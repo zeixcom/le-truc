@@ -294,6 +294,28 @@ export const diagnostic = {
 		),
 
 	/**
+	 * A `deriveCell`/`deriveStore`/`createMemo` compute function references
+	 * `host`/`internals` — these derived constructors invoke their compute
+	 * function synchronously at server-render time too (runtime.ts), where
+	 * `host`/`internals` don't exist (same verbatim-re-declaration rule as
+	 * `clientOnlySetupConst`, ADR 0023 sub-design 12; surfaced by LT-025's
+	 * `createMemo` support, the common shape for a derived-over-host-prop
+	 * memo, e.g. `createMemo(() => host.filter.toLowerCase())`).
+	 */
+	clientOnlySignalCompute: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		ctor: string,
+		badNames: string[],
+	) =>
+		error(
+			'TSRX013',
+			`\`${name}\`'s ${ctor}(...) compute function references ${badNames.map(n => `\`${n}\``).join(', ')} — ${ctor} runs server-side too (component.setup is emitted verbatim into the render function), where these don't exist. Derive from a server-known signal/param instead, or move the ${badNames.join('/')} read into a client-only construct (e.g. a reactive attribute thunk).`,
+			lineOf(source, offset),
+		),
+
+	/**
 	 * A plain (non-`.tsrx`) import whose local bindings never appear as a
 	 * free identifier anywhere in setup or the template (LT-034, ADR 0024
 	 * sub-design 14) — placement is inferred from usage, so an import with no

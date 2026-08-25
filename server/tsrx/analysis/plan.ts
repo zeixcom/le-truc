@@ -234,6 +234,18 @@ export type TopEffectPlan =
 			sourceStart: number | undefined
 			sourceEnd: number | undefined
 	  }
+	| {
+			/**
+			 * `html={() => …}` (LT-025): one `watch(thunk,
+			 * dangerouslyBindInnerHTML(el))` call — the sanctioned XSS-aware
+			 * sink (ADR 0010), never a raw `innerHTML` property binding.
+			 */
+			kind: 'watch-html'
+			query: string
+			thunkText: string
+			sourceStart: number | undefined
+			sourceEnd: number | undefined
+	  }
 	| { kind: 'each'; for: ForClientPlan }
 	| { kind: 'reconcile'; for: ReconcilePlan }
 	| {

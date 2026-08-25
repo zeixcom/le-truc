@@ -26,6 +26,7 @@ declare const createStore: LeTruc['createStore']
 declare const deriveCell: LeTruc['deriveCell']
 declare const deriveList: LeTruc['deriveList']
 declare const deriveStore: LeTruc['deriveStore']
+declare const createMemo: LeTruc['createMemo']
 
 /**
  * Context names usable as free names in every client code position

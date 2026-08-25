@@ -158,15 +158,52 @@ describe('@try — error boundaries', () => {
 		)
 	})
 
-	test('client constructs in the body are TSRX005 (element not guaranteed on error)', () => {
-		const { diagnostics: d } = compiled(`@try {
-			<button type="button" onClick={() => {}}>go</button>
+	test('client constructs on the body root are optionally addressed (LT-025) — guarded first(), not thrown', async () => {
+		const { component, diagnostics: d } = compiled(`@try {
+			<button type="button" class="go" data-len={status.length} onClick={() => {}}>go</button>
 		} @catch (error) {
 			<p>Failed</p>
 		}`)
-		expect(d.some(diag => diag.message.includes('inside @try bodies'))).toBe(
-			true,
+		expect(d).toEqual([])
+		if (!component) throw new Error('optional @try body fixture must compile')
+		expect(component.clientCode).toContain("first('button')")
+		expect(component.clientCode).toContain('if (button)')
+		ensureEmitted('feat-try-optional-body', component.serverCode)
+		expect(await render('feat-try-optional-body', { status: 'abc' })).toContain(
+			'<button type="button" data-len="3" class="go">go</button>',
 		)
+		expect(await render('feat-try-optional-body', {})).toBe(
+			'<c-el><p>Failed</p></c-el>',
+		)
+	})
+
+	test('client constructs on the catch-arm root are optionally addressed too (LT-025)', async () => {
+		const { component, diagnostics: d } = compiled(`@try {
+			<p>{status.length}</p>
+		} @catch (error) {
+			<button type="button" class="retry" onClick={() => {}}>retry</button>
+		}`)
+		expect(d).toEqual([])
+		if (!component) throw new Error('optional @catch arm fixture must compile')
+		expect(component.clientCode).toContain("first('button')")
+		ensureEmitted('feat-try-optional-catch', component.serverCode)
+		expect(await render('feat-try-optional-catch', { status: 'abc' })).toBe(
+			'<c-el><p>3</p></c-el>',
+		)
+		expect(await render('feat-try-optional-catch', {})).toContain(
+			'<button type="button" class="retry">retry</button>',
+		)
+	})
+
+	test('deeper (non-root) constructs inside a @try arm are still TSRX005', () => {
+		const { diagnostics: d } = compiled(`@try {
+			<div class="wrap"><button type="button" onClick={() => {}}>go</button></div>
+		} @catch (error) {
+			<p>Failed</p>
+		}`)
+		expect(
+			d.some(diag => diag.message.includes('must sit on its root element')),
+		).toBe(true)
 	})
 })
 
@@ -323,10 +360,89 @@ describe('html={expr} — dynamic rendering', () => {
 		).toBe('<c-el><article><p>hi</p><a>c</a></article></c-el>')
 	})
 
-	test('reactive thunk form is rejected (no client-side sanitizer contract)', () => {
-		const { diagnostics } = compiled('<article html={() => markup} />')
+	test('reactive thunk form (LT-025) lowers to a dangerouslyBindInnerHTML watch', async () => {
+		const source = `export function C({}: {})
+	@{
+		expose({})
+		const body = createState('<b>seed</b>')
+		<>
+			<c-el>
+				<article class="target" html={() => body.get()}></article>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics: d } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(d).toEqual([])
+		if (!component) throw new Error('reactive html fixture must compile')
+		expect(component.clientCode).toContain(
+			'watch(() => body.get(), dangerouslyBindInnerHTML(article))',
+		)
+		configureHtmlSanitizer(escapeAll)
+		ensureEmitted('feat-html-reactive', component.serverCode)
+		expect(await render('feat-html-reactive', {})).toBe(
+			'<c-el><article class="target">&lt;b&gt;seed&lt;/b&gt;</article></c-el>',
+		)
+	})
+})
+
+describe('createMemo — recognized signal constructor (LT-025)', () => {
+	test('derives from a rendered signal; server evaluates once, client re-derives', async () => {
+		const source = `export function C({}: {})
+	@{
+		expose({})
+		const value = createState(3)
+		const doubled = createMemo(() => value.get() * 2)
+		<>
+			<c-el>
+				<span class="value">&{value}</span>
+				<span class="doubled">&{doubled}</span>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('createMemo fixture must compile')
+		expect(component.clientCode).toContain(
+			'const doubled = createMemo(() => value.get() * 2)',
+		)
+		ensureEmitted('feat-create-memo', component.serverCode)
+		expect(await render('feat-create-memo', {})).toBe(
+			'<c-el><span class="value">3</span><span class="doubled">6</span></c-el>',
+		)
+	})
+
+	test('a compute function reading host/internals is TSRX013, not broken server codegen', () => {
+		const source = `export function C({}: {})
+	@{
+		expose({ filter: asString('') })
+		const lowerFilter = createMemo(() => host.filter.toLowerCase())
+		<>
+			<c-el>
+				<span>&{lowerFilter}</span>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
 		expect(
-			diagnostics.some(diag => diag.message.includes('data reference')),
+			diagnostics.some(
+				d => d.code === 'TSRX013' && d.message.includes('createMemo'),
+			),
 		).toBe(true)
 	})
 })

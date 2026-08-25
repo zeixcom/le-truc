@@ -164,11 +164,31 @@ export const classifyAttribute = (
 			isNode(value) && value.type === 'JSXExpressionContainer'
 				? value.expression
 				: value
+		if (isNode(expr) && expr.type === 'ArrowFunctionExpression') {
+			// html={() => …} (LT-025): a reactive thunk, lowered client-side to
+			// dangerouslyBindInnerHTML — exprText/node stay the BODY expression
+			// so server rendering (isServerEvaluable gating) is identical to the
+			// non-reactive bare-reference form below.
+			const body = expr.body
+			if (!isNode(body))
+				return {
+					kind: 'invalid',
+					reason: 'html={() => …} must be a thunk with a body.',
+				}
+			return {
+				kind: 'html',
+				exprText: text(ctx.source, body),
+				node: body,
+				reactive: true,
+				thunk: expr,
+				thunkText: text(ctx.source, expr),
+			}
+		}
 		if (!isNode(expr) || !/^(Identifier|MemberExpression)$/.test(expr.type))
 			return {
 				kind: 'invalid',
 				reason:
-					'html={…} expects a data reference (identifier or member expression) — computed markup and reactive thunks are not supported.',
+					'html={…} expects a data reference (identifier or member expression) or a reactive thunk (html={() => value}).',
 			}
 		return {
 			kind: 'html',

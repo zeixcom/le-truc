@@ -126,6 +126,18 @@ export const isPending = (signal: unknown): boolean =>
 	typeof signal === 'object' &&
 	(signal as Record<symbol, unknown>)[ASYNC_PENDING] === true
 
+/**
+ * `createMemo(fn, options?)` → box over `fn(prev)` evaluated once. Unlike
+ * `deriveCell`, `createMemo` has no async overload (cause-effect's `Memo`
+ * type is sync-only), so there is no pending-render branch to consider —
+ * `options.value` seeds the reducer-pattern `prev` argument on this single
+ * server-side call, exactly as it seeds the client's first computation.
+ */
+export const createMemo = <T>(
+	compute: (prev: T | undefined) => T,
+	options?: { value?: T },
+): ServerCell<T> => createCell(compute(options?.value))
+
 /** `deriveList(fn)` → list box over `fn()` evaluated once. */
 export const deriveList = <T>(compute: () => Iterable<T>): ServerList<T> =>
 	createList(compute())

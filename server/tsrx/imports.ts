@@ -235,6 +235,12 @@ const serverRenderedThunkNodes = (
 			isServerEvaluable(attr.object, serverKnown)
 		)
 			out.push(attr.object)
+		else if (
+			attr.kind === 'html' &&
+			attr.reactive &&
+			isServerEvaluable(attr.node, serverKnown)
+		)
+			out.push(attr.node)
 	}
 	return out
 }

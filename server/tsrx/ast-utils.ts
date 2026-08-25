@@ -22,6 +22,7 @@ export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>([
 	'deriveCell',
 	'deriveList',
 	'deriveStore',
+	'createMemo',
 ])
 
 /** Parser factory names recognized as ambients in `expose()` initializers. */

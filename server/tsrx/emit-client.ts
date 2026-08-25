@@ -400,6 +400,18 @@ export const emitClientModule = (
 			)
 			return
 		}
+		if (effect.kind === 'watch-html') {
+			// LT-025: dangerouslyBindInnerHTML is the sanctioned XSS-aware sink
+			// (ADR 0010) — never a raw innerHTML property binding.
+			imports.add('watch')
+			imports.add('dangerouslyBindInnerHTML')
+			const slices = sliceOf(effect.thunkText, effect.sourceStart)
+			at(
+				`watch(${effect.thunkText}, dangerouslyBindInnerHTML(${effect.query}))`,
+				slices,
+			)
+			return
+		}
 		if (effect.kind === 'pass') {
 			imports.add('pass')
 			const accessors = effect.setThunkText

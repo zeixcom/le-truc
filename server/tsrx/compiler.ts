@@ -300,17 +300,46 @@ export const compileSource = (
 				}
 			} else if (calleeName && SIGNAL_CONSTRUCTORS.has(calleeName)) {
 				const args = asArray(init.arguments)
-				const signal: SignalIR = {
-					name: declName,
-					text: text(ctx.source, init),
-					textStart: typeof init.start === 'number' ? init.start : 0,
-					constructor: calleeName as SignalConstructor,
-					init: args[0] ?? null,
-					inferredType: inferType(args[0] ?? null, typeCtx),
-					fallbackText: null,
+				const computeArg = args[0] ?? null
+				// deriveCell/deriveStore/createMemo invoke their compute function
+				// synchronously at server-render time too (runtime.ts) — a
+				// host/internals read inside it would crash, since every signal
+				// declaration is re-emitted verbatim into both modules (ADR 0023
+				// sub-design 12; surfaced by LT-025's createMemo support).
+				const isDerivedCallback =
+					(calleeName === 'deriveCell' ||
+						calleeName === 'deriveStore' ||
+						calleeName === 'createMemo') &&
+					isNode(computeArg) &&
+					/Function(Expression)?$/.test(computeArg.type)
+				const badContextNames = isDerivedCallback
+					? [...freeIdentifiers(computeArg as TsrxNode)].filter(n =>
+							CONTEXT_NAMES.has(n),
+						)
+					: []
+				if (badContextNames.length > 0) {
+					ctx.diagnostics.push(
+						diagnostic.clientOnlySignalCompute(
+							source,
+							stmt.start,
+							declName,
+							calleeName,
+							badContextNames,
+						),
+					)
+				} else {
+					const signal: SignalIR = {
+						name: declName,
+						text: text(ctx.source, init),
+						textStart: typeof init.start === 'number' ? init.start : 0,
+						constructor: calleeName as SignalConstructor,
+						init: computeArg,
+						inferredType: inferType(computeArg, typeCtx),
+						fallbackText: null,
+					}
+					signals.push(signal)
+					signalByName.set(declName, signal)
 				}
-				signals.push(signal)
-				signalByName.set(declName, signal)
 			} else if (init.type === 'ConditionalExpression') {
 				// A ternary between two constructor calls isn't recognized as a
 				// signal at all (no single `.callee`) — diagnose it explicitly

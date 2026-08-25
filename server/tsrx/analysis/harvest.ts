@@ -236,13 +236,23 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			if (
 				attr.kind !== 'reactive' &&
 				attr.kind !== 'style-map' &&
-				attr.kind !== 'class-map'
+				attr.kind !== 'class-map' &&
+				!(attr.kind === 'html' && attr.reactive)
 			)
 				continue
 			const order = documentOrder++
 			if (attr.kind === 'style-map' || attr.kind === 'class-map') {
 				for (const signal of component.signals.map(s => s.name)) {
 					if (containsSignalGet(attr.object, signal)) thunkRendered.add(signal)
+				}
+				continue
+			}
+			if (attr.kind === 'html' && attr.reactive) {
+				// html={() => …} (LT-025): markup is opaque, unreadable back out
+				// of innerHTML — never a harvest SITE, but rendered (LT-036),
+				// same treatment as style-map/class-map.
+				for (const signal of component.signals.map(s => s.name)) {
+					if (containsSignalGet(attr.thunk, signal)) thunkRendered.add(signal)
 				}
 				continue
 			}
@@ -585,7 +595,8 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		// substitution route for these constructors.
 		const isDerivedCallback =
 			signal.constructor === 'deriveCell' ||
-			signal.constructor === 'deriveStore'
+			signal.constructor === 'deriveStore' ||
+			signal.constructor === 'createMemo'
 		const own = isDerivedCallback
 			? []
 			: sites

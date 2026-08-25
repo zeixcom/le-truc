@@ -16,7 +16,7 @@ import {
 	sanitizeVarName,
 } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
-import type { ForIR, PassEntryIR, TemplateNode } from '../ir'
+import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import type { AnalysisContext, TopEffectPlan } from './plan'
 import {
@@ -31,6 +31,16 @@ import {
 	selectorFor as selectorForIn,
 	type TryNode,
 } from './selectors'
+
+/**
+ * Does this attribute carry a client construct? A non-reactive `html={ref}`
+ * is server-rendered only (LT-025); a reactive `html={() => …}` lowers to a
+ * `dangerouslyBindInnerHTML` watch, same as any other reactive attribute.
+ */
+const isClientConstructAttr = (a: AttributeIR): boolean =>
+	a.kind !== 'static' &&
+	a.kind !== 'server' &&
+	!(a.kind === 'html' && !a.reactive)
 
 /* === Exported Functions === */
 
@@ -197,6 +207,28 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					sourceStart: attr.handler.start,
 					sourceEnd: attr.handler.end,
 				})
+			} else if (attr.kind === 'html' && attr.reactive) {
+				// reactive html={() => …} (LT-025): lowers to a
+				// dangerouslyBindInnerHTML watch, the sanctioned XSS-aware sink
+				// (ADR 0010) — never a raw innerHTML property binding.
+				collectAmbient(attr.thunk)
+				const bad = badFreeNames(attr.thunk)
+				if (bad.length > 0) {
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							attr.thunk.start,
+							`Reactive html={…} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
+						),
+					)
+				}
+				sink.push({
+					kind: 'watch-html',
+					query,
+					thunkText: attr.thunkText,
+					sourceStart: attr.thunk.start,
+					sourceEnd: attr.thunk.end,
+				})
 			}
 		}
 		for (const child of el.children) {
@@ -228,9 +260,8 @@ export const runEffects = (ctx: AnalysisContext): void => {
 
 	/** Does this element carry a construct of its own (not a nested one)? */
 	const hasOwnConstruct = (el: ElementNode): boolean =>
-		el.attrs.some(
-			a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-		) || el.children.some(c => c.kind === 'expr' && c.lazy)
+		el.attrs.some(isClientConstructAttr) ||
+		el.children.some(c => c.kind === 'expr' && c.lazy)
 
 	// A lazy text child of the branch ROOT itself is a legitimate construct
 	// (watched via the root's own query, exactly like a reactive attribute)
@@ -241,34 +272,41 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			child =>
 				(depth > 0 && child.kind === 'expr' && child.lazy) ||
 				(child.kind === 'element' &&
-					(child.attrs.some(
-						a =>
-							a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-					) ||
+					(child.attrs.some(isClientConstructAttr) ||
 						hasDeepConstruct(child, depth + 1))),
 		)
 
 	/**
-	 * A single-branch `@if` (no `@else`) whose root may not exist at all —
-	 * the DOM-derived mirror of the hand-written `if (clearBtn) { … }`
-	 * pattern. The root (if any carries client constructs) is addressed with
-	 * a non-throwing `first()`; its own construct effects, plus any bare
-	 * client-only statement sitting beside it in the branch (LT-008), are all
-	 * wrapped in one `'guarded'` effect emitted client-side as
-	 * `if (query) { … }`.
+	 * A single branch whose root may not exist at all — the DOM-derived
+	 * mirror of the hand-written `if (clearBtn) { … }` pattern. The root (if
+	 * it carries client constructs) is addressed with a non-throwing
+	 * `first()`; its own construct effects, plus any bare client-only
+	 * statement sitting beside it in the branch (LT-008), are all wrapped in
+	 * one `'guarded'` effect emitted client-side as `if (query) { … }`.
+	 *
+	 * Shared by a single-branch `@if` (no `@else`, `handleOptionalIfEffects`)
+	 * and a plain `@try`'s two mutually-exclusive arms (LT-025,
+	 * `handleTryEffects`) — same DOM-existence-guarded shape either way, just
+	 * a different `label` for diagnostics and a different `atNode` to
+	 * attribute a bare-statement error to when the branch has no element at
+	 * all.
 	 */
-	const handleOptionalIfEffects = (node: IfNode): void => {
-		const roots = node.then.filter(isElement)
+	const handleOptionalBranch = (
+		body: TemplateNode[],
+		atNode: { node: TsrxNode },
+		label: string,
+	): void => {
+		const roots = body.filter(isElement)
 		for (const root of roots)
 			if (hasDeepConstruct(root))
 				diagnostics.push(
 					diagnostic.unsupported(
 						source,
 						root.node.start,
-						'Client constructs inside @if branches must sit on the branch root elements — deeper elements exist only when their branch rendered',
+						`Client constructs inside ${label} must sit on its root element — deeper elements exist only when it rendered`,
 					),
 				)
-		const clientStmts = node.then.filter(
+		const clientStmts = body.filter(
 			(n): n is TemplateNode & { kind: 'client-stmt' } =>
 				n.kind === 'client-stmt',
 		)
@@ -277,8 +315,8 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			diagnostics.push(
 				diagnostic.unsupported(
 					source,
-					node.node.start,
-					'Multiple addressable elements with client constructs inside one @if branch — only one root can be addressed per branch; split into separate @if blocks, or address the extra element through a hoisted const referenced from the first',
+					atNode.node.start,
+					`Multiple addressable elements with client constructs inside one ${label} — only one root can be addressed; address the extra element through a hoisted const referenced from the first`,
 				),
 			)
 			return
@@ -291,8 +329,8 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			diagnostics.push(
 				diagnostic.unsupported(
 					source,
-					node.node.start,
-					'A bare client-only statement inside a single-branch @if needs an element sibling in the same branch to test whether the branch rendered',
+					atNode.node.start,
+					`A bare client-only statement inside ${label} needs an element sibling to test whether it rendered`,
 				),
 			)
 			return
@@ -303,7 +341,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				diagnostic.unaddressableElement(
 					source,
 					primary.node.start,
-					`No unique selector for the @if branch root <${primary.tag}> — add a distinguishing static attribute`,
+					`No unique selector for ${label}'s root <${primary.tag}> — add a distinguishing static attribute`,
 				),
 			)
 			return
@@ -317,7 +355,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			'maybe',
 		)
 		const guarded: TopEffectPlan[] = []
-		for (const stmt of node.then) {
+		for (const stmt of body) {
 			if (stmt.kind === 'client-stmt') {
 				collectAmbient(stmt.node)
 				guarded.push({
@@ -332,6 +370,10 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		}
 		effects.push({ kind: 'guarded', query, effects: guarded })
 	}
+
+	/** A single-branch `@if` (no `@else`) — see `handleOptionalBranch`. */
+	const handleOptionalIfEffects = (node: IfNode): void =>
+		handleOptionalBranch(node.then, node, 'a single-branch @if')
 
 	/**
 	 * @if branches (LT-008): client constructs must sit on the branch ROOT
@@ -389,11 +431,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		// html={dataRef} is server-rendered only — not a client construct.
 		const hasConstructs = roots.some(hasOwnConstruct)
 		if (!hasConstructs) return
-		const primary = roots.find(r =>
-			r.attrs.some(
-				a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-			),
-		)
+		const primary = roots.find(r => r.attrs.some(isClientConstructAttr))
 		if (!primary) return
 		const resolved = selectorFor(primary)
 		if (!resolved.unique) {
@@ -451,12 +489,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
 			return false
 		if (!isElement(node)) return false
-		if (
-			node.attrs.some(
-				a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-			)
-		)
-			return true
+		if (node.attrs.some(isClientConstructAttr)) return true
 		return node.children.some(hasClientConstructs)
 	}
 
@@ -583,11 +616,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		}
 		const signal = boundaryCandidates[0]?.name as string
 
-		if (
-			okRoot.attrs.some(
-				a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-			)
-		) {
+		if (okRoot.attrs.some(isClientConstructAttr)) {
 			diagnostics.push(
 				diagnostic.unsupported(
 					source,
@@ -597,11 +626,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			)
 			return
 		}
-		if (
-			errRoot.attrs.some(
-				a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-			)
-		) {
+		if (errRoot.attrs.some(isClientConstructAttr)) {
 			diagnostics.push(
 				diagnostic.unsupported(
 					source,
@@ -672,10 +697,13 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	}
 
 	/**
-	 * @try error boundaries: the catch arm renders instead on error, so
-	 * constructs in the body are not guaranteed (first() would throw on the
-	 * error path); interactive error boundaries need optional addressing,
-	 * which is outside the current subset. Catch arms must be static.
+	 * @try error boundaries: the body and catch arm render mutually
+	 * exclusively — whichever one the server actually rendered is the only
+	 * one that exists in the DOM, exactly the DOM-existence-guarded shape a
+	 * single-branch `@if` has (LT-025: each arm gets its own
+	 * `handleOptionalBranch` call, independently — NOT union addressing like
+	 * `@if`/`@else`, since the two arms are different content, not the same
+	 * construct duplicated).
 	 *
 	 * A `@pending` arm present routes to `handleAsyncBoundary` instead (ADR
 	 * 0023 sub-design 13, LT-012) — a fundamentally different shape (all
@@ -687,24 +715,8 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			handleAsyncBoundary(node)
 			return
 		}
-		for (const child of node.children)
-			if (hasClientConstructs(child))
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						(child as ElementNode).node?.start ?? node.node.start,
-						'Client constructs inside @try bodies — the catch arm renders instead on error, so the element is not guaranteed to exist; error boundaries over interactive markup need optional addressing (tracked in TODO). Keep the body to static/server markup.',
-					),
-				)
-		for (const child of node.catchChildren)
-			if (hasClientConstructs(child))
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						(child as ElementNode).node?.start ?? node.node.start,
-						'Client constructs inside @catch arms — the arm renders only on error; keep it to static/server markup.',
-					),
-				)
+		handleOptionalBranch(node.children, node, 'a @try body')
+		handleOptionalBranch(node.catchChildren, node, 'a @catch arm')
 	}
 
 	/**
@@ -855,9 +867,8 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			}
 		} else {
 			const hasClientConstruct =
-				node.attrs.some(
-					a => a.kind !== 'static' && a.kind !== 'server' && a.kind !== 'html',
-				) || node.children.some(c => c.kind === 'expr' && c.lazy)
+				node.attrs.some(isClientConstructAttr) ||
+				node.children.some(c => c.kind === 'expr' && c.lazy)
 			if (hasClientConstruct) {
 				const { selector, unique } = resolveSelector(node)
 				if (!unique) {

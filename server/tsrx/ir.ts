@@ -44,6 +44,7 @@ export type SignalConstructor =
 	| 'deriveCell'
 	| 'deriveList'
 	| 'deriveStore'
+	| 'createMemo'
 	| 'requestContext'
 
 /** A signal declared in the component's setup. */
@@ -201,20 +202,26 @@ export type AttributeIR =
 			thunk: TsrxNode
 			object: TsrxNode
 	  }
-	| {
+	| ({
 			/**
-			 * Dynamic rendering: `html={expr}` — the .tsrx spelling of the
-			 * upstream `{html expr}` keyword (newer grammar than the pinned
-			 * parser). Server-known expressions render as raw, TRUSTED HTML
-			 * children (no escaping — the same trust contract as the docs
-			 * pipeline's rendered markup); the reactive form lowers to an
-			 * `innerHTML` property binding.
+			 * Dynamic rendering: `html={expr}` (a bare data reference) or
+			 * `html={() => expr}` (LT-025, a reactive thunk) — the .tsrx
+			 * spelling of the upstream `{html expr}` keyword (newer grammar
+			 * than the pinned parser). `exprText`/`node` are always the VALUE
+			 * expression (the thunk's body, for the reactive form) — server
+			 * rendering (sanitizeHtml, ADR 0010) is identical either way,
+			 * gated on `isServerEvaluable(node, scope)`. The reactive form
+			 * additionally carries the whole thunk for the client's
+			 * `dangerouslyBindInnerHTML` watch (never a raw `innerHTML`
+			 * property binding — that would bypass the sanitizer contract).
 			 */
 			kind: 'html'
 			exprText: string
 			node: TsrxNode
-			reactive: boolean
-	  }
+	  } & (
+			| { reactive: false }
+			| { reactive: true; thunk: TsrxNode; thunkText: string }
+	  ))
 	| {
 			kind: 'event'
 			name: string
