@@ -596,6 +596,22 @@ still open:
   same "hand-build the input, call the function" granularity
   `analysis.test.ts` already gave `runHarvest`/`runEffects`/the selector
   engine.
+- **Browser purity is now CI-pinned (LT-045, ADR 0025 sub-design 6).**
+  `scripts/build-tsrx-browser.ts` bundles `server/tsrx/index.ts` for
+  `target: 'browser'` and asserts no `node:` import survived into the
+  bundled text — Bun's bundler silently ships a JS shim for some `node:`
+  built-ins (e.g. `node:path`) even under `target: 'browser'`, so a build
+  *succeeding* is not proof of purity; `external: ['node:*']` disables that
+  shimming so a reintroduced import shows up as a literal, unresolvable
+  `from "node:…"` specifier in the output instead.
+  `server/tests/tsrx/browser-bundle.test.ts` runs the bundle build and
+  additionally proves artifact parity: the same fixture compiled through the
+  browser bundle (dynamically imported from a temp file) and through the
+  direct Node import of `server/tsrx/index.ts` produce byte-identical
+  `serverCode`/`clientCode`/`css`/span tables. `bun run build:tsrx:browser`
+  also writes the bundle to `server/generated/tsrx-browser/index.js`
+  (gitignored) — the seed of the playground's compile worker; wiring it into
+  the docs site is future playground work, not part of this gate.
 
 ---
 

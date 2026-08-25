@@ -73,7 +73,8 @@
     "check:size": "bun test test/regression-bundle.test.ts",
     "build:cem": "bun run scripts/build-tsrx.ts && cem analyze && bun run verify:cem",
     "verify:cem": "bun run scripts/verify-cem.ts",
-    "check:tsrx": "bun run scripts/check-tsrx.ts"
+    "check:tsrx": "bun run scripts/check-tsrx.ts",
+    "build:tsrx:browser": "bun run scripts/build-tsrx-browser.ts"
   },
   "dependencies": {
     "@zeix/cause-effect": "^1.5.2"
