@@ -148,7 +148,7 @@ describe('integration — emitClientModule spans locate the authored thunk', () 
 		<>
 			<c-el>
 				<button type="button" onClick={() => count.set(count.get() + 1)}>
-					&{count}
+					{count}
 				</button>
 			</c-el>
 			<style>c-el { color: red }</style>

@@ -14,7 +14,7 @@ export function C({}: {})
 	expose({ value: asNumber() })
 	<>
 		<c-el>
-			<p>&{String(host.value)}</p>
+			<p>{String(host.value)}</p>
 		</c-el>
 		<style>c-el { color: red }</style>
 	</>
@@ -34,8 +34,8 @@ describe('lazy child with an arbitrary (non-identifier, non-prop-name) expressio
 
 describe('lazy child already authored as an arrow thunk', () => {
 	const explicit = source.replace(
-		'&{String(host.value)}',
-		'&{() => String(host.value)}',
+		'{String(host.value)}',
+		'{() => String(host.value)}',
 	)
 
 	test('is not double-wrapped', () => {

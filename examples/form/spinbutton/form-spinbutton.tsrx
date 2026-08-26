@@ -236,7 +236,7 @@ export function FormSpinbutton(
 					>+</button>
 				</div>
 			</fieldset>
-			<p class="error" role="alert" aria-live="assertive">&{'validationMessage'}</p>
+			<p class="error" role="alert" aria-live="assertive">{host.validationMessage}</p>
 		</form-spinbutton>
 
 		<style>

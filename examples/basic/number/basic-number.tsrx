@@ -45,7 +45,7 @@ export function BasicNumber(
 		expose({ value: numberCell.get })
 
 		<>
-			<basic-number {value} {lang} {options}>&{formatted}</basic-number>
+			<basic-number {value} {lang} {options}>{formatted}</basic-number>
 
 			<style>
 			basic-number {

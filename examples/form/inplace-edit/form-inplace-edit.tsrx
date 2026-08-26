@@ -70,7 +70,7 @@ export function FormInplaceEdit(
 					editInput?.focus();
 					editInput?.select();
 				}}
-			>&{() => host.value}</span>
+			>{() => host.value}</span>
 			<div
 				class="edit"
 				hidden={() => !host.editing}
@@ -112,7 +112,7 @@ export function FormInplaceEdit(
 						editInput?.select();
 					}
 				}}
-			>&{() => (host.editing ? '✓' : '✎')}</button>
+			>{() => (host.editing ? '✓' : '✎')}</button>
 		</form-inplace-edit>
 
 		<style>

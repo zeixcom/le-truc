@@ -134,7 +134,7 @@ export function C({ label }: { label?: string })
 	@{
 		expose({})
 		<>
-			<c-el><p class="error">&{'validationMessage'}</p></c-el>
+			<c-el><p class="error">{host.validationMessage}</p></c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`
@@ -257,7 +257,7 @@ describe('milestone gates', () => {
 		<>
 			<c-el>
 				@for (const item of items; key k) {
-					<li>&{item}</li>
+					<li>{item}</li>
 				}
 			</c-el>
 			<style>c-el { color: red }</style>
@@ -288,7 +288,7 @@ describe('reactive-list rewrite rules (milestone 3)', () => {
 	test('well-formed body compiles: hole, statics, key-bound event', () => {
 		const { component, diagnostics } = compileComponent(
 			listSource(
-				'<li><span>&{item}</span><button type="button" onClick={() => items.remove(k)}>✕</button></li>',
+				'<li><span>{item}</span><button type="button" onClick={() => items.remove(k)}>✕</button></li>',
 			),
 			'c.tsrx',
 			new Set(),
@@ -310,9 +310,22 @@ describe('reactive-list rewrite rules (milestone 3)', () => {
 		).toBe(true)
 	})
 
-	test('non-lazy item expression is TSRX005', () => {
+	// Since LT-052 a bare `{item}` IS the slot fill — the item binding is
+	// reactive by position, marked in `lowerListFor`. The "must be lazy"
+	// gate still covers every OTHER expression in the body, which has no
+	// per-item client binding.
+	test('a bare {item} is the slot fill, not an error', () => {
 		const { diagnostics } = compileComponent(
 			listSource('<li>{item}</li>'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+	})
+
+	test('a non-item expression in a reactive-list body is TSRX005', () => {
+		const { diagnostics } = compileComponent(
+			listSource('<li>{item}{label}</li>'),
 			'c.tsrx',
 			new Set(),
 		)
@@ -331,7 +344,7 @@ describe('reactive-list rewrite rules (milestone 3)', () => {
 	test('handler referencing the loop item is TSRX005 (bindItem Signal)', () => {
 		const { diagnostics } = compileComponent(
 			listSource(
-				'<li><span>&{item}</span><button type="button" onClick={() => items.remove(item)}>✕</button></li>',
+				'<li><span>{item}</span><button type="button" onClick={() => items.remove(item)}>✕</button></li>',
 			),
 			'c.tsrx',
 			new Set(),
@@ -352,7 +365,7 @@ describe('reactive-list rewrite rules (milestone 3)', () => {
 			<c-el>
 				<ul>
 					@for (const item of items; index i; key k) {
-						<li>&{item}</li>
+						<li>{item}</li>
 					}
 				</ul>
 			</c-el>
@@ -372,7 +385,7 @@ describe('reactive-list rewrite rules (milestone 3)', () => {
 		<>
 			<c-el>
 				@for (const item of items; key k) {
-					<li>&{item}</li>
+					<li>{item}</li>
 				}
 			</c-el>
 			<style>c-el { color: red }</style>
@@ -422,7 +435,7 @@ describe('rewrite-rule enforcement', () => {
 		const seen = createCell(0)
 		expose({ seen: seen.get })
 		<>
-			<c-el><span>&{seen}</span></c-el>
+			<c-el><span>{seen}</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`
@@ -474,7 +487,7 @@ describe('rewrite-rule enforcement', () => {
 	test('lazy child inside @for body is gated as milestone-3', () => {
 		const source = wrap(
 			`@for (const tab of tabs) {
-				<button><span>&{selected}</span></button>
+				<button><span>{selected}</span></button>
 			}`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -489,7 +502,7 @@ describe('rewrite-rule enforcement', () => {
 		const n = createCell(1)
 		expose({ n: n.get })
 		<>
-			<c-el onClick={() => n.set(0)}><span>&{n}</span></c-el>
+			<c-el onClick={() => n.set(0)}><span>{n}</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`
@@ -499,7 +512,7 @@ describe('rewrite-rule enforcement', () => {
 
 	test('ambiguous selector is TSRX007', () => {
 		const source = wrap(
-			`<span>&{selected}</span>
+			`<span>{selected}</span>
 			<span>other</span>`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -514,7 +527,7 @@ describe('rewrite-rule enforcement', () => {
 		const n = big ? deriveCell(() => 1) : createCell(0)
 		expose({ n: n.get })
 		<>
-			<c-el><span>&{n}</span></c-el>
+			<c-el><span>{n}</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`
@@ -532,7 +545,7 @@ describe('rewrite-rule enforcement', () => {
 		const el = first('.foo')
 		expose({ n: n.get })
 		<>
-			<c-el><span>&{n}</span></c-el>
+			<c-el><span>{n}</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`

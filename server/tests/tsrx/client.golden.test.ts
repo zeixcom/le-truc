@@ -175,11 +175,16 @@ describe('client golden — convergence with the hand-written trio', () => {
 		expect(code).toContain(
 			"watch(() => host.value, bindProperty(input, 'value'))",
 		)
-		// Managed form prop as watch source — exists only on FormFactoryContext
+		// Managed form prop as watch source. Since LT-052 the source spelling
+		// is a `host.<prop>` read lowering to watch()'s thunk overload, not
+		// the FormFactoryContext string-key overload — `host.validationMessage`
+		// still typechecks only against a FormAssociatedElement-typed host, so
+		// the extension ordering stays type-enforced, just via the host type
+		// rather than the watch() key.
 		// (named p2: the description paragraph claimed `p` first, harvested
 		// via arg-substitution rather than a direct site — ADR 0023 sub-design 12)
 		expect(code).toContain('const p2 = first(\'p[role="alert"]\')')
-		expect(code).toContain("watch('validationMessage', bindText(p2))")
+		expect(code).toContain('watch(() => host.validationMessage, bindText(p2))')
 		// description: a deriveCell harvested via arg-substitution (LT-024) —
 		// the raw template is traced to the paragraph's own data-remaining
 		// attribute (not the root), and `maxlength` to the input's plain

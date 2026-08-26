@@ -393,6 +393,13 @@ export type ComponentIR = {
 export type ExtractContext = {
 	source: string
 	diagnostics: CompileDiagnostic[]
+	/**
+	 * Prop names `expose()` declares, plus the managed form props. Populated
+	 * before template lowering so a string-literal child naming a prop can be
+	 * diagnosed (TSRX019) — that spelling meant "watch this prop by name"
+	 * only while the `&` sigil disambiguated it from ordinary text.
+	 */
+	exposedProps: Set<string>
 	/** Names server-known at template evaluation time (args, setup). */
 	serverKnown: Set<string>
 	/**

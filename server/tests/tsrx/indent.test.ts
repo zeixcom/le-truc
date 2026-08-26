@@ -69,7 +69,7 @@ describe('reindentation keeps template-literal interiors byte-identical', () => 
 				const msg = \`Min length is \${n}
 				Please enter more\`
 				seen.set(n)
-			}}>&{seen}</button></c-el>
+			}}>{seen}</button></c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`
@@ -87,7 +87,7 @@ describe('reindentation keeps template-literal interiors byte-identical', () => 
 		second line of banner\`
 		expose({ seen: seen.get })
 		<>
-			<c-el title={banner}>&{seen}</c-el>
+			<c-el title={banner}>{seen}</c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`

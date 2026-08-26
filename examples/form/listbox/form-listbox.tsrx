@@ -11,7 +11,7 @@
  *   and the two-level hoisted-const/selector-scoping story isn't proven.
  * - The remote-fetch mode's async `@try`/`@pending`/`@catch` boundary
  *   requires the guarded `deriveCell(async …)` signal to be the ok-arm
- *   root's DIRECT LAZY CHILD (`&{content}`, rendered as escaped TEXT) —
+ *   root's DIRECT LAZY CHILD (`{content}`, rendered as escaped TEXT) —
  *   the hand-written version needs raw, unescaped HTML injection instead
  *   (`listbox.innerHTML = html`), which is a different construct
  *   (`html={() => …}`) that async `@try` doesn't route through.

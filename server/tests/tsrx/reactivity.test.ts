@@ -133,3 +133,32 @@ describe('lowerChildren — lift applied to template children', () => {
 		expect(child.lazy).toBe(false)
 	})
 })
+
+describe('the retired &{} sigil (LT-052)', () => {
+	test('&{expr} is TSRX018 with a drop-the-sigil fix-it', () => {
+		const { diagnostics } = childOf('&{count}')
+		expect(diagnostics.map(d => d.code)).toContain('TSRX018')
+		expect(diagnostics[0]?.message).toContain('{count}')
+	})
+
+	test("a literal & before an expression no longer swallows the '&'", () => {
+		// The old sigil detection matched any JSXText ending in '&', so
+		// `Q&{label}` silently ate the ampersand. It is now diagnosed rather
+		// than mis-parsed.
+		const { diagnostics } = childOf('Q&{label}')
+		expect(diagnostics.map(d => d.code)).toContain('TSRX018')
+	})
+
+	test('a string literal naming a prop is TSRX019, not silent text', () => {
+		const { diagnostics } = childOf("{'count'}")
+		expect(diagnostics.map(d => d.code)).toEqual(['TSRX019'])
+		expect(diagnostics[0]?.message).toContain('{host.count}')
+	})
+
+	test('a string literal naming nothing stays ordinary text', () => {
+		const { child, diagnostics } = childOf("{'hello'}")
+		expect(diagnostics).toHaveLength(0)
+		if (child?.kind !== 'expr') throw new Error('expected expr child')
+		expect(child.lazy).toBe(false)
+	})
+})

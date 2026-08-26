@@ -76,7 +76,7 @@ const seededSource = `export function Seeded({ initial }: { initial?: string[] }
 			<c-el>
 				<ul data-container>
 					@for (const item of items; key k) {
-						<li><span>&{item}</span></li>
+						<li><span>{item}</span></li>
 					}
 				</ul>
 			</c-el>

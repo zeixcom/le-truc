@@ -25,6 +25,7 @@ import {
 	identifierName,
 	isNode,
 	JS_GLOBALS,
+	MANAGED_TEXT_PROPS,
 	PARSER_FACTORIES,
 	SIGNAL_CONSTRUCTORS,
 	text,
@@ -125,6 +126,7 @@ export const compileSource = (
 	const ctx: ExtractContext = {
 		source,
 		diagnostics: [],
+		exposedProps: new Set<string>(),
 		serverKnown: new Set<string>(),
 		composeImports: new Map<string, string>(),
 		setupInits: new Map<string, TsrxNode>(),
@@ -511,6 +513,14 @@ export const compileSource = (
 	for (const s of signals) ctx.serverKnown.add(s.name)
 	for (const n of setupInits.keys()) ctx.serverKnown.add(n)
 	ctx.setupInits = setupInits
+	// Seed the prop set the lift rule consults for TSRX019. `expose()` has
+	// been fully parsed by now; `config` has not, so the managed form props
+	// are included unconditionally — a string-literal `'validationMessage'`
+	// child is the retired spelling whether or not formAssociated() is on.
+	for (const prop of exposeProps.keys()) ctx.exposedProps.add(prop)
+	for (const prop of parserExposeProps.keys()) ctx.exposedProps.add(prop)
+	for (const prop of MANAGED_TEXT_PROPS) ctx.exposedProps.add(prop)
+
 	const lowered = lowerChildren(ctx, render, signalByName, fors)
 	const root = lowered.find(
 		(n): n is TemplateNode & { kind: 'element' } =>

@@ -17,6 +17,7 @@ import {
 	isNode,
 	JS_GLOBALS,
 	jsxName,
+	nodeType,
 	text,
 } from './ast-utils'
 import {
@@ -384,6 +385,11 @@ export const lowerTry = (
 		)
 		return null
 	}
+	// The `@catch` arm's error child reads the catch parameter, which is
+	// reactive by position — the async boundary re-renders the arm when the
+	// task rejects — but is not a declared signal.
+	if (catchParam !== null)
+		markPositionallyReactive(catchChildren, new Set([catchParam]))
 	return {
 		kind: 'try',
 		children,
@@ -512,6 +518,40 @@ export const lowerComposeElement = (
 }
 
 /**
+ * Mark direct `{expr}` children of each root element reactive when they read
+ * a name that is reactive *by position* rather than by declaration (LT-052).
+ * Two such names exist, and both are already recognised structurally
+ * downstream: a `@catch` arm's error parameter, and a reactive `@for` body's
+ * item binding (the slot fill). Neither is a declared signal, so the general
+ * lift rule in `reactivity.ts` correctly classifies them static — the context
+ * that makes them reactive lives here, in the construct that binds them.
+ *
+ * Recurses through element children, matching the recursive walk
+ * `validateListBody` uses to count slot-fill holes — a reactive `@for`'s
+ * item is routinely nested (`<li><span>{item}</span></li>`), not a direct
+ * child of the loop's output root.
+ */
+const markPositionallyReactive = (
+	nodes: TemplateNode[],
+	names: ReadonlySet<string>,
+): void => {
+	if (names.size === 0) return
+	const visit = (node: TemplateNode): void => {
+		if (node.kind === 'expr') {
+			if (node.lazy) return
+			for (const name of freeIdentifiers(node.expr))
+				if (names.has(name)) {
+					node.lazy = true
+					return
+				}
+			return
+		}
+		if (node.kind === 'element') for (const child of node.children) visit(child)
+	}
+	for (const node of nodes) visit(node)
+}
+
+/**
  * Whether a plain `{expr}` child lifts into a `watch()` (LT-051). The rule
  * and its rationale live in `reactivity.ts`; this wrapper only turns the
  * `opaque` verdict into a TSRX017 diagnostic. The `{children}` insertion
@@ -525,6 +565,23 @@ const liftsToReactive = (
 	exprText: string,
 	container: TsrxNode,
 ): boolean => {
+	// `{'label'}` used to mean "watch the prop named label" — legible only
+	// because `&` marked it as not-text. Bare, it is the literal string, so
+	// the silent reading is a wrong component; demand `{host.label}`.
+	if (
+		nodeType(expr) === 'Literal' &&
+		typeof expr.value === 'string' &&
+		ctx.exposedProps.has(String(expr.value))
+	) {
+		ctx.diagnostics.push(
+			diagnostic.stringLiteralPropChild(
+				ctx.source,
+				container.start,
+				String(expr.value),
+			),
+		)
+		return false
+	}
 	const verdict = classifyChild(expr, signals)
 	if (verdict.kind === 'opaque') {
 		ctx.diagnostics.push(
@@ -563,23 +620,23 @@ export const lowerChildren = (
 		if (child.type === 'JSXText') {
 			const next = children[i + 1] as TsrxNode | undefined
 			const raw = String(child.value ?? '')
-			// `&{expr}` lazy child: the parser emits the sigil as a text node
-			// ENDING in '&' immediately before the expression container — the
-			// '&' may carry leading whitespace when formatted on its own line.
+			// The retired `&{expr}` lazy child (LT-052). `&{`/`&[` are TSRX's
+			// lazy DESTRUCTURING introducers and live in binding position;
+			// there is no `&{}` template-child form. The compiler never got a
+			// lazy node from the parser for this — it matched a `JSXText`
+			// ending in '&' beside an expression container, which also meant
+			// `<span>Q&{a}</span>` silently swallowed the '&'. Reactivity is
+			// decided by `reactivity.ts` now, so the sigil is redundant as
+			// well as wrong: diagnose it rather than keep parsing it.
 			if (next?.type === 'JSXExpressionContainer' && raw.endsWith('&')) {
-				const leading = collapseJsxText(raw.slice(0, -1))
-				if (leading) out.push({ kind: 'text', value: leading })
 				const expr = next.expression
-				if (isNode(expr))
-					out.push({
-						kind: 'expr',
-						expr,
-						exprText: text(ctx.source, expr),
-						lazy: true,
-						node: next as TsrxNode,
-					})
-				i += 2
-				continue
+				ctx.diagnostics.push(
+					diagnostic.retiredLazySigil(
+						ctx.source,
+						child.start,
+						isNode(expr) ? text(ctx.source, expr) : '…',
+					),
+				)
 			}
 			const collapsed = collapseJsxText(raw)
 			if (collapsed) out.push({ kind: 'text', value: collapsed })
@@ -1006,6 +1063,10 @@ export const lowerListFor = (
 		return null
 	}
 	const output = lowerElement(ctx, outputNode, signals, fors)
+	// The item binding is the slot fill — reactive by position, not a
+	// declared signal, so the lift rule alone would leave it static and
+	// `validateListBody` would then see zero holes.
+	markPositionallyReactive([output], new Set([itemName]))
 	validateListBody(ctx, output, itemName)
 	const forIR: ForIR = {
 		itemName,

@@ -61,13 +61,13 @@ export function CardMediaqueries({ label }: { label?: string })
 				}
 				<dl>
 					<dt>Motion Preference:</dt>
-					<dd class="motion">&{motion}</dd>
+					<dd class="motion">{motion}</dd>
 					<dt>Theme Preference:</dt>
-					<dd class="theme">&{theme}</dd>
+					<dd class="theme">{theme}</dd>
 					<dt>Device Viewport:</dt>
-					<dd class="viewport">&{viewport}</dd>
+					<dd class="viewport">{viewport}</dd>
 					<dt>Device Orientation:</dt>
-					<dd class="orientation">&{orientation}</dd>
+					<dd class="orientation">{orientation}</dd>
 				</dl>
 			</card-mediaqueries>
 

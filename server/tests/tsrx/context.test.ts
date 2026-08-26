@@ -15,7 +15,7 @@ describe('requestContext() — consumer side', () => {
 		expose({})
 		<>
 			<c-el>
-				<span class="motion">&{motion}</span>
+				<span class="motion">{motion}</span>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
@@ -67,7 +67,7 @@ describe('requestContext() — reactive attribute referencing the context signal
 		expose({})
 		<>
 			<c-el>
-				<span class={() => theme.get()}>&{theme}</span>
+				<span class={() => theme.get()}>{theme}</span>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
@@ -137,7 +137,7 @@ describe('provideContexts() — provider side', () => {
 		expose({ count: count.get })
 		provideContexts(['count'])
 		<>
-			<c-el>&{count}</c-el>
+			<c-el>{count}</c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`
@@ -168,7 +168,7 @@ describe('provideContexts() — provider side', () => {
 			expose({ count: count.get })
 			const p = provideContexts(['count'])
 			<>
-				<c-el>&{count}</c-el>
+				<c-el>{count}</c-el>
 				<style>c-el { color: red }</style>
 			</>
 		}`

@@ -14,7 +14,7 @@
  * - `value={() => host.value}` mirrors the host prop onto the input — lowers
  *   to `watch(() => host.value, bindProperty(input, 'value'))` and
  *   server-renders from the root attribute expression
- * - `&{'validationMessage'}` is the managed-prop lazy child (only exists on
+ * - `{host.validationMessage}` is the managed-prop lazy child (only exists on
  *   FormFactoryContext — the emitted `watch('validationMessage', …)` typechecks
  *   only when formAssociated() leads the extensions array)
  */
@@ -161,11 +161,11 @@ export function FormTextbox(
 			</div>
 			@if (validatable) {
 				<p class="error" role="alert" aria-live="assertive" id={errorId}>
-					&{'validationMessage'}
+					{host.validationMessage}
 				</p>
 			}
 			@if (description) {
-				<p class="description" aria-live="polite" id={descriptionId} data-remaining={description}>&{descriptionCell}</p>
+				<p class="description" aria-live="polite" id={descriptionId} data-remaining={description}>{descriptionCell}</p>
 			}
 		</form-textbox>
 

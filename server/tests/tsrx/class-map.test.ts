@@ -16,7 +16,7 @@ describe('class-map on a descendant native element', () => {
 		expose({})
 		<>
 			<c-el>
-				<p>&{open}</p>
+				<p>{open}</p>
 				<span class={() => ({ open: open.get(), disabled: false })}>ok</span>
 			</c-el>
 			<style>c-el { color: red }</style>
@@ -54,7 +54,7 @@ describe('class-map on the component root (targets host)', () => {
 		expose({})
 		<>
 			<c-el class={() => ({ open: open.get(), disabled: false })}>
-				<p>&{open}</p>
+				<p>{open}</p>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
@@ -90,7 +90,7 @@ describe('class-map on a descendant custom element bypasses the reactive-attribu
 		expose({})
 		<>
 			<c-el>
-				<p>&{open}</p>
+				<p>{open}</p>
 				<sub-el class={() => ({ open: open.get() })}>ok</sub-el>
 			</c-el>
 			<style>c-el { color: red }</style>

@@ -11,8 +11,8 @@
  * template can't represent "sometimes no span at all" — `label`/`badge`
  * become genuine Parser-exposed, attribute-driven, externally-settable
  * props (`asString`/`asBoolean`) instead, mirrored reactively onto the
- * `<span>`s via `&{'label'}` — the string-key form `watch('label', …)`
- * already uses for managed form props (`&{'validationMessage'}`), just not
+ * `<span>`s via `{host.label}` — the string-key form `watch('label', …)`
+ * already uses for managed form props (`{host.validationMessage}`), just not
  * form-specific: any Parser-exposed prop is `keyof P` for the real
  * `WatchHelper` (`src/helpers/reactive.ts`) — `badge` stays optional via
  * `@if (badge)`.
@@ -52,9 +52,9 @@ export function BasicButton(
 		<>
 			<basic-button {label} {badge} {disabled}>
 				<button type="button" disabled={() => host.disabled}>
-					<span class="label">&{'label'}</span>
+					<span class="label">{host.label}</span>
 					@if (badge) {
-						<span class="badge">&{'badge'}</span>
+						<span class="badge">{host.badge}</span>
 					}
 				</button>
 			</basic-button>

@@ -28,6 +28,8 @@ export type DiagnosticCode =
 	| 'TSRX015' // requestContext() called with other than exactly two arguments
 	| 'TSRX016' // requestContext()'s fallback argument is not server-known
 	| 'TSRX017' // template child whose reactivity cannot be traced — needs a thunk
+	| 'TSRX018' // retired `&{}` lazy-child sigil
+	| 'TSRX019' // string-literal prop name in child position — write host.<prop>
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -386,6 +388,41 @@ export const diagnostic = {
 		error(
 			'TSRX017',
 			`${names.map(n => `\`${n}\``).join(', ')} ${names.length > 1 ? 'are' : 'is'} passed into a call the compiler cannot see inside, so it cannot tell whether this child is reactive. Wrap it in an explicit thunk: \`{() => ${exprText}}\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * The retired `&{expr}` lazy-child sigil (LT-052). In TSRX, `&{` and `&[`
+	 * introduce lazy DESTRUCTURING patterns in binding position; there is no
+	 * `&{}` template-child form. Reactivity is decided by the lift rule
+	 * (`reactivity.ts`) now, so the sigil carries no information.
+	 */
+	retiredLazySigil: (
+		source: string,
+		offset: number | undefined,
+		exprText: string,
+	) =>
+		error(
+			'TSRX018',
+			`\`&{…}\` is not a TSRX template child — \`&{\` and \`&[\` introduce lazy destructuring patterns in binding position. Reactivity is now decided by analysis, so drop the sigil: \`{${exprText}}\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A string literal naming an exposed or managed prop in child position
+	 * (LT-052). This used to mean "watch this prop by name" — but only
+	 * because the `&` sigil disambiguated it from ordinary text. Without the
+	 * sigil `{'label'}` is indistinguishable from the literal string, so the
+	 * prop read must be written explicitly.
+	 */
+	stringLiteralPropChild: (
+		source: string,
+		offset: number | undefined,
+		prop: string,
+	) =>
+		error(
+			'TSRX019',
+			`\`{'${prop}'}\` names a prop but reads as the literal string "${prop}" — the \`&\` sigil that used to distinguish them is gone (LT-052). Write the read explicitly: \`{host.${prop}}\`.`,
 			lineOf(source, offset),
 		),
 }

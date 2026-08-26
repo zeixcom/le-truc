@@ -79,7 +79,7 @@ export default defineComponent<FormTextboxProps>(
 			on(button, 'click', () => host.clear())
 		}
 		if (p2) {
-			watch('validationMessage', bindText(p2))
+			watch(() => host.validationMessage, bindText(p2))
 		}
 		if (p) {
 			watch(descriptionCell, bindText(p))

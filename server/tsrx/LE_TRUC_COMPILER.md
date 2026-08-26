@@ -107,7 +107,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
-| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–017, message factories | — (leaf) |
+| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–019, message factories | — (leaf) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 294 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
@@ -167,7 +167,7 @@ see § 4.4.
 | --- | --- | --- |
 | `element` | `tag, attrs: AttributeIR[], children` | Lowered JSX element; `<style>` becomes a placeholder element |
 | `text` | `value` | JSX text after whitespace collapse |
-| `expr` | `expr, exprText, lazy` | A child expression. `lazy` marks it reactive, decided by `reactivity.ts`'s lift rule (LT-051): a lexically visible signal or `host.<prop>` read lifts, an expression over server args stays static, and a signal escaping into an opaque call is TSRX017. `&{expr}` still forces `lazy` (LT-052 removes the sigil); it is detected as a `JSXText` ending in `&` immediately before the container |
+| `expr` | `expr, exprText, lazy` | A child expression. `lazy` marks it reactive, decided by `reactivity.ts`'s lift rule (LT-051): a lexically visible signal or `host.<prop>` read lifts, an expression over server args stays static, and a signal escaping into an opaque call is TSRX017. Two names are reactive *by position* rather than declaration — a `@catch` arm's error param and a reactive `@for`'s item binding — and are marked in `lowerTry`/`lowerFor` via `markPositionallyReactive`. The `&{expr}` sigil is retired (LT-052): it is TSRX018, and a string literal naming a prop is TSRX019 (`{host.<prop>}` instead) |
 | `if` | `test(Text), then, alternate` | Server-known condition; server renders taken branch, client union-addresses both roots |
 | `switch` | `discriminant(Text), cases[]` | Mutually exclusive arms |
 | `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ **async boundary** (sub-design 13): all three arms render, `hidden`-toggled |

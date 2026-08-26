@@ -3,7 +3,7 @@
  * in sync from an `<input>` via the event-handler state-update shorthand
  * (`onInput={() => ({ subject: input.value || fallback })}`, the same shape
  * `form-checkbox.tsrx`'s `onChange` already proves), mirrored into the
- * `<output>` via the string-key lazy child `&{'subject'}` (ADR 0023 examples
+ * `<output>` via the string-key lazy child `{host.subject}` (ADR 0023 examples
  * migration).
  *
  * Deviation from the hand-written `basic-hello.ts`: the hand-written version
@@ -47,7 +47,7 @@ export function BasicHello({ subject = 'World' }: { subject?: string })
 					ref={input}
 					onInput={() => ({ subject: input.value || 'World' })}
 				/>
-				<p>Hello, <output for="subject">&{'subject'}</output>!</p>
+				<p>Hello, <output for="subject">{host.subject}</output>!</p>
 			</basic-hello>
 
 			<style>

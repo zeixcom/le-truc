@@ -48,7 +48,7 @@ export function ModuleList({}: {})
 				<ul data-container>
 					@for (const item of items; key k) {
 						<li>
-							<span>&{item}</span>
+							<span>{item}</span>
 							<basic-button class="remove">
 								<button
 									type="button"

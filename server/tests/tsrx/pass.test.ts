@@ -114,7 +114,7 @@ describe('pass={{ }} on raw dashed custom-element tags', () => {
 		expose({ value: value.get })
 		<>
 			<c-el>
-				<span>&{value}</span>
+				<span>{value}</span>
 				<basic-child pass={{ value: { get: () => value.get(), set: v => value.set(v) } }}></basic-child>
 			</c-el>
 			<style>c-el { color: red }</style>

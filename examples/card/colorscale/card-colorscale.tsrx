@@ -97,8 +97,8 @@ export function CardColorscale({ label }: { label: string })
 					<li class="lighten20"></li>
 					<li class="base">
 						<span class="label">
-							<strong>&{'label'}</strong>
-							<small>&{() => formatHex(host.value)}</small>
+							<strong>{host.label}</strong>
+							<small>{() => formatHex(host.value)}</small>
 						</span>
 					</li>
 					<li class="darken20"></li>

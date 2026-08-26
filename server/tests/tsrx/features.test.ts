@@ -216,11 +216,11 @@ describe('@pending — async boundaries (ADR 0023 sub-design 13, LT-012)', () =>
 		<>
 			<c-el>
 				@try {
-					<div class="content">&{data}</div>
+					<div class="content">{data}</div>
 				} @pending {
 					<p class="loading">Loading</p>
 				} @catch (e) {
-					<p class="error">&{e.message}</p>
+					<p class="error">{e.message}</p>
 				}
 			</c-el>
 			<style>c-el { color: red }</style>
@@ -236,7 +236,7 @@ describe('@pending — async boundaries (ADR 0023 sub-design 13, LT-012)', () =>
 		<>
 			<c-el>
 				@try {
-					<div class="content">&{data}</div>
+					<div class="content">{data}</div>
 				} @pending {
 					<p class="loading">Loading</p>
 				}
@@ -265,7 +265,7 @@ describe('@pending — async boundaries (ADR 0023 sub-design 13, LT-012)', () =>
 				} @pending {
 					<p class="loading">Loading</p>
 				} @catch (e) {
-					<p class="error">&{e.message}</p>
+					<p class="error">{e.message}</p>
 				}
 			</c-el>
 			<style>c-el { color: red }</style>
@@ -399,8 +399,8 @@ describe('createMemo — recognized signal constructor (LT-025)', () => {
 		const doubled = createMemo(() => value.get() * 2)
 		<>
 			<c-el>
-				<span class="value">&{value}</span>
-				<span class="doubled">&{doubled}</span>
+				<span class="value">{value}</span>
+				<span class="doubled">{doubled}</span>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
@@ -428,7 +428,7 @@ describe('createMemo — recognized signal constructor (LT-025)', () => {
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
 		<>
 			<c-el>
-				<span>&{lowerFilter}</span>
+				<span>{lowerFilter}</span>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
@@ -538,7 +538,7 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 				<ul data-container>
 					<li class="header">static header</li>
 					@for (const item of items; key k) {
-						<li><span>&{item}</span></li>
+						<li><span>{item}</span></li>
 					}
 				</ul>
 			</c-el>
@@ -565,12 +565,12 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 			<c-el>
 				<ul data-a>
 					@for (const item of a; key k) {
-						<li><span>&{item}</span></li>
+						<li><span>{item}</span></li>
 					}
 				</ul>
 				<ul data-b>
 					@for (const item of b; key k2) {
-						<li><span>&{item}</span></li>
+						<li><span>{item}</span></li>
 					}
 				</ul>
 			</c-el>

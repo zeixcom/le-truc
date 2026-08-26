@@ -55,7 +55,7 @@ export function BasicPluralize(
 			<basic-pluralize {count} {lang} {ordinal}>
 				<p class="none" hidden={() => host.count !== 0}>Well done, all done!</p>
 				<p class="some" hidden={() => host.count === 0}>
-					<span class="count">&{'count'}</span>
+					<span class="count">{host.count}</span>
 					task
 					<span class="zero" hidden={() => category.get() !== 'zero'}>s</span>
 					<span class="one" hidden={() => category.get() !== 'one'}></span>

@@ -70,7 +70,7 @@ export function BasicGauge(
 					ref={numberEl}
 					pass={{ value: () => host.value }}
 				/>
-				<small class="label">&{qualification.get().label}</small>
+				<small class="label">{qualification.get().label}</small>
 			</basic-gauge>
 
 			<style>

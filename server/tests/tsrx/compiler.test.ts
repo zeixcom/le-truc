@@ -163,7 +163,7 @@ describe('template classification', () => {
 				const n = createCell(1)
 				expose({ n: n.get })
 				<>
-					<c-el><span>&{n}</span></c-el>
+					<c-el><span>{n}</span></c-el>
 					<style>c-el { color: red }</style>
 				</>
 			}`,
@@ -305,14 +305,14 @@ export function C({ value = '' }: { value?: string })
 	})
 
 	test('managed lazy child requires form config to be more than text', () => {
-		// Without config.form, `&{'validationMessage'}` is an ordinary
+		// Without config.form, `{host.validationMessage}` is an ordinary
 		// string-literal child — the managed-prop lowering never applies.
 		const { component } = compileSource(
 			`export function C({}: {})
 			@{
 				expose({})
 				<>
-					<c-el><p>&{'validationMessage'}</p></c-el>
+					<c-el><p>{host.validationMessage}</p></c-el>
 					<style>c-el { color: red }</style>
 				</>
 			}`,
@@ -321,6 +321,9 @@ export function C({ value = '' }: { value?: string })
 		expect(component?.config).toBeNull()
 		const p = firstElementChild(component?.root)
 		const expr = p?.children.find(c => c.kind === 'expr')
-		expect(expr).toMatchObject({ lazy: true, exprText: "'validationMessage'" })
+		expect(expr).toMatchObject({
+			lazy: true,
+			exprText: 'host.validationMessage',
+		})
 	})
 })

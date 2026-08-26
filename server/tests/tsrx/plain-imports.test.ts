@@ -51,7 +51,7 @@ describe('plain import used only client-side', () => {
 		expose({ value: asNumber() })
 		<>
 			<c-el style={() => ({ '--x': clientOnlyHelper(host.value) })}>
-				<p>&{host.value}</p>
+				<p>{host.value}</p>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
@@ -72,17 +72,23 @@ describe('plain import used only client-side', () => {
 describe('plain import used both server- and client-side', () => {
 	// `bothHelper` is used inside a plain setup const referencing only a
 	// server-known param — component.setup is emitted verbatim into both
-	// generated modules, and the const is also referenced from a lazy child
-	// (always client-emitted), so this import is needed in both.
+	// generated modules — and the const is also read from a reactive thunk,
+	// which the client module emits, so this import is needed in both.
+	//
+	// The signal (rather than a plain const) is load-bearing since LT-052: a
+	// plain const over a server arg is not reactive, so a bare child of it
+	// is correctly static and the client would need no code at all. As a
+	// signal, the client re-emits the initializer to seed it, which is what
+	// pulls `bothHelper` into the client module.
 	const source = `import { bothHelper } from '../../_common/bothHelper.ts'
 
 	export function C({ count }: { count: number })
 	@{
-		const formatted = bothHelper(count)
-		expose({})
+		const formatted = createCell(bothHelper(count))
+		expose({ formatted: formatted.get })
 		<>
 			<c-el>
-				<p>&{formatted}</p>
+				<p>{formatted}</p>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>

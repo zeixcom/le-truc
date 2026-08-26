@@ -10,6 +10,7 @@
 import type { TsrxNode } from '@tsrx/core'
 import {
 	hostPropOf,
+	isNode,
 	MANAGED_TEXT_PROPS,
 	nodeType,
 	objectKeys,
@@ -37,6 +38,27 @@ import {
  * is server-rendered only (LT-025); a reactive `html={() => …}` lowers to a
  * `dangerouslyBindInnerHTML` watch, same as any other reactive attribute.
  */
+/**
+ * The managed form prop a reactive child reads, or null. Since LT-052 that
+ * is a `host.<prop>` member read; the retired `{'<prop>'}` string-literal
+ * spelling is still recognised so a stale source reports the managed-prop
+ * message instead of a downstream type error.
+ */
+const managedPropRead = (expr: TsrxNode): string | null => {
+	if (nodeType(expr) === 'Literal' && typeof expr.value === 'string') {
+		const prop = String(expr.value)
+		return MANAGED_TEXT_PROPS.has(prop) ? prop : null
+	}
+	if (nodeType(expr) !== 'MemberExpression' || expr.computed) return null
+	const obj = expr.object
+	if (!isNode(obj) || obj.type !== 'Identifier' || String(obj.name) !== 'host')
+		return null
+	const prop = expr.property
+	if (!isNode(prop) || prop.type !== 'Identifier') return null
+	const name = String(prop.name)
+	return MANAGED_TEXT_PROPS.has(name) ? name : null
+}
+
 const isClientConstructAttr = (a: AttributeIR): boolean =>
 	a.kind !== 'static' &&
 	a.kind !== 'server' &&
@@ -233,22 +255,20 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		}
 		for (const child of el.children) {
 			if (child.kind !== 'expr' || !child.lazy) continue
-			// A managed form prop as a lazy child requires the widened
+			// A managed form prop as a reactive child requires the widened
 			// FormFactoryContext — formAssociated() must lead the extensions.
+			// Since LT-052 the spelling is a `host.<prop>` read; the retired
+			// string-literal form is still matched so a stale source gets this
+			// message rather than a confusing downstream type error.
+			const managed = managedPropRead(child.expr)
 			if (
-				nodeType(child.expr) === 'Literal' &&
-				typeof (child.expr as TsrxNode).value === 'string'
-			) {
-				const prop = String((child.expr as TsrxNode).value)
-				if (
-					MANAGED_TEXT_PROPS.has(prop) &&
-					!component.exposeProps.has(prop) &&
-					!component.config?.form
+				managed !== null &&
+				!component.exposeProps.has(managed) &&
+				!component.config?.form
+			)
+				diagnostics.push(
+					diagnostic.managedPropWithoutForm(source, child.node.start, managed),
 				)
-					diagnostics.push(
-						diagnostic.managedPropWithoutForm(source, child.node.start, prop),
-					)
-			}
 			collectAmbient(child.expr)
 			sink.push({
 				kind: 'watch-text',

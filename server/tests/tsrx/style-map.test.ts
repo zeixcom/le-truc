@@ -15,7 +15,7 @@ describe('style-map on a descendant native element', () => {
 		expose({})
 		<>
 			<c-el>
-				<p>&{color}</p>
+				<p>{color}</p>
 				<span style={() => ({ color: color.get(), '--gap': null })}>ok</span>
 			</c-el>
 			<style>c-el { color: red }</style>
@@ -53,7 +53,7 @@ describe('style-map on the component root (targets host)', () => {
 		expose({})
 		<>
 			<c-el style={() => ({ color: color.get(), '--gap': null })}>
-				<p>&{color}</p>
+				<p>{color}</p>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
@@ -89,7 +89,7 @@ describe('style-map on a descendant custom element bypasses the reactive-attribu
 	expose({})
 	<>
 		<c-el>
-			<p>&{color}</p>
+			<p>{color}</p>
 			<sub-el style={() => ({ '--x': color.get() })}>ok</sub-el>
 		</c-el>
 		<style>c-el { color: red }</style>

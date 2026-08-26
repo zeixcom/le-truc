@@ -9,7 +9,7 @@
  * - `expose()` declares the client interface on top of HTMLElement.
  * - Signals are declared in the server function (CE v2 name: createCell).
  * - Event handlers attach to JSX elements directly (`onClick={…}`).
- * - Reactive children: `&{signal}` (grammar-native lazy read).
+ * - Reactive children: `{signal}` (grammar-native lazy read).
  * - The client never sees `start`: it harvests `count` from the <span> the
  *   server rendered (ADR 0003 preserved).
  */
@@ -41,7 +41,7 @@ export function BasicCounter({ start = 42 }: { start?: number })
 		<>
 			<basic-counter>
 				<button type="button" onClick={() => count.set(count.get() + 1)}>
-					💐 <span>&{count}</span>
+					💐 <span>{count}</span>
 				</button>
 			</basic-counter>
 

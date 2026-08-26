@@ -151,7 +151,7 @@ export function FormCombobox(
 			@if (description) {
 				<p class="description" aria-live="polite" id={descriptionId}>{description}</p>
 			}
-			<p class="error" role="alert" aria-live="assertive">&{'validationMessage'}</p>
+			<p class="error" role="alert" aria-live="assertive">{host.validationMessage}</p>
 		</form-combobox>
 
 		<style>
