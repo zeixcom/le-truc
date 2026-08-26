@@ -127,37 +127,77 @@ export const runLoops = (ctx: AnalysisContext): void => {
 		}
 
 		const effectsPlan: LoopEffectPlan[] = []
-		for (const attr of output.attrs) {
-			if (attr.kind === 'reactive') {
-				checkClientNames(attr.thunk, `Reactive attribute \`${attr.name}\``)
-				effectsPlan.push({
-					kind: 'watch-attr',
-					attr: attr.name,
-					thunkText: attr.thunkText,
-					coerceToString: returnsNumber(attr.thunk.body),
-					sourceStart: attr.thunk.start,
-					sourceEnd: attr.thunk.end,
-				})
-			} else if (attr.kind === 'class-map') {
-				checkClientNames(attr.object, 'Reactive class map')
-				effectsPlan.push({
-					kind: 'watch-class',
-					keys: objectKeys(attr.object, { allowStrings: false }),
-					thunkText: attr.thunkText,
-					sourceStart: attr.thunk.start,
-					sourceEnd: attr.thunk.end,
-				})
-			} else if (attr.kind === 'event') {
-				checkClientNames(attr.handler, `Event attribute \`${attr.name}\``)
-				effectsPlan.push({
-					kind: 'on',
-					event: attr.event,
-					handlerText: attr.handlerText,
-					sourceStart: attr.handler.start,
-					sourceEnd: attr.handler.end,
-				})
+		const collectAttrs = (el: ElementNode, target: string | null): void => {
+			for (const attr of el.attrs) {
+				if (attr.kind === 'reactive') {
+					checkClientNames(attr.thunk, `Reactive attribute \`${attr.name}\``)
+					effectsPlan.push({
+						kind: 'watch-attr',
+						attr: attr.name,
+						thunkText: attr.thunkText,
+						coerceToString: returnsNumber(attr.thunk.body),
+						sourceStart: attr.thunk.start,
+						sourceEnd: attr.thunk.end,
+						target,
+					})
+				} else if (attr.kind === 'class-map') {
+					checkClientNames(attr.object, 'Reactive class map')
+					effectsPlan.push({
+						kind: 'watch-class',
+						keys: objectKeys(attr.object, { allowStrings: false }),
+						thunkText: attr.thunkText,
+						sourceStart: attr.thunk.start,
+						sourceEnd: attr.thunk.end,
+						target,
+					})
+				} else if (attr.kind === 'event') {
+					checkClientNames(attr.handler, `Event attribute \`${attr.name}\``)
+					effectsPlan.push({
+						kind: 'on',
+						event: attr.event,
+						handlerText: attr.handlerText,
+						sourceStart: attr.handler.start,
+						sourceEnd: attr.handler.end,
+						target,
+					})
+				}
 			}
 		}
+		collectAttrs(output, null)
+		// LT-037: descendants of the loop's output root (nested inside its
+		// own subtree — a native <input> inside a wrapping <label>, etc.)
+		// get their reactive attrs/events addressed too, via a selector
+		// resolved WITHIN the output's own subtree (never the whole
+		// template — the same element shape repeats once per item, so a
+		// selector unique against the global template would be meaningless;
+		// `resolveSelectorIn(output, descendant)` scopes the uniqueness
+		// count to just this one item's rendered markup instead).
+		const collectDescendants = (el: ElementNode): void => {
+			for (const child of el.children) {
+				if (child.kind !== 'element') continue
+				const hasConstruct = child.attrs.some(
+					a =>
+						a.kind === 'reactive' ||
+						a.kind === 'class-map' ||
+						a.kind === 'event',
+				)
+				if (hasConstruct) {
+					const resolved = resolveSelectorScoped(output, child)
+					if (!resolved.unique) {
+						diagnostics.push(
+							diagnostic.unaddressableElement(
+								source,
+								child.node.start,
+								`No unique selector for <${child.tag}> inside the @for output <${output.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
+							),
+						)
+					}
+					collectAttrs(child, resolved.selector)
+				}
+				collectDescendants(child)
+			}
+		}
+		collectDescendants(output)
 		const gatedLazyChild = (node: TemplateNode): unknown => {
 			if (node.kind === 'expr' && node.lazy) {
 				diagnostics.push(

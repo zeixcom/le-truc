@@ -70,6 +70,33 @@ const buildSelector = (
 	return element.tag
 }
 
+/**
+ * All discriminator candidates in priority order (`type`, `class`, every
+ * `data-*`) — plural, unlike `buildSelector('discriminator', …)`'s single
+ * pick. Two sibling `<button type="button">`s that only differ by `class`
+ * (e.g. decrement/increment) share the same `type` clause, so picking just
+ * the first present discriminator name (the original single-candidate
+ * behavior) produced a non-unique selector and never got to try `class` at
+ * all — `resolveSelectorIn` needs every candidate to fall through to, not
+ * just one.
+ */
+const discriminatorCandidates = (element: ElementNode): string[] => {
+	const attrs = staticAttrs(element)
+	const clause = (name: string, value: string): string => {
+		const attr = `[${name}="${value}"]`
+		return element.tag === 'div' ? attr : `${element.tag}${attr}`
+	}
+	const names = [
+		...['type', 'class'].filter(
+			name => attrs.has(name) && attrs.get(name) !== null,
+		),
+		...[...attrs.keys()].filter(
+			name => name.startsWith('data-') && attrs.get(name) !== null,
+		),
+	]
+	return names.map(name => clause(name, attrs.get(name) as string))
+}
+
 /** Does `candidate` structurally match a synthesized selector string? */
 const matchesSelector = (candidate: ElementNode, selector: string): boolean => {
 	const match = selector.match(
@@ -210,7 +237,7 @@ export const resolveSelectorIn = (
 	const candidates = [
 		buildSelector(element, 'role'),
 		buildSelector(element, 'bare'),
-		buildSelector(element, 'discriminator'),
+		...discriminatorCandidates(element),
 	].filter((s): s is string => s !== null)
 	for (const selector of candidates) {
 		if (countForSelector(tree, selector) === 1)

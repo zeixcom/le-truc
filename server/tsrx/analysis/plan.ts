@@ -110,6 +110,15 @@ export type LoopEffectPlan =
 			/** Source range of `thunkText` (LT-011 span table). */
 			sourceStart: number | undefined
 			sourceEnd: number | undefined
+			/**
+			 * Scoped selector (resolved within the loop output's own subtree,
+			 * LT-037) of the descendant this construct lives on, or `null` for
+			 * the output root itself. Non-null targets are queried once per
+			 * item (`itemParam.querySelector(target)`) and cached under a
+			 * generated local, so multiple constructs on the same descendant
+			 * share one query.
+			 */
+			target: string | null
 	  }
 	| {
 			kind: 'watch-class'
@@ -117,6 +126,7 @@ export type LoopEffectPlan =
 			thunkText: string
 			sourceStart: number | undefined
 			sourceEnd: number | undefined
+			target: string | null
 	  }
 	| {
 			kind: 'on'
@@ -124,6 +134,7 @@ export type LoopEffectPlan =
 			handlerText: string
 			sourceStart: number | undefined
 			sourceEnd: number | undefined
+			target: string | null
 	  }
 
 /** One `@for` over server data lowered to `each()`. */

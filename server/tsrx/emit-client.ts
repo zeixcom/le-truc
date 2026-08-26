@@ -124,6 +124,35 @@ const emitEachBlock = (
 	append(`each(${plan.collection}, ${plan.itemParam} => {`, depth)
 	for (const rebinding of plan.rebindings)
 		append(`const ${rebinding.name} = ${rebinding.expr}`, depth + 1)
+	// LT-037: constructs on descendants of the loop's output root (rather
+	// than the root itself) carry a `target` selector, resolved within the
+	// item's own subtree. Query each distinct descendant once per item and
+	// cache it under a generated local, so N constructs on the same nested
+	// element (e.g. an <input>'s `checked` + `tabIndex` + `onChange`) share
+	// one `querySelector` call instead of repeating it per construct.
+	const taken = new Set<string>([
+		plan.itemParam,
+		...plan.rebindings.map(r => r.name),
+	])
+	const targetVars = new Map<string, string>()
+	for (const effect of plan.effects) {
+		if (effect.target === null || targetVars.has(effect.target)) continue
+		const tagMatch = effect.target.match(/^[a-z][a-z0-9-]*/)
+		const base = sanitizeVarName(tagMatch ? tagMatch[0] : 'el')
+		let name = base
+		let i = 1
+		while (taken.has(name)) name = `${base}${++i}`
+		taken.add(name)
+		targetVars.set(effect.target, name)
+		append(
+			`const ${name} = ${plan.itemParam}.querySelector('${effect.target}')!`,
+			depth + 1,
+		)
+	}
+	const targetOf = (target: string | null): string =>
+		target === null
+			? plan.itemParam
+			: (targetVars.get(target) ?? plan.itemParam)
 	for (const effect of plan.effects) {
 		if (effect.kind === 'watch-attr') {
 			imports.add('watch')
@@ -132,7 +161,7 @@ const emitEachBlock = (
 				? `() => String((${effect.thunkText})())`
 				: effect.thunkText
 			append(
-				`watch(${source}, bindAttribute(${plan.itemParam}, '${effect.attr}'))`,
+				`watch(${source}, bindAttribute(${targetOf(effect.target)}, '${effect.attr}'))`,
 				depth + 1,
 				sliceOf(effect.thunkText, effect.sourceStart),
 			)
@@ -141,7 +170,7 @@ const emitEachBlock = (
 			imports.add('bindClass')
 			for (const key of effect.keys) {
 				append(
-					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${plan.itemParam}, '${key}'))`,
+					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${targetOf(effect.target)}, '${key}'))`,
 					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
@@ -149,7 +178,7 @@ const emitEachBlock = (
 		} else {
 			imports.add('on')
 			append(
-				`on(${plan.itemParam}, '${effect.event}', ${effect.handlerText})`,
+				`on(${targetOf(effect.target)}, '${effect.event}', ${effect.handlerText})`,
 				depth + 1,
 				sliceOf(effect.handlerText, effect.sourceStart),
 			)
