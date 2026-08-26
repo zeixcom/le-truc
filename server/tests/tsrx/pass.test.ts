@@ -190,43 +190,26 @@ describe('truc:pass — namespaced host-owned attribute (LT-053)', () => {
 		</>
 	}`
 
-	test('truc:pass lowers exactly like the bare spelling, with no warning', () => {
+	test('truc:pass lowers to a pass() binding', () => {
 		const { component, diagnostics } = compileComponent(
 			source('truc:pass'),
 			'examples/card/c.tsrx',
 			new Set(['child-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX021')).toEqual([])
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
 		expect(component?.clientCode).toContain('pass(')
 	})
 
-	test('bare pass still lowers, but warns TSRX021', () => {
-		const { component, diagnostics } = compileComponent(
+	// Not left to fall through: `pass={{ … }}` would classify as a server
+	// attribute and render `pass="[object Object]"` — silently wrong markup.
+	test('the bare pass spelling is a hard error naming the replacement', () => {
+		const { diagnostics } = compileComponent(
 			source('pass'),
 			'examples/card/c.tsrx',
 			new Set(['child-el']),
 		)
-		const dep = diagnostics.filter(d => d.code === 'TSRX021')
-		expect(dep).toHaveLength(1)
-		expect(dep[0]?.severity).toBe('warning')
-		expect(dep[0]?.message).toContain('truc:pass')
-		// A warning, not a gate: the component still compiles this cycle.
-		expect(component?.clientCode).toContain('pass(')
-	})
-
-	test('a user prop named pass on a native element is untouched', () => {
-		const { diagnostics } = compileComponent(
-			`export function C({}: {})
-			@{
-				expose({})
-				<>
-					<c-el><p data-pass="x">ok</p></c-el>
-					<style>c-el { color: red }</style>
-				</>
-			}`,
-			'examples/card/c.tsrx',
-			new Set(),
-		)
-		expect(diagnostics.filter(d => d.code === 'TSRX021')).toEqual([])
+		const errs = diagnostics.filter(d => d.severity === 'error')
+		expect(errs).toHaveLength(1)
+		expect(errs[0]?.message).toContain('truc:pass')
 	})
 })

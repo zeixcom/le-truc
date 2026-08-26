@@ -108,6 +108,9 @@ export const classifyPassEntries = (
 const PASS_ATTR = 'truc:pass'
 const LEGACY_PASS_ATTR = 'pass'
 
+const renamedPassReason =
+	'`pass={{ … }}` is now `truc:pass={{ … }}` — host-owned attributes are namespaced so they cannot collide with a user prop called `pass`.'
+
 /** Classify one JSXAttribute into the attribute IR. */
 export const classifyAttribute = (
 	ctx: ExtractContext,
@@ -115,15 +118,19 @@ export const classifyAttribute = (
 ): AttributeIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
 	const value = attr.value
-	if (name === PASS_ATTR || name === LEGACY_PASS_ATTR) {
-		if (name === LEGACY_PASS_ATTR)
-			ctx.diagnostics.push(
-				diagnostic.deprecatedPassAttribute(ctx.source, attr.start),
-			)
+	if (name === PASS_ATTR) {
 		const entries = classifyPassEntries(ctx, attr)
 		if ('reason' in entries) return entries
 		return { kind: 'pass', entries }
 	}
+	// The pre-LT-053 spelling. Caught explicitly rather than left to fall
+	// through: `pass={{ … }}` would classify as a server attribute and render
+	// `pass="[object Object]"` into the markup — silently wrong output, the
+	// worst failure mode this compiler has. Every spelling is rejected, not
+	// just the expression form: `pass` is not an HTML attribute, so there is
+	// no legitimate author use to preserve.
+	if (name === LEGACY_PASS_ATTR)
+		return { kind: 'invalid', reason: renamedPassReason }
 	if (name === 'ref') {
 		const target =
 			isNode(value) && value.type === 'JSXExpressionContainer'
@@ -272,15 +279,19 @@ export const classifyComposeAttribute = (
 ): ComposeAttrIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
 	const value = attr.value
-	if (name === PASS_ATTR || name === LEGACY_PASS_ATTR) {
-		if (name === LEGACY_PASS_ATTR)
-			ctx.diagnostics.push(
-				diagnostic.deprecatedPassAttribute(ctx.source, attr.start),
-			)
+	if (name === PASS_ATTR) {
 		const entries = classifyPassEntries(ctx, attr)
 		if ('reason' in entries) return entries
 		return { kind: 'pass', entries }
 	}
+	// The pre-LT-053 spelling. Caught explicitly rather than left to fall
+	// through: `pass={{ … }}` would classify as a server attribute and render
+	// `pass="[object Object]"` into the markup — silently wrong output, the
+	// worst failure mode this compiler has. Every spelling is rejected, not
+	// just the expression form: `pass` is not an HTML attribute, so there is
+	// no legitimate author use to preserve.
+	if (name === LEGACY_PASS_ATTR)
+		return { kind: 'invalid', reason: renamedPassReason }
 	if (name === 'ref') {
 		const target =
 			isNode(value) && value.type === 'JSXExpressionContainer'

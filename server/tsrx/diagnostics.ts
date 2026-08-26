@@ -31,7 +31,6 @@ export type DiagnosticCode =
 	| 'TSRX018' // retired `&{}` lazy-child sigil
 	| 'TSRX019' // string-literal prop name in child position — write host.<prop>
 	| 'TSRX020' // lazy destructuring pattern — not applicable to the Le Truc profile
-	| 'TSRX021' // bare `pass` attribute — renamed to the namespaced `truc:pass`
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -435,19 +434,6 @@ export const diagnostic = {
 	 * produce markup at render time, where there is nothing to defer to.
 	 * Unsupported in this host profile rather than silently half-working.
 	 */
-	/**
-	 * The bare `pass` special attribute (LT-053). Host-owned attributes are
-	 * namespaced so they cannot collide with a user prop of the same name.
-	 * A warning for one cycle — bare `pass` is load-bearing across the
-	 * migrated corpus (LT-016/LT-017) — then an error.
-	 */
-	deprecatedPassAttribute: (source: string, offset: number | undefined) =>
-		warning(
-			'TSRX021',
-			'`pass={{ … }}` is renamed to `truc:pass={{ … }}` — host-owned attributes are namespaced so they cannot collide with a user prop called `pass`. The bare spelling still works this cycle and is removed next.',
-			lineOf(source, offset),
-		),
-
 	lazyDestructuring: (
 		source: string,
 		offset: number | undefined,

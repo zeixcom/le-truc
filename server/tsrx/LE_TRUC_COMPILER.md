@@ -107,7 +107,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
-| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–021, message factories | — (leaf) |
+| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–020, message factories | — (leaf) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 294 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
@@ -176,7 +176,7 @@ see § 4.4.
 
 **`AttributeIR`** — the attribute IR union: `static` (name + literal value),
 `server` (expression rendered at render time), `reactive` (thunk → `watch()`),
-`pass` (`truc:pass` entries → `pass()`; the bare `pass` spelling warns TSRX021 for one cycle, LT-053), `class-map` / `style-map` (object-literal-bodied
+`pass` (`truc:pass` entries → `pass()`; the bare `pass` spelling is TSRX006, LT-053), `class-map` / `style-map` (object-literal-bodied
 thunks, LT-028/031), `html` (dynamic rendering, sanitized), `event` (`on*`,
 stripped server-side), `ref`.
 
