@@ -50,8 +50,8 @@ export function FormCheckbox(
 			<label>
 				<input
 					type="checkbox"
-					checked={'checked'}
-					disabled={'disabled'}
+					checked={() => host.checked}
+					disabled={() => host.disabled}
 					ref={checkbox}
 					onChange={() => ({ checked: checkbox.checked })}
 				/>
