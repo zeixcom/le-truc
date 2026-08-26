@@ -68,7 +68,7 @@ export function BasicGauge(
 					{value}
 					options={'{"style":"percent","maximumFractionDigits":1}'}
 					ref={numberEl}
-					pass={{ value: () => host.value }}
+					truc:pass={{ value: () => host.value }}
 				/>
 				<small class="label">{qualification.get().label}</small>
 			</basic-gauge>

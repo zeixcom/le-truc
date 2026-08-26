@@ -92,7 +92,7 @@ export function FormInplaceEdit(
 					name={`${name}-edit`}
 					label="Edit"
 					ref={textbox}
-					pass={{ value: () => host.value }}
+					truc:pass={{ value: () => host.value }}
 				/>
 			</div>
 			<button

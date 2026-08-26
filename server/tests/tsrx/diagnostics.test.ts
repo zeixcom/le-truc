@@ -472,7 +472,7 @@ describe('rewrite-rule enforcement', () => {
 		const value = createCell('x')
 		expose({ value: value.get })
 		<>
-			<c-el pass={{ value: { get: () => value.get() } }}>ok</c-el>
+			<c-el truc:pass={{ value: { get: () => value.get() } }}>ok</c-el>
 			<style>c-el { color: red }</style>
 		</>
 	}`

@@ -390,8 +390,20 @@ export const text = (
 		? source.slice(node.start, node.end)
 		: ''
 
-export const attrName = (attr: TsrxNode): string =>
-	jsxName(attr.name) ?? String(attr.name)
+export const attrName = (attr: TsrxNode): string => {
+	// `truc:pass` parses as a JSXNamespacedName (namespace + name), which
+	// `jsxName` deliberately does not flatten — it is also used for element
+	// tags, where a namespace would mean something else. Host-owned
+	// attributes are namespaced (LT-053) to stay collision-proof against a
+	// user prop legitimately called `pass`.
+	const name = attr.name
+	if (isNode(name) && name.type === 'JSXNamespacedName') {
+		const ns = jsxName(name.namespace)
+		const local = jsxName(name.name)
+		if (ns !== null && local !== null) return `${ns}:${local}`
+	}
+	return jsxName(name) ?? String(name)
+}
 
 /** `onClick` → `click`; `onKeyup` → `keyup`. */
 export const eventNameFromAttr = (name: string): string => {

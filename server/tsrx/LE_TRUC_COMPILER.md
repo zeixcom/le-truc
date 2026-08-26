@@ -92,7 +92,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `evaluability.ts` | 39 | `dependenciesOf` + `isServerEvaluable` — the single home of the server-known dependency-closure rule | ast-utils |
 | `reactivity.ts` | 145 | `classifyChild` — the single home of the reactive-lift rule (LT-051): is a template child reactive, static, or untraceable? | ast-utils |
 | `lower-template.ts` | 991 | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation | ast-utils, classify-attributes, core (`isTemplateForOfNode` value), diagnostics, ir (types), reactivity |
-| `classify-attributes.ts` | 282 | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `pass={{ }}` parser | ast-utils, ir (types) |
+| `classify-attributes.ts` | 282 | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser | ast-utils, diagnostics, ir (types) |
 | `infer-type.ts` | 118 | Signal value-type inference (`string\|number\|boolean\|unknown`) | ast-utils |
 | `config.ts` | 108 | `export const config` extraction **only** | ast-utils, diagnostics, ir (types) |
 | `imports.ts` | 352 | Compose-import resolution + plain (non-`.tsrx`) import collection and placement | ast-utils, diagnostics, evaluability, ir (types), walk |
@@ -107,7 +107,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
-| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–019, message factories | — (leaf) |
+| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–021, message factories | — (leaf) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 294 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
@@ -176,7 +176,7 @@ see § 4.4.
 
 **`AttributeIR`** — the attribute IR union: `static` (name + literal value),
 `server` (expression rendered at render time), `reactive` (thunk → `watch()`),
-`pass` (entries → `pass()`), `class-map` / `style-map` (object-literal-bodied
+`pass` (`truc:pass` entries → `pass()`; the bare `pass` spelling warns TSRX021 for one cycle, LT-053), `class-map` / `style-map` (object-literal-bodied
 thunks, LT-028/031), `html` (dynamic rendering, sanitized), `event` (`on*`,
 stripped server-side), `ref`.
 

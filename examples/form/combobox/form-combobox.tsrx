@@ -13,7 +13,7 @@
  *   its own host, which bubbles up through the wrapper same as any DOM
  *   event (no shadow DOM boundary to stop it).
  * - Filtering is driven by the composed listbox's `filter` prop via
- *   `pass={{ filter: () => host.value }}` — `filterable` itself is passed
+ *   `truc:pass={{ filter: () => host.value }}` — `filterable` itself is passed
  *   `false` (a plain `arg`, not reactive) since form-combobox owns the only
  *   visible text input; form-listbox's OWN optional filter input/clear
  *   button UI (`filterable` prop) would be a redundant second input.
@@ -145,7 +145,7 @@ export function FormCombobox(
 					options={options}
 					filterable={false}
 					ref={listbox}
-					pass={{ filter: () => host.value }}
+					truc:pass={{ filter: () => host.value }}
 				/>
 			</div>
 			@if (description) {

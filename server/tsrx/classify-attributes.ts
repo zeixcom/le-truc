@@ -15,6 +15,7 @@ import {
 	isNode,
 	text,
 } from './ast-utils'
+import { diagnostic } from './diagnostics'
 import type {
 	AttributeIR,
 	ComposeAttrIR,
@@ -103,6 +104,10 @@ export const classifyPassEntries = (
 	return entries
 }
 
+/** The host-owned client-prop interop attribute, and its pre-LT-053 name. */
+const PASS_ATTR = 'truc:pass'
+const LEGACY_PASS_ATTR = 'pass'
+
 /** Classify one JSXAttribute into the attribute IR. */
 export const classifyAttribute = (
 	ctx: ExtractContext,
@@ -110,7 +115,11 @@ export const classifyAttribute = (
 ): AttributeIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
 	const value = attr.value
-	if (name === 'pass') {
+	if (name === PASS_ATTR || name === LEGACY_PASS_ATTR) {
+		if (name === LEGACY_PASS_ATTR)
+			ctx.diagnostics.push(
+				diagnostic.deprecatedPassAttribute(ctx.source, attr.start),
+			)
 		const entries = classifyPassEntries(ctx, attr)
 		if ('reason' in entries) return entries
 		return { kind: 'pass', entries }
@@ -263,7 +272,11 @@ export const classifyComposeAttribute = (
 ): ComposeAttrIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
 	const value = attr.value
-	if (name === 'pass') {
+	if (name === PASS_ATTR || name === LEGACY_PASS_ATTR) {
+		if (name === LEGACY_PASS_ATTR)
+			ctx.diagnostics.push(
+				diagnostic.deprecatedPassAttribute(ctx.source, attr.start),
+			)
 		const entries = classifyPassEntries(ctx, attr)
 		if ('reason' in entries) return entries
 		return { kind: 'pass', entries }

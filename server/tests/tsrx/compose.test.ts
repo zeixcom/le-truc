@@ -334,7 +334,7 @@ export function BasicParent({ title }: { title: string })
 		expect(diagnostics.some(d => d.code === 'TSRX011')).toBe(true)
 	})
 
-	test('`pass={{ }}` on a composed element without a `ref` is diagnosed', () => {
+	test('`truc:pass={{ }}` on a composed element without a `ref` is diagnosed', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
@@ -343,7 +343,7 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild label={title} pass={{ value: () => title }} />
+				<BasicChild label={title} truc:pass={{ value: () => title }} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
@@ -359,7 +359,7 @@ export function BasicParent({ title }: { title: string })
 		expect(diagnostics.some(d => d.code === 'TSRX012')).toBe(true)
 	})
 
-	test('`pass={{ }}` on a composed element with a `ref` lowers to pass() on the child tag', () => {
+	test('`truc:pass={{ }}` on a composed element with a `ref` lowers to pass() on the child tag', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
@@ -368,7 +368,7 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild label={title} ref={child} pass={{ value: () => 'x' }} />
+				<BasicChild label={title} ref={child} truc:pass={{ value: () => 'x' }} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
