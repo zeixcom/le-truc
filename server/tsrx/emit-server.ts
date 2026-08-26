@@ -8,7 +8,7 @@
  * then builds the HTML string:
  *
  * - `{expr}` over server data → escaped interpolation
- * - `&{expr}` lazy children and thunk attributes render their initial value
+ * - reactive children and thunk attributes render their initial value
  *   when the dependency closure is server-known (args, setup names, loop
  *   bindings, hoisted consts); otherwise the attribute is omitted — the
  *   first client binding pass sets it (dependency-provable evaluation,
@@ -18,12 +18,7 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import {
-	freeIdentifiers,
-	hostPropOf,
-	JS_GLOBALS,
-	MANAGED_TEXT_PROPS,
-} from './ast-utils'
+import { freeIdentifiers, hostPropOf, JS_GLOBALS } from './ast-utils'
 import { isVoidElement } from './core'
 import { isServerEvaluable } from './evaluability'
 import type { AttributeIR, ComponentIR, ForIR, TemplateNode } from './ir'
@@ -98,30 +93,6 @@ const lazyValueExpression = (
 		if (component.signals.some(s => s.name === name)) return `${name}.get()`
 		return exprText
 	}
-	if (expr.type === 'Literal' && typeof expr.value === 'string') {
-		const propName = String(expr.value)
-		if (component.exposeProps.has(propName)) {
-			const signal = component.exposeProps.get(propName) as string
-			return `${signal}.get()`
-		}
-		// A Parser-exposed prop (`asString`/`asBoolean`/…) as a string-literal
-		// lazy child — `&{'label'}` — is the same general "watch this exposed
-		// prop by name" mechanism `&{'validationMessage'}` already uses for
-		// managed form props (`WatchHelper`'s `K extends keyof P & string`
-		// overload, `src/helpers/reactive.ts`), just not form-specific: the
-		// prop's server truth IS the root attribute that seeds it (DOM-is-
-		// truth, ADR 0003), exactly like the host-prop-mirror ATTRIBUTE thunk
-		// (`hostPropMirrorExpr`) above — same lookup, keyed by name instead of
-		// an authored `() => host.<prop>` thunk.
-		if (component.parserExposeProps.has(propName)) {
-			const rootAttr = component.root.attrs.find(
-				(a): a is Extract<AttributeIR, { kind: 'server' }> =>
-					a.kind === 'server' && a.name === propName,
-			)
-			if (rootAttr) return rootAttr.exprText
-		}
-		if (component.config?.form && MANAGED_TEXT_PROPS.has(propName)) return "''"
-	}
 	// Anything else (a call expression, an arrow thunk, a bare non-signal
 	// identifier, …) is only safe to render verbatim if its dependency
 	// closure is server-known — the same rule attribute thunks already
@@ -129,7 +100,7 @@ const lazyValueExpression = (
 	// evaluability.ts). A lazy
 	// child referencing `host` (a client-only ambient, e.g. `formatHex(host
 	// .value)`) has no server value at all: render nothing initially, the
-	// client's `watch()` for this lazy child corrects it on connect (DOM-is-
+	// client's `watch()` for this reactive child corrects it on connect (DOM-is-
 	// truth, ADR 0003) — same posture as an omitted non-server-known thunk
 	// attribute. Found and fixed alongside LT-034 (`card-colorscale.tsrx`'s
 	// hex-value lazy child called `formatHex(host.value)`, which used to

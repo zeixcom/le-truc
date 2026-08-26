@@ -112,6 +112,39 @@ const newerGrammarHint = (source: string, error: unknown): string => {
 	return ''
 }
 
+/**
+ * Report every lazy destructuring pattern in the module (TSRX020, LT-052).
+ * `&{ … }`/`&[ … ]` are real TSRX grammar — the parser sets `lazy` on the
+ * ObjectPattern/ArrayPattern — but they defer evaluation to first read, and
+ * the server half must evaluate setup eagerly to produce markup. Scanning the
+ * whole AST rather than just setup catches params and nested functions too.
+ */
+const reportLazyPatterns = (ctx: ExtractContext, ast: TsrxNode): void => {
+	const visit = (node: unknown): void => {
+		if (Array.isArray(node)) {
+			for (const child of node) visit(child)
+			return
+		}
+		if (!isNode(node)) return
+		if (
+			(node.type === 'ObjectPattern' || node.type === 'ArrayPattern') &&
+			node.lazy === true
+		)
+			ctx.diagnostics.push(
+				diagnostic.lazyDestructuring(
+					ctx.source,
+					node.start,
+					node.type === 'ObjectPattern' ? 'object' : 'array',
+				),
+			)
+		for (const [key, value] of Object.entries(node)) {
+			if (key === 'loc' || key === 'range' || key === 'parent') continue
+			visit(value)
+		}
+	}
+	visit(ast)
+}
+
 /* === Exported Functions === */
 
 /**
@@ -144,6 +177,7 @@ export const compileSource = (
 			],
 		}
 	}
+	reportLazyPatterns(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
 	const plainImports = parsePlainImports(ctx, ast, filename)
 

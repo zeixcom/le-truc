@@ -34,11 +34,6 @@ import {
 } from './selectors'
 
 /**
- * Does this attribute carry a client construct? A non-reactive `html={ref}`
- * is server-rendered only (LT-025); a reactive `html={() => …}` lowers to a
- * `dangerouslyBindInnerHTML` watch, same as any other reactive attribute.
- */
-/**
  * The managed form prop a reactive child reads, or null. Since LT-052 that
  * is a `host.<prop>` member read; the retired `{'<prop>'}` string-literal
  * spelling is still recognised so a stale source reports the managed-prop
@@ -59,6 +54,11 @@ const managedPropRead = (expr: TsrxNode): string | null => {
 	return MANAGED_TEXT_PROPS.has(name) ? name : null
 }
 
+/**
+ * Does this attribute carry a client construct? A non-reactive `html={ref}`
+ * is server-rendered only (LT-025); a reactive `html={() => …}` lowers to a
+ * `dangerouslyBindInnerHTML` watch, same as any other reactive attribute.
+ */
 const isClientConstructAttr = (a: AttributeIR): boolean =>
 	a.kind !== 'static' &&
 	a.kind !== 'server' &&
@@ -273,7 +273,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			sink.push({
 				kind: 'watch-text',
 				query,
-				source: lazyWatchSource(component, child),
+				source: lazyWatchSource(child),
 			})
 		}
 	}

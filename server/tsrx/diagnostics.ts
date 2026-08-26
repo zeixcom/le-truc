@@ -30,6 +30,7 @@ export type DiagnosticCode =
 	| 'TSRX017' // template child whose reactivity cannot be traced — needs a thunk
 	| 'TSRX018' // retired `&{}` lazy-child sigil
 	| 'TSRX019' // string-literal prop name in child position — write host.<prop>
+	| 'TSRX020' // lazy destructuring pattern — not applicable to the Le Truc profile
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -121,7 +122,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX004',
-			`Signal \`${name}\` is never rendered into the DOM, so the client cannot harvest its initial value (ADR 0003: DOM is the truth at load time). Render it — &{${name}} as a child or an attribute thunk — or remove it.`,
+			`Signal \`${name}\` is never rendered into the DOM, so the client cannot harvest its initial value (ADR 0003: DOM is the truth at load time). Render it — \`{${name}}\` as a child or an attribute thunk — or remove it.`,
 			lineOf(source, offset),
 		),
 
@@ -155,8 +156,8 @@ export const diagnostic = {
 		error('TSRX009', what, lineOf(source, offset)),
 
 	/**
-	 * Managed form prop (`&{'validationMessage'}`) without `formAssociated` —
-	 * the watch source exists only on FormFactoryContext (LT-008).
+	 * Managed form prop (`{host.validationMessage}`) without `formAssociated`
+	 * — the watch source exists only on FormFactoryContext (LT-008).
 	 */
 	managedPropWithoutForm: (
 		source: string,
@@ -165,7 +166,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX010',
-			`Lazy child &{'${prop}'} names a managed form prop — it is watchable only when formAssociated() leads the extensions. Declare \`export const config = { formAssociated: true }\` or expose a prop of that name.`,
+			`\`{host.${prop}}\` reads a managed form prop — it is watchable only when formAssociated() leads the extensions. Declare \`export const config = { formAssociated: true }\` or expose a prop of that name.`,
 			lineOf(source, offset),
 		),
 
@@ -423,6 +424,24 @@ export const diagnostic = {
 		error(
 			'TSRX019',
 			`\`{'${prop}'}\` names a prop but reads as the literal string "${prop}" — the \`&\` sigil that used to distinguish them is gone (LT-052). Write the read explicitly: \`{host.${prop}}\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A lazy destructuring pattern (`&{ … }` / `&[ … ]`) in binding position
+	 * (LT-052). These are real TSRX grammar, but they defer evaluation to
+	 * first read — and Le Truc's server half must evaluate setup eagerly to
+	 * produce markup at render time, where there is nothing to defer to.
+	 * Unsupported in this host profile rather than silently half-working.
+	 */
+	lazyDestructuring: (
+		source: string,
+		offset: number | undefined,
+		form: 'object' | 'array',
+	) =>
+		error(
+			'TSRX020',
+			`Lazy destructuring (\`&${form === 'object' ? '{ … }' : '[ … ]'}\`) is not supported in the Le Truc profile — server composition evaluates setup eagerly to render markup, so there is no first-read to defer to. Use a plain \`${form === 'object' ? '{ … }' : '[ … ]'}\` pattern.`,
 			lineOf(source, offset),
 		),
 }

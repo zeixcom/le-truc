@@ -162,3 +162,37 @@ describe('the retired &{} sigil (LT-052)', () => {
 		expect(child.lazy).toBe(false)
 	})
 })
+
+describe('lazy destructuring in binding position (LT-052)', () => {
+	const compile = (setup: string) =>
+		compileSource(
+			`export function C({}: {})
+			@{
+				${setup}
+				expose({})
+				<>
+					<c-el>x</c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		).diagnostics
+
+	test('&{ … } object pattern is TSRX020', () => {
+		const d = compile('const obj = { a: 1 }\n\t\t\t\tconst &{ a } = obj')
+		expect(d.map(x => x.code)).toContain('TSRX020')
+		expect(d.find(x => x.code === 'TSRX020')?.message).toContain(
+			'evaluates setup eagerly',
+		)
+	})
+
+	test('&[ … ] array pattern is TSRX020', () => {
+		const d = compile('const &[ b ] = [1]')
+		expect(d.map(x => x.code)).toContain('TSRX020')
+	})
+
+	test('a plain destructuring pattern is untouched', () => {
+		const d = compile('const obj = { a: 1 }\n\t\t\t\tconst { a } = obj')
+		expect(d.filter(x => x.code === 'TSRX020')).toEqual([])
+	})
+})
