@@ -27,6 +27,7 @@ export type DiagnosticCode =
 	| 'TSRX014' // plain (non-.tsrx) import whose bindings are never used anywhere the compiler can place them
 	| 'TSRX015' // requestContext() called with other than exactly two arguments
 	| 'TSRX016' // requestContext()'s fallback argument is not server-known
+	| 'TSRX017' // template child whose reactivity cannot be traced — needs a thunk
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -366,6 +367,25 @@ export const diagnostic = {
 		error(
 			'TSRX016',
 			`\`${name}\`'s fallback argument references ${names.map(n => `\`${n}\``).join(', ')}, which the server cannot resolve — requestContext()'s fallback must be a literal or an expression over server args/setup, since the server renders using it directly (no ancestor DOM to walk at render time).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A signal crosses an opaque call boundary in a template child (LT-051),
+	 * so the lift analysis cannot see where — or whether — it is read. Erring
+	 * here rather than emitting a static value is deliberate: a missed lift
+	 * is invisible (the server folds it, the markup is correct, and it never
+	 * updates), whereas this message is loud.
+	 */
+	unliftableChild: (
+		source: string,
+		offset: number | undefined,
+		names: string[],
+		exprText: string,
+	) =>
+		error(
+			'TSRX017',
+			`${names.map(n => `\`${n}\``).join(', ')} ${names.length > 1 ? 'are' : 'is'} passed into a call the compiler cannot see inside, so it cannot tell whether this child is reactive. Wrap it in an explicit thunk: \`{() => ${exprText}}\`.`,
 			lineOf(source, offset),
 		),
 }

@@ -33,6 +33,7 @@ import type {
 	SignalIR,
 	TemplateNode,
 } from './ir'
+import { classifyChild } from './reactivity'
 
 /**
  * Validate a control-flow condition (`@if` test, `@switch` discriminant):
@@ -511,9 +512,39 @@ export const lowerComposeElement = (
 }
 
 /**
+ * Whether a plain `{expr}` child lifts into a `watch()` (LT-051). The rule
+ * and its rationale live in `reactivity.ts`; this wrapper only turns the
+ * `opaque` verdict into a TSRX017 diagnostic. The `{children}` insertion
+ * point (ADR 0024 sub-design 10) is a server arg, so it classifies `static`
+ * without a special case here.
+ */
+const liftsToReactive = (
+	ctx: ExtractContext,
+	signals: ReadonlyMap<string, SignalIR>,
+	expr: TsrxNode,
+	exprText: string,
+	container: TsrxNode,
+): boolean => {
+	const verdict = classifyChild(expr, signals)
+	if (verdict.kind === 'opaque') {
+		ctx.diagnostics.push(
+			diagnostic.unliftableChild(
+				ctx.source,
+				container.start,
+				verdict.names,
+				exprText,
+			),
+		)
+		return false
+	}
+	return verdict.kind === 'reactive'
+}
+
+/**
  * Lower template children into IR. `&{expr}` arrives from the parser as a
  * `JSXText("&")` node immediately preceding a `JSXExpressionContainer` —
- * the sigil is detected by that adjacency.
+ * the sigil is detected by that adjacency. A plain `{expr}` child lifts to
+ * reactive by analysis instead (LT-051, `reactivity.ts`).
  */
 export const lowerChildren = (
 	ctx: ExtractContext,
@@ -557,14 +588,16 @@ export const lowerChildren = (
 		}
 		if (child.type === 'JSXExpressionContainer') {
 			const expr = child.expression
-			if (isNode(expr))
+			if (isNode(expr)) {
+				const exprText = text(ctx.source, expr)
 				out.push({
 					kind: 'expr',
 					expr,
-					exprText: text(ctx.source, expr),
-					lazy: false,
+					exprText,
+					lazy: liftsToReactive(ctx, signals, expr, exprText, child),
 					node: child,
 				})
+			}
 			i += 1
 			continue
 		}

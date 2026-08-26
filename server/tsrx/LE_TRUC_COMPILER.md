@@ -90,7 +90,8 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `core.ts` | 21 | The **only** `@tsrx/core` value-import leaf (`parseModule`, `isStyleElement`, `getStyleElementStylesheet`, `isTemplateForOfNode`, `isVoidElement`) | `@tsrx/core` (values) |
 | `walk.ts` | 101 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
 | `evaluability.ts` | 39 | `dependenciesOf` + `isServerEvaluable` — the single home of the server-known dependency-closure rule | ast-utils |
-| `lower-template.ts` | 991 | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation | ast-utils, classify-attributes, core (`isTemplateForOfNode` value), diagnostics, ir (types) |
+| `reactivity.ts` | 145 | `classifyChild` — the single home of the reactive-lift rule (LT-051): is a template child reactive, static, or untraceable? | ast-utils |
+| `lower-template.ts` | 991 | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation | ast-utils, classify-attributes, core (`isTemplateForOfNode` value), diagnostics, ir (types), reactivity |
 | `classify-attributes.ts` | 282 | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `pass={{ }}` parser | ast-utils, ir (types) |
 | `infer-type.ts` | 118 | Signal value-type inference (`string\|number\|boolean\|unknown`) | ast-utils |
 | `config.ts` | 108 | `export const config` extraction **only** | ast-utils, diagnostics, ir (types) |
@@ -106,7 +107,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
-| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–016, message factories | — (leaf) |
+| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–017, message factories | — (leaf) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 294 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
@@ -118,8 +119,8 @@ i.e. the `index.ts` facade, plus direct `registry`/`spans` imports); tests impor
 overwhelmingly through the facade.
 
 **Dependency shape**: every module now points strictly at `ir.ts` (types), `core.ts`
-(the one `@tsrx/core` value import), `walk.ts`, and `evaluability.ts` as shared
-leaves — no runtime value cycles remain. Within `analysis/`, `plan.ts` orchestrates
+(the one `@tsrx/core` value import), `walk.ts`, `evaluability.ts`, and
+`reactivity.ts` as shared leaves — no runtime value cycles remain. Within `analysis/`, `plan.ts` orchestrates
 `{selectors, naming, harvest, loops, effects}`, and `harvest.ts` is itself imported
 back by `loops.ts` and `effects.ts` for a handful of shared signal-read predicates
 (`returnsNumber`, `lazyWatchSource`) — the one edge inside `analysis/` that isn't a
@@ -166,7 +167,7 @@ see § 4.4.
 | --- | --- | --- |
 | `element` | `tag, attrs: AttributeIR[], children` | Lowered JSX element; `<style>` becomes a placeholder element |
 | `text` | `value` | JSX text after whitespace collapse |
-| `expr` | `expr, exprText, lazy` | `{expr}` (server) or `&{expr}` (lazy/reactive) child; the `&` sigil is detected as a `JSXText` ending in `&` immediately before the container |
+| `expr` | `expr, exprText, lazy` | A child expression. `lazy` marks it reactive, decided by `reactivity.ts`'s lift rule (LT-051): a lexically visible signal or `host.<prop>` read lifts, an expression over server args stays static, and a signal escaping into an opaque call is TSRX017. `&{expr}` still forces `lazy` (LT-052 removes the sigil); it is detected as a `JSXText` ending in `&` immediately before the container |
 | `if` | `test(Text), then, alternate` | Server-known condition; server renders taken branch, client union-addresses both roots |
 | `switch` | `discriminant(Text), cases[]` | Mutually exclusive arms |
 | `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ **async boundary** (sub-design 13): all three arms render, `hidden`-toggled |
