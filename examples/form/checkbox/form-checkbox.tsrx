@@ -41,6 +41,7 @@ export function FormCheckbox(
 		},
 )
 @{
+	const checkbox = first('input', 'checkbox input')
 	expose({
 		checked: asBoolean(false),
 	});
@@ -52,7 +53,6 @@ export function FormCheckbox(
 					type="checkbox"
 					checked={() => host.checked}
 					disabled={() => host.disabled}
-					ref={checkbox}
 					onChange={() => ({ checked: checkbox.checked })}
 				/>
 				<span class="label">{label}</span>

@@ -35,11 +35,12 @@ declare global {
  **/
 export function CardCollapsible({ open = false }: { open?: boolean })
 	@{
+		const details = first('details', 'details element')
 		expose({ open: asBoolean(false) })
 
 		<>
 			<card-collapsible {open}>
-				<details ref={details} open={() => host.open} onToggle={() => ({ open: details.open })}>
+				<details open={() => host.open} onToggle={() => ({ open: details.open })}>
 					<summary>
 						<span class="description">
 							Click to expand and read the rest of this card — the summary text

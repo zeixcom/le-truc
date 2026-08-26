@@ -54,11 +54,12 @@ export const addQuery = (
 	)
 		childTags.add(tag)
 	const name = uniqueName(usedNames, base)
-	queries.push({
-		name,
-		selector,
-		cardinality,
-		message: `${component.tag}: ${selector} missing`,
-	})
+	// A `first()`-declared reference's own required-reason text (LT-055)
+	// flows into the generated MissingElementError message verbatim — the
+	// one part of the author's call the compiler doesn't resynthesize (the
+	// selector itself stays compiler-proven, same as `ref={}` before it).
+	const message =
+		component.refReasons.get(base) ?? `${component.tag}: ${selector} missing`
+	queries.push({ name, selector, cardinality, message })
 	return name
 }

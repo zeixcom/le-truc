@@ -111,6 +111,18 @@ const LEGACY_PASS_ATTR = 'pass'
 const renamedPassReason =
 	'`pass={{ … }}` is now `truc:pass={{ … }}` — host-owned attributes are namespaced so they cannot collide with a user prop called `pass`.'
 
+/**
+ * React's DOM-property attribute names (LT-054). Rendered verbatim they are
+ * not real HTML attributes — the browser ignores `className`/`htmlFor`
+ * entirely, so the near-miss is silently broken rather than merely
+ * non-idiomatic. TSRX has no JSX-to-DOM-property translation layer; `class`/
+ * `for` are the real HTML attribute names.
+ */
+const REACT_ATTR_RENAMES: ReadonlyMap<string, string> = new Map([
+	['className', 'class'],
+	['htmlFor', 'for'],
+])
+
 /** Classify one JSXAttribute into the attribute IR. */
 export const classifyAttribute = (
 	ctx: ExtractContext,
@@ -131,19 +143,25 @@ export const classifyAttribute = (
 	// no legitimate author use to preserve.
 	if (name === LEGACY_PASS_ATTR)
 		return { kind: 'invalid', reason: renamedPassReason }
-	if (name === 'ref') {
-		const target =
-			isNode(value) && value.type === 'JSXExpressionContainer'
-				? value.expression
-				: value
-		const refName = identifierName(target)
-		if (!refName)
-			return {
-				kind: 'invalid',
-				reason: 'ref={…} expects a bare identifier (ref={textbox}).',
-			}
-		return { kind: 'ref', name: refName }
-	}
+	// React's DOM-property attribute names (LT-054): not real HTML attributes,
+	// so passed through verbatim they render into markup the browser ignores.
+	const reactRename = REACT_ATTR_RENAMES.get(name)
+	if (reactRename)
+		return {
+			kind: 'invalid',
+			reason: `\`${name}\` is a React DOM-property name, not an HTML attribute — TSRX has no JSX-to-DOM-property translation, so this would render into the markup verbatim and the browser would ignore it. Use \`${reactRename}\` instead.`,
+		}
+	// The pre-LT-055 spelling: `ref={}` is retired outright, no deprecation
+	// cycle (the compiler has never shipped). `first(selector, required)` in
+	// setup replaces it — resolved structurally at compile time instead of
+	// via magic attribute placement (see `first-refs.ts`), and works on both
+	// raw and composed elements without a separate `ComposeAttrIR` variant.
+	if (name === 'ref')
+		return {
+			kind: 'invalid',
+			reason:
+				"`ref={name}` is retired (LT-055) — use `const name = first(selector, required)` in setup instead, e.g. `const textbox = first('input', 'required')`. The compiler resolves the selector structurally at compile time.",
+		}
 	if (/^on[A-Z]/.test(name)) {
 		const raw =
 			isNode(value) && value.type === 'JSXExpressionContainer'
@@ -292,6 +310,23 @@ export const classifyComposeAttribute = (
 	// no legitimate author use to preserve.
 	if (name === LEGACY_PASS_ATTR)
 		return { kind: 'invalid', reason: renamedPassReason }
+	// React's DOM-property attribute names (LT-054): not real HTML attributes,
+	// so passed through verbatim they render into markup the browser ignores.
+	const reactRename = REACT_ATTR_RENAMES.get(name)
+	if (reactRename)
+		return {
+			kind: 'invalid',
+			reason: `\`${name}\` is a React DOM-property name, not an HTML attribute — TSRX has no JSX-to-DOM-property translation, so this would render into the markup verbatim and the browser would ignore it. Use \`${reactRename}\` instead.`,
+		}
+	// `ref={}` on a COMPOSED element is a distinct, still-supported mechanism
+	// (LT-055 scoping decision): `first()`'s structural resolution walks
+	// `kind: 'element'` template nodes only (`first-refs.ts`), never
+	// `kind: 'compose'` — a composed child's eventual DOM tag lives in
+	// another file's registry entry, resolved in a later corpus pass
+	// (`server/effects/tsrx.ts`), not visible here inside single-file
+	// `compileSource`. Retiring composed-element `ref={}` needs registry-
+	// aware selector resolution across the two-pass compile, which is out
+	// of scope for LT-055; tracked as a follow-up, not silently dropped.
 	if (name === 'ref') {
 		const target =
 			isNode(value) && value.type === 'JSXExpressionContainer'

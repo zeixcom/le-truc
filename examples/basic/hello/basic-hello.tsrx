@@ -34,6 +34,7 @@ declare global {
  **/
 export function BasicHello({ subject = 'World' }: { subject?: string })
 	@{
+		const input = first('#subject', 'subject input')
 		expose({ subject: asString('World') })
 
 		<>
@@ -44,7 +45,6 @@ export function BasicHello({ subject = 'World' }: { subject?: string })
 					name="subject"
 					type="text"
 					autocomplete="given-name"
-					ref={input}
 					onInput={() => ({ subject: input.value || 'World' })}
 				/>
 				<p>Hello, <output for="subject">{host.subject}</output>!</p>

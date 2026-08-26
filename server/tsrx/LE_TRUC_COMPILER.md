@@ -85,7 +85,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | Module | Size | Role | Intra-package imports |
 | --- | ---: | --- | --- |
 | `index.ts` | 133 | Public API; `compileComponent` pipeline assembly; flat re-exports | analysis/plan, compiler, diagnostics, emit-client, emit-server, registry, spans |
-| `compiler.ts` | 636 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements` | ast-utils, config, core, css, diagnostics, imports, infer-type, ir (types), lower-template, walk |
+| `compiler.ts` | 891 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
 | `ir.ts` | 404 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
 | `core.ts` | 21 | The **only** `@tsrx/core` value-import leaf (`parseModule`, `isStyleElement`, `getStyleElementStylesheet`, `isTemplateForOfNode`, `isVoidElement`) | `@tsrx/core` (values) |
 | `walk.ts` | 101 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
@@ -107,7 +107,8 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
-| `diagnostics.ts` | 359 | Diagnostic codes TSRX001–020, message factories | — (leaf) |
+| `diagnostics.ts` | 574 | Diagnostic codes TSRX001–027, message factories | — (leaf) |
+| `first-refs.ts` | 210 | `collectMatchingElements`/`shareExclusiveIf` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}` | ir (types) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 294 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
@@ -613,6 +614,65 @@ still open:
   also writes the bundle to `server/generated/tsrx-browser/index.js`
   (gitignored) — the seed of the playground's compile worker; wiring it into
   the docs site is future playground work, not part of this gate.
+- **React JSX near-misses are hard errors, not warnings (LT-054).** TSRX is
+  close enough to JSX that React habits produce five idioms that *parse* as
+  ordinary JS/JSX but compile silently into broken output, since @tsrx/core
+  has no implicit conditional-render or loop-render rule: `{cond && <jsx/>}`
+  and `{cond ? <a/> : <b/>}` (TSRX021/TSRX022, a JSX node stringified into
+  the HTML), `.map()` producing JSX in child position (TSRX023, an array of
+  JSX nodes stringified), `return (<>…</>)` in setup (TSRX024, replacing the
+  generic TSRX005 for this specific shape with a fix-it naming the actual
+  idiom), and `className`/`htmlFor` (TSRX006, real HTML attribute names
+  `class`/`for` — the browser ignores the React DOM-property spelling
+  entirely). Verified empirically before scoping: all five compiled with
+  zero diagnostics prior to this task. The first three are caught by
+  `reportReactJsxNearMisses`, a whole-module AST scan in `compiler.ts`
+  (same shape as `reportLazyPatterns`/TSRX020), so they're caught wherever
+  they appear, not just in direct template-child position. To keep the
+  hard errors from being a migration tax, `scripts/codemod-react-jsx.ts`
+  mechanically rewrites the common, unambiguous shape of each into native
+  TSRX — single-pass and non-recursive into a rewritten span (a near-miss
+  nested inside another is fixed one level per run; the script reports
+  when it finds nothing left to rewrite).
+- **`ref={}` is retired for raw elements in favor of `first(selector,
+  required)` (LT-055).** `const name = first(selector, required)` in setup
+  is now the sanctioned way to name an element reference — resolved
+  structurally at COMPILE time (`first-refs.ts`'s `collectMatchingElements`
+  matches the author's selector — bare tag, `.class`, `#id`, `[attr]`/
+  `[attr="value"]`, comma-lists — against the template IR once
+  `lowerChildren` has run) rather than by JSX attribute placement. On a
+  unique match, the matched element gets the SAME `{kind: 'ref', name}` IR
+  `ref={}` used to populate directly — every downstream consumer
+  (`addQuery`'s naming in `analysis/effects.ts`/`analysis/harvest.ts`,
+  `refNames` collection in `analysis/plan.ts`) is unchanged; only the
+  authoring surface and how that IR gets populated moved. Two matches are
+  allowed when they are direct branch roots of the SAME `@if`, one per
+  branch (`shareExclusiveIf`) — the shape `first('input, textarea',
+  'required')` needs when the referenced element's tag differs across
+  `@if`/`@else`. The RUNTIME selector stays whatever `resolveSelectorIn`/
+  `selectorFor` synthesize (exactly as for `ref={}` before it) — the
+  author's selector text is compile-time-only, used to identify which
+  element(s) the name refers to, never emitted verbatim; the author's
+  REQUIRED-REASON text, by contrast, DOES flow into the generated
+  `MissingElementError` message verbatim (`addQuery` checks
+  `component.refReasons` before falling back to its usual auto-generated
+  message) — the one part of the source `first()` call that isn't
+  resynthesized. `first-refs.ts` is a front-end-owned pure leaf (sibling of
+  `reactivity.ts`/`evaluability.ts`, depending only on `ir.ts` types)
+  rather than living in `analysis/selectors.ts` — `compiler.ts` (front end)
+  needs it before the analysis stage runs, and adding it to
+  `analysis/selectors.ts` would have made the front end import from the
+  analysis layer, backwards from the pipeline's documented direction.
+  **Scoped out, not silently dropped:** composed (PascalCase) elements keep
+  the original `ref={}` JSX-attribute mechanism unchanged — a composed
+  child's eventual DOM tag lives in another file's registry entry, resolved
+  in a later, cross-file corpus pass (`server/effects/tsrx.ts`), not visible
+  inside single-file `compileSource`; `first()`'s selector-matching only
+  walks `kind: 'element'` template nodes, never `kind: 'compose'`. Retiring
+  composed-element `ref={}` needs registry-aware selector resolution across
+  the two-pass compile — a follow-up task, not part of LT-055. Corpus
+  codemodded by hand (9 raw-element occurrences across 7 files; 4 more
+  `ref={}` sites on composed elements were left alone as in-scope survivors).
 
 ---
 

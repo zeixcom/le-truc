@@ -106,6 +106,10 @@ export function FormTextbox(
 	// gates rendering the error paragraph (form-textbox.ts always rendered
 	// it; here it's genuinely optional markup, so it's genuinely conditional).
 	const validatable = required || maxlength != null;
+	// One @if branch renders <textarea>, the other <input> — a single name
+	// spanning both via a comma selector (LT-055), verified structurally as
+	// mutually-exclusive @if branch roots.
+	const input = first('input, textarea', 'text control');
 
 	const onInput = () => {
 		length.set(input.value.length);
@@ -128,7 +132,6 @@ export function FormTextbox(
 						{required}
 						{maxlength}
 						rows={3}
-						ref={input}
 						{onInput}
 						{onChange}
 					/>
@@ -141,7 +144,6 @@ export function FormTextbox(
 						{required}
 						{maxlength}
 						aria-describedby={description ? descriptionId : null}
-						ref={input}
 						{onInput}
 						{onChange}
 					/>

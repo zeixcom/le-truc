@@ -31,6 +31,13 @@ export type DiagnosticCode =
 	| 'TSRX018' // retired `&{}` lazy-child sigil
 	| 'TSRX019' // string-literal prop name in child position — write host.<prop>
 	| 'TSRX020' // lazy destructuring pattern — not applicable to the Le Truc profile
+	| 'TSRX021' // React `{cond && <jsx/>}` conditional-render idiom in child position
+	| 'TSRX022' // React `{cond ? <a/> : <b/>}` conditional-render idiom in child position
+	| 'TSRX023' // React `.map()` producing JSX in child position
+	| 'TSRX024' // React `return (<>…</>)` render idiom in setup position
+	| 'TSRX025' // malformed first() element-reference call
+	| 'TSRX026' // first() selector matches no element, or uses unverifiable syntax
+	| 'TSRX027' // first() selector matches multiple, non-mutually-exclusive elements
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -442,6 +449,126 @@ export const diagnostic = {
 		error(
 			'TSRX020',
 			`Lazy destructuring (\`&${form === 'object' ? '{ … }' : '[ … ]'}\`) is not supported in the Le Truc profile — server composition evaluates setup eagerly to render markup, so there is no first-read to defer to. Use a plain \`${form === 'object' ? '{ … }' : '[ … ]'}\` pattern.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `{cond && <jsx/>}` (LT-054): React's short-circuit conditional-render
+	 * idiom. TSRX has no implicit "falsy renders nothing" rule — this renders
+	 * literally, stringifying a boolean ANDed with a JSX node — so it must be
+	 * rewritten to `@if`, not merely warned about.
+	 */
+	reactLogicalJsx: (
+		source: string,
+		offset: number | undefined,
+		condText: string,
+		exprText: string,
+	) =>
+		error(
+			'TSRX021',
+			`\`{${exprText}}\` is the React \`&&\` conditional-render idiom — TSRX has no implicit falsy-renders-nothing rule, so this renders literally instead of conditionally. Use \`@if (${condText}) { … }\` instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `{cond ? <a/> : <b/>}` (LT-054): React's ternary conditional-render
+	 * idiom. Same failure mode as `reactLogicalJsx` — the chosen branch
+	 * stringifies instead of rendering.
+	 */
+	reactTernaryJsx: (
+		source: string,
+		offset: number | undefined,
+		condText: string,
+		exprText: string,
+	) =>
+		error(
+			'TSRX022',
+			`\`{${exprText}}\` is the React ternary conditional-render idiom — TSRX renders it literally (the chosen branch stringified), not conditionally. Use \`@if (${condText}) { … } @else { … }\` instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `.map()` producing JSX in child position (LT-054): React's list-render
+	 * idiom. TSRX's loop construct is `@for`; `.map()` over server data
+	 * renders literally (`Array.prototype.toString()` over the JSX nodes).
+	 */
+	reactMapJsx: (
+		source: string,
+		offset: number | undefined,
+		itemName: string,
+		arrayText: string,
+		exprText: string,
+	) =>
+		error(
+			'TSRX023',
+			`\`{${exprText}}\` is the React \`.map()\` list-render idiom — TSRX renders it literally (the array stringified), not as a loop. Use \`@for (const ${itemName} of ${arrayText}) { … }\` instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `return (<>…</>)` in setup position (LT-054): React's component-return
+	 * idiom. TSRX's output is the setup block's trailing JSX expression
+	 * itself — there is no `return` in the sanctioned subset.
+	 */
+	reactReturnJsx: (source: string, offset: number | undefined) =>
+		error(
+			'TSRX024',
+			"`return (…)` is the React component-return idiom — TSRX's output is the setup block's trailing JSX expression itself, not a return value. Drop `return`, keep the `<>…</>` as a bare expression.",
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `first(selector, required)` (LT-055) called with anything other than
+	 * exactly two string-literal arguments — the shape the compiler resolves
+	 * structurally at compile time, replacing `ref={}`.
+	 */
+	invalidFirstCall: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
+		error(
+			'TSRX025',
+			`\`const ${name} = first(…)\` must be called with exactly two string literals — a selector and a required-reason string (e.g. \`first('input', 'required')\`) — so the compiler can resolve the reference structurally at compile time.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `first()`'s selector matches no element in the template, or uses syntax
+	 * outside the structurally-verifiable subset (LT-055): a bare tag plus
+	 * any combination of `.class`, `#id`, `[attr]`/`[attr="value"]`, and
+	 * comma-separated lists. Both cases are reported together — from the
+	 * author's side, "no match" and "can't tell" call for the same fix.
+	 */
+	firstSelectorNotFound: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		selector: string,
+	) =>
+		error(
+			'TSRX026',
+			`\`first('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, or uses selector syntax this compiler cannot verify structurally — supported: a tag plus any combination of \`.class\`, \`#id\`, \`[attr]\`/\`[attr="value"]\`, and comma-separated lists. Adjust the selector to match a real, statically-addressable element.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `first()`'s selector matches more than one element that aren't all
+	 * direct branch roots of the same `@if` (LT-055) — the compiler cannot
+	 * tell which one the author means. A selector spanning an `@if`/`@else`
+	 * with different element types per branch (`first('input, textarea',
+	 * …)`) is the one multi-match shape that IS allowed.
+	 */
+	firstSelectorAmbiguous: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		selector: string,
+		count: number,
+	) =>
+		error(
+			'TSRX027',
+			`\`first('${selector}', …)\` (bound to \`${name}\`) matches ${count} elements in this component's template, and they are not all mutually-exclusive branches of the same @if — add a distinguishing \`.class\`/\`#id\`/\`[attr]\` to the selector.`,
 			lineOf(source, offset),
 		),
 }

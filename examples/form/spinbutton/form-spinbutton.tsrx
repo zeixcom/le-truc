@@ -116,6 +116,7 @@ export function FormSpinbutton(
 )
 @{
 	const inputId = `${name}-input`
+	const input = first('input', 'number input')
 
 	expose({
 		value: asNumber(0),
@@ -200,7 +201,6 @@ export function FormSpinbutton(
 					<input
 						id={inputId}
 						type="number"
-						ref={input}
 						value={() => String(host.value)}
 						min={() => String(host.min)}
 						max={() => String(host.max)}

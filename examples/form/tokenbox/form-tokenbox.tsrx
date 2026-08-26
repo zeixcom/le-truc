@@ -85,6 +85,8 @@ export function FormTokenbox(
 	)
 	const inputId = `${name}-input`
 	const descriptionId = `${name}-description`
+	const textbox = first('input', 'token input')
+	const statusEl = first('.status', 'status paragraph')
 
 	expose({
 		value: {
@@ -127,7 +129,6 @@ export function FormTokenbox(
 				<input
 					{type}
 					id={inputId}
-					ref={textbox}
 					aria-describedby={description ? descriptionId : null}
 					onKeydown={(e: KeyboardEvent) => {
 						if (e.key === ',' || e.key === 'Enter') {
@@ -187,7 +188,7 @@ export function FormTokenbox(
 			@if (description) {
 				<p class="description" aria-live="polite" id={descriptionId}>{description}</p>
 			}
-			<p class="status visually-hidden" role="status" aria-live="polite" ref={statusEl}></p>
+			<p class="status visually-hidden" role="status" aria-live="polite"></p>
 		</form-tokenbox>
 
 		<style>

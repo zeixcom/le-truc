@@ -79,6 +79,7 @@ export function FormCombobox(
 	const inputId = `${name}-input`;
 	const descriptionId = `${name}-description`;
 	const showPopup = createState(false);
+	const textbox = first('input', 'combobox input');
 
 	expose({
 		value: asString(''),
@@ -101,7 +102,6 @@ export function FormCombobox(
 				<input
 					type="text"
 					id={inputId}
-					ref={textbox}
 					value={() => host.value}
 					autocomplete="off"
 					role="combobox"

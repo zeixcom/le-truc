@@ -140,8 +140,8 @@ describe('template classification', () => {
 		])
 	})
 
-	test('ref attribute classifies as ref', () => {
-		const { component } = compileSource(
+	test('bare ref={} on a raw element is retired (TSRX006, LT-055)', () => {
+		const { component, diagnostics } = compileComponent(
 			`export function C({}: {})
 			@{
 				expose({})
@@ -151,7 +151,30 @@ describe('template classification', () => {
 				</>
 			}`,
 			'c.tsrx',
+			new Set(),
 		)
+		expect(component).toBeNull()
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX006' && d.message.includes('first('),
+			),
+		).toBe(true)
+	})
+
+	test('first(selector, required) resolves to a ref attribute (LT-055)', () => {
+		const { component, diagnostics } = compileSource(
+			`export function C({}: {})
+			@{
+				const box = first('input', 'required')
+				expose({})
+				<>
+					<c-el><input /></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		expect(diagnostics).toEqual([])
 		const input = firstElementChild(component?.root)
 		expect(input?.attrs).toEqual([{ kind: 'ref', name: 'box' }])
 	})

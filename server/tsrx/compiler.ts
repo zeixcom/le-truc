@@ -34,6 +34,7 @@ import { readConfig } from './config'
 import { getStyleElementStylesheet, isStyleElement, parseModule } from './core'
 import { dedentCss } from './css'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
+import { collectMatchingElements, shareExclusiveIf } from './first-refs'
 import {
 	parseComposeImports,
 	parsePlainImports,
@@ -145,6 +146,95 @@ const reportLazyPatterns = (ctx: ExtractContext, ast: TsrxNode): void => {
 	visit(ast)
 }
 
+/** Is `node` a JSX value (`<x/>` or `<>…</>`)? */
+const isJsxNode = (node: unknown): boolean => {
+	const t = isNode(node) ? String(node.type) : null
+	return t === 'JSXElement' || t === 'JSXFragment'
+}
+
+/** Does an arrow/function body produce JSX, directly or via a `return`? */
+const producesJsx = (body: unknown): boolean => {
+	if (isJsxNode(body)) return true
+	if (!isNode(body) || body.type !== 'BlockStatement') return false
+	return asArray(body.body).some(
+		stmt => stmt.type === 'ReturnStatement' && isJsxNode(stmt.argument),
+	)
+}
+
+/**
+ * Report React JSX idioms that TSRX renders literally instead of
+ * conditionally or iteratively (LT-054): `{cond && <jsx/>}`, `{cond ? <a/> :
+ * <b/>}`, and `.map()` producing JSX in child position. None of these fail
+ * to parse — @tsrx/core accepts every one as an ordinary expression — so
+ * without this scan they compile silently into broken output (a JSX node,
+ * or an array of them, stringified into the HTML; verified empirically
+ * before scoping this task). Scanning the whole AST, the same shape as
+ * `reportLazyPatterns`, also catches the idiom nested inside setup
+ * expressions, not just direct template children.
+ */
+const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
+	const visit = (node: unknown): void => {
+		if (Array.isArray(node)) {
+			for (const child of node) visit(child)
+			return
+		}
+		if (!isNode(node)) return
+		if (
+			node.type === 'LogicalExpression' &&
+			node.operator === '&&' &&
+			isJsxNode(node.right)
+		)
+			ctx.diagnostics.push(
+				diagnostic.reactLogicalJsx(
+					ctx.source,
+					node.start,
+					text(ctx.source, node.left as TsrxNode),
+					text(ctx.source, node),
+				),
+			)
+		if (
+			node.type === 'ConditionalExpression' &&
+			(isJsxNode(node.consequent) || isJsxNode(node.alternate))
+		)
+			ctx.diagnostics.push(
+				diagnostic.reactTernaryJsx(
+					ctx.source,
+					node.start,
+					text(ctx.source, node.test as TsrxNode),
+					text(ctx.source, node),
+				),
+			)
+		if (
+			node.type === 'CallExpression' &&
+			isNode(node.callee) &&
+			node.callee.type === 'MemberExpression' &&
+			!node.callee.computed &&
+			identifierName(node.callee.property) === 'map'
+		) {
+			const callback = asArray(node.arguments)[0]
+			if (
+				callback &&
+				/Function(Expression)?$/.test(callback.type) &&
+				producesJsx(callback.body)
+			)
+				ctx.diagnostics.push(
+					diagnostic.reactMapJsx(
+						ctx.source,
+						node.start,
+						identifierName(asArray(callback.params)[0]) ?? 'item',
+						text(ctx.source, node.callee.object as TsrxNode),
+						text(ctx.source, node),
+					),
+				)
+		}
+		for (const [key, value] of Object.entries(node)) {
+			if (key === 'loc' || key === 'range' || key === 'parent') continue
+			visit(value)
+		}
+	}
+	visit(ast)
+}
+
 /* === Exported Functions === */
 
 /**
@@ -178,6 +268,7 @@ export const compileSource = (
 		}
 	}
 	reportLazyPatterns(ctx, ast)
+	reportReactJsxNearMisses(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
 	const plainImports = parsePlainImports(ctx, ast, filename)
 
@@ -245,6 +336,17 @@ export const compileSource = (
 	const signals: SignalIR[] = []
 	const signalByName = new Map<string, SignalIR>()
 	const setupInits = new Map<string, TsrxNode>()
+	/**
+	 * `const name = first(selector, required)` declarations (LT-055),
+	 * pending post-lowering resolution — the template doesn't exist yet at
+	 * this point in the setup-statement loop (`lowerChildren` runs later),
+	 * and structurally matching the selector against template elements
+	 * needs the template. Resolved once `root` exists, below.
+	 */
+	const elementRefs = new Map<
+		string,
+		{ selectorText: string; reasonText: string; node: TsrxNode }
+	>()
 	let exposeText: string | null = null
 	let exposeRange: SourceRange | null = null
 	let exposeArgNode: TsrxNode | null = null
@@ -277,6 +379,33 @@ export const compileSource = (
 				continue
 			}
 			const init = (decl as TsrxNode).init as TsrxNode
+			// `first(selector, required)` element reference (LT-055, replacing
+			// `ref={}`): doesn't exist server-side and has no server
+			// substitution the way `requestContext` does, so it must never
+			// reach `setup`/`setupInits`/`serverKnown` at all — a name known
+			// there but never actually declared server-side would suppress the
+			// `exposeArgNode` `any`-stub below for a name that genuinely needs
+			// it (same as `ref={}` names, which never entered these either).
+			// Handled entirely separately, before the generic push/set below.
+			if (identifierName(init.callee) === 'first') {
+				const args = asArray(init.arguments)
+				const [selectorArg, reasonArg] = args
+				const selectorText =
+					selectorArg?.type === 'Literal' &&
+					typeof selectorArg.value === 'string'
+						? selectorArg.value
+						: null
+				const reasonText =
+					reasonArg?.type === 'Literal' && typeof reasonArg.value === 'string'
+						? reasonArg.value
+						: null
+				if (args.length !== 2 || selectorText === null || reasonText === null)
+					ctx.diagnostics.push(
+						diagnostic.invalidFirstCall(source, stmt.start, declName),
+					)
+				else elementRefs.set(declName, { selectorText, reasonText, node: init })
+				continue
+			}
 			setupInits.set(declName, init)
 			const setupStmt: SetupStmt = {
 				text: text(ctx.source, stmt),
@@ -422,6 +551,20 @@ export const compileSource = (
 					)
 				}
 			}
+			continue
+		}
+		// React's component-return idiom (LT-054): TSRX's output is the setup
+		// block's trailing JSX expression, not a `return`. Diagnosed with a
+		// dedicated fix-it rather than falling through to the generic
+		// "unsupported statement" message below.
+		if (
+			stmt.type === 'ReturnStatement' &&
+			isNode((stmt as TsrxNode).argument) &&
+			['JSXElement', 'JSXFragment'].includes(
+				String(((stmt as TsrxNode).argument as TsrxNode).type),
+			)
+		) {
+			ctx.diagnostics.push(diagnostic.reactReturnJsx(source, stmt.start))
 			continue
 		}
 		const expression =
@@ -581,6 +724,44 @@ export const compileSource = (
 		return { component: null, diagnostics: ctx.diagnostics }
 	}
 
+	// Resolve `first(selector, required)` element references (LT-055) now
+	// that `root` exists: structurally match each author selector against
+	// the template, and attach a synthetic `{kind: 'ref', name}` to every
+	// matched element — the exact IR shape `ref={}` used to populate
+	// directly. Every downstream consumer (addQuery's naming in
+	// analysis/effects.ts and analysis/harvest.ts, refNames collection in
+	// analysis/plan.ts) is unchanged: only how that IR gets populated moved.
+	const refReasons = new Map<string, string>()
+	for (const [refName, { selectorText, reasonText, node }] of elementRefs) {
+		const { elements } = collectMatchingElements(root, selectorText)
+		if (elements.length === 0) {
+			ctx.diagnostics.push(
+				diagnostic.firstSelectorNotFound(
+					source,
+					node.start,
+					refName,
+					selectorText,
+				),
+			)
+			continue
+		}
+		if (elements.length > 1 && !shareExclusiveIf(root, elements)) {
+			ctx.diagnostics.push(
+				diagnostic.firstSelectorAmbiguous(
+					source,
+					node.start,
+					refName,
+					selectorText,
+					elements.length,
+				),
+			)
+			continue
+		}
+		for (const element of elements)
+			element.attrs.push({ kind: 'ref', name: refName })
+		refReasons.set(refName, reasonText)
+	}
+
 	// CSS: verbatim, dedented (see css.ts).
 	let css = ''
 	if (styleChild) {
@@ -668,6 +849,7 @@ export const compileSource = (
 					contextRefs: [...contextRefs].sort(),
 					config,
 					root,
+					refReasons,
 					fors,
 					css,
 					typeDecls,

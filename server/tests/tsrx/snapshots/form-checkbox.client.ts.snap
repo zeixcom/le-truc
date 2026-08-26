@@ -37,7 +37,7 @@ declare global {
 export default defineComponent<FormCheckboxProps>(
 	'form-checkbox',
 	({ expose, first, host, on, watch }) => {
-		const checkbox = first('input', 'form-checkbox: input missing')
+		const checkbox = first('input', 'checkbox input')
 		expose({
 			checked: asBoolean(false),
 		})

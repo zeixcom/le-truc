@@ -39,7 +39,7 @@ declare global {
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',
 	({ expose, first, host, internals, on, watch }) => {
-		const input = first('textarea, input', 'form-textbox: textarea, input missing')
+		const input = first('textarea, input', 'text control')
 		const p = first('p[class="description"]')
 		const button = first('button')
 		const p2 = first('p[role="alert"]')

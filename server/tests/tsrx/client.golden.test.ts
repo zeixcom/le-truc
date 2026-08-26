@@ -158,9 +158,12 @@ describe('client golden — convergence with the hand-written trio', () => {
 		// Arg-substituted seed (LT-008): the param's mirror site is the live
 		// input — the hand-written seeds createState(textbox.value.length).
 		expect(code).toContain('const length = createCell(input.value.length)')
-		// @if union addressing: whichever branch rendered is the element found
+		// @if union addressing: whichever branch rendered is the element found.
+		// The message is the author's own first()-declared reason (LT-055),
+		// not the usual auto-generated one — the one part of the source
+		// `first()` call that flows into the generated code verbatim.
 		expect(code).toContain(
-			"const input = first('textarea, input', 'form-textbox: textarea, input missing')",
+			"const input = first('textarea, input', 'text control')",
 		)
 		// `clearable`/`validatable` each gate an optional element (LT-008,
 		// single-branch @if, no @else): the button/error-paragraph queries are

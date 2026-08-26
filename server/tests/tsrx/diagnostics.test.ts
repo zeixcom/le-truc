@@ -7,6 +7,7 @@ import { describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent, compileSource } from '../../tsrx'
+import type { RegistryEntry } from '../../tsrx/registry'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -539,10 +540,14 @@ describe('rewrite-rule enforcement', () => {
 	})
 
 	test('a plain setup const calling a client-only primitive directly is TSRX013', () => {
+		// `first()` is deliberately excluded from this example since LT-055:
+		// a two-string-literal-argument `first()` call is now the sanctioned
+		// `ref={}` replacement (see the "first() element references" describe
+		// block below), not a generic client-only primitive.
 		const source = `export function C({}: {})
 	@{
 		const n = createCell(1)
-		const el = first('.foo')
+		const el = all('.foo')
 		expose({ n: n.get })
 		<>
 			<c-el><span>{n}</span></c-el>
@@ -553,6 +558,287 @@ describe('rewrite-rule enforcement', () => {
 		const hit = diagnostics.find(d => d.code === 'TSRX013')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`el`')
-		expect(hit?.message).toContain('`first`')
+		expect(hit?.message).toContain('`all`')
+	})
+})
+
+describe('React JSX near-misses (LT-054)', () => {
+	const el = (body: string): string =>
+		`export function C({ cond, items }: { cond: boolean; items: string[] })
+	@{
+		expose({})
+		<>
+			<c-el>${body}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('{cond && <jsx/>} is TSRX021 with an @if fix-it', () => {
+		const source = el('<div>{cond && <span>yes</span>}</div>')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX021')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('@if (cond)')
+	})
+
+	test('{cond ? <a/> : <b/>} is TSRX022 with an @if/@else fix-it', () => {
+		const source = el('<div>{cond ? <span>a</span> : <span>b</span>}</div>')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX022')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('@if (cond)')
+		expect(hit?.message).toContain('@else')
+	})
+
+	test('.map() producing JSX in child position is TSRX023 with an @for fix-it', () => {
+		const source = el('<ul>{items.map(i => <li>{i}</li>)}</ul>')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX023')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('@for (const i of items)')
+	})
+
+	test('.map() over an array NOT producing JSX is not diagnosed', () => {
+		const source = el("<div>{items.map(i => i).join(', ')}</div>")
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX023')).toBe(false)
+	})
+
+	test('return (<>…</>) in setup is TSRX024, not the generic TSRX005', () => {
+		const source = `export function C({ cond }: { cond: boolean })
+	@{
+		expose({})
+		return (<>
+			<c-el><span>{cond}</span></c-el>
+			<style>c-el { color: red }</style>
+		</>)
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		expect(diagnostics.some(d => d.code === 'TSRX024')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'TSRX005')).toBe(false)
+	})
+
+	test('className/htmlFor are TSRX006 naming the real HTML attribute', () => {
+		const source = el('<label className="x" htmlFor="y">{cond}</label>')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hits = diagnostics.filter(d => d.code === 'TSRX006')
+		expect(hits.some(h => h.message.includes('`class`'))).toBe(true)
+		expect(hits.some(h => h.message.includes('`for`'))).toBe(true)
+	})
+
+	test('className/htmlFor are rejected on composed elements too', () => {
+		const childSource = `export function BasicChild({ label }: { label: string })
+	@{
+		expose({})
+		<>
+			<basic-child>{label}</basic-child>
+			<style>basic-child { display: block }</style>
+		</>
+	}`
+		const { component: child, diagnostics: childDiagnostics } =
+			compileComponent(
+				childSource,
+				'examples/child/basic-child.tsrx',
+				new Set(),
+			)
+		if (!child)
+			throw new Error(`child must compile: ${JSON.stringify(childDiagnostics)}`)
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild className="x" label={title} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const composeRegistry = new Map<string, RegistryEntry>([
+			[child.entry.source, child.entry],
+		])
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(),
+			undefined,
+			composeRegistry,
+		)
+		expect(component).toBeNull()
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX006' && d.message.includes('`class`'),
+			),
+		).toBe(true)
+	})
+})
+
+describe('first(selector, required) element references (LT-055)', () => {
+	const el = (setup: string, template: string): string =>
+		`export function C({}: {})
+	@{
+		${setup}
+		expose({})
+		<>
+			<c-el>${template}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('resolves a bare-tag selector and lowers to a ref', () => {
+		const source = el(
+			"const input = first('input', 'required')",
+			'<input onInput={() => input.value} />',
+		)
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		expect(component?.clientCode).toContain("first('input', 'required')")
+	})
+
+	test('a selector spanning @if branches with different tags resolves', () => {
+		const source = `export function C({ multiline }: { multiline: boolean })
+	@{
+		const control = first('input, textarea', 'text control')
+		expose({})
+		<>
+			<c-el>
+				@if (multiline) {
+					<textarea onInput={() => control.value} />
+				} @else {
+					<input onInput={() => control.value} />
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+	})
+
+	test('a malformed first() call (wrong arg count/shape) is TSRX025', () => {
+		const source = el("const input = first('input')", '<input />')
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX025')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('const input = first(…)')
+	})
+
+	test('a selector matching no element is TSRX026', () => {
+		const source = el(
+			"const input = first('.nonexistent', 'required')",
+			'<input />',
+		)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX026')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`input`')
+	})
+
+	test('a selector using unsupported syntax is TSRX026', () => {
+		const source = el(
+			"const input = first('c-el input', 'required')",
+			'<input />',
+		)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX026')).toBe(true)
+	})
+
+	test('a selector matching multiple, non-exclusive elements is TSRX027', () => {
+		const source = el(
+			"const input = first('input', 'required')",
+			'<input /><input />',
+		)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX027')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('2 elements')
+	})
+
+	test("the author's required-reason text flows into the emitted message", () => {
+		const source = el(
+			"const input = first('input', 'a very specific reason')",
+			'<input onInput={() => input.value} />',
+		)
+		const { component } = compileComponent(source, 'c.tsrx', new Set())
+		expect(component?.clientCode).toContain(
+			"first('input', 'a very specific reason')",
+		)
+	})
+
+	test('bare ref={} on a composed element is unaffected (still supported)', () => {
+		const childSource = `export function BasicChild({ label }: { label: string })
+	@{
+		expose({})
+		<>
+			<basic-child>{label}</basic-child>
+			<style>basic-child { display: block }</style>
+		</>
+	}`
+		const { component: child, diagnostics: childDiagnostics } =
+			compileComponent(
+				childSource,
+				'examples/child/basic-child.tsrx',
+				new Set(),
+			)
+		if (!child)
+			throw new Error(`child must compile: ${JSON.stringify(childDiagnostics)}`)
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={title} ref={child} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const composeRegistry = new Map([[child.entry.source, child.entry]])
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(),
+			undefined,
+			composeRegistry,
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
 	})
 })

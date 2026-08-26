@@ -229,7 +229,29 @@ export type AttributeIR =
 			handler: TsrxNode
 			handlerText: string
 	  }
-	| { kind: 'ref'; name: string }
+	| {
+			/**
+			 * An element bound to a name usable as a client-side reference. On
+			 * a RAW (dashed-tag) element this is never authored as a JSX
+			 * attribute — `classifyAttribute` hard-errors a bare `ref={}`
+			 * (TSRX006) — this variant is instead populated exclusively by
+			 * `compiler.ts`'s post-lowering `first(selector, required)`
+			 * resolution (LT-055), which structurally matches the author's
+			 * selector against the template and attaches this to the matched
+			 * element(s) (more than one only when they are mutually-exclusive
+			 * `@if` branch roots). On a COMPOSED (PascalCase) element,
+			 * `ref={name}` is still authored directly as a JSX attribute
+			 * (`classifyComposeAttribute`) — `first()`'s selector-matching
+			 * never sees `kind: 'compose'` nodes, so retiring it there is a
+			 * separate, not-yet-scoped follow-up (see `classify-attributes.ts`).
+			 * Every downstream consumer (`addQuery`'s naming, `refNames`
+			 * collection in `analysis/plan.ts`) is unchanged from the original
+			 * `ref={}` design either way — only the raw-element authoring
+			 * surface moved.
+			 */
+			kind: 'ref'
+			name: string
+	  }
 
 /**
  * Attributes on a composed (PascalCase) element (ADR 0023 sub-design 10).
@@ -351,6 +373,17 @@ export type ComponentIR = {
 	config: ConfigIR | null
 	/** Template root element IR (style block removed). */
 	root: TemplateNode & { kind: 'element' }
+	/**
+	 * `first(selector, required)`-declared name → the author's own required-
+	 * reason text (LT-055). `analysis/naming.ts`'s `addQuery` uses this to
+	 * populate the emitted `MissingElementError` message instead of its
+	 * usual auto-generated one, when the query's name matches a `first()`
+	 * declaration — the reason string is the one part of the author's call
+	 * that DOES flow into the generated code verbatim; the selector itself
+	 * is compile-time-only (the emitted selector is always the compiler's
+	 * own structurally-proven one, exactly as for `ref={}` before it).
+	 */
+	refReasons: ReadonlyMap<string, string>
 	/** `@for` loops, keyed by their template node. */
 	fors: Map<TsrxNode, ForIR>
 	/** Dedented verbatim CSS ("" when no style block). */
