@@ -21,7 +21,7 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 ## MethodProducer is Branded, Not Structurally Distinguished
 
-`isMethodProducer()` in `src/types.ts` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `deriveSignal`), not a method producer.
+`isMethodProducer()` in `src/types.ts` checks for `METHOD_BRAND` only. An unbranded `() => void` function is treated as a `MemoCallback` (wrapped in `deriveCell`), not a method producer.
 
 **Always wrap method producer initializers with `defineMethod()`.** The function IS the method — it is installed directly as `host[key] = fn`.
 
@@ -39,9 +39,9 @@ A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no 
 
 ## `all()` MutationObserver is Lazy
 
-The observer in `src/helpers/dom.ts` only activates when the `Memo` is **read inside a reactive effect**. If no effect reads the Memo, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
+The observer in `src/helpers/dom.ts` only activates when the returned `Signal` is **read inside a reactive effect**. If no effect reads it, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
 
-The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the memo's `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
+The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
 ## `reconcile()` Owns the Container; `each()` Does Not
 
@@ -64,7 +64,7 @@ The observer watches only mutations implied by the CSS selector (class, ID, `[at
 
 The original signal is captured and restored when the parent disconnects, so the child regains its own independent state after detachment.
 
-**The property-key (`'value'`) and bare-writable-signal short forms are deprecated (ADR 0012).** Both resolve to the parent's writable signal and grant the child unrestricted `.set()`; they warn in DEV_MODE and are removed in the next major. Use the thunk (`() => host.prop`, read-only) or descriptor (`{ get, set }`, mediated writable) forms. Read-only signals (`Memo`/`Task`) passed directly do not warn.
+**The property-key (`'value'`) and bare-writable-signal short forms are deprecated (ADR 0012).** Both resolve to the parent's writable signal and grant the child unrestricted `.set()`; they warn in DEV_MODE and are removed in the next major. Use the thunk (`() => host.prop`, read-only) or descriptor (`{ get, set }`, mediated writable) forms. The warning checks for the problematic shape directly — a branded CE signal exposing both `get` and `set` — rather than trying to prove read-only-ness; signals without a `.set()` (`Memo`/`Task`/`Sensor`) passed directly do not warn.
 
 **Every entry in `props` is validated before any signal is swapped (ADR 0011).** If a passed prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed — which is exactly what happens when the target is a non-Le-Truc element, or the prop is read-only/computed — `pass()` throws `InvalidPassPropertyError` naming every failing prop, instead of silently no-op'ing. This is a deferred-activation throw (ADR 0007): it happens inside `connectedCallback`, after the calling factory has already returned, so it cannot be caught by the factory's own code — it surfaces as an uncaught error (`pageerror`), the same way `InvalidPropertyNameError` does.
 
@@ -88,7 +88,7 @@ If a child custom element queried by `first()` or `all()` in `src/helpers/dom.ts
 
 ## `on()` Handler Return Value Updates Host
 
-If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs. The handler always receives `(event, element)` — second arg is the element, useful for Memo targets.
+If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all returned entries are applied to `host` in a `batch()`. Returning `void` (or `undefined`) is a no-op — no host update occurs. The handler always receives `(event, element)` — second arg is the element, useful for `Signal` targets.
 
 ## Context Protocol is the Web Components Community Protocol
 
@@ -119,6 +119,24 @@ DEV-gated code is guarded inline by `process.env.DEV_MODE === 'true'` at each us
 ## Event-Driven Read-Only Props
 
 Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
+
+## `expose()` Accepts a `SlotDescriptor` (`{ get, set? }`) for a Mediated Read/Write Prop
+
+`#setAccessor` in `src/component.ts` recognizes a plain `{ get, set? }` object — detected by `isSlotDescriptor()` in `src/util.ts` (a `get` function, no `Signal` brand `Symbol.toStringTag`) — and installs it directly as the property's backing `Slot`, exactly as `createSlot()` (`@zeix/cause-effect`) already accepts a `SlotDescriptor` in place of a `Signal`. This is the same mediated shape `pass()` accepts (ADR 0012), now usable in `expose()` too.
+
+Use this instead of a pair of `watch()` calls syncing two signals by hand (one direction needs an equality guard to avoid re-triggering the other): `expose({ value: { get: () => tokens.get().join(', '), set: v => tokens.set(parse(v)) } })` replaces `watch(tokens, list => host.value = list.join(', '))` + `watch('value', v => { if (!same(parse(v), tokens.get())) tokens.set(parse(v)) })`. Omitting `set` produces a read-only prop; writing to it throws `ReadonlySignalError`, same as any read-only `Signal`.
+
+`isSignal({ get, set })` is `false` (no brand) — this is what lets `#setAccessor` distinguish a descriptor from a static value that happens to be an arbitrary object. `formResetCallback`/`formAssociatedCheckbox()`'s reset path (`src/extensions/form.ts`) also checks `isSlotDescriptor()` before treating an initializer as a literal default to reassign — a descriptor has no "default", so reset is a no-op for it, same as for a `Signal` or callback initializer.
+
+See `examples/form/tokenbox/form-tokenbox.ts` for a real usage.
+
+## Form Reset Is Deferred and Restores From `defaultValue`/`defaultChecked`
+
+`makeResetCallback` (`src/extensions/form.ts`) defers its restoring write to a microtask. Form reset runs in tree order, so a form-associated host's `formResetCallback` fires **before** its own inner native control resets itself — a synchronous write raced that native reset and lost. Consequence for tests: `instance.formResetCallback()` returns before `value`/`checked` changes; `await Promise.resolve()` before asserting.
+
+Reset assigns `this[prop] = this[defaultProp]` — it does not re-run the retained initializer inline. `defaultValue`/`defaultChecked` are managed prototype properties: the getter re-parses the live same-named content attribute through the retained `Parser` (static initializer as-is when not Parser-backed); the setter writes or removes the attribute. Setting them moves the baseline for the next reset only — it never applies live. Native `<input>` also updates a clean control's live value here; that is unimplementable from JS (the dirty flag is write-only), so the deviation is deliberate.
+
+Both names are per-variant reserved members (`InvalidPropertyNameError` from `expose()`), and `value`/`checked` must never go into `observedAttributes()` on a form-associated component — re-parsing the baseline attribute into the live prop is the same conflation from the attribute-write direction.
 
 ## Testing a DEV-Gated Branch: Flip the Env Var, No Module Mocking
 

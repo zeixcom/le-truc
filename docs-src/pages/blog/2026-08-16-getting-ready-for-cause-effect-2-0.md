@@ -4,6 +4,7 @@ description: Le Truc 2.5 backports Cause & Effect's new signal names so you can 
 emoji: 🌉
 layout: blog
 date: 2026-08-16
+modified-date: 2026-08-18
 author: Esther Brunner
 tags: release, migration, cause-effect
 ---
@@ -27,19 +28,19 @@ That's an imperative write inside an effect, syncing one signal into another by 
 
 ## What Cause & Effect 1.5 does about it
 
-Cause & Effect 1.5 backports the fix without breaking anything yet. Three new functions — `deriveSignal`, `deriveList`, and `deriveStore` — replace the old split between `createComputed`/`createMemo` and the collection-specific derivation functions. Each one derives a signal of its matching shape from any source: a sync function, an async function, an external push, or another signal. That closes exactly the gap above — a `Task` can become a `Store` or a `List` directly, no manual effect required.
+Cause & Effect 1.5 backports the fix without breaking anything yet. Three new functions — `deriveCell`, `deriveList`, and `deriveStore` — replace the old split between `createComputed`/`createMemo` and the collection-specific derivation functions. Each one derives a signal of its matching shape from any source: a sync function, an async function, an external push, or another signal. That closes exactly the gap above — a `Task` can become a `Store` or a `List` directly, no manual effect required.
 
 The old names — `createComputed`, `List`, `Store`, `createCollection`, and others tied to the previous nine-type taxonomy — still work in 1.5. They're marked `@deprecated` and point at their replacement. Nothing breaks yet. That's the point of a 1.x release. The renames are visible now. The removal happens later, in Cause & Effect 2.0.
 
 ## What Le Truc 2.5 does about it
 
-Le Truc 2.5 re-exports every one of those new names next to the deprecated one it replaces. You can start using `deriveSignal`, `deriveList`, `MutableList`, `MutableStore`, and the rest today, without waiting for a major version bump on either library. [Cause & Effect's MIGRATION-2.0.md](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md) has the full rename table. A codemod rewrites your imports automatically:
+Le Truc 2.5 re-exports every one of those new names next to the deprecated one it replaces. You can start using `deriveCell`, `deriveList`, `MutableList`, `MutableStore`, and the rest today, without waiting for a major version bump on either library. [Cause & Effect's MIGRATION-2.0.md](https://github.com/zeixcom/cause-effect/blob/main/MIGRATION-2.0.md) has the full rename table. A codemod rewrites your imports automatically:
 
 ```sh
 bun tools/codemod-v2.ts 'src/**/*.ts' --module @zeix/le-truc
 ```
 
-Run it, review the diff, done. The one rename it can't do for you: `createComputed` → `deriveSignal` also renames the `value` option to `initial` — that one needs a manual pass.
+Run it, review the diff, done. The one rename it can't do for you: `createComputed` → `deriveCell` also renames the `value` option to `initial` — that one needs a manual pass.
 
 ## Why the names had to change
 

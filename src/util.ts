@@ -1,4 +1,24 @@
+import type { SlotDescriptor } from '@zeix/cause-effect'
+
 /* === Exported Functions === */
+
+/**
+ * Check whether a value is a `SlotDescriptor`-shaped object: a plain `{ get, set? }`
+ * pair, not a branded `Signal`. Signals carry a `Symbol.toStringTag` (`'State'`,
+ * `'Memo'`, `'Slot'`, …); a raw descriptor never does, which is what distinguishes
+ * `expose({ value: { get, set } })` from `expose({ value: someSignal })`.
+ *
+ * @since 2.5.1
+ * @param {unknown} value - Value to check
+ * @returns {boolean} - True if `value` is a `{ get, set? }` descriptor, not a `Signal`
+ */
+const isSlotDescriptor = /*#__PURE__*/ <T extends {} = unknown & {}>(
+	value: unknown,
+): value is SlotDescriptor<T> =>
+	value !== null &&
+	typeof value === 'object' &&
+	typeof (value as Record<string, unknown>).get === 'function' &&
+	!(Symbol.toStringTag in value)
 
 /**
  * Check whether an element is a custom element
@@ -50,4 +70,10 @@ const describeRoot = /*#__PURE__*/ (parent: ParentNode): string =>
 			? elementName(parent)
 			: 'document'
 
-export { describeRoot, elementName, isCustomElement, isNotYetDefinedComponent }
+export {
+	describeRoot,
+	elementName,
+	isCustomElement,
+	isNotYetDefinedComponent,
+	isSlotDescriptor,
+}

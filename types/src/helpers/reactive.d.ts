@@ -7,7 +7,7 @@ import { type FirstElement } from './dom';
  *
  * A `Reactive<T, P>` source is one of three forms: a property name (reads
  * `host[name]` and tracks it as a signal dependency), a `Signal`, or a thunk
- * wrapped in `deriveSignal()`. `watch()` and `pass()` both resolve sources
+ * wrapped in `deriveCell()`. `watch()` and `pass()` both resolve sources
  * through `toSignal()`.
  *
  * `pass()` accepts a read-only thunk, a mediated `{ get, set }` descriptor, a
@@ -26,7 +26,7 @@ import { type FirstElement } from './dom';
  * - `keyof P` — a string property name on the host; reads `host[name]` and
  *   registers it as a signal dependency automatically.
  * - `Signal<T>` — any signal; `.get()` is called inside the reactive effect.
- * - `() => T | Promise<T> | null | undefined` — a thunk wrapped in `deriveSignal`;
+ * - `() => T | Promise<T> | null | undefined` — a thunk wrapped in `deriveCell`;
  *   all signals read inside are tracked in the pure phase. Returning `null` or
  *   `undefined` drives the `nil` path; an async thunk becomes a `Task` signal.
  */

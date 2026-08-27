@@ -34,7 +34,7 @@ None. This component coordinates child component properties through effects.
 - Shopping cart button receiving `disabled` and `badge` via `pass()`
 ---
 - `all('form-spinbutton')`
-- `Memo<(HTMLElement & FormSpinbuttonProps)[]>`
+- `Cell<(HTMLElement & FormSpinbuttonProps)[]>`
 - **required**
 - Spinbuttons whose `value` properties are summed to compute cart total
 {% /table %}

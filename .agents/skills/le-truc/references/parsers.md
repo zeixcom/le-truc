@@ -13,6 +13,7 @@
 | **Signal (`state.get`)** | Prop is read-only to consumers; expose getter of `createState()` in factory closure |
 | **MemoCallback** `() => T` | Prop is derived computed value (unbranded thunk) |
 | **MethodProducer** (`defineMethod`-wrapped) | Prop is imperative method callable from outside |
+| **SlotDescriptor** (`{ get, set? }`) | Prop is a mediated read/write view over other internal state (e.g. a joined-string projection of a `MutableList`) — the getter derives live, the setter writes through; replaces a pair of hand-synced `watch()` calls. Omit `set` for a read-only mediated prop (writes throw) |
 
 > **Attribute semantics:** Attributes are for server-side configuration by HTML authors. Parsers in `expose()` called **once at connect time** — they read current attribute value from server-rendered markup. Attribute changes on live document do NOT trigger re-parsing.
 

@@ -65,7 +65,7 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 - `pass()` behavior or scope changes (e.g., Le Truc-only restriction clarified)
 - `provideContexts` / `requestContext` API changes
 - `createList()` usage or the DOM reconciliation pattern changes
-- `createMemo` or other signal API used in examples changes
+- `deriveCell` or other signal API used in examples changes
 - Code examples reference a changed API
 
 **Consistency checks:**

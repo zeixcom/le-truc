@@ -1,4 +1,4 @@
-import { createMemo, type Memo } from '@zeix/cause-effect'
+import { type Cell, createMemo } from '@zeix/cause-effect'
 import {
 	DependencyTimeoutError,
 	InvalidSelectorError,
@@ -101,8 +101,8 @@ type AllElements = {
 	<S extends string>(
 		selector: S,
 		required?: string,
-	): Memo<ElementFromSelector<S>[]>
-	<E extends Element>(selector: string, required?: string): Memo<E[]>
+	): Cell<ElementFromSelector<S>[]>
+	<E extends Element>(selector: string, required?: string): Cell<E[]>
 }
 
 type ElementQueries = {
@@ -179,7 +179,7 @@ const bindFirst = (root: Element): FirstElement =>
 /**
  * Return the first descendant of `root` matching a CSS selector.
  *
- * One-shot: no dependency tracking for undefined custom elements, no `Memo`.
+ * One-shot: no dependency tracking for undefined custom elements, no `Cell`.
  * `first()`/`all()` (see `makeElementQueries`) add that on top of this for a
  * component host. Use `query()` directly for lookups relative to any other
  * already-obtained element — inside `reconcile()`/`each()` callbacks, or from
@@ -222,7 +222,7 @@ function query<S extends string>(
 /**
  * Return a plain array of all descendants of `root` matching a CSS selector.
  *
- * One-shot: queried once, not backed by a `Memo`/`MutationObserver`. Use this
+ * One-shot: queried once, not backed by a `Cell`/`MutationObserver`. Use this
  * for a roving-tabindex-style snapshot, or any other case where a live
  * collection isn't needed. See `query()` and ADR 0021.
  *
@@ -264,21 +264,21 @@ function queryAll<S extends string>(
  * @since 0.16.0
  * @param {ParentNode} parent - The parent node to search within
  * @param {string} selector - The CSS selector to match elements
- * @returns {Memo<ElementFromSelector<S>[]>} Reactive memo of current matching elements
+ * @returns {Cell<ElementFromSelector<S>[]>} Reactive memo of current matching elements
  * @throws {InvalidSelectorError} If the selector is malformed
  */
 function createElementsMemo<S extends string>(
 	parent: ParentNode,
 	selector: S,
-): Memo<ElementFromSelector<S>[]>
+): Cell<ElementFromSelector<S>[]>
 function createElementsMemo<E extends Element>(
 	parent: ParentNode,
 	selector: string,
-): Memo<E[]>
+): Cell<E[]>
 function createElementsMemo<S extends string>(
 	parent: ParentNode,
 	selector: S,
-): Memo<ElementFromSelector<S>[]> {
+): Cell<ElementFromSelector<S>[]> {
 	type E = ElementFromSelector<S>
 
 	// Validate the selector eagerly so a malformed selector throws here,
@@ -393,31 +393,31 @@ const makeElementQueries = (
 	}
 
 	/**
-	 * Return a `Memo` of all descendant elements matching a CSS selector.
+	 * Return a `Cell` of all descendant elements matching a CSS selector.
 	 *
-	 * The Memo is backed by a `MutationObserver` that activates lazily when first
+	 * The cell is backed by a `MutationObserver` that activates lazily when first
 	 * read inside a reactive effect, and disconnects when no effects are watching.
 	 * Undefined custom elements found at query time are added to the dependency set.
 	 *
 	 * @since 0.15.0
 	 * @param {S} selector - CSS selector
 	 * @param {string} [required] - If provided and no elements are found at query time, throws with this message as context
-	 * @returns {Memo<ElementFromSelector<S>[]>} Reactive memo of current matching elements
+	 * @returns {Cell<ElementFromSelector<S>[]>} Reactive cell of current matching elements
 	 * @throws {MissingElementError} If `required` is set and no matching elements exist at query time
 	 * @throws {InvalidSelectorError} If the selector is malformed
 	 */
 	function all<S extends string>(
 		selector: S,
 		required?: string,
-	): Memo<ElementFromSelector<S>[]>
+	): Cell<ElementFromSelector<S>[]>
 	function all<E extends Element>(
 		selector: string,
 		required?: string,
-	): Memo<E[]>
+	): Cell<E[]>
 	function all<S extends string>(
 		selector: S,
 		required?: string,
-	): Memo<ElementFromSelector<S>[]> {
+	): Cell<ElementFromSelector<S>[]> {
 		const targets = createElementsMemo(root, selector)
 		const current = targets.get()
 		if (required != null && !current.length)

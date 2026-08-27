@@ -1,4 +1,4 @@
-import { type Memo } from '@zeix/cause-effect';
+import { type Signal } from '@zeix/cause-effect';
 import type { ComponentProps, EffectDescriptor, Falsy } from '../types';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
 /**
@@ -12,19 +12,19 @@ type OnEventHandler<P extends ComponentProps, Evt extends Event, E extends Eleme
     [K in keyof P]?: P[K];
 } | Falsy | void | Promise<void>;
 /**
- * `on` helper bound to a component host. Accepts a single element or `Memo<E[]>` target
+ * `on` helper bound to a component host. Accepts a single element or `Signal<E[]>` target
  * and typed event names. Returns an `EffectDescriptor`.
  */
 type OnHelper<P extends ComponentProps> = {
-    <E extends Element, T extends keyof HTMLElementEventMap>(target: Memo<E[]> | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: Memo<E[]> | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: Signal<E[]> | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element>(target: Signal<E[]> | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): EffectDescriptor;
     <E extends Element, T extends keyof HTMLElementEventMap>(target: E | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): EffectDescriptor;
     <E extends Element>(target: E | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): EffectDescriptor;
 };
 /**
  * Create an `on` helper bound to a component host.
  *
- * The returned `on` attaches a typed event listener to a single element or `Memo<E[]>`
+ * The returned `on` attaches a typed event listener to a single element or `Signal<E[]>`
  * collection. Handlers receive `(event, element)`. Returning `{ prop: value }` synchronously
  * batch-applies those updates to host properties; returning `Promise<void>` is valid for
  * fire-and-forget side effects. For async state updates use a trigger-state + `Task`:
@@ -35,7 +35,7 @@ type OnHelper<P extends ComponentProps> = {
  * watch(createTask(async () => { ... trigger.get() ... }), { ok: ..., err: ... })
  * ```
  *
- * For `Memo<E[]>` targets, uses event delegation (one listener on the shadow root or host).
+ * For `Signal<E[]>` targets, uses event delegation (one listener on the shadow root or host).
  * Non-bubbling events fall back to per-element listeners; a DEV_MODE warning points toward
  * `each()` + `on()`.
  *

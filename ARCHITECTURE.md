@@ -27,7 +27,7 @@ defineComponent('my-element', ({ expose, first, watch }) => {
 
 Properties are backed by signals from `@zeix/cause-effect`. The `#setAccessor` creates the appropriate signal based on the initializer:
 - Already a `Signal` → used directly
-- A function → wrapped in `deriveSignal` (read-only)
+- A function → wrapped in `deriveCell` (read-only)
 - Anything else → wrapped in `createState` (read-write)
 
 Mutable signals are wrapped in a `Slot` to enable signal swapping for `pass()` (see [ADR 0004](adr/0004-slot-based-signal-swapping-for-inter-component-binding.md)).
@@ -46,7 +46,7 @@ Each helper pushes its descriptor into an ambient collector instead of relying o
 
 Explicit `return` of a `FactoryResult` array still works but is deprecated. Descriptors from `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` are already in the collector by the time they're returned, so returning them is redundant, not required. The return value is not discarded: `forEachUnseen()` (in `helpers/reactive.ts`) reconciles it against the collector, deduping by reference, so a hand-authored `EffectDescriptor` that bypasses every helper is still picked up if returned.
 
-To wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primitive without a `return`, use `watch(() => true, descriptor)`. `createComputed(() => true)` has no signal dependencies, so it never reruns. `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup on the active owner.
+To wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primitive without a `return`, use `watch(() => true, descriptor)`. `deriveCell(() => true)` has no signal dependencies, so it never reruns. `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup on the active owner.
 
 ### DOM Binding Helpers
 
@@ -65,7 +65,7 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 
 ### Event Binding
 
-`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Memo<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events. Per-element lifecycles over reactive element collections — `each()` and `pass()` with a `Signal<Element[]>` target, and the non-bubbling `on()` fallback over `Memo<Element[]>` — share the internal `keyedScopes` helper, which keys scopes by element identity so collection changes only mount entering elements and dispose leaving ones, leaving survivors untouched (see [ADR 0014](adr/0014-keyed-per-element-scopes-for-memo-collections.md)).
+`on(target, type, handler)` binds events with unified `(event, target)` signature. For `Signal<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events. Per-element lifecycles over reactive element collections — `each()` and `pass()` with a `Signal<Element[]>` target, and the non-bubbling `on()` fallback over `Signal<Element[]>` — share the internal `keyedScopes` helper, which keys scopes by element identity so collection changes only mount entering elements and dispose leaving ones, leaving survivors untouched (see [ADR 0014](adr/0014-keyed-per-element-scopes-for-memo-collections.md)).
 
 ### List Reconciliation
 
@@ -92,7 +92,7 @@ Per-item bindings mount via `bindItem` in root-keyed scopes, reusing the `keyedS
 
 So `watch()`, `on()`, `pass()`, and `provideContexts()` are all usable inside `bindItem`, exactly as inside `each()`'s callback. Per-item reactivity does not require a raw `createEffect`, and per-item events do not require container-level delegation.
 
-`bindItem` and `each()`'s callback also receive a scoped `first` as their last parameter — `query()` (see "Query System" below) pre-bound to the item's root element instead of an explicit root argument (see [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md)). It is named `first`, not `query`, matching host-level `first()`'s pre-bound, one-off shape; naming it `query` would shadow a same-scope standalone `query` import in components that need both. It does not return a `Memo` and does not defer for undefined custom elements: item subtrees are cloned once and static, and no dependency-resolution mechanism exists for a single item mid-reconciliation. An existing, not-yet-upgraded custom element inside an item still surfaces normally through the host-level `first`/`all` if the factory queries it there.
+`bindItem` and `each()`'s callback also receive a scoped `first` as their last parameter — `query()` (see "Query System" below) pre-bound to the item's root element instead of an explicit root argument (see [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md)). It is named `first`, not `query`, matching host-level `first()`'s pre-bound, one-off shape; naming it `query` would shadow a same-scope standalone `query` import in components that need both. It does not return a `Signal` and does not defer for undefined custom elements: item subtrees are cloned once and static, and no dependency-resolution mechanism exists for a single item mid-reconciliation. An existing, not-yet-upgraded custom element inside an item still surfaces normally through the host-level `first`/`all` if the factory queries it there.
 
 Collected descriptors activate against the per-item `{ root: true }` scope, not the driving structural effect. Item-level `watch(item, …)` therefore does not make the structural effect depend on item signals.
 
@@ -103,13 +103,13 @@ Unlike `each()`, `reconcile()` does not apply `forEachUnseen` to the return valu
 ### `first(selector)` / `all(selector)`
 
 - `first()`: Returns single element or throws `MissingElementError` if required
-- `all()`: Returns `Memo<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
+- `all()`: Returns `Signal<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
 
 Both collect undefined custom element dependencies for `resolveDependencies()`.
 
 ### `query(root, selector, required?)` / `queryAll(root, selector, required?)`
 
-Standalone, root-parameterized siblings of `first`/`all` (see [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md)) — same selector-to-type inference and `MissingElementError`-throwing/optional behavior, applied to an explicit `root` instead of a closed-over host. `queryAll()` returns a plain array, not a `Memo` — no `MutationObserver`, one-shot only. Neither collects dependencies for `resolveDependencies()`.
+Standalone, root-parameterized siblings of `first`/`all` (see [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md)) — same selector-to-type inference and `MissingElementError`-throwing/optional behavior, applied to an explicit `root` instead of a closed-over host. `queryAll()` returns a plain array, not a `Signal` — no `MutationObserver`, one-shot only. Neither collects dependencies for `resolveDependencies()`.
 
 `first()`/`all()` are implemented as `query`/`queryAll` bound to `host.shadowRoot ?? host`, plus the dependency-collection step. `reconcile()`'s `bindItem` and `each()`'s callback receive `query` pre-bound to the item's root element as their scoped lookup, exposed under the name `first` (see "List Reconciliation" above) — there is no separate per-item implementation.
 
@@ -134,7 +134,7 @@ Implements the [Community Protocol for Context](https://github.com/webcomponents
 - `provideContexts([...])`: provider side. Installs a `context-request` listener. A throwing property getter is caught and degrades to `undefined` (logged in `DEV_MODE`) instead of throwing inside the consumer's `Slot`.
 - `requestContext(context, fallback)`: consumer side. Dispatches `ContextRequestEvent` and returns a `Signal<T>` backed by a `Slot` — the same primitive `pass()` uses for overridable backing signals.
 
-A provider can upgrade after the consumer's synchronous dispatch — for example if its `customElements.define()` runs later in the bundle, or its `provideContexts` listener hasn't activated yet. Two re-dispatches catch this case: one on a microtask, one after the 200 ms dependency-resolution window. Each re-dispatch lets the `Slot` swap its delegate from the fallback `State` to a `Memo` of the provider's getter, switching the value reactively with no consumer code change.
+A provider can upgrade after the consumer's synchronous dispatch — for example if its `customElements.define()` runs later in the bundle, or its `provideContexts` listener hasn't activated yet. Two re-dispatches catch this case: one on a microtask, one after the 200 ms dependency-resolution window. Each re-dispatch lets the `Slot` swap its delegate from the fallback `State` to a read-only `Signal` of the provider's getter, switching the value reactively with no consumer code change.
 
 Once a provider answers, the consumer retains its value for the lifetime of the connection. Providers are stable single sources of truth that update values, not entities to be removed or swapped — disconnecting a provider does not revert the consumer to `fallback` (see [ADR 0015](adr/0015-late-provider-retry-in-requestcontext.md)).
 

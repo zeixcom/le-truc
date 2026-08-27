@@ -114,8 +114,8 @@ declare const bindClass: <T = boolean>(element: Element, token: string) => ((val
  *
  * `value=true` adds the state; `value=false` removes it. Consumers match it in
  * CSS with the `:state(token)` pseudo-class. Unlike a class token, a custom
- * state is owned by the component — it cannot be clobbered by author code or
- * frameworks rewriting the host's `class` attribute.
+ * state is owned by the component — author code or frameworks rewriting the
+ * host's `class` attribute cannot overwrite it.
  *
  * Accepts `null` for graceful degradation: the factory context's `internals`
  * is `null` when `attachInternals()` failed, in which case the returned

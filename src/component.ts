@@ -1,16 +1,17 @@
 import {
+	createCell,
 	createScope,
 	createSlot,
-	createState,
-	deriveSignal,
+	deriveCell,
 	isFunction,
 	isMutableSignal,
 	isSignal,
 	isSlot,
 	type MaybeCleanup,
 	type MemoCallback,
-	type MutableSignal,
+	type MutableCell,
 	type Signal,
+	type SlotDescriptor,
 	type TaskCallback,
 } from '@zeix/cause-effect'
 import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
@@ -53,7 +54,7 @@ import {
 	type MethodProducer,
 	type Parser,
 } from './types'
-import { elementName } from './util'
+import { elementName, isSlotDescriptor } from './util'
 
 /* === Types === */
 
@@ -61,14 +62,22 @@ import { elementName } from './util'
  * Any value that `#setAccessor` can turn into a signal:
  * - `T` — wrapped in `createState()`
  * - `Signal<T>` — used directly
- * - `MemoCallback<T>` — wrapped in `deriveSignal()`
+ * - `MemoCallback<T>` — wrapped in `deriveCell()`
  * - `TaskCallback<T>` — wrapped in `createTask()`
+ * - `SlotDescriptor<T>` (`{ get, set? }`) — used directly as the Slot's backing
+ *   signal, mirroring the mediated form `pass()` accepts. Distinguished from `T`
+ *   by `isSlotDescriptor()`: a plain object with a `get` function and no `Signal`
+ *   brand (`Symbol.toStringTag`). Use this form when the property needs both a
+ *   computed read and a validated write — e.g.
+ *   `expose({ value: { get: () => tokens.get().join(', '), set: v => tokens.set(parse(v)) } })`
+ *   replaces a pair of `watch()` calls kept in sync by hand.
  */
 type MaybeSignal<T extends {}> =
 	| T
 	| Signal<T>
 	| MemoCallback<T>
 	| TaskCallback<T>
+	| SlotDescriptor<T>
 
 /**
  * The `props` argument of `defineComponent` — a map from property names to their initializers.
@@ -79,9 +88,18 @@ type MaybeSignal<T extends {}> =
  *   at connect time.
  * - A **`MethodProducer`** (branded with `defineMethod()`) — assigned directly as the property
  *   value; the function IS the method. Per-instance state lives in factory scope.
+ * - A **`SlotDescriptor`** (`{ get, set? }`) — used directly as the property's backing
+ *   Slot, mirroring the mediated form `pass()` accepts. Listed explicitly (not left to
+ *   structurally match `Signal<P[K]>`) so an object literal with `set` type-checks without
+ *   excess-property errors.
  */
 type Initializers<P extends ComponentProps> = {
-	[K in keyof P]?: P[K] | Signal<P[K]> | Parser<P[K]> | MethodProducer
+	[K in keyof P]?:
+		| P[K]
+		| Signal<P[K]>
+		| Parser<P[K]>
+		| MethodProducer
+		| SlotDescriptor<P[K]>
 }
 
 /**
@@ -105,6 +123,34 @@ interface FormAssociatedElement extends HTMLElement {
 	checkValidity(): boolean
 	reportValidity(): boolean
 	setCustomValidity(message: string): void
+}
+
+/**
+ * The host shape of the `formAssociated()` value variant: additionally carries
+ * the managed `defaultValue` reset-baseline property, mirroring
+ * `<input>.defaultValue`. The getter re-parses the `value` content attribute
+ * through the same retained `Parser` as the live prop, so in practice it yields
+ * the component's own `value` type — declared as `string | number` because the
+ * parserless fallback path yields the raw attribute string. Setting it moves
+ * the baseline for the next form reset; it never changes the live `value`.
+ *
+ * @since 2.5.1
+ */
+interface FormAssociatedValueElement extends FormAssociatedElement {
+	defaultValue: string | number
+}
+
+/**
+ * The host shape of the `formAssociatedCheckbox()` variant: additionally
+ * carries the managed `defaultChecked` reset-baseline property, mirroring
+ * `<input>.defaultChecked`. It reflects the `checked` attribute's presence.
+ * Setting it moves the baseline for the next form reset; it never changes the
+ * live `checked`.
+ *
+ * @since 2.5.1
+ */
+interface FormAssociatedCheckboxElement extends FormAssociatedElement {
+	defaultChecked: boolean
 }
 
 /**
@@ -134,17 +180,24 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 
 /**
  * The factory context for form-associated components. Extends `FactoryContext`
- * with `host` typed as `FormAssociatedElement & P` and `watch`/`on`/`pass`
- * accepting the managed `disabled`, `validationMessage`, and `validity`
- * reactive props in addition to `P`.
+ * with `host` typed as `HostElement & P` (`FormAssociatedValueElement` for
+ * `formAssociated()`, `FormAssociatedCheckboxElement` for
+ * `formAssociatedCheckbox()`) and `watch`/`on`/`pass` accepting the managed
+ * `disabled`, `validationMessage`, and `validity` reactive props in addition
+ * to `P`.
  *
  * `expose` stays typed over `Initializers<P>`, not the widened
  * `P & { disabled: boolean; validationMessage: string; validity: ValidityState }`,
  * so `expose({ disabled: … })` / `expose({ validationMessage: … })` /
  * `expose({ validity: … })` are type errors. All three are managed by the
  * library; `expose()` throws `InvalidPropertyNameError` for them at runtime.
+ * The same holds for the variant's reset-baseline member (`defaultValue`/
+ * `defaultChecked`), which lives on the host element interface, not in `P`.
  */
-type FormFactoryContext<P extends ComponentProps> = Omit<
+type FormFactoryContext<
+	P extends ComponentProps,
+	HostElement extends FormAssociatedElement = FormAssociatedValueElement,
+> = Omit<
 	FactoryContext<
 		P & {
 			disabled: boolean
@@ -154,7 +207,7 @@ type FormFactoryContext<P extends ComponentProps> = Omit<
 	>,
 	'host' | 'expose'
 > & {
-	host: FormAssociatedElement & P
+	host: HostElement & P
 	expose: (props: Initializers<P>) => void
 }
 
@@ -184,7 +237,9 @@ function defineComponent<P extends ComponentProps & { value: string | number }>(
 ): CustomElementConstructor | undefined
 function defineComponent<P extends ComponentProps & { checked: boolean }>(
 	name: string,
-	factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void,
+	factory: (
+		context: FormFactoryContext<P, FormAssociatedCheckboxElement>,
+	) => FactoryResult | Falsy | void,
 	extensions: readonly [
 		FormAssociatedCheckboxExtension,
 		...ComponentExtension[],
@@ -425,25 +480,27 @@ function defineComponent<P extends ComponentProps>(
 
 		/**
 		 * Create or replace the Slot-backed property accessor for a reactive property.
-		 * Mutable signals are wrapped in a Slot so their backing signal can be swapped
-		 * later (e.g. by `pass()`).
+		 * Mutable signals and `{ get, set? }` descriptors are wrapped in a Slot so
+		 * their backing signal can be swapped later (e.g. by `pass()`).
 		 *
 		 * @since 0.15.0
 		 * @param {K} key - Reactive property name
-		 * @param {MaybeSignal<P[K]>} value - Static value, signal, or computed callback
+		 * @param {MaybeSignal<P[K]>} value - Static value, signal, computed callback, or `{ get, set? }` descriptor
 		 */
 		#setAccessor<K extends keyof P>(key: K, value: MaybeSignal<P[K]>): void {
 			const signal = isSignal(value)
 				? value
-				: isFunction<P[K]>(value)
-					? deriveSignal(value)
-					: (createState(value) as MutableSignal<P[K]>)
+				: isSlotDescriptor<P[K]>(value)
+					? value
+					: isFunction<P[K]>(value)
+						? deriveCell(value)
+						: (createCell(value) as MutableCell<P[K]>)
 			const signals = getSignals(this)
 			const k = key as string
 			const prev = signals[k]
 			if (isSlot(prev)) {
 				prev.replace(signal)
-			} else if (isMutableSignal(signal)) {
+			} else if (isMutableSignal(signal) || isSlotDescriptor<P[K]>(signal)) {
 				const slot = createSlot<P[K]>(signal)
 				signals[k] = slot
 				Object.defineProperty(this, key, slot)
@@ -477,7 +534,9 @@ function defineComponent<P extends ComponentProps>(
 export {
 	defineComponent,
 	type FactoryContext,
+	type FormAssociatedCheckboxElement,
 	type FormAssociatedElement,
+	type FormAssociatedValueElement,
 	type Initializers,
 	type MaybeSignal,
 }

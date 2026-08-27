@@ -11,9 +11,7 @@ import {
 	formAssociatedCheckbox,
 } from '../../index'
 
-type CoreFormCheckboxProps = { checked: boolean }
-
-defineComponent<CoreFormCheckboxProps>(
+defineComponent<{ checked: boolean }>(
 	'core-form-checkbox',
 	({ expose, first, on, watch }) => {
 		const checkbox = first('input[type="checkbox"]', 'Needed for form input.')

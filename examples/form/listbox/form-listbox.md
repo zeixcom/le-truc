@@ -84,7 +84,7 @@ A full-featured listbox with client-side filtering, optional remote option loadi
 - Error message element
 ---
 - `all('button[role="option"]')`
-- `Memo<HTMLButtonElement[]>`
+- `Cell<HTMLButtonElement[]>`
 - optional
 - Option buttons (inline and/or rendered from `src`)
 {% /table %}

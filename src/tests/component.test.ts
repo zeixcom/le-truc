@@ -301,6 +301,42 @@ describe('#initSignals dispatch order', () => {
 		expect(instance.count).toBe(5)
 	})
 
+	test('SlotDescriptor ({ get, set }) initializer delegates reads/writes to a backing signal', () => {
+		const tokens = createState('a,b')
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({
+					value: {
+						get: () => tokens.get(),
+						set: (v: string) => tokens.set(v.toUpperCase()),
+					},
+				})
+			},
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		expect(instance.value).toBe('a,b')
+		instance.value = 'c,d'
+		expect(tokens.get()).toBe('C,D')
+		expect(instance.value).toBe('C,D')
+	})
+
+	test('SlotDescriptor without set throws on write, like a read-only signal', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: { get: () => 'fixed' } })
+			},
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		expect(instance.value).toBe('fixed')
+		expect(() => {
+			instance.value = 'other'
+		}).toThrow()
+	})
+
 	test('all three initializer kinds resolve correctly in a single expose() call', () => {
 		const upper = asParser((value: string | null | undefined) =>
 			(value ?? '').toUpperCase(),

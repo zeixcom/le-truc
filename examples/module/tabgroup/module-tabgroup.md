@@ -37,12 +37,12 @@ An accessible tab group with full keyboard navigation. It demonstrates managing 
 - Description
 ---
 - `all('button[role="tab"]')`
-- `Memo<HTMLButtonElement[]>`
+- `Cell<HTMLButtonElement[]>`
 - **required**
 - Tab buttons with unique `aria-controls` references
 ---
 - `all('[role="tabpanel"]')`
-- `Memo<HTMLElement[]>`
+- `Cell<HTMLElement[]>`
 - **required**
 - Tab panels with unique ids controlled by selected tab
 {% /table %}

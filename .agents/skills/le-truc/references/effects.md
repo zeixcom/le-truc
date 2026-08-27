@@ -52,7 +52,7 @@ Without thunks, these require custom handlers. Thunks keep intent declarative.
 | Set innerHTML | `dangerouslyBindInnerHTML(el, options?)` | `SingleMatchHandlers<string>` |
 | Attach event listener | `on(target, type, handler, options?)` | registers an `EffectDescriptor` |
 | Bind Le Truc child prop | `pass(target, props)` | registers an `EffectDescriptor` |
-| Per-element effects on Memo | `each(memo, callback)` | registers an `EffectDescriptor` |
+| Per-element effects on Signal | `each(memo, callback)` | registers an `EffectDescriptor` |
 | Sync keyed data to container children | `reconcile(container, template, source, bindItem)` | registers an `EffectDescriptor` |
 | Register a hand-authored descriptor | `watch(() => true, descriptor)` | runs `descriptor` once on connect, registers its returned cleanup for disconnect |
 
@@ -156,11 +156,11 @@ on(button, 'click', () => ({ count: host.count + 1 }))
 // Side-effect only
 on(input, 'input', () => { analytics.track('typed') })
 
-// Memo target — event delegation (bubbling events only)
+// Signal target — event delegation (bubbling events only)
 on(allItems, 'click', (event, item) => ({ selectedId: item.dataset.id }))
 ```
 
-`passive` set automatically for high-frequency events (scroll, resize, touch, wheel). For non-bubbling events with Memo target, per-element listeners set up as fallback — prefer `each()` + `on()` instead.
+`passive` set automatically for high-frequency events (scroll, resize, touch, wheel). For non-bubbling events with a Signal target, per-element listeners set up as fallback — prefer `each()` + `on()` instead.
 
 ### `pass(target, props)`
 
@@ -184,7 +184,7 @@ pass(child, {
 
 ### `each(memo, callback)`
 
-For per-element effects on `Memo<E[]>` from `all()`. Elements enter/leave collection with own reactive scope.
+For per-element effects on `Signal<E[]>` from `all()`. Elements enter/leave collection with own reactive scope.
 
 ```typescript
 const items = all('[role="option"]')
@@ -226,7 +226,7 @@ function getItemText(item: HTMLElement): string {
 }
 ```
 
-Same selector-to-type inference and `MissingElementError` behavior as `first()`/`all()`. `queryAll()` returns a plain array, queried once — never a `Memo`. Neither participates in dependency resolution for undefined custom elements; that guarantee is host-level `first()`/`all()` only.
+Same selector-to-type inference and `MissingElementError` behavior as `first()`/`all()`. `queryAll()` returns a plain array, queried once — never a `Signal`. Neither participates in dependency resolution for undefined custom elements; that guarantee is host-level `first()`/`all()` only.
 
 ### Hand-authored descriptors: `watch(() => true, descriptor)`
 
@@ -242,7 +242,7 @@ watch(() => true, () => {
 })
 ```
 
-`() => true` has no signal dependency, so `deriveSignal` evaluates it once and never reruns — the descriptor's setup runs exactly once, on connect. `watch()` calls `createEffect()` internally, which self-registers the descriptor's returned cleanup on the active owner, so it runs on disconnect. Without this wrapping (or `return`), a bare descriptor's cleanup never registers anywhere — `disconnectedCallback()` has no way to find it, so it silently never runs.
+`() => true` has no signal dependency, so `deriveCell` evaluates it once and never reruns — the descriptor's setup runs exactly once, on connect. `watch()` calls `createEffect()` internally, which self-registers the descriptor's returned cleanup on the active owner, so it runs on disconnect. Without this wrapping (or `return`), a bare descriptor's cleanup never registers anywhere — `disconnectedCallback()` has no way to find it, so it silently never runs.
 
 ---
 
@@ -298,4 +298,4 @@ if (badge) watch('count', bindText(badge)) // skipped if badge is null
 
 `on()` and `pass()` also skip a falsy target on their own — an absent optional element makes the effect a no-op, with no throw and no stray listener.
 
-`first()` and `all()` must run in the factory body, never inside a callback — this does not apply to `query()`/`queryAll()` or the scoped `first` passed to `each()`/`bindItem`, which never had dependency-resolution or Memo-liveness to lose. See "Querying Inside Effect or Event Callbacks" in `anti-patterns.md`.
+`first()` and `all()` must run in the factory body, never inside a callback — this does not apply to `query()`/`queryAll()` or the scoped `first` passed to `each()`/`bindItem`, which never had dependency-resolution or Signal-liveness to lose. See "Querying Inside Effect or Event Callbacks" in `anti-patterns.md`.

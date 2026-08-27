@@ -1,9 +1,9 @@
 import {
 	batch,
 	createScope,
-	isMemo,
 	isRecord,
-	type Memo,
+	isSignal,
+	type Signal,
 } from '@zeix/cause-effect'
 import { debugFire } from '../extensions/debug'
 import { pushDescriptor } from '../internal'
@@ -35,18 +35,18 @@ type OnEventHandler<
 ) => { [K in keyof P]?: P[K] } | Falsy | void | Promise<void>
 
 /**
- * `on` helper bound to a component host. Accepts a single element or `Memo<E[]>` target
+ * `on` helper bound to a component host. Accepts a single element or `Signal<E[]>` target
  * and typed event names. Returns an `EffectDescriptor`.
  */
 type OnHelper<P extends ComponentProps> = {
 	<E extends Element, T extends keyof HTMLElementEventMap>(
-		target: Memo<E[]> | Falsy,
+		target: Signal<E[]> | Falsy,
 		type: T,
 		handler: OnEventHandler<P, HTMLElementEventMap[T], E>,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	<E extends Element>(
-		target: Memo<E[]> | Falsy,
+		target: Signal<E[]> | Falsy,
 		type: string,
 		handler: OnEventHandler<P, Event, E>,
 		options?: AddEventListenerOptions,
@@ -77,7 +77,7 @@ const PASSIVE_EVENTS = new Set([
 	'wheel',
 ])
 
-// Events that do not bubble — `on()` with a Memo target falls back to per-element listeners.
+// Events that do not bubble — `on()` with a Signal target falls back to per-element listeners.
 const NON_BUBBLING_EVENTS = new Set([
 	'focus',
 	'blur',
@@ -150,7 +150,7 @@ const attachListener = <P extends ComponentProps, E extends Element>(
 /**
  * Create an `on` helper bound to a component host.
  *
- * The returned `on` attaches a typed event listener to a single element or `Memo<E[]>`
+ * The returned `on` attaches a typed event listener to a single element or `Signal<E[]>`
  * collection. Handlers receive `(event, element)`. Returning `{ prop: value }` synchronously
  * batch-applies those updates to host properties; returning `Promise<void>` is valid for
  * fire-and-forget side effects. For async state updates use a trigger-state + `Task`:
@@ -161,7 +161,7 @@ const attachListener = <P extends ComponentProps, E extends Element>(
  * watch(createTask(async () => { ... trigger.get() ... }), { ok: ..., err: ... })
  * ```
  *
- * For `Memo<E[]>` targets, uses event delegation (one listener on the shadow root or host).
+ * For `Signal<E[]>` targets, uses event delegation (one listener on the shadow root or host).
  * Non-bubbling events fall back to per-element listeners; a DEV_MODE warning points toward
  * `each()` + `on()`.
  *
@@ -173,13 +173,13 @@ const makeOn = <P extends ComponentProps>(
 	host: HTMLElement & P,
 ): OnHelper<P> => {
 	function on<E extends Element, T extends keyof HTMLElementEventMap>(
-		target: Memo<E[]> | Falsy,
+		target: Signal<E[]> | Falsy,
 		type: T,
 		handler: OnEventHandler<P, HTMLElementEventMap[T], E>,
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	function on<E extends Element>(
-		target: Memo<E[]> | Falsy,
+		target: Signal<E[]> | Falsy,
 		type: string,
 		handler: OnEventHandler<P, Event, E>,
 		options?: AddEventListenerOptions,
@@ -197,7 +197,7 @@ const makeOn = <P extends ComponentProps>(
 		options?: AddEventListenerOptions,
 	): EffectDescriptor
 	function on(
-		target: Element | Memo<Element[]> | Falsy,
+		target: Element | Signal<Element[]> | Falsy,
 		type: string,
 		handler: OnEventHandler<P, Event, Element>,
 		options: AddEventListenerOptions = {},
@@ -209,8 +209,8 @@ const makeOn = <P extends ComponentProps>(
 				options = { ...options, passive: PASSIVE_EVENTS.has(type) }
 			}
 
-			if (isMemo(target)) {
-				// Memo target: check whether this event type bubbles
+			if (isSignal(target)) {
+				// Signal target: check whether this event type bubbles
 				if (NON_BUBBLING_EVENTS.has(type)) {
 					if (process.env.DEV_MODE === 'true') {
 						console.warn(

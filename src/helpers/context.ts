@@ -1,10 +1,10 @@
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
 
 import {
-	createMemo,
+	createCell,
 	createScope,
 	createSlot,
-	createState,
+	deriveCell,
 	isFunction,
 	type Signal,
 } from '@zeix/cause-effect'
@@ -195,7 +195,7 @@ const makeProvideContexts =
  * same bundle) and once after {@link CONTEXT_RETRY_DELAY} (covers providers
  * whose effect activation waited on `customElements.whenDefined()`). When a
  * provider answers late, the Slot's backing signal is swapped
- * (`slot.replace(createMemo(getter))`), so the consumer's value switches
+ * (`slot.replace(deriveCell(getter))`), so the consumer's value switches
  * from `fallback` to the provided value reactively. If no provider ever
  * answers, `fallback` is permanent for that connection, and a `DEV_MODE`
  * warning names the context and host.
@@ -219,14 +219,14 @@ const makeRequestContext =
 		// The Slot delegates to a State holding the fallback until a provider
 		// answers, then swaps in a Memo wrapping the provider's getter — a
 		// single slot.get() tracks both the swap and the provider's live value.
-		const slot = createSlot(createState(fallback))
+		const slot = createSlot(createCell(fallback))
 		let answered = false
 
 		const dispatch = () => {
 			host.dispatchEvent(
 				new ContextRequestEvent(context, (getter: () => T) => {
 					answered = true
-					slot.replace(createMemo(getter))
+					slot.replace(deriveCell(getter))
 				}),
 			)
 		}

@@ -1,4 +1,4 @@
-import { type Memo } from '@zeix/cause-effect';
+import { type Cell } from '@zeix/cause-effect';
 type SplitByComma<S extends string> = S extends `${infer First},${infer Rest}` ? [TrimWhitespace<First>, ...SplitByComma<Rest>] : [TrimWhitespace<S>];
 type TrimWhitespace<S extends string> = S extends ` ${infer Rest}` ? TrimWhitespace<Rest> : S extends `${infer Rest} ` ? TrimWhitespace<Rest> : S;
 type ExtractRightmostSelector<S extends string> = S extends `${string} ${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}>${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}+${infer Rest}` ? ExtractRightmostSelector<Rest> : S extends `${string}~${infer Rest}` ? ExtractRightmostSelector<Rest> : S;
@@ -17,8 +17,8 @@ type FirstElement = {
     <E extends Element>(selector: string): E | undefined;
 };
 type AllElements = {
-    <S extends string>(selector: S, required?: string): Memo<ElementFromSelector<S>[]>;
-    <E extends Element>(selector: string, required?: string): Memo<E[]>;
+    <S extends string>(selector: S, required?: string): Cell<ElementFromSelector<S>[]>;
+    <E extends Element>(selector: string, required?: string): Cell<E[]>;
 };
 type ElementQueries = {
     first: FirstElement;
@@ -42,7 +42,7 @@ declare const bindFirst: (root: Element) => FirstElement;
 /**
  * Return the first descendant of `root` matching a CSS selector.
  *
- * One-shot: no dependency tracking for undefined custom elements, no `Memo`.
+ * One-shot: no dependency tracking for undefined custom elements, no `Cell`.
  * `first()`/`all()` (see `makeElementQueries`) add that on top of this for a
  * component host. Use `query()` directly for lookups relative to any other
  * already-obtained element — inside `reconcile()`/`each()` callbacks, or from
@@ -63,7 +63,7 @@ declare function query<E extends Element>(root: ParentNode, selector: string): E
 /**
  * Return a plain array of all descendants of `root` matching a CSS selector.
  *
- * One-shot: queried once, not backed by a `Memo`/`MutationObserver`. Use this
+ * One-shot: queried once, not backed by a `Cell`/`MutationObserver`. Use this
  * for a roving-tabindex-style snapshot, or any other case where a live
  * collection isn't needed. See `query()` and ADR 0021.
  *
@@ -84,11 +84,11 @@ declare function queryAll<E extends Element>(root: ParentNode, selector: string,
  * @since 0.16.0
  * @param {ParentNode} parent - The parent node to search within
  * @param {string} selector - The CSS selector to match elements
- * @returns {Memo<ElementFromSelector<S>[]>} Reactive memo of current matching elements
+ * @returns {Cell<ElementFromSelector<S>[]>} Reactive memo of current matching elements
  * @throws {InvalidSelectorError} If the selector is malformed
  */
-declare function createElementsMemo<S extends string>(parent: ParentNode, selector: S): Memo<ElementFromSelector<S>[]>;
-declare function createElementsMemo<E extends Element>(parent: ParentNode, selector: string): Memo<E[]>;
+declare function createElementsMemo<S extends string>(parent: ParentNode, selector: S): Cell<ElementFromSelector<S>[]>;
+declare function createElementsMemo<E extends Element>(parent: ParentNode, selector: string): Cell<E[]>;
 /**
  * Create `{ first, all }` query helpers and a dependency resolver for a component host.
  *

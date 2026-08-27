@@ -12,7 +12,7 @@ user_invocable: true
 
 Most of the public API is re-exported by `@zeix/le-truc`, so a separate `@zeix/cause-effect` install is usually unnecessary. The re-export is not guaranteed 1:1 forever (le-truc has dropped niche helpers like `valueString` from its surface); if an import fails from `@zeix/le-truc`, import it from `@zeix/cause-effect` directly.
 
-> Written against **@zeix/cause-effect 1.5.0**. Verify against the installed `node_modules/@zeix/cause-effect/README.md` and `src/` on major upgrades. If the README and `src/` disagree, **`src/` wins**.
+> Written against **@zeix/cause-effect 1.5.2**. Verify against the installed `node_modules/@zeix/cause-effect/README.md` and `src/` on major upgrades. If the README and `src/` disagree, **`src/` wins**.
 
 ## Primitive Picker
 
@@ -22,7 +22,7 @@ Most of the public API is re-exported by `@zeix/le-truc`, so a separate `@zeix/c
 | External input (lazy lifecycle) | `createSensor(set => cleanup)` | Mouse, resize, media queries, geolocation, DOM observers. Read-only; `.get()` throws `UnsetSignalValueError` before first event unless `{ value }` seeds it |
 | Sync derived (memoized) | `createMemo(fn)` | Re-derives only when tracked deps change. For cheap/simple derivations a plain function is faster |
 | Async derived (cancellable) | `createTask(fn)` | Receives `(prev, abort: AbortSignal)`; auto-aborts in-flight work when deps change; exposes `.isPending()` and `.abort()` |
-| Sync-or-async derived (auto-detect) | `deriveSignal(fn)` | Returns `Memo` or `Task` by checking whether `fn` is `async` — decided statically, before first run. Deprecated alias: `createComputed` |
+| Sync-or-async derived (auto-detect) | `deriveCell(fn)` | Returns `Memo` or `Task` by checking whether `fn` is `async` — decided statically, before first run. Deprecated aliases: `createComputed`, `deriveSignal` |
 | Reactive object (keyed props) | `createStore(obj)` | Each property (recursively) becomes its own signal via Proxy. Direct proxy mutation throws `InvalidStoreMutationError` — use `.set`/`.update`/`.add`/`.remove`. Returns `MutableStore` (deprecated alias: `Store`) |
 | Reactive array (stable keys) | `createList(arr)` | Per-item signals with persistent identity across sort/reorder. Update items with `.replace(key, value)` (not `.byKey(key).set()`) to reach all subscribers. Returns `MutableList` (deprecated alias: `List`) |
 | External keyed list | `deriveList(seed, { watched })` | WebSocket / SSE feeds — external push. Deprecated alias: `createCollection` |
@@ -30,9 +30,9 @@ Most of the public API is re-exported by `@zeix/le-truc`, so a separate `@zeix/c
 | Stable property position that swaps backing signal | `createSlot(signal)` | Integration layers (e.g. le-truc props). Doubles as an `Object.defineProperty` descriptor. `set()` forwards to the backing signal |
 | Terminal side-effect sink | `createEffect(fn)` | Runs once immediately, re-runs on dep changes. Return a cleanup fn — it runs before each re-run and on dispose |
 
-**Utilities:** `createSignal(value)` (polymorphic — infers type), `createScope(fn, { root })` (ownership/cleanup), `batch(fn)`, `untrack(fn)`, `unown(fn)`, `match(signal(s), handlers)` (state routing), `isPending(signal)` / `abort(signal)` (async state, any origin), type predicates `isSignal` / `isMutableSignal` / `isSlot` / `isMutableList` / `isDerivedList` / `isMutableStore`. Equality helpers: `DEFAULT_EQUALITY` (`===`), `DEEP_EQUALITY` (structural), `SKIP_EQUALITY` (always re-propagate — for mutable-object observation).
+**Utilities:** `createSignal(value)` (polymorphic — infers type), `createScope(fn, { root })` (ownership/cleanup), `batch(fn)`, `untrack(fn)`, `unown(fn)`, `match(signal(s), handlers)` (state routing), `isPending(signal)` / `abort(signal)` (async state, any origin), type predicates `isSignal` / `isMutableSignal` / `isSlot` / `isMutableList` / `isDerivedList` / `isMutableStore` / `isCell` / `isMutableCell`. Equality helpers: `DEFAULT_EQUALITY` (`===`), `DEEP_EQUALITY` (structural), `SKIP_EQUALITY` (always re-propagate — for mutable-object observation).
 
-**Cause & Effect 2.0 name bridge (1.5):** `List`→`MutableList`, `Store`→`MutableStore`, `Collection`→`DerivedList`, `createComputed`→`deriveSignal`, `createMutableSignal`→`createSignal`, `createCollection`/`.deriveCollection()`→`deriveList`. `MutableList`/`MutableStore`/`ListSource`/`ListCallback`/`ListChanges`/`PerItemCallback` are terminal v2 vocabulary; `DerivedList`/`DerivedStore` rename once more at 2.0 (to `List`/`Store` readonly bases). The origin types (`State`/`Memo`/`Task`/`Sensor`) and origin guards (`isState`/`isMemo`/`isTask`/`isSensor`/`isComputed`/`isList`/`isCollection`/`isStore`) are removed at 2.0 — use `isSignalOfType()` for type discrimination. Full guide: `MIGRATION-2.0.md` in the cause-effect repo.
+**Cause & Effect 2.0 name bridge (1.5):** `List`→`MutableList`, `Store`→`MutableStore`, `Collection`→`DerivedList`, `createComputed`/`deriveSignal`→`deriveCell`, `createMutableSignal`→`createSignal`, `createCollection`/`.deriveCollection()`→`deriveList`. `deriveSignal` was itself the terminal name for one release (1.5.0) before 1.5.1 renamed it to `deriveCell` — `Signal` stays the umbrella term, `Cell` names the single-value shape. `MutableList`/`MutableStore`/`ListSource`/`ListCallback`/`ListChanges`/`PerItemCallback`/`deriveCell`/`DeriveCellOptions`/`createCell` are terminal v2 vocabulary; `DerivedList`/`DerivedStore` rename once more at 2.0 (to `List`/`Store` readonly bases). The origin types (`State`/`Memo`/`Task`/`Sensor`) and origin guards (`isState`/`isMemo`/`isTask`/`isSensor`/`isComputed`/`isList`/`isCollection`/`isStore`) are removed at 2.0 — use `isSignalOfType()` for type discrimination. **1.5.2** adds `Cell<T>` (`State<T> | Memo<T> | Task<T> | Sensor<T>` — a structural narrowing of `Signal<T>` that excludes `List`/`Store`/`Collection`) and `MutableCell<T>` (alias of `State<T>`), with guards `isCell()`/`isMutableCell()`; `deriveCell`/`createCell` now return `Cell<T>`/`MutableCell<T>` rather than the wider `Signal<T>`/`State<T>`. Full guide: `MIGRATION-2.0.md` in the cause-effect repo.
 
 ## The Ownership Model (read this once)
 
@@ -69,7 +69,7 @@ All in `references/`:
 | `primitives.md` | Per-primitive signatures, laziness/`watched` activation, equality, canonical examples |
 | `pitfalls.md` | Verified sharp edges, failure modes, and one-line fixes |
 
-For how **le-truc** uses these primitives internally (`Slot`-backed props, `all()` Memo, `batch()` in event handlers), see `../le-truc-dev/references/cause-effect-integration.md`.
+For how **le-truc** uses these primitives internally (`Slot`-backed props, `all()` Signal, `batch()` in event handlers), see `../le-truc-dev/references/cause-effect-integration.md`.
 
 ## Authority
 
