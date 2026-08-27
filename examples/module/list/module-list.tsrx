@@ -17,6 +17,7 @@
  *   (ADR 0017 collector parity) — delegation becomes an optimization
  * - ZERO imports: createList auto-imported from '@zeix/le-truc' (v2 bridge)
  */
+import { createList } from '@zeix/le-truc'
 import { FormTextbox } from '../../form/textbox/form-textbox.tsrx'
 
 export function ModuleList({}: {})

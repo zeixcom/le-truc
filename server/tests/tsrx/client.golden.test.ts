@@ -105,8 +105,11 @@ describe('client golden — convergence with the hand-written trio', () => {
 	test('basic-counter: same seed, handler, and binding as the hand-written component', () => {
 		const code = compiled[0]?.result.component?.clientCode ?? ''
 		expect(code).toContain(
-			"import { asInteger, bindText, createCell, defineComponent } from '@zeix/le-truc'",
+			"import { asInteger, bindText, defineComponent } from '@zeix/le-truc'",
 		)
+		// Sub-design 16: the authored import line re-emits alongside the
+		// synthesized one, which drops the names it provides.
+		expect(code).toContain("import { createCell } from '@zeix/le-truc'")
 		expect(code).toContain("first('span'")
 		expect(code).toContain('createCell(asInteger()(span.textContent))')
 		expect(code).toContain(
@@ -142,7 +145,11 @@ describe('client golden — convergence with the hand-written trio', () => {
 		// attribute is the reset baseline, not a live-value channel.
 		expect(code).toContain('\t[formAssociated()],')
 		expect(code).toContain(
-			"import { asString, bindAttribute, bindProperty, bindText, createCell, defineComponent, defineMethod, deriveCell, formAssociated } from '@zeix/le-truc'",
+			"import { bindAttribute, bindProperty, bindText, defineComponent, formAssociated } from '@zeix/le-truc'",
+		)
+		// Sub-design 16: authored real-export names ride their own line.
+		expect(code).toContain(
+			"import { createCell, deriveCell, asString, defineMethod } from '@zeix/le-truc'",
 		)
 		expect(code).toContain(
 			"import type { FormAssociatedElement } from '@zeix/le-truc'",
@@ -204,8 +211,9 @@ describe('client golden — convergence with the hand-written trio', () => {
 	test('form-checkbox: formAssociatedCheckbox leads, checked mirror, return-update handler', () => {
 		const code = compiled[3]?.result.component?.clientCode ?? ''
 		expect(code).toContain(
-			"import { asBoolean, bindProperty, defineComponent, formAssociatedCheckbox } from '@zeix/le-truc'",
+			"import { bindProperty, defineComponent, formAssociatedCheckbox } from '@zeix/le-truc'",
 		)
+		expect(code).toContain("import { asBoolean } from '@zeix/le-truc'")
 		expect(code).toContain('\t[formAssociatedCheckbox()],')
 		expect(code).toContain('checked: asBoolean(false),')
 		// Both mirrors dispatch as properties — checked from the parser-exposed
@@ -225,8 +233,9 @@ describe('client golden — convergence with the hand-written trio', () => {
 	test('module-list: reconcile() with generated bindItem, DOM-seeded list, pass() on registry child', () => {
 		const code = compiled[4]?.result.component?.clientCode ?? ''
 		expect(code).toContain(
-			"import { bindText, createList, defineComponent, reconcile } from '@zeix/le-truc'",
+			"import { bindText, defineComponent, reconcile } from '@zeix/le-truc'",
 		)
+		expect(code).toContain("import { createList } from '@zeix/le-truc'")
 		// Static seed passes through verbatim — the server rendered from the
 		// same literal, so the DOM agrees by construction.
 		expect(code).toContain('const items = createList<string>([], {')

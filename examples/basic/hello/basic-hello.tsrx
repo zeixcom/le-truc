@@ -12,7 +12,8 @@
  * (the mirror), so the fallback becomes an ordinary default parameter value
  * instead of a DOM read.
  */
-import { expose, first, host } from '@zeix/le-truc'
+
+import { asString } from '@zeix/le-truc'
 
 export type BasicHelloProps = {
 	/** The subject to greet. Updated reactively as the user types in the input. */

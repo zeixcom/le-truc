@@ -21,7 +21,8 @@
  * either way, but with no separate "server renders something else first"
  * step to correct away from).
  */
-import { expose, host } from '@zeix/le-truc'
+
+import { deriveCell, asClampedInteger } from '@zeix/le-truc'
 
 export type BasicPluralizeProps = {
 	/** The count to pluralize. Clamped to a non-negative integer. */

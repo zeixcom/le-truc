@@ -416,6 +416,13 @@ export type ComponentIR = {
 		server: string[]
 		client: string[]
 		serverLocalNames: ReadonlySet<string>
+		/**
+		 * Real `@zeix/le-truc` export names an authored import provides to
+		 * the CLIENT module (ADR 0024 sub-design 16) — `emit-client.ts`
+		 * subtracts these from its synthesized `@zeix/le-truc` import line so
+		 * a name is never bound by two import statements in one module.
+		 */
+		clientLeTrucNames: ReadonlySet<string>
 	}
 }
 

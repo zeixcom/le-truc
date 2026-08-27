@@ -45,7 +45,8 @@
  *   call (CHECKLIST §10) — derived from markup, so it can't drift from
  *   whether the clear button actually exists
  */
-import { expose, first, host } from '@zeix/le-truc'
+
+import { createCell, deriveCell, asString, defineMethod } from '@zeix/le-truc'
 
 export const config = {
 	formAssociated: true,

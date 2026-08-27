@@ -1,4 +1,5 @@
-import { expose, first, host } from '@zeix/le-truc'
+
+import { asBoolean } from '@zeix/le-truc'
 
 export const config = { formAssociatedCheckbox: true }
 

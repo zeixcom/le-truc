@@ -579,10 +579,15 @@ export const emitClientModule = (
 		` * ${options.sourcePath} — DO NOT EDIT. The server half lives in ${component.tag}.server.ts.`,
 		' */',
 	]
+	// Real-export names an authored `import { … } from '@zeix/le-truc'` line
+	// already provides to this module (sub-design 16) — synthesized names
+	// are subtracted so no name is bound by two import statements.
 	const importList = [...imports]
 		.filter(name => !FACTORY_CONTEXT_MEMBERS.has(name))
+		.filter(name => !component.imports.clientLeTrucNames.has(name))
 		.sort()
-	body.push(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
+	if (importList.length > 0)
+		body.push(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
 	if (needsFormType)
 		body.push("import type { FormAssociatedElement } from '@zeix/le-truc'")
 	for (const tag of plan.childTags) {

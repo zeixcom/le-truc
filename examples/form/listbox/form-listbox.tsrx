@@ -35,7 +35,8 @@
  * stays unconditional (renders empty when `filterable` is false) so its
  * two children can each be their own single-element `@if` root.
  */
-import { all, expose, host } from '@zeix/le-truc'
+
+import { asString } from '@zeix/le-truc'
 
 export const config = { formAssociated: true }
 

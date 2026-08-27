@@ -33,7 +33,7 @@
  * with the `host`→arg mirror the server understands (same rule `basic-gauge
  * .tsrx` follows for its `qualification` derivation).
  */
-import { expose, host } from '@zeix/le-truc'
+import { asString } from '@zeix/le-truc'
 import 'culori/css'
 import { formatCss, formatHex, type Oklch } from 'culori/fn'
 import { asOklch } from '../../_common/asOklch.ts'

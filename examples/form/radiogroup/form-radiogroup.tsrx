@@ -18,7 +18,8 @@
  * reflects directly, so no extra state (and no TSRX004 "never rendered"
  * signal) is needed at all.
  */
-import { all, expose, host } from '@zeix/le-truc'
+
+import { asString } from '@zeix/le-truc'
 
 export const config = { formAssociated: true }
 
@@ -80,10 +81,12 @@ export function FormRadiogroup(
 					const { key } = e;
 					if (!HANDLED_KEYS.includes(key)) return;
 
-					const elements = all('input[type="radio"]').get();
+					const elements = all('input[type="radio"]', 'add at least one radiobutton').get();
 					e.preventDefault();
 					e.stopPropagation();
-					const current = elements.indexOf(document.activeElement);
+					const current = document.activeElement
+						? elements.indexOf(document.activeElement as HTMLInputElement)
+						: -1;
 					const next =
 						key === FIRST_KEY
 							? 0

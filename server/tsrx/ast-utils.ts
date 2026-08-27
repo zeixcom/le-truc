@@ -111,19 +111,129 @@ export const FACTORY_CONTEXT_MEMBERS: ReadonlySet<string> = new Set<string>(
 )
 
 /**
- * `FactoryContext` helper names requiring an explicit `import { … } from
- * '@zeix/le-truc'` in `.tsrx` sources (ADR 0024 sub-design 4, amended
- * 2026-08-27, LT-079) — the union of `FACTORY_CONTEXT_MEMBER_NAMES` and the
- * subset of `CONTEXT_NAMES` the amendment named. `internals` is a
- * `CONTEXT_NAMES` member of the same shape as `host` but was NOT named in
- * the amendment text — left purely ambient here rather than silently
- * widening the decision; flagged in NOTES.md for the architect.
+ * Value exports of the `@zeix/le-truc` package barrel (`index.ts`) — the
+ * names an authored `.tsrx` source may legitimately `import { … } from
+ * '@zeix/le-truc'` (ADR 0024 sub-design 16: real exports are imported
+ * explicitly; the FactoryContext vocabulary is ambient and disjoint from
+ * this set). Hand-maintained against the barrel — the duplication
+ * precedent is `MANAGED_FORM_MEMBERS`; a barrel change that forgets this
+ * list fails the corpus check, since a newly exported name used in
+ * authored code would fire TSRX036 until listed here.
  */
-export const AMBIENT_IMPORT_NAMES: ReadonlySet<string> = new Set<string>([
-	...FACTORY_CONTEXT_MEMBER_NAMES,
-	'host',
-	'provideContexts',
-	'requestContext',
+export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
+	// @zeix/cause-effect bridge (index.ts re-exports)
+	'abort',
+	'batch',
+	'CircularDependencyError',
+	'createCell',
+	'createCollection',
+	'createComputed',
+	'createEffect',
+	'createList',
+	'createMemo',
+	'createMutableSignal',
+	'createScope',
+	'createSensor',
+	'createSignal',
+	'createSlot',
+	'createState',
+	'createStore',
+	'createTask',
+	'DEEP_EQUALITY',
+	'DEFAULT_EQUALITY',
+	'DuplicateKeyError',
+	'deriveCell',
+	'deriveList',
+	'deriveSignal',
+	'deriveStore',
+	'EffectConvergenceError',
+	'InvalidCallbackError',
+	'InvalidSignalValueError',
+	'InvalidStoreMutationError',
+	'isAsyncFunction',
+	'isCell',
+	'isCollection',
+	'isComputed',
+	'isDerivedList',
+	'isFunction',
+	'isList',
+	'isMemo',
+	'isMutableCell',
+	'isMutableList',
+	'isMutableSignal',
+	'isMutableStore',
+	'isPending',
+	'isRecord',
+	'isSensor',
+	'isSignal',
+	'isSignalOfType',
+	'isSlot',
+	'isState',
+	'isStore',
+	'isTask',
+	'match',
+	'NullishSignalValueError',
+	'PromiseValueError',
+	'ReadonlySignalError',
+	'RequiredOwnerError',
+	'SKIP_EQUALITY',
+	'UnresolvableKeyError',
+	'UnsetSignalValueError',
+	'unown',
+	'untrack',
+	// src/bindings
+	'bindAttribute',
+	'bindClass',
+	'bindProperty',
+	'bindState',
+	'bindStyle',
+	'bindText',
+	'bindVisible',
+	'configureHtmlSanitizer',
+	'dangerouslyBindInnerHTML',
+	'escapeHTML',
+	'safeSetAttribute',
+	'setTextPreservingComments',
+	// src/component, src/errors
+	'defineComponent',
+	'DependencyTimeoutError',
+	'ExtensionCollisionError',
+	'InvalidComponentNameError',
+	'InvalidCustomElementError',
+	'InvalidPassPropertyError',
+	'InvalidPropertyNameError',
+	'InvalidReactivesError',
+	'InvalidSelectorError',
+	'InvalidTemplateError',
+	'MissingElementError',
+	'NoActiveCollectorError',
+	// src/extensions, src/helpers, src/scheduler
+	'observedAttributes',
+	'formAssociated',
+	'formAssociatedCheckbox',
+	'relayValidity',
+	'CONTEXT_REQUEST',
+	'ContextRequestEvent',
+	'createContext',
+	'createElementsMemo',
+	'query',
+	'queryAll',
+	'each',
+	'reconcile',
+	'schedule',
+	'throttle',
+	// src/parsers, src/types
+	'asBoolean',
+	'asJSON',
+	'asClampedInteger',
+	'asInteger',
+	'asNumber',
+	'asEnum',
+	'asString',
+	'asParser',
+	'defineMethod',
+	'isMethodProducer',
+	'isParser',
 ])
 
 /** Managed form props usable as string-literal lazy children (text-bindable). */

@@ -14,7 +14,7 @@
  * `form-inplace-edit.spec.ts`'s `.not.toBeAttached()` assertions describe
  * the hand-written version's behavior, not this one).
  */
-import { expose, host } from '@zeix/le-truc'
+import { asBoolean, asString } from '@zeix/le-truc'
 import { FormTextbox } from '../textbox/form-textbox.tsrx'
 
 export const config = { formAssociated: true };

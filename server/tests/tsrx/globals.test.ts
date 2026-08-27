@@ -36,24 +36,19 @@ const declaredTypes = [...GLOBALS.matchAll(/^type (\w+)/gm)].map(
 
 describe('globals.d.ts — ambient vocabulary parity with the compiler', () => {
 	test('every recognized ambient is declared', () => {
-		const required = [
-			...SIGNAL_CONSTRUCTORS,
-			...CONTEXT_NAMES,
-			...PARSER_FACTORIES,
-			'expose',
-			'defineMethod',
-		]
+		// Sub-design 16: the ambient vocabulary is exactly the
+		// FactoryContext members plus the context names — real package
+		// exports (signal constructors, parsers, defineMethod) are NOT
+		// ambient anymore; authored sources import them explicitly.
+		const required = [...FACTORY_CONTEXT_MEMBER_NAMES, ...CONTEXT_NAMES]
 		for (const name of required) expect(declaredConsts).toContain(name)
 		expect(declaredTypes).toContain('FormAssociatedElement')
 	})
 
 	test('the file declares nothing outside the recognized vocabulary', () => {
 		const allowed = new Set<string>([
-			...SIGNAL_CONSTRUCTORS,
+			...FACTORY_CONTEXT_MEMBER_NAMES,
 			...CONTEXT_NAMES,
-			...PARSER_FACTORIES,
-			'expose',
-			'defineMethod',
 		])
 		const stray = declaredConsts.filter(name => !allowed.has(name))
 		expect(stray).toEqual([])
@@ -92,26 +87,31 @@ describe('globals.d.ts — probe typechecks against the ambients alone', () => {
 		fs.writeFileSync(
 			probePath,
 			[
+				// Sub-design 16: real exports are imported explicitly…
+				"import { asBoolean, asEnum, asInteger, asJSON, asNumber, asString, createCell, createContext, defineMethod } from '@zeix/le-truc'",
 				'const count = createCell(0)',
-				"const items = createList<string>([], { keyConfig: 'item' })",
-				'const store = createStore({ a: 1 })',
-				'const d1 = deriveCell(() => 1)',
-				"const d2 = deriveList(() => ['a'])",
-				'const d3 = deriveStore(() => ({ a: 1 }))',
+				"const theme = requestContext(createContext<() => string>('theme'), 'light')",
+				'provideContexts([])',
 				'expose({',
 				"\tvalue: asString(''),",
 				'\tn: asInteger(0),',
 				'\tx: asNumber(0),',
 				'\tb: asBoolean(false),',
 				"\te: asEnum(['a', 'b']),",
-				'\tc: asClampedInteger(0, 10),',
 				'\tj: asJSON({}),',
 				'\tclear: defineMethod(() => {',
 				"\t\thost.value = ''",
 				"\t\tinternals?.states.add('clearable')",
 				'\t}),',
 				'\tcount: count.get,',
+				'\ttheme: theme.get,',
 				'})',
+				// …while the FactoryContext vocabulary stays ambient.
+				"const clearBtn = first('button')",
+				"const items = all('li')",
+				"on(clearBtn ?? host, 'click', () => count.set(0))",
+				'watch(count, v => { host.dataset.count = String(v) })',
+				'void [items]',
 				'declare global {',
 				'\tinterface HTMLElementTagNameMap {',
 				"\t\t'probe-el': FormAssociatedElement & { value: string }",

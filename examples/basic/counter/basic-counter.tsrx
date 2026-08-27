@@ -15,7 +15,7 @@
  * - The client never sees `start`: it harvests `count` from the <span> the
  *   server rendered (ADR 0003 preserved).
  */
-import { expose } from '@zeix/le-truc'
+import { createCell } from '@zeix/le-truc'
 
 export type BasicCounterProps = {
 	/** Current counter value. Increments on each button click. */

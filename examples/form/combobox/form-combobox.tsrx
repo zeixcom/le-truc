@@ -27,7 +27,7 @@
  * `options` list of visible buttons, so visibility here is driven by
  * `showPopup` alone.
  */
-import { expose, first, host } from '@zeix/le-truc'
+import { createState, asString, defineMethod } from '@zeix/le-truc'
 import { FormListbox } from '../listbox/form-listbox.tsrx'
 
 export type FormComboboxOption = {

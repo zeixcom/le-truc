@@ -46,8 +46,8 @@ export type DiagnosticCode =
 	| 'TSRX033' // a reactive expression that would otherwise fold server-side reads an impure ambient (Date/Intl/Math.random/toLocaleString)
 	| 'TSRX034' // a semantically-loaded attribute (hidden/disabled/checked/selected/aria-expanded) has no server-renderable value
 	| 'TSRX035' // duplicate static id across @try/@catch/@pending arms
-	| 'TSRX036' // FactoryContext helper used without an explicit `@zeix/le-truc` import
-	| 'TSRX037' // FactoryContext helper imported but never used
+	| 'TSRX036' // real `@zeix/le-truc` export used without an explicit import (sub-design 16)
+	| 'TSRX037' // FactoryContext name inside an authored `@zeix/le-truc` import (sub-design 16)
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -777,42 +777,38 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A `FactoryContext` helper (`first`/`expose`/`watch`/`on`/`pass`/`all`/
-	 * `host`/`provideContexts`/`requestContext`) is used without a matching
-	 * `import { … } from '@zeix/le-truc'` (ADR 0024 sub-design 4, amended
-	 * 2026-08-27, LT-079). These were purely ambient (a `globals.d.ts`
-	 * `declare global` contract, no authored import) until the amendment —
-	 * reversed because TSRX syntax highlighters can't see TypeScript's
-	 * ambient-global mechanism, so the identifier rendered unstyled in every
-	 * editor, and because every other TSRX host profile exposes its runtime
-	 * primitives via explicit import.
+	 * A real `@zeix/le-truc` export (`createCell`, `deriveCell`, a parser,
+	 * `defineMethod`, …) is used in authored code without a matching
+	 * `import { … } from '@zeix/le-truc'` (ADR 0024 sub-design 16). Real
+	 * exports are true module exports — authored sources stay valid
+	 * TypeScript by construction, which is exactly what the import line
+	 * declares. FactoryContext vocabulary (`expose`, `host`, `first`, …) is
+	 * ambient and NEVER needs an import.
 	 */
-	missingFactoryImport: (
+	missingRealExportImport: (
 		source: string,
 		offset: number | undefined,
 		name: string,
 	) =>
 		error(
 			'TSRX036',
-			`\`${name}\` is used here but never imported. FactoryContext helpers require an explicit import in this host profile — add \`${name}\` to (or add) the \`import { ${name} } from '@zeix/le-truc'\` line at the top of the file.`,
+			`\`${name}\` is a real '@zeix/le-truc' export used here but never imported — add \`import { ${name} } from '@zeix/le-truc'\` (FactoryContext helpers are ambient and need no import).`,
 			lineOf(source, offset),
 		),
 
 	/**
-	 * A `FactoryContext` helper is named in an `import { … } from
-	 * '@zeix/le-truc'` line but never actually used in the file (ADR 0024
-	 * sub-design 4). WARNING, not error: an unused import doesn't produce a
-	 * wrong component, only clutter — unlike `missingFactoryImport`, which
-	 * would leave a real free-name reference the compiler can't resolve.
+	 * A FactoryContext member (`expose`, `first`, `all`, `on`, `pass`,
+	 * `watch`, `host`, `internals`, `requestContext`, `provideContexts`) is
+	 * named in an authored `import { … } from '@zeix/le-truc'` line (ADR
+	 * 0024 sub-design 16). These are NOT package exports — the factory
+	 * parameter they arrive on is compiler-generated, so the import line is
+	 * a false declaration a future working language service would flag, and
+	 * re-emitting it would break the generated module.
 	 */
-	unusedFactoryImport: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
-		warning(
+	contextNameInImport: (source: string, offset: number | undefined, name: string) =>
+		error(
 			'TSRX037',
-			`\`${name}\` is imported from '@zeix/le-truc' but never used — remove it from the import (drop the whole line if it's the only named import left).`,
+			`\`${name}\` is FactoryContext vocabulary — ambient in this host profile, not a '@zeix/le-truc' export. Remove it from the import (drop the whole line if it's the only named import left).`,
 			lineOf(source, offset),
 		),
 }

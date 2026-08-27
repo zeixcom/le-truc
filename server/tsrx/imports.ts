@@ -7,10 +7,14 @@
  *
  * 1. `parseComposeImports` — named imports of sibling `.tsrx` modules
  *    (ADR 0023 sub-design 10), the composable targets.
- * 2. `parsePlainImports` — every OTHER top-level import, with relative
+ * 2. `parseLeTrucImports`/`placeLeTrucImports` — authored
+ *    `import { … } from '@zeix/le-truc'` statements: real package exports
+ *    (ADR 0024 sub-design 16), placed per name against the runtime-harness
+ *    filter rather than re-emitted verbatim.
+ * 3. `parsePlainImports` — every OTHER top-level import, with relative
  *    specifiers rewritten for the flat generated directory (LT-034, ADR
  *    0024 sub-design 14).
- * 3. `placePlainImports`/`computeClientNeededNames` — placement of each
+ * 4. `placePlainImports`/`computeClientNeededNames` — placement of each
  *    plain import into whichever generated module(s) actually reference
  *    its bindings, inferred from usage — the same free-identifier analysis
  *    the compiler already runs for setup consts — no new annotation syntax.
@@ -22,8 +26,9 @@
 
 import type { TsrxNode } from '@tsrx/core'
 import {
-	AMBIENT_IMPORT_NAMES,
 	asArray,
+	CONTEXT_NAMES,
+	FACTORY_CONTEXT_MEMBERS,
 	freeIdentifiers,
 	identifierName,
 	isNode,
@@ -98,30 +103,30 @@ export const parseComposeImports = (
 	return imports
 }
 
-/* === Factory-context helper imports (ADR 0024 sub-design 4, LT-079) === */
+/* === `@zeix/le-truc` authored imports (ADR 0024 sub-design 16, LT-082) === */
 
-/** One `FactoryContext` helper named in an `import { … } from '@zeix/le-truc'` line. */
-export type FactoryImportSpecifier = {
-	name: string
+/**
+ * One `import { … } from '@zeix/le-truc'` statement in an authored source:
+ * every VALUE name it binds (type-only statements are skipped — they were
+ * dropped from generated output before sub-design 16 and stay dropped).
+ */
+export type LeTrucImport = {
+	names: string[]
 	start: number
 }
 
 /**
- * Every `FactoryContext` helper (`AMBIENT_IMPORT_NAMES`) explicitly imported
- * from `'@zeix/le-truc'` — the authoring-time declaration of which ambient
- * helpers a `.tsrx` source uses (ADR 0024 sub-design 4, amended 2026-08-27).
- * Not a plain import (`parsePlainImports` excludes this specifier below):
- * the generated client already emits its own `import { ... } from
- * '@zeix/le-truc'` via context destructuring (`emit-client.ts`), so this
- * declaration exists purely for the compiler's own name resolution and is
- * never re-emitted verbatim. A named import that isn't in
- * `AMBIENT_IMPORT_NAMES` (a signal constructor, a parser factory) is
- * ignored here — those stay ambient-only, unaffected by this amendment.
+ * Every named VALUE import from `'@zeix/le-truc'` — the author's declaration
+ * of which real package exports the source uses (ADR 0024 sub-design 16).
+ * NOT a plain import (`parsePlainImports` still excludes this specifier
+ * below): placement is per-name against the runtime-harness filter
+ * (`placeLeTrucImports`), not the verbatim re-emission plain imports get.
  */
-export const parseFactoryImports = (ast: TsrxNode): FactoryImportSpecifier[] => {
-	const result: FactoryImportSpecifier[] = []
+export const parseLeTrucImports = (ast: TsrxNode): LeTrucImport[] => {
+	const result: LeTrucImport[] = []
 	for (const stmt of asArray(ast.body)) {
 		if (stmt.type !== 'ImportDeclaration') continue
+		if ((stmt as { importKind?: unknown }).importKind === 'type') continue
 		const specifierNode = stmt.source
 		const specifier =
 			isNode(specifierNode) &&
@@ -130,17 +135,119 @@ export const parseFactoryImports = (ast: TsrxNode): FactoryImportSpecifier[] => 
 				? specifierNode.value
 				: null
 		if (specifier !== '@zeix/le-truc') continue
+		const names: string[] = []
 		for (const spec of asArray(stmt.specifiers)) {
 			if (spec.type !== 'ImportSpecifier') continue
 			const name = identifierName(spec.local)
-			if (name && AMBIENT_IMPORT_NAMES.has(name))
-				result.push({
-					name,
-					start: typeof spec.start === 'number' ? spec.start : 0,
-				})
+			if (name) names.push(name)
 		}
+		if (names.length > 0)
+			result.push({
+				names,
+				start: typeof stmt.start === 'number' ? stmt.start : 0,
+			})
 	}
 	return result
+}
+
+/**
+ * Exports of the server runtime harness (`server/tsrx/runtime.ts`,
+ * ADR 0023 sub-design 2): the names a generated SERVER module binds from the
+ * harness import `emit-server.ts` synthesizes. An authored
+ * `'@zeix/le-truc'` import must not re-bind any of them server-side — two
+ * import statements can't share a local name, and the harness's plain-value
+ * shims are what server evaluation semantically requires.
+ */
+const RUNTIME_HARNESS_EXPORTS: ReadonlySet<string> = new Set<string>([
+	'createCell',
+	'createList',
+	'createStore',
+	'createState',
+	'deriveCell',
+	'deriveList',
+	'deriveStore',
+	'createMemo',
+	'isPending',
+	'expose',
+	'defineMethod',
+	'asString',
+	'asInteger',
+	'asNumber',
+	'asBoolean',
+	'asEnum',
+	'asClampedInteger',
+	'asJSON',
+	'esc',
+	'attr',
+	'cls',
+	'styleAttr',
+	'sanitizeHtml',
+	'configureHtmlSanitizer',
+	'items',
+	'entries',
+])
+
+/**
+ * Place each authored `'@zeix/le-truc'` import into the generated modules,
+ * per name (ADR 0024 sub-design 16): a name lands in the CLIENT module when
+ * a client-emitted position uses it (the real package IS the client
+ * implementation), and in the SERVER module only when used there AND the
+ * runtime harness cannot provide it — the harness keeps providing its
+ * plain-value shims for signal constructors, parsers, `defineMethod`, so the
+ * authored line is filtered per name rather than re-emitted verbatim. A
+ * statement no name uses anywhere warns via TSRX014, same as plain imports.
+ */
+export const placeLeTrucImports = (
+	ctx: ExtractContext,
+	component: SetupLikeComponent,
+	leTrucImports: LeTrucImport[],
+): {
+	server: string[]
+	client: string[]
+	serverNames: ReadonlySet<string>
+	clientNames: ReadonlySet<string>
+} => {
+	const server: string[] = []
+	const client: string[] = []
+	const serverNames = new Set<string>()
+	const clientNames = new Set<string>()
+	if (leTrucImports.length === 0)
+		return { server, client, serverNames, clientNames }
+
+	const serverUsage = serverUsageNames(component)
+	const clientUsage = computeClientNeededNames(component)
+	// A FactoryContext member inside an authored '@zeix/le-truc' import is
+	// TSRX037 (compiler.ts) — never re-emit one: it is not a package export
+	// and would break the generated module's imports.
+	const contextVocabulary = new Set<string>([
+		...FACTORY_CONTEXT_MEMBERS,
+		...CONTEXT_NAMES,
+	])
+	for (const imp of leTrucImports) {
+		// A FactoryContext member inside an authored '@zeix/le-truc' import is
+		// TSRX037 (compiler.ts) — excluded here so it is neither placed nor
+		// double-reported as an unused import.
+		const names = imp.names.filter(n => !contextVocabulary.has(n))
+		if (names.length === 0) continue
+		const usedServer = names.filter(n => serverUsage.has(n))
+		const usedClient = names.filter(n => clientUsage.has(n))
+		if (usedServer.length === 0 && usedClient.length === 0) {
+			ctx.diagnostics.push(
+				diagnostic.unusedPlainImport(ctx.source, imp.start, names),
+			)
+			continue
+		}
+		const serverSide = usedServer.filter(n => !RUNTIME_HARNESS_EXPORTS.has(n))
+		if (serverSide.length > 0) {
+			for (const n of serverSide) serverNames.add(n)
+			server.push(`import { ${serverSide.join(', ')} } from '@zeix/le-truc'`)
+		}
+		if (usedClient.length > 0) {
+			for (const n of usedClient) clientNames.add(n)
+			client.push(`import { ${usedClient.join(', ')} } from '@zeix/le-truc'`)
+		}
+	}
+	return { server, client, serverNames, clientNames }
 }
 
 /* === Plain imports (from plain-imports.ts) === */
@@ -168,11 +275,9 @@ export type PlainImportIR = {
 /**
  * Every top-level `ImportDeclaration` whose specifier does NOT resolve to a
  * `.tsrx` compose target (`parseComposeImports` above already claims
- * those) and is not `'@zeix/le-truc'` (`parseFactoryImports` above claims
- * that one — the generated client emits its own `@zeix/le-truc` import via
- * context destructuring, so tracing this one's usage and re-placing it
- * verbatim, as an ordinary plain import would be, would double-import it in
- * the generated output). Side-effect-only imports (`import 'culori/css'`)
+ * those) and is not `'@zeix/le-truc'` (`parseLeTrucImports` above claims
+ * that specifier — its placement is per-name against the runtime-harness
+ * filter, not the verbatim re-emission plain imports get). Side-effect-only imports (`import 'culori/css'`)
  * have no bindings to trace usage from. A relative specifier (`./`, `../`)
  * is rewritten to stay valid from the generated modules' flat output
  * directory — it was authored relative to the `.tsrx` source's own
@@ -348,6 +453,26 @@ export const computeClientNeededNames = (
 }
 
 /**
+ * Every name a server-evaluated position uses: setup statements (emitted
+ * verbatim into the server module unconditionally, ADR 0024 sub-design 12),
+ * always-server template expressions, and server-conditional reactive-family
+ * thunks. Shared by `placePlainImports` and `placeLeTrucImports`.
+ */
+const serverUsageNames = (component: SetupLikeComponent): ReadonlySet<string> => {
+	const serverNames = new Set<string>()
+	for (const stmt of component.setup)
+		for (const n of dependenciesOf(stmt.node)) serverNames.add(n)
+	for (const exprNode of serverExprNodes(component.root))
+		for (const n of dependenciesOf(exprNode)) serverNames.add(n)
+	for (const exprNode of serverRenderedThunkNodes(
+		component.root,
+		component.serverKnown,
+	))
+		for (const n of dependenciesOf(exprNode)) serverNames.add(n)
+	return serverNames
+}
+
+/**
  * Place each plain import into the generated server module, client module,
  * or both — inferred from where its bindings are actually used. Pushes a
  * TSRX014 warning (not dropped silently) for an import with no detectable
@@ -365,20 +490,7 @@ export const placePlainImports = (
 	if (plainImports.length === 0)
 		return { server: [], client: [], serverLocalNames: new Set() }
 
-	const serverNames = new Set<string>()
-
-	// component.setup is emitted verbatim into the SERVER module
-	// unconditionally (ADR 0024 sub-design 12).
-	for (const stmt of component.setup)
-		for (const n of dependenciesOf(stmt.node)) serverNames.add(n)
-	for (const exprNode of serverExprNodes(component.root))
-		for (const n of dependenciesOf(exprNode)) serverNames.add(n)
-	for (const exprNode of serverRenderedThunkNodes(
-		component.root,
-		component.serverKnown,
-	))
-		for (const n of dependenciesOf(exprNode)) serverNames.add(n)
-
+	const serverNames = serverUsageNames(component)
 	const clientNames = computeClientNeededNames(component)
 
 	const server: string[] = []

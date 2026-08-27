@@ -17,7 +17,8 @@
  * `Intl.NumberFormat` config error (e.g. `style: "currency"` without a
  * `currency`) is not caught and re-logged here.
  */
-import { expose } from '@zeix/le-truc'
+
+import { createCell, deriveCell } from '@zeix/le-truc'
 
 export type BasicNumberProps = {
 	/** Numeric value to format and display. */

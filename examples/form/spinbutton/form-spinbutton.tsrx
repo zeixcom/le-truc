@@ -53,8 +53,8 @@
  * host-value change they cause, so this only matters for `host.value`
  * being set from OUTSIDE the component.
  */
-import { expose, first, host } from '@zeix/le-truc'
-import { relayValidity } from '../../../index'
+import { asNumber, defineMethod } from '@zeix/le-truc'
+import { relayValidity } from '@zeix/le-truc'
 
 export const config = { formAssociated: true }
 

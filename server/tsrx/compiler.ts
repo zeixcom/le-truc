@@ -17,11 +17,11 @@
 
 import type { TsrxNode } from '@tsrx/core'
 import {
-	AMBIENT_IMPORT_NAMES,
 	asArray,
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
 	collectBoundNames,
+	FACTORY_CONTEXT_MEMBERS,
 	freeIdentifiers,
 	identifierName,
 	isNode,
@@ -29,6 +29,7 @@ import {
 	MANAGED_FORM_MEMBERS,
 	MANAGED_TEXT_PROPS,
 	PARSER_FACTORIES,
+	REAL_EXPORT_NAMES,
 	SIGNAL_CONSTRUCTORS,
 	text,
 } from './ast-utils'
@@ -38,10 +39,11 @@ import { dedentCss } from './css'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { collectMatchingElements, shareExclusiveIf } from './first-refs'
 import {
-	type FactoryImportSpecifier,
+	type LeTrucImport,
 	parseComposeImports,
-	parseFactoryImports,
+	parseLeTrucImports,
 	parsePlainImports,
+	placeLeTrucImports,
 	placePlainImports,
 } from './imports'
 import { inferType, isOptionalBinding, type TypeContext } from './infer-type'
@@ -240,21 +242,26 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
 }
 
 /**
- * Collect the first read-position occurrence of each `AMBIENT_IMPORT_NAMES`
- * member anywhere in the module (ADR 0024 sub-design 4, amended 2026-08-27,
- * LT-079), skipping `ImportDeclaration` nodes entirely — an import
- * specifier introducing `first` is a DECLARATION of the name, not a read of
- * it, and must not count as "usage" or the unused-import diagnostic could
- * never fire. Scope-aware the same way `freeIdentifiers` is (params,
- * declarator bindings, and non-computed property keys/member properties
- * never count as reads) since these names are common enough words (`on`,
- * `all`, `host`) that an unscoped scan would false-positive on unrelated
- * local bindings and object literal keys.
+ * Validate authored `'@zeix/le-truc'` imports against real usage (ADR 0024
+ * sub-design 16, LT-082), scope-aware the same way `freeIdentifiers` is:
+ * params, declarator bindings, function-declaration names, non-computed
+ * property keys and member properties never count as reads — a local
+ * `const createCell = …` shadowing the export must not fire. Two checks:
+ *
+ * - TSRX036: a `REAL_EXPORT_NAMES` identifier is read somewhere in the
+ *   module but not imported from `'@zeix/le-truc'` — the first read
+ *   position is reported.
+ * - TSRX037: a FactoryContext member (`FACTORY_CONTEXT_MEMBERS` ∪
+ *   `CONTEXT_NAMES`) is named in an authored `'@zeix/le-truc'` import —
+ *   not a package export; the line is a false declaration.
+ *
+ * `ImportDeclaration` nodes are skipped entirely — an import specifier
+ * introduces a name, it is not a read of it.
  */
-const reportFactoryImportMismatch = (
+const reportLeTrucImportMismatch = (
 	ctx: ExtractContext,
 	ast: TsrxNode,
-	imports: FactoryImportSpecifier[],
+	leTrucImports: LeTrucImport[],
 ): void => {
 	const usage = new Map<string, number>()
 	const visit = (node: unknown, bound: ReadonlySet<string>): void => {
@@ -270,7 +277,7 @@ const reportFactoryImportMismatch = (
 				const name = String(node.name)
 				if (
 					!bound.has(name) &&
-					AMBIENT_IMPORT_NAMES.has(name) &&
+					REAL_EXPORT_NAMES.has(name) &&
 					!usage.has(name)
 				)
 					usage.set(name, typeof node.start === 'number' ? node.start : 0)
@@ -285,8 +292,7 @@ const reportFactoryImportMismatch = (
 				visit(node.value, bound)
 				return
 			case 'ArrowFunctionExpression':
-			case 'FunctionExpression':
-			case 'FunctionDeclaration': {
+			case 'FunctionExpression': {
 				const inner = new Set(bound)
 				const paramNames = new Set<string>()
 				for (const param of asArray(node.params))
@@ -295,9 +301,52 @@ const reportFactoryImportMismatch = (
 				visit(node.body, inner)
 				return
 			}
-			case 'VariableDeclarator':
-				visit(node.init, bound)
+			case 'FunctionDeclaration': {
+				const inner = new Set(bound)
+				const paramNames = new Set<string>()
+				for (const param of asArray(node.params))
+					collectBoundNames(param, paramNames)
+				for (const n of paramNames) inner.add(n)
+				const id = identifierName(node.id)
+				if (id) inner.add(id)
+				visit(node.body, inner)
 				return
+			}
+			case 'VariableDeclarator': {
+				visit(node.init, bound)
+				const declared = new Set<string>()
+				collectBoundNames(node.id, declared)
+				visit(node.id, new Set([...bound, ...declared]))
+				return
+			}
+			case 'BlockStatement':
+			case 'Program':
+			case 'JSXCodeBlock': {
+				// Statements execute in order: a declaration adds its names to
+				// scope for every statement that follows it (same sequential
+				// rule as `freeIdentifiers`). The `@{ }` setup container is a
+				// JSXCodeBlock node holding plain statements — without it in
+				// this group, a top-level `const match = …` inside `@{ }`
+				// would not bind `match` for later statements.
+				const inner = new Set(bound)
+				for (const stmt of asArray(node.body)) {
+					if (stmt.type === 'VariableDeclaration') {
+						for (const decl of asArray(stmt.declarations))
+							visit(decl.init, inner)
+						const declared = new Set<string>()
+						for (const decl of asArray(stmt.declarations))
+							collectBoundNames(decl.id, declared)
+						for (const name of declared) inner.add(name)
+					} else {
+						visit(stmt, inner)
+						if (stmt.type === 'FunctionDeclaration') {
+							const id = identifierName(stmt.id)
+							if (id) inner.add(id)
+						}
+					}
+				}
+				return
+			}
 			default:
 				for (const [key, value] of Object.entries(node)) {
 					if (key === 'loc' || key === 'range' || key === 'parent') continue
@@ -307,16 +356,23 @@ const reportFactoryImportMismatch = (
 	}
 	visit(ast, new Set())
 
-	const imported = new Map(imports.map(spec => [spec.name, spec.start]))
+	const imported = new Map<string, number>()
+	for (const imp of leTrucImports)
+		for (const name of imp.names)
+			if (!imported.has(name)) imported.set(name, imp.start)
+	const contextVocabulary = new Set<string>([
+		...FACTORY_CONTEXT_MEMBERS,
+		...CONTEXT_NAMES,
+	])
 	for (const [name, offset] of usage)
 		if (!imported.has(name))
 			ctx.diagnostics.push(
-				diagnostic.missingFactoryImport(ctx.source, offset, name),
+				diagnostic.missingRealExportImport(ctx.source, offset, name),
 			)
 	for (const [name, offset] of imported)
-		if (!usage.has(name))
+		if (contextVocabulary.has(name))
 			ctx.diagnostics.push(
-				diagnostic.unusedFactoryImport(ctx.source, offset, name),
+				diagnostic.contextNameInImport(ctx.source, offset, name),
 			)
 }
 
@@ -429,8 +485,8 @@ export const compileSource = (
 	reportReactJsxNearMisses(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
 	const plainImports = parsePlainImports(ctx, ast, filename)
-	const factoryImports = parseFactoryImports(ast)
-	reportFactoryImportMismatch(ctx, ast, factoryImports)
+	const leTrucImports = parseLeTrucImports(ast)
+	reportLeTrucImportMismatch(ctx, ast, leTrucImports)
 
 	// Locate the exported component function (body = JSXCodeBlock).
 	let fn: TsrxNode | null = null
@@ -1022,11 +1078,25 @@ export const compileSource = (
 	for (const s of signals) serverKnown.add(s.name)
 	for (const n of setupInits.keys()) serverKnown.add(n)
 
-	const imports = placePlainImports(
+	const plainPlacement = placePlainImports(
 		ctx,
 		{ root, setup, plainSetup, clientSetup, signals, serverKnown },
 		plainImports,
 	)
+	const leTrucPlacement = placeLeTrucImports(
+		ctx,
+		{ root, setup, plainSetup, clientSetup, signals, serverKnown },
+		leTrucImports,
+	)
+	const imports = {
+		server: [...plainPlacement.server, ...leTrucPlacement.server],
+		client: [...plainPlacement.client, ...leTrucPlacement.client],
+		serverLocalNames: new Set([
+			...plainPlacement.serverLocalNames,
+			...leTrucPlacement.serverNames,
+		]),
+		clientLeTrucNames: leTrucPlacement.clientNames,
+	}
 
 	// A milestone gate (reactive @for) skips the whole file: rendering the
 	// remaining markup without the gated construct would be silently wrong.

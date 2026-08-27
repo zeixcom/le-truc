@@ -13,7 +13,8 @@
  * - a signal (`selected`) whose client seed is harvested from which tab the
  *   server marked aria-selected="true"
  */
-import { expose } from '@zeix/le-truc'
+
+import { createCell } from '@zeix/le-truc'
 
 export type ModuleTabgroupProps = {
 	/** The `aria-controls` value of the currently selected tab (read-only). */
