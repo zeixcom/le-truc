@@ -16,7 +16,8 @@ import { compileComponent } from '../../tsrx'
 
 const harvestFrom = (attr: string, signalInit = "createCell('')"): string => {
 	const { component, diagnostics } = compileComponent(
-		`export function C({}: {})
+		`import { createCell } from '@zeix/le-truc'
+export function C({}: {})
 	@{
 		const ${attr === 'checked' ? 'checked' : 'value'} = ${signalInit}
 		expose({ ${attr === 'checked' ? 'checked' : 'value'}: ${attr === 'checked' ? 'checked' : 'value'}.get })
@@ -60,7 +61,8 @@ describe('dirty-flag attribute harvest reads the live property (CHECKLIST §6)',
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`,
+	}
+import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 			new Set(),
 		)

@@ -7,7 +7,9 @@
 import { describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../tsrx'
 
-const source = `export type CProps = { value: number }
+const source = `import { asNumber } from '@zeix/le-truc'
+
+export type CProps = { value: number }
 
 export function C({}: {})
 @{

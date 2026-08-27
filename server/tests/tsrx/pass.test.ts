@@ -108,7 +108,9 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 	})
 
 	test('a { get, set } descriptor entry lowers to a two-way pass()', () => {
-		const source = `export function C({}: {})
+		const source = `import { createCell } from '@zeix/le-truc'
+
+export function C({}: {})
 	@{
 		const value = createCell('x')
 		expose({ value: value.get })
@@ -118,8 +120,8 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 				<basic-child truc:pass={{ value: { get: () => value.get(), set: v => value.set(v) } }}></basic-child>
 			</c-el>
 			<style>c-el { color: red }</style>
-		</>
-	}`
+			</>
+		}`
 		const { component, diagnostics } = compileComponent(
 			source,
 			'c.tsrx',
@@ -175,7 +177,8 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 })
 
 describe('truc:pass — namespaced host-owned attribute (LT-053)', () => {
-	const source = (attr: string) => `import { Child } from './child.tsrx'
+	const source = (attr: string) => `import { createCell } from '@zeix/le-truc'
+import { Child } from './child.tsrx'
 
 	export function C({}: {})
 	@{

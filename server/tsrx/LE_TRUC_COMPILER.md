@@ -28,7 +28,9 @@ The server module re-declares the source's `@{ }` setup **verbatim** against the
 runtime harness in `runtime.ts`, where a signal is its initial value in a box
 (`.get()` reads once, `.set()` is a no-op) — "signals as plain values". The client
 module is today's idiomatic hand-written Le Truc factory, importing solely from
-`@zeix/le-truc`; the `.tsrx` source itself imports nothing (ambient vocabulary).
+`@zeix/le-truc`; the `.tsrx` source imports the real package exports its setup
+uses and its library/plain helpers, while the FactoryContext vocabulary stays
+ambient (`globals.d.ts`, ADR 0024 sub-design 16).
 
 The parser dependency `@tsrx/core` is **pinned at 0.1.60** (ADR 0024 sub-design 2).
 `core.ts` is the **only** module importing its *values*; siblings import only the

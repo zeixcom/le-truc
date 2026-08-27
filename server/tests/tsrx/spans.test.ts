@@ -153,7 +153,8 @@ describe('integration — emitClientModule spans locate the authored thunk', () 
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		if (!component) throw new Error('fixture must compile')
 		const handlerText = '() => count.set(count.get() + 1)'

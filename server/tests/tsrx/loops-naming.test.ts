@@ -108,7 +108,8 @@ describe('runLoops — Pass 1b (reactive-list @for → reconcile())', () => {
 					</c-el>
 					<style>c-el { color: red }</style>
 				</>
-			}`,
+			}
+import { createList } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		if (!component) throw new Error('component must compile')

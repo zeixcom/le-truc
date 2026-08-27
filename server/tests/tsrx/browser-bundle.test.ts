@@ -29,7 +29,8 @@ const FIXTURE = `export function C({}: {})
 		</c-el>
 		<style>c-el { color: red }</style>
 	</>
-}`
+}
+import { createCell } from '@zeix/le-truc'`
 
 const tmpDir = mkdtempSync(join(tmpdir(), 'tsrx-browser-bundle-'))
 afterAll(() => rmSync(tmpDir, { recursive: true, force: true }))

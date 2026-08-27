@@ -123,7 +123,8 @@ export function C({ label }: { label?: string })
 			<c-el count={max}><span>ok</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileSource(source, 'c.tsrx')
 		expect(diagnostics).toEqual([])
 		expect(component?.parserExposeProps.has('count')).toBe(true)
@@ -202,7 +203,8 @@ describe('@if conditional markup (LT-008)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(
@@ -263,7 +265,8 @@ describe('milestone gates', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { deriveList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX001')).toBe(true)
 	})
@@ -271,7 +274,8 @@ describe('milestone gates', () => {
 
 describe('reactive-list rewrite rules (milestone 3)', () => {
 	const listSource = (body: string): string =>
-		`export function C({}: {})
+		`import { createList } from '@zeix/le-truc'
+export function C({}: {})
 	@{
 		const items = createList<string>([], { keyConfig: 'item' })
 		<>
@@ -372,7 +376,8 @@ describe('reactive-list rewrite rules (milestone 3)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.message.includes('Index bindings'))).toBe(
 			true,
@@ -391,7 +396,8 @@ describe('reactive-list rewrite rules (milestone 3)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(d =>
@@ -439,7 +445,8 @@ describe('rewrite-rule enforcement', () => {
 			<c-el><span>{seen}</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'TSRX004')
 		expect(hit).toBeDefined()
@@ -455,7 +462,8 @@ describe('rewrite-rule enforcement', () => {
 		<c-el><span title={() => prefix.get() + '!'}>ok</span></c-el>
 		<style>c-el { color: red }</style>
 	</>
-}`
+}
+import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
 			source,
 			'c.tsrx',
@@ -476,7 +484,8 @@ describe('rewrite-rule enforcement', () => {
 			<c-el truc:pass={{ value: { get: () => value.get() } }}>ok</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(
 			source,
 			'c.tsrx',
@@ -506,7 +515,8 @@ describe('rewrite-rule enforcement', () => {
 			<c-el onClick={() => n.set(0)}><span>{n}</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.message.includes('root element'))).toBe(true)
 	})
@@ -531,7 +541,8 @@ describe('rewrite-rule enforcement', () => {
 			<c-el><span>{n}</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { deriveCell, createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'TSRX013')
 		expect(hit).toBeDefined()
@@ -553,7 +564,8 @@ describe('rewrite-rule enforcement', () => {
 			<c-el><span>{n}</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'TSRX013')
 		expect(hit).toBeDefined()
@@ -910,7 +922,8 @@ export function C({ name }: { name: string })
 			<c-el><span>ok</span></c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { asString } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX028')).toBe(false)
 	})
@@ -1035,7 +1048,8 @@ describe('textarea value attribute (CHECKLIST §10, TSRX030)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { asString } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX030')).toBe(false)
 	})
@@ -1201,7 +1215,8 @@ describe('impure server fold (CHECKLIST §4, TSRX033)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
 			source,
 			'c.tsrx',
@@ -1228,7 +1243,8 @@ describe('impure server fold (CHECKLIST §4, TSRX033)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
 	})
@@ -1245,7 +1261,8 @@ describe('semantically-loaded attribute has no server default (CHECKLIST §5, TS
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { asInteger } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
 			source,
 			'c.tsrx',
@@ -1271,7 +1288,8 @@ describe('semantically-loaded attribute has no server default (CHECKLIST §5, TS
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'TSRX034')
 		expect(hit).toBeDefined()
@@ -1288,7 +1306,8 @@ describe('semantically-loaded attribute has no server default (CHECKLIST §5, TS
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { asBoolean } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
 	})
@@ -1305,7 +1324,8 @@ describe('semantically-loaded attribute has no server default (CHECKLIST §5, TS
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
 	})
@@ -1320,7 +1340,8 @@ describe('semantically-loaded attribute has no server default (CHECKLIST §5, TS
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { asInteger } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
 	})

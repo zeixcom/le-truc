@@ -59,7 +59,9 @@ describe('lineStartsInTemplate', () => {
 
 describe('reindentation keeps template-literal interiors byte-identical', () => {
 	test('client: handler with a multi-line template literal', () => {
-		const source = `export function C({}: {})
+		const source = `import { createCell } from '@zeix/le-truc'
+
+export function C({}: {})
 	@{
 		const seen = createCell(0)
 		expose({ seen: seen.get })
@@ -80,7 +82,9 @@ describe('reindentation keeps template-literal interiors byte-identical', () => 
 	})
 
 	test('server: setup const with a multi-line template literal', () => {
-		const source = `export function C({ note }: { note?: string })
+		const source = `import { createCell } from '@zeix/le-truc'
+
+export function C({ note }: { note?: string })
 	@{
 		const seen = createCell(note)
 		const banner = \`First \${note}

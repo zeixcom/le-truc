@@ -140,7 +140,8 @@ describe('provideContexts() — provider side', () => {
 			<c-el>{count}</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 
 	test('lowers to a bare client-only setup statement, never runs server-side', () => {
 		const { component, diagnostics } = compileComponent(
@@ -171,7 +172,8 @@ describe('provideContexts() — provider side', () => {
 				<c-el>{count}</c-el>
 				<style>c-el { color: red }</style>
 			</>
-		}`
+		}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(badSource, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(true)
 	})

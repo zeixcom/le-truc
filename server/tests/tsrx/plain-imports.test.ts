@@ -43,6 +43,7 @@ describe('plain import used only client-side', () => {
 	// dependency is the ambient `host` — never server-known, so this thunk
 	// never server-renders.
 	const source = `import { clientOnlyHelper } from '../../_common/clientOnlyHelper.ts'
+	import { asNumber } from '@zeix/le-truc'
 
 	export type CProps = { value: number }
 
@@ -81,6 +82,7 @@ describe('plain import used both server- and client-side', () => {
 	// signal, the client re-emits the initializer to seed it, which is what
 	// pulls `bothHelper` into the client module.
 	const source = `import { bothHelper } from '../../_common/bothHelper.ts'
+	import { createCell } from '@zeix/le-truc'
 
 	export function C({ count }: { count: number })
 	@{

@@ -20,7 +20,8 @@ describe('style-map on a descendant native element', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 
 	test('compiles without diagnostics', () => {
 		const { component, diagnostics } = compileComponent(
@@ -57,7 +58,8 @@ describe('style-map on the component root (targets host)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 
 	test('compiles without the "Reactive constructs on the component root element" diagnostic', () => {
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -94,7 +96,8 @@ describe('style-map on a descendant custom element bypasses the reactive-attribu
 		</c-el>
 		<style>c-el { color: red }</style>
 	</>
-}`
+}
+import { createCell } from '@zeix/le-truc'`
 
 	test('compiles without a reactiveAttrOnCustomElement diagnostic', () => {
 		const { diagnostics, component } = compileComponent(
@@ -125,7 +128,8 @@ describe('signal used only inside the style-map thunk (LT-036)', () => {
 		</c-el>
 		<style>c-el { color: red }</style>
 	</>
-}`
+}
+import { createCell } from '@zeix/le-truc'`
 	const root = `export function C({}: {})
 @{
 	const color = createCell('red')
@@ -136,7 +140,8 @@ describe('signal used only inside the style-map thunk (LT-036)', () => {
 		</c-el>
 		<style>c-el { color: red }</style>
 	</>
-}`
+}
+import { createCell } from '@zeix/le-truc'`
 
 	test('descendant case: no TSRX004, client seeds by initializer reuse', () => {
 		const { component, diagnostics } = compileComponent(

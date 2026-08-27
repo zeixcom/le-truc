@@ -77,7 +77,8 @@ describe('freeIdentifiers', () => {
 					<c-el hidden={() => !open.get() && selected.get() === 'a'}>ok</c-el>
 					<style>c-el { color: red }</style>
 				</>
-			}`,
+			}
+import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		const hidden = component?.root.attrs.find(a => a.kind === 'reactive')
@@ -99,7 +100,8 @@ describe('freeIdentifiers', () => {
 					}}>ok</c-el>
 					<style>c-el { color: red }</style>
 				</>
-			}`,
+			}
+import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		const onClick = component?.root.attrs.find(a => a.kind === 'event')
@@ -127,7 +129,8 @@ describe('template classification', () => {
 					>ok</c-el>
 					<style>c-el { color: red }</style>
 				</>
-			}`,
+			}
+import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		expect(diagnostics).toEqual([])
@@ -189,7 +192,8 @@ describe('template classification', () => {
 					<c-el><span>{n}</span></c-el>
 					<style>c-el { color: red }</style>
 				</>
-			}`,
+			}
+import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		const span = firstElementChild(component?.root)
@@ -229,7 +233,8 @@ describe('template classification', () => {
 					</c-el>
 					<style>c-el { color: red }</style>
 				</>
-			}`,
+			}
+import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		expect(diagnostics).toEqual([])
@@ -243,7 +248,8 @@ describe('template classification', () => {
 
 describe('extension activation — export const config (sub-design 8)', () => {
 	const configSource = (config: string): string =>
-		`export const config = ${config}
+		`import { asString } from '@zeix/le-truc'
+export const config = ${config}
 export function C({ value = '' }: { value?: string })
 @{
 	expose({ value: asString('') })
@@ -287,7 +293,8 @@ export function C({ value = '' }: { value?: string })
 					<c-el><span>ok</span></c-el>
 					<style>c-el { color: red }</style>
 				</>
-			}`,
+			}
+import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		expect(component?.parserExposeProps.get('value')).toEqual({
@@ -321,7 +328,8 @@ export function C({ value = '' }: { value?: string })
 					<c-el><span>ok</span></c-el>
 					<style>c-el { color: red }</style>
 				</>
-			}`,
+			}
+import { asString, defineMethod } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		expect(component?.contextRefs).toEqual(['host', 'internals'])

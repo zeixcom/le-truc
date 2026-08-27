@@ -26,7 +26,8 @@ const source = `export function C({}: {})
 		</c-el>
 		<style>c-el { color: red }</style>
 	</>
-}`
+}
+import { createCell } from '@zeix/le-truc'`
 
 /** A minimal honest component IR: the front end's own output, not the facade's emitted artifacts. */
 const realComponent = (): ComponentIR => {

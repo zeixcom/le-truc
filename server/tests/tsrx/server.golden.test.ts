@@ -69,7 +69,8 @@ const formCheckbox = compileComponent(
 // Arg-seeded reactive list (LT-003): initial items render in place with
 // data-key, the item shape is extracted as a <template>, and the client's
 // List declaration harvests the adopted children (see client.golden.test.ts).
-const seededSource = `export function Seeded({ initial }: { initial?: string[] })
+const seededSource = `import { createList } from '@zeix/le-truc'
+export function Seeded({ initial }: { initial?: string[] })
 	@{
 		const items = createList<string>(initial, { keyConfig: 'item' })
 		<>

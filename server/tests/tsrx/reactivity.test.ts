@@ -16,7 +16,8 @@ import { classifyChild } from '../../tsrx/reactivity'
 /** Compile a one-child fixture and return that child's IR node. */
 const childOf = (body: string, setup = 'const count = createCell(0)') => {
 	const { component, diagnostics } = compileSource(
-		`export function C({ label }: { label: string })
+		`import { createCell } from '@zeix/le-truc'
+		export function C({ label }: { label: string })
 		@{
 			${setup}
 			expose({ count: count.get })

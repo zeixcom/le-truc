@@ -128,7 +128,8 @@ describe('@switch — multi-branch conditional rendering', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createCell } from '@zeix/le-truc'`
 		const { diagnostics: d } = compileComponent(source2, 'c.tsrx', new Set())
 		expect(
 			d.some(diag =>
@@ -209,7 +210,8 @@ describe('@try — error boundaries', () => {
 
 describe('@pending — async boundaries (ADR 0023 sub-design 13, LT-012)', () => {
 	const asyncComponent = (deriveExpr: string): string =>
-		`export function C({}: {})
+		`import { deriveCell } from '@zeix/le-truc'
+export function C({}: {})
 	@{
 		const data = deriveCell(${deriveExpr})
 		expose({ data: data.get })
@@ -243,7 +245,8 @@ describe('@pending — async boundaries (ADR 0023 sub-design 13, LT-012)', () =>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`,
+	}
+import { deriveCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 			new Set(),
 		)
@@ -270,7 +273,8 @@ describe('@pending — async boundaries (ADR 0023 sub-design 13, LT-012)', () =>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`,
+	}
+import { deriveCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 			new Set(),
 		)
@@ -371,7 +375,8 @@ describe('html={expr} — dynamic rendering', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createState } from '@zeix/le-truc'`
 		const { component, diagnostics: d } = compileComponent(
 			source,
 			'c.tsrx',
@@ -404,7 +409,8 @@ describe('createMemo — recognized signal constructor (LT-025)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createState, createMemo } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
 			source,
 			'c.tsrx',
@@ -432,7 +438,8 @@ describe('createMemo — recognized signal constructor (LT-025)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { asString, createMemo } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
 			source,
 			'c.tsrx',
@@ -544,7 +551,8 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createList } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
 			source,
 			'seeded.tsrx',
@@ -576,7 +584,8 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+	}
+import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(d =>
