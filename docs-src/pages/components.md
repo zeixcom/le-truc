@@ -506,7 +506,7 @@ With `[formAssociated()]`, Le Truc manages for you:
 - State restore
 - A `<fieldset disabled>`-aware `disabled` property
 
-The host gains a native-parity contract delegating to `internals`: `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()`. External consumers read them as on a native input. The convention requires a reactive `value` property. Expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension.
+The host gains a native-parity contract delegating to `internals`: `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()`. It also gains a managed `defaultValue` property — the reset baseline, mirroring `<input>.defaultValue`. When the prop is Parser-backed, `defaultValue` reflects the live `value` content attribute through that Parser. Setting it moves the baseline for the next form reset; it never changes the live `value`. External consumers read them as on a native input. The convention requires a reactive `value` property. Expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension — `defaultValue` is one of them.
 
 The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags and custom `:state()` pseudo-classes. Follow this rule: use `internals?.setFormValue()` indirectly through the managed convention. Set `value`, and it syncs automatically. Call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
 
@@ -529,10 +529,14 @@ defineComponent<FormCheckboxProps>(
 )
 ```
 
-`internals.setFormValue()` receives the host's own `value` attribute when checked (default `'on'`, matching native `<input type="checkbox">`) and `null` when unchecked. The convention requires a reactive `checked` property.
+`internals.setFormValue()` receives the host's own `value` attribute when checked (default `'on'`, matching native `<input type="checkbox">`) and `null` when unchecked. The convention requires a reactive `checked` property. The reset baseline is a managed `defaultChecked` property, mirroring `<input>.defaultChecked`: it reflects the `checked` attribute, and setting it moves the baseline for the next form reset without changing the live `checked`.
 
 {% callout .caution title="Do not combine the two form extensions" %}
 Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticProps.formAssociated` key. Combining them on one component throws `ExtensionCollisionError` in dev mode. Radio groups and listboxes do not need `formAssociatedCheckbox()`. Their selection aggregates into one string `value` on the container, which fits `formAssociated()`.
+{% /callout %}
+
+{% callout .caution title="Do not observe value or checked on a form-associated component" %}
+On a form-associated component, the `value` attribute is the reset baseline, not a live-value channel. Passing `value` to `observedAttributes()` re-parses the baseline attribute into the live prop on every mutation, so baseline updates apply live and the two channels stop being distinct. The same applies to `checked` with `formAssociatedCheckbox()`. Use the property as the sole live edit path.
 {% /callout %}
 
 #### Relaying Native Control Validity
@@ -570,7 +574,7 @@ defineComponent<BasicGaugeProps>(
 )
 ```
 
-Le Truc adds named attributes to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value. It writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched. Use this sparingly. For most components, event handlers or direct property writes are the right way to update state after connect.
+Le Truc adds named attributes to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value. It writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched. Use this sparingly. For most components, event handlers or direct property writes are the right way to update state after connect. On form-associated components, do not observe `value` — or `checked` with `formAssociatedCheckbox()`; see the caution in [Form Association](#form-association).
 
 ### Debug Instrumentation
 

@@ -130,6 +130,14 @@ Use this instead of a pair of `watch()` calls syncing two signals by hand (one d
 
 See `examples/form/tokenbox/form-tokenbox.ts` for a real usage.
 
+## Form Reset Is Deferred and Restores From `defaultValue`/`defaultChecked`
+
+`makeResetCallback` (`src/extensions/form.ts`) defers its restoring write to a microtask. Form reset runs in tree order, so a form-associated host's `formResetCallback` fires **before** its own inner native control resets itself — a synchronous write raced that native reset and lost. Consequence for tests: `instance.formResetCallback()` returns before `value`/`checked` changes; `await Promise.resolve()` before asserting.
+
+Reset assigns `this[prop] = this[defaultProp]` — it does not re-run the retained initializer inline. `defaultValue`/`defaultChecked` are managed prototype properties: the getter re-parses the live same-named content attribute through the retained `Parser` (static initializer as-is when not Parser-backed); the setter writes or removes the attribute. Setting them moves the baseline for the next reset only — it never applies live. Native `<input>` also updates a clean control's live value here; that is unimplementable from JS (the dirty flag is write-only), so the deviation is deliberate.
+
+Both names are per-variant reserved members (`InvalidPropertyNameError` from `expose()`), and `value`/`checked` must never go into `observedAttributes()` on a form-associated component — re-parsing the baseline attribute into the live prop is the same conflation from the attribute-write direction.
+
 ## Testing a DEV-Gated Branch: Flip the Env Var, No Module Mocking
 
 Since v2.3, DEV guards read `process.env.DEV_MODE` at call time (no import-time const), so a test exercises a DEV branch by setting `process.env.DEV_MODE = 'true'` around the call and restoring the previous value in a `finally` (see `withDevMode` in `src/tests/context.test.ts`, and the inline pattern in `events.test.ts` / `reactive.test.ts`). The historical `mock.module('../util', …)` + namespace-snapshot dance is gone — do not reintroduce it. One residual caveat: the env var is process-global, so while an `await` is pending inside a DEV-enabled window, guards in interleaved tests from other files also see it. That only produces extra `console.warn` calls; keep warn-counting assertions inside the same file (bun runs a file's tests sequentially) and this stays benign.
