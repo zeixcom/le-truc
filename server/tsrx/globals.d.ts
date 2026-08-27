@@ -56,4 +56,5 @@ declare const provideContexts: LeTrucFactoryContext['provideContexts']
  * `declare global` HTMLElementTagNameMap augmentation when
  * `config.formAssociated` leads the extensions.
  */
-export type FormAssociatedElement = import('@zeix/le-truc').FormAssociatedElement
+// biome-ignore lint/correctness/noUnusedVariables: used in components
+type FormAssociatedElement = import('@zeix/le-truc').FormAssociatedElement
