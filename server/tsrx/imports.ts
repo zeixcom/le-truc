@@ -22,6 +22,7 @@
 
 import type { TsrxNode } from '@tsrx/core'
 import {
+	AMBIENT_IMPORT_NAMES,
 	asArray,
 	freeIdentifiers,
 	identifierName,
@@ -97,6 +98,51 @@ export const parseComposeImports = (
 	return imports
 }
 
+/* === Factory-context helper imports (ADR 0024 sub-design 4, LT-079) === */
+
+/** One `FactoryContext` helper named in an `import { … } from '@zeix/le-truc'` line. */
+export type FactoryImportSpecifier = {
+	name: string
+	start: number
+}
+
+/**
+ * Every `FactoryContext` helper (`AMBIENT_IMPORT_NAMES`) explicitly imported
+ * from `'@zeix/le-truc'` — the authoring-time declaration of which ambient
+ * helpers a `.tsrx` source uses (ADR 0024 sub-design 4, amended 2026-08-27).
+ * Not a plain import (`parsePlainImports` excludes this specifier below):
+ * the generated client already emits its own `import { ... } from
+ * '@zeix/le-truc'` via context destructuring (`emit-client.ts`), so this
+ * declaration exists purely for the compiler's own name resolution and is
+ * never re-emitted verbatim. A named import that isn't in
+ * `AMBIENT_IMPORT_NAMES` (a signal constructor, a parser factory) is
+ * ignored here — those stay ambient-only, unaffected by this amendment.
+ */
+export const parseFactoryImports = (ast: TsrxNode): FactoryImportSpecifier[] => {
+	const result: FactoryImportSpecifier[] = []
+	for (const stmt of asArray(ast.body)) {
+		if (stmt.type !== 'ImportDeclaration') continue
+		const specifierNode = stmt.source
+		const specifier =
+			isNode(specifierNode) &&
+			specifierNode.type === 'Literal' &&
+			typeof specifierNode.value === 'string'
+				? specifierNode.value
+				: null
+		if (specifier !== '@zeix/le-truc') continue
+		for (const spec of asArray(stmt.specifiers)) {
+			if (spec.type !== 'ImportSpecifier') continue
+			const name = identifierName(spec.local)
+			if (name && AMBIENT_IMPORT_NAMES.has(name))
+				result.push({
+					name,
+					start: typeof spec.start === 'number' ? spec.start : 0,
+				})
+		}
+	}
+	return result
+}
+
 /* === Plain imports (from plain-imports.ts) === */
 
 /**
@@ -122,11 +168,15 @@ export type PlainImportIR = {
 /**
  * Every top-level `ImportDeclaration` whose specifier does NOT resolve to a
  * `.tsrx` compose target (`parseComposeImports` above already claims
- * those). Side-effect-only imports (`import 'culori/css'`) have no bindings
- * to trace usage from. A relative specifier (`./`, `../`) is rewritten to
- * stay valid from the generated modules' flat output directory — it was
- * authored relative to the `.tsrx` source's own location, which is almost
- * never where the compiled module ends up.
+ * those) and is not `'@zeix/le-truc'` (`parseFactoryImports` above claims
+ * that one — the generated client emits its own `@zeix/le-truc` import via
+ * context destructuring, so tracing this one's usage and re-placing it
+ * verbatim, as an ordinary plain import would be, would double-import it in
+ * the generated output). Side-effect-only imports (`import 'culori/css'`)
+ * have no bindings to trace usage from. A relative specifier (`./`, `../`)
+ * is rewritten to stay valid from the generated modules' flat output
+ * directory — it was authored relative to the `.tsrx` source's own
+ * location, which is almost never where the compiled module ends up.
  */
 export const parsePlainImports = (
 	ctx: ExtractContext,
@@ -144,7 +194,8 @@ export const parsePlainImports = (
 			typeof specifierNode.value === 'string'
 				? specifierNode.value
 				: null
-		if (!specifier || specifier.endsWith('.tsrx')) continue
+		if (!specifier || specifier.endsWith('.tsrx') || specifier === '@zeix/le-truc')
+			continue
 		const localNames: string[] = []
 		for (const spec of asArray(stmt.specifiers)) {
 			const local = identifierName(spec.local)

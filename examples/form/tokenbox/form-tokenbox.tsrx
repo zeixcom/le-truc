@@ -21,6 +21,7 @@
  * that one initial read; `tokens.add()`'s own `DuplicateKeyError` guard
  * still catches duplicates from then on, same as the hand-written version.
  */
+import { expose, first, host } from '@zeix/le-truc'
 import { DuplicateKeyError } from '../../../index'
 
 export const config = { formAssociated: true }

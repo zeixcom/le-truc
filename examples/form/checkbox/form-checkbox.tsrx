@@ -1,3 +1,5 @@
+import { expose, first, host } from '@zeix/le-truc'
+
 export const config = { formAssociatedCheckbox: true }
 
 export type FormCheckboxProps = {

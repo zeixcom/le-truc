@@ -17,6 +17,7 @@
 
 import type { TsrxNode } from '@tsrx/core'
 import {
+	AMBIENT_IMPORT_NAMES,
 	asArray,
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
@@ -37,7 +38,9 @@ import { dedentCss } from './css'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { collectMatchingElements, shareExclusiveIf } from './first-refs'
 import {
+	type FactoryImportSpecifier,
 	parseComposeImports,
+	parseFactoryImports,
 	parsePlainImports,
 	placePlainImports,
 } from './imports'
@@ -236,6 +239,87 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
 	visit(ast)
 }
 
+/**
+ * Collect the first read-position occurrence of each `AMBIENT_IMPORT_NAMES`
+ * member anywhere in the module (ADR 0024 sub-design 4, amended 2026-08-27,
+ * LT-079), skipping `ImportDeclaration` nodes entirely — an import
+ * specifier introducing `first` is a DECLARATION of the name, not a read of
+ * it, and must not count as "usage" or the unused-import diagnostic could
+ * never fire. Scope-aware the same way `freeIdentifiers` is (params,
+ * declarator bindings, and non-computed property keys/member properties
+ * never count as reads) since these names are common enough words (`on`,
+ * `all`, `host`) that an unscoped scan would false-positive on unrelated
+ * local bindings and object literal keys.
+ */
+const reportFactoryImportMismatch = (
+	ctx: ExtractContext,
+	ast: TsrxNode,
+	imports: FactoryImportSpecifier[],
+): void => {
+	const usage = new Map<string, number>()
+	const visit = (node: unknown, bound: ReadonlySet<string>): void => {
+		if (Array.isArray(node)) {
+			for (const child of node) visit(child, bound)
+			return
+		}
+		if (!isNode(node)) return
+		switch (node.type) {
+			case 'ImportDeclaration':
+				return
+			case 'Identifier': {
+				const name = String(node.name)
+				if (
+					!bound.has(name) &&
+					AMBIENT_IMPORT_NAMES.has(name) &&
+					!usage.has(name)
+				)
+					usage.set(name, typeof node.start === 'number' ? node.start : 0)
+				return
+			}
+			case 'MemberExpression':
+				visit(node.object, bound)
+				if (node.computed) visit(node.property, bound)
+				return
+			case 'Property':
+				if (node.computed) visit(node.key, bound)
+				visit(node.value, bound)
+				return
+			case 'ArrowFunctionExpression':
+			case 'FunctionExpression':
+			case 'FunctionDeclaration': {
+				const inner = new Set(bound)
+				const paramNames = new Set<string>()
+				for (const param of asArray(node.params))
+					collectBoundNames(param, paramNames)
+				for (const n of paramNames) inner.add(n)
+				visit(node.body, inner)
+				return
+			}
+			case 'VariableDeclarator':
+				visit(node.init, bound)
+				return
+			default:
+				for (const [key, value] of Object.entries(node)) {
+					if (key === 'loc' || key === 'range' || key === 'parent') continue
+					visit(value, bound)
+				}
+		}
+	}
+	visit(ast, new Set())
+
+	const imported = new Map(imports.map(spec => [spec.name, spec.start]))
+	for (const [name, offset] of usage)
+		if (!imported.has(name))
+			ctx.diagnostics.push(
+				diagnostic.missingFactoryImport(ctx.source, offset, name),
+			)
+	for (const [name, offset] of imported)
+		if (!usage.has(name))
+			ctx.diagnostics.push(
+				diagnostic.unusedFactoryImport(ctx.source, offset, name),
+			)
+}
+
 /** Native form-control tags whose own `name` would double-submit (LT-059). */
 const NAMED_FORM_CONTROL_TAGS: ReadonlySet<string> = new Set([
 	'input',
@@ -345,6 +429,8 @@ export const compileSource = (
 	reportReactJsxNearMisses(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
 	const plainImports = parsePlainImports(ctx, ast, filename)
+	const factoryImports = parseFactoryImports(ast)
+	reportFactoryImportMismatch(ctx, ast, factoryImports)
 
 	// Locate the exported component function (body = JSXCodeBlock).
 	let fn: TsrxNode | null = null

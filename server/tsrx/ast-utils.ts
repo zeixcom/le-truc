@@ -110,6 +110,22 @@ export const FACTORY_CONTEXT_MEMBERS: ReadonlySet<string> = new Set<string>(
 	FACTORY_CONTEXT_MEMBER_NAMES,
 )
 
+/**
+ * `FactoryContext` helper names requiring an explicit `import { … } from
+ * '@zeix/le-truc'` in `.tsrx` sources (ADR 0024 sub-design 4, amended
+ * 2026-08-27, LT-079) — the union of `FACTORY_CONTEXT_MEMBER_NAMES` and the
+ * subset of `CONTEXT_NAMES` the amendment named. `internals` is a
+ * `CONTEXT_NAMES` member of the same shape as `host` but was NOT named in
+ * the amendment text — left purely ambient here rather than silently
+ * widening the decision; flagged in NOTES.md for the architect.
+ */
+export const AMBIENT_IMPORT_NAMES: ReadonlySet<string> = new Set<string>([
+	...FACTORY_CONTEXT_MEMBER_NAMES,
+	'host',
+	'provideContexts',
+	'requestContext',
+])
+
 /** Managed form props usable as string-literal lazy children (text-bindable). */
 export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
 	'validationMessage',

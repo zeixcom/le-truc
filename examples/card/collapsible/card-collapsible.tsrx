@@ -12,6 +12,8 @@
  * host.open}>` and a `ref`-based `onToggle` handler keeps it two-way, same
  * end-to-end behavior via a different source of truth.
  */
+import { expose, first, host } from '@zeix/le-truc'
+
 export type CardCollapsibleProps = {
 	/** Whether the card is expanded. Reflects the descendant `<details>` element's `open` state. */
 	open: boolean

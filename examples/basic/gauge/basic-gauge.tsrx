@@ -8,6 +8,8 @@
  * and rotation stay live when `value` changes after connect — parity with
  * the hand-written `basic-gauge.ts`.
  */
+import { expose, host } from '@zeix/le-truc'
+
 export type BasicGaugeProps = {
 	/** Current gauge value in the range [0, 1]. */
 	value: number

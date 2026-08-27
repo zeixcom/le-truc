@@ -1,10 +1,12 @@
 /**
  * Unified-format spike: basic-counter — client component GENERATED from source.
  *
- * Final convention after the 2026-08-22 refinement:
- * - ZERO imports: signal constructors (createCell, …) are auto-imported into
- *   the generated client module from '@zeix/le-truc' (v2 bridge re-exported
- *   since 2.5.1); `expose`/`host` are compiler-recognized ambient identifiers.
+ * Final convention after the 2026-08-22 refinement, amended 2026-08-27
+ * (ADR 0024 sub-design 4, LT-079):
+ * - Signal constructors (createCell, …) are auto-imported into the generated
+ *   client module from '@zeix/le-truc' (v2 bridge re-exported since 2.5.1);
+ *   `expose`/`host` and the other FactoryContext helpers require an explicit
+ *   `import { ... } from '@zeix/le-truc'` naming only what's used.
  * - Function inputs are server args (`start`), not client props.
  * - `expose()` declares the client interface on top of HTMLElement.
  * - Signals are declared in the server function (CE v2 name: createCell).
@@ -13,6 +15,8 @@
  * - The client never sees `start`: it harvests `count` from the <span> the
  *   server rendered (ADR 0003 preserved).
  */
+import { expose } from '@zeix/le-truc'
+
 export type BasicCounterProps = {
 	/** Current counter value. Increments on each button click. */
 	count: number

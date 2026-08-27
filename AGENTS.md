@@ -1,6 +1,6 @@
 # Agent Context — Le Truc
 
-> This file lists things an agent should know about Le Truc that may be surprising, non-obvious, or easy to get wrong. It is not a general introduction — see `ARCHITECTURE.md` for structure and `package.json` for project metadata.
+> This file lists things an agent should know about Le Truc that may be surprising, non-obvious, or easy to get wrong. It is not a general introduction — see `ARCHITECTURE.md` for structure and `package.json` for project metadata. Authoring or reviewing a `.tsrx` component? See `TSRX-HOST-PROFILE.md` first — it states this project's host-specific decisions (styles, `truc:pass`, element references), which differ from Ripple's, the only other TSRX host profile.
 
 ## Factory Form
 

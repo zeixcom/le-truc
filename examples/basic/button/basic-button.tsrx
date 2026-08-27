@@ -17,6 +17,8 @@
  * `WatchHelper` (`src/helpers/reactive.ts`) — `badge` stays optional via
  * `@if (badge)`.
  */
+import { expose, host } from '@zeix/le-truc'
+
 export type BasicButtonProps = {
 	/** Whether the button is disabled. */
 	disabled: boolean

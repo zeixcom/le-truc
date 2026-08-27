@@ -48,6 +48,10 @@ my-component {
 **Avoid if** you expect style clashes from third-party styles.
 {% /callout %}
 
+{% callout .note title="Authoring in .tsrx" %}
+A `.tsrx` component's `<style>` block is emitted verbatim, unscoped — the same tag-name convention above applies, just written once and compiled through unchanged. See `TSRX-HOST-PROFILE.md` in the repo root.
+{% /callout %}
+
 {% /section %}
 
 {% section %}
