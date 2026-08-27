@@ -314,7 +314,7 @@ describe('managed value sync', () => {
 /* === Managed formResetCallback === */
 
 describe('managed formResetCallback', () => {
-	test('restores value to static default', () => {
+	test('restores value to static default', async () => {
 		const Ctor = defineComponent<{ value: string }>(
 			uniqueName(),
 			({ expose }) => {
@@ -328,10 +328,11 @@ describe('managed formResetCallback', () => {
 		expect(instance.value).toBe('changed')
 
 		instance.formResetCallback()
+		await Promise.resolve()
 		expect(instance.value).toBe('default')
 	})
 
-	test('restores value by re-parsing the value attribute (parser initializer)', () => {
+	test('restores value by re-parsing the value attribute (parser initializer)', async () => {
 		const Ctor = defineComponent<{ value: string }>(
 			uniqueName(),
 			({ expose }) => {
@@ -346,7 +347,29 @@ describe('managed formResetCallback', () => {
 
 		instance.value = 'changed'
 		instance.formResetCallback()
+		await Promise.resolve()
 		expect(instance.value).toBe('from-attribute')
+	})
+
+	test('the restoring write is deferred past the synchronous call (LT-056)', async () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'default' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		instance.value = 'changed'
+
+		instance.formResetCallback()
+		// Not yet restored synchronously — a native descendant control's own
+		// reset (which the real form-reset algorithm runs immediately after,
+		// in tree order) gets a chance to happen first, uncontested.
+		expect(instance.value).toBe('changed')
+		await Promise.resolve()
+		expect(instance.value).toBe('default')
 	})
 
 	test('is a no-op for a SlotDescriptor ({ get, set }) initializer — no default to restore', () => {
@@ -380,6 +403,133 @@ describe('managed formResetCallback', () => {
 		const instance = new Ctor() as any
 		instance.connectedCallback()
 		expect(() => instance.formResetCallback()).not.toThrow()
+	})
+})
+
+/* === Managed defaultValue / defaultChecked (LT-057) === */
+
+describe('managed defaultValue', () => {
+	test('mirrors the value content attribute through the retained Parser', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: asParser(v => v ?? '') })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.setAttribute('value', 'from-attribute')
+		instance.connectedCallback()
+		expect(instance.defaultValue).toBe('from-attribute')
+
+		// Live edits never touch the attribute — the baseline stays put.
+		instance.value = 'changed'
+		expect(instance.defaultValue).toBe('from-attribute')
+		expect(instance.value).toBe('changed')
+	})
+
+	test('is settable from outside and moves the reset baseline', async () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: asParser(v => v ?? '') })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.setAttribute('value', 'original')
+		instance.connectedCallback()
+		instance.value = 'edited'
+
+		instance.defaultValue = 'new-baseline'
+		expect(instance.getAttribute('value')).toBe('new-baseline')
+		// Setting the baseline never applies it live by itself.
+		expect(instance.value).toBe('edited')
+
+		instance.formResetCallback()
+		await Promise.resolve()
+		expect(instance.value).toBe('new-baseline')
+	})
+
+	test('falls back to the retained static initializer when not Parser-backed', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'default' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		instance.value = 'changed'
+		expect(instance.defaultValue).toBe('default')
+	})
+
+	test('is a reserved member — exposing it collides with the managed extension', () => {
+		const Ctor = defineComponent<{ value: string; defaultValue: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'default', defaultValue: 'nope' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
+	})
+})
+
+describe('managed defaultChecked', () => {
+	test('reflects the checked attribute presence', () => {
+		const Ctor = defineComponent<{ checked: boolean }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ checked: asParser(v => v != null) })
+			},
+			[formAssociatedCheckbox()],
+		)!
+		const instance = new Ctor() as any
+		instance.setAttribute('checked', '')
+		instance.connectedCallback()
+		expect(instance.defaultChecked).toBe(true)
+
+		instance.checked = false
+		expect(instance.defaultChecked).toBe(true)
+		expect(instance.checked).toBe(false)
+	})
+
+	test('is settable from outside and moves the reset baseline', async () => {
+		const Ctor = defineComponent<{ checked: boolean }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ checked: asParser(v => v != null) })
+			},
+			[formAssociatedCheckbox()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		instance.checked = true
+
+		instance.defaultChecked = true
+		expect(instance.hasAttribute('checked')).toBe(true)
+
+		instance.checked = false
+		instance.formResetCallback()
+		await Promise.resolve()
+		expect(instance.checked).toBe(true)
+	})
+
+	test('falls back to the retained static initializer when not Parser-backed', () => {
+		const Ctor = defineComponent<{ checked: boolean }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ checked: true })
+			},
+			[formAssociatedCheckbox()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		instance.checked = false
+		expect(instance.defaultChecked).toBe(true)
 	})
 })
 
@@ -1256,7 +1406,7 @@ describe('managed checkbox value sync', () => {
 })
 
 describe('managed checkbox formResetCallback', () => {
-	test('restores checked to its static default', () => {
+	test('restores checked to its static default', async () => {
 		const Ctor = defineComponent<{ checked: boolean }>(
 			uniqueName(),
 			({ expose }) => {
@@ -1270,10 +1420,11 @@ describe('managed checkbox formResetCallback', () => {
 		expect(instance.checked).toBe(false)
 
 		instance.formResetCallback()
+		await Promise.resolve()
 		expect(instance.checked).toBe(true)
 	})
 
-	test('restores checked by re-parsing the checked attribute (parser initializer)', () => {
+	test('restores checked by re-parsing the checked attribute (parser initializer)', async () => {
 		const Ctor = defineComponent<{ checked: boolean }>(
 			uniqueName(),
 			({ expose }) => {
@@ -1288,6 +1439,7 @@ describe('managed checkbox formResetCallback', () => {
 
 		instance.checked = false
 		instance.formResetCallback()
+		await Promise.resolve()
 		expect(instance.checked).toBe(true)
 	})
 })

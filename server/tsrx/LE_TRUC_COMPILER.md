@@ -85,7 +85,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | Module | Size | Role | Intra-package imports |
 | --- | ---: | --- | --- |
 | `index.ts` | 133 | Public API; `compileComponent` pipeline assembly; flat re-exports | analysis/plan, compiler, diagnostics, emit-client, emit-server, registry, spans |
-| `compiler.ts` | 891 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
+| `compiler.ts` | 997 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
 | `ir.ts` | 404 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
 | `core.ts` | 21 | The **only** `@tsrx/core` value-import leaf (`parseModule`, `isStyleElement`, `getStyleElementStylesheet`, `isTemplateForOfNode`, `isVoidElement`) | `@tsrx/core` (values) |
 | `walk.ts` | 101 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
@@ -107,7 +107,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
-| `diagnostics.ts` | 574 | Diagnostic codes TSRX001–027, message factories | — (leaf) |
+| `diagnostics.ts` | 617 | Diagnostic codes TSRX001–029, message factories | — (leaf) |
 | `first-refs.ts` | 210 | `collectMatchingElements`/`shareExclusiveIf` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}` | ir (types) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 294 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
@@ -673,6 +673,55 @@ still open:
   the two-pass compile — a follow-up task, not part of LT-055. Corpus
   codemodded by hand (9 raw-element occurrences across 7 files; 4 more
   `ref={}` sites on composed elements were left alone as in-scope survivors).
+- **Two form-associated compile-time guards, both preemptive of an existing
+  runtime failure (LT-058, LT-059, CHECKLIST §7).** `formAssociated()`/
+  `formAssociatedCheckbox()` (`src/extensions/form.ts`) install a fixed set
+  of members on the prototype — `form`, `name`, `labels`, `validity`,
+  `validationMessage`, `willValidate`, `checkValidity`, `reportValidity`,
+  `setCustomValidity`, `disabled`, plus the variant's own reset-baseline
+  prop (`defaultValue`/`defaultChecked`, see the next entry) — and
+  `expose()` already throws `InvalidPropertyNameError` at RUNTIME for any
+  of them (`component.ts`'s `reservedMembers` check predates this task).
+  TSRX028 moves that failure to compile time: after `config`/`expose()` are
+  both parsed, `exposeArgNode`'s own property keys are checked against a
+  compiler-side duplicate of the managed-member set
+  (`ast-utils.ts`'s `MANAGED_FORM_MEMBERS` — the TSRX compiler doesn't
+  import the runtime library, so this list is kept in sync by hand, same
+  precedent as `MANAGED_TEXT_PROPS`). TSRX029 catches a different, NOT
+  already-guarded failure: a form-associated component's inner native
+  `input`/`select`/`textarea`/`button` carrying a `name` submits the field
+  TWICE (once via the host's `setFormValue`, once natively) — invisible in
+  the browser, only visible server-side as a duplicate form field.
+  `reportNamedFormControls` walks the already-lowered template IR (the same
+  `kind: 'element'` traversal shape as `first-refs.ts`'s
+  `collectMatchingElements`, composed children excluded as a boundary),
+  checking only `static`/`server`/`reactive` attribute kinds named `name`
+  (never `ref`/`event`/etc., which carry an unrelated `.name` field). Both
+  checks are gated on `config?.form`, so a non-form-associated component is
+  entirely unaffected.
+- **`defaultValue`/`defaultChecked` as the reset-baseline's public channel
+  (LT-057, CHECKLIST §7) — a `src/extensions/form.ts` change, but one
+  TSRX028 (above) directly depends on.** `formResetCallback` used to
+  recompute the restore value by re-running the retained Parser against
+  the current attribute inline; it's now `this[prop] = this[defaultProp]`,
+  mirroring `<input>.value = <input>.defaultValue` — `defaultValue`/
+  `defaultChecked` are new managed properties that read the SAME retained-
+  Parser computation (or the retained static initializer, unchanged, when
+  not Parser-backed) and, when written, set or remove the content
+  attribute. Consequently `value`/`checked` must never appear in
+  `observedAttributes` on a form-associated component (dropped from
+  `form-textbox.tsrx`'s `config`) — re-parsing the attribute into the LIVE
+  prop on every mutation is exactly the "reflecting overwrites the reset
+  baseline" bug this closes, approached from the attribute-write direction
+  instead of the property-read one. `formResetCallback`'s restoring write
+  is also now deferred one microtask (LT-056): form reset runs in tree
+  order, so the host's `formResetCallback` fires BEFORE its own descendant
+  native control resets itself, and a synchronous write there raced that
+  native reset and lost. See `adr/0016-element-internals-for-form-
+  association-and-states.md`, whose `formResetCallback` row and "must not
+  reflect the current value back into the attribute" line predate and
+  motivate both fixes — worth an ADR amendment on the next architecture
+  pass, not made here.
 
 ---
 

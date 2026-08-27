@@ -842,3 +842,147 @@ export function BasicParent({ title }: { title: string })
 		expect(component).not.toBeNull()
 	})
 })
+
+describe('managed form member shadowing (LT-058)', () => {
+	const el = (config: string, exposeBody: string): string =>
+		`export const config = ${config}
+export function C({ name }: { name: string })
+	@{
+		expose({ ${exposeBody} })
+		<>
+			<c-el {name}><input /></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('exposing a member formAssociated() installs is TSRX028', () => {
+		const source = el(
+			`{ formAssociated: true }`,
+			`value: asString(''), validationMessage: asString('')`,
+		)
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX028')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`validationMessage`')
+		expect(hit?.message).toContain('formAssociated()')
+	})
+
+	test('exposing defaultValue (the reset-baseline prop) is TSRX028', () => {
+		const source = el(
+			`{ formAssociated: true }`,
+			`value: asString(''), defaultValue: asString('')`,
+		)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX028' && d.message.includes('`defaultValue`'),
+			),
+		).toBe(true)
+	})
+
+	test('exposing defaultChecked on formAssociatedCheckbox() is TSRX028', () => {
+		const source = el(
+			`{ formAssociatedCheckbox: true }`,
+			`checked: asBoolean(false), defaultChecked: asBoolean(false)`,
+		)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX028')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('formAssociatedCheckbox()')
+	})
+
+	test('exposing value/checked themselves is never flagged', () => {
+		const source = el(`{ formAssociated: true }`, `value: asString('')`)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX028')).toBe(false)
+	})
+
+	test('a non-form-associated component is unaffected', () => {
+		const source = `export function C({}: {})
+	@{
+		expose({ validationMessage: asString('') })
+		<>
+			<c-el><span>ok</span></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX028')).toBe(false)
+	})
+})
+
+describe('inner form control must have no name (LT-059)', () => {
+	const el = (template: string): string =>
+		`export const config = { formAssociated: true }
+export function C({ name }: { name: string })
+	@{
+		expose({ value: asString('') })
+		<>
+			<c-el {name}>${template}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('a static name on a descendant input is TSRX029', () => {
+		const source = el('<input name="inner" />')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX029')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('<input>')
+	})
+
+	test('a bound (reactive) name is also TSRX029', () => {
+		const source = el('<textarea name={() => host.value} />')
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX029' && d.message.includes('<textarea>'),
+			),
+		).toBe(true)
+	})
+
+	test('select and button are also checked', () => {
+		const source = el(
+			'<select name="a"></select><button name="b" type="button"></button>',
+		)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hits = diagnostics.filter(d => d.code === 'TSRX029')
+		expect(hits.some(h => h.message.includes('<select>'))).toBe(true)
+		expect(hits.some(h => h.message.includes('<button>'))).toBe(true)
+	})
+
+	test('an unnamed inner control is not flagged', () => {
+		const source = el('<input />')
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX029')).toBe(false)
+	})
+
+	test('name on a non-form-control element is not flagged', () => {
+		const source = el('<div name="whatever"></div>')
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX029')).toBe(false)
+	})
+
+	test('not gated behind formAssociated is unaffected', () => {
+		const source = `export function C({ name }: { name: string })
+	@{
+		expose({})
+		<>
+			<c-el {name}><input name="inner" /></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX029')).toBe(false)
+	})
+})

@@ -80,6 +80,33 @@ export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
 ])
 
 /**
+ * Member names `formAssociated()`/`formAssociatedCheckbox()` install on the
+ * prototype (`src/extensions/form.ts`'s `MANAGED_FORM_MEMBERS`, duplicated
+ * here since the TSRX compiler doesn't import the runtime library). Exposing
+ * any of these shadows the managed member — `expose()` already throws
+ * `InvalidPropertyNameError` for it at RUNTIME (component.ts's
+ * `reservedMembers` check), but only once the component actually connects;
+ * TSRX010's family (LT-058) catches it at compile time instead, naming the
+ * exact source line and the extension it collides with. `value`/`checked`
+ * are the deliberate exceptions the component MUST expose — never included
+ * here; the variant-specific reset-baseline prop (`defaultValue`/
+ * `defaultChecked`, LT-057) is added by the caller, since which one applies
+ * depends on `config.form`.
+ */
+export const MANAGED_FORM_MEMBERS: ReadonlySet<string> = new Set<string>([
+	'form',
+	'name',
+	'labels',
+	'validity',
+	'validationMessage',
+	'willValidate',
+	'checkValidity',
+	'reportValidity',
+	'setCustomValidity',
+	'disabled',
+])
+
+/**
  * Client-only context helpers (query/effect primitives) that exist only in
  * the generated client factory's context object — never in the server render
  * function's scope, even though `component.setup`'s plain `const` statements

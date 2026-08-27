@@ -38,6 +38,8 @@ export type DiagnosticCode =
 	| 'TSRX025' // malformed first() element-reference call
 	| 'TSRX026' // first() selector matches no element, or uses unverifiable syntax
 	| 'TSRX027' // first() selector matches multiple, non-mutually-exclusive elements
+	| 'TSRX028' // expose() names a member managed by formAssociated()/formAssociatedCheckbox()
+	| 'TSRX029' // a form-associated component's inner control carries a name
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -569,6 +571,47 @@ export const diagnostic = {
 		error(
 			'TSRX027',
 			`\`first('${selector}', …)\` (bound to \`${name}\`) matches ${count} elements in this component's template, and they are not all mutually-exclusive branches of the same @if — add a distinguishing \`.class\`/\`#id\`/\`[attr]\` to the selector.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `expose()` names a member `formAssociated()`/`formAssociatedCheckbox()`
+	 * installs on the prototype (LT-058, extending the TSRX010 managed-prop
+	 * family): silently shadows the managed member at the JS level — the
+	 * runtime already throws `InvalidPropertyNameError` for it
+	 * (`component.ts`'s `reservedMembers` check), but only once the
+	 * component actually connects. Caught here at compile time instead, so
+	 * the failure surfaces before the component ever ships.
+	 */
+	managedFormMemberShadowed: (
+		source: string,
+		offset: number | undefined,
+		member: string,
+		extension: 'formAssociated' | 'formAssociatedCheckbox',
+	) =>
+		error(
+			'TSRX028',
+			`\`expose({ ${member}: … })\` shadows the \`${member}\` member ${extension}() installs on the prototype — it is managed automatically (form-participation host contract) and cannot be exposed. Remove it, or rename the reactive property if you need something similar under a different name.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A form-associated component's inner native control carries a `name`
+	 * (LT-059): the control stays out of native form submission only
+	 * because it is unnamed — the host submits via `setFormValue` instead.
+	 * A named inner control submits the field TWICE: once via
+	 * `setFormValue`, once natively. The markup looks entirely reasonable
+	 * and the failure is server-side (a duplicate form field) and invisible
+	 * in the browser, so this is a compiler error, not a doc note.
+	 */
+	formControlHasName: (
+		source: string,
+		offset: number | undefined,
+		tag: string,
+	) =>
+		error(
+			'TSRX029',
+			`<${tag}> is a descendant of a formAssociated() component and carries a \`name\` — it would submit natively AND via the host's \`setFormValue\`, submitting the field twice. Remove \`name\` from <${tag}>; the host element is the sole form participant.`,
 			lineOf(source, offset),
 		),
 }

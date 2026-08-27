@@ -138,11 +138,11 @@ describe('client golden — convergence with the hand-written trio', () => {
 		const code = compiled[2]?.result.component?.clientCode ?? ''
 		// Extension activation (sub-design 8): formAssociated leads the
 		// emitted array — the FormFactoryContext overload selector.
+		// `value` is deliberately not in observedAttributes (LT-057): the
+		// attribute is the reset baseline, not a live-value channel.
+		expect(code).toContain('\t[formAssociated()],')
 		expect(code).toContain(
-			"\t[formAssociated(), observedAttributes(['value'])],",
-		)
-		expect(code).toContain(
-			"import { asString, bindAttribute, bindProperty, bindText, createCell, defineComponent, defineMethod, deriveCell, formAssociated, observedAttributes } from '@zeix/le-truc'",
+			"import { asString, bindAttribute, bindProperty, bindText, createCell, defineComponent, defineMethod, deriveCell, formAssociated } from '@zeix/le-truc'",
 		)
 		expect(code).toContain(
 			"import type { FormAssociatedElement } from '@zeix/le-truc'",

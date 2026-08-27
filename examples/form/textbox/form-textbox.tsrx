@@ -8,8 +8,12 @@
  *   factories (formAssociated first — it selects the FormFactoryContext
  *   overload), and emits them as the generated client's extensions array
  * - Parser-backed attribute-driven props: `expose({ value: asString('') })`
- *   seeds `value` from the HOST's `value` attribute at connect (ADR 0003);
- *   `observedAttributes: ['value']` re-parses it on later mutations
+ *   seeds `value` from the HOST's `value` attribute at connect (ADR 0003).
+ *   `value` is deliberately NOT in `observedAttributes` (LT-057): the
+ *   attribute is the reset baseline (`host.defaultValue`), not a live-value
+ *   channel — re-parsing it on every mutation would push the baseline into
+ *   the live `value` prop, exactly the "reflecting overwrites the reset
+ *   baseline" bug LT-057 closes from the other direction.
  * - `defineMethod()` brands the `clear` method producer
  * - `value={() => host.value}` mirrors the host prop onto the input — lowers
  *   to `watch(() => host.value, bindProperty(input, 'value'))` and
@@ -20,7 +24,6 @@
  */
 export const config = {
 	formAssociated: true,
-	observedAttributes: ['value'],
 }
 
 export type FormTextboxProps = {

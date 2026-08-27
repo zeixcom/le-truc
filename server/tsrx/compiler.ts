@@ -25,6 +25,7 @@ import {
 	identifierName,
 	isNode,
 	JS_GLOBALS,
+	MANAGED_FORM_MEMBERS,
 	MANAGED_TEXT_PROPS,
 	PARSER_FACTORIES,
 	SIGNAL_CONSTRUCTORS,
@@ -233,6 +234,79 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
 		}
 	}
 	visit(ast)
+}
+
+/** Native form-control tags whose own `name` would double-submit (LT-059). */
+const NAMED_FORM_CONTROL_TAGS: ReadonlySet<string> = new Set([
+	'input',
+	'select',
+	'textarea',
+	'button',
+])
+
+/**
+ * Report a `name` (static or bound) on a descendant `input`/`select`/
+ * `textarea`/`button` inside a form-associated component's template
+ * (LT-059, CHECKLIST §7): the inner control stays out of NATIVE form
+ * submission only because it's unnamed — the host submits via
+ * `setFormValue` instead. A named inner control submits the field TWICE:
+ * once via `setFormValue`, once natively. The markup looks entirely
+ * reasonable and the failure is server-side (a duplicate form field) and
+ * invisible in the browser, so this is a compiler error, not a doc note.
+ *
+ * Walks the already-lowered template IR (post-`lowerChildren`) directly —
+ * `kind: 'element'` nodes only; composed children are the child's own
+ * template, a boundary, same as `first-refs.ts`'s `collectMatchingElements`.
+ * Only `static`/`server`/`reactive` attribute kinds represent a real HTML
+ * `name` value; `ref`/`event`/`pass`/etc. carry a `.name` field with a
+ * different meaning (a JS binding or event name) and must not match.
+ */
+const reportNamedFormControls = (
+	ctx: ExtractContext,
+	root: TemplateNode,
+): void => {
+	const visit = (node: TemplateNode): void => {
+		if (node.kind === 'element') {
+			if (NAMED_FORM_CONTROL_TAGS.has(node.tag)) {
+				const nameAttr = node.attrs.find(
+					a =>
+						(a.kind === 'static' ||
+							a.kind === 'server' ||
+							a.kind === 'reactive') &&
+						a.name === 'name',
+				)
+				if (nameAttr)
+					ctx.diagnostics.push(
+						diagnostic.formControlHasName(
+							ctx.source,
+							node.node.start,
+							node.tag,
+						),
+					)
+			}
+			for (const child of node.children) visit(child)
+			return
+		}
+		if (node.kind === 'if') {
+			for (const child of node.then) visit(child)
+			for (const child of node.alternate) visit(child)
+			return
+		}
+		if (node.kind === 'switch') {
+			for (const arm of node.cases)
+				for (const child of arm.children) visit(child)
+			return
+		}
+		if (node.kind === 'try') {
+			for (const child of node.children) visit(child)
+			for (const child of node.catchChildren) visit(child)
+			if (node.pendingChildren)
+				for (const child of node.pendingChildren) visit(child)
+			return
+		}
+		// 'compose', 'text', 'expr', 'client-stmt' — nothing to check/recurse.
+	}
+	visit(root)
 }
 
 /* === Exported Functions === */
@@ -812,6 +886,38 @@ export const compileSource = (
 					),
 				)
 		}
+
+	// A form-associated component's expose() naming a member the extension
+	// installs on the prototype (LT-058, TSRX010 family): silently shadows
+	// it at the JS level. `value`/`checked` (config.form) are the deliberate
+	// exceptions the component MUST expose; the variant's own reset-baseline
+	// prop (`defaultValue`/`defaultChecked`, LT-057) is reserved too.
+	if (config?.form && exposeArgNode) {
+		const defaultPropName =
+			config.form === 'value' ? 'defaultValue' : 'defaultChecked'
+		const extensionName =
+			config.form === 'value' ? 'formAssociated' : 'formAssociatedCheckbox'
+		for (const prop of asArray(exposeArgNode.properties)) {
+			if (prop.type !== 'Property') continue
+			const propName = identifierName(prop.key)
+			if (
+				propName &&
+				(MANAGED_FORM_MEMBERS.has(propName) || propName === defaultPropName)
+			)
+				ctx.diagnostics.push(
+					diagnostic.managedFormMemberShadowed(
+						source,
+						prop.start,
+						propName,
+						extensionName,
+					),
+				)
+		}
+	}
+
+	// A form-associated component's inner native control must have no
+	// `name` (LT-059) — see reportNamedFormControls's doc comment.
+	if (config?.form) reportNamedFormControls(ctx, root)
 
 	const serverKnown = new Set<string>([...paramNames])
 	for (const s of signals) serverKnown.add(s.name)
