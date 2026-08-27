@@ -22,7 +22,11 @@ import type {
 	ReconcilePlan,
 	TopEffectPlan,
 } from './analysis/plan'
-import { FACTORY_CONTEXT_MEMBERS, sanitizeVarName } from './ast-utils'
+import {
+	DIRTY_FLAG_ATTRS,
+	FACTORY_CONTEXT_MEMBERS,
+	sanitizeVarName,
+} from './ast-utils'
 import { computeClientNeededNames } from './imports'
 import type { ComponentIR, SignalIR } from './ir'
 import {
@@ -70,6 +74,19 @@ const harvestInitializer = (
 	}
 	if (plan.kind === 'attr') {
 		if (plan.parser && parserImport(plan.parser)) imports.add(plan.parser)
+		// CHECKLIST §6 (BUG): `value`/`checked`/`selected` are dirty-flag
+		// attributes — between server render and upgrade, the user can type,
+		// or the browser can refill via session restore/password-manager
+		// autofill/bfcache, so the LIVE IDL property may already differ from
+		// the content attribute the server rendered. Reading the attribute
+		// here would silently discard that pre-upgrade input the moment the
+		// signal seeds itself. Every other attribute has no dirty flag — the
+		// content attribute IS the current source of truth for those, so
+		// `getAttribute` stays correct there.
+		if (DIRTY_FLAG_ATTRS.has(plan.attr)) {
+			const live = `${queryName(plan.query)}.${plan.attr}`
+			return plan.parser ? `${plan.parser}()(String(${live}))` : live
+		}
 		const raw = `${queryName(plan.query)}.getAttribute('${plan.attr}')`
 		return plan.parser ? `${plan.parser}()(${raw})` : `${raw} ?? ''`
 	}

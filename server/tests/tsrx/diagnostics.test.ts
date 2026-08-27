@@ -986,3 +986,390 @@ export function C({ name }: { name: string })
 		expect(diagnostics.some(d => d.code === 'TSRX029')).toBe(false)
 	})
 })
+
+describe('textarea value attribute (CHECKLIST §10, TSRX030)', () => {
+	test('a static value attribute on textarea is TSRX030', () => {
+		const source = `export function C({}: {})
+	@{
+		expose({})
+		<>
+			<c-el>
+				<textarea value="hi"></textarea>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX030')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('text content')
+	})
+
+	test('a server-arg value attribute on textarea is TSRX030', () => {
+		const source = `export function C({ value }: { value: string })
+	@{
+		expose({})
+		<>
+			<c-el>
+				<textarea value={value}></textarea>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX030')).toBe(true)
+	})
+
+	test('a reactive host-mirror value attribute on textarea is NOT flagged — paired with text content it is sound', () => {
+		const source = `export function C({ value }: { value?: string })
+	@{
+		expose({ value: asString('') })
+		<>
+			<c-el {value}>
+				<textarea value={() => host.value}>{value}</textarea>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX030')).toBe(false)
+	})
+
+	test('a value attribute on input is not flagged — only textarea lacks the content attribute', () => {
+		const source = `export function C({ value }: { value: string })
+	@{
+		expose({})
+		<>
+			<c-el>
+				<input value={value} />
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX030')).toBe(false)
+	})
+})
+
+describe('asymmetric @if branch client constructs (TSRX031)', () => {
+	test('a client construct on only one branch root is TSRX031', () => {
+		const source = `export function C({ big }: { big?: boolean })
+	@{
+		expose({})
+		<>
+			<c-el>
+				@if (big) {
+					<strong>a</strong>
+				} @else {
+					<strong onClick={() => {}}>b</strong>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX031')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('on:onClick')
+	})
+
+	test('an identical construct on both branch roots is not flagged', () => {
+		const source = `export function C({ big }: { big?: boolean })
+	@{
+		expose({})
+		<>
+			<c-el>
+				@if (big) {
+					<strong onClick={() => {}}>a</strong>
+				} @else {
+					<strong onClick={() => {}}>b</strong>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX031')).toBe(false)
+	})
+})
+
+describe('default value on a non-optional prop type (CHECKLIST §10, TSRX032)', () => {
+	test('a default paired with a required type is TSRX032', () => {
+		const source = `export function C({ label = 'x' }: { label: string })
+	@{
+		expose({})
+		<>
+			<c-el>{label}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX032')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`label`')
+		expect(hit?.message).toContain('label?:')
+	})
+
+	test('a default paired with an optional type is not flagged', () => {
+		const source = `export function C({ label = 'x' }: { label?: string })
+	@{
+		expose({})
+		<>
+			<c-el>{label}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX032')).toBe(false)
+	})
+
+	test('no default value is not flagged regardless of optionality', () => {
+		const source = `export function C({ label }: { label: string })
+	@{
+		expose({})
+		<>
+			<c-el>{label}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX032')).toBe(false)
+	})
+})
+
+describe('impure server fold (CHECKLIST §4, TSRX033)', () => {
+	test('a static child (no signal dependency) reading Date is a hard error — no client correction exists', () => {
+		const source = `export function C({ label }: { label: string })
+	@{
+		expose({})
+		<>
+			<c-el>{label + Date.now()}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX033')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('error')
+	})
+
+	test('Math.random() in a static child is also TSRX033', () => {
+		const source = `export function C({}: {})
+	@{
+		expose({})
+		<>
+			<c-el>{Math.random()}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(true)
+	})
+
+	test('Math.max (not Math.random) in a static child is not flagged — pure function of its args', () => {
+		const source = `export function C({ a, b }: { a: number; b: number })
+	@{
+		expose({})
+		<>
+			<c-el>{Math.max(a, b)}</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+	})
+
+	test('a reactive attribute that would otherwise fold, reading Date, is a WARNING — the client corrects the omission', () => {
+		const source = `export function C({}: {})
+	@{
+		const length = createCell(0)
+		expose({ length: length.get })
+		<>
+			<c-el>
+				<span>{length}</span>
+				<div title={() => length.get() + Date.now()}></div>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX033')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('warning')
+		expect(hit?.message).toContain('`title`')
+		// A warning must not fail the build — the omission is safe.
+		expect(component).not.toBeNull()
+		expect(component?.serverCode).not.toContain('Date.now')
+	})
+
+	test('a purely client-side reactive expression whose deps are NOT server-known is unaffected (nothing would have folded anyway)', () => {
+		const source = `export function C({}: {})
+	@{
+		const length = createCell(0)
+		expose({ length: length.get })
+		<>
+			<c-el>
+				<span>{length}</span>
+				<button onClick={() => { const x = new Date(); length.set(x.getTime()) }}>go</button>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+	})
+})
+
+describe('semantically-loaded attribute has no server default (CHECKLIST §5, TSRX034)', () => {
+	test('hidden bound to a non-foldable comparison thunk is a warning, not an error', () => {
+		const source = `export function C({ count }: { count: number })
+	@{
+		expose({ count: asInteger() })
+		<>
+			<c-el {count}>
+				<p hidden={() => host.count !== 0}>done</p>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('warning')
+		expect(hit?.message).toContain('visible')
+		// A warning must not fail the build.
+		expect(component).not.toBeNull()
+	})
+
+	test('disabled bound to a non-foldable thunk names the enabled-and-submittable risk', () => {
+		const source = `export function C({}: {})
+	@{
+		const busy = createCell(false)
+		expose({})
+		<>
+			<c-el>
+				<span>{busy}</span>
+				<button disabled={() => busy.get() && Math.random() > 0.5}>go</button>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('enabled AND submittable')
+	})
+
+	test('a bare host-prop mirror on hidden is not flagged — it always renders from the root arg', () => {
+		const source = `export function C({ open }: { open?: boolean })
+	@{
+		expose({ open: asBoolean(false) })
+		<>
+			<c-el {open}>
+				<p hidden={() => host.open}>panel</p>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+	})
+
+	test('a server-evaluable thunk over a signal is not flagged — it folds normally', () => {
+		const source = `export function C({}: {})
+	@{
+		const open = createCell(false)
+		expose({ open: open.get })
+		<>
+			<c-el>
+				<span>{open}</span>
+				<p hidden={() => !open.get()}>panel</p>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+	})
+
+	test('a non-loaded attribute (e.g. title) with the same non-foldable shape is not flagged', () => {
+		const source = `export function C({ count }: { count: number })
+	@{
+		expose({ count: asInteger() })
+		<>
+			<c-el {count}>
+				<p title={() => host.count !== 0 ? 'yes' : 'no'}>x</p>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+	})
+})
+
+describe('duplicate id across @try/@catch arms (CHECKLIST §8, TSRX035)', () => {
+	const wrapTry = (template: string): string =>
+		`export function C({ status }: { status?: string })
+	@{
+		expose({})
+		<>
+			<c-el>
+				${template}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('the same literal id on the @try body and @catch arm is TSRX035', () => {
+		const source = wrapTry(`@try {
+			<p id="msg">{status.length}</p>
+		} @catch (error) {
+			<p id="msg">Failed</p>
+		}`)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX035')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('id="msg"')
+		expect(hit?.message).toContain('@try body')
+		expect(hit?.message).toContain('@catch arm')
+	})
+
+	test('a duplicate id on a NESTED element (not just the arm root) is still TSRX035', () => {
+		const source = wrapTry(`@try {
+			<div><span id="inner">{status.length}</span></div>
+		} @catch (error) {
+			<div><span id="inner">Failed</span></div>
+		}`)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX035')).toBe(true)
+	})
+
+	test('distinct ids across arms are not flagged', () => {
+		const source = wrapTry(`@try {
+			<p id="msg-ok">{status.length}</p>
+		} @catch (error) {
+			<p id="msg-error">Failed</p>
+		}`)
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics.some(d => d.code === 'TSRX035')).toBe(false)
+	})
+})

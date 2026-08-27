@@ -37,6 +37,42 @@ export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
 ])
 
 /**
+ * Attribute names whose ABSENCE carries meaning (CHECKLIST §5): `hidden`
+ * omitted means visible, `disabled` omitted means enabled AND submittable,
+ * likewise `checked`/`selected`/`aria-expanded`. A reactive binding on one of
+ * these that the server can't render an initial value for (TSRX034) doesn't
+ * degrade neutrally like an ordinary omitted attribute (`title`, `class`) —
+ * it renders the more dangerous of the two states regardless of what the
+ * author intended.
+ */
+export const SEMANTICALLY_LOADED_ATTRS: ReadonlySet<string> = new Set<string>([
+	'hidden',
+	'disabled',
+	'checked',
+	'selected',
+	'aria-expanded',
+])
+
+/**
+ * Attributes with a native "dirty flag" (CHECKLIST §6): the content
+ * attribute and the live IDL property diverge once the user (or the
+ * browser, via session restore/autofill/bfcache) has interacted with the
+ * control, and only the live property reflects that interaction. Harvesting
+ * one of these via `getAttribute` at connect time reads the SERVER-rendered
+ * value and silently discards whatever the user already typed/toggled in
+ * the pre-upgrade window — exactly the window people are most likely to be
+ * interacting in. Harvesting the live property instead is always correct:
+ * on a clean (never-interacted) control the property already equals the
+ * attribute-derived initial value; on a dirty one, the property is the only
+ * source that still has it.
+ */
+export const DIRTY_FLAG_ATTRS: ReadonlySet<string> = new Set<string>([
+	'value',
+	'checked',
+	'selected',
+])
+
+/**
  * Context members usable as free names in any client code position —
  * `host`/`internals` plus the Web Components Community Protocol helpers
  * (LT-035, ADR 0024 sub-design 15): `requestContext(Context, fallback)` in a

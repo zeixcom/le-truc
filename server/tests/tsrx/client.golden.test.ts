@@ -147,11 +147,11 @@ describe('client golden — convergence with the hand-written trio', () => {
 		expect(code).toContain(
 			"import type { FormAssociatedElement } from '@zeix/le-truc'",
 		)
-		// host/internals destructure from the factory context (ambients —
-		// internals arrives via the client-only setup side effect)
-		expect(code).toContain(
-			'({ expose, first, host, internals, on, watch }) => {',
-		)
+		// host destructures from the factory context. No `internals` ambient
+		// here (LT-060): `:has(.clear)` replaced the imperative
+		// `internals?.states.add('clearable')` client-stmt, so the factory
+		// never touches internals directly.
+		expect(code).toContain('({ expose, first, host, on, watch }) => {')
 		// Attribute-driven prop + method producer, verbatim expose shape
 		expect(code).toContain("value: asString(''),")
 		expect(code).toContain('length: length.get,')
@@ -167,12 +167,9 @@ describe('client golden — convergence with the hand-written trio', () => {
 		)
 		// `clearable`/`validatable` each gate an optional element (LT-008,
 		// single-branch @if, no @else): the button/error-paragraph queries are
-		// non-throwing `first()`, and their effects — including the bare
-		// client-only `internals?.states.add('clearable')` statement sitting
-		// beside the button in the branch — only run guarded by presence.
+		// non-throwing `first()`, and their effects only run guarded by presence.
 		expect(code).toContain("const button = first('button')")
 		expect(code).toContain('if (button) {')
-		expect(code).toContain("internals?.states.add('clearable')")
 		expect(code).toContain('clear: defineMethod(() => {')
 		// The host-prop mirror lowers to a property dispatch (AGENTS.md rule)
 		expect(code).toContain(

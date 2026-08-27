@@ -40,6 +40,12 @@ export type DiagnosticCode =
 	| 'TSRX027' // first() selector matches multiple, non-mutually-exclusive elements
 	| 'TSRX028' // expose() names a member managed by formAssociated()/formAssociatedCheckbox()
 	| 'TSRX029' // a form-associated component's inner control carries a name
+	| 'TSRX030' // <textarea value={…}> — textarea has no value content attribute
+	| 'TSRX031' // client-construct attribute present on one @if/@else branch root but not the other
+	| 'TSRX032' // destructured prop has a default value but its type isn't marked optional
+	| 'TSRX033' // a reactive expression that would otherwise fold server-side reads an impure ambient (Date/Intl/Math.random/toLocaleString)
+	| 'TSRX034' // a semantically-loaded attribute (hidden/disabled/checked/selected/aria-expanded) has no server-renderable value
+	| 'TSRX035' // duplicate static id across @try/@catch/@pending arms
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -612,6 +618,159 @@ export const diagnostic = {
 		error(
 			'TSRX029',
 			`<${tag}> is a descendant of a formAssociated() component and carries a \`name\` — it would submit natively AND via the host's \`setFormValue\`, submitting the field twice. Remove \`name\` from <${tag}>; the host element is the sole form participant.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `<textarea value={…}>` (CHECKLIST §10): `value` is not a real HTML
+	 * attribute on `<textarea>` — the browser silently ignores it. The
+	 * initial value must be the element's text content instead. Flags every
+	 * attribute-value form (static, server, or reactive-thunk) uniformly,
+	 * since all three render into the same invalid server attribute.
+	 */
+	textareaValueAttribute: (source: string, offset: number | undefined) =>
+		error(
+			'TSRX030',
+			'`<textarea value={…}>` has no effect — `value` is not a real HTML attribute on `<textarea>` (the browser ignores it) and the pre-hydration control renders empty. Set the initial value as text content instead: `<textarea>{value}</textarea>`.',
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A client-construct attribute (reactive, event, class-map, style-map)
+	 * exists on one `@if`/`@else` branch root but not the other (CHECKLIST
+	 * §10's `aria-describedby` parity gotcha, generalized). Union addressing
+	 * (`analysis/effects.ts` `handleIfEffects`) only walks the FIRST branch
+	 * root carrying any client construct — an attribute unique to the OTHER
+	 * branch is silently never emitted client-side, no matter what it is.
+	 * The "same-named constructs must agree" check only compares keys
+	 * present in both branches, so this asymmetric case had no diagnostic
+	 * before LT-060/LT-066 found it dropping a form-textbox host-value
+	 * mirror with zero warning.
+	 */
+	asymmetricBranchConstruct: (
+		source: string,
+		offset: number | undefined,
+		key: string,
+		presentTag: string,
+		missingTag: string,
+	) =>
+		error(
+			'TSRX031',
+			`\`${key}\` is present on the <${presentTag}> \`@if\` branch root but not on the <${missingTag}> branch — union addressing only emits constructs from whichever branch root is found first, so this one would be silently dropped from the generated client. Add the equivalent construct to both branch roots, or move it to a location outside the \`@if\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A destructured prop has a default value (`foo = 'x'`) but its type
+	 * annotation doesn't mark the field optional (`foo: string`, not `foo?:
+	 * string`) — CHECKLIST §10's last gotcha. TypeScript treats the
+	 * annotation as authoritative for external callers (composing the
+	 * component, or a hand-authored `.tsx` caller), so the default is
+	 * unreachable from outside: omitting the prop is a type error before the
+	 * default ever gets a chance to apply.
+	 */
+	defaultOnRequiredProp: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
+		error(
+			'TSRX032',
+			`Prop \`${name}\` has a default value but its type isn't marked optional — mark it \`${name}?:\` in the props type, or the default is unreachable (omitting \`${name}\` is a type error for any external caller before the default ever applies).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A reactive expression's free names are all server-known — it would
+	 * otherwise fold to a server-rendered initial value — but it also reads
+	 * an impure ambient (`Date`/`Intl`, `Math.random()`, `toLocaleString()`/
+	 * `getTimezoneOffset()`) whose actual input is the BUILD MACHINE's own
+	 * clock/locale/timezone/RNG, not any server arg (CHECKLIST §4). Folding
+	 * would bake that one build-time reading into the page permanently — for
+	 * SSG specifically, stale by however long the page sits before being
+	 * served. `isServerEvaluable` (evaluability.ts) already refuses to fold
+	 * this (omitted server-side, same as any non-portable thunk, corrected
+	 * by the client's first binding pass) — a WARNING, not an error, since
+	 * the omission is safe; this just explains why the initial HTML won't
+	 * show a value here, so it doesn't read as an unrelated bug.
+	 */
+	impureServerFold: (
+		source: string,
+		offset: number | undefined,
+		attrName: string | null,
+	) =>
+		warning(
+			'TSRX033',
+			`${attrName ? `Reactive attribute \`${attrName}\`` : 'This reactive expression'} reads an ambient value (\`Date\`/\`Intl\`, \`Math.random()\`, or a locale/timezone method) whose real input is the BUILD MACHINE's own clock/locale/timezone/RNG, not a server arg — folding it would bake one build-time reading into the page permanently. Refusing to fold: the ${attrName ? 'attribute is' : 'child is'} omitted from the initial HTML and set by the client's first binding pass instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A `static` template child (CHECKLIST §4) — one with no signal
+	 * dependency at all, so it renders exactly once, server-side, forever —
+	 * reads an impure ambient. Unlike {@link impureServerFold}'s reactive
+	 * case, there is no `watch()` to ever correct this: the build machine's
+	 * one clock/locale/timezone/RNG reading is baked into the page
+	 * permanently. Hard error, not a warning — CHECKLIST §4 calls this out
+	 * as the worst outcome ("folding to the build machine's reading").
+	 */
+	impureStaticChild: (source: string, offset: number | undefined) =>
+		error(
+			'TSRX033',
+			"This child reads an ambient value (`Date`/`Intl`, `Math.random()`, or a locale/timezone method) with no signal dependency, so it renders exactly once, server-side, at build time, forever — the build machine's clock/locale/timezone/RNG reading gets baked into the page permanently, with no client-side correction. Wrap it in a signal (e.g. `createCell(...)` set from a client-only effect) so it can be a reactive child instead, or move the computation out of the template entirely.",
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A semantically-loaded attribute (CHECKLIST §5 — `hidden`, `disabled`,
+	 * `checked`, `selected`, `aria-expanded`) has no server-renderable
+	 * initial value: it's not a host-prop mirror (which always renders from
+	 * the root's own server arg) and its thunk isn't server-evaluable (a
+	 * sensor read, or any other dependency the server can't resolve).
+	 * `emit-server.ts`'s reactive-attribute case pushes NOTHING for this
+	 * shape — the attribute is simply absent from the initial HTML, which
+	 * means visible/enabled-and-submittable/unchecked/deselected/collapsed,
+	 * the more dangerous of each pair, regardless of what the author meant.
+	 * WARNING, not error: several existing example components (`basic-
+	 * pluralize.tsrx`'s `hidden={() => host.count !== 0}`, others) already
+	 * carry this exact shape as a documented, deliberately accepted flash-
+	 * risk tradeoff (a comparison thunk over `host.<prop>` isn't a bare
+	 * mirror `hostPropOf` recognizes, so it isn't foldable under the current
+	 * fold rule) — hard-erroring here would retroactively invalidate prior
+	 * reviewed decisions rather than surface new ones. Widening `hostPropOf`
+	 * or the fold rule to cover comparison/derived thunks over `host.<prop>`
+	 * would shrink how often this fires; not attempted here (see LT-062's
+	 * TODO.md handoff).
+	 */
+	unsafeLoadedAttributeDefault: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
+		warning(
+			'TSRX034',
+			`\`${name}\` has no server-renderable initial value here — the server can't resolve this thunk (a sensor, or any dependency outside props/signals), so \`${name}\` is silently OMITTED from the initial HTML. Omission is not neutral for \`${name}\`: it renders the ${name === 'hidden' ? 'visible' : name === 'disabled' ? 'enabled AND submittable' : name === 'checked' ? 'unchecked' : name === 'selected' ? 'deselected' : 'collapsed'} state regardless of what this expression would actually evaluate to once connected. Trace the value to a server-known prop or signal so it can render an initial value, or accept the pre-hydration flash explicitly by giving this element a static/server-rendered default for \`${name}\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A literal `id` is duplicated across `@try`/`@catch`/`@pending` arms
+	 * (CHECKLIST §8). All three arms render into the initial HTML
+	 * simultaneously — two `hidden`, not removed — so a shared `id` is two
+	 * elements sharing an id in the SAME document at once, real regardless
+	 * of whether `@pending` is present (a plain `@try`/`@catch` render-time
+	 * boundary has exactly the same two-arms-present-at-once shape).
+	 */
+	duplicateIdAcrossArms: (
+		source: string,
+		offset: number | undefined,
+		id: string,
+		firstArm: string,
+		secondArm: string,
+	) =>
+		error(
+			'TSRX035',
+			`id="${id}" appears in both ${firstArm} and ${secondArm} — all arms of a \`@try\`/\`@catch\`/\`@pending\` boundary render into the initial HTML at once (non-active arms are hidden, not removed), so this is two elements sharing an id in the same document simultaneously. Give each arm's element a distinct id.`,
 			lineOf(source, offset),
 		),
 }

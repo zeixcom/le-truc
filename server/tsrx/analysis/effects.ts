@@ -14,9 +14,11 @@ import {
 	MANAGED_TEXT_PROPS,
 	nodeType,
 	objectKeys,
+	SEMANTICALLY_LOADED_ATTRS,
 	sanitizeVarName,
 } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
+import { containsImpureAmbient, dependenciesOf } from '../evaluability'
 import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import type { AnalysisContext, TopEffectPlan } from './plan'
@@ -161,6 +163,47 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						),
 					)
 				}
+				// CHECKLIST §4 / TSRX033: this thunk's free names are otherwise
+				// all server-known — it would have folded to an initial server
+				// value — but it also reads an impure ambient (Date/Intl/
+				// Math.random/toLocaleString/getTimezoneOffset). `isServerEvaluable`
+				// (evaluability.ts) already refuses to fold it (the attribute is
+				// omitted server-side, same as any non-portable thunk); this warns
+				// so the omission doesn't read as an unrelated bug.
+				if (
+					dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
+					containsImpureAmbient(attr.thunk)
+				)
+					diagnostics.push(
+						diagnostic.impureServerFold(source, attr.thunk.start, attr.name),
+					)
+				// CHECKLIST §5 / TSRX034: omission is not neutral for these
+				// attribute names — `hidden` omitted means visible, `disabled`
+				// omitted means enabled AND submittable, same for `checked`/
+				// `selected`/`aria-expanded`. A host-prop mirror always renders
+				// an initial value (from the root's own server arg), and a
+				// server-evaluable thunk folds normally — both safe. Anything
+				// else (a sensor, or any other non-portable dependency) would be
+				// silently OMITTED (`emit-server.ts`'s `case 'reactive'` pushes
+				// nothing at all when neither path applies), rendering the
+				// interactive/visible/submittable default regardless of what the
+				// author intended — the worst of the two possible defaults, not
+				// a neutral one.
+				if (
+					SEMANTICALLY_LOADED_ATTRS.has(attr.name) &&
+					hostPropOf(attr.thunk) === null &&
+					!(
+						dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
+						!containsImpureAmbient(attr.thunk)
+					)
+				)
+					diagnostics.push(
+						diagnostic.unsafeLoadedAttributeDefault(
+							source,
+							attr.thunk.start,
+							attr.name,
+						),
+					)
 				if (isCustom) {
 					// ADR 0023 sub-design 4 (amended by sub-design 10): a
 					// function-valued attribute is only ever a reactive binding
@@ -270,6 +313,17 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					diagnostic.managedPropWithoutForm(source, child.node.start, managed),
 				)
 			collectAmbient(child.expr)
+			// CHECKLIST §4 / TSRX033: same "would have folded, refuse to fold,
+			// warn" as the reactive-attribute site above, for a lazy text child
+			// (the checklist's own example: `{formatRemaining(maxlength, length)}`
+			// shaped, but reading `Date`/`Intl`/`Math.random` instead).
+			if (
+				dependenciesOf(child.expr).isSubsetOf(component.serverKnown) &&
+				containsImpureAmbient(child.expr)
+			)
+				diagnostics.push(
+					diagnostic.impureServerFold(source, child.node.start, null),
+				)
 			sink.push({
 				kind: 'watch-text',
 				query,
@@ -474,6 +528,10 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		)
 		// Same-named constructs must agree across branches.
 		const textsByKey = new Map<string, Set<string>>()
+		// Root elements (not just texts) carrying each key, keyed the same
+		// way — lets TSRX031 name which branch has the construct and which
+		// is missing it, distinct from the "differs" check below.
+		const rootsByKey = new Map<string, ElementNode[]>()
 		for (const root of roots)
 			for (const attr of root.attrs) {
 				if (attr.kind === 'static' || attr.kind === 'server') continue
@@ -489,6 +547,9 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				const texts = textsByKey.get(key) ?? new Set<string>()
 				texts.add(attrText)
 				textsByKey.set(key, texts)
+				const withKey = rootsByKey.get(key) ?? []
+				withKey.push(root)
+				rootsByKey.set(key, withKey)
 			}
 		for (const [key, texts] of textsByKey)
 			if (texts.size > 1)
@@ -499,6 +560,27 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						`@if branch constructs differ for \`${key}\` — union addressing requires identical client behavior in every branch`,
 					),
 				)
+		// TSRX031: a construct present on only SOME branch roots is silently
+		// dropped entirely — `emitConstructEffects(primary, …)` below only
+		// ever reads `primary`'s own attrs, so a construct unique to a
+		// non-primary branch never gets emitted, with no diagnostic before
+		// this check existed (found migrating form-textbox.tsrx, LT-060).
+		for (const [key, withKey] of rootsByKey) {
+			const [present] = withKey
+			if (present && withKey.length < roots.length) {
+				const missing = roots.find(r => !withKey.includes(r))
+				if (missing)
+					diagnostics.push(
+						diagnostic.asymmetricBranchConstruct(
+							source,
+							node.node.start,
+							key,
+							present.tag,
+							missing.tag,
+						),
+					)
+			}
+		}
 		emitConstructEffects(primary, query)
 	}
 
@@ -730,7 +812,60 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	 * three arms render unconditionally, toggled `hidden`) from this plain
 	 * mutually-exclusive error boundary.
 	 */
+	/**
+	 * Static `id` attribute values under a subtree (CHECKLIST §8's duplicate-
+	 * id rule) — walks every element, not just roots, since an id collision
+	 * anywhere under an arm is just as real a document-validity/ARIA-
+	 * relationship bug as one on the arm root itself.
+	 */
+	const staticIdsUnder = (nodes: readonly TemplateNode[]): string[] => {
+		const ids: string[] = []
+		// Only recurses into ELEMENT children — a nested `@if`/`@try`/`@for`
+		// inside an arm isn't walked (each has its own distinct nesting
+		// shape). Acceptable scoping gap: catches the common case (a literal
+		// `id` on a plain element in the arm) without a full generic
+		// template-node visitor.
+		const visit = (n: TemplateNode): void => {
+			if (isElement(n)) {
+				const idAttr = n.attrs.find(
+					(a): a is Extract<AttributeIR, { kind: 'static' }> =>
+						a.kind === 'static' && a.name === 'id' && a.value !== null,
+				)
+				if (idAttr) ids.push(idAttr.value as string)
+				for (const child of n.children) visit(child)
+			}
+		}
+		for (const n of nodes) visit(n)
+		return ids
+	}
+
 	const handleTryEffects = (node: TryNode): void => {
+		// CHECKLIST §8: all three arms render into the initial HTML at once
+		// (two hidden, not removed) — a literal `id` duplicated across arms
+		// is two elements sharing an id in the SAME document simultaneously,
+		// same failure whether or not `@pending` is present.
+		const branches: Array<[string, readonly TemplateNode[]]> = [
+			['@try body', node.children],
+			['@catch arm', node.catchChildren],
+		]
+		if (node.pendingChildren !== null)
+			branches.push(['@pending arm', node.pendingChildren])
+		const seenIn = new Map<string, string>()
+		for (const [label, branch] of branches)
+			for (const id of staticIdsUnder(branch)) {
+				const firstLabel = seenIn.get(id)
+				if (firstLabel && firstLabel !== label)
+					diagnostics.push(
+						diagnostic.duplicateIdAcrossArms(
+							source,
+							node.node.start,
+							id,
+							firstLabel,
+							label,
+						),
+					)
+				else if (!firstLabel) seenIn.set(id, label)
+			}
 		if (node.pendingChildren !== null) {
 			handleAsyncBoundary(node)
 			return

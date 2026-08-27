@@ -41,7 +41,7 @@ import {
 	parsePlainImports,
 	placePlainImports,
 } from './imports'
-import { inferType, type TypeContext } from './infer-type'
+import { inferType, isOptionalBinding, type TypeContext } from './infer-type'
 import type {
 	ComponentIR,
 	ConfigIR,
@@ -393,6 +393,19 @@ export const compileSource = (
 	}
 	const paramNames = new Set<string>()
 	collectBoundNames(paramsNode, paramNames)
+	// TSRX032 (CHECKLIST §10): a destructured default (`foo = 'x'`) paired
+	// with a non-optional type (`foo: string`, not `foo?: string`) is
+	// unreachable for any external caller — the type annotation is what
+	// callers see, and it says the prop is required.
+	for (const prop of asArray(paramsNode.properties)) {
+		if (prop.type !== 'Property' || !isNode(prop.value)) continue
+		if (prop.value.type !== 'AssignmentPattern') continue
+		const bindingName = identifierName(prop.value.left)
+		if (bindingName && !isOptionalBinding(paramsNode, bindingName))
+			ctx.diagnostics.push(
+				diagnostic.defaultOnRequiredProp(ctx.source, prop.start, bindingName),
+			)
+	}
 
 	// Setup statements: const declarations (signals vs. helpers) + expose() +
 	// client-only side effects.

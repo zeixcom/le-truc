@@ -26,6 +26,7 @@ import {
 } from './classify-attributes'
 import { isTemplateForOfNode } from './core'
 import { diagnostic } from './diagnostics'
+import { containsImpureAmbient } from './evaluability'
 import type {
 	AttributeIR,
 	ComposeAttrIR,
@@ -594,6 +595,15 @@ const liftsToReactive = (
 		)
 		return false
 	}
+	// CHECKLIST §4 / TSRX033 (error form): a `static` child renders ONCE,
+	// server-side, forever — there is no watch() to ever correct it, unlike
+	// a `reactive` child (which gets the WARNING form of this check in
+	// analysis/effects.ts, since the client's first binding pass corrects
+	// an omitted fold there). An impure ambient here (`Date.now()`, a random
+	// id, `Intl`/`toLocaleString`) bakes one build-time reading into the
+	// page permanently with no safety net at all — hard error, not a warning.
+	if (verdict.kind === 'static' && containsImpureAmbient(expr))
+		ctx.diagnostics.push(diagnostic.impureStaticChild(ctx.source, expr.start))
 	return verdict.kind === 'reactive'
 }
 
@@ -769,6 +779,25 @@ export const lowerElement = (
 			}
 			attrs.push(classified)
 		}
+	}
+	// CHECKLIST §10 / TSRX030: `value` is not a real HTML attribute on
+	// `<textarea>` — the browser ignores it, and with no compensating write
+	// the pre-hydration control renders empty. Only flags the STATIC/
+	// server-rendered forms (`value="x"`, `value={arg}`): those have no
+	// client-side correction at all, ever. A reactive-thunk mirror
+	// (`value={() => host.value}`) still renders the same dead attribute,
+	// but `bindProperty` corrects the live `.value` on connect, and pairing
+	// it with a static text-content child (`<textarea>{value}</textarea>`)
+	// covers the pre-hydration gap too — a legitimate pattern (see
+	// form-textbox.tsrx), not the footgun this rule targets.
+	if (tag === 'textarea') {
+		const valueAttr = attrs.find(
+			a => (a.kind === 'static' || a.kind === 'server') && a.name === 'value',
+		)
+		if (valueAttr)
+			ctx.diagnostics.push(
+				diagnostic.textareaValueAttribute(ctx.source, element.start),
+			)
 	}
 	return {
 		kind: 'element',

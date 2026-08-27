@@ -149,7 +149,10 @@ describe('uniqueName', () => {
 })
 
 describe('addQuery', () => {
-	const component = { tag: 'c-el', refReasons: new Map() } as unknown as ComponentIR
+	const component = {
+		tag: 'c-el',
+		refReasons: new Map(),
+	} as unknown as ComponentIR
 
 	test('registers a new query and returns its variable name', () => {
 		const used = new Set<string>()

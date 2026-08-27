@@ -269,19 +269,24 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 		description?: string
 	}): string => {
 		const validatable = required || maxlength != null
-		const describedBy = description
-			? ` aria-describedby="${name}-description"`
-			: ''
+		const describedByIds = [
+			description ? `${name}-description` : null,
+			validatable ? `${name}-error` : null,
+		].filter((id): id is string => id !== null)
+		const describedBy =
+			describedByIds.length > 0
+				? ` aria-describedby="${describedByIds.join(' ')}"`
+				: ''
 		const descriptionText =
-			Number(maxlength) > 0 && description.includes('${n}')
-				? description.replace('${n}', String(Number(maxlength) - value.length))
+			Number(maxlength) > 0 && description.includes('{n}')
+				? description.replace('{n}', String(Number(maxlength) - value.length))
 				: description
 		return (
 			`<form-textbox name="${name}" value="${value}">` +
 			`<label for="${name}-input">${label}</label>` +
 			'<div class="input">' +
 			(multiline
-				? `<textarea id="${name}-input" value="${value}" autocomplete="off"${required ? ' required' : ''}${maxlength !== undefined ? ` maxlength="${maxlength}"` : ''} rows="3"></textarea>`
+				? `<textarea id="${name}-input" value="${value}" autocomplete="off"${required ? ' required' : ''}${maxlength !== undefined ? ` maxlength="${maxlength}"` : ''} rows="3"${describedBy}>${value}</textarea>`
 				: `<input type="text" id="${name}-input" value="${value}" autocomplete="off"${required ? ' required' : ''}${maxlength !== undefined ? ` maxlength="${maxlength}"` : ''}${describedBy}>`) +
 			(clearable
 				? `<button type="button" aria-label="Clear input"${value === '' ? ' hidden' : ''} class="clear">✕</button>`
@@ -566,7 +571,8 @@ describe('CSS golden — verbatim tag-scoped extraction', () => {
 		height: var(--input-height);
 	}
 
-	&:state(clearable) .input {
+	/* Derived from markup, so it cannot drift from whether the button exists. */
+	&:has(.clear) .input {
 		position: relative;
 
 		& input {

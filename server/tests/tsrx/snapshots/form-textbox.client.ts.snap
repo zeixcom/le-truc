@@ -10,7 +10,7 @@ export type FormTextboxProps = {
 	value: string
 	/** Character length of the current value (read-only). */
 	readonly length: number
-	/** Helper text shown below the input. May include a remaining-characters template. */
+	/** Helper text shown below the input. May include a `{n}` remaining-characters placeholder. */
 	description: string
 	/** Method to clear the textbox and emit input/change events */
 	clear: () => void
@@ -29,16 +29,20 @@ declare global {
  * and validity are via ElementInternals (`formAssociated()`).
  * External consumers read `host.validationMessage` / `host.validity` like on a
  * native input; inline error display binds directly to `host.validationMessage`.
- * Sets the `:state(clearable)` custom state when a `button.clear` descendant
- * is present, so CSS can reserve space for it — derived from markup, not an
- * author-set attribute, so it can't drift out of sync or be spoofed.
+ * Sets the `:has(.clear)` style hook when a `button.clear` descendant is
+ * present, so CSS can reserve space for it — derived from markup, not an
+ * author-set attribute or custom state, so it can't drift out of sync.
+ *
+ * The inner control is deliberately unnamed — `name` belongs to the host,
+ * which submits via `setFormValue`. A named inner control would submit the
+ * field twice.
  *
  * @demo {https://zeixcom.github.io/le-truc/examples.html#form-textbox} Interactive preview and usage examples
  **/
 
 export default defineComponent<FormTextboxProps>(
 	'form-textbox',
-	({ expose, first, host, internals, on, watch }) => {
+	({ expose, first, host, on, watch }) => {
 		const input = first('textarea, input', 'text control')
 		const p = first('p[class="description"]')
 		const button = first('button')
@@ -46,8 +50,8 @@ export default defineComponent<FormTextboxProps>(
 		const length = createCell(input.value.length)
 		const descriptionCell = deriveCell(() => {
 			const template = (p?.getAttribute('data-remaining') ?? '');
-			return Number((input.getAttribute('maxlength') ?? '')) > 0 && template.includes('${n}')
-				? template.replace('${n}', String(Number((input.getAttribute('maxlength') ?? '')) - length.get()))
+			return Number((input.getAttribute('maxlength') ?? '')) > 0 && template.includes('{n}')
+				? template.replace('{n}', String(Number((input.getAttribute('maxlength') ?? '')) - length.get()))
 				: template;
 		})
 		expose({
@@ -67,6 +71,7 @@ export default defineComponent<FormTextboxProps>(
 		watch(() => host.value, bindProperty(input, 'value'))
 		on(input, 'input', () => {
 			length.set(input.value.length);
+			host.value = input.value;
 		})
 		on(input, 'change', () => {
 			input.checkValidity();
@@ -74,7 +79,6 @@ export default defineComponent<FormTextboxProps>(
 			host.value = input.value;
 		})
 		if (button) {
-			internals?.states.add('clearable');
 			watch(() => length.get() === 0, bindAttribute(button, 'hidden'))
 			on(button, 'click', () => host.clear())
 		}

@@ -98,6 +98,33 @@ export const typeAnnotationForBinding = (
 	return null
 }
 
+/**
+ * Whether a destructured prop's TS type annotation marks it optional
+ * (`foo?: string`). Mirrors {@link typeAnnotationForBinding}'s traversal but
+ * reads `TSPropertySignature.optional` instead of the annotation itself —
+ * used by TSRX032 to catch a default value paired with a non-optional type
+ * (CHECKLIST §10: the default becomes unreachable for any external caller).
+ */
+export const isOptionalBinding = (
+	paramsNode: TsrxNode | null,
+	bindingName: string,
+): boolean => {
+	if (!paramsNode || !isNode(paramsNode.typeAnnotation)) return true
+	const wrapped = paramsNode.typeAnnotation as TsrxNode
+	const literal =
+		wrapped.type === 'TSTypeAnnotation' && isNode(wrapped.typeAnnotation)
+			? (wrapped.typeAnnotation as TsrxNode)
+			: wrapped
+	if (literal.type !== 'TSTypeLiteral') return true
+	for (const member of asArray(literal.members)) {
+		if (member.type !== 'TSPropertySignature') continue
+		if (identifierName(member.key) === bindingName) return !!member.optional
+	}
+	// No matching property signature found (e.g. the type is a named alias,
+	// not an inline literal) — nothing to check against, so don't flag.
+	return true
+}
+
 export const typeOfAnnotation = (
 	annotation: TsrxNode,
 ): 'string' | 'number' | 'boolean' | 'unknown' => {

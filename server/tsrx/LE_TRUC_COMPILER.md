@@ -42,6 +42,20 @@ diagnostics }`. Severity policy: **errors fail the file**; **warnings skip it**
 (the TSRX001 milestone gate nulls the component inside `compileSource`; the build
 effect logs and moves on).
 
+**Grounding an agent to author or migrate `.tsrx` source** (CHECKLIST §11): point it
+at <https://tsrx.dev/llms.txt> for the upstream grammar, not general JSX/React
+training — TSRX is close enough to JSX that the React prior fires at full strength
+otherwise (`{cond && <x/>}`, `return (<>…</>)`, `className`/`htmlFor` are the
+observed failure modes; TSRX021/022/024 and the `classify-attributes.ts`
+`REACT_ATTR_RENAMES` table hard-error them rather than silently emitting broken
+output). Two caveats specific to this host profile, not covered by the upstream
+docs: the pinned `@tsrx/core` 0.1.60 lags the docs — a construct the docs describe
+may not parse yet (`compiler.ts`'s `newerGrammarHint` names the gap when it bites);
+and `&{}`/`&[]` lazy destructuring, real in core TSRX, is retired outright here
+(LT-052, TSRX018/020) — Le Truc's server composition needs eager snapshot
+evaluation, so an agent trained on upstream examples using it will hit a hard
+error, by design.
+
 ## 2. Pipeline at a glance
 
 ```

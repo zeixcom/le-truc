@@ -189,9 +189,13 @@ describe('CEM golden — generated clients extract like hand-written components'
 				'and validity are via ElementInternals (`formAssociated()`).\n' +
 				'External consumers read `host.validationMessage` / `host.validity` like on a\n' +
 				'native input; inline error display binds directly to `host.validationMessage`.\n' +
-				'Sets the `:state(clearable)` custom state when a `button.clear` descendant\n' +
-				'is present, so CSS can reserve space for it — derived from markup, not an\n' +
-				"author-set attribute, so it can't drift out of sync or be spoofed.",
+				'Sets the `:has(.clear)` style hook when a `button.clear` descendant is\n' +
+				'present, so CSS can reserve space for it — derived from markup, not an\n' +
+				"author-set attribute or custom state, so it can't drift out of sync.\n" +
+				'\n' +
+				'The inner control is deliberately unnamed — `name` belongs to the host,\n' +
+				'which submits via `setFormValue`. A named inner control would submit the\n' +
+				'field twice.',
 		)
 		expect(textbox.demos).toEqual([
 			{
