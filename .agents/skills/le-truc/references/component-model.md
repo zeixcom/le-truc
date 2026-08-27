@@ -65,8 +65,8 @@ Explicit `return [...]` of the same descriptors still works (dual support in v2.
 
 | Extension | Adds |
 |---|---|
-| `formAssociated()` | Form participation via `ElementInternals` — value sync, reset, state restore, `disabled`, native-parity host contract. Widens the factory context with `internals` |
-| `formAssociatedCheckbox()` | Same host contract, keyed on `checked: boolean` instead of `value` — submits nothing when unchecked. Do not combine with `formAssociated()`: both declare `staticProps.formAssociated`, which throws `ExtensionCollisionError` in `DEV_MODE` |
+| `formAssociated()` | Form participation via `ElementInternals` — value sync, reset, state restore, `disabled`, native-parity host contract, and a managed `defaultValue` reset-baseline property. Widens the factory context with `internals` |
+| `formAssociatedCheckbox()` | Same host contract, keyed on `checked: boolean` instead of `value` — submits nothing when unchecked; reset baseline is a managed `defaultChecked` property. Do not combine with `formAssociated()`: both declare `staticProps.formAssociated`, which throws `ExtensionCollisionError` in `DEV_MODE` |
 | `observedAttributes(names)` | Re-runs the retained `Parser` for each named prop when its attribute mutates post-connect (still not the default — see Key Constraints below) |
 
 ```typescript
@@ -83,6 +83,7 @@ A fourth extension, `debug()`, is **not exported and never appears in this array
 
 - `expose()` **must** be called before any signal access that reads `host.propName`
 - `defineComponent` doesn't register `observedAttributes` unless explicitly requested via `observedAttributes` extension
+- On form-associated components, `value`/`checked` is the sole live edit path — never pass it to `observedAttributes()`: the attribute is the reset baseline (`defaultValue`/`defaultChecked`), and re-parsing it into the live prop conflates the two channels. `defaultValue`/`defaultChecked` are reserved member names — `expose()` throws `InvalidPropertyNameError` for them
 - Parsers in `expose()` called **once at connect time** — HTML authors configure via attributes in server-rendered markup
 - Attribute changes after connect **are not re-parsed** — reactive state flows through property interface only
 - Effect helpers register themselves when called — no `return` needed. Explicit `return [...]` of a `FactoryResult` (`Array<EffectDescriptor | FactoryResult | Falsy>`) still works but is deprecated; nested arrays are flattened and falsy values filtered, so the legacy `element && watch(...)` pattern still works too, but prefer `if (element) watch(...)` in new code

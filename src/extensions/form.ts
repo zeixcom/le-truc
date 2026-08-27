@@ -38,7 +38,7 @@ type FormAssociatedVariantConfig<Tag extends string> = {
 	__kind: Tag
 	name: string
 	propName: 'value' | 'checked'
-	/** The reset-baseline property's name (LT-057): `defaultValue`/`defaultChecked`. */
+	/** The reset-baseline property's name: `defaultValue`/`defaultChecked`. */
 	defaultPropName: 'defaultValue' | 'defaultChecked'
 	installOnPrototype: (proto: HTMLElement) => void
 	makeSyncDescriptor: (
@@ -260,8 +260,7 @@ const FOCUSABLE_FORM_CONTROL_SELECTOR =
 const FALLBACK_VALIDITY_MESSAGE = 'Invalid value'
 
 /**
- * The reset-baseline property descriptor for a variant (LT-057, CHECKLIST
- * §7): `defaultValue`/`defaultChecked`, mirroring the native
+ * The reset-baseline property descriptor for a variant: `defaultValue`/`defaultChecked`, mirroring the native
  * `<input>.defaultValue`/`.defaultChecked` pair. When the prop is
  * Parser-backed (the attribute-driven convention, ADR 0003), this reflects
  * the LIVE same-named content attribute through the retained Parser, so it
@@ -431,14 +430,14 @@ const makeFormAssociatedExtension = <Tag extends string>(
  * Build a managed `formResetCallback` for the given reactive prop: restore it
  * to its baseline by assigning from the paired {@link makeDefaultPropDescriptor}
  * property (`this[prop] = this[defaultProp]`) — the same relationship
- * `<input>.value`/`.defaultValue` have natively (LT-057). No-op if no
+ * `<input>.value`/`.defaultValue` have natively. No-op if no
  * initializer was retained (e.g. the prop was pre-set on the instance before
  * upgrade) or signals are not yet initialized. Also a no-op for a `Signal`,
  * `MemoCallback`/`TaskCallback`, or `SlotDescriptor` (`{ get, set? }`)
  * initializer — none of these carry a "default value" to restore; the prop
  * already derives live from whatever backs it.
  *
- * The restoring write is deferred to a microtask (LT-056, CHECKLIST §7): form
+ * The restoring write is deferred to a microtask: form
  * reset runs in TREE ORDER, and a form-associated host precedes its own inner
  * native control in the light DOM — `formResetCallback` fires on the host
  * FIRST, then the browser resets the descendant control to its own
@@ -449,7 +448,7 @@ const makeFormAssociatedExtension = <Tag extends string>(
  * fired, which then silently overwrote it. Deferring past the synchronous
  * reset walk means the write lands after the control's own reset has already
  * happened; the two converge on the same baseline now that `defaultValue`'s
- * content attribute is never touched by live edits (LT-057), so this is not
+ * content attribute is never touched by live edits, so this is not
  * a race anymore, just a same-tick reconciliation. The host's OWN internal
  * "dirty" flag isn't cleared by this write — only the form reset algorithm
  * clears it, which it does regardless, since the inner control is owned by

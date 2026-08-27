@@ -351,7 +351,7 @@ describe('managed formResetCallback', () => {
 		expect(instance.value).toBe('from-attribute')
 	})
 
-	test('the restoring write is deferred past the synchronous call (LT-056)', async () => {
+	test('the restoring write is deferred past the synchronous call', async () => {
 		const Ctor = defineComponent<{ value: string }>(
 			uniqueName(),
 			({ expose }) => {
@@ -406,7 +406,7 @@ describe('managed formResetCallback', () => {
 	})
 })
 
-/* === Managed defaultValue / defaultChecked (LT-057) === */
+/* === Managed defaultValue / defaultChecked === */
 
 describe('managed defaultValue', () => {
 	test('mirrors the value content attribute through the retained Parser', () => {
@@ -530,6 +530,36 @@ describe('managed defaultChecked', () => {
 		instance.connectedCallback()
 		instance.checked = false
 		expect(instance.defaultChecked).toBe(true)
+	})
+})
+
+/* === Host typing: variant reset-baseline members === */
+
+describe('host typing: variant reset-baseline members', () => {
+	// Purely compile-time: the factories never connect, so the bodies only
+	// need to typecheck (enforced by `tsc -p tsconfig.build.json`).
+	test('formAssociated() host exposes defaultValue, not defaultChecked', () => {
+		defineComponent<{ value: string }>(
+			uniqueName(),
+			({ host }) => {
+				void host.defaultValue
+				// @ts-expect-error defaultChecked belongs to the checkbox variant
+				void host.defaultChecked
+			},
+			[formAssociated()],
+		)
+	})
+
+	test('formAssociatedCheckbox() host exposes defaultChecked, not defaultValue', () => {
+		defineComponent<{ checked: boolean }>(
+			uniqueName(),
+			({ host }) => {
+				void host.defaultChecked
+				// @ts-expect-error defaultValue belongs to the value variant
+				void host.defaultValue
+			},
+			[formAssociatedCheckbox()],
+		)
 	})
 })
 

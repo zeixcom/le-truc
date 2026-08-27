@@ -131,7 +131,9 @@ export {
 export {
 	defineComponent,
 	type FactoryContext,
+	type FormAssociatedCheckboxElement,
 	type FormAssociatedElement,
+	type FormAssociatedValueElement,
 	type Initializers,
 	type MaybeSignal,
 } from './src/component'
