@@ -439,6 +439,13 @@ export const analyzeClient = (
 		},
 	)
 
+	// `component.imports.plainLocalNames` (LT-091) completes the same
+	// widening for AUTHORED IMPORTS: a pass set-thunk (two-way `truc:pass`)
+	// referencing e.g. `formatCss` from `culori/fn` is client-traced, so the
+	// placement fixpoint pulls the import into the client module — the same
+	// trust the client-only statement gate (`importedNames`, compiler.ts)
+	// already extends.
+
 	// Plain setup const names (LT-088) — `component.setup` covers signals AND
 	// expose() too (redundant with the signals/CONTEXT_NAMES checks below for
 	// those, harmless), but it is the only place a plain helper const like
@@ -461,7 +468,8 @@ export const analyzeClient = (
 				!JS_GLOBALS.has(name) &&
 				!CONTEXT_NAMES.has(name) &&
 				!setupNames.has(name) &&
-				!component.imports.clientLeTrucNames.has(name),
+				!component.imports.clientLeTrucNames.has(name) &&
+				!component.imports.plainLocalNames.has(name),
 		)
 
 	const ctx: AnalysisContext = {

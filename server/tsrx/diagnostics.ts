@@ -48,6 +48,7 @@ export type DiagnosticCode =
 	| 'TSRX035' // duplicate static id across @try/@catch/@pending arms
 	| 'TSRX036' // real `@zeix/le-truc` export used without an explicit import (sub-design 16)
 	| 'TSRX037' // FactoryContext name inside an authored `@zeix/le-truc` import (sub-design 16)
+	| 'TSRX038' // duplicate static id across compose sites (LT-090)
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -794,6 +795,26 @@ export const diagnostic = {
 		error(
 			'TSRX035',
 			`id="${id}" appears in both ${firstArm} and ${secondArm} — all arms of a \`@try\`/\`@catch\`/\`@pending\` boundary render into the initial HTML at once (non-active arms are hidden, not removed), so this is two elements sharing an id in the same document simultaneously. Give each arm's element a distinct id.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * The same static `id` appears on more than one composed element
+	 * (LT-090). A compose site's `id` materializes on that instance's host
+	 * element in the initial HTML (`composeHostAttrs`) — duplicated, that is
+	 * two elements sharing an id in the SAME document: invalid HTML, and
+	 * id-based addressing (`first('#x')`, label `for`) resolves to at most
+	 * one of them, never reliably the right one.
+	 */
+	duplicateComposeId: (
+		source: string,
+		offset: number | undefined,
+		id: string,
+		count: number,
+	) =>
+		error(
+			'TSRX038',
+			`id="${id}" appears on ${count} composed elements — each compose site's id is materialized on that instance's host element, so this is ${count} elements sharing an id in the same document. Give each site a distinct id, or address the instances with a static class instead.`,
 			lineOf(source, offset),
 		),
 

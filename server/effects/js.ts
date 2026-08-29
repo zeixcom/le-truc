@@ -1,11 +1,23 @@
-import { ASSETS_DIR, TS_FILE } from '../config'
-import { componentScripts, docsScripts, libraryScripts } from '../file-signals'
+import { ASSETS_DIR, TS_FILE, TSRX_TEST_FILE } from '../config'
+import {
+	componentScripts,
+	docsScripts,
+	generatedClientScripts,
+	libraryScripts,
+} from '../file-signals'
 import { createBuildEffect, runCommand } from './build-effect'
 
 export const jsEffect = (onRebuild?: () => void) =>
 	createBuildEffect(
 		'JS assets',
-		[docsScripts.sources, libraryScripts.sources, componentScripts.sources],
+		[
+			docsScripts.sources,
+			libraryScripts.sources,
+			componentScripts.sources,
+			// LT-091: migrated components' generated clients are bundle inputs
+			// — a recompiled client must re-trigger the bundle.
+			generatedClientScripts.sources,
+		],
 		async () => {
 			console.log('🔧 Rebuilding JS assets...')
 			// Any local invocation (`bun run dev`, `serve:docs`,
@@ -23,6 +35,7 @@ export const jsEffect = (onRebuild?: () => void) =>
 				'bun',
 				'build',
 				TS_FILE,
+				TSRX_TEST_FILE,
 				'--outdir',
 				`${ASSETS_DIR}/`,
 				'--minify',

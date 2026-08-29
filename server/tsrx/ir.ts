@@ -423,6 +423,16 @@ export type ComponentIR = {
 		 * a name is never bound by two import statements in one module.
 		 */
 		clientLeTrucNames: ReadonlySet<string>
+		/**
+		 * Every locally-bound name across ALL plain imports, regardless of
+		 * placement (LT-091) — `badFreeNames` accepts these in client-thunk
+		 * free-name checks because any client-traced node referencing a
+		 * plain import makes the placement fixpoint (`computeClientNeededNames`)
+		 * pull that import into the client module; whether it is needed
+		 * client-side is decided downstream of the analysis that consults
+		 * this set, so placement-agnostic membership is the sound check.
+		 */
+		plainLocalNames: ReadonlySet<string>
 	}
 }
 

@@ -29,18 +29,26 @@
  * object literals directly rather than sharing a `stepStyle()` helper call.
  *
  * The three axis spinbuttons are addressed via composed `ref={}` (LT-087/
- * LT-089), pushing the display-scaled value in one direction
- * (`truc:pass={{ value: … }}`) and reading committed changes back via a
- * per-axis `on(<ref>, 'change', …)` — the exact shape the hand-written
- * original uses via `on(el, 'change', …)` in its own per-axis loop, now that
- * a composed ref is a real client-side reference to the child element
+ * LT-089): the parent pushes the display-scaled value down with
+ * `watch(() => toDisplay(…), bindProperty(el, 'value'))` and reads
+ * committed changes back via a per-axis `on(<ref>, 'change', …)` — the
+ * exact shape the hand-written original uses, now that a composed ref
+ * is a real client-side reference to the child element
  * (`FormSpinbuttonProps`' own `stepDown`/`stepUp`/`value`/`validity`).
+ * Deliberately NOT `truc:pass`: a pass replaces the child's `value` Slot
+ * for the life of the connection, so the child's own writes — its step
+ * methods, the typed-input harvest, and the library's built-in
+ * formResetCallback baseline restore — all route through the parent's
+ * setter; the reset case then re-commits the child's 0 baseline over the
+ * freshly restored host color (both found by form-colorgraph.spec.ts's
+ * first real-DOM run, LT-091; the getter-only pass additionally made every
+ * child write throw ReadonlySignalError).
  * `name=""` on each: they are presentational sub-controls (only
  * `form-colorgraph` itself submits, under its own `name`) — an empty `name`
  * attribute is excluded from `FormData` by the HTML spec, the same as an
  * unnamed native `<input>`.
  */
-import { asString, batch, createState, defineMethod, throttle } from '@zeix/le-truc'
+import { asString, batch, bindProperty, createState, defineMethod, throttle } from '@zeix/le-truc'
 import { clampChroma, formatCss, inGamut, type Oklch } from 'culori/fn'
 import { asOklch } from '../../_common/asOklch.ts'
 import { getStepColor } from '../../_common/getStepColor.ts'
@@ -321,7 +329,22 @@ export function FormColorgraph(
 		}
 	});
 
-	// Axis spinbuttons: read committed changes back (write side is truc:pass below)
+	// Axis spinbuttons: push the display-scaled value down, read committed
+	// changes back (write side is the child's own step methods / typed input
+	// harvest, committed to host.value by the change handlers above/below).
+	//
+	// The push is `watch` + `bindProperty`, NOT `truc:pass`: a pass REPLACES
+	// the child's `value` Slot for the life of the connection, so the child's
+	// own writes route through the parent's setter — including the library's
+	// built-in formResetCallback baseline restore, which then re-commits the
+	// child's 0 baseline over the freshly reset host color (found by
+	// form-colorgraph.spec.ts's first real-DOM run, LT-091). With the child
+	// owning its value and the parent pushing, form reset restores the host
+	// attribute and the push re-syncs the displays from it.
+	watch(() => toDisplay('l', host.lightness), bindProperty(lightnessEl, 'value'));
+	watch(() => toDisplay('c', host.chroma), bindProperty(chromaEl, 'value'));
+	watch(() => toDisplay('h', host.hue), bindProperty(hueEl, 'value'));
+
 	on(lightnessEl, 'change', () => {
 		if (!lightnessEl.validity.valid) return;
 		const c = { ...parseOklch(host.value), l: fromDisplay('l', lightnessEl.value) };
@@ -452,7 +475,6 @@ export function FormColorgraph(
 				max={100}
 				step={0.25}
 				bigStep={5}
-				truc:pass={{ value: () => toDisplay('l', host.lightness) }}
 			/>
 			<FormSpinbutton
 				class="chroma"
@@ -463,7 +485,6 @@ export function FormColorgraph(
 				max={0.4}
 				step={0.001}
 				bigStep={0.02}
-				truc:pass={{ value: () => toDisplay('c', host.chroma) }}
 			/>
 			<FormSpinbutton
 				class="hue"
@@ -475,7 +496,6 @@ export function FormColorgraph(
 				max={360}
 				step={0.01}
 				bigStep={15}
-				truc:pass={{ value: () => toDisplay('h', host.hue) }}
 			/>
 		</form-colorgraph>
 

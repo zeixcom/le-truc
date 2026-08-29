@@ -24,11 +24,11 @@ export type FormSpinbuttonProps = {
 	stepUp: (big?: boolean) => void
 }
 
-declare global {
-	interface HTMLElementTagNameMap {
-		'form-spinbutton': FormAssociatedElement & FormSpinbuttonProps
-	}
-}
+// The `HTMLElementTagNameMap` entry for `form-spinbutton` lives in the
+// compiled client (server/generated/tsrx/form-spinbutton.client.ts, the
+// migration source of truth) — re-declaring it here collides in the type
+// graph now that examples/tsrx-test.ts pulls generated clients in alongside
+// this file (LT-091).
 
 /**
  * A numeric spinbutton with increment/decrement buttons and keyboard support.

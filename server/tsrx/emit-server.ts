@@ -451,14 +451,14 @@ export const emitServerModule = (
 					(a): a is Extract<typeof a, { kind: 'arg' }> =>
 						a.kind === 'arg' &&
 						// `class`/`id` on a composed element address the COMPOSE
-						// SITE, not the child (LT-089's discriminator search,
-						// `composeStaticAttrs`) — never real typed props a
-						// `.tsrx` component function would declare, so never
-						// forwarded as server args. `data-*` stays forwarded
-						// (a pre-existing, tested convention, LT-015/016) —
-						// it can double as BOTH a real server arg and a
-						// discriminator; no conflict, `composeStaticAttrs`
-						// only reads it, never removes it.
+						// SITE (the child's host element), not typed props —
+						// filtered out of the forwarded args and spliced onto
+						// the child's rendered root via `composeHostAttrs` below
+						// (LT-089's discriminator vocabulary, materialized by
+						// LT-090). `data-*` stays forwarded (a pre-existing,
+						// tested convention, LT-015/016) — it can double as BOTH
+						// a real server arg and a discriminator; no conflict,
+						// `composeStaticAttrs` only reads it, never removes it.
 						a.name !== 'class' &&
 						a.name !== 'id',
 				)
@@ -476,9 +476,28 @@ export const emitServerModule = (
 				buffer = outerBuffer
 				args.push(`children: ${childrenVar}.join('')`)
 			}
-			lines.push(
-				`${tab(depth)}${buffer}.push(render${entry.name}({ ${args.join(', ')} }))`,
+			// LT-090: materialize compose-site class/id on the child root so
+			// the discriminator the client selector relies on (e.g.
+			// `first('form-spinbutton.lightness')`) exists in the served DOM.
+			// Values pass through as the authored expressions — static string
+			// literals AND server-evaluable dynamic ones — evaluated at render
+			// time in this module's scope, exactly like any other arg.
+			const hostAttrs = node.attrs.filter(
+				(a): a is Extract<typeof a, { kind: 'arg' }> =>
+					a.kind === 'arg' && (a.name === 'class' || a.name === 'id'),
 			)
+			const renderCall = `render${entry.name}({ ${args.join(', ')} })`
+			if (hostAttrs.length > 0) {
+				used.add('composeHostAttrs')
+				const attrsArg = hostAttrs
+					.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
+					.join(', ')
+				lines.push(
+					`${tab(depth)}${buffer}.push(composeHostAttrs(${renderCall}, ${JSON.stringify(entry.tag)}, { ${attrsArg} }))`,
+				)
+			} else {
+				lines.push(`${tab(depth)}${buffer}.push(${renderCall})`)
+			}
 			return
 		}
 		const loop = [...component.fors.values()].find(f => f.output === node)

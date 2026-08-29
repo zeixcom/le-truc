@@ -1126,6 +1126,7 @@ export const compileSource = (
 			...leTrucPlacement.serverNames,
 		]),
 		clientLeTrucNames: leTrucPlacement.clientNames,
+		plainLocalNames: new Set(plainImports.flatMap(i => i.localNames)),
 	}
 
 	// A milestone gate (reactive @for) skips the whole file: rendering the

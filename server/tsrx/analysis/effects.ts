@@ -29,9 +29,11 @@ import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
 import type { AnalysisContext, TopEffectPlan } from './plan'
 import {
+	allComposeNodes,
 	type ComposeNode,
 	composeDiscriminatorClause,
 	composeNodesBySource as composeNodesBySourceIn,
+	composeStaticAttrs,
 	countComposeBySource as countComposeBySourceIn,
 	type ElementNode,
 	type IfNode,
@@ -1124,4 +1126,31 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		for (const child of node.children) emitTopEffects(child)
 	}
 	emitTopEffects(component.root)
+
+	// LT-090: a static `id` on a compose site materializes on that
+	// instance's host element (`composeHostAttrs`) — duplicated across
+	// sites it is two elements sharing an id in the same rendered
+	// document, invalid HTML, and id-based addressing resolves to at most
+	// one of them. Same rationale as TSRX035's across-arms rule,
+	// generalized to compose sites.
+	const idSites = new Map<string, ComposeNode[]>()
+	for (const composeNode of allComposeNodes(component.root)) {
+		const id = composeStaticAttrs(composeNode).get('id')
+		if (id == null) continue
+		const sites = idSites.get(id) ?? []
+		sites.push(composeNode)
+		idSites.set(id, sites)
+	}
+	for (const [id, sites] of idSites) {
+		const [, second] = sites
+		if (!second) continue
+		diagnostics.push(
+			diagnostic.duplicateComposeId(
+				source,
+				second.node.start,
+				id,
+				sites.length,
+			),
+		)
+	}
 }

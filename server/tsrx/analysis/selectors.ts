@@ -225,6 +225,27 @@ export const countComposeBySource = (
 }
 
 /**
+ * Every composed element over the whole template, regardless of source
+ * (LT-090) — the source-agnostic sibling of `composeNodesBySource`, used
+ * for template-wide invariants on compose sites (today: duplicate static
+ * `id`). Same flat, non-exclusivity-aware collection: an `id` shared by
+ * two mutually-exclusive-branch sites still renders two elements with that
+ * id across the component's lifetime, so over-collecting here is the
+ * conservative direction for a validity check.
+ */
+export const allComposeNodes = (node: TemplateNode): ComposeNode[] => {
+	if (node.kind === 'if')
+		return [...node.then, ...node.alternate].flatMap(allComposeNodes)
+	if (node.kind === 'switch')
+		return node.cases.flatMap(arm => arm.children.flatMap(allComposeNodes))
+	if (node.kind === 'try')
+		return [...node.children, ...node.catchChildren].flatMap(allComposeNodes)
+	if (node.kind === 'compose') return [node]
+	if (!isElement(node)) return []
+	return node.children.flatMap(allComposeNodes)
+}
+
+/**
  * Every composed element over the whole template sharing one `.tsrx` source
  * path, as the actual nodes rather than just a count (LT-089). A flat
  * collection — unlike `countComposeBySource`, it does NOT take `@if`/

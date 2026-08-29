@@ -7,8 +7,12 @@
  * server module imports and calls the child's `render<Name>()`.
  */
 import { describe, expect, test } from 'bun:test'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { compileComponent } from '../../tsrx'
 import type { RegistryEntry } from '../../tsrx/registry'
+
+const ROOT = path.resolve(import.meta.dir, '../../..')
 
 const child = `export function BasicChild({ label }: { label: string })
 	@{
@@ -28,6 +32,15 @@ const compileChild = (path: string, source = child) => {
 
 const composeRegistryOf = (...entries: RegistryEntry[]) =>
 	new Map(entries.map(e => [e.source, e]))
+
+// Generated server modules must exist for in-process execution (LT-090);
+// the effect normally writes them, tests must not depend on a prior build.
+// Same harness as server.golden.test.ts — server/generated is gitignored.
+const ensureEmitted = (tag: string, code: string): void => {
+	const out = path.join(ROOT, 'server/generated/tsrx', `${tag}.server.ts`)
+	fs.mkdirSync(path.dirname(out), { recursive: true })
+	fs.writeFileSync(out, code)
+}
 
 describe('component composition (ADR 0023 sub-design 10)', () => {
 	test('splices the child render call with server args', () => {
@@ -457,6 +470,46 @@ export function BasicParent({ title }: { title: string })
 		)
 	})
 
+	test('compose-site class/id are materialized on the child root in the rendered HTML (LT-090)', async () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild class="a" label={title} ref={childA} truc:pass={{ value: () => 'x' }} />
+				<BasicChild class="b" id="second" label={title} ref={childB} truc:pass={{ value: () => 'y' }} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		if (!component)
+			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+		// Render through the generated server module (same in-process
+		// execution as server.golden.test.ts) — the discriminator the client
+		// selector relies on (`first('basic-child.a')`) must exist in the
+		// served DOM, not just in the query string.
+		ensureEmitted('basic-child', childComponent.serverCode)
+		ensureEmitted('basic-parent', component.serverCode)
+		const mod = await import('../../generated/tsrx/basic-parent.server.ts')
+		const html = (
+			mod as { renderBasicParent: (args: Record<string, unknown>) => string }
+		).renderBasicParent({ title: 'Hi' })
+		expect(html).toContain('<basic-child class="a">Hi</basic-child>')
+		expect(html).toContain(
+			'<basic-child class="b" id="second">Hi</basic-child>',
+		)
+	})
+
 	test('two same-source composed instances with no distinguishing static attr are still unaddressable (TSRX007)', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
@@ -481,6 +534,32 @@ export function BasicParent({ title }: { title: string })
 		)
 		expect(component).toBeNull()
 		expect(diagnostics.filter(d => d.code === 'TSRX007')).toHaveLength(2)
+	})
+
+	test('the same static id on two compose sites is diagnosed (TSRX038, LT-090)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild id="dup" label={title} />
+				<BasicChild id="dup" label={title} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(component).toBeNull()
+		expect(diagnostics.filter(d => d.code === 'TSRX038')).toHaveLength(1)
 	})
 
 	test('a raw lowercase dashed tag is unaffected by composition', () => {

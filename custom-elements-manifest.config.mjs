@@ -30,6 +30,7 @@ export default {
 		'examples/form/listbox/form-listbox.ts',
 		'examples/form/radiogroup/form-radiogroup.ts',
 		'examples/form/spinbutton/form-spinbutton.ts',
+		'examples/form/colorgraph/form-colorgraph.ts',
 		'examples/form/tokenbox/form-tokenbox.ts',
 		'examples/card/collapsible/card-collapsible.ts',
 		'examples/card/colorscale/card-colorscale.ts',
@@ -58,6 +59,8 @@ export default {
 		// Comparing raw names silently dropped such files — examples/main.ts
 		// (latent) and every generated client (LT-006).
 		const requested = new Set(globs.map(g => resolve(g)))
-		return program.getSourceFiles().filter(sf => requested.has(resolve(sf.fileName)))
+		return program
+			.getSourceFiles()
+			.filter(sf => requested.has(resolve(sf.fileName)))
 	},
 }

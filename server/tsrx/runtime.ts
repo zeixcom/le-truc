@@ -311,3 +311,10 @@ export const items = <T>(iterable: Iterable<T>): T[] => Array.from(iterable)
 export const entries = <T>(
 	iterable: Iterable<T>,
 ): IterableIterator<[number, T]> => Array.from(iterable).entries()
+
+/**
+ * Compose-site `class`/`id` materialization (LT-090) — implemented in
+ * `compose-attrs.ts` (markup post-processing, not a signal shim) and
+ * re-exported here so generated modules keep a single runtime import.
+ */
+export { composeHostAttrs } from './compose-attrs'
