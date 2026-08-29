@@ -49,8 +49,9 @@ export default defineComponent<FormTextboxProps>(
 		const button = first('button')
 		const p2 = first('p[role="alert"]')
 		const length = createCell(input.value.length)
-		const descriptionCell = deriveCell(() => {
-			const template = (p?.getAttribute('data-remaining') ?? '');
+		const descriptionCell = createCell((p?.getAttribute('data-remaining') ?? ''))
+		const remainingCount = deriveCell(() => {
+			const template = descriptionCell.get();
 			return Number((input.getAttribute('maxlength') ?? '')) > 0 && template.includes('{n}')
 				? template.replace('{n}', String(Number((input.getAttribute('maxlength') ?? '')) - length.get()))
 				: template;
@@ -58,7 +59,7 @@ export default defineComponent<FormTextboxProps>(
 		expose({
 			value: asString(''),
 			length: length.get,
-			description: descriptionCell.get,
+			description: descriptionCell,
 			clear: defineMethod(() => {
 				host.value = ''
 				input.value = ''
@@ -87,7 +88,7 @@ export default defineComponent<FormTextboxProps>(
 			watch(() => host.validationMessage, bindText(p2))
 		}
 		if (p) {
-			watch(descriptionCell, bindText(p))
+			watch(remainingCount, bindText(p))
 		}
 	},
 	[formAssociated()],

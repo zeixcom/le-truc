@@ -1,3 +1,4 @@
+import { asParser } from '@zeix/le-truc'
 import {
 	converter,
 	modeOklch,
@@ -6,7 +7,6 @@ import {
 	type Oklch,
 	useMode,
 } from 'culori/fn'
-import { asParser } from '../../index'
 
 // culori's `fn` build ships mode DEFINITIONS but registers none of them —
 // `converter('oklch')` silently returns a converter that resolves nothing,

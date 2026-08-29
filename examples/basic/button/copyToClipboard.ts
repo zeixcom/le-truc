@@ -1,4 +1,4 @@
-import { type EffectDescriptor } from '../../../index'
+import { type EffectDescriptor } from '@zeix/le-truc'
 
 import type { BasicButtonProps } from './basic-button'
 

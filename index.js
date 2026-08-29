@@ -2064,6 +2064,10 @@ var throttle = (fn, signal) => {
 };
 
 // src/bindings.ts
+var defaultSanitize;
+var configureHtmlSanitizer = (sanitize) => {
+  defaultSanitize = sanitize;
+};
 var debugBindingTargets = new WeakMap;
 var registerDebugBindingTarget = (target, element) => {
   if (false)
@@ -2280,7 +2284,11 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
         schedule(element, reset);
         return;
       }
-      const { shadowRootMode, allowScripts, sanitize } = options;
+      const {
+        shadowRootMode,
+        allowScripts,
+        sanitize = defaultSanitize
+      } = options;
       if (shadowRootMode && !element.shadowRoot)
         element.attachShadow({ mode: shadowRootMode });
       const target = element.shadowRoot || element;
@@ -3387,9 +3395,33 @@ var MANAGED_FORM_MEMBERS = new Set([
 ]);
 var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
 var FALLBACK_VALIDITY_MESSAGE = "Invalid value";
-var installManagedFormMembers = (proto, resetCallback, stateRestoreCallback) => {
+var makeDefaultPropDescriptor = (prop) => ({
+  get() {
+    const initializer = retainedInitializers.get(this)?.[prop];
+    if (isParser(initializer))
+      return initializer(this.getAttribute(prop));
+    if (initializer !== undefined)
+      return initializer;
+    return prop === "checked" ? this.hasAttribute("checked") : this.getAttribute(prop) ?? "";
+  },
+  set(v) {
+    if (prop === "checked") {
+      if (v)
+        this.setAttribute("checked", "");
+      else
+        this.removeAttribute("checked");
+    } else if (v == null)
+      this.removeAttribute(prop);
+    else
+      this.setAttribute(prop, String(v));
+  },
+  enumerable: true,
+  configurable: true
+});
+var installManagedFormMembers = (proto, propName, defaultPropName, resetCallback, stateRestoreCallback) => {
   Object.defineProperties(proto, {
     ...HOST_CONTRACT_DESCRIPTORS,
+    [defaultPropName]: makeDefaultPropDescriptor(propName),
     formResetCallback: {
       value: resetCallback,
       writable: true,
@@ -3441,7 +3473,7 @@ var makeFormAssociatedExtension = (config) => ({
   name: config.name,
   __kind: config.__kind,
   staticProps: { formAssociated: true },
-  reservedMembers: MANAGED_FORM_MEMBERS,
+  reservedMembers: new Set([...MANAGED_FORM_MEMBERS, config.defaultPropName]),
   installOnPrototype: config.installOnPrototype,
   onConnect: (instance, internals) => {
     if (!internals)
@@ -3454,17 +3486,17 @@ var makeFormAssociatedExtension = (config) => ({
     return [config.makeSyncDescriptor(instance, internals)];
   }
 });
-var makeResetCallback = (prop) => function() {
+var makeResetCallback = (prop, defaultProp) => function() {
   const initializer = retainedInitializers.get(this)?.[prop];
   if (initializer === undefined)
     return;
-  if (isParser(initializer)) {
-    const result = initializer(this.getAttribute(prop));
+  if (!isParser(initializer) && (isSignal(initializer) || isFunction(initializer) || isSlotDescriptor(initializer)))
+    return;
+  queueMicrotask(() => {
+    const result = this[defaultProp];
     if (result != null)
       this[prop] = result;
-  } else if (!isSignal(initializer) && !isFunction(initializer) && !isSlotDescriptor(initializer)) {
-    this[prop] = initializer;
-  }
+  });
 };
 var formStateRestoreCallback = function(state) {
   if (typeof state !== "string")
@@ -3497,7 +3529,8 @@ var formAssociated = () => makeFormAssociatedExtension({
   __kind: "form-associated",
   name: "formAssociated",
   propName: "value",
-  installOnPrototype: (proto) => installManagedFormMembers(proto, makeResetCallback("value"), formStateRestoreCallback),
+  defaultPropName: "defaultValue",
+  installOnPrototype: (proto) => installManagedFormMembers(proto, "value", "defaultValue", makeResetCallback("value", "defaultValue"), formStateRestoreCallback),
   makeSyncDescriptor: (instance, internals) => () => createEffect(() => {
     const v = instance.value;
     internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
@@ -3507,7 +3540,8 @@ var formAssociatedCheckbox = () => makeFormAssociatedExtension({
   __kind: "form-associated-checkbox",
   name: "formAssociatedCheckbox",
   propName: "checked",
-  installOnPrototype: (proto) => installManagedFormMembers(proto, makeResetCallback("checked"), checkboxFormStateRestoreCallback),
+  defaultPropName: "defaultChecked",
+  installOnPrototype: (proto) => installManagedFormMembers(proto, "checked", "defaultChecked", makeResetCallback("checked", "defaultChecked"), checkboxFormStateRestoreCallback),
   makeSyncDescriptor: (instance, internals) => () => createEffect(() => {
     const checked = instance.checked;
     internals.setFormValue(checked ? instance.getAttribute("value") ?? "on" : null);
@@ -3640,6 +3674,7 @@ export {
   createComputed,
   createCollection,
   createCell,
+  configureHtmlSanitizer,
   bindVisible,
   bindText,
   bindStyle,

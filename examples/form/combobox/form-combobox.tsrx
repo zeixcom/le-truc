@@ -27,7 +27,7 @@
  * `options` list of visible buttons, so visibility here is driven by
  * `showPopup` alone.
  */
-import { createState, asString, defineMethod } from '@zeix/le-truc'
+import { createCell, createState, asString, defineMethod } from '@zeix/le-truc'
 import { FormListbox } from '../listbox/form-listbox.tsrx'
 
 export type FormComboboxOption = {
@@ -40,6 +40,8 @@ export const config = { formAssociated: true }
 export type FormComboboxProps = {
 	/** Current text input value. Updated on each `input` event. */
 	value: string
+	/** Number of characters in the current value (read-only, derived). */
+	readonly length: number
 	/** Helper text shown below the input. */
 	description: string
 	/** Clears the input and dispatches `input` and `change` events. */
@@ -67,6 +69,7 @@ export function FormCombobox(
 		options,
 		value = '',
 		description = '',
+		clearable = false,
 	}:
 		{
 			name: string
@@ -74,6 +77,7 @@ export function FormCombobox(
 			options: FormComboboxOption[]
 			value?: string
 			description?: string
+			clearable?: boolean
 		},
 )
 @{
@@ -81,10 +85,15 @@ export function FormCombobox(
 	const descriptionId = `${name}-description`;
 	const showPopup = createState(false);
 	const textbox = first('input', 'combobox input');
+	// Children-are-data (LT-112/113): the description is a writable prop
+	// (createCell) whose client-side seed is harvested from the owned
+	// paragraph's text content; consumers compose through the public prop.
+	const descriptionCell = createCell(description);
 
 	expose({
 		value: asString(''),
-		description: asString(''),
+		length: () => host.value.length,
+		description: descriptionCell,
 		clear: defineMethod(() => {
 			host.value = '';
 			textbox.value = '';
@@ -128,6 +137,15 @@ export function FormCombobox(
 							(listbox.querySelector('button[role="option"]') as HTMLButtonElement | null)?.focus();
 					}}
 				/>
+				@if (clearable) {
+					<button
+						type="button"
+						class="clear"
+						aria-label="Clear input"
+						hidden={() => host.value === ''}
+						onClick={() => host.clear()}
+					>✕</button>
+				}
 			</div>
 			<div
 				class="popup"
@@ -150,7 +168,12 @@ export function FormCombobox(
 				/>
 			</div>
 			@if (description) {
-				<p class="description" aria-live="polite" id={descriptionId}>{description}</p>
+				<p
+					class="description"
+					aria-live="polite"
+					id={descriptionId}
+					data-description={description}
+				>{descriptionCell}</p>
 			}
 			<p class="error" role="alert" aria-live="assertive">{host.validationMessage}</p>
 		</form-combobox>

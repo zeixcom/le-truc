@@ -5,36 +5,26 @@ let typeChecker
 
 // The migrated corpus (.tsrx components) is read from its GENERATED clients
 // in server/generated/tsrx/ — the plugin extracts the same declarations from
-// the generated defineComponent() shape (ADR 0023, LT-006). Their
-// hand-written .ts twins stay on disk as golden-test references but must not
-// produce duplicate declarations, hence the excludes. Run
-// `bun run scripts/build-tsrx.ts` (or build:docs) before `cem analyze` —
-// the generated output is gitignored.
+// the generated defineComponent() shape (ADR 0023, LT-006). Since the site
+// cutover (LT-092) the hand-written .ts twins are deleted per component, so
+// nearly all exclusions are gone — main.ts imports the generated clients
+// directly and every compiled component declares its tag exactly once.
+// The kept-twins list (basic-button + the four LT-092 compiler-gap stops)
+// stays excluded while their hand-written twins remain the site
+// implementation — NOTES.md has the details for each. Run
+// `bun run scripts/build-tsrx.ts` (or build:docs / build:examples:js, which
+// both sequence the compiler first) before `cem analyze` — the generated
+// output is gitignored.
 export default {
 	globs: ['examples/**/*.ts', 'server/generated/tsrx/*.client.ts'],
 	exclude: [
 		'**/*.spec.ts',
 		'**/*.test.ts',
-		'examples/basic/counter/basic-counter.ts',
 		'examples/basic/button/basic-button.ts',
-		'examples/basic/hello/basic-hello.ts',
+		'examples/basic/gauge/basic-gauge.ts',
 		'examples/basic/number/basic-number.ts',
 		'examples/basic/pluralize/basic-pluralize.ts',
-		'examples/basic/gauge/basic-gauge.ts',
-		'examples/module/tabgroup/module-tabgroup.ts',
-		'examples/module/list/module-list.ts',
-		'examples/form/textbox/form-textbox.ts',
-		'examples/form/checkbox/form-checkbox.ts',
-		'examples/form/combobox/form-combobox.ts',
-		'examples/form/inplace-edit/form-inplace-edit.ts',
-		'examples/form/listbox/form-listbox.ts',
 		'examples/form/radiogroup/form-radiogroup.ts',
-		'examples/form/spinbutton/form-spinbutton.ts',
-		'examples/form/colorgraph/form-colorgraph.ts',
-		'examples/form/tokenbox/form-tokenbox.ts',
-		'examples/card/collapsible/card-collapsible.ts',
-		'examples/card/colorscale/card-colorscale.ts',
-		'examples/card/mediaqueries/card-mediaqueries.ts',
 	],
 	outdir: '.',
 	plugins: [leTrucPlugin(() => typeChecker)],

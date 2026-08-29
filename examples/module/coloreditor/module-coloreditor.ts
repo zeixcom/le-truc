@@ -1,3 +1,4 @@
+import { asString, bindProperty, defineComponent } from '@zeix/le-truc'
 import {
 	colorsNamed,
 	converter,
@@ -6,7 +7,6 @@ import {
 	nearest,
 	type Oklch,
 } from 'culori/fn'
-import { asString, defineComponent } from '../../../index'
 import { asOklch } from '../../_common/asOklch'
 import { getStepColor } from '../../_common/getStepColor'
 
@@ -46,7 +46,7 @@ const oklchConverter = converter('oklch')
  **/
 export default defineComponent<ModuleColoreditorProps>(
 	'module-coloreditor',
-	({ expose, first, host, on, pass }) => {
+	({ expose, first, host, on, pass, watch }) => {
 		expose({
 			value: asOklch(),
 			label: asString('Blue'),
@@ -70,8 +70,18 @@ export default defineComponent<ModuleColoreditorProps>(
 					host.label = v
 				},
 			},
-			description: () => `Nearest named CSS color: ${host.nearest}`,
 		})
+		// LT-113: compose through the public prop — form-textbox exposes a
+		// writable description. Per the LT-091 write-ownership rules a
+		// parent-derived/child-owned value is PUSHED with watch() +
+		// bindProperty() (a property WRITE flows through the exposed Slot
+		// into the cell the remaining-count derivation reads); a getter-only
+		// pass would swap the Slot's backing and leave that derivation on
+		// the stale internal cell.
+		watch(
+			() => `Nearest named CSS color: ${host.nearest}`,
+			bindProperty(textbox, 'description'),
+		)
 
 		const colorgraph = first(
 			'form-colorgraph',

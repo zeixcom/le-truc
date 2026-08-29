@@ -14,7 +14,7 @@
  * `form-inplace-edit.spec.ts`'s `.not.toBeAttached()` assertions describe
  * the hand-written version's behavior, not this one).
  */
-import { asBoolean, asString } from '@zeix/le-truc'
+import { asBoolean, asString, bindProperty } from '@zeix/le-truc'
 import { FormTextbox } from '../textbox/form-textbox.tsrx'
 
 export const config = { formAssociated: true };
@@ -54,9 +54,14 @@ export function FormInplaceEdit(
 		},
 )
 @{
+	const textEl = first('span', 'display text')
 	expose({
 		editing: asBoolean(false),
-		value: asString(''),
+		// Children-are-data (LT-112): the initial value is harvested from
+		// the owned .text span's text content (the hand-written twin's
+		// contract); the host attribute remains a Parser-level override.
+		// Optional chaining keeps the server-side ref shim safe.
+		value: asString(textEl?.textContent ?? ''),
 	});
 
 	// Retired from `onFocusout`/`onKeydown` JSX attributes on `.edit` to bare
@@ -81,26 +86,38 @@ export function FormInplaceEdit(
 		} else host.editing = false;
 	});
 
+	// The composed textbox owns its value Slot — pushing the display value
+	// down via a getter-only truc:pass would make the textbox's own
+	// `host.value = input.value` write throw "Signal is read-only" (the
+	// LT-091 form-colorgraph finding, ratified as the host-profile pattern:
+	// child-writable/parent-derived compositions use watch() + bindProperty()
+	// + commit-on-change instead). The Enter/accept paths below commit by
+	// reading textbox.value directly.
+	watch(() => host.value, bindProperty(textbox, 'value'))
+
+	// Reflect editing onto the host attribute — the twin did this and the
+	// component's own CSS (&[editing]) and consumer specs key on it.
+	watch(() => host.editing, editing => {
+		host.toggleAttribute('editing', editing)
+	})
+
 	<>
 		<form-inplace-edit {name} {value} editing={initialEditing}>
 			<span
 				class="text"
 				hidden={() => host.editing}
 				onDblclick={() => {
-					if (host.disabled) return;
-					host.editing = true;
-					const editInput = textbox.querySelector('input');
-					editInput?.focus();
-					editInput?.select();
+					if (host.disabled) return
+					host.editing = true
+					const editInput = textbox.querySelector('input')
+					editInput?.focus()
+					editInput?.select()
 				}}
 			>{() => host.value}</span>
 			<div class="edit" hidden={() => !host.editing}>
-				<FormTextbox
-					name={`${name}-edit`}
-					label="Edit"
-					ref={textbox}
-					truc:pass={{ value: () => host.value }}
-				/>
+				{/* name="" keeps the composed textbox OUT of FormData (the
+				    colorgraph precedent) — the host alone submits `name` */}
+				<FormTextbox name="" label="Edit" ref={textbox} />
 			</div>
 			<button
 				type="button"

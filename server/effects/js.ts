@@ -1,4 +1,4 @@
-import { ASSETS_DIR, TS_FILE, TSRX_TEST_FILE } from '../config'
+import { ASSETS_DIR, TS_FILE } from '../config'
 import {
 	componentScripts,
 	docsScripts,
@@ -35,7 +35,6 @@ export const jsEffect = (onRebuild?: () => void) =>
 				'bun',
 				'build',
 				TS_FILE,
-				TSRX_TEST_FILE,
 				'--outdir',
 				`${ASSETS_DIR}/`,
 				'--minify',

@@ -1,4 +1,4 @@
-import { createCell, createTask, defineComponent, untrack } from '../../../index'
+import { createCell, createTask, defineComponent, untrack } from '@zeix/le-truc'
 
 /**
  * Teaching component for the "Async State" guide section.

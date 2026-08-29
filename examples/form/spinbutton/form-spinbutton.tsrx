@@ -120,13 +120,21 @@ export function FormSpinbutton(
 	const input = first('input', 'number input')
 
 	expose({
-		value: asNumber(0),
-		min: asNumber(0),
-		max: asNumber(100),
-		step: asNumber(1),
-		bigStep: asNumber(10),
-		stepDown: defineMethod((big = false) => {
-			const isInteger = Number.isInteger(host.step)
+		// Children-are-data (LT-112): each Parser reads the HOST attribute
+		// first (its own contract), then falls back to the owned input's
+		// attribute, then the plain default — the hand-written twin's exact
+		// precedence ("host attribute wins over the nested input's own
+		// attribute"). The fallback itself re-parses the input's string so
+		// non-numeric values (step="any") degrade to the default instead of
+		// NaN. Page authors carry the data on the input; the host attribute
+		// stays a legitimate override (form-colorgraph sets per-axis bounds
+		// on the composed host).
+		value: asNumber(asNumber(0)(input.value)),
+		min: asNumber(asNumber(0)(input.min)),
+		max: asNumber(asNumber(100)(input.max)),
+		step: asNumber(asNumber(1)(input.step)),
+		bigStep: asNumber(asNumber(1)(input.step) * 10 || 10),
+		stepDown: defineMethod((big = false) => {			const isInteger = Number.isInteger(host.step)
 			const decimals = isInteger ? 0 : (String(host.step).split('.')[1] ?? '').length
 			const delta = big ? host.bigStep : host.step
 			const clamped = Math.min(
@@ -163,9 +171,26 @@ export function FormSpinbutton(
 			if (host.checkValidity())
 				host.dispatchEvent(new Event('change', { bubbles: true }))
 			else host.value = prev
-			relayValidity(internals, input)
-		}),
+				relayValidity(internals, input)
+			}),
 	})
+
+	// Ported from the hand-written twin (LT-092 cutover): external writes to
+	// the exposed bounds/value (e.g. module-catalog lowering `max` after an
+	// availability check) must reach the native input AND re-relay validity —
+	// the ADR 0020 rangeOverflow+customError composition depends on the relay
+	// firing synchronously on the write, BEFORE the composer's
+	// setCustomValidity() merges on top. Property writes (not attribute) keep
+	// the live input value in sync for controlled usage too.
+	watch(
+		() => ({ value: host.value, min: host.min, max: host.max }),
+		({ value, min, max }) => {
+			input.value = String(value)
+			input.min = String(min)
+			input.max = String(max)
+			relayValidity(internals, input)
+		},
+	)
 
 	<>
 		<form-spinbutton

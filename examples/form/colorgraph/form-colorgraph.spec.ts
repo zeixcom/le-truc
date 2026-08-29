@@ -1,24 +1,21 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
 import { converter, formatCss, type Oklch } from 'culori'
-// The COMPILED component's server render, executed in the spec process —
-// the same generated module the docs build serves (LT-091).
-import { renderFormColorgraph } from '../../../server/generated/tsrx/form-colorgraph.server'
 
 /*
- * FORM-COLORGRAPH COMPONENT TESTS — against the compiled `.tsrx` component.
+ * FORM-COLORGRAPH COMPONENT TESTS — against the compiled `.tsrx` component
+ * served from the plain /test page (LT-092 site cutover).
  *
- * The docs site still mounts the hand-written implementation for site pages
- * (examples/main.ts), so this spec route-intercepts its test URL and serves
- * the component's GENERATED server HTML with the compiled clients attached
- * (examples/tsrx-test.ts → /assets/tsrx-test.js). That is the surface where
- * LT-090's dropped compose-site class shipped invisible: the unit suite
- * asserted client codegen strings, never real DOM, so the required
- * `first('form-spinbutton.lightness')` queries matched nothing and the
- * component threw at activation. The activation test below is the direct
- * regression guard for exactly that failure mode.
+ * LT-091 originally route-intercepted this URL to serve the generated server
+ * HTML with a dedicated second bundle (examples/tsrx-test.ts →
+ * /assets/tsrx-test.js) — the isolation existed only to keep the compiled and
+ * hand-written definitions of the tag out of one document. Since the cutover,
+ * examples/main.ts imports the generated clients directly, so main.js IS the
+ * compiled client and the plain page exercises the same surface without
+ * interception. That page-level surface is where LT-090's dropped compose-site
+ * class shipped invisible: the unit suite asserted client codegen strings,
+ * never real DOM, so the required `first('form-spinbutton.lightness')` queries
+ * matched nothing and the component threw at activation. The activation test
+ * below is the direct regression guard for exactly that failure mode.
  *
  * Test coverage:
  * - Activation: the compiled factory runs without MissingElementError and
@@ -41,35 +38,6 @@ const oklchConverter = converter('oklch')
 const parseOklch = (value: string): Oklch =>
 	oklchConverter(value) ?? { mode: 'oklch', l: 0.48, c: 0.23, h: 263 }
 
-// Playwright specs run under Node — fileURLToPath, not Bun's import.meta.dir.
-const SPEC_DIR = path.dirname(fileURLToPath(import.meta.url))
-const ROOT = path.resolve(SPEC_DIR, '../../..')
-const read = (rel: string): string =>
-	fs.readFileSync(path.join(ROOT, rel), 'utf8')
-
-const componentHtml = renderFormColorgraph({
-	name: 'color',
-	value: 'oklch(.48 .23 263)',
-})
-const componentCss = [
-	read('examples/form/colorgraph/form-colorgraph.css'),
-	read('examples/form/spinbutton/form-spinbutton.css'),
-].join('\n')
-
-const compiledTestPage = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>${componentCss}</style>
-</head>
-<body>
-<form>
-${componentHtml}
-</form>
-<script type="module" src="/assets/tsrx-test.js"></script>
-</body>
-</html>`
-
 type Colorgraph = HTMLElement & {
 	value: string
 	hue: number
@@ -81,12 +49,6 @@ type Colorgraph = HTMLElement & {
 
 test.describe('form-colorgraph component (compiled .tsrx)', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.route('**/test/form-colorgraph', route =>
-			route.fulfill({
-				contentType: 'text/html; charset=utf-8',
-				body: compiledTestPage,
-			}),
-		)
 		await page.goto('http://localhost:3000/test/form-colorgraph')
 		await page.waitForSelector('form-colorgraph')
 		// The module script defines the tag after parse; wait for the

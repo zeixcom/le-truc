@@ -3,7 +3,7 @@ import {
 	bindText,
 	bindVisible,
 	defineComponent,
-} from '../../../index'
+} from '@zeix/le-truc'
 import { getLocale } from '../../_common/getLocale'
 
 export type BasicPluralizeProps = {

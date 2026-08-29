@@ -5,7 +5,7 @@ import {
 	bindStyle,
 	defineComponent,
 	observedAttributes,
-} from '../../../index'
+} from '@zeix/le-truc'
 
 export type BasicGaugeProps = {
 	/**

@@ -1,4 +1,4 @@
-import { createContext, createSensor, defineComponent } from '../../../index'
+import { createContext, createSensor, defineComponent } from '@zeix/le-truc'
 
 export type ContextMediaMotion = 'no-preference' | 'reduce'
 export type ContextMediaTheme = 'light' | 'dark'

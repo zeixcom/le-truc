@@ -112,8 +112,16 @@ export function FormTextbox(
 )
 @{
 	const length = createCell(value.length);
-	const descriptionCell = deriveCell(() => {
-		const template = description;
+	// LT-113: `description` is a writable prop (createCell) — consumers own
+	// the message (module-coloreditor passes its nearest-named-color line
+	// through it). The seed is the render arg, harvested client-side from
+	// the owned paragraph's data-remaining attribute. The remaining-count is
+	// a display DERIVATION over it (template + maxlength), not the prop
+	// itself: el.description holds the template string ("{n} characters
+	// remaining"), the paragraph shows the substituted text.
+	const descriptionCell = createCell(description);
+	const remainingCount = deriveCell(() => {
+		const template = descriptionCell.get();
 		return Number(maxlength) > 0 && template.includes('{n}')
 			? template.replace('{n}', String(Number(maxlength) - length.get()))
 			: template;
@@ -122,7 +130,7 @@ export function FormTextbox(
 	expose({
 		value: asString(''),
 		length: length.get,
-		description: descriptionCell.get,
+		description: descriptionCell,
 		clear: defineMethod(() => {
 			host.value = ''
 			input.value = ''
@@ -207,7 +215,7 @@ export function FormTextbox(
 				</p>
 			}
 			@if (description) {
-				<p class="description" aria-live="polite" id={descriptionId} data-remaining={description}>{descriptionCell}</p>
+				<p class="description" aria-live="polite" id={descriptionId} data-remaining={description}>{remainingCount}</p>
 			}
 		</form-textbox>
 

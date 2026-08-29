@@ -1,26 +1,44 @@
+// Site cutover (LT-092): every migrated component mounts its COMPILED client
+// from server/generated/tsrx (gitignored build output — scripts/build-tsrx.ts
+// regenerates it; build:examples:js runs that compiler step before bundling,
+// and server/build.ts sequences the tsrx effect in phase 1 ahead of the js
+// bundle for the same reason). The hand-written .ts twins are deleted per the
+// card-blogpost/card-callout precedent.
+// basic-button stays on its hand-written twin (LT-112): the owner-ratified
+// contract harvests label/badge/disabled from the owned light-DOM children,
+// and .tsrx cannot express a template-less enhancer yet — see NOTES.md.
 import './basic/button/basic-button.ts'
-import './basic/counter/basic-counter.ts'
+import '../server/generated/tsrx/basic-counter.client.ts'
+// basic-gauge, basic-number and basic-pluralize stay on their hand-written
+// twins (LT-092): compiler gaps make their compiled halves regress behavior
+// the specs pin — see NOTES.md (root signal text child never bound
+// client-side; arg→DOM substitution reads attributes via an illegal root
+// self-query, freezing reactivity). Revisit after those gaps close.
 import './basic/gauge/basic-gauge.ts'
-import './basic/hello/basic-hello.ts'
+import '../server/generated/tsrx/basic-hello.client.ts'
 import './basic/number/basic-number.ts'
 import './basic/pluralize/basic-pluralize.ts'
 import './card/blogmeta/card-blogmeta.ts'
-import './card/collapsible/card-collapsible.ts'
-import './card/colorscale/card-colorscale.ts'
-import './card/mediaqueries/card-mediaqueries.ts'
+import '../server/generated/tsrx/card-collapsible.client.ts'
+import '../server/generated/tsrx/card-colorscale.client.ts'
+import '../server/generated/tsrx/card-mediaqueries.client.ts'
 import './context/media/context-media.ts'
 import './docs/lifecycle/docs-lifecycle.ts'
 import './docs/reconcile/docs-reconcile.ts'
 import './docs/task-states/docs-task-states.ts'
-import './form/checkbox/form-checkbox.ts'
-import './form/colorgraph/form-colorgraph.ts'
-import './form/combobox/form-combobox.ts'
-import './form/inplace-edit/form-inplace-edit.ts'
-import './form/listbox/form-listbox.ts'
+import '../server/generated/tsrx/form-checkbox.client.ts'
+import '../server/generated/tsrx/form-colorgraph.client.ts'
+import '../server/generated/tsrx/form-combobox.client.ts'
+import '../server/generated/tsrx/form-inplace-edit.client.ts'
+import '../server/generated/tsrx/form-listbox.client.ts'
+// form-radiogroup stays on its hand-written twin (LT-092): the compiled
+// loop body's checked thunk lowers to bindAttribute, and the native
+// dirty-checkedness divergence breaks mutual exclusion after first
+// interaction — see NOTES.md.
 import './form/radiogroup/form-radiogroup.ts'
-import './form/spinbutton/form-spinbutton.ts'
-import './form/textbox/form-textbox.ts'
-import './form/tokenbox/form-tokenbox.ts'
+import '../server/generated/tsrx/form-spinbutton.client.ts'
+import '../server/generated/tsrx/form-textbox.client.ts'
+import '../server/generated/tsrx/form-tokenbox.client.ts'
 import './module/calctable/module-calctable.ts'
 import './module/carousel/module-carousel.ts'
 import './module/catalog/module-catalog.ts'
@@ -30,12 +48,12 @@ import './module/coloreditor/module-coloreditor.ts'
 import './module/colorinfo/module-colorinfo.ts'
 import './module/dialog/module-dialog.ts'
 import './module/lazyload/module-lazyload.ts'
-import './module/list/module-list.ts'
+import '../server/generated/tsrx/module-list.client.ts'
 import './module/listnav/module-listnav.ts'
 import './module/pagination/module-pagination.ts'
 import './module/scrollarea/module-scrollarea.ts'
 import './module/splitview/module-splitview.ts'
-import './module/tabgroup/module-tabgroup.ts'
+import '../server/generated/tsrx/module-tabgroup.client.ts'
 import './module/ticker/module-ticker.ts'
 import './module/todo/module-todo.ts'
 import './test/audit/test-audit.ts'

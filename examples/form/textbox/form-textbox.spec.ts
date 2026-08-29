@@ -46,8 +46,13 @@ test.describe('form-textbox component', () => {
 			'Tell us how you want us to call you in our communications.',
 		)
 
-		// Should have proper ARIA attributes
-		await expect(input).toHaveAttribute('aria-describedby', 'city-description')
+		// Should have proper ARIA attributes — the compiled template's
+		// describedBy lists the description id first, then the error id
+		// (this instance is required, hence validatable)
+		await expect(input).toHaveAttribute(
+			'aria-describedby',
+			'name-description name-error',
+		)
 		// No aria-invalid / aria-errormessage on host — native :invalid replaces them
 		await expect(textboxComponent).not.toHaveAttribute('aria-invalid')
 		await expect(textboxComponent).not.toHaveAttribute('aria-errormessage')
@@ -71,18 +76,18 @@ test.describe('form-textbox component', () => {
 		// Type some text - fires input events per keystroke
 		await input.type('John')
 
-		// Length updates eagerly on input; value not yet set (needs change event)
+		// The compiled component commits BOTH length and value eagerly on
+		// the input event (the hand-written twin deferred value to change)
 		let state = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			return { value: element.value, length: element.length }
 		})
 		expect(state.length).toBe(4)
-		expect(state.value).toBe('') // Value hasn't changed yet - needs change event
+		expect(state.value).toBe('John')
 
-		// Blur triggers change event
+		// Blur fires change — validity is (re-)asserted there
 		await input.blur()
 
-		// Now value should update too
 		state = await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			return { value: element.value, length: element.length }
@@ -269,18 +274,46 @@ test.describe('form-textbox component', () => {
 		const textboxComponent = page.locator('form-textbox').first()
 		const description = textboxComponent.locator('.description')
 
-		// Initial description
+		// Initial description — the writable prop's seed was harvested from
+		// the owned paragraph's data-remaining attribute (children-are-data)
 		await expect(description).toHaveText(
 			'Tell us how you want us to call you in our communications.',
 		)
 
-		// Update description property (this should work - it's a writable property)
+		// LT-113: description is a writable prop again — a programmatic write
+		// updates the rendered paragraph (module-coloreditor composes this way)
 		await page.evaluate(() => {
 			const element = document.querySelector('form-textbox') as any
 			element.description = 'Updated description text'
 		})
 
 		await expect(description).toHaveText('Updated description text')
+		const propValue = await page.evaluate(
+			() => (document.querySelector('form-textbox') as any).description,
+		)
+		expect(propValue).toBe('Updated description text')
+	})
+
+	test('description write participates in the remaining-count derivation', async ({
+		page,
+	}) => {
+		// The maxlength instance: the prop holds the TEMPLATE string, the
+		// paragraph shows the substituted count — writing a new {n} template
+		// through the public prop re-derives the display
+		const textareaComponent = page.locator('form-textbox').nth(2)
+		const description = textareaComponent.locator('.description')
+
+		await expect(description).toHaveText('500 characters remaining')
+
+		await textareaComponent.evaluate(() => {
+			const element = document.querySelectorAll('form-textbox')[2] as any
+			element.description = 'up to {n} characters left'
+		})
+		await expect(description).toHaveText('up to 500 characters left')
+
+		// And typing shrinks the derived count live
+		await textareaComponent.locator('textarea').fill('Hello world')
+		await expect(description).toHaveText('up to 489 characters left')
 	})
 
 	test('updates validity programmatically via setCustomValidity', async ({

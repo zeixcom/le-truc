@@ -4,7 +4,7 @@ import {
 	each,
 	type FormAssociatedElement,
 	formAssociated,
-} from '../../../index'
+} from '@zeix/le-truc'
 
 export type FormRadiogroupProps = {
 	/** Value of the currently selected radio button. */

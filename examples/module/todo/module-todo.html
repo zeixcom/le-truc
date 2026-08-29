@@ -29,8 +29,19 @@
 			</button>
 			<form-checkbox class="todo">
 				<input type="checkbox" class="visually-hidden">
+				<!-- Compiled form-inplace-edit (LT-092 cutover): span.text +
+				     div.edit > form-textbox(name="") + toggle button; the label
+				     text arrives via module-todo's pass() into host.value -->
 				<form-inplace-edit>
-					<label class="label text"><slot></slot></label>
+					<label class="label"><span class="text"><slot></slot></span></label>
+					<div class="edit" hidden>
+						<form-textbox name="">
+							<label for="-input">Edit</label>
+							<div class="input">
+								<input type="text" id="-input" autocomplete="off">
+							</div>
+						</form-textbox>
+					</div>
 					<button type="button" aria-label="Edit">✎</button>
 				</form-inplace-edit>
 			</form-checkbox>

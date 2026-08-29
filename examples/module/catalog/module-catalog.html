@@ -1,7 +1,10 @@
 <module-catalog id="default-test">
 	<header>
 		<p>Shop</p>
-		<basic-button disabled>
+		<!-- basic-button harvests label/badge/disabled from these children
+		     (LT-112 twin contract); module-catalog drives disabled/badge via
+		     pass() -->
+		<basic-button>
 			<button type="button" disabled>
 				<span class="label">🛒 Shopping Cart</span>
 				<span class="badge"></span>
@@ -11,75 +14,63 @@
 	<ul>
 		<li>
 			<p>Product 1</p>
-			<form-spinbutton data-product="product-1">
+			<!-- form-spinbutton harvests value/min/max/step from the owned
+			     input (LT-112); data-product is module-catalog's boundary
+			     attribute -->
+			<form-spinbutton data-product="product-1" name="product-1">
 				<fieldset>
-					<button type="button" class="decrement" aria-label="Decrement" hidden>
-						−
-					</button>
-					<input
-						id="product-1-quantity-input"
-						type="number"
-						class="value"
-						value="0"
-						min="0"
-						max="10"
-						aria-label="Quantity"
-						hidden
-					>
-					<button type="button" class="increment" aria-label="Increment">
-						<span class="zero">Add to Cart</span>
-						<span class="other" hidden>+</span>
-					</button>
+					<div class="input">
+						<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
+						<input
+							id="product-1-quantity-input"
+							type="number"
+							value="0"
+							min="0"
+							max="10"
+							step="1"
+						>
+						<button type="button" class="increment" aria-label="Increment">+</button>
+					</div>
 				</fieldset>
 				<p class="error" role="alert" aria-live="assertive"></p>
 			</form-spinbutton>
 		</li>
 		<li>
 			<p>Product 2 <small>(reduced stock on checkout)</small></p>
-			<form-spinbutton data-product="product-2">
+			<form-spinbutton data-product="product-2" name="product-2">
 				<fieldset>
-					<button type="button" class="decrement" aria-label="Decrement" hidden>
-						−
-					</button>
-					<input
-						id="product-2-quantity-input"
-						type="number"
-						class="value"
-						value="0"
-						min="0"
-						max="5"
-						aria-label="Quantity"
-						hidden
-					>
-					<button type="button" class="increment" aria-label="Increment">
-						<span class="zero">Add to Cart</span>
-						<span class="other" hidden>+</span>
-					</button>
+					<div class="input">
+						<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
+						<input
+							id="product-2-quantity-input"
+							type="number"
+							value="0"
+							min="0"
+							max="5"
+							step="1"
+						>
+						<button type="button" class="increment" aria-label="Increment">+</button>
+					</div>
 				</fieldset>
 				<p class="error" role="alert" aria-live="assertive"></p>
 			</form-spinbutton>
 		</li>
 		<li>
 			<p>Product 3 <small>(sold out on checkout)</small></p>
-			<form-spinbutton data-product="product-3">
+			<form-spinbutton data-product="product-3" name="product-3">
 				<fieldset>
-					<button type="button" class="decrement" aria-label="Decrement" hidden>
-						−
-					</button>
-					<input
-						id="product-3-quantity-input"
-						type="number"
-						class="value"
-						value="0"
-						min="0"
-						max="20"
-						aria-label="Quantity"
-						hidden
-					>
-					<button type="button" class="increment" aria-label="Increment">
-						<span class="zero">Add to Cart</span>
-						<span class="other" hidden>+</span>
-					</button>
+					<div class="input">
+						<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
+						<input
+							id="product-3-quantity-input"
+							type="number"
+							value="0"
+							min="0"
+							max="20"
+							step="1"
+						>
+						<button type="button" class="increment" aria-label="Increment">+</button>
+					</div>
 				</fieldset>
 				<p class="error" role="alert" aria-live="assertive"></p>
 			</form-spinbutton>

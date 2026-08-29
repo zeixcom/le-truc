@@ -27,16 +27,19 @@ const registry = new Set<string>([
 	'module-list',
 	'basic-button',
 ])
-// Child-module map: migrated tags → generated clients, hand-written tags →
-// their example sources (the child authors its element interface inline via
-// declare global; the generated client side-effect-imports the module).
+// Child-module map: migrated tags → generated clients. This fixture models a
+// FULLY-CUT corpus (every tag served from its generated client) so the
+// emit-then-check typecheck resolves; the live pipeline (server/effects/tsrx)
+// additionally keeps hand-written twins mapped to their source modules while
+// they remain mounted (LT-112 dual-state rule) — basic-button is such a tag
+// today, so real module-list.client.ts imports the twin, not the client.
 const childImports = new Map<string, string>([
 	['basic-counter', './basic-counter.client'],
 	['module-tabgroup', './module-tabgroup.client'],
 	['form-textbox', './form-textbox.client'],
 	['form-checkbox', './form-checkbox.client'],
 	['module-list', './module-list.client'],
-	['basic-button', '../../../examples/basic/button/basic-button'],
+	['basic-button', './basic-button.client'],
 ])
 const SOURCES = [
 	'examples/basic/counter/basic-counter.tsrx',
@@ -192,20 +195,23 @@ describe('client golden — convergence with the hand-written trio', () => {
 		// via arg-substitution rather than a direct site — ADR 0023 sub-design 12)
 		expect(code).toContain('const p2 = first(\'p[role="alert"]\')')
 		expect(code).toContain('watch(() => host.validationMessage, bindText(p2))')
-		// description: a deriveCell harvested via arg-substitution (LT-024) —
-		// the raw template is traced to the paragraph's own data-remaining
-		// attribute (not the root), and `maxlength` to the input's plain
-		// attribute — both descendant sites, not the root's own mirror.
+		// description (LT-113): a WRITABLE createCell whose seed is harvested
+		// from the paragraph's own data-remaining attribute (arg-substitution),
+		// with the remaining-count as a separate deriveCell display derivation
+		// over it — maxlength traced to the input's plain attribute, a
+		// descendant site. The paragraph binds the DERIVATION; a prop write
+		// flows through the exposed Slot into the cell and re-derives.
 		expect(code).toContain('const p = first(\'p[class="description"]\')')
-		expect(code).toContain('const descriptionCell = deriveCell(() => {')
 		expect(code).toContain(
-			"const template = (p?.getAttribute('data-remaining') ?? '');",
+			"const descriptionCell = createCell((p?.getAttribute('data-remaining') ?? ''))",
 		)
+		expect(code).toContain('const remainingCount = deriveCell(() => {')
 		expect(code).toContain(
 			"Number((input.getAttribute('maxlength') ?? '')) > 0",
 		)
 		expect(code).toContain('if (p) {')
-		expect(code).toContain('watch(descriptionCell, bindText(p))')
+		expect(code).toContain('watch(remainingCount, bindText(p))')
+		expect(code).toContain('description: descriptionCell,')
 	})
 
 	test('form-checkbox: formAssociatedCheckbox leads, checked mirror, return-update handler', () => {

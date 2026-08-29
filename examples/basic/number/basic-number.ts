@@ -1,4 +1,4 @@
-import { asNumber, bindText, defineComponent } from '../../../index'
+import { asNumber, bindText, defineComponent } from '@zeix/le-truc'
 import { getLocale } from '../../_common/getLocale'
 import { getNumberFormatter } from '../../_common/getNumberFormatter'
 

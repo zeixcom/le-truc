@@ -9,7 +9,7 @@ import {
 	each,
 	query,
 	queryAll,
-} from '../../../index'
+} from '@zeix/le-truc'
 
 /* === Fantasy symbol generator === */
 

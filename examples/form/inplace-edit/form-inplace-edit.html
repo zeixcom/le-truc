@@ -1,4 +1,15 @@
+<!-- Children-are-data (LT-112): the initial value is the owned .text
+     span's content; the compiled template owns the edit form-textbox (with
+     the textbox's own compiled structure) and the toggle button. -->
 <form-inplace-edit name="label">
 	<span class="text">Edit me</span>
+	<div class="edit" hidden>
+		<form-textbox name="">
+			<label for="-input">Edit</label>
+			<div class="input">
+				<input type="text" id="-input" autocomplete="off">
+			</div>
+		</form-textbox>
+	</div>
 	<button type="button" aria-label="Edit">✎</button>
 </form-inplace-edit>

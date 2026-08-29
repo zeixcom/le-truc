@@ -16,6 +16,20 @@
 		"isolatedModules": true,
 		"resolveJsonModule": true,
 		"types": ["bun", "node"],
+		// Resolve the package's own name to SOURCE (index.ts) for every
+		// in-repo consumer — tsc, bun's runtime, and critically `bun build`,
+		// whose browser-target resolution would otherwise follow the exports
+		// map's "default" condition into the PREBUILT index.js (DEV_MODE
+		// constant-folded to false), silently stripping the ADR 0022 debug
+		// instrumentation from the examples bundle. Also keeps hand-written
+		// examples and the TSRX compiler's generated clients on ONE module
+		// instance of the library inside the bundle (two specifiers —
+		// '@zeix/le-truc' and a relative index path — duplicate it, which
+		// splits the library's internal WeakMaps and breaks pass() across
+		// the boundary).
+		"paths": {
+			"@zeix/le-truc": ["./index.ts"],
+		},
 
 		// No emit — use tsconfig.build.json for declarations
 		"noEmit": true,

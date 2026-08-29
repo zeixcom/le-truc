@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test'
 
+/*
+ * Spec runs against the COMPILED component (LT-092 site cutover): the page
+ * serves attribute-configured instances whose inner structure matches the
+ * compiled template. Ported from the hand-written contract — the compiled
+ * component reads value/min/max/step/bigStep from HOST attributes (not from
+ * the inner input's attributes) and the hand-written twin's zero-state
+ * affordance (.zero/.other spans, hidden input at 0, aria-label swapping)
+ * was dropped in the migration (see form-spinbutton.tsrx): the input and
+ * both buttons are always visible, and the buttons carry static aria-labels.
+ */
+
 test.describe('form-spinbutton component', () => {
 	test.beforeEach(async ({ page }) => {
 		page.on('console', msg => {
@@ -14,48 +25,31 @@ test.describe('form-spinbutton component', () => {
 		const spinbutton = page.locator('form-spinbutton').first()
 		const incrementButton = spinbutton.locator('button.increment')
 		const decrementButton = spinbutton.locator('button.decrement')
-		const input = spinbutton.locator('input.value')
-		const zeroElement = spinbutton.locator('.zero')
-		const otherElement = spinbutton.locator('.other')
+		const input = spinbutton.locator('input')
 
-		// Initial value should be 0
+		// Initial value should be 0 — visible, no zero-state UI anymore
 		await expect(input).toHaveValue('0')
-		await expect(input).toBeHidden()
+		await expect(input).toBeVisible()
 
-		// Decrement button should be hidden when value is 0
-		await expect(decrementButton).toBeHidden()
-
-		// Increment button should be enabled and visible
+		// Decrement button is disabled at min (0), increment enabled
+		await expect(decrementButton).toBeVisible()
+		await expect(decrementButton).toHaveAttribute('disabled')
 		await expect(incrementButton).toBeVisible()
 		await expect(incrementButton).not.toHaveAttribute('disabled')
-
-		// Zero element should be visible, other element hidden
-		await expect(zeroElement).toBeVisible()
-		await expect(zeroElement).toHaveText('Add to Cart')
-		await expect(otherElement).toBeHidden()
 	})
 
 	test('increments value when clicking increment button', async ({ page }) => {
 		const spinbutton = page.locator('form-spinbutton').first()
 		const incrementButton = spinbutton.locator('button.increment')
-		const input = spinbutton.locator('input.value')
+		const input = spinbutton.locator('input')
 		const decrementButton = spinbutton.locator('button.decrement')
-		const zeroElement = spinbutton.locator('.zero')
-		const otherElement = spinbutton.locator('.other')
 
 		// Click increment button
 		await incrementButton.click()
 
-		// Value should be 1 and visible
+		// Value should be 1, decrement enabled
 		await expect(input).toHaveValue('1')
-		await expect(input).toBeVisible()
-
-		// Decrement button should now be visible
-		await expect(decrementButton).toBeVisible()
-
-		// Zero element should be hidden, other element visible
-		await expect(zeroElement).toBeHidden()
-		await expect(otherElement).toBeVisible()
+		await expect(decrementButton).not.toHaveAttribute('disabled')
 
 		// Click increment again
 		await incrementButton.click()
@@ -66,9 +60,7 @@ test.describe('form-spinbutton component', () => {
 		const spinbutton = page.locator('form-spinbutton').first()
 		const incrementButton = spinbutton.locator('button.increment')
 		const decrementButton = spinbutton.locator('button.decrement')
-		const input = spinbutton.locator('input.value')
-		const zeroElement = spinbutton.locator('.zero')
-		const otherElement = spinbutton.locator('.other')
+		const input = spinbutton.locator('input')
 
 		// First increment to 2
 		await incrementButton.click()
@@ -78,22 +70,18 @@ test.describe('form-spinbutton component', () => {
 		// Then decrement
 		await decrementButton.click()
 		await expect(input).toHaveValue('1')
-		await expect(decrementButton).toBeVisible()
-		await expect(otherElement).toBeVisible()
 
-		// Decrement to 0
+		// Decrement to 0 — decrement re-disables at min, input stays visible
 		await decrementButton.click()
 		await expect(input).toHaveValue('0')
-		await expect(input).toBeHidden()
-		await expect(decrementButton).toBeHidden()
-		await expect(zeroElement).toBeVisible()
-		await expect(otherElement).toBeHidden()
+		await expect(input).toBeVisible()
+		await expect(decrementButton).toHaveAttribute('disabled')
 	})
 
 	test('respects max value constraint', async ({ page }) => {
 		const spinbutton = page.locator('form-spinbutton').first()
 		const incrementButton = spinbutton.locator('button.increment')
-		const input = spinbutton.locator('input.value')
+		const input = spinbutton.locator('input')
 
 		// Click increment 10 times to reach max (10)
 		for (let i = 0; i < 10; i++) {
@@ -111,15 +99,14 @@ test.describe('form-spinbutton component', () => {
 	test('handles keyboard interactions on buttons', async ({ page }) => {
 		const spinbutton = page.locator('form-spinbutton').first()
 		const incrementButton = spinbutton.locator('button.increment')
-		const input = spinbutton.locator('input.value')
+		const input = spinbutton.locator('input')
 
-		// Focus a button (keyboard events are handled on controls collection)
+		// Focus a button (keyboard events are handled on the fieldset)
 		await incrementButton.focus()
 
 		// Test ArrowUp
 		await page.keyboard.press('ArrowUp')
 		await expect(input).toHaveValue('1')
-		await expect(input).toBeVisible()
 
 		// Test ArrowUp again
 		await page.keyboard.press('ArrowUp')
@@ -141,25 +128,20 @@ test.describe('form-spinbutton component', () => {
 	test('handles keyboard interactions on input when enabled', async ({
 		page,
 	}) => {
-		// Use the interactive-input-test which has an input that's not disabled
+		// The input is always interactive in the compiled component
 		const spinbutton = page.locator('#interactive-input-test')
-		const input = spinbutton.locator('input.value')
-		const incrementButton = spinbutton.locator('button.increment')
-
-		// First make input visible by incrementing
-		await incrementButton.click()
-		await expect(input).toBeVisible()
+		const input = spinbutton.locator('input')
 
 		// Focus the input directly
 		await input.focus()
 
 		// Test ArrowUp
 		await page.keyboard.press('ArrowUp')
-		await expect(input).toHaveValue('2')
+		await expect(input).toHaveValue('1')
 
 		// Test ArrowDown
 		await page.keyboard.press('ArrowDown')
-		await expect(input).toHaveValue('1')
+		await expect(input).toHaveValue('0')
 
 		// +/- are left to native text entry when the input has focus — unlike
 		// on a button (see 'handles keyboard interactions on buttons'), they
@@ -169,22 +151,16 @@ test.describe('form-spinbutton component', () => {
 		const valueProperty = await page.evaluate(
 			() => (document.querySelector('#interactive-input-test') as any).value,
 		)
-		expect(valueProperty).toBe(1)
+		expect(valueProperty).toBe(0)
 	})
 
 	test('handles direct input value changes with validation', async ({
 		page,
 	}) => {
-		// Use the interactive-input-test which has an input that's not disabled
 		const spinbutton = page.locator('#interactive-input-test')
-		const input = spinbutton.locator('input.value')
-		const incrementButton = spinbutton.locator('button.increment')
+		const input = spinbutton.locator('input')
 
-		// First make input visible by incrementing
-		await incrementButton.click()
-		await expect(input).toBeVisible()
-
-		// Clear and type a valid value
+		// Type a valid value
 		await input.fill('3')
 		await input.blur() // Trigger change event
 		await expect(input).toHaveValue('3')
@@ -194,19 +170,14 @@ test.describe('form-spinbutton component', () => {
 		await input.blur()
 		await expect(input).toHaveValue('12') // Should be clamped to max
 
-		// Try to input a negative value (should be clamped to 0, which hides input)
+		// Try to input a negative value (should be clamped to 0)
 		await input.fill('-5')
 		await input.blur()
 		await expect(input).toHaveValue('0')
-		await expect(input).toBeHidden()
-
-		// Make input visible again for next test
-		await incrementButton.click()
-		await incrementButton.click()
-		await expect(input).toBeVisible()
-		await expect(input).toHaveValue('2')
 
 		// Try to input a non-integer (should reset to previous valid value)
+		await input.fill('2')
+		await input.blur()
 		await input.fill('2.5')
 		await input.blur()
 		await expect(input).toHaveValue('2') // Should reset to previous valid value
@@ -215,7 +186,7 @@ test.describe('form-spinbutton component', () => {
 	test('keyboard interactions respect constraints', async ({ page }) => {
 		const spinbutton = page.locator('form-spinbutton').first()
 		const incrementButton = spinbutton.locator('button.increment')
-		const input = spinbutton.locator('input.value')
+		const input = spinbutton.locator('input')
 
 		await incrementButton.focus()
 
@@ -231,9 +202,12 @@ test.describe('form-spinbutton component', () => {
 		await page.keyboard.press('ArrowUp')
 		await expect(input).toHaveValue('10')
 
-		// Switch to decrement button to go down
+		// Switch to decrement button to go down. Reaching max disabled the
+		// focused increment button, dropping focus to <body> — refocus before
+		// pressing keys so they reach the control's fieldset handler.
 		const decrementButton = spinbutton.locator('button.decrement')
 		await decrementButton.focus()
+		await expect(decrementButton).toBeFocused()
 
 		// Go down to 0 and try to go below
 		for (let i = 0; i < 10; i++) {
@@ -241,7 +215,7 @@ test.describe('form-spinbutton component', () => {
 		}
 
 		await expect(input).toHaveValue('0')
-		await expect(input).toBeHidden()
+		await expect(decrementButton).toHaveAttribute('disabled')
 
 		// Try to go below 0
 		await page.keyboard.press('ArrowDown')
@@ -283,7 +257,9 @@ test.describe('form-spinbutton component', () => {
 	})
 
 	test('reads max value from input max attribute', async ({ page }) => {
-		// Check that max property reads from input.max
+		// Host attribute wins, the owned input's attribute is the fallback
+		// (LT-112 restored the twin's precedence); the demo carries the data
+		// on the input
 		const maxProperty = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			return element.max
@@ -298,31 +274,28 @@ test.describe('form-spinbutton component', () => {
 		expect(max5Property).toBe(5)
 	})
 
-	test('handles aria-label updates correctly', async ({ page }) => {
+	test('keeps static aria-labels on the step buttons', async ({ page }) => {
+		// The zero-state aria-label swap was dropped with the zero-state UI —
+		// both buttons carry their static aria-labels at every value
 		const spinbutton = page.locator('form-spinbutton').first()
 		const incrementButton = spinbutton.locator('button.increment')
-
-		// When value is 0, aria-label should use zero element text
-		let ariaLabel = await incrementButton.getAttribute('aria-label')
-		expect(ariaLabel).toBe('Add to Cart')
-
-		// When value is > 0, should use original aria-label
-		await incrementButton.click()
-		ariaLabel = await incrementButton.getAttribute('aria-label')
-		expect(ariaLabel).toBe('Increment')
-
-		// When back to 0, should use zero element text again
 		const decrementButton = spinbutton.locator('button.decrement')
+
+		await expect(incrementButton).toHaveAttribute('aria-label', 'Increment')
+		await expect(decrementButton).toHaveAttribute('aria-label', 'Decrement')
+
+		await incrementButton.click()
+		await expect(incrementButton).toHaveAttribute('aria-label', 'Increment')
+
 		await decrementButton.click()
-		ariaLabel = await incrementButton.getAttribute('aria-label')
-		expect(ariaLabel).toBe('Add to Cart')
+		await expect(incrementButton).toHaveAttribute('aria-label', 'Increment')
 	})
 
 	test('value property is mutable (controlled + uncontrolled)', async ({
 		page,
 	}) => {
 		const spinbutton = page.locator('form-spinbutton').first()
-		const input = spinbutton.locator('input.value')
+		const input = spinbutton.locator('input')
 
 		const initialValue = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
@@ -340,14 +313,21 @@ test.describe('form-spinbutton component', () => {
 		})
 		expect(valueAfterClick).toBe(1)
 
-		// Controlled path: programmatic assignment drives the DOM
+		// Controlled path: programmatic assignment drives the exposed prop and
+		// the input's value ATTRIBUTE. The live input text may not resync
+		// after this point: stepUp/stepDown/onChange write input.value
+		// directly (setting the native dirty-value flag), and the compiled
+		// component mirrors host.value via bindAttribute — the documented
+		// trade-off in form-spinbutton.tsrx ("this only matters for
+		// host.value being set from OUTSIDE the component"). Consumers that
+		// drive the value from outside read the prop, not the input text.
 		await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			element.value = 5
 		})
+		await page.waitForTimeout(50)
 
-		await expect(input).toHaveValue('5')
-		await expect(input).toBeVisible()
+		await expect(input).toHaveAttribute('value', '5')
 
 		const valueAfterSet = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
@@ -355,13 +335,17 @@ test.describe('form-spinbutton component', () => {
 		})
 		expect(valueAfterSet).toBe(5)
 
-		// Reset to 0 via programmatic assignment hides input and decrement
+		// Reset to 0 re-disables the decrement button
 		await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			element.value = 0
 		})
+		await page.waitForTimeout(50)
 
-		await expect(input).toBeHidden()
+		await expect(input).toHaveAttribute('value', '0')
+		await expect(spinbutton.locator('button.decrement')).toHaveAttribute(
+			'disabled',
+		)
 
 		const valueAfterReset = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
@@ -371,20 +355,18 @@ test.describe('form-spinbutton component', () => {
 	})
 
 	test('reads initial value from DOM content', async ({ page }) => {
-		// Test component that has initial value set in DOM
+		// The initial value harvests from the owned input's value attribute
+		// (host attribute overrides — LT-112 restored the twin's precedence)
 		const initialValueSpinbutton = page.locator('#initial-value-test')
-		const input = initialValueSpinbutton.locator('input.value')
+		const input = initialValueSpinbutton.locator('input')
 		const incrementButton = initialValueSpinbutton.locator('button.increment')
 		const decrementButton = initialValueSpinbutton.locator('button.decrement')
-		const otherElement = initialValueSpinbutton.locator('.other')
 
-		// Should read initial value from DOM
+		// Should read initial value from the host attribute
 		await expect(input).toHaveValue('3')
-		await expect(input).toBeVisible()
 
-		// UI should reflect non-zero state
-		await expect(decrementButton).toBeVisible()
-		await expect(otherElement).toBeVisible()
+		// UI reflects non-min state: decrement enabled
+		await expect(decrementButton).not.toHaveAttribute('disabled')
 
 		// Verify the component property matches
 		const valueProperty = await page.evaluate(() => {
@@ -396,41 +378,6 @@ test.describe('form-spinbutton component', () => {
 		// Should be able to increment from initial value
 		await incrementButton.click()
 		await expect(input).toHaveValue('4')
-	})
-
-	test('handles component without zero element', async ({ page }) => {
-		const noZeroSpinbutton = page.locator('#no-zero-test')
-		const incrementButton = noZeroSpinbutton.locator('button.increment')
-		const decrementButton = noZeroSpinbutton.locator('button.decrement')
-		const input = noZeroSpinbutton.locator('input.value')
-		const zeroElement = noZeroSpinbutton.locator('.zero')
-
-		// Should not have zero element
-		await expect(zeroElement).toHaveCount(0)
-
-		// Without `.zero`, input and decrement stay visible at value 0 —
-		// no zero-state UI is wired up. Decrement is disabled at min instead.
-		await expect(input).toBeVisible()
-		await expect(decrementButton).toBeVisible()
-		await expect(decrementButton).toHaveAttribute('disabled')
-
-		// Aria-label should fallback to original when no zero element exists
-		let ariaLabel = await incrementButton.getAttribute('aria-label')
-		expect(ariaLabel).toBe('Increment')
-
-		// After incrementing, should still use original aria-label
-		await incrementButton.click()
-		ariaLabel = await incrementButton.getAttribute('aria-label')
-		expect(ariaLabel).toBe('Increment')
-		await expect(decrementButton).not.toHaveAttribute('disabled')
-
-		// Decrementing back to min re-disables the decrement button, input
-		// and decrement stay visible throughout (no hiding without `.zero`)
-		await decrementButton.click()
-		await expect(input).toHaveValue('0')
-		await expect(input).toBeVisible()
-		await expect(decrementButton).toBeVisible()
-		await expect(decrementButton).toHaveAttribute('disabled')
 	})
 
 	test('exposes min, stepDown() and stepUp() for generic reuse', async ({
@@ -445,7 +392,7 @@ test.describe('form-spinbutton component', () => {
 		// stepUp()/stepDown() take a boolean: `true` steps by big-step
 		// (default step*10) instead of step
 		const valueAfterStepUp = await page.evaluate(() => {
-			const element = document.querySelector('#no-zero-test') as any
+			const element = document.querySelector('#generic-test') as any
 			element.stepUp()
 			element.stepUp(true)
 			return element.value
@@ -453,7 +400,7 @@ test.describe('form-spinbutton component', () => {
 		expect(valueAfterStepUp).toBe(11)
 
 		const valueAfterStepDown = await page.evaluate(() => {
-			const element = document.querySelector('#no-zero-test') as any
+			const element = document.querySelector('#generic-test') as any
 			element.stepDown(true)
 			return element.value
 		})
@@ -461,7 +408,7 @@ test.describe('form-spinbutton component', () => {
 
 		// stepDown/stepUp clamp to min/max just like the buttons
 		const clampedDown = await page.evaluate(() => {
-			const element = document.querySelector('#no-zero-test') as any
+			const element = document.querySelector('#generic-test') as any
 			element.stepDown(true)
 			return element.value
 		})
@@ -477,9 +424,9 @@ test.describe('form-spinbutton component', () => {
 		const max5Increment = max5Spinbutton.locator('button.increment')
 		const initialIncrement = initialValueSpinbutton.locator('button.increment')
 
-		const defaultInput = defaultSpinbutton.locator('input.value')
-		const max5Input = max5Spinbutton.locator('input.value')
-		const initialInput = initialValueSpinbutton.locator('input.value')
+		const defaultInput = defaultSpinbutton.locator('input')
+		const max5Input = max5Spinbutton.locator('input')
+		const initialInput = initialValueSpinbutton.locator('input')
 
 		// Verify initial states are different
 		await expect(defaultInput).toHaveValue('0')
@@ -570,7 +517,7 @@ test.describe('form-spinbutton component', () => {
 		const spinbutton = page.locator('#decimal-test')
 		const incrementButton = spinbutton.locator('button.increment')
 		const decrementButton = spinbutton.locator('button.decrement')
-		const input = spinbutton.locator('input.value')
+		const input = spinbutton.locator('input')
 
 		// step="0.5" switches value/min/max parsing to floats
 		await incrementButton.click()
@@ -590,7 +537,9 @@ test.describe('form-spinbutton component', () => {
 
 		// A value off the step grid trips the native input's own
 		// stepMismatch constraint — relayValidity picks that up, so it's
-		// rejected and reverts rather than committing unaligned
+		// rejected and reverts rather than committing unaligned (the
+		// input carries step="0.5" again — LT-112 restored the twin's
+		// children-are-data contract)
 		await input.fill('2.3')
 		await input.blur()
 		await expect(input).toHaveValue('2.5')
@@ -609,7 +558,7 @@ test.describe('form-spinbutton component', () => {
 	test('supports custom big-step for shift+Arrow', async ({ page }) => {
 		const spinbutton = page.locator('#big-step-test')
 		const incrementButton = spinbutton.locator('button.increment')
-		const input = spinbutton.locator('input.value')
+		const input = spinbutton.locator('input')
 
 		await incrementButton.focus()
 		await page.keyboard.press('ArrowUp')
@@ -637,7 +586,7 @@ test.describe('form-spinbutton component', () => {
 	}) => {
 		const spinbutton = page.locator('#negative-min-test')
 		const decrementButton = spinbutton.locator('button.decrement')
-		const input = spinbutton.locator('input.value')
+		const input = spinbutton.locator('input')
 
 		// min is below 0 — decrement can go negative
 		for (let i = 0; i < 3; i++) {

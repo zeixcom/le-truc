@@ -1,4 +1,4 @@
-import { bindText, defineComponent } from '../../../index'
+import { bindText, defineComponent } from '@zeix/le-truc'
 
 export type TestDebugProps = {
 	count: number

@@ -53,7 +53,7 @@
     "build": "bun run build:prod && bunx tsc -p tsconfig.build.json && bun run lint",
     "build:docs": "bun ./server/build.ts",
     "build:docs:watch": "bun ./server/build.ts --watch",
-    "build:examples:js": "bun run build && bun build examples/main.ts examples/tsrx-test.ts --outdir docs/assets --target browser --define process.env.DEV_MODE='\"true\"' --minify",
+    "build:examples:js": "bun run build && bun run scripts/build-tsrx.ts && bun build examples/main.ts --outdir docs/assets --target browser --define process.env.DEV_MODE='\"true\"' --minify",
     "build:examples:css": "bun build examples/main.css --outdir docs/assets --target browser --minify",
     "build:examples": "bun run build:examples:js && bun run build:examples:css",
     "dev": "NODE_ENV=development bun --watch server/dev.ts",
