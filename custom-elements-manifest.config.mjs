@@ -9,21 +9,21 @@ let typeChecker
 // cutover (LT-092) the hand-written .ts twins are deleted per component, so
 // nearly all exclusions are gone — main.ts imports the generated clients
 // directly and every compiled component declares its tag exactly once.
-// The kept-twins list (basic-button + the four LT-092 compiler-gap stops)
-// stays excluded while their hand-written twins remain the site
-// implementation — NOTES.md has the details for each. Run
-// `bun run scripts/build-tsrx.ts` (or build:docs / build:examples:js, which
-// both sequence the compiler first) before `cem analyze` — the generated
-// output is gitignored.
+// The kept-twins list (basic-button + the two remaining LT-092/LT-116
+// compiler-gap stops) stays excluded while their hand-written twins remain
+// the site implementation — NOTES.md has the details for each. basic-gauge
+// and basic-pluralize were cut over in LT-115 (tracked arg reads + root
+// harvest routing) — their twins are deleted, the CEM reads the generated
+// clients. basic-number was cut over in LT-114.
+// Run `bun run scripts/build-tsrx.ts` (or build:docs / build:examples:js,
+// which both sequence the compiler first) before `cem analyze` — the
+// generated output is gitignored.
 export default {
 	globs: ['examples/**/*.ts', 'server/generated/tsrx/*.client.ts'],
 	exclude: [
 		'**/*.spec.ts',
 		'**/*.test.ts',
 		'examples/basic/button/basic-button.ts',
-		'examples/basic/gauge/basic-gauge.ts',
-		'examples/basic/number/basic-number.ts',
-		'examples/basic/pluralize/basic-pluralize.ts',
 		'examples/form/radiogroup/form-radiogroup.ts',
 	],
 	outdir: '.',

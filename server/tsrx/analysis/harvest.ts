@@ -306,14 +306,45 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	// --- Pass 3: harvest plans ------------------------------------------------
 
 	/**
-	 * DOM read expression for a server arg, traced to its rendered site:
-	 * a host-prop mirror (`value={() => host.value}` where the root renders
-	 * the parser-exposed prop from this arg) wins — read the target element's
-	 * property; then a plain element attribute rendering the arg bare; then
-	 * the root attribute via `host.getAttribute`. Null when the arg renders
-	 * nowhere (the signal stays unharvestable).
+	 * DOM read expression for a server arg, traced to its rendered site.
+	 * Precedence (LT-115):
+	 * 1. the exposed prop's Slot — when `allowTrackedRead` (a LAZY
+	 *    constructor: `deriveCell`/`deriveStore`/`createMemo`, whose callback
+	 *    first runs only after `expose()` has installed the Slot-backed
+	 *    property) and the root renders a Parser-exposed prop from this arg,
+	 *    read `host.<prop>`: a TRACKED reactive source, so the derived signal
+	 *    re-runs on later property writes and `observedAttributes` re-parses
+	 *    instead of freezing on the untracked `getAttribute` read (NOTES
+	 *    LT-092, the frozen basic-gauge/basic-pluralize `deriveCell`s).
+	 * 2. a host-prop mirror (`value={() => host.value}` where the root renders
+	 *    the parser-exposed prop from this arg) — read the target element's
+	 *    property;
+	 * 3. a plain (non-root) element attribute rendering the arg bare;
+	 * 4. the root attribute via `host.getAttribute`.
+	 * Root sites NEVER become queries: `first()` searches descendants only
+	 * (`src/helpers/dom.ts`), so a query for the root's own tag throws
+	 * `MissingElementError` for the component's own root at activation (the
+	 * LT-024 `site.el !== component.root` guard, restored by LT-115 after a
+	 * regrouping-era edit dropped it). Null when the arg renders nowhere (the
+	 * signal stays unharvestable).
 	 */
-	const paramDomRead = (param: string): string | null => {
+	const paramDomRead = (
+		param: string,
+		allowTrackedRead: boolean,
+	): string | null => {
+		if (allowTrackedRead) {
+			const exposedRootAttr = component.root.attrs.find(
+				a =>
+					a.kind === 'server' &&
+					a.name !== null &&
+					a.exprText === param &&
+					component.parserExposeProps.has(a.name),
+			) as Extract<AttributeIR, { kind: 'server' }> | undefined
+			if (exposedRootAttr) {
+				ambient.add('host')
+				return `host.${exposedRootAttr.name}`
+			}
+		}
 		const childrenOf = (node: TemplateNode): TemplateNode[] =>
 			node.kind === 'if'
 				? [...node.then, ...node.alternate]
@@ -385,7 +416,11 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			return null
 		}
 		const site = findAttrSite(component.root)
-		if (site) {
+		// LT-024's root guard, restored by LT-115: the root's own attributes
+		// are NOT a query site — `first('<own-tag>')` would throw for the
+		// component's own root (descendants-only search). A root match falls
+		// through to the `host.getAttribute` branch below instead.
+		if (site && site.el !== component.root) {
 			const resolved = selectorFor(site.el)
 			if (!resolved.unique) {
 				diagnostics.push(
@@ -454,6 +489,16 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		 * the drift ADR 0003 exists to catch.
 		 */
 		allowVerbatim: boolean,
+		/**
+		 * The initializer is LAZY — its body first runs only after `expose()`
+		 * has installed the Slot-backed properties, so arg reads may route
+		 * through `host.<prop>` (the exposed prop's Slot, a tracked reactive
+		 * source; see `paramDomRead`'s precedence 1). Always true for
+		 * `deriveCell`/`deriveStore`/`createMemo`; NEVER for the eager
+		 * constructors, whose initializer executes at declaration — before
+		 * `expose()` — where a `host.<prop>` read would be `undefined`.
+		 */
+		allowTrackedRead: boolean,
 	): string | null => {
 		const free = dependenciesOf(init)
 		const signalNames = new Set(component.signals.map(s => s.name))
@@ -480,7 +525,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			return allowVerbatim ? source.slice(init.start, init.end) : null
 		const reads = new Map<string, string>()
 		for (const param of params) {
-			const read = paramDomRead(param)
+			const read = paramDomRead(param, allowTrackedRead)
 			if (!read) return null
 			reads.set(param, read)
 		}
@@ -594,6 +639,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 				? substituteArgExpr(
 						signal.init,
 						isDerivedCallback || thunkRendered.has(signal.name),
+						isDerivedCallback,
 					)
 				: null
 			if (substituted) {
@@ -617,6 +663,39 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			| { kind: 'text'; element: ElementNode }
 			| { kind: 'attr'; element: ElementNode; attr: string }
 			| undefined
+		// LT-114 interplay / LT-115: a direct site ON THE ROOT (a
+		// signal-identifier lazy root child, `<my-el>{sig}</my-el>`) must never
+		// become a query — `first('<own-tag>')` searches descendants only and
+		// throws `MissingElementError` for the component's own root at
+		// activation. Route it through the ambient `host` instead (the text
+		// site reads `host.textContent`), the same target LT-114's root branch
+		// plans the watch against — harvest and watch agree. `'host'` is
+		// deliberately NOT a query-table entry: `harvestInitializer` passes
+		// unknown query names through verbatim, and `usedNames` already
+		// reserves `'host'` (analysis/plan.ts) so `addQuery` can never allocate
+		// it. (An `attr` site on the root is unreachable in a compiling
+		// component — reactive attributes on the root are TSRX005 — but routed
+		// uniformly rather than left emitting a broken query.)
+		if (direct && direct.element === component.root) {
+			ambient.add('host')
+			if (direct.kind === 'text') {
+				harvests.push({
+					kind: 'text',
+					signal: signal.name,
+					query: 'host',
+					parser: parserForType(signal.inferredType),
+				})
+			} else {
+				harvests.push({
+					kind: 'attr',
+					signal: signal.name,
+					query: 'host',
+					attr: direct.attr,
+					parser: parserForType(signal.inferredType),
+				})
+			}
+			continue
+		}
 		if (direct) {
 			const { selector, unique } = resolveSelector(direct.element)
 			if (!unique) {

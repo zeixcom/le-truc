@@ -289,6 +289,14 @@ export const emitClientModule = (
 
 	// Queries
 	for (const query of plan.queries) {
+		// `'host'` is never a real query entry — `usedNames` reserves the name
+		// (analysis/plan.ts) so `addQuery` cannot allocate it — but
+		// HarvestPlans address the component ROOT through the literal `'host'`
+		// (LT-114/LT-115 root-site routing), so a future writer that DID add
+		// one would otherwise emit `const host = first('host')`, shadowing the
+		// factory context member. Skip defensively and let the root's reads
+		// resolve to the destructured `host`.
+		if (query.name === 'host') continue
 		const typeArg = query.explicitType ? `<${query.explicitType}>` : ''
 		if (query.cardinality === 'maybe') {
 			// A single-branch @if (no @else) root: `first()` without a

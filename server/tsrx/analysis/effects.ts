@@ -36,6 +36,7 @@ import {
 	composeStaticAttrs,
 	countComposeBySource as countComposeBySourceIn,
 	type ElementNode,
+	type ExprNode,
 	type IfNode,
 	isElement,
 	loopFor as loopForIn,
@@ -338,8 +339,23 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				})
 			}
 		}
-		for (const child of el.children) {
-			if (child.kind !== 'expr' || !child.lazy) continue
+		// LT-115 (folded in by the LT-114 review): the EMISSION gate the root
+		// branch has had since LT-114, mirrored onto the nested path.
+		// `bindText` replaces the element's ENTIRE textContent, so the one
+		// sanctioned shape is a lazy child that is the element's sole content
+		// — multiple lazy children race last-write-wins on the shared
+		// textContent, and static text is wiped (element children REMOVED) by
+		// the first write. Before this, the nested loop silently emitted a
+		// plausible-looking but wrong binding for both mixes (NOTES LT-114's
+		// hazard flag). Per-child checks below run regardless of this gate —
+		// independent findings, same posture as the root branch.
+		const lazyChildren = el.children.filter(
+			(c): c is ExprNode => c.kind === 'expr' && c.lazy,
+		)
+		const contentSiblings = el.children.filter(
+			c => c.kind !== 'client-stmt' && !(c.kind === 'expr' && c.lazy),
+		)
+		for (const child of lazyChildren) {
 			// A managed form prop as a reactive child requires the widened
 			// FormFactoryContext — formAssociated() must lead the extensions.
 			// Since LT-052 the spelling is a `host.<prop>` read; the retired
@@ -366,6 +382,26 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				diagnostics.push(
 					diagnostic.impureServerFold(source, child.node.start, null),
 				)
+			if (lazyChildren.length > 1) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						lazyChildren[1]?.node.start,
+						`Multiple lazy text children on <${el.tag}> — bindText() replaces the element's entire textContent, so a second lazy child's writes would silently overwrite the first's. Combine them into one expression.`,
+					),
+				)
+				continue
+			}
+			if (contentSiblings.length > 0) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						child.node.start,
+						`A lazy text child must be <${el.tag}>'s only content — bindText() replaces the element's entire textContent, wiping static text and removing element children on the first write. Move mixed content into a dedicated child element.`,
+					),
+				)
+				continue
+			}
 			sink.push({
 				kind: 'watch-text',
 				query,
@@ -1095,6 +1131,90 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						),
 					)
 					break
+				}
+			}
+			// LT-114: the root's lazy text CHILDREN are the text-binding
+			// counterpart of the style-map/class-map root exemptions above
+			// (LT-028/LT-032). A nested element binds its lazy children
+			// through the element's own query; the root has none, so the
+			// target is the ambient `host` — before this, the root branch
+			// never visited children at all and the generated client
+			// silently emitted no `watch(source, bindText(...))`, leaving
+			// the component permanently empty on hydration-only pages
+			// (found cutting basic-number over, NOTES LT-092).
+			const lazyChildren = component.root.children.filter(
+				(c): c is ExprNode => c.kind === 'expr' && c.lazy,
+			)
+			if (lazyChildren.length > 0) {
+				// Per-child checks run regardless of the emission gate below —
+				// they are independent findings (same posture as the nested
+				// path's loop inside emitConstructEffects).
+				for (const child of lazyChildren) {
+					// A managed form prop as a reactive child requires the
+					// widened FormFactoryContext — formAssociated() must lead
+					// the extensions (same gate as the nested path).
+					const managed = managedPropRead(child.expr)
+					if (
+						managed !== null &&
+						!component.exposeProps.has(managed) &&
+						!component.config?.form
+					)
+						diagnostics.push(
+							diagnostic.managedPropWithoutForm(
+								source,
+								child.node.start,
+								managed,
+							),
+						)
+					collectAmbient(child.expr)
+					// CHECKLIST §4 / TSRX033: same "would have folded, refuse
+					// to fold, warn" as the nested path's lazy-child site —
+					// the server omits the child and the client's first
+					// binding pass corrects it, which the author should not
+					// mistake for an unrelated bug.
+					if (
+						dependenciesOf(child.expr).isSubsetOf(component.serverKnown) &&
+						containsImpureAmbient(child.expr)
+					)
+						diagnostics.push(
+							diagnostic.impureServerFold(source, child.node.start, null),
+						)
+				}
+				// Emission gate: bindText() replaces the element's ENTIRE
+				// textContent, so the one sanctioned shape is a lazy child
+				// that is the root's sole content. Multiple lazy children
+				// would race last-write-wins; static text would be wiped on
+				// the first write; element children would be REMOVED by the
+				// textContent assignment itself. Reject with a clear message
+				// instead of emitting a plausible-looking but wrong binding
+				// (the nested path tolerates these silently — a pre-existing
+				// hazard there, not a precedent to copy).
+				const contentSiblings = component.root.children.filter(
+					c => c.kind !== 'client-stmt' && !(c.kind === 'expr' && c.lazy),
+				)
+				if (lazyChildren.length > 1) {
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							lazyChildren[1]?.node.start,
+							"Multiple lazy text children on the component root — bindText() replaces the element's entire textContent, so a second lazy child's writes would silently overwrite the first's. Combine them into one expression.",
+						),
+					)
+				} else if (contentSiblings.length > 0) {
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							lazyChildren[0]?.node.start,
+							"A lazy text child must be the component root's only content — bindText() replaces the element's entire textContent, wiping static text and removing element children on the first write. Move mixed content into a dedicated child element.",
+						),
+					)
+				} else {
+					ambient.add('host')
+					effects.push({
+						kind: 'watch-text',
+						query: 'host',
+						source: lazyWatchSource(lazyChildren[0] as ExprNode),
+					})
 				}
 			}
 		} else {

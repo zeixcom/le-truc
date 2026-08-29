@@ -9,15 +9,17 @@
 // and .tsrx cannot express a template-less enhancer yet — see NOTES.md.
 import './basic/button/basic-button.ts'
 import '../server/generated/tsrx/basic-counter.client.ts'
-// basic-gauge, basic-number and basic-pluralize stay on their hand-written
-// twins (LT-092): compiler gaps make their compiled halves regress behavior
-// the specs pin — see NOTES.md (root signal text child never bound
-// client-side; arg→DOM substitution reads attributes via an illegal root
-// self-query, freezing reactivity). Revisit after those gaps close.
-import './basic/gauge/basic-gauge.ts'
+// basic-gauge and basic-pluralize cut over in LT-115: the arg→DOM
+// substitution now routes derived signals through the exposed prop's Slot
+// (a tracked source — post-connect writes re-derive instead of freezing),
+// and root harvest sites read the ambient `host` instead of an illegal
+// `first('<own-tag>')` self-query. Both components were reshaped to their
+// twins' contracts (gauge: meter-fallback harvest + observedAttributes;
+// pluralize: getLocale thunks, no setup signals) — see their .tsrx headers.
+import '../server/generated/tsrx/basic-gauge.client.ts'
+import '../server/generated/tsrx/basic-number.client.ts'
 import '../server/generated/tsrx/basic-hello.client.ts'
-import './basic/number/basic-number.ts'
-import './basic/pluralize/basic-pluralize.ts'
+import '../server/generated/tsrx/basic-pluralize.client.ts'
 import './card/blogmeta/card-blogmeta.ts'
 import '../server/generated/tsrx/card-collapsible.client.ts'
 import '../server/generated/tsrx/card-colorscale.client.ts'

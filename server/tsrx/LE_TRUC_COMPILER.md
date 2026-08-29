@@ -418,9 +418,18 @@ Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
 - **Pass 3 — harvest plans** (`analysis/harvest.ts`). Precedence: reconciled
   List (`list`) → direct site (first by document order; `deriveCell`/
   `deriveStore` never take this route) → arg substitution (`substituteArgExpr`:
-  rewrite each param identifier with `paramDomRead` — host-prop mirror → bare
-  attribute site → root `host.getAttribute` — right-to-left by source range) →
-  membership fallback. No route at all → TSRX004.
+  rewrite each param identifier with `paramDomRead` — exposed-prop Slot
+  (`host.<prop>`, only for LAZY constructors whose callback first runs after
+  `expose()` installs the property; a tracked source, LT-115) → host-prop
+  mirror → bare non-root attribute site → root `host.getAttribute` —
+  right-to-left by source range) → membership fallback. Root sites NEVER
+  become queries: `first()` searches descendants only, so a query for the
+  root's own tag would throw `MissingElementError` for the component's own
+  root at activation — root arg sites read the ambient `host`, and a direct
+  text site on the root (a signal-identifier lazy root child, LT-114/LT-115)
+  harvests `host.textContent` through the literal `'host'` query name (never
+  a query-table entry; `usedNames` reserves it, and `emit-client.ts`'s query
+  loop skips it defensively). No route at all → TSRX004.
 - **Pass 4 — top-level effects** (`analysis/effects.ts`, `emitTopEffects` walk,
   document order):
   - Root element: `style-map`/`class-map` lower to `watch-style`/`watch-class`
@@ -442,8 +451,11 @@ Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
   - Plain elements with client constructs: selector resolution, ref-name or
     camelCased tag as query name, `emitConstructEffects` (reactive attr with
     custom-element gate TSRX012 / host-mirror property dispatch, pass with
-    registry gate TSRX012, class/style maps, events, lazy children with managed
-    form prop gate TSRX010).
+    registry gate TSRX012, class/style maps, events, lazy children with
+    managed form prop gate TSRX010; since LT-115 a lazy text child must be
+    its element's sole content — multiple lazy children and static/element
+    sibling mixes are TSRX005, the LT-114 root gate mirrored onto the nested
+    path instead of a silently wrong last-write-wins `bindText`).
 
 `loops.ts` and `effects.ts` import a handful of signal-read predicates back from
 `harvest.ts` (`returnsNumber`, `lazyWatchSource`) — the one intra-`analysis/`
