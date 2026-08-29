@@ -289,16 +289,17 @@ export const emitClientModule = (
 
 	// Queries
 	for (const query of plan.queries) {
+		const typeArg = query.explicitType ? `<${query.explicitType}>` : ''
 		if (query.cardinality === 'maybe') {
 			// A single-branch @if (no @else) root: `first()` without a
 			// `required` message returns `Element | undefined` instead of
 			// throwing — the element only exists when that branch rendered.
 			imports.add('first')
-			push(`const ${query.name} = first('${query.selector}')`)
+			push(`const ${query.name} = first${typeArg}('${query.selector}')`)
 		} else if (query.cardinality === 'one') {
 			imports.add('first')
 			push(
-				`const ${query.name} = first('${query.selector}', '${query.message}')`,
+				`const ${query.name} = first${typeArg}('${query.selector}', '${query.message}')`,
 			)
 		} else {
 			imports.add('all')
@@ -485,23 +486,54 @@ export const emitClientModule = (
 			imports.add('watch')
 			const append = (text: string, atDepth: number): void =>
 				appendWithSpans(lines, text, atDepth, [], spans, cursor)
+			// The fieldset wrappers (LT-077, CHECKLIST §8) toggle `disabled` in
+			// lockstep with their arm's own `hidden` — `hidden`/`display:none`
+			// exclude nothing from form submission, only `disabled` does, so a
+			// named control in a non-active arm must be disabled, not just
+			// hidden, or it submits alongside whichever arm the user sees.
+			// Addressed via `.parentElement` (LT-086), not a `fieldset:has(...)`
+			// query — `emit-server.ts` always makes the fieldset the arm root's
+			// immediate parent, and `:has()` predates REQUIREMENTS.md's 2020
+			// browser baseline; a live `querySelector()` using it would throw
+			// `InvalidSelectorError` on an unsupporting engine.
+			append(
+				`const ${effect.pendingFieldsetQuery} = ${effect.pendingQuery}.parentElement as HTMLFieldSetElement`,
+				depth,
+			)
+			append(
+				`const ${effect.okFieldsetQuery} = ${effect.okQuery}.parentElement as HTMLFieldSetElement`,
+				depth,
+			)
+			append(
+				`const ${effect.errFieldsetQuery} = ${effect.errQuery}.parentElement as HTMLFieldSetElement`,
+				depth,
+			)
 			append(`watch(${effect.signal}, {`, depth)
 			append('ok: value => {', depth + 1)
 			append(`${effect.pendingQuery}.hidden = true`, depth + 2)
+			append(`${effect.pendingFieldsetQuery}.disabled = true`, depth + 2)
 			append(`${effect.errQuery}.hidden = true`, depth + 2)
+			append(`${effect.errFieldsetQuery}.disabled = true`, depth + 2)
 			append(`${effect.okQuery}.hidden = false`, depth + 2)
+			append(`${effect.okFieldsetQuery}.disabled = false`, depth + 2)
 			if (effect.okText)
 				append(`${effect.okQuery}.textContent = String(value)`, depth + 2)
 			append('},', depth + 1)
 			append('nil: () => {', depth + 1)
 			append(`${effect.okQuery}.hidden = true`, depth + 2)
+			append(`${effect.okFieldsetQuery}.disabled = true`, depth + 2)
 			append(`${effect.errQuery}.hidden = true`, depth + 2)
+			append(`${effect.errFieldsetQuery}.disabled = true`, depth + 2)
 			append(`${effect.pendingQuery}.hidden = false`, depth + 2)
+			append(`${effect.pendingFieldsetQuery}.disabled = false`, depth + 2)
 			append('},', depth + 1)
 			append('err: error => {', depth + 1)
 			append(`${effect.pendingQuery}.hidden = true`, depth + 2)
+			append(`${effect.pendingFieldsetQuery}.disabled = true`, depth + 2)
 			append(`${effect.okQuery}.hidden = true`, depth + 2)
+			append(`${effect.okFieldsetQuery}.disabled = true`, depth + 2)
 			append(`${effect.errQuery}.hidden = false`, depth + 2)
+			append(`${effect.errFieldsetQuery}.disabled = false`, depth + 2)
 			if (effect.errText)
 				append(
 					`${effect.errQuery}.textContent = String(${effect.errText})`,

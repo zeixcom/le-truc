@@ -352,17 +352,39 @@ export const emitServerModule = (
 				}
 				emit(child, armScope, depth)
 			}
+			// `hidden`/`display:none` exclude nothing from form submission,
+			// only `disabled` does (CHECKLIST §8, LT-077) — a named control in
+			// a non-active arm would otherwise submit alongside `@pending`'s.
+			// Every arm root is unconditionally wrapped in a synthetic
+			// `<fieldset disabled>`, toggled by the SAME condition as the root's
+			// own `hidden` (nested form-associated custom elements inherit the
+			// disabled state natively); the inline style resets the box model
+			// (border/padding/margin/min-width — the `min-content` quirk breaks
+			// flex/grid children) so the always-present wrapper stays invisible
+			// chrome around whichever arm is actually hidden.
 			const emitArmRoot = (
 				root: ElementNode,
 				armScope: ReadonlySet<string>,
 				hiddenCond: string,
 				guardedExpr: string | null,
 			): void => {
+				used.add('attr')
+				lines.push(
+					`${tab(depth)}${buffer}.push(${pushArgument([
+						{
+							static:
+								'<fieldset style="border:0;padding:0;margin:0;min-width:0"',
+						},
+						{ expr: `attr('disabled', ${hiddenCond})` },
+						{ static: '>' },
+					])})`,
+				)
 				emitElement(root, armScope, depth, [hiddenAttr(hiddenCond)])
 				for (const child of root.children)
 					emitGuardedChild(child, armScope, guardedExpr)
 				if (!isVoidElement(root.tag))
 					lines.push(`${tab(depth)}${buffer}.push('</${root.tag}>')`)
+				lines.push(`${tab(depth)}${buffer}.push('</fieldset>')`)
 			}
 			emitArmRoot(pendingRoot, scope, `${stateVar} !== 'pending'`, null)
 			emitArmRoot(

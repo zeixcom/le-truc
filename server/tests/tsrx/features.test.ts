@@ -333,6 +333,107 @@ import { deriveCell } from '@zeix/le-truc'`,
 		expect(code).toContain('err: error => {')
 		expect(code).toContain('.textContent = String(error.message)')
 	})
+
+	// LT-077 (CHECKLIST §8): `hidden`/`display:none` exclude nothing from form
+	// submission, only `disabled` does. A named control living in a non-active
+	// arm would otherwise submit alongside `@pending`'s own controls. Every arm
+	// root is wrapped in a synthetic `<fieldset disabled>`, toggled by the same
+	// condition as the arm's own `hidden` — these fixtures put a named `<input>`
+	// inside each arm and check the fieldset wrapper, not just the input's own
+	// attributes, carries the submission-exclusion.
+	const namedControlComponent = (deriveExpr: string): string =>
+		`import { deriveCell } from '@zeix/le-truc'
+export function C({}: {})
+	@{
+		const data = deriveCell(${deriveExpr})
+		expose({ data: data.get })
+		<>
+			<c-el>
+				@try {
+					<div class="content"><input name="x" value="ok" />{data}</div>
+				} @pending {
+					<p class="loading"><input name="x" value="pending" />Loading</p>
+				} @catch (e) {
+					<p class="error"><input name="x" value="error" />{e.message}</p>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('server render (pending step): only the pending arm fieldset is enabled, ok/error are disabled', async () => {
+		const { component, diagnostics } = compileComponent(
+			namedControlComponent("async () => 'loaded'"),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('named-control fixture must compile')
+		ensureEmitted('feat-async-named-pending', component.serverCode)
+		const html = await render('feat-async-named-pending', {})
+		// pending arm's fieldset: not disabled (attr() omits `false`/omitted attrs)
+		expect(html).toContain(
+			'<fieldset style="border:0;padding:0;margin:0;min-width:0"><p class="loading"',
+		)
+		// ok/error arms' fieldsets: disabled
+		expect(html).toContain(
+			'<fieldset style="border:0;padding:0;margin:0;min-width:0" disabled><div hidden class="content"',
+		)
+		expect(html).toContain(
+			'<fieldset style="border:0;padding:0;margin:0;min-width:0" disabled><p hidden class="error"',
+		)
+	})
+
+	test('server render (ok step): only the ok arm fieldset is enabled, pending/error are disabled', async () => {
+		const { component, diagnostics } = compileComponent(
+			namedControlComponent("async () => 'loaded', { initial: 'seed' }"),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('named-control fixture must compile')
+		ensureEmitted('feat-async-named-ok', component.serverCode)
+		const html = await render('feat-async-named-ok', {})
+		expect(html).toContain(
+			'<fieldset style="border:0;padding:0;margin:0;min-width:0"><div class="content"',
+		)
+		expect(html).toContain(
+			'<fieldset style="border:0;padding:0;margin:0;min-width:0" disabled><p hidden class="loading"',
+		)
+		expect(html).toContain(
+			'<fieldset style="border:0;padding:0;margin:0;min-width:0" disabled><p hidden class="error"',
+		)
+	})
+
+	test("client codegen (error step, by construction): watch()'s err handler disables the ok/pending fieldsets and enables its own", () => {
+		const { component, diagnostics } = compileComponent(
+			namedControlComponent("async () => 'loaded', { initial: 'seed' }"),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		const code = component?.clientCode ?? ''
+		// LT-086: addressed via `.parentElement`, not a `fieldset:has(...)`
+		// query — `:has()` predates REQUIREMENTS.md's 2020 browser baseline.
+		expect(code).toContain('div.parentElement as HTMLFieldSetElement')
+		expect(
+			(code.match(/p\d*\.parentElement as HTMLFieldSetElement/g) ?? []).length,
+		).toBe(2)
+		// err handler: pending/ok fieldsets disabled, error's own enabled —
+		// this is the state a pending→error transition lands in; verified here
+		// as generated code since the compiler's own test harness has no real
+		// DOM/FormData to submit against (that's the corpus's Playwright specs).
+		const errHandler = code.slice(
+			code.indexOf('err: error => {'),
+			code.indexOf('})', code.indexOf('err: error => {')),
+		)
+		expect(
+			(errHandler.match(/Fieldset\d*\.disabled = true/g) ?? []).length,
+		).toBe(2)
+		expect(
+			(errHandler.match(/Fieldset\d*\.disabled = false/g) ?? []).length,
+		).toBe(1)
+	})
 })
 
 describe('html={expr} — dynamic rendering', () => {

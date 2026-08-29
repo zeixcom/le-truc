@@ -39,6 +39,15 @@ export type QueryPlan = {
 	 */
 	cardinality: 'one' | 'many' | 'maybe'
 	message: string
+	/**
+	 * Override for `first()`'s own string-literal type inference (LT-077):
+	 * needed when the selector embeds a functional pseudo-class argument
+	 * (`fieldset:has(.content)`) — the type-level parser has no notion of
+	 * parens and misreads the class selector inside `:has()` as the outer
+	 * selector's own class/id/attribute suffix. `undefined` everywhere else;
+	 * inference stays selector-driven as before.
+	 */
+	explicitType?: string
 }
 
 /** How a signal seeds itself from the server-rendered DOM. */
@@ -290,12 +299,29 @@ export type TopEffectPlan =
 			 * shape. `okText`/`errText`, when present, are the arm's own lazy
 			 * text child — the resolved value for `okQuery`, the error (or a
 			 * member expression over it, e.g. `error.message`) for `errQuery`.
+			 *
+			 * The `*FieldsetQuery` trio (LT-077, CHECKLIST §8) names the
+			 * synthetic `<fieldset disabled>` `emit-server.ts` wraps around each
+			 * arm root: `hidden`/`display:none` exclude nothing from form
+			 * submission, only `disabled` does, and named form controls in a
+			 * non-active arm would otherwise submit alongside `@pending`'s own
+			 * controls. The wrapper toggles in lockstep with its arm's own
+			 * `hidden` — same condition, one extra property write per handler.
+			 * These are reserved variable names only (`analysis/naming.ts`'s
+			 * `uniqueName`), not entries in `queries` — the fieldset is always
+			 * its arm root's immediate parent, so `emit-client.ts` declares it
+			 * via `<armRootQuery>.parentElement` rather than a second `first()`
+			 * query (LT-086: a `fieldset:has(...)` selector would need `:has()`,
+			 * which predates REQUIREMENTS.md's 2020 browser baseline).
 			 */
 			kind: 'async'
 			signal: string
 			pendingQuery: string
 			okQuery: string
 			errQuery: string
+			pendingFieldsetQuery: string
+			okFieldsetQuery: string
+			errFieldsetQuery: string
 			okText: boolean
 			errText: string | null
 	  }
@@ -363,6 +389,7 @@ export type AnalysisContext = {
 		base: string,
 		selector: string,
 		cardinality: 'one' | 'many' | 'maybe',
+		explicitType?: string,
 	) => string
 	/** Note context members (`host`, `internals`) a client code position reads. */
 	collectAmbient: (node: TsrxNode | null | undefined) => void
@@ -437,7 +464,7 @@ export const analyzeClient = (
 		refNames,
 		forPlans: new Map(),
 		reconcilePlans: new Map(),
-		addQuery: (base, selector, cardinality) =>
+		addQuery: (base, selector, cardinality, explicitType) =>
 			addQuery(
 				usedNames,
 				queries,
@@ -447,6 +474,7 @@ export const analyzeClient = (
 				base,
 				selector,
 				cardinality,
+				explicitType,
 			),
 		collectAmbient,
 		badFreeNames,

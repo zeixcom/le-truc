@@ -37,6 +37,7 @@ export const addQuery = (
 	base: string,
 	selector: string,
 	cardinality: 'one' | 'many' | 'maybe',
+	explicitType?: string,
 ): string => {
 	const existing = queries.find(
 		q => q.selector === selector && q.cardinality === cardinality,
@@ -60,6 +61,10 @@ export const addQuery = (
 	// selector itself stays compiler-proven, same as `ref={}` before it).
 	const message =
 		component.refReasons.get(base) ?? `${component.tag}: ${selector} missing`
-	queries.push({ name, selector, cardinality, message })
+	queries.push(
+		explicitType
+			? { name, selector, cardinality, message, explicitType }
+			: { name, selector, cardinality, message },
+	)
 	return name
 }

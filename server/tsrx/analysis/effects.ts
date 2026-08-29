@@ -26,6 +26,7 @@ import {
 } from '../evaluability'
 import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
 import { lazyWatchSource, returnsNumber } from './harvest'
+import { uniqueName } from './naming'
 import type { AnalysisContext, TopEffectPlan } from './plan'
 import {
 	type ComposeNode,
@@ -104,6 +105,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		badFreeNames,
 		forPlans,
 		reconcilePlans,
+		usedNames,
 	} = ctx
 	const selectorFor = (el: ElementNode) => selectorForIn(component, el)
 	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
@@ -805,6 +807,30 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			errSelector.selector,
 			'one',
 		)
+		// The synthetic `<fieldset disabled>` `emit-server.ts` wraps around
+		// each arm root (LT-077, CHECKLIST §8) is addressed structurally, not
+		// via a CSS query (LT-086): `emit-server.ts` always makes it the arm
+		// root's IMMEDIATE parent, so the client reads `<armRoot>.parentElement`
+		// instead of re-querying — no selector to keep in sync with the
+		// emitter, and no dependency on `:has()`, which is outside
+		// REQUIREMENTS.md's 2020 Web Platform browser baseline and would throw
+		// `InvalidSelectorError` on an unsupporting engine (a live
+		// `querySelector()` call, unlike this codebase's existing CSS-only
+		// `:has()` use in `form-tokenbox.css`, which degrades gracefully
+		// instead of throwing). Only the variable name is reserved here;
+		// `emit-client.ts` emits the `.parentElement` declaration itself.
+		const okFieldsetQuery = uniqueName(
+			usedNames,
+			`${sanitizeVarName(okRoot.tag)}Fieldset`,
+		)
+		const pendingFieldsetQuery = uniqueName(
+			usedNames,
+			`${sanitizeVarName(pendingRoot.tag)}Fieldset`,
+		)
+		const errFieldsetQuery = uniqueName(
+			usedNames,
+			`${sanitizeVarName(errRoot.tag)}Fieldset`,
+		)
 
 		const errText = catchParam ? directLazyCatchRef(errRoot, catchParam) : null
 		if (
@@ -827,6 +853,9 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			pendingQuery,
 			okQuery,
 			errQuery,
+			pendingFieldsetQuery,
+			okFieldsetQuery,
+			errFieldsetQuery,
 			okText: true,
 			errText,
 		})
