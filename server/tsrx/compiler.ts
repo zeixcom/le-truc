@@ -21,6 +21,7 @@ import {
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
 	collectBoundNames,
+	collectComposedRefNames,
 	FACTORY_CONTEXT_MEMBERS,
 	freeIdentifiers,
 	identifierName,
@@ -275,11 +276,7 @@ const reportLeTrucImportMismatch = (
 				return
 			case 'Identifier': {
 				const name = String(node.name)
-				if (
-					!bound.has(name) &&
-					REAL_EXPORT_NAMES.has(name) &&
-					!usage.has(name)
-				)
+				if (!bound.has(name) && REAL_EXPORT_NAMES.has(name) && !usage.has(name))
 					usage.set(name, typeof node.start === 'number' ? node.start : 0)
 				return
 			}
@@ -487,6 +484,17 @@ export const compileSource = (
 	const plainImports = parsePlainImports(ctx, ast, filename)
 	const leTrucImports = parseLeTrucImports(ast)
 	reportLeTrucImportMismatch(ctx, ast, leTrucImports)
+	// Authored import bindings (plain or real `@zeix/le-truc` exports, LT-088)
+	// — a bare client-only setup statement (e.g. `throttle()` inside a
+	// `watch(() => el, () => { ... })` connect-time effect) can freely
+	// reference either kind: `imports.ts`'s placement inference already walks
+	// `clientSetup` free names (`computeClientNeededNames`) to decide where
+	// each import lands, so a name recognized here is guaranteed to resolve
+	// once emitted, exactly like `setupInits`/`elementRefs` before it.
+	const importedNames = new Set<string>([
+		...plainImports.flatMap(i => i.localNames),
+		...leTrucImports.flatMap(i => i.names),
+	])
 
 	// Locate the exported component function (body = JSXCodeBlock).
 	let fn: TsrxNode | null = null
@@ -552,6 +560,14 @@ export const compileSource = (
 	// Setup statements: const declarations (signals vs. helpers) + expose() +
 	// client-only side effects.
 	const codeBlock = fn.body as TsrxNode
+	// `ref={name}` names on composed (PascalCase) elements (LT-087): a raw-AST
+	// pre-scan, up front, so the client-only setup-statement gate below can
+	// see them — `lowerChildren` (which resolves `ComposeAttrIR` the normal
+	// way) hasn't run yet and can't run yet (it needs `signalByName`, which
+	// this same setup-statement loop populates).
+	const composedRefNames = isNode(codeBlock.render)
+		? collectComposedRefNames(codeBlock.render)
+		: new Set<string>()
 	const setup: SetupStmt[] = []
 	const clientSetup: SetupStmt[] = []
 	// Plain (non-signal) setup consts (LT-034 follow-up fix): `component.setup`
@@ -866,8 +882,14 @@ export const compileSource = (
 			// Client-only setup side effect (LT-008): connect-time statements
 			// (`internals?.states.add('clearable')`) whose free names are all
 			// client-known — context members, signals, expose ambients, JS
-			// globals. The server never runs them: they touch connect-time
-			// APIs (ElementInternals, DOM) that don't exist render-time.
+			// globals, earlier plain setup consts, `first()`-bound element
+			// locals, `ref={}`-bound composed-element locals (LT-087), and the
+			// `watch`/`on`/`pass` ambients (LT-069) — those touch connect-time
+			// APIs (ElementInternals, DOM, ResizeObserver/pointer capture) that
+			// don't exist render-time, same posture as the pre-existing cases.
+			// A plain-const reference is picked up client-side automatically:
+			// `imports.ts`'s `computeClientNeededNames` already walks
+			// `clientSetup` nodes' free names into its plain-setup fixpoint.
 			const free = freeIdentifiers(expression)
 			const bad: string[] = []
 			for (const name of free) {
@@ -878,6 +900,14 @@ export const compileSource = (
 				}
 				if (signalByName.has(name)) continue
 				if (exposeAmbients.has(name)) continue
+				if (elementRefs.has(name)) continue
+				if (setupInits.has(name)) continue
+				if (composedRefNames.has(name)) continue
+				if (importedNames.has(name)) continue
+				if (CLIENT_ONLY_PRIMITIVES.has(name)) {
+					contextRefs.add(name)
+					continue
+				}
 				bad.push(name)
 			}
 			if (bad.length === 0) {

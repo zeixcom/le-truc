@@ -387,6 +387,102 @@ export function BasicParent({ title }: { title: string })
 		)
 	})
 
+	test('a plain setup const used only inside a compose pass thunk is placed client-side (LT-088)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		const shout = (s: string) => s.toUpperCase()
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={title} ref={child} truc:pass={{ value: () => shout('x') }} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		if (!component)
+			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.clientCode).toContain(
+			'const shout = (s: string) => s.toUpperCase()',
+		)
+		expect(component.clientCode).toContain(
+			"pass(child, { value: { get: () => shout('x') } })",
+		)
+	})
+
+	test('two same-source composed instances discriminated by a static class each get their own ref (LT-089)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild class="a" label={title} ref={childA} truc:pass={{ value: () => 'x' }} />
+				<BasicChild class="b" label={title} ref={childB} truc:pass={{ value: () => 'y' }} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		if (!component)
+			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.clientCode).toContain(
+			"const childA = first('basic-child.a'",
+		)
+		expect(component.clientCode).toContain(
+			"const childB = first('basic-child.b'",
+		)
+		expect(component.clientCode).toContain(
+			"pass(childA, { value: { get: () => 'x' } })",
+		)
+		expect(component.clientCode).toContain(
+			"pass(childB, { value: { get: () => 'y' } })",
+		)
+	})
+
+	test('two same-source composed instances with no distinguishing static attr are still unaddressable (TSRX007)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={title} ref={childA} truc:pass={{ value: () => 'x' }} />
+				<BasicChild label={title} ref={childB} truc:pass={{ value: () => 'y' }} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(component).toBeNull()
+		expect(diagnostics.filter(d => d.code === 'TSRX007')).toHaveLength(2)
+	})
+
 	test('a raw lowercase dashed tag is unaffected by composition', () => {
 		const source = `export function BasicParent({}: {})
 	@{

@@ -331,6 +331,7 @@ export const JS_GLOBALS: ReadonlySet<string> = new Set<string>([
 	'FocusEvent',
 	'FormData',
 	'HTMLButtonElement',
+	'HTMLCanvasElement',
 	'HTMLDivElement',
 	'HTMLElement',
 	'HTMLFormElement',
@@ -345,6 +346,8 @@ export const JS_GLOBALS: ReadonlySet<string> = new Set<string>([
 	'MouseEvent',
 	'Node',
 	'NodeList',
+	'PointerEvent',
+	'ResizeObserver',
 	'SubmitEvent',
 	'URL',
 	'URLSearchParams',
@@ -431,6 +434,56 @@ export const jsxName = (node: unknown): string | null =>
 		: null
 
 /**
+ * Every name bound via `ref={name}` on a composed (PascalCase) JSX element,
+ * anywhere in the render tree — a raw-AST walk, independent of
+ * `lowerChildren`/`lowerComposeElement` (LT-087). The client-only
+ * setup-statement gate (`compiler.ts`) runs BEFORE lowering, so it can't
+ * consult the `ComposeAttrIR` a composed `ref={}` eventually produces;
+ * walking the raw JSX once, up front, gives the gate visibility without
+ * reordering the setup-statement loop ahead of `lowerChildren` — which
+ * itself depends on that loop having already populated `signalByName`.
+ * Mirrors `lowerChildren`'s own composed-vs-raw test (`/^[A-Z]/`) exactly;
+ * whether the import itself resolves is a separate, already-existing
+ * diagnostic (`unresolvedComposedComponent`) fired later during full
+ * lowering — this walk only needs to know the author wrote `ref={}` on
+ * something capitalized.
+ */
+export const collectComposedRefNames = (node: TsrxNode): Set<string> => {
+	const names = new Set<string>()
+	const visit = (current: unknown): void => {
+		if (Array.isArray(current)) {
+			for (const child of current) visit(child)
+			return
+		}
+		if (!isNode(current)) return
+		if (current.type === 'JSXElement') {
+			const opening = current.openingElement
+			const tag = jsxName(isNode(opening) ? opening.name : null)
+			if (tag && /^[A-Z]/.test(tag)) {
+				for (const attr of asArray(
+					isNode(opening) ? opening.attributes : null,
+				)) {
+					if (attr.type !== 'JSXAttribute' || attrName(attr) !== 'ref') continue
+					const value = attr.value
+					const target =
+						isNode(value) && value.type === 'JSXExpressionContainer'
+							? value.expression
+							: value
+					const refName = identifierName(target)
+					if (refName) names.add(refName)
+				}
+			}
+		}
+		for (const [key, value] of Object.entries(current)) {
+			if (key === 'loc' || key === 'range' || key === 'parent') continue
+			if (isNode(value) || Array.isArray(value)) visit(value)
+		}
+	}
+	visit(node)
+	return names
+}
+
+/**
  * Collect the identifiers a node reads that are NOT bound within it — its
  * free variables. Scope-aware enough for the sanctioned shapes: function
  * params, local declarators, property keys, and non-computed member
@@ -474,6 +527,62 @@ export const freeIdentifiers = (node: TsrxNode): Set<string> => {
 				visit(current.id, new Set([...bound, ...declared]))
 				return
 			}
+			case 'ForStatement': {
+				// `for (let x = 0; ...) { ... }` — `init`'s declared name(s) must
+				// be in scope for `test`/`update`/`body` too, not just the
+				// declarator's own (self-only) re-visit `VariableDeclarator`
+				// gives it. Without this case the loop variable falls through to
+				// the generic `default` walk, unbound in every other clause —
+				// found migrating `form-colorgraph.tsrx` (LT-088), a canvas-draw
+				// `for (let x = 0; x < n; x++)` reported `x` itself as free.
+				const inner = new Set(bound)
+				if (
+					isNode(current.init) &&
+					current.init.type === 'VariableDeclaration'
+				) {
+					for (const decl of asArray(current.init.declarations))
+						visit(decl.init, inner)
+					const declared = new Set<string>()
+					for (const decl of asArray(current.init.declarations))
+						collectBoundNames(decl.id, declared)
+					for (const name of declared) inner.add(name)
+				} else {
+					visit(current.init, inner)
+				}
+				visit(current.test, inner)
+				visit(current.update, inner)
+				visit(current.body, inner)
+				return
+			}
+			case 'ForOfStatement':
+			case 'ForInStatement': {
+				// `for (const x of xs) { ... }` — same binding gap as
+				// `ForStatement` above, for the `left` pattern instead of `init`.
+				const inner = new Set(bound)
+				visit(current.right, bound)
+				const declared = new Set<string>()
+				const left = current.left
+				if (isNode(left) && left.type === 'VariableDeclaration') {
+					for (const decl of asArray(left.declarations))
+						collectBoundNames(decl.id, declared)
+				} else {
+					collectBoundNames(left, declared)
+				}
+				for (const name of declared) inner.add(name)
+				visit(current.body, inner)
+				return
+			}
+			case 'CatchClause': {
+				// `catch (e) { ... }` — same gap for the catch binding.
+				const inner = new Set(bound)
+				if (current.param) {
+					const declared = new Set<string>()
+					collectBoundNames(current.param, declared)
+					for (const name of declared) inner.add(name)
+				}
+				visit(current.body, inner)
+				return
+			}
 			case 'BlockStatement':
 			case 'Program': {
 				// Statements execute in order: a declaration adds its names to
@@ -481,10 +590,36 @@ export const freeIdentifiers = (node: TsrxNode): Set<string> => {
 				const inner = new Set(bound)
 				for (const stmt of asArray(current.body)) {
 					if (stmt.type === 'VariableDeclaration') {
-						for (const decl of asArray(stmt.declarations))
-							visit(decl.init, inner)
+						// `const handleUp = () => { ...; el.removeEventListener(
+						// 'up', handleUp) }` — a function EXPRESSION referencing
+						// its own name inside its own (deferred) body, the const
+						// analog of a recursive named `FunctionDeclaration`
+						// (handled below). By the time the closure actually
+						// runs, the const is long since assigned — bind the
+						// name before visiting a single declarator's own
+						// function/arrow initializer so this resolves instead
+						// of reporting the const's own name as free. Found
+						// migrating `form-colorgraph.tsrx` (LT-088): a
+						// pointerdown handler's own `handleUp` unregisters
+						// itself by reference.
+						const declarations = asArray(stmt.declarations)
+						const selfNames = new Set<string>()
+						for (const decl of declarations) {
+							const declName = identifierName(decl.id)
+							if (
+								declName &&
+								isNode(decl.init) &&
+								(decl.init.type === 'ArrowFunctionExpression' ||
+									decl.init.type === 'FunctionExpression')
+							)
+								selfNames.add(declName)
+						}
+						const initScope = selfNames.size
+							? new Set([...inner, ...selfNames])
+							: inner
+						for (const decl of declarations) visit(decl.init, initScope)
 						const declared = new Set<string>()
-						for (const decl of asArray(stmt.declarations))
+						for (const decl of declarations)
 							collectBoundNames(decl.id, declared)
 						for (const name of declared) inner.add(name)
 					} else if (

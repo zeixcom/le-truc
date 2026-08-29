@@ -299,7 +299,11 @@ export const parsePlainImports = (
 			typeof specifierNode.value === 'string'
 				? specifierNode.value
 				: null
-		if (!specifier || specifier.endsWith('.tsrx') || specifier === '@zeix/le-truc')
+		if (
+			!specifier ||
+			specifier.endsWith('.tsrx') ||
+			specifier === '@zeix/le-truc'
+		)
 			continue
 		const localNames: string[] = []
 		for (const spec of asArray(stmt.specifiers)) {
@@ -361,6 +365,20 @@ const clientExprNodes = (root: TemplateNode): TsrxNode[] => {
 	walkTemplate(root, node => {
 		if (node.kind === 'expr' && node.lazy) out.push(node.expr)
 		else if (node.kind === 'client-stmt') out.push(node.node)
+		// `pass={{ }}` on a composed element (LT-088): `collectAttrs` only
+		// covers `kind: 'element'` attrs (`ComposeAttrIR` is a different
+		// vocabulary, walk.ts's own doc comment on `collectAttrs` used to
+		// flag this as a known gap) — a plain-setup-const/plain-import
+		// referenced ONLY inside a compose `pass` thunk (`truc:pass={{ value:
+		// () => toDisplay(...) }}`) needs the exact same client-need tracing
+		// raw-element `pass` gets below, or it silently never gets emitted.
+		else if (node.kind === 'compose')
+			for (const attr of node.attrs)
+				if (attr.kind === 'pass')
+					for (const entry of attr.entries) {
+						out.push(entry.thunk)
+						if (entry.setThunk) out.push(entry.setThunk)
+					}
 	})
 	for (const attr of collectAttrs(root)) {
 		if (attr.kind === 'reactive') out.push(attr.thunk)
@@ -368,6 +386,11 @@ const clientExprNodes = (root: TemplateNode): TsrxNode[] => {
 			out.push(attr.object)
 		else if (attr.kind === 'event') out.push(attr.handler)
 		else if (attr.kind === 'html' && attr.reactive) out.push(attr.node)
+		else if (attr.kind === 'pass')
+			for (const entry of attr.entries) {
+				out.push(entry.thunk)
+				if (entry.setThunk) out.push(entry.setThunk)
+			}
 	}
 	return out
 }
@@ -458,7 +481,9 @@ export const computeClientNeededNames = (
  * always-server template expressions, and server-conditional reactive-family
  * thunks. Shared by `placePlainImports` and `placeLeTrucImports`.
  */
-const serverUsageNames = (component: SetupLikeComponent): ReadonlySet<string> => {
+const serverUsageNames = (
+	component: SetupLikeComponent,
+): ReadonlySet<string> => {
 	const serverNames = new Set<string>()
 	for (const stmt of component.setup)
 		for (const n of dependenciesOf(stmt.node)) serverNames.add(n)

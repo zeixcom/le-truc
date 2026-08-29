@@ -175,13 +175,13 @@ export const countForSelector = (
 /**
  * Structural match count for composed elements over the whole template,
  * grouped by their resolved `.tsrx` source path — the proxy for "this
- * composed target is unique" used by `pass={{ }}` addressing (ADR 0023
- * sub-design 10). Composed elements don't carry reliably-rendered static
- * attributes to build a role/discriminator selector from (they're server
- * args to the child's render call, not guaranteed DOM attributes), so only
- * the count-by-source-identity check is attempted; an author with more than
- * one instance of the same composed child needs a mechanism this milestone
- * doesn't offer yet.
+ * composed target is the sole possible instance" used by `pass={{ }}`
+ * addressing (ADR 0023 sub-design 10). Exactly 1 is the fast path: no
+ * discriminator needed at all. More than 1 no longer means unaddressable
+ * outright (LT-089) — `composeNodesBySource`/`composeDiscriminatorClause`
+ * below can still tell same-source instances apart by a static `class`/`id`/
+ * `data-*` on the compose site; this count only decides whether that search
+ * is needed.
  */
 export const countComposeBySource = (
 	node: TemplateNode,
@@ -222,6 +222,131 @@ export const countComposeBySource = (
 	for (const child of node.children)
 		count += countComposeBySource(child, source)
 	return count
+}
+
+/**
+ * Every composed element over the whole template sharing one `.tsrx` source
+ * path, as the actual nodes rather than just a count (LT-089). A flat
+ * collection — unlike `countComposeBySource`, it does NOT take `@if`/
+ * `@switch` mutual exclusivity into account (that count stays the "is this
+ * the sole POSSIBLE instance" fast path, unchanged); this is only consulted
+ * once that count is already `> 1`, to search for a static discriminator
+ * (`class`/`id`/`data-*`) that tells same-source instances apart. Treating
+ * two mutually-exclusive-branch instances as needing a discriminator too
+ * (when in principle they never coexist) is a strictly conservative
+ * over-restriction, never an incorrect acceptance — the same trade this
+ * compiler already makes elsewhere when a cheaper, sound check is preferred
+ * over a more complete but heavier one.
+ */
+export const composeNodesBySource = (
+	node: TemplateNode,
+	source: string,
+): ComposeNode[] => {
+	if (node.kind === 'if')
+		return [...node.then, ...node.alternate].flatMap(child =>
+			composeNodesBySource(child, source),
+		)
+	if (node.kind === 'switch')
+		return node.cases.flatMap(arm =>
+			arm.children.flatMap(child => composeNodesBySource(child, source)),
+		)
+	if (node.kind === 'try')
+		return [...node.children, ...node.catchChildren].flatMap(child =>
+			composeNodesBySource(child, source),
+		)
+	if (node.kind === 'compose') return node.source === source ? [node] : []
+	if (!isElement(node)) return []
+	return node.children.flatMap(child => composeNodesBySource(child, source))
+}
+
+/**
+ * Static (`Literal`-valued) `arg` attrs of a composed element, keyed by name
+ * (LT-089) — the compose-node analog of `staticAttrs` above, used only to
+ * search for a `class`/`id`/`data-*` discriminator among same-source
+ * siblings. Server args to a composed child aren't guaranteed to render as
+ * real DOM attributes at all (unlike a raw element's own `static` attrs) —
+ * this is compile-time bookkeeping for telling compose SITES apart, never
+ * treated as the child's actual rendered output.
+ */
+export const composeStaticAttrs = (node: ComposeNode): Map<string, string> => {
+	const map = new Map<string, string>()
+	for (const attr of node.attrs) {
+		if (attr.kind !== 'arg') continue
+		// A bare `class="a"` (no `{}`) classifies with `node: null` — the
+		// value only survives as `exprText`, `JSON.stringify`-encoded
+		// (`classify-attributes.ts`), so it round-trips safely through
+		// `JSON.parse`. A braced `class={'a'}` keeps its real `node`, read
+		// directly like `staticAttrs` does for raw elements above.
+		if (attr.node === null) {
+			try {
+				const value = JSON.parse(attr.exprText)
+				if (typeof value === 'string') map.set(attr.name, value)
+			} catch {
+				// exprText wasn't a JSON string literal — not a static value.
+			}
+			continue
+		}
+		if (attr.node.type === 'Literal' && typeof attr.node.value === 'string')
+			map.set(attr.name, attr.node.value)
+	}
+	return map
+}
+
+/**
+ * A selector-clause discriminator (`.lightness`, `#foo`, `[data-axis="x"]`)
+ * that uniquely picks `node` out among `siblings` (same-source composed
+ * elements, LT-089) — `class`/`id`/`data-*` priority, mirroring
+ * `discriminatorCandidates`'s own priority order for raw elements. `class`
+ * matches by token membership (a multi-class `class="a b"` site can be
+ * discriminated by either token); `id`/`data-*` match by exact value. `null`
+ * if no candidate is unique to `node` — the caller must treat that as
+ * genuinely unaddressable, not fall back to anything looser.
+ */
+export const composeDiscriminatorClause = (
+	node: ComposeNode,
+	siblings: readonly ComposeNode[],
+): string | null => {
+	const attrs = composeStaticAttrs(node)
+	const classTokens = (attrs.get('class') ?? '').split(/\s+/).filter(Boolean)
+	const candidates: Array<{ name: string; value: string; clause: string }> = [
+		...classTokens.map(value => ({
+			name: 'class',
+			value,
+			clause: `.${value}`,
+		})),
+		...(attrs.has('id')
+			? [
+					{
+						name: 'id',
+						value: attrs.get('id') as string,
+						clause: `#${attrs.get('id')}`,
+					},
+				]
+			: []),
+		...[...attrs.keys()]
+			.filter(name => name.startsWith('data-'))
+			.map(name => ({
+				name,
+				value: attrs.get(name) as string,
+				clause: `[${name}="${attrs.get(name)}"]`,
+			})),
+	]
+	const matches = (sib: ComposeNode, name: string, value: string): boolean => {
+		const sibAttrs = composeStaticAttrs(sib)
+		if (name === 'class')
+			return (sibAttrs.get('class') ?? '')
+				.split(/\s+/)
+				.filter(Boolean)
+				.includes(value)
+		return sibAttrs.get(name) === value
+	}
+	for (const candidate of candidates) {
+		const matchCount = siblings.filter(sib =>
+			matches(sib, candidate.name, candidate.value),
+		).length
+		if (matchCount === 1) return candidate.clause
+	}
+	return null
 }
 
 /**

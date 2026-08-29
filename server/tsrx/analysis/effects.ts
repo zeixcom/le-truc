@@ -30,6 +30,8 @@ import { uniqueName } from './naming'
 import type { AnalysisContext, TopEffectPlan } from './plan'
 import {
 	type ComposeNode,
+	composeDiscriminatorClause,
+	composeNodesBySource as composeNodesBySourceIn,
 	countComposeBySource as countComposeBySourceIn,
 	type ElementNode,
 	type IfNode,
@@ -111,6 +113,8 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
 	const countComposeBySource = (source2: string) =>
 		countComposeBySourceIn(component.root, source2)
+	const composeNodesBySource = (source2: string) =>
+		composeNodesBySourceIn(component.root, source2)
 	const loopFor = (node: TemplateNode): ForIR | null =>
 		loopForIn(component, node)
 	// LT-085: the substitutable host-prop set for `hostDerivedFold` below,
@@ -946,8 +950,10 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	 * query so the name resolves in the factory (e.g. reading `textbox.value`
 	 * from an event handler elsewhere in the template) — and the target must
 	 * be the sole composed instance of that child in the template
-	 * (`countComposeBySource`) since there's no attribute-based discriminator
-	 * to fall back on.
+	 * (`countComposeBySource`), UNLESS a static `class`/`id`/`data-*` on the
+	 * compose site uniquely tells it apart from same-source siblings
+	 * (`composeDiscriminatorClause`, LT-089) — three same-source
+	 * `<FormSpinbutton class="lightness"|"chroma"|"hue">` instances, say.
 	 */
 	const emitComposeEffects = (node: ComposeNode): void => {
 		const passAttrs = node.attrs.filter(
@@ -969,15 +975,21 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			)
 			return
 		}
+		let discriminator = ''
 		if (countComposeBySource(node.source) !== 1) {
-			diagnostics.push(
-				diagnostic.unaddressableElement(
-					source,
-					node.node.start,
-					`Multiple <${node.component}> instances compose the same child — ref={{ }}/pass={{ }} need a target this milestone can uniquely identify.`,
-				),
-			)
-			return
+			const siblings = composeNodesBySource(node.source)
+			const clause = composeDiscriminatorClause(node, siblings)
+			if (!clause) {
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						source,
+						node.node.start,
+						`Multiple <${node.component}> instances compose the same child — ref={{ }}/pass={{ }} need a target this milestone can uniquely identify (a distinguishing static class/id/data-* attribute on the compose site).`,
+					),
+				)
+				return
+			}
+			discriminator = clause
 		}
 		// `composeRegistry` is `undefined` during the corpus-wide registry-
 		// discovery pass (compileComponent's own tolerance, LT-015) — this
@@ -996,7 +1008,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			)
 			return
 		}
-		const query = addQuery(refAttr.name, childTag, 'one')
+		const query = addQuery(refAttr.name, `${childTag}${discriminator}`, 'one')
 		if (passAttrs.length > 0)
 			emitPassEntries(
 				passAttrs.flatMap(a => a.entries),

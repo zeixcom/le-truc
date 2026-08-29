@@ -59,6 +59,28 @@ export function FormInplaceEdit(
 		value: asString(''),
 	});
 
+	// Retired from `onFocusout`/`onKeydown` JSX attributes on `.edit` to bare
+	// host-level statements (LT-070/LT-087, now that LT-069 widened the
+	// client-only setup-statement gate and LT-087 widened it further to
+	// composed-element `ref={}` names) — matches form-inplace-edit.ts's own
+	// `on(host, 'focusout'/'keydown', …)` calls exactly, including reading
+	// `textbox.value` (the composed `<FormTextbox>`'s `ref={}`, below).
+	on(host, 'focusout', (e: FocusEvent) => {
+		if (!host.editing) return;
+		const related = e.relatedTarget as Element | null;
+		if (related && host.contains(related)) return;
+		host.editing = false;
+	});
+	on(host, 'keydown', (e: KeyboardEvent) => {
+		if (!host.editing) return;
+		if (e.key !== 'Escape' && e.key !== 'Enter') return;
+		e.preventDefault();
+		if (e.key === 'Enter') {
+			host.value = textbox.value;
+			host.editing = false;
+		} else host.editing = false;
+	});
+
 	<>
 		<form-inplace-edit {name} {value} editing={initialEditing}>
 			<span
@@ -72,23 +94,7 @@ export function FormInplaceEdit(
 					editInput?.select();
 				}}
 			>{() => host.value}</span>
-			<div
-				class="edit"
-				hidden={() => !host.editing}
-				onKeydown={(e: KeyboardEvent) => {
-					if (e.key !== 'Escape' && e.key !== 'Enter') return;
-					e.preventDefault();
-					if (e.key === 'Enter') {
-						host.value = textbox.value;
-						host.editing = false;
-					} else host.editing = false;
-				}}
-				onFocusout={(e: FocusEvent) => {
-					const related = e.relatedTarget as Element | null;
-					if (related && host.contains(related)) return;
-					host.editing = false;
-				}}
-			>
+			<div class="edit" hidden={() => !host.editing}>
 				<FormTextbox
 					name={`${name}-edit`}
 					label="Edit"

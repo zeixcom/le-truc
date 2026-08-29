@@ -111,6 +111,89 @@ import { createCell } from '@zeix/le-truc'`,
 		// filtering is the analyzer's dependency-provability concern.
 		expect([...free].sort()).toEqual(['String', 'selected'])
 	})
+
+	test('a for-loop variable is bound in its own test/update/body, not free (LT-088)', () => {
+		const { component } = compileSource(
+			`export function C({}: {})
+			@{
+				expose({})
+				<>
+					<c-el onClick={() => {
+						for (let i = 0; i < n; i++) {
+							console.log(i)
+						}
+					}}>ok</c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		const onClick = component?.root.attrs.find(a => a.kind === 'event')
+		if (onClick?.kind !== 'event') throw new Error('expected event attr')
+		const free = freeIdentifiers(onClick.handler)
+		expect([...free].sort()).toEqual(['console', 'n'])
+	})
+
+	test('a const arrow function may reference its own name inside its own body (LT-088)', () => {
+		const { component } = compileSource(
+			`export function C({}: {})
+			@{
+				expose({})
+				<>
+					<c-el onClick={() => {
+						const handleUp = () => {
+							el.removeEventListener('up', handleUp)
+						}
+						el.addEventListener('up', handleUp)
+					}}>ok</c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		const onClick = component?.root.attrs.find(a => a.kind === 'event')
+		if (onClick?.kind !== 'event') throw new Error('expected event attr')
+		const free = freeIdentifiers(onClick.handler)
+		expect([...free].sort()).toEqual(['el'])
+	})
+})
+
+describe('reactive attribute thunks may reference a plain setup const (LT-088)', () => {
+	test('an ordinary reactive attribute referencing a plain helper const compiles clean', () => {
+		const { component, diagnostics } = compileComponent(
+			`export function C({}: {})
+			@{
+				const fmt = (n: number) => \`#\${n}\`
+				expose({})
+				<>
+					<c-el><span aria-label={() => fmt(1)}>ok</span></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(component?.clientCode).toContain('fmt(1)')
+	})
+
+	test('a reactive attribute referencing a genuinely undeclared name is still diagnosed', () => {
+		const { diagnostics } = compileComponent(
+			`export function C({}: {})
+			@{
+				expose({})
+				<>
+					<c-el><span aria-label={() => mysteryHelper(1)}>ok</span></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(d => d.message.includes('references server-only name')),
+		).toBe(true)
+	})
 })
 
 describe('template classification', () => {
@@ -333,6 +416,114 @@ import { asString, defineMethod } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
 		expect(component?.contextRefs).toEqual(['host', 'internals'])
+	})
+
+	test('client-only setup statement may reference a first()-bound element local (LT-069)', () => {
+		const { component, diagnostics } = compileSource(
+			`export function C({}: {})
+			@{
+				const btn = first('button', 'always present')
+				expose({})
+				on(btn, 'keydown', (e: KeyboardEvent) => {
+					e.preventDefault()
+				})
+				<>
+					<c-el><button>go</button></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(component?.clientSetup).toHaveLength(1)
+		expect(component?.contextRefs).toContain('on')
+	})
+
+	test('client-only setup statement may reference watch/on ambients directly (LT-069)', () => {
+		const { component, diagnostics } = compileSource(
+			`export function C({}: {})
+			@{
+				const canvasEl = first('canvas', 'always present')
+				const size = createCell(0)
+				expose({})
+				watch(size, () => {
+					const ro = new ResizeObserver(() => {})
+					ro.observe(canvasEl)
+					return () => ro.disconnect()
+				})
+				<>
+					<c-el><canvas></canvas></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}
+import { createCell } from '@zeix/le-truc'`,
+			'c.tsrx',
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(component?.clientSetup).toHaveLength(1)
+		expect(component?.contextRefs).toEqual(expect.arrayContaining(['watch']))
+	})
+
+	test('client-only setup statement may reference a ref={} name on a composed element (LT-087)', () => {
+		const { component, diagnostics } = compileSource(
+			`export function C({}: {})
+			@{
+				expose({})
+				on(host, 'keydown', (e: KeyboardEvent) => {
+					if (e.key === 'Enter') child.value = 'x'
+				})
+				<>
+					<c-el><Widget ref={child} /></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}
+import { Widget } from './widget.tsrx'`,
+			'c.tsrx',
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(component?.clientSetup).toHaveLength(1)
+	})
+
+	test('composed-element ref={} pre-scan ignores raw dashed tags and non-ref attributes', () => {
+		const { diagnostics } = compileSource(
+			`export function C({}: {})
+			@{
+				expose({})
+				on(host, 'keydown', () => {
+					stray.focus()
+				})
+				<>
+					<c-el><input /></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		expect(
+			diagnostics.some(d =>
+				d.message.includes('Setup statements other than const declarations'),
+			),
+		).toBe(true)
+	})
+
+	test('client-only setup statement referencing a genuinely unknown name is still unsupported', () => {
+		const { diagnostics } = compileSource(
+			`export function C({}: {})
+			@{
+				expose({})
+				on(mysteryVariable, 'click', () => {})
+				<>
+					<c-el><button>go</button></c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		expect(
+			diagnostics.some(d =>
+				d.message.includes('Setup statements other than const declarations'),
+			),
+		).toBe(true)
 	})
 
 	test('managed lazy child requires form config to be more than text', () => {

@@ -448,7 +448,19 @@ export const emitServerModule = (
 			composeImports.set(entry.name, `./${entry.tag}.server`)
 			const args = node.attrs
 				.filter(
-					(a): a is Extract<typeof a, { kind: 'arg' }> => a.kind === 'arg',
+					(a): a is Extract<typeof a, { kind: 'arg' }> =>
+						a.kind === 'arg' &&
+						// `class`/`id` on a composed element address the COMPOSE
+						// SITE, not the child (LT-089's discriminator search,
+						// `composeStaticAttrs`) — never real typed props a
+						// `.tsrx` component function would declare, so never
+						// forwarded as server args. `data-*` stays forwarded
+						// (a pre-existing, tested convention, LT-015/016) —
+						// it can double as BOTH a real server arg and a
+						// discriminator; no conflict, `composeStaticAttrs`
+						// only reads it, never removes it.
+						a.name !== 'class' &&
+						a.name !== 'id',
 				)
 				.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
 			// A composed element's children (LT-018) render into their own

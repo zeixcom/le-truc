@@ -157,10 +157,17 @@ export const expose = (_props: Record<string, unknown>): void => {}
  * `defineMethod(fn)` — identity on the server: the branded MethodProducer
  * matters only to the client's `expose()` dispatch, and the method body is
  * never invoked during server evaluation.
+ *
+ * Constrained to `any[]`, matching the real `@zeix/le-truc` export exactly
+ * (`src/types.ts`) — `unknown[]` is stricter than the real signature and
+ * rejects a method whose own params have a concrete (non-`unknown`) type
+ * under `strictFunctionTypes`' parameter contravariance, e.g. a union type
+ * (`(axis: 'l' | 'c' | 'h', big?: boolean) => void`) — found migrating
+ * `form-colorgraph.tsrx` (LT-088); every prior `defineMethod` in the corpus
+ * happened to use only inferred-`boolean`/no-param callbacks, which
+ * apparently didn't trip this.
  */
-export const defineMethod = <T extends (...args: unknown[]) => void>(
-	fn: T,
-): T => fn
+export const defineMethod = <T extends (...args: any[]) => void>(fn: T): T => fn
 
 /**
  * Parser-factory shims (`asString` etc.). The verbatim setup calls them when

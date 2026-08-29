@@ -7,16 +7,16 @@
  * on them, so no extra prop is needed for that axis.
  *
  * Roving-tabindex keyboard navigation ported from form-radiogroup.ts's
- * `on(host, 'keydown'/'keyup')` handlers as `onKeydown`/`onKeyup` JSX
- * attributes on the root — bare `on(host, …)` setup statements aren't
- * supported by the milestone-2 subset (TSRX005; only const/expose/narrow
- * client-only side effects over host/internals/signals are). Tracking which
- * radio currently has roving focus is read from `document.activeElement`
- * rather than a separate `focusIndex` signal — the original's own click
- * handler existed only to sync a hand-kept index to the DOM's native
- * focus-follows-click behavior, which `document.activeElement` already
- * reflects directly, so no extra state (and no TSRX004 "never rendered"
- * signal) is needed at all.
+ * `on(host, 'keydown'/'keyup')` handlers as bare setup statements (LT-070,
+ * now that LT-069 widened the client-only setup-statement gate to admit the
+ * `on`/`watch` ambients directly, matching the hand-written original exactly
+ * instead of the earlier per-element `onKeydown`/`onKeyup` JSX-attribute
+ * workaround). Tracking which radio currently has roving focus is read from
+ * `document.activeElement` rather than a separate `focusIndex` signal — the
+ * original's own click handler existed only to sync a hand-kept index to the
+ * DOM's native focus-follows-click behavior, which `document.activeElement`
+ * already reflects directly, so no extra state (and no TSRX004 "never
+ * rendered" signal) is needed at all.
  */
 
 import { asString } from '@zeix/le-truc'
@@ -74,36 +74,36 @@ export function FormRadiogroup(
 		value: asString(''),
 	});
 
+	on(host, 'keydown', (e: KeyboardEvent) => {
+		const { key } = e;
+		if (!HANDLED_KEYS.includes(key)) return;
+
+		const elements = all('input[type="radio"]', 'add at least one radiobutton').get();
+		e.preventDefault();
+		e.stopPropagation();
+		const current = document.activeElement
+			? elements.indexOf(document.activeElement as HTMLInputElement)
+			: -1;
+		const next =
+			key === FIRST_KEY
+				? 0
+				: key === LAST_KEY
+					? elements.length - 1
+					: (current +
+							(INCREMENT_KEYS.includes(key) ? 1 : -1) +
+							elements.length) %
+						elements.length;
+		elements[next]?.focus();
+	});
+	on(host, 'keyup', (e: KeyboardEvent) => {
+		if (e.key !== ENTER_KEY) return;
+		if (document.activeElement instanceof HTMLInputElement)
+			document.activeElement.click();
+	});
+
 	<>
 		<form-radiogroup {name} value={value || options[0]?.value || ''}>
-			<fieldset
-				onKeydown={(e: KeyboardEvent) => {
-					const { key } = e;
-					if (!HANDLED_KEYS.includes(key)) return;
-
-					const elements = all('input[type="radio"]', 'add at least one radiobutton').get();
-					e.preventDefault();
-					e.stopPropagation();
-					const current = document.activeElement
-						? elements.indexOf(document.activeElement as HTMLInputElement)
-						: -1;
-					const next =
-						key === FIRST_KEY
-							? 0
-							: key === LAST_KEY
-								? elements.length - 1
-								: (current +
-										(INCREMENT_KEYS.includes(key) ? 1 : -1) +
-										elements.length) %
-									elements.length;
-					elements[next]?.focus();
-				}}
-				onKeyup={(e: KeyboardEvent) => {
-					if (e.key !== ENTER_KEY) return;
-					if (document.activeElement instanceof HTMLInputElement)
-						document.activeElement.click();
-				}}
-			>
+			<fieldset>
 				<legend>{legend}</legend>
 				@for (const option of options; index i) {
 					const optValue = option.value;

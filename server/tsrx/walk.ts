@@ -82,8 +82,9 @@ export const walkTemplate = (
 
 /**
  * Every `element`-kind attribute in traversal order (compose attributes are
- * `ComposeAttrIR`, a different vocabulary — deliberately not included, e.g.
- * compose `pass` thunks are not client-traced by import placement).
+ * `ComposeAttrIR`, a different vocabulary — deliberately not included here;
+ * `imports.ts`'s `clientExprNodes` walks compose `pass` thunks separately,
+ * LT-088).
  */
 export const collectAttrs = (
 	node: TemplateNode,

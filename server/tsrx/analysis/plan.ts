@@ -439,6 +439,19 @@ export const analyzeClient = (
 		},
 	)
 
+	// Plain setup const names (LT-088) — `component.setup` covers signals AND
+	// expose() too (redundant with the signals/CONTEXT_NAMES checks below for
+	// those, harmless), but it is the only place a plain helper const like
+	// `card-colorscale.tsrx`'s `step`/`isLight` or a Parser instance
+	// (`parseOklch = asOklch()`) is named. Those already work unchecked
+	// inside `style-map`/`class-map` thunks (`emitConstructEffects` never
+	// calls `badFreeNames` for those two kinds at all) — found needing the
+	// same allowance for an ORDINARY reactive attribute (`aria-valuenow`)
+	// migrating `form-colorgraph.tsrx`, which had no reason to differ.
+	const setupNames = new Set(
+		component.setup.map(s => s.name).filter((n): n is string => !!n),
+	)
+
 	/** Free names in a reactive/pass thunk the client cannot resolve. */
 	const badFreeNames = (node: TsrxNode): string[] =>
 		[...dependenciesOf(node)].filter(
@@ -446,7 +459,9 @@ export const analyzeClient = (
 				!component.signals.some(s => s.name === name) &&
 				!refNames.has(name) &&
 				!JS_GLOBALS.has(name) &&
-				!CONTEXT_NAMES.has(name),
+				!CONTEXT_NAMES.has(name) &&
+				!setupNames.has(name) &&
+				!component.imports.clientLeTrucNames.has(name),
 		)
 
 	const ctx: AnalysisContext = {
