@@ -1251,12 +1251,17 @@ import { createCell } from '@zeix/le-truc'`
 })
 
 describe('semantically-loaded attribute has no server default (CHECKLIST §5, TSRX034)', () => {
-	test('hidden bound to a non-foldable comparison thunk is a warning, not an error', () => {
+	test('hidden bound to a comparison over a host prop the root does NOT render is a warning, not an error', () => {
+		// `count` is Parser-exposed but never seeded onto <c-el> as a server
+		// attribute — LT-085's derived-fold widening can't substitute it (no
+		// root expression to splice in), so this stays genuinely unfoldable,
+		// unlike the identical-shaped `host.count !== 0` comparison in
+		// basic-pluralize.tsrx (which DOES render `count` on its root).
 		const source = `export function C({ count }: { count: number })
 	@{
 		expose({ count: asInteger() })
 		<>
-			<c-el {count}>
+			<c-el>
 				<p hidden={() => host.count !== 0}>done</p>
 			</c-el>
 			<style>c-el { color: red }</style>
@@ -1274,6 +1279,115 @@ import { asInteger } from '@zeix/le-truc'`
 		expect(hit?.message).toContain('visible')
 		// A warning must not fail the build.
 		expect(component).not.toBeNull()
+	})
+
+	test('hidden bound to a comparison over a host prop the root DOES render folds — no diagnostic (LT-085)', () => {
+		const source = `export function C({ count }: { count: number })
+	@{
+		expose({ count: asInteger() })
+		<>
+			<c-el {count}>
+				<p hidden={() => host.count !== 0}>done</p>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { asInteger } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(component?.serverCode).toContain(
+			"attr('hidden', (() => (count) !== 0)())",
+		)
+	})
+
+	test('disabled bound to a derived-but-unrenderable comparison over two host props stays unfoldable', () => {
+		// Both `min`/`max` are Parser-exposed and rendered — but `value` is
+		// not rendered on the root, so the whole expression can't fold
+		// (all-or-nothing: one unfoldable `host.<prop>` read disqualifies it).
+		const source = `export function C({ value, min, max }: { value: number; min: number; max: number })
+	@{
+		expose({ value: asInteger(), min: asInteger(), max: asInteger() })
+		<>
+			<c-el {min} {max}>
+				<button disabled={() => host.value <= host.min}>-</button>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { asInteger } from '@zeix/le-truc'`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('warning')
+	})
+
+	test('disabled on a real submittable form control inside a form-associated component escalates to an error (LT-062/LT-085)', () => {
+		const source = `export const config = { formAssociated: true }
+export function C({}: {})
+	@{
+		const busy = createCell(false)
+		expose({ value: asString('') })
+		<>
+			<c-el>
+				<span>{busy}</span>
+				<input disabled={() => busy.get() && Math.random() > 0.5} />
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { createCell, asString } from '@zeix/le-truc'`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('correctness bug')
+	})
+
+	test('disabled on the same unfoldable thunk without formAssociated stays a warning', () => {
+		const source = `export function C({}: {})
+	@{
+		const busy = createCell(false)
+		expose({})
+		<>
+			<c-el>
+				<span>{busy}</span>
+				<input disabled={() => busy.get() && Math.random() > 0.5} />
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { createCell } from '@zeix/le-truc'`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('warning')
+	})
+
+	test('disabled on a non-form-control element inside a form-associated component stays a warning', () => {
+		const source = `export const config = { formAssociated: true }
+export function C({}: {})
+	@{
+		const busy = createCell(false)
+		expose({ value: asString('') })
+		<>
+			<c-el>
+				<span>{busy}</span>
+				<fieldset disabled={() => busy.get() && Math.random() > 0.5}>
+					<input />
+				</fieldset>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { createCell, asString } from '@zeix/le-truc'`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('warning')
 	})
 
 	test('disabled bound to a non-foldable thunk names the enabled-and-submittable risk', () => {

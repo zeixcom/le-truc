@@ -20,7 +20,12 @@
 import type { TsrxNode } from '@tsrx/core'
 import { freeIdentifiers, hostPropOf, JS_GLOBALS } from './ast-utils'
 import { isVoidElement } from './core'
-import { isServerEvaluable } from './evaluability'
+import {
+	foldableHostProps,
+	hostDerivedFold,
+	isServerEvaluable,
+	spliceHostDerivedFold,
+} from './evaluability'
 import type { AttributeIR, ComponentIR, ForIR, TemplateNode } from './ir'
 import type { RegistryEntry } from './registry'
 import {
@@ -130,6 +135,41 @@ const hostPropMirrorExpr = (
 			a.kind === 'server' && a.name === propName,
 	)
 	return rootAttr ? rootAttr.exprText : null
+}
+
+/**
+ * The server expression for a thunk that reads ONLY `host.<prop>` members
+ * (LT-085, CHECKLIST §5 widening of the fold rule beyond the bare mirror
+ * above): each `host.<prop>` range is spliced for that prop's own root
+ * attribute expression (`hostDerivedFold`/`spliceHostDerivedFold`,
+ * evaluability.ts), then the whole rewritten thunk is IIFE-invoked, same
+ * posture as the plain-`isServerEvaluable` case below. Null when the thunk
+ * reads anything other than foldable `host.<prop>` members (a signal, a
+ * bare `host` escape, an unexposed prop).
+ */
+const hostDerivedExpr = (
+	component: ComponentIR,
+	thunk: TsrxNode,
+	thunkText: string,
+): string | null => {
+	const reads = hostDerivedFold(thunk, foldableHostProps(component))
+	if (reads === null || reads.length === 0) return null
+	const spliced = spliceHostDerivedFold(
+		thunkText,
+		typeof thunk.start === 'number' ? thunk.start : 0,
+		reads,
+		prop => {
+			const rootAttr = component.root.attrs.find(
+				(a): a is Extract<AttributeIR, { kind: 'server' }> =>
+					a.kind === 'server' && a.name === prop,
+			)
+			// hostDerivedFold only returns reads whose prop is in
+			// foldableHostProps(component), which is built from exactly these
+			// root attributes — always found.
+			return rootAttr ? rootAttr.exprText : ''
+		},
+	)
+	return `(${spliced})()`
 }
 
 /* === Exported Functions === */
@@ -459,9 +499,16 @@ export const emitServerModule = (
 					break
 				case 'reactive': {
 					const mirror = hostPropMirrorExpr(component, attr.thunk)
+					const derived =
+						mirror === null
+							? hostDerivedExpr(component, attr.thunk, attr.thunkText)
+							: null
 					if (mirror !== null) {
 						used.add('attr')
 						parts.push({ expr: `attr('${attr.name}', ${mirror})` })
+					} else if (derived !== null) {
+						used.add('attr')
+						parts.push({ expr: `attr('${attr.name}', ${derived})` })
 					} else if (isServerEvaluable(attr.thunk, scope)) {
 						used.add('attr')
 						parts.push({ expr: `attr('${attr.name}', (${attr.thunkText})())` })

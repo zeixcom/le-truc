@@ -18,7 +18,12 @@ import {
 	sanitizeVarName,
 } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
-import { containsImpureAmbient, dependenciesOf } from '../evaluability'
+import {
+	containsImpureAmbient,
+	dependenciesOf,
+	foldableHostProps,
+	hostDerivedFold,
+} from '../evaluability'
 import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import type { AnalysisContext, TopEffectPlan } from './plan'
@@ -34,6 +39,22 @@ import {
 	selectorFor as selectorForIn,
 	type TryNode,
 } from './selectors'
+
+/**
+ * Native form-control tags a form-associated component's `disabled`/
+ * `checked` omission (TSRX034) escalates to an ERROR for (LT-062/LT-085):
+ * a real submittable control, not the host itself. Compiler-side duplicate
+ * of `compiler.ts`'s `NAMED_FORM_CONTROL_TAGS` (LT-059) — front-end/
+ * analysis-layer duplication is the established pattern here (same
+ * precedent as `MANAGED_FORM_MEMBERS`, ast-utils.ts) rather than an import
+ * against the documented front-end → analysis direction.
+ */
+const SUBMITTABLE_FORM_CONTROL_TAGS: ReadonlySet<string> = new Set([
+	'input',
+	'select',
+	'textarea',
+	'button',
+])
 
 /**
  * The managed form prop a reactive child reads, or null. Since LT-052 that
@@ -90,6 +111,9 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		countComposeBySourceIn(component.root, source2)
 	const loopFor = (node: TemplateNode): ForIR | null =>
 		loopForIn(component, node)
+	// LT-085: the substitutable host-prop set for `hostDerivedFold` below,
+	// computed once per component rather than per attribute.
+	const derivableHostProps = foldableHostProps(component)
 
 	/**
 	 * Validate and lower one target's `pass={{ }}` entries into `pass` effect
@@ -180,18 +204,20 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				// CHECKLIST §5 / TSRX034: omission is not neutral for these
 				// attribute names — `hidden` omitted means visible, `disabled`
 				// omitted means enabled AND submittable, same for `checked`/
-				// `selected`/`aria-expanded`. A host-prop mirror always renders
-				// an initial value (from the root's own server arg), and a
-				// server-evaluable thunk folds normally — both safe. Anything
-				// else (a sensor, or any other non-portable dependency) would be
-				// silently OMITTED (`emit-server.ts`'s `case 'reactive'` pushes
-				// nothing at all when neither path applies), rendering the
-				// interactive/visible/submittable default regardless of what the
-				// author intended — the worst of the two possible defaults, not
-				// a neutral one.
+				// `selected`/`aria-expanded`. A host-prop mirror, a derived
+				// `host.<prop>` fold (LT-085, `hostDerivedFold` below), and a
+				// server-evaluable thunk all render an initial value — all
+				// three safe. Anything else (a sensor, or any other
+				// non-portable dependency) would be silently OMITTED
+				// (`emit-server.ts`'s `case 'reactive'` pushes nothing at all
+				// when none of the three paths applies), rendering the
+				// interactive/visible/submittable default regardless of what
+				// the author intended — the worst of the two possible
+				// defaults, not a neutral one.
 				if (
 					SEMANTICALLY_LOADED_ATTRS.has(attr.name) &&
 					hostPropOf(attr.thunk) === null &&
+					hostDerivedFold(attr.thunk, derivableHostProps) === null &&
 					!(
 						dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
 						!containsImpureAmbient(attr.thunk)
@@ -202,6 +228,14 @@ export const runEffects = (ctx: AnalysisContext): void => {
 							source,
 							attr.thunk.start,
 							attr.name,
+							// LT-062/LT-085: escalate to ERROR only for `disabled`/
+							// `checked` on a real submittable native form control
+							// inside a form-associated component — there, the wrong
+							// default is a submission-correctness bug, not a
+							// cosmetic flash.
+							(attr.name === 'disabled' || attr.name === 'checked') &&
+								component.config?.form != null &&
+								SUBMITTABLE_FORM_CONTROL_TAGS.has(el.tag),
 						),
 					)
 				if (isCustom) {

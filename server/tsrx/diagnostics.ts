@@ -726,34 +726,55 @@ export const diagnostic = {
 	/**
 	 * A semantically-loaded attribute (CHECKLIST §5 — `hidden`, `disabled`,
 	 * `checked`, `selected`, `aria-expanded`) has no server-renderable
-	 * initial value: it's not a host-prop mirror (which always renders from
-	 * the root's own server arg) and its thunk isn't server-evaluable (a
-	 * sensor read, or any other dependency the server can't resolve).
-	 * `emit-server.ts`'s reactive-attribute case pushes NOTHING for this
-	 * shape — the attribute is simply absent from the initial HTML, which
-	 * means visible/enabled-and-submittable/unchecked/deselected/collapsed,
-	 * the more dangerous of each pair, regardless of what the author meant.
-	 * WARNING, not error: several existing example components (`basic-
-	 * pluralize.tsrx`'s `hidden={() => host.count !== 0}`, others) already
-	 * carry this exact shape as a documented, deliberately accepted flash-
-	 * risk tradeoff (a comparison thunk over `host.<prop>` isn't a bare
-	 * mirror `hostPropOf` recognizes, so it isn't foldable under the current
-	 * fold rule) — hard-erroring here would retroactively invalidate prior
-	 * reviewed decisions rather than surface new ones. Widening `hostPropOf`
-	 * or the fold rule to cover comparison/derived thunks over `host.<prop>`
-	 * would shrink how often this fires; not attempted here (see LT-062's
-	 * TODO.md handoff).
+	 * initial value: it's not a host-prop mirror or a derived `host.<prop>`
+	 * fold (`hostDerivedFold`, evaluability.ts — both always render from the
+	 * root's own server arg(s)) and its thunk isn't otherwise server-
+	 * evaluable (a sensor read, or any other dependency the server can't
+	 * resolve). `emit-server.ts`'s reactive-attribute case pushes NOTHING for
+	 * this shape — the attribute is simply absent from the initial HTML,
+	 * which means visible/enabled-and-submittable/unchecked/deselected/
+	 * collapsed, the more dangerous of each pair, regardless of what the
+	 * author meant.
+	 *
+	 * WARNING by default: some sensor-driven shapes have no server value at
+	 * all and are a documented, deliberately accepted flash-risk tradeoff
+	 * (ADR 0023, `basic-pluralize.tsrx`'s history before LT-085 widened the
+	 * fold rule to cover its own `host.count` comparisons) — hard-erroring
+	 * unconditionally would treat every unfoldable case as equally severe.
+	 * `severe` (LT-062/LT-085 decision) escalates to ERROR specifically for
+	 * `disabled`/`checked` on a real submittable form control (`input`/
+	 * `select`/`textarea`/`button` inside a `formAssociated`/
+	 * `formAssociatedCheckbox` component): there, "enabled and submittable"
+	 * or "unchecked" regardless of author intent is a correctness bug (the
+	 * control can submit, or fail to, against the author's actual intent),
+	 * not just a cosmetic pre-hydration flash.
 	 */
 	unsafeLoadedAttributeDefault: (
 		source: string,
 		offset: number | undefined,
 		name: string,
-	) =>
-		warning(
+		severe: boolean,
+	) => {
+		const build = severe ? error : warning
+		const stateWord =
+			name === 'hidden'
+				? 'visible'
+				: name === 'disabled'
+					? 'enabled AND submittable'
+					: name === 'checked'
+						? 'unchecked'
+						: name === 'selected'
+							? 'deselected'
+							: 'collapsed'
+		const correctnessNote = severe
+			? ` This is a real submittable form control, so the wrong default is a correctness bug — the control can submit, or fail to, regardless of what the author intended — not just a cosmetic pre-hydration flash.`
+			: ''
+		return build(
 			'TSRX034',
-			`\`${name}\` has no server-renderable initial value here — the server can't resolve this thunk (a sensor, or any dependency outside props/signals), so \`${name}\` is silently OMITTED from the initial HTML. Omission is not neutral for \`${name}\`: it renders the ${name === 'hidden' ? 'visible' : name === 'disabled' ? 'enabled AND submittable' : name === 'checked' ? 'unchecked' : name === 'selected' ? 'deselected' : 'collapsed'} state regardless of what this expression would actually evaluate to once connected. Trace the value to a server-known prop or signal so it can render an initial value, or accept the pre-hydration flash explicitly by giving this element a static/server-rendered default for \`${name}\`.`,
+			`\`${name}\` has no server-renderable initial value here — the server can't resolve this thunk (a sensor, or any dependency outside props/signals), so \`${name}\` is silently OMITTED from the initial HTML. Omission is not neutral for \`${name}\`: it renders the ${stateWord} state regardless of what this expression would actually evaluate to once connected.${correctnessNote} Trace the value to a server-known prop or signal so it can render an initial value, or accept the pre-hydration flash explicitly by giving this element a static/server-rendered default for \`${name}\`.`,
 			lineOf(source, offset),
-		),
+		)
+	},
 
 	/**
 	 * A literal `id` is duplicated across `@try`/`@catch`/`@pending` arms
