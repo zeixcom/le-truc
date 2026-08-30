@@ -353,7 +353,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					// `bindAttribute` takes string|boolean, and the dirty-flag
 					// properties (`value` on input/textarea/select) are
 					// DOMString-typed — the coercion keeps both typechecking.
-					coerceToString: returnsNumber(attr.thunk.body),
+					coerceToString: returnsNumber(attr.thunk.body, component.signals),
 					sourceStart: attr.thunk.start,
 					sourceEnd: attr.thunk.end,
 				})

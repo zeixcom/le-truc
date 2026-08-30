@@ -263,6 +263,12 @@ export const shareExclusiveIf = (
  * channels are genuinely INDEPENDENT copies. Note this is per-SITE, not
  * per-prop — the same prop rendered onto a DIFFERENT element than the
  * one its fallback reads is still a duplicate and still warns.
+ *
+ * The exclusion covers text-child sites as well as attributes (LT-139):
+ * `expose({ label: asString(labelSpan.textContent ?? '') })` over
+ * `<span class="label">{label}</span>` is bullet 4's canonical harvest
+ * site with bullet 2's override added. A text child's site element is
+ * its PARENT, which `walkTemplate` already hands to the visitor.
  */
 export const reportDuplicatedChannels = (
 	root: TemplateNode,
@@ -308,10 +314,19 @@ export const reportDuplicatedChannels = (
 		const refName = element ? refNameOf(element) : null
 		return refName !== null && parserFallbackRefsOf(prop).has(refName)
 	}
-	walkTemplate(root, node => {
+	walkTemplate(root, (node, parent) => {
 		if (node.kind === 'expr') {
 			const prop = named(node.expr)
-			if (prop) report(prop, node.node.start)
+			// A text child's site element is its PARENT (LT-139) — `walkTemplate`
+			// hands it to the visitor, so the same per-site exclusion the
+			// attribute branch below applies works here unchanged. The root is
+			// not skipped the way it is for attributes: a text child OF the root
+			// is an owned site, not the host's own attribute channel.
+			if (
+				prop &&
+				!isSanctionedOverride(prop, parent?.kind === 'element' ? parent : null)
+			)
+				report(prop, node.node.start)
 			return
 		}
 		if (node.kind !== 'element' || node === root) return

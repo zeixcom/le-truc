@@ -1900,3 +1900,70 @@ export function C({ step = 1 }: { step?: number })
 		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
 	})
 })
+
+describe('TSRX039 override exclusion reaches TEXT CHILDREN too (LT-139)', () => {
+	// LT-129 excluded the sanctioned override on ATTRIBUTE sites only. The same
+	// relationship spelled as a text child is bullet 4's canonical harvest site
+	// (`<span class="label">{label}</span>`) with bullet 2's host-attribute
+	// override added — two shapes the profile endorses, combined.
+	test('fallback reads the span it renders into — no warning', () => {
+		const source = `import { asString } from '@zeix/le-truc'
+export function C({ label = '' }: { label?: string })
+@{
+	const labelSpan = first('span.label', 'label span')
+	expose({ label: asString(labelSpan.textContent ?? '') })
+	<>
+		<c-el><span class="label">{label}</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX039')).toEqual([])
+	})
+
+	test('per-SITE still holds — a text child in a DIFFERENT element warns', () => {
+		// `labelSpan`'s fallback sanctions the override on that span alone. The
+		// same arg rendered as a second element's text is an independent copy.
+		const source = `import { asString } from '@zeix/le-truc'
+export function C({ label = '' }: { label?: string })
+@{
+	const labelSpan = first('span.label', 'label span')
+	expose({ label: asString(labelSpan.textContent ?? '') })
+	<>
+		<c-el>
+			<span class="label">{label}</span>
+			<span class="echo">{label}</span>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
+	})
+
+	test('a Parser with no fallback read still warns on a text child', () => {
+		const source = `import { asString } from '@zeix/le-truc'
+export function C({ label = '' }: { label?: string })
+@{
+	expose({ label: asString('') })
+	<>
+		<c-el><span class="label">{label}</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
+	})
+})

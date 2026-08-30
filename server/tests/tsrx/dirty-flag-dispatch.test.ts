@@ -179,10 +179,9 @@ export function C({}: {})
 	})
 
 	test('number-valued thunk over `value` on a native input still stringifies for the property setter', () => {
-		// `returnsNumber`'s heuristic: number literals and conditionals over
-		// them. A bare number-signal read (`count.get()`) is NOT detected —
-		// a pre-existing heuristic gap shared with the attribute dispatch,
-		// flagged in NOTES.md, not introduced or worsened here.
+		// `returnsNumber`: number literals and conditionals over them. The
+		// bare number-signal read (`count.get()`) it used to miss is covered
+		// since LT-126 — see the test below.
 		const { component, diagnostics } = compiled(`export function C({}: {})
 @{
 	expose({})
@@ -197,6 +196,52 @@ export function C({}: {})
 		const code = component?.clientCode ?? ''
 		expect(code).toContain(
 			"watch(() => String((() => (host.value === '' ? 1 : 2))()), bindProperty(input, 'value'))",
+		)
+	})
+
+	test('a bare number-SIGNAL read stringifies too (LT-126)', () => {
+		// `returnsNumber` used to recognise only literals and conditionals over
+		// them, so `() => count.get()` reached `bindProperty`'s DOMString setter
+		// uncoerced and the generated client failed `check:tsrx`. The signal's
+		// `inferredType` settles it.
+		const { component, diagnostics } =
+			compiled(`import { createState } from '@zeix/le-truc'
+export function C({}: {})
+@{
+	const count = createState(0)
+	expose({})
+	<>
+		<c-el>
+			<input type="number" value={() => count.get()} />
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`)
+		expect(diagnostics).toEqual([])
+		// IIFE-wrapped like the conditional case above — the coercion is what
+		// this pins, not the wrapping.
+		expect(component?.clientCode ?? '').toContain(
+			"watch(() => String((() => count.get())()), bindProperty(input, 'value'))",
+		)
+	})
+
+	test('a STRING signal read is left alone — the coercion is number-only', () => {
+		const { component, diagnostics } =
+			compiled(`import { createState } from '@zeix/le-truc'
+export function C({}: {})
+@{
+	const label = createState('a')
+	expose({})
+	<>
+		<c-el>
+			<input type="text" value={() => label.get()} />
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`)
+		expect(diagnostics).toEqual([])
+		expect(component?.clientCode ?? '').toContain(
+			"watch(() => label.get(), bindProperty(input, 'value'))",
 		)
 	})
 })

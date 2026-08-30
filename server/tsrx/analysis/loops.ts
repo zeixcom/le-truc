@@ -151,7 +151,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 							mirror !== null || isDirtyFlagControlAttr(el.tag, attr.name)
 								? 'property'
 								: 'attribute',
-						coerceToString: returnsNumber(attr.thunk.body),
+						coerceToString: returnsNumber(attr.thunk.body, component.signals),
 						sourceStart: attr.thunk.start,
 						sourceEnd: attr.thunk.end,
 						target,

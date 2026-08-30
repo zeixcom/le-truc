@@ -13,13 +13,14 @@ import type { TsrxNode } from '@tsrx/core'
 import {
 	CONTEXT_NAMES,
 	hostPropOf,
+	identifierName,
 	JS_GLOBALS,
 	nodeType,
 	sanitizeVarName,
 } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
-import type { AttributeIR, TemplateNode } from '../ir'
+import type { AttributeIR, SignalIR, TemplateNode } from '../ir'
 import type { AnalysisContext, HarvestPlan, ParserKind } from './plan'
 import {
 	type ElementNode,
@@ -135,12 +136,40 @@ export const defaultForType = (type: string): string => {
 	}
 }
 
-/** Conservative check: does a thunk body return a number literal? */
-export const returnsNumber = (body: unknown): boolean => {
+/**
+ * Conservative check: does a thunk body evaluate to a number? Number
+ * literals, conditionals over them, and — since LT-126 — a bare read of a
+ * number-typed signal (`count.get()`), resolved through the signal's own
+ * `inferredType` rather than guessed from the expression's shape.
+ *
+ * The signal case matters because of LT-116: `value` on a native form
+ * control now dispatches as a PROPERTY write, and `HTMLInputElement.value`
+ * is DOMString-typed, so an uncoerced number thunk fails `check:tsrx` on
+ * the generated client. Callers that have no signal list keep the old
+ * literal-only behaviour.
+ */
+export const returnsNumber = (
+	body: unknown,
+	signals: readonly SignalIR[] = [],
+): boolean => {
 	if (nodeType(body) === 'Literal')
 		return typeof (body as TsrxNode).value === 'number'
 	if (nodeType(body) === 'ConditionalExpression')
-		return returnsNumber((body as TsrxNode).consequent)
+		return returnsNumber((body as TsrxNode).consequent, signals)
+	// `<signal>.get()` — the identifier form only. A `.get()` on anything
+	// else (a member chain, a call result) is not a signal read this
+	// compiler tracks, so it stays undetected rather than guessed at.
+	if (nodeType(body) === 'CallExpression') {
+		const callee = (body as TsrxNode).callee
+		if (
+			nodeType(callee) === 'MemberExpression' &&
+			identifierName((callee as TsrxNode).property) === 'get'
+		) {
+			const name = identifierName((callee as TsrxNode).object)
+			if (name)
+				return signals.some(s => s.name === name && s.inferredType === 'number')
+		}
+	}
 	return false
 }
 
