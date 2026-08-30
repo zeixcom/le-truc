@@ -9,6 +9,8 @@
 import type { TsrxNode } from '@tsrx/core'
 import {
 	CONTEXT_NAMES,
+	hostPropOf,
+	isDirtyFlagControlAttr,
 	JS_GLOBALS,
 	nodeType,
 	objectKeys,
@@ -131,10 +133,24 @@ export const runLoops = (ctx: AnalysisContext): void => {
 			for (const attr of el.attrs) {
 				if (attr.kind === 'reactive') {
 					checkClientNames(attr.thunk, `Reactive attribute \`${attr.name}\``)
+					// LT-116: same dispatch rule the top-level path applies —
+					// a bare host-prop mirror OR a dirty-flag IDL attr
+					// (`value`/`checked`/`selected`) on a native form control
+					// lowers to a property write. Inside `each()` this is
+					// exactly what the hand-written twin did
+					// (`radio.checked = isChecked`): once the user clicks a
+					// radio, attribute removal no longer clears the live
+					// property, so `bindAttribute` mirrors stop tracking and
+					// mutual exclusion breaks (NOTES LT-092).
+					const mirror = hostPropOf(attr.thunk)
 					effectsPlan.push({
 						kind: 'watch-attr',
 						attr: attr.name,
 						thunkText: attr.thunkText,
+						dispatch:
+							mirror !== null || isDirtyFlagControlAttr(el.tag, attr.name)
+								? 'property'
+								: 'attribute',
 						coerceToString: returnsNumber(attr.thunk.body),
 						sourceStart: attr.thunk.start,
 						sourceEnd: attr.thunk.end,

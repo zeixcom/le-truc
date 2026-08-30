@@ -146,6 +146,11 @@ export const returnsNumber = (body: unknown): boolean => {
 
 export const lazyWatchSource = (child: ExprNode): string => {
 	const expr = child.expr
+	// LT-122: the site renders a server ARG that is also an exposed
+	// prop. `exprText` is the arg — what the server splices — so the
+	// client source has to be spelled from the prop instead, exactly
+	// as an authored `{host.<prop>}` would have lowered.
+	if (child.bindsProp) return `() => host.${child.bindsProp}`
 	if (nodeType(expr) === 'Identifier') return child.exprText
 	// Anything else (a call/member expression, etc.) isn't one of `watch()`'s
 	// identifier overload — spliced verbatim it would be a

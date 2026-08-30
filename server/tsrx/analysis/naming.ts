@@ -39,8 +39,16 @@ export const addQuery = (
 	cardinality: 'one' | 'many' | 'maybe',
 	explicitType?: string,
 ): string => {
+	// LT-123: an author-declared optional ref stays optional
+	// however unconditional its site looks — the component's
+	// markup may be page-authored, and a page may omit a child
+	// this template would have rendered.
+	const effective: 'one' | 'many' | 'maybe' =
+		cardinality === 'one' && component.optionalRefs.has(base)
+			? 'maybe'
+			: cardinality
 	const existing = queries.find(
-		q => q.selector === selector && q.cardinality === cardinality,
+		q => q.selector === selector && q.cardinality === effective,
 	)
 	if (existing) return existing.name
 	// Addressing another registry component means needing its element
@@ -63,8 +71,8 @@ export const addQuery = (
 		component.refReasons.get(base) ?? `${component.tag}: ${selector} missing`
 	queries.push(
 		explicitType
-			? { name, selector, cardinality, message, explicitType }
-			: { name, selector, cardinality, message },
+			? { name, selector, cardinality: effective, message, explicitType }
+			: { name, selector, cardinality: effective, message },
 	)
 	return name
 }

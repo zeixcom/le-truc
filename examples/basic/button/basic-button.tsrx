@@ -1,24 +1,35 @@
 /**
- * Unified-format migration: basic-button — reactive, externally-settable
- * `label` / `badge` / `disabled` props (ADR 0023 examples migration).
+ * Children-are-data harvest in the DEFAULT template-owning path
+ * (LT-117, reopened): this component OWNS its markup — the server
+ * renders the `<button>` and its `span.label`/`span.badge` from
+ * the args — and harvests the exposed props back out of that same
+ * markup at connect (TSRX-HOST-PROFILE § data account bullet 4).
+ * One site per value, three roles: the server's render target, the
+ * client's harvest source (ADR 0003, DOM-is-truth), and the
+ * client's binding target.
  *
- * Deviation from the hand-written `basic-button.ts` (noted per project
- * convention rather than silently dropped): the hand-written version
- * harvests `label`/`badge`/`disabled` once from descendant DOM (span
- * textContent, button.disabled) with graceful fallback when the `.label`
- * span is missing (falls back to the button's own text) or entirely absent
- * (`missing-elements-test` in basic-button.html). TSRX's single canonical
- * template can't represent "sometimes no span at all" — `label`/`badge`
- * become genuine Parser-exposed, attribute-driven, externally-settable
- * props (`asString`/`asBoolean`) instead, mirrored reactively onto the
- * `<span>`s via `{host.label}` — the string-key form `watch('label', …)`
- * already uses for managed form props (`{host.validationMessage}`), just not
- * form-specific: any Parser-exposed prop is `keyof P` for the real
- * `WatchHelper` (`src/helpers/reactive.ts`) — `badge` stays optional via
- * `@if (badge)`.
+ * The contract this restores, verbatim from the hand-written twin:
+ *
+ * - `label` harvests `span.label`'s text, falling back to the
+ *   button's own text when the page authored no span
+ *   (`text-fallback-test` in basic-button.html);
+ * - `badge` tolerates absence entirely — `first('span.badge')` is
+ *   the OPTIONAL form (LT-123), and the `@if (badge)` branch means
+ *   the client already addresses it non-throwing, under a presence
+ *   guard;
+ * - `label`'s ref is optional for the same reason even though the
+ *   template renders the span unconditionally: a page may enhance a
+ *   bare `<button>` this component never rendered
+ *   (`missing-elements-test`);
+ * - `button` is REQUIRED — it is the component's whole reason to
+ *   exist, and a missing one throws with the authored reason.
+ *
+ * `variant`/`size` drive the button's own classes. Per the ownership
+ * rule, classes on INNER elements belong to this component and reach
+ * it through server args; a parent styling one INSTANCE puts its
+ * class on the `basic-button` host instead, where it passes through
+ * to the served DOM untouched.
  */
-
-import { asBoolean, asString } from '@zeix/le-truc'
 
 export type BasicButtonProps = {
 	/** Whether the button is disabled. */
@@ -43,21 +54,42 @@ declare global {
  * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-button} Interactive preview with disabled, labelled, and badged variants
  */
 export function BasicButton(
-	{ label, badge = '', disabled = false }: { label: string; badge?: string; disabled?: boolean },
+	{
+		label,
+		badge = '',
+		disabled = false,
+		variant = 'secondary',
+		size = 'medium',
+	}: {
+		label: string
+		badge?: string
+		disabled?: boolean
+		variant?:
+			| 'primary'
+			| 'secondary'
+			| 'tertiary'
+			| 'constructive'
+			| 'destructive'
+		size?: 'small' | 'medium' | 'large'
+	},
 )
 	@{
+		const button = first('button', 'Add a native button as descendant.')
+		const labelSpan = first('span.label')
+		const badgeSpan = first('span.badge')
+
 		expose({
-			disabled: asBoolean(false),
-			label: asString(''),
-			badge: asString(''),
+			disabled: button.disabled,
+			label: labelSpan?.textContent ?? button.textContent ?? '',
+			badge: badgeSpan?.textContent ?? '',
 		})
 
 		<>
-			<basic-button {label} {badge} {disabled}>
-				<button type="button" disabled={() => host.disabled}>
-					<span class="label">{host.label}</span>
+			<basic-button>
+				<button type="button" class={`${variant} ${size}`} {disabled}>
+					<span class="label">{label}</span>
 					@if (badge) {
-						<span class="badge">{host.badge}</span>
+						<span class="badge">{badge}</span>
 					}
 				</button>
 			</basic-button>
@@ -97,6 +129,87 @@ export function BasicButton(
 						&:active {
 							background-color: var(--color-secondary-active);
 						}
+					}
+
+					/* Variants — chosen with the `variant` arg. */
+					&.primary {
+						background-color: var(--color-primary);
+						border-color: var(--color-primary);
+						color: var(--color-primary-text);
+
+						&:not(:disabled) {
+							&:hover {
+								background-color: var(--color-primary-hover);
+							}
+
+							&:active {
+								background-color: var(--color-primary-active);
+							}
+						}
+					}
+
+					&.tertiary {
+						background-color: transparent;
+						border-color: transparent;
+
+						&:not(:disabled) {
+							&:hover {
+								background-color: var(--color-secondary-hover);
+							}
+
+							&:active {
+								background-color: var(--color-secondary-active);
+							}
+						}
+					}
+
+					&.constructive {
+						background-color: var(--color-success);
+						border-color: var(--color-success);
+						color: var(--color-success-text);
+
+						&:not(:disabled) {
+							&:hover {
+								background-color: var(--color-success-hover);
+							}
+
+							&:active {
+								background-color: var(--color-success-active);
+							}
+						}
+					}
+
+					&.destructive {
+						background-color: var(--color-error);
+						border-color: var(--color-error);
+						color: var(--color-error-text);
+
+						&:not(:disabled) {
+							&:hover {
+								background-color: var(--color-error-hover);
+							}
+
+							&:active {
+								background-color: var(--color-error-active);
+							}
+						}
+					}
+
+					/* Sizes — chosen with the `size` arg. */
+					&.small {
+						height: var(--space-l);
+						min-inline-size: var(--space-l);
+						padding: 0 var(--space-xs);
+						font-size: var(--font-size-xs);
+						line-height: var(--line-height-xs);
+					}
+
+					&.large {
+						height: var(--space-xl);
+						min-inline-size: var(--space-xl);
+						padding: 0 var(--space-m);
+						font-size: var(--font-size-m);
+						line-height: var(--line-height-m);
 					}
 				}
 

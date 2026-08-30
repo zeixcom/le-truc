@@ -88,6 +88,7 @@ export default defineComponent<FormTextboxProps>(
 			watch(() => host.validationMessage, bindText(p2))
 		}
 		if (p) {
+			watch(() => host.description, bindAttribute(p, 'data-remaining'))
 			watch(remainingCount, bindText(p))
 		}
 	},

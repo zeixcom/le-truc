@@ -39,7 +39,10 @@ export const readConfig = (
 		)
 		return null
 	}
-	const config: ConfigIR = { form: null, observedAttributes: [] }
+	const config: ConfigIR = {
+		form: null,
+		observedAttributes: [],
+	}
 	for (const prop of asArray(init.properties)) {
 		if (prop.type !== 'Property') continue
 		const key = identifierName(prop.key)

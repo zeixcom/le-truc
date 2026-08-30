@@ -89,6 +89,15 @@ export type TemplateNode =
 			expr: TsrxNode
 			exprText: string
 			lazy: boolean
+			/**
+			 * The exposed prop this server-rendered text site ALSO
+			 * binds client-side (LT-122) — see the identically-named
+			 * field on the `'server'` attribute kind. `lazy` is true
+			 * whenever this is set: the site needs a client effect,
+			 * but its `exprText` stays the ARG so the server can
+			 * still render it.
+			 */
+			bindsProp?: string
 			node: TsrxNode
 	  }
 	| {
@@ -176,7 +185,22 @@ export type PassEntryIR = {
 
 export type AttributeIR =
 	| { kind: 'static'; name: string; value: string | null }
-	| { kind: 'server'; name: string; exprText: string; node: TsrxNode }
+	| {
+			kind: 'server'
+			name: string
+			exprText: string
+			node: TsrxNode
+			/**
+			 * The exposed prop this server-rendered attribute ALSO binds
+			 * client-side (LT-122) — set when `exprText` is a bare
+			 * identifier naming both a server arg and an `expose()`d prop
+			 * of the same name. The server renders the arg (unchanged);
+			 * the client watches `() => host.<bindsProp>` against the same
+			 * site, so one authored `{disabled}` is the render target, the
+			 * harvest source, and the binding target at once.
+			 */
+			bindsProp?: string
+	  }
 	| { kind: 'reactive'; name: string; thunk: TsrxNode; thunkText: string }
 	| { kind: 'pass'; entries: PassEntryIR[] }
 	| {
@@ -384,6 +408,28 @@ export type ComponentIR = {
 	 * own structurally-proven one, exactly as for `ref={}` before it).
 	 */
 	refReasons: ReadonlyMap<string, string>
+	/**
+	 * Optional (`first('sel')`, one-literal) references whose
+	 * selector matches NOTHING in this component's own template
+	 * (LT-123) — legitimate: an optional ref may address markup
+	 * the PAGE authored beside the component's own children. The
+	 * structural check that rejects an unmatched REQUIRED ref
+	 * (TSRX026) cannot say anything about those, so the client
+	 * queries them from the authored selector verbatim.
+	 */
+	unmatchedOptionalRefs: ReadonlyArray<{ name: string; selector: string }>
+	/**
+	 * Refs the author declared OPTIONAL (`first('sel')`, one
+	 * literal), matched or not (LT-123). The template having
+	 * rendered the element unconditionally does not make such a
+	 * ref required: the component's markup can be page-authored
+	 * instead of server-rendered, and a page is free to leave a
+	 * child out (`basic-button.html`'s `missing-elements-test`
+	 * authors a bare `<button>` with no `span.label`). So
+	 * cardinality is the WEAKER of what the author declared and
+	 * what the site proves — never the stronger.
+	 */
+	optionalRefs: ReadonlySet<string>
 	/** `@for` loops, keyed by their template node. */
 	fors: Map<TsrxNode, ForIR>
 	/** Dedented verbatim CSS ("" when no style block). */
@@ -452,6 +498,22 @@ export type ExtractContext = {
 	exposedProps: Set<string>
 	/** Names server-known at template evaluation time (args, setup). */
 	serverKnown: Set<string>
+	/**
+	 * Prop names exposed through a Parser factory — the subset of
+	 * `exposedProps` seeded from the HOST ATTRIBUTE rather than
+	 * from the component's own markup. LT-122 excludes them; see
+	 * `bindsExposedArg`.
+	 */
+	parserProps: Set<string>
+	/** The Parser factory name backing a `parserProps` entry (TSRX039). */
+	parserFactoryOf: (prop: string) => string
+	/**
+	 * The component function's own parameter names — the strict
+	 * subset of `serverKnown` that arrives from the CALLER. LT-122's
+	 * arg-and-prop coincidence is about those only: a setup const or
+	 * signal sharing a prop's name is a different relationship.
+	 */
+	argNames: Set<string>
 	/**
 	 * Local name → import specifier resolved to a repo-relative `.tsrx` path,
 	 * for composed (PascalCase) elements (ADR 0023 sub-design 10).

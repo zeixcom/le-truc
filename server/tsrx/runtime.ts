@@ -154,6 +154,52 @@ export const deriveStore = <T>(compute: () => T): ServerCell<T> =>
 export const expose = (_props: Record<string, unknown>): void => {}
 
 /**
+ * Stand-in for a client-only ambient the server render function still
+ * has to DECLARE — a `first()`-bound element reference, `host`,
+ * `internals` (LT-121). Those name connect-time DOM the server never
+ * has, but `expose()`'s argument object is a real expression the
+ * generated module evaluates: a component following the
+ * children-are-data rule seeds its props by READING the reference
+ * (`expose({ value: asNumber(asNumber(0)(input.value)) })`,
+ * TSRX-HOST-PROFILE § data account bullet 2), so an `undefined` stub —
+ * what this used to be — made `renderFormSpinbutton()` throw
+ * `undefined is not an object` the moment it was called.
+ *
+ * A self-returning proxy makes any authored chain evaluate harmlessly
+ * instead: every property read yields the stub again, calls return it,
+ * and coercion yields the empty/zero/false primitive for the hint. The
+ * VALUES are meaningless by construction and never reach the markup —
+ * `host.<prop>` is never server-known (ADR 0003: the client harvests
+ * the real value from the rendered DOM at connect) — so the only
+ * contract here is "evaluates without throwing".
+ */
+export const refStub: any = new Proxy((() => {}) as never, {
+	get: (_target, key) => {
+		// Coercion and iteration protocols must answer with real
+		// callables — returning the stub for `Symbol.toPrimitive` would
+		// make `String(stub)` throw "not a function" instead of ''.
+		if (key === Symbol.toPrimitive)
+			return (hint: string): string | number | boolean =>
+				hint === 'number' ? 0 : hint === 'string' ? '' : false
+		if (key === Symbol.toStringTag) return 'TsrxRefStub'
+		if (key === Symbol.iterator) return function* () {}
+		if (key === 'toString' || key === 'valueOf') return () => ''
+		// NOT thenable: a stub `then` would make any `await` over it
+		// recurse forever resolving itself.
+		if (key === 'then') return undefined
+		return refStub
+	},
+	set: () => true,
+	has: () => true,
+	apply: () => refStub,
+	// The target is an arrow function — no own `prototype`, and `length`
+	// /`name` are configurable — so reporting no own keys breaks no
+	// proxy invariant (a spread over the stub yields `{}`).
+	ownKeys: () => [],
+	getOwnPropertyDescriptor: () => undefined,
+})
+
+/**
  * `defineMethod(fn)` — identity on the server: the branded MethodProducer
  * matters only to the client's `expose()` dispatch, and the method body is
  * never invoked during server evaluation.

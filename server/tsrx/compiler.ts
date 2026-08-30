@@ -38,7 +38,12 @@ import { readConfig } from './config'
 import { getStyleElementStylesheet, isStyleElement, parseModule } from './core'
 import { dedentCss } from './css'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
-import { collectMatchingElements, shareExclusiveIf } from './first-refs'
+import {
+	collectMatchingElements,
+	inOptionalBranch,
+	reportDuplicatedChannels,
+	shareExclusiveIf,
+} from './first-refs'
 import {
 	type LeTrucImport,
 	parseComposeImports,
@@ -59,7 +64,7 @@ import type {
 	SourceRange,
 	TemplateNode,
 } from './ir'
-import { lowerChildren } from './lower-template'
+import { lowerChildren, lowerElement } from './lower-template'
 import { walkTemplate } from './walk'
 
 /* === Types === */
@@ -462,6 +467,9 @@ export const compileSource = (
 		diagnostics: [],
 		exposedProps: new Set<string>(),
 		serverKnown: new Set<string>(),
+		argNames: new Set<string>(),
+		parserProps: new Set<string>(),
+		parserFactoryOf: () => '',
 		composeImports: new Map<string, string>(),
 		setupInits: new Map<string, TsrxNode>(),
 	}
@@ -534,6 +542,7 @@ export const compileSource = (
 	const params = asArray(fn.params)
 	const paramsNode = params[0] ?? null
 	if (params.length !== 1 || paramsNode?.type !== 'ObjectPattern') {
+	} else if (params.length !== 1 || paramsNode?.type !== 'ObjectPattern') {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
 				`${filename}: the component function must take a single destructured args object.`,
@@ -542,12 +551,12 @@ export const compileSource = (
 		return { component: null, diagnostics: ctx.diagnostics }
 	}
 	const paramNames = new Set<string>()
-	collectBoundNames(paramsNode, paramNames)
+	if (paramsNode) collectBoundNames(paramsNode, paramNames)
 	// TSRX032 (CHECKLIST §10): a destructured default (`foo = 'x'`) paired
 	// with a non-optional type (`foo: string`, not `foo?: string`) is
 	// unreachable for any external caller — the type annotation is what
 	// callers see, and it says the prop is required.
-	for (const prop of asArray(paramsNode.properties)) {
+	for (const prop of asArray(paramsNode?.properties)) {
 		if (prop.type !== 'Property' || !isNode(prop.value)) continue
 		if (prop.value.type !== 'AssignmentPattern') continue
 		const bindingName = identifierName(prop.value.left)
@@ -587,15 +596,24 @@ export const compileSource = (
 	 * this point in the setup-statement loop (`lowerChildren` runs later),
 	 * and structurally matching the selector against template elements
 	 * needs the template. Resolved once `root` exists, below.
+	 * `maybe` marks the one-literal OPTIONAL form (LT-123), which
+	 * is verified only where the template can speak to it.
 	 */
 	const elementRefs = new Map<
 		string,
-		{ selectorText: string; reasonText: string; node: TsrxNode }
+		{
+			selectorText: string
+			reasonText: string | null
+			maybe: boolean
+			node: TsrxNode
+		}
 	>()
 	let exposeText: string | null = null
 	let exposeRange: SourceRange | null = null
 	let exposeArgNode: TsrxNode | null = null
 	const exposeProps = new Map<string, string>()
+	/** Every name `expose()` declares — see the loop below. */
+	const exposedPropNames = new Set<string>()
 	const parserExposeProps = new Map<
 		string,
 		{ parser: string; fallbackText: string | null }
@@ -644,11 +662,28 @@ export const compileSource = (
 					reasonArg?.type === 'Literal' && typeof reasonArg.value === 'string'
 						? reasonArg.value
 						: null
-				if (args.length !== 2 || selectorText === null || reasonText === null)
+				// One literal (a selector alone) is the OPTIONAL form
+				// (LT-123): the reference may be absent at activation
+				// and effects over it register under a presence guard.
+				// Two literals (selector + required-reason) is the
+				// required form. Anything else is TSRX025.
+				const validArity = args.length === 1 || args.length === 2
+				if (
+					!validArity ||
+					selectorText === null ||
+					(args.length === 2 && reasonText === null)
+				)
 					ctx.diagnostics.push(
 						diagnostic.invalidFirstCall(source, stmt.start, declName),
 					)
-				else elementRefs.set(declName, { selectorText, reasonText, node: init })
+				else {
+					elementRefs.set(declName, {
+						selectorText,
+						reasonText,
+						maybe: args.length === 1,
+						node: init,
+					})
+				}
 				continue
 			}
 			setupInits.set(declName, init)
@@ -812,6 +847,30 @@ export const compileSource = (
 			ctx.diagnostics.push(diagnostic.reactReturnJsx(source, stmt.start))
 			continue
 		}
+		// The client-only free-name gate (LT-008, widened by LT-069/087/088):
+		// a name resolves client-side when it is a JS global, a context
+		// member, a signal, an expose ambient, a `first()`-bound element
+		// local, an earlier setup const, a composed-element ref, an authored
+		// import binding, or a client-only FactoryContext primitive (watch/
+		// on/pass/…). Used by bare client-only expression statements.
+		const clientKnownName = (freeName: string): boolean => {
+			if (JS_GLOBALS.has(freeName)) return true
+			if (CONTEXT_NAMES.has(freeName)) {
+				contextRefs.add(freeName)
+				return true
+			}
+			if (signalByName.has(freeName)) return true
+			if (exposeAmbients.has(freeName)) return true
+			if (elementRefs.has(freeName)) return true
+			if (setupInits.has(freeName)) return true
+			if (composedRefNames.has(freeName)) return true
+			if (importedNames.has(freeName)) return true
+			if (CLIENT_ONLY_PRIMITIVES.has(freeName)) {
+				contextRefs.add(freeName)
+				return true
+			}
+			return false
+		}
 		const expression =
 			stmt.type === 'ExpressionStatement'
 				? (stmt.expression as TsrxNode | undefined)
@@ -850,6 +909,16 @@ export const compileSource = (
 				if (prop.type !== 'Property') continue
 				const propName = identifierName(prop.key)
 				const value = prop.value
+				// EVERY declared prop name, whatever its initializer
+				// shape. The two maps below only record the initializer
+				// KINDS they each lower (signal getters, Parser
+				// factories) — a prop harvested straight from the DOM
+				// (`label: labelSpan.textContent ?? ''`) is neither, so
+				// before LT-122 it was exposed at runtime but invisible
+				// to the compiler, which `ExtractContext.exposedProps`
+				// already claimed to list ("prop names `expose()`
+				// declares").
+				if (propName) exposedPropNames.add(propName)
 				if (
 					propName &&
 					isNode(value) &&
@@ -890,26 +959,9 @@ export const compileSource = (
 			// A plain-const reference is picked up client-side automatically:
 			// `imports.ts`'s `computeClientNeededNames` already walks
 			// `clientSetup` nodes' free names into its plain-setup fixpoint.
-			const free = freeIdentifiers(expression)
-			const bad: string[] = []
-			for (const name of free) {
-				if (JS_GLOBALS.has(name)) continue
-				if (CONTEXT_NAMES.has(name)) {
-					contextRefs.add(name)
-					continue
-				}
-				if (signalByName.has(name)) continue
-				if (exposeAmbients.has(name)) continue
-				if (elementRefs.has(name)) continue
-				if (setupInits.has(name)) continue
-				if (composedRefNames.has(name)) continue
-				if (importedNames.has(name)) continue
-				if (CLIENT_ONLY_PRIMITIVES.has(name)) {
-					contextRefs.add(name)
-					continue
-				}
-				bad.push(name)
-			}
+			const bad = [...freeIdentifiers(expression)].filter(
+				n => !clientKnownName(n),
+			)
 			if (bad.length === 0) {
 				clientSetup.push({
 					text: text(ctx.source, stmt),
@@ -932,12 +984,18 @@ export const compileSource = (
 		)
 	}
 
-	// Output: fragment of [root element, <style>?].
+	// Output: a single root element, or a fragment of
+	// [root element, <style>?].
 	const render = codeBlock.render as TsrxNode | undefined
-	if (!render || render.type !== 'JSXFragment') {
+	// A bare single root element is a legal output (LT-123): the
+	// fragment exists to carry a SECOND node beside the root (the
+	// `<style>` block), so a component with no styles of its own has
+	// nothing to wrap and should not have to write `<>…</>` anyway.
+	const bareRoot = render?.type === 'JSXElement' ? render : null
+	if (!bareRoot && (!render || render.type !== 'JSXFragment')) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
-				`${filename}: the @{ } container's output must be a fragment (element + <style>).`,
+				`${filename}: the @{ } container's output must be a single root element, or a fragment (element + <style>).`,
 			),
 		)
 		return { component: null, diagnostics: ctx.diagnostics }
@@ -946,6 +1004,10 @@ export const compileSource = (
 	// @if conditions validate against server-known names — args and setup
 	// declarations, all parsed by this point.
 	ctx.serverKnown = new Set<string>([...paramNames])
+	// LT-122 consults the caller-supplied names alone (see
+	// `ExtractContext.argNames`), so they are kept apart from the
+	// signals/setup consts folded into `serverKnown` below.
+	ctx.argNames = new Set<string>(paramNames)
 	for (const s of signals) ctx.serverKnown.add(s.name)
 	for (const n of setupInits.keys()) ctx.serverKnown.add(n)
 	ctx.setupInits = setupInits
@@ -953,85 +1015,159 @@ export const compileSource = (
 	// been fully parsed by now; `config` has not, so the managed form props
 	// are included unconditionally — a string-literal `'validationMessage'`
 	// child is the retired spelling whether or not formAssociated() is on.
+	for (const prop of exposedPropNames) ctx.exposedProps.add(prop)
 	for (const prop of exposeProps.keys()) ctx.exposedProps.add(prop)
-	for (const prop of parserExposeProps.keys()) ctx.exposedProps.add(prop)
+	for (const prop of parserExposeProps.keys()) {
+		ctx.exposedProps.add(prop)
+		ctx.parserProps.add(prop)
+	}
+	ctx.parserFactoryOf = (prop: string): string =>
+		parserExposeProps.get(prop)?.parser ?? ''
 	for (const prop of MANAGED_TEXT_PROPS) ctx.exposedProps.add(prop)
 
-	const lowered = lowerChildren(ctx, render, signalByName, fors)
-	const root = lowered.find(
-		(n): n is TemplateNode & { kind: 'element' } =>
-			n.kind === 'element' && !isStyleElement(n.node),
-	)
-	const styleChild = lowered.find(
-		(n): n is TemplateNode & { kind: 'element' } =>
-			n.kind === 'element' && isStyleElement(n.node),
-	)
-	if (!root) {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				`${filename}: no root element found in the @{ } output.`,
-			),
-		)
-		return { component: null, diagnostics: ctx.diagnostics }
-	}
-	if (!root.tag.includes('-')) {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				`${filename}: the root element must be the component's custom element tag (got \`${root.tag}\`).`,
-			),
-		)
-		return { component: null, diagnostics: ctx.diagnostics }
-	}
-
-	// Resolve `first(selector, required)` element references (LT-055) now
-	// that `root` exists: structurally match each author selector against
-	// the template, and attach a synthetic `{kind: 'ref', name}` to every
-	// matched element — the exact IR shape `ref={}` used to populate
-	// directly. Every downstream consumer (addQuery's naming in
-	// analysis/effects.ts and analysis/harvest.ts, refNames collection in
-	// analysis/plan.ts) is unchanged: only how that IR gets populated moved.
-	const refReasons = new Map<string, string>()
-	for (const [refName, { selectorText, reasonText, node }] of elementRefs) {
-		const { elements } = collectMatchingElements(root, selectorText)
-		if (elements.length === 0) {
-			ctx.diagnostics.push(
-				diagnostic.firstSelectorNotFound(
-					source,
-					node.start,
-					refName,
-					selectorText,
-				),
-			)
-			continue
-		}
-		if (elements.length > 1 && !shareExclusiveIf(root, elements)) {
-			ctx.diagnostics.push(
-				diagnostic.firstSelectorAmbiguous(
-					source,
-					node.start,
-					refName,
-					selectorText,
-					elements.length,
-				),
-			)
-			continue
-		}
-		for (const element of elements)
-			element.attrs.push({ kind: 'ref', name: refName })
-		refReasons.set(refName, reasonText)
-	}
-
-	// CSS: verbatim, dedented (see css.ts).
+	let root: (TemplateNode & { kind: 'element' }) | null = null
+	let styleChild: (TemplateNode & { kind: 'element' }) | null = null
 	let css = ''
-	if (styleChild) {
-		const stylesheet = getStyleElementStylesheet(styleChild.node)
-		css = dedentCss(String(stylesheet?.source ?? ''))
-	} else {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				`${filename}: expected a <style> block beside the root element.`,
-			),
+	/** `first()` required-reason texts — template mode only (LT-055). */
+	let componentRefReasons = new Map<string, string>()
+	/** Optional refs matching nothing structural (LT-123). */
+	const unmatchedOptionalRefs: Array<{ name: string; selector: string }> = []
+	/** Author-declared optional refs, matched or not (LT-123). */
+	let componentOptionalRefs = new Set<string>()
+	{
+		// A bare root element has no fragment to walk children of
+		// — lower it as the single-node list the fragment path
+		// would have produced.
+		const lowered: TemplateNode[] = bareRoot
+			? ((el): TemplateNode[] => (el ? [el] : []))(
+					lowerElement(ctx, bareRoot, signalByName, fors),
+				)
+			: lowerChildren(ctx, render as TsrxNode, signalByName, fors)
+		const templateRoot = lowered.find(
+			(n): n is TemplateNode & { kind: 'element' } =>
+				n.kind === 'element' && !isStyleElement(n.node),
 		)
+		styleChild =
+			lowered.find(
+				(n): n is TemplateNode & { kind: 'element' } =>
+					n.kind === 'element' && isStyleElement(n.node),
+			) ?? null
+		root = templateRoot ?? null
+		if (!root) {
+			ctx.diagnostics.push(
+				diagnostic.invalidSource(
+					`${filename}: no root element found in the @{ } output.`,
+				),
+			)
+			return { component: null, diagnostics: ctx.diagnostics }
+		}
+		if (!root.tag.includes('-')) {
+			ctx.diagnostics.push(
+				diagnostic.invalidSource(
+					`${filename}: the root element must be the component's custom element tag (got \`${root.tag}\`).`,
+				),
+			)
+			return { component: null, diagnostics: ctx.diagnostics }
+		}
+
+		// Resolve `first(selector, required)` element references (LT-055) now
+		// that `root` exists: structurally match each author selector against
+		// the template, and attach a synthetic `{kind: 'ref', name}` to every
+		// matched element — the exact IR shape `ref={}` used to populate
+		// directly. Every downstream consumer (addQuery's naming in
+		// analysis/effects.ts and analysis/harvest.ts, refNames collection in
+		// analysis/plan.ts) is unchanged: only how that IR gets populated moved.
+		const refReasons = new Map<string, string>()
+		for (const [
+			refName,
+			{ selectorText, reasonText, maybe, node },
+		] of elementRefs) {
+			const { elements } = collectMatchingElements(root, selectorText)
+			if (elements.length === 0) {
+				// An OPTIONAL ref is allowed to match nothing here
+				// (LT-123): "may be absent" includes "the page, not
+				// this template, authors it". The structural proof
+				// TSRX026 rests on — the compiler wrote this HTML,
+				// so counting matches in the IR is counting matches
+				// in the DOM — simply has nothing to say about
+				// markup the component didn't render, so the client
+				// queries the authored selector as-is.
+				if (maybe) {
+					unmatchedOptionalRefs.push({
+						name: refName,
+						selector: selectorText,
+					})
+					continue
+				}
+				ctx.diagnostics.push(
+					diagnostic.firstSelectorNotFound(
+						source,
+						node.start,
+						refName,
+						selectorText,
+					),
+				)
+				continue
+			}
+			// A REQUIRED ref (two literals) whose only match sits in
+			// a branch that may not render is required in name only
+			// — the analysis addresses it with a non-throwing query
+			// under a presence guard either way (LT-008/LT-025), so
+			// the authored reason can never be thrown. Say so
+			// rather than dropping the string silently: for a
+			// template-OWNING component the compiler controls the
+			// markup, so a required-reason only ever earns its keep
+			// on a selector that may match markup this component
+			// did not itself render.
+			if (!maybe && elements.every(el => inOptionalBranch(root, el)))
+				ctx.diagnostics.push(
+					diagnostic.deadRequiredReason(
+						source,
+						node.start,
+						refName,
+						selectorText,
+					),
+				)
+			if (elements.length > 1 && !shareExclusiveIf(root, elements)) {
+				ctx.diagnostics.push(
+					diagnostic.firstSelectorAmbiguous(
+						source,
+						node.start,
+						refName,
+						selectorText,
+						elements.length,
+					),
+				)
+				continue
+			}
+			for (const element of elements)
+				element.attrs.push({ kind: 'ref', name: refName })
+			refReasons.set(refName, reasonText as string)
+		}
+		componentRefReasons = refReasons
+		componentOptionalRefs = new Set(
+			[...elementRefs].filter(([, entry]) => entry.maybe).map(([name]) => name),
+		)
+
+		// TSRX039 (LT-122): one value, two channels. Runs here
+		// rather than during lowering because the check has to
+		// skip the ROOT element — the root is the host, so a
+		// Parser prop rendered as its attribute is the correct
+		// channel, not a duplicate — and `root` only exists now.
+		reportDuplicatedChannels(
+			root,
+			source,
+			ctx.diagnostics,
+			ctx.argNames,
+			ctx.parserProps,
+			ctx.parserFactoryOf,
+		)
+
+		// CSS: verbatim, dedented (see css.ts).
+		if (styleChild) {
+			const stylesheet = getStyleElementStylesheet(styleChild.node)
+			css = dedentCss(String(stylesheet?.source ?? ''))
+		}
 	}
 
 	// Exported type declarations + declare global, verbatim.
@@ -1140,7 +1276,7 @@ export const compileSource = (
 					name,
 					source,
 					tag: root.tag,
-					paramsText: text(ctx.source, paramsNode),
+					paramsText: paramsNode ? text(ctx.source, paramsNode) : '',
 					paramNames: [...paramNames],
 					setup,
 					clientSetup,
@@ -1155,7 +1291,9 @@ export const compileSource = (
 					contextRefs: [...contextRefs].sort(),
 					config,
 					root,
-					refReasons,
+					refReasons: componentRefReasons,
+					unmatchedOptionalRefs,
+					optionalRefs: componentOptionalRefs,
 					fors,
 					css,
 					typeDecls,

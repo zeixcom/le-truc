@@ -1,0 +1,239 @@
+/**
+ * `@if`/`@else` addressing (LT-118): union addressing over branch roots,
+ * extended to structurally DIFFERING branch roots via per-branch addressing.
+ *
+ * - Identical construct text on every branch root keeps union addressing
+ *   byte-for-byte: ONE throwing query whose selector unions both roots —
+ *   whichever branch rendered is the element found (LT-008).
+ * - DIFFERING constructs (different construct key sets, or the same key with
+ *   different text — the shapes that used to be TSRX005/"constructs differ"
+ *   and TSRX031/asymmetric) now route to per-branch addressing: each branch
+ *   is addressed independently with a non-throwing `first()` and a
+ *   `'guarded'` effect block — exactly how a plain `@try`'s two arms are
+ *   addressed (LT-025), since the branches are different content, not the
+ *   same construct duplicated.
+ * - Exclusivity is structural: at most one branch's root exists in the DOM,
+ *   so at most one guard is ever true — mutually-exclusive branches never
+ *   double-bind. But only if each branch root's selector cannot match the
+ *   OTHER branch's markup; roots indistinguishable by statics keep an error
+ *   (TSRX007) naming the fix, because two existence guards over one
+ *   selector would BOTH be true on the one rendered element.
+ */
+import { describe, expect, test } from 'bun:test'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { compileComponent } from '../../tsrx'
+
+const ROOT = path.resolve(import.meta.dir, '../../..')
+
+// `text` (the server arg) and `note` (the Parser-exposed prop) are
+// deliberately DIFFERENT names: a site rendering an arg that is also
+// a Parser prop is TSRX039 (LT-122, one value through two channels),
+// which these fixtures are not about.
+const wrap = (template: string, tag = 'c-el'): string =>
+	`export function C({ big, text }: { big?: boolean; text?: string })
+@{
+	expose({ note: asString('') })
+	<>
+		<${tag}>
+			${template}
+		</${tag}>
+		<style>${tag} { color: red }</style>
+	</>
+}
+import { asString } from '@zeix/le-truc'`
+
+const compile = (template: string) =>
+	compileComponent(wrap(template), 'c.tsrx', new Set(['c-el']))
+
+/** Every `const x = first('sel')` maybe-query in the generated client. */
+const maybeQueries = (code: string): string[] =>
+	[...code.matchAll(/const (\w+) = first\('([^']*)'\)/g)].map(m => m[2] ?? '')
+
+/** Every `if (x) { … }` guarded block's body (one nesting level deep). */
+const guardBodies = (code: string): string[] =>
+	[...code.matchAll(/if \(\w+\) \{\n([\s\S]*?)\n\t\t\}/g)].map(m => m[1] ?? '')
+
+describe('@if/@else union addressing over differing branch roots (LT-118)', () => {
+	test('differing constructs on distinguishable roots are addressable, each branch scoped to its own guard', () => {
+		const { component, diagnostics } = compile(`@if (big) {
+			<button type="button" class="cta" onClick={() => { host.stepDown() }}>{text}</button>
+		} @else {
+			<input class="qty" value={() => String(host.note.length)} onChange={() => {}} />
+		}`)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		const code = component?.clientCode ?? ''
+		// Two DISTINCT non-throwing queries (the maybe cardinality carries no
+		// required-reason argument), never one union selector.
+		const queries = maybeQueries(code)
+		expect(queries.length).toBe(2)
+		for (const selector of queries) expect(selector).not.toContain(',')
+		// No union query at all — a 'one'-cardinality query always carries
+		// its message argument.
+		expect(code).not.toMatch(/first\('[^']*, '/)
+		// Each branch's effects sit inside its own existence guard, scoped
+		// to that branch's constructs only — the @if branch's handler never
+		// shares a guard with the @else branch's thunk.
+		const guards = guardBodies(code)
+		expect(guards.length).toBe(2)
+		const [ifGuard, elseGuard] = guards
+		expect(ifGuard).toContain('host.stepDown')
+		expect(ifGuard).not.toContain('host.note')
+		expect(elseGuard).toContain('host.note')
+		expect(elseGuard).not.toContain('host.stepDown')
+	})
+
+	test('a construct on only one branch root is addressable when the roots are distinguishable (was TSRX031)', () => {
+		const { component, diagnostics } = compile(`@if (big) {
+			<button type="button" class="cta" onClick={() => {}}>a</button>
+		} @else {
+			<input class="qty" value={text} />
+		}`)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		const code = component?.clientCode ?? ''
+		// The bare `button` candidate is unique in the template and matches
+		// nothing under the @else branch (an <input>), so it wins over the
+		// type discriminator — one maybe query, one guard.
+		expect(maybeQueries(code)).toEqual(['button'])
+		expect(guardBodies(code).length).toBe(1)
+	})
+
+	test('mutually-exclusive branches never double-bind: indistinguishable roots stay an error (TSRX007)', () => {
+		// Both branch roots are bare <strong> — per-branch guards could not
+		// tell the branches apart (both queries would find the one rendered
+		// element), and union addressing cannot carry the asymmetric
+		// construct. This is the shape the old TSRX031 protected; an
+		// error is still reported, naming the fix.
+		const { diagnostics } = compile(`@if (big) {
+			<strong>a</strong>
+		} @else {
+			<strong onClick={() => {}}>b</strong>
+		}`)
+		const hit = diagnostics.find(d => d.code === 'TSRX007')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('distinguishing')
+	})
+
+	test('differing construct text on same-tag, same-class roots is TSRX007 (the old "constructs differ" shape)', () => {
+		const { diagnostics } = compile(`@if (big) {
+			<strong onClick={() => {}}>a</strong>
+		} @else {
+			<strong onClick={() => { }}>b</strong>
+		}`)
+		const hit = diagnostics.find(d => d.code === 'TSRX007')
+		expect(hit).toBeDefined()
+	})
+
+	test('distinctly-classed same-tag roots with differing construct text address per-branch', () => {
+		const { component, diagnostics } = compile(`@if (big) {
+			<button type="button" class="buy" onClick={() => {}}>a</button>
+		} @else {
+			<button type="button" class="sell" onClick={() => { }}>b</button>
+		}`)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		const code = component?.clientCode ?? ''
+		// The bare-tag and type candidates match BOTH branches (exclusivity-
+		// aware counting calls them unique) — per-branch resolution must
+		// skip them for the class discriminator, or the two guards would
+		// both bind the one rendered button.
+		expect(maybeQueries(code).sort()).toEqual([
+			'button[class="buy"]',
+			'button[class="sell"]',
+		])
+	})
+
+	test('identical constructs on both branch roots keep union addressing (one throwing query, no guards)', () => {
+		const { component, diagnostics } = compile(`@if (big) {
+			<strong onClick={() => {}}>a</strong>
+		} @else {
+			<strong onClick={() => {}}>b</strong>
+		}`)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		const code = component?.clientCode ?? ''
+		expect(code).toMatch(/const \w+ = first\('strong', '/)
+		expect(maybeQueries(code)).toEqual([])
+	})
+
+	test('a bare client-only statement in a per-branch-addressed branch is guarded, not rejected', () => {
+		const { component, diagnostics } = compile(`@if (big) {
+			internals?.states.add('cta')
+			<button type="button" class="cta" onClick={() => {}}>a</button>
+		} @else {
+			<input class="qty" value={text} />
+		}`)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		const code = component?.clientCode ?? ''
+		expect(code).toContain("internals?.states.add('cta')")
+		// The statement runs only when its branch rendered — inside the
+		// branch root's existence guard, never bare at factory top level.
+		const wrapping = code.match(
+			/if \(\w+\) \{\n[\s\S]*?internals\?\.states\.add\('cta'\)[\s\S]*?\n\t\t\}/,
+		)
+		expect(wrapping).toBeDefined()
+	})
+
+	test('a branch root selector matching a DEEP element of the other branch is TSRX007', () => {
+		// The @else branch's static inner <button class="cta"> would be
+		// found by the @if branch's per-branch query when the @else branch
+		// rendered — the wrong element gets the @if branch's effects.
+		const { diagnostics } = compile(`@if (big) {
+			<button type="button" class="cta" onClick={() => {}}>a</button>
+		} @else {
+			<p class="fallback"><button type="button" class="cta">b</button></p>
+		}`)
+		const hit = diagnostics.find(d => d.code === 'TSRX007')
+		expect(hit).toBeDefined()
+	})
+
+	test('a text-only @else with a constructed @if root addresses per-branch (no throwing query)', () => {
+		// The union query is cardinality 'one' — an @else guarantees SOME
+		// branch rendered — which would throw MissingElementError whenever
+		// the text-only branch is the one that rendered. The constructed
+		// root must be addressed as maybe instead.
+		const { component, diagnostics } = compile(`@if (big) {
+			<strong class="cta" onClick={() => {}}>a</strong>
+		} @else {
+			plain text fallback
+		}`)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		const code = component?.clientCode ?? ''
+		expect(maybeQueries(code)).toEqual(['strong[class="cta"]'])
+		expect(guardBodies(code).length).toBe(1)
+	})
+
+	test('server render picks the branch per args for per-branch-addressed constructs', async () => {
+		// Its own tag: the executed-module import below caches by file path,
+		// which other suites' `c-el` fixtures share.
+		const template = `@if (big) {
+			<button type="button" class="cta" onClick={() => {}}>a</button>
+		} @else {
+			<input class="qty" value={text} />
+		}`
+		const { component } = compileComponent(
+			wrap(template, 'c-if-branch'),
+			'c.tsrx',
+			new Set(['c-if-branch']),
+		)
+		expect(component).not.toBeNull()
+		const out = path.join(
+			ROOT,
+			'server/generated/tsrx',
+			'c-if-branch.server.ts',
+		)
+		fs.mkdirSync(path.dirname(out), { recursive: true })
+		fs.writeFileSync(out, component?.serverCode ?? '')
+		const mod = await import(out)
+		const thenHtml = mod.renderC({ big: true, text: 'x' })
+		const elseHtml = mod.renderC({ text: 'x' })
+		expect(thenHtml).toContain('class="cta"')
+		expect(thenHtml).not.toContain('class="qty"')
+		expect(elseHtml).toContain('class="qty"')
+		expect(elseHtml).not.toContain('class="cta"')
+	})
+})

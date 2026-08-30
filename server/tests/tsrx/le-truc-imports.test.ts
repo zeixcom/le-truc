@@ -12,8 +12,8 @@
  * - TSRX014 — an authored `'@zeix/le-truc'` import no name uses anywhere.
  */
 import { describe, expect, test } from 'bun:test'
-import { compileSource } from '../../tsrx/compiler'
 import { compileComponent } from '../../tsrx'
+import { compileSource } from '../../tsrx/compiler'
 
 const compile = (source: string) =>
 	compileComponent(source, 'c.tsrx', new Set<string>())
@@ -72,9 +72,10 @@ describe('sub-design 16 — real-export imports', () => {
 		expect(d).toHaveLength(1)
 		expect(d[0]?.message).toContain('expose')
 		expect(
-			[...(component?.imports.client ?? []), ...(component?.imports.server ?? [])].join(
-				'\n',
-			),
+			[
+				...(component?.imports.client ?? []),
+				...(component?.imports.server ?? []),
+			].join('\n'),
 		).not.toContain('expose')
 	})
 
@@ -84,10 +85,7 @@ describe('sub-design 16 — real-export imports', () => {
 		// `createCell` fires (LT-079 review defect: declarator bindings were
 		// not tracked, and the @{ } JSXCodeBlock needs sequential scoping).
 		const { diagnostics } = compile(
-			fixture(
-				'',
-				"\tconst match = createCell('x')\n\tconst count = match",
-			),
+			fixture('', "\tconst match = createCell('x')\n\tconst count = match"),
 		)
 		const d = diagnostics.filter(x => x.code === 'TSRX036')
 		expect(d).toHaveLength(1)

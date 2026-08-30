@@ -24,6 +24,7 @@ import type {
 } from './analysis/plan'
 import {
 	DIRTY_FLAG_ATTRS,
+	DIRTY_FLAG_CONTROL_TAGS,
 	FACTORY_CONTEXT_MEMBERS,
 	sanitizeVarName,
 } from './ast-utils'
@@ -147,6 +148,13 @@ const emitEachBlock = (
 	// cache it under a generated local, so N constructs on the same nested
 	// element (e.g. an <input>'s `checked` + `tabIndex` + `onChange`) share
 	// one `querySelector` call instead of repeating it per construct.
+	// LT-116: when the target's leading tag is a native form control, the
+	// query emits with the tag's element interface as its type argument —
+	// `querySelector` itself returns bare `Element`, and the dirty-flag
+	// property dispatch below (`bindProperty(input, 'checked')`) needs the
+	// precise key/value typing that interface carries. Sound by
+	// construction: the selector is tag-leading for non-div tags (the
+	// selector engine's clause form), so every match IS that interface.
 	const taken = new Set<string>([
 		plan.itemParam,
 		...plan.rebindings.map(r => r.name),
@@ -161,8 +169,10 @@ const emitEachBlock = (
 		while (taken.has(name)) name = `${base}${++i}`
 		taken.add(name)
 		targetVars.set(effect.target, name)
+		const tag = tagMatch?.[0] ?? ''
+		const typeArg = DIRTY_FLAG_CONTROL_TAGS.get(tag)
 		append(
-			`const ${name} = ${plan.itemParam}.querySelector('${effect.target}')!`,
+			`const ${name} = ${plan.itemParam}.querySelector${typeArg ? `<${typeArg}>` : ''}('${effect.target}')!`,
 			depth + 1,
 		)
 	}
@@ -173,15 +183,27 @@ const emitEachBlock = (
 	for (const effect of plan.effects) {
 		if (effect.kind === 'watch-attr') {
 			imports.add('watch')
-			imports.add('bindAttribute')
 			const source = effect.coerceToString
 				? `() => String((${effect.thunkText})())`
 				: effect.thunkText
-			append(
-				`watch(${source}, bindAttribute(${targetOf(effect.target)}, '${effect.attr}'))`,
-				depth + 1,
-				sliceOf(effect.thunkText, effect.sourceStart),
-			)
+			if (effect.dispatch === 'property') {
+				// LT-116: dirty-flag IDL attrs (and host-prop mirrors) write
+				// the live property, not the attribute — the loop-body
+				// counterpart of the top-level property dispatch.
+				imports.add('bindProperty')
+				append(
+					`watch(${source}, bindProperty(${targetOf(effect.target)}, '${effect.attr}'))`,
+					depth + 1,
+					sliceOf(effect.thunkText, effect.sourceStart),
+				)
+			} else {
+				imports.add('bindAttribute')
+				append(
+					`watch(${source}, bindAttribute(${targetOf(effect.target)}, '${effect.attr}'))`,
+					depth + 1,
+					sliceOf(effect.thunkText, effect.sourceStart),
+				)
+			}
 		} else if (effect.kind === 'watch-class') {
 			imports.add('watch')
 			imports.add('bindClass')
@@ -411,8 +433,16 @@ export const emitClientModule = (
 				)
 			} else if (effect.dispatch === 'property') {
 				imports.add('bindProperty')
+				// LT-116 widened this beyond bare host-prop mirrors: dirty-flag
+				// IDL attrs on native form controls dispatch here too, so a
+				// number-valued `value` thunk now needs the same String
+				// coercion the attribute branch applies (the DOMString-typed
+				// property setter would otherwise fail check:tsrx).
+				const source = effect.coerceToString
+					? `() => String((${effect.thunkText})())`
+					: effect.thunkText
 				at(
-					`watch(${effect.thunkText}, bindProperty(${effect.query}, '${effect.attr}'))`,
+					`watch(${source}, bindProperty(${effect.query}, '${effect.attr}'))`,
 					slices,
 				)
 			} else {

@@ -10,6 +10,7 @@
 import type { TsrxNode } from '@tsrx/core'
 import {
 	hostPropOf,
+	isDirtyFlagControlAttr,
 	isNode,
 	MANAGED_TEXT_PROPS,
 	nodeType,
@@ -40,6 +41,7 @@ import {
 	type IfNode,
 	isElement,
 	loopFor as loopForIn,
+	resolveExclusiveSelectorIn,
 	resolveSelector as resolveSelectorIn,
 	type SwitchNode,
 	selectorFor as selectorForIn,
@@ -89,8 +91,9 @@ const managedPropRead = (expr: TsrxNode): string | null => {
  * `dangerouslyBindInnerHTML` watch, same as any other reactive attribute.
  */
 const isClientConstructAttr = (a: AttributeIR): boolean =>
-	a.kind !== 'static' &&
-	a.kind !== 'server' &&
+	// A server attribute is normally render-only — except LT-122's
+	// arg-and-prop coincidence, which renders server-side AND binds.
+	(a.kind === 'server' ? a.bindsProp != null : a.kind !== 'static') &&
 	!(a.kind === 'html' && !a.reactive)
 
 /* === Exported Functions === */
@@ -184,6 +187,57 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	): void => {
 		const isCustom = el.tag.includes('-')
 		for (const attr of el.attrs) {
+			if (attr.kind === 'server' && attr.bindsProp) {
+				// LT-122: a server-rendered attribute whose expression is
+				// an arg that is also an exposed prop. `emit-server.ts`
+				// renders it from the arg exactly as before — this adds
+				// the client half, so a later prop write reaches the
+				// attribute the component itself rendered. Dispatch is
+				// always `property`: the source is a host-prop mirror by
+				// construction, and mirrors never write through the
+				// content attribute (see the `reactive` branch below).
+				if (isCustom) {
+					diagnostics.push(
+						diagnostic.reactiveAttrOnCustomElement(
+							source,
+							attr.node.start,
+							el.tag,
+							attr.name,
+						),
+					)
+					continue
+				}
+				// The synthesized thunk reads `host`, so the factory
+				// destructuring needs it — there is no authored node
+				// for `collectAmbient` to find the name in.
+				ambient.add('host')
+				sink.push({
+					kind: 'watch-attr',
+					query,
+					attr: attr.name,
+					thunkText: `() => host.${attr.bindsProp}`,
+					// Attribute dispatch by default, exactly as an
+					// authored thunk over a non-mirror source: the
+					// site is whatever the author rendered, including
+					// `data-*` seeds with no DOM property at all
+					// (form-textbox's `data-remaining={description}`
+					// — `bindProperty` there fails to typecheck, which
+					// is how this was found). Property dispatch is
+					// reserved for the one case where the attribute
+					// genuinely stops tracking: a dirty-flag IDL
+					// attribute on a native form control (LT-116).
+					dispatch: isDirtyFlagControlAttr(el.tag, attr.name)
+						? 'property'
+						: 'attribute',
+					// The thunk is synthesized, so there is no authored
+					// body to inspect for a number return; the exposed
+					// prop's own type decides.
+					coerceToString: false,
+					sourceStart: attr.node.start,
+					sourceEnd: attr.node.end,
+				})
+				continue
+			}
 			if (attr.kind === 'reactive') {
 				collectAmbient(attr.thunk)
 				const bad = badFreeNames(attr.thunk)
@@ -265,15 +319,31 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				}
 				// A host-prop mirror always dispatches as a property —
 				// attribute dispatch would be wrong for property-backed
-				// targets like `input.value`.
+				// targets like `input.value`. LT-116: a dirty-flag IDL
+				// attribute on a native form control (`value`/`checked`/
+				// `selected` on input/select/textarea/option) dispatches as
+				// a property too, mirror or not — once the control is dirty,
+				// rewriting the content attribute no longer moves the live
+				// property, so `bindAttribute` would silently stop tracking
+				// (the form-radiogroup mutual-exclusion break, NOTES LT-092).
+				// The thunk's own type is irrelevant to that hazard: the
+				// divergence is a property of the target.
 				const mirror = hostPropOf(attr.thunk)
+				const dispatch: 'attribute' | 'property' =
+					mirror !== null || isDirtyFlagControlAttr(el.tag, attr.name)
+						? 'property'
+						: 'attribute'
 				sink.push({
 					kind: 'watch-attr',
 					query,
 					attr: attr.name,
 					thunkText: attr.thunkText,
-					dispatch: mirror !== null ? 'property' : 'attribute',
-					coerceToString: mirror === null && returnsNumber(attr.thunk.body),
+					dispatch,
+					// Number-valued thunks stringify under either dispatch:
+					// `bindAttribute` takes string|boolean, and the dirty-flag
+					// properties (`value` on input/textarea/select) are
+					// DOMString-typed — the coercion keeps both typechecking.
+					coerceToString: returnsNumber(attr.thunk.body),
 					sourceStart: attr.thunk.start,
 					sourceEnd: attr.thunk.end,
 				})
@@ -402,6 +472,13 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				)
 				continue
 			}
+			if (child.bindsProp) {
+				// `lazyWatchSource` spells this site's source as
+				// `() => host.<prop>` (the arg is what the SERVER
+				// splices), so the factory destructuring needs
+				// `host` — the authored expression names only the arg.
+				ambient.add('host')
+			}
 			sink.push({
 				kind: 'watch-text',
 				query,
@@ -436,17 +513,27 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	 * statement sitting beside it in the branch (LT-008), are all wrapped in
 	 * one `'guarded'` effect emitted client-side as `if (query) { … }`.
 	 *
-	 * Shared by a single-branch `@if` (no `@else`, `handleOptionalIfEffects`)
-	 * and a plain `@try`'s two mutually-exclusive arms (LT-025,
-	 * `handleTryEffects`) — same DOM-existence-guarded shape either way, just
-	 * a different `label` for diagnostics and a different `atNode` to
-	 * attribute a bare-statement error to when the branch has no element at
-	 * all.
+	 * Shared by a single-branch `@if` (no `@else`, `handleOptionalIfEffects`),
+	 * a plain `@try`'s two mutually-exclusive arms (LT-025, `handleTryEffects`),
+	 * and — since LT-118 — each branch of an `@if`/`@else` whose branch roots
+	 * carry differing client constructs (`handlePerBranchIfEffects`): same
+	 * DOM-existence-guarded shape either way, just a different `label` for
+	 * diagnostics, a different `atNode` to attribute a bare-statement error
+	 * to when the branch has no element at all, and — for the two-branch
+	 * `@if`/`@else` case only — a `resolve` that yields each root's OWN
+	 * selector instead of the union across both branches (the default
+	 * `selectorFor` would union them, which is the other addressing mode).
 	 */
 	const handleOptionalBranch = (
-		body: TemplateNode[],
+		// Read-only: the body is filtered and iterated, never mutated. Declared
+		// `readonly` so `handlePerBranchIfEffects` can pass a branch out of its
+		// `readonly` tuple without a cast (LT-118).
+		body: readonly TemplateNode[],
 		atNode: { node: TsrxNode },
 		label: string,
+		resolve: (el: ElementNode) => { selector: string; unique: boolean } = (
+			el: ElementNode,
+		) => selectorFor(el),
 	): void => {
 		const roots = body.filter(isElement)
 		for (const root of roots)
@@ -487,7 +574,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			)
 			return
 		}
-		const resolved = selectorFor(primary)
+		const resolved = resolve(primary)
 		if (!resolved.unique) {
 			diagnostics.push(
 				diagnostic.unaddressableElement(
@@ -528,12 +615,92 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		handleOptionalBranch(node.then, node, 'a single-branch @if')
 
 	/**
+	 * One branch root's client-construct signature (LT-118): its construct
+	 * attributes' `key=text` pairs, sorted. Two roots with equal signatures
+	 * are interchangeable for union addressing (one query, one effect set,
+	 * whichever branch rendered); differing signatures — a construct key
+	 * present on only some roots (the old TSRX031 case) or the same key with
+	 * different text (the old "constructs differ" case) — route to per-branch
+	 * addressing instead. Same key/text extraction those diagnostics compared.
+	 */
+	const constructSignatureOf = (root: ElementNode): string => {
+		const parts: string[] = []
+		for (const attr of root.attrs) {
+			if (attr.kind === 'static' || attr.kind === 'server') continue
+			const key = `${attr.kind === 'event' ? 'on' : 'bind'}:${'name' in attr ? attr.name : attr.kind}`
+			const attrText =
+				attr.kind === 'event'
+					? attr.handlerText
+					: attr.kind === 'reactive' ||
+							attr.kind === 'class-map' ||
+							attr.kind === 'style-map'
+						? attr.thunkText
+						: ''
+			parts.push(`${key}=${attrText}`)
+		}
+		return parts.sort().join('|')
+	}
+
+	/**
+	 * An `@if`/`@else` whose branch roots carry DIFFERING client constructs
+	 * (LT-118) — addressed per branch: each branch root gets its own
+	 * non-throwing `first()` and its constructs wrap in a `'guarded'` effect,
+	 * exactly how a plain `@try`'s two arms are addressed (LT-025), because
+	 * the branches are different content, not the same construct duplicated.
+	 * An effect planned inside a branch only activates when that branch
+	 * rendered — the branch that didn't render has no element, its guard is
+	 * false, its effects never bind. Exclusivity is therefore structural:
+	 * mutually-exclusive branches never double-bind.
+	 *
+	 * That soundness has one precondition, checked up front: each addressed
+	 * root's selector must not match the OTHER branch's markup
+	 * (`resolveExclusiveSelectorIn`) — two existence guards over one
+	 * selector would both be true on the one rendered element. Roots
+	 * indistinguishable by statics keep a TSRX007 error naming the fix,
+	 * rather than a plausible-but-wrong double binding.
+	 */
+	const handlePerBranchIfEffects = (node: IfNode): void => {
+		const branches: Array<
+			[string, readonly TemplateNode[], readonly TemplateNode[]]
+		> = [
+			['@if', node.then, node.alternate],
+			['@else', node.alternate, node.then],
+		]
+		// Validate every branch needing addressing BEFORE any effects are
+		// planned — a collision diagnostic must not leave a half-planned @if.
+		for (const [label, body, other] of branches) {
+			const own = body.filter(isElement).filter(hasOwnConstruct)
+			if (own.length === 0) continue
+			const root = own[0] as ElementNode
+			const resolved = resolveExclusiveSelectorIn(component.root, root, other)
+			if (resolved.unique) continue
+			const plain = resolveSelector(root)
+			if (!plain.unique) continue // no unique selector at all — reported below
+			const otherLabel = label === '@if' ? '@else' : '@if'
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					root.node.start,
+					`Per-branch addressing of this @if needs a selector for the ${label} branch root <${root.tag}> that cannot match the ${otherLabel} branch — \`${plain.selector}\` is unique in the template but matches the ${otherLabel} branch too, so both branches' effects would bind whichever root rendered. Add distinguishing static attributes to the branch roots, or make the constructs identical across branches (union addressing).`,
+				),
+			)
+			return
+		}
+		for (const [label, body, other] of branches)
+			handleOptionalBranch(body, node, `the ${label} branch`, el =>
+				resolveExclusiveSelectorIn(component.root, el, other),
+			)
+	}
+
+	/**
 	 * @if branches (LT-008): client constructs must sit on the branch ROOT
-	 * elements; the client addresses whichever branch rendered through a
-	 * union selector (`first('textarea, input[type="text"]')`). Construct
-	 * texts must be identical across branches — one effect covers all. A
-	 * branch with no `@else` may not render at all — see
-	 * `handleOptionalIfEffects` for that (DOM-existence-guarded) case.
+	 * elements. With IDENTICAL construct text on every branch root, the
+	 * client addresses whichever branch rendered through a union selector
+	 * (`first('textarea, input[type="text"]')`) — one effect covers all.
+	 * With DIFFERING constructs (LT-118), each branch is addressed on its
+	 * own — see `handlePerBranchIfEffects`. A branch with no `@else` may not
+	 * render at all — see `handleOptionalIfEffects` for that
+	 * (DOM-existence-guarded) case.
 	 */
 	const handleIfEffects = (node: IfNode): void => {
 		if (node.alternate.length === 0) {
@@ -554,14 +721,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			(n): n is TemplateNode & { kind: 'client-stmt' } =>
 				n.kind === 'client-stmt',
 		)
-		for (const stmt of clientStmts)
-			diagnostics.push(
-				diagnostic.unsupported(
-					source,
-					stmt.node.start,
-					'A bare client-only statement inside an @if with @else — union addressing needs identical constructs in every branch; use a single-branch @if (no @else) instead',
-				),
-			)
 		// Each branch may only carry ONE addressable element of its own —
 		// the union query addresses "whichever branch rendered", not
 		// multiple distinct siblings within a single branch.
@@ -580,9 +739,53 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				return
 			}
 		}
+		const constructedRoots = roots.filter(hasOwnConstruct)
+		if (constructedRoots.length === 0) {
+			for (const stmt of clientStmts)
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						stmt.node.start,
+						'A bare client-only statement inside an @if with @else needs an addressed branch root to guard it — add a client construct to one branch root (per-branch addressing), or use a single-branch @if (no @else) instead',
+					),
+				)
+			return
+		}
+		// LT-118 routing: identical construct signatures on every branch
+		// root AND an element root in every branch → union addressing (one
+		// query, one effect set, unchanged emission); any difference — a
+		// construct on only some roots (the old TSRX031 hazard: union
+		// emission reads the FIRST constructed root only, so a sibling
+		// branch's construct was silently dropped, or worse, bound onto the
+		// wrong branch's element) or the same key with different text (the
+		// old "constructs differ" error) → per-branch addressing. A branch
+		// with no ELEMENT root at all (text-only) also routes per-branch:
+		// the union query is cardinality 'one' (an @else guarantees SOME
+		// branch rendered), which would throw on the branch-less side.
+		const signatures = roots.map(constructSignatureOf)
+		const everyBranchHasElementRoot = [node.then, node.alternate].every(
+			branch => branch.some(isElement),
+		)
+		const unionCompatible =
+			everyBranchHasElementRoot &&
+			signatures.length > 0 &&
+			signatures.every(s => s !== '' && s === signatures[0])
+		if (!unionCompatible) {
+			handlePerBranchIfEffects(node)
+			return
+		}
+		// Union path. A bare client-only statement stays rejected here: a
+		// union query proves SOME branch rendered, never WHICH one, so a
+		// statement authored in one branch would run when the other rendered.
+		for (const stmt of clientStmts)
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					stmt.node.start,
+					'A bare client-only statement inside an @if with @else — union addressing cannot tell which branch rendered; make the branch constructs differ (per-branch addressing) or use a single-branch @if (no @else) instead',
+				),
+			)
 		// html={dataRef} is server-rendered only — not a client construct.
-		const hasConstructs = roots.some(hasOwnConstruct)
-		if (!hasConstructs) return
 		const primary = roots.find(r => r.attrs.some(isClientConstructAttr))
 		if (!primary) return
 		const resolved = selectorFor(primary)
@@ -604,61 +807,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			resolved.selector,
 			'one',
 		)
-		// Same-named constructs must agree across branches.
-		const textsByKey = new Map<string, Set<string>>()
-		// Root elements (not just texts) carrying each key, keyed the same
-		// way — lets TSRX031 name which branch has the construct and which
-		// is missing it, distinct from the "differs" check below.
-		const rootsByKey = new Map<string, ElementNode[]>()
-		for (const root of roots)
-			for (const attr of root.attrs) {
-				if (attr.kind === 'static' || attr.kind === 'server') continue
-				const key = `${attr.kind === 'event' ? 'on' : 'bind'}:${'name' in attr ? attr.name : attr.kind}`
-				const attrText =
-					attr.kind === 'event'
-						? attr.handlerText
-						: attr.kind === 'reactive' ||
-								attr.kind === 'class-map' ||
-								attr.kind === 'style-map'
-							? attr.thunkText
-							: ''
-				const texts = textsByKey.get(key) ?? new Set<string>()
-				texts.add(attrText)
-				textsByKey.set(key, texts)
-				const withKey = rootsByKey.get(key) ?? []
-				withKey.push(root)
-				rootsByKey.set(key, withKey)
-			}
-		for (const [key, texts] of textsByKey)
-			if (texts.size > 1)
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						node.node.start,
-						`@if branch constructs differ for \`${key}\` — union addressing requires identical client behavior in every branch`,
-					),
-				)
-		// TSRX031: a construct present on only SOME branch roots is silently
-		// dropped entirely — `emitConstructEffects(primary, …)` below only
-		// ever reads `primary`'s own attrs, so a construct unique to a
-		// non-primary branch never gets emitted, with no diagnostic before
-		// this check existed (found migrating form-textbox.tsrx, LT-060).
-		for (const [key, withKey] of rootsByKey) {
-			const [present] = withKey
-			if (present && withKey.length < roots.length) {
-				const missing = roots.find(r => !withKey.includes(r))
-				if (missing)
-					diagnostics.push(
-						diagnostic.asymmetricBranchConstruct(
-							source,
-							node.node.start,
-							key,
-							present.tag,
-							missing.tag,
-						),
-					)
-			}
-		}
 		emitConstructEffects(primary, query)
 	}
 

@@ -114,6 +114,15 @@ export type LoopEffectPlan =
 			kind: 'watch-attr'
 			attr: string
 			thunkText: string
+			/**
+			 * Property vs attribute dispatch (LT-116): a bare host-prop mirror
+			 * OR a dirty-flag IDL attr (`value`/`checked`/`selected`) on a
+			 * native form control lowers to `bindProperty` — attribute
+			 * rewriting stops moving the live property once the control is
+			 * dirty, which broke form-radiogroup's mutual exclusion (NOTES
+			 * LT-092). Same rule the top-level `watch-attr` dispatch applies.
+			 */
+			dispatch: 'attribute' | 'property'
 			/** Number-valued thunks stringify — `bindAttribute` takes string|boolean. */
 			coerceToString: boolean
 			/** Source range of `thunkText` (LT-011 span table). */
@@ -439,6 +448,23 @@ export const analyzeClient = (
 		},
 	)
 
+	// Optional refs matching nothing structural (LT-123): the
+	// template never carried a `ref` attr for them, so the walk
+	// above found nothing — but the author declared the const
+	// and setup code may read it. Query them from the AUTHORED
+	// selector under `maybe` cardinality (non-throwing `first()`),
+	// under the authored NAME, which is what setup references.
+	for (const ref of component.unmatchedOptionalRefs) {
+		refNames.add(ref.name)
+		usedNames.add(ref.name)
+		queries.push({
+			name: ref.name,
+			selector: ref.selector,
+			cardinality: 'maybe',
+			message: '',
+		})
+	}
+
 	// `component.imports.plainLocalNames` (LT-091) completes the same
 	// widening for AUTHORED IMPORTS: a pass set-thunk (two-way `truc:pass`)
 	// referencing e.g. `formatCss` from `culori/fn` is client-traced, so the
@@ -507,10 +533,44 @@ export const analyzeClient = (
 	runHarvest(ctx)
 	runEffects(ctx)
 
+	// LT-123: an effect over an author-declared OPTIONAL ref
+	// needs the same existence guard a single-branch `@if` root
+	// gets — the query is non-throwing, so the local is
+	// `Element | undefined` and binding it bare neither
+	// typechecks nor runs. `handleOptionalBranch` already
+	// wraps the STRUCTURALLY optional case; this covers the
+	// case where the template renders the element
+	// unconditionally but the author declared the reference
+	// optional anyway (`basic-button`'s `span.label`, which a
+	// page may simply not have authored).
+	const maybeQueryNames = new Set(
+		queries.filter(q => q.cardinality === 'maybe').map(q => q.name),
+	)
+	const guardedEffects: TopEffectPlan[] = []
+	for (const effect of effects) {
+		const target =
+			effect.kind !== 'guarded' && 'query' in effect ? effect.query : null
+		if (target === null || !maybeQueryNames.has(target)) {
+			guardedEffects.push(effect)
+			continue
+		}
+		// Consecutive effects over the same optional element
+		// share one guard, exactly as a branch's own do.
+		const last = guardedEffects.at(-1)
+		if (last?.kind === 'guarded' && last.query === target)
+			last.effects.push(effect)
+		else
+			guardedEffects.push({
+				kind: 'guarded',
+				query: target,
+				effects: [effect],
+			})
+	}
+
 	return {
 		queries,
 		harvests,
-		effects,
+		effects: guardedEffects,
 		ambientContext: [...ambient].sort(),
 		childTags: [...childTags].sort(),
 	}

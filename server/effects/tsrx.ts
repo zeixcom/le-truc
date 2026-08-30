@@ -116,8 +116,7 @@ export const compileTsrxCorpus = async (
 	}
 	// Migrated tags import their generated clients (side-effect: the tag-map
 	// augmentation and the runtime registration arrive together). A tag in a
-	// dual state — .tsrx compiled AND its hand-written twin still on disk
-	// (LT-112: basic-button's enhancer contract is not .tsrx-expressible) —
+	// dual state — .tsrx compiled AND its hand-written twin still on disk —
 	// keeps the TWIN's module: the twin is what main.ts registers, and a
 	// generated client importing the other half would double-define the tag
 	// in the bundle.

@@ -314,20 +314,20 @@ test.describe('form-spinbutton component', () => {
 		expect(valueAfterClick).toBe(1)
 
 		// Controlled path: programmatic assignment drives the exposed prop and
-		// the input's value ATTRIBUTE. The live input text may not resync
-		// after this point: stepUp/stepDown/onChange write input.value
-		// directly (setting the native dirty-value flag), and the compiled
-		// component mirrors host.value via bindAttribute — the documented
-		// trade-off in form-spinbutton.tsrx ("this only matters for
-		// host.value being set from OUTSIDE the component"). Consumers that
-		// drive the value from outside read the prop, not the input text.
+		// the LIVE input value (LT-116): `value` on a native input dispatches
+		// as a property write, so an external host.value write resyncs the
+		// input text even after stepUp/stepDown/onChange set the native
+		// dirty-value flag — the pre-LT-116 bindAttribute mirror could not,
+		// and this test then asserted the attribute mirror instead. The
+		// value ATTRIBUTE stays at the server-rendered default on purpose:
+		// it is the reset baseline (LT-057), not a live-value channel.
 		await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			element.value = 5
 		})
 		await page.waitForTimeout(50)
 
-		await expect(input).toHaveAttribute('value', '5')
+		await expect(input).toHaveValue('5')
 
 		const valueAfterSet = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
@@ -342,7 +342,7 @@ test.describe('form-spinbutton component', () => {
 		})
 		await page.waitForTimeout(50)
 
-		await expect(input).toHaveAttribute('value', '0')
+		await expect(input).toHaveValue('0')
 		await expect(spinbutton.locator('button.decrement')).toHaveAttribute(
 			'disabled',
 		)

@@ -71,19 +71,22 @@
 				remaining
 			</p>
 		</basic-pluralize>
+		<!-- form-radiogroup serves its compiled client since LT-116 — the
+		     labels carry the item's value in data-value, the compiled each()
+		     addressing channel the hand-written enhancer didn't need. -->
 		<form-radiogroup value="all" class="split-button">
 			<fieldset>
 				<legend class="visually-hidden">Filter</legend>
-				<label class="selected">
-					<input type="radio" class="visually-hidden" value="all" checked>
+				<label data-value="all" class="selected">
+					<input type="radio" class="visually-hidden" value="all" checked tabindex="0">
 					<span>All</span>
 				</label>
-				<label>
-					<input type="radio" class="visually-hidden" value="active">
+				<label data-value="active">
+					<input type="radio" class="visually-hidden" value="active" tabindex="-1">
 					<span>Active</span>
 				</label>
-				<label>
-					<input type="radio" class="visually-hidden" value="completed">
+				<label data-value="completed">
+					<input type="radio" class="visually-hidden" value="completed" tabindex="-1">
 					<span>Completed</span>
 				</label>
 			</fieldset>

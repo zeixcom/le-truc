@@ -4,10 +4,11 @@
 // and server/build.ts sequences the tsrx effect in phase 1 ahead of the js
 // bundle for the same reason). The hand-written .ts twins are deleted per the
 // card-blogpost/card-callout precedent.
-// basic-button stays on its hand-written twin (LT-112): the owner-ratified
-// contract harvests label/badge/disabled from the owned light-DOM children,
-// and .tsrx cannot express a template-less enhancer yet — see NOTES.md.
-import './basic/button/basic-button.ts'
+// basic-button cut over in LT-117 — it OWNS its template (the server
+// renders the button and its spans from the args) and harvests
+// label/badge/disabled back out of that same markup at connect, so a
+// page may also author the markup itself, in whole or in part.
+import '../server/generated/tsrx/basic-button.client.ts'
 import '../server/generated/tsrx/basic-counter.client.ts'
 // basic-gauge and basic-pluralize cut over in LT-115: the arg→DOM
 // substitution now routes derived signals through the exposed prop's Slot
@@ -33,11 +34,10 @@ import '../server/generated/tsrx/form-colorgraph.client.ts'
 import '../server/generated/tsrx/form-combobox.client.ts'
 import '../server/generated/tsrx/form-inplace-edit.client.ts'
 import '../server/generated/tsrx/form-listbox.client.ts'
-// form-radiogroup stays on its hand-written twin (LT-092): the compiled
-// loop body's checked thunk lowers to bindAttribute, and the native
-// dirty-checkedness divergence breaks mutual exclusion after first
-// interaction — see NOTES.md.
-import './form/radiogroup/form-radiogroup.ts'
+// form-radiogroup cut over in LT-116: the loop-body `checked` mirror lowers
+// to a property write (the compiler's dirty-flag dispatch widening), so the
+// compiled client restores the twin's mutual exclusion after interaction.
+import '../server/generated/tsrx/form-radiogroup.client.ts'
 import '../server/generated/tsrx/form-spinbutton.client.ts'
 import '../server/generated/tsrx/form-textbox.client.ts'
 import '../server/generated/tsrx/form-tokenbox.client.ts'

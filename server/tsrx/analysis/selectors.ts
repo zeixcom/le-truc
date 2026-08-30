@@ -97,8 +97,17 @@ const discriminatorCandidates = (element: ElementNode): string[] => {
 	return names.map(name => clause(name, attrs.get(name) as string))
 }
 
-/** Does `candidate` structurally match a synthesized selector string? */
-const matchesSelector = (candidate: ElementNode, selector: string): boolean => {
+/**
+ * Does `candidate` structurally match a synthesized selector string?
+ * Exported for LT-118's per-branch addressing collision check: a branch
+ * root's query is only sound if it cannot match the OTHER branch's markup,
+ * and the synthesized-selector grammar here is exactly the shape a query
+ * selector can take.
+ */
+export const matchesSelector = (
+	candidate: ElementNode,
+	selector: string,
+): boolean => {
 	const match = selector.match(
 		/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\])?$/,
 	)
@@ -397,6 +406,75 @@ export const resolveSelector = (
 	element: ElementNode,
 ): { selector: string; unique: boolean } =>
 	resolveSelectorIn(component.root, element)
+
+/**
+ * Does any element under `nodes` (any depth, entering nested control flow,
+ * stopping at composed children — another component's template) structurally
+ * match `selector`? (LT-118) — the per-branch addressing collision check:
+ * a branch root's query is only sound when it cannot match the OTHER
+ * branch's markup, or the branch that didn't render would have its effects
+ * bound onto the sibling branch's element by its own existence guard.
+ */
+export const matchesUnder = (
+	nodes: readonly TemplateNode[],
+	selector: string,
+): boolean => {
+	for (const node of nodes) {
+		if (node.kind === 'if') {
+			if (matchesUnder([...node.then, ...node.alternate], selector)) return true
+			continue
+		}
+		if (node.kind === 'switch') {
+			for (const arm of node.cases)
+				if (matchesUnder(arm.children, selector)) return true
+			continue
+		}
+		if (node.kind === 'try') {
+			if (
+				matchesUnder([...node.children, ...node.catchChildren], selector) ||
+				(node.pendingChildren !== null &&
+					matchesUnder(node.pendingChildren, selector))
+			)
+				return true
+			continue
+		}
+		if (isElement(node)) {
+			if (matchesSelector(node, selector)) return true
+			if (matchesUnder(node.children, selector)) return true
+		}
+		// 'compose', 'text', 'expr', 'client-stmt' — nothing to match.
+	}
+	return false
+}
+
+/**
+ * Resolve the selector for an element addressed PER-BRANCH (LT-118): like
+ * {@link resolveSelectorIn}, but a candidate is additionally rejected when
+ * it structurally matches anything under `clash` — the sibling branch(es) of
+ * the same exclusive control-flow node. `countForSelector`'s exclusivity-
+ * aware counting deliberately calls a selector matching one root per branch
+ * "unique" (the premise union addressing is built on); per-branch addressing
+ * needs the opposite — a selector that only the addressed branch's element
+ * can match — so the bare-tag candidate a same-tag sibling also matches
+ * falls through to a discriminator here instead of being accepted.
+ */
+export const resolveExclusiveSelectorIn = (
+	tree: ElementNode,
+	element: ElementNode,
+	clash: readonly TemplateNode[],
+): { selector: string; unique: boolean } => {
+	const candidates = [
+		buildSelector(element, 'role'),
+		buildSelector(element, 'bare'),
+		...discriminatorCandidates(element),
+	].filter((s): s is string => s !== null)
+	for (const selector of candidates) {
+		if (countForSelector(tree, selector) !== 1) continue
+		if (matchesUnder(clash, selector)) continue
+		return { selector, unique: true }
+	}
+	return { selector: candidates[0] ?? element.tag, unique: false }
+}
 
 /** The `@for` loop whose output element is `node`, if any. */
 export const loopFor = (

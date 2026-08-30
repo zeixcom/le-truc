@@ -35,7 +35,7 @@ import type {
 	SignalIR,
 	TemplateNode,
 } from './ir'
-import { classifyChild } from './reactivity'
+import { bindsExposedArg, classifyChild } from './reactivity'
 
 /**
  * Validate a control-flow condition (`@if` test, `@switch` discriminant):
@@ -657,11 +657,26 @@ export const lowerChildren = (
 			const expr = child.expression
 			if (isNode(expr)) {
 				const exprText = text(ctx.source, expr)
+				// LT-122: `{label}`, where `label` is both a server arg
+				// and an exposed prop, is reactive BY POSITION the same
+				// way a `@catch` param or a loop item is — the arg is
+				// what the server renders, the prop is what the client
+				// rebinds against that render. `exprText` stays the arg.
+				const bindsProp = bindsExposedArg(
+					expr,
+					ctx.argNames,
+					ctx.exposedProps,
+					signals,
+					ctx.parserProps,
+				)
 				out.push({
 					kind: 'expr',
 					expr,
 					exprText,
-					lazy: liftsToReactive(ctx, signals, expr, exprText, child),
+					lazy:
+						bindsProp !== null ||
+						liftsToReactive(ctx, signals, expr, exprText, child),
+					...(bindsProp !== null ? { bindsProp } : {}),
 					node: child,
 				})
 			}
@@ -766,7 +781,7 @@ export const lowerElement = (
 				)
 				continue
 			}
-			const classified = classifyAttribute(ctx, attr)
+			const classified = classifyAttribute(ctx, attr, signals)
 			if ('reason' in classified) {
 				ctx.diagnostics.push(
 					diagnostic.invalidAttribute(

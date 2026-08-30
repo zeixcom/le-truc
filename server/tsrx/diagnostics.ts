@@ -49,6 +49,8 @@ export type DiagnosticCode =
 	| 'TSRX036' // real `@zeix/le-truc` export used without an explicit import (sub-design 16)
 	| 'TSRX037' // FactoryContext name inside an authored `@zeix/le-truc` import (sub-design 16)
 	| 'TSRX038' // duplicate static id across compose sites (LT-090)
+	| 'TSRX039' // Parser-exposed prop whose value is also rendered into an owned site (LT-122)
+	| 'TSRX040' // required first() whose only match sits in a branch that may not render (LT-123)
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -168,6 +170,32 @@ export const diagnostic = {
 
 	/** Source-level structure violations. */
 	invalidSource: (what: string) => error('TSRX008', what, undefined),
+
+	/**
+	 * A prop that is Parser-exposed AND rendered into the component's
+	 * own markup from a same-named server arg (LT-122). Two seeding
+	 * stories for one value: the Parser reads the HOST ATTRIBUTE at
+	 * connect, the site carries the same value as CONTENT. The page
+	 * therefore has to carry it twice, and if the host attribute is
+	 * absent the Parser's fallback wins and the first binding pass
+	 * OVERWRITES the text the server rendered.
+	 *
+	 * A warning rather than an error (owner decision, 2026-08-30):
+	 * harvesting from the DOM is the preferred contract, but an
+	 * attribute-driven prop whose site merely displays it is a
+	 * legitimate shape the corpus has not yet argued either way.
+	 */
+	duplicatedPropChannel: (
+		source: string,
+		offset: number | undefined,
+		prop: string,
+		parser: string,
+	) =>
+		warning(
+			'TSRX039',
+			`\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. Harvest it from the site instead (\`expose({ ${prop}: <ref read> })\`, TSRX-HOST-PROFILE § data account) and drop the attribute, or stop rendering the value here.`,
+			lineOf(source, offset),
+		),
 
 	/** Invalid `export const config` declaration (ADR 0023 sub-design 8). */
 	invalidConfig: (source: string, offset: number | undefined, what: string) =>
@@ -529,9 +557,12 @@ export const diagnostic = {
 		),
 
 	/**
-	 * `first(selector, required)` (LT-055) called with anything other than
-	 * exactly two string-literal arguments — the shape the compiler resolves
-	 * structurally at compile time, replacing `ref={}`.
+	 * `first(…)` (LT-055) called with anything other than one or two
+	 * string literals. Two (selector + a human required-reason) is the
+	 * REQUIRED form, verified structurally against the component's own
+	 * template; one (a bare selector) is the OPTIONAL form (LT-123),
+	 * which may match markup the component did not itself render and
+	 * yields `undefined` instead of throwing.
 	 */
 	invalidFirstCall: (
 		source: string,
@@ -540,7 +571,25 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX025',
-			`\`const ${name} = first(…)\` must be called with exactly two string literals — a selector and a required-reason string (e.g. \`first('input', 'required')\`) — so the compiler can resolve the reference structurally at compile time.`,
+			`\`const ${name} = first(…)\` must be called with one or two string literals — a selector alone for an optional reference (\`first('span.badge')\`, yields \`undefined\` when absent), or a selector plus a required-reason string (\`first('input', 'required')\`, throws with that reason) — so the compiler can resolve the reference structurally at compile time.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A REQUIRED `first(selector, reason)` whose only match sits
+	 * inside a branch that may not render (LT-123) — the reason
+	 * can never be thrown, because the analysis addresses such an
+	 * element with a non-throwing query under a presence guard.
+	 */
+	deadRequiredReason: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		selector: string,
+	) =>
+		warning(
+			'TSRX040',
+			`\`const ${name} = first('${selector}', …)\` is declared REQUIRED, but its only match in this template sits inside a branch that may not render — the client addresses it with an existence guard either way, so the required-reason string is never thrown. Drop it (\`first('${selector}')\`) to say optional outright. For a template-owning component the compiler controls the markup, so a required-reason only earns its keep on a selector that may match markup this component did not itself render.`,
 			lineOf(source, offset),
 		),
 
@@ -635,31 +684,6 @@ export const diagnostic = {
 		error(
 			'TSRX030',
 			'`<textarea value={…}>` has no effect — `value` is not a real HTML attribute on `<textarea>` (the browser ignores it) and the pre-hydration control renders empty. Set the initial value as text content instead: `<textarea>{value}</textarea>`.',
-			lineOf(source, offset),
-		),
-
-	/**
-	 * A client-construct attribute (reactive, event, class-map, style-map)
-	 * exists on one `@if`/`@else` branch root but not the other (CHECKLIST
-	 * §10's `aria-describedby` parity gotcha, generalized). Union addressing
-	 * (`analysis/effects.ts` `handleIfEffects`) only walks the FIRST branch
-	 * root carrying any client construct — an attribute unique to the OTHER
-	 * branch is silently never emitted client-side, no matter what it is.
-	 * The "same-named constructs must agree" check only compares keys
-	 * present in both branches, so this asymmetric case had no diagnostic
-	 * before LT-060/LT-066 found it dropping a form-textbox host-value
-	 * mirror with zero warning.
-	 */
-	asymmetricBranchConstruct: (
-		source: string,
-		offset: number | undefined,
-		key: string,
-		presentTag: string,
-		missingTag: string,
-	) =>
-		error(
-			'TSRX031',
-			`\`${key}\` is present on the <${presentTag}> \`@if\` branch root but not on the <${missingTag}> branch — union addressing only emits constructs from whichever branch root is found first, so this one would be silently dropped from the generated client. Add the equivalent construct to both branch roots, or move it to a location outside the \`@if\`.`,
 			lineOf(source, offset),
 		),
 
@@ -847,7 +871,11 @@ export const diagnostic = {
 	 * a false declaration a future working language service would flag, and
 	 * re-emitting it would break the generated module.
 	 */
-	contextNameInImport: (source: string, offset: number | undefined, name: string) =>
+	contextNameInImport: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
 		error(
 			'TSRX037',
 			`\`${name}\` is FactoryContext vocabulary — ambient in this host profile, not a '@zeix/le-truc' export. Remove it from the import (drop the whole line if it's the only named import left).`,

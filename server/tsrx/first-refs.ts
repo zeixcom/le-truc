@@ -17,7 +17,11 @@
  * so every existing dedup/union-addressing guarantee carries over unchanged.
  */
 
+import type { TsrxNode } from '@tsrx/core'
+import { isNode } from './ast-utils'
+import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import type { TemplateNode } from './ir'
+import { walkTemplate } from './walk'
 
 /* === Types === */
 
@@ -216,4 +220,96 @@ export const shareExclusiveIf = (
 		inAlternate.length <= 1 &&
 		inThen.length + inAlternate.length === elements.length
 	)
+}
+
+/**
+ * TSRX039 (LT-122): report every site that renders a server arg
+ * whose name is a PARSER-exposed prop — the value's own seeding
+ * channel is the host attribute, so such a site is a second copy.
+ *
+ * The component ROOT is skipped deliberately: the root IS the host,
+ * so `<form-textbox value={value}>` is the Parser's channel being
+ * rendered, which is the correct half. Only OWNED descendants
+ * duplicate it (`<textarea …>{value}</textarea>` beside that same
+ * root attribute — form-textbox ships `value` twice today).
+ */
+export const reportDuplicatedChannels = (
+	root: TemplateNode,
+	source: string,
+	diagnostics: CompileDiagnostic[],
+	argNames: ReadonlySet<string>,
+	parserProps: ReadonlySet<string>,
+	parserFactoryOf: (prop: string) => string,
+): void => {
+	if (parserProps.size === 0 || argNames.size === 0) return
+	const named = (expr: TsrxNode): string | null => {
+		if (!isNode(expr) || expr.type !== 'Identifier') return null
+		const name = String(expr.name)
+		return argNames.has(name) && parserProps.has(name) ? name : null
+	}
+	const report = (prop: string, offset: number | undefined): void => {
+		diagnostics.push(
+			diagnostic.duplicatedPropChannel(
+				source,
+				offset,
+				prop,
+				parserFactoryOf(prop),
+			),
+		)
+	}
+	walkTemplate(root, node => {
+		if (node.kind === 'expr') {
+			const prop = named(node.expr)
+			if (prop) report(prop, node.node.start)
+			return
+		}
+		if (node.kind !== 'element' || node === root) return
+		for (const attr of node.attrs) {
+			if (attr.kind !== 'server') continue
+			const prop = named(attr.node)
+			if (prop) report(prop, attr.node.start)
+		}
+	})
+}
+
+/**
+ * Does every path to `target` from `root` pass through an `@if`
+ * with no `@else` (LT-123)? Such an element is absent from the
+ * rendered DOM whenever that branch didn't take, so a reference
+ * to it is optional NO MATTER how `first()` was called — the
+ * analysis addresses it with a non-throwing query under a
+ * presence guard (`handleOptionalBranch`, analysis/effects.ts).
+ */
+export const inOptionalBranch = (
+	root: TemplateNode,
+	target: TemplateNode,
+): boolean => {
+	let found = false
+	const walk = (node: TemplateNode, optional: boolean): void => {
+		if (found) return
+		if (node === target) {
+			found = optional
+			return
+		}
+		if (node.kind === 'if') {
+			const single = node.alternate.length === 0
+			for (const child of node.then) walk(child, optional || single)
+			for (const child of node.alternate) walk(child, optional)
+			return
+		}
+		if (node.kind === 'element' || node.kind === 'compose')
+			for (const child of node.children) walk(child, optional)
+		else if (node.kind === 'try')
+			for (const child of [
+				...node.children,
+				...node.catchChildren,
+				...(node.pendingChildren ?? []),
+			])
+				walk(child, optional)
+		else if (node.kind === 'switch')
+			for (const arm of node.cases)
+				for (const child of arm.children) walk(child, optional)
+	}
+	walk(root, false)
+	return found
 }

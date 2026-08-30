@@ -73,6 +73,44 @@ export const DIRTY_FLAG_ATTRS: ReadonlySet<string> = new Set<string>([
 ])
 
 /**
+ * Native tags whose `value`/`checked`/`selected` IDL properties carry the
+ * DOM dirty flag (LT-116) — mapped to the lib.dom interface the generated
+ * client needs so `bindProperty`'s keyed setter typechecks. The WRITE-side
+ * counterpart of `DIRTY_FLAG_ATTRS`: a reactive thunk targeting one of
+ * these attr×tag combinations must lower to a property write, because
+ * rewriting/removing the content attribute no longer moves the live
+ * property once the control is dirty (user interaction, autofill, or any
+ * prior JS property write) — the form-radiogroup mutual-exclusion break
+ * (NOTES LT-092). The hand-written corpus precedent is a property write in
+ * the `each()` callback (`radio.checked = isChecked`), not `setAttribute`.
+ *
+ * `button` is deliberately absent: its `value` attribute/property pair has
+ * no dirty flag (the property always reflects the attribute). `option` is
+ * present for `selected` (dirtiness applies); `select`/`textarea` for
+ * `value`. Compiler-side literal, same duplication precedent as
+ * `DIRTY_FLAG_ATTRS` itself — the TSRX compiler never imports lib.dom
+ * types, it only emits names the generated client resolves.
+ */
+export const DIRTY_FLAG_CONTROL_TAGS: ReadonlyMap<string, string> = new Map([
+	['input', 'HTMLInputElement'],
+	['select', 'HTMLSelectElement'],
+	['textarea', 'HTMLTextAreaElement'],
+	['option', 'HTMLOptionElement'],
+])
+
+/**
+ * Does this attr×tag combination hit a native dirty-flag IDL property
+ * (LT-116)? The reactive-attr dispatch uses this to lower thunks to
+ * `bindProperty` — regardless of the thunk's own value type, since the
+ * attribute/property divergence is a property of the TARGET, not of the
+ * thunk: a string `value` thunk over an `<input>` desyncs from the
+ * attribute exactly as a boolean `checked` thunk does once the control is
+ * dirty.
+ */
+export const isDirtyFlagControlAttr = (tag: string, attr: string): boolean =>
+	DIRTY_FLAG_ATTRS.has(attr) && DIRTY_FLAG_CONTROL_TAGS.has(tag)
+
+/**
  * Context members usable as free names in any client code position —
  * `host`/`internals` plus the Web Components Community Protocol helpers
  * (LT-035, ADR 0024 sub-design 15): `requestContext(Context, fallback)` in a

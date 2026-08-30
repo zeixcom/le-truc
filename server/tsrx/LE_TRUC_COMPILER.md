@@ -208,11 +208,14 @@ iterableName, hoisted[], output, node }`. `listSignal ≠ null` marks the reacti
 declarations that the client rebinds to element-derived reads.
 
 **`ConfigIR`** — `{ form: 'value' | 'checked' | null, observedAttributes: string[] }`
-from `export const config`; lowers to `defineComponent`'s third argument with the
-form variant leading (ADR 0019 ordering, enforced structurally).
+from `export const config`; the form variant and `observedAttributes` lower to
+`defineComponent`'s third argument (form variant leading, ADR 0019 ordering,
+enforced structurally).
 
 **`ExtractContext`** — threaded through the front end: `{ source, diagnostics,
-serverKnown, composeImports, setupInits }`.
+serverKnown, argNames, exposedProps, parserProps, composeImports, setupInits }`.
+`argNames`/`parserProps` are the two name sets LT-122's arg-and-prop rule
+consults; see § 5.3.
 
 ### 4.2 Analysis plan (defined in `analysis/plan.ts`)
 
@@ -241,9 +244,25 @@ all; see § 4.4.
 `raw` (verbatim client-stmt), `guarded` (effects under `if (query) { … }` for an
 optional `@if`), `async` (`watch(signal, { ok, err, nil })` over three roots).
 Loop-scoped variants: `LoopEffectPlan` (`watch-attr` / `watch-class` / `on` inside
-`each()`), `ForClientPlan` (collection + itemParam + rebindings + effects),
+`each()`; `watch-attr` carries the same `dispatch` decision as the top-level
+path), `ForClientPlan` (collection + itemParam + rebindings + effects),
 `ReconcilePlan` (container/template/signal/itemParam/keyParam/holeSelector/
 itemEvents). Every plan node carries `sourceStart`/`sourceEnd` for the span table.
+
+The `watch-attr` dispatch rule (LT-116), applied identically by the top-level
+and loop paths: a bare `() => host.<prop>` mirror OR a dirty-flag IDL attr
+(`value`/`checked`/`selected`, `DIRTY_FLAG_ATTRS`) on a native form control
+(`input`/`select`/`textarea`/`option`, `DIRTY_FLAG_CONTROL_TAGS` in
+`ast-utils.ts`) lowers to `bindProperty`; everything else to `bindAttribute`.
+The write-side counterpart of the CHECKLIST §6 harvest rule: once a control
+is dirty (user interaction, autofill, or any prior property write), rewriting
+the content attribute no longer moves the live property, so an
+attribute-dispatched mirror silently stops tracking — the form-radiogroup
+mutual-exclusion break that stopped its cutover (NOTES LT-092). The thunk's
+own type is irrelevant to the hazard (the divergence is a property of the
+target), so the rule keys on attr×tag alone; loop-body descendant targets
+emit `querySelector<Interface>(…)` (the map's interface name) so the keyed
+`bindProperty` setter typechecks.
 
 **`AnalysisContext`** — the explicit context threaded through all four passes
 (replacing the pre-regrouping closure-shared state):
@@ -432,14 +451,44 @@ Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
   loop skips it defensively). No route at all → TSRX004.
 - **Pass 4 — top-level effects** (`analysis/effects.ts`, `emitTopEffects` walk,
   document order):
+  - **The arg-and-prop coincidence** (LT-122): an expression naming BOTH
+    a server arg and an `expose()`d prop of that name — a text child
+    (`{label}`) or a bare-identifier attribute (`disabled={disabled}`)
+    — plans the effect the `host.<name>` spelling plans, while the
+    SERVER emission still splices the arg. One site, three roles: the
+    server's render target, the client's harvest source (ADR 0003),
+    and the client's binding target. That is what lets a component
+    harvest its props from its own rendered children without
+    duplicating the value onto a host attribute (TSRX-HOST-PROFILE
+    § data account bullet 4; `basic-button` is the reference).
+    Declared signals are excluded (they own a render site and a
+    harvest plan already), and so are PARSER-exposed props: their
+    seeding channel IS the host attribute, so a site rendering the
+    same value is a second copy — TSRX039 warns and no binding is
+    added (binding one would fight a native control's dirty-value
+    flag, e.g. `<textarea …>{value}</textarea>`).
   - Root element: `style-map`/`class-map` lower to `watch-style`/`watch-class`
     targeting the ambient `host`; any other reactive construct on the root is
     rejected.
   - Loop outputs become `each`/`reconcile` effects.
-  - `@if`: with `@else` → union addressing (constructs on branch roots only,
-    identical construct text across branches — TSRX005 otherwise); without
-    `@else` → `'maybe'` query + `guarded` effect wrapping the root's constructs
-    and any `client-stmt` siblings.
+  - `@if`: with `@else` and IDENTICAL construct text on every branch root →
+    union addressing (one throwing query whose selector unions both roots —
+    whichever branch rendered is the element found; constructs on branch
+    roots only). With `@else` and DIFFERING constructs (LT-118) → per-branch
+    addressing: each branch root is addressed independently with a
+    non-throwing `first()` and a `'guarded'` effect, the plain-`@try` arms
+    precedent (LT-025) — an effect planned inside a branch only activates
+    when that branch rendered, so mutually-exclusive branches never
+    double-bind. Sound only while each addressed root's selector cannot
+    match the other branch's markup (`resolveExclusiveSelectorIn`, which
+    skips candidates `countForSelector`'s exclusivity-aware counting would
+    accept); indistinguishable roots stay a TSRX007 error naming the fix.
+    An effect over an author-declared OPTIONAL ref gets the same
+    `guarded` wrapping after the walk (`analysis/plan.ts`), whatever
+    its site looks like — the query is non-throwing, so binding it
+    bare would neither typecheck nor run.
+    Without `@else` → `'maybe'` query + `guarded` effect wrapping the root's
+    constructs and any `client-stmt` siblings.
   - `@switch` / plain `@try`: arms must be construct-free (elements are not
     guaranteed to exist).
   - Async `@try`: `handleAsyncBoundary` — the guarded `deriveCell(async …)`
@@ -450,7 +499,8 @@ Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
     child tag from `composeRegistry` for the query selector.
   - Plain elements with client constructs: selector resolution, ref-name or
     camelCased tag as query name, `emitConstructEffects` (reactive attr with
-    custom-element gate TSRX012 / host-mirror property dispatch, pass with
+    custom-element gate TSRX012 / property dispatch for host-prop mirrors and
+    dirty-flag control attrs (§4.2, LT-116), pass with
     registry gate TSRX012, class/style maps, events, lazy children with
     managed form prop gate TSRX010; since LT-115 a lazy text child must be
     its element's sole content — multiple lazy children and static/element
@@ -574,7 +624,10 @@ why every verbatim slice is span-recorded rather than rewritten.
   `core-shim.d.ts` is the type-side boundary. An upgrade touches `core.ts` and
   the shim only.
 - **One reactive list per component** (extracted-template addressing limit);
-  **one addressable construct root per `@if` branch**; **composed children are
+  **one addressable construct root per `@if` branch** — union-addressed when
+  every branch root carries the identical construct signature, per-branch
+  addressed otherwise (LT-118; roots must then be statically
+  distinguishable from each other); **composed children are
   statics/server expressions only**.
 
 ## 7. Regrouping history and remaining gaps
@@ -685,7 +738,23 @@ still open:
   `MissingElementError` message verbatim (`addQuery` checks
   `component.refReasons` before falling back to its usual auto-generated
   message) — the one part of the source `first()` call that isn't
-  resynthesized. `first-refs.ts` is a front-end-owned pure leaf (sibling of
+  resynthesized. **Cardinality is the WEAKER of what the author
+  declared and what the site proves (LT-123).** One selector literal
+  (`first('span.label')`) declares the reference OPTIONAL: it yields
+  `undefined` instead of throwing, the structural check is not
+  enforced against it (an optional ref may address markup the PAGE
+  authored, which this component's template says nothing about — an
+  unmatched one is queried from the AUTHORED selector, the one place
+  besides the reason string where `first()` text survives verbatim),
+  and every effect over it is wrapped in the same existence guard a
+  single-branch `@if` root gets. Two literals declare it REQUIRED —
+  but a required ref whose only match sits inside a branch that may
+  not render is optional anyway (the analysis addresses it
+  non-throwing under a presence guard either way), so the reason
+  string is dead and TSRX040 says so. For a template-OWNING component
+  the compiler controls the markup, so a required-reason only earns
+  its keep on a selector that may match markup the component did not
+  itself render. `first-refs.ts` is a front-end-owned pure leaf (sibling of
   `reactivity.ts`/`evaluability.ts`, depending only on `ir.ts` types)
   rather than living in `analysis/selectors.ts` — `compiler.ts` (front end)
   needs it before the analysis stage runs, and adding it to

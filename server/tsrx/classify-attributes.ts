@@ -22,6 +22,7 @@ import type {
 	ExtractContext,
 	PassEntryIR,
 } from './ir'
+import { bindsExposedArg } from './reactivity'
 
 /**
  * Parse `pass={{ prop: thunk, … }}` entries — shared by raw dashed tags and
@@ -127,6 +128,8 @@ const REACT_ATTR_RENAMES: ReadonlyMap<string, string> = new Map([
 export const classifyAttribute = (
 	ctx: ExtractContext,
 	attr: TsrxNode,
+	/** Declared signal names — LT-122's exclusion (see `bindsExposedArg`). */
+	signals: { has(name: string): boolean },
 ): AttributeIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
 	const value = attr.value
@@ -270,11 +273,24 @@ export const classifyAttribute = (
 				kind: 'invalid',
 				reason: `Attribute \`${name}\` uses an unsupported function form; write a thunk (() => value).`,
 			}
+		// LT-122: `disabled={disabled}`, where `disabled` is both a
+		// server arg and an exposed prop, still renders from the arg
+		// server-side — and additionally binds `() => host.disabled`
+		// against the same element client-side, so an external prop
+		// write reaches the DOM the component itself rendered.
+		const bindsProp = bindsExposedArg(
+			expr,
+			ctx.argNames,
+			ctx.exposedProps,
+			signals,
+			ctx.parserProps,
+		)
 		return {
 			kind: 'server',
 			name,
 			exprText: text(ctx.source, expr),
 			node: expr,
+			...(bindsProp !== null ? { bindsProp } : {}),
 		}
 	}
 	return {

@@ -17,6 +17,14 @@
  * DOM's native focus-follows-click behavior, which `document.activeElement`
  * already reflects directly, so no extra state (and no TSRX004 "never
  * rendered" signal) is needed at all.
+ *
+ * Cutover notes (LT-116): the loop input's `checked` mirror lowers to a
+ * PROPERTY write (the compiler's dirty-flag dispatch widening — the reason
+ * this cutover was stopped under LT-092), and `disabled={() => host.disabled}`
+ * restores the twin's per-radio disabled propagation. The label's class
+ * thunk is the map form (`{ selected: … }` → `bindClass`, toggling one
+ * token) — the twin's `classList.toggle('selected', …)` preserved any other
+ * classes on the label, which a string-valued class thunk would wipe.
  */
 
 import { asString } from '@zeix/le-truc'
@@ -109,13 +117,14 @@ export function FormRadiogroup(
 					const optValue = option.value;
 					<label
 						data-value={optValue}
-						class={() => (host.value === optValue ? 'selected' : '')}
+						class={() => ({ selected: host.value === optValue })}
 					>
 						<input
 							type="radio"
 							value={optValue}
 							checked={() => host.value === optValue}
 							tabindex={() => (host.value === optValue ? 0 : -1)}
+							disabled={() => host.disabled}
 							onChange={() => ({ value: optValue })}
 						/>
 						<span>{option.label}</span>

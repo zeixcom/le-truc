@@ -153,6 +153,9 @@ describe('addQuery', () => {
 	const component = {
 		tag: 'c-el',
 		refReasons: new Map(),
+		// LT-123: `addQuery` consults this to keep an
+		// author-declared optional ref optional.
+		optionalRefs: new Set<string>(),
 	} as unknown as ComponentIR
 
 	test('registers a new query and returns its variable name', () => {

@@ -216,8 +216,32 @@ import { createCell } from '@zeix/le-truc'`
 		).toBe(true)
 	})
 
-	test('@if construct differing between branches is TSRX005', () => {
+	test('@if construct differing between distinguishable branches compiles (per-branch addressing, LT-118)', () => {
 		const source = `export function C({ big }: { big?: boolean })
+	@{
+		expose({})
+		<>
+			<c-el>
+				@if (big) {
+					<strong class="a" onClick={() => {}}>a</strong>
+				} @else {
+					<strong class="b" onClick={() => { }}>b</strong>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		// Indistinguishable roots (no distinguishing static attribute) keep
+		// the error — per-branch guards could not tell the branches apart,
+		// and both guards would bind the one rendered element.
+		const indistinguishable = `export function C({ big }: { big?: boolean })
 	@{
 		expose({})
 		<>
@@ -230,11 +254,11 @@ import { createCell } from '@zeix/le-truc'`
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(
-			diagnostics.some(d => d.message.includes('branch constructs differ')),
-		).toBe(true)
+		}`
+		const clash = compileComponent(indistinguishable, 'c.tsrx', new Set())
+		const hit = clash.diagnostics.find(d => d.code === 'TSRX007')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('distinguishing')
 	})
 })
 
@@ -764,7 +788,9 @@ describe('first(selector, required) element references (LT-055)', () => {
 	})
 
 	test('a malformed first() call (wrong arg count/shape) is TSRX025', () => {
-		const source = el("const input = first('input')", '<input />')
+		// One literal is the OPTIONAL form since LT-123 — malformed
+		// now means neither one nor two string literals.
+		const source = el("const input = first('input', 'a', 'b')", '<input />')
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'TSRX025')
 		expect(hit).toBeDefined()
@@ -1070,8 +1096,41 @@ import { asString } from '@zeix/le-truc'`
 	})
 })
 
-describe('asymmetric @if branch client constructs (TSRX031)', () => {
-	test('a client construct on only one branch root is TSRX031', () => {
+describe('asymmetric @if branch client constructs (per-branch addressing since LT-118)', () => {
+	test('a client construct on only one distinguishable branch root addresses per-branch', () => {
+		const source = `export function C({ big }: { big?: boolean })
+	@{
+		expose({})
+		<>
+			<c-el>
+				@if (big) {
+					<strong class="plain">a</strong>
+				} @else {
+					<button type="button" class="act" onClick={() => {}}>b</button>
+				}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+		}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+		// The constructed @else root is addressed with its own non-throwing
+		// query inside an existence guard; the static @if root is not
+		// addressed at all.
+		expect(component?.clientCode).toContain("const button = first('button')")
+		expect(component?.clientCode).toContain('if (button) {')
+	})
+
+	test('a construct unique to one INDISTINGUISHABLE branch root stays an error (was TSRX031)', () => {
+		// Both roots are bare <strong> — union addressing cannot carry the
+		// asymmetric construct, and per-branch guards over one selector
+		// would both bind the rendered element. TSRX007 keeps the hazard an
+		// error, naming the fix.
 		const source = `export function C({ big }: { big?: boolean })
 	@{
 		expose({})
@@ -1085,11 +1144,11 @@ describe('asymmetric @if branch client constructs (TSRX031)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX031')
+		const hit = diagnostics.find(d => d.code === 'TSRX007')
 		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('on:onClick')
+		expect(hit?.message).toContain('distinguishing')
 	})
 
 	test('an identical construct on both branch roots is not flagged', () => {
@@ -1106,9 +1165,9 @@ describe('asymmetric @if branch client constructs (TSRX031)', () => {
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
-	}`
+		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX031')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'TSRX007')).toBe(false)
 	})
 })
 

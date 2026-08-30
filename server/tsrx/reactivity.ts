@@ -52,6 +52,69 @@ export type LiftVerdict =
 	| { kind: 'opaque'; names: string[] }
 
 /**
+ * Does this template expression name a server arg that is ALSO an
+ * exposed prop (LT-122)? Returns the shared name, or `null`.
+ *
+ * That coincidence is the children-are-data contract written out: the
+ * component receives `label` as a server arg, renders it into its own
+ * markup, and exposes a `label` prop the client seeds by HARVESTING
+ * that same markup back (TSRX-HOST-PROFILE § data account bullet 4).
+ * The site is therefore three things at once, and each spelling on its
+ * own only covers part of it — `{label}` renders but never rebinds,
+ * `{host.label}` rebinds but renders empty, which is what pushed
+ * LT-092 into duplicating the value onto a host attribute.
+ *
+ * A declared SIGNAL of the same name is excluded: a signal already
+ * owns a render site and a harvest plan (`analysis/harvest.ts`), and
+ * would bind itself twice if this rule also claimed it.
+ *
+ * A PARSER-exposed prop is excluded too, and for a sharper reason:
+ * it already has a seeding channel — the host attribute — so the
+ * site is a second copy of the value rather than its home. Binding
+ * it would make that worse, not better: `<textarea …>{value}</textarea>`
+ * (form-textbox) is a native control's INITIAL content, and a
+ * live `bindText` over it would fight the dirty-value flag the
+ * moment the user typed. Those shapes get TSRX039 instead, which
+ * names the two channels and asks the author to pick one.
+ */
+/**
+ * The TSRX039 shape (LT-122): a site rendering a server arg whose
+ * name is a PARSER-exposed prop — the value's real seeding channel
+ * is the host attribute, so this site is a second copy of it.
+ * Returns the shared name, or `null`.
+ *
+ * Deliberately independent of `bindsExposedArg`, which excludes
+ * exactly this case: the compiler declines to bind such a site AND
+ * says why, rather than doing neither or both.
+ */
+export const duplicatedChannelArg = (
+	expr: TsrxNode,
+	args: NameSet,
+	parserProps: NameSet,
+): string | null => {
+	if (nodeType(expr) !== 'Identifier') return null
+	const name = String(expr.name)
+	return args.has(name) && parserProps.has(name) ? name : null
+}
+
+export const bindsExposedArg = (
+	expr: TsrxNode,
+	args: NameSet,
+	exposedProps: NameSet,
+	signals: NameSet,
+	parserProps: NameSet,
+): string | null => {
+	if (nodeType(expr) !== 'Identifier') return null
+	const name = String(expr.name)
+	return args.has(name) &&
+		exposedProps.has(name) &&
+		!signals.has(name) &&
+		!parserProps.has(name)
+		? name
+		: null
+}
+
+/**
  * Classify a template-child expression against the component's signal names.
  *
  * `signals` is the declared-signal name set; `host` is always reactive. Server
