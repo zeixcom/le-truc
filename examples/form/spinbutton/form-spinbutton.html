@@ -1,130 +1,165 @@
-<!-- Children-are-data (LT-112): value/min/max/step live on the owned input
-     (the hand-written contract); a host attribute overrides per the Parser's
-     own precedence. bigStep has no input attribute — it stays on the host.
-     The hand-written twin's zero-state affordance (.zero/.other spans) is
-     still dropped pending a compiler capability (NOTES.md) — the compiled
-     template always renders the plain input + step buttons. -->
-<form-spinbutton id="default-test" name="amount">
+<!-- Regenerated from the compiled template (LT-118): every instance below is
+     what `renderFormSpinbutton()` emits for its args, so the served DOM and the
+     client's harvest agree. value/min/max/step live on the owned input
+     (children-are-data, LT-112); `zero` opts an instance into the "Add to Cart"
+     zero-state affordance and is harvested from its own `.zero` span — at value
+     0 the input and decrement button are `hidden`, the increment button carries
+     the call-to-action label, and `.other` hides. -->
+
+<form-spinbutton id="default-test" name="amount" value="0" min="0" max="10" step="1" bigStep="10">
 	<label for="amount-input">Amount</label>
 	<fieldset>
 		<div class="input">
-			<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-			<input id="amount-input" type="number" value="0" min="0" max="10" step="1">
-			<button type="button" class="increment" aria-label="Increment">+</button>
+			<button type="button" aria-label="Decrement" hidden disabled class="decrement">−</button>
+			<input id="amount-input" type="number" value="0" min="0" max="10" step="1" hidden class="value">
+			<button type="button" class="increment">
+				<span class="zero">Add to Cart</span>
+				<span hidden class="other">+</span>
+			</button>
 		</div>
 	</fieldset>
-	<p class="error" role="alert" aria-live="assertive"></p>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
 </form-spinbutton>
 
 <hr>
 
-<!-- Test with different max value -->
-<form-spinbutton id="max-5-test" name="count">
+<!-- Different max value, zero-state opted in -->
+
+<form-spinbutton id="max-5-test" name="count" value="0" min="0" max="5" step="1" bigStep="10">
 	<label for="count-input">Count</label>
 	<fieldset>
 		<div class="input">
-			<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-			<input id="count-input" type="number" value="0" min="0" max="5" step="1">
-			<button type="button" class="increment" aria-label="Increment">+</button>
+			<button type="button" aria-label="Decrement" hidden disabled class="decrement">−</button>
+			<input id="count-input" type="number" value="0" min="0" max="5" step="1" hidden class="value">
+			<button type="button" class="increment">
+				<span class="zero">Start</span>
+				<span hidden class="other">+</span>
+			</button>
 		</div>
 	</fieldset>
-	<p class="error" role="alert" aria-live="assertive"></p>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
 </form-spinbutton>
 
 <hr>
 
-<!-- Test with initial value carried by the input -->
-<form-spinbutton id="initial-value-test" name="number">
+<!-- Non-zero initial value: the zero-state UI starts in its "other" shape -->
+
+<form-spinbutton id="initial-value-test" name="number" value="3" min="0" max="15" step="1" bigStep="10">
 	<label for="number-input">Quantity</label>
 	<fieldset>
 		<div class="input">
-			<button type="button" class="decrement" aria-label="Decrement">−</button>
-			<input id="number-input" type="number" value="3" min="0" max="15" step="1">
-			<button type="button" class="increment" aria-label="Increment">+</button>
+			<button type="button" aria-label="Decrement" class="decrement">−</button>
+			<input id="number-input" type="number" value="3" min="0" max="15" step="1" class="value">
+			<button type="button" class="increment">
+				<span hidden class="zero">Begin</span>
+				<span class="other">+</span>
+			</button>
 		</div>
 	</fieldset>
-	<p class="error" role="alert" aria-live="assertive"></p>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
 </form-spinbutton>
 
 <hr>
 
-<!-- Generic spinbutton with a larger range -->
-<form-spinbutton id="generic-test" name="counter">
-	<label for="counter-input">Quantity</label>
+<!-- No zero-state affordance: no `zero` arg, so no `.zero` span is rendered -->
+
+<form-spinbutton id="no-zero-test" name="counter" value="0" min="0" max="999" step="1" bigStep="10">
+	<label for="counter-input">Counter</label>
 	<fieldset>
 		<div class="input">
-			<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-			<input id="counter-input" type="number" value="0" min="0" max="999" step="1">
-			<button type="button" class="increment" aria-label="Increment">+</button>
+			<button type="button" aria-label="Decrement" disabled class="decrement">−</button>
+			<input id="counter-input" type="number" value="0" min="0" max="999" step="1" class="value">
+			<button type="button" class="increment">
+				<span class="other">+</span>
+			</button>
 		</div>
 	</fieldset>
-	<p class="error" role="alert" aria-live="assertive"></p>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
 </form-spinbutton>
 
 <hr>
 
-<!-- Test with fractional step (float mode): step="0.5" on the input switches
-     value/min/max parsing from integer to decimal -->
-<form-spinbutton id="decimal-test" name="weight">
+<!-- Fractional step -->
+
+<form-spinbutton id="decimal-test" name="weight" value="0" min="0" max="5" step="0.5" bigStep="5">
 	<label for="weight-input">Weight</label>
 	<fieldset>
 		<div class="input">
-			<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-			<input id="weight-input" type="number" value="0" min="0" max="5" step="0.5">
+			<button type="button" aria-label="Decrement" disabled class="decrement">−</button>
+			<input id="weight-input" type="number" value="0" min="0" max="5" step="any" class="value">
 			<span class="unit">kg</span>
-			<button type="button" class="increment" aria-label="Increment">+</button>
+			<button type="button" class="increment">
+				<span class="other">+</span>
+			</button>
 		</div>
 	</fieldset>
-	<p class="error" role="alert" aria-live="assertive"></p>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
 </form-spinbutton>
 
 <hr>
 
-<!-- Test with custom big-step: shift+Arrow or stepUp(true)/stepDown(true)
-     moves by 5 instead of the default step*10 — no input attribute carries
-     it, so it lives on the host -->
-<form-spinbutton id="big-step-test" name="points" bigStep="5">
+<!-- Explicit bigStep for Shift+Arrow / Shift+click -->
+
+<form-spinbutton id="big-step-test" name="points" value="0" min="0" max="100" step="1" bigStep="5">
 	<label for="points-input">Points</label>
 	<fieldset>
 		<div class="input">
-			<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-			<input id="points-input" type="number" value="0" min="0" max="100" step="1">
-			<button type="button" class="increment" aria-label="Increment">+</button>
+			<button type="button" aria-label="Decrement" disabled class="decrement">−</button>
+			<input id="points-input" type="number" value="0" min="0" max="100" step="1" class="value">
+			<button type="button" class="increment">
+				<span class="other">+</span>
+			</button>
 		</div>
 	</fieldset>
-	<p class="error" role="alert" aria-live="assertive"></p>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
 </form-spinbutton>
 
 <hr>
 
-<!-- Test with negative min: value can go below 0, and typing "-" directly
-     into the focused input must not be intercepted as a decrement shortcut -->
-<form-spinbutton id="negative-min-test" name="temperature">
+<!-- Negative minimum -->
+
+<form-spinbutton id="negative-min-test" name="temperature" value="0" min="-10" max="10" step="1" bigStep="10">
 	<label for="temperature-input">Temperature</label>
 	<fieldset>
 		<div class="input">
-			<button type="button" class="decrement" aria-label="Decrement">−</button>
-			<input id="temperature-input" type="number" value="0" min="-10" max="10" step="1">
-			<span class="unit">°C</span>
-			<button type="button" class="increment" aria-label="Increment">+</button>
+			<button type="button" aria-label="Decrement" class="decrement">−</button>
+			<input id="temperature-input" type="number" value="0" min="-10" max="10" step="1" class="value">
+			<button type="button" class="increment">
+				<span class="other">+</span>
+			</button>
 		</div>
 	</fieldset>
-	<p class="error" role="alert" aria-live="assertive"></p>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
 </form-spinbutton>
 
 <hr>
 
-<!-- Test with interactive input field -->
+<!-- Inside a form, for form participation and reset -->
+
 <form id="test-form">
-	<form-spinbutton id="interactive-input-test" name="interactive">
+
+	<form-spinbutton id="interactive-input-test" name="interactive" value="0" min="0" max="12" step="1" bigStep="10">
 		<label for="interactive-input">Quantity</label>
 		<fieldset>
 			<div class="input">
-				<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-				<input id="interactive-input" type="number" value="0" min="0" max="12" step="1">
-				<button type="button" class="increment" aria-label="Increment">+</button>
+				<button type="button" aria-label="Decrement" hidden disabled class="decrement">−</button>
+				<input id="interactive-input" type="number" value="0" min="0" max="12" step="1" hidden class="value">
+				<button type="button" class="increment">
+					<span class="zero">Begin</span>
+					<span hidden class="other">+</span>
+				</button>
 			</div>
 		</fieldset>
-		<p class="error" role="alert" aria-live="assertive"></p>
+		<p role="alert" aria-live="assertive" class="error">
+		</p>
 	</form-spinbutton>
+
 </form>
+

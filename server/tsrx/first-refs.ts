@@ -280,6 +280,86 @@ export const reportDuplicatedChannels = (
  * analysis addresses it with a non-throwing query under a
  * presence guard (`handleOptionalBranch`, analysis/effects.ts).
  */
+/**
+ * The server-side condition deciding whether `refName`'s matched element
+ * is in this component's OWN rendered output (LT-118) — the expression
+ * text to substitute for a `Boolean(ref)` presence read when folding a
+ * thunk server-side (`evaluability.ts`).
+ *
+ * The server renders the element exactly when every `@if` on the path to
+ * it is taken, so the answer is the conjunction of those conditions
+ * (negated for an `@else` arm): `'true'` when nothing guards it, `'false'`
+ * when no element matches the ref at all (only a PAGE could supply it, and
+ * the server did not).
+ *
+ * `null` — meaning "do not fold, omit the attribute instead" — for the two
+ * cases the server cannot settle with a plain condition: a ref inside a
+ * `@switch`/`@try` arm (arm selection is not a single boolean), and a ref
+ * matched more than once (the union of several conditions is not what a
+ * presence read means). Refusing to fold is always safe; folding wrongly
+ * bakes a wrong initial state into the HTML.
+ */
+export const refBranchGuard = (
+	root: TemplateNode,
+	refName: string,
+): string | null => {
+	const found: string[][] = []
+	let bailed = false
+	const carriesRef = (node: TemplateNode): boolean =>
+		(node.kind === 'element' || node.kind === 'compose') &&
+		node.attrs.some(a => a.kind === 'ref' && a.name === refName)
+	const walk = (node: TemplateNode, guards: readonly string[]): void => {
+		if (bailed) return
+		if (carriesRef(node)) found.push([...guards])
+		if (node.kind === 'if') {
+			for (const child of node.then)
+				walk(child, [...guards, `(${node.testText})`])
+			for (const child of node.alternate)
+				walk(child, [...guards, `!(${node.testText})`])
+			return
+		}
+		if (node.kind === 'switch' || node.kind === 'try') {
+			// Arm selection is not a plain condition — if the ref lives in
+			// one, refuse rather than guess.
+			const arms =
+				node.kind === 'switch'
+					? node.cases.flatMap(arm => arm.children)
+					: [
+							...node.children,
+							...node.catchChildren,
+							...(node.pendingChildren ?? []),
+						]
+			for (const child of arms) if (containsRef(child, refName)) bailed = true
+			return
+		}
+		if (node.kind === 'element' || node.kind === 'compose')
+			for (const child of node.children) walk(child, guards)
+	}
+	const containsRef = (node: TemplateNode, name: string): boolean => {
+		if (carriesRef(node)) return true
+		if (node.kind === 'if')
+			return [...node.then, ...node.alternate].some(c => containsRef(c, name))
+		if (node.kind === 'switch')
+			return node.cases.some(arm =>
+				arm.children.some(c => containsRef(c, name)),
+			)
+		if (node.kind === 'try')
+			return [
+				...node.children,
+				...node.catchChildren,
+				...(node.pendingChildren ?? []),
+			].some(c => containsRef(c, name))
+		if (node.kind === 'element' || node.kind === 'compose')
+			return node.children.some(c => containsRef(c, name))
+		return false
+	}
+	walk(root, [])
+	if (bailed || found.length > 1) return null
+	if (found.length === 0) return 'false'
+	const guards = found[0] as string[]
+	return guards.length === 0 ? 'true' : guards.join(' && ')
+}
+
 export const inOptionalBranch = (
 	root: TemplateNode,
 	target: TemplateNode,

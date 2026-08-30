@@ -22,6 +22,7 @@ import { freeIdentifiers, hostPropOf, JS_GLOBALS } from './ast-utils'
 import { isVoidElement } from './core'
 import {
 	foldableHostProps,
+	foldableRefGuards,
 	hostDerivedFold,
 	isServerEvaluable,
 	spliceHostDerivedFold,
@@ -152,21 +153,31 @@ const hostDerivedExpr = (
 	thunk: TsrxNode,
 	thunkText: string,
 ): string | null => {
-	const reads = hostDerivedFold(thunk, foldableHostProps(component))
+	const reads = hostDerivedFold(
+		thunk,
+		foldableHostProps(component),
+		foldableRefGuards(component),
+	)
 	if (reads === null || reads.length === 0) return null
 	const spliced = spliceHostDerivedFold(
 		thunkText,
 		typeof thunk.start === 'number' ? thunk.start : 0,
 		reads,
-		prop => {
+		(prop, kind) => {
+			// A ref read folds to whatever decides its presence in the
+			// server's OWN output (LT-118) — `refBranchGuard`'s condition.
+			if (kind === 'ref') return foldableRefGuards(component).get(prop) ?? ''
 			const rootAttr = component.root.attrs.find(
 				(a): a is Extract<AttributeIR, { kind: 'server' }> =>
 					a.kind === 'server' && a.name === prop,
 			)
-			// hostDerivedFold only returns reads whose prop is in
-			// foldableHostProps(component), which is built from exactly these
-			// root attributes — always found.
-			return rootAttr ? rootAttr.exprText : ''
+			// Two membership routes into foldableHostProps, two truths to
+			// splice (see its doc): a Parser-exposed prop's is its root
+			// attribute's expression; a HARVESTED prop's is the server arg
+			// that renders its site, which shares the prop's name and is in
+			// scope in this render function. Root attribute first — a prop
+			// can be both, and the root attribute is the narrower statement.
+			return rootAttr ? rootAttr.exprText : prop
 		},
 	)
 	return `(${spliced})()`
@@ -799,7 +810,29 @@ export const emitServerModule = (
 				)
 				.sort()
 		: []
-	if (stubNames.length > 0) used.add('refStub')
+	// A shared setup HELPER (`const commit = (next: number) => { … host.value
+	// = next … relayValidity(internals, input) }`) is dead code server-side
+	// for exactly the same reason a `defineMethod` body is — defined, never
+	// called — but its free context members still have to RESOLVE for the
+	// module to type-check. `host` usually rides in on `expose()`'s argument;
+	// `internals` need not, and did not once form-spinbutton's commit path
+	// was extracted out of `expose()` (LT-118).
+	//
+	// Deliberately narrow: only the two context MEMBERS, never refs. A ref
+	// stub that is merely declared is fine, but one whose value reaches the
+	// markup renders an empty string where the author asked for a DOM read —
+	// a build error traded for a silently wrong page (see LT-125). A context
+	// member cannot reach the markup: it is never server-known at all.
+	const setupContextNames = new Set<string>()
+	for (const stmt of component.setup)
+		for (const name of freeIdentifiers(stmt.node))
+			if (
+				(name === 'host' || name === 'internals') &&
+				!component.serverKnown.has(name)
+			)
+				setupContextNames.add(name)
+	const stubNamesAll = [...new Set([...stubNames, ...setupContextNames])].sort()
+	if (stubNamesAll.length > 0) used.add('refStub')
 
 	const body: string[] = [
 		'/**',
@@ -838,7 +871,7 @@ export const emitServerModule = (
 	// still needs it to TYPE-CHECK (LT-019). `expose()`'s own argument
 	// object, unlike those bodies, IS evaluated, so the stub has to
 	// survive being read and called, not just resolve (LT-121).
-	for (const name of stubNames) body.push(`\tconst ${name}: any = refStub`)
+	for (const name of stubNamesAll) body.push(`\tconst ${name}: any = refStub`)
 	// Setup statements keep their relative shape: the shallowest continuation
 	// line lands at one tab (statement depth), deeper lines keep their
 	// relative indent, template-literal interiors stay byte-identical (LT-010).

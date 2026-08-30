@@ -1,98 +1,88 @@
-<!-- Regenerated from the compiled server render (LT-092 site cutover):
+<!-- Regenerated from the compiled server render (LT-092 site cutover,
+     refreshed for LT-118's spinbutton zero-state):
      renderFormColorgraph({ name: 'color', value: 'oklch(.48 .23 263)' })
      from server/generated/tsrx/form-colorgraph.server.ts — the demo serves
      exactly the markup the compiled client hydrates. Attribute-configured:
      the component owns its whole template now. -->
 <form>
 	<form-colorgraph name="color" value="oklch(.48 .23 263)">
-		<div class="graph" style="--canvas-size: 400px">
-			<canvas class="graph-canvas" width="400" height="400"></canvas>
-			<button type="button" class="knob">
-				<span class="visually-hidden">Drag</span>
+		<div style="--canvas-size: 400px" class="graph">
+			<canvas width="400" height="400" class="graph-canvas">
+		</canvas>
+		<button type="button" class="knob">
+			<span class="visually-hidden">Drag</span>
+		</button>
+		<ol role="presentation">
+			<li class="lighten80">
+			</li>
+			<li class="lighten60">
+			</li>
+			<li class="lighten40">
+			</li>
+			<li class="lighten20">
+			</li>
+			<li class="darken20">
+			</li>
+			<li class="darken40">
+			</li>
+			<li class="darken60">
+			</li>
+			<li class="darken80">
+			</li>
+		</ol>
+	</div>
+	<div role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="360" aria-controls="hue" aria-labelledby="hue-label" style="--track-width: 360px" class="slider">
+		<canvas width="360" height="1" class="hue-track">
+	</canvas>
+	<span class="thumb">
+	</span>
+</div>
+<p aria-live="assertive" id="color-error" class="error">
+</p>
+<form-spinbutton name="" value="0" min="0" max="100" step="0.25" bigStep="5" class="lightness">
+	<label for="-input">Lightness</label>
+	<fieldset>
+		<div class="input">
+			<button type="button" aria-label="Decrement" disabled class="decrement">−</button>
+			<input id="-input" type="number" value="0" min="0" max="100" step="any" class="value">
+			<span class="unit">%</span>
+			<button type="button" class="increment">
+				<span class="other">+</span>
 			</button>
-			<ol role="presentation">
-				<li class="lighten80"></li>
-				<li class="lighten60"></li>
-				<li class="lighten40"></li>
-				<li class="lighten20"></li>
-				<li class="darken20"></li>
-				<li class="darken40"></li>
-				<li class="darken60"></li>
-				<li class="darken80"></li>
-			</ol>
 		</div>
-		<div
-			class="slider"
-			role="slider"
-			tabindex="0"
-			aria-valuemin="0"
-			aria-valuemax="360"
-			aria-controls="hue"
-			aria-labelledby="hue-label"
-			style="--track-width: 360px"
-		>
-			<canvas class="hue-track" width="360" height="1"></canvas>
-			<span class="thumb"></span>
+	</fieldset>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
+</form-spinbutton>
+<form-spinbutton name="" value="0" min="0" max="0.4" step="0.001" bigStep="0.02" class="chroma">
+	<label for="-input">Chroma</label>
+	<fieldset>
+		<div class="input">
+			<button type="button" aria-label="Decrement" disabled class="decrement">−</button>
+			<input id="-input" type="number" value="0" min="0" max="0.4" step="any" class="value">
+			<button type="button" class="increment">
+				<span class="other">+</span>
+			</button>
 		</div>
-		<p class="error" aria-live="assertive" id="color-error"></p>
-		<form-spinbutton
-			class="lightness"
-			name=""
-			value="0"
-			min="0"
-			max="100"
-			step="0.25"
-			big-step="5"
-		>
-			<label for="-input">Lightness</label>
-			<fieldset>
-				<div class="input">
-					<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-					<input id="-input" type="number" value="0" min="0" max="100" step="any" />
-					<span class="unit">%</span>
-					<button type="button" class="increment" aria-label="Increment">+</button>
-				</div>
-			</fieldset>
-			<p class="error" role="alert" aria-live="assertive"></p>
-		</form-spinbutton>
-		<form-spinbutton
-			class="chroma"
-			name=""
-			value="0"
-			min="0"
-			max="0.4"
-			step="0.001"
-			big-step="0.02"
-		>
-			<label for="-input">Chroma</label>
-			<fieldset>
-				<div class="input">
-					<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-					<input id="-input" type="number" value="0" min="0" max="0.4" step="any" />
-					<button type="button" class="increment" aria-label="Increment">+</button>
-				</div>
-			</fieldset>
-			<p class="error" role="alert" aria-live="assertive"></p>
-		</form-spinbutton>
-		<form-spinbutton
-			class="hue"
-			name=""
-			value="0"
-			min="0"
-			max="360"
-			step="0.01"
-			big-step="15"
-		>
-			<label for="-input">Hue</label>
-			<fieldset>
-				<div class="input">
-					<button type="button" class="decrement" aria-label="Decrement" disabled>−</button>
-					<input id="-input" type="number" value="0" min="0" max="360" step="any" />
-					<span class="unit">°</span>
-					<button type="button" class="increment" aria-label="Increment">+</button>
-				</div>
-			</fieldset>
-			<p class="error" role="alert" aria-live="assertive"></p>
-		</form-spinbutton>
-	</form-colorgraph>
+	</fieldset>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
+</form-spinbutton>
+<form-spinbutton name="" value="0" min="0" max="360" step="0.01" bigStep="15" class="hue">
+	<label for="-input">Hue</label>
+	<fieldset>
+		<div class="input">
+			<button type="button" aria-label="Decrement" disabled class="decrement">−</button>
+			<input id="-input" type="number" value="0" min="0" max="360" step="any" class="value">
+			<span class="unit">°</span>
+			<button type="button" class="increment">
+				<span class="other">+</span>
+			</button>
+		</div>
+	</fieldset>
+	<p role="alert" aria-live="assertive" class="error">
+	</p>
+</form-spinbutton>
+</form-colorgraph>
 </form>
+

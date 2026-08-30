@@ -190,21 +190,44 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		expect(hit).toBeDefined()
 	})
 
-	test('a text-only @else with a constructed @if root addresses per-branch (no throwing query)', () => {
+	test('a construct-free @else with a constructed @if root addresses per-branch (no throwing query)', () => {
 		// The union query is cardinality 'one' — an @else guarantees SOME
 		// branch rendered — which would throw MissingElementError whenever
-		// the text-only branch is the one that rendered. The constructed
-		// root must be addressed as maybe instead.
+		// the construct-free branch is the one that rendered. The
+		// constructed root must be addressed as maybe instead.
 		const { component, diagnostics } = compile(`@if (big) {
 			<strong class="cta" onClick={() => {}}>a</strong>
 		} @else {
-			plain text fallback
+			<span class="plain">fallback</span>
 		}`)
 		expect(diagnostics).toEqual([])
 		expect(component).not.toBeNull()
 		const code = component?.clientCode ?? ''
-		expect(maybeQueries(code)).toEqual(['strong[class="cta"]'])
+		expect(maybeQueries(code)).toEqual(['strong'])
 		expect(guardBodies(code).length).toBe(1)
+	})
+
+	test('a control-flow arm cannot hold bare text — it is statement context', () => {
+		// Not a Le Truc restriction: an `@if`/`@else` block body is parsed as
+		// STATEMENTS, so `+` or `plain text` is read as JavaScript, not as a
+		// text child. Pinned because assuming otherwise is what produced both
+		// an unparseable form-spinbutton source and this file's original
+		// version of the test above (LT-118). Wrap text in an element.
+		const bare = compile(`@if (big) {
+			<strong class="cta" onClick={() => {}}>a</strong>
+		} @else {
+			+
+		}`)
+		expect(bare.diagnostics.some(d => d.code === 'TSRX008')).toBe(true)
+
+		// A bare word parses (as an expression statement) and is then
+		// rejected by the sanctioned-statement gate rather than the parser.
+		const word = compile(`@if (big) {
+			<strong class="cta" onClick={() => {}}>a</strong>
+		} @else {
+			fallback
+		}`)
+		expect(word.diagnostics.some(d => d.code === 'TSRX005')).toBe(true)
 	})
 
 	test('server render picks the branch per args for per-branch-addressed constructs', async () => {

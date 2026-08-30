@@ -6,15 +6,27 @@
  * template driven by typed props (`min`/`max`/`step`/`bigStep`/`unit`/
  * `label`) instead of DOM-harvested optional descendants — the same
  * category of change as `form-checkbox`/`form-textbox`'s prior migrations.
- * The `.zero`/`.other` "Add to Cart"-style affordance (swap the whole
- * input/decrement for a single call-to-action button at `value === 0`,
- * used by `module-catalog.ts`) is DROPPED here: it needs the decrement
- * button and the increment button's own text to trade places depending on
- * a value comparison, and `@if`/`@else`'s union addressing requires
- * identical construct text across both branch roots — a structural
- * swap like this doesn't fit that contract. Left as a follow-up if a
- * second component needs it (worth a dedicated design then, not a
- * workaround here).
+ *
+ * The `.zero`/`.other` "Add to Cart"-style affordance is RESTORED (LT-118):
+ * the `zero` server arg opts in — at `value === 0` the input and the
+ * decrement button hide and the increment button shows the call-to-action
+ * text (its `.zero` span) with a matching `aria-label`; at any other value
+ * the full control set shows and the increment button reads "+" (its
+ * `.other` span).
+ *
+ * It needs NO `@if`/`@else` structural swap, which is what the task
+ * originally assumed: the hand-written twin never swapped structures
+ * either, it toggled four `hidden` properties over always-present
+ * elements. So the spans are a single-branch `@if (zero)` opt-in (already
+ * supported) and everything else is a `hidden` fold. `zero` itself is
+ * HARVESTED from its own `.zero` span (`zero.textContent`, exactly as the
+ * twin read it) rather than parsed from a host attribute: the span is the
+ * value's one channel — the arg renders it, the site seeds the prop at
+ * connect, LT-122 rebinds it. The `hidden`/`aria-label` thunks read
+ * `host.zero`/`host.value` and still render server-side, because LT-118
+ * taught `foldableHostProps` that a harvested prop's server truth is the
+ * arg that renders its site — without that, following the data account
+ * here would have cost three TSRX034 warnings and a real pre-JS flash.
  *
  * `stepBy`'s clamp/commit logic isn't a shared plain setup const (a plain
  * const referencing `host`/refs breaks server compilation once emitted
@@ -43,15 +55,15 @@
  * but `HTMLInputElement`'s `value`/`min`/`max` are `string`-typed DOM
  * properties, so `bindProperty(input, 'value')` fed a number-returning
  * thunk fails to type-check. Wrapping in `String(...)` disqualifies the
- * mirror match and falls back to `bindAttribute` instead — fine for
- * `min`/`max` (no "dirty" attribute/property divergence for those), but
- * `value` has the same native dirty-value-flag caveat noted for `checked`
- * in the LT-037 NOTES.md entry: once the user (or a prior JS write to
- * `.value`) has touched the input, later `setAttribute('value', …)` calls
- * may not resync the live value in every browser. `stepDown`/`stepUp`/the
- * input's own `onChange` already write `input.value` directly on every
- * host-value change they cause, so this only matters for `host.value`
- * being set from OUTSIDE the component.
+ * mirror match — fine for `min`/`max` (no "dirty" attribute/property
+ * divergence for those, they stay `bindAttribute`). `value` is covered
+ * since LT-116 anyway: a dirty-flag IDL attr on a native form control
+ * dispatches as a property write regardless of the thunk's shape, so the
+ * `String(host.value)` thunk lowers to `bindProperty(input, 'value')` —
+ * an external `host.value` write resyncs the live input text even after
+ * the user (or stepUp/stepDown) has set the native dirty-value flag. The
+ * `value` ATTRIBUTE stays at the server-rendered default — the reset
+ * baseline (LT-057), not a live-value channel.
  */
 import { asNumber, defineMethod } from '@zeix/le-truc'
 import { relayValidity } from '@zeix/le-truc'
@@ -103,6 +115,7 @@ export function FormSpinbutton(
 		step = 1,
 		bigStep,
 		unit,
+		zero,
 	}:
 		{
 			name: string
@@ -113,11 +126,79 @@ export function FormSpinbutton(
 			step?: number
 			bigStep?: number
 			unit?: string
+			zero?: string
 		},
 )
 @{
 	const inputId = `${name}-input`
 	const input = first('input', 'number input')
+	// The zero-state affordance is gated on the PRESENCE of its own span,
+	// exactly as the hand-written twin gated it (`const zero = first('.zero');
+	// if (zero) { … }`) — `zero` is a render-time server arg that decides
+	// whether the spans exist, NOT a reactive prop and not part of this
+	// component's public interface. Both spans are optional refs (LT-123):
+	// they only render when `zero` is set, and a page may author the control
+	// by hand without them (module-catalog does).
+	const zeroSpan = first('span.zero')
+	const otherSpan = first('span.other')
+
+	/**
+	 * Commit `next` as the new value: mirror it into the live input, then
+	 * write the prop and let the native constraint check veto it — a
+	 * rejected value reverts and never fires `change`. Every write path
+	 * (both step methods, the input's own `onChange`) ends here, so the
+	 * revert-and-relay contract exists once.
+	 */
+	const commit = (next: number) => {
+		input.value = String(next)
+		const prev = host.value
+		host.value = next
+		if (host.checkValidity())
+			host.dispatchEvent(new Event('change', { bubbles: true }))
+		else host.value = prev
+		relayValidity(internals, input)
+	}
+
+	/**
+	 * The value the user typed, clamped to [min, max] — or the current value
+	 * when what they typed cannot be committed at all (not finite, or not a
+	 * whole number under an integer step). Unlike `stepBy` this does NOT snap
+	 * to the step grid: a fractional step renders `step="any"` on the control
+	 * on purpose, so typing more precision than the buttons produce is
+	 * allowed (see the `step` attribute below).
+	 */
+	const typed = () => {
+		const next = input.valueAsNumber
+		const rejected =
+			!Number.isFinite(next) ||
+			(Number.isInteger(host.step) &&
+				(!Number.isInteger(next) ||
+					Math.abs(next) > Number.MAX_SAFE_INTEGER))
+		return rejected
+			? host.value
+			: Math.min(host.max, Math.max(host.min, next))
+	}
+
+	/**
+	 * Step the current value by `delta`, snapped back onto the step grid and
+	 * clamped to [min, max]. `stepDown` is `stepUp` with a negated delta —
+	 * the two differed by exactly one character before this was extracted.
+	 */
+	const stepBy = (delta: number) => {
+		const isInteger = Number.isInteger(host.step)
+		const decimals = isInteger
+			? 0
+			: (String(host.step).split('.')[1] ?? '').length
+		const clamped = Math.min(
+			host.max,
+			Math.max(
+				host.min,
+				Math.round(((input.valueAsNumber || 0) + delta) / host.step) *
+					host.step,
+			),
+		)
+		commit(isInteger ? clamped : Number(clamped.toFixed(decimals)))
+	}
 
 	expose({
 		// Children-are-data (LT-112): each Parser reads the HOST attribute
@@ -134,45 +215,12 @@ export function FormSpinbutton(
 		max: asNumber(asNumber(100)(input.max)),
 		step: asNumber(asNumber(1)(input.step)),
 		bigStep: asNumber(asNumber(1)(input.step) * 10 || 10),
-		stepDown: defineMethod((big = false) => {			const isInteger = Number.isInteger(host.step)
-			const decimals = isInteger ? 0 : (String(host.step).split('.')[1] ?? '').length
-			const delta = big ? host.bigStep : host.step
-			const clamped = Math.min(
-				host.max,
-				Math.max(
-					host.min,
-					Math.round(((input.valueAsNumber || 0) - delta) / host.step) * host.step,
-				),
-			)
-			const rounded = isInteger ? clamped : Number(clamped.toFixed(decimals))
-			input.value = String(rounded)
-			const prev = host.value
-			host.value = rounded
-			if (host.checkValidity())
-				host.dispatchEvent(new Event('change', { bubbles: true }))
-			else host.value = prev
-			relayValidity(internals, input)
+		stepDown: defineMethod((big = false) => {
+			stepBy(-(big ? host.bigStep : host.step))
 		}),
 		stepUp: defineMethod((big = false) => {
-			const isInteger = Number.isInteger(host.step)
-			const decimals = isInteger ? 0 : (String(host.step).split('.')[1] ?? '').length
-			const delta = big ? host.bigStep : host.step
-			const clamped = Math.min(
-				host.max,
-				Math.max(
-					host.min,
-					Math.round(((input.valueAsNumber || 0) + delta) / host.step) * host.step,
-				),
-			)
-			const rounded = isInteger ? clamped : Number(clamped.toFixed(decimals))
-			input.value = String(rounded)
-			const prev = host.value
-			host.value = rounded
-			if (host.checkValidity())
-				host.dispatchEvent(new Event('change', { bubbles: true }))
-			else host.value = prev
-				relayValidity(internals, input)
-			}),
+			stepBy(big ? host.bigStep : host.step)
+		}),
 	})
 
 	// Ported from the hand-written twin (LT-092 cutover): external writes to
@@ -196,9 +244,9 @@ export function FormSpinbutton(
 		<form-spinbutton
 			{name}
 			{value}
-			min={min}
-			max={max}
-			step={step}
+			{min}
+			{max}
+			{step}
 			bigStep={bigStep ?? step * 10}
 		>
 			@if (label) {
@@ -221,34 +269,30 @@ export function FormSpinbutton(
 						type="button"
 						class="decrement"
 						aria-label="Decrement"
+						hidden={() => Boolean(zeroSpan) && host.value === 0}
 						disabled={() => host.value <= host.min}
 						onClick={(e: MouseEvent) => host.stepDown(e.shiftKey)}
 					>−</button>
 					<input
 						id={inputId}
 						type="number"
+						class="value"
 						value={() => String(host.value)}
 						min={() => String(host.min)}
 						max={() => String(host.max)}
+						// Deliberately NOT the component's own `step` (owner ruling,
+						// 2026-08-30 — this is the hand-written twin's twist, and
+						// form-colorgraph depends on it): an INTEGER step is enforced
+						// natively via `stepMismatch`, which `relayValidity` relays; a
+						// FRACTIONAL step renders `any` so the field accepts more
+						// precision than `stepUp()`/`stepDown()` themselves produce
+						// (colorgraph's chroma axis steps by 0.001 but must accept any
+						// oklch value the graph produces). The two channels are the
+						// component's step and the CONTROL's step — different things
+						// on purpose, not a copy of one value.
 						step={Number.isInteger(step) ? '1' : 'any'}
-						onChange={() => {
-							const isInteger = Number.isInteger(host.step)
-							const next = input.valueAsNumber
-							const rejected =
-								!Number.isFinite(next) ||
-								(isInteger &&
-									(!Number.isInteger(next) || Math.abs(next) > Number.MAX_SAFE_INTEGER))
-							const committed = rejected
-								? host.value
-								: Math.min(host.max, Math.max(host.min, next))
-							input.value = String(committed)
-							const prev = host.value
-							host.value = committed
-							if (host.checkValidity())
-								host.dispatchEvent(new Event('change', { bubbles: true }))
-							else host.value = prev
-							relayValidity(internals, input)
-						}}
+						hidden={() => Boolean(zeroSpan) && host.value === 0}
+						onChange={() => commit(typed())}
 					/>
 					@if (unit) {
 						<span class="unit">{unit}</span>
@@ -256,10 +300,22 @@ export function FormSpinbutton(
 					<button
 						type="button"
 						class="increment"
-						aria-label="Increment"
+						aria-label={() =>
+							zeroSpan && host.value === 0
+								? (zeroSpan.textContent ?? 'Increment')
+								: 'Increment'
+						}
 						disabled={() => host.value >= host.max}
 						onClick={(e: MouseEvent) => host.stepUp(e.shiftKey)}
-					>+</button>
+					>
+						@if (zero) {
+							<span class="zero" hidden={() => host.value !== 0}>{zero}</span>
+						}
+						<span
+							class="other"
+							hidden={() => Boolean(zeroSpan) && host.value === 0}
+						>+</span>
+					</button>
 				</div>
 			</fieldset>
 			<p class="error" role="alert" aria-live="assertive">{host.validationMessage}</p>

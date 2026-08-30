@@ -13,7 +13,8 @@
 
 import type { TsrxNode } from '@tsrx/core'
 import { freeIdentifiers, isNode, JS_GLOBALS } from './ast-utils'
-import type { ComponentIR } from './ir'
+import { refBranchGuard } from './first-refs'
+import type { ComponentIR, TemplateNode } from './ir'
 
 /**
  * Ambient globals whose *inputs* are the build machine's own state (locale,
@@ -124,13 +125,70 @@ export const isServerEvaluable = (
 	dependenciesOf(node).isSubsetOf(scope) && !containsImpureAmbient(node)
 
 /**
- * Host props with a server-rendered root attribute (`kind: 'server'`) that
- * is also Parser-exposed — the substitutable set for {@link hostDerivedFold}
- * (CHECKLIST §5, LT-085): the root attribute's own `exprText` IS the prop's
- * server-side seed value (DOM-is-truth, ADR 0003), the same fact
- * `emit-server.ts`'s bare-mirror case (`hostPropOf`, ast-utils.ts) already
- * relies on.
+ * Every prop bound at an owned site from a same-named server arg
+ * (LT-122's `bindsProp`), anywhere in the template — a text child
+ * (`<span class="zero">{zero}</span>`) or an attribute. Collected
+ * for {@link foldableHostProps}; see the rationale there.
  */
+const argRenderedProps = (node: TemplateNode): string[] => {
+	if (node.kind === 'if')
+		return [...node.then, ...node.alternate].flatMap(argRenderedProps)
+	if (node.kind === 'switch')
+		return node.cases.flatMap(arm => arm.children.flatMap(argRenderedProps))
+	if (node.kind === 'try')
+		return [...node.children, ...node.catchChildren].flatMap(argRenderedProps)
+	if (node.kind === 'expr') return node.bindsProp ? [node.bindsProp] : []
+	if (node.kind !== 'element') return []
+	const own = node.attrs.flatMap(attr =>
+		attr.kind === 'server' && attr.bindsProp ? [attr.bindsProp] : [],
+	)
+	return [...own, ...node.children.flatMap(argRenderedProps)]
+}
+
+/**
+ * Host props whose SERVER-SIDE truth the compiler knows — the
+ * substitutable set for {@link hostDerivedFold} (CHECKLIST §5, LT-085).
+ * Two ways a prop earns membership, and they are the same fact reached
+ * from opposite directions:
+ *
+ * 1. **Parser-exposed with a server-rendered root attribute** — the host
+ *    attribute is the prop's seed (ADR 0003), so the root attribute's own
+ *    `exprText` IS the value. This is what `emit-server.ts`'s bare-mirror
+ *    case (`hostPropOf`, ast-utils.ts) already relies on.
+ * 2. **Harvested from a site a same-named server arg renders** (LT-118,
+ *    the server half of LT-122's coincidence) — the arg renders the site,
+ *    the site seeds the prop at connect, so the ARG is the value. The
+ *    substituted expression is the arg name itself, in scope in the
+ *    generated render function.
+ *
+ * Without (2), following the data account costs you the fold: a component
+ * that harvests `zero` from its own `.zero` span instead of duplicating it
+ * onto a host attribute would see every `hidden={() => …host.zero…}` thunk
+ * drop out of the initial HTML (TSRX034) — the pre-JS flash this fold
+ * exists to prevent, charged as a penalty for doing the right thing.
+ */
+/**
+ * Every `first()`-bound ref whose presence the server can settle, mapped
+ * to the condition that settles it (LT-118) — the ref half of
+ * {@link hostDerivedFold}'s substitutable set. See `refBranchGuard`
+ * (first-refs.ts) for what each condition means and when a ref is left
+ * out (a `@switch`/`@try` arm, or several matches).
+ */
+export const foldableRefGuards = (
+	component: ComponentIR,
+): ReadonlyMap<string, string> => {
+	const guards = new Map<string, string>()
+	const declared = new Set([
+		...component.refReasons.keys(),
+		...component.optionalRefs,
+	])
+	for (const name of declared) {
+		const guard = refBranchGuard(component.root, name)
+		if (guard !== null) guards.set(name, guard)
+	}
+	return guards
+}
+
 export const foldableHostProps = (
 	component: ComponentIR,
 ): ReadonlySet<string> => {
@@ -138,11 +196,22 @@ export const foldableHostProps = (
 	for (const attr of component.root.attrs)
 		if (attr.kind === 'server' && component.parserExposeProps.has(attr.name))
 			names.add(attr.name)
+	for (const prop of argRenderedProps(component.root)) names.add(prop)
 	return names
 }
 
-/** One `host.<prop>` member read replaced during {@link hostDerivedFold}. */
-export type HostPropRead = { start: number; end: number; prop: string }
+/**
+ * One read replaced during {@link hostDerivedFold} — either a
+ * `host.<prop>` member (`kind: 'prop'`) or a bare identifier naming a
+ * `first()`-bound ref whose presence the server decides (`kind: 'ref'`,
+ * LT-118).
+ */
+export type HostPropRead = {
+	start: number
+	end: number
+	prop: string
+	kind: 'prop' | 'ref'
+}
 
 /**
  * Whether `node` reads ONLY `host.<prop>` members (each `prop` in
@@ -156,16 +225,25 @@ export type HostPropRead = { start: number; end: number; prop: string }
  * (`analysis/effects.ts`) treats a non-null result the same as a bare
  * mirror when deciding whether omission is safe.
  *
+ * `foldableRefs` (LT-118) extends the same idea to a `first()`-bound ref
+ * read as a bare identifier: the hand-written idiom for an optional
+ * affordance is `const zero = first('.zero'); if (zero) { … }`, a LOCAL
+ * ref and not a reactive prop, and a compiled component must be able to
+ * say it too. Client-side a ref is simply in scope; server-side its
+ * presence is whatever `refBranchGuard` (first-refs.ts) computed for it.
+ *
  * All-or-nothing: one `host` read that isn't a member of `foldable` (a
  * signal-shaped prop the root doesn't render, a computed member, `host`
- * itself escaping as a bare value) disqualifies the WHOLE expression —
- * substituting only some of several `host.<prop>` reads would fold a
+ * itself escaping as a bare value), or one free name that is neither
+ * foldable nor a foldable ref, disqualifies the WHOLE expression —
+ * substituting only some of several reads would fold a
  * plausible-looking but wrong initial value, worse than omitting the
  * attribute entirely and letting the client's first pass render it.
  */
 export const hostDerivedFold = (
 	node: TsrxNode,
 	foldable: ReadonlySet<string>,
+	foldableRefs: ReadonlyMap<string, string> = new Map(),
 ): readonly HostPropRead[] | null => {
 	if (containsImpureAmbient(node)) return null
 	const reads: HostPropRead[] = []
@@ -179,7 +257,18 @@ export const hostDerivedFold = (
 		switch (current.type) {
 			case 'Identifier': {
 				const name = String(current.name)
-				if (!bound.has(name) && name === 'host') escaped = true
+				if (bound.has(name)) return
+				if (name === 'host') {
+					escaped = true
+					return
+				}
+				if (foldableRefs.has(name))
+					reads.push({
+						start: typeof current.start === 'number' ? current.start : 0,
+						end: typeof current.end === 'number' ? current.end : 0,
+						prop: name,
+						kind: 'ref',
+					})
 				return
 			}
 			case 'MemberExpression': {
@@ -204,7 +293,23 @@ export const hostDerivedFold = (
 						start: typeof current.start === 'number' ? current.start : 0,
 						end: typeof current.end === 'number' ? current.end : 0,
 						prop: name,
+						kind: 'prop',
 					})
+					return
+				}
+				// A ref read as a MEMBER (`zeroSpan.textContent`) is not a
+				// presence read: its guard condition is a boolean, and
+				// splicing that in would give the server `(zero).textContent`.
+				// The server may well know the answer — the span's text is the
+				// arg that renders it — but proving that is the harvest-site
+				// relation, not this fold. Refuse rather than guess.
+				if (
+					isNode(obj) &&
+					obj.type === 'Identifier' &&
+					!bound.has(String(obj.name)) &&
+					foldableRefs.has(String(obj.name))
+				) {
+					escaped = true
 					return
 				}
 				visit(obj, bound)
@@ -236,6 +341,7 @@ export const hostDerivedFold = (
 	if (escaped) return null
 	const others = dependenciesOf(node)
 	others.delete('host')
+	for (const ref of foldableRefs.keys()) others.delete(ref)
 	if (others.size > 0) return null
 	return reads
 }
@@ -252,13 +358,13 @@ export const spliceHostDerivedFold = (
 	thunkText: string,
 	thunkStart: number,
 	reads: readonly HostPropRead[],
-	exprTextOf: (prop: string) => string,
+	exprTextOf: (prop: string, kind: 'prop' | 'ref') => string,
 ): string => {
 	let out = ''
 	let cursor = 0
 	for (const r of [...reads].sort((a, b) => a.start - b.start)) {
 		out += thunkText.slice(cursor, r.start - thunkStart)
-		out += `(${exprTextOf(r.prop)})`
+		out += `(${exprTextOf(r.prop, r.kind)})`
 		cursor = r.end - thunkStart
 	}
 	out += thunkText.slice(cursor)

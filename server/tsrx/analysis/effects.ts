@@ -23,6 +23,7 @@ import {
 	containsImpureAmbient,
 	dependenciesOf,
 	foldableHostProps,
+	foldableRefGuards,
 	hostDerivedFold,
 } from '../evaluability'
 import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
@@ -123,9 +124,13 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		composeNodesBySourceIn(component.root, source2)
 	const loopFor = (node: TemplateNode): ForIR | null =>
 		loopForIn(component, node)
-	// LT-085: the substitutable host-prop set for `hostDerivedFold` below,
-	// computed once per component rather than per attribute.
+	// LT-085/LT-118: the two substitutable sets for `hostDerivedFold`
+	// below — host props with a known server truth, and refs whose
+	// presence the server decides — computed once per component rather
+	// than per attribute. Both must match what `emit-server.ts` will
+	// actually fold, or TSRX034 warns about an attribute that does render.
 	const derivableHostProps = foldableHostProps(component)
+	const derivableRefGuards = foldableRefGuards(component)
 
 	/**
 	 * Validate and lower one target's `pass={{ }}` entries into `pass` effect
@@ -280,7 +285,11 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				if (
 					SEMANTICALLY_LOADED_ATTRS.has(attr.name) &&
 					hostPropOf(attr.thunk) === null &&
-					hostDerivedFold(attr.thunk, derivableHostProps) === null &&
+					hostDerivedFold(
+						attr.thunk,
+						derivableHostProps,
+						derivableRefGuards,
+					) === null &&
 					!(
 						dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
 						!containsImpureAmbient(attr.thunk)
