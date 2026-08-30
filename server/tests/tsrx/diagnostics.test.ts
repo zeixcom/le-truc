@@ -1724,3 +1724,179 @@ describe('static ids in a template (TSRX042, LT-131)', () => {
 		expect(diagnostics.filter(d => d.code === 'TSRX042')).toHaveLength(1)
 	})
 })
+
+describe('ref-derived setup const reaching the server render (TSRX043)', () => {
+	// LT-125. Every non-`first()` setup const lands in `component.setup`, which
+	// `emit-server.ts` re-declares VERBATIM into the render function — so a
+	// const whose initializer reads a `first()`-bound ref is evaluated at
+	// server-render time, where no DOM exists. Which of two bad outcomes you
+	// get depends on an unrelated accident: whether the same ref also appears
+	// inside `expose()`'s argument, which is what `stubNames` is computed from.
+	const refConst = (extra: string, setup: string): string =>
+		`import { asString } from '@zeix/le-truc'
+export function C({}: {})
+@{
+	const input = first('input', 'the control')
+	${setup}
+	expose({${extra}})
+	<>
+		<c-el>
+			<input type="text" />
+			<span class="label">{initial}</span>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('unstubbed ref — the tsc failure gets a source-mapped diagnostic', () => {
+		const { diagnostics } = compileComponent(
+			refConst('', 'const initial = input.value'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX043')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('`initial`')
+		expect(hit?.message).toContain('`input`')
+	})
+
+	test('stubbed ref — the SILENT empty render is diagnosed too', () => {
+		// `input` appears in expose()'s argument, so it gets `const input: any =
+		// refStub` and the module compiles clean — rendering `esc(String(refStub))`,
+		// an empty site where the author asked for a DOM read. Before LT-125 this
+		// shape produced ZERO diagnostics; it is the reason the fix cannot be
+		// "make the unstubbed case compile".
+		const { diagnostics } = compileComponent(
+			refConst(' value: asString(input.value),', 'const initial = input.value'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX043')).toHaveLength(1)
+	})
+
+	test('the message names the harvest form, not just the problem', () => {
+		const { diagnostics } = compileComponent(
+			refConst('', 'const initial = input.value'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX043')
+		expect(hit?.message).toContain('expose(')
+	})
+
+	test('a ref read inside a FUNCTION body does NOT fire', () => {
+		// form-spinbutton's `commit`/`typed`/`stepBy` shape: a setup helper is
+		// dead code server-side (defined, never called), so its ref reads never
+		// evaluate. Firing here would reject the corpus.
+		const source = `export function C({}: {})
+@{
+	const input = first('input', 'the control')
+	const commit = (next: string) => { input.value = next }
+	expose({})
+	<>
+		<c-el><input type="text" /></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX043')).toEqual([])
+	})
+
+	test('a setup const that reads no ref is untouched', () => {
+		const source = `export function C({ name }: { name: string })
+@{
+	const input = first('input', 'the control')
+	const inputId = \`\${name}-input\`
+	expose({})
+	<>
+		<c-el><input type="text" id={inputId} /></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX043')).toEqual([])
+	})
+})
+
+describe('TSRX039 and the sanctioned override shape (LT-129)', () => {
+	// The criterion (owner, 2026-08-30): warn only when the two channels carry
+	// the SAME value by INDEPENDENT routes. A Parser whose fallback expression
+	// reads the very site the arg renders into is bullet 2's declared
+	// precedence — host attribute wins over the harvested value — not a copy.
+	const overrideSource = (attrs: string, extra = ''): string =>
+		`import { asNumber } from '@zeix/le-truc'
+export function C({ step = 1 }: { step?: number })
+@{
+	const input = first('input', 'number input')
+	${extra}
+	expose({ step: asNumber(asNumber(1)(input.step)) })
+	<>
+		<c-el><input type="number" ${attrs} /></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('fallback reads the site it renders into — no warning', () => {
+		const { diagnostics } = compileComponent(
+			overrideSource('step={step}'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX039')).toEqual([])
+	})
+
+	test('a Parser whose fallback reads NOTHING still warns', () => {
+		// The independent-copies shape: `step`'s seeding channel is the host
+		// attribute alone, so rendering the arg into an owned site is a second
+		// copy — form-textbox's `value` and form-tokenbox's `description`.
+		const source = `import { asNumber } from '@zeix/le-truc'
+export function C({ step = 1 }: { step?: number })
+@{
+	expose({ step: asNumber(1) })
+	<>
+		<c-el><input type="number" step={step} /></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
+	})
+
+	test('the exclusion is per-SITE — a DIFFERENT element still warns', () => {
+		// `input`'s fallback sanctions the override on the input itself. The
+		// same arg rendered onto a second, unrelated element is still one value
+		// through two independent channels, and must keep warning.
+		const source = `import { asNumber } from '@zeix/le-truc'
+export function C({ step = 1 }: { step?: number })
+@{
+	const input = first('input', 'number input')
+	expose({ step: asNumber(asNumber(1)(input.step)) })
+	<>
+		<c-el>
+			<input type="number" step={step} />
+			<span data-step={step}></span>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
+	})
+})

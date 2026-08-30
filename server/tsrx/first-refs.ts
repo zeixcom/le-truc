@@ -252,6 +252,17 @@ export const shareExclusiveIf = (
  * rendered, which is the correct half. Only OWNED descendants
  * duplicate it (`<textarea …>{value}</textarea>` beside that same
  * root attribute — form-textbox ships `value` twice today).
+ *
+ * A site whose OWN element the Parser's fallback reads is skipped too
+ * (LT-129). `asNumber(asNumber(1)(input.step))` rendered onto the very
+ * `<input>` that `input` addresses is not one value arriving twice — it
+ * is the data account's sanctioned OVERRIDE precedence (bullet 2: the
+ * host attribute wins over the harvested value), which LT-112 restored
+ * deliberately for form-spinbutton's `value`/`min`/`max`/`step`. The
+ * criterion is the one confirmed with the owner: warn only when the two
+ * channels are genuinely INDEPENDENT copies. Note this is per-SITE, not
+ * per-prop — the same prop rendered onto a DIFFERENT element than the
+ * one its fallback reads is still a duplicate and still warns.
  */
 export const reportDuplicatedChannels = (
 	root: TemplateNode,
@@ -260,6 +271,7 @@ export const reportDuplicatedChannels = (
 	argNames: ReadonlySet<string>,
 	parserProps: ReadonlySet<string>,
 	parserFactoryOf: (prop: string) => string,
+	parserFallbackRefsOf: (prop: string) => ReadonlySet<string>,
 ): void => {
 	if (parserProps.size === 0 || argNames.size === 0) return
 	const named = (expr: TsrxNode): string | null => {
@@ -277,6 +289,25 @@ export const reportDuplicatedChannels = (
 			),
 		)
 	}
+	/**
+	 * The `first()` name bound to this element, if any — the element's own
+	 * `{kind:'ref'}` attribute, which is how a fallback expression addresses
+	 * it (`input.step`).
+	 */
+	const refNameOf = (
+		node: TemplateNode & { kind: 'element' },
+	): string | null => {
+		for (const attr of node.attrs) if (attr.kind === 'ref') return attr.name
+		return null
+	}
+	/** The override shape: this prop's Parser fallback reads THIS element. */
+	const isSanctionedOverride = (
+		prop: string,
+		element: (TemplateNode & { kind: 'element' }) | null,
+	): boolean => {
+		const refName = element ? refNameOf(element) : null
+		return refName !== null && parserFallbackRefsOf(prop).has(refName)
+	}
 	walkTemplate(root, node => {
 		if (node.kind === 'expr') {
 			const prop = named(node.expr)
@@ -287,7 +318,8 @@ export const reportDuplicatedChannels = (
 		for (const attr of node.attrs) {
 			if (attr.kind !== 'server') continue
 			const prop = named(attr.node)
-			if (prop) report(prop, attr.node.start)
+			if (prop && !isSanctionedOverride(prop, node))
+				report(prop, attr.node.start)
 		}
 	})
 }

@@ -385,7 +385,18 @@ export type ComponentIR = {
 	 */
 	parserExposeProps: Map<
 		string,
-		{ parser: string; fallbackText: string | null }
+		{
+			parser: string
+			fallbackText: string | null
+			/**
+			 * The fallback argument's AST, when it has one. Kept beside the
+			 * text because TSRX039 has to ask what the fallback READS, not
+			 * just how it prints: a fallback whose expression reads the very
+			 * site the arg renders into is bullet 2's sanctioned override,
+			 * not a duplicated channel (LT-129).
+			 */
+			fallbackNode: TsrxNode | null
+		}
 	>
 	/** Ambient names `expose()` uses (parser factories, `defineMethod`). */
 	exposeAmbients: string[]
@@ -525,6 +536,14 @@ export type ExtractContext = {
 	parserProps: Set<string>
 	/** The Parser factory name backing a `parserProps` entry (TSRX039). */
 	parserFactoryOf: (prop: string) => string
+	/**
+	 * The `first()`-bound ref names a Parser-exposed prop's FALLBACK
+	 * expression reads (LT-129). `asNumber(asNumber(1)(input.step))` returns
+	 * `{'input'}` — the fallback re-reads the very element the arg renders
+	 * into, which is the data account's sanctioned OVERRIDE precedence rather
+	 * than a second copy, so TSRX039 must not fire on it.
+	 */
+	parserFallbackRefsOf: (prop: string) => ReadonlySet<string>
 	/**
 	 * The component function's own parameter names — the strict
 	 * subset of `serverKnown` that arrives from the CALLER. LT-122's

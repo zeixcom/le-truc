@@ -380,11 +380,13 @@ export function C({ value = '' }: { value?: string })
 import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
 			'c.tsrx',
 		)
-		expect(component?.parserExposeProps.get('value')).toEqual({
+		// `fallbackNode` (LT-129) carries the fallback's AST beside its text, so
+		// match on the recorded fields rather than the whole entry.
+		expect(component?.parserExposeProps.get('value')).toMatchObject({
 			parser: 'asString',
 			fallbackText: "'x'",
 		})
-		expect(component?.parserExposeProps.get('count')).toEqual({
+		expect(component?.parserExposeProps.get('count')).toMatchObject({
 			parser: 'asInteger',
 			fallbackText: '0',
 		})

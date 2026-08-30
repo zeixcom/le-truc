@@ -53,6 +53,7 @@ export type DiagnosticCode =
 	| 'TSRX040' // required first() whose only match sits in a branch that may not render (LT-123)
 	| 'TSRX041' // two first() names resolve to the same element (LT-132)
 	| 'TSRX042' // a static id in a template duplicates once the component is instantiated twice (LT-131)
+	| 'TSRX043' // a setup const's initializer reads a first()-bound ref, so it evaluates server-side where no DOM exists (LT-125)
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -379,6 +380,40 @@ export const diagnostic = {
 		error(
 			'TSRX013',
 			`\`${name}\`'s ${ctor}(...) compute function references ${badNames.map(n => `\`${n}\``).join(', ')} — ${ctor} runs server-side too (component.setup is emitted verbatim into the render function), where these don't exist. Derive from a server-known signal/param instead, or move the ${badNames.join('/')} read into a client-only construct (e.g. a reactive attribute thunk).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A setup const whose initializer READS a `first()`-bound element
+	 * reference (LT-125). Every non-`first()` setup const lands in
+	 * `component.setup`, which `emit-server.ts` re-declares verbatim into the
+	 * render function — so the initializer is evaluated at server-render time,
+	 * where the ref names no DOM. Which failure the author gets depends on an
+	 * unrelated accident: if the same ref also appears inside `expose()`'s
+	 * argument it is stubbed (`const input: any = refStub`, computed from
+	 * `exposeArgNode`) and the module compiles clean, rendering an EMPTY site
+	 * where a DOM read was asked for; if it does not, `tsc` fails with "Cannot
+	 * find name" on generated code. Stubbing the rest would make every case the
+	 * silent one — the LT-092 class — so this is a diagnostic instead.
+	 *
+	 * Deliberately not fired for a FUNCTION initializer: a setup helper
+	 * (`const commit = (next) => { input.value = next }`) is dead code
+	 * server-side, defined and never called, so its ref reads never evaluate.
+	 * That is form-spinbutton's `commit`/`typed`/`stepBy` shape and it is
+	 * legitimate. A ref read nested in a function INSIDE a non-function
+	 * initializer (`createMemo(() => input.value)`) does fire, and should —
+	 * the derived constructors invoke their compute synchronously at render
+	 * time (same rule as `clientOnlySignalCompute`).
+	 */
+	refDerivedSetupConst: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		refs: string[],
+	) =>
+		error(
+			'TSRX043',
+			`\`${name}\`'s initializer reads ${refs.map(r => `\`${r}\``).join(', ')} — a \`first()\`-bound element reference — but plain setup consts are evaluated SERVER-side too (\`component.setup\` is emitted verbatim into the render function), where no DOM exists. Depending on whether the ref is also named inside \`expose()\`, this either fails to compile or silently renders an empty site. Harvest it instead (TSRX-HOST-PROFILE § data account bullet 4): render the site from a server arg (\`<span class="label">{label}</span>\`) and read it back at connect through \`expose({ label: ${refs[0] ?? 'ref'}.textContent ?? '' })\`, so the one site is the server's render target AND the client's harvest source. A ref read inside a function body is fine — those never run server-side.`,
 			lineOf(source, offset),
 		),
 

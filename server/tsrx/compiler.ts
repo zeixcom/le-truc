@@ -77,6 +77,9 @@ export type CompileResult = {
 
 /* === Internal Functions === */
 
+/** Shared empty result for the `parserFallbackRefsOf` context hook. */
+const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
+
 /**
  * The doc comment immediately preceding a declaration, sliced verbatim.
  * The whitespace-only guard between comment close and declaration keeps a
@@ -471,6 +474,7 @@ export const compileSource = (
 		argNames: new Set<string>(),
 		parserProps: new Set<string>(),
 		parserFactoryOf: () => '',
+		parserFallbackRefsOf: () => EMPTY_NAMES,
 		composeImports: new Map<string, string>(),
 		setupInits: new Map<string, TsrxNode>(),
 	}
@@ -609,7 +613,11 @@ export const compileSource = (
 	const exposedPropNames = new Set<string>()
 	const parserExposeProps = new Map<
 		string,
-		{ parser: string; fallbackText: string | null }
+		{
+			parser: string
+			fallbackText: string | null
+			fallbackNode: TsrxNode | null
+		}
 	>()
 	const exposeAmbients = new Set<string>()
 	const contextRefs = new Set<string>()
@@ -690,6 +698,32 @@ export const compileSource = (
 				name: declName,
 			}
 			setup.push(setupStmt)
+			// LT-125: this statement is now bound for the SERVER render function
+			// too (`emit-server.ts` re-declares `component.setup` verbatim), so an
+			// initializer that reads a `first()`-bound ref evaluates where no DOM
+			// exists. Reported here, at the push, rather than in the branches
+			// below, because it holds for every initializer shape alike — signal
+			// constructor, requestContext, or plain.
+			//
+			// A FUNCTION initializer is exempt: a setup helper is defined but
+			// never called server-side, so its ref reads never evaluate (that is
+			// form-spinbutton's `commit`/`typed`/`stepBy`, and rejecting it would
+			// reject the corpus). Everything else is evaluated, including a
+			// compute thunk handed to a derived constructor.
+			if (!/Function(Expression)?$/.test(String(init.type))) {
+				const refReads = [...freeIdentifiers(init)]
+					.filter(n => elementRefs.has(n))
+					.sort()
+				if (refReads.length > 0)
+					ctx.diagnostics.push(
+						diagnostic.refDerivedSetupConst(
+							source,
+							stmt.start,
+							declName,
+							refReads,
+						),
+					)
+			}
 			const calleeName = identifierName(init.callee)
 			if (calleeName === 'requestContext') {
 				// Consumer side of the context protocol (LT-035, ADR 0024
@@ -930,6 +964,7 @@ export const compileSource = (
 						parserExposeProps.set(propName, {
 							parser: callee,
 							fallbackText: fallback ? text(ctx.source, fallback) : null,
+							fallbackNode: fallback,
 						})
 						exposeAmbients.add(callee)
 					} else if (callee === 'defineMethod') {
@@ -1015,6 +1050,13 @@ export const compileSource = (
 	}
 	ctx.parserFactoryOf = (prop: string): string =>
 		parserExposeProps.get(prop)?.parser ?? ''
+	ctx.parserFallbackRefsOf = (prop: string): ReadonlySet<string> => {
+		const fallback = parserExposeProps.get(prop)?.fallbackNode
+		if (!fallback) return EMPTY_NAMES
+		return new Set(
+			[...freeIdentifiers(fallback)].filter(n => elementRefs.has(n)),
+		)
+	}
 	for (const prop of MANAGED_TEXT_PROPS) ctx.exposedProps.add(prop)
 
 	let root: (TemplateNode & { kind: 'element' }) | null = null
@@ -1200,6 +1242,7 @@ export const compileSource = (
 			ctx.argNames,
 			ctx.parserProps,
 			ctx.parserFactoryOf,
+			ctx.parserFallbackRefsOf,
 		)
 
 		// CSS: verbatim, dedented (see css.ts).
