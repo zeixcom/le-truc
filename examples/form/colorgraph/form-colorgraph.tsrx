@@ -177,7 +177,8 @@ export function FormColorgraph(
 			graphEl.removeEventListener('pointermove', handleMove);
 			graphEl.removeEventListener('pointerup', handleUp);
 			graphEl.removeEventListener('pointercancel', handleUp);
-			moveKnob.cancel();
+			// No moveKnob.cancel(): the pending sample is the release position
+			// and must flush (next animation frame), not be discarded.
 			knob.ariaPressed = 'false';
 		};
 		graphEl.addEventListener('pointermove', handleMove, { passive: true });
@@ -251,7 +252,8 @@ export function FormColorgraph(
 			sliderEl.removeEventListener('pointermove', handleMove);
 			sliderEl.removeEventListener('pointerup', handleUp);
 			sliderEl.removeEventListener('pointercancel', handleUp);
-			moveThumb.cancel();
+			// No moveThumb.cancel(): the pending sample is the release position
+			// and must flush (next animation frame), not be discarded.
 		};
 		sliderEl.addEventListener('pointermove', handleMove, { passive: true });
 		sliderEl.addEventListener('pointerup', handleUp);

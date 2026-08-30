@@ -231,27 +231,39 @@ test.describe('form-colorgraph component (compiled .tsrx)', () => {
 		const before = await page.evaluate(
 			() => (document.querySelector('form-colorgraph') as Colorgraph).value,
 		)
+		const readValue = () =>
+			page.evaluate(
+				() => (document.querySelector('form-colorgraph') as Colorgraph).value,
+			)
 
-		// Drag within the graph canvas from right of the current chroma
-		// toward higher x: chroma rises monotonically along the path, so any
-		// committed sample (the throttle commits leading-edge samples and
-		// pointerup cancels the trailing one) sits above the initial chroma
-		// of 0.23, which corresponds to x ≈ 0.575 of the canvas width. The
-		// pointerdown handler captures the canvas rect and commits on move,
-		// gated on P3 gamut (this region is in gamut).
+		// Drag within the graph canvas from right of the current chroma toward
+		// higher x, staying inside the P3 gamut band (≈ chroma ≤ 0.29 at this
+		// lightness/hue; x ≈ 0.575 of the canvas width is the initial chroma
+		// of 0.23). The component commits only in-gamut samples, and the
+		// pointerdown handler captures the canvas rect and commits on move.
 		const canvas = page.locator('.graph-canvas')
 		const box = await canvas.boundingBox()
 		if (!box) throw new Error('.graph-canvas has no bounding box')
 		const midY = box.y + box.height / 2
 		await page.mouse.move(box.x + box.width * 0.62, midY)
 		await page.mouse.down()
-		await page.mouse.move(box.x + box.width * 0.9, midY, { steps: 5 })
+		// Move in stations with > 1 frame between them: Playwright's WebKit
+		// delivers a continuous mouse.move({ steps }) burst within a single
+		// animation frame, so the rAF-throttled handler would only ever see
+		// the last position — which can sit beyond the gamut boundary and be
+		// rejected, losing the whole gesture. Real hardware never does this.
+		for (const fraction of [0.65, 0.68, 0.7]) {
+			await page.mouse.move(box.x + box.width * fraction, midY, { steps: 2 })
+			await page.waitForTimeout(30)
+		}
 		await page.mouse.up()
 
-		const after = await page.evaluate(
-			() => (document.querySelector('form-colorgraph') as Colorgraph).value,
-		)
-		expect(after).not.toBe(before)
+		// The drag commit is throttled to the next animation frame, so the
+		// released position lands up to one frame AFTER pointerup — poll for
+		// it instead of reading synchronously (synthesized input can deliver
+		// the whole drag within a single frame, e.g. Playwright WebKit).
+		await expect.poll(readValue).not.toBe(before)
+		const after = await readValue()
 		expect(parseOklch(after).c).toBeGreaterThan(parseOklch(before).c)
 	})
 
