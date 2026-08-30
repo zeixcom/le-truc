@@ -17,7 +17,7 @@ import { mkdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { componentTsrx, type FileInfo } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
-import { compileComponent } from '../tsrx'
+import { type CompileDiagnostic, compileComponent } from '../tsrx'
 import { type RegistryEntry, registryJson } from '../tsrx/registry'
 import type { SourceSpan } from '../tsrx/spans'
 import { createBuildEffect } from './build-effect'
@@ -90,6 +90,36 @@ export const compileTsrxCorpus = async (
 	const compilable = new Map<string, string>()
 	const compiledTags = new Set<string>()
 	const composeRegistry = new Map<string, RegistryEntry>()
+	// Pass 1 legality checks must not depend on visit order: a fully
+	// migrated tag has no hand-written twin to seed `registry` with, so its
+	// tag only enters the set when its OWN file is visited — a raw-tag
+	// `pass={{ }}` target (module-list → basic-button) failed [TSRX012] in
+	// one glob order and passed in another, silently dropping the whole
+	// file from pass 2 (CI regression 2026-08-30). Seed the discovery pass
+	// with every corpus file's conventional tag instead; pass 2 still
+	// validates against the authoritative registry built below, so a tag
+	// whose file genuinely failed to compile never legitimizes a target.
+	const discoveryRegistry = new Set<string>(registry)
+	for (const file of files) {
+		const base = (file.filename.split('/').pop() ?? '').replace(/\.tsrx$/, '')
+		if (/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(base))
+			discoveryRegistry.add(base)
+	}
+	// "Errors fail the build run" (see header): the runner throws AFTER the
+	// artifacts are written, so build:cem fails at the compile step with the
+	// real diagnostic instead of shipping a manifest missing the dropped
+	// component. A file that errors in pass 1 and survives to pass 2 is
+	// reported by its pass-2 verdict (last write wins per file).
+	const errorLabels = new Map<string, string>()
+	const report = (rel: string, diagnostics: CompileDiagnostic[]) => {
+		for (const d of diagnostics) {
+			const label = `[${d.code}] ${d.line ? `line ${d.line}: ` : ''}${d.message}`
+			if (d.severity === 'error') {
+				console.error(`❌ ${rel} — ${label}`)
+				errorLabels.set(rel, label)
+			} else console.warn(`⚠️ ${rel} — ${label}`)
+		}
+	}
 	for (const file of files) {
 		const rel = relative(join(import.meta.dir, '..', '..'), file.path)
 		// Pass 1 must see the hand-written tags too (`registry` starts seeded
@@ -100,13 +130,9 @@ export const compileTsrxCorpus = async (
 		const { component, diagnostics } = compileComponent(
 			file.content,
 			rel,
-			registry,
+			discoveryRegistry,
 		)
-		for (const d of diagnostics) {
-			const label = `[${d.code}] ${d.line ? `line ${d.line}: ` : ''}${d.message}`
-			if (d.severity === 'error') console.error(`❌ ${rel} — ${label}`)
-			else console.warn(`⚠️ ${rel} — ${label}`)
-		}
+		report(rel, diagnostics)
 		if (component) {
 			registry.add(component.entry.tag)
 			compiledTags.add(component.entry.tag)
@@ -133,11 +159,7 @@ export const compileTsrxCorpus = async (
 			childImports,
 			composeRegistry,
 		)
-		for (const d of diagnostics) {
-			const label = `[${d.code}] ${d.line ? `line ${d.line}: ` : ''}${d.message}`
-			if (d.severity === 'error') console.error(`❌ ${rel} — ${label}`)
-			else console.warn(`⚠️ ${rel} — ${label}`)
-		}
+		report(rel, diagnostics)
 		if (!component) continue
 		const { entry } = component
 		const clientModulePath = getFilePath(GENERATED_DIR, entry.clientModule)
@@ -162,6 +184,14 @@ export const compileTsrxCorpus = async (
 		registryJson(entries),
 	)
 	console.log(`📝 TSRX compilation completed (${entries.length} component(s))`)
+	if (errorLabels.size > 0) {
+		throw new Error(
+			`TSRX compilation failed — ${errorLabels.size} file(s) with error-severity diagnostics (dropped from the generated output):\n` +
+				[...errorLabels]
+					.map(([rel, label]) => `  • ${rel} — ${label}`)
+					.join('\n'),
+		)
+	}
 	return spanInfos
 }
 
