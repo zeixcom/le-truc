@@ -83,11 +83,11 @@ const parseSimpleSelector = (selector: string): SimpleSelector | null => {
 }
 
 const matchesSimpleSelector = (
-	candidate: ElementNode,
+	candidate: { tag: string; attrs: ReadonlyMap<string, string | null> },
 	parsed: SimpleSelector,
 ): boolean => {
 	if (parsed.tag && candidate.tag !== parsed.tag) return false
-	const attrs = staticAttrs(candidate)
+	const attrs = candidate.attrs
 	if (parsed.id !== null && attrs.get('id') !== parsed.id) return false
 	if (parsed.classes.length > 0) {
 		const classList = (attrs.get('class') ?? '').split(/\s+/).filter(Boolean)
@@ -101,16 +101,18 @@ const matchesSimpleSelector = (
 }
 
 /**
- * Does `candidate` structurally match an author-written selector? A comma-
- * separated list is OR semantics (matching `ElementFromSelector<S>`'s own
+ * Does `candidate` — any `{tag, attrs}` pair, so composed elements can be
+ * matched too once the registry has resolved their tag (`analysis/
+ * compose-refs.ts`) — structurally match an author-written selector? A
+ * comma-separated list is OR semantics (matching `ElementFromSelector<S>`'s own
  * comma-union typing); each branch is a tag with any combination of
  * `.class`, `#id`, and `[attr]`/`[attr="value"]`. Returns `null` — not
  * `false` — when NO branch matches AND at least one branch used unsupported
  * syntax, so the caller can distinguish "verified: no match" from "cannot
  * verify."
  */
-const matchesAuthoredSelector = (
-	candidate: ElementNode,
+export const matchesAuthoredSelectorOn = (
+	candidate: { tag: string; attrs: ReadonlyMap<string, string | null> },
 	selectorList: string,
 ): boolean | null => {
 	let anyUnsupported = false
@@ -141,7 +143,10 @@ export const collectMatchingElements = (
 	let unsupported = false
 	const visit = (node: TemplateNode): void => {
 		if (node.kind === 'element') {
-			const result = matchesAuthoredSelector(node, selectorList)
+			const result = matchesAuthoredSelectorOn(
+				{ tag: node.tag, attrs: staticAttrs(node) },
+				selectorList,
+			)
 			if (result === null) unsupported = true
 			else if (result) elements.push(node)
 			for (const child of node.children) visit(child)
@@ -169,6 +174,21 @@ export const collectMatchingElements = (
 	visit(root)
 	return { elements, unsupported }
 }
+
+/**
+ * Does any branch of an author-written selector list name a CUSTOM-element
+ * tag (one containing a `-`)? The deferral test for LT-127: a `first()`
+ * selector that matched no raw element in this component's own template,
+ * but names a custom-element tag, may still be addressing a COMPOSED
+ * (PascalCase) child — whose eventual tag lives in another file's registry
+ * entry and is unknown inside single-file `compileSource`. Such a selector
+ * is handed to the registry-aware second pass (`analysis/compose-refs.ts`)
+ * instead of being rejected here; anything else is a genuine TSRX026.
+ */
+export const namesCustomElementTag = (selectorList: string): boolean =>
+	selectorList
+		.split(',')
+		.some(branch => parseSimpleSelector(branch)?.tag?.includes('-') === true)
 
 /**
  * The nearest enclosing `@if` whose branches (`then`/`alternate`) directly

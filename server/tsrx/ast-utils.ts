@@ -472,56 +472,6 @@ export const jsxName = (node: unknown): string | null =>
 		: null
 
 /**
- * Every name bound via `ref={name}` on a composed (PascalCase) JSX element,
- * anywhere in the render tree — a raw-AST walk, independent of
- * `lowerChildren`/`lowerComposeElement` (LT-087). The client-only
- * setup-statement gate (`compiler.ts`) runs BEFORE lowering, so it can't
- * consult the `ComposeAttrIR` a composed `ref={}` eventually produces;
- * walking the raw JSX once, up front, gives the gate visibility without
- * reordering the setup-statement loop ahead of `lowerChildren` — which
- * itself depends on that loop having already populated `signalByName`.
- * Mirrors `lowerChildren`'s own composed-vs-raw test (`/^[A-Z]/`) exactly;
- * whether the import itself resolves is a separate, already-existing
- * diagnostic (`unresolvedComposedComponent`) fired later during full
- * lowering — this walk only needs to know the author wrote `ref={}` on
- * something capitalized.
- */
-export const collectComposedRefNames = (node: TsrxNode): Set<string> => {
-	const names = new Set<string>()
-	const visit = (current: unknown): void => {
-		if (Array.isArray(current)) {
-			for (const child of current) visit(child)
-			return
-		}
-		if (!isNode(current)) return
-		if (current.type === 'JSXElement') {
-			const opening = current.openingElement
-			const tag = jsxName(isNode(opening) ? opening.name : null)
-			if (tag && /^[A-Z]/.test(tag)) {
-				for (const attr of asArray(
-					isNode(opening) ? opening.attributes : null,
-				)) {
-					if (attr.type !== 'JSXAttribute' || attrName(attr) !== 'ref') continue
-					const value = attr.value
-					const target =
-						isNode(value) && value.type === 'JSXExpressionContainer'
-							? value.expression
-							: value
-					const refName = identifierName(target)
-					if (refName) names.add(refName)
-				}
-			}
-		}
-		for (const [key, value] of Object.entries(current)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			if (isNode(value) || Array.isArray(value)) visit(value)
-		}
-	}
-	visit(node)
-	return names
-}
-
-/**
  * Collect the identifiers a node reads that are NOT bound within it — its
  * free variables. Scope-aware enough for the sanctioned shapes: function
  * params, local declarators, property keys, and non-computed member

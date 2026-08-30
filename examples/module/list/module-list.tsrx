@@ -4,7 +4,7 @@
  *
  * - `<FormTextbox ... />` composes `form-textbox.tsrx`: the server splices
  *   its `renderFormTextbox()` output inline instead of hand-duplicating its
- *   markup, and `ref={textbox}` addresses the rendered custom element for
+ *   markup, and `first('form-textbox')` addresses the rendered custom element for
  *   client-side reads (`textbox.value`, `textbox.clear()`) exactly as a raw
  *   dashed tag would.
  * - `@for (const item of items; key k)` over a declared reactive List →
@@ -22,6 +22,8 @@ import { FormTextbox } from '../../form/textbox/form-textbox.tsrx'
 
 export function ModuleList({}: {})
 	@{
+		const textbox = first('form-textbox', 'the new-item textbox')
+
 		const items = createList<string>([], {
 			keyConfig: 'item',
 		})
@@ -38,7 +40,7 @@ export function ModuleList({}: {})
 						textbox.clear()
 					}}
 				>
-					<FormTextbox name="new-item" label="New item" ref={textbox} clearable />
+					<FormTextbox name="new-item" label="New item" clearable />
 					<basic-button
 						class="submit"
 						truc:pass={{ disabled: () => !textbox.length }}

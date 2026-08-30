@@ -37,7 +37,7 @@ Core TSRX defines no attribute semantics at all — every attribute's meaning is
 The prefix marks attributes whose semantics **Le Truc owns and core TSRX does not define**. Applied to the current non-standard surface (owner review, 2026-08-30):
 
 - **`truc:pass`** — namespaced, correctly. Signal interop with a custom-element target is entirely a host concern; core defines nothing here.
-- **`ref={}` on a composed element** — host-owned, but the answer is deletion rather than a prefix. It supplies only the query variable's name; the selector (`form-spinbutton.lightness`) is already synthesized from the compose registry and the site's own discriminator, and `first()` types it through `HTMLElementTagNameMap` with no library change. It is also the one place TSRX declares a binding by attribute instead of by statement. Tracked as LT-127.
+- **`ref={}` on a composed element** — host-owned, and deleted rather than prefixed (LT-127, landed). It supplied only the query variable's name; the selector (`form-spinbutton.lightness`) was already synthesized from the compose registry and the site's own discriminator, and `first()` types it through `HTMLElementTagNameMap` with no library change. It was also the one place TSRX declared a binding by attribute instead of by statement — with it gone, composed and raw elements share one addressing mechanism and the attribute KIND is gone, not renamed.
 - **`html={}`** — NOT host-owned, so it must not be prefixed: it is the `.tsrx` stand-in for upstream's `{html expr}` keyword, which the pinned parser cannot yet parse. Prefixing it would fork from core and make the eventual switch a migration instead of a deletion (LT-128).
 - **`truc:text`** — considered and dropped as speculative. The case it was meant to serve, overriding a server-known empty string with a client-only binding, is already spelled `{host.X}` (what managed form props do — server-renders empty, binds on connect) or `{() => …}`.
 
@@ -53,7 +53,9 @@ When a composition needs a child-writable prop whose value the parent derives (a
 
 ## Element references are `first()`-based, never `ref={}`
 
-Le Truc has no `ref={}` binding. An author declares `const el = first(selector, required?)`, resolved structurally against the template on the server and via the DOM on the client. Selector-literal types infer precise, non-nullable element types through `HTMLElementTagNameMap` (e.g. `first('input, textarea', 'required')` → `HTMLInputElement | HTMLTextAreaElement`).
+Le Truc has no `ref={}` binding, on raw or composed elements. An author declares `const el = first(selector, required?)`, resolved structurally against the template on the server and via the DOM on the client. Selector-literal types infer precise, non-nullable element types through `HTMLElementTagNameMap` (e.g. `first('input, textarea', 'required')` → `HTMLInputElement | HTMLTextAreaElement`).
+
+A COMPOSED child is addressed by the tag it renders plus the compose site's own discriminator — `first('form-spinbutton.lightness', 'the lightness axis')` — never by the PascalCase name in the template. The child's tag lives in another file's registry entry, so the match is made in the compiler's second, registry-aware pass rather than in the single-file front end (LT-127). This promotes one previously incidental fact to an invariant: **`class`/`id` on a compose site reach the served DOM**, spliced onto the child's rendered root, because they are now the only way to tell two same-source compose sites apart.
 
 ## Lazy destructuring does not apply
 

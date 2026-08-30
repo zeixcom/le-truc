@@ -85,6 +85,7 @@ export function FormCombobox(
 	const descriptionId = `${name}-description`;
 	const showPopup = createState(false);
 	const textbox = first('input', 'combobox input');
+	const listbox = first('form-listbox', 'combobox listbox');
 	// Children-are-data (LT-112/113): the description is a writable prop
 	// (createCell) whose client-side seed is harvested from the owned
 	// paragraph's text content; consumers compose through the public prop.
@@ -163,7 +164,6 @@ export function FormCombobox(
 					name={`${name}-options`}
 					options={options}
 					filterable={false}
-					ref={listbox}
 					truc:pass={{ filter: () => host.value }}
 				/>
 			</div>

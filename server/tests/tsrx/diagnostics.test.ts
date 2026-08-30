@@ -839,7 +839,7 @@ describe('first(selector, required) element references (LT-055)', () => {
 		)
 	})
 
-	test('bare ref={} on a composed element is unaffected (still supported)', () => {
+	test('a bare `first()` reference addresses a composed element (LT-127)', () => {
 		const childSource = `export function BasicChild({ label }: { label: string })
 	@{
 		expose({})
@@ -860,10 +860,11 @@ describe('first(selector, required) element references (LT-055)', () => {
 
 export function BasicParent({ title }: { title: string })
 	@{
+		const child = first('basic-child', 'the composed child')
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild label={title} ref={child} />
+				<BasicChild label={title} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
@@ -878,6 +879,35 @@ export function BasicParent({ title }: { title: string })
 		)
 		expect(diagnostics).toEqual([])
 		expect(component).not.toBeNull()
+		// The selector the client queries is the compiler's own synthesis
+		// from the registry tag, not the author's text — the same contract
+		// raw-element `first()` has always had.
+		expect(component?.clientCode).toContain(
+			"first('basic-child', 'the composed child')",
+		)
+	})
+
+	test('an unmatched required `first()` on a custom-element tag is TSRX026 in the registry pass (LT-127)', () => {
+		const source = `export function C({}: {})
+	@{
+		const stray = first('no-such-child', 'a child this template never composes')
+		expose({})
+		on(host, 'click', () => stray.focus())
+		<>
+			<c-el><input /></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		// `compileSource` alone cannot decide this — the tag could belong to
+		// a composed child — so the deferral must not swallow the error.
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+			undefined,
+			new Map(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX026')).toBe(true)
 	})
 })
 

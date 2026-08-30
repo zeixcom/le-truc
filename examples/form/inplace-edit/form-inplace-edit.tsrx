@@ -55,6 +55,7 @@ export function FormInplaceEdit(
 )
 @{
 	const textEl = first('span', 'display text')
+	const textbox = first('form-textbox', 'edit-mode textbox')
 	expose({
 		editing: asBoolean(false),
 		// Children-are-data (LT-112): the initial value is harvested from
@@ -66,10 +67,10 @@ export function FormInplaceEdit(
 
 	// Retired from `onFocusout`/`onKeydown` JSX attributes on `.edit` to bare
 	// host-level statements (LT-070/LT-087, now that LT-069 widened the
-	// client-only setup-statement gate and LT-087 widened it further to
-	// composed-element `ref={}` names) — matches form-inplace-edit.ts's own
+	// client-only setup-statement gate) — matches form-inplace-edit.ts's own
 	// `on(host, 'focusout'/'keydown', …)` calls exactly, including reading
-	// `textbox.value` (the composed `<FormTextbox>`'s `ref={}`, below).
+	// `textbox.value` (the composed `<FormTextbox>`, addressed by the tag it
+	// renders — LT-127 retired composed-element `ref={}`).
 	on(host, 'focusout', (e: FocusEvent) => {
 		if (!host.editing) return;
 		const related = e.relatedTarget as Element | null;
@@ -117,7 +118,7 @@ export function FormInplaceEdit(
 			<div class="edit" hidden={() => !host.editing}>
 				{/* name="" keeps the composed textbox OUT of FormData (the
 				    colorgraph precedent) — the host alone submits `name` */}
-				<FormTextbox name="" label="Edit" ref={textbox} />
+				<FormTextbox name="" label="Edit" />
 			</div>
 			<button
 				type="button"

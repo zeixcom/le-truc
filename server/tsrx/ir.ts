@@ -266,8 +266,10 @@ export type AttributeIR =
 			 * `@if` branch roots). On a COMPOSED (PascalCase) element,
 			 * `ref={name}` is still authored directly as a JSX attribute
 			 * (`classifyComposeAttribute`) — `first()`'s selector-matching
-			 * never sees `kind: 'compose'` nodes, so retiring it there is a
-			 * separate, not-yet-scoped follow-up (see `classify-attributes.ts`).
+			 * never sees `kind: 'compose'` nodes, so the composed half is
+			 * populated by the registry-aware second pass instead (LT-127,
+			 * `analysis/compose-refs.ts`) — the authoring surface is `first()`
+			 * for both element kinds; `ref={}` is retired outright.
 			 * Every downstream consumer (`addQuery`'s naming, `refNames`
 			 * collection in `analysis/plan.ts`) is unchanged from the original
 			 * `ref={}` design either way — only the raw-element authoring
@@ -418,6 +420,22 @@ export type ComponentIR = {
 	 * queries them from the authored selector verbatim.
 	 */
 	unmatchedOptionalRefs: ReadonlyArray<{ name: string; selector: string }>
+	/**
+	 * `first()` references whose selector matched no RAW element but names
+	 * a custom-element tag (LT-127) — deferred to the registry-aware second
+	 * pass, which resolves them against COMPOSED (PascalCase) children and
+	 * attaches the same synthetic `{kind: 'ref', name}` (`analysis/
+	 * compose-refs.ts`). A composed child's eventual DOM tag lives in
+	 * another file's registry entry, so `compileSource` cannot decide
+	 * whether such a selector matches something or nothing — deferring is
+	 * the only sound answer, and TSRX026/TSRX027 are raised there instead.
+	 */
+	deferredComposeRefs: ReadonlyArray<{
+		name: string
+		selector: string
+		maybe: boolean
+		offset: number | undefined
+	}>
 	/**
 	 * Refs the author declared OPTIONAL (`first('sel')`, one
 	 * literal), matched or not (LT-123). The template having

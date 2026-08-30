@@ -101,30 +101,31 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | Module | Size | Role | Intra-package imports |
 | --- | ---: | --- | --- |
 | `index.ts` | 133 | Public API; `compileComponent` pipeline assembly; flat re-exports | analysis/plan, compiler, diagnostics, emit-client, emit-server, registry, spans |
-| `compiler.ts` | 1335 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
-| `ir.ts` | 530 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
+| `compiler.ts` | 1350 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
+| `ir.ts` | 548 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
 | `core.ts` | 21 | The **only** `@tsrx/core` value-import leaf (`parseModule`, `isStyleElement`, `getStyleElementStylesheet`, `isTemplateForOfNode`, `isVoidElement`) | `@tsrx/core` (values) |
 | `walk.ts` | 102 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
 | `evaluability.ts` | 372 | `dependenciesOf` + `isServerEvaluable` — the single home of the server-known dependency-closure rule — plus the host-derived FOLD rule that widens it (`foldableHostProps`/`foldableRefGuards`/`hostDerivedFold`/`spliceHostDerivedFold`, § 5.4) | ast-utils, first-refs, ir (types) |
 | `reactivity.ts` | 209 | `classifyChild` — the single home of the reactive-lift rule (LT-051): is a template child reactive, static, or untraceable? | ast-utils |
 | `lower-template.ts` | 1129 | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation | ast-utils, classify-attributes, core (`isTemplateForOfNode` value), diagnostics, ir (types), reactivity |
-| `classify-attributes.ts` | 377 | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser | ast-utils, diagnostics, ir (types) |
+| `classify-attributes.ts` | 369 | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser | ast-utils, diagnostics, ir (types) |
 | `infer-type.ts` | 145 | Signal value-type inference (`string\|number\|boolean\|unknown`) | ast-utils |
 | `config.ts` | 111 | `export const config` extraction **only** | ast-utils, diagnostics, ir (types) |
 | `imports.ts` | 546 | Compose-import resolution + plain (non-`.tsrx`) import collection and placement | ast-utils, diagnostics, evaluability, ir (types), walk |
-| `analysis/plan.ts` | 577 | `ClientPlan`/`QueryPlan`/… types, `AnalysisContext` assembly, `analyzeClient` orchestration | ast-utils, diagnostics (type), evaluability, ir (types), registry (type), walk, analysis/{effects,harvest,loops,naming} |
-| `analysis/selectors.ts` | 536 | Pure selector engine: synthesis, structural uniqueness (branch-exclusivity counting), union/compose addressing, `enclosingIfOf`, `loopFor` | ir (types) |
+| `analysis/plan.ts` | 606 | `ClientPlan`/`QueryPlan`/… types, `AnalysisContext` assembly, `analyzeClient` orchestration | ast-utils, diagnostics (type), evaluability, ir (types), registry (type), walk, analysis/{compose-refs,effects,harvest,loops,naming} |
+| `analysis/selectors.ts` | 590 | Pure selector engine: synthesis, structural uniqueness (branch-exclusivity counting), union/compose addressing, `enclosingIfOf`, `loopFor` | ir (types) |
+| `analysis/compose-refs.ts` | 107 | Registry-aware resolution of `first()` references addressing COMPOSED children (LT-127) — the second half of what `first-refs.ts` starts in the single-file front end | diagnostics, first-refs, ir (types), registry (type), analysis/selectors |
 | `analysis/naming.ts` | 78 | `uniqueName`, `addQuery` (query table + name allocation) | ir (type), analysis/plan (type) |
 | `analysis/harvest.ts` | 773 | Passes 2+3: render sites, harvest-plan selection, `paramDomRead`/`substituteArgExpr`; shared signal-read AST predicates | ast-utils, diagnostics, evaluability, ir (types), analysis/plan (types), analysis/selectors |
 | `analysis/loops.ts` | 474 | Passes 1+1b: `each()` and `reconcile()` planning | ast-utils, diagnostics, evaluability, ir (types), analysis/harvest (`returnsNumber`), analysis/plan (types), analysis/selectors |
-| `analysis/effects.ts` | 1433 | Pass 4: document-ordered per-construct effect planning | ast-utils, diagnostics, ir (types), analysis/harvest (`lazyWatchSource`, `returnsNumber`), analysis/plan (types), analysis/selectors |
+| `analysis/effects.ts` | 1443 | Pass 4: document-ordered per-construct effect planning | ast-utils, diagnostics, ir (types), analysis/harvest (`lazyWatchSource`, `returnsNumber`), analysis/plan (types), analysis/selectors |
 | `emit-server.ts` | 925 | `ComponentIR` → server render module | ast-utils, core (`isVoidElement` value), evaluability, ir (types), registry (type), spans |
 | `emit-client.ts` | 694 | `ComponentIR` + `ClientPlan` → client factory module | analysis/plan (types), ast-utils, imports (`computeClientNeededNames`), ir (types), spans |
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
 | `diagnostics.ts` | 884 | Diagnostic codes TSRX001–029, message factories | — (leaf) |
-| `first-refs.ts` | 395 | `collectMatchingElements`/`shareExclusiveIf` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}`; also `refBranchGuard`/`inOptionalBranch`, the ref-presence half of the fold rule (LT-118, § 5.4) | ir (types) |
+| `first-refs.ts` | 415 | `collectMatchingElements`/`shareExclusiveIf`/`matchesAuthoredSelectorOn` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}`; `namesCustomElementTag` is the compose-deferral test (LT-127); also `refBranchGuard`/`inOptionalBranch`, the ref-presence half of the fold rule (LT-118, § 5.4) | ir (types) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 366 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
@@ -832,16 +833,50 @@ still open:
   needs it before the analysis stage runs, and adding it to
   `analysis/selectors.ts` would have made the front end import from the
   analysis layer, backwards from the pipeline's documented direction.
-  **Scoped out, not silently dropped:** composed (PascalCase) elements keep
-  the original `ref={}` JSX-attribute mechanism unchanged — a composed
-  child's eventual DOM tag lives in another file's registry entry, resolved
-  in a later, cross-file corpus pass (`server/effects/tsrx.ts`), not visible
-  inside single-file `compileSource`; `first()`'s selector-matching only
-  walks `kind: 'element'` template nodes, never `kind: 'compose'`. Retiring
-  composed-element `ref={}` needs registry-aware selector resolution across
-  the two-pass compile — a follow-up task, not part of LT-055. Corpus
-  codemodded by hand (9 raw-element occurrences across 7 files; 4 more
-  `ref={}` sites on composed elements were left alone as in-scope survivors).
+  Corpus codemodded by hand (9 raw-element occurrences across 7 files).
+- **`ref={}` is retired on COMPOSED elements too (LT-127).** One addressing
+  mechanism for both element kinds; the attribute kind is gone, not
+  renamed. A compose site is addressed by the tag its child renders plus
+  the site's own discriminator — `first('form-spinbutton.lightness',
+  'the lightness axis')`. The blocker LT-055 scoped out was pass ordering,
+  not design: `first()`'s structural match runs inside single-file
+  `compileSource`, which has no compose registry, so a composed child's
+  eventual DOM tag isn't knowable there. The fix splits the decision across
+  the two passes. `compileSource` matches raw elements as before; a
+  selector that matched NONE but names a custom-element tag (one containing
+  a `-`, `namesCustomElementTag`) is DEFERRED — recorded in
+  `component.deferredComposeRefs` rather than rejected, because rejecting
+  it would mean rejecting a selector that is about to resolve.
+  `analysis/compose-refs.ts` finishes the job at the first point
+  `composeRegistry` is threaded (`analyzeClient`, before its `refNames`
+  walk): it matches each deferred selector against `allComposeNodes`, using
+  the registry's tag and `composeStaticAttrs`, and attaches the SAME
+  synthetic `{kind: 'ref', name}` the raw path attaches. Everything
+  downstream — `emitComposeEffects`'s `addQuery`, `refNames`, `pass()`
+  lowering — is unchanged.
+  **Three things this pass must get right, each a bug the corpus caught:**
+  (a) the registry-DISCOVERY pass runs with `composeRegistry === undefined`
+  and must never error — it drops any file it reports an error on, and pass
+  2 never sees that file again, so both `resolveComposeRefs` and
+  `emitComposeEffects` return early there (the latter's LT-015 tolerance,
+  moved to the top of the function now that the `ref` attr itself arrives
+  from pass 2); (b) a deferred ref's NAME is added to `refNames`
+  unconditionally, in both passes — otherwise a `pass={{ }}` thunk reading
+  it is rejected as server-only (TSRX005) in pass 1 for a name that
+  resolves in pass 2; (c) an ambiguous selector reports TSRX027 once and
+  suppresses the TSRX012 that the same unaddressed `pass` site would
+  otherwise also raise (`ambiguousComposeNodes`) — one authoring mistake,
+  one diagnostic, and TSRX027 is the one that names the fix. An OPTIONAL
+  deferred ref matching nothing is legitimate and queried from the authored
+  selector verbatim, exactly like `unmatchedOptionalRefs`.
+  **The invariant this promotes:** `class`/`id` on a compose site reach the
+  served DOM (`composeHostAttrs`, LT-090) — previously incidental
+  compile-time bookkeeping for telling sites apart, now the only way to
+  address one at all. Pinned by the LT-090 rendered-HTML test.
+  LT-087's raw-AST `collectComposedRefNames` pre-scan is deleted with it:
+  it existed only because a composed `ref={}` declared a name with no
+  `const`, and a `first()` name is an ordinary setup declaration the gate
+  already knows.
 - **Two form-associated compile-time guards, both preemptive of an existing
   runtime failure (LT-058, LT-059, CHECKLIST §7).** `formAssociated()`/
   `formAssociatedCheckbox()` (`src/extensions/form.ts`) install a fixed set

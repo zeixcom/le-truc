@@ -14,9 +14,10 @@ import type { TsrxNode } from '@tsrx/core'
 import { CONTEXT_NAMES, freeIdentifiers, JS_GLOBALS } from '../ast-utils'
 import type { CompileDiagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
-import type { ComponentIR, ForIR } from '../ir'
+import type { ComponentIR, ForIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
 import { walkTemplate } from '../walk'
+import { resolveComposeRefs } from './compose-refs'
 import { runEffects } from './effects'
 import { runHarvest } from './harvest'
 import { runLoops } from './loops'
@@ -387,8 +388,15 @@ export type AnalysisContext = {
 	ambient: Set<string>
 	/** Claimed variable names (queries, rebindings; never signals/refs). */
 	usedNames: Set<string>
-	/** Every `ref={name}` in the template, pre-collected. */
+	/** Every ref name in the template, pre-collected. */
 	refNames: Set<string>
+	/**
+	 * Compose sites an ambiguous `first()` selector matched (LT-127) —
+	 * already reported as TSRX027 by `resolveComposeRefs`, so
+	 * `emitComposeEffects` must not report them a second time as
+	 * unaddressed `pass={{ }}` sites.
+	 */
+	ambiguousComposeNodes: ReadonlySet<TemplateNode>
 	/** Pass 1 output: server-data `@for` → `each()` plans. */
 	forPlans: Map<ForIR, ForClientPlan>
 	/** Pass 1b output: reactive-list `@for` → `reconcile()` plans. */
@@ -430,6 +438,15 @@ export const analyzeClient = (
 		...component.signals.map(s => s.name),
 		'host',
 	])
+	// LT-127: `first()` selectors addressing COMPOSED children are resolved
+	// here, not in `compileSource` — the child's tag needs the registry.
+	// Runs before the `refNames` walk below, which is what finds the
+	// synthetic `{kind: 'ref'}` attrs this attaches.
+	const {
+		unmatchedOptional: unmatchedComposeRefs,
+		ambiguous: ambiguousComposeNodes,
+	} = resolveComposeRefs(component, diagnostics, composeRegistry)
+
 	// Pre-collect ref names — thunks may reference any ref in the template.
 	// Traversal via `walkTemplate` (LT-042): refs are declared on plain and
 	// composed elements only, composition is a boundary, and `@pending` arms
@@ -448,13 +465,24 @@ export const analyzeClient = (
 		},
 	)
 
+	// A deferred compose reference (LT-127) is an author-declared element
+	// reference whether or not this pass can resolve it: the registry-
+	// discovery pass has no `composeRegistry` and attaches no `ref` attr for
+	// the walk above to find, and a pass thunk reading the name there must
+	// not be rejected as server-only (TSRX005) for a name that resolves in
+	// pass 2.
+	for (const ref of component.deferredComposeRefs) refNames.add(ref.name)
+
 	// Optional refs matching nothing structural (LT-123): the
 	// template never carried a `ref` attr for them, so the walk
 	// above found nothing — but the author declared the const
 	// and setup code may read it. Query them from the AUTHORED
 	// selector under `maybe` cardinality (non-throwing `first()`),
 	// under the authored NAME, which is what setup references.
-	for (const ref of component.unmatchedOptionalRefs) {
+	for (const ref of [
+		...component.unmatchedOptionalRefs,
+		...unmatchedComposeRefs,
+	]) {
 		refNames.add(ref.name)
 		usedNames.add(ref.name)
 		queries.push({
@@ -511,6 +539,7 @@ export const analyzeClient = (
 		ambient,
 		usedNames,
 		refNames,
+		ambiguousComposeNodes,
 		forPlans: new Map(),
 		reconcilePlans: new Map(),
 		addQuery: (base, selector, cardinality, explicitType) =>

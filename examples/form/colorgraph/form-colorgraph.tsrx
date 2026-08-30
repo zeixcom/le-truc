@@ -2,7 +2,8 @@
  * TSRX migration: form-colorgraph — the LT-070 acceptance case for LT-069's
  * widened client-only setup-statement gate, blocked twice more along the way
  * (LT-087: a composed element's own `ref={}` wasn't visible to a bare setup
- * statement; LT-089: `ref={}`/`pass={{ }}` on more than one same-source
+ * statement — the implicitness LT-127 later removed outright by retiring
+ * composed `ref={}`; LT-089: addressing/`pass={{ }}` on more than one same-source
  * composed element — the three `<FormSpinbutton>` axes — was unconditionally
  * rejected). All three landed; this is the component that needed all of
  * them at once.
@@ -28,7 +29,7 @@
  * therefore inline their `background-color`/`border-color`/`left`/`top`
  * object literals directly rather than sharing a `stepStyle()` helper call.
  *
- * The three axis spinbuttons are addressed via composed `ref={}` (LT-087/
+ * The three axis spinbuttons are addressed via `first('form-spinbutton.…')` (LT-127; LT-087/
  * LT-089): the parent pushes the display-scaled value down with
  * `watch(() => toDisplay(…), bindProperty(el, 'value'))` and reads
  * committed changes back via a per-axis `on(<ref>, 'change', …)` — the
@@ -116,6 +117,9 @@ export function FormColorgraph(
 	const sliderEl = first('.slider', 'Add a <.slider> element as a container for track and thumb.')
 	const track = first('canvas.hue-track', 'Add a <canvas> element inside the slider to display the hue slider track.')
 	const canvasSize = createState(400)
+	const lightnessEl = first('form-spinbutton.lightness', 'the lightness axis spinbutton')
+	const chromaEl = first('form-spinbutton.chroma', 'the chroma axis spinbutton')
+	const hueEl = first('form-spinbutton.hue', 'the hue axis spinbutton')
 
 	expose({
 		value: asString('oklch(0.48 0.23 263)'),
@@ -467,7 +471,6 @@ export function FormColorgraph(
 			<p class="error" aria-live="assertive" id="color-error">{host.validationMessage}</p>
 			<FormSpinbutton
 				class="lightness"
-				ref={lightnessEl}
 				name=""
 				label="Lightness"
 				unit="%"
@@ -478,7 +481,6 @@ export function FormColorgraph(
 			/>
 			<FormSpinbutton
 				class="chroma"
-				ref={chromaEl}
 				name=""
 				label="Chroma"
 				min={0}
@@ -488,7 +490,6 @@ export function FormColorgraph(
 			/>
 			<FormSpinbutton
 				class="hue"
-				ref={hueEl}
 				name=""
 				label="Hue"
 				unit="°"

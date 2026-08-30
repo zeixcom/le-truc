@@ -88,6 +88,7 @@ export function BasicGauge(
 			'meter',
 			'a <meter> element for the accessible level fallback',
 		)
+		const numberEl = first('basic-number', 'the formatted number display')
 
 		const qualification = deriveCell(() => {
 			const parsed = JSON.parse(thresholds);
@@ -120,7 +121,6 @@ export function BasicGauge(
 				<BasicNumber
 					{value}
 					options={'{"style":"percent","maximumFractionDigits":1}'}
-					ref={numberEl}
 					truc:pass={{ value: () => host.value }}
 				/>
 				<small class="label">{qualification.get().label}</small>

@@ -115,6 +115,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		forPlans,
 		reconcilePlans,
 		usedNames,
+		ambiguousComposeNodes,
 	} = ctx
 	const selectorFor = (el: ElementNode) => selectorForIn(component, el)
 	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
@@ -1137,11 +1138,13 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	}
 
 	/**
-	 * `ref={name}` and/or `pass={{ }}` on a composed element (ADR 0023
-	 * sub-design 10). Composed elements aren't otherwise addressed at all yet
-	 * (server args aren't guaranteed to render as DOM attributes, LT-018's
-	 * children are the only other construct they'll carry): an explicit
-	 * `ref` is required for BOTH — a bare `ref` (no `pass`) still needs the
+	 * A `first()` reference and/or `pass={{ }}` on a composed element (ADR
+	 * 0023 sub-design 10). Composed elements aren't otherwise addressed at
+	 * all (server args aren't guaranteed to render as DOM attributes,
+	 * LT-018's children are the only other construct they'll carry): the
+	 * synthetic `ref` attr `analysis/compose-refs.ts` attaches for a
+	 * matching `first()` (LT-127, replacing the authored `ref={}`) is
+	 * required for BOTH — a bare reference (no `pass`) still needs the
 	 * query so the name resolves in the factory (e.g. reading `textbox.value`
 	 * from an event handler elsewhere in the template) — and the target must
 	 * be the sole composed instance of that child in the template
@@ -1151,6 +1154,14 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	 * `<FormSpinbutton class="lightness"|"chroma"|"hue">` instances, say.
 	 */
 	const emitComposeEffects = (node: ComposeNode): void => {
+		// `composeRegistry` is `undefined` during the corpus-wide registry-
+		// discovery pass (compileComponent's own tolerance, LT-015). Nothing
+		// below it can run then — the child's tag isn't resolvable, and since
+		// LT-127 the `ref` attr itself is attached by that same registry-aware
+		// pass (`analysis/compose-refs.ts`), so demanding one here would
+		// reject every composed `pass={{ }}` site before pass 2 ever compiles
+		// the file. That pass needs only this component's OWN registry entry.
+		if (!composeRegistry) return
 		const passAttrs = node.attrs.filter(
 			(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
 				a.kind === 'pass',
@@ -1161,6 +1172,10 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		)
 		if (passAttrs.length === 0 && !refAttr) return
 		if (!refAttr) {
+			// An ambiguous `first()` already explained itself (TSRX027,
+			// `analysis/compose-refs.ts`) — don't pile a second error on
+			// the same mistake.
+			if (ambiguousComposeNodes.has(node)) return
 			diagnostics.push(
 				diagnostic.composedPassRequiresRef(
 					source,
@@ -1179,18 +1194,13 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					diagnostic.unaddressableElement(
 						source,
 						node.node.start,
-						`Multiple <${node.component}> instances compose the same child — ref={{ }}/pass={{ }} need a target this milestone can uniquely identify (a distinguishing static class/id/data-* attribute on the compose site).`,
+						`Multiple <${node.component}> instances compose the same child — first()/pass={{ }} need a target this milestone can uniquely identify (a distinguishing static class/id/data-* attribute on the compose site).`,
 					),
 				)
 				return
 			}
 			discriminator = clause
 		}
-		// `composeRegistry` is `undefined` during the corpus-wide registry-
-		// discovery pass (compileComponent's own tolerance, LT-015) — this
-		// component's OWN entry is all that pass needs; the composed child's
-		// tag isn't resolvable yet, and that's fine, not an error.
-		if (!composeRegistry) return
 		const childTag = composeRegistry.get(node.source)?.tag ?? null
 		if (!childTag) {
 			diagnostics.push(

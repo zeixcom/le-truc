@@ -334,28 +334,20 @@ export const classifyComposeAttribute = (
 			kind: 'invalid',
 			reason: `\`${name}\` is a React DOM-property name, not an HTML attribute — TSRX has no JSX-to-DOM-property translation, so this would render into the markup verbatim and the browser would ignore it. Use \`${reactRename}\` instead.`,
 		}
-	// `ref={}` on a COMPOSED element is a distinct, still-supported mechanism
-	// (LT-055 scoping decision): `first()`'s structural resolution walks
-	// `kind: 'element'` template nodes only (`first-refs.ts`), never
-	// `kind: 'compose'` — a composed child's eventual DOM tag lives in
-	// another file's registry entry, resolved in a later corpus pass
-	// (`server/effects/tsrx.ts`), not visible here inside single-file
-	// `compileSource`. Retiring composed-element `ref={}` needs registry-
-	// aware selector resolution across the two-pass compile, which is out
-	// of scope for LT-055; tracked as a follow-up, not silently dropped.
-	if (name === 'ref') {
-		const target =
-			isNode(value) && value.type === 'JSXExpressionContainer'
-				? value.expression
-				: value
-		const refName = identifierName(target)
-		if (!refName)
-			return {
-				kind: 'invalid',
-				reason: 'ref={…} expects a bare identifier (ref={textbox}).',
-			}
-		return { kind: 'ref', name: refName }
-	}
+	// `ref={}` is retired on COMPOSED elements too (LT-127) — one addressing
+	// mechanism for both element kinds. `first()`'s structural resolution
+	// walks `kind: 'element'` nodes only (`first-refs.ts`), so a selector
+	// naming a custom-element tag that matches no raw element is deferred to
+	// the registry-aware second pass and resolved against compose sites
+	// there (`analysis/compose-refs.ts`) — a composed child's eventual DOM
+	// tag lives in another file's registry entry, not visible here inside
+	// single-file `compileSource`.
+	if (name === 'ref')
+		return {
+			kind: 'invalid',
+			reason:
+				"`ref={name}` is retired (LT-055/LT-127) — use `const name = first(selector, required)` in setup instead. A composed element is addressed by the tag it renders plus its own compose-site class/id, e.g. `const lightness = first('form-spinbutton.lightness', 'required')`.",
+		}
 	if (!isNode(value)) return { kind: 'arg', name, exprText: 'true', node: null }
 	if (value.type === 'Literal')
 		return {

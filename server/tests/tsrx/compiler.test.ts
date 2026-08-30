@@ -464,16 +464,17 @@ import { createCell } from '@zeix/le-truc'`,
 		expect(component?.contextRefs).toEqual(expect.arrayContaining(['watch']))
 	})
 
-	test('client-only setup statement may reference a ref={} name on a composed element (LT-087)', () => {
+	test('client-only setup statement may reference a `first()` name addressing a composed element (LT-087/LT-127)', () => {
 		const { component, diagnostics } = compileSource(
 			`export function C({}: {})
 			@{
+				const child = first('widget-el', 'the composed widget')
 				expose({})
 				on(host, 'keydown', (e: KeyboardEvent) => {
 					if (e.key === 'Enter') child.value = 'x'
 				})
 				<>
-					<c-el><Widget ref={child} /></c-el>
+					<c-el><Widget /></c-el>
 					<style>c-el { color: red }</style>
 				</>
 			}
@@ -484,7 +485,7 @@ import { Widget } from './widget.tsrx'`,
 		expect(component?.clientSetup).toHaveLength(1)
 	})
 
-	test('composed-element ref={} pre-scan ignores raw dashed tags and non-ref attributes', () => {
+	test('a setup-gate free name that is no element reference is still rejected', () => {
 		const { diagnostics } = compileSource(
 			`export function C({}: {})
 			@{

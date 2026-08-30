@@ -21,7 +21,6 @@ import {
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
 	collectBoundNames,
-	collectComposedRefNames,
 	FACTORY_CONTEXT_MEMBERS,
 	freeIdentifiers,
 	identifierName,
@@ -41,6 +40,7 @@ import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import {
 	collectMatchingElements,
 	inOptionalBranch,
+	namesCustomElementTag,
 	reportDuplicatedChannels,
 	shareExclusiveIf,
 } from './first-refs'
@@ -569,14 +569,6 @@ export const compileSource = (
 	// Setup statements: const declarations (signals vs. helpers) + expose() +
 	// client-only side effects.
 	const codeBlock = fn.body as TsrxNode
-	// `ref={name}` names on composed (PascalCase) elements (LT-087): a raw-AST
-	// pre-scan, up front, so the client-only setup-statement gate below can
-	// see them — `lowerChildren` (which resolves `ComposeAttrIR` the normal
-	// way) hasn't run yet and can't run yet (it needs `signalByName`, which
-	// this same setup-statement loop populates).
-	const composedRefNames = isNode(codeBlock.render)
-		? collectComposedRefNames(codeBlock.render)
-		: new Set<string>()
 	const setup: SetupStmt[] = []
 	const clientSetup: SetupStmt[] = []
 	// Plain (non-signal) setup consts (LT-034 follow-up fix): `component.setup`
@@ -863,7 +855,6 @@ export const compileSource = (
 			if (exposeAmbients.has(freeName)) return true
 			if (elementRefs.has(freeName)) return true
 			if (setupInits.has(freeName)) return true
-			if (composedRefNames.has(freeName)) return true
 			if (importedNames.has(freeName)) return true
 			if (CLIENT_ONLY_PRIMITIVES.has(freeName)) {
 				contextRefs.add(freeName)
@@ -1032,6 +1023,13 @@ export const compileSource = (
 	let componentRefReasons = new Map<string, string>()
 	/** Optional refs matching nothing structural (LT-123). */
 	const unmatchedOptionalRefs: Array<{ name: string; selector: string }> = []
+	/** Refs deferred to the registry-aware pass (LT-127). */
+	const deferredComposeRefs: Array<{
+		name: string
+		selector: string
+		maybe: boolean
+		offset: number | undefined
+	}> = []
 	/** Author-declared optional refs, matched or not (LT-123). */
 	let componentOptionalRefs = new Set<string>()
 	{
@@ -1083,6 +1081,22 @@ export const compileSource = (
 			{ selectorText, reasonText, maybe, node },
 		] of elementRefs) {
 			const { elements } = collectMatchingElements(root, selectorText)
+			if (elements.length === 0 && namesCustomElementTag(selectorText)) {
+				// A selector naming a custom-element tag that matched no raw
+				// element may still address a COMPOSED child, whose tag this
+				// single-file pass cannot know (LT-127). Defer the whole
+				// decision — match, no match, ambiguity — to the pass that
+				// has the compose registry; deciding here would mean
+				// rejecting a selector that is about to resolve.
+				deferredComposeRefs.push({
+					name: refName,
+					selector: selectorText,
+					maybe,
+					offset: node.start,
+				})
+				refReasons.set(refName, reasonText as string)
+				continue
+			}
 			if (elements.length === 0) {
 				// An OPTIONAL ref is allowed to match nothing here
 				// (LT-123): "may be absent" includes "the page, not
@@ -1293,6 +1307,7 @@ export const compileSource = (
 					root,
 					refReasons: componentRefReasons,
 					unmatchedOptionalRefs,
+					deferredComposeRefs,
 					optionalRefs: componentOptionalRefs,
 					fors,
 					css,

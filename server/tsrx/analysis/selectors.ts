@@ -337,12 +337,20 @@ export const composeNodesBySource = (
 
 /**
  * Static (`Literal`-valued) `arg` attrs of a composed element, keyed by name
- * (LT-089) — the compose-node analog of `staticAttrs` above, used only to
- * search for a `class`/`id`/`data-*` discriminator among same-source
- * siblings. Server args to a composed child aren't guaranteed to render as
- * real DOM attributes at all (unlike a raw element's own `static` attrs) —
- * this is compile-time bookkeeping for telling compose SITES apart, never
- * treated as the child's actual rendered output.
+ * (LT-089) — the compose-node analog of `staticAttrs` above, used to search
+ * for a `class`/`id`/`data-*` discriminator among same-source siblings and,
+ * since LT-127, to match an author's `first('child-tag.discriminator')`
+ * selector against compose sites (`analysis/compose-refs.ts`).
+ *
+ * Server args to a composed child aren't guaranteed to render as real DOM
+ * attributes (unlike a raw element's own `static` attrs), but `class` and
+ * `id` ARE: `emit-server.ts` filters them out of the forwarded args and
+ * splices them onto the child's rendered root via `composeHostAttrs`
+ * (LT-090). That pass-through is now load-bearing rather than incidental —
+ * addressing a compose site by `.class` is the only way to address it at
+ * all — so it is an invariant, pinned by test, not an implementation
+ * detail. `data-*` is forwarded as a real server arg and reaches the DOM
+ * only if the child renders it; matching on one is the author's call.
  */
 export const composeStaticAttrs = (node: ComposeNode): Map<string, string> => {
 	const map = new Map<string, string>()

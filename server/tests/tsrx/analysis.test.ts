@@ -51,6 +51,7 @@ const contextFor = (component: ComponentIR): AnalysisContext => {
 		ambient: new Set(component.contextRefs),
 		usedNames: new Set(['cEl', ...component.signals.map(s => s.name), 'host']),
 		refNames: new Set(),
+		ambiguousComposeNodes: new Set(),
 		forPlans: new Map(),
 		reconcilePlans: new Map(),
 		addQuery: (base, selector, cardinality) => {

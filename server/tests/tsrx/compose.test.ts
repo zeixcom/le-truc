@@ -372,16 +372,17 @@ export function BasicParent({ title }: { title: string })
 		expect(diagnostics.some(d => d.code === 'TSRX012')).toBe(true)
 	})
 
-	test('`truc:pass={{ }}` on a composed element with a `ref` lowers to pass() on the child tag', () => {
+	test('`truc:pass={{ }}` on a composed element addressed by first() lowers to pass() on the child tag', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
 export function BasicParent({ title }: { title: string })
 	@{
+		const child = first('basic-child', 'the composed child')
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild label={title} ref={child} truc:pass={{ value: () => 'x' }} />
+				<BasicChild label={title} truc:pass={{ value: () => 'x' }} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
@@ -407,10 +408,11 @@ export function BasicParent({ title }: { title: string })
 export function BasicParent({ title }: { title: string })
 	@{
 		const shout = (s: string) => s.toUpperCase()
+		const child = first('basic-child', 'the composed child')
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild label={title} ref={child} truc:pass={{ value: () => shout('x') }} />
+				<BasicChild label={title} truc:pass={{ value: () => shout('x') }} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
@@ -438,11 +440,13 @@ export function BasicParent({ title }: { title: string })
 
 export function BasicParent({ title }: { title: string })
 	@{
+		const childA = first('basic-child.a', 'the first child')
+		const childB = first('basic-child.b', 'the second child')
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild class="a" label={title} ref={childA} truc:pass={{ value: () => 'x' }} />
-				<BasicChild class="b" label={title} ref={childB} truc:pass={{ value: () => 'y' }} />
+				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
+				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
@@ -476,11 +480,13 @@ export function BasicParent({ title }: { title: string })
 
 export function BasicParent({ title }: { title: string })
 	@{
+		const childA = first('basic-child.a', 'the first child')
+		const childB = first('basic-child#second', 'the second child')
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild class="a" label={title} ref={childA} truc:pass={{ value: () => 'x' }} />
-				<BasicChild class="b" id="second" label={title} ref={childB} truc:pass={{ value: () => 'y' }} />
+				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
+				<BasicChild class="b" id="second" label={title} truc:pass={{ value: () => 'y' }} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
@@ -510,17 +516,76 @@ export function BasicParent({ title }: { title: string })
 		)
 	})
 
-	test('two same-source composed instances with no distinguishing static attr are still unaddressable (TSRX007)', () => {
+	test('an OPTIONAL first() naming a tag this template never composes is queried verbatim (LT-123/LT-127)', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
 export function BasicParent({ title }: { title: string })
 	@{
+		const stray = first('other-child')
+		expose({})
+		on(host, 'click', () => stray?.focus())
+		<>
+			<basic-parent>
+				<BasicChild label={title} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		if (!component)
+			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+		// "May be absent" includes "the page, not this template, authors it"
+		// — the same latitude an unmatched optional RAW selector gets.
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(component.clientCode).toContain("first('other-child')")
+	})
+
+	test('a deferred first() reference is not mistaken for a server-only name in the registry-discovery pass (LT-127)', () => {
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		const child = first('basic-child', 'the composed child')
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild label={title} ref={childA} truc:pass={{ value: () => 'x' }} />
-				<BasicChild label={title} ref={childB} truc:pass={{ value: () => 'y' }} />
+				<BasicChild label={title} truc:pass={{ value: () => child.value }} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		// No composeRegistry: this is pass 1, which only harvests each file's
+		// own registry entry. It must not reject the file — pass 2 never gets
+		// to compile a file pass 1 dropped.
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(component).not.toBeNull()
+	})
+
+	test('two same-source composed instances with no distinguishing static attr are unaddressable (TSRX027, LT-127)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		const childA = first('basic-child', 'the first child')
+		const childB = first('basic-child', 'the second child')
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={title} truc:pass={{ value: () => 'x' }} />
+				<BasicChild label={title} truc:pass={{ value: () => 'y' }} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
@@ -533,7 +598,10 @@ export function BasicParent({ title }: { title: string })
 			composeRegistryOf(childComponent.entry),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.filter(d => d.code === 'TSRX007')).toHaveLength(2)
+		// One diagnostic per unresolvable reference, and no second helping
+		// of TSRX012 for the same two compose sites.
+		expect(diagnostics.filter(d => d.code === 'TSRX027')).toHaveLength(2)
+		expect(diagnostics.filter(d => d.code === 'TSRX012')).toHaveLength(0)
 	})
 
 	test('the same static id on two compose sites is diagnosed (TSRX038, LT-090)', () => {

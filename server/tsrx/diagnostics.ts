@@ -303,7 +303,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX012',
-			`pass={{ … }} on <${component}> needs an explicit ref={name} — a composed element's server args aren't guaranteed to render as DOM attributes, so it can't be auto-addressed the way native/raw custom elements are.`,
+			`pass={{ … }} on <${component}> needs a \`first()\` reference addressing it — a composed element's server args aren't guaranteed to render as DOM attributes, so it can't be auto-addressed the way native/raw custom elements are. Give the compose site a static class and address it by the tag it renders, e.g. \`const el = first('child-tag.discriminator', 'required')\` (LT-127).`,
 			lineOf(source, offset),
 		),
 
