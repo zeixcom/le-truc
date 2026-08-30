@@ -324,7 +324,7 @@ export const styleAttr = (
 		.join('; ')
 
 /**
- * The sanitizer applied to every `html={expr}` dynamic-rendering attribute
+ * The sanitizer applied to every `truc:html={expr}` dynamic-rendering attribute
  * across the whole compiled site. Defaults to escaping all markup (safe but
  * inert — `<` and `>` become entities, so no element ever renders) until a
  * host configures a real sanitizer via `configureHtmlSanitizer`, mirroring
@@ -336,7 +336,7 @@ let htmlSanitizer: (html: string) => string = html =>
 	html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /**
- * Configure the sanitizer used by `sanitizeHtml` for every `html={expr}`
+ * Configure the sanitizer used by `sanitizeHtml` for every `truc:html={expr}`
  * dynamic-rendering attribute in the compiled site. Call once at server
  * startup, before any generated module renders.
  */
@@ -345,7 +345,7 @@ export const configureHtmlSanitizer = (sanitizer: (html: string) => string) => {
 }
 
 /**
- * Sanitize HTML for the `html={expr}` dynamic-rendering attribute by
+ * Sanitize HTML for the `truc:html={expr}` dynamic-rendering attribute by
  * delegating to the configured sanitizer (see `configureHtmlSanitizer`).
  */
 export const sanitizeHtml = (html: string): string => htmlSanitizer(html)

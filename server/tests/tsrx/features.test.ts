@@ -2,7 +2,7 @@
  * Language-feature tests (tsrx.dev/features parity): every construct the
  * pinned @tsrx/core 0.1.63 can parse must lower deliberately — supported or
  * gated with a diagnostic — never silently dropped. Covers @switch arms,
- * @try error boundaries, @pending async boundaries (gated), html={expr}
+ * @try error boundaries, @pending async boundaries (gated), truc:html={expr}
  * dynamic rendering, and parse-error hints for the newer-grammar constructs
  * (statement-form switch, {html}/{text}/{ref} keywords, await).
  */
@@ -15,7 +15,7 @@ import { configureHtmlSanitizer } from '../../tsrx/runtime'
 
 // The runtime's default sanitizer (unconfigured state): escape everything,
 // safe but inert. Tests that configure a permissive/stripping sanitizer to
-// exercise `html={expr}` must restore this afterward — `configureHtmlSanitizer`
+// exercise `truc:html={expr}` must restore this afterward — `configureHtmlSanitizer`
 // is process-wide, shared across every generated module.
 const escapeAll = (html: string): string =>
 	html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -436,8 +436,21 @@ export function C({}: {})
 	})
 })
 
-describe('html={expr} — dynamic rendering', () => {
-	const { component, diagnostics } = compiled('<article html={markup} />')
+describe('bare html={} is rejected, not silently reclassified (LT-137)', () => {
+	// `html` is not a real HTML attribute. If the rename let the bare spelling
+	// fall through to the ordinary-attribute path, the compiler would emit a
+	// dead `html="…"` and drop the sanitize + client-bind behaviour entirely —
+	// a silent downgrade of the one attribute where that matters most.
+	test('bare html={markup} reports and names the new spelling', () => {
+		const { diagnostics } = compiled('<article html={markup} />')
+		const hit = diagnostics.find(d => d.message.includes('truc:html'))
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('error')
+	})
+})
+
+describe('truc:html={expr} — dynamic rendering', () => {
+	const { component, diagnostics } = compiled('<article truc:html={markup} />')
 
 	afterEach(() => {
 		configureHtmlSanitizer(escapeAll)
@@ -472,7 +485,7 @@ describe('html={expr} — dynamic rendering', () => {
 		const body = createState('<b>seed</b>')
 		<>
 			<c-el>
-				<article class="target" html={() => body.get()}></article>
+				<article class="target" truc:html={() => body.get()}></article>
 			</c-el>
 			<style>c-el { color: red }</style>
 		</>
@@ -695,9 +708,9 @@ import { createList } from '@zeix/le-truc'`
 		).toBe(true)
 	})
 
-	test('html={dataRef} inside an @if branch is not a client construct', () => {
+	test('truc:html={dataRef} inside an @if branch is not a client construct', () => {
 		const { diagnostics } = compiled(`@if (status) {
-			<article html={markup} />
+			<article truc:html={markup} />
 		} @else {
 			<article />
 		}`)
@@ -721,21 +734,26 @@ describe('newer-grammar constructs — parse-error hints', () => {
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'TSRX008')
 		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('newer TSRX grammar')
+		expect(hit?.message).toContain('not parseable by the pinned')
 		expect(hit?.message).toContain('statement-form switch')
 	})
 
-	test('{html markup} keyword gets the hint', () => {
+	test('`{html markup}` gets NO phantom-keyword hint (LT-137)', () => {
+		// The hint used to say "{html expr} keyword is newer TSRX grammar than
+		// @tsrx/core 0.1.63". No such keyword exists in any published upstream
+		// release — verified against @tsrx/core 0.1.60/0.1.63, @tsrx/ripple and
+		// ripple — so the hint sent the author looking for a pin upgrade that
+		// would not have helped. It still fails to parse; it just no longer
+		// claims a false cause.
 		const { diagnostics } = compileComponent(
 			wrap('<article>{html markup}</article>'),
 			'c.tsrx',
 			new Set(),
 		)
+		expect(diagnostics.some(d => d.code === 'TSRX008')).toBe(true)
 		expect(
-			diagnostics.some(
-				d => d.code === 'TSRX008' && d.message.includes('{html expr} keyword'),
-			),
-		).toBe(true)
+			diagnostics.some(d => d.message.includes('{html expr} keyword')),
+		).toBe(false)
 	})
 
 	test('setup await gets the hint', () => {

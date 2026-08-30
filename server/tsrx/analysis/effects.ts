@@ -87,8 +87,8 @@ const managedPropRead = (expr: TsrxNode): string | null => {
 }
 
 /**
- * Does this attribute carry a client construct? A non-reactive `html={ref}`
- * is server-rendered only (LT-025); a reactive `html={() => …}` lowers to a
+ * Does this attribute carry a client construct? A non-reactive `truc:html={ref}`
+ * is server-rendered only (LT-025); a reactive `truc:html={() => …}` lowers to a
  * `dangerouslyBindInnerHTML` watch, same as any other reactive attribute.
  */
 const isClientConstructAttr = (a: AttributeIR): boolean =>
@@ -396,7 +396,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					sourceEnd: attr.handler.end,
 				})
 			} else if (attr.kind === 'html' && attr.reactive) {
-				// reactive html={() => …} (LT-025): lowers to a
+				// reactive truc:html={() => …} (LT-025): lowers to a
 				// dangerouslyBindInnerHTML watch, the sanctioned XSS-aware sink
 				// (ADR 0010) — never a raw innerHTML property binding.
 				collectAmbient(attr.thunk)
@@ -406,7 +406,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						diagnostic.unsupported(
 							source,
 							attr.thunk.start,
-							`Reactive html={…} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
+							`Reactive truc:html={…} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
 						),
 					)
 				}
@@ -857,7 +857,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					'A bare client-only statement inside an @if with @else — union addressing cannot tell which branch rendered; make the branch constructs differ (per-branch addressing) or use a single-branch @if (no @else) instead',
 				),
 			)
-		// html={dataRef} is server-rendered only — not a client construct.
+		// truc:html={dataRef} is server-rendered only — not a client construct.
 		const primary = roots.find(r => r.attrs.some(isClientConstructAttr))
 		if (!primary) return
 		const resolved = selectorFor(primary)

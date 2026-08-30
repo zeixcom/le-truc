@@ -14,7 +14,7 @@
  *   root's DIRECT LAZY CHILD (`{content}`, rendered as escaped TEXT) —
  *   the hand-written version needs raw, unescaped HTML injection instead
  *   (`listbox.innerHTML = html`), which is a different construct
- *   (`html={() => …}`) that async `@try` doesn't route through.
+ *   (`truc:html={() => …}`) that async `@try` doesn't route through.
  * Both are real behavior drops, not workarounds — left as follow-ups if a
  * second use case justifies the compiler work.
  *

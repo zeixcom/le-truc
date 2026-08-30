@@ -266,7 +266,7 @@ export type TopEffectPlan =
 	  }
 	| {
 			/**
-			 * `html={() => …}` (LT-025): one `watch(thunk,
+			 * `truc:html={() => …}` (LT-025): one `watch(thunk,
 			 * dangerouslyBindInnerHTML(el))` call — the sanctioned XSS-aware
 			 * sink (ADR 0010), never a raw `innerHTML` property binding.
 			 */

@@ -852,6 +852,27 @@ export const diagnostic = {
 		),
 
 	/**
+	 * The attribute counterpart of {@link impureStaticChild} (LT-075). A
+	 * `kind: 'server'` attribute (`<div title={Date.now()}>`) is rendered
+	 * once into the initial HTML and never bound client-side, so it carries
+	 * exactly the hazard the child form does — CHECKLIST §4's worst outcome,
+	 * folding to the build machine's own reading with no correction. The
+	 * REACTIVE thunk form (`title={() => Date.now()}`) keeps the warning
+	 * verdict in {@link impureServerFold} instead: there the fold is refused
+	 * and the client's first binding pass supplies the value.
+	 */
+	impureStaticAttribute: (
+		source: string,
+		offset: number | undefined,
+		attrName: string,
+	) =>
+		error(
+			'TSRX033',
+			`Attribute \`${attrName}\` reads an ambient value (\`Date\`/\`Intl\`, \`Math.random()\`, or a locale/timezone method) with no signal dependency, so it is rendered exactly once, server-side, at build time, forever — the build machine's clock/locale/timezone/RNG reading gets baked into the page permanently, with no client-side correction. Make it a reactive thunk (\`${attrName}={() => …}\`, which the client's first binding pass sets) or take the value as a server arg so the caller owns it.`,
+			lineOf(source, offset),
+		),
+
+	/**
 	 * A semantically-loaded attribute (CHECKLIST §5 — `hidden`, `disabled`,
 	 * `checked`, `selected`, `aria-expanded`) has no server-renderable
 	 * initial value: it's not a host-prop mirror or a derived `host.<prop>`

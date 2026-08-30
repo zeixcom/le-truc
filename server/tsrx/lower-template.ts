@@ -792,6 +792,25 @@ export const lowerElement = (
 				)
 				continue
 			}
+			// CHECKLIST §4 / TSRX033 (error form), LT-075: the attribute
+			// counterpart of the static-CHILD check in `lowerExprChild` above.
+			// A `server` attribute is rendered once into the initial HTML and
+			// never bound client-side, so an impure ambient here bakes one
+			// build-time reading into the page permanently. The REACTIVE thunk
+			// form is deliberately NOT escalated — it keeps the warning verdict
+			// in analysis/effects.ts, where the refused fold is corrected by
+			// the client's first binding pass.
+			if (
+				classified.kind === 'server' &&
+				containsImpureAmbient(classified.node)
+			)
+				ctx.diagnostics.push(
+					diagnostic.impureStaticAttribute(
+						ctx.source,
+						classified.node.start,
+						classified.name,
+					),
+				)
 			attrs.push(classified)
 		}
 	}

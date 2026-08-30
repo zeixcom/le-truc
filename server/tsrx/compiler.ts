@@ -99,12 +99,20 @@ const leadingDocComment = (source: string, before: number): string | null => {
 }
 
 /**
- * When a parse fails, check the error position for signatures of the NEWER
- * TSRX grammar (statement-form `switch` in templates, the `{html …}`,
- * `{text …}`, `{ref …}` keywords, setup `await`, `component` declarations) —
- * constructs the pinned @tsrx/core 0.1.63 cannot parse at all. The hint
- * turns a bare "Unexpected token" into an actionable diagnosis (pin
- * upgrades are reviewed changes, ADR 0023 sub-design 2).
+ * When a parse fails, check the error position for constructs the pinned
+ * @tsrx/core cannot parse in that POSITION — a statement-form `switch`
+ * inside a template, or `await` in setup. The hint turns a bare "Unexpected
+ * token" into an actionable diagnosis.
+ *
+ * Four signatures were removed in LT-137: `{html …}`, `{text …}`, `{ref …}`
+ * and `component` declarations. They named constructs that do not exist in
+ * ANY published upstream release — verified against `@tsrx/core` 0.1.60 and
+ * 0.1.63, `@tsrx/ripple`, and `ripple` (components are plain functions
+ * upstream, `plugin.js`: "so components can be written as `function
+ * Something()`"). The hints sent an author looking for a pin upgrade that
+ * would not have helped, which is worse than the bare parse error they
+ * replaced. Le Truc's own dynamic-rendering attribute is `truc:html={…}`
+ * (LT-128); it is host-owned, not a polyfill for upstream vocabulary.
  */
 const newerGrammarHint = (source: string, error: unknown): string => {
 	const pos =
@@ -116,16 +124,12 @@ const newerGrammarHint = (source: string, error: unknown): string => {
 	const around =
 		pos !== undefined ? source.slice(Math.max(0, pos - 24), pos + 48) : ''
 	const signatures: Array<[RegExp, string]> = [
-		[/\bswitch\b/, 'statement-form switch'],
-		[/\{\s*html\b/, 'the {html expr} keyword'],
-		[/\{\s*text\b/, 'the {text expr} keyword'],
-		[/\{\s*ref\b/, 'the {ref value} keyword'],
-		[/\bawait\b/, 'await'],
-		[/^\s*component\b/, 'the component keyword'],
+		[/\bswitch\b/, 'a statement-form switch inside a template'],
+		[/\bawait\b/, 'await in setup'],
 	]
 	for (const [pattern, what] of signatures)
 		if (pattern.test(around))
-			return ` — ${what} is newer TSRX grammar than @tsrx/core 0.1.63 (the latest published release; the tsrx.dev docs track upstream unreleased grammar — see ADR 0023 sub-design 2)`
+			return ` — ${what} is not parseable by the pinned @tsrx/core 0.1.63 (pin upgrades are reviewed changes — see ADR 0023 sub-design 2)`
 	return ''
 }
 

@@ -264,7 +264,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 				continue
 			}
 			if (attr.kind === 'html' && attr.reactive) {
-				// html={() => …} (LT-025): markup is opaque, unreadable back out
+				// truc:html={() => …} (LT-025): markup is opaque, unreadable back out
 				// of innerHTML — never a harvest SITE, but rendered (LT-036),
 				// same treatment as style-map/class-map.
 				for (const signal of component.signals.map(s => s.name)) {

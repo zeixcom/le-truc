@@ -521,7 +521,7 @@ export const emitServerModule = (
 		// template out of the reconciled container's children.
 		templateQueue.push([])
 		emitElement(node, scope, depth)
-		// html={dataRef} renders as sanitized raw children before authored
+		// truc:html={dataRef} renders as sanitized raw children before authored
 		// children (dependency-provable, else omitted for the client pass).
 		const htmlAttr = node.attrs.find(a => a.kind === 'html') as
 			| Extract<AttributeIR, { kind: 'html' }>

@@ -112,6 +112,13 @@ const LEGACY_PASS_ATTR = 'pass'
 const renamedPassReason =
 	'`pass={{ … }}` is now `truc:pass={{ … }}` — host-owned attributes are namespaced so they cannot collide with a user prop called `pass`.'
 
+/** The host-owned dynamic-rendering attribute, and its pre-LT-137 name. */
+const HTML_ATTR = 'truc:html'
+const LEGACY_HTML_ATTR = 'html'
+
+const renamedHtmlReason =
+	'`html={…}` is now `truc:html={…}` — host-owned attributes are namespaced so they cannot collide with a user prop called `html` (LT-128). Core TSRX defines no `{html expr}` keyword in any published release; it delegates raw markup to the host, and Le Truc owns this one because it routes the value through `sanitizeHtml` rather than assigning it raw.'
+
 /**
  * React's DOM-property attribute names (LT-054). Rendered verbatim they are
  * not real HTML attributes — the browser ignores `className`/`htmlFor`
@@ -192,17 +199,26 @@ export const classifyAttribute = (
 			handlerText: text(ctx.source, expr),
 		}
 	}
-	// Dynamic rendering: html={dataRef} — the .tsrx spelling of the upstream
-	// {html expr} keyword (newer grammar than the pinned parser). Only data
-	// references are accepted; the emitters route the value through the
-	// runtime's sanitizeHtml before it reaches the output.
-	if (name === 'html') {
+	// Dynamic rendering: truc:html={dataRef} (LT-137). Host-owned and
+	// namespaced: core TSRX defines no `{html expr}` keyword in any published
+	// release — it delegates raw markup to the host, and the reference host
+	// answers with a literal `innerHTML` attribute. Le Truc does not borrow
+	// that name because it sanitizes rather than assigning raw (LT-128).
+	// Only data references are accepted; the emitters route the value through
+	// the runtime's sanitizeHtml before it reaches the output.
+	// The bare spelling must NOT fall through to the ordinary-attribute path
+	// below: `html` is not a real HTML attribute, so a silent reclassification
+	// would render a dead `html="…"` and drop the sanitize/bind behaviour
+	// entirely (LT-137).
+	if (name === LEGACY_HTML_ATTR)
+		return { kind: 'invalid', reason: renamedHtmlReason }
+	if (name === HTML_ATTR) {
 		const expr =
 			isNode(value) && value.type === 'JSXExpressionContainer'
 				? value.expression
 				: value
 		if (isNode(expr) && expr.type === 'ArrowFunctionExpression') {
-			// html={() => …} (LT-025): a reactive thunk, lowered client-side to
+			// truc:html={() => …} (LT-025): a reactive thunk, lowered client-side to
 			// dangerouslyBindInnerHTML — exprText/node stay the BODY expression
 			// so server rendering (isServerEvaluable gating) is identical to the
 			// non-reactive bare-reference form below.
@@ -210,7 +226,7 @@ export const classifyAttribute = (
 			if (!isNode(body))
 				return {
 					kind: 'invalid',
-					reason: 'html={() => …} must be a thunk with a body.',
+					reason: 'truc:html={() => …} must be a thunk with a body.',
 				}
 			return {
 				kind: 'html',
@@ -225,7 +241,7 @@ export const classifyAttribute = (
 			return {
 				kind: 'invalid',
 				reason:
-					'html={…} expects a data reference (identifier or member expression) or a reactive thunk (html={() => value}).',
+					'truc:html={…} expects a data reference (identifier or member expression) or a reactive thunk (truc:html={() => value}).',
 			}
 		return {
 			kind: 'html',

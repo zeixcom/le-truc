@@ -1967,3 +1967,62 @@ export function C({ label = '' }: { label?: string })
 		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
 	})
 })
+
+describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
+	const withAttrs = (tpl: string): string => `export function C({}: {})
+@{
+	expose({})
+	<>
+		<c-el>${tpl}</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('a server-rendered attribute reading Date is a hard error', () => {
+		// Same hazard as the static-CHILD form already caught: the attribute
+		// renders once, server-side, forever — there is no watch() to correct
+		// the build machine's clock reading.
+		const { diagnostics } = compileComponent(
+			withAttrs('<div title={Date.now()}></div>'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX033')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('title')
+	})
+
+	test('Math.random() in a server-rendered attribute is caught too', () => {
+		const { diagnostics } = compileComponent(
+			withAttrs('<div data-x={Math.random()}></div>'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(
+			diagnostics.filter(d => d.code === 'TSRX033' && d.severity === 'error'),
+		).toHaveLength(1)
+	})
+
+	test('a REACTIVE thunk over the same ambient stays a warning', () => {
+		// The client's first binding pass corrects an omitted fold, so the
+		// reactive form keeps the softer verdict — LT-075 must not escalate it.
+		const { diagnostics } = compileComponent(
+			withAttrs('<div title={() => String(Date.now())}></div>'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		const hits = diagnostics.filter(d => d.code === 'TSRX033')
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.severity).toBe('warning')
+	})
+
+	test('a pure server-rendered attribute is untouched', () => {
+		const { diagnostics } = compileComponent(
+			withAttrs('<div title={Math.max(1, 2)}></div>'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX033')).toEqual([])
+	})
+})

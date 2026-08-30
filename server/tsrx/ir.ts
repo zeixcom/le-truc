@@ -228,8 +228,8 @@ export type AttributeIR =
 	  }
 	| ({
 			/**
-			 * Dynamic rendering: `html={expr}` (a bare data reference) or
-			 * `html={() => expr}` (LT-025, a reactive thunk) — the .tsrx
+			 * Dynamic rendering: `truc:html={expr}` (a bare data reference) or
+			 * `truc:html={() => expr}` (LT-025, a reactive thunk) — the .tsrx
 			 * spelling of the upstream `{html expr}` keyword (newer grammar
 			 * than the pinned parser). `exprText`/`node` are always the VALUE
 			 * expression (the thunk's body, for the reactive form) — server
