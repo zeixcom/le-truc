@@ -14,7 +14,7 @@ export default defineComponent(
 		const template = first('template', 'module-list: template missing')
 		const form = first('form', 'module-list: form missing')
 		const textbox = first('form-textbox', 'module-list: form-textbox missing')
-		const basicButton = first('basic-button[class="submit"]', 'module-list: basic-button[class="submit"] missing')
+		const basicButton = first('basic-button.submit', 'module-list: basic-button.submit missing')
 		const items = createList<string>([], {
 			keyConfig: 'item',
 		})

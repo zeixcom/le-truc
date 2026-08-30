@@ -146,28 +146,6 @@ const argRenderedProps = (node: TemplateNode): string[] => {
 }
 
 /**
- * Host props whose SERVER-SIDE truth the compiler knows — the
- * substitutable set for {@link hostDerivedFold} (CHECKLIST §5, LT-085).
- * Two ways a prop earns membership, and they are the same fact reached
- * from opposite directions:
- *
- * 1. **Parser-exposed with a server-rendered root attribute** — the host
- *    attribute is the prop's seed (ADR 0003), so the root attribute's own
- *    `exprText` IS the value. This is what `emit-server.ts`'s bare-mirror
- *    case (`hostPropOf`, ast-utils.ts) already relies on.
- * 2. **Harvested from a site a same-named server arg renders** (LT-118,
- *    the server half of LT-122's coincidence) — the arg renders the site,
- *    the site seeds the prop at connect, so the ARG is the value. The
- *    substituted expression is the arg name itself, in scope in the
- *    generated render function.
- *
- * Without (2), following the data account costs you the fold: a component
- * that harvests `zero` from its own `.zero` span instead of duplicating it
- * onto a host attribute would see every `hidden={() => …host.zero…}` thunk
- * drop out of the initial HTML (TSRX034) — the pre-JS flash this fold
- * exists to prevent, charged as a penalty for doing the right thing.
- */
-/**
  * Every `first()`-bound ref whose presence the server can settle, mapped
  * to the condition that settles it (LT-118) — the ref half of
  * {@link hostDerivedFold}'s substitutable set. See `refBranchGuard`
@@ -189,6 +167,28 @@ export const foldableRefGuards = (
 	return guards
 }
 
+/**
+ * Host props whose SERVER-SIDE truth the compiler knows — the
+ * substitutable set for {@link hostDerivedFold} (CHECKLIST §5, LT-085).
+ * Two ways a prop earns membership, and they are the same fact reached
+ * from opposite directions:
+ *
+ * 1. **Parser-exposed with a server-rendered root attribute** — the host
+ *    attribute is the prop's seed (ADR 0003), so the root attribute's own
+ *    `exprText` IS the value. This is what `emit-server.ts`'s bare-mirror
+ *    case (`hostPropOf`, ast-utils.ts) already relies on.
+ * 2. **Harvested from a site a same-named server arg renders** (LT-118,
+ *    the server half of LT-122's coincidence) — the arg renders the site,
+ *    the site seeds the prop at connect, so the ARG is the value. The
+ *    substituted expression is the arg name itself, in scope in the
+ *    generated render function.
+ *
+ * Without (2), following the data account costs you the fold: a component
+ * that harvests `zero` from its own `.zero` span instead of duplicating it
+ * onto a host attribute would see every `hidden={() => …host.zero…}` thunk
+ * drop out of the initial HTML (TSRX034) — the pre-JS flash this fold
+ * exists to prevent, charged as a penalty for doing the right thing.
+ */
 export const foldableHostProps = (
 	component: ComponentIR,
 ): ReadonlySet<string> => {

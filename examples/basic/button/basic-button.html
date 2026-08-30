@@ -31,6 +31,17 @@
 
 <hr>
 
+<!-- Extra page-authored classes example - tests that a token selector still
+	 finds `.label` when the page adds its own classes to the same span (LT-124) -->
+<basic-button id="extra-class-test">
+	<button type="button" class="secondary medium">
+		<span class="label icon">🛒 Shopping Cart</span>
+		<span class="badge highlight">5</span>
+	</button>
+</basic-button>
+
+<hr>
+
 <!-- Boolean attribute variations example - tests '', 'false', 'disabled', '0', and removeAttribute -->
 <basic-button id="boolean-test">
 	<button type="button" class="constructive medium">

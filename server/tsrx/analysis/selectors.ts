@@ -38,63 +38,95 @@ export const staticAttrs = (
  * 1. a `role` attribute is always the discriminator (it is the element's
  *    semantic contract; `div` tags drop the tag itself);
  * 2. otherwise the bare tag, upgraded to a `type`/`class`/`data-*`
- *    discriminator only when the bare tag is structurally ambiguous.
+ *    discriminator (`discriminatorCandidates`) only when the bare tag is
+ *    structurally ambiguous.
  * Uniqueness is proven structurally — the compiler rendered this HTML.
+ *
+ * A third `'discriminator'` mode lived here until LT-124: a single-pick
+ * variant of `discriminatorCandidates` that no caller had used since the
+ * plural version landed, still carrying the exact-match `[class="…"]`
+ * semantics LT-124 replaced. Deleted rather than updated — a second,
+ * unreachable implementation of the discriminator rule is exactly the
+ * drift LT-124 exists to remove.
  */
 const buildSelector = (
 	element: ElementNode,
-	mode: 'role' | 'discriminator' | 'bare',
+	mode: 'role' | 'bare',
 ): string | null => {
-	const attrs = staticAttrs(element)
-	const clause = (name: string, value: string): string => {
-		const attr = `[${name}="${value}"]`
-		return element.tag === 'div' ? attr : `${element.tag}${attr}`
-	}
-	if (mode === 'role') {
-		const role = attrs.get('role')
-		if (role !== undefined && role !== null) return clause('role', role)
-		return null
-	}
-	if (mode === 'discriminator') {
-		const disc =
-			['type', 'class'].find(
-				name => attrs.has(name) && attrs.get(name) !== null,
-			) ??
-			[...attrs.keys()].find(
-				name => name.startsWith('data-') && attrs.get(name) !== null,
-			)
-		if (disc !== undefined && attrs.get(disc) !== undefined)
-			return clause(disc, attrs.get(disc) as string)
-		return null
-	}
-	return element.tag
+	if (mode === 'bare') return element.tag
+	const role = staticAttrs(element).get('role')
+	if (role !== undefined && role !== null)
+		return element.tag === 'div'
+			? `[role="${role}"]`
+			: `${element.tag}[role="${role}"]`
+	return null
 }
 
 /**
- * All discriminator candidates in priority order (`type`, `class`, every
- * `data-*`) — plural, unlike `buildSelector('discriminator', …)`'s single
- * pick. Two sibling `<button type="button">`s that only differ by `class`
- * (e.g. decrement/increment) share the same `type` clause, so picking just
- * the first present discriminator name (the original single-candidate
- * behavior) produced a non-unique selector and never got to try `class` at
- * all — `resolveSelectorIn` needs every candidate to fall through to, not
- * just one.
+ * A class token or `id` safe to spell as a `.token` / `#id` clause. Anything
+ * outside this shape (a Tailwind-style `w-1/2`, a leading digit, a token with
+ * a `:` or an escape) would make the synthesized selector a `querySelector`
+ * syntax error — a throw at activation, not a miss — so those fall back to
+ * the exact-match `[attr="value"]` form.
+ */
+const PLAIN_SELECTOR_TOKEN = /^[A-Za-z_-][\w-]*$/
+
+/**
+ * All discriminator candidates in priority order (`type`, each `class`
+ * token, `id`, every `data-*` — the `class`-then-`id`-then-`data-*` tail
+ * mirroring `composeDiscriminatorClause`'s) — plural, because two sibling
+ * `<button type="button">`s that only differ by `class` (decrement /
+ * increment) share the same `type` clause: `resolveSelectorIn` needs every
+ * candidate to fall through to, not just the first present one.
+ *
+ * Two clauses are spelled canonically rather than as attribute selectors.
+ * `class` discriminates by TOKEN MEMBERSHIP (`span.label`), not by exact
+ * value (LT-124), and `id` by the hash form (`input#name-input`). The two
+ * are different KINDS of change: the class form deliberately matches wider
+ * markup than `[class="label"]` did, while `#name-input` and
+ * `[id="name-input"]` select exactly the same element — the id form is pure
+ * canonicalization, carrying none of the widening discussed below.
+ *
+ * Exact match on `class` was wrong twice over: it made `class="a b"`
+ * order-sensitive, and — since LT-123 made an unmatched optional ref a
+ * silent no-op rather than a throw — it silently bound NOTHING when a page
+ * enhanced the component's markup with an extra class (`class="label icon"`),
+ * which is precisely the page-authored case optional refs exist to serve.
+ * Token membership is also what `composeDiscriminatorClause` has always
+ * emitted for compose sites; the two paths now agree on semantics, not just
+ * on priority. Note this restores the contract the author wrote — the
+ * authored selector in `basic-button.tsrx` is `span.label` — rather than
+ * inventing a looser one.
  */
 const discriminatorCandidates = (element: ElementNode): string[] => {
 	const attrs = staticAttrs(element)
-	const clause = (name: string, value: string): string => {
-		const attr = `[${name}="${value}"]`
-		return element.tag === 'div' ? attr : `${element.tag}${attr}`
+	const prefix = element.tag === 'div' ? '' : element.tag
+	const exact = (name: string, value: string): string =>
+		`${prefix}[${name}="${value}"]`
+	// A Set, not an array: two unsafe tokens in one `class` value would
+	// otherwise push the same exact-match fallback twice.
+	const candidates = new Set<string>()
+	const type = attrs.get('type')
+	if (typeof type === 'string') candidates.add(exact('type', type))
+	const className = attrs.get('class')
+	if (typeof className === 'string') {
+		const tokens = className.split(/\s+/).filter(Boolean)
+		for (const token of tokens)
+			candidates.add(
+				PLAIN_SELECTOR_TOKEN.test(token)
+					? `${prefix}.${token}`
+					: exact('class', className),
+			)
 	}
-	const names = [
-		...['type', 'class'].filter(
-			name => attrs.has(name) && attrs.get(name) !== null,
-		),
-		...[...attrs.keys()].filter(
-			name => name.startsWith('data-') && attrs.get(name) !== null,
-		),
-	]
-	return names.map(name => clause(name, attrs.get(name) as string))
+	const id = attrs.get('id')
+	if (typeof id === 'string')
+		candidates.add(
+			PLAIN_SELECTOR_TOKEN.test(id) ? `${prefix}#${id}` : exact('id', id),
+		)
+	for (const [name, value] of attrs)
+		if (name.startsWith('data-') && typeof value === 'string')
+			candidates.add(exact(name, value))
+	return [...candidates]
 }
 
 /**
@@ -103,17 +135,31 @@ const discriminatorCandidates = (element: ElementNode): string[] => {
  * root's query is only sound if it cannot match the OTHER branch's markup,
  * and the synthesized-selector grammar here is exactly the shape a query
  * selector can take.
+ *
+ * It must therefore track `discriminatorCandidates` exactly. When that
+ * started emitting `.token` clauses (LT-124) this matcher's grammar had to
+ * learn them in the same commit: an unparsed selector returns `false`, which
+ * reads as "no collision" — so a stale matcher would not fail loudly, it
+ * would quietly stop rejecting the branch-root collisions
+ * `resolveExclusiveSelectorIn` calls it to catch, and effects would bind
+ * onto the wrong branch's element. An unrecognized selector is a false, not
+ * a throw, which is why this pairing is the load-bearing half of LT-124.
  */
 export const matchesSelector = (
 	candidate: ElementNode,
 	selector: string,
 ): boolean => {
 	const match = selector.match(
-		/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\])?$/,
+		/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\]|\.([A-Za-z_-][\w-]*)|#([A-Za-z_-][\w-]*))?$/,
 	)
 	if (!match) return false
-	const [, tag, attr, value] = match
+	const [, tag, attr, value, classToken, id] = match
 	if (tag && candidate.tag !== tag) return false
+	if (classToken !== undefined)
+		return (staticAttrs(candidate).get('class') ?? '')
+			.split(/\s+/)
+			.includes(classToken)
+	if (id !== undefined) return staticAttrs(candidate).get('id') === id
 	if (attr) return staticAttrs(candidate).get(attr) === value
 	return true
 }

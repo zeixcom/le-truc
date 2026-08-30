@@ -101,34 +101,34 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | Module | Size | Role | Intra-package imports |
 | --- | ---: | --- | --- |
 | `index.ts` | 133 | Public API; `compileComponent` pipeline assembly; flat re-exports | analysis/plan, compiler, diagnostics, emit-client, emit-server, registry, spans |
-| `compiler.ts` | 997 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
-| `ir.ts` | 404 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
+| `compiler.ts` | 1335 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
+| `ir.ts` | 530 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
 | `core.ts` | 21 | The **only** `@tsrx/core` value-import leaf (`parseModule`, `isStyleElement`, `getStyleElementStylesheet`, `isTemplateForOfNode`, `isVoidElement`) | `@tsrx/core` (values) |
-| `walk.ts` | 101 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
-| `evaluability.ts` | 39 | `dependenciesOf` + `isServerEvaluable` — the single home of the server-known dependency-closure rule | ast-utils |
-| `reactivity.ts` | 145 | `classifyChild` — the single home of the reactive-lift rule (LT-051): is a template child reactive, static, or untraceable? | ast-utils |
-| `lower-template.ts` | 991 | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation | ast-utils, classify-attributes, core (`isTemplateForOfNode` value), diagnostics, ir (types), reactivity |
-| `classify-attributes.ts` | 282 | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser | ast-utils, diagnostics, ir (types) |
-| `infer-type.ts` | 118 | Signal value-type inference (`string\|number\|boolean\|unknown`) | ast-utils |
-| `config.ts` | 108 | `export const config` extraction **only** | ast-utils, diagnostics, ir (types) |
-| `imports.ts` | 352 | Compose-import resolution + plain (non-`.tsrx`) import collection and placement | ast-utils, diagnostics, evaluability, ir (types), walk |
-| `analysis/plan.ts` | 443 | `ClientPlan`/`QueryPlan`/… types, `AnalysisContext` assembly, `analyzeClient` orchestration | ast-utils, diagnostics (type), evaluability, ir (types), registry (type), walk, analysis/{effects,harvest,loops,naming} |
-| `analysis/selectors.ts` | 285 | Pure selector engine: synthesis, structural uniqueness (branch-exclusivity counting), union/compose addressing, `enclosingIfOf`, `loopFor` | ir (types) |
-| `analysis/naming.ts` | 64 | `uniqueName`, `addQuery` (query table + name allocation) | ir (type), analysis/plan (type) |
-| `analysis/harvest.ts` | 696 | Passes 2+3: render sites, harvest-plan selection, `paramDomRead`/`substituteArgExpr`; shared signal-read AST predicates | ast-utils, diagnostics, evaluability, ir (types), analysis/plan (types), analysis/selectors |
-| `analysis/loops.ts` | 418 | Passes 1+1b: `each()` and `reconcile()` planning | ast-utils, diagnostics, evaluability, ir (types), analysis/harvest (`returnsNumber`), analysis/plan (types), analysis/selectors |
-| `analysis/effects.ts` | 886 | Pass 4: document-ordered per-construct effect planning | ast-utils, diagnostics, ir (types), analysis/harvest (`lazyWatchSource`, `returnsNumber`), analysis/plan (types), analysis/selectors |
-| `emit-server.ts` | 813 | `ComponentIR` → server render module | ast-utils, core (`isVoidElement` value), evaluability, ir (types), registry (type), spans |
-| `emit-client.ts` | 561 | `ComponentIR` + `ClientPlan` → client factory module | analysis/plan (types), ast-utils, imports (`computeClientNeededNames`), ir (types), spans |
+| `walk.ts` | 102 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
+| `evaluability.ts` | 372 | `dependenciesOf` + `isServerEvaluable` — the single home of the server-known dependency-closure rule — plus the host-derived FOLD rule that widens it (`foldableHostProps`/`foldableRefGuards`/`hostDerivedFold`/`spliceHostDerivedFold`, § 5.4) | ast-utils, first-refs, ir (types) |
+| `reactivity.ts` | 209 | `classifyChild` — the single home of the reactive-lift rule (LT-051): is a template child reactive, static, or untraceable? | ast-utils |
+| `lower-template.ts` | 1129 | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation | ast-utils, classify-attributes, core (`isTemplateForOfNode` value), diagnostics, ir (types), reactivity |
+| `classify-attributes.ts` | 377 | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser | ast-utils, diagnostics, ir (types) |
+| `infer-type.ts` | 145 | Signal value-type inference (`string\|number\|boolean\|unknown`) | ast-utils |
+| `config.ts` | 111 | `export const config` extraction **only** | ast-utils, diagnostics, ir (types) |
+| `imports.ts` | 546 | Compose-import resolution + plain (non-`.tsrx`) import collection and placement | ast-utils, diagnostics, evaluability, ir (types), walk |
+| `analysis/plan.ts` | 577 | `ClientPlan`/`QueryPlan`/… types, `AnalysisContext` assembly, `analyzeClient` orchestration | ast-utils, diagnostics (type), evaluability, ir (types), registry (type), walk, analysis/{effects,harvest,loops,naming} |
+| `analysis/selectors.ts` | 536 | Pure selector engine: synthesis, structural uniqueness (branch-exclusivity counting), union/compose addressing, `enclosingIfOf`, `loopFor` | ir (types) |
+| `analysis/naming.ts` | 78 | `uniqueName`, `addQuery` (query table + name allocation) | ir (type), analysis/plan (type) |
+| `analysis/harvest.ts` | 773 | Passes 2+3: render sites, harvest-plan selection, `paramDomRead`/`substituteArgExpr`; shared signal-read AST predicates | ast-utils, diagnostics, evaluability, ir (types), analysis/plan (types), analysis/selectors |
+| `analysis/loops.ts` | 474 | Passes 1+1b: `each()` and `reconcile()` planning | ast-utils, diagnostics, evaluability, ir (types), analysis/harvest (`returnsNumber`), analysis/plan (types), analysis/selectors |
+| `analysis/effects.ts` | 1433 | Pass 4: document-ordered per-construct effect planning | ast-utils, diagnostics, ir (types), analysis/harvest (`lazyWatchSource`, `returnsNumber`), analysis/plan (types), analysis/selectors |
+| `emit-server.ts` | 925 | `ComponentIR` → server render module | ast-utils, core (`isVoidElement` value), evaluability, ir (types), registry (type), spans |
+| `emit-client.ts` | 694 | `ComponentIR` + `ClientPlan` → client factory module | analysis/plan (types), ast-utils, imports (`computeClientNeededNames`), ir (types), spans |
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
-| `diagnostics.ts` | 617 | Diagnostic codes TSRX001–029, message factories | — (leaf) |
-| `first-refs.ts` | 210 | `collectMatchingElements`/`shareExclusiveIf` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}` | ir (types) |
+| `diagnostics.ts` | 884 | Diagnostic codes TSRX001–029, message factories | — (leaf) |
+| `first-refs.ts` | 395 | `collectMatchingElements`/`shareExclusiveIf` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}`; also `refBranchGuard`/`inOptionalBranch`, the ref-presence half of the fold rule (LT-118, § 5.4) | ir (types) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
-| `runtime.ts` | 294 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
+| `runtime.ts` | 366 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
-| `globals.d.ts` | 71 | Ambient vocabulary for editor surfaces; parity-tested against `ast-utils` | — |
+| `globals.d.ts` | 60 | Ambient vocabulary for editor surfaces; parity-tested against `ast-utils` | — |
 | `core-shim.d.ts` | 41 | Type shim for the pinned `@tsrx/core` | — |
 
 External consumers: `server/effects/tsrx.ts` and `server/build.ts` (via `../tsrx`,
@@ -466,7 +466,13 @@ Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
     seeding channel IS the host attribute, so a site rendering the
     same value is a second copy — TSRX039 warns and no binding is
     added (binding one would fight a native control's dirty-value
-    flag, e.g. `<textarea …>{value}</textarea>`).
+    flag, e.g. `<textarea …>{value}</textarea>`). **The warning is
+    currently over-broad (LT-129, open):** it fires on the data
+    account's sanctioned OVERRIDE too — a Parser whose FALLBACK
+    expression reads the very site being rendered
+    (`asNumber(asNumber(1)(input.step))`) is the contract's declared
+    precedence, not a second copy. Only genuinely independent copies
+    should warn.
   - Root element: `style-map`/`class-map` lower to `watch-style`/`watch-class`
     targeting the ambient `host`; any other reactive construct on the root is
     rejected.
@@ -474,7 +480,8 @@ Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
   - `@if`: with `@else` and IDENTICAL construct text on every branch root →
     union addressing (one throwing query whose selector unions both roots —
     whichever branch rendered is the element found; constructs on branch
-    roots only). With `@else` and DIFFERING constructs (LT-118) → per-branch
+    roots only). With `@else` and DIFFERING constructs (built under LT-118,
+    whose own acceptance case turned out not to need it — see § 6) → per-branch
     addressing: each branch root is addressed independently with a
     non-throwing `first()` and a `'guarded'` effect, the plain-`@try` arms
     precedent (LT-025) — an effect planned inside a branch only activates
@@ -536,9 +543,45 @@ lines, with:
   render **only when their dependency closure ⊆ scope** (`isServerEvaluable`,
   `evaluability.ts`; else omitted — DOM-is-truth); `class-map` → `cls()`,
   `style-map` → `styleAttr()`; `html` → `sanitizeHtml()` when server-known;
-  `event`/`ref` stripped. The **root element's** opening is assembled after
+  `event`/`ref` stripped. A thunk whose closure is NOT a subset of scope gets
+  one second chance: the host-derived FOLD below. The **root element's** opening is assembled after
   children emission (same parts machinery) with the root-only `class-map`/
   `style-map` exemptions (LT-028/032).
+- **Host-derived folds** (`hostDerivedExpr`, over `evaluability.ts`'s
+  `hostDerivedFold`/`spliceHostDerivedFold`): a reactive thunk reading only
+  values whose SERVER-SIDE truth the compiler knows is folded to an initial
+  value instead of being omitted, by splicing each read's source range with
+  that truth and evaluating the result. Three substitutable sources, each a
+  different route to the same fact:
+  1. **Parser-exposed prop with a server-rendered root attribute** (LT-085) —
+     the host attribute is the prop's seed (ADR 0003), so the root attribute's
+     `exprText` is the value. Widens the bare `() => host.<prop>` mirror
+     (`hostPropOf`) to derived reads like `() => host.value <= host.min`.
+  2. **Harvested prop rendered from a same-named server arg** (LT-118, the
+     server half of LT-122's coincidence, `argRenderedProps`) — the arg
+     renders the site, the site seeds the prop at connect, so the ARG is the
+     value. Without it, following the data account (harvest rather than
+     duplicate onto a host attribute) would be charged a pre-JS flash: every
+     `hidden={() => …host.<harvested>…}` thunk would drop out of the HTML.
+  3. **`first()`-bound ref read as a bare identifier** (LT-118,
+     `refBranchGuard` in `first-refs.ts`) — the hand-written idiom for an
+     optional affordance is `const zero = first('.zero'); if (zero) { … }`, a
+     local ref and not a reactive prop, and a compiled component must be able
+     to say it too. Server-side a ref's presence is the conjunction of the
+     `@if` conditions on the path to its matched element (negated for `@else`);
+     `'true'` unguarded, `'false'` when the template matches nothing.
+     `refBranchGuard` returns `null` — do not fold, omit — for a ref in a
+     `@switch`/`@try` arm or matched more than once. A ref read as a MEMBER
+     (`zero.textContent`) disqualifies the fold: a presence guard is a boolean,
+     not the element.
+
+  All-or-nothing by design: one read that isn't substitutable disqualifies the
+  whole expression. Folding some reads would bake a plausible-looking but wrong
+  initial state into the HTML, which is worse than omitting the attribute and
+  letting the client's first pass render it. `analysis/effects.ts` consults the
+  same predicate when deciding whether TSRX034 (no server-renderable value) is
+  warranted, so the fold set and the warning can never disagree.
+
 - **Loops**: server-data `@for` → `for (const item of items(iterable))` or
   `entries(...)` when the index is used, hoisted consts re-declared; reactive
   list → `for (const [k, item] of list.entries())` with `data-key`, plus the
@@ -619,16 +662,45 @@ why every verbatim slice is span-recorded rather than rewritten.
 - **Selector uniqueness is proven structurally** against the template the
   compiler itself renders (role → bare tag → discriminator; exclusivity-aware
   counting for `@if`/`@switch`, coexistence-summing for async arms) —
-  `analysis/selectors.ts`.
+  `analysis/selectors.ts`. Discriminators use canonical CSS spellings
+  (LT-124): a `class` is a TOKEN clause (`span.label`), matching by membership
+  so page-authored extra classes still address, and an `id` is the hash form
+  (`input#name-input`); `type`/`data-*` stay exact `[attr="value"]`. Only the
+  class change is a widening — `#name-input` and `[id="name-input"]` select
+  the same element. A token or id outside the plain-identifier shape (a
+  Tailwind-style `w-1/2`, a leading digit) falls back to the exact form, since
+  a malformed clause is a `querySelector` THROW at activation, not a miss.
+  `matchesSelector` parses
+  exactly the grammar the synthesizer emits — it must be changed in the same
+  commit, since an unparsed selector returns `false`, which reads as "no
+  collision" and would quietly disarm per-branch addressing's soundness check.
 - **Pin isolation**: `@tsrx/core` values enter through `core.ts` only;
   `core-shim.d.ts` is the type-side boundary. An upgrade touches `core.ts` and
   the shim only.
 - **One reactive list per component** (extracted-template addressing limit);
   **one addressable construct root per `@if` branch** — union-addressed when
   every branch root carries the identical construct signature, per-branch
-  addressed otherwise (LT-118; roots must then be statically
-  distinguishable from each other); **composed children are
-  statics/server expressions only**.
+  addressed otherwise (roots must then be statically distinguishable from
+  each other); **composed children are statics/server expressions only**.
+  Per-branch addressing was built under LT-118 on the premise that the
+  form-spinbutton zero state needed union addressing over structurally
+  differing branch roots. It did not — the hand-written twin toggled `hidden`
+  over always-present elements and never swapped structures — so the machinery
+  stands on its own tests (`if-branches.test.ts`, `diagnostics.test.ts`), not
+  on a corpus component. Do not read the corpus as its proof.
+- **A control-flow arm is STATEMENT context.** `@if`/`@else` bodies parse as
+  JS statements, not JSX children, so `@else { + }` is a parse error and
+  `@else { <>+</> }` is not — a fragment is an expression. This is a grammar
+  fact of the pinned parser, not a compiler restriction; both spellings are
+  pinned in `if-branches.test.ts` so the distinction is not re-litigated.
+- **Server stubs never reach the markup.** `emit-server.ts` declares `any`
+  stubs for client-only free names inside `expose()` method-producer closures,
+  widened (LT-118) to `host`/`internals` free in an emitted setup HELPER — a
+  shared helper is dead code server-side for the reason a `defineMethod` body
+  is, but its free context members must resolve for the module to type-check.
+  Deliberately never REFS: a ref stub whose value reaches the markup renders an
+  empty string where the author asked for a DOM read, trading a loud build
+  error for a silently wrong page (LT-125, open).
 
 ## 7. Regrouping history and remaining gaps
 

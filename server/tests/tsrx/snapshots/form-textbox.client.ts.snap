@@ -45,7 +45,7 @@ export default defineComponent<FormTextboxProps>(
 	'form-textbox',
 	({ expose, first, host, on, watch }) => {
 		const input = first('textarea, input', 'text control')
-		const p = first('p[class="description"]')
+		const p = first('p.description')
 		const button = first('button')
 		const p2 = first('p[role="alert"]')
 		const length = createCell(input.value.length)

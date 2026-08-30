@@ -11,6 +11,7 @@ import { runHarvest } from '../../tsrx/analysis/harvest'
 import { type AnalysisContext, analyzeClient } from '../../tsrx/analysis/plan'
 import {
 	countForSelector,
+	matchesSelector,
 	resolveSelector,
 } from '../../tsrx/analysis/selectors'
 import { compileSource } from '../../tsrx/compiler'
@@ -108,6 +109,141 @@ describe('analysis passes over a constructed context (LT-022)', () => {
 		expect(countForSelector(component.root, 'span')).toBe(1)
 		expect(resolveSelector(component, span)).toEqual({
 			selector: 'span',
+			unique: true,
+		})
+	})
+})
+
+/**
+ * LT-124: class discriminators are TOKEN clauses, and `matchesSelector` — the
+ * structural matcher `countForSelector` and per-branch collision rejection
+ * both run on — has to recognize the same grammar the synthesizer emits. An
+ * unparsed selector returns `false`, which reads as "no match" everywhere, so
+ * a drift between the two would be silent in both directions.
+ */
+describe('class discriminators are token clauses (LT-124)', () => {
+	/** The element a `first()`-addressed span lowers to, given a class value. */
+	const spanWithClass = (className: string): ComponentIR => {
+		const { component } = compileSource(
+			`export function C({}: {})
+@{
+	const el = first('span.label')
+	expose({})
+	<>
+		<c-el>
+			<span class="${className}">ok</span>
+			<span class="other">x</span>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`,
+			'c.tsrx',
+		)
+		return component as ComponentIR
+	}
+
+	const firstSpan = (component: ComponentIR) =>
+		(component.root.children as ReadonlyArray<{ kind: string }>).find(
+			n => n.kind === 'element',
+		) as Extract<ComponentIR['root'], { kind: 'element' }>
+
+	test('a single-token class synthesizes `.token`, not `[class="…"]`', () => {
+		const component = spanWithClass('label')
+		expect(resolveSelector(component, firstSpan(component))).toEqual({
+			selector: 'span.label',
+			unique: true,
+		})
+	})
+
+	test('a multi-token class offers one candidate per token, order-insensitively', () => {
+		const component = spanWithClass('label icon')
+		// The FIRST unique candidate wins, so the synthesized selector names
+		// one token — but either token identifies the element, which is the
+		// property exact match did not have.
+		const { selector } = resolveSelector(component, firstSpan(component))
+		expect(['span.label', 'span.icon']).toContain(selector)
+		expect(countForSelector(component.root, 'span.label')).toBe(1)
+		expect(countForSelector(component.root, 'span.icon')).toBe(1)
+	})
+
+	test('a token clause matches page markup carrying extra classes', () => {
+		// The acceptance case: the template renders `class="label"`, the PAGE
+		// renders `class="label icon"`. Structurally the same question asked
+		// of the matcher — a token clause matches by membership.
+		const pageSpan = firstSpan(spanWithClass('label icon'))
+		expect(matchesSelector(pageSpan, 'span.label')).toBe(true)
+		expect(matchesSelector(pageSpan, 'span.icon')).toBe(true)
+		expect(matchesSelector(pageSpan, 'span[class="label"]')).toBe(false)
+		expect(matchesSelector(pageSpan, 'span.missing')).toBe(false)
+		expect(matchesSelector(pageSpan, 'div.label')).toBe(false)
+	})
+
+	test('a token that is not a plain identifier falls back to exact match', () => {
+		// `.w-1/2` would be a querySelector SYNTAX error — a throw at
+		// activation, not a miss — so those keep the exact-match form.
+		const component = spanWithClass('w-1/2')
+		expect(resolveSelector(component, firstSpan(component))).toEqual({
+			selector: 'span[class="w-1/2"]',
+			unique: true,
+		})
+	})
+})
+
+/**
+ * LT-124 follow-up (owner, 2026-08-30): `#id` is the canonical spelling of an
+ * id discriminator. Unlike the class change this is NOT a widening —
+ * `input#name-input` and `input[id="name-input"]` select exactly the same
+ * element — so it is pure canonicalization. It is also a new capability:
+ * `id` was not among the raw-element discriminator candidates at all, only
+ * among the compose-site ones.
+ */
+describe('id discriminators use the hash form (LT-124)', () => {
+	/** Two same-tag inputs — the bare tag is ambiguous, forcing a discriminator. */
+	const twoInputs = (idValue: string): ComponentIR => {
+		const { component } = compileSource(
+			`export function C({}: {})
+@{
+	const el = first('input#${idValue}')
+	expose({})
+	<>
+		<c-el>
+			<input id="${idValue}" />
+			<input id="other" />
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`,
+			'c.tsrx',
+		)
+		return component as ComponentIR
+	}
+
+	const firstInput = (component: ComponentIR) =>
+		(component.root.children as ReadonlyArray<{ kind: string }>).find(
+			n => n.kind === 'element',
+		) as Extract<ComponentIR['root'], { kind: 'element' }>
+
+	test('an ambiguous tag upgrades to `tag#id`, not `tag[id="…"]`', () => {
+		const component = twoInputs('name-input')
+		expect(resolveSelector(component, firstInput(component))).toEqual({
+			selector: 'input#name-input',
+			unique: true,
+		})
+	})
+
+	test('the matcher recognizes the hash form and stays exact', () => {
+		const input = firstInput(twoInputs('name-input'))
+		expect(matchesSelector(input, 'input#name-input')).toBe(true)
+		expect(matchesSelector(input, '#name-input')).toBe(true)
+		// Exact, unlike a class token: no membership, no prefix matching.
+		expect(matchesSelector(input, 'input#name')).toBe(false)
+		expect(matchesSelector(input, 'span#name-input')).toBe(false)
+	})
+
+	test('an id that is not a plain identifier falls back to exact match', () => {
+		const component = twoInputs('1st.field')
+		expect(resolveSelector(component, firstInput(component))).toEqual({
+			selector: 'input[id="1st.field"]',
 			unique: true,
 		})
 	})

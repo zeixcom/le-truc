@@ -139,10 +139,10 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		// aware counting calls them unique) — per-branch resolution must
 		// skip them for the class discriminator, or the two guards would
 		// both bind the one rendered button.
-		expect(maybeQueries(code).sort()).toEqual([
-			'button[class="buy"]',
-			'button[class="sell"]',
-		])
+		// Class discriminators are TOKEN clauses since LT-124, and
+		// `matchesSelector` must recognize them or the collision check
+		// above silently stops rejecting anything.
+		expect(maybeQueries(code).sort()).toEqual(['button.buy', 'button.sell'])
 	})
 
 	test('identical constructs on both branch roots keep union addressing (one throwing query, no guards)', () => {

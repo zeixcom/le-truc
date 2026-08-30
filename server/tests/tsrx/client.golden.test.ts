@@ -201,7 +201,10 @@ describe('client golden — convergence with the hand-written trio', () => {
 		// over it — maxlength traced to the input's plain attribute, a
 		// descendant site. The paragraph binds the DERIVATION; a prop write
 		// flows through the exposed Slot into the cell and re-derives.
-		expect(code).toContain('const p = first(\'p[class="description"]\')')
+		// A TOKEN clause since LT-124 — and the hand-written twin this test
+		// checks convergence against wrote `first('.description')`, so the
+		// token form converges where the exact-match form diverged.
+		expect(code).toContain("const p = first('p.description')")
 		expect(code).toContain(
 			"const descriptionCell = createCell((p?.getAttribute('data-remaining') ?? ''))",
 		)
