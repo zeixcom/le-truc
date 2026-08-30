@@ -1,6 +1,6 @@
 /**
  * Language-feature tests (tsrx.dev/features parity): every construct the
- * pinned @tsrx/core 0.1.60 can parse must lower deliberately — supported or
+ * pinned @tsrx/core 0.1.63 can parse must lower deliberately — supported or
  * gated with a diagnostic — never silently dropped. Covers @switch arms,
  * @try error boundaries, @pending async boundaries (gated), html={expr}
  * dynamic rendering, and parse-error hints for the newer-grammar constructs

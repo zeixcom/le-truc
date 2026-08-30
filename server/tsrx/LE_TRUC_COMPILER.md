@@ -32,7 +32,7 @@ module is today's idiomatic hand-written Le Truc factory, importing solely from
 uses and its library/plain helpers, while the FactoryContext vocabulary stays
 ambient (`globals.d.ts`, ADR 0024 sub-design 16).
 
-The parser dependency `@tsrx/core` is **pinned at 0.1.60** (ADR 0024 sub-design 2).
+The parser dependency `@tsrx/core` is **pinned at 0.1.63** (ADR 0024 sub-design 2).
 `core.ts` is the **only** module importing its *values*; siblings import only the
 `TsrxNode` *type* (erased at compile time) from `ir.ts` or directly from
 `@tsrx/core`. `core-shim.d.ts` is the type side of that boundary — a pin upgrade
@@ -51,7 +51,7 @@ otherwise (`{cond && <x/>}`, `return (<>…</>)`, `className`/`htmlFor` are the
 observed failure modes; TSRX021/022/024 and the `classify-attributes.ts`
 `REACT_ATTR_RENAMES` table hard-error them rather than silently emitting broken
 output). Two caveats specific to this host profile, not covered by the upstream
-docs: the pinned `@tsrx/core` 0.1.60 lags the docs — a construct the docs describe
+docs: the pinned `@tsrx/core` 0.1.63 lags the docs — a construct the docs describe
 may not parse yet (`compiler.ts`'s `newerGrammarHint` names the gap when it bites);
 and `&{}`/`&[]` lazy destructuring, real in core TSRX, is retired outright here
 (LT-052, TSRX018/020) — Le Truc's server composition needs eager snapshot
@@ -354,7 +354,7 @@ include both context-protocol primitives alongside `first`/`all`/`watch`/`on`/
 1. **Parse** via `core.ts`'s `parseModule` (the pinned `@tsrx/core`). A parse
    failure gets a newer-grammar hint (statement-form `switch`, `{html}`/
    `{text}`/`{ref}` keywords, setup `await`, `component`) naming what the
-   pinned 0.1.60 cannot parse.
+   pinned 0.1.63 cannot parse.
 2. **Compose imports** (`parseComposeImports`, `imports.ts`): named imports of
    sibling `.tsrx` modules → local name → repo-relative path map.
 3. **Plain imports** (`parsePlainImports`, `imports.ts`): every other top-level

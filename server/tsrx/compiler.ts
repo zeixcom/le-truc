@@ -1,7 +1,7 @@
 /**
  * TSRX compiler front end. Everything downstream consumes the component IR
  * produced here. `@tsrx/core` VALUES enter through the `core.ts` pin adapter
- * (pinned 0.1.60, ADR 0023 sub-design 2; LT-040) — a pin upgrade touches
+ * (pinned 0.1.63, ADR 0023 sub-design 2; LT-040) — a pin upgrade touches
  * only that file and core-shim.d.ts — and the IR type vocabulary shared by
  * the rest of the compiler lives in `ir.ts` (LT-039).
  *
@@ -99,7 +99,7 @@ const leadingDocComment = (source: string, before: number): string | null => {
  * When a parse fails, check the error position for signatures of the NEWER
  * TSRX grammar (statement-form `switch` in templates, the `{html …}`,
  * `{text …}`, `{ref …}` keywords, setup `await`, `component` declarations) —
- * constructs the pinned @tsrx/core 0.1.60 cannot parse at all. The hint
+ * constructs the pinned @tsrx/core 0.1.63 cannot parse at all. The hint
  * turns a bare "Unexpected token" into an actionable diagnosis (pin
  * upgrades are reviewed changes, ADR 0023 sub-design 2).
  */
@@ -122,7 +122,7 @@ const newerGrammarHint = (source: string, error: unknown): string => {
 	]
 	for (const [pattern, what] of signatures)
 		if (pattern.test(around))
-			return ` — ${what} is newer TSRX grammar than @tsrx/core 0.1.60 (the latest published release; the tsrx.dev docs track upstream unreleased grammar — see ADR 0023 sub-design 2)`
+			return ` — ${what} is newer TSRX grammar than @tsrx/core 0.1.63 (the latest published release; the tsrx.dev docs track upstream unreleased grammar — see ADR 0023 sub-design 2)`
 	return ''
 }
 

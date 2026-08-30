@@ -3,7 +3,7 @@
  *
  * The package's main entry ships no usable types for our surface (its
  * `types` field points at a `.js` file), and ADR 0023 pins `@tsrx/core` at
- * 0.1.60 behind a single emitter module (`server/tsrx/compiler.ts`). This
+ * 0.1.63 behind a single emitter module (`server/tsrx/compiler.ts`). This
  * shim is that boundary's type side: it declares exactly the functions the
  * compiler uses, over the loose `TsrxNode` structural type, so a pin
  * upgrade only ever touches `compiler.ts` and this file.
