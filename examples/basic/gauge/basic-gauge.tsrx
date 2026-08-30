@@ -81,7 +81,21 @@ export function BasicGauge(
 		value,
 		label = 'Value:',
 		thresholds = '[]',
-	}: { value: number; label?: string; thresholds?: string },
+		labelId = 'basic-gauge-label',
+	}: {
+		value: number
+		label?: string
+		thresholds?: string
+		/**
+		 * The `id` wiring the label `<p>` to the `<meter>`'s
+		 * `aria-labelledby` (LT-131). An `id` is unique per DOCUMENT, so it
+		 * cannot be a constant in a template that may be instantiated more
+		 * than once — the default is correct only for a single instance on
+		 * a page. Whoever instantiates the component owns the value, the
+		 * same ownership the data account gives compose-site discriminators.
+		 */
+		labelId?: string
+	},
 )
 	@{
 		const meter = first(
@@ -112,11 +126,11 @@ export function BasicGauge(
 					'--basic-gauge-degree': qualification.get().degree,
 				})}
 			>
-				<p id="basic-gauge-label">{label}</p>
+				<p id={labelId}>{label}</p>
 				<meter
 					class="visually-hidden"
 					value={() => host.value}
-					aria-labelledby="basic-gauge-label"
+					aria-labelledby={labelId}
 				></meter>
 				<BasicNumber
 					{value}

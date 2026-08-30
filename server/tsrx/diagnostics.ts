@@ -51,6 +51,8 @@ export type DiagnosticCode =
 	| 'TSRX038' // duplicate static id across compose sites (LT-090)
 	| 'TSRX039' // Parser-exposed prop whose value is also rendered into an owned site (LT-122)
 	| 'TSRX040' // required first() whose only match sits in a branch that may not render (LT-123)
+	| 'TSRX041' // two first() names resolve to the same element (LT-132)
+	| 'TSRX042' // a static id in a template duplicates once the component is instantiated twice (LT-131)
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -70,6 +72,21 @@ const error = (
 	line === undefined
 		? { code, severity: 'error', message }
 		: { code, severity: 'error', message, line }
+
+/**
+ * `basic-gauge-label` → `basicGaugeLabelId`: a plausible server-arg name for
+ * an id the author has to lift out of the template (LT-131). Only used to
+ * make TSRX042's fix-it concrete — the author is free to pick another name.
+ */
+const sanitizeArgName = (id: string): string => {
+	const camel = id
+		.replace(/[^A-Za-z0-9]+(.)?/g, (_, c: string | undefined) =>
+			c ? c.toUpperCase() : '',
+		)
+		.replace(/^[0-9]+/, '')
+	const base = camel === '' ? 'element' : camel
+	return /id$/i.test(base) ? base : `${base}Id`
+}
 
 const warning = (
 	code: DiagnosticCode,
@@ -609,6 +626,57 @@ export const diagnostic = {
 		error(
 			'TSRX026',
 			`\`first('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, or uses selector syntax this compiler cannot verify structurally — supported: a tag plus any combination of \`.class\`, \`#id\`, \`[attr]\`/\`[attr="value"]\`, and comma-separated lists. Adjust the selector to match a real, statically-addressable element.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A STATIC `id` attribute in a template (LT-131). An `id` is unique per
+	 * DOCUMENT, but a template is a per-INSTANCE thing: the moment a page
+	 * places the component twice, the constant renders twice and every
+	 * `aria-labelledby`/`aria-describedby`/`<label for>` pointing at it
+	 * resolves to the FIRST instance — invalid HTML and, when it is an
+	 * `aria-*` wiring, a real accessibility defect.
+	 *
+	 * A warning, not an error: a single-instance component is legitimate,
+	 * and the compiler cannot know how many times a page will place it. The
+	 * fix is ownership, not generation — the compiler inventing an id would
+	 * make the server render non-deterministic and give the client nothing
+	 * stable to re-derive, so the id belongs to whoever instantiates the
+	 * component (TSRX-HOST-PROFILE § data account, bullet 3).
+	 */
+	staticIdInTemplate: (
+		source: string,
+		offset: number | undefined,
+		tag: string,
+		id: string,
+	) =>
+		warning(
+			'TSRX042',
+			`\`<${tag} id="${id}">\` is a constant \`id\` in a template — it duplicates the moment a page places this component twice, and any \`aria-labelledby\`/\`aria-describedby\`/\`<label for>\` pointing at it resolves to the FIRST instance. Take the id as a server arg with a default instead (\`{ ${sanitizeArgName(id)} = '${id}' }\`) and render it as \`id={${sanitizeArgName(id)}}\`, so whoever instantiates the component owns the value; wire every reference from that same arg.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * Two `first()` declarations resolve to the SAME element (LT-132).
+	 * Silent until now: the ref IR is a list, but every consumer reads it
+	 * with `.find(a => a.kind === 'ref')`, so only the first name ever
+	 * became a query — the generated client then declared one const and
+	 * referenced the other, which surfaced as a tsc error on GENERATED
+	 * code with nothing pointing back at the `.tsrx` line that caused it.
+	 * Two names for one element is a mistake, not a shorthand: an alias
+	 * would work mechanically (`addQuery` dedups by selector+cardinality)
+	 * but would leave the author believing they had addressed two things.
+	 */
+	firstSelectorDuplicate: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		selector: string,
+		existing: string,
+	) =>
+		error(
+			'TSRX041',
+			`\`first('${selector}', …)\` (bound to \`${name}\`) resolves to the same element as \`${existing}\` — two names for one element. Only one of them would become a query and the other would be undefined at runtime. Use \`${existing}\` in both places, or give the two elements distinguishing \`class\`/\`id\`/\`data-*\` attributes and address them separately.`,
 			lineOf(source, offset),
 		),
 

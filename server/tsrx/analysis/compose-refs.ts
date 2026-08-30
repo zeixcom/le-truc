@@ -98,10 +98,24 @@ export const resolveComposeRefs = (
 			)
 			continue
 		}
-		;(matches[0] as (typeof nodes)[number]).attrs.push({
-			kind: 'ref',
-			name: ref.name,
-		})
+		const target = matches[0] as (typeof nodes)[number]
+		// The compose-site half of LT-132: same IR limitation, same
+		// silence. `ref={}` made this shape unwritable; `first()` does
+		// not, so it needs the same check the raw path got.
+		const claimed = target.attrs.find(a => a.kind === 'ref')
+		if (claimed) {
+			diagnostics.push(
+				diagnostic.firstSelectorDuplicate(
+					component.source,
+					ref.offset,
+					ref.name,
+					ref.selector,
+					claimed.name,
+				),
+			)
+			continue
+		}
+		target.attrs.push({ kind: 'ref', name: ref.name })
 	}
 	return result
 }

@@ -101,7 +101,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | Module | Size | Role | Intra-package imports |
 | --- | ---: | --- | --- |
 | `index.ts` | 133 | Public API; `compileComponent` pipeline assembly; flat re-exports | analysis/plan, compiler, diagnostics, emit-client, emit-server, registry, spans |
-| `compiler.ts` | 1350 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
+| `compiler.ts` | 1375 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
 | `ir.ts` | 548 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
 | `core.ts` | 21 | The **only** `@tsrx/core` value-import leaf (`parseModule`, `isStyleElement`, `getStyleElementStylesheet`, `isTemplateForOfNode`, `isVoidElement`) | `@tsrx/core` (values) |
 | `walk.ts` | 102 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
@@ -114,18 +114,18 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `imports.ts` | 546 | Compose-import resolution + plain (non-`.tsrx`) import collection and placement | ast-utils, diagnostics, evaluability, ir (types), walk |
 | `analysis/plan.ts` | 606 | `ClientPlan`/`QueryPlan`/… types, `AnalysisContext` assembly, `analyzeClient` orchestration | ast-utils, diagnostics (type), evaluability, ir (types), registry (type), walk, analysis/{compose-refs,effects,harvest,loops,naming} |
 | `analysis/selectors.ts` | 590 | Pure selector engine: synthesis, structural uniqueness (branch-exclusivity counting), union/compose addressing, `enclosingIfOf`, `loopFor` | ir (types) |
-| `analysis/compose-refs.ts` | 107 | Registry-aware resolution of `first()` references addressing COMPOSED children (LT-127) — the second half of what `first-refs.ts` starts in the single-file front end | diagnostics, first-refs, ir (types), registry (type), analysis/selectors |
+| `analysis/compose-refs.ts` | 121 | Registry-aware resolution of `first()` references addressing COMPOSED children (LT-127) — the second half of what `first-refs.ts` starts in the single-file front end | diagnostics, first-refs, ir (types), registry (type), analysis/selectors |
 | `analysis/naming.ts` | 78 | `uniqueName`, `addQuery` (query table + name allocation) | ir (type), analysis/plan (type) |
 | `analysis/harvest.ts` | 773 | Passes 2+3: render sites, harvest-plan selection, `paramDomRead`/`substituteArgExpr`; shared signal-read AST predicates | ast-utils, diagnostics, evaluability, ir (types), analysis/plan (types), analysis/selectors |
 | `analysis/loops.ts` | 474 | Passes 1+1b: `each()` and `reconcile()` planning | ast-utils, diagnostics, evaluability, ir (types), analysis/harvest (`returnsNumber`), analysis/plan (types), analysis/selectors |
-| `analysis/effects.ts` | 1443 | Pass 4: document-ordered per-construct effect planning | ast-utils, diagnostics, ir (types), analysis/harvest (`lazyWatchSource`, `returnsNumber`), analysis/plan (types), analysis/selectors |
+| `analysis/effects.ts` | 1505 | Pass 4: document-ordered per-construct effect planning | ast-utils, diagnostics, ir (types), analysis/harvest (`lazyWatchSource`, `returnsNumber`), analysis/plan (types), analysis/selectors |
 | `emit-server.ts` | 925 | `ComponentIR` → server render module | ast-utils, core (`isVoidElement` value), evaluability, ir (types), registry (type), spans |
 | `emit-client.ts` | 694 | `ComponentIR` + `ClientPlan` → client factory module | analysis/plan (types), ast-utils, imports (`computeClientNeededNames`), ir (types), spans |
 | `spans.ts` | 239 | Generated↔source span recording + lookup (LT-011); also owns plain `reindent` (moved from `emit-server.ts` in the M7 dedup) | indent |
 | `indent.ts` | 134 | Template-literal-safe line classification for reindentation (LT-010) | — (leaf) |
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
-| `diagnostics.ts` | 884 | Diagnostic codes TSRX001–029, message factories | — (leaf) |
-| `first-refs.ts` | 415 | `collectMatchingElements`/`shareExclusiveIf`/`matchesAuthoredSelectorOn` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}`; `namesCustomElementTag` is the compose-deferral test (LT-127); also `refBranchGuard`/`inOptionalBranch`, the ref-presence half of the fold rule (LT-118, § 5.4) | ir (types) |
+| `diagnostics.ts` | 952 | Diagnostic codes TSRX001–042, message factories | — (leaf) |
+| `first-refs.ts` | 446 | `collectMatchingElements`/`shareExclusiveIf`/`matchesAuthoredSelectorOn` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}`; `namesCustomElementTag` is the compose-deferral test (LT-127); also `refBranchGuard`/`inOptionalBranch`, the ref-presence half of the fold rule (LT-118, § 5.4), and `reportStaticIds` (TSRX042, LT-131) | ir (types) |
 | `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
 | `runtime.ts` | 366 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
@@ -877,6 +877,56 @@ still open:
   it existed only because a composed `ref={}` declared a name with no
   `const`, and a `first()` name is an ordinary setup declaration the gate
   already knows.
+- **Two `first()` names resolving to one element is TSRX041 (LT-132).**
+  Silent until now, and silently WRONG: the ref IR is a list, but every
+  consumer reads it with `.find(a => a.kind === 'ref')`, so only the first
+  name ever became a query. The generated client declared one const and
+  referenced the other, which surfaced as a tsc error on GENERATED code
+  with nothing pointing back at the `.tsrx` line. Checked where the ref is
+  attached — `compiler.ts`'s `elementRefs` loop for raw elements,
+  `analysis/compose-refs.ts` for compose sites. An alias would have worked
+  mechanically (`addQuery` dedups by selector+cardinality) but would leave
+  the author believing they had addressed two things.
+- **An element the author addressed with `first()` is exempt from the
+  one-root-per-branch limit (LT-130).** The limit exists because a branch
+  ROOT with no ref is addressed by a SYNTHESIZED selector standing in for
+  "whichever branch rendered", and that selector resolves to one element
+  per branch. An element carrying its own `first()` reference has its own
+  query and its own `if (ref) { … }` presence guard — exactly what it would
+  have outside the branch — so it never competes for that single root.
+  `handleOptionalBranch` now counts only UNADDRESSED constructed roots
+  toward the limit and emits each ref-addressed sibling as its own
+  `'guarded'` effect; bare client-only statements stay with the primary,
+  since they are guarded by "did this branch render", which the primary's
+  presence already answers. `handleIfEffects` gained the matching exemption
+  plus a new union precondition: a branch with more than ONE element root
+  can never be union-addressed even with identical construct signatures,
+  because the union query resolves to a single element per branch and the
+  siblings would go unbound. This is what let `form-spinbutton` restore its
+  twin's markup byte-for-byte — two spans when the zero-state affordance is
+  opted into, a bare `+` when it is not.
+- **A constant `id` in a template is TSRX042 (LT-131).** A template is
+  per-INSTANCE; an `id` is per-DOCUMENT. `basic-gauge` rendered
+  `<p id="basic-gauge-label">` wired to `<meter aria-labelledby=…>`, and
+  its demo page places three instances — three duplicate ids, three
+  `aria-labelledby` references all resolving to the first instance's label.
+  Invalid HTML and a real accessibility defect, hidden only because the
+  hand-authored page had drifted from the template (the same drift that
+  masked two latent bugs in LT-118). **The fix is ownership, not
+  generation:** a compiler-invented id (counter, hash) would make the
+  server render non-deterministic across pages and give the client nothing
+  stable to re-derive, so the id belongs to whoever instantiates the
+  component — the data account's bullet 3 position on instance
+  discriminators. `basic-gauge`/`basic-hello` take it as a server arg with
+  a documented default and wire every reference from that one arg (one
+  value, two sites, the SAME channel — not the TSRX039 shape).
+  `form-colorgraph`'s `id="color-error"` was referenced by nothing and is
+  simply gone. A warning, not an error: one instance on a page is
+  legitimate, and the compiler cannot know how many a page will place.
+  Note the interaction with `first()`: lifting an id out of the template
+  means a `first('#subject')` selector no longer matches structurally
+  (only `kind: 'static'` attrs are matchable), so such selectors must move
+  to another discriminator — `basic-hello`'s became `first('input', …)`.
 - **Two form-associated compile-time guards, both preemptive of an existing
   runtime failure (LT-058, LT-059, CHECKLIST §7).** `formAssociated()`/
   `formAssociatedCheckbox()` (`src/extensions/form.ts`) install a fixed set

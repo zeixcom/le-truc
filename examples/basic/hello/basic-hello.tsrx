@@ -35,22 +35,40 @@ declare global {
  *
  * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-hello} Interactive preview and usage examples
  **/
-export function BasicHello({ subject = 'World' }: { subject?: string })
+export function BasicHello(
+	{
+		subject = 'World',
+		subjectId = 'subject',
+	}: {
+		subject?: string
+		/**
+		 * The `id` wiring `<label for>`, the `<input>`, and `<output for>`
+		 * together (LT-131). Per-DOCUMENT unique, so it belongs to whoever
+		 * places the component, not to the template.
+		 */
+		subjectId?: string
+	},
+)
 	@{
-		const input = first('#subject', 'subject input')
+		// LT-131: the id is a server arg, so a page placing two
+		// <basic-hello> gets two distinct label/input/output wirings.
+		// The `first()` selector must not name it any more — it is no
+		// longer a static attr the compiler can match structurally, and
+		// the single <input> is unambiguous on its own.
+		const input = first('input', 'subject input')
 		expose({ subject: asString('World') })
 
 		<>
 			<basic-hello {subject}>
-				<label for="subject">Your name</label><br />
+				<label for={subjectId}>Your name</label><br />
 				<input
-					id="subject"
+					id={subjectId}
 					name="subject"
 					type="text"
 					autocomplete="given-name"
 					onInput={() => ({ subject: input.value || 'World' })}
 				/>
-				<p>Hello, <output for="subject">{host.subject}</output>!</p>
+				<p>Hello, <output for={subjectId}>{host.subject}</output>!</p>
 			</basic-hello>
 
 			<style>

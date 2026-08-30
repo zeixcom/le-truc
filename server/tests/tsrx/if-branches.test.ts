@@ -260,3 +260,125 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		expect(elseHtml).not.toContain('class="cta"')
 	})
 })
+
+describe('two ref-addressed elements in one @if branch (LT-130)', () => {
+	// A separate fixture from `wrap` above: these need `first()` consts in
+	// setup, which is the whole point — an element the author addressed
+	// explicitly does not need the branch's synthesized union selector.
+	const withRefs = (setup: string, template: string): string =>
+		`export function C({ big, text }: { big?: boolean; text?: string })
+@{
+${setup}
+	expose({ note: asString('') })
+	<>
+		<c-el>
+			${template}
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}
+import { asString } from '@zeix/le-truc'`
+
+	const compileRefs = (setup: string, template: string) =>
+		compileComponent(withRefs(setup, template), 'c.tsrx', new Set(['c-el']))
+
+	test('each keeps its own optional query and its own existence guard', () => {
+		const { component, diagnostics } = compileRefs(
+			`	const zeroSpan = first('span.zero')
+	const otherSpan = first('span.other')`,
+			`@if (big) {
+				<>
+					<span class="zero" hidden={() => host.note === 'x'}>{text}</span>
+					<span class="other" hidden={() => Boolean(zeroSpan)}>+</span>
+				</>
+			} @else {
+				<>+</>
+			}`,
+		)
+		// The exact shape LT-118 could not express: two elements in one
+		// branch, each with its own client constructs and its own `first()`.
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		const code = component?.clientCode ?? ''
+		expect(maybeQueries(code)).toEqual(
+			expect.arrayContaining(['span.zero', 'span.other']),
+		)
+		const guards = guardBodies(code)
+		const zeroGuard = guards.find(g => g.includes('zeroSpan,'))
+		const otherGuard = guards.find(g => g.includes('otherSpan,'))
+		expect(zeroGuard).toBeDefined()
+		expect(otherGuard).toBeDefined()
+		// Separate guards, not one block covering both — each span is
+		// addressed on its own, exactly as it would be outside the branch.
+		expect(zeroGuard).not.toBe(otherGuard)
+		expect(zeroGuard).not.toContain('otherSpan')
+	})
+
+	test('the server renders both spans in the taken branch and neither in the other', async () => {
+		const { component, diagnostics } = compileRefs(
+			`	const zeroSpan = first('span.zero')
+	const otherSpan = first('span.other')`,
+			`@if (big) {
+				<>
+					<span class="zero" hidden={() => host.note === 'x'}>{text}</span>
+					<span class="other" hidden={() => Boolean(zeroSpan)}>+</span>
+				</>
+			} @else {
+				<>+</>
+			}`,
+		)
+		if (!component)
+			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+		const out = path.join(ROOT, 'server/generated/tsrx', 'c-el.server.ts')
+		fs.mkdirSync(path.dirname(out), { recursive: true })
+		fs.writeFileSync(out, component.serverCode)
+		const mod = (await import(`${out}?lt130`)) as {
+			renderC: (args: Record<string, unknown>) => string
+		}
+		const taken = mod.renderC({ big: true, text: 'Add to Cart' })
+		expect(taken).toContain('class="zero"')
+		expect(taken).toContain('class="other"')
+		const notTaken = mod.renderC({ big: false, text: 'Add to Cart' })
+		expect(notTaken).not.toContain('class="zero"')
+		expect(notTaken).not.toContain('class="other"')
+		expect(notTaken).toContain('+')
+	})
+
+	test('two UNADDRESSED constructed elements in one branch stay rejected', () => {
+		const { diagnostics } = compileRefs(
+			'',
+			`@if (big) {
+				<>
+					<span class="zero" hidden={() => host.note === 'x'}>{text}</span>
+					<span class="other" hidden={() => host.note === 'y'}>+</span>
+				</>
+			} @else {
+				<>+</>
+			}`,
+		)
+		// The one-root limit is about the SYNTHESIZED branch-root selector,
+		// which addresses a single root per branch. Nothing about LT-130
+		// weakens it for elements the author did not address.
+		expect(
+			diagnostics.some(
+				d =>
+					d.severity === 'error' &&
+					d.message.includes('Multiple addressable elements'),
+			),
+		).toBe(true)
+	})
+
+	test('one addressed + one unaddressed element in a branch is fine', () => {
+		const { diagnostics } = compileRefs(
+			`	const otherSpan = first('span.other')`,
+			`@if (big) {
+				<>
+					<span class="zero" hidden={() => host.note === 'x'}>{text}</span>
+					<span class="other" hidden={() => Boolean(otherSpan)}>+</span>
+				</>
+			} @else {
+				<>+</>
+			}`,
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+	})
+})

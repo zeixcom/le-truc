@@ -293,6 +293,37 @@ export const reportDuplicatedChannels = (
 }
 
 /**
+ * TSRX042 (LT-131): every element in the template carrying a STATIC `id`.
+ * A template is per-INSTANCE; an `id` is per-DOCUMENT. The constant is
+ * correct for exactly one instance on a page and silently wrong for the
+ * second — including the root element, which is the host itself.
+ *
+ * Only `kind: 'static'` attrs are reported: an `id={expr}` is already the
+ * shape this diagnostic asks for, whatever the expression turns out to be
+ * (the compiler cannot and should not judge whether the author's value is
+ * unique per instance — that is the instantiator's contract).
+ */
+export const reportStaticIds = (
+	root: TemplateNode,
+	source: string,
+	diagnostics: CompileDiagnostic[],
+): void => {
+	walkTemplate(root, node => {
+		if (node.kind !== 'element') return
+		for (const attr of node.attrs)
+			if (attr.kind === 'static' && attr.name === 'id' && attr.value)
+				diagnostics.push(
+					diagnostic.staticIdInTemplate(
+						source,
+						node.node.start,
+						node.tag,
+						attr.value,
+					),
+				)
+	})
+}
+
+/**
  * Does every path to `target` from `root` pass through an `@if`
  * with no `@else` (LT-123)? Such an element is absent from the
  * rendered DOM whenever that branch didn't take, so a reference

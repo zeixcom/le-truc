@@ -516,6 +516,17 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		)
 
 	/**
+	 * An element's author-declared `first()` reference, if it has one. Since
+	 * LT-055 (raw) and LT-127 (composed) every `{kind:'ref'}` attr in the IR
+	 * is one — the compiler attaches them from `first()` calls and nothing
+	 * else does.
+	 */
+	const refOf = (el: ElementNode): { kind: 'ref'; name: string } | undefined =>
+		el.attrs.find(a => a.kind === 'ref') as
+			| { kind: 'ref'; name: string }
+			| undefined
+
+	/**
 	 * A single branch whose root may not exist at all — the DOM-derived
 	 * mirror of the hand-written `if (clearBtn) { … }` pattern. The root (if
 	 * it carries client constructs) is addressed with a non-throwing
@@ -560,17 +571,29 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				n.kind === 'client-stmt',
 		)
 		const constructedRoots = roots.filter(hasOwnConstruct)
-		if (constructedRoots.length > 1) {
+		// LT-130: an element the author addressed with `first()` carries its
+		// OWN query and its OWN presence guard — exactly as it would outside
+		// a branch — so it is not being union-addressed and does not compete
+		// for the branch's single addressable root. The one-root limit exists
+		// because a branch ROOT with no ref is addressed by a synthesized
+		// selector standing in for "whichever branch rendered"; only those
+		// count. `refOf` is total over ref kinds: since LT-055/LT-127 every
+		// `{kind:'ref'}` in the IR comes from an author's `first()` call.
+		const unaddressed = constructedRoots.filter(el => !refOf(el))
+		if (unaddressed.length > 1) {
 			diagnostics.push(
 				diagnostic.unsupported(
 					source,
 					atNode.node.start,
-					`Multiple addressable elements with client constructs inside one ${label} — only one root can be addressed; address the extra element through a hoisted const referenced from the first`,
+					`Multiple addressable elements with client constructs inside one ${label} — only one root can be addressed; give the extra element its own \`first()\` reference, or address it through a hoisted const referenced from the first`,
 				),
 			)
 			return
 		}
-		const primary = constructedRoots[0] ?? roots[0] ?? null
+		const primary = unaddressed[0] ?? constructedRoots[0] ?? roots[0] ?? null
+		// Every OTHER constructed root in this branch is ref-addressed (the
+		// filter above proved it) and gets its own guarded effect below.
+		const extras = constructedRoots.filter(el => el !== primary)
 		const hasConstructs =
 			clientStmts.length > 0 || (primary ? hasOwnConstruct(primary) : false)
 		if (!hasConstructs) return
@@ -595,9 +618,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			)
 			return
 		}
-		const refAttr = primary.attrs.find(a => a.kind === 'ref') as
-			| { kind: 'ref'; name: string }
-			| undefined
+		const refAttr = refOf(primary)
 		const query = addQuery(
 			refAttr?.name ?? sanitizeVarName(primary.tag),
 			resolved.selector,
@@ -618,6 +639,34 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			if (stmt === primary) emitConstructEffects(primary, query, guarded)
 		}
 		effects.push({ kind: 'guarded', query, effects: guarded })
+		// LT-130: each ref-addressed sibling in the same branch, on its own
+		// query and its own guard. Bare client-only statements stay with the
+		// primary — they are guarded by "did this branch render", which the
+		// primary's presence already answers; duplicating them under every
+		// sibling's guard would run them once per element.
+		for (const extra of extras) {
+			const extraResolved = resolve(extra)
+			if (!extraResolved.unique) {
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						source,
+						extra.node.start,
+						`No unique selector for the \`first()\`-addressed <${extra.tag}> inside ${label} — add a distinguishing static attribute`,
+					),
+				)
+				continue
+			}
+			const extraName = refOf(extra)?.name
+			if (!extraName) continue
+			const extraQuery = addQuery(extraName, extraResolved.selector, 'maybe')
+			const extraEffects: TopEffectPlan[] = []
+			emitConstructEffects(extra, extraQuery, extraEffects)
+			effects.push({
+				kind: 'guarded',
+				query: extraQuery,
+				effects: extraEffects,
+			})
+		}
 	}
 
 	/** A single-branch `@if` (no `@else`) — see `handleOptionalBranch`. */
@@ -731,13 +780,17 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			(n): n is TemplateNode & { kind: 'client-stmt' } =>
 				n.kind === 'client-stmt',
 		)
-		// Each branch may only carry ONE addressable element of its own —
+		// Each branch may only carry ONE UNADDRESSED element of its own —
 		// the union query addresses "whichever branch rendered", not
-		// multiple distinct siblings within a single branch.
+		// multiple distinct siblings within a single branch. An element the
+		// author addressed with `first()` has its own query and its own
+		// guard and is exempt (LT-130); a branch carrying one routes to
+		// per-branch addressing below, which is where those are emitted.
 		for (const branch of [node.then, node.alternate]) {
 			const constructedInBranch = branch
 				.filter(isElement)
 				.filter(hasOwnConstruct)
+				.filter(el => !refOf(el))
 			if (constructedInBranch.length > 1) {
 				diagnostics.push(
 					diagnostic.unsupported(
@@ -776,8 +829,17 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		const everyBranchHasElementRoot = [node.then, node.alternate].every(
 			branch => branch.some(isElement),
 		)
+		// A branch carrying MORE than one element root cannot be union-
+		// addressed even with matching signatures (LT-130): the union query
+		// resolves to a single element per branch, so the siblings would go
+		// unbound. Route those to per-branch addressing, which gives each
+		// `first()`-addressed element its own query.
+		const everyBranchHasOneElementRoot = [node.then, node.alternate].every(
+			branch => branch.filter(isElement).length === 1,
+		)
 		const unionCompatible =
 			everyBranchHasElementRoot &&
+			everyBranchHasOneElementRoot &&
 			signatures.length > 0 &&
 			signatures.every(s => s !== '' && s === signatures[0])
 		if (!unionCompatible) {

@@ -887,6 +887,71 @@ export function BasicParent({ title }: { title: string })
 		)
 	})
 
+	test('two first() names resolving to the same RAW element is TSRX041 (LT-132)', () => {
+		const source = `export function C({}: {})
+	@{
+		const a = first('input', 'a')
+		const b = first('input', 'b')
+		expose({})
+		on(host, 'click', () => { a.focus(); b.focus() })
+		<>
+			<c-el><input /></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		// Before LT-132 this compiled silently: `b` never became a query,
+		// and the generated client referenced an undeclared const — a tsc
+		// error on GENERATED code with nothing pointing at this line.
+		const dup = diagnostics.filter(d => d.code === 'TSRX041')
+		expect(dup).toHaveLength(1)
+		expect(dup[0]?.message).toContain('`a`')
+		expect(component).toBeNull()
+	})
+
+	test('two first() names resolving to the same COMPOSE site is TSRX041 (LT-132)', () => {
+		const childSource = `export function BasicChild({ label }: { label: string })
+	@{
+		expose({})
+		<>
+			<basic-child>{label}</basic-child>
+			<style>basic-child { display: block }</style>
+		</>
+	}`
+		const { component: child } = compileComponent(
+			childSource,
+			'examples/child/basic-child.tsrx',
+			new Set(),
+		)
+		if (!child) throw new Error('child must compile')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		const a = first('basic-child', 'a')
+		const b = first('basic-child', 'b')
+		expose({})
+		on(host, 'click', () => { a.focus(); b.focus() })
+		<>
+			<basic-parent><BasicChild label={title} /></basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		// `ref={}` made this shape unwritable; `first()` does not.
+		expect(diagnostics.filter(d => d.code === 'TSRX041')).toHaveLength(1)
+	})
+
 	test('an unmatched required `first()` on a custom-element tag is TSRX026 in the registry pass (LT-127)', () => {
 		const source = `export function C({}: {})
 	@{
@@ -1595,5 +1660,67 @@ describe('duplicate id across @try/@catch arms (CHECKLIST §8, TSRX035)', () => 
 		}`)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'TSRX035')).toBe(false)
+	})
+})
+
+describe('static ids in a template (TSRX042, LT-131)', () => {
+	const withBody = (body: string): string =>
+		`export function C({ label, labelId = 'c-label' }: { label?: string; labelId?: string })
+	@{
+		expose({})
+		<>
+			<c-el>
+				${body}
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('a constant id is a warning naming the server-arg fix', () => {
+		const { component, diagnostics } = compileComponent(
+			withBody(
+				`<p id="c-label">{label}</p>
+				<meter aria-labelledby="c-label"></meter>`,
+			),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		const warn = diagnostics.filter(d => d.code === 'TSRX042')
+		expect(warn).toHaveLength(1)
+		expect(warn[0]?.severity).toBe('warning')
+		// The fix-it names a concrete arg, not just the problem.
+		expect(warn[0]?.message).toContain("cLabelId = 'c-label'")
+		// A warning, not an error: one instance on a page is legitimate,
+		// and the compiler cannot know how many a page will place.
+		expect(component).not.toBeNull()
+	})
+
+	test('an id rendered from a server arg is silent — the shape the warning asks for', () => {
+		const { diagnostics } = compileComponent(
+			withBody(
+				`<p id={labelId}>{label}</p>
+				<meter aria-labelledby={labelId}></meter>`,
+			),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX042')).toEqual([])
+	})
+
+	test('the ROOT element is checked too — the root is the host', () => {
+		const source = `export function C({}: {})
+	@{
+		expose({})
+		<>
+			<c-el id="the-one"><input /></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX042')).toHaveLength(1)
 	})
 })

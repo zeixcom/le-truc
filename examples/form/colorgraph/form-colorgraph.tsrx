@@ -468,7 +468,10 @@ export function FormColorgraph(
 					})}
 				></span>
 			</div>
-			<p class="error" aria-live="assertive" id="color-error">{host.validationMessage}</p>
+			{/* No `id` here (LT-131): nothing references it, and a constant
+			    one would duplicate as soon as a page places two colorgraphs.
+			    `.error` is what addresses this element. */}
+			<p class="error" aria-live="assertive">{host.validationMessage}</p>
 			<FormSpinbutton
 				class="lightness"
 				name=""

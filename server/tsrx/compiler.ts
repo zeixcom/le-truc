@@ -42,6 +42,7 @@ import {
 	inOptionalBranch,
 	namesCustomElementTag,
 	reportDuplicatedChannels,
+	reportStaticIds,
 	shareExclusiveIf,
 } from './first-refs'
 import {
@@ -1154,6 +1155,25 @@ export const compileSource = (
 				)
 				continue
 			}
+			// Two `first()` names resolving to the same element is a
+			// mistake the IR cannot represent (LT-132): `attrs` is a
+			// list, but every consumer reads the ref with `.find()`,
+			// so the second name would silently never become a query.
+			const claimed = elements
+				.flatMap(el => el.attrs)
+				.find(a => a.kind === 'ref')
+			if (claimed) {
+				ctx.diagnostics.push(
+					diagnostic.firstSelectorDuplicate(
+						source,
+						node.start,
+						refName,
+						selectorText,
+						claimed.name,
+					),
+				)
+				continue
+			}
 			for (const element of elements)
 				element.attrs.push({ kind: 'ref', name: refName })
 			refReasons.set(refName, reasonText as string)
@@ -1162,6 +1182,11 @@ export const compileSource = (
 		componentOptionalRefs = new Set(
 			[...elementRefs].filter(([, entry]) => entry.maybe).map(([name]) => name),
 		)
+
+		// TSRX042 (LT-131): a constant `id` in a template duplicates as
+		// soon as a page places the component twice. Runs here, beside
+		// TSRX039, for the same reason — the walk needs `root`.
+		reportStaticIds(root, source, ctx.diagnostics)
 
 		// TSRX039 (LT-122): one value, two channels. Runs here
 		// rather than during lowering because the check has to

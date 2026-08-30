@@ -14,11 +14,16 @@
  * the full control set shows and the increment button reads "+" (its
  * `.other` span).
  *
- * It needs NO `@if`/`@else` structural swap, which is what the task
- * originally assumed: the hand-written twin never swapped structures
- * either, it toggled four `hidden` properties over always-present
- * elements. So the spans are a single-branch `@if (zero)` opt-in (already
- * supported) and everything else is a `hidden` fold. `zero` itself is
+ * It needs NO `@if`/`@else` structural swap for the CONTROLS, which is what
+ * the task originally assumed: the hand-written twin never swapped those
+ * structures either, it toggled four `hidden` properties over always-present
+ * elements. Everything outside the increment button is therefore a `hidden`
+ * fold. The two spans ARE an `@if (zero)`/`@else` pair, restoring the twin's
+ * markup exactly — both spans when the affordance is opted into, a bare `+`
+ * when it is not. That shape needed LT-130: two elements in one branch, each
+ * with its own `first()` reference and its own guard, which the one-root-per-
+ * branch limit rejected until it learned to count only UNADDRESSED roots.
+ * `zero` itself is
  * HARVESTED from its own `.zero` span (`zero.textContent`, exactly as the
  * twin read it) rather than parsed from a host attribute: the span is the
  * value's one channel — the arg renders it, the site seeds the prop at
@@ -309,12 +314,16 @@ export function FormSpinbutton(
 						onClick={(e: MouseEvent) => host.stepUp(e.shiftKey)}
 					>
 						@if (zero) {
-							<span class="zero" hidden={() => host.value !== 0}>{zero}</span>
+							<>
+								<span class="zero" hidden={() => host.value !== 0}>{zero}</span>
+								<span
+									class="other"
+									hidden={() => Boolean(zeroSpan) && host.value === 0}
+								>+</span>
+							</>
+						} @else {
+							<>+</>
 						}
-						<span
-							class="other"
-							hidden={() => Boolean(zeroSpan) && host.value === 0}
-						>+</span>
 					</button>
 				</div>
 			</fieldset>
