@@ -237,16 +237,13 @@ test.describe('form-combobox component', () => {
 			// Wait for options to load
 			await page.waitForTimeout(50)
 
-			// Type something that won't match any options. The compiled
-			// component dropped the twin's options.length > 0 visibility gate
-			// (documented in form-combobox.tsrx) — the popup stays open with
-			// every option filtered out
+			// Type something that won't match any options
 			await textbox.fill('zzz_no_match_xyz')
-			await expect(textbox).toHaveAttribute('aria-expanded', 'true')
-			const visibleOptions = listboxElement.locator(
-				'button[role="option"]:not([hidden])',
-			)
-			await expect(visibleOptions).toHaveCount(0)
+
+			// Popup should be hidden (no visible options) — restored in LT-119
+			// via form-listbox's `visibleOptions` public prop
+			await expect(listboxElement).toBeHidden()
+			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
 		})
 
 		test('hides popup on Escape key', async ({ page }) => {

@@ -308,6 +308,23 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	}
 	recordSites(component.root, false)
 
+	// A signal consumed only by a CLIENT-ONLY setup statement (LT-119:
+	// `watch(() => showPopup.get() && listbox.visibleOptions.length > 0,
+	// bindAttribute(popup, 'hidden'))`) reaches the DOM without a template
+	// render site. It gets the same credit as LT-036's map/computed thunks —
+	// not dead, never a harvest SITE, seeds by initializer reuse — and the
+	// soundness argument is if anything stronger: `clientSetup` statements
+	// exist ONLY in the generated client, so the server rendered nothing
+	// from this signal and there is no server output for the reused
+	// initializer to disagree with. Reaching the DOM this way is the only
+	// route open to a predicate over a COMPOSED CHILD's public prop, which
+	// no server fold can resolve (TSRX034) — see the popup gate in
+	// form-combobox.tsrx.
+	for (const stmt of component.clientSetup)
+		for (const signal of component.signals)
+			if (containsSignalGet(stmt.node, signal.name))
+				thunkRendered.add(signal.name)
+
 	// --- Pass 3: harvest plans ------------------------------------------------
 
 	/**

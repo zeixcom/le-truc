@@ -110,9 +110,7 @@ export function FormInplaceEdit(
 				onDblclick={() => {
 					if (host.disabled) return
 					host.editing = true
-					const editInput = textbox.querySelector('input')
-					editInput?.focus()
-					editInput?.select()
+					textbox.focusControl()
 				}}
 			>{() => host.value}</span>
 			<div class="edit" hidden={() => !host.editing}>
@@ -132,9 +130,7 @@ export function FormInplaceEdit(
 						host.editing = false;
 					} else {
 						host.editing = true;
-						const editInput = textbox.querySelector('input');
-						editInput?.focus();
-						editInput?.select();
+						textbox.focusControl();
 					}
 				}}
 			>{() => (host.editing ? '✓' : '✎')}</button>

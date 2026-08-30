@@ -21,13 +21,13 @@
  *   to `host.filter` regardless of whether its own input UI is rendered,
  *   so this composes cleanly.
  *
- * Dropped from the hand-written version: the `isExpanded` popup-visibility
- * memo also checked `listbox.options.length > 0` (don't show an empty
- * popup) — form-listbox.tsrx (LT-0xx migration) doesn't expose a live
- * `options` list of visible buttons, so visibility here is driven by
- * `showPopup` alone.
+ * The twin's `isExpanded` popup-visibility memo also checked
+ * `listbox.options.length > 0` (don't show an empty popup). Restored in
+ * LT-119 through form-listbox's `visibleOptions` public prop — see the two
+ * client-only `watch` statements below for why it is not a reactive JSX
+ * attribute.
  */
-import { createCell, createState, asString, defineMethod } from '@zeix/le-truc'
+import { bindAttribute, createCell, createState, asString, defineMethod } from '@zeix/le-truc'
 import { FormListbox } from '../listbox/form-listbox.tsrx'
 
 export type FormComboboxOption = {
@@ -86,6 +86,7 @@ export function FormCombobox(
 	const showPopup = createState(false);
 	const textbox = first('input', 'combobox input');
 	const listbox = first('form-listbox', 'combobox listbox');
+	const popup = first('.popup', 'listbox popup wrapper');
 	// Children-are-data (LT-112/113): the description is a writable prop
 	// (createCell) whose client-side seed is harvested from the owned
 	// paragraph's text content; consumers compose through the public prop.
@@ -106,6 +107,35 @@ export function FormCombobox(
 		}),
 	});
 
+	// LT-119: the twin's popup-visibility memo also required at least one
+	// matching option (`options.length > 0`) — restored by reading the
+	// composed listbox's public `visibleOptions` prop instead of counting the
+	// option buttons it owns. Both the popup's `hidden` and the combobox's
+	// own `aria-expanded` go through the one predicate, as they did in the
+	// twin.
+	//
+	// Deliberately CLIENT-ONLY setup statements (the LT-069/LT-070
+	// form-inplace-edit precedent) rather than reactive JSX attributes: the
+	// predicate reads a ref, so the server cannot fold it, and as attribute
+	// thunks both attributes would be silently OMITTED from the initial HTML
+	// (TSRX034) — which for `hidden` means serving the popup OPEN until
+	// hydration. The template carries the closed state statically instead
+	// (`hidden`, `aria-expanded="false"`), which is what the server rendered
+	// anyway with `showPopup` seeded false, and these two watches take over
+	// from the first binding pass.
+	//
+	// The predicate is repeated rather than hoisted into a shared const: the
+	// signal-render credit above is established per STATEMENT, and a const
+	// would put `showPopup.get()` one level of indirection away from both.
+	watch(
+		() => String(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
+		bindAttribute(textbox, 'aria-expanded'),
+	);
+	watch(
+		() => !(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
+		bindAttribute(popup, 'hidden'),
+	);
+
 	<>
 		<form-combobox {name} {value}>
 			<label for={inputId}>{label}</label>
@@ -116,7 +146,7 @@ export function FormCombobox(
 					value={() => host.value}
 					autocomplete="off"
 					role="combobox"
-					aria-expanded={() => String(showPopup.get())}
+					aria-expanded="false"
 					aria-describedby={description ? descriptionId : null}
 					onInput={() => {
 						host.value = textbox.value;
@@ -134,8 +164,7 @@ export function FormCombobox(
 					onKeydown={(e: KeyboardEvent) => {
 						if (e.key !== 'ArrowDown') return;
 						if (e.altKey) showPopup.set(true);
-						if (showPopup.get())
-							(listbox.querySelector('button[role="option"]') as HTMLButtonElement | null)?.focus();
+						if (showPopup.get()) listbox.focusFirstOption();
 					}}
 				/>
 				@if (clearable) {
@@ -150,7 +179,7 @@ export function FormCombobox(
 			</div>
 			<div
 				class="popup"
-				hidden={() => !showPopup.get()}
+				hidden
 				onChange={() => {
 					textbox.value = listbox.value;
 					host.value = listbox.value;

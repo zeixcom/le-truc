@@ -50,6 +50,10 @@ A general-purpose wrapper for `input` and `textarea` elements, with built-in val
 - `clear`
 - `() => void`
 - Method to clear the textbox and emit input/change events
+---
+- `focusControl`
+- `() => void`
+- Moves focus to the owned `input`/`textarea` and selects its content
 {% /table %}
 
 #### Descendant Elements

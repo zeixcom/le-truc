@@ -36,7 +36,7 @@
  * two children can each be their own single-element `@if` root.
  */
 
-import { asString } from '@zeix/le-truc'
+import { asString, defineMethod } from '@zeix/le-truc'
 
 export const config = { formAssociated: true }
 
@@ -50,6 +50,19 @@ export type FormListboxProps = {
 	value: string
 	/** Filter string used to narrow displayed options. */
 	filter: string
+	/**
+	 * The options currently passing the filter, in document order (read-only,
+	 * derived). Composing parents gate their own UI on this — form-combobox
+	 * hides its popup when the list is empty — instead of reaching into the
+	 * option buttons this component owns (LT-119).
+	 */
+	readonly visibleOptions: FormListboxOption[]
+	/**
+	 * Moves focus to the first option still passing the filter, if any. The
+	 * public entry point for a composing parent's "open the popup and step
+	 * into it" key handler (LT-120).
+	 */
+	focusFirstOption: () => void
 }
 
 declare global {
@@ -86,6 +99,27 @@ export function FormListbox(
 	expose({
 		value: asString(''),
 		filter: asString(''),
+		// Children-are-data (LT-119): the rendered option buttons ARE the
+		// option list, so the public projection is read back off them
+		// (`data-value`/`data-label`, the same pair `@for` writes) rather
+		// than off the server `options` arg, which the client half never
+		// receives. Filtering repeats the per-option `hidden` predicate
+		// below; both read `host.filter`, so both stay live.
+		visibleOptions: () =>
+			all('button[role="option"]')
+				.get()
+				.map((el: HTMLElement) => ({
+					value: el.getAttribute('data-value') ?? '',
+					label: el.getAttribute('data-label') ?? '',
+				}))
+				.filter((option: FormListboxOption) =>
+					option.label
+						.toLowerCase()
+						.includes(host.filter.toLowerCase()),
+				),
+		focusFirstOption: defineMethod(() => {
+			all('button[role="option"]:not([hidden])').get()[0]?.focus();
+		}),
 	});
 
 	<>

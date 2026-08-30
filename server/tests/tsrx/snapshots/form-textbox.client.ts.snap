@@ -15,6 +15,14 @@ export type FormTextboxProps = {
 	description: string
 	/** Method to clear the textbox and emit input/change events */
 	clear: () => void
+	/**
+	 * Moves focus to the owned text control and selects its content — the
+	 * public entry point for a composing parent that wants the user editing
+	 * immediately (form-inplace-edit's toggle-to-edit paths), instead of
+	 * reaching past the boundary for the `<input>`/`<textarea>` this
+	 * component owns (LT-120).
+	 */
+	focusControl: () => void
 }
 
 declare global {
@@ -68,6 +76,10 @@ export default defineComponent<FormTextboxProps>(
 				input.dispatchEvent(new Event('input', { bubbles: true }))
 				input.dispatchEvent(new Event('change', { bubbles: true }))
 				input.focus()
+			}),
+			focusControl: defineMethod(() => {
+				input.focus()
+				input.select()
 			}),
 		})
 		watch(() => host.value, bindProperty(input, 'value'))

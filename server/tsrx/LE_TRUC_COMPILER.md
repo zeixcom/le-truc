@@ -450,6 +450,18 @@ Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
   harvests `host.textContent` through the literal `'host'` query name (never
   a query-table entry; `usedNames` reserves it, and `emit-client.ts`'s query
   loop skips it defensively). No route at all → TSRX004.
+  - **Client-only-setup render credit** (LT-119). A signal read by a
+    `clientSetup` statement is credited in `thunkRendered` alongside
+    LT-036's map/computed thunks: not dead, never a harvest SITE, seeds by
+    initializer reuse. Sounder than the LT-036 case rather than weaker —
+    `clientSetup` exists only in the generated client, so the server
+    rendered nothing from the signal and there is no server output for the
+    reused initializer to disagree with. The credit is per STATEMENT and
+    does not follow plain-const indirection, so the signal read must appear
+    in the statement itself. This is the only route open to a predicate
+    over a COMPOSED CHILD's public prop, which no server fold can resolve
+    (as a reactive JSX attribute it would draw TSRX034 and be omitted from
+    the served HTML) — see form-combobox.tsrx's popup-visibility gate.
 - **Pass 4 — top-level effects** (`analysis/effects.ts`, `emitTopEffects` walk,
   document order):
   - **The arg-and-prop coincidence** (LT-122): an expression naming BOTH

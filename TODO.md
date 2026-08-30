@@ -1,28 +1,31 @@
 # TODO
 
-## Sequencing (architect, 2026-08-30, after the LT-118 review; wave 1 updated after the LT-127 review)
+## Sequencing (architect, 2026-08-30, after the LT-118 review; waves 1 and 2 closed after the LT-130/132 and LT-119/120 reviews)
 
 Seventeen hand-written examples still await migration (LT-095, LT-096–LT-111), and the
 open compiler debt divides cleanly into "cheaper before those" and "cheaper after". The
 recommended order, and the reasoning that puts the compiler first:
 
-**Wave 1 — the addressing surface, before it multiplies. Two of three landed; LT-130 is
-what remains.** Every migration adds `first()` sites and compose sites, so a change to how
-elements are addressed costs more with each one landed. **LT-124** (landed 2026-08-30):
-class discriminators are token selectors, and the same commit canonicalized `#id` — the
-correctness fix, since LT-123's optional form had turned a selector mismatch from a thrown
-required-reason into a silent no-op. **LT-127** (landed 2026-08-30): composed-element
-`ref={}` retired, so composed and raw elements share one addressing mechanism. **LT-130
-(open)** — two ref-addressed elements in one `@if` branch — is the last of the three and
-should be done before wave 4: it is the limit that stopped LT-118 from reproducing its
-twin's markup exactly, LT-100 (`module-catalog`) wants it landed first, and it is a
-change to the same branch-addressing code LT-124 just touched. It does NOT block wave 2,
-which is corpus work that touches no addressing code.
+**Wave 1 — the addressing surface, before it multiplies. CLOSED 2026-08-30.** Every
+migration adds `first()` sites and compose sites, so a change to how elements are addressed
+costs more with each one landed. **LT-124**: class discriminators are token selectors, and
+the same commit canonicalized `#id` — the correctness fix, since LT-123's optional form had
+turned a selector mismatch from a thrown required-reason into a silent no-op. **LT-127**:
+composed-element `ref={}` retired, so composed and raw elements share one addressing
+mechanism. **LT-130/LT-131/LT-132** (`bf054a70`): two ref-addressed elements in one `@if`
+branch, per-instance template ids, and duplicate-`first()` detection. LT-100
+(`module-catalog`) is now unblocked.
 
-**Wave 2 — data-account debt on the corpus that is already migrated.** **LT-119** and
-**LT-120** close the LT-112/113 ownership sweep. Worth doing before the remaining
-migrations because the migrated corpus is the pattern the next seventeen are read against,
-and it currently contains two reach-ins the data account forbids.
+**Wave 2 — data-account debt on the corpus that is already migrated. CLOSED 2026-08-30.**
+**LT-119** and **LT-120** closed the LT-112/113 ownership sweep: the last two `querySelector`
+reach-ins are gone, replaced by `form-listbox.visibleOptions`/`focusFirstOption()` and
+`form-textbox.focusControl()`, and form-combobox's popup-visibility gate is restored. The
+migrated corpus is now clean under the data account, which matters because it is the pattern
+the remaining seventeen migrations get read against. One `querySelectorAll` survives in
+`module-tabgroup.tsrx` and is CORRECT — it queries the component's own `[role="tablist"]`,
+which bullet 2 explicitly permits; bullet 3 governs reaching into a COMPOSED CHILD's markup,
+not into your own. Two follow-ups fell out of the work
+(LT-135, LT-136), both DX warts behind loud failures, neither blocking. **Wave 3 is next.**
 
 **Wave 3 — diagnostic honesty, each small and independent.** **LT-129** (TSRX039's
 over-broad warning; no corpus component exercises the shape any more, so write the fixture
@@ -96,13 +99,28 @@ silently wrong rather than merely unfinished.
   **Skill:** le-truc-dev
   **Context:** `analysis/harvest.ts`'s `returnsNumber` recognises number LITERALS and conditionals over them only — a thunk reading a number-typed signal (`count.get()`) is not detected, so the coercion is skipped. Harmless while the only sink was `bindAttribute`; LT-116's dirty-flag widening makes `value` thunks on native controls lower to `bindProperty`, whose DOMString setter makes it reachable (`value={() => count.get()}` → generated client fails `check:tsrx`). No corpus source does this today, and LT-116's own tests pin only the literal/conditional shapes — so this is a latent gap with no current victim. **Fix:** consult the signal's `inferredType` for identifier `.get()` reads. Small, self-contained, blocking nothing; write the failing fixture first, since nothing in the corpus will fail for you.
 
-- [ ] LT-119: form-listbox `visibleOptions` readonly prop; restore form-combobox's popup-visibility gate (LT-112 escalation decision).
+- [x] LT-119: form-listbox `visibleOptions` readonly prop; restore form-combobox's popup-visibility gate (LT-112 escalation decision) — reviewed ✓
   **Skill:** le-truc-dev
-  **Context:** The twin hid the popup when zero options matched (`options.length > 0` in the visibility memo); the compiled listbox exposes no live visible-option state. Per the data account, add the missing child public prop — `visibleOptions` (readonly, derived from the filtered options list) on `form-listbox.tsrx` — and gate the combobox popup on it (compose through the declared interface; no reaching into the listbox's buttons). Re-flip the LT-092-flipped spec test to the original assertion. Small, self-contained; keep both specs green.
+  **Changed:** `examples/form/listbox/form-listbox.tsrx` (new `visibleOptions` readonly prop), `examples/form/combobox/form-combobox.tsrx` (popup gate + header note), `examples/form/combobox/form-combobox.spec.ts` (re-flipped assertion), `examples/form/listbox/form-listbox.md`, `server/tsrx/analysis/harvest.ts` (+18 lines), `server/tsrx/LE_TRUC_COMPILER.md`, `server/tests/tsrx/client-setup-credit.test.ts` (new).
+  **How:** `visibleOptions` is derived from the RENDERED option buttons (`all('button[role="option"]')` → `data-value`/`data-label`) filtered by `host.filter`, not from the server `options` arg the client half never receives — the children-are-data account applied to the listbox's own markup. The combobox gates both the popup's `hidden` and its own `aria-expanded` on `showPopup && visibleOptions.length > 0`, as the twin's single `isExpanded` memo did.
+  **Deviation (needs review):** the gate is TWO CLIENT-ONLY `watch` statements over statically-closed template attributes (`hidden`, `aria-expanded="false"`), not reactive JSX attributes. As attribute thunks the predicate reads a ref, so the server cannot fold it and TSRX034 fires — both attributes would be OMITTED from the served HTML, which for `hidden` means shipping the popup OPEN until hydration. Served output is byte-identical to HEAD either way. This required a compiler change: `analysis/harvest.ts` now credits a signal read by a `clientSetup` statement in `thunkRendered`, or `showPopup` draws TSRX004 ("never rendered"). Argued sound in the code comment and LE_TRUC_COMPILER.md — `clientSetup` exists only in the generated client, so the server rendered nothing for the reused initializer to disagree with.
+  **Check:** (a) the `thunkRendered` widening — is crediting every signal read by a client-only setup statement too loose, or is "consumed by a statement that only exists client-side" exactly the right line? (b) The credit is per STATEMENT and does not follow plain-const indirection, so the author must inline the predicate at each site (pinned by a test, and filed as LT-135). (c) `listbox.visibleOptions?.length ?? 0` guards `resolveDependencies`' documented timeout path, where effects run even though the child never upgraded.
+  **Review:** Approved, including the deviation. Verified the load-bearing claim rather than taking it: rendered `renderFormCombobox(...)` at HEAD and at this change — the served HTML is byte-identical, so the JSX→static move costs nothing on the wire. The deviation is *required*, not merely tolerable: REQUIREMENTS § Assumptions ("the initial server-rendered HTML is the correct initial UI state") rules out the JSX form, whose TSRX034 omission would serve the popup OPEN. And REQUIREMENTS § Accessibility ("example components must demonstrate correct ARIA patterns as the reference implementation") is why gating BOTH attributes was mandatory — a half-measure gating only `hidden` would have left `aria-expanded="true"` over a hidden popup in the corpus authors read as reference. (a) The `thunkRendered` widening is accepted: "consumed by a statement that exists only in the generated client" is the right line, and the soundness argument is genuinely stronger than LT-036's, since there is no server output for the reused initializer to contradict. Documented in LE_TRUC_COMPILER.md § Pass 3, which is the correct home — this is a harvest-pass rule, not an ADR-level decision. (b) Filed as LT-135, correctly scoped as a DX wart. (c) The `?.` guard is right: `resolveDependencies` runs the callback anyway on its 200 ms timeout, and a throw in a binding effect would turn "listbox never upgraded" into "combobox dead". Separately verified the `all()`-inside-a-`deriveCell` pattern in Chromium — live MutationObserver count went 2→3 across 8 filter keystrokes, so the memo churn self-cleans via the watched/unwatched lifecycle and does not accumulate.
 
-- [ ] LT-120: Retire the two pre-existing reach-ins via child public interfaces (LT-113 sweep findings).
+- [x] LT-120: Retire the two pre-existing reach-ins via child public interfaces (LT-113 sweep findings) — reviewed ✓
   **Skill:** le-truc-dev
-  **Context:** Two `querySelector` calls into composed children's owned markup violate the data account: `form-inplace-edit.tsrx`'s `textbox.querySelector('input')` (dblclick/click focus+select) and `form-combobox.tsrx`'s `listbox.querySelector('button[role="option"]')` (ArrowDown focus-first-option). Fix via boundary additions: `form-textbox` exposes a `focus()`/`select()`-delegating method (or focuses its own control via a public `focus` method matching native semantics), `form-listbox` exposes `focusFirstOption()`. Update both parents' handlers to the public calls; specs stay green; no behavior change.
+  **Changed:** `examples/form/textbox/form-textbox.tsrx` (new `focusControl()` method), `examples/form/listbox/form-listbox.tsrx` (new `focusFirstOption()` method), `examples/form/inplace-edit/form-inplace-edit.tsrx` (2 call sites), `examples/form/combobox/form-combobox.tsrx` (1 call site), both `.md` docs, `server/tests/tsrx/cem.golden.test.ts` (`focusControl` in the member list).
+  **How:** `form-textbox.focusControl()` delegates `focus()` + `select()` to the owned control; `form-listbox.focusFirstOption()` focuses the first option still passing the filter. Both parents call the public method; no `querySelector` remains in either file.
+  **Check:** (a) Naming — `focusControl` deliberately does NOT shadow the native `HTMLElement.focus()`, since form-associated internals and the browser both call `host.focus()` and overriding it is a wider change than this task. `focus*` prefix is consistent across both additions. (b) One intentional behavior change: the combobox's ArrowDown previously focused the first option button whether or not it was `hidden` (a no-op when filtered out); `focusFirstOption()` skips hidden options, matching the listbox's own Home/End/Arrow handler.
+  **Review:** Approved. Traces directly to data-account bullet 3, which already names "public props **and methods**" as the sanctioned channel. (a) Not shadowing native `focus()` is the right call and I'd have pushed back if it had — `formAssociated()` and the browser's own validation focus both call `host.focus()`, so redefining it is a platform-semantics change masquerading as a boundary fix. (b) The `:not([hidden])` change is an improvement, not a regression: the old reach-in focused the first option whether or not it was filtered out, which was a silent no-op, and the new behavior matches the listbox's own Arrow/Home/End handler. Amended TSRX-HOST-PROFILE § data account bullet 3 to enumerate the method form explicitly and to record `focusFirstOption`/`focusControl` (and the `focus()`-shadowing non-decision) as the corpus anchors — the clause previously listed only prop shapes, which is why "expose a method" read as improvisation rather than as the ratified route.
+
+- [ ] LT-135: Follow plain-const indirection when crediting client-only setup reads (LT-119 sharp edge).
+  **Skill:** le-truc-dev
+  **Context:** LT-119 credits a signal in `thunkRendered` when a `clientSetup` statement reads it, but the check is `containsSignalGet(stmt.node, …)` on the statement itself. Hoisting the predicate into a plain setup const — `const isOpen = () => open.get(); watch(() => !isOpen(), …)` — moves the read out of the statement and the signal draws TSRX004 again, so the author must repeat the predicate at every site (form-combobox.tsrx does, with a comment saying why). The diagnostic is loud, not silent, and the workaround is one line, so this is a DX wart rather than a correctness gap. **Fix:** resolve reads through `component.plainSetup` consts the statement names, the same one-hop widening `computeClientNeededNames` already does for client-needed names — or fold into LT-093, which is the same free-name-through-a-const wall from the other direction. The negative case is already pinned in `server/tests/tsrx/client-setup-credit.test.ts`; flip that test when fixing.
+
+- [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
+  **Skill:** le-truc-dev
+  **Context:** A `@for (const x of items)` loop lowers CLIENT-side to `const items = all('<selector>')` — the loop's collection name becomes a query variable that SHADOWS the server arg of the same name. Setup or `expose()` code that reads the arg then means two different things per half: server `items.length` is the array length, client `items.length` is `undefined` on a `Cell`. **Verified 2026-08-30, and the good news is it is loud:** `expose({ n: () => items.length })` over a `@for (const item of items)` loop compiles with ZERO compiler diagnostics but fails `check:tsrx` with `TS2339: Property 'length' does not exist on type 'Cell<HTMLSpanElement[]>'`, mapped back to the right `.tsrx` line. So this is a message-clarity task, not a correctness hole — same posture as LT-125. The tsc text names `Cell<…>` but never says *why* the author's `string[]` arg became one, and the fix (rename the loop binding, or project the value through `expose()`) is not discoverable from it. **Fix:** detect the collision in the compiler — a `@for` collection name that also names a server arg, where the arg is read outside the loop body — and emit a dedicated diagnostic naming both the shadowing and the rename. Low priority: no corpus component hits it, and the build already stops.
 
 - [ ] LT-093: Make TSRX004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall).
   **Skill:** le-truc-dev

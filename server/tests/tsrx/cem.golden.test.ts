@@ -203,8 +203,8 @@ describe('CEM golden — generated clients extract like hand-written components'
 				description: 'Interactive preview and usage examples',
 			},
 		])
-		// The fixture's Props (value, length, description, clear) + the
-		// formAssociated() member set. `description` isn't wired through
+		// The fixture's Props (value, length, description, clear,
+		// focusControl) + the formAssociated() member set. `description` isn't wired through
 		// expose() (it's authored render-time content, not a live DOM-derived
 		// prop like the hand-written .ts's descriptionMemo) but it's still a
 		// real member of FormTextboxProps, so CEM extraction picks it up.
@@ -217,6 +217,7 @@ describe('CEM golden — generated clients extract like hand-written components'
 			'length',
 			'description',
 			'clear',
+			'focusControl',
 			'form',
 			'name',
 			'disabled',
