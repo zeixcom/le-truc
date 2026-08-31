@@ -2003,6 +2003,130 @@ function createSlot(initialSignal, options) {
 function isSlot(value) {
   return isSignalOfType(value, TYPE_SLOT);
 }
+// src/util.ts
+var isSlotDescriptor = (value) => value !== null && typeof value === "object" && typeof value.get === "function" && !(Symbol.toStringTag in value);
+var isCustomElement = (element) => element.localName.includes("-");
+var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
+var elementName = (el) => {
+  if (!el)
+    return "<unknown>";
+  const id = el.id ? `#${el.id}` : "";
+  const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
+  return `<${el.localName}${id}${classes}>`;
+};
+var describeRoot = (parent) => typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
+
+// src/errors.ts
+class InvalidComponentNameError extends TypeError {
+  constructor(component) {
+    super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
+    this.name = "InvalidComponentNameError";
+  }
+}
+
+class InvalidPropertyNameError extends TypeError {
+  constructor(component, prop, reason) {
+    super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
+    this.name = "InvalidPropertyNameError";
+  }
+}
+
+class MissingElementError extends Error {
+  constructor(root, selector, required, contextLabel = "component") {
+    super(`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`);
+    this.name = "MissingElementError";
+  }
+}
+
+class DependencyTimeoutError extends Error {
+  constructor(host, missing) {
+    super(`Timeout waiting for: [${missing.join(", ")}] in component ${elementName(host)}.`);
+    this.name = "DependencyTimeoutError";
+  }
+}
+
+class InvalidReactivesError extends TypeError {
+  constructor(host, target, reactives) {
+    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString(reactives)}.`);
+    this.name = "InvalidReactivesError";
+  }
+}
+
+class InvalidCustomElementError extends TypeError {
+  constructor(target, where) {
+    super(`Target ${elementName(target)} is not a custom element in ${where}.`);
+    this.name = "InvalidCustomElementError";
+  }
+}
+
+class InvalidPassPropertyError extends TypeError {
+  constructor(host, target, reasons) {
+    const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
+    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`);
+    this.name = "InvalidPassPropertyError";
+  }
+}
+
+class NoActiveCollectorError extends Error {
+  constructor(host, helper) {
+    const where = host ? ` in component ${elementName(host)}` : "";
+    super(`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`);
+    this.name = "NoActiveCollectorError";
+  }
+}
+
+class InvalidTemplateError extends TypeError {
+  constructor(container, count) {
+    super(`Invalid template for reconcile() into ${elementName(container)}. Expected exactly 1 root element in the template content, found ${count}.`);
+    this.name = "InvalidTemplateError";
+  }
+}
+
+class ExtensionCollisionError extends Error {
+  constructor(component, key, first, second) {
+    super(`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`);
+    this.name = "ExtensionCollisionError";
+  }
+}
+
+class InvalidSelectorError extends TypeError {
+  constructor(parent, selector, cause) {
+    super(`Invalid selector "${selector}" passed to all() in ${describeRoot(parent)}. ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = "InvalidSelectorError";
+  }
+}
+
+// src/internal.ts
+var DEPENDENCY_TIMEOUT = 200;
+var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
+var componentSignals = new WeakMap;
+var internalsMap = new WeakMap;
+var internalsHosts = new WeakMap;
+var retainedInitializers = new WeakMap;
+var getSignals = (el) => {
+  let signals = componentSignals.get(el);
+  if (!signals) {
+    signals = {};
+    componentSignals.set(el, signals);
+  }
+  return signals;
+};
+var activeCollector;
+var withCollector = (collector, fn) => {
+  const previous = activeCollector;
+  activeCollector = collector;
+  try {
+    return fn();
+  } finally {
+    activeCollector = previous;
+  }
+};
+var pushDescriptor = (host, helper, descriptor) => {
+  if (!activeCollector)
+    throw new NoActiveCollectorError(host, helper);
+  activeCollector.push(descriptor);
+};
+
 // src/scheduler.ts
 var objects = new Set;
 var tasks = new WeakMap;
@@ -2234,6 +2358,66 @@ function bindAttribute(element, nameOrNames, allowUnsafe = false) {
   registerDebugBindingTarget(handlers, element);
   return handlers;
 }
+var ariaAttributeName = (idlName) => {
+  if (idlName === "role")
+    return "role";
+  let base = idlName.startsWith("aria") ? idlName.slice("aria".length) : idlName;
+  if (base.endsWith("Elements"))
+    base = base.slice(0, -"Elements".length);
+  else if (base.endsWith("Element"))
+    base = base.slice(0, -"Element".length);
+  return `aria-${base.toLowerCase()}`;
+};
+function bindAria(target, nameOrNames) {
+  const isElementTarget = target != null && typeof Element !== "undefined" && target instanceof Element;
+  const host = target != null && !isElementTarget ? internalsHosts.get(target) : undefined;
+  const cleared = new Set;
+  const assign = (name, value) => {
+    if (!target)
+      return;
+    if (value == null) {
+      target[name] = null;
+      return;
+    }
+    if (host && !cleared.has(name)) {
+      cleared.add(name);
+      host.removeAttribute(ariaAttributeName(name));
+    }
+    target[name] = typeof value === "boolean" ? value ? "true" : "false" : typeof value === "number" ? String(value) : value;
+  };
+  const clear = (name) => {
+    if (target)
+      target[name] = null;
+  };
+  if (typeof nameOrNames === "string") {
+    const name = nameOrNames;
+    const handlers2 = {
+      ok: (value) => {
+        assign(name, value);
+      },
+      nil: () => {
+        clear(name);
+      }
+    };
+    if (isElementTarget)
+      registerDebugBindingTarget(handlers2, target);
+    return handlers2;
+  }
+  const names = nameOrNames;
+  const handlers = {
+    ok: (map) => {
+      for (const name of names)
+        assign(name, map[name]);
+    },
+    nil: () => {
+      for (const name of names)
+        clear(name);
+    }
+  };
+  if (isElementTarget)
+    registerDebugBindingTarget(handlers, target);
+  return handlers;
+}
 function bindStyle(element, propOrProps) {
   if (typeof propOrProps === "string") {
     const prop = propOrProps;
@@ -2313,99 +2497,6 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
     nil: () => schedule(element, reset)
   };
 };
-// src/util.ts
-var isSlotDescriptor = (value) => value !== null && typeof value === "object" && typeof value.get === "function" && !(Symbol.toStringTag in value);
-var isCustomElement = (element) => element.localName.includes("-");
-var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
-var elementName = (el) => {
-  if (!el)
-    return "<unknown>";
-  const id = el.id ? `#${el.id}` : "";
-  const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
-  return `<${el.localName}${id}${classes}>`;
-};
-var describeRoot = (parent) => typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
-
-// src/errors.ts
-class InvalidComponentNameError extends TypeError {
-  constructor(component) {
-    super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
-    this.name = "InvalidComponentNameError";
-  }
-}
-
-class InvalidPropertyNameError extends TypeError {
-  constructor(component, prop, reason) {
-    super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
-    this.name = "InvalidPropertyNameError";
-  }
-}
-
-class MissingElementError extends Error {
-  constructor(root, selector, required, contextLabel = "component") {
-    super(`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`);
-    this.name = "MissingElementError";
-  }
-}
-
-class DependencyTimeoutError extends Error {
-  constructor(host, missing) {
-    super(`Timeout waiting for: [${missing.join(", ")}] in component ${elementName(host)}.`);
-    this.name = "DependencyTimeoutError";
-  }
-}
-
-class InvalidReactivesError extends TypeError {
-  constructor(host, target, reactives) {
-    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString(reactives)}.`);
-    this.name = "InvalidReactivesError";
-  }
-}
-
-class InvalidCustomElementError extends TypeError {
-  constructor(target, where) {
-    super(`Target ${elementName(target)} is not a custom element in ${where}.`);
-    this.name = "InvalidCustomElementError";
-  }
-}
-
-class InvalidPassPropertyError extends TypeError {
-  constructor(host, target, reasons) {
-    const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
-    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`);
-    this.name = "InvalidPassPropertyError";
-  }
-}
-
-class NoActiveCollectorError extends Error {
-  constructor(host, helper) {
-    const where = host ? ` in component ${elementName(host)}` : "";
-    super(`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`);
-    this.name = "NoActiveCollectorError";
-  }
-}
-
-class InvalidTemplateError extends TypeError {
-  constructor(container, count) {
-    super(`Invalid template for reconcile() into ${elementName(container)}. Expected exactly 1 root element in the template content, found ${count}.`);
-    this.name = "InvalidTemplateError";
-  }
-}
-
-class ExtensionCollisionError extends Error {
-  constructor(component, key, first, second) {
-    super(`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`);
-    this.name = "ExtensionCollisionError";
-  }
-}
-
-class InvalidSelectorError extends TypeError {
-  constructor(parent, selector, cause) {
-    super(`Invalid selector "${selector}" passed to all() in ${describeRoot(parent)}. ${cause instanceof Error ? cause.message : String(cause)}`);
-    this.name = "InvalidSelectorError";
-  }
-}
-
 // src/extension.ts
 var mergeExtensions = (component, extensions) => {
   const staticProps = {};
@@ -2438,36 +2529,6 @@ var mergeExtensions = (component, extensions) => {
     reservedMembers,
     reservedMemberOwners
   };
-};
-
-// src/internal.ts
-var DEPENDENCY_TIMEOUT = 200;
-var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
-var componentSignals = new WeakMap;
-var internalsMap = new WeakMap;
-var retainedInitializers = new WeakMap;
-var getSignals = (el) => {
-  let signals = componentSignals.get(el);
-  if (!signals) {
-    signals = {};
-    componentSignals.set(el, signals);
-  }
-  return signals;
-};
-var activeCollector;
-var withCollector = (collector, fn) => {
-  const previous = activeCollector;
-  activeCollector = collector;
-  try {
-    return fn();
-  } finally {
-    activeCollector = previous;
-  }
-};
-var pushDescriptor = (host, helper, descriptor) => {
-  if (!activeCollector)
-    throw new NoActiveCollectorError(host, helper);
-  activeCollector.push(descriptor);
 };
 
 // src/helpers/context.ts
@@ -3119,6 +3180,11 @@ var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
 // src/component.ts
+var elementInternalsRegistry = () => {
+  const g = globalThis;
+  g._elementInternals ??= new WeakMap;
+  return g._elementInternals;
+};
 function defineComponent(name, factory, extensions) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
@@ -3135,7 +3201,10 @@ function defineComponent(name, factory, extensions) {
     constructor() {
       super();
       try {
-        internalsMap.set(this, this.attachInternals());
+        const internals = this.attachInternals();
+        internalsMap.set(this, internals);
+        internalsHosts.set(internals, this);
+        elementInternalsRegistry().set(this, internals);
       } catch {
         internalsMap.set(this, null);
       }
@@ -3678,6 +3747,7 @@ export {
   bindProperty,
   bindClass,
   bindAttribute,
+  bindAria,
   batch,
   asString,
   asParser,

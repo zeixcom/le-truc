@@ -110,6 +110,7 @@ export {
 } from '@zeix/cause-effect'
 
 export {
+	bindAria,
 	bindAttribute,
 	bindClass,
 	bindProperty,
@@ -117,6 +118,7 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
+	type AriaValue,
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 	escapeHTML,

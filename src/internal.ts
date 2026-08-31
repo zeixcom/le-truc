@@ -38,6 +38,17 @@ const componentSignals = new WeakMap<
 const internalsMap = new WeakMap<HTMLElement, ElementInternals | null>()
 
 /**
+ * Module-internal map from `ElementInternals` to their host element — the
+ * reverse of {@link internalsMap}. `ElementInternals` carries no host
+ * reference, so `bindAria()` (ADR 0026) uses this to reach the element whose
+ * shadowing content attribute it must remove under the stale-attribute rule.
+ * Populated on the same constructor line as `internalsMap` in
+ * `src/component.ts`. Empty for internals this library did not create, which
+ * makes the removal a graceful no-op there. Library-private; not exposed.
+ */
+const internalsHosts = new WeakMap<ElementInternals, HTMLElement>()
+
+/**
  * Module-internal map from component instances to their retained property
  * initializers, keyed by prop name — the original value passed to
  * `expose({ [prop]: ... })`, captured verbatim before `#initSignals` consumes
@@ -157,6 +168,7 @@ export {
 	DEPENDENCY_TIMEOUT,
 	getSignals,
 	installActiveCollector,
+	internalsHosts,
 	internalsMap,
 	pushDescriptor,
 	restoreActiveCollector,

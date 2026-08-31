@@ -1,9 +1,10 @@
 import type { SingleMatchHandlers } from '@zeix/cause-effect'
+import { internalsHosts } from './internal'
 import { schedule } from './scheduler'
 
 /**
  * Low-level DOM-mutation primitives behind `bindText`, `bindAttribute`,
- * `bindClass`, `bindState`, `bindStyle`, `bindVisible`, and
+ * `bindAria`, `bindClass`, `bindState`, `bindStyle`, `bindVisible`, and
  * `dangerouslyBindInnerHTML`. Each `bind*` function returns a setter (or
  * `SingleMatchHandlers`) that a caller wires to a signal via `watch()` or
  * `match()`.
@@ -507,6 +508,191 @@ function bindAttribute(
 	return handlers
 }
 
+/* === ARIA Reflection (ADR 0026) === */
+
+/**
+ * Everything `bindAria()`'s `ok()` handler accepts, per ADR 0026 §2's mapping
+ * table. Deliberately excludes `null | undefined` even though `ok()` guards
+ * for both at runtime: `SingleMatchHandlers<T>` constrains `T extends {}`, so
+ * a union including them fails to typecheck as the generic parameter — the
+ * same "typed optimistically, guarded defensively" split the map-form
+ * `ok(map)` of `bindAttribute`/`bindStyle` already carries for absent keys.
+ * A signal whose *resolved value* is legitimately `null` still reaches
+ * `ok(null)` via cause-effect's `match()` (which routes to `nil` only on
+ * `UnsetSignalValueError`, i.e. pending/unset, never on a resolved null) —
+ * exactly the case the runtime guard exists for.
+ */
+type AriaValue = boolean | number | string | Element | readonly Element[]
+
+/**
+ * IDL property name → content attribute name. NOT kebab-case: ARIA attribute
+ * names carry no inner hyphens. Strip a trailing `Element`/`Elements`, strip
+ * the `aria` prefix, lowercase the remainder, prefix `aria-` —
+ * `ariaValueNow` → `aria-valuenow`, `ariaDescribedByElements` →
+ * `aria-describedby`, `ariaActiveDescendantElement` → `aria-activedescendant`;
+ * `role` maps to itself. A naive kebab-case transform would yield
+ * `aria-labelled-by` for `ariaLabelledByElements` and silently remove nothing.
+ */
+const ariaAttributeName = (idlName: string): string => {
+	if (idlName === 'role') return 'role'
+	let base = idlName.startsWith('aria') ? idlName.slice('aria'.length) : idlName
+	if (base.endsWith('Elements')) base = base.slice(0, -'Elements'.length)
+	else if (base.endsWith('Element')) base = base.slice(0, -'Element'.length)
+	return `aria-${base.toLowerCase()}`
+}
+
+/**
+ * Returns `SingleMatchHandlers` that reflect a value onto an `ARIAMixin`
+ * target via the platform's ARIA reflection properties — `ElementInternals`
+ * for component-owned host semantics (invisible in markup, unclobberable by
+ * attribute rewriting), or a native `Element` whose IDL write mirrors into
+ * the content attribute. Both implement `ARIAMixin`, so one signature covers
+ * host reflection and inner-element binding.
+ *
+ * Coercion per ADR 0026 §2's mapping table:
+ *
+ * - `ok(boolean)` → assigns `'true'` / `'false'` — ARIA enumerated semantics,
+ *   never `toggleAttribute`'s invalid empty-string form
+ * - `ok(number)` → assigns the decimal string (`ariaValueNow` from a numeric
+ *   prop — note the IDL casing, which is *not* the hyphenated attribute name;
+ *   a mis-cased write would be a silent no-op)
+ * - `ok(string | Element | readonly Element[])` → pass-through (`'mixed'`,
+ *   element references, …)
+ * - `ok(null | undefined)` → assigns `null`, clearing the reflection and
+ *   restoring attribute authority (runtime guard; see `AriaValue`)
+ * - `nil` → assigns `null` (same clear)
+ *
+ * **Stale-attribute rule (ADR 0026 §1, `ElementInternals` targets only).**
+ * A pre-existing host content attribute for the property being reflected
+ * *permanently shadows* the internals value in the accessibility tree —
+ * host attributes are the consumer-override channel, so a server-rendered
+ * `aria-expanded="false"` would silently nullify every later
+ * `internals.ariaExpanded` write. `bindAria()` therefore removes the
+ * shadowing attribute itself: **once per property, at the binding's first
+ * `ok()` that asserts a value** — never on `nil` or a nullish `ok` (those
+ * restore attribute authority instead), and never again afterwards, so an
+ * attribute set *after* connect keeps overriding on every later update. The
+ * one-line contract: the server-rendered attribute is the initial value;
+ * from the first assertion on, the component owns that property reactively
+ * via internals. For an `Element` target the IDL write *is* the attribute
+ * channel (native reflection mirrors it), so there is nothing shadowing and
+ * nothing is removed. A nullish target (the `attachInternals()`-failed path)
+ * makes every handler a no-op — the same graceful degradation `bindState()`
+ * established.
+ *
+ * @since 2.6
+ * @param target - `ARIAMixin` target (`Element` or `ElementInternals`), or `null`/`undefined`
+ * @param name - Platform `ARIAMixin` property name (e.g. `'ariaExpanded'`, `'ariaValueNow'`, `'role'`)
+ * @returns Match handlers for the ARIA reflection
+ */
+function bindAria(
+	target: ARIAMixin | null | undefined,
+	name: keyof ARIAMixin & string,
+): SingleMatchHandlers<AriaValue>
+/**
+ * Returns `SingleMatchHandlers` that reflect several ARIA properties onto an
+ * `ARIAMixin` target from one map.
+ *
+ * `names` is declared statically at the call site, so it is always the
+ * complete set of properties this binding owns:
+ *
+ * - `ok(map)` — for every declared name: present and non-nullish → assign
+ *   per the single-form coercion table (boolean → `'true'`/`'false'`,
+ *   number → decimal string, otherwise pass-through); absent or
+ *   `null`/`undefined` → assign `null`, clearing that reflection.
+ * - `nil` → assigns `null` to every declared name (clear).
+ *
+ * The stale-attribute rule applies per declared property: each one's
+ * shadowing content attribute is removed at that property's first asserted
+ * value (`ElementInternals` targets only — see the single form).
+ *
+ * @since 2.6
+ * @param target - `ARIAMixin` target (`Element` or `ElementInternals`), or `null`/`undefined`
+ * @param names - `ARIAMixin` property names the returned handlers may reflect (e.g. `['ariaValueNow', 'ariaValueText']`)
+ * @returns Match handlers for the ARIA reflections
+ */
+function bindAria<N extends keyof ARIAMixin & string>(
+	target: ARIAMixin | null | undefined,
+	names: readonly N[],
+): SingleMatchHandlers<Partial<Record<N, AriaValue>>>
+function bindAria(
+	target: ARIAMixin | null | undefined,
+	nameOrNames:
+		| (keyof ARIAMixin & string)
+		| readonly (keyof ARIAMixin & string)[],
+): SingleMatchHandlers<any> {
+	// The stale-attribute rule needs the host element behind an
+	// `ElementInternals` target; internals this library did not create are
+	// absent from the reverse lookup, which makes the removal a graceful
+	// no-op. `Element` targets skip it entirely — their IDL writes mirror
+	// into the attribute natively, so there is nothing shadowing.
+	const isElementTarget =
+		target != null &&
+		typeof Element !== 'undefined' &&
+		target instanceof Element
+	const host =
+		target != null && !isElementTarget
+			? internalsHosts.get(target as ElementInternals)
+			: undefined
+	// Per property: the shadowing content attribute is removed exactly once,
+	// at the first `ok()` that asserts a value — never on `nil`/null clears
+	// (those restore attribute authority), never twice (a post-connect
+	// consumer override must survive every later update).
+	const cleared = new Set<keyof ARIAMixin & string>()
+	// `value` accepts `undefined` in addition to `AriaValue`: the map form's
+	// index read widens under `noUncheckedIndexedAccess`, and an undefined
+	// entry clears the reflection exactly like a null one.
+	const assign = (
+		name: keyof ARIAMixin & string,
+		value: AriaValue | undefined,
+	): void => {
+		if (!target) return
+		if (value == null) {
+			;(target as unknown as Record<string, unknown>)[name] = null
+			return
+		}
+		if (host && !cleared.has(name)) {
+			cleared.add(name)
+			host.removeAttribute(ariaAttributeName(name))
+		}
+		;(target as unknown as Record<string, unknown>)[name] =
+			typeof value === 'boolean'
+				? value
+					? 'true'
+					: 'false'
+				: typeof value === 'number'
+					? String(value)
+					: value
+	}
+	const clear = (name: keyof ARIAMixin & string): void => {
+		if (target) (target as unknown as Record<string, unknown>)[name] = null
+	}
+	if (typeof nameOrNames === 'string') {
+		const name = nameOrNames
+		const handlers: SingleMatchHandlers<AriaValue> = {
+			ok: (value: AriaValue) => {
+				assign(name, value)
+			},
+			nil: () => {
+				clear(name)
+			},
+		}
+		if (isElementTarget) registerDebugBindingTarget(handlers, target)
+		return handlers
+	}
+	const names = nameOrNames
+	const handlers: SingleMatchHandlers<Record<string, AriaValue>> = {
+		ok: (map: Record<string, AriaValue>) => {
+			for (const name of names) assign(name, map[name])
+		},
+		nil: () => {
+			for (const name of names) clear(name)
+		},
+	}
+	if (isElementTarget) registerDebugBindingTarget(handlers, target)
+	return handlers
+}
+
 /**
  * Returns `SingleMatchHandlers<string>` that set or remove an inline style property.
  *
@@ -670,6 +856,8 @@ const dangerouslyBindInnerHTML = (
 }
 
 export {
+	type AriaValue,
+	bindAria,
 	bindAttribute,
 	bindClass,
 	bindProperty,

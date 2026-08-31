@@ -56,6 +56,7 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 
 | Helper | Purpose |
 |--------|---------|
+| `bindAria` | Reflects ARIA properties onto `ARIAMixin` targets (`ElementInternals` or `Element`), removing shadowing attributes (see [ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md)) |
 | `bindAttribute` | Sets/removes attributes with security validation (see [ADR 0009](adr/0009-security-validation-in-bindattribute.md)) |
 | `bindClass` | Adds/removes CSS classes |
 | `bindText` | Sets text content |
@@ -65,7 +66,7 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 | `bindVisible` | Controls `hidden` attribute |
 | `dangerouslyBindInnerHTML` | Sets innerHTML |
 
-`bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, and `bindState` additionally accept a `readonly string[]` in place of the single target, targeting several properties/attributes/class tokens/object keys/custom states from one `watch()` handler instead of N separate calls sharing one computed source (see [ADR 0023](adr/0023-map-form-overloads-for-bind-helpers.md)). Implemented for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty` (LT-029); `bindState`'s map-form overload is tracked as a follow-up (LT-032).
+`bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, `bindState`, and `bindAria` additionally accept a `readonly string[]` in place of the single target, targeting several properties/attributes/class tokens/object keys/custom states/ARIA properties from one `watch()` handler instead of N separate calls sharing one computed source (see [ADR 0023](adr/0023-map-form-overloads-for-bind-helpers.md)). Implemented for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty` (LT-029), `bindState`, and `bindAria` (LT-007).
 
 ### Event Binding
 

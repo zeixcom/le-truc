@@ -1,7 +1,7 @@
 import type { SingleMatchHandlers } from '@zeix/cause-effect';
 /**
  * Low-level DOM-mutation primitives behind `bindText`, `bindAttribute`,
- * `bindClass`, `bindState`, `bindStyle`, `bindVisible`, and
+ * `bindAria`, `bindClass`, `bindState`, `bindStyle`, `bindVisible`, and
  * `dangerouslyBindInnerHTML`. Each `bind*` function returns a setter (or
  * `SingleMatchHandlers`) that a caller wires to a signal via `watch()` or
  * `match()`.
@@ -228,6 +228,87 @@ declare function bindAttribute(element: Element, name: string, allowUnsafe?: boo
  */
 declare function bindAttribute<N extends string>(element: Element, names: readonly N[], allowUnsafe?: boolean): SingleMatchHandlers<Partial<Record<N, string | boolean>>>;
 /**
+ * Everything `bindAria()`'s `ok()` handler accepts, per ADR 0026 §2's mapping
+ * table. Deliberately excludes `null | undefined` even though `ok()` guards
+ * for both at runtime: `SingleMatchHandlers<T>` constrains `T extends {}`, so
+ * a union including them fails to typecheck as the generic parameter — the
+ * same "typed optimistically, guarded defensively" split the map-form
+ * `ok(map)` of `bindAttribute`/`bindStyle` already carries for absent keys.
+ * A signal whose *resolved value* is legitimately `null` still reaches
+ * `ok(null)` via cause-effect's `match()` (which routes to `nil` only on
+ * `UnsetSignalValueError`, i.e. pending/unset, never on a resolved null) —
+ * exactly the case the runtime guard exists for.
+ */
+type AriaValue = boolean | number | string | Element | readonly Element[];
+/**
+ * Returns `SingleMatchHandlers` that reflect a value onto an `ARIAMixin`
+ * target via the platform's ARIA reflection properties — `ElementInternals`
+ * for component-owned host semantics (invisible in markup, unclobberable by
+ * attribute rewriting), or a native `Element` whose IDL write mirrors into
+ * the content attribute. Both implement `ARIAMixin`, so one signature covers
+ * host reflection and inner-element binding.
+ *
+ * Coercion per ADR 0026 §2's mapping table:
+ *
+ * - `ok(boolean)` → assigns `'true'` / `'false'` — ARIA enumerated semantics,
+ *   never `toggleAttribute`'s invalid empty-string form
+ * - `ok(number)` → assigns the decimal string (`ariaValueNow` from a numeric
+ *   prop — note the IDL casing, which is *not* the hyphenated attribute name;
+ *   a mis-cased write would be a silent no-op)
+ * - `ok(string | Element | readonly Element[])` → pass-through (`'mixed'`,
+ *   element references, …)
+ * - `ok(null | undefined)` → assigns `null`, clearing the reflection and
+ *   restoring attribute authority (runtime guard; see `AriaValue`)
+ * - `nil` → assigns `null` (same clear)
+ *
+ * **Stale-attribute rule (ADR 0026 §1, `ElementInternals` targets only).**
+ * A pre-existing host content attribute for the property being reflected
+ * *permanently shadows* the internals value in the accessibility tree —
+ * host attributes are the consumer-override channel, so a server-rendered
+ * `aria-expanded="false"` would silently nullify every later
+ * `internals.ariaExpanded` write. `bindAria()` therefore removes the
+ * shadowing attribute itself: **once per property, at the binding's first
+ * `ok()` that asserts a value** — never on `nil` or a nullish `ok` (those
+ * restore attribute authority instead), and never again afterwards, so an
+ * attribute set *after* connect keeps overriding on every later update. The
+ * one-line contract: the server-rendered attribute is the initial value;
+ * from the first assertion on, the component owns that property reactively
+ * via internals. For an `Element` target the IDL write *is* the attribute
+ * channel (native reflection mirrors it), so there is nothing shadowing and
+ * nothing is removed. A nullish target (the `attachInternals()`-failed path)
+ * makes every handler a no-op — the same graceful degradation `bindState()`
+ * established.
+ *
+ * @since 2.6
+ * @param target - `ARIAMixin` target (`Element` or `ElementInternals`), or `null`/`undefined`
+ * @param name - Platform `ARIAMixin` property name (e.g. `'ariaExpanded'`, `'ariaValueNow'`, `'role'`)
+ * @returns Match handlers for the ARIA reflection
+ */
+declare function bindAria(target: ARIAMixin | null | undefined, name: keyof ARIAMixin & string): SingleMatchHandlers<AriaValue>;
+/**
+ * Returns `SingleMatchHandlers` that reflect several ARIA properties onto an
+ * `ARIAMixin` target from one map.
+ *
+ * `names` is declared statically at the call site, so it is always the
+ * complete set of properties this binding owns:
+ *
+ * - `ok(map)` — for every declared name: present and non-nullish → assign
+ *   per the single-form coercion table (boolean → `'true'`/`'false'`,
+ *   number → decimal string, otherwise pass-through); absent or
+ *   `null`/`undefined` → assign `null`, clearing that reflection.
+ * - `nil` → assigns `null` to every declared name (clear).
+ *
+ * The stale-attribute rule applies per declared property: each one's
+ * shadowing content attribute is removed at that property's first asserted
+ * value (`ElementInternals` targets only — see the single form).
+ *
+ * @since 2.6
+ * @param target - `ARIAMixin` target (`Element` or `ElementInternals`), or `null`/`undefined`
+ * @param names - `ARIAMixin` property names the returned handlers may reflect (e.g. `['ariaValueNow', 'ariaValueText']`)
+ * @returns Match handlers for the ARIA reflections
+ */
+declare function bindAria<N extends keyof ARIAMixin & string>(target: ARIAMixin | null | undefined, names: readonly N[]): SingleMatchHandlers<Partial<Record<N, AriaValue>>>;
+/**
  * Returns `SingleMatchHandlers<string>` that set or remove an inline style property.
  *
  * - `ok(string)` → schedules `el.style.setProperty(prop, value)`
@@ -291,4 +372,4 @@ declare function bindStyle<P extends string>(element: HTMLElement | SVGElement |
  * @returns Match handlers that schedule the innerHTML mutation
  */
 declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslyBindInnerHTMLOptions) => SingleMatchHandlers<string>;
-export { bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, safeSetAttribute, setTextPreservingComments, };
+export { type AriaValue, bindAria, bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, safeSetAttribute, setTextPreservingComments, };
