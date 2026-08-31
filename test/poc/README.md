@@ -1,0 +1,40 @@
+# ARIA-Reflection PoC — Findings
+
+Proof-of-concept workspace for [ADR 0026](../../adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) (🔄 Proposed). Each LT task probes one channel of the two-channel policy against its hardest case and records what it observes here. This file is the running log the LT-006 decision gate reads; it is not documentation of shipped behavior.
+
+## Infrastructure (LT-001)
+
+- `serve.ts` — Bun server on **:3100** serving `pages/*.html` and bundling `*.ts` PoC modules on demand (`Bun.build`, `DEV_MODE="true"`, cached by mtime). Deliberately separate from the docs server (port 3000): `examples/` is the published demo surface.
+- `fixtures/aria.ts` — three observation tiers:
+  1. **`computedAriaTree(page, selector)`** — the engine's own accessibility tree via CDP `Accessibility.getFullAXTree`, sliced to the element's subtree. **Chromium only** (Playwright exposes no computed-tree API for Firefox/WebKit). This is ground truth: what AT consumes.
+  2. **`ariaSnapshotOf()` / `getByRole`** — Playwright's injected ARIA engine. All engines, but a *tool's* view of the DOM, not the platform's.
+  3. **`runAxe()`** — axe-core ≥ 4.13 in-page, reading ElementInternals through the element-internals-declaration registry (`globalThis._elementInternals`, populated by the probe).
+- Run with: `node node_modules/.bin/playwright test --project=poc-chromium` (or `poc-firefox` / `poc-webkit`).
+
+## Findings matrix — LT-001 baseline
+
+Observed 2026-08-31 with Playwright 1.62 (`poc.spec.ts` pins all of this; a tooling/engine upgrade that changes behavior should flip a pinned test and this table).
+
+| Observation channel | internals-set `role` + `aria-label` | internals-set `aria-valuenow` | attribute semantics | internals-related axe violations |
+|---|---|---|---|---|
+| Chromium engine tree (CDP) | ✅ visible | ❌ **not mapped** (node value stays `""` while the IDL holds the value) | ✅ visible | — |
+| Firefox engine tree | n/a (no CDP access from Playwright) | n/a | n/a | — |
+| WebKit engine tree | n/a (no CDP access from Playwright) | n/a | n/a | — |
+| Playwright tooling (`getByRole`/`ariaSnapshot`) | ❌ invisible (empty snapshot, role not counted) — same in Chromium, Firefox, WebKit | ❌ invisible | ✅ visible | — |
+| axe-core 4.13 (registry populated) | ✅ no false positives (also in Firefox/WebKit runs) | ✅ no false positive (`aria-required-attr` stays silent on the internals-only progressbar) | ✅ | none observed |
+
+### The load-bearing discoveries
+
+1. **Chromium does not map internals-set `aria-valuenow` into the AX tree** (verified not a timing artifact: the IDL holds `'42'` while the node value stays `""` after attribute removal). The 2025 Chromium fix covered element *reference* properties; string state that feeds a node's AX **value** (valuenow/valuetext class) appears unmapped. **Consequence for ADR 0026 §1:** the internals channel is proven for *role and name* (labels, descriptions), not (yet, Chromium) for live range/numeric state. LT-002's hue-slider hard case must treat the attribute channel (host or inner native element) as mandatory for `aria-valuenow`/`aria-valuetext` until this engine gap closes.
+2. **Playwright's tooling tier ignores ElementInternals entirely** — `getByRole('progressbar')` counts only attribute-carrying probes, and `ariaSnapshot` of the internals-only probe is empty, identically on all three engines. Testing-library-style queries cannot see internals semantics; assertions on internals-driven state must go through `computedAriaTree()` (Chromium) or the registry/IDL (all engines). This is the tooling-introspection gap w3c/aria#2663 describes, seen from the test-runner side.
+3. **The override/reassert semantics are real** (Chromium, name): a host `aria-label` attribute beats the internals default, and `removeAttribute` restores the internals value — the platform behavior ADR 0026 §1's consumer-override story rests on. (Also confirmed as a *risk*: stale server-rendered attributes permanently shadow reflection — the no-mixing rule and the LT-002 SSR probe exist because of this.)
+4. **axe-core 4.13 + registry produces zero internals-related violations** on the probe page in all three engines — including no `aria-required-attr` complaint for the internals-only progressbar (axe skips internals elements in rules it does not support, rather than false-flagging them). Whether axe *positively* honors internals `role` (the trap test: reflected `role=button` with the native child dropped must be flagged) is LT-005's explicit check; this baseline only proves the pipeline runs silently.
+5. Engine-level ground truth for **Firefox/WebKit computed trees is unobservable** through Playwright (no CDP equivalent). Any cross-engine semantics claim beyond the tooling tier needs manual VO/NVDA verification or a dedicated out-of-Playwright harness — recorded as a standing limitation of the PoC.
+
+## Probe inventory
+
+| Page | Component | Probes |
+|---|---|---|
+| `/basic` | `poc-basic.ts` (`<poc-probe>`, raw custom element) | `#via-internals`, `#via-attribute`, `#via-both` — role/label/valuenow set per mode |
+
+Subsequent LT tasks append their own pages/components here.

@@ -86,6 +86,7 @@
 		"@types/culori": "^4.0.1",
 		"@types/node": "^26.2.0",
 		"@zeix/cem-plugin-le-truc": "^0.3.3",
+		"axe-core": "^4.13.0",
 		"culori": "^4.0.2",
 		"dompurify": "^3.4.14",
 		"lightningcss-cli": "^1.33.0",
