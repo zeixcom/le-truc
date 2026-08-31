@@ -12,7 +12,7 @@ Historical record of the proof-of-concept behind [ADR 0026](../0026-aria-reflect
 - `fixtures/aria.ts` — three observation tiers:
   1. **`computedAriaTree(page, selector)`** — the engine's own accessibility tree via CDP `Accessibility.getFullAXTree`, sliced to the element's subtree. **Chromium only** (Playwright exposes no computed-tree API for Firefox/WebKit). This is ground truth: what AT consumes.
   2. **`ariaSnapshotOf()` / `getByRole`** — Playwright's injected ARIA engine. All engines, but a *tool's* view of the DOM, not the platform's.
-  3. **`runAxe()`** — axe-core ≥ 4.13 in-page, reading ElementInternals through the element-internals-declaration registry (`globalThis._elementInternals`, populated by the probe).
+  3. **`runAxe()`** — axe-core ≥ 4.13 in-page, reading ElementInternals through the ElementInternals declaration registry (`globalThis._elementInternals`, populated by the probe).
 - Run with: `node node_modules/.bin/playwright test --project=poc-chromium` (or `poc-firefox` / `poc-webkit`).
 
 ## ⚠️ Correction (2026-08-31, during LT-002)
@@ -73,7 +73,7 @@ Hardest case: `poc-combobox.ts`, a real Le Truc component (unlike LT-001/LT-002'
 5. **The debug-attribution split (register `Element` targets, skip `ElementInternals` targets) is a real, testable branch** — proven with a PoC-local mirror of `src/bindings.ts`'s private `debugBindingTargets` WeakMap (not importable from the library; module-private). The real implementation in `src/bindings.ts` will register directly into the existing registry rather than a second one, but the branch condition (`target instanceof Element`) is proven here.
 6. **Compile-time pins hold**: `bindAria(internals, 'aria-expanded')` (the content-attribute string, not the IDL property name `ariaExpanded`) and `bindAria(internals, 'textContent')` (not an `ARIAMixin` member at all) both fail to typecheck, confirming `name: keyof ARIAMixin & string` actually constrains the second argument rather than silently widening to `string`. `handlers.ok({...})`/`handlers.ok(Symbol())` also fail, confirming `AriaValue` rejects values outside its union. Verified each pin is load-bearing (not accidentally always-passing) by temporarily removing one `@ts-expect-error` comment and confirming `tsc --noEmit` then reports the expected `TS2345`, before restoring it.
 
-## Findings matrix — LT-005 (element-internals-declaration registration + axe-core gate)
+## Findings matrix — LT-005 (ElementInternals declaration registration + axe-core gate)
 
 `poc-truc-registration.ts` prototypes the exact addition ADR 0026 §3 proposes for the real `Truc` constructor: after a successful `attachInternals()`, also `globalThis._elementInternals ??= new WeakMap()` then `.set(this, internals)`, unconditionally — no `DEV_MODE` gate.
 

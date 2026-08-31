@@ -493,9 +493,9 @@ describe('implicit effect collection — regression (ADR 0018)', () => {
 	})
 })
 
-/* === Element-internals-declaration registry (ADR 0026 §3) === */
+/* === ElementInternals declaration registry (ADR 0026 §3) === */
 
-describe('element-internals-declaration registry', () => {
+describe('ElementInternals declaration registry', () => {
 	test('a constructed component is registered in globalThis._elementInternals with its internals', () => {
 		const Ctor = defineComponent(uniqueName(), () => {})!
 		const instance = new Ctor() as unknown as HTMLElement

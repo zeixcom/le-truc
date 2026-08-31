@@ -217,7 +217,7 @@ type FormFactoryContext<
 /* === Exported Functions === */
 
 /**
- * The element-internals-declaration community protocol's registry — a
+ * The ElementInternals declaration community protocol's registry — a
  * page-global `WeakMap` from elements to their `ElementInternals`, created
  * lazily via `??=` so it is idempotent in the (rare) presence of another
  * library that already created it. Tooling-only: it makes every Le Truc
@@ -311,7 +311,7 @@ function defineComponent<P extends ComponentProps>(
 				// reaches the element whose shadowing attribute it must remove
 				// through this map. Library-private (src/internal.ts).
 				internalsHosts.set(internals, this)
-				// Element-internals-declaration registry (ADR 0026 §3). One
+				// ElementInternals declaration registry (ADR 0026 §3). One
 				// WeakMap entry per instance, unconditional — no DEV_MODE gate,
 				// audits run against production builds — and no disconnect-time
 				// cleanup to write: attachInternals() runs here, in the

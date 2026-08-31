@@ -10,7 +10,7 @@
  *    Playwright's injected ARIA engine computes from the DOM. Runs on all
  *    engines, but is a *tool's view*, not the platform's.
  * 3. `runAxe()` — axe-core ≥ 4.13 executed in the page, reading
- *    ElementInternals through the element-internals-declaration registry
+ *    ElementInternals through the ElementInternals declaration registry
  *    (`globalThis._elementInternals`) when the page populates it.
  */
 import { readFile } from 'node:fs/promises'
@@ -187,7 +187,7 @@ type AxeLike = {
 /**
  * Run axe-core (devDependency, ≥ 4.13 for ElementInternals support) inside
  * the page and return a compact violation summary. axe discovers
- * ElementInternals only through the element-internals-declaration registry,
+ * ElementInternals only through the ElementInternals declaration registry,
  * which the PoC components populate.
  */
 export async function runAxe(

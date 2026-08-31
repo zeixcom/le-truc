@@ -3,7 +3,7 @@ import { computedAriaTree, engineOf } from '../fixtures/aria'
 
 /**
  * Playwright-tier verification for `bindAria()` (LT-007) and the
- * element-internals-declaration registry (LT-008), per ADR 0026.
+ * ElementInternals declaration registry (LT-008), per ADR 0026.
  *
  * The stale-attribute rule's contract halves are attribute-observable on
  * every engine; the internals side is read back through the declaration
