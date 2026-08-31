@@ -2121,29 +2121,68 @@ var bindText = (element, preserveComments = false) => {
   registerDebugBindingTarget(setter, element);
   return setter;
 };
-var bindProperty = (object, key) => {
+function bindProperty(object, keyOrKeys) {
+  if (typeof keyOrKeys === "string") {
+    const key = keyOrKeys;
+    const setter2 = (value) => {
+      object[key] = value;
+    };
+    if (typeof Element !== "undefined" && object instanceof Element)
+      registerDebugBindingTarget(setter2, object);
+    return setter2;
+  }
+  const keys = keyOrKeys;
   const setter = (value) => {
-    object[key] = value;
+    for (const key of keys) {
+      if (Object.hasOwn(value, key))
+        object[key] = value[key];
+    }
   };
   if (typeof Element !== "undefined" && object instanceof Element)
     registerDebugBindingTarget(setter, object);
   return setter;
-};
-var bindClass = (element, token) => {
+}
+function bindClass(element, tokenOrTokens) {
+  if (typeof tokenOrTokens === "string") {
+    const token = tokenOrTokens;
+    const setter2 = (value) => {
+      element.classList.toggle(token, Boolean(value));
+    };
+    registerDebugBindingTarget(setter2, element);
+    return setter2;
+  }
+  const tokens = tokenOrTokens;
   const setter = (value) => {
-    element.classList.toggle(token, Boolean(value));
+    for (const token of tokens)
+      element.classList.toggle(token, Boolean(value[token]));
   };
   registerDebugBindingTarget(setter, element);
   return setter;
-};
-var bindState = (internals, token) => (value) => {
-  if (!internals)
-    return;
-  if (value)
-    internals.states.add(token);
-  else
-    internals.states.delete(token);
-};
+}
+function bindState(internals, tokenOrTokens) {
+  if (typeof tokenOrTokens === "string") {
+    const token = tokenOrTokens;
+    return (value) => {
+      if (!internals)
+        return;
+      if (value)
+        internals.states.add(token);
+      else
+        internals.states.delete(token);
+    };
+  }
+  const tokens = tokenOrTokens;
+  return (value) => {
+    if (!internals)
+      return;
+    for (const token of tokens) {
+      if (value[token])
+        internals.states.add(token);
+      else
+        internals.states.delete(token);
+    }
+  };
+}
 var bindVisible = (element) => {
   const setter = (value) => {
     element.hidden = !value;
@@ -2151,36 +2190,83 @@ var bindVisible = (element) => {
   registerDebugBindingTarget(setter, element);
   return setter;
 };
-var bindAttribute = (element, name, allowUnsafe = false) => {
+function bindAttribute(element, nameOrNames, allowUnsafe = false) {
+  if (typeof nameOrNames === "string") {
+    const name = nameOrNames;
+    const handlers2 = {
+      ok: (value) => {
+        if (typeof value === "boolean") {
+          element.toggleAttribute(name, value);
+        } else if (allowUnsafe) {
+          element.setAttribute(name, value);
+        } else {
+          safeSetAttribute(element, name, value);
+        }
+      },
+      nil: () => {
+        element.removeAttribute(name);
+      }
+    };
+    registerDebugBindingTarget(handlers2, element);
+    return handlers2;
+  }
+  const names = nameOrNames;
   const handlers = {
-    ok: (value) => {
-      if (typeof value === "boolean") {
-        element.toggleAttribute(name, value);
-      } else if (allowUnsafe) {
-        element.setAttribute(name, value);
-      } else {
-        safeSetAttribute(element, name, value);
+    ok: (map) => {
+      for (const name of names) {
+        const value = map[name];
+        if (value == null) {
+          element.removeAttribute(name);
+        } else if (typeof value === "boolean") {
+          element.toggleAttribute(name, value);
+        } else if (allowUnsafe) {
+          element.setAttribute(name, value);
+        } else {
+          safeSetAttribute(element, name, value);
+        }
       }
     },
     nil: () => {
-      element.removeAttribute(name);
+      for (const name of names)
+        element.removeAttribute(name);
     }
   };
   registerDebugBindingTarget(handlers, element);
   return handlers;
-};
-var bindStyle = (element, prop) => {
+}
+function bindStyle(element, propOrProps) {
+  if (typeof propOrProps === "string") {
+    const prop = propOrProps;
+    const handlers2 = {
+      ok: (value) => {
+        element.style.setProperty(prop, value);
+      },
+      nil: () => {
+        element.style.removeProperty(prop);
+      }
+    };
+    registerDebugBindingTarget(handlers2, element);
+    return handlers2;
+  }
+  const props = propOrProps;
   const handlers = {
-    ok: (value) => {
-      element.style.setProperty(prop, value);
+    ok: (map) => {
+      for (const prop of props) {
+        const value = map[prop];
+        if (value == null)
+          element.style.removeProperty(prop);
+        else
+          element.style.setProperty(prop, value);
+      }
     },
     nil: () => {
-      element.style.removeProperty(prop);
+      for (const prop of props)
+        element.style.removeProperty(prop);
     }
   };
   registerDebugBindingTarget(handlers, element);
   return handlers;
-};
+}
 var dangerouslyBindInnerHTML = (element, options = {}) => {
   const reset = () => {
     if (element.shadowRoot)
