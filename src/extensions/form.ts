@@ -38,6 +38,8 @@ type FormAssociatedVariantConfig<Tag extends string> = {
 	__kind: Tag
 	name: string
 	propName: 'value' | 'checked'
+	/** The reset-baseline property's name: `defaultValue`/`defaultChecked`. */
+	defaultPropName: 'defaultValue' | 'defaultChecked'
 	installOnPrototype: (proto: HTMLElement) => void
 	makeSyncDescriptor: (
 		instance: HTMLElement,
@@ -257,24 +259,65 @@ const FOCUSABLE_FORM_CONTROL_SELECTOR =
  */
 const FALLBACK_VALIDITY_MESSAGE = 'Invalid value'
 
+/**
+ * The reset-baseline property descriptor for a variant: `defaultValue`/`defaultChecked`, mirroring the native
+ * `<input>.defaultValue`/`.defaultChecked` pair. When the prop is
+ * Parser-backed (the attribute-driven convention, ADR 0003), this reflects
+ * the LIVE same-named content attribute through the retained Parser, so it
+ * matches the live prop's own type and can be moved from outside via
+ * `setAttribute`/`this[defaultProp] =`. When it isn't Parser-backed (a
+ * static initializer, `expose({ value: 'default' })`), there is no
+ * attribute contract to reflect — the getter returns the retained
+ * initializer as-is, unchanged from how `formResetCallback` always restored
+ * it. Writing this never marks the control dirty and is never itself the
+ * live prop — it only moves the baseline a future `formResetCallback`
+ * restores `value`/`checked` to (`this[prop] = this[defaultProp]`, the same
+ * relationship `<input>` has between its own two properties).
+ */
+const makeDefaultPropDescriptor = (
+	prop: 'value' | 'checked',
+): PropertyDescriptor => ({
+	get(this: HTMLElement) {
+		const initializer = retainedInitializers.get(this)?.[prop]
+		if (isParser(initializer)) return initializer(this.getAttribute(prop))
+		if (initializer !== undefined) return initializer
+		return prop === 'checked'
+			? this.hasAttribute('checked')
+			: (this.getAttribute(prop) ?? '')
+	},
+	set(this: HTMLElement, v: unknown) {
+		if (prop === 'checked') {
+			if (v) this.setAttribute('checked', '')
+			else this.removeAttribute('checked')
+		} else if (v == null) this.removeAttribute(prop)
+		else this.setAttribute(prop, String(v))
+	},
+	enumerable: true,
+	configurable: true,
+})
+
 /* === Internal Helpers === */
 
 /**
- * Install the native-parity host contract ({@link HOST_CONTRACT_DESCRIPTORS})
- * plus the three managed lifecycle callbacks on a prototype, given the
- * variant-specific reset/state-restore pair. `formDisabledCallback` is
- * shape-agnostic, so it's shared unconditionally.
+ * Install the native-parity host contract ({@link HOST_CONTRACT_DESCRIPTORS}),
+ * the reset-baseline property ({@link makeDefaultPropDescriptor}), plus the
+ * three managed lifecycle callbacks on a prototype, given the variant-specific
+ * reset/state-restore pair. `formDisabledCallback` is shape-agnostic, so it's
+ * shared unconditionally.
  *
  * @since 2.3
  * @internal
  */
 const installManagedFormMembers = (
 	proto: HTMLElement,
+	propName: 'value' | 'checked',
+	defaultPropName: 'defaultValue' | 'defaultChecked',
 	resetCallback: (this: any) => void,
 	stateRestoreCallback: (this: any, state: unknown, mode: string) => void,
 ): void => {
 	Object.defineProperties(proto, {
 		...HOST_CONTRACT_DESCRIPTORS,
+		[defaultPropName]: makeDefaultPropDescriptor(propName),
 		formResetCallback: {
 			value: resetCallback,
 			writable: true,
@@ -366,7 +409,7 @@ const makeFormAssociatedExtension = <Tag extends string>(
 	name: config.name,
 	__kind: config.__kind,
 	staticProps: { formAssociated: true },
-	reservedMembers: MANAGED_FORM_MEMBERS,
+	reservedMembers: new Set([...MANAGED_FORM_MEMBERS, config.defaultPropName]),
 	installOnPrototype: config.installOnPrototype,
 	onConnect: (instance, internals): FactoryResult | void => {
 		if (!internals) return
@@ -385,33 +428,58 @@ const makeFormAssociatedExtension = <Tag extends string>(
 
 /**
  * Build a managed `formResetCallback` for the given reactive prop: restore it
- * to its default by re-running the retained initializer — re-parse the prop's
- * same-named attribute for a Parser (native `defaultValue`/`defaultChecked`
- * semantics), or restore a static value. No-op if signals are not yet
- * initialized or no initializer was retained (e.g. the prop was pre-set on
- * the instance before upgrade). Also a no-op for a `Signal`, `MemoCallback`/
- * `TaskCallback`, or `SlotDescriptor` (`{ get, set? }`) initializer — none of
- * these carry a "default value" to restore; the prop already derives live
- * from whatever backs it.
+ * to its baseline by assigning from the paired {@link makeDefaultPropDescriptor}
+ * property (`this[prop] = this[defaultProp]`) — the same relationship
+ * `<input>.value`/`.defaultValue` have natively. No-op if no
+ * initializer was retained (e.g. the prop was pre-set on the instance before
+ * upgrade) or signals are not yet initialized. Also a no-op for a `Signal`,
+ * `MemoCallback`/`TaskCallback`, or `SlotDescriptor` (`{ get, set? }`)
+ * initializer — none of these carry a "default value" to restore; the prop
+ * already derives live from whatever backs it.
  *
- * Shared by `formAssociated()` (`prop: 'value'`) and `formAssociatedCheckbox()`
- * (`prop: 'checked'`) — the reset mechanics are identical, only the target
- * prop differs.
+ * The restoring write is deferred to a microtask: form
+ * reset runs in TREE ORDER, and a form-associated host precedes its own inner
+ * native control in the light DOM — `formResetCallback` fires on the host
+ * FIRST, then the browser resets the descendant control to its own
+ * `defaultValue`/`defaultChecked` a moment later, in the same synchronous
+ * walk. Writing `this[prop]` synchronously here raced that native reset and
+ * lost — the reactive effect it triggers (`bindProperty`/`bindState` writing
+ * the new value into the control) ran before the control's own native reset
+ * fired, which then silently overwrote it. Deferring past the synchronous
+ * reset walk means the write lands after the control's own reset has already
+ * happened; the two converge on the same baseline now that `defaultValue`'s
+ * content attribute is never touched by live edits, so this is not
+ * a race anymore, just a same-tick reconciliation. The host's OWN internal
+ * "dirty" flag isn't cleared by this write — only the form reset algorithm
+ * clears it, which it does regardless, since the inner control is owned by
+ * the same form.
+ *
+ * Shared by `formAssociated()` (`prop: 'value'`, `defaultProp: 'defaultValue'`)
+ * and `formAssociatedCheckbox()` (`prop: 'checked'`, `defaultProp:
+ * 'defaultChecked'`) — the reset mechanics are identical, only the target
+ * prop pair differs.
  */
-const makeResetCallback = (prop: string) =>
+const makeResetCallback = (
+	prop: 'value' | 'checked',
+	defaultProp: 'defaultValue' | 'defaultChecked',
+) =>
 	function (this: HTMLElement) {
 		const initializer = retainedInitializers.get(this)?.[prop]
 		if (initializer === undefined) return
-		if (isParser(initializer)) {
-			const result = initializer(this.getAttribute(prop))
+		// A Parser is itself a function — this exclusion must not catch it
+		// (checked first) before falling through to the MemoCallback/
+		// TaskCallback/SlotDescriptor "no default to restore" cases.
+		if (
+			!isParser(initializer) &&
+			(isSignal(initializer) ||
+				isFunction(initializer) ||
+				isSlotDescriptor(initializer))
+		)
+			return
+		queueMicrotask(() => {
+			const result = (this as any)[defaultProp]
 			if (result != null) (this as any)[prop] = result
-		} else if (
-			!isSignal(initializer) &&
-			!isFunction(initializer) &&
-			!isSlotDescriptor(initializer)
-		) {
-			;(this as any)[prop] = initializer
-		}
+		})
 	}
 
 /**
@@ -488,10 +556,13 @@ const formAssociated = (): FormAssociatedExtension =>
 		__kind: 'form-associated',
 		name: 'formAssociated',
 		propName: 'value',
+		defaultPropName: 'defaultValue',
 		installOnPrototype: proto =>
 			installManagedFormMembers(
 				proto,
-				makeResetCallback('value'),
+				'value',
+				'defaultValue',
+				makeResetCallback('value', 'defaultValue'),
 				formStateRestoreCallback,
 			),
 		makeSyncDescriptor: (instance, internals) => () =>
@@ -528,10 +599,13 @@ const formAssociatedCheckbox = (): FormAssociatedCheckboxExtension =>
 		__kind: 'form-associated-checkbox',
 		name: 'formAssociatedCheckbox',
 		propName: 'checked',
+		defaultPropName: 'defaultChecked',
 		installOnPrototype: proto =>
 			installManagedFormMembers(
 				proto,
-				makeResetCallback('checked'),
+				'checked',
+				'defaultChecked',
+				makeResetCallback('checked', 'defaultChecked'),
 				checkboxFormStateRestoreCallback,
 			),
 		makeSyncDescriptor: (instance, internals) => () =>
