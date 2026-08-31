@@ -20,11 +20,17 @@ test('internals-only: role, bounds, and live value/text all reach the AX tree', 
 }) => {
 	test.skip(engineOf(page) !== 'chromium', 'CDP AX tree is Chromium-only')
 
-	await page.evaluate(() => {
+	await page.evaluate(async () => {
 		const el = document.querySelector('#slider-internals') as HTMLElement & {
 			setHue(deg: number): void
 		}
 		el.setHue(120)
+		// setHue is throttled to one flush per animation frame (M5 dedup,
+		// see the "no glitching" test below) — wait past it before reading
+		// the AX tree, or this races the flush under worker contention.
+		await new Promise(r =>
+			requestAnimationFrame(() => requestAnimationFrame(r)),
+		)
 	})
 	const tree = await computedAriaTree(page, '#slider-internals')
 	expect(tree.role).toBe('slider')
