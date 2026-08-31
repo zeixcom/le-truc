@@ -1234,21 +1234,6 @@ export const compileSource = (
 		// TSRX039, for the same reason — the walk needs `root`.
 		reportStaticIds(root, source, ctx.diagnostics)
 
-		// TSRX039 (LT-122): one value, two channels. Runs here
-		// rather than during lowering because the check has to
-		// skip the ROOT element — the root is the host, so a
-		// Parser prop rendered as its attribute is the correct
-		// channel, not a duplicate — and `root` only exists now.
-		reportDuplicatedChannels(
-			root,
-			source,
-			ctx.diagnostics,
-			ctx.argNames,
-			ctx.parserProps,
-			ctx.parserFactoryOf,
-			ctx.parserFallbackRefsOf,
-		)
-
 		// CSS: verbatim, dedented (see css.ts).
 		if (styleChild) {
 			const stylesheet = getStyleElementStylesheet(styleChild.node)
@@ -1280,6 +1265,31 @@ export const compileSource = (
 		if (stmt.type === 'TSModuleDeclaration' && String(stmt.kind) === 'global')
 			globalDecl = text(ctx.source, stmt)
 	}
+
+	// TSRX039 (LT-122): one value, two channels. Runs here rather than
+	// during lowering because the check has to skip the ROOT element — the
+	// root is the host, so a Parser prop rendered as its attribute is the
+	// correct channel, not a duplicate — and `root` only exists now. Also
+	// waits for `config` (parsed just above): a `formAssociated()`/
+	// `formAssociatedCheckbox()` host's reserved prop (`value`/`checked`)
+	// is a third exclusion beside the root and the sanctioned override
+	// (LT-141) — the root's own content attribute is the reset baseline,
+	// not a duplicate copy.
+	reportDuplicatedChannels({
+		root,
+		source,
+		diagnostics: ctx.diagnostics,
+		argNames: ctx.argNames,
+		parserProps: ctx.parserProps,
+		parserFactoryOf: ctx.parserFactoryOf,
+		parserFallbackRefsOf: ctx.parserFallbackRefsOf,
+		formResetProp: config?.form
+			? config.form === 'value'
+				? 'value'
+				: 'checked'
+			: null,
+	})
+
 	// observedAttributes only fires for Parser-backed initializers — a name
 	// that is not Parser-exposed would make the extension silently inert.
 	if (config)

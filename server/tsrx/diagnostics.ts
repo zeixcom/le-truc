@@ -202,16 +202,29 @@ export const diagnostic = {
 	 * harvesting from the DOM is the preferred contract, but an
 	 * attribute-driven prop whose site merely displays it is a
 	 * legitimate shape the corpus has not yet argued either way.
+	 *
+	 * `formManaged` (LT-141) branches the fix-it for `value`/`checked` on a
+	 * `formAssociated()`/`formAssociatedCheckbox()` host that renders the
+	 * prop into an owned site but does NOT carry the corresponding host
+	 * attribute: there, the ordinary advice ("drop the attribute") is
+	 * backwards, because the host attribute IS the reset baseline
+	 * (`defaultValue`/`defaultChecked`) the extension's `formResetCallback`
+	 * needs. The exemption in `reportDuplicatedChannels` only fires when
+	 * that attribute IS present — this message covers the case where it
+	 * should be present and isn't.
 	 */
 	duplicatedPropChannel: (
 		source: string,
 		offset: number | undefined,
 		prop: string,
 		parser: string,
+		formManaged: boolean,
 	) =>
 		warning(
 			'TSRX039',
-			`\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. Harvest it from the site instead (\`expose({ ${prop}: <ref read> })\`, TSRX-HOST-PROFILE § data account) and drop the attribute, or stop rendering the value here.`,
+			formManaged
+				? `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. On a form-associated host \`${prop}\` is the reset baseline (\`default${prop === 'checked' ? 'Checked' : 'Value'}\`) — render the host attribute too (\`<… ${prop}={${prop}}>\`) rather than dropping it; do not stop rendering the value here either, since the baseline attribute alone gives no initial DOM state for the control to mirror.`
+				: `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. Harvest it from the site instead (\`expose({ ${prop}: <ref read> })\`, TSRX-HOST-PROFILE § data account) and drop the attribute, or stop rendering the value here.`,
 			lineOf(source, offset),
 		),
 

@@ -269,22 +269,56 @@ export const shareExclusiveIf = (
  * `<span class="label">{label}</span>` is bullet 4's canonical harvest
  * site with bullet 2's override added. A text child's site element is
  * its PARENT, which `walkTemplate` already hands to the visitor.
+ *
+ * A `formAssociated()`/`formAssociatedCheckbox()` host's reserved prop
+ * (`value`/`checked`) is a THIRD exclusion, distinct from bullet 2's
+ * override (LT-141): the root's own content attribute is the RESET
+ * BASELINE the extension reads on `formResetCallback` (`defaultValue`/
+ * `defaultChecked`, LT-056/LT-057), and the owned site is the CURRENT
+ * value — native `<input value>` semantics, where the content attribute
+ * and the IDL property deliberately diverge. Neither channel is
+ * removable, so the ordinary fix-it ("drop the attribute") would break
+ * form reset. Exempt only while the root actually carries that baseline
+ * attribute — absent it, there is no baseline and the original
+ * duplication hazard is real — and when the exemption doesn't apply,
+ * `duplicatedPropChannel`'s message is branched so it never tells a
+ * form-associated author to delete their reset baseline.
  */
-export const reportDuplicatedChannels = (
-	root: TemplateNode,
-	source: string,
-	diagnostics: CompileDiagnostic[],
-	argNames: ReadonlySet<string>,
-	parserProps: ReadonlySet<string>,
-	parserFactoryOf: (prop: string) => string,
-	parserFallbackRefsOf: (prop: string) => ReadonlySet<string>,
-): void => {
+export type DuplicatedChannelsCheck = {
+	root: TemplateNode
+	source: string
+	diagnostics: CompileDiagnostic[]
+	argNames: ReadonlySet<string>
+	parserProps: ReadonlySet<string>
+	parserFactoryOf: (prop: string) => string
+	parserFallbackRefsOf: (prop: string) => ReadonlySet<string>
+	/** `value` or `checked` if `config.form` names it (LT-141); else `null`. */
+	formResetProp: string | null
+}
+
+export const reportDuplicatedChannels = ({
+	root,
+	source,
+	diagnostics,
+	argNames,
+	parserProps,
+	parserFactoryOf,
+	parserFallbackRefsOf,
+	formResetProp,
+}: DuplicatedChannelsCheck): void => {
 	if (parserProps.size === 0 || argNames.size === 0) return
 	const named = (expr: TsrxNode): string | null => {
 		if (!isNode(expr) || expr.type !== 'Identifier') return null
 		const name = String(expr.name)
 		return argNames.has(name) && parserProps.has(name) ? name : null
 	}
+	// The root carries the reserved prop as its own baseline attribute —
+	// the condition that makes the second channel a baseline rather than
+	// a duplicate (LT-141).
+	const rootHasBaselineAttr =
+		formResetProp !== null &&
+		root.kind === 'element' &&
+		root.attrs.some(a => a.kind === 'server' && a.name === formResetProp)
 	const report = (prop: string, offset: number | undefined): void => {
 		diagnostics.push(
 			diagnostic.duplicatedPropChannel(
@@ -292,6 +326,7 @@ export const reportDuplicatedChannels = (
 				offset,
 				prop,
 				parserFactoryOf(prop),
+				prop === formResetProp,
 			),
 		)
 	}
@@ -324,7 +359,11 @@ export const reportDuplicatedChannels = (
 			// is an owned site, not the host's own attribute channel.
 			if (
 				prop &&
-				!isSanctionedOverride(prop, parent?.kind === 'element' ? parent : null)
+				!isSanctionedOverride(
+					prop,
+					parent?.kind === 'element' ? parent : null,
+				) &&
+				!(prop === formResetProp && rootHasBaselineAttr)
 			)
 				report(prop, node.node.start)
 			return
@@ -333,7 +372,11 @@ export const reportDuplicatedChannels = (
 		for (const attr of node.attrs) {
 			if (attr.kind !== 'server') continue
 			const prop = named(attr.node)
-			if (prop && !isSanctionedOverride(prop, node))
+			if (
+				prop &&
+				!isSanctionedOverride(prop, node) &&
+				!(prop === formResetProp && rootHasBaselineAttr)
+			)
 				report(prop, attr.node.start)
 		}
 	})

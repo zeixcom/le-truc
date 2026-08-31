@@ -1968,6 +1968,102 @@ export function C({ label = '' }: { label?: string })
 	})
 })
 
+describe('TSRX039 exempts a formAssociated() reset baseline (LT-141)', () => {
+	// form-textbox's real shape: `value` is Parser-exposed, rendered into an
+	// owned text child (`<textarea>{value}</textarea>`), AND rendered onto
+	// the root as the host attribute (`<form-textbox {value}>`) — which is
+	// the RESET BASELINE `formResetCallback` reads (defaultValue), not an
+	// independent second copy of the current value.
+	test('formAssociated() root carrying the value attribute — no warning', () => {
+		const source = `import { asString } from '@zeix/le-truc'
+export const config = { formAssociated: true }
+export function C({ value = '' }: { value?: string })
+@{
+	expose({ value: asString('') })
+	<>
+		<c-el value={value}><textarea>{value}</textarea></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX039')).toEqual([])
+	})
+
+	test('formAssociatedCheckbox() root carrying the checked attribute — no warning', () => {
+		const source = `import { asBoolean } from '@zeix/le-truc'
+export const config = { formAssociatedCheckbox: true }
+export function C({ checked = false }: { checked?: boolean })
+@{
+	expose({ checked: asBoolean(false) })
+	<>
+		<c-el checked={checked}><input type="checkbox" checked={checked} /></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX039')).toEqual([])
+	})
+
+	test('formAssociated() root WITHOUT the value attribute still warns, with the baseline fix-it', () => {
+		// No baseline attribute means no reset baseline — the original
+		// duplication hazard (fallback-wins-on-first-bind) is real, but the
+		// ordinary "drop the attribute" advice would tell the author to
+		// delete the very thing formResetCallback needs, so the message must
+		// say to ADD the attribute instead.
+		const source = `import { asString } from '@zeix/le-truc'
+export const config = { formAssociated: true }
+export function C({ value = '' }: { value?: string })
+@{
+	expose({ value: asString('') })
+	<>
+		<c-el><textarea>{value}</textarea></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		const found = diagnostics.filter(d => d.code === 'TSRX039')
+		expect(found).toHaveLength(1)
+		expect(found[0]?.message).toContain('reset baseline')
+		expect(found[0]?.message).toContain('defaultValue')
+		expect(found[0]?.message).not.toContain('drop the attribute')
+	})
+
+	test('a non-form-associated component exposing `value` still warns', () => {
+		// Same site shape as form-textbox, minus formAssociated() — nothing
+		// reserves `value` as a reset baseline here, so it is a plain
+		// duplicate and the ordinary fix-it applies.
+		const source = `import { asString } from '@zeix/le-truc'
+export function C({ value = '' }: { value?: string })
+@{
+	expose({ value: asString('') })
+	<>
+		<c-el value={value}><textarea>{value}</textarea></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		const found = diagnostics.filter(d => d.code === 'TSRX039')
+		expect(found).toHaveLength(1)
+		expect(found[0]?.message).toContain('drop the attribute')
+	})
+})
+
 describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
 	const withAttrs = (tpl: string): string => `export function C({}: {})
 @{
