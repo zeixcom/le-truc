@@ -56,13 +56,13 @@ Use `class` attribute to get a different style for the radio group.
 - Required
 - Description
 ---
-- `all('input[type="radio"]')`
-- `Signal<HTMLInputElement[]>`
-- **required**
-- Native radio inputs (at least two)
----
 - `all('label')`
 - `Signal<HTMLLabelElement[]>`
 - **required**
-- Labels wrapping radio inputs; toggles `selected` class
+- One label per option, each carrying the option's value in `data-value` (the compiled item addressing) and wrapping its radio input; toggles the `selected` class
+---
+- `label input[type="radio"]`
+- `HTMLInputElement`
+- **required**
+- Native radio inputs (one per option, presentational only — no `name`); the compiled client writes their `checked`, `tabindex`, and `disabled` properties
 {% /table %}

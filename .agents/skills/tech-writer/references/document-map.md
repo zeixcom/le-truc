@@ -38,41 +38,122 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 
 ### `docs-src/pages/components.md`
 **Audience:** Developers learning to build Le Truc components
-**Register:** Tutorial — walks through real code with explanation; assumes JavaScript competence
-**Scope:** `defineComponent` factory form — `FactoryContext` helpers (`first`, `all`, `host`, `expose`, `watch`, `on`, `pass`); prop initializers (parsers, static values, signals, sensors); `bind*` helpers (`bindText`, `bindProperty`, `bindClass`, `bindVisible`, `bindAttribute`, `bindStyle`); `defineMethod()` for imperative methods; `all()` + `each()` for dynamic collections
+**Register:** Mixed — explanation prose around reference tables and hands-on fragments; set the dials per section (see references/tone-guide.md → Text Types). Assumes JavaScript competence
+**Scope:** Chapter *Building Components*, part 1 — `defineComponent()` signature and factory form, the connect/disconnect lifecycle (including hand-authored `EffectDescriptor` with `watch(() => true, …)`), element queries (`first`, `all`, `query`, `queryAll`); embeds the `docs-lifecycle` interactive
 
 **Update triggers:**
 - `defineComponent` signature changes
-- A parser is added, removed, or changes semantics
 - `first()` or `all()` behavior changes
-- A new property initializer kind is introduced
-- The three-phase initialization order changes
+- The connect/disconnect lifecycle changes
 - Code examples reference an API that has changed
 
 **Consistency checks:**
 - `defineComponent` call signature in all examples matches `src/component.ts`
-- Parser names and signatures match `src/parsers/`
 - `first()` and `all()` behavior description matches `src/helpers/dom.ts`
-- `defineMethod()` description matches `src/component.ts`
 - All code examples compile against current exports in `index.ts`
+- The `docs-lifecycle` demo markup matches `examples/docs/lifecycle/docs-lifecycle.html`
+
+### `docs-src/pages/props.md`
+**Audience:** Developers declaring reactive state on components
+**Register:** Mixed — how-to fragments around a reference table; assumes the reader has read components.md
+**Scope:** Chapter *Building Components*, part 2 — `expose()` initializers (parsers, static values, signals), signal-type table, deprecated-name migration, non-nullability, local signals, read-only properties, `defineMethod()`
+
+**Update triggers:**
+- `expose()` semantics or initializer kinds change
+- A signal type is added, removed, or renamed (also update the deprecated-names section)
+- `defineMethod()` behavior changes
+
+**Consistency checks:**
+- Signal-type table rows match the re-exports in `index.ts`
+- Parser examples match `src/parsers/`
+- Nil-behavior claims match the `bind*` table on effects.md
+
+### `docs-src/pages/effects.md`
+**Audience:** Developers wiring events and reactive DOM updates
+**Register:** Mixed — how-to with reference table; assumes the reader has read props.md
+**Scope:** Chapter *Building Components*, part 3 — `on()`, `watch()`, the `bind*` helper table (DOM update + nil behavior per helper), thunks, `each()`, bidirectional binding with native elements
+
+**Update triggers:**
+- A `bind*` helper is added, removed, or changes nil behavior (update the table)
+- `on()` or `watch()` semantics change
+- `each()` behavior changes
+
+**Consistency checks:**
+- `bind*` table matches `src/bindings.ts` (JSDoc per helper)
+- `each()` description matches `src/helpers/reactive.ts`
+
+### `docs-src/pages/extensions.md`
+**Audience:** Developers opting components into form participation, attribute reactivity, or debug instrumentation
+**Register:** Reference-leaning — mechanism intro plus per-extension how-tos
+**Scope:** Chapter *Building Components*, part 4 — the `ComponentExtension` mechanism, `formAssociated()`, `formAssociatedCheckbox()`, `relayValidity()`, `observedAttributes()`, `debug()` instrumentation
+
+**Update triggers:**
+- An extension is added, removed, or changes its host contract
+- `relayValidity()` semantics change
+- Debug instrumentation behavior changes (ADR 0022)
+
+**Consistency checks:**
+- Extension table matches exports in `index.ts`
+- Form-association contract matches `src/extensions/form.ts`
+- `observedAttributes()` description matches `src/extensions/attributes.ts`
 
 ### `docs-src/pages/data-flow.md`
 **Audience:** Developers building multi-component UIs
-**Register:** Tutorial — builds from a concrete scenario; assumes the reader has read components.md
-**Scope:** `pass()` for parent-to-child signal binding, `provideContexts`/`requestContext` for shared ancestor state, `createList()` for dynamic lists with DOM reconciliation, event delegation
+**Register:** Explanation built on one worked scenario (the product catalog); assumes the reader has read components.md
+**Scope:** Chapter *Coordinating Components*, part 1 — the "split first, then coordinate" framing and mechanism comparison table, `pass()` for parent-to-child signal binding with the `ModuleCatalog`/`BasicButton`/`FormSpinbutton` scenario
 
 **Update triggers:**
-- `pass()` behavior or scope changes (e.g., Le Truc-only restriction clarified)
-- `provideContexts` / `requestContext` API changes
-- `createList()` usage or the DOM reconciliation pattern changes
-- `deriveCell` or other signal API used in examples changes
+- `pass()` behavior or scope changes (e.g. Le Truc-only restriction clarified)
+- The mechanism comparison table needs a new row or a changed coupling claim
 - Code examples reference a changed API
 
 **Consistency checks:**
 - `pass()` callout about Le Truc-only scope is accurate
-- `provideContexts` / `requestContext` example signatures match `src/helpers/context.ts`
-- `createList()` reconciler pattern matches the `module-list` example source
-- All code examples compile against current exports
+- Mechanism table links resolve to context.html and async.html
+- Catalog example signatures match the `module-catalog` example source
+
+### `docs-src/pages/lists.md`
+**Audience:** Developers rendering dynamic keyed collections
+**Register:** How-to with explanation; embeds the `docs-reconcile` interactive
+**Scope:** Chapter *Coordinating Components*, part 2 — `createList()` and `keyConfig`, `reconcile()` (adoption, keyed moves, escape hatches, collector parity), add/remove mutations, the `module-list` example
+
+**Update triggers:**
+- `createList()` usage or the DOM reconciliation pattern changes
+- `reconcile()` semantics change (adoption, `data-unreconciled`, `bindItem` parity)
+- The `module-list` example source changes materially
+
+**Consistency checks:**
+- `reconcile()` description matches `src/helpers/reactive.ts`
+- Reconciler pattern matches the `module-list` example source
+- The `docs-reconcile` demo markup matches `examples/docs/reconcile/docs-reconcile.html`
+
+### `docs-src/pages/context.md`
+**Audience:** Developers sharing state across the component tree
+**Register:** How-to — provider and consumer as one flow
+**Scope:** Chapter *Coordinating Components*, part 3 — `createContext()`, provider components with `provideContexts()`, consumers with `requestContext()` and fallback semantics, the `context-media` example
+
+**Update triggers:**
+- `provideContexts` / `requestContext` API changes
+- Fallback or late-provider behavior changes
+
+**Consistency checks:**
+- Example signatures match `src/helpers/context.ts`
+- Fallback/late-provider claims match AGENTS.md context-protocol entry
+
+### `docs-src/pages/async.md`
+**Audience:** Developers loading data inside components
+**Register:** Explanation with how-to fragments
+**Scope:** Chapter *Coordinating Components*, part 4 — `Task` and `match()` state routing (`nil`/`err`/`stale`/`ok`), the `module-lazyload` example, `deriveList()` fetching into a reconciled list; embeds the `docs-task-states` interactive
+
+**Update triggers:**
+- Task state routing or `stale` semantics change
+- `deriveList()` options change
+- The `module-lazyload` example changes materially
+
+**Consistency checks:**
+- State-precedence list matches `@zeix/cause-effect` behavior
+- `deriveList` example matches the `module-users` pattern and current API
+- The `docs-task-states` demo markup matches `examples/docs/task-states/docs-task-states.html`
 
 ### `docs-src/pages/styling.md`
 **Audience:** Frontend developers and designers adding styles to Le Truc components
@@ -92,29 +173,24 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 **Scope:** The `{% listnav %}` listing all example components grouped by category
 
 **Update triggers:**
-- A new example component is added to `examples/`
+- A new example component is added to `examples/` (each needs a `.md` doc for the examples effect to build its page)
 - An example component is removed or renamed
 
 **Consistency checks:**
-- Every directory in `examples/` that has a `.html` file is listed here
+- Every directory in `examples/` that has a `.md` and `.html` file is listed here
 - Links follow the pattern `./examples/component-name.html`
-- Groups (Basic, Card, Context, Form, Module, Section) are correct for current examples
+- Groups (Basic, Card, Context, Docs, Form, Module) are correct for current examples
 
 ### `docs-src/pages/api.md`
 **Audience:** Developers browsing the API reference
-**Register:** Navigation — the `{% listnav %}` is the content; prose is minimal
-**Scope:** The manually-maintained `{% listnav %}` linking to TypeDoc-generated pages in `docs-src/api/`
+**Register:** Navigation — generated, not authored
+**Scope:** The `{% listnav %}` linking to TypeDoc-generated pages in `docs-src/api/`. **`api.md` is written by `apiEffect` at build time and is gitignored — never edit it by hand.** New exports appear after `bun run build:docs`.
 
 **Update triggers:**
-- A new symbol is exported from `index.ts` (add a link in the appropriate category)
-- An exported symbol is removed (remove its link)
-- A symbol is renamed
+- None manual — regenerate with `bun run build:docs`. To change content, update JSDoc in `src/`.
 
 **Consistency checks:**
-- Every exported symbol in `index.ts` that TypeDoc generates a page for has a link here
-- Links follow the pattern `./api/{category}/{SymbolName}.html`
-- Categories (Functions, Classes, Variables, Type Aliases) match TypeDoc's output structure
-- No links point to removed symbols
+- The generated list includes every exported symbol TypeDoc generates a page for (if one is missing, the export may lack JSDoc or be excluded by `typedoc.json`)
 
 ### `docs-src/pages/blog/YYYY-MM-DD-slug.md`
 **Audience:** Developers browsing the blog — curious about the project's history, design thinking, or how it compares to alternatives
@@ -214,12 +290,13 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 Quick reference for update-after-change.md:
 
 | Change type | JSDoc | ARCH | AGENTS | README | Pages |
-|---|---|---|---|---|
-| New exported function/type | ✓ | — | — | — | api.md nav list |
-| Removed export | ✓ | ✓ if structural | ✓ if was non-obvious | — | api.md nav list |
-| Changed public API signature | ✓ | — | — | ✓ if in quick-start | components.md or data-flow.md if documented |
+|---|---|---|---|---|---|
+| New exported function/type | ✓ | — | — | — | api.md regenerates automatically |
+| Removed export | ✓ | ✓ if structural | ✓ if was non-obvious | — | api.md regenerates automatically |
+| Changed public API signature | ✓ | — | — | ✓ if in quick-start | the page that documents it (see page table) |
 | New/changed non-obvious behavior | — | ✓ if structural | ✓ | — | callout in relevant page if user-facing |
 | Internal implementation change | — | ✓ | ✓ if tricky | — | — |
 | New example component added | — | — | — | — | examples.md nav list |
 | Example renamed/removed | — | — | — | — | examples.md nav list |
 | Installation/package change | — | — | — | ✓ | getting-started.md |
+| Guide restructured (pages added/removed/renamed) | — | — | — | ✓ docs list | update `PAGE_ORDER` + `CHAPTERS` in `server/config.ts`, `CURATED_PAGES` in `server/effects/llms-full-manifest.ts`, and document-map entries; any pipeline *code* goes to `docs-server-dev` as a `TODO.md` task (see workflows/improve-docs-architecture.md) |

@@ -127,7 +127,10 @@ test.describe('card-mediaqueries component', () => {
 	})
 
 	test('multiple components receive same context values', async ({ page }) => {
-		// Add another card-mediaqueries component inside the context provider
+		// Add another card-mediaqueries component inside the context provider.
+		// The compiled client hydrates the template structure it is given (it
+		// does not create it), so the appended instance carries the owned
+		// h5/dl markup; the heading text is page data, not an attribute.
 		await page.evaluate(() => {
 			const contextMedia = document.querySelector('context-media')
 			if (contextMedia) {
@@ -135,10 +138,10 @@ test.describe('card-mediaqueries component', () => {
 				newCard.innerHTML = `
 					<h5>Additional Card</h5>
 					<dl>
-						<dt>Motion:</dt><dd class="motion"></dd>
-						<dt>Theme:</dt><dd class="theme"></dd>
-						<dt>Viewport:</dt><dd class="viewport"></dd>
-						<dt>Orientation:</dt><dd class="orientation"></dd>
+						<dt>Motion Preference:</dt><dd class="motion"></dd>
+						<dt>Theme Preference</dt><dd class="theme"></dd>
+						<dt>Device Viewport:</dt><dd class="viewport"></dd>
+						<dt>Device Orientation:</dt><dd class="orientation"></dd>
 					</dl>
 				`
 				contextMedia.appendChild(newCard)

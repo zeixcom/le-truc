@@ -1,4 +1,4 @@
-import { type Context, defineComponent } from '../../../index'
+import { type Context, defineComponent } from '@zeix/le-truc'
 import { TEST_COUNT_CONTEXT } from './test-context'
 
 /* === Late provider === */

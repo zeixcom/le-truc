@@ -1,0 +1,13 @@
+{
+	// Program scope for the API documentation build (typedoc.json's tsconfig
+	// option). The API docs document the LIBRARY (entry point index.ts and
+	// its src/ graph). The root tsconfig.json's broader include (server/,
+	// examples/, scripts/) pulls files into the TypeDoc program whose type
+	// errors then fail the docs build even though they contribute nothing to
+	// the documentation — e.g. server/tests/tsrx/compose.test.ts imports a
+	// generated server module from gitignored server/generated/ that only
+	// exists after the test suite has run (CI runs build:docs before any
+	// test step), so a fresh checkout could never pass.
+	"extends": "./tsconfig.json",
+	"include": ["./index.ts", "./src/**/*.ts"]
+}

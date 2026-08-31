@@ -1,4 +1,4 @@
-import { defineComponent, each } from '../../../index'
+import { defineComponent, each } from '@zeix/le-truc'
 
 export type TestEachProps = {
 	selected: number

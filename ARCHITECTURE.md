@@ -4,6 +4,8 @@ Le Truc is a reactive custom elements library. This document provides the mental
 
 The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives (see [ADR 0001](adr/0001-use-cause-effect-as-reactive-primitive-layer.md)).
 
+Components may also be authored in `.tsrx`, an isomorphic single-file format compiled to this same runtime (see [ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md)). `TSRX-HOST-PROFILE.md` states Le Truc's host-specific decisions for that format.
+
 ## Component Model
 
 **Component** instances are defined using the factory form (see [ADR 0002](adr/0002-factory-form-over-builder-pattern.md)):
@@ -63,6 +65,8 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 | `bindVisible` | Controls `hidden` attribute |
 | `dangerouslyBindInnerHTML` | Sets innerHTML |
 
+`bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, and `bindState` additionally accept a `readonly string[]` in place of the single target, targeting several properties/attributes/class tokens/object keys/custom states from one `watch()` handler instead of N separate calls sharing one computed source (see [ADR 0023](adr/0023-map-form-overloads-for-bind-helpers.md)). Implemented for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty` (LT-029); `bindState`'s map-form overload is tracked as a follow-up (LT-032).
+
 ### Event Binding
 
 `on(target, type, handler)` binds events with unified `(event, target)` signature. For `Signal<Element[]>` targets, uses event delegation with fallback to per-element listeners for non-bubbling events. Per-element lifecycles over reactive element collections — `each()` and `pass()` with a `Signal<Element[]>` target, and the non-bubbling `on()` fallback over `Signal<Element[]>` — share the internal `keyedScopes` helper, which keys scopes by element identity so collection changes only mount entering elements and dispose leaving ones, leaving survivors untouched (see [ADR 0014](adr/0014-keyed-per-element-scopes-for-memo-collections.md)).
@@ -103,7 +107,7 @@ Unlike `each()`, `reconcile()` does not apply `forEachUnseen` to the return valu
 ### `first(selector)` / `all(selector)`
 
 - `first()`: Returns single element or throws `MissingElementError` if required
-- `all()`: Returns `Signal<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
+- `all()`: Returns `Cell<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
 
 Both collect undefined custom element dependencies for `resolveDependencies()`.
 

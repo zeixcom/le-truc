@@ -2064,6 +2064,10 @@ var throttle = (fn, signal) => {
 };
 
 // src/bindings.ts
+var defaultSanitize;
+var configureHtmlSanitizer = (sanitize) => {
+  defaultSanitize = sanitize;
+};
 var debugBindingTargets = new WeakMap;
 var registerDebugBindingTarget = (target, element) => {
   if (false)
@@ -2121,29 +2125,68 @@ var bindText = (element, preserveComments = false) => {
   registerDebugBindingTarget(setter, element);
   return setter;
 };
-var bindProperty = (object, key) => {
+function bindProperty(object, keyOrKeys) {
+  if (typeof keyOrKeys === "string") {
+    const key = keyOrKeys;
+    const setter2 = (value) => {
+      object[key] = value;
+    };
+    if (typeof Element !== "undefined" && object instanceof Element)
+      registerDebugBindingTarget(setter2, object);
+    return setter2;
+  }
+  const keys = keyOrKeys;
   const setter = (value) => {
-    object[key] = value;
+    for (const key of keys) {
+      if (Object.hasOwn(value, key))
+        object[key] = value[key];
+    }
   };
   if (typeof Element !== "undefined" && object instanceof Element)
     registerDebugBindingTarget(setter, object);
   return setter;
-};
-var bindClass = (element, token) => {
+}
+function bindClass(element, tokenOrTokens) {
+  if (typeof tokenOrTokens === "string") {
+    const token = tokenOrTokens;
+    const setter2 = (value) => {
+      element.classList.toggle(token, Boolean(value));
+    };
+    registerDebugBindingTarget(setter2, element);
+    return setter2;
+  }
+  const tokens = tokenOrTokens;
   const setter = (value) => {
-    element.classList.toggle(token, Boolean(value));
+    for (const token of tokens)
+      element.classList.toggle(token, Boolean(value[token]));
   };
   registerDebugBindingTarget(setter, element);
   return setter;
-};
-var bindState = (internals, token) => (value) => {
-  if (!internals)
-    return;
-  if (value)
-    internals.states.add(token);
-  else
-    internals.states.delete(token);
-};
+}
+function bindState(internals, tokenOrTokens) {
+  if (typeof tokenOrTokens === "string") {
+    const token = tokenOrTokens;
+    return (value) => {
+      if (!internals)
+        return;
+      if (value)
+        internals.states.add(token);
+      else
+        internals.states.delete(token);
+    };
+  }
+  const tokens = tokenOrTokens;
+  return (value) => {
+    if (!internals)
+      return;
+    for (const token of tokens) {
+      if (value[token])
+        internals.states.add(token);
+      else
+        internals.states.delete(token);
+    }
+  };
+}
 var bindVisible = (element) => {
   const setter = (value) => {
     element.hidden = !value;
@@ -2151,36 +2194,83 @@ var bindVisible = (element) => {
   registerDebugBindingTarget(setter, element);
   return setter;
 };
-var bindAttribute = (element, name, allowUnsafe = false) => {
+function bindAttribute(element, nameOrNames, allowUnsafe = false) {
+  if (typeof nameOrNames === "string") {
+    const name = nameOrNames;
+    const handlers2 = {
+      ok: (value) => {
+        if (typeof value === "boolean") {
+          element.toggleAttribute(name, value);
+        } else if (allowUnsafe) {
+          element.setAttribute(name, value);
+        } else {
+          safeSetAttribute(element, name, value);
+        }
+      },
+      nil: () => {
+        element.removeAttribute(name);
+      }
+    };
+    registerDebugBindingTarget(handlers2, element);
+    return handlers2;
+  }
+  const names = nameOrNames;
   const handlers = {
-    ok: (value) => {
-      if (typeof value === "boolean") {
-        element.toggleAttribute(name, value);
-      } else if (allowUnsafe) {
-        element.setAttribute(name, value);
-      } else {
-        safeSetAttribute(element, name, value);
+    ok: (map) => {
+      for (const name of names) {
+        const value = map[name];
+        if (value == null) {
+          element.removeAttribute(name);
+        } else if (typeof value === "boolean") {
+          element.toggleAttribute(name, value);
+        } else if (allowUnsafe) {
+          element.setAttribute(name, value);
+        } else {
+          safeSetAttribute(element, name, value);
+        }
       }
     },
     nil: () => {
-      element.removeAttribute(name);
+      for (const name of names)
+        element.removeAttribute(name);
     }
   };
   registerDebugBindingTarget(handlers, element);
   return handlers;
-};
-var bindStyle = (element, prop) => {
+}
+function bindStyle(element, propOrProps) {
+  if (typeof propOrProps === "string") {
+    const prop = propOrProps;
+    const handlers2 = {
+      ok: (value) => {
+        element.style.setProperty(prop, value);
+      },
+      nil: () => {
+        element.style.removeProperty(prop);
+      }
+    };
+    registerDebugBindingTarget(handlers2, element);
+    return handlers2;
+  }
+  const props = propOrProps;
   const handlers = {
-    ok: (value) => {
-      element.style.setProperty(prop, value);
+    ok: (map) => {
+      for (const prop of props) {
+        const value = map[prop];
+        if (value == null)
+          element.style.removeProperty(prop);
+        else
+          element.style.setProperty(prop, value);
+      }
     },
     nil: () => {
-      element.style.removeProperty(prop);
+      for (const prop of props)
+        element.style.removeProperty(prop);
     }
   };
   registerDebugBindingTarget(handlers, element);
   return handlers;
-};
+}
 var dangerouslyBindInnerHTML = (element, options = {}) => {
   const reset = () => {
     if (element.shadowRoot)
@@ -2194,7 +2284,11 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
         schedule(element, reset);
         return;
       }
-      const { shadowRootMode, allowScripts, sanitize } = options;
+      const {
+        shadowRootMode,
+        allowScripts,
+        sanitize = defaultSanitize
+      } = options;
       if (shadowRootMode && !element.shadowRoot)
         element.attachShadow({ mode: shadowRootMode });
       const target = element.shadowRoot || element;
@@ -3301,9 +3395,33 @@ var MANAGED_FORM_MEMBERS = new Set([
 ]);
 var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
 var FALLBACK_VALIDITY_MESSAGE = "Invalid value";
-var installManagedFormMembers = (proto, resetCallback, stateRestoreCallback) => {
+var makeDefaultPropDescriptor = (prop) => ({
+  get() {
+    const initializer = retainedInitializers.get(this)?.[prop];
+    if (isParser(initializer))
+      return initializer(this.getAttribute(prop));
+    if (initializer !== undefined)
+      return initializer;
+    return prop === "checked" ? this.hasAttribute("checked") : this.getAttribute(prop) ?? "";
+  },
+  set(v) {
+    if (prop === "checked") {
+      if (v)
+        this.setAttribute("checked", "");
+      else
+        this.removeAttribute("checked");
+    } else if (v == null)
+      this.removeAttribute(prop);
+    else
+      this.setAttribute(prop, String(v));
+  },
+  enumerable: true,
+  configurable: true
+});
+var installManagedFormMembers = (proto, propName, defaultPropName, resetCallback, stateRestoreCallback) => {
   Object.defineProperties(proto, {
     ...HOST_CONTRACT_DESCRIPTORS,
+    [defaultPropName]: makeDefaultPropDescriptor(propName),
     formResetCallback: {
       value: resetCallback,
       writable: true,
@@ -3355,7 +3473,7 @@ var makeFormAssociatedExtension = (config) => ({
   name: config.name,
   __kind: config.__kind,
   staticProps: { formAssociated: true },
-  reservedMembers: MANAGED_FORM_MEMBERS,
+  reservedMembers: new Set([...MANAGED_FORM_MEMBERS, config.defaultPropName]),
   installOnPrototype: config.installOnPrototype,
   onConnect: (instance, internals) => {
     if (!internals)
@@ -3368,17 +3486,17 @@ var makeFormAssociatedExtension = (config) => ({
     return [config.makeSyncDescriptor(instance, internals)];
   }
 });
-var makeResetCallback = (prop) => function() {
+var makeResetCallback = (prop, defaultProp) => function() {
   const initializer = retainedInitializers.get(this)?.[prop];
   if (initializer === undefined)
     return;
-  if (isParser(initializer)) {
-    const result = initializer(this.getAttribute(prop));
+  if (!isParser(initializer) && (isSignal(initializer) || isFunction(initializer) || isSlotDescriptor(initializer)))
+    return;
+  queueMicrotask(() => {
+    const result = this[defaultProp];
     if (result != null)
       this[prop] = result;
-  } else if (!isSignal(initializer) && !isFunction(initializer) && !isSlotDescriptor(initializer)) {
-    this[prop] = initializer;
-  }
+  });
 };
 var formStateRestoreCallback = function(state) {
   if (typeof state !== "string")
@@ -3411,7 +3529,8 @@ var formAssociated = () => makeFormAssociatedExtension({
   __kind: "form-associated",
   name: "formAssociated",
   propName: "value",
-  installOnPrototype: (proto) => installManagedFormMembers(proto, makeResetCallback("value"), formStateRestoreCallback),
+  defaultPropName: "defaultValue",
+  installOnPrototype: (proto) => installManagedFormMembers(proto, "value", "defaultValue", makeResetCallback("value", "defaultValue"), formStateRestoreCallback),
   makeSyncDescriptor: (instance, internals) => () => createEffect(() => {
     const v = instance.value;
     internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
@@ -3421,7 +3540,8 @@ var formAssociatedCheckbox = () => makeFormAssociatedExtension({
   __kind: "form-associated-checkbox",
   name: "formAssociatedCheckbox",
   propName: "checked",
-  installOnPrototype: (proto) => installManagedFormMembers(proto, makeResetCallback("checked"), checkboxFormStateRestoreCallback),
+  defaultPropName: "defaultChecked",
+  installOnPrototype: (proto) => installManagedFormMembers(proto, "checked", "defaultChecked", makeResetCallback("checked", "defaultChecked"), checkboxFormStateRestoreCallback),
   makeSyncDescriptor: (instance, internals) => () => createEffect(() => {
     const checked = instance.checked;
     internals.setFormValue(checked ? instance.getAttribute("value") ?? "on" : null);
@@ -3554,6 +3674,7 @@ export {
   createComputed,
   createCollection,
   createCell,
+  configureHtmlSanitizer,
   bindVisible,
   bindText,
   bindStyle,

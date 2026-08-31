@@ -1,5 +1,11 @@
 import pkg from '../../package.json'
-import { ASSETS_DIR, INCLUDES_DIR, LAYOUTS_DIR, OUTPUT_DIR } from '../config'
+import {
+	ASSETS_DIR,
+	CHAPTERS,
+	INCLUDES_DIR,
+	LAYOUTS_DIR,
+	OUTPUT_DIR,
+} from '../config'
 import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
 import {
 	calculateFileHash,
@@ -7,6 +13,7 @@ import {
 	getFilePath,
 	writeFileSafe,
 } from '../io'
+import { type ChapterLink, chapterNav } from '../templates/chapter-nav'
 import { performanceHints } from '../templates/performance-hints'
 import { escapeHtml, generateSlug, html, raw } from '../templates/utils'
 import { createBuildEffect } from './build-effect'
@@ -111,6 +118,9 @@ const analyzePageForPreloads = (htmlContent: string): string[] => {
 
 /* === Blog Helpers === */
 
+/** Posts featured as excerpt cards on the blog overview; the rest go to the archive list. */
+const FEATURED_POSTS = 3
+
 /** Compute reading time and blog tag HTML for a processed blog post. */
 export const getBlogVariables = (
 	processedFile: ProcessedMarkdownFile,
@@ -178,7 +188,7 @@ export const computeBlogPrevNext = (
 	return map
 }
 
-/** Generate blog overview excerpt cards for the 3 most-recent non-draft posts. */
+/** Generate blog overview excerpt cards for the most-recent non-draft posts. */
 export const generateBlogExcerpts = (
 	sortedPosts: ProcessedMarkdownFile[],
 	basePath: string = './',
@@ -186,7 +196,7 @@ export const generateBlogExcerpts = (
 	if (sortedPosts.length === 0) return '<p>No blog posts yet.</p>'
 
 	return sortedPosts
-		.slice(0, 3)
+		.slice(0, FEATURED_POSTS)
 		.map(post => {
 			const slug = post.relativePath.replace(/^blog\//, '').replace(/\.md$/, '')
 			const url = `${basePath}blog/${slug}.html`
@@ -242,6 +252,74 @@ export const generateBlogExcerpts = (
 			</card-blogpost>`
 		})
 		.join('\n')
+}
+
+/**
+ * Generate a compact archive list of non-draft posts beyond the featured
+ * cards: linked title + date per post, date-descending (caller sorts).
+ * Returns '' when every post fits the featured cards.
+ */
+export const generateBlogArchive = (
+	sortedPosts: ProcessedMarkdownFile[],
+	basePath: string = './',
+): string => {
+	const archived = sortedPosts.slice(FEATURED_POSTS)
+	if (archived.length === 0) return ''
+
+	const items = archived
+		.map(post => {
+			const slug = post.relativePath.replace(/^blog\//, '').replace(/\.md$/, '')
+			const url = `${basePath}blog/${slug}.html`
+			const date = post.metadata.date ?? ''
+			return html`<li>
+				<a href="${url}">${post.title}</a>
+				<time datetime="${date}">${date}</time>
+			</li>`
+		})
+		.join('\n')
+
+	return html`<section class="blog-archive" aria-labelledby="blog-archive-title">
+		<h2 id="blog-archive-title">Archive</h2>
+		<ul>
+			${raw(items)}
+		</ul>
+	</section>`
+}
+
+/* === Chapter Helpers === */
+
+const slugOf = (file: ProcessedMarkdownFile): string =>
+	file.filename.replace('.md', '')
+
+/**
+ * Compute the `chapter-nav` template variable for a page.
+ * Returns {} for pages outside every chapter, so the layout's
+ * `{{ chapter-nav }}` placeholder collapses to nothing for them.
+ * Missing siblings (a chapter page not present in the build) are skipped.
+ */
+export const getChapterVars = (
+	file: ProcessedMarkdownFile,
+	rootPagesBySlug: Map<string, ProcessedMarkdownFile>,
+): Record<string, string> => {
+	if (file.section) return {}
+	const slug = slugOf(file)
+	const chapter = CHAPTERS.find(c => c.pages.includes(slug as never))
+	if (!chapter) return {}
+	const pages = chapter.pages as readonly string[]
+	const index = pages.indexOf(slug)
+	const link = (s: string | undefined): ChapterLink | undefined => {
+		if (!s || !rootPagesBySlug.has(s)) return undefined
+		return { url: `${s}.html`, title: rootPagesBySlug.get(s)!.title }
+	}
+	return {
+		'chapter-nav': chapterNav(
+			chapter.title,
+			index + 1,
+			pages.length,
+			link(pages[index - 1]),
+			link(pages[index + 1]),
+		),
+	}
 }
 
 /* === Template Application === */
@@ -330,13 +408,26 @@ export const pagesEffect = (onRebuild?: () => void) =>
 				sortedBlogPosts,
 				blogOverviewBasePath,
 			)
+			const blogArchive = generateBlogArchive(
+				sortedBlogPosts,
+				blogOverviewBasePath,
+			)
+
+			// Root pages by slug, for chapter prev/next resolution
+			const rootPagesBySlug = new Map<string, ProcessedMarkdownFile>()
+			for (const f of processedFiles.values()) {
+				if (!f.section) rootPagesBySlug.set(f.filename.replace('.md', ''), f)
+			}
 
 			// Process all markdown files
 			const processPromises = Array.from(processedFiles.values()).map(
 				async (processedFile: ProcessedMarkdownFile) => {
 					try {
 						let fileToRender = processedFile
-						let extra: Record<string, string> = {}
+						let extra: Record<string, string> = getChapterVars(
+							processedFile,
+							rootPagesBySlug,
+						)
 
 						if (processedFile.relativePath === 'blog.md') {
 							// Inject hero + excerpt cards into the blog overview
@@ -358,7 +449,8 @@ export const pagesEffect = (onRebuild?: () => void) =>
 								htmlContent: html`${raw(heroHtml)}
 									<section class="blog-posts">
 										${raw(blogExcerpts)}
-									</section>`,
+									</section>
+									${raw(blogArchive)}`,
 							}
 						} else if (processedFile.section === 'blog') {
 							// Add blog-specific template variables

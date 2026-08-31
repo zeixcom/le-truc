@@ -17,6 +17,10 @@ const CSS_FILE = join(ROOT, 'examples/main.css')
 const TS_FILE = join(ROOT, 'examples/main.ts')
 
 const TEMPLATES_DIR = join(ROOT, 'server/templates')
+// The tsrx effect's gitignored compile output (server/effects/tsrx.ts);
+// migrated components' generated clients are bundle inputs for main.ts
+// (LT-091), so the js effect watches this directory for rebuilds.
+const GENERATED_CLIENTS_DIR = join(ROOT, 'server/generated/tsrx')
 
 const INPUT_DIR = join(ROOT, 'docs-src')
 const PAGES_DIR = join(ROOT, 'docs-src/pages')
@@ -41,13 +45,36 @@ const PAGE_ORDER = [
 	'index',
 	'getting-started',
 	'components',
-	'styling',
+	'props',
+	'effects',
+	'extensions',
 	'data-flow',
+	'lists',
+	'context',
+	'async',
+	'styling',
 	'examples',
 	'api',
 	'blog',
 	'about',
 ]
+
+/**
+ * Guide chapters — pages grouped under a heading in the sidebar menu and
+ * linked by a prev/next stepper on every member page.
+ * Member slugs must appear in PAGE_ORDER; the group heading renders
+ * before the first member present in the menu.
+ */
+const CHAPTERS = [
+	{
+		title: 'Building Components',
+		pages: ['components', 'props', 'effects', 'extensions'],
+	},
+	{
+		title: 'Coordinating Components',
+		pages: ['data-flow', 'lists', 'context', 'async'],
+	},
+] as const
 
 // Layout system configuration
 export const CONTENT_MARKER = '{{ content }}'
@@ -117,10 +144,12 @@ export {
 	ASSETS_DIR,
 	BASE_URL,
 	BLOG_OUTPUT_DIR,
+	CHAPTERS,
 	COMPONENTS_DIR,
 	COMPRESSIBLE_TYPES,
 	CSS_FILE,
 	EXAMPLES_DIR,
+	GENERATED_CLIENTS_DIR,
 	INCLUDES_DIR,
 	INPUT_DIR,
 	LAYOUTS_DIR,

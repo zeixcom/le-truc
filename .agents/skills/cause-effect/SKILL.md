@@ -69,7 +69,7 @@ All in `references/`:
 | `primitives.md` | Per-primitive signatures, laziness/`watched` activation, equality, canonical examples |
 | `pitfalls.md` | Verified sharp edges, failure modes, and one-line fixes |
 
-For how **le-truc** uses these primitives internally (`Slot`-backed props, `all()` Signal, `batch()` in event handlers), see `../le-truc-dev/references/cause-effect-integration.md`.
+For how **le-truc** uses these primitives internally (`Slot`-backed props, `all()` Cell, `batch()` in event handlers), see `../le-truc-dev/references/cause-effect-integration.md`.
 
 ## Authority
 

@@ -1,34 +1,12 @@
-<form>
-	<form-listbox id="timezone" name="timezone" src="./test/form-listbox/mocks/timezones.json">
-		<card-callout>
-			<p class="loading" role="status">Loading...</p>
-			<p class="error" role="alert" aria-live="assertive" hidden></p>
-		</card-callout>
-		<module-scrollarea orientation="vertical">
-			<div role="listbox" aria-label="Timezones" hidden></div>
-		</module-scrollarea>
-	</form-listbox>
-</form>
-
-<hr>
-
 <!-- Declarative inline HTML example -->
 <form>
 	<form-listbox id="colors" name="color">
 		<div role="listbox" aria-label="Colors">
-			<button type="button" role="option" tabindex="-1" value="red">Red</button>
-			<button type="button" role="option" tabindex="-1" value="green">
-				Green
-			</button>
-			<button type="button" role="option" tabindex="-1" value="blue">
-				Blue
-			</button>
-			<button type="button" role="option" tabindex="-1" value="yellow">
-				Yellow
-			</button>
-			<button type="button" role="option" tabindex="-1" value="purple">
-				Purple
-			</button>
+			<button type="button" role="option" tabindex="-1" data-value="red" data-label="Red">Red</button>
+			<button type="button" role="option" tabindex="-1" data-value="green" data-label="Green">Green</button>
+			<button type="button" role="option" tabindex="-1" data-value="blue" data-label="Blue">Blue</button>
+			<button type="button" role="option" tabindex="-1" data-value="yellow" data-label="Yellow">Yellow</button>
+			<button type="button" role="option" tabindex="-1" data-value="purple" data-label="Purple">Purple</button>
 		</div>
 	</form-listbox>
 </form>
@@ -51,27 +29,15 @@
 		<div role="listbox" aria-label="Fruits">
 			<div role="group" aria-labelledby="fruits-citrus">
 				<div role="presentation" id="fruits-citrus">Citrus</div>
-				<button type="button" role="option" tabindex="-1" value="orange">
-					Orange
-				</button>
-				<button type="button" role="option" tabindex="-1" value="lemon">
-					Lemon
-				</button>
-				<button type="button" role="option" tabindex="-1" value="lime">
-					Lime
-				</button>
+				<button type="button" role="option" tabindex="-1" data-value="orange" data-label="Orange">Orange</button>
+				<button type="button" role="option" tabindex="-1" data-value="lemon" data-label="Lemon">Lemon</button>
+				<button type="button" role="option" tabindex="-1" data-value="lime" data-label="Lime">Lime</button>
 			</div>
 			<div role="group" aria-labelledby="fruits-berries">
 				<div role="presentation" id="fruits-berries">Berries</div>
-				<button type="button" role="option" tabindex="-1" value="strawberry">
-					Strawberry
-				</button>
-				<button type="button" role="option" tabindex="-1" value="blueberry">
-					Blueberry
-				</button>
-				<button type="button" role="option" tabindex="-1" value="raspberry">
-					Raspberry
-				</button>
+				<button type="button" role="option" tabindex="-1" data-value="strawberry" data-label="Strawberry">Strawberry</button>
+				<button type="button" role="option" tabindex="-1" data-value="blueberry" data-label="Blueberry">Blueberry</button>
+				<button type="button" role="option" tabindex="-1" data-value="raspberry" data-label="Raspberry">Raspberry</button>
 			</div>
 		</div>
 	</form-listbox>

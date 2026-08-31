@@ -86,6 +86,25 @@ function main() {
 	// and unresolvable declarations become `anonymous_N`.
 	const GARBAGE_NAMES = new Set(['Truc', 'J'])
 
+	// The migrated .tsrx corpus is read from gitignored generated clients
+	// (ADR 0023, LT-006). If `cem analyze` ran against a stale or empty
+	// server/generated/tsrx/, the corpus tags silently vanish from the
+	// manifest — this guard turns that into a build failure with the fix.
+	const REQUIRED_TAGS = [
+		'basic-counter',
+		'module-tabgroup',
+		'module-list',
+		'form-textbox',
+		'form-checkbox',
+	]
+	const present = new Set(customElements.map(d => d.tagName))
+	const missing = REQUIRED_TAGS.filter(tag => !present.has(tag))
+	if (missing.length > 0) {
+		fail(
+			`${MANIFEST_PATH} is missing the migrated corpus tag(s) ${missing.map(t => `<${t}>`).join(', ')} — the tsrx compile probably did not run. Use \`bun run build:cem\` (it compiles the corpus before analyzing).`,
+		)
+	}
+
 	const bad: string[] = []
 	for (const decl of customElements) {
 		const name = decl.name ?? ''
@@ -110,8 +129,34 @@ function main() {
 		process.exit(1)
 	}
 
+	// A tag declared by two modules means a component migrated to .tsrx
+	// without excluding its hand-written .ts twin in
+	// custom-elements-manifest.config.mjs (LT-009). Every other check above
+	// passes on such a manifest — without this guard the conflicting pair
+	// would be published.
+	const byTag = new Map<string, string[]>()
+	for (const mod of manifest.modules ?? [])
+		for (const decl of mod.declarations ?? []) {
+			if (!decl.customElement || !decl.tagName) continue
+			const owners = byTag.get(decl.tagName) ?? []
+			if (mod.path) owners.push(mod.path)
+			byTag.set(decl.tagName, owners)
+		}
+	const duplicates = [...byTag.entries()].filter(
+		([, paths]) => paths.length > 1,
+	)
+	if (duplicates.length > 0) {
+		fail(
+			`${MANIFEST_PATH} declares ${duplicates.length} tag(s) from multiple modules — a migrated component's hand-written .ts twin was not excluded:\n` +
+				duplicates
+					.map(([tag, paths]) => `  • <${tag}>: ${paths.join(', ')}`)
+					.join('\n') +
+				'\nExclude the hand-written file in custom-elements-manifest.config.mjs (it stays on disk as a golden-test reference).',
+		)
+	}
+
 	console.log(
-		`✅ ${MANIFEST_PATH} verified: ${customElements.length} custom-element declaration(s), all PascalCase.`,
+		`✅ ${MANIFEST_PATH} verified: ${customElements.length} custom-element declaration(s), all PascalCase, no duplicate tags.`,
 	)
 }
 

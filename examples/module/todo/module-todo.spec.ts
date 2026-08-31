@@ -95,7 +95,7 @@ test.describe('module-todo component', () => {
 	test.describe('Add Functionality', () => {
 		test('enables submit button when input has text', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 
 			// Initially disabled
@@ -112,7 +112,7 @@ test.describe('module-todo component', () => {
 
 		test('adds todo item via form submission', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 
@@ -128,7 +128,7 @@ test.describe('module-todo component', () => {
 			const firstItem = items.first()
 			await expect(firstItem).toContainText('Buy groceries')
 
-			const checkbox = firstItem.locator('form-checkbox input')
+			const checkbox = firstItem.locator('form-checkbox > input')
 			await expect(checkbox).not.toBeChecked()
 
 			// Input should be cleared and submit button disabled
@@ -138,7 +138,7 @@ test.describe('module-todo component', () => {
 
 		test('adds multiple todo items', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 
@@ -158,7 +158,7 @@ test.describe('module-todo component', () => {
 			for (let i = 0; i < todoTexts.length; i++) {
 				await expect(items.nth(i)).toContainText(todoTexts[i]!)
 				await expect(
-					items.nth(i).locator('form-checkbox input'),
+					items.nth(i).locator('form-checkbox > input'),
 				).not.toBeChecked()
 			}
 		})
@@ -167,7 +167,7 @@ test.describe('module-todo component', () => {
 	test.describe('Checkbox Functionality', () => {
 		test('can check and uncheck todo items', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 
@@ -176,8 +176,8 @@ test.describe('module-todo component', () => {
 			await submitButton.click()
 
 			const item = list.locator('li').first()
-			const checkbox = item.locator('form-checkbox input')
-			const checkboxLabel = item.locator('form-checkbox label')
+			const checkbox = item.locator('form-checkbox > input')
+			const checkboxLabel = item.locator('form-checkbox .text')
 
 			// Initially unchecked
 			await expect(checkbox).not.toBeChecked()
@@ -195,7 +195,7 @@ test.describe('module-todo component', () => {
 	test.describe('List and Count Updates', () => {
 		test('count updates when todos are added', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const count = todo.locator('basic-pluralize')
 
@@ -226,7 +226,7 @@ test.describe('module-todo component', () => {
 
 		test('count updates when todos are completed', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 			const count = todo.locator('basic-pluralize')
@@ -245,7 +245,7 @@ test.describe('module-todo component', () => {
 			const firstCheckboxLabel = list
 				.locator('li')
 				.first()
-				.locator('form-checkbox label')
+				.locator('form-checkbox .text')
 			await firstCheckboxLabel.click()
 
 			// Should show 1 task remaining
@@ -257,7 +257,7 @@ test.describe('module-todo component', () => {
 			const secondCheckboxLabel = list
 				.locator('li')
 				.nth(1)
-				.locator('form-checkbox label')
+				.locator('form-checkbox .text')
 			await secondCheckboxLabel.click()
 
 			// Should show "all done"
@@ -269,7 +269,7 @@ test.describe('module-todo component', () => {
 			page,
 		}) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 			const count = todo.locator('basic-pluralize')
@@ -281,7 +281,7 @@ test.describe('module-todo component', () => {
 			const checkboxLabel = list
 				.locator('li')
 				.first()
-				.locator('form-checkbox label')
+				.locator('form-checkbox .text')
 			await checkboxLabel.click()
 
 			// Should show "all done"
@@ -302,7 +302,7 @@ test.describe('module-todo component', () => {
 			page,
 		}) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 			const clearButton = todo.locator('basic-button.clear-completed')
@@ -324,7 +324,7 @@ test.describe('module-todo component', () => {
 			const firstCheckboxLabel = list
 				.locator('li')
 				.first()
-				.locator('form-checkbox label')
+				.locator('form-checkbox .text')
 			await firstCheckboxLabel.click()
 
 			// Should be enabled with badge showing 1
@@ -335,7 +335,7 @@ test.describe('module-todo component', () => {
 			const secondCheckboxLabel = list
 				.locator('li')
 				.nth(1)
-				.locator('form-checkbox label')
+				.locator('form-checkbox .text')
 			await secondCheckboxLabel.click()
 
 			// Should show badge with 2
@@ -344,7 +344,7 @@ test.describe('module-todo component', () => {
 
 		test('clear completed removes completed items', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 			const clearButton = todo.locator('basic-button.clear-completed button')
@@ -360,8 +360,8 @@ test.describe('module-todo component', () => {
 			await expect(list.locator('li')).toHaveCount(3)
 
 			// Complete first and third tasks
-			await list.locator('li').first().locator('form-checkbox label').click()
-			await list.locator('li').nth(2).locator('form-checkbox label').click()
+			await list.locator('li').first().locator('form-checkbox .text').click()
+			await list.locator('li').nth(2).locator('form-checkbox .text').click()
 
 			// Click clear completed
 			await clearButton.click()
@@ -375,7 +375,7 @@ test.describe('module-todo component', () => {
 	test.describe('Filter Functionality', () => {
 		test('filter changes affect list display', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 			const filter = todo.locator('form-radiogroup')
@@ -390,7 +390,7 @@ test.describe('module-todo component', () => {
 			const secondCheckboxLabel = list
 				.locator('li')
 				.nth(1)
-				.locator('form-checkbox label')
+				.locator('form-checkbox .text')
 			await secondCheckboxLabel.click()
 
 			// Initially on "All" - should show both
@@ -429,7 +429,7 @@ test.describe('module-todo component', () => {
 
 		test('form prevents default submission', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 
 			// Submit via Enter key
 			await textboxInput.fill('Test task')
@@ -443,7 +443,7 @@ test.describe('module-todo component', () => {
 	test.describe('Edge Cases', () => {
 		test('handles empty input gracefully', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
 
@@ -460,7 +460,7 @@ test.describe('module-todo component', () => {
 
 		test('handles rapid checkbox toggles', async ({ page }) => {
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const count = todo.locator('basic-pluralize')
 
@@ -471,11 +471,11 @@ test.describe('module-todo component', () => {
 			const checkbox = todo
 				.locator('[data-container] li')
 				.first()
-				.locator('form-checkbox input')
+				.locator('form-checkbox > input')
 			const checkboxLabel = todo
 				.locator('[data-container] li')
 				.first()
-				.locator('form-checkbox label')
+				.locator('form-checkbox .text')
 
 			// Rapidly toggle checkbox (5 clicks = checked, since it starts unchecked)
 			for (let i = 0; i < 5; i++) {
@@ -500,7 +500,7 @@ test.describe('module-todo component', () => {
 			// label click → checkbox.change → slot setter → list.completed.set
 			// → completedCount memo → activeCount → pass(count) → basic-pluralize
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const count = todo.locator('basic-pluralize')
 
@@ -511,7 +511,7 @@ test.describe('module-todo component', () => {
 			await todo
 				.locator('li[data-key]')
 				.first()
-				.locator('form-checkbox label')
+				.locator('form-checkbox .text')
 				.click()
 			await expect(count.locator('.none')).toBeVisible()
 		})
@@ -523,7 +523,7 @@ test.describe('module-todo component', () => {
 			// If each() re-run does not wire the new item, clicking its label will
 			// not update list state and count stays at 2.
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
 			const count = todo.locator('basic-pluralize')
@@ -535,7 +535,7 @@ test.describe('module-todo component', () => {
 			await expect(items).toHaveCount(2)
 			await expect(count.locator('.count')).toHaveText('2')
 
-			await items.nth(1).locator('form-checkbox label').click()
+			await items.nth(1).locator('form-checkbox .text').click()
 			await expect(count.locator('.count')).toHaveText('1')
 		})
 
@@ -545,7 +545,7 @@ test.describe('module-todo component', () => {
 			// When a second item is added, each() re-runs. If the re-run breaks
 			// previously-wired slots for existing items, count stays at 2.
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
 			const count = todo.locator('basic-pluralize')
@@ -557,7 +557,7 @@ test.describe('module-todo component', () => {
 			await expect(items).toHaveCount(2)
 			await expect(count.locator('.count')).toHaveText('2')
 
-			await items.nth(0).locator('form-checkbox label').click()
+			await items.nth(0).locator('form-checkbox .text').click()
 			await expect(count.locator('.count')).toHaveText('1')
 		})
 
@@ -567,7 +567,7 @@ test.describe('module-todo component', () => {
 			// Verifies the watch('checked', ...) effect inside form-checkbox runs
 			// after pass() wires the slot — i.e. the child component's inner effects work.
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
 
@@ -579,7 +579,7 @@ test.describe('module-todo component', () => {
 
 			// Check item 2 — verifies both the setter (updates list) and the getter
 			// (watch inside form-checkbox syncs the native checkbox's checked state).
-			await items.nth(1).locator('form-checkbox label').click()
+			await items.nth(1).locator('form-checkbox .text').click()
 			expect(await isHostChecked(items.nth(1).locator('form-checkbox'))).toBe(
 				true,
 			)
@@ -595,7 +595,7 @@ test.describe('module-todo component', () => {
 			// If both checkboxes share the same slot backing, checking one would
 			// check both.
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
 			const count = todo.locator('basic-pluralize')
@@ -606,7 +606,7 @@ test.describe('module-todo component', () => {
 			await submitButton.click()
 			await expect(items).toHaveCount(2)
 
-			await items.nth(0).locator('form-checkbox label').click()
+			await items.nth(0).locator('form-checkbox .text').click()
 			await expect(count.locator('.count')).toHaveText('1')
 			expect(await isHostChecked(items.nth(0).locator('form-checkbox'))).toBe(
 				true,
@@ -621,7 +621,7 @@ test.describe('module-todo component', () => {
 			// signal for each item. If signals are crossed, editing one item's label
 			// would change the other's display.
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
 
@@ -646,7 +646,7 @@ test.describe('module-todo component', () => {
 			// before a reorder but do after, it shows each() re-run repairs slots.
 			// Fails before-reorder assertions demonstrate the bug; pass-after shows recovery.
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
 			const count = todo.locator('basic-pluralize')
@@ -659,7 +659,7 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.count')).toHaveText('2')
 
 			// Check second item BEFORE any reorder — should work
-			await items.nth(1).locator('form-checkbox label').click()
+			await items.nth(1).locator('form-checkbox .text').click()
 			await expect(count.locator('.count')).toHaveText('1')
 
 			// Reorder: move second item to top
@@ -681,7 +681,7 @@ test.describe('module-todo component', () => {
 			// listener is lost on disconnect/reconnect, so only the two click events fire
 			// (toggling the linked checkbox twice, net no-op) and the editor stays closed.
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
 
@@ -720,7 +720,7 @@ test.describe('module-todo component', () => {
 		}) => {
 			// Stress-tests that each() correctly wires N items as the list grows.
 			const todo = page.locator('module-todo')
-			const textboxInput = todo.locator('form-textbox input')
+			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
 			const count = todo.locator('basic-pluralize')
@@ -732,13 +732,13 @@ test.describe('module-todo component', () => {
 			await expect(items).toHaveCount(3)
 			await expect(count.locator('.count')).toHaveText('3')
 
-			await items.nth(2).locator('form-checkbox label').click()
+			await items.nth(2).locator('form-checkbox .text').click()
 			await expect(count.locator('.count')).toHaveText('2')
 
-			await items.nth(0).locator('form-checkbox label').click()
+			await items.nth(0).locator('form-checkbox .text').click()
 			await expect(count.locator('.count')).toHaveText('1')
 
-			await items.nth(1).locator('form-checkbox label').click()
+			await items.nth(1).locator('form-checkbox .text').click()
 			await expect(count.locator('.none')).toBeVisible()
 		})
 	})

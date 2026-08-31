@@ -13,7 +13,10 @@ import { schedule } from './scheduler'
  * `tel:`); see `isSafeURL()` for the exact rules. `dangerouslyBindInnerHTML()`
  * is an XSS sink — pass a `sanitize` option (e.g. DOMPurify) for untrusted
  * input, and return `TrustedHTML` from it on pages that enforce
- * `require-trusted-types-for 'script'`. Le Truc ships no sanitizer.
+ * `require-trusted-types-for 'script'`. `configureHtmlSanitizer()` registers
+ * a module-level default `sanitize` for call sites that omit their own — Le
+ * Truc still ships no sanitizer implementation of its own; this is a
+ * consumer-configured hook, not a library default (ADR-0010).
  */
 
 /* === Types === */
@@ -28,6 +31,9 @@ import { schedule } from './scheduler'
  */
 type TrustedHTML = object
 
+/** A sanitizer function: raw HTML in, a safe `string` or `TrustedHTML` out. */
+type Sanitizer = (html: string) => string | TrustedHTML
+
 type DangerouslyBindInnerHTMLOptions = {
 	shadowRootMode?: ShadowRootMode
 	allowScripts?: boolean
@@ -35,9 +41,41 @@ type DangerouslyBindInnerHTMLOptions = {
 	 * Sanitizer applied to the HTML string before assignment to `innerHTML`.
 	 * Return a sanitized `string`, or a `TrustedHTML` instance on pages that
 	 * enforce Trusted Types (see the Security note on
-	 * `dangerouslyBindInnerHTML` below).
+	 * `dangerouslyBindInnerHTML` below). Omit to fall back to the module-level
+	 * default configured via `configureHtmlSanitizer()`, if any.
 	 */
-	sanitize?: (html: string) => string | TrustedHTML
+	sanitize?: Sanitizer
+}
+
+/* === Default HTML Sanitizer (ADR 0010 amendment) === */
+
+/**
+ * Module-level fallback `sanitize` function for every `dangerouslyBindInnerHTML()`
+ * call site that omits its own `options.sanitize` — `undefined` until
+ * `configureHtmlSanitizer()` is called. Le Truc still ships no sanitizer of
+ * its own: this is a consumer-configured hook, not a library default, and an
+ * unconfigured `dangerouslyBindInnerHTML()` call behaves exactly as it always
+ * has (raw passthrough).
+ */
+let defaultSanitize: Sanitizer | undefined
+
+/**
+ * Configure the module-level default sanitizer that `dangerouslyBindInnerHTML()`
+ * falls back to when a call site omits its own `sanitize` option. Purely
+ * opt-in — call once, e.g. at app startup; every `dangerouslyBindInnerHTML()`
+ * call site keeps working exactly as before unless it left `sanitize` unset.
+ * A call site's own `sanitize` option still takes precedence.
+ *
+ * Le Truc ships no sanitizer implementation of its own (ADR-0010) — this
+ * only registers a hook. DOMPurify is the recommended choice; configure it
+ * with `RETURN_TRUSTED_TYPE: true` for Trusted-Types-enforcing pages (see the
+ * Trusted Types note on `dangerouslyBindInnerHTML` below).
+ *
+ * @since 2.6
+ * @param sanitize - Default sanitizer, or `undefined` to clear it
+ */
+const configureHtmlSanitizer = (sanitize: Sanitizer | undefined): void => {
+	defaultSanitize = sanitize
 }
 
 /* === DEV_MODE Debug Attribution (ADR 0022) === */
@@ -227,12 +265,45 @@ const bindText = (
  * @param key - Property key to set
  * @returns Function that sets a property
  */
-const bindProperty = <O extends object, K extends keyof O & string>(
+function bindProperty<O extends object, K extends keyof O & string>(
 	object: O,
 	key: K,
-): ((value: O[K]) => void) => {
-	const setter = (value: O[K]) => {
-		object[key] = value
+): (value: O[K]) => void
+/**
+ * Returns a function that patches several DOM properties from one map.
+ *
+ * Unlike the single-key form, this is a partial PATCH, not a clear/set pair:
+ * `keys` is declared statically at the call site, but object properties have
+ * no "unset" operation, so absent keys in the value are simply skipped —
+ * their previous value is left untouched.
+ *
+ * @since 2.6
+ * @param object - Target object
+ * @param keys - Property keys the returned setter may patch
+ * @returns Function that patches the given properties from a partial map
+ */
+function bindProperty<O extends object, K extends keyof O & string>(
+	object: O,
+	keys: readonly K[],
+): (value: Partial<Pick<O, K>>) => void
+function bindProperty(
+	object: any,
+	keyOrKeys: string | readonly string[],
+): (value: any) => void {
+	if (typeof keyOrKeys === 'string') {
+		const key = keyOrKeys
+		const setter = (value: unknown) => {
+			object[key] = value
+		}
+		if (typeof Element !== 'undefined' && object instanceof Element)
+			registerDebugBindingTarget(setter, object)
+		return setter
+	}
+	const keys = keyOrKeys
+	const setter = (value: Record<string, unknown>) => {
+		for (const key of keys) {
+			if (Object.hasOwn(value, key)) object[key] = value[key]
+		}
 	}
 	if (typeof Element !== 'undefined' && object instanceof Element)
 		registerDebugBindingTarget(setter, object)
@@ -249,12 +320,45 @@ const bindProperty = <O extends object, K extends keyof O & string>(
  * @param token - CSS class token to toggle
  * @returns Function that toggles the class token
  */
-const bindClass = <T = boolean>(
+function bindClass<T = boolean>(
 	element: Element,
 	token: string,
-): ((value: T) => void) => {
-	const setter = (value: T) => {
-		element.classList.toggle(token, Boolean(value))
+): (value: T) => void
+/**
+ * Returns a function that toggles several CSS class tokens on an element.
+ *
+ * `tokens` is declared statically at the call site — the array is always the
+ * complete set of tokens this binding owns. For every declared token,
+ * `classList.toggle(token, Boolean(map[token]))` runs; an absent token in the
+ * map coerces to `false` (off), the same coercion the single-token form
+ * already uses. No separate `nil` handler is needed: an empty map already
+ * clears every declared token via the same toggle loop.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param tokens - CSS class tokens the returned setter may toggle
+ * @returns Function that toggles the given class tokens from a partial map
+ */
+function bindClass<Tk extends string>(
+	element: Element,
+	tokens: readonly Tk[],
+): (value: Partial<Record<Tk, boolean>>) => void
+function bindClass(
+	element: Element,
+	tokenOrTokens: string | readonly string[],
+): (value: any) => void {
+	if (typeof tokenOrTokens === 'string') {
+		const token = tokenOrTokens
+		const setter = (value: unknown) => {
+			element.classList.toggle(token, Boolean(value))
+		}
+		registerDebugBindingTarget(setter, element)
+		return setter
+	}
+	const tokens = tokenOrTokens
+	const setter = (value: Record<string, unknown>) => {
+		for (const token of tokens)
+			element.classList.toggle(token, Boolean(value[token]))
 	}
 	registerDebugBindingTarget(setter, element)
 	return setter
@@ -282,16 +386,53 @@ const bindClass = <T = boolean>(
  * @param token - Custom state token to toggle (matched via `:state(token)`)
  * @returns Function that toggles the custom state
  */
-const bindState =
-	<T = boolean>(
-		internals: ElementInternals | null,
-		token: string,
-	): ((value: T) => void) =>
-	(value: T) => {
-		if (!internals) return
-		if (value) internals.states.add(token)
-		else internals.states.delete(token)
+function bindState<T = boolean>(
+	internals: ElementInternals | null,
+	token: string,
+): (value: T) => void
+/**
+ * Returns a function that toggles several custom states on an element's
+ * `ElementInternals` from one map.
+ *
+ * `tokens` is declared statically at the call site — the array is always the
+ * complete set of states this binding owns. For every declared token,
+ * `internals.states.add(token)`/`.delete(token)` runs per
+ * `Boolean(map[token])`; an absent token in the map coerces to `false` (off),
+ * the same coercion the single-token form already uses. No separate `nil`
+ * handler is needed: an empty map already clears every declared token via
+ * the same toggle loop. Degrades the same way as the single-token form —
+ * `internals === null` makes the returned function a no-op.
+ *
+ * @since 2.6
+ * @param internals - The component's `ElementInternals` (or `null`)
+ * @param tokens - Custom state tokens the returned setter may toggle
+ * @returns Function that toggles the given custom states from a partial map
+ */
+function bindState<Tk extends string>(
+	internals: ElementInternals | null,
+	tokens: readonly Tk[],
+): (value: Partial<Record<Tk, boolean>>) => void
+function bindState(
+	internals: ElementInternals | null,
+	tokenOrTokens: string | readonly string[],
+): (value: any) => void {
+	if (typeof tokenOrTokens === 'string') {
+		const token = tokenOrTokens
+		return (value: unknown) => {
+			if (!internals) return
+			if (value) internals.states.add(token)
+			else internals.states.delete(token)
+		}
 	}
+	const tokens = tokenOrTokens
+	return (value: Record<string, unknown>) => {
+		if (!internals) return
+		for (const token of tokens) {
+			if (value[token]) internals.states.add(token)
+			else internals.states.delete(token)
+		}
+	}
+}
 
 /**
  * Returns a function that controls element visibility via `el.hidden = !value`.
@@ -327,23 +468,77 @@ const bindVisible = <T = boolean>(
  * @param [allowUnsafe=false] - Skip security validation for string values
  * @returns Match handlers for the attribute mutation
  */
-const bindAttribute = (
+function bindAttribute(
 	element: Element,
 	name: string,
+	allowUnsafe?: boolean,
+): SingleMatchHandlers<string | boolean>
+/**
+ * Returns `SingleMatchHandlers` that set, toggle, or remove several
+ * attributes with security validation, from one map.
+ *
+ * `names` is declared statically at the call site, so it is always the
+ * complete set of attributes this binding owns:
+ *
+ * - `ok(map)` — for every declared name: present and a string →
+ *   `safeSetAttribute`/`setAttribute` (per `allowUnsafe`); present and a
+ *   boolean → `toggleAttribute`; absent or `null`/`undefined` →
+ *   `removeAttribute`.
+ * - `nil` → removes every declared attribute.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param names - Attribute names the returned handlers may set/toggle/remove
+ * @param [allowUnsafe=false] - Skip security validation for string values
+ * @returns Match handlers for the attribute mutations
+ */
+function bindAttribute<N extends string>(
+	element: Element,
+	names: readonly N[],
+	allowUnsafe?: boolean,
+): SingleMatchHandlers<Partial<Record<N, string | boolean>>>
+function bindAttribute(
+	element: Element,
+	nameOrNames: string | readonly string[],
 	allowUnsafe: boolean = false,
-): SingleMatchHandlers<string | boolean> => {
-	const handlers: SingleMatchHandlers<string | boolean> = {
-		ok: (value: string | boolean) => {
-			if (typeof value === 'boolean') {
-				element.toggleAttribute(name, value)
-			} else if (allowUnsafe) {
-				element.setAttribute(name, value)
-			} else {
-				safeSetAttribute(element, name, value)
+): SingleMatchHandlers<any> {
+	if (typeof nameOrNames === 'string') {
+		const name = nameOrNames
+		const handlers: SingleMatchHandlers<string | boolean> = {
+			ok: (value: string | boolean) => {
+				if (typeof value === 'boolean') {
+					element.toggleAttribute(name, value)
+				} else if (allowUnsafe) {
+					element.setAttribute(name, value)
+				} else {
+					safeSetAttribute(element, name, value)
+				}
+			},
+			nil: () => {
+				element.removeAttribute(name)
+			},
+		}
+		registerDebugBindingTarget(handlers, element)
+		return handlers
+	}
+	const names = nameOrNames
+	const handlers: SingleMatchHandlers<Record<string, string | boolean>> = {
+		ok: (map: Record<string, string | boolean>) => {
+			for (const name of names) {
+				const value = map[name]
+				if (value == null) {
+					element.removeAttribute(name)
+				} else if (typeof value === 'boolean') {
+					element.toggleAttribute(name, value)
+				} else if (allowUnsafe) {
+					element.setAttribute(name, value)
+				} else {
+					safeSetAttribute(element, name, value)
+				}
 			}
 		},
 		nil: () => {
-			element.removeAttribute(name)
+			for (const name of names) element.removeAttribute(name)
 		},
 	}
 	registerDebugBindingTarget(handlers, element)
@@ -361,16 +556,60 @@ const bindAttribute = (
  * @param prop - CSS property name (e.g. `'color'`, `'--my-var'`)
  * @returns Match handlers for the style mutation
  */
-const bindStyle = (
+function bindStyle(
 	element: HTMLElement | SVGElement | MathMLElement,
 	prop: string,
-): SingleMatchHandlers<string> => {
-	const handlers: SingleMatchHandlers<string> = {
-		ok: (value: string) => {
-			element.style.setProperty(prop, value)
+): SingleMatchHandlers<string>
+/**
+ * Returns `SingleMatchHandlers` that set or remove several inline style
+ * properties from one map.
+ *
+ * `props` is declared statically at the call site, so it is always the
+ * complete set of properties this binding owns:
+ *
+ * - `ok(map)` — for every declared property: present and non-nil →
+ *   `el.style.setProperty(prop, value)`; absent or `null`/`undefined` →
+ *   `el.style.removeProperty(prop)`.
+ * - `nil` → removes every declared property, restoring the CSS cascade value
+ *   for each.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param props - CSS property names the returned handlers may set/remove
+ * @returns Match handlers for the style mutations
+ */
+function bindStyle<P extends string>(
+	element: HTMLElement | SVGElement | MathMLElement,
+	props: readonly P[],
+): SingleMatchHandlers<Partial<Record<P, string | null>>>
+function bindStyle(
+	element: HTMLElement | SVGElement | MathMLElement,
+	propOrProps: string | readonly string[],
+): SingleMatchHandlers<any> {
+	if (typeof propOrProps === 'string') {
+		const prop = propOrProps
+		const handlers: SingleMatchHandlers<string> = {
+			ok: (value: string) => {
+				element.style.setProperty(prop, value)
+			},
+			nil: () => {
+				element.style.removeProperty(prop)
+			},
+		}
+		registerDebugBindingTarget(handlers, element)
+		return handlers
+	}
+	const props = propOrProps
+	const handlers: SingleMatchHandlers<Record<string, string | null>> = {
+		ok: (map: Record<string, string | null>) => {
+			for (const prop of props) {
+				const value = map[prop]
+				if (value == null) element.style.removeProperty(prop)
+				else element.style.setProperty(prop, value)
+			}
 		},
 		nil: () => {
-			element.style.removeProperty(prop)
+			for (const prop of props) element.style.removeProperty(prop)
 		},
 	}
 	registerDebugBindingTarget(handlers, element)
@@ -382,9 +621,10 @@ const bindStyle = (
  * with optional Shadow DOM, sanitization, and script re-execution support.
  *
  * - `ok(html)` → schedules `element.innerHTML = html` (or `shadowRoot.innerHTML`);
- *   if `sanitize` is provided, it is applied first. If `allowScripts` is true,
- *   `<script>` elements are re-executed after injection (inline `<script>` added
- *   via `innerHTML` does not run on its own).
+ *   `sanitize` is applied first if provided, falling back to the module-level
+ *   default configured via `configureHtmlSanitizer()` when omitted. If
+ *   `allowScripts` is true, `<script>` elements are re-executed after
+ *   injection (inline `<script>` added via `innerHTML` does not run on its own).
  * - `nil` (or an empty/falsy `html`) → schedules a reset via
  *   `element.replaceChildren()` (or `shadowRoot.replaceChildren(document.createElement('slot'))`).
  *   This goes through the same per-element `schedule()` dedup as the `ok`
@@ -425,7 +665,11 @@ const dangerouslyBindInnerHTML = (
 				schedule(element, reset)
 				return
 			}
-			const { shadowRootMode, allowScripts, sanitize } = options
+			const {
+				shadowRootMode,
+				allowScripts,
+				sanitize = defaultSanitize,
+			} = options
 			if (shadowRootMode && !element.shadowRoot)
 				element.attachShadow({ mode: shadowRootMode })
 			const target = element.shadowRoot || element
@@ -476,10 +720,12 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
+	configureHtmlSanitizer,
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 	escapeHTML,
 	getDebugBindingTarget,
+	type Sanitizer,
 	safeSetAttribute,
 	setTextPreservingComments,
 }

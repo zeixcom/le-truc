@@ -1,4 +1,4 @@
-import { bindStyle, bindText, defineComponent } from '../../../index'
+import { bindStyle, bindText, defineComponent } from '@zeix/le-truc'
 import 'culori/css'
 import {
 	formatCss,

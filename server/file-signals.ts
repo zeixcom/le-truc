@@ -4,6 +4,7 @@ import {
 	API_DIR,
 	COMPONENTS_DIR,
 	// INCLUDES_DIR,
+	GENERATED_CLIENTS_DIR,
 	INPUT_DIR,
 	// LAYOUTS_DIR,
 	PAGES_DIR,
@@ -299,6 +300,8 @@ const [
 	componentMarkdownSources,
 	componentStylesSources,
 	componentScriptsSources,
+	componentTsrxSources,
+	generatedClientScriptsSources,
 ] = await Promise.all([
 	watchFiles(INPUT_DIR, '*.css'),
 	watchFiles(INPUT_DIR, '*.ts'),
@@ -310,6 +313,13 @@ const [
 	watchFiles(COMPONENTS_DIR, '**/*.md'),
 	watchFiles(COMPONENTS_DIR, '**/*.css'),
 	watchFiles(COMPONENTS_DIR, '**/*.ts'),
+	watchFiles(COMPONENTS_DIR, '**/*.tsrx'),
+	// LT-091: migrated components' generated clients are bundle inputs
+	// (examples/main.ts imports them) — a `.tsrx` edit re-runs the compiler
+	// effect, which rewrites these files, which must re-trigger the js
+	// bundle. Tolerates the directory not existing yet on a fresh checkout
+	// (the tsrx effect creates it in phase 1 before anything reads it).
+	watchFiles(GENERATED_CLIENTS_DIR, '*.client.ts'),
 ])
 
 /* const layoutFiles = {
@@ -330,6 +340,8 @@ const componentMocks = { sources: componentMocksSources }
 const componentMarkdown = { sources: componentMarkdownSources }
 const componentStyles = { sources: componentStylesSources }
 const componentScripts = { sources: componentScriptsSources }
+const componentTsrx = { sources: componentTsrxSources }
+const generatedClientScripts = { sources: generatedClientScriptsSources }
 
 export {
 	apiMarkdown,
@@ -338,9 +350,11 @@ export {
 	componentMocks,
 	componentScripts,
 	componentStyles,
+	componentTsrx,
 	docsMarkdown,
 	docsScripts,
 	docsStyles,
+	generatedClientScripts,
 	// includeFiles,
 	// layoutFiles,
 	libraryScripts,

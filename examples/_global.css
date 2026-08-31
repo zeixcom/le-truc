@@ -414,6 +414,33 @@ section {
 		gap: var(--space-xl);
 	}
 
+	&.blog-archive {
+		& ul {
+			gap: 0;
+			list-style: none;
+			margin-block-end: 0;
+		}
+
+		& li {
+			display: flex;
+			align-items: baseline;
+			justify-content: space-between;
+			gap: var(--space-m);
+			padding-block: var(--space-xs);
+			border-block-end: 1px solid var(--color-border-soft);
+
+			&:last-child {
+				border-block-end: none;
+			}
+		}
+
+		& time {
+			color: var(--color-text-soft);
+			font-variant-numeric: tabular-nums;
+			white-space: nowrap;
+		}
+	}
+
 	& h3 {
 		margin-block-start: var(--space-xl);
 		margin-block-end: var(--space-l);

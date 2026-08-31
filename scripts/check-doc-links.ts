@@ -52,7 +52,8 @@ for (const f of ['ARCHITECTURE.md', 'REQUIREMENTS.md', 'AGENTS.md']) {
 // Matches [text](target), skipping code spans (`` ` ``), image links, and
 // <autolinks>. Negative lookbehind avoids matching inside inline code by
 // a simple heuristic: links preceded by a backtick are skipped in post-filter.
-const LINK_RE = /(?<!`)!\[(?:[^\]]*)\]\(([^)]+)\)|(?<!`)\[([^\]]+)\]\(([^)]+)\)/g
+const LINK_RE =
+	/(?<!`)!\[(?:[^\]]*)\]\(([^)]+)\)|(?<!`)\[([^\]]+)\]\(([^)]+)\)/g
 
 // --- Slugify (GitHub-compatible for this repo) -------------------------------
 
@@ -140,14 +141,24 @@ for (const filePath of scanFiles) {
 			// If no fragment, just check file existence
 			if (!fragment) {
 				if (!existsSync(targetFile)) {
-					broken.push({ file: relFile, line: i + 1, target, reason: 'file not found' })
+					broken.push({
+						file: relFile,
+						line: i + 1,
+						target,
+						reason: 'file not found',
+					})
 				}
 				continue
 			}
 
 			const content = getFileContent(targetFile)
 			if (content === null) {
-				broken.push({ file: relFile, line: i + 1, target, reason: 'file not found' })
+				broken.push({
+					file: relFile,
+					line: i + 1,
+					target,
+					reason: 'file not found',
+				})
 				continue
 			}
 
@@ -162,8 +173,17 @@ for (const filePath of scanFiles) {
 			}
 			// Decode percent-encoding in fragment for comparison
 			const decodedFragment = decodeURIComponent(fragment)
-			if (!headings.has(fragment) && !headings.has(decodedFragment) && !explicitAnchors.has(fragment)) {
-				broken.push({ file: relFile, line: i + 1, target, reason: `anchor "#${fragment}" not found` })
+			if (
+				!headings.has(fragment) &&
+				!headings.has(decodedFragment) &&
+				!explicitAnchors.has(fragment)
+			) {
+				broken.push({
+					file: relFile,
+					line: i + 1,
+					target,
+					reason: `anchor "#${fragment}" not found`,
+				})
 			}
 		}
 	})
@@ -172,7 +192,9 @@ for (const filePath of scanFiles) {
 // --- Report ------------------------------------------------------------------
 
 if (broken.length > 0) {
-	console.error(`\n❌ ${broken.length} broken link(s) found (checked ${checked} internal links):\n`)
+	console.error(
+		`\n❌ ${broken.length} broken link(s) found (checked ${checked} internal links):\n`,
+	)
 	for (const b of broken) {
 		console.error(`  ${b.file}:${b.line} → ${b.target}  (${b.reason})`)
 	}

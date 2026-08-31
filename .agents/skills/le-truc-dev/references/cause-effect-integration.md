@@ -27,11 +27,11 @@ This design enables two things:
 
 The cleanup in `pass()` restores the original signal when the parent disconnects.
 
-## Signal — `all()` Element Collection
+## Cell — `all()` Element Collection
 
-`all(selector, required?)` returns a `Cell<E[]>` created by `createElementsMemo()` in `src/helpers/dom.ts` (the function itself still calls `createMemo` internally — only the annotated return type changed). If `required` is a non-empty string and no elements match at query time, a `MissingElementError` is thrown before the Signal is returned.
+`all(selector, required?)` returns a `Cell<E[]>` created by `createElementsMemo()` in `src/helpers/dom.ts` (the function itself still calls `createMemo` internally — only the annotated return type changed). If `required` is a non-empty string and no elements match at query time, a `MissingElementError` is thrown before the Cell is returned.
 
-The `Signal` uses the `watched` option to set up a `MutationObserver` lazily — the observer only activates when the Signal has an active reactive reader.
+The `Cell` uses the `watched` option to set up a `MutationObserver` lazily — the observer only activates when the Cell has an active reactive reader.
 
 The `equals` option uses element-identity comparison. Since cause-effect, `equals` is fully respected by `invalidate()` — effects skip re-runs when the matched element set has not changed.
 
@@ -53,7 +53,7 @@ A raw hand-authored descriptor with no internal `createEffect`/`createScope` cal
 
 `watch()` (via `makeWatch`) wraps `match()` inside `createEffect()`. The `createEffect` is nested inside the `createScope` created in `connectedCallback`. This is why `watch` returns an `EffectDescriptor` — the effect is deferred until after dependency resolution.
 
-For `all()` targets, `each()` wraps the per-element effect loop in an outer `createEffect` that tracks the Signal. When the Signal invalidates (element set changes), the outer effect re-runs, creating new inner scopes for new elements and disposing scopes for removed ones.
+For `all()` targets, `each()` wraps the per-element effect loop in an outer `createEffect` that tracks the Cell. When the Cell invalidates (element set changes), the outer effect re-runs, creating new inner scopes for new elements and disposing scopes for removed ones.
 
 ## batch — Event Handler Updates
 

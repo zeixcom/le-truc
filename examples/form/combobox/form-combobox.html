@@ -1,75 +1,73 @@
+<!-- Children-are-data (LT-112): the description seed lives on the owned
+     paragraph (data-description + text); clearable is a boundary config
+     attribute; the popup's options are inline data-value/data-label buttons
+     (the listbox's remote-fetch mode remains dropped — NOTES.md). The error
+     paragraph keeps a page-authored id for aria wiring. -->
 <form-combobox name="timezone" clearable>
-	<label for="timezone-input" id="timezone-label">Choose a timezone</label>
+	<label for="timezone-input">Choose a timezone</label>
 	<div class="input">
 		<input
-			id="timezone-input"
 			type="text"
+			id="timezone-input"
 			role="combobox"
 			aria-expanded="false"
-			aria-controls="timezone-popup"
-			aria-autocomplete="list"
+			aria-describedby="timezone-description"
 			autocomplete="off"
 			required
 		>
-		<form-listbox
-			id="timezone-popup"
-			src="./test/form-listbox/mocks/timezones.json"
-		>
-			<card-callout>
-				<p class="loading" role="status">Loading...</p>
-				<p class="error" role="alert" aria-live="assertive" hidden></p>
-			</card-callout>
-			<module-scrollarea>
-				<div role="listbox" aria-labelledby="timezone-label" hidden></div>
-			</module-scrollarea>
-		</form-listbox>
 		<button type="button" class="clear" aria-label="Clear input" hidden>
 			✕
 		</button>
 	</div>
-	<p class="error" role="alert" aria-live="assertive" id="timezone-error"></p>
-	<p class="description" aria-live="polite" id="timezone-description">
-		Tell us where you live so we can set your timezone for our calendar and
+	<div class="popup" hidden>
+		<form-listbox name="timezone-options">
+			<div role="listbox" aria-label="Timezones">
+				<button type="button" role="option" tabindex="-1" data-value="America/New_York" data-label="New York">New York</button>
+				<button type="button" role="option" tabindex="-1" data-value="America/Los_Angeles" data-label="Los Angeles">Los Angeles</button>
+				<button type="button" role="option" tabindex="-1" data-value="Europe/London" data-label="London">London</button>
+				<button type="button" role="option" tabindex="-1" data-value="Europe/Zurich" data-label="Zurich">Zurich</button>
+				<button type="button" role="option" tabindex="-1" data-value="Asia/Tokyo" data-label="Tokyo">Tokyo</button>
+				<button type="button" role="option" tabindex="-1" data-value="Australia/Sydney" data-label="Sydney">Sydney</button>
+			</div>
+		</form-listbox>
+	</div>
+	<p
+		class="description"
+		aria-live="polite"
+		id="timezone-description"
+		data-description="Tell us where you live so we can set our timezone for our calendar and notification features."
+	>
+		Tell us where you live so we can set our timezone for our calendar and
 		notification features.
 	</p>
+	<p class="error" role="alert" aria-live="assertive" id="timezone-error"></p>
 </form-combobox>
 
 <hr>
 
 <form>
 	<form-combobox name="color">
-		<label for="color-input" id="color-label"
-			>What is your favorite color?</label
-		>
+		<label for="color-input">What is your favorite color?</label>
 		<div class="input">
 			<input
-				id="color-input"
 				type="text"
+				id="color-input"
 				role="combobox"
 				aria-expanded="false"
-				aria-controls="color-popup"
-				aria-autocomplete="list"
 				autocomplete="off"
 			>
-			<form-listbox id="color-popup">
-				<div role="listbox" aria-labelledby="color-label">
-					<button type="button" role="option" tabindex="-1" value="Red">
-						Red
-					</button>
-					<button type="button" role="option" tabindex="-1" value="Green">
-						Green
-					</button>
-					<button type="button" role="option" tabindex="-1" value="Blue">
-						Blue
-					</button>
-					<button type="button" role="option" tabindex="-1" value="Yellow">
-						Yellow
-					</button>
-					<button type="button" role="option" tabindex="-1" value="Purple">
-						Purple
-					</button>
+		</div>
+		<div class="popup" hidden>
+			<form-listbox name="color-options">
+				<div role="listbox" aria-label="Colors">
+					<button type="button" role="option" tabindex="-1" data-value="Red" data-label="Red">Red</button>
+					<button type="button" role="option" tabindex="-1" data-value="Green" data-label="Green">Green</button>
+					<button type="button" role="option" tabindex="-1" data-value="Blue" data-label="Blue">Blue</button>
+					<button type="button" role="option" tabindex="-1" data-value="Yellow" data-label="Yellow">Yellow</button>
+					<button type="button" role="option" tabindex="-1" data-value="Purple" data-label="Purple">Purple</button>
 				</div>
 			</form-listbox>
 		</div>
+		<p class="error" role="alert" aria-live="assertive" id="color-error"></p>
 	</form-combobox>
 </form>

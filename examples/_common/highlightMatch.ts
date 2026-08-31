@@ -1,4 +1,4 @@
-import { escapeHTML } from '../../index'
+import { escapeHTML } from '@zeix/le-truc'
 
 /**
  * Safely creates HTML with highlighted matches

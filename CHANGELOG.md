@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`configureHtmlSanitizer()`**: registers a module-level default `sanitize` function (`src/bindings.ts`) that `dangerouslyBindInnerHTML()` falls back to when a call site omits its own `sanitize` option. Purely opt-in — an unconfigured call behaves exactly as before (raw passthrough); a call site's own `sanitize` still takes precedence. Le Truc still ships no sanitizer implementation; DOMPurify remains the recommended choice (ADR-0010).
+- **`tech-writer` `improve-docs-architecture.md` workflow**: tech-writer can now lead guide restructures — split or merge pages, improve navigation, add teaching components — routing pipeline code to `docs-server-dev` via `TODO.md`/`NOTES.md`.
+- **Map-form overloads for `bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, `bindState`**: each helper (`src/bindings.ts`) now also accepts a `readonly string[]` of targets instead of a single one, returning a setter/handlers keyed on a partial map — `watch(source, bindStyle(el, ['left', 'top', '--color-border']))` drives several DOM writes from one computed value in one `watch()` call, instead of N independent `watch()` calls sharing a source (which loses "one update, several DOM writes" atomicity) or hand-rolled `style.setProperty()` calls inside a watch body. The array of keys is declared statically at the call site — always the complete key set that binding owns, not accumulated dynamically — which is what makes `nil`/absent-key cleanup well-defined: `bindStyle`/`bindAttribute`'s map form treats a present-but-`null`/`undefined` key as "unset that one" (`removeProperty`/`removeAttribute`) and `nil` as "unset all declared keys"; `bindClass`/`bindState`'s map form toggles every declared token per `Boolean(map[token])` (absent = falsy = off, same coercion as the single-target form) with no separate `nil` handler needed, since an empty map already clears everything through the same toggle loop; `bindProperty`'s map form is a partial *patch*, not a clear/set pair — plain object properties have no "unset" operation, so absent keys are simply skipped, leaving their previous value untouched. `bindState`'s existing `internals === null` no-op degradation is preserved in the map form. Purely additive — overload resolution picks the array form only when the target argument is an array, so every existing single-target call site is unaffected. See [ADR 0023](adr/0023-map-form-overloads-for-bind-helpers.md).
+
+### Changed
+
+- **`changelog-keeper` `entry_style`**: entries now cap at 4 sentences (~300 characters), keep only user-facing rationale, and cut implementation internals. Version preambles cap at 3 sentences. New entries follow this; existing ones stay as history.
+- **`adr-keeper` concision rules**: rationales tightened — Context a few problem-first sentences, Decision commitment plus mechanism, Consequences compact lists, no appended postscripts (`adr-template.md`, `create-adr.md`).
+- **`architect` `architecture.md` Step 5**: now prescribes the `ARCHITECTURE.md` register — present-tense mechanisms, inline ADR citations, opinion-through-contrast, trade-off notes as the only voice moment.
+
 ## 2.5.1
 
 Second bridge-name wave ahead of Cause & Effect 2.0: CE 1.5.1 deprecates `deriveSignal` — the very name `2.5.0` adopted as the non-deprecated replacement for `createComputed` — in favor of `deriveCell`, one release later. `Signal` stays the umbrella term; `Cell` is now the settled terminal name for the single-value shape. Non-breaking, same policy as `2.5.0`: deprecated re-exports keep working through Le Truc 2.x and are removed in Le Truc 3.0. Also folds in a form-participation bug fix with its supporting API — a form-associated host's `formResetCallback` no longer races its inner native control's own reset, and `defaultValue`/`defaultChecked` become the managed reset baseline.

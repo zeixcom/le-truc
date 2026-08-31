@@ -1,3 +1,8 @@
+<!-- Attribute-configured usage (LT-092 cutover): the compiled component owns
+     its template. The description paragraph carries the template string in
+     data-remaining ({n} is replaced by the remaining count); ids follow the
+     {name}-input/{name}-error/{name}-description convention the compiled
+     template derives. -->
 <form-textbox name="name">
 	<label for="name-input">Name</label>
 	<div class="input">
@@ -5,13 +10,17 @@
 			type="text"
 			id="name-input"
 			autocomplete="name"
+			aria-describedby="name-description name-error"
 			required
 		>
 	</div>
 	<p class="error" role="alert" aria-live="assertive" id="name-error"></p>
-	<p class="description" aria-live="polite" id="city-description">
-		Tell us how you want us to call you in our communications.
-	</p>
+	<p
+		class="description"
+		aria-live="polite"
+		id="name-description"
+		data-remaining="Tell us how you want us to call you in our communications."
+	></p>
 </form-textbox>
 
 <hr>
@@ -24,6 +33,7 @@
 			id="query-input"
 			autocomplete="off"
 			placeholder="apple banana"
+			aria-describedby="query-error"
 			required
 		>
 		<button type="button" class="clear" aria-label="Clear input" hidden>
@@ -42,6 +52,8 @@
 			id="comment-input"
 			autocomplete="off"
 			maxlength="500"
+			rows="3"
+			aria-describedby="comment-description comment-error"
 		></textarea>
 	</div>
 	<p class="error" role="alert" aria-live="assertive" id="comment-error"></p>
@@ -49,6 +61,6 @@
 		class="description"
 		aria-live="polite"
 		id="comment-description"
-		data-remaining="${n} characters remaining"
+		data-remaining="{n} characters remaining"
 	></p>
 </form-textbox>

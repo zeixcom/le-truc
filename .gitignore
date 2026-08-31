@@ -164,12 +164,17 @@ vite.config.ts.timestamp-*
 
 # Generated
 custom-elements.json
-docs/
+/docs/
 docs-src/api/
 docs-src/pages/api.md
+server/generated/
 
 # Local dev tooling
 .mcp.json
 dataset/
-.mimosa/
+.mimosa/*
+!.mimosa/security-policy.json
 .playwright-mcp/
+.zcode/plans/
+spike/tsrx-phase0/.mimosa/
+adr/.mimosa/

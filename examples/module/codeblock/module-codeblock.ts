@@ -1,4 +1,4 @@
-import { asBoolean, bindAttribute, defineComponent } from '../../../index'
+import { asBoolean, bindAttribute, defineComponent } from '@zeix/le-truc'
 import { copyToClipboard } from '../../basic/button/copyToClipboard'
 
 export type ModuleCodeblockProps = {

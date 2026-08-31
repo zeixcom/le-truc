@@ -14,15 +14,15 @@ This skill maintains the **authored documentation** for the @zeix/le-truc librar
 - `examples/*/` — component source files; use the `le-truc` or `le-truc-dev` skill instead
 - `CHANGELOG.md` — use the `changelog-keeper` skill instead
 - `adr/` — use the `adr-keeper` skill instead
-- Build scripts, server code, or test infrastructure (other than `server/SERVER.md`)
+- Pipeline code in `server/` (effects, templates, schemas, routes) — write a `TODO.md` task for the `docs-server-dev` skill instead of editing it directly; only `server/SERVER.md` is in scope here
 
 ## Essential Principles
 
 **Read source before writing.** Always read the current state of the source file(s) and the target document before making any changes. Never update from memory.
 
-**Tone adapts to audience.** Each document has a distinct primary reader and register. See references/tone-guide.md. Violating the tone is as wrong as a factual error.
+**Tone adapts to audience and text type.** Each document has a distinct primary reader, and each section has a text type — landing, tutorial, how-to, explanation, reference, AI-optimized, narrative, community. The type sets the style dials. See references/tone-guide.md. Violating the tone is as wrong as a factual error.
 
-**Prose docs and JSDoc follow ASD-STE100.** Pages, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc, `server/SERVER.md`, and skill files use Simplified Technical English sentence and vocabulary rules — see references/ste100-style.md. Domain terms use the definitions in `CONTEXT.md`. Blog posts are exempt; they keep the narrative register in references/tone-guide.md `<blog>`.
+**Precision where the reader acts, voice where the reader learns.** Every document shares a plain-English baseline with `CONTEXT.md` domain terms (references/tone-guide.md, Layer 1). Reference and AI-optimized documents — JSDoc, `ARCHITECTURE.md`, `AGENTS.md`, `server/SERVER.md`, skill files, navigation pages — run Simplified Technical English at Full strength (references/ste100-style.md). Tutorials, how-to guides, explanations, `README.md`, and landing copy relax sentence discipline for connective prose and carry voice — journey, rhythm, opinion (references/tone-guide.md, Voice Techniques). Blog posts run the narrative register of references/tone-guide.md `<blog>`.
 
 **Concise over comprehensive.** Every sentence must justify its presence. Cut anything that does not add information the reader needs.
 
@@ -40,6 +40,7 @@ What do you need to do?
 3. **Update a specific document** — you know exactly which one
 4. **Write a blog post** — draft a new post for `docs-src/pages/blog/`
 5. **Update a skill file** — a skill description, reference, or workflow under `.agents/skills/` is inaccurate or incomplete
+6. **Improve the docs architecture** — restructure pages, navigation, or add interactive teaching components
 
 Wait for response before proceeding.
 
@@ -52,6 +53,7 @@ Wait for response before proceeding.
 | 3, "specific", or names a document | See document routing below |
 | 4, "write a blog post", "new blog post", "blog" | workflows/write-blog-post.md |
 | 5, "skill file", "skill doc", "update skill", names a skill | workflows/update-skills.md |
+| 6, "improve docs", "restructure", "split pages", "merge pages", "navigation", "teaching component" | workflows/improve-docs-architecture.md |
 
 **Document-specific routing (option 3):**
 
@@ -75,6 +77,7 @@ Wait for response before proceeding.
 - "write a blog post" / "new blog post" / "draft a post" → workflows/write-blog-post.md
 - "update skill" / "skill file is wrong" / "fix skill reference" → workflows/update-skills.md
 - "update SERVER.md" / "server docs" / "build pipeline changed" / "new effect" → workflows/update-server-md.md
+- "docs are too long" / "split this page" / "improve navigation" / "add a teaching component" / "restructure the guide" → workflows/improve-docs-architecture.md
 
 After identifying the workflow, read it and follow it exactly.
 
@@ -84,9 +87,9 @@ All in `references/`:
 | File | Contents |
 |---|---|
 | document-map.md | Each document's audience, scope, update triggers, and consistency checks |
-| tone-guide.md | Writing tone, register, and conciseness rules per document |
+| tone-guide.md | Style layers and text types: plain-English baseline, sentence discipline, voice techniques (journey, rhythm, opinion), and per-document registers |
 | markdoc-tags.md | Markdoc authoring reference: frontmatter, available tags, and usage patterns |
-| ste100-style.md | Simplified Technical English (ASD-STE100) sentence and vocabulary rules for prose docs and JSDoc; blog is exempt |
+| ste100-style.md | Simplified Technical English sentence discipline at three strengths (Full / Working / Off) with the scope per document type |
 
 ## Workflows Index
 All in `workflows/`:
@@ -103,3 +106,21 @@ All in `workflows/`:
 | update-server-md.md | Update `server/SERVER.md` after dev server or build pipeline changes |
 | consistency-review.md | Review all documents for consistency with current source |
 | write-blog-post.md | Draft a new blog post in `docs-src/pages/blog/` |
+| improve-docs-architecture.md | Plan and lead a guide restructure — split or merge pages, improve navigation, add teaching components; coordinate pipeline work via `TODO.md` |
+
+## Post-Task Protocol
+
+When working a task assigned via `TODO.md`:
+
+1. **Content-only changes** (pages, `README.md`, skill files, `SERVER.md`, declarative config: `PAGE_ORDER`, `CHAPTERS`, `CURATED_PAGES`) → mark `— done ✓` and add a one-line `**Changed:**`.
+2. **Teaching-component code in `examples/` or edits beyond declarative config in `server/`** → mark `— done, pending review ⏳` and add the handoff:
+
+   ```
+   **Changed:** which file(s) and what (page, component, config key)
+   **How:** key implementation note (1-2 sentences)
+   **Check:** what the reviewer should focus on
+   ```
+
+3. **Blocked or deviating?** Append to `NOTES.md` using the format defined in the `architect` skill's `<notes_format>` section. Stop work on the task. Wait for Architect or user to resolve before proceeding.
+
+Task IDs, status suffixes, and the `**Skill:**` routing field follow the `architect` skill's `<todo_format>` — read it before writing to `TODO.md` for the first time.

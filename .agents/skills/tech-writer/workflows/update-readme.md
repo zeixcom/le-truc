@@ -3,7 +3,7 @@
 ## Required Reading
 1. references/document-map.md → `<README_md>`
 2. references/tone-guide.md → `<README>` section
-3. references/ste100-style.md — sentence and vocabulary rules
+3. references/ste100-style.md — sentence and vocabulary rules: Working strength for the "Why use Le Truc" prose (rhythm and one committed opinion welcome), Full strength for installation and quick-start steps
 
 ## Process
 

@@ -95,8 +95,8 @@ function listAvailableComponents() {
 				const subPath = join(itemPath, sub)
 				const componentName = `${item}-${sub}`
 				if (
-					statSync(subPath).isDirectory()
-					&& existsSync(join(subPath, `${componentName}.spec.ts`))
+					statSync(subPath).isDirectory() &&
+					existsSync(join(subPath, `${componentName}.spec.ts`))
 				) {
 					components.push(componentName)
 				}
@@ -120,6 +120,16 @@ function listAvailableComponents() {
 }
 
 function runPlaywrightTest(testPath: string, playwrightArgs: string[] = []) {
+	// The test path must resolve inside examples/ and every passthrough
+	// argument must be a flag (--headed) or --flag=value — never a bare
+	// positional that could be read as a file filter or command
+	if (!/^examples\/[a-z0-9/-]+(\.spec\.ts)?$/.test(testPath)) {
+		throw new Error(`Unrecognized test path: ${testPath}`)
+	}
+	if (playwrightArgs.some(arg => !/^--[a-z][a-z0-9-]*(=.+)?$/.test(arg))) {
+		throw new Error('Playwright args must be --flag or --flag=value form')
+	}
+
 	console.log(`🎭 Running tests for: ${testPath}`)
 	console.log('')
 
@@ -167,6 +177,13 @@ function main() {
 		console.error('❌ Component name is required')
 		showHelp()
 		listAvailableComponents()
+		process.exit(1)
+	}
+
+	// Component names are kebab-case (e.g. "module-carousel"); anything else
+	// could smuggle options or path segments into spawn or the shell on Windows
+	if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(componentName)) {
+		console.error(`❌ Invalid component name: "${componentName}"`)
 		process.exit(1)
 	}
 

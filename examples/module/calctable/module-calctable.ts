@@ -9,7 +9,7 @@ import {
 	query,
 	queryAll,
 	reconcile,
-} from '../../../index'
+} from '@zeix/le-truc'
 import { getLocale } from '../../_common/getLocale'
 import { getNumberFormatter } from '../../_common/getNumberFormatter'
 

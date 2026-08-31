@@ -9,6 +9,9 @@
 @import "./card/callout/card-callout.css";
 @import "./card/collapsible/card-collapsible.css";
 @import "./card/colorscale/card-colorscale.css";
+@import "./docs/lifecycle/docs-lifecycle.css";
+@import "./docs/reconcile/docs-reconcile.css";
+@import "./docs/task-states/docs-task-states.css";
 @import "./form/checkbox/form-checkbox.css";
 @import "./form/colorgraph/form-colorgraph.css";
 @import "./form/combobox/form-combobox.css";
@@ -38,3 +41,4 @@
 @import "./module/todo/module-todo.css";
 @import "./section/hero/section-hero.css";
 @import "./section/menu/section-menu.css";
+@import "./section/menu/chapter-nav.css";

@@ -21,7 +21,7 @@ defineComponent<P extends ComponentProps>(name, factory, extensions?)
 | Helper | Purpose |
 |---|---|
 | `first(selector, required?)` | Query single descendant; throws `MissingElementError` if `required` string given and no match |
-| `all(selector, required?)` | Return `Signal<E[]>` backed by lazy `MutationObserver`; throws `MissingElementError` if `required` string given and no elements match |
+| `all(selector, required?)` | Return `Cell<E[]>` backed by lazy `MutationObserver`; throws `MissingElementError` if `required` string given and no elements match |
 | `host` | Component host element, typed as `HTMLElement & P` |
 | `expose(props)` | Declare reactive properties — call once, imperatively, inside factory body |
 | `watch(source, handler)` | Create and register a reactive effect descriptor |

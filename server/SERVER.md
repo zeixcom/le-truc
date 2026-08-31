@@ -118,6 +118,7 @@ Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild
 | `mdMirrorEffect` | `docsMarkdown.processed` | `docs/**/*.md` | Regex tag stripping |
 | `llmsManifestEffect` | `docsMarkdown.pageInfos` | `docs/llms.txt` | Template generation |
 | `llmsFullManifestEffect` | `docsMarkdown.processed` | `docs/llms-full.txt` | Curated concatenation |
+| `tsrxEffect` | `componentTsrx.sources` | `server/generated/tsrx/*` (gitignored) | Inlined TSRX compiler (ADR 0024) |
 
 ### Build Outputs
 
@@ -230,6 +231,18 @@ While `llms.txt` is a link index, `llms-full.txt` is the **authoritative concate
 
 Sections are delimited by `---` and headed with an H1. Blog posts, `about.md`, `examples.md`, and the per-symbol TypeDoc API files are excluded to keep the file focused on authoring guidance. Narrative pages have Markdoc tags stripped; standalone root docs pass through unchanged (they are plain Markdown). Standalone docs are read from `ROOT` via `Bun.file().text()` inside the effect.
 
+### TSRX Compiler (`tsrxEffect`)
+
+**File:** `server/effects/tsrx.ts`  
+**Depends on:** `componentTsrx.sources` (`examples/**/*.tsrx`)  
+**Outputs:** `server/generated/tsrx/` — `<tag>.server.ts` (render function), `<tag>.client.ts` (generated `defineComponent` module), `<tag>.css` (verbatim tag-scoped CSS), and `registry.json`
+
+The inlined TSRX compiler (ADR 0024, milestones 1–4) compiles isomorphic single-file `.tsrx` components — server args, signals, `expose()`, markup, event handlers, and scoped styles in one source — into the split compiler's two halves. The server module re-declares the `@{ }` setup verbatim against the runtime harness (`server/tsrx/runtime.ts`, where signals are their initial values in a box) and renders HTML strings; the client module is a generated factory importing solely from `@zeix/le-truc`, side-effect-importing every addressed child component's module so its `declare global` tag-map entry is in scope (type flow by projection — the registry spans migrated `.tsrx` tags and the hand-written example tags). Extension activation (ADR 0024 sub-design 8) is declared as `export const config` in the source: the compiler validates the keys, auto-imports the extension factories with the form variant leading, and carries Parser-call `expose()` initializers and `defineMethod()` as ambients (real imports client-side, inert shims in the runtime harness). The generated clients are consumed by the Custom Element Manifest: `bun run build:cem` runs `scripts/build-tsrx.ts` (this corpus compile, standalone) before `cem analyze`, whose globs read them with `@zeix/cem-plugin-le-truc` unchanged — the compiler carries the component JSDoc above each `export default defineComponent(` so extraction is identical (ADR 0024 sub-design 9; equivalence pinned in `server/tests/tsrx/cem.golden.test.ts`). Errors fail the build; the remaining gate (`@for` over non-List reactive sources) logs TSRX001 and skips the file.
+
+Template control flow follows the pinned `@tsrx/core` 0.1.63 directive grammar: `@if (cond) { … } @else { … }` and `@switch (disc) { @case expr: { … } @default: { … } }` render server-known branches (the server evaluates the condition against real args; the client addresses `@if` branch roots through union selectors), `@try { … } @catch (e) { … }` is a render-time error boundary (arms render into isolated buffers so a mid-arm throw cannot leak partial markup), and `@for` over a declared `createList` lowers to keyed in-place items plus an extracted `<template>` with `<slot>` holes, reconciled client-side by `reconcile()`. Dynamic rendering is `truc:html={dataRef}` — host-owned and namespaced (LT-128/LT-137: core TSRX defines no `{html expr}` keyword in any published release, and Le Truc does not borrow the reference host's `innerHTML` spelling because it sanitizes rather than assigning raw) — rendered through `sanitizeHtml` (scripts, `on*` attributes, and unsafe URL schemes stripped). Constructs the pinned parser cannot parse in that position (a statement-form `switch` inside a template, setup `await`) fail with a parse-error hint naming the construct; `@pending` async arms are gated until async server rendering exists.
+
+The compiler itself lives in `server/tsrx/`, split for pipeline role (each concern in its own file, front-end parsing wired together by `compiler.ts`): `core.ts` is the only module importing `@tsrx/core` VALUES (pinned 0.1.63, see `core-shim.d.ts` — a pure re-export leaf, so a pin upgrade touches only it and the shim; siblings may still import the `TsrxNode` TYPE, which erases at compile time); `ir.ts` owns the shared IR type vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `ExtractContext`, …) as a pure type leaf; `compiler.ts` owns `compileSource`; `lower-template.ts` lowers JSX/`@if`/`@switch`/`@try`/`@for` into that IR (mutually recursive, so it moves as one unit); `classify-attributes.ts` classifies JSXAttributes into `AttributeIR`/`ComposeAttrIR`, including the shared `pass={{ }}` entry parser (ADR 0024 sub-design 10); `infer-type.ts` infers a signal's value type from its initializer; `config.ts` extracts `export const config` only; `imports.ts` resolves `.tsrx` compose imports and collects/places plain (non-`.tsrx`) imports; `walk.ts` is the one structural `TemplateNode` visitor (plus derived collectors) shared by the front end and the analyzer; `evaluability.ts` is the single home of the server-known dependency-closure rule (`dependenciesOf`/`isServerEvaluable`), consumed by `imports.ts`, `emit-server.ts`, and the analyzer; `ast-utils.ts` holds shared AST predicates/text-extraction helpers and the recognized-name vocabulary (signal constructors, context names, parser factories, JS/DOM globals) consumed across the front end. `analysis/{plan,selectors,naming,harvest,loops,effects}.ts` produce the client emission plan (element addressing, harvest rules incl. arg→DOM substitution and List adoption, hoisted-const rebinding, `@if` union addressing) as four explicit passes threaded through a shared `AnalysisContext`; `emit-server.ts`/`emit-client.ts` render the artifacts, `indent.ts` makes verbatim-slice reindentation template-literal-safe, `globals.d.ts` declares the ambient vocabulary for editor surfaces (pinned to `ast-utils.ts`'s recognized sets by `globals.test.ts`), and `css.ts` dedents the `<style>` block's verbatim stylesheet. See `server/tsrx/LE_TRUC_COMPILER.md` for the full module inventory and pipeline walkthrough. Golden tests in `server/tests/tsrx/` pin server renders, CSS bytes, client snapshots (regenerate with `UPDATE_SNAPSHOTS=1 bun test server/tests/tsrx`), diagnostics, the language-feature gates (`features.test.ts`), and an emit-then-check typecheck of the generated client modules.
+
 ### Path Constants
 
 | Constant | Path | Description |
@@ -317,7 +330,7 @@ The `fence` schema override provides:
 | `GET /:page` | Documentation page | `docs/<page>.html` |
 | `GET /favicon.ico` | Favicon | `docs/favicon.ico` |
 
-All HTML routes support `Accept: text/markdown` to return raw `.md` source from `docs-src/pages/`.
+All HTML routes support `Accept: text/markdown` to return raw `.md` source from `docs-src/pages/`. Bare section roots (`/blog`, `/examples`, `/api`) resolve to directories under `docs/` via `GET /:page` — they redirect 301 to the matching `<page>.html` when it exists and 404 otherwise; `handleStaticFile` 404s on directory paths generally, so no route can attempt `sendfile` on a directory.
 
 ### Layout and Template System
 
@@ -457,7 +470,16 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 ### Page Ordering
 
 `PAGE_ORDER` controls navigation menu order:
-`index`, `getting-started`, `components`, `styling`, `data-flow`, `examples`, `api`, `blog`, `about`
+`index`, `getting-started`, `components`, `props`, `effects`, `extensions`, `data-flow`, `lists`, `context`, `async`, `styling`, `examples`, `api`, `blog`, `about`
+
+### Guide Chapters
+
+`CHAPTERS` groups guide pages into chapters with a shared sidebar heading and a prev/after stepper:
+
+- **Sidebar grouping:** `menu()` in `templates/menu.ts` inserts one `<li class="group" role="presentation">` heading before the first chapter member present in the sorted root pages. Styling lives in `examples/section/menu/section-menu.css` (`.group` spans the full grid row).
+- **Chapter stepper:** `getChapterVars()` in `effects/pages.ts` computes a `chapter-nav` template variable for every root page that belongs to a chapter. `chapterNav()` in `templates/chapter-nav.ts` renders `<nav class="content chapter-nav">` with "Part k of n" and prev/next links; the `{{ chapter-nav }}` placeholder in `layouts/page.html` collapses to nothing for non-member pages. Missing siblings (a chapter page absent from the build) are skipped; the stepper collapses entirely when no links remain. Styling lives in `examples/section/menu/chapter-nav.css`.
+
+Constraint: member slugs must appear in `PAGE_ORDER`, and each chapter's members should be contiguous in it — the group heading renders at the position of the first present member.
 
 ## Environment Variables
 
@@ -486,7 +508,7 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 
 ## Blog Support
 
-Blog posts live in `docs-src/pages/blog/` (`YYYY-MM-DD-slug.md` naming) and are processed by the existing `docsMarkdown` signal and `pagesEffect` — no dedicated signal or effect. `PageMetadata` carries blog-only optional fields (`date`, `author`, `author-avatar`, `modified-date`, `tags`); `pagesEffect` injects derived template variables (`published-date`, `modified-date`, `reading-time`, `blog-tags`, `author-avatar`, `prev-post(-title)`, `next-post(-title)`) via `applyTemplate`'s `extraReplacements` parameter when `section === 'blog'`. The blog overview page (`blog.md`, `page.html` layout) has its body replaced with 3 latest-post excerpt cards (`<card-blogpost>`) built directly by `generateBlogExcerpts()` in `pages.ts` (not via a Markdoc tag); individual posts use the `blog.html` layout, which hardcodes a `<card-blogmeta>` element filled in via `{{ published-date }}`-style template variables. Routing: `GET /blog/:slug` in `serve.ts`, guarded by the `BLOG_OUTPUT_DIR` constant.
+Blog posts live in `docs-src/pages/blog/` (`YYYY-MM-DD-slug.md` naming) and are processed by the existing `docsMarkdown` signal and `pagesEffect` — no dedicated signal or effect. `PageMetadata` carries blog-only optional fields (`date`, `author`, `author-avatar`, `modified-date`, `tags`); `pagesEffect` injects derived template variables (`published-date`, `modified-date`, `reading-time`, `blog-tags`, `author-avatar`, `prev-post(-title)`, `next-post(-title)`) via `applyTemplate`'s `extraReplacements` parameter when `section === 'blog'`. The blog overview page (`blog.md`, `page.html` layout) has its body replaced with 3 latest-post excerpt cards (`<card-blogpost>`) built directly by `generateBlogExcerpts()` in `pages.ts`, followed by a compact archive list of the remaining posts built by `generateBlogArchive()` (both not via a Markdoc tag); individual posts use the `blog.html` layout, which hardcodes a `<card-blogmeta>` element filled in via `{{ published-date }}`-style template variables. Routing: `GET /blog/:slug` in `serve.ts`, guarded by the `BLOG_OUTPUT_DIR` constant.
 
 ## Future Improvements
 

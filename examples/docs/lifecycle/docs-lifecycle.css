@@ -1,0 +1,67 @@
+docs-lifecycle {
+	display: block;
+
+	& .stage {
+		display: grid;
+		place-items: center;
+		min-height: 5rem;
+		padding: var(--space-m);
+		margin-block: var(--space-m);
+		border: 1px dashed var(--color-neutral-40);
+		border-radius: var(--space-s);
+	}
+
+	& .controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-s);
+	}
+
+	& ol.log {
+		margin-block-start: var(--space-m);
+		padding: var(--space-s) var(--space-m);
+		border-radius: var(--space-xs);
+		background-color: var(--color-neutral-10);
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xxs);
+		font-family: ui-monospace, monospace;
+		font-size: var(--font-size-s);
+		color: var(--color-text-soft);
+	}
+}
+
+docs-pulse {
+	display: inline-flex;
+	align-items: baseline;
+	gap: var(--space-s);
+	padding: var(--space-s) var(--space-m);
+	border-radius: var(--space-xxl);
+	background-color: var(--color-neutral-10);
+
+	&::before {
+		content: '';
+		align-self: center;
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 50%;
+		background-color: var(--color-neutral-60);
+		animation: docs-pulse-dot 1s ease-in-out infinite;
+	}
+
+	& .ticks {
+		min-width: 4.5ch;
+		color: var(--color-text-soft);
+	}
+}
+
+@keyframes docs-pulse-dot {
+	0%,
+	100% {
+		opacity: 0.25;
+	}
+	50% {
+		opacity: 1;
+	}
+}

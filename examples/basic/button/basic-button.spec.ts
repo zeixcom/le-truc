@@ -117,6 +117,28 @@ test.describe('basic-button component', () => {
 		await expect(button).toHaveText('Button Text Only') // Button text unchanged
 	})
 
+	test('binds a label span carrying extra page-authored classes', async ({
+		page,
+	}) => {
+		// LT-124: the synthesized query is a TOKEN selector (`span.label`), so
+		// a page that enhances this component's markup with its own extra
+		// classes is still addressed. Under the previous exact-match
+		// `[class="label"]` synthesis this span matched nothing, and since
+		// LT-123 made an unmatched optional ref a silent no-op, the harvest
+		// and the binding would both have failed without a word.
+		const extraClass = page.locator('#extra-class-test')
+		const label = extraClass.locator('span.label')
+
+		const labelValue = await extraClass.evaluate(node => (node as any).label)
+		expect(labelValue).toBe('🛒 Shopping Cart')
+
+		await extraClass.evaluate(node => {
+			;(node as any).label = 'Rebound'
+		})
+		await expect(label).toHaveText('Rebound')
+		await expect(label).toHaveClass('label icon')
+	})
+
 	test('toggles disabled via property', async ({ page }) => {
 		// Use the existing boolean test element from HTML
 		const booleanElement = page.locator('#boolean-test')

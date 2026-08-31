@@ -17,6 +17,7 @@ import {
 	bindStyle,
 	bindText,
 	bindVisible,
+	configureHtmlSanitizer,
 	dangerouslyBindInnerHTML,
 	escapeHTML,
 	safeSetAttribute,
@@ -447,6 +448,26 @@ describe('bindProperty', () => {
 		setLabel('c')
 		expect(obj.label).toBe('c')
 	})
+
+	describe('map form', () => {
+		test('patches multiple keys present in the map', () => {
+			const obj = { a: 1, b: 2, c: 3 }
+			bindProperty(obj, ['a', 'b', 'c'])({ a: 10, b: 20, c: 30 })
+			expect(obj).toEqual({ a: 10, b: 20, c: 30 })
+		})
+
+		test('skips keys absent from the map, leaving their previous value', () => {
+			const obj = { a: 1, b: 2 }
+			bindProperty(obj, ['a', 'b'])({ a: 10 })
+			expect(obj).toEqual({ a: 10, b: 2 })
+		})
+
+		test('an empty map leaves every declared key untouched', () => {
+			const obj = { a: 1, b: 2 }
+			bindProperty(obj, ['a', 'b'])({})
+			expect(obj).toEqual({ a: 1, b: 2 })
+		})
+	})
 })
 
 describe('bindClass', () => {
@@ -467,6 +488,37 @@ describe('bindClass', () => {
 		const el = new FakeElement('div')
 		bindClass<number>(el as unknown as Element, 'has-items')(3)
 		expect(el.classList.contains('has-items')).toBe(true)
+	})
+
+	describe('map form', () => {
+		test('toggles every declared token from one map', () => {
+			const el = new FakeElement('div')
+			bindClass(el as unknown as Element, ['active', 'selected'])({
+				active: true,
+				selected: false,
+			})
+			expect(el.classList.contains('active')).toBe(true)
+			expect(el.classList.contains('selected')).toBe(false)
+		})
+
+		test('a token absent from the map coerces to false (off)', () => {
+			const el = new FakeElement('div')
+			el.classList.toggle('selected', true)
+			bindClass(el as unknown as Element, ['active', 'selected'])({
+				active: true,
+			})
+			expect(el.classList.contains('active')).toBe(true)
+			expect(el.classList.contains('selected')).toBe(false)
+		})
+
+		test('an empty map clears every declared token', () => {
+			const el = new FakeElement('div')
+			el.classList.toggle('active', true)
+			el.classList.toggle('selected', true)
+			bindClass(el as unknown as Element, ['active', 'selected'])({})
+			expect(el.classList.contains('active')).toBe(false)
+			expect(el.classList.contains('selected')).toBe(false)
+		})
 	})
 })
 
@@ -501,6 +553,45 @@ describe('bindState', () => {
 			bindState(null, 'overflow-end')(true)
 		}).not.toThrow()
 	})
+
+	describe('map form', () => {
+		test('toggles every declared token from one map', () => {
+			const { states, internals } = fakeInternals()
+			bindState(internals, ['overflow-start', 'overflow-end'])({
+				'overflow-start': true,
+				'overflow-end': false,
+			})
+			expect(states.has('overflow-start')).toBe(true)
+			expect(states.has('overflow-end')).toBe(false)
+		})
+
+		test('a token absent from the map coerces to false (off)', () => {
+			const { states, internals } = fakeInternals()
+			states.add('overflow-end')
+			bindState(internals, ['overflow-start', 'overflow-end'])({
+				'overflow-start': true,
+			})
+			expect(states.has('overflow-start')).toBe(true)
+			expect(states.has('overflow-end')).toBe(false)
+		})
+
+		test('an empty map clears every declared token', () => {
+			const { states, internals } = fakeInternals()
+			states.add('overflow-start')
+			states.add('overflow-end')
+			bindState(internals, ['overflow-start', 'overflow-end'])({})
+			expect(states.has('overflow-start')).toBe(false)
+			expect(states.has('overflow-end')).toBe(false)
+		})
+
+		test('is a no-op when internals is null', () => {
+			expect(() => {
+				bindState(null, ['overflow-start', 'overflow-end'])({
+					'overflow-start': true,
+				})
+			}).not.toThrow()
+		})
+	})
 })
 
 describe('bindVisible', () => {
@@ -530,6 +621,47 @@ describe('bindStyle', () => {
 		el.style.setProperty('color', 'red')
 		bindStyle(el as unknown as HTMLElement, 'color').nil?.()
 		expect(el.style.getPropertyValue('color')).toBe('')
+	})
+
+	describe('map form', () => {
+		test('ok sets multiple properties in one call', () => {
+			const el = new FakeElement('div')
+			bindStyle(el as unknown as HTMLElement, ['color', '--x']).ok({
+				color: 'red',
+				'--x': '1px',
+			})
+			expect(el.style.getPropertyValue('color')).toBe('red')
+			expect(el.style.getPropertyValue('--x')).toBe('1px')
+		})
+
+		test('ok removes a property whose value is null, leaving others set', () => {
+			const el = new FakeElement('div')
+			el.style.setProperty('color', 'red')
+			bindStyle(el as unknown as HTMLElement, ['color', '--x']).ok({
+				color: null,
+				'--x': '1px',
+			})
+			expect(el.style.getPropertyValue('color')).toBe('')
+			expect(el.style.getPropertyValue('--x')).toBe('1px')
+		})
+
+		test('ok removes a property absent from the map', () => {
+			const el = new FakeElement('div')
+			el.style.setProperty('color', 'red')
+			bindStyle(el as unknown as HTMLElement, ['color', '--x']).ok({
+				'--x': '1px',
+			})
+			expect(el.style.getPropertyValue('color')).toBe('')
+		})
+
+		test('nil clears every declared property', () => {
+			const el = new FakeElement('div')
+			el.style.setProperty('color', 'red')
+			el.style.setProperty('--x', '1px')
+			bindStyle(el as unknown as HTMLElement, ['color', '--x']).nil?.()
+			expect(el.style.getPropertyValue('color')).toBe('')
+			expect(el.style.getPropertyValue('--x')).toBe('')
+		})
 	})
 })
 
@@ -575,6 +707,64 @@ describe('bindAttribute', () => {
 		el.setAttribute('disabled', '')
 		bindAttribute(el as unknown as Element, 'disabled').nil?.()
 		expect(el.hasAttribute('disabled')).toBe(false)
+	})
+
+	describe('map form', () => {
+		test('ok sets a string and toggles a boolean in one call', () => {
+			const el = new FakeElement('button')
+			bindAttribute(el as unknown as Element, ['title', 'disabled']).ok({
+				title: 'hi',
+				disabled: true,
+			})
+			expect(el.getAttribute('title')).toBe('hi')
+			expect(el.hasAttribute('disabled')).toBe(true)
+		})
+
+		test('ok removes a key whose value is null, leaving others set', () => {
+			const el = new FakeElement('button')
+			el.setAttribute('title', 'hi')
+			bindAttribute(el as unknown as Element, ['title', 'disabled']).ok({
+				title: null as unknown as string,
+				disabled: true,
+			})
+			expect(el.hasAttribute('title')).toBe(false)
+			expect(el.hasAttribute('disabled')).toBe(true)
+		})
+
+		test('ok removes a key absent from the map', () => {
+			const el = new FakeElement('button')
+			el.setAttribute('title', 'hi')
+			bindAttribute(el as unknown as Element, ['title', 'disabled']).ok({
+				disabled: true,
+			})
+			expect(el.hasAttribute('title')).toBe(false)
+		})
+
+		test('ok with an unsafe string value throws (delegates to safeSetAttribute)', () => {
+			const el = new FakeElement('a')
+			expect(() =>
+				bindAttribute(el as unknown as Element, ['href']).ok({
+					href: 'javascript:alert(1)',
+				}),
+			).toThrow()
+		})
+
+		test('allowUnsafe bypasses safeSetAttribute validation', () => {
+			const el = new FakeElement('a')
+			bindAttribute(el as unknown as Element, ['href'], true).ok({
+				href: 'javascript:alert(1)',
+			})
+			expect(el.getAttribute('href')).toBe('javascript:alert(1)')
+		})
+
+		test('nil removes every declared attribute', () => {
+			const el = new FakeElement('button')
+			el.setAttribute('title', 'hi')
+			el.setAttribute('disabled', '')
+			bindAttribute(el as unknown as Element, ['title', 'disabled']).nil?.()
+			expect(el.hasAttribute('title')).toBe(false)
+			expect(el.hasAttribute('disabled')).toBe(false)
+		})
 	})
 })
 
@@ -660,5 +850,49 @@ describe('dangerouslyBindInnerHTML', () => {
 
 		const script = el.querySelectorAll('script')[0] as FakeElement
 		expect(script?.removed).toBe(false)
+	})
+
+	describe('configureHtmlSanitizer (default fallback)', () => {
+		afterEach(() => {
+			configureHtmlSanitizer(undefined)
+		})
+
+		test('a call site with no sanitize option falls back to the configured default', () => {
+			configureHtmlSanitizer(html => html.replace(/<img[^>]*>/gi, ''))
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element).ok(
+				'<img src=x onerror="alert(1)"><p>safe</p>',
+			)
+			flushRAF()
+			expect(el.innerHTML).toBe('<p>safe</p>')
+		})
+
+		test("a call site's own sanitize option still takes precedence over the default", () => {
+			configureHtmlSanitizer(() => '<default>')
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element, {
+				sanitize: () => '<explicit>',
+			}).ok('<p>hi</p>')
+			flushRAF()
+			expect(el.innerHTML).toBe('<explicit>')
+		})
+
+		test('unconfigured (no configureHtmlSanitizer call) behaves exactly as before — raw passthrough', () => {
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element).ok(
+				'<img src=x onerror="alert(1)">',
+			)
+			flushRAF()
+			expect(el.innerHTML).toBe('<img src=x onerror="alert(1)">')
+		})
+
+		test('configureHtmlSanitizer(undefined) clears a previously configured default', () => {
+			configureHtmlSanitizer(() => '<sanitized>')
+			configureHtmlSanitizer(undefined)
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element).ok('<p>raw</p>')
+			flushRAF()
+			expect(el.innerHTML).toBe('<p>raw</p>')
+		})
 	})
 })

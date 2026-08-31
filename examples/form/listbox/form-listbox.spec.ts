@@ -61,9 +61,11 @@ test.describe('form-listbox component', () => {
 
 	test('clicking an option selects it', async ({ page }) => {
 		const greenOption = page.locator(
-			'#colors button[role="option"][value="green"]',
+			'#colors button[role="option"][data-value="green"]',
 		)
-		const redOption = page.locator('#colors button[role="option"][value="red"]')
+		const redOption = page.locator(
+			'#colors button[role="option"][data-value="red"]',
+		)
 
 		await greenOption.click()
 
@@ -90,10 +92,10 @@ test.describe('form-listbox component', () => {
 
 	test('clicking another option changes selection', async ({ page }) => {
 		const greenOption = page.locator(
-			'#colors button[role="option"][value="green"]',
+			'#colors button[role="option"][data-value="green"]',
 		)
 		const blueOption = page.locator(
-			'#colors button[role="option"][value="blue"]',
+			'#colors button[role="option"][data-value="blue"]',
 		)
 
 		await greenOption.click()
@@ -112,7 +114,7 @@ test.describe('form-listbox component', () => {
 
 	test('value property is writable', async ({ page }) => {
 		const purpleOption = page.locator(
-			'#colors button[role="option"][value="purple"]',
+			'#colors button[role="option"][data-value="purple"]',
 		)
 
 		await page.evaluate(() => {
@@ -136,7 +138,7 @@ test.describe('form-listbox component', () => {
 
 	test('form reset restores the initial value', async ({ page }) => {
 		const greenOption = page.locator(
-			'#colors button[role="option"][value="green"]',
+			'#colors button[role="option"][data-value="green"]',
 		)
 
 		await greenOption.click()
@@ -194,7 +196,7 @@ test.describe('form-listbox component', () => {
 		await page.waitForTimeout(100)
 
 		const lemonOption = page.locator(
-			'#fruits button[role="option"][value="lemon"]',
+			'#fruits button[role="option"][data-value="lemon"]',
 		)
 		await lemonOption.click()
 
@@ -229,34 +231,6 @@ test.describe('form-listbox component', () => {
 
 	// ===== REMOTE SRC (timezone listbox) =====
 
-	test('loads remote options from src', async ({ page }) => {
-		await page.waitForSelector('#timezone button[role="option"]', {
-			timeout: 5000,
-		})
-
-		const options = page.locator('#timezone button[role="option"]')
-		const count = await options.count()
-		expect(count).toBeGreaterThan(0)
-	})
-
-	test('selecting remote option updates value', async ({ page }) => {
-		await page.waitForSelector('#timezone button[role="option"]', {
-			timeout: 5000,
-		})
-
-		const firstOption = page.locator('#timezone button[role="option"]').first()
-		const optionValue = await firstOption.getAttribute('value')
-
-		await firstOption.click()
-		await expect(firstOption).toHaveAttribute('aria-selected', 'true')
-
-		const value = await page.evaluate(() => {
-			const el = document.getElementById('timezone') as any
-			return el.value
-		})
-		expect(value).toBe(optionValue)
-	})
-
 	// ===== innerHTML MUTATION RESILIENCE =====
 	// Setting innerHTML on option buttons (e.g. for filter text highlighting
 	// with <mark>) must not break reactive effects on those elements.
@@ -265,12 +239,14 @@ test.describe('form-listbox component', () => {
 		page,
 	}) => {
 		const greenOption = page.locator(
-			'#colors button[role="option"][value="green"]',
+			'#colors button[role="option"][data-value="green"]',
 		)
 		const blueOption = page.locator(
-			'#colors button[role="option"][value="blue"]',
+			'#colors button[role="option"][data-value="blue"]',
 		)
-		const redOption = page.locator('#colors button[role="option"][value="red"]')
+		const redOption = page.locator(
+			'#colors button[role="option"][data-value="red"]',
+		)
 
 		// Establish baseline
 		await greenOption.click()
@@ -355,10 +331,10 @@ test.describe('form-listbox component', () => {
 		page,
 	}) => {
 		const greenOption = page.locator(
-			'#colors button[role="option"][value="green"]',
+			'#colors button[role="option"][data-value="green"]',
 		)
 		const blueOption = page.locator(
-			'#colors button[role="option"][value="blue"]',
+			'#colors button[role="option"][data-value="blue"]',
 		)
 
 		await greenOption.click()
@@ -402,7 +378,7 @@ test.describe('form-listbox component', () => {
 		page,
 	}) => {
 		const greenOption = page.locator(
-			'#colors button[role="option"][value="green"]',
+			'#colors button[role="option"][data-value="green"]',
 		)
 
 		// Establish a selection

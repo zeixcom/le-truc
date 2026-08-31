@@ -4,7 +4,7 @@
 
 1. **Check for existing ADRs on the same topic**
    - Run `grep -r "keyword" /adr/` to search existing ADRs
-   - If an Accepted ADR already covers this, check whether it's published (`git show main:adr/000X-title.md`): if published, ask the user if they want to supersede it instead; if unpublished, amend it in place via update-adr.md instead of creating a new one
+   - If an Accepted ADR already covers this, don't create a new one — use update-adr.md instead. If it's unpublished, amend it in place regardless of the change. If it's published (`git show main:adr/000X-title.md`), classify the change against update-adr.md's breaking/non-breaking checklist: non-breaking still amends in place; only a breaking change goes through supersede-adr.md
 
 2. **Determine the next ADR number**
    - List existing ADRs: `ls -1 /adr/*.md | grep -E '^[0-9]{4}-' | sort -n`
@@ -26,6 +26,7 @@
    - Filename: `/adr/000X-title-in-kebab-case.md`
    - Set status to "🔄 Proposed" initially
    - Fill in all sections
+   - Keep sections tight per SKILL.md `<essential_principles>`: Context a few problem-first sentences, Decision commitment + mechanism, Consequences compact Good/Bad lists. No postscripts.
 
 5. **Update the index**
    - Add entry to `references/adr-index.md`

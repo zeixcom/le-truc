@@ -17,12 +17,12 @@
  *   integration the library's own docs recommend.
  */
 
-import DOMPurify from 'dompurify'
 import {
 	type ComponentProps,
 	dangerouslyBindInnerHTML,
 	defineComponent,
-} from '../../../index'
+} from '@zeix/le-truc'
+import DOMPurify from 'dompurify'
 
 /* === Reserved-word runtime guard === */
 //

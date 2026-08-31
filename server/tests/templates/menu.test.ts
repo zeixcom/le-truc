@@ -137,3 +137,46 @@ describe('menu', () => {
 		expect(result).not.toContain('<li>')
 	})
 })
+
+/* === menu grouping === */
+
+describe('menu chapter grouping', () => {
+	const chapterPage = (overrides: Partial<PageInfo>): PageInfo =>
+		mockPage({ section: '', ...overrides })
+
+	test('renders a group heading before the first chapter member', () => {
+		const result = menu([
+			chapterPage({ filename: 'index.md', url: 'index.html' }),
+			chapterPage({ filename: 'components.md', url: 'components.html' }),
+			chapterPage({ filename: 'about.md', url: 'about.html' }),
+		])
+		const headingPos = result.indexOf('Building Components')
+		const memberPos = result.indexOf('components.html')
+		expect(headingPos).toBeGreaterThanOrEqual(0)
+		expect(headingPos).toBeLessThan(memberPos)
+	})
+
+	test('renders each chapter heading only once', () => {
+		const result = menu([
+			chapterPage({ filename: 'components.md', url: 'components.html' }),
+			chapterPage({ filename: 'props.md', url: 'props.html' }),
+			chapterPage({ filename: 'effects.md', url: 'effects.html' }),
+		])
+		expect(result.split('Building Components').length - 1).toBe(1)
+	})
+
+	test('renders no group heading for ungrouped pages', () => {
+		const result = menu([
+			chapterPage({ filename: 'index.md', url: 'index.html' }),
+			chapterPage({ filename: 'about.md', url: 'about.html' }),
+		])
+		expect(result).not.toContain('class="group"')
+	})
+
+	test('group heading carries presentation role', () => {
+		const result = menu([
+			chapterPage({ filename: 'components.md', url: 'components.html' }),
+		])
+		expect(result).toContain('role="presentation"')
+	})
+})
