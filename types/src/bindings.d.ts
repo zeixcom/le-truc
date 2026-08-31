@@ -34,6 +34,19 @@ type DangerouslyBindInnerHTMLOptions = {
     sanitize?: (html: string) => string | TrustedHTML;
 };
 /**
+ * Everything `bindAria()`'s `ok()` handler accepts, per ADR 0026 §2's mapping
+ * table. Deliberately excludes `null | undefined` even though `ok()` guards
+ * for both at runtime: `SingleMatchHandlers<T>` constrains `T extends {}`, so
+ * a union including them fails to typecheck as the generic parameter — the
+ * same "typed optimistically, guarded defensively" split the map-form
+ * `ok(map)` of `bindAttribute`/`bindStyle` already carries for absent keys.
+ * A signal whose *resolved value* is legitimately `null` still reaches
+ * `ok(null)` via cause-effect's `match()` (which routes to `nil` only on
+ * `UnsetSignalValueError`, i.e. pending/unset, never on a resolved null) —
+ * exactly the case the runtime guard exists for.
+ */
+type AriaValue = boolean | number | string | Element | readonly Element[];
+/**
  * Look up the element a `bind*`-produced closure was registered against, if
  * any. Used by `watch()`'s `DEV_MODE` instrumentation (ADR 0022) — a handler
  * not produced by a `bind*` helper resolves to `undefined`, which is the
@@ -227,19 +240,6 @@ declare function bindAttribute(element: Element, name: string, allowUnsafe?: boo
  * @returns Match handlers for the attribute mutations
  */
 declare function bindAttribute<N extends string>(element: Element, names: readonly N[], allowUnsafe?: boolean): SingleMatchHandlers<Partial<Record<N, string | boolean>>>;
-/**
- * Everything `bindAria()`'s `ok()` handler accepts, per ADR 0026 §2's mapping
- * table. Deliberately excludes `null | undefined` even though `ok()` guards
- * for both at runtime: `SingleMatchHandlers<T>` constrains `T extends {}`, so
- * a union including them fails to typecheck as the generic parameter — the
- * same "typed optimistically, guarded defensively" split the map-form
- * `ok(map)` of `bindAttribute`/`bindStyle` already carries for absent keys.
- * A signal whose *resolved value* is legitimately `null` still reaches
- * `ok(null)` via cause-effect's `match()` (which routes to `nil` only on
- * `UnsetSignalValueError`, i.e. pending/unset, never on a resolved null) —
- * exactly the case the runtime guard exists for.
- */
-type AriaValue = boolean | number | string | Element | readonly Element[];
 /**
  * Returns `SingleMatchHandlers` that reflect a value onto an `ARIAMixin`
  * target via the platform's ARIA reflection properties — `ElementInternals`

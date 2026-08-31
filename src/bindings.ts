@@ -41,6 +41,20 @@ type DangerouslyBindInnerHTMLOptions = {
 	sanitize?: (html: string) => string | TrustedHTML
 }
 
+/**
+ * Everything `bindAria()`'s `ok()` handler accepts, per ADR 0026 §2's mapping
+ * table. Deliberately excludes `null | undefined` even though `ok()` guards
+ * for both at runtime: `SingleMatchHandlers<T>` constrains `T extends {}`, so
+ * a union including them fails to typecheck as the generic parameter — the
+ * same "typed optimistically, guarded defensively" split the map-form
+ * `ok(map)` of `bindAttribute`/`bindStyle` already carries for absent keys.
+ * A signal whose *resolved value* is legitimately `null` still reaches
+ * `ok(null)` via cause-effect's `match()` (which routes to `nil` only on
+ * `UnsetSignalValueError`, i.e. pending/unset, never on a resolved null) —
+ * exactly the case the runtime guard exists for.
+ */
+type AriaValue = boolean | number | string | Element | readonly Element[]
+
 /* === DEV_MODE Debug Attribution (ADR 0022) === */
 
 /**
@@ -509,20 +523,6 @@ function bindAttribute(
 }
 
 /* === ARIA Reflection (ADR 0026) === */
-
-/**
- * Everything `bindAria()`'s `ok()` handler accepts, per ADR 0026 §2's mapping
- * table. Deliberately excludes `null | undefined` even though `ok()` guards
- * for both at runtime: `SingleMatchHandlers<T>` constrains `T extends {}`, so
- * a union including them fails to typecheck as the generic parameter — the
- * same "typed optimistically, guarded defensively" split the map-form
- * `ok(map)` of `bindAttribute`/`bindStyle` already carries for absent keys.
- * A signal whose *resolved value* is legitimately `null` still reaches
- * `ok(null)` via cause-effect's `match()` (which routes to `nil` only on
- * `UnsetSignalValueError`, i.e. pending/unset, never on a resolved null) —
- * exactly the case the runtime guard exists for.
- */
-type AriaValue = boolean | number | string | Element | readonly Element[]
 
 /**
  * IDL property name → content attribute name. NOT kebab-case: ARIA attribute
