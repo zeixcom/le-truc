@@ -194,6 +194,8 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * library; `expose()` throws `InvalidPropertyNameError` for them at runtime.
  * The same holds for the variant's reset-baseline member (`defaultValue`/
  * `defaultChecked`), which lives on the host element interface, not in `P`.
+ *
+ * @since 2.6
  */
 type FormFactoryContext<
 	P extends ComponentProps,
@@ -570,6 +572,7 @@ export {
 	type FormAssociatedCheckboxElement,
 	type FormAssociatedElement,
 	type FormAssociatedValueElement,
+	type FormFactoryContext,
 	type Initializers,
 	type MaybeSignal,
 }

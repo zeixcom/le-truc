@@ -4,6 +4,18 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>PoC — host default-semantics channel: hue slider (LT-002)</title>
+		<style>
+			/* LT-013: a zero-size element is a coin flip for AX-tree/AT
+			   exposure — give the slider a visible box so a manual VO/NVDA
+			   pass actually exercises the internals-set channel. */
+			poc-hue-slider {
+				display: block;
+				width: 16rem;
+				height: 2rem;
+				background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+				border: 2px solid black;
+			}
+		</style>
 	</head>
 	<body>
 		<h1>LT-002 probe</h1>

@@ -36,12 +36,16 @@ type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | (() => T
  * per form: prop key `K` → `P[K]`, `Signal<V>` → `V`, thunk → the awaited,
  * null/undefined-stripped return type (matching the single-source thunk
  * overload's `T extends {}` handler value).
+ *
+ * @since 2.6
  */
 type ResolvedReactive<R, P extends ComponentProps> = R extends keyof P ? P[R] : R extends Signal<infer V> ? V : R extends () => infer V ? Awaited<V> & {} : never;
 /**
  * Position-preserving tuple of `ResolvedReactive` values for an array
  * source — what `watch([a, b], ([x, y]) => …)` hands the handler, instead
  * of the untyped `any[]` the array form carried before.
+ *
+ * @since 2.6
  */
 type ResolvedReactiveValues<S extends readonly unknown[], P extends ComponentProps> = {
     [K in keyof S]: ResolvedReactive<S[K], P> & {};
@@ -50,6 +54,8 @@ type ResolvedReactiveValues<S extends readonly unknown[], P extends ComponentPro
  * `S`'s resolved values wrapped as signals — the source-tuple shape
  * `match()`'s multi-signal overload (`MatchHandlers<T>`) expects for an
  * array of `Reactive` sources.
+ *
+ * @since 2.6
  */
 type ResolvedReactiveSignals<S extends readonly unknown[], P extends ComponentProps> = {
     [K in keyof S]: Signal<ResolvedReactive<S[K], P> & {}>;
@@ -235,4 +241,4 @@ declare function each<E extends Element>(memo: Signal<E[]>, callback: (element: 
  */
 declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: MutableList<T, S>, bindItem: (element: HTMLElement, item: S, key: string, first: FirstElement) => MaybeCleanup): EffectDescriptor;
 declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: DerivedList<T, S>, bindItem: (element: HTMLElement, item: S, key: string, first: FirstElement) => MaybeCleanup): EffectDescriptor;
-export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, reconcile, type WatchHelper, };
+export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type ResolvedReactive, type ResolvedReactiveSignals, type ResolvedReactiveValues, reconcile, type WatchHelper, };

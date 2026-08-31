@@ -23,6 +23,11 @@
  * throttled path a real pointermove handler would, without simulating
  * actual pointer events.
  *
+ * LT-013: ArrowLeft/ArrowRight also drive `setHue()`, keyed to focus rather
+ * than pointer capture — without this a manual VoiceOver/NVDA pass has no
+ * way to trigger the live `valuenow`/`valuetext` announcements at all, only
+ * `setHue()` calls from a console or Playwright.
+ *
  * LT-004: the reactive `ariaValueNow`/`ariaValueText` writes go through
  * `bindAria()` (poc-bind-aria.ts), invoked imperatively — this is a raw
  * custom element with no cause-effect signal graph (`throttle()` drives a
@@ -72,11 +77,13 @@ class PocHueSlider extends HTMLElement {
 
 	connectedCallback() {
 		this.addEventListener('pointerdown', this.#onPointerDown)
+		this.addEventListener('keydown', this.#onKeyDown)
 		this.setHue(0)
 	}
 
 	disconnectedCallback() {
 		this.removeEventListener('pointerdown', this.#onPointerDown)
+		this.removeEventListener('keydown', this.#onKeyDown)
 		this.#setValueNow.cancel()
 	}
 
@@ -89,6 +96,16 @@ class PocHueSlider extends HTMLElement {
 	/** Call counter for the throttled sink, exposed for dedup assertions. */
 	get flushCount(): number {
 		return this.#flushCount
+	}
+
+	#onKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'ArrowRight') {
+			event.preventDefault()
+			this.setHue(this.#hue + 5)
+		} else if (event.key === 'ArrowLeft') {
+			event.preventDefault()
+			this.setHue(this.#hue - 5)
+		}
 	}
 
 	#onPointerDown = (event: PointerEvent) => {

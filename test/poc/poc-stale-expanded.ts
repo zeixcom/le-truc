@@ -17,6 +17,10 @@
  *             no-mixing rule (ADR 0026 §1) applied defensively for the case
  *             where a consumer (or SSR) authored the attribute without
  *             knowing the component manages it at runtime.
+ *
+ * LT-013: focusable + clickable, so `expand()`/`collapse()` can be toggled
+ * in place under a manual VoiceOver/NVDA pass — previously only reachable
+ * from a console or Playwright.
  */
 interface PocRegistry {
 	_elementInternals?: WeakMap<Element, ElementInternals>
@@ -27,25 +31,50 @@ const registry = ((globalThis as PocRegistry)._elementInternals ??=
 
 class PocStaleExpanded extends HTMLElement {
 	#internals: ElementInternals
+	#expanded = false
 
 	constructor() {
 		super()
 		this.#internals = this.attachInternals()
 		registry.set(this, this.#internals)
 		this.#internals.role = 'button'
+		this.tabIndex = 0
 	}
 
 	connectedCallback() {
 		if (this.hasAttribute('mitigate')) this.removeAttribute('aria-expanded')
 		this.#internals.ariaExpanded = 'false'
+		this.addEventListener('click', this.#onClick)
+		this.addEventListener('keydown', this.#onKeyDown)
+	}
+
+	disconnectedCallback() {
+		this.removeEventListener('click', this.#onClick)
+		this.removeEventListener('keydown', this.#onKeyDown)
 	}
 
 	expand(): void {
+		this.#expanded = true
 		this.#internals.ariaExpanded = 'true'
 	}
 
 	collapse(): void {
+		this.#expanded = false
 		this.#internals.ariaExpanded = 'false'
+	}
+
+	#onClick = () => {
+		if (this.#expanded) this.collapse()
+		else this.expand()
+	}
+
+	/* role="button" carries no native activation — Enter/Space must be
+	   wired by hand, per the ARIA authoring practices button pattern. */
+	#onKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault()
+			this.#onClick()
+		}
 	}
 }
 

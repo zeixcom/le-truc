@@ -82,6 +82,8 @@ type Reactive<T, P extends ComponentProps> =
  * per form: prop key `K` → `P[K]`, `Signal<V>` → `V`, thunk → the awaited,
  * null/undefined-stripped return type (matching the single-source thunk
  * overload's `T extends {}` handler value).
+ *
+ * @since 2.6
  */
 type ResolvedReactive<R, P extends ComponentProps> = R extends keyof P
 	? P[R]
@@ -95,6 +97,8 @@ type ResolvedReactive<R, P extends ComponentProps> = R extends keyof P
  * Position-preserving tuple of `ResolvedReactive` values for an array
  * source — what `watch([a, b], ([x, y]) => …)` hands the handler, instead
  * of the untyped `any[]` the array form carried before.
+ *
+ * @since 2.6
  */
 type ResolvedReactiveValues<
 	S extends readonly unknown[],
@@ -107,6 +111,8 @@ type ResolvedReactiveValues<
  * `S`'s resolved values wrapped as signals — the source-tuple shape
  * `match()`'s multi-signal overload (`MatchHandlers<T>`) expects for an
  * array of `Reactive` sources.
+ *
+ * @since 2.6
  */
 type ResolvedReactiveSignals<
 	S extends readonly unknown[],
@@ -922,6 +928,9 @@ export {
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
+	type ResolvedReactive,
+	type ResolvedReactiveSignals,
+	type ResolvedReactiveValues,
 	reconcile,
 	type WatchHelper,
 }

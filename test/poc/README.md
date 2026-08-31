@@ -92,3 +92,56 @@ Hardest case: `poc-combobox.ts`, a real Le Truc component (unlike LT-001/LT-002'
 | *(no page)* | `poc-bind-aria.ts` — the `bindAria()` helper prototype itself, no DOM harness needed | `bind-aria.test.ts` (bun:test): every ADR 0026 §2 mapping-table row, null-target no-op, debug attribution, `@ts-expect-error` compile pins |
 
 Subsequent LT tasks append their own pages/components here.
+
+## LT-013 — manual AT test fixtures + pre-migration baseline
+
+LT-009's manual VoiceOver/NVDA pass needs fixtures that actually exercise the internals-set channel under an AT, not just under Playwright's DOM/CDP inspection. Three gaps found while scoping LT-009, fixed here:
+
+1. **`poc-hue-slider` had no box.** No CSS shipped on `/hue-slider`, so the element rendered at zero size — a zero-area element is a coin flip for AX-tree/AT exposure regardless of what `internals.role`/`aria*` carry. Fixed: `pages/hue-slider.html` now gives `poc-hue-slider` a visible `16rem × 2rem` box with a hue-gradient background.
+2. **No keyboard path to trigger reactive updates.** `setHue()`/`expand()`/`collapse()` were only reachable from a console or Playwright — a manual pass had no way to trigger the live `valuenow`/`valuetext` announcements or toggle the button in place. Fixed: `poc-hue-slider.ts` now drives `setHue(hue ± 5)` on ArrowLeft/ArrowRight (focus-scoped, not pointer-capture-scoped); `poc-stale-expanded.ts` now has `tabIndex = 0` plus click and Enter/Space handlers toggling `expand()`/`collapse()`.
+3. **The PoC pages exercise a throwaway `bindAria()`, not the shipped one.** `test/poc/poc-bind-aria.ts` is LT-004's prototype; LT-007/LT-008 landed the real `bindAria()` and registry in `src/bindings.ts`/`src/component.ts`. `examples/test/aria/` (served at :3000 via `bun run serve:examples`) exercises the real helper and is the more faithful target for a second AT pass — see the manual procedure below.
+
+`/combobox` and `poc-late-ref` needed no fixture changes: the combobox's `<input>` already carries real keyboard focus and an ArrowUp/ArrowDown/Escape handler (`poc-combobox.ts`), and `poc-late-ref` only proves static element-reference wiring at construction time — nothing to operate under an AT.
+
+### Manual procedure (human-run — not automatable, no results fabricated here)
+
+1. `bun test/poc/serve.ts` (port 3100) for the PoC pages; `bun run serve:examples` (port 3000) for `examples/test/aria/`, `examples/form/combobox/`, and `examples/form/colorgraph/`.
+2. Safari: enable VoiceOver (⌘F5), turn on the caption panel (VO+⌘+F10) to transcribe exact announcement strings, and disable QuickNav (Left+Right arrow together) on pages with a focused text input (`/combobox`, `form-combobox`) so arrow keys reach the control instead of the VO cursor.
+3. Firefox: enable NVDA, use browse/focus mode as appropriate per page.
+4. Pair every AT pass with the engine's own computed-tree inspector as ground truth — VO/NVDA speech alone can't distinguish "AT doesn't voice this property here" from "the engine dropped it": Safari Web Inspector's Elements → Node → Accessibility panel, or Accessibility Inspector (Xcode → Open Developer Tool) for WebKit; Firefox's Accessibility Inspector for Gecko.
+5. Record results in the tables below, filling in the AT/browser/OS version columns. Leave a row's Result cell as `—` until actually observed; do not infer or fabricate an entry.
+
+#### LT-009 — PoC pages (internals-set semantics, hardest cases)
+
+Manually verified 2026-08-31 by Esther Brunner: Safari 27, VoiceOver, macOS 27 beta ("Golden Gate"). Method per row: WebKit's computed-tree ground truth via Safari Web Inspector's Elements → Node → Accessibility panel (confirms the internals-set default role/value reaches WebKit's AX tree at all), paired with a VoiceOver announcement pass (confirms AT actually voices it) — the two-tier procedure above.
+
+| Page | Element | Property | Chromium CDP (LT-001–LT-002, done) | Safari + VoiceOver | Firefox + NVDA |
+|---|---|---|---|---|---|
+| `/hue-slider` | `#slider-internals` | role=slider | ✅ visible | ✅ Inspector shows the internals-set role; VoiceOver announces it as it would an attribute-set role | untested — no Windows/Linux + NVDA machine available |
+| `/hue-slider` | `#slider-internals` | live valuenow/valuetext (Arrow keys) | ✅ visible | ✅ | untested |
+| `/hue-slider` | `#slider-override` | attribute override wins | ✅ visible | ✅ | untested |
+| `/hue-slider` | `#toggle-stale` | stale attribute shadows internals | ✅ confirmed | ✅ | untested |
+| `/hue-slider` | `#toggle-mitigated` | mitigation restores internals authority | ✅ confirmed | ✅ mitigated internals-set element announced identically to an attribute-set equivalent | untested |
+| `/combobox` | `poc-combobox input` | ariaActiveDescendantElement (Arrow keys) | ✅ visible (relatedNodes) | ✅ | untested |
+| `/combobox` | `poc-combobox input` | describedby/labelledby/errormessage | ✅ visible | ✅ | untested |
+| `/combobox` | `#late-ref` | element reference to `:not(:defined)` target | ✅ visible | ✅ | untested |
+
+**Firefox/NVDA gap, accepted as a standing limitation, not blocking:** no Windows/Linux machine with NVDA was available to the tester. Per the tester's explicit call, WebKit's and Chromium's independent agreement on every property above is treated as sufficient basis to *assume* Gecko/NVDA parity for LT-010's purposes; a Firefox/NVDA divergence, if one ever surfaces, is treated as a Firefox- or NVDA-side bug report, not evidence against ADR 0026's channel model. This is a judgment call, not a verified result — anyone relying on this row for a Firefox-specific claim should re-test before trusting it.
+
+**Verdict: LT-009's WebKit/Safari verification is complete and positive — no property failed to survive the engine.** No internals-set property is disqualified from LT-010 migration on WebKit grounds. The Firefox/NVDA row stays formally unverified (see above).
+
+#### LT-013 — pre-migration baseline (`examples/`, current attribute-channel form, before any LT-010 change)
+
+`form-combobox` and `form-colorgraph` are LT-010's migration candidates. This baseline captures their *current* behavior — hand-rolled `aria-describedby`/`aria-expanded` attribute plumbing (`form-combobox`), static `aria-valuenow`/`aria-valuemin`/`aria-valuemax` attributes on the hue slider (`form-colorgraph`) — so LT-010's "no regression from LT-009" check has something to diff against.
+
+| Component | Property | Safari + VoiceOver (attribute channel, pre-migration) | Firefox + NVDA (attribute channel, pre-migration) |
+|---|---|---|---|
+| `examples/form/combobox` | `aria-expanded` on textbox | — | — |
+| `examples/form/combobox` | `aria-describedby` (description/error) | — | — |
+| `examples/form/combobox` | active option on Arrow keys | — | — |
+| `examples/form/colorgraph` | hue slider role | — | — |
+| `examples/form/colorgraph` | hue slider live valuenow/valuetext | — | — |
+
+Also worth a second pass once fixtures above are exercised: `examples/test/aria/` (`<test-aria>`, real `bindAria()` + registry) — the SSR-echo removal case in particular, where the finding *is* which of two competing sources VoiceOver ends up voicing.
+
+**Status:** fixtures and baseline table structure in place; the manual AT passes themselves are unrun (require an interactive human session) — this is what unblocks LT-009 and gives LT-010 a pre-migration comparison point once run.
