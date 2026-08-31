@@ -80,7 +80,7 @@ Bun.serve({
 		const { pathname } = new URL(req.url)
 		if (pathname === '/' || pathname === '/index.html') return indexResponse()
 		const moduleMatch = pathname.match(/^\/poc\/([\w-]+)\.js$/)
-		if (moduleMatch) {
+		if (moduleMatch?.[1]) {
 			const js = await bundleModule(moduleMatch[1])
 			if (js == null) return new Response('Not found', { status: 404 })
 			return new Response(js, {
@@ -88,7 +88,7 @@ Bun.serve({
 			})
 		}
 		const pageMatch = pathname.match(/^\/([\w-]+)$/)
-		if (pageMatch) {
+		if (pageMatch?.[1]) {
 			const page = await pageResponse(pageMatch[1])
 			if (page) return page
 		}
