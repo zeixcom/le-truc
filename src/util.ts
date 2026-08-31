@@ -3,14 +3,13 @@ import type { SlotDescriptor } from '@zeix/cause-effect'
 /* === Exported Functions === */
 
 /**
- * Check whether a value is a `SlotDescriptor`-shaped object: a plain `{ get, set? }`
- * pair, not a branded `Signal`. Signals carry a `Symbol.toStringTag` (`'State'`,
- * `'Memo'`, `'Slot'`, …); a raw descriptor never does, which is what distinguishes
- * `expose({ value: { get, set } })` from `expose({ value: someSignal })`.
+ * Checks whether a value is a `SlotDescriptor`-shaped object: a plain `{ get, set? }`
+ * pair, not a branded `Signal`. Signals carry a `Symbol.toStringTag`; a raw
+ * descriptor never does.
  *
  * @since 2.5.1
- * @param {unknown} value - Value to check
- * @returns {boolean} - True if `value` is a `{ get, set? }` descriptor, not a `Signal`
+ * @param value - Value to check
+ * @returns True if `value` is a `{ get, set? }` descriptor, not a `Signal`
  */
 const isSlotDescriptor = /*#__PURE__*/ <T extends {} = unknown & {}>(
 	value: unknown,
@@ -21,30 +20,30 @@ const isSlotDescriptor = /*#__PURE__*/ <T extends {} = unknown & {}>(
 	!(Symbol.toStringTag in value)
 
 /**
- * Check whether an element is a custom element
+ * Checks whether an element is a custom element.
  *
- * @param {E} element - Element to check
- * @returns {boolean} - True if the element is a custom element
+ * @param element - Element to check
+ * @returns True if the element is a custom element
  */
 const isCustomElement = /*#__PURE__*/ <E extends Element>(
 	element: E,
 ): boolean => element.localName.includes('-')
 
 /**
- * Check whether a custom element is not yet defined
+ * Checks whether a custom element is not yet defined.
  *
- * @param {Element} element - Element to check
- * @returns {boolean} - True if the element is a custom element and not yet defined
+ * @param element - Element to check
+ * @returns True if the element is a custom element and not yet defined
  */
 const isNotYetDefinedComponent = /*#__PURE__*/ (element: Element): boolean =>
 	isCustomElement(element) && element.matches(':not(:defined)')
 
 /**
- * Return a string representation of the Element instance
+ * Returns a string representation of an element, for use in error messages.
  *
  * @since 0.7.0
- * @param {Element | undefined | null} el
- * @returns {string}
+ * @param el - Element to describe
+ * @returns The element's tag name, id, and classes as a CSS-selector-like string
  */
 const elementName = /*#__PURE__*/ (el: Element | undefined | null): string => {
 	if (!el) return '<unknown>'
@@ -56,12 +55,12 @@ const elementName = /*#__PURE__*/ (el: Element | undefined | null): string => {
 }
 
 /**
- * Describe a `ParentNode` for use in error messages: an element's `elementName()`,
+ * Describes a `ParentNode` for use in error messages: an element's `elementName()`,
  * a shadow root's host plus "shadow root", or "document" for anything else.
  *
  * @since 2.4.0
- * @param {ParentNode} parent - Node to describe
- * @returns {string}
+ * @param parent - Node to describe
+ * @returns A human-readable description of the node
  */
 const describeRoot = /*#__PURE__*/ (parent: ParentNode): string =>
 	typeof ShadowRoot !== 'undefined' && parent instanceof ShadowRoot
