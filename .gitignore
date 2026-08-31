@@ -171,7 +171,7 @@ docs-src/pages/api.md
 # Local dev tooling
 .mcp.json
 dataset/
-.mimosa/*
+**/.mimosa/*
 !.mimosa/security-policy.json
 .playwright-mcp/
 .zcode/plans/

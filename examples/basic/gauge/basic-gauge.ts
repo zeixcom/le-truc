@@ -1,6 +1,8 @@
 import {
 	asJSON,
 	asNumber,
+	bindProperty,
+	bindStyle,
 	defineComponent,
 	observedAttributes,
 } from '../../../index'
@@ -66,13 +68,11 @@ export default defineComponent<BasicGaugeProps>(
 		)
 		pass(valueEl, { value: () => host.value })
 
-		watch('value', value => {
-			meter.value = value
-			host.style.setProperty(
-				'--basic-gauge-degree',
-				`${(240 * value) / meter.max}deg`,
-			)
-		})
+		watch('value', bindProperty(meter, 'value'))
+		watch(
+			() => `${(240 * host.value) / meter.max}deg`,
+			bindStyle(host, '--basic-gauge-degree'),
+		)
 
 		const labelEl = first(
 			'.label',

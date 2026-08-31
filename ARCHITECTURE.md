@@ -52,8 +52,11 @@ To wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primit
 
 Binding helpers return either a setter function `(value) => void` or `SingleMatchHandlers<T>` for use with `watch()` — enabling the pattern `watch(reactive, bindText(element))`.
 
+`watch()`'s array-source form (`watch([a, b], …)`) accepts both flavors too: a plain handler receiving the per-position-inferred value tuple (prop key → `P[K]`, `Signal<T>` → `T`, thunk → awaited non-null return), or cause-effect's `MatchHandlers` for `ok`/`nil`/`err`/`stale` routing with `match()`'s `nil > err > stale > ok` precedence — for an array source, `nil` fires when *any* source is unset and `err` collects every source error. Binding helpers themselves stay unary (they need one value), so a binding derived from several sources reduces through a tracked thunk: `watch(() => f(a.get(), b.get()), bindText(el))`.
+
 | Helper | Purpose |
 |--------|---------|
+| `bindAria` | Reflects ARIA properties onto `ARIAMixin` targets (`ElementInternals` or `Element`), removing shadowing attributes (see [ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md)) |
 | `bindAttribute` | Sets/removes attributes with security validation (see [ADR 0009](adr/0009-security-validation-in-bindattribute.md)) |
 | `bindClass` | Adds/removes CSS classes |
 | `bindText` | Sets text content |
@@ -62,6 +65,8 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 | `bindStyle` | Sets/removes inline styles |
 | `bindVisible` | Controls `hidden` attribute |
 | `dangerouslyBindInnerHTML` | Sets innerHTML |
+
+`bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, `bindState`, and `bindAria` additionally accept a `readonly string[]` in place of the single target, targeting several properties/attributes/class tokens/object keys/custom states/ARIA properties from one `watch()` handler instead of N separate calls sharing one computed source (see [ADR 0023](adr/0023-map-form-overloads-for-bind-helpers.md)). Implemented for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty` (LT-029), `bindState`, and `bindAria` (LT-007).
 
 ### Event Binding
 

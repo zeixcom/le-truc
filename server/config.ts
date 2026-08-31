@@ -44,6 +44,7 @@ const PAGE_ORDER = [
 	'props',
 	'effects',
 	'extensions',
+	'accessibility',
 	'data-flow',
 	'lists',
 	'context',
@@ -64,7 +65,7 @@ const PAGE_ORDER = [
 const CHAPTERS = [
 	{
 		title: 'Building Components',
-		pages: ['components', 'props', 'effects', 'extensions'],
+		pages: ['components', 'props', 'effects', 'extensions', 'accessibility'],
 	},
 	{
 		title: 'Coordinating Components',

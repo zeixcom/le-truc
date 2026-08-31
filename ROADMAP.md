@@ -20,7 +20,7 @@ It replaces the hand-written, brittle reconciliation code that `module-list` and
 
 ### Next: TSRX as a server-side component format
 
-The full design lives in git history (`PLAN-tsrx-server-components.md`, superseded by this roadmap) and will return as ADR 0023-or-later once we commit to it. In short:
+The full design lives in git history (`PLAN-tsrx-server-components.md`, superseded by this roadmap) and will return as ADR 0024. In short:
 
 - **What TSRX is.** A JSX-shaped template language (`.tsrx`, from the Ripple ecosystem) with real control flow (`@if`, `@for`, `@switch`), scoped `<style>` blocks, and a shared parser (`@tsrx/core`) with per-framework codegen targets (React, Preact, Solid, Vue, Ripple). There is no server/HTML target today — Le Truc would be the first.
 - **The semantic gap.** Every existing TSRX target assumes the component renders and re-renders its own DOM. Le Truc's components never do. A Le Truc target must classify every expression as server-definitive (renders once, ships zero client JS) or reactive (needs a binding), using the same declared-roots principle Le Truc already relies on: reactivity only enters through props, context, or internal signals — everything else is server-definitive by construction.

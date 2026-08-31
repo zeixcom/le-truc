@@ -118,6 +118,8 @@ This is a deliberate carve-out from the bind-helper rejection below: `internals.
 
 ### ARIA reflection: available but not promoted
 
+> **Amended by [ADR 0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) (Accepted 2026-08-31, targets v3.0).** This section and the corresponding advisory in the Consequences below are superseded: the platform gaps they cite have closed, ARIA reflection is now a first-class channel governed by a two-channel policy, and `bindAria()` is added. One qualification from ADR 0016 survives on evidence — static tools still cannot validate *nesting* for internals-set roles, so structural/composite roles stay on the attribute channel. §1–8 of this ADR are otherwise unchanged.
+
 `internals.role` and `internals.aria*` are accessible via the exposed `internals` object — they cannot be withheld once the object is on the context. However, **no convenience helpers will be added** for ARIA reflection, and the documentation will carry an active warning against replacing explicit `aria-*` attributes or native semantic elements with it until the platform tooling gap is resolved (see Consequences).
 
 ## Alternatives Considered

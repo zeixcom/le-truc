@@ -61,6 +61,32 @@ interface FormAssociatedElement extends HTMLElement {
     setCustomValidity(message: string): void;
 }
 /**
+ * The host shape of the `formAssociated()` value variant: additionally carries
+ * the managed `defaultValue` reset-baseline property, mirroring
+ * `<input>.defaultValue`. The getter re-parses the `value` content attribute
+ * through the same retained `Parser` as the live prop, so in practice it yields
+ * the component's own `value` type — declared as `string | number` because the
+ * parserless fallback path yields the raw attribute string. Setting it moves
+ * the baseline for the next form reset; it never changes the live `value`.
+ *
+ * @since 2.5.1
+ */
+interface FormAssociatedValueElement extends FormAssociatedElement {
+    defaultValue: string | number;
+}
+/**
+ * The host shape of the `formAssociatedCheckbox()` variant: additionally
+ * carries the managed `defaultChecked` reset-baseline property, mirroring
+ * `<input>.defaultChecked`. It reflects the `checked` attribute's presence.
+ * Setting it moves the baseline for the next form reset; it never changes the
+ * live `checked`.
+ *
+ * @since 2.5.1
+ */
+interface FormAssociatedCheckboxElement extends FormAssociatedElement {
+    defaultChecked: boolean;
+}
+/**
  * The context object passed to the v2.x factory function.
  *
  * Components destructure only what they need.
@@ -86,22 +112,28 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 };
 /**
  * The factory context for form-associated components. Extends `FactoryContext`
- * with `host` typed as `FormAssociatedElement & P` and `watch`/`on`/`pass`
- * accepting the managed `disabled`, `validationMessage`, and `validity`
- * reactive props in addition to `P`.
+ * with `host` typed as `HostElement & P` (`FormAssociatedValueElement` for
+ * `formAssociated()`, `FormAssociatedCheckboxElement` for
+ * `formAssociatedCheckbox()`) and `watch`/`on`/`pass` accepting the managed
+ * `disabled`, `validationMessage`, and `validity` reactive props in addition
+ * to `P`.
  *
  * `expose` stays typed over `Initializers<P>`, not the widened
  * `P & { disabled: boolean; validationMessage: string; validity: ValidityState }`,
  * so `expose({ disabled: … })` / `expose({ validationMessage: … })` /
  * `expose({ validity: … })` are type errors. All three are managed by the
  * library; `expose()` throws `InvalidPropertyNameError` for them at runtime.
+ * The same holds for the variant's reset-baseline member (`defaultValue`/
+ * `defaultChecked`), which lives on the host element interface, not in `P`.
+ *
+ * @since 2.6
  */
-type FormFactoryContext<P extends ComponentProps> = Omit<FactoryContext<P & {
+type FormFactoryContext<P extends ComponentProps, HostElement extends FormAssociatedElement = FormAssociatedValueElement> = Omit<FactoryContext<P & {
     disabled: boolean;
     validationMessage: string;
     validity: ValidityState;
 }>, 'host' | 'expose'> & {
-    host: FormAssociatedElement & P;
+    host: HostElement & P;
     expose: (props: Initializers<P>) => void;
 };
 /**
@@ -126,9 +158,9 @@ declare function defineComponent<P extends ComponentProps & {
 }>(name: string, factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void, extensions: readonly [FormAssociatedExtension, ...ComponentExtension[]]): CustomElementConstructor | undefined;
 declare function defineComponent<P extends ComponentProps & {
     checked: boolean;
-}>(name: string, factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void, extensions: readonly [
+}>(name: string, factory: (context: FormFactoryContext<P, FormAssociatedCheckboxElement>) => FactoryResult | Falsy | void, extensions: readonly [
     FormAssociatedCheckboxExtension,
     ...ComponentExtension[]
 ]): CustomElementConstructor | undefined;
 declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void, extensions?: readonly ComponentExtension[]): CustomElementConstructor | undefined;
-export { defineComponent, type FactoryContext, type FormAssociatedElement, type Initializers, type MaybeSignal, };
+export { defineComponent, type FactoryContext, type FormAssociatedCheckboxElement, type FormAssociatedElement, type FormAssociatedValueElement, type FormFactoryContext, type Initializers, type MaybeSignal, };

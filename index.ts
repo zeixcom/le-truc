@@ -1,4 +1,4 @@
-// Le Truc 2.5.1
+// Le Truc 2.6.0
 
 // From Cause & Effect
 // Names deprecated by @zeix/cause-effect 1.5 ahead of its 2.0 keep their upstream
@@ -113,6 +113,8 @@ export {
 } from '@zeix/cause-effect'
 
 export {
+	type AriaValue,
+	bindAria,
 	bindAttribute,
 	bindClass,
 	bindProperty,
@@ -129,7 +131,10 @@ export {
 export {
 	defineComponent,
 	type FactoryContext,
+	type FormAssociatedCheckboxElement,
 	type FormAssociatedElement,
+	type FormAssociatedValueElement,
+	type FormFactoryContext,
 	type Initializers,
 	type MaybeSignal,
 } from './src/component'
@@ -190,6 +195,9 @@ export {
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
+	type ResolvedReactive,
+	type ResolvedReactiveSignals,
+	type ResolvedReactiveValues,
 	reconcile,
 	type WatchHelper,
 } from './src/helpers/reactive'
@@ -210,5 +218,6 @@ export {
 	isParser,
 	type MethodProducer,
 	type Parser,
+	RESERVED_WORDS_LIST,
 	type ReservedWords,
 } from './src/types'

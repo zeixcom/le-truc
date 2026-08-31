@@ -78,7 +78,7 @@ Reactive states that map to ARIA attributes must be kept in sync via effects. Us
 ```typescript
 // In factory return array
 watch('expanded', bindAttribute(trigger, 'aria-expanded'))  // boolean → toggleAttribute
-watch('selectedId', bindAttribute(option, 'aria-selected', id => id === option.id))  // derived
+watch(() => host.selectedId === option.id, bindAttribute(option, 'aria-selected'))  // derived
 ```
 
 For static ARIA attributes:

@@ -113,7 +113,7 @@ defineComponent<Props>('list-el', ({ all, expose, host, on, watch }) => {
   }))
   // Per-element reactive class with own scope
   each(items, item => {
-    watch('selectedId', bindClass(item, 'selected', id => id === item.id))
+    watch(() => host.selectedId === item.id, bindClass(item, 'selected'))
   })
 })
 ```

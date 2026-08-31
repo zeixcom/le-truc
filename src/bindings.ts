@@ -1,9 +1,10 @@
 import type { SingleMatchHandlers } from '@zeix/cause-effect'
+import { internalsHosts } from './internal'
 import { schedule } from './scheduler'
 
 /**
  * Low-level DOM-mutation primitives behind `bindText`, `bindAttribute`,
- * `bindClass`, `bindState`, `bindStyle`, `bindVisible`, and
+ * `bindAria`, `bindClass`, `bindState`, `bindStyle`, `bindVisible`, and
  * `dangerouslyBindInnerHTML`. Each `bind*` function returns a setter (or
  * `SingleMatchHandlers`) that a caller wires to a signal via `watch()` or
  * `match()`.
@@ -39,6 +40,20 @@ type DangerouslyBindInnerHTMLOptions = {
 	 */
 	sanitize?: (html: string) => string | TrustedHTML
 }
+
+/**
+ * Everything `bindAria()`'s `ok()` handler accepts, per ADR 0026 §2's mapping
+ * table. Deliberately excludes `null | undefined` even though `ok()` guards
+ * for both at runtime: `SingleMatchHandlers<T>` constrains `T extends {}`, so
+ * a union including them fails to typecheck as the generic parameter — the
+ * same "typed optimistically, guarded defensively" split the map-form
+ * `ok(map)` of `bindAttribute`/`bindStyle` already carries for absent keys.
+ * A signal whose *resolved value* is legitimately `null` still reaches
+ * `ok(null)` via cause-effect's `match()` (which routes to `nil` only on
+ * `UnsetSignalValueError`, i.e. pending/unset, never on a resolved null) —
+ * exactly the case the runtime guard exists for.
+ */
+type AriaValue = boolean | number | string | Element | readonly Element[]
 
 /* === DEV_MODE Debug Attribution (ADR 0022) === */
 
@@ -227,12 +242,45 @@ const bindText = (
  * @param key - Property key to set
  * @returns Function that sets a property
  */
-const bindProperty = <O extends object, K extends keyof O & string>(
+function bindProperty<O extends object, K extends keyof O & string>(
 	object: O,
 	key: K,
-): ((value: O[K]) => void) => {
-	const setter = (value: O[K]) => {
-		object[key] = value
+): (value: O[K]) => void
+/**
+ * Returns a function that patches several DOM properties from one map.
+ *
+ * Unlike the single-key form, this is a partial PATCH, not a clear/set pair:
+ * `keys` is declared statically at the call site, but object properties have
+ * no "unset" operation, so absent keys in the value are simply skipped —
+ * their previous value is left untouched.
+ *
+ * @since 2.6
+ * @param object - Target object
+ * @param keys - Property keys the returned setter may patch
+ * @returns Function that patches the given properties from a partial map
+ */
+function bindProperty<O extends object, K extends keyof O & string>(
+	object: O,
+	keys: readonly K[],
+): (value: Partial<Pick<O, K>>) => void
+function bindProperty(
+	object: any,
+	keyOrKeys: string | readonly string[],
+): (value: any) => void {
+	if (typeof keyOrKeys === 'string') {
+		const key = keyOrKeys
+		const setter = (value: unknown) => {
+			object[key] = value
+		}
+		if (typeof Element !== 'undefined' && object instanceof Element)
+			registerDebugBindingTarget(setter, object)
+		return setter
+	}
+	const keys = keyOrKeys
+	const setter = (value: Record<string, unknown>) => {
+		for (const key of keys) {
+			if (Object.hasOwn(value, key)) object[key] = value[key]
+		}
 	}
 	if (typeof Element !== 'undefined' && object instanceof Element)
 		registerDebugBindingTarget(setter, object)
@@ -249,12 +297,45 @@ const bindProperty = <O extends object, K extends keyof O & string>(
  * @param token - CSS class token to toggle
  * @returns Function that toggles the class token
  */
-const bindClass = <T = boolean>(
+function bindClass<T = boolean>(
 	element: Element,
 	token: string,
-): ((value: T) => void) => {
-	const setter = (value: T) => {
-		element.classList.toggle(token, Boolean(value))
+): (value: T) => void
+/**
+ * Returns a function that toggles several CSS class tokens on an element.
+ *
+ * `tokens` is declared statically at the call site — the array is always the
+ * complete set of tokens this binding owns. For every declared token,
+ * `classList.toggle(token, Boolean(map[token]))` runs; an absent token in the
+ * map coerces to `false` (off), the same coercion the single-token form
+ * already uses. No separate `nil` handler is needed: an empty map already
+ * clears every declared token via the same toggle loop.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param tokens - CSS class tokens the returned setter may toggle
+ * @returns Function that toggles the given class tokens from a partial map
+ */
+function bindClass<Tk extends string>(
+	element: Element,
+	tokens: readonly Tk[],
+): (value: Partial<Record<Tk, boolean>>) => void
+function bindClass(
+	element: Element,
+	tokenOrTokens: string | readonly string[],
+): (value: any) => void {
+	if (typeof tokenOrTokens === 'string') {
+		const token = tokenOrTokens
+		const setter = (value: unknown) => {
+			element.classList.toggle(token, Boolean(value))
+		}
+		registerDebugBindingTarget(setter, element)
+		return setter
+	}
+	const tokens = tokenOrTokens
+	const setter = (value: Record<string, unknown>) => {
+		for (const token of tokens)
+			element.classList.toggle(token, Boolean(value[token]))
 	}
 	registerDebugBindingTarget(setter, element)
 	return setter
@@ -282,16 +363,53 @@ const bindClass = <T = boolean>(
  * @param token - Custom state token to toggle (matched via `:state(token)`)
  * @returns Function that toggles the custom state
  */
-const bindState =
-	<T = boolean>(
-		internals: ElementInternals | null,
-		token: string,
-	): ((value: T) => void) =>
-	(value: T) => {
-		if (!internals) return
-		if (value) internals.states.add(token)
-		else internals.states.delete(token)
+function bindState<T = boolean>(
+	internals: ElementInternals | null,
+	token: string,
+): (value: T) => void
+/**
+ * Returns a function that toggles several custom states on an element's
+ * `ElementInternals` from one map.
+ *
+ * `tokens` is declared statically at the call site — the array is always the
+ * complete set of states this binding owns. For every declared token,
+ * `internals.states.add(token)`/`.delete(token)` runs per
+ * `Boolean(map[token])`; an absent token in the map coerces to `false` (off),
+ * the same coercion the single-token form already uses. No separate `nil`
+ * handler is needed: an empty map already clears every declared token via
+ * the same toggle loop. Degrades the same way as the single-token form —
+ * `internals === null` makes the returned function a no-op.
+ *
+ * @since 2.6
+ * @param internals - The component's `ElementInternals` (or `null`)
+ * @param tokens - Custom state tokens the returned setter may toggle
+ * @returns Function that toggles the given custom states from a partial map
+ */
+function bindState<Tk extends string>(
+	internals: ElementInternals | null,
+	tokens: readonly Tk[],
+): (value: Partial<Record<Tk, boolean>>) => void
+function bindState(
+	internals: ElementInternals | null,
+	tokenOrTokens: string | readonly string[],
+): (value: any) => void {
+	if (typeof tokenOrTokens === 'string') {
+		const token = tokenOrTokens
+		return (value: unknown) => {
+			if (!internals) return
+			if (value) internals.states.add(token)
+			else internals.states.delete(token)
+		}
 	}
+	const tokens = tokenOrTokens
+	return (value: Record<string, unknown>) => {
+		if (!internals) return
+		for (const token of tokens) {
+			if (value[token]) internals.states.add(token)
+			else internals.states.delete(token)
+		}
+	}
+}
 
 /**
  * Returns a function that controls element visibility via `el.hidden = !value`.
@@ -327,26 +445,252 @@ const bindVisible = <T = boolean>(
  * @param [allowUnsafe=false] - Skip security validation for string values
  * @returns Match handlers for the attribute mutation
  */
-const bindAttribute = (
+function bindAttribute(
 	element: Element,
 	name: string,
+	allowUnsafe?: boolean,
+): SingleMatchHandlers<string | boolean>
+/**
+ * Returns `SingleMatchHandlers` that set, toggle, or remove several
+ * attributes with security validation, from one map.
+ *
+ * `names` is declared statically at the call site, so it is always the
+ * complete set of attributes this binding owns:
+ *
+ * - `ok(map)` — for every declared name: present and a string →
+ *   `safeSetAttribute`/`setAttribute` (per `allowUnsafe`); present and a
+ *   boolean → `toggleAttribute`; absent or `null`/`undefined` →
+ *   `removeAttribute`.
+ * - `nil` → removes every declared attribute.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param names - Attribute names the returned handlers may set/toggle/remove
+ * @param [allowUnsafe=false] - Skip security validation for string values
+ * @returns Match handlers for the attribute mutations
+ */
+function bindAttribute<N extends string>(
+	element: Element,
+	names: readonly N[],
+	allowUnsafe?: boolean,
+): SingleMatchHandlers<Partial<Record<N, string | boolean>>>
+function bindAttribute(
+	element: Element,
+	nameOrNames: string | readonly string[],
 	allowUnsafe: boolean = false,
-): SingleMatchHandlers<string | boolean> => {
-	const handlers: SingleMatchHandlers<string | boolean> = {
-		ok: (value: string | boolean) => {
-			if (typeof value === 'boolean') {
-				element.toggleAttribute(name, value)
-			} else if (allowUnsafe) {
-				element.setAttribute(name, value)
-			} else {
-				safeSetAttribute(element, name, value)
+): SingleMatchHandlers<any> {
+	if (typeof nameOrNames === 'string') {
+		const name = nameOrNames
+		const handlers: SingleMatchHandlers<string | boolean> = {
+			ok: (value: string | boolean) => {
+				if (typeof value === 'boolean') {
+					element.toggleAttribute(name, value)
+				} else if (allowUnsafe) {
+					element.setAttribute(name, value)
+				} else {
+					safeSetAttribute(element, name, value)
+				}
+			},
+			nil: () => {
+				element.removeAttribute(name)
+			},
+		}
+		registerDebugBindingTarget(handlers, element)
+		return handlers
+	}
+	const names = nameOrNames
+	const handlers: SingleMatchHandlers<Record<string, string | boolean>> = {
+		ok: (map: Record<string, string | boolean>) => {
+			for (const name of names) {
+				const value = map[name]
+				if (value == null) {
+					element.removeAttribute(name)
+				} else if (typeof value === 'boolean') {
+					element.toggleAttribute(name, value)
+				} else if (allowUnsafe) {
+					element.setAttribute(name, value)
+				} else {
+					safeSetAttribute(element, name, value)
+				}
 			}
 		},
 		nil: () => {
-			element.removeAttribute(name)
+			for (const name of names) element.removeAttribute(name)
 		},
 	}
 	registerDebugBindingTarget(handlers, element)
+	return handlers
+}
+
+/* === ARIA Reflection (ADR 0026) === */
+
+/**
+ * IDL property name → content attribute name. NOT kebab-case: ARIA attribute
+ * names carry no inner hyphens. Strip a trailing `Element`/`Elements`, strip
+ * the `aria` prefix, lowercase the remainder, prefix `aria-` —
+ * `ariaValueNow` → `aria-valuenow`, `ariaDescribedByElements` →
+ * `aria-describedby`, `ariaActiveDescendantElement` → `aria-activedescendant`;
+ * `role` maps to itself. A naive kebab-case transform would yield
+ * `aria-labelled-by` for `ariaLabelledByElements` and silently remove nothing.
+ */
+const ariaAttributeName = (idlName: string): string => {
+	if (idlName === 'role') return 'role'
+	let base = idlName.startsWith('aria') ? idlName.slice('aria'.length) : idlName
+	if (base.endsWith('Elements')) base = base.slice(0, -'Elements'.length)
+	else if (base.endsWith('Element')) base = base.slice(0, -'Element'.length)
+	return `aria-${base.toLowerCase()}`
+}
+
+/**
+ * Returns `SingleMatchHandlers` that reflect a value onto an `ARIAMixin`
+ * target via the platform's ARIA reflection properties — `ElementInternals`
+ * for component-owned host semantics (invisible in markup, unclobberable by
+ * attribute rewriting), or a native `Element` whose IDL write mirrors into
+ * the content attribute. Both implement `ARIAMixin`, so one signature covers
+ * host reflection and inner-element binding.
+ *
+ * Coercion per ADR 0026 §2's mapping table:
+ *
+ * - `ok(boolean)` → assigns `'true'` / `'false'` — ARIA enumerated semantics,
+ *   never `toggleAttribute`'s invalid empty-string form
+ * - `ok(number)` → assigns the decimal string (`ariaValueNow` from a numeric
+ *   prop — note the IDL casing, which is *not* the hyphenated attribute name;
+ *   a mis-cased write would be a silent no-op)
+ * - `ok(string | Element | readonly Element[])` → pass-through (`'mixed'`,
+ *   element references, …)
+ * - `ok(null | undefined)` → assigns `null`, clearing the reflection and
+ *   restoring attribute authority (runtime guard; see `AriaValue`)
+ * - `nil` → assigns `null` (same clear)
+ *
+ * **Stale-attribute rule (ADR 0026 §1, `ElementInternals` targets only).**
+ * A pre-existing host content attribute for the property being reflected
+ * *permanently shadows* the internals value in the accessibility tree —
+ * host attributes are the consumer-override channel, so a server-rendered
+ * `aria-expanded="false"` would silently nullify every later
+ * `internals.ariaExpanded` write. `bindAria()` therefore removes the
+ * shadowing attribute itself. **The removal fires once** — per property,
+ * at that property's first value-bearing `ok()`. Never on `nil` or a
+ * nullish `ok` (those restore attribute authority instead), and never
+ * again afterwards, so an
+ * attribute set *after* connect keeps overriding on every later update. The
+ * one-line contract: the server-rendered attribute is the initial value;
+ * from the first assertion on, the component owns that property reactively
+ * via internals. For an `Element` target the IDL write *is* the attribute
+ * channel (native reflection mirrors it), so there is nothing shadowing and
+ * nothing is removed. A nullish target (the `attachInternals()`-failed path)
+ * makes every handler a no-op — the same graceful degradation `bindState()`
+ * established.
+ *
+ * @since 2.6
+ * @param target - `ARIAMixin` target (`Element` or `ElementInternals`), or `null`/`undefined`
+ * @param name - Platform `ARIAMixin` property name (e.g. `'ariaExpanded'`, `'ariaValueNow'`, `'role'`)
+ * @returns Match handlers for the ARIA reflection
+ */
+function bindAria(
+	target: ARIAMixin | null | undefined,
+	name: keyof ARIAMixin & string,
+): SingleMatchHandlers<AriaValue>
+/**
+ * Returns `SingleMatchHandlers` that reflect several ARIA properties onto an
+ * `ARIAMixin` target from one map.
+ *
+ * `names` is declared statically at the call site, so it is always the
+ * complete set of properties this binding owns:
+ *
+ * - `ok(map)` — for every declared name: present and non-nullish → assign
+ *   per the single-form coercion table (boolean → `'true'`/`'false'`,
+ *   number → decimal string, otherwise pass-through); absent or
+ *   `null`/`undefined` → assign `null`, clearing that reflection.
+ * - `nil` → assigns `null` to every declared name (clear).
+ *
+ * The stale-attribute rule applies per declared property: each one's
+ * shadowing content attribute is removed at that property's first asserted
+ * value (`ElementInternals` targets only — see the single form).
+ *
+ * @since 2.6
+ * @param target - `ARIAMixin` target (`Element` or `ElementInternals`), or `null`/`undefined`
+ * @param names - `ARIAMixin` property names the returned handlers may reflect (e.g. `['ariaValueNow', 'ariaValueText']`)
+ * @returns Match handlers for the ARIA reflections
+ */
+function bindAria<N extends keyof ARIAMixin & string>(
+	target: ARIAMixin | null | undefined,
+	names: readonly N[],
+): SingleMatchHandlers<Partial<Record<N, AriaValue>>>
+function bindAria(
+	target: ARIAMixin | null | undefined,
+	nameOrNames:
+		| (keyof ARIAMixin & string)
+		| readonly (keyof ARIAMixin & string)[],
+): SingleMatchHandlers<any> {
+	// The stale-attribute rule needs the host element behind an
+	// `ElementInternals` target; internals this library did not create are
+	// absent from the reverse lookup, which makes the removal a graceful
+	// no-op. `Element` targets skip it entirely — their IDL writes mirror
+	// into the attribute natively, so there is nothing shadowing.
+	const isElementTarget =
+		target != null &&
+		typeof Element !== 'undefined' &&
+		target instanceof Element
+	const host =
+		target != null && !isElementTarget
+			? internalsHosts.get(target as ElementInternals)
+			: undefined
+	// Per property: the shadowing content attribute is removed exactly once,
+	// at the first `ok()` that asserts a value — never on `nil`/null clears
+	// (those restore attribute authority), never twice (a post-connect
+	// consumer override must survive every later update).
+	const cleared = new Set<keyof ARIAMixin & string>()
+	// `value` accepts `undefined` in addition to `AriaValue`: the map form's
+	// index read widens under `noUncheckedIndexedAccess`, and an undefined
+	// entry clears the reflection exactly like a null one.
+	const assign = (
+		name: keyof ARIAMixin & string,
+		value: AriaValue | undefined,
+	): void => {
+		if (!target) return
+		if (value == null) {
+			;(target as unknown as Record<string, unknown>)[name] = null
+			return
+		}
+		if (host && !cleared.has(name)) {
+			cleared.add(name)
+			host.removeAttribute(ariaAttributeName(name))
+		}
+		;(target as unknown as Record<string, unknown>)[name] =
+			typeof value === 'boolean'
+				? value
+					? 'true'
+					: 'false'
+				: typeof value === 'number'
+					? String(value)
+					: value
+	}
+	const clear = (name: keyof ARIAMixin & string): void => {
+		if (target) (target as unknown as Record<string, unknown>)[name] = null
+	}
+	if (typeof nameOrNames === 'string') {
+		const name = nameOrNames
+		const handlers: SingleMatchHandlers<AriaValue> = {
+			ok: (value: AriaValue) => {
+				assign(name, value)
+			},
+			nil: () => {
+				clear(name)
+			},
+		}
+		if (isElementTarget) registerDebugBindingTarget(handlers, target)
+		return handlers
+	}
+	const names = nameOrNames
+	const handlers: SingleMatchHandlers<Record<string, AriaValue>> = {
+		ok: (map: Record<string, AriaValue>) => {
+			for (const name of names) assign(name, map[name])
+		},
+		nil: () => {
+			for (const name of names) clear(name)
+		},
+	}
+	if (isElementTarget) registerDebugBindingTarget(handlers, target)
 	return handlers
 }
 
@@ -361,16 +705,60 @@ const bindAttribute = (
  * @param prop - CSS property name (e.g. `'color'`, `'--my-var'`)
  * @returns Match handlers for the style mutation
  */
-const bindStyle = (
+function bindStyle(
 	element: HTMLElement | SVGElement | MathMLElement,
 	prop: string,
-): SingleMatchHandlers<string> => {
-	const handlers: SingleMatchHandlers<string> = {
-		ok: (value: string) => {
-			element.style.setProperty(prop, value)
+): SingleMatchHandlers<string>
+/**
+ * Returns `SingleMatchHandlers` that set or remove several inline style
+ * properties from one map.
+ *
+ * `props` is declared statically at the call site, so it is always the
+ * complete set of properties this binding owns:
+ *
+ * - `ok(map)` — for every declared property: present and non-nil →
+ *   `el.style.setProperty(prop, value)`; absent or `null`/`undefined` →
+ *   `el.style.removeProperty(prop)`.
+ * - `nil` → removes every declared property, restoring the CSS cascade value
+ *   for each.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param props - CSS property names the returned handlers may set/remove
+ * @returns Match handlers for the style mutations
+ */
+function bindStyle<P extends string>(
+	element: HTMLElement | SVGElement | MathMLElement,
+	props: readonly P[],
+): SingleMatchHandlers<Partial<Record<P, string | null>>>
+function bindStyle(
+	element: HTMLElement | SVGElement | MathMLElement,
+	propOrProps: string | readonly string[],
+): SingleMatchHandlers<any> {
+	if (typeof propOrProps === 'string') {
+		const prop = propOrProps
+		const handlers: SingleMatchHandlers<string> = {
+			ok: (value: string) => {
+				element.style.setProperty(prop, value)
+			},
+			nil: () => {
+				element.style.removeProperty(prop)
+			},
+		}
+		registerDebugBindingTarget(handlers, element)
+		return handlers
+	}
+	const props = propOrProps
+	const handlers: SingleMatchHandlers<Record<string, string | null>> = {
+		ok: (map: Record<string, string | null>) => {
+			for (const prop of props) {
+				const value = map[prop]
+				if (value == null) element.style.removeProperty(prop)
+				else element.style.setProperty(prop, value)
+			}
 		},
 		nil: () => {
-			element.style.removeProperty(prop)
+			for (const prop of props) element.style.removeProperty(prop)
 		},
 	}
 	registerDebugBindingTarget(handlers, element)
@@ -469,6 +857,8 @@ const dangerouslyBindInnerHTML = (
 }
 
 export {
+	type AriaValue,
+	bindAria,
 	bindAttribute,
 	bindClass,
 	bindProperty,

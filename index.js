@@ -2003,6 +2003,130 @@ function createSlot(initialSignal, options) {
 function isSlot(value) {
   return isSignalOfType(value, TYPE_SLOT);
 }
+// src/util.ts
+var isSlotDescriptor = (value) => value !== null && typeof value === "object" && typeof value.get === "function" && !(Symbol.toStringTag in value);
+var isCustomElement = (element) => element.localName.includes("-");
+var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
+var elementName = (el) => {
+  if (!el)
+    return "<unknown>";
+  const id = el.id ? `#${el.id}` : "";
+  const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
+  return `<${el.localName}${id}${classes}>`;
+};
+var describeRoot = (parent) => typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
+
+// src/errors.ts
+class InvalidComponentNameError extends TypeError {
+  constructor(component) {
+    super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
+    this.name = "InvalidComponentNameError";
+  }
+}
+
+class InvalidPropertyNameError extends TypeError {
+  constructor(component, prop, reason) {
+    super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
+    this.name = "InvalidPropertyNameError";
+  }
+}
+
+class MissingElementError extends Error {
+  constructor(root, selector, required, contextLabel = "component") {
+    super(`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`);
+    this.name = "MissingElementError";
+  }
+}
+
+class DependencyTimeoutError extends Error {
+  constructor(host, missing) {
+    super(`Timeout waiting for: [${missing.join(", ")}] in component ${elementName(host)}.`);
+    this.name = "DependencyTimeoutError";
+  }
+}
+
+class InvalidReactivesError extends TypeError {
+  constructor(host, target, reactives) {
+    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString(reactives)}.`);
+    this.name = "InvalidReactivesError";
+  }
+}
+
+class InvalidCustomElementError extends TypeError {
+  constructor(target, where) {
+    super(`Target ${elementName(target)} is not a custom element in ${where}.`);
+    this.name = "InvalidCustomElementError";
+  }
+}
+
+class InvalidPassPropertyError extends TypeError {
+  constructor(host, target, reasons) {
+    const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
+    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`);
+    this.name = "InvalidPassPropertyError";
+  }
+}
+
+class NoActiveCollectorError extends Error {
+  constructor(host, helper) {
+    const where = host ? ` in component ${elementName(host)}` : "";
+    super(`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`);
+    this.name = "NoActiveCollectorError";
+  }
+}
+
+class InvalidTemplateError extends TypeError {
+  constructor(container, count) {
+    super(`Invalid template for reconcile() into ${elementName(container)}. Expected exactly 1 root element in the template content, found ${count}.`);
+    this.name = "InvalidTemplateError";
+  }
+}
+
+class ExtensionCollisionError extends Error {
+  constructor(component, key, first, second) {
+    super(`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`);
+    this.name = "ExtensionCollisionError";
+  }
+}
+
+class InvalidSelectorError extends TypeError {
+  constructor(parent, selector, cause) {
+    super(`Invalid selector "${selector}" passed to all() in ${describeRoot(parent)}. ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = "InvalidSelectorError";
+  }
+}
+
+// src/internal.ts
+var DEPENDENCY_TIMEOUT = 200;
+var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
+var componentSignals = new WeakMap;
+var internalsMap = new WeakMap;
+var internalsHosts = new WeakMap;
+var retainedInitializers = new WeakMap;
+var getSignals = (el) => {
+  let signals = componentSignals.get(el);
+  if (!signals) {
+    signals = {};
+    componentSignals.set(el, signals);
+  }
+  return signals;
+};
+var activeCollector;
+var withCollector = (collector, fn) => {
+  const previous = activeCollector;
+  activeCollector = collector;
+  try {
+    return fn();
+  } finally {
+    activeCollector = previous;
+  }
+};
+var pushDescriptor = (host, helper, descriptor) => {
+  if (!activeCollector)
+    throw new NoActiveCollectorError(host, helper);
+  activeCollector.push(descriptor);
+};
+
 // src/scheduler.ts
 var objects = new Set;
 var tasks = new WeakMap;
@@ -2121,29 +2245,68 @@ var bindText = (element, preserveComments = false) => {
   registerDebugBindingTarget(setter, element);
   return setter;
 };
-var bindProperty = (object, key) => {
+function bindProperty(object, keyOrKeys) {
+  if (typeof keyOrKeys === "string") {
+    const key = keyOrKeys;
+    const setter2 = (value) => {
+      object[key] = value;
+    };
+    if (typeof Element !== "undefined" && object instanceof Element)
+      registerDebugBindingTarget(setter2, object);
+    return setter2;
+  }
+  const keys = keyOrKeys;
   const setter = (value) => {
-    object[key] = value;
+    for (const key of keys) {
+      if (Object.hasOwn(value, key))
+        object[key] = value[key];
+    }
   };
   if (typeof Element !== "undefined" && object instanceof Element)
     registerDebugBindingTarget(setter, object);
   return setter;
-};
-var bindClass = (element, token) => {
+}
+function bindClass(element, tokenOrTokens) {
+  if (typeof tokenOrTokens === "string") {
+    const token = tokenOrTokens;
+    const setter2 = (value) => {
+      element.classList.toggle(token, Boolean(value));
+    };
+    registerDebugBindingTarget(setter2, element);
+    return setter2;
+  }
+  const tokens = tokenOrTokens;
   const setter = (value) => {
-    element.classList.toggle(token, Boolean(value));
+    for (const token of tokens)
+      element.classList.toggle(token, Boolean(value[token]));
   };
   registerDebugBindingTarget(setter, element);
   return setter;
-};
-var bindState = (internals, token) => (value) => {
-  if (!internals)
-    return;
-  if (value)
-    internals.states.add(token);
-  else
-    internals.states.delete(token);
-};
+}
+function bindState(internals, tokenOrTokens) {
+  if (typeof tokenOrTokens === "string") {
+    const token = tokenOrTokens;
+    return (value) => {
+      if (!internals)
+        return;
+      if (value)
+        internals.states.add(token);
+      else
+        internals.states.delete(token);
+    };
+  }
+  const tokens = tokenOrTokens;
+  return (value) => {
+    if (!internals)
+      return;
+    for (const token of tokens) {
+      if (value[token])
+        internals.states.add(token);
+      else
+        internals.states.delete(token);
+    }
+  };
+}
 var bindVisible = (element) => {
   const setter = (value) => {
     element.hidden = !value;
@@ -2151,36 +2314,143 @@ var bindVisible = (element) => {
   registerDebugBindingTarget(setter, element);
   return setter;
 };
-var bindAttribute = (element, name, allowUnsafe = false) => {
+function bindAttribute(element, nameOrNames, allowUnsafe = false) {
+  if (typeof nameOrNames === "string") {
+    const name = nameOrNames;
+    const handlers2 = {
+      ok: (value) => {
+        if (typeof value === "boolean") {
+          element.toggleAttribute(name, value);
+        } else if (allowUnsafe) {
+          element.setAttribute(name, value);
+        } else {
+          safeSetAttribute(element, name, value);
+        }
+      },
+      nil: () => {
+        element.removeAttribute(name);
+      }
+    };
+    registerDebugBindingTarget(handlers2, element);
+    return handlers2;
+  }
+  const names = nameOrNames;
   const handlers = {
-    ok: (value) => {
-      if (typeof value === "boolean") {
-        element.toggleAttribute(name, value);
-      } else if (allowUnsafe) {
-        element.setAttribute(name, value);
-      } else {
-        safeSetAttribute(element, name, value);
+    ok: (map) => {
+      for (const name of names) {
+        const value = map[name];
+        if (value == null) {
+          element.removeAttribute(name);
+        } else if (typeof value === "boolean") {
+          element.toggleAttribute(name, value);
+        } else if (allowUnsafe) {
+          element.setAttribute(name, value);
+        } else {
+          safeSetAttribute(element, name, value);
+        }
       }
     },
     nil: () => {
-      element.removeAttribute(name);
+      for (const name of names)
+        element.removeAttribute(name);
     }
   };
   registerDebugBindingTarget(handlers, element);
   return handlers;
+}
+var ariaAttributeName = (idlName) => {
+  if (idlName === "role")
+    return "role";
+  let base = idlName.startsWith("aria") ? idlName.slice("aria".length) : idlName;
+  if (base.endsWith("Elements"))
+    base = base.slice(0, -"Elements".length);
+  else if (base.endsWith("Element"))
+    base = base.slice(0, -"Element".length);
+  return `aria-${base.toLowerCase()}`;
 };
-var bindStyle = (element, prop) => {
+function bindAria(target, nameOrNames) {
+  const isElementTarget = target != null && typeof Element !== "undefined" && target instanceof Element;
+  const host = target != null && !isElementTarget ? internalsHosts.get(target) : undefined;
+  const cleared = new Set;
+  const assign = (name, value) => {
+    if (!target)
+      return;
+    if (value == null) {
+      target[name] = null;
+      return;
+    }
+    if (host && !cleared.has(name)) {
+      cleared.add(name);
+      host.removeAttribute(ariaAttributeName(name));
+    }
+    target[name] = typeof value === "boolean" ? value ? "true" : "false" : typeof value === "number" ? String(value) : value;
+  };
+  const clear = (name) => {
+    if (target)
+      target[name] = null;
+  };
+  if (typeof nameOrNames === "string") {
+    const name = nameOrNames;
+    const handlers2 = {
+      ok: (value) => {
+        assign(name, value);
+      },
+      nil: () => {
+        clear(name);
+      }
+    };
+    if (isElementTarget)
+      registerDebugBindingTarget(handlers2, target);
+    return handlers2;
+  }
+  const names = nameOrNames;
   const handlers = {
-    ok: (value) => {
-      element.style.setProperty(prop, value);
+    ok: (map) => {
+      for (const name of names)
+        assign(name, map[name]);
     },
     nil: () => {
-      element.style.removeProperty(prop);
+      for (const name of names)
+        clear(name);
+    }
+  };
+  if (isElementTarget)
+    registerDebugBindingTarget(handlers, target);
+  return handlers;
+}
+function bindStyle(element, propOrProps) {
+  if (typeof propOrProps === "string") {
+    const prop = propOrProps;
+    const handlers2 = {
+      ok: (value) => {
+        element.style.setProperty(prop, value);
+      },
+      nil: () => {
+        element.style.removeProperty(prop);
+      }
+    };
+    registerDebugBindingTarget(handlers2, element);
+    return handlers2;
+  }
+  const props = propOrProps;
+  const handlers = {
+    ok: (map) => {
+      for (const prop of props) {
+        const value = map[prop];
+        if (value == null)
+          element.style.removeProperty(prop);
+        else
+          element.style.setProperty(prop, value);
+      }
+    },
+    nil: () => {
+      for (const prop of props)
+        element.style.removeProperty(prop);
     }
   };
   registerDebugBindingTarget(handlers, element);
   return handlers;
-};
+}
 var dangerouslyBindInnerHTML = (element, options = {}) => {
   const reset = () => {
     if (element.shadowRoot)
@@ -2227,99 +2497,6 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
     nil: () => schedule(element, reset)
   };
 };
-// src/util.ts
-var isSlotDescriptor = (value) => value !== null && typeof value === "object" && typeof value.get === "function" && !(Symbol.toStringTag in value);
-var isCustomElement = (element) => element.localName.includes("-");
-var isNotYetDefinedComponent = (element) => isCustomElement(element) && element.matches(":not(:defined)");
-var elementName = (el) => {
-  if (!el)
-    return "<unknown>";
-  const id = el.id ? `#${el.id}` : "";
-  const classes = el.classList?.length ? `.${Array.from(el.classList).join(".")}` : "";
-  return `<${el.localName}${id}${classes}>`;
-};
-var describeRoot = (parent) => typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
-
-// src/errors.ts
-class InvalidComponentNameError extends TypeError {
-  constructor(component) {
-    super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
-    this.name = "InvalidComponentNameError";
-  }
-}
-
-class InvalidPropertyNameError extends TypeError {
-  constructor(component, prop, reason) {
-    super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
-    this.name = "InvalidPropertyNameError";
-  }
-}
-
-class MissingElementError extends Error {
-  constructor(root, selector, required, contextLabel = "component") {
-    super(`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`);
-    this.name = "MissingElementError";
-  }
-}
-
-class DependencyTimeoutError extends Error {
-  constructor(host, missing) {
-    super(`Timeout waiting for: [${missing.join(", ")}] in component ${elementName(host)}.`);
-    this.name = "DependencyTimeoutError";
-  }
-}
-
-class InvalidReactivesError extends TypeError {
-  constructor(host, target, reactives) {
-    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString(reactives)}.`);
-    this.name = "InvalidReactivesError";
-  }
-}
-
-class InvalidCustomElementError extends TypeError {
-  constructor(target, where) {
-    super(`Target ${elementName(target)} is not a custom element in ${where}.`);
-    this.name = "InvalidCustomElementError";
-  }
-}
-
-class InvalidPassPropertyError extends TypeError {
-  constructor(host, target, reasons) {
-    const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
-    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`);
-    this.name = "InvalidPassPropertyError";
-  }
-}
-
-class NoActiveCollectorError extends Error {
-  constructor(host, helper) {
-    const where = host ? ` in component ${elementName(host)}` : "";
-    super(`${helper}() called outside synchronous factory, each() callback, or reconcile() bindItem execution${where}.`);
-    this.name = "NoActiveCollectorError";
-  }
-}
-
-class InvalidTemplateError extends TypeError {
-  constructor(container, count) {
-    super(`Invalid template for reconcile() into ${elementName(container)}. Expected exactly 1 root element in the template content, found ${count}.`);
-    this.name = "InvalidTemplateError";
-  }
-}
-
-class ExtensionCollisionError extends Error {
-  constructor(component, key, first, second) {
-    super(`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`);
-    this.name = "ExtensionCollisionError";
-  }
-}
-
-class InvalidSelectorError extends TypeError {
-  constructor(parent, selector, cause) {
-    super(`Invalid selector "${selector}" passed to all() in ${describeRoot(parent)}. ${cause instanceof Error ? cause.message : String(cause)}`);
-    this.name = "InvalidSelectorError";
-  }
-}
-
 // src/extension.ts
 var mergeExtensions = (component, extensions) => {
   const staticProps = {};
@@ -2352,36 +2529,6 @@ var mergeExtensions = (component, extensions) => {
     reservedMembers,
     reservedMemberOwners
   };
-};
-
-// src/internal.ts
-var DEPENDENCY_TIMEOUT = 200;
-var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
-var componentSignals = new WeakMap;
-var internalsMap = new WeakMap;
-var retainedInitializers = new WeakMap;
-var getSignals = (el) => {
-  let signals = componentSignals.get(el);
-  if (!signals) {
-    signals = {};
-    componentSignals.set(el, signals);
-  }
-  return signals;
-};
-var activeCollector;
-var withCollector = (collector, fn) => {
-  const previous = activeCollector;
-  activeCollector = collector;
-  try {
-    return fn();
-  } finally {
-    activeCollector = previous;
-  }
-};
-var pushDescriptor = (host, helper, descriptor) => {
-  if (!activeCollector)
-    throw new NoActiveCollectorError(host, helper);
-  activeCollector.push(descriptor);
 };
 
 // src/helpers/context.ts
@@ -2653,9 +2800,14 @@ var makeWatch = (host) => {
     const descriptor = () => {
       if (Array.isArray(source)) {
         const signals = source.map((s) => toSignal(host, s));
-        const handler = handlerOrHandlers;
         if (false) {}
-        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
+        if (typeof handlerOrHandlers === "function") {
+          const handler = handlerOrHandlers;
+          return createEffect(() => match(signals, {
+            ok: (values) => untrack(() => handler(values))
+          }));
+        }
+        return createEffect(() => match(signals, handlerOrHandlers));
       }
       const signal = toSignal(host, source);
       if (typeof handlerOrHandlers === "function") {
@@ -3028,6 +3180,11 @@ var asParser = (fn) => Object.assign(fn, { [PARSER_BRAND]: true });
 var defineMethod = (fn) => Object.assign(fn, { [METHOD_BRAND]: true });
 
 // src/component.ts
+var elementInternalsRegistry = () => {
+  const g = globalThis;
+  g._elementInternals ??= new WeakMap;
+  return g._elementInternals;
+};
 function defineComponent(name, factory, extensions) {
   if (!name.includes("-") || !name.match(/^[a-z][a-z0-9-]*$/))
     throw new InvalidComponentNameError(name);
@@ -3044,7 +3201,10 @@ function defineComponent(name, factory, extensions) {
     constructor() {
       super();
       try {
-        internalsMap.set(this, this.attachInternals());
+        const internals = this.attachInternals();
+        internalsMap.set(this, internals);
+        internalsHosts.set(internals, this);
+        elementInternalsRegistry().set(this, internals);
       } catch {
         internalsMap.set(this, null);
       }
@@ -3301,9 +3461,33 @@ var MANAGED_FORM_MEMBERS = new Set([
 ]);
 var FOCUSABLE_FORM_CONTROL_SELECTOR = "input, select, textarea, button, [tabindex]";
 var FALLBACK_VALIDITY_MESSAGE = "Invalid value";
-var installManagedFormMembers = (proto, resetCallback, stateRestoreCallback) => {
+var makeDefaultPropDescriptor = (prop) => ({
+  get() {
+    const initializer = retainedInitializers.get(this)?.[prop];
+    if (isParser(initializer))
+      return initializer(this.getAttribute(prop));
+    if (initializer !== undefined)
+      return initializer;
+    return prop === "checked" ? this.hasAttribute("checked") : this.getAttribute(prop) ?? "";
+  },
+  set(v) {
+    if (prop === "checked") {
+      if (v)
+        this.setAttribute("checked", "");
+      else
+        this.removeAttribute("checked");
+    } else if (v == null)
+      this.removeAttribute(prop);
+    else
+      this.setAttribute(prop, String(v));
+  },
+  enumerable: true,
+  configurable: true
+});
+var installManagedFormMembers = (proto, propName, defaultPropName, resetCallback, stateRestoreCallback) => {
   Object.defineProperties(proto, {
     ...HOST_CONTRACT_DESCRIPTORS,
+    [defaultPropName]: makeDefaultPropDescriptor(propName),
     formResetCallback: {
       value: resetCallback,
       writable: true,
@@ -3355,7 +3539,7 @@ var makeFormAssociatedExtension = (config) => ({
   name: config.name,
   __kind: config.__kind,
   staticProps: { formAssociated: true },
-  reservedMembers: MANAGED_FORM_MEMBERS,
+  reservedMembers: new Set([...MANAGED_FORM_MEMBERS, config.defaultPropName]),
   installOnPrototype: config.installOnPrototype,
   onConnect: (instance, internals) => {
     if (!internals)
@@ -3368,17 +3552,17 @@ var makeFormAssociatedExtension = (config) => ({
     return [config.makeSyncDescriptor(instance, internals)];
   }
 });
-var makeResetCallback = (prop) => function() {
+var makeResetCallback = (prop, defaultProp) => function() {
   const initializer = retainedInitializers.get(this)?.[prop];
   if (initializer === undefined)
     return;
-  if (isParser(initializer)) {
-    const result = initializer(this.getAttribute(prop));
+  if (!isParser(initializer) && (isSignal(initializer) || isFunction(initializer) || isSlotDescriptor(initializer)))
+    return;
+  queueMicrotask(() => {
+    const result = this[defaultProp];
     if (result != null)
       this[prop] = result;
-  } else if (!isSignal(initializer) && !isFunction(initializer) && !isSlotDescriptor(initializer)) {
-    this[prop] = initializer;
-  }
+  });
 };
 var formStateRestoreCallback = function(state) {
   if (typeof state !== "string")
@@ -3411,7 +3595,8 @@ var formAssociated = () => makeFormAssociatedExtension({
   __kind: "form-associated",
   name: "formAssociated",
   propName: "value",
-  installOnPrototype: (proto) => installManagedFormMembers(proto, makeResetCallback("value"), formStateRestoreCallback),
+  defaultPropName: "defaultValue",
+  installOnPrototype: (proto) => installManagedFormMembers(proto, "value", "defaultValue", makeResetCallback("value", "defaultValue"), formStateRestoreCallback),
   makeSyncDescriptor: (instance, internals) => () => createEffect(() => {
     const v = instance.value;
     internals.setFormValue(typeof v === "string" ? v : String(v ?? ""));
@@ -3421,7 +3606,8 @@ var formAssociatedCheckbox = () => makeFormAssociatedExtension({
   __kind: "form-associated-checkbox",
   name: "formAssociatedCheckbox",
   propName: "checked",
-  installOnPrototype: (proto) => installManagedFormMembers(proto, makeResetCallback("checked"), checkboxFormStateRestoreCallback),
+  defaultPropName: "defaultChecked",
+  installOnPrototype: (proto) => installManagedFormMembers(proto, "checked", "defaultChecked", makeResetCallback("checked", "defaultChecked"), checkboxFormStateRestoreCallback),
   makeSyncDescriptor: (instance, internals) => () => createEffect(() => {
     const checked = instance.checked;
     internals.setFormValue(checked ? instance.getAttribute("value") ?? "on" : null);
@@ -3561,6 +3747,7 @@ export {
   bindProperty,
   bindClass,
   bindAttribute,
+  bindAria,
   batch,
   asString,
   asParser,
@@ -3576,6 +3763,7 @@ export {
   SKIP_EQUALITY,
   RequiredOwnerError,
   ReadonlySignalError,
+  RESERVED_WORDS_LIST,
   PromiseValueError,
   NullishSignalValueError,
   NoActiveCollectorError,

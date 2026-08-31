@@ -457,7 +457,7 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 ### Page Ordering
 
 `PAGE_ORDER` controls navigation menu order:
-`index`, `getting-started`, `components`, `props`, `effects`, `extensions`, `data-flow`, `lists`, `context`, `async`, `styling`, `examples`, `api`, `blog`, `about`
+`index`, `getting-started`, `components`, `props`, `effects`, `extensions`, `accessibility`, `data-flow`, `lists`, `context`, `async`, `styling`, `examples`, `api`, `blog`, `about`
 
 ### Guide Chapters
 

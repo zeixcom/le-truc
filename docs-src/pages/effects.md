@@ -73,6 +73,7 @@ Most DOM updates are common operations: set text, toggle a class, show or hide. 
 | `bindAttribute(el, name)` | Sets the attribute (string); adds or removes it (boolean) | Removes the attribute |
 | `bindStyle(el, prop)` | Sets the inline style property | Removes the inline style, restoring the cascade |
 | `bindState(internals, token)` | Toggles a `:state(token)` custom state on `ElementInternals` | No-op when `internals` is `null` |
+| `bindAria(target, name)` | Reflects a value onto an `ARIAMixin` target's ARIA property | Clears the reflection |
 
 Two of these deserve a second look.
 
@@ -80,11 +81,26 @@ Two of these deserve a second look.
 
 `bindState()` toggles a custom state that CSS matches with `:state(token)`. Unlike a class, a custom state belongs to the component; author code or a framework rewriting the host's `class` attribute cannot overwrite it.
 
+`bindAria()` targets `internals` or a native element to drive ARIA reflection — a separate channel from content attributes, with its own no-mixing rules. See [Accessibility](accessibility.html) for the full picture.
+
 {% callout .note title="CSS must define what the class or attribute does" %}
 `bindClass(el, 'even')` adds or removes the `even` class. Nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.
 
 See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and effects work together.
 {% /callout %}
+
+### Bind Several Targets from One Source
+
+`bindStyle()`, `bindAttribute()`, `bindAria()`, `bindClass()`, `bindProperty()`, and `bindState()` each also accept an array of targets instead of a single one. Use this when one computed value drives several properties, attributes, ARIA properties, class tokens, object keys, or custom states at once — one `watch()` call instead of several:
+
+```js
+watch(
+  () => ({ '--gauge-color': color, '--gauge-degree': `${degree}deg` }),
+  bindStyle(host, ['--gauge-color', '--gauge-degree']),
+)
+```
+
+The array of targets is fixed where you call the helper. The handler you pass to `watch()` receives an object keyed by those targets. For `bindStyle()`, `bindAttribute()`, and `bindAria()`, a target missing from that object (or set to `null`/`undefined`) is cleared — removed from the style/attribute, or set to `null` for the ARIA reflection. `bindClass()` and `bindState()` toggle off the same way. `bindProperty()` is the exception: a missing key is left alone, not cleared, because arbitrary object properties have no "remove" operation.
 
 ### Derive Inline with a Thunk
 
@@ -173,7 +189,7 @@ This creates a full cycle: DOM → signal → DOM, with the signal as the single
 {% callout .tip title="`bindProperty()` vs `bindAttribute()`" %}
 `bindAttribute(el, 'checked')` sets the HTML attribute. This only controls the checkbox's *default* state. It has no effect on the live `.checked` property once the page has loaded. `bindProperty(el, 'checked')` assigns to the element's JS property directly. This is the only reliable way to update native form element state at runtime.
 
-Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
+Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`. Use [`bindAria()`](accessibility.html) for ARIA reflection properties — it coerces `boolean` values to `'true'`/`'false'` and handles the `null` case.
 {% /callout %}
 
 {% /section %}
