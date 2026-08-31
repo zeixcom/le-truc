@@ -23,6 +23,14 @@ export type AriaNodeSnapshot = {
 	role: string
 	name: string
 	value: string
+	/**
+	 * The node's computed accessible description (CDP's top-level
+	 * `description` field) — how a role like `button` surfaces an
+	 * `aria*DescribedByElements`/`aria-describedby` relationship. Some roles
+	 * (e.g. `combobox`) instead surface it as a `describedby` entry in
+	 * `props` — check both (LT-003 finding).
+	 */
+	description: string
 	props: Record<string, string>
 	children: AriaNodeSnapshot[]
 }
@@ -34,7 +42,16 @@ export type AxeViolationSummary = {
 }
 
 /* Minimal structural typings for the CDP accessibility nodes we consume. */
-type CdpValue = { value?: unknown; type?: string }
+type CdpRelatedNode = {
+	backendDOMNodeId: number
+	idref?: string
+	text?: string
+}
+type CdpValue = {
+	value?: unknown
+	type?: string
+	relatedNodes?: CdpRelatedNode[]
+}
 type CdpAxNode = {
 	nodeId: string
 	backendDOMNodeId?: number
@@ -42,6 +59,7 @@ type CdpAxNode = {
 	role?: CdpValue
 	name?: CdpValue
 	value?: CdpValue
+	description?: CdpValue
 	properties?: { name: string; value: CdpValue }[]
 	childIds?: string[]
 }
@@ -56,6 +74,23 @@ const stringValue = (v: CdpValue | undefined): string => {
 	if (v == null) return ''
 	const raw = (v as { value?: unknown }).value
 	return raw == null ? '' : String(raw)
+}
+
+/**
+ * Element-reference-typed AX properties (`idrefList`/`nodeList` — the
+ * `aria*Elements` class: describedby, controls, labelledby, ...) carry no
+ * plain string `value` when set via the IDL element-reference properties
+ * (there is no IDREF string to report) — the actual relationship lives in
+ * `relatedNodes` instead. Falls back to `idref` (present when the target
+ * happens to have an `id`) or `#<backendDOMNodeId>`, space-joined, so tests
+ * can assert on the relationship even when it carries no id.
+ */
+const propValue = (v: CdpValue | undefined): string => {
+	const str = stringValue(v)
+	if (str) return str
+	const related = v?.relatedNodes
+	if (!related?.length) return ''
+	return related.map(n => n.idref ?? `#${n.backendDOMNodeId}`).join(' ')
 }
 
 /**
@@ -97,8 +132,9 @@ export async function computedAriaTree(
 			role: stringValue(axNode.role),
 			name: stringValue(axNode.name),
 			value: stringValue(axNode.value),
+			description: stringValue(axNode.description),
 			props: Object.fromEntries(
-				(axNode.properties ?? []).map(p => [p.name, stringValue(p.value)]),
+				(axNode.properties ?? []).map(p => [p.name, propValue(p.value)]),
 			),
 			children: (axNode.childIds ?? [])
 				.map(id => byId.get(id))

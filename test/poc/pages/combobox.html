@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>PoC — element-reference channel: combobox (LT-003)</title>
+	</head>
+	<body>
+		<h1>LT-003 probe</h1>
+
+		<h2>Combobox — element-reference relationships</h2>
+		<poc-combobox>
+			<span class="label" id="fruit-label">Choose a fruit</span>
+			<input
+				type="text"
+				role="combobox"
+				aria-expanded="true"
+				aria-describedby="stale-id"
+			/>
+			<p class="description" id="fruit-description">
+				Use Arrow Down/Up to navigate options.
+			</p>
+			<p class="error" id="fruit-error">Not a valid fruit.</p>
+			<div class="popup" role="listbox" aria-labelledby="fruit-label">
+				<div role="option" id="opt-apple">Apple</div>
+				<div role="option" id="opt-banana">Banana</div>
+				<div role="option" id="opt-cherry">Cherry</div>
+			</div>
+		</poc-combobox>
+
+		<h2>No-mixing wrinkle — element reference to a not-yet-defined custom element</h2>
+		<!-- Placed before poc-late-ref so it already exists in the DOM (as a
+		     plain, unupgraded HTMLElement) when poc-late-ref's constructor
+		     runs and reads it via getElementById. Deliberately never defined
+		     by any script on this page. -->
+		<late-target-el id="late-target-el">a not-yet-defined description</late-target-el>
+		<poc-late-ref id="late-ref" target-id="late-target-el"></poc-late-ref>
+
+		<script type="module" src="/poc/poc-combobox.js"></script>
+		<script type="module" src="/poc/poc-late-ref.js"></script>
+	</body>
+</html>
