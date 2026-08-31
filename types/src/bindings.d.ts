@@ -267,9 +267,10 @@ type AriaValue = boolean | number | string | Element | readonly Element[];
  * host attributes are the consumer-override channel, so a server-rendered
  * `aria-expanded="false"` would silently nullify every later
  * `internals.ariaExpanded` write. `bindAria()` therefore removes the
- * shadowing attribute itself: **once per property, at the binding's first
- * `ok()` that asserts a value** — never on `nil` or a nullish `ok` (those
- * restore attribute authority instead), and never again afterwards, so an
+ * shadowing attribute itself. **The removal fires once** — per property,
+ * at that property's first value-bearing `ok()`. Never on `nil` or a
+ * nullish `ok` (those restore attribute authority instead), and never
+ * again afterwards, so an
  * attribute set *after* connect keeps overriding on every later update. The
  * one-line contract: the server-rendered attribute is the initial value;
  * from the first assertion on, the component owns that property reactively

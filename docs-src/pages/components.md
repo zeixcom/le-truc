@@ -356,7 +356,7 @@ See [Reactive Styles](styling.html#reactive-styles) for examples of how CSS and 
 
 ### Bind Several Targets from One Source
 
-`bindStyle()`, `bindAttribute()`, `bindClass()`, `bindProperty()`, and `bindState()` each also accept an array of targets instead of a single one. Use this when one computed value drives several properties, attributes, class tokens, object keys, or custom states at once — one `watch()` call instead of several:
+`bindStyle()`, `bindAttribute()`, `bindAria()`, `bindClass()`, `bindProperty()`, and `bindState()` each also accept an array of targets instead of a single one. Use this when one computed value drives several properties, attributes, ARIA properties, class tokens, object keys, or custom states at once — one `watch()` call instead of several:
 
 ```js
 watch(
@@ -365,7 +365,7 @@ watch(
 )
 ```
 
-The array of targets is fixed where you call the helper. The handler you pass to `watch()` receives an object keyed by those targets. For `bindStyle()`, `bindAttribute()`, and `bindClass()`, a target missing from that object (or set to `null`/`undefined`) is cleared — removed from the style/attribute, or toggled off for a class. `bindState()` toggles the same way. `bindProperty()` is the exception: a missing key is left alone, not cleared, because arbitrary object properties have no "remove" operation.
+The array of targets is fixed where you call the helper. The handler you pass to `watch()` receives an object keyed by those targets. For `bindStyle()`, `bindAttribute()`, and `bindAria()`, a target missing from that object (or set to `null`/`undefined`) is cleared — removed from the style/attribute, or set to `null` for the ARIA reflection. `bindClass()` and `bindState()` toggle off the same way. `bindProperty()` is the exception: a missing key is left alone, not cleared, because arbitrary object properties have no "remove" operation.
 
 ### Use Functions for Ad-hoc Derived State
 
@@ -454,8 +454,71 @@ This creates a full cycle: DOM → signal → DOM, with the signal as the single
 {% callout .tip title="`bindProperty()` vs `bindAttribute()`" %}
 `bindAttribute(el, 'checked')` sets the HTML attribute. This only controls the checkbox's *default* state. It has no effect on the live `.checked` property once the page has loaded. `bindProperty(el, 'checked')` assigns to the element's JS property directly. This is the only reliable way to update native form element state at runtime.
 
-Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`, `ariaLabel`, `ariaExpanded`, `ariaDisabled`.
+Use `bindProperty()` for properties that diverge from their attribute equivalent: `checked`, `value`, `disabled`, `readOnly`, `selectedIndex`. Use [`bindAria()`](#aria-reflection) for ARIA reflection properties — it coerces `boolean` values to `'true'`/`'false'` and handles the `null` case.
 {% /callout %}
+
+{% /section %}
+
+{% section %}
+## ARIA Reflection
+
+ARIA semantics have two channels. **Content attributes** face the consumer. **Reflection properties** (`internals.ariaExpanded`, `trigger.ariaLabel`) are the component's own defaults. The `bindAria()` helper drives the reflection channel from a signal:
+
+```js
+defineComponent('my-disclosure', ({ first, host, internals, on, watch }) => {
+  const trigger = first('button', 'Add a native button as the trigger.')
+
+  expose({ expanded: false })
+
+  on(trigger, 'click', () => ({ expanded: !host.expanded }))
+  // Host default semantics: invisible in markup, consumer can still override
+  watch('expanded', bindAria(internals, 'ariaExpanded'))
+})
+```
+
+`bindAria(target, name)` accepts any `ARIAMixin` target:
+
+- **`internals`** — on the factory context of every component. It is `null` only if `attachInternals()` failed, and every handler degrades to a no-op. The write sets default semantics on the host. No attribute appears in markup. No consumer framework rewriting attributes can overwrite the value.
+- **A native element** — the write mirrors into the content attribute. CSS selectors and `getAttribute()` still see the value.
+
+The handler assigns values the way the reflection API expects:
+
+| Watched value | Assigned |
+|---|---|
+| `boolean` | `'true'` or `'false'` |
+| `number` | Decimal string |
+| `string`, `Element`, `Element[]` | Unchanged |
+| `null` / `undefined` | `null` — clears the reflection |
+
+`bindAria()` also has the [map form](#bind-several-targets-from-one-source):
+
+```js
+watch(
+  () => ({ ariaValueNow: `${degree}`, ariaValueText: `${degree} degrees` }),
+  bindAria(internals, ['ariaValueNow', 'ariaValueText']),
+)
+```
+
+Set static ARIA directly in the factory. `internals.role = 'slider'` is shorter than any helper call.
+
+{% callout .note title="The server-rendered attribute is the initial value" %}
+A host content attribute **overrides** the reflection value in the accessibility tree. A stale `aria-expanded="false"` from the server would silence every later update through `internals`. `bindAria()` removes the shadowing attribute for you — once per property, at the first value the binding applies. After that, the component owns the property. A consumer who sets the attribute **after** connect still overrides it. Never write both channels for the same property on the same element.
+{% /callout %}
+
+### Choose the Channel
+
+| Concern | Channel |
+|---|---|
+| Initial state in server-rendered HTML | Content attribute — a `Parser` reads it at connect time |
+| Consumer overrides component semantics | Content attribute — the platform guarantees the host attribute wins |
+| Component-owned state on the host (`role`, `aria-expanded`, `aria-valuenow`) | `internals.aria*` via `bindAria()` |
+| Component-internal relationships (label, description, controls, active descendant) | Element references via `bindAria()` |
+| Relationships the consumer authors | Content attribute (IDREF) — the component only reads it |
+| State that CSS must select on | Content attribute — internals values are invisible to CSS |
+
+axe-core 4.13 and later can see `internals.role` on every Le Truc component. Le Truc registers each component's internals in the [element-internals-declaration](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/element-internals-declaration.md) registry for you. The tooling reach is partial: only the attribute-validity rules (`aria-allowed-attr`, `aria-prohibited-attr`) act on an internals-only role. The nesting rules (`aria-required-parent`, `aria-required-children`) inspect only elements with a `role` attribute. Keep structural roles (`list`, `table`, `menu`, and their required children) on the attribute channel, or keep the native element.
+
+Do not use `ariaOwnsElements`. Chromium does not implement it, and its `aria-owns` semantics are problematic on their own. Le Truc components own their internal structure and never need it.
 
 {% /section %}
 
@@ -521,7 +584,7 @@ With `[formAssociated()]`, Le Truc manages for you:
 
 The host gains a native-parity contract delegating to `internals`: `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()`. It also gains a managed `defaultValue` property — the reset baseline, mirroring `<input>.defaultValue`. When the prop is Parser-backed, `defaultValue` reflects the live `value` content attribute through that Parser. Setting it moves the baseline for the next form reset; it never changes the live `value`. External consumers read them as on a native input. The convention requires a reactive `value` property. Expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension — `defaultValue` is one of them.
 
-The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags and custom `:state()` pseudo-classes. Follow this rule: use `internals?.setFormValue()` indirectly through the managed convention. Set `value`, and it syncs automatically. Call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
+The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags, custom `:state()` pseudo-classes, and [ARIA reflection](#aria-reflection). Follow this rule: use `internals?.setFormValue()` indirectly through the managed convention. Set `value`, and it syncs automatically. Call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
 
 #### Checkbox-Shaped Controls
 
