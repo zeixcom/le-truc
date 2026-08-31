@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>PoC — host default-semantics channel: hue slider (LT-002)</title>
+	</head>
+	<body>
+		<h1>LT-002 probe</h1>
+
+		<h2>Hue slider — internals-only value channel</h2>
+		<poc-hue-slider id="slider-internals"></poc-hue-slider>
+
+		<h2>Hue slider — consumer attribute override</h2>
+		<!-- Consumer authors an overriding aria-valuenow; must win over the
+		     internals default until removed. -->
+		<poc-hue-slider id="slider-override" aria-valuenow="270"></poc-hue-slider>
+
+		<h2>No-mixing wrinkle — stale server-rendered aria-expanded</h2>
+		<poc-stale-expanded id="toggle-clean">clean, no host attribute</poc-stale-expanded>
+		<poc-stale-expanded id="toggle-stale" aria-expanded="false"
+			>stale attribute, unmitigated</poc-stale-expanded
+		>
+		<poc-stale-expanded id="toggle-mitigated" aria-expanded="false" mitigate
+			>stale attribute, mitigated</poc-stale-expanded
+		>
+
+		<script type="module" src="/poc/poc-hue-slider.js"></script>
+		<script type="module" src="/poc/poc-stale-expanded.js"></script>
+	</body>
+</html>

@@ -32,7 +32,7 @@ class PocProbe extends HTMLElement {
 		this.#internals.role = 'progressbar'
 		this.#internals.ariaLabel =
 			mode === 'both' ? 'Internals both' : 'Internals only'
-		this.#internals.ariaValuenow = '42'
+		this.#internals.ariaValueNow = '42'
 	}
 }
 

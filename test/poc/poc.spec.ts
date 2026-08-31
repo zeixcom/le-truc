@@ -13,6 +13,13 @@
  * 1.62, Chromium/Firefox/WebKit); where a tier cannot see internals that
  * is itself the pinned finding. A tooling or engine upgrade that changes
  * any of this should flip a test and force a README.md update.
+ *
+ * Corrected 2026-08-31 (LT-002): the original pass wrote to
+ * `internals.ariaValuenow` (lowercase n) in poc-basic.ts — not the real
+ * `ariaValueNow` IDL attribute — so it silently created an inert data
+ * property instead of setting ARIA state. The resulting "internals-set
+ * aria-valuenow never reaches the tree" finding was an artifact of that
+ * typo, not a platform gap. Fixed in poc-basic.ts; see README.md.
  */
 import { expect, test } from '@playwright/test'
 import {
@@ -56,20 +63,21 @@ test('registry is populated for every probe instance (all engines)', async ({
 	])
 })
 
-test('engine ground truth: internals-set role and name reach the AX tree; internals-set aria-valuenow does not', async ({
+test('engine ground truth: internals-set role, name, and aria-valuenow all reach the AX tree', async ({
 	page,
 }) => {
 	test.skip(engineOf(page) !== 'chromium', 'CDP AX tree is Chromium-only')
 
 	const tree = await computedAriaTree(page, '#via-internals')
-	// Chromium maps internals role + aria-label into the computed tree…
+	// Chromium maps internals role, aria-label, AND aria-valuenow into the
+	// computed tree (observed 2026-08-31, Chromium via Playwright 1.62,
+	// correcting an earlier reading of this probe that wrote to a
+	// mis-cased `ariaValuenow` property — a plain data property that does
+	// nothing — instead of the real `ariaValueNow` IDL attribute; see
+	// README.md for the correction).
 	expect(tree.role).toBe('progressbar')
 	expect(tree.name).toBe('Internals only')
-	// …but NOT internals-set aria-valuenow: the node's AX value stays empty
-	// even though the IDL holds '42' (observed 2026-08-31, Chromium via
-	// Playwright 1.62). Range/numeric state therefore still requires the
-	// attribute channel — a key input for LT-002 and ADR 0026.
-	expect(tree.value).toBe('')
+	expect(tree.value).toBe('42')
 	const attributes = await page.evaluate(
 		sel => document.querySelector(sel)?.getAttributeNames() ?? [],
 		'#via-internals',
@@ -82,7 +90,7 @@ test('engine ground truth: internals-set role and name reach the AX tree; intern
 				_elementInternals?: WeakMap<Element, ElementInternals>
 			}
 		)._elementInternals
-		return registry?.get(el as Element)?.ariaValuenow ?? null
+		return registry?.get(el as Element)?.ariaValueNow ?? null
 	})
 	expect(idlValuenow).toBe('42')
 })
@@ -108,8 +116,9 @@ test('engine ground truth: host attributes override internals defaults, and remo
 	expect(overridden.name).toBe('Attribute wins')
 	expect(overridden.value).toBe('99')
 
-	// Remove the overriding attributes → the internals defaults reassert
-	// (name only — the valuenow mapping gap above applies here too).
+	// Remove the overriding attributes → the internals defaults reassert,
+	// for name AND value alike (both channels map, per the corrected
+	// finding above).
 	await page.evaluate(() => {
 		const el = document.querySelector('#via-both') as HTMLElement | null
 		el?.removeAttribute('aria-label')
@@ -118,6 +127,9 @@ test('engine ground truth: host attributes override internals defaults, and remo
 	await expect
 		.poll(async () => (await computedAriaTree(page, '#via-both')).name)
 		.toBe('Internals both')
+	await expect
+		.poll(async () => (await computedAriaTree(page, '#via-both')).value)
+		.toBe('42')
 	const idlValuenow = await page.evaluate(() => {
 		const el = document.querySelector('#via-both')
 		const registry = (
@@ -125,7 +137,7 @@ test('engine ground truth: host attributes override internals defaults, and remo
 				_elementInternals?: WeakMap<Element, ElementInternals>
 			}
 		)._elementInternals
-		return registry?.get(el as Element)?.ariaValuenow ?? null
+		return registry?.get(el as Element)?.ariaValueNow ?? null
 	})
 	expect(idlValuenow).toBe('42')
 })
