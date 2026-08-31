@@ -1,0 +1,33 @@
+# TODO
+
+Proof-of-concept milestone for [ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) (🔄 Proposed — stays Proposed until this PoC proves the ship shape). Scope rule: prove each planned channel against the **hardest** real case only; features of similar or simpler shape, and the migration of the example components, are deferred until after the decision gate (LT-006). PoC code lives under `test/poc/` (not `examples/` — that is the published demo surface) with its own Playwright project and a served PoC page; PoC components are throwaway and must not enter the public API.
+
+- [ ] LT-001: Computed-accessibility ground-truth test harness
+  **Skill:** le-truc-dev
+  **Context:** Everything else in this milestone depends on being able to *observe* what assistive tech sees, not just what JS properties hold. Set up `test/poc/` with a served PoC page, a Playwright project (extend `playwright.config.ts`; Chromium + WebKit are configured, Firefox is commented out — enable it for this project if practical), and a reusable fixture that reads the computed accessibility tree (CDP `Accessibility.getFullAXTree` on Chromium; verify the WebKit equivalent) plus an axe-core ≥ 4.13 runner wired to the `globalThis._elementInternals` registry.
+  **Check:** The harness distinguishes attribute-set from internals-set ARIA on a trivial throwaway component in both engines, and produces a written note of what each engine/tooling tier can and cannot observe.
+
+- [ ] LT-002: Host default-semantics channel PoC — hardest case: colorgraph-style hue slider
+  **Skill:** le-truc-dev
+  **Context:** Validates the policy table's "component-owned default semantics on the host" row (ADR 0026 §1) plus the attribute-override interplay. Prototype: `internals.role = 'slider'` on the host with reactive `aria-valuenow`/`aria-valuetext`/`aria-valuemin`/`aria-valuemax` driven at pointermove frequency (the `form-colorgraph` hue case — continuous updates + formatted `aria-valuetext`). Then probe the override semantics the ADR's story rests on: consumer sets `aria-valuenow` attribute → attribute must win in the computed tree; attribute removed → internals default must reassert; and the no-mixing wrinkle — server HTML carrying e.g. `aria-expanded="false"` while the component reflects runtime state via internals (stale attribute overriding reflection — document the observed failure mode and a mitigation).
+  **Check:** Computed tree shows slider role + live `valuenow`/`valuetext` in Chromium and WebKit; override and restore behaviors match ADR 0026's claims; no glitching under high-frequency updates (scheduler dedup, M5).
+
+- [ ] LT-003: Element-reference channel PoC — hardest case: combobox pattern
+  **Skill:** le-truc-dev
+  **Context:** Validates the `aria*Elements` rows of the policy table against the most demanding widget: `ariaActiveDescendantElement` retargeted per keystroke across an `all()`-backed option list, `ariaControlsElements` pointing at a hidden popup, plus `ariaDescribedByElements`, `ariaLabelledByElements`, `ariaErrorMessageElements` (`ariaOwnsElements` is deliberately out — ADR 0026 §4). Edge cases: target `:not(:defined)` at wiring time (element references should be immune to ADR 0016's dependency-timeout trap — verify), target removed/re-added under `all()`'s observer, and the spec's side effect that writing the property clears the content attribute.
+  **Check:** Computed tree in both engines reflects each relationship, including the hidden popup and per-keystroke activedescendant retarget; engine differences (Firefox/WebKit mapping) documented in the PoC notes.
+
+- [ ] LT-004: `bindAria()` contract prototype
+  **Skill:** le-truc-dev
+  **Context:** Implements ADR 0026 §2 as a PoC module and re-wires LT-002/LT-003 through it, proving the signature before anything ships: `ARIAMixin | null | undefined` target (null-guarded no-op), `keyof ARIAMixin & string` name, `SingleMatchHandlers` return with `nil` → clear, mapping table boolean → `'true'`/`'false'`, number → decimal string, `null | undefined` → `null`, `string | Element | readonly Element[]` → pass-through, and the debug-attribution split (register `Element` targets only, per ADR 0022). Coordinate with the unmerged multi-property bind-helper work (ADR 0023, targets v2.6): if it lands first, prototype `bindAria`'s shape on top of it so the two don't diverge.
+  **Check:** Every mapping row is exercised by a test; `@ts-expect-error` compile pins for the rejections (boolean into `bindAttribute`-style misuse, wrong prop types); ergonomics verified against all three `watch()` source forms (prop key, signal, thunk).
+
+- [ ] LT-005: Element-internals-declaration registration + axe-core gate PoC
+  **Skill:** le-truc-dev
+  **Context:** Validates ADR 0026 §3: register `globalThis._elementInternals ??= new WeakMap()` and `.set(this, internals)` in a prototype of the `Truc` constructor path (unconditional, incl. `DEV_MODE=false` builds — audits run against production), then run axe-core ≥ 4.13 in-browser over the PoC components. Include the nested-element trap test the advisory was built on: `internals.role = 'button'` with the inner native button dropped must now be *flagged* (role-visible to `aria-required-*`/`aria-allowed-attr`), and the PoC suite must produce no new false positives.
+  **Check:** axe report confirms internals roles are seen via the registry; the trap test flips from silent-pass to flagged; one WeakMap entry per instance, no leaks across connect/disconnect cycles.
+
+- [ ] LT-006: PoC findings → ADR 0026 decision gate
+  **Skill:** architect
+  **Context:** Consolidate LT-001–LT-005 findings per channel: viable / not viable / viable-with-caveats, engine gaps, whether the override semantics and helper contract survived the hard cases. Amend ADR 0026 where the PoC falsified or refined a claim (helper signature, additional withheld properties, SSR no-mixing mitigation), then decide go/no-go on the ship shape and only then create the deferred follow-up tasks: bulk ARIA features of similar/simpler shape, example-component migration, docs advisory rewrite, CEM/`docs-src` updates.
+  **Check:** ADR 0026 either accepted with a proven shape or amended with evidence; deferred scope enumerated as tasks with IDs; PoC notes archived or distilled into the ADR.
