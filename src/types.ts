@@ -31,8 +31,10 @@ type MethodProducer = ((...args: any[]) => void) & {
  * host would corrupt the prototype chain or shadow builtins used internally
  * by the reactive layer.
  *
- * The {@link ReservedWords} type and {@link RESERVED_WORDS} runtime set are
+ * The {@link ReservedWords} type and the `RESERVED_WORDS` runtime set are
  * both derived from this tuple so they can never diverge.
+ *
+ * @since 2.6
  */
 const RESERVED_WORDS_LIST = [
 	'constructor',

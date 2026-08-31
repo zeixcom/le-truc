@@ -9,5 +9,10 @@
 	"hidePageTitle": false,
 	"useCodeBlocks": false,
 	"expandObjects": false,
-	"expandParameters": false
+	"expandParameters": false,
+	"externalSymbolLinkMappings": {
+		"@zeix/le-truc": {
+			"TrustedHTML": "#"
+		}
+	}
 }

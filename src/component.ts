@@ -42,6 +42,7 @@ import {
 } from './helpers/reactive'
 import {
 	getSignals,
+	internalsHosts,
 	internalsMap,
 	retainedInitializers,
 	withCollector,
@@ -193,6 +194,8 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
  * library; `expose()` throws `InvalidPropertyNameError` for them at runtime.
  * The same holds for the variant's reset-baseline member (`defaultValue`/
  * `defaultChecked`), which lives on the host element interface, not in `P`.
+ *
+ * @since 2.6
  */
 type FormFactoryContext<
 	P extends ComponentProps,
@@ -212,6 +215,25 @@ type FormFactoryContext<
 }
 
 /* === Exported Functions === */
+
+/**
+ * The ElementInternals declaration community protocol's registry — a
+ * page-global `WeakMap` from elements to their `ElementInternals`, created
+ * lazily via `??=` so it is idempotent in the (rare) presence of another
+ * library that already created it. Tooling-only: it makes every Le Truc
+ * component's internals visible to axe-core ≥ 4.13 with zero author opt-in
+ * (ADR 0026 §3). The protocol explicitly rejects public accessors, so this
+ * is deliberately not exposed as a host property, and it is a stopgap by
+ * design — removable without API impact once a native introspection API
+ * ships (whatwg/html#11040, w3c/aria #2663).
+ */
+const elementInternalsRegistry = (): WeakMap<Element, ElementInternals> => {
+	const g = globalThis as {
+		_elementInternals?: WeakMap<Element, ElementInternals>
+	}
+	g._elementInternals ??= new WeakMap()
+	return g._elementInternals
+}
 
 /**
  * Define and register a reactive custom element using the v2.x factory form.
@@ -282,7 +304,20 @@ function defineComponent<P extends ComponentProps>(
 		constructor() {
 			super()
 			try {
-				internalsMap.set(this, this.attachInternals())
+				const internals = this.attachInternals()
+				internalsMap.set(this, internals)
+				// Reverse lookup for bindAria()'s stale-attribute rule (ADR 0026
+				// §1): ElementInternals carries no host reference, so the helper
+				// reaches the element whose shadowing attribute it must remove
+				// through this map. Library-private (src/internal.ts).
+				internalsHosts.set(internals, this)
+				// ElementInternals declaration registry (ADR 0026 §3). One
+				// WeakMap entry per instance, unconditional — no DEV_MODE gate,
+				// audits run against production builds — and no disconnect-time
+				// cleanup to write: attachInternals() runs here, in the
+				// constructor the upgrade algorithm invokes exactly once per
+				// instance.
+				elementInternalsRegistry().set(this, internals)
 			} catch {
 				// In practice this catches environments with no
 				// `ElementInternals` at all — a TypeError from
@@ -537,6 +572,7 @@ export {
 	type FormAssociatedCheckboxElement,
 	type FormAssociatedElement,
 	type FormAssociatedValueElement,
+	type FormFactoryContext,
 	type Initializers,
 	type MaybeSignal,
 }

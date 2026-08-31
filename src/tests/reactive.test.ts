@@ -2,9 +2,9 @@
  * Unit tests for makeWatch in src/helpers/reactive.ts
  *
  * Tests that SingleMatchHandlers branches (ok, nil, stale) are correctly forwarded
- * to match(). Uses createTask with a seeded value to trigger the stale path: on the
- * first effect run the task has a retained value but is still computing, so match()
- * routes to stale instead of ok.
+ * to match(), and that the array-source form passes a MatchHandlers object through
+ * to match()'s multi-signal overload (nil on any unset source, collected errors,
+ * stale on a seeded re-computing Task) with a per-position-inferred value tuple.
  *
  * No DOM required — host is a plain stub; Task signals are passed directly.
  */
@@ -185,6 +185,163 @@ describe('makeWatch — SingleMatchHandlers', () => {
 		state.set('world')
 		expect(calls).toEqual(['ok:hello', 'ok:world'])
 		expect(calls).not.toContain('stale')
+
+		cleanup?.()
+	})
+})
+
+describe('makeWatch — array source', () => {
+	test('delivers the resolved tuple to the plain handler', () => {
+		const calls: unknown[][] = []
+		const watch = makeWatch(
+			stubHost() as unknown as HTMLElement & ComponentProps,
+		)
+		const num = createState(1)
+		const str = createState('a')
+		const cleanup = createScope(() => {
+			watch([num, str], values => {
+				calls.push([...values])
+			})()
+		})
+
+		expect(calls).toEqual([[1, 'a']])
+
+		num.set(2)
+		expect(calls).toEqual([
+			[1, 'a'],
+			[2, 'a'],
+		])
+
+		cleanup?.()
+	})
+
+	test('infers the value tuple per position (mixed source forms)', () => {
+		const calls: unknown[][] = []
+		const host = { testProp: 'value' } as unknown as HTMLElement & {
+			testProp: string
+		}
+		const watch = makeWatch(host)
+		const num = createState(1)
+		const cleanup = createScope(() => {
+			watch([num, 'testProp', () => 2], values => {
+				// Compile-time pin: Signal → V, prop key → P[K], thunk →
+				// awaited non-null return. Load-bearing both ways — if the
+				// array form still carried `any[]`, the negative pin below
+				// would stop erroring and `tsc` would flag it as unused.
+				const typed: [number, string, number] = values
+				// @ts-expect-error — positions resolve per source form, not all-any
+				const wrong: [string, string, string] = values
+				void wrong
+				calls.push([...typed])
+			})()
+		})
+
+		expect(calls).toEqual([[1, 'value', 2]])
+
+		cleanup?.()
+	})
+
+	test('nil fires while any source is unset, then ok once it resolves', async () => {
+		const calls: string[] = []
+		const deferred = { resolve: () => {} }
+		const pending = createTask(async () => {
+			await new Promise<void>(r => {
+				deferred.resolve = r
+			})
+			return 'ready'
+		})
+		const set = createState('x')
+		const watch = makeWatch(
+			stubHost() as unknown as HTMLElement & ComponentProps,
+		)
+		const cleanup = createScope(() => {
+			watch([set, pending], {
+				ok: values => {
+					calls.push(`ok:${values[1]}`)
+				},
+				nil: () => {
+					calls.push('nil')
+				},
+			})()
+		})
+
+		// Unseeded task source → UnsetSignalValueError → nil for the whole
+		// tuple, even though the State source has a value.
+		expect(calls).toEqual(['nil'])
+
+		deferred.resolve()
+		await new Promise<void>(r => setTimeout(r, 0))
+		expect(calls).toEqual(['nil', 'ok:ready'])
+
+		cleanup?.()
+	})
+
+	test('err collects a source error once the rejected task settles', async () => {
+		const calls: string[] = []
+		const failing = createTask(async () => {
+			throw new Error('boom')
+		})
+		const set = createState('x')
+		const watch = makeWatch(
+			stubHost() as unknown as HTMLElement & ComponentProps,
+		)
+		const cleanup = createScope(() => {
+			watch([set, failing], {
+				ok: () => {
+					calls.push('ok')
+				},
+				nil: () => {
+					calls.push('nil')
+				},
+				err: errors => {
+					calls.push(`err:${errors.map(e => e.message).join(',')}`)
+				},
+			})()
+		})
+
+		expect(calls).toEqual(['nil'])
+
+		await new Promise<void>(r => setTimeout(r, 0))
+		// The rejection settles the task signal, which re-runs the effect;
+		// match() collects the source errors into one readonly array.
+		expect(calls).toEqual(['nil', 'err:boom'])
+
+		cleanup?.()
+	})
+
+	test('stale fires when a seeded task source re-computes', async () => {
+		const calls: string[] = []
+		const deferred = { resolve: () => {} }
+		const task = createTask(
+			async () => {
+				await new Promise<void>(r => {
+					deferred.resolve = r
+				})
+				return 'resolved'
+			},
+			{ value: 'seeded' },
+		)
+		const set = createState('x')
+		const watch = makeWatch(
+			stubHost() as unknown as HTMLElement & ComponentProps,
+		)
+		const cleanup = createScope(() => {
+			watch([set, task], {
+				ok: values => {
+					calls.push(`ok:${values[1]}`)
+				},
+				stale: () => {
+					calls.push('stale')
+				},
+			})()
+		})
+
+		// Retained 'seeded' value while computing → stale, not ok.
+		expect(calls).toEqual(['stale'])
+
+		deferred.resolve()
+		await new Promise<void>(r => setTimeout(r, 0))
+		expect(calls).toEqual(['stale', 'ok:resolved'])
 
 		cleanup?.()
 	})

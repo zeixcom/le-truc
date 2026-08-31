@@ -20,6 +20,7 @@ import {
 	InvalidPropertyNameError,
 	NoActiveCollectorError,
 } from '../errors'
+import { internalsHosts } from '../internal'
 import { asParser, defineMethod } from '../types'
 
 /* === Fake customElements registry + HTMLElement base === */
@@ -491,3 +492,35 @@ describe('implicit effect collection — regression (ADR 0018)', () => {
 		expect(thrown).toBeInstanceOf(NoActiveCollectorError)
 	})
 })
+
+/* === ElementInternals declaration registry (ADR 0026 §3) === */
+
+describe('ElementInternals declaration registry', () => {
+	test('a constructed component is registered in globalThis._elementInternals with its internals', () => {
+		const Ctor = defineComponent(uniqueName(), () => {})!
+		const instance = new Ctor() as unknown as HTMLElement
+		const internals = globalThisRegistry().get(instance)
+		expect(internals).toBeInstanceOf(FakeElementInternals)
+		// Reverse lookup (bindAria's stale-attribute rule, ADR 0026 §1) is
+		// populated on the same constructor line.
+		expect(internalsHosts.get(internals!)).toBe(instance)
+	})
+
+	test('the registry is shared across instances and created idempotently', () => {
+		const first = new (defineComponent(uniqueName(), () => {})!)()
+		const second = new (defineComponent(uniqueName(), () => {})!)()
+		const registry = globalThisRegistry()
+		expect(registry.has(first)).toBe(true)
+		expect(registry.has(second)).toBe(true)
+		// ??= semantics: an existing global is adopted, never replaced.
+		expect((globalThis as any)._elementInternals).toBe(registry)
+	})
+})
+
+/** Read-side helper for the protocol registry under test. */
+const globalThisRegistry = (): WeakMap<Element, ElementInternals> =>
+	(
+		globalThis as unknown as {
+			_elementInternals: WeakMap<Element, ElementInternals>
+		}
+	)._elementInternals
