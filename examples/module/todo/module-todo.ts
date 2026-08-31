@@ -364,12 +364,14 @@ export default defineComponent(
 			'Add <form-radiogroup> component to filter todo items.',
 		)
 		watch(
-			() => (filter.value || 'all') === 'active',
-			bindState(internals, 'filter-active'),
-		)
-		watch(
-			() => (filter.value || 'all') === 'completed',
-			bindState(internals, 'filter-completed'),
+			() => {
+				const value = filter.value || 'all'
+				return {
+					'filter-active': value === 'active',
+					'filter-completed': value === 'completed',
+				}
+			},
+			bindState(internals, ['filter-active', 'filter-completed']),
 		)
 
 		watch(status, bindText(liveRegion))

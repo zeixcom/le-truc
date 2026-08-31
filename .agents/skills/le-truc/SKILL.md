@@ -84,6 +84,8 @@ Binding helpers connect signals to DOM properties/attributes:
 | `bindStyle(el, prop)` | Set/remove inline style |
 | `bindVisible(el)` | Control `hidden` attribute |
 
+`bindProperty`, `bindAttribute`, `bindClass`, `bindState`, and `bindStyle` also accept an array of targets (e.g. `bindStyle(el, ['color', '--x'])`) to drive several from one `watch()` call. See `references/effects.md`.
+
 ### Inter-Component Coordination
 
 | Relationship | Mechanism |

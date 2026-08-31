@@ -263,22 +263,16 @@ export default defineComponent<FormColorgraphProps>(
 
 		// Knob position
 		watch(
-			() => ({
-				l: color.get().l,
-				c: color.get().c,
-				size: canvasSize.get(),
-			}),
-			({ l, c, size }) => {
-				knob.style.setProperty('top', `${Math.round((1 - l) * size)}px`)
-				knob.style.setProperty(
-					'left',
-					`${Math.round((c * size) / AXIS_MAX.c)}px`,
-				)
-				knob.style.setProperty(
-					'--color-border',
-					l > CONTRAST_THRESHOLD ? 'black' : 'white',
-				)
+			() => {
+				const { l, c } = color.get()
+				const size = canvasSize.get()
+				return {
+					top: `${Math.round((1 - l) * size)}px`,
+					left: `${Math.round((c * size) / AXIS_MAX.c)}px`,
+					'--color-border': l > CONTRAST_THRESHOLD ? 'black' : 'white',
+				}
 			},
+			bindStyle(knob, ['top', 'left', '--color-border']),
 		)
 
 		// Hue slider pointer interaction + ARIA + CSS variable
@@ -361,30 +355,25 @@ export default defineComponent<FormColorgraphProps>(
 
 		// Thumb position
 		watch(
-			() => ({
-				hue: color.get().h ?? 0,
-				l: color.get().l,
-				tw: trackWidth.get(),
-			}),
-			({ hue, l, tw }) => {
-				thumb.style.setProperty(
-					'left',
-					`${Math.round((hue * tw) / AXIS_MAX.h) + TRACK_OFFSET}px`,
-				)
-				thumb.style.setProperty(
-					'--color-border',
-					l > CONTRAST_THRESHOLD ? 'black' : 'white',
-				)
+			() => {
+				const { l } = color.get()
+				const hue = color.get().h ?? 0
+				const tw = trackWidth.get()
+				return {
+					left: `${Math.round((hue * tw) / AXIS_MAX.h) + TRACK_OFFSET}px`,
+					'--color-border': l > CONTRAST_THRESHOLD ? 'black' : 'white',
+				}
 			},
+			bindStyle(thumb, ['left', '--color-border']),
 		)
 
 		// Keyboard navigation
 		on(host, 'keydown', event => {
 			const { key, shiftKey, target } = event
 			if (
-				!(target instanceof HTMLElement) ||
-				(target.localName === 'input' &&
-					(key === 'ArrowLeft' || key === 'ArrowRight'))
+				!(target instanceof HTMLElement)
+				|| (target.localName === 'input'
+					&& (key === 'ArrowLeft' || key === 'ArrowRight'))
 			)
 				return
 			if (key.substring(0, 5) === 'Arrow' || ['+', '-'].includes(key)) {
@@ -426,37 +415,42 @@ export default defineComponent<FormColorgraphProps>(
 			}
 		})
 
-		const setStepPosition = (target: HTMLLIElement, color: Oklch): void => {
-			const size = canvasSize.get()
-			const x = Math.round((color.c * size) / AXIS_MAX.c)
-			const y = Math.round((1 - color.l) * size)
-			target.style.setProperty('background-color', formatCss(color))
-			target.style.setProperty(
-				'border-color',
-				color.l > CONTRAST_THRESHOLD ? 'black' : 'white',
-			)
-			target.style.setProperty('left', `${x}px`)
-			target.style.setProperty('top', `${y}px`)
-		}
+		const STEP_STYLE_PROPS = [
+			'background-color',
+			'border-color',
+			'left',
+			'top',
+		] as const
+
+		const stepStyle = (
+			size: number,
+			color: Oklch,
+		): Record<(typeof STEP_STYLE_PROPS)[number], string> => ({
+			'background-color': formatCss(color),
+			'border-color': color.l > CONTRAST_THRESHOLD ? 'black' : 'white',
+			left: `${Math.round((color.c * size) / AXIS_MAX.c)}px`,
+			top: `${Math.round((1 - color.l) * size)}px`,
+		})
 
 		for (let i = 1; i < 5; i++) {
 			const li = first(`li.lighten${(5 - i) * 20}`)
 			if (li)
 				watch(
-					() => ({ c: color.get(), size: canvasSize.get() }),
-					({ c }) => {
-						setStepPosition(li, getStepColor(c, 1 - i / 10))
-					},
+					() =>
+						stepStyle(canvasSize.get(), getStepColor(color.get(), 1 - i / 10)),
+					bindStyle(li, STEP_STYLE_PROPS),
 				)
 		}
 		for (let i = 1; i < 5; i++) {
 			const li = first(`li.darken${i * 20}`)
 			if (li)
 				watch(
-					() => ({ c: color.get(), size: canvasSize.get() }),
-					({ c }) => {
-						setStepPosition(li, getStepColor(c, 1 - (i + 5) / 10))
-					},
+					() =>
+						stepStyle(
+							canvasSize.get(),
+							getStepColor(color.get(), 1 - (i + 5) / 10),
+						),
+					bindStyle(li, STEP_STYLE_PROPS),
 				)
 		}
 
