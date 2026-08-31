@@ -1,4 +1,4 @@
-import { type DerivedList, type MaybeCleanup, type MaybePromise, type MutableList, type MutableSignal, type Signal, type SingleMatchHandlers, type SlotDescriptor } from '@zeix/cause-effect';
+import { type DerivedList, type MatchHandlers, type MaybeCleanup, type MaybePromise, type MutableList, type MutableSignal, type Signal, type SingleMatchHandlers, type SlotDescriptor } from '@zeix/cause-effect';
 import type { ComponentProp, ComponentProps, EffectDescriptor, FactoryResult, Falsy } from '../types';
 import { type FirstElement } from './dom';
 /**
@@ -32,6 +32,29 @@ import { type FirstElement } from './dom';
  */
 type Reactive<T, P extends ComponentProps> = keyof P | Signal<T & {}> | (() => T | Promise<T> | null | undefined);
 /**
+ * The value one `Reactive` source delivers to a `watch()` handler, resolved
+ * per form: prop key `K` → `P[K]`, `Signal<V>` → `V`, thunk → the awaited,
+ * null/undefined-stripped return type (matching the single-source thunk
+ * overload's `T extends {}` handler value).
+ */
+type ResolvedReactive<R, P extends ComponentProps> = R extends keyof P ? P[R] : R extends Signal<infer V> ? V : R extends () => infer V ? Awaited<V> & {} : never;
+/**
+ * Position-preserving tuple of `ResolvedReactive` values for an array
+ * source — what `watch([a, b], ([x, y]) => …)` hands the handler, instead
+ * of the untyped `any[]` the array form carried before.
+ */
+type ResolvedReactiveValues<S extends readonly unknown[], P extends ComponentProps> = {
+    [K in keyof S]: ResolvedReactive<S[K], P> & {};
+};
+/**
+ * `S`'s resolved values wrapped as signals — the source-tuple shape
+ * `match()`'s multi-signal overload (`MatchHandlers<T>`) expects for an
+ * array of `Reactive` sources.
+ */
+type ResolvedReactiveSignals<S extends readonly unknown[], P extends ComponentProps> = {
+    [K in keyof S]: Signal<ResolvedReactive<S[K], P> & {}>;
+};
+/**
  * Map of child component property names to the reactive values `pass()` injects into them.
  *
  * `Q` is bound to `HTMLElement`, not `ComponentProps`, because native members
@@ -48,6 +71,12 @@ type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
  * Drives a reactive effect from one or more `Reactive` sources. Only the
  * declared sources trigger re-runs; other reads inside the handler are not
  * tracked. Returns an `EffectDescriptor`.
+ *
+ * Every source form accepts both flavors: a plain handler receiving the
+ * value (the resolved tuple for an array source), or match handlers for
+ * `ok`/`nil`/`err`/`stale` routing with `match()`'s documented
+ * `nil > err > stale > ok` precedence — for an array source, `nil` fires
+ * when any source is unset and `err` collects every source error.
  */
 type WatchHelper<P extends ComponentProps> = {
     <K extends keyof P & string>(source: K, handler: (value: P[K]) => MaybePromise<MaybeCleanup>): EffectDescriptor;
@@ -56,7 +85,8 @@ type WatchHelper<P extends ComponentProps> = {
     <T extends {}>(source: Signal<T>, handlers: SingleMatchHandlers<T>): EffectDescriptor;
     <T extends {}>(source: () => T | Promise<T> | null | undefined, handler: (value: T) => MaybePromise<MaybeCleanup>): EffectDescriptor;
     <T extends {}>(source: () => T | Promise<T> | null | undefined, handlers: SingleMatchHandlers<T>): EffectDescriptor;
-    (source: Array<Reactive<NonNullable<unknown>, P>>, handler: (values: any[]) => MaybePromise<MaybeCleanup>): EffectDescriptor;
+    <S extends readonly Reactive<unknown, P>[]>(source: [...S], handler: (values: ResolvedReactiveValues<S, P>) => MaybePromise<MaybeCleanup>): EffectDescriptor;
+    <S extends readonly Reactive<unknown, P>[]>(source: [...S], handlers: MatchHandlers<ResolvedReactiveSignals<S, P>>): EffectDescriptor;
 };
 /**
  * The `pass` helper type in `FactoryContext`.

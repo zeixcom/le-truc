@@ -2739,9 +2739,14 @@ var makeWatch = (host) => {
     const descriptor = () => {
       if (Array.isArray(source)) {
         const signals = source.map((s) => toSignal(host, s));
-        const handler = handlerOrHandlers;
         if (false) {}
-        return createEffect(() => match(signals, { ok: (values) => untrack(() => handler(values)) }));
+        if (typeof handlerOrHandlers === "function") {
+          const handler = handlerOrHandlers;
+          return createEffect(() => match(signals, {
+            ok: (values) => untrack(() => handler(values))
+          }));
+        }
+        return createEffect(() => match(signals, handlerOrHandlers));
       }
       const signal = toSignal(host, source);
       if (typeof handlerOrHandlers === "function") {

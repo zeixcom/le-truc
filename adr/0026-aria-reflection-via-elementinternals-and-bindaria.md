@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted (2026-08-31, after the LT-001–LT-005 proof-of-concept; see [PoC validation](#poc-validation))
+✅ Accepted (2026-08-31, after the LT-001–LT-005 proof-of-concept; see [PoC validation](#poc-validation)). Re-targeted from v3.0 to **v2.6** the same day: the entire surface is additive and non-breaking (see Decision), and the 3.0 line is unscheduled pending TSRX 1.0 (ADR 0024, unmerged) — holding a proven, purely additive channel behind it would only prolong the ADR 0016 advisory this decision retires.
 
 ## Context
 
@@ -30,7 +30,7 @@ Relevant requirements: [M1](../REQUIREMENTS.md#m1-component-definition-via-a-sin
 
 ## Decision
 
-Lift ADR 0016's advisory and amend its "ARIA reflection: available but not promoted" section. ARIA reflection via `ElementInternals` is now a **recommended, first-class channel** alongside content attributes, governed by a two-channel policy, served by one new binding helper (`bindAria()`), and made tooling-visible by implementing the element-internals-declaration protocol for every Le Truc component. Targets the v3.0 line per [issue #121](https://github.com/zeixcom/le-truc/issues/121). Additive and non-breaking; `bindAttribute`/`bindProperty` keep their roles.
+Lift ADR 0016's advisory and amend its "ARIA reflection: available but not promoted" section. ARIA reflection via `ElementInternals` is now a **recommended, first-class channel** alongside content attributes, governed by a two-channel policy, served by one new binding helper (`bindAria()`), and made tooling-visible by implementing the element-internals-declaration protocol for every Le Truc component. Targets the **v2.6** line (re-targeted from v3.0 per [issue #121](https://github.com/zeixcom/le-truc/issues/121), whose milestone predates the PoC — see Status). Additive and non-breaking; `bindAttribute`/`bindProperty` keep their roles.
 
 ### 1. Two-channel policy
 
@@ -51,7 +51,7 @@ Content attributes and internals reflection are **complementary channels, not co
 
 `bindAria()` therefore **removes the shadowing content attribute itself**, as part of its contract, rather than leaving it to the author. The contract in one line: *the server-rendered attribute is the initial value; from then on the component owns that property reactively via internals.* Precisely:
 
-- **Once, at binding activation** — not continuously. This is what preserves the consumer-override row above: internals values remain *defaults*, so a parent that sets `aria-expanded` **after** connect still wins, exactly as before. Only the server-rendered echo is cleared.
+- **Once, at the binding's first value assertion** — not at the `bindAria()` call, and not continuously. `bindAria()` itself runs once at factory setup; it is the returned handlers that the `watch()` effect invokes on every update. The removal hook is those handlers' first `ok()` invocation, guarded one-shot: a source that routes `nil` at activation has asserted nothing, so removing then would blank the accessibility tree while the still-present attribute was the correct value; and removing on every `ok()` would wipe a post-connect consumer override on the binding's next update. For parser-driven sources — the dominant case, since parsers resolve at connect (ADR 0003) — the first `ok` lands at binding activation, which is what preserves the consumer-override row above: internals values remain *defaults*, so a parent that sets `aria-expanded` **after** connect still wins, exactly as before. Only the server-rendered echo is cleared.
 - **Only for `ElementInternals` targets.** For an `Element` target the IDL write *is* the attribute channel (native reflection mirrors it), so there is nothing shadowing and nothing to remove.
 - **After parsers have run.** Attributes drive initial state at connect time ([ADR 0003](0003-attributes-drive-state-at-connect-time-only.md), M3) and effects activate later ([ADR 0007](0007-effect-descriptors-with-deferred-activation.md)), so a prop parser reading that attribute has already consumed it by the time the binding activates. The implementation must honor and test this ordering — removing before parsing would discard the SSR value instead of adopting it.
 
@@ -92,7 +92,7 @@ Two amendments from the PoC (LT-004):
 watch('hue', bindAria(internals, ['ariaValueNow', 'ariaValueText']))
 ```
 
-`names` is declared statically at the call site, so it is always the complete set of properties the binding owns: `ok(map)` assigns each declared name per the coercion table above, with an absent or nullish entry clearing that property; `nil` clears every declared property. This was **not** prototyped in the PoC and is the one part of §2 landing on ADR 0023's precedent rather than on measured evidence — but the PoC produced the motivating case directly: the LT-002 hue slider derives *two* ARIA properties (`ariaValueNow`, `ariaValueText`) from one hue value and needed two separate `bindAria()` calls driven from one throttled callback. Multi-property-from-one-source is if anything more common for ARIA than for style or attributes, and shipping the only `bind*` helper without a map form would be a gratuitous asymmetry in a v3.0 API. Implementation must prototype it before landing (see the follow-up task).
+`names` is declared statically at the call site, so it is always the complete set of properties the binding owns: `ok(map)` assigns each declared name per the coercion table above, with an absent or nullish entry clearing that property; `nil` clears every declared property. This was **not** prototyped in the PoC and is the one part of §2 landing on ADR 0023's precedent rather than on measured evidence — but the PoC produced the motivating case directly: the LT-002 hue slider derives *two* ARIA properties (`ariaValueNow`, `ariaValueText`) from one hue value and needed two separate `bindAria()` calls driven from one throttled callback. Multi-property-from-one-source is if anything more common for ARIA than for style or attributes, and shipping the only `bind*` helper without a map form would be a gratuitous asymmetry in the shipped `bind*` helper family. Implementation must prototype it before landing (see the follow-up task).
 
 `bindAria()`'s return value is a plain object with `ok`/`nil`, so it also composes with imperative call sites that have no signal graph at all (verified against the raw-custom-element hue slider). That is a property of the shape, not a promoted usage pattern.
 

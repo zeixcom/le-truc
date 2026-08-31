@@ -9,6 +9,7 @@ import {
 	isRecord,
 	isSignal,
 	isSlot,
+	type MatchHandlers,
 	type MaybeCleanup,
 	type MaybePromise,
 	type MutableList,
@@ -77,6 +78,44 @@ type Reactive<T, P extends ComponentProps> =
 	| (() => T | Promise<T> | null | undefined)
 
 /**
+ * The value one `Reactive` source delivers to a `watch()` handler, resolved
+ * per form: prop key `K` → `P[K]`, `Signal<V>` → `V`, thunk → the awaited,
+ * null/undefined-stripped return type (matching the single-source thunk
+ * overload's `T extends {}` handler value).
+ */
+type ResolvedReactive<R, P extends ComponentProps> = R extends keyof P
+	? P[R]
+	: R extends Signal<infer V>
+		? V
+		: R extends () => infer V
+			? Awaited<V> & {}
+			: never
+
+/**
+ * Position-preserving tuple of `ResolvedReactive` values for an array
+ * source — what `watch([a, b], ([x, y]) => …)` hands the handler, instead
+ * of the untyped `any[]` the array form carried before.
+ */
+type ResolvedReactiveValues<
+	S extends readonly unknown[],
+	P extends ComponentProps,
+> = {
+	[K in keyof S]: ResolvedReactive<S[K], P> & {}
+}
+
+/**
+ * `S`'s resolved values wrapped as signals — the source-tuple shape
+ * `match()`'s multi-signal overload (`MatchHandlers<T>`) expects for an
+ * array of `Reactive` sources.
+ */
+type ResolvedReactiveSignals<
+	S extends readonly unknown[],
+	P extends ComponentProps,
+> = {
+	[K in keyof S]: Signal<ResolvedReactive<S[K], P> & {}>
+}
+
+/**
  * Map of child component property names to the reactive values `pass()` injects into them.
  *
  * `Q` is bound to `HTMLElement`, not `ComponentProps`, because native members
@@ -94,6 +133,12 @@ type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
  * Drives a reactive effect from one or more `Reactive` sources. Only the
  * declared sources trigger re-runs; other reads inside the handler are not
  * tracked. Returns an `EffectDescriptor`.
+ *
+ * Every source form accepts both flavors: a plain handler receiving the
+ * value (the resolved tuple for an array source), or match handlers for
+ * `ok`/`nil`/`err`/`stale` routing with `match()`'s documented
+ * `nil > err > stale > ok` precedence — for an array source, `nil` fires
+ * when any source is unset and `err` collects every source error.
  */
 type WatchHelper<P extends ComponentProps> = {
 	<K extends keyof P & string>(
@@ -120,9 +165,15 @@ type WatchHelper<P extends ComponentProps> = {
 		source: () => T | Promise<T> | null | undefined,
 		handlers: SingleMatchHandlers<T>,
 	): EffectDescriptor
-	(
-		source: Array<Reactive<NonNullable<unknown>, P>>,
-		handler: (values: any[]) => MaybePromise<MaybeCleanup>,
+	<S extends readonly Reactive<unknown, P>[]>(
+		source: [...S],
+		handler: (
+			values: ResolvedReactiveValues<S, P>,
+		) => MaybePromise<MaybeCleanup>,
+	): EffectDescriptor
+	<S extends readonly Reactive<unknown, P>[]>(
+		source: [...S],
+		handlers: MatchHandlers<ResolvedReactiveSignals<S, P>>,
 	): EffectDescriptor
 }
 
@@ -307,9 +358,15 @@ const makeWatch = <P extends ComponentProps>(
 		source: () => T | Promise<T> | null | undefined,
 		handlers: SingleMatchHandlers<T>,
 	): EffectDescriptor
-	function watch(
-		source: Array<Reactive<NonNullable<unknown>, P>>,
-		handler: (values: any[]) => MaybePromise<MaybeCleanup>,
+	function watch<S extends readonly Reactive<unknown, P>[]>(
+		source: [...S],
+		handler: (
+			values: ResolvedReactiveValues<S, P>,
+		) => MaybePromise<MaybeCleanup>,
+	): EffectDescriptor
+	function watch<S extends readonly Reactive<unknown, P>[]>(
+		source: [...S],
+		handlers: MatchHandlers<ResolvedReactiveSignals<S, P>>,
 	): EffectDescriptor
 	function watch(
 		source:
@@ -317,19 +374,18 @@ const makeWatch = <P extends ComponentProps>(
 			| Array<Reactive<NonNullable<unknown>, P>>,
 		handlerOrHandlers:
 			| ((value: any) => MaybePromise<MaybeCleanup>)
-			| SingleMatchHandlers<any>,
+			| SingleMatchHandlers<any>
+			| MatchHandlers<any>,
 	): EffectDescriptor {
 		const descriptor: EffectDescriptor = () => {
 			if (Array.isArray(source)) {
 				const signals = source.map(s => toSignal(host, s))
-				const handler = handlerOrHandlers as (
-					values: any[],
-				) => MaybePromise<MaybeCleanup>
 				if (process.env.DEV_MODE === 'true') {
 					// Additive companion effect (ADR 0022) — never wraps or
-					// replaces the author's own effect. `handler` isn't a
-					// bind*-produced closure for an array source, so it never
-					// resolves to an element — host-level pulse only.
+					// replaces the author's own effect. Neither an array-source
+					// handler nor a hand-written `MatchHandlers` object is a
+					// bind*-produced closure, so it never resolves to an
+					// element — host-level pulse only.
 					createEffect(() =>
 						match(signals, {
 							ok: values =>
@@ -337,8 +393,21 @@ const makeWatch = <P extends ComponentProps>(
 						}),
 					)
 				}
+				if (typeof handlerOrHandlers === 'function') {
+					const handler = handlerOrHandlers as (
+						values: any[],
+					) => MaybePromise<MaybeCleanup>
+					return createEffect(() =>
+						match(signals, {
+							ok: values => untrack(() => handler(values)),
+						}),
+					)
+				}
 				return createEffect(() =>
-					match(signals, { ok: values => untrack(() => handler(values)) }),
+					match(
+						signals,
+						handlerOrHandlers as MatchHandlers<Signal<unknown & {}>[]>,
+					),
 				)
 			}
 			const signal = toSignal(host, source)
@@ -371,7 +440,12 @@ const makeWatch = <P extends ComponentProps>(
 					}),
 				)
 			}
-			return createEffect(() => match(signal, handlerOrHandlers))
+			// Array sources returned above, but TS cannot correlate the two
+			// variables — a non-function handler here is necessarily the
+			// single-source flavor.
+			return createEffect(() =>
+				match(signal, handlerOrHandlers as SingleMatchHandlers<any>),
+			)
 		}
 		pushDescriptor(host, 'watch', descriptor)
 		return descriptor

@@ -52,6 +52,8 @@ To wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primit
 
 Binding helpers return either a setter function `(value) => void` or `SingleMatchHandlers<T>` for use with `watch()` — enabling the pattern `watch(reactive, bindText(element))`.
 
+`watch()`'s array-source form (`watch([a, b], …)`) accepts both flavors too: a plain handler receiving the per-position-inferred value tuple (prop key → `P[K]`, `Signal<T>` → `T`, thunk → awaited non-null return), or cause-effect's `MatchHandlers` for `ok`/`nil`/`err`/`stale` routing with `match()`'s `nil > err > stale > ok` precedence — for an array source, `nil` fires when *any* source is unset and `err` collects every source error. Binding helpers themselves stay unary (they need one value), so a binding derived from several sources reduces through a tracked thunk: `watch(() => f(a.get(), b.get()), bindText(el))`.
+
 | Helper | Purpose |
 |--------|---------|
 | `bindAttribute` | Sets/removes attributes with security validation (see [ADR 0009](adr/0009-security-validation-in-bindattribute.md)) |
