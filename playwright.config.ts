@@ -22,37 +22,11 @@ export default defineConfig({
 			name: 'WebKit',
 			use: { ...devices['Desktop Safari'] },
 		},
-		// ARIA-reflection PoC (test/poc, TODO.md LT-001) — served by its own
-		// lightweight server on 3100; `playwright test examples` never
-		// matches these specs, `playwright test test/poc` never matches the
-		// example ones.
-		{
-			name: 'poc-chromium',
-			testDir: './test/poc',
-			use: { ...devices['Desktop Chrome'], baseURL: 'http://localhost:3100' },
-		},
-		{
-			name: 'poc-firefox',
-			testDir: './test/poc',
-			use: { ...devices['Desktop Firefox'], baseURL: 'http://localhost:3100' },
-		},
-		{
-			name: 'poc-webkit',
-			testDir: './test/poc',
-			use: { ...devices['Desktop Safari'], baseURL: 'http://localhost:3100' },
-		},
 	],
-	webServer: [
-		{
-			command: 'bun run serve:examples',
-			port: 3000,
-			reuseExistingServer: true,
-		},
-		{
-			command: 'bun test/poc/serve.ts',
-			port: 3100,
-			reuseExistingServer: true,
-		},
-	],
+	webServer: {
+		command: 'bun run serve:examples',
+		port: 3000,
+		reuseExistingServer: true,
+	},
 	reporter: [['list'], ['html', { outputFolder: 'playwright-report' }]],
 })

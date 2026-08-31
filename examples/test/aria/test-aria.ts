@@ -20,6 +20,7 @@ declare global {
 		'test-aria-pending': HTMLElement & TestAriaPendingProps
 		'test-aria-trap': HTMLElement
 		'test-aria-trap-ok': HTMLElement
+		'test-aria-late-ref': HTMLElement
 	}
 }
 
@@ -112,5 +113,28 @@ export const testAriaTrapOk = defineComponent(
 	'test-aria-trap-ok',
 	({ internals }) => {
 		if (internals) internals.role = 'button'
+	},
+)
+
+/**
+ * Element-reference channel: does `ariaDescribedByElements` require its
+ * target to be an upgraded (`:defined`) custom element at wiring time? Le
+ * Truc's own `first()`/`all()` collect undefined custom-element targets as
+ * dependencies and defer effect activation up to `DEPENDENCY_TIMEOUT`
+ * (`src/helpers/dom.ts`) — a progressive-enhancement mechanism for reading a
+ * *child component's own exposed properties*. An element-reference ARIA
+ * property is a different thing: it only needs the target's identity as an
+ * `Element` node, not its class behavior, so nothing here waits for
+ * anything — confirmed by wiring the reference synchronously in the
+ * constructor against `<test-aria-late-target>`, a tag no script on this
+ * page ever registers.
+ */
+export const testAriaLateRef = defineComponent(
+	'test-aria-late-ref',
+	({ internals }) => {
+		if (!internals) return
+		internals.role = 'button'
+		const target = document.getElementById('late-target')
+		if (target) internals.ariaDescribedByElements = [target]
 	},
 )

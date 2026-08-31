@@ -155,5 +155,6 @@ Do not use or promote `ariaOwnsElements` — it does not exist in Chrome/Edge, a
 - Related: [ADR 0022](0022-debug-extension-for-visual-and-console-instrumentation.md) — debug-attribution treatment of internals-targeting bindings
 - Related: [ADR 0023](0023-map-form-overloads-for-bind-helpers.md) — the map-form precedent `bindAria()` follows (§2)
 - Motivating issue: [zeixcom/le-truc#121](https://github.com/zeixcom/le-truc/issues/121)
+- Evidence: [ADR 0026 PoC findings](archive/0026-poc-findings.md) — the LT-001–LT-013 proof-of-concept log the LT-006 decision gate read; `test/poc/` itself was retired by LT-014 once its coverage moved to `examples/test/aria/`
 - External: [Deque: axe-core ElementInternals support](https://www.deque.com/blog/test-your-custom-elements-and-trust-the-results-with-axe-cores-support-for-elementinternals/) · [axe-core element-internals docs](https://github.com/dequelabs/axe-core/blob/develop/doc/element-internals.md) · [element-internals-declaration protocol](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/element-internals-declaration.md) · [MDN ARIAMixin](https://developer.mozilla.org/en-US/docs/Web/API/ARIAMixin)
 - Supersedes: None

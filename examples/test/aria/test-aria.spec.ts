@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
+import { computedAriaTree, engineOf } from '../fixtures/aria'
 
 /**
  * Playwright-tier verification for `bindAria()` (LT-007) and the
@@ -8,7 +9,8 @@ import { expect, type Page, test } from '@playwright/test'
  * every engine; the internals side is read back through the declaration
  * registry (`globalThis._elementInternals` — tooling surface, ADR 0026 §3).
  * Computed-accessibility-tree ground truth for the underlying reflection
- * channels is pinned separately in `test/poc/` (Chromium CDP tier).
+ * channels (Chromium CDP tier) is pinned here too — originally proven in the
+ * ADR 0026 PoC (see `adr/archive/0026-poc-findings.md`).
  */
 
 const readAriaState = (page: Page, selector: string) =>
@@ -114,6 +116,24 @@ test.describe('test-aria: bindAria() + element-internals registry', () => {
 		const state = await readAriaState(page, '#pending')
 		expect(state.internals).toBe('true')
 	})
+
+	test('engine ground truth: internals-reflected ariaExpanded reaches the Chromium AX tree', async ({
+		page,
+	}) => {
+		test.skip(engineOf(page) !== 'chromium', 'CDP AX tree is Chromium-only')
+
+		expect((await computedAriaTree(page, '#default')).props.expanded).toBe(
+			'false',
+		)
+		await page.evaluate(() => {
+			;(document.querySelector('#default') as any).expanded = true
+		})
+		await expect
+			.poll(
+				async () => (await computedAriaTree(page, '#default')).props.expanded,
+			)
+			.toBe('true')
+	})
 })
 
 test.describe('test-aria: axe-core visibility via the declaration registry', () => {
@@ -143,5 +163,57 @@ test.describe('test-aria: axe-core visibility via the declaration registry', () 
 	test('registered correct component stays clean', async ({ page }) => {
 		const violations = await axeViolations(page, '#trap-ok')
 		expect(violations).toEqual([])
+	})
+
+	test('engine ground truth: internals-set role reaches the Chromium AX tree', async ({
+		page,
+	}) => {
+		test.skip(engineOf(page) !== 'chromium', 'CDP AX tree is Chromium-only')
+
+		const tree = await computedAriaTree(page, '#trap-ok')
+		expect(tree.role).toBe('button')
+	})
+})
+
+test.describe('test-aria-late-ref: element reference to a :not(:defined) target', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto('http://localhost:3000/test/test-aria')
+		await page.waitForSelector('test-aria-late-ref', { state: 'attached' })
+	})
+
+	test('wires ariaDescribedByElements synchronously in the constructor, with the target still undefined', async ({
+		page,
+	}) => {
+		const idl = await page.evaluate(() => {
+			const el = document.querySelector('#late-ref')
+			const registry = (
+				globalThis as unknown as {
+					_elementInternals?: WeakMap<Element, ElementInternals>
+				}
+			)._elementInternals
+			return {
+				describedByIds: registry
+					?.get(el as Element)
+					?.ariaDescribedByElements?.map(e => e.id),
+				targetDefined: customElements.get('test-aria-late-target') != null,
+			}
+		})
+		expect(idl.targetDefined).toBe(false)
+		expect(idl.describedByIds).toEqual(['late-target'])
+	})
+
+	test('engine ground truth: the relationship is already computed in the AX tree', async ({
+		page,
+	}) => {
+		test.skip(engineOf(page) !== 'chromium', 'CDP AX tree is Chromium-only')
+
+		// role=button surfaces a description relationship as the top-level
+		// `description` field, not a `describedby` property — a role-dependent
+		// AX-tree shape difference (see adr/archive/0026-poc-findings.md, LT-003
+		// finding 3).
+		const tree = await computedAriaTree(page, '#late-ref')
+		expect(tree.role).toBe('button')
+		expect(tree.description).toBe('a not-yet-defined description')
+		expect(tree.props.describedby).toBeUndefined()
 	})
 })

@@ -1,7 +1,7 @@
 /**
- * Computed-accessibility ground-truth harness for the ARIA-reflection PoC
- * (ADR 0026, TODO.md LT-001). Three observation tiers with very different
- * trust levels — see test/poc/README.md for the findings matrix:
+ * Computed-accessibility ground-truth harness for ARIA reflection (ADR
+ * 0026). Three observation tiers with very different trust levels — see
+ * adr/archive/0026-poc-findings.md for the PoC findings that established them:
  *
  * 1. `computedAriaTree()` — Chromium only. The engine's own accessibility
  *    tree via CDP (`Accessibility.getFullAXTree`). This is what assistive

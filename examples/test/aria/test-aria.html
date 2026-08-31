@@ -1,7 +1,13 @@
-<test-aria id="default" aria-expanded="false">
+<test-aria id="default" role="button" aria-expanded="false">
 	<span id="state"></span>
 	<span id="inner" aria-expanded="false"></span>
 </test-aria>
 <test-aria-pending id="pending" aria-expanded="false"></test-aria-pending>
 <test-aria-trap id="trap" aria-checked="true"></test-aria-trap>
 <test-aria-trap-ok id="trap-ok"></test-aria-trap-ok>
+<!-- Placed before test-aria-late-ref so it already exists in the DOM (as a
+     plain, unupgraded HTMLElement) when test-aria-late-ref's constructor
+     runs and reads it via getElementById. Deliberately never defined by any
+     script on this page. -->
+<test-aria-late-target id="late-target">a not-yet-defined description</test-aria-late-target>
+<test-aria-late-ref id="late-ref"></test-aria-late-ref>
