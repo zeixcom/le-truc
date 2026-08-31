@@ -97,7 +97,21 @@ declare const bindText: (element: Element, preserveComments?: boolean) => ((valu
  * @param key - Property key to set
  * @returns Function that sets a property
  */
-declare const bindProperty: <O extends object, K extends keyof O & string>(object: O, key: K) => ((value: O[K]) => void);
+declare function bindProperty<O extends object, K extends keyof O & string>(object: O, key: K): (value: O[K]) => void;
+/**
+ * Returns a function that patches several DOM properties from one map.
+ *
+ * Unlike the single-key form, this is a partial PATCH, not a clear/set pair:
+ * `keys` is declared statically at the call site, but object properties have
+ * no "unset" operation, so absent keys in the value are simply skipped —
+ * their previous value is left untouched.
+ *
+ * @since 2.6
+ * @param object - Target object
+ * @param keys - Property keys the returned setter may patch
+ * @returns Function that patches the given properties from a partial map
+ */
+declare function bindProperty<O extends object, K extends keyof O & string>(object: O, keys: readonly K[]): (value: Partial<Pick<O, K>>) => void;
 /**
  * Returns a function that toggles a CSS class token on an element.
  *
@@ -108,7 +122,23 @@ declare const bindProperty: <O extends object, K extends keyof O & string>(objec
  * @param token - CSS class token to toggle
  * @returns Function that toggles the class token
  */
-declare const bindClass: <T = boolean>(element: Element, token: string) => ((value: T) => void);
+declare function bindClass<T = boolean>(element: Element, token: string): (value: T) => void;
+/**
+ * Returns a function that toggles several CSS class tokens on an element.
+ *
+ * `tokens` is declared statically at the call site — the array is always the
+ * complete set of tokens this binding owns. For every declared token,
+ * `classList.toggle(token, Boolean(map[token]))` runs; an absent token in the
+ * map coerces to `false` (off), the same coercion the single-token form
+ * already uses. No separate `nil` handler is needed: an empty map already
+ * clears every declared token via the same toggle loop.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param tokens - CSS class tokens the returned setter may toggle
+ * @returns Function that toggles the given class tokens from a partial map
+ */
+declare function bindClass<Tk extends string>(element: Element, tokens: readonly Tk[]): (value: Partial<Record<Tk, boolean>>) => void;
 /**
  * Returns a function that toggles a custom state on an element's `ElementInternals`.
  *
@@ -131,7 +161,26 @@ declare const bindClass: <T = boolean>(element: Element, token: string) => ((val
  * @param token - Custom state token to toggle (matched via `:state(token)`)
  * @returns Function that toggles the custom state
  */
-declare const bindState: <T = boolean>(internals: ElementInternals | null, token: string) => ((value: T) => void);
+declare function bindState<T = boolean>(internals: ElementInternals | null, token: string): (value: T) => void;
+/**
+ * Returns a function that toggles several custom states on an element's
+ * `ElementInternals` from one map.
+ *
+ * `tokens` is declared statically at the call site — the array is always the
+ * complete set of states this binding owns. For every declared token,
+ * `internals.states.add(token)`/`.delete(token)` runs per
+ * `Boolean(map[token])`; an absent token in the map coerces to `false` (off),
+ * the same coercion the single-token form already uses. No separate `nil`
+ * handler is needed: an empty map already clears every declared token via
+ * the same toggle loop. Degrades the same way as the single-token form —
+ * `internals === null` makes the returned function a no-op.
+ *
+ * @since 2.6
+ * @param internals - The component's `ElementInternals` (or `null`)
+ * @param tokens - Custom state tokens the returned setter may toggle
+ * @returns Function that toggles the given custom states from a partial map
+ */
+declare function bindState<Tk extends string>(internals: ElementInternals | null, tokens: readonly Tk[]): (value: Partial<Record<Tk, boolean>>) => void;
 /**
  * Returns a function that controls element visibility via `el.hidden = !value`.
  *
@@ -157,7 +206,27 @@ declare const bindVisible: <T = boolean>(element: HTMLElement) => ((value: T) =>
  * @param [allowUnsafe=false] - Skip security validation for string values
  * @returns Match handlers for the attribute mutation
  */
-declare const bindAttribute: (element: Element, name: string, allowUnsafe?: boolean) => SingleMatchHandlers<string | boolean>;
+declare function bindAttribute(element: Element, name: string, allowUnsafe?: boolean): SingleMatchHandlers<string | boolean>;
+/**
+ * Returns `SingleMatchHandlers` that set, toggle, or remove several
+ * attributes with security validation, from one map.
+ *
+ * `names` is declared statically at the call site, so it is always the
+ * complete set of attributes this binding owns:
+ *
+ * - `ok(map)` — for every declared name: present and a string →
+ *   `safeSetAttribute`/`setAttribute` (per `allowUnsafe`); present and a
+ *   boolean → `toggleAttribute`; absent or `null`/`undefined` →
+ *   `removeAttribute`.
+ * - `nil` → removes every declared attribute.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param names - Attribute names the returned handlers may set/toggle/remove
+ * @param [allowUnsafe=false] - Skip security validation for string values
+ * @returns Match handlers for the attribute mutations
+ */
+declare function bindAttribute<N extends string>(element: Element, names: readonly N[], allowUnsafe?: boolean): SingleMatchHandlers<Partial<Record<N, string | boolean>>>;
 /**
  * Returns `SingleMatchHandlers<string>` that set or remove an inline style property.
  *
@@ -169,7 +238,26 @@ declare const bindAttribute: (element: Element, name: string, allowUnsafe?: bool
  * @param prop - CSS property name (e.g. `'color'`, `'--my-var'`)
  * @returns Match handlers for the style mutation
  */
-declare const bindStyle: (element: HTMLElement | SVGElement | MathMLElement, prop: string) => SingleMatchHandlers<string>;
+declare function bindStyle(element: HTMLElement | SVGElement | MathMLElement, prop: string): SingleMatchHandlers<string>;
+/**
+ * Returns `SingleMatchHandlers` that set or remove several inline style
+ * properties from one map.
+ *
+ * `props` is declared statically at the call site, so it is always the
+ * complete set of properties this binding owns:
+ *
+ * - `ok(map)` — for every declared property: present and non-nil →
+ *   `el.style.setProperty(prop, value)`; absent or `null`/`undefined` →
+ *   `el.style.removeProperty(prop)`.
+ * - `nil` → removes every declared property, restoring the CSS cascade value
+ *   for each.
+ *
+ * @since 2.6
+ * @param element - Target element
+ * @param props - CSS property names the returned handlers may set/remove
+ * @returns Match handlers for the style mutations
+ */
+declare function bindStyle<P extends string>(element: HTMLElement | SVGElement | MathMLElement, props: readonly P[]): SingleMatchHandlers<Partial<Record<P, string | null>>>;
 /**
  * Returns `SingleMatchHandlers<string>` that sets the inner HTML of an element,
  * with optional Shadow DOM, sanitization, and script re-execution support.
