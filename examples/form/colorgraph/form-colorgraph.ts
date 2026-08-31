@@ -2,6 +2,7 @@ import { clampChroma, formatCss, inGamut, type Oklch } from 'culori/fn'
 import {
 	asString,
 	batch,
+	bindAria,
 	bindStyle,
 	bindText,
 	createMemo,
@@ -332,11 +333,19 @@ export default defineComponent<FormColorgraphProps>(
 			sliderEl.addEventListener('pointercancel', handleUp)
 		})
 		watch(() => `${trackWidth.get()}px`, bindStyle(sliderEl, '--track-width'))
-		watch(color, c => {
-			const hue = c.h ?? 0
-			sliderEl.setAttribute('aria-valuenow', String(hue))
-			sliderEl.setAttribute('aria-valuetext', `${fn2Digits(hue)}°`)
-		})
+		// bindAria()'s map form (ADR 0026 §2): one thunk source derives both
+		// properties from the same hue read. `sliderEl` is a native Element
+		// (role="slider" set statically in markup), so this stays the
+		// attribute channel — CSS/Playwright-visible on every engine, just
+		// routed through the helper's number coercion instead of manual
+		// String()/template-literal writes.
+		watch(
+			() => {
+				const hue = color.get().h ?? 0
+				return { ariaValueNow: hue, ariaValueText: `${fn2Digits(hue)}°` }
+			},
+			bindAria(sliderEl, ['ariaValueNow', 'ariaValueText']),
+		)
 
 		// Track canvas: redraw on color or track width change
 		watch(
@@ -371,9 +380,9 @@ export default defineComponent<FormColorgraphProps>(
 		on(host, 'keydown', event => {
 			const { key, shiftKey, target } = event
 			if (
-				!(target instanceof HTMLElement)
-				|| (target.localName === 'input'
-					&& (key === 'ArrowLeft' || key === 'ArrowRight'))
+				!(target instanceof HTMLElement) ||
+				(target.localName === 'input' &&
+					(key === 'ArrowLeft' || key === 'ArrowRight'))
 			)
 				return
 			if (key.substring(0, 5) === 'Arrow' || ['+', '-'].includes(key)) {

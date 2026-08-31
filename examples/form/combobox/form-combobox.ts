@@ -124,9 +124,7 @@ export default defineComponent<FormComboboxProps>(
 		if (errorEl) watch('validationMessage', bindText(errorEl))
 		if (descriptionEl) watch('description', bindText(descriptionEl))
 
-		watch(isExpanded, expanded => {
-			listbox.hidden = !expanded
-		})
+		watch(isExpanded, bindVisible(listbox))
 		// bindAria() gives the ADR 0026 §2 boolean coercion ('true'/'false',
 		// never manual String(expanded)) and nil handling; textbox stays a
 		// native Element, so this remains the attribute channel, CSS-visible,
