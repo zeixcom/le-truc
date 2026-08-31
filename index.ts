@@ -110,6 +110,7 @@ export {
 } from '@zeix/cause-effect'
 
 export {
+	type AriaValue,
 	bindAria,
 	bindAttribute,
 	bindClass,
@@ -118,7 +119,6 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
-	type AriaValue,
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 	escapeHTML,
@@ -131,6 +131,7 @@ export {
 	type FormAssociatedCheckboxElement,
 	type FormAssociatedElement,
 	type FormAssociatedValueElement,
+	type FormFactoryContext,
 	type Initializers,
 	type MaybeSignal,
 } from './src/component'
@@ -191,6 +192,9 @@ export {
 	type PassedProps,
 	type PassHelper,
 	type Reactive,
+	type ResolvedReactive,
+	type ResolvedReactiveSignals,
+	type ResolvedReactiveValues,
 	reconcile,
 	type WatchHelper,
 } from './src/helpers/reactive'
@@ -211,5 +215,6 @@ export {
 	isParser,
 	type MethodProducer,
 	type Parser,
+	RESERVED_WORDS_LIST,
 	type ReservedWords,
 } from './src/types'

@@ -3763,6 +3763,7 @@ export {
   SKIP_EQUALITY,
   RequiredOwnerError,
   ReadonlySignalError,
+  RESERVED_WORDS_LIST,
   PromiseValueError,
   NullishSignalValueError,
   NoActiveCollectorError,
