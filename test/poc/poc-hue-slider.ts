@@ -22,8 +22,20 @@
  * `setHue(deg)` is the deterministic test entry point — it drives the same
  * throttled path a real pointermove handler would, without simulating
  * actual pointer events.
+ *
+ * LT-004: the reactive `ariaValueNow`/`ariaValueText` writes go through
+ * `bindAria()` (poc-bind-aria.ts), invoked imperatively — this is a raw
+ * custom element with no cause-effect signal graph (`throttle()` drives a
+ * plain class field, not a signal), so there is no `watch()` source to hand
+ * `bindAria`'s `SingleMatchHandlers` to. Calling `.ok()` directly proves the
+ * helper works standalone, not just wired through `watch()`. The static
+ * `role`/`ariaValueMin`/`ariaValueMax` writes stay untouched, imperative
+ * `internals.*` assignments — ADR 0026 §2 reserves `bindAria()` for
+ * *reactive* bindings; a one-time statement is already shorter than a
+ * helper call.
  */
 import { throttle } from '../../index'
+import { bindAria } from './poc-bind-aria'
 
 interface PocRegistry {
 	_elementInternals?: WeakMap<Element, ElementInternals>
@@ -49,10 +61,12 @@ class PocHueSlider extends HTMLElement {
 		this.#internals.ariaValueMin = '0'
 		this.#internals.ariaValueMax = '360'
 		this.tabIndex = 0
+		const setValueNow = bindAria(this.#internals, 'ariaValueNow')
+		const setValueText = bindAria(this.#internals, 'ariaValueText')
 		this.#setValueNow = throttle((deg: number) => {
 			this.#flushCount++
-			this.#internals.ariaValueNow = String(deg)
-			this.#internals.ariaValueText = `${fmtDeg(deg)}°`
+			setValueNow.ok(deg)
+			setValueText.ok(`${fmtDeg(deg)}°`)
 		})
 	}
 

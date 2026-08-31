@@ -22,16 +22,27 @@
  * it. Static relationships are set once, imperative in the factory body
  * (ADR 0026 §2: no helper for statements shorter than their helper call).
  *
- * `options` (the `all()` Cell) MUST be passed as a `watch()` source, not
- * just read inside the handler body: `watch()` wraps the handler in
- * `untrack()` (src/helpers/reactive.ts) so accidental reads inside it never
- * become dependencies — reading `options.get()` there alone never subscribes
- * the effect, so the Cell's MutationObserver (`watched`, lazily activated
- * only once something actually subscribes) never turns on and the list
- * stays frozen at its first snapshot. An earlier draft of this probe made
- * exactly that mistake — see README.md.
+ * `options` (the `all()` Cell) MUST be read inside a tracked `watch()`
+ * source, not just inside the handler body: `watch()` wraps the *handler*
+ * in `untrack()` (src/helpers/reactive.ts) so accidental reads inside it
+ * never become dependencies. An earlier draft read `options.get()` only
+ * inside the handler body of a single-source `watch(activeIndex, ...)` call
+ * — that never subscribed the effect, so the Cell's MutationObserver
+ * (lazily activated only once something actually subscribes) never turned
+ * on and the list stayed frozen at its first snapshot (see README.md).
+ *
+ * LT-004 rewires this through `bindAria()` (poc-bind-aria.ts) using the
+ * *thunk* source form — `() => T | null` — rather than the array-source form
+ * the original draft (and its first fix) used: `SingleMatchHandlers` only
+ * has an overload for single sources (string/Signal/thunk), not the
+ * multi-source array form, so combining `activeIndex` and `options` into one
+ * tracked thunk is what makes `bindAria` pluggable here at all. Returning
+ * `null` from the thunk drives `bindAria`'s `nil` path (clears
+ * `ariaActiveDescendantElement` on Escape) via `deriveCell`'s null/undefined
+ * routing — not `bindAria`'s own defensive `ok(null)` guard.
  */
 import { createState, defineComponent } from '../../index'
+import { bindAria } from './poc-bind-aria'
 
 export default defineComponent('poc-combobox', ({ all, first, on, watch }) => {
 	const textbox = first('input', 'Needed a text input.')
@@ -47,9 +58,14 @@ export default defineComponent('poc-combobox', ({ all, first, on, watch }) => {
 	if (errorEl) textbox.ariaErrorMessageElements = [errorEl]
 
 	const activeIndex = createState(-1)
-	watch([activeIndex, options], ([i, list]) => {
-		textbox.ariaActiveDescendantElement = i >= 0 ? (list[i] ?? null) : null
-	})
+	watch(
+		() => {
+			const i = activeIndex.get()
+			const list = options.get()
+			return i >= 0 ? (list[i] ?? null) : null
+		},
+		bindAria(textbox, 'ariaActiveDescendantElement'),
+	)
 
 	on(textbox, 'keydown', event => {
 		const list = options.get()
