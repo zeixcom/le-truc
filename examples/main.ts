@@ -1,10 +1,10 @@
+import './basic/blogmeta/basic-blogmeta.ts'
 import './basic/button/basic-button.ts'
 import './basic/counter/basic-counter.ts'
 import './basic/gauge/basic-gauge.ts'
 import './basic/hello/basic-hello.ts'
 import './basic/number/basic-number.ts'
 import './basic/pluralize/basic-pluralize.ts'
-import './card/blogmeta/card-blogmeta.ts'
 import './card/collapsible/card-collapsible.ts'
 import './card/colorscale/card-colorscale.ts'
 import './card/mediaqueries/card-mediaqueries.ts'
@@ -63,6 +63,10 @@ customElements.define('card-blogpost', CardBlogpost)
 /** Callout banner for highlighted or danger content. */
 class CardCallout extends HTMLElement {}
 customElements.define('card-callout', CardCallout)
+
+/** Blog post archive, grouped by year into collapsible sections. */
+class ModuleBlogarchive extends HTMLElement {}
+customElements.define('module-blogarchive', ModuleBlogarchive)
 
 /** Wrapper around a live component preview in the docs. */
 class ModuleDemo extends HTMLElement {}

@@ -219,7 +219,7 @@ export const generateBlogExcerpts = (
 
 			return html`<card-blogpost itemscope itemtype="https://schema.org/BlogPosting">
 				<h2 itemprop="headline"><a href="${url}" itemprop="url">${title}</a></h2>
-				<card-blogmeta>
+				<basic-blogmeta>
 					<span
 						class="author"
 						itemprop="author"
@@ -251,7 +251,7 @@ export const generateBlogExcerpts = (
 						><meta itemprop="timeRequired" content="PT${readingTime}M" />${readingTime}
 						min read</span
 					>
-				</card-blogmeta>
+				</basic-blogmeta>
 				${description ? raw(html`<p itemprop="description">${description}</p>`) : ''}
 			</card-blogpost>`
 		})
@@ -259,8 +259,9 @@ export const generateBlogExcerpts = (
 }
 
 /**
- * Generate a compact archive list of non-draft posts beyond the featured
- * cards: linked title + date per post, date-descending (caller sorts).
+ * Generate a compact archive of non-draft posts beyond the featured cards,
+ * grouped by year into collapsible `<details>` sections (only the current
+ * year starts open), date-descending within each year (caller sorts).
  * Returns '' when every post fits the featured cards.
  */
 export const generateBlogArchive = (
@@ -270,23 +271,48 @@ export const generateBlogArchive = (
 	const archived = sortedPosts.slice(FEATURED_POSTS)
 	if (archived.length === 0) return ''
 
-	const items = archived
-		.map(post => {
-			const slug = post.relativePath.replace(/^blog\//, '').replace(/\.md$/, '')
-			const url = `${basePath}blog/${slug}.html`
-			const date = post.metadata.date ?? ''
-			return html`<li>
-				<a href="${url}">${post.title}</a>
-				<time datetime="${date}">${date}</time>
-			</li>`
+	const currentYear = String(new Date().getFullYear())
+
+	const postsByYear = new Map<string, ProcessedMarkdownFile[]>()
+	for (const post of archived) {
+		const year = (post.metadata.date ?? '').slice(0, 4) || 'Undated'
+		const group = postsByYear.get(year)
+		if (group) group.push(post)
+		else postsByYear.set(year, [post])
+	}
+
+	const groups = Array.from(postsByYear.entries())
+		.map(([year, posts]) => {
+			const items = posts
+				.map(post => {
+					const slug = post.relativePath
+						.replace(/^blog\//, '')
+						.replace(/\.md$/, '')
+					const url = `${basePath}blog/${slug}.html`
+					const date = post.metadata.date ?? ''
+					return html`<li>
+						<a href="${url}">${post.title}</a>
+						<basic-blogmeta>
+							<time class="published" datetime="${date}">${date}</time>
+						</basic-blogmeta>
+					</li>`
+				})
+				.join('\n')
+
+			return html`<details${year === currentYear ? raw(' open') : ''}>
+				<summary>${year}</summary>
+				<ul>
+					${raw(items)}
+				</ul>
+			</details>`
 		})
 		.join('\n')
 
 	return html`<section class="blog-archive" aria-labelledby="blog-archive-title">
-		<h2 id="blog-archive-title">Archive</h2>
-		<ul>
-			${raw(items)}
-		</ul>
+		<module-blogarchive>
+			<h2 id="blog-archive-title">Archive</h2>
+			${raw(groups)}
+		</module-blogarchive>
 	</section>`
 }
 

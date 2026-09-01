@@ -182,7 +182,7 @@ describe('generateBlogExcerpts', () => {
 		expect(result).toContain('href="./blog/2026-03-09-hello.html"')
 	})
 
-	test('includes card-blogmeta with time and author span', () => {
+	test('includes basic-blogmeta with time and author span', () => {
 		const post = makePost({
 			slug: 'meta-test',
 			date: '2026-03-09',
@@ -300,7 +300,7 @@ describe('generateBlogArchive', () => {
 		expect(result).not.toContain('/blog/p3')
 	})
 
-	test('renders linked title and time per item', () => {
+	test('renders linked title and basic-blogmeta time per item', () => {
 		const posts = [
 			makePost({ slug: 'p1', date: '2026-03-01' }),
 			makePost({ slug: 'p2', date: '2026-02-01' }),
@@ -313,10 +313,13 @@ describe('generateBlogArchive', () => {
 		]
 		const result = generateBlogArchive(posts)
 		expect(result).toContain('<a href="./blog/p4.html">An Older Post</a>')
-		expect(result).toContain('<time datetime="2026-01-01">2026-01-01</time>')
+		expect(result).toContain(
+			'<time class="published" datetime="2026-01-01">2026-01-01</time>',
+		)
+		expect(result).toContain('<basic-blogmeta>')
 	})
 
-	test('wraps items in a labelled archive section', () => {
+	test('wraps groups in a labelled module-blogarchive element', () => {
 		const posts = [
 			makePost({ slug: 'p1', date: '2026-03-01' }),
 			makePost({ slug: 'p2', date: '2026-02-01' }),
@@ -325,10 +328,28 @@ describe('generateBlogArchive', () => {
 		]
 		const result = generateBlogArchive(posts)
 		expect(result).toContain(
-			'<section class="blog-archive" aria-labelledby="blog-archive-title">',
+			'<module-blogarchive aria-labelledby="blog-archive-title">',
 		)
 		expect(result).toContain('<h2 id="blog-archive-title">Archive</h2>')
 		expect(result).toContain('<ul>')
+	})
+
+	test('groups posts by year into details/summary, most recent year open', () => {
+		const currentYear = new Date().getFullYear()
+		const posts = [
+			makePost({ slug: 'p1', date: `${currentYear}-03-01` }),
+			makePost({ slug: 'p2', date: `${currentYear}-02-01` }),
+			makePost({ slug: 'p3', date: `${currentYear}-01-02` }),
+			makePost({ slug: 'p4', date: `${currentYear}-01-01` }),
+			makePost({ slug: 'p5', date: `${currentYear - 1}-06-01` }),
+		]
+		const result = generateBlogArchive(posts)
+		const blocks = result.split('</details>').slice(0, -1)
+		expect(blocks.length).toBe(2)
+		const openBlock = blocks.find(b => b.includes('<details open>'))
+		expect(openBlock).toContain(`<summary>${currentYear}</summary>`)
+		const closedBlock = blocks.find(b => !b.includes('<details open>'))
+		expect(closedBlock).toContain(`<summary>${currentYear - 1}</summary>`)
 	})
 
 	test('preserves input order (caller is responsible for sorting)', () => {
