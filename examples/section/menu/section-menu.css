@@ -125,35 +125,35 @@ section-menu {
 		position: absolute;
 		top: var(--space-m);
 		left: 13rem;
-    border: 1px solid var(--color-border);
-    height: var(--input-height);
-    width: var(--input-height);
-    border-radius: var(--space-xs);
-    background-color: var(--color-secondary);
-    font-size: var(--font-size-s);
-    line-height: var(--line-height-xs);
+		border: 1px solid var(--color-border);
+		height: var(--input-height);
+		width: var(--input-height);
+		border-radius: var(--space-xs);
+		background-color: var(--color-secondary);
+		font-size: var(--font-size-s);
+		line-height: var(--line-height-xs);
 
-    &:hover {
-    	background-color: var(--color-secondary-hover);
-    }
+		&:hover {
+			background-color: var(--color-secondary-hover);
+		}
 
-    .open {
-    	display: none;
-    }
+		.open {
+			display: none;
+		}
 
-    .closed {
-    	display: block;
-    }
+		.closed {
+			display: block;
+		}
 
-    &[aria-expanded="true"] {
-      .open {
-      	display: block;
-      }
+		&[aria-expanded="true"] {
+			.open {
+				display: block;
+			}
 
-      .closed {
-      	display: none;
-      }
-    }
+			.closed {
+				display: none;
+			}
+		}
 	}
 
 	section-menu.js {

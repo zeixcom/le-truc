@@ -50,7 +50,7 @@ test.describe('docs-task-states', () => {
 			timeout: 6000,
 		})
 
-		await page.check('input.fail')
+		await page.locator('form-checkbox:has(input.fail) label').click()
 		await page.click('button.fetch')
 		await expect(page.locator('.states')).toHaveAttribute('data-state', 'err', {
 			timeout: 4000,
@@ -61,7 +61,7 @@ test.describe('docs-task-states', () => {
 			page.locator('ol.log li', { hasText: 'err —' }),
 		).toHaveCount(1)
 
-		await page.uncheck('input.fail')
+		await page.locator('form-checkbox:has(input.fail) label').click()
 		await page.click('button.fetch')
 		await expect(page.locator('.states')).toHaveAttribute('data-state', 'ok', {
 			timeout: 6000,

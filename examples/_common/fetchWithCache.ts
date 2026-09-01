@@ -100,8 +100,8 @@ export const fetchWithCache = async <T = string>(
 	// or non-HTTP schemes on a component's behalf
 	const requested = new URL(url, location.href)
 	if (
-		requested.origin !== location.origin
-		|| (requested.protocol !== 'https:' && requested.protocol !== 'http:')
+		requested.origin !== location.origin ||
+		(requested.protocol !== 'https:' && requested.protocol !== 'http:')
 	)
 		throw new Error('Invalid URL')
 
