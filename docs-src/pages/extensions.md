@@ -5,7 +5,7 @@ description: 'Form participation, observed attributes, debug'
 ---
 
 {% hero %}
-# 🧩 Extensions
+# Extensions
 
 **Opt-in capabilities, imported separately, tree-shaken away when unused.** Form participation, attribute-driven reactivity, and debug instrumentation extend `defineComponent()` through a third argument.
 {% /hero %}

@@ -39,11 +39,7 @@ describe('menuItem', () => {
 		expect(result).toContain('href="getting-started.html"')
 	})
 
-	test('renders the emoji in an icon span', () => {
-		const result = menuItem(mockPage({ emoji: '🚀' }))
-		expect(result).toContain('<span class="icon">')
-		expect(result).toContain('🚀')
-	})
+
 
 	test('renders the title in a <strong> element', () => {
 		const result = menuItem(mockPage({ title: 'Getting Started' }))

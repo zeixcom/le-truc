@@ -5,7 +5,7 @@ description: 'Tasks, loading and error states'
 ---
 
 {% hero %}
-# ⏳ Async State
+# Async State
 
 **Model async work as a `Task`.** Loading, error, stale, and success stop being ad-hoc booleans and become first-class reactive values. `match()` routes each state to the DOM update that belongs to it.
 {% /hero %}

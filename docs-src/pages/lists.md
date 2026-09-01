@@ -5,7 +5,7 @@ description: 'Keyed lists, reconcile, templates'
 ---
 
 {% hero %}
-# 📋 Dynamic Lists
+# Dynamic Lists
 
 **Grow and shrink keyed lists at runtime with `reconcile()`.** A reactive list holds the data. A `<template>` provides the markup. The DOM stays in sync — items enter, leave, and reorder, and no line of your code touches a DOM node directly.
 {% /hero %}

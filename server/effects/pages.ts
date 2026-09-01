@@ -214,12 +214,11 @@ export const generateBlogExcerpts = (
 				(author
 					? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg`
 					: '')
-			const emoji = post.metadata.emoji ?? '📝'
 			const title = post.title
 			const description = post.metadata.description ?? ''
 
 			return html`<card-blogpost itemscope itemtype="https://schema.org/BlogPosting">
-				<h2><a href="${url}" itemprop="url">${emoji} <span itemprop="headline">${title}</span></a></h2>
+				<h2 itemprop="headline"><a href="${url}" itemprop="url">${title}</a></h2>
 				<card-blogmeta>
 					<span
 						class="author"
@@ -463,7 +462,7 @@ export const pagesEffect = (onRebuild?: () => void) =>
 							// Inject hero + excerpt cards into the blog overview
 							const { metadata } = processedFile
 							const heroHtml = html`<section-hero>
-								<h1>${metadata.emoji ?? ''} ${metadata.title ?? 'Blog'}</h1>
+								<h1>${metadata.title ?? 'Blog'}</h1>
 								<div class="hero-layout">
 									<div class="lead">
 										${

@@ -5,7 +5,7 @@ description: 'Expose props, parse attributes, signal types'
 ---
 
 {% hero %}
-# 📦 Props & State
+# Props & State
 
 **Declare reactive properties with `expose()`.** Parse initial values from server-rendered attributes, hold private state in local signals, expose read-only values and imperative methods. State lives on the host as plain properties.
 {% /hero %}

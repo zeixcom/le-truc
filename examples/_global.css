@@ -371,13 +371,27 @@ details {
 }
 
 header {
-	margin-block: var(--space-xl);
+	margin-block: var(--space-m);
 
 	& h1 {
 		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: var(--space-m);
+		align-items: start;
+		justify-content: flex-start;
+		gap: var(--space-xs);
+		margin-bottom: 0;
+
+		& small {
+			color: var(--color-text-soft);
+			border: 1px solid var(--color-border-soft);
+			padding: 0 var(--space-xs);
+			border-radius: var(--space-xl);
+			font-weight: var(--font-weight-regular);
+			font-size: var(--font-size-xs);
+		}
+
+		& a {
+			text-decoration: none;
+		}
 	}
 }
 
@@ -403,6 +417,18 @@ main {
 
 	.breakout {
 		grid-column: breakout;
+	}
+}
+
+main {
+	background-color: var(--color-input);
+}
+
+footer {
+	margin-block: var(--space-m);
+
+	& p {
+		margin: 0;
 	}
 }
 

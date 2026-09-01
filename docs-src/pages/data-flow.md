@@ -5,7 +5,7 @@ description: 'Coordinate components, pass state'
 ---
 
 {% hero %}
-# 🔄 Data Flow
+# Data Flow
 
 **Split your UI into components, then coordinate across boundaries.** `pass()` drives a named child from a parent. Dynamic lists, context, and async state round out this chapter.
 {% /hero %}

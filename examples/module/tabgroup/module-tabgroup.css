@@ -10,9 +10,10 @@ module-tabgroup {
 
 		> [role="tab"] {
 			border: 0;
-			border-top: 2px solid transparent;
-			border-bottom-width: 0;
+			border-color: transparent;
+			border-width: 2px 1px 0 1px;
 			border-radius: var(--space-xs) var(--space-xs) 0 0;
+			border-style: solid;
 			font-family: var(--font-family-sans);
 			font-size: var(--font-size-s);
 			font-weight: var(--font-weight-bold);
@@ -39,8 +40,9 @@ module-tabgroup {
 
 			&[aria-selected="true"] {
 				color: var(--color-primary-active);
-				border-top: 3px solid var(--color-primary);
-				background-color: var(--color-background);
+				border-color: var(--color-primary);
+				border-width: 3px 1px 0 1px;
+				background-color: var(--color-input);
 				margin-bottom: -1px;
 			}
 		}

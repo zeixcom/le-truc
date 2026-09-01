@@ -5,7 +5,7 @@ description: 'Anatomy, lifecycle, element queries'
 ---
 
 {% hero %}
-# 🏗️ Components
+# Components
 
 **Create lightweight, self-contained Web Components with built-in reactivity.** Le Truc lets you define custom elements that manage state efficiently and update the DOM automatically. Components enhance server-rendered pages without an SPA framework.
 {% /hero %}

@@ -6,7 +6,7 @@ layout: 'page'
 ---
 
 {% hero %}
-# 🍽️ Examples & Recipes
+# Examples & Recipes
 
 **Discover practical examples components with Le Truc.** Each example focuses on showcasing a specific feature or best practice, guiding you through real-world use cases.
 {% /hero %}

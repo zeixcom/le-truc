@@ -23,10 +23,7 @@ export const groupOf = (slug: string) =>
 export function menuItem(page: PageInfo, currentSlug?: string): string {
 	const isCurrent = currentSlug !== undefined && slugOf(page) === currentSlug
 	return html`<li>
-		<a href="${page.url}"${raw(isCurrent ? ' aria-current="page" class="active"' : '')}>
-			<span class="icon">${page.emoji}</span>
-			<strong>${page.title}</strong>
-		</a>
+		<a href="${page.url}"${raw(isCurrent ? ' aria-current="page" class="active"' : '')}>${page.title}</a>
 	</li>`
 }
 
@@ -61,11 +58,13 @@ export function menu(pages: PageInfo[], currentSlug?: string): string {
 	})
 
 	return html`<section-menu id="sidebar">
-		<nav>
-			<h2 class="visually-hidden">Main Menu</h2>
-			<ol>
-				${items}
-			</ol>
-		</nav>
+		<module-scrollarea>
+			<nav>
+				<h2 class="visually-hidden">Main Menu</h2>
+				<ol>
+					${items}
+				</ol>
+			</nav>
+		</module-scrollarea>
 	</section-menu>`
 }

@@ -5,7 +5,7 @@ description: 'Installation, setup, and first steps'
 ---
 
 {% hero %}
-# 🚀 Getting Started
+# Getting Started
 
 **Set up Le Truc in minutes. No build tools required.** Or use a package manager and bundler for TypeScript support and optimized frontend assets.
 {% /hero %}

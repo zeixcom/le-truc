@@ -62,10 +62,9 @@ module-codeblock {
 				linear-gradient(
 					135deg,
 					var(--color-secondary) 0.5rem,
-					var(--color-background) 0
+					var(--color-input) 0
 				)
 				0 0.5rem;
-			background-color: var(--color-secondary);
 			background-size: var(--space-m) var(--space-m);
 			background-position: bottom;
 		}
@@ -91,7 +90,7 @@ module-codeblock {
 			margin-bottom: var(--space-m);
 			font-size: var(--font-size-s);
 			transition: background-color var(--transition-short) var(--easing-inout);
-			text-shadow: var(--color-background) 1px 0 var(--space-xs);
+			text-shadow: var(--color-input) 1px 0 var(--space-xs);
 
 			&:hover,
 			&:active {

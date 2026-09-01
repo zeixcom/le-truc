@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>{{ title }} – Le Truc Docs</title>
+		<title>{{ title }} – Le Truc</title>
 		<meta name="description" content="{{ description }}">
 		<link
 			rel="preload"
@@ -31,8 +31,8 @@
 				<a href="#main" class="skiplink visually-hidden">
 					Skip to main content
 				</a>
-				<div class="content docs-header-bar">
-					<h1>Le Truc Docs <small>{{ version }}</small></h1>
+				<div class="breakout docs-header-bar">
+					<h1>Le Truc <small>{{ version }}</small></h1>
 					<button
 						type="button"
 						id="sidebar-toggle"
@@ -40,8 +40,8 @@
 						aria-expanded="false"
 						aria-controls="sidebar"
 					>
-						<span class="visually-hidden">Toggle menu</span>
-						☰
+						<span class="closed" aria-label="Open menu">☰</span>
+						<span class="open" aria-label="Close menu">×</span>
 					</button>
 				</div>
 				<card-callout class="content danger" hidden>
@@ -55,7 +55,7 @@
 			</div>
 
 			<footer class="content-grid">
-				<div class="content">
+				<div class="breakout">
 					<h2 class="visually-hidden">Footer</h2>
 					<p>© 2024 – 2026 Zeix AG</p>
 				</div>

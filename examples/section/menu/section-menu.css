@@ -5,6 +5,10 @@
    layout only reads as a sidebar once these are a flex row. Below 48em
    `section-menu` is off-canvas (see the max-width query below), so the
    shell stays a single column there — nothing to coordinate. */
+:root {
+	--header-height: 3rem;
+}
+
 .docs-body {
 	display: block;
 }
@@ -13,8 +17,6 @@
 	.docs-body {
 		display: flex;
 		align-items: flex-start;
-		gap: var(--space-xl);
-		padding-inline-start: var(--space-l);
 	}
 
 	.docs-main {
@@ -27,10 +29,6 @@ section-menu {
 	/* Default (no JS, any width): normal in-flow block, all links reachable
 	   without script — the drawer behavior below is JS-enhanced only. */
 	display: block;
-
-	& nav {
-		display: block;
-	}
 
 	& ol,
 	& ul {
@@ -48,7 +46,7 @@ section-menu {
 	& li.group {
 		margin-block-start: var(--space-l);
 		padding: var(--space-xs) var(--space-m);
-		font-size: var(--font-size-s);
+		font-size: var(--font-size-xs);
 		font-weight: var(--font-weight-bold);
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
@@ -63,8 +61,7 @@ section-menu {
 		display: flex;
 		align-items: center;
 		gap: var(--space-s);
-		padding: var(--space-s) var(--space-m);
-		border-radius: var(--space-xs);
+		padding: var(--space-xs) var(--space-m);
 		color: var(--color-text);
 		text-decoration: none;
 
@@ -99,8 +96,8 @@ section-menu {
 			margin: 0;
 		}
 
-		&.active strong,
-		&[aria-current="page"] strong {
+		&.active,
+		&[aria-current="page"] {
 			font-weight: var(--font-weight-bold);
 		}
 	}
@@ -118,8 +115,39 @@ section-menu {
 	   section-menu.ts). Stays above the drawer's fixed, viewport-covering
 	   backdrop (z-index 100) so it remains clickable to close while open. */
 	#sidebar-toggle {
-		position: relative;
 		z-index: 101;
+		position: absolute;
+		top: var(--space-m);
+		left: 13rem;
+    border: 1px solid var(--color-border);
+    height: var(--input-height);
+    width: var(--input-height);
+    border-radius: var(--space-xs);
+    background-color: var(--color-secondary);
+    font-size: var(--font-size-s);
+    line-height: var(--line-height-xs);
+
+    &:hover {
+    	background-color: var(--color-secondary-hover);
+    }
+
+    .open {
+    	display: none;
+    }
+
+    .closed {
+    	display: block;
+    }
+
+    &[aria-expanded="true"] {
+      .open {
+      	display: block;
+      }
+
+      .closed {
+      	display: none;
+      }
+    }
 	}
 
 	section-menu.js {
@@ -135,17 +163,15 @@ section-menu {
 		   `<nav>` (below) animates. */
 		pointer-events: none;
 
-		& nav {
+		& module-scrollarea {
 			position: absolute;
 			z-index: 1;
 			inset-block: 0;
 			inset-inline-start: 0;
 			width: 16rem;
 			max-width: 85vw;
-			overflow-y: auto;
 			background-color: var(--color-background);
 			border-inline-end: 1px solid var(--color-border-soft);
-			padding-block: var(--space-l);
 			pointer-events: auto;
 			transform: translateX(-100%);
 		}
@@ -166,7 +192,7 @@ section-menu {
 		   `.js` → `.js`), animating the drawer sliding out on every page
 		   load even though it was never open. */
 		&.ready {
-			& nav {
+			& module-scrollarea {
 				transition: transform var(--transition-short) var(--easing-inout);
 			}
 
@@ -178,7 +204,7 @@ section-menu {
 		&.open {
 			pointer-events: auto;
 
-			& nav {
+			& module-scrollarea {
 				transform: translateX(0);
 			}
 
@@ -198,6 +224,10 @@ section-menu {
 		display: none;
 	}
 
+	header {
+		height: var(--header-height);
+	}
+
 	section-menu {
 		/* Above the breakpoint the sidebar is always visible, sticky, and
 		   independently scrollable — no toggle, no off-canvas/backdrop. */
@@ -206,26 +236,20 @@ section-menu {
 		align-self: start;
 		flex: 0 0 16rem;
 		width: 16rem;
-		max-height: 100dvh;
-		overflow-y: auto;
-		padding-block: var(--space-l);
 
 		&.js {
-			position: sticky;
-			inset: auto;
 			visibility: visible;
 			pointer-events: auto;
 			transition: none;
 
-			& nav {
+			& module-scrollarea {
 				position: static;
 				inset: auto;
 				width: auto;
 				max-width: none;
-				overflow-y: visible;
+				max-height: 100dvh;
 				background-color: transparent;
 				border-inline-end: none;
-				padding-block: 0;
 				transform: none;
 			}
 

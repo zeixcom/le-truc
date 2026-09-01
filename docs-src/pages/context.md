@@ -5,7 +5,7 @@ description: 'Shared state across the tree'
 ---
 
 {% hero %}
-# 🌐 Context
+# Context
 
 **Share state across the component tree without prop drilling.** A provider publishes typed values. Any descendant consumes them reactively. Provider and consumer never reference each other.
 {% /hero %}

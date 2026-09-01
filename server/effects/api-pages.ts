@@ -182,8 +182,7 @@ const headingTagText = (tag: RenderableTreeNode): string => {
 	if (!Tag.isTag(tag)) return ''
 	const anchor = tag.children[0]
 	if (!Tag.isTag(anchor)) return ''
-	const titleSpan = anchor.children[0]!
-	return firstTextContent(titleSpan)
+	return firstTextContent(anchor.children[0]!)
 }
 
 type NamedRow = {

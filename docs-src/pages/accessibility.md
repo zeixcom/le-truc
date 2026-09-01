@@ -5,7 +5,7 @@ description: 'ARIA reflection via ElementInternals and bindAria()'
 ---
 
 {% hero %}
-# ♿ Accessibility
+# Accessibility
 
 **Reflect ARIA semantics from a signal with `bindAria()`.** Content attributes and `ElementInternals` reflection are two complementary channels, not competitors — the consumer owns one, the component owns the other.
 {% /hero %}

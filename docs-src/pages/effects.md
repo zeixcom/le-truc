@@ -5,7 +5,7 @@ description: 'Event listeners, watchers, bindings'
 ---
 
 {% hero %}
-# ⚡️ Events & Effects
+# Events & Effects
 
 **Wire user input to state with `on()`, and state to the DOM with `watch()`.** Le Truc registers listeners and effects for you and removes them automatically on disconnect. No manual DOM manipulation anywhere.
 {% /hero %}
