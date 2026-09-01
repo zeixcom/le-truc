@@ -356,7 +356,7 @@ const applyTemplate = async (
 		// only root pages appear in the menu.
 		const currentSlug =
 			processedFile.section || processedFile.filename.replace('.md', '')
-		const menuHtml = menu(rootPages, currentSlug)
+		const menuHtml = menu(rootPages, currentSlug, processedFile.basePath)
 
 		// Replace template variables
 		const replacements: { [key: string]: string } = {

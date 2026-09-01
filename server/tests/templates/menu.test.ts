@@ -36,10 +36,17 @@ describe('menuItem', () => {
 
 	test('renders a link with the page URL', () => {
 		const result = menuItem(mockPage({ url: 'getting-started.html' }))
-		expect(result).toContain('href="getting-started.html"')
+		expect(result).toContain('href="./getting-started.html"')
 	})
 
-
+	test('prefixes the URL with basePath for nested pages', () => {
+		const result = menuItem(
+			mockPage({ url: 'getting-started.html' }),
+			undefined,
+			'../',
+		)
+		expect(result).toContain('href="../getting-started.html"')
+	})
 
 	test('renders the title in a <strong> element', () => {
 		const result = menuItem(mockPage({ title: 'Getting Started' }))

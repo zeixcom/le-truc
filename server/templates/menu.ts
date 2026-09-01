@@ -20,10 +20,14 @@ export const groupOf = (slug: string) =>
  * When `currentSlug` matches the page's own slug, the item is marked as the
  * active page with `aria-current="page"` and `class="active"`.
  */
-export function menuItem(page: PageInfo, currentSlug?: string): string {
+export function menuItem(
+	page: PageInfo,
+	currentSlug?: string,
+	basePath = './',
+): string {
 	const isCurrent = currentSlug !== undefined && slugOf(page) === currentSlug
 	return html`<li>
-		<a href="${page.url}"${raw(isCurrent ? ' aria-current="page" class="active"' : '')}>${page.title}</a>
+		<a href="${basePath}${page.url}"${raw(isCurrent ? ' aria-current="page" class="active"' : '')}>${page.title}</a>
 	</li>`
 }
 
@@ -41,7 +45,11 @@ export function menuGroup(title: string): string {
  * that live under a root page (blog posts, API symbol pages) so the parent
  * menu item is marked active instead.
  */
-export function menu(pages: PageInfo[], currentSlug?: string): string {
+export function menu(
+	pages: PageInfo[],
+	currentSlug?: string,
+	basePath = './',
+): string {
 	// Get only root pages (no section) and sort them using common utility
 	const rootPages = pages
 		.filter(p => !p.section)
@@ -52,9 +60,9 @@ export function menu(pages: PageInfo[], currentSlug?: string): string {
 	const items = rootPages.map(page => {
 		const group = groupOf(slugOf(page))
 		if (!group || renderedHeadings.has(group.title))
-			return menuItem(page, currentSlug)
+			return menuItem(page, currentSlug, basePath)
 		renderedHeadings.add(group.title)
-		return menuGroup(group.title) + menuItem(page, currentSlug)
+		return menuGroup(group.title) + menuItem(page, currentSlug, basePath)
 	})
 
 	return html`<section-menu id="sidebar">
