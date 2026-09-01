@@ -167,6 +167,19 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 **Consistency checks:**
 - Describes only techniques that work with current Le Truc (no Shadow DOM in `defineComponent` unless added)
 
+### `docs-src/pages/accessibility.md`
+**Audience:** Developers reflecting ARIA semantics from component state
+**Register:** How-to with explanation; assumes the reader has read effects.md
+**Scope:** Chapter *Building Components*, between *Styling* and *Extensions* — `bindAria()`, and choosing between content-attribute ARIA and `ElementInternals` reflection
+
+**Update triggers:**
+- `bindAria()` signature or behavior changes
+- The content-attribute vs. `ElementInternals` guidance changes
+
+**Consistency checks:**
+- `bindAria()` description matches `src/bindings.ts`
+- Channel-choice guidance matches current `ElementInternals` usage in `src/extensions/form.ts`
+
 ### `docs-src/pages/examples.md`
 **Audience:** Developers browsing example components
 **Register:** Navigation — minimal prose; the `{% listnav %}` is the content
@@ -191,6 +204,31 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 
 **Consistency checks:**
 - The generated list includes every exported symbol TypeDoc generates a page for (if one is missing, the export may lack JSDoc or be excluded by `typedoc.json`)
+
+### `docs-src/pages/blog.md`
+**Audience:** Developers browsing the blog
+**Register:** Navigation — frontmatter only, no body content
+**Scope:** The blog index route; post listing is rendered from `docs-src/pages/blog/` at build time
+
+**Update triggers:**
+- None expected — this page has no body to update
+
+**Consistency checks:**
+- Frontmatter (`title`, `description`, `emoji`, `layout: page`) is present and valid
+
+### `docs-src/pages/about.md`
+**Audience:** Developers and prospective contributors evaluating the project or team
+**Register:** Community-facing — informational, welcoming
+**Scope:** Core team and sponsors, license, version history, contributing guidelines, community guidelines
+
+**Update triggers:**
+- A new release changes the "Current Version" or versioning scheme description
+- Contributing or community guidelines change
+- Team or sponsor list changes
+
+**Consistency checks:**
+- "Current Version" matches `package.json`
+- License section matches the repo's `LICENSE` file
 
 ### `docs-src/pages/blog/YYYY-MM-DD-slug.md`
 **Audience:** Developers browsing the blog — curious about the project's history, design thinking, or how it compares to alternatives

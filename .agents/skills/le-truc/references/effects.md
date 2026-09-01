@@ -49,6 +49,7 @@ Without thunks, these require custom handlers. Thunks keep intent declarative.
 | Toggle custom `:state()` pseudo-class | `bindState(internals, token)` | `(value: boolean) => void` |
 | Set/remove attribute | `bindAttribute(el, name, allowUnsafe?)` | `SingleMatchHandlers<string \| boolean>` |
 | Set inline style | `bindStyle(el, prop)` | `SingleMatchHandlers<string>` |
+| Reflect ARIA property via `ElementInternals`/IDL | `bindAria(target, name)` | `SingleMatchHandlers<AriaValue>` |
 | Set innerHTML | `dangerouslyBindInnerHTML(el, options?)` | `SingleMatchHandlers<string>` |
 | Attach event listener | `on(target, type, handler, options?)` | registers an `EffectDescriptor` |
 | Bind Le Truc child prop | `pass(target, props)` | registers an `EffectDescriptor` |
@@ -178,6 +179,20 @@ watch(
 )
 ```
 
+### `bindAria(target, name)`
+
+Returns `SingleMatchHandlers<AriaValue>`. `target` is `el` or `internals` — anything implementing `ARIAMixin`. Reflects the property via `ElementInternals`/IDL, not a content attribute.
+
+- `ok(value)` → assigns the coerced value (`boolean`/`number`/`string`/`Element`/`Element[]`, per property)
+- `nil` → assigns `null`
+
+```typescript
+watch('expanded', bindAria(trigger, 'ariaExpanded'))
+watch('busy', bindAria(internals, 'ariaBusy'))
+```
+
+**Map form:** `bindAria(target, names)` with an array of names returns `SingleMatchHandlers<Partial<Record<N, AriaValue>>>`. `ok(map)` assigns every declared name; a name missing from the map (or nullish) assigns `null`. `nil` assigns `null` to every declared name. See `references/accessibility.md` for choosing between `bindAria` and content-attribute ARIA via `bindAttribute`.
+
 ### `dangerouslyBindInnerHTML(element, options?)`
 
 Returns `SingleMatchHandlers<string>`. Pass directly to `watch`. Only use on trusted/sanitized content.
@@ -213,9 +228,7 @@ Le Truc-to-Le Truc only. Replaces backing Slot signal of descendant component's 
 
 ```typescript
 const child = first('child-component') as HTMLElement & ChildProps
-pass(child, { disabled: 'disabled' })   // string prop name
-pass(child, { value: mySignal })         // Signal
-pass(child, { label: () => host.label }) // thunk
+pass(child, { label: () => host.label }) // thunk — read-only
 // SlotDescriptor — inline bi-directional adapter
 pass(child, {
   progress: {
@@ -224,6 +237,8 @@ pass(child, {
   },
 })
 ```
+
+The property-key form (`{ disabled: 'disabled' }`) and bare-writable-signal form (`{ value: mySignal }`) are deprecated (removed in v3.0) — see `references/coordination.md` for why.
 
 **Use `bindProperty()` inside `watch()` for non-Le Truc elements** (Lit, Stencil, plain custom elements).
 

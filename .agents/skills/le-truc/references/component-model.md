@@ -99,6 +99,7 @@ A fourth extension, `debug()`, is **not exported and never appears in this array
 | `Signal` | Any `Signal<T>` | Used directly as backing signal |
 | Static value | Anything else (`string`, `number`, `boolean`, `[]`, ...) | Wrapped in `createState()` |
 | `MemoCallback<T>` | `() => T` (unbranded thunk) | Wrapped in `deriveCell()` — reactive derived value |
+| `SlotDescriptor<T>` | `{ get, set? }` | Used directly as the property's backing `Slot` |
 
 ---
 

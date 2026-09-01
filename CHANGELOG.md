@@ -1,14 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## 2.6.0
 
 ### Added
 
-- **`tech-writer` `improve-docs-architecture.md` workflow**: tech-writer can now lead guide restructures — split or merge pages, improve navigation, add teaching components — routing pipeline code to `docs-server-dev` via `TODO.md`/`NOTES.md`.
 - **`bindAria()`**: new binding helper reflects values onto ARIA attributes via `ElementInternals`, invisible in markup and immune to attribute rewriting. Booleans map to `'true'`/`'false'`, numbers to strings, `nil` clears the value. A pre-existing conflicting attribute is removed automatically.
 - **ElementInternals declaration registry**: every Le Truc component now registers its `ElementInternals` so accessibility auditing tools like axe-core (>= 4.13) can inspect it, with zero opt-in required from component authors.
 - **Map-form overloads for `bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, `bindState`, `bindAria()`**: each helper now also accepts an array of target keys, driving several DOM writes from one `watch()` call instead of several. Purely additive; existing single-target calls are unaffected.
 - **`watch()`'s array-source form now supports match handlers**: passing multiple sources can use the same `ok`/`nil`/`err`/`stale` routing as single-source bindings, with `values` typed as a proper tuple instead of `any[]`. Purely additive; existing array-source calls are unaffected.
+- **`tech-writer` `improve-docs-architecture.md` workflow**: tech-writer can now lead guide restructures — split or merge pages, improve navigation, add teaching components — routing pipeline code to `docs-server-dev` via `TODO.md`/`NOTES.md`.
 
 ### Changed
 
