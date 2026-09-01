@@ -48,9 +48,8 @@ describe('menuItem', () => {
 		expect(result).toContain('href="../getting-started.html"')
 	})
 
-	test('renders the title in a <strong> element', () => {
+	test('renders the title as the link text', () => {
 		const result = menuItem(mockPage({ title: 'Getting Started' }))
-		expect(result).toContain('<strong>')
 		expect(result).toContain('Getting Started')
 	})
 

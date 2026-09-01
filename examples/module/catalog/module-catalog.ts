@@ -87,7 +87,10 @@ export default defineComponent('module-catalog', ({ all, first, on, pass }) => {
 				)
 				item.max = max
 				item.disabled = max === 0
-				item.setCustomValidity(message)
+				// Only surface the reason when the reduced max actually
+				// invalidates the current quantity — a cart quantity that
+				// still fits the new max shouldn't show a stock warning.
+				item.setCustomValidity(item.value > max ? message : '')
 			}),
 		)
 	})
