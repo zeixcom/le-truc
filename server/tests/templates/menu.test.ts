@@ -51,10 +51,10 @@ describe('menuItem', () => {
 		expect(result).toContain('Getting Started')
 	})
 
-	test('renders the description in a <small> element', () => {
+	test('does not render a description caption', () => {
 		const result = menuItem(mockPage({ description: 'Learn the basics' }))
-		expect(result).toContain('<small>')
-		expect(result).toContain('Learn the basics')
+		expect(result).not.toContain('<small>')
+		expect(result).not.toContain('Learn the basics')
 	})
 
 	test('escapes HTML special characters in title', () => {
@@ -63,19 +63,31 @@ describe('menuItem', () => {
 		expect(result).not.toContain('A & B')
 	})
 
-	test('escapes HTML special characters in description', () => {
-		const result = menuItem(mockPage({ description: '<script>evil</script>' }))
-		expect(result).toContain('&lt;script&gt;')
-		expect(result).not.toContain('<script>')
+	test('does not mark the item active when no currentSlug is given', () => {
+		const result = menuItem(mockPage({ filename: 'index.md' }))
+		expect(result).not.toContain('aria-current')
+		expect(result).not.toContain('class="active"')
+	})
+
+	test('marks the item active when currentSlug matches its slug', () => {
+		const result = menuItem(mockPage({ filename: 'index.md' }), 'index')
+		expect(result).toContain('aria-current="page"')
+		expect(result).toContain('class="active"')
+	})
+
+	test('does not mark the item active when currentSlug does not match', () => {
+		const result = menuItem(mockPage({ filename: 'index.md' }), 'about')
+		expect(result).not.toContain('aria-current')
+		expect(result).not.toContain('class="active"')
 	})
 })
 
 /* === menu === */
 
 describe('menu', () => {
-	test('wraps output in <section-menu>', () => {
+	test('wraps output in <section-menu> with a sidebar id', () => {
 		const result = menu([mockPage()])
-		expect(result).toContain('<section-menu>')
+		expect(result).toContain('<section-menu id="sidebar">')
 		expect(result).toContain('</section-menu>')
 	})
 
@@ -93,8 +105,8 @@ describe('menu', () => {
 
 	test('renders all root pages', () => {
 		const pages = [
-			mockPage({ title: 'Home', url: 'index.html' }),
-			mockPage({ title: 'About', url: 'about.html' }),
+			mockPage({ title: 'Home', url: 'index.html', filename: 'index.md' }),
+			mockPage({ title: 'About', url: 'about.html', filename: 'about.md' }),
 		]
 		const result = menu(pages)
 		expect(result).toContain('Home')
@@ -125,30 +137,59 @@ describe('menu', () => {
 	test('renders empty <ol> when no root pages exist', () => {
 		const pages = [mockPage({ title: 'API Page', section: 'api' })]
 		const result = menu(pages)
-		expect(result).toContain('<section-menu>')
+		expect(result).toContain('<section-menu')
 		expect(result).toContain('<ol>')
 		expect(result).not.toContain('<li>')
 	})
 
 	test('renders empty <ol> for empty input', () => {
 		const result = menu([])
-		expect(result).toContain('<section-menu>')
+		expect(result).toContain('<section-menu')
 		expect(result).toContain('<ol>')
 		expect(result).not.toContain('<li>')
+	})
+
+	test('marks the page matching currentSlug active', () => {
+		const pages = [
+			mockPage({ title: 'Home', url: 'index.html', filename: 'index.md' }),
+			mockPage({ title: 'About', url: 'about.html', filename: 'about.md' }),
+		]
+		const result = menu(pages, 'about')
+		const aboutIndex = result.indexOf('about.html')
+		const aboutLinkStart = result.lastIndexOf('<a', aboutIndex)
+		const aboutLinkEnd = result.indexOf('>', aboutIndex)
+		const aboutLink = result.slice(aboutLinkStart, aboutLinkEnd)
+		expect(aboutLink).toContain('aria-current="page"')
+
+		const homeIndex = result.indexOf('index.html')
+		const homeLinkStart = result.lastIndexOf('<a', homeIndex)
+		const homeLinkEnd = result.indexOf('>', homeIndex)
+		const homeLink = result.slice(homeLinkStart, homeLinkEnd)
+		expect(homeLink).not.toContain('aria-current')
+	})
+
+	test('marks a sectioned page active via its parent section slug', () => {
+		// currentSlug "blog" marks the root "blog" menu item active when
+		// rendering an individual blog post (which has section: "blog")
+		const pages = [
+			mockPage({ title: 'Blog', url: 'blog.html', filename: 'blog.md' }),
+		]
+		const result = menu(pages, 'blog')
+		expect(result).toContain('aria-current="page"')
 	})
 })
 
 /* === menu grouping === */
 
-describe('menu chapter grouping', () => {
-	const chapterPage = (overrides: Partial<PageInfo>): PageInfo =>
+describe('menu group headings', () => {
+	const groupPage = (overrides: Partial<PageInfo>): PageInfo =>
 		mockPage({ section: '', ...overrides })
 
-	test('renders a group heading before the first chapter member', () => {
+	test('renders a group heading before the first group member', () => {
 		const result = menu([
-			chapterPage({ filename: 'index.md', url: 'index.html' }),
-			chapterPage({ filename: 'components.md', url: 'components.html' }),
-			chapterPage({ filename: 'about.md', url: 'about.html' }),
+			groupPage({ filename: 'index.md', url: 'index.html' }),
+			groupPage({ filename: 'components.md', url: 'components.html' }),
+			groupPage({ filename: 'about.md', url: 'about.html' }),
 		])
 		const headingPos = result.indexOf('Building Components')
 		const memberPos = result.indexOf('components.html')
@@ -156,26 +197,27 @@ describe('menu chapter grouping', () => {
 		expect(headingPos).toBeLessThan(memberPos)
 	})
 
-	test('renders each chapter heading only once', () => {
+	test('renders each group heading only once', () => {
 		const result = menu([
-			chapterPage({ filename: 'components.md', url: 'components.html' }),
-			chapterPage({ filename: 'props.md', url: 'props.html' }),
-			chapterPage({ filename: 'effects.md', url: 'effects.html' }),
+			groupPage({ filename: 'components.md', url: 'components.html' }),
+			groupPage({ filename: 'props.md', url: 'props.html' }),
+			groupPage({ filename: 'effects.md', url: 'effects.html' }),
 		])
 		expect(result.split('Building Components').length - 1).toBe(1)
 	})
 
-	test('renders no group heading for ungrouped pages', () => {
+	test('every root page belongs to a group, so every page gets a heading somewhere', () => {
 		const result = menu([
-			chapterPage({ filename: 'index.md', url: 'index.html' }),
-			chapterPage({ filename: 'about.md', url: 'about.html' }),
+			groupPage({ filename: 'index.md', url: 'index.html' }),
+			groupPage({ filename: 'about.md', url: 'about.html' }),
 		])
-		expect(result).not.toContain('class="group"')
+		expect(result).toContain('Get Started')
+		expect(result).toContain('Community')
 	})
 
 	test('group heading carries presentation role', () => {
 		const result = menu([
-			chapterPage({ filename: 'components.md', url: 'components.html' }),
+			groupPage({ filename: 'components.md', url: 'components.html' }),
 		])
 		expect(result).toContain('role="presentation"')
 	})

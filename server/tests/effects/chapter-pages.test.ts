@@ -42,7 +42,7 @@ const bySlug = (slugs: string[]) =>
 
 describe('getChapterVars', () => {
 	test('returns {} for a page outside every chapter', () => {
-		expect(getChapterVars(makePage('styling'), bySlug(['styling']))).toEqual({})
+		expect(getChapterVars(makePage('about'), bySlug(['about']))).toEqual({})
 	})
 
 	test('returns {} for sectioned pages (blog, api)', () => {
@@ -51,10 +51,17 @@ describe('getChapterVars', () => {
 	})
 
 	test('computes prev/next links from sibling titles', () => {
-		const map = bySlug(['components', 'props', 'effects', 'extensions'])
+		const map = bySlug([
+			'components',
+			'props',
+			'effects',
+			'styling',
+			'accessibility',
+			'extensions',
+		])
 		const vars = getChapterVars(makePage('props'), map)
 		expect(vars['chapter-nav']).toContain('Building Components')
-		expect(vars['chapter-nav']).toContain('Part 2 of 4')
+		expect(vars['chapter-nav']).toContain('Part 2 of 6')
 		expect(vars['chapter-nav']).toContain('href="components.html"')
 		expect(vars['chapter-nav']).toContain('Page components')
 		expect(vars['chapter-nav']).toContain('href="effects.html"')

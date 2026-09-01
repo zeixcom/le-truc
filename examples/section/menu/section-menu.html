@@ -1,0 +1,48 @@
+<button
+	id="sidebar-toggle"
+	type="button"
+	aria-expanded="false"
+	aria-controls="sidebar"
+>
+	<span class="visually-hidden">Toggle menu</span>
+	☰
+</button>
+<section-menu id="sidebar">
+	<nav>
+		<h2 class="visually-hidden">Main Menu</h2>
+		<ol>
+			<li class="group" role="presentation">Guide</li>
+			<li>
+				<a href="#page-one">
+					<span class="icon">📘</span>
+					<strong>Page One</strong>
+				</a>
+			</li>
+			<li>
+				<a href="#page-two" class="active" aria-current="page">
+					<span class="icon">📗</span>
+					<strong>Page Two</strong>
+				</a>
+			</li>
+			<li class="group" role="presentation">Reference</li>
+			<li>
+				<a href="#page-three">
+					<span class="icon">📙</span>
+					<strong>Page Three</strong>
+				</a>
+			</li>
+		</ol>
+	</nav>
+</section-menu>
+<main>
+	<h1 id="page-one">Page One</h1>
+	<h1 id="page-two">Page Two</h1>
+	<h1 id="page-three">Page Three</h1>
+	<!-- Fixed to the top-right corner — unambiguously clear of the
+	     left-anchored drawer (max 16rem wide) for the outside-click test,
+	     regardless of grid/layout width or viewport size. -->
+	<p
+		id="outside-target"
+		style="position: fixed; top: 0.5rem; right: 0.5rem; z-index: 200;"
+	>Outside target</p>
+</main>

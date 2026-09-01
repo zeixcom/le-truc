@@ -15,7 +15,7 @@ import {
 	INCLUDES_DIR,
 	INPUT_DIR,
 	LAYOUTS_DIR,
-	MENU_FILE,
+	MENU_GROUPS,
 	MIME_TYPES,
 	OUTPUT_DIR,
 	PAGE_ORDER,
@@ -87,6 +87,49 @@ describe('CHAPTERS', () => {
 	})
 })
 
+/* === MENU_GROUPS === */
+
+describe('MENU_GROUPS', () => {
+	test('every PAGE_ORDER page belongs to exactly one MENU_GROUPS group', () => {
+		for (const slug of PAGE_ORDER) {
+			const owningGroups = MENU_GROUPS.filter(group =>
+				(group.pages as readonly string[]).includes(slug),
+			)
+			expect(owningGroups.length).toBe(1)
+		}
+	})
+
+	test('every group member appears in PAGE_ORDER', () => {
+		for (const group of MENU_GROUPS) {
+			for (const slug of group.pages) {
+				expect(PAGE_ORDER).toContain(slug)
+			}
+		}
+	})
+
+	test("each group's members are contiguous in PAGE_ORDER", () => {
+		for (const group of MENU_GROUPS) {
+			const indices = group.pages
+				.map(slug => PAGE_ORDER.indexOf(slug))
+				.sort((a, b) => a - b)
+			for (let i = 1; i < indices.length; i++) {
+				expect(indices[i]).toBe(indices[0]! + i)
+			}
+		}
+	})
+
+	test('group titles are unique and non-empty', () => {
+		const titles = MENU_GROUPS.map(group => group.title)
+		expect(titles.every(title => title.length > 0)).toBe(true)
+		expect(new Set(titles).size).toBe(titles.length)
+	})
+
+	test('no page belongs to two groups', () => {
+		const allMembers = MENU_GROUPS.flatMap(group => [...group.pages])
+		expect(new Set(allMembers).size).toBe(allMembers.length)
+	})
+})
+
 /* === ROUTE_LAYOUT_MAP === */
 
 describe('ROUTE_LAYOUT_MAP', () => {
@@ -130,7 +173,6 @@ describe('directory constants', () => {
 		['TEST_DIR', TEST_DIR],
 		['LAYOUTS_DIR', LAYOUTS_DIR],
 		['INCLUDES_DIR', INCLUDES_DIR],
-		['MENU_FILE', MENU_FILE],
 		['SITEMAP_FILE', SITEMAP_FILE],
 	] as const
 

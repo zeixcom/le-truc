@@ -29,70 +29,88 @@
 				<a href="#main" class="skiplink visually-hidden">
 					Skip to main content
 				</a>
-				<h1 class="content">Le Truc Docs <small>{{ version }}</small></h1>
-				{{ include 'menu.html' }}
+				<div class="content docs-header-bar">
+					<h1>Le Truc Docs <small>{{ version }}</small></h1>
+					<button
+						type="button"
+						id="sidebar-toggle"
+						class="sidebar-toggle"
+						aria-expanded="false"
+						aria-controls="sidebar"
+					>
+						<span class="visually-hidden">Toggle menu</span>
+						☰
+					</button>
+				</div>
 				<card-callout class="content danger" hidden>
 					<p class="error" role="alert" aria-live="assertive"></p>
 				</card-callout>
 			</header>
-			<div class="example-header">
-				<div class="content-grid">
-					<div class="content">
-						<h1 class="example-title">{{ example-name }}</h1>
-						<p class="example-subtitle">{{ example-description }}</p>
-					</div>
-				</div>
-			</div>
-			<div class="example-meta">
-				<div class="content-grid">
-					<div class="content">
-						<div class="example-tags">
-							<span
-								class="example-tag {{ example-difficulty }}"
-								>{{ example-difficulty }}</span
-							>
-							{{ example-tags }}
-						</div>
-						<div class="example-actions">
-							<a
-								href="./test/{{ example-slug }}.html"
-								class="example-action primary"
-							>
-								▶ Live Demo
-							</a>
-							<a
-								href="{{ example-source }}"
-								class="example-action secondary"
-								target="_blank"
-								rel="noopener"
-							>
-								📄 View Source
-							</a>
-							{{ example-actions }}
+
+			<div class="docs-body">
+				{{ menu }}
+				<div class="docs-main">
+					<div class="example-header">
+						<div class="content-grid">
+							<div class="content">
+								<h1 class="example-title">{{ example-name }}</h1>
+								<p class="example-subtitle">{{ example-description }}</p>
+							</div>
 						</div>
 					</div>
-				</div>
-			</div>
-			<main id="main" class="content-grid">
-				<div class="content example-content">{{ content }}</div>
-			</main>
-			<div class="example-nav">
-				<div class="content-grid">
-					<div class="content">
-						<nav class="example-nav-links" aria-label="Example navigation">
-							<a href="{{ prev-example }}" class="example-nav-link">
-								← {{ prev-example-title }}
-							</a>
-							<a href="/examples/" class="example-nav-link">
-								📋 All Examples
-							</a>
-							<a href="{{ next-example }}" class="example-nav-link">
-								{{ next-example-title }} →
-							</a>
-						</nav>
+					<div class="example-meta">
+						<div class="content-grid">
+							<div class="content">
+								<div class="example-tags">
+									<span
+										class="example-tag {{ example-difficulty }}"
+										>{{ example-difficulty }}</span
+									>
+									{{ example-tags }}
+								</div>
+								<div class="example-actions">
+									<a
+										href="./test/{{ example-slug }}.html"
+										class="example-action primary"
+									>
+										▶ Live Demo
+									</a>
+									<a
+										href="{{ example-source }}"
+										class="example-action secondary"
+										target="_blank"
+										rel="noopener"
+									>
+										📄 View Source
+									</a>
+									{{ example-actions }}
+								</div>
+							</div>
+						</div>
+					</div>
+					<main id="main" class="content-grid">
+						<div class="content example-content">{{ content }}</div>
+					</main>
+					<div class="example-nav">
+						<div class="content-grid">
+							<div class="content">
+								<nav class="example-nav-links" aria-label="Example navigation">
+									<a href="{{ prev-example }}" class="example-nav-link">
+										← {{ prev-example-title }}
+									</a>
+									<a href="/examples/" class="example-nav-link">
+										📋 All Examples
+									</a>
+									<a href="{{ next-example }}" class="example-nav-link">
+										{{ next-example-title }} →
+									</a>
+								</nav>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
+
 			<footer class="content-grid">
 				<div class="content">
 					<h2 class="visually-hidden">Footer</h2>

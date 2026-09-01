@@ -398,6 +398,7 @@ main {
 	> .content,
 	> section {
 		grid-column: content;
+		min-width: 0;
 	}
 
 	.breakout {

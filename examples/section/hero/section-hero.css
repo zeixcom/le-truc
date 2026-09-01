@@ -75,6 +75,11 @@ section-hero {
 			grid-column: breakout;
 			grid-template-columns: 2fr 1fr;
 			gap: var(--space-xl);
+			min-width: 0;
+
+			> * {
+				min-width: 0;
+			}
 		}
 	}
 }

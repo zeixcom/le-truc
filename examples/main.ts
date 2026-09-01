@@ -38,6 +38,7 @@ import './module/splitview/module-splitview.ts'
 import './module/tabgroup/module-tabgroup.ts'
 import './module/ticker/module-ticker.ts'
 import './module/todo/module-todo.ts'
+import './section/menu/section-menu.ts'
 import './test/audit/test-audit.ts'
 import './test/aria/test-aria.ts'
 import './test/context/test-context.ts'
@@ -74,7 +75,3 @@ customElements.define('module-toc', ModuleToc)
 /** Hero section at the top of a page. */
 class SectionHero extends HTMLElement {}
 customElements.define('section-hero', SectionHero)
-
-/** Navigation menu section. */
-class SectionMenu extends HTMLElement {}
-customElements.define('section-menu', SectionMenu)

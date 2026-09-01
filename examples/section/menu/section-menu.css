@@ -1,12 +1,42 @@
-section-menu {
-	grid-column: breakout;
+/* Exception to scoping rule (see module-dialog.css's body.scroll-lock for
+   prior art): `.docs-body`/`.docs-main` are the two-column shell wrapper
+   LT-001 added around `<section-menu>` in docs-src/layouts/*.html — they're
+   siblings/ancestors of the component, not inside it, but the sidebar-role
+   layout only reads as a sidebar once these are a flex row. Below 48em
+   `section-menu` is off-canvas (see the max-width query below), so the
+   shell stays a single column there — nothing to coordinate. */
+.docs-body {
+	display: block;
+}
 
-	& ol {
-		display: grid;
+@media screen and (min-width: 48em) {
+	.docs-body {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-xl);
+		padding-inline-start: var(--space-l);
+	}
+
+	.docs-main {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+}
+
+section-menu {
+	/* Default (no JS, any width): normal in-flow block, all links reachable
+	   without script — the drawer behavior below is JS-enhanced only. */
+	display: block;
+
+	& nav {
+		display: block;
+	}
+
+	& ol,
+	& ul {
+		display: block;
 		list-style: none;
-		gap: var(--space-s);
-		margin-block: var(--space-l);
-		grid-template-columns: 1fr;
+		margin: 0;
 		padding: 0;
 	}
 
@@ -16,7 +46,6 @@ section-menu {
 	}
 
 	& li.group {
-		grid-column: 1 / -1;
 		margin-block-start: var(--space-l);
 		padding: var(--space-xs) var(--space-m);
 		font-size: var(--font-size-s);
@@ -26,15 +55,16 @@ section-menu {
 		color: var(--color-text-soft);
 	}
 
+	& li.group:first-child {
+		margin-block-start: 0;
+	}
+
 	& a {
-		display: grid;
-		grid-template-areas: "icon title" "icon description";
-		grid-template-columns: auto 1fr;
-		grid-template-rows: auto 1fr;
-		gap: var(--space-xs) var(--space-s);
-		padding: var(--space-m);
+		display: flex;
+		align-items: center;
+		gap: var(--space-s);
+		padding: var(--space-s) var(--space-m);
 		border-radius: var(--space-xs);
-		height: calc(100% - 2 * var(--space-m));
 		color: var(--color-text);
 		text-decoration: none;
 
@@ -43,16 +73,18 @@ section-menu {
 			background-color: var(--color-secondary-hover);
 		}
 
-		&.active {
+		&.active,
+		&[aria-current="page"] {
 			background-color: var(--color-background-alt);
+			color: var(--color-primary);
 		}
 
 		.icon {
-			grid-area: icon;
 			display: flex;
+			flex: none;
 			align-items: center;
 			justify-content: center;
-			font-size: var(--font-size-l);
+			font-size: var(--font-size-m);
 			width: var(--space-xl);
 			height: var(--space-xl);
 			border-radius: 50%;
@@ -60,33 +92,146 @@ section-menu {
 			border: 1px solid var(--color-border-soft);
 		}
 
-		& strong {
-			grid-area: title;
+		strong {
 			font-size: var(--font-size-m);
+			font-weight: var(--font-weight-regular);
 			line-height: var(--line-height-s);
 			margin: 0;
 		}
 
-		& small {
-			grid-area: description;
-			font-size: var(--font-size-s);
-			line-height: var(--line-height-m);
-			margin: 0;
-			color: var(--color-text-soft);
+		&.active strong,
+		&[aria-current="page"] strong {
+			font-weight: var(--font-weight-bold);
+		}
+	}
+
+	.backdrop {
+		display: none;
+	}
+}
+
+/* Off-canvas drawer — only once JS has enhanced the component (`.js`,
+   added by section-menu.ts on connect). Without JS, section-menu stays in
+   normal flow at every width (rule block above). */
+@media screen and (max-width: 47.999em) {
+	/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID in
+	   section-menu.ts). Stays above the drawer's fixed, viewport-covering
+	   backdrop (z-index 100) so it remains clickable to close while open. */
+	#sidebar-toggle {
+		position: relative;
+		z-index: 101;
+	}
+
+	section-menu.js {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		/* No `visibility`/transition-delay hiding trick here: a transition on
+		   a property that also changes the moment `.js` is first added (going
+		   from the pre-JS default straight to the closed state) delays that
+		   very first application too — the drawer would sit visibly "open"
+		   for one full `--transition-short` after every page load. `transform`
+		   + `pointer-events` alone close it instantly; only the *movement* of
+		   `<nav>` (below) animates. */
+		pointer-events: none;
+
+		& nav {
+			position: absolute;
+			z-index: 1;
+			inset-block: 0;
+			inset-inline-start: 0;
+			width: 16rem;
+			max-width: 85vw;
+			overflow-y: auto;
+			background-color: var(--color-background);
+			border-inline-end: 1px solid var(--color-border-soft);
+			padding-block: var(--space-l);
+			pointer-events: auto;
+			transform: translateX(-100%);
+		}
+
+		& .backdrop {
+			display: block;
+			position: absolute;
+			z-index: 0;
+			inset: 0;
+			background-color: var(--color-shadow);
+			opacity: var(--opacity-transparent);
+		}
+
+		/* `.ready` (added a frame after `.js`, see section-menu.ts) gates the
+		   transitions themselves — the closed layout above still applies
+		   instantly on connect either way, but without this gate the *first*
+		   application of `.js` would itself be a transitionable change (no
+		   `.js` → `.js`), animating the drawer sliding out on every page
+		   load even though it was never open. */
+		&.ready {
+			& nav {
+				transition: transform var(--transition-short) var(--easing-inout);
+			}
+
+			& .backdrop {
+				transition: opacity var(--transition-short) var(--easing-inout);
+			}
+		}
+
+		&.open {
+			pointer-events: auto;
+
+			& nav {
+				transform: translateX(0);
+			}
+
+			& .backdrop {
+				opacity: var(--opacity-dimmed);
+				pointer-events: auto;
+			}
 		}
 	}
 }
 
-@media screen and (min-width: 32em) and (max-width: 48em) {
-	section-menu ol {
-		grid-template-columns: 1fr 1fr;
-		gap: var(--space-m);
-	}
-}
-
 @media screen and (min-width: 48em) {
-	section-menu ol {
-		grid-template-columns: 1fr 1fr 1fr;
-		gap: var(--space-l);
+	/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID in
+	   section-menu.ts). Hidden above the breakpoint since the sidebar is
+	   always visible there and has nothing to toggle. */
+	#sidebar-toggle {
+		display: none;
+	}
+
+	section-menu {
+		/* Above the breakpoint the sidebar is always visible, sticky, and
+		   independently scrollable — no toggle, no off-canvas/backdrop. */
+		position: sticky;
+		top: 0;
+		align-self: start;
+		flex: 0 0 16rem;
+		width: 16rem;
+		max-height: 100dvh;
+		overflow-y: auto;
+		padding-block: var(--space-l);
+
+		&.js {
+			position: sticky;
+			inset: auto;
+			visibility: visible;
+			pointer-events: auto;
+			transition: none;
+
+			& nav {
+				position: static;
+				inset: auto;
+				width: auto;
+				max-width: none;
+				overflow-y: visible;
+				background-color: transparent;
+				border-inline-end: none;
+				padding-block: 0;
+				transform: none;
+			}
+
+			& .backdrop {
+				display: none;
+			}
+		}
 	}
 }

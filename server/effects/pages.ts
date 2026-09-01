@@ -6,7 +6,11 @@ import {
 	LAYOUTS_DIR,
 	OUTPUT_DIR,
 } from '../config'
-import { docsMarkdown, type ProcessedMarkdownFile } from '../file-signals'
+import {
+	docsMarkdown,
+	type PageInfo,
+	type ProcessedMarkdownFile,
+} from '../file-signals'
 import {
 	calculateFileHash,
 	getFileContent,
@@ -14,6 +18,7 @@ import {
 	writeFileSafe,
 } from '../io'
 import { type ChapterLink, chapterNav } from '../templates/chapter-nav'
+import { menu } from '../templates/menu'
 import { performanceHints } from '../templates/performance-hints'
 import { escapeHtml, generateSlug, html, raw } from '../templates/utils'
 import { createBuildEffect } from './build-effect'
@@ -327,6 +332,7 @@ export const getChapterVars = (
 const applyTemplate = async (
 	processedFile: ProcessedMarkdownFile,
 	assetHashes: { css: string; js: string },
+	rootPages: PageInfo[],
 	extraReplacements: Record<string, string> = {},
 ): Promise<string> => {
 	try {
@@ -345,6 +351,14 @@ const applyTemplate = async (
 		// Replace content
 		layout = layout.replace('{{ content }}', processedFile.htmlContent)
 
+		// Render the sidebar menu for this page, marking the current page
+		// active. Sectioned pages (blog posts, API symbols) mark their parent
+		// root page (the section slug) active instead of themselves, since
+		// only root pages appear in the menu.
+		const currentSlug =
+			processedFile.section || processedFile.filename.replace('.md', '')
+		const menuHtml = menu(rootPages, currentSlug)
+
 		// Replace template variables
 		const replacements: { [key: string]: string } = {
 			url: processedFile.relativePath.replace('.md', '.html'),
@@ -357,6 +371,7 @@ const applyTemplate = async (
 			'performance-hints': performanceHintsHtml,
 			'additional-preloads': additionalPreloads.join('\n\t\t'),
 			'alternate-link': `./${processedFile.relativePath}`,
+			menu: menuHtml,
 			// Convert metadata values to strings
 			...Object.fromEntries(
 				Object.entries(processedFile.metadata).map(([key, value]) => [
@@ -419,6 +434,21 @@ export const pagesEffect = (onRebuild?: () => void) =>
 				if (!f.section) rootPagesBySlug.set(f.filename.replace('.md', ''), f)
 			}
 
+			// Root pages as PageInfo-shaped objects, for the sidebar menu
+			// (rendered per-page below, with the current page marked active)
+			const rootPages: PageInfo[] = Array.from(rootPagesBySlug.values()).map(
+				f => ({
+					title: f.title,
+					emoji: f.metadata.emoji || '📄',
+					description: f.metadata.description || '',
+					url: f.relativePath.replace('.md', '.html'),
+					filename: f.filename,
+					relativePath: f.relativePath,
+					lastModified: f.lastModified,
+					section: f.section,
+				}),
+			)
+
 			// Process all markdown files
 			const processPromises = Array.from(processedFiles.values()).map(
 				async (processedFile: ProcessedMarkdownFile) => {
@@ -464,6 +494,7 @@ export const pagesEffect = (onRebuild?: () => void) =>
 						const finalHtml = await applyTemplate(
 							fileToRender,
 							assetHashes,
+							rootPages,
 							extra,
 						)
 
