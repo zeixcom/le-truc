@@ -328,8 +328,9 @@ describe('generateBlogArchive', () => {
 		]
 		const result = generateBlogArchive(posts)
 		expect(result).toContain(
-			'<module-blogarchive aria-labelledby="blog-archive-title">',
+			'<section class="blog-archive" aria-labelledby="blog-archive-title">',
 		)
+		expect(result).toContain('<module-blogarchive>')
 		expect(result).toContain('<h2 id="blog-archive-title">Archive</h2>')
 		expect(result).toContain('<ul>')
 	})
