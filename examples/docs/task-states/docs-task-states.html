@@ -9,10 +9,15 @@
 	<output class="value">no value resolved yet</output>
 	<p class="error" role="alert" hidden></p>
 	<div class="controls">
-		<button class="fetch" type="button">Fetch</button>
-		<label class="fail-toggle">
-			<input class="fail" type="checkbox" /> Let the next fetch fail
-		</label>
+		<basic-button>
+			<button class="fetch constructive" type="button">Fetch</button>
+		</basic-button>
+		<form-checkbox class="checkbox">
+			<label>
+				<input type="checkbox" class="fail visually-hidden">
+				<span class="label">Let the next fetch fail</span>
+			</label>
+		</form-checkbox>
 	</div>
 	<ol class="log"></ol>
 </docs-task-states>

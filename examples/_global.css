@@ -435,7 +435,7 @@ footer {
 }
 
 section {
-	margin-block: var(--space-xl);
+	margin-block-start: var(--space-xl);
 
 	&.blog-posts {
 		display: flex;

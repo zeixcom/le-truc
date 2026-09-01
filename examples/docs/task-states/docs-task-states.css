@@ -55,6 +55,8 @@ docs-task-states {
 	& p.error {
 		margin-block: var(--space-m);
 		color: var(--color-error-text);
+		background: var(--color-error);
+		padding: var(--space-xs) var(--space-s);
 	}
 
 	& .controls {
@@ -65,16 +67,18 @@ docs-task-states {
 	}
 
 	& ol.log {
-		margin-block-start: var(--space-m);
-		padding: var(--space-s) var(--space-m);
-		border-radius: var(--space-xs);
+		margin: var(--space-m) 0 0;
+		padding: 0;
 		background-color: var(--color-neutral-10);
 		list-style: none;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-xxs);
-		font-family: ui-monospace, monospace;
-		font-size: var(--font-size-s);
-		color: var(--color-text-soft);
+
+		& li {
+			font-family: ui-monospace, monospace;
+			font-size: var(--font-size-s);
+			color: var(--color-text-soft);
+		}
 	}
 }

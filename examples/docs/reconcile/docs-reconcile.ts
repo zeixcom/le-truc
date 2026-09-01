@@ -1,4 +1,4 @@
-import { createList, defineComponent, reconcile } from '../../../index'
+import { createList, defineComponent, query, reconcile } from '../../../index'
 
 /**
  * Teaching component for the "Reconcile the DOM" section of the Dynamic
@@ -14,11 +14,12 @@ import { createList, defineComponent, reconcile } from '../../../index'
 
 const TOWNS = ['Adelboden', 'Basel', 'Chur', 'Davos']
 const MORE_TOWNS = [
-	'Emmental',
-	'Frauenfeld',
-	'Genf',
+	'Engelberg',
+	'Filisur',
+	'Geneva',
+	'Herisau',
 	'Interlaken',
-	'Jona',
+	'Juf',
 	'Kreuzlingen',
 	'Lugano',
 	'Montreux',
@@ -45,10 +46,10 @@ export default defineComponent('docs-reconcile', ({ first, host, on }) => {
 	let created = 0
 	const list = createList(TOWNS, { keyConfig: (town: string) => town })
 
-	reconcile(container, template, list, row => {
-		const keyEl = row.querySelector('.key')
-		const stampEl = row.querySelector('small')
-		if (keyEl) keyEl.textContent = row.dataset.key ?? ''
+	reconcile(container, template, list, (_row, _item, key, first) => {
+		const keyEl = first('.label')
+		const stampEl = first('small')
+		if (keyEl) keyEl.textContent = key ?? ''
 		if (stampEl) stampEl.textContent = `created #${++created}`
 	})
 

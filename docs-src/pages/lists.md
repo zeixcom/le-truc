@@ -65,21 +65,69 @@ See it for yourself. Check a checkbox, then shuffle or reverse the list: the che
 {% demo %}
 ```html
 <docs-reconcile>
-  <div class="controls">
-    <button type="button" data-add>Add town</button>
-    <button type="button" data-remove>Remove last</button>
-    <button type="button" data-shuffle>Shuffle</button>
-    <button type="button" data-reverse>Reverse</button>
-  </div>
-  <ul data-container>
-    <li data-key="Adelboden"><label><input type="checkbox"> <span class="key"></span></label> <small></small></li>
-    <li data-key="Basel"><label><input type="checkbox"> <span class="key"></span></label> <small></small></li>
-    <li data-key="Chur"><label><input type="checkbox"> <span class="key"></span></label> <small></small></li>
-    <li data-key="Davos"><label><input type="checkbox"> <span class="key"></span></label> <small></small></li>
-  </ul>
-  <template>
-    <li><label><input type="checkbox"> <span class="key"></span></label> <small></small></li>
-  </template>
+	<div class="controls">
+		<basic-button>
+			<button type="button" class="constructive" data-add>Add town</button>
+		</basic-button>
+		<basic-button>
+			<button type="button" class="destructive" data-remove>Remove last</button>
+		</basic-button>
+		<basic-button>
+			<button type="button" data-shuffle>Shuffle</button>
+		</basic-button>
+		<basic-button>
+			<button type="button" data-reverse>Reverse</button>
+		</basic-button>
+	</div>
+	<ul data-container>
+		<li data-key="Adelboden">
+			<form-checkbox class="checkbox">
+				<label>
+					<input type="checkbox" class="visually-hidden">
+					<span class="label"></span>
+				</label>
+			</form-checkbox>
+			<small></small>
+		</li>
+		<li data-key="Basel">
+			<form-checkbox class="checkbox">
+				<label>
+					<input type="checkbox" class="visually-hidden">
+					<span class="label"></span>
+				</label>
+			</form-checkbox>
+			<small></small>
+		</li>
+		<li data-key="Chur">
+			<form-checkbox class="checkbox">
+				<label>
+					<input type="checkbox" class="visually-hidden">
+					<span class="label"></span>
+				</label>
+			</form-checkbox>
+			<small></small>
+		</li>
+		<li data-key="Davos">
+			<form-checkbox class="checkbox">
+				<label>
+					<input type="checkbox" class="visually-hidden">
+					<span class="label"></span>
+				</label>
+			</form-checkbox>
+			<small></small>
+		</li>
+	</ul>
+	<template>
+		<li>
+			<form-checkbox class="checkbox">
+				<label>
+					<input type="checkbox" class="visually-hidden">
+					<span class="label"></span>
+				</label>
+			</form-checkbox>
+			<small></small>
+		</li>
+	</template>
 </docs-reconcile>
 ```
 {% /demo %}

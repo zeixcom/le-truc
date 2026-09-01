@@ -158,7 +158,7 @@ defineComponent('form-textbox', ({ expose, first, host, on, watch }) => {
 Common use cases include `reset()`, `stepUp()` / `stepDown()`, or `clear()`. The function operates on the host and hides implementation details. You can expose both reactive values (`value`) and methods (`clear`) side by side.
 
 {% callout .caution title="Always use defineMethod(), never a plain function" %}
-Le Truc identifies method producers by a brand symbol that `defineMethod()` attaches. Le Truc treats an unbranded function passed to `expose()` as a thunk instead. This creates a computed reactive property — almost never what you wanted.
+Le Truc identifies method producers by a brand symbol that `defineMethod()` attaches. Le Truc treats an unbranded function passed to `expose()` as a thunk instead. This creates a computed reactive property.
 {% /callout %}
 
 {% /section %}

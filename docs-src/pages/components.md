@@ -93,8 +93,12 @@ The playground below is live. Disconnect the component and read the log: the cle
     </docs-pulse>
   </div>
   <div class="controls">
-    <button class="connect" type="button" disabled>Connect</button>
-    <button class="disconnect" type="button">Disconnect</button>
+    <basic-button>
+      <button class="connect constructive" type="button" disabled>Connect</button>
+    </basic-button>
+    <basic-button>
+      <button class="disconnect destructive" type="button">Disconnect</button>
+    </basic-button>
   </div>
   <ol class="log"></ol>
 </docs-lifecycle>
