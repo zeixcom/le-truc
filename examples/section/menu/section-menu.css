@@ -44,7 +44,7 @@ section-menu {
 	}
 
 	& li.group {
-		margin-block-start: var(--space-l);
+		margin-block-start: var(--space-s);
 		padding: var(--space-xs) var(--space-m);
 		font-size: var(--font-size-xs);
 		font-weight: var(--font-weight-bold);
@@ -64,6 +64,8 @@ section-menu {
 		padding: var(--space-xs) var(--space-m);
 		color: var(--color-text);
 		text-decoration: none;
+		font-size: var(--font-size-s);
+		line-height: var(--line-height-s);
 
 		&:hover,
 		&:focus {

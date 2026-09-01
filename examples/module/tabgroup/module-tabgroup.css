@@ -50,7 +50,6 @@ module-tabgroup {
 
 	> [role="tabpanel"] {
 		font-size: var(--font-size-m);
-		background: var(--color-background);
 		margin-block-start: var(--space-l);
 	}
 }

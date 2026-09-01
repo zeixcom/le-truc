@@ -34,7 +34,7 @@ module-list {
 	}
 }
 
-@container (width > 32rem) {
+@container (width > 27rem) {
 	module-list {
 		& form {
 			flex-direction: row;
