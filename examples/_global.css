@@ -430,7 +430,14 @@ footer {
 	margin-block: var(--space-m);
 
 	& p {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
 		margin: 0;
+	}
+
+	& a {
+		display: flex;
 	}
 }
 

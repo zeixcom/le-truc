@@ -13,7 +13,11 @@
 	display: block;
 }
 
-@media screen and (min-width: 48em) {
+.quicklinks {
+	display: none;
+}
+
+@media screen and (min-width: 45em) {
 	.docs-body {
 		display: flex;
 		align-items: flex-start;
@@ -112,7 +116,7 @@ section-menu {
 /* Off-canvas drawer — only once JS has enhanced the component (`.js`,
    added by section-menu.ts on connect). Without JS, section-menu stays in
    normal flow at every width (rule block above). */
-@media screen and (max-width: 47.999em) {
+@media screen and (max-width: 44.999em) {
 	/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID in
 	   section-menu.ts). Stays above the drawer's fixed, viewport-covering
 	   backdrop (z-index 100) so it remains clickable to close while open. */
@@ -218,10 +222,32 @@ section-menu {
 	}
 }
 
-@media screen and (min-width: 48em) {
+@media screen and (min-width: 27em) {
+	.docs-header-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.quicklinks {
+		display: flex;
+		align-items: center;
+		gap: var(--space-m);
+
+		& a {
+			display: flex;
+		}
+
+		& img {
+			display: block;
+		}
+	}
+}
+
+@media screen and (min-width: 45em) {
 	/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID in
-	   section-menu.ts). Hidden above the breakpoint since the sidebar is
-	   always visible there and has nothing to toggle. */
+   section-menu.ts). Hidden above the breakpoint since the sidebar is
+   always visible there and has nothing to toggle. */
 	#sidebar-toggle {
 		display: none;
 	}
