@@ -68,7 +68,7 @@ defineComponent(
 - 🚦 **Reactive properties** — signals track their dependencies automatically
 - ⚡️ **Pinpoint effects** — changes only the exact DOM nodes that changed
 - 🛡️ **Type-safe** — TypeScript infers types from selector strings through to property types; it finds integration errors when you compile the code
-- ♿ **Accessible** — reflect default ARIA semantics and sync with child elements' content attributes
+- ♿ **Accessible** — reflect default ARIA semantics and sync with child elements' ARIA attributes
 - 🧩 **Composable** — build component behavior from small, reusable parser and effect functions
 - 🌐 **Context support** — components share state without you passing props through each level
 - 🪶 **Small size** — core under 9 kB gzipped, tree-shakeable extensions

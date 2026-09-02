@@ -235,7 +235,11 @@ section-menu {
 		gap: var(--space-m);
 
 		& a {
-			display: flex;
+			text-decoration: none;
+
+			&:hover {
+				text-decoration: underline;
+			}
 		}
 
 		& img {
