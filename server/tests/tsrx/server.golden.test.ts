@@ -17,10 +17,11 @@
  *
  * CSS is asserted byte for byte against the hand-written artifacts.
  */
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent } from '../../tsrx'
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const read = (rel: string): string =>
@@ -97,11 +98,12 @@ if (
 	throw new Error('corpus components must compile for golden tests')
 
 // Generated server modules must exist for in-process execution; the effect
-// normally writes them, tests must not depend on a prior build.
+// normally writes them, tests must not depend on a prior build — nor write
+// into the build's own output directory (LT-140).
+const generated = createGeneratedDir('server-golden')
+afterAll(() => generated.cleanup())
 const ensureEmitted = (tag: string, code: string): void => {
-	const out = path.join(ROOT, 'server/generated/tsrx', `${tag}.server.ts`)
-	fs.mkdirSync(path.dirname(out), { recursive: true })
-	fs.writeFileSync(out, code)
+	generated.emit(`${tag}.server.ts`, code)
 }
 ensureEmitted('basic-counter', counter.component.serverCode)
 ensureEmitted('module-tabgroup', tabgroup.component.serverCode)
@@ -115,7 +117,7 @@ const render = async (
 	tag: string,
 	args: unknown,
 ): Promise<string> => {
-	const mod = await import(`../../generated/tsrx/${tag}.server.ts`)
+	const mod = await generated.importModule(`${tag}.server.ts`)
 	const fn = mod[`render${name}`] as (args: unknown) => string
 	if (typeof fn !== 'function')
 		throw new Error(`render function for ${tag} missing`)

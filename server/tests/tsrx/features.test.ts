@@ -6,12 +6,11 @@
  * dynamic rendering, and parse-error hints for the newer-grammar constructs
  * (statement-form switch, {html}/{text}/{ref} keywords, await).
  */
-import { afterEach, describe, expect, test } from 'bun:test'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { afterAll, afterEach, describe, expect, test } from 'bun:test'
 import sanitizeHtml from 'sanitize-html'
 import { compileComponent } from '../../tsrx'
 import { configureHtmlSanitizer } from '../../tsrx/runtime'
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 
 // The runtime's default sanitizer (unconfigured state): escape everything,
 // safe but inert. Tests that configure a permissive/stripping sanitizer to
@@ -31,8 +30,6 @@ const stripDangerousMarkup = (html: string): string =>
 		allowedAttributes: sanitizeHtml.defaults.allowedAttributes,
 	})
 
-const ROOT = path.resolve(import.meta.dir, '../../..')
-
 const wrap = (
 	template: string,
 	params = '{ status, markup }: { status?: string; markup?: string }',
@@ -51,16 +48,18 @@ const wrap = (
 const compiled = (template: string) =>
 	compileComponent(wrap(template), 'c.tsrx', new Set())
 
+// A per-run directory, not the build pipeline's own output (LT-140).
+const generated = createGeneratedDir('features')
+afterAll(() => generated.cleanup())
+
 const ensureEmitted = (tag: string, code: string): void => {
-	const out = path.join(ROOT, 'server/generated/tsrx', `${tag}.server.ts`)
-	fs.mkdirSync(path.dirname(out), { recursive: true })
-	fs.writeFileSync(out, code)
+	generated.emit(`${tag}.server.ts`, code)
 }
 
 const render = async (tag: string, args: unknown): Promise<string> => {
-	const mod = (await import(`../../generated/tsrx/${tag}.server.ts`)) as {
+	const mod = await generated.importModule<{
 		renderC: (args: unknown) => string
-	}
+	}>(`${tag}.server.ts`)
 	return mod.renderC(args)
 }
 

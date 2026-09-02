@@ -7,8 +7,9 @@
  * one extractor produces identical declarations from both input shapes.
  *
  * Mechanism: compile the corpus in-process, run `cem analyze` with a shadow
- * config (globs at the generated clients only, output into the gitignored
- * server/generated/tsrx/), then compare declarations against the pinned
+ * config (globs at this run's own gitignored output directory only, never
+ * the build pipeline's server/generated/tsrx/ — LT-140), then compare
+ * declarations against the pinned
  * hand-written-derived expectations below — captured from the committed
  * manifest before the globs switched (2026-08-22).
  *
@@ -20,13 +21,15 @@
  * default) extracted from a generated `expose()` call, and extension-derived
  * members from the emitted third argument.
  */
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent } from '../../tsrx'
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
-const GENERATED = path.join(ROOT, 'server/generated/tsrx')
+const generated = createGeneratedDir('cem-golden')
+afterAll(() => generated.cleanup())
 const read = (rel: string): string =>
 	fs.readFileSync(path.isAbsolute(rel) ? rel : path.join(ROOT, rel), 'utf8')
 
@@ -34,23 +37,29 @@ const registry = new Set<string>([
 	'basic-counter',
 	'module-tabgroup',
 	'form-textbox',
+	'form-checkbox',
 ])
+// Every tag asserted below must be listed here. Until LT-140 gave this file
+// its own output directory, form-checkbox was asserted but never compiled —
+// its declaration came from a client another writer had left in the shared
+// server/generated/tsrx/.
 const SOURCES = [
 	'examples/basic/counter/basic-counter.tsrx',
 	'examples/module/tabgroup/module-tabgroup.tsrx',
 	'examples/form/textbox/form-textbox.tsrx',
+	'examples/form/checkbox/form-checkbox.tsrx',
 ] as const
 
-/** The shadow config: analyzer + plugin over ONLY the generated clients. */
+/** The shadow config: analyzer + plugin over ONLY this run's generated clients. */
 const SHADOW_CONFIG = `import { resolve } from 'node:path'
 import { leTrucPlugin } from '@zeix/cem-plugin-le-truc'
 
 let typeChecker
 
 export default {
-	globs: ['server/generated/tsrx/*.client.ts'],
+	globs: ['${generated.relativePath}/*.client.ts'],
 	exclude: [],
-	outdir: 'server/generated/tsrx',
+	outdir: '${generated.relativePath}',
 	// The analyzer defaults packagejson: true and would rewrite the ROOT
 	// package.json "customElements" field to this shadow outdir — never
 	// enable it for a shadow manifest.
@@ -82,12 +91,9 @@ const declarationsByTag = async (): Promise<Map<string, CemDeclaration>> => {
 		)
 		for (const d of diagnostics) console.warn(`[${d.code}] ${d.message}`)
 		if (!component) throw new Error(`${rel} did not compile`)
-		fs.writeFileSync(
-			path.join(GENERATED, component.entry.clientModule),
-			component.clientCode,
-		)
+		generated.emit(component.entry.clientModule, component.clientCode)
 	}
-	fs.writeFileSync(path.join(GENERATED, 'cem.config.mjs'), SHADOW_CONFIG)
+	generated.emit('cem.config.mjs', SHADOW_CONFIG)
 
 	const proc = Bun.spawn(
 		[
@@ -95,7 +101,7 @@ const declarationsByTag = async (): Promise<Map<string, CemDeclaration>> => {
 			'cem',
 			'analyze',
 			'--config',
-			'server/generated/tsrx/cem.config.mjs',
+			`${generated.relativePath}/cem.config.mjs`,
 			'--quiet',
 		],
 		{ stdout: 'pipe', stderr: 'pipe', cwd: ROOT },
@@ -108,7 +114,7 @@ const declarationsByTag = async (): Promise<Map<string, CemDeclaration>> => {
 	if (exitCode !== 0) throw new Error(`cem analyze failed: ${stdout}${stderr}`)
 
 	const manifest = JSON.parse(
-		fs.readFileSync(path.join(GENERATED, 'custom-elements.json'), 'utf8'),
+		fs.readFileSync(path.join(generated.path, 'custom-elements.json'), 'utf8'),
 	) as { modules?: Array<{ declarations?: CemDeclaration[] }> }
 	const byTag = new Map<string, CemDeclaration>()
 	for (const module of manifest.modules ?? [])

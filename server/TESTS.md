@@ -104,6 +104,27 @@ server/tests/
 - `assertContains` / `assertNotContains` / `assertMatches` / `assertValidHtml` — assertion wrappers
 - `wait(ms)` / `retryUntil(fn, options)` — timing helpers for async/integration tests
 
+`server/tests/helpers/generated-tsrx.ts` provides:
+
+- `createGeneratedDir(label)` — a per-run output directory for tests that EMIT or EXECUTE
+  generated TSRX modules; returns `{ path, relativePath, emit, importModule, cleanup }`
+
+**Never write into `server/generated/tsrx/` from a test** (LT-140). That directory belongs to
+the build pipeline, and sharing it makes the suite intermittently red in two ways: a
+concurrent `build-tsrx` / `check:tsrx` / dev server overwrites a module between a test's write
+and its import, and two test files choosing the same tag overwrite each other, since
+`bun test` shares one process and one module registry. Take a `createGeneratedDir()` instead
+and `afterAll(() => generated.cleanup())`. Tests that drive the real corpus runner pass the
+directory through: `compileTsrxCorpus(files, generated.path)`.
+
+The directory is deliberately a sibling of the real one rather than an OS temp dir — emitted
+modules address `../../tsrx/runtime` and `../../../examples/…` relatively, so only the same
+depth under the repo root keeps those specifiers resolving.
+
+Sharing the directory also HIDES bugs, not just causes flakes: two tests were passing on
+artifacts a previous `build-tsrx` had left behind, asserting over modules they never compiled.
+If a test needs a module it does not itself emit, emit it explicitly.
+
 ---
 
 ## Verification Processes

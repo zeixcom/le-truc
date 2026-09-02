@@ -71,11 +71,17 @@ export const handwrittenExampleModules = (): Map<string, string> => {
  * Compile the whole corpus (exported for the standalone `scripts/build-tsrx.ts`
  * runner — `build:cem` needs the generated clients on disk before `cem
  * analyze` reads them).
+ *
+ * `outDir` defaults to the pipeline's own `server/generated/tsrx/`. Tests
+ * pass a per-run directory instead so they never race the build (LT-140); it
+ * must sit at the same depth under the repo root, since emitted modules
+ * address the runtime and the hand-written examples relatively.
  */
 export const compileTsrxCorpus = async (
 	files: FileInfo[],
+	outDir: string = GENERATED_DIR,
 ): Promise<CompiledSpanInfo[]> => {
-	await mkdir(GENERATED_DIR, { recursive: true })
+	await mkdir(outDir, { recursive: true })
 
 	// Registry-aware dispatch needs every compilable tag up front: first
 	// pass collects tags (warnings already skip their files), second pass
@@ -162,11 +168,11 @@ export const compileTsrxCorpus = async (
 		report(rel, diagnostics)
 		if (!component) continue
 		const { entry } = component
-		const clientModulePath = getFilePath(GENERATED_DIR, entry.clientModule)
-		const serverModulePath = getFilePath(GENERATED_DIR, entry.serverModule)
+		const clientModulePath = getFilePath(outDir, entry.clientModule)
+		const serverModulePath = getFilePath(outDir, entry.serverModule)
 		await writeFileSafe(serverModulePath, component.serverCode)
 		await writeFileSafe(clientModulePath, component.clientCode)
-		await writeFileSafe(getFilePath(GENERATED_DIR, entry.css), component.css)
+		await writeFileSafe(getFilePath(outDir, entry.css), component.css)
 		entries.push(entry)
 		spanInfos.push({
 			tag: entry.tag,
@@ -180,7 +186,7 @@ export const compileTsrxCorpus = async (
 	}
 
 	await writeFileSafe(
-		getFilePath(GENERATED_DIR, 'registry.json'),
+		getFilePath(outDir, 'registry.json'),
 		registryJson(entries),
 	)
 	console.log(`📝 TSRX compilation completed (${entries.length} component(s))`)

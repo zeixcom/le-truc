@@ -21,12 +21,13 @@
  * need a value to render at all — `ARGS` carries those; everything else
  * renders from `{}`, which is also what proves the defaults work.
  */
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { Glob } from 'bun'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { FileInfo } from '../../file-signals'
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -100,7 +101,13 @@ const corpus = async (): Promise<FileInfo[]> => {
 	return files
 }
 
-const compiled = await compileTsrxCorpus(await corpus())
+// The REAL corpus runner writes every generated module; a per-run directory
+// keeps that out of the build pipeline's own output (LT-140). Render happens
+// through `info.serverModulePath`, so the redirect is transparent.
+const generated = createGeneratedDir('render-smoke')
+afterAll(() => generated.cleanup())
+
+const compiled = await compileTsrxCorpus(await corpus(), generated.path)
 
 describe('server render smoke — every corpus tag renders (LT-121)', () => {
 	test('the corpus compiled at all', () => {

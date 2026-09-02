@@ -6,13 +6,10 @@
  * `server/effects/tsrx.ts`'s two-pass compile) and the parent's generated
  * server module imports and calls the child's `render<Name>()`.
  */
-import { describe, expect, test } from 'bun:test'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { afterAll, describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../tsrx'
 import type { RegistryEntry } from '../../tsrx/registry'
-
-const ROOT = path.resolve(import.meta.dir, '../../..')
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 
 const child = `export function BasicChild({ label }: { label: string })
 	@{
@@ -35,11 +32,12 @@ const composeRegistryOf = (...entries: RegistryEntry[]) =>
 
 // Generated server modules must exist for in-process execution (LT-090);
 // the effect normally writes them, tests must not depend on a prior build.
-// Same harness as server.golden.test.ts — server/generated is gitignored.
+// Same harness as server.golden.test.ts — a per-run directory, never the
+// build pipeline's own output (LT-140).
+const generated = createGeneratedDir('compose')
+afterAll(() => generated.cleanup())
 const ensureEmitted = (tag: string, code: string): void => {
-	const out = path.join(ROOT, 'server/generated/tsrx', `${tag}.server.ts`)
-	fs.mkdirSync(path.dirname(out), { recursive: true })
-	fs.writeFileSync(out, code)
+	generated.emit(`${tag}.server.ts`, code)
 }
 
 describe('component composition (ADR 0023 sub-design 10)', () => {
@@ -506,7 +504,7 @@ export function BasicParent({ title }: { title: string })
 		// served DOM, not just in the query string.
 		ensureEmitted('basic-child', childComponent.serverCode)
 		ensureEmitted('basic-parent', component.serverCode)
-		const mod = await import('../../generated/tsrx/basic-parent.server.ts')
+		const mod = await generated.importModule('basic-parent.server.ts')
 		const html = (
 			mod as { renderBasicParent: (args: Record<string, unknown>) => string }
 		).renderBasicParent({ title: 'Hi' })

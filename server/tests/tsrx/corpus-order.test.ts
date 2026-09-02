@@ -15,20 +15,30 @@
  * These tests pin the invariant: the compiled tag set is independent of
  * the input file order.
  */
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 import * as path from 'node:path'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { FileInfo } from '../../file-signals'
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { loadTsrxCorpus } from './corpus-fixture'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
+
+// These tests run the REAL corpus runner, which writes every generated
+// module. Point it at a per-run directory so it never races the build
+// pipeline writing the same files (LT-140).
+const generated = createGeneratedDir('corpus-order')
+afterAll(() => generated.cleanup())
 
 describe('corpus compile order invariance', () => {
 	test('module-list compiles even when it precedes its pass() target', async () => {
 		const files = await loadTsrxCorpus()
 		const first = files.filter(f => f.filename.endsWith('module-list.tsrx'))
 		const rest = files.filter(f => !f.filename.endsWith('module-list.tsrx'))
-		const compiled = await compileTsrxCorpus([...first, ...rest])
+		const compiled = await compileTsrxCorpus(
+			[...first, ...rest],
+			generated.path,
+		)
 		const tags = compiled.map(info => info.tag)
 		expect(tags).toContain('module-list')
 		expect(tags).toContain('basic-button')
@@ -36,7 +46,10 @@ describe('corpus compile order invariance', () => {
 
 	test('every corpus file compiles in reverse order too', async () => {
 		const files = await loadTsrxCorpus()
-		const compiled = await compileTsrxCorpus([...files].reverse())
+		const compiled = await compileTsrxCorpus(
+			[...files].reverse(),
+			generated.path,
+		)
 		const tags = new Set(compiled.map(info => info.tag))
 		for (const file of files) {
 			// Component files are named for their tag (repo convention, the
@@ -73,7 +86,7 @@ describe('corpus error policy', () => {
 			size: 0,
 			exists: true,
 		}
-		expect(compileTsrxCorpus([...files, bad])).rejects.toThrow(
+		expect(compileTsrxCorpus([...files, bad], generated.path)).rejects.toThrow(
 			/examples\/module\/bad-pass\.tsrx[\s\S]*TSRX012/,
 		)
 	})

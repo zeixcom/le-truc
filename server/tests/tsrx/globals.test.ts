@@ -9,7 +9,7 @@
  *    `FormAssociatedElement` referenced without import in a `declare global`)
  *    compiles against the globals file alone.
  */
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { ComponentProps, FactoryContext } from '@zeix/le-truc'
@@ -20,12 +20,18 @@ import {
 	PARSER_FACTORIES,
 	SIGNAL_CONSTRUCTORS,
 } from '../../tsrx/ast-utils'
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const GLOBALS = fs.readFileSync(
 	path.join(ROOT, 'server/tsrx/globals.d.ts'),
 	'utf8',
 )
+
+// The probe is emitted into a per-run directory, not the build pipeline's
+// own output (LT-140).
+const generated = createGeneratedDir('globals')
+afterAll(() => generated.cleanup())
 
 const declaredConsts = [...GLOBALS.matchAll(/^declare const (\w+)/gm)].map(
 	m => m[1] as string,
@@ -82,10 +88,8 @@ describe('globals.d.ts — ambient vocabulary parity with the compiler', () => {
 
 describe('globals.d.ts — probe typechecks against the ambients alone', () => {
 	test('full vocabulary probe compiles', async () => {
-		const probePath = path.join(ROOT, 'server/generated/tsrx/globals-probe.ts')
-		fs.mkdirSync(path.dirname(probePath), { recursive: true })
-		fs.writeFileSync(
-			probePath,
+		const probePath = generated.emit(
+			'globals-probe.ts',
 			[
 				// Sub-design 16: real exports are imported explicitly…
 				"import { asBoolean, asEnum, asInteger, asJSON, asNumber, asString, createCell, createContext, defineMethod } from '@zeix/le-truc'",

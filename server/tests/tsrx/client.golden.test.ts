@@ -10,10 +10,11 @@
  * spike/tsrx-phase0/expected/unified-lowerings.md: statement-for-statement
  * today's hand-written components, imports solely from '@zeix/le-truc'.
  */
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent } from '../../tsrx'
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const read = (rel: string): string =>
@@ -48,6 +49,9 @@ const SOURCES = [
 	'examples/form/checkbox/form-checkbox.tsrx',
 	'examples/module/list/module-list.tsrx',
 ] as const
+// Compiled for the emit-then-check pass only: reachable from a SOURCES
+// client's child-module import, but carrying no snapshot of its own.
+const TYPECHECK_DEPS = ['examples/basic/button/basic-button.tsrx'] as const
 
 // module-list composes FormTextbox (ADR 0023 sub-design 10, LT-020) — the
 // compose registry must be built before it compiles, keyed by form-textbox's
@@ -283,20 +287,38 @@ describe('client golden — convergence with the hand-written trio', () => {
 	})
 })
 
+// A per-run directory for the emit-then-check pass, not the build pipeline's
+// output (LT-140). It sits at the same depth under the repo root as the real
+// `server/generated/tsrx/`, so relative specifiers in the emitted clients
+// resolve identically.
+const generated = createGeneratedDir('client-golden')
+afterAll(() => generated.cleanup())
+
 describe('client golden — emit-then-check (ADR 0023 sub-design 6)', () => {
 	test('generated client modules typecheck against @zeix/le-truc', async () => {
 		const files: string[] = []
 		for (const { result } of compiled) {
 			const component = result.component
 			if (!component) throw new Error('corpus must compile')
-			const out = path.join(
-				ROOT,
-				'server/generated/tsrx',
-				component.entry.clientModule,
+			files.push(
+				generated.emit(component.entry.clientModule, component.clientCode),
 			)
-			fs.mkdirSync(path.dirname(out), { recursive: true })
-			fs.writeFileSync(out, component.clientCode)
-			files.push(out)
+		}
+		// module-list's client side-effect-imports './basic-button.client'
+		// because `childImports` models a fully-cut corpus. basic-button has
+		// no snapshot of its own and is deliberately not in SOURCES, but the
+		// typecheck program still needs the module to exist. Emit it here:
+		// until LT-140 this test passed only when a previous `build-tsrx` had
+		// happened to leave the file in the shared output directory.
+		for (const rel of TYPECHECK_DEPS) {
+			const { component } = compileComponent(
+				read(rel),
+				rel,
+				registry,
+				childImports,
+			)
+			if (!component) throw new Error(`${rel} must compile`)
+			generated.emit(component.entry.clientModule, component.clientCode)
 		}
 		const proc = Bun.spawn(
 			[

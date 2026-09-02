@@ -19,12 +19,15 @@
  *   (TSRX007) naming the fix, because two existence guards over one
  *   selector would BOTH be true on the one rendered element.
  */
-import { describe, expect, test } from 'bun:test'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { afterAll, describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../tsrx'
+import { createGeneratedDir } from '../helpers/generated-tsrx'
 
-const ROOT = path.resolve(import.meta.dir, '../../..')
+// Both fixtures below execute their generated module, so they need a per-run
+// directory rather than the build pipeline's output — `c-el` in particular
+// collides with server.golden.test.ts's fixture of the same tag (LT-140).
+const generated = createGeneratedDir('if-branches')
+afterAll(() => generated.cleanup())
 
 // `text` (the server arg) and `note` (the Parser-exposed prop) are
 // deliberately DIFFERENT names: a site rendering an arg that is also
@@ -244,14 +247,10 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 			new Set(['c-if-branch']),
 		)
 		expect(component).not.toBeNull()
-		const out = path.join(
-			ROOT,
-			'server/generated/tsrx',
-			'c-if-branch.server.ts',
-		)
-		fs.mkdirSync(path.dirname(out), { recursive: true })
-		fs.writeFileSync(out, component?.serverCode ?? '')
-		const mod = await import(out)
+		generated.emit('c-if-branch.server.ts', component?.serverCode ?? '')
+		const mod = await generated.importModule<{
+			renderC: (args: Record<string, unknown>) => string
+		}>('c-if-branch.server.ts')
 		const thenHtml = mod.renderC({ big: true, text: 'x' })
 		const elseHtml = mod.renderC({ text: 'x' })
 		expect(thenHtml).toContain('class="cta"')
@@ -328,12 +327,10 @@ import { asString } from '@zeix/le-truc'`
 		)
 		if (!component)
 			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
-		const out = path.join(ROOT, 'server/generated/tsrx', 'c-el.server.ts')
-		fs.mkdirSync(path.dirname(out), { recursive: true })
-		fs.writeFileSync(out, component.serverCode)
-		const mod = (await import(`${out}?lt130`)) as {
+		generated.emit('c-el.server.ts', component.serverCode)
+		const mod = await generated.importModule<{
 			renderC: (args: Record<string, unknown>) => string
-		}
+		}>('c-el.server.ts')
 		const taken = mod.renderC({ big: true, text: 'Add to Cart' })
 		expect(taken).toContain('class="zero"')
 		expect(taken).toContain('class="other"')
