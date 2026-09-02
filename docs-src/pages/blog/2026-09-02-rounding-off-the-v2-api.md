@@ -62,9 +62,9 @@ One computation, one `watch()` call, three DOM writes, and `nil` cleanup for all
 
 ## `watch()` finally tells the truth about types
 
-This one isn't new behavior. Passing an array of signals to `watch()` and getting back a tuple has always worked at runtime — it's inherited straight from Cause & Effect. But the array-source overload typed the callback's values as `any[]`, so autocomplete and type-checking died the moment you watched more than one signal.
+The tuple values aren't new. Passing an array of signals to `watch()` and getting back a tuple has always worked at runtime — it's inherited straight from Cause & Effect. But the array-source overload typed the callback's values as `any[]`, so autocomplete and type-checking died the moment you watched more than one signal.
 
-That's fixed. `watch([nameSignal, ageSignal], ([name, age]) => ...)` now infers `[string, number]`, not `any[]`. `ok`/`nil`/`err`/`stale` match handlers on multi-source `watch()` calls get the same tuple typing. This is 2.6 catching TypeScript up to what the library already did.
+That's fixed. `watch([nameSignal, ageSignal], ([name, age]) => ...)` now infers `[string, number]`, not `any[]`. The array form also gains `ok`/`nil`/`err`/`stale` match handlers — `nil` fires when any source is unset, `err` collects every source error. That part is new; the typing is 2.6 catching TypeScript up to what the library already did.
 
 ## Also in this release
 
