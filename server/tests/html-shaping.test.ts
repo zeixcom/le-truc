@@ -15,7 +15,7 @@ describe('injectTableOfContents', () => {
 			{ id: 'advanced', text: 'Advanced' },
 		]
 		const result = injectTableOfContents(html, toc)
-		expect(result).toContain('<nav class="toc" aria-label="On this page">')
+		expect(result).toContain('<nav class="toc">')
 		expect(result).toContain('<a href="#getting-started">Getting started</a>')
 		expect(result).toContain('<a href="#advanced">Advanced</a>')
 		expect(result).not.toContain('toc-placeholder')

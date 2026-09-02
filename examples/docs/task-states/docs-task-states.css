@@ -1,0 +1,84 @@
+docs-task-states {
+	display: block;
+
+	& .states {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-xs);
+	}
+
+	& .state {
+		padding: var(--space-xxs) var(--space-m);
+		border: 1px solid transparent;
+		border-radius: var(--space-xxl);
+		background-color: var(--color-neutral-10);
+		font-family: ui-monospace, monospace;
+		font-size: var(--font-size-s);
+		color: var(--color-text-soft);
+		transition:
+			background-color 150ms ease,
+			border-color 150ms ease,
+			color 150ms ease;
+	}
+
+	& .states[data-state='nil'] .state.nil {
+		border-color: var(--color-blue-40);
+		background-color: var(--color-blue-10);
+		color: var(--color-blue-70);
+	}
+
+	& .states[data-state='err'] .state.err {
+		border-color: var(--color-error);
+		background-color: var(--color-error-invalid);
+		color: var(--color-error-text);
+	}
+
+	& .states[data-state='stale'] .state.stale {
+		border-color: var(--color-orange-40);
+		background-color: var(--color-orange-10);
+		color: var(--color-orange-70);
+	}
+
+	& .states[data-state='ok'] .state.ok {
+		border-color: var(--color-green-40);
+		background-color: var(--color-green-10);
+		color: var(--color-green-70);
+	}
+
+	& output.value {
+		display: block;
+		margin-block: var(--space-m);
+		font-family: ui-monospace, monospace;
+		font-size: var(--font-size-s);
+	}
+
+	& p.error {
+		margin-block: var(--space-m);
+		color: var(--color-error-text);
+		background: var(--color-error);
+		padding: var(--space-xs) var(--space-s);
+	}
+
+	& .controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-s);
+	}
+
+	& ol.log {
+		margin: var(--space-m) 0 0;
+		padding: 0;
+		background-color: var(--color-neutral-10);
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xxs);
+
+		& li {
+			font-family: ui-monospace, monospace;
+			font-size: var(--font-size-s);
+			color: var(--color-text-soft);
+		}
+	}
+}

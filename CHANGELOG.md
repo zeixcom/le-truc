@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.6.0
+
+### Added
+
+- **`bindAria()`**: new binding helper reflects values onto ARIA reflection properties — on `ElementInternals` (invisible in markup, immune to attribute rewriting) or any element target. Booleans map to `'true'`/`'false'`, numbers to strings, `nil` clears the value. A pre-existing conflicting attribute is removed automatically.
+- **ElementInternals declaration registry**: every Le Truc component now registers its `ElementInternals` so accessibility auditing tools like axe-core (>= 4.13) can inspect it, with zero opt-in required from component authors.
+- **Map-form overloads for `bindStyle()`, `bindAttribute()`, `bindClass()`, `bindProperty()`, `bindState()`, `bindAria()`**: each helper now also accepts an array of target keys, driving several DOM writes from one `watch()` call instead of several. Purely additive; existing single-target calls are unaffected.
+- **`watch()` array-source match handlers**: passing multiple sources now also accepts the same `ok`/`nil`/`err`/`stale` routing as single-source bindings — `nil` fires when any source is unset, `err` collects every source error. Purely additive; existing array-source calls are unaffected.
+- **Expanded export surface**: `FormFactoryContext` (form-associated factory context with managed `disabled`/`validationMessage`/`validity` props), `AriaValue`, the `ResolvedReactive*` watch types, and `RESERVED_WORDS_LIST` are now exported; `KeyConfig`, `SensorCallback`, and `UpdateCallback` join the Cause & Effect re-exports.
+- **`tech-writer` `improve-docs-architecture.md` workflow**: tech-writer can now lead guide restructures — split or merge pages, improve navigation, add teaching components — routing pipeline code to `docs-server-dev` via `TODO.md`/`NOTES.md`.
+
+### Changed
+
+- **`changelog-keeper` `entry_style`**: entries now cap at 4 sentences (~300 characters), keep only user-facing rationale, and cut implementation internals. Version preambles cap at 3 sentences. New entries follow this; existing ones stay as history.
+- **`adr-keeper` concision rules**: rationales tightened — Context a few problem-first sentences, Decision commitment plus mechanism, Consequences compact lists, no appended postscripts (`adr-template.md`, `create-adr.md`).
+- **`architect` `architecture.md` Step 5**: now prescribes the `ARCHITECTURE.md` register — present-tense mechanisms, inline ADR citations, opinion-through-contrast, trade-off notes as the only voice moment.
+- **`le-truc`, `le-truc-dev`, and `cause-effect` skill references**: `effects.md`, `accessibility.md`, and the source maps now cover `bindAria()`, the map-form overloads, and the declaration registry; Cause & Effect naming aligned with `Cell`.
+
+### Fixed
+
+- **`watch()` array-source typing**: previously the callback's `values` were typed as `any[]`, losing autocomplete and type-checking on multi-source calls. Now a position-preserving tuple is inferred (`[string, number]` for a string and a number signal); runtime behavior is unchanged.
+
 ## 2.5.1
 
 Second bridge-name wave ahead of Cause & Effect 2.0: CE 1.5.1 deprecates `deriveSignal` — the very name `2.5.0` adopted as the non-deprecated replacement for `createComputed` — in favor of `deriveCell`, one release later. `Signal` stays the umbrella term; `Cell` is now the settled terminal name for the single-value shape. Non-breaking, same policy as `2.5.0`: deprecated re-exports keep working through Le Truc 2.x and are removed in Le Truc 3.0. Also folds in a form-participation bug fix with its supporting API — a form-associated host's `formResetCallback` no longer races its inner native control's own reset, and `defaultValue`/`defaultChecked` become the managed reset baseline.

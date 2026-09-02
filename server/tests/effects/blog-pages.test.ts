@@ -4,12 +4,14 @@
  * Covers:
  * - getBlogVariables: reading-time computation, tag HTML rendering
  * - generateBlogExcerpts: card output, ordering, empty state, < 3 posts
+ * - generateBlogArchive: archive list output, featured/archived split, empty state
  * - computeBlogPrevNext: prev/next links, boundary conditions
  */
 
 import { describe, expect, test } from 'bun:test'
 import {
 	computeBlogPrevNext,
+	generateBlogArchive,
 	generateBlogExcerpts,
 	getBlogVariables,
 } from '../../effects/pages'
@@ -180,7 +182,7 @@ describe('generateBlogExcerpts', () => {
 		expect(result).toContain('href="./blog/2026-03-09-hello.html"')
 	})
 
-	test('includes card-blogmeta with time and author span', () => {
+	test('includes basic-blogmeta with time and author span', () => {
 		const post = makePost({
 			slug: 'meta-test',
 			date: '2026-03-09',
@@ -258,6 +260,128 @@ describe('generateBlogExcerpts', () => {
 		expect(result).toContain('browser&#39;s')
 		// Must not be double-escaped (& → &amp; → visible &#39; in browser)
 		expect(result).not.toContain('&amp;#39;')
+	})
+})
+
+/* === generateBlogArchive === */
+
+describe('generateBlogArchive', () => {
+	test('returns empty string for empty post list', () => {
+		const result = generateBlogArchive([])
+		expect(result).toBe('')
+	})
+
+	test('returns empty string when all posts fit the featured cards', () => {
+		const posts = [
+			makePost({ slug: 'p1', date: '2026-03-01' }),
+			makePost({ slug: 'p2', date: '2026-02-01' }),
+			makePost({ slug: 'p3', date: '2026-01-01' }),
+		]
+		const result = generateBlogArchive(posts)
+		expect(result).toBe('')
+	})
+
+	test('lists exactly the posts beyond the first 3', () => {
+		const posts = [
+			makePost({ slug: 'p1', date: '2026-04-01' }),
+			makePost({ slug: 'p2', date: '2026-03-01' }),
+			makePost({ slug: 'p3', date: '2026-02-01' }),
+			makePost({ slug: 'p4', date: '2026-01-15' }),
+			makePost({ slug: 'p5', date: '2026-01-01' }),
+		]
+		const result = generateBlogArchive(posts)
+		const itemCount = (result.match(/<li>/g) ?? []).length
+		expect(itemCount).toBe(2)
+		expect(result).toContain('/blog/p4.html')
+		expect(result).toContain('/blog/p5.html')
+		// Featured posts stay on the cards only
+		expect(result).not.toContain('/blog/p1')
+		expect(result).not.toContain('/blog/p2')
+		expect(result).not.toContain('/blog/p3')
+	})
+
+	test('renders linked title and basic-blogmeta time per item', () => {
+		const posts = [
+			makePost({ slug: 'p1', date: '2026-03-01' }),
+			makePost({ slug: 'p2', date: '2026-02-01' }),
+			makePost({ slug: 'p3', date: '2026-01-02' }),
+			makePost({
+				slug: 'p4',
+				date: '2026-01-01',
+				title: 'An Older Post',
+			}),
+		]
+		const result = generateBlogArchive(posts)
+		expect(result).toContain('<a href="./blog/p4.html">An Older Post</a>')
+		expect(result).toContain(
+			'<time class="published" datetime="2026-01-01">2026-01-01</time>',
+		)
+		expect(result).toContain('<basic-blogmeta>')
+	})
+
+	test('wraps groups in a labelled module-blogarchive element', () => {
+		const posts = [
+			makePost({ slug: 'p1', date: '2026-03-01' }),
+			makePost({ slug: 'p2', date: '2026-02-01' }),
+			makePost({ slug: 'p3', date: '2026-01-02' }),
+			makePost({ slug: 'p4', date: '2026-01-01' }),
+		]
+		const result = generateBlogArchive(posts)
+		expect(result).toContain(
+			'<section class="blog-archive" aria-labelledby="blog-archive-title">',
+		)
+		expect(result).toContain('<module-blogarchive>')
+		expect(result).toContain('<h2 id="blog-archive-title">Archive</h2>')
+		expect(result).toContain('<ul>')
+	})
+
+	test('groups posts by year into details/summary, most recent year open', () => {
+		const currentYear = new Date().getFullYear()
+		const posts = [
+			makePost({ slug: 'p1', date: `${currentYear}-03-01` }),
+			makePost({ slug: 'p2', date: `${currentYear}-02-01` }),
+			makePost({ slug: 'p3', date: `${currentYear}-01-02` }),
+			makePost({ slug: 'p4', date: `${currentYear}-01-01` }),
+			makePost({ slug: 'p5', date: `${currentYear - 1}-06-01` }),
+		]
+		const result = generateBlogArchive(posts)
+		const blocks = result.split('</details>').slice(0, -1)
+		expect(blocks.length).toBe(2)
+		const openBlock = blocks.find(b => b.includes('<details open>'))
+		expect(openBlock).toContain(`<summary>${currentYear}</summary>`)
+		const closedBlock = blocks.find(b => !b.includes('<details open>'))
+		expect(closedBlock).toContain(`<summary>${currentYear - 1}</summary>`)
+	})
+
+	test('preserves input order (caller is responsible for sorting)', () => {
+		const posts = [
+			makePost({ slug: 'p1', date: '2026-03-01' }),
+			makePost({ slug: 'p2', date: '2026-02-01' }),
+			makePost({ slug: 'p3', date: '2026-01-03' }),
+			makePost({ slug: 'newer', date: '2026-01-02', title: 'Newer' }),
+			makePost({ slug: 'older', date: '2026-01-01', title: 'Older' }),
+		]
+		const result = generateBlogArchive(posts)
+		const newerIndex = result.indexOf('/blog/newer')
+		const olderIndex = result.indexOf('/blog/older')
+		expect(newerIndex).toBeGreaterThan(-1)
+		expect(newerIndex).toBeLessThan(olderIndex)
+	})
+
+	test('HTML-escapes titles', () => {
+		const posts = [
+			makePost({ slug: 'p1', date: '2026-03-01' }),
+			makePost({ slug: 'p2', date: '2026-02-01' }),
+			makePost({ slug: 'p3', date: '2026-01-02' }),
+			makePost({
+				slug: 'xss',
+				date: '2026-01-01',
+				title: '<script>x</script>',
+			}),
+		]
+		const result = generateBlogArchive(posts)
+		expect(result).not.toContain('<script>')
+		expect(result).toContain('&lt;script&gt;')
 	})
 })
 

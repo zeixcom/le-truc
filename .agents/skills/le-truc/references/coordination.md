@@ -42,7 +42,7 @@ defineComponent<ParentProps>('parent-el', ({ expose, first, pass }) => {
 
 When parent disconnects, original signal restored to child (child regains independent state).
 
-**Memo target:** `pass` also accepts `Memo<(HTMLElement & Q)[]>` from `all()` — per-element lifecycle handled automatically.
+**Cell target:** `pass` also accepts `Cell<(HTMLElement & Q)[]>` from `all()` — per-element lifecycle handled automatically.
 
 ---
 
@@ -101,7 +101,7 @@ Use when: parent needs to respond to any child of particular type without knowin
 
 ## `all(selector)` + `each()` — Drive Effects on Dynamic Descendants
 
-`all(selector, required?)` returns `Memo<E[]>` backed by lazy `MutationObserver`. If `required` is non-empty string and no elements match at query time, throws `MissingElementError`. Use with `each()` for per-element effects, or with `on()` for delegated event listeners.
+`all(selector, required?)` returns `Cell<E[]>` backed by lazy `MutationObserver`. If `required` is non-empty string and no elements match at query time, throws `MissingElementError`. Use with `each()` for per-element effects, or with `on()` for delegated event listeners.
 
 ```typescript
 defineComponent<Props>('list-el', ({ all, expose, host, on, watch }) => {
@@ -113,12 +113,12 @@ defineComponent<Props>('list-el', ({ all, expose, host, on, watch }) => {
   }))
   // Per-element reactive class with own scope
   each(items, item => {
-    watch('selectedId', bindClass(item, 'selected', id => id === item.id))
+    watch(() => host.selectedId === item.id, bindClass(item, 'selected'))
   })
 })
 ```
 
-MutationObserver is lazy: only activates when Memo read inside reactive effect.
+MutationObserver is lazy: only activates when the Cell is read inside a reactive effect.
 
 ---
 

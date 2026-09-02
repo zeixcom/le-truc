@@ -5,7 +5,7 @@ description: 'Scoped styles, CSS custom properties'
 ---
 
 {% hero %}
-# 🎨 Styling
+# Styling
 
 **Keep your components' styles self-contained and support shared design tokens.** Scope styles with the custom element name and expose customization via CSS custom properties. Le Truc toggles classes and attributes for you when state changes.
 {% /hero %}

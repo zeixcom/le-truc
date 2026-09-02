@@ -90,11 +90,10 @@ sources (List<FileInfo>)
   │     ├─▶ mdMirrorEffect         → docs/**/*.md  (clean Markdown mirrors)
   │     └─▶ llmsFullManifestEffect → docs/llms-full.txt
   → pageInfos (Memo: page navigation data)
-  │     ├─▶ menuEffect         → docs-src/includes/menu.html
   │     ├─▶ sitemapEffect      → docs/sitemap.xml
   │     └─▶ llmsManifestEffect → docs/llms.txt
   → fullyProcessed (Task: Markdoc parse → transform → render → Shiki → post-processing)
-        └─▶ pagesEffect        → docs/**/*.html (with alternate link in <head>)
+        └─▶ pagesEffect        → docs/**/*.html (with alternate link in <head>, sidebar menu rendered per page)
 ```
 
 ### Effects
@@ -112,8 +111,7 @@ Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild
 | `examplesEffect` | `componentMarkdown`, `componentMarkup` | `docs/examples/<name>.html` | Markdoc + Shiki |
 | `mocksEffect` | `componentMocks.sources` | `docs/test/<component>/mocks/*` | File copy |
 | `sourcesEffect` | `componentMarkup`, `componentStyles`, `componentScripts` | `docs/sources/<name>.html` | Shiki-highlighted tab groups |
-| `pagesEffect` | `docsMarkdown.fullyProcessed` | `docs/**/*.html` | Layout templating |
-| `menuEffect` | `docsMarkdown.pageInfos` | `docs-src/includes/menu.html` | Template generation |
+| `pagesEffect` | `docsMarkdown.fullyProcessed` | `docs/**/*.html` | Layout templating (renders the sidebar menu per page via `menu()`) |
 | `sitemapEffect` | `docsMarkdown.pageInfos` | `docs/sitemap.xml` | XML template |
 | `mdMirrorEffect` | `docsMarkdown.processed` | `docs/**/*.md` | Regex tag stripping |
 | `llmsManifestEffect` | `docsMarkdown.pageInfos` | `docs/llms.txt` | Template generation |
@@ -147,13 +145,11 @@ docs/
 ├── sw.js                 # Service worker
 └── sitemap.xml           # SEO sitemap
 docs-src/
-├── api/                  # TypeDoc-generated Markdown (intermediate)
-│   ├── classes/
-│   ├── functions/
-│   ├── type-aliases/
-│   └── variables/
-└── includes/
-    └── menu.html         # Generated navigation menu (intermediate)
+└── api/                  # TypeDoc-generated Markdown (intermediate)
+    ├── classes/
+    ├── functions/
+    ├── type-aliases/
+    └── variables/
 ```
 
 ## Agent-Oriented Content Discovery
@@ -317,7 +313,7 @@ The `fence` schema override provides:
 | `GET /:page` | Documentation page | `docs/<page>.html` |
 | `GET /favicon.ico` | Favicon | `docs/favicon.ico` |
 
-All HTML routes support `Accept: text/markdown` to return raw `.md` source from `docs-src/pages/`.
+All HTML routes support `Accept: text/markdown` to return raw `.md` source from `docs-src/pages/`. Bare section roots (`/blog`, `/examples`, `/api`) resolve to directories under `docs/` via `GET /:page` — they redirect 301 to the matching `<page>.html` when it exists and 404 otherwise; `handleStaticFile` 404s on directory paths generally, so no route can attempt `sendfile` on a directory.
 
 ### Layout and Template System
 
@@ -333,6 +329,8 @@ Layouts live in `docs-src/layouts/`:
 | `test.html` | Component test harness |
 
 Templates use `{{ variable }}` substitution and `{{ include 'file' }}` directives (resolved from `docs-src/includes/`). `api.html` additionally uses `{{ api-category }}`, `{{ api-name }}`, `{{ api-kind }}`, and `{{ toc }}`, populated by `pagesEffect` for breadcrumbs and sidebar TOC on direct API page navigation.
+
+All six layouts share a persistent left sidebar + main two-column shell: a slimmed `<header>` top bar (title, `#sidebar-toggle` button, the error `card-callout`) followed by a `.docs-body` wrapper containing the `{{ menu }}` placeholder and the layout's existing `<main class="content-grid">` (each layout's own secondary navigation — `api.html`'s `.api-breadcrumb`/`.api-nav`, `overview.html`'s `.overview-pagination`, content-level `{% listnav %}` — is unchanged, nested inside `.docs-main`/`<main>` alongside the sidebar). `{{ menu }}` is populated per page by `pagesEffect` (see below), not by an include. The toggle button (`id="sidebar-toggle"`, `aria-controls="sidebar"`) and the sidebar root (`<section-menu id="sidebar">`, rendered by `menu()`) are the markup contract for `section-menu`'s mobile drawer behavior — interactivity itself lives in `examples/section/menu/`.
 
 Layout files are cached in a `Map<string, string>` in `serve.ts` for performance. In development mode the cache is bypassed so layout changes take effect immediately without a server restart.
 
@@ -404,7 +402,7 @@ hmrScriptTag({
 | `constants.ts` | `MIME_TYPES`, `RESOURCE_TYPE_MAP`, `PAGE_ORDER`, `SERVICE_WORKER_EVENTS`, `SITEMAP_PRIORITIES`, etc. | Config, templates |
 | `fragments.ts` | `tabButton`, `tabPanel`, `tabGroup`, `componentInfo` | `sourcesEffect` |
 | `hmr.ts` | `hmrClient()`, `hmrScriptTag()` | `serve.ts` |
-| `menu.ts` | `menuItem()`, `menu()` | `menuEffect` |
+| `menu.ts` | `menuItem()`, `menu()`, `groupOf()` | `pagesEffect` (rendered per page inside `applyTemplate()`) |
 | `performance-hints.ts` | `preloadLink()`, `performanceHints()` | `pagesEffect` |
 | `service-worker.ts` | `serviceWorker()`, `minifiedServiceWorker()` | `serviceWorkerEffect` |
 | `sitemap.ts` | `sitemapUrl()`, `sitemap()` | `sitemapEffect` |
@@ -443,7 +441,6 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 | `API_DIR` | `docs-src/api/` | TypeDoc output (intermediate) |
 | `LAYOUTS_DIR` | `docs-src/layouts/` | HTML layout templates |
 | `INCLUDES_DIR` | `docs-src/includes/` | Includable HTML fragments |
-| `MENU_FILE` | `docs-src/includes/menu.html` | Generated menu |
 | `STATIC_DIR` | `docs-src/static/` | Static assets copied verbatim by `staticAssetsEffect` |
 | `OUTPUT_DIR` | `docs/` | Final build output |
 | `ASSETS_DIR` | `docs/assets/` | Built assets |
@@ -457,7 +454,22 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 ### Page Ordering
 
 `PAGE_ORDER` controls navigation menu order:
-`index`, `getting-started`, `components`, `styling`, `data-flow`, `examples`, `api`, `blog`, `about`
+`index`, `getting-started`, `components`, `props`, `effects`, `styling`, `accessibility`, `extensions`, `data-flow`, `lists`, `async`, `context`, `examples`, `api`, `blog`, `about`
+
+### Sidebar Menu Groups
+
+`MENU_GROUPS` groups every root page under a sidebar heading, in sidebar order. The two guide chapters (see below) double as menu groups — same title, same page list as `CHAPTERS` — interleaved with sidebar-only groups ("Get Started", "Reference", "Community") that carry no stepper.
+
+- **Sidebar rendering:** `menu()` in `templates/menu.ts` sorts root pages by `PAGE_ORDER`, then inserts one `<li class="group" role="presentation">` heading before the first member of each `MENU_GROUPS` group present in that sorted list. It's called per page inside `applyTemplate()` (`effects/pages.ts`), which passes the current page's slug (or its `section`, for pages that live under a root page — blog posts, API symbols) so the matching item gets `aria-current="page"` and `class="active"`. Sidebar layout/styling lives in `examples/section/menu/section-menu.css`.
+- **Constraint:** every `PAGE_ORDER` slug must belong to exactly one `MENU_GROUPS` group, and each group's members must be contiguous in `PAGE_ORDER` — the group heading renders at the position of the first present member. Covered by `server/tests/config.test.ts`.
+
+### Guide Chapters
+
+`CHAPTERS` groups guide pages into chapters with a prev/next stepper (the sidebar heading for the same pages comes from `MENU_GROUPS`, above — the two configs stay in sync by construction: each guide chapter's `MENU_GROUPS` entry reuses `CHAPTERS[i].title`/`.pages` directly):
+
+- **Chapter stepper:** `getChapterVars()` in `effects/pages.ts` computes a `chapter-nav` template variable for every root page that belongs to a chapter. `chapterNav()` in `templates/chapter-nav.ts` renders `<nav class="content chapter-nav">` with "Part k of n" and prev/next links; the `{{ chapter-nav }}` placeholder in `layouts/page.html` collapses to nothing for non-member pages. Missing siblings (a chapter page absent from the build) are skipped; the stepper collapses entirely when no links remain. Styling lives in `examples/section/menu/chapter-nav.css`.
+
+Constraint: member slugs must appear in `PAGE_ORDER`, and each chapter's members should be contiguous in it — the same contiguity constraint `MENU_GROUPS` has.
 
 ## Environment Variables
 
@@ -486,7 +498,7 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 
 ## Blog Support
 
-Blog posts live in `docs-src/pages/blog/` (`YYYY-MM-DD-slug.md` naming) and are processed by the existing `docsMarkdown` signal and `pagesEffect` — no dedicated signal or effect. `PageMetadata` carries blog-only optional fields (`date`, `author`, `author-avatar`, `modified-date`, `tags`); `pagesEffect` injects derived template variables (`published-date`, `modified-date`, `reading-time`, `blog-tags`, `author-avatar`, `prev-post(-title)`, `next-post(-title)`) via `applyTemplate`'s `extraReplacements` parameter when `section === 'blog'`. The blog overview page (`blog.md`, `page.html` layout) has its body replaced with 3 latest-post excerpt cards (`<card-blogpost>`) built directly by `generateBlogExcerpts()` in `pages.ts` (not via a Markdoc tag); individual posts use the `blog.html` layout, which hardcodes a `<card-blogmeta>` element filled in via `{{ published-date }}`-style template variables. Routing: `GET /blog/:slug` in `serve.ts`, guarded by the `BLOG_OUTPUT_DIR` constant.
+Blog posts live in `docs-src/pages/blog/` (`YYYY-MM-DD-slug.md` naming) and are processed by the existing `docsMarkdown` signal and `pagesEffect` — no dedicated signal or effect. `PageMetadata` carries blog-only optional fields (`date`, `author`, `author-avatar`, `modified-date`, `tags`); `pagesEffect` injects derived template variables (`published-date`, `modified-date`, `reading-time`, `blog-tags`, `author-avatar`, `prev-post(-title)`, `next-post(-title)`) via `applyTemplate`'s `extraReplacements` parameter when `section === 'blog'`. The blog overview page (`blog.md`, `page.html` layout) has its body replaced with 3 latest-post excerpt cards (`<card-blogpost>`) built directly by `generateBlogExcerpts()` in `pages.ts`, followed by a `<module-blogarchive>` of the remaining posts, grouped by year into `<details>`/`<summary>` sections (current year open), built by `generateBlogArchive()` (both not via a Markdoc tag); individual posts use the `blog.html` layout, which hardcodes a `<basic-blogmeta>` element filled in via `{{ published-date }}`-style template variables. Routing: `GET /blog/:slug` in `serve.ts`, guarded by the `BLOG_OUTPUT_DIR` constant.
 
 ## Future Improvements
 

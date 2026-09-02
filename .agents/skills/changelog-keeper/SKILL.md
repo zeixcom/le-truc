@@ -5,7 +5,7 @@ user_invocable: true
 ---
 
 ## Objective
-Maintain `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com) conventions, adapted to this project's style: technically precise, developer-focused entries that include implementation detail when it explains _why_ behavior changed or _how_ to migrate.
+Maintain `CHANGELOG.md` following [Keep a Changelog](https://keepachangelog.com) conventions, adapted to this project's style: short, precise, user-facing entries. Each entry lets an integrator decide quickly whether the change affects them — it is not a deep-dive.
 
 ## Structure
 The changelog uses this heading hierarchy:
@@ -27,6 +27,7 @@ The changelog uses this heading hierarchy:
 - `## [Unreleased]` is only present when there are documented changes not yet released. Create it at the top (below `# Changelog`) when documenting the first new change after a release. It does not exist between releases.
 - Released versions use bare version numbers: `## 1.0.0`, `## 0.16.3`, etc. No brackets.
 - Only include category headings (`### Added`, `### Changed`, etc.) that have entries.
+- A released version may open with a **preamble** of at most 3 sentences telling what the release is about for a skimming integrator (e.g., "Second bridge-name wave ahead of Cause & Effect 2.0…"). No preamble for patch releases that need none.
 - `## 0.15.0` is present as a baseline marker ("Changes before this version are not documented").
 
 ## Adding Entries
@@ -49,12 +50,17 @@ When asked to release a version:
 - **One behavior change per bullet.**
 - **Bold the API name or short summary** at the start, followed by a colon:
   `- **\`createMemo\` \`watched\` option**: description…`
-- **Include implementation details** when they explain _why_ the behavior changed, _how_ the fix works, or _what internal invariant_ is preserved. This changelog is read by developers and AI agents integrating or contributing to the library — precision is expected.
+- **Hard ceiling: 4 sentences per bullet. Target ≤ 300 characters** for the whole bullet, bold lead included. If it does not fit, the entry mixes behaviors or carries internals — split it or cut it.
+- **User-facing rationale only.** State what observable behavior changed, plus at most one clause of why. **Cut all internals** — flag mechanics, spec citations, type-inference stories, internal invariants. Internals belong in commit messages, ADRs, and `ARCHITECTURE.md`.
 - **Use before/after framing for Fixed entries**: "Previously, X. Now, Y."
-- **Include migration notes** under Changed or Removed when behavior breaks compatibility. State clearly what consumers must change and why.
-- Use backticks for all public API names, internal types, flags, and file names.
+- **Include migration notes** under Changed or Removed when behavior breaks compatibility. State what consumers must change. Migration notes are user-relevant by definition — keep them.
+- Use backticks for all public API names, flags, and file names.
+
+**Condensation exemplar** — the `2.3.4` flag-clobbering entry condensed from ~150 words to the target style:
+
+> - **`host.setCustomValidity()` preserves other validity flags**: previously it cleared every other validity flag when setting a custom error. Now it updates only the custom error, like native `<input>`.
 
 **Skill changes** (changes to `.agents/skills/`):
 - Classify as **Changed** when an existing skill's behavior, scope, or reference material is updated; **Added** when a new skill or workflow file is introduced; **Removed** when one is deleted.
 - Bold the skill name and the affected file or section: `- **\`changelog-keeper\` \`adding_entries\`**: description…`
-- State what the skill now does differently and why — the audience is developers who invoke skills and need to know when their mental model of a skill's behavior has changed.
+- State what the skill now does differently — the audience is developers who invoke skills and need to know when their mental model changed. Same ceilings apply.

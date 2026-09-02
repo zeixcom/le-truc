@@ -31,7 +31,7 @@ Explicit `return [...]` of a `FactoryResult` (nested arrays flattened, falsy val
 
 - **A hand-authored `EffectDescriptor` silently never cleans up unless wrapped**: `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` self-register cleanup via their internal `createEffect()`/`createScope()` call (see ARCHITECTURE.md § Effect Descriptors). A raw descriptor (`() => { setup(); return cleanup }`) has no such registration — if returned bare, its cleanup is silently dropped and never runs on disconnect. Wrap it in `watch(() => true, descriptor)` instead.
 
-- **`all()` MutationObserver is lazy**: The observer activates only when the returned `Signal` is read inside a reactive effect. It watches attribute changes implied by the CSS selector (classes, IDs, `[attr]` patterns), not all mutations. The `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
+- **`all()` MutationObserver is lazy**: The observer activates only when the returned `Cell` is read inside a reactive effect. It watches attribute changes implied by the CSS selector (classes, IDs, `[attr]` patterns), not all mutations. The `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
 - **`setAttribute` has security validation**: Blocks `on*` event handler attributes and validates URL attributes against a safe-protocol allowlist (`http:`, `https:`, `ftp:`, `mailto:`, `tel:`). Violations throw a descriptive error — they are never silent.
 
@@ -59,4 +59,4 @@ Explicit `return [...]` of a `FactoryResult` (nested arrays flattened, falsy val
 
 - **`bindStyle` nil path removes the inline style**: When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring whatever value the CSS cascade provides. Setting the reactive back to a string re-applies the inline style.
 
-- **`stale` in `watch` only fires for `Task` signals with a seeded value**: Routing precedence is `nil` > `err` > `stale` > `ok`. `stale` fires when the signal has a retained value AND `isPending(signal)` — never for `State` or `Memo`. Without `{ value: seed }` on the task, the first read throws `UnsetSignalValueError` and routes to `nil`, not `stale`. Omitting `stale` falls back to `ok`, leaving the retained value in place while the task re-fetches.
+- **`stale` in `watch` only fires for `Task` signals with a retained value**: Routing precedence is `nil` > `err` > `stale` > `ok`. `stale` fires when the signal has a retained value AND `isPending(signal)` — never for `State` or `Memo`. Without `{ value: seed }` on the task, the first read throws `UnsetSignalValueError` and routes to `nil`, not `stale`. Omitting `stale` falls back to `ok`, leaving the retained value in place while the task re-fetches.

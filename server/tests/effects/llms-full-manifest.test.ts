@@ -60,11 +60,12 @@ describe('generateLlmsFullTxt — section order', () => {
 
 	test('narrative pages follow curated order regardless of input order', () => {
 		const pages = [
+			makePage('styling.md', 'Styling body.'),
+			makePage('async.md', 'Async body.'),
 			makePage('data-flow.md', 'Data Flow body.'),
 			makePage('index.md', 'Intro body.'),
 			makePage('components.md', 'Components body.'),
 			makePage('getting-started.md', 'Getting Started body.'),
-			makePage('styling.md', 'Styling body.'),
 		]
 		const result = generateLlmsFullTxt({ pages, ...baseParams })
 		expect(result.indexOf('# Introduction')).toBeLessThan(
@@ -74,10 +75,13 @@ describe('generateLlmsFullTxt — section order', () => {
 			result.indexOf('# Components'),
 		)
 		expect(result.indexOf('# Components')).toBeLessThan(
-			result.indexOf('# Styling'),
-		)
-		expect(result.indexOf('# Styling')).toBeLessThan(
 			result.indexOf('# Data Flow'),
+		)
+		expect(result.indexOf('# Data Flow')).toBeLessThan(
+			result.indexOf('# Async State'),
+		)
+		expect(result.indexOf('# Async State')).toBeLessThan(
+			result.indexOf('# Styling'),
 		)
 	})
 

@@ -15,8 +15,12 @@ card-callout {
 		left: var(--space-s);
 	}
 
+	> p {
+		margin-block-end: var(--space-s);
+	}
+
 	> *:last-child {
-		margin-bottom: 0;
+		margin-block-end: 0;
 	}
 
 	&.tip {

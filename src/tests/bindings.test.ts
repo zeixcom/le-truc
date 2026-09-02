@@ -10,6 +10,8 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import {
+	type AriaValue,
+	bindAria,
 	bindAttribute,
 	bindClass,
 	bindProperty,
@@ -22,6 +24,7 @@ import {
 	safeSetAttribute,
 	setTextPreservingComments,
 } from '../bindings'
+import { internalsHosts } from '../internal'
 
 /* === Fake DOM (minimal, test-only) === */
 
@@ -447,6 +450,26 @@ describe('bindProperty', () => {
 		setLabel('c')
 		expect(obj.label).toBe('c')
 	})
+
+	describe('map form', () => {
+		test('patches multiple keys present in the map', () => {
+			const obj = { a: 1, b: 2, c: 3 }
+			bindProperty(obj, ['a', 'b', 'c'])({ a: 10, b: 20, c: 30 })
+			expect(obj).toEqual({ a: 10, b: 20, c: 30 })
+		})
+
+		test('skips keys absent from the map, leaving their previous value', () => {
+			const obj = { a: 1, b: 2 }
+			bindProperty(obj, ['a', 'b'])({ a: 10 })
+			expect(obj).toEqual({ a: 10, b: 2 })
+		})
+
+		test('an empty map leaves every declared key untouched', () => {
+			const obj = { a: 1, b: 2 }
+			bindProperty(obj, ['a', 'b'])({})
+			expect(obj).toEqual({ a: 1, b: 2 })
+		})
+	})
 })
 
 describe('bindClass', () => {
@@ -467,6 +490,37 @@ describe('bindClass', () => {
 		const el = new FakeElement('div')
 		bindClass<number>(el as unknown as Element, 'has-items')(3)
 		expect(el.classList.contains('has-items')).toBe(true)
+	})
+
+	describe('map form', () => {
+		test('toggles every declared token from one map', () => {
+			const el = new FakeElement('div')
+			bindClass(el as unknown as Element, ['active', 'selected'])({
+				active: true,
+				selected: false,
+			})
+			expect(el.classList.contains('active')).toBe(true)
+			expect(el.classList.contains('selected')).toBe(false)
+		})
+
+		test('a token absent from the map coerces to false (off)', () => {
+			const el = new FakeElement('div')
+			el.classList.toggle('selected', true)
+			bindClass(el as unknown as Element, ['active', 'selected'])({
+				active: true,
+			})
+			expect(el.classList.contains('active')).toBe(true)
+			expect(el.classList.contains('selected')).toBe(false)
+		})
+
+		test('an empty map clears every declared token', () => {
+			const el = new FakeElement('div')
+			el.classList.toggle('active', true)
+			el.classList.toggle('selected', true)
+			bindClass(el as unknown as Element, ['active', 'selected'])({})
+			expect(el.classList.contains('active')).toBe(false)
+			expect(el.classList.contains('selected')).toBe(false)
+		})
 	})
 })
 
@@ -501,6 +555,45 @@ describe('bindState', () => {
 			bindState(null, 'overflow-end')(true)
 		}).not.toThrow()
 	})
+
+	describe('map form', () => {
+		test('toggles every declared token from one map', () => {
+			const { states, internals } = fakeInternals()
+			bindState(internals, ['overflow-start', 'overflow-end'])({
+				'overflow-start': true,
+				'overflow-end': false,
+			})
+			expect(states.has('overflow-start')).toBe(true)
+			expect(states.has('overflow-end')).toBe(false)
+		})
+
+		test('a token absent from the map coerces to false (off)', () => {
+			const { states, internals } = fakeInternals()
+			states.add('overflow-end')
+			bindState(internals, ['overflow-start', 'overflow-end'])({
+				'overflow-start': true,
+			})
+			expect(states.has('overflow-start')).toBe(true)
+			expect(states.has('overflow-end')).toBe(false)
+		})
+
+		test('an empty map clears every declared token', () => {
+			const { states, internals } = fakeInternals()
+			states.add('overflow-start')
+			states.add('overflow-end')
+			bindState(internals, ['overflow-start', 'overflow-end'])({})
+			expect(states.has('overflow-start')).toBe(false)
+			expect(states.has('overflow-end')).toBe(false)
+		})
+
+		test('is a no-op when internals is null', () => {
+			expect(() => {
+				bindState(null, ['overflow-start', 'overflow-end'])({
+					'overflow-start': true,
+				})
+			}).not.toThrow()
+		})
+	})
 })
 
 describe('bindVisible', () => {
@@ -530,6 +623,47 @@ describe('bindStyle', () => {
 		el.style.setProperty('color', 'red')
 		bindStyle(el as unknown as HTMLElement, 'color').nil?.()
 		expect(el.style.getPropertyValue('color')).toBe('')
+	})
+
+	describe('map form', () => {
+		test('ok sets multiple properties in one call', () => {
+			const el = new FakeElement('div')
+			bindStyle(el as unknown as HTMLElement, ['color', '--x']).ok({
+				color: 'red',
+				'--x': '1px',
+			})
+			expect(el.style.getPropertyValue('color')).toBe('red')
+			expect(el.style.getPropertyValue('--x')).toBe('1px')
+		})
+
+		test('ok removes a property whose value is null, leaving others set', () => {
+			const el = new FakeElement('div')
+			el.style.setProperty('color', 'red')
+			bindStyle(el as unknown as HTMLElement, ['color', '--x']).ok({
+				color: null,
+				'--x': '1px',
+			})
+			expect(el.style.getPropertyValue('color')).toBe('')
+			expect(el.style.getPropertyValue('--x')).toBe('1px')
+		})
+
+		test('ok removes a property absent from the map', () => {
+			const el = new FakeElement('div')
+			el.style.setProperty('color', 'red')
+			bindStyle(el as unknown as HTMLElement, ['color', '--x']).ok({
+				'--x': '1px',
+			})
+			expect(el.style.getPropertyValue('color')).toBe('')
+		})
+
+		test('nil clears every declared property', () => {
+			const el = new FakeElement('div')
+			el.style.setProperty('color', 'red')
+			el.style.setProperty('--x', '1px')
+			bindStyle(el as unknown as HTMLElement, ['color', '--x']).nil?.()
+			expect(el.style.getPropertyValue('color')).toBe('')
+			expect(el.style.getPropertyValue('--x')).toBe('')
+		})
 	})
 })
 
@@ -575,6 +709,64 @@ describe('bindAttribute', () => {
 		el.setAttribute('disabled', '')
 		bindAttribute(el as unknown as Element, 'disabled').nil?.()
 		expect(el.hasAttribute('disabled')).toBe(false)
+	})
+
+	describe('map form', () => {
+		test('ok sets a string and toggles a boolean in one call', () => {
+			const el = new FakeElement('button')
+			bindAttribute(el as unknown as Element, ['title', 'disabled']).ok({
+				title: 'hi',
+				disabled: true,
+			})
+			expect(el.getAttribute('title')).toBe('hi')
+			expect(el.hasAttribute('disabled')).toBe(true)
+		})
+
+		test('ok removes a key whose value is null, leaving others set', () => {
+			const el = new FakeElement('button')
+			el.setAttribute('title', 'hi')
+			bindAttribute(el as unknown as Element, ['title', 'disabled']).ok({
+				title: null as unknown as string,
+				disabled: true,
+			})
+			expect(el.hasAttribute('title')).toBe(false)
+			expect(el.hasAttribute('disabled')).toBe(true)
+		})
+
+		test('ok removes a key absent from the map', () => {
+			const el = new FakeElement('button')
+			el.setAttribute('title', 'hi')
+			bindAttribute(el as unknown as Element, ['title', 'disabled']).ok({
+				disabled: true,
+			})
+			expect(el.hasAttribute('title')).toBe(false)
+		})
+
+		test('ok with an unsafe string value throws (delegates to safeSetAttribute)', () => {
+			const el = new FakeElement('a')
+			expect(() =>
+				bindAttribute(el as unknown as Element, ['href']).ok({
+					href: 'javascript:alert(1)',
+				}),
+			).toThrow()
+		})
+
+		test('allowUnsafe bypasses safeSetAttribute validation', () => {
+			const el = new FakeElement('a')
+			bindAttribute(el as unknown as Element, ['href'], true).ok({
+				href: 'javascript:alert(1)',
+			})
+			expect(el.getAttribute('href')).toBe('javascript:alert(1)')
+		})
+
+		test('nil removes every declared attribute', () => {
+			const el = new FakeElement('button')
+			el.setAttribute('title', 'hi')
+			el.setAttribute('disabled', '')
+			bindAttribute(el as unknown as Element, ['title', 'disabled']).nil?.()
+			expect(el.hasAttribute('title')).toBe(false)
+			expect(el.hasAttribute('disabled')).toBe(false)
+		})
 	})
 })
 
@@ -660,5 +852,301 @@ describe('dangerouslyBindInnerHTML', () => {
 
 		const script = el.querySelectorAll('script')[0] as FakeElement
 		expect(script?.removed).toBe(false)
+	})
+})
+
+/* === bindAria (ADR 0026) === */
+
+/**
+ * Minimal stand-in for `ElementInternals` — only the ARIAMixin members the
+ * tests touch. A real ElementInternals is unreachable in bun:test.
+ */
+class FakeAriaInternals {
+	role: string | null = null
+	ariaExpanded: string | null = null
+	ariaValueNow: string | null = null
+	ariaActiveDescendantElement: Element | null = null
+	ariaDescribedByElements: readonly Element[] | null = null
+	ariaLabelledByElements: readonly Element[] | null = null
+}
+
+/** Register stub internals against a stub host, enabling the removal rule. */
+const makeRegisteredInternals = () => {
+	const internals = new FakeAriaInternals()
+	const host = new FakeElement('test-foo')
+	internalsHosts.set(
+		internals as unknown as ElementInternals,
+		host as unknown as HTMLElement,
+	)
+	return { internals, host }
+}
+
+describe('bindAria — ADR 0026 §2 mapping table', () => {
+	test('ok(boolean) → "true"/"false", never toggleAttribute-style empty string', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		handlers.ok(true)
+		expect(internals.ariaExpanded).toBe('true')
+		handlers.ok(false)
+		expect(internals.ariaExpanded).toBe('false')
+	})
+
+	test('ok(number) → decimal string', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaValueNow')
+		handlers.ok(42)
+		expect(internals.ariaValueNow).toBe('42')
+	})
+
+	test('ok(string) → pass-through', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'role')
+		handlers.ok('slider')
+		expect(internals.role).toBe('slider')
+	})
+
+	test('ok(Element) → pass-through', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(
+			internals as unknown as ARIAMixin,
+			'ariaActiveDescendantElement',
+		)
+		const option = new FakeElement('option') as unknown as Element
+		handlers.ok(option)
+		expect(internals.ariaActiveDescendantElement).toBe(option)
+	})
+
+	test('ok(readonly Element[]) → pass-through', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(
+			internals as unknown as ARIAMixin,
+			'ariaDescribedByElements',
+		)
+		const description = new FakeElement('p') as unknown as Element
+		handlers.ok([description])
+		expect(internals.ariaDescribedByElements).toEqual([description])
+	})
+
+	test('ok(null | undefined) → clears (assigns null)', () => {
+		// `ok()`'s static type excludes null/undefined (SingleMatchHandlers<T>
+		// requires T extends {}) but guards for both at runtime — see the
+		// AriaValue doc comment in src/bindings.ts. A signal whose *resolved
+		// value* is legitimately null (not merely unset) still reaches ok(null)
+		// via cause-effect's match(), so this exercises real, reachable
+		// behavior, not just a type escape hatch.
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		internals.ariaExpanded = 'true'
+		handlers.ok(null as never)
+		expect(internals.ariaExpanded).toBeNull()
+		internals.ariaExpanded = 'true'
+		handlers.ok(undefined as never)
+		expect(internals.ariaExpanded).toBeNull()
+	})
+
+	test('nil → clears (assigns null), same as ok(null)', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		internals.ariaExpanded = 'true'
+		handlers.nil?.()
+		expect(internals.ariaExpanded).toBeNull()
+	})
+
+	test('null target: every handler is a no-op (attachInternals()-failed degradation)', () => {
+		const handlers = bindAria(null, 'ariaExpanded')
+		expect(() => handlers.ok(true)).not.toThrow()
+		expect(() => handlers.nil?.()).not.toThrow()
+	})
+
+	test('undefined target: every handler is a no-op', () => {
+		const handlers = bindAria(undefined, 'ariaExpanded')
+		expect(() => handlers.ok('x')).not.toThrow()
+	})
+})
+
+describe('bindAria — map form', () => {
+	test('ok assigns every declared name from one map, per the coercion table', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, [
+			'ariaExpanded',
+			'ariaValueNow',
+			'role',
+		])
+		handlers.ok({ ariaExpanded: true, ariaValueNow: 180, role: 'slider' })
+		expect(internals.ariaExpanded).toBe('true')
+		expect(internals.ariaValueNow).toBe('180')
+		expect(internals.role).toBe('slider')
+	})
+
+	test('ok with a nullish entry clears that property, leaving the others set', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, [
+			'ariaExpanded',
+			'ariaValueNow',
+		])
+		handlers.ok({ ariaExpanded: true, ariaValueNow: 180 })
+		handlers.ok({ ariaExpanded: true })
+		expect(internals.ariaExpanded).toBe('true')
+		expect(internals.ariaValueNow).toBeNull()
+	})
+
+	test('nil clears every declared property', () => {
+		const { internals } = makeRegisteredInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, [
+			'ariaExpanded',
+			'ariaValueNow',
+		])
+		handlers.ok({ ariaExpanded: true, ariaValueNow: 180 })
+		handlers.nil?.()
+		expect(internals.ariaExpanded).toBeNull()
+		expect(internals.ariaValueNow).toBeNull()
+	})
+
+	test('null target: every handler is a no-op', () => {
+		const handlers = bindAria(null, ['ariaExpanded', 'ariaValueNow'])
+		expect(() => handlers.ok({ ariaExpanded: true })).not.toThrow()
+		expect(() => handlers.nil?.()).not.toThrow()
+	})
+})
+
+describe('bindAria — stale-attribute rule (ADR 0026 §1)', () => {
+	test('removes the shadowing attribute once, at the first value assertion', () => {
+		const { internals, host } = makeRegisteredInternals()
+		host.setAttribute('aria-expanded', 'false')
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		handlers.ok(true)
+		expect(host.hasAttribute('aria-expanded')).toBe(false)
+		expect(internals.ariaExpanded).toBe('true')
+	})
+
+	test('IDL → attribute mapping covers all four shapes', () => {
+		// ariaValueNow → aria-valuenow (no inner hyphens despite the casing),
+		// ariaDescribedByElements → aria-describedby, ariaActiveDescendantElement
+		// → aria-activedescendant, role → itself.
+		const cases: Array<[keyof ARIAMixin & string, string, AriaValue]> = [
+			['ariaValueNow', 'aria-valuenow', 5],
+			[
+				'ariaDescribedByElements',
+				'aria-describedby',
+				new FakeElement('p') as unknown as Element,
+			],
+			[
+				'ariaActiveDescendantElement',
+				'aria-activedescendant',
+				new FakeElement('option') as unknown as Element,
+			],
+			['role', 'role', 'slider'],
+		]
+		for (const [idl, attr, value] of cases) {
+			const { internals, host } = makeRegisteredInternals()
+			host.setAttribute(attr, 'stale')
+			bindAria(internals as unknown as ARIAMixin, idl).ok(value)
+			expect(host.hasAttribute(attr)).toBe(false)
+		}
+	})
+
+	test('is NOT kebab-case: ariaLabelledByElements removes "aria-labelledby" only', () => {
+		// A naive kebab-case transform yields 'aria-labelled-by' and silently
+		// removes nothing — the stale attribute would keep shadowing forever.
+		const { internals, host } = makeRegisteredInternals()
+		host.setAttribute('aria-labelledby', 'real-label')
+		host.setAttribute('aria-labelled-by', 'naive-kebab')
+		const description = new FakeElement('p') as unknown as Element
+		bindAria(internals as unknown as ARIAMixin, 'ariaLabelledByElements').ok([
+			description,
+		])
+		expect(host.hasAttribute('aria-labelledby')).toBe(false)
+		expect(host.getAttribute('aria-labelled-by')).toBe('naive-kebab')
+	})
+
+	test('nil does not remove (no assertion → attribute keeps authority)', () => {
+		const { internals, host } = makeRegisteredInternals()
+		host.setAttribute('aria-expanded', 'false')
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		handlers.nil?.()
+		expect(host.getAttribute('aria-expanded')).toBe('false')
+		expect(internals.ariaExpanded).toBeNull()
+	})
+
+	test('ok(null) does not remove (clearing restores attribute authority)', () => {
+		const { internals, host } = makeRegisteredInternals()
+		host.setAttribute('aria-expanded', 'false')
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		handlers.ok(null as never)
+		expect(host.getAttribute('aria-expanded')).toBe('false')
+		expect(internals.ariaExpanded).toBeNull()
+	})
+
+	test('removal fires once — an attribute re-set later (consumer override) survives updates', () => {
+		const { internals, host } = makeRegisteredInternals()
+		host.setAttribute('aria-expanded', 'false')
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		handlers.ok(true)
+		expect(host.hasAttribute('aria-expanded')).toBe(false)
+		// A consumer (or parent framework) re-asserts via the attribute channel
+		// AFTER the binding took over — the override channel (§1 row 2).
+		host.setAttribute('aria-expanded', 'false')
+		handlers.ok(false)
+		handlers.ok(true)
+		expect(host.getAttribute('aria-expanded')).toBe('false')
+	})
+
+	test("map form: removal is per property, at that property's own first assertion", () => {
+		const { internals, host } = makeRegisteredInternals()
+		host.setAttribute('aria-valuenow', '210')
+		host.setAttribute('aria-valuetext', '210 degrees')
+		const handlers = bindAria(internals as unknown as ARIAMixin, [
+			'ariaValueNow',
+			'ariaValueText',
+		])
+		handlers.ok({ ariaValueNow: 180 })
+		// ariaValueNow asserted → its echo removed; ariaValueText only cleared
+		// (nullish entry) → its echo keeps authority until first asserted.
+		expect(host.hasAttribute('aria-valuenow')).toBe(false)
+		expect(host.getAttribute('aria-valuetext')).toBe('210 degrees')
+		handlers.ok({ ariaValueNow: 180, ariaValueText: '180 degrees' })
+		expect(host.hasAttribute('aria-valuetext')).toBe(false)
+		expect(
+			(internals as unknown as Record<string, unknown>).ariaValueText,
+		).toBe('180 degrees')
+	})
+
+	test('internals absent from the reverse lookup: no removal, no throw', () => {
+		// Internals this library did not create (e.g. hand-attached in a raw
+		// custom element) are not in internalsHosts — the rule degrades to a
+		// no-op rather than throwing or guessing a host.
+		const internals = new FakeAriaInternals()
+		const host = new FakeElement('test-foo')
+		host.setAttribute('aria-expanded', 'false')
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		handlers.ok(true)
+		expect(host.getAttribute('aria-expanded')).toBe('false')
+		expect(internals.ariaExpanded).toBe('true')
+	})
+})
+
+describe('bindAria — compile-time rejections (@ts-expect-error pins)', () => {
+	test('type-level pins compile only if the errors below are real', () => {
+		const internals = new FakeAriaInternals() as unknown as ARIAMixin
+
+		// @ts-expect-error — 'aria-expanded' is the content-attribute name, not
+		// the ARIAMixin IDL property ('ariaExpanded'); bindAria is typed off the
+		// platform property names, not attribute strings (that's bindAttribute's
+		// job, which — unlike bindAria — would toggleAttribute() a boolean into
+		// an invalid empty-string ARIA value; ADR 0026 §2 exists to avoid that).
+		bindAria(internals, 'aria-expanded')
+
+		// @ts-expect-error — not an ARIAMixin property at all.
+		bindAria(internals, 'textContent')
+
+		const handlers = bindAria(internals, 'ariaExpanded')
+		// @ts-expect-error — a plain object is not a valid AriaValue (not
+		// boolean/number/string/Element/Element[]/null/undefined).
+		handlers.ok({ not: 'a valid aria value' })
+
+		// @ts-expect-error — a symbol is not a valid AriaValue either.
+		handlers.ok(Symbol('nope'))
+
+		expect(true).toBe(true)
 	})
 })

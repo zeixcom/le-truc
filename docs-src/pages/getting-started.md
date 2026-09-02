@@ -5,7 +5,7 @@ description: 'Installation, setup, and first steps'
 ---
 
 {% hero %}
-# 🚀 Getting Started
+# Getting Started
 
 **Set up Le Truc in minutes. No build tools required.** Or use a package manager and bundler for TypeScript support and optimized frontend assets.
 {% /hero %}
@@ -160,7 +160,7 @@ Add the following inside a `<script type="module">` tag, or in an external modul
 </script>
 ```
 
-The [Components](components.html) guide explains each piece in depth.
+The [Components](components.html) guide starts the Building Components chapter. [Props & State](props.html), [Events & Effects](effects.html), [Extensions](extensions.html), and [Accessibility](accessibility.html) follow it.
 
 {% /section %}
 

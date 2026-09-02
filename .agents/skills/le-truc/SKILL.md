@@ -43,7 +43,7 @@ The factory receives a `FactoryContext` at connect time with these helpers:
 | Helper | Purpose |
 |---|---|
 | `first(selector, required?)` | Query single descendant; throws if `required` string given and no match |
-| `all(selector, required?)` | Return `Memo<E[]>` backed by lazy `MutationObserver` |
+| `all(selector, required?)` | Return `Cell<E[]>` backed by lazy `MutationObserver` |
 | `host` | Component host element, typed as `HTMLElement & P` |
 | `expose(props)` | Declare reactive properties — call **once**, imperatively |
 | `watch(source, handler)` | Create reactive effect descriptor |
@@ -54,19 +54,7 @@ The factory receives a `FactoryContext` at connect time with these helpers:
 
 ### Reactivity Flow
 
-```
-attribute at connect time → parser
-                              ↓
-event / property set → host.prop (signal)
-                              ↓
-                 watch(source, handler) re-runs
-                              ↓
-                      DOM update via bind*
-                              ↓
-            on(el, type, handler) → { prop: value }
-                              ↓
-                signal updated → watch re-runs
-```
+Attribute (connect time, via parser) or event/property set → `host.prop` signal → `watch()` re-runs → DOM update via `bind*`; and `on()` handlers write back to `host.prop`, closing the loop. Full diagram: `references/component-model.md`.
 
 **Key constraint:** `host` is the **only external interface**. Components read/write state through `host.propName`. No querying outside the host's subtree, no direct property access on child components.
 
@@ -83,6 +71,9 @@ Binding helpers connect signals to DOM properties/attributes:
 | `bindState(internals, token)` | Toggle custom `:state()` pseudo-class — prefer over `bindClass(host, token)` for host state |
 | `bindStyle(el, prop)` | Set/remove inline style |
 | `bindVisible(el)` | Control `hidden` attribute |
+| `bindAria(target, name)` | Reflect an ARIA property onto an `ARIAMixin` target (`el` or `internals`) |
+
+`bindProperty`, `bindAttribute`, `bindClass`, `bindState`, and `bindStyle` also accept an array of targets (e.g. `bindStyle(el, ['color', '--x'])`) to drive several from one `watch()` call. `bindAria` accepts an array of ARIA property names the same way. See `references/effects.md`.
 
 ### Inter-Component Coordination
 

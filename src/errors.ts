@@ -10,7 +10,7 @@ import { describeRoot, elementName } from './util'
  */
 class InvalidComponentNameError extends TypeError {
 	/**
-	 * @param {string} component - Component name
+	 * @param component - Component name
 	 */
 	constructor(component: string) {
 		super(
@@ -27,9 +27,9 @@ class InvalidComponentNameError extends TypeError {
  */
 class InvalidPropertyNameError extends TypeError {
 	/**
-	 * @param {string} component - Component name
-	 * @param {string} prop - Property name
-	 * @param {string} reason - Explanation why the property is invalid
+	 * @param component - Component name
+	 * @param prop - Property name
+	 * @param reason - Explanation why the property is invalid
 	 */
 	constructor(component: string, prop: string, reason: string) {
 		super(
@@ -46,10 +46,10 @@ class InvalidPropertyNameError extends TypeError {
  */
 class MissingElementError extends Error {
 	/**
-	 * @param {ParentNode} root - Node the selector was queried against
-	 * @param {string} selector - Selector used to find the elements
-	 * @param {string} required - Explanation why the element is required
-	 * @param {string} [contextLabel] - Noun describing `root` in the message (default `'component'`); `query()`/`queryAll()`-derived helpers scoped to a narrower root, like `reconcile()`'s item-scoped `first`, pass `'item'`
+	 * @param root - Node the selector was queried against
+	 * @param selector - Selector used to find the elements
+	 * @param required - Explanation why the element is required
+	 * @param contextLabel - Noun describing `root` in the message; defaults to `'component'`
 	 */
 	constructor(
 		root: ParentNode,
@@ -71,8 +71,8 @@ class MissingElementError extends Error {
  */
 class DependencyTimeoutError extends Error {
 	/**
-	 * @param {HTMLElement} host - Host component
-	 * @param {string[]} missing - List of missing dependencies
+	 * @param host - Host component
+	 * @param missing - List of missing dependencies
 	 */
 	constructor(host: HTMLElement, missing: string[]) {
 		super(
@@ -89,9 +89,9 @@ class DependencyTimeoutError extends Error {
  */
 class InvalidReactivesError extends TypeError {
 	/**
-	 * @param {HTMLElement} host - Host component
-	 * @param {HTMLElement} target - Target component
-	 * @param {unknown} reactives - Reactives passed to the component
+	 * @param host - Host component
+	 * @param target - Target component
+	 * @param reactives - Reactives passed to the component
 	 */
 	constructor(host: HTMLElement, target: HTMLElement, reactives: unknown) {
 		super(
@@ -108,8 +108,8 @@ class InvalidReactivesError extends TypeError {
  */
 class InvalidCustomElementError extends TypeError {
 	/**
-	 * @param {HTMLElement} target - Target component
-	 * @param {string} where - Location where the error occurred
+	 * @param target - Target component
+	 * @param where - Location where the error occurred
 	 */
 	constructor(target: HTMLElement, where: string) {
 		super(`Target ${elementName(target)} is not a custom element in ${where}.`)
@@ -118,18 +118,16 @@ class InvalidCustomElementError extends TypeError {
 }
 
 /**
- * Error thrown when `pass()` cannot bind one or more properties on the target —
- * the property doesn't exist on the target, can't be resolved to a signal, or
- * isn't Slot-backed (the target is not a Le Truc component, or the property is
- * read-only/computed). See ADR 0011.
+ * Error thrown when `pass()` cannot bind one or more properties on the
+ * target. See ADR 0011.
  *
  * @since 2.0.4
  */
 class InvalidPassPropertyError extends TypeError {
 	/**
-	 * @param {HTMLElement} host - Host component passing the properties
-	 * @param {HTMLElement} target - Target component the properties were passed to
-	 * @param {Map<string, string>} reasons - Map of failing property name to the reason it could not be bound
+	 * @param host - Host component passing the properties
+	 * @param target - Target component the properties were passed to
+	 * @param reasons - Map of failing property name to the reason it could not be bound
 	 */
 	constructor(
 		host: HTMLElement,
@@ -148,18 +146,16 @@ class InvalidPassPropertyError extends TypeError {
 }
 
 /**
- * Error thrown when `watch()`, `on()`, `pass()`, `each()`, or `provideContexts()`
- * is called with no active effect-descriptor collector — i.e. not synchronously
- * during factory setup, an `each()` callback, or a `reconcile()` `bindItem`.
- * Common causes: calling the helper after an `await`, inside a detached
- * `setTimeout`, or from an event handler defined during setup. See ADR 0018.
+ * Error thrown when `watch()`, `on()`, `pass()`, `each()`, or
+ * `provideContexts()` is called outside synchronous factory setup, an
+ * `each()` callback, or a `reconcile()` `bindItem`. See ADR 0018.
  *
  * @since 2.3.0
  */
 class NoActiveCollectorError extends Error {
 	/**
-	 * @param {HTMLElement | undefined} host - Host component the helper was called for, if known (`each()` and `reconcile()` aren't host-bound, so they have none)
-	 * @param {string} helper - Name of the helper that was called (e.g. `'watch'`)
+	 * @param host - Host component the helper was called for, if known
+	 * @param helper - Name of the helper that was called (e.g. `'watch'`)
 	 */
 	constructor(host: HTMLElement | undefined, helper: string) {
 		const where = host ? ` in component ${elementName(host)}` : ''
@@ -172,14 +168,14 @@ class NoActiveCollectorError extends Error {
 
 /**
  * Error thrown when the template passed to `reconcile()` does not contain
- * exactly one root element in its content
+ * exactly one root element in its content.
  *
  * @since 2.3.0
  */
 class InvalidTemplateError extends TypeError {
 	/**
-	 * @param {Element} container - Container element the template was meant to fill
-	 * @param {number} count - Number of root elements found in the template content
+	 * @param container - Container element the template was meant to fill
+	 * @param count - Number of root elements found in the template content
 	 */
 	constructor(container: Element, count: number) {
 		super(
@@ -191,18 +187,17 @@ class InvalidTemplateError extends TypeError {
 
 /**
  * Error thrown in DEV_MODE when two extensions passed to `defineComponent()`
- * declare the same `staticProps` key. In production the first extension to
- * declare the key wins and the rest are silently ignored — see ADR on the
- * `ComponentExtension` mechanism.
+ * declare the same `staticProps` key. In production, the first extension to
+ * declare the key wins and the rest are silently ignored.
  *
  * @since 2.3
  */
 class ExtensionCollisionError extends Error {
 	/**
-	 * @param {string} component - Component name
-	 * @param {string} key - The colliding `staticProps` key
-	 * @param {string} first - Name of the extension that first declared `key`
-	 * @param {string} second - Name of the extension whose declaration was ignored
+	 * @param component - Component name
+	 * @param key - The colliding `staticProps` key
+	 * @param first - Name of the extension that first declared `key`
+	 * @param second - Name of the extension whose declaration was ignored
 	 */
 	constructor(component: string, key: string, first: string, second: string) {
 		super(
@@ -213,15 +208,15 @@ class ExtensionCollisionError extends Error {
 }
 
 /**
- * Error thrown when a CSS selector passed to `all()` is malformed
+ * Error thrown when a CSS selector passed to `all()` is malformed.
  *
  * @since 2.0.4
  */
 class InvalidSelectorError extends TypeError {
 	/**
-	 * @param {ParentNode} parent - Parent node the selector was queried against
-	 * @param {string} selector - The malformed selector
-	 * @param {unknown} cause - The error thrown by the DOM selector engine
+	 * @param parent - Parent node the selector was queried against
+	 * @param selector - The malformed selector
+	 * @param cause - The error thrown by the DOM selector engine
 	 */
 	constructor(parent: ParentNode, selector: string, cause: unknown) {
 		super(

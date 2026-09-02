@@ -23,7 +23,6 @@ const PAGES_DIR = join(ROOT, 'docs-src/pages')
 const API_DIR = join(ROOT, 'docs-src/api')
 const LAYOUTS_DIR = join(ROOT, 'docs-src/layouts')
 const INCLUDES_DIR = join(ROOT, 'docs-src/includes')
-const MENU_FILE = join(ROOT, 'docs-src/includes/menu.html')
 const STATIC_DIR = join(ROOT, 'docs-src/static')
 
 const OUTPUT_DIR = join(ROOT, 'docs')
@@ -41,13 +40,75 @@ const PAGE_ORDER = [
 	'index',
 	'getting-started',
 	'components',
+	'props',
+	'effects',
 	'styling',
+	'accessibility',
+	'extensions',
 	'data-flow',
+	'lists',
+	'async',
+	'context',
 	'examples',
 	'api',
 	'blog',
 	'about',
 ]
+
+/**
+ * Guide chapters — pages grouped under a heading in the sidebar menu and
+ * linked by a prev/next stepper on every member page.
+ * Member slugs must appear in PAGE_ORDER; the group heading renders
+ * before the first member present in the menu.
+ */
+const CHAPTERS = [
+	{
+		title: 'Building Components',
+		pages: [
+			'components',
+			'props',
+			'effects',
+			'styling',
+			'accessibility',
+			'extensions',
+		],
+	},
+	{
+		title: 'Coordinating Components',
+		pages: ['data-flow', 'lists', 'async', 'context'],
+	},
+] as const
+
+/**
+ * Sidebar menu groups — every root page belongs to exactly one group,
+ * rendered as a heading in the sidebar in this order. The two guide
+ * chapters double as menu groups (same title, same page list as
+ * CHAPTERS); the other groups are sidebar-only and carry no stepper.
+ * Member slugs must appear in PAGE_ORDER; each group's members should be
+ * contiguous in it so the heading renders once, before the first member.
+ */
+const MENU_GROUPS = [
+	{
+		title: 'Get Started',
+		pages: ['index', 'getting-started'],
+	},
+	{
+		title: CHAPTERS[0].title,
+		pages: CHAPTERS[0].pages,
+	},
+	{
+		title: CHAPTERS[1].title,
+		pages: CHAPTERS[1].pages,
+	},
+	{
+		title: 'Reference',
+		pages: ['examples', 'api'],
+	},
+	{
+		title: 'Community',
+		pages: ['blog', 'about'],
+	},
+] as const
 
 // Layout system configuration
 export const CONTENT_MARKER = '{{ content }}'
@@ -117,6 +178,7 @@ export {
 	ASSETS_DIR,
 	BASE_URL,
 	BLOG_OUTPUT_DIR,
+	CHAPTERS,
 	COMPONENTS_DIR,
 	COMPRESSIBLE_TYPES,
 	CSS_FILE,
@@ -126,7 +188,7 @@ export {
 	LAYOUTS_DIR,
 	LLMS_FULL_TXT_FILE,
 	LLMS_TXT_FILE,
-	MENU_FILE,
+	MENU_GROUPS,
 	MIME_TYPES,
 	OUTPUT_DIR,
 	PAGE_ORDER,

@@ -6,11 +6,11 @@
 
 ## Context
 
-[What problem are we solving? What is the background? Link to relevant sections in REQUIREMENTS.md (e.g., M1, S3, X1) or ARCHITECTURE.md.]
+[What problem are we solving? State the situation and complication in a few tight sentences, problem first. Link to relevant sections in REQUIREMENTS.md (e.g., M1, S3, X1) or ARCHITECTURE.md — links, not history.]
 
 ## Decision
 
-[What did we choose? Be concise and specific.]
+[What did we choose, and how does it work? Terse: commitment plus mechanism. Numbered sub-designs only when the decision has multiple genuine moving parts. No narrative.]
 
 ## Alternatives Considered
 
@@ -19,7 +19,7 @@
 
 ## Consequences
 
-[Good and bad outcomes. How does this affect:
+[Good and bad outcomes as compact lists. How does this affect:
 - Performance (bundle size, runtime)
 - Type safety
 - Developer experience

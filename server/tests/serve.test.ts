@@ -5,6 +5,7 @@
  * - getLayoutForPath pure unit function
  * - Route responses via isolated Bun.serve instance
  * - HMR injection behaviour (dev vs production)
+ * - Bare section roots (/blog, /examples): 301 redirect or 404, never sendfile on a directory
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
@@ -15,7 +16,7 @@ import {
 	OUTPUT_DIR,
 	SOURCES_DIR,
 } from '../config'
-import { fileExists, getFilePath } from '../io'
+import { fileExists, getFilePath, isDirectory } from '../io'
 import { getLayoutForPath } from '../serve'
 import { hmrScriptTag } from '../templates/hmr'
 
@@ -101,7 +102,9 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 	}
 
 	const serveFile = async (filePath: string): Promise<Response> => {
-		if (!fileExists(filePath)) return new Response('Not Found', { status: 404 })
+		// Directories pass existsSync but fail in sendfile — treat as not found
+		if (!fileExists(filePath) || isDirectory(filePath))
+			return new Response('Not Found', { status: 404 })
 		if (isDev && filePath.endsWith('.html')) {
 			const content = await Bun.file(filePath).text()
 			return new Response(injectHMR(content), {
@@ -144,6 +147,17 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 
 			'/:page': req => {
 				const filePath = getFilePath(OUTPUT_DIR, req.params.page)
+				// Bare section roots (/blog, /examples, /api) resolve to
+				// directories — redirect to the matching page if it exists
+				if (isDirectory(filePath)) {
+					const page = req.params.page.replace(/\.html$/, '')
+					if (fileExists(getFilePath(OUTPUT_DIR, `${page}.html`)))
+						return new Response(null, {
+							status: 301,
+							headers: { Location: `/${page}.html` },
+						})
+					return new Response('Not Found', { status: 404 })
+				}
 				return serveFile(filePath)
 			},
 
@@ -324,5 +338,54 @@ describe('/blog/:slug route', () => {
 		} else {
 			expect(res.status).toBe(404)
 		}
+	})
+})
+
+/* === Bare section roots (directories under docs/) === */
+
+describe('bare section roots', () => {
+	let server: TestServer
+
+	beforeAll(() => {
+		server = startTestServer()
+	})
+
+	afterAll(() => {
+		server.close()
+	})
+
+	test('GET /blog → 301 to /blog.html', async () => {
+		const res = await fetch(`${server.url}/blog`, { redirect: 'manual' })
+		expect(res.status).toBe(301)
+		expect(res.headers.get('location')).toBe('/blog.html')
+	})
+
+	test('GET /examples → 301 to /examples.html', async () => {
+		const res = await fetch(`${server.url}/examples`, { redirect: 'manual' })
+		expect(res.status).toBe(301)
+		expect(res.headers.get('location')).toBe('/examples.html')
+	})
+
+	test('GET /api → 301 to /api.html', async () => {
+		const res = await fetch(`${server.url}/api`, { redirect: 'manual' })
+		expect(res.status).toBe(301)
+		expect(res.headers.get('location')).toBe('/api.html')
+	})
+
+	test('GET /blog follows the redirect to the blog index page', async () => {
+		const res = await fetch(`${server.url}/blog`)
+		expect(res.status).toBe(200)
+		const body = await res.text()
+		expect(body.toLowerCase()).toContain('<!doctype html')
+	})
+
+	test('GET /assets → 404 (directory without a matching page)', async () => {
+		const res = await fetch(`${server.url}/assets`, { redirect: 'manual' })
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /examples/basic → 404 (example group directory)', async () => {
+		const res = await fetch(`${server.url}/examples/basic`)
+		expect(res.status).toBe(404)
 	})
 })

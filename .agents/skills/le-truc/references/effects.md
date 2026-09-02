@@ -44,11 +44,12 @@ Without thunks, these require custom handlers. Thunks keep intent declarative.
 |---|---|---|
 | Set text content | `bindText(el, preserveComments?)` | `(value: string \| number) => void` |
 | Set DOM property | `bindProperty(el, key)` | `(value: E[K]) => void` |
-| Show/hide element | `bindVisible(el, transform?)` | `(value: T) => void` |
-| Toggle CSS class | `bindClass(el, token, transform?)` | `(value: T) => void` |
+| Show/hide element | `bindVisible(el)` | `(value: T) => void` |
+| Toggle CSS class | `bindClass(el, token)` | `(value: T) => void` |
 | Toggle custom `:state()` pseudo-class | `bindState(internals, token)` | `(value: boolean) => void` |
 | Set/remove attribute | `bindAttribute(el, name, allowUnsafe?)` | `SingleMatchHandlers<string \| boolean>` |
 | Set inline style | `bindStyle(el, prop)` | `SingleMatchHandlers<string>` |
+| Reflect ARIA property via `ElementInternals`/IDL | `bindAria(target, name)` | `SingleMatchHandlers<AriaValue>` |
 | Set innerHTML | `dangerouslyBindInnerHTML(el, options?)` | `SingleMatchHandlers<string>` |
 | Attach event listener | `on(target, type, handler, options?)` | registers an `EffectDescriptor` |
 | Bind Le Truc child prop | `pass(target, props)` | registers an `EffectDescriptor` |
@@ -78,22 +79,40 @@ watch('disabled', bindProperty(button, 'disabled'))
 watch('value', bindProperty(input, 'value'))
 ```
 
-### `bindVisible(element, transform?)`
+**Map form:** `bindProperty(element, keys)` with an array of keys returns `(value: Partial<Pick<E, K>>) => void`. Patches only the keys present in the object — a missing key is left untouched, not cleared, since object properties have no "remove" operation. This differs from every other `bind*` helper's map form below.
+
+```typescript
+watch(
+  () => ({ disabled: !host.ready, ariaBusy: String(!host.ready) }),
+  bindProperty(button, ['disabled', 'ariaBusy']),
+)
+```
+
+### `bindVisible(element)`
 
 Returns `(value: T) => void`. Sets `element.hidden = !value`. `true` makes element visible.
 
 ```typescript
 watch('loading', bindVisible(spinner))
-watch('count', bindVisible(clearBtn, v => v > 0))  // custom transform
+watch(() => host.count > 0, bindVisible(clearBtn))  // thunk derives the boolean
 ```
 
-### `bindClass(element, token, transform?)`
+### `bindClass(element, token)`
 
 Returns `(value: T) => void`. Adds `token` when truthy, removes when falsy.
 
 ```typescript
 watch('active', bindClass(item, 'active'))
-watch('state', bindClass(el, 'is-open', v => v === 'open'))  // custom transform
+watch(() => host.state === 'open', bindClass(el, 'is-open'))
+```
+
+**Map form:** `bindClass(element, tokens)` with an array of tokens returns `(value: Partial<Record<Tk, boolean>>) => void`. Toggles every declared token in one call — a token missing from the object is treated as falsy (removed), same coercion as the single-token form. No `nil` handling needed: an empty object already clears every declared token.
+
+```typescript
+watch(
+  () => ({ selected: item.id === host.selectedId, disabled: item.disabled }),
+  bindClass(item, ['selected', 'disabled']),
+)
 ```
 
 ### `bindState(internals, token)`
@@ -106,6 +125,15 @@ watch('overflowEnd', bindState(internals, 'overflow-end'))
 ```
 
 Prefer `bindState` over `bindClass(host, token)` for host-level state. Consumer code rewriting the host's `class` attribute cannot overwrite a custom state. It is also available on every component (`internals` is attached unconditionally), not only form-associated ones. `internals` comes from `FactoryContext` — destructure it alongside `watch`/`host`/etc.
+
+**Map form:** `bindState(internals, tokens)` with an array of tokens returns `(value: Partial<Record<Tk, boolean>>) => void`. Same toggle-loop semantics as `bindClass`'s map form — a token missing from the object is treated as falsy. The `null`-internals no-op still applies.
+
+```typescript
+watch(
+  () => ({ 'filter-active': filter === 'active', 'filter-completed': filter === 'completed' }),
+  bindState(internals, ['filter-active', 'filter-completed']),
+)
+```
 
 ### `bindAttribute(element, name, allowUnsafe?)`
 
@@ -121,6 +149,15 @@ watch('expanded', bindAttribute(trigger, 'aria-expanded'))
 watch('src', bindAttribute(img, 'src', true))  // skip security validation
 ```
 
+**Map form:** `bindAttribute(element, names, allowUnsafe?)` with an array of names returns `SingleMatchHandlers<Partial<Record<N, string | boolean>>>`. `ok(map)` sets/toggles every declared name (string → validated `setAttribute`, boolean → `toggleAttribute`); a name missing from the map (or `null`/`undefined`) is removed. `nil` removes every declared name.
+
+```typescript
+watch(
+  () => ({ 'aria-expanded': String(open), 'aria-disabled': disabled }),
+  bindAttribute(trigger, ['aria-expanded', 'aria-disabled']),
+)
+```
+
 ### `bindStyle(element, prop)`
 
 Returns `SingleMatchHandlers<string>`. Pass directly to `watch`.
@@ -132,6 +169,29 @@ Returns `SingleMatchHandlers<string>`. Pass directly to `watch`.
 watch('opacity', bindStyle(overlay, 'opacity'))
 watch('accentColor', bindStyle(card, '--highlight-color'))
 ```
+
+**Map form:** `bindStyle(element, props)` with an array of property names returns `SingleMatchHandlers<Partial<Record<P, string | null>>>`. `ok(map)` sets every declared property present and non-nil, removes the rest (missing or `null`/`undefined`). `nil` removes every declared property. Use this when one computed value drives several CSS custom properties at once, instead of one `watch()` call per property.
+
+```typescript
+watch(
+  () => ({ '--gauge-color': color, '--gauge-degree': `${degree}deg` }),
+  bindStyle(host, ['--gauge-color', '--gauge-degree']),
+)
+```
+
+### `bindAria(target, name)`
+
+Returns `SingleMatchHandlers<AriaValue>`. `target` is `el` or `internals` — anything implementing `ARIAMixin`. Reflects the property via `ElementInternals`/IDL, not a content attribute.
+
+- `ok(value)` → assigns the coerced value (`boolean`/`number`/`string`/`Element`/`Element[]`, per property)
+- `nil` → assigns `null`
+
+```typescript
+watch('expanded', bindAria(trigger, 'ariaExpanded'))
+watch('busy', bindAria(internals, 'ariaBusy'))
+```
+
+**Map form:** `bindAria(target, names)` with an array of names returns `SingleMatchHandlers<Partial<Record<N, AriaValue>>>`. `ok(map)` assigns every declared name; a name missing from the map (or nullish) assigns `null`. `nil` assigns `null` to every declared name. See `references/accessibility.md` for choosing between `bindAria` and content-attribute ARIA via `bindAttribute`.
 
 ### `dangerouslyBindInnerHTML(element, options?)`
 
@@ -168,9 +228,7 @@ Le Truc-to-Le Truc only. Replaces backing Slot signal of descendant component's 
 
 ```typescript
 const child = first('child-component') as HTMLElement & ChildProps
-pass(child, { disabled: 'disabled' })   // string prop name
-pass(child, { value: mySignal })         // Signal
-pass(child, { label: () => host.label }) // thunk
+pass(child, { label: () => host.label }) // thunk — read-only
 // SlotDescriptor — inline bi-directional adapter
 pass(child, {
   progress: {
@@ -180,17 +238,19 @@ pass(child, {
 })
 ```
 
+The property-key form (`{ disabled: 'disabled' }`) and bare-writable-signal form (`{ value: mySignal }`) are deprecated (removed in v3.0) — see `references/coordination.md` for why.
+
 **Use `bindProperty()` inside `watch()` for non-Le Truc elements** (Lit, Stencil, plain custom elements).
 
 ### `each(memo, callback)`
 
-For per-element effects on `Signal<E[]>` from `all()`. Elements enter/leave collection with own reactive scope.
+For per-element effects on `Cell<E[]>` from `all()`. Elements enter/leave collection with own reactive scope.
 
 ```typescript
 const items = all('[role="option"]')
 each(items, item => {
   on(item, 'focus', () => ({ focusedId: item.id }))
-  watch('selectedId', bindClass(item, 'selected', id => id === item.id))
+  watch(() => host.selectedId === item.id, bindClass(item, 'selected'))
 })
 ```
 
@@ -278,7 +338,7 @@ Call each helper directly — order doesn't matter:
 ```typescript
 watch('value', bindProperty(input, 'value'))
 watch('disabled', bindProperty(input, 'disabled'))
-watch('error', bindClass(input, 'error', Boolean))
+watch(() => Boolean(host.error), bindClass(input, 'error'))
 ```
 
 ---

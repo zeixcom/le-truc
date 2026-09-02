@@ -1,5 +1,6 @@
 import {
 	batch,
+	bindAria,
 	bindText,
 	bindVisible,
 	createMemo,
@@ -43,8 +44,12 @@ export default defineComponent<FormComboboxProps>(
 		const listbox = first('form-listbox', 'Needed to display options.')
 		const descriptionEl = first('.description')
 
-		const descriptionId = descriptionEl?.id
-		if (descriptionId) textbox.setAttribute('aria-describedby', descriptionId)
+		// Element reference instead of hand-rolled ID plumbing (ADR 0026 §1/§5)
+		// — static, one-time wiring stays imperative, no bindAria() call for a
+		// statement already shorter than its helper (ADR 0026 §2). `textbox`
+		// is a native Element, so the IDL write mirrors into the attribute:
+		// still CSS/markup-visible, no channel change.
+		if (descriptionEl) textbox.ariaDescribedByElements = [descriptionEl]
 
 		const showPopup = createState(false)
 		const isExpanded = createMemo(
@@ -119,10 +124,12 @@ export default defineComponent<FormComboboxProps>(
 		if (errorEl) watch('validationMessage', bindText(errorEl))
 		if (descriptionEl) watch('description', bindText(descriptionEl))
 
-		watch(isExpanded, expanded => {
-			listbox.hidden = !expanded
-			textbox.ariaExpanded = String(expanded)
-		})
+		watch(isExpanded, bindVisible(listbox))
+		// bindAria() gives the ADR 0026 §2 boolean coercion ('true'/'false',
+		// never manual String(expanded)) and nil handling; textbox stays a
+		// native Element, so this remains the attribute channel, CSS-visible,
+		// Playwright-visible on every engine — no testability loss.
+		watch(isExpanded, bindAria(textbox, 'ariaExpanded'))
 		if (clearBtn) watch(length, bindVisible(clearBtn))
 	},
 	[formAssociated()],

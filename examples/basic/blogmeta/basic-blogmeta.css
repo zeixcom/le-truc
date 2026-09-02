@@ -1,4 +1,4 @@
-card-blogmeta {
+basic-blogmeta {
 	display: flex;
 	align-items: center;
 	gap: var(--space-m);

@@ -8,7 +8,6 @@ import { jsEffect } from './effects/js'
 import { llmsFullManifestEffect } from './effects/llms-full-manifest'
 import { llmsManifestEffect } from './effects/llms-manifest'
 import { mdMirrorEffect } from './effects/md-mirror'
-import { menuEffect } from './effects/menu'
 import { mocksEffect } from './effects/mocks'
 import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
@@ -70,7 +69,6 @@ export async function build(
 		const mocks = mocksEffect(scheduleReload)
 		const sources = sourcesEffect(scheduleReload)
 		const pages = pagesEffect(scheduleReload)
-		const menuEff = menuEffect(scheduleReload)
 		const sitemap = sitemapEffect(scheduleReload)
 		const mdMirror = mdMirrorEffect(scheduleReload)
 		const llmsManifest = llmsManifestEffect(scheduleReload)
@@ -84,7 +82,6 @@ export async function build(
 			mocks.ready,
 			sources.ready,
 			pages.ready,
-			menuEff.ready,
 			sitemap.ready,
 			mdMirror.ready,
 			llmsManifest.ready,
@@ -111,7 +108,6 @@ export async function build(
 			mocks.cleanup?.()
 			sources.cleanup?.()
 			pages.cleanup?.()
-			menuEff.cleanup?.()
 			sitemap.cleanup?.()
 			mdMirror.cleanup?.()
 			llmsManifest.cleanup?.()

@@ -9,19 +9,16 @@ import { isCustomElement, isNotYetDefinedComponent } from '../util'
 
 /* === Types === */
 
-// Split a comma-separated selector into individual selectors
 type SplitByComma<S extends string> = S extends `${infer First},${infer Rest}`
 	? [TrimWhitespace<First>, ...SplitByComma<Rest>]
 	: [TrimWhitespace<S>]
 
-// Trim leading/trailing whitespace from a string
 type TrimWhitespace<S extends string> = S extends ` ${infer Rest}`
 	? TrimWhitespace<Rest>
 	: S extends `${infer Rest} `
 		? TrimWhitespace<Rest>
 		: S
 
-// Extract the rightmost selector part from combinator selectors (space, >, +, ~)
 type ExtractRightmostSelector<S extends string> =
 	S extends `${string} ${infer Rest}`
 		? ExtractRightmostSelector<Rest>
@@ -33,10 +30,9 @@ type ExtractRightmostSelector<S extends string> =
 					? ExtractRightmostSelector<Rest>
 					: S
 
-// Extract tag name from a simple selector (without combinators)
-// Check `[` before `:` so `button[attr]:pseudo` yields `button`, not `button[attr]`.
-// But only use the `[` match when the prefix contains no `:` — otherwise the `[`
-// is inside a pseudo-class argument like `:not([hidden])` and `:` should win.
+// Check `[` before `:` so `button[attr]:pseudo` yields `button`. Only use the
+// `[` match when the prefix has no `:` — otherwise the `[` is inside a
+// pseudo-class argument like `:not([hidden])` and `:` should win.
 type ExtractTagFromSimpleSelector<S extends string> =
 	S extends `${infer T}.${string}`
 		? T
@@ -52,12 +48,10 @@ type ExtractTagFromSimpleSelector<S extends string> =
 					? T
 					: S
 
-// Main extraction logic for a single selector
 type ExtractTag<S extends string> = ExtractTagFromSimpleSelector<
 	ExtractRightmostSelector<S>
 >
 
-// Normalize to lowercase and ensure it's a known HTML tag
 type KnownTag<S extends string> =
 	Lowercase<ExtractTag<S>> extends
 		| keyof HTMLElementTagNameMap
@@ -66,7 +60,6 @@ type KnownTag<S extends string> =
 		? Lowercase<ExtractTag<S>>
 		: never
 
-// Get element type from a single selector
 type ElementFromSingleSelector<S extends string> =
 	KnownTag<S> extends never
 		? HTMLElement
@@ -78,14 +71,12 @@ type ElementFromSingleSelector<S extends string> =
 					? MathMLElementTagNameMap[KnownTag<S>]
 					: HTMLElement
 
-// Map a tuple of selectors to a union of their element types
 type ElementsFromSelectorArray<Selectors extends readonly string[]> = {
 	[K in keyof Selectors]: Selectors[K] extends string
 		? ElementFromSingleSelector<Selectors[K]>
 		: never
 }[number]
 
-// Main type: handle both single selectors and comma-separated selectors
 type ElementFromSelector<S extends string> = S extends `${string},${string}`
 	? ElementsFromSelectorArray<SplitByComma<S>>
 	: ElementFromSingleSelector<S>
@@ -113,17 +104,18 @@ type ElementQueries = {
 /* === Internal Functions === */
 
 /**
- * Extract attribute names from a CSS selector
- * Handles various attribute selector formats: .class, #id, [attr], [attr=value], [attr^=value], etc.
+ * Extract attribute names from a CSS selector.
  *
- * @param {string} selector - CSS selector to parse
- * @returns {string[]} - Array of attribute names found in the selector
+ * Handles `.class`, `#id`, `[attr]`, `[attr=value]`, `[attr^=value]`, and similar forms.
+ *
+ * @param selector - CSS selector to parse
+ * @returns Attribute names found in the selector
  */
 const extractAttributes = (selector: string): string[] => {
 	const attributes = new Set<string>()
 	// Strip attribute selector content before checking for class/id shorthand,
-	// so that #/. inside [attr^="#anchor"] don't produce false positives.
-	// Linear scan instead of regex to avoid O(n²) backtracking on inputs like `[[[[`.
+	// so #/. inside [attr^="#anchor"] don't produce false positives. Linear
+	// scan instead of regex to avoid backtracking on inputs like `[[[[`.
 	let withoutAttrValues = ''
 	let depth = 0
 	for (const ch of selector) {
@@ -151,7 +143,7 @@ const extractAttributes = (selector: string): string[] => {
 }
 
 // Shared lookup behind `query()`, `makeElementQueries`'s `first`, and
-// `bindFirst`'s item-scoped `first` — only `contextLabel` varies between them.
+// `bindFirst`'s item-scoped `first`.
 function queryOne<S extends string>(
 	root: ParentNode,
 	selector: S,
@@ -165,10 +157,9 @@ function queryOne<S extends string>(
 }
 
 /**
- * Bind `query()` to `root`, throwing with contextLabel `'item'` instead of the
- * default `'component'`. Internal — backs `reconcile()`'s `bindItem` and
- * `each()`'s scoped `first` parameter, not exported from the package. See
- * ADR 0021.
+ * Bind `query()` to `root`, throwing with contextLabel `'item'` instead of
+ * the default `'component'`. Backs `reconcile()`'s `bindItem` and `each()`'s
+ * scoped `first` parameter. See ADR 0021.
  */
 const bindFirst = (root: Element): FirstElement =>
 	((selector: string, required?: string) =>
@@ -180,17 +171,15 @@ const bindFirst = (root: Element): FirstElement =>
  * Return the first descendant of `root` matching a CSS selector.
  *
  * One-shot: no dependency tracking for undefined custom elements, no `Cell`.
- * `first()`/`all()` (see `makeElementQueries`) add that on top of this for a
- * component host. Use `query()` directly for lookups relative to any other
- * already-obtained element — inside `reconcile()`/`each()` callbacks, or from
- * free-standing helper functions that only receive an element, not the
- * factory context. See ADR 0021.
+ * Use it for lookups relative to an already-obtained element. `first()`/
+ * `all()` (see `makeElementQueries`) add dependency tracking for a
+ * component host. See ADR 0021.
  *
  * @since 2.4.0
- * @param {ParentNode} root - Node to search within
- * @param {S} selector - CSS selector
- * @param {string} [required] - If provided and no element is found, throws with this message as context
- * @returns {ElementFromSelector<S> | undefined} The first matching element, or `undefined` if not found and not required
+ * @param root - Node to search within
+ * @param selector - CSS selector
+ * @param [required] - If set and no element is found, throws with this message as context
+ * @returns The first matching element, or `undefined` if not found and not required
  * @throws {MissingElementError} If `required` is set and no matching element exists
  */
 function query<S extends string>(
@@ -222,15 +211,14 @@ function query<S extends string>(
 /**
  * Return a plain array of all descendants of `root` matching a CSS selector.
  *
- * One-shot: queried once, not backed by a `Cell`/`MutationObserver`. Use this
- * for a roving-tabindex-style snapshot, or any other case where a live
- * collection isn't needed. See `query()` and ADR 0021.
+ * One-shot: queried once, not backed by a `Cell`/`MutationObserver`. Use
+ * this when a live collection isn't needed. See `query()` and ADR 0021.
  *
  * @since 2.4.0
- * @param {ParentNode} root - Node to search within
- * @param {S} selector - CSS selector
- * @param {string} [required] - If provided and no elements are found, throws with this message as context
- * @returns {ElementFromSelector<S>[]} Array of matching elements
+ * @param root - Node to search within
+ * @param selector - CSS selector
+ * @param [required] - If set and no elements are found, throws with this message as context
+ * @returns Array of matching elements
  * @throws {MissingElementError} If `required` is set and no matching elements exist
  */
 function queryAll<S extends string>(
@@ -258,13 +246,14 @@ function queryAll<S extends string>(
 
 /**
  * Create a memo of elements matching a CSS selector.
- * The MutationObserver is lazily activated when an effect first reads
- * the memo, and disconnected when no effects are watching.
+ *
+ * The `MutationObserver` activates lazily when an effect first reads the
+ * memo, and disconnects when no effects are watching.
  *
  * @since 0.16.0
- * @param {ParentNode} parent - The parent node to search within
- * @param {string} selector - The CSS selector to match elements
- * @returns {Cell<ElementFromSelector<S>[]>} Reactive memo of current matching elements
+ * @param parent - The parent node to search within
+ * @param selector - The CSS selector to match elements
+ * @returns Reactive memo of current matching elements
  * @throws {InvalidSelectorError} If the selector is malformed
  */
 function createElementsMemo<S extends string>(
@@ -281,10 +270,8 @@ function createElementsMemo<S extends string>(
 ): Cell<ElementFromSelector<S>[]> {
 	type E = ElementFromSelector<S>
 
-	// Validate the selector eagerly so a malformed selector throws here,
-	// at memo creation, instead of inside the MutationObserver callback —
-	// where a thrown SyntaxError is silently swallowed per spec, leaving
-	// the memo permanently stale.
+	// Validate eagerly: a SyntaxError thrown inside the MutationObserver
+	// callback is silently swallowed per spec, leaving the memo stale.
 	try {
 		parent.querySelector(selector)
 	} catch (error) {
@@ -335,39 +322,35 @@ function createElementsMemo<S extends string>(
 /**
  * Create `{ first, all }` query helpers and a dependency resolver for a component host.
  *
- * Queries are run against `host.shadowRoot` if present, otherwise against `host` itself.
- * Any undefined custom elements found during queries are collected as dependencies;
- * `resolveDependencies` waits for them to be defined before activating effects.
+ * Queries run against `host.shadowRoot` if present, otherwise against `host`
+ * itself. Undefined custom elements found during queries are collected as
+ * dependencies; `resolveDependencies` waits for them before activating effects.
  *
  * @since 0.14.0
- * @param {HTMLElement} host - The component host element
- * @returns {[ElementQueries, (callback: () => void) => void]} Query helpers and a dependency resolver
+ * @param host - The component host element
+ * @returns Query helpers and a dependency resolver
  */
 const makeElementQueries = (
 	host: HTMLElement,
 ): [ElementQueries, (run: () => void) => void] => {
 	const root = host.shadowRoot ?? host
 	const dependencies: Set<string> = new Set()
-	// True when `first()`/`all()` matched any `:defined` custom-element
-	// descendant. The element's class is already registered, but when a whole
-	// nested subtree is connected in one operation (e.g. a framework building
-	// it detached then appending), the browser queues each element's
-	// connectedCallback in tree order — the parent's runs first, before the
-	// child's own setup (expose()/Slot accessors) has run. Deferring setup by
-	// one microtask lets the child's queued connectedCallback drain first, so
-	// `pass()` → `swapSlots` finds the child's properties ready.
+	// True when `first()`/`all()` matched a `:defined` custom-element
+	// descendant. Its connectedCallback may not have run yet when a whole
+	// subtree connects in one operation (parent callback fires first, in
+	// tree order) — resolveDependencies() defers a microtask to let it drain.
 	let queriedDefinedCustomChild = false
 
 	/**
 	 * Return the first descendant element matching a CSS selector.
 	 *
-	 * If the matched element is an undefined custom element, its tag name is added
-	 * to the dependency set so `resolveDependencies` can await its definition.
+	 * If the matched element is an undefined custom element, its tag name is
+	 * added to the dependency set so `resolveDependencies` can await it.
 	 *
 	 * @since 0.15.0
-	 * @param {S} selector - CSS selector
-	 * @param {string} [required] - If provided and no element is found, throws with this message as context
-	 * @returns {ElementFromSelector<S> | undefined} The first matching element, or `undefined` if not found and not required
+	 * @param selector - CSS selector
+	 * @param [required] - If set and no element is found, throws with this message as context
+	 * @returns The first matching element, or `undefined` if not found and not required
 	 * @throws {MissingElementError} If `required` is set and no matching element exists
 	 */
 	function first<S extends string>(
@@ -385,7 +368,6 @@ const makeElementQueries = (
 	): ElementFromSelector<S> | undefined {
 		const target = queryOne(root, selector, required, 'component')
 
-		// Only add to dependencies if element is a custom element that's not yet defined
 		if (target && isNotYetDefinedComponent(target))
 			dependencies.add(target.localName)
 		else if (target && isCustomElement(target)) queriedDefinedCustomChild = true
@@ -395,14 +377,15 @@ const makeElementQueries = (
 	/**
 	 * Return a `Cell` of all descendant elements matching a CSS selector.
 	 *
-	 * The cell is backed by a `MutationObserver` that activates lazily when first
-	 * read inside a reactive effect, and disconnects when no effects are watching.
-	 * Undefined custom elements found at query time are added to the dependency set.
+	 * The cell is backed by a `MutationObserver` that activates lazily when
+	 * first read inside a reactive effect, and disconnects when no effects
+	 * are watching. Undefined custom elements found at query time are added
+	 * to the dependency set.
 	 *
 	 * @since 0.15.0
-	 * @param {S} selector - CSS selector
-	 * @param {string} [required] - If provided and no elements are found at query time, throws with this message as context
-	 * @returns {Cell<ElementFromSelector<S>[]>} Reactive cell of current matching elements
+	 * @param selector - CSS selector
+	 * @param [required] - If set and no elements are found at query time, throws with this message as context
+	 * @returns Reactive cell of current matching elements
 	 * @throws {MissingElementError} If `required` is set and no matching elements exist at query time
 	 * @throws {InvalidSelectorError} If the selector is malformed
 	 */
@@ -424,7 +407,6 @@ const makeElementQueries = (
 			throw new MissingElementError(host, selector, required)
 		if (current.length)
 			for (const target of current) {
-				// Only add to dependencies if element is a custom element that's not yet defined
 				if (isNotYetDefinedComponent(target)) dependencies.add(target.localName)
 				else if (isCustomElement(target)) queriedDefinedCustomChild = true
 			}
@@ -434,28 +416,21 @@ const makeElementQueries = (
 	/**
 	 * Wait for all collected custom element dependencies to be defined, then run `callback`.
 	 *
-	 * If no dependencies were collected and no `:defined` custom-element child was queried,
-	 * `callback` runs synchronously. Otherwise, a microtask filters out already-defined
-	 * elements, then `Promise.all` awaits the rest with a 200 ms timeout
-	 * (see `DEPENDENCY_TIMEOUT`). The microtask deferral also covers the case where a
-	 * `:defined` custom-element child was queried: its class is registered but its own
-	 * `connectedCallback` may not have run yet when a nested subtree is connected in one
-	 * operation (parent's callback fires first, in tree order). Letting the microtask
-	 * drain first ensures the child's `expose()`/Slot setup is complete before the
-	 * parent's effects (e.g. `pass()` → `swapSlots`) read the child's properties.
+	 * If no dependencies were collected and no `:defined` custom-element
+	 * child was queried, `callback` runs synchronously. Otherwise, a
+	 * microtask filters out already-defined elements, then `Promise.all`
+	 * awaits the rest with a timeout (see `DEPENDENCY_TIMEOUT`).
 	 *
-	 * On timeout, a `DependencyTimeoutError` is logged in DEV_MODE and `callback` runs
-	 * anyway — effects proceed in a degraded-but-functional state. A single undefined
-	 * dependency should never block the entire component: progressive enhancement means
-	 * the component remains usable even when a queried child element is not yet registered.
+	 * On timeout, a `DependencyTimeoutError` is logged in DEV_MODE and
+	 * `callback` runs anyway, so one undefined dependency never blocks the
+	 * whole component.
 	 *
-	 * @param {() => void} callback - Function to run once dependencies are resolved (or timed out)
+	 * @param callback - Function to run once dependencies are resolved (or timed out)
 	 */
 	const resolveDependencies = (callback: () => void) => {
 		if (dependencies.size || queriedDefinedCustomChild) {
-			// Defer to microtask to filter out components that get defined
-			// synchronously after queries ran (e.g. co-bundled components
-			// whose define() calls execute later in the same script).
+			// Defer to a microtask so components defined synchronously after
+			// queries ran (e.g. co-bundled components) are filtered out.
 			queueMicrotask(() => {
 				const deps = Array.from(dependencies).filter(
 					dep => !customElements.get(dep),

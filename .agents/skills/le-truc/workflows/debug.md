@@ -46,7 +46,7 @@ Check each link in order:
 
 ### Signal → `watch`
 - Is source of `watch()` correct? String prop name looks up `host[name]`; thunk tracks all signals read inside; `Signal` used directly
-- Is `watch()` descriptor in return array? Descriptors not in array never activated
+- Was `watch()` actually called during the factory run? It registers automatically when called — a call skipped by a conditional never activates
 - For `all(selector)` targets with `each()`: confirm selector correct and MutationObserver fires
 
 ### `watch` → DOM
@@ -75,7 +75,7 @@ Within a `DEV_MODE` build, every component also gets a reactive `debug: boolean`
 If required child custom element not defined within 200ms, `DependencyTimeoutError` logged and effects run anyway. DOM may not be in expected state. Check browser console.
 
 ### `all()` laziness
-MutationObserver only activates when Memo read inside reactive effect. If Memo has no active readers, mutations not tracked.
+MutationObserver only activates when the returned `Cell` is read inside a reactive effect. If it has no active readers, mutations are not tracked.
 
 ---
 

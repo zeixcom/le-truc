@@ -72,10 +72,21 @@ test.describe('form-combobox component', () => {
 
 			// Check initial ARIA attributes
 			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
-			await expect(textbox).toHaveAttribute(
-				'aria-describedby',
-				'timezone-description',
-			)
+			// aria-describedby is wired via ariaDescribedByElements (ADR 0026 §1
+			// element-reference channel), not a plain ID string — the mirrored
+			// content attribute is present but empty (LT-003 finding 5), so the
+			// relationship must be asserted through the IDL property, not
+			// toHaveAttribute's string match.
+			const describesDescription = await page.evaluate(() => {
+				const el = document.querySelector(
+					'#timezone-input',
+				) as HTMLInputElement & ARIAMixin
+				const description = document.querySelector('#timezone-description')
+				return (
+					el.ariaDescribedByElements?.includes(description as Element) ?? false
+				)
+			})
+			expect(describesDescription).toBe(true)
 
 			// Initial validity is valid (native :user-invalid drives styling,
 			// not aria-invalid — which was retired per the managed convention)
@@ -103,7 +114,6 @@ test.describe('form-combobox component', () => {
 			page,
 		}) => {
 			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
 			const errorElement = combobox.locator('> .error')
 			const descriptionElement = combobox.locator('.description')
 
@@ -114,11 +124,18 @@ test.describe('form-combobox component', () => {
 				'timezone-description',
 			)
 
-			// Check textbox references these IDs
-			await expect(textbox).toHaveAttribute(
-				'aria-describedby',
-				'timezone-description',
-			)
+			// Check textbox references the description element (via
+			// ariaDescribedByElements — see the element-reference note above)
+			const describesDescription = await page.evaluate(() => {
+				const el = document.querySelector(
+					'#timezone-input',
+				) as HTMLInputElement & ARIAMixin
+				const description = document.querySelector('#timezone-description')
+				return (
+					el.ariaDescribedByElements?.includes(description as Element) ?? false
+				)
+			})
+			expect(describesDescription).toBe(true)
 
 			// Description should have initial content
 			await expect(descriptionElement).toHaveText(/Tell us where you live/)
@@ -599,7 +616,6 @@ test.describe('form-combobox component', () => {
 	test.describe('Accessibility Features', () => {
 		test('has proper error message structure', async ({ page }) => {
 			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
 			const errorElement = combobox.locator('> .error')
 
 			// Check that error element exists and has proper attributes
@@ -607,24 +623,36 @@ test.describe('form-combobox component', () => {
 			await expect(errorElement).toHaveAttribute('aria-live', 'assertive')
 			await expect(errorElement).toHaveAttribute('id', 'timezone-error')
 
-			// Textbox should reference the error element when needed
-			// (This might be set dynamically when there's an actual error)
-			await expect(textbox).toHaveAttribute(
-				'aria-describedby',
-				'timezone-description',
-			)
+			// Textbox references the description via ariaDescribedByElements
+			// (element-reference channel — see the note above)
+			const describesDescription = await page.evaluate(() => {
+				const el = document.querySelector(
+					'#timezone-input',
+				) as HTMLInputElement & ARIAMixin
+				const description = document.querySelector('#timezone-description')
+				return (
+					el.ariaDescribedByElements?.includes(description as Element) ?? false
+				)
+			})
+			expect(describesDescription).toBe(true)
 		})
 
 		test('associates description with textbox', async ({ page }) => {
 			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
 			const descriptionElement = combobox.locator('.description')
 
-			// Should be associated via aria-describedby
-			await expect(textbox).toHaveAttribute(
-				'aria-describedby',
-				'timezone-description',
-			)
+			// Should be associated via ariaDescribedByElements (element-reference
+			// channel — see the note above)
+			const describesDescription = await page.evaluate(() => {
+				const el = document.querySelector(
+					'#timezone-input',
+				) as HTMLInputElement & ARIAMixin
+				const description = document.querySelector('#timezone-description')
+				return (
+					el.ariaDescribedByElements?.includes(description as Element) ?? false
+				)
+			})
+			expect(describesDescription).toBe(true)
 
 			// Description should have proper attributes
 			await expect(descriptionElement).toHaveAttribute('aria-live', 'polite')

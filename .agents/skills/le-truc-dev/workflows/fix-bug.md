@@ -14,7 +14,7 @@ Read references/non-obvious.md. Many apparent bugs are actually correct behavior
 - `isParser()` checks only for `PARSER_BRAND` — unbranded functions are NOT treated as parsers
 - `pass()` is Le Truc-only; using it on non-Le-Truc elements silently does nothing
 - `undefined` from a reactive source restores the original DOM value — it does not clear/null it
-- `all()` MutationObserver is lazy — only active when the Memo has a reactive reader
+- `all()` MutationObserver is lazy — only active when the returned `Cell` has a reactive reader
 - `safeSetAttribute` throws on `on*` attribute names and unsafe URLs — it is never silent
 
 If the symptom matches a documented behavior, explain it to the user rather than changing the code.

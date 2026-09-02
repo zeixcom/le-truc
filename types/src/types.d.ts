@@ -1,6 +1,5 @@
 /**
- * Core type definitions for Le Truc.
- * This file contains types that are shared across multiple modules.
+ * Core type definitions shared across Le Truc modules.
  */
 import type { MaybeCleanup } from '@zeix/cause-effect';
 /** Symbol brand applied to all MethodProducer functions. */
@@ -12,28 +11,16 @@ type MethodProducer = ((...args: any[]) => void) & {
     readonly [METHOD_BRAND]: true;
 };
 /**
- * The single source of truth for reserved property names.
+ * JavaScript and `Object` builtins that must not be used as reactive component properties.
  *
- * These are fundamental JavaScript / `Object` builtins that must not be used
- * as reactive component properties. Defining them as own properties on the
- * host would corrupt the prototype chain or shadow builtins used internally
- * by the reactive layer.
+ * {@link ReservedWords} and `RESERVED_WORDS` both derive from this tuple.
  *
- * The {@link ReservedWords} type and {@link RESERVED_WORDS} runtime set are
- * both derived from this tuple so they can never diverge.
+ * @since 2.6
  */
 declare const RESERVED_WORDS_LIST: readonly ["constructor", "prototype", "__proto__", "toString", "valueOf", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString"];
-/**
- * Property names that must not be used as reactive component properties.
- * Derived from {@link RESERVED_WORDS_LIST} — do not edit directly.
- */
+/** Property names that must not be used as reactive component properties. */
 type ReservedWords = (typeof RESERVED_WORDS_LIST)[number];
-/**
- * Runtime mirror of the {@link ReservedWords} type, derived from the same
- * {@link RESERVED_WORDS_LIST} source. Used by `#initSignals` to reject
- * reserved property names that defeat the type-level exclusion (e.g. via
- * `asJSON`-parsed keys or `Record<string, …>` casts). O(1) lookup via `Set`.
- */
+/** Runtime set version of {@link ReservedWords}, for O(1) lookup. */
 declare const RESERVED_WORDS: ReadonlySet<string>;
 /** A valid reactive property name — any string that is not an `HTMLElement` or `ReservedWords` key. */
 type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>;
@@ -41,73 +28,59 @@ type ComponentProp = Exclude<string, keyof HTMLElement | ReservedWords>;
 type ComponentProps = Record<ComponentProp, NonNullable<unknown>>;
 type Falsy = false | null | undefined | '' | 0 | 0n;
 /**
- * A deferred effect: a thunk that, when called inside a reactive scope, creates
- * a reactive effect and returns an optional cleanup function.
+ * A deferred effect: creates a reactive effect when called inside a reactive scope.
  *
- * Effect descriptors are returned by `watch()`, `on()`, `each()`, `pass()`, and
- * `provideContexts()`. They are activated after dependency resolution, not
- * immediately when the factory function runs.
+ * Returned by `watch()`, `on()`, `each()`, `pass()`, and `provideContexts()`.
+ * Activates after dependency resolution, not when the factory function runs.
  */
 type EffectDescriptor = () => MaybeCleanup;
 /**
- * The return value of the factory function.
+ * The factory function's return value: an array of effect descriptors and optional falsy guards.
  *
- * An array of effect descriptors (and optional falsy guards for conditional
- * effects). Nested arrays are automatically flattened. Falsy values (`false`,
- * `undefined`, `null`, `""`, `0`) are filtered out before activation, enabling the
- * `element && [watch(...)]` conditional pattern.
+ * Nested arrays flatten automatically. Falsy values are filtered out before
+ * activation, enabling the `element && [watch(...)]` conditional pattern.
  */
 type FactoryResult = Array<EffectDescriptor | FactoryResult | Falsy>;
 /**
- * Check if a value is a parser
+ * Checks whether a value is a branded parser function.
  *
- * Checks for the `PARSER_BRAND` symbol. Unbranded functions are NOT treated as
- * parsers — always use `asParser()` to brand custom parsers.
+ * Unbranded functions are not parsers — brand custom parsers with `asParser()`.
  *
  * @since 0.14.0
- * @param {unknown} value - Value to check if it is a parser
- * @returns {boolean} True if the value is a parser, false otherwise
+ * @param value - Value to check.
+ * @returns True if the value is a parser.
  */
 declare const isParser: <T extends {}>(value: unknown) => value is Parser<T>;
 /**
- * Check if a value is a MethodProducer (branded side-effect initializer)
+ * Checks whether a value is a branded method-producer function.
  *
  * @since 0.16.2
- * @param {unknown} value - Value to check
- * @returns {boolean} True if the value is a MethodProducer
+ * @param value - Value to check.
+ * @returns True if the value is a MethodProducer.
  */
 declare const isMethodProducer: (value: unknown) => value is MethodProducer;
 /**
- * Check whether a string is a reserved property name.
- *
- * Runtime counterpart of the {@link ReservedWords} type exclusion. `#initSignals`
- * calls this to reject names that would corrupt the host's prototype chain or
- * shadow `Object` builtins used by the reactive layer.
+ * Checks whether a string is a reserved property name.
  *
  * @since 2.0.4
- * @param {string} name - Property name to check
- * @returns {boolean} True if the name is reserved and must not be used as a reactive property
+ * @param name - Property name to check.
+ * @returns True if the name is reserved and must not be used as a reactive property.
  */
 declare const isReservedWord: (name: string) => boolean;
 /**
- * Brand a custom parser function with the `PARSER_BRAND` symbol.
- *
- * Use this to wrap any custom parser so `isParser()` can identify it reliably.
+ * Brands a custom parser function so `isParser()` identifies it.
  *
  * @since 0.16.2
- * @param {Parser<T>} fn - Custom parser function to brand
- * @returns {Parser<T>} The same function, branded
+ * @param fn - Parser function to brand.
+ * @returns The same function, branded.
  */
 declare const asParser: <T extends {}>(fn: Parser<T>) => Parser<T>;
 /**
- * Brand a custom method-producer function with the `METHOD_BRAND` symbol.
- *
- * Use this to wrap any side-effect initializer so `isMethodProducer()` can
- * identify it explicitly rather than relying on the absence of a return value.
+ * Brands a custom method-producer function so `isMethodProducer()` identifies it.
  *
  * @since 0.16.2
- * @param {T} fn - Side-effect initializer to brand
- * @returns {T & { readonly [METHOD_BRAND]: true }} The same function, branded as a `MethodProducer`
+ * @param fn - Side-effect initializer to brand.
+ * @returns The same function, branded as a MethodProducer.
  */
 declare const defineMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
     readonly [METHOD_BRAND]: true;

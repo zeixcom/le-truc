@@ -27,18 +27,12 @@ type FormAssociatedCheckboxExtension = ComponentExtension & {
 	readonly __kind: 'form-associated-checkbox'
 }
 
-/**
- * Shared shape of everything `formAssociated()` and `formAssociatedCheckbox()`
- * do identically — host contract, managed `disabled`, managed validity
- * signals — parameterized over the one thing that varies: which reactive
- * prop drives value sync/reset/state-restore, and how the sync effect reads
- * it.
- */
+/** Config shared by `formAssociated()` and `formAssociatedCheckbox()`, parameterized on the driving prop. */
 type FormAssociatedVariantConfig<Tag extends string> = {
 	__kind: Tag
 	name: string
 	propName: 'value' | 'checked'
-	/** The reset-baseline property's name: `defaultValue`/`defaultChecked`. */
+	/** The reset-baseline property name: `defaultValue` or `defaultChecked`. */
 	defaultPropName: 'defaultValue' | 'defaultChecked'
 	installOnPrototype: (proto: HTMLElement) => void
 	makeSyncDescriptor: (
@@ -47,12 +41,7 @@ type FormAssociatedVariantConfig<Tag extends string> = {
 	) => () => MaybeCleanup
 }
 
-/**
- * Structural shape required by {@link relayValidity}: any element exposing
- * the native Constraint Validation trio. `HTMLInputElement`,
- * `HTMLSelectElement`, `HTMLTextAreaElement`, `HTMLButtonElement`, and others
- * all satisfy this without a cast.
- */
+/** Element shape required by {@link relayValidity}: exposes the native Constraint Validation trio. */
 type ValidatableControl = HTMLElement & {
 	readonly validity: ValidityState
 	readonly validationMessage: string
@@ -62,14 +51,10 @@ type ValidatableControl = HTMLElement & {
 /* === Constants === */
 
 /**
- * Genuinely empty NodeList for the `labels` fallback when `internals` is null.
- * `new NodeList()` throws `TypeError: Illegal constructor` — NodeList has no
- * public constructor. A DocumentFragment's `childNodes` is a live, permanently
- * empty NodeList, the idiomatic browser-side way to obtain an empty one.
- * Computed lazily and cached on first access rather than at module-evaluation
- * time, and guards the method itself, not just `document`'s existence: some
- * non-browser or test-stub `document` globals are partial and don't implement
- * `createDocumentFragment`.
+ * Empty NodeList for the `labels` fallback when `internals` is null.
+ * `NodeList` has no public constructor, so this uses a detached
+ * `DocumentFragment`'s `childNodes` instead. Cached lazily; some
+ * non-browser `document` stubs lack `createDocumentFragment`.
  */
 let emptyNodeList: NodeList | undefined
 const getEmptyNodeList = (): NodeList =>
@@ -79,7 +64,7 @@ const getEmptyNodeList = (): NodeList =>
 			? document.createDocumentFragment().childNodes
 			: ([] as unknown as NodeList))
 
-/** Fallback ValidityState for when internals is null (attachInternals failed). */
+/** Fallback ValidityState for when `internals` is null (`attachInternals` failed). */
 const EMPTY_VALIDITY_STATE: ValidityState = {
 	valueMissing: false,
 	typeMismatch: false,
@@ -95,11 +80,9 @@ const EMPTY_VALIDITY_STATE: ValidityState = {
 }
 
 /**
- * Snapshot a native `ValidityState` into a plain object. `ValidityState`'s
- * fields (`valid`, `valueMissing`, `typeMismatch`, …) are accessor properties
- * on the prototype, not own enumerable properties — `{ ...validity }` silently
- * copies nothing and yields `{}`. Reads the field list off
- * {@link EMPTY_VALIDITY_STATE} so the two stay in sync by construction.
+ * Copy a native `ValidityState` into a plain object.
+ * `ValidityState` fields are prototype accessors, so a spread copies nothing;
+ * this reads each key explicitly instead.
  */
 const snapshotValidity = (validity: ValidityState): ValidityState => {
 	const snapshot = {} as Record<keyof ValidityState, boolean>
@@ -110,25 +93,15 @@ const snapshotValidity = (validity: ValidityState): ValidityState => {
 	return snapshot
 }
 
-/**
- * The settable `ValidityStateFlags` keys — every {@link EMPTY_VALIDITY_STATE}
- * key except `valid`, which is computed by the platform, not a flag a caller
- * can set via `internals.setValidity()`.
- */
+/** The settable `ValidityStateFlags` keys — every validity key except `valid`, which the platform computes. */
 const VALIDITY_FLAG_KEYS = (
 	Object.keys(EMPTY_VALIDITY_STATE) as (keyof ValidityState)[]
 ).filter(key => key !== 'valid') as (keyof ValidityStateFlags)[]
 
 /**
- * Member-spec table: the single source of truth for the native-parity host
- * contract installed on form-associated components. Each entry maps a member
- * name to its property descriptor. Driving both the reserved set and the
- * prototype install from one table makes "reserved but not installed"
- * impossible.
- *
- * `disabled` is managed separately (Slot-backed reactive property installed
- * per-instance, not per-prototype). `value` is the deliberate exception: the
- * component must expose it.
+ * Property descriptors for the native-parity host contract on form-associated components.
+ * Drives both the reserved-member set and the prototype install from one table.
+ * `disabled` is managed separately, per instance. `value` is exposed by the component itself.
  */
 const HOST_CONTRACT_DESCRIPTORS = {
 	form: {
@@ -231,14 +204,8 @@ const HOST_CONTRACT_DESCRIPTORS = {
 } as const
 
 /**
- * Managed member names reserved on form-associated components. Derived from
- * the host-contract table plus `disabled` (managed per-instance).
- *
- * `expose()` throws `InvalidPropertyNameError` for any of these names on a
- * form-associated component — the check runs before the `prop in this` guard,
- * which would otherwise silently skip the colliding initializer (these are
- * prototype-defined). `value` is the deliberate exception: the component must
- * expose it.
+ * Managed member names reserved on form-associated components.
+ * `expose()` throws `InvalidPropertyNameError` for any of these names. `value` is exempt: the component must expose it.
  */
 const MANAGED_FORM_MEMBERS: ReadonlySet<string> = new Set([
 	...Object.keys(HOST_CONTRACT_DESCRIPTORS),
@@ -251,28 +218,16 @@ const FOCUSABLE_FORM_CONTROL_SELECTOR =
 
 /**
  * Fallback message when a flag is `true` but no real message is available.
- * Native controls barred from constraint validation (`disabled`, or
- * `readonly` on `type="number"`/`text`/etc.) always report an empty
- * `validationMessage` even though their `.validity` flags stay live —
- * {@link relayValidity} relaying such a control hits this on the *first*
- * flag transition, before any prior message exists to fall back to.
+ * Covers native controls barred from constraint validation (`disabled`,
+ * `readonly`), which report an empty `validationMessage` despite live `.validity` flags.
  */
 const FALLBACK_VALIDITY_MESSAGE = 'Invalid value'
 
 /**
- * The reset-baseline property descriptor for a variant: `defaultValue`/`defaultChecked`, mirroring the native
- * `<input>.defaultValue`/`.defaultChecked` pair. When the prop is
- * Parser-backed (the attribute-driven convention, ADR 0003), this reflects
- * the LIVE same-named content attribute through the retained Parser, so it
- * matches the live prop's own type and can be moved from outside via
- * `setAttribute`/`this[defaultProp] =`. When it isn't Parser-backed (a
- * static initializer, `expose({ value: 'default' })`), there is no
- * attribute contract to reflect — the getter returns the retained
- * initializer as-is, unchanged from how `formResetCallback` always restored
- * it. Writing this never marks the control dirty and is never itself the
- * live prop — it only moves the baseline a future `formResetCallback`
- * restores `value`/`checked` to (`this[prop] = this[defaultProp]`, the same
- * relationship `<input>` has between its own two properties).
+ * Build the reset-baseline property descriptor (`defaultValue`/`defaultChecked`), mirroring native `<input>` semantics.
+ * For a Parser-backed prop (see ADR 0003), it reflects the live attribute through the Parser.
+ * Otherwise it returns the retained static initializer as-is.
+ * Writing it only moves the baseline that `formResetCallback` restores `value`/`checked` to; it never marks the control dirty.
  */
 const makeDefaultPropDescriptor = (
 	prop: 'value' | 'checked',
@@ -299,11 +254,7 @@ const makeDefaultPropDescriptor = (
 /* === Internal Helpers === */
 
 /**
- * Install the native-parity host contract ({@link HOST_CONTRACT_DESCRIPTORS}),
- * the reset-baseline property ({@link makeDefaultPropDescriptor}), plus the
- * three managed lifecycle callbacks on a prototype, given the variant-specific
- * reset/state-restore pair. `formDisabledCallback` is shape-agnostic, so it's
- * shared unconditionally.
+ * Install the host contract, reset-baseline property, and the three managed lifecycle callbacks on a prototype.
  *
  * @since 2.3
  * @internal
@@ -337,23 +288,11 @@ const installManagedFormMembers = (
 }
 
 /**
- * Register reactive `disabled`/`validationMessage`/`validity` signals on a
- * form-associated host.
- *
- * Managed `disabled` is a reactive property on a form-associated host.
- * Slot-backed so `formDisabledCallback` can write the effective disabled
- * state (including `<fieldset disabled>` inheritance). The getter and setter
- * go through the Slot, not the raw backing signal, so `host.disabled`,
- * `watch('disabled')`, and `formDisabledCallback` stay consistent even after
- * `pass()` replaces the Slot's delegate. The setter also reflects to the
- * `disabled` content attribute, so FACE gives native `:disabled` for free.
- *
- * `watch('validationMessage', …)` / `watch('validity',…)` see every change.
- * Wraps `internals.setValidity` itself, so both the managed `setCustomValidity`
- * path and a component's own typed-flags `internals.setValidity(...)` calls stay
- * in sync. `validity` uses `DEEP_EQUALITY` since `internals.validity` snapshots
- * are always a new object reference. Both signals are read-only `State` (no Slot),
- * {@link HOST_CONTRACT_DESCRIPTORS} reads them directly.
+ * Register reactive `disabled`, `validationMessage`, and `validity` signals on a form-associated host.
+ * `disabled` is Slot-backed so `formDisabledCallback` and `pass()` stay consistent, and reflects to the
+ * `disabled` content attribute for native `:disabled` support.
+ * Wraps `internals.setValidity` so both the managed and a component's own calls keep the signals in sync.
+ * `validity` uses `DEEP_EQUALITY` because each `internals.validity` snapshot is a new object.
  *
  * @since 2.3.3
  */
@@ -396,12 +335,8 @@ const createManagedProperties = (
 }
 
 /**
- * Build a managed form-control extension from a {@link
- * FormAssociatedVariantConfig}. `formAssociated()` and
- * `formAssociatedCheckbox()` are both thin config calls into this — see ADR
- * 0019 for why they stay two public functions rather than one parameterized
- * one (their `defineComponent` overloads need distinct types to widen the
- * factory context correctly).
+ * Build a managed form-control extension from a {@link FormAssociatedVariantConfig}.
+ * `formAssociated()` and `formAssociatedCheckbox()` both call into this; see ADR 0019 for why they stay separate public functions.
  */
 const makeFormAssociatedExtension = <Tag extends string>(
 	config: FormAssociatedVariantConfig<Tag>,
@@ -427,37 +362,11 @@ const makeFormAssociatedExtension = <Tag extends string>(
 /* === Form Lifecycle Callbacks === */
 
 /**
- * Build a managed `formResetCallback` for the given reactive prop: restore it
- * to its baseline by assigning from the paired {@link makeDefaultPropDescriptor}
- * property (`this[prop] = this[defaultProp]`) — the same relationship
- * `<input>.value`/`.defaultValue` have natively. No-op if no
- * initializer was retained (e.g. the prop was pre-set on the instance before
- * upgrade) or signals are not yet initialized. Also a no-op for a `Signal`,
- * `MemoCallback`/`TaskCallback`, or `SlotDescriptor` (`{ get, set? }`)
- * initializer — none of these carry a "default value" to restore; the prop
- * already derives live from whatever backs it.
- *
- * The restoring write is deferred to a microtask: form
- * reset runs in TREE ORDER, and a form-associated host precedes its own inner
- * native control in the light DOM — `formResetCallback` fires on the host
- * FIRST, then the browser resets the descendant control to its own
- * `defaultValue`/`defaultChecked` a moment later, in the same synchronous
- * walk. Writing `this[prop]` synchronously here raced that native reset and
- * lost — the reactive effect it triggers (`bindProperty`/`bindState` writing
- * the new value into the control) ran before the control's own native reset
- * fired, which then silently overwrote it. Deferring past the synchronous
- * reset walk means the write lands after the control's own reset has already
- * happened; the two converge on the same baseline now that `defaultValue`'s
- * content attribute is never touched by live edits, so this is not
- * a race anymore, just a same-tick reconciliation. The host's OWN internal
- * "dirty" flag isn't cleared by this write — only the form reset algorithm
- * clears it, which it does regardless, since the inner control is owned by
- * the same form.
- *
- * Shared by `formAssociated()` (`prop: 'value'`, `defaultProp: 'defaultValue'`)
- * and `formAssociatedCheckbox()` (`prop: 'checked'`, `defaultProp:
- * 'defaultChecked'`) — the reset mechanics are identical, only the target
- * prop pair differs.
+ * Build a managed `formResetCallback` for the given reactive prop.
+ * Restores the prop from its paired default property (`this[prop] = this[defaultProp]`).
+ * No-op if no initializer was retained, or if the initializer is a `Signal`, `MemoCallback`/`TaskCallback`,
+ * or `SlotDescriptor` — none of these carry a default value to restore.
+ * Shared by `formAssociated()` and `formAssociatedCheckbox()`; only the target prop pair differs.
  */
 const makeResetCallback = (
 	prop: 'value' | 'checked',
@@ -466,9 +375,8 @@ const makeResetCallback = (
 	function (this: HTMLElement) {
 		const initializer = retainedInitializers.get(this)?.[prop]
 		if (initializer === undefined) return
-		// A Parser is itself a function — this exclusion must not catch it
-		// (checked first) before falling through to the MemoCallback/
-		// TaskCallback/SlotDescriptor "no default to restore" cases.
+		// A Parser is itself a function — check it first so this exclusion
+		// doesn't catch it before the "no default to restore" cases below.
 		if (
 			!isParser(initializer) &&
 			(isSignal(initializer) ||
@@ -476,6 +384,9 @@ const makeResetCallback = (
 				isSlotDescriptor(initializer))
 		)
 			return
+		// Deferred to a microtask: form reset runs in tree order, so the host's
+		// formResetCallback fires before the browser resets its own inner native
+		// control. A synchronous write here would race that native reset and lose.
 		queueMicrotask(() => {
 			const result = (this as any)[defaultProp]
 			if (result != null) (this as any)[prop] = result
@@ -483,12 +394,8 @@ const makeResetCallback = (
 	}
 
 /**
- * Managed state restore: the browser always restores what `setFormValue`
- * submitted — a string — so non-string states (File/FormData, custom
- * two-argument setFormValue states) are not managed. The restored string must
- * land in the correct type: run it through the retained Parser if the component
- * uses one, coerce to number for number-valued components (e.g.
- * form-spinbutton), or assign as-is for string-valued components.
+ * Managed state restore for `value`. Ignores non-string states; a string state is run through
+ * the retained Parser if the component uses one, coerced to number for number-valued components, or assigned as-is.
  */
 const formStateRestoreCallback = function (
 	this: HTMLElement & { value: unknown },
@@ -507,12 +414,7 @@ const formStateRestoreCallback = function (
 	}
 }
 
-/**
- * Managed state restore for checkbox-shaped controls: `setFormValue` was
- * called with either a string (checked) or `null` (unchecked, submits
- * nothing) — restoring is just the inverse: a string state means it was
- * checked.
- */
+/** Managed state restore for checkbox-shaped controls: a string state means it was checked. */
 const checkboxFormStateRestoreCallback = function (
 	this: HTMLElement & { checked: boolean },
 	state: unknown,
@@ -520,12 +422,7 @@ const checkboxFormStateRestoreCallback = function (
 	this.checked = typeof state === 'string'
 }
 
-/**
- * Managed: write the effective disabled state into the `disabled` signal.
- * Covers both own `disabled` attribute and ancestor `<fieldset disabled>`
- * (which never touches the element's attribute). Shape-agnostic — shared by
- * `formAssociated()` and `formAssociatedCheckbox()`.
- */
+/** Writes the effective disabled state, including inherited `<fieldset disabled>`, into the `disabled` signal. */
 const formDisabledCallback = function (
 	this: HTMLElement & { disabled: boolean },
 	disabled: boolean,
@@ -539,15 +436,9 @@ const formDisabledCallback = function (
 /* === Exported Functions === */
 
 /**
- * Extension enabling the managed form-control convention: native-parity host
- * contract (`form`, `name`, `labels`, `validity`, ...), managed `disabled`,
- * value sync to `internals.setFormValue`, reset, and state restore. Pass to
- * `defineComponent`'s third parameter: `defineComponent(name, factory,
- * [formAssociated()])`.
- *
- * `component.ts` never imports this module at the value level, so a
- * consumer who doesn't call `formAssociated()` never bundles ElementInternals
- * support.
+ * Extension enabling the managed form-control convention: native-parity host contract
+ * (`form`, `name`, `labels`, `validity`, ...), managed `disabled`, value sync, reset, and state restore.
+ * Pass to `defineComponent`'s third parameter. See ADR 0016.
  *
  * @since 2.3
  */
@@ -573,24 +464,12 @@ const formAssociated = (): FormAssociatedExtension =>
 	})
 
 /**
- * Extension enabling the managed checkbox-shaped form-control convention:
- * same host contract as {@link formAssociated}, but value sync submits
- * nothing when unchecked (matching native `<input type="checkbox">`), keyed
- * on a reactive `checked: boolean` prop instead of `value`. Pass to
- * `defineComponent`'s third parameter: `defineComponent(name, factory,
- * [formAssociatedCheckbox()])`.
+ * Extension enabling the managed checkbox-shaped form-control convention: same host contract as
+ * {@link formAssociated}, keyed on a reactive `checked: boolean` prop, and value sync submits nothing when unchecked.
+ * Covers checkbox-shaped controls (switches, toggles), not radio groups or multi-select lists — those fit
+ * `formAssociated()` instead.
  *
- * Covers checkbox-*shaped* controls generically (a switch/toggle is always a
- * styled checkbox, not a distinct native form control), not radio groups or
- * multi-select lists — those aggregate many children's boolean state into
- * one string `value` and already fit `formAssociated()` (see
- * `form-radiogroup`, `form-listbox`).
- *
- * **Do not combine with `formAssociated()` on the same component** — both
- * declare the same `staticProps.formAssociated` key, so DEV_MODE throws
- * `ExtensionCollisionError`; in production, whichever extension is later in
- * the array silently wins `installOnPrototype` while the earlier one wins
- * `staticProps` (see ADR 0019's Consequences).
+ * Do not combine with `formAssociated()` on the same component; see ADR 0019.
  *
  * @since 2.3
  */
@@ -618,27 +497,15 @@ const formAssociatedCheckbox = (): FormAssociatedCheckboxExtension =>
 	})
 
 /**
- * Relay a wrapped native `control`'s full `ValidityState` — every UA-computed
- * flag plus its own `customError` — onto a form-associated host's
- * `internals`, for "enhanced native input" components (e.g. a spinbutton
- * wrapping `<input type="number">`).
- *
- * A full replace, not a merge: the control's live `ValidityState` is the
- * complete, authoritative picture of its own constraints, including any
- * cross-field `customError` a parent previously layered on via
- * `host.setCustomValidity()`. The parent's cross-field check always runs
- * *after* the child's own validation on the same cycle, so it re-asserts
- * its `customError` on top of this the next time it runs — see ADR-0020.
- *
- * Not reactive — the control's `validationMessage` has no signal
- * counterpart, so re-run this from `on(control, 'input'/'change', …)`. Not
- * gated behind `formAssociated()`: usable by any component with `internals`.
+ * Relays a wrapped native `control`'s full `ValidityState` onto a form-associated host's `internals`.
+ * Replaces the host's validity state entirely rather than merging; see ADR-0020 for cross-field interaction.
+ * Not reactive: re-run from an `on(control, 'input'/'change', …)` handler. Usable by any component with `internals`.
  *
  * @see ADR-0020
  * @since 2.3.4
- * @param internals - The host's `ElementInternals`
- * @param control - The native control whose `ValidityState` to relay
- * @param anchor - Focus target on blocked submission or `reportValidity()`; defaults to `control`
+ * @param internals - The host's `ElementInternals`.
+ * @param control - The native control whose `ValidityState` to relay.
+ * @param anchor - Focus target on blocked submission or `reportValidity()`. Defaults to `control`.
  */
 const relayValidity = (
 	internals: ElementInternals | null,

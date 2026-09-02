@@ -5,6 +5,7 @@ module-demo {
 	margin-block-end: var(--space-l);
 
 	.preview {
+		background: var(--color-background);
 		border: 1px solid var(--color-border-soft);
 		border-radius: var(--space-s);
 		padding: var(--space-s);

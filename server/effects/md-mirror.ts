@@ -96,7 +96,6 @@ export const serializeFrontmatter = (metadata: PageMetadata): string => {
 	if (metadata.title) fields.push(`title: ${JSON.stringify(metadata.title)}`)
 	if (metadata.description)
 		fields.push(`description: ${JSON.stringify(metadata.description)}`)
-	if (metadata.emoji) fields.push(`emoji: ${JSON.stringify(metadata.emoji)}`)
 	if (metadata.date) fields.push(`date: ${metadata.date}`)
 	if (metadata.author) fields.push(`author: ${JSON.stringify(metadata.author)}`)
 	if (metadata.tags?.length) fields.push(`tags: ${metadata.tags.join(', ')}`)
