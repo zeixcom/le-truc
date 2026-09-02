@@ -100,7 +100,7 @@ export const injectTableOfContents = (html: string, toc: TocItem[]): string => {
 	const items = toc
 		.map(({ id, text }) => `<li><a href="#${id}">${text}</a></li>`)
 		.join('')
-	const nav = `<nav class="toc" aria-label="On this page"><ol>${items}</ol></nav>`
+	const nav = `<nav class="toc"><h2>On this page</h2><ol>${items}</ol></nav>`
 	return html.replace(
 		/<div class="toc-placeholder" data-toc="true"><\/div>/g,
 		nav,

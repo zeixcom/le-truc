@@ -39,9 +39,9 @@ A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no 
 
 ## `all()` MutationObserver is Lazy
 
-The observer in `src/helpers/dom.ts` only activates when the returned `Signal` is **read inside a reactive effect**. If no effect reads it, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
+The observer in `src/helpers/dom.ts` only activates when the returned `Cell` is **read inside a reactive effect**. If no effect reads it, mutations are not tracked. This is intentional (avoids unnecessary observers) but can look like a bug.
 
-The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. Since `cause-effect` 0.18.4, the `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
+The observer watches only mutations implied by the CSS selector (class, ID, `[attr]` patterns) — not all mutations. The `equals` check is fully respected: if an `innerHTML` mutation doesn't change which elements match the selector, downstream effects do not re-run.
 
 ## `reconcile()` Owns the Container; `each()` Does Not
 

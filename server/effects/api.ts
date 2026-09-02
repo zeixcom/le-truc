@@ -120,7 +120,7 @@ layout: 'page'
 ---
 
 {% hero %}
-# 📖 API Reference
+# API Reference
 
 **Browse the complete Le Truc API.** Functions, error classes, variables, and type aliases — all generated from the TypeScript source.
 {% /hero %}

@@ -1,15 +1,10 @@
 /**
  * Dependency-injection contract for `defineComponent()`'s third parameter.
  *
- * An extension is a plain data/function bundle a feature module hands to
- * `defineComponent(name, factory, [extension(), ...])`. `component.ts` only
- * ever references this generic shape — it never imports a concrete feature
- * module (`extensions/form.ts`, `extensions/attributes.ts`, ...) directly, so a
- * consumer who never calls e.g. `formAssociated()` never causes their
- * bundler to pull that module's code in at all.
- *
- * Extensions bundled with the library are the intended norm; the same type
- * is public so authoring a custom extension is possible, but exceptional.
+ * A feature module hands `defineComponent(name, factory, [extension(), ...])`
+ * an extension. `component.ts` references only this generic shape; it never
+ * imports a concrete feature module, so an unused extension does not reach
+ * the bundle.
  */
 import type { FactoryResult, Falsy } from './types';
 type ComponentExtension = {
@@ -41,20 +36,17 @@ type MergedExtensions = {
     reservedMemberOwners: ReadonlyMap<string, string>;
 };
 /**
- * Fold an extensions array into the merged shape `component.ts` installs on
- * the generated class, once, at class-definition time.
+ * Folds an extensions array into the merged shape `component.ts` installs on the generated class.
  *
- * Collision policy (only `staticProps` keys can collide — `reservedMembers`
- * and `observedAttributes` are unions, never conflicts): in DEV_MODE, a
- * repeated `staticProps` key throws {@link ExtensionCollisionError}; in
- * production, the first extension to declare a key wins and later ones are
- * silently ignored.
+ * Only `staticProps` keys can collide (`reservedMembers` and
+ * `observedAttributes` are unions). In DEV_MODE, a repeated `staticProps`
+ * key throws; in production, the first extension to declare a key wins.
  *
  * @since 2.3
- * @param {string} component - Component name, for the collision error message
- * @param {readonly ComponentExtension[]} extensions - Extensions passed to `defineComponent`
- * @returns {MergedExtensions} The merged static props, observed attributes, and reserved members
- * @throws {ExtensionCollisionError} In DEV_MODE, if two extensions declare the same `staticProps` key
+ * @param component - Component name, for the collision error message.
+ * @param extensions - Extensions passed to `defineComponent`.
+ * @returns The merged static props, observed attributes, and reserved members.
+ * @throws {ExtensionCollisionError} In DEV_MODE, if two extensions declare the same `staticProps` key.
  */
 declare const mergeExtensions: (component: string, extensions: readonly ComponentExtension[]) => MergedExtensions;
 export { type ComponentExtension, type MergedExtensions, mergeExtensions };

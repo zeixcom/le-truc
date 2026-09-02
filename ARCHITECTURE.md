@@ -108,7 +108,7 @@ Unlike `each()`, `reconcile()` does not apply `forEachUnseen` to the return valu
 ### `first(selector)` / `all(selector)`
 
 - `first()`: Returns single element or throws `MissingElementError` if required
-- `all()`: Returns `Signal<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
+- `all()`: Returns `Cell<Element[]>` with lazy `MutationObserver` (see [ADR 0006](adr/0006-lazy-mutationobserver-for-all-collections.md)); a malformed selector throws `InvalidSelectorError` immediately instead of stalling the observer
 
 Both collect undefined custom element dependencies for `resolveDependencies()`.
 

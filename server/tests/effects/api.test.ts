@@ -226,7 +226,7 @@ describe('generateApiIndexMarkdown', () => {
 
 		expect(result).toContain('{% hero %}')
 		expect(result).toContain('{% /hero %}')
-		expect(result).toContain('# 📖 API Reference')
+		expect(result).toContain('# API Reference')
 	})
 
 	test('includes listnav tag', () => {

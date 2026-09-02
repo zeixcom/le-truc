@@ -3,7 +3,7 @@ import { getLocale } from '../../_common/getLocale'
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'card-blogmeta': HTMLElement
+		'basic-blogmeta': HTMLElement
 	}
 }
 
@@ -43,9 +43,9 @@ function formatLocalDate(
  * The host element should contain `<time class="published">` and `<time class="modified">` elements.
  * If `.author` has no `<img>` child, a stylized placeholder avatar is inserted.
  *
- * @demo {https://zeixcom.github.io/le-truc/examples.html#card-blogmeta} Interactive preview and usage examples
+ * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-blogmeta} Interactive preview and usage examples
  **/
-export default defineComponent('card-blogmeta', ({ host, first }) => {
+export default defineComponent('basic-blogmeta', ({ host, first }) => {
 	const published = first(
 		'time.published',
 		'Add a <time> element to display the publication date.',

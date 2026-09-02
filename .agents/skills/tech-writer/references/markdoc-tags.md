@@ -11,11 +11,11 @@ Every page starts with YAML frontmatter:
 title: 'Components'          # required — used in <title> and navigation
 emoji: '🏗️'                  # required — displayed in the nav and hero
 description: 'Anatomy, lifecycle, signals, effects'  # required — used in meta tags
-layout: 'page'               # optional — defaults to 'page'; also: 'blog', 'overview', 'example', 'api'
+layout: 'page'               # optional — defaults to 'page'; the only other hand-authored value is 'blog'
 ---
 ```
 
-The `layout` field selects the HTML template from `docs-src/layouts/`. Most narrative pages use the default (`page`). Only set it explicitly when using a non-default layout.
+The `layout` field selects the HTML template from `docs-src/layouts/`. Most narrative pages use the default (`page`). Only set it explicitly when using a non-default layout. Generated pages (API reference, examples index) get their layout from the route, not frontmatter.
 
 ## Available Tags
 
@@ -61,7 +61,9 @@ Body text explaining the constraint in one or two sentences.
 {% /callout %}
 ```
 
-- `.tip` — green/blue; for best practices and helpful guidance
+- `.tip` — for best practices and helpful guidance
+- `.note` — for supplementary context that isn't a warning
+- `.caution` — for constraints that cause bugs if ignored
 - `title` attribute — displayed as the callout heading; omit for an untitled callout
 
 Use sparingly: one per major section at most. Do not use for content that belongs in the main prose.
@@ -93,14 +95,6 @@ Self-closing. Adds a labeled link to a source file. Used inside `{% demo %}` blo
 
 ```markdoc
 {% sources title="BasicCounter source code" src="./sources/basic-counter.html" /%}
-```
-
-### `{% callout %}` title attribute is optional
-
-```markdoc
-{% callout .tip %}
-Short tip with no explicit title.
-{% /callout %}
 ```
 
 ### `{% tabgroup %}` / `{% /tabgroup %}`

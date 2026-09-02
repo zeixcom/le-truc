@@ -73,19 +73,19 @@ For complex interactive patterns where no native element exists (combobox, tabs,
 
 ## Keeping ARIA States in Sync
 
-Reactive states that map to ARIA attributes must be kept in sync via effects. Use `toggleAttribute` for boolean ARIA states and `setAttribute` for enumerated ones:
+ARIA has two channels: the content attribute (faces the consumer) and `ElementInternals`/IDL reflection (the component's own default). For component-owned semantics — `role`, `aria-expanded`, `aria-valuenow` and similar — prefer `bindAria(target, name)`, which reflects onto `internals` or a native element and clears any stale server-rendered attribute on first write. Use `bindAttribute` only for the content-attribute channel: state a consumer overrides or that CSS must select on.
 
 ```typescript
-// In factory return array
-watch('expanded', bindAttribute(trigger, 'aria-expanded'))  // boolean → toggleAttribute
-watch(() => host.selectedId === option.id, bindAttribute(option, 'aria-selected'))  // derived
+watch('expanded', bindAria(internals, 'ariaExpanded'))  // component-owned default
+watch(() => host.selectedId === option.id, bindAttribute(option, 'aria-selected'))  // consumer-facing
 ```
 
-For static ARIA attributes:
+For static ARIA, set the property directly in the factory body (runs once at connect):
 ```typescript
-// In factory body (runs once at connect)
-trigger.setAttribute('aria-controls', 'panelId')
+internals.role = 'slider'
 ```
+
+See `references/effects.md` for `bindAria`'s single/map forms and `docs-src/pages/accessibility.md` for the full channel decision table.
 
 ---
 

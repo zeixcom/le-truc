@@ -1,6 +1,7 @@
 form-listbox {
 	display: block;
 	margin: 0;
+	max-width: 16rem;
 
 	.input {
 		position: relative;
@@ -98,6 +99,9 @@ form-listbox {
 		color: var(--color-text);
 		cursor: pointer;
 		transition: background var(--transition-short) var(--easing-inout);
+		text-overflow: ellipsis;
+		max-width: 100%;
+		overflow-x: hidden;
 
 		&[aria-selected="true"] {
 			background: var(--color-selection-selected);

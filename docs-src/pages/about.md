@@ -5,7 +5,7 @@ description: 'License, versioning, getting involved'
 ---
 
 {% hero %}
-# 🤝 About
+# About
 
 **Join the Le Truc community.** Whether you are a developer, designer, or sponsor, there are many ways to get involved.
 {% /hero %}

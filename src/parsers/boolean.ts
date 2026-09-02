@@ -1,18 +1,15 @@
 import { asParser, type Parser } from '../types'
 
 /**
- * Parser that converts a boolean HTML attribute to an actual boolean.
+ * Converts a boolean HTML attribute to a boolean value.
  *
- * Returns `true` when the attribute is present and its value is not the
- * string `'false'`, compared case-insensitively (`'FALSE'`, `'False'`, …
- * also opt out). Returns `fallback` otherwise (default `false`). This
- * matches standard HTML boolean attribute semantics, allows explicit
- * opt-out via `attr="false"`, and covers ARIA-style string-boolean
- * attributes (e.g. `aria-hidden="true"`/`"false"`).
+ * Returns `true` when the attribute is present and its value is not
+ * `"false"` (case-insensitive). Returns `fallback` when the attribute is
+ * absent. This also covers ARIA-style attributes like `aria-hidden="true"`.
  *
  * @since 0.13.1
- * @param {boolean} [fallback=false] - Value to use when the attribute is absent
- * @returns {Parser<boolean>} Parser that returns `true` if the attribute is set and not (case-insensitively) `"false"`, `fallback` otherwise
+ * @param fallback - Value to use when the attribute is absent
+ * @returns Parser that returns the boolean value
  */
 const asBoolean = (fallback: boolean = false): Parser<boolean> =>
 	asParser((value: string | null | undefined) =>

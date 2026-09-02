@@ -12,7 +12,7 @@ import {
 	SERVER_CONFIG,
 	SOURCES_DIR,
 } from './config'
-import { fileExists, getFilePath, getRelativePath } from './io'
+import { fileExists, getFilePath, getRelativePath, isDirectory } from './io'
 import { hmrScriptTag } from './templates/hmr'
 
 /* === Command Line Args === */
@@ -157,7 +157,9 @@ const handleComponentTest = async (
 }
 
 const handleStaticFile = async (filePath: string): Promise<Response> => {
-	if (!fileExists(filePath)) return new Response('Not Found', { status: 404 })
+	// Directories pass existsSync but fail in sendfile — treat as not found
+	if (!fileExists(filePath) || isDirectory(filePath))
+		return new Response('Not Found', { status: 404 })
 
 	try {
 		// For HTML files in development, inject HMR script
@@ -354,9 +356,20 @@ async function startServer() {
 					OUTPUT_DIR,
 					getFilePath(OUTPUT_DIR, req.params.page),
 				)
-				return filePath
-					? handleStaticFile(filePath)
-					: new Response('Not Found', { status: 404 })
+				if (!filePath) return new Response('Not Found', { status: 404 })
+
+				// Bare section roots (/blog, /examples, /api) resolve to
+				// directories — redirect to the matching page if it exists
+				if (isDirectory(filePath)) {
+					const page = req.params.page.replace(/\.html$/, '')
+					if (fileExists(getFilePath(OUTPUT_DIR, `${page}.html`)))
+						return new Response(null, {
+							status: 301,
+							headers: { Location: `/${page}.html` },
+						})
+					return new Response('Not Found', { status: 404 })
+				}
+				return handleStaticFile(filePath)
 			},
 
 			// Serve favicon

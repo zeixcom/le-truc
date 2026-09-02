@@ -122,7 +122,7 @@ module-todo {
 	}
 }
 
-@container (width > 32rem) {
+@container (width > 27rem) {
 	module-todo {
 		& form {
 			flex-direction: row;

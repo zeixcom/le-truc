@@ -183,11 +183,6 @@ describe('serializeFrontmatter', () => {
 		expect(result).toContain('description: "A short description"')
 	})
 
-	test('includes emoji when present', () => {
-		const result = serializeFrontmatter({ title: 'T', emoji: '🚀' })
-		expect(result).toContain('emoji: "🚀"')
-	})
-
 	test('includes date without quotes', () => {
 		const result = serializeFrontmatter({ title: 'T', date: '2026-03-09' })
 		expect(result).toContain('date: 2026-03-09')

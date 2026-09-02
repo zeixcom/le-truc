@@ -147,7 +147,6 @@ server/tests/
    - `docs/assets/main.js`
    - `docs/sitemap.xml`
    - `docs/sw.js`
-   - `docs-src/includes/menu.html`
    - At least one file in `docs/examples/`
    - At least one file in `docs/sources/`
 4. Run `bun run dev` and confirm HMR broadcasts `build-success` on startup

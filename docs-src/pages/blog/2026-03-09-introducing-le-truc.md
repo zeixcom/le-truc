@@ -4,6 +4,7 @@ description: We built Le Truc after years of jQuery legacy code and SPA framewor
 emoji: 🎉
 layout: blog
 date: 2026-03-09
+modified-date: 2026-09-01
 author: Esther Brunner
 tags: release, announcement
 ---
@@ -61,7 +62,10 @@ One mechanism we are particularly proud of: `pass()`. In most component models, 
 
 ## What it looks like
 
-Here is a counter component:
+Here is a counter component. The signature below is the one we shipped at launch; version 2.0 replaced it with a two-argument factory form (see [Four Arguments for Four Guarantees](/blog/2026-04-04-four-arguments-for-four-guarantees.html)) — the second tab shows the same component written against the current API:
+
+{% tabgroup %}
+#### v1.0 (as published)
 
 ```ts
 import { defineComponent, asInteger, on, setText } from '@zeix/le-truc'
@@ -80,7 +84,28 @@ defineComponent(
 )
 ```
 
-Four arguments: a name, reactive properties with their parsers, a DOM query function, and a setup function that returns an effects map. The component connects to the server-rendered HTML, reads the initial count from the DOM, and updates only the `output` element when the count changes. No virtual DOM. No re-render. No JSON payload.
+---
+
+#### v2.0 (current)
+
+```ts
+import { asInteger, bindText, defineComponent } from '@zeix/le-truc'
+
+defineComponent(
+  'basic-counter',
+  ({ expose, first, host, on, watch }) => {
+    const output = first('output')
+    expose({ count: asInteger()(output.textContent) })
+
+    const button = first('button')
+    on(button, 'click', () => ({ count: host.count + 1 }))
+    watch('count', bindText(output))
+  },
+)
+```
+{% /tabgroup %}
+
+Four arguments in v1.0, two in v2.0 — but the guarantee is the same. The component connects to the server-rendered HTML, reads the initial count from the DOM, and updates only the `output` element when the count changes. No virtual DOM. No re-render. No JSON payload.
 
 If that sounds like something you have been looking for — or if you have been frustrated by the same trade-offs we were — we would love for you to try it.
 

@@ -6,7 +6,7 @@ description: 'Overview and key benefits of Le Truc'
 
 {% hero %}
 
-# 📖 Introduction
+# Introduction
 
 **Le Truc adds a reactive layer to server-rendered HTML.** Keep your existing backend. Le Truc wires type-safe component properties directly to DOM updates in the browser. It needs no re-rendering step and no JavaScript server.
 {% /hero %}

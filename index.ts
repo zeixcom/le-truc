@@ -68,6 +68,7 @@ export {
 	isState,
 	isStore,
 	isTask,
+	type KeyConfig,
 	type List,
 	type ListCallback,
 	type ListChanges,
@@ -90,6 +91,7 @@ export {
 	RequiredOwnerError,
 	type ScopeOptions,
 	type Sensor,
+	type SensorCallback,
 	type SensorOptions,
 	type Signal,
 	type SignalOptions,
@@ -105,6 +107,7 @@ export {
 	type TaskCallback,
 	UnresolvableKeyError,
 	UnsetSignalValueError,
+	type UpdateCallback,
 	unown,
 	untrack,
 } from '@zeix/cause-effect'

@@ -1,9 +1,9 @@
 # Write Blog Post
 
-Blog posts are exempt from references/ste100-style.md. Keep the narrative, conversational register below — do not apply STE100 sentence-length or vocabulary rules here.
+Blog posts run at **Off** sentence-discipline strength (references/ste100-style.md) — the sentence rules do not apply. The plain-English baseline does: active voice, plain words, `CONTEXT.md` terms, and the jargon table below. Journey, rhythm, and committed opinions are not an exemption here; they are the assignment. See references/tone-guide.md → Voice Techniques.
 
 ## Required Reading
-1. references/tone-guide.md → `<blog>` section — read before writing a single word
+1. references/tone-guide.md → `<blog>` section and → Voice Techniques — read before writing a single word
 2. references/markdoc-tags.md — frontmatter format and `{% section %}` tag
 3. references/document-map.md → `<pages_blog>` section
 
@@ -57,11 +57,16 @@ Use `## H2` headings to break up sections. Keep sections focused — one idea pe
 
 Open with the point, not the framing. Do not start with "In this post we will cover…" or "Before we dive in…".
 
+Story-frame code examples. Real component names and realistic data — never `foo`, `bar`, `test1`.
+
 ### Tone checklist while drafting
 
 Apply these actively, not as a final pass:
 
 - **Would a colleague say this out loud?** If it sounds like a press release, rewrite it.
+- **Is there a journey?** The post needs an arc: a question or problem in the opening, a turn in the middle, a payoff at the end. If a section could be shuffled into any order, the arc is missing.
+- **Does the rhythm vary?** Read a paragraph aloud. If three sentences in a row share the same length and shape, rewrite one. A short sentence after two long ones lands the point ("Each argument runs at a different time. That's the key.").
+- **Does it commit?** An opinion backed by a checkable reason beats a hedge. "That's a lot to hold in your head" beats "this may be considered somewhat complex". Commit or cut.
 - **Is the sentence doing work?** If removing it would not change the meaning, cut it.
 - **Is there a simpler word?** "Use" beats "utilize". "Fix" beats "remediate". "Change" beats "paradigm shift".
 - **Are transitions earned?** Only add a transition sentence if the jump between paragraphs is genuinely confusing without it.

@@ -6,7 +6,7 @@ layout: 'page'
 ---
 
 {% hero %}
-# 🍽️ Examples & Recipes
+# Examples & Recipes
 
 **Discover practical examples components with Le Truc.** Each example focuses on showcasing a specific feature or best practice, guiding you through real-world use cases.
 {% /hero %}
@@ -15,6 +15,7 @@ layout: 'page'
 
 {% listnav title="Select a Component" %}
 - Basic
+  - [Blogmeta](./examples/basic-blogmeta.html)
   - [Button](./examples/basic-button.html)
   - [Counter](./examples/basic-counter.html) selected
   - [Gauge](./examples/basic-gauge.html)
@@ -22,7 +23,6 @@ layout: 'page'
   - [Number](./examples/basic-number.html)
   - [Pluralize](./examples/basic-pluralize.html)
 - Card
-  - [Blogmeta](./examples/card-blogmeta.html)
   - [Blogpost](./examples/card-blogpost.html)
   - [Callout](./examples/card-callout.html)
   - [Collapsible](./examples/card-collapsible.html)
@@ -40,6 +40,7 @@ layout: 'page'
   - [Textbox](./examples/form-textbox.html)
   - [Tokenbox](./examples/form-tokenbox.html)
 - Module
+  - [Blogarchive](./examples/module-blogarchive.html)
   - [Calctable](./examples/module-calctable.html)
   - [Carousel](./examples/module-carousel.html)
   - [Catalog](./examples/module-catalog.html)
@@ -57,6 +58,10 @@ layout: 'page'
   - [Tabgroup](./examples/module-tabgroup.html)
   - [Ticker](./examples/module-ticker.html)
   - [Todo](./examples/module-todo.html)
+- Docs
+  - [Lifecycle](./examples/docs-lifecycle.html)
+  - [Reconcile](./examples/docs-reconcile.html)
+  - [Task States](./examples/docs-task-states.html)
 {% /listnav %}
 
 {% /section %}

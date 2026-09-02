@@ -1,14 +1,17 @@
+import './basic/blogmeta/basic-blogmeta.ts'
 import './basic/button/basic-button.ts'
 import './basic/counter/basic-counter.ts'
 import './basic/gauge/basic-gauge.ts'
 import './basic/hello/basic-hello.ts'
 import './basic/number/basic-number.ts'
 import './basic/pluralize/basic-pluralize.ts'
-import './card/blogmeta/card-blogmeta.ts'
 import './card/collapsible/card-collapsible.ts'
 import './card/colorscale/card-colorscale.ts'
 import './card/mediaqueries/card-mediaqueries.ts'
 import './context/media/context-media.ts'
+import './docs/lifecycle/docs-lifecycle.ts'
+import './docs/reconcile/docs-reconcile.ts'
+import './docs/task-states/docs-task-states.ts'
 import './form/checkbox/form-checkbox.ts'
 import './form/colorgraph/form-colorgraph.ts'
 import './form/combobox/form-combobox.ts'
@@ -35,6 +38,7 @@ import './module/splitview/module-splitview.ts'
 import './module/tabgroup/module-tabgroup.ts'
 import './module/ticker/module-ticker.ts'
 import './module/todo/module-todo.ts'
+import './section/menu/section-menu.ts'
 import './test/audit/test-audit.ts'
 import './test/aria/test-aria.ts'
 import './test/context/test-context.ts'
@@ -60,6 +64,10 @@ customElements.define('card-blogpost', CardBlogpost)
 class CardCallout extends HTMLElement {}
 customElements.define('card-callout', CardCallout)
 
+/** Blog post archive, grouped by year into collapsible sections. */
+class ModuleBlogarchive extends HTMLElement {}
+customElements.define('module-blogarchive', ModuleBlogarchive)
+
 /** Wrapper around a live component preview in the docs. */
 class ModuleDemo extends HTMLElement {}
 customElements.define('module-demo', ModuleDemo)
@@ -71,7 +79,3 @@ customElements.define('module-toc', ModuleToc)
 /** Hero section at the top of a page. */
 class SectionHero extends HTMLElement {}
 customElements.define('section-hero', SectionHero)
-
-/** Navigation menu section. */
-class SectionMenu extends HTMLElement {}
-customElements.define('section-menu', SectionMenu)

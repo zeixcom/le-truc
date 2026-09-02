@@ -39,6 +39,7 @@ Present a numbered list of deepening opportunities. For each candidate:
 **Language rules:**
 - Use CONTEXT.md vocabulary for domain concepts
 - Use architecture terms from the glossary below (Module, Interface, Implementation, Depth, Seam, Adapter, Leverage, Locality)
+- Candidate prose (Problem/Solution/Benefits): plain English; the two-beat rhythm is allowed, not required
 - Do NOT propose interfaces yet — ask user: "Which of these would you like to explore?"
 
 ## Step 4: Grilling loop
