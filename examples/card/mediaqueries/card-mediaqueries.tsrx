@@ -10,7 +10,7 @@
  * into whichever of those elements exist (each guarded independently via
  * `first()`'s "maybe" cardinality). TSRX's single canonical template can't
  * express "enhance arbitrary author-supplied light DOM" any more than it
- * could for `card-blogmeta` (NOTES.md) — there's no prop to convert
+ * could for `basic-blogmeta` (NOTES.md) — there's no prop to convert
  * usage-site markup to. This migration instead makes the component OWN its
  * template: a `label` prop replaces the page author's own `<h5>` heading,
  * and all four `<dd>` slots are unconditionally rendered (no more per-slot
