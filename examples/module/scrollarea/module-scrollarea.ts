@@ -1,4 +1,4 @@
-import { batch, bindState, createState, defineComponent } from '../../../index'
+import { batch, bindState, createState, defineComponent } from '@zeix/le-truc'
 
 const MIN_INTERSECTION_RATIO = 0
 const MAX_INTERSECTION_RATIO = 0.99 // ignore rounding errors of fraction pixels

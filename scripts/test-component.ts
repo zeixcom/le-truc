@@ -95,8 +95,8 @@ function listAvailableComponents() {
 				const subPath = join(itemPath, sub)
 				const componentName = `${item}-${sub}`
 				if (
-					statSync(subPath).isDirectory()
-					&& existsSync(join(subPath, `${componentName}.spec.ts`))
+					statSync(subPath).isDirectory() &&
+					existsSync(join(subPath, `${componentName}.spec.ts`))
 				) {
 					components.push(componentName)
 				}

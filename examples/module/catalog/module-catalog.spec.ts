@@ -26,8 +26,9 @@ test.describe('module-catalog component', () => {
 		// Badge should be empty initially
 		await expect(badge).toHaveText('')
 
-		// All spinbuttons should start at 0
-		const inputs = catalog.locator('form-spinbutton input.value')
+		// All spinbuttons should start at 0 (the compiled spinbutton's input
+		// carries no class — value lives on the host)
+		const inputs = catalog.locator('form-spinbutton input')
 		await expect(inputs.nth(0)).toHaveValue('0')
 		await expect(inputs.nth(1)).toHaveValue('0')
 		await expect(inputs.nth(2)).toHaveValue('0')

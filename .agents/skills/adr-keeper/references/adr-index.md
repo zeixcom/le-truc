@@ -28,9 +28,11 @@ This file is auto-generated. Do not edit manually.
 | [0021](0021-root-parameterized-query-and-queryall.md) | `query`/`queryAll` — Root-Parameterized Siblings of `first`/`all` | ✅ Accepted | S6, M4, M8, M14 |
 | [0022](0022-debug-extension-for-visual-and-console-instrumentation.md) | `debug()` Extension for Visual and Console Instrumentation | ✅ Accepted | S3, N1, M5, M6 |
 | [0023](0023-map-form-overloads-for-bind-helpers.md) | Map-Form Overloads for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty`/`bindState` | ✅ Accepted | M5 |
+| [0024](0024-adopt-tsrx-as-isomorphic-component-format.md) | Adopt TSRX as the Isomorphic Component Format | ✅ Accepted | M1, M3, M4, §1, §5, §7 |
+| [0025](0025-client-side-tsrx-playground.md) | Client-Side TSRX Playground | 🔄 Proposed | §1, M12, M13, S2 |
 | [0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) | ARIA Reflection via ElementInternals and `bindAria()` | ✅ Accepted | M1, M3, M5, §4 |
 
 ---
 
-**Last updated:** 2026-08-31
-**Total ADRs:** 24 (excluding template)
+**Last updated:** 2026-09-02
+**Total ADRs:** 26 (excluding template)

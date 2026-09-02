@@ -27,23 +27,30 @@ A full-featured listbox with client-side filtering, optional remote option loadi
 - `''`
 - Selected option value (`button[role="option"][aria-selected="true"]`)
 ---
-- `options`
-- `HTMLButtonElement[]`
-- Visible `button[role="option"]` elements
-- Live collection of selectable options
----
 - `filter`
 - `string`
 - `''`
 - Filter text used to hide/show options
 ---
-- `src`
-- `string`
-- `''`
-- URL for loading options JSON (flat or grouped)
+- `visibleOptions`
+- `FormListboxOption[]`
+- All options
+- **Read-only.** The `{ value, label }` pairs currently passing `filter`, in document order. Composing parents gate their own UI on this rather than querying the option buttons.
 {% /table %}
 
 {% partial file="form-associated.md" /%}
+
+#### Methods
+
+{% table %}
+- Name
+- Type
+- Description
+---
+- `focusFirstOption`
+- `() => void`
+- Moves focus to the first option still passing the filter, if any
+{% /table %}
 
 #### Descendant Elements
 

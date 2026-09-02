@@ -11,7 +11,7 @@ import {
 	type MutableStore,
 	query,
 	reconcile,
-} from '../../../index'
+} from '@zeix/le-truc'
 
 export type TodoItem = {
 	id: string

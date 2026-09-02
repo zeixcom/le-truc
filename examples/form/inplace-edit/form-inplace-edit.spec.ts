@@ -50,9 +50,9 @@ test.describe('form-inplace-edit component', () => {
 		await page.locator('form-inplace-edit input').fill('Will be discarded')
 		await page.locator('form-inplace-edit input').press('Escape')
 		await expect(page.locator('form-inplace-edit .text')).toHaveText('Edit me')
-		await expect(
-			page.locator('form-inplace-edit form-textbox'),
-		).not.toBeAttached()
+		// The compiled template keeps the edit box in the DOM and toggles
+		// hidden (the twin created/destroyed it dynamically)
+		await expect(page.locator('form-inplace-edit .edit')).toBeHidden()
 	})
 
 	test('cancels on blur to external element', async ({ page }) => {
@@ -60,9 +60,7 @@ test.describe('form-inplace-edit component', () => {
 		await page.locator('form-inplace-edit input').fill('Will be discarded')
 		await page.locator('form-inplace-edit button').focus() // no cancel when focus moves to button
 		await page.locator('form-inplace-edit button').evaluate(el => el.blur()) // cancel when focus leaves component
-		await expect(
-			page.locator('form-inplace-edit form-textbox'),
-		).not.toBeAttached()
+		await expect(page.locator('form-inplace-edit .edit')).toBeHidden()
 		await expect(page.locator('form-inplace-edit .text')).toHaveText('Edit me')
 	})
 
@@ -141,9 +139,7 @@ test.describe('form-inplace-edit component', () => {
 		await expect(page.locator('form-inplace-edit button')).toBeDisabled()
 
 		await page.locator('form-inplace-edit .text').dblclick()
-		await expect(
-			page.locator('form-inplace-edit form-textbox'),
-		).not.toBeAttached()
+		await expect(page.locator('form-inplace-edit .edit')).toBeHidden()
 	})
 
 	test('a disabled ancestor fieldset disables the edit button', async ({

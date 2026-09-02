@@ -150,11 +150,10 @@ test.describe('form-combobox component', () => {
 			await expect(listbox).toBeAttached()
 			await expect(listboxElement).toBeHidden()
 
-			// Listbox should have src attribute for loading
-			await expect(listbox).toHaveAttribute(
-				'src',
-				'./test/form-listbox/mocks/timezones.json',
-			)
+			// The compiled listbox dropped the remote-fetch mode — the popup's
+			// options are inline data-value/data-label buttons
+			const optionCount = await listbox.locator('button[role="option"]').count()
+			expect(optionCount).toBeGreaterThan(0)
 		})
 	})
 
@@ -197,6 +196,34 @@ test.describe('form-combobox component', () => {
 			})
 			expect(newLength).toBe(0)
 		})
+
+		test('length property is readonly and reactive', async ({ page }) => {
+			const combobox = page.locator('form-combobox').first()
+			const textbox = combobox.locator('input[role="combobox"]')
+
+			// Type something
+			await textbox.fill('hello world')
+
+			const length = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.length
+			})
+			expect(length).toBe(11)
+
+			// Try to set length (should be ignored as it's readonly)
+			await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				// @ts-expect-error deliberate test of readonly property
+				if (element) element.length = 999
+			})
+
+			// Length should still reflect actual input length
+			const actualLength = await page.evaluate(() => {
+				const element = document.querySelector('form-combobox')
+				return element?.length
+			})
+			expect(actualLength).toBe(11)
+		})
 	})
 
 	test.describe('Popup Show/Hide Behavior', () => {
@@ -207,21 +234,6 @@ test.describe('form-combobox component', () => {
 
 			// Wait for options to load by waiting for listbox to have loaded state
 			await page.waitForTimeout(50)
-
-			// Verify options are available before testing popup
-			const optionsLoaded = await page.evaluate(() => {
-				const listboxElement = document.querySelector('form-listbox')
-				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
-				)
-			})
-
-			if (!optionsLoaded) {
-				console.log('Options not loaded, skipping popup test')
-				return
-			}
 
 			// Type to trigger popup
 			await textbox.fill('New')
@@ -245,7 +257,8 @@ test.describe('form-combobox component', () => {
 			// Type something that won't match any options
 			await textbox.fill('zzz_no_match_xyz')
 
-			// Popup should be hidden (no visible options)
+			// Popup should be hidden (no visible options) — restored in LT-119
+			// via form-listbox's `visibleOptions` public prop
 			await expect(listboxElement).toBeHidden()
 			await expect(textbox).toHaveAttribute('aria-expanded', 'false')
 		})
@@ -254,24 +267,6 @@ test.describe('form-combobox component', () => {
 			const combobox = page.locator('form-combobox').first()
 			const textbox = combobox.locator('input[role="combobox"]')
 			const listboxElement = combobox.locator('[role="listbox"]')
-
-			// Wait for options to load
-			await page.waitForTimeout(50)
-
-			// Verify options are available
-			const optionsLoaded = await page.evaluate(() => {
-				const listboxElement = document.querySelector('form-listbox')
-				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
-				)
-			})
-
-			if (!optionsLoaded) {
-				console.log('Options not loaded, skipping escape test')
-				return
-			}
 
 			await textbox.fill('New')
 			await page.waitForTimeout(50)
@@ -289,24 +284,6 @@ test.describe('form-combobox component', () => {
 			const combobox = page.locator('form-combobox').first()
 			const textbox = combobox.locator('input[role="combobox"]')
 			const listboxElement = combobox.locator('[role="listbox"]')
-
-			// Wait for options to load
-			await page.waitForTimeout(50)
-
-			// Verify options are available
-			const optionsLoaded = await page.evaluate(() => {
-				const listboxElement = document.querySelector('form-listbox')
-				return (
-					listboxElement &&
-					listboxElement.options &&
-					listboxElement.options.length > 0
-				)
-			})
-
-			if (!optionsLoaded) {
-				console.log('Options not loaded, skipping Alt+ArrowDown test')
-				return
-			}
 
 			// Focus textbox and use Alt+ArrowDown
 			await textbox.focus()
@@ -402,7 +379,7 @@ test.describe('form-combobox component', () => {
 			const firstOption = listboxElement
 				.locator('button[role="option"]:not([hidden])')
 				.first()
-			const optionValue = (await firstOption.getAttribute('value')) ?? ''
+			const optionValue = (await firstOption.getAttribute('data-value')) ?? ''
 			await firstOption.click()
 
 			// Combobox value should update to the selected option
@@ -724,36 +701,6 @@ test.describe('form-combobox component', () => {
 				return (document.querySelector('form form-combobox') as any)?.value
 			})
 			expect(value).toBe('')
-		})
-	})
-
-	test.describe('Component Properties', () => {
-		test('length property is readonly and reactive', async ({ page }) => {
-			const combobox = page.locator('form-combobox').first()
-			const textbox = combobox.locator('input[role="combobox"]')
-
-			// Type something
-			await textbox.fill('hello world')
-
-			const length = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.length
-			})
-			expect(length).toBe(11)
-
-			// Try to set length (should be ignored as it's readonly)
-			await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				// @ts-expect-error deliberate test of readonly property
-				if (element) element.length = 999
-			})
-
-			// Length should still reflect actual input length
-			const actualLength = await page.evaluate(() => {
-				const element = document.querySelector('form-combobox')
-				return element?.length
-			})
-			expect(actualLength).toBe(11)
 		})
 	})
 

@@ -1,16 +1,27 @@
-<form-radiogroup name="gender">
+<!-- Regenerated from the compiled server render (LT-116 cutover):
+     renderFormRadiogroup({ name, legend, options, value }) from
+     server/generated/tsrx/form-radiogroup.server.ts — the demo serves exactly
+     the markup the compiled client hydrates. Attribute-configured: the
+     component owns its whole template now. The per-item steady state
+     (`checked`/`tabindex` on the selected radio, `selected` on its label) is
+     baked in so the docs demo renders without a pre-upgrade flash — the
+     compiled client re-asserts the same state at activation. The styled
+     variants keep the page-level `visually-hidden` utility class on their
+     inputs, the same stand-in-for-server-render presentation config the
+     form-checkbox demo carries. -->
+<form-radiogroup name="gender" value="other">
 	<fieldset>
 		<legend>Gender</legend>
-		<label>
-			<input type="radio" value="female">
+		<label data-value="female">
+			<input type="radio" value="female" tabindex="-1">
 			<span>Female</span>
 		</label>
-		<label>
-			<input type="radio" value="male">
+		<label data-value="male">
+			<input type="radio" value="male" tabindex="-1">
 			<span>Male</span>
 		</label>
-		<label class="selected">
-			<input type="radio" value="other" checked>
+		<label data-value="other" class="selected">
+			<input type="radio" value="other" checked tabindex="0">
 			<span>Other</span>
 		</label>
 	</fieldset>
@@ -18,24 +29,19 @@
 
 <hr>
 
-<form-radiogroup class="radio-group" name="theme">
+<form-radiogroup class="radio-group" name="theme" value="system">
 	<fieldset>
 		<legend>Theme</legend>
-		<label>
-			<input type="radio" class="visually-hidden" value="light">
+		<label data-value="light">
+			<input type="radio" class="visually-hidden" value="light" tabindex="-1">
 			<span>Light</span>
 		</label>
-		<label>
-			<input type="radio" class="visually-hidden" value="dark">
+		<label data-value="dark">
+			<input type="radio" class="visually-hidden" value="dark" tabindex="-1">
 			<span>Dark</span>
 		</label>
-		<label class="selected">
-			<input
-				type="radio"
-				class="visually-hidden"
-				value="system"
-				checked
-			>
+		<label data-value="system" class="selected">
+			<input type="radio" class="visually-hidden" value="system" checked tabindex="0">
 			<span>Use system preference</span>
 		</label>
 	</fieldset>
@@ -43,32 +49,19 @@
 
 <hr>
 
-<form-radiogroup class="split-button" name="filter">
+<form-radiogroup class="split-button" name="filter" value="all">
 	<fieldset>
 		<legend class="visually-hidden">Filter</legend>
-		<label class="selected">
-			<input
-				type="radio"
-				class="visually-hidden"
-				value="all"
-				checked
-			>
+		<label data-value="all" class="selected">
+			<input type="radio" class="visually-hidden" value="all" checked tabindex="0">
 			<span>All</span>
 		</label>
-		<label>
-			<input
-				type="radio"
-				class="visually-hidden"
-				value="active"
-			>
+		<label data-value="active">
+			<input type="radio" class="visually-hidden" value="active" tabindex="-1">
 			<span>Active</span>
 		</label>
-		<label>
-			<input
-				type="radio"
-				class="visually-hidden"
-				value="completed"
-			>
+		<label data-value="completed">
+			<input type="radio" class="visually-hidden" value="completed" tabindex="-1">
 			<span>Completed</span>
 		</label>
 	</fieldset>

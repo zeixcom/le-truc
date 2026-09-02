@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test'
 
+/*
+ * Runs against the COMPILED component. This is the hand-written twin's
+ * contract restored (LT-118): the `.zero`/`.other` zero-state affordance,
+ * the hidden input/decrement at value 0, and the increment button's
+ * aria-label swap are all back, so these tests are the pre-migration ones
+ * except where the compiled component genuinely differs — value/min/max/
+ * step read from HOST attributes with the owned input as fallback (LT-112),
+ * `value` mirrors as a PROPERTY write (LT-116), and keyboard events are
+ * handled on the fieldset.
+ */
+
 test.describe('form-spinbutton component', () => {
 	test.beforeEach(async ({ page }) => {
 		page.on('console', msg => {
@@ -113,7 +124,7 @@ test.describe('form-spinbutton component', () => {
 		const incrementButton = spinbutton.locator('button.increment')
 		const input = spinbutton.locator('input.value')
 
-		// Focus a button (keyboard events are handled on controls collection)
+		// Focus a button (keyboard events are handled on the fieldset)
 		await incrementButton.focus()
 
 		// Test ArrowUp
@@ -231,9 +242,12 @@ test.describe('form-spinbutton component', () => {
 		await page.keyboard.press('ArrowUp')
 		await expect(input).toHaveValue('10')
 
-		// Switch to decrement button to go down
+		// Switch to decrement button to go down. Reaching max disabled the
+		// focused increment button, dropping focus to <body> — refocus before
+		// pressing keys so they reach the control's fieldset handler.
 		const decrementButton = spinbutton.locator('button.decrement')
 		await decrementButton.focus()
+		await expect(decrementButton).toBeFocused()
 
 		// Go down to 0 and try to go below
 		for (let i = 0; i < 10; i++) {
@@ -283,7 +297,9 @@ test.describe('form-spinbutton component', () => {
 	})
 
 	test('reads max value from input max attribute', async ({ page }) => {
-		// Check that max property reads from input.max
+		// Host attribute wins, the owned input's attribute is the fallback
+		// (LT-112 restored the twin's precedence); the demo carries the data
+		// on the input
 		const maxProperty = await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			return element.max
@@ -340,12 +356,18 @@ test.describe('form-spinbutton component', () => {
 		})
 		expect(valueAfterClick).toBe(1)
 
-		// Controlled path: programmatic assignment drives the DOM
+		// Controlled path: programmatic assignment drives the exposed prop and
+		// the LIVE input value (LT-116): `value` on a native input dispatches
+		// as a property write, so an external host.value write resyncs the
+		// input text even after stepUp/stepDown/onChange set the native
+		// dirty-value flag. The value ATTRIBUTE stays at the server-rendered
+		// default on purpose: it is the reset baseline (LT-057).
 		await page.evaluate(() => {
 			const element = document.querySelector('form-spinbutton') as any
 			element.value = 5
 		})
 
+		await page.waitForTimeout(50)
 		await expect(input).toHaveValue('5')
 		await expect(input).toBeVisible()
 
@@ -361,6 +383,7 @@ test.describe('form-spinbutton component', () => {
 			element.value = 0
 		})
 
+		await page.waitForTimeout(50)
 		await expect(input).toBeHidden()
 
 		const valueAfterReset = await page.evaluate(() => {
@@ -371,14 +394,15 @@ test.describe('form-spinbutton component', () => {
 	})
 
 	test('reads initial value from DOM content', async ({ page }) => {
-		// Test component that has initial value set in DOM
+		// The initial value harvests from the owned input's value attribute
+		// (host attribute overrides — LT-112 restored the twin's precedence)
 		const initialValueSpinbutton = page.locator('#initial-value-test')
 		const input = initialValueSpinbutton.locator('input.value')
 		const incrementButton = initialValueSpinbutton.locator('button.increment')
 		const decrementButton = initialValueSpinbutton.locator('button.decrement')
 		const otherElement = initialValueSpinbutton.locator('.other')
 
-		// Should read initial value from DOM
+		// Should read the initial value
 		await expect(input).toHaveValue('3')
 		await expect(input).toBeVisible()
 
@@ -588,12 +612,16 @@ test.describe('form-spinbutton component', () => {
 		await input.blur()
 		await expect(input).toHaveValue('2.5')
 
-		// A value off the step grid trips the native input's own
-		// stepMismatch constraint — relayValidity picks that up, so it's
-		// rejected and reverts rather than committing unaligned
+		// A FRACTIONAL step renders `step="any"` on the control on purpose
+		// (owner ruling, 2026-08-30): the field accepts more precision than
+		// stepUp()/stepDown() themselves produce, which is what
+		// form-colorgraph's 0.001-step chroma axis needs. So an off-grid
+		// value commits rather than tripping stepMismatch. An INTEGER step
+		// still renders `step="1"` and IS enforced natively — the two other
+		// instances on this page cover that.
 		await input.fill('2.3')
 		await input.blur()
-		await expect(input).toHaveValue('2.5')
+		await expect(input).toHaveValue('2.3')
 
 		// Clamped to max (5) when exceeding the bound
 		await input.fill('9.9')

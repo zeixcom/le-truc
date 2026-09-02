@@ -105,6 +105,10 @@ defineComponent<FormCheckboxProps>(
 Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticProps.formAssociated` key. Combining them on one component throws `ExtensionCollisionError` in dev mode. Radio groups and listboxes do not need `formAssociatedCheckbox()`. Their selection aggregates into one string `value` on the container, which fits `formAssociated()`.
 {% /callout %}
 
+{% callout .caution title="Do not observe value or checked on a form-associated component" %}
+On a form-associated component, the `value` attribute is the reset baseline, not a live-value channel. Passing `value` to `observedAttributes()` re-parses the baseline attribute into the live prop on every mutation, so baseline updates apply live and the two channels stop being distinct. The same applies to `checked` with `formAssociatedCheckbox()`. Use the property as the sole live edit path.
+{% /callout %}
+
 {% /section %}
 
 {% section %}
@@ -148,7 +152,7 @@ defineComponent<BasicGaugeProps>(
 
 Le Truc adds named attributes to the class's `static observedAttributes`. On each mutation, the extension re-runs the same retained `Parser` against the attribute's new string value. It writes the result to the prop. Props whose initializer is not a branded `Parser` are left untouched.
 
-Use this sparingly. For most components, event handlers or direct property writes are the right way to update state after connect.
+Use this sparingly. For most components, event handlers or direct property writes are the right way to update state after connect. On form-associated components, do not observe `value` — or `checked` with `formAssociatedCheckbox()`; see the caution in [Form Association](#form-association).
 
 {% callout .caution title="Do not observe value or checked on a form-associated component" %}
 On a form-associated component, the `value` attribute is the reset baseline, not a live-value channel. Passing `value` to `observedAttributes()` re-parses the baseline attribute into the live prop on every mutation, so baseline updates apply live and the two channels stop being distinct. The same applies to `checked` with `formAssociatedCheckbox()`. Use the property as the sole live edit path.

@@ -1,4 +1,4 @@
-import { createList, defineComponent, reconcile } from '../../../index'
+import { createList, defineComponent, reconcile } from '@zeix/le-truc'
 
 /**
  * Teaching component for the "Reconcile the DOM" section of the Dynamic

@@ -1,6 +1,9 @@
-import { type EffectDescriptor } from '../../../index'
+import { type EffectDescriptor } from '@zeix/le-truc'
 
-import type { BasicButtonProps } from './basic-button'
+// LT-117 cutover: the props type lives in the generated client now that the
+// hand-written twin is deleted — same fresh-checkout guard as main.ts's
+// generated-client imports (scripts/build-tsrx.ts regenerates the module).
+import type { BasicButtonProps } from '../../../server/generated/tsrx/basic-button.client'
 
 type CopyStatus = 'success' | 'error'
 

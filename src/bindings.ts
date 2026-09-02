@@ -8,7 +8,8 @@ import { schedule } from './scheduler'
  * caller wires to a signal via `watch()` or `match()`.
  *
  * `dangerouslyBindInnerHTML()` is an XSS sink. Pass a `sanitize` option
- * (e.g. DOMPurify) for untrusted input. Le Truc ships no sanitizer.
+ * (e.g. DOMPurify) for untrusted input, or register a module-level default
+ * with `configureHtmlSanitizer()`. Le Truc ships no sanitizer.
  */
 
 /* === Types === */
@@ -19,14 +20,50 @@ import { schedule } from './scheduler'
  */
 type TrustedHTML = object
 
+/** A sanitizer function: raw HTML in, a safe `string` or `TrustedHTML` out. */
+type Sanitizer = (html: string) => string | TrustedHTML
+
 type DangerouslyBindInnerHTMLOptions = {
 	shadowRootMode?: ShadowRootMode
 	allowScripts?: boolean
 	/**
 	 * Sanitizer applied to the HTML string before assignment to `innerHTML`.
 	 * Return a `TrustedHTML` instance on pages that enforce Trusted Types.
+	 * Omit to fall back to the module-level default set by
+	 * `configureHtmlSanitizer()`, if any.
 	 */
-	sanitize?: (html: string) => string | TrustedHTML
+	sanitize?: Sanitizer
+}
+
+/* === Default HTML Sanitizer (ADR 0010 amendment) === */
+
+/**
+ * Module-level fallback `sanitize` function for every `dangerouslyBindInnerHTML()`
+ * call site that omits its own `options.sanitize` — `undefined` until
+ * `configureHtmlSanitizer()` is called. Le Truc still ships no sanitizer of
+ * its own: this is a consumer-configured hook, not a library default, and an
+ * unconfigured `dangerouslyBindInnerHTML()` call behaves exactly as it always
+ * has (raw passthrough).
+ */
+let defaultSanitize: Sanitizer | undefined
+
+/**
+ * Configure the module-level default sanitizer that `dangerouslyBindInnerHTML()`
+ * falls back to when a call site omits its own `sanitize` option. Purely
+ * opt-in — call once, e.g. at app startup; every `dangerouslyBindInnerHTML()`
+ * call site keeps working exactly as before unless it left `sanitize` unset.
+ * A call site's own `sanitize` option still takes precedence.
+ *
+ * Le Truc ships no sanitizer implementation of its own (ADR-0010) — this
+ * only registers a hook. DOMPurify is the recommended choice; configure it
+ * with `RETURN_TRUSTED_TYPE: true` for Trusted-Types-enforcing pages (see the
+ * Trusted Types note on `dangerouslyBindInnerHTML` below).
+ *
+ * @since 2.6
+ * @param sanitize - Default sanitizer, or `undefined` to clear it
+ */
+const configureHtmlSanitizer = (sanitize: Sanitizer | undefined): void => {
+	defaultSanitize = sanitize
 }
 
 /**
@@ -667,9 +704,11 @@ function bindStyle(
  * Returns `SingleMatchHandlers<string>` that set the inner HTML of an element,
  * with optional Shadow DOM, sanitization, and script re-execution support.
  *
- * - `ok(html)` → sets `innerHTML` (sanitized first, if `sanitize` is given).
- *   With `allowScripts`, `<script>` elements are re-executed after injection.
- * - `nil` (or an empty/falsy `html`) → resets via `replaceChildren()`.
+ * - `ok(html)` → sets `innerHTML` (sanitized first, by `sanitize` or the
+ *   module-level default from `configureHtmlSanitizer()`). With
+ *   `allowScripts`, `<script>` elements are re-executed after injection.
+ * - `nil` (or an empty/falsy `html`) → resets via `replaceChildren()`, not
+ *   `innerHTML = ''`, which a Trusted-Types CSP would reject.
  *
  * **Security.** `allowScripts: false` (the default) does not make untrusted
  * HTML safe: `innerHTML` still fires event-handler attributes on other
@@ -702,7 +741,11 @@ const dangerouslyBindInnerHTML = (
 				schedule(element, reset)
 				return
 			}
-			const { shadowRootMode, allowScripts, sanitize } = options
+			const {
+				shadowRootMode,
+				allowScripts,
+				sanitize = defaultSanitize,
+			} = options
 			if (shadowRootMode && !element.shadowRoot)
 				element.attachShadow({ mode: shadowRootMode })
 			const target = element.shadowRoot || element
@@ -751,10 +794,12 @@ export {
 	bindStyle,
 	bindText,
 	bindVisible,
+	configureHtmlSanitizer,
 	type DangerouslyBindInnerHTMLOptions,
 	dangerouslyBindInnerHTML,
 	escapeHTML,
 	getDebugBindingTarget,
+	type Sanitizer,
 	safeSetAttribute,
 	setTextPreservingComments,
 }

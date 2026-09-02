@@ -3,7 +3,7 @@ import {
 	bindProperty,
 	bindText,
 	defineComponent,
-} from '../../../index'
+} from '@zeix/le-truc'
 
 export type ModulePaginationProps = {
 	/** Total number of pages. Read from the `max` attribute at connect time. */

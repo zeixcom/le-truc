@@ -1,26 +1,46 @@
 import './basic/blogmeta/basic-blogmeta.ts'
-import './basic/button/basic-button.ts'
-import './basic/counter/basic-counter.ts'
-import './basic/gauge/basic-gauge.ts'
-import './basic/hello/basic-hello.ts'
-import './basic/number/basic-number.ts'
-import './basic/pluralize/basic-pluralize.ts'
-import './card/collapsible/card-collapsible.ts'
-import './card/colorscale/card-colorscale.ts'
-import './card/mediaqueries/card-mediaqueries.ts'
+// Site cutover (LT-092): every migrated component mounts its COMPILED client
+// from server/generated/tsrx (gitignored build output — scripts/build-tsrx.ts
+// regenerates it; build:examples:js runs that compiler step before bundling,
+// and server/build.ts sequences the tsrx effect in phase 1 ahead of the js
+// bundle for the same reason). The hand-written .ts twins are deleted per the
+// card-blogpost/card-callout precedent.
+// basic-button cut over in LT-117 — it OWNS its template (the server
+// renders the button and its spans from the args) and harvests
+// label/badge/disabled back out of that same markup at connect, so a
+// page may also author the markup itself, in whole or in part.
+import '../server/generated/tsrx/basic-button.client.ts'
+import '../server/generated/tsrx/basic-counter.client.ts'
+// basic-gauge and basic-pluralize cut over in LT-115: the arg→DOM
+// substitution now routes derived signals through the exposed prop's Slot
+// (a tracked source — post-connect writes re-derive instead of freezing),
+// and root harvest sites read the ambient `host` instead of an illegal
+// `first('<own-tag>')` self-query. Both components were reshaped to their
+// twins' contracts (gauge: meter-fallback harvest + observedAttributes;
+// pluralize: getLocale thunks, no setup signals) — see their .tsrx headers.
+import '../server/generated/tsrx/basic-gauge.client.ts'
+import '../server/generated/tsrx/basic-number.client.ts'
+import '../server/generated/tsrx/basic-hello.client.ts'
+import '../server/generated/tsrx/basic-pluralize.client.ts'
+import '../server/generated/tsrx/card-collapsible.client.ts'
+import '../server/generated/tsrx/card-colorscale.client.ts'
+import '../server/generated/tsrx/card-mediaqueries.client.ts'
 import './context/media/context-media.ts'
 import './docs/lifecycle/docs-lifecycle.ts'
 import './docs/reconcile/docs-reconcile.ts'
 import './docs/task-states/docs-task-states.ts'
-import './form/checkbox/form-checkbox.ts'
-import './form/colorgraph/form-colorgraph.ts'
-import './form/combobox/form-combobox.ts'
-import './form/inplace-edit/form-inplace-edit.ts'
-import './form/listbox/form-listbox.ts'
-import './form/radiogroup/form-radiogroup.ts'
-import './form/spinbutton/form-spinbutton.ts'
-import './form/textbox/form-textbox.ts'
-import './form/tokenbox/form-tokenbox.ts'
+import '../server/generated/tsrx/form-checkbox.client.ts'
+import '../server/generated/tsrx/form-colorgraph.client.ts'
+import '../server/generated/tsrx/form-combobox.client.ts'
+import '../server/generated/tsrx/form-inplace-edit.client.ts'
+import '../server/generated/tsrx/form-listbox.client.ts'
+// form-radiogroup cut over in LT-116: the loop-body `checked` mirror lowers
+// to a property write (the compiler's dirty-flag dispatch widening), so the
+// compiled client restores the twin's mutual exclusion after interaction.
+import '../server/generated/tsrx/form-radiogroup.client.ts'
+import '../server/generated/tsrx/form-spinbutton.client.ts'
+import '../server/generated/tsrx/form-textbox.client.ts'
+import '../server/generated/tsrx/form-tokenbox.client.ts'
 import './module/calctable/module-calctable.ts'
 import './module/carousel/module-carousel.ts'
 import './module/catalog/module-catalog.ts'
@@ -30,12 +50,12 @@ import './module/coloreditor/module-coloreditor.ts'
 import './module/colorinfo/module-colorinfo.ts'
 import './module/dialog/module-dialog.ts'
 import './module/lazyload/module-lazyload.ts'
-import './module/list/module-list.ts'
+import '../server/generated/tsrx/module-list.client.ts'
 import './module/listnav/module-listnav.ts'
 import './module/pagination/module-pagination.ts'
 import './module/scrollarea/module-scrollarea.ts'
 import './module/splitview/module-splitview.ts'
-import './module/tabgroup/module-tabgroup.ts'
+import '../server/generated/tsrx/module-tabgroup.client.ts'
 import './module/ticker/module-ticker.ts'
 import './module/todo/module-todo.ts'
 import './section/menu/section-menu.ts'
@@ -55,14 +75,12 @@ import './test/watch/test-watch.ts'
 // Structural-only custom elements — no behavior, just layout containers.
 // Declared as named classes (not inline expressions) so the CEM analyzer
 // extracts proper PascalCase names + descriptions for editor LSP awareness.
-
-/** Container for a blog post card in the blog layout. */
-class CardBlogpost extends HTMLElement {}
-customElements.define('card-blogpost', CardBlogpost)
-
-/** Callout banner for highlighted or danger content. */
-class CardCallout extends HTMLElement {}
-customElements.define('card-callout', CardCallout)
+//
+// card-blogpost and card-callout used to be stubs here too; both migrated to
+// .tsrx (fb06e37a, LT-033/LT-034) — same structural-only shape, now compiled
+// from examples/card/{blogpost,callout}/*.tsrx and read into the CEM
+// manifest from their generated client, so a stub here would double-declare
+// the tag (verify-cem.ts's duplicate-tag guard).
 
 /** Blog post archive, grouped by year into collapsible sections. */
 class ModuleBlogarchive extends HTMLElement {}

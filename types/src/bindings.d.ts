@@ -5,22 +5,43 @@ import type { SingleMatchHandlers } from '@zeix/cause-effect';
  * caller wires to a signal via `watch()` or `match()`.
  *
  * `dangerouslyBindInnerHTML()` is an XSS sink. Pass a `sanitize` option
- * (e.g. DOMPurify) for untrusted input. Le Truc ships no sanitizer.
+ * (e.g. DOMPurify) for untrusted input, or register a module-level default
+ * with `configureHtmlSanitizer()`. Le Truc ships no sanitizer.
  */
 /**
  * Placeholder for the DOM's `TrustedHTML` type (Trusted Types API).
  * `lib.dom.d.ts` does not ship this type yet. See ADR-0010.
  */
 type TrustedHTML = object;
+/** A sanitizer function: raw HTML in, a safe `string` or `TrustedHTML` out. */
+type Sanitizer = (html: string) => string | TrustedHTML;
 type DangerouslyBindInnerHTMLOptions = {
     shadowRootMode?: ShadowRootMode;
     allowScripts?: boolean;
     /**
      * Sanitizer applied to the HTML string before assignment to `innerHTML`.
      * Return a `TrustedHTML` instance on pages that enforce Trusted Types.
+     * Omit to fall back to the module-level default set by
+     * `configureHtmlSanitizer()`, if any.
      */
-    sanitize?: (html: string) => string | TrustedHTML;
+    sanitize?: Sanitizer;
 };
+/**
+ * Configure the module-level default sanitizer that `dangerouslyBindInnerHTML()`
+ * falls back to when a call site omits its own `sanitize` option. Purely
+ * opt-in — call once, e.g. at app startup; every `dangerouslyBindInnerHTML()`
+ * call site keeps working exactly as before unless it left `sanitize` unset.
+ * A call site's own `sanitize` option still takes precedence.
+ *
+ * Le Truc ships no sanitizer implementation of its own (ADR-0010) — this
+ * only registers a hook. DOMPurify is the recommended choice; configure it
+ * with `RETURN_TRUSTED_TYPE: true` for Trusted-Types-enforcing pages (see the
+ * Trusted Types note on `dangerouslyBindInnerHTML` below).
+ *
+ * @since 2.6
+ * @param sanitize - Default sanitizer, or `undefined` to clear it
+ */
+declare const configureHtmlSanitizer: (sanitize: Sanitizer | undefined) => void;
 /**
  * Values `bindAria()`'s `ok()` handler accepts. See ADR 0026 §2 for the
  * mapping table and for why `null | undefined` are excluded from the type
@@ -260,9 +281,11 @@ declare function bindStyle<P extends string>(element: HTMLElement | SVGElement |
  * Returns `SingleMatchHandlers<string>` that set the inner HTML of an element,
  * with optional Shadow DOM, sanitization, and script re-execution support.
  *
- * - `ok(html)` → sets `innerHTML` (sanitized first, if `sanitize` is given).
- *   With `allowScripts`, `<script>` elements are re-executed after injection.
- * - `nil` (or an empty/falsy `html`) → resets via `replaceChildren()`.
+ * - `ok(html)` → sets `innerHTML` (sanitized first, by `sanitize` or the
+ *   module-level default from `configureHtmlSanitizer()`). With
+ *   `allowScripts`, `<script>` elements are re-executed after injection.
+ * - `nil` (or an empty/falsy `html`) → resets via `replaceChildren()`, not
+ *   `innerHTML = ''`, which a Trusted-Types CSP would reject.
  *
  * **Security.** `allowScripts: false` (the default) does not make untrusted
  * HTML safe: `innerHTML` still fires event-handler attributes on other
@@ -279,4 +302,4 @@ declare function bindStyle<P extends string>(element: HTMLElement | SVGElement |
  * @returns Match handlers that schedule the innerHTML mutation
  */
 declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslyBindInnerHTMLOptions) => SingleMatchHandlers<string>;
-export { type AriaValue, bindAria, bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, safeSetAttribute, setTextPreservingComments, };
+export { type AriaValue, bindAria, bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, configureHtmlSanitizer, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, type Sanitizer, safeSetAttribute, setTextPreservingComments, };

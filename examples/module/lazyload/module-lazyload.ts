@@ -5,7 +5,7 @@ import {
 	defineComponent,
 	query,
 	schedule,
-} from '../../../index'
+} from '@zeix/le-truc'
 import {
 	fetchWithCache,
 	isRecursiveURL,

@@ -17,6 +17,10 @@ const CSS_FILE = join(ROOT, 'examples/main.css')
 const TS_FILE = join(ROOT, 'examples/main.ts')
 
 const TEMPLATES_DIR = join(ROOT, 'server/templates')
+// The tsrx effect's gitignored compile output (server/effects/tsrx.ts);
+// migrated components' generated clients are bundle inputs for main.ts
+// (LT-091), so the js effect watches this directory for rebuilds.
+const GENERATED_CLIENTS_DIR = join(ROOT, 'server/generated/tsrx')
 
 const INPUT_DIR = join(ROOT, 'docs-src')
 const PAGES_DIR = join(ROOT, 'docs-src/pages')
@@ -183,6 +187,7 @@ export {
 	COMPRESSIBLE_TYPES,
 	CSS_FILE,
 	EXAMPLES_DIR,
+	GENERATED_CLIENTS_DIR,
 	INCLUDES_DIR,
 	INPUT_DIR,
 	LAYOUTS_DIR,

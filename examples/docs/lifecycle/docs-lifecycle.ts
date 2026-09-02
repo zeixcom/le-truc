@@ -1,4 +1,4 @@
-import { bindText, createCell, defineComponent } from '../../../index'
+import { bindText, createCell, defineComponent } from '@zeix/le-truc'
 
 /**
  * Teaching components for the "Component Lifecycle" section of the docs.

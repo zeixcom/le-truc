@@ -14,6 +14,7 @@ import { serviceWorkerEffect } from './effects/service-worker'
 import { sitemapEffect } from './effects/sitemap'
 import { sourcesEffect } from './effects/sources'
 import { staticAssetsEffect } from './effects/static-assets'
+import { tsrxEffect } from './effects/tsrx'
 
 /**
  * Simple reactive build system orchestration with HMR integration
@@ -50,17 +51,28 @@ export async function build(
 				: undefined
 
 		// Phase 1: generator effects that produce gitignored inputs consumed by
-		// later effects — TypeDoc markdown (docs-src/api, docs-src/pages/api.md)
-		// and the bundled assets (docs/assets/main.{css,js}). On a fresh checkout
-		// none of these exist yet, so the consumers must not take their first-run
+		// later effects — TypeDoc markdown (docs-src/api, docs-src/pages/api.md),
+		// the bundled assets (docs/assets/main.{css,js}), and the TSRX compiler's
+		// generated modules (server/generated/tsrx). On a fresh checkout none of
+		// these exist yet, so the consumers must not take their first-run
 		// snapshot until phase 1 has completed; a one-shot build would otherwise
 		// finish (and clean up subscriptions) before the reactive re-runs settle.
 		const api = apiEffect(scheduleReload)
 		const css = cssEffect(scheduleReload)
-		const js = jsEffect(scheduleReload)
 		const staticAssets = staticAssetsEffect(scheduleReload)
+		// LT-091: generated `.client.ts` modules are now BUNDLE INPUTS —
+		// examples/tsrx-test.ts imports migrated components' generated
+		// clients for the real-browser specs — so the compiler's first run
+		// must complete before the bundler starts.
+		// The compiler used to be a phase-2 effect, racing it AFTER the js
+		// build on a fresh checkout (generated dir not yet written) and
+		// breaking the bundle with an unresolved import.
+		const tsrx = tsrxEffect(scheduleReload)
 
-		await Promise.all([api.ready, css.ready, js.ready, staticAssets.ready])
+		await Promise.all([api.ready, css.ready, staticAssets.ready, tsrx.ready])
+
+		const js = jsEffect(scheduleReload)
+		await js.ready
 
 		// Phase 2: effects consuming phase-1 output
 		const apiPages = apiPagesEffect(scheduleReload)
@@ -112,6 +124,7 @@ export async function build(
 			mdMirror.cleanup?.()
 			llmsManifest.cleanup?.()
 			llmsFullManifest.cleanup?.()
+			tsrx.cleanup?.()
 			staticAssets.cleanup?.()
 		}
 	} catch (error) {

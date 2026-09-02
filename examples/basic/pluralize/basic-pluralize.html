@@ -1,9 +1,15 @@
+<!-- Regenerated for the LT-115 cutover: the compiled component owns the
+     six-CLDR-category structure (all of .zero/.one/.two/.few/.many/.other
+     must exist in hydrated markup — the compiled queries address each); the
+     per-instance plural WORDS stay page data in the light DOM. -->
 <p>Remaining tasks:</p>
 <basic-pluralize>
 	<p class="none">Well done, all done!</p>
 	<p class="some">
 		<span class="count"></span>
-		task<span class="other">s</span>
+		task<span class="zero"></span><span class="one"></span
+		><span class="two">s</span><span class="few">s</span
+		><span class="many">s</span><span class="other">s</span>
 		remaining
 	</p>
 </basic-pluralize>
@@ -15,7 +21,8 @@
 <basic-pluralize id="plural-test" count="1">
 	<p class="none">Nobody</p>
 	<p class="some">
-		<span class="count"></span> <span class="one">person</span
+		<span class="count"></span> <span class="zero"></span><span class="one">person</span
+		><span class="two"></span><span class="few"></span><span class="many"></span
 		><span class="other">people</span>
 	</p>
 </basic-pluralize>
@@ -49,8 +56,8 @@
 <basic-pluralize id="ordinal-test" count="1" ordinal>
 	<p class="none">None</p>
 	<p class="some">
-		<span class="count"></span><span class="one">st</span
-		><span class="two">nd</span><span class="few">rd</span
+		<span class="count"></span><span class="zero"></span><span class="one">st</span
+		><span class="two">nd</span><span class="few">rd</span><span class="many"></span
 		><span class="other">th</span>
 	</p>
 </basic-pluralize>
@@ -62,7 +69,9 @@
 <basic-pluralize id="pluralize-1" count="0">
 	<p class="none">No items</p>
 	<p class="some">
-		<span class="count"></span> item<span class="other">s</span>
+		<span class="count"></span> item<span class="zero"></span><span class="one"></span
+		><span class="two"></span><span class="few"></span><span class="many"></span
+		><span class="other">s</span>
 	</p>
 </basic-pluralize>
 
@@ -73,6 +82,8 @@
 	<p class="none">No filters</p>
 	<p class="some">
 		<span class="count"></span>
-		filter criteri<span class="one">on</span><span class="other">a</span>
+		filter criteri<span class="zero"></span><span class="one">on</span
+		><span class="two"></span><span class="few"></span><span class="many"></span
+		><span class="other">a</span>
 	</p>
 </basic-pluralize>

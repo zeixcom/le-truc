@@ -2188,6 +2188,10 @@ var throttle = (fn, signal) => {
 };
 
 // src/bindings.ts
+var defaultSanitize;
+var configureHtmlSanitizer = (sanitize) => {
+  defaultSanitize = sanitize;
+};
 var debugBindingTargets = new WeakMap;
 var registerDebugBindingTarget = (target, element) => {
   if (false)
@@ -2464,7 +2468,11 @@ var dangerouslyBindInnerHTML = (element, options = {}) => {
         schedule(element, reset);
         return;
       }
-      const { shadowRootMode, allowScripts, sanitize } = options;
+      const {
+        shadowRootMode,
+        allowScripts,
+        sanitize = defaultSanitize
+      } = options;
       if (shadowRootMode && !element.shadowRoot)
         element.attachShadow({ mode: shadowRootMode });
       const target = element.shadowRoot || element;
@@ -3740,6 +3748,7 @@ export {
   createComputed,
   createCollection,
   createCell,
+  configureHtmlSanitizer,
   bindVisible,
   bindText,
   bindStyle,

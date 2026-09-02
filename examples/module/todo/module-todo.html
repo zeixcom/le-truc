@@ -29,8 +29,19 @@
 			</button>
 			<form-checkbox class="todo">
 				<input type="checkbox" class="visually-hidden">
+				<!-- Compiled form-inplace-edit (LT-092 cutover): span.text +
+				     div.edit > form-textbox(name="") + toggle button; the label
+				     text arrives via module-todo's pass() into host.value -->
 				<form-inplace-edit>
-					<label class="label text"><slot></slot></label>
+					<label class="label"><span class="text"><slot></slot></span></label>
+					<div class="edit" hidden>
+						<form-textbox name="">
+							<label for="-input">Edit</label>
+							<div class="input">
+								<input type="text" id="-input" autocomplete="off">
+							</div>
+						</form-textbox>
+					</div>
 					<button type="button" aria-label="Edit">✎</button>
 				</form-inplace-edit>
 			</form-checkbox>
@@ -46,28 +57,36 @@
 		</li>
 	</template>
 	<footer>
+		<!-- Regenerated for the LT-115 basic-pluralize cutover: the compiled
+		     component requires all six CLDR category spans in hydrated
+		     markup; English never matches zero/two/few/many, so they stay
+		     empty and permanently hidden. -->
 		<basic-pluralize>
 			<p class="none">Well done, all done!</p>
 			<p class="some">
 				<span class="count"></span>
-				<span class="one"> task</span>
-				<span class="other"> tasks</span>
+				<span class="zero"></span><span class="one"> task</span
+				><span class="two"></span><span class="few"></span
+				><span class="many"></span><span class="other"> tasks</span>
 				remaining
 			</p>
 		</basic-pluralize>
+		<!-- form-radiogroup serves its compiled client since LT-116 — the
+		     labels carry the item's value in data-value, the compiled each()
+		     addressing channel the hand-written enhancer didn't need. -->
 		<form-radiogroup value="all" class="split-button">
 			<fieldset>
 				<legend class="visually-hidden">Filter</legend>
-				<label class="selected">
-					<input type="radio" class="visually-hidden" value="all" checked>
+				<label data-value="all" class="selected">
+					<input type="radio" class="visually-hidden" value="all" checked tabindex="0">
 					<span>All</span>
 				</label>
-				<label>
-					<input type="radio" class="visually-hidden" value="active">
+				<label data-value="active">
+					<input type="radio" class="visually-hidden" value="active" tabindex="-1">
 					<span>Active</span>
 				</label>
-				<label>
-					<input type="radio" class="visually-hidden" value="completed">
+				<label data-value="completed">
+					<input type="radio" class="visually-hidden" value="completed" tabindex="-1">
 					<span>Completed</span>
 				</label>
 			</fieldset>
