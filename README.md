@@ -31,9 +31,9 @@ bun add @zeix/le-truc
 
 ```html
 <basic-hello>
-  <label for="name">Your name</label>
-  <input id="name" name="name" type="text" autocomplete="given-name" />
-  <p>Hello, <output for="name">World</output>!</p>
+  <label for="subject">Your name</label>
+  <input id="subject" name="subject" type="text" autocomplete="given-name" />
+  <p>Hello, <output for="subject">World</output>!</p>
 </basic-hello>
 ```
 
@@ -45,14 +45,14 @@ import { bindText, defineComponent } from '@zeix/le-truc'
 defineComponent(
   'basic-hello',                      // component name (must contain a hyphen)
   ({ expose, first, on, watch }) => { // query DOM, declare props, wire up effects
-    const input = first('input', 'Needed to enter the name.')
-    const output = first('output', 'Needed to display the name.')
+    const output = first('output', 'Needed to display the subject.')
     const fallback = output.textContent || ''
 
-    expose({ name: output.textContent ?? '' }) // declare reactive prop
+    expose({ subject: fallback }) // declare reactive prop
 
-    on(input, 'input', () => ({ name: input.value || fallback }))
-    watch('name', bindText(output))
+    const input = first('input', 'Needed to enter the subject.')
+    on(input, 'input', () => ({ subject: input.value || fallback }))
+    watch('subject', bindText(output))
   },
 )
 ```
@@ -68,6 +68,7 @@ defineComponent(
 - 🚦 **Reactive properties** — signals track their dependencies automatically
 - ⚡️ **Pinpoint effects** — changes only the exact DOM nodes that changed
 - 🛡️ **Type-safe** — TypeScript infers types from selector strings through to property types; it finds integration errors when you compile the code
+- ♿ **Accessible** — reflect default ARIA semantics and sync with child elements' ARIA attributes
 - 🧩 **Composable** — build component behavior from small, reusable parser and effect functions
 - 🌐 **Context support** — components share state without you passing props through each level
 - 🪶 **Small size** — core under 9 kB gzipped, tree-shakeable extensions
@@ -83,14 +84,16 @@ Find the full documentation with live examples at **[zeixcom.github.io/le-truc](
 - [Components](https://zeixcom.github.io/le-truc/components.html)
 - [Props & State](https://zeixcom.github.io/le-truc/props.html)
 - [Events & Effects](https://zeixcom.github.io/le-truc/effects.html)
+- [Styling](https://zeixcom.github.io/le-truc/styling.html)
+- [Accessibility](https://zeixcom.github.io/le-truc/accessibility.html)
 - [Extensions](https://zeixcom.github.io/le-truc/extensions.html)
 - [Data Flow](https://zeixcom.github.io/le-truc/data-flow.html)
 - [Dynamic Lists](https://zeixcom.github.io/le-truc/lists.html)
-- [Context](https://zeixcom.github.io/le-truc/context.html)
 - [Async State](https://zeixcom.github.io/le-truc/async.html)
-- [Styling](https://zeixcom.github.io/le-truc/styling.html)
+- [Context](https://zeixcom.github.io/le-truc/context.html)
 - [Examples](https://zeixcom.github.io/le-truc/examples.html)
 - [API](https://zeixcom.github.io/le-truc/api.html)
+- [Blog](https://zeixcom.github.io/le-truc/blog.html)
 - [About](https://zeixcom.github.io/le-truc/about.html)
 
 ## Contributing and license
