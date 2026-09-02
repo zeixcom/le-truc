@@ -160,6 +160,30 @@ export function mockFileInfo(options: {
 /* === Assertion Helpers === */
 
 /**
+ * Await a promise that may reject and return its outcome for assertion.
+ *
+ * bun-types types every `expect()` matcher as returning `void`, so
+ * `await expect(p).rejects.toThrow(...)` draws TS 80007 ("await has no
+ * effect on the type of this expression") even though the runtime
+ * promise is real. Await through this instead and assert on the outcome:
+ *
+ * ```ts
+ * const settled = await settle(mayReject())
+ * if (settled.status !== 'rejected')
+ * 	throw new Error('expected the call to reject')
+ * expect(String(settled.reason)).toContain('boom')
+ * ```
+ */
+export function settle<T>(
+	promise: Promise<T>,
+): Promise<PromiseSettledResult<T>> {
+	return promise.then(
+		value => ({ status: 'fulfilled', value }),
+		reason => ({ status: 'rejected', reason }),
+	)
+}
+
+/**
  * Assert that a string contains specific text
  */
 export function assertContains(actual: string, expected: string): void {
@@ -253,18 +277,36 @@ export async function wait(ms: number): Promise<void> {
 
 /**
  * Retry a function until it succeeds or times out
+ *
+ * `backoff` grows the wait after each failed attempt by the given factor
+ * (1 = fixed interval, the default), capped at `maxInterval` — so a
+ * starved machine is polled less aggressively while a healthy one still
+ * converges at the initial `interval`. The `timeout` budget is wall-clock:
+ * when tests sit behind real-world timing (fs watchers, timers), give it
+ * enough room for a loaded CI runner, and raise bun's per-test timeout
+ * (third `test()` argument) to match — the lower of the two caps is the
+ * one that actually fires.
  */
 export async function retryUntil<T>(
 	fn: () => T | Promise<T>,
 	options: {
 		timeout?: number
 		interval?: number
+		backoff?: number
+		maxInterval?: number
 		condition?: (result: T) => boolean
 	} = {},
 ): Promise<T> {
-	const { timeout = 5000, interval = 100, condition = () => true } = options
+	const {
+		timeout = 5000,
+		interval = 100,
+		backoff = 1,
+		maxInterval = 1000,
+		condition = () => true,
+	} = options
 
 	const startTime = Date.now()
+	let currentInterval = interval
 
 	while (Date.now() - startTime < timeout) {
 		try {
@@ -275,7 +317,8 @@ export async function retryUntil<T>(
 		} catch (_error) {
 			// Continue retrying
 		}
-		await wait(interval)
+		await wait(currentInterval)
+		currentInterval = Math.min(currentInterval * backoff, maxInterval)
 	}
 
 	throw new Error(`retryUntil timed out after ${timeout}ms`)

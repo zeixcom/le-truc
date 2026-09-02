@@ -20,6 +20,7 @@ import * as path from 'node:path'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { settle } from '../helpers/test-utils'
 import { loadTsrxCorpus } from './corpus-fixture'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -86,7 +87,15 @@ describe('corpus error policy', () => {
 			size: 0,
 			exists: true,
 		}
-		expect(compileTsrxCorpus([...files, bad], generated.path)).rejects.toThrow(
+		// Via settle() rather than `expect(...).rejects`: bun-types types
+		// every matcher as returning void, so the awaited-matcher form draws
+		// TS 80007 even though the runtime promise is real (LT-140 review).
+		const settled = await settle(
+			compileTsrxCorpus([...files, bad], generated.path),
+		)
+		if (settled.status !== 'rejected')
+			throw new Error('the run should have failed with TSRX012')
+		expect(String(settled.reason)).toMatch(
 			/examples\/module\/bad-pass\.tsrx[\s\S]*TSRX012/,
 		)
 	})

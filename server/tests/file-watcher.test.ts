@@ -7,7 +7,9 @@
  *
  * File-system watching is disabled automatically when PLAYWRIGHT is set.
  * These tests write real files to a temp directory, so they are integration
- * tests but stay well under 500 ms each.
+ * tests. On a healthy machine they stay in the low hundreds of ms; the
+ * debounce tests budget up to 20 s so a loaded CI runner cannot flake them
+ * (see their comments).
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
@@ -130,18 +132,35 @@ describe('watchFiles — debounced batch updates', () => {
 			),
 		)
 
-		// Debounce is 50 ms, but a busy CI runner can delay fs events and the
-		// timer well beyond that — poll instead of a single fixed sleep so the
-		// test passes as soon as the batch settles instead of racing a clock.
-		await retryUntil(() => observed, {
-			condition: value => value === N,
-			timeout: 5000,
-			interval: 25,
-		})
+		// Debounce is 50 ms, but real fs event delivery is not: under load,
+		// macOS can lag the watch() arming (dropping pre-arm events) or stall
+		// delivery for many seconds. Poll with exponential backoff AND re-kick
+		// the watcher about once a second — the flush rescans the whole
+		// directory, so ONE delivered post-arm event recovers the entire
+		// burst. A genuinely dead watcher still fails at the budget.
+		let lastKick = 0
+		await retryUntil(
+			() => {
+				if (Date.now() - lastKick > 1000) {
+					lastKick = Date.now()
+					return writeTempFile(dir, 'file0.md', `content 0 ${lastKick}`).then(
+						() => observed,
+					)
+				}
+				return observed
+			},
+			{
+				condition: value => value === N,
+				timeout: 20000,
+				interval: 25,
+				backoff: 2,
+				maxInterval: 500,
+			},
+		)
 
 		stopEffect()
 		expect(observed).toBe(N)
-	})
+	}, 20000)
 
 	test('list reflects updated content after a file changes', async () => {
 		// Pre-populate so we exercise the "update existing" branch
@@ -158,14 +177,28 @@ describe('watchFiles — debounced batch updates', () => {
 
 		await writeTempFile(dir, 'doc.md', 'v2')
 
-		// See the burst test above: poll rather than sleep a fixed duration.
-		await retryUntil(() => observedContent, {
-			condition: value => value === 'v2',
-			timeout: 5000,
-			interval: 25,
-		})
+		// See the burst test above: backoff polling, periodic re-kick to
+		// survive dropped/stalled fs event delivery, budget mirrored by the
+		// per-test timeout.
+		let lastKick = 0
+		await retryUntil(
+			() => {
+				if (Date.now() - lastKick > 1000) {
+					lastKick = Date.now()
+					return writeTempFile(dir, 'doc.md', 'v2').then(() => observedContent)
+				}
+				return observedContent
+			},
+			{
+				condition: value => value === 'v2',
+				timeout: 20000,
+				interval: 25,
+				backoff: 2,
+				maxInterval: 500,
+			},
+		)
 
 		stopEffect()
 		expect(observedContent).toBe('v2')
-	})
+	}, 20000)
 })

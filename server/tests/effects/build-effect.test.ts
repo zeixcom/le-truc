@@ -11,6 +11,7 @@
 import { describe, expect, test } from 'bun:test'
 import { createState } from '@zeix/cause-effect'
 import { createBuildEffect, runCommand } from '../../effects/build-effect'
+import { settle } from '../helpers/test-utils'
 
 const tick = () => Bun.sleep(10)
 
@@ -19,7 +20,7 @@ describe('createBuildEffect', () => {
 		const source = createState({ n: 0 })
 		const { cleanup, ready } = createBuildEffect('Test', [source], () => {})
 
-		await expect(ready).resolves.toBeUndefined()
+		expect(await ready).toBeUndefined()
 		cleanup()
 	})
 
@@ -66,7 +67,12 @@ describe('createBuildEffect', () => {
 			throw new Error('boom')
 		})
 
-		await expect(ready).rejects.toThrow('boom')
+		// Via settle() — bun-types types every matcher as void, so the
+		// awaited `expect(...).rejects` form draws TS 80007 (see test-utils).
+		const settled = await settle(ready)
+		if (settled.status !== 'rejected')
+			throw new Error('the first run should have failed')
+		expect(String(settled.reason)).toContain('boom')
 		cleanup()
 	})
 
@@ -84,7 +90,7 @@ describe('createBuildEffect', () => {
 			},
 		)
 
-		await expect(ready).resolves.toBeUndefined()
+		expect(await ready).toBeUndefined()
 
 		// A failing rebuild must not crash the effect or reject `ready` again —
 		// it's already settled — and must not trigger onRebuild.
@@ -116,16 +122,21 @@ describe('createBuildEffect', () => {
 
 describe('runCommand', () => {
 	test('resolves when the command exits 0', async () => {
-		await expect(runCommand(['true'])).resolves.toBeUndefined()
+		expect(await runCommand(['true'])).toBeUndefined()
 	})
 
 	test('throws when the command exits non-zero', async () => {
-		await expect(runCommand(['false'])).rejects.toThrow('exited with code')
+		const settled = await settle(runCommand(['false']))
+		if (settled.status !== 'rejected')
+			throw new Error('the command should have failed')
+		expect(String(settled.reason)).toContain('exited with code')
 	})
 
 	test('runs in the given cwd', async () => {
-		await expect(
-			runCommand(['test', '-f', 'package.json'], { cwd: process.cwd() }),
-		).resolves.toBeUndefined()
+		expect(
+			await runCommand(['test', '-f', 'package.json'], {
+				cwd: process.cwd(),
+			}),
+		).toBeUndefined()
 	})
 })

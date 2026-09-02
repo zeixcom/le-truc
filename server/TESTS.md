@@ -102,7 +102,18 @@ server/tests/
 - `mockRequestContext(options)` — factory for server request context
 - `normalizeWhitespace(str)` / `normalizeHtml(html)` — normalize output for comparison
 - `assertContains` / `assertNotContains` / `assertMatches` / `assertValidHtml` — assertion wrappers
-- `wait(ms)` / `retryUntil(fn, options)` — timing helpers for async/integration tests
+- `wait(ms)` / `retryUntil(fn, options)` — timing helpers for async/integration tests.
+  `retryUntil` takes `timeout`, `interval`, `condition`, and optional `backoff` /
+  `maxInterval` (fixed-interval by default; `backoff: 2` doubles the wait after each failed
+  attempt up to `maxInterval` — gentler on a loaded machine, same convergence on a healthy
+  one). The `timeout` is wall-clock: when a test sits behind real-world timing, raise bun's
+  per-test timeout (`test(name, fn, timeout)`) to match — the lower of the two caps is the
+  one that actually fires.
+- `settle(promise)` — awaits a promise that may reject and resolves to
+  `PromiseSettledResult<T>` (`{ status, value/reason }`). Use it instead of
+  `await expect(p).rejects.toThrow(...)`: bun-types types every matcher as returning `void`,
+  so the awaited-matcher form draws TS 80007 while still leaving the assertion unawaited.
+  Assert on the outcome — see the JSDoc for the canonical shape.
 
 `server/tests/helpers/generated-tsrx.ts` provides:
 
