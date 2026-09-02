@@ -17,16 +17,41 @@ import { refBranchGuard } from './first-refs'
 import type { ComponentIR, TemplateNode } from './ir'
 
 /**
- * Ambient globals whose *inputs* are the build machine's own state (locale,
- * timezone, wall clock, RNG), not any server arg or signal — a "free
- * identifiers ⊆ scope" check alone can't see this, since `Date`/`Math`/
- * `Intl` are themselves in {@link JS_GLOBALS} and read no server-known name
- * at all. Folding one of these bakes the BUILD MACHINE's reading into the
- * page permanently (CHECKLIST §4): for SSG specifically, add the build-to-
- * serve time gap on top — a locale-formatted date folded at build time is
- * stale by however long the page sits before being served.
+ * Ambient globals whose *inputs* are the build machine's own state (wall
+ * clock, RNG), not any server arg or signal — a "free identifiers ⊆ scope"
+ * check alone can't see this, since `Date`/`Math` are themselves in
+ * {@link JS_GLOBALS} and read no server-known name at all. Folding one of
+ * these bakes the BUILD MACHINE's reading into the page permanently
+ * (CHECKLIST §4). `Date.now()`/`new Date()` are not deterministic at all —
+ * there is no argument that could make them server-known — so `Date` is
+ * unconditionally impure, unlike `Intl` (handled separately below, LT-142).
  */
-const IMPURE_AMBIENT_ROOTS: ReadonlySet<string> = new Set(['Date', 'Intl'])
+const IMPURE_AMBIENT_ROOTS: ReadonlySet<string> = new Set(['Date'])
+
+/**
+ * `Intl.PluralRules`/`Intl.NumberFormat`/`Intl.DateTimeFormat` etc. are
+ * deterministic GIVEN A LOCALE — unlike `Date`, they read the build
+ * machine's own state only when the locale argument is itself unresolved
+ * (the runtime default). LT-142 (owner decision 2026-09-02): fold an
+ * `Intl.<Ctor>(locale, ...)` call/construction when `locale` resolves to a
+ * server-known value — a string literal, or an identifier already in
+ * `scope` (a server arg or a server-known const). Any other shape (a
+ * missing locale, a `host.<prop>` read, a computed member, another call)
+ * is left impure — conservative, not "guess and hope". Where the folded
+ * value and the client's eventual value disagree (the page's actual `lang`
+ * differs from the folded arg), the client thunk re-runs at connect and
+ * corrects — the same precedent ADR 0024 sub-design 15 set for
+ * `requestContext` fallbacks, and sub-design 3's documented flash tradeoff.
+ */
+const isLocaleResolvable = (
+	arg: unknown,
+	scope: ReadonlySet<string>,
+): boolean => {
+	if (!isNode(arg)) return false
+	if (arg.type === 'Literal' && typeof arg.value === 'string') return true
+	if (arg.type === 'Identifier') return scope.has(String(arg.name))
+	return false
+}
 
 /** Method names whose ambient inputs (not their receiver) make them impure. */
 const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
@@ -38,14 +63,20 @@ const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
 
 /**
  * Whether `node` contains a call/read against an impure ambient (CHECKLIST
- * §4): `Date`/`Intl` (and their members — `Date.now()`, `new Date()`,
- * `Intl.DateTimeFormat(...)`), `Math.random()` specifically (not `Math` at
- * large — `Math.max`/`Math.min`/etc. are pure functions of their arguments,
- * safe to fold), and the locale/timezone-reading instance methods
- * (`x.toLocaleString()`, `x.getTimezoneOffset()`) regardless of receiver,
- * since the ambient input is in the method, not the object it's called on.
+ * §4): `Date` (and its members — `Date.now()`, `new Date()`), `Math.random()`
+ * specifically (not `Math` at large — `Math.max`/`Math.min`/etc. are pure
+ * functions of their arguments, safe to fold), the locale/timezone-reading
+ * instance methods (`x.toLocaleString()`, `x.getTimezoneOffset()`) regardless
+ * of receiver, since the ambient input is in the method, not the object it's
+ * called on, and `Intl.<Ctor>(...)` calls/constructions whose locale argument
+ * does NOT resolve within `scope` (LT-142) — a resolvable-locale `Intl` call
+ * is deterministic and folds; every other `Intl` read (bare, computed member,
+ * unresolvable locale) stays impure.
  */
-export const containsImpureAmbient = (node: TsrxNode): boolean => {
+export const containsImpureAmbient = (
+	node: TsrxNode,
+	scope: ReadonlySet<string> = new Set(),
+): boolean => {
 	let found = false
 	const visit = (current: unknown): void => {
 		if (found) return
@@ -56,14 +87,16 @@ export const containsImpureAmbient = (node: TsrxNode): boolean => {
 		if (!isNode(current)) return
 		if (
 			current.type === 'Identifier' &&
-			IMPURE_AMBIENT_ROOTS.has(String(current.name))
+			(IMPURE_AMBIENT_ROOTS.has(String(current.name)) ||
+				String(current.name) === 'Intl')
 		) {
 			found = true
 			return
 		}
 		if (
 			(current.type === 'CallExpression' ||
-				current.type === 'OptionalCallExpression') &&
+				current.type === 'OptionalCallExpression' ||
+				current.type === 'NewExpression') &&
 			isNode(current.callee) &&
 			current.callee.type === 'MemberExpression' &&
 			!current.callee.computed
@@ -87,6 +120,23 @@ export const containsImpureAmbient = (node: TsrxNode): boolean => {
 				IMPURE_AMBIENT_METHODS.has(String(prop.name))
 			) {
 				found = true
+				return
+			}
+			if (
+				isNode(obj) &&
+				obj.type === 'Identifier' &&
+				String(obj.name) === 'Intl'
+			) {
+				const args = Array.isArray(current.arguments) ? current.arguments : []
+				if (!isLocaleResolvable(args[0], scope)) {
+					found = true
+					return
+				}
+				// Locale resolved: still walk the remaining arguments (e.g. an
+				// `options` object) for any nested impure ambient, but skip the
+				// `Intl` identifier itself so it isn't flagged by the generic
+				// root check below.
+				for (const arg of args) visit(arg)
 				return
 			}
 		}
@@ -122,7 +172,7 @@ export const isServerEvaluable = (
 	node: TsrxNode,
 	scope: ReadonlySet<string>,
 ): boolean =>
-	dependenciesOf(node).isSubsetOf(scope) && !containsImpureAmbient(node)
+	dependenciesOf(node).isSubsetOf(scope) && !containsImpureAmbient(node, scope)
 
 /**
  * Every prop bound at an owned site from a same-named server arg

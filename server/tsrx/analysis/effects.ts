@@ -265,7 +265,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				// so the omission doesn't read as an unrelated bug.
 				if (
 					dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
-					containsImpureAmbient(attr.thunk)
+					containsImpureAmbient(attr.thunk, component.serverKnown)
 				)
 					diagnostics.push(
 						diagnostic.impureServerFold(source, attr.thunk.start, attr.name),
@@ -293,7 +293,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					) === null &&
 					!(
 						dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
-						!containsImpureAmbient(attr.thunk)
+						!containsImpureAmbient(attr.thunk, component.serverKnown)
 					)
 				)
 					diagnostics.push(
@@ -457,7 +457,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			// shaped, but reading `Date`/`Intl`/`Math.random` instead).
 			if (
 				dependenciesOf(child.expr).isSubsetOf(component.serverKnown) &&
-				containsImpureAmbient(child.expr)
+				containsImpureAmbient(child.expr, component.serverKnown)
 			)
 				diagnostics.push(
 					diagnostic.impureServerFold(source, child.node.start, null),
@@ -1403,7 +1403,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					// mistake for an unrelated bug.
 					if (
 						dependenciesOf(child.expr).isSubsetOf(component.serverKnown) &&
-						containsImpureAmbient(child.expr)
+						containsImpureAmbient(child.expr, component.serverKnown)
 					)
 						diagnostics.push(
 							diagnostic.impureServerFold(source, child.node.start, null),
