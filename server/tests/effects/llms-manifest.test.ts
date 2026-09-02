@@ -68,7 +68,7 @@ describe('generateLlmsTxt — header', () => {
 
 	test('includes tagline as blockquote', () => {
 		const result = generateLlmsTxt(corePages)
-		expect(result).toContain('> High-performance, signal-based web components.')
+		expect(result).toContain('> Type-safe reactive Web Components – HTML-first, backend-agnostic.')
 	})
 
 	test('ends with a newline', () => {
