@@ -2,7 +2,9 @@
 
 ## Status
 
-✅ Accepted (2026-08-22). Implemented in the inlined compiler (`server/tsrx/`), golden-tested in `server/tests/tsrx/`. The sanctioned subset covers server evaluation and client codegen, DOM-is-truth harvesting from a component's own rendered children, reactive `@for` over a `List` via `reconcile()`, type flow by emit-then-check, component composition, optional element references and optional `@if` branches, multi-arg/multi-site signal substitution, and async boundaries (`@try`/`@pending`/`@catch`). The 22-component corpus in `examples/` compiles end to end; `basic-button` is the harvest reference.
+🔄 Reopened (2026-09-02).
+
+Implemented in the inlined compiler (`server/tsrx/`), golden-tested in `server/tests/tsrx/`. The sanctioned subset covers server evaluation and client codegen, DOM-is-truth harvesting from a component's own rendered children, reactive `@for` over a `List` via `reconcile()`, type flow by emit-then-check, component composition, optional element references and optional `@if` branches, multi-arg/multi-site signal substitution, and async boundaries (`@try`/`@pending`/`@catch`). The 22-component corpus in `examples/` compiles end to end; `basic-button` is the harvest reference.
 
 Amended 2026-08-30 (LT-117/121/122/123): sub-designs 3 and 11 were widened after the first attempt at a template-owning component with harvested props and optional children hit four diagnostics and was implemented as an opt-in `enhancer` mode that lifted all four. That mode is **rejected and removed** — see Alternatives. The re-diagnosis found the real gap in neither of the four: a render site could serve the server or the client, never both.
 

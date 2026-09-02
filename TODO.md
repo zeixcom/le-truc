@@ -10,7 +10,33 @@ migrated corpus) closed 2026-08-30. Wave 3 (diagnostic honesty) closed 2026-09-0
 LT-125/126/129/075/137/139/141 landed and were reviewed. Its last item, LT-140, closed after
 the wave did (reviewed 2026-09-02); the gate wave is now led by LT-142.
 
-**Gate wave — clear every known trap BEFORE the corpus port. CURRENT.** The seventeen
+**ADR 0027 wave — Server Simulation (owner decision, 2026-09-02). CURRENT.** The jsdom spike
+(2026-09-02: pre-parsed custom elements upgrade child-before-parent, connect-time writes land
+in the serialized HTML, `form-colorgraph` — canvas, `ResizeObserver`, form-associated, three
+composed spinbuttons — simulated end to end) verified the direction; the queue reorders around
+it. Engine gaps first (the spike exposed two), then driver portability and substrate
+evaluation, then the compiler consequences — and only then ADR acceptance and implementation.
+**This wave supersedes the gate wave's fold-based items:** LT-143/LT-133 (gate item 3),
+LT-144 (item 4), and LT-145 (item 5) consume the splice/fold machinery the decision retires;
+they are re-scoped by LT-153, not executed as written. LT-146 (item 6, component-only) and
+LT-147/LT-148 (item 7, client-side lowering) are unaffected — but the gate wave as a whole
+resumes only after acceptance.
+
+1. **LT-149** — catch factory-run errors gracefully. Engine gap: the spike's RUN 2 showed a
+   throwing effect escaping `connectedCallback` process-fatal instead of per-element.
+2. **LT-150** — treat an unusable `ElementInternals` stub as no internals. Engine gap: jsdom's
+   skeletal internals silently defeated the library's degradation guard (4 Nullish errors).
+3. **LT-151** — server-simulation driver portability: Bun, Node, Deno, missing functions patched.
+4. **LT-152** — jsdom vs. happy-dom substrate evaluation (fidelity checklist + weight/perf).
+5. **LT-153** — plan the TSRX-compiler consequences: diagnostics, goldens, staged retirement;
+   re-scope gate-wave items 3–5; resolve the NOTES.md LT-143 finding into LT-144.
+6. **Milestone — accept ADRs 0024/0027** (flip to Accepted once LT-151/LT-152 confirm the substrate
+   claims; CONTEXT.md vocabulary and ARCHITECTURE.md's compiler section ride with it).
+7. **LT-154** — resume implementation: stage-1 driver (ADR 0027 sub-design 7) — this is what
+   finally unblocks LT-143.
+
+**Gate wave — clear every known trap BEFORE the corpus port. PAUSED behind the ADR 0027
+wave.** The seventeen
 remaining migrations are repetitive work against a shared set of compiler rules. Anything
 still unsettled gets re-discovered seventeen times, once per author, so the ordering below is
 by how many downstream migrations an item unblocks — not by cost:
@@ -26,16 +52,25 @@ by how many downstream migrations an item unblocks — not by cost:
 2. **LT-142** — `Intl` becomes server-foldable when its locale resolves to a server-known
    value (owner decision, 2026-09-02). The single highest-leverage item: it clears six of the
    eight remaining corpus warnings, unblocks LT-133, and settles the rule that LT-095,
-   LT-109, and LT-110 would each otherwise decide for themselves.
+   LT-109, and LT-110 would each otherwise decide for themselves. — **landed, pending review
+   ⏳.** Its consumers (items 3 and 5) are re-scoped by LT-153 under ADR 0027 before
+   execution; the review proceeds once LT-153 says whether the fold rule has a remaining
+   service life inside the staged retirement.
 3. **LT-143 / LT-133** — the two components that consume LT-142's rule (`basic-pluralize`,
    `basic-number`). Both currently server-render visibly wrong markup, not merely incomplete
-   markup; see LT-143 for the rendered evidence.
+   markup; see LT-143 for the rendered evidence. — **superseded in plan by ADR 0027:** LT-153
+   rewrites both tasks for the simulation route before execution; the wrong-markup bugs stay
+   open until then.
 4. **LT-144** — a `{host.<prop>}` text child renders empty with ZERO diagnostics. Found while
    verifying LT-143. Silent, and the correct spelling (`{prop}`) is one character shorter, so
-   an author has no signal they picked the losing one.
+   an author has no signal they picked the losing one. — **re-scoped by LT-153** (the
+   NOTES.md finding about Parser-exposed props is folded into the entry; under simulation the
+   silent-empty class may dissolve — pin what survives).
 5. **LT-145** — a Parser-exposed prop with no server arg folds to its Parser's fallback.
    Clears the seventh warning (`form-listbox`), and is the fourth server-known route beside
-   the three ADR 0024 sub-design 3 already names.
+   the three ADR 0024 sub-design 3 already names. — **superseded in plan by ADR 0027:** under
+   simulation the Parser's fallback renders naturally at connect; LT-153 confirms on a
+   fixture and closes or re-points this.
 6. **LT-146** — `form-tokenbox.description` stops shipping through two channels. Clears the
    eighth and last warning. Component-only; no compiler change.
 7. **LT-147 / LT-148** — the `bindAria` lowering (owner decision, 2026-09-02). Last in the
@@ -46,7 +81,9 @@ by how many downstream migrations an item unblocks — not by cost:
 **Target: a zero-warning corpus before LT-095.** Items 2–6 exist to retire all eight remaining
 warnings. A clean baseline is what makes a NEW warning during wave 4 mean something; against a
 standing count of eight, a migration author cannot tell their own regression from the
-background.
+background. — **ADR 0027 note:** under Server Simulation the warning baseline is re-derived by
+LT-153 (execution replaces the fold rules several warnings were computed from); the goal — a
+clean regression signal before wave 4 — stands, its mechanism changes.
 
 **Wave 4 — the migrations themselves,** LT-095 and LT-096–LT-111. LT-095 (`basic-blogmeta`)
 carries a reshape decision already made and now also depends on LT-142; LT-100
@@ -61,7 +98,7 @@ sanitizer-default inversion, and the Trusted Types alignment behind it) must lan
 component actually authors `truc:html`, since that is the point the inconsistency becomes
 reachable. Nothing today does.
 
-## Gate wave — current (clear the traps before the corpus port)
+## Gate wave — paused behind the ADR 0027 wave (clear the traps before the corpus port)
 
 - [x] LT-140: Golden tests write into the real `server/generated/tsrx/`, making the primary gate intermittently unreliable. — reviewed ✓
   **Skill:** docs-server-dev
@@ -85,7 +122,7 @@ reachable. Nothing today does.
 
 - [ ] LT-144: A `{host.<prop>}` text child renders empty server-side with ZERO diagnostics.
   **Skill:** le-truc-dev
-  **Context:** Found while verifying LT-143. `<span class="count">{host.count}</span>` in `basic-pluralize.tsrx` server-renders as `<span class="count"></span>` and reports nothing — no TSRX034 (that rule governs attributes), no TSRX004, nothing. The correct spelling is the ARG form `{count}`, which LT-122's one-site-three-roles coincidence rule both renders AND binds. So the failing spelling is one character LONGER than the working one, silently, with no signal which is which. **This is the LT-092 silent-empty-render class** the data account exists to prevent, and it is the last known member of it. **Fix:** diagnose a lazy text child whose expression reads `host.<prop>` where `<prop>` is ALSO a server arg of the same name — the fix-it is "write `{<prop>}`; the arg spelling renders server-side and still binds client-side (ADR 0024 sub-design 3, one site three roles)". Deliberately narrow: a `host.<prop>` text child for a prop with NO same-named arg is a different case (nothing to render server-side, genuinely client-only) and must not be swept in — pin that as a negative test. Severity is the judgement call to confirm at review: an error matches the silent-wrong-render precedent set by TSRX043 (LT-125), but no corpus component will fail once LT-143 lands. **Fixture first.**
+  **Context:** Found while verifying LT-143. `<span class="count">{host.count}</span>` in `basic-pluralize.tsrx` server-renders as `<span class="count"></span>` and reports nothing — no TSRX034 (that rule governs attributes), no TSRX004, nothing. The correct spelling is the ARG form `{count}`, which LT-122's one-site-three-roles coincidence rule both renders AND binds. So the failing spelling is one character LONGER than the working one, silently, with no signal which is which. **This is the LT-092 silent-empty-render class** the data account exists to prevent, and it is the last known member of it. **Fix:** diagnose a lazy text child whose expression reads `host.<prop>` where `<prop>` is ALSO a server arg of the same name — the fix-it is "write `{<prop>}`; the arg spelling renders server-side and still binds client-side (ADR 0024 sub-design 3, one site three roles)". Deliberately narrow: a `host.<prop>` text child for a prop with NO same-named arg is a different case (nothing to render server-side, genuinely client-only) and must not be swept in — pin that as a negative test. Severity is the judgement call to confirm at review: an error matches the silent-wrong-render precedent set by TSRX043 (LT-125), but no corpus component will fail once LT-143 lands. **Fixture first.** **Finding folded in from NOTES.md (2026-09-02, LT-143 blocker session):** the fix-it does NOT hold when `<prop>` is *also* Parser-exposed — switching the count child to bare `{count}` raises a NEW TSRX039 (duplicate-channel), because `bindsExposedArg` deliberately excludes Parser-exposed names from the coincidence rule; a text-child site duplicating a Parser's own host-attribute channel is a genuine two-copies hazard. So the fix-it must be conditioned on the prop not being Parser-exposed, and LT-143's count child needs its own answer either way. **Re-scoped 2026-09-02 under ADR 0027:** Server Simulation renders the text child at connect (LT-154), which may dissolve the silent-empty class itself — this task's diagnostic half is decided by LT-153's inventory; the Parser-exposed/TSRX039 interaction finding survives regardless and must be pinned in fixtures before any fix-it ships.
 
 - [ ] LT-145: Fold a Parser-exposed prop with no server arg to its Parser's fallback.
   **Skill:** le-truc-dev
@@ -102,6 +139,30 @@ reachable. Nothing today does.
 - [ ] LT-148: Route the component's OWN host ARIA to `internals`, and diagnose CSS that depends on host ARIA attributes.
   **Skill:** le-truc-dev
   **Context:** **Owner decision, 2026-09-02.** Depends on LT-147's mapping table. Per ADR 0026 §1, host semantics belong on `internals.aria*`: invisible in markup, unclobberable by framework attribute rewriting, and still overridable by the consumer's own attribute. **Fix:** a reactive `aria-*` on the ROOT element lowers to `watch(<thunk>, bindAria(internals, '<idlName>'))` rather than to an attribute write on the host. **The two halves must land in the same commit,** because the routing is what makes the diagnostic necessary: `bindAria()` on an `ElementInternals` target **removes the shadowing content attribute** at its first value assertion (ADR 0026 §1, stale-attribute rule), so a server-rendered `aria-expanded="false"` on the host is deleted at hydration — by design, and fatal to any CSS selecting on it. **So:** diagnose a selector in the component's own `<style>` block that matches the HOST on an `aria-*` content attribute (e.g. `module-tabgroup[aria-expanded="true"]`), with the fix-it naming `:state()` (ADR 0016 §8) as the component-owned styling hook. **The distinction is load-bearing and the diagnostic is wrong without it:** ARIA on CHILD elements stays on the attribute channel (native IDL reflection mirrors element-target writes), so the corpus's three existing `&[aria-selected="true"]` selectors — nested under tab buttons and option buttons in `module-tabgroup` and `form-listbox` — are CORRECT and must NOT warn. Only host-matching selectors do. **Zero corpus sites exercise either half today** (no component has a reactive `aria-*` on its root, and no `<style>` selects host ARIA), so **write both fixtures first**; this is a forward-looking guard, in the LT-125/129 posture. Acceptance: a root `aria-*` thunk lowers to the internals form; a host `[aria-*]` style selector warns; the three child selectors stay silent; the zero-warning baseline from LT-146 holds.
+
+- [ ] LT-149: Catch factory-run errors gracefully in `connectedCallback`.
+  **Skill:** le-truc-dev
+  **Context:** Engine gap exposed by the ADR 0027 spike (2026-09-02). `component.ts` guards `attachInternals()` in try/catch but not the factory invocation (`factory(context)`, ~line 339) nor the subsequent `activateResult`/`runSetup` — a throwing factory or first effect pass escapes `connectedCallback`. In a browser the custom-element reaction machinery reports that per element and the page continues; under the server simulation the same escape shape surfaced **process-fatal** (spike RUN 2: a `ReferenceError` on a missing global propagated to top level, while RUN 1's form-property errors were caught per element by jsdom's CEReactions wrapper — the containment must not depend on which wrapper happens to sit outside). **Fix:** wrap the factory invocation and scope activation in try/catch; on error, dispose the partial scope cleanly, leave the element connected and inert (whatever `expose()` installed before the throw stays), and report a diagnostic naming the component and the error — DEV_MODE full detail, production a single `console.error`, matching the internals-warning posture. This makes ADR 0027 sub-design 2c's per-component containment a library guarantee instead of a driver courtesy, and it is correct browser behavior regardless: one broken component must never take the page's other components down. Acceptance: unit tests — a factory that throws at connect leaves the element in the DOM, other components unaffected, nothing uncaught escapes; a throwing first effect does the same; the DEV_MODE diagnostic names the component.
+
+- [ ] LT-150: Treat an unusable `ElementInternals` stub as no internals.
+  **Skill:** le-truc-dev
+  **Context:** Engine gap exposed by the ADR 0027 spike (RUN 1: four `NullishSignalValueError`s, one per form-associated element). The constructor guard (`component.ts:272`) catches `attachInternals()` **throwing**, but jsdom 30's skeletal internals *succeed* and return an object whose `validationMessage`/`validity` are `undefined` — `extensions/form.ts:304` then runs `createCell(internals.validationMessage)` → `createState(undefined)` throws. A half-implemented internals silently defeats the guard that exists for exactly this case; "worse than none." **Fix:** validate what `attachInternals()` returns at acquisition — the surface the form machinery relies on must be present (`validity` and `validationMessage` defined, `setFormValue`/`setValidity` callable) — and route a failed check through the same `internals = null` degradation as a throw, DEV_MODE warning included. Keep the check at the acquisition site (constructor), not at every read. Re-run the ADR spike as the fixture: with the check in place, baseline jsdom (no `NO_INTERNALS` patch) must take the degradation path with zero Nullish errors. Acceptance: unit tests with fake internals objects (nullish, partial, full) — only the full one enables the form machinery; the spike's baseline variant runs clean.
+
+- [ ] LT-151: Server-simulation driver portability — Bun, Node, Deno with missing functions patched.
+  **Skill:** docs-server-dev
+  **Context:** ADR 0027 sub-design 2's driver must run the generated client modules under all three server runtimes. The spike proved Bun only; the runtimes differ in web-API globals (Bun lacks `ResizeObserver`/`matchMedia`/rAF; Node lacks all DOM globals; **Deno ships many web APIs natively, which can shadow the jsdom realm rather than fill gaps** — the shim must force the realm's classes over natives, not merely add what's missing). **Build the realm-shim layer as a data patch table**, per runtime: force jsdom-realm classes over natives (`HTMLElement`, `customElements`, `document`, event and observer constructors), stub absent constructors as no-ops (`ResizeObserver`, `matchMedia`, `IntersectionObserver`, `requestAnimationFrame`), normalize `attachInternals` to throw (LT-150's check then degrades gracefully), and surface jsdom's `virtualConsole` as the diagnostic channel. Acceptance: the colorgraph spike (or a distilled driver probe) produces equivalent serialized HTML on Bun, Node, and Deno; the patch table is declarative data, not scattered conditionals.
+
+- [ ] LT-152: jsdom vs. happy-dom substrate evaluation.
+  **Skill:** docs-server-dev
+  **Context:** ADR 0027 names jsdom the substrate with happy-dom as the named fallback; before acceptance, that claim needs the spike checklist run on both. happy-dom is lighter and implements `matchMedia` (jsdom does not), but its custom-element machinery (pre-parsed upgrade order, `whenDefined`), IDL reflection set, inline-style/custom-property serialization, and `attachInternals` surface are unproven for our use. **Run the full checklist on happy-dom:** pre-parsed upgrade + `connectedCallback` child-before-parent, `whenDefined`, reflection (`lang`), attribute reads, connect-time writes landing in `outerHTML`, custom-property survival, internals skeleton behavior, `getBoundingClientRect`-class silent defaults — plus weight/perf numbers (install size, one full docs-page render). Record the comparison in the ADR and confirm the substrate or swap; the driver interface (LT-151) isolates a swap to the patch table. Acceptance: documented side-by-side on the checklist with numbers; substrate decision recorded.
+
+- [ ] LT-153: Plan the TSRX-compiler consequences of Server Simulation.
+  **Skill:** architect
+  **Context:** The deferred inventory (owner instruction, 2026-09-02 — task planning parked until the implications were known; LT-151/LT-152 now supply them). Deliver the re-scoping that turns the ADR from decision into queue: (1) **Diagnostics** — re-ground `TSRX005` (server-only names; dissolves), `TSRX034` (omitted-because-unprovable; becomes driver-refusal reporting through the virtualConsole), and `TSRX039`'s server half; decide what replaces the eight-warning baseline as the wave-4 regression signal (fixture-pinned simulated renders per the fidelity statement). (2) **Goldens** — from byte-pinning two hand-shaped modules to behavior-pinning the simulated render; decide what survives byte-for-byte. (3) **Staged retirement** — map `emit-server`'s pieces onto sub-design 7's stages (stage 1: old render fn as template-tree source + client connect simulated; stage 3: serialization replaces render functions), with the evaluability machinery's deletion checkpoint (`isServerEvaluable`, `hostDerivedFold`, `spliceHostDerivedFold`, the fold-set routes). (4) **Re-scope the gate wave** — rewrite LT-143/LT-133 for the simulation route (the rendered-wrong-markup bugs stay open; the fold route in their current text is superseded); fold the NOTES.md finding into LT-144 and pin what survives of the silent-empty class under simulation; confirm LT-145's fate on a fixture (a Parser-exposed prop with no server arg renders its fallback naturally at connect — no fold route needed); confirm LT-146/LT-147/LT-148 unchanged. (5) **Acceptance ritual** — flip ADR 0027 to Accepted (this task is the milestone in the wave list), add the CONTEXT.md vocabulary (Server Simulation, simulated connect, simulated document; "one runtime, two DOMs — the DOM is the wire format; the second computer is optional"), update ARCHITECTURE.md's compiler section, and record the prior-art landscape (Lit's narrow-surface shim, Angular Universal/Domino, Stencil's own hydrate engine, Enhance's pure-function restriction) in the ADR. Acceptance: updated TODO texts (LT-143/LT-133/LT-144/LT-145), ADR 0027 Accepted, CONTEXT.md and ARCHITECTURE.md updated, gate wave un-paused.
+
+- [ ] LT-154: Resume implementation — stage-1 server-simulation driver.
+  **Skill:** docs-server-dev
+  **Context:** ADR 0027 sub-design 7, stage 1, per the plan LT-153 produced: driver + substrate answering `host` reads and reactive attributes for the corpus — the old render function remains the template-tree source, the client connect is simulated against it, and serialization overlays the computed initial state. This is the task that finally unblocks LT-143: `pluralCategory(host)` runs exactly as authored and `basic-pluralize`'s six flash warnings retire by *rendering*, not by a fold rule. Follow the full driver posture — internals normalization (LT-150), constructor stubs and the per-runtime patch table (LT-151), per-component containment (LT-149) — fixture-pin the corpus's simulated renders, and keep `bun test server/tests` plus the build gates green. Acceptance: the basic-pluralize instance renders exactly one plural suffix and the count for its args with zero flash; the corpus's simulated renders are fixture-pinned; no regression elsewhere.
 
 ## Wave 4 — example migrations
 
