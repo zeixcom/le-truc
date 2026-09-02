@@ -64,7 +64,7 @@ export const generateLlmsTxt = (pageInfos: PageInfo[]): string => {
 
 	const lines: string[] = [
 		'# Le Truc Documentation',
-		'> High-performance, signal-based web components.',
+		'> Type-safe reactive Web Components – HTML-first, backend-agnostic.',
 		'',
 	]
 
