@@ -20,6 +20,10 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import {
+	formatSimDiagnostic,
+	type SimDiagnostic,
+} from '../server/tsrx/sim/index.ts'
 
 /* === Types === */
 
@@ -28,7 +32,7 @@ type ProbeResult = {
 	definitions: string[]
 	html: string
 	values: Record<string, string | null>
-	diagnostics: Array<{ kind: string; component?: string; message: string }>
+	diagnostics: SimDiagnostic[]
 }
 
 type RuntimeSpec = {
@@ -195,8 +199,10 @@ try {
 		)
 		for (const [label, value] of Object.entries(result.values))
 			console.log(`  ${label.padEnd(18)}= ${JSON.stringify(value)}`)
+		// Via the report formatter (LT-167): the raw message is subject-less
+		// for the kinds whose copy assumes an attribution prefix.
 		for (const diagnostic of result.diagnostics)
-			console.log(`  ! ${diagnostic.kind}: ${diagnostic.message.slice(0, 160)}`)
+			console.log(`  ! ${formatSimDiagnostic(diagnostic)}`)
 	}
 
 	const [first, ...rest] = names

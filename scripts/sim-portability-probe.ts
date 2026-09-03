@@ -49,7 +49,10 @@ await realm.load(() => import(pathToFileURL(job.clientBundle).href))
 
 // Phase 2 — parse+upgrade (synchronous), then drain to hermetic quiescence
 // (ADR 0027 sub-design 9, amended) before serializing.
-const html = await realm.render({ markup: job.markup, component: job.component })
+const html = await realm.render({
+	markup: job.markup,
+	component: job.component,
+})
 
 const values: Record<string, string | null> = {}
 for (const probe of job.probes ?? []) {
@@ -69,11 +72,14 @@ console.log(
 			definitions: realm.definitions.map(entry => entry.name).sort(),
 			html,
 			values,
-			diagnostics: realm.diagnostics.map(({ kind, component, message }) => ({
-				kind,
-				component,
-				message,
-			})),
+			diagnostics: realm.diagnostics.map(
+				({ kind, component, level, message }) => ({
+					kind,
+					component,
+					level,
+					message,
+				}),
+			),
 		},
 		null,
 		2,

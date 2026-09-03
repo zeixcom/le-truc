@@ -497,6 +497,73 @@ describe('two-phase load and render', () => {
 	})
 })
 
+describe('render memoization (LT-166)', () => {
+	test('a repeated (component, markup) render returns the memoized bytes without a second connect', async () => {
+		const realm = withRealm()
+		let connects = 0
+		await realm.load(async () => {
+			customElements.define(
+				'probe-memo',
+				class extends HTMLElement {
+					connectedCallback() {
+						connects++
+						this.setAttribute('data-connected', '')
+					}
+				},
+			)
+		})
+		const markup = '<probe-memo></probe-memo>'
+		const first = await realm.render({ markup, component: 'probe-memo' })
+		const second = await realm.render({ markup, component: 'probe-memo' })
+		expect(second).toBe(first)
+		expect(connects).toBe(1)
+	})
+
+	test('a degraded render is not memoized — its diagnostic fires per occurrence', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			// A name without a dash: `define()` itself throws during replay,
+			// outside any CEReactions wrapper — the containment path.
+			customElements.define('probeinvalid', class extends HTMLElement {})
+		})
+		const markup = '<probe-holder>fallback</probe-holder>'
+		const first = await realm.render({ markup, component: 'probe-holder' })
+		const second = await realm.render({ markup, component: 'probe-holder' })
+		expect(first).toBe(markup)
+		expect(second).toBe(markup)
+		const throws = realm.diagnostics.filter(
+			entry => entry.kind === 'component-throw',
+		)
+		expect(throws.length).toBe(2)
+	})
+
+	test('a non-quiescent render is not memoized — its diagnostic fires per occurrence', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			customElements.define(
+				'probe-looping',
+				class extends HTMLElement {
+					connectedCallback() {
+						this.#tick()
+					}
+					#tick() {
+						const n = Number(this.getAttribute('data-n') ?? '0')
+						this.setAttribute('data-n', String(n + 1))
+						if (n < 20) queueMicrotask(() => this.#tick())
+					}
+				},
+			)
+		})
+		const markup = '<probe-looping></probe-looping>'
+		await realm.render({ markup, component: 'probe-looping', maxTurns: 3 })
+		await realm.render({ markup, component: 'probe-looping', maxTurns: 3 })
+		const overruns = realm.diagnostics.filter(
+			entry => entry.kind === 'non-quiescent',
+		)
+		expect(overruns.length).toBe(2)
+	})
+})
+
 describe('build report (LT-163)', () => {
 	const diagnostic = (overrides: Partial<SimDiagnostic>): SimDiagnostic => ({
 		kind: 'jsdom-error',
@@ -522,7 +589,7 @@ describe('build report (LT-163)', () => {
 	})
 
 	test('format survives a diagnostic no render window owns', () => {
-		const text = formatSimDiagnostic(diagnostic({ component: undefined }))
+		const text = formatSimDiagnostic(diagnostic({}))
 		expect(text).toContain('outside any render window')
 	})
 

@@ -216,10 +216,13 @@ export const STUB_GLOBALS: readonly StubGlobalPatch[] = [
 ]
 
 /**
- * Every ambient network global, replaced with a reporting, rejecting no-op.
- * Reporting happens at CALL time, not at rejection time: a component that
- * swallows its own rejection would otherwise reach the network silently in a
- * future runtime where the stub is missing, and the build would say nothing.
+ * Every ambient network global, replaced with a reporting, never-settling
+ * stub (amended sub-design 2d, LT-154). Reporting happens at CALL time, so a
+ * network attempt is always a build warning regardless of what the component
+ * does with the returned promise. The promise itself never settles, which is
+ * what keeps a fetching component's task at `nil` and its markup on the
+ * `@pending` arm under the quiescence drain — a rejection would route it to
+ * `@catch` and ship an arm the build cannot know is right (CHECKLIST §8/§9).
  */
 export const NETWORK_GLOBALS: readonly NetworkGlobalPatch[] = [
 	{

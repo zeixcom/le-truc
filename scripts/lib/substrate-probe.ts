@@ -490,38 +490,3 @@ export class ProbeRealm {
 		this.handle.dispose()
 	}
 }
-
-/* === Hermetic quiescence (amended sub-design 9) === */
-
-export type QuiescenceResult = {
-	/** The serialized HTML once the output stopped changing. */
-	html: string
-	/** Microtask turns elapsed until stability (≥ 1). */
-	turns: number
-	/** False when `maxTurns` expired with the output still changing. */
-	quiescent: boolean
-}
-
-/**
- * Drain the realm's microtask queue to quiescence and read the settled
- * `outerHTML` — the harness counterpart of the boundary LT-154 will build:
- * microtask-only (jsdom timers never fire), bounded (a reactive loop
- * surfaces as a `non-quiescent` verdict, not a hang), and the settled
- * output is what the amended contract ships. The realm must stay alive
- * until this resolves — draining after `dispose()` tears the patch-table
- * globals out from under deferred effects.
- */
-export const drainToQuiescence = async (
-	realm: ProbeRealm,
-	component: string,
-	maxTurns = 10,
-): Promise<QuiescenceResult> => {
-	let previous = realm.document.querySelector(component)?.outerHTML ?? ''
-	for (let turns = 1; turns <= maxTurns; turns++) {
-		await Promise.resolve()
-		const next = realm.document.querySelector(component)?.outerHTML ?? ''
-		if (next === previous) return { html: next, turns, quiescent: true }
-		previous = next
-	}
-	return { html: previous, turns: maxTurns, quiescent: false }
-}

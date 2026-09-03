@@ -151,14 +151,45 @@ when extending it:
   `bun run check:sim`, which reports which runtimes it found and exits non-zero if their
   serialized HTML differs.
 
+`server/tests/tsrx/sim-driver.test.ts` runs the WHOLE corpus through the driver (LT-154) and
+owns, next to the build-report baseline below, the 22 fixture snapshots and two corpus
+invariants (LT-164). Three things to know about the snapshots and invariants:
+
+- The simulated snapshots are **per-substrate bytes**. Inline-style serialization is
+  substrate-specific (happy-dom terminates inline custom-property declarations with `;` where
+  jsdom omits it — LT-152), so a substrate swap re-baselines every snapshot in the file at
+  once and is NOT a behavior change. A single tag moving with no substrate change is one —
+  treat it as a behavior change or a driver regression.
+- The **double-connect fixed-point gate** (ADR 0027 sub-design 8) rides every fixture: the
+  fixture feeds its own output back through a second `realm.render()` — what a browser does
+  when it parses the served HTML and connects again — and requires byte-identical
+  serialization. A component whose second pass differs fails the build against that
+  component.
+- The realm's `render()` memoizes on `(component, markup)` (LT-166): a repeated
+  render of identical input returns the first pass's bytes without a second
+  connect, so only the first occurrence reports diagnostics. Tests that need a
+  fresh connect — a diagnostic per render, per-render connect effects — must
+  render distinct markup (or a fresh realm), not the same input twice.
+- The **two-order hermeticity test** (sub-design 10) renders the corpus in two orders on two
+  realms and requires identical per-tag output. Order 2 needs its own module tree, because
+  one module cache per process makes a second realm's import of order 1's client modules
+  record no definitions — so the test copies the compiled tree to a second
+  `createGeneratedDir()` instead of recompiling: fresh resolved specifiers, identical code,
+  so a diff can only be order, never rebuild variance.
+
 ### The two regression baselines (LT-153 decision 2, LT-163)
 
 Since the simulation driver took over renderability from the compiler, the wave-4 regression
 signal is **two numbers**, not one:
 
-1. **The compile baseline** — `bun run check:tsrx` must reach zero warnings before
-   wave 4 (the standing count is under reconciliation — LT-168). This is the channel
-   for what is statically decidable.
+1. **The compile baseline** — `bun run check:tsrx` counts the standing corpus warnings in
+   its summary line (`Compile-warning baseline: N unique…`) — read that count, never a
+   tail-read of the ⚠️ lines (LT-168). The gate-wave target is the counted **6 unique**
+   (LT-145 and LT-146 remove form-listbox and form-tokenbox); the six `basic-pluralize`
+   warnings are **correct refusals** — the fold cannot follow the authored `pluralCategory`
+   const, its opaque `getLocale` helper, or the `hasAttribute` sensor — and they retire with
+   TSRX034 at stage 3 (LT-165). Zero compile warnings is the stage-3 state. This is the
+   channel for what is statically decidable.
 2. **The build-report baseline** — `server/tests/tsrx/sim-driver.test.ts` runs the corpus
    through the simulation driver and requires **zero unclassified diagnostics**. The driver
    raises a diagnostic per condition (a jsdom `jsdomError`, an unhandled rejection, a

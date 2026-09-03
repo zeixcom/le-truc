@@ -32,12 +32,12 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { basename, join, relative, resolve } from 'node:path'
 import type { WindowLike } from 'dompurify'
 import createDOMPurify from 'dompurify'
+import { drainToQuiescence } from '../server/tsrx/sim/boundary.ts'
 import { detectRuntime } from '../server/tsrx/sim/patch-table.ts'
 import {
 	applyPatches,
 	buildClientBundle,
 	createWindow,
-	drainToQuiescence,
 	importBundle,
 	ProbeRealm,
 	releaseBundleDir,
@@ -451,10 +451,12 @@ const runColorgraph = async (
 		// kept only to show what a synchronous window would have dropped.
 		const sync = realm.renderSync(markup, COLORGRAPH.component)
 		const {
-			html: shipped,
+			value: shipped,
 			turns,
 			quiescent,
-		} = await drainToQuiescence(realm, COLORGRAPH.component)
+		} = await drainToQuiescence(
+			() => realm.document.querySelector(COLORGRAPH.component)?.outerHTML ?? '',
+		)
 		const probes: Record<string, string | null> = {}
 		for (const probe of COLORGRAPH.probes) {
 			const el = realm.document.querySelector(probe.selector)
@@ -674,7 +676,9 @@ const measureMemoization = async (
 		for (const index of order) {
 			const entry = inventory[index]!
 			realm.render(entry.markup, entry.tag)
-			const { html, quiescent } = await drainToQuiescence(realm, entry.tag)
+			const { value: html, quiescent } = await drainToQuiescence(
+				() => realm.document.querySelector(entry.tag)?.outerHTML ?? '',
+			)
 			if (!quiescent)
 				throw new Error(`${entry.tag} did not quiesce in memo pass ${pass}`)
 			outputs[index] = html

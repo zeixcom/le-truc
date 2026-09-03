@@ -71,6 +71,22 @@
  * rejections from inside the realm. That is the containment trade (tier 2):
  * an unhandled rejection during a build becomes a diagnostic here instead of
  * a dead build, and the build report is the only place it surfaces.
+ *
+ * ## Render memoization (LT-166)
+ *
+ * `render()` memoizes on `(component, markup)` — the driver-side surrogate
+ * for the build's `(component, serialized args)` key: identical args render
+ * to identical markup through the pure server render functions, and the
+ * markup is what the simulation actually consumes. A hit returns the first
+ * pass's bytes without reopening a connect window, so a repeated occurrence
+ * reports only the FIRST occurrence's diagnostics, and a time-dependent
+ * render (sub-design 6 lets `Date.now()` through) stabilizes on the first
+ * observed value — which is what a deterministic build wants. Only a
+ * completed connect memoizes: a degraded (contained throw) or non-quiescent
+ * render re-runs every time, so its diagnostic keeps firing per occurrence.
+ * The map dies with the realm and is bounded by unique
+ * `(component, markup)` pairs — 216 signatures across the built docs' 3,330
+ * occurrences, per LT-152's measurement.
  */
 
 import { JSDOM, VirtualConsole } from 'jsdom'
@@ -465,6 +481,10 @@ export function createSimulationRealm(
 		upgrade: (node: Node) => realRegistry.upgrade(node),
 	}
 
+	// Render memoization (LT-166): see the module header's section. Keyed on
+	// (component, markup); only quiescent, non-degraded connects are stored.
+	const renderCache = new Map<string, string>()
+
 	const load = async (importer: () => Promise<unknown>) => {
 		const before = definitions.length
 		force('customElements', recordingRegistry)
@@ -492,6 +512,9 @@ export function createSimulationRealm(
 		component,
 		maxTurns,
 	}: RenderOptions): Promise<string> => {
+		const cacheKey = `${component}\u0000${markup}`
+		const cached = renderCache.get(cacheKey)
+		if (cached !== undefined) return cached
 		let degraded = false
 		const parsed = assertSynchronousWindow(() => {
 			currentComponent = component
@@ -537,6 +560,9 @@ export function createSimulationRealm(
 			() => document.querySelector(component)?.outerHTML ?? parsed,
 			maxTurns,
 		)
+		// Only a completed connect memoizes — a non-quiescent one re-runs per
+		// occurrence so its diagnostic keeps firing (LT-166).
+		if (quiescent) renderCache.set(cacheKey, value)
 		if (!quiescent)
 			report({
 				kind: 'non-quiescent',
