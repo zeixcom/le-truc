@@ -35,7 +35,7 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 `activateResult()` (`src/helpers/reactive.ts`) discards the return value of every descriptor it calls during activation. `watch()`/`on()`/`pass()` are unaffected because they call `createEffect()`/`createScope()` *inside* their own descriptor body. That self-registers cleanup onto the active owner, regardless of what the outer caller does with the return value.
 
-A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no internal `createEffect`/`createScope` call — has **no such registration**. If it's called via `activateResult` directly (i.e. `return`ed from the factory with no wrapping), its cleanup is silently dropped and never runs on disconnect. This was a real, previously-shipping bug in several example components (found during LT-010; see NOTES.md history). The fix wraps the raw descriptor in `watch(() => true, descriptor)`: `() => true` has no signal dependency so it runs once, and `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup. Always register hand-authored descriptors this way, not bare `return`, in new code.
+A raw hand-authored descriptor — `() => { setup(); return cleanup }`, with no internal `createEffect`/`createScope` call — has **no such registration**. If it's called via `activateResult` directly (i.e. `return`ed from the factory with no wrapping), its cleanup is silently dropped and never runs on disconnect. This was a real, previously-shipping bug in several example components. The fix wraps the raw descriptor in `watch(() => true, descriptor)`: `() => true` has no signal dependency so it runs once, and `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup. Always register hand-authored descriptors this way, not bare `return`, in new code.
 
 ## `all()` MutationObserver is Lazy
 
@@ -67,6 +67,20 @@ The original signal is captured and restored when the parent disconnects, so the
 **The property-key (`'value'`) and bare-writable-signal short forms are deprecated (ADR 0012).** Both resolve to the parent's writable signal and grant the child unrestricted `.set()`; they warn in DEV_MODE and are removed in the next major. Use the thunk (`() => host.prop`, read-only) or descriptor (`{ get, set }`, mediated writable) forms. The warning checks for the problematic shape directly — a branded CE signal exposing both `get` and `set` — rather than trying to prove read-only-ness; signals without a `.set()` (`Memo`/`Task`/`Sensor`) passed directly do not warn.
 
 **Every entry in `props` is validated before any signal is swapped (ADR 0011).** If a passed prop doesn't exist on the target, can't be resolved to a signal, or isn't Slot-backed — which is exactly what happens when the target is a non-Le-Truc element, or the prop is read-only/computed — `pass()` throws `InvalidPassPropertyError` naming every failing prop, instead of silently no-op'ing. This is a deferred-activation throw (ADR 0007): it happens inside `connectedCallback`, after the calling factory has already returned, so it cannot be caught by the factory's own code — it surfaces as an uncaught error (`pageerror`), the same way `InvalidPropertyNameError` does.
+
+## Connect-Time Errors Are Contained — Except Le Truc's Own
+
+`connectedCallback` catches throws from the factory, from an extension's `onConnect`, and from effect activation. The element stays connected and inert, the partial scope is disposed, and a `console.error` names the component. One broken component cannot take the page's other components down, and the containment does not depend on the host's custom-element reaction wrapper — which is what makes the server simulation (ADR 0027) viable, since a jsdom driver has no such wrapper and the escape was process-fatal there.
+
+**The exception is deliberate.** Every class in `src/errors.ts` extends `TrucError`/`TrucTypeError`, which carry a contract brand; `isContractError()` detects it and `connectedCallback` re-throws those *after* disposing the partial scope. ADR 0011 makes `InvalidPassPropertyError` (and `InvalidPropertyNameError` alongside it) surfacing as an uncaught `connectedCallback` exception an explicit decision — a violated authoring contract must be fixed before production, not swallowed. So: **a new error class in `src/errors.ts` is loud by default; a `throw` from anywhere else is contained.** If you add an error class outside `src/errors.ts`, it will be contained, which is probably not what you want.
+
+Note that a throw inside a `watch()` *handler* never reaches this machinery at all: cause-effect's `match()` routes it to the `err` branch, defaulting to `console.error`. The containment only sees hand-authored descriptors, `pass()` validation, and anything the factory does directly.
+
+## An Unusable `ElementInternals` Is Treated As No Internals
+
+The constructor guard is not just a `try/catch` around `attachInternals()`. A *half-implemented* internals succeeds and defeats that guard while being worse than none — jsdom 30 returns an object whose `validity`/`validationMessage` are `undefined`, and `formAssociated()`'s `createCell(internals.validationMessage)` then throws far from the cause. `isUsableInternals()` checks the surface at acquisition and routes a failure to the same `internals = null` degradation.
+
+**The check only reads the form members when the component is form-associated.** On any other custom element, `validity`, `validationMessage`, `setFormValue`, `willValidate` and friends throw `NotSupportedError` *by spec* — an ungated health check therefore nulls the internals of every ordinary component and silently kills custom states and ARIA reflection. The `DEV_MODE` warning fires once per page, not once per instance: the condition is a property of the environment.
 
 ## `safeSetAttribute` Throws on Unsafe Values — Never Silent
 

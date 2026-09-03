@@ -24,6 +24,8 @@ defineComponent('my-element', ({ expose, first, watch }) => {
 
 - **`connectedCallback`**: Queries DOM, creates signals from parsers, runs the factory (collecting effect descriptors into the ambient collector as `watch`/`on`/`pass`/`each`/`provideContexts` are called), waits for child element definitions, then activates effects in a scope
 - **`disconnectedCallback`**: Tears down all effects and event listeners via the scope cleanup
+- **Connect-time error containment**: A throw from the factory, from an extension's `onConnect`, or from effect activation is caught inside `connectedCallback`. The partial scope is disposed, the element stays connected but inert (whatever `expose()` installed before the throw remains), and a diagnostic naming the component is reported through `console.error` — full detail in `DEV_MODE`, one line in production. One broken component never takes the page's other components down, and that containment does not depend on the host environment's custom-element reaction wrapper. The deliberate exception is Le Truc's own error classes (`src/errors.ts`), which carry a contract brand and stay uncaught by design — see [ADR 0011](adr/0011-throw-on-pass-binding-failure.md). **This carve-out is being retired:** [ADR 0028](adr/0028-tiered-error-surfacing.md) (proposed) deletes the brand, makes containment unconditional, and splits activation-phase containment per descriptor. Update this section when LT-155 lands.
+- **`ElementInternals` acquisition**: `attachInternals()` is validated at the constructor, not at every read. It failing *and* it returning a half-implemented object both route to the same degradation: `internals` is `null`, form association / custom states / ARIA reflection are unavailable, and a `DEV_MODE` warning fires. The shape check only reads the form members for a form-associated component — on any other element they throw `NotSupportedError` by spec.
 
 ### Signals and Properties
 
@@ -68,7 +70,7 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 | `bindVisible` | Controls `hidden` attribute |
 | `dangerouslyBindInnerHTML` | Sets innerHTML |
 
-`bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, `bindState`, and `bindAria` additionally accept a `readonly string[]` in place of the single target, targeting several properties/attributes/class tokens/object keys/custom states/ARIA properties from one `watch()` handler instead of N separate calls sharing one computed source (see [ADR 0023](adr/0023-map-form-overloads-for-bind-helpers.md)). Implemented for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty` (LT-029), `bindState`, and `bindAria` (LT-007).
+`bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, `bindState`, and `bindAria` additionally accept a `readonly string[]` in place of the single target, targeting several properties/attributes/class tokens/object keys/custom states/ARIA properties from one `watch()` handler instead of N separate calls sharing one computed source (see [ADR 0023](adr/0023-map-form-overloads-for-bind-helpers.md)). Implemented for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty`, `bindState`, and `bindAria`.
 
 ### Event Binding
 
