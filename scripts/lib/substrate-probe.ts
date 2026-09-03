@@ -21,7 +21,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { JSDOM, VirtualConsole } from 'jsdom'
-import { runSynchronously } from '../../server/tsrx/sim/boundary.ts'
+import { assertSynchronousWindow } from '../../server/tsrx/sim/boundary.ts'
 import {
 	detectRuntime,
 	NETWORK_GLOBALS,
@@ -479,7 +479,10 @@ export class ProbeRealm {
 
 	/** Like `render`, but under the production boundary assertion. */
 	renderSync(markup: string, component: string): string {
-		return runSynchronously(() => this.render(markup, component), component)
+		return assertSynchronousWindow(
+			() => this.render(markup, component),
+			component,
+		)
 	}
 
 	dispose(): void {

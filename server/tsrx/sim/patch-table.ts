@@ -71,8 +71,16 @@ export type StubGlobalPatch = {
 }
 
 /**
- * An ambient network global, replaced with a no-op that reports and then
- * rejects. The build must never depend on the network (sub-design 2d).
+ * An ambient network global, replaced with a no-op that reports at call
+ * time and then NEVER SETTLES (amended sub-design 2d, LT-154, 2026-09-03).
+ * A rejecting stub is wrong under the hermetic-quiescence boundary
+ * (`boundary.ts`): draining a rejection to settlement routes every fetching
+ * component to its `@catch` arm, but the build cannot know the request
+ * failed — it never ran. A promise that never settles keeps the component's
+ * task at `nil`, which is what CHECKLIST §8/§9 require of SSG and is what
+ * `match()` renders as `@pending`. The build must never depend on the
+ * network either way (sub-design 2d); only the arm the client ends up
+ * shipping changes.
  */
 export type NetworkGlobalPatch = {
 	kind: 'network'

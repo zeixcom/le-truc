@@ -1,5 +1,6 @@
 /**
- * The simulation realm (ADR 0027 sub-design 2, LT-151).
+ * The simulation realm (ADR 0027 sub-design 2, LT-151; amended by LT-154,
+ * 2026-09-03 — see `boundary.ts`'s header for why).
  *
  * Applies `patch-table.ts` to `globalThis` for the duration of a simulated
  * connect, so a generated client module — which reads `HTMLElement`,
@@ -11,29 +12,69 @@
  *
  * A generated client module registers its element as an import side effect
  * (`defineComponent()` at module top level), and importing is asynchronous.
- * Sub-design 9 requires the instantiate→serialize window to be synchronous, so
- * the two are split:
+ * Sub-design 9 requires the instantiate→parse step to be synchronous, so the
+ * two are split:
  *
  * 1. `load()` — the resolution phase. Imports run with a RECORDING
  *    `customElements` in place, which captures `define()` calls instead of
  *    performing them. Awaiting here is legitimate (sub-design 9, "two phases,
- *    and only the second is synchronous").
- * 2. `render()` — the synchronous window. Parses the SSR'd markup into the
- *    document while the elements are still undefined (the pre-parsed upgrade
- *    path sub-design 2 depends on), replays the recorded definitions onto the
- *    real registry so the upgrade runs, and serializes — all under
- *    `runSynchronously()`, which fails the build if anything awaited.
+ *    and only the second is synchronous"). One module cache per process means
+ *    a component's client module registers its element exactly once — `load()`
+ *    THROWS when an import records no new definitions, because a fresh realm
+ *    re-importing an already-loaded bundle silently degrades to un-upgraded
+ *    SSR markup (sub-design 10) rather than erroring. **Load each component
+ *    once; render it many times.**
+ * 2. `render()` — parses the SSR'd markup into the document while the
+ *    elements are still undefined (the pre-parsed upgrade path sub-design 2
+ *    depends on), replays the recorded definitions onto the real registry
+ *    CHILDREN-FIRST (`childrenFirstOrder`, keyed off the compiler's compose
+ *    graph — `define()` call order decides upgrade order, not import order
+ *    or recording order) so the upgrade runs, then drains the realm's
+ *    microtask queue to quiescence (`drainToQuiescence`) and serializes.
+ *    Async, because draining is: the parse+upgrade step itself is still
+ *    asserted synchronous (`assertSynchronousWindow`), only the quiescence
+ *    wait after it is not.
+ *
+ * ## Disposal
+ *
+ * End-of-process, not per-realm (LT-152 review, LT-154). A disposed realm's
+ * deleted globals turn a contained component's lingering dependency-wait
+ * into a synchronous `customElements is not defined` flood that aborts the
+ * process — so `dispose()` must be called at most once, after every render
+ * the realm will ever do, never between them. One realm per build.
  *
  * ## Diagnostics
  *
  * jsdom's `virtualConsole` is the diagnostic channel (ADR 0027 Consequences).
- * `jsdomError`s, realm console errors/warnings, attempted network calls and
- * contained per-component throws all land in `diagnostics` as build warnings
- * attributed to a component where one is known.
+ * `jsdomError`s, realm console errors/warnings, attempted network calls,
+ * contained per-component throws and non-quiescent drains all land in
+ * `diagnostics`; `report.ts` turns them into the build report (LT-163) —
+ * per-kind copy, the classification registry for standing entries, and the
+ * zero-unclassified baseline.
+ *
+ * ## Attribution
+ *
+ * A diagnostic is attributed to `currentComponent` — the component whose
+ * synchronous window most recently opened. The marker is set when a render
+ * opens its window and is overwritten by the NEXT render; it is deliberately
+ * never reset in between, because the process-level channels report late:
+ * under Bun (and Node), an `unhandledRejection` fires in a macrotask AFTER
+ * `render()` has returned, and post-drain the realm's queue is quiescent —
+ * so a late rejection traces to the most recent connect, and clearing the
+ * marker would strip the warning of the component it belongs to. `load()`
+ * performs no connect, so an error during module evaluation attributes to
+ * whatever component rendered last.
+ *
+ * Note the scope of the rejection handler: registering `process.on(
+ * 'unhandledRejection')` suppresses the runtime's default crash-on-unhandled-
+ * rejection for the WHOLE process, for the realm's lifetime — not just
+ * rejections from inside the realm. That is the containment trade (tier 2):
+ * an unhandled rejection during a build becomes a diagnostic here instead of
+ * a dead build, and the build report is the only place it surfaces.
  */
 
 import { JSDOM, VirtualConsole } from 'jsdom'
-import { runSynchronously } from './boundary.ts'
+import { assertSynchronousWindow, drainToQuiescence } from './boundary.ts'
 import {
 	detectRuntime,
 	NETWORK_GLOBALS,
@@ -54,13 +95,19 @@ export type SimDiagnosticKind =
 	| 'network'
 	| 'unhandled-rejection'
 	| 'component-throw'
-	| 'deferred-activation'
+	| 'non-quiescent'
 
 /** One build warning from a simulated run, attributed where possible. */
 export type SimDiagnostic = {
 	kind: SimDiagnosticKind
 	/** Custom element name, when the driver knows which component caused it. */
 	component?: string
+	/**
+	 * For `console`: which channel logged. The level is part of the condition
+	 * (`console.error` and `console.warn` mean different things), so it is
+	 * data, not message text.
+	 */
+	level?: 'error' | 'warn'
 	message: string
 	stack?: string
 }
@@ -77,6 +124,8 @@ export type RenderOptions = {
 	markup: string
 	/** Custom element name, used to attribute diagnostics and pick the root. */
 	component: string
+	/** Bound passed through to `drainToQuiescence`; defaults to 10 turns. */
+	maxTurns?: number
 }
 
 export type SimulationRealm = {
@@ -85,15 +134,18 @@ export type SimulationRealm = {
 	readonly document: Document
 	readonly diagnostics: readonly SimDiagnostic[]
 	readonly definitions: readonly RecordedDefinition[]
-	/** Resolution phase: import client modules, recording their definitions. */
-	load(importer: () => Promise<unknown>): Promise<void>
-	/** Synchronous window: parse, upgrade, serialize. */
-	render(options: RenderOptions): string
 	/**
-	 * Diagnostic-only: yield one turn and report whether the serialized HTML
-	 * would have changed. Never affects the shipped HTML.
+	 * Resolution phase: import client modules, recording their definitions.
+	 * Throws if the import records no NEW definitions (sub-design 10's
+	 * load-once assertion) — see module header.
 	 */
-	checkDeferredActivation(component: string, rendered: string): Promise<void>
+	load(importer: () => Promise<unknown>): Promise<void>
+	/**
+	 * Parse, upgrade, drain to quiescence, serialize. The parse+upgrade step
+	 * is asserted synchronous; the quiescence drain after it is not, so this
+	 * is async end to end.
+	 */
+	render(options: RenderOptions): Promise<string>
 	dispose(): void
 }
 
@@ -149,6 +201,37 @@ const stubFor = (shape: StubShape): unknown => {
 	}
 }
 
+/**
+ * Order `definitions` so every entry's composed children (per
+ * `composesTags`) come before it — a DFS post-order topological sort,
+ * stable on the input order for unrelated entries.
+ *
+ * `define()` call order decides jsdom upgrade order (LT-154's correction to
+ * sub-design 2's "native bottom-up" claim): a composed child that its
+ * parent's client module never imports (pure server-splice composition, no
+ * `pass()`/`first()` binding) has no import-graph relationship to its
+ * parent, so nothing about import/recording order guarantees it is defined
+ * first. The compose graph is the only source of truth for that
+ * relationship, hence `composesTags` is threaded in rather than inferred.
+ */
+export function childrenFirstOrder(
+	definitions: readonly RecordedDefinition[],
+	composesTags: (tag: string) => readonly string[],
+): RecordedDefinition[] {
+	const byName = new Map(definitions.map(entry => [entry.name, entry]))
+	const visited = new Set<string>()
+	const ordered: RecordedDefinition[] = []
+	const visit = (name: string): void => {
+		if (visited.has(name)) return
+		visited.add(name)
+		for (const child of composesTags(name)) visit(child)
+		const entry = byName.get(name)
+		if (entry) ordered.push(entry)
+	}
+	for (const entry of definitions) visit(entry.name)
+	return ordered
+}
+
 /* === Exported Functions === */
 
 /**
@@ -156,15 +239,23 @@ const stubFor = (shape: StubShape): unknown => {
  *
  * The patches are process-global for the realm's lifetime, so a realm owns the
  * process while it lives — `dispose()` restores every touched global to the
- * descriptor it found. One realm per build (ADR 0027 sub-design 2), or one per
- * render where isolation matters more than cost (sub-design 10).
+ * descriptor it found. One realm per build (ADR 0027 sub-design 2), disposed
+ * only at end-of-process (LT-154; see module header).
  *
  * @param options.html - the shell document; defaults to an empty body
+ * @param options.composesTags - direct composed-child tags for a defined
+ *   tag, from the compiler's compose graph (`RegistryEntry.composesTags`).
+ *   Defaults to "no known children" — correct for the driver's own inline
+ *   test fixtures, which have no composition.
  * @returns the realm handle
  */
 export function createSimulationRealm(
-	options: { html?: string } = {},
+	options: {
+		html?: string
+		composesTags?: (tag: string) => readonly string[]
+	} = {},
 ): SimulationRealm {
+	const composesTags = options.composesTags ?? (() => [])
 	const runtime = detectRuntime()
 	const diagnostics: SimDiagnostic[] = []
 	const definitions: RecordedDefinition[] = []
@@ -192,7 +283,7 @@ export function createSimulationRealm(
 	})
 	for (const level of ['error', 'warn'] as const)
 		virtualConsole.on(level, (...args: unknown[]) => {
-			report({ kind: 'console', message: args.map(String).join(' ') })
+			report({ kind: 'console', level, message: args.map(String).join(' ') })
 		})
 
 	const dom = new JSDOM(
@@ -261,18 +352,18 @@ export function createSimulationRealm(
 
 	const denyNetwork = (patch: NetworkGlobalPatch) => {
 		const message =
-			`Network access from a simulated connect: ${patch.name}() — the ` +
+			`network access from a simulated connect (\`${patch.name}()\`) — the ` +
 			'build realm is closed (ADR 0027 sub-design 2d). Declare build-time ' +
 			'data as a resolution-phase dependency instead.'
+		// Never settles (amended sub-design 2d, LT-154): a rejection would route
+		// every fetching component to `@catch` under the quiescence drain, but
+		// the build cannot know the request failed — it never ran. A promise
+		// that never settles keeps the component's task at `nil`, which SSG
+		// requires (CHECKLIST §8/§9) and `match()` renders as `@pending`.
+		// Reported at CALL time, so "fails loudly" is unaffected either way.
 		const deny = () => {
 			report({ kind: 'network', message })
-			const rejection = Promise.reject(new Error(message))
-			// Reported at CALL time above, so silence the runtime's own
-			// unhandled-rejection channel: the caller still sees the rejection,
-			// but a component that ignores its own promise must not abort a build
-			// that has already recorded the violation.
-			rejection.catch(() => {})
-			return rejection
+			return new Promise<never>(() => {})
 		}
 		return patch.form === 'function'
 			? deny
@@ -375,22 +466,43 @@ export function createSimulationRealm(
 	}
 
 	const load = async (importer: () => Promise<unknown>) => {
+		const before = definitions.length
 		force('customElements', recordingRegistry)
 		try {
 			await importer()
 		} finally {
 			force('customElements', realRegistry)
 		}
+		// Load-once is a driver assertion, not a convention (LT-152 review,
+		// LT-154): one module cache per process means a bundle imported by an
+		// EARLIER realm/load re-evaluates nothing here, and rendering would
+		// then silently degrade to un-upgraded SSR markup — invisible in the
+		// output, because it looks like ordinary un-upgraded markup.
+		if (definitions.length === before)
+			throw new Error(
+				'load() recorded no element definitions — the imported module was ' +
+					'served from the process module cache (one cache per process, ' +
+					'ADR 0027 sub-design 10). Load each component exactly once and ' +
+					'render it many times.',
+			)
 	}
 
-	const render = ({ markup, component }: RenderOptions): string =>
-		runSynchronously(() => {
+	const render = async ({
+		markup,
+		component,
+		maxTurns,
+	}: RenderOptions): Promise<string> => {
+		let degraded = false
+		const parsed = assertSynchronousWindow(() => {
 			currentComponent = component
 			try {
 				// Parsed while still undefined: the pre-parsed upgrade path, which
 				// is what gives `connectedCallback` its child-before-parent order.
 				document.body.innerHTML = markup
-				for (const entry of definitions) {
+				// Children-first (LT-154): define() call order decides jsdom
+				// upgrade order, and the compose graph — not recording order —
+				// is the only source of truth for which tags contain which.
+				for (const entry of childrenFirstOrder(definitions, composesTags)) {
 					if (realRegistry.get(entry.name)) continue
 					realRegistry.define(
 						entry.name,
@@ -409,30 +521,33 @@ export function createSimulationRealm(
 						? {}
 						: { stack: (error as Error).stack as string }),
 				})
+				degraded = true
 				return markup
 			}
 			const rendered = document.querySelector(component)
 			return rendered?.outerHTML ?? document.body.innerHTML
 		}, component)
 
-	const checkDeferredActivation = async (
-		component: string,
-		rendered: string,
-	) => {
-		await Promise.resolve()
-		const settled = document.querySelector(component)?.outerHTML
-		if (settled !== undefined && settled !== rendered)
+		// Hermetic quiescence (sub-design 9, amended): drain the microtask
+		// queue — never a timer — until the component's own markup stops
+		// changing, or the bound expires. Skipped when the parse step already
+		// degraded to plain SSR output (nothing upgraded, nothing to settle).
+		if (degraded) return parsed
+		const { value, quiescent, turns } = await drainToQuiescence(
+			() => document.querySelector(component)?.outerHTML ?? parsed,
+			maxTurns,
+		)
+		if (!quiescent)
 			report({
-				kind: 'deferred-activation',
+				kind: 'non-quiescent',
 				component,
 				message:
-					`${component} kept mutating after the serialization boundary: ` +
-					`${rendered.length} chars serialized, ${settled.length} after one ` +
-					'turn. The library defers effect activation by a microtask whenever ' +
-					'a component queries a custom child (`resolveDependencies`, ' +
-					'`src/helpers/dom.ts`), and those writes cannot reach the served ' +
-					'HTML under sub-design 9.',
+					`did not settle within ${turns} microtask turns — a reactive ` +
+					'effect is re-triggering itself at connect (ADR 0027 sub-design ' +
+					'9). The build shipped the last observed state rather than hang. ' +
+					'Find the self-triggering effect before relying on this markup.',
 			})
+		return value
 	}
 
 	const dispose = () => {
@@ -449,7 +564,6 @@ export function createSimulationRealm(
 		definitions,
 		load,
 		render,
-		checkDeferredActivation,
 		dispose,
 	}
 }

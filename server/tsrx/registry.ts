@@ -50,6 +50,20 @@ export type RegistryEntry = {
 	 * `pass={{ }}` on that component's tag.
 	 */
 	exposedProps: Record<string, ExposeKind>
+	/**
+	 * Tags of every DIRECTLY composed (PascalCase) child, deduplicated.
+	 * Corpus-wide (composeRegistry-resolved) so it is empty during the
+	 * registry-discovery pass, same tolerance as `pass()` dispatch.
+	 *
+	 * The server-simulation driver (ADR 0027, LT-154) needs this to replay
+	 * `customElements.define()` calls children-first: a composed child that
+	 * a component's own client module never imports (pure server-splice
+	 * composition, no `pass()`/`first()` binding) still needs its tag
+	 * defined before its composing ancestor's for jsdom upgrade order —
+	 * and nothing in an import graph encodes that relationship, so the
+	 * compiler has to hand it down explicitly.
+	 */
+	composesTags: string[]
 }
 
 export type ComponentRegistry = Record<string, RegistryEntry>

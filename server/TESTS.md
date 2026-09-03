@@ -151,6 +151,32 @@ when extending it:
   `bun run check:sim`, which reports which runtimes it found and exits non-zero if their
   serialized HTML differs.
 
+### The two regression baselines (LT-153 decision 2, LT-163)
+
+Since the simulation driver took over renderability from the compiler, the wave-4 regression
+signal is **two numbers**, not one:
+
+1. **The compile baseline** — `bun run check:tsrx` must reach zero warnings before
+   wave 4 (the standing count is under reconciliation — LT-168). This is the channel
+   for what is statically decidable.
+2. **The build-report baseline** — `server/tests/tsrx/sim-driver.test.ts` runs the corpus
+   through the simulation driver and requires **zero unclassified diagnostics**. The driver
+   raises a diagnostic per condition (a jsdom `jsdomError`, an unhandled rejection, a
+   contained connect throw, an attempted network call, a non-quiescent drain); the report
+   layer in `server/tsrx/sim/report.ts` formats each as a build warning attributed to the
+   component (tier 2, Contained — the build completes and the component keeps its
+   server-rendered markup). A migration that renders wrong shows up here as a new entry, and
+   the test fails naming it.
+
+A diagnostic the build cannot fix is **classified, never silenced**: add a narrow
+`{ kind, component, message, reason }` entry to `CLASSIFIED_DIAGNOSTICS` in `report.ts`, and
+the report keeps listing every occurrence with its reason. Never widen an existing pattern to
+admit a new diagnostic — that is how a real regression gets allowed through. When an entry
+stops matching anything (the condition was fixed), retire the classification; the baseline
+test says so. Tech Writer owns the report copy — see the `tech-writer` skill's
+`workflows/error-message-lifecycle.md` (the five conditions are tier 2: wording says the
+component *keeps* its server-rendered markup, never that the page broke).
+
 ---
 
 ## Verification Processes

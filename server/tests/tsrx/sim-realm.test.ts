@@ -1,6 +1,7 @@
 /**
  * Server-Simulation driver: patch table, realm application, and the
- * synchronous serialization boundary (ADR 0027 sub-designs 2 and 9, LT-151).
+ * hermetic-quiescence serialization boundary (ADR 0027 sub-designs 2, 9 and
+ * 10, LT-151, amended LT-154).
  *
  * These tests define their components inline through the realm's recording
  * registry rather than importing generated modules, so they exercise the
@@ -11,7 +12,7 @@
 
 import { afterEach, describe, expect, test } from 'bun:test'
 import {
-	runSynchronously,
+	assertSynchronousWindow,
 	SimulationBoundaryError,
 } from '../../tsrx/sim/boundary.ts'
 import {
@@ -24,9 +25,18 @@ import {
 	STUB_GLOBALS,
 } from '../../tsrx/sim/patch-table.ts'
 import {
+	childrenFirstOrder,
 	createSimulationRealm,
+	type SimDiagnostic,
 	type SimulationRealm,
 } from '../../tsrx/sim/realm.ts'
+import {
+	type ClassifiedDiagnostic,
+	classifyDiagnostic,
+	formatSimDiagnostic,
+	formatSimReport,
+	reportDiagnostics,
+} from '../../tsrx/sim/report.ts'
 
 /* === Helpers === */
 
@@ -168,14 +178,23 @@ describe('realm application', () => {
 })
 
 describe('closed network (sub-design 2d)', () => {
-	test('fetch rejects and is reported, without reaching the network', async () => {
+	test('fetch never settles and is reported, without reaching the network', async () => {
 		const realm = withRealm()
-		await expect(
-			(globalRecord.fetch as (input: string) => Promise<unknown>)(
-				'https://example.com',
-			),
-		).rejects.toThrow(/Network access from a simulated connect/)
+		const pending = (globalRecord.fetch as (input: string) => Promise<unknown>)(
+			'https://example.com',
+		)
 		expect(realm.diagnostics.some(entry => entry.kind === 'network')).toBe(true)
+		// Never settles (amended sub-design 2d): a rejection would route a
+		// fetching component to `@catch` under the quiescence drain; the honest
+		// state is `@pending`, so the stub must never resolve OR reject.
+		const settled = await Promise.race([
+			pending.then(
+				() => 'resolved',
+				() => 'rejected',
+			),
+			new Promise(resolve => setTimeout(() => resolve('pending'), 10)),
+		])
+		expect(settled).toBe('pending')
 	})
 
 	test('a component fetching at connect fails loudly', async () => {
@@ -193,37 +212,77 @@ describe('closed network (sub-design 2d)', () => {
 				},
 			)
 		})
-		realm.render({
+		await realm.render({
 			markup: '<probe-fetcher></probe-fetcher>',
 			component: 'probe-fetcher',
 		})
 		const network = realm.diagnostics.filter(entry => entry.kind === 'network')
 		expect(network.length).toBe(1)
 		expect(network[0]?.message).toContain('sub-design 2d')
+		// The fetch happened inside probe-fetcher's connect window, so the
+		// build warning names it (LT-163's attribution criterion).
+		expect(network[0]?.component).toBe('probe-fetcher')
 	})
 
 	test('XMLHttpRequest throws on construction', () => {
 		withRealm()
 		expect(
 			() => new (globalRecord.XMLHttpRequest as new () => unknown)(),
-		).toThrow(/Network access from a simulated connect/)
+		).toThrow(/network access from a simulated connect/)
+	})
+
+	test('an unhandled rejection is contained and attributed (LT-163)', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			customElements.define(
+				'probe-rejector',
+				class extends HTMLElement {
+					connectedCallback() {
+						this.setAttribute('data-connected', '')
+					}
+				},
+			)
+		})
+		await realm.render({
+			markup: '<probe-rejector></probe-rejector>',
+			component: 'probe-rejector',
+		})
+		// A REAL connect-time rejection cannot be provoked under bun:test: the
+		// runner fails the file on any rejection still unhandled when the host
+		// delivers the `unhandledRejection` event, even though the realm's own
+		// process-level handler has already recorded it (the end-to-end path —
+		// reject at connect, event arrives in a macrotask after render()
+		// returns, attributed via the render-window convention — was verified
+		// against plain `bun`). Emitting the exact event the host delivers
+		// exercises the same handler and attribution wiring.
+		process.emit(
+			'unhandledRejection',
+			new Error('boom, unhandled'),
+			Promise.resolve(),
+		)
+		const rejections = realm.diagnostics.filter(
+			entry => entry.kind === 'unhandled-rejection',
+		)
+		expect(rejections.length).toBe(1)
+		expect(rejections[0]?.component).toBe('probe-rejector')
+		expect(rejections[0]?.message).toContain('boom, unhandled')
 	})
 })
 
 describe('serialization boundary (sub-design 9)', () => {
 	test('passes synchronous work through', () => {
-		expect(runSynchronously(() => 'sync', 'probe')).toBe('sync')
+		expect(assertSynchronousWindow(() => 'sync', 'probe')).toBe('sync')
 	})
 
 	test('refuses a promise-returning window', () => {
-		expect(() => runSynchronously(async () => 'async', 'probe')).toThrow(
+		expect(() => assertSynchronousWindow(async () => 'async', 'probe')).toThrow(
 			SimulationBoundaryError,
 		)
 	})
 
 	test('names the component and the rule it broke', () => {
 		try {
-			runSynchronously(async () => 'async', 'basic-counter')
+			assertSynchronousWindow(async () => 'async', 'basic-counter')
 			throw new Error('expected a SimulationBoundaryError')
 		} catch (error) {
 			expect((error as Error).message).toContain('basic-counter')
@@ -231,11 +290,48 @@ describe('serialization boundary (sub-design 9)', () => {
 		}
 	})
 
-	test('render() runs under the assertion', () => {
+	test('render() runs under the assertion', async () => {
 		const realm = withRealm()
-		expect(() =>
-			realm.render({ markup: '<p>plain</p>', component: 'p' }),
-		).not.toThrow()
+		const html = await realm.render({ markup: '<p>plain</p>', component: 'p' })
+		expect(html).toBe('<p>plain</p>')
+	})
+})
+
+describe('children-first replay order (sub-design 2/10)', () => {
+	// `childrenFirstOrder` only reads `.name` — no realm or real HTMLElement
+	// needed, so a bare class stands in for the constructor.
+	const def = (name: string) => ({
+		name,
+		elementConstructor: class {} as unknown as CustomElementConstructor,
+	})
+
+	test('orders composed children before their composing ancestor', () => {
+		const definitions = [def('probe-parent'), def('probe-child')]
+		const composesTags = (tag: string) =>
+			tag === 'probe-parent' ? ['probe-child'] : []
+		expect(
+			childrenFirstOrder(definitions, composesTags).map(entry => entry.name),
+		).toEqual(['probe-child', 'probe-parent'])
+	})
+
+	test('leaves unrelated entries in recorded order', () => {
+		const definitions = [def('probe-a'), def('probe-b')]
+		expect(
+			childrenFirstOrder(definitions, () => []).map(entry => entry.name),
+		).toEqual(['probe-a', 'probe-b'])
+	})
+
+	test('resolves a transitive chain (grandchild before child before parent)', () => {
+		const definitions = [def('probe-root'), def('probe-mid'), def('probe-leaf')]
+		const composesTags = (tag: string) =>
+			tag === 'probe-root'
+				? ['probe-mid']
+				: tag === 'probe-mid'
+					? ['probe-leaf']
+					: []
+		expect(
+			childrenFirstOrder(definitions, composesTags).map(entry => entry.name),
+		).toEqual(['probe-leaf', 'probe-mid', 'probe-root'])
 	})
 })
 
@@ -264,7 +360,7 @@ describe('two-phase load and render', () => {
 				},
 			)
 		})
-		const html = realm.render({
+		const html = await realm.render({
 			markup: '<probe-writer count="7"><span></span></probe-writer>',
 			component: 'probe-writer',
 		})
@@ -295,7 +391,7 @@ describe('two-phase load and render', () => {
 				},
 			)
 		})
-		realm.render({
+		await realm.render({
 			markup: '<probe-parent><probe-child></probe-child></probe-parent>',
 			component: 'probe-parent',
 		})
@@ -318,7 +414,7 @@ describe('two-phase load and render', () => {
 		// jsdom's own CEReactions wrapper contains a connectedCallback throw and
 		// routes it to the virtualConsole, so the build continues and the element
 		// serializes with whatever it wrote before throwing.
-		const html = realm.render({ markup, component: 'probe-thrower' })
+		const html = await realm.render({ markup, component: 'probe-thrower' })
 		expect(html).toContain('fallback')
 		const contained = realm.diagnostics.find(entry =>
 			entry.message.includes('boom at connect'),
@@ -335,7 +431,7 @@ describe('two-phase load and render', () => {
 			customElements.define('probeinvalid', class extends HTMLElement {})
 		})
 		const markup = '<probe-holder>fallback</probe-holder>'
-		const html = realm.render({ markup, component: 'probe-holder' })
+		const html = await realm.render({ markup, component: 'probe-holder' })
 		expect(html).toBe(markup)
 		const contained = realm.diagnostics.find(
 			entry => entry.kind === 'component-throw',
@@ -343,7 +439,7 @@ describe('two-phase load and render', () => {
 		expect(contained?.component).toBe('probe-holder')
 	})
 
-	test('reports work that lands after the boundary', async () => {
+	test('microtask-deferred connect writes land in the shipped HTML (amended sub-design 9)', async () => {
 		const realm = withRealm()
 		await realm.load(async () => {
 			customElements.define(
@@ -357,14 +453,136 @@ describe('two-phase load and render', () => {
 				},
 			)
 		})
-		const html = realm.render({
+		const html = await realm.render({
 			markup: '<probe-deferred></probe-deferred>',
 			component: 'probe-deferred',
 		})
-		expect(html).not.toContain('data-late')
-		await realm.checkDeferredActivation('probe-deferred', html)
+		// The quiescence drain is what makes composition render at all
+		// (form-colorgraph's resolveDependencies deferral) — a strictly
+		// synchronous window would drop this write entirely.
+		expect(html).toContain('data-late')
+	})
+
+	test('a non-quiescent component ships its last observed state and reports, never hangs', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			customElements.define(
+				'probe-looping',
+				class extends HTMLElement {
+					connectedCallback() {
+						this.#tick()
+					}
+					#tick() {
+						const n = Number(this.getAttribute('data-n') ?? '0')
+						this.setAttribute('data-n', String(n + 1))
+						// Bounded well past `maxTurns` below so the drain's own bound is
+						// what stops it, not this cap — but still terminates, so an
+						// infinite self-rescheduling microtask chain never starves the
+						// test runner's own event loop.
+						if (n < 20) queueMicrotask(() => this.#tick())
+					}
+				},
+			)
+		})
+		const html = await realm.render({
+			markup: '<probe-looping></probe-looping>',
+			component: 'probe-looping',
+			maxTurns: 3,
+		})
+		expect(typeof html).toBe('string')
+		const nonQuiescent = realm.diagnostics.find(
+			entry => entry.kind === 'non-quiescent',
+		)
+		expect(nonQuiescent?.component).toBe('probe-looping')
+	})
+})
+
+describe('build report (LT-163)', () => {
+	const diagnostic = (overrides: Partial<SimDiagnostic>): SimDiagnostic => ({
+		kind: 'jsdom-error',
+		message: 'Not implemented: something',
+		...overrides,
+	})
+
+	test('format names the component, the condition, and the decision', () => {
+		const text = formatSimDiagnostic(
+			diagnostic({
+				kind: 'component-throw',
+				component: 'probe-x',
+				message: 'boom',
+			}),
+		)
+		expect(text).toContain('probe-x')
+		expect(text).toContain('boom')
+		// Tier 2, Contained: the wording says the component keeps its
+		// server-rendered markup — it does not say the page broke (ADR 0028
+		// sub-design 4, error-message-lifecycle criterion 3).
+		expect(text).toContain('server-rendered markup')
+		expect(text).not.toMatch(/broken|crashed|failed to render/)
+	})
+
+	test('format survives a diagnostic no render window owns', () => {
+		const text = formatSimDiagnostic(diagnostic({ component: undefined }))
+		expect(text).toContain('outside any render window')
+	})
+
+	test('classification matches kind, component, and message', () => {
+		const classification: ClassifiedDiagnostic = {
+			kind: 'jsdom-error',
+			component: 'probe-x',
+			message: /not implemented/i,
+			reason: 'jsdom does not implement it.',
+		}
 		expect(
-			realm.diagnostics.some(entry => entry.kind === 'deferred-activation'),
+			classifyDiagnostic(diagnostic({ component: 'probe-x' }), classification),
 		).toBe(true)
+		expect(
+			classifyDiagnostic(diagnostic({ component: 'probe-y' }), classification),
+		).toBe(false)
+		expect(
+			classifyDiagnostic(
+				diagnostic({ kind: 'console', component: 'probe-x' }),
+				classification,
+			),
+		).toBe(false)
+		expect(
+			classifyDiagnostic(
+				diagnostic({ component: 'probe-x', message: 'other' }),
+				classification,
+			),
+		).toBe(false)
+	})
+
+	test('the report partitions, and the formatted output explains its classifications', () => {
+		const known = diagnostic({
+			component: 'form-colorgraph',
+			message: "Not implemented: HTMLCanvasElement's getContext() method",
+		})
+		const report = reportDiagnostics([
+			known,
+			diagnostic({ component: 'probe-new', message: 'surprise' }),
+		])
+		expect(report.classified.length).toBe(1)
+		expect(report.unclassified.length).toBe(1)
+		const text = formatSimReport(report)
+		expect(text).toContain('surprise')
+		expect(text).toContain('classified (standing)')
+		expect(text).toContain('jsdom does not implement canvas')
+	})
+})
+
+describe('load-once assertion (sub-design 10)', () => {
+	test('load() throws when an import records no new definitions', async () => {
+		const realm = withRealm()
+		let alreadyImported = false
+		const importer = async () => {
+			if (alreadyImported) return
+			alreadyImported = true
+			customElements.define('probe-once', class extends HTMLElement {})
+		}
+		await realm.load(importer)
+		await expect(realm.load(importer)).rejects.toThrow(
+			/recorded no element definitions/,
+		)
 	})
 })

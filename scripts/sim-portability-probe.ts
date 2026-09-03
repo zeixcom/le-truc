@@ -47,11 +47,9 @@ const realm = createSimulationRealm()
 // Phase 1 — resolution. Awaiting here is legitimate (ADR 0027 sub-design 9).
 await realm.load(() => import(pathToFileURL(job.clientBundle).href))
 
-// Phase 2 — the synchronous instantiate→serialize window.
-const html = realm.render({ markup: job.markup, component: job.component })
-
-// Diagnostic-only, after the boundary: did anything keep mutating?
-await realm.checkDeferredActivation(job.component, html)
+// Phase 2 — parse+upgrade (synchronous), then drain to hermetic quiescence
+// (ADR 0027 sub-design 9, amended) before serializing.
+const html = await realm.render({ markup: job.markup, component: job.component })
 
 const values: Record<string, string | null> = {}
 for (const probe of job.probes ?? []) {
