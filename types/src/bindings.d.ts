@@ -63,7 +63,7 @@ declare const getDebugBindingTarget: (handler: object) => Element | undefined;
  * @param element - Target element
  * @param attr - Attribute name to set
  * @param value - Attribute value to set
- * @throws {Error} If the attribute name or value is unsafe
+ * @throws {UnsafeAttributeError} If the attribute name or value is unsafe
  */
 declare const safeSetAttribute: (element: Element, attr: string, value: string) => void;
 /**

@@ -1,4 +1,4 @@
-import type { Signal } from '@zeix/cause-effect';
+import { type Signal } from '@zeix/cause-effect';
 import type { EffectDescriptor } from './types';
 /**
  * Milliseconds to wait for child custom elements to be defined before activating effects anyway.
@@ -59,6 +59,14 @@ declare const withCollector: <T>(collector: EffectDescriptor[], fn: () => T) => 
  */
 declare const pushDescriptor: (host: HTMLElement | undefined, helper: string, descriptor: EffectDescriptor) => void;
 /**
+ * Describes an effect descriptor for a diagnostic message.
+ *
+ * @since 3.0.0
+ * @param descriptor - Descriptor to describe
+ * @returns e.g. `"watch()"`, or a generic label for a hand-authored descriptor
+ */
+declare const describeDescriptor: (descriptor: EffectDescriptor) => string;
+/**
  * Escape hatch for tests that call collector-consuming helpers directly, outside a `withCollector()` boundary.
  *
  * Pair with `restoreActiveCollector()`, typically in `beforeEach`/`afterEach`.
@@ -76,4 +84,23 @@ declare const installActiveCollector: (collector: EffectDescriptor[]) => EffectD
  * @param previous - Value returned by the matching `installActiveCollector()` call.
  */
 declare const restoreActiveCollector: (previous: EffectDescriptor[] | undefined) => void;
-export { CONTEXT_RETRY_DELAY, DEPENDENCY_TIMEOUT, getSignals, installActiveCollector, internalsHosts, internalsMap, pushDescriptor, restoreActiveCollector, retainedInitializers, withCollector, };
+/**
+ * Checks whether an `ElementInternals` object is usable by the form machinery.
+ *
+ * `attachInternals()` throwing is already handled, but a *partial*
+ * implementation is worse than none: it succeeds and hands back an object
+ * whose `validity`/`validationMessage` are `undefined`, which then blows up
+ * in `createCell()` far from the cause (LT-150). Validate the surface the
+ * form extensions actually rely on, once, at acquisition.
+ *
+ * Only meaningful for a form-associated component: on any other element the
+ * form-related members of `ElementInternals` throw `NotSupportedError` by
+ * spec, so reading them as a health check would condemn every non-form
+ * component to the degradation path.
+ *
+ * @param internals - Return value of `attachInternals()`
+ * @param formAssociated - Whether the component is form-associated
+ * @returns True if the surface the component needs is present and callable
+ */
+declare const isUsableInternals: (internals: ElementInternals | null | undefined, formAssociated: boolean) => internals is ElementInternals;
+export { CONTEXT_RETRY_DELAY, DEPENDENCY_TIMEOUT, describeDescriptor, getSignals, installActiveCollector, internalsHosts, internalsMap, isUsableInternals, pushDescriptor, restoreActiveCollector, retainedInitializers, withCollector, };

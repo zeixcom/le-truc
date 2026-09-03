@@ -1,6 +1,66 @@
 import { valueString } from '@zeix/cause-effect'
 import { describeRoot, elementName } from './util'
 
+/* === Diagnostic Reporting === */
+
+/**
+ * Reports a whole-component connect failure that was contained instead of allowed to escape `connectedCallback`.
+ *
+ * Tier 2 of [ADR 0028](../adr/0028-tiered-error-surfacing.md): one broken
+ * component never takes the page's other components down, and that
+ * containment does not depend on which wrapper the host runtime happens to
+ * put around `connectedCallback`. The component degrades to its
+ * server-rendered markup, which is already the correct pre-JS state
+ * (ADR 0003) — this is a component that did not enhance, not a broken page.
+ *
+ * @since 3.0.0
+ * @param host - Component instance whose connect failed
+ * @param phase - What was running when it threw, for the DEV_MODE diagnostic
+ * @param error - The thrown value
+ */
+const reportConnectFailure = (
+	host: HTMLElement,
+	phase: string,
+	error: unknown,
+): void => {
+	if (process.env.DEV_MODE === 'true')
+		console.error(
+			`Connect failed in ${elementName(host)} while running ${phase}. The component keeps its server-rendered markup and does not enhance. Other components are unaffected.`,
+			error,
+		)
+	else console.error(`Connect failed in ${elementName(host)}:`, error)
+}
+
+/**
+ * Reports a single effect descriptor that threw while activating.
+ *
+ * Activation is contained per descriptor (ADR 0028 sub-design 3), so the
+ * component's other effects still activate — which means the diagnostic has
+ * to name *which* effect failed, or a partially enhanced component is not
+ * debuggable.
+ *
+ * @since 3.0.0
+ * @param host - Component instance the descriptor belongs to
+ * @param descriptor - Description of the failing effect, e.g. `"watch()"`
+ * @param error - The thrown value
+ */
+const reportEffectFailure = (
+	host: HTMLElement,
+	descriptor: string,
+	error: unknown,
+): void => {
+	if (process.env.DEV_MODE === 'true')
+		console.error(
+			`${descriptor} failed to activate in ${elementName(host)}. This effect does not run; the component's other effects are unaffected.`,
+			error,
+		)
+	else
+		console.error(
+			`${descriptor} failed to activate in ${elementName(host)}:`,
+			error,
+		)
+}
+
 /* === Error Classes === */
 
 /**
@@ -226,6 +286,36 @@ class InvalidSelectorError extends TypeError {
 	}
 }
 
+/**
+ * Error thrown when `safeSetAttribute()` blocks an attribute write.
+ *
+ * Two conditions, both of which fire on runtime *data* rather than on source
+ * shape, so neither is decidable by the compiler (ADR 0028 inventory): an
+ * attribute name starting with `on`, and a value using an unsafe URL protocol
+ * ([M16](../REQUIREMENTS.md#m16-security-validation-in-setattribute),
+ * [ADR 0009](../adr/0009-security-validation-in-bindattribute.md)).
+ *
+ * The security guarantee is that the `setAttribute` does not happen — not
+ * that the throw escapes — so this is Tier 2 and contained like any other
+ * activation failure.
+ *
+ * @since 3.0.0
+ */
+class UnsafeAttributeError extends TypeError {
+	/**
+	 * @param element - Element the attribute was to be set on
+	 * @param attr - Attribute name
+	 * @param reason - Why the write was blocked
+	 * @param value - Attribute value, when the value is what was unsafe
+	 */
+	constructor(element: Element, attr: string, reason: string, value?: string) {
+		super(
+			`Blocked unsafe setAttribute('${attr}') on ${elementName(element)}: ${reason}${value !== undefined ? ` Got '${value}'.` : ''}`,
+		)
+		this.name = 'UnsafeAttributeError'
+	}
+}
+
 export {
 	DependencyTimeoutError,
 	ExtensionCollisionError,
@@ -238,4 +328,7 @@ export {
 	InvalidTemplateError,
 	MissingElementError,
 	NoActiveCollectorError,
+	reportConnectFailure,
+	reportEffectFailure,
+	UnsafeAttributeError,
 }

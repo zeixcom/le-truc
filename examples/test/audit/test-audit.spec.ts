@@ -8,11 +8,12 @@ import { expect, test } from '@playwright/test'
  * runtime isReservedWord guard must throw InvalidPropertyNameError before
  * Object.defineProperty can corrupt the host prototype chain.
  *
- * NOTE on assertion strategy: custom-element lifecycle callbacks
- * (connectedCallback) run inside the browser's "custom element reactions"
- * internal slot, which reports exceptions via the global error handler
- * (pageerror) rather than re-throwing synchronously to the appendChild caller.
- * So the throw is observed via the `pageerror` listener, not via try/catch.
+ * NOTE on assertion strategy: since ADR 0028 the throw never leaves
+ * `connectedCallback` — it is contained and reported through `console.error`
+ * (Tier 2). So the failure is observed on the `console` channel, not via
+ * `pageerror` and not via try/catch. The guarantee under test is unchanged:
+ * the guard runs BEFORE `Object.defineProperty`, so the prototype chain is
+ * protected by the ordering, not by the throw escaping.
  */
 test.describe('Reserved-word runtime guard', () => {
 	test.beforeEach(async ({ page }) => {
@@ -22,11 +23,15 @@ test.describe('Reserved-word runtime guard', () => {
 		await page.waitForSelector('#anchor', { state: 'attached' })
 	})
 
-	test('emits InvalidPropertyNameError when a reserved name reaches expose()', async ({
+	test('reports InvalidPropertyNameError when a reserved name reaches expose()', async ({
 		page,
 	}) => {
-		const errors: string[] = []
-		page.on('pageerror', err => errors.push(`${err.name}:${err.message}`))
+		const logs: string[] = []
+		const pageErrors: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') logs.push(msg.text())
+		})
+		page.on('pageerror', err => pageErrors.push(`${err.name}:${err.message}`))
 
 		await page.evaluate(() => {
 			const el = document.createElement('audit-reserved-word')
@@ -35,19 +40,23 @@ test.describe('Reserved-word runtime guard', () => {
 		// Give the reaction a tick to flush.
 		await page.waitForTimeout(100)
 
-		const match = errors.find(e => e.startsWith('InvalidPropertyNameError:'))
+		const match = logs.find(e => e.includes('InvalidPropertyNameError'))
 		expect(
 			match,
-			`expected InvalidPropertyNameError, got: ${errors.join(' | ')}`,
+			`expected InvalidPropertyNameError on console, got: ${logs.join(' | ')}`,
 		).toBeTruthy()
-		expect(match).toContain('constructor')
+		// Contained, not escaped — one broken component must not surface as a
+		// page-level error (ADR 0028 Tier 2).
+		expect(pageErrors).toHaveLength(0)
 	})
 
-	test('error names the component and the offending property', async ({
+	test('the report names the component and the offending property', async ({
 		page,
 	}) => {
-		const errors: string[] = []
-		page.on('pageerror', err => errors.push(err.message))
+		const logs: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') logs.push(msg.text())
+		})
 
 		await page.evaluate(() => {
 			const el = document.createElement('audit-reserved-word')
@@ -55,8 +64,8 @@ test.describe('Reserved-word runtime guard', () => {
 		})
 		await page.waitForTimeout(100)
 
-		const msg = errors.find(e => e.includes('audit-reserved-word'))
-		expect(msg, `errors: ${errors.join(' | ')}`).toBeTruthy()
+		const msg = logs.find(e => e.includes('audit-reserved-word'))
+		expect(msg, `console errors: ${logs.join(' | ')}`).toBeTruthy()
 		expect(msg).toContain('audit-reserved-word')
 		expect(msg).toContain('constructor')
 		expect(msg).toContain('reserved word')
@@ -65,9 +74,10 @@ test.describe('Reserved-word runtime guard', () => {
 	test('the reserved property is NOT installed as an own accessor on the host', async ({
 		page,
 	}) => {
-		// The guarantee: the prototype chain is not corrupted. Even though the
-		// browser swallows the reaction exception, the guard must throw BEFORE
-		// Object.defineProperty(this, 'constructor', …) runs.
+		// The guarantee: the prototype chain is not corrupted. The guard must
+		// throw BEFORE Object.defineProperty(this, 'constructor', …) runs —
+		// the ordering is what protects it, which is why containing the throw
+		// costs nothing (ADR 0028 inventory).
 		await page.evaluate(() => {
 			const el = document.createElement('audit-reserved-word')
 			document.body.appendChild(el)
@@ -95,6 +105,9 @@ test.describe('Reserved-word runtime guard', () => {
 		// and initialize its props.
 		const errors: string[] = []
 		page.on('pageerror', err => errors.push(err.name))
+		page.on('console', msg => {
+			if (msg.type() === 'error') errors.push(msg.text())
+		})
 
 		const ok = await page.evaluate(() => {
 			const el = document.createElement('test-expose') // registered, safe props

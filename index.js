@@ -2017,6 +2017,19 @@ var elementName = (el) => {
 var describeRoot = (parent) => typeof ShadowRoot !== "undefined" && parent instanceof ShadowRoot ? `${elementName(parent.host)} shadow root` : typeof Element !== "undefined" && parent instanceof Element ? elementName(parent) : "document";
 
 // src/errors.ts
+var reportConnectFailure = (host, phase, error) => {
+  if (false)
+    ;
+  else
+    console.error(`Connect failed in ${elementName(host)}:`, error);
+};
+var reportEffectFailure = (host, descriptor, error) => {
+  if (false)
+    ;
+  else
+    console.error(`${descriptor} failed to activate in ${elementName(host)}:`, error);
+};
+
 class InvalidComponentNameError extends TypeError {
   constructor(component) {
     super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
@@ -2096,6 +2109,13 @@ class InvalidSelectorError extends TypeError {
   }
 }
 
+class UnsafeAttributeError extends TypeError {
+  constructor(element, attr, reason, value) {
+    super(`Blocked unsafe setAttribute('${attr}') on ${elementName(element)}: ${reason}${value !== undefined ? ` Got '${value}'.` : ""}`);
+    this.name = "UnsafeAttributeError";
+  }
+}
+
 // src/internal.ts
 var DEPENDENCY_TIMEOUT = 200;
 var CONTEXT_RETRY_DELAY = DEPENDENCY_TIMEOUT + 10;
@@ -2124,7 +2144,24 @@ var withCollector = (collector, fn) => {
 var pushDescriptor = (host, helper, descriptor) => {
   if (!activeCollector)
     throw new NoActiveCollectorError(host, helper);
+  descriptorHelpers.set(descriptor, helper);
   activeCollector.push(descriptor);
+};
+var descriptorHelpers = new WeakMap;
+var describeDescriptor = (descriptor) => {
+  const helper = descriptorHelpers.get(descriptor);
+  return helper ? `${helper}()` : "A hand-authored effect descriptor";
+};
+var isUsableInternals = (internals, formAssociated) => {
+  if (internals == null)
+    return false;
+  if (!formAssociated)
+    return true;
+  try {
+    return internals.validity != null && internals.validationMessage != null && isFunction(internals.setFormValue) && isFunction(internals.setValidity);
+  } catch {
+    return false;
+  }
 };
 
 // src/scheduler.ts
@@ -2229,10 +2266,10 @@ var isSafeURL = (value) => {
 };
 var safeSetAttribute = (element, attr, value) => {
   if (/^on/i.test(attr))
-    throw new Error(`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`);
+    throw new UnsafeAttributeError(element, attr, "event handler attributes are not allowed.");
   value = String(value).trim();
   if (!isSafeURL(value))
-    throw new Error(`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`);
+    throw new UnsafeAttributeError(element, attr, "the value uses an unsafe URL protocol. Allowed: http, https, ftp, mailto, tel.", value);
   element.setAttribute(attr, value);
 };
 var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -2748,12 +2785,20 @@ var makeElementQueries = (host) => {
 };
 
 // src/helpers/reactive.ts
-var activateResult = (result) => {
+var activateResult = (result, onError) => {
   for (const descriptor of result) {
     if (Array.isArray(descriptor))
-      activateResult(descriptor);
-    else if (descriptor)
-      descriptor();
+      activateResult(descriptor, onError);
+    else if (descriptor) {
+      if (!onError)
+        descriptor();
+      else
+        try {
+          descriptor();
+        } catch (error) {
+          onError(error, descriptor);
+        }
+    }
   }
 };
 var forEachUnseen = (result, seen, visit) => {
@@ -3206,10 +3251,17 @@ function defineComponent(name, factory, extensions) {
     #setup = [];
     #cleanup;
     #internalsAccessed = false;
+    #connectFailed = false;
+    #reportedFailures;
     constructor() {
       super();
       try {
         const internals = this.attachInternals();
+        if (!isUsableInternals(internals, this.constructor.formAssociated)) {
+          internalsMap.set(this, null);
+          if (false) {}
+          return;
+        }
         internalsMap.set(this, internals);
         internalsHosts.set(internals, this);
         elementInternalsRegistry().set(this, internals);
@@ -3218,13 +3270,22 @@ function defineComponent(name, factory, extensions) {
       }
     }
     connectedCallback() {
+      const onDescriptorError = (error, descriptor) => {
+        const reported = this.#reportedFailures ??= new WeakSet;
+        if (reported.has(descriptor))
+          return;
+        reported.add(descriptor);
+        reportEffectFailure(this, describeDescriptor(descriptor), error);
+      };
       const runSetup = () => {
         this.#cleanup = createScope(() => {
-          activateResult(this.#setup);
+          activateResult(this.#setup, onDescriptorError);
         }, {
           root: true
         });
       };
+      if (this.#connectFailed)
+        return;
       if (this.#initialized) {
         if (isFunction(this.#cleanup))
           this.#cleanup();
@@ -3249,18 +3310,34 @@ function defineComponent(name, factory, extensions) {
           requestContext: makeRequestContext(host)
         };
         const collector = [];
-        const result = withCollector(collector, () => factory(context));
-        this.#setup = collector;
-        if (result) {
-          const seen = new Set(collector);
-          forEachUnseen(result, seen, (d) => this.#setup.push(d));
+        const failConnect = (phase, error) => {
+          this.#setup = [];
+          this.#initialized = true;
+          this.#connectFailed = true;
+          reportConnectFailure(this, phase, error);
+        };
+        try {
+          const result = withCollector(collector, () => factory(context));
+          this.#setup = collector;
+          if (result) {
+            const seen = new Set(collector);
+            forEachUnseen(result, seen, (d) => this.#setup.push(d));
+          }
+        } catch (error) {
+          failConnect("the component factory", error);
+          return;
         }
         const internals = internalsMap.get(this) ?? null;
         for (const ext of exts) {
-          const extra = ext.onConnect?.(this, internals);
-          if (extra) {
-            const seen = new Set(this.#setup);
-            forEachUnseen(extra, seen, (d) => this.#setup.push(d));
+          try {
+            const extra = ext.onConnect?.(this, internals);
+            if (extra) {
+              const seen = new Set(this.#setup);
+              forEachUnseen(extra, seen, (d) => this.#setup.push(d));
+            }
+          } catch (error) {
+            failConnect(`the '${ext.name}' extension`, error);
+            return;
           }
         }
         this.#initialized = true;
@@ -3768,6 +3845,7 @@ export {
   asBoolean,
   abort,
   UnsetSignalValueError,
+  UnsafeAttributeError,
   UnresolvableKeyError,
   SKIP_EQUALITY,
   RequiredOwnerError,

@@ -8,7 +8,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { defineComponent } from '../component'
-import { ExtensionCollisionError } from '../errors'
+import { ExtensionCollisionError, InvalidPropertyNameError } from '../errors'
 import type { ComponentExtension } from '../extension'
 import { observedAttributes } from '../extensions/attributes'
 import { asParser } from '../types'
@@ -119,7 +119,18 @@ describe('extension composition', () => {
 			[a, b],
 		)!
 		const instance = new Ctor() as any
-		expect(() => instance.connectedCallback()).toThrow()
+		// Both names are reserved, so exposing 'foo' collides. Contained and
+		// reported rather than thrown (ADR 0028 Tier 2).
+		const originalError = console.error
+		const calls: unknown[][] = []
+		console.error = (...args: unknown[]) => calls.push(args)
+		try {
+			expect(() => instance.connectedCallback()).not.toThrow()
+		} finally {
+			console.error = originalError
+		}
+		expect(calls).toHaveLength(1)
+		expect(calls[0]?.[1]).toBeInstanceOf(InvalidPropertyNameError)
 	})
 })
 

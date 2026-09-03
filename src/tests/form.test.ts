@@ -211,6 +211,95 @@ class FakeHTMLElementNoInternals extends FakeHTMLElement {
 	}
 }
 
+/**
+ * FakeHTMLElement whose `attachInternals()` *succeeds* but hands back a
+ * skeletal object: `validity` and `validationMessage` are `undefined`.
+ *
+ * This is jsdom 30's shape, and the case that defeats the constructor's
+ * `catch` — nothing throws, so the guard for exactly this situation never
+ * fires and `createCell(internals.validationMessage)` blows up far from the
+ * cause (LT-150). Half-implemented internals are worse than none.
+ */
+class FakeHTMLElementSkeletalInternals extends FakeHTMLElement {
+	attachInternals(): FakeElementInternals {
+		return {
+			states: new Set<string>(),
+			setFormValue() {},
+			setValidity() {},
+		} as unknown as FakeElementInternals
+	}
+}
+
+/**
+ * FakeHTMLElement whose internals has both accessors but is missing
+ * `setFormValue` — the other half of the "callable surface" check.
+ */
+class FakeHTMLElementPartialInternals extends FakeHTMLElement {
+	attachInternals(): FakeElementInternals {
+		return {
+			validity: { valid: true },
+			validationMessage: '',
+			states: new Set<string>(),
+			setValidity() {},
+		} as unknown as FakeElementInternals
+	}
+}
+
+/**
+ * FakeHTMLElement whose internals throws on every form-related member, which
+ * is what the spec mandates for a custom element that is *not*
+ * form-associated (`NotSupportedError`). Reading `validity` as a health check
+ * would therefore condemn every ordinary component to the degradation path —
+ * caught by the `:state(debug)` browser tests when LT-150's check was first
+ * written ungated.
+ */
+class FakeHTMLElementSpecInternals extends FakeHTMLElement {
+	attachInternals(): FakeElementInternals {
+		return {
+			states: new Set<string>(),
+			get validity(): never {
+				throw new DOMException(
+					'NotSupportedError',
+					'not a form-associated custom element',
+				)
+			},
+			get validationMessage(): never {
+				throw new DOMException(
+					'NotSupportedError',
+					'not a form-associated custom element',
+				)
+			},
+		} as unknown as FakeElementInternals
+	}
+}
+
+/** Swallows console.error for the duration of `fn` and returns what it saw. */
+const captureErrors = <T>(fn: () => T): { calls: unknown[][]; result: T } => {
+	const originalError = console.error
+	const calls: unknown[][] = []
+	console.error = (...args: unknown[]) => calls.push(args)
+	try {
+		return { calls, result: fn() }
+	} finally {
+		console.error = originalError
+	}
+}
+
+/**
+ * Asserts a connect-time collision is reported through the contained channel
+ * rather than thrown (ADR 0028 Tier 2). The guard's job is that the colliding
+ * initializer is never installed; the throw escaping was never the guarantee.
+ */
+const expectContainedCollision = (instance: {
+	connectedCallback: () => void
+}): void => {
+	const { calls } = captureErrors(() => {
+		expect(() => instance.connectedCallback()).not.toThrow()
+	})
+	expect(calls).toHaveLength(1)
+	expect(calls[0]?.[1]).toBeInstanceOf(InvalidPropertyNameError)
+}
+
 const registry = new Map<string, CustomElementConstructor>()
 
 const installFakeCustomElements = (base?: typeof FakeHTMLElement) => {
@@ -473,8 +562,7 @@ describe('managed defaultValue', () => {
 			},
 			[formAssociated()],
 		)!
-		const instance = new Ctor() as any
-		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
+		expectContainedCollision(new Ctor() as any)
 	})
 })
 
@@ -1046,7 +1134,7 @@ describe('native-parity host contract', () => {
 /* === Managed-name collision guard === */
 
 describe('managed-name collision guard', () => {
-	test('throws InvalidPropertyNameError when exposing a managed member name', () => {
+	test('reports InvalidPropertyNameError when exposing a managed member name', () => {
 		const Ctor = defineComponent<Record<string, NonNullable<unknown>>>(
 			uniqueName(),
 			({ expose }) => {
@@ -1054,11 +1142,10 @@ describe('managed-name collision guard', () => {
 			},
 			[formAssociated()],
 		)!
-		const instance = new Ctor() as any
-		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
+		expectContainedCollision(new Ctor() as any)
 	})
 
-	test('throws for disabled specifically', () => {
+	test('reports for disabled specifically', () => {
 		const Ctor = defineComponent<Record<string, NonNullable<unknown>>>(
 			uniqueName(),
 			({ expose }) => {
@@ -1066,8 +1153,7 @@ describe('managed-name collision guard', () => {
 			},
 			[formAssociated()],
 		)!
-		const instance = new Ctor() as any
-		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
+		expectContainedCollision(new Ctor() as any)
 	})
 
 	test('value is the deliberate exception — exposing it is required', () => {
@@ -1129,6 +1215,96 @@ describe('internals on FactoryContext', () => {
 		const instance = new Ctor() as any
 		expect(() => instance.connectedCallback()).not.toThrow()
 		expect(capturedInternals).toBe(null)
+	})
+
+	test('is null when attachInternals returns skeletal internals (LT-150)', () => {
+		// The regression: jsdom 30 returns an object whose validity and
+		// validationMessage are undefined. Before LT-150 this reached
+		// createManagedProperties and threw NullishSignalValueError, once per
+		// form-associated element, from inside connectedCallback.
+		installFakeCustomElements(FakeHTMLElementSkeletalInternals)
+		let capturedInternals: unknown = 'unset'
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, internals }) => {
+				expose({ value: '' })
+				capturedInternals = internals
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).not.toThrow()
+		expect(capturedInternals).toBe(null)
+	})
+
+	test('is null when the internals surface is only partially callable (LT-150)', () => {
+		installFakeCustomElements(FakeHTMLElementPartialInternals)
+		let capturedInternals: unknown = 'unset'
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, internals }) => {
+				expose({ value: '' })
+				capturedInternals = internals
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).not.toThrow()
+		expect(capturedInternals).toBe(null)
+	})
+
+	test('skeletal internals take the same degradation path as a throw — the form machinery stays off (LT-150)', () => {
+		installFakeCustomElements(FakeHTMLElementSkeletalInternals)
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'x' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		// formAssociated()'s onConnect returns early on null internals, so the
+		// managed signals were never installed and the host contract serves
+		// its documented fallbacks instead.
+		expect(instance.validationMessage).toBe('')
+		expect(instance.validity.valid).toBe(true)
+		expect(instance.willValidate).toBe(false)
+		expect(instance.checkValidity()).toBe(true)
+		// The component itself still works.
+		expect(instance.value).toBe('x')
+	})
+
+	test('a fully implemented internals still enables the form machinery (LT-150 specificity)', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'x' })
+			},
+			[formAssociated()],
+		)!
+		const instance = new Ctor() as any
+		instance.connectedCallback()
+		const internals = instance.attachInternals() as FakeElementInternals
+		expect(internals.formValue).toBe('x')
+		expect(instance.willValidate).toBe(true)
+	})
+
+	test('a non-form-associated component keeps its internals even though the form members throw (LT-150)', () => {
+		installFakeCustomElements(FakeHTMLElementSpecInternals)
+		let capturedInternals: unknown = 'unset'
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, internals }) => {
+				expose({ value: '' })
+				capturedInternals = internals
+			},
+			// Deliberately no formAssociated() — nothing reads validity here,
+			// and custom states / ARIA reflection must keep working.
+		)!
+		const instance = new Ctor() as any
+		expect(() => instance.connectedCallback()).not.toThrow()
+		expect(capturedInternals).not.toBe(null)
 	})
 
 	test('internals can be used imperatively for typed validity flags', () => {
@@ -1538,10 +1714,7 @@ describe('formAssociatedCheckbox() shares the generic managed layer', () => {
 			},
 			[formAssociatedCheckbox()],
 		)
-		expect(() => {
-			const instance = new Ctor!() as any
-			instance.connectedCallback()
-		}).toThrow(InvalidPropertyNameError)
+		expectContainedCollision(new Ctor!() as any)
 	})
 
 	test('combining with formAssociated() throws ExtensionCollisionError in DEV_MODE', () => {
