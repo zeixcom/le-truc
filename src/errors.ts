@@ -97,7 +97,7 @@ class InvalidPropertyNameError extends TypeError {
 	 */
 	constructor(component: string, prop: string, reason: string) {
 		super(
-			`Invalid property name "${prop}" for component <${component}>. ${reason} Rename the reactive property in expose(). The compiler checks expose() keys as TSRX028.`,
+			`Invalid property name "${prop}" for component <${component}>. ${reason}`,
 		)
 		this.name = 'InvalidPropertyNameError'
 	}
@@ -106,10 +106,6 @@ class InvalidPropertyNameError extends TypeError {
 /**
  * Error thrown when a required descendant element does not exist in a queried
  * root's DOM subtree.
- *
- * The one content-dependent error in the set (ADR 0028 inventory): it fires on
- * markup drift, not on bad source, so `TSRX026`/`TSRX040` cover the authored
- * case and this covers markup that changed after the server rendered it.
  *
  * @since 0.14.0
  */

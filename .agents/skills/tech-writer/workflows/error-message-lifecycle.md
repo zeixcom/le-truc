@@ -24,9 +24,9 @@ Where the fix genuinely depends on information the builder does not have, name t
 
 ### 2. Name the paired rule
 
-A runtime message whose condition has a compiler rule **must name that rule's code**, so a reader who hits the backstop learns the check exists upstream (ADR 0028 sub-design 1 — the runtime is a backstop, not the notification). The reverse cross-reference belongs on the compiler side: a `TSRX0NN` message whose condition also throws at connect names the runtime class.
+A runtime message whose condition has a compiler rule **must not name that rule's code**. TSRX is not the only way to author Le Truc components, and for a no-build setup the compiler message would be non-actionable noise. Instead, [errors.md](../../le-truc/references/errors.md) in Le Truc skills a tells agents that hit the backstop about the TSRX compiler check upstream (ADR 0028 sub-design 1 — the runtime is a backstop, not the notification).
 
-If a condition has no compiler channel, say why in the JSDoc — "fires on runtime data, not source shape", "TypeScript covers this" — so the next reader does not re-litigate it.
+The reverse cross-reference belongs on the compiler side: a `TSRX0NN` message whose condition also throws at connect names the runtime error class.
 
 ### 3. Do not imply a Tier 2 failure broke the page
 
