@@ -136,6 +136,21 @@ Sharing the directory also HIDES bugs, not just causes flakes: two tests were pa
 artifacts a previous `build-tsrx` had left behind, asserting over modules they never compiled.
 If a test needs a module it does not itself emit, emit it explicitly.
 
+### Server Simulation driver tests
+
+`server/tests/tsrx/sim-realm.test.ts` covers `server/tsrx/sim/` (ADR 0027, LT-151). It defines
+its components **inline through the realm's recording registry** rather than importing generated
+modules, so it needs neither `server/generated/` nor a `createGeneratedDir()`. Two things to know
+when extending it:
+
+- The realm patches `globalThis` (`document`, `HTMLElement`, `customElements`, `fetch`, …) for
+  its lifetime, and `bun test` shares one process. Always take a realm through the file's
+  `withRealm()` helper so `afterEach` disposes it; a leaked realm leaves DOM globals installed
+  for every later test file.
+- Cross-runtime equivalence is **not** a unit test — it needs a second and third process. Run
+  `bun run check:sim`, which reports which runtimes it found and exits non-zero if their
+  serialized HTML differs.
+
 ---
 
 ## Verification Processes
