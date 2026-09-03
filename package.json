@@ -75,6 +75,7 @@
 		"verify:cem": "bun run scripts/verify-cem.ts",
 		"check:tsrx": "bun run scripts/check-tsrx.ts",
 		"check:sim": "bun run scripts/sim-portability-check.ts",
+		"eval:substrate": "bun run scripts/substrate-evaluation.ts",
 		"build:tsrx:browser": "bun run scripts/build-tsrx-browser.ts"
 	},
 	"dependencies": {
