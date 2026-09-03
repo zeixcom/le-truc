@@ -2021,53 +2021,53 @@ var reportConnectFailure = (host, phase, error) => {
   if (false)
     ;
   else
-    console.error(`Connect failed in ${elementName(host)}:`, error);
+    console.error(`${elementName(host)} did not enhance and keeps its server-rendered markup:`, error);
 };
 var reportEffectFailure = (host, descriptor, error) => {
   if (false)
     ;
   else
-    console.error(`${descriptor} failed to activate in ${elementName(host)}:`, error);
+    console.error(`${descriptor} did not activate in ${elementName(host)}; its other effects are unaffected:`, error);
 };
 
 class InvalidComponentNameError extends TypeError {
   constructor(component) {
-    super(`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`);
+    super(`Invalid component name "${component}". Rename the custom element to contain a hyphen, start with a lowercase letter, and use only lowercase letters, numbers, and hyphens.`);
     this.name = "InvalidComponentNameError";
   }
 }
 
 class InvalidPropertyNameError extends TypeError {
   constructor(component, prop, reason) {
-    super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
+    super(`Invalid property name "${prop}" for component <${component}>. ${reason} Rename the reactive property in expose(). The compiler checks expose() keys as TSRX028.`);
     this.name = "InvalidPropertyNameError";
   }
 }
 
 class MissingElementError extends Error {
   constructor(root, selector, required, contextLabel = "component") {
-    super(`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`);
+    super(`Missing required element \`${selector}\` in ${contextLabel} ${describeRoot(root)}. ${required}`);
     this.name = "MissingElementError";
   }
 }
 
 class DependencyTimeoutError extends Error {
   constructor(host, missing) {
-    super(`Timeout waiting for: [${missing.join(", ")}] in component ${elementName(host)}.`);
+    super(`Timeout waiting for [${missing.join(", ")}] in component ${elementName(host)}. Make sure each one is a Le Truc component or registered with customElements.define().`);
     this.name = "DependencyTimeoutError";
   }
 }
 
 class InvalidReactivesError extends TypeError {
   constructor(host, target, reactives) {
-    super(`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString(reactives)}.`);
+    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}. Expected an object literal of thunks (read-only) or \`{ get, set }\` descriptors (read-write), got ${valueString(reactives)}.`);
     this.name = "InvalidReactivesError";
   }
 }
 
 class InvalidCustomElementError extends TypeError {
   constructor(target, where) {
-    super(`Target ${elementName(target)} is not a custom element in ${where}.`);
+    super(`${elementName(target)} is not a custom element in ${where}. The target of pass() must be a Le Truc component.`);
     this.name = "InvalidCustomElementError";
   }
 }
@@ -2075,7 +2075,7 @@ class InvalidCustomElementError extends TypeError {
 class InvalidPassPropertyError extends TypeError {
   constructor(host, target, reasons) {
     const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
-    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`);
+    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}. Nothing was swapped. Expose each of the target properties from a mutable initializer on ${elementName(target)} (a value, a Parser, or a \`{ get, set }\` descriptor).`);
     this.name = "InvalidPassPropertyError";
   }
 }
@@ -2097,7 +2097,7 @@ class InvalidTemplateError extends TypeError {
 
 class ExtensionCollisionError extends Error {
   constructor(component, key, first, second) {
-    super(`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`);
+    super(`Extension collision for component <${component}>: '${first}' and '${second}' both declare the staticProps key "${key}". The '${second}' declaration is ignored.`);
     this.name = "ExtensionCollisionError";
   }
 }
@@ -2266,10 +2266,10 @@ var isSafeURL = (value) => {
 };
 var safeSetAttribute = (element, attr, value) => {
   if (/^on/i.test(attr))
-    throw new UnsafeAttributeError(element, attr, "event handler attributes are not allowed.");
+    throw new UnsafeAttributeError(element, attr, "event handler attributes are not allowed. Attach the listener with on() instead.");
   value = String(value).trim();
   if (!isSafeURL(value))
-    throw new UnsafeAttributeError(element, attr, "the value uses an unsafe URL protocol. Allowed: http, https, ftp, mailto, tel.", value);
+    throw new UnsafeAttributeError(element, attr, "the value uses an unsafe URL protocol (allowed: http, https, ftp, mailto, tel).", value);
   element.setAttribute(attr, value);
 };
 var escapeHTML = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -2891,7 +2891,7 @@ var makePass = (host) => {
       if (reactive == null)
         continue;
       if (!(prop in target)) {
-        failures.set(prop, `does not exist on ${targetName}`);
+        failures.set(prop, `is not a property of ${targetName}`);
         continue;
       }
       const signal = toSignal(host, reactive);
@@ -2902,7 +2902,7 @@ var makePass = (host) => {
       if (false) {}
       const slot = signals[prop];
       if (!isSlot(slot)) {
-        failures.set(prop, `is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`);
+        failures.set(prop, `is not Slot-backed on ${targetName} (exposed read-only, or it is not a Le Truc component)`);
         continue;
       }
       bindings.push({ slot, signal });
@@ -3372,9 +3372,9 @@ function defineComponent(name, factory, extensions) {
         if (initializer == null)
           continue;
         if (isReservedWord(prop))
-          throw new InvalidPropertyNameError(this.localName, prop, "reserved word or Object builtin — cannot be used as a reactive property");
+          throw new InvalidPropertyNameError(this.localName, prop, "It is a reserved word or object builtin, so defining an accessor for it would shadow an inherited member.");
         if (merged.reservedMembers.has(prop)) {
-          let reason = "is a member reserved by an extension";
+          let reason = "It is a member reserved by an extension.";
           if (false)
             ;
           throw new InvalidPropertyNameError(this.localName, prop, reason);

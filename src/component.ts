@@ -486,15 +486,15 @@ function defineComponent<P extends ComponentProps>(
 					throw new InvalidPropertyNameError(
 						this.localName,
 						prop,
-						'reserved word or Object builtin — cannot be used as a reactive property',
+						'It is a reserved word or object builtin, so defining an accessor for it would shadow an inherited member.',
 					)
 				// Extension-reserved names (e.g. form, name, labels, validity)
 				// are prototype-defined, so `prop in this` would otherwise
 				// silently skip the colliding initializer.
 				if (merged.reservedMembers.has(prop)) {
-					let reason = 'is a member reserved by an extension'
+					let reason = 'It is a member reserved by an extension.'
 					if (process.env.DEV_MODE === 'true')
-						reason += ` ('${merged.reservedMemberOwners.get(prop)}') — it is managed automatically and cannot be set via expose()`
+						reason = `It is a member reserved and managed automatically by the '${merged.reservedMemberOwners.get(prop)}' extension.`
 					throw new InvalidPropertyNameError(this.localName, prop, reason)
 				}
 				// Skip properties already set on the host (explicit DOM value wins).

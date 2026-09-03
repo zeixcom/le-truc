@@ -53,7 +53,12 @@ declare class InvalidPropertyNameError extends TypeError {
     constructor(component: string, prop: string, reason: string);
 }
 /**
- * Error thrown when a required descendant element does not exist in a queried root's DOM subtree
+ * Error thrown when a required descendant element does not exist in a queried
+ * root's DOM subtree.
+ *
+ * The one content-dependent error in the set (ADR 0028 inventory): it fires on
+ * markup drift, not on bad source, so `TSRX026`/`TSRX040` cover the authored
+ * case and this covers markup that changed after the server rendered it.
  *
  * @since 0.14.0
  */
@@ -105,7 +110,13 @@ declare class InvalidCustomElementError extends TypeError {
 }
 /**
  * Error thrown when `pass()` cannot bind one or more properties on the
- * target. See ADR 0011.
+ * target.
+ *
+ * Tier 2 ([ADR 0028](../adr/0028-tiered-error-surfacing.md), which supersedes
+ * ADR 0011): `TSRX012` decides the same question at compile time for a
+ * registry-known target, so this is the backstop for hand-authored and
+ * foreign custom elements. Validation is eager and the commit is atomic — a
+ * failure leaves the target exactly as it was.
  *
  * @since 2.0.4
  */

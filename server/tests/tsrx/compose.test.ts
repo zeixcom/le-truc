@@ -11,9 +11,13 @@ import { compileComponent } from '../../tsrx'
 import type { RegistryEntry } from '../../tsrx/registry'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 
+// `value` is exposed from a plain literal, i.e. Slot-backed (LT-158): the
+// parent fixtures below pass to it, and since TSRX012 now decides a pass
+// target's prop against the CHILD's own expose(), a child that exposed
+// nothing would make every one of them a compile error.
 const child = `export function BasicChild({ label }: { label: string })
 	@{
-		expose({})
+		expose({ value: '' })
 		<>
 			<basic-child>{label}</basic-child>
 			<style>basic-child { display: block }</style>

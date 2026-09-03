@@ -101,7 +101,7 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | Module | Size | Role | Intra-package imports |
 | --- | ---: | --- | --- |
 | `index.ts` | 133 | Public API; `compileComponent` pipeline assembly; flat re-exports | analysis/plan, compiler, diagnostics, emit-client, emit-server, registry, spans |
-| `compiler.ts` | 1375 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020) and `reportReactJsxNearMisses` (TSRX021–023, LT-054); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, walk |
+| `compiler.ts` | 1641 | Front end: `compileSource` (parsing, setup extraction), `collectComposeElements`; whole-module scans `reportLazyPatterns` (TSRX020), `reportReactJsxNearMisses` (TSRX021–023, LT-054) and `reportMalformedSelectors` (TSRX026, LT-157b); the component-body scan `reportDeferredCollectorCalls` (TSRX013, LT-157d); `classifyExposeInit` (`ExposeKind`, LT-158); post-lowering `first(selector, required)` resolution (LT-055, via `first-refs.ts`); reserved-word `expose()` keys (TSRX028, LT-157a); post-config `formAssociated()` checks `reportNamedFormControls` (TSRX029) and managed-member shadowing (TSRX028, LT-058/LT-059) | ast-utils, config, core, css, diagnostics, first-refs, imports, infer-type, ir (types), lower-template, selector-syntax, walk |
 | `ir.ts` | 548 | Pure type leaf: the whole IR vocabulary (`TemplateNode`, `AttributeIR`, `ComponentIR`, `SignalIR`, `ForIR`, `ConfigIR`, `ExtractContext`, …) | diagnostics (type), `@tsrx/core` (type) |
 | `core.ts` | 21 | The **only** `@tsrx/core` value-import leaf (`parseModule`, `isStyleElement`, `getStyleElementStylesheet`, `isTemplateForOfNode`, `isVoidElement`) | `@tsrx/core` (values) |
 | `walk.ts` | 102 | One structural `TemplateNode` visitor (`walkTemplate`, `childNodes`) + `collectAttrs` | ir (types) |
@@ -126,7 +126,8 @@ compilation) lives in the consumer, `server/effects/tsrx.ts`.
 | `css.ts` | 38 | `<style>` dedent | — (leaf) |
 | `diagnostics.ts` | 952 | Diagnostic codes TSRX001–042, message factories | — (leaf) |
 | `first-refs.ts` | 446 | `collectMatchingElements`/`shareExclusiveIf`/`matchesAuthoredSelectorOn` — structural matcher `first(selector, required)` resolution uses to find which template element(s) an author's selector refers to (LT-055), replacing `ref={}`; `namesCustomElementTag` is the compose-deferral test (LT-127); also `refBranchGuard`/`inOptionalBranch`, the ref-presence half of the fold rule (LT-118, § 5.4), and `reportStaticIds` (TSRX042, LT-131) | ir (types) |
-| `registry.ts` | 36 | `RegistryEntry` type + `registryJson` | — (leaf) |
+| `registry.ts` | 60 | `RegistryEntry` type (incl. `exposedProps`, the per-prop Slot-backedness `pass={{ }}` legality is decided against — LT-158) + `registryJson` | ir (type) |
+| `selector-syntax.ts` | 170 | `malformedSelectorReason` — conservative CSS selector *parse* validation for `first()`/`all()` (TSRX026, LT-157b). Deliberately one-sided: it reports only what no CSS parser accepts, never "cannot verify" | — (leaf) |
 | `runtime.ts` | 366 | Server-evaluation harness — imported **by generated code only**, never by the compiler | — (leaf) |
 | `smoke.ts` | 83 | Dev script: compile corpus, execute renders, print | analysis/plan, compiler, emit-client, emit-server |
 | `globals.d.ts` | 60 | Ambient vocabulary for editor surfaces; parity-tested against `ast-utils` | — |
@@ -304,7 +305,13 @@ needs them — not context fields — so each pass re-imports what it needs from
 - `SourceSpan` = `{ generatedStart, sourceStart, length }` — byte-identical in
   both files; `SourceSlice` / `SpanCursor` support recording during assembly.
 - `CompileDiagnostic` = `{ code: TSRX001–016, severity, message, line? }`.
-- `RegistryEntry` = `{ tag, name, source, serverModule, clientModule, css, propsType }`.
+- `RegistryEntry` = `{ tag, name, source, serverModule, clientModule, css, propsType, exposedProps }`.
+  `exposedProps` maps every `expose()` key to an `ExposeKind` — `'slot'` (plain
+  value, Parser, or `{ get, set }` descriptor: mutable, hence Slot-backed),
+  `'computed'` (`sig.get` or an arrow: read-only), `'method'` (`defineMethod()`).
+  It is what makes `pass={{ }}` legality decidable (LT-158, ADR 0028 § 6); note
+  that `expose({ x: sig.get })` is `'computed'` however mutable `sig` is,
+  because `#setAccessor` sees a bare function and wraps it in `deriveCell`.
 - `PlainImportIR` = `{ text, localNames, sideEffectOnly, start }`.
 - Runtime types: `ServerCell<T>` (read-once box), `ServerList<T>` (iterable box
   with cause-effect-parity key generation via `entries()`).
@@ -354,14 +361,24 @@ include both context-protocol primitives alongside `first`/`all`/`watch`/`on`/
 1. **Parse** via `core.ts`'s `parseModule` (the pinned `@tsrx/core`). A parse
    failure gets a newer-grammar hint (statement-form `switch`, `{html}`/
    `{text}`/`{ref}` keywords, setup `await`, `component`) naming what the
-   pinned 0.1.63 cannot parse.
+   pinned 0.1.63 cannot parse. Then `reportMalformedSelectors` (TSRX026,
+   LT-157b) scans the whole module for `first()`/`all()` string-literal
+   selectors that no CSS parser would accept — whole-module because `all()` is
+   legitimately called from event handlers and `defineMethod()` bodies, which
+   the setup loop never sees.
 2. **Compose imports** (`parseComposeImports`, `imports.ts`): named imports of
    sibling `.tsrx` modules → local name → repo-relative path map.
 3. **Plain imports** (`parsePlainImports`, `imports.ts`): every other top-level
    import, with relative specifiers rewritten for the flat generated directory.
 4. **Locate the exported component function** whose body is an `@{ }`
    (`JSXCodeBlock`) container. Exactly one; single destructured args object;
-   otherwise TSRX008.
+   `async` is rejected outright (TSRX008, LT-157d — neither half of the
+   isomorphic pair can honour it: the server render function would stringify a
+   Promise, and the client factory's effect collector is only active for the
+   duration of the call). Then `reportDeferredCollectorCalls` (TSRX013,
+   LT-157d) walks the body, flagging a `watch`/`on`/`pass`/`provideContexts`/
+   `each`/`reconcile` call nested inside a function — the collector is gone by
+   the time a callback runs.
 5. **Setup loop** over the body statements, classifying each:
    - single `const` → `SetupStmt`; if the initializer calls a recognized signal
      constructor → `SignalIR` (+ `inferType`); `requestContext(...)` is
@@ -370,7 +387,10 @@ include both context-protocol primitives alongside `first`/`all`/`watch`/`on`/
      `watch`/`on`/`pass`/`requestContext`/`provideContexts`) → TSRX013.
    - `expose(...)` → verbatim text + span; scan its object for `.get` members
      (`exposeProps`), parser-factory calls (`parserExposeProps`, `exposeAmbients`),
-     `defineMethod`; collect context refs.
+     `defineMethod`; classify every key's initializer into `exposeKinds`
+     (`classifyExposeInit`, LT-158); collect context refs. A key that is a
+     reserved word or `Object` builtin → TSRX028 (LT-157a), ungated — unlike
+     the managed-form-member branch of the same code.
    - bare expression statement whose free names are all client-known →
      `clientSetup` (LT-008; `provideContexts([...])` included).
    - anything else → TSRX005.
@@ -521,7 +541,10 @@ Builds one `AnalysisContext` (§ 4.2) and runs the four passes over it in order:
     camelCased tag as query name, `emitConstructEffects` (reactive attr with
     custom-element gate TSRX012 / property dispatch for host-prop mirrors and
     dirty-flag control attrs (§4.2, LT-116), pass with
-    registry gate TSRX012, class/style maps, events, lazy children with
+    registry gate TSRX012 and — LT-158 — a per-prop check against the TARGET
+    entry's `exposedProps` (`checkPassEntries`, silent for a target with no
+    entry, which keeps the Tier 2 runtime backstop for hand-written and
+    foreign children), class/style maps, events, lazy children with
     managed form prop gate TSRX010; since LT-115 a lazy text child must be
     its element's sole content — multiple lazy children and static/element
     sibling mixes are TSRX005, the LT-114 root gate mirrored onto the nested

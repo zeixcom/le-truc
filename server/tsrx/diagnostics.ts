@@ -22,8 +22,8 @@ export type DiagnosticCode =
 	| 'TSRX009' // invalid `export const config` extension declaration
 	| 'TSRX010' // managed form prop used without formAssociated
 	| 'TSRX011' // composed (PascalCase) element with no resolvable .tsrx import
-	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target
-	| 'TSRX013' // signal declared with a conditionally-chosen constructor, or a client-only primitive called from a plain setup const
+	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target, incl. per-prop Slot-backedness (LT-158)
+	| 'TSRX013' // signal declared with a conditionally-chosen constructor, or a client-only primitive called from a plain setup const or a deferred callback
 	| 'TSRX014' // plain (non-.tsrx) import whose bindings are never used anywhere the compiler can place them
 	| 'TSRX015' // requestContext() called with other than exactly two arguments
 	| 'TSRX016' // requestContext()'s fallback argument is not server-known
@@ -36,12 +36,12 @@ export type DiagnosticCode =
 	| 'TSRX023' // React `.map()` producing JSX in child position
 	| 'TSRX024' // React `return (<>…</>)` render idiom in setup position
 	| 'TSRX025' // malformed first() element-reference call
-	| 'TSRX026' // first() selector matches no element, or uses unverifiable syntax
+	| 'TSRX026' // first()/all() selector matches no element, uses unverifiable syntax, or is malformed
 	| 'TSRX027' // first() selector matches multiple, non-mutually-exclusive elements
-	| 'TSRX028' // expose() names a member managed by formAssociated()/formAssociatedCheckbox()
+	| 'TSRX028' // expose() names a member it cannot: managed by formAssociated(), or a reserved word
 	| 'TSRX029' // a form-associated component's inner control carries a name
 	| 'TSRX030' // <textarea value={…}> — textarea has no value content attribute
-	| 'TSRX031' // client-construct attribute present on one @if/@else branch root but not the other
+	| 'TSRX031' // RETIRED — per-branch addressing replaced it; no builder emits this code
 	| 'TSRX032' // destructured prop has a default value but its type isn't marked optional
 	| 'TSRX033' // a reactive expression that would otherwise fold server-side reads an impure ambient (Date/Intl/Math.random/toLocaleString)
 	| 'TSRX034' // a semantically-loaded attribute (hidden/disabled/checked/selected/aria-expanded) has no server-renderable value
@@ -317,7 +317,62 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX012',
-			`pass={{ … }} on <${tag}> — its target must be a registry-known custom element (ADR 0023 sub-design 10); native elements use reactive attribute bindings instead.`,
+			`pass={{ … }} on <${tag}> — its target must be a registry-known custom element (ADR 0023 sub-design 10); native elements use reactive attribute bindings instead. At connect this is \`InvalidCustomElementError\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `pass={{ prop }}` naming a prop the target component does not
+	 * `expose()` at all (LT-158, ADR 0028 sub-design 6). The runtime check
+	 * is `!(prop in target)` — weaker, because an inherited `HTMLElement`
+	 * member passes it and then fails the Slot check one line later. The
+	 * compiler asks the stronger and more useful question: `expose()` is
+	 * the complete list of a Le Truc component's reactive props, so a name
+	 * absent from it can never be Slot-backed however the DOM is shaped.
+	 *
+	 * Only raised for a target whose entry is in the registry — a
+	 * hand-authored or foreign custom element keeps the Tier 2 backstop.
+	 */
+	passPropNotExposed: (
+		source: string,
+		offset: number | undefined,
+		tag: string,
+		prop: string,
+		exposed: string[],
+	) =>
+		error(
+			'TSRX012',
+			`pass={{ ${prop}: … }} targets <${tag}>, which does not expose \`${prop}\` — its reactive props are ${exposed.length ? exposed.map(p => `\`${p}\``).join(', ') : '(none)'}. Add \`${prop}\` to that component's \`expose({ … })\`, or pass one of the props it does declare. At connect this is \`InvalidPassPropertyError\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `pass={{ prop }}` naming a prop the target exposes READ-ONLY — ADR
+	 * 0011's own motivating example, and the residual ADR 0028 sub-design 6
+	 * asked the registry to close. `pass()` swaps the target's backing
+	 * SIGNAL, so it needs a Slot ([ADR 0004]); `#setAccessor` only builds
+	 * one for a mutable initializer. A computed (`expose({ x: sig.get })`,
+	 * `expose({ x: () => … })`) and a `defineMethod()` producer are both
+	 * defined with a plain getter instead, so the swap has nothing to
+	 * attach to.
+	 *
+	 * This is the row that makes containment (LT-155) safe to rely on: the
+	 * runtime check still fires and is now contained, so without the
+	 * compiler carrying it the author would learn about a dead binding from
+	 * a console line rather than a build failure.
+	 */
+	passPropNotSlotBacked: (
+		source: string,
+		offset: number | undefined,
+		tag: string,
+		prop: string,
+		kind: 'computed' | 'method',
+	) =>
+		error(
+			'TSRX012',
+			kind === 'method'
+				? `pass={{ ${prop}: … }} targets <${tag}>, whose \`${prop}\` is a \`defineMethod()\` producer, not a reactive property — it is installed as a plain member and has no Slot to swap. Call it (\`el.${prop}()\`) from an event handler instead of passing to it. At connect this is \`InvalidPassPropertyError\`.`
+				: `pass={{ ${prop}: … }} targets <${tag}>, whose \`${prop}\` is exposed READ-ONLY — a computed initializer (\`sig.get\` or \`() => …\`) is defined with a getter, not a Slot, so there is no backing signal for pass() to swap (ADR 0004). Expose \`${prop}\` from a mutable initializer on <${tag}> (a value, a Parser, or a \`{ get, set }\` descriptor) if it is meant to be driven from outside; otherwise drive it from <${tag}>'s own state. At connect this is \`InvalidPassPropertyError\`.`,
 			lineOf(source, offset),
 		),
 
@@ -371,6 +426,37 @@ export const diagnostic = {
 		error(
 			'TSRX013',
 			`\`${name}\` calls client-only primitive(s) ${primitives.map(p => `\`${p}\``).join(', ')} — plain setup consts run server-side too (component.setup is emitted verbatim into the render function), where these don't exist. Use a signal constructor (the client seeds it from the DOM) or a client-only setup statement instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A collector-requiring helper (`watch`/`on`/`pass`/`provideContexts`/
+	 * `each`/`reconcile`) called from inside a nested function in a
+	 * client-only setup statement (LT-157d, ADR 0028 sub-design 5). Those
+	 * helpers do not create their effect — they push a descriptor into the
+	 * ambient collector (`src/internal.ts`'s `pushDescriptor`), which is
+	 * active only while the factory itself is running (ADR 0018). A call
+	 * deferred into a callback therefore runs after the factory returned,
+	 * with no collector to push into, and throws `NoActiveCollectorError`.
+	 *
+	 * The compiler cannot EMIT this shape — every generated `watch`/`on`/
+	 * `pass` call sits at the top level of the factory — so the whole rule
+	 * exists for hand-authored client-setup statements, which are exactly
+	 * the half ADR 0028 says the compiler owes ([M15] keeps the runtime
+	 * check as the backstop for no-build components it never sees).
+	 *
+	 * Deliberately silent on a call nested inside `reconcile()`/`each()`'s
+	 * own `bindItem` callback: that one runs INSIDE a per-item collector,
+	 * which is the whole point of those helpers.
+	 */
+	deferredCollectorCall: (
+		source: string,
+		offset: number | undefined,
+		helper: string,
+	) =>
+		error(
+			'TSRX013',
+			`\`${helper}(…)\` is called from inside a callback — it collects an effect descriptor into the factory's ambient collector, which is gone by the time a deferred callback runs, so this throws NoActiveCollectorError at connect (contained per ADR 0028, so the effect silently never activates). Call \`${helper}(…)\` directly in setup and make the callback's condition part of the effect instead (e.g. \`watch(() => cond ? … : …, sink)\`).`,
 			lineOf(source, offset),
 		),
 
@@ -673,7 +759,36 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX026',
-			`\`first('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, or uses selector syntax this compiler cannot verify structurally — supported: a tag plus any combination of \`.class\`, \`#id\`, \`[attr]\`/\`[attr="value"]\`, and comma-separated lists. Adjust the selector to match a real, statically-addressable element.`,
+			`\`first('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, or uses selector syntax this compiler cannot verify structurally — supported: a tag plus any combination of \`.class\`, \`#id\`, \`[attr]\`/\`[attr="value"]\`, and comma-separated lists. Adjust the selector to match a real, statically-addressable element. A required reference that survives to runtime with no match is \`MissingElementError\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A `first()`/`all()` selector that is not merely unverifiable but
+	 * MALFORMED (LT-157b, ADR 0028 sub-design 5) — the half of
+	 * `InvalidSelectorError` a compiler can decide outright, as opposed to
+	 * `firstSelectorNotFound`'s "matches nothing here, or I cannot tell."
+	 * Shares TSRX026 because the author's fix is the same one sentence:
+	 * correct the selector.
+	 *
+	 * `all()` matters more than `first()` here. A `first()` selector is
+	 * compile-time-only — the emitted query is the compiler's own
+	 * structurally-proven selector — but `all()`'s selector is emitted
+	 * VERBATIM into the client, where `createElementsMemo` probes it with
+	 * an eager `querySelector` precisely because a `SyntaxError` raised
+	 * later inside the MutationObserver callback would be swallowed and
+	 * leave the memo permanently stale.
+	 */
+	malformedSelector: (
+		source: string,
+		offset: number | undefined,
+		helper: 'first' | 'all',
+		selector: string,
+		reason: string,
+	) =>
+		error(
+			'TSRX026',
+			`\`${helper}('${selector}', …)\` is not a valid CSS selector — ${reason}. \`querySelector\` would throw a SyntaxError on it (InvalidSelectorError at connect); fix the selector.`,
 			lineOf(source, offset),
 		),
 
@@ -749,6 +864,32 @@ export const diagnostic = {
 		),
 
 	/**
+	 * `expose()` names a reserved word or `Object` builtin (LT-157a, ADR
+	 * 0028 sub-design 5) — `src/types.ts`'s `RESERVED_WORDS_LIST`. The
+	 * runtime throws `InvalidPropertyNameError` for these, and the throw is
+	 * deliberately ordered BEFORE `#initSignals`'s `prop in this` guard:
+	 * every reserved name is an inherited own-property of `Object`, so the
+	 * guard would otherwise skip the colliding initializer silently. That
+	 * ordering is what protects the prototype chain — not the throw
+	 * escaping — which is why containing the throw (LT-155) costs nothing
+	 * and why this rule is the one that has to carry the signal.
+	 *
+	 * Shares TSRX028 with `managedFormMemberShadowed`: both say "this
+	 * `expose()` key is not available," and both are fixed by renaming the
+	 * prop.
+	 */
+	reservedExposeName: (
+		source: string,
+		offset: number | undefined,
+		member: string,
+	) =>
+		error(
+			'TSRX028',
+			`\`expose({ ${member}: … })\` names \`${member}\`, a reserved word or Object builtin — it cannot be a reactive property, because defining an accessor for it would shadow a member every object inherits. Rename the prop (e.g. \`${member}Value\`). At connect this is \`InvalidPropertyNameError\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
 	 * `expose()` names a member `formAssociated()`/`formAssociatedCheckbox()`
 	 * installs on the prototype (LT-058, extending the TSRX010 managed-prop
 	 * family): silently shadows the managed member at the JS level — the
@@ -765,7 +906,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX028',
-			`\`expose({ ${member}: … })\` shadows the \`${member}\` member ${extension}() installs on the prototype — it is managed automatically (form-participation host contract) and cannot be exposed. Remove it, or rename the reactive property if you need something similar under a different name.`,
+			`\`expose({ ${member}: … })\` shadows the \`${member}\` member ${extension}() installs on the prototype — it is managed automatically (form-participation host contract) and cannot be exposed. Remove it, or rename the reactive property if you need something similar under a different name. At connect this is \`InvalidPropertyNameError\`.`,
 			lineOf(source, offset),
 		),
 

@@ -27,6 +27,7 @@ import * as path from 'node:path'
 import { Glob } from 'bun'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { FileInfo } from '../../file-signals'
+import { isVoidElement } from '../../tsrx/core'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -125,6 +126,63 @@ describe('server render smoke — every corpus tag renders (LT-121)', () => {
 			const html = (fn as (args: unknown) => string)(ARGS[info.tag] ?? {})
 			expect(typeof html).toBe('string')
 			expect(html).toContain(`<${info.tag}`)
+		})
+	}
+})
+
+/**
+ * `reconcile()`'s template root count (LT-157c, ADR 0028 sub-design 5).
+ *
+ * `InvalidTemplateError` is the one entry in ADR 0028's inventory that gets
+ * no diagnostic and needs none: `emit-server.ts`'s `listTemplateLines` calls
+ * `shape(loop.output, …)` on a SINGLE element node, so the emitted
+ * `<template>` has exactly one root element by construction. There is
+ * nothing for a rule to decide — the shape the runtime rejects is not
+ * expressible in compiled output.
+ *
+ * "By construction" is a claim about code that can be edited, though, so it
+ * is pinned here rather than only written down. If someone ever teaches
+ * `@for` to emit a fragment, this fails before the runtime throw does.
+ */
+describe('@for templates have exactly one root element (LT-157c)', () => {
+	/** Root-level element count of a `<template>`'s content. */
+	const rootElementCount = (content: string): number => {
+		let depth = 0
+		let roots = 0
+		const tagPattern = /<(\/?)([a-zA-Z][\w-]*)([^>]*)>/g
+		let match: RegExpExecArray | null = tagPattern.exec(content)
+		while (match) {
+			const [, slash, tag, rest] = match
+			const selfClosing = (rest ?? '').trimEnd().endsWith('/')
+			if (slash === '/') depth--
+			else {
+				if (depth === 0) roots++
+				if (!selfClosing && !isVoidElement(tag as string)) depth++
+			}
+			match = tagPattern.exec(content)
+		}
+		return roots
+	}
+
+	test('the counter agrees with the runtime check it stands in for', () => {
+		expect(rootElementCount('<li><span>x</span></li>')).toBe(1)
+		expect(rootElementCount('<li>a</li><li>b</li>')).toBe(2)
+		expect(rootElementCount('text only')).toBe(0)
+		expect(rootElementCount('<li><input name="x"><br>y</li>')).toBe(1)
+	})
+
+	for (const info of compiled) {
+		test(`${info.tag}'s emitted templates each have one root`, async () => {
+			const mod = (await import(info.serverModulePath)) as Record<
+				string,
+				unknown
+			>
+			const fn = mod[renderName(info.tag)] as (args: unknown) => string
+			const html = fn(ARGS[info.tag] ?? {})
+			const templates = [
+				...html.matchAll(/<template>([\s\S]*?)<\/template>/g),
+			].map(m => m[1] ?? '')
+			for (const content of templates) expect(rootElementCount(content)).toBe(1)
 		})
 	}
 })

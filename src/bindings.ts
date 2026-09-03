@@ -170,14 +170,14 @@ const safeSetAttribute = (
 		throw new UnsafeAttributeError(
 			element,
 			attr,
-			'event handler attributes are not allowed.',
+			'event handler attributes are not allowed. Attach the listener with on() instead.',
 		)
 	value = String(value).trim()
 	if (!isSafeURL(value))
 		throw new UnsafeAttributeError(
 			element,
 			attr,
-			'the value uses an unsafe URL protocol. Allowed: http, https, ftp, mailto, tel.',
+			'the value uses an unsafe URL protocol (allowed: http, https, ftp, mailto, tel).',
 			value,
 		)
 	element.setAttribute(attr, value)

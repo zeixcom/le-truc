@@ -450,7 +450,8 @@ describe('connect-time error containment (ADR 0028)', () => {
 			expect(() => instance.connectedCallback()).not.toThrow()
 		})
 		expect(calls).toHaveLength(1)
-		expect(String(calls[0]?.[0])).toContain('Connect failed')
+		// Production-branch wording: degraded, not broken (ADR 0028 sub-design 4).
+		expect(String(calls[0]?.[0])).toContain('did not enhance')
 	})
 
 	test('a broken component does not take other components down', () => {

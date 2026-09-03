@@ -512,7 +512,7 @@ const makePass = <P extends ComponentProps>(
 			for (const [prop, reactive] of Object.entries(props)) {
 				if (reactive == null) continue
 				if (!(prop in target)) {
-					failures.set(prop, `does not exist on ${targetName}`)
+					failures.set(prop, `is not a property of ${targetName}`)
 					continue
 				}
 
@@ -545,7 +545,7 @@ const makePass = <P extends ComponentProps>(
 				if (!isSlot(slot)) {
 					failures.set(
 						prop,
-						`is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`,
+						`is not Slot-backed on ${targetName} (exposed read-only, or it is not a Le Truc component)`,
 					)
 					continue
 				}

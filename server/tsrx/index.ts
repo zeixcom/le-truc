@@ -101,6 +101,7 @@ export const compileComponent = (
 				clientModule: `${component.tag}.client.ts`,
 				css: `${component.tag}.css`,
 				propsType: component.propsTypeName,
+				exposedProps: Object.fromEntries(component.exposeKinds),
 			},
 			serverCode: server.code,
 			clientCode: client.code,

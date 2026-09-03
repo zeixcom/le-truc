@@ -10,6 +10,20 @@ For signal-level issues (unexpected Memo/State/Sensor behavior), defer to cause-
 
 ---
 
+## Step 0: Is there a named error?
+
+Two entry points lead here, and only one of them is a symptom.
+
+**The build named a `TSRX0NN` code, or the console named an error class** → go straight to `references/errors.md`, find the row, and act on it. Do not trace the reactivity chain first — the row tells you the condition and the fix.
+
+**Read the tier before you judge the damage.** A Tier 2 error is *contained*: the component did not enhance and kept its server-rendered markup, which is already the correct pre-JS state, and the rest of the page is unaffected. It reads like a crash in the console and is not one. Only Tier 3 — `defineComponent()` at module evaluation, or a Trusted Types violation — is a page-level failure.
+
+Since containment ([ADR 0028](../../../../adr/0028-tiered-error-surfacing.md)), a failing component is *silent apart from that one console line*, and activation failures are contained **per effect** — so a component can be partially enhanced, with some bindings live and one dead. `reportEffectFailure` names the helper that did not activate; that name is the fastest route to the cause.
+
+**No named error, just wrong behavior** → continue with Step 1.
+
+---
+
 ## Step 1: Understand the Symptom
 
 Ask (or infer from context):
@@ -73,6 +87,9 @@ Within a `DEV_MODE` build, every component also gets a reactive `debug: boolean`
 
 ### Dependency timeout
 If required child custom element not defined within 200ms, `DependencyTimeoutError` logged and effects run anyway. DOM may not be in expected state. Check browser console.
+
+### A named error you skipped past
+If the console holds an error class or the build held a `TSRX0NN` code, `references/errors.md` has the condition and the fix. A contained failure produces exactly one line, so it is easy to scroll past.
 
 ### `all()` laziness
 MutationObserver only activates when the returned `Cell` is read inside a reactive effect. If it has no active readers, mutations are not tracked.

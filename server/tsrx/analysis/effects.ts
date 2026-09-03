@@ -27,6 +27,7 @@ import {
 	hostDerivedFold,
 } from '../evaluability'
 import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
+import type { RegistryEntry } from '../registry'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
 import type { AnalysisContext, TopEffectPlan } from './plan'
@@ -117,6 +118,64 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		usedNames,
 		ambiguousComposeNodes,
 	} = ctx
+	/**
+	 * Registry entries by TAG (LT-158). `composeRegistry` is keyed by source
+	 * path because composition resolves through import specifiers; a
+	 * `pass={{ }}` on a raw dashed tag has only the tag, so it needs the
+	 * other index. Built from the same map rather than threading a second
+	 * one through: pass 1 puts every compilable file's entry in there, so
+	 * the two indexes are the same set of components.
+	 */
+	const entryByTag = new Map<string, RegistryEntry>()
+	if (composeRegistry)
+		for (const entry of composeRegistry.values())
+			entryByTag.set(entry.tag, entry)
+
+	/**
+	 * Decide each `pass={{ prop }}` against the TARGET component's own
+	 * `expose()` (LT-158, ADR 0028 sub-design 6) — the residual TypeScript
+	 * cannot carry, because a read-only prop is structurally identical to a
+	 * writable one.
+	 *
+	 * Silent when the target's entry is unknown: a hand-written (non-.tsrx)
+	 * child is in `registry` via `childImports` but never in
+	 * `composeRegistry`, and the discovery pass has no `composeRegistry` at
+	 * all. Both keep the Tier 2 runtime check, which is what ADR 0028 says
+	 * it is for — [M15] no-build components and foreign markup.
+	 */
+	const checkPassEntries = (
+		entries: readonly PassEntryIR[],
+		tag: string,
+		node: TsrxNode,
+	): void => {
+		const entry = entryByTag.get(tag)
+		if (!entry) return
+		const exposed = entry.exposedProps
+		for (const passed of entries) {
+			const kind = exposed[passed.prop]
+			if (kind === undefined)
+				diagnostics.push(
+					diagnostic.passPropNotExposed(
+						source,
+						node.start,
+						tag,
+						passed.prop,
+						Object.keys(exposed),
+					),
+				)
+			else if (kind !== 'slot')
+				diagnostics.push(
+					diagnostic.passPropNotSlotBacked(
+						source,
+						node.start,
+						tag,
+						passed.prop,
+						kind,
+					),
+				)
+		}
+	}
+
 	const selectorFor = (el: ElementNode) => selectorForIn(component, el)
 	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
 	const countComposeBySource = (source2: string) =>
@@ -364,6 +423,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					)
 					continue
 				}
+				checkPassEntries(attr.entries, el.tag, el.node)
 				emitPassEntries(attr.entries, query, sink)
 			} else if (attr.kind === 'class-map') {
 				collectAmbient(attr.object)
@@ -1276,11 +1336,11 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			return
 		}
 		const query = addQuery(refAttr.name, `${childTag}${discriminator}`, 'one')
-		if (passAttrs.length > 0)
-			emitPassEntries(
-				passAttrs.flatMap(a => a.entries),
-				query,
-			)
+		if (passAttrs.length > 0) {
+			const entries = passAttrs.flatMap(a => a.entries)
+			checkPassEntries(entries, childTag, node.node)
+			emitPassEntries(entries, query)
+		}
 	}
 
 	const emitTopEffects = (node: TemplateNode): void => {

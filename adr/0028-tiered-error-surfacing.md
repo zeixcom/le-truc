@@ -47,21 +47,25 @@ Le Truc never renders initial HTML ([ADR 0003](0003-attributes-drive-state-at-co
 | `InvalidComponentNameError` | `defineComponent()`, module eval | Compiler owns the tag name (`TSRX008`) | **Tier 3** — no component exists to degrade |
 | `ExtensionCollisionError` | `mergeExtensions()`, module eval | `TSRX009` (extension declarations) | **Tier 3**, DEV only; production is first-wins |
 | `InvalidPropertyNameError` — managed member | `#initSignals` | **`TSRX028`** ✅ | Tier 2 |
-| `InvalidPropertyNameError` — reserved word | `#initSignals` | **Owed** — `expose()` keys vs. `ReservedWords` is statically decidable | Tier 2. The prototype chain is protected by the throw's *ordering* (before `defineProperty`), not by its escaping |
+| `InvalidPropertyNameError` — reserved word | `#initSignals` | **`TSRX028`** ✅ (LT-157a) — the same code as the managed-member branch; the author's fix is the same rename | Tier 2. The prototype chain is protected by the throw's *ordering* (before `defineProperty`), not by its escaping |
 | `MissingElementError` | `first`/`query` required | **`TSRX026`** (no match), **`TSRX040`** (conditional branch), `TSRX025` ✅ | Tier 2. The only content-dependent error in the set — it fires on markup drift, not on bad source |
-| `InvalidSelectorError` | `all`/`queryAll` | **Owed** — a malformed selector is decidable; `TSRX026` covers the unverifiable-syntax half | Tier 2 |
-| `NoActiveCollectorError` | `pushDescriptor` | Compiler cannot emit this shape; **owed** for hand-authored (async factory, deferred callback) | Tier 2 |
+| `InvalidSelectorError` | `all`/`queryAll` | **`TSRX026`** ✅ (LT-157b) — a *malformed* selector, decided outright; the rule is one-sided, so a selector it passes is not thereby claimed valid | Tier 2. `all()`'s selector is the one emitted verbatim into the client, so this is where the check earns its keep |
+| `NoActiveCollectorError` | `pushDescriptor` | **`TSRX013`** ✅ (LT-157d) for a collector helper deferred into a callback; **`TSRX008`** ✅ for an `async` component function. The compiler cannot emit the shape, so the rule exists entirely for authored setup | Tier 2 |
 | `InvalidCustomElementError` | `swapSlots` | **`TSRX012`** (`passTargetNotCustom`) ✅ | Tier 2 |
 | `InvalidReactivesError` | `swapSlots` | TypeScript — `props` is typed | Tier 2 |
-| `InvalidPassPropertyError` | `swapSlots` | **Partial.** `TSRX012` + `PassedProps<P>` typing cover the common cases. Two residuals need registry work — see §6 | Tier 2 |
-| `InvalidTemplateError` | `reconcile()` | **Owed** — `@for` templates are compiler-generated (`TSRX001`) | Tier 2 |
+| `InvalidPassPropertyError` | `swapSlots` | **`TSRX012`** ✅ (LT-158) — registry membership decides a foreign target, and the target's own `expose()` decides per-prop Slot-backedness (see §6) | Tier 2, for hand-authored and foreign targets |
+| `InvalidTemplateError` | `reconcile()` | **None needed** (LT-157c) — `emit-server.ts`'s `listTemplateLines` shapes a single element node, so a compiled `<template>` has exactly one root *by construction*. Pinned by a corpus test rather than a rule, since there is nothing to decide | Tier 2, for hand-authored `reconcile()` calls only |
 | `DependencyTimeoutError` | *logged, never thrown* | n/a | Already Tier 2. **The existing precedent this ADR generalizes** ([§4 Reliability](../REQUIREMENTS.md#reliability)) |
 | Unsafe attribute name/value | `safeSetAttribute` | Not decidable — fires on runtime *data* | Tier 2. The security guarantee is the `setAttribute` **not happening**, not the throw. Needs a real error class so the report names the component |
 | Trusted Types violation | `dangerouslyBindInnerHTML` | n/a | **Tier 3** (ADR 0010 §4) |
 
-### 6. Two residuals the registry should close
+### 6. Two residuals the registry closes
 
-`InvalidPassPropertyError`'s hard case — ADR 0011's own motivating example — is a target whose prop *exists* but is not Slot-backed: a Lit/vanilla custom element with a matching property, or a Le Truc prop exposed as a `deriveCell` (read-only, [ADR 0004](0004-slot-based-signal-swapping-for-inter-component-binding.md)). TypeScript accepts both structurally. Both are knowable at compile time — registry membership decides the first, the target's own `expose()` decides the second — but `RegistryEntry` records only `propsType`'s *name* today, not its members or their writability. Extending it moves this from Tier 2 to Tier 1 and retires the last of ADR 0011's rationale.
+`InvalidPassPropertyError`'s hard case — ADR 0011's own motivating example — is a target whose prop *exists* but is not Slot-backed: a Lit/vanilla custom element with a matching property, or a Le Truc prop exposed read-only ([ADR 0004](0004-slot-based-signal-swapping-for-inter-component-binding.md)). TypeScript accepts both structurally. Both are knowable at compile time — registry membership decides the first, the target's own `expose()` decides the second — but `RegistryEntry` recorded only `propsType`'s *name*, not its members or their writability.
+
+**Closed by LT-158.** `RegistryEntry.exposedProps` now maps every `expose()` key to how its initializer lands on the host: `slot` (a plain value, a Parser, or a `{ get, set }` descriptor — mutable, hence Slot-backed), `computed` (read-only), or `method` (a `defineMethod()` producer, not reactive at all). `TSRX012` decides a `pass={{ }}` against the target entry's map.
+
+Implementing it turned up a shape worth recording, because it inverts the intuition the rule is built on: **`expose({ x: sig.get })` is read-only however mutable `sig` is.** `sig.get` is a bare function, so it is neither a signal nor a descriptor, and `#setAccessor` wraps it in `deriveCell`. That is the corpus's single most common expose shape, which means the residual this section set out to close was not a corner case at all — it was the default. Verified against the runtime rather than inferred from the types.
 
 ## Alternatives Considered
 
@@ -78,7 +82,7 @@ Le Truc never renders initial HTML ([ADR 0003](0003-attributes-drive-state-at-co
 - One rule with no remembered exceptions: everything reaching `connectedCallback` is contained. The brand, and the risk of a future error class landing on the wrong side of it by accident, are deleted.
 - ADR 0027 becomes safe by construction — no single component can fail a build without attribution, and per-component containment stops depending on which wrapper the host runtime happens to provide.
 - Better degradation: a failed `pass()` costs one binding, not every effect in the component.
-- Failures are diagnosed where they are cheapest to fix. Four rules are owed (`InvalidSelectorError`, `InvalidTemplateError`, the reserved-word branch, hand-authored `NoActiveCollectorError`); the rest of Tier 1 already exists.
+- Failures are diagnosed where they are cheapest to fix. All four owed rules landed in LT-157, and the registry extension in LT-158; every inventory row now names a channel that exists.
 - The error surface gets a single documented contract instead of eleven per-class precedents.
 
 **Bad:**
@@ -86,7 +90,7 @@ Le Truc never renders initial HTML ([ADR 0003](0003-attributes-drive-state-at-co
 - Behavior change for consumers who relied on `pageerror` to detect `pass()` and reserved-word failures — including three of our own Playwright specs. `examples/form/colorgraph/form-colorgraph.spec.ts:85` asserts `MissingElementError` is *absent* from `pageerror`; once contained it can never appear there and the guard passes vacuously, so it must be re-pointed at the console channel in the same commit.
 - A contained failure is quieter than an uncaught one. Mitigated by the compiler carrying the loud half, but a hand-authored no-build component genuinely loses signal strength — this is the cost of [M15](../REQUIREMENTS.md#m15-no-build-cdn-usage-supported) coexisting with a compiler.
 - Per-descriptor activation containment means a component can now be *partially* enhanced, a state that did not previously exist. The diagnostic must name the descriptor's helper and target precisely enough that "half of it works" is debuggable.
-- Four compiler rules and a registry extension are owed before Tier 1 is honest; until then the table's "owed" rows are aspiration, not description.
+- ~~Four compiler rules and a registry extension are owed before Tier 1 is honest.~~ **Closed by LT-157 and LT-158.** One row resolved differently than this ADR assumed: `InvalidTemplateError` needs no rule, because a compiled `@for` template cannot have the shape the runtime rejects. The residual cost is that three of the new rules are deliberately *one-sided* — the malformed-selector check, the deferred-collector scan, and the per-prop `pass()` check all stay silent where they cannot decide, so Tier 1 covers less than the table's ✅ marks suggest and the Tier 2 backstop still does real work.
 
 ## Related
 

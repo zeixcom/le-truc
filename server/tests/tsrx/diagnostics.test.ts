@@ -2122,3 +2122,242 @@ describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
 		expect(diagnostics.filter(d => d.code === 'TSRX033')).toEqual([])
 	})
 })
+
+/* === ADR 0028's owed rules (LT-157) === */
+
+/**
+ * ADR 0028 sub-design 5 makes the compiler the primary channel and the
+ * runtime a backstop. LT-155 contained the runtime half, so a condition with
+ * no rule here is a condition the author now learns about from a console
+ * line on a page that already degraded — these four rules are what buys
+ * containment back.
+ */
+describe('reserved expose() key (TSRX028, LT-157a)', () => {
+	const exposing = (props: string): string =>
+		`export function C({}: {})
+@{
+	expose({ ${props} })
+	<>
+		<c-el><span>ok</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('a reserved word as an expose() key is TSRX028', () => {
+		const { diagnostics } = compileComponent(
+			exposing(`toString: 'x'`),
+			'c.tsrx',
+			new Set(),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX028')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('`toString`')
+		expect(hit?.message).toContain('reserved word or Object builtin')
+	})
+
+	test('every RESERVED_WORDS_LIST entry is covered, not just the obvious ones', () => {
+		// The list is duplicated in `ast-utils.ts` (the compiler does not
+		// import the runtime library), so a drift between the two is exactly
+		// the failure this rule exists to prevent.
+		for (const word of [
+			'constructor',
+			'prototype',
+			'__proto__',
+			'toString',
+			'valueOf',
+			'hasOwnProperty',
+			'isPrototypeOf',
+			'propertyIsEnumerable',
+			'toLocaleString',
+		]) {
+			const { diagnostics } = compileComponent(
+				exposing(`${word}: 'x'`),
+				'c.tsrx',
+				new Set(),
+			)
+			expect(
+				diagnostics.some(
+					d => d.code === 'TSRX028' && d.message.includes(`\`${word}\``),
+				),
+			).toBe(true)
+		}
+	})
+
+	test('the check is ungated — it does not need config.formAssociated', () => {
+		// TSRX028's other builder only fires for a form-associated
+		// component; this one has nothing to do with form participation.
+		const { diagnostics } = compileComponent(
+			exposing(`valueOf: 1`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX028')).toBe(true)
+	})
+
+	test('an ordinary prop name is untouched', () => {
+		const { diagnostics } = compileComponent(
+			exposing(`label: 'x'`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.filter(d => d.code === 'TSRX028')).toEqual([])
+	})
+})
+
+describe('malformed selector (TSRX026, LT-157b)', () => {
+	const withSetup = (setup: string): string =>
+		`export function C({}: {})
+@{
+	${setup}
+	expose({})
+	<>
+		<c-el><button role="option">ok</button></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('a malformed all() selector is TSRX026', () => {
+		const { diagnostics } = compileComponent(
+			withSetup(`const opts = all('button[role="option"')`),
+			'c.tsrx',
+			new Set(),
+		)
+		const hit = diagnostics.find(
+			d => d.code === 'TSRX026' && d.message.includes('valid CSS selector'),
+		)
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('leaves a `[` unclosed')
+	})
+
+	test('a trailing combinator is TSRX026', () => {
+		const { diagnostics } = compileComponent(
+			withSetup(`const opts = all('button >')`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d =>
+					d.code === 'TSRX026' && d.message.includes('ends with a combinator'),
+			),
+		).toBe(true)
+	})
+
+	test('the scan reaches a call nested in a handler or a defineMethod body', () => {
+		// The rule's whole point: form-listbox calls `all()` from both, and
+		// neither goes through setup extraction.
+		const { diagnostics } = compileComponent(
+			withSetup(
+				`const focusFirst = () => { document.querySelector('x') }
+	const m = defineMethod(() => { all('button[').item(0) })`,
+			),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d =>
+					d.code === 'TSRX026' && d.message.includes('leaves a `[` unclosed'),
+			),
+		).toBe(true)
+	})
+
+	test('a selector this compiler cannot structurally verify is NOT malformed', () => {
+		// `:not(…)` is outside `first-refs.ts`'s structural subset but is
+		// perfectly valid CSS. Conflating "cannot verify" with "malformed"
+		// would fail builds over working markup — see selector-syntax.ts.
+		const { diagnostics } = compileComponent(
+			withSetup(`const opts = all('button[role="option"]:not([hidden])')`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.filter(d => d.message.includes('valid CSS selector')),
+		).toEqual([])
+	})
+})
+
+describe('deferred collector call (TSRX013, LT-157d)', () => {
+	const withSetup = (setup: string): string =>
+		`export function C({}: {})
+@{
+	expose({})
+	${setup}
+	<>
+		<c-el><span>ok</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+	test('watch() inside a setTimeout callback is TSRX013', () => {
+		const { diagnostics } = compileComponent(
+			withSetup(`setTimeout(() => { watch(() => 1, () => {}) }, 0)`),
+			'c.tsrx',
+			new Set(),
+		)
+		const hit = diagnostics.find(
+			d => d.code === 'TSRX013' && d.message.includes('NoActiveCollectorError'),
+		)
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`watch(…)`')
+	})
+
+	test('on() inside a promise callback is TSRX013', () => {
+		const { diagnostics } = compileComponent(
+			withSetup(`Promise.resolve().then(() => { on('click', () => {}) })`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d => d.code === 'TSRX013' && d.message.includes('`on(…)`'),
+			),
+		).toBe(true)
+	})
+
+	test('a top-level client-only setup statement is untouched', () => {
+		// LT-008/LT-069's sanctioned escape hatch — the collector IS active
+		// there, which is the whole distinction this rule draws.
+		const { diagnostics } = compileComponent(
+			withSetup(`on('click', () => {})`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.filter(d => d.message.includes('NoActiveCollectorError')),
+		).toEqual([])
+	})
+
+	test('a member call that merely shares the name is untouched', () => {
+		const { diagnostics } = compileComponent(
+			withSetup(`queueMicrotask(() => { document.body.on('x') })`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.filter(d => d.message.includes('NoActiveCollectorError')),
+		).toEqual([])
+	})
+
+	test('an async component function is rejected outright (TSRX008)', () => {
+		const source = `export async function C({}: {})
+@{
+	expose({})
+	<>
+		<c-el><span>ok</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(
+			d => d.code === 'TSRX008' && d.message.includes('async'),
+		)
+		expect(hit).toBeDefined()
+	})
+})

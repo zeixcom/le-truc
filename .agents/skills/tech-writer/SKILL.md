@@ -7,14 +7,14 @@ user_invocable: false
 ## Scope
 This skill maintains the **authored documentation** for the @zeix/le-truc library and the **AI skill files** that agents use to work with the codebase.
 
-**In scope:** `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc in `src/`, all files under `.agents/skills/` (SKILL.md, references/, workflows/), and `server/SERVER.md`.
+**In scope:** `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc in `src/`, all files under `.agents/skills/` (SKILL.md, references/, workflows/), `server/SERVER.md`, and **error-message copy** in `src/errors.ts` and `server/tsrx/diagnostics.ts` (the message strings and their JSDoc — developers own the conditions that fire them; see `workflows/error-message-lifecycle.md`).
 
 **Out of scope — do not edit:**
 - `docs-src/api/` — TypeDoc-generated from source; regenerate with `bun run build:docs` instead
 - `examples/*/` — component source files; use the `le-truc` or `le-truc-dev` skill instead
 - `CHANGELOG.md` — use the `changelog-keeper` skill instead
 - `adr/` — use the `adr-keeper` skill instead
-- Pipeline code in `server/` (effects, templates, schemas, routes) — write a `TODO.md` task for the `docs-server-dev` skill instead of editing it directly; only `server/SERVER.md` is in scope here
+- Pipeline code in `server/` (effects, templates, schemas, routes) — write a `TODO.md` task for the `docs-server-dev` skill instead of editing it directly; `server/SERVER.md` and the message strings in `server/tsrx/diagnostics.ts` are the two exceptions
 
 ## Essential Principles
 
@@ -41,6 +41,7 @@ What do you need to do?
 4. **Write a blog post** — draft a new post for `docs-src/pages/blog/`
 5. **Update a skill file** — a skill description, reference, or workflow under `.agents/skills/` is inaccurate or incomplete
 6. **Improve the docs architecture** — restructure pages, navigation, or add interactive teaching components
+7. **Error message work** — an error class or `TSRX0NN` code was added, reworded, or retired, or the two lists need a consistency pass
 
 Wait for response before proceeding.
 
@@ -54,6 +55,7 @@ Wait for response before proceeding.
 | 4, "write a blog post", "new blog post", "blog" | workflows/write-blog-post.md |
 | 5, "skill file", "skill doc", "update skill", names a skill | workflows/update-skills.md |
 | 6, "improve docs", "restructure", "split pages", "merge pages", "navigation", "teaching component" | workflows/improve-docs-architecture.md |
+| 7, "error message", "new error", "diagnostic", "TSRX", "error copy" | workflows/error-message-lifecycle.md |
 
 **Document-specific routing (option 3):**
 
@@ -78,6 +80,7 @@ Wait for response before proceeding.
 - "update skill" / "skill file is wrong" / "fix skill reference" → workflows/update-skills.md
 - "update SERVER.md" / "server docs" / "build pipeline changed" / "new effect" → workflows/update-server-md.md
 - "docs are too long" / "split this page" / "improve navigation" / "add a teaching component" / "restructure the guide" → workflows/improve-docs-architecture.md
+- "new error class" / "new TSRX code" / "reword this diagnostic" / "we removed an error" → workflows/error-message-lifecycle.md
 
 After identifying the workflow, read it and follow it exactly.
 
@@ -107,6 +110,7 @@ All in `workflows/`:
 | consistency-review.md | Review all documents for consistency with current source |
 | write-blog-post.md | Draft a new blog post in `docs-src/pages/blog/` |
 | improve-docs-architecture.md | Plan and lead a guide restructure — split or merge pages, improve navigation, add teaching components; coordinate pipeline work via `TODO.md` |
+| error-message-lifecycle.md | Write and propagate error-message copy in `src/errors.ts` and `server/tsrx/diagnostics.ts` — new, revised, retired, and periodic review |
 
 ## Post-Task Protocol
 

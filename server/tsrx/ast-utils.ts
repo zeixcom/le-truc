@@ -276,6 +276,43 @@ export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
 	'RESERVED_WORDS_LIST',
 ])
 
+/**
+ * Property names that must never be a reactive component property
+ * (`src/types.ts`'s `RESERVED_WORDS_LIST`, duplicated here since the TSRX
+ * compiler doesn't import the runtime library). Every one is an inherited
+ * own-property of `Object`, so `component.ts`'s `#initSignals` checks them
+ * BEFORE its `prop in this` guard — that ordering, not the throw escaping,
+ * is what protects the prototype chain (ADR 0028 sub-design 5). Since the
+ * throw is contained (LT-155) the compiler carries the loud half: TSRX028
+ * (LT-157a).
+ */
+export const RESERVED_PROP_NAMES: ReadonlySet<string> = new Set<string>([
+	'constructor',
+	'prototype',
+	'__proto__',
+	'toString',
+	'valueOf',
+	'hasOwnProperty',
+	'isPrototypeOf',
+	'propertyIsEnumerable',
+	'toLocaleString',
+])
+
+/**
+ * FactoryContext helpers that push an effect descriptor into the ambient
+ * collector (`src/internal.ts`'s `pushDescriptor`). Calling one after the
+ * factory has returned throws `NoActiveCollectorError`; TSRX013 (LT-157d)
+ * decides the statically visible half of that.
+ */
+export const COLLECTOR_HELPERS: ReadonlySet<string> = new Set<string>([
+	'watch',
+	'on',
+	'pass',
+	'provideContexts',
+	'each',
+	'reconcile',
+])
+
 /** Managed form props usable as string-literal lazy children (text-bindable). */
 export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
 	'validationMessage',
