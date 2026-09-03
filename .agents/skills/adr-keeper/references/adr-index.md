@@ -31,7 +31,7 @@ This file is auto-generated. Do not edit manually.
 | [0024](0024-adopt-tsrx-as-isomorphic-component-format.md) | Adopt TSRX as the Isomorphic Component Format | 🔄 Reopened | M1, M3, M4, §1, §4, §5, §7 |
 | [0025](0025-client-side-tsrx-playground.md) | Client-Side TSRX Playground | 🔄 Proposed | §1, M12, M13, S2 |
 | [0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) | ARIA Reflection via ElementInternals and `bindAria()` | ✅ Accepted | M1, M3, M5, §4 |
-| [0027](0027-server-simulation.md) | Server Simulation — Render Initial HTML by Executing the Client Module | 🔄 Proposed | §1, M5, M6, M8, §5, §7 |
+| [0027](0027-server-simulation.md) | Server Simulation — Render Initial HTML by Executing the Client Module | ✅ Accepted | §1, M5, M6, M8, §5, §7 |
 | [0028](0028-tiered-error-surfacing.md) | Tiered Error Surfacing — Compiler First, Contained Runtime | ✅ Accepted | M11, M15, M16, S2, S3, S5, §4 |
 
 ---
