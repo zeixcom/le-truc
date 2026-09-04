@@ -56,10 +56,6 @@ declare class InvalidPropertyNameError extends TypeError {
  * Error thrown when a required descendant element does not exist in a queried
  * root's DOM subtree.
  *
- * The one content-dependent error in the set (ADR 0028 inventory): it fires on
- * markup drift, not on bad source, so `TSRX026`/`TSRX040` cover the authored
- * case and this covers markup that changed after the server rendered it.
- *
  * @since 0.14.0
  */
 declare class MissingElementError extends Error {

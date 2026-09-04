@@ -300,7 +300,7 @@ function defineComponent<P extends ComponentProps>(
 					if (process.env.DEV_MODE === 'true' && !unusableInternalsWarned) {
 						unusableInternalsWarned = true
 						console.warn(
-							`attachInternals() returned an incomplete ElementInternals in ${elementName(this)}. This environment's implementation is missing validity, validationMessage, setFormValue, or setValidity. Treating it as no internals: form association, custom states, and ARIA reflection are unavailable.`,
+							`attachInternals() returned an incomplete ElementInternals in ${elementName(this)} — this environment is missing validity, validationMessage, setFormValue, or setValidity. The component runs without internals: form association, custom states, and host ARIA reflection are unavailable. Author the ARIA attributes in your markup instead.`,
 						)
 					}
 					return

@@ -117,7 +117,7 @@ watch(
 
 ### `bindState(internals, token)`
 
-Returns `(value: boolean) => void`. Adds `token` to `internals.states` when truthy, removes when falsy — consumer CSS matches with `:state(token)`. `null` internals (only possible if `attachInternals()` failed pre-upgrade) is a graceful no-op.
+Returns `(value: boolean) => void`. Adds `token` to `internals.states` when truthy, removes when falsy — consumer CSS matches with `:state(token)`. `null` internals (only possible if `attachInternals()` failed pre-upgrade), or internals with no usable `states` (a skeletal implementation — jsdom's, under server simulation), is a graceful no-op. Custom states have no attribute channel to fall back to.
 
 ```typescript
 watch('disabled', bindState(internals, 'disabled'))
@@ -126,7 +126,7 @@ watch('overflowEnd', bindState(internals, 'overflow-end'))
 
 Prefer `bindState` over `bindClass(host, token)` for host-level state. Consumer code rewriting the host's `class` attribute cannot overwrite a custom state. It is also available on every component (`internals` is attached unconditionally), not only form-associated ones. `internals` comes from `FactoryContext` — destructure it alongside `watch`/`host`/etc.
 
-**Map form:** `bindState(internals, tokens)` with an array of tokens returns `(value: Partial<Record<Tk, boolean>>) => void`. Same toggle-loop semantics as `bindClass`'s map form — a token missing from the object is treated as falsy. The `null`-internals no-op still applies.
+**Map form:** `bindState(internals, tokens)` with an array of tokens returns `(value: Partial<Record<Tk, boolean>>) => void`. Same toggle-loop semantics as `bindClass`'s map form — a token missing from the object is treated as falsy. The `null`-internals no-op still applies, extended to internals with no usable `states`.
 
 ```typescript
 watch(
@@ -181,10 +181,10 @@ watch(
 
 ### `bindAria(target, name)`
 
-Returns `SingleMatchHandlers<AriaValue>`. `target` is `el` or `internals` — anything implementing `ARIAMixin`. Reflects the property via `ElementInternals`/IDL, not a content attribute.
+Returns `SingleMatchHandlers<AriaValue>`. `target` is `el` or `internals` — anything implementing `ARIAMixin`. Reflects the property via `ElementInternals`/IDL, not a content attribute. If the target has no working reflection surface (a skeletal `ElementInternals` — jsdom's, under server simulation), `bindAria` binds the host content attribute instead, with the same coercion; the eight element-reference properties (`aria*Elements`) have no attribute form and stay no-ops, and the stale-attribute removal never fires on that path (ADR 0026 §2).
 
-- `ok(value)` → assigns the coerced value (`boolean`/`number`/`string`/`Element`/`Element[]`, per property)
-- `nil` → assigns `null`
+- `ok(value)` → assigns the coerced value (`boolean`/`number`/`string`/`Element`/`Element[]`, per property); on the attribute fallback, writes the coerced attribute value
+- `nil` → assigns `null`; on the attribute fallback, removes the attribute
 
 ```typescript
 watch('expanded', bindAria(trigger, 'ariaExpanded'))

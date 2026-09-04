@@ -60,12 +60,12 @@ Binding helpers return either a setter function `(value) => void` or `SingleMatc
 
 | Helper | Purpose |
 |--------|---------|
-| `bindAria` | Reflects ARIA properties onto `ARIAMixin` targets (`ElementInternals` or `Element`), removing shadowing attributes (see [ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md)) |
+| `bindAria` | Reflects ARIA properties onto `ARIAMixin` targets (`ElementInternals` or `Element`), removing shadowing attributes; falls back to the host content attribute where no reflection reaches the platform (see [ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md)) |
 | `bindAttribute` | Sets/removes attributes with security validation (see [ADR 0009](adr/0009-security-validation-in-bindattribute.md)) |
 | `bindClass` | Adds/removes CSS classes |
 | `bindText` | Sets text content |
 | `bindProperty` | Sets DOM properties |
-| `bindState` | Toggles `ElementInternals` custom states via `:state()` |
+| `bindState` | Toggles `ElementInternals` custom states via `:state()`; a no-op without a `states` surface |
 | `bindStyle` | Sets/removes inline styles |
 | `bindVisible` | Controls `hidden` attribute |
 | `dangerouslyBindInnerHTML` | Sets innerHTML |
@@ -195,7 +195,7 @@ Every `.tsrx` component's template is lowered to markup server-side, in every ti
 | **2** *Simulated* | Server Simulation ([ADR 0027](adr/0027-server-simulation.md)): the generated client module executes against jsdom and the reactive graph's initial state is serialized. | Something does not resolve in phase 1 — typically a `first()` element reference, a cross-component read, or a `host`/`internals` read the harness cannot supply — **and** the simulation realm can plausibly answer it. |
 | **0** *Static* | The phase-1 skeleton only. The unresolved expressions are omitted; the client corrects at connect. | Nothing resolves in phase 1 **and** every unresolved expression is *unresolvable* (below). |
 
-Cutting across the tiers is a second, expression-level fact. An expression is **unresolvable** when no server phase can produce its value, for either of two reasons: the read routes through an API the driver stubs (layout geometry — jsdom returns zeros; `internals` — `attachInternals()` is normalized to throw; an absent sensor such as `matchMedia`/`ResizeObserver`/`IntersectionObserver`), or its input is not a server-side fact at all (the wall clock, the RNG, a runtime-default locale — values that are a function of *when the page is viewed*, not of anything the server knows).
+Cutting across the tiers is a second, expression-level fact. An expression is **unresolvable** when no server phase can produce its value, for either of two reasons: the read routes through an API the driver stubs (layout geometry — jsdom returns zeros; `internals.states` and the form members — the realm's `ElementInternals` is skeletal; an absent sensor such as `matchMedia`/`ResizeObserver`/`IntersectionObserver`), or its input is not a server-side fact at all (the wall clock, the RNG, a runtime-default locale — values that are a function of *when the page is viewed*, not of anything the server knows).
 
 **An unresolvable expression is omitted in every tier, including the Simulated tier.** The realm does not fold one: a build-time `Date.now()` is not an approximation the client briefly corrects, it is a stale value cached into the served HTML for the life of the page. Blank is more honest than confidently wrong, and the no-JS mitigation is authored static markup — the author supplies the default rather than the compiler guessing. The Static tier is simply the case where *every* unresolved expression is unresolvable, so no mechanism needs to run at all; a Simulated-tier component can carry a suppressed expression alongside plenty the realm does resolve.
 

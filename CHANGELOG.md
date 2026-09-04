@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- **`bindAria()` attribute fallback**: when the target's reflection does not reach the platform (jsdom's skeletal `ElementInternals` under server simulation), it now binds the host content attribute with the same coercion instead of writing into the void. The eight element-reference properties stay no-ops there, and no attribute removal fires on that path.
+- **Server simulation carries root ARIA**: the realm no longer forces `attachInternals()` to throw, so the served HTML keeps `role`/`aria-*` initial values instead of losing them at hydration. Form-associated components still degrade to no internals.
+- **Reworded `attachInternals()` degradation warning** (dev mode): it now states the component runs without internals — form association, custom states, and host ARIA reflection unavailable — and names the mitigation: author the ARIA attributes in your markup instead.
+- **`le-truc` skill references and docs pages cover the fallback**: `effects.md`/`accessibility.md` (skill references and `docs-src/pages/`) now describe `bindAria()`'s attribute fallback and `bindState()`'s no-`states` no-op.
+
+### Fixed
+
+- **`bindState()` on internals without a `states` set**: previously threw a `TypeError` on the first value; now a graceful no-op, same as `null` internals. Custom states have no attribute channel, so the no-op is the whole behavior.
+
 ## 2.6.0
 
 ### Added

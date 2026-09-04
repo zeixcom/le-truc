@@ -88,9 +88,10 @@ describe('patch table', () => {
 			expect(stubs).toContain(name)
 
 		expect(NETWORK_GLOBALS.map(patch => patch.name)).toContain('fetch')
-		expect(PROTOTYPE_PATCHES.map(patch => patch.method)).toContain(
-			'attachInternals',
-		)
+		// Empty since LT-177: `attachInternals()` is no longer forced to
+		// throw, so jsdom's skeletal internals reaches the library and
+		// `bindAria()` can bind the host attribute the served HTML needs.
+		expect(PROTOTYPE_PATCHES).toHaveLength(0)
 	})
 
 	test('patchesFor keeps unscoped entries for every runtime', () => {
@@ -168,12 +169,111 @@ describe('realm application', () => {
 		expect(called).toBe(false)
 	})
 
-	test('normalizes attachInternals to throw', () => {
+	test('leaves attachInternals alone (LT-177)', () => {
 		const realm = withRealm()
-		const element = realm.document.createElement('div')
-		expect(() =>
-			(element as unknown as { attachInternals: () => void }).attachInternals(),
-		).toThrow()
+		class Probe extends (realm.window.HTMLElement as typeof HTMLElement) {}
+		realm.window.customElements.define('lt177-probe', Probe)
+		const element = realm.document.createElement('lt177-probe')
+		const internals = (
+			element as unknown as { attachInternals: () => ElementInternals }
+		).attachInternals()
+		// Skeletal, but non-null: that is the point. `internalsHosts` gets
+		// populated, so `bindAria()` has a host to bind the attribute on.
+		expect(internals).not.toBeNull()
+		expect(typeof internals.setFormValue).toBe('undefined')
+	})
+})
+
+describe('ARIA under simulation (LT-177)', () => {
+	/**
+	 * The pin LT-177 exists for. Removing the forced `attachInternals()`
+	 * throw lets jsdom's skeletal `ElementInternals` reach the library, which
+	 * registers it in `internalsHosts`; `bindAria()` then probes it, finds no
+	 * reflection reaching the platform, and binds the host's content
+	 * attribute — so the served HTML CARRIES the ARIA value. Reflecting
+	 * instead would write to the void and strip the server-rendered
+	 * attribute, serializing markup below the no-JS baseline.
+	 */
+	test('a root aria-* binding serializes as an attribute', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			const { bindAria, defineComponent } = await import('../../../index.ts')
+			defineComponent<{ expanded: boolean }>(
+				'probe-aria',
+				({ expose, internals, watch }) => {
+					expose({ expanded: true })
+					watch('expanded', bindAria(internals, 'ariaExpanded'))
+				},
+			)
+		})
+		// The server-rendered attribute is the initial-state channel; the
+		// binding must update it in place, never remove it.
+		const html = await realm.render({
+			markup: '<probe-aria aria-expanded="false"></probe-aria>',
+			component: 'probe-aria',
+		})
+		expect(html).toContain('aria-expanded="true"')
+	})
+
+	test('a form-associated component still degrades to no internals (LT-150)', async () => {
+		// Form association keeps the GLOBAL degradation the forced throw used
+		// to guarantee: an incomplete stub is worse than none there. LT-150's
+		// shape check was built against exactly this substrate, and must
+		// still see it now that nothing normalizes `attachInternals()`.
+		const realm = withRealm()
+		await realm.load(async () => {
+			const { defineComponent, formAssociated } = await import(
+				'../../../index.ts'
+			)
+			defineComponent(
+				'probe-form',
+				({ expose, host, internals }) => {
+					expose({ value: '' })
+					host.setAttribute(
+						'data-internals',
+						internals === null ? 'null' : 'present',
+					)
+				},
+				[formAssociated()],
+			)
+		})
+		const html = await realm.render({
+			markup: '<probe-form></probe-form>',
+			component: 'probe-form',
+		})
+		// `null`, not `present`: the skeletal stub was detected. A stub that
+		// slipped past the check would have thrown out of `formAssociated()`'s
+		// own `onConnect` before the factory ever ran, and the marker would be
+		// missing entirely.
+		expect(html).toContain('data-internals="null"')
+	})
+
+	test('bindState no-ops on skeletal internals instead of throwing', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			const { bindState, defineComponent } = await import('../../../index.ts')
+			defineComponent<{ open: boolean }>(
+				'probe-state',
+				({ expose, host, internals, watch }) => {
+					expose({ open: true })
+					const setState = bindState(internals, 'open')
+					watch('open', value => {
+						setState(value)
+						// Only reached if the setter did not throw — jsdom's
+						// internals has no `states` set at all.
+						host.setAttribute('data-state-bound', '')
+					})
+				},
+			)
+		})
+		const html = await realm.render({
+			markup: '<probe-state></probe-state>',
+			component: 'probe-state',
+		})
+		// Custom states have no attribute channel, so the no-op is the whole
+		// behavior; the marker is what pins that it WAS a no-op and not a
+		// `TypeError` swallowed by the per-descriptor containment.
+		expect(html).toContain('data-state-bound')
 	})
 })
 

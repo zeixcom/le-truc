@@ -220,7 +220,7 @@ remain warnings.]
 
 ## Architecture — ARIA reflection in the simulation realm (ADR 0026, amended 2026-09-04)
 
-- [ ] LT-177: Make `bindAria()`/`bindState()` capability-resilient; let the realm keep jsdom's skeletal `ElementInternals`.
+- [x] LT-177: Make `bindAria()`/`bindState()` capability-resilient; let the realm keep jsdom's skeletal `ElementInternals`. — reviewed ✓
   **Skill:** le-truc-dev
   **Context:** Owner decision, 2026-09-04, amending [ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) §2 in place (pointer notes already landed in ADR 0027 s2 and ADR 0029 s1 limb (a), and in `ARCHITECTURE.md` § Server Evaluation Tiers). Polyfilling `ElementInternals` in the realm was REJECTED: a working reflection surface would fire the stale-attribute removal at simulated connect and **strip** `role`/`aria-*` from the served HTML — the opposite of what serialization needs. Ordered scope:
   1. **Remove the forced `attachInternals` throw** from `PROTOTYPE_PATCHES` (`server/tsrx/sim/patch-table.ts:251`) — its own comment records it as "no longer load-bearing for correctness" since LT-150. jsdom's skeletal internals then flows through non-null and populates `internalsHosts` and the declaration-protocol registry at the existing constructor line (ADR 0026 §2 note 1, §3).
@@ -231,6 +231,19 @@ remain warnings.]
   **Channels/tiers:** a capability fallback is not a failure — channel: none, no Surfacing Tier, no diagnostic (the attribute path is a supported channel, not degradation). The LT-150 degradation-warning copy and `bindAria`/`bindState` JSDoc are touched → **Tech Writer reviews the copy** (`tech-writer`'s `workflows/error-message-lifecycle.md`).
   **Coordinate:** LT-165's classifier reads the patch table — when it lands, internals capability is capability rows, not one binary row: ARIA expressions are realm-answerable via this fallback; `internals.states`/form-member reads stay unanswerable. LT-148 lowers root ARIA to `bindAria(internals, …)`; add to its fixtures the serialization pin this task exists for: the served HTML carries the attribute under simulation.
   Acceptance: a root `aria-*` `.tsrx` fixture under simulation serializes WITH the attribute (golden-pinned per substrate); real-browser behavior unchanged (reflection + removal — existing ARIA specs stay green); `bindState` on skeletal internals no-ops; `bun test server` green; per-substrate goldens re-baselined if jsdom output moves.
+
+  **Handoff (le-truc-dev, 2026-09-04).** All five scope items landed.
+  1. `PROTOTYPE_PATCHES` is now empty (`server/tsrx/sim/patch-table.ts`). The applier loop, the `PrototypePatch` type and the table entry in `SIM_PATCH_TABLE` all stay — LT-165's classifier reads the table, and the mechanism is what the next capability row plugs into.
+  2. Verified, and pinned: `server/tests/tsrx/sim-realm.test.ts` renders a `formAssociated()` component in the realm and asserts the factory sees `internals === null`. Mutation-checked (making `isUsableInternals` unconditionally true fails it) — the earlier diagnostics-based assertion was silently vacuous, because the library's `reportConnectFailure` writes to the HOST console, not jsdom's `virtualConsole`, so a contained connect failure inside the realm never becomes a `SimDiagnostic`. **That gap is real and outside this task** — filed as LT-180 (architect review, 2026-09-04: build reports ARE meant to catch connect failures).
+  3. **The capability probe is `isCompleteInternals()` (new, `src/internal.ts`), not a per-property `in` check.** jsdom's skeletal internals *does* carry working `role`/`aria*` accessors (they store and read back, reaching nothing), so "does this property exist" classifies the realm as reflection-capable and the fallback never fires. The discriminator used instead is presence of the form-association members (`setFormValue`/`setValidity`, never called): every engine that ships `ElementInternals` ships them, because form association is the feature it was introduced for; jsdom ships none of them. `ariaActiveDescendantElement` was considered and rejected as the sentinel — element-reference reflection landed years after `ElementInternals` itself, so it would demote real browsers to the attribute path and change shipped behavior. Element-reference properties stay no-ops on the fallback path *including for a nullish value*: there is no attribute they own to clear.
+  4. `bindState()` probes `states` for a callable `add`/`delete` once at bind time and captures the set.
+  5. Unchanged, as decided.
+  **Copy for Tech Writer** (three sites): (a) the LT-150 degradation warning in `src/component.ts` — first draft narrows "ARIA reflection" to "host ARIA … for this component" and adds the mitigation sentence the ADR names ("Author the ARIA attributes in your markup instead"); (b) `bindAria()`'s JSDoc, which gained a capability-fallback paragraph; (c) `bindState()`'s JSDoc, which now names the no-`states` case alongside `null`. No error class and no `TSRX` code was added, removed, or renamed, so no union member or diagnostics-registry entry moved.
+  **Docs touched** (also Tech Writer's, factual corrections only): `ARCHITECTURE.md` (the `bindAria`/`bindState` helper-table rows, and the unresolvable-expression sentence that still said `attachInternals()` is normalized to throw), `server/SERVER.md`, `server/tsrx/LE_TRUC_COMPILER.md` (§ unresolvability limb (a) and the `patch-table.ts` entry). ADR 0026 §2 needed no edit — the owner's amendment already described the shipped behavior.
+  **Acceptance status:** the serialization pin is a realm-level test rather than a `.tsrx` corpus fixture, because LT-148 (which lowers root ARIA to `bindAria`) has not landed — no corpus component binds root ARIA yet, so a `.tsrx` fixture would pin `bindAttribute` and prove nothing. The realm test defines a `defineComponent` + `bindAria(internals, …)` component, renders it from `<probe-aria aria-expanded="false">`, and requires `aria-expanded="true"` in the serialized output; mutation-checked (taking the reflection path serializes `<probe-aria></probe-aria>` — the attribute stripped, nothing written, exactly the regression this task exists to prevent). **LT-148 should still add the corpus fixture.** No golden moved: `bun test server` 1362/1362, `bun test src/tests` 483/483, tsc clean, biome clean, and the Chromium+WebKit `test-aria` specs stay green (23 passed, 3 skipped) — real-browser reflection + removal unchanged.
+  **New hazard for LT-148/LT-165:** under simulation `internals` is now non-null for non-form-associated components, so an imperative `internals.states.add(…)` in a factory throws a `TypeError` where it previously no-op'd through `internals?.`. No corpus site does this today (`form-textbox` removed the last one in LT-060). `bindState()` is the safe path.
+  **Review (architect, 2026-09-04):** Approved. Implementation matches ADR 0026 §2's amended *Capability fallback* exactly — probe once at bind time, three tiers, shared coercion table, stale-attribute removal confined to the reflection path, element-reference properties no-ops on the attribute path. The `setFormValue`/`setValidity` presence probe is the right discriminator (jsdom's `aria*` accessors store and read back, so a property-existence probe would misclassify the realm as reflection-capable and never fire the fallback); the empty-but-retained `PROTOTYPE_PATCHES` is right for LT-165's table-read. The realm-level (rather than corpus-fixture) serialization pin is accepted — no corpus component binds root ARIA yet — with the fixture obligation moved onto LT-148 (amended there). The connect-failure diagnostics gap in the handoff and NOTES.md is filed as **LT-180**. Verified independently: `bun test server` 1362/1362, `bun test src/tests` 483/483, tsc clean; biome clean except one pre-existing unrelated suppression warning (`server/tsrx/globals.d.ts:59`, not touched by this diff). One accepted nuance, no follow-up: in real browsers the fallback path is near-unreachable (an engine without `attachInternals()` yields `null` → the no-op tier), so the attribute path's consumer-override semantics are effectively a simulation-only concern.
+  **Copy review (Tech Writer, 2026-09-04):** Done. All three sites met the lifecycle criteria in draft; final wording applied: (a) the LT-150 warning now runs condition — em-dash mechanism — consequence — imperative, drops the implementation-voice "Treating it as no internals" for "The component runs without internals", and says "host ARIA reflection"; (b) `bindAria()`'s fallback paragraph now cites ADR 0026 §2 and unstacks its modifiers; (c) `bindState()`'s JSDoc says "no usable `states`" (the old "no `states` set behind it" misparses). **Propagation beyond the handoff's list** — the behavior docs that described the old no-op/reflection-only story: `docs-src/pages/effects.md` (helper-table nil cells + both prose paragraphs), `docs-src/pages/accessibility.md` (the `internals` bullet and the stale-attribute callout), `.agents/skills/le-truc/references/effects.md` (bindState/bindAria sections), `.agents/skills/le-truc/references/accessibility.md` (channel guidance). No error class, TSRX code, channel, or tier moved, so `errors.md`, `debug.md`, ADR 0028's inventory, and `non-obvious.md` are untouched. `types/src/bindings.d.ts` regenerated. When this branch lands, the CHANGELOG entry for the feature should mention the fallback and the reworded warning (changelog-keeper, at merge). Post-edit: server 1362/1362, src 483/483, tsc clean, biome clean.
 
 ## Architecture — internationalization (ADR 0030)
 
@@ -425,7 +438,14 @@ remain warnings.]
   ADR 0029 sub-design 6 keeps the baseline's target at ZERO by moving the routing signals
   (TSRX004/TSRX034) out of the warning channel entirely into a tier census. So the original
   acceptance line stands as written — the eight standing warnings' successors are simply not
-  warnings any more.]
+  warnings any more.] [**Amended 2026-09-04 (LT-177 landed):** carry two things from LT-177's
+  handoff. (1) This task now owns the serialization pin LT-177 deferred: a corpus fixture whose
+  root `aria-*` binding serializes WITH the attribute under simulation — LT-177's realm-level
+  test pins the mechanism only, and a `.tsrx` fixture was meaningless before any root ARIA
+  binding exists. (2) Under simulation `internals` is now non-null for non-form-associated
+  components, so an imperative `internals.states.add(…)` in a factory throws a `TypeError`;
+  route custom states through `bindState()`, which capability-probes and no-ops on skeletal
+  internals.]
 
 - [ ] LT-170: Strengthen two gate-wave assertions in `gate-wave-verification.test.ts` that don't test what they claim.
   **Skill:** docs-server-dev
@@ -548,6 +568,33 @@ remain warnings.]
   Static-tier or Folded-tier component — a new build-report entry fails the build naming the component,
   disposal is provably end-of-build, and the wall-time/cache-engagement figures are recorded in
   the handoff and split by tier, including the Static-tier saving as a separate figure.
+
+- [ ] LT-180: Surface library-contained connect failures in the simulation realm's diagnostics.
+  **Skill:** docs-server-dev
+  **Context:** Found and mutation-verified while pinning LT-177 item 2 (NOTES.md, 2026-09-04,
+  resolved into this task). A component that throws during `connectedCallback` inside the realm
+  is contained by ADR 0028 and reported through `reportConnectFailure` — which writes to the
+  **host** console, not jsdom's `virtualConsole` — so `realm.diagnostics` stays empty and a
+  Simulated-tier component silently degrades to skeleton serialization: the build serves wrong
+  HTML with no signal. The `component-throw` diagnostic kind already exists in the realm's
+  channel, so the wiring is intended; only throws the library contains itself bypass it.
+  ADR 0029 makes this urgent rather than cosmetic: once LT-169 wires the driver into the build,
+  a silent connect failure is silently wrong served HTML — and the CI equivalence audit
+  (ADR 0029 s7) cannot catch it, because the audit compares Folded-tier output, not connect
+  failures. **Land with or before LT-169.** Fix shape is open: capture the host console during
+  the realm's load/render window, or route `reportConnectFailure` through a channel the realm
+  subscribes to — if the fix wants a library-side channel or a new diagnostic class (an
+  ADR 0028 surface change), escalate back to architect first. **Channel:** the build report
+  (`sim/report.ts`), NOT the compile-warning channel — a connect throw is a dynamic execution
+  failure, not a statically-detectable source issue, so it can never be a converging warning.
+  **Tier:** 3 (Escalated) — error-level, failing the build and naming the component, matching
+  LT-169's existing build-report gate. No new runtime check and no new diagnostic kind is
+  introduced, so no TSRX code moves; if copy is touched anyway, Tech Writer reviews it.
+  Acceptance: a component throwing in `connectedCallback` inside the realm yields an
+  error-level diagnostic in `realm.diagnostics` naming the component; removing the wiring
+  fails a test (pin the negative — the vacuous-assertion trap LT-177 documented is the failure
+  mode to avoid); the LT-177 realm tests' marker-attribute assertions stay green;
+  `bun test server` green.
 
 ## Wave 4 — example migrations
 

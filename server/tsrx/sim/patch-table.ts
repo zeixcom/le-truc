@@ -241,23 +241,19 @@ export const NETWORK_GLOBALS: readonly NetworkGlobalPatch[] = [
 /**
  * Prototype normalizations inside the realm.
  *
- * jsdom 30's `attachInternals()` succeeds and returns a skeletal
- * `ElementInternals`. LT-150 made the library detect that and degrade, so this
- * entry is no longer load-bearing for correctness — it is here so the simulated
- * run takes the SAME branch on every substrate, including one whose internals
- * are skeletal in a different place. Throwing is the shape the library's guard
- * was written against (Safari < 16.4).
+ * Empty since LT-177. The forced `attachInternals()` throw that used to live
+ * here is gone: jsdom's skeletal `ElementInternals` now flows through
+ * non-null, which is what populates `internalsHosts` and lets `bindAria()`
+ * bind the host's content attribute so the served HTML carries the value
+ * (ADR 0026 §2, *Capability fallback*). Polyfilling internals here was
+ * rejected for the same reason — a working reflection surface would fire the
+ * stale-attribute removal at simulated connect and strip `role`/`aria-*` from
+ * the served markup. Form association keeps its own global degradation: the
+ * library's LT-150 shape check still sees the skeletal object and treats it
+ * as no internals, which is the honest posture for a form-associated
+ * component (an incomplete stub is worse than none).
  */
-export const PROTOTYPE_PATCHES: readonly PrototypePatch[] = [
-	{
-		kind: 'prototype',
-		owner: 'HTMLElement',
-		method: 'attachInternals',
-		behavior: 'throw',
-		message:
-			'attachInternals() is not supported in the server simulation (ADR 0027 sub-design 2a)',
-	},
-]
+export const PROTOTYPE_PATCHES: readonly PrototypePatch[] = []
 
 /** The whole table, in application order. */
 export const SIM_PATCH_TABLE: readonly SimPatch[] = [

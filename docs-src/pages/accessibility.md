@@ -29,7 +29,7 @@ defineComponent('my-disclosure', ({ first, host, internals, on, watch }) => {
 
 `bindAria(target, name)` accepts any `ARIAMixin` target:
 
-- **`internals`** — on the factory context of every component. It is `null` only if `attachInternals()` failed, and every handler degrades to a no-op. The write sets default semantics on the host. No attribute appears in markup. No consumer framework rewriting attributes can overwrite the value.
+- **`internals`** — on the factory context of every component. It is `null` only if `attachInternals()` failed, and every handler degrades to a no-op. The write sets default semantics on the host. No attribute appears in markup. No consumer framework rewriting attributes can overwrite the value. If the environment ships an `ElementInternals` whose reflection does not reach the platform, `bindAria()` binds the host content attribute instead, with the same coercion table — the eight element-reference properties have no attribute form and stay no-ops. There the attribute is the channel, so the shadowing-attribute removal never runs.
 - **A native element** — the write mirrors into the content attribute. CSS selectors and `getAttribute()` still see the value.
 
 The handler assigns values the way the reflection API expects:
@@ -53,7 +53,7 @@ watch(
 Set static ARIA directly in the factory. `internals.role = 'slider'` is shorter than any helper call.
 
 {% callout .note title="The server-rendered attribute is the initial value" %}
-A host content attribute **overrides** the reflection value in the accessibility tree. A stale `aria-expanded="false"` from the server would silence every later update through `internals`. `bindAria()` removes the shadowing attribute for you — once per property, at the first value the binding applies. After that, the component owns the property. A consumer who sets the attribute **after** connect still overrides it. Never write both channels for the same property on the same element.
+A host content attribute **overrides** the reflection value in the accessibility tree. A stale `aria-expanded="false"` from the server would silence every later update through `internals`. `bindAria()` removes the shadowing attribute for you — once per property, at the first value the binding applies. After that, the component owns the property. On the attribute fallback there is nothing to remove: the attribute is the live channel, and the binding updates it in place. A consumer who sets the attribute **after** connect still overrides it. Never write both channels for the same property on the same element.
 {% /callout %}
 
 {% /section %}

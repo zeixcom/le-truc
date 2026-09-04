@@ -2163,6 +2163,7 @@ var isUsableInternals = (internals, formAssociated) => {
     return false;
   }
 };
+var isCompleteInternals = (internals) => isFunction(internals.setFormValue) && isFunction(internals.setValidity);
 
 // src/scheduler.ts
 var objects = new Set;
@@ -2325,26 +2326,28 @@ function bindClass(element, tokenOrTokens) {
   return setter;
 }
 function bindState(internals, tokenOrTokens) {
+  const states = internals?.states;
+  const usable = states != null && isFunction(states.add) && isFunction(states.delete);
   if (typeof tokenOrTokens === "string") {
     const token = tokenOrTokens;
     return (value) => {
-      if (!internals)
+      if (!usable)
         return;
       if (value)
-        internals.states.add(token);
+        states.add(token);
       else
-        internals.states.delete(token);
+        states.delete(token);
     };
   }
   const tokens = tokenOrTokens;
   return (value) => {
-    if (!internals)
+    if (!usable)
       return;
     for (const token of tokens) {
       if (value[token])
-        internals.states.add(token);
+        states.add(token);
       else
-        internals.states.delete(token);
+        states.delete(token);
     }
   };
 }
@@ -2409,13 +2412,30 @@ var ariaAttributeName = (idlName) => {
     base = base.slice(0, -"Element".length);
   return `aria-${base.toLowerCase()}`;
 };
+var isElementReference = (name) => name.endsWith("Element") || name.endsWith("Elements");
 function bindAria(target, nameOrNames) {
   const isElementTarget = target != null && typeof Element !== "undefined" && target instanceof Element;
-  const host = target != null && !isElementTarget ? internalsHosts.get(target) : undefined;
+  const internals = target != null && !isElementTarget ? target : undefined;
+  const host = internals ? internalsHosts.get(internals) : undefined;
+  const reflects = isElementTarget || internals != null && isCompleteInternals(internals);
   const cleared = new Set;
+  const coerce = (value) => typeof value === "boolean" ? value ? "true" : "false" : typeof value === "number" ? String(value) : typeof value === "string" ? value : undefined;
   const assign = (name, value) => {
     if (!target)
       return;
+    if (!reflects) {
+      if (!host || isElementReference(name))
+        return;
+      const attribute = ariaAttributeName(name);
+      if (value == null) {
+        host.removeAttribute(attribute);
+        return;
+      }
+      const coerced = coerce(value);
+      if (coerced != null)
+        host.setAttribute(attribute, coerced);
+      return;
+    }
     if (value == null) {
       target[name] = null;
       return;
@@ -2424,11 +2444,17 @@ function bindAria(target, nameOrNames) {
       cleared.add(name);
       host.removeAttribute(ariaAttributeName(name));
     }
-    target[name] = typeof value === "boolean" ? value ? "true" : "false" : typeof value === "number" ? String(value) : value;
+    target[name] = coerce(value) ?? value;
   };
   const clear = (name) => {
-    if (target)
-      target[name] = null;
+    if (!target)
+      return;
+    if (!reflects) {
+      if (host && !isElementReference(name))
+        host.removeAttribute(ariaAttributeName(name));
+      return;
+    }
+    target[name] = null;
   };
   if (typeof nameOrNames === "string") {
     const name = nameOrNames;
