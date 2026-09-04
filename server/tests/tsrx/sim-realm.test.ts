@@ -753,3 +753,58 @@ describe('load-once assertion (sub-design 10)', () => {
 		)
 	})
 })
+
+describe('page locale seeding (LT-172, ADR 0030 sub-design 7)', () => {
+	/**
+	 * The component the seeding exists for: it reads `getLocale(host)` with
+	 * no `lang` arg of its own, exactly as `module-calctable` and
+	 * `basic-blogmeta` do. Unseeded, `closest('[lang]')` finds nothing in the
+	 * realm's `<html>`-less ancestor chain and resolves the `'en'` fallback —
+	 * silently, on every page, whatever its locale.
+	 */
+	const loadLocaleProbe = (realm: SimulationRealm) =>
+		realm.load(async () => {
+			const { defineComponent } = await import('../../../index.ts')
+			defineComponent('probe-locale', ({ host }) => {
+				const lang = host.closest('[lang]')?.getAttribute('lang') || 'en'
+				host.setAttribute('data-locale', lang)
+			})
+		})
+
+	test("seeds <html lang> from the render's page locale", async () => {
+		const realm = withRealm()
+		await loadLocaleProbe(realm)
+		const html = await realm.render({
+			markup: '<probe-locale></probe-locale>',
+			component: 'probe-locale',
+			locale: 'de-CH',
+		})
+		expect(html).toContain('data-locale="de-CH"')
+		expect(realm.document.documentElement.getAttribute('lang')).toBe('de-CH')
+	})
+
+	test('a per-render locale never leaks into the next render', async () => {
+		const realm = withRealm()
+		await loadLocaleProbe(realm)
+		await realm.render({
+			markup: '<probe-locale></probe-locale>',
+			component: 'probe-locale',
+			locale: 'fr',
+		})
+		// Same markup, different page: the memo key carries the locale, so this
+		// is a fresh render rather than the `fr` pass's cached bytes.
+		const second = await realm.render({
+			markup: '<probe-locale></probe-locale>',
+			component: 'probe-locale',
+			locale: 'it',
+		})
+		expect(second).toContain('data-locale="it"')
+		// No locale means no page answer, not the previous page's answer.
+		const third = await realm.render({
+			markup: '<probe-locale></probe-locale>',
+			component: 'probe-locale',
+		})
+		expect(third).toContain('data-locale="en"')
+		expect(realm.document.documentElement.hasAttribute('lang')).toBe(false)
+	})
+})

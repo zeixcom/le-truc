@@ -74,10 +74,13 @@
  *
  * ## Render memoization (LT-166)
  *
- * `render()` memoizes on `(component, markup)` — the driver-side surrogate
+ * `render()` memoizes on `(component, locale, markup)` — the driver-side
+ * surrogate
  * for the build's `(component, serialized args)` key: identical args render
  * to identical markup through the pure server render functions, and the
- * markup is what the simulation actually consumes. A hit returns the first
+ * markup is what the simulation actually consumes. The page locale joins the
+ * key because it is seeded onto `<html lang>` and so is an input to the
+ * render, not a property of the markup (LT-172). A hit returns the first
  * pass's bytes without reopening a connect window, so a repeated occurrence
  * reports only the FIRST occurrence's diagnostics, and a time-dependent
  * render (sub-design 6 lets `Date.now()` through) stabilizes on the first
@@ -85,7 +88,8 @@
  * completed connect memoizes: a degraded (contained throw) or non-quiescent
  * render re-runs every time, so its diagnostic keeps firing per occurrence.
  * The map dies with the realm and is bounded by unique
- * `(component, markup)` pairs — 216 signatures across the built docs' 3,330
+ * `(component, locale, markup)` triples — 216 signatures across the built
+ * docs' 3,330
  * occurrences, per LT-152's measurement.
  */
 
@@ -140,6 +144,15 @@ export type RenderOptions = {
 	markup: string
 	/** Custom element name, used to attribute diagnostics and pick the root. */
 	component: string
+	/**
+	 * BCP 47 tag for the page this occurrence is being built into (LT-172,
+	 * ADR 0030 sub-design 7). Seeds the simulated document's `<html lang>` so
+	 * `getLocale()`'s `closest('[lang]')` walk resolves the page's locale
+	 * instead of the `'en'` fallback. Omitted means "no page locale known",
+	 * which clears the attribute — a previous render's locale never leaks
+	 * into the next one.
+	 */
+	locale?: string
 	/** Bound passed through to `drainToQuiescence`; defaults to 10 turns. */
 	maxTurns?: number
 }
@@ -482,7 +495,8 @@ export function createSimulationRealm(
 	}
 
 	// Render memoization (LT-166): see the module header's section. Keyed on
-	// (component, markup); only quiescent, non-degraded connects are stored.
+	// (component, locale, markup); only quiescent, non-degraded connects are
+	// stored.
 	const renderCache = new Map<string, string>()
 
 	const load = async (importer: () => Promise<unknown>) => {
@@ -510,15 +524,28 @@ export function createSimulationRealm(
 	const render = async ({
 		markup,
 		component,
+		locale,
 		maxTurns,
 	}: RenderOptions): Promise<string> => {
-		const cacheKey = `${component}\u0000${markup}`
+		// The locale is part of the render signature, not incidental to it: the
+		// same markup on a `de` page and an `en` page are different renders
+		// once a component reads `getLocale(host)` (LT-172).
+		const cacheKey = `${component}\u0000${locale ?? ''}\u0000${markup}`
 		const cached = renderCache.get(cacheKey)
 		if (cached !== undefined) return cached
 		let degraded = false
 		const parsed = assertSynchronousWindow(() => {
 			currentComponent = component
 			try {
+				// Seed the page locale onto `<html>` BEFORE the markup parses, so
+				// a component reading `getLocale(host)` at connect sees the page's
+				// answer rather than the `'en'` fallback (ADR 0030 sub-design 7).
+				// This only narrows the gap — the realm parses one component's
+				// markup, so an ancestor `[lang]` BELOW `<html>` stays invisible;
+				// the reserved `i18n` parameter is the canonical route.
+				if (locale === undefined)
+					document.documentElement.removeAttribute('lang')
+				else document.documentElement.setAttribute('lang', locale)
 				// Parsed while still undefined: the pre-parsed upgrade path, which
 				// is what gives `connectedCallback` its child-before-parent order.
 				document.body.innerHTML = markup

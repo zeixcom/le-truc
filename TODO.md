@@ -247,7 +247,7 @@ remain warnings.]
 
 ## Architecture — internationalization (ADR 0030)
 
-- [ ] LT-172: Seed the simulation realm's `<html lang>` from the page's build locale.
+- [x] LT-172: Seed the simulation realm's `<html lang>` from the page's build locale. — done, pending review ⏳
   **Skill:** docs-server-dev
   **Context:** **Fixes a live silent-wrong-answer bug; do this independently of the rest of the
   i18n work.** `sim/realm.ts` renders with `document.body.innerHTML = markup`, so the simulated
@@ -263,6 +263,21 @@ remain warnings.]
   `bun test server` green. Note this only narrows the gap — the realm still parses one
   component's markup, so an ancestor `[lang]` BELOW `<html>` remains invisible; ADR 0030 s7
   makes the reserved `i18n` parameter the canonical route for that reason.
+  **Changed:** `server/tsrx/sim/realm.ts` — `RenderOptions` gains an optional `locale`;
+  `render()` seeds it onto `<html lang>` inside the synchronous window before
+  `document.body.innerHTML = markup`, and the render memo key becomes
+  `(component, locale, markup)`. New `page locale seeding` describe block in
+  `server/tests/tsrx/sim-realm.test.ts`.
+  **How:** `setAttribute('lang', locale)` when a locale is given, `removeAttribute('lang')`
+  when it is not — so "no page locale known" is distinct from the previous render's locale and
+  nothing leaks between pages. The locale had to join the memo key: the same markup on a `de`
+  page and an `en` page are different renders once a component reads `getLocale(host)`.
+  **Check:** (a) the no-locale branch clearing rather than defaulting to `'en'` — the `'en'`
+  fallback stays `getLocale()`'s, not the realm's; (b) whether the driver that will call
+  `render()` from the build (not yet written) should get the locale from a realm-level default
+  instead, given one realm per build but one locale per page — per-render was chosen because
+  the realm outlives the page; (c) the memo-key widening is a cache-hit-rate change: distinct
+  locales now multiply the 216 measured signatures by the number of built locales.
 
 - [ ] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline (ADR 0030).
   **Skill:** le-truc-dev
