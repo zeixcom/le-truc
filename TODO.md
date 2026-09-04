@@ -63,7 +63,7 @@ has to work out precisely, not just restate:**
   server-renderable initial value) **stop being errors to fix and become the classifier
   itself.** The exact static analysis that used to justify "refuse to compile" now justifies
   "route this component through phase 2." A "no" answer from the analysis doesn't mean the
-  author did something wrong — it means the component is (correctly) tier 2. **The
+  author did something wrong — it means the component is (correctly) The Simulated tier. **The
   compile-warning baseline's target is therefore NOT zero** — LT-153 decision 2 and every
   "zero-warning corpus" acceptance line inherited from it (LT-147/LT-148 included) is now the
   wrong framing and needs correcting once LT-171 lands, not before (the correction is
@@ -81,7 +81,7 @@ has to work out precisely, not just restate:**
   REPURPOSED** from a pass/fail gate into the tier classifier. **LT-165 is superseded by LT-171**
   and retitled below rather than left pointing at a deletion that would remove the very
   mechanism the new plan depends on.
-- `emit-server.ts` changes shape for tier-2 components: instead of emitting a second,
+- `emit-server.ts` changes shape for Simulated-tier components: instead of emitting a second,
   semantically-constrained "server module" that re-declares setup, phase 2 needs to drive the
   *client* factory through the simulation realm to produce the string. What exactly this looks
   like (one emit path with a tier flag? two paths where today there's one?) is undecided —
@@ -90,7 +90,7 @@ has to work out precisely, not just restate:**
 **What's explicitly still open, not decided by this entry — LT-171 answers these:**
 - Is tiering decided purely statically at compile time (reusing the existing analysis as-is), or
   is a runtme fallback from phase 1 to phase 2 ever needed?
-- Per-request SSR cost for tier-2 components is flagged as "not optimal" but not measured or
+- Per-request SSR cost for Simulated-tier components is flagged as "not optimal" but not measured or
   designed around yet — does phase 2 need its own cache/warm-path story beyond LT-166's
   same-build memoization, for a live server rather than a build?
 - Whether this is an amendment to ADR 0027 (promoting simulation from verification-only to the
@@ -103,7 +103,7 @@ neither required nor excluded it). Locale and translations are build-time SERVER
 components through a compiler-supplied reserved `i18n` parameter — not the context protocol,
 whose fallback-then-correct shape would flash English into German and leave a no-JS reader on
 the wrong language permanently. **Three things worth carrying forward:** (1) it is a tiering
-WIN — a build-constant locale folds `Intl`, so i18n components are tier-1 eligible and
+WIN — a build-constant locale folds `Intl`, so i18n components are Folded-tier eligible and
 `basic-pluralize`'s six standing TSRX034 warnings dissolve; (2) missing translation keys go to a
 translation CENSUS, not the warning channel, because they are not author-fixable and would
 restart the non-zero-baseline drift ADR 0029 s6 just removed; (3) LT-172 fixes a live bug the
@@ -145,8 +145,8 @@ remain warnings.]
      cannot fully resolve" needs a precise, checkable definition — presumably every currently
      TSRX004/TSRX034-triggering site, but confirm there's no third case (e.g. a component with
      no DOM-dependent site itself but that COMPOSES one that does).
-  3. **Decide `emit-server.ts`'s shape for tier-2 components** — what it emits instead of
-     today's re-declared, DOM-less setup, and whether tier-1 components' emit path changes at
+  3. **Decide `emit-server.ts`'s shape for Simulated-tier components** — what it emits instead of
+     today's re-declared, DOM-less setup, and whether Folded-tier components' emit path changes at
      all (it shouldn't need to, but confirm).
   4. **Resolve the retirement/reclassification per diagnostic**, and hand the copy work to Tech
      Writer once decided: TSRX013/TSRX043 retire outright (no tier needs them — argued in the
@@ -154,7 +154,7 @@ remain warnings.]
      signal (their copy needs to say "this routes to phase 2," not "this is wrong"); TSRX039 is
      unaffected. TSRX005 (already dissolved per LT-153) is unaffected by this task.
   5. **Answer the three open questions from the Sequencing section**: static-only tiering vs. a
-     runtime fallback path; per-request SSR cost/caching story for tier-2 components (the 1.1
+     runtime fallback path; per-request SSR cost/caching story for Simulated-tier components (the 1.1
      ms/component, ~4 s/3,700-component figures are a build-time SSG number, not yet an SSR
      one); and whether LT-166's build-scoped memoization needs a server-scoped analogue.
   6. **Reconcile every "zero-warning" acceptance criterion this supersedes** — LT-147/LT-148's
@@ -174,46 +174,46 @@ remain warnings.]
      resolve it → simulate it" classifier routes `module-scrollarea` (2,091 occurrences, ~2.3 s
      of the measured 3.9 s) into a realm that returns ZEROS for its every layout read and drops
      its entire `bindState(internals, …)` output channel — ADR 0027's own stub posture
-     guarantees a null answer. So the classifier is a conjunction: tier 2 requires phase 1 to
+     guarantees a null answer. So the classifier is a conjunction: the Simulated tier requires phase 1 to
      fail AND the realm to be able to answer, the second conjunct read from
-     `sim/patch-table.ts`. Tier 0 (static skeleton, client corrects) is the third bucket.
+     `sim/patch-table.ts`. The Static tier (static skeleton, client corrects) is the third bucket.
      `card-mediaqueries`, `form-colorgraph`, `form-textbox`, `form-spinbutton` join it.
-  2. **Tier 1 is the minority path, measured: ~6 of 22 migrated components.** Under the owner's
+  2. **The Folded tier is the minority path, measured: ~6 of 22 migrated components.** Under the owner's
      strict baseline (server args + `@tsrx/core` only) it is 2 of 22; the two sound relaxations
      (signal initializers over server args in the value harness; `host.<prop>` reads of
-     Parser-exposed props) bring it to ~6. Fifteen of 22 use `first()` and are tier 2 by
-     construction. Tiering's payoff comes from tier 0, not tier 1 — worth remembering before
-     anyone invests in widening tier 1.
+     Parser-exposed props) bring it to ~6. Fifteen of 22 use `first()` and are Simulated-tier by
+     construction. Tiering's payoff comes from the Static tier, not the Folded tier — worth remembering before
+     anyone invests in widening the Folded tier.
   3. **"TSRX013/TSRX043 retire outright" was wrong as stated.** TSRX013 is FOUR factories
      sharing one code and only two are server-evaluation guards: `deferredCollectorCall` is a
      client-side `NoActiveCollectorError` bug (tier-independent) and `conditionalSignalConstructor`
      enforces ADR 0024 s12's format rule. Both survive and need their own codes; the split is a
      PREREQUISITE of the retirement, not a follow-up.
-  4. **TSRX034's severe variant survives, scoped to tier 0** — its own copy is right that a
+  4. **TSRX034's severe variant survives, scoped to the Static tier** — its own copy is right that a
      submittable control rendering the wrong `disabled`/`checked` is a correctness bug, and
-     tier 0 is the one tier where nothing resolves it.
+     the Static tier is the one tier where nothing resolves it.
   5. **The baseline target stays ZERO.** Routing signals leave the diagnostic channel for a tier
      census, so the remaining warnings are all author-fixable again and LT-146/LT-168's
      regression signal survives intact. This is a better answer than the "target is not zero"
      framing the Sequencing section assumed.
-  6. **Composition contaminates on READS, not containment** — a parent embedding a tier-2 child
+  6. **Composition contaminates on READS, not containment** — a parent embedding a Simulated-tier child
      splices its markup and keeps its own tier; only a `first()` on a compose site or a
      `truc:pass` into it contaminates. Containment-based contamination would drag page chrome's
      whole ancestry into the realm.
   7. **A CI equivalence audit is now a standing obligation** (ADR 0029 s7). Tiering reinstates
-     the two-mechanism hazard ADR 0027 explicitly rejected; the audit renders every tier-1
+     the two-mechanism hazard ADR 0027 explicitly rejected; the audit renders every Folded-tier
      component through the realm too and requires byte-identical output. If it goes red or gets
      disabled, the drift class 0027 eliminated comes back.
   8. **`Date.now()` exposed a fourth correction, made by the owner mid-review and folded in.**
-     The tier-1/tier-2 disagreement over impure ambient reads is not a drift bug to resolve by
-     electing a mechanism — NEITHER can answer it. Tier 1 refuses; tier 2 folds a value that is
+     The Folded-tier/Simulated-tier disagreement over impure ambient reads is not a drift bug to resolve by
+     electing a mechanism — NEITHER can answer it. The Folded tier refuses; the Simulated tier folds a value that is
      not an approximation but a build-machine reading cached into the served HTML for the life
      of the page. So impure-ambient became an **expression-level** property (unresolvable in
-     every tier, omitted in every tier, no diagnostic) rather than a tier-2 routing signal. This
+     every tier, omitted in every tier, no diagnostic) rather than a Simulated-tier routing signal. This
      also forced the general split — unresolvability is per-EXPRESSION, tier is per-COMPONENT —
      which `module-ticker` proves is necessary (`Math.random()` inside a heavily `first()`-based
-     component: tier 2 with one suppressed expression). ADR 0027 s6's determinism gate had the
-     right judgment and the wrong response; tier 0 is the third option it lacked.
+     component: the Simulated tier with one suppressed expression). ADR 0027 s6's determinism gate had the
+     right judgment and the wrong response; the Static tier is the third option it lacked.
   9. **Per-request SSR: anticipated, not committed** (owner, 2026-09-04). ADR 0024 s7 stands —
      build-time tooling only, jsdom never ships. LT-166's memoization needs no server-scoped
      analogue yet; designing a cache for a workload that doesn't exist would fix the wrong shape.
@@ -274,9 +274,9 @@ remain warnings.]
      Writer owns the copy** (new TSRX code; `tech-writer`'s `workflows/error-message-lifecycle.md`
      carries the propagation checklist).
   6. **Verify the tiering payoff.** With a server-known locale, `Intl` folds (LT-142) and
-     `basic-pluralize` should become tier-1 eligible, dissolving its six standing TSRX034
+     `basic-pluralize` should become Folded-tier eligible, dissolving its six standing TSRX034
      warnings. If it does not, either the fold rule or the classifier is wrong — investigate
-     rather than accepting tier 2. `basic-blogmeta` should fold too, but ONLY once its date
+     rather than accepting the Simulated tier. `basic-blogmeta` should fold too, but ONLY once its date
      handling stops reading the build machine's timezone: it currently does
      `new Date(year, month - 1, day)` (local zone) and `new Intl.DateTimeFormat(locale, {dateStyle})`
      with no `timeZone`. For a date-only value use `Date.UTC(y, m - 1, d)` with
@@ -295,7 +295,7 @@ remain warnings.]
   Acceptance: a component declaring `i18n` receives it with no caller change; an authored `lang`
   overrides the record and renders as the root attribute; a missing key renders the source
   string and appears in the census, not the warning stream; an untranslated literal warns;
-  `basic-pluralize` classifies tier 1, renders two category spans on an `en` page, and still
+  `basic-pluralize` classifies as Folded-tier, renders two category spans on an `en` page, and still
   re-selects correctly when `count` changes after connect; the build writes no tracked file;
   `bun test server` green.
   **Depends on LT-165** (the classifier must exist before the tiering payoff in step 6 is
@@ -308,7 +308,7 @@ remain warnings.]
   and not an obligation buried inside LT-174. Pulling the other way: per-locale rendering
   multiplies the corpus (~3,700 occurrences → N × 3,700) and LT-166's `(component, markup)`
   memoization now varies by locale, so the measured **93.5% hit rate will drop**. Pulling back:
-  ADR 0030's tier-1 promotion means i18n components stop being simulated at all, and per-locale
+  ADR 0030's Folded-tier promotion means i18n components stop being simulated at all, and per-locale
   pruning (LT-173 step 7) shrinks the markup that is the cache key. **Measure, don't estimate:**
   hit rate and simulated-stage wall time at 1 locale vs. 2, split by tier, with and without
   pruning. Then decide whether containment is needed at all and what shape it takes (locale in
@@ -321,12 +321,12 @@ remain warnings.]
   **Skill:** docs-server-dev
   **Context:** Path-prefix routing (`/de/guide`, `/en/guide`), one SSG page per locale, locale
   fixed before rendering begins. **The build-time-constant property is load-bearing, not an
-  infrastructure preference** — it is what lets `Intl` fold and keeps i18n components on tier 1;
-  a request-time locale would unfold every `Intl` call and push the whole i18n corpus to tier 2.
+  infrastructure preference** — it is what lets `Intl` fold and keeps i18n components on the Folded tier;
+  a request-time locale would unfold every `Intl` call and push the whole i18n corpus to the Simulated tier.
   **Perf obligation:** the corpus's ~3,700 occurrences become N × 3,700, and LT-166's
   `(component, args)` memoization now keys on locale, so the measured 93.5% hit rate will drop
   by an amount that depends on how many components consume `i18n`. Re-measure when the second
-  locale lands and record the figure — it partially offsets ADR 0029's tier-0 savings, and
+  locale lands and record the figure — it partially offsets ADR 0029's Static-tier savings, and
   nobody has measured the net yet — **LT-175 is that measurement, and it should land first.**
   **Depends on LT-173 and LT-175.**
 
@@ -438,18 +438,18 @@ remain warnings.]
      `truc:pass` into it), never on containment (ADR 0029 s3). Computed in the registry-aware
      second pass alongside `analysis/compose-refs.ts`.
   4. **`emit-server.ts` takes a tier flag.** One emit path; every component still gets a render
-     module (the realm parses it as input). The only difference: tier-2 and tier-0 modules do
-     NOT re-declare `@{ }` setup verbatim. Tier 1's path is unchanged — confirm this with the
-     server goldens, which should not move for any tier-1 component.
+     module (the realm parses it as input). The only difference: Simulated-tier and Static-tier modules do
+     NOT re-declare `@{ }` setup verbatim. The Folded tier's path is unchanged — confirm this with the
+     server goldens, which should not move for any Folded-tier component.
   5. **Diagnostic reclassification per ADR 0029 s5's table.** TSRX004, TSRX034 (non-severe),
      TSRX043 and TSRX013's two server-evaluation factories leave the diagnostic channel for the
-     tier census. TSRX034-severe survives SCOPED TO TIER 0. TSRX039 untouched.
+     tier census. TSRX034-severe survives SCOPED TO THE STATIC TIER. TSRX039 untouched.
      **Impure-ambient is NOT a routing signal** — it is the expression-level unresolvability
-     property (ADR 0029 s1 limb b): omitted in EVERY tier including tier 2, no diagnostic. This
+     property (ADR 0029 s1 limb b): omitted in EVERY tier including the Simulated tier, no diagnostic. This
      needs the realm-side suppression step (step 7). LT-142's `Intl` rule splits three ways:
-     server-known locale → tier-1-eligible; locale read from the DOM (`getLocale(el)`,
-     `host.lang`) → tier-2 routing signal, since the realm executes it for real; runtime-default
-     locale → unresolvable. `basic-pluralize` must stay tier 2. Also revisit `evaluability.ts`'s
+     server-known locale → Folded-tier-eligible; locale read from the DOM (`getLocale(el)`,
+     `host.lang`) → Simulated-tier routing signal, since the realm executes it for real; runtime-default
+     locale → unresolvable. `basic-pluralize` must stay the Simulated tier. Also revisit `evaluability.ts`'s
      unconditional `Date` impurity: `new Date(year, month, day)` over parsed server args (the
      `basic-blogmeta`/LT-095 shape) reads no viewing-moment fact, but both the constructor and
      the formatter read the build machine's TIMEZONE — analyse it, don't assume it.
@@ -462,8 +462,8 @@ remain warnings.]
      serializing. **Ordering is load-bearing** — it must run AFTER the fixed-point gate's second
      connect pass (ADR 0027 s8), never between the two, or the gate compares a suppressed tree
      against an unsuppressed one and reports a spurious failure. `module-ticker` is the corpus
-     case to pin (tier 2, `Math.random()` suppressed, everything else simulated) once migrated.
-  8. **The CI equivalence audit** (ADR 0029 s7) — render every tier-1 component through the
+     case to pin (the Simulated tier, `Math.random()` suppressed, everything else simulated) once migrated.
+  8. **The CI equivalence audit** (ADR 0029 s7) — render every Folded-tier component through the
      realm as well, require byte-identical output, fail against the component on divergence.
      This is what makes two coexisting mechanisms defensible; it is not optional and it is not a
      follow-up task. The known `Date.now()` disagreement between `evaluability.ts`'s
@@ -471,21 +471,21 @@ remain warnings.]
      winner: neither mechanism can answer it, so it renders in neither.
   Acceptance: the classifier assigns a tier to every corpus component with a recorded reason and
   golden coverage; `module-scrollarea`-shaped components (layout + `internals`-only output)
-  classify tier 0 once migrated; `basic-counter`/`module-tabgroup`/`card-blogpost`/`card-callout`
-  classify tier 1; no `Date`/`Math.random()` reading expression renders a value in ANY tier;
+  classify as Static-tier once migrated; `basic-counter`/`module-tabgroup`/`card-blogpost`/`card-callout`
+  classify as Folded-tier; no `Date`/`Math.random()` reading expression renders a value in ANY tier;
   the equivalence audit runs green in CI; TSRX013 is three codes; the compile-warning count is
   zero and the tier census is reported separately; `bun test server` green.
 
-- [ ] LT-169: Wire the simulation driver into the docs build for tier-2 components (ADR 0027 stage 2). **Depends on LT-165.**
+- [ ] LT-169: Wire the simulation driver into the docs build for Simulated-tier components (ADR 0027 stage 2). **Depends on LT-165.**
   **Skill:** docs-server-dev
   **Context:** [**Rewritten 2026-09-04 against ADR 0029**; originally "wire the driver in for
-  every corpus component", then re-scoped to "tier-2 only" under a two-tier model. The accepted
-  model is THREE tiers: only **tier 2** goes through the driver. **Tier 1** renders through
-  `emit-server.ts` + the `runtime.ts` value harness with no jsdom involvement, and **tier 0**
+  every corpus component", then re-scoped to "Simulated-tier only" under a two-tier model. The accepted
+  model is THREE tiers: only **The Simulated tier** goes through the driver. **The Folded tier** renders through
+  `emit-server.ts` + the `runtime.ts` value harness with no jsdom involvement, and **The Static tier**
   renders the static skeleton and is likewise never simulated — that last bucket is where most
   of the cost saving lives, since `module-scrollarea` alone is ~2.3 s of the measured ~3.9 s and
   the realm cannot answer it. The wiring must therefore read the classifier's tier (LT-165) and
-  open a realm for tier 2 ONLY; opening one for tier 0 is the specific waste ADR 0029 exists to
+  open a realm for the Simulated tier ONLY; opening one for the Static tier is the specific waste ADR 0029 exists to
   prevent, and it would not be caught by any correctness test.] The consolidated obligations from four prior reviews, carried forward unchanged because
   they don't depend on the tiering question: (1) **Disposal is build-process scope, not
   test-file scope** — `dispose()` at most once, after every render the build will ever do, never
@@ -496,24 +496,24 @@ remain warnings.]
   stays listed with its reason, and the report copy is final (Tech Writer, 2026-09-03). (3)
   **The fixed-point gate's placement decides** — the corpus test carries it today and
   auto-extends; the wiring may either keep it test-only or run a second connect per render at
-  build time; per-render doubles simulation cost for tier-2 components and is NOT required for
+  build time; per-render doubles simulation cost for Simulated-tier components and is NOT required for
   correctness while the corpus test exists, so the default is test-only unless a stage-2 finding
   says otherwise. (4) **The memoization's transferred acceptance lands here** — measure the
   simulated build stage's wall time (the LT-096/LT-103 handoffs record their before/after
-  figures) and verify the render cache engages, now scoped to tier-2 occurrences only. (5)
+  figures) and verify the render cache engages, now scoped to Simulated-tier occurrences only. (5)
   **Per-substrate goldens posture holds** — the build serializes with jsdom; if the substrate
   ever swaps, the snapshot re-baseline is expected and is not a behavior change. **Resolved from LT-171
   (ADR 0029 s8):** there is NO per-request SSR story to honor — the driver stays build-time
   tooling (ADR 0024 s7 unchanged) and LT-166's memoization needs no server-scoped analogue. If a
-  per-request path is ever wanted, tier 1 and tier 0 are already per-request-cheap and only
-  tier 2 would need a cache with an eviction policy; do not build one now. **Also from ADR 0029
+  per-request path is ever wanted, the Folded tier and the Static tier are already per-request-cheap and only
+  the Simulated tier would need a cache with an eviction policy; do not build one now. **Also from ADR 0029
   s7:** the CI equivalence audit (LT-165 step 8) runs an unconditional simulation pass over
-  tier-1 components — that is a CI cost, deliberately NOT paid by this build. Do not let the two
-  get merged into one pass. Acceptance: the build runs the driver over tier-2
+  Folded-tier components — that is a CI cost, deliberately NOT paid by this build. Do not let the two
+  get merged into one pass. Acceptance: the build runs the driver over Simulated-tier
   `server/generated/tsrx/` components only — with an assertion that no realm is opened for a
-  tier-0 or tier-1 component — a new build-report entry fails the build naming the component,
+  Static-tier or Folded-tier component — a new build-report entry fails the build naming the component,
   disposal is provably end-of-build, and the wall-time/cache-engagement figures are recorded in
-  the handoff and split by tier, including the tier-0 saving as a separate figure.
+  the handoff and split by tier, including the Static-tier saving as a separate figure.
 
 ## Wave 4 — example migrations
 
@@ -524,9 +524,9 @@ that trips them is not accruing warnings, it is being classified. Judge a migrat
 warnings in the diagnostic channel, plus its recorded TIER and the reason.] LT-096/LT-103's perf-trigger notes (below) are about whether they push
 page chrome into the simulated corpus at all; that's still meaningful under tiering (a
 phase-1-only component migrating in adds ~nothing; a phase-2 component adds real jsdom cost),
-so keep recording the wall-time figures either way — and note that a **tier-0** result (layout
+so keep recording the wall-time figures either way — and note that a **Static-tier** result (layout
 reads, `internals`-only output, stubbed sensors) also adds ~nothing, because it is never
-simulated. Under ADR 0029 only tier 2 costs jsdom time.
+simulated. Under ADR 0029 only the Simulated tier costs jsdom time.
 
 - [ ] LT-095: Migrate basic-blogmeta by reshaping it into a template owner with typed byline props (LT-033 decision).
   **Skill:** le-truc-dev
@@ -534,7 +534,7 @@ simulated. Under ADR 0029 only tier 2 costs jsdom time.
 
 - [ ] LT-096: Migrate `module-codeblock` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
-  **Context:** Smallest hand-written example (~43 lines). Migrate `examples/module/codeblock/module-codeblock.ts` → `.tsrx` following the corpus precedents and TSRX-HOST-PROFILE.md. Cutover is same-commit per the canonical pattern (LT-092): delete the `.ts` twin, point `examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green against the served compiled component. Surface compiler gaps in NOTES.md — or fix them directly if small (LT-088 precedent) — never weaken the component to dodge a gap. **Known pre-existing bug to fix during this migration (LT-117 review):** the twin calls `copyToClipboard(code, copy, {...}` bare — the `EffectDescriptor` is created and discarded, so the copy-click listener never attaches (label stays "Copy" on click; verified at HEAD). Per AGENTS.md it needs registration — `watch(() => true, copyToClipboard(...))` or returning it — and a spec assertion that click actually copies/toggles the label (verify via clipboard or button-text state). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (299 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff. [Amended by the LT-166 review, 2026-09-03: nothing left to schedule as a trigger — record the wall-time figures and verify the render cache is actually engaging. **Amended again, 2026-09-04 (LT-171/ADR 0029):** also record which of the THREE tiers this component lands in once LT-165's classifier exists — tier 1 AND tier 0 both mean near-zero added cost regardless of occurrence count; only tier 2 opens a realm. Its `first('code')`/`first('button.overlay')`/`first('basic-button.copy')` refs predict tier 2, but its ~299 occurrences make that ~0.33 s, not a blocker.]
+  **Context:** Smallest hand-written example (~43 lines). Migrate `examples/module/codeblock/module-codeblock.ts` → `.tsrx` following the corpus precedents and TSRX-HOST-PROFILE.md. Cutover is same-commit per the canonical pattern (LT-092): delete the `.ts` twin, point `examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green against the served compiled component. Surface compiler gaps in NOTES.md — or fix them directly if small (LT-088 precedent) — never weaken the component to dodge a gap. **Known pre-existing bug to fix during this migration (LT-117 review):** the twin calls `copyToClipboard(code, copy, {...}` bare — the `EffectDescriptor` is created and discarded, so the copy-click listener never attaches (label stays "Copy" on click; verified at HEAD). Per AGENTS.md it needs registration — `watch(() => true, copyToClipboard(...))` or returning it — and a spec assertion that click actually copies/toggles the label (verify via clipboard or button-text state). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (299 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff. [Amended by the LT-166 review, 2026-09-03: nothing left to schedule as a trigger — record the wall-time figures and verify the render cache is actually engaging. **Amended again, 2026-09-04 (LT-171/ADR 0029):** also record which of the THREE tiers this component lands in once LT-165's classifier exists — Folded and Static both mean near-zero added cost regardless of occurrence count; only the Simulated tier opens a realm. Its `first('code')`/`first('button.overlay')`/`first('basic-button.copy')` refs predict the Simulated tier, but its ~299 occurrences make that ~0.33 s, not a blocker.]
 
 - [ ] LT-097: Migrate `module-cem-list` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -562,7 +562,7 @@ simulated. Under ADR 0029 only tier 2 costs jsdom time.
 
 - [ ] LT-103: Migrate `module-scrollarea` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
-  **Context:** ~104 lines, scroll area with `IntersectionObserver`. Migrate per the canonical pattern (see LT-096); has a spec. Watch for: effect-with-cleanup idiom (`watch` + `return () => observer.disconnect()`, the LT-069 acceptance case). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (2,091 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff. [Amended by the LT-166 review, 2026-09-03: nothing left to schedule as a trigger — record the wall-time figures and verify the render cache is actually engaging. **Amended again, 2026-09-04 (LT-171/ADR 0029):** this component's tier is now PREDICTED, and it drove the ADR's three-tier shape. It reads `scrollLeft`/`scrollTop`/`scrollWidth`/`offsetWidth`/`scrollHeight`/`offsetHeight` and emits exclusively through `bindState(internals, …)` — layout returns zeros under jsdom and `attachInternals()` is normalized to throw, so the realm cannot answer it and it classifies **tier 0**: never simulated, static skeleton, client corrects at connect. At 2,091 occurrences that is ~2.3 s of the measured ~3.9 s NOT paid. Verify the classifier actually reaches that conclusion during this migration — if it lands tier 2 instead, the second conjunct (`sim/patch-table.ts` lookup, ADR 0029 s1) is not wired correctly, and no correctness test would catch it.]
+  **Context:** ~104 lines, scroll area with `IntersectionObserver`. Migrate per the canonical pattern (see LT-096); has a spec. Watch for: effect-with-cleanup idiom (`watch` + `return () => observer.disconnect()`, the LT-069 acceptance case). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (2,091 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff. [Amended by the LT-166 review, 2026-09-03: nothing left to schedule as a trigger — record the wall-time figures and verify the render cache is actually engaging. **Amended again, 2026-09-04 (LT-171/ADR 0029):** this component's tier is now PREDICTED, and it drove the ADR's three-tier shape. It reads `scrollLeft`/`scrollTop`/`scrollWidth`/`offsetWidth`/`scrollHeight`/`offsetHeight` and emits exclusively through `bindState(internals, …)` — layout returns zeros under jsdom and `attachInternals()` is normalized to throw, so the realm cannot answer it and it classifies **The Static tier**: never simulated, static skeleton, client corrects at connect. At 2,091 occurrences that is ~2.3 s of the measured ~3.9 s NOT paid. Verify the classifier actually reaches that conclusion during this migration — if it lands the Simulated tier instead, the second conjunct (`sim/patch-table.ts` lookup, ADR 0029 s1) is not wired correctly, and no correctness test would catch it.]
 
 - [ ] LT-104: Migrate `module-lazyload` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -586,7 +586,7 @@ simulated. Under ADR 0029 only tier 2 costs jsdom time.
 
 - [ ] LT-109: Migrate `module-calctable` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
-  **Context:** ~200 lines, the heaviest `reconcile()` consumer (8 call sites). Migrate per the canonical pattern (see LT-096); reactive lists lower to the compiled `each()`/reconcile path (LT-003) — check loop-body reactive attrs on non-root children (LT-037) carefully. **Note:** formats numbers through `Intl`; LT-142 settles whether those thunks fold server-side (tier-1) or need pre-play (tier-2, per LT-171). Read that rule before authoring, rather than re-deciding it here.
+  **Context:** ~200 lines, the heaviest `reconcile()` consumer (8 call sites). Migrate per the canonical pattern (see LT-096); reactive lists lower to the compiled `each()`/reconcile path (LT-003) — check loop-body reactive attrs on non-root children (LT-037) carefully. **Note:** formats numbers through `Intl`; LT-142 settles whether those thunks fold server-side (Folded-tier) or need pre-play (Simulated-tier, per LT-171). Read that rule before authoring, rather than re-deciding it here.
 
 - [ ] LT-110: Migrate `module-ticker` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -640,7 +640,7 @@ simulated. Under ADR 0029 only tier 2 costs jsdom time.
 
 Full task-by-task rationale, review notes, and corpus-impact numbers for everything below have been compacted out of this file; see git history (`git log -p -- TODO.md`) for the original entries if needed.
 
-**ADR 0027 stage-1 implementation (2026-09-03, CLOSED — all reviewed; ADRs 0024/0027 accepted on this basis):** LT-154 (server-simulation driver — jsdom substrate, hermetic-quiescence boundary replacing strict synchronicity, children-first replay from the compose graph, load-once-per-module assertion), LT-163 (build-report channel — five diagnostic conditions raised as tier-2/Contained build warnings attributed per-component: jsdomError, unhandled rejection, contained connect throw, network access, non-quiescent drain overrun; `getContext` classified as a documented non-issue), LT-164 (per-substrate simulated goldens plus the two-order hermeticity and double-connect fixed-point invariants, both as `bun test server/tests` cases), LT-166 (render memoization on `(component, markup)`, landed ahead of its 1.0 s trigger by explicit owner request — 93.5% measured hit rate at docs scale), LT-167 (driver polish — stale network-stub doc, probe drain dedup, three fixture-artifact ARGS fixed, `check:sim` output attributed), LT-168 (reconciled the compile-warning baseline to the tool-counted **8 unique** standing warnings — six `basic-pluralize` TSRX034 correct refusals, `form-listbox` TSRX034, `form-tokenbox` TSRX039 — correcting a "cleared six, leaving 2" mis-record that never held on this branch; added a counted summary line to `check:tsrx`). LT-153 (the architect's compiler-consequences plan that produced LT-163/164/165/166 and re-scoped the gate wave) is superseded in its "zero is the target"/"delete evaluability.ts at stage 3" halves by the 2026-09-04 phase-1/phase-2 tiering decision — see the Sequencing section and LT-171.
+**ADR 0027 stage-1 implementation (2026-09-03, CLOSED — all reviewed; ADRs 0024/0027 accepted on this basis):** LT-154 (server-simulation driver — jsdom substrate, hermetic-quiescence boundary replacing strict synchronicity, children-first replay from the compose graph, load-once-per-module assertion), LT-163 (build-report channel — five diagnostic conditions raised as Simulated-tier/Contained build warnings attributed per-component: jsdomError, unhandled rejection, contained connect throw, network access, non-quiescent drain overrun; `getContext` classified as a documented non-issue), LT-164 (per-substrate simulated goldens plus the two-order hermeticity and double-connect fixed-point invariants, both as `bun test server/tests` cases), LT-166 (render memoization on `(component, markup)`, landed ahead of its 1.0 s trigger by explicit owner request — 93.5% measured hit rate at docs scale), LT-167 (driver polish — stale network-stub doc, probe drain dedup, three fixture-artifact ARGS fixed, `check:sim` output attributed), LT-168 (reconciled the compile-warning baseline to the tool-counted **8 unique** standing warnings — six `basic-pluralize` TSRX034 correct refusals, `form-listbox` TSRX034, `form-tokenbox` TSRX039 — correcting a "cleared six, leaving 2" mis-record that never held on this branch; added a counted summary line to `check:tsrx`). LT-153 (the architect's compiler-consequences plan that produced LT-163/164/165/166 and re-scoped the gate wave) is superseded in its "zero is the target"/"delete evaluability.ts at stage 3" halves by the 2026-09-04 phase-1/phase-2 tiering decision — see the Sequencing section and LT-171.
 
 **Gate wave (2026-09-03/04, CLOSED except LT-147/LT-148/LT-170, tracked above):** LT-143 (`basic-pluralize` renders correctly under simulation for count values 0/1/2/3/5/11 — the six standing TSRX034 refusals confirmed correct and left untouched), LT-133 (`basic-number` renders the formatted value under simulation; `basic-gauge.html`'s hand-authored `84%`/`65%`/`20.57%` fallback text removed — the last figure was itself inconsistent with its own `options`, corrected to `20.6%` by removing the workaround), LT-144 (`{host.count}`/`{count}` converge on identical initial HTML under simulation; the remaining binding-plan difference — one plans a live `watch()`, the other is a compile-time literal substitution — is real and documented, but the test pinning it was weak; strengthening it is LT-170), LT-145 (`form-listbox`'s Parser-exposed-`filter`-prop-with-no-server-arg fallback pinned under simulation — a pure runtime pin, does not move the compile baseline; an arithmetic error in the task's own acceptance text was corrected by the architect review, not by chasing a follow-up fix), LT-146 (`form-tokenbox.description`'s TSRX039 duplicate-channel warning closed — final shape is `description: descriptionEl?.textContent ?? ''` handed straight to `expose()`, which auto-wraps any plain function/value into a reactive cell; no `data-description` attribute or explicit `createCell`/`asString` needed, simpler than the `form-combobox` `descriptionCell` pattern it was originally modeled on, which is itself now a candidate for the same simplification).
 

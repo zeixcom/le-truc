@@ -200,7 +200,7 @@ registry holds: source paths, emitted module texts, CSS, props type, and
 `exposedProps` mapping every `expose()` key to an `ExposeKind` (`'slot'`,
 `'computed'`, `'method'`). This is what makes `truc:pass={{ }}` legality
 decidable at compile time (ADR 0028); a target with no entry stays on the
-Tier 2 runtime backstop.
+**Contained** runtime backstop (ADR 0028).
 
 **Reserved parameters** — server args the compiler supplies rather than the
 caller: `children` (ADR 0024 s10, composed children) and `i18n` (ADR 0030,
@@ -208,8 +208,8 @@ the locale record: `lang`, the component's resolved messages `t`,
 `timeZone`/`currency`, and `dir`). A component receives one only by declaring
 it; declaring it costs the caller nothing, so composition never threads
 locale by hand. Both are ordinary destructurable args, so the value is
-server-known and folds in phase 1 — which is why an i18n component is tier-1
-eligible rather than tier 2 (§ 5). An authored `lang` arg, or one supplied at
+server-known and folds in phase 1 — which is why an i18n component is Folded-tier
+eligible rather than the Simulated tier (§ 5). An authored `lang` arg, or one supplied at
 a compose site, overrides the record's locale; the EFFECTIVE locale renders
 onto the root `lang` attribute, exempt from TSRX039 by ADR 0024 s3's
 root-attribute exclusion.
@@ -265,7 +265,7 @@ reactive INITIAL VALUES.
 | **2** *Simulated* | The `sim/` driver (ADR 0027). | Phase 1 does not resolve everything **and** the realm can plausibly answer. |
 | **0** *Static* | The phase-1 skeleton only; unresolved expressions omitted. | Phase 1 does not resolve everything **and** the realm cannot answer either. |
 
-Tier 0 sits below tier 1 because it resolves *less*, not more. It is what
+The Static tier sits below the Folded tier because it resolves *less*, not more. It is what
 today's compiler already does when the fold gives up — promoted from an
 accident of a failed proof to a routed decision with a recorded reason.
 
@@ -288,7 +288,7 @@ produce its value. Two limbs —
   back to the runtime default. This is `evaluability.ts`'s existing
   `containsImpureAmbient` set.
 
-**An unresolvable expression is omitted in EVERY tier, tier 2 included.** The
+**An unresolvable expression is omitted in EVERY tier, the Simulated tier included.** The
 realm must not fold one: a build-time `Date.now()` is not an approximation
 the client corrects, it is a stale value cached into the served HTML for the
 life of the page (`evaluability.ts`'s own comment already says so). Since the
@@ -302,12 +302,12 @@ or the gate compares a suppressed tree against an unsuppressed one.
 - **Phase-1 totality** reuses `evaluability.ts` (`isServerEvaluable`,
   `hostDerivedFold`) and `analysis/harvest.ts`'s site detection unchanged in
   mechanism, inverted in polarity. Every site that used to trigger a refusal
-  is now a tier-2 routing signal: no harvestable render site (old `TSRX004`),
+  is now a Simulated-tier routing signal: no harvestable render site (old `TSRX004`),
   no server-renderable value for a semantically-loaded attribute (old
   `TSRX034`), a setup const reading a `first()` ref (old `TSRX043`), a
   client-only primitive or a `host`/`internals` read in a plain setup const
   or a derived compute (the server-evaluation members of old `TSRX013`).
-- **Tier 0 is the degenerate case**: every phase-1-unresolved expression is
+- **The Static tier is the degenerate case**: every phase-1-unresolved expression is
   unresolvable, so no mechanism needs to run at all.
 
 Keeping the stub table load-bearing for limb (a) is deliberate: when the
@@ -318,31 +318,31 @@ will be when the page is read.
 
 **`module-ticker` is why the two facts stay separate.** It calls
 `Math.random()` and is heavily `first()`-based (template, table, tbody,
-toggle button). Component-level tier 0 would discard everything the realm
-could resolve; component-level tier 2 would bake the random walk's seed into
-the page. It is tier 2 with one suppressed expression.
+toggle button). Component-level the Static tier would discard everything the realm
+could resolve; component-level the Simulated tier would bake the random walk's seed into
+the page. It is the Simulated tier with one suppressed expression.
 
 `Intl` splits along the same seam: a locale resolving to a server-known value
-keeps a component tier-1-eligible; a locale read from the DOM (`getLocale(el)`,
-`host.lang`) is a tier-2 routing signal, because the realm executes that read
+keeps a component Folded-tier-eligible; a locale read from the DOM (`getLocale(el)`,
+`host.lang`) is a Simulated-tier routing signal, because the realm executes that read
 for real; only a runtime-default locale is unresolvable under limb (b).
-`basic-pluralize` is the middle case and stays tier 2.
+`basic-pluralize` is the middle case and stays Simulated-tier.
 
 **Classification is static and conservative.** There is no render-time
 fallback from phase 1 to phase 2 — the fallback condition is exactly what the
-analysis already decides ahead of time. A component is tier 1 only when phase
-1 is provably total; any doubt routes downward. A false tier-2 costs ~1.1 ms;
-a false tier-1 ships wrong HTML with no diagnostic.
+analysis already decides ahead of time. A component is Folded-tier only when phase
+1 is provably total; any doubt routes downward. A false Simulated classification costs ~1.1 ms;
+a false Folded-tier ships wrong HTML with no diagnostic.
 
-**Composition contaminates on reads, not containment.** A tier-1 or tier-0
-parent that merely embeds a tier-2 child splices the child's already-rendered
+**Composition contaminates on reads, not containment.** A Folded-tier or Static-tier
+parent that merely embeds a Simulated-tier child splices the child's already-rendered
 markup and keeps its own tier — the compose graph renders children before
 parents. Contamination applies only when the parent READS the child: a
 `first()` addressing a compose site, or a `truc:pass={{ }}` into it. The rule
 is a fixpoint over the compose graph, computed in the registry-aware second
 pass alongside `analysis/compose-refs.ts`.
 
-### 5.3 Tier 1 — generated render modules and the value harness
+### 5.3 the Folded tier — generated render modules and the value harness
 
 `emit-server.ts` walks the IR and emits a `render<Name>(args): string`
 function: per-kind dispatch over the template (escaped text, server
@@ -356,13 +356,13 @@ server truth (a Parser prop's root attribute, a prop harvested from a
 same-named server arg, a `first()` ref's branch presence) is spliced to an
 initial value. The fold is all-or-nothing: one non-substitutable read
 disqualifies the expression — and, under ADR 0029, routes the component out
-of tier 1.
+of the Folded tier.
 
-Measured against the migrated corpus, tier 1 is the minority path: about 6 of
+Measured against the migrated corpus, the Folded tier is the minority path: about 6 of
 22 components qualify. Fifteen use `first()`, which is irreducibly a DOM
 question.
 
-### 5.4 Tier 2 — Server Simulation (ADR 0027)
+### 5.4 the Simulated tier — Server Simulation (ADR 0027)
 
 The server renders initial HTML by **executing the generated client module**
 against jsdom and serializing the reactive graph's initial state. The client
@@ -399,14 +399,14 @@ Two gates make simulation safe to ship: **connect must be a fixed point**
 harvestable from the markup the component itself rendered — otherwise
 `@pending`.
 
-For a tier-2 component `emit-server.ts` emits the same skeleton it emits for
-everyone, minus the verbatim `@{ }` setup re-declaration: only tier 1
+For a Simulated-tier component `emit-server.ts` emits the same skeleton it emits for
+everyone, minus the verbatim `@{ }` setup re-declaration: only the Folded tier
 evaluates setup in the value harness, and the setup shapes that would break
 the harness are precisely the ones that routed the component here.
 
-### 5.5 Tier 0 — the static skeleton
+### 5.5 the Static tier — the static skeleton
 
-A tier-0 component gets the phase-1 skeleton with its unresolved expressions
+A Static-tier component gets the phase-1 skeleton with its unresolved expressions
 omitted, and the client corrects at connect. No realm is opened.
 
 This is where the cost argument for tiering mostly pays. `module-scrollarea`
@@ -423,10 +423,10 @@ and `form-spinbutton` (`internals.states`) are in the same position.
 Two evaluating mechanisms coexist — the value harness and the realm — which
 is the hazard ADR 0027 rejected when it declined to keep the determinism gate
 alongside simulation. ADR 0029 answers it with a test rather than an argument:
-**CI renders every tier-1 component through the realm as well and requires
+**CI renders every Folded-tier component through the realm as well and requires
 byte-identical output.** At ~1.1 ms per occurrence the whole corpus is ~4 s,
 affordable once per CI run and not paid by the build. A divergence is a build
-error against that component: either the classifier admitted a false tier-1,
+error against that component: either the classifier admitted a false Folded-tier,
 or the two mechanisms disagree on a shape that needs reconciling. The known
 case is `Date.now()` — `evaluability.ts` refuses it while ADR 0027 § 6 folds
 it — and it is DISSOLVED rather than resolved: neither mechanism can answer
@@ -484,13 +484,13 @@ per component, its tier and the reason — rather than as warnings:
 
 | Code | Becomes |
 | --- | --- |
-| `TSRX004` | tier-2 routing signal; leaves the diagnostic channel |
+| `TSRX004` | Simulated-tier routing signal; leaves the diagnostic channel |
 | `TSRX034` non-severe | routing signal; leaves the diagnostic channel |
-| `TSRX034` **severe** (`disabled`/`checked` on a real submittable control) | **survives, scoped to tier 0** — the only tier where nothing resolves the value, and its own copy is right that this is a correctness bug rather than a flash |
-| `TSRX013` → `clientOnlySetupConst`, `clientOnlySignalCompute` | tier-2 routing signals |
+| `TSRX034` **severe** (`disabled`/`checked` on a real submittable control) | **survives, scoped to the Static tier** — the only tier where nothing resolves the value, and its own copy is right that this is a correctness bug rather than a flash |
+| `TSRX013` → `clientOnlySetupConst`, `clientOnlySignalCompute` | Simulated-tier routing signals |
 | `TSRX013` → `conditionalSignalConstructor` | **unchanged**, and gets its own code — an ADR 0024 s12 format rule, not a server-evaluation guard |
 | `TSRX013` → `deferredCollectorCall` | **unchanged**, and gets its own code — a client-side `NoActiveCollectorError` bug, tier-independent |
-| `TSRX043` | tier-2 routing signal |
+| `TSRX043` | Simulated-tier routing signal |
 | `TSRX039` | **unchanged** — a data-ownership rule; tiering does not answer it |
 
 `TSRX013`'s four factories must be split into distinct codes BEFORE any part
@@ -500,7 +500,7 @@ The consequence for the regression signal: **the compile-warning baseline's
 target stays zero.** Once routing signals leave the channel, the remaining
 warnings are all genuinely author-fixable again. The tier census is a
 separate, non-zero, expected-to-grow record with its own regression story — a
-component drifting from tier 1 to tier 2 is a build-cost regression worth
+component drifting from the Folded tier to the Simulated tier is a build-cost regression worth
 seeing, and it is now visible without being miscast as a warning.
 
 Message copy is owned by the Tech Writer per ADR 0028's lifecycle; severity
@@ -546,11 +546,11 @@ across runtimes) and `eval:substrate` (substrate evaluation scripts).
 
 - **DOM-is-truth** (ADR 0003/0024 s3): the server renders each reactive
   expression's initial value by its tier's mechanism — folded in the value
-  harness (tier 1), simulated (tier 2), or omitted (tier 0) — and the client
+  harness (the Folded tier), simulated (the Simulated tier), or omitted (the Static tier) — and the client
   corrects at connect. No serialized state payload ever ships, in any tier.
-- **Tier is decided statically and conservatively** (ADR 0029, § 5.2): tier 1
+- **Tier is decided statically and conservatively** (ADR 0029, § 5.2): the Folded tier
   only when phase 1 is provably total; any doubt routes downward. There is no
-  render-time fallback. A false tier-2 costs ~1.1 ms; a false tier-1 ships
+  render-time fallback. A false Simulated classification costs ~1.1 ms; a false Folded-tier ships
   wrong HTML with no diagnostic, so the classifier is sound, not complete.
 - **Verbatim slices, sparse spans**: source code is never rewritten, only
   reindented — which is what makes the span tables sound (§ 6).

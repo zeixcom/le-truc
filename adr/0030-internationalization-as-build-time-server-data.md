@@ -26,7 +26,7 @@ Three facts from the existing corpus shape the design:
 
 Pages are rendered once per locale under a path prefix (`/de/guide`, `/en/guide`). Each page's locale is fixed before rendering begins.
 
-This is load-bearing, not an infrastructure detail. Because the locale is a build constant, LT-142's `Intl` fold rule resolves it: `Intl.PluralRules(lang)` and friends become server-known and fold in phase 1. Under ADR [0029](0029-tiered-server-evaluation.md) that means i18n components are **tier-1 eligible rather than tier 2** — internationalization makes them cheaper, not more expensive. A request-time locale would make locale a runtime variable, unfold every `Intl` call, and push the whole i18n corpus to tier 2; it also needs the per-request SSR path ADR 0029 sub-design 8 declined to commit to.
+This is load-bearing, not an infrastructure detail. Because the locale is a build constant, LT-142's `Intl` fold rule resolves it: `Intl.PluralRules(lang)` and friends become server-known and fold in phase 1. Under ADR [0029](0029-tiered-server-evaluation.md) that means i18n components are **Folded-tier eligible rather than the Simulated tier** — internationalization makes them cheaper, not more expensive. A request-time locale would make locale a runtime variable, unfold every `Intl` call, and push the whole i18n corpus to the Simulated tier; it also needs the per-request SSR path ADR 0029 sub-design 8 declined to commit to.
 
 ### 2. The reserved `i18n` parameter
 
@@ -49,7 +49,7 @@ The record carries:
 | `timeZone`, `currency` | formatting configuration for `Intl` consumers — load-bearing, not decorative: see below |
 | `dir` | text direction, derived from `lang` |
 
-`timeZone` is what makes date formatting foldable. `basic-blogmeta` today constructs `new Date(year, month - 1, day)` in the build machine's local zone and formats with `new Intl.DateTimeFormat(locale, { dateStyle })` — no `timeZone` — so the build machine's zone is read twice and the value is not server-known. With `lang` and `timeZone` both supplied, the expression becomes deterministic and folds to tier 1. For a **date-only** value the robust form is `Date.UTC(y, m - 1, d)` formatted with `timeZone: 'UTC'`: it never shifts the day and reads no build-machine state at all. This also resolves the question ADR 0029 left open about local-timezone `Date` construction.
+`timeZone` is what makes date formatting foldable. `basic-blogmeta` today constructs `new Date(year, month - 1, day)` in the build machine's local zone and formats with `new Intl.DateTimeFormat(locale, { dateStyle })` — no `timeZone` — so the build machine's zone is read twice and the value is not server-known. With `lang` and `timeZone` both supplied, the expression becomes deterministic and folds into the Folded tier. For a **date-only** value the robust form is `Date.UTC(y, m - 1, d)` formatted with `timeZone: 'UTC'`: it never shifts the day and reads no build-machine state at all. This also resolves the question ADR 0029 left open about local-timezone `Date` construction.
 
 `dir` is exposed for components whose *logic* is direction-aware. It is not rendered per component — direction belongs on the page's `<html>`, and a component writing `dir` on its own root would fight the page.
 
@@ -116,7 +116,7 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 - **Automatic extraction of all template literals**: rejected for now. It guarantees no string is forgotten, but it is substantial machinery (key stability across edits, disambiguating identical strings, a catalog edit for every text edit) and the untranslated-literal warning in sub-design 4 gets most of the benefit at a fraction of the cost. Revisit if the warning proves insufficient in practice.
 - **A missing key as a build error**: rejected — it makes a partially translated locale unbuildable, so a new locale could never land incrementally. Attractive on the project's usual compile-time-contract grounds, and rejected only because translation is externally paced work.
 - **A missing key as a compile warning**: rejected — it is not author-fixable, so it would sit in the warning channel indefinitely and reintroduce the non-zero baseline ADR 0029 sub-design 6 just removed.
-- **Request-time content negotiation**: rejected — it needs the per-request SSR path ADR 0029 sub-design 8 declined, and it makes locale a runtime variable so no `Intl` call can fold, pushing every i18n component to tier 2.
+- **Request-time content negotiation**: rejected — it needs the per-request SSR path ADR 0029 sub-design 8 declined, and it makes locale a runtime variable so no `Intl` call can fold, pushing every i18n component to the Simulated tier.
 - **Tiered catalogs (global / page / component) with override precedence**: rejected — three channels able to carry the same key is the duplication smell policed everywhere else in this project, and the precedence rule it needs is the shape repeatedly rejected before. Page prose is a per-locale page source, not a catalog override, so the tier that motivated it was a category error.
 - **Per-component catalog files co-located with the `.tsrx`**: rejected — it reintroduces a sibling file whose contract must be kept in sync by hand, which is precisely the three-file drift ADR 0024 exists to cure, and it hands translators N files per language instead of one. Inline source strings get the co-location benefit without the sibling file.
 - **The build writing missing keys into committed catalogs** (i18next/Fluent "save missing" mode): rejected — self-maintaining and diffable, but it makes the build non-idempotent and has CI writing to tracked files. The same benefit is available from an explicit `i18n:sync` script a person runs.
@@ -129,7 +129,7 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 
 - The server has a real answer to "what locale is this page," rather than the build machine's default or an ancestor walk over a truncated tree.
 - Rendered markup shrinks as well: an English page carries two plural spans where it carries six today (sub-design 6).
-- **i18n components get cheaper, not more expensive.** A server-known locale folds `Intl` (LT-142), so `basic-pluralize`'s six standing `TSRX034` warnings dissolve and it becomes tier-1 eligible instead of tier 2 (ADR 0029).
+- **i18n components get cheaper, not more expensive.** A server-known locale folds `Intl` (LT-142), so `basic-pluralize`'s six standing `TSRX034` warnings dissolve and it becomes Folded-tier eligible instead of the Simulated tier (ADR 0029).
 - ADR 0029's unresolvability limb (b) stops firing for compiled components on the locale axis: there is no runtime-default locale to be unresolvable, because the record supplies one.
 - No message catalog and no locale runtime ship to the browser. The client's i18n surface is `Intl` plus the DOM — no payload, consistent with ADR 0003.
 - Composition does not thread locale by hand; the reserved-parameter mechanism keeps the compose graph free of plumbing, and a component that does not want i18n pays nothing.
@@ -138,7 +138,7 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 
 **Bad / accepted tradeoffs:**
 
-- **The corpus multiplies per locale.** ~3,700 component occurrences become N × 3,700, and LT-166's `(component, args)` memoization now keys on locale, so the measured 93.5% hit rate will drop — by how much depends on how many components actually consume `i18n`. This needs re-measuring when the second locale lands, and it partially offsets ADR 0029's tier-0 savings.
+- **The corpus multiplies per locale.** ~3,700 component occurrences become N × 3,700, and LT-166's `(component, args)` memoization now keys on locale, so the measured 93.5% hit rate will drop — by how much depends on how many components actually consume `i18n`. This needs re-measuring when the second locale lands, and it partially offsets ADR 0029's Static-tier savings.
 - Mixed-language pages are shippable and therefore will ship. That is the deliberate price of incremental translation, and the census is the only thing making it visible.
 - The catalog pipeline (format, loading, key resolution, staleness detection, the report artifact, the `i18n:sync` script) is new build surface with no prior art in this repo.
 - Source strings living inline means a source-locale copy edit is a `.tsrx` edit, which invalidates that key's translations. Staleness detection has to notice that, or translations silently drift from a source string that moved on.
@@ -153,4 +153,4 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 - Architecture: [Server Evaluation Tiers](../ARCHITECTURE.md#server-evaluation-tiers)
 - Host profile: [TSRX-HOST-PROFILE.md](../TSRX-HOST-PROFILE.md) (the reserved `i18n` parameter and the data account)
 - Compiler: [`server/tsrx/LE_TRUC_COMPILER.md`](../server/tsrx/LE_TRUC_COMPILER.md)
-- Related ADRs: [ADR 0024](0024-adopt-tsrx-as-isomorphic-component-format.md) (s3 one-site-three-roles and the root-attribute exclusion; s10's `children` reserved-parameter precedent; s15 the context fallback this decision declines to use), [ADR 0027](0027-server-simulation.md) (the realm whose `<html lang>` sub-design 7 seeds), [ADR 0029](0029-tiered-server-evaluation.md) (why a build-constant locale means tier 1, and the census pattern both new reports reuse), [ADR 0003](0003-attributes-drive-state-at-connect-time-only.md) (the client reads the locale from the rendered DOM)
+- Related ADRs: [ADR 0024](0024-adopt-tsrx-as-isomorphic-component-format.md) (s3 one-site-three-roles and the root-attribute exclusion; s10's `children` reserved-parameter precedent; s15 the context fallback this decision declines to use), [ADR 0027](0027-server-simulation.md) (the realm whose `<html lang>` sub-design 7 seeds), [ADR 0029](0029-tiered-server-evaluation.md) (why a build-constant locale means the Folded tier, and the census pattern both new reports reuse), [ADR 0003](0003-attributes-drive-state-at-connect-time-only.md) (the client reads the locale from the rendered DOM)

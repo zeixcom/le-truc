@@ -52,6 +52,22 @@ _Avoid_: link, connection, sync, pass
 The mechanism for zero-overhead live **Signal** sharing between Le Truc **Component** instances, swapping **Slot**-backed signals. Enables two-way synchronization between components. Only works between Le Truc components.
 _Avoid_: forward, propagate, share, bind
 
+**Evaluation Tier**:
+Which server-side mechanism renders a **Component**'s reactive initial values, decided statically by the compiler ([ADR 0029](adr/0029-tiered-server-evaluation.md)). Named, not numbered: **Folded** (the DOM-less value harness), **Simulated** (pre-play in the jsdom realm), **Static** (skeleton only; the client corrects). Applies to a whole component.
+_Avoid_: bare "tier 1/2" (ambiguous with **Surfacing Tier**), phase (that is the two-phase render, not the routing)
+
+**Surfacing Tier**:
+Which channel carries a failure to whoever must act on it ([ADR 0028](adr/0028-tiered-error-surfacing.md)). Named, not numbered: **Prevented** (a compile-time diagnostic exists; the build fails), **Contained** (fires at runtime, the component degrades, one attributed `console.error`), **Escalated** (escapes containment — definition-time failures and security-boundary violations only).
+_Avoid_: bare "tier 1/2/3" (ambiguous with **Evaluation Tier**)
+
+**Unresolvable**:
+A property of an *expression*, not a component: no server phase can produce its value, either because every read routes through an API the simulation realm stubs (layout, `internals`, absent sensors) or because its input is not a server-side fact at all (wall clock, RNG, runtime-default locale). An unresolvable expression is omitted in **every** Evaluation Tier. The **Static** tier is the component-level case where every unresolved expression is unresolvable.
+_Avoid_: "unrenderable", "not server-evaluable" (that is the narrower phase-1 predicate)
+
+**Census**:
+A per-component or per-locale record in the build report stating what the build found, without asserting anything is wrong — the *tier census* ([ADR 0029](adr/0029-tiered-server-evaluation.md)) and the *translation census* ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)). A census entry is deliberately **not** a diagnostic and not a warning: it carries findings that are not author-fixable, which is what keeps the compile-warning target at zero.
+_Avoid_: warning, diagnostic, error (all three are the channels a census exists to stay out of)
+
 ## Relationships
 
 - A **Module** (ESM file) contains one or more **Component** definitions
@@ -62,6 +78,8 @@ _Avoid_: forward, propagate, share, bind
 - **Binding** helpers connect **Signal** values to DOM properties/attributes on any element
 - **Pass** connects **Slot**-backed **Signal** instances between Le Truc **Component** instances
 - A **Component** is a **Custom Element** with JavaScript-enhanced functionality (a Web Component)
+- A **Component** has exactly one **Evaluation Tier**; an *expression* within it may be **Unresolvable** regardless of that tier
+- A runtime check has a **Surfacing Tier**; a **Census** record has neither, being no kind of failure
 
 ## Example Dialogue
 
@@ -73,4 +91,4 @@ _Avoid_: forward, propagate, share, bind
 
 ## Flagged Ambiguities
 
-None currently.
+- **"Tier", unqualified.** Two distinct concepts carry the word: **Evaluation Tier** (Folded/Simulated/Static, ADR 0029) and **Surfacing Tier** (Prevented/Contained/Escalated, ADR 0028), and their numberings overlap — "tier 2" once meant Contained and now also means Simulated. **Resolution (owner, 2026-09-04): lead with the NAME in both, everywhere; the number survives only as an ordering inside each ADR's own defining list.** Write "the Simulated tier" or "Contained", never a bare "tier 2".
