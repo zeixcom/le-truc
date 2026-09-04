@@ -73,7 +73,7 @@ For complex interactive patterns where no native element exists (combobox, tabs,
 
 ## Keeping ARIA States in Sync
 
-ARIA has two channels: the content attribute (faces the consumer) and `ElementInternals`/IDL reflection (the component's own default). For component-owned semantics — `role`, `aria-expanded`, `aria-valuenow` and similar — prefer `bindAria(target, name)`, which reflects onto `internals` or a native element and clears any stale server-rendered attribute on first write. Use `bindAttribute` only for the content-attribute channel: state a consumer overrides or that CSS must select on.
+ARIA has two channels: the content attribute (faces the consumer) and `ElementInternals`/IDL reflection (the component's own default). For component-owned semantics — `role`, `aria-expanded`, `aria-valuenow` and similar — prefer `bindAria(target, name)`, which reflects onto `internals` or a native element and clears any stale server-rendered attribute on first write. When the target has no working reflection surface (a skeletal `ElementInternals`, as under server simulation), `bindAria` binds the content attribute instead and nothing is removed — there the attribute is the live channel. Use `bindAttribute` only for the content-attribute channel: state a consumer overrides or that CSS must select on.
 
 ```typescript
 watch('expanded', bindAria(internals, 'ariaExpanded'))  // component-owned default

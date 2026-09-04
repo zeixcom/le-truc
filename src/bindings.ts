@@ -1,6 +1,6 @@
-import type { SingleMatchHandlers } from '@zeix/cause-effect'
+import { isFunction, type SingleMatchHandlers } from '@zeix/cause-effect'
 import { UnsafeAttributeError } from './errors'
-import { internalsHosts } from './internal'
+import { internalsHosts, isCompleteInternals } from './internal'
 import { schedule } from './scheduler'
 
 /**
@@ -348,8 +348,9 @@ function bindClass(
  * Unlike a class token, a custom state cannot be overwritten by author code
  * or frameworks rewriting the host's `class` attribute.
  *
- * If `internals` is `null` (`attachInternals()` failed), the returned
- * function is a no-op.
+ * If `internals` is `null` (`attachInternals()` failed) or has no usable
+ * `states`, the returned function is a no-op. Custom states have no
+ * attribute channel to fall back to.
  *
  * @since 2.3
  * @param internals - The component's `ElementInternals` (or `null`)
@@ -366,7 +367,7 @@ function bindState<T = boolean>(
  *
  * `tokens` is the complete set of states this binding owns. A token absent
  * from the map is treated as `false` (off). Degrades the same way as the
- * single-token form when `internals` is `null`.
+ * single-token form when `internals` is `null` or has no usable `states`.
  *
  * @since 2.6
  * @param internals - The component's `ElementInternals` (or `null`)
@@ -381,20 +382,28 @@ function bindState(
 	internals: ElementInternals | null,
 	tokenOrTokens: string | readonly string[],
 ): (value: any) => void {
+	// Capability probe, once at bind time (ADR 0026 §2, *Capability
+	// fallback*): a non-null internals without a `CustomStateSet` — jsdom's
+	// skeletal one, under server simulation — no-ops exactly as `null` does,
+	// extending ADR 0016 §8's null rule. Custom states have no attribute to
+	// fall back to; `:state()` is the whole channel.
+	const states = internals?.states as CustomStateSet | undefined
+	const usable =
+		states != null && isFunction(states.add) && isFunction(states.delete)
 	if (typeof tokenOrTokens === 'string') {
 		const token = tokenOrTokens
 		return (value: unknown) => {
-			if (!internals) return
-			if (value) internals.states.add(token)
-			else internals.states.delete(token)
+			if (!usable) return
+			if (value) states.add(token)
+			else states.delete(token)
 		}
 	}
 	const tokens = tokenOrTokens
 	return (value: Record<string, unknown>) => {
-		if (!internals) return
+		if (!usable) return
 		for (const token of tokens) {
-			if (value[token]) internals.states.add(token)
-			else internals.states.delete(token)
+			if (value[token]) states.add(token)
+			else states.delete(token)
 		}
 	}
 }
@@ -524,6 +533,17 @@ const ariaAttributeName = (idlName: string): string => {
 }
 
 /**
+ * Whether an `ARIAMixin` property is one of the eight element-reference
+ * properties (`ariaActiveDescendantElement`, `ariaDescribedByElements`, …).
+ *
+ * These carry `Element` references, which no content attribute can express
+ * without the ID-generation plumbing ADR 0026 deleted — so they are the one
+ * hole in the attribute fallback below.
+ */
+const isElementReference = (name: string): boolean =>
+	name.endsWith('Element') || name.endsWith('Elements')
+
+/**
  * Returns `SingleMatchHandlers` that reflect a value onto an `ARIAMixin`
  * target (an `Element` or an `ElementInternals`) via the platform's ARIA
  * reflection properties.
@@ -535,8 +555,15 @@ const ariaAttributeName = (idlName: string): string => {
  *
  * For an `ElementInternals` target, a pre-existing host content attribute
  * for the same property is removed once, on that property's first
- * value-bearing `ok()` — see the stale-attribute rule in ADR 0026 §1. A
- * nullish target makes every handler a no-op.
+ * value-bearing `ok()` — see the stale-attribute rule in ADR 0026 §1.
+ *
+ * The target's capabilities are probed once, at bind time (ADR 0026 §2,
+ * *Capability fallback*). An `ElementInternals` whose reflection does not
+ * reach the platform binds the host's **content attribute** with the same
+ * coercion, and never removes a stale attribute — there the attribute is
+ * the live channel. The eight element-reference properties have no
+ * attribute form and stay no-ops on that path. A nullish target makes
+ * every handler a no-op.
  *
  * @since 2.6
  * @param target - `ARIAMixin` target (`Element` or `ElementInternals`), or `null`/`undefined`
@@ -580,18 +607,54 @@ function bindAria(
 		target != null &&
 		typeof Element !== 'undefined' &&
 		target instanceof Element
-	const host =
+	const internals =
 		target != null && !isElementTarget
-			? internalsHosts.get(target as ElementInternals)
+			? (target as ElementInternals)
 			: undefined
+	const host = internals ? internalsHosts.get(internals) : undefined
+	// Capability probe, once at bind time (ADR 0026 §2, *Capability
+	// fallback*). An `Element` reflects natively; a complete
+	// `ElementInternals` reflects into the accessibility tree. A skeletal
+	// internals — jsdom's, under server simulation — has `aria*` properties
+	// that store and read back while reaching nothing, so reflecting through
+	// it would write to the void *and* remove the server-rendered attribute
+	// that was carrying the value. Such a target binds the host's content
+	// attribute instead, which is a supported channel, not a degradation.
+	const reflects =
+		isElementTarget || (internals != null && isCompleteInternals(internals))
 	// Tracks which properties have had their shadowing attribute removed,
-	// so removal fires once per property, not on every `ok()`.
+	// so removal fires once per property, not on every `ok()`. Never used on
+	// the attribute path, where the attribute is the live channel.
 	const cleared = new Set<keyof ARIAMixin & string>()
+	const coerce = (value: AriaValue): string | undefined =>
+		typeof value === 'boolean'
+			? value
+				? 'true'
+				: 'false'
+			: typeof value === 'number'
+				? String(value)
+				: typeof value === 'string'
+					? value
+					: undefined
 	const assign = (
 		name: keyof ARIAMixin & string,
 		value: AriaValue | undefined,
 	): void => {
 		if (!target) return
+		if (!reflects) {
+			// Element-reference properties have no honest attribute fallback,
+			// so they stay no-ops here — including for a nullish value: there
+			// is no attribute they own to clear.
+			if (!host || isElementReference(name)) return
+			const attribute = ariaAttributeName(name)
+			if (value == null) {
+				host.removeAttribute(attribute)
+				return
+			}
+			const coerced = coerce(value)
+			if (coerced != null) host.setAttribute(attribute, coerced)
+			return
+		}
 		if (value == null) {
 			;(target as unknown as Record<string, unknown>)[name] = null
 			return
@@ -601,16 +664,16 @@ function bindAria(
 			host.removeAttribute(ariaAttributeName(name))
 		}
 		;(target as unknown as Record<string, unknown>)[name] =
-			typeof value === 'boolean'
-				? value
-					? 'true'
-					: 'false'
-				: typeof value === 'number'
-					? String(value)
-					: value
+			coerce(value) ?? value
 	}
 	const clear = (name: keyof ARIAMixin & string): void => {
-		if (target) (target as unknown as Record<string, unknown>)[name] = null
+		if (!target) return
+		if (!reflects) {
+			if (host && !isElementReference(name))
+				host.removeAttribute(ariaAttributeName(name))
+			return
+		}
+		;(target as unknown as Record<string, unknown>)[name] = null
 	}
 	if (typeof nameOrNames === 'string') {
 		const name = nameOrNames

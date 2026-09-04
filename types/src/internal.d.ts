@@ -103,4 +103,25 @@ declare const restoreActiveCollector: (previous: EffectDescriptor[] | undefined)
  * @returns True if the surface the component needs is present and callable
  */
 declare const isUsableInternals: (internals: ElementInternals | null | undefined, formAssociated: boolean) => internals is ElementInternals;
-export { CONTEXT_RETRY_DELAY, DEPENDENCY_TIMEOUT, describeDescriptor, getSignals, installActiveCollector, internalsHosts, internalsMap, isUsableInternals, pushDescriptor, restoreActiveCollector, retainedInitializers, withCollector, };
+/**
+ * Checks whether an `ElementInternals` object is a complete implementation.
+ *
+ * Every engine that ships `ElementInternals` at all ships it with the
+ * form-association members, because form association is the feature it was
+ * introduced for — so their presence is a reliable proxy for "this object's
+ * ARIA reflection reaches the platform". An implementation missing them is
+ * skeletal: jsdom's `attachInternals()` hands back an object whose `aria*`
+ * properties store a value and read it back while reaching nothing at all,
+ * and no serialized markup follows from writing to it. `bindAria()` uses
+ * this to pick its channel (ADR 0026 §2, *Capability fallback*).
+ *
+ * Presence only — the members are never called. On a non-form-associated
+ * element they exist but throw `NotSupportedError` by spec, which is why
+ * {@link isUsableInternals} reads the *values* of the form members only when
+ * the component is form-associated, while this reads nothing.
+ *
+ * @param internals - An `ElementInternals` (or anything claiming to be one)
+ * @returns True if the object is a complete `ElementInternals` implementation
+ */
+declare const isCompleteInternals: (internals: ElementInternals) => boolean;
+export { CONTEXT_RETRY_DELAY, DEPENDENCY_TIMEOUT, describeDescriptor, getSignals, installActiveCollector, internalsHosts, internalsMap, isCompleteInternals, isUsableInternals, pushDescriptor, restoreActiveCollector, retainedInitializers, withCollector, };

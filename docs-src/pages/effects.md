@@ -72,16 +72,16 @@ Most DOM updates are common operations: set text, toggle a class, show or hide. 
 | `bindVisible(el)` | Sets `el.hidden = !value` — `true` means visible | DOM unchanged |
 | `bindAttribute(el, name)` | Sets the attribute (string); adds or removes it (boolean) | Removes the attribute |
 | `bindStyle(el, prop)` | Sets the inline style property | Removes the inline style, restoring the cascade |
-| `bindState(internals, token)` | Toggles a `:state(token)` custom state on `ElementInternals` | No-op when `internals` is `null` |
-| `bindAria(target, name)` | Reflects a value onto an `ARIAMixin` target's ARIA property | Clears the reflection |
+| `bindState(internals, token)` | Toggles a `:state(token)` custom state on `ElementInternals` | No-op when `internals` is `null` or has no usable `states` |
+| `bindAria(target, name)` | Reflects a value onto an `ARIAMixin` target's ARIA property | Clears the reflection — or the host attribute on the attribute fallback |
 
 Two of these deserve a second look.
 
 `bindAttribute()` validates string values before writing them: event-handler attributes (`on*`) are rejected, and URL attributes must pass a safe-protocol allowlist. Violations throw — they are never silent.
 
-`bindState()` toggles a custom state that CSS matches with `:state(token)`. Unlike a class, a custom state belongs to the component; author code or a framework rewriting the host's `class` attribute cannot overwrite it.
+`bindState()` toggles a custom state that CSS matches with `:state(token)`. Unlike a class, a custom state belongs to the component; author code or a framework rewriting the host's `class` attribute cannot overwrite it. Custom states have no attribute channel: when `internals` has no usable `states`, the binding is a no-op.
 
-`bindAria()` targets `internals` or a native element to drive ARIA reflection — a separate channel from content attributes, with its own no-mixing rules. See [Accessibility](accessibility.html) for the full picture.
+`bindAria()` targets `internals` or a native element to drive ARIA reflection — a separate channel from content attributes, with its own no-mixing rules. When the target has no working reflection surface, `bindAria()` binds the host content attribute instead. See [Accessibility](accessibility.html) for the full picture.
 
 {% callout .note title="CSS must define what the class or attribute does" %}
 `bindClass(el, 'even')` adds or removes the `even` class. Nothing changes visually unless your CSS has a rule for `&.even { ... }`. The same applies to `bindAttribute()`: a `[aria-selected="true"]` selector in CSS only activates when the attribute is present on the element.

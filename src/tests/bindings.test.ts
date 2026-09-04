@@ -557,6 +557,17 @@ describe('bindState', () => {
 		}).not.toThrow()
 	})
 
+	test('is a no-op on internals with no states set (LT-177)', () => {
+		// jsdom's skeletal ElementInternals is non-null but has no
+		// CustomStateSet. Without the probe this would be a TypeError; ADR
+		// 0026 §2 extends ADR 0016 §8's null rule to cover it. Custom states
+		// have no attribute channel to fall back to.
+		const internals = {} as unknown as ElementInternals
+		expect(() => {
+			bindState(internals, 'overflow-end')(true)
+		}).not.toThrow()
+	})
+
 	describe('map form', () => {
 		test('toggles every declared token from one map', () => {
 			const { states, internals } = fakeInternals()
@@ -590,6 +601,15 @@ describe('bindState', () => {
 		test('is a no-op when internals is null', () => {
 			expect(() => {
 				bindState(null, ['overflow-start', 'overflow-end'])({
+					'overflow-start': true,
+				})
+			}).not.toThrow()
+		})
+
+		test('is a no-op on internals with no states set (LT-177)', () => {
+			const internals = {} as unknown as ElementInternals
+			expect(() => {
+				bindState(internals, ['overflow-start', 'overflow-end'])({
 					'overflow-start': true,
 				})
 			}).not.toThrow()
@@ -905,6 +925,12 @@ describe('dangerouslyBindInnerHTML', () => {
 /**
  * Minimal stand-in for `ElementInternals` — only the ARIAMixin members the
  * tests touch. A real ElementInternals is unreachable in bun:test.
+ *
+ * The form members are present but never called: `bindAria()` reads their
+ * presence as the capability probe for "this internals' reflection reaches
+ * the platform" (ADR 0026 §2, *Capability fallback*), so a stand-in for a
+ * real implementation has to carry them. {@link SkeletalAriaInternals} is
+ * the deliberate opposite.
  */
 class FakeAriaInternals {
 	role: string | null = null
@@ -913,6 +939,20 @@ class FakeAriaInternals {
 	ariaActiveDescendantElement: Element | null = null
 	ariaDescribedByElements: readonly Element[] | null = null
 	ariaLabelledByElements: readonly Element[] | null = null
+	setFormValue(): void {}
+	setValidity(): void {}
+}
+
+/**
+ * Stand-in for jsdom's skeletal `ElementInternals`, the substrate the server
+ * simulation runs on: ARIA properties that store and read back while
+ * reaching nothing, no form members, no `states`.
+ */
+class SkeletalAriaInternals {
+	role: string | null = null
+	ariaExpanded: string | null = null
+	ariaValueNow: string | null = null
+	ariaValueText: string | null = null
 }
 
 /** Register stub internals against a stub host, enabling the removal rule. */
@@ -1167,6 +1207,103 @@ describe('bindAria — stale-attribute rule (ADR 0026 §1)', () => {
 		handlers.ok(true)
 		expect(host.getAttribute('aria-expanded')).toBe('false')
 		expect(internals.ariaExpanded).toBe('true')
+	})
+})
+
+describe('bindAria — capability fallback (ADR 0026 §2, LT-177)', () => {
+	/** Skeletal internals registered against a host, as the realm produces. */
+	const makeSkeletal = () => {
+		const internals = new SkeletalAriaInternals()
+		const host = new FakeElement('test-foo')
+		internalsHosts.set(
+			internals as unknown as ElementInternals,
+			host as unknown as HTMLElement,
+		)
+		return { internals, host }
+	}
+
+	test('skeletal internals: writes the host content attribute instead', () => {
+		const { internals, host } = makeSkeletal()
+		bindAria(internals as unknown as ARIAMixin, 'ariaExpanded').ok(true)
+		expect(host.getAttribute('aria-expanded')).toBe('true')
+		// The reflection channel is not written to — it reaches nothing here.
+		expect(internals.ariaExpanded).toBeNull()
+	})
+
+	test('skeletal internals: same coercion table as the reflection path', () => {
+		const { internals, host } = makeSkeletal()
+		bindAria(internals as unknown as ARIAMixin, 'ariaExpanded').ok(false)
+		expect(host.getAttribute('aria-expanded')).toBe('false')
+		bindAria(internals as unknown as ARIAMixin, 'ariaValueNow').ok(42)
+		expect(host.getAttribute('aria-valuenow')).toBe('42')
+		bindAria(internals as unknown as ARIAMixin, 'role').ok('slider')
+		expect(host.getAttribute('role')).toBe('slider')
+	})
+
+	test('skeletal internals: nil and ok(null) remove the attribute', () => {
+		const { internals, host } = makeSkeletal()
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		handlers.ok(true)
+		handlers.ok(null as never)
+		expect(host.hasAttribute('aria-expanded')).toBe(false)
+		handlers.ok(true)
+		handlers.nil?.()
+		expect(host.hasAttribute('aria-expanded')).toBe(false)
+	})
+
+	test('skeletal internals: the served attribute survives — no stale removal', () => {
+		// The pin this task exists for: under simulation the initial value
+		// arrives as a server-rendered attribute, and the binding must update
+		// it in place, never strip it (which reflection + removal would do).
+		const { internals, host } = makeSkeletal()
+		host.setAttribute('aria-expanded', 'false')
+		bindAria(internals as unknown as ARIAMixin, 'ariaExpanded').ok(true)
+		expect(host.getAttribute('aria-expanded')).toBe('true')
+	})
+
+	test('skeletal internals: map form covers every declared name', () => {
+		const { internals, host } = makeSkeletal()
+		const handlers = bindAria(internals as unknown as ARIAMixin, [
+			'ariaValueNow',
+			'ariaValueText',
+		])
+		handlers.ok({ ariaValueNow: 180, ariaValueText: '180 degrees' })
+		expect(host.getAttribute('aria-valuenow')).toBe('180')
+		expect(host.getAttribute('aria-valuetext')).toBe('180 degrees')
+		handlers.ok({ ariaValueNow: 210 })
+		expect(host.getAttribute('aria-valuenow')).toBe('210')
+		expect(host.hasAttribute('aria-valuetext')).toBe(false)
+	})
+
+	test('skeletal internals: element-reference properties stay no-ops', () => {
+		const { internals, host } = makeSkeletal()
+		host.setAttribute('aria-describedby', 'authored-id')
+		const option = new FakeElement('p') as unknown as Element
+		const handlers = bindAria(
+			internals as unknown as ARIAMixin,
+			'ariaDescribedByElements',
+		)
+		handlers.ok([option])
+		// No IDREF can be invented, and the authored attribute is not ours to
+		// clear either.
+		expect(host.getAttribute('aria-describedby')).toBe('authored-id')
+		handlers.nil?.()
+		expect(host.getAttribute('aria-describedby')).toBe('authored-id')
+	})
+
+	test('skeletal internals with no host in the reverse lookup: no-op, no throw', () => {
+		const internals = new SkeletalAriaInternals()
+		const handlers = bindAria(internals as unknown as ARIAMixin, 'ariaExpanded')
+		expect(() => handlers.ok(true)).not.toThrow()
+		expect(() => handlers.nil?.()).not.toThrow()
+	})
+
+	test('complete internals is unaffected: reflection plus stale removal', () => {
+		const { internals, host } = makeRegisteredInternals()
+		host.setAttribute('aria-expanded', 'false')
+		bindAria(internals as unknown as ARIAMixin, 'ariaExpanded').ok(true)
+		expect(internals.ariaExpanded).toBe('true')
+		expect(host.hasAttribute('aria-expanded')).toBe(false)
 	})
 })
 

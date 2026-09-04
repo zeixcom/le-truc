@@ -1,4 +1,4 @@
-import type { SingleMatchHandlers } from '@zeix/cause-effect';
+import { type SingleMatchHandlers } from '@zeix/cause-effect';
 /**
  * Low-level DOM-mutation primitives behind the `bind*` helpers. Each
  * `bind*` function returns a setter (or `SingleMatchHandlers`) that a
@@ -146,8 +146,9 @@ declare function bindClass<Tk extends string>(element: Element, tokens: readonly
  * Unlike a class token, a custom state cannot be overwritten by author code
  * or frameworks rewriting the host's `class` attribute.
  *
- * If `internals` is `null` (`attachInternals()` failed), the returned
- * function is a no-op.
+ * If `internals` is `null` (`attachInternals()` failed) or has no usable
+ * `states`, the returned function is a no-op. Custom states have no
+ * attribute channel to fall back to.
  *
  * @since 2.3
  * @param internals - The component's `ElementInternals` (or `null`)
@@ -161,7 +162,7 @@ declare function bindState<T = boolean>(internals: ElementInternals | null, toke
  *
  * `tokens` is the complete set of states this binding owns. A token absent
  * from the map is treated as `false` (off). Degrades the same way as the
- * single-token form when `internals` is `null`.
+ * single-token form when `internals` is `null` or has no usable `states`.
  *
  * @since 2.6
  * @param internals - The component's `ElementInternals` (or `null`)
@@ -222,8 +223,15 @@ declare function bindAttribute<N extends string>(element: Element, names: readon
  *
  * For an `ElementInternals` target, a pre-existing host content attribute
  * for the same property is removed once, on that property's first
- * value-bearing `ok()` — see the stale-attribute rule in ADR 0026 §1. A
- * nullish target makes every handler a no-op.
+ * value-bearing `ok()` — see the stale-attribute rule in ADR 0026 §1.
+ *
+ * The target's capabilities are probed once, at bind time (ADR 0026 §2,
+ * *Capability fallback*). An `ElementInternals` whose reflection does not
+ * reach the platform binds the host's **content attribute** with the same
+ * coercion, and never removes a stale attribute — there the attribute is
+ * the live channel. The eight element-reference properties have no
+ * attribute form and stay no-ops on that path. A nullish target makes
+ * every handler a no-op.
  *
  * @since 2.6
  * @param target - `ARIAMixin` target (`Element` or `ElementInternals`), or `null`/`undefined`

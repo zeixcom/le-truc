@@ -278,10 +278,13 @@ produce its value. Two limbs —
 
 - **(a) stubbed API** — every read routes through something
   `sim/patch-table.ts` declares the realm cannot answer: layout geometry
-  (jsdom has no layout engine; reads return zeros), `attachInternals()`
-  (normalized to throw so the library's degradation branch runs), the absent-
-  API stubs (`ResizeObserver`, `matchMedia`, `IntersectionObserver`,
-  `requestAnimationFrame`), the closed network globals.
+  (jsdom has no layout engine; reads return zeros), the absent-API stubs
+  (`ResizeObserver`, `matchMedia`, `IntersectionObserver`,
+  `requestAnimationFrame`), the closed network globals. `ElementInternals` is
+  no longer one binary row (LT-177): the realm's skeletal internals leaves
+  ARIA expressions answerable — `bindAria()` falls back to the host content
+  attribute, which serializes — while `internals.states` and the form members
+  stay unanswerable.
 - **(b) not a server-side fact** — the value is a function of the moment the
   page is VIEWED, or of the build machine's own ambient state: the wall clock
   (`Date.now()`, `new Date()`), the RNG (`Math.random()`), a locale falling
@@ -372,9 +375,10 @@ stays ground truth and corrects at connect. The driver lives in `sim/`:
   forced from the jsdom window, inert stubs for absent APIs
   (`ResizeObserver`, `matchMedia`, …), network globals replaced with
   never-settling no-ops (a build can never depend on the network; a fetching
-  component stays on its `@pending` arm), and `attachInternals()` normalized
-  to throw so every component takes the library's graceful-degradation branch.
-  Also the second conjunct of the tier classifier (§ 5.2).
+  component stays on its `@pending` arm). `PROTOTYPE_PATCHES` is empty since
+  LT-177: `attachInternals()` is left alone so jsdom's skeletal internals
+  reaches the library and `bindAria()` can bind the attribute the served HTML
+  carries. Also the second conjunct of the tier classifier (§ 5.2).
 - **`realm.ts`** — `createSimulationRealm`: loads the client module with a
   recording `customElements`, parses the SSR'd markup, replays the
   definitions so the upgrade runs, serializes. It seeds the simulated
