@@ -4,6 +4,8 @@
 
 ✅ Accepted (2026-08-31).
 
+**Amended in place, 2026-09-04 (owner):** `bindAria()` — and, for parity, `bindState()` — gains a capability fallback for targets without a usable reflection surface: the simulation realm's skeletal jsdom `ElementInternals`, and `attachInternals()`-less engines. Such a target binds the **content attribute on the host** instead of asserting through reflection. Additive: every environment where reflection works behaves exactly as decided below; the fallback only fills the path that was previously a silent no-op, and it is what keeps the served HTML carrying `role`/`aria-*` initial values under server simulation (ADR 0027), where a reflection-only write would serialize nothing. See §2's amended **Target** rule and the *Capability fallback* subsection.
+
 ## Context
 
 [ADR 0016](0016-element-internals-for-form-association-and-states.md) adopted `ElementInternals` for form association and custom `:state()` pseudo-classes but deliberately withheld ARIA reflection (`internals.role`, `internals.aria*`): no helpers, no examples, and an active advisory to keep explicit `aria-*` attributes. The advisory named three blockers, each concrete at the time:
@@ -72,7 +74,7 @@ watch('activeOption', bindAria(listbox, 'ariaActiveDescendantElement'))
 watch(all(descriptions), bindAria(internals, 'ariaDescribedByElements'))
 ```
 
-- **Target**: `ARIAMixin | null | undefined` — `Element` and `ElementInternals` both implement `ARIAMixin` (with `role` and all `aria*Elements` typed on it), so one signature covers host reflection and inner-element binding. A nullish target (the `attachInternals()` failed path) makes the returned handlers a no-op — the same graceful degradation `bindState()` established.
+- **Target**: `ARIAMixin | null | undefined` — `Element` and `ElementInternals` both implement `ARIAMixin` (with `role` and all `aria*Elements` typed on it), so one signature covers host reflection and inner-element binding. A nullish target (the `attachInternals()` failed path) makes the returned handlers a no-op — the same graceful degradation `bindState()` established. *(Amended 2026-09-04 (owner): the no-op is now the last of three capability tiers — see *Capability fallback* below.)*
 - **Name**: `keyof ARIAMixin & string` — the platform property names, with full editor autocomplete. The helper hides nothing; it is named for and dispatches to the platform API.
 - **Return**: `SingleMatchHandlers` (like `bindAttribute`, not a bare function) so `watch`'s `nil` path is available:
   - `ok(boolean)` → `'true'` / `'false'` — ARIA enumerated semantics, never `toggleAttribute`'s empty-string form
@@ -91,6 +93,16 @@ watch('hue', bindAria(internals, ['ariaValueNow', 'ariaValueText']))
 ```
 
 `names` is declared statically at the call site, so it is always the complete set of properties the binding owns: `ok(map)` assigns each declared name per the coercion table above, with an absent or nullish entry clearing that property; `nil` clears every declared property. The motivating case is a slider that derives *two* ARIA properties (`ariaValueNow`, `ariaValueText`) from one hue value — multi-property-from-one-source is if anything more common for ARIA than for style or attributes, and shipping the only `bind*` helper without a map form would be a gratuitous asymmetry in the shipped `bind*` helper family.
+
+**Capability fallback (amended 2026-09-04, owner).** The target's surface is probed once, at bind time, and the binding takes the strongest channel the target actually supports:
+
+1. **Full `ARIAMixin` target** (every browser Le Truc supports): reflection plus the stale-attribute removal, exactly as decided above. Unchanged.
+2. **Target without a reflection surface** — the simulation realm's skeletal jsdom `ElementInternals`, or an engine without `attachInternals()`: resolve the host through `internalsHosts` (`src/internal.ts`) and bind the **content attribute** with the same coercion table (boolean → `'true'`/`'false'`, number → decimal string, nil/null → `removeAttribute`). The stale-attribute removal does **not** fire — the attribute is the live channel here, there is nothing shadowing it. The eight element-reference properties have no honest attribute fallback (they would need the ID-generation plumbing this ADR deleted) and stay no-ops.
+3. **Null target**: no-op (unchanged).
+
+The rationale is serialization, not merely politeness: a reflection-only write is invisible to serialized HTML, so a simulation realm that asserted through reflection would fire the stale-attribute removal at simulated connect — *deleting* the server-rendered initial value and serializing nothing, a no-JS regression below the attribute channel the value started on. The fallback keeps the served attribute as the initial value, which is the two-channel policy's own terms, while real browsers keep the reflection channel. `bindState()` takes the same treatment: a non-null target without a `states` surface is a no-op, extending ADR 0016 §8's null rule — without the probe, a formerly-null target that becomes non-null-but-skeletal would turn a graceful no-op into a `TypeError`.
+
+Two boundaries are deliberate. First, the fallback is a **capability tier, not a failure**: no diagnostic fires and no Surfacing Tier applies — the attribute path is a fully supported channel, not degradation. Second, the fallback cannot rescue a target that is *null on the context*: a form-associated component whose internals the library globally degraded (ADR 0027's realm posture, kept by owner decision — an incomplete stub is worse than none for form association) has `internals === null`, and `null` has no WeakMap route to a host. `bindAria(null, …)` therefore stays a no-op for exactly that case; no corpus site exercises it (LT-148's fixtures are the forward guard), and the mitigation for one that appears is authored static markup.
 
 `bindAria()`'s return value is a plain object with `ok`/`nil`, so it also composes with imperative call sites that have no signal graph at all. That is a property of the shape, not a promoted usage pattern.
 
@@ -133,6 +145,7 @@ Do not use or promote `ariaOwnsElements` — it does not exist in Chrome/Edge, a
 - Every Le Truc component becomes axe-core-visible out of the box (≥ 4.13), with no per-component opt-in — the library bears the protocol cost once, in the constructor, without blanket-flagging correct internals-role elements.
 - One helper, one mental model: `bindAria(target, name)` spans host reflection, inner-element binding, string state, and element references, typed off the platform's own `ARIAMixin`.
 - Attribute-validity rules regain the safety net for internals-set roles: an `aria-*` attribute that is invalid for a component's reflected role is flagged again (`aria-allowed-attr`/`aria-prohibited-attr`), where before it passed silently.
+- **(Amended 2026-09-04)** The served HTML keeps `role`/`aria-*` initial values in environments without a reflection surface — the simulation realm and `attachInternals()`-less engines — so server evaluation and the no-JS story stop regressing at exactly the point the internals posture would otherwise break them (ADR 0027).
 
 **Bad / trade-offs:**
 
@@ -146,6 +159,7 @@ Do not use or promote `ariaOwnsElements` — it does not exist in Chrome/Edge, a
 - **`ariaOwnsElements` is a known hole** in Chromium; guidance withholds it rather than papering over it.
 - **Bundle cost**: `bindAria` lives in `src/bindings.ts`, which is inside the minimal entry measured by the ≤ 9 kB regression ceiling; it tree-shakes out of bundles that never import it, and the registry registration costs one WeakMap set per instance.
 - DevTools' accessibility-computed-tree panel rendering of internals-set semantics is engine-fixed but not formally verified; Chromium's `ariaOwnsElements`-style deferrals are a reminder that "Baseline" still carries per-property asterisks.
+- **(Amended 2026-09-04)** The capability probe is one more check on each binding's creation path, and internals *capability* becomes substrate-visible in served HTML: a realm with a stronger internals surface than jsdom's would serialize reflection-less output where jsdom serializes attributes. The per-substrate simulated goldens (ADR 0027) are what pin this — a substrate swap re-baselines the snapshots by design.
 
 ## Related
 
@@ -158,3 +172,4 @@ Do not use or promote `ariaOwnsElements` — it does not exist in Chrome/Edge, a
 - Evidence: [ADR 0026 PoC findings](archive/0026-poc-findings.md) — the LT-001–LT-013 proof-of-concept log the LT-006 decision gate read; `test/poc/` itself was retired by LT-014 once its coverage moved to `examples/test/aria/`
 - External: [Deque: axe-core ElementInternals support](https://www.deque.com/blog/test-your-custom-elements-and-trust-the-results-with-axe-cores-support-for-elementinternals/) · [axe-core element-internals docs](https://github.com/dequelabs/axe-core/blob/develop/doc/element-internals.md) · [ElementInternals declaration protocol](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/element-internals-declaration.md) · [MDN ARIAMixin](https://developer.mozilla.org/en-US/docs/Web/API/ARIAMixin)
 - Supersedes: None
+- **Amended in place (2026-09-04, owner):** the *Capability fallback* in §2. Scopes two neighbors: ADR 0027 sub-design 2's realm no longer forces `attachInternals()` to throw — jsdom's skeletal internals flows through and the library's own LT-150 shape check keeps the degradation scoped to form-associated components; ADR 0029 sub-design 1 limb (a)'s internals row becomes capability-scoped for the tier classifier (ARIA expressions realm-answerable via this fallback; `internals.states`/form-member reads still unanswerable).

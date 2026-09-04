@@ -1,4 +1,5 @@
 import type { SingleMatchHandlers } from '@zeix/cause-effect'
+import { UnsafeAttributeError } from './errors'
 import { internalsHosts } from './internal'
 import { schedule } from './scheduler'
 
@@ -158,7 +159,7 @@ const isSafeURL = (value: string): boolean => {
  * @param element - Target element
  * @param attr - Attribute name to set
  * @param value - Attribute value to set
- * @throws {Error} If the attribute name or value is unsafe
+ * @throws {UnsafeAttributeError} If the attribute name or value is unsafe
  */
 const safeSetAttribute = (
 	element: Element,
@@ -166,13 +167,18 @@ const safeSetAttribute = (
 	value: string,
 ): void => {
 	if (/^on/i.test(attr))
-		throw new Error(
-			`setAttribute: blocked unsafe attribute name '${attr}' on ${element.localName} — event handler attributes are not allowed`,
+		throw new UnsafeAttributeError(
+			element,
+			attr,
+			'event handler attributes are not allowed. Attach the listener with on() instead.',
 		)
 	value = String(value).trim()
 	if (!isSafeURL(value))
-		throw new Error(
-			`setAttribute: blocked unsafe value for '${attr}' on <${element.localName}>: '${value}'`,
+		throw new UnsafeAttributeError(
+			element,
+			attr,
+			'the value uses an unsafe URL protocol (allowed: http, https, ftp, mailto, tel).',
+			value,
 		)
 	element.setAttribute(attr, value)
 }

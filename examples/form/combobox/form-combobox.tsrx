@@ -87,15 +87,12 @@ export function FormCombobox(
 	const textbox = first('input', 'combobox input');
 	const listbox = first('form-listbox', 'combobox listbox');
 	const popup = first('.popup', 'listbox popup wrapper');
-	// Children-are-data (LT-112/113): the description is a writable prop
-	// (createCell) whose client-side seed is harvested from the owned
-	// paragraph's text content; consumers compose through the public prop.
-	const descriptionCell = createCell(description);
+	const descriptionEl = first('.description');
 
 	expose({
 		value: asString(''),
 		length: () => host.value.length,
-		description: descriptionCell,
+		description: descriptionEl?.textContent ?? '',
 		clear: defineMethod(() => {
 			host.value = '';
 			textbox.value = '';
@@ -197,14 +194,13 @@ export function FormCombobox(
 				/>
 			</div>
 			@if (description) {
-				<p
-					class="description"
-					aria-live="polite"
-					id={descriptionId}
-					data-description={description}
-				>{descriptionCell}</p>
+				<p class="description" aria-live="polite" id={descriptionId}>
+					{description}
+				</p>
 			}
-			<p class="error" role="alert" aria-live="assertive">{host.validationMessage}</p>
+			<p class="error" role="alert" aria-live="assertive">
+				{host.validationMessage}
+			</p>
 		</form-combobox>
 
 		<style>

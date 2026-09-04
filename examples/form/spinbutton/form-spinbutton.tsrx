@@ -70,8 +70,7 @@
  * `value` ATTRIBUTE stays at the server-rendered default — the reset
  * baseline (LT-057), not a live-value channel.
  */
-import { asNumber, defineMethod } from '@zeix/le-truc'
-import { relayValidity } from '@zeix/le-truc'
+import { asNumber, defineMethod, relayValidity } from '@zeix/le-truc'
 
 export const config = { formAssociated: true }
 

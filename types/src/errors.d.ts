@@ -1,4 +1,34 @@
 /**
+ * Reports a whole-component connect failure that was contained instead of allowed to escape `connectedCallback`.
+ *
+ * Tier 2 of [ADR 0028](../adr/0028-tiered-error-surfacing.md): one broken
+ * component never takes the page's other components down, and that
+ * containment does not depend on which wrapper the host runtime happens to
+ * put around `connectedCallback`. The component degrades to its
+ * server-rendered markup, which is already the correct pre-JS state
+ * (ADR 0003) — this is a component that did not enhance, not a broken page.
+ *
+ * @since 3.0.0
+ * @param host - Component instance whose connect failed
+ * @param phase - What was running when it threw, for the DEV_MODE diagnostic
+ * @param error - The thrown value
+ */
+declare const reportConnectFailure: (host: HTMLElement, phase: string, error: unknown) => void;
+/**
+ * Reports a single effect descriptor that threw while activating.
+ *
+ * Activation is contained per descriptor (ADR 0028 sub-design 3), so the
+ * component's other effects still activate — which means the diagnostic has
+ * to name *which* effect failed, or a partially enhanced component is not
+ * debuggable.
+ *
+ * @since 3.0.0
+ * @param host - Component instance the descriptor belongs to
+ * @param descriptor - Description of the failing effect, e.g. `"watch()"`
+ * @param error - The thrown value
+ */
+declare const reportEffectFailure: (host: HTMLElement, descriptor: string, error: unknown) => void;
+/**
  * Error thrown when component name violates rules for custom element names
  *
  * @since 0.14.0
@@ -23,7 +53,12 @@ declare class InvalidPropertyNameError extends TypeError {
     constructor(component: string, prop: string, reason: string);
 }
 /**
- * Error thrown when a required descendant element does not exist in a queried root's DOM subtree
+ * Error thrown when a required descendant element does not exist in a queried
+ * root's DOM subtree.
+ *
+ * The one content-dependent error in the set (ADR 0028 inventory): it fires on
+ * markup drift, not on bad source, so `TSRX026`/`TSRX040` cover the authored
+ * case and this covers markup that changed after the server rendered it.
  *
  * @since 0.14.0
  */
@@ -75,7 +110,13 @@ declare class InvalidCustomElementError extends TypeError {
 }
 /**
  * Error thrown when `pass()` cannot bind one or more properties on the
- * target. See ADR 0011.
+ * target.
+ *
+ * Tier 2 ([ADR 0028](../adr/0028-tiered-error-surfacing.md), which supersedes
+ * ADR 0011): `TSRX012` decides the same question at compile time for a
+ * registry-known target, so this is the backstop for hand-authored and
+ * foreign custom elements. Validation is eager and the commit is atomic — a
+ * failure leaves the target exactly as it was.
  *
  * @since 2.0.4
  */
@@ -143,4 +184,28 @@ declare class InvalidSelectorError extends TypeError {
      */
     constructor(parent: ParentNode, selector: string, cause: unknown);
 }
-export { DependencyTimeoutError, ExtensionCollisionError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, InvalidTemplateError, MissingElementError, NoActiveCollectorError, };
+/**
+ * Error thrown when `safeSetAttribute()` blocks an attribute write.
+ *
+ * Two conditions, both of which fire on runtime *data* rather than on source
+ * shape, so neither is decidable by the compiler (ADR 0028 inventory): an
+ * attribute name starting with `on`, and a value using an unsafe URL protocol
+ * ([M16](../REQUIREMENTS.md#m16-security-validation-in-setattribute),
+ * [ADR 0009](../adr/0009-security-validation-in-bindattribute.md)).
+ *
+ * The security guarantee is that the `setAttribute` does not happen — not
+ * that the throw escapes — so this is Tier 2 and contained like any other
+ * activation failure.
+ *
+ * @since 3.0.0
+ */
+declare class UnsafeAttributeError extends TypeError {
+    /**
+     * @param element - Element the attribute was to be set on
+     * @param attr - Attribute name
+     * @param reason - Why the write was blocked
+     * @param value - Attribute value, when the value is what was unsafe
+     */
+    constructor(element: Element, attr: string, reason: string, value?: string);
+}
+export { DependencyTimeoutError, ExtensionCollisionError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, InvalidTemplateError, MissingElementError, NoActiveCollectorError, reportConnectFailure, reportEffectFailure, UnsafeAttributeError, };

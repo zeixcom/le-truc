@@ -205,11 +205,28 @@ type PassHelper<P extends ComponentProps> = {
  *
  * @since 2.0
  * @param result - Flat or nested array of effect descriptors to activate
+ * @param onError - When given, each descriptor is contained individually and a throw is reported here instead of propagating (ADR 0028)
  */
-const activateResult = (result: FactoryResult): void => {
+const activateResult = (
+	result: FactoryResult,
+	onError?: (error: unknown, descriptor: EffectDescriptor) => void,
+): void => {
 	for (const descriptor of result) {
-		if (Array.isArray(descriptor)) activateResult(descriptor)
-		else if (descriptor) descriptor()
+		if (Array.isArray(descriptor)) activateResult(descriptor, onError)
+		else if (descriptor) {
+			// Without a handler, a throw propagates — that is what `each()`'s
+			// and `reconcile()`'s nested calls want, since they run *inside* a
+			// descriptor that the host's own containment already wraps. The
+			// host passes a handler so one failing effect costs only itself
+			// (ADR 0028 sub-design 3).
+			if (!onError) descriptor()
+			else
+				try {
+					descriptor()
+				} catch (error) {
+					onError(error, descriptor)
+				}
+		}
 	}
 }
 
@@ -495,7 +512,7 @@ const makePass = <P extends ComponentProps>(
 			for (const [prop, reactive] of Object.entries(props)) {
 				if (reactive == null) continue
 				if (!(prop in target)) {
-					failures.set(prop, `does not exist on ${targetName}`)
+					failures.set(prop, `is not a property of ${targetName}`)
 					continue
 				}
 
@@ -528,7 +545,7 @@ const makePass = <P extends ComponentProps>(
 				if (!isSlot(slot)) {
 					failures.set(
 						prop,
-						`is not Slot-backed on ${targetName} (read-only property, or target is not a Le Truc component)`,
+						`is not Slot-backed on ${targetName} (exposed read-only, or it is not a Le Truc component)`,
 					)
 					continue
 				}
@@ -883,7 +900,6 @@ function reconcile<T extends {}>(
 
 export {
 	activateResult,
-	type EffectDescriptor,
 	each,
 	type FactoryResult,
 	type Falsy,

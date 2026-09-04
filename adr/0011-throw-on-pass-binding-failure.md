@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted
+🗑️ Superseded by [ADR 0028](0028-tiered-error-surfacing.md)
 
 ## Context
 
@@ -45,3 +45,4 @@ For `Memo<Element[]>` targets, the same per-target throw applies with no special
 - Architecture: [Inter-Component Signal Sharing (Pass)](../ARCHITECTURE.md#inter-component-signal-sharing-pass)
 - Related ADRs: [ADR 0004](0004-slot-based-signal-swapping-for-inter-component-binding.md) (Slot-based signal swapping), [ADR 0007](0007-effect-descriptors-with-deferred-activation.md) (deferred activation — explains why this can't be caught by the caller)
 - Supersedes: None
+- Superseded by: [ADR 0028](0028-tiered-error-surfacing.md)

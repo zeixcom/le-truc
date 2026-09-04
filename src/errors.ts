@@ -1,6 +1,70 @@
 import { valueString } from '@zeix/cause-effect'
 import { describeRoot, elementName } from './util'
 
+/* === Diagnostic Reporting === */
+
+/**
+ * Reports a whole-component connect failure that was contained instead of allowed to escape `connectedCallback`.
+ *
+ * Tier 2 of [ADR 0028](../adr/0028-tiered-error-surfacing.md): one broken
+ * component never takes the page's other components down, and that
+ * containment does not depend on which wrapper the host runtime happens to
+ * put around `connectedCallback`. The component degrades to its
+ * server-rendered markup, which is already the correct pre-JS state
+ * (ADR 0003) — this is a component that did not enhance, not a broken page.
+ *
+ * @since 3.0.0
+ * @param host - Component instance whose connect failed
+ * @param phase - What was running when it threw, for the DEV_MODE diagnostic
+ * @param error - The thrown value
+ */
+const reportConnectFailure = (
+	host: HTMLElement,
+	phase: string,
+	error: unknown,
+): void => {
+	if (process.env.DEV_MODE === 'true')
+		console.error(
+			`Connect failed in ${elementName(host)} while running ${phase}. The component keeps its server-rendered markup and does not enhance. Other components are unaffected.`,
+			error,
+		)
+	else
+		console.error(
+			`${elementName(host)} did not enhance and keeps its server-rendered markup:`,
+			error,
+		)
+}
+
+/**
+ * Reports a single effect descriptor that threw while activating.
+ *
+ * Activation is contained per descriptor (ADR 0028 sub-design 3), so the
+ * component's other effects still activate — which means the diagnostic has
+ * to name *which* effect failed, or a partially enhanced component is not
+ * debuggable.
+ *
+ * @since 3.0.0
+ * @param host - Component instance the descriptor belongs to
+ * @param descriptor - Description of the failing effect, e.g. `"watch()"`
+ * @param error - The thrown value
+ */
+const reportEffectFailure = (
+	host: HTMLElement,
+	descriptor: string,
+	error: unknown,
+): void => {
+	if (process.env.DEV_MODE === 'true')
+		console.error(
+			`${descriptor} failed to activate in ${elementName(host)}. This effect does not run; the component's other effects are unaffected.`,
+			error,
+		)
+	else
+		console.error(
+			`${descriptor} did not activate in ${elementName(host)}; its other effects are unaffected:`,
+			error,
+		)
+}
+
 /* === Error Classes === */
 
 /**
@@ -14,7 +78,7 @@ class InvalidComponentNameError extends TypeError {
 	 */
 	constructor(component: string) {
 		super(
-			`Invalid component name "${component}". Custom element names must contain a hyphen, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens.`,
+			`Invalid component name "${component}". Rename the custom element to contain a hyphen, start with a lowercase letter, and use only lowercase letters, numbers, and hyphens.`,
 		)
 		this.name = 'InvalidComponentNameError'
 	}
@@ -40,7 +104,8 @@ class InvalidPropertyNameError extends TypeError {
 }
 
 /**
- * Error thrown when a required descendant element does not exist in a queried root's DOM subtree
+ * Error thrown when a required descendant element does not exist in a queried
+ * root's DOM subtree.
  *
  * @since 0.14.0
  */
@@ -58,7 +123,7 @@ class MissingElementError extends Error {
 		contextLabel: string = 'component',
 	) {
 		super(
-			`Missing required element <${selector}> in ${contextLabel} ${describeRoot(root)}. ${required}`,
+			`Missing required element \`${selector}\` in ${contextLabel} ${describeRoot(root)}. ${required}`,
 		)
 		this.name = 'MissingElementError'
 	}
@@ -76,7 +141,7 @@ class DependencyTimeoutError extends Error {
 	 */
 	constructor(host: HTMLElement, missing: string[]) {
 		super(
-			`Timeout waiting for: [${missing.join(', ')}] in component ${elementName(host)}.`,
+			`Timeout waiting for [${missing.join(', ')}] in component ${elementName(host)}. Make sure each one is a Le Truc component or registered with customElements.define().`,
 		)
 		this.name = 'DependencyTimeoutError'
 	}
@@ -95,7 +160,7 @@ class InvalidReactivesError extends TypeError {
 	 */
 	constructor(host: HTMLElement, target: HTMLElement, reactives: unknown) {
 		super(
-			`Expected reactives passed from ${elementName(host)} to ${elementName(target)} to be a record of signals, reactive property names or functions. Got ${valueString(reactives)}.`,
+			`Cannot pass from ${elementName(host)} to ${elementName(target)}. Expected an object literal of thunks (read-only) or \`{ get, set }\` descriptors (read-write), got ${valueString(reactives)}.`,
 		)
 		this.name = 'InvalidReactivesError'
 	}
@@ -112,14 +177,22 @@ class InvalidCustomElementError extends TypeError {
 	 * @param where - Location where the error occurred
 	 */
 	constructor(target: HTMLElement, where: string) {
-		super(`Target ${elementName(target)} is not a custom element in ${where}.`)
+		super(
+			`${elementName(target)} is not a custom element in ${where}. The target of pass() must be a Le Truc component.`,
+		)
 		this.name = 'InvalidCustomElementError'
 	}
 }
 
 /**
  * Error thrown when `pass()` cannot bind one or more properties on the
- * target. See ADR 0011.
+ * target.
+ *
+ * Tier 2 ([ADR 0028](../adr/0028-tiered-error-surfacing.md), which supersedes
+ * ADR 0011): `TSRX012` decides the same question at compile time for a
+ * registry-known target, so this is the backstop for hand-authored and
+ * foreign custom elements. Validation is eager and the commit is atomic — a
+ * failure leaves the target exactly as it was.
  *
  * @since 2.0.4
  */
@@ -139,7 +212,7 @@ class InvalidPassPropertyError extends TypeError {
 			([prop, reason]) => `'${prop}' ${reason}`,
 		).join('; ')
 		super(
-			`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}.`,
+			`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}. Nothing was swapped. Expose each of the target properties from a mutable initializer on ${elementName(target)} (a value, a Parser, or a \`{ get, set }\` descriptor).`,
 		)
 		this.name = 'InvalidPassPropertyError'
 	}
@@ -201,7 +274,7 @@ class ExtensionCollisionError extends Error {
 	 */
 	constructor(component: string, key: string, first: string, second: string) {
 		super(
-			`Extension collision for component <${component}>: both '${first}' and '${second}' declare staticProps key "${key}". The '${second}' declaration is ignored.`,
+			`Extension collision for component <${component}>: '${first}' and '${second}' both declare the staticProps key "${key}". The '${second}' declaration is ignored.`,
 		)
 		this.name = 'ExtensionCollisionError'
 	}
@@ -226,6 +299,36 @@ class InvalidSelectorError extends TypeError {
 	}
 }
 
+/**
+ * Error thrown when `safeSetAttribute()` blocks an attribute write.
+ *
+ * Two conditions, both of which fire on runtime *data* rather than on source
+ * shape, so neither is decidable by the compiler (ADR 0028 inventory): an
+ * attribute name starting with `on`, and a value using an unsafe URL protocol
+ * ([M16](../REQUIREMENTS.md#m16-security-validation-in-setattribute),
+ * [ADR 0009](../adr/0009-security-validation-in-bindattribute.md)).
+ *
+ * The security guarantee is that the `setAttribute` does not happen — not
+ * that the throw escapes — so this is Tier 2 and contained like any other
+ * activation failure.
+ *
+ * @since 3.0.0
+ */
+class UnsafeAttributeError extends TypeError {
+	/**
+	 * @param element - Element the attribute was to be set on
+	 * @param attr - Attribute name
+	 * @param reason - Why the write was blocked
+	 * @param value - Attribute value, when the value is what was unsafe
+	 */
+	constructor(element: Element, attr: string, reason: string, value?: string) {
+		super(
+			`Blocked unsafe setAttribute('${attr}') on ${elementName(element)}: ${reason}${value !== undefined ? ` Got '${value}'.` : ''}`,
+		)
+		this.name = 'UnsafeAttributeError'
+	}
+}
+
 export {
 	DependencyTimeoutError,
 	ExtensionCollisionError,
@@ -238,4 +341,7 @@ export {
 	InvalidTemplateError,
 	MissingElementError,
 	NoActiveCollectorError,
+	reportConnectFailure,
+	reportEffectFailure,
+	UnsafeAttributeError,
 }

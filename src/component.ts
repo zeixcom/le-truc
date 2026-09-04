@@ -14,7 +14,12 @@ import {
 	type SlotDescriptor,
 	type TaskCallback,
 } from '@zeix/cause-effect'
-import { InvalidComponentNameError, InvalidPropertyNameError } from './errors'
+import {
+	InvalidComponentNameError,
+	InvalidPropertyNameError,
+	reportConnectFailure,
+	reportEffectFailure,
+} from './errors'
 import { type ComponentExtension, mergeExtensions } from './extension'
 import { debug } from './extensions/debug'
 import type {
@@ -31,7 +36,6 @@ import { type ElementQueries, makeElementQueries } from './helpers/dom'
 import { makeOn, type OnHelper } from './helpers/events'
 import {
 	activateResult,
-	type EffectDescriptor,
 	type FactoryResult,
 	type Falsy,
 	forEachUnseen,
@@ -41,14 +45,17 @@ import {
 	type WatchHelper,
 } from './helpers/reactive'
 import {
+	describeDescriptor,
 	getSignals,
 	internalsHosts,
 	internalsMap,
+	isUsableInternals,
 	retainedInitializers,
 	withCollector,
 } from './internal'
 import {
 	type ComponentProps,
+	type EffectDescriptor,
 	isMethodProducer,
 	isParser,
 	isReservedWord,
@@ -191,7 +198,10 @@ type FormFactoryContext<
 	expose: (props: Initializers<P>) => void
 }
 
-/* === Exported Functions === */
+/* === Internal Functions === */
+
+/** Whether the unusable-internals warning has already fired (per page, DEV_MODE only). */
+let unusableInternalsWarned = false
 
 /**
  * Page-global registry for the ElementInternals declaration community protocol.
@@ -205,6 +215,8 @@ const elementInternalsRegistry = (): WeakMap<Element, ElementInternals> => {
 	g._elementInternals ??= new WeakMap()
 	return g._elementInternals
 }
+
+/* === Exported Functions === */
 
 /**
  * Defines and registers a reactive custom element.
@@ -266,11 +278,33 @@ function defineComponent<P extends ComponentProps>(
 		#setup: FactoryResult = []
 		#cleanup: MaybeCleanup
 		#internalsAccessed = false
+		/** Set when the factory or an extension threw — the component never enhances. */
+		#connectFailed = false
+		/** Descriptors already reported as failing, so a reslot cycle does not re-report. */
+		#reportedFailures: WeakSet<EffectDescriptor> | undefined
 
 		constructor() {
 			super()
 			try {
 				const internals = this.attachInternals()
+				// A half-implemented ElementInternals succeeds and so defeats
+				// the catch below, but is worse than none — it fails later,
+				// deep inside the form machinery. Treat it as none (LT-150).
+				if (
+					!isUsableInternals(
+						internals,
+						(this.constructor as typeof Truc).formAssociated,
+					)
+				) {
+					internalsMap.set(this, null)
+					if (process.env.DEV_MODE === 'true' && !unusableInternalsWarned) {
+						unusableInternalsWarned = true
+						console.warn(
+							`attachInternals() returned an incomplete ElementInternals in ${elementName(this)}. This environment's implementation is missing validity, validationMessage, setFormValue, or setValidity. Treating it as no internals: form association, custom states, and ARIA reflection are unavailable.`,
+						)
+					}
+					return
+				}
 				internalsMap.set(this, internals)
 				// Reverse lookup for bindAria()'s stale-attribute rule (ADR 0026 §1).
 				internalsHosts.set(internals, this)
@@ -286,16 +320,36 @@ function defineComponent<P extends ComponentProps>(
 
 		/** Runs when the custom element is first connected to the document. */
 		connectedCallback() {
+			// Activation is contained per descriptor (ADR 0028 sub-design 3):
+			// a throwing effect costs only itself, and every sibling still
+			// activates. Reported once per descriptor per instance, so an
+			// element that reslots repeatedly does not flood the console with
+			// the same failure.
+			const onDescriptorError = (
+				error: unknown,
+				descriptor: EffectDescriptor,
+			) => {
+				const reported = (this.#reportedFailures ??= new WeakSet())
+				if (reported.has(descriptor)) return
+				reported.add(descriptor)
+				reportEffectFailure(this, describeDescriptor(descriptor), error)
+			}
+
 			const runSetup = () => {
 				this.#cleanup = createScope(
 					() => {
-						activateResult(this.#setup)
+						activateResult(this.#setup, onDescriptorError)
 					},
 					{
 						root: true,
 					},
 				)
 			}
+
+			// A component whose factory or extension threw never enhances, and
+			// a reconnect re-runs neither — so it stays inert and silent
+			// rather than re-reporting a failure the console already carries.
+			if (this.#connectFailed) return
 
 			if (this.#initialized) {
 				// Dispose the previous scope before re-activating #setup, or
@@ -336,21 +390,46 @@ function defineComponent<P extends ComponentProps>(
 				// still activates. forEachUnseen skips anything already
 				// collected, so nothing activates twice. See ADR 0018.
 				const collector: EffectDescriptor[] = []
-				const result = withCollector(collector, () => factory(context))
-				this.#setup = collector
-				if (result) {
-					const seen = new Set(collector)
-					forEachUnseen(result, seen, d => this.#setup.push(d))
+
+				// The factory phase is contained whole-component: a factory is
+				// one indivisible consumer function and cannot be resumed past
+				// a throw (ADR 0028 sub-design 3). Nothing has activated yet,
+				// so there is no scope to dispose — dropping the partial
+				// descriptor list is the whole teardown.
+				const failConnect = (phase: string, error: unknown) => {
+					this.#setup = []
+					this.#initialized = true
+					this.#connectFailed = true
+					reportConnectFailure(this, phase, error)
+				}
+
+				try {
+					const result = withCollector(collector, () => factory(context))
+					this.#setup = collector
+					if (result) {
+						const seen = new Set(collector)
+						forEachUnseen(result, seen, d => this.#setup.push(d))
+					}
+				} catch (error) {
+					failConnect('the component factory', error)
+					return
 				}
 
 				// Let each extension register extra effects (e.g.
 				// formAssociated()'s managed value-sync), in array order.
+				// Its own try, so the diagnostic names the failing extension
+				// rather than sending the reader to the factory.
 				const internals = internalsMap.get(this) ?? null
 				for (const ext of exts) {
-					const extra = ext.onConnect?.(this, internals)
-					if (extra) {
-						const seen = new Set(this.#setup as EffectDescriptor[])
-						forEachUnseen(extra, seen, d => this.#setup.push(d))
+					try {
+						const extra = ext.onConnect?.(this, internals)
+						if (extra) {
+							const seen = new Set(this.#setup as EffectDescriptor[])
+							forEachUnseen(extra, seen, d => this.#setup.push(d))
+						}
+					} catch (error) {
+						failConnect(`the '${ext.name}' extension`, error)
+						return
 					}
 				}
 
@@ -407,15 +486,15 @@ function defineComponent<P extends ComponentProps>(
 					throw new InvalidPropertyNameError(
 						this.localName,
 						prop,
-						'reserved word or Object builtin — cannot be used as a reactive property',
+						'It is a reserved word or object builtin, so defining an accessor for it would shadow an inherited member.',
 					)
 				// Extension-reserved names (e.g. form, name, labels, validity)
 				// are prototype-defined, so `prop in this` would otherwise
 				// silently skip the colliding initializer.
 				if (merged.reservedMembers.has(prop)) {
-					let reason = 'is a member reserved by an extension'
+					let reason = 'It is a member reserved by an extension.'
 					if (process.env.DEV_MODE === 'true')
-						reason += ` ('${merged.reservedMemberOwners.get(prop)}') — it is managed automatically and cannot be set via expose()`
+						reason = `It is a member reserved and managed automatically by the '${merged.reservedMemberOwners.get(prop)}' extension.`
 					throw new InvalidPropertyNameError(this.localName, prop, reason)
 				}
 				// Skip properties already set on the host (explicit DOM value wins).

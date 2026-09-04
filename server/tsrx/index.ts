@@ -66,8 +66,9 @@ export const compileComponent = (
 ): CompileFileResult => {
 	const { component, diagnostics } = compileSource(source, filename)
 	if (!component) return { component: null, diagnostics }
+	const composeNodes = collectComposeElements(component)
 	if (composeRegistry) {
-		for (const node of collectComposeElements(component)) {
+		for (const node of composeNodes) {
 			if (!composeRegistry.has(node.source))
 				diagnostics.push(
 					diagnostic.composedComponentNotCompiled(
@@ -101,6 +102,16 @@ export const compileComponent = (
 				clientModule: `${component.tag}.client.ts`,
 				css: `${component.tag}.css`,
 				propsType: component.propsTypeName,
+				exposedProps: Object.fromEntries(component.exposeKinds),
+				composesTags: composeRegistry
+					? [
+							...new Set(
+								composeNodes
+									.map(node => composeRegistry.get(node.source)?.tag)
+									.filter((tag): tag is string => tag !== undefined),
+							),
+						]
+					: [],
 			},
 			serverCode: server.code,
 			clientCode: client.code,

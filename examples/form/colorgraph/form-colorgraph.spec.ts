@@ -64,6 +64,9 @@ test.describe('form-colorgraph component (compiled .tsrx)', () => {
 		page,
 	}) => {
 		const errors: string[] = []
+		// Both channels, and the console one is load-bearing: since ADR 0028 a
+		// MissingElementError is contained, so it can never reach `pageerror`
+		// and a pageerror-only assertion would pass vacuously.
 		page.on('pageerror', error => errors.push(String(error)))
 		page.on('console', msg => {
 			if (msg.type() === 'error') errors.push(msg.text())

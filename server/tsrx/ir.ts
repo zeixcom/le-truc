@@ -48,6 +48,24 @@ export type SignalConstructor =
 	| 'requestContext'
 
 /** A signal declared in the component's setup. */
+/**
+ * How an `expose()` initializer lands on the host, which decides whether
+ * `pass()` can bind to it (LT-158, ADR 0028 sub-design 6).
+ *
+ * `component.ts`'s `#setAccessor` builds a **Slot** only for a MUTABLE
+ * signal or a `{ get, set }` descriptor ([ADR 0004]); anything else is
+ * defined with a plain getter and has no backing signal to swap. The
+ * surprise is `expose({ x: sig.get })`: `sig.get` is a bare function, so it
+ * is neither a signal nor a descriptor and is wrapped in `deriveCell` —
+ * read-only, however mutable the signal it reads. Verified empirically
+ * against the runtime, not inferred from the types.
+ *
+ * - `slot` — plain value, Parser, or `{ get, set }` descriptor: Slot-backed.
+ * - `computed` — `sig.get`, an arrow, any function: read-only getter.
+ * - `method` — `defineMethod()`: a plain member, not reactive at all.
+ */
+export type ExposeKind = 'slot' | 'computed' | 'method'
+
 export type SignalIR = {
 	name: string
 	/** Declaring expression text, e.g. `createCell(start)`. */
@@ -378,6 +396,13 @@ export type ComponentIR = {
 	exposeArgNode: TsrxNode | null
 	/** Prop name → signal name, from `expose({ prop: signal.get })`. */
 	exposeProps: Map<string, string>
+	/**
+	 * Prop name → how its initializer lands on the host (LT-158). Flows into
+	 * the component's `RegistryEntry`, where a `pass={{ }}` site in ANOTHER
+	 * file reads it to decide the binding's legality at compile time — the
+	 * residual ADR 0028 sub-design 6 asked the registry to close.
+	 */
+	exposeKinds: Map<string, ExposeKind>
 	/**
 	 * Prop name → Parser factory, from `expose({ prop: asString('') })` —
 	 * attribute-driven state (ADR 0003): the host attribute seeds the prop at

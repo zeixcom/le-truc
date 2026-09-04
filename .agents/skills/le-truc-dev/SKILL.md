@@ -74,4 +74,12 @@ After completing any task, in this order:
 3. **Update TODO.md** (only if the task was assigned via TODO.md):
    - If the change affects the **public API surface** → mark as pending review with handoff notes
    - If the change is a **bug fix, test, or internal-only** → mark as done
-4. **Write to NOTES.md** if you encountered an unexpected challenge or want to deviate from the plan
+4. **Hand off error-message copy to Tech Writer** — required before the task is marked done if you added, reworded, or removed either:
+   - an error class in `src/errors.ts` (including the caller-side `reason` strings in `src/component.ts`, `src/helpers/reactive.ts`, `src/bindings.ts` — half the sentence lives there), or
+   - a `TSRX0NN` code in `server/tsrx/diagnostics.ts`.
+
+   **Direction:** you write the condition and a first-draft message; Tech Writer owns the final copy. **Removal counts** — a deleted class or a retired rule leaves references behind in `.agents/skills/le-truc/references/errors.md`, the skill files, and `docs-src/pages/`, and its union member may survive with no builder behind it. The propagation checklist and the acceptance criteria for the copy are in the `tech-writer` skill's `workflows/error-message-lifecycle.md` — do not restate them here.
+
+   Under [ADR 0028](../../../adr/0028-tiered-error-surfacing.md), a new *runtime* check whose condition is statically decidable also owes a `TSRX` rule. If the task did not say which channel and tier the check lands in, that is an Architect question, not a copy question — raise it in `NOTES.md`.
+
+5. **Write to NOTES.md** if you encountered an unexpected challenge or want to deviate from the plan

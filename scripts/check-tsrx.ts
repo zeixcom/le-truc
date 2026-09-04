@@ -64,7 +64,24 @@ if (files.length === 0) {
 	process.exit(1)
 }
 
-const spanInfos = await compileTsrxCorpus(files)
+// Count what the corpus runner reports (LT-168): the runner owns the warning
+// format and prints each warning once per compilation pass, so the baseline
+// is captured here and deduped across the passes instead of remembered. The
+// wave-4 regression signal's first number must be a counted figure — the
+// summary line below is what a reconciliation reads.
+const warningLines: string[] = []
+const realWarn = console.warn.bind(console)
+console.warn = (...args: unknown[]) => {
+	const text = args.map(String).join(' ')
+	if (text.startsWith('⚠️')) warningLines.push(text)
+	realWarn(...args)
+}
+let spanInfos
+try {
+	spanInfos = await compileTsrxCorpus(files)
+} finally {
+	console.warn = realWarn
+}
 if (spanInfos.length === 0) {
 	console.error('❌ No .tsrx source compiled — nothing to check')
 	process.exit(1)
@@ -177,5 +194,16 @@ if (remapped > 0 || unmapped > 0)
 	console.log(
 		`\n${remapped} diagnostic(s) mapped to source, ${unmapped} unmapped.`,
 	)
+
+// The standing corpus compile warnings, counted (LT-168). Printed even at
+// zero — an absent line is indistinguishable from an uncounted one, and
+// zero is the gate-wave target state.
+const uniqueWarnings = new Set(warningLines)
+console.log(
+	`\nCompile-warning baseline: ${uniqueWarnings.size} unique standing ` +
+		`warning(s) (${warningLines.length} lines across the two compilation ` +
+		"passes) — the wave-4 regression signal's first number. Read this " +
+		'count; do not tail-read the ⚠️ lines.',
+)
 
 process.exit(exitCode)

@@ -136,6 +136,83 @@ Sharing the directory also HIDES bugs, not just causes flakes: two tests were pa
 artifacts a previous `build-tsrx` had left behind, asserting over modules they never compiled.
 If a test needs a module it does not itself emit, emit it explicitly.
 
+### Server Simulation driver tests
+
+`server/tests/tsrx/sim-realm.test.ts` covers `server/tsrx/sim/` (ADR 0027, LT-151). It defines
+its components **inline through the realm's recording registry** rather than importing generated
+modules, so it needs neither `server/generated/` nor a `createGeneratedDir()`. Two things to know
+when extending it:
+
+- The realm patches `globalThis` (`document`, `HTMLElement`, `customElements`, `fetch`, …) for
+  its lifetime, and `bun test` shares one process. Always take a realm through the file's
+  `withRealm()` helper so `afterEach` disposes it; a leaked realm leaves DOM globals installed
+  for every later test file.
+- Cross-runtime equivalence is **not** a unit test — it needs a second and third process. Run
+  `bun run check:sim`, which reports which runtimes it found and exits non-zero if their
+  serialized HTML differs.
+
+`server/tests/tsrx/sim-driver.test.ts` runs the WHOLE corpus through the driver (LT-154) and
+owns, next to the build-report baseline below, the 22 fixture snapshots and two corpus
+invariants (LT-164). Three things to know about the snapshots and invariants:
+
+- The simulated snapshots are **per-substrate bytes**. Inline-style serialization is
+  substrate-specific (happy-dom terminates inline custom-property declarations with `;` where
+  jsdom omits it — LT-152), so a substrate swap re-baselines every snapshot in the file at
+  once and is NOT a behavior change. A single tag moving with no substrate change is one —
+  treat it as a behavior change or a driver regression.
+- The **double-connect fixed-point gate** (ADR 0027 sub-design 8) rides every fixture: the
+  fixture feeds its own output back through a second `realm.render()` — what a browser does
+  when it parses the served HTML and connects again — and requires byte-identical
+  serialization. A component whose second pass differs fails the build against that
+  component.
+- The realm's `render()` memoizes on `(component, markup)` (LT-166): a repeated
+  render of identical input returns the first pass's bytes without a second
+  connect, so only the first occurrence reports diagnostics. Tests that need a
+  fresh connect — a diagnostic per render, per-render connect effects — must
+  render distinct markup (or a fresh realm), not the same input twice.
+- The **two-order hermeticity test** (sub-design 10) renders the corpus in two orders on two
+  realms and requires identical per-tag output. Order 2 needs its own module tree, because
+  one module cache per process makes a second realm's import of order 1's client modules
+  record no definitions — so the test copies the compiled tree to a second
+  `createGeneratedDir()` instead of recompiling: fresh resolved specifiers, identical code,
+  so a diff can only be order, never rebuild variance.
+
+### The two regression baselines (LT-153 decision 2, LT-163)
+
+Since the simulation driver took over renderability from the compiler, the wave-4 regression
+signal is **two numbers**, not one:
+
+1. **The compile baseline** — `bun run check:tsrx` counts the standing corpus warnings in
+   its summary line (`Compile-warning baseline: N unique…`) — read that count, never a
+   tail-read of the ⚠️ lines (LT-168). The gate-wave target is the counted **6 unique**
+   (LT-145 and LT-146 remove form-listbox and form-tokenbox); the six `basic-pluralize`
+   warnings are **correct refusals** — the fold cannot follow the authored `pluralCategory`
+   const, its opaque `getLocale` helper, or the `hasAttribute` sensor — and they retire with
+   TSRX034 at stage 3 (LT-165). Zero compile warnings is the stage-3 state. This is the
+   channel for what is statically decidable. [**Corrected by LT-145's review, 2026-09-03:**
+   LT-145 landed as a pure runtime pin (its own instruction was "pin it, not build the
+   route") and does not move `check:tsrx`'s count — `form-listbox`'s TSRX034 stays standing.
+   The gate-wave target is **7 unique**, not 6: `LT-146` alone delivers the compile
+   reduction (8 → 7), and `form-listbox`'s TSRX034 joins the six `basic-pluralize` refusals
+   in the stage-3 (LT-165) retirement bucket, seven total.]
+2. **The build-report baseline** — `server/tests/tsrx/sim-driver.test.ts` runs the corpus
+   through the simulation driver and requires **zero unclassified diagnostics**. The driver
+   raises a diagnostic per condition (a jsdom `jsdomError`, an unhandled rejection, a
+   contained connect throw, an attempted network call, a non-quiescent drain); the report
+   layer in `server/tsrx/sim/report.ts` formats each as a build warning attributed to the
+   component (tier 2, Contained — the build completes and the component keeps its
+   server-rendered markup). A migration that renders wrong shows up here as a new entry, and
+   the test fails naming it.
+
+A diagnostic the build cannot fix is **classified, never silenced**: add a narrow
+`{ kind, component, message, reason }` entry to `CLASSIFIED_DIAGNOSTICS` in `report.ts`, and
+the report keeps listing every occurrence with its reason. Never widen an existing pattern to
+admit a new diagnostic — that is how a real regression gets allowed through. When an entry
+stops matching anything (the condition was fixed), retire the classification; the baseline
+test says so. Tech Writer owns the report copy — see the `tech-writer` skill's
+`workflows/error-message-lifecycle.md` (the five conditions are tier 2: wording says the
+component *keeps* its server-rendered markup, never that the page broke).
+
 ---
 
 ## Verification Processes

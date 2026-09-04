@@ -17,6 +17,7 @@ import { createEffect, createState, createTask } from '@zeix/cause-effect'
 import { defineComponent } from '../component'
 import {
 	InvalidComponentNameError,
+	InvalidPassPropertyError,
 	InvalidPropertyNameError,
 	NoActiveCollectorError,
 } from '../errors'
@@ -391,10 +392,22 @@ describe('prop in this guard', () => {
 	})
 })
 
+/** Swallows console.error for the duration of `fn` and returns what it saw. */
+const captureErrors = <T>(fn: () => T): { calls: unknown[][]; result: T } => {
+	const originalError = console.error
+	const calls: unknown[][] = []
+	console.error = (...args: unknown[]) => calls.push(args)
+	try {
+		return { calls, result: fn() }
+	} finally {
+		console.error = originalError
+	}
+}
+
 /* === InvalidPropertyNameError (reserved words regression) === */
 
 describe('reserved word guard', () => {
-	test('throws InvalidPropertyNameError for a reserved word prop name', () => {
+	test('reports InvalidPropertyNameError for a reserved word prop name, contained (ADR 0028)', () => {
 		const Ctor = defineComponent<Record<string, NonNullable<unknown>>>(
 			uniqueName(),
 			({ expose }) => {
@@ -402,7 +415,281 @@ describe('reserved word guard', () => {
 			},
 		)!
 		const instance = new Ctor() as any
-		expect(() => instance.connectedCallback()).toThrow(InvalidPropertyNameError)
+		const { calls } = captureErrors(() => {
+			expect(() => instance.connectedCallback()).not.toThrow()
+		})
+		expect(calls).toHaveLength(1)
+		expect(calls[0]?.[1]).toBeInstanceOf(InvalidPropertyNameError)
+	})
+
+	test('the reserved property is still not installed — the guard is the ordering, not the throw', () => {
+		// The prototype chain is protected because #initSignals throws BEFORE
+		// Object.defineProperty runs, not because the throw escapes. Containing
+		// it therefore costs nothing (ADR 0028 inventory).
+		const Ctor = defineComponent<Record<string, NonNullable<unknown>>>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ constructor: 'evil' } as any)
+			},
+		)!
+		const instance = new Ctor() as any
+		captureErrors(() => instance.connectedCallback())
+		expect(Object.hasOwn(instance, 'constructor')).toBe(false)
+	})
+})
+
+/* === ADR 0028: connect-time error containment === */
+
+describe('connect-time error containment (ADR 0028)', () => {
+	test('a factory that throws does not escape connectedCallback', () => {
+		const Ctor = defineComponent(uniqueName(), () => {
+			throw new Error('factory boom')
+		})!
+		const instance = new Ctor() as any
+		const { calls } = captureErrors(() => {
+			expect(() => instance.connectedCallback()).not.toThrow()
+		})
+		expect(calls).toHaveLength(1)
+		// Production-branch wording: degraded, not broken (ADR 0028 sub-design 4).
+		expect(String(calls[0]?.[0])).toContain('did not enhance')
+	})
+
+	test('a broken component does not take other components down', () => {
+		const BrokenCtor = defineComponent(uniqueName(), () => {
+			throw new Error('factory boom')
+		})!
+		const WorkingCtor = defineComponent<{ greeting: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ greeting: 'Hello' })
+			},
+		)!
+		const broken = new BrokenCtor() as any
+		const working = new WorkingCtor() as any
+		captureErrors(() => {
+			broken.connectedCallback()
+			working.connectedCallback()
+		})
+		expect(working.greeting).toBe('Hello')
+	})
+
+	test('props exposed before the throw stay installed — the element is inert, not reverted', () => {
+		const Ctor = defineComponent<{ greeting: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ greeting: 'Hello' })
+				throw new Error('factory boom')
+			},
+		)!
+		const instance = new Ctor() as any
+		captureErrors(() => instance.connectedCallback())
+		expect(instance.greeting).toBe('Hello')
+	})
+
+	test('a throwing descriptor costs only itself — its siblings still activate', () => {
+		// The substantive change from whole-component containment (ADR 0028
+		// sub-design 3): descriptors are independent thunks, so one failing
+		// binding must not cost the component its working effects.
+		const ran: string[] = []
+		const Ctor = defineComponent<{ count: number }>(
+			uniqueName(),
+			({ expose, watch }) => {
+				expose({ count: 0 })
+				watch(
+					() => true,
+					() => {
+						ran.push('before')
+					},
+				)
+				// Hand-authored descriptors: activateResult calls them
+				// directly, so a throw is not routed through match()'s err
+				// handler the way a watch() handler's would be.
+				return [
+					() => {
+						throw new Error('activation boom')
+					},
+					() => {
+						ran.push('after')
+					},
+				]
+			},
+		)!
+		const instance = new Ctor() as any
+		const { calls } = captureErrors(() => {
+			expect(() => instance.connectedCallback()).not.toThrow()
+		})
+		expect(calls).toHaveLength(1)
+		expect(ran).toEqual(['before', 'after'])
+	})
+
+	test('the surviving effects stay live and are disposed on disconnect', () => {
+		const cleaned: string[] = []
+		const Ctor = defineComponent<{ count: number }>(
+			uniqueName(),
+			({ expose, watch }) => {
+				expose({ count: 0 })
+				watch(
+					() => true,
+					() => () => cleaned.push('survivor'),
+				)
+				return [
+					() => {
+						throw new Error('activation boom')
+					},
+				]
+			},
+		)!
+		const instance = new Ctor() as any
+		captureErrors(() => instance.connectedCallback())
+		// Not torn down at connect: the component is partially enhanced, not
+		// failed.
+		expect(cleaned).toEqual([])
+		instance.disconnectedCallback()
+		expect(cleaned).toEqual(['survivor'])
+	})
+
+	test('a failing descriptor is reported once, not once per reconnect', () => {
+		const Ctor = defineComponent(uniqueName(), () => [
+			() => {
+				throw new Error('activation boom')
+			},
+		])!
+		const instance = new Ctor() as any
+		const { calls } = captureErrors(() => {
+			instance.connectedCallback()
+			instance.disconnectedCallback()
+			instance.connectedCallback()
+			instance.disconnectedCallback()
+			instance.connectedCallback()
+		})
+		expect(calls).toHaveLength(1)
+	})
+
+	test('a failed factory does not re-report on reconnect', () => {
+		const Ctor = defineComponent(uniqueName(), () => {
+			throw new Error('factory boom')
+		})!
+		const instance = new Ctor() as any
+		const { calls } = captureErrors(() => {
+			instance.connectedCallback()
+			instance.disconnectedCallback()
+			instance.connectedCallback()
+		})
+		expect(calls).toHaveLength(1)
+	})
+
+	test('the DEV_MODE diagnostic names the component and its degradation', () => {
+		const prevDevMode = process.env.DEV_MODE
+		const Ctor = defineComponent(uniqueName(), () => {
+			throw new Error('factory boom')
+		})!
+		const instance = new Ctor() as any
+		instance.localName = 'test-broken-factory'
+		let calls: unknown[][] = []
+		try {
+			process.env.DEV_MODE = 'true'
+			calls = captureErrors(() => instance.connectedCallback()).calls
+		} finally {
+			if (prevDevMode === undefined) delete process.env.DEV_MODE
+			else process.env.DEV_MODE = prevDevMode
+		}
+		expect(String(calls[0]?.[0])).toContain('<test-broken-factory>')
+		expect(String(calls[0]?.[0])).toContain('the component factory')
+		// Tier 2 wording: degraded, not broken (ADR 0028 sub-design 4).
+		expect(String(calls[0]?.[0])).toContain('server-rendered markup')
+		expect(calls[0]?.[1]).toBeInstanceOf(Error)
+	})
+
+	test('the effect diagnostic names the helper, and a failed pass() costs only that binding', () => {
+		// ADR 0028's headline case, and ADR 0011's own motivating example: a
+		// target whose prop exists but is not Slot-backed. A partially
+		// enhanced component is only debuggable if the report says which
+		// effect did not activate.
+		const prevDevMode = process.env.DEV_MODE
+		const ran: string[] = []
+		// Typed as a component with the prop — TypeScript covers the
+		// prop-does-not-exist half of this check (ADR 0028 inventory), so the
+		// residual the runtime backstop exists for is a prop that *is* there
+		// and simply is not Slot-backed.
+		const target = {
+			localName: 'my-target',
+			greeting: 'plain-value',
+		} as unknown as HTMLElement & { greeting: string }
+		const Ctor = defineComponent<{ greeting: string }>(
+			uniqueName(),
+			({ expose, host, pass, watch }) => {
+				expose({ greeting: 'from-host' })
+				pass(target, { greeting: () => host.greeting })
+				watch(
+					() => true,
+					() => {
+						ran.push('sibling')
+					},
+				)
+			},
+		)!
+		const instance = new Ctor() as any
+		instance.localName = 'test-broken-pass'
+		let calls: unknown[][] = []
+		try {
+			process.env.DEV_MODE = 'true'
+			calls = captureErrors(() => {
+				expect(() => instance.connectedCallback()).not.toThrow()
+			}).calls
+		} finally {
+			if (prevDevMode === undefined) delete process.env.DEV_MODE
+			else process.env.DEV_MODE = prevDevMode
+		}
+		expect(calls).toHaveLength(1)
+		expect(String(calls[0]?.[0])).toContain('pass()')
+		expect(String(calls[0]?.[0])).toContain('<test-broken-pass>')
+		expect(calls[0]?.[1]).toBeInstanceOf(InvalidPassPropertyError)
+		// The sibling effect activated anyway, and the target is untouched —
+		// no partial swap (ADR 0011's atomicity, preserved).
+		expect(ran).toEqual(['sibling'])
+		expect((target as any).greeting).toBe('plain-value')
+	})
+
+	test('a hand-authored descriptor gets a generic label', () => {
+		const prevDevMode = process.env.DEV_MODE
+		const Ctor = defineComponent(uniqueName(), () => [
+			() => {
+				throw new Error('activation boom')
+			},
+		])!
+		const instance = new Ctor() as any
+		let calls: unknown[][] = []
+		try {
+			process.env.DEV_MODE = 'true'
+			calls = captureErrors(() => instance.connectedCallback()).calls
+		} finally {
+			if (prevDevMode === undefined) delete process.env.DEV_MODE
+			else process.env.DEV_MODE = prevDevMode
+		}
+		expect(String(calls[0]?.[0])).toContain('hand-authored')
+	})
+
+	test('an error Le Truc raises itself is contained too — the brand is gone (ADR 0028)', () => {
+		// ADR 0011's carve-out is retired. Nothing reaching connectedCallback
+		// escapes it, and no marker decides otherwise.
+		const Ctor = defineComponent(uniqueName(), () => [
+			() => {
+				throw new NoActiveCollectorError(undefined, 'watch')
+			},
+		])!
+		const instance = new Ctor() as any
+		const { calls } = captureErrors(() => {
+			expect(() => instance.connectedCallback()).not.toThrow()
+		})
+		expect(calls[0]?.[1]).toBeInstanceOf(NoActiveCollectorError)
+	})
+
+	test('Tier 3 still escapes without a marker — a bad component name throws from defineComponent', () => {
+		// Definition-time failures sit outside connectedCallback structurally,
+		// so deleting the brand does not make them quiet (ADR 0028 sub-design 2).
+		expect(() => defineComponent('nohyphen', () => {})).toThrow(
+			InvalidComponentNameError,
+		)
 	})
 })
 

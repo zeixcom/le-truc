@@ -107,8 +107,9 @@ type PassHelper<P extends ComponentProps> = {
  *
  * @since 2.0
  * @param result - Flat or nested array of effect descriptors to activate
+ * @param onError - When given, each descriptor is contained individually and a throw is reported here instead of propagating (ADR 0028)
  */
-declare const activateResult: (result: FactoryResult) => void;
+declare const activateResult: (result: FactoryResult, onError?: (error: unknown, descriptor: EffectDescriptor) => void) => void;
 /**
  * Recursively flatten a `FactoryResult` (or a single descriptor, or a falsy
  * value), invoking `visit` for each descriptor not already present in `seen`.
@@ -226,4 +227,4 @@ declare function each<E extends Element>(memo: Signal<E[]>, callback: (element: 
  */
 declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: MutableList<T, S>, bindItem: (element: HTMLElement, item: S, key: string, first: FirstElement) => MaybeCleanup): EffectDescriptor;
 declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: DerivedList<T, S>, bindItem: (element: HTMLElement, item: S, key: string, first: FirstElement) => MaybeCleanup): EffectDescriptor;
-export { activateResult, type EffectDescriptor, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type ResolvedReactive, type ResolvedReactiveSignals, type ResolvedReactiveValues, reconcile, type WatchHelper, };
+export { activateResult, each, type FactoryResult, type Falsy, forEachUnseen, keyedScopes, makePass, makeWatch, type PassedProps, type PassHelper, type Reactive, type ResolvedReactive, type ResolvedReactiveSignals, type ResolvedReactiveValues, reconcile, type WatchHelper, };

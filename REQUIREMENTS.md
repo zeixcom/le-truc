@@ -2,6 +2,8 @@
 
 > This document is the north star for Le Truc's design and development. It captures the problem, the users, the constraints, and the success criteria from which all architectural decisions should be derived. It is not a changelog or a roadmap — it describes _what_ and _why_, not _when_.
 
+**Scope note (2026-09-04).** v3.0 is a two-track release. Track 1 is the committed library contract ([M1](#m1-component-definition-via-a-single-function)–[M16](#m16-security-validation-in-setattribute), shipped through 2.x). Track 2 is the isomorphic authoring and build-time server-evaluation program defined by [ADRs 0024–0030](adr/0024-adopt-tsrx-as-isomorphic-component-format.md), together with the amendments those ADRs carry in place — most recently ADR 0026's capability fallback (2026-09-04). **Where a shipped 2.x contract and an unpublished v3 decision conflict, the shipped contract wins**: the build-time tooling adapts to the library, never the reverse. ADR 0025 (client-side playground) remains Proposed and is in scope only if accepted.
+
 ---
 
 ## 1. Problem Statement
@@ -29,6 +31,12 @@ Rendering HTML is a solved problem on the backend. What's missing is a _thin rea
 
 This is SolidJS-style fine-grained reactivity, without client-side rendering, packaged as framework-agnostic Web Components.
 
+### The v3 problem: one component, three files
+
+The library contract above held, and a second problem grew under it. A Le Truc component is authored as three hand-maintained files — `.ts` (behavior), `.html` (markup), `.css` (styles) — whose mutual contract is checked only at runtime. A selector that no longer matches, a root tag that drifted, a style block that lost its scoping prefix: each surfaces as a `MissingElementError` or a silently unstyled page in the browser, not as a build failure. `first()` failures are the symptom; drift is the disease.
+
+Alongside it sits a question hand authoring cannot answer systematically: **what does a reactive initial value render before JavaScript loads?** A `{signal}` text child or a `checked={() => …}` thunk has a value only once the component connects. Serving blank is honest but degrades the no-JS experience; baking in a guess ships wrong HTML. Server evaluation needs to be a designed mechanism, not a per-component judgment call.
+
 ### Business impact
 
 Without Le Truc (or an equivalent), frontend teams often face:
@@ -37,6 +45,7 @@ Without Le Truc (or an equivalent), frontend teams often face:
 - Difficulty reusing components across client projects with heterogeneous backends
 - Inconsistent patterns between projects, requiring each team to re-establish best practices
 - Subtle bugs from imperative state management and async timing
+- _(v3)_ Per-component drift between markup, behavior, and styles — the class of bug that only appears in the browser, and only after the file that caused it was edited
 
 ### Success criteria
 
@@ -51,7 +60,15 @@ For the library itself:
 - Very few bug reports surface after 1.0 release; none of them requiring a major refactoring
 - Le Truc proves it can scale well in complex web applications with 1000+ frequently updated elements
 - Performance in benchmarks (js-reactivity-benchmark for Cause & Effect, js-framework-benchmark for Le Truc) is among the 5 best-in-class
-- Bundle size for a minimal consumer (`defineComponent`, no extensions) remains below 9 kB gzipped; core + `formAssociated()` warns above 14 kB (TCP segment threshold). Opt-in extensions (`formAssociated()`, `observedAttributes()`, ...) are tree-shaken away when unused — see the `ComponentExtension` mechanism
+- Bundle size for a minimal consumer (`defineComponent`, no extensions) remains below 9 kB gzipped; core + `formAssociated()` warns above 10 kB. Opt-in extensions (`formAssociated()`, `observedAttributes()`, ...) are tree-shaken away when unused — see the `ComponentExtension` mechanism
+
+For the v3 authoring program (ADRs 0024–0030):
+
+- The example corpus is 100% `.tsrx` — no hand-written component twins remain outside test and docs helpers — and every markup/selector/style contract error that used to surface as a runtime `MissingElementError` is a build failure
+- The compile-warning baseline holds at zero, with the tier census and translation census reported separately and growing only when the build genuinely learns something new
+- The CI equivalence audit (Folded-tier components rendered byte-identically by both evaluation mechanisms) is green
+- A second locale ships end to end: per-locale pages, the reserved `i18n` parameter, and a visible translation census
+- The shipped 2.x contract (M1–M16) is unchanged through v3 except the two removals scheduled by ADR 0012/0018 ([M26](#m26-v3-api-cleanup-removal-of-the-deprecated-surfaces))
 
 ---
 
@@ -64,6 +81,7 @@ For the library itself:
 - **Environment**: Multi-project context with heterogeneous backends (Java, PHP, Python, C# CMS platforms); uses npm packages and bundles with Vite or Bun; deploys to CDN or static hosting
 - **Goals**: Build interactive UI components that are reusable across projects; avoid per-project reinvention of patterns; be able to refactor with confidence; ship accessible, performant frontends
 - **Pain points solved**: No more tight coupling between components; state changes propagate automatically; TypeScript catches integration errors at compile time; components are portable because they are backend-agnostic
+- **(v3)** Authors components in the isomorphic `.tsrx` format — one file per component — and debugs generated client factories with the `DEV_MODE` tooling ([ADR 0022](adr/0022-debug-extension-for-visual-and-console-instrumentation.md)) and tiered error surfacing ([ADR 0028](adr/0028-tiered-error-surfacing.md))
 
 ### Secondary: Design system / component library author
 
@@ -77,7 +95,7 @@ For the library itself:
 
 ## 3. Functional Requirements
 
-### Must Have
+### Must Have — library contract
 
 #### M1. Component definition via a single function
 
@@ -93,11 +111,11 @@ Properties declared with a `Parser` function read the corresponding HTML attribu
 
 #### M4. Type-safe DOM queries
 
-`first(selector)` and `all(selector)` must infer the correct `HTMLElement` subtype from the CSS selector string at compile time. Required elements must throw a typed error if missing. Optional elements must return `undefined` without throwing.
+`first(selector)` and `all(selector)` must infer the correct `HTMLElement` subtype from the CSS selector string at compile time. Requiredness is declared with a second literal: `first('input', 'a native button as descendant')` is required and throws a typed `MissingElementError` carrying that reason if missing; `first('.maybe')` is optional and resolves `undefined` without throwing. See [ADR 0021](adr/0021-root-parameterized-query-and-queryall.md) for the root-parameterized `query`/`queryAll` siblings.
 
 #### M5. Fine-grained DOM effects
 
-Effects are applied per-element, not per-component. Updates are targeted to the exact DOM node that needs changing. The `watch(source, handler)` helper drives any DOM update from an explicit reactive source. The following built-in DOM binding helpers are required: `bindText`, `bindAttribute`, `bindClass`, `bindProperty`, `bindState`, `bindStyle`, `bindVisible`, `dangerouslyBindInnerHTML`. Event handling and inter-component binding are covered by `on()` and `pass()` respectively.
+Effects are applied per-element, not per-component. Updates are targeted to the exact DOM node that needs changing. The `watch(source, handler)` helper drives any DOM update from an explicit reactive source. The following built-in DOM binding helpers are required: `bindText`, `bindAttribute`, `bindClass`, `bindProperty`, `bindState`, `bindStyle`, `bindVisible`, `bindAria` (shipped 2.6, [ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md)), `dangerouslyBindInnerHTML`. Event handling and inter-component binding are covered by `on()` and `pass()` respectively.
 
 #### M6. Automatic dependency tracking
 
@@ -121,7 +139,7 @@ If a component queries child custom elements that are not yet defined, initializ
 
 #### M11. Signal injection between components via `pass()`
 
-A parent component must be able to inject its own reactive signal directly into a child component's property slot, creating a live reactive binding. The child must have no knowledge of the parent.
+A parent component must be able to inject its own reactive signal directly into a child component's property slot, creating a live reactive binding. The child must have no knowledge of the parent. Writes are mediated: read-only by thunk, parent-intercepted by `{ get, set }` descriptor ([ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)).
 
 #### M12. Async task signals
 
@@ -142,6 +160,48 @@ The library must be consumable via a `<script type="module">` tag from a CDN wit
 #### M16. Security validation in `setAttribute`
 
 `setAttribute` must block `on*` event handler attributes and reject URLs with unsafe protocols (`javascript:`, `data:`, etc.) to prevent XSS via attribute injection.
+
+### Must Have — v3: isomorphic authoring and build-time server evaluation
+
+#### M17. Single-file isomorphic authoring format
+
+A component is authored once, as a `.tsrx` file containing server args, signals, `expose()` calls, markup, event handlers, and scoped styles ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md)). The compiler generates the idiomatic `defineComponent()` client module, the server render module, and verbatim tag-scoped CSS from that one source. The hand-written trio is not a coexisting format — the isomorphic format is the only authoring format, and authored sources stay honest TypeScript by construction (real exports imported explicitly, FactoryContext vocabulary ambient).
+
+#### M18. Compile-time contract checking
+
+The compiler checks the template contract at build time: root-tag match, selector uniqueness and required-reference resolution against the owned template, extension config validation against the known bundled extensions, and import placement. Every runtime check that is statically decidable has a compiler rule ([ADR 0028](adr/0028-tiered-error-surfacing.md)) — a drifted selector is a build failure, never a browser surprise.
+
+#### M19. Tiered server evaluation
+
+Every component's reactive initial values are resolved server-side by the cheapest mechanism that can actually answer them, decided statically at compile time ([ADR 0029](adr/0029-tiered-server-evaluation.md)): the **Folded** tier (DOM-less value harness), the **Simulated** tier (Server Simulation, [M20](#m20-server-simulation-realm)), and the **Static** tier (skeleton only; the client corrects). Unresolvability is a per-expression property — an expression no phase can answer (layout geometry, stubbed internals surfaces, wall clock, RNG, runtime-default locale) is omitted in every tier, and the client supplies it at connect. No serialized state payload ever ships; the served HTML is corrected, never hydrated.
+
+#### M20. Server Simulation realm
+
+The Simulated tier renders initial HTML by executing the generated client module against a jsdom realm ([ADR 0027](adr/0027-server-simulation.md)): hermetic IO (a fetching component never settles), a fixed-point gate proving enhancement is idempotent over its own output, per-component containment so one throwing component never fails the build, and render memoization on `(component, markup, locale)`. The realm's `ElementInternals` posture is capability-scoped ([ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) §2, amended 2026-09-04): ARIA reflection falls back to content attributes so the served HTML carries `role`/`aria-*` initial values; form association degrades globally where the substrate cannot support it, because an incomplete stub is worse than none.
+
+#### M21. Composition and interop
+
+Compiled components compose: PascalCase invocation with typed server args at the boundary, `class`/`id` discriminators that reach the served DOM, a reserved `children` parameter for content insertion, and `truc:pass={{ … }}` as the sole channel for client-side signal interop with a custom-element target ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s10). Reaching into a sub-component's owned markup is a compile-checked ownership violation — composition goes through the child's declared public interface (TSRX-HOST-PROFILE.md, the data account).
+
+#### M22. Tiered error surfacing
+
+Failures route to the cheapest channel that can carry them ([ADR 0028](adr/0028-tiered-error-surfacing.md)): compile-time diagnostics for everything statically decidable (**Prevented**); unconditional containment inside `connectedCallback` with one attributed `console.error` per failure (**Contained**), degrading to the already-correct server markup; and escape reserved for definition-time failures and security-boundary violations (**Escalated**). Degradation is DOM-is-truth — there is no fallback UI to author.
+
+#### M23. Census reporting, zero-warning baseline
+
+The compile-warning channel stays author-fixable-only, with a zero target. Findings that are not author-fixable — the tier census ([ADR 0029](adr/0029-tiered-server-evaluation.md) s6) and the translation census ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md) s5) — are build-report records, not warnings, and carry their own regression signals.
+
+#### M24. Build-time internationalization
+
+Locale and translations are build-time server data ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)): one SSG page per locale with the locale fixed before rendering begins; a reserved compiler-supplied `i18n` parameter (`lang`, `t`, `timeZone`, `currency`, `dir`); an authored `lang` arg overriding the record; explicit keys with source strings declared inline in the `.tsrx`; additive per-locale catalog files with no override stack; a missing key falling back to the source locale and recorded in the translation census. The catalog never ships to the client — runtime variance is rendered (all alternatives, pruned per locale) and toggled by the client.
+
+#### M25. Tooling continuity
+
+Custom Elements Manifest generation continues through the migration (analyzer + plugin now; compiler-emitted fragments once the last hand-written component is gone) ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s9, [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The compiler is browser-pure (CI smoke test) so it can run in a browser bundle. Type flow is emit-then-check over the compiler's span table, remapping `tsc` diagnostics to source positions.
+
+#### M26. v3 API cleanup — removal of the deprecated surfaces
+
+The two removals scheduled by ADR and declared in ROADMAP land in v3.0, before the corpus migration completes: the `pass()` unrestricted-write short forms ([ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)) are removed, leaving the thunk (read-only) and `{ get, set }` descriptor (mediated) forms; and the explicit factory return contract ([ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md)) is removed — helpers register effects implicitly and return `void`, `FactoryResult`/`EffectDescriptor` leave the public return contract, and `watch(() => true, descriptor)` is the only registration path for a hand-authored descriptor.
 
 ### Should Have
 
@@ -183,16 +243,21 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 
 ✅ _Resolved._ `KnownTag` in `src/helpers/dom.ts` covers `SVGElementTagNameMap` and `MathMLElementTagNameMap`. Extend the CSS selector type parser to cover `SVGElementTagNameMap` and `MathMLElementTagNameMap` in addition to `HTMLElementTagNameMap`.
 
+#### N3. Client-side TSRX playground
+
+_Conditional._ A docs-site playground compiling `.tsrx` entirely in the visitor's browser ([ADR 0025](adr/0025-client-side-tsrx-playground.md) — **Proposed**, not accepted). In scope only if the ADR is accepted; it rides M25's browser-purity invariant and de-risks editor tooling, but commits nothing until decided.
+
 ---
 
 ## 4. Non-Functional Requirements
 
 ### Performance
 
-- Bundle size, gzipped: minimal entry (`defineComponent`, no extensions) ≤9 kB (hard ceiling, `test/regression-bundle.test.ts`); core + `formAssociated()` warns above 14 kB (one TCP segment); the full barrel (every export, including every bundled extension) is reported but not asserted — it is not a realistic consumer surface once extensions are opt-in
+- Bundle size, gzipped: minimal entry (`defineComponent`, no extensions) ≤9 kB (hard ceiling, `test/regression-bundle.test.ts`); core + `formAssociated()` warns above 10 kB; the full barrel (every export, including every bundled extension) is reported but not asserted — it is not a realistic consumer surface once extensions are opt-in
 - DOM updates must be synchronous and targeted: no virtual DOM diffing, no full component re-renders
 - Signal propagation must be glitch-free: no intermediate states visible to effects when multiple signals update in a single batch
 - High-frequency event handlers (scroll, resize, touch) must be frame-rate-limited via the scheduler
+- _(v3)_ Build-time server evaluation adds seconds, not minutes, to a full SSG pass at corpus scale (~1.1 ms per Simulated-tier occurrence measured); the tier classifier keeps the cost bounded as the corpus grows, and the tier census makes any drift visible
 
 ### Accessibility
 
@@ -200,6 +265,7 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 - Built-in effects must preserve existing accessibility attributes unless explicitly overridden
 - Example components must demonstrate correct ARIA patterns (roles, states, properties) as the reference implementation for component authors
 - `MissingElementError` hints must reference accessibility implications where relevant
+- _(v3)_ ARIA on a compiled component's host defaults to the internals channel with the content attribute as the consumer-facing override channel ([ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md)); in environments without a reflection surface the content attribute is the served channel, so the no-JS accessibility tree is never blank by mechanism
 
 ### Browser support
 
@@ -214,12 +280,16 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 - TypeScript strict mode compatible
 - No `any` in the public API surface
 - Selector type inference must work in editors (VSCode, WebStorm) without additional plugins
+- _(v3)_ Authored `.tsrx` sources are valid TypeScript by construction; generated client and server modules are checked by `tsc` in CI with diagnostics remapped to source positions through the span table
 
 ### Reliability
 
 - Components must clean up all effects and event listeners on disconnect — no memory leaks from connected/disconnected cycles
 - Dependency resolution timeout must not block page load; it must degrade gracefully
 - `createTask` cancellation must prevent stale async results from updating the DOM after component disconnect
+- _(v3)_ Enhancement must be idempotent over its own output — the simulation realm's fixed-point gate proves it at build time ([ADR 0027](adr/0027-server-simulation.md) s8)
+- _(v3)_ Server evaluation never depends on the network or the build machine's ambient state: the realm's IO is closed, impure-ambient reads are omitted in every tier, and `Intl` folds only over server-known locale/timeZone ([ADR 0029](adr/0029-tiered-server-evaluation.md), [ADR 0030](adr/0030-internationalization-as-build-time-server-data.md))
+- _(v3)_ The build never writes tracked source files; reports are gitignored artifacts
 
 ---
 
@@ -231,11 +301,12 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 - **Language**: TypeScript. The library is authored in TypeScript and published with full type declarations.
 - **Module format**: ESM only. CommonJS is not a target.
 - **Build tooling**: Bun (primary), Vite compatible. Tests run via Playwright against real browsers.
+- **(v3) Compiler**: the `.tsrx` compiler is built in-repo on a pinned `@tsrx/core` (shared parser; upgrades are reviewed changes), isolated behind one emitter module. It is build-time tooling only; jsdom is a build-time-only dependency. From v3.0 it ships as a separate package (`@tsrx/le-truc` or `@zeix/tsrx-le-truc`), while `@zeix/le-truc` remains the backend-agnostic client layer.
 
 ### Prohibited
 
-- No client-side rendering or templating. Le Truc must never generate initial HTML.
-- No server-side rendering layer. The library is browser-only.
+- No client-side rendering or templating. Le Truc must never generate initial HTML at runtime.
+- No server-side rendering layer **in the library**. `@zeix/le-truc` is browser-only and never renders; server evaluation lives in the build-time compiler and simulation realm, which never ship to clients ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s7).
 - No styled components or design system primitives. Le Truc provides behavioral guarantees only; visual styling is the consumer's responsibility.
 - No polyfills bundled or required.
 - No framework-specific integrations (React wrappers, Vue plugins, etc.) in the core library.
@@ -244,7 +315,7 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 
 - Consumed as an npm package (`@zeix/le-truc`) via any bundler (Vite, Bun, Webpack, Rollup)
 - Consumable via CDN as an ES module (no-build path)
-- Must coexist with any backend rendering technology without coupling or shared protocol
+- Must coexist with any backend rendering technology without coupling or shared protocol — server evaluation is SSG producing plain files, invisible to the client's backend
 
 ---
 
@@ -257,19 +328,23 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 - Custom Elements v1 and associated Web Platform APIs are available in all target environments without polyfills.
 - Sibling-to-sibling component communication is a design smell. Components should coordinate only through their hierarchy (parent→child via `pass()`, ancestor→descendant via context) or through application-level state. Tight sibling coupling is explicitly not a supported pattern.
 - The initial server-rendered HTML is the correct initial UI state. Le Truc does not need to "reconcile" its state with the server — the HTML _is_ the truth at load time.
+- _(v3)_ A page's locale is a build-time constant per rendered page (ADR 0030 s1); request-time locale negotiation would forfeit the Folded tier and is out of scope.
+- _(v3)_ The client environment is not guaranteed to support `ElementInternals` usable surfaces (old Safari, simulation realm); every internals-channel feature must degrade without changing what the component does once connected ([ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) §2, amended).
 
 ### Dependencies
 
 - `@zeix/cause-effect` ^1.0.0 — reactive primitive layer. Le Truc and Cause & Effect are co-developed at Zeix AG and released 1.0 together.
 - Playwright — browser-based integration tests
 - Bun — build tooling and test runner script
+- _(v3)_ `@tsrx/core` (pinned) — shared `.tsrx` parser; jsdom (build-time only) — simulation substrate
 
 ---
 
 ## 7. Out of Scope
 
-- **Client-side rendering or templating**: Le Truc will never generate initial HTML. Component authors who need client-side rendering should use a different tool or implement it themselves with template literals or `<template>` cloning.
-- **Server-side rendering**: The library is browser-only. A companion TypeScript SSR library is a separate future project, not part of Le Truc.
+- **Client-side rendering or templating**: Le Truc will never generate initial HTML at runtime. Component authors who need client-side rendering should use a different tool or implement it themselves with template literals or `<template>` cloning.
+- **Per-request server-side rendering**: initial HTML is produced at build time (SSG). A per-request runtime is anticipated but deliberately undesigned ([ADR 0029](adr/0029-tiered-server-evaluation.md) s8); the Folded and Static tiers are already per-request-cheap if it is ever wanted. The build-time compiler itself is in-repo tooling and ships as a separate package with v3.0 — it is not part of the `@zeix/le-truc` package.
+- **Internationalization runtime**: the library ships no message catalog, no translation function, and no locale resolution. Locale and translations are build-time server data handled by the compiler ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)); at runtime a component uses the platform's own `Intl` and the `lang` the server rendered into the DOM.
 - **Styled components / design system**: Visual styling is entirely the consumer's responsibility. Le Truc provides behavioral primitives only.
 - **Framework adapters**: No React wrappers, Vue plugins, Angular modules, or similar.
 - **Sibling-to-sibling state sharing**: Not a supported coordination pattern.

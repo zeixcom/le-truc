@@ -152,6 +152,7 @@ export {
 	InvalidTemplateError,
 	MissingElementError,
 	NoActiveCollectorError,
+	UnsafeAttributeError,
 } from './src/errors'
 export { type ComponentExtension } from './src/extension'
 export { observedAttributes } from './src/extensions/attributes'

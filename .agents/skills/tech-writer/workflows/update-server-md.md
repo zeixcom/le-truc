@@ -35,7 +35,7 @@ Update only what changed. Preserve the structure and tone — SERVER.md is a tec
 
 **Markdoc tag table (`stripMarkdocTags()`):** Each row maps a source pattern to its Markdown output. Add rows for new tags; remove rows for deleted tags. Order: block → inline, most complex patterns first within each group.
 
-**`Future Improvements` section:** Mark items ✅ when they ship. Do not delete them — they serve as a changelog for what was planned vs. delivered. Add new planned items when introduced.
+**Planned or roadmap items:** SERVER.md is Reference type — current shape only (references/tone-guide.md, Shared Rules). Do not add a "Future Improvements" or changelog-style section; route planned work to `TODO.md` instead.
 
 ### Step 4: Verify
 
@@ -43,8 +43,9 @@ Re-read the edited section against the source. Confirm:
 - Effect count in Build Orchestration matches the number of rows in the Effects Table
 - File paths in output columns match what the effect actually writes
 - No section was accidentally left describing the old behavior
+- No ticket/issue IDs, dates, or change-narration language ("no longer", "was dropped", "not yet") crept in — state current behavior only
 
 ## Success Criteria
 - Every table, count, and path in the edited section matches the current `server/` source
-- The Future Improvements section correctly reflects shipped (✅) vs. planned items
+- No ticket IDs, dates, or planned-work sections remain
 - Surrounding accurate content is untouched

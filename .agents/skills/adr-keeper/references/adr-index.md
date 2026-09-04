@@ -15,7 +15,7 @@ This file is auto-generated. Do not edit manually.
 | [0008](0008-community-protocol-for-context.md) | Community Protocol for Context | ✅ Accepted | M10 |
 | [0009](0009-security-validation-in-bindattribute.md) | Security Validation in bindAttribute | ✅ Accepted (partially superseded by 0010) | M16 |
 | [0010](0010-trusted-types-support-via-sanitize-hook.md) | Trusted Types Support via the sanitize Hook | ✅ Accepted | M16, §4, §7 |
-| [0011](0011-throw-on-pass-binding-failure.md) | Throw on pass() Binding Failure Instead of Warning | ✅ Accepted | M11, S3 |
+| [0011](0011-throw-on-pass-binding-failure.md) | Throw on pass() Binding Failure Instead of Warning | 🗑️ Superseded by [0028](0028-tiered-error-surfacing.md) | M11, S3 |
 | [0012](0012-deprecate-unrestricted-write-short-forms-in-pass.md) | Deprecate Unrestricted-Write Short Forms in pass() | ✅ Accepted | M11, S4 |
 | [0013](0013-cem-plugin-for-le-truc-factory-pattern.md) | Custom Elements Manifest via `@custom-elements-manifest/analyzer` Plugin | ✅ Accepted | M13 |
 | [0014](0014-keyed-per-element-scopes-for-memo-collections.md) | Keyed Per-Element Scopes for Memo-Driven Collections | ✅ Accepted | M5, M6, M7, M11, §1, §4 |
@@ -28,11 +28,13 @@ This file is auto-generated. Do not edit manually.
 | [0021](0021-root-parameterized-query-and-queryall.md) | `query`/`queryAll` — Root-Parameterized Siblings of `first`/`all` | ✅ Accepted | S6, M4, M8, M14 |
 | [0022](0022-debug-extension-for-visual-and-console-instrumentation.md) | `debug()` Extension for Visual and Console Instrumentation | ✅ Accepted | S3, N1, M5, M6 |
 | [0023](0023-map-form-overloads-for-bind-helpers.md) | Map-Form Overloads for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty`/`bindState` | ✅ Accepted | M5 |
-| [0024](0024-adopt-tsrx-as-isomorphic-component-format.md) | Adopt TSRX as the Isomorphic Component Format | ✅ Accepted | M1, M3, M4, §1, §4, §5, §7 |
+| [0024](0024-adopt-tsrx-as-isomorphic-component-format.md) | Adopt TSRX as the Isomorphic Component Format | ✅ Accepted | M1, M3, M4, M10, §1, §4, §5, §7 |
 | [0025](0025-client-side-tsrx-playground.md) | Client-Side TSRX Playground | 🔄 Proposed | §1, M12, M13, S2 |
 | [0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) | ARIA Reflection via ElementInternals and `bindAria()` | ✅ Accepted | M1, M3, M5, §4 |
+| [0027](0027-server-simulation.md) | Server Simulation — Render Initial HTML by Executing the Client Module | ✅ Accepted | §1, M5, M6, M8, §5, §7 |
+| [0028](0028-tiered-error-surfacing.md) | Tiered Error Surfacing — Compiler First, Contained Runtime | ✅ Accepted | M11, M15, M16, S2, S3, S5, §4 |
 
 ---
 
-**Last updated:** 2026-09-02
-**Total ADRs:** 26 (excluding template)
+**Last updated:** 2026-09-03
+**Total ADRs:** 28 (excluding template)

@@ -259,24 +259,32 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 })
 
 test.describe('debug reserved-name collision (ADR 0022 Consequences)', () => {
-	test('expose({ debug: ... }) throws in a DEV_MODE build — every component reserves "debug", even ones that never reference it', async ({
+	test('expose({ debug: ... }) is reported in a DEV_MODE build — every component reserves "debug", even ones that never reference it', async ({
 		page,
 	}) => {
+		const logs: string[] = []
 		const pageErrors: string[] = []
+		page.on('console', msg => {
+			if (msg.type() === 'error') logs.push(msg.text())
+		})
 		page.on('pageerror', err => pageErrors.push(err.message))
 
 		await page.goto('http://localhost:3000/test/test-debug-collision')
 		// The throw happens synchronously during connectedCallback, before any
 		// content this component would otherwise render — waiting for the
-		// custom element to upgrade is enough to have observed it.
+		// custom element to upgrade is enough to have observed it. Since ADR
+		// 0028 it is contained and reported on the console rather than
+		// escaping as a pageerror.
 		await page.waitForFunction(
 			() => customElements.get('test-debug-collision') !== undefined,
 		)
 
 		expect(
-			pageErrors.some(
+			logs.some(
 				message => message.includes('debug') && message.includes('reserved'),
 			),
+			`console errors: ${logs.join(' | ')}`,
 		).toBe(true)
+		expect(pageErrors).toHaveLength(0)
 	})
 })

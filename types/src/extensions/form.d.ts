@@ -41,7 +41,7 @@ declare const formAssociatedCheckbox: () => FormAssociatedCheckboxExtension;
 /**
  * Relays a wrapped native `control`'s full `ValidityState` onto a form-associated host's `internals`.
  * Replaces the host's validity state entirely rather than merging; see ADR-0020 for cross-field interaction.
- * Not reactive: re-run from an `on(control, 'input'/'change', …)` handler. Usable by any component with `internals`.
+ * Not reactive: re-run from an `on(control, 'input'/'change', …)` handler.
  *
  * @see ADR-0020
  * @since 2.3.4

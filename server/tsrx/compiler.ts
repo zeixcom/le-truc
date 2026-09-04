@@ -19,6 +19,7 @@ import type { TsrxNode } from '@tsrx/core'
 import {
 	asArray,
 	CLIENT_ONLY_PRIMITIVES,
+	COLLECTOR_HELPERS,
 	CONTEXT_NAMES,
 	collectBoundNames,
 	FACTORY_CONTEXT_MEMBERS,
@@ -30,6 +31,7 @@ import {
 	MANAGED_TEXT_PROPS,
 	PARSER_FACTORIES,
 	REAL_EXPORT_NAMES,
+	RESERVED_PROP_NAMES,
 	SIGNAL_CONSTRUCTORS,
 	text,
 } from './ast-utils'
@@ -57,6 +59,7 @@ import { inferType, isOptionalBinding, type TypeContext } from './infer-type'
 import type {
 	ComponentIR,
 	ConfigIR,
+	ExposeKind,
 	ExtractContext,
 	ForIR,
 	SetupStmt,
@@ -66,6 +69,7 @@ import type {
 	TemplateNode,
 } from './ir'
 import { lowerChildren, lowerElement } from './lower-template'
+import { malformedSelectorReason } from './selector-syntax'
 import { walkTemplate } from './walk'
 
 /* === Types === */
@@ -164,6 +168,164 @@ const reportLazyPatterns = (ctx: ExtractContext, ast: TsrxNode): void => {
 		}
 	}
 	visit(ast)
+}
+
+/**
+ * Report every malformed `first()`/`all()` selector in the module (TSRX026,
+ * LT-157b, ADR 0028 sub-design 5). Scanning the whole AST rather than just
+ * setup is what makes this worth having: `all()` is legitimately called from
+ * inside an event handler or a `defineMethod()` body (form-listbox does
+ * both), and those calls never pass through the setup extraction below.
+ *
+ * Only a selector this compiler can prove no CSS parser accepts is reported
+ * — see `selector-syntax.ts` on why the check is deliberately one-sided.
+ */
+const reportMalformedSelectors = (ctx: ExtractContext, ast: TsrxNode): void => {
+	const visit = (node: unknown): void => {
+		if (Array.isArray(node)) {
+			for (const child of node) visit(child)
+			return
+		}
+		if (!isNode(node)) return
+		if (node.type === 'CallExpression') {
+			const helper = identifierName(node.callee)
+			if (helper === 'first' || helper === 'all') {
+				const arg = asArray(node.arguments)[0]
+				if (
+					isNode(arg) &&
+					arg.type === 'Literal' &&
+					typeof arg.value === 'string'
+				) {
+					const reason = malformedSelectorReason(arg.value)
+					if (reason)
+						ctx.diagnostics.push(
+							diagnostic.malformedSelector(
+								ctx.source,
+								arg.start,
+								helper,
+								arg.value,
+								reason,
+							),
+						)
+				}
+			}
+		}
+		for (const [key, value] of Object.entries(node)) {
+			if (key === 'loc' || key === 'range' || key === 'parent') continue
+			visit(value)
+		}
+	}
+	visit(ast)
+}
+
+/**
+ * Report every collector-requiring helper called from inside a nested
+ * function in the component body (TSRX013, LT-157d, ADR 0028 sub-design 5).
+ *
+ * `watch`/`on`/`pass`/`provideContexts` do not create their effect where
+ * they are called — they push a descriptor into the ambient collector, which
+ * exists only for the duration of the factory call (ADR 0018). Deferring one
+ * into a callback therefore throws `NoActiveCollectorError` at connect, and
+ * since LT-155 that throw is contained: the effect silently never activates.
+ * The compiler never emits this shape, so the rule is entirely about
+ * hand-authored setup statements.
+ *
+ * The walk starts INSIDE the component function, so its own body is depth 0
+ * and only genuinely nested functions count.
+ */
+const reportDeferredCollectorCalls = (
+	ctx: ExtractContext,
+	fn: TsrxNode,
+): void => {
+	const FUNCTION_TYPES = new Set([
+		'FunctionDeclaration',
+		'FunctionExpression',
+		'ArrowFunctionExpression',
+	])
+	const visit = (node: unknown, depth: number): void => {
+		if (Array.isArray(node)) {
+			for (const child of node) visit(child, depth)
+			return
+		}
+		if (!isNode(node)) return
+		if (depth > 0 && node.type === 'CallExpression') {
+			// `identifierName` returns null for a member callee, so
+			// `list.pass(…)` on some unrelated object never matches.
+			const helper = identifierName(node.callee)
+			if (helper && COLLECTOR_HELPERS.has(helper))
+				ctx.diagnostics.push(
+					diagnostic.deferredCollectorCall(ctx.source, node.start, helper),
+				)
+		}
+		const nextDepth = FUNCTION_TYPES.has(String(node.type)) ? depth + 1 : depth
+		for (const [key, value] of Object.entries(node)) {
+			if (key === 'loc' || key === 'range' || key === 'parent') continue
+			visit(value, nextDepth)
+		}
+	}
+	visit(fn.body, 0)
+}
+
+/** Signal constructors whose result is MUTABLE, hence Slot-backed. */
+const MUTABLE_SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>([
+	'createCell',
+	'createState',
+	'createList',
+	'createStore',
+])
+
+/**
+ * Which of `#setAccessor`'s three landings an `expose()` initializer takes
+ * (LT-158) — see `ExposeKind`. One-sided on purpose: everything unrecognized
+ * classifies as `slot`, the answer that raises no diagnostic, so a shape this
+ * compiler has not met falls through to the Tier 2 runtime check instead of
+ * failing a build on a guess (ADR 0028 sub-design 1).
+ */
+const classifyExposeInit = (
+	value: unknown,
+	signalByName: ReadonlyMap<string, SignalIR>,
+): ExposeKind => {
+	if (!isNode(value)) return 'slot'
+	// `defineMethod(…)` → a plain member; `asString(…)` and friends → the
+	// Parser's RESULT reaches `#setAccessor`, so a Parser is Slot-backed.
+	if (value.type === 'CallExpression') {
+		const callee = identifierName(value.callee)
+		if (callee === 'defineMethod') return 'method'
+		return 'slot'
+	}
+	// `sig.get` — a bare function, so `deriveCell` wraps it read-only
+	// however mutable `sig` is. The single most common expose shape in the
+	// corpus, and the one ADR 0011's motivating example is built on.
+	if (
+		value.type === 'MemberExpression' &&
+		identifierName(value.property) === 'get'
+	)
+		return 'computed'
+	if (
+		value.type === 'ArrowFunctionExpression' ||
+		value.type === 'FunctionExpression'
+	)
+		return 'computed'
+	// `{ get, set }` is a SlotDescriptor; a `get`-only object literal is
+	// one too (`isSlotDescriptor` requires only `get`), but it can never be
+	// written through, so it is reported as read-only.
+	if (value.type === 'ObjectExpression') {
+		const keys = asArray(value.properties)
+			.filter(prop => prop.type === 'Property')
+			.map(prop => identifierName(prop.key))
+		if (keys.includes('get')) return keys.includes('set') ? 'slot' : 'computed'
+		return 'slot'
+	}
+	// A bare signal identifier: mutable constructors give a Slot, derived
+	// ones do not.
+	if (value.type === 'Identifier') {
+		const signal = signalByName.get(identifierName(value) ?? '')
+		if (signal)
+			return MUTABLE_SIGNAL_CONSTRUCTORS.has(String(signal.constructor))
+				? 'slot'
+				: 'computed'
+	}
+	return 'slot'
 }
 
 /** Is `node` a JSX value (`<x/>` or `<>…</>`)? */
@@ -497,6 +659,7 @@ export const compileSource = (
 	}
 	reportLazyPatterns(ctx, ast)
 	reportReactJsxNearMisses(ctx, ast)
+	reportMalformedSelectors(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
 	const plainImports = parsePlainImports(ctx, ast, filename)
 	const leTrucImports = parseLeTrucImports(ast)
@@ -546,6 +709,24 @@ export const compileSource = (
 		)
 		return { component: null, diagnostics: ctx.diagnostics }
 	}
+
+	// An `async` component function (TSRX008, LT-157d): every statement
+	// after the first `await` runs in a later microtask, when the ambient
+	// effect collector is gone (ADR 0018) — so `expose()`/`watch()`/`on()`
+	// there throw `NoActiveCollectorError`, contained and silent since
+	// LT-155. The server half is worse: `emit-server.ts` calls the render
+	// function synchronously and would stringify a Promise. Rejected
+	// outright rather than diagnosed per call site, since neither half of
+	// the isomorphic pair can honour it.
+	if (fn.async === true) {
+		ctx.diagnostics.push(
+			diagnostic.invalidSource(
+				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
+			),
+		)
+		return { component: null, diagnostics: ctx.diagnostics }
+	}
+	reportDeferredCollectorCalls(ctx, fn)
 
 	const name = identifierName(fn.id) ?? 'Component'
 	const params = asArray(fn.params)
@@ -613,6 +794,7 @@ export const compileSource = (
 	let exposeRange: SourceRange | null = null
 	let exposeArgNode: TsrxNode | null = null
 	const exposeProps = new Map<string, string>()
+	const exposeKinds = new Map<string, ExposeKind>()
 	/** Every name `expose()` declares — see the loop below. */
 	const exposedPropNames = new Set<string>()
 	const parserExposeProps = new Map<
@@ -949,6 +1131,14 @@ export const compileSource = (
 				// already claimed to list ("prop names `expose()`
 				// declares").
 				if (propName) exposedPropNames.add(propName)
+				// LT-158: which of `#setAccessor`'s three landings this
+				// initializer takes, so another file's `pass={{ }}` can be
+				// decided against it. Default `slot` — the shape that makes
+				// no diagnostic — so an initializer this classifier does not
+				// recognize falls back to the Tier 2 runtime check rather
+				// than failing a build on a guess.
+				if (propName)
+					exposeKinds.set(propName, classifyExposeInit(value, signalByName))
 				if (
 					propName &&
 					isNode(value) &&
@@ -1304,6 +1494,24 @@ export const compileSource = (
 				)
 		}
 
+	// An expose() key that is a reserved word or Object builtin (LT-157a,
+	// TSRX028). Ungated, unlike the managed-member check below: this one
+	// has nothing to do with form participation. The runtime throws
+	// InvalidPropertyNameError before its `prop in this` guard — every
+	// reserved name is an inherited own-property of Object, so the guard
+	// would otherwise skip the initializer silently — and since LT-155
+	// contains that throw, this rule is what the author actually sees.
+	if (exposeArgNode) {
+		for (const prop of asArray(exposeArgNode.properties)) {
+			if (prop.type !== 'Property') continue
+			const propName = identifierName(prop.key)
+			if (propName && RESERVED_PROP_NAMES.has(propName))
+				ctx.diagnostics.push(
+					diagnostic.reservedExposeName(source, prop.start, propName),
+				)
+		}
+	}
+
 	// A form-associated component's expose() naming a member the extension
 	// installs on the prototype (LT-058, TSRX010 family): silently shadows
 	// it at the JS level. `value`/`checked` (config.form) are the deliberate
@@ -1382,6 +1590,7 @@ export const compileSource = (
 					exposeRange,
 					exposeArgNode,
 					exposeProps,
+					exposeKinds,
 					parserExposeProps,
 					exposeAmbients: [...exposeAmbients].sort(),
 					contextRefs: [...contextRefs].sort(),

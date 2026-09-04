@@ -12,6 +12,7 @@ This skill provides **authoritative guidance** for developing components with `@
 - Creating a new Le Truc component
 - Reviewing or extending an existing component
 - Debugging unexpected reactive behavior
+- Acting on a named error — a `TSRX0NN` build diagnostic or a runtime error in the console (`references/errors.md`)
 
 **For library development itself**, use the project's own documentation in `src/`, `ARCHITECTURE.md`, `REQUIREMENTS.md`, and `CONTEXT.md`.
 
@@ -139,6 +140,7 @@ All references in `references/`:
 | `documentation.md` | What to document and how: property tables, descendant tables |
 | `testing.md` | Framework-agnostic testing patterns |
 | `anti-patterns.md` | What to avoid: TypeScript, HTML, CSS, documentation |
+| `errors.md` | Every runtime error and `TSRX0NN` compiler code: what fired, why, how to fix, and its tier |
 | `accessibility.md` | ARIA roles, native semantics, ARIA APG patterns |
 
 ---

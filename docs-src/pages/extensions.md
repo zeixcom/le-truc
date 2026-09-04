@@ -129,7 +129,7 @@ export default defineComponent(
 )
 ```
 
-`relayValidity()` isn't gated behind `formAssociated()` — it works with any component that has `internals` on its factory context. See `form-spinbutton.ts` for a complete example.
+See `form-spinbutton.ts` for a complete example.
 
 {% /section %}
 

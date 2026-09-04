@@ -31,6 +31,8 @@ For documentation updates, use the `tech-writer` skill.
 
 **A wrong direction is worse than a slow one.** When uncertain, ask the user rather than assuming.
 
+**Every new runtime check names its channel and its tier.** [ADR 0028](../../../adr/0028-tiered-error-surfacing.md) sub-design 1 obliges every runtime check that is statically decidable to have a `TSRX` compiler rule as well. So an ADR or task that introduces a runtime check must state **which channel carries it** (compiler, runtime, TypeScript, or none — with the reason) and **which tier it lands in** (1 Prevented, 2 Contained, 3 Escalated). That is a design decision made here at task-writing time, not a copy decision made later: record the tier in the task, and Tech Writer writes the message to match. A task that introduces or retires an error class or a `TSRX` code must also name Tech Writer as the reviewer of its copy — the developer drafts, Tech Writer owns the final wording. Retirement counts, because a deleted error leaves references behind. The propagation checklist lives in the `tech-writer` skill's `workflows/error-message-lifecycle.md`; do not duplicate it in a task.
+
 **Decisions become ADRs.** When a significant architectural decision is made, record it as an ADR using the `adr-keeper` skill.
 </essential_principles>
 
