@@ -18,7 +18,7 @@ import {
 	SEMANTICALLY_LOADED_ATTRS,
 	sanitizeVarName,
 } from '../ast-utils'
-import { diagnostic } from '../diagnostics'
+import { diagnostic, lineOf } from '../diagnostics'
 import {
 	containsImpureAmbient,
 	dependenciesOf,
@@ -28,6 +28,7 @@ import {
 } from '../evaluability'
 import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
+import { lineFields, resolutionOf } from '../tier'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
 import type { AnalysisContext, TopEffectPlan } from './plan'
@@ -106,6 +107,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		component,
 		source,
 		diagnostics,
+		routingSignals,
 		registry,
 		composeRegistry,
 		effects,
@@ -354,7 +356,18 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
 						!containsImpureAmbient(attr.thunk, component.serverKnown)
 					)
-				)
+				) {
+					// ADR 0029 sub-design 5: the same site is now a routing
+					// signal. Whether it is ALSO a diagnostic depends on
+					// severity — only the severe variant survives the channel,
+					// and only on the Static tier (applied in index.ts, where
+					// the tier is known).
+					routingSignals.push({
+						origin: 'TSRX034',
+						detail: `\`${attr.name}\` on <${el.tag}> has no server-renderable value`,
+						...lineFields(source, attr.thunk.start),
+						resolution: resolutionOf(attr.thunk, component.serverKnown),
+					})
 					diagnostics.push(
 						diagnostic.unsafeLoadedAttributeDefault(
 							source,
@@ -370,6 +383,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 								SUBMITTABLE_FORM_CONTROL_TAGS.has(el.tag),
 						),
 					)
+				}
 				if (isCustom) {
 					// ADR 0023 sub-design 4 (amended by sub-design 10): a
 					// function-valued attribute is only ever a reactive binding

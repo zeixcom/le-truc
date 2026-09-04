@@ -484,7 +484,7 @@ remain warnings.]
   duplicating weaker coverage. Acceptance: both tests fail if the underlying compiled/rendered
   behavior regresses; `bun test server/tests` stays green.
 
-- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013.
+- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — steps 1–3 done, pending review ⏳; steps 4–8 not started
   **Skill:** le-truc-dev
   **Context:** [**Rewritten 2026-09-04 against ADR 0029; the original "delete the evaluability
   machinery" premise, and its 2026-09-04 interim retitle, are both superseded.**] ADR 0029 is
@@ -544,6 +544,43 @@ remain warnings.]
   classify as Folded-tier; no `Date`/`Math.random()` reading expression renders a value in ANY tier;
   the equivalence audit runs green in CI; TSRX013 is three codes; the compile-warning count is
   zero and the tier census is reported separately; `bun test server` green.
+  **Changed (steps 1–3, 2026-09-04):**
+  - `server/tsrx/diagnostics.ts` — TSRX013 split three ways. `conditionalSignalConstructor` →
+    **TSRX044** (ADR 0024 s12 format rule), `deferredCollectorCall` → **TSRX045** (client-side
+    `NoActiveCollectorError`); `clientOnlySetupConst`/`clientOnlySignalCompute` keep TSRX013.
+    `lineOf` is now exported so the census cites the same line the diagnostic did.
+  - `server/tsrx/tier.ts` (new) — `classifyTier`, `resolutionOf`, `stubbedApiRead`,
+    `contaminateComposeReads`.
+  - `server/tsrx/sim/patch-table.ts` — new `CAPABILITY_PATCHES` (`kind: 'capability'`) for
+    member reads the realm answers WRONG rather than not at all (layout geometry → silent zeros;
+    `internals.states`/form members). ARIA members deliberately excluded per ADR 0026 §2.
+  - `server/tsrx/evaluability.ts` — new `impureAmbientCauses`, with `containsImpureAmbient`
+    redefined on top of it so the two cannot drift.
+  - Routing signals threaded through `ExtractContext`/`AnalysisContext`/`ClientPlan`; classified
+    in `server/tsrx/index.ts`; `tier`/`routingSignals`/`composeReadTags` recorded on
+    `RegistryEntry`; the compose fixpoint applied corpus-wide in `server/effects/tsrx.ts`.
+  **How:** the two ADR 0029 facts are kept separate in code as well as in prose —
+  `resolutionOf` is per-EXPRESSION (which limb, if any, makes it unresolvable) and
+  `classifyTier` is per-COMPONENT (is phase 2 worth running). Limb (a) reads the patch table so
+  the delete-a-row-to-re-route property holds. LT-142's `Intl` rule splits three ways via
+  `impureAmbientCauses`: `intl-dom-locale` is impure for FOLDING but realm-answerable, which is
+  what keeps `basic-pluralize` Simulated rather than Static.
+  **Check:** (a) **the Folded/Simulated/Static split is 19/3/0, not the ~6-of-22 ADR 0029's
+  Consequences forecast — this needs an Architect decision and is written up in NOTES.md**; it
+  changes the CI equivalence audit's cost (step 8 renders every Folded component through the
+  realm) and therefore step 8's design; (b) Static is EMPTY because every component ADR 0029
+  names as a Static-tier case (`module-scrollarea` above all) is unmigrated, so the tier the
+  cost argument rests on has no corpus member yet; (c) whether `composeReadTags`' definition —
+  a compose site carrying a `ref` or `pass` attr — is the right reading of "contamination on
+  reads"; (d) the diagnostics still fire alongside the new signals, deliberately, so steps 1–3
+  are behaviour-preserving; step 5 is what removes them from the channel.
+  **Not started:** steps 4 (emit-server tier flag), 5 (diagnostic reclassification), 6 (tier
+  census on `sim/report.ts`), 7 (realm-side suppression), 8 (CI equivalence audit).
+  **Copy handoff owed to Tech Writer:** TSRX044 and TSRX045 are new codes with first-draft
+  messages (carried over verbatim from TSRX013's originals) and need the ADR 0028 lifecycle
+  propagation — `.agents/skills/le-truc/references/errors.md` still describes TSRX013 as all
+  four factories, and ADR 0028 §5's `NoActiveCollectorError` row carries an explicit
+  "re-point this row when LT-165 lands" instruction that is now due.
 
 - [ ] LT-169: Wire the simulation driver into the docs build for Simulated-tier components (ADR 0027 stage 2). **Depends on LT-165.**
   **Skill:** docs-server-dev

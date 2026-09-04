@@ -16,6 +16,7 @@ import type { CompileDiagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import type { ComponentIR, ForIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
+import type { RoutingSignal } from '../tier'
 import { walkTemplate } from '../walk'
 import { resolveComposeRefs } from './compose-refs'
 import { runEffects } from './effects'
@@ -352,6 +353,13 @@ export type ClientPlan = {
 	 * tag-map augmentation is present for the factory's typed queries.
 	 */
 	childTags: string[]
+	/**
+	 * Why this component cannot be answered by phase 1 alone (ADR 0029,
+	 * LT-165) — the tier classifier's input, collected at the same sites
+	 * that used to raise `TSRX004`/`TSRX034`. Empty means phase 1 is total,
+	 * which is the Folded tier.
+	 */
+	routingSignals: RoutingSignal[]
 }
 
 /**
@@ -368,6 +376,8 @@ export type AnalysisContext = {
 	component: ComponentIR
 	source: string
 	diagnostics: CompileDiagnostic[]
+	/** Tier routing signals (ADR 0029) — see {@link ClientPlan.routingSignals}. */
+	routingSignals: RoutingSignal[]
 	registry: ReadonlySet<string>
 	/**
 	 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
@@ -526,10 +536,12 @@ export const analyzeClient = (
 				!component.imports.plainLocalNames.has(name),
 		)
 
+	const routingSignals: RoutingSignal[] = []
 	const ctx: AnalysisContext = {
 		component,
 		source,
 		diagnostics,
+		routingSignals,
 		registry,
 		composeRegistry,
 		queries,
@@ -602,5 +614,6 @@ export const analyzeClient = (
 		effects: guardedEffects,
 		ambientContext: [...ambient].sort(),
 		childTags: [...childTags].sort(),
+		routingSignals,
 	}
 }

@@ -70,6 +70,7 @@ import type {
 } from './ir'
 import { lowerChildren, lowerElement } from './lower-template'
 import { malformedSelectorReason } from './selector-syntax'
+import { lineFields, type RoutingSignal, resolutionOf } from './tier'
 import { walkTemplate } from './walk'
 
 /* === Types === */
@@ -77,6 +78,11 @@ import { walkTemplate } from './walk'
 export type CompileResult = {
 	component: ComponentIR | null
 	diagnostics: CompileDiagnostic[]
+	/**
+	 * Setup-extraction routing signals (ADR 0029, LT-165). Merged with the
+	 * analysis pass's own in `index.ts`, where the tier is classified.
+	 */
+	routingSignals: RoutingSignal[]
 }
 
 /* === Internal Functions === */
@@ -635,6 +641,7 @@ export const compileSource = (
 	const ctx: ExtractContext = {
 		source,
 		diagnostics: [],
+		routingSignals: [],
 		exposedProps: new Set<string>(),
 		serverKnown: new Set<string>(),
 		argNames: new Set<string>(),
@@ -650,6 +657,7 @@ export const compileSource = (
 	} catch (e) {
 		return {
 			component: null,
+			routingSignals: [],
 			diagnostics: [
 				diagnostic.invalidSource(
 					`Failed to parse ${filename}: ${e instanceof Error ? e.message : String(e)}${newerGrammarHint(source, e)}`,
@@ -707,7 +715,11 @@ export const compileSource = (
 				`${filename}: no exported component function with an @{ } container found.`,
 			),
 		)
-		return { component: null, diagnostics: ctx.diagnostics }
+		return {
+			component: null,
+			diagnostics: ctx.diagnostics,
+			routingSignals: ctx.routingSignals,
+		}
 	}
 
 	// An `async` component function (TSRX008, LT-157d): every statement
@@ -724,7 +736,11 @@ export const compileSource = (
 				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
 			),
 		)
-		return { component: null, diagnostics: ctx.diagnostics }
+		return {
+			component: null,
+			diagnostics: ctx.diagnostics,
+			routingSignals: ctx.routingSignals,
+		}
 	}
 	reportDeferredCollectorCalls(ctx, fn)
 
@@ -738,7 +754,11 @@ export const compileSource = (
 				`${filename}: the component function must take a single destructured args object.`,
 			),
 		)
-		return { component: null, diagnostics: ctx.diagnostics }
+		return {
+			component: null,
+			diagnostics: ctx.diagnostics,
+			routingSignals: ctx.routingSignals,
+		}
 	}
 	const paramNames = new Set<string>()
 	if (paramsNode) collectBoundNames(paramsNode, paramNames)
@@ -900,7 +920,16 @@ export const compileSource = (
 				const refReads = [...freeIdentifiers(init)]
 					.filter(n => elementRefs.has(n))
 					.sort()
-				if (refReads.length > 0)
+				if (refReads.length > 0) {
+					// ADR 0029 sub-design 5: a Simulated-tier routing signal. The
+					// realm has a real DOM, so the ref read the value harness
+					// could not evaluate is exactly what phase 2 answers.
+					ctx.routingSignals.push({
+						origin: 'TSRX043',
+						detail: `\`${declName}\` reads element ref(s) ${refReads.join(', ')} in setup`,
+						...lineFields(source, stmt.start),
+						resolution: { by: 'realm' },
+					})
 					ctx.diagnostics.push(
 						diagnostic.refDerivedSetupConst(
 							source,
@@ -909,6 +938,7 @@ export const compileSource = (
 							refReads,
 						),
 					)
+				}
 			}
 			const calleeName = identifierName(init.callee)
 			if (calleeName === 'requestContext') {
@@ -976,6 +1006,14 @@ export const compileSource = (
 						)
 					: []
 				if (badContextNames.length > 0) {
+					ctx.routingSignals.push({
+						origin: 'TSRX013',
+						detail: `\`${declName}\`'s ${calleeName}() compute reads ${badContextNames.join('/')}`,
+						...lineFields(source, stmt.start),
+						// `host`/`internals` resolve in the realm — that is the
+						// whole difference between the harness and phase 2.
+						resolution: resolutionOf(init, ctx.serverKnown),
+					})
 					ctx.diagnostics.push(
 						diagnostic.clientOnlySignalCompute(
 							source,
@@ -1034,6 +1072,12 @@ export const compileSource = (
 					.filter(n => CLIENT_ONLY_PRIMITIVES.has(n))
 					.sort()
 				if (badPrimitives.length > 0) {
+					ctx.routingSignals.push({
+						origin: 'TSRX013',
+						detail: `\`${declName}\` calls client-only primitive(s) ${badPrimitives.join(', ')}`,
+						...lineFields(source, stmt.start),
+						resolution: resolutionOf(init, ctx.serverKnown),
+					})
 					ctx.diagnostics.push(
 						diagnostic.clientOnlySetupConst(
 							source,
@@ -1219,7 +1263,11 @@ export const compileSource = (
 				`${filename}: the @{ } container's output must be a single root element, or a fragment (element + <style>).`,
 			),
 		)
-		return { component: null, diagnostics: ctx.diagnostics }
+		return {
+			component: null,
+			diagnostics: ctx.diagnostics,
+			routingSignals: ctx.routingSignals,
+		}
 	}
 	const fors = new Map<TsrxNode, ForIR>()
 	// @if conditions validate against server-known names — args and setup
@@ -1294,7 +1342,11 @@ export const compileSource = (
 					`${filename}: no root element found in the @{ } output.`,
 				),
 			)
-			return { component: null, diagnostics: ctx.diagnostics }
+			return {
+				component: null,
+				diagnostics: ctx.diagnostics,
+				routingSignals: ctx.routingSignals,
+			}
 		}
 		if (!root.tag.includes('-')) {
 			ctx.diagnostics.push(
@@ -1302,7 +1354,11 @@ export const compileSource = (
 					`${filename}: the root element must be the component's custom element tag (got \`${root.tag}\`).`,
 				),
 			)
-			return { component: null, diagnostics: ctx.diagnostics }
+			return {
+				component: null,
+				diagnostics: ctx.diagnostics,
+				routingSignals: ctx.routingSignals,
+			}
 		}
 
 		// Resolve `first(selector, required)` element references (LT-055) now
@@ -1610,6 +1666,7 @@ export const compileSource = (
 					imports,
 				},
 		diagnostics: ctx.diagnostics,
+		routingSignals: ctx.routingSignals,
 	}
 }
 

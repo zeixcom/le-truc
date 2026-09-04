@@ -11,6 +11,7 @@
 
 import type { TsrxNode } from '@tsrx/core'
 import type { CompileDiagnostic } from './diagnostics'
+import type { RoutingSignal } from './tier'
 
 /* === Types === */
 
@@ -543,6 +544,13 @@ export type ComponentIR = {
 export type ExtractContext = {
 	source: string
 	diagnostics: CompileDiagnostic[]
+	/**
+	 * Why this component cannot be answered by phase 1 alone (ADR 0029,
+	 * LT-165). Collected at the same setup-extraction sites that raise
+	 * `TSRX013`/`TSRX043`, and merged in `index.ts` with the analysis pass's
+	 * own signals before the tier is classified.
+	 */
+	routingSignals: RoutingSignal[]
 	/**
 	 * Prop names `expose()` declares, plus the managed form props. Populated
 	 * before template lowering so a string-literal child naming a prop can be

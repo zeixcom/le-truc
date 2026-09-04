@@ -20,6 +20,7 @@ import { getFilePath, writeFileSafe } from '../io'
 import { type CompileDiagnostic, compileComponent } from '../tsrx'
 import { type RegistryEntry, registryJson } from '../tsrx/registry'
 import type { SourceSpan } from '../tsrx/spans'
+import { contaminateComposeReads } from '../tsrx/tier'
 import { createBuildEffect } from './build-effect'
 
 /**
@@ -183,6 +184,26 @@ export const compileTsrxCorpus = async (
 			serverSpans: component.serverSpans,
 		})
 		console.log(`✅ Compiled ${entry.tag} from ${rel}`)
+	}
+
+	// ADR 0029 sub-design 3, LT-165: compose contamination is a FIXPOINT over
+	// the whole corpus's compose-read graph, so it can only run here — the
+	// first point where every component's own first-pass tier is known. A
+	// component's tier can only move downward (towards the Simulated tier).
+	const contaminated = contaminateComposeReads(
+		new Map(
+			entries.map(entry => [
+				entry.tag,
+				{ tag: entry.tag, tier: entry.tier, signals: entry.routingSignals },
+			]),
+		),
+		tag => entries.find(entry => entry.tag === tag)?.composeReadTags ?? [],
+	)
+	for (const entry of entries) {
+		const classification = contaminated.get(entry.tag)
+		if (!classification) continue
+		entry.tier = classification.tier
+		entry.routingSignals = [...classification.signals]
 	}
 
 	await writeFileSafe(

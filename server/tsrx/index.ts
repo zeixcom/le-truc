@@ -17,6 +17,7 @@ import { emitClientModule } from './emit-client'
 import { emitServerModule } from './emit-server'
 import type { RegistryEntry } from './registry'
 import type { SourceSpan } from './spans'
+import { classifyTier } from './tier'
 
 /* === Types === */
 
@@ -64,7 +65,11 @@ export const compileComponent = (
 	 */
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 ): CompileFileResult => {
-	const { component, diagnostics } = compileSource(source, filename)
+	const {
+		component,
+		diagnostics,
+		routingSignals: setupSignals,
+	} = compileSource(source, filename)
 	if (!component) return { component: null, diagnostics }
 	const composeNodes = collectComposeElements(component)
 	if (composeRegistry) {
@@ -83,6 +88,47 @@ export const compileComponent = (
 	const plan = analyzeClient(component, registry, diagnostics, composeRegistry)
 	if (diagnostics.some(d => d.severity === 'error'))
 		return { component: null, diagnostics }
+	/**
+	 * The per-component half of the tier decision (ADR 0029, LT-165). Both
+	 * halves of the analysis contribute: setup extraction sees the
+	 * `TSRX013`/`TSRX043` shapes, the client analysis sees `TSRX004`/
+	 * `TSRX034`.
+	 *
+	 * Compose contamination (sub-design 3) is deliberately NOT applied here
+	 * — it is a fixpoint over the whole corpus's compose graph, so it runs
+	 * in the registry-aware second pass (`server/effects/tsrx.ts`) where
+	 * every component's first-pass tier is known. This value is therefore
+	 * the component's tier BEFORE contamination, and can only move
+	 * downward (towards the Simulated tier) from here.
+	 */
+	const routingSignals = [...setupSignals, ...plan.routingSignals]
+	const tier = classifyTier(routingSignals)
+	/**
+	 * Composed children this component READS — a `first()` addressing the
+	 * compose site (resolved to a synthetic `ref` attr by
+	 * `analysis/compose-refs.ts`) or a `truc:pass={{ }}` into it.
+	 *
+	 * Deliberately NOT every composed child (ADR 0029 sub-design 3):
+	 * containment does not contaminate, because the compose graph renders
+	 * children before parents, so a merely-embedded child's markup is
+	 * already a string by the time the parent needs it. A containment rule
+	 * was measured and rejected — with page chrome in the graph it drags
+	 * nearly the whole corpus into the realm.
+	 */
+	const composeReadTags = composeRegistry
+		? [
+				...new Set(
+					composeNodes
+						.filter(node =>
+							node.attrs.some(
+								attr => attr.kind === 'ref' || attr.kind === 'pass',
+							),
+						)
+						.map(node => composeRegistry.get(node.source)?.tag)
+						.filter((tag): tag is string => tag !== undefined),
+				),
+			]
+		: []
 	const server = emitServerModule(component, {
 		runtimeImport: '../../tsrx/runtime',
 		sourcePath: filename,
@@ -103,6 +149,9 @@ export const compileComponent = (
 				css: `${component.tag}.css`,
 				propsType: component.propsTypeName,
 				exposedProps: Object.fromEntries(component.exposeKinds),
+				tier,
+				routingSignals,
+				composeReadTags,
 				composesTags: composeRegistry
 					? [
 							...new Set(

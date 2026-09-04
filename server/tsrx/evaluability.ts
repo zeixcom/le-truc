@@ -76,8 +76,47 @@ const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
 export const containsImpureAmbient = (
 	node: TsrxNode,
 	scope: ReadonlySet<string> = new Set(),
-): boolean => {
+): boolean => impureAmbientCauses(node, scope).length > 0
+
+/**
+ * Why `node` is impure, rather than merely whether it is — the same walk as
+ * {@link containsImpureAmbient}, which is defined in terms of this one so
+ * the two cannot drift.
+ *
+ * The distinction exists for the tier classifier (ADR 0029 sub-design 5,
+ * LT-165). Impurity means "phase 1 must not fold this", which is one
+ * question; "can any server phase answer it" is a different one, and
+ * LT-142's `Intl` rule splits three ways along exactly this seam:
+ *
+ * - `intl-server-locale` never appears here — a resolvable locale is not
+ *   impure at all, and the call folds.
+ * - `intl-dom-locale` is impure for FOLDING (the value harness has no DOM
+ *   to read the locale from) but the REALM can answer it, because it
+ *   executes `getLocale(el)` against a real simulated element. A
+ *   Simulated-tier routing signal, not an unresolvable expression.
+ * - `intl-default-locale` is unresolvable: the default is the build
+ *   machine's own setting, and no driver capability can change that.
+ *
+ * `date`, `rng` and `locale-method` are unresolvable in every tier for the
+ * same reason — their input is the viewing moment or the build machine.
+ */
+export type ImpureAmbientCause =
+	| 'date'
+	| 'rng'
+	| 'locale-method'
+	| 'intl-default-locale'
+	| 'intl-dom-locale'
+
+export const impureAmbientCauses = (
+	node: TsrxNode,
+	scope: ReadonlySet<string> = new Set(),
+): ImpureAmbientCause[] => {
+	const causes: ImpureAmbientCause[] = []
 	let found = false
+	const flag = (cause: ImpureAmbientCause) => {
+		causes.push(cause)
+		found = true
+	}
 	const visit = (current: unknown): void => {
 		if (found) return
 		if (Array.isArray(current)) {
@@ -85,13 +124,20 @@ export const containsImpureAmbient = (
 			return
 		}
 		if (!isNode(current)) return
-		if (
-			current.type === 'Identifier' &&
-			(IMPURE_AMBIENT_ROOTS.has(String(current.name)) ||
-				String(current.name) === 'Intl')
-		) {
-			found = true
-			return
+		if (current.type === 'Identifier') {
+			const name = String(current.name)
+			// A bare `Intl` read reached without matching the call shape below
+			// (a computed member, an aliasing assignment) — conservative, and
+			// unresolvable rather than realm-answerable, since nothing here
+			// proves a locale ever reaches it.
+			if (name === 'Intl') {
+				flag('intl-default-locale')
+				return
+			}
+			if (IMPURE_AMBIENT_ROOTS.has(name)) {
+				flag('date')
+				return
+			}
 		}
 		if (
 			(current.type === 'CallExpression' ||
@@ -111,7 +157,7 @@ export const containsImpureAmbient = (
 				prop.type === 'Identifier' &&
 				String(prop.name) === 'random'
 			) {
-				found = true
+				flag('rng')
 				return
 			}
 			if (
@@ -119,7 +165,7 @@ export const containsImpureAmbient = (
 				prop.type === 'Identifier' &&
 				IMPURE_AMBIENT_METHODS.has(String(prop.name))
 			) {
-				found = true
+				flag('locale-method')
 				return
 			}
 			if (
@@ -129,7 +175,12 @@ export const containsImpureAmbient = (
 			) {
 				const args = Array.isArray(current.arguments) ? current.arguments : []
 				if (!isLocaleResolvable(args[0], scope)) {
-					found = true
+					// Absent locale → the runtime default, the build machine's own
+					// setting, unresolvable. Present but not server-known → a DOM
+					// read the realm can execute for real (LT-142's middle case).
+					flag(
+						args[0] === undefined ? 'intl-default-locale' : 'intl-dom-locale',
+					)
 					return
 				}
 				// Locale resolved: still walk the remaining arguments (e.g. an
@@ -146,7 +197,7 @@ export const containsImpureAmbient = (
 		}
 	}
 	visit(node)
-	return found
+	return causes
 }
 
 /**

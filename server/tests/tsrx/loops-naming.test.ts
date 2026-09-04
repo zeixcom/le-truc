@@ -20,6 +20,7 @@ const contextFor = (component: ComponentIR): AnalysisContext => {
 		component,
 		source: component.source,
 		diagnostics: [],
+		routingSignals: [],
 		registry: new Set(),
 		queries,
 		harvests: [],

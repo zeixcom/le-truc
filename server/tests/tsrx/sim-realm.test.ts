@@ -62,7 +62,9 @@ describe('patch table', () => {
 		for (const patch of SIM_PATCH_TABLE) {
 			for (const value of Object.values(patch))
 				expect(typeof value).not.toBe('function')
-			expect(['realm', 'stub', 'network', 'prototype']).toContain(patch.kind)
+			expect(['realm', 'stub', 'network', 'prototype', 'capability']).toContain(
+				patch.kind,
+			)
 		}
 	})
 

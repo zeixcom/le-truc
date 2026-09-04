@@ -556,7 +556,7 @@ import { createCell } from '@zeix/le-truc'`
 		expect(hits.some(h => h.message.includes('span'))).toBe(true)
 	})
 
-	test('a signal conditionally choosing between two constructors is TSRX013', () => {
+	test('a signal conditionally choosing between two constructors is TSRX044', () => {
 		const source = `export function C({ big = false }: { big?: boolean })
 	@{
 		const n = big ? deriveCell(() => 1) : createCell(0)
@@ -568,10 +568,13 @@ import { createCell } from '@zeix/le-truc'`
 	}
 import { deriveCell, createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX013')
+		// Own code since LT-165's split: a format rule (ADR 0024 s12), not a
+		// server-evaluation guard, so it stays an error under tiering.
+		const hit = diagnostics.find(d => d.code === 'TSRX044')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`n`')
 		expect(hit?.message).toContain('conditionally chooses')
+		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
 	})
 
 	test('a plain setup const calling a client-only primitive directly is TSRX013', () => {
@@ -2278,7 +2281,7 @@ describe('malformed selector (TSRX026, LT-157b)', () => {
 	})
 })
 
-describe('deferred collector call (TSRX013, LT-157d)', () => {
+describe('deferred collector call (TSRX045, LT-157d)', () => {
 	const withSetup = (setup: string): string =>
 		`export function C({}: {})
 @{
@@ -2290,20 +2293,20 @@ describe('deferred collector call (TSRX013, LT-157d)', () => {
 	</>
 }`
 
-	test('watch() inside a setTimeout callback is TSRX013', () => {
+	test('watch() inside a setTimeout callback is TSRX045', () => {
 		const { diagnostics } = compileComponent(
 			withSetup(`setTimeout(() => { watch(() => 1, () => {}) }, 0)`),
 			'c.tsrx',
 			new Set(),
 		)
 		const hit = diagnostics.find(
-			d => d.code === 'TSRX013' && d.message.includes('NoActiveCollectorError'),
+			d => d.code === 'TSRX045' && d.message.includes('NoActiveCollectorError'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`watch(…)`')
 	})
 
-	test('on() inside a promise callback is TSRX013', () => {
+	test('on() inside a promise callback is TSRX045', () => {
 		const { diagnostics } = compileComponent(
 			withSetup(`Promise.resolve().then(() => { on('click', () => {}) })`),
 			'c.tsrx',
@@ -2311,7 +2314,7 @@ describe('deferred collector call (TSRX013, LT-157d)', () => {
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX013' && d.message.includes('`on(…)`'),
+				d => d.code === 'TSRX045' && d.message.includes('`on(…)`'),
 			),
 		).toBe(true)
 	})

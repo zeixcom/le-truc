@@ -14,6 +14,7 @@
  */
 
 import type { ExposeKind } from './ir'
+import type { EvaluationTier, RoutingSignal } from './tier'
 
 /* === Types === */
 
@@ -64,6 +65,32 @@ export type RegistryEntry = {
 	 * compiler has to hand it down explicitly.
 	 */
 	composesTags: string[]
+	/**
+	 * Which server-evaluation mechanism renders this component's initial
+	 * HTML (ADR 0029, LT-165), and why it was routed there.
+	 *
+	 * Recorded here rather than kept inside the compiler because the tier is
+	 * product surface, not an implementation detail: it decides build cost,
+	 * it feeds the build report's tier census, and a component drifting from
+	 * the Folded tier to the Simulated tier is a cost regression worth
+	 * seeing. `emit-server.ts` also reads it — a Simulated-tier or
+	 * Static-tier module does not re-declare `@{ }` setup verbatim.
+	 *
+	 * The value written by the FIRST pass is pre-contamination. The
+	 * registry-aware second pass applies ADR 0029 sub-design 3's compose-read
+	 * fixpoint, which can only move a component downward, towards the
+	 * Simulated tier.
+	 */
+	tier: EvaluationTier
+	/** Why this component is not Folded-tier; empty for the Folded tier. */
+	routingSignals: RoutingSignal[]
+	/**
+	 * Composed children this component READS — the contamination edges of
+	 * ADR 0029 sub-design 3, and a strict subset of `composesTags`.
+	 * Containment alone does not contaminate; only a `first()` on the
+	 * compose site or a `truc:pass={{ }}` into it does.
+	 */
+	composeReadTags: string[]
 }
 
 export type ComponentRegistry = Record<string, RegistryEntry>

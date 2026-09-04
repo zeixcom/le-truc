@@ -21,6 +21,7 @@ import {
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import type { AttributeIR, SignalIR, TemplateNode } from '../ir'
+import { lineFields, resolutionOf } from '../tier'
 import type { AnalysisContext, HarvestPlan, ParserKind } from './plan'
 import {
 	type ElementNode,
@@ -203,12 +204,34 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		component,
 		source,
 		diagnostics,
+		routingSignals,
 		harvests,
 		reconcilePlans,
 		addQuery,
 		ambient,
 		refNames,
 	} = ctx
+	/**
+	 * A signal the client cannot seed from server-rendered DOM. Under ADR
+	 * 0029 sub-design 5 this is a Simulated-tier ROUTING SIGNAL rather than
+	 * an author error — the realm connects the component for real and
+	 * serializes whatever the signal actually settles to, which is exactly
+	 * the initial value the harvest could not find a site for.
+	 */
+	const reportUnharvestable = (signal: SignalIR): void => {
+		routingSignals.push({
+			origin: 'TSRX004',
+			detail: `signal \`${signal.name}\` has no harvestable initial-DOM site`,
+			...lineFields(source, signal.init?.start),
+			resolution:
+				signal.init == null
+					? { by: 'realm' }
+					: resolutionOf(signal.init, component.serverKnown),
+		})
+		diagnostics.push(
+			diagnostic.signalNotHarvestable(source, signal.init?.start, signal.name),
+		)
+	}
 	const enclosingIfOf = (target: ElementNode) =>
 		enclosingIfOfIn(component, target)
 	const selectorFor = (el: ElementNode) => selectorForIn(component, el)
@@ -701,13 +724,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 				})
 				continue
 			}
-			diagnostics.push(
-				diagnostic.signalNotHarvestable(
-					source,
-					signal.init?.start,
-					signal.name,
-				),
-			)
+			reportUnharvestable(signal)
 			continue
 		}
 		const direct = own.find(s => s.kind === 'text' || s.kind === 'attr') as
@@ -798,13 +815,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 				)
 			: undefined
 		if (!loop || !plan || !valueAttr) {
-			diagnostics.push(
-				diagnostic.signalNotHarvestable(
-					source,
-					signal.init?.start,
-					signal.name,
-				),
-			)
+			reportUnharvestable(signal)
 			continue
 		}
 		harvests.push({

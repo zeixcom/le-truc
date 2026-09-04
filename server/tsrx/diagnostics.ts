@@ -23,7 +23,7 @@ export type DiagnosticCode =
 	| 'TSRX010' // managed form prop used without formAssociated
 	| 'TSRX011' // composed (PascalCase) element with no resolvable .tsrx import
 	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target, incl. per-prop Slot-backedness (LT-158)
-	| 'TSRX013' // signal declared with a conditionally-chosen constructor, or a client-only primitive called from a plain setup const or a deferred callback
+	| 'TSRX013' // a plain setup const or a derived-signal compute reads something the DOM-less value harness cannot run (host/internals/client-only primitives)
 	| 'TSRX014' // plain (non-.tsrx) import whose bindings are never used anywhere the compiler can place them
 	| 'TSRX015' // requestContext() called with other than exactly two arguments
 	| 'TSRX016' // requestContext()'s fallback argument is not server-known
@@ -54,6 +54,8 @@ export type DiagnosticCode =
 	| 'TSRX041' // two first() names resolve to the same element (LT-132)
 	| 'TSRX042' // a static id in a template duplicates once the component is instantiated twice (LT-131)
 	| 'TSRX043' // a setup const's initializer reads a first()-bound ref, so it evaluates server-side where no DOM exists (LT-125)
+	| 'TSRX044' // a signal's initializer conditionally chooses between two constructor calls (ADR 0024 sub-design 12 format rule; split from TSRX013 by LT-165)
+	| 'TSRX045' // a collector-requiring helper deferred into a callback, so it throws NoActiveCollectorError at connect (split from TSRX013 by LT-165)
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -98,7 +100,12 @@ const warning = (
 		? { code, severity: 'warning', message }
 		: { code, severity: 'warning', message, line }
 
-const lineOf = (
+/**
+ * 1-based line for a source offset. Exported since LT-165: the tier census
+ * cites the same line the diagnostic did, and one implementation keeps the
+ * two agreeing.
+ */
+export const lineOf = (
 	source: string,
 	offset: number | undefined,
 ): number | undefined => {
@@ -399,6 +406,11 @@ export const diagnostic = {
 	 * initializer must be a SINGLE, unconditional call to a recognized
 	 * constructor; conditional logic belongs inside the callback, not as a
 	 * choice between constructors (ADR 0023 sub-design 12).
+	 *
+	 * Own code since LT-165 (was `TSRX013`). It is a FORMAT rule, not a
+	 * server-evaluation guard: harvest planning needs one shape to plan for,
+	 * and no tier supersedes that — so unlike its former code-mates it stays
+	 * an error rather than becoming a routing signal (ADR 0029 s5).
 	 */
 	conditionalSignalConstructor: (
 		source: string,
@@ -406,7 +418,7 @@ export const diagnostic = {
 		name: string,
 	) =>
 		error(
-			'TSRX013',
+			'TSRX044',
 			`\`${name}\`'s initializer conditionally chooses between two signal-constructor calls — a signal must be a single, unconditional call to a recognized constructor (createCell/createState/deriveCell/…). Move the condition inside the callback instead (e.g. \`deriveCell(() => cond ? a : b)\`).`,
 			lineOf(source, offset),
 		),
@@ -416,6 +428,11 @@ export const diagnostic = {
 	 * primitive directly — `component.setup` is emitted verbatim into the
 	 * SERVER render function, where `first`/`all`/`watch`/`on`/`pass` don't
 	 * exist (ADR 0023 sub-design 12).
+	 *
+	 * One of the two server-evaluation guards left on `TSRX013` after
+	 * LT-165's split. Under ADR 0029 s5 this becomes a Simulated-tier
+	 * ROUTING SIGNAL rather than an author error — the shape it refuses is
+	 * the shape that routes away from the harness that cannot run it.
 	 */
 	clientOnlySetupConst: (
 		source: string,
@@ -448,6 +465,11 @@ export const diagnostic = {
 	 * Deliberately silent on a call nested inside `reconcile()`/`each()`'s
 	 * own `bindItem` callback: that one runs INSIDE a per-item collector,
 	 * which is the whole point of those helpers.
+	 *
+	 * Own code since LT-165 (was `TSRX013`). It is a CLIENT-side bug —
+	 * `NoActiveCollectorError` at connect — so it is tier-independent and
+	 * stays an error; retiring it with the server-evaluation guards would
+	 * have deleted a real check (ADR 0029 s5).
 	 */
 	deferredCollectorCall: (
 		source: string,
@@ -455,7 +477,7 @@ export const diagnostic = {
 		helper: string,
 	) =>
 		error(
-			'TSRX013',
+			'TSRX045',
 			`\`${helper}(…)\` is called from inside a callback — it collects an effect descriptor into the factory's ambient collector, which is gone by the time a deferred callback runs, so this throws NoActiveCollectorError at connect (contained per ADR 0028, so the effect silently never activates). Call \`${helper}(…)\` directly in setup and make the callback's condition part of the effect instead (e.g. \`watch(() => cond ? … : …, sink)\`).`,
 			lineOf(source, offset),
 		),
