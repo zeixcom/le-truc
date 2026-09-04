@@ -218,6 +218,20 @@ remain warnings.]
      build-time tooling only, jsdom never ships. LT-166's memoization needs no server-scoped
      analogue yet; designing a cache for a workload that doesn't exist would fix the wrong shape.
 
+## Architecture — ARIA reflection in the simulation realm (ADR 0026, amended 2026-09-04)
+
+- [ ] LT-177: Make `bindAria()`/`bindState()` capability-resilient; let the realm keep jsdom's skeletal `ElementInternals`.
+  **Skill:** le-truc-dev
+  **Context:** Owner decision, 2026-09-04, amending [ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) §2 in place (pointer notes already landed in ADR 0027 s2 and ADR 0029 s1 limb (a), and in `ARCHITECTURE.md` § Server Evaluation Tiers). Polyfilling `ElementInternals` in the realm was REJECTED: a working reflection surface would fire the stale-attribute removal at simulated connect and **strip** `role`/`aria-*` from the served HTML — the opposite of what serialization needs. Ordered scope:
+  1. **Remove the forced `attachInternals` throw** from `PROTOTYPE_PATCHES` (`server/tsrx/sim/patch-table.ts:251`) — its own comment records it as "no longer load-bearing for correctness" since LT-150. jsdom's skeletal internals then flows through non-null and populates `internalsHosts` and the declaration-protocol registry at the existing constructor line (ADR 0026 §2 note 1, §3).
+  2. **Form association keeps the global degradation** (LT-150's shape check, unchanged, owner decision): an incomplete stub is worse than none for form-associated components — the realm still lands them on the old-Safari branch. Verify LT-150 still detects jsdom's actual skeletal shape with the patch removed; it was built against exactly this substrate.
+  3. **`bindAria()` capability tiers** (ADR 0026 §2 as amended): probe the target once at bind time. Full `ARIAMixin` → reflection + stale-attribute removal, unchanged everywhere it works today. No reflection surface → resolve the host via `internalsHosts` and bind the **content attribute** with the same coercion table (boolean → `'true'`/`'false'`, number → decimal, nil/null → `removeAttribute`; the eight element-reference properties have no honest attribute fallback and stay no-ops). Null target → no-op, unchanged. No stale-attribute removal ever fires on the fallback path.
+  4. **`bindState()` parity**: a non-null target without a `states` surface is a no-op, not a `TypeError` (extends ADR 0016 §8's null rule).
+  5. **Residual, documented, not fixed**: for LT-150-degraded (form-associated) components the context value is `null` and no WeakMap route exists — `bindAria(null, …)` stays a no-op. Zero corpus sites (LT-148's fixtures are the forward guard); the mitigation for one that appears is authored static markup.
+  **Channels/tiers:** a capability fallback is not a failure — channel: none, no Surfacing Tier, no diagnostic (the attribute path is a supported channel, not degradation). The LT-150 degradation-warning copy and `bindAria`/`bindState` JSDoc are touched → **Tech Writer reviews the copy** (`tech-writer`'s `workflows/error-message-lifecycle.md`).
+  **Coordinate:** LT-165's classifier reads the patch table — when it lands, internals capability is capability rows, not one binary row: ARIA expressions are realm-answerable via this fallback; `internals.states`/form-member reads stay unanswerable. LT-148 lowers root ARIA to `bindAria(internals, …)`; add to its fixtures the serialization pin this task exists for: the served HTML carries the attribute under simulation.
+  Acceptance: a root `aria-*` `.tsrx` fixture under simulation serializes WITH the attribute (golden-pinned per substrate); real-browser behavior unchanged (reflection + removal — existing ARIA specs stay green); `bindState` on skeletal internals no-ops; `bun test server` green; per-substrate goldens re-baselined if jsdom output moves.
+
 ## Architecture — internationalization (ADR 0030)
 
 - [ ] LT-172: Seed the simulation realm's `<html lang>` from the page's build locale.
@@ -329,6 +343,26 @@ remain warnings.]
   locale lands and record the figure — it partially offsets ADR 0029's Static-tier savings, and
   nobody has measured the net yet — **LT-175 is that measurement, and it should land first.**
   **Depends on LT-173 and LT-175.**
+
+## Documentation alignment
+
+- [ ] LT-176: Align bundle-size thresholds across test copy and ADR citations.
+  **Skill:** tech-writer
+  **Context:** One number, three stories (architecture review, 2026-09-04). The constants are operative: `test/regression-bundle.test.ts:4-5` enforces **9 kB minimal (hard ceiling)** and **warns at 10 kB** for core + `formAssociated()` — but the first test's title says "under 8 kB", the second's says "exceeds 14 kB", and published ADRs cite the older numbers (ADR 0010: "≤10 kB target, hard ceiling 14 kB"; ADR 0014: "the 14 kB ceiling"; ADR 0019: "the 9/10 kB ceiling"). REQUIREMENTS §4 is already canonical (rewritten 2026-09-04): 9 kB minimal hard ceiling, 10 kB formAssociated warn, full barrel reported-not-asserted. Fix: test titles to match their constants; audit every threshold citation in `adr/`, `ARCHITECTURE.md`, `README.md`, and `docs-src/`. Do NOT rewrite published ADR history — add bracketed correction pointers in the house style (ADR 0003 ← 0019 is the pattern). Acceptance: no surviving doc/test text states a threshold the constants don't enforce; a "kB" grep across test titles, `adr/`, `ARCHITECTURE.md`, and `docs-src/` agrees with the constants or carries a dated correction pointer.
+
+## v3.0 — deprecated-surface removal (separate branch; gates wave 4)
+
+**Owner sequencing, 2026-09-04:** both removals run on a **separate branch**, started only once the authoritative documents speak a common language again (the ADR amendments + the v3 REQUIREMENTS rewrite, landed 2026-09-04, plus LT-176), and land **before any wave-4 migration** (LT-095–LT-111) so migrated twins and newly generated clients never target the removed forms. ROADMAP § "Dead ends: deprecated in 2.x, removed in 3.0" already declares both; these tasks implement it. The Cause & Effect 2.0 re-export surface rewrite (ROADMAP § "Cause & Effect 2.0 alignment") is a separate track, blocked on CE 2.0 actually shipping — out of scope here.
+
+- [ ] LT-178: Remove the `pass()` unrestricted-write short forms (ADR 0012 removal).
+  **Skill:** le-truc-dev
+  **Context:** ADR 0012 scheduled removal for the next major; the major is in pre-release (3.0.0-next.1) and the DEV_MODE warning still fires in `swapSlots` (`src/helpers/reactive.ts`). Delete the property-key and bare-writable-signal input forms from `PassedProps` handling and `toSignal` resolution — the thunk (read-only) and `{ get, set }` descriptor (mediated) forms remain the only inputs. ADR 0012's status records the examples as already migrated; sweep `examples/`, `test/`, and `docs-src/` for stragglers anyway. **Retires a DEV_MODE deprecation warning — Tech Writer reviews the copy removal** (warning message, JSDoc on `pass()`/`PassedProps`, CHANGELOG breaking entry, ROADMAP dead-end check-off). Channel note: this retires a check and adds none.
+  Acceptance: the short forms are gone from the types and the runtime; nothing warns because nothing exists to warn about; `bun test` green; CHANGELOG carries the breaking entry.
+
+- [ ] LT-179: Remove the explicit factory return contract and `forEachUnseen` (ADR 0018 v3.0 milestone).
+  **Skill:** le-truc-dev
+  **Context:** ADR 0018's v3.0 milestone, still pending at 3.0.0-next.1: `watch()`/`on()`/`pass()`/`each()`/`provideContexts()` return `void`; `FactoryResult`/`EffectDescriptor` leave the public return contract (`src/types.ts`, `index.ts`); the `forEachUnseen` return-reconciliation in `src/component.ts` is deleted, as is `each()`'s copy kept only for the v2.3→v3.0 window (ADR 0017). Hand-authored descriptor registration remains `watch(() => true, descriptor)` — the only documented path. Sweep examples/tests for `return [...]` factories. **Tech Writer reviews the doc touchpoints** (AGENTS.md, ARCHITECTURE.md § Effect Descriptors, CONTEXT.md Factory/Effect Descriptor entries, CHANGELOG breaking entry).
+  Acceptance: helpers return `void`; `FactoryResult` is not exported; a bare-statement helper call cannot silently no-op (the collector is the only registration path); `bun test` green.
 
 ## Gate wave — remaining
 
@@ -521,7 +555,7 @@ remain warnings.]
 this wave. [**Updated 2026-09-04, LT-171/ADR 0029:** the zero-warning gate STANDS — routing
 signals (TSRX004/TSRX034-non-severe/TSRX043) leave the warning channel entirely, so a migration
 that trips them is not accruing warnings, it is being classified. Judge a migration on: zero
-warnings in the diagnostic channel, plus its recorded TIER and the reason.] LT-096/LT-103's perf-trigger notes (below) are about whether they push
+warnings in the diagnostic channel, plus its recorded TIER and the reason.] [**Updated 2026-09-04 (owner sequencing):** wave 4 additionally gates on LT-178/LT-179 — the deprecated-surface removals land on a separate branch first, so no migration authors against forms that are about to disappear.] LT-096/LT-103's perf-trigger notes (below) are about whether they push
 page chrome into the simulated corpus at all; that's still meaningful under tiering (a
 phase-1-only component migrating in adds ~nothing; a phase-2 component adds real jsdom cost),
 so keep recording the wall-time figures either way — and note that a **Static-tier** result (layout

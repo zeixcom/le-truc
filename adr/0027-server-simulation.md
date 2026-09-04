@@ -22,6 +22,8 @@ The structural fact that dissolves the dilemma: the generated client factory alr
 
    jsdom was confirmed over happy-dom as the substrate; see Alternatives.
 
+   *(Amended 2026-09-04, owner, via [ADR 0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) §2: the forced `attachInternals()` throw is retired — jsdom's skeletal `ElementInternals` flows through non-null, the library's own LT-150 shape check keeps the degradation scoped to form-associated components, where an incomplete stub is worse than none, and `bindAria()`/`bindState()` take the attribute/no-op fallback for targets without the surface. The realm still lands every form-associated component on the same branch as old Safari.)*
+
 3. **Bindings write the simulated document.** No recording layer: `watch()` installs normally into Cause & Effect, the `bind*` helpers write the jsdom DOM directly, and the driver serializes the tree after the connect pass. There is no diffing and no client-side VDOM — the simulation document *is* the intermediate representation.
 
 4. **Simulated connect.** jsdom supplies upgrade order natively; the driver additionally honors the library's own child-await (`customElements.whenDefined`), so a parent's connect-time reads of child state never error — the same dependency-resolution semantics as the browser (REQUIREMENTS M8).

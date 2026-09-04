@@ -208,6 +208,8 @@ Three properties are worth carrying as a mental model:
 
 In every tier the client remains ground truth and corrects at connect; no serialized state payload ever ships ([ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)). Tiering changes how good the pre-JavaScript HTML is and how much the build costs — never what the component does once connected.
 
+The realm's `ElementInternals` posture is capability-scoped ([ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) §2, amended 2026-09-04): jsdom's skeletal internals flows through non-null, so `bindAria()` binds content attributes (keeping `role`/`aria-*` in the served HTML) and `bindState()` no-ops where the `states` surface is missing; form-associated components alone take the global old-Safari degradation, where an incomplete stub is worse than none.
+
 ## Ecosystem Tooling
 
 ### Custom Elements Manifest

@@ -45,3 +45,4 @@ Implement the [Community Protocol for Context](https://github.com/webcomponents-
 - Requirements: [M10](../REQUIREMENTS.md#m10-context-protocol)
 - Architecture: [Context Protocol](../ARCHITECTURE.md#context-protocol)
 - Supersedes: None
+- Amended by: [ADR 0015](0015-late-provider-retry-in-requestcontext.md) — `requestContext` returns a `Slot`-backed `Signal<T>` (not the `Memo<T>` this ADR's Decision names) and re-dispatches the request up to two more times before the fallback becomes permanent. The protocol and the provider side are unchanged.

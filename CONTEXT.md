@@ -49,7 +49,7 @@ The connection between a **Signal** and a DOM property/attribute on any **HTMLEl
 _Avoid_: link, connection, sync, pass
 
 **Pass**:
-The mechanism for zero-overhead live **Signal** sharing between Le Truc **Component** instances, swapping **Slot**-backed signals. Enables two-way synchronization between components. Only works between Le Truc components.
+The mechanism for zero-overhead live **Signal** sharing between Le Truc **Component** instances, swapping **Slot**-backed signals. Writes are mediated: the thunk form is read-only for the receiving component, and the `{ get, set }` descriptor form routes child writes through the parent. The unrestricted-write short forms are deprecated (v2.2) and removed in v3.0 ([ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)). Only works between Le Truc components.
 _Avoid_: forward, propagate, share, bind
 
 **Server Arg**:
