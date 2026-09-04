@@ -324,6 +324,10 @@ remain warnings.]
      with no `timeZone`. For a date-only value use `Date.UTC(y, m - 1, d)` with
      `timeZone: 'UTC'` — never shifts the day, reads no ambient state (ADR 0030 s2; this closes
      the question ADR 0029 s5 left open). Coordinate with LT-095, which reshapes this component.
+     **[Hardened 2026-09-04 (LT-173 block, NOTES.md): this is a HARD block, not a courtesy —
+     `basic-blogmeta` has no `.tsrx` until LT-095 migrates it, so the date-handling fix and the
+     fold verification for it cannot land inside this task. Verify `basic-pluralize` here and
+     record blogmeta's fold as deferred-to-LT-095 (whose text already carries the expectation).]**
   7. **Per-locale pruning of rendered alternatives** (ADR 0030 s6). A component rendering one
      alternative per plural category prunes to the locale's actual set — `{one, other}` for
      English instead of all six. Read the set from
@@ -341,7 +345,12 @@ remain warnings.]
   re-selects correctly when `count` changes after connect; the build writes no tracked file;
   `bun test server` green.
   **Depends on LT-165** (the classifier must exist before the tiering payoff in step 6 is
-  checkable).
+  checkable). **[Resolved 2026-09-04 (user, via NOTES.md): land LT-165 first. Verified while
+  blocked that the dependency is wider than step 6 — step 4's translation census has no
+  channel to ride until LT-165 step 6 defines the tier census on `sim/report.ts`; when this
+  task resumes, step 4 ADOPTS that census surface rather than defining a parallel one. The
+  `basic-pluralize` Simulated→Folded flip (this task's step 6 vs LT-165 step 5) is an
+  expected sequential state, not a regression — see the note now on LT-165 step 5.]**
 
 - [ ] LT-175: Measure and contain the per-locale impact on LT-166's render cache (exploration).
   **Skill:** docs-server-dev
@@ -373,6 +382,36 @@ remain warnings.]
   **Depends on LT-173 and LT-175.**
 
 ## Documentation alignment
+
+- [ ] LT-181: Propagate the TSRX013 split (TSRX044/TSRX045) through the error-surfacing docs, and re-point ADR 0028 §5's `NoActiveCollectorError` row.
+  **Skill:** tech-writer
+  **Context:** Owed from LT-165 steps 1–3 (landed, reviewed ✓ 2026-09-04). `TSRX013` is now
+  three codes: `conditionalSignalConstructor` → **TSRX044** (ADR 0024 s12 format rule),
+  `deferredCollectorCall` → **TSRX045** (client-side `NoActiveCollectorError`,
+  tier-independent), and `clientOnlySetupConst`/`clientOnlySignalCompute` keep TSRX013. The
+  two new codes carry first-draft messages carried verbatim from TSRX013's originals, which
+  described all four factories at once — each should name only its own shape. Propagation
+  (ADR 0028 lifecycle; `workflows/error-message-lifecycle.md`):
+  1. `.agents/skills/le-truc/references/errors.md` — the `NoActiveCollectorError` row cites
+     `TSRX013` (deferred call) → TSRX045; the TSRX013 diagnostic row scopes to the two
+     server-evaluation factories; add TSRX044/TSRX045 rows.
+  2. ADR 0028 §5's `NoActiveCollectorError` row — re-point `TSRX013` → TSRX045. **The
+     architect pre-approves this ADR edit**: the row's own text instructs it ("re-point this
+     row when LT-165 lands") and the re-point is mechanical; use a dated bracket per house
+     style, no history rewrite.
+  3. `server/tsrx/LE_TRUC_COMPILER.md` § 6 — the reclassification table says the two
+     factories "get their own code" without naming it; name TSRX044/TSRX045.
+  4. `TSRX-HOST-PROFILE.md` § "What you write decides your evaluation tier" says "the
+     server-evaluation members of `TSRX013`" — still accurate (only the two retaining
+     factories are server-evaluation guards); verify, don't rewrite.
+  **Channels/tiers:** no new check and no code moved by this task — copy only. If the
+  verbatim drafts mislead (they enumerate shapes that moved to sibling codes), rewording the
+  messages in `server/tsrx/diagnostics.ts` is in scope, same commit.
+  **Coordinate:** land before or with LT-165 step 5's diagnostic-reclassification copy pass,
+  so the diagnostics copy is touched once.
+  Acceptance: `errors.md`, ADR 0028 §5, and `LE_TRUC_COMPILER.md` § 6 agree with
+  `server/tsrx/diagnostics.ts`'s code set; a grep for TSRX013 no longer describes the split
+  factories anywhere author-facing; `bun test server` green if messages moved.
 
 - [ ] LT-176: Align bundle-size thresholds across test copy and ADR citations.
   **Skill:** tech-writer
@@ -484,7 +523,7 @@ remain warnings.]
   duplicating weaker coverage. Acceptance: both tests fail if the underlying compiled/rendered
   behavior regresses; `bun test server/tests` stays green.
 
-- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — steps 1–3 done, pending review ⏳; steps 4–8 not started
+- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — steps 1–3 reviewed ✓; steps 4–8 not started
   **Skill:** le-truc-dev
   **Context:** [**Rewritten 2026-09-04 against ADR 0029; the original "delete the evaluability
   machinery" premise, and its 2026-09-04 interim retitle, are both superseded.**] ADR 0029 is
@@ -510,6 +549,13 @@ remain warnings.]
      module (the realm parses it as input). The only difference: Simulated-tier and Static-tier modules do
      NOT re-declare `@{ }` setup verbatim. The Folded tier's path is unchanged — confirm this with the
      server goldens, which should not move for any Folded-tier component.
+     **[Amended 2026-09-04 (architect review, check (b)): the corpus's Static tier is empty and
+     stays so until wave 4 (see the review ruling), so pin the Static emit variant with a
+     SYNTHETIC fixture compiled through `compileComponent` in tests — a component whose only
+     signal is served-relevant and unresolvable (e.g. a `Math.random()`-initialized cell
+     rendered into markup), asserting tier `'static'` and a server module without the verbatim
+     setup re-declaration. Without it, the Static emit path ships untested until a real
+     migration exists.]**
   5. **Diagnostic reclassification per ADR 0029 s5's table.** TSRX004, TSRX034 (non-severe),
      TSRX043 and TSRX013's two server-evaluation factories leave the diagnostic channel for the
      tier census. TSRX034-severe survives SCOPED TO THE STATIC TIER. TSRX039 untouched.
@@ -518,7 +564,12 @@ remain warnings.]
      needs the realm-side suppression step (step 7). LT-142's `Intl` rule splits three ways:
      server-known locale → Folded-tier-eligible; locale read from the DOM (`getLocale(el)`,
      `host.lang`) → Simulated-tier routing signal, since the realm executes it for real; runtime-default
-     locale → unresolvable. `basic-pluralize` must stay the Simulated tier. Also revisit `evaluability.ts`'s
+     locale → unresolvable. `basic-pluralize` must stay the Simulated tier. **[Amended
+     2026-09-04 (architect review, cross-noted in LT-173 step 6): this pin is SEQUENTIAL, not
+     permanent — LT-173's reserved `i18n` parameter makes the locale server-known, so
+     `basic-pluralize` is expected to flip Simulated → Folded when LT-173 lands. That flip is
+     this acceptance line's successor state, not a regression; whoever implements either task
+     should expect it and update the census golden rather than investigating.]** Also revisit `evaluability.ts`'s
      unconditional `Date` impurity: `new Date(year, month, day)` over parsed server args (the
      `basic-blogmeta`/LT-095 shape) reads no viewing-moment fact, but both the constructor and
      the formatter read the build machine's TIMEZONE — analyse it, don't assume it.
@@ -580,7 +631,41 @@ remain warnings.]
   messages (carried over verbatim from TSRX013's originals) and need the ADR 0028 lifecycle
   propagation — `.agents/skills/le-truc/references/errors.md` still describes TSRX013 as all
   four factories, and ADR 0028 §5's `NoActiveCollectorError` row carries an explicit
-  "re-point this row when LT-165 lands" instruction that is now due.
+  "re-point this row when LT-165 lands" instruction that is now due. **[Filed as LT-181,
+  2026-09-04.]**
+  **Review (architect, 2026-09-04):** Steps 1–3 **approved**. Read `tier.ts`, the signal push
+  sites in `analysis/harvest.ts`/`analysis/effects.ts`/`compiler.ts`, `index.ts`'s wiring, and
+  `effects/tsrx.ts`'s fixpoint independently; gates re-run: `bun test server` 1391/1391, tsc
+  clean, biome clean, `check:tsrx` 22/22. Verified behavior-preserving: the compile-warning
+  baseline is **7 unique** at BOTH this head and its parent `809d2f7e` (LT-168's recorded "8"
+  was already stale on this branch — see the archive correction below), so steps 1–3 moved
+  nothing. Rulings on the checks:
+  - **(a) 19-Folded is right.** The tier routes which MECHANISM produces the served HTML;
+    sub-design 1 defines "phase 1 cannot resolve" operationally as the inverted refusal sites,
+    and those count sites whose *server render* cannot complete. A `first()` read confined to
+    `watch()`/`on()` positions is a client concern (ADR 0003, tier-independent) that reaches
+    no served byte — the Context's "~6 of 22" measured a broader any-purpose predicate and was
+    the pre-implementation estimate, not the definition. Bracketed corrections are now in ADR
+    0029 (Context facts 1–2 and the Consequences minority-path bullet) and
+    `LE_TRUC_COMPILER.md` § 5.3. Step 8's audit scope is therefore 19 components — accepted;
+    its CI cost is bounded by corpus size (~4 s), not by the tier split, and a harness/realm
+    divergence on any of them is the audit working as designed (sub-design 7: a false Folded
+    or a real two-mechanism disagreement).
+  - **(b) Static empty is a correct classification, not a wiring gap — do NOT pull wave 4
+    forward to fill it.** ADR 0029's named Static cases (`card-mediaqueries`, `form-colorgraph`,
+    `form-textbox`, `form-spinbutton`, and by the same reading a migrated `module-scrollarea`)
+    hold their unanswerable reads in client-only positions, so they fold totally. The tier is
+    real but rare by construction: unanswerable expressions in a *served* position with no
+    realm-answerable sibling signal. The cost argument survives without a Static corpus member —
+    Folded and Static are both never simulated, so `module-scrollarea`'s ~2.3 s is not paid
+    either way. Wave 4 stays gated on LT-178/LT-179 (owner sequencing). Because Static may stay
+    empty until wave 4, **step 4's acceptance gains a synthetic Static-tier emit fixture** (see
+    the amended step 4) so the skeleton emit path is exercised before a real member exists.
+  - **(c) `composeReadTags` is the right reading.** A compose-site `ref` attr IS ADR 0029 s3's
+    "`first()` addressing a compose site" (resolved to a synthetic ref by
+    `analysis/compose-refs.ts`), and a `pass` attr is its "`truc:pass` into it" — the
+    implementation matches the ADR clause clause-for-clause.
+  - **(d)** Confirmed deliberate and correct for steps 1–3; step 5 removes the overlap.
 
 - [ ] LT-169: Wire the simulation driver into the docs build for Simulated-tier components (ADR 0027 stage 2). **Depends on LT-165.**
   **Skill:** docs-server-dev
@@ -695,7 +780,7 @@ simulated. Under ADR 0029 only the Simulated tier costs jsdom time.
 
 - [ ] LT-103: Migrate `module-scrollarea` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
-  **Context:** ~104 lines, scroll area with `IntersectionObserver`. Migrate per the canonical pattern (see LT-096); has a spec. Watch for: effect-with-cleanup idiom (`watch` + `return () => observer.disconnect()`, the LT-069 acceptance case). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (2,091 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff. [Amended by the LT-166 review, 2026-09-03: nothing left to schedule as a trigger — record the wall-time figures and verify the render cache is actually engaging. **Amended again, 2026-09-04 (LT-171/ADR 0029):** this component's tier is now PREDICTED, and it drove the ADR's three-tier shape. It reads `scrollLeft`/`scrollTop`/`scrollWidth`/`offsetWidth`/`scrollHeight`/`offsetHeight` and emits exclusively through `bindState(internals, …)` — layout returns zeros under jsdom and `attachInternals()` is normalized to throw, so the realm cannot answer it and it classifies **The Static tier**: never simulated, static skeleton, client corrects at connect. At 2,091 occurrences that is ~2.3 s of the measured ~3.9 s NOT paid. Verify the classifier actually reaches that conclusion during this migration — if it lands the Simulated tier instead, the second conjunct (`sim/patch-table.ts` lookup, ADR 0029 s1) is not wired correctly, and no correctness test would catch it.]
+  **Context:** ~104 lines, scroll area with `IntersectionObserver`. Migrate per the canonical pattern (see LT-096); has a spec. Watch for: effect-with-cleanup idiom (`watch` + `return () => observer.disconnect()`, the LT-069 acceptance case). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (2,091 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff. [Amended by the LT-166 review, 2026-09-03: nothing left to schedule as a trigger — record the wall-time figures and verify the render cache is actually engaging. **Amended again, 2026-09-04 (LT-171/ADR 0029):** this component's tier is now PREDICTED, and it drove the ADR's three-tier shape. It reads `scrollLeft`/`scrollTop`/`scrollWidth`/`offsetWidth`/`scrollHeight`/`offsetHeight` and emits exclusively through `bindState(internals, …)` — layout returns zeros under jsdom and `attachInternals()` is normalized to throw, so the realm cannot answer it and it classifies **The Static tier**: never simulated, static skeleton, client corrects at connect. At 2,091 occurrences that is ~2.3 s of the measured ~3.9 s NOT paid. Verify the classifier actually reaches that conclusion during this migration — if it lands the Simulated tier instead, the second conjunct (`sim/patch-table.ts` lookup, ADR 0029 s1) is not wired correctly, and no correctness test would catch it. **[Amended 2026-09-04 (LT-165 review / ADR 0029 Context correction): the Static prediction above is superseded — the geometry reads live in scroll/observer callbacks and the `bindState(internals, …)` output never reaches served HTML, so under the corrected predicate the EXPECTED tier is FOLDED (Static also acceptable, same never-simulated saving). Simulated is now the outcome to investigate: at 2,091 occurrences it reproduces the ~2.3 s this ADR exists to avoid, so either reshape the migrated component so its reads stay in client-only positions (per its demonstrated patterns) or surface the over-signal in NOTES.md. Record the actual tier + reason + wall-time figures either way; only wrong served HTML is a correctness bug.]**]
 
 - [ ] LT-104: Migrate `module-lazyload` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -773,7 +858,7 @@ simulated. Under ADR 0029 only the Simulated tier costs jsdom time.
 
 Full task-by-task rationale, review notes, and corpus-impact numbers for everything below have been compacted out of this file; see git history (`git log -p -- TODO.md`) for the original entries if needed.
 
-**ADR 0027 stage-1 implementation (2026-09-03, CLOSED — all reviewed; ADRs 0024/0027 accepted on this basis):** LT-154 (server-simulation driver — jsdom substrate, hermetic-quiescence boundary replacing strict synchronicity, children-first replay from the compose graph, load-once-per-module assertion), LT-163 (build-report channel — five diagnostic conditions raised as Simulated-tier/Contained build warnings attributed per-component: jsdomError, unhandled rejection, contained connect throw, network access, non-quiescent drain overrun; `getContext` classified as a documented non-issue), LT-164 (per-substrate simulated goldens plus the two-order hermeticity and double-connect fixed-point invariants, both as `bun test server/tests` cases), LT-166 (render memoization on `(component, markup)`, landed ahead of its 1.0 s trigger by explicit owner request — 93.5% measured hit rate at docs scale), LT-167 (driver polish — stale network-stub doc, probe drain dedup, three fixture-artifact ARGS fixed, `check:sim` output attributed), LT-168 (reconciled the compile-warning baseline to the tool-counted **8 unique** standing warnings — six `basic-pluralize` TSRX034 correct refusals, `form-listbox` TSRX034, `form-tokenbox` TSRX039 — correcting a "cleared six, leaving 2" mis-record that never held on this branch; added a counted summary line to `check:tsrx`). LT-153 (the architect's compiler-consequences plan that produced LT-163/164/165/166 and re-scoped the gate wave) is superseded in its "zero is the target"/"delete evaluability.ts at stage 3" halves by the 2026-09-04 phase-1/phase-2 tiering decision — see the Sequencing section and LT-171.
+**ADR 0027 stage-1 implementation (2026-09-03, CLOSED — all reviewed; ADRs 0024/0027 accepted on this basis):** LT-154 (server-simulation driver — jsdom substrate, hermetic-quiescence boundary replacing strict synchronicity, children-first replay from the compose graph, load-once-per-module assertion), LT-163 (build-report channel — five diagnostic conditions raised as Simulated-tier/Contained build warnings attributed per-component: jsdomError, unhandled rejection, contained connect throw, network access, non-quiescent drain overrun; `getContext` classified as a documented non-issue), LT-164 (per-substrate simulated goldens plus the two-order hermeticity and double-connect fixed-point invariants, both as `bun test server/tests` cases), LT-166 (render memoization on `(component, markup)`, landed ahead of its 1.0 s trigger by explicit owner request — 93.5% measured hit rate at docs scale), LT-167 (driver polish — stale network-stub doc, probe drain dedup, three fixture-artifact ARGS fixed, `check:sim` output attributed), LT-168 (reconciled the compile-warning baseline to the tool-counted **8 unique** standing warnings — six `basic-pluralize` TSRX034 correct refusals, `form-listbox` TSRX034, `form-tokenbox` TSRX039 — correcting a "cleared six, leaving 2" mis-record that never held on this branch; added a counted summary line to `check:tsrx` **[re-counted 2026-09-04 at the LT-165 review: the tool reports 7 unique at both LT-165's head and base commit — the `form-tokenbox` TSRX039 listed here was closed by LT-146 and does not stand; read the tool count, not this line.]**). LT-153 (the architect's compiler-consequences plan that produced LT-163/164/165/166 and re-scoped the gate wave) is superseded in its "zero is the target"/"delete evaluability.ts at stage 3" halves by the 2026-09-04 phase-1/phase-2 tiering decision — see the Sequencing section and LT-171.
 
 **Gate wave (2026-09-03/04, CLOSED except LT-147/LT-148/LT-170, tracked above):** LT-143 (`basic-pluralize` renders correctly under simulation for count values 0/1/2/3/5/11 — the six standing TSRX034 refusals confirmed correct and left untouched), LT-133 (`basic-number` renders the formatted value under simulation; `basic-gauge.html`'s hand-authored `84%`/`65%`/`20.57%` fallback text removed — the last figure was itself inconsistent with its own `options`, corrected to `20.6%` by removing the workaround), LT-144 (`{host.count}`/`{count}` converge on identical initial HTML under simulation; the remaining binding-plan difference — one plans a live `watch()`, the other is a compile-time literal substitution — is real and documented, but the test pinning it was weak; strengthening it is LT-170), LT-145 (`form-listbox`'s Parser-exposed-`filter`-prop-with-no-server-arg fallback pinned under simulation — a pure runtime pin, does not move the compile baseline; an arithmetic error in the task's own acceptance text was corrected by the architect review, not by chasing a follow-up fix), LT-146 (`form-tokenbox.description`'s TSRX039 duplicate-channel warning closed — final shape is `description: descriptionEl?.textContent ?? ''` handed straight to `expose()`, which auto-wraps any plain function/value into a reactive cell; no `data-description` attribute or explicit `createCell`/`asString` needed, simpler than the `form-combobox` `descriptionCell` pattern it was originally modeled on, which is itself now a candidate for the same simplification).
 

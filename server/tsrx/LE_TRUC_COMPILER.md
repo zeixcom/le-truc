@@ -363,7 +363,11 @@ of the Folded tier.
 
 Measured against the migrated corpus, the Folded tier is the minority path:
 about 6 of 22 components qualify. Fifteen use `first()`, which is irreducibly a DOM
-question.
+question. **[Corrected 2026-09-04, LT-165's implementation (see ADR 0029's Context
+correction): `first()` in `watch()`/`on()` positions was never a refusal site — it is a
+client concern that reaches no served byte. The implemented classifier folds **19 of 22**
+(Simulated: `basic-pluralize`, `form-combobox` via compose-read, `form-listbox`); the Folded
+tier is the MAJORITY path.]**
 
 ### 5.4 The Simulated tier — Server Simulation (ADR 0027)
 
