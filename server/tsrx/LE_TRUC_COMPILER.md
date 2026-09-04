@@ -342,7 +342,7 @@ parents. Contamination applies only when the parent READS the child: a
 is a fixpoint over the compose graph, computed in the registry-aware second
 pass alongside `analysis/compose-refs.ts`.
 
-### 5.3 the Folded tier — generated render modules and the value harness
+### 5.3 The Folded tier — generated render modules and the value harness
 
 `emit-server.ts` walks the IR and emits a `render<Name>(args): string`
 function: per-kind dispatch over the template (escaped text, server
@@ -358,11 +358,11 @@ initial value. The fold is all-or-nothing: one non-substitutable read
 disqualifies the expression — and, under ADR 0029, routes the component out
 of the Folded tier.
 
-Measured against the migrated corpus, the Folded tier is the minority path: about 6 of
-22 components qualify. Fifteen use `first()`, which is irreducibly a DOM
+Measured against the migrated corpus, the Folded tier is the minority path:
+about 6 of 22 components qualify. Fifteen use `first()`, which is irreducibly a DOM
 question.
 
-### 5.4 the Simulated tier — Server Simulation (ADR 0027)
+### 5.4 The Simulated tier — Server Simulation (ADR 0027)
 
 The server renders initial HTML by **executing the generated client module**
 against jsdom and serializing the reactive graph's initial state. The client
@@ -404,7 +404,7 @@ everyone, minus the verbatim `@{ }` setup re-declaration: only the Folded tier
 evaluates setup in the value harness, and the setup shapes that would break
 the harness are precisely the ones that routed the component here.
 
-### 5.5 the Static tier — the static skeleton
+### 5.5 The Static tier — the static skeleton
 
 A Static-tier component gets the phase-1 skeleton with its unresolved expressions
 omitted, and the client corrects at connect. No realm is opened.

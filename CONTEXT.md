@@ -52,21 +52,69 @@ _Avoid_: link, connection, sync, pass
 The mechanism for zero-overhead live **Signal** sharing between Le Truc **Component** instances, swapping **Slot**-backed signals. Enables two-way synchronization between components. Only works between Le Truc components.
 _Avoid_: forward, propagate, share, bind
 
-**Evaluation Tier**:
-Which server-side mechanism renders a **Component**'s reactive initial values, decided statically by the compiler ([ADR 0029](adr/0029-tiered-server-evaluation.md)). Named, not numbered: **Folded** (the DOM-less value harness), **Simulated** (pre-play in the jsdom realm), **Static** (skeleton only; the client corrects). Applies to a whole component.
-_Avoid_: bare "tier 1/2" (ambiguous with **Surfacing Tier**), phase (that is the two-phase render, not the routing)
+**Server Arg**:
+A parameter of the function a `.tsrx` **Component** declares. The server supplies its value at render time. Server args are the only channel that carries data into a **Component** from outside its own markup.
+_Avoid_: prop (that is a reactive **Component** property), input, attribute
 
-**Surfacing Tier**:
-Which channel carries a failure to whoever must act on it ([ADR 0028](adr/0028-tiered-error-surfacing.md)). Named, not numbered: **Prevented** (a compile-time diagnostic exists; the build fails), **Contained** (fires at runtime, the component degrades, one attributed `console.error`), **Escalated** (escapes containment — definition-time failures and security-boundary violations only).
-_Avoid_: bare "tier 1/2/3" (ambiguous with **Evaluation Tier**)
+**Reserved Parameter**:
+A **Server Arg** the compiler supplies instead of the caller. Two exist: `children` (a composed **Component**'s children) and `i18n` (the locale record, [ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)). A **Component** receives one only if it declares it.
+_Avoid_: injected arg, ambient arg, context (a **Reserved Parameter** is not the context protocol)
+
+**Phase**:
+One of the two server render steps. **Phase 1** lowers the template to markup and **Folds** what it can. **Phase 2** pre-plays the generated client module in the **Simulation Realm**. A phase is a step; an **Evaluation Tier** is the decision about which steps a **Component** runs.
+_Avoid_: stage (that names ADR 0027's rollout stages), tier, pass
+
+**Fold**:
+To compute a reactive expression's initial value at build time and write the result into the rendered markup. The fold is all-or-nothing per expression. One read the compiler cannot resolve disqualifies the whole expression.
+_Avoid_: evaluate (too generic), precompute, inline
+
+**Harvest**:
+To read a **Component**'s initial state back out of the server-rendered DOM at connect time. The site a value renders into is the same site the client harvests it from.
+_Avoid_: hydrate, scrape, parse. "Hydrate" is correct only when describing other frameworks, which do ship a state payload; a Le Truc **Component** enhances markup and harvests from it.
+
+**Value Harness**:
+The server-side stand-in for the reactive system that the **Folded** tier runs setup against. A **Signal** is its initial value in a box: `.get()` reads once, and `.set()` does nothing. The harness has no DOM.
+_Avoid_: shim, mock, stub (those name the **Simulation Realm**'s replacements for absent APIs)
+
+**Simulation Realm**:
+The jsdom document and custom-element registry that the driver runs a generated client module in ([ADR 0027](adr/0027-server-simulation.md)). It renders the **Simulated** tier. Nothing about the realm ships to a browser.
+_Avoid_: sandbox, VM, headless browser, virtual DOM
+
+**Evaluation Tier**:
+Which server mechanism produces a **Component**'s reactive initial values ([ADR 0029](adr/0029-tiered-server-evaluation.md)). The compiler decides it statically, per **Component**. Three tiers, named rather than numbered:
+- **Folded** — phase 1 only, in the **Value Harness**. No jsdom.
+- **Simulated** — phase 1, then pre-play in the **Simulation Realm**.
+- **Static** — the phase-1 skeleton only. The client corrects at connect.
+
+_Avoid_: bare "tier 1/2" (ambiguous with **Surfacing Tier**), phase, mode, level
 
 **Unresolvable**:
-A property of an *expression*, not a component: no server phase can produce its value, either because every read routes through an API the simulation realm stubs (layout, `internals`, absent sensors) or because its input is not a server-side fact at all (wall clock, RNG, runtime-default locale). An unresolvable expression is omitted in **every** Evaluation Tier. The **Static** tier is the component-level case where every unresolved expression is unresolvable.
-_Avoid_: "unrenderable", "not server-evaluable" (that is the narrower phase-1 predicate)
+Said of an expression, never of a **Component**. No server phase can produce the expression's value. Two causes:
+- Every read routes through an API the **Simulation Realm** stubs — layout, `internals`, an absent sensor.
+- The input is not a server-side fact — the wall clock, the RNG, a runtime-default locale.
+
+An unresolvable expression is omitted in every **Evaluation Tier**. The **Static** tier is the component-level case, where every unresolved expression is unresolvable.
+_Avoid_: unrenderable, not server-evaluable (that names the narrower phase-1 predicate)
+
+**Routing Signal**:
+A compile-time finding that selects a **Component**'s **Evaluation Tier**. A routing signal reports no fault. The author wrote nothing wrong; the **Component** needs a different render mechanism.
+_Avoid_: warning, error, diagnostic (a routing signal is none of the three)
+
+**Surfacing Tier**:
+Which channel carries a failure to whoever must act on it ([ADR 0028](adr/0028-tiered-error-surfacing.md)). Three tiers, named rather than numbered:
+- **Prevented** — a compile-time diagnostic exists, and the build fails.
+- **Contained** — the check fires at runtime, the **Component** degrades, and one attributed `console.error` names it.
+- **Escalated** — the failure escapes containment. Definition-time failures and security-boundary violations only.
+
+_Avoid_: bare "tier 1/2/3" (ambiguous with **Evaluation Tier**), severity, level
 
 **Census**:
-A per-component or per-locale record in the build report stating what the build found, without asserting anything is wrong — the *tier census* ([ADR 0029](adr/0029-tiered-server-evaluation.md)) and the *translation census* ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)). A census entry is deliberately **not** a diagnostic and not a warning: it carries findings that are not author-fixable, which is what keeps the compile-warning target at zero.
-_Avoid_: warning, diagnostic, error (all three are the channels a census exists to stay out of)
+A build-report record of what the build found. A census entry asserts no fault, so it is neither a diagnostic nor a warning. Two exist: the tier census, per **Component**, and the translation census, per locale.
+_Avoid_: warning, diagnostic, error, report (too generic)
+
+**Message Catalog**:
+The per-locale translation overrides for a build ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)). A **Component** declares each message key with its source-locale string, and the catalog supplies the other locales. The catalog never reaches a browser.
+_Avoid_: dictionary, translations file, i18n bundle. "Locale data" is not a synonym — it names the whole `i18n` record, of which the catalog is one field.
 
 ## Relationships
 
@@ -78,8 +126,12 @@ _Avoid_: warning, diagnostic, error (all three are the channels a census exists 
 - **Binding** helpers connect **Signal** values to DOM properties/attributes on any element
 - **Pass** connects **Slot**-backed **Signal** instances between Le Truc **Component** instances
 - A **Component** is a **Custom Element** with JavaScript-enhanced functionality (a Web Component)
-- A **Component** has exactly one **Evaluation Tier**; an *expression* within it may be **Unresolvable** regardless of that tier
-- A runtime check has a **Surfacing Tier**; a **Census** record has neither, being no kind of failure
+- A **Component** declares **Server Args**; the compiler supplies any **Reserved Parameter** among them
+- **Phase 1** **Folds** the expressions it can resolve; **Phase 2** runs the client module in the **Simulation Realm**
+- A **Component** has exactly one **Evaluation Tier**, which decides the phases it runs
+- An expression is **Unresolvable** or not, independently of its **Component**'s **Evaluation Tier**
+- A **Routing Signal** selects an **Evaluation Tier**; a **Surfacing Tier** carries a failure; a **Census** record carries neither
+- The client **Harvests** initial state from the rendered DOM in every **Evaluation Tier**
 
 ## Example Dialogue
 
@@ -89,6 +141,11 @@ _Avoid_: warning, diagnostic, error (all three are the channels a census exists 
 > **Dev:** "Can I use **Pass** to share a non-**Slot** **Signal**?"
 > **Architect:** "No — **Pass** requires **Slot**-wrapped **Signal** instances because it swaps the signal references. Regular **Signal** instances don't support this swapping mechanism. Use **Binding** helpers for one-way signal→DOM updates on non-Le Truc elements."
 
+> **Dev:** "This component trips `TSRX004`. What did I do wrong?"
+> **Architect:** "Nothing. That is a **Routing Signal**, not a diagnostic — it selects the **Simulated** tier, because the server cannot **Fold** the value and the **Simulation Realm** can. You would only act on it if the value were **Unresolvable**, which routes to the **Static** tier instead."
+
 ## Flagged Ambiguities
 
 - **"Tier", unqualified.** Two distinct concepts carry the word: **Evaluation Tier** (Folded/Simulated/Static, ADR 0029) and **Surfacing Tier** (Prevented/Contained/Escalated, ADR 0028), and their numberings overlap — "tier 2" once meant Contained and now also means Simulated. **Resolution (owner, 2026-09-04): lead with the NAME in both, everywhere; the number survives only as an ordering inside each ADR's own defining list.** Write "the Simulated tier" or "Contained", never a bare "tier 2".
+- **"Phase" against "tier".** Both carry small numbers, and they answer different questions. A **Phase** is a render step (phase 1 folds, phase 2 pre-plays). An **Evaluation Tier** decides which steps a **Component** runs. Keep the numbers on phases and the names on tiers.
+- **"Fold" as verb and noun.** Both are in use: to fold an expression, and the host-derived fold. Both are correct. Do not introduce "folding" as a third form.
