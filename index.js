@@ -2039,7 +2039,7 @@ class InvalidComponentNameError extends TypeError {
 
 class InvalidPropertyNameError extends TypeError {
   constructor(component, prop, reason) {
-    super(`Invalid property name "${prop}" for component <${component}>. ${reason} Rename the reactive property in expose(). The compiler checks expose() keys as TSRX028.`);
+    super(`Invalid property name "${prop}" for component <${component}>. ${reason}`);
     this.name = "InvalidPropertyNameError";
   }
 }
