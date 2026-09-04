@@ -1,313 +1,532 @@
 # TODO
 
-## Sequencing (architect, 2026-09-03; ADR 0027 wave — spikes closed, LT-153 planned, implementation next)
+## Sequencing (architect, 2026-09-04; tiered server evaluation supersedes the stage-3 fold-retirement plan)
 
-Seventeen hand-written examples still await migration (LT-095, LT-096–LT-111). Waves 1–3 are
-closed; their full rationale is in the archive below and in git history.
+**[LANDED, 2026-09-04 — LT-171 delivered [ADR 0029](adr/0029-tiered-server-evaluation.md).** The
+entry below is the owner's articulated direction as filed; read it for the argument and the cost
+data, but read ADR 0029 for the decision. **Three things in it changed shape under scrutiny and
+the ADR overrides them:** (1) the model is THREE tiers, not two — `module-scrollarea` (2,091
+occurrences, ~2.3 s) is unanswerable by phase 2 as well, so the classifier asks "is simulation
+worth running", with `sim/patch-table.ts` as its second conjunct; (2) TSRX013 does NOT retire
+outright — it is four factories sharing a code and two of them (`deferredCollectorCall`,
+`conditionalSignalConstructor`) are not server-evaluation guards at all; (3) the compile-warning
+baseline's target STAYS ZERO — routing signals leave the warning channel for a tier census, which
+preserves LT-146/LT-168's regression signal instead of abandoning it. The bracketed claim below
+that "the target is therefore NOT zero" is superseded on that basis.]**
 
 **Waves 1–3 — CLOSED.** Wave 1 (the addressing surface) and wave 2 (data-account debt on the
 migrated corpus) closed 2026-08-30. Wave 3 (diagnostic honesty) closed 2026-09-01.
 
-**ADR 0027 wave — Server Simulation. CURRENT, and the implementation tasks are all landed.**
-LT-149/LT-150 shut the two engine gaps, LT-151 proved the driver portable (Bun/Node/Deno,
-byte-identical), and LT-152 confirmed the substrate. **The stage-1 implementation is done and
-reviewed as of 2026-09-03:** LT-154 (driver), LT-163 (build-report channel), LT-164 (goldens +
-the two-order and double-connect invariants), LT-167 (polish), and LT-166 (render memoization —
-landed early by explicit owner request), with LT-168 reconciling the compile baseline to a
-tool-counted 8 unique. **The acceptance milestone (wave-order step 4) is unblocked** — its gate
-was LT-154/163/164 landing reviewed, which they now have. Next: accept ADRs 0024/0027, then the
-gate wave (LT-143/133/144/145/146/147/148), then wave 4. LT-169 carries the stage-2 build
-wiring and is queued, not scheduled.
+**ADR 0027 wave — Server Simulation stage 1. CLOSED, ADRs 0024/0027 accepted 2026-09-03/04.**
+LT-154 (driver), LT-163 (build-report channel), LT-164 (goldens + two-order/double-connect
+invariants), LT-166 (memoization, landed early by owner request), LT-167 (polish), and LT-168
+(compile-warning baseline reconciled to a tool-counted 8 unique) all landed and reviewed. Full
+history compacted to the archive below.
 
-**LT-154 review, 2026-09-03 — approved.** All four driver-contract changes verified against ADR 0027's amended text (the ADR already carries them; no ADR edit owed), gates re-run green (1331 pass; 2-warning compile baseline [figure corrected by LT-168: the true standing count was 8 unique — see the LT-163 review]; `check:sim` 3302 byte-identical Bun/Node), and all 22 corpus snapshots read. The developer's four check items are answered on the task entry — check 1 (direct-edge sufficiency) holds by construction because composed children must be compiled (TSRX011 is a hard error). The only follow-ups are polish (LT-167) and two design observations carried into LT-163's attribution work.
+**Gate wave — CLOSED except LT-147/148/170.** LT-143/LT-133/LT-144/LT-145/LT-146 all landed,
+reviewed, and are compacted to the archive below. LT-146 in particular ended up simpler than its
+own task text assumed — see its archive line — which is directly relevant to the new decision
+below: a `first()`-bound ref read handed straight to `expose()` needs neither a compiler proof
+nor a DOM-duplicating workaround once something downstream actually *executes* the setup code
+against a real document. That observation is what LT-171 now has to take architecture-wide.
 
-**LT-152 review, 2026-09-03 — three findings that change the queue.**
+**NEW DECISION (2026-09-04): commit to phase-1/phase-2 tiering as the SSR mechanism, superseding
+LT-153 decision 4's "delete evaluability.ts at stage 3" and decision 2's "zero is the compile
+target."** This is the owner's articulated direction, not yet formalized in either ADR — that
+formalization is LT-171, filed first, below.
 
-1. **The happy-dom disqualification is confirmed, and it is worse than the task recorded.**
-   Verified independently, from a fresh script against a second payload set rather than by
-   re-running the harness: on happy-dom 20.13.2, DOMPurify 3.4.14 reports `isSupported: true`
-   and then ships `<svg><animate onbegin="alert(1)">` verbatim — a live handler, not merely a
-   stripped-tag miss — while also *mangling benign markup* (`<b>ok</b>` → `ok`). Its behavior
-   also varies with payload shape: the combined payload ships `<script>bad()</script>` and
-   `onerror` intact, the isolated one strips the tag but keeps its text. jsdom strips every
-   vector cleanly on both payload sets. So the disqualification does not rest on one
-   sensitively-chosen payload, and the ADR's wording is accurate for the payload it ran.
-2. **"Stage 1 does not pay the page-chrome bill" is true today and expires during wave 4.**
-   The ~0.1 s figure holds because `module-scrollarea` (2,091 occurrences) and
-   `module-codeblock` (299) are still hand-written `.ts`, and the driver only simulates
-   `server/generated/tsrx/`. **LT-096 and LT-103 migrate exactly those two components** — so
-   wave 4 moves ~91% of the measured 3.9 s into the driver's scope. The evaluation's
-   methodology is sound (occurrence counts from the built docs, `docs/test/` excluded,
-   corpus/hand-written split taken from `examples/main.ts`); the *scoping claim* is simply
-   time-limited, and the ADR states it without the expiry. **Owner decision, 2026-09-03:** do
-   not pre-build the cache — file it with a numeric trigger (LT-166). The 93.5% hit rate is
-   measured and the mitigation is ready when the cliff arrives.
-3. **LT-142 removed a bug's diagnostic without removing the bug, and it is shipping now.**
-   Verified by rendering, not by reading the warning count: `renderBasicPluralize({count: 3})`
-   still emits `task<span class="two">s</span>…<span class="other">s</span>remaining` with an
-   empty `<span class="count">`. The corpus baseline is **2 warnings, not 8** (LT-142 cleared
-   six), and `basic-pluralize`'s six were among them — so the component now renders wrong
-   markup *silently*. [Figure corrected by LT-168: the count was never 2 — `check:tsrx` at
-   LT-142's own commit already reports 8 unique; "cleared six" compressed the never-run
-   LT-143 reshape into a landed fact. See the archive line's reconciliation.] This is ADR
-   0027's "the diagnostics loss is structural" concern, already
-   happening, ahead of the mechanism that causes it. **Owner decision, 2026-09-03:** accept it;
-   LT-154 fixes it by rendering and a stopgap diagnostic would be work LT-154 deletes. Recorded
-   here so the silence is chosen rather than discovered.
+**The shape of it.** Le Truc's SSR is partial application done entirely SERVER-side, never
+shipped over the network the way RSC ships serialized data/promises/functions/a rendering
+engine to reconstruct a blueprint. Two phases:
 
-**LT-151 review, 2026-09-03 — approved.** Checks (1) and (3) were resolved by the Architect on
-2026-09-03 (hermetic quiescence, never-settling stub; keep the `attachInternals`
-normalization). Check (2) re-verified here rather than taken from the handoff: `bun run
-check:sim` serializes `form-colorgraph` identically on Bun and Node (2343 chars, same
-knob/thumb/`aria-valuenow`/canvas values), and degrades honestly when a runtime is absent —
-Deno was not on PATH for this run and the probe said so rather than reporting a pass. Check (4)
-is satisfied by `withRealm()` and the TESTS.md note. The known-superseded parts of this task's
-output (rejecting stub, strict boundary) are LT-154's to change and were not re-litigated.
+1. **Phase 1 — render the JSX/TSRX blueprint to static HTML.** Plain string concatenation from
+   server args. This is what `emit-server.ts` already does and continues to do; it is not going
+   away (ADR 0024 sub-design 1, template lowering, is untouched).
+2. **Phase 2 — pre-play DOM hydration on the server.** Run the signal graph — DOM harvesting,
+   `expose()`, `watch()`, event wiring, everything the browser would do at connect — for real,
+   once, against a simulated document (jsdom), and serialize whatever DOM state falls out. This
+   is what `server/tsrx/sim/` already does, today, as a TEST-ONLY verification harness (ADR
+   0027's "nothing consumes the artifacts yet"). The new decision promotes it to the actual
+   phase-2 SSR mechanism for the components that need it.
 
-**LT-153 — the compiler-consequences plan (architect, 2026-09-03). This is the deliverable.**
-It re-scopes the queue rather than adding a phase; the five decisions below are what the rest
-of this file now encodes.
+**Why not every component runs phase 2.** Measured cost: pre-play averages ~1.1 ms/component.
+A full SSG pass over the docs site's ~3,700 component occurrences would add ~4 s to the build —
+tolerable for SSG, not for SSR (per-request). So phase 2 must be selective: a component that is
+fully resolved by phase 1 alone (no DOM ref, no signal data harvested from another component —
+"full application" in phase 1) skips jsdom entirely and stays on the cheap path. A component
+that phase 1 cannot fully resolve ("partial application" — DOM harvest, cross-component signal
+dependency) is routed through phase 2.
 
-1. **Diagnostics: the channel moves from compile time to build time, and it moves in one
-   step.** `TSRX005` (server-only names) dissolves — the client module computes every initial
-   value by running, so there is no class of name that exists server-side only. `TSRX034`
-   (omitted-because-unprovable) dissolves *as a refusal* and survives *as a report*: the
-   question "can the server render this?" stops being decidable statically and becomes
-   observable, so what replaces it is the driver's own report, not a reworded warning.
-   `TSRX039`'s server half (one value, two channels) **survives untouched** — it is a
-   data-account rule about which channel owns a value, and simulation does not answer it.
-   The replacement channel is LT-163, and it is a build warning attributed to a component for:
-   a `virtualConsole` `jsdomError`, an unhandled rejection, a contained per-component throw
-   during connect, an attempted network call, or a `non-quiescent` drain overrun. **Tier and
-   channel, per ADR 0028 sub-design 1:** these are tier-2 Contained (the build completes and
-   the component degrades to its pre-upgrade SSR markup), carried by the **compiler/build**
-   channel, not by TypeScript and not by a runtime check. Tech Writer owns the copy for every
-   message LT-163 introduces and for `TSRX005`/`TSRX034`'s retirement, which leaves references
-   behind (`references/errors.md`, the host profile, the diagnostics table).
-2. **The warning baseline is 2, not 8, and it is the wrong instrument after LT-154.** [The
-   "2, not 8" figure was corrected by LT-168: the true standing count is **8 unique**, never
-   2, and the consequence reaches this decision's own arithmetic — LT-145/LT-146 deliver a
-   **6-unique** compile baseline, not zero, because the six `basic-pluralize` warnings are
-   correct refusals that retire only at stage 3 (LT-165). The count is now tool-counted in
-   `check:tsrx`'s summary line rather than remembered.] LT-146
-   and LT-145 still drive it to zero and stay in the gate wave for that reason. But a clean
-   *compile-time* baseline stops being the wave-4 regression signal once the compiler stops
-   being where renderability is decided. **The signal becomes two numbers, both owned by
-   LT-163:** a zero-warning compile baseline (LT-145/LT-146 deliver it) and a zero-warning
-   *build report* baseline. A wave-4 migration that renders wrong is caught by the second.
-3. **Goldens: byte-pin what is emitted, behavior-pin what is simulated.** The server module's
-   template output stays byte-pinned — template lowering does not retire (sub-design 1), so
-   `server.golden.test.ts` is unaffected in kind. The *simulated* render is pinned per
-   substrate, because LT-152 measured that inline-style serialization differs between
-   substrates: a substrate swap re-baselines goldens and must not be mistaken for a behavior
-   change. Two new corpus invariants ride with it (LT-164): the **two-order hermeticity test**
-   (render the corpus in two different orders, require identical output) and the
-   **double-connect fixed-point gate** (sub-design 8). Both are `bun test server/tests` cases.
-   `eval:substrate` itself stays a **manual** tool — 3–5 minutes and ~250 client bundles is not
-   a CI shape, and the invariants that matter have been extracted into tests that are.
-4. **Staged retirement: two emit paths permanently, one evaluation mechanism.** What retires is
-   `emit-server`'s evaluation half only. The deletion checkpoint is `evaluability.ts` (422
-   lines) plus its call sites — `emit-server.ts` (9), `imports.ts` (4), `analysis/effects.ts`
-   (2), and the tests — and it lands at **stage 3**, not stage 1. ADR 0024 s3's *client* half
-   (one-site-three-roles, LT-122) survives untouched, as do s5, s10, s12, s13. LT-165 carries
-   the deletion and is deliberately blocked, not scheduled.
-5. **LT-142 has a service life and it is not over.** The `Intl` fold rule is part of the
-   determinism gate that sub-design 6 retires — but only at stage 3, with the rest of
-   `evaluability.ts`. Through stages 1 and 2 the fold rules still answer everything the driver
-   does not, and LT-142 already cleared six of the eight standing warnings. **Approved on that
-   basis** (see its archive line); it retires with LT-165, not before. [The "cleared six"
-   premise was corrected by LT-168: LT-142 cleared none of them — the six were slated for
-   LT-143's reshape, which was superseded; the rule's service-life argument stands
-   unchanged.]
+**What this does to the existing diagnostic family — this is the load-bearing insight LT-171
+has to work out precisely, not just restate:**
+- **TSRX004** (signal never rendered / can't harvest) and **TSRX034** (hidden has no
+  server-renderable initial value) **stop being errors to fix and become the classifier
+  itself.** The exact static analysis that used to justify "refuse to compile" now justifies
+  "route this component through phase 2." A "no" answer from the analysis doesn't mean the
+  author did something wrong — it means the component is (correctly) tier 2. **The
+  compile-warning baseline's target is therefore NOT zero** — LT-153 decision 2 and every
+  "zero-warning corpus" acceptance line inherited from it (LT-147/LT-148 included) is now the
+  wrong framing and needs correcting once LT-171 lands, not before (the correction is
+  architecture, not a search-and-replace).
+- **TSRX013** (conditional signal constructor) and **TSRX043** (ref read in a setup const)
+  **retire outright, for every component, regardless of tier** — their entire reason for
+  existing was protecting a constrained, no-DOM re-execution of `component.setup`. That
+  execution mode disappears whichever way a component is tiered: phase-1-only components don't
+  re-run setup server-side at all under the new model, and phase-2 components run it for real,
+  in jsdom, where a ref genuinely resolves. There is no tier left where either restriction is
+  still protecting something real.
+- **TSRX039** (duplicated channel) is untouched either way — it's a data-ownership rule (which
+  channel owns a value), not a fold-provability rule, and tiering doesn't answer it.
+- **`evaluability.ts`/`harvest.ts` do not get deleted (LT-165's premise is now wrong) — they get
+  REPURPOSED** from a pass/fail gate into the tier classifier. **LT-165 is superseded by LT-171**
+  and retitled below rather than left pointing at a deletion that would remove the very
+  mechanism the new plan depends on.
+- `emit-server.ts` changes shape for tier-2 components: instead of emitting a second,
+  semantically-constrained "server module" that re-declares setup, phase 2 needs to drive the
+  *client* factory through the simulation realm to produce the string. What exactly this looks
+  like (one emit path with a tier flag? two paths where today there's one?) is undecided —
+  LT-171's job, not assumed here.
 
-**The wave order, after this plan:**
+**What's explicitly still open, not decided by this entry — LT-171 answers these:**
+- Is tiering decided purely statically at compile time (reusing the existing analysis as-is), or
+  is a runtme fallback from phase 1 to phase 2 ever needed?
+- Per-request SSR cost for tier-2 components is flagged as "not optimal" but not measured or
+  designed around yet — does phase 2 need its own cache/warm-path story beyond LT-166's
+  same-build memoization, for a live server rather than a build?
+- Whether this is an amendment to ADR 0027 (promoting simulation from verification-only to the
+  real phase-2 mechanism) or a new ADR, and what ADR 0024 needs to say differently about the
+  compiler's two emit paths.
 
-1. **LT-154** — stage-1 driver (the four contract changes from 2026-09-03 ride with it).
-2. **LT-163** — the build-report channel and its baseline. Same wave as LT-154; the driver is
-   not shippable without a diagnostic channel, per decision 1.
-3. **LT-164** — golden strategy plus the two-order and double-connect invariants.
-4. **Milestone — accept ADRs 0024/0027.** No longer gated on evidence; gated on LT-154/163/164
-   landing, since acceptance asserts the mechanism works, not that it was measured.
-5. **Gate wave resumes** — LT-143/LT-133 (now fixed by rendering), LT-144/LT-145 (re-scoped
-   below), LT-146, LT-147/LT-148.
-6. **Wave 4** — the migrations. LT-166's trigger fires somewhere inside it.
+**i18n, added 2026-09-04 — [ADR 0030](adr/0030-internationalization-as-build-time-server-data.md).**
+A multilingual docs site is now planned, and i18n was entirely unaddressed (REQUIREMENTS.md
+neither required nor excluded it). Locale and translations are build-time SERVER data reaching
+components through a compiler-supplied reserved `i18n` parameter — not the context protocol,
+whose fallback-then-correct shape would flash English into German and leave a no-JS reader on
+the wrong language permanently. **Three things worth carrying forward:** (1) it is a tiering
+WIN — a build-constant locale folds `Intl`, so i18n components are tier-1 eligible and
+`basic-pluralize`'s six standing TSRX034 warnings dissolve; (2) missing translation keys go to a
+translation CENSUS, not the warning channel, because they are not author-fixable and would
+restart the non-zero-baseline drift ADR 0029 s6 just removed; (3) LT-172 fixes a live bug the
+investigation surfaced — the simulation realm's truncated ancestor chain makes `getLocale()`
+resolve `'en'` silently for any component without a `lang` arg. Tasks: LT-172 (independent,
+do first), LT-173 (depends on LT-165), LT-175 (cache-impact measurement spike), LT-174 (depends
+on both). **Catalog layout** is decided (ADR 0030 s4): source strings inline in the `.tsrx`,
+translations as additive per-locale namespaced files (`i18n/de.json`), **no tiering and no
+override stack**. **One correction worth carrying:** a build-constant locale does NOT retire
+`basic-pluralize`'s client-side toggles — `count` stays reactive, so the category still changes
+at runtime and the client can only select among server-rendered strings. What it buys is
+per-locale PRUNING of the rendered alternatives (six spans → two on an `en` page).
 
-**Gate wave — clear every known trap BEFORE the corpus port. Resumes after the acceptance
-milestone.** The ordering below is by how many downstream migrations an item unblocks, not by
-cost. Items 1–2 are re-scoped by LT-153 above; items 3–5 are unaffected.
+**The wave order, after this decision:** LT-171 (architecture) blocks nothing already landed,
+but should land BEFORE wave 4 commits any more migrations to the old "reduce warnings to zero"
+framing, and before LT-165/LT-169 are touched at all (both are now stale in their current
+wording — see their entries below). [**Updated 2026-09-04:** LT-171 has landed; LT-165 and
+LT-169 are rewritten against ADR 0029 and LT-165 now gates LT-169. Wave 4 is unblocked — and
+"reduce warnings to zero" turns out to be the correct framing after all, for the warnings that
+remain warnings.]
 
-1. **LT-143 / LT-133** — the two components that server-render visibly wrong markup. **No
-   longer fold-route tasks:** LT-154 makes them render correctly by executing the authored
-   thunk, so what remains in each is verification and the removal of the workaround the drift
-   forced (`basic-gauge.html`'s hand-authored `84%`).
-2. **LT-144 / LT-145** — both were diagnostics for the silent-empty class. Under simulation
-   that class largely dissolves; each task is now scoped to **pin what survives**, not to build
-   the diagnostic it was filed for.
-3. **LT-146** — `form-tokenbox.description` stops shipping through two channels. Component-only,
-   no compiler change, and it is one of the two warnings still standing [count corrected by
-   LT-168: one of the EIGHT unique standing warnings; LT-145/LT-146 bring the count 8 → 7 → 6,
-   and the six `basic-pluralize` refusals retire at stage 3 — LT-165]. TSRX039 survives LT-153
-   intact, so this task is unaffected by the wave. [**Arithmetic corrected by LT-145's review,
-   2026-09-03:** LT-145 landed as a pure runtime pin, per its own explicit "pin it, not build
-   the route" instruction — it does not touch `check:tsrx`'s output. `form-listbox`'s TSRX034
-   stays standing and joins the six `basic-pluralize` refusals in the stage-3 (LT-165)
-   retirement bucket, seven total. **LT-146 alone delivers the gate-wave compile reduction: 8 →
-   7**, not 8 → 7 → 6.]
-4. **LT-147 / LT-148** — the `bindAria` lowering (owner decision, 2026-09-02). Changes no server
-   HTML and blocks no migration, but must land BEFORE wave 4 so no migration author hand-writes
-   the `String()` coercion the lowering removes.
-5. **Target: a zero-warning corpus before LT-095**, now in both instruments (decision 2).
-   [Arithmetic corrected by LT-168: the compile instrument's gate-wave target is the
-   **tool-counted 6 unique** (LT-145/LT-146 remove listbox and tokenbox; the six
-   `basic-pluralize` refusals are correct and retire at stage 3 — LT-165), with the
-   build-report instrument at zero.] [**Corrected again by LT-145's review, 2026-09-03:** the
-   gate-wave compile target is **7 unique**, not 6 — LT-145 is a runtime-only pin and does not
-   remove `form-listbox`'s TSRX034 (see item 3's correction above); only LT-146 moves the
-   compile count, 8 → 7. The seven remaining (six `basic-pluralize` + `form-listbox`) retire
-   together at stage 3 — LT-165.]
+## Architecture — tiered server evaluation (LANDED: ADR 0029)
 
-**Wave 4 — the migrations themselves,** LT-095 and LT-096–LT-111. LT-095 (`basic-blogmeta`)
-carries a reshape decision already made; LT-100 (`module-catalog`) is unblocked. **New this
-wave:** LT-096 and LT-103 are the two that move page chrome into the simulated corpus — LT-166's
-budget trigger is most likely to fire on one of them.
+- [x] LT-171: Work out phase-1/phase-2 tiering's implications for ADR 0024 and ADR 0027, and
+      record the decision. — done ✓
+  **Skill:** architect
+  **Context:** Owner decision, 2026-09-04 (see the Sequencing section above for the full
+  argument and cost data — do not re-derive it, extend it). The verification-only phase of
+  server simulation is over; phase-2 pre-play is committed as the real SSR mechanism for
+  components phase 1 cannot fully resolve. This task is to turn that into an actual
+  architectural decision rather than an implication left implicit:
+  1. **Decide the ADR shape:** amend ADR 0027 (promote simulation from verification-only to the
+     phase-2 SSR mechanism) vs. a new ADR that supersedes parts of both 0024 and 0027. ADR 0024
+     sub-design 1 (template lowering, phase 1) is untouched either way and should say so
+     explicitly once this lands, so a future reader doesn't assume the whole compiler pipeline
+     moved to simulation.
+  2. **Specify the classifier precisely.** `evaluability.ts`/`harvest.ts`'s existing analysis is
+     the reused mechanism (confirmed in the Sequencing section), but "component that phase 1
+     cannot fully resolve" needs a precise, checkable definition — presumably every currently
+     TSRX004/TSRX034-triggering site, but confirm there's no third case (e.g. a component with
+     no DOM-dependent site itself but that COMPOSES one that does).
+  3. **Decide `emit-server.ts`'s shape for tier-2 components** — what it emits instead of
+     today's re-declared, DOM-less setup, and whether tier-1 components' emit path changes at
+     all (it shouldn't need to, but confirm).
+  4. **Resolve the retirement/reclassification per diagnostic**, and hand the copy work to Tech
+     Writer once decided: TSRX013/TSRX043 retire outright (no tier needs them — argued in the
+     Sequencing section); TSRX004/TSRX034 stop being errors and become the classifier's positive
+     signal (their copy needs to say "this routes to phase 2," not "this is wrong"); TSRX039 is
+     unaffected. TSRX005 (already dissolved per LT-153) is unaffected by this task.
+  5. **Answer the three open questions from the Sequencing section**: static-only tiering vs. a
+     runtime fallback path; per-request SSR cost/caching story for tier-2 components (the 1.1
+     ms/component, ~4 s/3,700-component figures are a build-time SSG number, not yet an SSR
+     one); and whether LT-166's build-scoped memoization needs a server-scoped analogue.
+  6. **Reconcile every "zero-warning" acceptance criterion this supersedes** — LT-147/LT-148's
+     "the zero-warning baseline from LT-146 holds," LT-153 decision 2, and LT-165's own premise
+     — using the append-only correction convention already established in this file (bracket the
+     correction in place; do not silently rewrite).
+  Acceptance: an ADR (amended or new) records the tiering decision and the diagnostic
+  reclassification; LT-165 and LT-169 are rewritten (not just corrected) to match; every
+  superseded "zero-warning" acceptance criterion in this file carries a correction; wave 4 does
+  not start against the old framing.
+  **Delivered, 2026-09-04 — [ADR 0029](adr/0029-tiered-server-evaluation.md), amending 0024
+  (s2/s3) and 0027 (s1/s7); ARCHITECTURE.md § Server Evaluation Tiers; TSRX-HOST-PROFILE.md
+  § What you write decides your evaluation tier; LE_TRUC_COMPILER.md § 5 rewritten, § 6
+  reclassification table, § 8 invariant added.**
+  **The model changed shape during the work — two tiers became three, on measurement:**
+  1. **A third tier was found, and it carries most of the payoff.** The binary "phase 1 can't
+     resolve it → simulate it" classifier routes `module-scrollarea` (2,091 occurrences, ~2.3 s
+     of the measured 3.9 s) into a realm that returns ZEROS for its every layout read and drops
+     its entire `bindState(internals, …)` output channel — ADR 0027's own stub posture
+     guarantees a null answer. So the classifier is a conjunction: tier 2 requires phase 1 to
+     fail AND the realm to be able to answer, the second conjunct read from
+     `sim/patch-table.ts`. Tier 0 (static skeleton, client corrects) is the third bucket.
+     `card-mediaqueries`, `form-colorgraph`, `form-textbox`, `form-spinbutton` join it.
+  2. **Tier 1 is the minority path, measured: ~6 of 22 migrated components.** Under the owner's
+     strict baseline (server args + `@tsrx/core` only) it is 2 of 22; the two sound relaxations
+     (signal initializers over server args in the value harness; `host.<prop>` reads of
+     Parser-exposed props) bring it to ~6. Fifteen of 22 use `first()` and are tier 2 by
+     construction. Tiering's payoff comes from tier 0, not tier 1 — worth remembering before
+     anyone invests in widening tier 1.
+  3. **"TSRX013/TSRX043 retire outright" was wrong as stated.** TSRX013 is FOUR factories
+     sharing one code and only two are server-evaluation guards: `deferredCollectorCall` is a
+     client-side `NoActiveCollectorError` bug (tier-independent) and `conditionalSignalConstructor`
+     enforces ADR 0024 s12's format rule. Both survive and need their own codes; the split is a
+     PREREQUISITE of the retirement, not a follow-up.
+  4. **TSRX034's severe variant survives, scoped to tier 0** — its own copy is right that a
+     submittable control rendering the wrong `disabled`/`checked` is a correctness bug, and
+     tier 0 is the one tier where nothing resolves it.
+  5. **The baseline target stays ZERO.** Routing signals leave the diagnostic channel for a tier
+     census, so the remaining warnings are all author-fixable again and LT-146/LT-168's
+     regression signal survives intact. This is a better answer than the "target is not zero"
+     framing the Sequencing section assumed.
+  6. **Composition contaminates on READS, not containment** — a parent embedding a tier-2 child
+     splices its markup and keeps its own tier; only a `first()` on a compose site or a
+     `truc:pass` into it contaminates. Containment-based contamination would drag page chrome's
+     whole ancestry into the realm.
+  7. **A CI equivalence audit is now a standing obligation** (ADR 0029 s7). Tiering reinstates
+     the two-mechanism hazard ADR 0027 explicitly rejected; the audit renders every tier-1
+     component through the realm too and requires byte-identical output. If it goes red or gets
+     disabled, the drift class 0027 eliminated comes back.
+  8. **`Date.now()` exposed a fourth correction, made by the owner mid-review and folded in.**
+     The tier-1/tier-2 disagreement over impure ambient reads is not a drift bug to resolve by
+     electing a mechanism — NEITHER can answer it. Tier 1 refuses; tier 2 folds a value that is
+     not an approximation but a build-machine reading cached into the served HTML for the life
+     of the page. So impure-ambient became an **expression-level** property (unresolvable in
+     every tier, omitted in every tier, no diagnostic) rather than a tier-2 routing signal. This
+     also forced the general split — unresolvability is per-EXPRESSION, tier is per-COMPONENT —
+     which `module-ticker` proves is necessary (`Math.random()` inside a heavily `first()`-based
+     component: tier 2 with one suppressed expression). ADR 0027 s6's determinism gate had the
+     right judgment and the wrong response; tier 0 is the third option it lacked.
+  9. **Per-request SSR: anticipated, not committed** (owner, 2026-09-04). ADR 0024 s7 stands —
+     build-time tooling only, jsdom never ships. LT-166's memoization needs no server-scoped
+     analogue yet; designing a cache for a workload that doesn't exist would fix the wrong shape.
 
-**Cleanup round — after the corpus port completes.** Owner decision, 2026-08-31: not blocking,
-deferred to a single pass after wave 4 unless a gate-wave or wave-4 task needs one earlier — in
-which case pull it forward rather than working around it. **One carries a gate:** LT-138 (the
-server/client sanitizer-default inversion) must land before any component actually authors
-`truc:html`. Nothing does today. LT-152 answered *how* it lands — DOMPurify on the jsdom realm,
-one sanitizer for both channels — so the task is now a known implementation behind an unchanged
-trigger.
+## Architecture — internationalization (ADR 0030)
 
-## ADR 0027 wave — implementation
-
-- [x] LT-154: Resume implementation — stage-1 server-simulation driver. — reviewed ✓
+- [ ] LT-172: Seed the simulation realm's `<html lang>` from the page's build locale.
   **Skill:** docs-server-dev
-  **Context:** ADR 0027 sub-design 7, stage 1, per the LT-153 plan in the sequencing section above: driver + jsdom substrate answering `host` reads and reactive attributes for the corpus — the old render function remains the template-tree source, the client connect is simulated against it, and serialization overlays the computed initial state. This is the task that finally unblocks LT-143: `pluralCategory(host)` runs exactly as authored. Follow the full driver posture — internals normalization (LT-150), constructor stubs, per-component containment (LT-149), and the patch table from LT-151 — fixture-pin the corpus's simulated renders, and keep `bun test server/tests` plus the build gates green. **Scope is `server/generated/tsrx/` only** — template-rendered page chrome is not simulated, which is what makes stage 1 cost ~0.1 s rather than 3.9 s (LT-152). That scoping is load-bearing; if it widens, LT-166's trigger fires.
+  **Context:** **Fixes a live silent-wrong-answer bug; do this independently of the rest of the
+  i18n work.** `sim/realm.ts` renders with `document.body.innerHTML = markup`, so the simulated
+  document's `<html>` carries no `lang` and `getLocale()`'s `closest('[lang]')` walk sees a
+  TRUNCATED ancestor chain — it finds the component's own root `lang` if it rendered one, and
+  otherwise silently resolves the `'en'` fallback regardless of the page's actual locale.
+  `basic-pluralize`/`basic-number` are safe only by accident (they take `lang` as a server arg
+  and render it); `module-calctable` and `basic-blogmeta` call `getLocale(host)` with no `lang`
+  arg and would resolve `'en'` under simulation for any page. This is ADR 0027's "the
+  diagnostics loss is structural" hazard with a concrete instance. Seed `<html lang>` from the
+  build's page locale (ADR 0030 s7). Acceptance: a fixture component reading `getLocale(host)`
+  with no `lang` arg, rendered on a non-`en` page, resolves that page's locale under simulation;
+  `bun test server` green. Note this only narrows the gap — the realm still parses one
+  component's markup, so an ancestor `[lang]` BELOW `<html>` remains invisible; ADR 0030 s7
+  makes the reserved `i18n` parameter the canonical route for that reason.
 
-  **Carries the driver-contract change decided 2026-09-03** (ADR 0027 sub-designs 2d/9/10 amended; the NOTES.md entry that raised it is resolved and deleted). LT-151 built the boundary as *strictly synchronous* and measuring it proved that wrong: `resolveDependencies` (`src/helpers/dom.ts`) defers effect activation by a microtask whenever a component queried a custom child, so a synchronous window drops every composing parent's effects — `form-colorgraph` serializes 2343 chars instead of 3302. **The library is not changed** (a defined child is not necessarily a connected one; the deferral is load-bearing in the browser and M8 only ever covered not-yet-defined children). Four changes, all driver-side:
-  1. **`boundary.ts` becomes hermetic quiescence, not synchronicity.** The window performs no driver IO, advances no timer, and drains the realm's *microtask* queue to quiescence before serializing. Microtask-only, so jsdom timers never fire. Bound the drain (`form-colorgraph` quiesces after exactly one turn, so a small bound is generous) and raise a `non-quiescent` build warning attributed to the component on overrun, turning a reactive loop into a diagnostic instead of a hang. Keep the promise-returning check — the driver still must not `await`. `drainToQuiescence()` in `scripts/lib/substrate-probe.ts` is the working probe-local implementation; port it rather than re-deriving it.
-  2. **The network stub never settles instead of rejecting** (`patch-table.ts`/`realm.ts`). Verified: under a drain a rejecting stub routes every fetching component to `err` and ships the **`@catch`** arm, while a never-settling one stays `nil` and ships `@pending` — which is what CHECKLIST §8/§9 require of SSG. Reporting stays at call time, so "fails loudly" is unaffected; the LT-151 test asserting a rejection must move to asserting the report plus a never-settling promise.
-  3. **Replay definitions children-first**, from the compiler's compose graph, rather than inheriting import order. Sub-design 2's "native bottom-up upgrade order" claim was wrong — `define()` order decides it — so this is what makes composition converge regardless of input order (sub-design 10).
-  4. **Load each component once, render many times.** One module cache per process means a client module registers its element exactly once; a fresh realm per render silently yields un-upgraded markup (3302 → 2274, no error). Pin that as a test, not a convention.
-
-  **Two acceptance criteria added by the LT-152 review (its check 3), both from real harness failures rather than from theory:** (a) **disposal is end-of-process, not per-realm** — a disposed realm's deleted globals turn a contained component's lingering dependency-wait into a synchronous `customElements is not defined` flood that aborts the process, so the driver must not dispose a realm while any component may still be waiting; (b) **load-once is a driver assertion, not a convention** — `ProbeRealm.load()` throws when an import records no new definitions, and the production `realm.ts` must do the same, because the silent-degradation mode it catches is invisible in the output (it looks like ordinary un-upgraded SSR markup).
-
-  **Changed:** `server/tsrx/sim/boundary.ts` (`runSynchronously` → `assertSynchronousWindow` for the parse+upgrade step only, plus new `drainToQuiescence`, ported from `scripts/lib/substrate-probe.ts`); `server/tsrx/sim/patch-table.ts` (doc only — network-stub contract note); `server/tsrx/sim/realm.ts` (`render()` is now `async`, drains to quiescence after the synchronous parse+upgrade step and reports a `non-quiescent` diagnostic on overrun instead of throwing; `denyNetwork`'s function-form stub returns a promise that never settles instead of rejecting; `load()` throws when an import records no new definitions; replay in `render()` uses new `childrenFirstOrder()` — a compose-graph-driven topological sort — instead of recorded order; `checkDeferredActivation` removed, superseded by the drain; `createSimulationRealm({ composesTags })` accepts the compose-child lookup); `server/tsrx/registry.ts` (`RegistryEntry.composesTags: string[]`, direct composed-child tags); `server/tsrx/index.ts` (populates `composesTags` from `collectComposeElements` + `composeRegistry`); `server/tsrx/sim/index.ts` (export renames); `scripts/sim-portability-probe.ts` and `scripts/lib/substrate-probe.ts` (adjusted to the renamed/async API). New: `server/tests/tsrx/sim-driver.test.ts` — the stage-1 driver itself (load-once corpus pass, then render-many, one realm, disposed once at end-of-file), fixture-pinning all 22 corpus components' simulated renders as snapshots (`server/tests/tsrx/__snapshots__/sim-driver.test.ts.snap`). `server/tests/tsrx/sim-realm.test.ts` updated to the new contract (async `render()`, never-settling fetch, `non-quiescent` fixture, load-once fixture, `childrenFirstOrder` unit tests).
-  **How:** The compose-graph plumbing (`composesTags`) is new end-to-end wiring, not a repurposed existing field — `collectComposeElements(component)` was already computed for the `TSRX011`/composed-not-compiled diagnostic in `index.ts`, so it's reused rather than re-walked. `childrenFirstOrder` is a DFS post-order topological sort, stable on recorded order for entries with no compose relationship. `check:sim` (`scripts/sim-portability-check.ts`) reproduces `form-colorgraph` at 3302 chars on both Bun and Node, matching the pre-regression figure the amendment target-fixed (2343 under the old strict-sync boundary). `bun test server/tests` (1331 pass), `bun run check:tsrx` and `bun run check:sim` all green.
-  **Check:** (1) `childrenFirstOrder`'s use of ONLY direct compose edges (`RegistryEntry.composesTags`, not transitive) — verify this is sufficient for the corpus's actual nesting depth (form-colorgraph→form-spinbutton is one level; no corpus component composes three deep today, so the transitive chain unit test in `sim-realm.test.ts` is unexercised against real generated modules). (2) The `sim-driver.test.ts` snapshot file is the first fixture-pin of simulated output for the WHOLE corpus — worth a read-through for anything that looks like a jsdom artifact rather than authored behavior, before the diagnostics loss (ADR 0027 Consequences, "ships a wrong answer quietly unless caught by a fixture") gets a chance to hide something. (3) `non-quiescent` is a new `SimDiagnosticKind` with no consumer yet — LT-163 is the build-report channel that surfaces it; this task only makes the driver capable of raising it. (4) Disposal in `sim-driver.test.ts` is `afterAll` at file scope (end-of-process posture for that one test file) — the REAL build's driver (still to be wired into the actual docs build, per ADR 0027's "nothing consumes the artifacts yet") will need the same discipline at build-process scope, not test-file scope; that wiring is not part of this task's `server/generated/tsrx/`-only scope.
-
-  **Review (architect, 2026-09-03):** Approved. Gates re-run, not taken from the handoff: `bun test server/tests` 1331 pass, `check:tsrx` at the documented 2-warning baseline [figure corrected by the LT-163 review: tail-read, not counted — the branch's true standing count is 8 unique warnings; see LT-168], `check:sim` at 3302 chars byte-identical Bun/Node with Deno honestly reported absent. All four changed sim files, the wiring, both test files, and all 22 snapshots read in full. The check items: (1) direct-edge-only is sufficient **by construction, not corpus luck** — DFS post-order over direct edges IS the transitive order, and every composed child must be a compiled registry entry (TSRX011 is a hard `error()`), so each intermediate carries its own `composesTags`; the transitive unit test covers a real shape. (2) Snapshot read-through: the only non-authored-looking pins are the `undefined` trio — card-blogpost/card-callout render `String(undefined)` for an unpassed composition `children`, and form-radiogroup's `<legend>undefined</legend>` comes from the smoke-posture ARGS passing `label` where the component's prop is `legend`. Those are fixture artifacts inherited from `server-render-smoke`, not jsdom artifacts (LT-167); everything else matches authored behavior, and basic-pluralize/basic-number's snapshots already show the LT-143/LT-133 fixes rendering (empty count → `0` + one visible plural arm; `0`/`0%`). The combobox's selected-but-`hidden` inner option is authored `truc:pass` filter wiring — exactly the case LT-145 pins. (3) Acknowledged; `non-quiescent` awaits LT-163. (4) Noted; build-process-scope disposal rides the real build wiring. Two design observations carried forward, not defects: the realm's `process.on('unhandledRejection')` suppresses the runtime's default crash for the realm's lifetime (process-wide, not realm-scoped — contained diagnostics instead of a crashed build is the intended trade, and LT-163 is what makes it visible), and `currentComponent` persists after `render()` returns, so a late jsdom error or rejection would attribute to the previous component.
-
-- [x] LT-163: Give the simulation driver a build-report channel, and re-baseline the wave-4 regression signal on it. — reviewed ✓
-  **Skill:** docs-server-dev
-  **Context:** LT-153 decision 1. Simulation trades a compiler that refuses and names the mistake for a driver that ships a wrong answer quietly; fixture-pinning is necessary but is not a channel. **Build the channel:** the driver raises a **build warning attributed to the component** for each of — a `virtualConsole` `jsdomError`, an unhandled rejection inside the realm, a contained per-component throw during connect (LT-149's containment is what makes these observable), an attempted network call (the never-settling stub reports at call time), and a `non-quiescent` drain overrun. **Tier 2, Contained** (ADR 0028 sub-design 1): the build completes and the affected component degrades to its pre-upgrade SSR markup; nothing is prevented and nothing escalates. **Channel is compiler/build** — none of these are statically decidable, which is precisely why they moved off the compiler, so there is no owed `TSRX` rule for them. **Baseline:** the report must reach zero on the corpus, and the two numbers together (zero compile warnings from LT-145/LT-146, zero build-report warnings from here) are the wave-4 regression signal that the old eight-warning baseline used to be. One known non-zero entry exists today and must be classified, not silenced: jsdom's `getContext()` not-implemented notice on `form-colorgraph`, which the component's own `if (!ctx) return` guard already neutralizes and which cannot affect serialized HTML (canvas pixels do not serialize). **Tech Writer reviews the copy** for every message introduced here, and for the retirement of `TSRX005` and `TSRX034`, which leaves references behind — see `tech-writer`'s `workflows/error-message-lifecycle.md`. Acceptance: each of the five conditions has a fixture that provokes it and asserts the attribution names the right component; the corpus report is zero apart from a classified, documented `getContext` entry; the build fails on a *new* report entry, not on the standing baseline. **Two refinements from the LT-154 review (2026-09-03):** reset the realm's `currentComponent` when `render()` returns — it currently persists, so a jsdom error or unhandled rejection landing between renders attributes to the previous component; and document on the channel that `process.on('unhandledRejection')` suppresses the host runtime's default crash for the realm's lifetime (process-wide, not realm-scoped) — a deliberate containment trade that makes this channel the only place such rejections surface.
-
-  **Changed:** `server/tsrx/sim/report.ts` (new — the report layer over the realm's `diagnostics`: `CLASSIFIED_DIAGNOSTICS` with the classified `getContext` entry and its reason, `classifyDiagnostic`/`classificationFor`, `reportDiagnostics` partitioning into classified/unclassified, `formatSimDiagnostic`/`formatSimReport` per-kind copy); `server/tsrx/sim/realm.ts` (console diagnostics now lead with their level — `console.error:`/`console.warn:`; the `non-quiescent` message reworded to carry the imperative fix, attribution prefix removed since the report adds it; `denyNetwork`'s message likewise de-duplicated; new **Attribution** header section documenting the render-window convention and the process-wide `unhandledRejection` suppression); `server/tsrx/sim/index.ts` (report exports + header); `server/tests/tsrx/sim-realm.test.ts` (the unhandled-rejection fixture, attribution assertion added to the network fixture, four report unit tests incl. the tier-2 wording guard, XHR message assertion updated to the reworded text); `server/tests/tsrx/sim-driver.test.ts` (the baseline gate as three tests: **zero unclassified** on the corpus — failure message carries the formatted report — plus **every classification still matches a standing entry** (a dead classification fails with a retire instruction) and **classified entries are listed with their reason**, not silenced); `server/TESTS.md` (new "The two regression baselines" section: compile baseline + build-report baseline, how to classify, never widen a pattern, Tech Writer owns the copy).
-  **How:** The five conditions were already observable as `SimDiagnostic`s (LT-154); this task built the channel on top — the gate is `bun test server/tests` cases (matching LT-164's invariant posture), and the future docs-build wiring calls `reportDiagnostics` on the same data; no build wiring here, since nothing consumes the driver in the build yet. Classification is data with a narrow `(kind, component, message-pattern)` match and a recorded reason; the report lists classified occurrences every run, so the standing entry stays visible. Verified: `bun test server/tests` 1339 pass, `check:tsrx` at the 2-warning compile baseline [figure corrected by LT-168: 8 unique — the LT-163 review's own count], `check:sim` byte-identical Bun/Node, biome clean (one pre-existing unrelated suppression warning in `globals.d.ts`).
-  **Check:** (1) **Tech Writer copy review is owed** for every message this task introduced or reworded — the six `formatSimDiagnostic` kinds, the reworded `non-quiescent` realm message, and the reworded network message; drafted to the lifecycle criteria (condition → component → fix/decision, tier-2 wording), per the task's own Tech-Writer clause. (2) **The first review refinement is amended by measurement, and needs the Architect's confirmation:** resetting `currentComponent` when `render()` returns would have LOST attribution systematically — under Bun, `unhandledRejection` is delivered in a macrotask AFTER `render()` returns (verified with a plain-`bun` probe), so a reset strips every late rejection of its component. The implemented convention keeps the marker until the next render overwrites it and documents why (`realm.ts` § Attribution); post-drain the realm is quiescent, so the most recent connect is the honest owner of a late diagnostic. (3) **The unhandled-rejection fixture emits the event instead of creating a real rejection:** bun:test fails the file on a real unhandled rejection even with the realm's process handler registered (verified in isolation); the fixture's `process.emit('unhandledRejection', …)` exercises the same handler and attribution wiring, and the end-to-end path was verified under plain `bun`. (4) The "every classification still matches" test makes FIXING a classified condition fail the build until the classification is retired — a deliberate forcing function against dead allowlist entries; confirm it is wanted. (5) Scope unchanged from the task: no docs-build wiring (ADR 0027's "nothing consumes the artifacts yet" still holds).
-
-  **Tech Writer review (2026-09-03):** Copy settled — corrections applied directly to `report.ts` and `realm.ts` (developer drafts, Tech Writer owns the wording). The six report messages now: split their imperatives into separate sentences (STE Full — one command per sentence; two had semicolon-joined double commands); carry the console level as data (`SimDiagnostic.level`, so the condition reads "console.warn logged during…" instead of burying it in message text); backtick `CLASSIFIED_DIAGNOSTICS`; use ONE term for the build output — "the serialized markup" — across messages, the classification reason, and JSDoc (was "shipped markup"/"serialized HTML"); and read correctly in both frames, attributed and unattributed, via a `location()` phrase ("its simulated connect" / "a simulated connect outside any render window"). The network stub's message reverted to a noun-phrase lead — "network access from a simulated connect (`fetch()`)" — because the verb-phrase lead ("attempted a network call: …") left the standalone `Error` frame (constructor-form throw; `check:sim`'s raw print) subject-less; the XHR message-substring test moved with the reword, not weakened. The classification reason split to one idea per sentence; the `non-quiescent` message's semicolon split likewise. `references/errors.md` gets NO row: that catalog serves errors a component author meets (runtime classes, TSRX codes), while the build report's reader is the docs-build runner — repo-internal at stage 1; revisit when a consumer-facing build runs the driver (stage 2/3). **One finding filed on LT-167:** `scripts/sim-portability-check.ts` prints raw `diagnostic.message` without attribution, which is subject-less for exactly the kinds whose copy assumes a prefix; it should print via `formatSimDiagnostic`.
-
-  **Review (architect, 2026-09-03):** Approved. Gates re-run independently (full suite 1339 pass; `check:sim` byte-identical Bun/Node, Deno honestly absent; biome clean apart from the pre-existing `globals.d.ts` suppression warning), the report module and both changed test files read in full, and all six rendered message frames eyeballed end to end. **The handoff's check items are each confirmed:** (2) the attribution-convention amendment stands — the plain-`bun` probe (event delivered in a macrotask after `render()` returns, marker persists, most recent connect is the owner) is the right call, the `realm.ts` § Attribution section documents it, and the `unattributed` label cannot collide with a real component (custom element names require a hyphen). (3) the emit-based rejection fixture is accepted — bun:test fails the file on a real rejection even with the realm's handler registered (verified in isolation), so the event-level fixture is the strongest in-suite provocation available and the end-to-end path was verified under plain `bun`; (4) the dead-classification forcing function is confirmed as wanted — a classification that admits nothing IS a stale allowlist entry, and retiring it is the lifecycle's own hygiene; (5) scope confirmed — no build wiring, per ADR 0027's "nothing consumes the artifacts yet". **Acceptance criteria verified per item:** all five conditions have fixtures asserting `component` attribution (probe-fetcher/probe-rejector/probe-holder/probe-thrower/probe-looping); the corpus report is zero unclassified with the `getContext` entry classified and still listed; the gate fails on a new entry carrying the formatted report. **One finding, filed as LT-168:** this review counted `check:tsrx`'s warnings in full for the first time in this wave — 16 lines = **8 unique** standing warnings (six `basic-pluralize` TSRX034 + form-listbox + form-tokenbox), not the "2 warnings" the LT-152 review, the LT-142 archive line, and LT-145/LT-146's task texts record. Verified pre-existing at HEAD via stash (16 lines there too), so LT-154/LT-163 did not cause it and LT-142's "cleared six" never held on this branch's CLI output. The build-report baseline (this task's number) is unaffected — it is independent of the compile count and passes — but the wave-4 signal's first number is mis-recorded and must be reconciled before wave 4 relies on it (LT-168). The stale "2-warning" figure also appeared in this wave's own LT-154 review line and LT-163 handoff; corrected here rather than silently left.
-
-- [x] LT-164: Golden strategy for simulated renders, plus the two-order and double-connect invariants. — reviewed ✓
-  **Skill:** docs-server-dev
-  **Context:** LT-153 decision 3. Depends on LT-154. **Goldens:** the server module's template output stays byte-pinned exactly as today (template lowering does not retire — ADR 0027 sub-design 1), so `server.golden.test.ts` is unaffected in kind. The *simulated* render gets its own goldens, and they are **per-substrate bytes**: LT-152 measured that happy-dom terminates inline custom-property declarations with `;` where jsdom omits it, so a substrate swap re-baselines goldens and must never be read as a behavior change. Say that in the fixture file's header, so the next person to see a mass re-baseline knows which of the two it is. **Two corpus invariants, both as `bun test server/tests` cases:** (1) the **two-order hermeticity test** (ADR 0027 sub-design 10) — render the corpus in two different orders and require identical per-tag output; no component holds module-level mutable state today, so this pins the invariant rather than assuming it, and LT-152 measured that it holds. Mind the module-cache trap: a second realm importing the same bundle records no definitions and silently renders un-upgraded markup, so each order needs a freshly-built bundle (`scripts/lib/substrate-probe.ts` shows the shape). (2) the **double-connect fixed-point gate** (sub-design 8) — run the connect pass twice and require byte-identical `outerHTML`; a component whose second pass differs is a build error against that component. `reconcile()` consumers (`form-tokenbox`, `module-list`) are the sharp cases and are the ones to fixture first. **`eval:substrate` stays manual** — 3–5 minutes and ~250 client bundles is not a CI shape, and these two tests are the part of it that needed to be. Acceptance: both invariants green on the corpus, the simulated goldens carry the per-substrate note, and `bun test server/tests` runtime does not regress materially.
-
-  **Changed:** `server/tests/tsrx/sim-driver.test.ts` (the only code file): the fixture-file header now carries the per-substrate goldens note (mass re-baseline after a substrate swap is the expected shape; a single tag moving with no substrate change is the dangerous kind) and describes both invariants; every per-component fixture now also runs the **double-connect fixed-point gate** — it feeds its own output back through a second `realm.render()` and throws a build-error message naming the component if the second pass differs (title updated to carry it); a new closing describe holds the **two-order hermeticity test** — order 1 re-renders the corpus in compiled order on the file's realm, order 2 loads AND renders in reversed order on a fresh realm whose module tree is a `cpSync` copy of the compiled dir into a second `createGeneratedDir()` (fresh resolved specifiers, byte-identical code — the module-cache trap satisfied without rebuild variance), with per-tag equality and a first-difference offset in the failure message; two small helpers (`serverMarkupOf`, `simulateConnect`) de-duplicate the render plumbing. The test rename moved all 22 snapshot keys — re-baselined with `--update-snapshots`; **the snap diff is key-only, all 22 bodies verified byte-identical to the LT-154-reviewed pins**. `server/TESTS.md`: the driver-tests section now documents the per-substrate posture and both invariants.
-  **How:** The fixed-point gate rides the existing per-component fixtures rather than a second loop, because pass 1's output is already in hand — the gate costs one extra render per component (~1.2 ms each) instead of two. Order 2's tree is a copy rather than a recompile on purpose: identical code means any output difference is attributable to order alone, and it skips the corpus compiler's ~30 console lines per run. Realm2 is created and disposed INSIDE the invariant test (nested inside realm1's patch lifetime — its restores re-install realm1's patches, so disposal order realm2→realm1 is correct; the test is the file's last). The double connect doubles the classified `getContext` diagnostics (one per connect pass of form-colorgraph); the baseline tests are count-agnostic and still pass. Verified: `bun test server/tests` 1340 pass (was 1339; +1 invariant test), sim-driver file 1056 ms → 1132 ms (+76 ms — no material regression), `check:sim` byte-identical Bun/Node with Deno honestly absent, `check:tsrx` at the standing 16-line/8-unique baseline (LT-168, untouched), biome clean apart from the pre-existing `globals.d.ts` suppression warning.
-  **Check:** (1) The fixed-point gate's failure posture is a thrown Error naming the component, not an `expect()` — sub-design 8 says "a build error against that component"; confirm the shape is wanted. (2) The gate proved connect is idempotent over its own output for all 22 corpus components, including the `reconcile()` sharp cases (form-tokenbox, module-list templates serialize and re-upgrade cleanly) — but note what it CANNOT catch: a component that converges by accident of ARGS (the fixtures render one arg shape per component); widening arg coverage is LT-167's ARGS rework, not this task's. (3) Order 2 uses a COPIED module tree rather than a recompiled one — "freshly-built bundle" read as fresh resolved specifiers; the probe's Bun.build shape was the pattern's intent, and recompiling would add rebuild variance and console noise without more power; confirm this reading. (4) The two-order test reuses this file's parsed `registry.json` for realm2's `composesTags` (the copy is byte-identical) rather than re-reading order 2's copy. (5) Scope held: `eval:substrate` untouched (stays manual per the task), `server.golden.test.ts` and `client.golden.test.ts` untouched (template/client lowering unaffected in kind), no sim/ source change — the invariants are pure tests over the LT-154 driver.
-
-  **Review (architect, 2026-09-03):** Approved. Gates re-run, not taken from the handoff: full suite 1343 pass, `check:sim` byte-identical Bun/Node with Deno honestly absent, the counted `check:tsrx` summary at 8 unique / 16 lines, biome clean apart from the pre-existing `globals.d.ts` warning. The snapshot file verified coherent: 22 entries, all under the post-rename keys, and the snap diff's body-only changes are exactly the three LT-167 ARGS fixes (verified by normalizing the key rename away — 19 bodies byte-identical). Both invariants checked for vacuity: the two-order test guards `reversed.size === compiled.length` and compares all 22 per-tag; the fixed-point gate runs a real second connect every time (pass-2 markup differs from pass-1, so the LT-166 cache can never absorb it). **The five check items are each confirmed:** (1) the thrown-Error posture matches sub-design 8's "build error against that component" wording; (2) the single-arg-shape limitation is accepted — the gate is corpus-wide BY CONSTRUCTION (every compiled component is gated, including all future migrations), and arg widening was LT-167's, now landed; (3) the copy-not-recompile reading of "freshly-built bundle" is confirmed — fresh resolved specifiers is what the module-cache trap requires, and identical code makes the diff attribution strict (order only, never rebuild variance); (4) the `registry.json` reuse is sound (byte-identical copy); (5) scope confirmed held. Requirement grounding: the fixed-point gate is REQUIREMENTS §Technical Constraints' "the initial server-rendered HTML is the correct initial UI state" made checkable under simulation — the browser re-runs connect over the simulation's own output, and the gate proves that changes nothing (ADR 0027 sub-design 7 makes it stage-1 load-bearing; sub-design 10 is the two-order invariant itself). One disposition recorded rather than decided here: whether the gate ever runs PER-RENDER at build time is LT-169's item 3 — the corpus test carries it today and auto-extends, so the default is test-only.
-
-- [ ] LT-165: Delete the evaluability machinery — the stage-3 deletion checkpoint. **BLOCKED: do not schedule.**
+- [ ] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline (ADR 0030).
   **Skill:** le-truc-dev
-  **Context:** LT-153 decision 4, recorded now so the deletion is a planned checkpoint rather than a discovery. **Blocked until ADR 0027 stage 3** (full driver-based rendering) — through stages 1 and 2 the fold rules still answer everything the driver does not, so deleting early leaves a hole. **What retires:** `server/tsrx/evaluability.ts` (422 lines) and its call sites — `emit-server.ts` (9: lines 114, 156, 162, 529, 576, 583, 589, 756, 766), `imports.ts` (4: 410, 414, 420 plus the import), `analysis/effects.ts` (2: the `hostDerivedFold` uses at 348 and the `IMPURE_AMBIENT` gate at 321), and `server/tests/tsrx/evaluability.test.ts`. `TSRX005` and `TSRX034` retire with it (LT-163 owns their replacement channel; Tech Writer owns the reference cleanup). **What does NOT retire, and must be verified untouched before the deletion lands:** template lowering in `emit-server` (server args, `@if`, `@for` over server data, composition splicing, escaping — the client module builds no markup and has no other home for it); ADR 0024 s3's client half, one-site-three-roles (LT-122), which is a codegen rule about which spelling plans a `watch()`; and s5, s10, s12, s13. LT-142's `Intl` rule retires here too — it is part of the determinism gate, and this is where that gate goes. Acceptance: the corpus's emitted server modules are byte-identical before and after apart from the values the driver now computes; `bun test server/tests` green; no `TSRX005`/`TSRX034` reference survives in code, tests, `references/errors.md`, or the host profile.
+  **Context:** ADR 0030 is accepted; read it rather than this summary. Scope, ordered:
+  1. **The reserved parameter.** `i18n` joins `children` as a compiler-supplied server arg
+     (ADR 0024 s10's mechanism, reused — do not invent a second one). A component receives it
+     only by declaring it; callers never pass it. Record shape: `lang`, `t`, `timeZone`,
+     `currency`, `dir`. It must be an ordinary destructurable arg so it is server-known and
+     folds in phase 1.
+  2. **Precedence.** An authored `lang` arg, or a `lang` at a compose site, overrides the
+     record. The EFFECTIVE locale renders onto the root `lang` attribute. Confirm no new
+     TSRX039 exemption is needed — ADR 0024 s3's root-attribute exclusion should already cover
+     it; if it does not, that is a finding worth escalating rather than patching.
+  3. **Catalog pipeline** — format, per-locale loading, key resolution at render time, staleness
+     detection. New build surface with no prior art in this repo; keep it in `server/effects/`
+     alongside the other build effects. **Layout (ADR 0030 s4):** source-locale strings are
+     declared INLINE in the `.tsrx` beside their keys — there is deliberately no per-component
+     catalog file, since that reintroduces the sibling-file drift ADR 0024 cures. Translations
+     are additive per-locale override files, component-namespaced: `i18n/de.json` with keys
+     `<tag>.<key>`. **No tiering, no override stack** — a key resolves in exactly one place; do
+     not add a global or page layer without reopening the ADR. **Staleness is the subtle part:**
+     a source-string edit is a `.tsrx` edit that silently invalidates that key's translations, so
+     detection must notice a moved source string, not just an absent key.
+  3b. **Report artifact and `i18n:sync`.** The build stays READ-ONLY: emit a gitignored report
+     (machine-readable per locale + a human summary) and the census count in the build summary.
+     A separate explicit `bun run i18n:sync` writes missing keys into the committed catalogs as
+     empty entries — run by a person, diffable in review. The build must never write tracked
+     files (non-idempotent builds, CI writing to the working tree).
+  4. **Missing keys** fall back to the source-locale string and land in the build report's
+     **translation census** (ADR 0030 s5) — NOT the compile-warning channel, since a missing key
+     is not author-fixable and would restart the non-zero-baseline drift ADR 0029 s6 removed.
+     Reuse `sim/report.ts`, the same channel as the tier census.
+  5. **The untranslated-literal warning** — literal prose inside a component that otherwise uses
+     the catalog. This one IS author-fixable, so it is a genuine compile warning and must
+     converge to zero. **Channel:** compiler. **Tier:** 1 (Prevented) per ADR 0028. **Tech
+     Writer owns the copy** (new TSRX code; `tech-writer`'s `workflows/error-message-lifecycle.md`
+     carries the propagation checklist).
+  6. **Verify the tiering payoff.** With a server-known locale, `Intl` folds (LT-142) and
+     `basic-pluralize` should become tier-1 eligible, dissolving its six standing TSRX034
+     warnings. If it does not, either the fold rule or the classifier is wrong — investigate
+     rather than accepting tier 2. `basic-blogmeta` should fold too, but ONLY once its date
+     handling stops reading the build machine's timezone: it currently does
+     `new Date(year, month - 1, day)` (local zone) and `new Intl.DateTimeFormat(locale, {dateStyle})`
+     with no `timeZone`. For a date-only value use `Date.UTC(y, m - 1, d)` with
+     `timeZone: 'UTC'` — never shifts the day, reads no ambient state (ADR 0030 s2; this closes
+     the question ADR 0029 s5 left open). Coordinate with LT-095, which reshapes this component.
+  7. **Per-locale pruning of rendered alternatives** (ADR 0030 s6). A component rendering one
+     alternative per plural category prunes to the locale's actual set — `{one, other}` for
+     English instead of all six. Read the set from
+     `Intl.PluralRules(lang, opts).resolvedOptions().pluralCategories`, NOT a hand-maintained
+     table (same posture as ADR 0024 s4's ARIA mapping). Cardinal and ordinal differ, so prune by
+     the configured `type` and fall back to their union when it can't be proven.
+     **The client-side `hidden` toggles do NOT retire** — the locale is fixed but `host.count` is
+     a reactive prop, so the category still changes at runtime and the client can only select
+     among strings the server rendered. Removing the toggles would freeze every pluralized string
+     at its initial count. Pin this with a fixture that changes `count` after connect.
+  Acceptance: a component declaring `i18n` receives it with no caller change; an authored `lang`
+  overrides the record and renders as the root attribute; a missing key renders the source
+  string and appears in the census, not the warning stream; an untranslated literal warns;
+  `basic-pluralize` classifies tier 1, renders two category spans on an `en` page, and still
+  re-selects correctly when `count` changes after connect; the build writes no tracked file;
+  `bun test server` green.
+  **Depends on LT-165** (the classifier must exist before the tiering payoff in step 6 is
+  checkable).
 
-- [x] LT-166: Memoize simulated renders on `(component, args)`. — reviewed ✓ (scheduled ahead of its trigger by explicit owner request, 2026-09-03 — the +1.0 s trigger had not fired: no wave-4 migration has run and no build consumes the driver yet)
+- [ ] LT-175: Measure and contain the per-locale impact on LT-166's render cache (exploration).
   **Skill:** docs-server-dev
-  **Context:** LT-152 measured the cliff and the mitigation both. **The cliff:** simulating every site-component occurrence in the built docs costs 3.9 s on jsdom (3,327 occurrences, ~1.17 ms/render mean), and ~91% of that is `module-scrollarea` (2,091 occurrences) plus `module-codeblock` (299). Stage 1 costs ~0.1 s only because those two are still hand-written `.ts` and outside the driver's scope — **LT-096 and LT-103 migrate exactly them**, so wave 4 is what moves the bill into scope. **The mitigation, measured not assumed:** repeat renders of the same component with the same markup in the same realm are byte-identical, corpus renders in two different orders are byte-identical, and a `(component, args)` cache would hit **93.5%** on the built docs (216 unique attribute signatures across 3,330 occurrences). ADR 0027 sub-design 10 records why that needed measuring rather than inheriting — one shared document and one module cache per build put today's pure-`render*()` isolation at risk. **Owner decision, 2026-09-03: do not pre-build it.** A cache in the first driver is speculative complexity at 0.1 s. **Trigger:** during wave 4, when a migration takes the simulated build stage more than 1.0 s above its pre-migration figure, this task is scheduled *in that migration's wave*, not deferred past it. Note the figure in each of LT-096 and LT-103's handoffs so the trigger is observed rather than remembered. Acceptance when it fires: the cache keys on `(component, serialized args)`, LT-164's two-order invariant still passes with the cache enabled (a cache that breaks order-independence is a wrong cache), and the measured build stage returns below the trigger.
+  **Context:** **Owner decision, 2026-09-04: do this as a measurement round before designing
+  anything.** The direction of the net effect is genuinely unknown, which is why it is a spike
+  and not an obligation buried inside LT-174. Pulling the other way: per-locale rendering
+  multiplies the corpus (~3,700 occurrences → N × 3,700) and LT-166's `(component, markup)`
+  memoization now varies by locale, so the measured **93.5% hit rate will drop**. Pulling back:
+  ADR 0030's tier-1 promotion means i18n components stop being simulated at all, and per-locale
+  pruning (LT-173 step 7) shrinks the markup that is the cache key. **Measure, don't estimate:**
+  hit rate and simulated-stage wall time at 1 locale vs. 2, split by tier, with and without
+  pruning. Then decide whether containment is needed at all and what shape it takes (locale in
+  the key vs. a locale-invariant key for components that don't consume `i18n`; the latter looks
+  promising since most components won't declare the parameter, but confirm it rather than
+  assuming). Record the figures in the handoff — nobody has measured the net, and ADR 0030's
+  consequences section says so explicitly. **Depends on LT-173.**
 
-  **Changed:** `server/tsrx/sim/realm.ts` — `render()` memoizes on `(component, markup)` in a per-realm `Map`; only a **completed connect** (quiescent, non-degraded) is stored, so contained-throw and non-quiescent renders re-run per occurrence and their diagnostics keep firing; a hit returns the first pass's bytes without reopening a connect window. Module header gained a "Render memoization" section (key semantics, first-occurrence diagnostics, time-dependent renders stabilizing on the first observed value per sub-design 6, map lifetime = realm lifetime). `server/tests/tsrx/sim-realm.test.ts` — new "render memoization (LT-166)" describe: repeat render returns memoized bytes with exactly one connect (probe counter), degraded renders throw per occurrence (2 component-throws), non-quiescent renders overrun per occurrence (2 diagnostics). `server/tests/tsrx/sim-driver.test.ts` — the two-order invariant's comment now states the cache deliberately stays enabled per this task's acceptance (the comparison is what catches a wrong cache).
-  **How:** The key is `(component, markup)`, not `(component, serialized args)` — the driver's API consumes markup, identical serialized args render to identical markup through the pure server render functions, and the markup is the simulation's actual input, so the surrogate is at least as precise. First-occurrence-wins semantics also give deterministic builds for free: a `Date.now()`-reading thunk (allowed through by sub-design 6) stabilizes on the first simulated value instead of varying per occurrence. The two-order invariant retains its power under the cache: order 1's side returns memoized bytes, order 2's realm renders fresh in reversed order, so the per-tag equality is exactly the "cache must return what a fresh render would" check. Acceptance items: keying ✓, invariant green with cache ✓; the third (build-stage wall time below trigger) is **not yet measurable** — no build consumes the driver (ADR 0027's "nothing consumes the artifacts yet"), so it transfers to the stage-2 build wiring. Verified: `bun test server/tests` 1343 pass (was 1340; +3 memoization tests), sim-driver file 968–1132 ms range unchanged, `check:sim` byte-identical Bun/Node, biome clean apart from the pre-existing `globals.d.ts` warning.
-
-  **Review (architect, 2026-09-03):** Approved, owner override confirmed. The pre-trigger scheduling is legitimate owner authority and is recorded verbatim on the task line, not buried — that was the one record-honesty risk and it is handled. Gates re-run: the three new memoization tests pass, both LT-164 invariants stay green with the cache enabled, full suite 1343 pass. **Scrutiny the handoff invited, applied:** (a) the surrogate key is sound — the key string is injective (NUL cannot appear in a custom element name, so the split point is unambiguous), and keying on markup rather than args is strictly at least as precise for the simulation's actual input; (b) the "wrong cache" hazard the acceptance names is genuinely covered — order 1 rides cache hits while order 2's realm renders fresh in reversed order, so a cache returning anything but fresh-render bytes fails the per-tag comparison; (c) the fixed-point gate keeps full power — pass-2 markup always differs from pass-1, so it can never be a cache hit; (d) first-occurrence-wins diagnostics are confirmed as intended semantics (the baseline tests are count-agnostic, the report de-duplicates by construction, and a build wanting per-occurrence diagnostics for a degraded component gets them because degraded renders never cache). Two consequences propagated: the LT-096/LT-103 trigger instructions are amended (nothing left to schedule — record wall-time figures and verify cache engagement instead), and the transferred acceptance item (build-stage measurement + cache-engagement verification) is LT-169's item 4. Sub-design 10 anticipated exactly this mitigation ("renders remain a pure function of `(component, args)` for caching purposes"), so no ADR edit is owed.
-
-- [x] LT-167: Driver polish from the LT-154 review — stale network-stub doc, probe drain dedup, undefined-bearing fixture args. — done ✓
+- [ ] LT-174: Per-locale page rendering for the docs site (ADR 0030 s1).
   **Skill:** docs-server-dev
-  **Context:** Four small items from the LT-154 and LT-163 reviews; none touches the driver contract. Can ride with LT-163's wave. (1) `server/tsrx/sim/patch-table.ts`'s NETWORK_GLOBALS section comment (~line 219) still says "reporting, rejecting no-op" — the amended sub-design 2d contract, which the `NetworkGlobalPatch` type doc and `denyNetwork` already state correctly, is **never-settling**; fix the stale sentence and drop the now-moot swallowed-rejection rationale. (2) `scripts/lib/substrate-probe.ts` keeps a probe-local `drainToQuiescence` (~line 514) even though the file already imports `assertSynchronousWindow` from `server/tsrx/sim/boundary.ts`, whose production drain (read-callback form) fits the probe's two call sites in `scripts/substrate-evaluation.ts` — delete the local copy and its local `QuiescenceResult`. (3) `server/tests/tsrx/sim-driver.test.ts`'s ARGS copy `server-render-smoke`'s verbatim, so the corpus goldens pin fixture artifacts rather than authored behavior: card-blogpost/card-callout render the literal text `undefined` (unpassed composition `children` through `String(children)`), and form-radiogroup renders `<legend>undefined</legend>` (ARGS passes `label`; the component's prop is `legend`, `form-radiogroup.tsrx:62`). Pass `legend: 'Pick one'` and a `children` string to the two cards, re-baseline exactly those three snapshots, and leave every other pin untouched. (4) **From the LT-163 Tech Writer review:** `scripts/sim-portability-check.ts` prints diagnostics as raw `${kind}: ${message}` without attribution (`scripts/sim-portability-check.ts:199`), which is subject-less for the kinds whose copy assumes a prefix (network, non-quiescent) and omits the component; print via `formatSimDiagnostic` from `server/tsrx/sim/report.ts` instead. Acceptance: all four done, `bun test server/tests` green with the re-baselined snapshots, a comment on ARGS noting where it now diverges from the smoke test's, and `check:sim`'s diagnostic lines attributed.
+  **Context:** Path-prefix routing (`/de/guide`, `/en/guide`), one SSG page per locale, locale
+  fixed before rendering begins. **The build-time-constant property is load-bearing, not an
+  infrastructure preference** — it is what lets `Intl` fold and keeps i18n components on tier 1;
+  a request-time locale would unfold every `Intl` call and push the whole i18n corpus to tier 2.
+  **Perf obligation:** the corpus's ~3,700 occurrences become N × 3,700, and LT-166's
+  `(component, args)` memoization now keys on locale, so the measured 93.5% hit rate will drop
+  by an amount that depends on how many components consume `i18n`. Re-measure when the second
+  locale lands and record the figure — it partially offsets ADR 0029's tier-0 savings, and
+  nobody has measured the net yet — **LT-175 is that measurement, and it should land first.**
+  **Depends on LT-173 and LT-175.**
 
-  **Changed:** all four items. (1) `patch-table.ts`'s NETWORK_GLOBALS section doc now states the never-settling contract (report at call time, promise never settles, `@pending` stays shipped) with the swallowed-rejection rationale dropped. (2) the probe-local `drainToQuiescence`/`QuiescenceResult` deleted from `substrate-probe.ts`; `substrate-evaluation.ts` imports the production drain from `server/tsrx/sim/boundary.ts` and both call sites pass a read callback (`querySelector(tag)?.outerHTML ?? ''`) — `check:sim` byte-identical Bun/Node confirms behavior unchanged. (3) ARGS: `label` → `legend` for form-radiogroup, `children` bound for the two cards (dead `title`/`href` smoke-copy args dropped), divergence comment added; verified before re-baselining that exactly the 3 expected fixtures failed and exactly 3 snapshot bodies changed — the other 19 pins are byte-identical (the key-line moves in the same snap diff are LT-164's title rename, recorded there). (4) `check:sim` prints via `formatSimDiagnostic` (imported from `sim/index.ts`), and the probe's JSON now carries `level` so a console diagnostic formats with its channel; the 160-char truncation is dropped so the final copy prints whole. Verified: `bun test server/tests` 1340 pass, `check:tsrx` at the standing 16-line baseline, `check:sim` attributed lines + byte-identical, biome clean apart from the pre-existing `globals.d.ts` warning.
-
-- [x] LT-168: Reconcile the compile-warning baseline — six `basic-pluralize` TSRX034 warnings contradict the "cleared by LT-142" record. — reviewed ✓
-  **Skill:** le-truc-dev
-  **Context:** Found by the LT-163 review (2026-09-03), which counted `check:tsrx`'s warnings in full for the first time this wave: the output is 16 lines = **8 unique standing warnings** — six `basic-pluralize` TSRX034 (lines 79–84, the `hidden={() => pluralCategory(host) !== '…'}` thunks), form-listbox TSRX034, form-tokenbox TSRX039 — each printed twice by the two compilation passes. Every record that says otherwise is wrong for this branch: the LT-142 archive line ("cleared six of the eight … leaving 2"), the LT-152 review's "the corpus baseline is 2, not 8", and LT-145/LT-146's "one of the two warnings still standing". Verified pre-existing at HEAD via stash (16 lines there too), and `git log` shows no commit since LT-142 (d553fb78) touched `basic-pluralize.tsrx`, `evaluability.ts`, or `examples/_common/getLocale.ts` — so "cleared six" never held on this branch's CLI output, and the LT-142 verification likely measured a since-reverted reshape or a different instrument. The substance: `pluralCategory` is an authored const whose body calls `new Intl.PluralRules(getLocale(el), el.hasAttribute('ordinal') …)` — the locale argument is an opaque imported helper walking `closest('[lang]')`, and the `hasAttribute` read is a DOM sensor, so the fold as landed plausibly CANNOT prove these thunks server-renderable and the six warnings may be CORRECT refusals (the component's own header documents the thunks as having no server-renderable initial value). Note the tension with LT-142's rule and with the LT-153 plan: under simulation these thunks render correctly (the `sim-driver` snapshot pins count `0` + one visible plural arm), and TSRX034 retires entirely at stage 3 (LT-165) — so the six may be stage-1 noise worth carrying honestly rather than fold-rules worth extending. **Decide with evidence, do not assume:** (1) establish why LT-142's verification reported the six cleared (find the instrument or the reshape it measured); (2) determine whether the fold CAN be extended to fold `pluralCategory(host)` as authored (inline the const, prove the locale server-known, fold or refuse `hasAttribute('ordinal')`) without widening the grammar per-idiom — ADR 0027 sub-design 6 and the Alternatives section's "widen the splice grammar" rejection both bear on this; or (3) accept the eight-unique baseline as the honest stage-1 number, re-record it everywhere (LT-142 archive line, LT-152 review, LT-145/LT-146 texts, TESTS.md), and let LT-165's retirement dissolve the six. Either way the wave-4 regression signal's first number must be a COUNTED figure, not a remembered one — add the count to `check:tsrx`'s summary line so the next reconciliation reads it instead of tail-reading it. Schedule before wave 4 (the signal must be honest before migrations rely on it); does not block the ADR acceptance milestone. Acceptance: the true baseline is counted by the tool and recorded consistently in TODO.md and TESTS.md; the pluralize six are either folding (with the corpus snapshots still passing) or documented as correct refusals; no record in this repo claims a warning count that `check:tsrx` contradicts.
-
-  **Changed:** `scripts/check-tsrx.ts` (the only code change) — the corpus compile's warnings are captured during the run (the runner owns the `⚠️` format and prints each once per compilation pass), deduped across the passes, and printed in an end-of-run summary line: `Compile-warning baseline: N unique standing warning(s) (M lines across the two compilation passes) — the wave-4 regression signal's first number. Read this count; do not tail-read the ⚠️ lines.` Printed unconditionally, including at zero. Every stale count record in TODO.md and TESTS.md now carries a bracketed LT-168 correction (LT-152 review finding 3, LT-153 decisions 2 and 5, the gate-wave LT-146 bullet and its target bullet, the LT-154 review line, LT-163's handoff How, LT-143/LT-145/LT-146 task texts, the LT-142 archive line) — appended, not rewritten, so the mis-record stays visible as history.
-  **How (the evidence, per the task's decide-with-evidence mandate):** **(1) The count was never 2, and the instrument is proved.** `check:tsrx` run at d553fb78 — LT-142's own commit — in a throwaway worktree reports the identical 16 lines / 8 unique standing warnings. Combined with LT-142's own acceptance text ("the 8-warning baseline drops only by what LT-143/LT-133 then claim") and its diff (component untouched; +109 lines of unit fixtures only), the mis-record is a compression: the six were to clear via **LT-143's reshape** (`pluralCategory(count, locale, ordinal)`), which was planned, never executed, and then superseded by LT-153 (simulation makes the reshape unnecessary — and LT-143's re-scoped text now forbids applying it). The "cleared six, leaving 2" sentence entered the record at the LT-152 review and propagated to the archive line and LT-145/LT-146. **(2) The fold cannot fold `pluralCategory(host)` as authored — three independent gates, read from `evaluability.ts`:** `isServerEvaluable`'s `dependenciesOf(node).isSubsetOf(scope)` fails first (`pluralCategory` is a factory-scope const, not a server arg — the analysis has no interprocedural follow into authored closures); even inlined, `containsImpureAmbient` walks only the thunk's own AST, so the `Intl.PluralRules` construction inside the const's body is invisible, and `isLocaleResolvable` admits only a string literal or an in-scope identifier — `getLocale(el)` is a call to an imported helper walking `closest('[lang]')`, refused; and `el.hasAttribute('ordinal')` is a DOM sensor no static fold can answer. Extending the fold would require per-idiom interprocedural proof rules — precisely what ADR 0027's Alternatives section rejected ("every new idiom needs its own proof rule") and sub-design 6 retired the whole question. **(3) Decision: path 3** — the eight-unique count is the honest stage-1 number, tool-counted from now on; the six are documented as correct refusals (whose omission is even visually neutral here: the affected spans sit inside a server-hidden parent); the gate-wave target becomes the counted **6 unique** (LT-145 8→7, LT-146 7→6) with zero deferred to stage 3 (LT-165 retires TSRX034 and the determinism gate together). No library code changed.
-  **Check:** (1) The path-3 decision itself is the architect-confirmable item: accepting 6-unique as the gate-wave compile target (not 0) rewrites what "a zero-warning corpus before LT-095" meant — the build-report instrument still hits zero, and LT-165 delivers the compile zero at stage 3. (2) The warning-count capture in `check-tsrx.ts` intercepts `console.warn` around the `compileTsrxCorpus` call and filters on the `⚠️` prefix — if the corpus runner's reporting format ever changes, the count moves with it; the filter, not the interception, is the coupling point. (3) The worktree evidence run used a symlinked `node_modules` (worktree removed after); its 16-line output was read in full, both passes — the count is reproducible by anyone with `git worktree add` + the summary line's instruction. (4) The six warnings' text ("silently OMITTED... renders the visible state") is arguably over-alarming for THESE six sites (the parent's server-rendered `hidden` contains the omission) — left untouched: rewording TSRX034's copy is Tech Writer territory and the rule retires at stage 3 anyway.
-
-  **Review (architect, 2026-09-03):** Approved — path 3 confirmed, and the evidence meets the task's own decide-with-evidence bar. The archaeology was re-verified from primary sources, not the handoff's summary: LT-142's commit (d553fb78) read directly (component untouched, +109 unit-fixture lines, acceptance text explicitly deferring the six to LT-143/LT-133), and `check:tsrx` re-run in a fresh worktree at that commit returned the identical 16-line / 8-unique output, read in full. The fold analysis was checked against `evaluability.ts`'s source, and the three gates are real and independent: the scope-subset check fails on the out-of-scope `pluralCategory` identifier before the ambient walk even runs; `isLocaleResolvable` admits only string literals and in-scope identifiers, refusing the `getLocale(el)` call; and the `hasAttribute` sensor is unanswerable statically. Widening the fold would be the per-idiom proof-rule growth ADR 0027's Alternatives section rejected — so "correct refusals" is the right classification, not a consolation prize, and their retirement with TSRX034 at LT-165 is already planned. **The consequence is accepted and now recorded:** the gate-wave compile target is the tool-counted **6 unique** (LT-145 8→7, LT-146 7→6), zero arrives at stage 3; the wave-4 signal's first number reads from `check:tsrx`'s summary line, which I verified live (the apparent 17th ⚠️ line in one grep was the summary line's own "do not tail-read the ⚠️ lines" text — the count is exactly 16/8). The ⚠️-prefix interception coupling (check item 2) is accepted for a dev tool; if the runner's format ever changes, the summary line's count changes with it visibly. The record-correction sweep is verified complete: a repo grep for the stale figures returns only bracketed corrections and this task's own record. TSRX034's copy left untouched (check item 4) — confirmed; it states a general risk correctly and retires at stage 3.
-- [ ] LT-169: Wire the simulation driver into the docs build (stage 2) — the obligations four reviews scattered across records.
-  **Skill:** docs-server-dev
-  **Context:** ADR 0027 stage 2 — the build consumes the driver. Nothing consumes the artifacts yet (LT-154's scope note), and every review since has parked one obligation on that future wiring; this task consolidates them so the wiring is done once, against the full list, rather than re-derived. **The consolidated obligations:** (1) **Disposal is build-process scope, not test-file scope** (LT-154 review, check 4) — `dispose()` at most once, after every render the build will ever do, never between; a disposed realm's deleted globals turn a contained component's lingering dependency-wait into a synchronous `customElements is not defined` flood that aborts the process. (2) **The build report surfaces through `reportDiagnostics`** (LT-163) — the same partition the tests read; zero-unclassified is the build's own gate, the classified `getContext` entry stays listed with its reason, and the report copy is final (Tech Writer, 2026-09-03). (3) **The fixed-point gate's placement decides** (LT-164 review): the corpus test carries it today and auto-extends to every future corpus component; the wiring may either keep it test-only or run a second connect per render at build time — per-render doubles simulation cost and is NOT required for correctness while the corpus test exists, so the default is test-only unless a stage-2 finding says otherwise. (4) **The memoization's transferred acceptance lands here** (LT-166): measure the simulated build stage's wall time (the LT-096/LT-103 handoffs record their before/after figures — collect both) and verify the render cache engages (unique `(component, markup)` pairs vs render count; LT-152 measured a 93.5% would-be hit rate at docs scale). (5) **Per-substrate goldens posture holds** (LT-164): the build serializes with jsdom; if the substrate ever swaps, the snapshot re-baseline is expected and is not a behavior change (the fixture-file header says so). Acceptance: the build runs the driver over `server/generated/tsrx/` components, a new build-report entry fails the build naming the component, disposal is provably end-of-build, and the wall-time and cache-engagement figures are recorded in the handoff.
-
-## Gate wave — resumes after the acceptance milestone
-
-- [x] LT-143: `basic-pluralize` server-renders "task ssss remaining" — verify it renders correctly under simulation. — reviewed ✓
-  **Skill:** docs-server-dev
-  **Context:** **Re-scoped by LT-153 (2026-09-03); depends on LT-154, no longer on a fold route.** The bug is live and re-verified 2026-09-03 by rendering the generated module: `renderBasicPluralize({count: 3})` emits `…<span class="count"></span>task<span class="zero"></span><span class="one"></span><span class="two">s</span><span class="few">s</span><span class="many">s</span><span class="other">s</span>remaining…` — all six plural spans visible at once and the count empty. Pre-JS that reads "task ssss remaining". **It is now silent as well as wrong:** LT-142 cleared this component's six TSRX034 warnings without changing the markup, an accepted owner trade (2026-09-03) because LT-154 fixes it by rendering. [Corrected by LT-168: LT-142 did NOT clear them — the six warnings still stand as correct refusals of the fold; what made the render silent was the accepted retirement of the stopgap diagnostic. The simulated render is correct, which is what matters here.] **The task's original two-part reshape is superseded.** Under simulation `pluralCategory(host)` runs exactly as authored — `host` escaping as a bare call argument is no longer a disqualifying shape, because nothing is being proved — and `{host.count}` renders because the thunk executes. **So this task is verification, not reshaping:** confirm the simulated render emits exactly one visible plural span and the correct count for several `count` values, fixture-pin it, and delete any workaround the drift forced. **Do not reshape the helper to `pluralCategory(count, locale, ordinal)`** — that reshape existed only to satisfy the fold grammar, and applying it now would hide whether simulation actually works on the authored shape. If the simulated render is still wrong, that is a LT-154 finding, not a component fix.
-  **Changed:** `server/tests/tsrx/gate-wave-verification.test.ts` (new) — a compiled-fresh `basic-pluralize` fixture rendered and simulated-connected for `count` in `{0, 1, 2, 3, 5, 11}`.
-  **How:** For every value, exactly one of the six CLDR spans is visible after simulated connect and matches `new Intl.PluralRules('en').select(count)`, and `<span class="count">` carries the count text. No component or compiler change — `pluralCategory(host)` and `{host.count}` already run correctly under the driver, confirming ADR 0027's premise. No workaround existed to delete.
-  **Check:** confirm the six standing `basic-pluralize` TSRX034 warnings are correctly left untouched here — LT-168 already classified them as correct refusals retiring at stage 3 (LT-165), out of this task's scope.
-  **Review (architect, 2026-09-03):** Approved. Re-ran independently: `bun test server/tests/tsrx/gate-wave-verification.test.ts` (16 pass), `bun run check:tsrx` (still 8 unique — confirms the six `basic-pluralize` warnings are untouched, as intended). The fixture is well-isolated (one compiled component, no corpus-wide rebuild) and each of the six `count` values asserts both the plural-category selection and the visible-span count, not just one or the other. No workaround existed to delete, and none was invented — the developer correctly declined to reshape `pluralCategory`, honoring the task's explicit prohibition.
-
-- [x] LT-133: `basic-number` server-renders no text — verify it renders correctly under simulation. — reviewed ✓
-  **Skill:** docs-server-dev
-  **Context:** **Re-scoped by LT-153 (2026-09-03); depends on LT-154, no longer on a fold route.** `renderBasicNumber()` emits `<basic-number …></basic-number>` — empty. The root text child is `{() => getNumberFormatter(getLocale(host), host.getAttribute('options')).format(host.value)}` (`basic-number.tsrx:61`): it reads `Intl` through a helper AND `host`, and today neither is server-known. Under simulation both simply run. **Same posture as LT-143: verify, do not reshape.** The `getLocale(host)` walk resolves against the simulated fragment (own-attribute-or-null — ADR 0027 sub-design 6's documented fidelity limit), so pin what it resolves to rather than assuming the page's `lang`. Acceptance: `renderBasicNumber()` emits the formatted number under the driver, `basic-gauge.html` no longer needs its hand-authored `84%`, and the removal of that workaround is verified in a browser (every `basic-gauge` composition inherited the drift).
-  **Changed:** `server/tests/tsrx/gate-wave-verification.test.ts` (new) — `basic-number` fixture-pinned standalone (`0.84`/`0.65`/`0.20566788` → `84%`/`65%`/`20.6%`) and composed under `basic-gauge`; `examples/basic/gauge/basic-gauge.html` — dropped the hand-authored `84%`/`65%`/`20.57%` text content from the three `<basic-number>` fixtures, now empty elements relying on simulated/real connect to fill them in.
-  **How:** `getLocale(host)` resolves to `'en'` under simulation (own-attribute-or-null fidelity limit, no ancestor `[lang]` in the fragment) and `getNumberFormatter` runs `Intl.NumberFormat` for real, so the thunk folds correctly at connect with no reshape needed. Verified in a real browser, not just simulation: `bun run serve:examples` + Playwright against `/test/basic-gauge` — all four existing specs in `basic-gauge.spec.ts` still pass, and an ad hoc check (not committed) confirmed the three `<basic-number>` elements render exactly `84%`/`65%`/`20.6%` post-hydration with zero console errors.
-  **Check:** the demo's rounding (`20.6%`, not `20.57%`) comes from `maximumFractionDigits: 1` in the options JSON, matching the original hand-authored value's own `maximumFractionDigits: 1` for the OTHER two entries but not the third (`20.57%` had 2 significant decimal digits) — the old hand-authored text for the third gauge was itself slightly inconsistent with its own `options`; the new client-rendered `20.6%` is the options-correct value.
-  **Review (architect, 2026-09-03):** Approved. Verified the `basic-gauge.html` diff directly (`git show`) — exactly the three `<basic-number>` elements' text content dropped, nothing else touched. Re-ran the browser check independently (`npx playwright test examples/basic/gauge/basic-gauge.spec.ts` — 4/4 pass) and confirmed the developer's own ad hoc finding by re-adding an equivalent one-off spec: all three gauges render `84%`/`65%`/`20.6%` post-hydration with zero console errors, then removed the throwaway spec. The rounding-discrepancy finding is correct and immaterial — `20.6%` is what the fixture's own `options` always specified; the old `20.57%` was a stale hand-authored value that never matched its own `maximumFractionDigits: 1`, so this change is a silent correctness fix on top of the workaround removal, not a new discrepancy.
-
-- [x] LT-144: Pin what survives of the silent-empty-render class under simulation. — reviewed ✓
-  **Skill:** docs-server-dev
-  **Context:** **Re-scoped by LT-153 (2026-09-03); depends on LT-154.** This was filed as a diagnostic task: `<span class="count">{host.count}</span>` server-renders empty with zero diagnostics, and the correct spelling `{count}` is one character shorter — the last known member of the LT-092 silent-empty class. **Under simulation the class largely dissolves** (ADR 0027 Consequences): the markup emits the empty span and `bindText` fills it at connect, so `{host.<prop>}` and `{count}` converge on the same rendered output. **So do not build the diagnostic this task was filed for.** Instead: (1) fixture-pin that both spellings render identically under the driver, for a prop with a same-named server arg and for one without; (2) identify what does *not* converge — the two spellings still differ in which client bindings the compiler plans (LT-122's one-site-three-roles survives LT-153 untouched), so a difference in *planned bindings* is a real remaining distinction even when the initial HTML matches; (3) if any silent-empty case survives simulation, file it as a fresh task with the fixture attached rather than reviving this one. **Folded in from NOTES.md (2026-09-02):** the original fix-it did not hold when the prop is Parser-exposed with no server arg — that case is LT-145, and under simulation the Parser runs, so check the two together.
-  **Changed:** `server/tests/tsrx/gate-wave-verification.test.ts` (new) — two `basic-pluralize` clones (`c-count-host`, `c-count-bare`) compiled from the real source with only the count span's spelling swapped, rendered and simulated-connected for `count` in `{0, 1, 3}`.
-  **How:** Item (1), the "with a same-named server arg" half: both spellings converge on identical `<span class="count">N</span>` text for every value tested — `count` is Parser-exposed AND a root server attribute here, same shape LT-143 already pins. Item (1)'s "without a server arg" half is covered together with LT-145 below, per this task's own folded-in note — `form-listbox`'s `filter` is the corpus's real instance of that shape and has no natural `{count}`-style bare-identifier counterpart to pin (a bare identifier requires the prop to be a function parameter in scope, which `filter` isn't). Item (2), the non-convergent remainder: confirmed by construction, not a fresh fixture — `{host.count}` compiles to `watch(() => host.count, bindText(...))` (a live client binding) while bare `{count}` compiles to a compile-time literal substitution with no client binding at all (same class as `root-lazy-text.test.ts`'s bare-identifier auto-wrap, `card-callout.tsrx`'s `{children}`); LT-122's one-site-three-roles finding already documents this and is unaffected by LT-153. Item (3): no silent-empty survivor found — nothing to file.
-  **Check:** the synthetic fixtures live only in this test file (not under `examples/`) since they exist solely to isolate the spelling variable; confirm that's the right call rather than adding permanent corpus noise.
-  **Review (architect, 2026-09-03):** Approved, with one follow-up filed (LT-170) rather than a re-open. The test-local synthetic fixtures are the right call — cloning `basic-pluralize`'s real source with only the count span's spelling swapped isolates exactly the one variable in question, and keeping them out of `examples/` avoids two permanent corpus entries that exist solely to prove a compiler-internals point no author would ever intentionally write both ways. Convergence (item 1) is soundly pinned for both `count` values tested. Item (2), the non-convergence claim, is where I found a gap: `test('the reactive spelling plans a client binding the static spelling does not', ...)` (line 220) only asserts `hostVariant.spans`/`bareVariant.spans` are truthy — that's true of any compiled component and asserts nothing about the binding-plan difference the test's own name and the surrounding comment claim. The claim itself is correct (verified by hand: `hostVariant`'s `clientCode` contains `watch(() => host.count, bindText(`, `bareVariant`'s does not), but the test doesn't check it, so it would pass even if that difference disappeared. Filed as LT-170 — not blocking, since the convergence half (this task's actual acceptance criterion) is solid.
-
-- [x] LT-145: Pin that a Parser-exposed prop with no server arg renders its fallback under simulation. — reviewed ✓
-  **Skill:** docs-server-dev
-  **Context:** **Re-scoped by LT-153 (2026-09-03); depends on LT-154.** This was filed as a fourth fold route: `hidden={() => !host.filter}` on `form-listbox`'s clear button (`form-listbox.tsrx:141`) is omitted from the initial HTML because `filter` is `expose({ filter: asString('') })` with no `filter` server arg and nothing on the root — so `foldableHostProps` admits it by neither route. **Under simulation there is no route to add:** the server renders no `filter` attribute, the Parser resolves its fallback `''` at connect, and the thunk runs. **So the task is to pin it, not to build the route.** Acceptance: the clear button renders `hidden` in the driver's output; `form-listbox`'s TSRX034 is gone (counted-baseline arithmetic corrected by LT-168: the standing baseline is 8 unique warnings, so this task takes it 8 → 7 and LT-146 takes it 7 → 6; the remaining six `basic-pluralize` refusals retire at stage 3 — LT-165); and the composed case is fixture-pinned — `form-combobox` passes `filter` via `truc:pass`, which applies post-connect and must not affect the initial render. If the fallback does *not* resolve under the driver, that is a LT-154 finding about `expose()` under simulation, not a component fix.
-  **Changed:** `server/tests/tsrx/gate-wave-verification.test.ts` (new) — `form-listbox` rendered with `filterable: true` (the corpus's default ARGS in `sim-driver.test.ts` never sets this, so the clear button was never exercised there) and simulated-connected; `form-combobox` composed case rendered and confirmed hermetic.
-  **How:** `filter` has no seed anywhere in the markup (no root attribute, no argRenderedProps site), so the Parser's own `asString('')` default is the ONLY value the client can ever compute at connect regardless of runtime data — the clear button's `hidden={() => !host.filter}` thunk runs during simulated connect and resolves to `hidden=""`, confirmed by fixture. **Did not touch `evaluability.ts`/`foldableHostProps`**, per the task's explicit instruction not to build the route.
-  **Check — discrepancy found, not resolved here:** the task's acceptance text claims completing this pin takes the compile-warning baseline **8 → 7** (`form-listbox`'s own TSRX034 "is gone"). That warning is a compile-time diagnostic (`check:tsrx`), and is UNCHANGED by this task — `bun test server/tests` still shows the identical `[TSRX034] line 141` warning after this change, because nothing here touches the compiler (per instruction). Pinning the *runtime* correctness of the omission does not make the *compile-time* diagnostic disappear; those are two different gates (LT-153 decision: `TSRX034` becomes a build-time report, but that migration is LT-163/LT-165's, not landed for this specific line). Architect should reconcile: either the 8→7 arithmetic in LT-145/LT-146/LT-168's records is itself the thing that needs correcting (the six-unique gate-wave target may need to become seven-unique), or a follow-up task is needed to actually retire this one compile-time warning (e.g., migrating it into the build-report channel) — that follow-up is NOT this task per its own "pin it, not build the route" instruction.
-  **Review (architect, 2026-09-03):** Approved, and the flagged discrepancy is resolved as the developer's first option, not the second. **Decision: the arithmetic was wrong, not the delivery.** Re-ran `bun run check:tsrx` independently — 8 unique standing, confirmed unchanged. LT-153's own re-scope text for this task ("the task is to pin it, not to build the route") is in direct tension with the acceptance bullet it was attached to ("`form-listbox`'s TSRX034 is gone... 8 → 7") — that acceptance bullet was never updated when LT-153 re-scoped this task from a fold-route task to a pin-only task, and it's the stale half. There is no live mechanism to retire this one warning without either (a) building the fold route (explicitly forbidden here) or (b) TSRX034's blanket stage-3 retirement (LT-165, not due yet) — migrating a single compile-time diagnostic into a build-time report ad hoc, for just this one line, would be exactly the kind of one-off special case ADR 0027's Alternatives section already rejected. So no follow-up task is filed to chase this warning down early. **Correction applied:** `form-listbox`'s TSRX034 now joins the six `basic-pluralize` refusals in the stage-3 retirement bucket (seven total, not six); `LT-146` alone delivers the gate-wave's one real compile-time reduction, 8 → 7. Propagated (append-only, per the LT-168 precedent) to: the gate-wave item-3 and item-5 bullets above, `LT-146`'s own acceptance text below, and `server/TESTS.md`'s two-baselines section.
-
-- [x] LT-146: `form-tokenbox.description` ships through two channels — harvest it from the site. — done ✓
-  **Skill:** le-truc-dev
-  **Context:** One of the **two** corpus warnings still standing as of 2026-09-03 — LT-142 cleared six of the original eight, and the other survivor is LT-145's (TSRX039, `form-tokenbox.tsrx:190`), and a **genuine true positive** [baseline corrected by LT-168: the standing baseline is 8 unique warnings — LT-142 cleared none; this task takes it 7 → 6 after LT-145's 8 → 7, and the six `basic-pluralize` refusals retire at stage 3 — LT-165] — LT-141 confirmed it is not a managed reset baseline and LT-129's sanctioned-override exclusion does not apply, because the Parser (`asString('')`, line 97) does not read the site. `description` is exposed through a Parser reading the host attribute AND rendered into the component's own `<p class="description">` from the `description` arg, so the value ships twice; when the host attribute is absent the Parser's fallback wins and overwrites the server-rendered content on the first binding pass. **Fix is component-side, no compiler change:** follow TSRX-HOST-PROFILE § data account bullet 4 and harvest from the site — `expose({ description: <ref read of the paragraph> })` — then drop the host attribute, exactly as `form-combobox` already does (`descriptionCell`, LT-112/113 children-are-data). **TSRX039 survives LT-153's re-scoping untouched** — it is a data-account rule about which channel owns a value, and simulation does not answer that — so this task is unaffected by the ADR 0027 wave and could be pulled forward if convenient. Acceptance: the warning is gone, the corpus **compile** baseline reaches the counted 6 unique (LT-145 has taken it 8 → 7; the remaining six `basic-pluralize` refusals retire at stage 3 — LT-165; zero compile warnings is the stage-3 state, not the gate-wave one), and the existing form-tokenbox spec stays green. [**Arithmetic corrected by LT-145's review, 2026-09-03:** LT-145 landed as a pure runtime pin per its own "pin it, not build the route" instruction and does not move `check:tsrx`'s count — `form-listbox`'s TSRX034 is still standing (verified: 8 unique). **This task alone takes the compile baseline 8 → 7**, and the gate-wave target is **7 unique** (not 6): the six `basic-pluralize` refusals plus `form-listbox`'s TSRX034 retire together at stage 3 — LT-165.]
-  **Changed:** `examples/form/tokenbox/form-tokenbox.tsrx` — `description: asString('')` → `description: descriptionEl?.textContent ?? ''`, a plain client-side DOM read passed straight to `expose()`, no `asString`/`createCell`/`data-description` involved. `examples/form/tokenbox/form-tokenbox.html` — no change needed once the fix landed in this form (the second demo's hand-authored text was never touched by this final version).
-  **How:** [**Superseded by architect review, 2026-09-04 — the first attempt below was wrong, kept for the record per the append-only convention.**] First attempt harvested via `createCell(description)` + a companion `data-description` attribute, mirroring `form-combobox`'s existing pattern verbatim (see the original paragraph this replaces, still below). On review, the developer/user pointed out the `data-description` attribute exists only to route around a compiler limitation (`harvest.ts`'s `recordSites` not traversing `@if`/`@switch`/`@try` `TemplateNode`s to find a bare-text-child site) and asked why a plain `descriptionEl?.textContent ?? ''` read wasn't sufficient. Verified by compiling and dumping the generated client code directly (`compileComponent()`): `expose()`'s `#setAccessor` (`src/component.ts:526-533`) wraps **any** plain non-Parser/non-Signal/non-function value in `createCell()` automatically, and the compiler equates the bare `{description}` JSX child with `host.description` once `description` is an exposed prop — emitting a real `watch(() => host.description, bindText(descriptionEl))` binding, the same bare-identifier-equates-to-`host.prop` mechanism LT-144 pinned for `{host.count}`/`{count}`. So `expose({ description: descriptionEl?.textContent ?? '' })` is fully reactive, needs no `asString`/`createCell` import, no host attribute, and no `data-description` duplication — strictly simpler than the first attempt and with none of its DOM-duplication cost. Re-verified end to end: `check:tsrx` compiles clean (baseline still the counted 7 unique — this task's contribution to the count is unchanged, only the technique changed), `bun test server/tests src/tests` (1832 pass), and an ad hoc Playwright check against `/test/form-tokenbox` confirming both demos hydrate correctly (box 0, no description: renders empty; box 1: "Each entry must be a valid email address." intact) with zero console errors. `form-tokenbox.html`'s `data-description` attribute (added in the first attempt) was removed as no longer needed.
-  **Original (superseded) How:** `asString('')` read the (absent) host attribute and its fallback overwrote the server-rendered `<p>` text on first bind — the exact TSRX039 shape. Followed `form-combobox`'s `descriptionCell` pattern verbatim rather than inventing a new one. One thing the task text didn't anticipate, found via testing, not assumed: the compiler's harvest for a bare `createCell(description)` inside a bare `{descriptionCell}` text child does NOT find a site when that text child sits inside an `@if` block with no companion attribute — confirmed empirically (removing the `@if` wrapper alone made `check:tsrx`'s TSRX004 "never rendered" error disappear). Added `data-description={description}` to route around it, matching `form-combobox`'s existing (same-limitation-driven) convention. A second issue, found only by browser testing: the hand-authored second demo lacked the matching attribute and had its description silently wiped at hydration; fixed by adding it. **Both of these workarounds are now moot** — the plain-DOM-read technique above needs neither.
-  **Check:** no dedicated `form-tokenbox.spec.ts` exists (the task's "the existing form-tokenbox spec stays green" doesn't have a literal target) — verification rested on `bun run check:tsrx`, the full `bun test server/tests`/`bun test src/tests` suites (no snapshot changes — no corpus fixture sets `description`), and the ad hoc browser check described above. Worth considering whether `form-tokenbox` should get a `.spec.ts` given this class of bug (harvest correctness on hand-authored demo markup) is exactly what a Playwright spec would catch structurally instead of by ad hoc check. **New consideration raised by this review:** should `form-combobox`'s own `descriptionCell`/`data-description` pattern (LT-112/113) be revisited the same way, now that the simpler plain-DOM-read technique is known to work? Not done here — out of scope for this task — but worth a follow-up if the `@if`-harvest limitation in `harvest.ts` isn't going to be fixed directly (see LT-145/LT-146 gate-wave discussion above for that follow-up).
-
-- [ ] LT-170: Strengthen two gate-wave assertions in `gate-wave-verification.test.ts` that don't test what they claim.
-  **Skill:** docs-server-dev
-  **Context:** Filed by the LT-144/LT-145 review (2026-09-03). Two tests in `server/tests/tsrx/gate-wave-verification.test.ts` pass today but don't verify the behavior their name/comment claims — a regression in the underlying compiler behavior would not fail either one. (1) **LT-144's `'the reactive spelling plans a client binding the static spelling does not'`** (line ~220) only asserts `hostVariant.spans`/`bareVariant.spans` are truthy — true of any compiled component. Fix: assert on the actual compiled `clientCode`, e.g. `hostVariant.clientCode` contains a `watch(...host.count...bindText(` call and `bareVariant.clientCode` does not (confirmed by hand during review: this distinction is real and present today). (2) **LT-145's `'composed under form-combobox, initial render stays hermetic'`** (line ~263) only asserts the string `<form-listbox` appears in the composed output — trivially true. `form-combobox` composes its listbox with `filterable={false}`, so there's no clear button to check there; the acceptance-relevant behavior this test should pin is the OTHER known composed-filter case already documented in the LT-154 review ("The combobox's selected-but-`hidden` inner option is authored `truc:pass` filter wiring") — assert the first option renders both `aria-selected="true"` AND `hidden=""` in the initial (pre-`truc:pass`) render, matching `sim-driver.test.ts`'s own corpus snapshot for `form-combobox`, so this file actually pins the case its own task text describes rather than duplicating weaker coverage. Acceptance: both tests fail if the underlying compiled/rendered behavior regresses; `bun test server/tests` stays green.
+## Gate wave — remaining
 
 - [ ] LT-147: Lower reactive `aria-*` on element targets to `bindAria()`, with a reverse IDL name table.
   **Skill:** le-truc-dev
-  **Context:** **Owner decision, 2026-09-02.** v2.6 added `bindAria()` (ADR 0026), and the compiler does not know about it: all 7 reactive ARIA bindings in the corpus lower to `bindAttribute` with a **compiler-synthesized `String()`** — `String(selected.get() === pid)` (module-tabgroup), `String(host.value === optValue)` (form-listbox), `String(parseOklch(host.value).h ?? 0)` (form-colorgraph) — which is precisely the hand-rolled coercion ADR 0026 §2 exists to remove. **Fix:** lower a reactive `aria-*` attribute on an element target to `watch(<thunk>, bindAria(el, '<idlName>'))`, dropping the synthetic `String()` and letting the helper apply ARIA's own coercion (`boolean` → `'true'`/`'false'`, `number` → decimal, `nil` → clear). **Two hard constraints.** (1) The attribute→IDL mapping is a **lookup table, not a transform**: ARIA attribute names carry no inner hyphens, so `aria-valuenow` gives no clue where the camel hump falls (`ariaValueNow`). Build the table by enumerating `ARIAMixin`'s names and applying the library's own forward rule (`ariaAttributeName`, `src/bindings.ts:512`) — do not hand-maintain a second list that can drift from the platform. (2) `ARIAMixin` splits into **44 string-valued props and 8 element-reference props** (`ariaActiveDescendantElement`, `ariaControlsElements`, `ariaDescribedByElements`, `ariaDetailsElements`, `ariaErrorMessageElements`, `ariaFlowToElements`, `ariaLabelledByElements`, `ariaOwnsElements`) that take `Element`/`Element[]`. An IDREF *string* must NEVER be routed to one — `aria-describedby="x"` is not `ariaDescribedByElements`. Map string-valued props only; leave the IDREF attributes on `bindAttribute`. All of the corpus's IDREF ARIA is server-static today, so nothing regresses. Acceptance: the 7 sites lower to `bindAria` with no `String()`, the golden clients update, and all 842 Playwright example specs stay green (they assert on the ARIA *attributes*, which native reflection still mirrors for element targets).
+  **Context:** **Owner decision, 2026-09-02. Unaffected by the phase-1/phase-2 decision** — this
+  is about which binding helper the compiler emits, not about server-execution tiering. v2.6
+  added `bindAria()` (ADR 0026), and the compiler does not know about it: all 7 reactive ARIA
+  bindings in the corpus lower to `bindAttribute` with a **compiler-synthesized `String()`** —
+  `String(selected.get() === pid)` (module-tabgroup), `String(host.value === optValue)`
+  (form-listbox), `String(parseOklch(host.value).h ?? 0)` (form-colorgraph) — which is precisely
+  the hand-rolled coercion ADR 0026 §2 exists to remove. **Fix:** lower a reactive `aria-*`
+  attribute on an element target to `watch(<thunk>, bindAria(el, '<idlName>'))`, dropping the
+  synthetic `String()` and letting the helper apply ARIA's own coercion (`boolean` →
+  `'true'`/`'false'`, `number` → decimal, `nil` → clear). **Two hard constraints.** (1) The
+  attribute→IDL mapping is a **lookup table, not a transform**: ARIA attribute names carry no
+  inner hyphens, so `aria-valuenow` gives no clue where the camel hump falls (`ariaValueNow`).
+  Build the table by enumerating `ARIAMixin`'s names and applying the library's own forward rule
+  (`ariaAttributeName`, `src/bindings.ts:512`) — do not hand-maintain a second list that can
+  drift from the platform. (2) `ARIAMixin` splits into **44 string-valued props and 8
+  element-reference props** (`ariaActiveDescendantElement`, `ariaControlsElements`,
+  `ariaDescribedByElements`, `ariaDetailsElements`, `ariaErrorMessageElements`,
+  `ariaFlowToElements`, `ariaLabelledByElements`, `ariaOwnsElements`) that take
+  `Element`/`Element[]`. An IDREF *string* must NEVER be routed to one —
+  `aria-describedby="x"` is not `ariaDescribedByElements`. Map string-valued props only; leave
+  the IDREF attributes on `bindAttribute`. All of the corpus's IDREF ARIA is server-static
+  today, so nothing regresses. Acceptance: the 7 sites lower to `bindAria` with no `String()`,
+  the golden clients update, and all 842 Playwright example specs stay green (they assert on the
+  ARIA *attributes*, which native reflection still mirrors for element targets). [**Corrected, 2026-09-04 (LT-171 / ADR 0029):** any inherited "the zero-warning
+  baseline from LT-146 holds" reading of this acceptance line is superseded. The baseline's
+  target IS still zero — ADR 0029 sub-design 6 moves the routing signals (TSRX004/TSRX034) out
+  of the warning channel into a tier census rather than declaring a non-zero target — so use
+  the post-0029 zero-warning gate here, not a hand-maintained expected count.]
 
 - [ ] LT-148: Route the component's OWN host ARIA to `internals`, and diagnose CSS that depends on host ARIA attributes.
   **Skill:** le-truc-dev
-  **Context:** **Owner decision, 2026-09-02.** Depends on LT-147's mapping table. Per ADR 0026 §1, host semantics belong on `internals.aria*`: invisible in markup, unclobberable by framework attribute rewriting, and still overridable by the consumer's own attribute. **Fix:** a reactive `aria-*` on the ROOT element lowers to `watch(<thunk>, bindAria(internals, '<idlName>'))` rather than to an attribute write on the host. **The two halves must land in the same commit,** because the routing is what makes the diagnostic necessary: `bindAria()` on an `ElementInternals` target **removes the shadowing content attribute** at its first value assertion (ADR 0026 §1, stale-attribute rule), so a server-rendered `aria-expanded="false"` on the host is deleted at hydration — by design, and fatal to any CSS selecting on it. **So:** diagnose a selector in the component's own `<style>` block that matches the HOST on an `aria-*` content attribute (e.g. `module-tabgroup[aria-expanded="true"]`), with the fix-it naming `:state()` (ADR 0016 §8) as the component-owned styling hook. **The distinction is load-bearing and the diagnostic is wrong without it:** ARIA on CHILD elements stays on the attribute channel (native IDL reflection mirrors element-target writes), so the corpus's three existing `&[aria-selected="true"]` selectors — nested under tab buttons and option buttons in `module-tabgroup` and `form-listbox` — are CORRECT and must NOT warn. Only host-matching selectors do. **Zero corpus sites exercise either half today** (no component has a reactive `aria-*` on its root, and no `<style>` selects host ARIA), so **write both fixtures first**; this is a forward-looking guard, in the LT-125/129 posture. Acceptance: a root `aria-*` thunk lowers to the internals form; a host `[aria-*]` style selector warns; the three child selectors stay silent; the zero-warning baseline from LT-146 holds.
+  **Context:** **Owner decision, 2026-09-02. Unaffected by the phase-1/phase-2 decision**, same
+  reasoning as LT-147. Depends on LT-147's mapping table. Per ADR 0026 §1, host semantics belong
+  on `internals.aria*`: invisible in markup, unclobberable by framework attribute rewriting, and
+  still overridable by the consumer's own attribute. **Fix:** a reactive `aria-*` on the ROOT
+  element lowers to `watch(<thunk>, bindAria(internals, '<idlName>'))` rather than to an
+  attribute write on the host. **The two halves must land in the same commit,** because the
+  routing is what makes the diagnostic necessary: `bindAria()` on an `ElementInternals` target
+  **removes the shadowing content attribute** at its first value assertion (ADR 0026 §1,
+  stale-attribute rule), so a server-rendered `aria-expanded="false"` on the host is deleted at
+  hydration — by design, and fatal to any CSS selecting on it. **So:** diagnose a selector in
+  the component's own `<style>` block that matches the HOST on an `aria-*` content attribute
+  (e.g. `module-tabgroup[aria-expanded="true"]`), with the fix-it naming `:state()` (ADR 0016
+  §8) as the component-owned styling hook. **The distinction is load-bearing and the diagnostic
+  is wrong without it:** ARIA on CHILD elements stays on the attribute channel (native IDL
+  reflection mirrors element-target writes), so the corpus's three existing
+  `&[aria-selected="true"]` selectors — nested under tab buttons and option buttons in
+  `module-tabgroup` and `form-listbox` — are CORRECT and must NOT warn. Only host-matching
+  selectors do. **Zero corpus sites exercise either half today** (no component has a reactive
+  `aria-*` on its root, and no `<style>` selects host ARIA), so **write both fixtures first**;
+  this is a forward-looking guard, in the LT-125/129 posture. Acceptance: a root `aria-*` thunk
+  lowers to the internals form; a host `[aria-*]` style selector warns; the three child
+  selectors stay silent. [**Superseded reference, 2026-09-04; resolved by LT-171 / ADR 0029:** the
+  intermediate note that "the zero-warning baseline no longer applies" was itself too broad.
+  ADR 0029 sub-design 6 keeps the baseline's target at ZERO by moving the routing signals
+  (TSRX004/TSRX034) out of the warning channel entirely into a tier census. So the original
+  acceptance line stands as written — the eight standing warnings' successors are simply not
+  warnings any more.]
+
+- [ ] LT-170: Strengthen two gate-wave assertions in `gate-wave-verification.test.ts` that don't test what they claim.
+  **Skill:** docs-server-dev
+  **Context:** Filed by the LT-144/LT-145 review (2026-09-03). Unaffected by the phase-1/phase-2
+  decision. Two tests in `server/tests/tsrx/gate-wave-verification.test.ts` pass today but don't
+  verify the behavior their name/comment claims — a regression in the underlying compiler
+  behavior would not fail either one. (1) **LT-144's `'the reactive spelling plans a client
+  binding the static spelling does not'`** (line ~220) only asserts `hostVariant.spans`/
+  `bareVariant.spans` are truthy — true of any compiled component. Fix: assert on the actual
+  compiled `clientCode`, e.g. `hostVariant.clientCode` contains a `watch(...host.count...bindText(`
+  call and `bareVariant.clientCode` does not (confirmed by hand during review: this distinction
+  is real and present today). (2) **LT-145's `'composed under form-combobox, initial render
+  stays hermetic'`** (line ~263) only asserts the string `<form-listbox` appears in the composed
+  output — trivially true. `form-combobox` composes its listbox with `filterable={false}`, so
+  there's no clear button to check there; the acceptance-relevant behavior this test should pin
+  is the OTHER known composed-filter case already documented in the LT-154 review ("The
+  combobox's selected-but-`hidden` inner option is authored `truc:pass` filter wiring") — assert
+  the first option renders both `aria-selected="true"` AND `hidden=""` in the initial
+  (pre-`truc:pass`) render, matching `sim-driver.test.ts`'s own corpus snapshot for
+  `form-combobox`, so this file actually pins the case its own task text describes rather than
+  duplicating weaker coverage. Acceptance: both tests fail if the underlying compiled/rendered
+  behavior regresses; `bun test server/tests` stays green.
+
+- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013.
+  **Skill:** le-truc-dev
+  **Context:** [**Rewritten 2026-09-04 against ADR 0029; the original "delete the evaluability
+  machinery" premise, and its 2026-09-04 interim retitle, are both superseded.**] ADR 0029 is
+  accepted; this is its implementation. Read the ADR, not this summary, for the rationale.
+  Ordered, because step 1 gates the rest:
+  1. **Split `TSRX013` first.** Four unrelated factories share the code and only two are
+     server-evaluation guards. `deferredCollectorCall` (client-side `NoActiveCollectorError`,
+     tier-independent) and `conditionalSignalConstructor` (ADR 0024 s12 format rule) each get
+     their own code and KEEP their current severity. `clientOnlySetupConst` and
+     `clientOnlySignalCompute` stay on TSRX013 and become classifier input. Nothing else in this
+     task is safe to do before this split. **Tech Writer reviews the copy** for the two new
+     codes and for every retirement (ADR 0028 lifecycle; `tech-writer`'s
+     `workflows/error-message-lifecycle.md` carries the propagation checklist).
+  2. **Build the classifier** in `evaluability.ts`/`analysis/harvest.ts` as ADR 0029 s1 specifies
+     — a conjunction, not a single predicate. Phase-1 totality is the existing analysis with
+     inverted polarity; realm answerability reads `sim/patch-table.ts`. Keep the stub table as
+     the single source for the second conjunct: a driver capability landing later must re-route
+     components by deleting a patch-table row, not by editing a second list.
+  3. **Compose-graph fixpoint** — contamination on READS (a `first()` on a compose site, a
+     `truc:pass` into it), never on containment (ADR 0029 s3). Computed in the registry-aware
+     second pass alongside `analysis/compose-refs.ts`.
+  4. **`emit-server.ts` takes a tier flag.** One emit path; every component still gets a render
+     module (the realm parses it as input). The only difference: tier-2 and tier-0 modules do
+     NOT re-declare `@{ }` setup verbatim. Tier 1's path is unchanged — confirm this with the
+     server goldens, which should not move for any tier-1 component.
+  5. **Diagnostic reclassification per ADR 0029 s5's table.** TSRX004, TSRX034 (non-severe),
+     TSRX043 and TSRX013's two server-evaluation factories leave the diagnostic channel for the
+     tier census. TSRX034-severe survives SCOPED TO TIER 0. TSRX039 untouched.
+     **Impure-ambient is NOT a routing signal** — it is the expression-level unresolvability
+     property (ADR 0029 s1 limb b): omitted in EVERY tier including tier 2, no diagnostic. This
+     needs the realm-side suppression step (step 7). LT-142's `Intl` rule splits three ways:
+     server-known locale → tier-1-eligible; locale read from the DOM (`getLocale(el)`,
+     `host.lang`) → tier-2 routing signal, since the realm executes it for real; runtime-default
+     locale → unresolvable. `basic-pluralize` must stay tier 2. Also revisit `evaluability.ts`'s
+     unconditional `Date` impurity: `new Date(year, month, day)` over parsed server args (the
+     `basic-blogmeta`/LT-095 shape) reads no viewing-moment fact, but both the constructor and
+     the formatter read the build machine's TIMEZONE — analyse it, don't assume it.
+  6. **The tier census** rides `sim/report.ts` (LT-163's channel), recording per component its
+     tier and the reason. It is NOT a warning — the compile-warning baseline's target stays zero
+     (ADR 0029 s6), and `check:tsrx`'s counted summary line should report the two separately.
+  7. **Realm-side suppression for unresolvable expressions.** The generated client is the
+     shipped artifact, so the realm cannot decline to install a binding: record each unresolvable
+     expression's target site at compile time and revert those sites in the driver before
+     serializing. **Ordering is load-bearing** — it must run AFTER the fixed-point gate's second
+     connect pass (ADR 0027 s8), never between the two, or the gate compares a suppressed tree
+     against an unsuppressed one and reports a spurious failure. `module-ticker` is the corpus
+     case to pin (tier 2, `Math.random()` suppressed, everything else simulated) once migrated.
+  8. **The CI equivalence audit** (ADR 0029 s7) — render every tier-1 component through the
+     realm as well, require byte-identical output, fail against the component on divergence.
+     This is what makes two coexisting mechanisms defensible; it is not optional and it is not a
+     follow-up task. The known `Date.now()` disagreement between `evaluability.ts`'s
+     `IMPURE_AMBIENT_ROOTS` and ADR 0027 s6 is DISSOLVED by steps 5+7, not resolved by electing a
+     winner: neither mechanism can answer it, so it renders in neither.
+  Acceptance: the classifier assigns a tier to every corpus component with a recorded reason and
+  golden coverage; `module-scrollarea`-shaped components (layout + `internals`-only output)
+  classify tier 0 once migrated; `basic-counter`/`module-tabgroup`/`card-blogpost`/`card-callout`
+  classify tier 1; no `Date`/`Math.random()` reading expression renders a value in ANY tier;
+  the equivalence audit runs green in CI; TSRX013 is three codes; the compile-warning count is
+  zero and the tier census is reported separately; `bun test server` green.
+
+- [ ] LT-169: Wire the simulation driver into the docs build for tier-2 components (ADR 0027 stage 2). **Depends on LT-165.**
+  **Skill:** docs-server-dev
+  **Context:** [**Rewritten 2026-09-04 against ADR 0029**; originally "wire the driver in for
+  every corpus component", then re-scoped to "tier-2 only" under a two-tier model. The accepted
+  model is THREE tiers: only **tier 2** goes through the driver. **Tier 1** renders through
+  `emit-server.ts` + the `runtime.ts` value harness with no jsdom involvement, and **tier 0**
+  renders the static skeleton and is likewise never simulated — that last bucket is where most
+  of the cost saving lives, since `module-scrollarea` alone is ~2.3 s of the measured ~3.9 s and
+  the realm cannot answer it. The wiring must therefore read the classifier's tier (LT-165) and
+  open a realm for tier 2 ONLY; opening one for tier 0 is the specific waste ADR 0029 exists to
+  prevent, and it would not be caught by any correctness test.] The consolidated obligations from four prior reviews, carried forward unchanged because
+  they don't depend on the tiering question: (1) **Disposal is build-process scope, not
+  test-file scope** — `dispose()` at most once, after every render the build will ever do, never
+  between; a disposed realm's deleted globals turn a contained component's lingering
+  dependency-wait into a synchronous `customElements is not defined` flood that aborts the
+  process. (2) **The build report surfaces through `reportDiagnostics`** — the same partition
+  the tests read; zero-unclassified is the build's own gate, the classified `getContext` entry
+  stays listed with its reason, and the report copy is final (Tech Writer, 2026-09-03). (3)
+  **The fixed-point gate's placement decides** — the corpus test carries it today and
+  auto-extends; the wiring may either keep it test-only or run a second connect per render at
+  build time; per-render doubles simulation cost for tier-2 components and is NOT required for
+  correctness while the corpus test exists, so the default is test-only unless a stage-2 finding
+  says otherwise. (4) **The memoization's transferred acceptance lands here** — measure the
+  simulated build stage's wall time (the LT-096/LT-103 handoffs record their before/after
+  figures) and verify the render cache engages, now scoped to tier-2 occurrences only. (5)
+  **Per-substrate goldens posture holds** — the build serializes with jsdom; if the substrate
+  ever swaps, the snapshot re-baseline is expected and is not a behavior change. **Resolved from LT-171
+  (ADR 0029 s8):** there is NO per-request SSR story to honor — the driver stays build-time
+  tooling (ADR 0024 s7 unchanged) and LT-166's memoization needs no server-scoped analogue. If a
+  per-request path is ever wanted, tier 1 and tier 0 are already per-request-cheap and only
+  tier 2 would need a cache with an eviction policy; do not build one now. **Also from ADR 0029
+  s7:** the CI equivalence audit (LT-165 step 8) runs an unconditional simulation pass over
+  tier-1 components — that is a CI cost, deliberately NOT paid by this build. Do not let the two
+  get merged into one pass. Acceptance: the build runs the driver over tier-2
+  `server/generated/tsrx/` components only — with an assertion that no realm is opened for a
+  tier-0 or tier-1 component — a new build-report entry fails the build naming the component,
+  disposal is provably end-of-build, and the wall-time/cache-engagement figures are recorded in
+  the handoff and split by tier, including the tier-0 saving as a separate figure.
 
 ## Wave 4 — example migrations
+
+**Note added 2026-09-04:** the phase-1/phase-2 tiering decision (LT-171) doesn't block starting
+this wave. [**Updated 2026-09-04, LT-171/ADR 0029:** the zero-warning gate STANDS — routing
+signals (TSRX004/TSRX034-non-severe/TSRX043) leave the warning channel entirely, so a migration
+that trips them is not accruing warnings, it is being classified. Judge a migration on: zero
+warnings in the diagnostic channel, plus its recorded TIER and the reason.] LT-096/LT-103's perf-trigger notes (below) are about whether they push
+page chrome into the simulated corpus at all; that's still meaningful under tiering (a
+phase-1-only component migrating in adds ~nothing; a phase-2 component adds real jsdom cost),
+so keep recording the wall-time figures either way — and note that a **tier-0** result (layout
+reads, `internals`-only output, stubbed sensors) also adds ~nothing, because it is never
+simulated. Under ADR 0029 only tier 2 costs jsdom time.
 
 - [ ] LT-095: Migrate basic-blogmeta by reshaping it into a template owner with typed byline props (LT-033 decision).
   **Skill:** le-truc-dev
@@ -315,7 +534,7 @@ trigger.
 
 - [ ] LT-096: Migrate `module-codeblock` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
-  **Context:** Smallest hand-written example (~43 lines). Migrate `examples/module/codeblock/module-codeblock.ts` → `.tsrx` following the corpus precedents and TSRX-HOST-PROFILE.md. Cutover is same-commit per the canonical pattern (LT-092): delete the `.ts` twin, point `examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green against the served compiled component. Surface compiler gaps in NOTES.md — or fix them directly if small (LT-088 precedent) — never weaken the component to dodge a gap. **Known pre-existing bug to fix during this migration (LT-117 review):** the twin calls `copyToClipboard(code, copy, {...}` bare — the `EffectDescriptor` is created and discarded, so the copy-click listener never attaches (label stays "Copy" on click; verified at HEAD). Per AGENTS.md it needs registration — `watch(() => true, copyToClipboard(...))` or returning it — and a spec assertion that click actually copies/toggles the label (verify via clipboard or button-text state). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (299 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff; if it rises by more than 1.0 s, schedule LT-166 in this wave rather than deferring it. [Amended by the LT-166 review, 2026-09-03: LT-166's memoization landed early by owner request, so there is nothing left to schedule — the instruction is now: record the wall-time figures as stated, and verify the render cache is actually engaging (unique `(component, markup)` pairs vs renders). If the stage still rises more than 1.0 s WITH the cache live, that is a new finding to file, not this trigger.]
+  **Context:** Smallest hand-written example (~43 lines). Migrate `examples/module/codeblock/module-codeblock.ts` → `.tsrx` following the corpus precedents and TSRX-HOST-PROFILE.md. Cutover is same-commit per the canonical pattern (LT-092): delete the `.ts` twin, point `examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green against the served compiled component. Surface compiler gaps in NOTES.md — or fix them directly if small (LT-088 precedent) — never weaken the component to dodge a gap. **Known pre-existing bug to fix during this migration (LT-117 review):** the twin calls `copyToClipboard(code, copy, {...}` bare — the `EffectDescriptor` is created and discarded, so the copy-click listener never attaches (label stays "Copy" on click; verified at HEAD). Per AGENTS.md it needs registration — `watch(() => true, copyToClipboard(...))` or returning it — and a spec assertion that click actually copies/toggles the label (verify via clipboard or button-text state). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (299 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff. [Amended by the LT-166 review, 2026-09-03: nothing left to schedule as a trigger — record the wall-time figures and verify the render cache is actually engaging. **Amended again, 2026-09-04 (LT-171/ADR 0029):** also record which of the THREE tiers this component lands in once LT-165's classifier exists — tier 1 AND tier 0 both mean near-zero added cost regardless of occurrence count; only tier 2 opens a realm. Its `first('code')`/`first('button.overlay')`/`first('basic-button.copy')` refs predict tier 2, but its ~299 occurrences make that ~0.33 s, not a blocker.]
 
 - [ ] LT-097: Migrate `module-cem-list` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -343,7 +562,7 @@ trigger.
 
 - [ ] LT-103: Migrate `module-scrollarea` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
-  **Context:** ~104 lines, scroll area with `IntersectionObserver`. Migrate per the canonical pattern (see LT-096); has a spec. Watch for: effect-with-cleanup idiom (`watch` + `return () => observer.disconnect()`, the LT-069 acceptance case). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (2,091 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff; if it rises by more than 1.0 s, schedule LT-166 in this wave rather than deferring it. [Amended by the LT-166 review, 2026-09-03: LT-166's memoization landed early by owner request, so there is nothing left to schedule — the instruction is now: record the wall-time figures as stated, and verify the render cache is actually engaging (unique `(component, markup)` pairs vs renders). If the stage still rises more than 1.0 s WITH the cache live, that is a new finding to file, not this trigger.]
+  **Context:** ~104 lines, scroll area with `IntersectionObserver`. Migrate per the canonical pattern (see LT-096); has a spec. Watch for: effect-with-cleanup idiom (`watch` + `return () => observer.disconnect()`, the LT-069 acceptance case). **Perf trigger (LT-166), 2026-09-03:** this component is one of the two that move page chrome into the simulated corpus (2,091 occurrences in the built docs, and together with the other ~91% of the measured 3.9 s full-site simulation cost). Record the simulated build stage's wall time before and after this migration in the handoff. [Amended by the LT-166 review, 2026-09-03: nothing left to schedule as a trigger — record the wall-time figures and verify the render cache is actually engaging. **Amended again, 2026-09-04 (LT-171/ADR 0029):** this component's tier is now PREDICTED, and it drove the ADR's three-tier shape. It reads `scrollLeft`/`scrollTop`/`scrollWidth`/`offsetWidth`/`scrollHeight`/`offsetHeight` and emits exclusively through `bindState(internals, …)` — layout returns zeros under jsdom and `attachInternals()` is normalized to throw, so the realm cannot answer it and it classifies **tier 0**: never simulated, static skeleton, client corrects at connect. At 2,091 occurrences that is ~2.3 s of the measured ~3.9 s NOT paid. Verify the classifier actually reaches that conclusion during this migration — if it lands tier 2 instead, the second conjunct (`sim/patch-table.ts` lookup, ADR 0029 s1) is not wired correctly, and no correctness test would catch it.]
 
 - [ ] LT-104: Migrate `module-lazyload` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -367,11 +586,11 @@ trigger.
 
 - [ ] LT-109: Migrate `module-calctable` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
-  **Context:** ~200 lines, the heaviest `reconcile()` consumer (8 call sites). Migrate per the canonical pattern (see LT-096); reactive lists lower to the compiled `each()`/reconcile path (LT-003) — check loop-body reactive attrs on non-root children (LT-037) carefully. **Note:** formats numbers through `Intl`; LT-142 settles whether those thunks fold server-side. Read that rule before authoring, rather than re-deciding it here.
+  **Context:** ~200 lines, the heaviest `reconcile()` consumer (8 call sites). Migrate per the canonical pattern (see LT-096); reactive lists lower to the compiled `each()`/reconcile path (LT-003) — check loop-body reactive attrs on non-root children (LT-037) carefully. **Note:** formats numbers through `Intl`; LT-142 settles whether those thunks fold server-side (tier-1) or need pre-play (tier-2, per LT-171). Read that rule before authoring, rather than re-deciding it here.
 
 - [ ] LT-110: Migrate `module-ticker` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
-  **Context:** ~283 lines, the most loop-dense example (`each()` ×11, `MutationObserver` ×6, `IntersectionObserver`, `populate`). Migrate per the canonical pattern (see LT-096). Expect this to stress the loop/effect analysis hardest — surface compiler gaps in NOTES.md rather than restructuring the component away from its demonstrated patterns. **Note:** formats through `Intl`; see LT-142 for the server-fold rule, same as LT-109.
+  **Context:** ~283 lines, the most loop-dense example (`each()` ×11, `MutationObserver` ×6, `IntersectionObserver`, `populate`). Migrate per the canonical pattern (see LT-096). Expect this to stress the loop/effect analysis hardest — surface compiler gaps in NOTES.md rather than restructuring the component away from its demonstrated patterns. **Note:** formats through `Intl`; see LT-142/LT-171 for the tiering question, same as LT-109.
 
 - [ ] LT-111: Migrate `module-todo` to `.tsrx` with same-commit cutover — last hand-written example, completes the corpus port.
   **Skill:** le-truc-dev
@@ -385,7 +604,7 @@ trigger.
 
 - [ ] LT-135: Follow plain-const indirection when crediting client-only setup reads (LT-119 sharp edge).
   **Skill:** le-truc-dev
-  **Context:** LT-119 credits a signal in `thunkRendered` when a `clientSetup` statement reads it, but the check is `containsSignalGet(stmt.node, …)` on the statement itself. Hoisting the predicate into a plain setup const — `const isOpen = () => open.get(); watch(() => !isOpen(), …)` — moves the read out of the statement and the signal draws TSRX004 again, so the author must repeat the predicate at every site (form-combobox.tsrx does, with a comment saying why). The diagnostic is loud, not silent, and the workaround is one line, so this is a DX wart rather than a correctness gap. **Fix:** resolve reads through `component.plainSetup` consts the statement names, the same one-hop widening `computeClientNeededNames` already does for client-needed names — or fold into LT-093, which is the same free-name-through-a-const wall from the other direction. The negative case is already pinned in `server/tests/tsrx/client-setup-credit.test.ts`; flip that test when fixing.
+  **Context:** LT-119 credits a signal in `thunkRendered` when a `clientSetup` statement reads it, but the check is `containsSignalGet(stmt.node, …)` on the statement itself. Hoisting the predicate into a plain setup const — `const isOpen = () => open.get(); watch(() => !isOpen(), …)` — moves the read out of the statement and the signal draws TSRX004 again, so the author must repeat the predicate at every site (form-combobox.tsrx does, with a comment saying why). The diagnostic is loud, not silent, and the workaround is one line, so this is a DX wart rather than a correctness gap. **Fix:** resolve reads through `component.plainSetup` consts the statement names, the same one-hop widening `computeClientNeededNames` already does for client-needed names — or fold into LT-093, which is the same free-name-through-a-const wall from the other direction. The negative case is already pinned in `server/tests/tsrx/client-setup-credit.test.ts`; flip that test when fixing. **Note, 2026-09-04:** if LT-171 repurposes TSRX004 as the tier classifier rather than an error, re-check whether this sharp edge still matters the same way — a signal that draws TSRX004 here would now mean "this routes to phase 2," which may make the workaround moot for reasons unrelated to this fix.
 
 - [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
   **Skill:** le-truc-dev
@@ -395,11 +614,11 @@ trigger.
   **Skill:** le-truc-dev
   **Context:** Found while verifying LT-128, and more consequential than the spelling. The two halves of one `.tsrx` source disagree on the default trust posture: `server/tsrx/runtime.ts:335` defaults `htmlSanitizer` to escaping ALL markup (`<`/`>` → entities, so nothing ever renders — safe but inert), while the client's `dangerouslyBindInnerHTML` (`src/bindings.ts:652`) ships NO sanitizer and assigns raw unless `configureHtmlSanitizer()` was called. Both are configurable and both document themselves as "the library owns no sanitizer", but the DEFAULTS point opposite ways. For a reactive `truc:html={() => …}` that means an unconfigured app server-renders escaped, inert text and then flips to live markup on hydration — a visible content change and an inconsistent security posture from one authored attribute. **Unverified:** no corpus component authors the attribute, so this has never run end to end; confirm the flip with a fixture before designing the fix. **Decide:** which default is right (escape-everywhere is the conservative match to the server's current behavior; raw-everywhere matches upstream's trusted-markup framing and the `dangerously` prefix's warning) — then make both halves agree, and make `configureHtmlSanitizer` on one side not silently leave the other unconfigured.
   **Target state (owner, 2026-08-31): seamless Trusted Types.** The API is Baseline 2026, and the client half is already shaped for it — `Sanitizer` returns `string | TrustedHTML` and `dangerouslyBindInnerHTML` assigns through a cast that a Trusted-Types-enforcing CSP accepts (`src/bindings.ts:35`, `:682`). The blocker was TypeScript's DOM lib, and it has NOT lifted yet: `lib.dom.d.ts` in the installed TS 6.0.3 still has no `TrustedHTML` interface (only prose in `document.write`'s doc comment), which is why `src/bindings.ts:32` carries a local `type TrustedHTML = object` placeholder. **Unverified:** whether TS 7 fixes it — the published `typescript@7.0.2` tarball ships no `lib.dom.d.ts` in the old layout, so this needs a real check against however TS 7 delivers its DOM lib before planning. Two things follow if it has landed: drop the placeholder for the real type, and decide whether the SERVER half gets a Trusted-Types-shaped seam too (it produces strings into markup, so it cannot hold a `TrustedHTML`, but it can share one policy-configuration entry point with the client so an app configures trust ONCE rather than per environment — which is the actual fix for the inverted-defaults problem above).
-  **How it lands is now answered (LT-152, 2026-09-03) — the trigger is unchanged.** ADR 0027 puts jsdom in the build, and DOMPurify's documented Node path (`createDOMPurify(new JSDOM('').window)`) was verified on it: hostile payloads sanitize correctly, and it was re-verified independently at the LT-152 review against a second payload set. So **one sanitizer serves both channels** — DOMPurify server-side through `configureHtmlSanitizer`, DOMPurify client-side — and `sanitize-html` retires. That matters beyond tidiness: two sanitizers with different allowlists mean a `truc:html` value that survives the server's filter can be altered by the client's at connect, i.e. a hydration diff in the one place a hydration diff is a security question. Note `sanitize-html` was never a production dependency — `configureHtmlSanitizer` is called only from `server/tests/tsrx/features.test.ts:25`, and the docs build renders `truc:html` through the escape-all default — so the retirement is small. **ADR 0010's policy is untouched:** the library still ships no sanitizer and the consumer still supplies the hook; this is about what the compiler runtime is configured with, and what the docs recommend. **Owner decision, 2026-09-03: this stays deferred behind the same gate** — before any component actually authors `truc:html`, and nothing does today. Depends on LT-154 (jsdom must actually be in the build).
+  **How it lands is now answered (LT-152, 2026-09-03) — the trigger is unchanged.** jsdom is in the build regardless of the tiering decision, and DOMPurify's documented Node path (`createDOMPurify(new JSDOM('').window)`) was verified on it: hostile payloads sanitize correctly, re-verified independently at the LT-152 review against a second payload set. So **one sanitizer serves both channels** — DOMPurify server-side through `configureHtmlSanitizer`, DOMPurify client-side — and `sanitize-html` retires. That matters beyond tidiness: two sanitizers with different allowlists mean a `truc:html` value that survives the server's filter can be altered by the client's at connect, i.e. a hydration diff in the one place a hydration diff is a security question. Note `sanitize-html` was never a production dependency — `configureHtmlSanitizer` is called only from `server/tests/tsrx/features.test.ts:25`, and the docs build renders `truc:html` through the escape-all default — so the retirement is small. **ADR 0010's policy is untouched:** the library still ships no sanitizer and the consumer still supplies the hook; this is about what the compiler runtime is configured with, and what the docs recommend. **Owner decision, 2026-09-03: this stays deferred behind the same gate** — before any component actually authors `truc:html`, and nothing does today.
 
 - [ ] LT-093: Make TSRX004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall).
   **Skill:** le-truc-dev
-  **Context:** Re-confirmed empirically 2026-08-29 (LT-071 re-evaluation): `const DEFAULT = 'red'; const color = createCell(DEFAULT)` consumed only through a style-map still fires TSRX004's "never rendered" message, though the signal IS credited as rendered (`thunkRendered`) — `substituteArgExpr`'s free-name gate rejects the verbatim initializer because the client module may not define the name. Step 1 (small): split the diagnostic — "rendered but initializer not client-portable" (name the offending free names) vs "never rendered". Step 2 (goal): feed signal-initializer free names into `computeClientNeededNames` as client-needed seed positions so plain-setup and import-local names in initializers place client-side; the fixpoint has grown accretively since the NOTES entry (clientSetup statements, composed refs, pass set-thunks — LT-069/087/088), so the plumbing gap is much narrower than when option (b) was judged heavy. Also fold in a compiler unit test for the `imports.plainLocalNames` badFreeNames widening (LT-090 review note — currently unexercised after the LT-091 redesign removed the corpus's two-way pass). Also fold in the LT-116 NOTES entry: `returnsNumber`'s heuristic misses number-signal reads (`count.get()`) in `value` thunks, which now lack `String()` coercion under the property dispatch — consult `inferredType` so the coercion fires for number-typed signal reads (no corpus offender today; add the unit test). No current migration is blocked by this wall (workaround: inline the constant or add a direct render site) — priority below the component tasks.
+  **Context:** Re-confirmed empirically 2026-08-29 (LT-071 re-evaluation): `const DEFAULT = 'red'; const color = createCell(DEFAULT)` consumed only through a style-map still fires TSRX004's "never rendered" message, though the signal IS credited as rendered (`thunkRendered`) — `substituteArgExpr`'s free-name gate rejects the verbatim initializer because the client module may not define the name. Step 1 (small): split the diagnostic — "rendered but initializer not client-portable" (name the offending free names) vs "never rendered". Step 2 (goal): feed signal-initializer free names into `computeClientNeededNames` as client-needed seed positions so plain-setup and import-local names in initializers place client-side; the fixpoint has grown accretively since the NOTES entry (clientSetup statements, composed refs, pass set-thunks — LT-069/087/088), so the plumbing gap is much narrower than when option (b) was judged heavy. Also fold in a compiler unit test for the `imports.plainLocalNames` badFreeNames widening (LT-090 review note — currently unexercised after the LT-091 redesign removed the corpus's two-way pass). Also fold in the LT-116 NOTES entry: `returnsNumber`'s heuristic misses number-signal reads (`count.get()`) in `value` thunks, which now lack `String()` coercion under the property dispatch — consult `inferredType` so the coercion fires for number-typed signal reads (no corpus offender today; add the unit test). No current migration is blocked by this wall (workaround: inline the constant or add a direct render site) — priority below the component tasks. **Raised in priority by LT-171, 2026-09-04:** once TSRX004 becomes the phase-1/phase-2 classifier rather than an error, an honest "rendered but not client-portable" message matters more than before — a false TSRX004 firing on a fully phase-1-resolvable component would wrongly tier it into phase 2. Re-triage after LT-171 lands.
 
 ## Backlog — not scheduled
 
@@ -416,11 +635,14 @@ trigger.
   **Context:** Blocked on trigger: every example outside `test/*` and `docs/*` is cut over to its compiled client — that means LT-111 (module-todo, the last hand-written module example) AND LT-114..LT-117 finishing the five currently dual-state components (basic-number, basic-gauge, basic-pluralize, form-radiogroup, basic-button). CLI-first (LT-011, done) covers CI/agent workflows; this adds in-editor squiggles via a `@volar/language-core` plugin projecting the generated client module, reusing LT-011's span table.
 
 ---
----
 
 ## Done (archive)
 
 Full task-by-task rationale, review notes, and corpus-impact numbers for everything below have been compacted out of this file; see git history (`git log -p -- TODO.md`) for the original entries if needed.
+
+**ADR 0027 stage-1 implementation (2026-09-03, CLOSED — all reviewed; ADRs 0024/0027 accepted on this basis):** LT-154 (server-simulation driver — jsdom substrate, hermetic-quiescence boundary replacing strict synchronicity, children-first replay from the compose graph, load-once-per-module assertion), LT-163 (build-report channel — five diagnostic conditions raised as tier-2/Contained build warnings attributed per-component: jsdomError, unhandled rejection, contained connect throw, network access, non-quiescent drain overrun; `getContext` classified as a documented non-issue), LT-164 (per-substrate simulated goldens plus the two-order hermeticity and double-connect fixed-point invariants, both as `bun test server/tests` cases), LT-166 (render memoization on `(component, markup)`, landed ahead of its 1.0 s trigger by explicit owner request — 93.5% measured hit rate at docs scale), LT-167 (driver polish — stale network-stub doc, probe drain dedup, three fixture-artifact ARGS fixed, `check:sim` output attributed), LT-168 (reconciled the compile-warning baseline to the tool-counted **8 unique** standing warnings — six `basic-pluralize` TSRX034 correct refusals, `form-listbox` TSRX034, `form-tokenbox` TSRX039 — correcting a "cleared six, leaving 2" mis-record that never held on this branch; added a counted summary line to `check:tsrx`). LT-153 (the architect's compiler-consequences plan that produced LT-163/164/165/166 and re-scoped the gate wave) is superseded in its "zero is the target"/"delete evaluability.ts at stage 3" halves by the 2026-09-04 phase-1/phase-2 tiering decision — see the Sequencing section and LT-171.
+
+**Gate wave (2026-09-03/04, CLOSED except LT-147/LT-148/LT-170, tracked above):** LT-143 (`basic-pluralize` renders correctly under simulation for count values 0/1/2/3/5/11 — the six standing TSRX034 refusals confirmed correct and left untouched), LT-133 (`basic-number` renders the formatted value under simulation; `basic-gauge.html`'s hand-authored `84%`/`65%`/`20.57%` fallback text removed — the last figure was itself inconsistent with its own `options`, corrected to `20.6%` by removing the workaround), LT-144 (`{host.count}`/`{count}` converge on identical initial HTML under simulation; the remaining binding-plan difference — one plans a live `watch()`, the other is a compile-time literal substitution — is real and documented, but the test pinning it was weak; strengthening it is LT-170), LT-145 (`form-listbox`'s Parser-exposed-`filter`-prop-with-no-server-arg fallback pinned under simulation — a pure runtime pin, does not move the compile baseline; an arithmetic error in the task's own acceptance text was corrected by the architect review, not by chasing a follow-up fix), LT-146 (`form-tokenbox.description`'s TSRX039 duplicate-channel warning closed — final shape is `description: descriptionEl?.textContent ?? ''` handed straight to `expose()`, which auto-wraps any plain function/value into a reactive cell; no `data-description` attribute or explicit `createCell`/`asString` needed, simpler than the `form-combobox` `descriptionCell` pattern it was originally modeled on, which is itself now a candidate for the same simplification).
 
 **TSRX compiler bring-up (ADR 0024 milestones 1–4):** LT-001/002 (compiler core + client codegen), LT-005 (isomorphic form-component format), LT-006 (CEM generation parity), LT-003 (reactive lists via `reconcile()`), LT-004 (Volar projection — infeasible, reshaped into LT-011), LT-008 (form-corpus migration enablers), LT-013 (tsrx.dev feature parity — `@switch`/`@try`/`html={}`), LT-011 (CLI-first span-table diagnostics, editor-level deferred to LT-014).
 
@@ -462,14 +684,13 @@ Full task-by-task rationale, review notes, and corpus-impact numbers for everyth
 
 **Parser pin moved 0.1.60 → 0.1.63 (2026-08-31):** reviewed change per ADR 0024 sub-design 2. TSRX split out of the Ripple repo into `tsrx-org/tsrx`, and most of the release range is that de-Rippling; the one behavioral change is that `&{…}`/`&[…]` lazy destructuring patterns now raise in expression position, which Le Truc does not author. Golden tests unmoved (corpus output byte-identical), full gate suite green.
 
-
 **Diagnostic honesty, wave 3 (2026-08-30/09-01, CLOSED):** LT-125 (TSRX043 — a `first()`-derived setup local spliced into the server render; the task's premise was corrected mid-flight, since the silent-empty-render half was already reachable whenever the ref was also named inside `expose()`), LT-129 (TSRX039 no longer fires on the sanctioned host-attribute override — excluded per SITE, not per prop, so a genuinely independent second channel still warns), LT-126 (`returnsNumber` resolves number-signal reads through `inferredType`; the string-signal negative pinned too), LT-075 (TSRX033 widened to static/server-rendered attribute literals, ERROR to match `impureStaticChild`), LT-137 (`html={}` → `truc:html={}` per LT-128; bare `html` is a hard error, not a silent reclassification, and four phantom parser hints naming constructs that exist in no published TSRX release were deleted while `switch`/`await` were kept and reworded), LT-139 (the LT-129 exclusion extended to text children — `walkTemplate` already passed the parent, so the task overestimated the work), LT-141 (TSRX039 exempts a `formAssociated()` host's reset baseline while the root actually carries the attribute; unique warnings 9 → 8).
 
-**ADR 0027 engine gaps and spikes (2026-09-03, CLOSED — all four reviewed):** LT-149 (factory-run errors contained in `connectedCallback`; ADR 0011's branded contract errors deliberately still escape — `TrucError`/`TrucTypeError` + `isContractError()`), LT-150 (an unusable `ElementInternals` stub routes to the same `internals = null` degradation as a throw, gated on `formAssociated` because spec-correct browsers throw `NotSupportedError` on non-form-associated elements — worth ~1000 characters of correct markup, 2274 → 3302), LT-151 (`server/tsrx/sim/` — the declarative patch table, two-phase realm, and boundary assertion; portable across Bun/Node/Deno, re-verified byte-identical on Bun and Node at review, and honest about an absent runtime rather than falsely passing), LT-152 (substrate evaluation — **jsdom confirmed, happy-dom disqualified**: DOMPurify fails open on it, independently re-verified at review against a second payload set where it also ships a live `<svg><animate onbegin>` handler and mangles benign markup; fidelity at parity otherwise; cost measured at 3.9 s full-site / ~0.1 s stage-1 on jsdom; memoization answered YES at a 93.5% hit rate). The three review findings that changed the queue — the expiring stage-1 scoping claim, LT-142's warning-without-fix, and the confirmed disqualification — are in the sequencing section above, not here. **`happy-dom` was dropped from `devDependencies` on owner instruction, 2026-09-03**, once the review noticed that installing a *disqualified* substrate had downgraded the hoisted `entities` from 8.0.0 to 7.0.1 (happy-dom pins `^7.0.1`), pushing parse5 — jsdom's own parser — onto a nested copy. `bun.lock` is now byte-identical to its pre-LT-152 state. The harness was kept and made to degrade rather than deleted: `substrateAvailable()` in `scripts/lib/substrate-probe.ts` resolves the import optionally, and `eval:substrate` runs every section's jsdom half one-sided while naming what is missing and why — the `check:sim` posture for an absent runtime, never a false pass. Verified end to end: the jsdom figures reproduce (3,327 occurrences / 782 on corpus tags, 93.5% memo hit rate, both isolation invariants true). `bun add -d happy-dom` restores the comparison if ADR 0027's two revisit conditions are ever met.
+**ADR 0027 engine gaps and spikes (2026-09-03, CLOSED — all four reviewed):** LT-149 (factory-run errors contained in `connectedCallback`; ADR 0011's branded contract errors deliberately still escape — `TrucError`/`TrucTypeError` + `isContractError()`), LT-150 (an unusable `ElementInternals` stub routes to the same `internals = null` degradation as a throw, gated on `formAssociated` because spec-correct browsers throw `NotSupportedError` on non-form-associated elements — worth ~1000 characters of correct markup, 2274 → 3302), LT-151 (`server/tsrx/sim/` — the declarative patch table, two-phase realm, and boundary assertion; portable across Bun/Node/Deno, re-verified byte-identical on Bun and Node at review, and honest about an absent runtime rather than falsely passing), LT-152 (substrate evaluation — **jsdom confirmed, happy-dom disqualified**: DOMPurify fails open on it, independently re-verified at review against a second payload set where it also ships a live `<svg><animate onbegin>` handler and mangles benign markup; fidelity at parity otherwise; cost measured at 3.9 s full-site / ~0.1 s stage-1 on jsdom; memoization answered YES at a 93.5% hit rate). `happy-dom` was dropped from `devDependencies` on owner instruction, 2026-09-03, once the review noticed that installing a *disqualified* substrate had downgraded the hoisted `entities` from 8.0.0 to 7.0.1 (happy-dom pins `^7.0.1`), pushing parse5 — jsdom's own parser — onto a nested copy. `bun.lock` is now byte-identical to its pre-LT-152 state. The harness was kept and made to degrade rather than deleted: `substrateAvailable()` in `scripts/lib/substrate-probe.ts` resolves the import optionally, and `eval:substrate` runs every section's jsdom half one-sided while naming what is missing and why.
 
-**`Intl` server-fold rule (LT-142, landed 2026-09-02, reviewed ✓ 2026-09-03):** `IMPURE_AMBIENT_ROOTS` splits `Intl` from `Date` — `Intl.*` folds when its locale resolves to a server-known value, `Date` stays impure, `Math.random()` untouched. Cleared six of the eight standing corpus warnings, leaving 2. **Approved with its service life stated:** the rule is part of the determinism gate ADR 0027 sub-design 6 retires, but that retirement is stage 3 (LT-165), and through stages 1–2 the fold rules still answer everything the driver does not. **Review caveat, recorded because it bit:** clearing `basic-pluralize`'s six warnings did not fix its markup — the component still renders "task ssss remaining", now silently. Accepted by the owner 2026-09-03 on the grounds that LT-154 fixes it by rendering; see LT-143. **Reconciled by LT-168 (2026-09-03): the "cleared six, leaving 2" figure above is wrong for this branch and always was** — `check:tsrx` at d553fb78 itself (run in a throwaway worktree) reports the full 16-line / 8-unique baseline, and LT-142's own acceptance said the baseline "drops only by what LT-143/LT-133 then claim". The six were to clear via LT-143's reshape (`pluralCategory(count, locale, ordinal)`), which LT-153 superseded before it ran — the record compressed the planned reshape's effect into a landed fact. The six are correct refusals: the fold cannot follow the authored `pluralCategory` const (an out-of-scope identifier — `dependenciesOf` fails immediately), cannot resolve `getLocale(el)` (a call, not a literal or in-scope identifier — `isLocaleResolvable` refuses), and cannot fold the `hasAttribute` DOM sensor. They retire with TSRX034 at stage 3 (LT-165). The rule itself works as its unit tests prove.
+**`Intl` server-fold rule (LT-142, landed 2026-09-02, reviewed ✓ 2026-09-03):** `IMPURE_AMBIENT_ROOTS` splits `Intl` from `Date` — `Intl.*` folds when its locale resolves to a server-known value, `Date` stays impure, `Math.random()` untouched. **Reconciled by LT-168 (2026-09-03):** the rule's own six-warnings-cleared claim never held on this branch — `check:tsrx` at LT-142's own commit already reported the full 8-unique baseline; the six were slated for LT-143's reshape, which LT-153 superseded before it ran. The six are correct refusals (the fold cannot follow the authored `pluralCategory` const, cannot resolve the `getLocale(el)` call, cannot fold the `hasAttribute` DOM sensor) and the rule itself works as its unit tests prove. **Its service-life question is superseded by the 2026-09-04 tiering decision** — see LT-171/LT-165 — rather than resolved by the old "retires at stage 3 with TSRX034" plan.
 
-**LT-153 — the TSRX-compiler consequences plan (architect, 2026-09-03, DELIVERED ✓):** the deferred inventory, executed. Five decisions — diagnostics move from compile time to build time in one step (`TSRX005` dissolves, `TSRX034` becomes a report, `TSRX039` survives); the regression signal becomes two baselines rather than one; goldens byte-pin what is emitted and behavior-pin what is simulated, with per-substrate bytes; two emit paths permanently and one evaluation mechanism, with the `evaluability.ts` deletion checkpointed at stage 3; and LT-142's rule has a service life that ends there. Produced LT-163 (build-report channel), LT-164 (golden strategy + two-order and double-connect invariants), LT-165 (the blocked deletion checkpoint), LT-166 (triggered memoization), and re-scoped LT-143/LT-133/LT-144/LT-145 from fold-route tasks to verification tasks. The full plan is in the sequencing section above rather than compacted here, because the queue below still depends on it.
+**LT-153 — the TSRX-compiler consequences plan (architect, 2026-09-03, DELIVERED — since partially superseded, 2026-09-04):** the deferred inventory, executed: diagnostics moved from compile time to build time (`TSRX005` dissolved, `TSRX034` became a report, `TSRX039` survived); the regression signal became two baselines; goldens byte-pin what's emitted and behavior-pin what's simulated, per-substrate; `evaluability.ts`'s deletion was checkpointed at stage 3; LT-142's rule was given a service life. Produced LT-163/LT-164/LT-165/LT-166 and re-scoped LT-143/LT-133/LT-144/LT-145. **The "zero is the compile target" and "delete evaluability.ts" halves are superseded by the phase-1/phase-2 tiering decision** (Sequencing section, LT-171) — the rest (build-report channel, golden strategy, TSRX039's survival) stands unchanged.
 
 **Tiered error surfacing (ADR 0028, 2026-09-03, CLOSED):** LT-155 (containment model — contract brand deleted, containment unconditional, activation split per descriptor), LT-156 (connect-failure phase label and reconnect asymmetry, landed with LT-155), LT-157 (the four owed compiler rules), LT-158 (exposed-prop writability in the TSRX registry, so `pass()` legality is decidable at compile time), LT-159 (Tech Writer took ownership of error-message copy in `src/errors.ts` and `server/tsrx/diagnostics.ts` — reviewed with one correction), LT-160 (`references/errors.md` added to the `le-truc` skill), LT-161 (`le-truc-dev` and `architect` taught when to involve Tech Writer), LT-162 (error-message lifecycle workflow added to the `tech-writer` skill).
 

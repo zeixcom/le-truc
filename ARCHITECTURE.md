@@ -183,6 +183,31 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 
 In `DEV_MODE`, every component gets a reactive `debug: boolean` property (default `false`) for free — no source change, no explicit opt-in — via `debug()`, a `ComponentExtension` `defineComponent()` appends to every component's extensions array unconditionally when `process.env.DEV_MODE === 'true'`. While `debug` is on for an instance, `on()`/`pass()`/`watch()` push an additive companion effect through the same `collect()` chokepoint every effect helper already uses: a permanent `:state(debug)` host indicator that pulses on any firing, presence-only `data-le-truc-on`/`-pass`/`-watch` marking on the target element where attribution is possible (exact for `on()`/`pass()`, and for `watch()` handlers produced by a `bind*` helper; a host-level-only pulse otherwise), and one `console.debug` entry per firing. The author's own effect or listener is never wrapped or modified — instrumentation cannot change app behavior merely by being switched on. Toggling `debug` works via the browser's properties panel or, in `DEV_MODE`, `metaKey`+click on the nearest custom-element ancestor. See [ADR 0022](adr/0022-debug-extension-for-visual-and-console-instrumentation.md).
 
+## Server Evaluation Tiers
+
+This section describes *build-time* behavior of the `.tsrx` compiler, not the runtime library. `@zeix/le-truc` never renders initial HTML and jsdom never ships to a client ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) sub-design 7). It is documented here because which tier a component lands in is a consequence of how it is *written*, so it shapes authoring.
+
+Every `.tsrx` component's template is lowered to markup server-side, in every tier. What is tiered is the evaluation of *reactive initial values* — what a `{signal}` child or a `checked={() => …}` thunk renders before JavaScript loads. Each component is statically routed at compile time to the cheapest phase that can actually answer it ([ADR 0029](adr/0029-tiered-server-evaluation.md)):
+
+| Tier | Mechanism | When |
+| --- | --- | --- |
+| **1** *Folded* | Template lowering plus a DOM-less value harness, where a signal is its initial value in a box. No jsdom. | Every reactive expression resolves from server args, signal initializers over those args, and `host.<prop>` reads of Parser-exposed props (whose root attribute the server itself rendered). |
+| **2** *Simulated* | Server Simulation ([ADR 0027](adr/0027-server-simulation.md)): the generated client module executes against jsdom and the reactive graph's initial state is serialized. | Something does not resolve in phase 1 — typically a `first()` element reference, a cross-component read, or a `host`/`internals` read the harness cannot supply — **and** the simulation realm can plausibly answer it. |
+| **0** *Static* | The phase-1 skeleton only. The unresolved expressions are omitted; the client corrects at connect. | Nothing resolves in phase 1 **and** every unresolved expression is *unresolvable* (below). |
+
+Cutting across the tiers is a second, expression-level fact. An expression is **unresolvable** when no server phase can produce its value, for either of two reasons: the read routes through an API the driver stubs (layout geometry — jsdom returns zeros; `internals` — `attachInternals()` is normalized to throw; an absent sensor such as `matchMedia`/`ResizeObserver`/`IntersectionObserver`), or its input is not a server-side fact at all (the wall clock, the RNG, a runtime-default locale — values that are a function of *when the page is viewed*, not of anything the server knows).
+
+**An unresolvable expression is omitted in every tier, including tier 2.** The realm does not fold one: a build-time `Date.now()` is not an approximation the client briefly corrects, it is a stale value cached into the served HTML for the life of the page. Blank is more honest than confidently wrong, and the no-JS mitigation is authored static markup — the author supplies the default rather than the compiler guessing. Tier 0 is simply the case where *every* unresolved expression is unresolvable, so no mechanism needs to run at all; a tier-2 component can carry a suppressed expression alongside plenty the realm does resolve.
+
+Three properties are worth carrying as a mental model:
+
+- **Unresolvability is per-expression; tier is per-component.** Conflating them goes wrong in both directions — `module-ticker` calls `Math.random()` but is also heavily `first()`-based, so it is tier 2 with one suppressed expression, neither wholly static nor wholly simulated.
+- **The predicate is "is simulation worth running," not "did folding fail."** A component whose only unresolved reads are scroll offsets and `bindState(internals, …)` writes gains nothing from a realm that returns zeros for both, so it is not simulated. The "can the realm answer this" half of the test reads the driver's own stub table, which means a driver capability landing later re-routes affected components automatically.
+- **Classification is conservative.** A component is tier 1 only when phase 1 is provably total; any doubt routes downward. A false tier-2 costs about a millisecond of build time; a false tier-1 ships wrong HTML with no diagnostic.
+- **Composition contaminates on reads, not on containment.** A parent that merely embeds a tier-2 child splices the child's already-rendered markup and keeps its own tier. Only a parent that *reads* the child — a `first()` addressing a compose site, or `truc:pass` into it — inherits tier 2.
+
+In every tier the client remains ground truth and corrects at connect; no serialized state payload ever ships ([ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)). Tiering changes how good the pre-JavaScript HTML is and how much the build costs — never what the component does once connected.
+
 ## Ecosystem Tooling
 
 ### Custom Elements Manifest

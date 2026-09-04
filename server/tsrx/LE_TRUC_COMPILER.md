@@ -2,12 +2,12 @@
 
 > High-level overview of the inlined TSRX compiler for Le Truc (`server/tsrx/`):
 > how the pipeline works, how it relates to `@tsrx/core`, how the server half is
-> evaluated (render modules today, Server Simulation per ADR 0027), how type
+> evaluated (tiered — value harness, Server Simulation, or neither), how type
 > checking and diagnostics flow back to the author, and how it is embedded in
 > the server build infrastructure. Companion documents: `server/SERVER.md`
 > (build-pipeline integration), ADR 0024 (format decisions), ADR 0027 (Server
-> Simulation), `server/TESTS.md` (test strategy). Symbol names are stable
-> anchors; avoid citing line numbers.
+> Simulation), ADR 0029 (tiered server evaluation), `server/TESTS.md` (test
+> strategy). Symbol names are stable anchors; avoid citing line numbers.
 
 ## 1. What this compiler is
 
@@ -109,7 +109,7 @@ lives in the consumer, `server/effects/tsrx.ts` (§ 6).
 | `lower-template.ts` | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation |
 | `classify-attributes.ts` | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser |
 | `reactivity.ts` | `classifyChild` — the reactive-lift rule: is a template child reactive, static, or untraceable? |
-| `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers |
+| `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers. Under ADR 0029 this is also the first conjunct of the **tier classifier** (§ 5) |
 | `infer-type.ts` | Signal value-type inference |
 | `config.ts` | `export const config` extraction |
 | `imports.ts` | Compose-import resolution + plain import collection and placement |
@@ -202,6 +202,45 @@ registry holds: source paths, emitted module texts, CSS, props type, and
 decidable at compile time (ADR 0028); a target with no entry stays on the
 Tier 2 runtime backstop.
 
+**Reserved parameters** — server args the compiler supplies rather than the
+caller: `children` (ADR 0024 s10, composed children) and `i18n` (ADR 0030,
+the locale record: `lang`, the component's resolved messages `t`,
+`timeZone`/`currency`, and `dir`). A component receives one only by declaring
+it; declaring it costs the caller nothing, so composition never threads
+locale by hand. Both are ordinary destructurable args, so the value is
+server-known and folds in phase 1 — which is why an i18n component is tier-1
+eligible rather than tier 2 (§ 5). An authored `lang` arg, or one supplied at
+a compose site, overrides the record's locale; the EFFECTIVE locale renders
+onto the root `lang` attribute, exempt from TSRX039 by ADR 0024 s3's
+root-attribute exclusion.
+
+**Message resolution** (ADR 0030): a component declares each message key
+*with its source-locale string inline in the `.tsrx`* — there is deliberately
+no per-component catalog file, which would reintroduce the sibling-file drift
+ADR 0024 cures. Translations are additive per-locale override files,
+component-namespaced (`i18n/de.json`, keys `<tag>.<key>`), with **no tiering
+and no override stack**: a key resolves in exactly one place. The compiler
+resolves `t` at render time and the catalog never reaches the client. A
+missing key renders the source-locale string and is recorded in the build
+report's **translation census** — not a compile warning, since it is not
+author-fixable. Literal prose inside a catalog-using component IS
+author-fixable and warns. The build stays read-only: it emits a gitignored
+report artifact (machine-readable per locale plus a human summary), and an
+explicit `i18n:sync` script — never the build — writes missing keys back into
+the committed catalogs.
+
+**Per-locale pruning of rendered alternatives** (ADR 0030 s6): with the locale
+a build constant, a component rendering one alternative per plural category
+prunes to the set the locale actually uses (`{one, other}` for English rather
+than all six). The set comes from
+`Intl.PluralRules(lang, opts).resolvedOptions().pluralCategories`, a platform
+fact rather than a hand-maintained table — the same posture as the ARIA
+mapping in ADR 0024 s4. Cardinal and ordinal have different sets, so pruning
+uses the configured `type` and falls back to their union when the compiler
+cannot prove which is in play. **The client-side toggles do NOT retire**: the
+locale is fixed but the category-selecting input (`host.count`) is reactive,
+and the client can only select among strings the server rendered.
+
 **Context protocol** (ADR 0024 sub-design 15): `requestContext(Context,
 fallback)` is a recognized signal-constructor form — its fallback must be
 server-known, the server renders the fallback value via `createCell`, and the
@@ -209,37 +248,125 @@ client emits the call verbatim, destructured from the factory context; it
 never gets a harvest plan. `provideContexts([...])` lowers to a connect-time
 client-only statement and renders nothing.
 
-## 5. Server evaluation: render modules and Server Simulation
+## 5. Server evaluation: tiers, the value harness, and Server Simulation
 
-### 5.1 Today: generated render modules
+Server evaluation answers one question — *what does a reactive expression
+render before JavaScript loads* — and ADR 0029 tiers the answer. Template
+lowering is NOT tiered: every component in every tier gets a server render
+module from `emit-server.ts`, because the simulation realm parses that
+module's markup as its own input. What is tiered is the evaluation of
+reactive INITIAL VALUES.
+
+### 5.1 The three tiers
+
+| Tier | Mechanism | Condition |
+| --- | --- | --- |
+| **1** *Folded* | `emit-server.ts` + the `runtime.ts` value harness. No jsdom. | Phase 1 resolves everything. |
+| **2** *Simulated* | The `sim/` driver (ADR 0027). | Phase 1 does not resolve everything **and** the realm can plausibly answer. |
+| **0** *Static* | The phase-1 skeleton only; unresolved expressions omitted. | Phase 1 does not resolve everything **and** the realm cannot answer either. |
+
+Tier 0 sits below tier 1 because it resolves *less*, not more. It is what
+today's compiler already does when the fold gives up — promoted from an
+accident of a failed proof to a routed decision with a recorded reason.
+
+### 5.2 The classifier
+
+Two different facts, deliberately kept apart (ADR 0029 s1).
+
+**Unresolvability is a property of an EXPRESSION**: no server phase can
+produce its value. Two limbs —
+
+- **(a) stubbed API** — every read routes through something
+  `sim/patch-table.ts` declares the realm cannot answer: layout geometry
+  (jsdom has no layout engine; reads return zeros), `attachInternals()`
+  (normalized to throw so the library's degradation branch runs), the absent-
+  API stubs (`ResizeObserver`, `matchMedia`, `IntersectionObserver`,
+  `requestAnimationFrame`), the closed network globals.
+- **(b) not a server-side fact** — the value is a function of the moment the
+  page is VIEWED, or of the build machine's own ambient state: the wall clock
+  (`Date.now()`, `new Date()`), the RNG (`Math.random()`), a locale falling
+  back to the runtime default. This is `evaluability.ts`'s existing
+  `containsImpureAmbient` set.
+
+**An unresolvable expression is omitted in EVERY tier, tier 2 included.** The
+realm must not fold one: a build-time `Date.now()` is not an approximation
+the client corrects, it is a stale value cached into the served HTML for the
+life of the page (`evaluability.ts`'s own comment already says so). Since the
+generated client module is the shipped artifact, the realm cannot decline to
+install the binding — suppression is a serialization-time step, and it must
+run AFTER the fixed-point gate's second connect pass, never between the two,
+or the gate compares a suppressed tree against an unsuppressed one.
+
+**Tier is a routing decision about a COMPONENT** — which mechanism to run:
+
+- **Phase-1 totality** reuses `evaluability.ts` (`isServerEvaluable`,
+  `hostDerivedFold`) and `analysis/harvest.ts`'s site detection unchanged in
+  mechanism, inverted in polarity. Every site that used to trigger a refusal
+  is now a tier-2 routing signal: no harvestable render site (old `TSRX004`),
+  no server-renderable value for a semantically-loaded attribute (old
+  `TSRX034`), a setup const reading a `first()` ref (old `TSRX043`), a
+  client-only primitive or a `host`/`internals` read in a plain setup const
+  or a derived compute (the server-evaluation members of old `TSRX013`).
+- **Tier 0 is the degenerate case**: every phase-1-unresolved expression is
+  unresolvable, so no mechanism needs to run at all.
+
+Keeping the stub table load-bearing for limb (a) is deliberate: when the
+driver gains a capability, deleting the patch-table row re-routes the
+affected expressions and their components automatically. Limb (b) has no such
+escape hatch — no driver capability can tell the build machine what time it
+will be when the page is read.
+
+**`module-ticker` is why the two facts stay separate.** It calls
+`Math.random()` and is heavily `first()`-based (template, table, tbody,
+toggle button). Component-level tier 0 would discard everything the realm
+could resolve; component-level tier 2 would bake the random walk's seed into
+the page. It is tier 2 with one suppressed expression.
+
+`Intl` splits along the same seam: a locale resolving to a server-known value
+keeps a component tier-1-eligible; a locale read from the DOM (`getLocale(el)`,
+`host.lang`) is a tier-2 routing signal, because the realm executes that read
+for real; only a runtime-default locale is unresolvable under limb (b).
+`basic-pluralize` is the middle case and stays tier 2.
+
+**Classification is static and conservative.** There is no render-time
+fallback from phase 1 to phase 2 — the fallback condition is exactly what the
+analysis already decides ahead of time. A component is tier 1 only when phase
+1 is provably total; any doubt routes downward. A false tier-2 costs ~1.1 ms;
+a false tier-1 ships wrong HTML with no diagnostic.
+
+**Composition contaminates on reads, not containment.** A tier-1 or tier-0
+parent that merely embeds a tier-2 child splices the child's already-rendered
+markup and keeps its own tier — the compose graph renders children before
+parents. Contamination applies only when the parent READS the child: a
+`first()` addressing a compose site, or a `truc:pass={{ }}` into it. The rule
+is a fixpoint over the compose graph, computed in the registry-aware second
+pass alongside `analysis/compose-refs.ts`.
+
+### 5.3 Tier 1 — generated render modules and the value harness
 
 `emit-server.ts` walks the IR and emits a `render<Name>(args): string`
 function: per-kind dispatch over the template (escaped text, server
 expressions, real JS conditionals for `@if`/`@switch`, isolated arm buffers
-for `@try`, composition calls for `compose` nodes), reactive thunks rendered
-**only when their dependency closure is server-known** (`isServerEvaluable`),
-and setup re-declared verbatim against the `runtime.ts` harness. A thunk whose
-closure is not provably server-known gets one second chance — the
+for `@try`, composition calls for `compose` nodes), and setup re-declared
+verbatim against the `runtime.ts` harness, where a signal is its initial value
+in a box (`.get()` reads once, `.set()` is a no-op) — "signals as plain
+values". A thunk whose closure is not directly server-known gets the
 **host-derived fold**: an expression whose every read has a compiler-known
 server truth (a Parser prop's root attribute, a prop harvested from a
 same-named server arg, a `first()` ref's branch presence) is spliced to an
-initial value instead of omitted. The fold is all-or-nothing: one
-non-substitutable read disqualifies the whole expression. Everything not
-rendered is corrected by the client at connect — DOM-is-truth (ADR 0003),
-no serialized state payload ever ships.
+initial value. The fold is all-or-nothing: one non-substitutable read
+disqualifies the expression — and, under ADR 0029, routes the component out
+of tier 1.
 
-### 5.2 Next: Server Simulation (ADR 0027)
+Measured against the migrated corpus, tier 1 is the minority path: about 6 of
+22 components qualify. Fifteen use `first()`, which is irreducibly a DOM
+question.
 
-The evaluability-plus-fold grammar has a ceiling — some authored idioms have
-no route into the fold set, and each new idiom would need its own proof rule.
-ADR 0027 replaces the mechanism: the server renders initial HTML by
-**executing the generated client module** against jsdom and serializing the
-reactive graph's initial state. One evaluation mechanism answers "what is this
-expression's initial value", the client stays ground truth, and the
-evaluability gate, fold routes, and eventually the hand-shaped render
-functions retire.
+### 5.4 Tier 2 — Server Simulation (ADR 0027)
 
-The driver lives in `sim/`:
+The server renders initial HTML by **executing the generated client module**
+against jsdom and serializing the reactive graph's initial state. The client
+stays ground truth and corrects at connect. The driver lives in `sim/`:
 
 - **`patch-table.ts`** — declarative substrate data: real DOM constructors
   forced from the jsdom window, inert stubs for absent APIs
@@ -247,9 +374,14 @@ The driver lives in `sim/`:
   never-settling no-ops (a build can never depend on the network; a fetching
   component stays on its `@pending` arm), and `attachInternals()` normalized
   to throw so every component takes the library's graceful-degradation branch.
+  Also the second conjunct of the tier classifier (§ 5.2).
 - **`realm.ts`** — `createSimulationRealm`: loads the client module with a
   recording `customElements`, parses the SSR'd markup, replays the
-  definitions so the upgrade runs, serializes; realm diagnostics are
+  definitions so the upgrade runs, serializes. It seeds the simulated
+  document's `<html lang>` from the page's build locale (ADR 0030 s7) —
+  without it, `document.body.innerHTML = markup` leaves the ancestor chain
+  truncated and `getLocale()`'s `closest('[lang]')` silently resolves the
+  `'en'` fallback regardless of the page's actual locale; realm diagnostics are
   attributed to the component whose window was open. Renders are isolated
   enough to be a function of `(component, args)` — each component loads once
   against a shared registry, disposal is end-of-process.
@@ -257,10 +389,9 @@ The driver lives in `sim/`:
   window performs no IO and advances no timers, draining microtasks to a
   bounded quiescence, so the compiler — not microtask timing — decides which
   `@try` arm ships.
-- **`report.ts`** — turns realm diagnostics into the build report: the channel
-  that replaces compile-time refusals once simulation renders (contained
-  throws, network attempts, console errors become build warnings attributed to
-  the component).
+- **`report.ts`** — turns realm diagnostics into the build report (contained
+  throws, network attempts, console errors become build warnings attributed
+  to the component), and carries the **tier census** (§ 6).
 
 Two gates make simulation safe to ship: **connect must be a fixed point**
 (the driver runs the connect pass twice and requires byte-identical
@@ -268,11 +399,39 @@ Two gates make simulation safe to ship: **connect must be a fixed point**
 harvestable from the markup the component itself rendered — otherwise
 `@pending`.
 
-**Rollout** (ADR 0027 sub-design 7): stage 1 (driver + substrate) is
-implemented and exercised by `server/tests/tsrx/sim-*.test.ts`; later stages
-extend ref resolution and composition against the simulated tree, and finally
-retire the generated render functions and the evaluability/fold machinery.
-Until then § 5.1 is the live mechanism.
+For a tier-2 component `emit-server.ts` emits the same skeleton it emits for
+everyone, minus the verbatim `@{ }` setup re-declaration: only tier 1
+evaluates setup in the value harness, and the setup shapes that would break
+the harness are precisely the ones that routed the component here.
+
+### 5.5 Tier 0 — the static skeleton
+
+A tier-0 component gets the phase-1 skeleton with its unresolved expressions
+omitted, and the client corrects at connect. No realm is opened.
+
+This is where the cost argument for tiering mostly pays. `module-scrollarea`
+(2,091 occurrences, the corpus's largest cost driver) reads `scrollLeft`/
+`scrollTop`/`scrollWidth`/`offsetWidth`/`scrollHeight`/`offsetHeight` and
+emits exclusively through `bindState(internals, …)` — both unanswerable by
+the realm's own stub posture. Simulating it would cost ~2.3 s of the measured
+~3.9 s full-corpus figure and produce nothing. `card-mediaqueries`
+(`matchMedia`), `form-colorgraph` (`getBoundingClientRect`), `form-textbox`
+and `form-spinbutton` (`internals.states`) are in the same position.
+
+### 5.6 The equivalence audit
+
+Two evaluating mechanisms coexist — the value harness and the realm — which
+is the hazard ADR 0027 rejected when it declined to keep the determinism gate
+alongside simulation. ADR 0029 answers it with a test rather than an argument:
+**CI renders every tier-1 component through the realm as well and requires
+byte-identical output.** At ~1.1 ms per occurrence the whole corpus is ~4 s,
+affordable once per CI run and not paid by the build. A divergence is a build
+error against that component: either the classifier admitted a false tier-1,
+or the two mechanisms disagree on a shape that needs reconciling. The known
+case is `Date.now()` — `evaluability.ts` refuses it while ADR 0027 § 6 folds
+it — and it is DISSOLVED rather than resolved: neither mechanism can answer
+it, so it is unresolvable in both and omitted in both (§ 5.2 limb b). Making
+the two agree by electing the realm would have blessed the wrong answer.
 
 ## 6. Type checking & diagnostics
 
@@ -313,6 +472,36 @@ is a real `tsc` diagnostic, remapped to the compose site.
   (TSRX004), no server-renderable value for a reactive attribute (TSRX034),
   the Parser-prop double-render warning (TSRX039), a dead required-reason
   string (TSRX040).
+
+**Reclassification under ADR 0029.** The impure-ambient refusal is not in the
+table below because it does not become a routing signal at all: it becomes
+the expression-level unresolvability property (§ 5.2 limb b), omitted in
+whatever tier its component lands in, with no diagnostic. Most of the rest of
+the harvest-and-evaluability
+family stops being diagnostics at all and becomes routing input to the tier
+classifier (§ 5.2), surfaced as a **tier census** in the build report —
+per component, its tier and the reason — rather than as warnings:
+
+| Code | Becomes |
+| --- | --- |
+| `TSRX004` | tier-2 routing signal; leaves the diagnostic channel |
+| `TSRX034` non-severe | routing signal; leaves the diagnostic channel |
+| `TSRX034` **severe** (`disabled`/`checked` on a real submittable control) | **survives, scoped to tier 0** — the only tier where nothing resolves the value, and its own copy is right that this is a correctness bug rather than a flash |
+| `TSRX013` → `clientOnlySetupConst`, `clientOnlySignalCompute` | tier-2 routing signals |
+| `TSRX013` → `conditionalSignalConstructor` | **unchanged**, and gets its own code — an ADR 0024 s12 format rule, not a server-evaluation guard |
+| `TSRX013` → `deferredCollectorCall` | **unchanged**, and gets its own code — a client-side `NoActiveCollectorError` bug, tier-independent |
+| `TSRX043` | tier-2 routing signal |
+| `TSRX039` | **unchanged** — a data-ownership rule; tiering does not answer it |
+
+`TSRX013`'s four factories must be split into distinct codes BEFORE any part
+of it retires; only two of the four are server-evaluation guards.
+
+The consequence for the regression signal: **the compile-warning baseline's
+target stays zero.** Once routing signals leave the channel, the remaining
+warnings are all genuinely author-fixable again. The tier census is a
+separate, non-zero, expected-to-grow record with its own regression story — a
+component drifting from tier 1 to tier 2 is a build-cost regression worth
+seeing, and it is now visible without being miscast as a warning.
 
 Message copy is owned by the Tech Writer per ADR 0028's lifecycle; severity
 follows the tiering decision recorded with each rule.
@@ -356,9 +545,13 @@ across runtimes) and `eval:substrate` (substrate evaluation scripts).
 ## 8. Cross-cutting invariants
 
 - **DOM-is-truth** (ADR 0003/0024 s3): the server renders each reactive
-  expression's initial value when provably able; otherwise it is omitted (or,
-  under simulation, rendered as the simulated best answer) and the client
-  corrects at connect. No serialized state payload ever ships.
+  expression's initial value by its tier's mechanism — folded in the value
+  harness (tier 1), simulated (tier 2), or omitted (tier 0) — and the client
+  corrects at connect. No serialized state payload ever ships, in any tier.
+- **Tier is decided statically and conservatively** (ADR 0029, § 5.2): tier 1
+  only when phase 1 is provably total; any doubt routes downward. There is no
+  render-time fallback. A false tier-2 costs ~1.1 ms; a false tier-1 ships
+  wrong HTML with no diagnostic, so the classifier is sound, not complete.
 - **Verbatim slices, sparse spans**: source code is never rewritten, only
   reindented — which is what makes the span tables sound (§ 6).
 - **Selector uniqueness is proven structurally** against the template the
@@ -395,5 +588,6 @@ across runtimes) and `eval:substrate` (substrate evaluation scripts).
 *Companion documents: `server/SERVER.md` (build-pipeline integration),
 `adr/0024-adopt-tsrx-as-isomorphic-component-format.md` (format decisions),
 `adr/0027-server-simulation.md` (Server Simulation),
+`adr/0029-tiered-server-evaluation.md` (tiered server evaluation),
 `server/TESTS.md` (test strategy), `TSRX-HOST-PROFILE.md` (host decisions for
 authored `.tsrx` components).*

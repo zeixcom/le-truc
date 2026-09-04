@@ -271,6 +271,7 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 - **Client-side rendering or templating**: Le Truc will never generate initial HTML. Component authors who need client-side rendering should use a different tool or implement it themselves with template literals or `<template>` cloning.
 - **Server-side rendering**: The library is browser-only. A companion TypeScript SSR library is a separate future project, not part of Le Truc.
 - **Styled components / design system**: Visual styling is entirely the consumer's responsibility. Le Truc provides behavioral primitives only.
+- **Internationalization runtime**: The library ships no message catalog, no translation function, and no locale resolution. Locale and translations are build-time server data handled by the compiler ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)); at runtime a component uses the platform's own `Intl` and the `lang` the server rendered into the DOM.
 - **Framework adapters**: No React wrappers, Vue plugins, Angular modules, or similar.
 - **Sibling-to-sibling state sharing**: Not a supported coordination pattern.
 - **Accessibility enforcement**: Le Truc cannot enforce WCAG compliance. It provides patterns and primitives; correctness is the component author's responsibility.
