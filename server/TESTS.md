@@ -189,7 +189,12 @@ signal is **two numbers**, not one:
    warnings are **correct refusals** — the fold cannot follow the authored `pluralCategory`
    const, its opaque `getLocale` helper, or the `hasAttribute` sensor — and they retire with
    TSRX034 at stage 3 (LT-165). Zero compile warnings is the stage-3 state. This is the
-   channel for what is statically decidable.
+   channel for what is statically decidable. [**Corrected by LT-145's review, 2026-09-03:**
+   LT-145 landed as a pure runtime pin (its own instruction was "pin it, not build the
+   route") and does not move `check:tsrx`'s count — `form-listbox`'s TSRX034 stays standing.
+   The gate-wave target is **7 unique**, not 6: `LT-146` alone delivers the compile
+   reduction (8 → 7), and `form-listbox`'s TSRX034 joins the six `basic-pluralize` refusals
+   in the stage-3 (LT-165) retirement bucket, seven total.]
 2. **The build-report baseline** — `server/tests/tsrx/sim-driver.test.ts` runs the corpus
    through the simulation driver and requires **zero unclassified diagnostics**. The driver
    raises a diagnostic per condition (a jsdom `jsdomError`, an unhandled rejection, a

@@ -21,7 +21,7 @@
  * that one initial read; `tokens.add()`'s own `DuplicateKeyError` guard
  * still catches duplicates from then on, same as the hand-written version.
  */
-import { createList, asString, defineMethod } from '@zeix/le-truc'
+import { createList, defineMethod } from '@zeix/le-truc'
 import { DuplicateKeyError } from '@zeix/le-truc'
 
 export const config = { formAssociated: true }
@@ -87,6 +87,7 @@ export function FormTokenbox(
 	const inputId = `${name}-input`
 	const descriptionId = `${name}-description`
 	const textbox = first('input', 'token input')
+	const descriptionEl = first('.description')
 	const statusEl = first('.status', 'status paragraph')
 
 	expose({
@@ -94,7 +95,7 @@ export function FormTokenbox(
 			get: () => tokens.get().join(', '),
 			set: (v: string) => tokens.set(splitTokens(v)),
 		},
-		description: asString(''),
+		description: descriptionEl?.textContent ?? '',
 		clear: defineMethod(() => {
 			tokens.set([])
 			host.setCustomValidity('')
@@ -185,9 +186,13 @@ export function FormTokenbox(
 					}}
 				/>
 			</div>
-			<p class="error" role="alert" aria-live="assertive">{host.validationMessage}</p>
+			<p class="error" role="alert" aria-live="assertive">
+				{host.validationMessage}
+			</p>
 			@if (description) {
-				<p class="description" aria-live="polite" id={descriptionId}>{description}</p>
+				<p class="description" aria-live="polite" id={descriptionId}>
+					{description}
+				</p>
 			}
 			<p class="status visually-hidden" role="status" aria-live="polite"></p>
 		</form-tokenbox>
