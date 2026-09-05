@@ -49,7 +49,7 @@ A consequence of longer-lived scopes: the computed created by `toSignal` for a `
 
 **Bad / accepted tradeoffs:**
 
-- ~300 B of additional source (Map bookkeeping); gzip stays under the 14 kB ceiling.
+- ~300 B of additional source (Map bookkeeping).
 - The Map holds strong references to elements between runs; entries are removed when elements leave and the wrapper cleanup clears the Map on disconnect, so lifetime is bounded by the component scope.
 - Longer-lived per-element computeds mean stale-closure bugs in `pass()` thunks are no longer masked by per-change recreation (see contract note in Decision).
 - The `{ root: true }` + Map + wrapper-scope ownership model is subtle enough that a well-meaning "simplification" (dropping `root: true`, or removing the wrapper cleanup) silently reintroduces the O(n) rebuild or leaks scopes. The flipped unit tests guard the runtime behavior; this ADR records the *why*.

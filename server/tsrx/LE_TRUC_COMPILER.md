@@ -496,13 +496,13 @@ per component, its tier and the reason — rather than as warnings:
 | `TSRX034` non-severe | routing signal; leaves the diagnostic channel |
 | `TSRX034` **severe** (`disabled`/`checked` on a real submittable control) | **survives, scoped to the Static tier** — the only tier where nothing resolves the value, and its own copy is right that this is a correctness bug rather than a flash |
 | `TSRX013` → `clientOnlySetupConst`, `clientOnlySignalCompute` | Simulated-tier routing signals |
-| `TSRX013` → `conditionalSignalConstructor` | **unchanged**, and gets its own code — an ADR 0024 s12 format rule, not a server-evaluation guard |
-| `TSRX013` → `deferredCollectorCall` | **unchanged**, and gets its own code — a client-side `NoActiveCollectorError` bug, tier-independent |
+| `TSRX013` → `conditionalSignalConstructor` | **unchanged** as `TSRX044` — an ADR 0024 s12 format rule, not a server-evaluation guard |
+| `TSRX013` → `deferredCollectorCall` | **unchanged** as `TSRX045` — a client-side `NoActiveCollectorError` bug, tier-independent |
 | `TSRX043` | Simulated-tier routing signal |
 | `TSRX039` | **unchanged** — a data-ownership rule; tiering does not answer it |
 
-`TSRX013`'s four factories must be split into distinct codes BEFORE any part
-of it retires; only two of the four are server-evaluation guards.
+`TSRX013`'s four factories are split into distinct codes (LT-165): only the
+two that keep the code are server-evaluation guards.
 
 The consequence for the regression signal: **the compile-warning baseline's
 target stays zero.** Once routing signals leave the channel, the remaining

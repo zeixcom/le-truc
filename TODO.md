@@ -247,7 +247,7 @@ remain warnings.]
 
 ## Architecture — internationalization (ADR 0030)
 
-- [x] LT-172: Seed the simulation realm's `<html lang>` from the page's build locale. — done, pending review ⏳
+- [x] LT-172: Seed the simulation realm's `<html lang>` from the page's build locale. — reviewed ✓
   **Skill:** docs-server-dev
   **Context:** **Fixes a live silent-wrong-answer bug; do this independently of the rest of the
   i18n work.** `sim/realm.ts` renders with `document.body.innerHTML = markup`, so the simulated
@@ -278,6 +278,18 @@ remain warnings.]
   instead, given one realm per build but one locale per page — per-render was chosen because
   the realm outlives the page; (c) the memo-key widening is a cache-hit-rate change: distinct
   locales now multiply the 216 measured signatures by the number of built locales.
+  **Review (architect, 2026-09-04):** Approved. All three checks resolved as implemented: (a)
+  the clearing branch is correct and pinned (`hasAttribute('lang')` false + `data-locale="en"`
+  from `getLocale`'s own fallback); (b) per-render is right — the realm outlives the page, and
+  LT-169's driver is the natural per-page caller; (c) the cache-hit-rate cost is exactly
+  LT-175's spike scope, no action here. One accepted nuance: the test probe reimplements
+  `getLocale`'s one-line walk rather than importing `examples/_common/getLocale` — faithful
+  (verified against the helper), and importing an examples helper into a server test would be
+  the worse layering; also, a cache hit returns before the seeding line, so `documentElement`'s
+  `lang` reflects the last actual render, not the current call — irrelevant to serialized
+  bytes, no follow-up. Verified independently: `bun test server` 1391/1391 (includes the 2 new
+  tests), `tsc -p tsconfig.build.json` clean, biome clean except the pre-existing
+  `server/tsrx/globals.d.ts:59` suppression warning (noted at the LT-177 review, unrelated).
 
 - [ ] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline (ADR 0030).
   **Skill:** le-truc-dev
@@ -383,7 +395,7 @@ remain warnings.]
 
 ## Documentation alignment
 
-- [ ] LT-181: Propagate the TSRX013 split (TSRX044/TSRX045) through the error-surfacing docs, and re-point ADR 0028 §5's `NoActiveCollectorError` row.
+- [x] LT-181: Propagate the TSRX013 split (TSRX044/TSRX045) through the error-surfacing docs, and re-point ADR 0028 §5's `NoActiveCollectorError` row. — done ✓
   **Skill:** tech-writer
   **Context:** Owed from LT-165 steps 1–3 (landed, reviewed ✓ 2026-09-04). `TSRX013` is now
   three codes: `conditionalSignalConstructor` → **TSRX044** (ADR 0024 s12 format rule),
@@ -412,10 +424,38 @@ remain warnings.]
   Acceptance: `errors.md`, ADR 0028 §5, and `LE_TRUC_COMPILER.md` § 6 agree with
   `server/tsrx/diagnostics.ts`'s code set; a grep for TSRX013 no longer describes the split
   factories anywhere author-facing; `bun test server` green if messages moved.
+  **Handoff (tech-writer, 2026-09-04; architect-verified):** docs-only, `diagnostics.ts`
+  untouched. `errors.md`: `NoActiveCollectorError` row → `TSRX045`; the `TSRX013` row rescoped
+  to its two surviving server-evaluation factories; `TSRX044`/`TSRX045` rows added in code
+  order with fix-its matching the code's messages. ADR 0028 §5: re-pointed to `TSRX045` with a
+  dated bracket; the row's "re-point when LT-165 lands" instruction completed in place.
+  `LE_TRUC_COMPILER.md` § 6: the table names `TSRX044`/`TSRX045`; the "must be split BEFORE
+  retirement" sentence now records the landed split. `TSRX-HOST-PROFILE.md` verified still
+  accurate post-split, untouched. **Premise correction: the task expected verbatim misleading
+  drafts needing reword — the two codes' messages were already shape-specific before the split**
+  (a2e789e4 changed identifiers/JSDoc only), so no message moved and no test churned.
+  Deliberately stale, not missed: `adr/0029` (immutable record), `adr/0027` §78 (historical),
+  ADR 0028's Related amendment line, CHANGELOG. Residual: `docs-src/api/_media/`'s generated
+  copies refresh on the next `bun run build:docs` (gitignored, never hand-edited).
+  `bun test server` 1391/1391.
 
-- [ ] LT-176: Align bundle-size thresholds across test copy and ADR citations.
+- [x] LT-176: Align bundle-size thresholds across test copy and ADR citations. — done ✓
   **Skill:** tech-writer
   **Context:** One number, three stories (architecture review, 2026-09-04). The constants are operative: `test/regression-bundle.test.ts:4-5` enforces **9 kB minimal (hard ceiling)** and **warns at 10 kB** for core + `formAssociated()` — but the first test's title says "under 8 kB", the second's says "exceeds 14 kB", and published ADRs cite the older numbers (ADR 0010: "≤10 kB target, hard ceiling 14 kB"; ADR 0014: "the 14 kB ceiling"; ADR 0019: "the 9/10 kB ceiling"). REQUIREMENTS §4 is already canonical (rewritten 2026-09-04): 9 kB minimal hard ceiling, 10 kB formAssociated warn, full barrel reported-not-asserted. Fix: test titles to match their constants; audit every threshold citation in `adr/`, `ARCHITECTURE.md`, `README.md`, and `docs-src/`. Do NOT rewrite published ADR history — add bracketed correction pointers in the house style (ADR 0003 ← 0019 is the pattern). Acceptance: no surviving doc/test text states a threshold the constants don't enforce; a "kB" grep across test titles, `adr/`, `ARCHITECTURE.md`, and `docs-src/` agrees with the constants or carries a dated correction pointer.
+  **Handoff (tech-writer, 2026-09-04; architect-verified):** titles-only in
+  `test/regression-bundle.test.ts` ("at or under 9 kB gzipped" / "exceeds 10 kB gzipped" —
+  matching `toBeLessThanOrEqual` and `>` respectively); dated *(Corrected 2026-09-04: …)*
+  pointers added to ADR 0010/0014/0019, no history rewrite — ADR 0019's pointer quotes what the
+  replaced line actually said ("below 14 kB … TCP segment threshold; target ≤10 kB"), and
+  ADR 0014's verifies the original claim still holds at the measured 8915 B. Every kB citation
+  in `adr/`, `ARCHITECTURE.md`, `README.md`, `docs-src/` judged: agreeing citations and cost
+  figures left as-is. Sole judgment call, accepted: the 2026-03-09 blog post's "less than
+  10 kB" (historical narrative, still true of the core). `bun run check:size` 5/5; measured:
+  minimal **8915 B** (301 B under the 9 kB ceiling), core+`formAssociated()` 9700 B /
+  +Checkbox 9729 B (warn 10240 B, neither warns), barrel 17773 B informational. Generated
+  gitignored `docs-src/api/_media/REQUIREMENTS.md` refreshes on the next `bun run build:docs`.
+  Headroom note for the next size conversation: the minimal ceiling is the thinner margin
+  (301 B vs ~510 B); retuning it is a REQUIREMENTS §4 decision, not a doc fix.
 
 ## v3.0 — deprecated-surface removal (separate branch; gates wave 4)
 
