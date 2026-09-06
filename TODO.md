@@ -22,6 +22,27 @@ on zero warnings *plus* its recorded tier and reason.
 
 ---
 
+## P0 — Format spike (gates P5; parallel-safe with P1/P2)
+
+- [ ] LT-183: TSX surface spike — decide `.tsrx` vs `.tsx` compiler surface. **Plan: `TSX_SPIKE.md`.**
+  **Skill:** le-truc-dev
+  **Context:** The 2026-09-06 architecture review concluded the compiler machinery
+  (analysis, emitters, simulation, tiering) is format-independent while the surface
+  (`.tsrx` grammar on a pinned `@tsrx/core`) carries the mounting costs: broken editor
+  support, the React-near-miss diagnostic family, pin churn, emit-then-check type flow.
+  A time-boxed spike on branch `spike/tsx-surface` re-targets the compiler front end onto
+  the TypeScript parser (stand-alone core; no Babel; `sim/` stays out of its import
+  graph — decisions §2 of the plan) and ports `basic-counter`, `basic-pluralize`,
+  `form-combobox` + `form-listbox`, diffing server renders **byte-wise** against the
+  existing `.tsrx` goldens. §7 records probe-verified facts (TS 6.0.3 parses and
+  type-checks `truc:pass` namespaced JSX attributes; function-valued attributes and IIFE
+  arms check under `--strict`). **Gates wave 4:** do not start LT-095–LT-111 before the
+  go/no-go — a surface switch after migrating 21 more components would double the churn.
+  On GO, an ADR supersedes ADR 0024's surface sub-designs; on NO-GO, TSRX stands with
+  evidence. Read the plan; it is self-contained.
+
+---
+
 ## P1 — Tiered server evaluation (critical path)
 
 - [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–4 done and reviewed ✓; steps 5–8 open.** Next up: step 5.
