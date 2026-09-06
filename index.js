@@ -2999,6 +2999,7 @@ function reconcile(container, template, source, bindItem) {
     const itemRoot = template.content.firstElementChild;
     const keyOf = new WeakMap;
     const disposers = new Map;
+    let firstRun = true;
     const nextKeyed = (after) => {
       let node = after ? after.nextElementSibling : container.firstElementChild;
       while (node && (!keyOf.has(node) || node.hasAttribute("data-unreconciled")))
@@ -3091,6 +3092,7 @@ function reconcile(container, template, source, bindItem) {
           const { current, adopted, pinned, leavers } = classify(keySet);
           leave(keySet, leavers);
           enter(keys, current, adopted, pinned);
+          firstRun = false;
         });
       });
       return () => {

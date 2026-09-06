@@ -689,8 +689,11 @@ function each<E extends Element>(
  *
  * On first run, existing children whose `data-key` matches a source key are
  * adopted (`bindItem` runs for them too, so make it idempotent against
- * server-rendered content). Everything else is removed. Children carrying
- * `data-unreconciled` are left alone entirely.
+ * server-rendered content). Everything else is removed, and every removal in
+ * that first pass warns in DEV_MODE — it is the one run that discards markup
+ * the author wrote. Children carrying `data-unreconciled` are left alone
+ * entirely; that is the opt-out for an authored sibling the source does not
+ * own, such as a text input sharing the container with the items.
  *
  * `bindItem` is called once per entering element, with the same collector
  * support as `each()`'s callback: `watch()`, `on()`, `pass()`, and
@@ -758,6 +761,11 @@ function reconcile<T extends {}>(
 		const keyOf = new WeakMap<Element, string>()
 		const disposers = new Map<string, Cleanup>()
 
+		// The adoption pass is the one run where the container's children are
+		// markup the author wrote rather than elements `reconcile()` placed,
+		// so every removal there is reported in DEV_MODE (LT-185).
+		let firstRun = true
+
 		// Next reconciled element after `after` in document order — skips
 		// `data-unreconciled` elements, which are invisible to positioning.
 		const nextKeyed = (after: Element | null): Element | null => {
@@ -806,9 +814,18 @@ function reconcile<T extends {}>(
 					adopted.add(harvested)
 					continue
 				}
-				if (process.env.DEV_MODE === 'true' && harvested !== null)
+				// On the first run the container is taking ownership of
+				// server-rendered or hand-authored markup, and anything dropped
+				// here disappears at upgrade with no other signal — the shape
+				// that cost form-tokenbox its text input. After that the
+				// container is reconcile-owned and self-cleaning is the point,
+				// so only a keyed child whose key left the source still warrants
+				// a warning.
+				if (process.env.DEV_MODE === 'true' && (firstRun || harvested !== null))
 					console.warn(
-						`reconcile() removed child with data-key="${harvested}" from ${elementName(container)} — key not present in the source.`,
+						harvested !== null
+							? `reconcile() removed child with data-key="${harvested}" from ${elementName(container)} — key not present in the source.`
+							: `reconcile() removed unkeyed <${child.localName}> from ${elementName(container)} during initial reconciliation — the source owns this container's children. Add data-unreconciled to exempt it.`,
 					)
 				child.remove()
 			}
@@ -886,6 +903,7 @@ function reconcile<T extends {}>(
 					const { current, adopted, pinned, leavers } = classify(keySet)
 					leave(keySet, leavers)
 					enter(keys, current, adopted, pinned)
+					firstRun = false
 				})
 			})
 			return () => {
