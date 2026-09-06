@@ -14,7 +14,7 @@
  */
 
 import type { ExposeKind } from './ir'
-import type { EvaluationTier, RoutingSignal } from './tier'
+import type { EvaluationTier, RoutingSignal, SuppressedSite } from './tier'
 
 /* === Types === */
 
@@ -84,6 +84,17 @@ export type RegistryEntry = {
 	tier: EvaluationTier
 	/** Why this component is not Folded-tier; empty for the Folded tier. */
 	routingSignals: RoutingSignal[]
+	/**
+	 * Reactive sites whose expression no server phase can answer (ADR 0029
+	 * sub-design 1 limb b, LT-165 step 7), so the simulation driver can
+	 * revert each one to its server-rendered skeleton state after the
+	 * connect window stabilizes. Recorded per EXPRESSION, not per tier —
+	 * unresolvability is a property of an expression — and keyed here
+	 * because the driver already reads this registry for `composesTags`; it
+	 * must not re-derive the list by re-analyzing source. Inert for Folded-
+	 * and Static-tier components, for which no realm ever opens.
+	 */
+	suppressedSites: SuppressedSite[]
 	/**
 	 * Composed children this component READS — the contamination edges of
 	 * ADR 0029 sub-design 3, and a strict subset of `composesTags`.

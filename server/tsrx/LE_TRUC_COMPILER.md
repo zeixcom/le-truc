@@ -392,7 +392,13 @@ stays ground truth and corrects at connect. The driver lives in `sim/`:
   `'en'` fallback regardless of the page's actual locale; realm diagnostics are
   attributed to the component whose window was open. Renders are isolated
   enough to be a function of `(component, args)` — each component loads once
-  against a shared registry, disposal is end-of-process.
+  against a shared registry, disposal is end-of-process. Suppression (LT-165
+  step 7): the registry's `suppressedSites` (§ 5.2 limb b) records each
+  unresolvable expression's target site; the driver snapshots the sites'
+  skeleton state from an inert parse of the markup and reverts them after
+  the quiescence drain and before serializing — never inside the drain — so
+  an impure binding's connect-time write never bakes the build machine's
+  reading into the served HTML.
 - **`boundary.ts`** — the serialization boundary: the instantiate→serialize
   window performs no IO and advances no timers, draining microtasks to a
   bounded quiescence, so the compiler — not microtask timing — decides which

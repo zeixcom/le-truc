@@ -72,6 +72,19 @@
  * an unhandled rejection during a build becomes a diagnostic here instead of
  * a dead build, and the build report is the only place it surfaces.
  *
+ * ## Suppression (LT-165 step 7, ADR 0029 sub-design 1)
+ *
+ * A suppressed site is an expression NO server phase can answer (limb b:
+ * wall clock, RNG, runtime-default locale). The generated client still
+ * binds it — the realm cannot decline — so `render()` snapshots the site's
+ * skeleton state from an inert parse of the markup and restores it after
+ * the quiescence drain, before serializing. The ordering is load-bearing:
+ * the drain's stability comparison must observe the unsuppressed tree, and
+ * a revert inside the drain loop would either oscillate against the live
+ * binding or mask a genuine non-quiescence. Records come from the
+ * compiler's `RegistryEntry.suppressedSites` via the constructor's
+ * `suppressedSites` callback, keyed by the rendered tag.
+ *
  * ## Render memoization (LT-166)
  *
  * `render()` memoizes on `(component, locale, markup)` — the driver-side
@@ -82,9 +95,9 @@
  * key because it is seeded onto `<html lang>` and so is an input to the
  * render, not a property of the markup (LT-172). A hit returns the first
  * pass's bytes without reopening a connect window, so a repeated occurrence
- * reports only the FIRST occurrence's diagnostics, and a time-dependent
- * render (sub-design 6 lets `Date.now()` through) stabilizes on the first
- * observed value — which is what a deterministic build wants. Only a
+ * reports only the FIRST occurrence's diagnostics, and the memoized bytes
+ * are the POST-suppression serialization (a time-dependent render's build-
+ * machine reading never reaches them). Only a
  * completed connect memoizes: a degraded (contained throw) or non-quiescent
  * render re-runs every time, so its diagnostic keeps firing per occurrence.
  * The map dies with the realm and is bounded by unique
@@ -94,6 +107,7 @@
  */
 
 import { JSDOM, VirtualConsole } from 'jsdom'
+import { SUPPRESSED_HOST_SELECTOR, type SuppressedSite } from '../tier'
 import { assertSynchronousWindow, drainToQuiescence } from './boundary.ts'
 import {
 	detectRuntime,
@@ -282,9 +296,18 @@ export function createSimulationRealm(
 	options: {
 		html?: string
 		composesTags?: (tag: string) => readonly string[]
+		/**
+		 * Suppression records per component tag (ADR 0029 sub-design 1,
+		 * LT-165 step 7), from the same registry entry the compile wrote.
+		 * Defaults to "no records" — correct for the driver's own inline test
+		 * fixtures and for tiers whose components carry none. Consulted once
+		 * per render, for the rendered tag.
+		 */
+		suppressedSites?: (tag: string) => readonly SuppressedSite[]
 	} = {},
 ): SimulationRealm {
 	const composesTags = options.composesTags ?? (() => [])
+	const suppressedSites = options.suppressedSites ?? (() => [])
 	const runtime = detectRuntime()
 	const diagnostics: SimDiagnostic[] = []
 	const definitions: RecordedDefinition[] = []
@@ -499,6 +522,77 @@ export function createSimulationRealm(
 	// stored.
 	const renderCache = new Map<string, string>()
 
+	/**
+	 * Snapshot each suppressed site's server-rendered state (ADR 0029
+	 * sub-design 1, LT-165 step 7) and return the closure that restores it.
+	 *
+	 * The snapshot is taken from an INERT parse of the same markup — not
+	 * from the live document — because an already-defined tag upgrades
+	 * DURING the `innerHTML` assignment that parses the markup (every
+	 * render after the component's first in a realm, the fixed-point second
+	 * pass included), so by the time the live tree exists its bindings have
+	 * already written. The inert document has no browsing context and
+	 * upgrades nothing, so its tree is the server-rendered skeleton
+	 * regardless of upgrade timing — provably the pre-connect state.
+	 *
+	 * Restoring that state after the drain — rather than enumerating
+	 * per-attribute revert operations — sidesteps the two ways a targeted
+	 * revert goes wrong: an attribute the binding REMOVED must become
+	 * present-with-value again, and a dirty-flag IDL property a
+	 * `bindProperty` write set must not survive the attribute revert (the
+	 * pre-connect property snapshot handles it). A site whose element did
+	 * not render (a guarded branch) contributes nothing.
+	 */
+	const snapshotSuppressedSites = (
+		component: string,
+		markup: string,
+	): (() => void) | null => {
+		const sites = suppressedSites(component)
+		if (sites.length === 0) return null
+		const skeleton = document.implementation.createHTMLDocument('')
+		skeleton.body.innerHTML = markup
+		const live = (site: SuppressedSite): Element | null =>
+			site.selector === SUPPRESSED_HOST_SELECTOR
+				? document.querySelector(component)
+				: document.querySelector(site.selector)
+		const undo: Array<() => void> = []
+		for (const site of sites) {
+			// Snapshot from the skeleton; restore onto the LIVE tree, resolved
+			// at restore time (the element exists by then — it was parsed).
+			const el =
+				site.selector === SUPPRESSED_HOST_SELECTOR
+					? skeleton.body.querySelector(component)
+					: skeleton.body.querySelector(site.selector)
+			if (!el) continue
+			if (site.kind === 'text') {
+				const text = el.textContent
+				undo.push(() => {
+					const target = live(site)
+					if (target) target.textContent = text
+				})
+			} else {
+				const present = el.hasAttribute(site.attr)
+				const value = el.getAttribute(site.attr)
+				const property =
+					site.prop === undefined
+						? undefined
+						: (el as unknown as Record<string, unknown>)[site.prop]
+				undo.push(() => {
+					const target = live(site)
+					if (!target) return
+					if (present) target.setAttribute(site.attr, value ?? '')
+					else target.removeAttribute(site.attr)
+					if (site.prop !== undefined)
+						(target as unknown as Record<string, unknown>)[site.prop] = property
+				})
+			}
+		}
+		if (undo.length === 0) return null
+		return () => {
+			for (const restore of undo) restore()
+		}
+	}
+
 	const load = async (importer: () => Promise<unknown>) => {
 		const before = definitions.length
 		force('customElements', recordingRegistry)
@@ -533,6 +627,11 @@ export function createSimulationRealm(
 		const cacheKey = `${component}\u0000${locale ?? ''}\u0000${markup}`
 		const cached = renderCache.get(cacheKey)
 		if (cached !== undefined) return cached
+		// Suppression (LT-165 step 7): the skeleton snapshot is a pure
+		// function of the markup — an inert parse upgrades nothing — so it is
+		// taken before the connect window opens at all. Restoring happens
+		// after the drain, below.
+		const restoreSuppressed = snapshotSuppressedSites(component, markup)
 		let degraded = false
 		const parsed = assertSynchronousWindow(() => {
 			currentComponent = component
@@ -583,13 +682,28 @@ export function createSimulationRealm(
 		// changing, or the bound expires. Skipped when the parse step already
 		// degraded to plain SSR output (nothing upgraded, nothing to settle).
 		if (degraded) return parsed
+		const readRendered = () =>
+			document.querySelector(component)?.outerHTML ?? parsed
 		const { value, quiescent, turns } = await drainToQuiescence(
-			() => document.querySelector(component)?.outerHTML ?? parsed,
+			readRendered,
 			maxTurns,
 		)
+		// Suppression is a serialization-time step (ADR 0029 sub-design 1's
+		// implementation constraint, LT-165 step 7), and the ordering is
+		// load-bearing: the revert runs strictly AFTER the drain has
+		// stabilized — the stability comparison must observe the unsuppressed
+		// tree, and a revert inside the drain loop would either oscillate
+		// against the live binding or mask a genuine non-quiescence — and the
+		// final serialization snapshot is taken only AFTER the revert, so the
+		// returned and memoized bytes never carry the build machine's reading.
+		let html = value
+		if (restoreSuppressed) {
+			restoreSuppressed()
+			html = readRendered()
+		}
 		// Only a completed connect memoizes — a non-quiescent one re-runs per
 		// occurrence so its diagnostic keeps firing (LT-166).
-		if (quiescent) renderCache.set(cacheKey, value)
+		if (quiescent) renderCache.set(cacheKey, html)
 		if (!quiescent)
 			report({
 				kind: 'non-quiescent',
@@ -600,7 +714,7 @@ export function createSimulationRealm(
 					'9). The build shipped the last observed state rather than hang. ' +
 					'Find the self-triggering effect before relying on this markup.',
 			})
-		return value
+		return html
 	}
 
 	const dispose = () => {

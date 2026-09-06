@@ -45,7 +45,7 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P1 — Tiered server evaluation (critical path)
 
-- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–6 done and reviewed; steps 7–8 open.** Next up: step 7.
+- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–7 done and reviewed; step 8 open.** Next up: step 8.
   **Skill:** le-truc-dev
   **Context:** ADR 0029 is accepted; this is its implementation. Read the ADR, not this
   summary, for the rationale. Steps 1–3 landed in `a2e789e4` and were reviewed and approved
@@ -144,14 +144,42 @@ on zero warnings *plus* its recorded tier and reason.
      reasons, but when the first Static-tier component lands the reason should also say WHY
      nothing answers it; add the resolution to the reason text then (the format is pinned,
      its tests update with it).
-  7. **Realm-side suppression for unresolvable expressions.** The generated client is the
-     shipped artifact, so the realm cannot decline to install a binding: record each
-     unresolvable expression's target site at compile time and revert those sites in the
-     driver before serializing. **Ordering is load-bearing** — it must run AFTER the
-     fixed-point gate's second connect pass (ADR 0027 s8), never between the two, or the gate
-     compares a suppressed tree against an unsuppressed one and reports a spurious failure.
-     `module-ticker` is the corpus case to pin (Simulated, `Math.random()` suppressed,
-     everything else simulated) once migrated.
+  7. **Realm-side suppression for unresolvable expressions.** — reviewed ✓ (2026-09-06)
+     **Changed:** `server/tsrx/tier.ts` (`SuppressedSite` union — `{kind:'attr', selector,
+     attr, prop?}` / `{kind:'text', selector}` — and the `SUPPRESSED_HOST_SELECTOR` root
+     sentinel), `server/tsrx/analysis/effects.ts` (`suppresses()` = `resolutionOf` says
+     `none`/`not-a-server-fact`; records pushed at the reactive-attribute, nested-lazy-child
+     and root-lazy-child sites; `prop` rides only on LT-116 property dispatch),
+     `server/tsrx/analysis/plan.ts` + `registry.ts` + `index.ts` (`suppressedSites` threaded
+     onto `RegistryEntry`, rides `registry.json`), `server/tsrx/sim/realm.ts` (constructor
+     `suppressedSites(tag)` option; snapshot from an INERT `createHTMLDocument` parse of the
+     markup, restore strictly AFTER `drainToQuiescence` stabilizes, final serialization read
+     AFTER the restore; memoized bytes are post-suppression), new
+     `server/tests/tsrx/suppression.test.ts` (11 tests incl. the standing unwired-realm
+     negative), driver-consuming test realms updated, `LE_TRUC_COMPILER.md` § 5.4 +
+     `server/TESTS.md` mentions. The generated client still binds every recorded site — the
+     realm reverts the writes, so the skeleton form ships in every tier.
+     **Review rulings (2026-09-06):** the inert-parse snapshot DEVIATION from the
+     snapshot-before-upgrade guidance is accepted as strictly more correct — an
+     already-defined tag upgrades DURING the `innerHTML` assignment, so a live-DOM snapshot
+     would capture the pollution it is meant to prevent; `createHTMLDocument` upgrades
+     nothing in jsdom, so the skeleton state is provable regardless of upgrade timing.
+     Limb-(b)-only scoping is accepted: limb (a) (stubbed-API) sites keep ADR 0027 s6's
+     unamended posture — the stub answer is deterministic inside the realm (no fixed-point
+     hazard), degrades to the skeleton when the stub throws, and ADR 0026's direction is to
+     make those sites realm-answerable via capability shims, not to suppress them.
+     **Known coverage gaps, no corpus instance today (record for future migrations):**
+     reactive `truc:html`, `class:`/`style:` maps (a shared-surface attribute — per-site
+     revert would undo other bindings' legitimate work), and `truc:pass`-into-child sites
+     are not recorded; a parent's render does not consult a composed child's records. A
+     future Simulated-tier component with an impure read behind one of those shapes must
+     extend the record set first.
+     `module-ticker` remains the corpus case to pin at its migration — the suppression
+     wiring now works end to end via registry-driven realms. Ordering is load-bearing and
+     pinned: mutation-disabling the revert fails 4 tests, including the fixed-point gate —
+     the exact "spurious fixed-point failure" ADR 0029 s1 predicted.
+     **Gates:** `bun test server` 1442 pass / 0 fail; `check:tsrx` exit 0, baseline line 0,
+     census "22 entries: 19 folded, 3 simulated, 0 static" — all unchanged.
   8. **The CI equivalence audit** (ADR 0029 s7) — render every Folded-tier component through
      the realm as well, require byte-identical output, fail against the component on
      divergence. This is what makes two coexisting mechanisms defensible; it is not optional

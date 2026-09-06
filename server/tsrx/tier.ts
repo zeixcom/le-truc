@@ -113,6 +113,55 @@ export type TierClassification = {
 	signals: readonly RoutingSignal[]
 }
 
+/**
+ * The {@link SuppressedSite} selector that addresses the component's own
+ * root element — the ambient `host`, the same sentinel the effect plans use
+ * for root-exempt constructs (`query: 'host'`). The realm resolves it
+ * against the rendered root, not against the document at large.
+ */
+export const SUPPRESSED_HOST_SELECTOR = 'host'
+
+/**
+ * One unresolvable expression's target site, recorded at compile time for
+ * the simulation driver (ADR 0029 sub-design 1's implementation constraint,
+ * LT-165 step 7).
+ *
+ * The generated client module is the shipped artifact and the realm replays
+ * it, so the realm cannot decline to install a binding whose thunk reads the
+ * wall clock or the RNG — its connect-time write would bake the build
+ * machine's reading into the serialized HTML permanently. Instead the driver
+ * snapshots each recorded site's server-rendered state before the upgrade
+ * and restores that state after the connect window stabilizes, so the site
+ * ships in the omitted (skeleton) form sub-design 1 mandates and the client
+ * answers at connect.
+ *
+ * Only limb (b) sites (`not-a-server-fact`) are recorded. Limb (a)
+ * (stubbed-API) sites keep ADR 0027 sub-design 6's unamended remainder —
+ * the realm's stub answer (silent zero, never-matching media list), which
+ * the client corrects at connect — and that answer is deterministic inside
+ * the realm, so the fixed-point gate is not threatened by it.
+ */
+export type SuppressedSite =
+	| {
+			kind: 'attr'
+			/** CSS selector for the element, or {@link SUPPRESSED_HOST_SELECTOR}. */
+			selector: string
+			/** The content attribute the binding writes. */
+			attr: string
+			/**
+			 * The IDL property the binding writes instead of the attribute
+			 * (dirty-flag dispatch, LT-116). The revert must restore the
+			 * property too: once the control is dirty, the stale reading
+			 * survives `removeAttribute`.
+			 */
+			prop?: string
+	  }
+	| {
+			kind: 'text'
+			/** CSS selector for the element, or {@link SUPPRESSED_HOST_SELECTOR}. */
+			selector: string
+	  }
+
 /* === Internal Functions === */
 
 /**

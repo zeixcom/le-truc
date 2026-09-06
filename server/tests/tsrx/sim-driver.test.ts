@@ -134,6 +134,11 @@ const registry = JSON.parse(
 // review's disposal finding).
 const realm = createSimulationRealm({
 	composesTags: tag => registry[tag]?.composesTags ?? [],
+	// LT-165 step 7: revert each unresolvable expression's site to its
+	// skeleton state after the drain — a no-op while no corpus component
+	// carries records, and what keeps the fixed-point gate below honest
+	// the day one does (module-ticker's shape).
+	suppressedSites: tag => registry[tag]?.suppressedSites ?? [],
 })
 afterAll(() => realm.dispose())
 
@@ -298,6 +303,7 @@ describe('two-order hermeticity (sub-design 10, LT-164)', () => {
 			cpSync(generated.path, order2.path, { recursive: true })
 			const realm2 = createSimulationRealm({
 				composesTags: tag => registry[tag]?.composesTags ?? [],
+				suppressedSites: tag => registry[tag]?.suppressedSites ?? [],
 			})
 			try {
 				const clientInOrder2 = (info: CompiledInfo): string =>

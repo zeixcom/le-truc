@@ -67,6 +67,9 @@ const loadRealm = async (
 ): Promise<SimulationRealm> => {
 	const realm = createSimulationRealm({
 		composesTags: tag => registry[tag]?.composesTags ?? [],
+		// LT-165 step 7: registry-driven suppression (no corpus component
+		// carries records today).
+		suppressedSites: tag => registry[tag]?.suppressedSites ?? [],
 	})
 	for (const info of infos)
 		await realm.load(() => import(pathToFileURL(info.clientModulePath).href))

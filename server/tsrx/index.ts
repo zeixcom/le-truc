@@ -174,6 +174,7 @@ export const compileComponent = (
 				exposedProps: Object.fromEntries(component.exposeKinds),
 				tier,
 				routingSignals,
+				suppressedSites: plan.suppressedSites,
 				composeReadTags,
 				composesTags: composeRegistry
 					? [

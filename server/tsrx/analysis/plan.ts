@@ -23,7 +23,7 @@ import { dependenciesOf } from '../evaluability'
 import { serverUsageNames } from '../imports'
 import type { ComponentIR, ForIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
-import type { RoutingSignal } from '../tier'
+import type { RoutingSignal, SuppressedSite } from '../tier'
 import { walkTemplate } from '../walk'
 import { resolveComposeRefs } from './compose-refs'
 import { runEffects } from './effects'
@@ -367,6 +367,13 @@ export type ClientPlan = {
 	 * which is the Folded tier.
 	 */
 	routingSignals: RoutingSignal[]
+	/**
+	 * Reactive sites whose expression no server phase can answer (ADR 0029
+	 * sub-design 1 limb b, LT-165 step 7) — recorded at the same sites for
+	 * the driver's serialization-time suppression: the generated client
+	 * still binds them, and the realm replays that module.
+	 */
+	suppressedSites: SuppressedSite[]
 }
 
 /**
@@ -385,6 +392,11 @@ export type AnalysisContext = {
 	diagnostics: CompileDiagnostic[]
 	/** Tier routing signals (ADR 0029) — see {@link ClientPlan.routingSignals}. */
 	routingSignals: RoutingSignal[]
+	/**
+	 * Suppression sites (ADR 0029 s1 limb b, LT-165 step 7) — see
+	 * {@link ClientPlan.suppressedSites}.
+	 */
+	suppressedSites: SuppressedSite[]
 	registry: ReadonlySet<string>
 	/**
 	 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
@@ -544,11 +556,13 @@ export const analyzeClient = (
 		)
 
 	const routingSignals: RoutingSignal[] = []
+	const suppressedSites: SuppressedSite[] = []
 	const ctx: AnalysisContext = {
 		component,
 		source,
 		diagnostics,
 		routingSignals,
+		suppressedSites,
 		registry,
 		composeRegistry,
 		queries,
@@ -656,5 +670,6 @@ export const analyzeClient = (
 		ambientContext: [...ambient].sort(),
 		childTags: [...childTags].sort(),
 		routingSignals,
+		suppressedSites,
 	}
 }

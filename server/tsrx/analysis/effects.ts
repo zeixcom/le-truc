@@ -28,7 +28,7 @@ import {
 } from '../evaluability'
 import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
-import { lineFields, resolutionOf } from '../tier'
+import { lineFields, resolutionOf, SUPPRESSED_HOST_SELECTOR } from '../tier'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
 import type { AnalysisContext, TopEffectPlan } from './plan'
@@ -108,6 +108,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		source,
 		diagnostics,
 		routingSignals,
+		suppressedSites,
 		registry,
 		composeRegistry,
 		effects,
@@ -119,6 +120,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		reconcilePlans,
 		usedNames,
 		ambiguousComposeNodes,
+		queries,
 	} = ctx
 	/**
 	 * Registry entries by TAG (LT-158). `composeRegistry` is keyed by source
@@ -193,6 +195,24 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	// actually fold, or TSRX034 warns about an attribute that does render.
 	const derivableHostProps = foldableHostProps(component)
 	const derivableRefGuards = foldableRefGuards(component)
+
+	/**
+	 * ADR 0029 sub-design 1 (LT-165 step 7): is this reactive expression
+	 * unresolvable — no server phase can answer it, because its value is a
+	 * function of the viewing moment or the build machine's own state (limb
+	 * b)? Such a site is omitted server-side in every tier and SILENT (step
+	 * 5), but the generated client still binds it and the realm replays that
+	 * module, so the site is recorded for the driver's serialization-time
+	 * suppression. Limb (a) (stubbed-API reads) is deliberately not
+	 * recorded — see {@link SuppressedSite}.
+	 */
+	const suppresses = (node: TsrxNode): boolean => {
+		const resolution = resolutionOf(node, component.serverKnown)
+		return resolution.by === 'none' && resolution.limb === 'not-a-server-fact'
+	}
+	/** The selector a plan query addresses; `'host'` stays the sentinel. */
+	const selectorOf = (query: string): string =>
+		queries.find(q => q.name === query)?.selector ?? query
 
 	/**
 	 * Validate and lower one target's `pass={{ }}` entries into `pass` effect
@@ -415,6 +435,19 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					sourceStart: attr.thunk.start,
 					sourceEnd: attr.thunk.end,
 				})
+				// ADR 0029 sub-design 1 (LT-165 step 7): the binding installs in
+				// the shipped client even though phase 1 omits the site — record
+				// where its connect-time write would land so the driver can
+				// revert it after the connect window stabilizes.
+				if (suppresses(attr.thunk))
+					suppressedSites.push({
+						kind: 'attr',
+						selector: selectorOf(query),
+						attr: attr.name,
+						// Property dispatch (LT-116) writes the IDL property, which
+						// a content-attribute revert alone does not undo.
+						...(dispatch === 'property' ? { prop: attr.name } : {}),
+					})
 			} else if (attr.kind === 'pass') {
 				if (!isCustom || !registry.has(el.tag)) {
 					diagnostics.push(
@@ -547,6 +580,11 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				query,
 				source: lazyWatchSource(child),
 			})
+			// Same record for the text-child form (LT-165 step 7): the emission
+			// gate makes the site the element's whole textContent, so the
+			// element's pre-connect text is the entire revert.
+			if (suppresses(child.expr))
+				suppressedSites.push({ kind: 'text', selector: selectorOf(query) })
 		}
 	}
 
@@ -1488,6 +1526,13 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						query: 'host',
 						source: lazyWatchSource(lazyChildren[0] as ExprNode),
 					})
+					// Same record for the root form (LT-165 step 7): the target is
+					// the component's own element, addressed by the host sentinel.
+					if (suppresses((lazyChildren[0] as ExprNode).expr))
+						suppressedSites.push({
+							kind: 'text',
+							selector: SUPPRESSED_HOST_SELECTOR,
+						})
 				}
 			}
 		} else {

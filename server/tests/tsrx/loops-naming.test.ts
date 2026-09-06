@@ -21,6 +21,7 @@ const contextFor = (component: ComponentIR): AnalysisContext => {
 		source: component.source,
 		diagnostics: [],
 		routingSignals: [],
+		suppressedSites: [],
 		registry: new Set(),
 		queries,
 		harvests: [],
