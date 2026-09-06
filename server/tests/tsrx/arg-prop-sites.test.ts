@@ -202,9 +202,11 @@ describe('host-derived folds over a harvested prop (LT-118)', () => {
 		expect(component?.clientCode).toContain('() => Boolean(host.zero)')
 	})
 
-	test('a prop that is NOT arg-rendered stays unfoldable', () => {
+	test('a prop that is NOT arg-rendered routes instead of warning (LT-165 step 5)', () => {
 		// `other` is exposed but no site renders it from a same-named arg,
-		// so the server has no truth to splice — omission, not a guess.
+		// so the server has no truth to splice — omission, not a guess. The
+		// omission is a routing signal (the realm reads `host.other` for
+		// real), not a diagnostic.
 		const { component, diagnostics } = compileComponent(
 			`export function C({ zero = '' }: { zero?: string })
 @{
@@ -221,7 +223,12 @@ describe('host-derived folds over a harvested prop (LT-118)', () => {
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		const hit = component?.entry.routingSignals.find(
+			s => s.origin === 'TSRX034',
+		)
+		expect(hit?.detail).toContain('`hidden`')
+		expect(component?.entry.tier).toBe('simulated')
 		expect(component?.serverCode).not.toContain('Boolean(other)')
 	})
 })

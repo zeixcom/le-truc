@@ -11,9 +11,16 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import { CONTEXT_NAMES, freeIdentifiers, JS_GLOBALS } from '../ast-utils'
+import {
+	CLIENT_ONLY_PRIMITIVES,
+	CONTEXT_NAMES,
+	freeIdentifiers,
+	JS_GLOBALS,
+} from '../ast-utils'
 import type { CompileDiagnostic } from '../diagnostics'
+import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
+import { serverUsageNames } from '../imports'
 import type { ComponentIR, ForIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
 import type { RoutingSignal } from '../tier'
@@ -573,6 +580,40 @@ export const analyzeClient = (
 	runLoops(ctx)
 	runHarvest(ctx)
 	runEffects(ctx)
+
+	// LT-165 step 5: the narrow residue of the retired TSRX013/TSRX043
+	// refusals. An UNrendered setup const the value harness cannot evaluate
+	// is a routing signal (recorded during extraction) and routes Simulated —
+	// but a const whose VALUE reaches a server-evaluated position asks the
+	// server to splice a value no phase can produce: the fold cannot run the
+	// read, the realm would have to serialize the site, and the Static tier
+	// omits it with no client binding to correct it. Same structural class as
+	// `impureStaticChild` — a permanent wrong-or-empty site — so it stays an
+	// error even under tiering.
+	const serverUsed = serverUsageNames(component)
+	const harnessUnevaluableNames = new Set([
+		...CLIENT_ONLY_PRIMITIVES,
+		...refNames,
+		'host',
+		'internals',
+	])
+	for (const stmt of component.plainSetup) {
+		if (stmt.name === null) continue
+		if (!/Function(Expression)?$/.test(String(stmt.node.type))) {
+			const badNames = [...freeIdentifiers(stmt.node)]
+				.filter(name => harnessUnevaluableNames.has(name))
+				.sort()
+			if (badNames.length > 0 && serverUsed.has(stmt.name))
+				diagnostics.push(
+					diagnostic.renderedClientOnlyConst(
+						source,
+						stmt.range.start,
+						stmt.name,
+						badNames,
+					),
+				)
+		}
+	}
 
 	// LT-123: an effect over an author-declared OPTIONAL ref
 	// needs the same existence guard a single-branch `@if` root

@@ -97,6 +97,14 @@ describe('limb (b) — inputs that are not server-side facts', () => {
 		}
 	})
 
+	test('Date.UTC is pure, so it does not route away (LT-165 step 5)', () => {
+		// The UTC conversion reads no clock and no timezone — the one `Date`
+		// form limb (b) admits (ADR 0030 s2's prescribed blogmeta shape).
+		expect(
+			resolutionOf(expr('Date.UTC(y, m - 1, d)'), new Set(['y', 'm', 'd'])).by,
+		).toBe('realm')
+	})
+
 	test('a server-known locale is resolvable, so Intl does not route away', () => {
 		// LT-142's split: the locale decides. A literal or an in-scope server
 		// arg keeps the component Folded-tier-eligible.

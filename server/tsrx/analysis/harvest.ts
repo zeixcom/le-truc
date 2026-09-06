@@ -213,10 +213,13 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	} = ctx
 	/**
 	 * A signal the client cannot seed from server-rendered DOM. Under ADR
-	 * 0029 sub-design 5 this is a Simulated-tier ROUTING SIGNAL rather than
-	 * an author error — the realm connects the component for real and
-	 * serializes whatever the signal actually settles to, which is exactly
-	 * the initial value the harvest could not find a site for.
+	 * 0029 sub-design 5 (LT-165 step 5) this is a ROUTING SIGNAL, not an
+	 * author error — the realm connects the component for real and serializes
+	 * whatever the signal actually settles to, which is exactly the initial
+	 * value the harvest could not find a site for. The generated client
+	 * declares the signal from its own initializer (`emit-client.ts`), so the
+	 * shape compiles and works in every tier; what changed is only who
+	 * produces the served HTML.
 	 */
 	const reportUnharvestable = (signal: SignalIR): void => {
 		routingSignals.push({
@@ -228,9 +231,6 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 					? { by: 'realm' }
 					: resolutionOf(signal.init, component.serverKnown),
 		})
-		diagnostics.push(
-			diagnostic.signalNotHarvestable(source, signal.init?.start, signal.name),
-		)
 	}
 	const enclosingIfOf = (target: ElementNode) =>
 		enclosingIfOfIn(component, target)

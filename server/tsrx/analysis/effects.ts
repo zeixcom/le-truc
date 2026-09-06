@@ -317,20 +317,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						),
 					)
 				}
-				// CHECKLIST §4 / TSRX033: this thunk's free names are otherwise
-				// all server-known — it would have folded to an initial server
-				// value — but it also reads an impure ambient (Date/Intl/
-				// Math.random/toLocaleString/getTimezoneOffset). `isServerEvaluable`
-				// (evaluability.ts) already refuses to fold it (the attribute is
-				// omitted server-side, same as any non-portable thunk); this warns
-				// so the omission doesn't read as an unrelated bug.
-				if (
-					dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
-					containsImpureAmbient(attr.thunk, component.serverKnown)
-				)
-					diagnostics.push(
-						diagnostic.impureServerFold(source, attr.thunk.start, attr.name),
-					)
 				// CHECKLIST §5 / TSRX034: omission is not neutral for these
 				// attribute names — `hidden` omitted means visible, `disabled`
 				// omitted means enabled AND submittable, same for `checked`/
@@ -338,12 +324,19 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				// `host.<prop>` fold (LT-085, `hostDerivedFold` below), and a
 				// server-evaluable thunk all render an initial value — all
 				// three safe. Anything else (a sensor, or any other
-				// non-portable dependency) would be silently OMITTED
-				// (`emit-server.ts`'s `case 'reactive'` pushes nothing at all
-				// when none of the three paths applies), rendering the
-				// interactive/visible/submittable default regardless of what
-				// the author intended — the worst of the two possible
-				// defaults, not a neutral one.
+				// non-portable dependency) is OMITTED (`emit-server.ts`'s
+				// `case 'reactive'` pushes nothing at all when none of the
+				// three paths applies).
+				//
+				// ADR 0029 sub-design 5 (LT-165 step 5): every such site is a
+				// ROUTING SIGNAL, not a diagnostic — "phase 1 cannot fold
+				// this" was a statement about the harness, not the author's
+				// code. The one exception is the severe form (`disabled`/
+				// `checked` on a real submittable control): its diagnostic is
+				// pushed here and `index.ts` drops it again unless
+				// `classifyTier` routed the component Static — the only tier
+				// where nothing resolves the value, so the wrong default is
+				// permanent.
 				if (
 					SEMANTICALLY_LOADED_ATTRS.has(attr.name) &&
 					hostPropOf(attr.thunk) === null &&
@@ -357,32 +350,24 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						!containsImpureAmbient(attr.thunk, component.serverKnown)
 					)
 				) {
-					// ADR 0029 sub-design 5: the same site is now a routing
-					// signal. Whether it is ALSO a diagnostic depends on
-					// severity — only the severe variant survives the channel,
-					// and only on the Static tier (applied in index.ts, where
-					// the tier is known).
 					routingSignals.push({
 						origin: 'TSRX034',
 						detail: `\`${attr.name}\` on <${el.tag}> has no server-renderable value`,
 						...lineFields(source, attr.thunk.start),
 						resolution: resolutionOf(attr.thunk, component.serverKnown),
 					})
-					diagnostics.push(
-						diagnostic.unsafeLoadedAttributeDefault(
-							source,
-							attr.thunk.start,
-							attr.name,
-							// LT-062/LT-085: escalate to ERROR only for `disabled`/
-							// `checked` on a real submittable native form control
-							// inside a form-associated component — there, the wrong
-							// default is a submission-correctness bug, not a
-							// cosmetic flash.
-							(attr.name === 'disabled' || attr.name === 'checked') &&
-								component.config?.form != null &&
-								SUBMITTABLE_FORM_CONTROL_TAGS.has(el.tag),
-						),
+					if (
+						(attr.name === 'disabled' || attr.name === 'checked') &&
+						component.config?.form != null &&
+						SUBMITTABLE_FORM_CONTROL_TAGS.has(el.tag)
 					)
+						diagnostics.push(
+							diagnostic.unsafeLoadedAttributeDefault(
+								source,
+								attr.thunk.start,
+								attr.name,
+							),
+						)
 				}
 				if (isCustom) {
 					// ADR 0023 sub-design 4 (amended by sub-design 10): a
@@ -525,17 +510,11 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					diagnostic.managedPropWithoutForm(source, child.node.start, managed),
 				)
 			collectAmbient(child.expr)
-			// CHECKLIST §4 / TSRX033: same "would have folded, refuse to fold,
-			// warn" as the reactive-attribute site above, for a lazy text child
-			// (the checklist's own example: `{formatRemaining(maxlength, length)}`
-			// shaped, but reading `Date`/`Intl`/`Math.random` instead).
-			if (
-				dependenciesOf(child.expr).isSubsetOf(component.serverKnown) &&
-				containsImpureAmbient(child.expr, component.serverKnown)
-			)
-				diagnostics.push(
-					diagnostic.impureServerFold(source, child.node.start, null),
-				)
+			// CHECKLIST §4: a lazy text child reading an impure ambient
+			// (`Date`/`Intl`/`Math.random`) is omitted server-side and set by
+			// the client's first binding pass — unresolvability, not an author
+			// error, so it draws no diagnostic (LT-165 step 5, ADR 0029 s1
+			// limb b).
 			if (lazyChildren.length > 1) {
 				diagnostics.push(
 					diagnostic.unsupported(
@@ -1470,18 +1449,9 @@ export const runEffects = (ctx: AnalysisContext): void => {
 							),
 						)
 					collectAmbient(child.expr)
-					// CHECKLIST §4 / TSRX033: same "would have folded, refuse
-					// to fold, warn" as the nested path's lazy-child site —
-					// the server omits the child and the client's first
-					// binding pass corrects it, which the author should not
-					// mistake for an unrelated bug.
-					if (
-						dependenciesOf(child.expr).isSubsetOf(component.serverKnown) &&
-						containsImpureAmbient(child.expr, component.serverKnown)
-					)
-						diagnostics.push(
-							diagnostic.impureServerFold(source, child.node.start, null),
-						)
+					// CHECKLIST §4: same as the nested path — an impure-ambient
+					// lazy child is omitted server-side, corrected by the
+					// client's first binding pass, and silent (LT-165 step 5).
 				}
 				// Emission gate: bindText() replaces the element's ENTIRE
 				// textContent, so the one sanctioned shape is a lazy child

@@ -49,13 +49,21 @@ import { bindAttribute, createState } from '@zeix/le-truc'`
 	test('the credit is per statement and does not follow a const', () => {
 		// `open.get()` sits one level of indirection away inside `isOpen`, so
 		// the statement's own node carries no signal read. Pinned because the
-		// corpus depends on the inlined spelling (form-combobox.tsrx).
-		const { diagnostics } = compile(
+		// corpus depends on the inlined spelling (form-combobox.tsrx). Under
+		// tiering (LT-165 step 5) the consequence is a routing signal, not a
+		// diagnostic — the signal is still unharvestable, the component still
+		// routes Simulated, and the client still declares it verbatim.
+		const { component, diagnostics } = compile(
 			source.replace(
 				"\twatch(() => !open.get(), bindAttribute(panel, 'hidden'))",
 				"\tconst isOpen = () => open.get()\n\twatch(() => !isOpen(), bindAttribute(panel, 'hidden'))",
 			),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		expect(
+			component?.entry.routingSignals.some(s => s.origin === 'TSRX004'),
+		).toBe(true)
+		expect(component?.entry.tier).toBe('simulated')
+		expect(component?.clientCode).toContain('createState(false)')
 	})
 })

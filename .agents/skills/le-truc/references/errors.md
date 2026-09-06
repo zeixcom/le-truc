@@ -58,14 +58,14 @@ Emitted by `server/tsrx/diagnostics.ts` while compiling a `.tsrx` source. **Erro
 | `TSRX001` | `@for` over a reactive source that is not a declared `createList`. | Declare the source with `createList()`, or iterate server data. | warning — file skipped |
 | `TSRX002` | A reactive expression reads an `@for` loop variable directly. | Hoist the derived value into a `const` first. | error |
 | `TSRX003` | A hoisted `const` is read reactively but never rendered as a bare attribute, so the client cannot rebind it. | Render it (e.g. `aria-controls={id}`), or stop reading it reactively. | error |
-| `TSRX004` | A signal is never rendered into the DOM, so the client cannot harvest its initial value. | Render it, or remove it. | error |
-| `TSRX013` | A setup `const` calls a client-only primitive, or a derived signal's compute reads `host`/`internals` — either runs server-side, where these don't exist. | Use a signal constructor, or derive from a server-known value. | error |
 | `TSRX017` | A signal crosses a call the compiler cannot see inside, so it cannot tell whether the child is reactive. | Wrap the child in an explicit thunk. | error |
-| `TSRX033` | An expression reads `Date`/`Intl`/`Math.random()`/a locale method — the *build machine's* clock, not a server arg. | Make it a reactive thunk, or take the value as a server arg. | error for a static child/attribute; warning for a reactive one (the fold is refused, the client corrects it) |
-| `TSRX034` | `hidden`/`disabled`/`checked`/`selected`/`aria-expanded` has no server-renderable value, so it is omitted — which renders the *more dangerous* state of each pair. | Trace the value to a server-known prop, or give the element an explicit static default. | error on a real submittable form control; warning otherwise |
-| `TSRX043` | A setup `const`'s initializer reads a `first()`-bound ref, which does not exist at server-render time. | Harvest instead: render the site from a server arg and read it back in `expose()`. | error |
+| `TSRX033` | A **static** child or server-rendered attribute reads `Date`/`Intl`/`Math.random()`/a locale method — the *build machine's* clock, baked into the page permanently. | Make it reactive, or take the value as a server arg. | error |
+| `TSRX034` | `disabled`/`checked` on a submittable form control has no server-renderable value and the component routes to the **Static** tier, so the attribute is omitted — leaving the control enabled-and-submittable (or unchecked) regardless of author intent. | Trace the value to a server-known prop or signal, or give the element an explicit static default. | error |
 | `TSRX044` | A signal's initializer conditionally chooses between two signal constructors — it must be a single, unconditional call. | Move the condition inside the callback (e.g. `deriveCell(() => cond ? a : b)`). | error |
 | `TSRX045` | A `watch()`/`on()`/`pass()`/`each()`/`provideContexts()` call is deferred into a callback, so it runs after the factory's collector is gone and its effect never activates. | Call the helper directly in setup; move the deferred condition inside the effect. | error |
+| `TSRX046` | A setup `const` the server cannot evaluate — its initializer reads a client-only name (`first`/`all`/`watch`/`on`/`pass`/`requestContext`/`provideContexts`, a `first()`-bound ref, or `host`/`internals`) — has its **value** rendered into the markup. No tier can produce the static splice, and no client binding ever corrects one. | Render the site from a server arg or signal, or make the site reactive so the client's first binding pass supplies the value. | error |
+
+Four conditions left this table in LT-165 ([ADR 0029](../../../../adr/0029-tiered-server-evaluation.md) § 5), because a shape the server cannot fold is a routing fact, not an author error. A signal with no harvestable render site (`TSRX004`), a setup `const` calling a client-only primitive or a derived compute reading `host`/`internals` (`TSRX013`), and a setup `const` reading a `first()`-bound ref (`TSRX043`) are now **routing signals** recorded on the component's registry entry (`server/tsrx/tier.ts`): they route the component to the Simulated tier and ride the build report's tier census instead of failing the build. The non-severe form of `TSRX034` left the channel the same way. The **reactive** form of `TSRX033` is silent for a different reason: the expression is *unresolvable*, so it is omitted from the initial HTML and the client's first binding pass supplies the value — no diagnostic, no flash.
 
 ### Element references
 
@@ -122,6 +122,8 @@ The selector rules are deliberately **one-sided**: `TSRX026` reports only what n
 `TSRX018`–`TSRX024` catch constructs that would compile to something silently wrong. `TSRX018` (`&{…}` lazy-child sigil) and `TSRX019` (`{'prop'}` string-literal prop child) are retired TSRX forms; `TSRX020` rejects lazy destructuring, which the eager server half has nothing to defer to. `TSRX021`–`TSRX024` are the React idioms — `{cond && …}`, `{cond ? … : …}`, `.map()`, and `return (<>…</>)`. None of them fail loudly on their own: TSRX would render each one **literally**, stringified. Each message names the TSRX construct to use instead (`@if`, `@if`/`@else`, `@for`, a bare trailing expression).
 
 `TSRX031` is **retired**. No builder emits it; per-branch addressing replaced the rule.
+
+`TSRX004`, `TSRX013`, and `TSRX043` are **retired** the same way — no builder emits them. Tiered server evaluation ([ADR 0029](../../../../adr/0029-tiered-server-evaluation.md) § 5) replaced the refusal with routing signals; see the note under the reactivity table above for where those conditions surface now.
 
 ---
 

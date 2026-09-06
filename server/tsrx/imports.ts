@@ -479,9 +479,12 @@ export const computeClientNeededNames = (
  * Every name a server-evaluated position uses: setup statements (emitted
  * verbatim into the server module unconditionally, ADR 0024 sub-design 12),
  * always-server template expressions, and server-conditional reactive-family
- * thunks. Shared by `placePlainImports` and `placeLeTrucImports`.
+ * thunks. Shared by `placePlainImports` and `placeLeTrucImports`; exported
+ * since LT-165 step 5 for the rendered-client-only-const check (`TSRX046`),
+ * which asks the complementary question — did a setup const the harness
+ * cannot evaluate reach one of these positions?
  */
-const serverUsageNames = (
+export const serverUsageNames = (
 	component: SetupLikeComponent,
 ): ReadonlySet<string> => {
 	const serverNames = new Set<string>()

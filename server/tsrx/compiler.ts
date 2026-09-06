@@ -921,23 +921,18 @@ export const compileSource = (
 					.filter(n => elementRefs.has(n))
 					.sort()
 				if (refReads.length > 0) {
-					// ADR 0029 sub-design 5: a Simulated-tier routing signal. The
-					// realm has a real DOM, so the ref read the value harness
-					// could not evaluate is exactly what phase 2 answers.
+					// ADR 0029 sub-design 5 (LT-165 step 5): a ROUTING SIGNAL,
+					// not a diagnostic. The realm has a real DOM, so the ref
+					// read the value harness could not evaluate is exactly what
+					// phase 2 answers — and the component routes Simulated so
+					// the tier-aware emit drops the statement from the server
+					// module instead of refusing the file.
 					ctx.routingSignals.push({
 						origin: 'TSRX043',
 						detail: `\`${declName}\` reads element ref(s) ${refReads.join(', ')} in setup`,
 						...lineFields(source, stmt.start),
 						resolution: { by: 'realm' },
 					})
-					ctx.diagnostics.push(
-						diagnostic.refDerivedSetupConst(
-							source,
-							stmt.start,
-							declName,
-							refReads,
-						),
-					)
 				}
 			}
 			const calleeName = identifierName(init.callee)
@@ -1006,23 +1001,22 @@ export const compileSource = (
 						)
 					: []
 				if (badContextNames.length > 0) {
+					// ADR 0029 sub-design 5 (LT-165 step 5): a ROUTING SIGNAL,
+					// not a diagnostic — `host`/`internals` resolve in the
+					// realm, which is the whole difference between the harness
+					// and phase 2. The declaration still has to exist somewhere
+					// the component can run it: registered as a plain setup
+					// const, so the generated CLIENT module emits it when its
+					// name is needed (`computeClientNeededNames`), while the
+					// Simulated-tier server module drops it (`retainReferenced`
+					// — no server-known name can reach the markup).
+					plainSetup.push(setupStmt)
 					ctx.routingSignals.push({
 						origin: 'TSRX013',
 						detail: `\`${declName}\`'s ${calleeName}() compute reads ${badContextNames.join('/')}`,
 						...lineFields(source, stmt.start),
-						// `host`/`internals` resolve in the realm — that is the
-						// whole difference between the harness and phase 2.
 						resolution: resolutionOf(init, ctx.serverKnown),
 					})
-					ctx.diagnostics.push(
-						diagnostic.clientOnlySignalCompute(
-							source,
-							stmt.start,
-							declName,
-							calleeName,
-							badContextNames,
-						),
-					)
 				} else {
 					const signal: SignalIR = {
 						name: declName,
@@ -1066,8 +1060,11 @@ export const compileSource = (
 			} else {
 				plainSetup.push(setupStmt)
 				// A plain setup const calling a client-only primitive directly —
-				// `component.setup` is emitted verbatim into the SERVER render
-				// function too, where these don't exist (ADR 0023 sub-design 12).
+				// the value harness cannot run it (ADR 0023 sub-design 12).
+				// ADR 0029 sub-design 5 (LT-165 step 5): a ROUTING SIGNAL, not
+				// a diagnostic — the const already sits in `plainSetup`, so the
+				// generated CLIENT module emits it when needed and the
+				// Simulated-tier server module drops it.
 				const badPrimitives = [...freeIdentifiers(init)]
 					.filter(n => CLIENT_ONLY_PRIMITIVES.has(n))
 					.sort()
@@ -1078,14 +1075,6 @@ export const compileSource = (
 						...lineFields(source, stmt.start),
 						resolution: resolutionOf(init, ctx.serverKnown),
 					})
-					ctx.diagnostics.push(
-						diagnostic.clientOnlySetupConst(
-							source,
-							stmt.start,
-							declName,
-							badPrimitives,
-						),
-					)
 				}
 			}
 			continue

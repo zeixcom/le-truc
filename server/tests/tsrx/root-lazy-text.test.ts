@@ -199,16 +199,17 @@ export function C({}: {})
 }`
 	const pure = impure.replace('Date.now()', '1')
 
-	test('a would-have-folded child reading Date is a WARNING — the client corrects the omission', () => {
+	test('a would-have-folded child reading Date is omitted silently — the client corrects it (LT-165 step 5)', () => {
+		// ADR 0029 s1 limb b: the expression has no server answer in any tier,
+		// so it is omitted and the client's first binding pass supplies it —
+		// unresolvability, not an author error, so no diagnostic.
 		const { component, diagnostics } = compileComponent(
 			impure,
 			'c.tsrx',
 			new Set(),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX033')
-		expect(hit).toBeDefined()
-		expect(hit?.severity).toBe('warning')
-		// A warning must not fail the build, and the watch is still emitted.
+		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+		expect(diagnostics.some(d => d.severity === 'warning')).toBe(false)
 		expect(component).not.toBeNull()
 		expect(component?.clientCode).toContain('bindText(host)')
 		expect(component?.serverCode).not.toContain('Date.now')

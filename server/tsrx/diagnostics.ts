@@ -14,7 +14,7 @@ export type DiagnosticCode =
 	| 'TSRX001' // @for over a reactive source that is not a declared createList
 	| 'TSRX002' // loop variable referenced inside a reactive thunk — hoist it first
 	| 'TSRX003' // hoisted const not rebindable to a server-rendered attribute
-	| 'TSRX004' // signal with no harvestable initial-DOM site
+	| 'TSRX004' // RETIRED (LT-165 step 5) — Simulated/Static routing signal; census provenance in tier.ts
 	| 'TSRX005' // construct outside the sanctioned milestone-2 subset
 	| 'TSRX006' // malformed or unsupported attribute shape
 	| 'TSRX007' // template structure the compiler cannot address
@@ -23,7 +23,7 @@ export type DiagnosticCode =
 	| 'TSRX010' // managed form prop used without formAssociated
 	| 'TSRX011' // composed (PascalCase) element with no resolvable .tsrx import
 	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target, incl. per-prop Slot-backedness (LT-158)
-	| 'TSRX013' // a plain setup const or a derived-signal compute reads something the DOM-less value harness cannot run (host/internals/client-only primitives)
+	| 'TSRX013' // RETIRED (LT-165 step 5) — its two server-evaluation factories became routing signals; the other two split to TSRX044/TSRX045 in step 1
 	| 'TSRX014' // plain (non-.tsrx) import whose bindings are never used anywhere the compiler can place them
 	| 'TSRX015' // requestContext() called with other than exactly two arguments
 	| 'TSRX016' // requestContext()'s fallback argument is not server-known
@@ -43,8 +43,8 @@ export type DiagnosticCode =
 	| 'TSRX030' // <textarea value={…}> — textarea has no value content attribute
 	| 'TSRX031' // RETIRED — per-branch addressing replaced it; no builder emits this code
 	| 'TSRX032' // destructured prop has a default value but its type isn't marked optional
-	| 'TSRX033' // a reactive expression that would otherwise fold server-side reads an impure ambient (Date/Intl/Math.random/toLocaleString)
-	| 'TSRX034' // a semantically-loaded attribute (hidden/disabled/checked/selected/aria-expanded) has no server-renderable value
+	| 'TSRX033' // a static child or server-rendered attribute reads an impure ambient (Date/Intl/Math.random/toLocaleString) — reactive thunks are omitted silently instead (LT-165 step 5)
+	| 'TSRX034' // severe only (LT-165 step 5): disabled/checked unresolvable on a submittable control of a Static-tier component; non-severe sites are routing signals
 	| 'TSRX035' // duplicate static id across @try/@catch/@pending arms
 	| 'TSRX036' // real `@zeix/le-truc` export used without an explicit import (sub-design 16)
 	| 'TSRX037' // FactoryContext name inside an authored `@zeix/le-truc` import (sub-design 16)
@@ -53,9 +53,10 @@ export type DiagnosticCode =
 	| 'TSRX040' // required first() whose only match sits in a branch that may not render (LT-123)
 	| 'TSRX041' // two first() names resolve to the same element (LT-132)
 	| 'TSRX042' // a static id in a template duplicates once the component is instantiated twice (LT-131)
-	| 'TSRX043' // a setup const's initializer reads a first()-bound ref, so it evaluates server-side where no DOM exists (LT-125)
+	| 'TSRX043' // RETIRED (LT-165 step 5) — Simulated-tier routing signal; census provenance in tier.ts
 	| 'TSRX044' // a signal's initializer conditionally chooses between two constructor calls (ADR 0024 sub-design 12 format rule; split from TSRX013 by LT-165)
 	| 'TSRX045' // a collector-requiring helper deferred into a callback, so it throws NoActiveCollectorError at connect (split from TSRX013 by LT-165)
+	| 'TSRX046' // a setup const the value harness cannot evaluate has its value rendered into the markup — no tier can produce the site (LT-165 step 5)
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -156,18 +157,6 @@ export const diagnostic = {
 		error(
 			'TSRX003',
 			`Hoisted const \`${name}\` is referenced by a reactive expression but never rendered as a bare attribute of <${element}>, so the client cannot rebind it. Render it (e.g. \`aria-controls={${name}}\` or a \`data-\` attribute) or stop referencing it reactively.`,
-			lineOf(source, offset),
-		),
-
-	/** Signal the client cannot seed from the server-rendered DOM. */
-	signalNotHarvestable: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
-		error(
-			'TSRX004',
-			`Signal \`${name}\` is never rendered into the DOM, so the client cannot harvest its initial value (ADR 0003: DOM is the truth at load time). Render it — \`{${name}}\` as a child or an attribute thunk — or remove it.`,
 			lineOf(source, offset),
 		),
 
@@ -424,29 +413,6 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A plain (non-signal) setup const calls a client-only DOM/context
-	 * primitive directly — `component.setup` is emitted verbatim into the
-	 * SERVER render function, where `first`/`all`/`watch`/`on`/`pass` don't
-	 * exist (ADR 0023 sub-design 12).
-	 *
-	 * One of the two server-evaluation guards left on `TSRX013` after
-	 * LT-165's split. Under ADR 0029 s5 this becomes a Simulated-tier
-	 * ROUTING SIGNAL rather than an author error — the shape it refuses is
-	 * the shape that routes away from the harness that cannot run it.
-	 */
-	clientOnlySetupConst: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-		primitives: string[],
-	) =>
-		error(
-			'TSRX013',
-			`\`${name}\` calls client-only primitive(s) ${primitives.map(p => `\`${p}\``).join(', ')} — plain setup consts run server-side too (component.setup is emitted verbatim into the render function), where these don't exist. Use a signal constructor (the client seeds it from the DOM) or a client-only setup statement instead.`,
-			lineOf(source, offset),
-		),
-
-	/**
 	 * A collector-requiring helper (`watch`/`on`/`pass`/`provideContexts`/
 	 * `each`/`reconcile`) called from inside a nested function in a
 	 * client-only setup statement (LT-157d, ADR 0028 sub-design 5). Those
@@ -483,58 +449,35 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A `deriveCell`/`deriveStore`/`createMemo` compute function references
-	 * `host`/`internals` — these derived constructors invoke their compute
-	 * function synchronously at server-render time too (runtime.ts), where
-	 * `host`/`internals` don't exist (same verbatim-re-declaration rule as
-	 * `clientOnlySetupConst`, ADR 0023 sub-design 12; surfaced by LT-025's
-	 * `createMemo` support, the common shape for a derived-over-host-prop
-	 * memo, e.g. `createMemo(() => host.filter.toLowerCase())`).
+	 * A setup const the value harness cannot evaluate — its initializer reads
+	 * a client-only primitive (`first`/`all`/`watch`/…), a `first()`-bound
+	 * ref, or `host`/`internals` — has its VALUE rendered into the markup
+	 * (LT-165 step 5). This is the narrow residue of the retired `TSRX013`/
+	 * `TSRX043` refusals, and it stays an error where they did not: an
+	 * UNrendered client-only const routes the component Simulated and the
+	 * realm runs it for real, but a RENDERED one asks the server to splice a
+	 * value no phase can produce — the fold cannot run the read, the realm
+	 * would have to serialize the site, and the Static tier omits the
+	 * expression with no client binding to correct it (a static splice is
+	 * never re-set at connect). Same structural class as `impureStaticChild`:
+	 * not a flash, a permanent wrong-or-empty site.
+	 *
+	 * Deliberately not fired for a FUNCTION initializer: a setup helper is
+	 * dead code server-side (defined, never called), so its free names never
+	 * evaluate — and a const reached only INDIRECTLY (this const's
+	 * initializer reads another const that reads a ref) is not caught either;
+	 * both surface as a source-mapped tsc failure on the generated module
+	 * instead (the LT-136 posture, tracked with LT-093/LT-135).
 	 */
-	clientOnlySignalCompute: (
+	renderedClientOnlyConst: (
 		source: string,
 		offset: number | undefined,
 		name: string,
-		ctor: string,
 		badNames: string[],
 	) =>
 		error(
-			'TSRX013',
-			`\`${name}\`'s ${ctor}(...) compute function references ${badNames.map(n => `\`${n}\``).join(', ')} — ${ctor} runs server-side too (component.setup is emitted verbatim into the render function), where these don't exist. Derive from a server-known signal/param instead, or move the ${badNames.join('/')} read into a client-only construct (e.g. a reactive attribute thunk).`,
-			lineOf(source, offset),
-		),
-
-	/**
-	 * A setup const whose initializer READS a `first()`-bound element
-	 * reference (LT-125). Every non-`first()` setup const lands in
-	 * `component.setup`, which `emit-server.ts` re-declares verbatim into the
-	 * render function — so the initializer is evaluated at server-render time,
-	 * where the ref names no DOM. Which failure the author gets depends on an
-	 * unrelated accident: if the same ref also appears inside `expose()`'s
-	 * argument it is stubbed (`const input: any = refStub`, computed from
-	 * `exposeArgNode`) and the module compiles clean, rendering an EMPTY site
-	 * where a DOM read was asked for; if it does not, `tsc` fails with "Cannot
-	 * find name" on generated code. Stubbing the rest would make every case the
-	 * silent one — the LT-092 class — so this is a diagnostic instead.
-	 *
-	 * Deliberately not fired for a FUNCTION initializer: a setup helper
-	 * (`const commit = (next) => { input.value = next }`) is dead code
-	 * server-side, defined and never called, so its ref reads never evaluate.
-	 * That is form-spinbutton's `commit`/`typed`/`stepBy` shape and it is
-	 * legitimate. A ref read nested in a function INSIDE a non-function
-	 * initializer (`createMemo(() => input.value)`) does fire, and should —
-	 * the derived constructors invoke their compute synchronously at render
-	 * time (same rule as `clientOnlySignalCompute`).
-	 */
-	refDerivedSetupConst: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-		refs: string[],
-	) =>
-		error(
-			'TSRX043',
-			`\`${name}\`'s initializer reads ${refs.map(r => `\`${r}\``).join(', ')} — a \`first()\`-bound element reference — but plain setup consts are evaluated SERVER-side too (\`component.setup\` is emitted verbatim into the render function), where no DOM exists. Depending on whether the ref is also named inside \`expose()\`, this either fails to compile or silently renders an empty site. Harvest it instead (TSRX-HOST-PROFILE § data account bullet 4): render the site from a server arg (\`<span class="label">{label}</span>\`) and read it back at connect through \`expose({ label: ${refs[0] ?? 'ref'}.textContent ?? '' })\`, so the one site is the server's render target AND the client's harvest source. A ref read inside a function body is fine — those never run server-side.`,
+			'TSRX046',
+			`\`${name}\`'s value is rendered into this component's markup, but its initializer reads ${badNames.map(n => `\`${n}\``).join(', ')} — client-only name(s) the server cannot evaluate in ANY tier, so the site would render broken or stay permanently empty (no client binding ever corrects a static splice). Render the site from a server arg or signal instead, or make the site reactive (wrap the read in a thunk, e.g. \`title={() => …}\`) so the client's first binding pass supplies the value.`,
 			lineOf(source, offset),
 		),
 
@@ -987,38 +930,16 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A reactive expression's free names are all server-known — it would
-	 * otherwise fold to a server-rendered initial value — but it also reads
-	 * an impure ambient (`Date`/`Intl`, `Math.random()`, `toLocaleString()`/
-	 * `getTimezoneOffset()`) whose actual input is the BUILD MACHINE's own
-	 * clock/locale/timezone/RNG, not any server arg (CHECKLIST §4). Folding
-	 * would bake that one build-time reading into the page permanently — for
-	 * SSG specifically, stale by however long the page sits before being
-	 * served. `isServerEvaluable` (evaluability.ts) already refuses to fold
-	 * this (omitted server-side, same as any non-portable thunk, corrected
-	 * by the client's first binding pass) — a WARNING, not an error, since
-	 * the omission is safe; this just explains why the initial HTML won't
-	 * show a value here, so it doesn't read as an unrelated bug.
-	 */
-	impureServerFold: (
-		source: string,
-		offset: number | undefined,
-		attrName: string | null,
-	) =>
-		warning(
-			'TSRX033',
-			`${attrName ? `Reactive attribute \`${attrName}\`` : 'This reactive expression'} reads an ambient value (\`Date\`/\`Intl\`, \`Math.random()\`, or a locale/timezone method) whose real input is the BUILD MACHINE's own clock/locale/timezone/RNG, not a server arg — folding it would bake one build-time reading into the page permanently. Refusing to fold: the ${attrName ? 'attribute is' : 'child is'} omitted from the initial HTML and set by the client's first binding pass instead.`,
-			lineOf(source, offset),
-		),
-
-	/**
 	 * A `static` template child (CHECKLIST §4) — one with no signal
 	 * dependency at all, so it renders exactly once, server-side, forever —
-	 * reads an impure ambient. Unlike {@link impureServerFold}'s reactive
-	 * case, there is no `watch()` to ever correct this: the build machine's
-	 * one clock/locale/timezone/RNG reading is baked into the page
-	 * permanently. Hard error, not a warning — CHECKLIST §4 calls this out
-	 * as the worst outcome ("folding to the build machine's reading").
+	 * reads an impure ambient. There is no `watch()` to ever correct this:
+	 * the build machine's one clock/locale/timezone/RNG reading is baked into
+	 * the page permanently. Hard error, not a warning — CHECKLIST §4 calls
+	 * this out as the worst outcome ("folding to the build machine's
+	 * reading"). The REACTIVE counterpart omits the expression instead and
+	 * stays silent (LT-165 step 5): there the client's first binding pass
+	 * corrects it, so it is unresolvability (ADR 0029 s1 limb b), not an
+	 * author error — while a static child has no correction at all.
 	 */
 	impureStaticChild: (source: string, offset: number | undefined) =>
 		error(
@@ -1033,9 +954,9 @@ export const diagnostic = {
 	 * once into the initial HTML and never bound client-side, so it carries
 	 * exactly the hazard the child form does — CHECKLIST §4's worst outcome,
 	 * folding to the build machine's own reading with no correction. The
-	 * REACTIVE thunk form (`title={() => Date.now()}`) keeps the warning
-	 * verdict in {@link impureServerFold} instead: there the fold is refused
-	 * and the client's first binding pass supplies the value.
+	 * REACTIVE thunk form (`title={() => Date.now()}`) is omitted from the
+	 * initial HTML instead and draws no diagnostic (LT-165 step 5): the
+	 * client's first binding pass supplies the value.
 	 */
 	impureStaticAttribute: (
 		source: string,
@@ -1051,36 +972,34 @@ export const diagnostic = {
 	/**
 	 * A semantically-loaded attribute (CHECKLIST §5 — `hidden`, `disabled`,
 	 * `checked`, `selected`, `aria-expanded`) has no server-renderable
-	 * initial value: it's not a host-prop mirror or a derived `host.<prop>`
-	 * fold (`hostDerivedFold`, evaluability.ts — both always render from the
-	 * root's own server arg(s)) and its thunk isn't otherwise server-
-	 * evaluable (a sensor read, or any other dependency the server can't
-	 * resolve). `emit-server.ts`'s reactive-attribute case pushes NOTHING for
-	 * this shape — the attribute is simply absent from the initial HTML,
-	 * which means visible/enabled-and-submittable/unchecked/deselected/
-	 * collapsed, the more dangerous of each pair, regardless of what the
-	 * author meant.
+	 * initial value AND no server phase can supply one: `emit-server.ts`'s
+	 * reactive-attribute case pushes NOTHING for this shape — the attribute
+	 * is simply absent from the initial HTML, which means visible/
+	 * enabled-and-submittable/unchecked/deselected/collapsed, the more
+	 * dangerous of each pair, regardless of what the author meant.
 	 *
-	 * WARNING by default: some sensor-driven shapes have no server value at
-	 * all and are a documented, deliberately accepted flash-risk tradeoff
-	 * (ADR 0023, `basic-pluralize.tsrx`'s history before LT-085 widened the
-	 * fold rule to cover its own `host.count` comparisons) — hard-erroring
-	 * unconditionally would treat every unfoldable case as equally severe.
-	 * `severe` (LT-062/LT-085 decision) escalates to ERROR specifically for
-	 * `disabled`/`checked` on a real submittable form control (`input`/
-	 * `select`/`textarea`/`button` inside a `formAssociated`/
-	 * `formAssociatedCheckbox` component): there, "enabled and submittable"
-	 * or "unchecked" regardless of author intent is a correctness bug (the
-	 * control can submit, or fail to, against the author's actual intent),
-	 * not just a cosmetic pre-hydration flash.
+	 * Reclassified by LT-165 step 5 (ADR 0029 s5): the general case left the
+	 * diagnostic channel for the tier census — an unresolvable site is a
+	 * routing fact about the harness, not an author error. What SURVIVES is
+	 * the severe form (LT-062/LT-085): `disabled`/`checked` on a real
+	 * submittable form control (`input`/`select`/`textarea`/`button` inside a
+	 * `formAssociated`/`formAssociatedCheckbox` component), where "enabled
+	 * and submittable" or "unchecked" regardless of author intent is a
+	 * correctness bug (the control can submit, or fail to, against the
+	 * author's actual intent), not just a cosmetic pre-hydration flash.
+	 *
+	 * Scoped to the Static tier (ADR 0029 s5): on the Simulated tier the
+	 * realm renders the value, so the diagnostic would be noise. The caller
+	 * (`analysis/effects.ts`) pushes it only for a severe site; the caller's
+	 * caller (`index.ts`) drops it again unless `classifyTier` routed the
+	 * component Static — the tier is only known there. Non-severe severe-less
+	 * sites never reach this builder at all.
 	 */
 	unsafeLoadedAttributeDefault: (
 		source: string,
 		offset: number | undefined,
 		name: string,
-		severe: boolean,
 	) => {
-		const build = severe ? error : warning
 		const stateWord =
 			name === 'hidden'
 				? 'visible'
@@ -1091,12 +1010,9 @@ export const diagnostic = {
 						: name === 'selected'
 							? 'deselected'
 							: 'collapsed'
-		const correctnessNote = severe
-			? ` This is a real submittable form control, so the wrong default is a correctness bug — the control can submit, or fail to, regardless of what the author intended — not just a cosmetic pre-hydration flash.`
-			: ''
-		return build(
+		return error(
 			'TSRX034',
-			`\`${name}\` has no server-renderable initial value here — the server can't resolve this thunk (a sensor, or any dependency outside props/signals), so \`${name}\` is silently OMITTED from the initial HTML. Omission is not neutral for \`${name}\`: it renders the ${stateWord} state regardless of what this expression would actually evaluate to once connected.${correctnessNote} Trace the value to a server-known prop or signal so it can render an initial value, or accept the pre-hydration flash explicitly by giving this element a static/server-rendered default for \`${name}\`.`,
+			`\`${name}\` has no server-renderable initial value here and this component routes to the Static tier, so no server phase can resolve it — \`${name}\` is silently OMITTED from the initial HTML. Omission is not neutral for \`${name}\`: it renders the ${stateWord} state regardless of what this expression would actually evaluate to once connected. This is a real submittable form control, so the wrong default is a correctness bug — the control can submit, or fail to, regardless of what the author intended — not just a cosmetic pre-hydration flash. Trace the value to a server-known prop or signal so it can render an initial value, or accept the pre-hydration flash explicitly by giving this element a static/server-rendered default for \`${name}\`.`,
 			lineOf(source, offset),
 		)
 	},

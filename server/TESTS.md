@@ -194,7 +194,10 @@ signal is **two numbers**, not one:
    route") and does not move `check:tsrx`'s count — `form-listbox`'s TSRX034 stays standing.
    The gate-wave target is **7 unique**, not 6: `LT-146` alone delivers the compile
    reduction (8 → 7), and `form-listbox`'s TSRX034 joins the six `basic-pluralize` refusals
-   in the stage-3 (LT-165) retirement bucket, seven total.]
+   in the stage-3 (LT-165) retirement bucket, seven total.
+   **Landed, 2026-09-06 (LT-165 step 5):** the seven retired with the channel
+   reclassification (ADR 0029 § 5) — the standing `check:tsrx` count is **0**, and those
+   conditions ride the tier census (`server/tsrx/tier.ts`) instead of the warning channel.]
 2. **The build-report baseline** — `server/tests/tsrx/sim-driver.test.ts` runs the corpus
    through the simulation driver and requires **zero unclassified diagnostics**. The driver
    raises a diagnostic per condition (a jsdom `jsdomError`, an unhandled rejection, a

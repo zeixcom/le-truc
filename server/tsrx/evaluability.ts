@@ -24,7 +24,12 @@ import type { ComponentIR, TemplateNode } from './ir'
  * these bakes the BUILD MACHINE's reading into the page permanently
  * (CHECKLIST §4). `Date.now()`/`new Date()` are not deterministic at all —
  * there is no argument that could make them server-known — so `Date` is
- * unconditionally impure, unlike `Intl` (handled separately below, LT-142).
+ * impure at the root, with ONE exception (`Date.UTC`, below): the local
+ * constructor and the zone-less formatter read the build machine's
+ * TIMEZONE, while `Date.UTC(y, m - 1, d)` is a pure function of its
+ * arguments (LT-165 step 5's analysis; ADR 0030 s2 resolved the shape this
+ * way — pair it with a `timeZone: 'UTC'` formatter, which `Intl`'s own
+ * locale rule already admits). `Intl` is handled separately below (LT-142).
  */
 const IMPURE_AMBIENT_ROOTS: ReadonlySet<string> = new Set(['Date'])
 
@@ -63,7 +68,8 @@ const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
 
 /**
  * Whether `node` contains a call/read against an impure ambient (CHECKLIST
- * §4): `Date` (and its members — `Date.now()`, `new Date()`), `Math.random()`
+ * §4): `Date` (and its members — `Date.now()`, `new Date()`; `Date.UTC(...)`
+ * excepted — a pure function of its arguments), `Math.random()`
  * specifically (not `Math` at large — `Math.max`/`Math.min`/etc. are pure
  * functions of their arguments, safe to fold), the locale/timezone-reading
  * instance methods (`x.toLocaleString()`, `x.getTimezoneOffset()`) regardless
@@ -149,6 +155,31 @@ export const impureAmbientCauses = (
 		) {
 			const obj = current.callee.object
 			const prop = current.callee.property
+			if (
+				isNode(obj) &&
+				obj.type === 'Identifier' &&
+				String(obj.name) === 'Date' &&
+				isNode(prop) &&
+				prop.type === 'Identifier' &&
+				String(prop.name) === 'UTC'
+			) {
+				// The one pure `Date` form: `Date.UTC(...)` converts fixed
+				// arguments to a timestamp with no clock and no timezone read,
+				// so it folds (LT-165 step 5). Still walk the arguments — a
+				// nested `Date.now()` inside them stays flagged — but skip the
+				// callee, whose `Date` identifier would otherwise trip the
+				// generic root check. The LOCAL constructor (`new Date(y, m,
+				// d)`) gets no such admission: it interprets its arguments in
+				// the build machine's timezone, which is limb (b) ambient state
+				// even though it reads no viewing-moment fact (the day must not
+				// depend on where the build ran — ADR 0030 s2 prescribes the
+				// `Date.UTC` + `timeZone: 'UTC'` shape instead).
+				const utcArgs = Array.isArray(current.arguments)
+					? current.arguments
+					: []
+				for (const arg of utcArgs) visit(arg)
+				return
+			}
 			if (
 				isNode(obj) &&
 				obj.type === 'Identifier' &&

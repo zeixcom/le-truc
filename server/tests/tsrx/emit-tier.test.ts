@@ -41,17 +41,65 @@ import type { EvaluationTier } from '../../tsrx/tier'
 import { loadTsrxCorpus } from './corpus-fixture'
 
 /**
- * A component whose only routing signal is served-relevant and unresolvable:
- * `hidden` is semantically loaded (omitted means VISIBLE, so it is a real
- * TSRX034 site) and its thunk reads the RNG, which no phase can answer —
- * limb (b), `not-a-server-fact`. With no realm-answerable signal to pull it
- * up, the conjunction lands on the Static tier.
+ * A component whose only routing signal is served-relevant and unresolvable,
+ * reached through the HARVEST path: `seed` is never rendered into the DOM
+ * (the retired TSRX004 shape) and its initializer reads the wall clock, which
+ * no phase can answer — limb (b), `not-a-server-fact`. With no
+ * realm-answerable signal to pull it up, the conjunction lands on the Static
+ * tier. Until step 5 this shape could not compile at all (TSRX004 was an
+ * error), which is why the fixture originally routed through an impure
+ * `hidden` thunk instead; step 5 rewired that route and the fixture was
+ * re-pinned deliberately (LT-165).
  *
  * It also carries both setup shapes on purpose, so one fixture pins both
  * halves of the rule: `expose()` (declares no name — dropped) and `labelId`
  * (a plain const the skeleton interpolates — kept).
  */
-const staticFixture = `import { asString } from '@zeix/le-truc'
+const staticFixture = `import { asString, createCell } from '@zeix/le-truc'
+
+export function C({ name }: { name: string })
+@{
+	const labelId = \`\${name}-label\`
+	const seed = createCell(Date.now())
+	expose({ label: asString('') })
+	<>
+		<c-el>
+			<span class="label" id={labelId}>Label</span>
+		</c-el>
+
+		<style>c-el { color: red }</style>
+	</>
+}`
+
+/**
+ * The same component with the SAME unrendered signal, differing only in
+ * whether the value has a server answer: a plain initializer is
+ * realm-answerable (the realm connects the component for real and serializes
+ * whatever the signal settles to). Resolution flips from `none` to `realm`,
+ * and the conjunction lands one tier up.
+ *
+ * This is the control that makes the Static assertion mean something. A plain
+ * Folded control would only prove the fixture has a routing signal at all;
+ * this one isolates the limb.
+ */
+const simulatedFixture = staticFixture.replace(
+	'createCell(Date.now())',
+	'createCell(name)',
+)
+
+/** The same component with no routing signal at all — the Folded control. */
+const foldedFixture = staticFixture.replace(
+	'\tconst seed = createCell(Date.now())\n',
+	'',
+)
+
+/**
+ * The OTHER route to the Static tier, kept pinned because it exercises a
+ * different origin: a semantically-loaded attribute (omitted `hidden` means
+ * VISIBLE, a real TSRX034 site) whose thunk reads the RNG. Step 5 left this
+ * route intact — the fixture that used to be the only compilable Static pin.
+ */
+const impureHiddenFixture = `import { asString } from '@zeix/le-truc'
 
 export function C({ name }: { name: string })
 @{
@@ -66,28 +114,6 @@ export function C({ name }: { name: string })
 		<style>c-el { color: red }</style>
 	</>
 }`
-
-/**
- * The same component with the SAME TSRX034 site, differing only in whether
- * the value has a server answer: `host.label` is not foldable here (the root
- * renders no `label` attribute for the fold to splice), but the realm
- * connects the component for real and reads it. Resolution flips from
- * `none` to `realm`, and the conjunction lands one tier up.
- *
- * This is the control that makes the Static assertion mean something. A plain
- * Folded control would only prove the fixture has a routing signal at all;
- * this one isolates the limb.
- */
-const simulatedFixture = staticFixture.replace(
-	'() => Math.random() > 0.5',
-	"() => host.label === ''",
-)
-
-/** The same component with no routing signal at all — the Folded control. */
-const foldedFixture = staticFixture.replace(
-	' hidden={() => Math.random() > 0.5}',
-	'',
-)
 
 const emit = (source: string, tier: EvaluationTier) => {
 	const { component } = compileSource(source, 'c.tsrx')
@@ -113,32 +139,49 @@ const markupOf = (code: string) => {
 }
 
 describe('the synthetic Static-tier fixture', () => {
-	test('classifies Static, for the recorded reason', () => {
+	test('classifies Static through the harvest path, for the recorded reason', () => {
 		const { component, diagnostics } = compileComponent(
 			staticFixture,
 			'c.tsrx',
 			new Set(),
 		)
-		// Not merely "compiles": TSRX004 is still an ERROR until step 5, so a
-		// fixture reaching Static through the harvest path could not compile at
-		// all. The impure-thunk route is the one that works today, and pinning
-		// that it still classifies guards the tier against step 5's rewiring.
+		// The unrendered signal no longer errors (TSRX004 left the channel in
+		// step 5) — the compile success is itself part of the pin.
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
 		expect(component?.entry.tier).toBe('static')
 		const signals = component?.entry.routingSignals ?? []
 		expect(signals).toHaveLength(1)
-		expect(signals[0]?.origin).toBe('TSRX034')
+		expect(signals[0]?.origin).toBe('TSRX004')
+		expect(signals[0]?.detail).toContain('`seed`')
 		expect(signals[0]?.resolution).toEqual({
 			by: 'none',
 			limb: 'not-a-server-fact',
-			reason: 'reads the RNG, which has no server answer to bake in',
+			reason: 'reads the wall clock, which is a fact about the viewing moment',
 		})
+		// And the client declares the unharvested signal from its own
+		// initializer — the artifact every tier's mechanism runs.
+		expect(component?.clientCode).toContain('const seed = createCell(')
 	})
 
-	test('the same site with a realm-answerable value is Simulated, not Static', () => {
-		// The conjunction, isolated: same component, same TSRX034 origin, only
+	test('the impure-`hidden` route still classifies Static (TSRX034 origin)', () => {
+		// The route the fixture used before step 5 made the harvest path
+		// compilable — kept pinned because the origin differs.
+		const { component } = compileComponent(
+			impureHiddenFixture,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component?.entry.tier).toBe('static')
+		const signals = component?.entry.routingSignals ?? []
+		expect(signals).toHaveLength(1)
+		expect(signals[0]?.origin).toBe('TSRX034')
+	})
+
+	test('the same signal with a realm-answerable value is Simulated, not Static', () => {
+		// The conjunction, isolated: same component, same TSRX004 origin, only
 		// the resolution limb differs. Without this the Static assertion above
-		// proves the fixture has a routing signal, not that the RNG is why.
+		// proves the fixture has a routing signal, not that the wall clock is
+		// why.
 		const { component } = compileComponent(
 			simulatedFixture,
 			'c.tsrx',
@@ -147,7 +190,7 @@ describe('the synthetic Static-tier fixture', () => {
 		expect(component?.entry.tier).toBe('simulated')
 		const signals = component?.entry.routingSignals ?? []
 		expect(signals).toHaveLength(1)
-		expect(signals[0]?.origin).toBe('TSRX034')
+		expect(signals[0]?.origin).toBe('TSRX004')
 		expect(signals[0]?.resolution).toEqual({ by: 'realm' })
 	})
 

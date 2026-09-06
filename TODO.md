@@ -45,7 +45,7 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P1 — Tiered server evaluation (critical path)
 
-- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–4 done and reviewed ✓; steps 5–8 open.** Next up: step 5.
+- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–5 done (step 5 landed, pending review); steps 6–8 open.** Next up: step 6.
   **Skill:** le-truc-dev
   **Context:** ADR 0029 is accepted; this is its implementation. Read the ADR, not this
   summary, for the rationale. Steps 1–3 landed in `a2e789e4` and were reviewed and approved
@@ -60,8 +60,7 @@ on zero warnings *plus* its recorded tier and reason.
   routes which mechanism produces the *served HTML*, so a `first()` read confined to
   `watch()`/`on()` positions is a client concern and does not route. Static being empty is a
   correct classification, not a wiring gap — the tier is rare by construction and stays empty
-  until wave 4. Steps 1–3 are deliberately behaviour-preserving: the old diagnostics still
-  fire alongside the new signals, and step 5 is what removes them from the channel.
+  until wave 4.
 
   Remaining scope, ordered:
   4. **`emit-server.ts` takes a tier flag.** — done ✓ (landed `ce3ebd10`, with LT-182)
@@ -79,33 +78,37 @@ on zero warnings *plus* its recorded tier and reason.
      Static emit path nowhere. `emit-tier.test.ts`'s "dropped ⇒ name absent" assertion stands
      in for it and covers all 22 × 3 combinations, which `tsc` does not. Wave 4's first real
      Static component closes it for free.
-     **Two facts step 5 needs to carry forward:**
-     (a) The **synthetic Static fixture reaches Static through an impure `hidden` thunk, not
-     the harvest path**, because TSRX004 is still an error until step 5 — a TSRX004-routed
-     component cannot compile today. Step 5 rewires that route, so expect the fixture's
-     premise to change and re-pin it deliberately rather than treating a flip as a regression.
-     Two controls isolate the conjunction: the same TSRX034 site with a realm-answerable value
-     classifies Simulated, and with no routing signal at all, Folded.
-     (b) Emit receives the **PRE-contamination** tier (`index.ts` classifies; the corpus
-     compose fixpoint runs afterwards in `server/effects/tsrx.ts`). So `form-combobox` —
-     Simulated purely by `compose-read` — is emitted on the Folded path. Ruled acceptable,
-     but it means "a Simulated module drops setup" is true of the classifier, not of every
-     module the corpus finally labels Simulated.
-  5. **Diagnostic reclassification per ADR 0029 s5's table.** TSRX004, TSRX034 (non-severe),
-     TSRX043 and TSRX013's two server-evaluation factories leave the diagnostic channel for
-     the tier census. TSRX034-severe survives, scoped to the Static tier. TSRX039 untouched.
-     Impure-ambient is NOT a routing signal — it is the expression-level unresolvability
-     property (ADR 0029 s1 limb b), omitted in every tier including Simulated, no diagnostic;
-     this needs the realm-side suppression of step 7. LT-142's `Intl` rule splits three ways:
-     server-known locale → Folded-eligible; locale read from the DOM (`getLocale(el)`,
-     `host.lang`) → Simulated routing signal, since the realm executes it for real;
-     runtime-default locale → unresolvable. `basic-pluralize` must stay Simulated **here** —
-     that pin is sequential, not permanent: LT-173's reserved `i18n` parameter makes the
-     locale server-known and flips it to Folded. Expect that flip and update the census golden
-     rather than investigating it. Also revisit `evaluability.ts`'s unconditional `Date`
-     impurity: `new Date(year, month, day)` over parsed server args (the `basic-blogmeta`/
-     LT-095 shape) reads no viewing-moment fact, but both the constructor and the formatter
-     read the build machine's TIMEZONE — analyse it, don't assume it.
+  5. **Diagnostic reclassification per ADR 0029 s5's table.** — done ✓ (landed, pending review)
+     `TSRX004`, `TSRX034` (non-severe), `TSRX043`, `TSRX013`'s two server-evaluation
+     factories and the reactive `TSRX033` warning left the diagnostic channel; the
+     compile-warning baseline is **0** (was 7 standing warnings: 6 on basic-pluralize,
+     1 on form-listbox). The retired codes stay in the union as census provenance — the
+     `RoutingSignal` origins in `tier.ts` cite them. The severe `TSRX034` error survives,
+     scoped to the Static tier via a post-`classifyTier` filter in `index.ts` (the error gate
+     moved after tier computation). Impure-ambient reactive reads are now silent —
+     unresolvability (s1 limb b), not a warning; the static-child/attribute `TSRX033` errors
+     remain. The synthetic Static fixture is re-pinned through the HARVEST path (an unrendered
+     signal with an impure initializer — the shape step 4's note said could not compile), the
+     impure-`hidden` route kept as a second pin, both controls updated. LT-142's `Intl` rule
+     was already split three ways in steps 1–3; basic-pluralize stays Simulated, its six
+     standing `TSRX034` warnings gone with the channel (LT-173 will flip the tier pin to
+     Folded). `Date` analysed and decided per ADR 0030 s2: `new Date(y, m, d)` stays impure
+     (the build-machine TIMEZONE is limb-b ambient state), `Date.UTC(y, m - 1, d)` admitted as
+     pure — LT-095's prescribed blogmeta shape is foldable when that migration lands. Four
+     decisions the table left open — including the new **`TSRX046`** (rendered client-only
+     const: the one residue that stays an error, now precisely scoped to rendered sites) —
+     are recorded in `NOTES.md` (2026-09-06); Tech Writer reviewed the retired copy with the
+     errors.md/docs sweep. Two enabling fixes keep the retired shapes sound instead of
+     silently broken: `emit-client.ts` declares unharvested signals verbatim (the realm
+     replays that module), and the suppression pool in `emit-server.ts` excludes statements
+     the harness cannot evaluate (the retention text-match would otherwise retain them via
+     word collisions).
+     **A fact steps 6–8 still carry forward:** emit receives the **PRE-contamination** tier
+     (`index.ts` classifies; the corpus compose fixpoint runs afterwards in
+     `server/effects/tsrx.ts`). So `form-combobox` — Simulated purely by `compose-read` — is
+     emitted on the Folded path, and the census must decide WHICH tier it records; ruled
+     acceptable for emit, but "a Simulated module drops setup" is true of the classifier, not
+     of every module the corpus finally labels Simulated.
   6. **The tier census** rides `sim/report.ts` (LT-163's channel), recording per component its
      tier and the reason. It is NOT a warning — the compile-warning baseline's target stays
      zero (ADR 0029 s6), and `check:tsrx`'s counted summary line reports the two separately.
@@ -127,9 +130,8 @@ on zero warnings *plus* its recorded tier and reason.
      `IMPURE_AMBIENT_ROOTS` and ADR 0027 s6 is DISSOLVED by steps 5+7, not resolved by
      electing a winner: neither mechanism can answer it, so it renders in neither.
 
-  **Tech Writer reviews the copy** for every retirement in step 5 (ADR 0028 lifecycle;
-  `tech-writer`'s `workflows/error-message-lifecycle.md`). TSRX044/TSRX045's own propagation
-  is done (LT-181).
+  Step 5's retirement copy was reviewed by Tech Writer at landing (ADR 0028 lifecycle);
+  TSRX044/TSRX045's own propagation is done (LT-181).
   Acceptance: the classifier assigns a tier to every corpus component with a recorded reason
   and golden coverage; the synthetic Static fixture pins the skeleton emit path;
   `basic-counter`/`module-tabgroup`/`card-blogpost`/`card-callout` classify Folded; no

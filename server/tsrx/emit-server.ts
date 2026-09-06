@@ -18,7 +18,12 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import { freeIdentifiers, hostPropOf, JS_GLOBALS } from './ast-utils'
+import {
+	CLIENT_ONLY_PRIMITIVES,
+	freeIdentifiers,
+	hostPropOf,
+	JS_GLOBALS,
+} from './ast-utils'
 import { isVoidElement } from './core'
 import {
 	foldableHostProps,
@@ -877,8 +882,46 @@ export const emitServerModule = (
 	 * appears verbatim in the emitted code.
 	 */
 	const harnessSuppressed = (options.tier ?? 'folded') !== 'folded'
+	/**
+	 * LT-165 step 5: statements the value harness can never evaluate — they
+	 * read a client-only primitive (`first`/`all`/`watch`/…) or a
+	 * `first()`-bound ref (the retired `TSRX013`/`TSRX043` shapes). The
+	 * retention rule keeps what the emitted code references, and its token
+	 * match cannot tell a genuine reference from a word that happens to
+	 * appear in one — `<c-el>` tokenises as containing `el`. Over-retaining
+	 * a harness-evaluable const is the Folded behaviour (dead, harmless);
+	 * over-retaining one of THESE breaks the module, because the name it
+	 * reads exists only in the factory. So the suppressed tiers exclude them
+	 * from the retention pool outright: the ADR-0029-s4 criterion retains
+	 * only what can actually run server-side, and a markup site genuinely
+	 * derived from such a name is an unsound shape that surfaces as a
+	 * source-mapped tsc failure on the generated module instead.
+	 */
+	const refNames = new Set([
+		...component.refReasons.keys(),
+		...component.optionalRefs,
+	])
+	// A `requestContext` statement is NOT excluded by the primitive check
+	// below: the primitive's name appears in its free identifiers, but the
+	// emitted form substitutes `createCell(fallback)` for the whole call and
+	// the fallback is enforced server-known (TSRX016) — the harness evaluates
+	// it fine (card-mediaqueries folds all four context signals into markup).
+	const requestContextNames = new Set(
+		component.signals
+			.filter(signal => signal.constructor === 'requestContext')
+			.map(signal => signal.name),
+	)
+	const serverUnevaluable = (stmt: SetupStmt): boolean =>
+		stmt.name !== null &&
+		!requestContextNames.has(stmt.name) &&
+		[...freeIdentifiers(stmt.node)].some(
+			name => CLIENT_ONLY_PRIMITIVES.has(name) || refNames.has(name),
+		)
 	const emittedSetup = harnessSuppressed
-		? retainReferenced(component.setup, [pushArgument(rootParts), ...lines])
+		? retainReferenced(
+				component.setup.filter(stmt => !serverUnevaluable(stmt)),
+				[pushArgument(rootParts), ...lines],
+			)
 		: component.setup
 	const emittedNames = new Set(
 		emittedSetup.map(stmt => stmt.name).filter(name => name !== null),

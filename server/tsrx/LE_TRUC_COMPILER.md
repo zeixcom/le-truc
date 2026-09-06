@@ -484,7 +484,7 @@ positions are remapped onto the `.tsrx` source through
 makes them import each other's real types — a missing or mistyped server arg
 is a real `tsc` diagnostic, remapped to the compose site.
 
-**Diagnostic codes** (`diagnostics.ts`, TSRX001–043) fall into families:
+**Diagnostic codes** (`diagnostics.ts`, TSRX001–046) fall into families:
 
 - *Grammar and shape gates*: unrecognized setup statements, reactive `@for`
   over a non-`createList` (TSRX001), async component functions, deferred
@@ -504,7 +504,9 @@ is a real `tsc` diagnostic, remapped to the compose site.
 - *Harvest and evaluability*: no render site or harvest route for a signal
   (TSRX004), no server-renderable value for a reactive attribute (TSRX034),
   the Parser-prop double-render warning (TSRX039), a dead required-reason
-  string (TSRX040).
+  string (TSRX040), and the rendered-client-only-const error (TSRX046 — the
+  narrow residue of this family that stays an error; see the reclassification
+  below).
 
 **Reclassification under ADR 0029.** The impure-ambient refusal is not in the
 table below because it does not become a routing signal at all: it becomes
