@@ -131,6 +131,7 @@ export function FormTokenbox(
 				<input
 					{type}
 					id={inputId}
+					data-unreconciled
 					aria-describedby={description ? descriptionId : null}
 					onKeydown={(e: KeyboardEvent) => {
 						if (e.key === ',' || e.key === 'Enter') {

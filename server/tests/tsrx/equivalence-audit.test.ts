@@ -140,9 +140,7 @@ describe('CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 
 
 	for (const entry of foldedEntries) {
 		test(`${entry.tag}: the connect diff against the harness render is the recorded hydration boundary`, async () => {
-			const info = compiled.find(
-				(i): i is CompiledInfo => i.tag === entry.tag,
-			)!
+			const info = compiled.find((i): i is CompiledInfo => i.tag === entry.tag)!
 			// Phase 1 — the value harness over the shared fixture args.
 			const mod = (await import(
 				pathToFileURL(info.serverModulePath).href
@@ -163,4 +161,39 @@ describe('CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 
 			expect(connectDiff(phase1, phase2)).toMatchSnapshot()
 		})
 	}
+
+	// The audit's first run surfaced exactly one instance of the dangerous
+	// class — a client write that REMOVES server-rendered state — and the
+	// snapshot above records it only as a shape. This pins the fact itself,
+	// so a regression fails on an assertion that names the symptom rather
+	// than on a diff a reviewer has to interpret (LT-185).
+	test('form-tokenbox: the authored text input survives hydration (LT-185 regression)', async () => {
+		const info = compiled.find(i => i.tag === 'form-tokenbox')!
+		const mod = (await import(
+			pathToFileURL(info.serverModulePath).href
+		)) as Record<string, unknown>
+		const renderFn = mod[renderName('form-tokenbox')] as (
+			args: unknown,
+		) => string
+		const phase1 = renderFn(CORPUS_ARGS['form-tokenbox'] ?? {})
+		expect(phase1).toContain('id="tags-input"')
+		const phase2 = await realm.render({
+			markup: phase1,
+			component: 'form-tokenbox',
+		})
+		// The input is the only place a user can type. `reconcile()` owns
+		// `data-container`'s children and removes every unkeyed one (ADR 0017's
+		// self-cleaning container), so the authored input must carry the
+		// `data-unreconciled` opt-out to survive the first reconcile pass.
+		expect(phase2).toContain('id="tags-input"')
+		// Inside the reconcile container specifically — surviving anywhere in
+		// the document would not mean it survived the pass that removed it.
+		// The container holds only spans, so the first `</div>` closes it.
+		const fromContainer = phase2.slice(phase2.indexOf('<div data-container'))
+		const containerInner = fromContainer.slice(
+			0,
+			fromContainer.indexOf('</div>'),
+		)
+		expect(containerInner).toContain('id="tags-input"')
+	})
 })
