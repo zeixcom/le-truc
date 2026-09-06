@@ -55,6 +55,34 @@ afterEach(() => {
 
 const globalRecord = globalThis as unknown as Record<string, unknown>
 
+/**
+ * Import the library INSIDE a realm, as that realm's OWN module instance.
+ *
+ * One module cache per process (ADR 0027 sub-design 10) applies to the
+ * library too, and it bites harder there than for a client module:
+ * `src/helpers/context.ts` captures the ambient `Event` when it evaluates
+ * (`class ContextRequestEvent extends Event`), so a library instance
+ * evaluated under an EARLIER realm dispatches an event that a LATER realm's
+ * jsdom rejects as foreign. The connect then fails, the library contains it
+ * (ADR 0028 tier 2), and the component degrades — which LT-180's host-console
+ * capture now surfaces as a build-report entry, against whichever realm ran
+ * second. A per-import token gives each realm a library bound to its own
+ * globals, and leaves the canonical `index.ts` for the corpus driver
+ * (`sim-driver.test.ts`) to evaluate inside its own realm.
+ */
+let libraryInstance = 0
+const importLibrary = (): Promise<typeof import('../../../index.ts')> =>
+	import(`../../../index.ts?realm=${++libraryInstance}`)
+
+/**
+ * A library instance evaluated at FILE LOAD, before this file creates any
+ * realm — so its `ContextRequestEvent` extends the process's own `Event`,
+ * never a realm's. This is the poisoned state a realm inherits whenever an
+ * earlier test file imports the library outside a realm, reproduced here on
+ * purpose and deterministically, rather than left to test-file order.
+ */
+const foreignLibrary = await importLibrary()
+
 /* === Tests === */
 
 describe('patch table', () => {
@@ -199,7 +227,7 @@ describe('ARIA under simulation (LT-177)', () => {
 	test('a root aria-* binding serializes as an attribute', async () => {
 		const realm = withRealm()
 		await realm.load(async () => {
-			const { bindAria, defineComponent } = await import('../../../index.ts')
+			const { bindAria, defineComponent } = await importLibrary()
 			defineComponent<{ expanded: boolean }>(
 				'probe-aria',
 				({ expose, internals, watch }) => {
@@ -224,9 +252,7 @@ describe('ARIA under simulation (LT-177)', () => {
 		// still see it now that nothing normalizes `attachInternals()`.
 		const realm = withRealm()
 		await realm.load(async () => {
-			const { defineComponent, formAssociated } = await import(
-				'../../../index.ts'
-			)
+			const { defineComponent, formAssociated } = await importLibrary()
 			defineComponent(
 				'probe-form',
 				({ expose, host, internals }) => {
@@ -253,7 +279,7 @@ describe('ARIA under simulation (LT-177)', () => {
 	test('bindState no-ops on skeletal internals instead of throwing', async () => {
 		const realm = withRealm()
 		await realm.load(async () => {
-			const { bindState, defineComponent } = await import('../../../index.ts')
+			const { bindState, defineComponent } = await importLibrary()
 			defineComponent<{ open: boolean }>(
 				'probe-state',
 				({ expose, host, internals, watch }) => {
@@ -368,6 +394,133 @@ describe('closed network (sub-design 2d)', () => {
 		expect(rejections.length).toBe(1)
 		expect(rejections[0]?.component).toBe('probe-rejector')
 		expect(rejections[0]?.message).toContain('boom, unhandled')
+	})
+})
+
+describe('library-contained connect failures reach the report (LT-180)', () => {
+	/**
+	 * The gap this closes. A generated client runs in THIS process against
+	 * patched globals, so when the library contains a connect throw
+	 * (ADR 0028 tier 2) it reports on the host console — jsdom's
+	 * `virtualConsole` never sees it, and before LT-180 `diagnostics` stayed
+	 * empty while the component serialized as the un-enhanced skeleton.
+	 * Remove the host-console capture in `realm.ts` and this test fails with
+	 * no diagnostic at all, which is the mutation it is here to catch.
+	 */
+	test('a contained connect throw is reported, error-level, and names the component', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			const { defineComponent } = await importLibrary()
+			defineComponent('probe-contained', () => {
+				throw new Error('boom in setup')
+			})
+		})
+		const html = await realm.render({
+			markup: '<probe-contained>skeleton</probe-contained>',
+			component: 'probe-contained',
+		})
+		// The library's containment held: the component kept its
+		// server-rendered markup rather than taking the render down.
+		expect(html).toContain('skeleton')
+		const contained = realm.diagnostics.find(entry =>
+			entry.message.includes('probe-contained'),
+		)
+		expect(contained).toBeDefined()
+		expect(contained?.kind).toBe('console')
+		expect(contained?.level).toBe('error')
+		expect(contained?.component).toBe('probe-contained')
+		// The thrown error rides along, or the report names a failure with no
+		// way to find it.
+		expect(
+			realm.diagnostics.some(entry => entry.message.includes('boom in setup')),
+		).toBe(true)
+	})
+
+	test('the entry fails the build report — it is unclassified, not silenced', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			const { defineComponent } = await importLibrary()
+			defineComponent('probe-contained2', () => {
+				throw new Error('boom in setup')
+			})
+		})
+		await realm.render({
+			markup: '<probe-contained2></probe-contained2>',
+			component: 'probe-contained2',
+		})
+		const report = reportDiagnostics(realm.diagnostics)
+		expect(report.unclassified.length).toBeGreaterThan(0)
+		expect(
+			report.unclassified.some(entry => entry.component === 'probe-contained2'),
+		).toBe(true)
+	})
+
+	/**
+	 * The regression pin for what LT-180's wiring found on its first run.
+	 *
+	 * `foreignLibrary` is evaluated OUTSIDE any realm, so its
+	 * `ContextRequestEvent` extends Bun's native `Event` — the state every
+	 * realm inherits once an earlier test file imports the library outside a
+	 * realm (`server-render-smoke.test.ts` does, through the generated server
+	 * modules). `src/helpers/context.ts` builds the request event in the
+	 * HOST's realm when the class's base does not belong to it; revert that
+	 * and jsdom rejects the dispatch, the library contains the throw, and the
+	 * component degrades to its skeleton with this test failing on both
+	 * counts.
+	 */
+	test('a context request from a foreign-realm library instance still connects', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			const { createContext, defineComponent } = foreignLibrary
+			const THEME = createContext<string>('probe-theme')
+			defineComponent('probe-consumer', ({ host, requestContext }) => {
+				// The dispatch under test: `requestContext` fires a
+				// `context-request` at connect, into the realm's document.
+				const theme = requestContext(THEME, 'fallback')
+				host.setAttribute('data-theme', theme.get())
+			})
+		})
+		const html = await realm.render({
+			markup: '<probe-consumer></probe-consumer>',
+			component: 'probe-consumer',
+		})
+		// The marker proves setup ran past the dispatch. A rejected dispatch
+		// throws out of connect, so the attribute is missing entirely.
+		expect(html).toContain('data-theme="fallback"')
+		expect(realm.diagnostics).toEqual([])
+	})
+
+	test('a component that connects cleanly reports nothing (the capture invents no entries)', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			customElements.define(
+				'probe-quiet',
+				class extends HTMLElement {
+					connectedCallback() {
+						this.setAttribute('data-connected', '')
+					}
+				},
+			)
+		})
+		const html = await realm.render({
+			markup: '<probe-quiet></probe-quiet>',
+			component: 'probe-quiet',
+		})
+		expect(html).toContain('data-connected')
+		expect(realm.diagnostics).toEqual([])
+	})
+
+	test('the host console is restored after the render window', async () => {
+		const before = console.error
+		const realm = withRealm()
+		await realm.load(async () => {
+			customElements.define('probe-restore', class extends HTMLElement {})
+		})
+		await realm.render({
+			markup: '<probe-restore></probe-restore>',
+			component: 'probe-restore',
+		})
+		expect(console.error).toBe(before)
 	})
 })
 
@@ -766,7 +919,7 @@ describe('page locale seeding (LT-172, ADR 0030 sub-design 7)', () => {
 	 */
 	const loadLocaleProbe = (realm: SimulationRealm) =>
 		realm.load(async () => {
-			const { defineComponent } = await import('../../../index.ts')
+			const { defineComponent } = await importLibrary()
 			defineComponent('probe-locale', ({ host }) => {
 				const lang = host.closest('[lang]')?.getAttribute('lang') || 'en'
 				host.setAttribute('data-locale', lang)

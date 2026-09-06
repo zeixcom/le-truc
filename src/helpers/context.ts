@@ -105,6 +105,45 @@ class ContextRequestEvent<T extends UnknownContext> extends Event {
 }
 
 /**
+ * Build a `context-request` event in the HOST's own realm.
+ *
+ * `ContextRequestEvent` extends whichever `Event` was global when this
+ * module evaluated. That is the right class in the normal case, and it is
+ * what `instanceof` checks in user code see — but a host in a DIFFERENT
+ * realm (an iframe, or the build's simulation realm, where the library may
+ * have been evaluated before the realm's globals were installed) rejects
+ * that instance: `dispatchEvent` brand-checks its argument against its own
+ * `Event`, and a foreign one throws. The throw lands in `connectedCallback`,
+ * the component contains it (ADR 0028 tier 2) and never enhances — a silent
+ * degradation, since the request is dispatched at connect.
+ *
+ * So the class is used whenever it belongs to the host's realm, and only a
+ * genuine mismatch falls back to building the event from the host's own
+ * `Event` constructor. The provider side reads `context`/`callback` off the
+ * event and never uses `instanceof`, so the duck-typed instance is answered
+ * identically.
+ */
+const contextRequestEvent = <T extends UnknownContext>(
+	host: HTMLElement,
+	context: T,
+	callback: ContextCallback<ContextType<T>>,
+	subscribe = false,
+): ContextRequestEvent<T> => {
+	const hostEvent = host.ownerDocument?.defaultView?.Event
+	if (!hostEvent || hostEvent === Object.getPrototypeOf(ContextRequestEvent))
+		return new ContextRequestEvent(context, callback, subscribe)
+	const event = new hostEvent(CONTEXT_REQUEST, {
+		bubbles: true,
+		composed: true,
+	})
+	return Object.assign(event, {
+		context,
+		callback,
+		subscribe,
+	}) as unknown as ContextRequestEvent<T>
+}
+
+/**
  * Creates a typed context key from a plain string.
  *
  * @since 2.0.2
@@ -193,7 +232,7 @@ const makeRequestContext =
 
 		const dispatch = () => {
 			host.dispatchEvent(
-				new ContextRequestEvent(context, (getter: () => T) => {
+				contextRequestEvent(host, context, (getter: () => T) => {
 					answered = true
 					slot.replace(deriveCell(getter))
 				}),

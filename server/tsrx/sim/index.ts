@@ -29,6 +29,7 @@ export {
 	childrenFirstOrder,
 	createSimulationRealm,
 	type RecordedDefinition,
+	type RenderStats,
 	type SimDiagnostic,
 	type SimulationRealm,
 } from './realm.ts'

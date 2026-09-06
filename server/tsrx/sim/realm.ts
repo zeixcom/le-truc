@@ -171,12 +171,30 @@ export type RenderOptions = {
 	maxTurns?: number
 }
 
+/**
+ * Render-cache engagement, as counted by `render()` (LT-169).
+ *
+ * The memoization (LT-166) is a build-cost mechanism, so the build has to be
+ * able to SEE it work: a cache that silently stops engaging is a cost
+ * regression with no other signal. `renders` counts cache misses — the
+ * connects actually simulated — and `cacheHits` the occurrences served from
+ * memory; their sum is the number of `render()` calls.
+ */
+export type RenderStats = {
+	/** Cache misses: connects the realm actually simulated. */
+	readonly renders: number
+	/** Occurrences served from the memo table instead of re-simulated. */
+	readonly cacheHits: number
+}
+
 export type SimulationRealm = {
 	readonly runtime: SimRuntime
 	readonly window: JSDOM['window']
 	readonly document: Document
 	readonly diagnostics: readonly SimDiagnostic[]
 	readonly definitions: readonly RecordedDefinition[]
+	/** Live render-cache counters (LT-166's acceptance, measured by LT-169). */
+	readonly renderStats: RenderStats
 	/**
 	 * Resolution phase: import client modules, recording their definitions.
 	 * Throws if the import records no NEW definitions (sub-design 10's
@@ -322,6 +340,55 @@ export function createSimulationRealm(
 				? { ...diagnostic, component: currentComponent }
 				: diagnostic,
 		)
+	}
+
+	/**
+	 * Capture the HOST console for one load/render window (LT-180).
+	 *
+	 * jsdom's `virtualConsole` only sees what code running INSIDE the jsdom
+	 * window logs. A generated client module is imported into this process
+	 * and executes against patched globals, so the library's own containment
+	 * (ADR 0028 tier 2: `reportConnectFailure` catches a connect throw,
+	 * degrades the component to its server-rendered markup, and reports it)
+	 * writes to the process console and never reaches the virtual one. The
+	 * component then serializes as the un-enhanced skeleton with the report
+	 * completely silent — the build serves wrong HTML with no signal, which
+	 * is exactly what the report channel exists to prevent.
+	 *
+	 * Everything the window logs at `error`/`warn` is recorded, not just the
+	 * library's containment: the host console carries no marker that would
+	 * separate a contained connect failure from any other error logged
+	 * during a connect, and both mean the same thing here — something went
+	 * wrong while this component was being simulated. `kind` is therefore
+	 * `console`, the same kind the virtual console's own levels report; the
+	 * source differs, the meaning does not. Output is captured rather than
+	 * forwarded, so the report is the single place a failure is stated.
+	 */
+	const hostConsole = globalThis.console as unknown as Record<
+		string,
+		(...args: unknown[]) => void
+	>
+	const CAPTURED_LEVELS = ['error', 'warn'] as const
+	const captureHostConsole = (): (() => void) => {
+		const original = CAPTURED_LEVELS.map(
+			level => [level, hostConsole[level]] as const,
+		)
+		for (const level of CAPTURED_LEVELS)
+			hostConsole[level] = (...args: unknown[]) => {
+				const thrown = args.find(arg => arg instanceof Error) as
+					| Error
+					| undefined
+				report({
+					kind: 'console',
+					level,
+					message: args.map(String).join(' '),
+					...(thrown?.stack === undefined ? {} : { stack: thrown.stack }),
+				})
+			}
+		return () => {
+			for (const [level, fn] of original)
+				if (fn !== undefined) hostConsole[level] = fn
+		}
 	}
 
 	const virtualConsole = new VirtualConsole()
@@ -521,6 +588,7 @@ export function createSimulationRealm(
 	// (component, locale, markup); only quiescent, non-degraded connects are
 	// stored.
 	const renderCache = new Map<string, string>()
+	const renderStats = { renders: 0, cacheHits: 0 }
 
 	/**
 	 * Snapshot each suppressed site's server-rendered state (ADR 0029
@@ -596,9 +664,11 @@ export function createSimulationRealm(
 	const load = async (importer: () => Promise<unknown>) => {
 		const before = definitions.length
 		force('customElements', recordingRegistry)
+		const releaseConsole = captureHostConsole()
 		try {
 			await importer()
 		} finally {
+			releaseConsole()
 			force('customElements', realRegistry)
 		}
 		// Load-once is a driver assertion, not a convention (LT-152 review,
@@ -615,7 +685,7 @@ export function createSimulationRealm(
 			)
 	}
 
-	const render = async ({
+	const renderWindow = async ({
 		markup,
 		component,
 		locale,
@@ -626,7 +696,11 @@ export function createSimulationRealm(
 		// once a component reads `getLocale(host)` (LT-172).
 		const cacheKey = `${component}\u0000${locale ?? ''}\u0000${markup}`
 		const cached = renderCache.get(cacheKey)
-		if (cached !== undefined) return cached
+		if (cached !== undefined) {
+			renderStats.cacheHits++
+			return cached
+		}
+		renderStats.renders++
 		// Suppression (LT-165 step 7): the skeleton snapshot is a pure
 		// function of the markup — an inert parse upgrades nothing — so it is
 		// taken before the connect window opens at all. Restoring happens
@@ -717,6 +791,21 @@ export function createSimulationRealm(
 		return html
 	}
 
+	/**
+	 * The render window, with the host console captured for its duration
+	 * (LT-180) — the connect this drives is where the library's own
+	 * containment reports, and that report is the build's only signal that
+	 * a component degraded instead of enhancing.
+	 */
+	const render = async (options: RenderOptions): Promise<string> => {
+		const releaseConsole = captureHostConsole()
+		try {
+			return await renderWindow(options)
+		} finally {
+			releaseConsole()
+		}
+	}
+
 	const dispose = () => {
 		processLike?.off?.('unhandledRejection', onRejection)
 		for (const restore of restores.reverse()) restore()
@@ -729,6 +818,7 @@ export function createSimulationRealm(
 		document,
 		diagnostics,
 		definitions,
+		renderStats,
 		load,
 		render,
 		dispose,
