@@ -2,16 +2,25 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Server evaluation tiers**: every `.tsrx` component is now classified at compile time as **Folded** (rendered by server-side folding), **Simulated** (pre-played in the jsdom realm) or **Static** (static skeleton, corrected by the client at connect), with the tier and its reason recorded per component. See [ADR 0029](adr/0029-tiered-server-evaluation.md).
+- **`TSRX044` and `TSRX045`**: `TSRX013` bundled four unrelated checks under one code and is now three. `TSRX044` carries the conditional signal-constructor format rule, `TSRX045` the deferred collector call (`NoActiveCollectorError`); `TSRX013` keeps only its two server-evaluation checks. Severities are unchanged.
+
 ### Changed
 
 - **`bindAria()` attribute fallback**: when the target's reflection does not reach the platform (jsdom's skeletal `ElementInternals` under server simulation), it now binds the host content attribute with the same coercion instead of writing into the void. The eight element-reference properties stay no-ops there, and no attribute removal fires on that path.
 - **Server simulation carries root ARIA**: the realm no longer forces `attachInternals()` to throw, so the served HTML keeps `role`/`aria-*` initial values instead of losing them at hydration. Form-associated components still degrade to no internals.
 - **Reworded `attachInternals()` degradation warning** (dev mode): it now states the component runs without internals — form association, custom states, and host ARIA reflection unavailable — and names the mitigation: author the ARIA attributes in your markup instead.
 - **`le-truc` skill references and docs pages cover the fallback**: `effects.md`/`accessibility.md` (skill references and `docs-src/pages/`) now describe `bindAria()`'s attribute fallback and `bindState()`'s no-`states` no-op.
+- **Unresolvable expressions are a per-expression property, not a per-component one**: an expression reading impure ambient state (`Date.now()`, `Math.random()`) is now omitted from the served HTML in every tier and raises no diagnostic, instead of routing its whole component to simulation.
+- **`le-truc` skill `errors.md` and the compiler docs cover the split codes**: `TSRX044`/`TSRX045` have their own rows and fix-its, and the `NoActiveCollectorError` reference points at `TSRX045`.
+- **Bundle-size thresholds now read the same everywhere**: the size tests' titles state the limits their constants actually enforce (9 kB minimal hard ceiling, 10 kB `formAssociated()` warning), and stale ceiling citations in ADRs and docs carry dated correction pointers.
 
 ### Fixed
 
 - **`bindState()` on internals without a `states` set**: previously threw a `TypeError` on the first value; now a graceful no-op, same as `null` internals. Custom states have no attribute channel, so the no-op is the whole behavior.
+- **`getLocale()` under server simulation**: previously the simulated document had no `<html lang>`, so a component calling `getLocale(host)` without a `lang` argument silently resolved the `'en'` fallback on every page, whatever the page's locale. Now the realm seeds `<html lang>` from the build's page locale.
 
 ## 2.6.0
 
