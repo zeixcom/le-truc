@@ -110,7 +110,7 @@ lives in the consumer, `server/effects/tsrx.ts` (§ 6).
 | `classify-attributes.ts` | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser |
 | `reactivity.ts` | `classifyChild` — the reactive-lift rule: is a template child reactive, static, or untraceable? |
 | `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers. Under ADR 0029 this is also the first conjunct of the **tier classifier** (§ 5) |
-| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary (LT-173): `export const i18n` extraction, the `lang` binding/default lookup, `PLURAL_CATEGORIES` |
+| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary (LT-173): `export const i18n` extraction (quoted keys included; dotted keys must end in a CLDR category — LT-190), the `lang` binding/default lookup, `PLURAL_CATEGORIES` |
 | `infer-type.ts` | Signal value-type inference |
 | `config.ts` | `export const config` extraction |
 | `imports.ts` | Compose-import resolution + plain import collection and placement |
@@ -210,18 +210,34 @@ the locale record: `lang`, the component's resolved messages `t`,
 it; declaring it costs the caller nothing, so composition never threads
 locale by hand. Both are ordinary destructurable args, so the value is
 server-known and folds in phase 1 — which is why an i18n component is Folded-tier
-eligible rather than the Simulated tier (§ 5). An authored `lang` arg, or one supplied at
-a compose site, overrides the record's locale; the EFFECTIVE locale renders
-onto the root `lang` attribute, exempt from TSRX039 by ADR 0024 s3's
-root-attribute exclusion.
+eligible rather than the Simulated tier (§ 5). The record's locale resolves by
+precedence (ADR 0030 s3 as amended by LT-191): an explicit `lang` arg at the
+compose site, else the PARENT'S effective locale — compose-graph inheritance,
+the SSR analog of the DOM ancestor walk, since the composition tree is the
+rendered ancestor chain — else the component's authored default, else the
+build's page locale. The EFFECTIVE locale renders onto the root `lang`
+attribute, exempt from TSRX039 by ADR 0024 s3's root-attribute exclusion.
+Client-side, `lang` is a CONFIG attribute, not a reactive property: it is a
+built-in IDL property, so `expose()` cannot install an accessor over it
+(`prop in this` skips silently), and a compiled component MATERIALIZES the
+walked locale onto the attribute at connect — the same thing the server
+render did, so the DOM carries one answer both paths agree on.
 
 **Message resolution** (ADR 0030): a component declares each message key
 *with its source-locale string inline in the `.tsrx`* — `export const i18n =
 { key: 'Source string', … }` (extracted by `i18n.ts`, same posture as
-`readConfig`) — so there is deliberately no per-component catalog file, which
-would reintroduce the sibling-file drift ADR 0024 cures. Values must be
-string literals: they are the fallback every locale resolves against and the
-bytes the staleness manifest hashes. Translations are additive per-locale
+`readConfig`; quoted keys are keys too — a dotted key is a string Literal,
+which no bare identifier can spell) — so there is deliberately no
+per-component catalog file, which would reintroduce the sibling-file drift
+ADR 0024 cures. Values must be string literals: they are the fallback every
+locale resolves against and the bytes the staleness manifest hashes, so the
+source locale declares EVERY key its template references — the fallback
+bytes always exist. **Plural word forms are per-category keys**
+(`<key>.<category>` — `'task.one'`, `'task.other'`; LT-190): a dotted key
+must end in a CLDR plural category (a shape error otherwise — a typo'd
+suffix would silently never resolve AND corrupt the census's reachability
+input), and the span carrying each `truc:case` category references its own
+key. Translations are additive per-locale
 override files, component-namespaced (`i18n/de.json`, keys `<tag>.<key>`),
 with **no tiering and no override stack**: a key resolves in exactly one
 place. The compiler resolves `t` at render time — the generated `i18n`
@@ -231,7 +247,14 @@ the reserved record — and the catalog never reaches the client. A missing
 key renders the source-locale string and is recorded in the build report's
 **translation census** (`translationCensus`, `sim/report.ts`; machine-
 readable artifact at `server/generated/tsrx/i18n-report.json`) — not a
-compile warning, since it is not author-fixable. Staleness rides a committed
+compile warning, since it is not author-fixable. The census is
+REACHABILITY-AWARE (LT-190): a `<key>.<category>` message whose category is
+outside the locale's platform set — read per locale for the component's
+statically proven `truc:case-type` (`RegistryEntry.caseType`:
+`'cardinal'`/`'ordinal'` when provable, `'union'` otherwise — the runtime's
+own fallback) — sits in a pruned span that cannot render there, so its
+absence is the translator's nothing-to-do, not a gap; a locale's catalog
+carries exactly its own reachable set. Staleness rides a committed
 manifest (`i18n/manifest.json`, per locale per key the source hash the
 translation was recorded against): a source-string edit is a `.tsrx` edit
 that silently invalidates that key's translations, so an override without a
@@ -347,10 +370,18 @@ could resolve; component-level the Simulated tier would bake the random walk's s
 the page. It is the Simulated tier with one suppressed expression.
 
 `Intl` splits along the same seam: a locale resolving to a server-known value
-keeps a component Folded-tier-eligible; a locale read from the DOM (`getLocale(el)`,
-`host.lang`) is a Simulated-tier routing signal, because the realm executes that read
-for real; only a runtime-default locale is unresolvable under limb (b).
-`basic-pluralize` is the middle case and stays Simulated-tier.
+keeps a component Folded-tier-eligible. A locale READ from the DOM folds only
+when the compiler can splice the read to server truth: `host.lang` mirrors
+the root `lang` attribute when that attribute is server-rendered — `lang`
+and `dir` are platform config attributes whose native accessors read the
+attribute verbatim, so they need no parser (LT-191's third `foldableHostProps`
+route; parser-exposed and arg-rendered props are the first two) — while an
+ANCESTOR WALK through a user-land helper (`getLocale(el)`) is outside the
+fold vocabulary and routes Simulated, because the realm executes that read
+for real. Only a runtime-default locale is unresolvable under limb (b).
+`basic-pluralize` reads `host.lang` over a root-rendered config attribute and
+is Folded-tier (LT-173): its locale is server-known through the reserved
+record.
 
 **Classification is static and conservative.** There is no render-time
 fallback from phase 1 to phase 2 — the fallback condition is exactly what the

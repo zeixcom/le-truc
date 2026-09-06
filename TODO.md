@@ -147,8 +147,53 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   page and correct re-selection when `count` changes after connect; the build writes only
   gitignored files; `bun test server` 1500 pass / 0 fail; `check:tsrx` clean; biome clean.
 
-- [ ] LT-175: Measure and contain the per-locale impact on LT-166's render cache (exploration). **Depends on LT-173.**
+- [x] LT-175: Measure and contain the per-locale impact on LT-166's render cache (exploration). — done, pending review ⏳ (measurement + ruling; no production code changed)
   **Skill:** docs-server-dev
+  **Findings (2026-09-06, measured on this checkout):**
+  **The premise is stale — the corpus the ADR feared no longer reaches the realm.**
+  The simulated stage today is **2 components, 4 occurrences, 4 renders, 0 cache hits, 83 ms**
+  (`form-combobox`, `form-listbox`; 20 of 22 components skipped). ADR 0030's
+  `~3,700 occurrences / 93.5% hit rate` is a pre-ADR-0029 figure: tiering routes the
+  corpus away from the realm, and the build's pass renders authored demo markup per
+  component, not page occurrences. **Neither simulated component declares `i18n`.**
+  The one i18n component (`basic-pluralize`) classifies **Folded**, exactly as
+  ADR 0030 sub-design 1 predicted.
+  **Render cache, 1 locale vs. N** (spike over the real compiled corpus; occurrences /
+  renders / hits / hit rate / wall time):
+
+  | Variant | occ | renders | hits | hit rate | ms |
+  |---|---|---|---|---|---|
+  | 1 locale, no locale seeded (today) | 4 | 4 | 0 | 0% | 18 |
+  | 1 locale (`en` seeded) | 4 | 4 | 0 | 0% | 19 |
+  | 2 locales, locale in key | 8 | 8 | 0 | 0% | 27 |
+  | 2 locales, locale-invariant key for non-i18n | 8 | 4 | 4 | 50% | 19 |
+  | 4 locales, locale in key | 16 | 16 | 0 | 0% | 37 |
+  | 4 locales, locale-invariant key for non-i18n | 16 | 4 | 12 | 75% | 19 |
+
+  **At 1 locale the cache is pure overhead** — a Map write per render and zero hits,
+  because the 4 occurrences are 4 distinct `(component, markup)` pairs. It only
+  becomes a saving under per-locale multiplication, and only if the key drops the
+  locale for components that do not consume it.
+  **Split by tier:** the Folded (20) and Static (0) tiers cost the realm nothing at any
+  locale count — the ADR 0029 saving holds unchanged under i18n.
+  **With/without pruning: no effect on the cache, structurally.** Per-locale span pruning
+  lives in `emit-server.ts` (the Folded server-render path); every component that
+  prunes is Folded and never reaches a realm. This axis is empty, not small.
+  **Ruling — containment is worth taking, but it is not where LT-174's cost is.**
+  Key on locale only when `declaresI18n` is true; otherwise use a locale-invariant
+  key. That makes the simulated stage locale-count-independent (19 ms flat vs. 37 ms at
+  4 locales) for a three-line change with a checkable invariant. Land it in LT-174.
+  **The figure LT-174 actually owes** (same build, instrumented per stage): phase 1
+  (TypeDoc + CSS + TSRX compile) **3032 ms and locale-independent**; simulate **85 ms**;
+  js 22 ms; mdMirror 41 ms; apiPages **731 ms**; pages **1544 ms** (28 pages, ~55 ms/page);
+  examples **1597 ms** (35 pages, ~46 ms/page); total 4816 ms. **Per additional locale
+  ≈ 3.9 s** (apiPages + pages + examples), against the realm's ≤ 37 ms. The render
+  cache is a rounding error in LT-174's budget either way.
+  **Follow-up:** ADR 0030's consequences bullet (`~3,700 occurrences`, `93.5% hit
+  rate will drop`) is measurably wrong post-ADR-0029 and should be amended — flagged for
+  the Architect, not edited here.
+  **Check:** whether the containment invariant belongs in `realm.ts` (cache key) or at
+  the `simulate.ts` call site, and whether the ADR amendment is in scope for LT-174.
   **Context:** A measurement round before designing anything — the direction of the net effect
   is genuinely unknown, which is why it is a spike and not an obligation buried inside LT-174.
   Pulling one way: per-locale rendering multiplies the corpus (~3,700 occurrences → N × 3,700)
@@ -373,14 +418,15 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   biome clean; tier census unchanged (20 folded / 2 simulated); the CI equivalence
   audit passed WITHOUT re-pinning — an SSR'd instance's root attribute makes
   materializeLocale a no-op, which is the soundness property itself.
-  **Handoffs:** adr-keeper amends ADR 0030 (s3 precedence chain + s7 posture: the
+  **Handoffs:** adr-keeper amends ADR 0030 (s3 precedence chain, s4 per-category
+  convention + census reachability — folded in per LT-192, s7 posture: the
   walk returns as the client-side route for client-authored markup, the record
   stays canonical for rendered pages, `lang` config-only); Tech Writer reviews the
   host-profile `lang`/precedence rewording. `basic-number` keeps its live
   per-evaluation `getLocale(host)` walk (its spec contract) — untouched, and it
   never exposed `lang` either.
 
-- [ ] LT-192: LT-190/LT-191 review residue — compiler-doc staleness, the AGENTS IDL-skip surprise, and the catalog→record pin.
+- [x] LT-192: LT-190/LT-191 review residue — compiler-doc staleness, the AGENTS IDL-skip surprise, and the catalog→record pin. — done ✓ (docs + test; internal-only)
   **Skill:** le-truc-dev (docs items route to Tech Writer)
   **Context:** The LT-190/LT-191 review approved both but found three small items
   too concrete to leave in handoff prose:
@@ -413,6 +459,25 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   Acceptance: the three doc spots name LT-190/191 and match the implemented
   behavior; the AGENTS bullet exists; the i18n.test.ts assertions land (and fail
   if someone drops the de.json override path); `bun test server` green.
+  **Done.** (1) `LE_TRUC_COMPILER.md`: the classification paragraph rewritten —
+  a locale read from the DOM folds only when the compiler can splice it
+  (`host.lang` over a root-rendered platform config attribute = LT-191's route 3;
+  an ancestor walk through a user-land helper still routes Simulated), and the
+  "pluralize stays Simulated-tier" claim replaced with its actual Folded fact;
+  the reserved-parameters paragraph carries the full LT-191 precedence chain and
+  the config-attribute rule; the message-resolution paragraph carries the
+  `<key>.<category>` convention (quoted keys, suffix validation, source-declares-
+  every-referenced-key, census reachability with `RegistryEntry.caseType`); the
+  module-map row updated. (2) `AGENTS.md` "Surprising Behaviors" gains the IDL
+  bullet: expose() on a built-in IDL property (`lang`, `dir`, `title`, …) is
+  silently skipped by `prop in this` — the attribute is the only channel; seed
+  it, don't expose it (the parser-applied-seed shape does not help either). (3)
+  `i18n.test.ts` pins the catalog→record path: `i18nRecord('basic-pluralize',
+  'de')` resolves `task.one`/`task.other` from the committed de.json through the
+  generated module's OVERRIDES, and zh resolves `task.other` from its catalog
+  with `task.one` falling back to the source string. Tech Writer review of the
+  reworded paragraphs folds into the open copy handoffs (TSRX008 message, ADR
+  0030 amendment).
 
 ---
 

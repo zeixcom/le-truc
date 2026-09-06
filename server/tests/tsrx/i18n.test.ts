@@ -418,4 +418,20 @@ describe('the generated i18n module', () => {
 		expect(i18nModule.i18nRecord('basic-pluralize', 'de').dir).toBe('ltr')
 		expect(i18nModule.i18nRecord('basic-pluralize', 'ar').lang).toBe('ar')
 	})
+
+	test('the committed catalogs resolve through the generated module (LT-192 pin)', () => {
+		// The end-to-end path the render fixtures bypass: catalog json →
+		// OVERRIDES embedded in the generated module → i18nRecord. Dropping
+		// the override pipeline (or the de.json catalog) fails here.
+		const de = i18nModule.i18nRecord('basic-pluralize', 'de')
+		expect(de.t['task.one']).toBe('Aufgabe')
+		expect(de.t['task.other']).toBe('Aufgaben')
+		// zh carries only its reachable category ({other}); the rest falls
+		// back to the SOURCE string — no implicit chain, and the fallback
+		// bytes exist because the source locale declares every referenced
+		// key (LT-190's no-implicit-fallback rule).
+		const zh = i18nModule.i18nRecord('basic-pluralize', 'zh')
+		expect(zh.t['task.other']).toBe('个任务')
+		expect(zh.t['task.one']).toBe('task')
+	})
 })
