@@ -232,6 +232,17 @@ upgrade timings (define-replay and parse-time), and an unwired realm as the stan
 negative control. The corpus carries no suppressed sites today, so the
 `sim-driver.test.ts` fixtures and the baselines above are unchanged by it.
 
+The **CI equivalence audit** (LT-165 step 8, ADR 0029 § 7 as amended 2026-09-06) runs the
+realm over every Folded-tier component's harness render and pins the per-component connect
+diff as a snapshot (`equivalence-audit.test.ts`, one per Folded component) — the record of
+that component's hydration boundary: serializer normalization, the client's designed
+connect-time writes, and any overwrite of server-rendered state, which is the class a
+changed diff is a review trigger for. The original byte-identity rule was found structurally
+void at landing — in a Folded component every signal seeds from a DOM harvest, so the two
+mechanisms share their input by construction and cannot independently disagree on a server
+value; see the amendment in the ADR. A changed diff is a review trigger, not an automatic
+mechanism failure.
+
 ---
 
 ## Verification Processes

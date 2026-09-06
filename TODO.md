@@ -45,7 +45,7 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P1 — Tiered server evaluation (critical path)
 
-- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–7 done and reviewed; step 8 open.** Next up: step 8.
+- [x] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — done ✓ (all eight steps landed and reviewed 2026-09-04 → 2026-09-06; step 8 landed with the ADR 0029 s7 amendment — see the step-8 review). Unblocks LT-169 and LT-173.
   **Skill:** le-truc-dev
   **Context:** ADR 0029 is accepted; this is its implementation. Read the ADR, not this
   summary, for the rationale. Steps 1–3 landed in `a2e789e4` and were reviewed and approved
@@ -187,6 +187,28 @@ on zero warnings *plus* its recorded tier and reason.
      corpus size (~4 s), not by the tier split. The known `Date.now()` disagreement between
      `IMPURE_AMBIENT_ROOTS` and ADR 0027 s6 is DISSOLVED by steps 5+7, not resolved by
      electing a winner: neither mechanism can answer it, so it renders in neither.
+     — reviewed ✓ (2026-09-06, with an ADR amendment)
+     **Changed:** new `server/tests/tsrx/equivalence-audit.test.ts` (coverage guard + one
+     pinned connect-diff snapshot per Folded-tier component), `corpus-args.ts` extracted
+     from `sim-driver.test.ts` so both mechanisms run on identical fixture inputs (data
+     unchanged, sim-driver snapshots unaffected), `TESTS.md` baselines mention.
+     **Finding and ruling (the audit's first run went red, 12 of 19):** the byte-identity
+     rule is STRUCTURALLY VOID — in a Folded-tier component every signal seeds from a DOM
+     harvest (a signal without one is a TSRX004 routing signal → Simulated), so the realm's
+     entire state derives from the phase-1 bytes and the mechanisms cannot independently
+     disagree on a server value. Byte comparison measures only the hydration boundary, and
+     every divergence fell in three designed classes: serializer normalization (bare
+     boolean attrs → `attr=""`, `bigStep` → `bigstep`), the client's connect-time writes
+     (fills of empty sites, roving tabindex, selection state, styles), and — the dangerous
+     class — overwrites/removals of server-rendered state, of which the census caught ONE:
+     form-tokenbox's text input is removed from `data-container` at hydration (**LT-185**).
+     ADR 0029 s7 amended accordingly: the audit pins each Folded-tier component's connect
+     diff as a snapshot — a changed diff is a review trigger naming the component, not an
+     automatic mechanism failure; s4's served-bytes invariant is unaffected.
+     Mutation-verified: corrupting one component's phase-1 markup fails exactly that
+     component's snapshot.
+     **Gates:** `bun test server` 1462 pass / 0 fail (+20); `check:tsrx` exit 0, baseline 0,
+     census unchanged.
 
   Step 5's retirement copy was reviewed by Tech Writer at landing (ADR 0028 lifecycle);
   TSRX044/TSRX045's own propagation is done (LT-181).
@@ -196,6 +218,29 @@ on zero warnings *plus* its recorded tier and reason.
   `Date`/`Math.random()` reading expression renders a value in ANY tier; the equivalence audit
   runs green in CI; the compile-warning count is zero and the tier census is reported
   separately; `bun test server` green.
+  **Closed 2026-09-06:** all eight steps landed and reviewed (`a2e789e4` 1–3, `ce3ebd10` 4,
+  `4e75a48b` 5, `b3b97b7c` 6, `f83e3b98` 7, step 8 this commit). The audit criterion is
+  satisfied under ADR 0029 s7's amended recorded-diff rule (see step 8's review). Final
+  gates: `bun test server` 1462 pass / 0 fail; compile-warning baseline 0; census reported
+  separately. Unblocks LT-169 and LT-173.
+
+- [ ] LT-185: Investigate form-tokenbox's text input being removed at hydration.
+  **Skill:** le-truc-dev
+  **Context:** Found by the LT-165 step-8 audit (2026-09-06): the realm fed
+  form-tokenbox's server render serializes `<div data-container class="input"></div>` —
+  the authored `<input type="text" id="tags-input">` is GONE after connect. The token
+  reconcile (ADR 0017) manages `data-container`'s children and removes unkeyed children
+  when the token list is empty, and the authored input sits inside the reconcile container —
+  so the same removal should happen in the real browser at upgrade, leaving nowhere to
+  type. Either the component's markup is mis-scoped (the input belongs outside the
+  reconcile container) or reconcile's removal semantics need scoping to adopted items —
+  decide which, failing-test-first. The audit's pinned diff for form-tokenbox records the
+  removal; its snapshot re-pins with the fix.
+  **Channel:** none — component/correctness fix, no diagnostic. If it turns into a
+  reconcile-lowering semantics change, that is an ADR 0017 architect question first.
+  Acceptance: the hydrated realm output retains the input; a regression test fails before
+  the fix and passes after; the audit's form-tokenbox diff snapshot re-pinned; `bun test
+  server` green.
 
 - [ ] LT-184: Scope the severe TSRX034 error per-expression instead of per-component (ADR 0029 s5 edge from the step-5 review).
   **Skill:** le-truc-dev
