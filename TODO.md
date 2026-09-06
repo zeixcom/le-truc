@@ -28,7 +28,8 @@ on zero warnings *plus* its recorded tier and reason.
   **Skill:** le-truc-dev
   **Context:** LT-165 step 4 landed a `tier` flag on `emitServerModule` that drops the signal
   declarations for Simulated/Static tiers. That clause is unsound and the architect review
-  rejected it (see LT-165's step-4 record for the full evidence): a folded signal is not dead
+  rejected it (the review's full evidence is in `git log -p -- TODO.md` at `62722e88`, since
+  LT-165's step-4 record has been pruned to its landed state): a folded signal is not dead
   code server-side, because `lazyValueExpression` emits `<name>.get()` into the markup, so the
   generated module references an undeclared name. Emitting the corpus at `tier: 'static'`
   breaks `card-mediaqueries`, `form-colorgraph`, `form-textbox`, `basic-counter` and
@@ -126,7 +127,7 @@ on zero warnings *plus* its recorded tier and reason.
   and covers all 22 × 3 combinations, which `tsc` does not. Wave 4's first real Static
   component closes the gap; no task needed before then.
 
-- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — steps 1–3 reviewed ✓; step 4's rejected clause **corrected by LT-182 (landed 2026-09-06); step 5 is unblocked**
+- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–4 done and reviewed ✓; steps 5–8 open.** Next up: step 5.
   **Skill:** le-truc-dev
   **Context:** ADR 0029 is accepted; this is its implementation. Read the ADR, not this
   summary, for the rationale. Steps 1–3 landed in `a2e789e4` and were reviewed and approved
@@ -145,63 +146,27 @@ on zero warnings *plus* its recorded tier and reason.
   fire alongside the new signals, and step 5 is what removes them from the channel.
 
   Remaining scope, ordered:
-  4. **`emit-server.ts` takes a tier flag.** One emit path; every component still gets a
-     render module (the realm parses it as input). The only difference: Simulated-tier and
-     Static-tier modules do NOT re-declare `@{ }` setup verbatim. The Folded tier's path is
-     unchanged — confirm with the server goldens, which should not move for any Folded-tier
-     component. Because the corpus's Static tier is empty and stays so until wave 4, pin the
-     Static emit variant with a **synthetic fixture** compiled through `compileComponent` in
-     tests — a component whose only signal is served-relevant and unresolvable (e.g. a
-     `Math.random()`-initialized cell rendered into markup) — asserting tier `'static'` and a
-     server module without the verbatim setup re-declaration. Without it the Static emit path
-     ships untested.
-     **Done 2026-09-06, pending review ⏳.**
-     **Changed:** `server/tsrx/emit-server.ts` (new `tier` option, defaulting to `'folded'`;
-     `harnessSuppressed`/`emittedSetup` gate the signal-constructor imports, `expose()`, the
-     `exposeAmbients` imports, the `refStub` any-stubs and the verbatim setup loop);
-     `server/tsrx/index.ts` (passes the classified `tier`); `server/tests/tsrx/emit-tier.test.ts`
-     (new, 9 tests).
-     **How:** suppression is NARROWER than sub-design 4's literal wording, on an owner ruling
-     (2026-09-06) — it drops the value harness (signal declarations + `expose()`, identified by
-     `SetupStmt.name === null` and by declared signal name) and KEEPS plain setup consts, because
-     the phase-1 skeleton interpolates them. `form-combobox` folds `inputId`/`descriptionId` into
-     `<label for>`, `<input id>`, `<p id>` and `aria-describedby`, its client module never binds
-     an id, and a literal reading would have stripped all four from the served HTML. `serverKnown`
-     is therefore untouched and the markup is byte-identical in every tier — pinned as a test.
-     **The synthetic Static fixture reaches Static through an impure `hidden` thunk, not the
-     harvest path:** TSRX004 is still an error until step 5, so a TSRX004-routed component cannot
-     compile today. Two controls isolate the conjunction — the same TSRX034 site with a
-     realm-answerable value classifies Simulated, and with no signal at all, Folded.
-     **Check:** (a) the narrowing needs a dated bracketed correction on ADR 0029 s4 and a check of
-     `LE_TRUC_COMPILER.md` § 5; (b) emit receives the PRE-contamination tier, so `form-combobox`
-     (Simulated purely by `compose-read`) is emitted on the Folded path — ruled acceptable, but it
-     means "a Simulated module omits the harness" is true of the classifier, not of every module
-     the corpus finally labels Simulated.
-     **Gates as landed:** `bun test server` 1400/1400 (+9), `tsc` clean, `check:tsrx` 22/22 with
-     the baseline unchanged at 7 unique, `check:sim` green, biome clean.
-     **Review (architect, 2026-09-06): REJECTED — the suppression rule is unsound. Do not build
-     step 5 on it; LT-182 corrects it first.** The `tier` option, its `'folded'` default, the
-     `index.ts` wiring, the pre-contamination ruling (b) and the plain-const ruling (a) are all
-     **approved and stay**. What is wrong is one clause: dropping the SIGNAL DECLARATIONS.
-     A folded signal is not dead code server-side — `lazyValueExpression` emits `<name>.get()`
-     into the markup, so dropping the declaration emits a module referencing an undeclared name.
-     Verified by emitting the corpus at `tier: 'static'`: `card-mediaqueries` loses
-     `motion`/`theme`/`viewport`/`orientation`, `form-colorgraph` loses `canvasSize`,
-     `form-textbox` loses `length`/`remainingCount`, `basic-counter` loses `count`,
-     `module-tabgroup` loses `selected`. **Those first three are exactly the components ADR 0029
-     names as the Static-tier candidates**, and the last two are its named Folded acceptance
-     cases. Confirmed loud, not silent: `tsc` reports `TS2304: Cannot find name 'count'`, and
-     `check:tsrx` type-checks generated server modules (LT-019), so this fails the build rather
-     than shipping wrong HTML — the reason it is a blocking defect and not a correctness
-     incident. It escapes the gates today only by luck: all 8 corpus components that declare a
-     signal fold at least one signal name into markup, and the 3 Simulated ones happen to be the
-     ones that do not (`basic-pluralize`/`form-listbox` declare none; `form-combobox`'s
-     `showPopup` is unreferenced AND it emits on the Folded path). One wave-4 migration changes
-     that — `module-ticker` (LT-110) is predicted Simulated with `each()` ×11.
-     **The deeper finding, which LT-182 carries into the ADR:** sub-design 4's framing of the
-     skeleton and the harness as separable layers is false. The folded markup IS partly the
-     harness's output, so "emit the skeleton, drop the setup" cannot be done as stated. What is
-     genuinely separable is setup the emitted markup does not reference.
+  4. **`emit-server.ts` takes a tier flag.** — done ✓ (landed `ce3ebd10`, with LT-182)
+     One emit path; every component still gets a render module, because the realm parses it as
+     input. A Simulated-tier or Static-tier module drops the parts of the `@{ }` setup its own
+     markup does not need, under one criterion: **retain a setup statement when the emitted
+     markup depends on its declared name, transitively; drop the rest.** Plain consts, folded
+     signals and `expose()` all fall out of it rather than being special-cased. The Folded
+     path is unchanged (the option defaults to `'folded'`), and the server goldens did not
+     move. See the LT-182 entry above for the full implementation record; ADR 0029 s4 and
+     `LE_TRUC_COMPILER.md` § 5.4 carry the rationale in main text.
+     **Two facts step 5 needs to carry forward:**
+     (a) The **synthetic Static fixture reaches Static through an impure `hidden` thunk, not
+     the harvest path**, because TSRX004 is still an error until step 5 — a TSRX004-routed
+     component cannot compile today. Step 5 rewires that route, so expect the fixture's
+     premise to change and re-pin it deliberately rather than treating a flip as a regression.
+     Two controls isolate the conjunction: the same TSRX034 site with a realm-answerable value
+     classifies Simulated, and with no routing signal at all, Folded.
+     (b) Emit receives the **PRE-contamination** tier (`index.ts` classifies; the corpus
+     compose fixpoint runs afterwards in `server/effects/tsrx.ts`). So `form-combobox` —
+     Simulated purely by `compose-read` — is emitted on the Folded path. Ruled acceptable,
+     but it means "a Simulated module drops setup" is true of the classifier, not of every
+     module the corpus finally labels Simulated.
   5. **Diagnostic reclassification per ADR 0029 s5's table.** TSRX004, TSRX034 (non-severe),
      TSRX043 and TSRX013's two server-evaluation factories leave the diagnostic channel for
      the tier census. TSRX034-severe survives, scoped to the Static tier. TSRX039 untouched.
