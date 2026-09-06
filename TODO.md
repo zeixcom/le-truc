@@ -43,202 +43,34 @@ on zero warnings *plus* its recorded tier and reason.
 
 ---
 
-## P1 — Tiered server evaluation (critical path)
+## P1 — Tiered server evaluation — CLOSED 2026-09-06
 
-**LT-165 closed 2026-09-06** — all eight ADR 0029 steps landed and reviewed. Corpus split
-**19 Folded / 3 Simulated / 0 Static**, compile-warning baseline **0**, tier census reported
-separately, equivalence audit green under ADR 0029 s7's amended recorded-diff rule. Read ADR 0029
-and `LE_TRUC_COMPILER.md` § 5.4 for the rationale; `git log -p -- TODO.md` for the step record.
-Its wave-4 obligations were carried forward to the P5 preamble, its driver caveat into LT-169.
-It unblocked LT-169 below and **LT-173 in P2** — P2 no longer waits on anything in P1.
+Everything in this band landed and is reviewed: **LT-165** (the eight ADR 0029 steps),
+**LT-185** (form-tokenbox's hydration regression), **LT-184** (the severe `TSRX034` scoped
+per-expression), **LT-180** (library-contained connect failures reach the build report) and
+**LT-169** (the simulation driver runs inside `build:docs`). Corpus split **19 Folded /
+3 Simulated / 0 Static**, compile-warning baseline **0**, simulation build-report baseline
+**0 unclassified**. Measured cost: the simulated build stage is ~90 ms against ~224 ms for the
+whole corpus, so tiering saves ~150 ms per build today; the Static-tier saving is still 0,
+because no corpus component routes Static until `module-scrollarea` migrates (LT-103). Read
+ADR 0027 and ADR 0029 plus `LE_TRUC_COMPILER.md` § 5.4 for the rationale, and
+`git log -p -- TODO.md` for the step record. P1's wave-4 obligations live in the P5 preamble;
+P2 and P3 no longer wait on anything here.
 
-**Order within the band, and why.** LT-185 is closed (reviewed 2026-09-06) — it was the audit's
-one dangerous finding, and it resolved as a migration regression rather than a reconcile
-semantics change, so nothing downstream shifted. Its two spin-offs are deliberately NOT in this
-band: **LT-186** (the TSRX rule) sits in P3 because it is parallelizable and only has to beat
-P5's `module-calctable`/`module-todo` migrations, and **LT-187** (a message-copy fix) sits in P6
-with the other diagnostic-copy work. Remaining order here: **LT-184** first — small,
-self-contained, and it returns the severe-error gate to its position *before* tier computation,
-so LT-180 and LT-169 do not inherit that ordering dependency. **LT-180** second and **LT-169**
-last, per LT-180's own "land with or before" constraint.
-
-- [x] LT-185: Investigate form-tokenbox's text input being removed at hydration. — reviewed ✓
-  **Skill:** le-truc-dev
-  **Root cause:** a `.tsrx` migration regression, not a reconcile bug and not mis-scoped
-  markup. The hand-written v2.6 twin carries `data-unreconciled` on its input
-  (`examples/form/tokenbox/form-tokenbox.html:7` and `:29`, both demo instances); the port to
-  `form-tokenbox.tsrx` dropped the attribute. `reconcile()` then removed the input as an
-  unkeyed child of `data-container` on its first pass — ADR 0017's documented self-cleaning
-  container behaviour, working as specified. Confirmed against v2.6 by the user.
-  **Changed:** `examples/form/tokenbox/form-tokenbox.tsrx` (one attribute, `data-unreconciled`
-  on the `<input>`); `server/tests/tsrx/equivalence-audit.test.ts` (LT-185 regression test);
-  both form-tokenbox snapshots re-pinned (`equivalence-audit`, `sim-driver`).
-  **Neither library option in the task was taken.** Reconcile's removal semantics are correct
-  as written (ADR 0017 s "One-way sync": "all other unkeyed children are removed
-  (self-cleaning container)"), and `data-unreconciled` is the permanent public opt-out that
-  exists for exactly this. Moving the input outside the container was also wrong — the `.input`
-  flex-wrap box is the visual design, pills and caret on one line. So no ADR 0017 question.
-  **Verification:** the regression test failed before the fix (input absent from phase 2) and
-  passes after. form-tokenbox's pinned connect diff now contains only the benign
-  serializer-normalization class (`data-unreconciled` → `data-unreconciled=""`,
-  `data-key` → `data-key=""`); the removal class is gone, so the audit's one dangerous finding
-  is cleared. `bun run test:src` 483 pass, `bun test server` 1463 pass / 0 fail, `check:tsrx`
-  exit 0 with baseline 0 and the census unchanged (19 folded / 3 simulated / 0 static,
-  form-tokenbox still Folded), `lint:examples` clean.
-  **Swept the rest of the corpus:** `module-list.tsrx` is the only other migrated component
-  with a `data-container`, and its container holds nothing but the `@for` — no hazard. But
-  **`module-calctable` and `module-todo` both use `data-unreconciled` today and are NOT yet
-  migrated** (LT-109, LT-111) — see the P5 note added for them.
-  **Library refinement, on the user's direction (2026-09-06) — this is what needs review.**
-  Silent unkeyed removal is why this survived the whole migration, so `reconcile()` now warns in
-  DEV_MODE on **every** removal in the adoption pass, keyed or not. Scoped to the first run
-  deliberately: after that the container is reconcile-owned and self-cleaning is the designed
-  behaviour, so warning there would be noise on every structural update.
-  **Changed:** `src/helpers/reactive.ts` (`firstRun` flag in the reconcile descriptor scope; the
-  removal branch in `classify()` now picks between the existing keyed message and a new unkeyed
-  one; JSDoc updated), `src/tests/reconcile.test.ts` (+3 tests and DEV_MODE/console-capture
-  helpers).
-  **Draft copy — Tech Writer owns the final wording** (ADR 0028 lifecycle, not yet handed over):
-  "reconcile() removed unkeyed <input> from <form-tokenbox> during initial reconciliation — the
-  source owns this container's children. Add data-unreconciled to exempt it."
-  **Channel:** runtime, DEV_MODE console warning. **Tier:** 2 (Contained) — the removal still
-  happens, the component keeps working, the author is told. Per ADR 0028 sub-design 1 the
-  statically-decidable half of this check also owes a compiler rule — filed as **LT-186**, which
-  the user has already directed toward the TSRX channel.
-  **Mutation-verified both directions:** dropping the `firstRun` clause fails the adoption-pass
-  test; warning unconditionally fails the after-first-run silence test. Neither assertion is
-  vacuous. Gates re-run after the library change: `test:src` 486 pass / 0 fail, `bun test server`
-  1463 pass / 0 fail, `check:size` 5 pass (`coreFormGzipped` 9700 B, unchanged — the message is
-  DEV_MODE-gated and strips from production builds), `lint` clean.
-  **Review (2026-09-06): Approved, with one classification corrected.**
-  The component fix is right and needed no ADR question: ADR 0017 s"One-way sync" specifies the
-  self-cleaning container, `data-unreconciled` is the permanent public opt-out, and the v2.6
-  twin carries it on both demo instances — the port dropped it. Verified the audit's dangerous
-  class is cleared: form-tokenbox's pinned diff now holds only serializer normalization.
-  1. **First-run-only scope: confirmed.** It matches the user's direction and the hazard's
-     shape. Checked the claim "every adoption-pass removal goes through this one site" and it
-     holds structurally, not just empirically: `keyOf` is created per descriptor invocation, so
-     on the first `classify()` no child has a runtime key, `leavers` is necessarily empty, and
-     `leave()` cannot remove anything. The warning therefore cannot miss a first-run removal.
-     **Recorded residual, deliberately not a follow-up:** an unkeyed element inserted into the
-     container AFTER adoption is still eaten silently. That case has a debuggable author — some
-     code performed the insertion — whereas the adoption case blames markup nobody is watching.
-     Asymmetric hazard, asymmetric treatment.
-  2. **"Tier 2 (Contained)" is wrong — corrected to: no ADR 0028 tier.** ADR 0028's tiers
-     classify *failures*: Contained means an error class fires, the component degrades, and one
-     attributed `console.error` reports it. Nothing here fails — `reconcile()` is doing exactly
-     what it is specified to do, there is no error class, and it is a `console.warn`. This is a
-     **DEV_MODE advisory** under REQUIREMENTS [S3](REQUIREMENTS.md#s3-development-mode-with-enhanced-diagnostics)
-     ("surfaces problems that are otherwise silent in production" — the literal case) and
-     ADR 0022, the same category as the `pass()` writable-signal warning at
-     `src/helpers/reactive.ts:539`. The ADR 0028 obligation is real but attaches to the
-     compiler half (LT-186), not to the warn. No code change — the classification in this entry
-     was the only thing wrong.
-  3. **Tech Writer handoff is still owed** for the new runtime message (ADR 0028 lifecycle).
-     It is not blocking this approval — no error class or `TSRX` code moved — but the draft
-     copy above ships as-is until reviewed. Fold it into LT-186's copy review so the runtime
-     and compiler messages are worded against each other rather than separately.
-  4. One pre-existing copy bug surfaced while reading the branch — follow-up **LT-187**.
-
-- [ ] LT-184: Scope the severe TSRX034 error per-expression instead of per-component (ADR 0029 s5 edge from the step-5 review).
-  **Skill:** le-truc-dev
-  **Context:** Step 5 implemented "severe `TSRX034` survives, scoped to the Static tier"
-  literally: `index.ts` drops every severe `TSRX034` error unless `classifyTier` routed the
-  whole component `static`. That reading fails for one shape the ADR's rationale doesn't
-  cover: a severe site whose OWN resolution is `none` (unresolvable in every tier, e.g.
-  `disabled={() => Date.now() < deadline}` — a time-window submit lockout) on a component
-  routed Simulated by some OTHER realm-answerable signal. There the ADR's premise ("on the
-  Simulated tier the value is resolved and the diagnostic is noise") is false — the value is
-  still omitted, so "enabled and submittable regardless of author intent" ships silently on
-  a submittable control. No corpus component hits the edge, but the shape is plausible.
-  Fix: fire the severe error iff the SITE's routing signal carries
-  `resolution.by === 'none'` (the resolution is already computed in `analysis/effects.ts`
-  and carried on the signal), regardless of component tier. Sound without a tier check: a
-  `none` resolution can never exist on a Folded-tier component (the routing signal itself
-  would have made it non-Folded), so this matches the ADR's rationale AND lets the error
-  gate return to its position before tier computation, removing that ordering dependency.
-  The filter is the single post-`classifyTier` block in `index.ts`; the push site is
-  `analysis/effects.ts`.
-  **Channel:** unchanged — same code, same Tier 3 error placement; only the firing
-  condition narrows. **Copy:** the current message asserts "this component routes to the
-  Static tier", which becomes false in the newly covered case (Simulated-tier component,
-  unresolvable site) — reword to state the site-level fact ("no server phase can resolve
-  this value in any tier"). Tech Writer reviews the reworded copy per the ADR 0028
-  lifecycle.
-  Acceptance: the edge shape (severe site with `none` resolution on a component that also
-  carries a realm-answerable routing signal) produces the error; a realm-answerable severe
-  site on a Simulated-tier component stays silent (pin BOTH directions — the vacuous
-  assertion is the failure mode); the error gate position change doesn't reorder any other
-  diagnostic's visibility; `bun test server` green.
-
-- [ ] LT-180: Surface library-contained connect failures in the simulation realm's diagnostics. **Land with or before LT-169.**
-  **Skill:** docs-server-dev
-  **Context:** A component that throws during `connectedCallback` inside the realm is contained
-  by ADR 0028 and reported through `reportConnectFailure` — which writes to the **host**
-  console, not jsdom's `virtualConsole` — so `realm.diagnostics` stays empty and a
-  Simulated-tier component silently degrades to skeleton serialization: the build serves wrong
-  HTML with no signal. The `component-throw` diagnostic kind already exists in the realm's
-  channel, so the wiring is intended; only throws the library contains itself bypass it. Found
-  and mutation-verified while pinning LT-177. ADR 0029 makes this urgent rather than cosmetic:
-  once LT-169 wires the driver into the build, a silent connect failure is silently wrong
-  served HTML — and the CI equivalence audit cannot catch it, because the audit compares
-  Folded-tier output, not connect failures. Fix shape is open: capture the host console during
-  the realm's load/render window, or route `reportConnectFailure` through a channel the realm
-  subscribes to. If the fix wants a library-side channel or a new diagnostic class (an ADR 0028
-  surface change), escalate to architect first.
-  **Channel:** the build report (`sim/report.ts`), NOT the compile-warning channel — a connect
-  throw is a dynamic execution failure, not a statically-detectable source issue, so it can
-  never be a converging warning. **Tier:** 3 (Escalated) — error-level, failing the build and
-  naming the component. No new runtime check and no TSRX code moves; if copy is touched
-  anyway, Tech Writer reviews it.
-  Acceptance: a component throwing in `connectedCallback` inside the realm yields an
-  error-level diagnostic in `realm.diagnostics` naming the component; removing the wiring fails
-  a test (pin the negative — the vacuous-assertion trap LT-177 documented is the failure mode
-  to avoid); the LT-177 realm tests' marker-attribute assertions stay green; `bun test server`
-  green.
-
-- [ ] LT-169: Wire the simulation driver into the docs build for Simulated-tier components (ADR 0027 stage 2). **LT-165 dependency satisfied.**
-  **Skill:** docs-server-dev
-  **Context:** Only **Simulated**-tier components go through the driver. Folded renders through
-  `emit-server.ts` + the `runtime.ts` value harness with no jsdom involvement, and Static
-  renders the static skeleton and is likewise never simulated — that last bucket is where most
-  of the cost saving lives, since `module-scrollarea` alone is ~2.3 s of the measured ~3.9 s.
-  The wiring must read the classifier's tier and open a realm for Simulated ONLY; opening one
-  for a Static- or Folded-tier component is the specific waste ADR 0029 exists to prevent, and
-  no correctness test would catch it. Consolidated obligations from four prior reviews:
-  1. **Disposal is build-process scope, not test-file scope** — `dispose()` at most once, after
-     every render the build will ever do, never between. A disposed realm's deleted globals
-     turn a contained component's lingering dependency-wait into a synchronous
-     `customElements is not defined` flood that aborts the process.
-  2. **The build report surfaces through `reportDiagnostics`** — the same partition the tests
-     read; zero-unclassified is the build's own gate, the classified `getContext` entry stays
-     listed with its reason, and the report copy is final (Tech Writer, 2026-09-03).
-  3. **The fixed-point gate's placement decides** — the corpus test carries it today and
-     auto-extends. Per-render doubles simulation cost for Simulated-tier components and is NOT
-     required for correctness while the corpus test exists, so the default is test-only unless
-     a stage-2 finding says otherwise.
-  4. **The memoization's transferred acceptance lands here** — measure the simulated build
-     stage's wall time and verify the render cache engages, scoped to Simulated-tier
-     occurrences only.
-  5. **Per-substrate goldens posture holds** — the build serializes with jsdom; a substrate
-     swap means an expected snapshot re-baseline, not a behavior change.
-  6. **Gate on the FINAL corpus tier, not the classifier's verdict** (carried forward from
-     LT-165 step 5). `index.ts` classifies before the corpus compose fixpoint runs in
-     `server/effects/tsrx.ts`, so a component Simulated purely by `compose-read`
-     (`form-combobox` today) carries a Folded classifier verdict and a Simulated census entry.
-     Read the post-contamination tier the registry records — gating on the pre-contamination one
-     silently skips a component that needs the realm, and no correctness test would catch it.
-  There is NO per-request SSR story to honor (ADR 0029 s8): the driver stays build-time tooling
-  (ADR 0024 s7) and LT-166's memoization needs no server-scoped analogue. Do not merge this
-  pass with LT-165 step 8's CI equivalence audit — that audit's unconditional Folded-tier
-  simulation is a CI cost, deliberately not paid by this build.
-  Acceptance: the build runs the driver over Simulated-tier `server/generated/tsrx/` components
-  only — with an assertion that no realm is opened for a Static- or Folded-tier component — a
-  new build-report entry fails the build naming the component, disposal is provably
-  end-of-build, and the wall-time/cache-engagement figures are recorded in the handoff and
-  split by tier, including the Static-tier saving as a separate figure.
-
----
+**Review decisions worth keeping (2026-09-06).** The build pass simulates each component's
+authored demo HTML (`examples/**/<tag>.html`) rather than the server render function over
+fixture args — approved: the fixture args are a test artifact, the demo markup is what the docs
+serve, and it keeps the build free of an args table it would have to maintain. The pass runs for
+one-shot builds only — approved: one module cache per process makes a second load of the same
+generated client unsound (ADR 0027 sub-design 10), and the gate belongs where CI runs it; the
+cost is that a watch session never sees the gate. Capturing every host `console.error`/`warn`
+during a load/render window, rather than only the library's containment messages — approved:
+the console carries no marker that separates them, and `CLASSIFIED_DIAGNOSTICS` is the designed
+escape hatch for anything that provably cannot affect serialized markup. LT-180's library fix
+(building the `context-request` event in the host's realm) is **protocol-conformant and needs no
+ADR**: the Web Components Community Protocol specifies the event's FIELDS, not its class — but
+it does need documenting, which is **LT-189** in P6. The one defect the review found is
+**LT-188** in P3.
 
 ## P2 — Internationalization (ADR 0030)
 
@@ -333,6 +165,33 @@ last, per LT-180's own "land with or before" constraint.
 ---
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
+
+- [ ] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding). **Land before P5 adds composition across tiers.**
+  **Skill:** docs-server-dev
+  **Context:** `server/effects/simulate.ts` loads a client module for each Simulated-tier
+  component and nothing else. Children-first replay needs every composed child's tag DEFINED in
+  the realm before its ancestor upgrades — `RegistryEntry.composesTags` exists for exactly this,
+  and its own JSDoc states the case: a child that a parent's client module never imports (pure
+  server-splice composition, no `pass()`/`first()` binding) is never pulled in by the import
+  graph. A Simulated-tier parent composing a **Folded**-tier child therefore renders that child
+  un-upgraded, and the served markup is silently wrong with no assertion to catch it. Today's
+  corpus hides the hole: the only composing Simulated parent is `form-combobox` →
+  `form-listbox`, and both are Simulated. Wave 4 (P5) will break that coincidence.
+  Fix: the LOAD set becomes the subjects plus the transitive `composesTags` closure over the
+  registry, children-first and de-duplicated against `realm.definitions` (the load-once
+  assertion). The RENDER set stays Simulated-tier only, so `assertSimulatedTier()` and the
+  no-realm-work-for-another-tier invariant are untouched — defining a tag is not simulating a
+  component, and the ADR 0029 saving is unaffected.
+  Second gap, same file: captured host-console output reaches `realm.diagnostics` but is only
+  PRINTED on the normal path, through `gateOnSimReport`/`formatSimReport`. If the pass throws
+  earlier (a `load()` assertion, an importer error), those lines die with the realm — print what
+  was captured before rethrowing.
+  **Channel:** the build report, unchanged; no new diagnostic kind and no TSRX code moves.
+  Acceptance: a fixture with a Simulated parent server-splicing a Folded child renders the child
+  UPGRADED, and removing the closure fails that test (pin the negative — a fixture whose child
+  happens to be Simulated proves nothing); the existing "no realm render for another tier" pin
+  stays green; a pass that throws during load still prints its captured diagnostics;
+  `bun test server` green.
 
 - [ ] LT-186: A TSRX rule for an unkeyed element sibling of a `@for` in a reconcile container (LT-185's compiler half).
   **Skill:** le-truc-dev
@@ -714,6 +573,22 @@ and this note is redundant; if it has not, do the manual diff.
   the next author has no way to discover. The census reason still names the origin, so it is
   diagnosable after the fact. **Architect question at pickup:** this may warrant moving out of
   P6 — raise it rather than assuming the P6 placement still reflects its cost.
+
+- [ ] LT-189: Document `ContextRequestEvent`'s cross-realm dispatch (LT-180 review finding).
+  **Skill:** tech-writer
+  **Context:** `requestContext()` now builds the `context-request` event from the HOST's own
+  realm whenever the exported `ContextRequestEvent` class does not belong to it
+  (`src/helpers/context.ts`, LT-180). The class stays exported and unchanged, and in the normal
+  same-realm case it is still what gets dispatched — but in a cross-realm host (an iframe, the
+  build's simulation realm) the dispatched object is a duck-typed `Event` carrying
+  `context`/`callback`/`subscribe`, so a provider written as
+  `if (e instanceof ContextRequestEvent)` would stop matching. This is protocol-conformant — the
+  Web Components Community Protocol specifies the event's fields, not its class, and Le Truc's
+  own `provideContexts()` reads the fields — so it is a documentation gap, not an ADR question
+  (Architect ruling, 2026-09-06).
+  Scope: the JSDoc on `ContextRequestEvent` and on `requestContext()`, plus the context section
+  in `docs-src/pages/` and the `le-truc` skill's context reference. One rule to state: a
+  provider checks `event.context`, never `instanceof`. No error copy moves.
 
 - [ ] LT-187: `reconcile()` misreports a DUPLICATE `data-key` as "key not present in the source" (LT-185 review finding).
   **Skill:** le-truc-dev
