@@ -59,6 +59,7 @@
 		"dev": "NODE_ENV=development bun --watch server/dev.ts",
 		"lint": "bunx biome check --write ./src",
 		"lint:examples": "bunx biome check --write ./examples",
+		"lint:server": "bunx biome check --write ./server",
 		"serve": "bun server/serve.ts",
 		"serve:docs": "bun server/serve.ts --build-first",
 		"serve:examples": "bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts",

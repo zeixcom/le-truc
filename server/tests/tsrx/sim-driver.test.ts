@@ -62,12 +62,12 @@ import {
 	tierCensus,
 } from '../../tsrx/sim/report'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
-import { loadTsrxCorpus } from './corpus-fixture'
 // LT-165 step 8: the args table and the tag→render-fn mapping moved to
 // `corpus-args.ts` so the equivalence audit (equivalence-audit.test.ts)
 // drives BOTH mechanisms from the identical fixture inputs this file uses —
 // one copy, no drift. Data is unchanged.
 import { CORPUS_ARGS as ARGS, renderName } from './corpus-args'
+import { loadTsrxCorpus } from './corpus-fixture'
 
 const generated = createGeneratedDir('sim-driver')
 afterAll(() => generated.cleanup())

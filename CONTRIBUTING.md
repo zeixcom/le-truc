@@ -189,7 +189,7 @@ To maintain a high-quality codebase, please follow these guidelines:
 - Avoid unnecessary dependencies.
 - Use functional programming principles where applicable.
 - Prefer composition over inheritance.
-- Make sure to lint your code (`bun run lint`) and all tests pass (`bun run test:watch`).
+- Make sure to lint your code (`bun run lint`/`bun run lint:server`/`bun run lint:examples`) and all tests pass (`bun run test`/`bun run test:server`).
 
 ## Commit Message Guidelines
 
