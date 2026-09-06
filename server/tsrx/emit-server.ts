@@ -27,7 +27,13 @@ import {
 	isServerEvaluable,
 	spliceHostDerivedFold,
 } from './evaluability'
-import type { AttributeIR, ComponentIR, ForIR, TemplateNode } from './ir'
+import type {
+	AttributeIR,
+	ComponentIR,
+	ForIR,
+	SetupStmt,
+	TemplateNode,
+} from './ir'
 import type { RegistryEntry } from './registry'
 import {
 	appendWithSpans,
@@ -35,6 +41,7 @@ import {
 	type SourceSpan,
 	type SpanCursor,
 } from './spans'
+import type { EvaluationTier } from './tier'
 
 /* === Types === */
 
@@ -72,6 +79,51 @@ const pushArgument = (parts: Part[]): string => {
 		.map(p => ('static' in p ? tplEscape(p.static) : `\${${p.expr}}`))
 		.join('')
 	return `\`${body}\``
+}
+
+/**
+ * LT-182: the setup statements a suppressed-harness module still has to
+ * declare — those whose declared name the emitted code references,
+ * transitively.
+ *
+ * Seeded from the generated markup, then closed over the retained statements'
+ * OWN texts to a fixpoint, because a retained statement may reference a name
+ * the markup never mentions. `form-textbox` is the corpus's one live case:
+ * the markup reads `remainingCount`, whose thunk reads `descriptionCell`,
+ * which appears nowhere in the markup — a one-step seed would drop it.
+ *
+ * The reference test is identifier-boundary tokenisation of the generated
+ * text — deliberately a text match, not a scope analysis: the generated text
+ * is exactly what must resolve. It can over-retain (a name that also appears
+ * inside a static string literal survives as a dead const, which is the
+ * Folded behaviour anyway); it cannot under-retain, because a genuine
+ * reference appears verbatim.
+ *
+ * A statement with no declared name (`expose()`) can never be referenced and
+ * is therefore always dropped. A `requestContext` statement is emitted as
+ * `createCell(fallback)` rather than verbatim, but its fallback text is a
+ * substring of `stmt.text`, so seeding from the verbatim text can only
+ * over-retain here too.
+ */
+const retainReferenced = (
+	setup: readonly SetupStmt[],
+	markup: readonly string[],
+): SetupStmt[] => {
+	const identifiersIn = (text: string): string[] =>
+		text.match(/[A-Za-z_$][\w$]*/g) ?? []
+	const referenced = new Set(markup.flatMap(identifiersIn))
+	const retained = new Set<SetupStmt>()
+	for (let changed = true; changed; ) {
+		changed = false
+		for (const stmt of setup) {
+			if (retained.has(stmt) || stmt.name === null) continue
+			if (!referenced.has(stmt.name)) continue
+			retained.add(stmt)
+			for (const name of identifiersIn(stmt.text)) referenced.add(name)
+			changed = true
+		}
+	}
+	return setup.filter(stmt => retained.has(stmt))
 }
 
 const escapeAttrValue = (value: string): string =>
@@ -204,6 +256,24 @@ export const emitServerModule = (
 		 * (`index.ts`), so `emit` never needs to handle a missing entry.
 		 */
 		composeRegistry?: ReadonlyMap<string, RegistryEntry> | undefined
+		/**
+		 * The component's evaluation tier (ADR 0029 sub-design 4, LT-165).
+		 * Defaults to `'folded'`, which is the pre-LT-165 behaviour — every
+		 * caller that does not classify gets the full re-declaration.
+		 *
+		 * Only the Folded tier re-declares the `@{ }` value-harness
+		 * constructs; see `harnessSuppressed` below for what the other two
+		 * tiers drop and, deliberately, what they keep.
+		 *
+		 * This is the component's tier BEFORE compose contamination
+		 * (`index.ts` classifies, `server/effects/tsrx.ts` runs the corpus
+		 * fixpoint afterwards). A contaminated component is therefore emitted
+		 * on the Folded path even though it ends up Simulated — harmless, and
+		 * deliberate: contamination fires on a parent whose OWN setup the
+		 * harness can still run, so the skeleton is merely richer than its
+		 * tier requires, and the realm re-renders it regardless.
+		 */
+		tier?: EvaluationTier | undefined
 	},
 ): EmittedServerModule => {
 	const used = new Set<string>()
@@ -774,7 +844,57 @@ export const emitServerModule = (
 	}
 	rootParts.push({ static: '>' })
 
+	/**
+	 * ADR 0029 sub-design 4: only the Folded tier re-declares the `@{ }`
+	 * value harness. A Simulated-tier module emits the skeleton and leaves
+	 * the rest to the realm; a Static-tier module emits the same skeleton and
+	 * leaves the rest to the client.
+	 *
+	 * **The skeleton and the harness are not separable layers** — the folded
+	 * markup IS partly the harness's output, so "emit the skeleton, drop the
+	 * setup" cannot be implemented as the ADR words it. `lazyValueExpression`
+	 * emits `<name>.get()` straight into the markup, so a folded signal is not
+	 * dead code server-side: dropping its declaration leaves the generated
+	 * module referencing an undeclared name (`TS2304` under `check:tsrx`).
+	 *
+	 * One criterion replaces the layer split: **retain a setup statement when
+	 * the emitted markup depends on its declared name, transitively; drop the
+	 * rest.** Plain consts fall out of it (`form-combobox`'s `inputId` reaches
+	 * `<label for>`, `<input id>`, `<p id>` and `aria-describedby`, and nothing
+	 * downstream restores them), folded signals fall out of it, and `expose()`
+	 * is dropped by the same rule rather than by name — it declares nothing, and
+	 * an exposed-prop lazy child resolves through the prop→signal map at COMPILE
+	 * time to a literal, so no markup expression ever references it.
+	 * [Architect ruling, 2026-09-06 (LT-182); ADR 0029 s4 carries the matching
+	 * correction.]
+	 *
+	 * The test is a word-boundary match against the generated code, which is
+	 * not a proxy — the question is literally "does this module need this
+	 * binding to resolve", and the generated text is the thing that must
+	 * resolve. Over-retention (a name that also appears inside a static string
+	 * literal) costs a surviving dead const, which is the Folded behaviour
+	 * anyway; under-retention cannot happen, because a genuine reference
+	 * appears verbatim in the emitted code.
+	 */
+	const harnessSuppressed = (options.tier ?? 'folded') !== 'folded'
+	const emittedSetup = harnessSuppressed
+		? retainReferenced(component.setup, [pushArgument(rootParts), ...lines])
+		: component.setup
+	const emittedNames = new Set(
+		emittedSetup.map(stmt => stmt.name).filter(name => name !== null),
+	)
+
 	for (const signal of component.signals) {
+		// A signal whose declaration the markup does not reference is not
+		// emitted, so its constructor must not be imported either. Hygiene,
+		// not a gate: `check:tsrx` runs `tsc` under the project's
+		// `noUnusedLocals: false`, and the plain `imports.server` lines are
+		// emitted unconditionally anyway, so orphaned imports are survivable
+		// in every tier (the Folded baseline carries more of them than the
+		// suppressed tiers do). What is NOT survivable is the reverse — a
+		// dropped declaration whose name survives in the markup, which is the
+		// `TS2304` this rule exists to prevent.
+		if (harnessSuppressed && !emittedNames.has(signal.name)) continue
 		// requestContext-declared signals (LT-035): `requestContext` doesn't
 		// exist server-side (no `host` to dispatch a context-request against)
 		// — the setup-statement loop below substitutes `createCell(fallback)`
@@ -787,29 +907,35 @@ export const emitServerModule = (
 		}
 		used.add(signal.constructor)
 	}
-	if (component.exposeText) used.add('expose')
-	for (const ambient of component.exposeAmbients) used.add(ambient)
+	// `expose()` declares no name, so the retention rule never keeps it; its
+	// runtime import and its ambients go with it.
+	if (component.exposeText && !harnessSuppressed) used.add('expose')
+	if (!harnessSuppressed)
+		for (const ambient of component.exposeAmbients) used.add(ambient)
 
 	// Client-only ambients `expose()`'s argument names that the server
 	// render function must still declare — see the `refStub` doc in
 	// runtime.ts. Computed here, ahead of the import line below, because
 	// a stub needs `refStub` imported; emitted further down, in
 	// signature order.
-	const stubNames = component.exposeArgNode
-		? [...freeIdentifiers(component.exposeArgNode)]
-				.filter(
-					name =>
-						!JS_GLOBALS.has(name) &&
-						name !== 'expose' &&
-						!component.serverKnown.has(name) &&
-						!component.exposeAmbients.includes(name) &&
-						// LT-034: a custom Parser factory (e.g. `asOklch`) may now
-						// resolve to a real plain import instead — stubbing it as
-						// `any` would shadow that import with a broken local const.
-						!component.imports.serverLocalNames.has(name),
-				)
-				.sort()
-		: []
+	// Suppressing `expose()` suppresses its stubs with it: the `any`-stubs
+	// exist only so the dropped call's own free names resolve.
+	const stubNames =
+		component.exposeArgNode && !harnessSuppressed
+			? [...freeIdentifiers(component.exposeArgNode)]
+					.filter(
+						name =>
+							!JS_GLOBALS.has(name) &&
+							name !== 'expose' &&
+							!component.serverKnown.has(name) &&
+							!component.exposeAmbients.includes(name) &&
+							// LT-034: a custom Parser factory (e.g. `asOklch`) may now
+							// resolve to a real plain import instead — stubbing it as
+							// `any` would shadow that import with a broken local const.
+							!component.imports.serverLocalNames.has(name),
+					)
+					.sort()
+			: []
 	// A shared setup HELPER (`const commit = (next: number) => { … host.value
 	// = next … relayValidity(internals, input) }`) is dead code server-side
 	// for exactly the same reason a `defineMethod` body is — defined, never
@@ -824,7 +950,7 @@ export const emitServerModule = (
 	// a build error traded for a silently wrong page (see LT-125). A context
 	// member cannot reach the markup: it is never server-known at all.
 	const setupContextNames = new Set<string>()
-	for (const stmt of component.setup)
+	for (const stmt of emittedSetup)
 		for (const name of freeIdentifiers(stmt.node))
 			if (
 				(name === 'host' || name === 'internals') &&
@@ -881,7 +1007,7 @@ export const emitServerModule = (
 	const spanCursor: SpanCursor = { offset: 0 }
 	const spanLines: string[] = []
 	const setupBaseOffset = body.join('\n').length + 1
-	for (const stmt of component.setup) {
+	for (const stmt of emittedSetup) {
 		// requestContext-declared signals (LT-035): `stmt.text` is the verbatim
 		// `requestContext(Context, fallback)` call, which doesn't exist
 		// server-side — substitute a `createCell(fallback)` declaration

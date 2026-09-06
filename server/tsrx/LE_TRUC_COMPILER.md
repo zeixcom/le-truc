@@ -361,13 +361,13 @@ initial value. The fold is all-or-nothing: one non-substitutable read
 disqualifies the expression — and, under ADR 0029, routes the component out
 of the Folded tier.
 
-Measured against the migrated corpus, the Folded tier is the minority path:
-about 6 of 22 components qualify. Fifteen use `first()`, which is irreducibly a DOM
-question. **[Corrected 2026-09-04, LT-165's implementation (see ADR 0029's Context
-correction): `first()` in `watch()`/`on()` positions was never a refusal site — it is a
-client concern that reaches no served byte. The implemented classifier folds **19 of 22**
-(Simulated: `basic-pluralize`, `form-combobox` via compose-read, `form-listbox`); the Folded
-tier is the MAJORITY path.]**
+Measured against the migrated corpus, the Folded tier is the **majority** path:
+the classifier folds 19 of 22 components (Simulated: `basic-pluralize`,
+`form-combobox` via compose-read, `form-listbox`; Static: none yet). An earlier
+estimate put it at about 6 of 22 by counting every component that needs a DOM
+fact for any purpose, but `first()` in `watch()`/`on()` positions is a client
+concern that reaches no served byte and was never a refusal site — what routes a
+component is a site whose *server render* phase 1 cannot complete.
 
 ### 5.4 The Simulated tier — Server Simulation (ADR 0027)
 
@@ -407,10 +407,35 @@ Two gates make simulation safe to ship: **connect must be a fixed point**
 harvestable from the markup the component itself rendered — otherwise
 `@pending`.
 
-For a Simulated-tier component `emit-server.ts` emits the same skeleton it emits for
-everyone, minus the verbatim `@{ }` setup re-declaration: only the Folded tier
-evaluates setup in the value harness, and the setup shapes that would break
-the harness are precisely the ones that routed the component here.
+For a Simulated-tier component `emit-server.ts` emits the same skeleton it emits
+for everyone, minus the parts of the verbatim `@{ }` setup re-declaration that
+skeleton does not need. Only the Folded tier evaluates setup in the value harness,
+and the setup shapes that would break the harness are precisely the ones that
+routed the component here.
+
+The filter is one criterion, applied by `retainReferenced` in `emit-server.ts`:
+**retain a setup statement when the emitted markup depends on its declared name,
+transitively; drop the rest.** It cannot be the coarser "drop the setup, keep the
+skeleton", because the skeleton and the harness are not separable layers —
+`lazyValueExpression` splices `<name>.get()` into the markup, so a folded signal
+is not dead code server-side and dropping its declaration emits a module that
+references an undeclared name (`TS2304`).
+
+Three cases fall out of the one criterion. A plain const is retained when the
+skeleton interpolates it (`form-combobox`'s `inputId` folds into `<label for>`,
+`<input id>`, `<p id>` and `aria-describedby`, which nothing downstream restores).
+A folded signal is retained for the same reason. `expose()` is dropped without
+being named, because it declares nothing the markup can reference — an
+exposed-prop lazy child resolves through the prop→signal map at compile time to a
+literal — and its `refStub` any-stubs go with it, since they exist only so its
+free names resolve. Retention is transitive, which the corpus needs exactly once:
+`form-textbox`'s markup reads `remainingCount`, whose thunk reads
+`descriptionCell`, a name the markup never mentions — seeding from the markup
+alone would drop it.
+
+The invariant that makes the flag safe is that **the emitted markup is
+byte-identical across all three tiers**, pinned corpus-wide in
+`server/tests/tsrx/emit-tier.test.ts`.
 
 ### 5.5 The Static tier — the static skeleton
 

@@ -133,6 +133,10 @@ export const compileComponent = (
 		runtimeImport: '../../tsrx/runtime',
 		sourcePath: filename,
 		composeRegistry,
+		// ADR 0029 sub-design 4: the tier decides whether the module
+		// re-declares the `@{ }` value harness. Pre-contamination by
+		// construction — see the option's own doc for why that is sound.
+		tier,
 	})
 	const client = emitClientModule(component, plan, {
 		sourcePath: filename,
