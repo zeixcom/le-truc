@@ -18,6 +18,7 @@ import {
 	type SimulationRealm,
 } from '../../tsrx/sim/realm'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { PLURALIZE_I18N } from './corpus-args'
 import { loadTsrxCorpus } from './corpus-fixture'
 
 const generated = createGeneratedDir('gate-wave')
@@ -76,7 +77,7 @@ const loadRealm = async (
 	return realm
 }
 
-/* === LT-143 — basic-pluralize renders correctly under simulation === */
+/* === LT-143 — basic-pluralize renders correctly (LT-173: now Folded-tier) === */
 
 const pluralize = await compileSubset(['basic-pluralize'])
 const pluralizeInfo = pluralize.compiled.find(
@@ -85,19 +86,84 @@ const pluralizeInfo = pluralize.compiled.find(
 if (!pluralizeInfo) throw new Error('basic-pluralize did not compile')
 const pluralizeRealm = await loadRealm(pluralize.registry, [pluralizeInfo])
 
+/**
+ * The reserved `i18n` record a fixture passes for basic-pluralize (the
+ * compiler supplies the real one at every render boundary; see
+ * `corpus-args.ts` for the shared copy's rationale). `en`, cardinal (no
+ * `ordinal` arg): the locale's actual category set is {one, other}.
+ */
+const PLURALIZE_ARGS = (count: number): Record<string, unknown> => ({
+	count,
+	i18n: PLURALIZE_I18N,
+})
+
+/** The category spans a render carries, pruned or not. */
+const categorySpansOf = (html: string): string[] =>
+	[...html.matchAll(/class="(zero|one|two|few|many|other)"/g)].map(
+		match => match[1] ?? '',
+	)
+
+/**
+ * The visible category spans. Scans WHOLE open tags — the emitter orders
+ * `hidden` before the static `class` on the category spans, so a
+ * class-anchored suffix scan would miss a leading `hidden`.
+ */
+const visibleSpans = (html: string): string[] =>
+	[...html.matchAll(/<span\b([^>]*)>/g)]
+		.map(([, attrs]) => ({
+			category: /class="(zero|one|two|few|many|other)"/.exec(attrs ?? '')?.[1],
+			hidden: /(^|\s)hidden(\s|=|$)/.test(attrs ?? ''),
+		}))
+		.filter(
+			(span): span is { category: string; hidden: boolean } =>
+				span.category !== undefined && !span.hidden,
+		)
+		.map(span => span.category)
+
 describe('LT-143 — basic-pluralize renders correctly under simulation', () => {
 	afterAll(() => pluralizeRealm.dispose())
 
-	const visibleSpans = (html: string): string[] =>
-		[...html.matchAll(/class="(zero|one|two|few|many|other)"([^>]*)>/g)]
-			.filter(([, , attrs]) => !(attrs ?? '').includes('hidden'))
-			.map(([, name]) => name ?? '')
+	test("LT-173: an en page prunes to the locale's two cardinal categories at phase 1", async () => {
+		// ADR 0030 sub-design 6: the rendered alternatives shrink to the set
+		// Intl.PluralRules('en') actually uses — {one, other}, not all six —
+		// the pruned categories absent entirely (no span at all, not a
+		// hidden one).
+		const html = await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(1))
+		expect(categorySpansOf(html).sort()).toEqual(['one', 'other'])
+		expect(categorySpansOf(html)).not.toContain('zero')
+	})
+
+	test('LT-173: a dynamic plural type prunes per call — ordinal renders its own set', async () => {
+		const html = await serverMarkupOf(pluralizeInfo, {
+			...PLURALIZE_ARGS(1),
+			ordinal: true,
+		})
+		// en ordinal is {one, two, few, other}: the truc:case-type expression
+		// (`ordinal ? 'ordinal' : undefined`) prunes tightly in both states.
+		expect(categorySpansOf(html).sort()).toEqual(['few', 'one', 'other', 'two'])
+	})
+
+	test('LT-173: a cy page keeps all six categories — pruning reads the platform, not a table', async () => {
+		const html = await serverMarkupOf(pluralizeInfo, {
+			...PLURALIZE_ARGS(1),
+			lang: 'cy',
+			i18n: { ...PLURALIZE_I18N, lang: 'cy' },
+		})
+		expect(categorySpansOf(html).sort()).toEqual([
+			'few',
+			'many',
+			'one',
+			'other',
+			'two',
+			'zero',
+		])
+	})
 
 	test.each([0, 1, 2, 3, 5, 11])(
 		'count=%d renders exactly one visible plural span and the count text',
 		async count => {
 			const html = await pluralizeRealm.render({
-				markup: await serverMarkupOf(pluralizeInfo, { count }),
+				markup: await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(count)),
 				component: 'basic-pluralize',
 			})
 			const visible = visibleSpans(html)
@@ -106,6 +172,25 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 			expect(html).toContain(`<span class="count">${count}</span>`)
 		},
 	)
+
+	test('LT-173: changing count after connect re-selects among the rendered alternatives', async () => {
+		// The toggles do NOT retire (ADR 0030 sub-design 6): the locale is
+		// fixed but host.count is reactive, so the category still changes at
+		// runtime, and the client can only select among strings the server
+		// rendered. count=1 renders; moving to 0 must flip the selection to
+		// `other` — which an en page DID render (pruning to {one, other}).
+		const html = await pluralizeRealm.render({
+			markup: await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(1)),
+			component: 'basic-pluralize',
+		})
+		expect(visibleSpans(html)).toEqual(['one'])
+		const host = pluralizeRealm.document.querySelector('basic-pluralize')
+		if (!host) throw new Error('rendered basic-pluralize not found')
+		;(host as unknown as { count: number }).count = 0
+		await new Promise(resolve => setTimeout(resolve, 0))
+		const after = host.outerHTML
+		expect(visibleSpans(after)).toEqual(['other'])
+	})
 })
 
 /* === LT-133 — basic-number renders the formatted value under simulation === */
@@ -200,11 +285,11 @@ describe('LT-144 — {host.count} and {count} converge on the same initial rende
 		'count=%d renders identical text for both spellings after simulated connect',
 		async count => {
 			const hostHtml = await spellingRealm.render({
-				markup: await serverMarkupOf(hostVariant, { count }),
+				markup: await serverMarkupOf(hostVariant, PLURALIZE_ARGS(count)),
 				component: 'c-count-host',
 			})
 			const bareHtml = await spellingRealm.render({
-				markup: await serverMarkupOf(bareVariant, { count }),
+				markup: await serverMarkupOf(bareVariant, PLURALIZE_ARGS(count)),
 				component: 'c-count-bare',
 			})
 			const countTextOf = (html: string) =>

@@ -57,18 +57,15 @@ describe('tier assignment over the migrated corpus', () => {
 			expect(registry[tag]?.tier).toBe('folded')
 	})
 
-	test('LT-165 acceptance: basic-pluralize stays Simulated-tier', () => {
-		// LT-142's middle case: the locale is read from the DOM
-		// (`getLocale(el)`), which the realm executes for real. It becomes
-		// Folded-tier eligible only once ADR 0030's reserved `i18n` parameter
-		// makes the locale server-known — LT-173, which expects to flip this
-		// pin rather than to preserve it.
-		expect(registry['basic-pluralize']?.tier).toBe('simulated')
-		expect(
-			registry['basic-pluralize']?.routingSignals.every(
-				signal => signal.resolution.by === 'realm',
-			),
-		).toBe(true)
+	test('LT-173 acceptance: basic-pluralize classifies Folded — the six standing signals dissolved', () => {
+		// The flip this pin always anticipated: the reserved `i18n` parameter
+		// (ADR 0030) makes the locale server-known, so `Intl.PluralRules` folds
+		// (LT-142) and the six TSRX034 routing signals — one per category
+		// span's `hidden` thunk, each "locale read from the DOM" — are gone.
+		// If a NEW signal ever appears here, the fold rule or the classifier
+		// moved underneath the component; investigate rather than reclassify.
+		expect(registry['basic-pluralize']?.tier).toBe('folded')
+		expect(registry['basic-pluralize']?.routingSignals).toHaveLength(0)
 	})
 
 	test('contamination reached form-combobox through a compose READ', () => {
@@ -94,6 +91,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'basic-gauge',
 				'basic-hello',
 				'basic-number',
+				'basic-pluralize',
 				'card-blogpost',
 				'card-callout',
 				'card-collapsible',
@@ -109,7 +107,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'module-list',
 				'module-tabgroup',
 			],
-			simulated: ['basic-pluralize', 'form-combobox', 'form-listbox'],
+			simulated: ['form-combobox', 'form-listbox'],
 			static: [],
 		})
 	})

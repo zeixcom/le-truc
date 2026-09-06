@@ -74,68 +74,59 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
 
 ## P2 — Internationalization (ADR 0030)
 
-- [ ] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline. **LT-165 dependency satisfied — unblocked.**
+- [x] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline. — **done, pending review** (public-surface change: new authoring vocabulary, see handoffs)
   **Skill:** le-truc-dev
-  **Context:** ADR 0030 is accepted; read it rather than this summary. The LT-165 dependency is
-  wider than step 6: step 4's translation census has no channel to ride until LT-165 step 6
-  defines the tier census on `sim/report.ts`, and step 4 ADOPTS that surface rather than
-  defining a parallel one. Scope, ordered:
-  1. **The reserved parameter.** `i18n` joins `children` as a compiler-supplied server arg
-     (ADR 0024 s10's mechanism, reused — do not invent a second one). A component receives it
-     only by declaring it; callers never pass it. Record shape: `lang`, `t`, `timeZone`,
-     `currency`, `dir`. It must be an ordinary destructurable arg so it is server-known and
-     folds in phase 1.
-  2. **Precedence.** An authored `lang` arg, or a `lang` at a compose site, overrides the
-     record. The EFFECTIVE locale renders onto the root `lang` attribute. Confirm no new
-     TSRX039 exemption is needed — ADR 0024 s3's root-attribute exclusion should already cover
-     it; if it does not, escalate rather than patching.
-  3. **Catalog pipeline** — format, per-locale loading, key resolution at render time,
-     staleness detection. New build surface with no prior art in this repo; keep it in
-     `server/effects/` alongside the other build effects. Source-locale strings are declared
-     INLINE in the `.tsrx` beside their keys — there is deliberately no per-component catalog
-     file, since that reintroduces the sibling-file drift ADR 0024 cures. Translations are
-     additive per-locale override files, component-namespaced: `i18n/de.json` with keys
-     `<tag>.<key>`. **No tiering, no override stack** — a key resolves in exactly one place; do
-     not add a global or page layer without reopening the ADR. **Staleness is the subtle part:**
-     a source-string edit is a `.tsrx` edit that silently invalidates that key's translations,
-     so detection must notice a moved source string, not just an absent key.
-  3b. **Report artifact and `i18n:sync`.** The build stays READ-ONLY: emit a gitignored report
-     (machine-readable per locale + a human summary) and the census count in the build summary.
-     A separate explicit `bun run i18n:sync` writes missing keys into the committed catalogs as
-     empty entries — run by a person, diffable in review. The build must never write tracked
-     files (non-idempotent builds, CI writing to the working tree).
-  4. **Missing keys** fall back to the source-locale string and land in the build report's
-     **translation census** (ADR 0030 s5) — NOT the compile-warning channel, since a missing key
-     is not author-fixable and would restart the non-zero-baseline drift ADR 0029 s6 removed.
-     Reuse `sim/report.ts`, the same channel as the tier census.
-  5. **The untranslated-literal warning** — literal prose inside a component that otherwise uses
-     the catalog. This one IS author-fixable, so it is a genuine compile warning and must
-     converge to zero. **Channel:** compiler. **Tier:** 1 (Prevented) per ADR 0028. **Tech
-     Writer owns the copy** (new TSRX code; `workflows/error-message-lifecycle.md`).
-  6. **Verify the tiering payoff.** With a server-known locale, `Intl` folds (LT-142) and
-     `basic-pluralize` should become Folded-tier eligible, dissolving its six standing TSRX034
-     warnings. If it does not, either the fold rule or the classifier is wrong — investigate
-     rather than accepting Simulated. `basic-blogmeta` is **hard-blocked on LT-095**, not merely
-     coordinated: it has no `.tsrx` until that migration, so its date-handling fix and fold
-     verification cannot land here. Record blogmeta's fold as deferred to LT-095, whose text
-     already carries the expectation and the fix (`Date.UTC(y, m - 1, d)` with `timeZone: 'UTC'`
-     — never shifts the day, reads no ambient state; ADR 0030 s2).
-  7. **Per-locale pruning of rendered alternatives** (ADR 0030 s6). A component rendering one
-     alternative per plural category prunes to the locale's actual set — `{one, other}` for
-     English instead of all six. Read the set from
-     `Intl.PluralRules(lang, opts).resolvedOptions().pluralCategories`, NOT a hand-maintained
-     table (same posture as ADR 0024 s4's ARIA mapping). Cardinal and ordinal differ, so prune
-     by the configured `type` and fall back to their union when it can't be proven.
-     **The client-side `hidden` toggles do NOT retire** — the locale is fixed but `host.count`
-     is a reactive prop, so the category still changes at runtime and the client can only select
-     among strings the server rendered. Removing the toggles would freeze every pluralized
-     string at its initial count. Pin this with a fixture that changes `count` after connect.
-  Acceptance: a component declaring `i18n` receives it with no caller change; an authored `lang`
-  overrides the record and renders as the root attribute; a missing key renders the source
-  string and appears in the census, not the warning stream; an untranslated literal warns;
-  `basic-pluralize` classifies Folded, renders two category spans on an `en` page, and still
-  re-selects correctly when `count` changes after connect; the build writes no tracked file;
-  `bun test server` green.
+  **Implemented, in the task's own order.** (1) The reserved parameter: a component
+  declaring `i18n` in its param pattern gets the record supplied by the compiler at every
+  render call boundary — compose sites emit `i18n: i18nRecord("<tag>", <lang-expr>)`
+  (`emit-server.ts`, child's registry entry carries `declaresI18n`/`langArgDefault`); a
+  caller-authored `i18n` attribute at a compose site is rejected (TSRX006). Record shape per
+  the ADR; `I18n` is ambient in `globals.d.ts` for sources and imported from the generated
+  `./i18n` module in generated server code. (2) Precedence: compose-site `lang` arg >
+  authored `lang` default > build page locale, computed at the record's construction; the
+  compiler renders `attr('lang', <binding>)` on the root for an i18n component that binds
+  `lang` but does not render it — **TSRX039 confirmation: no new exemption needed**, the
+  root-element exclusion in `reportDuplicatedChannels` already covers both routes.
+  (3+3b+4) Catalog pipeline in `server/effects/i18n.ts`: inline sources via `export const
+  i18n` (string literals only — they are the fallback bytes the manifest hashes); overrides
+  in `i18n/<locale>.json` (`<tag>.<key>`); staleness via a committed `i18n/manifest.json`
+  (per locale per key, the source hash at translation time — a moved source string reports
+  `stale`, verified live); the generated `server/generated/tsrx/i18n.ts` module; the
+  gitignored `i18n-report.json`; the census rides `sim/report.ts` (`CensusKind
+  'translation'`, `translationCensus`) with the count in the build summary and the full
+  section in `check:tsrx`; `bun run i18n:sync` is the person-run writer (exercised end to
+  end, throwaway artifacts removed — no catalogs committed until translation starts).
+  (5) **TSRX047** (warning): literal prose (two or more adjacent letters) in a
+  catalog-using component; single-letter fragments exempt (page data, not prose). Copy is a
+  first draft — **Tech Writer owns the final copy** per
+  `workflows/error-message-lifecycle.md`. (6) **The payoff verified**: the fold rule widened
+  so a host-derived fold may call TRANSITIVELY-PURE setup consts
+  (`foldableRenderScope`, shared by analyzer and emitter so they cannot drift) —
+  `basic-pluralize` re-cut onto `i18n` classifies **Folded with zero routing signals**, the
+  six standing signals dissolved; blogmeta's fold stays deferred to LT-095 as recorded
+  there. Side effect, reviewed and kept: `form-colorgraph`'s `aria-valuenow`/`aria-valuetext`
+  now fold at phase 1 too (same pure-const shape through `asOklch()`), shrinking its
+  hydration boundary — audit snapshot re-pinned, fixed-point gate green. (7) Pruning:
+  `truc:case="<category>"` marks an alternative; `truc:case-type={expr}` (once per group,
+  per render call) prunes by the configured `Intl.PluralRules` type — an explicit
+  `undefined` is cardinal (Intl's own default), no declaration falls back to the
+  cardinal∪ordinal union; the set is read from the platform at render time
+  (`runtime.ts`'s `pluralCategories`); case elements address as `'maybe'` + guarded effects,
+  deeper constructs inside them rejected; **the count-change-after-connect fixture pins the
+  toggles** (count 1 → 0 flips `.one` → `.other` on the pruned en set).
+  **Changed:** `server/tsrx/` (`i18n.ts` new; `ir.ts`, `compiler.ts`, `diagnostics.ts`,
+  `classify-attributes.ts`, `evaluability.ts`, `analysis/effects.ts`, `emit-server.ts`,
+  `runtime.ts`, `registry.ts`, `index.ts`, `lower-template.ts` text-node spans,
+  `sim/report.ts`, `sim/index.ts`, `globals.d.ts`); `server/effects/` (`i18n.ts` new,
+  `tsrx.ts`); `scripts/` (`i18n-sync.ts` new, `check-tsrx.ts`); `examples/basic/pluralize/`
+  (`.tsrx` migration, `.html` Welsh instance now carries `lang="cy"` directly); fixtures
+  (`corpus-args.ts`, smoke ARGS); `i18n/README.md` new.
+  **Verification:** acceptance walked item by item — record supplied with no caller change;
+  authored `lang` overrides and renders as the root attribute; missing key renders the
+  source string and lands in the census, never the warning stream (compile-warning baseline
+  stays 0); untranslated literal warns; pluralize Folded with two category spans on an `en`
+  page and correct re-selection when `count` changes after connect; the build writes only
+  gitignored files; `bun test server` 1500 pass / 0 fail; `check:tsrx` clean; biome clean.
 
 - [ ] LT-175: Measure and contain the per-locale impact on LT-166's render cache (exploration). **Depends on LT-173.**
   **Skill:** docs-server-dev

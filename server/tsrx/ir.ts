@@ -101,7 +101,15 @@ export type TemplateNode =
 			children: TemplateNode[]
 			node: TsrxNode
 	  }
-	| { kind: 'text'; value: string }
+	| {
+			kind: 'text'
+			value: string
+			/**
+			 * The JSXText node, when one produced this text (LT-173's
+			 * TSRX047 cites its offset). Absent for synthesized text.
+			 */
+			node?: TsrxNode
+	  }
 	| {
 			kind: 'expr'
 			/** `{expr}` or `&{expr}` child expression. */
@@ -274,6 +282,36 @@ export type AttributeIR =
 	  }
 	| {
 			/**
+			 * `truc:case="one"` — a plural-alternative marker (ADR 0030
+			 * sub-design 6, LT-173 step 7): the element is one alternative
+			 * per CLDR plural category, and the server prunes it to the
+			 * locale's actual category set, read from the platform
+			 * (`runtime.ts`'s `pluralCategories`) at render time. Consumed
+			 * by the compiler; renders no attribute. The client keeps the
+			 * element's `hidden` toggle over the pruned set, addressed with
+			 * `'maybe'` cardinality (the element may not render at all).
+			 */
+			kind: 'plural-case'
+			category: string
+	  }
+	| {
+			/**
+			 * `truc:case-type={expr}` — the `Intl.PluralRules` type the
+			 * truc:case group prunes by, evaluated per render call so a
+			 * dynamic configuration (`ordinal ? 'ordinal' : undefined`)
+			 * prunes tightly in both states. Declared on the case element
+			 * itself or any ancestor (the emitter threads it down the tree);
+			 * `undefined` means the union fallback (ADR 0030 sub-design 6's
+			 * "prune by the configured type" — the configured type here is
+			 * the component's own, per call). Consumed by the compiler;
+			 * renders no attribute.
+			 */
+			kind: 'plural-case-type'
+			exprText: string
+			node: TsrxNode
+	  }
+	| {
+			/**
 			 * An element bound to a name usable as a client-side reference. On
 			 * a RAW (dashed-tag) element this is never authored as a JSX
 			 * attribute — `classifyAttribute` hard-errors a bare `ref={}`
@@ -358,6 +396,32 @@ export type ComponentIR = {
 	paramsText: string
 	/** Names bound by the parameter pattern (server args). */
 	paramNames: string[]
+	/**
+	 * The component's `export const i18n` declaration (ADR 0030 sub-design
+	 * 4, LT-173): message key → source-locale string, inline in the `.tsrx`.
+	 * Null when the component declares none — then it has no catalog, no
+	 * `t` obligation, and the untranslated-literal warning never fires.
+	 */
+	i18nMessages: Record<string, string> | null
+	/**
+	 * Whether the parameter pattern declares the reserved `i18n` parameter
+	 * (ADR 0030 sub-design 2). The compiler — never a caller — supplies the
+	 * record at every render call boundary; see `emit-server.ts`'s compose
+	 * emission and the registry flag the fixtures read.
+	 */
+	declaresI18n: boolean
+	/**
+	 * The parameter-bound identifier for the component's locale (`lang`, or
+	 * the nested `i18n: { lang }` spelling), or null. The emitter uses it
+	 * for the root `lang` attribute and `truc:case` pruning; null means the
+	 * component binds no locale it could render.
+	 */
+	langBinding: string | null
+	/**
+	 * The authored `lang` default (`lang = 'en'`), or null — ADR 0030
+	 * sub-design 3's precedence anchor for the record compose sites build.
+	 */
+	langArgDefault: string | null
 	/**
 	 * All setup statements verbatim, in source order — helper consts, signal
 	 * declarations, and `expose()`. The generated server render function

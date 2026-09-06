@@ -47,5 +47,7 @@ export {
 	reportDiagnostics,
 	type SimReport,
 	type TierCensusSubject,
+	type TranslationGap,
 	tierCensus,
+	translationCensus,
 } from './report.ts'

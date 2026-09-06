@@ -32,22 +32,23 @@
 <!-- Welsh locale example - demonstrates complex pluralization rules
      Welsh has 6 plural categories: zero, one, two, few, many, other
      Example: "dog" in Welsh
-     0 = cŵn (zero), 1 = ci (one), 2 = gi (two), 3 = chi (few), 6 = chi (many), 4/5/7+ = ci (other) -->
-<div lang="cy">
-	<p>Number of dogs in Welsh:</p>
-	<basic-pluralize id="welsh-test" count="0">
-		<p class="none">Dim anifeiliaid!</p>
-		<p class="some">
-			<span class="count"></span>
-			<span class="zero">cŵn</span>
-			<span class="one">ci</span>
-			<span class="two">gi</span>
-			<span class="few">chi</span>
-			<span class="many">chi</span>
-			<span class="other">ci</span>
-		</p>
-	</basic-pluralize>
-</div>
+     0 = cŵn (zero), 1 = ci (one), 2 = gi (two), 3 = chi (few), 6 = chi (many), 4/5/7+ = ci (other)
+     LT-173: the locale is read from the element's OWN lang attribute
+     (the reserved i18n record renders it server-side), so the instance
+     carries lang="cy" directly rather than inheriting it from a wrapper. -->
+<p>Number of dogs in Welsh:</p>
+<basic-pluralize id="welsh-test" count="0" lang="cy">
+	<p class="none">Dim anifeiliaid!</p>
+	<p class="some">
+		<span class="count"></span>
+		<span class="zero">cŵn</span>
+		<span class="one">ci</span>
+		<span class="two">gi</span>
+		<span class="few">chi</span>
+		<span class="many">chi</span>
+		<span class="other">ci</span>
+	</p>
+</basic-pluralize>
 
 <hr>
 

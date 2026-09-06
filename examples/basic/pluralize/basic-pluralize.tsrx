@@ -1,45 +1,51 @@
 /**
- * Unified-format migration: basic-pluralize (LT-115 cutover, closing the
- * LT-092 stop). Reshaped to the hand-written twin's contract, the same
- * LT-114 basic-number route: no setup signals remain — the six category
- * spans' `hidden` thunks compute the CLDR category inline (the LT-115
- * compiler fixes make the as-authored `deriveCell` shape live too, but a
- * signal body may not read `host` — TSRX013 — and the twin's locale
- * resolution NEEDS the host: `getLocale` walks `closest('[lang]')`, so
- * hydration pages may carry the locale on an ANCESTOR, which no
- * root-attribute read can see; the authored thunk is the one
- * compiler-expressible home, exactly like basic-number's formatter).
+ * Unified-format migration: basic-pluralize (LT-115 cutover; re-cut onto the
+ * reserved `i18n` parameter in LT-173, ADR 0030). The component now declares
+ * `i18n` and receives the compiler-supplied locale record — callers never
+ * pass it — which makes the locale a build-time fact: the six category
+ * spans' `hidden` thunks fold server-side (the locale is server-known, so
+ * `Intl.PluralRules` folds per LT-142) and the component is Folded-tier;
+ * its six former Simulated-tier routing signals are dissolved. `truc:case`
+ * marks each span as one rendered plural alternative, so the server prunes
+ * to the locale's actual category set ({one, other} for English instead of
+ * all six); the `hidden` toggles stay — `host.count` is reactive, so the
+ * category still changes at runtime and the client re-selects among the
+ * rendered alternatives.
  *
- * Contract notes (restored to the hand-written twin, per the
- * TSRX-HOST-PROFILE data account):
- * - Locale inherits from the nearest `[lang]` (the element itself or any
- *   ancestor) via the shared `getLocale` helper — the twin's own rule; the
- *   `lang` server arg still materializes the root attribute for SSR markup,
- *   where `getLocale` finds it on the element.
- * - `ordinal` is read from the element's own attribute at each evaluation
- *   (presence-only, the twin's `hasAttribute` shape).
- * - The pluralizer is re-derived per evaluation — a display component's
- *   trade, the twin's behavior everywhere the specs observe it (LT-114's
- *   formatter precedent).
- * - The six CLDR category spans are ALWAYS present (the template's own
- *   structure); a locale that doesn't use a category simply never matches
- *   and stays hidden. The twin tolerated a PAGE omitting individual spans
- *   (`if (el)` guards) — the compiled template requires the six-span
- *   structure in hydrated markup; the demo was regenerated to carry it
- *   (escalated in NOTES.md, LT-115).
- * - The `hidden` thunks have no server-renderable initial value (`Intl` is
- *   an impure ambient — CHECKLIST §4 refuses to fold the BUILD MACHINE's
- *   locale into the page), so SSR omits `hidden` and the client's first
- *   pass corrects — the documented flash trade, pinned by the six TSRX034
- *   warnings this compile carries (same class as form-listbox's).
+ * Contract notes (LT-173 migration of the LT-115 contract):
+ * - The locale is read once at connect from the element's OWN `lang`
+ *   attribute (`@attribute` contract below already said "read once at
+ *   connect time" — now it is a Parser-exposed prop doing exactly that).
+ *   The compiled component no longer walks ancestors: the record's
+ *   effective locale renders onto the root attribute server-side, and a
+ *   page that wants a specific locale sets the attribute (the reserved
+ *   `i18n` parameter is ADR 0030 s7's canonical route; the ancestor walk
+ *   is the hand-written twins' contract, approximated by the seeded realm).
+ * - `ordinal` likewise became a Parser-exposed prop (presence) — the twin
+ *   re-read `hasAttribute` per evaluation; the JSDoc has said "read once
+ *   at connect time" since the LT-115 cutover, and the fold needs the
+ *   compiler-known server truth.
+ * - "task" / "remaining" / "Well done, all done!" are catalog keys
+ *   (`export const i18n` below); the per-category span CONTENTS stay page
+ *   data — a component catalog would claim per-instance wording ("person"/
+ *   "people") that belongs to the page.
  */
 
-import { asClampedInteger } from '@zeix/le-truc'
-import { getLocale } from '../../_common/getLocale'
+import { asBoolean, asClampedInteger, asString } from '@zeix/le-truc'
+
+export const i18n = {
+	done: 'Well done, all done!',
+	task: 'task',
+	remaining: 'remaining',
+}
 
 export type BasicPluralizeProps = {
 	/** The count to pluralize. Clamped to a non-negative integer. */
 	count: number
+	/** BCP 47 locale tag (e.g. `cy`). Read from the element's `lang` attribute once at connect time; falls back to `en`. */
+	lang?: string
+	/** Use ordinal plural rules (1st, 2nd, 3rd, ...) instead of cardinal. Presence-only; read once at connect time. */
+	ordinal?: boolean
 }
 
 declare global {
@@ -54,35 +60,48 @@ declare global {
  * accessibility tools and screen readers benefit from grammatically correct output.
  * Reveal children by class: `.none` (0), `.some` (>0), and `.zero/.one/.two/.few/.many/.other` per CLDR plural rules.
  *
- * @attribute {string} [lang] - BCP 47 locale tag (e.g. `ar`). Falls back to the nearest ancestor's `lang` attribute, or `en` if none is set. Read once at connect time.
+ * @attribute {string} [lang] - BCP 47 locale tag (e.g. `ar`). Read from the element's attribute once at connect time; falls back to `en`. The server renders the effective locale onto this attribute.
  * @attribute {boolean} [ordinal=false] - Use ordinal plural rules (1st, 2nd, 3rd, ...) instead of cardinal. Presence-only; read once at connect time.
  * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-pluralize} Interactive preview and usage examples
  **/
 export function BasicPluralize(
-	{ count, lang = 'en', ordinal = false }: { count: number; lang?: string; ordinal?: boolean },
+	{ count, lang = 'en', ordinal = false, i18n: { t } }: {
+		count: number
+		lang?: string
+		ordinal?: boolean
+		i18n: I18n
+	},
 )
 	@{
-		const pluralCategory = (el: HTMLElement & BasicPluralizeProps) =>
+		const pluralCategory = (
+			locale: string,
+			isOrdinal: boolean | undefined,
+			n: number,
+		) =>
 			new Intl.PluralRules(
-				getLocale(el),
-				el.hasAttribute('ordinal') ? { type: 'ordinal' } : undefined,
-			).select(el.count)
+				locale,
+				isOrdinal ? { type: 'ordinal' } : undefined,
+			).select(n)
 
-		expose({ count: asClampedInteger() })
+		expose({
+			count: asClampedInteger(),
+			lang: asString(),
+			ordinal: asBoolean(),
+		})
 
 		<>
 			<basic-pluralize {count} {lang} {ordinal}>
-				<p class="none" hidden={() => host.count !== 0}>Well done, all done!</p>
-				<p class="some" hidden={() => host.count === 0}>
+				<p class="none" hidden={() => host.count !== 0}>{t.done}</p>
+				<p class="some" truc:case-type={ordinal ? 'ordinal' : undefined} hidden={() => host.count === 0}>
 					<span class="count">{host.count}</span>
-					task
-					<span class="zero" hidden={() => pluralCategory(host) !== 'zero'}></span>
-					<span class="one" hidden={() => pluralCategory(host) !== 'one'}></span>
-					<span class="two" hidden={() => pluralCategory(host) !== 'two'}>s</span>
-					<span class="few" hidden={() => pluralCategory(host) !== 'few'}>s</span>
-					<span class="many" hidden={() => pluralCategory(host) !== 'many'}>s</span>
-					<span class="other" hidden={() => pluralCategory(host) !== 'other'}>s</span>
-					remaining
+					{t.task}
+					<span class="zero" truc:case="zero" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'zero'}></span>
+					<span class="one" truc:case="one" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'one'}></span>
+					<span class="two" truc:case="two" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'two'}>s</span>
+					<span class="few" truc:case="few" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'few'}>s</span>
+					<span class="many" truc:case="many" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'many'}>s</span>
+					<span class="other" truc:case="other" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'other'}>s</span>
+					{t.remaining}
 				</p>
 			</basic-pluralize>
 

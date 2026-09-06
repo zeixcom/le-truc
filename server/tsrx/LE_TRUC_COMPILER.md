@@ -110,6 +110,7 @@ lives in the consumer, `server/effects/tsrx.ts` (§ 6).
 | `classify-attributes.ts` | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser |
 | `reactivity.ts` | `classifyChild` — the reactive-lift rule: is a template child reactive, static, or untraceable? |
 | `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers. Under ADR 0029 this is also the first conjunct of the **tier classifier** (§ 5) |
+| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary (LT-173): `export const i18n` extraction, the `lang` binding/default lookup, `PLURAL_CATEGORIES` |
 | `infer-type.ts` | Signal value-type inference |
 | `config.ts` | `export const config` extraction |
 | `imports.ts` | Compose-import resolution + plain import collection and placement |
@@ -215,29 +216,49 @@ onto the root `lang` attribute, exempt from TSRX039 by ADR 0024 s3's
 root-attribute exclusion.
 
 **Message resolution** (ADR 0030): a component declares each message key
-*with its source-locale string inline in the `.tsrx`* — there is deliberately
-no per-component catalog file, which would reintroduce the sibling-file drift
-ADR 0024 cures. Translations are additive per-locale override files,
-component-namespaced (`i18n/de.json`, keys `<tag>.<key>`), with **no tiering
-and no override stack**: a key resolves in exactly one place. The compiler
-resolves `t` at render time and the catalog never reaches the client. A
-missing key renders the source-locale string and is recorded in the build
-report's **translation census** — not a compile warning, since it is not
-author-fixable. Literal prose inside a catalog-using component IS
-author-fixable and warns. The build stays read-only: it emits a gitignored
-report artifact (machine-readable per locale plus a human summary), and an
-explicit `i18n:sync` script — never the build — writes missing keys back into
-the committed catalogs.
+*with its source-locale string inline in the `.tsrx`* — `export const i18n =
+{ key: 'Source string', … }` (extracted by `i18n.ts`, same posture as
+`readConfig`) — so there is deliberately no per-component catalog file, which
+would reintroduce the sibling-file drift ADR 0024 cures. Values must be
+string literals: they are the fallback every locale resolves against and the
+bytes the staleness manifest hashes. Translations are additive per-locale
+override files, component-namespaced (`i18n/de.json`, keys `<tag>.<key>`),
+with **no tiering and no override stack**: a key resolves in exactly one
+place. The compiler resolves `t` at render time — the generated `i18n`
+module (`server/effects/i18n.ts` folds the corpus catalogs into it) exposes
+`i18nRecord(tag, lang?)`, which every render call boundary uses to supply
+the reserved record — and the catalog never reaches the client. A missing
+key renders the source-locale string and is recorded in the build report's
+**translation census** (`translationCensus`, `sim/report.ts`; machine-
+readable artifact at `server/generated/tsrx/i18n-report.json`) — not a
+compile warning, since it is not author-fixable. Staleness rides a committed
+manifest (`i18n/manifest.json`, per locale per key the source hash the
+translation was recorded against): a source-string edit is a `.tsrx` edit
+that silently invalidates that key's translations, so an override without a
+matching manifest hash reports `stale`. Literal prose inside a
+catalog-using component IS author-fixable and warns (TSRX047 — template
+text with two or more adjacent letters; single-letter fragments are page
+data). The build stays read-only: an explicit `i18n:sync` script — never
+the build — writes missing keys into the committed catalogs and refreshes
+the manifest.
 
 **Per-locale pruning of rendered alternatives** (ADR 0030 s6): with the locale
 a build constant, a component rendering one alternative per plural category
 prunes to the set the locale actually uses (`{one, other}` for English rather
-than all six). The set comes from
+than all six). The set comes from `runtime.ts`'s `pluralCategories` —
 `Intl.PluralRules(lang, opts).resolvedOptions().pluralCategories`, a platform
 fact rather than a hand-maintained table — the same posture as the ARIA
-mapping in ADR 0024 s4. Cardinal and ordinal have different sets, so pruning
-uses the configured `type` and falls back to their union when the compiler
-cannot prove which is in play. **The client-side toggles do NOT retire**: the
+mapping in ADR 0024 s4. The author marks each alternative `truc:case="one"`
+(a CLDR category literal; consumed by the compiler, renders no attribute) and
+declares the configured `type` once per group with
+`truc:case-type={ordinal ? 'ordinal' : undefined}` — evaluated per render
+call, so a dynamic configuration prunes tightly in both states; an
+explicit `undefined` is the `Intl` default (cardinal), and a group with no
+declared type prunes to the cardinal∪ordinal union, the ADR's sanctioned
+fallback. The client keeps the element's `hidden` toggle over the pruned set,
+addressed with `'maybe'` cardinality (the element may not render at all);
+deeper constructs inside a case element have no addressing and are rejected.
+**The client-side toggles do NOT retire**: the
 locale is fixed but the category-selecting input (`host.count`) is reactive,
 and the client can only select among strings the server rendered.
 
@@ -490,7 +511,7 @@ positions are remapped onto the `.tsrx` source through
 makes them import each other's real types — a missing or mistyped server arg
 is a real `tsc` diagnostic, remapped to the compose site.
 
-**Diagnostic codes** (`diagnostics.ts`, TSRX001–046) fall into families:
+**Diagnostic codes** (`diagnostics.ts`, TSRX001–047) fall into families:
 
 - *Grammar and shape gates*: unrecognized setup statements, reactive `@for`
   over a non-`createList` (TSRX001), async component functions, deferred
@@ -513,6 +534,10 @@ is a real `tsc` diagnostic, remapped to the compose site.
   string (TSRX040), and the rendered-client-only-const error (TSRX046 — the
   narrow residue of this family that stays an error; see the reclassification
   below).
+- *i18n* (LT-173): literal prose in a component that declares
+  `export const i18n` (TSRX047) — author-fixable, so a genuine warning that
+  converges to zero; a missing *translation* is the translator's work and
+  rides the translation census instead.
 
 **Reclassification under ADR 0029.** The impure-ambient refusal is not in the
 table below because it does not become a routing signal at all: it becomes

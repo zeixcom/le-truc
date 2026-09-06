@@ -12,7 +12,12 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import { freeIdentifiers, isNode, JS_GLOBALS } from './ast-utils'
+import {
+	collectBoundNames,
+	freeIdentifiers,
+	isNode,
+	JS_GLOBALS,
+} from './ast-utils'
 import { refBranchGuard } from './first-refs'
 import type { ComponentIR, TemplateNode } from './ir'
 
@@ -364,11 +369,23 @@ export type HostPropRead = {
  * say it too. Client-side a ref is simply in scope; server-side its
  * presence is whatever `refBranchGuard` (first-refs.ts) computed for it.
  *
+ * `allow` (LT-173 step 6) widens the third refusal — "reads some other
+ * free name" — to names that RESOLVE IN THE RENDER FUNCTION'S SCOPE:
+ * server args, signals (`.get()` is the harness's initial value), and the
+ * transitive-pure setup consts `foldableRenderScope` admits. The spliced
+ * thunk is IIFE-invoked inside the generated render function, so a call to
+ * a setup const (`pluralCategory(host.lang, host.ordinal, host.count)`)
+ * evaluates there exactly as the author wrote it; the same set doubles as
+ * the impure-ambient WALK's scope, so an `Intl` constructor whose locale
+ * is a server-known name (or a such-scoped call's parameter) counts as
+ * locale-resolvable (LT-142's rule, applied transitively). Undefined
+ * restores the pre-LT-173 behavior (no allowances, empty impurity scope).
+ *
  * All-or-nothing: one `host` read that isn't a member of `foldable` (a
  * signal-shaped prop the root doesn't render, a computed member, `host`
  * itself escaping as a bare value), or one free name that is neither
- * foldable nor a foldable ref, disqualifies the WHOLE expression —
- * substituting only some of several reads would fold a
+ * foldable, nor a foldable ref, nor in `allow`, disqualifies the WHOLE
+ * expression — substituting only some of several reads would fold a
  * plausible-looking but wrong initial value, worse than omitting the
  * attribute entirely and letting the client's first pass render it.
  */
@@ -376,8 +393,9 @@ export const hostDerivedFold = (
 	node: TsrxNode,
 	foldable: ReadonlySet<string>,
 	foldableRefs: ReadonlyMap<string, string> = new Map(),
+	allow?: ReadonlySet<string>,
 ): readonly HostPropRead[] | null => {
-	if (containsImpureAmbient(node)) return null
+	if (containsImpureAmbient(node, allow ?? new Set())) return null
 	const reads: HostPropRead[] = []
 	let escaped = false
 	const visit = (current: unknown, bound: ReadonlySet<string>): void => {
@@ -474,8 +492,95 @@ export const hostDerivedFold = (
 	const others = dependenciesOf(node)
 	others.delete('host')
 	for (const ref of foldableRefs.keys()) others.delete(ref)
+	if (allow) for (const name of allow) others.delete(name)
 	if (others.size > 0) return null
 	return reads
+}
+
+/**
+ * The names a host-derived fold may leave IN the spliced thunk for the
+ * render function's scope to resolve (LT-173 step 6): the component's
+ * `serverKnown`, with every setup const replaced by the subset that is
+ * TRANSITIVELY PURE — its initializer contains no impure ambient (checked
+ * against `serverKnown` widened by the initializer's own bound parameters,
+ * so an `Intl` constructor whose locale is a helper parameter counts as
+ * resolvable — the value arrives from the spliced call sites) and every
+ * setup const it references is admitted too, to a fixpoint. A rejected
+ * const stays rejected, and so does every thunk that calls it: an impure
+ * body would only run AT fold time (the declaration doesn't execute it),
+ * which is exactly what the fold must not do.
+ *
+ * Signals keep their `serverKnown` membership: under the value harness a
+ * signal IS its initial value (`.get()` reads once, `.set()` is a no-op),
+ * so a `.get()` inside a spliced thunk renders the declared initial — the
+ * same exposure the plain `isServerEvaluable` path already has.
+ *
+ * Consumers: `hostDerivedFold`'s `allow` in `analysis/effects.ts` (the
+ * TSRX034 routing check — it must agree with what the emitter folds) and
+ * `emit-server.ts` (the fold itself). One implementation for both, or the
+ * two drift.
+ */
+export const foldableRenderScope = (
+	component: ComponentIR,
+): ReadonlySet<string> => {
+	/** Plain setup consts, by declared name (signals excluded). */
+	const constInits = new Map<string, TsrxNode>()
+	for (const stmt of component.setup) {
+		if (stmt.name === null) continue
+		if (component.signals.some(signal => signal.name === stmt.name)) continue
+		constInits.set(stmt.name, stmt.node)
+	}
+	const scope = new Set<string>(
+		[...component.serverKnown].filter(name => !constInits.has(name)),
+	)
+	/** Names bound by function parameters / catch clauses within `node`. */
+	const boundWithin = (node: unknown, into: Set<string>): void => {
+		if (Array.isArray(node)) {
+			for (const child of node) boundWithin(child, into)
+			return
+		}
+		if (!isNode(node)) return
+		if (
+			node.type === 'ArrowFunctionExpression' ||
+			node.type === 'FunctionExpression' ||
+			node.type === 'FunctionDeclaration'
+		) {
+			for (const param of Array.isArray(node.params) ? node.params : [])
+				collectBoundNames(param, into)
+		}
+		if (node.type === 'CatchClause' && isNode(node.param))
+			collectBoundNames(node.param, into)
+		for (const [key, value] of Object.entries(node)) {
+			if (
+				key === 'loc' ||
+				key === 'range' ||
+				key === 'parent' ||
+				key === 'type' ||
+				key === 'start' ||
+				key === 'end'
+			)
+				continue
+			if (value && typeof value === 'object') boundWithin(value, into)
+		}
+	}
+	let changed = true
+	while (changed) {
+		changed = false
+		for (const [name, init] of constInits) {
+			if (scope.has(name)) continue
+			const params = new Set<string>()
+			boundWithin(init, params)
+			const checkScope = new Set([...component.serverKnown, ...params])
+			if (impureAmbientCauses(init, checkScope).length > 0) continue
+			let callsRejected = false
+			for (const free of dependenciesOf(init))
+				if (constInits.has(free) && !scope.has(free)) callsRejected = true
+			if (callsRejected) continue
+			scope.add(name)
+			changed = true
+		}
+	}
+	return scope
 }
 
 /**

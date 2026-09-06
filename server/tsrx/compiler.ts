@@ -48,6 +48,12 @@ import {
 	shareExclusiveIf,
 } from './first-refs'
 import {
+	declaresI18nOf,
+	langArgDefaultOf,
+	langBindingOf,
+	readI18nDecl,
+} from './i18n'
+import {
 	type LeTrucImport,
 	parseComposeImports,
 	parseLeTrucImports,
@@ -1481,10 +1487,18 @@ export const compileSource = (
 	let globalDecl: string | null = null
 	let propsTypeName: string | null = null
 	let config: ConfigIR | null = null
+	// `export const i18n` (ADR 0030 sub-design 4, LT-173): the component's
+	// message keys with their source-locale strings inline.
+	let i18nMessages: Record<string, string> | null = null
 	for (const stmt of asArray(ast.body)) {
 		const declaredConfig = readConfig(ctx, stmt)
 		if (declaredConfig) {
 			config = declaredConfig
+			continue
+		}
+		const declaredI18n = readI18nDecl(ctx, stmt)
+		if (declaredI18n) {
+			i18nMessages = declaredI18n
 			continue
 		}
 		if (
@@ -1524,6 +1538,21 @@ export const compileSource = (
 				: 'checked'
 			: null,
 	})
+
+	// TSRX047 (LT-173 step 5, ADR 0030 sub-design 4): literal prose inside a
+	// component that declared `export const i18n`. Author-fixable, so a
+	// genuine compile warning that converges to zero — unlike a missing
+	// translation, which is the translator's work and rides the build
+	// report's translation census instead. Two or more adjacent letters is
+	// the prose test: a single-letter fragment (basic-pluralize's `s`
+	// suffix spans) is per-instance page data, not catalog material.
+	if (i18nMessages)
+		walkTemplate(root, node => {
+			if (node.kind !== 'text' || !/[A-Za-z]{2}/.test(node.value)) return
+			ctx.diagnostics.push(
+				diagnostic.untranslatedLiteral(source, node.node?.start, node.value),
+			)
+		})
 
 	// observedAttributes only fires for Parser-backed initializers — a name
 	// that is not Parser-exposed would make the extension silently inert.
@@ -1627,6 +1656,10 @@ export const compileSource = (
 					tag: root.tag,
 					paramsText: paramsNode ? text(ctx.source, paramsNode) : '',
 					paramNames: [...paramNames],
+					i18nMessages,
+					declaresI18n: declaresI18nOf(paramsNode),
+					langBinding: langBindingOf(paramsNode),
+					langArgDefault: langArgDefaultOf(paramsNode),
 					setup,
 					clientSetup,
 					plainSetup,

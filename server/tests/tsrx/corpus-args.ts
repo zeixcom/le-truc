@@ -19,6 +19,21 @@ export const renderName = (tag: string): string =>
 		.join('')}`
 
 /**
+ * An inline reserved-`i18n` record for the fixture args (ADR 0030, LT-173).
+ * The compiler supplies the real record at every render boundary; a fixture
+ * builds its own so the args tables stay dependency-free (they are shared
+ * by tests that compile into per-run temp directories). Values mirror what
+ * `i18nRecord('basic-pluralize', 'en')` resolves at the current corpus.
+ */
+export const PLURALIZE_I18N = {
+	lang: 'en',
+	t: { done: 'Well done, all done!', task: 'task', remaining: 'remaining' },
+	timeZone: 'UTC',
+	currency: 'USD',
+	dir: 'ltr',
+} as const
+
+/**
  * Same posture as `server-render-smoke.test.ts`: components whose args are
  * genuinely required get a value, everything else renders from `{}`.
  * Diverges from the smoke test's copy in three entries (LT-167): the smoke
@@ -66,4 +81,5 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	'card-callout': { children: 'Heads up' },
 	'card-collapsible': { title: 'Details' },
 	'basic-button': { label: 'Add' },
+	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
 }

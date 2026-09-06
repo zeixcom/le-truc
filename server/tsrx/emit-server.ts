@@ -28,6 +28,7 @@ import { isVoidElement } from './core'
 import {
 	foldableHostProps,
 	foldableRefGuards,
+	foldableRenderScope,
 	hostDerivedFold,
 	isServerEvaluable,
 	spliceHostDerivedFold,
@@ -209,11 +210,13 @@ const hostDerivedExpr = (
 	component: ComponentIR,
 	thunk: TsrxNode,
 	thunkText: string,
+	allow: ReadonlySet<string>,
 ): string | null => {
 	const reads = hostDerivedFold(
 		thunk,
 		foldableHostProps(component),
 		foldableRefGuards(component),
+		allow,
 	)
 	if (reads === null || reads.length === 0) return null
 	const spliced = spliceHostDerivedFold(
@@ -295,6 +298,18 @@ export const emitServerModule = (
 	// Composed elements' children (LT-018) render into their own uniquely
 	// named buffers, for the same reason.
 	let childrenCounter = 0
+	// LT-173 step 6: the render-scope names a host-derived fold may leave in
+	// a spliced thunk — computed once per module, the same set the analyzer's
+	// TSRX034 check passes to `hostDerivedFold` (the two must agree).
+	const foldScope = foldableRenderScope(component)
+	// Set when a compose site supplies a child's reserved `i18n` record
+	// (ADR 0030 sub-design 2): pulls the `i18nRecord` import into the module.
+	let usedI18nRecord = false
+	// The innermost enclosing `truc:case-type` expression (LT-173 step 7) —
+	// declared on a case element itself or any ancestor, evaluated per
+	// render call so a dynamic plural configuration prunes tightly in both
+	// states. Null ⇒ the union fallback inside `pluralCategories`.
+	let pluralTypeExpr: string | null = null
 	const tab = (depth: number) => '\t'.repeat(depth)
 	/**
 	 * Extracted reactive-list templates, one pending queue per open element:
@@ -562,6 +577,31 @@ export const emitServerModule = (
 				buffer = outerBuffer
 				args.push(`children: ${childrenVar}.join('')`)
 			}
+			// The reserved `i18n` record (ADR 0030 sub-design 2, LT-173): the
+			// compiler supplies it at every render call boundary — callers
+			// never author it (a caller-authored `i18n` attribute is rejected
+			// in classify-attributes). The record's locale is the compose
+			// site's own `lang` arg when authored, else the child's authored
+			// `lang` default (ADR 0030 sub-design 3's precedence), else the
+			// build's page locale — `i18nRecord`'s own fallback.
+			if (entry.declaresI18n) {
+				usedI18nRecord = true
+				const langAttr = node.attrs.find(
+					(a): a is Extract<(typeof node.attrs)[number], { kind: 'arg' }> =>
+						a.kind === 'arg' && a.name === 'lang',
+				)
+				const langExpr =
+					langAttr !== undefined
+						? langAttr.exprText
+						: entry.langArgDefault !== null
+							? JSON.stringify(entry.langArgDefault)
+							: null
+				args.push(
+					langExpr !== null
+						? `i18n: i18nRecord(${JSON.stringify(entry.tag)}, ${langExpr})`
+						: `i18n: i18nRecord(${JSON.stringify(entry.tag)})`,
+				)
+			}
 			// LT-090: materialize compose-site class/id on the child root so
 			// the discriminator the client selector relies on (e.g.
 			// `first('form-spinbutton.lightness')`) exists in the served DOM.
@@ -587,30 +627,63 @@ export const emitServerModule = (
 			return
 		}
 		const loop = [...component.fors.values()].find(f => f.output === node)
+		const typeAttr = node.attrs.find(
+			(a): a is Extract<AttributeIR, { kind: 'plural-case-type' }> =>
+				a.kind === 'plural-case-type',
+		)
+		const previousTypeExpr = pluralTypeExpr
+		if (typeAttr) pluralTypeExpr = `(${typeAttr.exprText})`
 		if (loop) {
 			emitFor(loop, scope, depth)
+			pluralTypeExpr = previousTypeExpr
 			return
 		}
-		// Reactive-for templates flush after this element's close tag — the
-		// spec shape (adopted items, </container>, then <template>) keeps the
-		// template out of the reconciled container's children.
-		templateQueue.push([])
-		emitElement(node, scope, depth)
-		// truc:html={dataRef} renders as sanitized raw children before authored
-		// children (dependency-provable, else omitted for the client pass).
-		const htmlAttr = node.attrs.find(a => a.kind === 'html') as
-			| Extract<AttributeIR, { kind: 'html' }>
-			| undefined
-		if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
-			used.add('sanitizeHtml')
-			lines.push(
-				`${tab(depth)}${buffer}.push(sanitizeHtml(String(${htmlAttr.exprText})))`,
-			)
+		const emitPlainElement = (): void => {
+			// Reactive-for templates flush after this element's close tag — the
+			// spec shape (adopted items, </container>, then <template>) keeps the
+			// template out of the reconciled container's children.
+			templateQueue.push([])
+			emitElement(node, scope, depth)
+			// truc:html={dataRef} renders as sanitized raw children before authored
+			// children (dependency-provable, else omitted for the client pass).
+			const htmlAttr = node.attrs.find(a => a.kind === 'html') as
+				| Extract<AttributeIR, { kind: 'html' }>
+				| undefined
+			if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
+				used.add('sanitizeHtml')
+				lines.push(
+					`${tab(depth)}${buffer}.push(sanitizeHtml(String(${htmlAttr.exprText})))`,
+				)
+			}
+			for (const child of node.children) emit(child, scope, depth)
+			if (!isVoidElement(node.tag))
+				lines.push(`${tab(depth)}${buffer}.push('</${node.tag}>')`)
+			lines.push(...(templateQueue.pop() ?? []))
 		}
-		for (const child of node.children) emit(child, scope, depth)
-		if (!isVoidElement(node.tag))
-			lines.push(`${tab(depth)}${buffer}.push('</${node.tag}>')`)
-		lines.push(...(templateQueue.pop() ?? []))
+		// A `truc:case` element (ADR 0030 sub-design 6, LT-173 step 7) is one
+		// plural alternative: pruned to the locale's actual category set, read
+		// from the platform at render time — never a hand-maintained table.
+		// The union of cardinal and ordinal is the sanctioned fallback (the
+		// compiler cannot prove which `type` the component's own plural logic
+		// configures), and a superset prunes only categories NEITHER type
+		// uses. The locale expression is the component's own bound `lang` —
+		// its presence the analyzer enforces when the marker is authored.
+		const caseAttr = node.attrs.find(
+			(a): a is Extract<AttributeIR, { kind: 'plural-case' }> =>
+				a.kind === 'plural-case',
+		)
+		if (caseAttr) {
+			used.add('pluralCategories')
+			lines.push(
+				`${tab(depth)}if (pluralCategories(${component.langBinding}${pluralTypeExpr ? `, ${pluralTypeExpr}` : ''}).has('${caseAttr.category}')) {`,
+			)
+			emitPlainElement()
+			lines.push(`${tab(depth)}}`)
+			pluralTypeExpr = previousTypeExpr
+			return
+		}
+		emitPlainElement()
+		pluralTypeExpr = previousTypeExpr
 	}
 
 	const emitElement = (
@@ -640,7 +713,12 @@ export const emitServerModule = (
 					const mirror = hostPropMirrorExpr(component, attr.thunk)
 					const derived =
 						mirror === null
-							? hostDerivedExpr(component, attr.thunk, attr.thunkText)
+							? hostDerivedExpr(
+									component,
+									attr.thunk,
+									attr.thunkText,
+									foldScope,
+								)
 							: null
 					if (mirror !== null) {
 						used.add('attr')
@@ -847,6 +925,22 @@ export const emitServerModule = (
 			}
 		}
 	}
+	// ADR 0030 sub-design 3 (LT-173 step 2): the EFFECTIVE locale renders
+	// onto the root `lang` attribute. When the component declares the
+	// reserved `i18n` parameter and binds a `lang` it does not render
+	// itself, the compiler renders it here — the root IS the host, so a
+	// value rendered there is the channel, not a duplicate copy (ADR 0024
+	// sub-design 3's root-attribute exclusion; confirmed: no new TSRX039
+	// exemption is needed, because `reportDuplicatedChannels` already skips
+	// the root element outright).
+	if (
+		component.declaresI18n &&
+		component.langBinding !== null &&
+		!component.root.attrs.some(a => 'name' in a && a.name === 'lang')
+	) {
+		used.add('attr')
+		rootParts.push({ expr: `attr('lang', ${component.langBinding})` })
+	}
 	rootParts.push({ static: '>' })
 
 	/**
@@ -1017,6 +1111,12 @@ export const emitServerModule = (
 	}
 	for (const [name, specifier] of [...composeImports].sort())
 		body.push(`import { render${name} } from '${specifier}'`)
+	// ADR 0030 (LT-173): the reserved record's type and constructor live in
+	// the generated `i18n` module the corpus effect writes beside these
+	// artifacts. Type import when this component declares the parameter;
+	// value import when this module composes a child that declares it.
+	if (component.declaresI18n) body.push(`import type { I18n } from './i18n'`)
+	if (usedI18nRecord) body.push(`import { i18nRecord } from './i18n'`)
 	for (const importText of component.imports.server) body.push(importText)
 	body.push('')
 	for (const decl of component.typeDecls) body.push(decl, '')

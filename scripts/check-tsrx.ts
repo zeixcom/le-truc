@@ -30,9 +30,14 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Glob } from 'bun'
+import { collectI18n } from '../server/effects/i18n'
 import { compileTsrxCorpus, GENERATED_DIR } from '../server/effects/tsrx'
 import type { ComponentRegistry } from '../server/tsrx/registry'
-import { formatCensus, tierCensus } from '../server/tsrx/sim/report'
+import {
+	formatCensus,
+	tierCensus,
+	translationCensus,
+} from '../server/tsrx/sim/report'
 import {
 	fileLineColToOffset,
 	fileOffsetToLineCol,
@@ -219,5 +224,14 @@ const registry = JSON.parse(
 	readFileSync(join(GENERATED_DIR, 'registry.json'), 'utf8'),
 ) as ComponentRegistry
 console.log(`\n${formatCensus(tierCensus(Object.values(registry)))}`)
+const i18nGaps = await collectI18n(Object.values(registry))
+
+// The translation census (ADR 0030 sub-design 5, LT-173 step 4): the same
+// channel and the same reasoning as the tier census above — a missing
+// translation is the translator's work, not author-fixable, so it is a
+// census record and never a compile warning. Zero locales ⇒ zero entries.
+console.log(
+	`\n${formatCensus(translationCensus(i18nGaps.gaps, i18nGaps.locales))}`,
+)
 
 process.exit(exitCode)

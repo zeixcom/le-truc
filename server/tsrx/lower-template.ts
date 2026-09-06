@@ -201,7 +201,7 @@ const lowerBodyStatements = (
 		}
 		if (stmt.type === 'JSXText') {
 			const collapsed = collapseJsxText(String(stmt.value ?? ''))
-			if (collapsed) out.push({ kind: 'text', value: collapsed })
+			if (collapsed) out.push({ kind: 'text', value: collapsed, node: stmt })
 			continue
 		}
 		if (stmt.type === 'JSXFragment') {
@@ -649,7 +649,7 @@ export const lowerChildren = (
 				)
 			}
 			const collapsed = collapseJsxText(raw)
-			if (collapsed) out.push({ kind: 'text', value: collapsed })
+			if (collapsed) out.push({ kind: 'text', value: collapsed, node: child })
 			i += 1
 			continue
 		}

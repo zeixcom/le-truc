@@ -228,7 +228,7 @@ export const formatSimReport = (report: SimReport): string => {
  * Which census a record collection is. `'translation'` (LT-173 step 4)
  * rides this same surface — that is the point of the generic shape.
  */
-export type CensusKind = 'tier'
+export type CensusKind = 'tier' | 'translation'
 
 /**
  * One record in a census: what a subject was routed or assigned, and why.
@@ -297,6 +297,64 @@ export const tierCensus = (subjects: readonly TierCensusSubject[]): Census => ({
 					: `${signal.origin}: ${signal.detail} (line ${signal.line})`,
 			),
 		})),
+})
+
+/**
+ * One gap between a component's inline catalog and a locale's override
+ * file (ADR 0030 sub-design 5, LT-173 step 4).
+ */
+export type TranslationGap = {
+	/** The component-namespaced catalog key (`basic-pluralize.remaining`). */
+	key: string
+	/** The locale the key is missing or stale in. */
+	locale: string
+	/**
+	 * `missing` — no entry in the locale's catalog (the source-locale
+	 * string renders); `stale` — an entry exists but the source string
+	 * moved after the translation was recorded, so it may no longer match.
+	 */
+	status: 'missing' | 'stale'
+}
+
+/**
+ * Build the translation census (ADR 0030 sub-design 5, LT-173 step 4) from
+ * the corpus's catalog gaps. Deliberately NOT a compile warning: a missing
+ * translation is the translator's work, not the component author's, so it
+ * rides the census channel rather than re-starting the non-zero warning
+ * baseline ADR 0029 sub-design 6 removed. `locales` is the full domain of
+ * translated locales the catalogs cover, so the summary reports zero-gap
+ * locales too; entries are one per gap, sorted by key then locale so the
+ * output is stable whatever order the corpus compiled in.
+ */
+export const translationCensus = (
+	gaps: readonly TranslationGap[],
+	locales: readonly string[],
+): Census => ({
+	kind: 'translation',
+	name: 'Translation census',
+	values: [...locales].sort((a, b) => (a < b ? -1 : 1)),
+	entries: gaps
+		.map(gap => ({
+			subject: gap.key,
+			value: gap.locale,
+			reasons:
+				gap.status === 'missing'
+					? [
+							'missing — no entry in this locale’s catalog; the source-locale string renders',
+						]
+					: [
+							'stale — the source string moved after this translation was recorded',
+						],
+		}))
+		.sort((a, b) =>
+			a.subject < b.subject
+				? -1
+				: a.subject > b.subject
+					? 1
+					: a.value < b.value
+						? -1
+						: 1,
+		),
 })
 
 /**

@@ -19,9 +19,11 @@ import { componentTsrx, type FileInfo } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
 import { type CompileDiagnostic, compileComponent } from '../tsrx'
 import { type RegistryEntry, registryJson } from '../tsrx/registry'
+import { formatCensus, translationCensus } from '../tsrx/sim/report'
 import type { SourceSpan } from '../tsrx/spans'
 import { contaminateComposeReads } from '../tsrx/tier'
 import { createBuildEffect } from './build-effect'
+import { collectI18n, writeI18nModule, writeI18nReport } from './i18n'
 
 /**
  * One compiled component's generated-module span tables (LT-011, `check:tsrx`;
@@ -215,6 +217,23 @@ export const compileTsrxCorpus = async (
 		getFilePath(outDir, 'registry.json'),
 		registryJson(entries),
 	)
+	// ADR 0030 sub-designs 4+5 (LT-173): the catalog pipeline's corpus half.
+	// The generated i18n module folds every component's inline sources and
+	// the committed per-locale overrides into `i18nRecord(tag, lang?)`; the
+	// report artifact is gitignored; the census count rides the build
+	// summary. The build writes NO tracked file — missing keys land in the
+	// census, and `i18n:sync` is the person-run writer for the catalogs.
+	const i18nCollection = await collectI18n(entries)
+	await writeI18nModule(outDir, i18nCollection)
+	await writeI18nReport(outDir, i18nCollection)
+	const i18nCensus = translationCensus(
+		i18nCollection.gaps,
+		i18nCollection.locales,
+	)
+	console.log(
+		`🌐 Translation census: ${i18nCensus.entries.length} gap(s) across ${i18nCollection.locales.length} locale(s)`,
+	)
+	if (i18nCensus.entries.length > 0) console.log(formatCensus(i18nCensus))
 	console.log(`📝 TSRX compilation completed (${entries.length} component(s))`)
 	if (errorLabels.size > 0) {
 		throw new Error(

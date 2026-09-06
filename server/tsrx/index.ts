@@ -157,6 +157,9 @@ export const compileComponent = (
 				routingSignals,
 				suppressedSites: plan.suppressedSites,
 				composeReadTags,
+				declaresI18n: component.declaresI18n,
+				langArgDefault: component.langArgDefault,
+				i18nMessages: component.i18nMessages,
 				composesTags: composeRegistry
 					? [
 							...new Set(

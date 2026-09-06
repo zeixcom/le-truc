@@ -102,6 +102,28 @@ export type RegistryEntry = {
 	 * compose site or a `truc:pass={{ }}` into it does.
 	 */
 	composeReadTags: string[]
+	/**
+	 * Whether the component declares the reserved `i18n` parameter (ADR
+	 * 0030 sub-design 2, LT-173). A parent's generated server module reads
+	 * this off the child's entry at a compose site to supply the record the
+	 * child never receives from its caller — and to know that a caller
+	 * cannot have authored it either.
+	 */
+	declaresI18n: boolean
+	/**
+	 * The component's authored `lang` default (`lang = 'en'`), or null —
+	 * ADR 0030 sub-design 3's precedence: a compose site builds the child's
+	 * record with the site's `lang` arg when authored, else this default,
+	 * else the build's page locale.
+	 */
+	langArgDefault: string | null
+	/**
+	 * The component's inline message catalog (ADR 0030 sub-design 4): key →
+	 * source-locale string, from `export const i18n`. Null when the
+	 * component declares none. The corpus effect folds every entry's
+	 * catalog into the generated `i18n` module the render boundaries use.
+	 */
+	i18nMessages: Record<string, string> | null
 }
 
 export type ComponentRegistry = Record<string, RegistryEntry>

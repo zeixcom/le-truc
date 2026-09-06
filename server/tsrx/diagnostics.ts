@@ -57,6 +57,7 @@ export type DiagnosticCode =
 	| 'TSRX044' // a signal's initializer conditionally chooses between two constructor calls (ADR 0024 sub-design 12 format rule; split from TSRX013 by LT-165)
 	| 'TSRX045' // a collector-requiring helper deferred into a callback, so it throws NoActiveCollectorError at connect (split from TSRX013 by LT-165)
 	| 'TSRX046' // a setup const the value harness cannot evaluate has its value rendered into the markup — no tier can produce the site (LT-165 step 5)
+	| 'TSRX047' // literal prose in a component that declares `export const i18n` — route it through a message key (LT-173 step 5, ADR 0030 sub-design 4)
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -1096,6 +1097,34 @@ export const diagnostic = {
 		error(
 			'TSRX037',
 			`\`${name}\` is FactoryContext vocabulary — ambient in this host profile, not a '@zeix/le-truc' export. Remove it from the import (drop the whole line if it's the only named import left).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * Literal prose inside a component that declares `export const i18n`
+	 * (LT-173 step 5, ADR 0030 sub-design 4).
+	 *
+	 * A warning, and a genuine one: unlike a missing translation (the
+	 * translator's work, reported in the build's translation census) an
+	 * untranslated literal is author-fixable, so it belongs in the
+	 * compile-warning channel and must converge to zero (ADR 0029
+	 * sub-design 6's baseline). Fires on template text nodes containing two
+	 * or more adjacent letters — a single-letter fragment (pluralize's `s`
+	 * suffix spans) is page data, not prose. Per ADR 0028 this is Tier 1
+	 * (Prevented): the string ships untranslatable unless the author routes
+	 * it through the catalog.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
+	 * draft is the LT-173 handoff.
+	 */
+	untranslatedLiteral: (
+		source: string,
+		offset: number | undefined,
+		sample: string,
+	) =>
+		warning(
+			'TSRX047',
+			`Literal prose \`${sample}\` is not routed through the catalog — this component declares \`export const i18n\`, so a reader-facing string written directly in the template can never be translated. Declare a key with this string as its source-locale value in \`export const i18n\` and render \`{t.<key>}\` here.`,
 			lineOf(source, offset),
 		),
 }
