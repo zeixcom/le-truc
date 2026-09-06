@@ -18,7 +18,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-183.**
+**Next free task ID: LT-188.**
 
 ---
 
@@ -45,202 +45,100 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P1 — Tiered server evaluation (critical path)
 
-- [x] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — done ✓ (all eight steps landed and reviewed 2026-09-04 → 2026-09-06; step 8 landed with the ADR 0029 s7 amendment — see the step-8 review). Unblocks LT-169 and LT-173.
+**LT-165 closed 2026-09-06** — all eight ADR 0029 steps landed and reviewed. Corpus split
+**19 Folded / 3 Simulated / 0 Static**, compile-warning baseline **0**, tier census reported
+separately, equivalence audit green under ADR 0029 s7's amended recorded-diff rule. Read ADR 0029
+and `LE_TRUC_COMPILER.md` § 5.4 for the rationale; `git log -p -- TODO.md` for the step record.
+Its wave-4 obligations were carried forward to the P5 preamble, its driver caveat into LT-169.
+It unblocked LT-169 below and **LT-173 in P2** — P2 no longer waits on anything in P1.
+
+**Order within the band, and why.** LT-185 is closed (reviewed 2026-09-06) — it was the audit's
+one dangerous finding, and it resolved as a migration regression rather than a reconcile
+semantics change, so nothing downstream shifted. Its two spin-offs are deliberately NOT in this
+band: **LT-186** (the TSRX rule) sits in P3 because it is parallelizable and only has to beat
+P5's `module-calctable`/`module-todo` migrations, and **LT-187** (a message-copy fix) sits in P6
+with the other diagnostic-copy work. Remaining order here: **LT-184** first — small,
+self-contained, and it returns the severe-error gate to its position *before* tier computation,
+so LT-180 and LT-169 do not inherit that ordering dependency. **LT-180** second and **LT-169**
+last, per LT-180's own "land with or before" constraint.
+
+- [x] LT-185: Investigate form-tokenbox's text input being removed at hydration. — reviewed ✓
   **Skill:** le-truc-dev
-  **Context:** ADR 0029 is accepted; this is its implementation. Read the ADR, not this
-  summary, for the rationale. Steps 1–3 landed in `a2e789e4` and were reviewed and approved
-  (2026-09-04): `TSRX013` is now three codes (`TSRX044` conditional signal constructor,
-  `TSRX045` deferred collector call, `TSRX013` scoped to its two server-evaluation factories);
-  `server/tsrx/tier.ts` carries `classifyTier`/`resolutionOf`/`stubbedApiRead`/
-  `contaminateComposeReads`; `sim/patch-table.ts` gained `CAPABILITY_PATCHES`;
-  `evaluability.ts` gained `impureAmbientCauses`; routing signals, `tier`, `routingSignals`
-  and `composeReadTags` are threaded through the analysis contexts and onto `RegistryEntry`,
-  with the compose fixpoint applied corpus-wide in `server/effects/tsrx.ts`. The measured
-  corpus split is **19 Folded / 3 Simulated / 0 Static**, ruled correct at review: the tier
-  routes which mechanism produces the *served HTML*, so a `first()` read confined to
-  `watch()`/`on()` positions is a client concern and does not route. Static being empty is a
-  correct classification, not a wiring gap — the tier is rare by construction and stays empty
-  until wave 4.
-
-  Remaining scope, ordered:
-  4. **`emit-server.ts` takes a tier flag.** — done ✓ (landed `ce3ebd10`, with LT-182)
-     One emit path; every component still gets a render module, because the realm parses it as
-     input. A Simulated-tier or Static-tier module drops the parts of the `@{ }` setup its own
-     markup does not need, under one criterion: **retain a setup statement when the emitted
-     markup depends on its declared name, transitively; drop the rest.** Plain consts, folded
-     signals and `expose()` all fall out of it rather than being special-cased. The Folded
-     path is unchanged (the option defaults to `'folded'`), and the server goldens did not
-     move. Landed with LT-182, which corrected the rule; ADR 0029 s4 and
-     `LE_TRUC_COMPILER.md` § 5.4 carry the rationale in main text, and `ce3ebd10` carries the
-     implementation record.
-     **A coverage gap to close in wave 4, not before:** `check:tsrx` type-checks each module
-     at its OWN classified tier, and the Static census is empty, so the build type-checks the
-     Static emit path nowhere. `emit-tier.test.ts`'s "dropped ⇒ name absent" assertion stands
-     in for it and covers all 22 × 3 combinations, which `tsc` does not. Wave 4's first real
-     Static component closes it for free.
-  5. **Diagnostic reclassification per ADR 0029 s5's table.** — reviewed ✓ (2026-09-06)
-     `TSRX004`, `TSRX034` (non-severe), `TSRX043`, `TSRX013`'s two server-evaluation
-     factories and the reactive `TSRX033` warning left the diagnostic channel; the
-     compile-warning baseline is **0** (was 7 standing warnings: 6 on basic-pluralize,
-     1 on form-listbox). The retired codes stay in the union as census provenance — the
-     `RoutingSignal` origins in `tier.ts` cite them. The severe `TSRX034` error survives,
-     scoped to the Static tier via a post-`classifyTier` filter in `index.ts` (the error gate
-     moved after tier computation). Impure-ambient reactive reads are now silent —
-     unresolvability (s1 limb b), not a warning; the static-child/attribute `TSRX033` errors
-     remain. The synthetic Static fixture is re-pinned through the HARVEST path (an unrendered
-     signal with an impure initializer — the shape step 4's note said could not compile), the
-     impure-`hidden` route kept as a second pin, both controls updated. LT-142's `Intl` rule
-     was already split three ways in steps 1–3; basic-pluralize stays Simulated, its six
-     standing `TSRX034` warnings gone with the channel (LT-173 will flip the tier pin to
-     Folded). `Date` analysed and decided per ADR 0030 s2: `new Date(y, m, d)` stays impure
-     (the build-machine TIMEZONE is limb-b ambient state), `Date.UTC(y, m - 1, d)` admitted as
-     pure — LT-095's prescribed blogmeta shape is foldable when that migration lands. Four
-     decisions the table left open — including the new **`TSRX046`** (rendered client-only
-     const: the one residue that stays an error, now precisely scoped to rendered sites) —
-     are recorded in `NOTES.md` (2026-09-06); Tech Writer reviewed the retired copy with the
-     errors.md/docs sweep. Two enabling fixes keep the retired shapes sound instead of
-     silently broken: `emit-client.ts` declares unharvested signals verbatim (the realm
-     replays that module), and the suppression pool in `emit-server.ts` excludes statements
-     the harness cannot evaluate (the retention text-match would otherwise retain them via
-     word collisions).
-     **A fact steps 6–8 still carry forward:** emit receives the **PRE-contamination** tier
-     (`index.ts` classifies; the corpus compose fixpoint runs afterwards in
-     `server/effects/tsrx.ts`). So `form-combobox` — Simulated purely by `compose-read` — is
-     emitted on the Folded path, and the census must decide WHICH tier it records; ruled
-     acceptable for emit, but "a Simulated module drops setup" is true of the classifier, not
-     of every module the corpus finally labels Simulated.
-     **Review (2026-09-06):** Approved. Gates re-run independently: `bun test server`
-     1418 pass / 0 fail, `check:tsrx` green with the compile-warning baseline read as **0**
-     from its counted summary line. Of the four NOTES decisions: the `TSRX046`
-     rendered/not-rendered split and the `Date.UTC` admission are accepted as landed
-     (both match ADR 0029 s5 / ADR 0030 s2's rationale); the suppression-pool exclusion is
-     accepted with one correction — the pool excludes client-only primitives and ref names
-     only, NOT `host`/`internals` as NOTES claimed; those stay in the pool and are
-     neutralized instead by the `refStub` any-stubs (harmless dead code) plus `TSRX046`
-     when rendered, so do not "fix" the code to match the deleted NOTES wording. The
-     severe-`TSRX034` component-tier edge is ruled a real gap against the ADR's own
-     rationale — follow-up **LT-184**.
-  6. **The tier census** rides `sim/report.ts` (LT-163's channel), recording per component its
-     tier and the reason. — reviewed ✓ (2026-09-06)
-     **Changed:** `server/tsrx/sim/report.ts` (generic `Census`/`CensusEntry`/`CensusKind`
-     records + `tierCensus`/`formatCensus`), `server/tsrx/sim/index.ts` (re-exports),
-     `scripts/check-tsrx.ts` (prints the census as its own section after the compile-warning
-     baseline, read from the registry.json the compile just wrote), `server/effects/tsrx.ts`
-     (exports `GENERATED_DIR`), new `server/tests/tsrx/census.test.ts` (record shape, tag
-     sorting, format stability, "0 static" visibility, never a ⚠️ line),
-     `tier-corpus.test.ts` (+census-over-corpus: every component exactly once, reasons
-     discipline, form-combobox recorded Simulated via compose-read — the post-contamination
-     ruling), `sim-driver.test.ts` (+channel isolation: no census reason matches the LT-163
-     classification table; the zero-unclassified gate is unchanged),
-     `LE_TRUC_COMPILER.md` + `server/TESTS.md` (factual doc mentions). It is NOT a warning
-     — the compile-warning baseline's target stays zero (ADR 0029 s6), and `check:tsrx`'s
-     counted summary line reports the two separately. LT-173 step 4's translation census
-     adopts this surface; the generic named-census shape (`kind`/`name`/`values`/`entries`)
-     is defined so a second census can ride it without a parallel channel.
-     **Gates:** `bun test server` 1431 pass / 0 fail; `check:tsrx` exit 0 with the baseline
-     line still 0 and `Tier census — 22 entries: 19 folded, 3 simulated, 0 static`.
-     **Wave-4 note (from review):** census reasons carry `origin: detail (line N)` but not
-     the signal's `resolution` (`realm` vs `none`) — self-evident for today's Simulated
-     reasons, but when the first Static-tier component lands the reason should also say WHY
-     nothing answers it; add the resolution to the reason text then (the format is pinned,
-     its tests update with it).
-  7. **Realm-side suppression for unresolvable expressions.** — reviewed ✓ (2026-09-06)
-     **Changed:** `server/tsrx/tier.ts` (`SuppressedSite` union — `{kind:'attr', selector,
-     attr, prop?}` / `{kind:'text', selector}` — and the `SUPPRESSED_HOST_SELECTOR` root
-     sentinel), `server/tsrx/analysis/effects.ts` (`suppresses()` = `resolutionOf` says
-     `none`/`not-a-server-fact`; records pushed at the reactive-attribute, nested-lazy-child
-     and root-lazy-child sites; `prop` rides only on LT-116 property dispatch),
-     `server/tsrx/analysis/plan.ts` + `registry.ts` + `index.ts` (`suppressedSites` threaded
-     onto `RegistryEntry`, rides `registry.json`), `server/tsrx/sim/realm.ts` (constructor
-     `suppressedSites(tag)` option; snapshot from an INERT `createHTMLDocument` parse of the
-     markup, restore strictly AFTER `drainToQuiescence` stabilizes, final serialization read
-     AFTER the restore; memoized bytes are post-suppression), new
-     `server/tests/tsrx/suppression.test.ts` (11 tests incl. the standing unwired-realm
-     negative), driver-consuming test realms updated, `LE_TRUC_COMPILER.md` § 5.4 +
-     `server/TESTS.md` mentions. The generated client still binds every recorded site — the
-     realm reverts the writes, so the skeleton form ships in every tier.
-     **Review rulings (2026-09-06):** the inert-parse snapshot DEVIATION from the
-     snapshot-before-upgrade guidance is accepted as strictly more correct — an
-     already-defined tag upgrades DURING the `innerHTML` assignment, so a live-DOM snapshot
-     would capture the pollution it is meant to prevent; `createHTMLDocument` upgrades
-     nothing in jsdom, so the skeleton state is provable regardless of upgrade timing.
-     Limb-(b)-only scoping is accepted: limb (a) (stubbed-API) sites keep ADR 0027 s6's
-     unamended posture — the stub answer is deterministic inside the realm (no fixed-point
-     hazard), degrades to the skeleton when the stub throws, and ADR 0026's direction is to
-     make those sites realm-answerable via capability shims, not to suppress them.
-     **Known coverage gaps, no corpus instance today (record for future migrations):**
-     reactive `truc:html`, `class:`/`style:` maps (a shared-surface attribute — per-site
-     revert would undo other bindings' legitimate work), and `truc:pass`-into-child sites
-     are not recorded; a parent's render does not consult a composed child's records. A
-     future Simulated-tier component with an impure read behind one of those shapes must
-     extend the record set first.
-     `module-ticker` remains the corpus case to pin at its migration — the suppression
-     wiring now works end to end via registry-driven realms. Ordering is load-bearing and
-     pinned: mutation-disabling the revert fails 4 tests, including the fixed-point gate —
-     the exact "spurious fixed-point failure" ADR 0029 s1 predicted.
-     **Gates:** `bun test server` 1442 pass / 0 fail; `check:tsrx` exit 0, baseline line 0,
-     census "22 entries: 19 folded, 3 simulated, 0 static" — all unchanged.
-  8. **The CI equivalence audit** (ADR 0029 s7) — render every Folded-tier component through
-     the realm as well, require byte-identical output, fail against the component on
-     divergence. This is what makes two coexisting mechanisms defensible; it is not optional
-     and not a follow-up. Audit scope is the 19 Folded components; its CI cost is bounded by
-     corpus size (~4 s), not by the tier split. The known `Date.now()` disagreement between
-     `IMPURE_AMBIENT_ROOTS` and ADR 0027 s6 is DISSOLVED by steps 5+7, not resolved by
-     electing a winner: neither mechanism can answer it, so it renders in neither.
-     — reviewed ✓ (2026-09-06, with an ADR amendment)
-     **Changed:** new `server/tests/tsrx/equivalence-audit.test.ts` (coverage guard + one
-     pinned connect-diff snapshot per Folded-tier component), `corpus-args.ts` extracted
-     from `sim-driver.test.ts` so both mechanisms run on identical fixture inputs (data
-     unchanged, sim-driver snapshots unaffected), `TESTS.md` baselines mention.
-     **Finding and ruling (the audit's first run went red, 12 of 19):** the byte-identity
-     rule is STRUCTURALLY VOID — in a Folded-tier component every signal seeds from a DOM
-     harvest (a signal without one is a TSRX004 routing signal → Simulated), so the realm's
-     entire state derives from the phase-1 bytes and the mechanisms cannot independently
-     disagree on a server value. Byte comparison measures only the hydration boundary, and
-     every divergence fell in three designed classes: serializer normalization (bare
-     boolean attrs → `attr=""`, `bigStep` → `bigstep`), the client's connect-time writes
-     (fills of empty sites, roving tabindex, selection state, styles), and — the dangerous
-     class — overwrites/removals of server-rendered state, of which the census caught ONE:
-     form-tokenbox's text input is removed from `data-container` at hydration (**LT-185**).
-     ADR 0029 s7 amended accordingly: the audit pins each Folded-tier component's connect
-     diff as a snapshot — a changed diff is a review trigger naming the component, not an
-     automatic mechanism failure; s4's served-bytes invariant is unaffected.
-     Mutation-verified: corrupting one component's phase-1 markup fails exactly that
-     component's snapshot.
-     **Gates:** `bun test server` 1462 pass / 0 fail (+20); `check:tsrx` exit 0, baseline 0,
-     census unchanged.
-
-  Step 5's retirement copy was reviewed by Tech Writer at landing (ADR 0028 lifecycle);
-  TSRX044/TSRX045's own propagation is done (LT-181).
-  Acceptance: the classifier assigns a tier to every corpus component with a recorded reason
-  and golden coverage; the synthetic Static fixture pins the skeleton emit path;
-  `basic-counter`/`module-tabgroup`/`card-blogpost`/`card-callout` classify Folded; no
-  `Date`/`Math.random()` reading expression renders a value in ANY tier; the equivalence audit
-  runs green in CI; the compile-warning count is zero and the tier census is reported
-  separately; `bun test server` green.
-  **Closed 2026-09-06:** all eight steps landed and reviewed (`a2e789e4` 1–3, `ce3ebd10` 4,
-  `4e75a48b` 5, `b3b97b7c` 6, `f83e3b98` 7, step 8 this commit). The audit criterion is
-  satisfied under ADR 0029 s7's amended recorded-diff rule (see step 8's review). Final
-  gates: `bun test server` 1462 pass / 0 fail; compile-warning baseline 0; census reported
-  separately. Unblocks LT-169 and LT-173.
-
-- [ ] LT-185: Investigate form-tokenbox's text input being removed at hydration.
-  **Skill:** le-truc-dev
-  **Context:** Found by the LT-165 step-8 audit (2026-09-06): the realm fed
-  form-tokenbox's server render serializes `<div data-container class="input"></div>` —
-  the authored `<input type="text" id="tags-input">` is GONE after connect. The token
-  reconcile (ADR 0017) manages `data-container`'s children and removes unkeyed children
-  when the token list is empty, and the authored input sits inside the reconcile container —
-  so the same removal should happen in the real browser at upgrade, leaving nowhere to
-  type. Either the component's markup is mis-scoped (the input belongs outside the
-  reconcile container) or reconcile's removal semantics need scoping to adopted items —
-  decide which, failing-test-first. The audit's pinned diff for form-tokenbox records the
-  removal; its snapshot re-pins with the fix.
-  **Channel:** none — component/correctness fix, no diagnostic. If it turns into a
-  reconcile-lowering semantics change, that is an ADR 0017 architect question first.
-  Acceptance: the hydrated realm output retains the input; a regression test fails before
-  the fix and passes after; the audit's form-tokenbox diff snapshot re-pinned; `bun test
-  server` green.
+  **Root cause:** a `.tsrx` migration regression, not a reconcile bug and not mis-scoped
+  markup. The hand-written v2.6 twin carries `data-unreconciled` on its input
+  (`examples/form/tokenbox/form-tokenbox.html:7` and `:29`, both demo instances); the port to
+  `form-tokenbox.tsrx` dropped the attribute. `reconcile()` then removed the input as an
+  unkeyed child of `data-container` on its first pass — ADR 0017's documented self-cleaning
+  container behaviour, working as specified. Confirmed against v2.6 by the user.
+  **Changed:** `examples/form/tokenbox/form-tokenbox.tsrx` (one attribute, `data-unreconciled`
+  on the `<input>`); `server/tests/tsrx/equivalence-audit.test.ts` (LT-185 regression test);
+  both form-tokenbox snapshots re-pinned (`equivalence-audit`, `sim-driver`).
+  **Neither library option in the task was taken.** Reconcile's removal semantics are correct
+  as written (ADR 0017 s "One-way sync": "all other unkeyed children are removed
+  (self-cleaning container)"), and `data-unreconciled` is the permanent public opt-out that
+  exists for exactly this. Moving the input outside the container was also wrong — the `.input`
+  flex-wrap box is the visual design, pills and caret on one line. So no ADR 0017 question.
+  **Verification:** the regression test failed before the fix (input absent from phase 2) and
+  passes after. form-tokenbox's pinned connect diff now contains only the benign
+  serializer-normalization class (`data-unreconciled` → `data-unreconciled=""`,
+  `data-key` → `data-key=""`); the removal class is gone, so the audit's one dangerous finding
+  is cleared. `bun run test:src` 483 pass, `bun test server` 1463 pass / 0 fail, `check:tsrx`
+  exit 0 with baseline 0 and the census unchanged (19 folded / 3 simulated / 0 static,
+  form-tokenbox still Folded), `lint:examples` clean.
+  **Swept the rest of the corpus:** `module-list.tsrx` is the only other migrated component
+  with a `data-container`, and its container holds nothing but the `@for` — no hazard. But
+  **`module-calctable` and `module-todo` both use `data-unreconciled` today and are NOT yet
+  migrated** (LT-109, LT-111) — see the P5 note added for them.
+  **Library refinement, on the user's direction (2026-09-06) — this is what needs review.**
+  Silent unkeyed removal is why this survived the whole migration, so `reconcile()` now warns in
+  DEV_MODE on **every** removal in the adoption pass, keyed or not. Scoped to the first run
+  deliberately: after that the container is reconcile-owned and self-cleaning is the designed
+  behaviour, so warning there would be noise on every structural update.
+  **Changed:** `src/helpers/reactive.ts` (`firstRun` flag in the reconcile descriptor scope; the
+  removal branch in `classify()` now picks between the existing keyed message and a new unkeyed
+  one; JSDoc updated), `src/tests/reconcile.test.ts` (+3 tests and DEV_MODE/console-capture
+  helpers).
+  **Draft copy — Tech Writer owns the final wording** (ADR 0028 lifecycle, not yet handed over):
+  "reconcile() removed unkeyed <input> from <form-tokenbox> during initial reconciliation — the
+  source owns this container's children. Add data-unreconciled to exempt it."
+  **Channel:** runtime, DEV_MODE console warning. **Tier:** 2 (Contained) — the removal still
+  happens, the component keeps working, the author is told. Per ADR 0028 sub-design 1 the
+  statically-decidable half of this check also owes a compiler rule — filed as **LT-186**, which
+  the user has already directed toward the TSRX channel.
+  **Mutation-verified both directions:** dropping the `firstRun` clause fails the adoption-pass
+  test; warning unconditionally fails the after-first-run silence test. Neither assertion is
+  vacuous. Gates re-run after the library change: `test:src` 486 pass / 0 fail, `bun test server`
+  1463 pass / 0 fail, `check:size` 5 pass (`coreFormGzipped` 9700 B, unchanged — the message is
+  DEV_MODE-gated and strips from production builds), `lint` clean.
+  **Review (2026-09-06): Approved, with one classification corrected.**
+  The component fix is right and needed no ADR question: ADR 0017 s"One-way sync" specifies the
+  self-cleaning container, `data-unreconciled` is the permanent public opt-out, and the v2.6
+  twin carries it on both demo instances — the port dropped it. Verified the audit's dangerous
+  class is cleared: form-tokenbox's pinned diff now holds only serializer normalization.
+  1. **First-run-only scope: confirmed.** It matches the user's direction and the hazard's
+     shape. Checked the claim "every adoption-pass removal goes through this one site" and it
+     holds structurally, not just empirically: `keyOf` is created per descriptor invocation, so
+     on the first `classify()` no child has a runtime key, `leavers` is necessarily empty, and
+     `leave()` cannot remove anything. The warning therefore cannot miss a first-run removal.
+     **Recorded residual, deliberately not a follow-up:** an unkeyed element inserted into the
+     container AFTER adoption is still eaten silently. That case has a debuggable author — some
+     code performed the insertion — whereas the adoption case blames markup nobody is watching.
+     Asymmetric hazard, asymmetric treatment.
+  2. **"Tier 2 (Contained)" is wrong — corrected to: no ADR 0028 tier.** ADR 0028's tiers
+     classify *failures*: Contained means an error class fires, the component degrades, and one
+     attributed `console.error` reports it. Nothing here fails — `reconcile()` is doing exactly
+     what it is specified to do, there is no error class, and it is a `console.warn`. This is a
+     **DEV_MODE advisory** under REQUIREMENTS [S3](REQUIREMENTS.md#s3-development-mode-with-enhanced-diagnostics)
+     ("surfaces problems that are otherwise silent in production" — the literal case) and
+     ADR 0022, the same category as the `pass()` writable-signal warning at
+     `src/helpers/reactive.ts:539`. The ADR 0028 obligation is real but attaches to the
+     compiler half (LT-186), not to the warn. No code change — the classification in this entry
+     was the only thing wrong.
+  3. **Tech Writer handoff is still owed** for the new runtime message (ADR 0028 lifecycle).
+     It is not blocking this approval — no error class or `TSRX` code moved — but the draft
+     copy above ships as-is until reviewed. Fold it into LT-186's copy review so the runtime
+     and compiler messages are worded against each other rather than separately.
+  4. One pre-existing copy bug surfaced while reading the branch — follow-up **LT-187**.
 
 - [ ] LT-184: Scope the severe TSRX034 error per-expression instead of per-component (ADR 0029 s5 edge from the step-5 review).
   **Skill:** le-truc-dev
@@ -299,7 +197,7 @@ on zero warnings *plus* its recorded tier and reason.
   to avoid); the LT-177 realm tests' marker-attribute assertions stay green; `bun test server`
   green.
 
-- [ ] LT-169: Wire the simulation driver into the docs build for Simulated-tier components (ADR 0027 stage 2). **Depends on LT-165.**
+- [ ] LT-169: Wire the simulation driver into the docs build for Simulated-tier components (ADR 0027 stage 2). **LT-165 dependency satisfied.**
   **Skill:** docs-server-dev
   **Context:** Only **Simulated**-tier components go through the driver. Folded renders through
   `emit-server.ts` + the `runtime.ts` value harness with no jsdom involvement, and Static
@@ -324,6 +222,12 @@ on zero warnings *plus* its recorded tier and reason.
      occurrences only.
   5. **Per-substrate goldens posture holds** — the build serializes with jsdom; a substrate
      swap means an expected snapshot re-baseline, not a behavior change.
+  6. **Gate on the FINAL corpus tier, not the classifier's verdict** (carried forward from
+     LT-165 step 5). `index.ts` classifies before the corpus compose fixpoint runs in
+     `server/effects/tsrx.ts`, so a component Simulated purely by `compose-read`
+     (`form-combobox` today) carries a Folded classifier verdict and a Simulated census entry.
+     Read the post-contamination tier the registry records — gating on the pre-contamination one
+     silently skips a component that needs the realm, and no correctness test would catch it.
   There is NO per-request SSR story to honor (ADR 0029 s8): the driver stays build-time tooling
   (ADR 0024 s7) and LT-166's memoization needs no server-scoped analogue. Do not merge this
   pass with LT-165 step 8's CI equivalence audit — that audit's unconditional Folded-tier
@@ -338,7 +242,7 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P2 — Internationalization (ADR 0030)
 
-- [ ] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline. **Depends on LT-165.**
+- [ ] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline. **LT-165 dependency satisfied — unblocked.**
   **Skill:** le-truc-dev
   **Context:** ADR 0030 is accepted; read it rather than this summary. The LT-165 dependency is
   wider than step 6: step 4's translation census has no channel to ride until LT-165 step 6
@@ -429,6 +333,38 @@ on zero warnings *plus* its recorded tier and reason.
 ---
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
+
+- [ ] LT-186: A TSRX rule for an unkeyed element sibling of a `@for` in a reconcile container (LT-185's compiler half).
+  **Skill:** le-truc-dev
+  **Context:** LT-185 cost form-tokenbox its only text input: the `.tsrx` port dropped the
+  `data-unreconciled` attribute, `reconcile()` removed the input as an unkeyed child of
+  `data-container`, and nothing said so. LT-185 added the DEV_MODE warning for the runtime half.
+  This is the compiler half, and the **user's direction (2026-09-06) is that TSRX is the better
+  channel precisely because it is earlier** — the author learns at compile time instead of by
+  opening a browser in dev mode. The shape is statically decidable for the `.tsrx` corpus: an
+  element sibling of a `@for` inside the same `[data-container]`, carrying neither `data-key`
+  nor `data-unreconciled`, will be removed at the first reconcile. Note the two channels are
+  **complementary, not alternatives** — the compiler cannot see hand-authored HTML written by a
+  library consumer, which is the case the runtime warning keeps covering. Do not retire the
+  LT-185 warning when this lands.
+  **Channel:** compiler (a new `TSRX0NN`), per ADR 0028 sub-design 1 — **confirmed at the
+  LT-185 review**, and it is the user's direction: the compiler is earlier than a browser
+  dev-mode warning. **Tier:** 1 (Prevented). **Error, not warning** — decided here so it is not
+  re-litigated at implementation: the compile-warning baseline's target is zero (ADR 0029 s6,
+  REQUIREMENTS M23), so a warning would either be fixed immediately or break the baseline, and
+  the fix-it is one attribute. Check the false-positive shape FIRST — a container that
+  legitimately self-cleans a dirty server render: if a corpus component needs that, come back
+  before writing the rule rather than weakening it.
+  **A deviation from ADR 0028's usual pairing, stated so it is not "fixed":** the ADR's Prevented
+  tier says the runtime check "remains, behaving as Contained". Here the runtime half is LT-185's
+  DEV_MODE advisory, not a Contained error — nothing fails at runtime, so do NOT convert it to a
+  `console.error` or invent an error class to match the pattern.
+  **Copy:** Tech Writer owns the final wording and reviews it against LT-185's runtime message so
+  the two agree (the ADR 0028 lifecycle applies — this introduces a code).
+  Acceptance: the form-tokenbox shape at its pre-LT-185 state produces the diagnostic; a sibling
+  carrying `data-unreconciled` does not, and neither does `module-list.tsrx` (whose container
+  holds only the `@for`) — pin both negatives, the vacuous assertion is the failure mode; the
+  compile-warning baseline stays at 0 over the corpus; `bun test server` green.
 
 - [ ] LT-170: Strengthen two gate-wave assertions in `gate-wave-verification.test.ts` that don't test what they claim.
   **Skill:** docs-server-dev
@@ -563,6 +499,33 @@ Surface compiler gaps in NOTES.md — or fix them directly if small (LT-088 prec
 weaken a component to dodge a gap. **Per migration, record the tier and the reason** alongside
 the zero-warning check; only the Simulated tier opens a realm, so Folded and Static both mean
 near-zero added build cost regardless of occurrence count.
+
+**Two LT-165 obligations land on wave 4's first Static-tier component.** (a) `check:tsrx`
+type-checks each module at its OWN classified tier and the Static census is empty, so the build
+type-checks the Static emit path nowhere today; `emit-tier.test.ts`'s "dropped ⇒ name absent"
+assertion stands in for it. The first real Static component closes the gap for free — confirm it
+does. (b) Census reasons carry `origin: detail (line N)` but not the signal's `resolution`
+(`realm` vs `none`), which is self-evident for today's Simulated reasons but not for a Static
+one: a Static reason must also say why NOTHING answers it. Add the resolution to the reason text
+then — the format is pinned and its tests update with it.
+
+**Suppression records are incomplete by design** (LT-165 step 7). Reactive `truc:html`,
+`class:`/`style:` maps (a shared-surface attribute, where a per-site revert would undo other
+bindings' legitimate work) and `truc:pass`-into-child sites are NOT recorded, and a parent's
+render does not consult a composed child's records. No corpus component hits these today. A
+migration that produces a Simulated-tier component with an unresolvable read behind one of those
+shapes must extend the record set FIRST — surface it in NOTES.md rather than shipping a site
+that is suppressed in name only.
+
+**`data-unreconciled` must survive its migration** (LT-185's root cause). Porting a component
+to `.tsrx` silently dropped that attribute from form-tokenbox's input, and `reconcile()` then
+removed the input as an unkeyed child — nowhere to type, no diagnostic. **`module-calctable`
+(LT-109) and `module-todo` (LT-111) both carry `data-unreconciled` in their hand-written
+sources today.** When migrating either, diff the emitted markup's attributes against the `.ts`
+twin's before calling the port done, and assert the opt-out survives hydration the way
+`equivalence-audit.test.ts`'s LT-185 regression test does for form-tokenbox. **LT-186 (P3) makes
+this a compile error** — if it has landed by then, these two migrations get the check for free
+and this note is redundant; if it has not, do the manual diff.
 
 - [ ] LT-095: Migrate `basic-blogmeta` by reshaping it into a template owner with typed byline props (LT-033 decision). **Blocks LT-173's blogmeta fold verification.**
   **Skill:** le-truc-dev
@@ -720,9 +683,14 @@ near-zero added build cost regardless of occurrence count.
   finding that `returnsNumber`'s heuristic misses number-signal reads (`count.get()`) in `value`
   thunks, which now lack `String()` coercion under property dispatch — consult `inferredType` so
   the coercion fires for number-typed signal reads (no corpus offender today; add the unit test).
-  **Raised in priority by ADR 0029:** now that TSRX004 is a routing signal rather than an error,
-  a false TSRX004 firing on a fully phase-1-resolvable component wrongly tiers it into
-  simulation. Re-triage once LT-165 step 5 lands.
+  **Re-triaged 2026-09-06 (LT-165 step 5 landed).** The ADR 0029 concern stands and has
+  sharpened: TSRX004 left the diagnostic channel, so a false firing on a fully
+  phase-1-resolvable component now tiers it into simulation **silently** — it buys a realm and
+  says nothing. It is not invisible, though: the tier census records the reason with its
+  TSRX004 origin and line, so the failure mode is inspectable rather than lost. Stays in P6 on
+  that basis. **Cheap check to run at the end of wave 4, before this task:** scan the census for
+  any Simulated component whose ONLY reason is a TSRX004 origin — each one is a candidate false
+  firing, and the list sizes this task's real payoff.
 
 - [ ] LT-135: Follow plain-const indirection when crediting client-only setup reads (LT-119 sharp edge).
   **Skill:** le-truc-dev
@@ -736,8 +704,40 @@ near-zero added build cost regardless of occurrence count.
   the statement names — the same one-hop widening `computeClientNeededNames` already does — or
   fold into LT-093, which is the same free-name-through-a-const wall from the other direction.
   The negative case is pinned in `server/tests/tsrx/client-setup-credit.test.ts`; flip that test
-  when fixing. **Re-check after LT-165 step 5:** a signal that draws TSRX004 now means "this
-  routes to simulation", which may make the workaround moot for unrelated reasons.
+  when fixing.
+  **Re-checked 2026-09-06 (LT-165 step 5 landed) — the premise above is now false.** "The
+  diagnostic is loud, not silent" no longer holds: TSRX004 left the diagnostic channel, so
+  hoisting a predicate into a plain setup const now routes the whole component to the Simulated
+  tier with **no warning at all** — the author gets a jsdom realm instead of a one-line fix-it.
+  That is a worse failure than the DX wart this was filed as, and it makes the
+  `form-combobox.tsrx` comment ("repeat the predicate, here is why") unenforced guidance that
+  the next author has no way to discover. The census reason still names the origin, so it is
+  diagnosable after the fact. **Architect question at pickup:** this may warrant moving out of
+  P6 — raise it rather than assuming the P6 placement still reflects its cost.
+
+- [ ] LT-187: `reconcile()` misreports a DUPLICATE `data-key` as "key not present in the source" (LT-185 review finding).
+  **Skill:** le-truc-dev
+  **Context:** Pre-existing, found reading the removal branch during the LT-185 review. In
+  `classify()` (`src/helpers/reactive.ts`) a child is adopted only when
+  `harvested !== null && keySet.has(harvested) && !current.has(harvested)`. A SECOND child
+  carrying a `data-key` that is in the source but already claimed by an earlier sibling falls
+  through all three conditions to the removal branch, where it draws the keyed message —
+  "key not present in the source" — which is false. The key IS present; the child is a
+  duplicate. An author chasing that message looks at their data source, where nothing is wrong,
+  instead of at the two elements sharing a key in their markup. Removing the duplicate is the
+  correct action, so only the message is wrong, not the behaviour.
+  **Fix:** distinguish the two cases at the branch — `keySet.has(harvested)` separates "duplicate
+  key, first occurrence wins" from "key not in source" — and give the duplicate its own message
+  naming the collision.
+  **Channel:** runtime DEV_MODE advisory (REQUIREMENTS S3), same as its sibling — NOT an ADR 0028
+  tier, for the reason recorded in LT-185's review. Statically decidable for the `.tsrx` corpus
+  in principle, but the compiler emits `data-key` on `@for` items itself and cannot produce a
+  duplicate, so no `TSRX` rule is owed; hand-authored `reconcile()` markup is the only source.
+  **Copy:** Tech Writer owns the wording; batch it with LT-185's and LT-186's messages so all
+  three read as one family.
+  Acceptance: a duplicate-key child draws the duplicate message, a genuinely absent key still
+  draws the existing one, and both are pinned (the existing message has no test today — add one
+  while there); `test:src` green.
 
 - [ ] LT-134: TSRX035 and TSRX042 give opposite advice on the same construct (LT-131 review finding).
   **Skill:** le-truc-dev
