@@ -5,6 +5,7 @@
 ### Added
 
 - **Server evaluation tiers**: every `.tsrx` component is now classified at compile time as **Folded** (rendered by server-side folding), **Simulated** (pre-played in the jsdom realm) or **Static** (static skeleton, corrected by the client at connect), with the tier and its reason recorded per component. See [ADR 0029](adr/0029-tiered-server-evaluation.md).
+- **Tier-aware server modules**: a Simulated- or Static-tier component's server module now omits the setup its markup does not use — `expose()`, event handlers, helper consts. Served HTML stays byte-identical across all three tiers, so tier never changes what a reader sees before hydration.
 - **`TSRX044` and `TSRX045`**: `TSRX013` bundled four unrelated checks under one code and is now three. `TSRX044` carries the conditional signal-constructor format rule, `TSRX045` the deferred collector call (`NoActiveCollectorError`); `TSRX013` keeps only its two server-evaluation checks. Severities are unchanged.
 
 ### Changed

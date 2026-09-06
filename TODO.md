@@ -24,109 +24,6 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P1 — Tiered server evaluation (critical path)
 
-- [x] LT-182: Correct LT-165 step 4's harness-suppression rule — retain what the markup references. — reviewed ✓ **Unblocks LT-165 step 5.**
-  **Skill:** le-truc-dev
-  **Context:** LT-165 step 4 landed a `tier` flag on `emitServerModule` that drops the signal
-  declarations for Simulated/Static tiers. That clause is unsound and the architect review
-  rejected it (the review's full evidence is in `git log -p -- TODO.md` at `62722e88`, since
-  LT-165's step-4 record has been pruned to its landed state): a folded signal is not dead
-  code server-side, because `lazyValueExpression` emits `<name>.get()` into the markup, so the
-  generated module references an undeclared name. Emitting the corpus at `tier: 'static'`
-  breaks `card-mediaqueries`, `form-colorgraph`, `form-textbox`, `basic-counter` and
-  `module-tabgroup` — the first three being ADR 0029's own named Static candidates. It fails
-  loudly (`TS2304` via `check:tsrx`, which type-checks server modules per LT-019), so this is a
-  build break rather than wrong served HTML, and no corpus component trips it yet.
-  **Keep, do not revisit:** the `tier` option itself, its `'folded'` default, the `index.ts`
-  wiring, the pre-contamination tier, and the plain-const retention. All four were reviewed and
-  approved. `server/tests/tsrx/emit-tier.test.ts` stays; extend it.
-  **The rule to implement instead — one criterion replacing the current two-part filter:**
-  *retain a setup statement when the emitted markup depends on its declared name, transitively;
-  drop the rest.* Plain consts and folded signals both fall out of it, so the special-casing of
-  `signalNames` and of `SetupStmt.name === null` goes away. `expose()` is dropped by the same
-  rule rather than by name — no markup expression references it, because an exposed-prop lazy
-  child resolves through the prop→signal map at COMPILE time to a literal (verified: suppressing
-  it left `basic-pluralize`'s markup byte-identical). Its `refStub` any-stubs go with it, since
-  they exist only so its free names resolve.
-  1. **Seed** from the generated markup text (`rootParts` + `lines`, both already built before
-     the setup loop runs), then close over the retained statements' own texts to a fixpoint — a
-     retained statement can reference an earlier const (`form-textbox`'s `remainingCount` reads
-     `length`).
-  2. **A word-boundary text match against the generated code is the right test, not a weaker
-     proxy for one.** The question is literally "does this generated module need this binding to
-     resolve", and the generated text is the thing that must resolve. Over-retention (a name
-     that also appears inside a static string literal) costs a surviving dead const, which is
-     today's Folded behaviour anyway; under-retention cannot happen, because a genuine reference
-     appears verbatim in the emitted code.
-  3. **Re-pin the invariant**: the emitted markup must stay byte-identical across all three
-     tiers for every corpus component — that property is what makes the tier flag safe, and
-     `emit-tier.test.ts` currently asserts it only for the synthetic fixture. Add a corpus-wide
-     assertion, and a regression test emitting a component with a FOLDED SIGNAL at
-     `tier: 'static'` (use `basic-counter` or the ADR's named Static candidates) that fails if
-     any declaration the markup references goes missing. That test is the one this task exists
-     to add — its absence is why the defect reached review.
-  **ADR correction, architect pre-approved** (dated bracket, house style, no history rewrite):
-  ADR 0029 sub-design 4 frames the skeleton and the harness as separable layers, and they are
-  not — the folded markup IS partly the harness's output, which is why "emit the skeleton, drop
-  the setup" cannot be implemented as written. Record the operative rule (retain what the markup
-  references; drop the rest) and note that it subsumes the plain-const case. Check
-  `LE_TRUC_COMPILER.md` § 5 for the same wording. **Tech Writer reviews the prose**, but no error
-  class or `TSRX` code moves — channel: none, no Surfacing Tier, no diagnostic.
-  Acceptance: emitting every corpus component at each of the three tiers produces a module whose
-  every referenced name is declared, and markup byte-identical to the Folded emit; the Simulated
-  three still drop `expose()` and its stubs; `bun test server`, `tsc`, `check:tsrx` (baseline 7)
-  and `check:sim` all green.
-
-  **Done 2026-09-06.**
-  **Changed:** `server/tsrx/emit-server.ts` (new module-level `retainReferenced`; the two-part
-  `signalNames`/`name === null` filter is gone, and the signal-constructor imports now follow
-  `emittedNames` rather than a blanket suppression); `server/tests/tsrx/emit-tier.test.ts`
-  (9 → 20 tests); `adr/0029-tiered-server-evaluation.md` s4 and
-  `server/tsrx/LE_TRUC_COMPILER.md` § 5.4 (dated bracketed corrections).
-  **How:** one criterion — retain a setup statement when the emitted code depends on its
-  declared name, transitively. Seeded from `pushArgument(rootParts)` + `lines` (both built
-  before the setup loop), then closed over the retained statements' own texts to a fixpoint;
-  the reference test is identifier-boundary tokenisation of the generated text. `expose()`
-  falls out because it declares no name, and its `refStub` stubs and `exposeAmbients` imports
-  stay tied to it. Transitivity is load-bearing on the real corpus, though
-  narrowly: `form-textbox`'s `descriptionCell` is the one statement retained solely through
-  another (the markup reads `remainingCount`, whose thunk reads it). Names that a narrower
-  `__html.push`-only probe made look transitive — `module-tabgroup`'s `panelId`, `module-list`'s
-  `items`, `form-tokenbox`'s `tokens`, `form-textbox`'s `validatable` — are in fact seeded
-  directly, because the seed includes `@for`/`@if` scaffolding lines, not just push lines.
-  **Net effect on the corpus:** the rule is strictly better than both the rejected filter and
-  the Folded baseline — no component loses a name it references at any tier, and the dead
-  helper/handler/constant consts the old filter kept (`form-colorgraph`'s ten, `form-radiogroup`'s
-  six, `form-textbox`'s `onInput`/`onChange`, …) now drop too.
-  **Tests:** the two new corpus-wide assertions (markup byte-identical to Folded; a dropped
-  statement's name appears nowhere in the module) plus the synthetic folded-signal fixture were
-  mutation-checked against the rejected filter — 4 of them fail under it, so they bite. The
-  markup slice widened from the `__html.push` lines to everything from the `__html` accumulator
-  onward, so `@for` scaffolding is covered too.
-  **Gates:** `bun test server` 1411/1411 (+11), `tsc` clean, `check:tsrx` 22/22 baseline 7,
-  `check:sim` green (node + deno identical), biome clean.
-  **No channel change:** no error class, no `TSRX` code, no Surfacing Tier — per the task.
-  **Review (architect, 2026-09-06): APPROVED ✓.** Soundness verified independently, not from
-  the handoff: the whole corpus was emitted at `tier: 'static'` and run through real `tsc` —
-  **zero `TS2304`** across all 22 components, which is the property the rejected rule broke.
-  Seed completeness holds by construction (`lines` and `rootParts` are both complete before
-  `retainReferenced` runs, and nothing else in the emitted body can reference a setup name:
-  the `refStub` stubs are filtered against `serverKnown`, and `typeDecls`/`imports.server` are
-  type and module positions). Source order is preserved by `setup.filter`, so retention
-  introduces no TDZ hazard, and the fixpoint's closure is complete rather than one-step deep,
-  which the corpus exercises once (`form-textbox`'s `descriptionCell`). The over-/under-retention asymmetry
-  argued in the code comment is correct and is the right thing to lean on.
-  **One defect found and corrected in review** (a comment, not the code): the signal-import
-  guard claimed "an unused import fails `check:tsrx` just as loudly as an undeclared name."
-  It does not — `tsconfig.json` sets `noUnusedLocals: false`. Measured, the FOLDED baseline
-  emits 21 orphaned imports to the suppressed tiers' 9, so the corrected rule *reduces* them.
-  The behaviour was right; only the justification was wrong, and it would have taught a future
-  reader that a gate exists where none does. Comment rewritten in place.
-  **Coverage gap named, not blocking:** `check:tsrx` type-checks each module at its OWN
-  classified tier, and the Static census is empty, so the build type-checks the Static emit
-  path nowhere. `emit-tier.test.ts`'s "dropped ⇒ name absent" text assertion stands in for it
-  and covers all 22 × 3 combinations, which `tsc` does not. Wave 4's first real Static
-  component closes the gap; no task needed before then.
-
 - [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–4 done and reviewed ✓; steps 5–8 open.** Next up: step 5.
   **Skill:** le-truc-dev
   **Context:** ADR 0029 is accepted; this is its implementation. Read the ADR, not this
@@ -153,8 +50,14 @@ on zero warnings *plus* its recorded tier and reason.
      markup depends on its declared name, transitively; drop the rest.** Plain consts, folded
      signals and `expose()` all fall out of it rather than being special-cased. The Folded
      path is unchanged (the option defaults to `'folded'`), and the server goldens did not
-     move. See the LT-182 entry above for the full implementation record; ADR 0029 s4 and
-     `LE_TRUC_COMPILER.md` § 5.4 carry the rationale in main text.
+     move. Landed with LT-182, which corrected the rule; ADR 0029 s4 and
+     `LE_TRUC_COMPILER.md` § 5.4 carry the rationale in main text, and `ce3ebd10` carries the
+     implementation record.
+     **A coverage gap to close in wave 4, not before:** `check:tsrx` type-checks each module
+     at its OWN classified tier, and the Static census is empty, so the build type-checks the
+     Static emit path nowhere. `emit-tier.test.ts`'s "dropped ⇒ name absent" assertion stands
+     in for it and covers all 22 × 3 combinations, which `tsc` does not. Wave 4's first real
+     Static component closes it for free.
      **Two facts step 5 needs to carry forward:**
      (a) The **synthetic Static fixture reaches Static through an impure `hidden` thunk, not
      the harvest path**, because TSRX004 is still an error until step 5 — a TSRX004-routed
