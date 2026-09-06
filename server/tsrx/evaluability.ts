@@ -305,9 +305,21 @@ export const foldableRefGuards = (
 }
 
 /**
+ * Global config attributes the PLATFORM itself reflects (LT-191): `lang`
+ * and `dir` are built-in IDL properties whose accessors read the attribute
+ * verbatim, so a `host.<name>` read mirrors the root attribute's server
+ * expression WITHOUT Parser exposure — there is no parser owning the
+ * attribute→value semantics because the platform owns them. A component
+ * that treats `lang` as config-only (the ADR 0030 posture: the locale
+ * materializes onto the attribute, never a reactive prop) keeps its fold
+ * through this route.
+ */
+const PLATFORM_CONFIG_ATTRS: ReadonlySet<string> = new Set(['lang', 'dir'])
+
+/**
  * Host props whose SERVER-SIDE truth the compiler knows — the
  * substitutable set for {@link hostDerivedFold} (CHECKLIST §5, LT-085).
- * Two ways a prop earns membership, and they are the same fact reached
+ * Three ways a prop earns membership, and they are the same fact reached
  * from opposite directions:
  *
  * 1. **Parser-exposed with a server-rendered root attribute** — the host
@@ -319,6 +331,11 @@ export const foldableRefGuards = (
  *    the site seeds the prop at connect, so the ARG is the value. The
  *    substituted expression is the arg name itself, in scope in the
  *    generated render function.
+ * 3. **A platform config attribute rendered onto the root** (LT-191) —
+ *    `lang`/`dir` are not reactive properties at all (the native accessor
+ *    shadows any expose() accessor, `prop in this`), and the native
+ *    accessor reads the attribute verbatim, so the root attribute's
+ *    `exprText` is the value exactly as in (1), no parser required.
  *
  * Without (2), following the data account costs you the fold: a component
  * that harvests `zero` from its own `.zero` span instead of duplicating it
@@ -331,7 +348,11 @@ export const foldableHostProps = (
 ): ReadonlySet<string> => {
 	const names = new Set<string>()
 	for (const attr of component.root.attrs)
-		if (attr.kind === 'server' && component.parserExposeProps.has(attr.name))
+		if (
+			attr.kind === 'server' &&
+			(component.parserExposeProps.has(attr.name) ||
+				PLATFORM_CONFIG_ATTRS.has(attr.name))
+		)
 			names.add(attr.name)
 	for (const prop of argRenderedProps(component.root)) names.add(prop)
 	return names

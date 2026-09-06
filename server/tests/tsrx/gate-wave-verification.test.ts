@@ -159,6 +159,109 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		])
 	})
 
+	// ADR 0030's consequence list: "the served markup for a component
+	// differs per locale beyond its text — a fact fixtures must pin per
+	// locale rather than once." One pin per category-set shape this corpus
+	// claims to serve (reviewed LT-190).
+	const localeArgs = (locale: string, overrides?: Record<string, unknown>) => ({
+		...PLURALIZE_ARGS(1),
+		lang: locale,
+		i18n: { ...PLURALIZE_I18N, lang: locale },
+		...overrides,
+	})
+
+	test('LT-173: a de page prunes to the same two categories as en', async () => {
+		const html = await serverMarkupOf(pluralizeInfo, localeArgs('de'))
+		expect(categorySpansOf(html).sort()).toEqual(['one', 'other'])
+	})
+
+	test('LT-173: a zh page prunes to the single {other} category', async () => {
+		const html = await serverMarkupOf(pluralizeInfo, localeArgs('zh'))
+		expect(categorySpansOf(html)).toEqual(['other'])
+	})
+
+	test('LT-173: an ar page keeps six cardinal categories but prunes its ordinal set to {other}', async () => {
+		const cardinal = await serverMarkupOf(pluralizeInfo, localeArgs('ar'))
+		expect(categorySpansOf(cardinal).sort()).toEqual([
+			'few',
+			'many',
+			'one',
+			'other',
+			'two',
+			'zero',
+		])
+		// The same locale's ordinal rules use only {other} — the
+		// truc:case-type expression prunes tightly in both states.
+		const ordinal = await serverMarkupOf(
+			pluralizeInfo,
+			localeArgs('ar', { ordinal: true }),
+		)
+		expect(categorySpansOf(ordinal)).toEqual(['other'])
+	})
+
+	test('LT-173: a pl page prunes to the Slavic {one, few, many, other} set', async () => {
+		const html = await serverMarkupOf(pluralizeInfo, localeArgs('pl'))
+		expect(categorySpansOf(html).sort()).toEqual([
+			'few',
+			'many',
+			'one',
+			'other',
+		])
+	})
+
+	test('LT-173: an lv page prunes to {zero, one, other}, and count=10 selects ZERO', async () => {
+		const html = await serverMarkupOf(
+			pluralizeInfo,
+			localeArgs('lv', { count: 10 }),
+		)
+		expect(categorySpansOf(html).sort()).toEqual(['one', 'other', 'zero'])
+		// Latvian's zero category covers ANY count ending in 0 — ten tasks
+		// renders the ZERO form, not `other`.
+		expect(visibleSpans(html)).toEqual(['zero'])
+	})
+
+	test("LT-190: per-category catalog keys render each locale's own word forms", async () => {
+		// The LT-173 review pinned the old morphology gap here ("Aufgabe + s",
+		// a Latin `s` littering Chinese); LT-190's `<key>.<category>` keys
+		// replaced it. Each span now carries its locale's own form for that
+		// category, straight from the record's `t`.
+		const german = await serverMarkupOf(
+			pluralizeInfo,
+			localeArgs('de', {
+				count: 3,
+				i18n: {
+					...PLURALIZE_I18N,
+					lang: 'de',
+					t: {
+						...PLURALIZE_I18N.t,
+						'task.one': 'Aufgabe',
+						'task.other': 'Aufgaben',
+					},
+				},
+			}),
+		)
+		expect(visibleSpans(german)).toEqual(['other'])
+		expect(german).toContain('<span class="other">Aufgaben</span>')
+		// The pruned-in one span still carries its own form (hidden at
+		// count=3; the emitter orders reactive attrs before the class).
+		expect(german).toContain('<span hidden class="one">Aufgabe</span>')
+		const chinese = await serverMarkupOf(
+			pluralizeInfo,
+			localeArgs('zh', {
+				count: 5,
+				i18n: {
+					...PLURALIZE_I18N,
+					lang: 'zh',
+					t: { ...PLURALIZE_I18N.t, 'task.other': '个任务' },
+				},
+			}),
+		)
+		// zh prunes to {other}, whose span carries the Chinese form — no
+		// Latin morphology anywhere in the render.
+		expect(chinese).toContain('<span class="other">个任务</span>')
+		expect(chinese).not.toContain('>s</span>')
+	})
+
 	test.each([0, 1, 2, 3, 5, 11])(
 		'count=%d renders exactly one visible plural span and the count text',
 		async count => {
@@ -172,6 +275,35 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 			expect(html).toContain(`<span class="count">${count}</span>`)
 		},
 	)
+
+	test('LT-191: a client-authored instance inherits lang from the nearest [lang] ancestor', async () => {
+		// Hand-authored light DOM — the demo-page shape: no server render
+		// owns the root lang attribute, so the connect-time walk answers
+		// (LT-191 stage 1's getLocale seed). Welsh 2 -> the `two` span.
+		const markup = `<div lang="cy"><basic-pluralize count="2">
+			<p class="none">none</p>
+			<p class="some"><span class="count"></span><span class="zero">cwn</span><span class="one">ci</span><span class="two">gi</span><span class="few">chi</span><span class="many">chi</span><span class="other">ci</span></p>
+		</basic-pluralize></div>`
+		const html = await pluralizeRealm.render({
+			markup,
+			component: 'basic-pluralize',
+		})
+		expect(visibleSpans(html)).toEqual(['two'])
+	})
+
+	test('LT-191: an own lang attribute beats the nearest ancestor', async () => {
+		// Same wrapper, but the element pins lang="en" — the own attribute
+		// wins the walk (English 2 -> other).
+		const markup = `<div lang="cy"><basic-pluralize count="2" lang="en">
+			<p class="none">none</p>
+			<p class="some"><span class="count"></span><span class="zero"></span><span class="one">person</span><span class="two"></span><span class="few"></span><span class="many"></span><span class="other">people</span></p>
+		</basic-pluralize></div>`
+		const html = await pluralizeRealm.render({
+			markup,
+			component: 'basic-pluralize',
+		})
+		expect(visibleSpans(html)).toEqual(['other'])
+	})
 
 	test('LT-173: changing count after connect re-selects among the rendered alternatives', async () => {
 		// The toggles do NOT retire (ADR 0030 sub-design 6): the locale is

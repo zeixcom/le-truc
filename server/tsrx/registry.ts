@@ -124,6 +124,15 @@ export type RegistryEntry = {
 	 * catalog into the generated `i18n` module the render boundaries use.
 	 */
 	i18nMessages: Record<string, string> | null
+	/**
+	 * The component's static `truc:case-type` configuration (LT-190): the
+	 * plural type its `truc:case` groups prune by — `'cardinal'`/`'ordinal'`
+	 * when provable, `'union'` otherwise (the runtime's own fallback). The
+	 * translation census consults it per locale: a `<key>.<category>` message
+	 * whose category is outside `pluralCategories(locale, caseType)` sits in
+	 * a pruned span that can never render there, so its absence is not a gap.
+	 */
+	caseType: 'cardinal' | 'ordinal' | 'union'
 }
 
 export type ComponentRegistry = Record<string, RegistryEntry>

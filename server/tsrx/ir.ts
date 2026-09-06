@@ -423,6 +423,16 @@ export type ComponentIR = {
 	 */
 	langArgDefault: string | null
 	/**
+	 * The component's `truc:case-type` configuration, summarized statically
+	 * for the translation census (LT-190): the plural type its `truc:case`
+	 * groups prune by. `'ordinal'`/`'cardinal'` when every declared type
+	 * expression is that provable constant (an explicit `undefined` is
+	 * cardinal — Intl's own default); `'union'` when the component declares
+	 * no type or a dynamic expression — the runtime's own fallback, so the
+	 * census only skips categories NEITHER configuration reaches in a locale.
+	 */
+	caseType: 'cardinal' | 'ordinal' | 'union'
+	/**
 	 * All setup statements verbatim, in source order — helper consts, signal
 	 * declarations, and `expose()`. The generated server render function
 	 * executes them as-is against the runtime harness. Each carries its

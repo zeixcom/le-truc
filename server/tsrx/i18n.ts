@@ -33,6 +33,16 @@ export const PLURAL_CATEGORIES: ReadonlySet<string> = new Set([
 	'other',
 ])
 
+const messagesKey = (node: unknown): string | null => {
+	if (!isNode(node)) return null
+	if (node.type === 'Identifier') return String(node.name)
+	// LT-190: quoted keys — the `<key>.<category>` convention spells its dot
+	// in a string literal (`'task.other'`), which no bare identifier can be.
+	if (node.type === 'Literal' && typeof node.value === 'string')
+		return node.value
+	return null
+}
+
 /**
  * Extract and validate `export const i18n = { key: 'Source string', … }` —
  * the component's message keys with their source-locale strings inline
@@ -66,7 +76,7 @@ export const readI18nDecl = (
 	const messages: Record<string, string> = {}
 	for (const prop of asArray(init.properties)) {
 		if (prop.type !== 'Property') continue
-		const key = identifierName(prop.key)
+		const key = messagesKey(prop.key)
 		const value = prop.value
 		if (!key || !isNode(value)) continue
 		if (value.type === 'Literal' && typeof value.value === 'string') {
@@ -78,6 +88,23 @@ export const readI18nDecl = (
 				),
 			)
 		}
+	}
+	// LT-190: a dotted key's suffix must be a CLDR plural category — the
+	// `<key>.<category>` convention is how per-category word forms (Welsh
+	// tasg/tasgiau, Arabic's six forms, English's irregular person/people)
+	// ride the flat catalog. A typo'd suffix (`task.onee`) would otherwise
+	// silently never resolve; the census treats the suffix as reachability
+	// input, so non-category suffixes would corrupt that too.
+	for (const key of Object.keys(messages)) {
+		const dot = key.lastIndexOf('.')
+		if (dot === -1) continue
+		const suffix = key.slice(dot + 1)
+		if (!PLURAL_CATEGORIES.has(suffix))
+			ctx.diagnostics.push(
+				diagnostic.invalidSource(
+					`\`export const i18n\` key \`${key}\` — a dotted key must end in a CLDR plural category (zero, one, two, few, many, other), e.g. \`task.one\` / \`task.other\` (ADR 0030 sub-design 4, LT-190). Rename the key with a category suffix, or drop the dot.`,
+				),
+			)
 	}
 	return messages
 }

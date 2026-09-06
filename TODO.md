@@ -74,8 +74,27 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
 
 ## P2 — Internationalization (ADR 0030)
 
-- [x] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline. — **done, pending review** (public-surface change: new authoring vocabulary, see handoffs)
+- [x] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline. — reviewed ✓ (public-surface change: new authoring vocabulary, see handoffs)
   **Skill:** le-truc-dev
+  **Review (architect, 2026-09-06):** Approved. The mechanism is ADR 0024 s10's
+  reserved-parameter precedent applied once, not a second one; the census rides the
+  sim/report channel so the warning baseline survives; the build's read-only posture
+  held under a real end-to-end pass (six locale catalogs committed, `i18n:sync`
+  manifest written by the person-run script, census 0 gaps). One finding, routed to
+  **LT-190**: the component template's per-category span contents are literal
+  source-language morphology (`s`), which a single-string catalog key cannot override
+  — a German compose-site render reads "Aufgabe + s", a Chinese one litters a Latin
+  "s" into its only form. Pinned as a KNOWN GAP fixture in
+  `gate-wave-verification.test.ts` (per-locale pruning pins for de/zh/ar/pl/lv added
+  in the same pass, incl. ar's ordinal set collapsing to `{other}` and Latvian's
+  count=10 selecting `zero`). Also fixed during review: two standing type errors in
+  `server/tests` (no script typechecked `server/` — new `check:types` script closes
+  that gap). NOTES review notes resolved: the fold widening's form-colorgraph side
+  effect re-verified and kept; the ancestor-walk retirement was ruled too aggressive
+  the same day — **LT-191** restores inheritance (it was the components' own
+  documented contract); refs into pruned alternatives stay rejected until a real
+  authoring case appears.
+  The TSRX047 copy handoff to Tech Writer remains open.
   **Implemented, in the task's own order.** (1) The reserved parameter: a component
   declaring `i18n` in its param pattern gets the record supplied by the compiler at every
   render call boundary — compose sites emit `i18n: i18nRecord("<tag>", <lang-expr>)`
@@ -152,6 +171,248 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   corpus to Simulated. **Perf obligation:** re-measure when the second locale lands and record
   the figure — it partially offsets ADR 0029's Static-tier savings. LT-175 is that measurement
   and lands first.
+
+- [x] LT-190: `<key>.<category>` message keys — plural word forms the catalog can actually translate (LT-173 review finding). — reviewed ✓ (public-surface change: catalog convention + validation)
+  **Skill:** le-truc-dev
+  **Review (architect, 2026-09-06):** Approved. The flat-key ruling implemented
+  faithfully, and the subtle part is right: census reachability reads the PLATFORM
+  per locale (never a table) with the case type's provenance on the registry, and
+  the `'union'` fallback over-reports reachability — the conservative direction,
+  since a translation that might render should exist. The quoted-key bug
+  (`identifierName` silently dropped `'task.other'`) is exactly the kind of thing
+  the validation rule now makes loud. End-to-end record resolution verified during
+  review (`i18nRecord('basic-pluralize', 'de').t['task.other'] === 'Aufgaben'`; zh
+  carries only `task.other` and falls back to source for the rest); its fixture is
+  queued in **LT-192**.
+  **Context:** LT-173's catalog keys each resolve to ONE string, so per-category word
+  forms have no home: `basic-pluralize`'s template spells the plural as the catalog
+  noun plus a literal `s` in the two/few/many/other spans — English morphology the
+  catalog cannot override (a German compose-site render reads "Aufgabe + s", a
+  Chinese one litters a Latin `s` into its only form, and no irregular English noun —
+  person/people, foot/feet — can be expressed either). Pinned as the KNOWN GAP
+  fixture in `gate-wave-verification.test.ts`; rewriting that pin is the completion
+  signal. **Architect ruling (2026-09-06): flat keys with a `.<category>` suffix** —
+  `task.one`, `task.other` — NOT camelCased keys. Dots carry the CLDR category names
+  verbatim, stay greppable and JSON-friendly, and change nothing about the format: a
+  suffixed key is just a longer flat key, so the `<tag>.<key>` namespacing, the
+  generated module, and the staleness hashing all work unchanged.
+  **How:**
+  1. Authoring: the component declares per-category keys in its `export const i18n`
+     (`'task.one': 'task'`, `'task.other': 'tasks'`) and references them by dynamic
+     lookup through the EXISTING flat record — `t['task.' + category]`, conventionally
+     inside the matching `truc:case` span (`<span truc:case="one">{t['task.one']}
+     </span>`). No new runtime surface: `t` stays `Record<string, string>`. Base and
+     suffixed keys coexist; the suffix is optional per key.
+  2. Validation — **channel: compiler, Tier 1 (Prevented) per ADR 0028**: a declared
+     key whose dot-suffix is not one of the six CLDR categories (`task.onee`) is a
+     shape error (TSRX008-family or a new code — developer's call, one code; Tech
+     Writer owns the copy per `workflows/error-message-lifecycle.md`).
+  3. **Census awareness is the subtle part.** A suffixed key whose category is not in
+     the locale's platform set is UNREACHABLE there — the span is pruned — so the
+     translation census must not report it missing or stale. The census needs the
+     component's configured case type (`cardinal`/`ordinal`/`union`) on the
+     RegistryEntry, derived from the `truc:case-type` analysis the compiler already
+     does, then skips suffixed keys outside `pluralCategories(locale, caseType)`.
+     Without this, the first English catalog of a six-category component reports five
+     phantom gaps. Census keys become `<tag>.<key>.<category>` leaves; staleness
+     detection is unchanged (per flat leaf — verify by editing a source string).
+  4. **No implicit fallback chain** (the ruling's corollary): a reference resolves
+     the exact suffixed key or nothing — no category→`other`→bare chain. The source
+     locale declares every key its template references, so the source set is complete
+     by construction; a locale missing `task.one` renders the source string and shows
+     in the census like any other missing key.
+  5. Migrate `basic-pluralize` to per-category keys and rewrite the KNOWN GAP pin to
+     the correct forms ("Aufgaben" from the de catalog's `task.other`; no Latin `s`
+     on the zh page). The committed catalogs (de/cy/zh/ar/pl/lv) gain the suffixed
+     entries; `bun run i18n:sync` records their manifest hashes.
+  6. **Scope note for the docs (Tech Writer):** per-category keys fix MORPHOLOGY, not
+     word ORDER — "剩余 3 个任务" cannot be assembled from the count-noun-remaining
+     template order. The stage-2 endgame is whole-phrase keys per category with a
+     `{count}` placeholder (the ICU MessageFormat/Fluent shape). Record this as the
+     documented next step; do not build it here.
+  Acceptance: a German compose-site render reads "3 Aufgaben verbleibend" with the
+  plural noun form coming from the de catalog's `task.other`; a zh render contains
+  no Latin letters; an en render is unchanged apart from the migrated keys; the
+  census does NOT count a category-suffixed key as a gap for a locale that prunes
+  that category (fixture) and still counts genuinely missing ones; a moved
+  `task.other` source string reports stale; compile-warning baseline stays 0;
+  `bun test server` green; `bun run check:types` clean.
+  **Implemented, per the ruling.** (1) `readI18nDecl` (server/tsrx/i18n.ts) accepts
+  QUOTED keys — `identifierName` silently dropped `'task.other'` (string-literal
+  keys are Literals, not Identifiers) — and validates that every dotted key's
+  suffix is one of the six CLDR categories (TSRX008 shape error; the census treats
+  the suffix as reachability input, so a typo'd suffix would corrupt that too).
+  (2) `ComponentIR.caseType`/`RegistryEntry.caseType` (`'cardinal'|'ordinal'|'union'`,
+  ir.ts/compiler.ts/registry.ts/index.ts): every `truc:case-type` expr statically
+  provable and unanimous proves the type; an explicit `undefined` is cardinal;
+  basic-pluralize's dynamic ternary stays `'union'` — the runtime's own fallback.
+  (3) `collectI18n` (server/effects/i18n.ts) computes the locale's platform set for
+  the entry's case type and skips suffixed keys outside it — a pruned span's key is
+  unreachable, not a gap. (4) `basic-pluralize` migrated: six `task.<category>`
+  source keys (en declares zero/two/few/many too — its ORDINAL set uses two/few,
+  and the source set must cover every referenced key's fallback), spans reference
+  `{t['task.one']}` … directly, the bare `{t.task}` noun is gone. (5) The six
+  committed catalogs rewritten to their own reachable sets (de 4 keys, zh 3, cy/ar
+  8, pl 6, lv 5), manifest regenerated via `i18n:sync` — census 0 gaps.
+  **Changed:** `server/tsrx/` (`i18n.ts` quoted keys + validation, `ir.ts`,
+  `compiler.ts` caseType walk, `registry.ts`, `index.ts`); `server/effects/i18n.ts`;
+  `examples/basic/pluralize/basic-pluralize.tsrx`; `i18n/*.json` + `manifest.json`;
+  tests (`i18n.test.ts` validation + reachability + gap-free-corpus fixtures,
+  `gate-wave-verification.test.ts` KNOWN GAP pin rewritten to correct forms);
+  `i18n/README.md`, `TSRX-HOST-PROFILE.md`, `CHANGELOG.md`.
+  **Verification:** `bun test server` 1514 pass / 0 fail; `check:tsrx` clean
+  (baseline 0, tier census 20 folded / 2 simulated unchanged, translation census
+  0 gaps across 6 locales); `check:types` clean; biome clean. Snapshots re-pinned
+  (span contents now carry the catalog's per-category words; connect diff verified
+  to be exactly the count-fill boundary).
+  **Handoffs:** Tech Writer owns the TSRX008 dotted-key message copy (first draft
+  in `server/tsrx/i18n.ts`; propagation per `workflows/error-message-lifecycle.md`)
+  and the stage-2 endgame note (whole-phrase keys with `{count}` — morphology vs
+  word order) is recorded in the host profile for docs capture.
+
+- [x] LT-191: Restore ancestor `lang` inheritance for compiled components (LT-173 review follow-up; amends ADR 0030 s7's posture, not its mechanism). — reviewed ✓ (public-surface change: locale resolution + config-attribute rule)
+  **Skill:** le-truc-dev
+  **Review (architect, 2026-09-06):** Approved. The config-only ruling carried to
+  its structural conclusion — expose on an IDL property was a silent no-op all
+  along, and materializing the walked locale onto the attribute gives the SSR and
+  client paths ONE DOM shape; the CI equivalence audit passing without re-pinning
+  is the soundness property demonstrating itself. The config-attribute fold route
+  is principled (HTML's own global locale config, not a hand table) and minimal
+  (only pluralize matched; the tier map is byte-for-byte unchanged). Stage 2 as
+  compose-graph inheritance is the right scope given that no document-level
+  renderer exists; the page-position walk belongs to LT-174, which builds that
+  renderer. Residue queued in **LT-192**.
+  **Context:** LT-173 made `basic-pluralize` read its OWN `lang` attribute as a
+  connect-time Parser prop, retiring the ancestor walk for compiled components — a
+  pluralize under `<div lang="cy">` (or `<html lang="de">`) with no own attribute now
+  resolves `'en'`. That contradicts the platform (CSS `:lang()`, font selection, and
+  screen readers all inherit language) AND the corpus's own contracts: `basic-number`
+  still documents "falls back to the nearest ancestor's `lang`" and still calls
+  `getLocale(host)` live, so LT-173 left the corpus split-brained. **Architect ruling
+  (2026-09-06): inheritance itself is NOT fundamentally blocked.** The ambient `lang`
+  at a static page position is as build-time-constant as the page locale, so the
+  fold, the `truc:case` pruning, and the root-attribute render all survive — and the
+  one hard limit stays where ADR 0030 s6 put it: the catalog never ships, so the
+  client can never RE-translate server-rendered words at a different locale. Stages:
+  1. **Client, small:** seed the prop from the walk at connect —
+     `expose({ lang: asString()(getLocale(host)) })` (`getLocale`'s
+     `closest('[lang]')` includes the element itself, so own-attribute-first is
+     preserved). Sound by construction: an SSR'd instance carries the build locale on
+     its root attribute and terminates the walk immediately, so the walk can never
+     disagree with the build there; the walk only answers for client-authored markup
+     (demo pages, third-party pages). Revert the demo's Welsh instance to the
+     ancestor-wrapper shape and add an own-attribute-beats-ancestor instance.
+  2. **Server, the real fix:** ambient-lang tracking in the page/example renderers —
+     walk the document being rendered, maintain the `lang` stack, feed the ambient
+     locale into each occurrence's record. Precedence becomes: explicit
+     compose-site/authored arg > ambient `lang` at the render position > authored
+     default > build page locale (note the reorder: page-authored context outranks
+     the component's fallback default). The effective locale still renders onto the
+     root attribute — DOM-is-truth, already the rule.
+  3. **NOT restored — the fundamental limit, document it:** per-evaluation re-walking.
+     The LT-115 twin re-read `getLocale(host)` per thunk evaluation, so moving an
+     element across lang subtrees at runtime re-selected its category spans; the
+     connect-time seed freezes the walked locale for the connection, and for
+     server-rendered words re-selection at a new locale is impossible in principle
+     (frozen words, no catalog on the client — the mongrel state: new-language
+     category selection over old-language text). Restoring the live walk would also
+     need the compiler to splice a blessed walk idiom server-side (user-land
+     `getLocale` is outside the fold vocabulary — exactly why pluralize's six thunks
+     didn't fold pre-LT-173) without adding library i18n surface (ADR 0030 s8).
+     Defer until a real case appears; state the boundary in the host profile.
+  Acceptance: a compiled pluralize with NO own `lang` under `[lang="cy"]` selects
+  Welsh categories at connect (fixture); an SSR'd instance's root attribute still
+  wins over any ancestor; a compose site's explicit `lang` still overrides
+  everything; pluralize stays Folded with unchanged pruning (stage 1 touches only
+  the client seed); under stage 2, an occurrence beneath `<section lang="cy">` in a
+  page renders the six-span cy set while an occurrence above it renders the page
+  locale's set (fixture); `bun test server` green; ADR 0030 amended via adr-keeper
+  (s3 precedence chain, s7 posture: the walk returns as the client-side route for
+  client-authored markup, the record stays canonical for rendered pages); host
+  profile and both components' JSDoc updated to match.
+  **Implemented — with two rulings from execution.**
+  **Ruling 1 (user, 2026-09-06): `lang` is a CONFIG attribute only, not a reactive
+  property — it must not be exposed.** And it structurally cannot be: `lang` is a
+  built-in IDL property, so `'lang' in this` is always true and `expose()`'s
+  initializer is skipped silently (component.ts `#initSignals`) — the LT-173
+  `lang: asString()` expose entry never actually ran; `host.lang` in the thunks
+  reads the NATIVE accessor, i.e. the element's own attribute, live. The first
+  draft's `asString()(getLocale(host))` seed therefore landed as the native
+  accessor's `''`, and `Intl.PluralRules('')` threw per span — caught by the walk
+  fixture before landing. The shape that works: **materialize** the walked locale
+  onto the attribute at connect (`const materializeLocale = () => { if
+  (!host.getAttribute('lang')) host.setAttribute('lang', getLocale(host)) };
+  materializeLocale()` — the const+call is the sanctioned client-only setup shape;
+  a bare `if` statement is not, TSRX005). Both paths now converge on one DOM
+  shape: SSR renders the effective locale onto the root attribute, client-authored
+  instances materialize the walked one. (2) The fold needed a new membership route:
+  removing the parser exposure dropped `lang` from `foldableHostProps` and pluralize
+  routed Simulated (tier canary caught it). Route 3 in `evaluability.ts`:
+  **platform config attributes** (`lang`, `dir` — HTML's own global locale config,
+  not a hand table) render onto the root and read back verbatim through the native
+  accessor, so the root attribute's `exprText` is the server truth without a
+  parser. Tier restored: pluralize Folded, census 20/2/0 unchanged.
+  **Ruling 2 (scope): stage 2 landed as COMPOSE-GRAPH inheritance.** No
+  document-level server renderer exists in the build today (examples html is
+  copied verbatim; docs pages don't server-render compose sites), so
+  position-level ambient tracking has nothing to ride on. `emit-server.ts`'s
+  compose emission now resolves a child's record locale as: explicit site `lang`
+  arg > the PARENT'S effective `lang` binding > authored default > page locale —
+  the SSR analog of the ancestor walk, since the composition tree IS the rendered
+  ancestor chain. The page-position walk (`<section lang="cy">` around arbitrary
+  occurrences) is LT-174's, which builds the page renderer — its acceptance
+  fixture belongs there.
+  **Changed:** `server/tsrx/emit-server.ts` (compose inheritance), `server/tsrx/
+  evaluability.ts` (PLATFORM_CONFIG_ATTRS fold route), `examples/basic/pluralize/
+  basic-pluralize.tsrx` (materializeLocale; `lang` out of expose per the ruling),
+  `examples/basic/pluralize/basic-pluralize.html` (ancestor-wrapper instance +
+  own-attr-beats-ancestor pin), tests (`gate-wave-verification.test.ts`
+  ancestor-only + own-attr realm fixtures, `i18n.test.ts` compose-inheritance
+  fixture), `TSRX-HOST-PROFILE.md`, `CHANGELOG.md`.
+  **Verification:** `bun test server` 1514 pass / 0 fail; `check:types` clean;
+  biome clean; tier census unchanged (20 folded / 2 simulated); the CI equivalence
+  audit passed WITHOUT re-pinning — an SSR'd instance's root attribute makes
+  materializeLocale a no-op, which is the soundness property itself.
+  **Handoffs:** adr-keeper amends ADR 0030 (s3 precedence chain + s7 posture: the
+  walk returns as the client-side route for client-authored markup, the record
+  stays canonical for rendered pages, `lang` config-only); Tech Writer reviews the
+  host-profile `lang`/precedence rewording. `basic-number` keeps its live
+  per-evaluation `getLocale(host)` walk (its spec contract) — untouched, and it
+  never exposed `lang` either.
+
+- [ ] LT-192: LT-190/LT-191 review residue — compiler-doc staleness, the AGENTS IDL-skip surprise, and the catalog→record pin.
+  **Skill:** le-truc-dev (docs items route to Tech Writer)
+  **Context:** The LT-190/LT-191 review approved both but found three small items
+  too concrete to leave in handoff prose:
+  1. `server/tsrx/LE_TRUC_COMPILER.md` is stale in three places: (a) the
+     classification section still says a locale read from the DOM (`getLocale(el)`,
+     `host.lang`) routes Simulated and that "`basic-pluralize` … stays
+     Simulated-tier" — stale since LT-173 (Folded) and doubly stale since LT-191
+     (root-rendered `lang`/`dir` now fold via the platform-config-attribute route
+     in `foldableHostProps` route 3); (b) the i18n section's precedence chain stops
+     at "site lang > authored default > page locale" — LT-191 inserted the parent's
+     effective locale and made `lang` config-only; (c) the message-keys paragraph
+     predates the `<key>.<category>` convention (dotted-key validation, census
+     reachability, quoted-key extraction). Tech Writer owns the rewording; the
+     review lines on LT-190/191 carry the facts.
+  2. `AGENTS.md` "Surprising Behaviors" never documents that `expose()` on a
+     built-in IDL property name (`lang`, `dir`, `title`, …) is SILENTLY SKIPPED by
+     the `prop in this` guard — the attribute stays the only channel, and a prop
+     you meant to react on just... doesn't. This cost a debugging cycle in LT-191
+     (`asString()(getLocale(host))` landed as the native accessor's `''` and
+     `Intl.PluralRules('')` threw per span). One bullet, platform's own rule.
+  3. Pin the end-to-end catalog→record path in `server/tests/tsrx/i18n.test.ts`'s
+     generated-module block: `i18nRecord('basic-pluralize', 'de').t['task.other']
+     === 'Aufgaben'` and the zh source-fallback (`t['task.one'] === 'task'`) — the
+     LT-190 acceptance verified this manually during review, but no fixture pins
+     the OVERRIDES-embedded module resolution; the gate fixtures pass their `t`
+     by hand and bypass the catalog.
+  Also fold into the adr-keeper pass already queued on LT-191: ADR 0030 s4 gains
+  the `<key>.<category>` convention and the census's reachability rule (the
+  handoff previously named only s3/s7).
+  Acceptance: the three doc spots name LT-190/191 and match the implemented
+  behavior; the AGENTS bullet exists; the i18n.test.ts assertions land (and fail
+  if someone drops the de.json override path); `bun test server` green.
 
 ---
 

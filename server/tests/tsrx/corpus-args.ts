@@ -23,11 +23,21 @@ export const renderName = (tag: string): string =>
  * The compiler supplies the real record at every render boundary; a fixture
  * builds its own so the args tables stay dependency-free (they are shared
  * by tests that compile into per-run temp directories). Values mirror what
- * `i18nRecord('basic-pluralize', 'en')` resolves at the current corpus.
+ * `i18nRecord('basic-pluralize', 'en')` resolves at the current corpus —
+ * per-category word forms per LT-190's `<key>.<category>` convention.
  */
 export const PLURALIZE_I18N = {
 	lang: 'en',
-	t: { done: 'Well done, all done!', task: 'task', remaining: 'remaining' },
+	t: {
+		done: 'Well done, all done!',
+		remaining: 'remaining',
+		'task.one': 'task',
+		'task.other': 'tasks',
+		'task.zero': 'tasks',
+		'task.two': 'tasks',
+		'task.few': 'tasks',
+		'task.many': 'tasks',
+	},
 	timeZone: 'UTC',
 	currency: 'USD',
 	dir: 'ltr',

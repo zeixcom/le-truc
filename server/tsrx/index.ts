@@ -160,6 +160,7 @@ export const compileComponent = (
 				declaresI18n: component.declaresI18n,
 				langArgDefault: component.langArgDefault,
 				i18nMessages: component.i18nMessages,
+				caseType: component.caseType,
 				composesTags: composeRegistry
 					? [
 							...new Set(

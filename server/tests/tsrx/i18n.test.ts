@@ -6,10 +6,12 @@
  * the generated record runtime.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
+import { collectI18n } from '../../effects/i18n'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import { compileComponent } from '../../tsrx'
-import type { RegistryEntry } from '../../tsrx/registry'
+import type { ComponentRegistry, RegistryEntry } from '../../tsrx/registry'
 import { formatCensus, translationCensus } from '../../tsrx/sim/report'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { loadTsrxCorpus } from './corpus-fixture'
@@ -58,6 +60,37 @@ describe('TSRX047 — untranslated literal prose (LT-173 step 5)', () => {
 	})
 })
 
+/* === The `<key>.<category>` convention (LT-190) === */
+
+describe('dotted message keys (LT-190)', () => {
+	test('a category-suffixed key compiles clean', () => {
+		const { component, diagnostics } = compile(
+			catalogSource(
+				`{t['task.other']}`,
+				`export const i18n = { 'task.other': 'tasks' }`,
+			),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('must compile')
+		expect(component.serverCode).toContain(`t['task.other']`)
+	})
+
+	test('a dotted key whose suffix is not a CLDR category is a shape error', () => {
+		const { diagnostics } = compile(
+			catalogSource(`x`, `export const i18n = { 'task.onee': 'tasks' }`),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX008')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('CLDR plural category')
+		expect(hit?.message).toContain('task.onee')
+	})
+
+	test('a bare (undotted) key is unaffected by the suffix rule', () => {
+		const { diagnostics } = compile(catalogSource(`{t.task}`))
+		expect(diagnostics).toEqual([])
+	})
+})
+
 /* === The reserved parameter: callers never pass it (ADR 0030 s2) === */
 
 const i18nChildSource = `
@@ -75,6 +108,23 @@ const parentOf = (attrs: string): string => `
 import { BasicI18nChild } from '../child/basic-i18n-child.tsrx'
 
 export function BasicI18nParent({}: {})
+@{
+	expose({})
+	<>
+		<basic-i18n-parent>
+			<BasicI18nChild ${attrs} />
+		</basic-i18n-parent>
+		<style>basic-i18n-parent { display: block }</style>
+	</>
+}`
+
+// An i18n-DECLARING parent: its own `lang` binding is the ambient locale at
+// its compose sites (LT-191's compose-graph inheritance).
+const i18nParentOf = (attrs: string): string => `
+import { BasicI18nChild } from '../child/basic-i18n-child.tsrx'
+
+export const i18n = { title: 'Parent' }
+export function BasicI18nParent({ lang = 'en', i18n: { t } }: { lang?: string; i18n: I18n })
 @{
 	expose({})
 	<>
@@ -148,6 +198,31 @@ describe('the reserved `i18n` parameter (ADR 0030 sub-design 2)', () => {
 		if (!component) throw new Error('parent must compile')
 		expect(component.serverCode).toContain(
 			'i18n: i18nRecord("basic-i18n-child", "de")',
+		)
+	})
+
+	test("a site without a lang arg inherits the i18n parent's own locale (LT-191)", () => {
+		// Compose-graph inheritance: the parent's `lang` binding is the
+		// ambient locale at its sites — the SSR analog of the DOM ancestor
+		// walk. The child's authored default follows the parent; only a
+		// NON-i18n parent leaves the child's default in charge (the test
+		// above).
+		const child = compileComponent(
+			i18nChildSource,
+			'examples/child/basic-i18n-child.tsrx',
+			new Set(),
+		)
+		if (!child.component) throw new Error('child must compile')
+		const { component } = compileComponent(
+			i18nParentOf(''),
+			'examples/x/basic-i18n-parent.tsrx',
+			new Set(),
+			undefined,
+			composeRegistryOf(child.component.entry),
+		)
+		if (!component) throw new Error('parent must compile')
+		expect(component.serverCode).toContain(
+			'i18n: i18nRecord("basic-i18n-child", lang)',
 		)
 	})
 })
@@ -266,6 +341,49 @@ describe('the translation census', () => {
 	})
 })
 
+/* === Census reachability for `<key>.<category>` keys (LT-190) === */
+
+describe('the census skips pruned categories (LT-190)', () => {
+	// A synthetic corpus entry — collectI18n reads only tag/i18nMessages/
+	// caseType off an entry. The catalogs are the COMMITTED ones, so the
+	// locale facts are the platform's own: de's cardinal set is {one, other},
+	// cy's is all six.
+	const probe = {
+		tag: 'census-probe',
+		i18nMessages: { 'label.one': 'one', 'label.two': 'two' },
+		caseType: 'cardinal',
+	} as unknown as RegistryEntry
+
+	test("a category outside the locale's platform set is not a gap", async () => {
+		const { gaps } = await collectI18n([probe])
+		// label.one is reachable everywhere and in no catalog -> one gap per
+		// locale. label.two is pruned in de (cardinal de never selects two)
+		// -> no de gap for it — the phantom-gap case the filter exists for.
+		expect(gaps.filter(gap => gap.locale === 'de')).toEqual([
+			{ key: 'census-probe.label.one', locale: 'de', status: 'missing' },
+		])
+		// cy's cardinal rules use all six categories, so label.two IS
+		// reachable there and still reported.
+		expect(gaps).toContainEqual({
+			key: 'census-probe.label.two',
+			locale: 'cy',
+			status: 'missing',
+		})
+	})
+
+	test('the committed corpus is gap-free at its own case types', async () => {
+		// basic-pluralize's dynamic case type summarizes to 'union', so the
+		// census asks each locale for its full cardinal∪ordinal set — the
+		// committed catalogs carry exactly those keys, and i18n:sync keeps
+		// the manifest hashes fresh. Any entry here is a real regression.
+		const registry = JSON.parse(
+			readFileSync(`${generated.path}/registry.json`, 'utf8'),
+		) as ComponentRegistry
+		const collection = await collectI18n(Object.values(registry))
+		expect(collection.gaps).toEqual([])
+	})
+})
+
 /* === The generated record runtime (ADR 0030 sub-designs 2+5) === */
 
 const generated = createGeneratedDir('i18n')
@@ -278,11 +396,13 @@ const i18nModule = await (async () => {
 
 describe('the generated i18n module', () => {
 	test('a key resolves in exactly one place: source fallback first', () => {
-		// No committed catalogs exist yet, so every key resolves to its
-		// inline source-locale string (ADR 0030 sub-design 5's fallback).
+		// The page locale is 'en' — the source locale, which has no override
+		// file by construction — so every key resolves to its inline
+		// source-locale string (ADR 0030 sub-design 5's fallback).
 		const record = i18nModule.i18nRecord('basic-pluralize')
 		expect(record.lang).toBe('en')
-		expect(record.t.task).toBe('task')
+		expect(record.t['task.one']).toBe('task')
+		expect(record.t['task.other']).toBe('tasks')
 		expect(record.t.remaining).toBe('remaining')
 		expect(record.timeZone).toBe('UTC')
 		expect(record.dir).toBe('ltr')

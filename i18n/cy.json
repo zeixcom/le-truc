@@ -1,0 +1,10 @@
+{
+	"basic-pluralize.done": "Wedi cwblhau pob tasg!",
+	"basic-pluralize.remaining": "ar ôl",
+	"basic-pluralize.task.few": "tasg",
+	"basic-pluralize.task.many": "tasg",
+	"basic-pluralize.task.one": "tasg",
+	"basic-pluralize.task.other": "tasgiau",
+	"basic-pluralize.task.two": "dasg",
+	"basic-pluralize.task.zero": "tasg"
+}

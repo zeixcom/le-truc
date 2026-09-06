@@ -580,22 +580,30 @@ export const emitServerModule = (
 			// The reserved `i18n` record (ADR 0030 sub-design 2, LT-173): the
 			// compiler supplies it at every render call boundary — callers
 			// never author it (a caller-authored `i18n` attribute is rejected
-			// in classify-attributes). The record's locale is the compose
-			// site's own `lang` arg when authored, else the child's authored
-			// `lang` default (ADR 0030 sub-design 3's precedence), else the
-			// build's page locale — `i18nRecord`'s own fallback.
+			// in classify-attributes). Locale precedence (ADR 0030 sub-design
+			// 3 as amended by LT-191): the compose site's own `lang` arg, else
+			// the PARENT'S effective locale — compose-graph inheritance, the
+			// SSR analog of the DOM ancestor walk, since the composition tree
+			// is the rendered ancestor chain — else the child's authored
+			// default, else `i18nRecord`'s page-locale fallback.
 			if (entry.declaresI18n) {
 				usedI18nRecord = true
 				const langAttr = node.attrs.find(
 					(a): a is Extract<(typeof node.attrs)[number], { kind: 'arg' }> =>
 						a.kind === 'arg' && a.name === 'lang',
 				)
+				const parentLang =
+					component.declaresI18n && component.langBinding !== null
+						? component.langBinding
+						: null
 				const langExpr =
 					langAttr !== undefined
 						? langAttr.exprText
-						: entry.langArgDefault !== null
-							? JSON.stringify(entry.langArgDefault)
-							: null
+						: parentLang !== null
+							? parentLang
+							: entry.langArgDefault !== null
+								? JSON.stringify(entry.langArgDefault)
+								: null
 				args.push(
 					langExpr !== null
 						? `i18n: i18nRecord(${JSON.stringify(entry.tag)}, ${langExpr})`

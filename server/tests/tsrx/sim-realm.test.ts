@@ -472,7 +472,7 @@ describe('library-contained connect failures reach the report (LT-180)', () => {
 		const realm = withRealm()
 		await realm.load(async () => {
 			const { createContext, defineComponent } = foreignLibrary
-			const THEME = createContext<string>('probe-theme')
+			const THEME = createContext<() => string>('probe-theme')
 			defineComponent('probe-consumer', ({ host, requestContext }) => {
 				// The dispatch under test: `requestContext` fires a
 				// `context-request` at connect, into the realm's document.

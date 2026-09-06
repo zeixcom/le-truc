@@ -28,7 +28,9 @@ import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { getFilePath, writeFileSafe } from '../io'
+import { PLURAL_CATEGORIES } from '../tsrx/i18n'
 import type { RegistryEntry } from '../tsrx/registry'
+import { pluralCategories } from '../tsrx/runtime'
 import type { TranslationGap } from '../tsrx/sim/report'
 
 /** The repo-root directory holding the committed per-locale catalogs. */
@@ -167,8 +169,27 @@ export const collectI18n = async (
 		for (const locale of locales) {
 			const localeOverrides = overrides.get(locale) ?? {}
 			const localeManifest = manifest.get(locale) ?? {}
+			// LT-190: the locale's reachable category set for this component's
+			// configured `truc:case-type` — the platform's own answer (never a
+			// table), union of cardinal and ordinal when the compiler could not
+			// prove the type. A `<key>.<category>` message whose category sits
+			// outside this set lives in a pruned span that cannot render in
+			// this locale, so its absence is the translator's nothing-to-do,
+			// not a gap.
+			const reachableCategories =
+				entry.caseType === 'union'
+					? pluralCategories(locale)
+					: pluralCategories(locale, entry.caseType)
 			for (const [key, source] of Object.entries(entry.i18nMessages)) {
 				const compound = `${entry.tag}.${key}`
+				const dot = key.lastIndexOf('.')
+				const category = dot === -1 ? null : key.slice(dot + 1)
+				if (
+					category !== null &&
+					PLURAL_CATEGORIES.has(category) &&
+					!reachableCategories.has(category)
+				)
+					continue
 				if (localeOverrides[compound] === undefined) {
 					gaps.push({ key: compound, locale, status: 'missing' })
 					continue

@@ -125,7 +125,7 @@ describe('the tier census (LT-165 step 6, ADR 0029 sub-design 6)', () => {
 			Object.keys(registry).sort(),
 		)
 		for (const entry of census.entries)
-			expect(entry.value).toBe(registry[entry.subject]?.tier)
+			expect(entry.value).toBe(registry[entry.subject]!.tier)
 	})
 
 	test('folded entries carry no reasons; non-folded entries carry at least one', () => {

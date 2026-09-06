@@ -1554,6 +1554,37 @@ export const compileSource = (
 			)
 		})
 
+	// LT-190: the component's static `truc:case-type` configuration, for the
+	// translation census's reachability filter (effects/i18n.ts). A literal
+	// `'ordinal'`/`'cardinal'` — or an explicit `undefined`, which is
+	// cardinal by Intl's own default — proves the pruning type; a dynamic
+	// expression (basic-pluralize's `ordinal ? 'ordinal' : undefined`) or no
+	// declaration at all stays `'union'`, the runtime's own fallback, so the
+	// census only skips categories NEITHER configuration reaches in a locale.
+	let caseType: 'cardinal' | 'ordinal' | 'union' = 'union'
+	{
+		let sawType = false
+		let proven: 'cardinal' | 'ordinal' | null = null
+		let conflicted = false
+		walkTemplate(root, node => {
+			if (node.kind !== 'element') return
+			for (const attr of node.attrs) {
+				if (attr.kind !== 'plural-case-type') continue
+				sawType = true
+				const thisType: 'cardinal' | 'ordinal' | null =
+					attr.exprText === '"ordinal"'
+						? 'ordinal'
+						: attr.exprText === '"cardinal"' || attr.exprText === 'undefined'
+							? 'cardinal'
+							: null
+				if (thisType === null) conflicted = true
+				else if (proven === null) proven = thisType
+				else if (proven !== thisType) conflicted = true
+			}
+		})
+		if (sawType && !conflicted && proven !== null) caseType = proven
+	}
+
 	// observedAttributes only fires for Parser-backed initializers — a name
 	// that is not Parser-exposed would make the extension silently inert.
 	if (config)
@@ -1660,6 +1691,7 @@ export const compileSource = (
 					declaresI18n: declaresI18nOf(paramsNode),
 					langBinding: langBindingOf(paramsNode),
 					langArgDefault: langArgDefaultOf(paramsNode),
+					caseType,
 					setup,
 					clientSetup,
 					plainSetup,
