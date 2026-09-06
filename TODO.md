@@ -45,7 +45,7 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P1 — Tiered server evaluation (critical path)
 
-- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–5 done (step 5 landed, pending review); steps 6–8 open.** Next up: step 6.
+- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–5 done and reviewed (step 5 reviewed ✓ 2026-09-06); steps 6–8 open.** Next up: step 6.
   **Skill:** le-truc-dev
   **Context:** ADR 0029 is accepted; this is its implementation. Read the ADR, not this
   summary, for the rationale. Steps 1–3 landed in `a2e789e4` and were reviewed and approved
@@ -78,7 +78,7 @@ on zero warnings *plus* its recorded tier and reason.
      Static emit path nowhere. `emit-tier.test.ts`'s "dropped ⇒ name absent" assertion stands
      in for it and covers all 22 × 3 combinations, which `tsc` does not. Wave 4's first real
      Static component closes it for free.
-  5. **Diagnostic reclassification per ADR 0029 s5's table.** — done ✓ (landed, pending review)
+  5. **Diagnostic reclassification per ADR 0029 s5's table.** — reviewed ✓ (2026-09-06)
      `TSRX004`, `TSRX034` (non-severe), `TSRX043`, `TSRX013`'s two server-evaluation
      factories and the reactive `TSRX033` warning left the diagnostic channel; the
      compile-warning baseline is **0** (was 7 standing warnings: 6 on basic-pluralize,
@@ -109,6 +109,17 @@ on zero warnings *plus* its recorded tier and reason.
      emitted on the Folded path, and the census must decide WHICH tier it records; ruled
      acceptable for emit, but "a Simulated module drops setup" is true of the classifier, not
      of every module the corpus finally labels Simulated.
+     **Review (2026-09-06):** Approved. Gates re-run independently: `bun test server`
+     1418 pass / 0 fail, `check:tsrx` green with the compile-warning baseline read as **0**
+     from its counted summary line. Of the four NOTES decisions: the `TSRX046`
+     rendered/not-rendered split and the `Date.UTC` admission are accepted as landed
+     (both match ADR 0029 s5 / ADR 0030 s2's rationale); the suppression-pool exclusion is
+     accepted with one correction — the pool excludes client-only primitives and ref names
+     only, NOT `host`/`internals` as NOTES claimed; those stay in the pool and are
+     neutralized instead by the `refStub` any-stubs (harmless dead code) plus `TSRX046`
+     when rendered, so do not "fix" the code to match the deleted NOTES wording. The
+     severe-`TSRX034` component-tier edge is ruled a real gap against the ADR's own
+     rationale — follow-up **LT-184**.
   6. **The tier census** rides `sim/report.ts` (LT-163's channel), recording per component its
      tier and the reason. It is NOT a warning — the compile-warning baseline's target stays
      zero (ADR 0029 s6), and `check:tsrx`'s counted summary line reports the two separately.
@@ -138,6 +149,37 @@ on zero warnings *plus* its recorded tier and reason.
   `Date`/`Math.random()` reading expression renders a value in ANY tier; the equivalence audit
   runs green in CI; the compile-warning count is zero and the tier census is reported
   separately; `bun test server` green.
+
+- [ ] LT-184: Scope the severe TSRX034 error per-expression instead of per-component (ADR 0029 s5 edge from the step-5 review).
+  **Skill:** le-truc-dev
+  **Context:** Step 5 implemented "severe `TSRX034` survives, scoped to the Static tier"
+  literally: `index.ts` drops every severe `TSRX034` error unless `classifyTier` routed the
+  whole component `static`. That reading fails for one shape the ADR's rationale doesn't
+  cover: a severe site whose OWN resolution is `none` (unresolvable in every tier, e.g.
+  `disabled={() => Date.now() < deadline}` — a time-window submit lockout) on a component
+  routed Simulated by some OTHER realm-answerable signal. There the ADR's premise ("on the
+  Simulated tier the value is resolved and the diagnostic is noise") is false — the value is
+  still omitted, so "enabled and submittable regardless of author intent" ships silently on
+  a submittable control. No corpus component hits the edge, but the shape is plausible.
+  Fix: fire the severe error iff the SITE's routing signal carries
+  `resolution.by === 'none'` (the resolution is already computed in `analysis/effects.ts`
+  and carried on the signal), regardless of component tier. Sound without a tier check: a
+  `none` resolution can never exist on a Folded-tier component (the routing signal itself
+  would have made it non-Folded), so this matches the ADR's rationale AND lets the error
+  gate return to its position before tier computation, removing that ordering dependency.
+  The filter is the single post-`classifyTier` block in `index.ts`; the push site is
+  `analysis/effects.ts`.
+  **Channel:** unchanged — same code, same Tier 3 error placement; only the firing
+  condition narrows. **Copy:** the current message asserts "this component routes to the
+  Static tier", which becomes false in the newly covered case (Simulated-tier component,
+  unresolvable site) — reword to state the site-level fact ("no server phase can resolve
+  this value in any tier"). Tech Writer reviews the reworded copy per the ADR 0028
+  lifecycle.
+  Acceptance: the edge shape (severe site with `none` resolution on a component that also
+  carries a realm-answerable routing signal) produces the error; a realm-answerable severe
+  site on a Simulated-tier component stays silent (pin BOTH directions — the vacuous
+  assertion is the failure mode); the error gate position change doesn't reorder any other
+  diagnostic's visibility; `bun test server` green.
 
 - [ ] LT-180: Surface library-contained connect failures in the simulation realm's diagnostics. **Land with or before LT-169.**
   **Skill:** docs-server-dev
