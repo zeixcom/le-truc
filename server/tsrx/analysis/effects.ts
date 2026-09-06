@@ -352,11 +352,16 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				// ROUTING SIGNAL, not a diagnostic — "phase 1 cannot fold
 				// this" was a statement about the harness, not the author's
 				// code. The one exception is the severe form (`disabled`/
-				// `checked` on a real submittable control): its diagnostic is
-				// pushed here and `index.ts` drops it again unless
-				// `classifyTier` routed the component Static — the only tier
-				// where nothing resolves the value, so the wrong default is
-				// permanent.
+				// `checked` on a real submittable control), and it is scoped
+				// per-EXPRESSION, not per-component (LT-184): the error fires
+				// iff THIS site's own resolution is `none`, so no server phase
+				// resolves it in any tier and the wrong default is permanent.
+				// A component routed Simulated by some other realm-answerable
+				// signal still omits this value, so a component-level Static
+				// check would have missed it. Sound without a tier check: a
+				// `none` resolution can never occur on a Folded-tier
+				// component, since the signal recorded right here would have
+				// made it non-Folded.
 				if (
 					SEMANTICALLY_LOADED_ATTRS.has(attr.name) &&
 					hostPropOf(attr.thunk) === null &&
@@ -370,13 +375,15 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						!containsImpureAmbient(attr.thunk, component.serverKnown)
 					)
 				) {
+					const resolution = resolutionOf(attr.thunk, component.serverKnown)
 					routingSignals.push({
 						origin: 'TSRX034',
 						detail: `\`${attr.name}\` on <${el.tag}> has no server-renderable value`,
 						...lineFields(source, attr.thunk.start),
-						resolution: resolutionOf(attr.thunk, component.serverKnown),
+						resolution,
 					})
 					if (
+						resolution.by === 'none' &&
 						(attr.name === 'disabled' || attr.name === 'checked') &&
 						component.config?.form != null &&
 						SUBMITTABLE_FORM_CONTROL_TAGS.has(el.tag)

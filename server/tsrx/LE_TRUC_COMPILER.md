@@ -527,7 +527,7 @@ per component, its tier and the reason — rather than as warnings:
 | --- | --- |
 | `TSRX004` | Simulated-tier routing signal; leaves the diagnostic channel |
 | `TSRX034` non-severe | routing signal; leaves the diagnostic channel |
-| `TSRX034` **severe** (`disabled`/`checked` on a real submittable control) | **survives, scoped to the Static tier** — the only tier where nothing resolves the value, and its own copy is right that this is a correctness bug rather than a flash |
+| `TSRX034` **severe** (`disabled`/`checked` on a real submittable control) | **survives, scoped per-expression** (LT-184) — it fires when the SITE's own resolution is `none`, so no tier resolves the value, even if another signal routes the component Simulated. Its own copy is right that this is a correctness bug rather than a flash |
 | `TSRX013` → `clientOnlySetupConst`, `clientOnlySignalCompute` | Simulated-tier routing signals |
 | `TSRX013` → `conditionalSignalConstructor` | **unchanged** as `TSRX044` — an ADR 0024 s12 format rule, not a server-evaluation guard |
 | `TSRX013` → `deferredCollectorCall` | **unchanged** as `TSRX045` — a client-side `NoActiveCollectorError` bug, tier-independent |

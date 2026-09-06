@@ -988,12 +988,13 @@ export const diagnostic = {
 	 * correctness bug (the control can submit, or fail to, against the
 	 * author's actual intent), not just a cosmetic pre-hydration flash.
 	 *
-	 * Scoped to the Static tier (ADR 0029 s5): on the Simulated tier the
-	 * realm renders the value, so the diagnostic would be noise. The caller
-	 * (`analysis/effects.ts`) pushes it only for a severe site; the caller's
-	 * caller (`index.ts`) drops it again unless `classifyTier` routed the
-	 * component Static — the tier is only known there. Non-severe severe-less
-	 * sites never reach this builder at all.
+	 * Scoped per-EXPRESSION, not per-component (LT-184, refining ADR 0029
+	 * s5): the caller (`analysis/effects.ts`) pushes it only for a severe
+	 * site whose OWN resolution is `none` — unresolvable in every tier, so
+	 * the value is omitted no matter how the component routes. A severe site
+	 * the realm can answer stays silent (the realm renders the value, so the
+	 * diagnostic would be noise), including on a component routed Simulated
+	 * by some other signal. Non-severe sites never reach this builder at all.
 	 */
 	unsafeLoadedAttributeDefault: (
 		source: string,
@@ -1012,7 +1013,7 @@ export const diagnostic = {
 							: 'collapsed'
 		return error(
 			'TSRX034',
-			`\`${name}\` has no server-renderable initial value here and this component routes to the Static tier, so no server phase can resolve it — \`${name}\` is silently OMITTED from the initial HTML. Omission is not neutral for \`${name}\`: it renders the ${stateWord} state regardless of what this expression would actually evaluate to once connected. This is a real submittable form control, so the wrong default is a correctness bug — the control can submit, or fail to, regardless of what the author intended — not just a cosmetic pre-hydration flash. Trace the value to a server-known prop or signal so it can render an initial value, or accept the pre-hydration flash explicitly by giving this element a static/server-rendered default for \`${name}\`.`,
+			`\`${name}\` has no server-renderable initial value here, and no server phase can resolve this value in any tier — so \`${name}\` is silently OMITTED from the initial HTML. Omission is not neutral for \`${name}\`: it renders the ${stateWord} state regardless of what this expression would actually evaluate to once connected. This is a real submittable form control, so the wrong default is a correctness bug — the control can submit, or fail to, regardless of what the author intended — not just a cosmetic pre-hydration flash. Trace the value to a server-known prop or signal so it can render an initial value, or accept the pre-hydration flash explicitly by giving this element a static/server-rendered default for \`${name}\`.`,
 			lineOf(source, offset),
 		)
 	},

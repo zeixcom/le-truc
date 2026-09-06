@@ -86,6 +86,8 @@ export const compileComponent = (
 		}
 	}
 	const plan = analyzeClient(component, registry, diagnostics, composeRegistry)
+	if (diagnostics.some(d => d.severity === 'error'))
+		return { component: null, diagnostics }
 	/**
 	 * The per-component half of the tier decision (ADR 0029, LT-165). Both
 	 * halves of the analysis contribute: setup extraction sees the
@@ -101,27 +103,6 @@ export const compileComponent = (
 	 */
 	const routingSignals = [...setupSignals, ...plan.routingSignals]
 	const tier = classifyTier(routingSignals)
-	/**
-	 * ADR 0029 sub-design 5, the last piece of the TSRX034 reclassification
-	 * (LT-165 step 5): the severe form (`disabled`/`checked` unresolvable on
-	 * a real submittable control) SURVIVES the channel, but scoped to the
-	 * Static tier — the only tier where nothing resolves the value, so the
-	 * wrong default is permanent. On the Simulated tier the realm renders it
-	 * and the diagnostic would be noise; on the Folded tier the site cannot
-	 * exist at all (a routing signal would have been recorded). The analysis
-	 * pushes the diagnostic before the tier is known, so the filter lives
-	 * here — and the error gate below must run AFTER it, or a Simulated-tier
-	 * component carrying the severe shape would abort before its tier was
-	 * ever computed.
-	 */
-	const surfaced =
-		tier === 'static'
-			? diagnostics
-			: diagnostics.filter(
-					d => !(d.code === 'TSRX034' && d.severity === 'error'),
-				)
-	if (surfaced.some(d => d.severity === 'error'))
-		return { component: null, diagnostics: surfaced }
 	/**
 	 * Composed children this component READS — a `first()` addressing the
 	 * compose site (resolved to a synthetic `ref` attr by
@@ -192,7 +173,7 @@ export const compileComponent = (
 			clientSpans: client.spans,
 			serverSpans: server.spans,
 		},
-		diagnostics: surfaced,
+		diagnostics,
 	}
 }
 

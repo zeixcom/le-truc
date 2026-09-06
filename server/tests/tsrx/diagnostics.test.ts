@@ -1559,14 +1559,56 @@ import { createCell, asString } from '@zeix/le-truc'`
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('correctness bug')
-		expect(hit?.message).toContain('Static tier')
+		expect(hit?.message).toContain('in any tier')
+	})
+
+	test('a severe site the realm cannot answer fires even on a Simulated-tier component (LT-184)', () => {
+		// The edge the per-component scoping missed: the `disabled` thunk is
+		// unresolvable in EVERY tier (a time-window lockout reading the
+		// viewing moment), but another site (`hidden` over `host.busy`) is
+		// realm-answerable, so the component routes Simulated. The value is
+		// still omitted, shipping "enabled and submittable" on a submittable
+		// control — the diagnostic must fire on the SITE's resolution, not
+		// the component's tier.
+		const source = `export const config = { formAssociated: true }
+export function C({ busy }: { busy: boolean })
+	@{
+		expose({ value: asString(''), busy: asBoolean(false) })
+		<>
+			<c-el>
+				<p hidden={() => host.busy !== false}>waiting</p>
+				<input disabled={() => Date.now() < 1_000} />
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { asString, asBoolean } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('in any tier')
+		// The premise, pinned separately because the erroring compile returns
+		// no component to read a tier off: the very same markup without
+		// `formAssociated` (so nothing is severe) really does route Simulated.
+		const notSevere = compileComponent(
+			source.replace('export const config = { formAssociated: true }\n', ''),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(notSevere.component?.entry.tier).toBe('simulated')
 	})
 
 	test('the same severe site is silenced on the Simulated tier (ADR 0029 s5: the realm renders the value)', () => {
 		// Same submittable control, but the thunk is realm-answerable
-		// (`host.busy` — no stub, no impurity), so the component routes
-		// Simulated and the severe diagnostic would be noise: it is dropped
-		// in index.ts once the tier is known.
+		// (`host.busy` — no stub, no impurity), so no error: the realm
+		// renders the value, so the diagnostic would be noise. The other
+		// direction of the LT-184 pin above — assert the component really
+		// did route Simulated, or the silence is vacuous.
 		const source = `export const config = { formAssociated: true }
 export function C({ busy }: { busy: boolean })
 	@{
