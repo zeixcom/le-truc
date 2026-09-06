@@ -18,6 +18,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { ComponentRegistry } from '../../tsrx/registry'
+import { tierCensus } from '../../tsrx/sim/report'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { loadTsrxCorpus } from './corpus-fixture'
 
@@ -111,5 +112,42 @@ describe('tier assignment over the migrated corpus', () => {
 			simulated: ['basic-pluralize', 'form-combobox', 'form-listbox'],
 			static: [],
 		})
+	})
+})
+
+describe('the tier census (LT-165 step 6, ADR 0029 sub-design 6)', () => {
+	// Built from the registry the corpus runner wrote — which the fixpoint in
+	// `compileTsrxCorpus` updated BEFORE the write, so the census records
+	// POST-contamination tiers by construction (the architect ruling for
+	// step 6).
+	const census = tierCensus(Object.values(registry))
+
+	test('every corpus component appears exactly once, with its final tier', () => {
+		expect(census.entries.map(entry => entry.subject).sort()).toEqual(
+			Object.keys(registry).sort(),
+		)
+		for (const entry of census.entries)
+			expect(entry.value).toBe(registry[entry.subject]?.tier)
+	})
+
+	test('folded entries carry no reasons; non-folded entries carry at least one', () => {
+		for (const entry of census.entries) {
+			if (entry.value === 'folded') expect(entry.reasons).toEqual([])
+			else expect(entry.reasons.length).toBeGreaterThan(0)
+		}
+	})
+
+	test('form-combobox is recorded Simulated — the post-contamination tier, with its compose-read reason', () => {
+		// The step-6 ruling: emit receives the PRE-contamination tier (index.ts
+		// classifies before the corpus fixpoint runs), so form-combobox —
+		// Folded by its own signals, Simulated purely through its compose READ
+		// of form-listbox — must be census-recorded Simulated with the
+		// compose-read signal as the reason, not the pre-contamination Folded
+		// tier its emit used.
+		const entry = census.entries.find(e => e.subject === 'form-combobox')
+		expect(entry?.value).toBe('simulated')
+		expect(
+			entry?.reasons.some(reason => reason.startsWith('compose-read: ')),
+		).toBe(true)
 	})
 })

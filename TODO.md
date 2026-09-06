@@ -45,7 +45,7 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P1 — Tiered server evaluation (critical path)
 
-- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–5 done and reviewed (step 5 reviewed ✓ 2026-09-06); steps 6–8 open.** Next up: step 6.
+- [ ] LT-165: Implement the ADR 0029 tier classifier, and split TSRX013. — **steps 1–6 done and reviewed; steps 7–8 open.** Next up: step 7.
   **Skill:** le-truc-dev
   **Context:** ADR 0029 is accepted; this is its implementation. Read the ADR, not this
   summary, for the rationale. Steps 1–3 landed in `a2e789e4` and were reviewed and approved
@@ -121,10 +121,29 @@ on zero warnings *plus* its recorded tier and reason.
      severe-`TSRX034` component-tier edge is ruled a real gap against the ADR's own
      rationale — follow-up **LT-184**.
   6. **The tier census** rides `sim/report.ts` (LT-163's channel), recording per component its
-     tier and the reason. It is NOT a warning — the compile-warning baseline's target stays
-     zero (ADR 0029 s6), and `check:tsrx`'s counted summary line reports the two separately.
-     LT-173 step 4's translation census adopts this surface; define it so a second census can
-     ride it without a parallel channel.
+     tier and the reason. — reviewed ✓ (2026-09-06)
+     **Changed:** `server/tsrx/sim/report.ts` (generic `Census`/`CensusEntry`/`CensusKind`
+     records + `tierCensus`/`formatCensus`), `server/tsrx/sim/index.ts` (re-exports),
+     `scripts/check-tsrx.ts` (prints the census as its own section after the compile-warning
+     baseline, read from the registry.json the compile just wrote), `server/effects/tsrx.ts`
+     (exports `GENERATED_DIR`), new `server/tests/tsrx/census.test.ts` (record shape, tag
+     sorting, format stability, "0 static" visibility, never a ⚠️ line),
+     `tier-corpus.test.ts` (+census-over-corpus: every component exactly once, reasons
+     discipline, form-combobox recorded Simulated via compose-read — the post-contamination
+     ruling), `sim-driver.test.ts` (+channel isolation: no census reason matches the LT-163
+     classification table; the zero-unclassified gate is unchanged),
+     `LE_TRUC_COMPILER.md` + `server/TESTS.md` (factual doc mentions). It is NOT a warning
+     — the compile-warning baseline's target stays zero (ADR 0029 s6), and `check:tsrx`'s
+     counted summary line reports the two separately. LT-173 step 4's translation census
+     adopts this surface; the generic named-census shape (`kind`/`name`/`values`/`entries`)
+     is defined so a second census can ride it without a parallel channel.
+     **Gates:** `bun test server` 1431 pass / 0 fail; `check:tsrx` exit 0 with the baseline
+     line still 0 and `Tier census — 22 entries: 19 folded, 3 simulated, 0 static`.
+     **Wave-4 note (from review):** census reasons carry `origin: detail (line N)` but not
+     the signal's `resolution` (`realm` vs `none`) — self-evident for today's Simulated
+     reasons, but when the first Static-tier component lands the reason should also say WHY
+     nothing answers it; add the resolution to the reason text then (the format is pinned,
+     its tests update with it).
   7. **Realm-side suppression for unresolvable expressions.** The generated client is the
      shipped artifact, so the realm cannot decline to install a binding: record each
      unresolvable expression's target site at compile time and revert those sites in the

@@ -42,7 +42,12 @@ export type CompiledSpanInfo = {
 
 /* === Internal Functions === */
 
-const GENERATED_DIR = join(import.meta.dir, '..', 'generated', 'tsrx')
+/**
+ * Where the corpus compile writes its artifacts, including the registry the
+ * tier census reads (`scripts/check-tsrx.ts`). Exported for the scripts and
+ * tests that address the same directory the pipeline defaults to.
+ */
+export const GENERATED_DIR = join(import.meta.dir, '..', 'generated', 'tsrx')
 const ROOT = join(import.meta.dir, '..', '..')
 
 /**

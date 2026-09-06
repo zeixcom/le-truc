@@ -59,6 +59,7 @@ import {
 	CLASSIFIED_DIAGNOSTICS,
 	formatSimReport,
 	reportDiagnostics,
+	tierCensus,
 } from '../../tsrx/sim/report'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { loadTsrxCorpus } from './corpus-fixture'
@@ -245,6 +246,23 @@ describe('build-report baseline (LT-163) — the wave-4 regression signal', () =
 		const report = reportDiagnostics(realm.diagnostics)
 		for (const { classification } of report.classified)
 			expect(formatSimReport(report)).toContain(classification.reason)
+	})
+
+	test('the tier census rides its own channel, never the diagnostic one (ADR 0029 s6)', () => {
+		// The census (LT-165 step 6) is a second KIND of build-report record,
+		// not a diagnostic: none of its reasons may be admitted by — or be
+		// needed by — the classification table, and the zero-unclassified gate
+		// above is unchanged by the census's existence. A census record that
+		// showed up here would mean the two record kinds were merged, which
+		// would make the census trippable and the baseline lies-prone.
+		const census = tierCensus(Object.values(registry))
+		for (const entry of census.entries)
+			for (const reason of entry.reasons)
+				expect(CLASSIFIED_DIAGNOSTICS.some(c => c.message.test(reason))).toBe(
+					false,
+				)
+		const report = reportDiagnostics(realm.diagnostics)
+		expect(report.unclassified).toEqual([])
 	})
 })
 

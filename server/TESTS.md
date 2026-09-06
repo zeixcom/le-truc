@@ -216,6 +216,15 @@ test says so. Tech Writer owns the report copy — see the `tech-writer` skill's
 `workflows/error-message-lifecycle.md` (the five conditions are tier 2: wording says the
 component *keeps* its server-rendered markup, never that the page broke).
 
+The **tier census** (LT-165 step 6, ADR 0029 § 6) is a third record, not a third baseline
+number: `check:tsrx` prints it as its own section after the compile-warning baseline
+(`Tier census — N entries: …`), never inside any warning count. It is built from the
+registry's post-contamination tiers by `tierCensus`/`formatCensus` in
+`server/tsrx/sim/report.ts` and is expected to grow — a component moving Folded → Simulated
+is a build-cost regression visible there. `census.test.ts` pins the record shape and its
+formatting; `tier-corpus.test.ts` pins what the census decides about the corpus, including
+form-combobox's post-contamination Simulated record.
+
 ---
 
 ## Verification Processes

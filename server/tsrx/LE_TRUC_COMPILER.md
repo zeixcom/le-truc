@@ -536,7 +536,10 @@ target stays zero.** Once routing signals leave the channel, the remaining
 warnings are all genuinely author-fixable again. The tier census is a
 separate, non-zero, expected-to-grow record with its own regression story — a
 component drifting from the Folded tier to the Simulated tier is a build-cost regression worth
-seeing, and it is now visible without being miscast as a warning.
+seeing, and it is now visible without being miscast as a warning. The census
+rides the build-report channel (`server/tsrx/sim/report.ts`'s generic
+`Census` records via `tierCensus`/`formatCensus`), and `check:tsrx` prints it
+as its own section after the compile-warning baseline.
 
 Message copy is owned by the Tech Writer per ADR 0028's lifecycle; severity
 follows the tiering decision recorded with each rule.

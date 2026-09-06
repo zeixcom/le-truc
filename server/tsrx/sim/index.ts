@@ -33,12 +33,18 @@ export {
 	type SimulationRealm,
 } from './realm.ts'
 export {
+	type Census,
+	type CensusEntry,
+	type CensusKind,
 	CLASSIFIED_DIAGNOSTICS,
 	type ClassifiedDiagnostic,
 	classificationFor,
 	classifyDiagnostic,
+	formatCensus,
 	formatSimDiagnostic,
 	formatSimReport,
 	reportDiagnostics,
 	type SimReport,
+	type TierCensusSubject,
+	tierCensus,
 } from './report.ts'
