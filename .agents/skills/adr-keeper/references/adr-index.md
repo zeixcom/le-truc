@@ -29,8 +29,9 @@ This file is auto-generated. Do not edit manually.
 | [0022](0022-debug-extension-for-visual-and-console-instrumentation.md) | `debug()` Extension for Visual and Console Instrumentation | ✅ Accepted | S3, N1, M5, M6 |
 | [0023](0023-map-form-overloads-for-bind-helpers.md) | Map-Form Overloads for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty`/`bindState` | ✅ Accepted | M5 |
 | [0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) | ARIA Reflection via ElementInternals and `bindAria()` | ✅ Accepted | M1, M3, M5, §4 |
+| [0031](0031-pre-connect-property-writes-capture-and-install.md) | Pre-Connect Property Writes Are Captured and Installed | ✅ Accepted | M2, M3 |
 
 ---
 
-**Last updated:** 2026-08-31
-**Total ADRs:** 24 (excluding template)
+**Last updated:** 2026-09-15
+**Total ADRs:** 25 (excluding template)

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Pre-connect property writes no longer kill reactivity**: a property written before connect — e.g. a parent factory writing a child's prop, which runs first for subtrees inserted in one batch (`innerHTML`, `replaceChildren`, template cloning) — used to stay a plain own data property forever, deaf to `watch()` effects and `pass()`. `expose()` now captures the written value as the initial value and installs the accessor anyway (see ADR 0031): the write outranks static and Parser initializers, a declared `Signal`/thunk/`SlotDescriptor` initializer stays the source of truth, and inherited prototype-managed members (`localName`, `lang`, …) keep being skipped. The initializer is retained, so `formResetCallback` and `observedAttributes()` re-runs now also work for early-written props.
+
 ## 2.6.0
 
 ### Added
