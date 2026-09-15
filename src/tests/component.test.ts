@@ -20,17 +20,23 @@ import {
 	InvalidPropertyNameError,
 	NoActiveCollectorError,
 } from '../errors'
-import { internalsHosts } from '../internal'
+import { internalsHosts, retainedInitializers } from '../internal'
 import { asParser, defineMethod } from '../types'
 
 /* === Fake customElements registry + HTMLElement base === */
 
 class FakeHTMLElement {
 	#attrs = new Map<string, string>()
-	localName = 'fake-element'
 	shadowRoot: null = null
 	formAssociated = false
 	#internals: FakeElementInternals | null = null
+
+	// Prototype-defined, like Element.localName in the real DOM — as an own
+	// class field it would be indistinguishable from a pre-connect write,
+	// which #initSignals detects via Object.hasOwn.
+	get localName(): string {
+		return 'fake-element'
+	}
 
 	getAttribute(name: string): string | null {
 		return this.#attrs.has(name) ? this.#attrs.get(name)! : null
@@ -361,15 +367,47 @@ describe('#initSignals dispatch order', () => {
 	})
 })
 
-/* === prop in this guard === */
+/* === pre-connect property writes (LT-199) === */
 
-describe('prop in this guard', () => {
-	test('skips an initializer when the property already exists on the host', () => {
+describe('pre-connect property writes', () => {
+	test('captures a pre-connect write as the initial value and installs the accessor', async () => {
+		const seen: string[] = []
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose, watch }) => {
+				expose({ value: 'init' })
+				watch('value', v => {
+					seen.push(v)
+				})
+			},
+		)!
+		const el = new Ctor() as any
+
+		// Parent-first connectedCallback order: an inserting ancestor's
+		// factory runs before a child in the same subtree upgrades, so the
+		// write lands before expose() initializes the property.
+		el.value = 'early'
+		el.connectedCallback()
+		await new Promise(r => setTimeout(r, 0))
+
+		// The early write is the initial signal value, not the initializer
+		expect(seen).toEqual(['early'])
+
+		// The accessor is installed: later writes stay reactive
+		el.value = 'late'
+		await new Promise(r => setTimeout(r, 0))
+		expect(seen).toEqual(['early', 'late'])
+
+		// The plain own data property was replaced by the accessor
+		expect(Object.getOwnPropertyDescriptor(el, 'value')?.get).toBeDefined()
+	})
+
+	test('skips an inherited, prototype-managed member (real-DOM localName)', () => {
 		const Ctor = defineComponent<{ localName: string }>(
 			uniqueName(),
 			({ expose }) => {
-				// `localName` already exists on the HTMLElement instance — the
-				// guard must skip it rather than overwrite it with a signal.
+				// `localName` is prototype-defined on HTMLElement — the guard
+				// must skip it rather than shadow it with a signal.
 				expose({ localName: 'should-be-ignored' })
 			},
 		)!
@@ -388,6 +426,78 @@ describe('prop in this guard', () => {
 		const instance = new Ctor() as any
 		instance.connectedCallback()
 		expect(instance.totallyNewProp).toBe(42)
+	})
+
+	test('parser-backed prop: a pre-connect write wins over the attribute', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: asParser(v => v ?? '') })
+			},
+		)!
+		const written = new Ctor() as any
+		written.setAttribute('value', 'from-attribute')
+		written.value = 'early'
+		written.connectedCallback()
+		expect(written.value).toBe('early')
+
+		// Control: without an early write the attribute drives the parser
+		const unwritten = new Ctor() as any
+		unwritten.setAttribute('value', 'from-attribute')
+		unwritten.connectedCallback()
+		expect(unwritten.value).toBe('from-attribute')
+	})
+
+	test('a declared signal initializer stays the source of truth over a pre-connect write', () => {
+		const tokens = createState('declared')
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: tokens.get })
+			},
+		)!
+		const el = new Ctor() as any
+		el.value = 'early'
+		el.connectedCallback()
+		// Substituting the early write would downgrade the prop to a static
+		// cell and drop the signal's reactive edges
+		expect(el.value).toBe('declared')
+
+		// The prop stays live-backed by the declared signal (read-only, since
+		// `tokens.get` alone exposes no setter)
+		tokens.set('updated')
+		expect(el.value).toBe('updated')
+		expect(() => {
+			el.value = 'x'
+		}).toThrow()
+	})
+
+	test('method producer still overwrites a pre-connect write', () => {
+		const Ctor = defineComponent<{ reset: () => void }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ reset: defineMethod(() => {}) })
+			},
+		)!
+		const el = new Ctor() as any
+		el.reset = () => {
+			throw new Error('junk method left by the pre-connect write')
+		}
+		el.connectedCallback()
+		expect(() => el.reset()).not.toThrow()
+	})
+
+	test('retains the initializer for an early-written prop (form reset / observedAttributes re-run)', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'declared-default' })
+			},
+		)!
+		const el = new Ctor() as any
+		el.value = 'early'
+		el.connectedCallback()
+		expect(retainedInitializers.get(el)?.['value']).toBe('declared-default')
 	})
 })
 

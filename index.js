@@ -3270,15 +3270,16 @@ function defineComponent(name, factory, extensions) {
         this.#cleanup();
     }
     #initSignals(instanceProps) {
-      const createReactiveProperty = (key, initializer) => {
+      const createReactiveProperty = (key, initializer, earlyValue) => {
         if (isParser(initializer)) {
-          const result = initializer(this.getAttribute(key));
-          if (result != null)
-            this.#setAccessor(key, result);
+          const value = earlyValue ?? initializer(this.getAttribute(key));
+          if (value != null)
+            this.#setAccessor(key, value);
         } else if (isMethodProducer(initializer)) {
           this[key] = initializer;
         } else {
-          const value = initializer;
+          const init = initializer;
+          const value = earlyValue != null && !isSignal(init) && !isSlotDescriptor(init) && !isFunction(init) ? earlyValue : init;
           if (value != null)
             this.#setAccessor(key, value);
         }
@@ -3294,7 +3295,8 @@ function defineComponent(name, factory, extensions) {
             ;
           throw new InvalidPropertyNameError(this.localName, prop, reason);
         }
-        if (prop in this)
+        const earlyValue = Object.hasOwn(this, prop) ? this[prop] : undefined;
+        if (prop in this && earlyValue === undefined)
           continue;
         let retained = retainedInitializers.get(this);
         if (!retained) {
@@ -3302,7 +3304,7 @@ function defineComponent(name, factory, extensions) {
           retainedInitializers.set(this, retained);
         }
         retained[prop] = initializer;
-        createReactiveProperty(prop, initializer);
+        createReactiveProperty(prop, initializer, earlyValue);
       }
     }
     #setAccessor(key, value) {

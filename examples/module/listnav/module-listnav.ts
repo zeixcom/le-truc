@@ -75,12 +75,6 @@ export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 	const hasOption = (value: string): boolean =>
 		!!query(listbox, `button[role="option"][value="${CSS.escape(value)}"]`)
 
-	// Set initial selection from hash
-	if (location.hash) {
-		const value = hashToValue(location.hash, listbox)
-		if (value && hasOption(value)) listbox.value = value
-	}
-
 	// Track whether we're updating the hash ourselves to avoid loops
 	let updatingHash = false
 
@@ -105,6 +99,16 @@ export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 	watch(
 		() => true,
 		() => {
+			// Set initial selection from hash — deferred to effect activation:
+			// with dynamic composition the listbox may not have connected when
+			// our factory runs (parent-first connectedCallback order for
+			// inserted subtrees), and a synchronous write would land before
+			// its signal exists.
+			if (location.hash) {
+				const value = hashToValue(location.hash, listbox)
+				if (value && hasOption(value)) listbox.value = value
+			}
+
 			// Update hash when selection changes
 			const cleanup = createEffect(() => {
 				const value = listbox.value
