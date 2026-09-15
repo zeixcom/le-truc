@@ -6,7 +6,7 @@
 
 ## Context
 
-Custom element `connectedCallback`s fire parent-first for any subtree inserted in one operation (spec-mandated tree order), so a parent factory can synchronously write a child's `expose()`d property before the child upgrades — dynamic composition (`innerHTML`, `replaceChildren`, template cloning) hits this on every mount. `#initSignals` skipped any prop already present on the host ("explicit DOM value wins"), which honored the written value but left it a plain own data property forever: no signal, no accessor, so `watch()` effects never re-fired and `pass()` could not observe the prop — reads looked healthy while reactivity was dead, violating [M2](../../REQUIREMENTS.md#must-have). The skip also dropped the retained initializer, disabling `formResetCallback` and `observedAttributes()` re-runs for that prop. Static page loads mask the hazard because elements parse before definitions register, so nothing can write their properties early.
+Custom element `connectedCallback`s fire parent-first for any subtree inserted in one operation (spec-mandated tree order), so a parent factory can synchronously write a child's `expose()`d property before the child upgrades — dynamic composition (`innerHTML`, `replaceChildren`, template cloning) hits this on every mount. `#initSignals` skipped any prop already present on the host ("explicit DOM value wins"), which honored the written value but left it a plain own data property forever: no signal, no accessor, so `watch()` effects never re-fired and `pass()` could not observe the prop — reads looked healthy while reactivity was dead, violating [M2](../REQUIREMENTS.md#must-have). The skip also dropped the retained initializer, disabling `formResetCallback` and `observedAttributes()` re-runs for that prop. Static page loads mask the hazard because elements parse before definitions register, so nothing can write their properties early.
 
 ## Decision
 
@@ -32,7 +32,7 @@ Discrimination is `Object.hasOwn`, not `in`: inherited prototype-managed members
 
 ## Related
 
-- Requirements: [M2](../../REQUIREMENTS.md#m2-reactive-properties-backed-by-signals) (properties behave like normal JS object properties), [M3](../../REQUIREMENTS.md#m3-attribute--property-initialisation-via-parsers) (attribute → property initialisation at connect time)
-- Architecture: [Data Flow → Parsers](../../ARCHITECTURE.md#parsers)
+- Requirements: [M2](../REQUIREMENTS.md#m2-reactive-properties-backed-by-signals) (properties behave like normal JS object properties), [M3](../REQUIREMENTS.md#m3-attribute--property-initialisation-via-parsers) (attribute → property initialisation at connect time)
+- Architecture: [Data Flow → Parsers](../ARCHITECTURE.md#parsers)
 - Refines, does not supersede: ADR 0003 (attributes drive state at connect time only) — settles precedence between an attribute and an early imperative write
 - Tasks: LT-199 (library fix), LT-200 (`module-listnav` deferred hash sync as defense-in-depth)
