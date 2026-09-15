@@ -1,10 +1,14 @@
 import pkg from '../../package.json'
 import {
 	ASSETS_DIR,
+	BASE_URL,
 	CHAPTERS,
 	INCLUDES_DIR,
 	LAYOUTS_DIR,
+	LOCALES,
+	localeAssetPath,
 	OUTPUT_DIR,
+	rewriteFragmentRefs,
 } from '../config'
 import {
 	docsMarkdown,
@@ -136,7 +140,7 @@ export const getBlogVariables = (
 	'blog-tags': string
 	'author-avatar': string
 } => {
-	const { metadata, htmlContent, basePath } = processedFile
+	const { metadata, htmlContent, relativePath } = processedFile
 
 	// Strip HTML tags and count words
 	const wordCount = htmlContent
@@ -150,11 +154,16 @@ export const getBlogVariables = (
 		.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`)
 		.join(' ')
 
-	// Derive avatar path from author name if not explicitly set
+	// Derive avatar path from author name if not explicitly set. Avatars are
+	// ASSETS: they hang off the docs root (single-copy, LT-174), so the path
+	// goes through localeAssetPath — the locale-relative basePath would name
+	// a directory inside the locale tree that does not exist.
 	const author = metadata.author ?? ''
 	const authorAvatar =
 		metadata['author-avatar'] ||
-		(author ? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg` : '')
+		(author
+			? `${localeAssetPath(pageDepth(relativePath))}assets/img/avatar/${generateSlug(author)}.jpg`
+			: '')
 
 	return {
 		'published-date': metadata.date ?? '',
@@ -193,10 +202,18 @@ export const computeBlogPrevNext = (
 	return map
 }
 
-/** Generate blog overview excerpt cards for the most-recent non-draft posts. */
+/** Generate blog overview excerpt cards for the most-recent non-draft posts.
+ *
+ * `basePath` is the overview page's LOCALE-relative base — post links stay
+ * inside the locale tree. `assetBasePath` is its DOCS-root base: avatars are
+ * single-copy assets (LT-174) and must not ride the locale-relative base.
+ * The default assumes the overview sits at depth 0, which it does
+ * (`blog.md` — see the pagesEffect call site).
+ */
 export const generateBlogExcerpts = (
 	sortedPosts: ProcessedMarkdownFile[],
 	basePath: string = './',
+	assetBasePath: string = localeAssetPath(0),
 ): string => {
 	if (sortedPosts.length === 0) return '<p>No blog posts yet.</p>'
 
@@ -212,7 +229,7 @@ export const generateBlogExcerpts = (
 			const avatar =
 				post.metadata['author-avatar'] ||
 				(author
-					? `${basePath}assets/img/avatar/${generateSlug(author)}.jpg`
+					? `${assetBasePath}assets/img/avatar/${generateSlug(author)}.jpg`
 					: '')
 			const title = post.title
 			const description = post.metadata.description ?? ''
@@ -352,12 +369,75 @@ export const getChapterVars = (
 	}
 }
 
+/* === Locale Helpers === */
+
+/**
+ * How deep a page sits inside its locale tree.
+ *
+ * `guide.md` is 0, `blog/post.md` is 1. Drives `localeAssetPath` — the path
+ * back out to the docs root, where assets and the locale-independent
+ * fragment directories live (LT-174).
+ */
+export const pageDepth = (relativePath: string): number =>
+	relativePath.split('/').length - 1
+
+/**
+ * `<link rel="alternate" hreflang>` set for one page across every locale.
+ *
+ * Absolute URLs, because search engines resolve hreflang against the
+ * document rather than the site root. `x-default` points at the default
+ * locale, which is also where `/` redirects (serve.ts).
+ */
+export const hreflangAlternates = (
+	pageUrl: string,
+	baseUrl: string = BASE_URL,
+): string => {
+	const link = (hreflang: string, locale: string) =>
+		html`<link rel="alternate" hreflang="${hreflang}" href="${baseUrl}/${locale}/${pageUrl}">`
+	return [
+		...LOCALES.map(locale => link(locale, locale)),
+		link('x-default', LOCALES[0]),
+	].join('\n\t\t')
+}
+
+/**
+ * The site root's redirect stub (LT-174).
+ *
+ * Every page now lives under a locale prefix, which leaves `docs/index.html`
+ * — the URL people actually type and the one static hosts serve for `/` —
+ * with nothing behind it. The dev server answers with a 302 (serve.ts), but
+ * a static host has no such hook, so the build emits a real file.
+ *
+ * Belt and braces on purpose: the `<meta http-equiv="refresh">` is what
+ * actually redirects, the canonical link tells crawlers where the content
+ * lives, and the visible link is the no-JS, no-refresh fallback. No script,
+ * so it works with JS disabled; no locale sniffing, because the locale is a
+ * build-time decision and guessing it here would contradict ADR 0030's whole
+ * premise.
+ */
+export const rootRedirectPage = (locale: string = LOCALES[0]): string =>
+	html`<!doctype html>
+<html lang="${locale}">
+	<head>
+		<meta charset="utf-8">
+		<title>Le Truc</title>
+		<meta http-equiv="refresh" content="0; url=./${locale}/index.html">
+		<link rel="canonical" href="./${locale}/index.html">
+		${raw(hreflangAlternates('index.html'))}
+		<meta name="robots" content="noindex">
+	</head>
+	<body>
+		<p>Redirecting to <a href="./${locale}/index.html">the documentation</a>.</p>
+	</body>
+</html>`
+
 /* === Template Application === */
 
 const applyTemplate = async (
 	processedFile: ProcessedMarkdownFile,
 	assetHashes: { css: string; js: string },
 	rootPages: PageInfo[],
+	locale: string,
 	extraReplacements: Record<string, string> = {},
 ): Promise<string> => {
 	try {
@@ -384,11 +464,22 @@ const applyTemplate = async (
 			processedFile.section || processedFile.filename.replace('.md', '')
 		const menuHtml = menu(rootPages, currentSlug, processedFile.basePath)
 
-		// Replace template variables
+		// Replace template variables.
+		//
+		// TWO path variables, because a locale prefix splits what used to be
+		// one (LT-174). `base-path` reaches the DOCS ROOT — assets, llms.txt,
+		// and the locale-independent fragment directories all hang off it, one
+		// level further up now that the page sits inside `docs/<locale>/`.
+		// `processedFile.basePath` stays LOCALE-RELATIVE and keeps driving page
+		// links (the menu, resolved internal links, blog URLs): a sibling page
+		// lives in the same locale tree, so those paths are unchanged.
+		const pageUrl = processedFile.relativePath.replace('.md', '.html')
 		const replacements: { [key: string]: string } = {
-			url: processedFile.relativePath.replace('.md', '.html'),
+			url: pageUrl,
 			section: processedFile.section || '',
-			'base-path': processedFile.basePath,
+			'base-path': localeAssetPath(pageDepth(processedFile.relativePath)),
+			lang: locale,
+			'hreflang-alternates': hreflangAlternates(pageUrl),
 			title: processedFile.title,
 			version: pkg.version,
 			'css-hash': assetHashes.css,
@@ -412,9 +503,14 @@ const applyTemplate = async (
 			...extraReplacements,
 		}
 
-		return layout.replace(/{{\s*(.*?)\s*}}/g, (_, key) => {
+		const rendered = layout.replace(/{{\s*(.*?)\s*}}/g, (_, key) => {
 			return replacements[key.trim()] || ''
 		})
+
+		// Point fragment references at the single root copy. Runs on the FULLY
+		// rendered page so it covers both authored content (`./api/...` links)
+		// and anything a Markdoc schema emitted (listnav's `value="./examples/..."`).
+		return rewriteFragmentRefs(rendered, pageDepth(processedFile.relativePath))
 	} catch (error) {
 		console.error(
 			`Failed to apply template for ${processedFile.relativePath}:`,
@@ -474,20 +570,27 @@ export const pagesEffect = (onRebuild?: () => void) =>
 				}),
 			)
 
-			// Process all markdown files
-			const processPromises = Array.from(processedFiles.values()).map(
-				async (processedFile: ProcessedMarkdownFile) => {
-					try {
-						let fileToRender = processedFile
-						let extra: Record<string, string> = getChapterVars(
-							processedFile,
-							rootPagesBySlug,
-						)
+			// One complete page tree per locale (ADR 0030 sub-design 1, LT-174).
+			// The locale is fixed HERE, before any rendering begins — everything
+			// downstream of this loop sees it as a constant, which is what keeps
+			// `Intl` foldable and i18n components on the Folded tier (ADR 0029).
+			// Only PAGES multiply: the api/, examples/ and sources/ fragment
+			// trees are generated reference content no catalog can translate, so
+			// they stay single-copy at the docs root (LOCALE_INDEPENDENT_DIRS).
+			const processPromises = LOCALES.flatMap(locale =>
+				Array.from(processedFiles.values()).map(
+					async (processedFile: ProcessedMarkdownFile) => {
+						try {
+							let fileToRender = processedFile
+							let extra: Record<string, string> = getChapterVars(
+								processedFile,
+								rootPagesBySlug,
+							)
 
-						if (processedFile.relativePath === 'blog.md') {
-							// Inject hero + excerpt cards into the blog overview
-							const { metadata } = processedFile
-							const heroHtml = html`<section-hero>
+							if (processedFile.relativePath === 'blog.md') {
+								// Inject hero + excerpt cards into the blog overview
+								const { metadata } = processedFile
+								const heroHtml = html`<section-hero>
 								<h1>${metadata.title ?? 'Blog'}</h1>
 								<div class="hero-layout">
 									<div class="lead">
@@ -499,55 +602,67 @@ export const pagesEffect = (onRebuild?: () => void) =>
 									</div>
 								</div>
 							</section-hero>`
-							fileToRender = {
-								...processedFile,
-								htmlContent: html`${raw(heroHtml)}
+								fileToRender = {
+									...processedFile,
+									htmlContent: html`${raw(heroHtml)}
 									<section class="blog-posts">
 										${raw(blogExcerpts)}
 									</section>
 									${raw(blogArchive)}`,
+								}
+							} else if (processedFile.section === 'blog') {
+								// Add blog-specific template variables
+								extra = {
+									...getBlogVariables(processedFile),
+									...(prevNextMap.get(processedFile.path) ?? {}),
+								}
 							}
-						} else if (processedFile.section === 'blog') {
-							// Add blog-specific template variables
-							extra = {
-								...getBlogVariables(processedFile),
-								...(prevNextMap.get(processedFile.path) ?? {}),
-							}
+
+							// Apply template
+							const finalHtml = await applyTemplate(
+								fileToRender,
+								assetHashes,
+								rootPages,
+								locale,
+								extra,
+							)
+
+							// Write output file, under this locale's page tree
+							await writeFileSafe(
+								getFilePath(
+									OUTPUT_DIR,
+									locale,
+									processedFile.relativePath.replace('.md', '.html'),
+								),
+								finalHtml,
+							)
+
+							console.log(
+								`📄 Generated ${locale}/${processedFile.relativePath.replace('.md', '.html')}`,
+							)
+						} catch (error) {
+							console.error(
+								`Failed to generate ${locale}/${processedFile.relativePath}:`,
+								error,
+							)
 						}
-
-						// Apply template
-						const finalHtml = await applyTemplate(
-							fileToRender,
-							assetHashes,
-							rootPages,
-							extra,
-						)
-
-						// Write output file
-						await writeFileSafe(
-							getFilePath(
-								OUTPUT_DIR,
-								processedFile.relativePath.replace('.md', '.html'),
-							),
-							finalHtml,
-						)
-
-						console.log(
-							`📄 Generated ${processedFile.relativePath.replace('.md', '.html')}`,
-						)
-					} catch (error) {
-						console.error(
-							`Failed to generate ${processedFile.relativePath}:`,
-							error,
-						)
-					}
-				},
+					},
+				),
 			)
 
 			// Wait for all processing to complete
 			await Promise.all(processPromises)
 
-			console.log(`📚 Successfully generated ${processedFiles.size} HTML pages`)
+			// The site root, which is no longer a page but a signpost
+			await writeFileSafe(
+				getFilePath(OUTPUT_DIR, 'index.html'),
+				rootRedirectPage(),
+			)
+
+			console.log(
+				`📚 Successfully generated ${processPromises.length} HTML pages ` +
+					`(${processedFiles.size} × ${LOCALES.length} locale(s): ${LOCALES.join(', ')})`,
+			)
 		},
 		onRebuild,
 	)

@@ -91,19 +91,19 @@ describe('generateLlmsTxt — section grouping', () => {
 	test('top-level pages go into Core Reference', () => {
 		const result = generateLlmsTxt(corePages)
 		expect(result).toContain('## Core Reference')
-		expect(result).toContain('[Introduction](./index.md)')
+		expect(result).toContain('[Introduction](./en/index.md)')
 	})
 
 	test('blog/ pages go into Blog', () => {
 		const result = generateLlmsTxt(blogPages)
 		expect(result).toContain('## Blog')
-		expect(result).toContain('[Post A](./blog/2026-01-01-post-a.md)')
+		expect(result).toContain('[Post A](./en/blog/2026-01-01-post-a.md)')
 	})
 
 	test('api/ pages go into API Reference', () => {
 		const result = generateLlmsTxt(apiPages)
 		expect(result).toContain('## API Reference')
-		expect(result).toContain('[defineComponent](./api/define-component.md)')
+		expect(result).toContain('[defineComponent](./en/api/define-component.md)')
 	})
 
 	test('unknown section is capitalized', () => {
@@ -190,30 +190,30 @@ describe('generateLlmsTxt — page ordering', () => {
 /* === Link format === */
 
 describe('generateLlmsTxt — link format', () => {
-	test('uses relative ./ paths', () => {
+	test('links into the default locale, where the mirrors live (LT-174)', () => {
 		const result = generateLlmsTxt(corePages)
-		expect(result).toContain('./index.md')
+		expect(result).toContain('./en/index.md')
 		expect(result).not.toContain('/docs/')
 	})
 
 	test('preserves nested paths', () => {
 		const result = generateLlmsTxt(blogPages)
-		expect(result).toContain('./blog/2026-01-01-post-a.md')
+		expect(result).toContain('./en/blog/2026-01-01-post-a.md')
 	})
 
-	test('link format is "- [Title](./path.md)"', () => {
+	test('link format is "- [Title](./en/path.md)"', () => {
 		const pages = [
 			makePageInfo({ relativePath: 'index.md', title: 'Introduction' }),
 		]
 		const result = generateLlmsTxt(pages)
-		expect(result).toContain('- [Introduction](./index.md)')
+		expect(result).toContain('- [Introduction](./en/index.md)')
 	})
 
 	test('all pages are listed', () => {
 		const all = [...corePages, ...blogPages, ...apiPages]
 		const result = generateLlmsTxt(all)
 		for (const page of all) {
-			expect(result).toContain(`./${page.relativePath}`)
+			expect(result).toContain(`./en/${page.relativePath}`)
 		}
 	})
 })

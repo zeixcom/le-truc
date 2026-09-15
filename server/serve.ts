@@ -4,8 +4,10 @@ import {
 	ASSETS_DIR,
 	BLOG_OUTPUT_DIR,
 	COMPONENTS_DIR,
+	DEFAULT_LOCALE,
 	EXAMPLES_DIR,
 	LAYOUTS_DIR,
+	LOCALES,
 	OUTPUT_DIR,
 	PAGES_DIR,
 	ROUTE_LAYOUT_MAP,
@@ -139,6 +141,10 @@ const handleComponentTest = async (
 			content: componentContent,
 			title: componentName,
 			version: pkg.version,
+			// The test layout shares `{{ lang }}` with the page layouts
+			// (LT-174); an unreplaced key renders `lang=""`, which is worse
+			// than the default it stands in for.
+			lang: DEFAULT_LOCALE,
 		})
 
 		// Inject HMR script in development
@@ -190,6 +196,17 @@ const guardPath = (baseDir: string, resolvedPath: string): string | null =>
 
 const acceptsMarkdown = (req: Request): boolean =>
 	(req.headers.get('Accept') || '').includes('text/markdown')
+
+/**
+ * Whether a first path segment names one of the built locales (LT-174).
+ *
+ * Pages live under `docs/<locale>/`, so a request for `/de/guide.html` has to
+ * be told apart from a request for a root-level file. Anything not in
+ * `LOCALES` falls through to the un-prefixed routes, which still serve the
+ * locale-independent trees (assets, api, examples, sources).
+ */
+const isLocale = (segment: string): boolean =>
+	(LOCALES as readonly string[]).includes(segment)
 
 const handleMarkdownSource = async (
 	pageName: string,
@@ -333,56 +350,85 @@ async function startServer() {
 					: new Response('Not Found', { status: 404 })
 			},
 
-			// Individual blog post pages
-			'/blog/:slug': req => {
-				const slug = req.params.slug.replace(/\.html$/, '')
+			// Individual blog post pages, inside a locale tree
+			'/:locale/blog/:slug': req => {
+				const { locale, slug } = req.params
+				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
+				const localeBlogDir = getFilePath(OUTPUT_DIR, locale, 'blog')
 				const filePath = guardPath(
-					BLOG_OUTPUT_DIR,
-					getFilePath(BLOG_OUTPUT_DIR, `${slug}.html`),
+					localeBlogDir,
+					getFilePath(localeBlogDir, `${slug.replace(/\.html$/, '')}.html`),
 				)
 				return filePath
 					? handleStaticFile(filePath)
 					: new Response('Not Found', { status: 404 })
 			},
 
-			// Documentation pages
-			'/:page': async req => {
+			// Documentation pages, inside a locale tree (`/de/guide.html`).
+			// The locale is a PATH PREFIX, not a negotiated header: the page was
+			// rendered for it at build time (ADR 0030 sub-design 1), so there is
+			// exactly one file to serve and no content negotiation to do.
+			'/:locale/:page': async req => {
+				const { locale, page } = req.params
+				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
+				const localeDir = getFilePath(OUTPUT_DIR, locale)
 				if (acceptsMarkdown(req)) {
-					const pageName = req.params.page.replace(/\.html$/, '')
-					const mdResponse = await handleMarkdownSource(pageName)
+					const mdResponse = await handleMarkdownSource(
+						page.replace(/\.html$/, ''),
+					)
 					if (mdResponse) return mdResponse
 				}
-				const filePath = guardPath(
-					OUTPUT_DIR,
-					getFilePath(OUTPUT_DIR, req.params.page),
-				)
+				const filePath = guardPath(localeDir, getFilePath(localeDir, page))
 				if (!filePath) return new Response('Not Found', { status: 404 })
 
-				// Bare section roots (/blog, /examples, /api) resolve to
-				// directories — redirect to the matching page if it exists
-				if (isDirectory(filePath)) {
-					const page = req.params.page.replace(/\.html$/, '')
-					if (fileExists(getFilePath(OUTPUT_DIR, `${page}.html`)))
+				// Extensionless page URLs (/en/examples, /en/blog) redirect to
+				// the page itself. Before LT-174 this fired only where a
+				// same-named DIRECTORY happened to sit next to the page — an
+				// accident of the output layout, which the locale split removed
+				// for api/ and examples/ (their fragments stayed at the root).
+				// Keyed on the missing extension instead, it is a property of
+				// the URL rather than of what else got written nearby.
+				if (!page.includes('.') || isDirectory(filePath)) {
+					const name = page.replace(/\.html$/, '')
+					if (fileExists(getFilePath(localeDir, `${name}.html`)))
 						return new Response(null, {
 							status: 301,
-							headers: { Location: `/${page}.html` },
+							headers: { Location: `/${locale}/${name}.html` },
 						})
 					return new Response('Not Found', { status: 404 })
 				}
 				return handleStaticFile(filePath)
 			},
 
+			// A bare locale root serves that locale's index
+			'/:locale': req => {
+				const { locale } = req.params
+				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
+				return handleStaticFile(getFilePath(OUTPUT_DIR, locale, 'index.html'))
+			},
+
 			// Serve favicon
 			'/favicon.ico': () =>
 				handleStaticFile(getFilePath(OUTPUT_DIR, 'favicon.ico')),
 
-			// Index
+			// The root redirect stub the pages effect writes — what a static
+			// host serves for `/`, kept reachable by its own URL too.
+			'/index.html': () =>
+				handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html')),
+
+			// Index — every page now lives under a locale prefix, so the site
+			// root is a redirect rather than a page. 302, not 301: which locale
+			// is "default" is a build decision (config's LOCALES[0]) that may
+			// change, and a permanently cached redirect would outlive it.
 			'/': async req => {
 				if (acceptsMarkdown(req)) {
 					const mdResponse = await handleMarkdownSource('index')
 					if (mdResponse) return mdResponse
 				}
-				return handleStaticFile(getFilePath(OUTPUT_DIR, 'index.html'))
+				return new Response(null, {
+					status: 302,
+					headers: { Location: `/${DEFAULT_LOCALE}/index.html` },
+				})
 			},
 		},
 

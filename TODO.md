@@ -185,10 +185,17 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   4 locales) for a three-line change with a checkable invariant. Land it in LT-174.
   **The figure LT-174 actually owes** (same build, instrumented per stage): phase 1
   (TypeDoc + CSS + TSRX compile) **3032 ms and locale-independent**; simulate **85 ms**;
-  js 22 ms; mdMirror 41 ms; apiPages **731 ms**; pages **1544 ms** (28 pages, ~55 ms/page);
-  examples **1597 ms** (35 pages, ~46 ms/page); total 4816 ms. **Per additional locale
-  ≈ 3.9 s** (apiPages + pages + examples), against the realm's ≤ 37 ms. The render
-  cache is a rounding error in LT-174's budget either way.
+  js 22 ms; mdMirror 41 ms; apiPages **731 ms**; pages **1544 ms** (28 pages);
+  examples **1597 ms** (35 pages); total 4816 ms.
+  **Correction, measured after LT-174 landed:** the projection this spike drew from those
+  figures — "≈ 3.9 s per additional locale" — was **wrong by two orders of magnitude**. The
+  per-stage timings are wall-clock from phase-2 start, so `pages`' 1544 ms is dominated by
+  WAITING on `docsMarkdown.fullyProcessed` (Markdoc parse + transform + Shiki, computed once
+  and shared by every locale); the marginal per-locale work is template application and file
+  writes. Measured end to end, twice each: **1 locale 3723 ms, 2 locales 3746 ms — +23 ms for
+  a whole second locale.** The stage split still correctly identifies WHERE cost lives; it
+  does not license reading any stage's total as per-locale marginal cost. The conclusion the
+  spike was for is unchanged and now doubly true: the render cache is a rounding error.
   **Follow-up:** ADR 0030's consequences bullet (`~3,700 occurrences`, `93.5% hit
   rate will drop`) is measurably wrong post-ADR-0029 and should be amended — flagged for
   the Architect, not edited here.
@@ -207,8 +214,64 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   won't declare the parameter, but confirm rather than assume). Record the figures in the
   handoff — ADR 0030's consequences section says explicitly that nobody has measured the net.
 
-- [ ] LT-174: Per-locale page rendering for the docs site (ADR 0030 s1). **Depends on LT-173 and LT-175.**
+- [x] LT-174: Per-locale page rendering for the docs site (ADR 0030 s1). — done, reviewed
+  (2026-09-15): two regressions the review caught are fixed in this commit (llms.txt now
+  links the default locale's mirrors; blog avatars resolve from the docs root, tested), the
+  sitemap gained `x-default`, and the raw-NUL test file is escape-encoded so its cache-key
+  coverage is diffable. Minors queued as LT-198. (public-surface change: URL structure,
+  output layout, server routes)
   **Skill:** docs-server-dev
+  **Changed:** `server/config.ts` (`LOCALES`/`DEFAULT_LOCALE`, `LOCALE_INDEPENDENT_DIRS`,
+  `localeAssetPath`, `rewriteFragmentRefs`); `server/effects/pages.ts` (per-locale loop,
+  `pageDepth`, `hreflangAlternates`, `rootRedirectPage`); `server/effects/md-mirror.ts`
+  (per-locale mirrors); `server/effects/simulate.ts` (locale loop, `declaresI18n` wiring,
+  `locales` in the result); `server/tsrx/sim/realm.ts` (conditional locale in the cache key);
+  `server/effects/i18n.ts` (`BUILD_I18N.pageLocale` from config, new `I18N_LOCALES`);
+  `server/templates/sitemap.ts` (per-locale `<loc>` + reciprocal `xhtml:link` alternates);
+  `server/serve.ts` (locale-prefixed routes, `/` → 302, `/index.html`, extensionless
+  redirect); `docs-src/layouts/*.html` (`{{ lang }}`, `{{ hreflang-alternates }}`); tests
+  (`serve.test.ts`, `templates/sitemap.test.ts`, `effects/simulate.test.ts`).
+  **How:** `LOCALES = ['en', 'de']`; the pages effect emits one complete page tree per locale
+  into `docs/<locale>/`, with the locale fixed before rendering begins.
+  **Two design calls worth the Architect's attention:**
+  1. **Only PAGES multiply.** `docs/api/`, `docs/examples/` and `docs/sources/` hold
+     lazy-loaded FRAGMENTS (verified: no `<!doctype>`, no layout) generated from TypeDoc and
+     `examples/` — content no catalog can translate. They stay single-copy at the docs root;
+     `rewriteFragmentRefs` retargets pages' `./api/…` references to `../api/…` at build time.
+     The alternative (duplicating them per locale) writes byte-identical output. Done as a
+     build transform rather than an authoring change because `docs-src/` is read-only to this
+     skill and content should not have to know a locale prefix exists.
+  2. **`base-path` split in two.** A locale prefix separates two things that used to
+     coincide: `{{ base-path }}` now reaches the DOCS ROOT (`localeAssetPath(depth)` — assets,
+     `llms.txt`, fragments), while `processedFile.basePath` stays LOCALE-RELATIVE and keeps
+     driving page links unchanged. `file-signals.ts` needed no change as a result.
+  **Two things the change had to add rather than move:**
+  - `docs/index.html` is now a redirect stub (meta-refresh + canonical + no-JS link). Every
+    page moved under a prefix, and a static host has no route hook — the dev server's 302
+    does not exist on GitHub Pages.
+  - Extensionless page URLs (`/en/examples`) now redirect on the MISSING EXTENSION. The old
+    301 fired only where a same-named directory happened to sit beside the page; the locale
+    split removed those directories for `api/` and `examples/`, so the affordance had to be
+    made deliberate or it would have silently become a 404.
+  **Perf obligation (the ADR's own ask), measured end to end, twice each:** **1 locale
+  3723 ms, 2 locales 3746 ms — +23 ms.** Simulated stage flat: 4 occurrences / 4 renders /
+  0 hits / 80 ms at one locale, 8 occurrences / **4 renders / 4 hits** / 76 ms at two. LT-175's
+  containment (locale in the cache key only when `declaresI18n`) is doing exactly what it was
+  measured to do. This does NOT meaningfully offset ADR 0029's Static-tier savings — the ADR's
+  fear was calibrated on a pre-0029 corpus. See LT-175's correction note for why the earlier
+  ≈3.9 s/locale projection was wrong.
+  **Check:**
+  - The two design calls above, especially #1 — if fragments SHOULD be per-locale, the
+    `rewriteFragmentRefs` layer comes out and routing changes with it.
+  - `rewriteFragmentRefs` is a regex over rendered HTML (`href|src|value="./<dir>/`). It is
+    the same class of transform as `resolveInternalLinks`, but it is a regex over HTML.
+  - **Deliberately NOT done:** the document-level page renderer and the page-position ambient
+    `lang` walk (`<section lang="cy">` around arbitrary occurrences) that LT-191's scope ruling
+    parks in LT-174. LT-174's own entry scopes it to path-prefix routing and per-locale SSG,
+    and the walk needs a renderer that server-renders compose sites INTO pages — which the
+    build still does not do (pages embed authored markup; examples html is copied verbatim).
+    That is a separate task, not a detail of this one; **it needs its own ticket.**
+  - ADR 0030's consequences bullet is now doubly stale (see LT-175) and wants amending.
   **Context:** Path-prefix routing (`/de/guide`, `/en/guide`), one SSG page per locale, locale
   fixed before rendering begins. **The build-time-constant property is load-bearing, not an
   infrastructure preference** — it is what lets `Intl` fold and keeps i18n components on the
@@ -418,6 +481,12 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   biome clean; tier census unchanged (20 folded / 2 simulated); the CI equivalence
   audit passed WITHOUT re-pinning — an SSR'd instance's root attribute makes
   materializeLocale a no-op, which is the soundness property itself.
+  **Also fold in (architect, 2026-09-07):** sub-design 1 gains the LT-174 output shape —
+  pages multiply per locale under `docs/<locale>/`, but the lazy-loaded FRAGMENT trees
+  (`api/`, `examples/`, `sources/`) stay single-copy at the docs root, because they are
+  derived from TypeDoc and `examples/` and no catalog can translate them. **Architect
+  confirmed 2026-09-07**, resolving the LT-174 NOTES entry. The consequences bullet on
+  corpus multiplication was retracted in place on the same date.
   **Handoffs:** adr-keeper amends ADR 0030 (s3 precedence chain, s4 per-category
   convention + census reachability — folded in per LT-192, s7 posture: the
   walk returns as the client-side route for client-authored markup, the record
@@ -478,6 +547,173 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   with `task.one` falling back to the source string. Tech Writer review of the
   reworded paragraphs folds into the open copy handoffs (TSRX008 message, ADR
   0030 amendment).
+
+- [ ] LT-193: Remove LT-166's render cache and LT-175's locale containment with it.
+  **Skill:** docs-server-dev
+  **Context:** **Architect ruling (2026-09-07): remove it.** LT-175 measured the cache at
+  **0 hits on a one-locale build** — pure overhead — and 4 hits at two locales only because
+  no Simulated-tier component declares `i18n`. **LT-195 ends that**: `form-combobox` and
+  `form-listbox` are the corpus's ONLY two Simulated-tier components and BOTH carry
+  translatable strings, so the moment they declare `i18n` the locale rejoins their key and the
+  hit rate returns to zero. The containment contains nothing.
+  **Why the premise cannot come back** (the argument that would have saved it, tested and
+  refuted): the cache was justified by a 93.5% hit rate over 3,330 occurrences, which assumed
+  the whole corpus flows through the realm. ADR 0029 ended that permanently, not temporarily —
+  counted on the built docs, **3,249 occurrences, of which `module-scrollarea` alone is 1,966
+  (60%)**, and ADR 0029 routed it off simulation because the realm *cannot* answer it. Even if
+  LT-194's page renderer routed every page occurrence through the realm, the Simulated-tier
+  share is **9 occurrences** (`form-combobox` 2 + `form-listbox` 7). There is no future
+  corpus-scale hit rate to preserve.
+  **How:**
+  1. Delete `renderCache`, `renderStats` and the conditional-locale key from
+     `server/tsrx/sim/realm.ts`, plus the `declaresI18n` constructor option LT-175 added.
+  2. Drop `renders`/`cacheHits` from `SimulationPassResult` and the build log line
+     (`server/effects/simulate.ts`); keep `occurrences` and `locales`.
+  3. **Keep the two-order hermeticity test** (`sim-driver.test.ts`) — it tests corpus
+     order-independence, which stands on its own. Remove only its cache-correctness clause and
+     the comment explaining it.
+  4. Rewrite the module header's "Render memoization" section out of `realm.ts`, and the
+     cache-engagement expectations in `effects/simulate.test.ts`. Repeat renders of one
+     component staying byte-stable is still an invariant worth pinning — keep that assertion,
+     drop the hit/miss accounting around it.
+  **Verification:** the cost this removes is ~4 renders (~4 ms on a 3,750 ms build), so the
+  acceptance is NOT a speed figure — it is that the build's occurrence count, diagnostics and
+  gate are unchanged, and the compile-warning and census baselines hold. Record the
+  simulated-stage wall time before and after so the no-regression claim is a measurement.
+  **Note for the record:** only quiescent, non-degraded renders ever memoized (`if (degraded)
+  return parsed`), so the cache could not suppress a *degraded* or *non-quiescent* diagnostic.
+  It could dedupe a `console`/`network` diagnostic on an otherwise-clean repeated render;
+  after removal such an entry fires once per occurrence instead of once. The gate counts
+  unclassified entries, so this changes noise, not verdicts — but say so in the handoff if the
+  build report's shape visibly changes.
+
+- [ ] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174.**
+  **Skill:** docs-server-dev
+  **Context:** Resolves the second NOTES.md entry from LT-174. LT-191's scope ruling parked
+  the page-position walk in LT-174; LT-174's own entry scoped it to path-prefix routing, and
+  the developer built the stated scope and flagged the gap. **The developer was right to
+  split it** — the walk needs a renderer that does not exist, so it was never a detail of
+  LT-174. It is this ticket.
+  **The gap:** the docs build does not server-render compose sites INTO pages. Pages embed
+  authored markup; `examples/**/<tag>.html` is copied verbatim. So `emit-server.ts`'s compose
+  inheritance (LT-191 stage 2) resolves a child's locale down the COMPOSITION tree, but a
+  component's ambient `lang` from its POSITION on the page (`<section lang="cy">` wrapping
+  arbitrary occurrences) has nothing to ride on. **LT-191's acceptance fixture has no home
+  until this lands** — that is the completion signal.
+  **Scope this deliberately, and expect it to be large.** Before building, answer: does the
+  renderer replace the verbatim copy of authored markup, or wrap it? What is the unit of
+  render — the page, or each occurrence? How does it interact with LT-174's per-locale page
+  trees (one renderer pass per locale, locale already fixed)? Write those answers into
+  NOTES.md or back to the Architect BEFORE implementing; a wrong shape here is expensive.
+  **Constraint that survives regardless:** the page locale and the ambient `lang` at a static
+  page position are both build-time constants (LT-191's ruling), so the `Intl` fold, the
+  `truc:case` pruning and the root-attribute render all still hold. Do not introduce anything
+  that makes either a runtime variable.
+  **Perf note:** LT-193's data applies — the Simulated-tier share of page occurrences is 9 of
+  3,249. Do not reintroduce a render cache for this; measure first if you think you need one.
+
+- [ ] LT-195: Internationalize the corpus's hard-coded accessibility strings (demand check, 2026-09-07). **Depends on LT-173; sequence after LT-193.**
+  **Skill:** le-truc-dev
+  **Context:** Surveyed the 22-component `.tsrx` corpus for user-visible English literals.
+  **Demand is real but small and sharply bounded** — 7 strings across 6 components, all of
+  them static template attributes or visually-hidden text, all server-rendered, all
+  translatable by ADR 0030's existing mechanism with no new surface:
+
+  | Component | Tier | String | Site |
+  |---|---|---|---|
+  | `form-combobox` | simulated | `Clear input` | `aria-label` |
+  | `form-listbox` | simulated | `Filter` / `Clear filter` | `placeholder` / `aria-label` |
+  | `form-textbox` | folded | `Clear input` | `aria-label` |
+  | `form-spinbutton` | folded | `Decrement` / `Increment` | `aria-label` (the second inside a thunk, with the literal as fallback) |
+  | `form-tokenbox` | folded | `Remove` | `aria-label` |
+  | `form-colorgraph` | folded | `Drag` | `.visually-hidden` span |
+
+  **Two things NOT in scope, deliberately:**
+  - **Developer-facing messages stay English.** `first('button', 'Add a native button as
+    descendant.')` and friends address the page author in their console, not the end user.
+    Translating them would be a category error — say so in a comment where it is tempting.
+  - **Author-supplied content stays untouched.** `basic-gauge`'s qualification labels come
+    from its `thresholds` attribute — page-author data, not component-owned strings. The
+    component catalog is not the right home for them.
+  **Watch for:** `form-spinbutton`'s increment label is a THUNK with `'Increment'` as its
+  fallback (`zeroSpan.textContent ?? 'Increment'`). `t` is a build-time record, so
+  `t['increment']` inside the thunk is fine — but confirm the fold survives it and the tier
+  does not move.
+  **Expected tier consequence, and the reason this is sequenced after LT-193:** two of the six
+  are the corpus's only Simulated-tier components. Once they declare `i18n`, LT-175's
+  containment stops applying to them — which is exactly why LT-193 removes it first rather
+  than leaving a cache that silently stops engaging.
+  **Verification:** tier census unchanged (20 folded / 2 simulated); compile-warning baseline
+  stays 0; `bun run i18n:sync` records the new keys' manifest hashes; the de catalog gains real
+  translations (not source echoes) for at least one component, pinned as a fixture.
+
+- [ ] LT-196: Report orphaned catalog keys in the translation census (ADR 0030 s5 gap).
+  **Skill:** docs-server-dev
+  **Context:** **Demonstrated by falsification, not inspection** (architect, 2026-09-07):
+  adding `"basic-deleted-component.gone"` and `"basic-pluralize.typo-key"` to `i18n/de.json`
+  and running the build reports **`🌐 Translation census: 0 gap(s) across 6 locale(s)`**. The
+  census walks DECLARED keys and checks catalogs; nothing ever walks catalog keys and checks
+  declarations. `TranslationGap.status` is `'missing' | 'stale'` with no third case.
+  **Why it matters more than it looks:** this is the exact failure mode a translator produces.
+  Mistype `task.other` as `task.oher` and the census says all clear while the source string
+  renders forever — the silent-wrong-answer shape, in the one place the project built a census
+  specifically to make loud. It is also how a renamed key or a deleted component leaves
+  residue in six catalogs with nothing to catch it.
+  **How:** add `'orphaned'` to `TranslationGap['status']` — a catalog key with no declaring
+  component, or whose component declares no such key. Include the per-category reachability
+  logic LT-190 added, inverted with care: a suffixed key OUTSIDE the locale's platform
+  category set is unreachable-but-legitimate, **not** orphaned. Getting that backwards would
+  report every `task.one` in a locale without a `one` category.
+  **Channel and tier (ADR 0028 s1):** the **build report / translation census**, tier **not
+  applicable — a report, not an error**, and it does **not** fail the build. Same channel and
+  posture as `missing`/`stale`, and for the same reason: a catalog is DATA, not component
+  source, so the compiler has no jurisdiction over it, and a hard failure would break the
+  legitimate rename-then-sync workflow. Tech Writer owns the census wording.
+  **Also:** `scripts/i18n-sync.ts` should prune orphans (or list them for removal) in the same
+  pass it writes missing keys — the census names the problem, `i18n:sync` is where a person
+  fixes it.
+
+- [ ] LT-197: Decide how client-side runtime strings get translated (exploration). **Depends on LT-195.**
+  **Skill:** architect (with le-truc-dev for feasibility)
+  **Context:** LT-195's survey turned up a category ADR 0030's mechanism **structurally
+  cannot serve**: strings built at event time in the browser.
+  - `form-tokenbox`: `` `Added token: ${trimmed}` `` and `` `Removed token: ${removedValue}` ``
+    written into a `role="status" aria-live="polite"` region.
+  - `form-colorgraph`: `setCustomValidity('Color out of gamut')`, three sites.
+  ADR 0030 sub-design 6 is explicit that **no message catalog and no locale runtime ship to
+  the browser**. These strings are therefore untranslatable today, on any locale, and the
+  tokenbox ones are announced to screen-reader users — the accessibility case is the strongest
+  one in the corpus, and it is the one the current design cannot reach.
+  **Do not assume the answer is "ship the catalog."** That would contradict ADR 0030's payload
+  posture and ADR 0003. Weigh at least: (a) server-render the message variants into the DOM
+  and have the client select among them (the `truc:case` pattern, generalized — no payload,
+  but only works for a closed set); (b) a tiny per-component compiled-in string map in the
+  generated client, scoped to that component's declared keys (small payload, ADR 0030's
+  "no catalog" is about the CORPUS catalog — is a per-component map the same thing?); (c)
+  accept the gap and document it as a known limit. **Measure the payload cost of (b) before
+  arguing about it.** Outcome is an ADR 0030 amendment or a new ADR, then tickets.
+
+- [ ] LT-198: LT-174 review residue — four deferred minors. **Depends on nothing; any time.**
+  **Skill:** docs-server-dev
+  **Context:** The LT-174 code review (2026-09-15) returned ready-after-fixes; the two
+  regressions it caught — llms.txt linking root-level mirrors that had moved into the locale
+  trees, and blog author avatars resolving into the non-existent `<locale>/assets/` — plus
+  the missing sitemap `x-default` are fixed in the same commit as the review. Four minors
+  were judged real but not worth holding the commit for:
+  1. Blog-post markdown mirrors 404 on the dev server: `/:locale/blog/:slug` (serve.ts)
+     strips only `.html` and force-appends `.html`, so `/en/blog/<slug>.md` looks for
+     `<slug>.md.html`. The mirrors exist at `docs/<locale>/blog/<slug>.md`; static hosts
+     serve them fine. Handle `.md` in the blog route.
+  2. Legacy root URLs (`/guide.html`, `/blog/<slug>`, …) now 404 with no redirect map —
+     only `/` got the stub treatment. Decide: a 301 map in serve.ts, or accept it for a
+     young site and record the ruling.
+  3. `server/SERVER.md` still documents the old routes and output layout (`GET /` → the
+     index page, `GET /blog/:slug` → root-level blog, `<page>.html` at the docs root).
+     Tech Writer owns it.
+  4. The new pure helpers (`rewriteFragmentRefs`, `localeAssetPath`, `pageDepth`,
+     `hreflangAlternates`, `rootRedirectPage`) have no direct unit tests — the most
+     corner-case-prone surface of LT-174. Route-level tests partially compensate; the
+     avatar fix added tests for the path math it touched.
 
 ---
 

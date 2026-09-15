@@ -101,9 +101,23 @@
  * completed connect memoizes: a degraded (contained throw) or non-quiescent
  * render re-runs every time, so its diagnostic keeps firing per occurrence.
  * The map dies with the realm and is bounded by unique
- * `(component, locale, markup)` triples — 216 signatures across the built
- * docs' 3,330
- * occurrences, per LT-152's measurement.
+ * `(component, locale, markup)` triples.
+ *
+ * ### Locale in the key is CONDITIONAL (LT-175)
+ *
+ * Per-locale page rendering (ADR 0030 sub-design 1) multiplies every
+ * occurrence by the locale count, and an unconditional locale in the key
+ * turns each copy into a miss. But a component that does not declare the
+ * reserved `i18n` parameter cannot observe the locale — seeding
+ * `<html lang>` changes nothing it reads — so its renders are
+ * byte-identical across locales and belong in ONE cache entry. The
+ * `declaresI18n` callback (the registry's own flag) decides: locale joins
+ * the key only for components that consume it.
+ *
+ * Measured over the compiled corpus at 4 locales: 16 occurrences → 4
+ * renders + 12 hits (75%), versus 16 renders and 0 hits with the locale
+ * unconditionally in the key. The invariant is enforced HERE rather than at
+ * the call site, so a caller that loops locales cannot get it wrong.
  */
 
 import { JSDOM, VirtualConsole } from 'jsdom'
@@ -322,10 +336,20 @@ export function createSimulationRealm(
 		 * per render, for the rendered tag.
 		 */
 		suppressedSites?: (tag: string) => readonly SuppressedSite[]
+		/**
+		 * Whether a component declares the reserved `i18n` parameter
+		 * (`RegistryEntry.declaresI18n`) — the render cache's locale-keying
+		 * decision, see the module header. Defaults to "declares it", the
+		 * CONSERVATIVE answer: keying on a locale the component ignores only
+		 * costs cache hits, while omitting one it reads would serve another
+		 * locale's bytes.
+		 */
+		declaresI18n?: (tag: string) => boolean
 	} = {},
 ): SimulationRealm {
 	const composesTags = options.composesTags ?? (() => [])
 	const suppressedSites = options.suppressedSites ?? (() => [])
+	const declaresI18n = options.declaresI18n ?? (() => true)
 	const runtime = detectRuntime()
 	const diagnostics: SimDiagnostic[] = []
 	const definitions: RecordedDefinition[] = []
@@ -693,8 +717,11 @@ export function createSimulationRealm(
 	}: RenderOptions): Promise<string> => {
 		// The locale is part of the render signature, not incidental to it: the
 		// same markup on a `de` page and an `en` page are different renders
-		// once a component reads `getLocale(host)` (LT-172).
-		const cacheKey = `${component}\u0000${locale ?? ''}\u0000${markup}`
+		// once a component reads `getLocale(host)` (LT-172) — but only THEN.
+		// A component that declares no `i18n` parameter cannot observe the
+		// seeded `<html lang>`, so its locales collapse to one entry (LT-175).
+		const keyLocale = declaresI18n(component) ? (locale ?? '') : ''
+		const cacheKey = `${component}\u0000${keyLocale}\u0000${markup}`
 		const cached = renderCache.get(cacheKey)
 		if (cached !== undefined) {
 			renderStats.cacheHits++

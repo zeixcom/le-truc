@@ -39,6 +39,83 @@ const SITEMAP_FILE = join(ROOT, 'docs/sitemap.xml')
 const LLMS_TXT_FILE = join(ROOT, 'docs/llms.txt')
 const LLMS_FULL_TXT_FILE = join(ROOT, 'docs/llms-full.txt')
 
+/**
+ * The locales the docs site is built for (ADR 0030 sub-design 1, LT-174).
+ *
+ * Every entry produces one complete page tree under `docs/<locale>/`, and the
+ * locale is fixed BEFORE rendering begins — that build-time-constant property
+ * is load-bearing, not an infrastructure preference: it is what lets `Intl`
+ * fold (LT-142) and keeps i18n components on the Folded tier (ADR 0029). A
+ * request-time locale would unfold every `Intl` call and push the whole i18n
+ * corpus to the Simulated tier.
+ *
+ * The FIRST entry is the default locale — the one `/` redirects to and the one
+ * the source strings are written in (`SOURCE_LOCALE` in effects/i18n.ts).
+ * Adding a locale here costs one more page tree; measured at ~1.5 s per locale
+ * (LT-175), because only PAGES multiply — see `LOCALE_INDEPENDENT_DIRS`.
+ */
+const LOCALES = ['en', 'de'] as const
+
+type Locale = (typeof LOCALES)[number]
+
+/** The locale `/` redirects to, and the source locale of the inline strings. */
+const DEFAULT_LOCALE: Locale = LOCALES[0]
+
+/**
+ * Output subdirectories that stay SINGLE-COPY at the docs root rather than
+ * multiplying per locale (LT-174).
+ *
+ * These hold generated reference content — TypeDoc API fragments, component
+ * example fragments, source-code fragments — which is lazy-loaded by
+ * `module-lazyload` rather than navigated to, and which no catalog can
+ * translate: it is derived from `src/` and `examples/` verbatim. Duplicating
+ * it per locale would copy byte-identical output at ~2.3 s per locale
+ * (LT-175's per-stage figures: apiPages 731 ms + examples 1597 ms) for no
+ * translatable difference.
+ *
+ * Pages under a locale prefix reference these one level up; `localeAssetPath`
+ * is the path math that gets them there.
+ */
+const LOCALE_INDEPENDENT_DIRS = [
+	'api',
+	'examples',
+	'sources',
+	'assets',
+] as const
+
+/**
+ * Path from a page at `depth` inside a locale tree back to the DOCS ROOT.
+ *
+ * A page at `docs/<locale>/guide.html` is depth 0 and needs `../` to reach
+ * `docs/`; `docs/<locale>/blog/post.html` is depth 1 and needs `../../`. This
+ * is the `{{ base-path }}` layout variable — assets, `llms.txt`, and the
+ * locale-independent fragment directories all hang off the docs root.
+ */
+const localeAssetPath = (depth: number): string => '../'.repeat(depth + 1)
+
+/**
+ * Rewrite a page's references to locale-independent fragment directories so
+ * they resolve from inside the locale tree (LT-174).
+ *
+ * Authored content links fragments page-relatively (`./api/functions/abort.html`,
+ * `./examples/basic-button.html`) and `module-lazyload` fetches them relative to
+ * the page URL. Once the page lives at `docs/<locale>/api.html`, that resolves to
+ * `/<locale>/api/...`, which does not exist — the fragments stayed at the root.
+ * Rewriting the reference to `../api/...` puts it back on the single copy.
+ *
+ * Deliberately a build-pipeline transform over generated HTML rather than an
+ * authoring change: `docs-src/` content should not have to know that a locale
+ * prefix exists. Same class of transform as `resolveInternalLinks`.
+ */
+const rewriteFragmentRefs = (html: string, depth: number): string => {
+	const up = localeAssetPath(depth)
+	const dirs = LOCALE_INDEPENDENT_DIRS.join('|')
+	return html.replace(
+		new RegExp(`((?:href|src|value)=")\\./(${dirs})/`, 'g'),
+		(_, attr: string, dir: string) => `${attr}${up}${dir}/`,
+	)
+}
+
 // Page ordering configuration
 const PAGE_ORDER = [
 	'index',
@@ -176,6 +253,8 @@ const COMPRESSIBLE_TYPES = [
 	'.txt',
 ] as const
 
+export type { Locale }
+
 export {
 	ADR_DIR,
 	API_DIR,
@@ -186,6 +265,7 @@ export {
 	COMPONENTS_DIR,
 	COMPRESSIBLE_TYPES,
 	CSS_FILE,
+	DEFAULT_LOCALE,
 	EXAMPLES_DIR,
 	GENERATED_CLIENTS_DIR,
 	INCLUDES_DIR,
@@ -193,12 +273,16 @@ export {
 	LAYOUTS_DIR,
 	LLMS_FULL_TXT_FILE,
 	LLMS_TXT_FILE,
+	LOCALE_INDEPENDENT_DIRS,
+	LOCALES,
+	localeAssetPath,
 	MENU_GROUPS,
 	MIME_TYPES,
 	OUTPUT_DIR,
 	PAGE_ORDER,
 	PAGES_DIR,
 	ROOT,
+	rewriteFragmentRefs,
 	SERVER_CONFIG,
 	SITEMAP_FILE,
 	SOURCES_DIR,

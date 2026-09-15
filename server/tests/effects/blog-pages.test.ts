@@ -131,6 +131,26 @@ describe('getBlogVariables', () => {
 		const vars = getBlogVariables(post)
 		expect(vars['blog-tags']).toBe('')
 	})
+
+	test('derives author-avatar from the docs root, not the locale-relative basePath', () => {
+		const post = makePost({ slug: 'avatar-base', author: 'Alice Brunner' })
+		const vars = getBlogVariables(post)
+		// blog/<slug>.md sits at depth 1 in the locale tree; assets are
+		// single-copy at the docs root (LT-174), two levels up from the post.
+		expect(vars['author-avatar']).toBe(
+			'../../assets/img/avatar/alice-brunner.jpg',
+		)
+	})
+
+	test('prefers explicit author-avatar over the derived path', () => {
+		const post = makePost({
+			slug: 'avatar-explicit',
+			author: 'Bob',
+			'author-avatar': '/img/bob.jpg',
+		})
+		const vars = getBlogVariables(post)
+		expect(vars['author-avatar']).toBe('/img/bob.jpg')
+	})
 })
 
 /* === generateBlogExcerpts === */
@@ -195,14 +215,16 @@ describe('generateBlogExcerpts', () => {
 		expect(result).toContain('<span itemprop="name">Alice</span>')
 	})
 
-	test('includes avatar img with derived path when author-avatar not set', () => {
+	test('includes avatar img with docs-root path when author-avatar not set', () => {
 		const post = makePost({
 			slug: 'with-avatar',
 			date: '2026-03-09',
 			author: 'Alice Brunner',
 		})
 		const result = generateBlogExcerpts([post])
-		expect(result).toContain('src="./assets/img/avatar/alice-brunner.jpg"')
+		// Cards render on the blog overview (depth 0); assets are single-copy
+		// at the docs root (LT-174), one level up from the locale tree.
+		expect(result).toContain('src="../assets/img/avatar/alice-brunner.jpg"')
 	})
 
 	test('includes avatar img with explicit path when author-avatar is set', () => {

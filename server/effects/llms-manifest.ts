@@ -1,4 +1,4 @@
-import { LLMS_TXT_FILE, PAGE_ORDER } from '../config'
+import { DEFAULT_LOCALE, LLMS_TXT_FILE, PAGE_ORDER } from '../config'
 import { docsMarkdown, type PageInfo } from '../file-signals'
 import { writeFileSafe } from '../io'
 import { createBuildEffect } from './build-effect'
@@ -71,7 +71,9 @@ export const generateLlmsTxt = (pageInfos: PageInfo[]): string => {
 	for (const [sectionName, pages] of sortedSections) {
 		lines.push(`## ${sectionName}`)
 		for (const page of pages) {
-			lines.push(`- [${page.title}](./${page.relativePath})`)
+			// Markdown mirrors are per-locale (LT-174) — link the default
+			// locale's copy, the one `/` redirects to.
+			lines.push(`- [${page.title}](./${DEFAULT_LOCALE}/${page.relativePath})`)
 		}
 		lines.push('')
 	}

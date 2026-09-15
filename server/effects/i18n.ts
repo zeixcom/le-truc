@@ -27,6 +27,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { DEFAULT_LOCALE, LOCALES } from '../config'
 import { getFilePath, writeFileSafe } from '../io'
 import { PLURAL_CATEGORIES } from '../tsrx/i18n'
 import type { RegistryEntry } from '../tsrx/registry'
@@ -45,16 +46,25 @@ export const I18N_DIR = join(import.meta.dir, '..', '..', 'i18n')
 export const SOURCE_LOCALE = 'en'
 
 /**
- * The build's page locale (ADR 0030 sub-design 1) and the record's
- * formatting configuration. Locale-as-build-constant is what makes `Intl`
- * foldable; per-locale pages are LT-174's, which is when this becomes
- * per-page input rather than a single constant. `timeZone: 'UTC'` is the
- * ADR's own prescription for date-only values (`Date.UTC(y, m-1, d)`
- * formatted with `timeZone: 'UTC'` never shifts the day); `currency` has
- * no platform mapping from a locale tag, so it stays explicit.
+ * The build's DEFAULT page locale (ADR 0030 sub-design 1) and the record's
+ * formatting configuration.
+ *
+ * Since LT-174 the site builds one page tree per entry in config's `LOCALES`,
+ * so the page locale is per-page input supplied by the caller — `i18nRecord`'s
+ * `lang` argument. What survives as a constant is the FALLBACK: the locale a
+ * record resolves at when no caller supplies one, which is the default locale
+ * and the source locale both.
+ *
+ * Locale-as-build-constant is unchanged and still load-bearing — each page
+ * fixes its locale before rendering, which is what keeps `Intl` foldable.
+ *
+ * `timeZone: 'UTC'` is the ADR's own prescription for date-only values
+ * (`Date.UTC(y, m-1, d)` formatted with `timeZone: 'UTC'` never shifts the
+ * day); `currency` has no platform mapping from a locale tag, so it stays
+ * explicit.
  */
 export const BUILD_I18N = {
-	pageLocale: 'en',
+	pageLocale: DEFAULT_LOCALE,
 	timeZone: 'UTC',
 	currency: 'USD',
 } as const
@@ -246,8 +256,14 @@ export interface I18n {
 	dir: 'ltr' | 'rtl'
 }
 
-/** The build's page locale (ADR 0030 sub-design 1; per-locale pages are LT-174's). */
+/**
+ * The locale a record resolves at when the caller supplies none — the
+ * default locale of \`I18N_LOCALES\` (ADR 0030 sub-design 1).
+ */
 export const I18N_PAGE_LOCALE = ${JSON.stringify(BUILD_I18N.pageLocale)}
+
+/** Every locale the site is built for; the first is the default (LT-174). */
+export const I18N_LOCALES = ${JSON.stringify(LOCALES)} as const
 
 /** The source locale: the language the inline \`.tsrx\` strings are written in. */
 export const I18N_SOURCE_LOCALE = ${JSON.stringify(SOURCE_LOCALE)}
