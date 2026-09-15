@@ -175,3 +175,4 @@ dataset/
 !.mimosa/security-policy.json
 .playwright-mcp/
 .zcode/plans/
+server/generated/
