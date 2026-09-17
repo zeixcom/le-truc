@@ -7,14 +7,14 @@ user_invocable: false
 ## Scope
 This skill maintains the **authored documentation** for the @zeix/le-truc library and the **AI skill files** that agents use to work with the codebase.
 
-**In scope:** `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc in `src/`, all files under `.agents/skills/` (SKILL.md, references/, workflows/), `server/SERVER.md`, and **error-message copy** in `src/errors.ts` and `server/tsrx/diagnostics.ts` (the message strings and their JSDoc — developers own the conditions that fire them; see `workflows/error-message-lifecycle.md`).
+**In scope:** `docs-src/pages/`, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, JSDoc in `src/`, all files under `.agents/skills/` (SKILL.md, references/, workflows/), `server/SERVER.md`, and **error-message copy** in `src/errors.ts` and `server/compiler/diagnostics.ts` (the message strings and their JSDoc — developers own the conditions that fire them; see `workflows/error-message-lifecycle.md`).
 
 **Out of scope — do not edit:**
 - `docs-src/api/` — TypeDoc-generated from source; regenerate with `bun run build:docs` instead
 - `examples/*/` — component source files; use the `le-truc` or `le-truc-dev` skill instead
 - `CHANGELOG.md` — use the `changelog-keeper` skill instead
 - `adr/` — use the `adr-keeper` skill instead
-- Pipeline code in `server/` (effects, templates, schemas, routes) — write a `TODO.md` task for the `docs-server-dev` skill instead of editing it directly; `server/SERVER.md` and the message strings in `server/tsrx/diagnostics.ts` are the two exceptions
+- Pipeline code in `server/` (effects, templates, schemas, routes) — write a `TODO.md` task for the `docs-server-dev` skill instead of editing it directly; `server/SERVER.md` and the message strings in `server/compiler/diagnostics.ts` are the two exceptions
 
 ## Essential Principles
 
@@ -110,7 +110,7 @@ All in `workflows/`:
 | consistency-review.md | Review all documents for consistency with current source |
 | write-blog-post.md | Draft a new blog post in `docs-src/pages/blog/` |
 | improve-docs-architecture.md | Plan and lead a guide restructure — split or merge pages, improve navigation, add teaching components; coordinate pipeline work via `TODO.md` |
-| error-message-lifecycle.md | Write and propagate error-message copy in `src/errors.ts` and `server/tsrx/diagnostics.ts` — new, revised, retired, and periodic review |
+| error-message-lifecycle.md | Write and propagate error-message copy in `src/errors.ts` and `server/compiler/diagnostics.ts` — new, revised, retired, and periodic review |
 
 ## Post-Task Protocol
 

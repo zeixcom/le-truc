@@ -164,5 +164,5 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 - Requirements: [§4 Accessibility](../REQUIREMENTS.md#accessibility) (language and direction are accessibility-relevant), [§5 Technical Constraints](../REQUIREMENTS.md#5-technical-constraints), [§7 Out of Scope](../REQUIREMENTS.md#7-out-of-scope) (the library gains no i18n surface; this is compiler/build tooling)
 - Architecture: [Server Evaluation Tiers](../ARCHITECTURE.md#server-evaluation-tiers)
 - Host profile: [TSRX-HOST-PROFILE.md](../TSRX-HOST-PROFILE.md) (the reserved `i18n` parameter and the data account)
-- Compiler: [`server/tsrx/LE_TRUC_COMPILER.md`](../server/tsrx/LE_TRUC_COMPILER.md)
+- Compiler: [`server/tsrx/LE_TRUC_COMPILER.md`](../server/compiler/LE_TRUC_COMPILER.md)
 - Related ADRs: [ADR 0024](0024-adopt-tsrx-as-isomorphic-component-format.md) (s3 one-site-three-roles and the root-attribute exclusion; s10's `children` reserved-parameter precedent; s15 the context fallback this decision declines to use), [ADR 0027](0027-server-simulation.md) (the realm whose `<html lang>` sub-design 7 seeds), [ADR 0029](0029-tiered-server-evaluation.md) (why a build-constant locale means the Folded tier, and the census pattern both new reports reuse), [ADR 0003](0003-attributes-drive-state-at-connect-time-only.md) (the client reads the locale from the rendered DOM)

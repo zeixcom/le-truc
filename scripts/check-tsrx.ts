@@ -6,7 +6,7 @@
  *
  * Compiles the whole `.tsrx` corpus, runs `tsc --noEmit` against the
  * generated client modules (the same emit-then-check already exercised in
- * `server/tests/tsrx/client.golden.test.ts`), and remaps every diagnostic's
+ * `server/tests/compiler/client.golden.test.ts`), and remaps every diagnostic's
  * `generated-file:line:col` back onto its `.tsrx` source location using the
  * span table each component's client emitter records. TS diagnostics only
  * ever arise in CODE positions (setup, thunks, handlers) — every code
@@ -32,18 +32,18 @@ import { join, resolve } from 'node:path'
 import { Glob } from 'bun'
 import { collectI18n } from '../server/effects/i18n'
 import { compileTsrxCorpus, GENERATED_DIR } from '../server/effects/tsrx'
-import type { ComponentRegistry } from '../server/tsrx/registry'
+import type { ComponentRegistry } from '../server/compiler/registry'
 import {
 	formatCensus,
 	tierCensus,
 	translationCensus,
-} from '../server/tsrx/sim/report'
+} from '../server/compiler/sim/report'
 import {
 	fileLineColToOffset,
 	fileOffsetToLineCol,
 	findSpanForGeneratedOffset,
 	type SourceSpan,
-} from '../server/tsrx/spans'
+} from '../server/compiler/spans'
 
 const ROOT = resolve(import.meta.dir, '..')
 

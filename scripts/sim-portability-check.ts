@@ -23,7 +23,7 @@ import { join, resolve } from 'node:path'
 import {
 	formatSimDiagnostic,
 	type SimDiagnostic,
-} from '../server/tsrx/sim/index.ts'
+} from '../server/compiler/sim/index.ts'
 
 /* === Types === */
 

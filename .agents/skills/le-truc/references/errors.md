@@ -2,7 +2,7 @@
 
 Every error a component author can meet, why it surfaces, and how to fix it.
 
-**Source of truth:** `src/errors.ts` (runtime classes) and `server/tsrx/diagnostics.ts` (compiler codes). Read the condition at the throw site before you act on a row here.
+**Source of truth:** `src/errors.ts` (runtime classes) and `server/compiler/diagnostics.ts` (compiler codes). Read the condition at the throw site before you act on a row here.
 
 ---
 
@@ -49,7 +49,7 @@ Thrown from `src/errors.ts`. Every one is contained unless the tier column says 
 
 ## Compiler diagnostics
 
-Emitted by `server/tsrx/diagnostics.ts` while compiling a `.tsrx` source. **Errors** fail the build; **warnings** let it through and tell you what the output will do instead. Several conditions share one code where the author's fix is the same sentence.
+Emitted by `server/compiler/diagnostics.ts` while compiling a `.tsrx` source. **Errors** fail the build; **warnings** let it through and tell you what the output will do instead. Several conditions share one code where the author's fix is the same sentence.
 
 ### Reactivity and the server/client split
 
@@ -65,7 +65,7 @@ Emitted by `server/tsrx/diagnostics.ts` while compiling a `.tsrx` source. **Erro
 | `TSRX045` | A `watch()`/`on()`/`pass()`/`each()`/`provideContexts()` call is deferred into a callback, so it runs after the factory's collector is gone and its effect never activates. | Call the helper directly in setup; move the deferred condition inside the effect. | error |
 | `TSRX046` | A setup `const` the server cannot evaluate — its initializer reads a client-only name (`first`/`all`/`watch`/`on`/`pass`/`requestContext`/`provideContexts`, a `first()`-bound ref, or `host`/`internals`) — has its **value** rendered into the markup. No tier can produce the static splice, and no client binding ever corrects one. | Render the site from a server arg or signal, or make the site reactive so the client's first binding pass supplies the value. | error |
 
-Four conditions left this table in LT-165 ([ADR 0029](../../../../adr/0029-tiered-server-evaluation.md) § 5), because a shape the server cannot fold is a routing fact, not an author error. A signal with no harvestable render site (`TSRX004`), a setup `const` calling a client-only primitive or a derived compute reading `host`/`internals` (`TSRX013`), and a setup `const` reading a `first()`-bound ref (`TSRX043`) are now **routing signals** recorded on the component's registry entry (`server/tsrx/tier.ts`): they route the component to the Simulated tier and ride the build report's tier census instead of failing the build. The non-severe form of `TSRX034` left the channel the same way. The **reactive** form of `TSRX033` is silent for a different reason: the expression is *unresolvable*, so it is omitted from the initial HTML and the client's first binding pass supplies the value — no diagnostic, no flash.
+Four conditions left this table in LT-165 ([ADR 0029](../../../../adr/0029-tiered-server-evaluation.md) § 5), because a shape the server cannot fold is a routing fact, not an author error. A signal with no harvestable render site (`TSRX004`), a setup `const` calling a client-only primitive or a derived compute reading `host`/`internals` (`TSRX013`), and a setup `const` reading a `first()`-bound ref (`TSRX043`) are now **routing signals** recorded on the component's registry entry (`server/compiler/tier.ts`): they route the component to the Simulated tier and ride the build report's tier census instead of failing the build. The non-severe form of `TSRX034` left the channel the same way. The **reactive** form of `TSRX033` is silent for a different reason: the expression is *unresolvable*, so it is omitted from the initial HTML and the client's first binding pass supplies the value — no diagnostic, no flash.
 
 ### Element references
 

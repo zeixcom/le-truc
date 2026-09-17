@@ -31,7 +31,7 @@ import {
 	sourceHash,
 } from '../server/effects/i18n'
 import { compileTsrxCorpus } from '../server/effects/tsrx'
-import type { ComponentRegistry } from '../server/tsrx/registry'
+import type { ComponentRegistry } from '../server/compiler/registry'
 import type { FileInfo } from '../server/file-signals'
 
 const ROOT = resolve(import.meta.dir, '..')

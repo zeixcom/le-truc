@@ -1,7 +1,7 @@
 /**
  * The simulation pass of the docs build (ADR 0027 stage 2, LT-169).
  *
- * Runs the server-simulation driver (`server/tsrx/sim/`) over the compiled
+ * Runs the server-simulation driver (`server/compiler/sim/`) over the compiled
  * corpus in `server/generated/tsrx/` and gates the build on what it reports.
  * This is the first build stage that EXECUTES a generated client module — up
  * to LT-165 the driver existed only under test.
@@ -19,7 +19,7 @@
  *
  * The tier read here is the registry's — the POST-contamination one written
  * by `compileTsrxCorpus` after `contaminateComposeReads` runs. The
- * classifier's own per-file verdict (`server/tsrx/index.ts`) is taken before
+ * classifier's own per-file verdict (`server/compiler/frontend/tsrx/index.ts`) is taken before
  * the corpus compose fixpoint, so a component that is Simulated purely
  * because it READS a simulated composed child (`form-combobox` today) still
  * carries a Folded verdict there. Gating on that verdict would silently skip
@@ -67,14 +67,14 @@
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { LOCALES } from '../config'
-import type { ComponentRegistry, RegistryEntry } from '../tsrx/registry'
-import { createSimulationRealm, type SimulationRealm } from '../tsrx/sim/realm'
+import type { ComponentRegistry, RegistryEntry } from '../compiler/registry'
+import { createSimulationRealm, type SimulationRealm } from '../compiler/sim/realm'
 import {
 	formatSimReport,
 	reportDiagnostics,
 	type SimReport,
-} from '../tsrx/sim/report'
-import type { EvaluationTier } from '../tsrx/tier'
+} from '../compiler/sim/report'
+import type { EvaluationTier } from '../compiler/tier'
 import { GENERATED_DIR } from './tsrx'
 
 const ROOT = join(import.meta.dir, '..', '..')
@@ -157,7 +157,7 @@ export const gateOnSimReport = (report: SimReport) => {
 		`Simulation build report — ${report.unclassified.length} unclassified ` +
 			`entr${report.unclassified.length === 1 ? 'y' : 'ies'} on ` +
 			`${components.map(tag => `<${tag}>`).join(', ')}. Fix the component, ` +
-			'or classify the entry with a reason in server/tsrx/sim/report.ts:\n' +
+			'or classify the entry with a reason in server/compiler/sim/report.ts:\n' +
 			formatSimReport(report),
 	)
 }

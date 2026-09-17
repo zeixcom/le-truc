@@ -10,7 +10,7 @@
  *
  * The substrate-parameterized driver half lives in
  * `scripts/lib/substrate-probe.ts`; the production realm
- * (`server/tsrx/sim/realm.ts`) stays jsdom-only on purpose. The LT-152 claim
+ * (`server/compiler/sim/realm.ts`) stays jsdom-only on purpose. The LT-152 claim
  * under test — a substrate swap is confined to the applier plus table
  * entries — is exercised by that module reusing the production patch table.
  *
@@ -32,8 +32,8 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { basename, join, relative, resolve } from 'node:path'
 import type { WindowLike } from 'dompurify'
 import createDOMPurify from 'dompurify'
-import { drainToQuiescence } from '../server/tsrx/sim/boundary.ts'
-import { detectRuntime } from '../server/tsrx/sim/patch-table.ts'
+import { drainToQuiescence } from '../server/compiler/sim/boundary.ts'
+import { detectRuntime } from '../server/compiler/sim/patch-table.ts'
 import {
 	applyPatches,
 	buildClientBundle,
@@ -83,7 +83,7 @@ const COLORGRAPH = {
 
 /**
  * Args for corpus components whose contract has genuinely required fields —
- * the same fixtures `server/tests/tsrx/server-render-smoke.test.ts` uses.
+ * the same fixtures `server/tests/compiler/server-render-smoke.test.ts` uses.
  * Everything absent renders from `{}`.
  */
 const ARGS: Record<string, Record<string, unknown>> = {

@@ -21,7 +21,7 @@ const ROOT = path.resolve(import.meta.dir, '../../..')
 
 /**
  * Sibling of the real `server/generated/tsrx/`, NOT an OS temp dir: emitted
- * modules import `'../../tsrx/runtime'` (and examples/ helpers three levels
+ * modules import `'../../compiler/runtime'` (and examples/ helpers three levels
  * up), so the output has to sit at the same depth under the repo root for
  * those relative specifiers to resolve. `server/generated/` is gitignored,
  * so a leaked directory never shows up in `git status`.

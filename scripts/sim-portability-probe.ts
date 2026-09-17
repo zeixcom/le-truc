@@ -22,7 +22,7 @@
 
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { createSimulationRealm } from '../server/tsrx/sim/index.ts'
+import { createSimulationRealm } from '../server/compiler/sim/index.ts'
 
 type ProbeJob = {
 	/** Custom element name of the component under probe. */

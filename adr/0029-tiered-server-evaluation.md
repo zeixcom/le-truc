@@ -174,6 +174,6 @@ What the tiering *does* do is make a future per-request path possible without re
 
 - Requirements: [§1 The core insight](../REQUIREMENTS.md#the-core-insight), [§5 Technical Constraints](../REQUIREMENTS.md#5-technical-constraints), [§7 Out of Scope](../REQUIREMENTS.md#7-out-of-scope) (unchanged — the compiler and driver stay build-time tooling)
 - Architecture: [Server Evaluation Tiers](../ARCHITECTURE.md#server-evaluation-tiers)
-- Compiler: [`server/tsrx/LE_TRUC_COMPILER.md` § 5](../server/tsrx/LE_TRUC_COMPILER.md)
+- Compiler: [`server/tsrx/LE_TRUC_COMPILER.md` § 5](../server/compiler/LE_TRUC_COMPILER.md)
 - Amends: [ADR 0027](0027-server-simulation.md) (sub-designs 1 and 7 — the evaluability gate is repurposed rather than retired, and simulation applies to the Simulated tier rather than to every component); [ADR 0024](0024-adopt-tsrx-as-isomorphic-component-format.md) (sub-designs 2 and 3 — initial HTML is rendered by the tier's mechanism, not unconditionally by simulation). ADR 0024 sub-design 1 (template lowering) and sub-design 7 (library boundary) are untouched.
 - Related ADRs: [ADR 0003](0003-attributes-drive-state-at-connect-time-only.md) (connect-time seeding — the client still corrects, in every tier), [ADR 0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) (why `internals` is a Static-tier cause today), [ADR 0028](0028-tiered-error-surfacing.md) (the diagnostic channel/tier discipline this reclassification follows)

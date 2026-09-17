@@ -3,7 +3,7 @@
  *
  * The pass is driven through its seams (`createRealm`, `readMarkup`) rather
  * than against the real corpus: the driver's own corpus behavior is pinned
- * by `server/tests/tsrx/sim-driver.test.ts`, and re-loading the same
+ * by `server/tests/compiler/sim-driver.test.ts`, and re-loading the same
  * generated client modules in a second place in the same process is exactly
  * what the load-once assertion forbids (ADR 0027 sub-design 10). What is
  * tested here is the wiring the build adds around the driver — WHICH
@@ -24,10 +24,10 @@ import {
 	gateOnSimReport,
 	simulateTsrxCorpus,
 } from '../../effects/simulate'
-import type { ComponentRegistry, RegistryEntry } from '../../tsrx/registry'
-import type { SimDiagnostic, SimulationRealm } from '../../tsrx/sim/realm'
-import { reportDiagnostics } from '../../tsrx/sim/report'
-import type { EvaluationTier } from '../../tsrx/tier'
+import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
+import type { SimDiagnostic, SimulationRealm } from '../../compiler/sim/realm'
+import { reportDiagnostics } from '../../compiler/sim/report'
+import type { EvaluationTier } from '../../compiler/tier'
 
 /* === Fixtures === */
 

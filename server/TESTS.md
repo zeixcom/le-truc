@@ -138,7 +138,7 @@ If a test needs a module it does not itself emit, emit it explicitly.
 
 ### Server Simulation driver tests
 
-`server/tests/tsrx/sim-realm.test.ts` covers `server/tsrx/sim/` (ADR 0027, LT-151). It defines
+`server/tests/compiler/sim-realm.test.ts` covers `server/compiler/sim/` (ADR 0027, LT-151). It defines
 its components **inline through the realm's recording registry** rather than importing generated
 modules, so it needs neither `server/generated/` nor a `createGeneratedDir()`. Two things to know
 when extending it:
@@ -151,7 +151,7 @@ when extending it:
   `bun run check:sim`, which reports which runtimes it found and exits non-zero if their
   serialized HTML differs.
 
-`server/tests/tsrx/sim-driver.test.ts` runs the WHOLE corpus through the driver (LT-154) and
+`server/tests/compiler/sim-driver.test.ts` runs the WHOLE corpus through the driver (LT-154) and
 owns, next to the build-report baseline below, the 22 fixture snapshots and two corpus
 invariants (LT-164). Three things to know about the snapshots and invariants:
 
@@ -192,12 +192,12 @@ signal is **two numbers**, not one:
    in the stage-3 (LT-165) retirement bucket, seven total.
    **Landed, 2026-09-06 (LT-165 step 5):** the seven retired with the channel
    reclassification (ADR 0029 § 5) — the standing `check:tsrx` count is **0**, and those
-   conditions ride the tier census (`server/tsrx/tier.ts`) instead of the warning channel.]
-2. **The build-report baseline** — `server/tests/tsrx/sim-driver.test.ts` runs the corpus
+   conditions ride the tier census (`server/compiler/tier.ts`) instead of the warning channel.]
+2. **The build-report baseline** — `server/tests/compiler/sim-driver.test.ts` runs the corpus
    through the simulation driver and requires **zero unclassified diagnostics**. The driver
    raises a diagnostic per condition (a jsdom `jsdomError`, an unhandled rejection, a
    contained connect throw, an attempted network call, a non-quiescent drain); the report
-   layer in `server/tsrx/sim/report.ts` formats each as a build warning attributed to the
+   layer in `server/compiler/sim/report.ts` formats each as a build warning attributed to the
    component (tier 2, Contained — the build completes and the component keeps its
    server-rendered markup). A migration that renders wrong shows up here as a new entry, and
    the test fails naming it.
@@ -215,7 +215,7 @@ The **tier census** (LT-165 step 6, ADR 0029 § 6) is a third record, not a thir
 number: `check:tsrx` prints it as its own section after the compile-warning baseline
 (`Tier census — N entries: …`), never inside any warning count. It is built from the
 registry's post-contamination tiers by `tierCensus`/`formatCensus` in
-`server/tsrx/sim/report.ts` and is expected to grow — a component moving Folded → Simulated
+`server/compiler/sim/report.ts` and is expected to grow — a component moving Folded → Simulated
 is a build-cost regression visible there. `census.test.ts` pins the record shape and its
 formatting; `tier-corpus.test.ts` pins what the census decides about the corpus, including
 form-combobox's post-contamination Simulated record.

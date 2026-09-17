@@ -4,10 +4,10 @@
  *
  * Carries the substrate-parameterized half of the simulation driver: window
  * creation for both substrates, a patch-table applier that reuses the
- * PRODUCTION table (`server/tsrx/sim/patch-table.ts`) verbatim plus
+ * PRODUCTION table (`server/compiler/sim/patch-table.ts`) verbatim plus
  * substrate extras, and the two-phase ProbeRealm (recording-registry load,
  * synchronous parse→replay→serialize render) mirroring
- * `server/tsrx/sim/realm.ts`. The production realm stays jsdom-only; any
+ * `server/compiler/sim/realm.ts`. The production realm stays jsdom-only; any
  * table entry this harness needs for a second substrate is an evaluation
  * finding, recorded in ADR 0027.
  *
@@ -21,7 +21,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { JSDOM, VirtualConsole } from 'jsdom'
-import { assertSynchronousWindow } from '../../server/tsrx/sim/boundary.ts'
+import { assertSynchronousWindow } from '../../server/compiler/sim/boundary.ts'
 import {
 	detectRuntime,
 	NETWORK_GLOBALS,
@@ -30,8 +30,8 @@ import {
 	REALM_GLOBALS,
 	type RealmGlobalPatch,
 	STUB_GLOBALS,
-} from '../../server/tsrx/sim/patch-table.ts'
-import type { RecordedDefinition } from '../../server/tsrx/sim/realm.ts'
+} from '../../server/compiler/sim/patch-table.ts'
+import type { RecordedDefinition } from '../../server/compiler/sim/realm.ts'
 
 /* === Types === */
 

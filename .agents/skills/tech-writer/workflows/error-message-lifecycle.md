@@ -1,6 +1,6 @@
 # Error Message Lifecycle Workflow
 
-**Use when:** an error class in `src/errors.ts` or a `TSRX0NN` code in `server/tsrx/diagnostics.ts` is added, reworded, or removed — or when the two lists need a consistency pass.
+**Use when:** an error class in `src/errors.ts` or a `TSRX0NN` code in `server/compiler/diagnostics.ts` is added, reworded, or removed — or when the two lists need a consistency pass.
 
 **Ownership:** developers own the *condition* that fires an error; Tech Writer owns the *copy*. A developer writes a first-draft message with the condition; this workflow turns it into final copy and propagates it. See `.agents/skills/le-truc-dev/SKILL.md` and `.agents/skills/architect/SKILL.md` for the handoff triggers.
 
@@ -42,7 +42,7 @@ Message shape: a sentence stating the condition, an em-dash clause for the mecha
 
 ## Event: a new error
 
-**Trigger:** a developer adds a class to `src/errors.ts` or a code to `server/tsrx/diagnostics.ts`.
+**Trigger:** a developer adds a class to `src/errors.ts` or a code to `server/compiler/diagnostics.ts`.
 
 1. **Confirm the tier is recorded.** The Architect decides the tier at task-writing time; if the task does not say, ask before writing copy — the tier decides the wording.
 2. **Confirm the channel.** If the condition is statically decidable and the new error is a runtime class, ADR 0028 sub-design 1 obliges a `TSRX` rule too. Flag its absence rather than writing a message that pretends the compiler covers it.
@@ -84,7 +84,7 @@ An error message has more downstream copies than any other string in the project
 
 | Target | What to do |
 |---|---|
-| `src/errors.ts` / `server/tsrx/diagnostics.ts` | The builder and its JSDoc — the authoritative copy |
+| `src/errors.ts` / `server/compiler/diagnostics.ts` | The builder and its JSDoc — the authoritative copy |
 | Caller-side `reason` strings | `src/component.ts`, `src/helpers/reactive.ts`, `src/bindings.ts` — half the sentence lives here |
 | `.agents/skills/le-truc/references/errors.md` | One row per error: what fired, why, how to fix, tier. Do not restate the message — point at the condition |
 | `.agents/skills/le-truc/workflows/debug.md` | Step 0 routes named errors here; a new *class* of error may need a route |
@@ -93,7 +93,7 @@ An error message has more downstream copies than any other string in the project
 | `docs-src/api/classes/*.md` | **Generated.** Never hand-edit — regenerate with `bun run build:docs` after the JSDoc change |
 | **Message-substring tests** | See below — these fail the build, so find them first |
 | `adr/0028-tiered-error-surfacing.md` | The inventory table, if the channel or tier changed. Use the `adr-keeper` skill |
-| `server/tsrx/LE_TRUC_COMPILER.md` | The diagnostic inventory, for a new or retired `TSRX` code |
+| `server/compiler/LE_TRUC_COMPILER.md` | The diagnostic inventory, for a new or retired `TSRX` code |
 | `CHANGELOG.md` | A user-visible message change is a change. Use the `changelog-keeper` skill |
 
 ### Message-substring tests
@@ -103,7 +103,7 @@ These assert on fragments of the exact strings this workflow edits. Grep them be
 | File | Asserts on |
 |---|---|
 | `examples/test/audit/test-audit.spec.ts` | `'reserved word'` |
-| `server/tests/tsrx/diagnostics.test.ts` | `'reserved word or Object builtin'`, and code-specific fragments throughout |
+| `server/tests/compiler/diagnostics.test.ts` | `'reserved word or Object builtin'`, and code-specific fragments throughout |
 | `src/tests/component.test.ts` | `'did not enhance'`, `'the component factory'`, `'server-rendered markup'`, `'pass()'`, `'hand-authored'` |
 | `src/tests/internal.test.ts` | `'watch()'`, `'<my-element>'` |
 | `src/tests/reactive.test.ts` | failing prop names in `InvalidPassPropertyError` |

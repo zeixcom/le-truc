@@ -66,10 +66,10 @@
 		"docs",
 		"types",
 		// The .tsx host profile (ADR 0032) declares the same ambient
-		// vocabulary as server/tsrx/globals.d.ts in the GLOBAL scope — the
+		// vocabulary as server/compiler/frontend/tsrx/globals.d.ts in the GLOBAL scope — the
 		// two profiles are siblings, never roommates. Authored-.tsx
 		// tsconfigs include the profile; this program must not.
-		"server/tsrx-tsx/host-profile.d.ts",
+		"server/compiler/frontend/tsx/host-profile.d.ts",
 		// TSRX compiler output — generated code imports '@zeix/le-truc',
 		// which resolves to the built types/ artifact; it is typechecked by
 		// its own emit-then-check (server/tests/tsrx), not this project.

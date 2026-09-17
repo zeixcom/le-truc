@@ -5,7 +5,7 @@ names its own dependency.
 
 **Where the history went.** Everything landed and reviewed has been removed from this file
 (architect, 2026-09-06; i18n band pruned 2026-09-17). The rationale for what shipped lives in
-`adr/` (0024, 0026–0032), `ARCHITECTURE.md`, `server/tsrx/LE_TRUC_COMPILER.md` and
+`adr/` (0024, 0026–0032), `ARCHITECTURE.md`, `server/compiler/LE_TRUC_COMPILER.md` and
 `TSRX-HOST-PROFILE.md`; the user-facing summary lives in `CHANGELOG.md` `[Unreleased]`; the
 task-by-task record lives in `git log -p -- TODO.md`. Do not re-derive a decision from a task
 entry — read the ADR. LT-199/LT-200 (pre-connect property writes, ADR 0031) landed via the
@@ -150,7 +150,7 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   `bun test server/tests` green (the two props-type additions change only generated type
   text — tier census and warning baseline unchanged).
 
-- [ ] LT-206: Rename the compiler tree to match the dual-front-end architecture — `server/tsrx/` → `server/compiler/` with `frontend/tsrx/` and `frontend/tsx/` inside (architect ruling, 2026-09-17). **Land before wave 4's first migration and before LT-204's `LE_TRUC_COMPILER.md` rewrite.**
+- [x] LT-206: Rename the compiler tree to match the dual-front-end architecture — `server/tsrx/` → `server/compiler/` with `frontend/tsrx/` and `frontend/tsx/` inside (architect ruling, 2026-09-17). **Land before wave 4's first migration and before LT-204's `LE_TRUC_COMPILER.md` rewrite.** — done ✓ (internal-only; awaiting review)
   **Skill:** le-truc-dev
   **Context:** Post-ADR 0032 the directory names lie. `server/tsrx/` holds the MACHINERY —
   analysis, emitters, tiering, sim, plus since LT-202 the shared front-end modules
@@ -189,6 +189,36 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   TSRX-HOST-PROFILE.md, server/SERVER.md, server/TESTS.md, LE_TRUC_COMPILER.md path
   references — mechanical sed only; the content rewrite stays LT-204), and the browser
   purity gate (its entry point moves to `server/compiler/frontend/tsrx/index.ts`).
+  **Done (2026-09-17):** the tree moved exactly as ruled — 107 `git mv` renames, machinery
+  (analysis, emitters, tiering, sim, the front-end-neutral `front-end.ts`/`lower-shared.ts`/
+  `pipeline.ts`) at `server/compiler/`, the `.tsrx` front end (`compiler.ts`, `lower-template.ts`,
+  `globals.d.ts`, `index.ts`) under `frontend/tsrx/`, the `.tsx` front end under
+  `frontend/tsx/`, and `LE_TRUC_COMPILER.md` at `server/compiler/` (LT-204's rewrite target).
+  The one ruled seam landed in `walk.ts`: `collectComposeElements` moved beside `collectAttrs`
+  (same shape — a collect pass over the one structural visitor), so `pipeline.ts` imports
+  `./walk` and the machinery no longer depends on a front end; the `.tsrx` index re-exports it
+  from the new home. `smoke.ts` stays at the machinery level and imports `compileSource`
+  through the front-end index; its hardcoded `runtimeImport` and ROOT depth followed the move.
+  The emitted-runtime specifier changed exactly once — `pipeline.ts`'s
+  `runtimeImport: '../../compiler/runtime'` (generated modules live at the unchanged
+  `server/generated/tsrx/`, two levels above `server/compiler/`) — and the one test pinning
+  that specifier (`le-truc-imports.test.ts`) updated with it; smoke's copy likewise. All other
+  surgery was import specifiers and comment path references (mechanical, ordered
+  most-specific-first over tracked files, ADRs and historical records excluded). External
+  importers repointed as listed plus `tsconfig.typedoc.json`'s comment. Tests mirror the
+  source; parity moved to `server/tests/compiler/tsx/` with its snapshot (bun snapshots travel
+  with the file). Deliberately-out-of-scope items all untouched: script names, the effects
+  filename, the generated output directory, `@tsrx/core`, TSRX codes. Two ADR *links*
+  (0029, 0030) pointing at the moved `LE_TRUC_COMPILER.md` were repointed — the only ADR
+  edits; prose path quotations stay as written per the ruling.
+  **Verification:** all gates re-run and green — `bun run typecheck` exit 0; `bun test
+  server/tests` 1548 pass / 0 fail (1 unhandled inter-test error, falsified pre-existing at
+  HEAD via a throwaway worktree — see NOTES.md for its tier-corpus face); parity 26/26;
+  `check:tsrx` exit 0, warning baseline 0, tier census 20/2/0, translation census 0 gaps;
+  `build:docs` green (simulation pass 2/8/20 unchanged); `check:links` 387 green; browser
+  purity gate green against the moved entry (incl. the byte-identical-artifacts pin); all five
+  client goldens + all three bun snapshot files renamed with 0 content lines (byte-identical);
+  spike tsconfigs re-checked (main exit 0, both negative probes exit 2 as designed).
 
 - [ ] LT-204: Docs and requirements round for the dual front end (ADR 0032 follow-up f). **The REQUIREMENTS.md/ARCHITECTURE.md/CONTEXT.md drafts landed 2026-09-17 (architect) — review them, don't re-derive them; `LE_TRUC_COMPILER.md` waits for LT-206's new paths.**
   **Skill:** tech-writer (architect co-owns REQUIREMENTS.md/ARCHITECTURE.md touchpoints)
@@ -211,8 +241,8 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
      retained as-is.
   2. `AGENTS.md` gains the dual-surface facts (the header's "Authoring or reviewing a
      `.tsrx` component?" pointer becomes surface-aware).
-  3. `server/tsrx/LE_TRUC_COMPILER.md` (→ `server/compiler/LE_TRUC_COMPILER.md` after
-     LT-206) is stale at HEAD: its module map, pipeline diagram, and §1 boundary section
+  3. `server/compiler/LE_TRUC_COMPILER.md` (re-homed by LT-206) is stale at HEAD: its module
+     map, pipeline diagram, and §1 boundary section
      predate LT-202 — missing the shared front-end modules, the second front end, the
      four-arm `boundary`, the `css` tag, and TSRX048. Also fold in two recorded facts
      with no other home: the `check:tsrx` harness-types contract (a harness signature

@@ -27,8 +27,8 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import { asArray, identifierName, isNode, text } from '../server/tsrx/ast-utils'
-import { parseModule } from '../server/tsrx/core'
+import { asArray, identifierName, isNode, text } from '../server/compiler/ast-utils'
+import { parseModule } from '../server/compiler/core'
 
 /* === Types === */
 

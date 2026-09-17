@@ -1,5 +1,5 @@
 {
 	"extends": "./tsconfig.json",
-	"include": ["./jsx-probe-neg.tsx", "../../server/tsrx/globals.d.ts"],
+	"include": ["./jsx-probe-neg.tsx", "../../server/compiler/frontend/tsrx/globals.d.ts"],
 	"exclude": [],
 }
