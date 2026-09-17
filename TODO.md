@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-210.**
+**Next free task ID: LT-211.**
 
 ---
 
@@ -398,6 +398,53 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   against `Signal<string>`-backed props; `host.setCustomValidity(…)` still checks via
   `FormAssociatedElement`); the whole authored corpus passes; the editor path (wide
   overlay) is untouched and documented; `typecheck` runs the new checker.
+
+- [ ] LT-210: TSRX pin upgrade — 0.1.63 → the chosen 0.2.x, carrying three owner-wanted features: `@for`'s `@empty` arm, dynamic `<{expression}>` tags, and scoped styles. **Gate: land before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent before that — no migrated component uses these today.**
+  **Skill:** le-truc-dev, with architect co-owning the scoped-styles ruling (it revisits a HOST_PROFILE decision — expect a new ADR)
+  **Context (researched 2026-09-17 during LT-205):** upstream moved 0.1.64–0.1.71, then
+  the 0.2 minor line (0.2.0 2026-09-15 → 0.2.3 2026-09-17, latest at ruling time).
+  0.1.68+ was never evaluated; 0.1.67 was (2026-09-06: additive, corpus
+  byte-identical, reverted only for owner-pending timing). ADR 0023 sub-design 2 and
+  ADR 0032 s6 govern the review: the bump touches `core.ts`/`core-shim.d.ts` only, on
+  the `.tsrx` front end. The verification recipe that worked then: bump pin →
+  `bun install` → `bun test server/tests/compiler` → `bun run scripts/build-tsrx.ts` →
+  `git status --porcelain` (zero generated-artifact changes = byte-identical corpus) →
+  `check:tsrx` (read the standing-warning count; baseline is 0) — plus the parity suite
+  and `build:docs`.
+  **Corpus risk to clear at the bump itself, before any feature work:** the corpus's 22
+  raw `<style>` blocks may trip upstream 0.2's new style diagnostics
+  (`STYLE_STANDALONE_*`, including `STYLE_STANDALONE_OUTSIDE_TEMPLATE` for CSS outside
+  a template block). The bump lands only with the warning baseline still 0 — configure
+  or scope the new diagnostics per the review, never weaken our own.
+  **The three features, each with its design questions:**
+  1. `@empty` arm on `@for` (spec: optional arm after the template block). New IR (an
+     empty arm on `ForIR`), both emitters, analysis addressing. `.tsx` needs no new
+     spelling — an empty state is already `{items.length === 0 ? … : items.map(…)}` —
+     so decide whether `@empty` lowers to that shared conditional+loop shape or earns
+     its own IR (keys and addressing may differ).
+  2. Dynamic `<{expression}>` tags (spec: closing tag repeats, `</{expression}>`). Not
+     expressible in standard TSX — if the capability stays `.tsrx`-only, ADR 0032 s6's
+     exception mechanism records it. The server semantics are the hard part: a tag
+     name unknown at compile time folds only when the expression is server-known;
+     decide which tier renders the unknown case and what the client does at connect.
+     Also check the `.tsx` collision: a capitalized local-variable tag reads as
+     compose (PascalCase = compose), so a `.tsx` spelling via a local tag variable
+     must not blur compose dispatch.
+  3. Scoped styles — the host-decision change. HOST_PROFILE.md's "Styles are unscoped,
+     light DOM" (the deliberate divergence from Ripple) is the recorded decision; the
+     owner wants scoping supported. 0.2 ships the machinery (`STYLE_*` diagnostics,
+     `prepareStylesheetForRender(sheet, mode)` with `scope`/`class-map`/`theme`,
+     hash-class application, standalone blocks scoped to siblings). Rule FIRST
+     (architect, new ADR): opt-in per component vs new default; interaction with the
+     tag-name-prefix convention and docs-src/pages/styling.md; whether upstream's
+     sibling-scoping model fits light-DOM SSR output. Implementation follows the
+     ruling.
+  **Acceptance:** the pin moved to the chosen 0.2.x with the ADR 0023 s2 review
+  recorded (what changed 0.1.63 → chosen version, why safe); warning baseline 0 and
+  tier census 20/2/0 hold; goldens byte-identical for untouched behavior (or updated
+  pinning the new lowerings); each feature's dual-surface story lands per ADR 0032 s6
+  — paid in both surfaces, or its s6 exception recorded; parity extended accordingly;
+  `check:tsrx`/`typecheck`/`build:docs` green.
 
 ---
 
@@ -851,8 +898,9 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
 
 ## P5 — Wave 4: example migrations
 
-**Gated on LT-202 (the `.tsx` front end in the build) AND LT-178/LT-179** (owner
-sequencing). LT-183 returned GO (ADR 0032, dual front end) — **migrations author `.tsx`**;
+**Gated on LT-202 (the `.tsx` front end in the build), LT-178/LT-179, AND LT-210 (the
+TSRX pin upgrade; owner sequencing 2026-09-17)**. LT-183 returned GO (ADR 0032, dual
+front end) — **migrations author `.tsx`**;
 the spike's four fixtures (`spike/tsx/`) and FINDINGS' surface mapping are the shape
 reference. Otherwise unblocked. The canonical pattern is LT-092's: same-commit cutover — delete the `.ts` twin, point
 `examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green
