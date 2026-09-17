@@ -2,7 +2,7 @@
 
 > This document is the north star for Le Truc's design and development. It captures the problem, the users, the constraints, and the success criteria from which all architectural decisions should be derived. It is not a changelog or a roadmap — it describes _what_ and _why_, not _when_.
 
-**Scope note (2026-09-04).** v3.0 is a two-track release. Track 1 is the committed library contract ([M1](#m1-component-definition-via-a-single-function)–[M16](#m16-security-validation-in-setattribute), shipped through 2.x). Track 2 is the isomorphic authoring and build-time server-evaluation program defined by [ADRs 0024–0030](adr/0024-adopt-tsrx-as-isomorphic-component-format.md), together with the amendments those ADRs carry in place — most recently ADR 0026's capability fallback (2026-09-04). **Where a shipped 2.x contract and an unpublished v3 decision conflict, the shipped contract wins**: the build-time tooling adapts to the library, never the reverse. ADR 0025 (client-side playground) remains Proposed and is in scope only if accepted.
+**Scope note (2026-09-04).** v3.0 is a two-track release. Track 1 is the committed library contract ([M1](#m1-component-definition-via-a-single-function)–[M16](#m16-security-validation-in-setattribute), shipped through 2.x). Track 2 is the isomorphic authoring and build-time server-evaluation program defined by [ADRs 0024–0032](adr/0024-adopt-tsrx-as-isomorphic-component-format.md), together with the amendments those ADRs carry in place — most recently ADR 0032's dual authored surface (2026-09-17). **Where a shipped 2.x contract and an unpublished v3 decision conflict, the shipped contract wins**: the build-time tooling adapts to the library, never the reverse. ADR 0025 (client-side playground) remains Proposed and is in scope only if accepted.
 
 ---
 
@@ -64,7 +64,7 @@ For the library itself:
 
 For the v3 authoring program (ADRs 0024–0030):
 
-- The example corpus is 100% `.tsrx` — no hand-written component twins remain outside test and docs helpers — and every markup/selector/style contract error that used to surface as a runtime `MissingElementError` is a build failure
+- The example corpus is 100% compiled — every component authored in the isomorphic single-file format, `.tsx` by default with `.tsrx` retained ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)) — no hand-written component twins remain outside test and docs helpers, and every markup/selector/style contract error that used to surface as a runtime `MissingElementError` is a build failure
 - The compile-warning baseline holds at zero, with the tier census and translation census reported separately and growing only when the build genuinely learns something new
 - The CI equivalence audit (Folded-tier components rendered byte-identically by both evaluation mechanisms) is green
 - A second locale ships end to end: per-locale pages, the reserved `i18n` parameter, and a visible translation census
@@ -81,7 +81,7 @@ For the v3 authoring program (ADRs 0024–0030):
 - **Environment**: Multi-project context with heterogeneous backends (Java, PHP, Python, C# CMS platforms); uses npm packages and bundles with Vite or Bun; deploys to CDN or static hosting
 - **Goals**: Build interactive UI components that are reusable across projects; avoid per-project reinvention of patterns; be able to refactor with confidence; ship accessible, performant frontends
 - **Pain points solved**: No more tight coupling between components; state changes propagate automatically; TypeScript catches integration errors at compile time; components are portable because they are backend-agnostic
-- **(v3)** Authors components in the isomorphic `.tsrx` format — one file per component — and debugs generated client factories with the `DEV_MODE` tooling ([ADR 0022](adr/0022-debug-extension-for-visual-and-console-instrumentation.md)) and tiered error surfacing ([ADR 0028](adr/0028-tiered-error-surfacing.md))
+- **(v3)** Authors components in the isomorphic single-file format — one file per component, `.tsx` by default with `.tsrx` retained where statement-context control flow reads better ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)) — and debugs generated client factories with the `DEV_MODE` tooling ([ADR 0022](adr/0022-debug-extension-for-visual-and-console-instrumentation.md)) and tiered error surfacing ([ADR 0028](adr/0028-tiered-error-surfacing.md))
 
 ### Secondary: Design system / component library author
 
@@ -165,7 +165,7 @@ The library must be consumable via a `<script type="module">` tag from a CDN wit
 
 #### M17. Single-file isomorphic authoring format
 
-A component is authored once, as a `.tsrx` file containing server args, signals, `expose()` calls, markup, event handlers, and scoped styles ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md)). The compiler generates the idiomatic `defineComponent()` client module, the server render module, and verbatim tag-scoped CSS from that one source. The hand-written trio is not a coexisting format — the isomorphic format is the only authoring format, and authored sources stay honest TypeScript by construction (real exports imported explicitly, FactoryContext vocabulary ambient).
+A component is authored once, as a single isomorphic source file containing server args, signals, `expose()` calls, markup, event handlers, and scoped styles ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md)): **`.tsx` is the default authored surface; `.tsrx` remains a supported surface** where its statement-context control flow (`@if`/`@for`/`@try`) is the better ergonomics ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)). Both surfaces are first-class inputs to one machinery layer and compile to the same artifacts — the idiomatic `defineComponent()` client module, the server render module, and verbatim tag-scoped CSS. The hand-written trio is not a coexisting format — the isomorphic format is the only authoring format, and authored sources stay honest TypeScript by construction (real exports imported explicitly, FactoryContext vocabulary ambient).
 
 #### M18. Compile-time contract checking
 
@@ -177,11 +177,11 @@ Every component's reactive initial values are resolved server-side by the cheape
 
 #### M20. Server Simulation realm
 
-The Simulated tier renders initial HTML by executing the generated client module against a jsdom realm ([ADR 0027](adr/0027-server-simulation.md)): hermetic IO (a fetching component never settles), a fixed-point gate proving enhancement is idempotent over its own output, per-component containment so one throwing component never fails the build, and render memoization on `(component, markup, locale)`. The realm's `ElementInternals` posture is capability-scoped ([ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) §2, amended 2026-09-04): ARIA reflection falls back to content attributes so the served HTML carries `role`/`aria-*` initial values; form association degrades globally where the substrate cannot support it, because an incomplete stub is worse than none.
+The Simulated tier renders initial HTML by executing the generated client module against a jsdom realm ([ADR 0027](adr/0027-server-simulation.md)): hermetic IO (a fetching component never settles), a fixed-point gate proving enhancement is idempotent over its own output, and per-component containment so one throwing component never fails the build. The realm's `ElementInternals` posture is capability-scoped ([ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md) §2, amended 2026-09-04): ARIA reflection falls back to content attributes so the served HTML carries `role`/`aria-*` initial values; form association degrades globally where the substrate cannot support it, because an incomplete stub is worse than none.
 
 #### M21. Composition and interop
 
-Compiled components compose: PascalCase invocation with typed server args at the boundary, `class`/`id` discriminators that reach the served DOM, a reserved `children` parameter for content insertion, and `truc:pass={{ … }}` as the sole channel for client-side signal interop with a custom-element target ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s10). Reaching into a sub-component's owned markup is a compile-checked ownership violation — composition goes through the child's declared public interface (TSRX-HOST-PROFILE.md, the data account).
+Compiled components compose: PascalCase invocation with typed server args at the boundary, `class`/`id` discriminators that reach the served DOM, a reserved `children` parameter for content insertion, and `truc:pass={{ … }}` as the sole channel for client-side signal interop with a custom-element target ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s10). A composed child declares its pass surface on its own args type (`'truc:pass'?: { … }`), so a parent's pass checks against the child's real shape ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s3). Reaching into a sub-component's owned markup is a compile-checked ownership violation — composition goes through the child's declared public interface (TSRX-HOST-PROFILE.md, the data account).
 
 #### M22. Tiered error surfacing
 
@@ -197,7 +197,7 @@ Locale and translations are build-time server data ([ADR 0030](adr/0030-internat
 
 #### M25. Tooling continuity
 
-Custom Elements Manifest generation continues through the migration (analyzer + plugin now; compiler-emitted fragments once the last hand-written component is gone) ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s9, [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The compiler is browser-pure (CI smoke test) so it can run in a browser bundle. Type flow is emit-then-check over the compiler's span table, remapping `tsc` diagnostics to source positions.
+Custom Elements Manifest generation continues through the migration (analyzer + plugin now; compiler-emitted fragments once the last hand-written component is gone) ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s9, [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The compiler is browser-pure (CI smoke test) so it can run in a browser bundle. Type flow is emit-then-check over the compiler's span table — remapping `tsc` diagnostics to source positions — for generated modules and `.tsrx` sources; authored `.tsx` sources are type-checked directly, with no remapping step ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s3).
 
 #### M26. v3 API cleanup — removal of the deprecated surfaces
 
@@ -245,7 +245,7 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 
 #### N3. Client-side TSRX playground
 
-_Conditional._ A docs-site playground compiling `.tsrx` entirely in the visitor's browser ([ADR 0025](adr/0025-client-side-tsrx-playground.md) — **Proposed**, not accepted). In scope only if the ADR is accepted; it rides M25's browser-purity invariant and de-risks editor tooling, but commits nothing until decided.
+_Conditional._ A docs-site playground compiling components entirely in the visitor's browser ([ADR 0025](adr/0025-client-side-tsrx-playground.md) — **Proposed**, not accepted). In scope only if the ADR is accepted; it rides M25's browser-purity invariant, but commits nothing until decided.
 
 ---
 
@@ -280,7 +280,7 @@ _Conditional._ A docs-site playground compiling `.tsrx` entirely in the visitor'
 - TypeScript strict mode compatible
 - No `any` in the public API surface
 - Selector type inference must work in editors (VSCode, WebStorm) without additional plugins
-- _(v3)_ Authored `.tsrx` sources are valid TypeScript by construction; generated client and server modules are checked by `tsc` in CI with diagnostics remapped to source positions through the span table
+- _(v3)_ Authored sources are valid TypeScript by construction — `.tsx` sources type-check directly against the ambient host profile; generated client and server modules are checked by `tsc` in CI with diagnostics remapped to source positions through the span table (generated modules and `.tsrx` sources)
 
 ### Reliability
 
@@ -301,7 +301,7 @@ _Conditional._ A docs-site playground compiling `.tsrx` entirely in the visitor'
 - **Language**: TypeScript. The library is authored in TypeScript and published with full type declarations.
 - **Module format**: ESM only. CommonJS is not a target.
 - **Build tooling**: Bun (primary), Vite compatible. Tests run via Playwright against real browsers.
-- **(v3) Compiler**: the `.tsrx` compiler is built in-repo on a pinned `@tsrx/core` (shared parser; upgrades are reviewed changes), isolated behind one emitter module. It is build-time tooling only; jsdom is a build-time-only dependency. From v3.0 it ships as a separate package (`@tsrx/le-truc` or `@zeix/tsrx-le-truc`), while `@zeix/le-truc` remains the backend-agnostic client layer.
+- **(v3) Compiler**: the component compiler is built in-repo with two front ends behind one shared machinery layer ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)): `.tsx` parsed by the repo's `typescript` dependency, `.tsrx` on a pinned `@tsrx/core` — both parser upgrades are reviewed changes. It is build-time tooling only; jsdom is a build-time-only dependency. From v3.0 it ships as a separate package (`@tsrx/le-truc` or `@zeix/tsrx-le-truc`), while `@zeix/le-truc` remains the backend-agnostic client layer.
 
 ### Prohibited
 
@@ -336,7 +336,7 @@ _Conditional._ A docs-site playground compiling `.tsrx` entirely in the visitor'
 - `@zeix/cause-effect` ^1.0.0 — reactive primitive layer. Le Truc and Cause & Effect are co-developed at Zeix AG and released 1.0 together.
 - Playwright — browser-based integration tests
 - Bun — build tooling and test runner script
-- _(v3)_ `@tsrx/core` (pinned) — shared `.tsrx` parser; jsdom (build-time only) — simulation substrate
+- _(v3)_ `@tsrx/core` (pinned) — `.tsrx` front-end parser; `typescript` — `.tsx` front-end parser ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)); jsdom (build-time only) — simulation substrate
 
 ---
 

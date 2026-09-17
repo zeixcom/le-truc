@@ -5,7 +5,7 @@ names its own dependency.
 
 **Where the history went.** Everything landed and reviewed has been removed from this file
 (architect, 2026-09-06; i18n band pruned 2026-09-17). The rationale for what shipped lives in
-`adr/` (0024, 0026–0031), `ARCHITECTURE.md`, `server/tsrx/LE_TRUC_COMPILER.md` and
+`adr/` (0024, 0026–0032), `ARCHITECTURE.md`, `server/tsrx/LE_TRUC_COMPILER.md` and
 `TSRX-HOST-PROFILE.md`; the user-facing summary lives in `CHANGELOG.md` `[Unreleased]`; the
 task-by-task record lives in `git log -p -- TODO.md`. Do not re-derive a decision from a task
 entry — read the ADR. LT-199/LT-200 (pre-connect property writes, ADR 0031) landed via the
@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-206.**
+**Next free task ID: LT-210.**
 
 ---
 
@@ -40,7 +40,21 @@ its ergonomic edge; the forced 22-component codemod is cancelled — it becomes 
 consolidation pass), and the parity suite + shared front-end modules are the anti-drift
 contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
 
-- [x] LT-202: Production merge — land the `.tsx` front end in the v3 build as the second first-class surface (ADR 0032). — done ✓ (2026-09-17, pending architect review)
+- [x] LT-202: Production merge — land the `.tsx` front end in the v3 build as the second first-class surface (ADR 0032). — reviewed ✓ (architect, 2026-09-17)
+  **Skill:** le-truc-dev
+  **Review (architect, 2026-09-17):** Approved. The shared extraction is the anti-drift
+  contract made structural — `front-end.ts`/`lower-shared.ts` are genuinely
+  front-end-neutral (loose `TsrxNode` type only, no parser values), the `Lowering` seam +
+  `SurfaceWording` + dispatch hooks put exactly the surface-specific decisions (child node
+  types, control-flow expression shapes) in each front end, and `compileFromIR` leaves
+  `compileComponent`/`compileComponentTsx` differing only in parser. TSRX048 fires before
+  pass 2, names both files, and drops both (the in-memory-FileInfo duplicate test that
+  avoids racing the corpus glob is the right call). The four-arm boundary keeps `.tsrx`
+  byte-identical by construction (`staleChildren: null`), the `.get()` probe distinguishing
+  nil from stale is the minimal server state machine, and parity pins the nil-arm render +
+  the `stale:` client handler. Gates re-run at review: typecheck 0, `bun test server/tests`
+  1548/0 (3 documented pre-existing unhandled errors — now LT-207), parity 26/26,
+  `check:tsrx` 0 / baseline 0 / census 20/2/0.
   **Skill:** le-truc-dev
   **Done (2026-09-17):** all five items landed, plus the owner's two surface folds recorded below.
   1. Shared extraction: `server/tsrx/front-end.ts` (setup-extraction loop via
@@ -83,7 +97,26 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   → Tech Writer (draft in `diagnostics.ts`); boundary nil/stale diagnostic wordings ride
   the same review.
 
-- [x] LT-203: Harden the `.tsx` host profile — strict per-element typing, the `host` ambient, and the compose `'truc:pass'` convention (ADR 0032 s3). — done ✓ (2026-09-17, pending architect review)
+- [x] LT-203: Harden the `.tsx` host profile — strict per-element typing, the `host` ambient, and the compose `'truc:pass'` convention (ADR 0032 s3). — reviewed ✓ (architect, 2026-09-17)
+  **Skill:** le-truc-dev
+  **Review (architect, 2026-09-17):** Approved. The strict table is the right shape of
+  strict: per-element entries name the corpus's real light-DOM surface (thunk overloads,
+  `class`/`for` with no React aliases, the `data-*` pattern index), and keeping
+  `truc:pass` OUT of `CommonLightDom` — only pass targets declare one, keyed per element —
+  is what makes excess pass keys a tsc error instead of silently accepted vocabulary. The
+  `host` ambient's widening is correctly scoped to the authored-source stand-in with the
+  generated client keeping precise types, the two-profiles-never-share-a-program rule is
+  enforced in both tsconfigs and stated in both headers, and the `css`/`boundary` ambients
+  encode compiler semantics (`never[]` substitutions so tsc refuses what the compiler
+  refuses). The same-commit table-extension rule for wave 4 is stated in the profile
+  header where migrations will meet it.
+  **Owner precision ruling (2026-09-17, post-review):** the `host` ambient's
+  `Record<string, any>` and the `boundary` arms' `unknown` are imprecise where the
+  information is known — `host` is the lone `any`-hole in an otherwise precise profile
+  (`first`/`all` infer through selector literals; args flow through real parameter
+  types). Follow-ups LT-208 (boundary arms — cheap, available in the shared profile) and
+  LT-209 (precise per-file `host`) carry the fix; the wide `host` stands until LT-209
+  lands.
   **Skill:** le-truc-dev
   **Done (2026-09-17):** the profile moved from the spike's stand-in to
   `server/tsrx-tsx/host-profile.d.ts` and hardened.
@@ -117,27 +150,81 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   `bun test server/tests` green (the two props-type additions change only generated type
   text — tier census and warning baseline unchanged).
 
-- [ ] LT-204: Docs and requirements round for the dual front end (ADR 0032 follow-up f).
+- [ ] LT-206: Rename the compiler tree to match the dual-front-end architecture — `server/tsrx/` → `server/compiler/` with `frontend/tsrx/` and `frontend/tsx/` inside (architect ruling, 2026-09-17). **Land before wave 4's first migration and before LT-204's `LE_TRUC_COMPILER.md` rewrite.**
+  **Skill:** le-truc-dev
+  **Context:** Post-ADR 0032 the directory names lie. `server/tsrx/` holds the MACHINERY —
+  analysis, emitters, tiering, sim, plus since LT-202 the shared front-end modules
+  (`front-end.ts`, `lower-shared.ts`, `pipeline.ts`) that serve BOTH surfaces — and
+  `server/tsrx-tsx/` reads as a variant of tsrx rather than the co-equal front end it is.
+  ADR 0032's own vocabulary is "one machinery layer, two front ends, one registry"; the
+  tree should say so. Target shape:
+  - `server/compiler/` — the machinery, including the front-end-neutral shared modules
+    (they import no parser values by design, so they belong at the machinery level, not
+    under a surface).
+  - `server/compiler/frontend/tsrx/` — the `.tsrx` front end: `compiler.ts`,
+    `lower-template.ts`, `globals.d.ts`, `index.ts` (from `server/tsrx/`).
+  - `server/compiler/frontend/tsx/` — the `.tsx` front end: `compiler-tsx.ts`,
+    `lower-tsx.ts`, `to-estree.ts`, `host-profile.d.ts`, `index.ts` (from
+    `server/tsrx-tsx/`).
+  One seam is NOT mechanical: `pipeline.ts` imports `collectComposeElements` from
+  `./compiler` — a pure `ComponentIR` walk sitting in the `.tsrx` front end. Move it to a
+  shared leaf (e.g. beside `walk.ts`) so the machinery does not depend on a front end.
+  Everything else is `git mv` + import-specifier surgery. External importers to repoint:
+  the ten `scripts/*.ts` consumers, `server/effects/{tsrx,simulate,i18n}.ts`,
+  `server/tests/helpers/generated-tsrx.ts`, `tsconfig.json` (the host-profile exclusion —
+  the two ambient profiles still never share a program), `spike/tsx/tsconfig*.json`.
+  Tests mirror the source: `server/tests/tsrx/` → `server/tests/compiler/`,
+  `server/tests/tsrx-tsx/parity.test.ts` → `server/tests/compiler/tsx/parity.test.ts`.
+  **Deliberately OUT of scope** (recorded so nobody "finishes" them later): the
+  `package.json` script names (`check:tsrx`, `build:tsrx` — project lexemes cited across
+  every task and ADR; revisit at packaging), the `server/effects/tsrx.ts` filename, the
+  `server/generated/tsrx/` output directory (authored example imports point at it; wave 4
+  rewrites those files anyway — rule on it at packaging), `@tsrx/core` package names, and
+  TSRX diagnostic codes. ADRs keep their paths as written — they quote the tree at
+  decision time.
+  **Verification:** the rename compiles and passes IS the proof — goldens byte-identical
+  (no content change beyond import specifiers), `bun test server/tests` green,
+  `bun run typecheck` exit 0, `check:tsrx` baseline 0 / census 20/2/0, parity 26/26,
+  `build:docs` green, `check:links` green (docs move with the tree: TODO.md header,
+  TSRX-HOST-PROFILE.md, server/SERVER.md, server/TESTS.md, LE_TRUC_COMPILER.md path
+  references — mechanical sed only; the content rewrite stays LT-204), and the browser
+  purity gate (its entry point moves to `server/compiler/frontend/tsrx/index.ts`).
+
+- [ ] LT-204: Docs and requirements round for the dual front end (ADR 0032 follow-up f). **The REQUIREMENTS.md/ARCHITECTURE.md/CONTEXT.md drafts landed 2026-09-17 (architect) — review them, don't re-derive them; `LE_TRUC_COMPILER.md` waits for LT-206's new paths.**
   **Skill:** tech-writer (architect co-owns REQUIREMENTS.md/ARCHITECTURE.md touchpoints)
-  **Context:** ADR 0032 changes the authoring story; the documentation follows:
+  **Context:** ADR 0032 changes the authoring story; the documentation follows.
+  **Architect drafts landed (2026-09-17), tech-writer reviews and owns final copy:**
+  REQUIREMENTS.md — the v3 success criterion, both persona bullets, M17 (dual surface,
+  `.tsx` default), M21 (the compose `'truc:pass'` args-key convention), M25 and the type
+  safety NFR (emit-then-check for generated modules and `.tsrx` sources; direct tsc
+  checking for `.tsx`), §5's compiler constraint (two front ends, two parsers), §6
+  dependencies (`typescript` joins `@tsrx/core`). ARCHITECTURE.md — the intro paragraph,
+  a new "Authoring Surfaces" section before Server Evaluation Tiers, and the tier
+  section's surface-neutral wording. CONTEXT.md — **Authored Surface**, **Front End**, and
+  **Machinery** entries (ADR 0032's split vocabulary).
+  **Still tech-writer's to draft:**
   1. `TSRX-HOST-PROFILE.md` becomes the **dual host profile**: `.tsx` primary (module
-     shape, expression control flow, `boundary()`, template-literal CSS, no shorthand)
-     with the `.tsrx` profile retained.
-  2. REQUIREMENTS M17/M25 wording follows the ADR (`.tsx` primary, `.tsrx` supported).
-  3. **LT-014 (Volar plugin) retires as moot** — `.tsx` authored code gets editors
-     through tsserver; record the re-open condition (`.tsrx` authoring resurgence).
-  4. `AGENTS.md`/`ARCHITECTURE.md`/`CONTEXT.md` gain the dual-surface facts;
-     `server/tsrx/LE_TRUC_COMPILER.md`'s module map gains the second front end + shared
-     modules from LT-202.
-  5. The wave-4 authoring rule lands where authors will meet it: default `.tsx`;
-     `.tsrx` where statement-context control flow argues otherwise.
-  **Grew on 2026-09-17 (LT-202/LT-203 landed):** the docs must also teach the two
-  surface folds — the four-arm `boundary({ ok, nil, err, stale })` (nil vs stale
-  differentiable; omitting `stale` falls back to ok, `watch`-style) and the `css`
-  template tag as the default CSS spelling (`server/tsrx-tsx/host-profile.d.ts` is now
-  the authoritative strict `IntrinsicElements` table; wave-4 migrations extend it) —
-  plus the dual-corpus duplicate-tag rule (TSRX048) and the compose `'truc:pass'`
-  args-key convention now present on form-listbox and basic-number.
+     shape, expression control flow, `boundary()`, the `css` template tag, no shorthand,
+     the strict `IntrinsicElements` table at
+     `server/compiler/frontend/tsx/host-profile.d.ts` as the authoritative light-DOM
+     contract — wave-4 migrations extend it in the same commit) with the `.tsrx` profile
+     retained as-is.
+  2. `AGENTS.md` gains the dual-surface facts (the header's "Authoring or reviewing a
+     `.tsrx` component?" pointer becomes surface-aware).
+  3. `server/tsrx/LE_TRUC_COMPILER.md` (→ `server/compiler/LE_TRUC_COMPILER.md` after
+     LT-206) is stale at HEAD: its module map, pipeline diagram, and §1 boundary section
+     predate LT-202 — missing the shared front-end modules, the second front end, the
+     four-arm `boundary`, the `css` tag, and TSRX048. Also fold in two recorded facts
+     with no other home: the `check:tsrx` harness-types contract (a harness signature
+     narrower than what pruning/splice emits is caught only by the gate — no unit test
+     sits between them; LT-202 NOTES residue) and the wave-4 authoring rule (default
+     `.tsx`; `.tsrx` where statement-context control flow argues otherwise).
+  4. **LT-014 (Volar plugin) retires as moot** — already recorded in this file's P7;
+     verify the re-open condition (`.tsrx` authoring resurgence) is stated there and
+     mirror one line wherever editor tooling is discussed.
+  5. A biome formatting-only sweep of `server/` (the lint script gates `./src` only; the
+     spike merge left drift, e.g. `to-estree.ts` fails `biome check` format at tip) —
+     mechanical, rides this docs round (LT-202 NOTES residue).
   **Verification:** `bun run check:links` green; Tech Writer owns final copy.
 
 - [ ] LT-205: A `.tsrx` spelling for the four-state async boundary (the dual-contract debt LT-202's `boundary({ ok, nil, err, stale })` created).
@@ -159,6 +246,66 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   **Acceptance (once ruled):** the chosen spelling compiles through the unmodified
   machinery to the same four-arm IR; parity's four-arm pin extends to the `.tsrx` twin;
   goldens otherwise unchanged.
+
+- [ ] LT-208: Type the `boundary` arms precisely in the shared profile (owner precision ruling, 2026-09-17).
+  **Skill:** le-truc-dev
+  **Context:** `host-profile.d.ts` declares `boundary(arms: { ok: unknown; nil: unknown;
+  err: (error: any) => unknown; stale?: unknown })` — all four arms typed `unknown`/`any`
+  when the compiler itself REQUIRES every arm to be a single root JSX element
+  (`lower-tsx.ts`'s `singleRootOf` checks are the semantics). Type-level only, no new
+  diagnostic, no compiler change: make the ambient tell the same truth.
+  - Generic arms: `declare function boundary<T>(arms: { ok: T; nil: T;
+    err: (error: unknown) => T; stale?: T }): T` — `T` unifies the four arms, so an arm
+    that is not an element expression stands out against the others.
+  - `err`'s parameter contextually `unknown`, never `any`: an unannotated arrow param
+    stops being silently `any` (the author must narrow — honest, since the rejected
+    value's type is whatever the task rejected with); an explicitly annotated param
+    (`async-el.tsx`'s `(e: Error)`) keeps its annotation — verified no fixture breaks.
+  - Declare a minimal `interface Element {}` in the profile's `JSX` namespace so arm
+    element expressions have a name (today they fall back to `any`); attribute checking
+    is unaffected.
+  Update the profile header's `boundary` doc and `TSRX-HOST-PROFILE.md`'s (LT-204's)
+  `.tsx` module-shape section to match.
+  **Acceptance:** the six spike fixtures compile clean under the typed ambient;
+  `tsconfig.neg.json`-style probe: an arm returning a non-element or an err body reading
+  a property off the un-narrowed param is a tsc error on the authored file; parity and
+  `bun test server/tests` green (type text only).
+
+- [ ] LT-209: Precise per-file `host` typing for authored `.tsx` sources — per-file check programs over compiler-emitted ambients (owner precision ruling, 2026-09-17). **Land before or at the very start of wave 4 (LT-095), so migrated authors get feedback from day one.**
+  **Skill:** le-truc-dev
+  **Context:** The authored-source `host` ambient is `FormAssociatedElement &
+  Record<string, any>` — every prop read passes, typos included, while everything around
+  it is precise. The information exists in the same file (`expose({ value: asNumber() })`
+  names the prop AND its type), and the compiler already emits the precise per-component
+  host interface for the GENERATED client. Why the shared profile cannot simply carry the
+  precision: a global `declare const host` has no FILE dimension — one program, one
+  declaration — and merging per-component surfaces into one global interface is unsound
+  exactly where it matters: `value` is exposed as `asNumber()` (basic-number) and
+  `asString('')` (form-textbox) in this corpus, and TS interface merging requires
+  identical member types. The sound shape:
+  1. Split the wide `host` out of `host-profile.d.ts` into its own overlay (e.g.
+     `host-wide.d.ts`) — per-file programs take the shared profile + ONE generated
+     precise ambient; duplicate `host` declarations would otherwise collide.
+  2. The compiler emits the precise ambient per tag alongside the generated client
+     (`<tag>.host.d.ts`: `declare const host: FormAssociatedElement & <the interface the
+     client already declares>`) — single source of truth, no second hand-maintained
+     table. `exposedProps`/`ExposeKind` in the registry already carries the keys and
+     kinds.
+  3. A checker (script over the `typescript` API the repo already depends on — the same
+     package the `.tsx` front end parses with) builds ONE PROGRAM PER AUTHORED FILE
+     (shared `DocumentRegistry`, cached lib files — cheap at corpus scale), reporting
+     native positions: the ADR 0032 s3 dividend — no span remapping, the authored file
+     IS the source file. Wire it into the `typecheck` script (which already runs
+     `build-tsrx` first, so the ambients exist).
+  **Known limit, stated not hidden:** editors keep the wide overlay — tsserver checks
+  one program per tsconfig and cannot do per-file programs. Precise EDITOR feedback
+  needs the LT-014-shaped projection (see that entry's amended re-open condition).
+  CI-side precision is complete once this lands.
+  **Acceptance:** a typo'd `host.cout` in an authored fixture is a tsc error at native
+  position; correct reads get real prop types (`host.value = ''` assignability-checked
+  against `Signal<string>`-backed props; `host.setCustomValidity(…)` still checks via
+  `FormAssociatedElement`); the whole authored corpus passes; the editor path (wide
+  overlay) is untouched and documented; `typecheck` runs the new checker.
 
 ---
 
@@ -397,10 +544,35 @@ round, scope widened).
   3. **TSRX047's literal-prose warning** (LT-173 handoff): final copy; the single-letter
      exemption (page data, not prose) must survive the rewording, and the missing-
      *translation*-rides-the-census distinction is the point of the message.
+  4. **TSRX048's duplicate-tag error** (LT-202 handoff): final copy over the draft in
+     `server/tsrx/diagnostics.ts` — one tag, two corpus sources, both files named; the
+     "whatever surface it is written in" clause is the dual-front-end fact the message
+     teaches.
+  5. **The four-arm `boundary` diagnostic wordings** (LT-202 handoff): the arm-shape
+     errors in `server/tsrx-tsx/lower-tsx.ts` (missing/ill-typed arms, single-root rule
+     per arm, err-arrow requirement) — final copy; `nil` vs `stale` vocabulary must
+     match `watch()`'s and ADR 0029's precedence wording. Batch with items 2–3 so the
+     diagnostic families read as one voice.
 
 ---
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
+
+- [ ] LT-207: Stop the simulation realm's dependency-wait timers from leaking past teardown (LT-202 NOTES residue).
+  **Skill:** le-truc-dev
+  **Context:** `bun test server/tests` exits 0 or 1 nondeterministically at HEAD: 3
+  unhandled `DependencyTimeoutError` "errors between tests" with 0 failures (verified
+  pre-existing on the clean base, f4d66be0). Mechanism (hypothesis from LT-202): the
+  parity suite's sim-realm disposal leaves the library's 200 ms dependency-resolution
+  timer running; its rejection then lands on the torn-down window (`customElements.get`
+  on a disposed realm) and bun fails whichever test is awaiting when it arrives.
+  Timing-dependent — corpus-order failed twice in a 3-file subset run, passed in both
+  full-suite runs. The realm should cancel or absorb in-flight dependency-resolution
+  timers on `dispose()` (or the driver should drain them before teardown) so a disposed
+  realm can never emit an unhandled rejection into the next test.
+  **Acceptance:** three consecutive full `bun test server/tests` runs exit 0; the
+  3-file subset that failed during LT-202 exits 0 repeatedly; no test asserts on the
+  leaked rejection today, so fixing it changes no pinned behavior.
 
 - [ ] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding). **Land before P5 adds composition across tiers.**
   **Skill:** docs-server-dev
@@ -912,12 +1084,16 @@ and this note is redundant; if it has not, do the manual diff.
 
 ## P7 — Backlog (not scheduled)
 
-- [ ] LT-014: Type-flow diagnostics — Volar language-core plugin over the LT-011 span table (ADR 0024 milestone 4, stage 2).
+- [x] LT-014: Type-flow diagnostics — Volar language-core plugin over the LT-011 span table (ADR 0024 milestone 4, stage 2). — retired as moot ✓ (architect, 2026-09-17, ADR 0032)
   **Skill:** le-truc-dev
-  **Context:** Blocked on trigger: every example outside `test/*` and `docs/*` cut over to its
-  compiled client — that is LT-111 plus the remaining dual-state components. CLI-first (LT-011,
-  done) covers CI/agent workflows; this adds in-editor squiggles via a `@volar/language-core`
-  plugin projecting the generated client module, reusing LT-011's span table.
+  **Context:** RETIRED: `.tsx`-authored code gets editors through plain tsserver — there is
+  no generated module to project and no span table to remap for the primary surface
+  (ADR 0032 s3; the plugin's premise was `.tsrx`-everywhere authoring). CLI-first (LT-011)
+  covers CI/agent workflows. **Re-open conditions (either):** `.tsrx` authoring resurges as
+  a dominant surface (the span-table projection becomes relevant again); OR precise
+  EDITOR feedback on authored `.tsx` is demanded — LT-209 gives CI per-file precision with
+  compiler-emitted ambients, but tsserver cannot do per-file programs, so the wide `host`
+  overlay stays in editors until a per-file language-service projection exists.
 
 - [ ] LT-078: Implement conditional branch tree-shaking for `@try`/`@pending`/`@catch` (CHECKLIST §9).
   **Skill:** le-truc-dev

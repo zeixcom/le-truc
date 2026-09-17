@@ -4,7 +4,7 @@ Le Truc is a reactive custom elements library. This document provides the mental
 
 The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives (see [ADR 0001](adr/0001-use-cause-effect-as-reactive-primitive-layer.md)).
 
-Components may also be authored in `.tsrx`, an isomorphic single-file format compiled to this same runtime (see [ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md)). `TSRX-HOST-PROFILE.md` states Le Truc's host-specific decisions for that format.
+Components may also be authored in an isomorphic single-file format compiled to this same runtime (see [ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md)): `.tsx` is the default authored surface, `.tsrx` remains supported where its statement-context control flow reads better (see [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)). `TSRX-HOST-PROFILE.md` states Le Truc's host-specific decisions for both surfaces.
 
 ## Component Model
 
@@ -183,11 +183,23 @@ Factory context helpers (`watch`, `on`, `pass`, `provideContexts`, `requestConte
 
 In `DEV_MODE`, every component gets a reactive `debug: boolean` property (default `false`) for free — no source change, no explicit opt-in — via `debug()`, a `ComponentExtension` `defineComponent()` appends to every component's extensions array unconditionally when `process.env.DEV_MODE === 'true'`. While `debug` is on for an instance, `on()`/`pass()`/`watch()` push an additive companion effect through the same `collect()` chokepoint every effect helper already uses: a permanent `:state(debug)` host indicator that pulses on any firing, presence-only `data-le-truc-on`/`-pass`/`-watch` marking on the target element where attribution is possible (exact for `on()`/`pass()`, and for `watch()` handlers produced by a `bind*` helper; a host-level-only pulse otherwise), and one `console.debug` entry per firing. The author's own effect or listener is never wrapped or modified — instrumentation cannot change app behavior merely by being switched on. Toggling `debug` works via the browser's properties panel or, in `DEV_MODE`, `metaKey`+click on the nearest custom-element ancestor. See [ADR 0022](adr/0022-debug-extension-for-visual-and-console-instrumentation.md).
 
+## Authoring Surfaces
+
+Components are authored in one of two isomorphic single-file surfaces — **`.tsx` (the default)** or **`.tsrx`** — which compile through one shared machinery layer to identical artifact classes: the server render module, the generated client module, and the verbatim CSS (see [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)). One component tag has exactly one authored source; a tag two corpus files declare fails the build naming both files (TSRX048). The parity suite is the standing equivalence contract: the same component authored in both surfaces must render byte-identically, so capability parity — not similarity by convention — is what keeps the surfaces aligned.
+
+The surfaces differ only where the grammar differs:
+
+- **Setup**: `.tsx` setup is the statements before the single returned template; `.tsrx` marks them with the `@{ }` block. Extraction is shared code — both surfaces run the identical loop.
+- **Control flow**: `.tsx` spells conditions as expressions — ternaries and `&&`, `.map()` for loops, IIFEs for switch and try/catch — and the async boundary as the recognized ambient `boundary({ ok, nil, err, stale? })`: all arms render and are `hidden`-toggled by which state won, `nil` being no-value-yet and `stale` re-fetching with a retained value (omitting it falls back the way `watch()` does). `.tsrx` keeps the directive grammar — `@if`/`@switch`/`@try`/`@for` with statement-context arms — which is the ergonomic edge the dual ruling retains; its boundary is three-arm (no `stale` spelling yet).
+- **CSS**: `.tsx` wraps the stylesheet in the `css` template tag — ``<style>{css`…`}</style>`` — so editors highlight it as CSS; a bare template literal is accepted. `.tsrx`'s `<style>` block is raw CSS. Both emit verbatim, dedented.
+- **Shorthand**: the `{count}` attribute shorthand is `.tsrx`-only; `.tsx` spells `count={count}`, lowering to the same IR.
+- **Type checking**: authored `.tsx` is checked directly by `tsc` against the ambient host profile — a strict per-element light-DOM attribute table where `class`/`for` have no React aliases and a composed child declares its pass surface on its own args type; authored `.tsrx` is checked emit-then-check through the span table. Generated modules always go through the span table.
+
 ## Server Evaluation Tiers
 
-This section describes *build-time* behavior of the `.tsrx` compiler, not the runtime library. `@zeix/le-truc` never renders initial HTML and jsdom never ships to a client ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) sub-design 7). It is documented here because which tier a component lands in is a consequence of how it is *written*, so it shapes authoring.
+This section describes *build-time* behavior of the component compiler, not the runtime library. `@zeix/le-truc` never renders initial HTML and jsdom never ships to a client ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) sub-design 7). It is documented here because which tier a component lands in is a consequence of how it is *written*, so it shapes authoring.
 
-Every `.tsrx` component's template is lowered to markup server-side, in every tier. What is tiered is the evaluation of *reactive initial values* — what a `{signal}` child or a `checked={() => …}` thunk renders before JavaScript loads. Each component is statically routed at compile time to the cheapest phase that can actually answer it ([ADR 0029](adr/0029-tiered-server-evaluation.md)):
+Every compiled component's template is lowered to markup server-side, in every tier, whichever surface authored it. What is tiered is the evaluation of *reactive initial values* — what a `{signal}` child or a `checked={() => …}` thunk renders before JavaScript loads. Each component is statically routed at compile time to the cheapest phase that can actually answer it ([ADR 0029](adr/0029-tiered-server-evaluation.md)):
 
 | Tier | Mechanism | When |
 | --- | --- | --- |

@@ -57,12 +57,24 @@ The mechanism for zero-overhead live **Signal** sharing between Le Truc **Compon
 _Avoid_: forward, propagate, share, bind
 
 **Server Arg**:
-A parameter of the function a `.tsrx` **Component** declares. The server supplies its value at render time. Server args are the only channel that carries data into a **Component** from outside its own markup.
+A parameter of the function an authored **Component** source declares. The server supplies its value at render time. Server args are the only channel that carries data into a **Component** from outside its own markup.
 _Avoid_: prop (that is a reactive **Component** property), input, attribute
 
 **Reserved Parameter**:
 A **Server Arg** the compiler supplies instead of the caller. Two exist: `children` (a composed **Component**'s children) and `i18n` (the locale record, [ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)). A **Component** receives one only if it declares it.
 _Avoid_: injected arg, ambient arg, context (a **Reserved Parameter** is not the context protocol)
+
+**Authored Surface**:
+Which of the two isomorphic file formats a **Component** is authored in: `.tsx` (the default) or `.tsrx` (retained where statement-context control flow reads better) ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)). Both compile through the same **Machinery** to the same artifacts.
+_Avoid_: front end (that names the compiler half), format, dialect
+
+**Front End**:
+The compiler's per-surface half: parsing, setup-extraction dispatch, and template lowering for one **Authored Surface**. Two exist, sharing front-end-neutral extraction modules so a shared change cannot drift between surfaces ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s6).
+_Avoid_: parser (too narrow — a front end lowers, not only parses), compiler (that includes the **Machinery**)
+
+**Machinery**:
+The surface-independent compiler stages every **Authored Surface** shares: client analysis, both emitters, tier classification, and the simulation driver ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s5).
+_Avoid_: backend, core (that names `@tsrx/core`, the `.tsrx` parser pin)
 
 **Phase**:
 One of the two server render steps. **Phase 1** lowers the template to markup and **Folds** what it can. **Phase 2** pre-plays the generated client module in the **Simulation Realm**. A phase is a step; an **Evaluation Tier** is the decision about which steps a **Component** runs.
@@ -132,6 +144,7 @@ _Avoid_: dictionary, translations file, i18n bundle. "Locale data" is not a syno
 - **Pass** connects **Slot**-backed **Signal** instances between Le Truc **Component** instances
 - A **Component** is a **Custom Element** with JavaScript-enhanced functionality (a Web Component)
 - A **Component** declares **Server Args**; the compiler supplies any **Reserved Parameter** among them
+- An **Authored Surface** is parsed and lowered by its **Front End**; both front ends feed the same **Machinery**
 - **Phase 1** **Folds** the expressions it can resolve; **Phase 2** runs the client module in the **Simulation Realm**
 - A **Component** has exactly one **Evaluation Tier**, which decides the phases it runs
 - An expression is **Unresolvable** or not, independently of its **Component**'s **Evaluation Tier**
