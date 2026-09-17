@@ -63,6 +63,14 @@ export type FormListboxProps = {
 	 * into it" key handler (LT-120).
 	 */
 	focusFirstOption: () => void
+	/**
+	 * Compiler-consumed compose surface (truc:pass), never a render arg —
+	 * a composed child declares its pass-able props on its args type so a
+	 * parent's `truc:pass={{ … }}` type-checks against the child's real
+	 * shape (ADR 0032 sub-design 3). form-combobox passes `filter` so its
+	 * input drives the option list.
+	 */
+	'truc:pass'?: { filter?: () => string }
 }
 
 declare global {

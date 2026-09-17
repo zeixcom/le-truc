@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-205.**
+**Next free task ID: LT-206.**
 
 ---
 
@@ -40,48 +40,82 @@ its ergonomic edge; the forced 22-component codemod is cancelled — it becomes 
 consolidation pass), and the parity suite + shared front-end modules are the anti-drift
 contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
 
-- [ ] LT-202: Production merge — land the `.tsx` front end in the v3 build as the second first-class surface (ADR 0032).
+- [x] LT-202: Production merge — land the `.tsx` front end in the v3 build as the second first-class surface (ADR 0032). — done ✓ (2026-09-17, pending architect review)
   **Skill:** le-truc-dev
-  **Context:** The spike proved the machinery reuse with zero `server/tsrx/` changes; this
-  task turns the spike branch into production reality:
-  1. Merge `spike/tsx-surface` into v3 (the branch carries `server/tsrx-tsx/`, the
-     fixtures under `spike/tsx/`, and the parity suite — already committed).
-  2. **Extract the shared front-end halves** (mandatory under dual, not a nicety): the
-     setup-extraction loop and the element/children lowering shared by
-     `compiler.ts`/`compiler-tsx.ts` and `lower-template.ts`/`lower-tsx.ts` move into
-     shared modules used by both front ends, deleting the spike's ~950 copied lines
-     (FINDINGS projection: ≈2.4k `.tsx` front end). This is the anti-drift half of the
-     dual contract; the parity suite is the other half and must stay green through the
-     extraction.
-  3. **Dual corpus scan:** the build globs `.tsrx` AND `.tsx` into one registry; a tag
-     declared by two sources fails the corpus compile naming both files (channel:
-     compiler, tier 1 Prevented per ADR 0028 — statically decidable, no runtime half).
-  4. Widen `imports.ts`'s plain-import filter to both extensions (FINDINGS fact 7: it
-     filters `.tsrx` specifiers only today; the spike worked around it by local-name
-     overlap — the production shape belongs in `imports.ts`).
-  5. Note FINDINGS fact 6 for the extraction: IIFE recognition must be shape-based
-     (object identity does not survive TS→estree conversion).
-  **Verification:** parity 26/26 green post-extraction; full `bun test server/tests`
-  green; `bun run typecheck` exit 0 (capture directly); `check:tsrx` over the unified
-  corpus (22 `.tsrx` + the fixtures' tags) with warning baseline 0 and tier census
-  unchanged; `build:docs` green.
+  **Done (2026-09-17):** all five items landed, plus the owner's two surface folds recorded below.
+  1. Shared extraction: `server/tsrx/front-end.ts` (setup-extraction loop via
+     `extractSetup`, params contract via `extractParams`, context seeding, template-output
+     resolution, the post-lowering validation tail, and the verbatim module scans —
+     malformed-selector/import-mismatch/deferred-collector — plus IR assembly) and
+     `server/tsrx/lower-shared.ts` (condition validation, element/compose lowering, the
+     expression-child lift rule, positional reactivity, and a `lowerChildrenSkeleton` whose
+     hooks carry each surface's dispatch). `server/tsrx/pipeline.ts` shares the
+     post-front-end assembly, so `compileComponent`/`compileComponentTsx` are thin shells
+     differing only in the parser. The `.tsx` front end dropped ~1,040 lines (3,335 → ~2,290
+     incl. the production host profile); `.tsrx` emitted bytes and diagnostics are unchanged
+     (goldens + 1548-test suite green).
+  2. Dual corpus: `compileTsrxCorpus` dispatches per extension; watch effect, `build-tsrx`,
+     and `check-tsrx` glob both extensions. **TSRX048** (new, error severity, tier 1
+     Prevented): a tag two corpus sources declare fails the run naming every file, before
+     pass 2. Pinned by `server/tests/tsrx/dual-corpus.test.ts` (a `.tsx` file compiles
+     through the runner end to end; a synthetic duplicate names both files).
+  3. `imports.ts`: `parseComposeImports` accepts `.tsrx` AND `.tsx` (cross-surface compose
+     falls out of the path-keyed registry); `parsePlainImports` excludes both — the spike's
+     local-name-overlap workaround deleted (FINDINGS fact 7's production shape).
+  4. FINDINGS fact 6 recorded where it lives now: `lower-tsx.ts`'s IIFE recognition is
+     shape-based, documented on `asIife`/`lowerSwitchIife`.
+  **Folded in, same session (owner directives, 2026-09-17):** `boundary({ ok, nil, err,
+  stale? })` — the four Task-state arms, `stale` optional with `watch()`'s own fallback
+  (`TryIR.staleChildren`, null on `.tsrx` so its bytes are unchanged; new server state
+  machine distinguishes nil from stale via the `.get()` probe; the single client `watch()`
+  gains the `stale` handler) — and the `css` template tag (`<style>{css`…`}</style>`,
+  editor CSS highlighting; bare template literal still accepted). The `.tsrx` stale-arm
+  spelling is LT-205 (dual-contract debt). Parity 26/26 incl. a four-arm render + stale
+  handler pin.
+  **Also fixed here (pre-existing, found by the verification gates):** the
+  "single destructured args" check had been dead since 4952f586 (see NOTES.md); and
+  `check:tsrx` was broken at HEAD — `pluralCategories()` rejected the `undefined` its own
+  doc promised cardinal — 6 tsc errors in basic-pluralize's generated server module.
+  **Verification:** parity 26/26; `bun test server/tests` 1548 pass / 0 fail (3 unhandled
+  inter-test errors pre-exist on the clean base — NOTES.md); `bun run typecheck` exit 0;
+  `check:tsrx` exit 0, warning baseline 0, tier census 20/2/0, translation census 0 gaps;
+  `build:docs` green (simulation pass 2/8/20 unchanged). **Handoffs:** TSRX048 message copy
+  → Tech Writer (draft in `diagnostics.ts`); boundary nil/stale diagnostic wordings ride
+  the same review.
 
-- [ ] LT-203: Harden the `.tsx` host profile — strict per-element typing, the `host` ambient, and the compose `'truc:pass'` convention (ADR 0032 s3).
+- [x] LT-203: Harden the `.tsx` host profile — strict per-element typing, the `host` ambient, and the compose `'truc:pass'` convention (ADR 0032 s3). — done ✓ (2026-09-17, pending architect review)
   **Skill:** le-truc-dev
-  **Context:** The spike's `spike/tsx/host-profile.d.ts` is a permissive stand-in; the
-  probes already prove strict typing works. Three items (FINDINGS facts 4–5):
-  1. **Per-element strict `IntrinsicElements`:** light-DOM attribute types per element
-     (no blanket `HostAttrs`), function-valued thunk overloads, `class`/`for` (no
-     `className`/`htmlFor` entries), and value-shape checking of `truc:pass` entries.
-  2. **Widen the `host` ambient** beyond `HTMLElement & Record<string, unknown>` — the
-     spike's `FormAssociatedElement & Record<string, any>` shape makes managed-form
-     member calls (`host.setCustomValidity(…)`) type-check; the generated client keeps
-     precise types.
-  3. **The compose convention, productionized:** a composed child declares its
-     compiler-consumed pass surface on its args type (`'truc:pass'?: { … }`); apply it to
-     the corpus's composed children, not just the fixture's form-listbox.
-  **Verification:** the negative probes keep failing for the right reasons; fixtures
-  type-check under `--strict`; `bun test server/tests` green.
+  **Done (2026-09-17):** the profile moved from the spike's stand-in to
+  `server/tsrx-tsx/host-profile.d.ts` and hardened.
+  1. **Strict per-element `IntrinsicElements`:** every entry names its light-DOM
+     attributes — `Reactive<T>` thunk overloads, `class`/`for` (no `className`/`htmlFor`
+     entries), `data-*` via a pattern index signature, the corpus's event vocabulary, and
+     `truc:case`/`truc:case-type` as compiler-consumed common vocabulary. `truc:pass` is
+     deliberately NOT in the common set: only pass targets declare one, keyed per element
+     (`form-listbox.filter`, `basic-number.value`) so excess pass keys are tsc errors.
+     Component tags carry their real server args (basic-counter/pluralize/number,
+     form-combobox/listbox, sync-el, async-el); wave-4 migrations extend the table in the
+     same commit (rule stated in the profile header). The spike tsconfigs now include the
+     production profile; the root tsconfig excludes it (the two ambient profiles — this
+     and `server/tsrx/globals.d.ts` — declare the same global names and must never share
+     a program).
+  2. **`host` ambient:** `FormAssociatedElement & Record<string, any>`, now documented as
+     the authored-source stand-in whose wider form surface exists precisely so
+     `host.setCustomValidity(…)` and friends type-check; the generated client keeps the
+     precise per-component types.
+  3. **Compose convention on the corpus:** `'truc:pass'?: { filter?: () => string }` added
+     to `FormListboxProps` and `'truc:pass'?: { value?: () => number }` to
+     `BasicNumberProps` (the corpus's composed children that receive pass — combobox,
+     gauge, and module-list's basic-button is a hand-written twin, out of scope). Fixture
+     form-listbox already declared it; the `.tsrx` twins now match.
+  **Also:** the profile carries the owner's folds — the four-arm `boundary` and the `css`
+  template tag ambients (see LT-202).
+  **Verification:** `bunx tsc -p spike/tsx/tsconfig.json` exit 0 (six fixtures under
+  `--strict --jsx preserve` against the strict table); positive probe exit 0;
+  `tsconfig.probe-neg.json` exit 2 naming `Property 'truc:pass' does not exist`;
+  `tsconfig.neg.json` exit 2 with TS2322 on the authored parent (compose type-flow);
+  `bun test server/tests` green (the two props-type additions change only generated type
+  text — tier census and warning baseline unchanged).
 
 - [ ] LT-204: Docs and requirements round for the dual front end (ADR 0032 follow-up f).
   **Skill:** tech-writer (architect co-owns REQUIREMENTS.md/ARCHITECTURE.md touchpoints)
@@ -97,7 +131,34 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
      modules from LT-202.
   5. The wave-4 authoring rule lands where authors will meet it: default `.tsx`;
      `.tsrx` where statement-context control flow argues otherwise.
+  **Grew on 2026-09-17 (LT-202/LT-203 landed):** the docs must also teach the two
+  surface folds — the four-arm `boundary({ ok, nil, err, stale })` (nil vs stale
+  differentiable; omitting `stale` falls back to ok, `watch`-style) and the `css`
+  template tag as the default CSS spelling (`server/tsrx-tsx/host-profile.d.ts` is now
+  the authoritative strict `IntrinsicElements` table; wave-4 migrations extend it) —
+  plus the dual-corpus duplicate-tag rule (TSRX048) and the compose `'truc:pass'`
+  args-key convention now present on form-listbox and basic-number.
   **Verification:** `bun run check:links` green; Tech Writer owns final copy.
+
+- [ ] LT-205: A `.tsrx` spelling for the four-state async boundary (the dual-contract debt LT-202's `boundary({ ok, nil, err, stale })` created).
+  **Skill:** architect (rules the grammar question) with le-truc-dev (implements against the pin)
+  **Context:** The owner folded the four-arm boundary into the `.tsx` front end
+  (2026-09-17): `nil` (no value yet) and `stale` (re-fetching with retained value) are
+  differentiable arms, `stale` optional with `watch()`'s own fallback. The machinery is
+  ready — `TryIR.staleChildren` exists, both emitters and the analysis consume it, and
+  the `.tsrx` side passes `null` (byte-identical three-arm output, pinned by its
+  goldens). What is missing is the GRAMMAR: the pinned `@tsrx/core` 0.1.63 has no stale
+  arm (a `@stale` directive would need an upstream change and the ADR 0023 sub-design 2
+  pin-upgrade review). Weigh: (a) an upstream `@stale` arm (pin upgrade, the honest dual
+  answer), (b) an ambient call INSIDE `.tsrx` templates reusing the `.tsx` lowering
+  (no pin change, but two spellings on one surface), or (c) documenting the asymmetry as
+  permanent — the dual ruling's escape valve (`.tsx` where the grammar lags). Outcome
+  updates ADR 0032 s6's "every new front-end capability is paid for in both surfaces"
+  with whichever answer is chosen; until then the asymmetry is recorded in
+  `TryIR`/`lowerBoundaryCall` docs and the profile's `boundary` ambient.
+  **Acceptance (once ruled):** the chosen spelling compiles through the unmodified
+  machinery to the same four-arm IR; parity's four-arm pin extends to the `.tsrx` twin;
+  goldens otherwise unchanged.
 
 ---
 

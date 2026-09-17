@@ -34,6 +34,14 @@ import { getNumberFormatter } from '../../_common/getNumberFormatter'
 export type BasicNumberProps = {
 	/** Numeric value to format and display. Read from the `value` attribute at connect time. */
 	value: number
+	/**
+	 * Compiler-consumed compose surface (truc:pass), never a render arg —
+	 * a composed child declares its pass-able props on its args type so a
+	 * parent's `truc:pass={{ … }}` type-checks against the child's real
+	 * shape (ADR 0032 sub-design 3). basic-gauge passes `value` so the
+	 * gauge's input drives the displayed number.
+	 */
+	'truc:pass'?: { value?: () => number }
 }
 
 declare global {
