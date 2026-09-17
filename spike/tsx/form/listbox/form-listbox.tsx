@@ -168,7 +168,7 @@ export function FormListbox(
 				</div>
 			</form-listbox>
 
-			<style>{`
+			<style>{css`
 			form-listbox {
 				display: block;
 				margin: 0;

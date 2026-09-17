@@ -58,6 +58,7 @@ export type DiagnosticCode =
 	| 'TSRX045' // a collector-requiring helper deferred into a callback, so it throws NoActiveCollectorError at connect (split from TSRX013 by LT-165)
 	| 'TSRX046' // a setup const the value harness cannot evaluate has its value rendered into the markup — no tier can produce the site (LT-165 step 5)
 	| 'TSRX047' // literal prose in a component that declares `export const i18n` — route it through a message key (LT-173 step 5, ADR 0030 sub-design 4)
+	| 'TSRX048' // one component tag declared by multiple corpus sources (dual front end, ADR 0032 sub-design 6; LT-202) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -1126,5 +1127,25 @@ export const diagnostic = {
 			'TSRX047',
 			`Literal prose \`${sample}\` is not routed through the catalog — this component declares \`export const i18n\`, so a reader-facing string written directly in the template can never be translated. Declare a key with this string as its source-locale value in \`export const i18n\` and render \`{t.<key>}\` here.`,
 			lineOf(source, offset),
+		),
+
+	/**
+	 * One component tag declared by MULTIPLE corpus sources (LT-202, ADR
+	 * 0032 sub-design 6): the corpus scan globs `.tsrx` AND `.tsx` into one
+	 * registry, and a tag with two authored owners would make the registry,
+	 * the generated module names, and every `pass()`/compose resolution
+	 * ambiguous. ADR 0028 tier 1 (Prevented) — statically decidable at
+	 * corpus-compile time from the tag map alone, no runtime half exists.
+	 * Error severity: the build fails naming every declaring file, and both
+	 * files are dropped from the generated output.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
+	 * draft is the LT-202 handoff. Corpus-level: fires once per involved
+	 * file, no source offset.
+	 */
+	duplicateTag: (tag: string, sources: ReadonlyArray<string>) =>
+		error(
+			'TSRX048',
+			`Component tag \`${tag}\` is declared by more than one corpus source — every tag must have exactly one authored file, whatever surface it is written in (.tsrx or .tsx). Keep one of: ${sources.join(', ')} — delete the other or rename its tag.`,
 		),
 }

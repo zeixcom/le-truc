@@ -71,11 +71,14 @@ const normalize = (p: string): string => {
 /* === Compose imports (from config.ts) === */
 
 /**
- * Named imports of other `.tsrx` modules (ADR 0023 sub-design 10): local
- * binding name → import specifier resolved to a repo-relative path.
- * `filename` is itself repo-relative, so the specifier resolves against its
- * directory. Only `.tsrx` specifiers compose — anything else (a `.ts`
- * component, a library import) is not a composable import.
+ * Named imports of other component modules (ADR 0023 sub-design 10, dual
+ * surface per ADR 0032 sub-design 6): local binding name → import specifier
+ * resolved to a repo-relative path. `filename` is itself repo-relative, so
+ * the specifier resolves against its directory. Both authored extensions
+ * compose — `.tsrx` and `.tsx` (cross-surface composition included; the
+ * corpus's compose registry is keyed by resolved path, so either surface
+ * can import the other) — anything else (a `.ts` component, a library
+ * import) is not a composable import.
  */
 export const parseComposeImports = (
 	ast: TsrxNode,
@@ -92,7 +95,11 @@ export const parseComposeImports = (
 			typeof specifierNode.value === 'string'
 				? specifierNode.value
 				: null
-		if (!specifier || !specifier.endsWith('.tsrx')) continue
+		if (
+			!specifier ||
+			(!specifier.endsWith('.tsrx') && !specifier.endsWith('.tsx'))
+		)
+			continue
 		const resolved = normalize(join(dir, specifier))
 		for (const spec of asArray(stmt.specifiers)) {
 			if (spec.type !== 'ImportSpecifier') continue
@@ -274,14 +281,17 @@ export type PlainImportIR = {
 
 /**
  * Every top-level `ImportDeclaration` whose specifier does NOT resolve to a
- * `.tsrx` compose target (`parseComposeImports` above already claims
- * those) and is not `'@zeix/le-truc'` (`parseLeTrucImports` above claims
- * that specifier — its placement is per-name against the runtime-harness
- * filter, not the verbatim re-emission plain imports get). Side-effect-only imports (`import 'culori/css'`)
- * have no bindings to trace usage from. A relative specifier (`./`, `../`)
- * is rewritten to stay valid from the generated modules' flat output
- * directory — it was authored relative to the `.tsrx` source's own
- * location, which is almost never where the compiled module ends up.
+ * composable target — `.tsrx` OR `.tsx` (`parseComposeImports` above claims
+ * both; the dual-extension filter is the production shape LT-183's spike
+ * worked around by local-name overlap, FINDINGS fact 7) — and is not
+ * `'@zeix/le-truc'` (`parseLeTrucImports` above claims that specifier — its
+ * placement is per-name against the runtime-harness filter, not the
+ * verbatim re-emission plain imports get). Side-effect-only imports
+ * (`import 'culori/css'`) have no bindings to trace usage from. A relative
+ * specifier (`./`, `../`) is rewritten to stay valid from the generated
+ * modules' flat output directory — it was authored relative to the source
+ * file's own location, which is almost never where the compiled module ends
+ * up.
  */
 export const parsePlainImports = (
 	ctx: ExtractContext,
@@ -302,6 +312,7 @@ export const parsePlainImports = (
 		if (
 			!specifier ||
 			specifier.endsWith('.tsrx') ||
+			specifier.endsWith('.tsx') ||
 			specifier === '@zeix/le-truc'
 		)
 			continue

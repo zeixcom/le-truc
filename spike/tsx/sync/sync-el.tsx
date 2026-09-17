@@ -42,7 +42,7 @@ export function SyncEl(
 				{mode === 'list' && <span class="badge">listing</span>}
 				{items.length > 0 ? <span class="count">{items.length}</span> : <span class="zero">0</span>}
 			</sync-el>
-			<style>{`sync-el { display: block }`}</style>
+			<style>{css`sync-el { display: block }`}</style>
 		</>
 	)
 }

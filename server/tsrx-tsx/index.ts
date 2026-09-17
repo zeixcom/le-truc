@@ -1,128 +1,44 @@
 /**
- * TSX spike (LT-183): public API — `server/tsrx/index.ts`'s pipeline
- * assembly with the front end swapped (`compileSourceTsx` for
- * `compileSource`). Everything after `compileSource` — compose validation,
- * `analyzeClient`, tier classification, both emitters, the registry entry —
- * is IMPORTED UNMODIFIED from `server/tsrx/`; this file mirrors
- * `compileComponent`'s body because that body lives inside the original
- * module (its stages are otherwise exported).
+ * The `.tsx` front end's public API (LT-183 spike, productionized by
+ * LT-202): the SHARED pipeline (`server/tsrx/pipeline.ts` — compose
+ * validation, `analyzeClient`, tier classification, both emitters, the
+ * registry entry) over `compileSourceTsx`. Everything after the front end
+ * is imported unmodified from `server/tsrx/`; this shell differs from
+ * `compileComponent` ONLY in which front end parses the source — the
+ * anti-drift contract of ADR 0032 sub-design 6.
  */
 
-import { analyzeClient } from '../tsrx/analysis/plan'
-import { collectComposeElements } from '../tsrx/compiler'
-import { type CompileDiagnostic, diagnostic } from '../tsrx/diagnostics'
-import { emitClientModule } from '../tsrx/emit-client'
-import { emitServerModule } from '../tsrx/emit-server'
+import { type CompileFileResult, compileFromIR } from '../tsrx/pipeline'
 import type { RegistryEntry } from '../tsrx/registry'
-import type { SourceSpan } from '../tsrx/spans'
-import { classifyTier } from '../tsrx/tier'
 import { compileSourceTsx } from './compiler-tsx'
 
-export type CompiledComponent = {
-	entry: RegistryEntry
-	serverCode: string
-	clientCode: string
-	css: string
-	clientSpans: SourceSpan[]
-	serverSpans: SourceSpan[]
-}
-
-export type CompileFileResult = {
-	component: CompiledComponent | null
-	diagnostics: CompileDiagnostic[]
-}
+export type {
+	CompiledComponent,
+	CompileFileResult,
+} from '../tsrx/pipeline'
 
 export const compileComponentTsx = (
 	source: string,
 	filename: string,
 	registry: ReadonlySet<string>,
 	childImports?: ReadonlyMap<string, string>,
+	/**
+	 * Composed (PascalCase) elements' targets, keyed by resolved source
+	 * path — the same tolerance semantics as `compileComponent`.
+	 */
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 ): CompileFileResult => {
-	const {
+	const { component, diagnostics, routingSignals } = compileSourceTsx(
+		source,
+		filename,
+	)
+	return compileFromIR(
 		component,
 		diagnostics,
-		routingSignals: setupSignals,
-	} = compileSourceTsx(source, filename)
-	if (!component) return { component: null, diagnostics }
-	const composeNodes = collectComposeElements(component)
-	if (composeRegistry) {
-		for (const node of composeNodes) {
-			if (!composeRegistry.has(node.source))
-				diagnostics.push(
-					diagnostic.composedComponentNotCompiled(
-						component.source,
-						node.node.start,
-						node.component,
-						node.source,
-					),
-				)
-		}
-	}
-	const plan = analyzeClient(component, registry, diagnostics, composeRegistry)
-	if (diagnostics.some(d => d.severity === 'error'))
-		return { component: null, diagnostics }
-	const routingSignals = [...setupSignals, ...plan.routingSignals]
-	const tier = classifyTier(routingSignals)
-	const composeReadTags = composeRegistry
-		? [
-				...new Set(
-					composeNodes
-						.filter(node =>
-							node.attrs.some(
-								attr => attr.kind === 'ref' || attr.kind === 'pass',
-							),
-						)
-						.map(node => composeRegistry.get(node.source)?.tag)
-						.filter((tag): tag is string => tag !== undefined),
-				),
-			]
-		: []
-	const server = emitServerModule(component, {
-		runtimeImport: '../../tsrx/runtime',
-		sourcePath: filename,
-		composeRegistry,
-		tier,
-	})
-	const client = emitClientModule(component, plan, {
-		sourcePath: filename,
+		routingSignals,
+		filename,
+		registry,
 		childImports,
-	})
-	return {
-		component: {
-			entry: {
-				tag: component.tag,
-				name: component.name,
-				source: filename,
-				serverModule: `${component.tag}.server.ts`,
-				clientModule: `${component.tag}.client.ts`,
-				css: `${component.tag}.css`,
-				propsType: component.propsTypeName,
-				exposedProps: Object.fromEntries(component.exposeKinds),
-				tier,
-				routingSignals,
-				suppressedSites: plan.suppressedSites,
-				composeReadTags,
-				declaresI18n: component.declaresI18n,
-				langArgDefault: component.langArgDefault,
-				i18nMessages: component.i18nMessages,
-				caseType: component.caseType,
-				composesTags: composeRegistry
-					? [
-							...new Set(
-								composeNodes
-									.map(node => composeRegistry.get(node.source)?.tag)
-									.filter((tag): tag is string => tag !== undefined),
-							),
-						]
-					: [],
-			},
-			serverCode: server.code,
-			clientCode: client.code,
-			css: component.css,
-			clientSpans: client.spans,
-			serverSpans: server.spans,
-		},
-		diagnostics,
-	}
+		composeRegistry,
+	)
 }

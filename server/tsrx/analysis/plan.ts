@@ -340,6 +340,18 @@ export type TopEffectPlan =
 			pendingFieldsetQuery: string
 			okFieldsetQuery: string
 			errFieldsetQuery: string
+			/**
+			 * The four-arm `.tsx` boundary's stale arm (re-fetching with a
+			 * retained value), or null when the boundary has no stale arm —
+			 * the `.tsrx` grammar's three-arm shape and the plain try/catch
+			 * IIFE both leave it null, keeping their emitted bytes identical.
+			 * When present, the client's single `watch()` gains the matching
+			 * `stale` handler (ADR 0029's precedence: nil > err > stale > ok).
+			 */
+			staleQuery: string | null
+			staleFieldsetQuery: string | null
+			/** Whether the stale arm renders the retained signal value. */
+			staleText: boolean
 			okText: boolean
 			errText: string | null
 	  }

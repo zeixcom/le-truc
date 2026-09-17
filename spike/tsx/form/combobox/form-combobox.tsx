@@ -166,7 +166,7 @@ export function FormCombobox(
 				</p>
 			</form-combobox>
 
-			<style>{`
+			<style>{css`
 			form-combobox {
 				display: block;
 				width: 100%;

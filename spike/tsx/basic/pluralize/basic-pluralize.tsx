@@ -106,7 +106,7 @@ export function BasicPluralize(
 				</p>
 			</basic-pluralize>
 
-			<style>{`
+			<style>{css`
 			basic-pluralize {
 				display: inline;
 

@@ -204,7 +204,7 @@ describe('TSX spike — front-end parity (§4.3)', () => {
 })
 
 describe('TSX spike — §4.4 synthetic shapes through the unmodified analysis', () => {
-	test('async boundary (boundary({ ok, pending, err })) renders the pending arm', async () => {
+	test('async boundary (boundary({ ok, nil, err, stale })) renders the nil arm', async () => {
 		const source = read('spike/tsx/async/async-el.tsx')
 		const { component, diagnostics } = compileComponentTsx(
 			source,
@@ -215,12 +215,19 @@ describe('TSX spike — §4.4 synthetic shapes through the unmodified analysis',
 		if (!component) throw new Error('async fixture must compile')
 		const render = renderOf('async-el', 'AsyncEl')
 		const html = await render(component.serverCode, {})
+		// Fresh task in the value harness: pending WITHOUT a retained value —
+		// the nil arm shows; ok/err/stale render hidden alongside it.
 		expect(html).toContain('<p class="loading">Loading</p>')
 		expect(html).toContain('hidden class="content"')
 		expect(html).toContain('hidden class="error"')
-		// One watch() toggles all three roots — the client shape the .tsrx
-		// fixture pinned (features.test.ts).
+		// The stale arm renders hidden with its retained value un-evaluated
+		// (guarded off while the nil arm won).
+		expect(html).toContain('<p hidden data-state="stale" class="stale"></p>')
+		// One watch() toggles all four roots — the stale handler present
+		// (ADR 0029's nil > err > stale > ok precedence), the client shape
+		// the .tsrx fixture pinned (features.test.ts) plus the fourth arm.
 		expect(component.clientCode).toContain('watch(')
+		expect(component.clientCode).toContain('stale: value =>')
 		expect(component.clientCode).not.toContain('document.createElement')
 	})
 

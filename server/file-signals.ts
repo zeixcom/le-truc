@@ -313,7 +313,9 @@ const [
 	watchFiles(COMPONENTS_DIR, '**/*.md'),
 	watchFiles(COMPONENTS_DIR, '**/*.css'),
 	watchFiles(COMPONENTS_DIR, '**/*.ts'),
-	watchFiles(COMPONENTS_DIR, '**/*.tsrx'),
+	// ADR 0032 (LT-202): the corpus watches BOTH authored surfaces — the
+	// front end is chosen per file by extension (`server/effects/tsrx.ts`).
+	watchFiles(COMPONENTS_DIR, '**/*.tsrx', '**/*.tsx'),
 	// LT-091: migrated components' generated clients are bundle inputs
 	// (examples/main.ts imports them) — a `.tsrx` edit re-runs the compiler
 	// effect, which rewrites these files, which must re-trigger the js

@@ -1,13 +1,13 @@
 /**
  * TSRX compiler build effect (ADR 0023 milestone 1, LT-001).
  *
- * Watches every `.tsrx` source under `examples/`, compiles each through the inlined
- * compiler, and writes the generated artifacts (server render module,
- * generated client module, verbatim tag-scoped CSS) plus the component
- * registry into the gitignored `server/generated/tsrx/` directory. Nothing
- * consumes the artifacts yet — the docs/examples migration is the follow-on
- * once ADR 0023 is accepted — so this effect's job today is keeping the
- * compiler exercised against the corpus on every docs build.
+ * Watches every `.tsrx` AND `.tsx` source under `examples/` (dual front
+ * end, ADR 0032 sub-design 6; LT-202), compiles each through the front end
+ * its extension selects, and writes the generated artifacts (server render
+ * module, generated client module, verbatim tag-scoped CSS) plus the
+ * component registry into the gitignored `server/generated/tsrx/` directory.
+ * A tag declared by two sources fails the compile naming both files
+ * (TSRX048).
  *
  * Severity policy: milestone gates (warnings, e.g. TSRX001 reactive `@for`)
  * skip the file with a logged notice; errors fail the build run.
@@ -18,10 +18,12 @@ import { join, relative } from 'node:path'
 import { componentTsrx, type FileInfo } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
 import { type CompileDiagnostic, compileComponent } from '../tsrx'
+import { diagnostic } from '../tsrx/diagnostics'
 import { type RegistryEntry, registryJson } from '../tsrx/registry'
 import { formatCensus, translationCensus } from '../tsrx/sim/report'
 import type { SourceSpan } from '../tsrx/spans'
 import { contaminateComposeReads } from '../tsrx/tier'
+import { compileComponentTsx } from '../tsrx-tsx'
 import { createBuildEffect } from './build-effect'
 import { collectI18n, writeI18nModule, writeI18nReport } from './i18n'
 
@@ -76,6 +78,27 @@ export const handwrittenExampleModules = (): Map<string, string> => {
 }
 
 /**
+ * The corpus covers BOTH authored surfaces (ADR 0032 sub-design 6, LT-202):
+ * one registry, one generated directory, the front end chosen per file by
+ * extension. A tag declared by two sources fails the compile naming both
+ * files (TSRX048, tier 1 Prevented).
+ */
+const compileCorpusFile = (
+	content: string,
+	rel: string,
+	registry: ReadonlySet<string>,
+	childImports?: ReadonlyMap<string, string>,
+	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+) =>
+	rel.endsWith('.tsx')
+		? compileComponentTsx(content, rel, registry, childImports, composeRegistry)
+		: compileComponent(content, rel, registry, childImports, composeRegistry)
+
+/** `basic-counter.tsrx`/`basic-counter.tsx` → `basic-counter`. */
+const corpusTagOf = (filename: string): string =>
+	(filename.split('/').pop() ?? '').replace(/\.(tsrx|tsx)$/, '')
+
+/**
  * Compile the whole corpus (exported for the standalone `scripts/build-tsrx.ts`
  * runner — `build:cem` needs the generated clients on disk before `cem
  * analyze` reads them).
@@ -115,7 +138,7 @@ export const compileTsrxCorpus = async (
 	// whose file genuinely failed to compile never legitimizes a target.
 	const discoveryRegistry = new Set<string>(registry)
 	for (const file of files) {
-		const base = (file.filename.split('/').pop() ?? '').replace(/\.tsrx$/, '')
+		const base = corpusTagOf(file.filename)
 		if (/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(base))
 			discoveryRegistry.add(base)
 	}
@@ -134,14 +157,39 @@ export const compileTsrxCorpus = async (
 			} else console.warn(`⚠️ ${rel} — ${label}`)
 		}
 	}
+	// Dual-surface duplicate detection (TSRX048): a tag two corpus files
+	// both declare is ambiguous at the registry level — neither file can be
+	// compiled, because pass 2's registry would have last-write-wins
+	// semantics for the generated module names, the tag map augmentation,
+	// and every compose/pass resolution. Checked BEFORE pass 2, naming both
+	// files (ADR 0032 sub-design 6; tier 1 Prevented — statically
+	// decidable, no runtime half).
+	const tagsBySource = new Map<string, string[]>()
 	for (const file of files) {
 		const rel = relative(join(import.meta.dir, '..', '..'), file.path)
+		const base = corpusTagOf(file.filename)
+		if (!/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(base)) continue
+		const decls = tagsBySource.get(base) ?? []
+		decls.push(rel)
+		tagsBySource.set(base, decls)
+	}
+	for (const [tag, sources] of tagsBySource) {
+		if (sources.length < 2) continue
+		for (const rel of sources) {
+			report(rel, [diagnostic.duplicateTag(tag, sources)])
+			compilable.delete(rel)
+			composeRegistry.delete(rel)
+		}
+	}
+	for (const file of files) {
+		const rel = relative(join(import.meta.dir, '..', '..'), file.path)
+		if (errorLabels.has(rel)) continue
 		// Pass 1 must see the hand-written tags too (`registry` starts seeded
 		// from `childImports`, LT-020 fix): a raw-tag `pass={{ }}` target
 		// (e.g. `basic-button`) is otherwise flagged "not registry-known" in
 		// THIS pass even though it always was, silently dropping the whole
 		// file before pass 2 ever gets a chance to compile it for real.
-		const { component, diagnostics } = compileComponent(
+		const { component, diagnostics } = compileCorpusFile(
 			file.content,
 			rel,
 			discoveryRegistry,
@@ -166,7 +214,7 @@ export const compileTsrxCorpus = async (
 	const entries: RegistryEntry[] = []
 	const spanInfos: CompiledSpanInfo[] = []
 	for (const [rel, content] of compilable) {
-		const { component, diagnostics } = compileComponent(
+		const { component, diagnostics } = compileCorpusFile(
 			content,
 			rel,
 			registry,

@@ -23,7 +23,7 @@
 		"noFallthroughCasesInSwitch": true,
 		"forceConsistentCasingInFileNames": true,
 	},
-	"include": ["./**/*.tsx", "./**/*.ts", "./host-profile.d.ts"],
+	"include": ["./**/*.tsx", "./**/*.ts", "../../server/tsrx-tsx/host-profile.d.ts"],
 	"exclude": [
 		"node_modules",
 		"jsx-probe.tsx",

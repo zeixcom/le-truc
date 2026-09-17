@@ -39,7 +39,7 @@ export function BasicCounter({ start = 42 }: { start?: number }) {
 				</button>
 			</basic-counter>
 
-			<style>{`
+			<style>{css`
 			basic-counter {
 				display: inline-block;
 

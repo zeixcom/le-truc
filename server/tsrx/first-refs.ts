@@ -167,6 +167,8 @@ export const collectMatchingElements = (
 			for (const child of node.catchChildren) visit(child)
 			if (node.pendingChildren)
 				for (const child of node.pendingChildren) visit(child)
+			if (node.staleChildren)
+				for (const child of node.staleChildren) visit(child)
 			return
 		}
 		// 'compose', 'text', 'expr', 'client-stmt' — nothing to match/recurse.
@@ -469,6 +471,7 @@ export const refBranchGuard = (
 							...node.children,
 							...node.catchChildren,
 							...(node.pendingChildren ?? []),
+							...(node.staleChildren ?? []),
 						]
 			for (const child of arms) if (containsRef(child, refName)) bailed = true
 			return
@@ -489,6 +492,7 @@ export const refBranchGuard = (
 				...node.children,
 				...node.catchChildren,
 				...(node.pendingChildren ?? []),
+				...(node.staleChildren ?? []),
 			].some(c => containsRef(c, name))
 		if (node.kind === 'element' || node.kind === 'compose')
 			return node.children.some(c => containsRef(c, name))
@@ -525,6 +529,7 @@ export const inOptionalBranch = (
 				...node.children,
 				...node.catchChildren,
 				...(node.pendingChildren ?? []),
+				...(node.staleChildren ?? []),
 			])
 				walk(child, optional)
 		else if (node.kind === 'switch')

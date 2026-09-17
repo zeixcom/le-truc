@@ -32,9 +32,12 @@ export const childNodes = (node: TemplateNode): readonly TemplateNode[] => {
 		case 'switch':
 			return node.cases.flatMap(arm => arm.children)
 		case 'try':
-			return node.pendingChildren
-				? [...node.children, ...node.catchChildren, ...node.pendingChildren]
-				: [...node.children, ...node.catchChildren]
+			return [
+				...node.children,
+				...node.catchChildren,
+				...(node.pendingChildren ?? []),
+				...(node.staleChildren ?? []),
+			]
 		default:
 			return []
 	}
@@ -42,9 +45,10 @@ export const childNodes = (node: TemplateNode): readonly TemplateNode[] => {
 
 export type WalkOptions = {
 	/**
-	 * Enter a `@try`'s `@pending` arm (async boundary). Default true.
-	 * Consumers whose constructs cannot exist there (composed elements,
-	 * ref declarations) pass false — preserving their pre-visitor reach.
+	 * Enter a `@try`'s `@pending` (and `.tsx` four-arm `stale`) async-boundary
+	 * arms. Default true. Consumers whose constructs cannot exist there
+	 * (composed elements, ref declarations) pass false — preserving their
+	 * pre-visitor reach.
 	 */
 	intoPending?: boolean
 	/**

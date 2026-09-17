@@ -72,7 +72,7 @@ describe('corpus error policy', () => {
 		const bad: FileInfo = {
 			path: path.join(ROOT, 'examples', 'module', 'bad-pass.tsrx'),
 			filename: 'examples/module/bad-pass.tsrx',
-			content: `export function C()
+			content: `export function C({})
 @{
 	expose({})
 	<>

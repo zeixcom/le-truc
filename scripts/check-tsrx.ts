@@ -52,22 +52,26 @@ const DIAGNOSTIC_LINE =
 	/^(?<file>.+?)\((?<line>\d+),(?<col>\d+)\): (?<severity>error|warning) (?<code>TS\d+): (?<message>.*)$/
 
 const files = []
-const glob = new Glob('examples/**/*.tsrx')
-for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {
-	const path = join(ROOT, rel)
-	const stat = statSync(path)
-	files.push({
-		path,
-		filename: rel,
-		content: readFileSync(path, 'utf8'),
-		hash: '',
-		lastModified: stat.mtimeMs,
-		size: stat.size,
-		exists: true,
-	})
+// Dual corpus (ADR 0032 sub-design 6, LT-202): both authored surfaces feed
+// the same runner; the front end is chosen per file by extension.
+for (const pattern of ['examples/**/*.tsrx', 'examples/**/*.tsx']) {
+	const glob = new Glob(pattern)
+	for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {
+		const path = join(ROOT, rel)
+		const stat = statSync(path)
+		files.push({
+			path,
+			filename: rel,
+			content: readFileSync(path, 'utf8'),
+			hash: '',
+			lastModified: stat.mtimeMs,
+			size: stat.size,
+			exists: true,
+		})
+	}
 }
 if (files.length === 0) {
-	console.error('❌ No .tsrx sources found under examples/')
+	console.error('❌ No .tsrx/.tsx sources found under examples/')
 	process.exit(1)
 }
 

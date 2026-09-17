@@ -159,12 +159,23 @@ export type TemplateNode =
 			 * the server renders the body inside a real try/catch; if the
 			 * body throws (a server expression over args), the catch arm
 			 * renders instead. `@pending` arms are gated (async boundaries).
+			 *
+			 * `pendingChildren` is the no-value-yet pending arm (`nil` in
+			 * Task-state vocabulary). `staleChildren` — set only by the
+			 * `.tsx` front end's four-arm `boundary({ ok, nil, err, stale })`
+			 * spelling (ADR 0032; the pinned `.tsrx` grammar has no stale
+			 * arm) — is the re-fetching-with-retained-value arm: all four
+			 * roots render unconditionally, `hidden`-toggled by which state
+			 * won, and the client's single `watch()` gains the matching
+			 * `stale` handler. Null everywhere else, so `.tsrx` lowering and
+			 * both emitters are byte-identical to the three-arm shape.
 			 */
 			kind: 'try'
 			children: TemplateNode[]
 			catchParam: string | null
 			catchChildren: TemplateNode[]
 			pendingChildren: TemplateNode[] | null
+			staleChildren: TemplateNode[] | null
 			node: TsrxNode
 	  }
 	| {
