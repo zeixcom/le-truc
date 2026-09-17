@@ -167,10 +167,14 @@ export const expose = (_props: Record<string, unknown>): void => {}
  * match. The precise per-count selection stays the client's `hidden`
  * toggles either way. The rest parameter is the arity check: an explicit
  * `undefined` second argument is cardinal, a MISSING one is the union.
+ * (The element type includes `undefined` for exactly the authored shape
+ * `truc:case-type={ordinal ? 'ordinal' : undefined}` — the value the
+ * pruning splice receives before this widening was 6 tsc errors against
+ * the generated server module, LT-202.)
  */
 export const pluralCategories = (
 	locale: string,
-	...type: readonly ('cardinal' | 'ordinal')[]
+	...type: readonly ('cardinal' | 'ordinal' | undefined)[]
 ): ReadonlySet<string> => {
 	const options: Intl.PluralRulesOptions[] =
 		type.length === 0
