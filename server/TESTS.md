@@ -165,11 +165,6 @@ invariants (LT-164). Three things to know about the snapshots and invariants:
   when it parses the served HTML and connects again — and requires byte-identical
   serialization. A component whose second pass differs fails the build against that
   component.
-- The realm's `render()` memoizes on `(component, markup)` (LT-166): a repeated
-  render of identical input returns the first pass's bytes without a second
-  connect, so only the first occurrence reports diagnostics. Tests that need a
-  fresh connect — a diagnostic per render, per-render connect effects — must
-  render distinct markup (or a fresh realm), not the same input twice.
 - The **two-order hermeticity test** (sub-design 10) renders the corpus in two orders on two
   realms and requires identical per-tag output. Order 2 needs its own module tree, because
   one module cache per process makes a second realm's import of order 1's client modules

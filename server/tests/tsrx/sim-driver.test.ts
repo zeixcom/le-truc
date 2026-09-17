@@ -224,12 +224,7 @@ describe('two-order hermeticity (sub-design 10, LT-164)', () => {
 		// Order 1 — the compiled (glob scan) order, on this file's own realm.
 		// Re-rendered here rather than read from the fixtures above: repeat
 		// renders of the same component being byte-stable is part of the same
-		// invariant (sub-design 10). The render cache (LT-166) stays enabled
-		// on purpose — its acceptance requires this invariant to pass WITH
-		// the cache, because a cache that breaks order-independence is a
-		// wrong cache: order 1's side then returns memoized bytes, order 2's
-		// realm renders fresh in reversed order, and this comparison is what
-		// catches a cache returning anything but what a fresh render would.
+		// invariant (sub-design 10).
 		const forward = new Map<string, string>()
 		for (const info of compiled)
 			forward.set(

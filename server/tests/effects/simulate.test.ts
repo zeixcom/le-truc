@@ -52,27 +52,16 @@ const registryOf = (...entries: RegistryEntry[]): ComponentRegistry =>
 
 /**
  * A realm that records what the pass asked it to do, in order.
- *
- * Its cache mirrors the real one's key, INCLUDING the conditional locale
- * (LT-175): locale joins the key only for a component that declares the
- * reserved `i18n` parameter. Modelling that here is what lets these tests
- * pin the per-locale loop's cost rather than just its call count.
  */
-const fakeRealm = (
-	diagnostics: SimDiagnostic[] = [],
-	declaresI18n: (tag: string) => boolean = () => false,
-) => {
+const fakeRealm = (diagnostics: SimDiagnostic[] = []) => {
 	const log: string[] = []
 	const definitions: Array<{ name: string }> = []
-	const cache = new Set<string>()
-	const stats = { renders: 0, cacheHits: 0 }
 	const realm = {
 		runtime: 'bun',
 		window: undefined,
 		document: new JSDOM('').window.document,
 		diagnostics,
 		definitions,
-		renderStats: stats,
 		async load() {
 			log.push('load')
 			definitions.push({ name: `def-${definitions.length}` })
@@ -80,19 +69,12 @@ const fakeRealm = (
 		async render({
 			markup,
 			component,
-			locale,
 		}: {
 			markup: string
 			component: string
 			locale?: string
 		}) {
 			log.push(`render:${component}`)
-			const key = `${component}\u0000${declaresI18n(component) ? (locale ?? '') : ''}\u0000${markup}`
-			if (cache.has(key)) stats.cacheHits++
-			else {
-				cache.add(key)
-				stats.renders++
-			}
 			return markup
 		},
 		dispose() {
@@ -221,9 +203,9 @@ describe('the build report is the gate (LT-163 baseline, now the build’s own)'
 	})
 })
 
-describe('occurrence scope and cache engagement (LT-166 acceptance, measured here)', () => {
-	test('each top-level occurrence renders; identical ones hit the cache', async () => {
-		const { realm } = fakeRealm()
+describe('occurrence scope', () => {
+	test('each top-level occurrence renders, once per locale', async () => {
+		const { realm, log } = fakeRealm()
 		const result = await simulateTsrxCorpus({
 			registry: registryOf(entry('x-a', 'simulated')),
 			createRealm: () => realm,
@@ -232,28 +214,12 @@ describe('occurrence scope and cache engagement (LT-166 acceptance, measured her
 				'<x-a>one</x-a><p>chrome</p><x-a>two</x-a><x-a>one</x-a>',
 			log: () => {},
 		})
-		// Three occurrences per locale, two of the three byte-identical.
+		// Three occurrences per locale, two of the three byte-identical —
+		// every occurrence renders fresh (LT-193 removed the render cache).
 		expect(result.occurrences).toBe(3 * LOCALES.length)
-		// x-a declares no `i18n`, so its locales collapse onto one entry: two
-		// distinct markups render ONCE each no matter how many locales are
-		// built, and everything else is a hit (LT-175's containment).
-		expect(result.renders).toBe(2)
-		expect(result.cacheHits).toBe(3 * LOCALES.length - 2)
-	})
-
-	test('a component that DECLARES i18n re-renders per locale', async () => {
-		const { realm } = fakeRealm([], () => true)
-		const result = await simulateTsrxCorpus({
-			registry: registryOf(entry('x-i18n', 'simulated')),
-			createRealm: () => realm,
-			readMarkup: async () => '<x-i18n>one</x-i18n>',
-			log: () => {},
-		})
-		// The locale is an input it can observe, so each locale is its own
-		// render — the containment must NOT collapse these.
-		expect(result.occurrences).toBe(LOCALES.length)
-		expect(result.renders).toBe(LOCALES.length)
-		expect(result.cacheHits).toBe(0)
+		expect(log.filter(step => step === 'render:x-a').length).toBe(
+			3 * LOCALES.length,
+		)
 	})
 
 	test('a nested occurrence renders with its outer one, not on its own', async () => {

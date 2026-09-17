@@ -752,8 +752,8 @@ describe('two-phase load and render', () => {
 	})
 })
 
-describe('render memoization (LT-166)', () => {
-	test('a repeated (component, markup) render returns the memoized bytes without a second connect', async () => {
+describe('repeat renders (LT-193 removed the render cache)', () => {
+	test('a repeated (component, markup) render is byte-stable and connects again', async () => {
 		const realm = withRealm()
 		let connects = 0
 		await realm.load(async () => {
@@ -770,11 +770,14 @@ describe('render memoization (LT-166)', () => {
 		const markup = '<probe-memo></probe-memo>'
 		const first = await realm.render({ markup, component: 'probe-memo' })
 		const second = await realm.render({ markup, component: 'probe-memo' })
+		// Byte-stable repeat renders stay a pinned invariant (the same
+		// fixed-point property sub-design 10 rides); with the cache gone,
+		// every render connects — the documented post-LT-193 behavior.
 		expect(second).toBe(first)
-		expect(connects).toBe(1)
+		expect(connects).toBe(2)
 	})
 
-	test('a degraded render is not memoized — its diagnostic fires per occurrence', async () => {
+	test('a degraded render re-runs — its diagnostic fires per occurrence', async () => {
 		const realm = withRealm()
 		await realm.load(async () => {
 			// A name without a dash: `define()` itself throws during replay,
@@ -792,7 +795,7 @@ describe('render memoization (LT-166)', () => {
 		expect(throws.length).toBe(2)
 	})
 
-	test('a non-quiescent render is not memoized — its diagnostic fires per occurrence', async () => {
+	test('a non-quiescent render re-runs — its diagnostic fires per occurrence', async () => {
 		const realm = withRealm()
 		await realm.load(async () => {
 			customElements.define(

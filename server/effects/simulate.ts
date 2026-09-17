@@ -30,8 +30,7 @@
  * One render per OCCURRENCE, not per component: the markup is the
  * component's own authored demo HTML (`examples/**\/<tag>.html` — what the
  * docs actually serve), split into the top-level occurrences of the
- * component's tag. That is the unit the render cache (LT-166) is keyed on,
- * so it is also the unit that shows whether the cache engages.
+ * component's tag.
  *
  * ## One pass per locale
  *
@@ -42,11 +41,6 @@
  * component declares `i18n` right now, but that is a property of the corpus,
  * not of the pass, and it will stop holding the moment an i18n component
  * routes to the Simulated tier.
- *
- * The cost of looping is absorbed by the render cache's conditional locale
- * key (LT-175): a component that declares no `i18n` parameter cannot observe
- * the locale, so its N renders collapse to one and N-1 cache hits. Measured
- * flat at 19 ms from 1 to 4 locales, versus 37 ms at 4 locales without it.
  *
  * ## Disposal
  *
@@ -107,10 +101,6 @@ export type SimulationPassResult = {
 	occurrences: number
 	/** Locales the pass rendered each occurrence for (LT-174). */
 	locales: readonly string[]
-	/** Cache misses: occurrences actually simulated. */
-	renders: number
-	/** Occurrences served from the render cache (LT-166). */
-	cacheHits: number
 	/** False when the corpus has no Simulated-tier component at all. */
 	realmOpened: boolean
 	/** Wall time of the whole pass, milliseconds. */
@@ -259,8 +249,6 @@ export const simulateTsrxCorpus = async ({
 			withoutMarkup,
 			occurrences,
 			locales: LOCALES,
-			renders: 0,
-			cacheHits: 0,
 			realmOpened: false,
 			ms: performance.now() - started,
 			report,
@@ -270,10 +258,6 @@ export const simulateTsrxCorpus = async ({
 	const realm = createRealm({
 		composesTags: tag => entries[tag]?.composesTags ?? [],
 		suppressedSites: tag => entries[tag]?.suppressedSites ?? [],
-		// The render cache's locale-keying decision (LT-175). Absent from the
-		// registry means "no i18n parameter" — a component compiled before the
-		// flag existed declared none.
-		declaresI18n: tag => entries[tag]?.declaresI18n ?? false,
 	})
 	try {
 		// Resolution phase. A composed child whose parent's client module
@@ -310,13 +294,11 @@ export const simulateTsrxCorpus = async ({
 			simulated.push(subject.tag)
 		}
 		const report = reportDiagnostics(realm.diagnostics)
-		const { renders, cacheHits } = realm.renderStats
 		const ms = performance.now() - started
 		log(
 			`🎭 Simulation pass: ${simulated.length} Simulated-tier component(s), ` +
-				`${occurrences} occurrence(s) across ${LOCALES.length} locale(s), ` +
-				`${renders} render(s), ` +
-				`${cacheHits} cache hit(s) in ${ms.toFixed(0)}ms — ` +
+				`${occurrences} occurrence(s) across ${LOCALES.length} locale(s) ` +
+				`in ${ms.toFixed(0)}ms — ` +
 				`${skipped.length} component(s) skipped (no realm opened for them)`,
 		)
 		if (withoutMarkup.length > 0)
@@ -333,8 +315,6 @@ export const simulateTsrxCorpus = async ({
 			withoutMarkup,
 			occurrences,
 			locales: LOCALES,
-			renders,
-			cacheHits,
 			realmOpened: true,
 			ms,
 			report,

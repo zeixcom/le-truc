@@ -91,44 +91,30 @@ round, scope widened).
   over-report = conservative). Verified: section order and code fences intact, `check:links`
   374 green, no code moved.
 
-- [ ] LT-193: Remove LT-166's render cache and LT-175's locale containment with it.
+- [x] LT-193: Remove LT-166's render cache and LT-175's locale containment with it. — done, pending review ⏳ (build-pipeline behavior change)
   **Skill:** docs-server-dev
-  **Context:** **Architect ruling (2026-09-07): remove it.** LT-175 measured the cache at
-  **0 hits on a one-locale build** — pure overhead — and 4 hits at two locales only because
-  no Simulated-tier component declares `i18n`. **LT-195 ends that**: `form-combobox` and
-  `form-listbox` are the corpus's ONLY two Simulated-tier components and BOTH carry
-  translatable strings, so the moment they declare `i18n` the locale rejoins their key and the
-  hit rate returns to zero. The containment contains nothing.
-  **Why the premise cannot come back** (the argument that would have saved it, tested and
-  refuted): the cache was justified by a 93.5% hit rate over 3,330 occurrences, which assumed
-  the whole corpus flows through the realm. ADR 0029 ended that permanently, not temporarily —
-  counted on the built docs, **3,249 occurrences, of which `module-scrollarea` alone is 1,966
-  (60%)**, and ADR 0029 routed it off simulation because the realm *cannot* answer it. Even if
-  LT-194's page renderer routed every page occurrence through the realm, the Simulated-tier
-  share is **9 occurrences** (`form-combobox` 2 + `form-listbox` 7). There is no future
-  corpus-scale hit rate to preserve.
-  **How:**
-  1. Delete `renderCache`, `renderStats` and the conditional-locale key from
-     `server/tsrx/sim/realm.ts`, plus the `declaresI18n` constructor option LT-175 added.
-  2. Drop `renders`/`cacheHits` from `SimulationPassResult` and the build log line
-     (`server/effects/simulate.ts`); keep `occurrences` and `locales`.
-  3. **Keep the two-order hermeticity test** (`sim-driver.test.ts`) — it tests corpus
-     order-independence, which stands on its own. Remove only its cache-correctness clause and
-     the comment explaining it.
-  4. Rewrite the module header's "Render memoization" section out of `realm.ts`, and the
-     cache-engagement expectations in `effects/simulate.test.ts`. Repeat renders of one
-     component staying byte-stable is still an invariant worth pinning — keep that assertion,
-     drop the hit/miss accounting around it.
-  **Verification:** the cost this removes is ~4 renders (~4 ms on a 3,750 ms build), so the
-  acceptance is NOT a speed figure — it is that the build's occurrence count, diagnostics and
-  gate are unchanged, and the compile-warning and census baselines hold. Record the
-  simulated-stage wall time before and after so the no-regression claim is a measurement.
-  **Note for the record:** only quiescent, non-degraded renders ever memoized (`if (degraded)
-  return parsed`), so the cache could not suppress a *degraded* or *non-quiescent* diagnostic.
-  It could dedupe a `console`/`network` diagnostic on an otherwise-clean repeated render;
-  after removal such an entry fires once per occurrence instead of once. The gate counts
-  unclassified entries, so this changes noise, not verdicts — but say so in the handoff if the
-  build report's shape visibly changes.
+  **Changed:** `server/tsrx/sim/realm.ts` (deleted `renderCache`/`renderStats`, the
+  `RenderStats` type, the `declaresI18n` realm option, and the module header's "Render
+  memoization" + "conditional locale" sections); `server/effects/simulate.ts` (dropped
+  `renders`/`cacheHits` from `SimulationPassResult`, the log line, and the `declaresI18n`
+  wiring; header cost paragraph removed); tests (`sim-realm.test.ts` memoization block
+  reframed post-cache — byte-stability and `connects === 2` pinned, per-occurrence
+  diagnostics kept; `simulate.test.ts` fake realm de-modelled, containment test deleted,
+  occurrence test now pins a fresh render per occurrence per locale; `sim-driver.test.ts`
+  cache-correctness clause dropped from the hermeticity comment); `server/TESTS.md`
+  (memoization bullet removed — its "render distinct markup for a fresh connect" constraint
+  evaporates when every render connects); `server/SERVER.md` (stale cache-key clause →
+  "once per locale").
+  **How:** The registry's `declaresI18n` flag survives — `emit-server.ts`'s compose-graph
+  inheritance still consumes it; only the realm's cache-key consumer is gone.
+  **Verification:** `bun test server/tests` 1523 pass / 0 fail (−1 = the deleted containment
+  test); unit 491 pass; `build:docs` occurrence count and diagnostics UNCHANGED (8
+  occurrences, 2 components, 20 skipped, zero unclassified, no ⚠️ lines) — the report's shape
+  did not visibly change, so no dedup-noise note is owed; compile-warning baseline 0, tier
+  census 20/2/0, translation census 0 gaps all hold; simulated-stage wall time **60 ms →
+  61 ms** (no-regression measured, not asserted); biome clean.
+  **Check:** the reframed `sim-realm.test.ts` block (byte-stability + `connects === 2` as
+  the pinned post-cache behavior) and the SERVER.md/TESTS.md touch-ups.
 
 - [ ] LT-195: Internationalize the corpus's hard-coded accessibility strings (demand check, 2026-09-07). **Depends on LT-173; sequence after LT-193.**
   **Skill:** le-truc-dev
