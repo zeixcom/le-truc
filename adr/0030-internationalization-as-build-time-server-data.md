@@ -26,6 +26,8 @@ Three facts from the existing corpus shape the design:
 
 Pages are rendered once per locale under a path prefix (`/de/guide`, `/en/guide`). Each page's locale is fixed before rendering begins.
 
+The output shape keeps **pages** and **fragments** separate: complete pages multiply per locale under `docs/<locale>/`; the lazy-loaded fragment trees (`api/`, `examples/`, `sources/`) stay single-copy at the docs root. The fragments are derived from TypeDoc and `examples/` — content no catalog can translate — so a per-locale copy would write byte-identical output. Pages' fragment references are retargeted at build time rather than in content, and the docs root becomes a redirect stub, because a static host has no route hook for `/`.
+
 This is load-bearing, not an infrastructure detail. Because the locale is a build constant, LT-142's `Intl` fold rule resolves it: `Intl.PluralRules(lang)` and friends become server-known and fold in phase 1. Under ADR [0029](0029-tiered-server-evaluation.md) that means i18n components are **Folded-tier eligible rather than the Simulated tier** — internationalization makes them cheaper, not more expensive. A request-time locale would make locale a runtime variable, unfold every `Intl` call, and push the whole i18n corpus to the Simulated tier; it also needs the per-request SSR path ADR 0029 sub-design 8 declined to commit to.
 
 ### 2. The reserved `i18n` parameter
@@ -53,9 +55,13 @@ The record carries:
 
 `dir` is exposed for components whose *logic* is direction-aware. It is not rendered per component — direction belongs on the page's `<html>`, and a component writing `dir` on its own root would fight the page.
 
-### 3. An authored `lang` overrides the record
+### 3. Locale precedence; `lang` is config-only
 
-`basic-pluralize` and `basic-number` declare `lang` as a public attribute today (`@attribute {string} [lang]`), and those contracts stand. Precedence: **an authored `lang` server arg, or a `lang` supplied at a compose site, wins over the record's locale.** This is data-account bullet 2's sanctioned override shape — a host attribute overriding an inherited default — not a second copy of the same value.
+The record's locale is a default, and authored channels can override it. Full precedence, strongest first: **an explicit `lang` arg at a compose site or an authored `lang` server arg > the parent's effective locale (compose-graph inheritance) > the component's authored default > the page locale.** An explicit override is data-account bullet 2's sanctioned shape — a host attribute overriding an inherited default — not a second copy of the same value.
+
+Compose-graph inheritance is the SSR analog of the ancestor walk: the composition tree *is* the rendered ancestor chain, so a compose site without its own `lang` resolves the parent's effective `lang` binding. A page-position ambient walk — `<section lang="cy">` wrapping arbitrary occurrences — needs a document-level renderer the build does not have yet (LT-194); until then the walk serves client-authored markup only.
+
+**`lang` is a config attribute, not a reactive property — and structurally cannot be one.** It is a built-in IDL property: `'lang' in this` is always true, so `expose()`'s guard skips the initializer silently and reads hit the native accessor, i.e. the live attribute. The attribute is therefore the only channel, and it is the right one — HTML's own global locale config. A compiled component materializes the walked locale onto its root attribute at connect (own attribute first, else the nearest ancestor `[lang]`, else `en`), so server-rendered instances, which already carry the effective locale there, and client-authored instances converge on one DOM shape — an SSR'd instance terminates the walk immediately, so it can never disagree with the build. The walked locale is then fixed for the connection: ancestor changes after connect do not re-walk, because the catalog never ships and the client can only select among alternatives the server rendered.
 
 The **effective** locale is what renders onto the component's root `lang` attribute. This needs no new `TSRX039` exemption: ADR 0024 sub-design 3 already excludes the root element's own attributes from the duplication rule, because the root *is* the host, so a value rendered there is the channel rather than a copy.
 
@@ -65,10 +71,12 @@ A component declares the keys it needs; the build supplies the locale's catalog 
 
 **Keying is explicit.** Literal prose in a template stays literal; an author routes a string through `{t.key}` when it should be translated. The compiler warns on literal prose inside a component that otherwise uses the catalog, so a forgotten string is build-visible without full extraction machinery. That warning is **author-fixable and therefore a genuine warning** — it converges to zero, and the ADR 0029 sub-design 6 zero-target holds.
 
+**Plural word forms are per-category keys.** A key whose dotted suffix is one of the six CLDR categories — `'task.one': 'task'`, `'task.other': 'tasks'` — declares a category-selected form, referenced per span (`{t['task.one']}` inside the matching `truc:case`). Base and suffixed keys coexist; the suffix is optional per key, and dotted keys are quoted (they are string-literal keys, not identifiers). A suffix outside the six categories (`task.onee`) is a compile-time shape error, not a warning — a typo'd suffix corrupts resolution and the census's reachability input (sub-design 5) alike. There is **no implicit fallback chain**: a reference resolves the exact suffixed key or nothing, and the source locale declares every key its template references, so the source-string fallback always has bytes. Per-category keys fix morphology, not word order — whole-phrase keys with a `{count}` placeholder (the ICU MessageFormat/Fluent shape) are the recorded stage-2 endgame, deliberately not built here.
+
 **Source strings live inline; translations live in per-locale files.** A component declares each key *with its source-locale string* in the `.tsrx` itself, so the component remains the single source of truth for the source locale and **no sibling file exists for it** — this matters, because a per-component catalog file would reintroduce exactly the three-file drift disease ADR 0024 was written to cure. Translations are purely additive override files, one per locale, component-namespaced:
 
 ```
-i18n/de.json      { "basic-pluralize.remaining": "verbleibend", … }
+i18n/de.json      { "basic-pluralize.remaining": "verbleibend", "basic-pluralize.task.other": "Aufgaben", … }
 i18n/fr.json      …
 ```
 
@@ -81,6 +89,8 @@ One file per language is also what translation work actually wants; N files per 
 ### 5. A missing key falls back to the source locale and is reported as a translation census
 
 A key absent from a locale's catalog renders the source-locale string, and the omission is recorded in the **build report as a translation census** — per locale, which keys are missing or stale.
+
+**Reachability, not just presence.** A category-suffixed key whose category is not in the locale's platform set is unreachable there — the span is pruned (sub-design 6) — and must not count as missing or stale: a pruned category is the translator's nothing-to-do, not a gap. The census reads the platform's plural categories per locale, scoped by the component's case type (from `truc:case-type`, recorded on the registry; the cardinal∪ordinal union fallback over-reports reachability — the conservative direction, since a translation that might render should exist).
 
 It is deliberately **not** a compile warning. A missing translation is not fixable by the component author; it is the translator's work, and during an in-progress translation the count is expected to be non-zero for as long as the translation takes. Putting it in the warning channel would restart precisely the non-zero-baseline drift ADR 0029 sub-design 6 eliminated. The census is the same reporting pattern as ADR 0029's tier census, riding the same `sim/report.ts` channel, and it carries its own signal: a key count that grows without a translation landing is visible without pretending to be a compile warning.
 

@@ -78,27 +78,18 @@ History: `git log -p -- TODO.md`, ADR 0030, `CHANGELOG.md` `[Unreleased]`. Two r
 handoffs became tasks: **LT-201** (the ADR amendment) and **LT-189** (the Tech Writer copy
 round, scope widened).
 
-- [ ] LT-201: Amend ADR 0030 — s1 output shape, s3 precedence chain, s4 per-category keys (the adr-keeper pass queued on LT-191, never run).
+- [x] LT-201: Amend ADR 0030 — s1 output shape, s3 precedence chain, s4 per-category keys (the adr-keeper pass queued on LT-191, never run). — done ✓ (docs-only; ADR unpublished on v3, amended in place)
   **Skill:** adr-keeper
-  **Context:** The implemented system is ahead of the ADR text; the last ADR 0030 edit was
-  LT-174's consequences retraction (2026-09-15), and the amendments from the LT-190/LT-191
-  handoffs never landed. Three sub-designs:
-  1. **s1** gains LT-174's output shape (architect-confirmed 2026-09-07): pages multiply per
-     locale under `docs/<locale>/`, but the lazy-loaded fragment trees (`api/`, `examples/`,
-     `sources/`) stay single-copy at the docs root — derived from TypeDoc and `examples/`,
-     with no catalog to translate them.
-  2. **s3** precedence chain gains LT-191's insertions: a compose site without a `lang` arg
-     inherits the parent's effective locale (explicit site arg > parent's locale > authored
-     default > page locale), and `lang` is config-only — a built-in IDL property, never a
-     reactive prop; the walked locale is materialized onto the root attribute at connect,
-     so SSR and client paths share one DOM shape.
-  3. **s4** gains LT-190's keying convention: `<key>.<category>` suffixes with quoted-key
-     extraction and the six CLDR categories validated (TSRX008); no implicit fallback
-     chain (a reference resolves the exact suffixed key or falls back to the source
-     string via the census); census reachability — a suffixed key outside the locale's
-     platform category set is unreachable, not a gap (`RegistryEntry.caseType` is the
-     input). s7 already carries its amendment (platform verification + materialization).
-  Acceptance: ADR 0030 reads as the implemented system; `check:links` green; no code moves.
+  **Done (2026-09-17):** s1 gained the pages/fragments split (pages multiply per locale under
+  `docs/<locale>/`, fragment trees single-copy at the docs root); s3 retitled "Locale
+  precedence; `lang` is config-only" and rewritten — full precedence chain (explicit site/server
+  arg > compose-graph inheritance > authored default > page locale), the IDL guard making
+  `lang` structurally un-exposable, materialization at connect, fixed-for-the-connection; s4
+  gained the per-category key paragraph (quoted dotted keys, TSRX008 shape error, no implicit
+  fallback chain, stage-2 whole-phrase endgame) and a real de.json example entry; s5 gained the
+  census reachability rule (pruned category = nothing-to-do, `caseType` scoping, union
+  over-report = conservative). Verified: section order and code fences intact, `check:links`
+  374 green, no code moved.
 
 - [ ] LT-193: Remove LT-166's render cache and LT-175's locale containment with it.
   **Skill:** docs-server-dev
