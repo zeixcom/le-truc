@@ -1,20 +1,21 @@
-# The Le Truc TSRX Compiler
+# The Le Truc Component Compiler
 
-> High-level overview of the inlined TSRX compiler for Le Truc (`server/compiler/`):
-> how the pipeline works, how it relates to `@tsrx/core`, how the server half is
-> evaluated (tiered — value harness, Server Simulation, or neither), how type
-> checking and diagnostics flow back to the author, and how it is embedded in
-> the server build infrastructure. Companion documents: `server/SERVER.md`
-> (build-pipeline integration), ADR 0024 (format decisions), ADR 0027 (Server
+> High-level overview of the inlined component compiler for Le Truc
+> (`server/compiler/`): how the pipeline works, how the two front ends relate
+> to their parsers, how the server half is evaluated (tiered — value harness,
+> Server Simulation, or neither), how type checking and diagnostics flow back
+> to the author, and how it is embedded in the server build infrastructure.
+> Companion documents: `server/SERVER.md` (build-pipeline integration), ADR
+> 0024 (format decisions), ADR 0032 (the dual front end), ADR 0027 (Server
 > Simulation), ADR 0029 (tiered server evaluation), `server/TESTS.md` (test
 > strategy). Symbol names are stable anchors; avoid citing line numbers.
 
 ## 1. What this compiler is
 
-An **inlined split compiler** (ADR 0024) that turns one isomorphic single-file
-`.tsrx` source — server args, signals, `expose()`, markup with `@if`/`@switch`/
-`@try`/`@for` directives, event handlers, and scoped styles — into three
-artifacts plus two diagnostic remapping tables:
+An **inlined split compiler** (ADRs 0024, 0032) that turns one isomorphic
+single-file source — server args, signals, `expose()`, markup, event
+handlers, and scoped styles — into three artifacts plus two diagnostic
+remapping tables:
 
 | Artifact | File | Produced by |
 | --- | --- | --- |
@@ -23,27 +24,69 @@ artifacts plus two diagnostic remapping tables:
 | Verbatim tag-scoped CSS | `<tag>.css` | `css.ts` (`dedentCss`) |
 | Client + server span tables | in-memory | `spans.ts` machinery |
 
-The server module re-declares the source's `@{ }` setup **verbatim** against
-the runtime harness in `runtime.ts`, where a signal is its initial value in a
-box (`.get()` reads once, `.set()` is a no-op) — "signals as plain values". The
-client module is today's idiomatic hand-written Le Truc factory, importing
-solely from `@zeix/le-truc`; authored sources import the real package exports
-their setup uses, while the FactoryContext vocabulary stays ambient
-(`globals.d.ts`, ADR 0024 sub-design 16).
+Two authored surfaces feed one shared machinery layer and compile to the
+same artifacts (ADR 0032):
 
-Entry point: `index.ts` exports `compileComponent(source, filename, registry,
-childImports?, composeRegistry?)` → `{ component: CompiledComponent | null,
-diagnostics }`. Severity policy: **errors fail the file**; **warnings skip it**
-(the build effect logs and moves on).
+- **`.tsx` — the default.** Parsed by the repo's `typescript` dependency
+  (`ts.createSourceFile`, `ScriptKind.TSX`). One exported component function
+  per file: its single destructured parameter is the server args (its type
+  is what compose sites check against), the statements before the single
+  `return` are the setup, the returned JSX is the template, and a `<style>`
+  sibling carries the CSS as a `css`-tagged template literal. Control flow
+  is expression-shaped — ternaries and `&&`, `.map()`, IIFEs for switch and
+  try/catch, and the recognized ambient `boundary({ ok, nil, err, stale? })`
+  for the async boundary. There is no `{count}` shorthand; spell
+  `count={count}`.
+- **`.tsrx` — retained.** The pinned `@tsrx/core` grammar: the `@{ }` setup
+  block, `@if`/`@switch`/`@try`/`@for` directives with statement-context
+  arms, and the `{count}` attribute shorthand. Author it where
+  statement-context control flow reads better; it is the surface the
+  upstream TSRX bet lives on.
 
-### The `@tsrx/core` boundary
+The default is a rule, not a residue: new authoring is `.tsx` unless
+statement-context control flow argues otherwise. Both surfaces are
+first-class inputs — the corpus scan globs both extensions into one
+registry, and a tag two sources declare fails the compile naming both files
+(TSRX048). The parity suite
+(`server/tests/compiler/tsx/parity.test.ts`) is the standing equivalence
+contract: the same component authored in both surfaces must render
+byte-identically, which is what keeps the surfaces from drifting apart
+(ADR 0032 sub-design 6).
 
-The parser dependency is **pinned** (currently 0.1.63; ADR 0024 sub-design 2).
-`core.ts` is the **only** module importing its *values*; siblings import only
-the `TsrxNode` *type* (erased at compile time). `core-shim.d.ts` is the type
-side of that boundary — a pin upgrade touches `core.ts` and the shim only.
-The pin lags the upstream docs; when a construct the docs describe fails to
-parse, `compiler.ts`'s `newerGrammarHint` names the gap.
+The server module re-declares the source's setup **verbatim** against the
+runtime harness in `runtime.ts`, where a signal is its initial value in a
+box (`.get()` reads once, `.set()` is a no-op) — "signals as plain values".
+The client module is today's idiomatic hand-written Le Truc factory,
+importing solely from `@zeix/le-truc`; authored sources import the real
+package exports their setup uses, while the FactoryContext vocabulary stays
+ambient via each surface's profile (`globals.d.ts` for the raw `.tsrx`
+view, `host-profile.d.ts` for authored `.tsx` — ADR 0024 sub-design 16).
+
+Entry points: `frontend/tsrx/index.ts` exports
+`compileComponent(source, filename, registry, childImports?, composeRegistry?)`
+and `frontend/tsx/index.ts` exports `compileComponentTsx` with the same
+signature. Both are thin shells over the shared `compileFromIR`
+(`pipeline.ts`), differing only in which front end parses the source, so a
+pipeline change cannot drift between surfaces. Severity policy: **errors
+fail the file**; **warnings skip it** (the build effect logs and moves on).
+
+### The parser boundaries
+
+Each surface owns one parser dependency, and the two isolate each other's
+churn:
+
+- **`.tsrx` pins `@tsrx/core`** (currently 0.1.63; ADR 0024 sub-design 2).
+  `core.ts` is the **only** module importing its *values*; siblings import
+  only the `TsrxNode` *type* (erased at compile time). `core-shim.d.ts` is
+  the type side of that boundary — a pin upgrade touches `core.ts` and the
+  shim only. The pin lags the upstream docs; when a construct the docs
+  describe fails to parse, `frontend/tsrx/compiler.ts`'s `newerGrammarHint`
+  names the gap.
+- **`.tsx` parses with the repo's `typescript` package** through
+  `frontend/tsx/to-estree.ts`, the one `typescript`-API leaf: a
+  `typescript` major's AST drift touches that converter only and cannot
+  reach the `.tsrx` front end, whose pinned parser's churn cannot reach
+  `.tsx`.
 
 ### Grounding an agent
 
@@ -53,67 +96,103 @@ training — TSRX is close enough to JSX that the React prior fires at full
 strength (`{cond && <x/>}`, `return (<>…</>)`, `className`/`htmlFor` are the
 observed failure modes; TSRX021–024 and the `classify-attributes.ts`
 `REACT_ATTR_RENAMES` table hard-error them rather than silently emitting
-broken output). One caveat is host-specific: `&{}`/`&[]` lazy destructuring,
-real in core TSRX, is retired outright here (TSRX018/020) — Le Truc's server
-composition needs eager snapshot evaluation.
+broken output — on the `.tsrx` surface only; on `.tsx` those idioms are the
+correct spellings, and `className`/`htmlFor` simply fail the strict ambient
+table). One caveat is host-specific: `&{}`/`&[]` lazy destructuring, real
+in core TSRX, is retired outright here (TSRX018/020) — Le Truc's server
+composition needs eager snapshot evaluation. The default surface needs no
+grammar grounding: `.tsx` is standard TypeScript, and its contract is the
+strict ambient profile (`frontend/tsx/host-profile.d.ts`,
+`HOST_PROFILE.md`).
 
 ## 2. Pipeline at a glance
 
 ```
-                .tsrx source
-                     │
-     ┌───────────────┴───────────────┐
-     │  FRONT END  (compiler.ts)     │  compileSource
-     │  parse (core.ts → @tsrx/core) │  ├─ parseComposeImports      (imports.ts)
-     │  setup extraction             │  ├─ parsePlainImports        (imports.ts)
-     │  template lowering            │  ├─ lowerChildren           (lower-template.ts)
-     │  attribute classification     │  │   └─ classifyAttribute(s) (classify-attributes.ts)
-     │  signal type inference        │  ├─ inferType                (infer-type.ts)
-     │  config extraction            │  ├─ readConfig               (config.ts)
-     │  CSS dedent                   │  ├─ dedentCss                (css.ts)
-     │  import placement             │  └─ placePlainImports        (imports.ts)
-     └───────────────┬───────────────┘
-                     │  ComponentIR  (shared vocabulary, defined in ir.ts)
-     ┌───────────────┴───────────────┐
-     │  CLIENT ANALYSIS (analysis/*) │  analyzeClient(component, registry, diags, composeRegistry)
-     │  pass 1  @for → each() plans  │  → ClientPlan       (analysis/plan.ts, orchestration)
-     │  pass 1b List @for → reconcile│                     (analysis/loops.ts)
-     │  pass 2  signal render sites  │                     (analysis/harvest.ts)
-     │  pass 3  harvest plans        │                     (analysis/harvest.ts)
-     │  pass 4  top-level effects    │                     (analysis/effects.ts)
-     └──────┬────────────────┬───────┘
-            │ ClientPlan     │ (errors gate here)
-            ▼                ▼
-     ┌─────────────┐   ┌─────────────┐
-     │ emit-server │   │ emit-client │
-     │ .server.ts  │   │ .client.ts  │
-     └─────────────┘   └─────────────┘
+        .tsx source                    .tsrx source
+               │                                 │
+┌──────────────┴────────────────┐  ┌─────────────┴───────────────┐
+│ TSX FRONT END                 │  │ TSRX FRONT END              │
+│ compiler-tsx.ts               │  │ compiler.ts                 │
+│ parse: typescript package     │  │ parse: @tsrx/core (pinned,  │
+│   (to-estree.ts converts)     │  │   via core.ts)              │
+│ control-flow dispatch         │  │ control-flow dispatch       │
+│   (lower-tsx.ts)              │  │   (lower-template.ts)       │
+│ ternary/&& → if               │  │ @if @switch @try @for       │
+│ .map() → for                  │  │ statement-context arms      │
+│ IIFE → switch / try-catch     │  │                             │
+│ boundary({ ok, nil,           │  │                             │
+│   err, stale? })              │  │                             │
+└──────────────┬────────────────┘  └─────────────┬───────────────┘
+               │                                 │
+┌──────────────┴─────────────────────────────────┴───────────────┐
+│ SHARED FRONT-END STAGES                                        │
+│ setup extraction, params contract, context seeding,            │
+│ template-output resolution, validation tail, verbatim          │
+│ module scans, IR assembly — front-end.ts                       │
+│ condition validation, element/compose lowering,                │
+│ expression-child lift rule, positional reactivity —            │
+│ lower-shared.ts (each surface passes its dispatch hooks)       │
+│ attribute classification — classify-attributes.ts              │
+│ signal type inference — infer-type.ts · config — config.ts     │
+│ CSS dedent — css.ts · import placement — imports.ts            │
+└───────────────────────────────┬────────────────────────────────┘
+                                │  ComponentIR (ir.ts)
+┌───────────────────────────────┴────────────────────────────────┐
+│ SHARED PIPELINE — pipeline.ts (compileFromIR)                  │
+│ compose validation against the composeRegistry                 │
+│ CLIENT ANALYSIS (analysis/*) → ClientPlan                      │
+│   pass 1  for-IR → each() plans                                │
+│   pass 1b  list-IR → reconcile plans                           │
+│   pass 2  signal render sites                                  │
+│   pass 3  harvest plans                                        │
+│   pass 4  top-level effects                                    │
+│ tier classification — tier.ts                                  │
+└───────┬───────────────────────┬────────────────────────────────┘
+        │ ClientPlan            │ (errors gate here)
+        ▼                       ▼
+    ┌─────────────┐       ┌─────────────┐
+    │ emit-server │       │ emit-client │
+    │ .server.ts  │       │ .client.ts  │
+    └─────────────┘       └─────────────┘
 ```
 
-`compileComponent` wires the stages in exactly this order and validates
-composed elements against the corpus-wide `composeRegistry` before analysis.
-The two-pass corpus orchestration (registry discovery, then real compilation)
-lives in the consumer, `server/effects/tsrx.ts` (§ 6).
+`compileFromIR` (`pipeline.ts`) wires the post-front-end stages in exactly
+this order and validates composed elements against the corpus-wide
+`composeRegistry` before analysis; both front ends run it, so the two
+surfaces cannot drift after lowering. The two-pass corpus orchestration
+(registry discovery, then real compilation) lives in the consumer,
+`server/effects/tsrx.ts` (§ 7).
 
 ## 3. Module map
 
+Machinery first, then the shared front-end modules, then the two front ends:
+
 | Module | Role |
 | --- | --- |
-| `index.ts` | Public API; `compileComponent` pipeline assembly; flat re-exports |
-| `compiler.ts` | Front end: `compileSource` (parsing, setup extraction, first-ref resolution); whole-module scans (lazy patterns, React JSX near-misses, malformed selectors, deferred collector calls, reserved expose keys, form-control guards) |
+| `pipeline.ts` | Shared post-front-end pipeline (`compileFromIR`): compose validation, `analyzeClient`, tier classification, both emitters, the registry entry — `CompiledComponent`/`CompileFileResult` live here |
+| `frontend/tsrx/index.ts` | `.tsrx` public API: `compileComponent` = `compileSource` + the shared pipeline |
+| `frontend/tsx/index.ts` | `.tsx` public API: `compileComponentTsx` = `compileSourceTsx` + the shared pipeline |
 | `ir.ts` | Pure type leaf: the whole IR vocabulary (`ComponentIR`, `TemplateNode`, `AttributeIR`, `SignalIR`, `ForIR`, `ConfigIR`, …) |
-| `core.ts` | The only `@tsrx/core` value-import leaf |
+| `front-end.ts` | Front-end-neutral shared stages: setup extraction (`extractSetup`), the params contract (`extractParams`), context seeding, template-output resolution, the post-lowering validation tail, the verbatim module scans (malformed selectors, import mismatches, deferred collector calls), and IR assembly |
+| `lower-shared.ts` | Surface-independent lowering core: condition validation, element/compose lowering, the expression-child lift rule, positional reactivity, and `lowerChildrenSkeleton` — the `Lowering` hooks carry each surface's child-node dispatch |
+| `ast-utils.ts` | Shared AST predicates and the recognized-name vocabulary constants both front ends' walks run on |
+| `walk.ts` | Generic structural `TemplateNode` visitor (`walkTemplate`, `collectAttrs`, `collectComposeElements`) |
+| `frontend/tsrx/compiler.ts` | `.tsrx` front end: `compileSource` (locate the `@{ }` component, slice setup + output verbatim) plus the grammar's own scans (lazy patterns, React JSX near-misses, `newerGrammarHint`) |
+| `frontend/tsrx/lower-template.ts` | `.tsrx` directives (`@if`/`@switch`/`@try`/`@for`) → `TemplateNode` IR; list-body validation |
+| `frontend/tsrx/globals.d.ts` | Ambient FactoryContext vocabulary for the raw `.tsrx` view; parity-tested against `ast-utils` |
+| `frontend/tsx/compiler-tsx.ts` | `.tsx` front end: `compileSourceTsx` (locate the exported component function, statements + single `return` shape, `boundary()`/`css` recognition) |
+| `frontend/tsx/lower-tsx.ts` | `.tsx` expression shapes → `TemplateNode` IR; shape-based IIFE recognition (`asIife`, `lowerSwitchIife`) |
+| `frontend/tsx/to-estree.ts` | `typescript`-AST → estree-shaped `TsrxNode` converter — the only `typescript`-API leaf |
+| `frontend/tsx/host-profile.d.ts` | The strict authored-`.tsx` ambient profile: FactoryContext vocabulary plus the strict per-element `JSX.IntrinsicElements` light-DOM contract (migrations extend it in the same commit). Never in one `tsc` program with `globals.d.ts` |
+| `core.ts` | The only `@tsrx/core` value-import leaf (`.tsrx` front end only) |
 | `core-shim.d.ts` | Type shim for the pinned `@tsrx/core` |
-| `globals.d.ts` | Ambient FactoryContext vocabulary for editors; parity-tested against `ast-utils` |
-| `walk.ts` | Generic structural `TemplateNode` visitor (`walkTemplate`, `collectAttrs`) |
-| `lower-template.ts` | JSX/`@if`/`@switch`/`@try`/`@for` → `TemplateNode` IR; list-body validation |
 | `classify-attributes.ts` | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser |
 | `reactivity.ts` | `classifyChild` — the reactive-lift rule: is a template child reactive, static, or untraceable? |
 | `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers. Under ADR 0029 this is also the first conjunct of the **tier classifier** (§ 5) |
-| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary (LT-173): `export const i18n` extraction (quoted keys included; dotted keys must end in a CLDR category — LT-190), the `lang` binding/default lookup, `PLURAL_CATEGORIES` |
+| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary: `export const i18n` extraction (quoted keys included; dotted keys must end in a CLDR category), the `lang` binding/default lookup, `PLURAL_CATEGORIES` |
 | `infer-type.ts` | Signal value-type inference |
 | `config.ts` | `export const config` extraction |
-| `imports.ts` | Compose-import resolution + plain import collection and placement |
+| `imports.ts` | Compose-import resolution (accepts `.tsrx` AND `.tsx` specifiers — cross-surface composition falls out of the path-keyed registry) + plain import collection and placement |
 | `first-refs.ts` | Structural matcher for `first(selector, reason?)`: which template element(s) an author's selector refers to; compose-deferral test; ref-presence guards |
 | `selector-syntax.ts` | Conservative CSS selector *parse* validation for `first()`/`all()` — reports only what no CSS parser accepts |
 | `registry.ts` | `RegistryEntry` type (incl. per-prop `ExposeKind`) + `registryJson` |
@@ -127,18 +206,22 @@ lives in the consumer, `server/effects/tsrx.ts` (§ 6).
 | `emit-server.ts` | `ComponentIR` → server render module |
 | `emit-client.ts` | `ComponentIR` + `ClientPlan` → client factory module |
 | `spans.ts` | Generated↔source span recording + lookup |
+| `tier.ts` | The tier classifier (§ 5): routing signals in, the component's tier + recorded reasons out |
 | `indent.ts` / `css.ts` | Template-literal-safe reindentation / `<style>` dedent |
-| `diagnostics.ts` | Diagnostic codes TSRX001–043, message factories |
+| `diagnostics.ts` | Diagnostic codes TSRX001–048, message factories |
 | `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup) |
 | `smoke.ts` | Dev script: compile corpus, execute renders, print |
 | `sim/` | Server Simulation driver (§ 5): `patch-table.ts`, `realm.ts`, `boundary.ts`, `report.ts` |
 
-**Dependency shape**: every module points strictly at `ir.ts` (types),
-`core.ts`, `walk.ts`, `evaluability.ts`, `reactivity.ts`, and `first-refs.ts`
-as shared leaves — no runtime value cycles. Within `analysis/`, `plan.ts`
-orchestrates `{selectors, naming, harvest, loops, effects}`, with `harvest.ts`
-imported back by `loops.ts` and `effects.ts` for a few shared signal-read
-predicates — the one edge that isn't a strict fan-out from `plan.ts`.
+**Dependency shape**: every module points strictly at `ir.ts` (types) and
+the shared leaves — `ast-utils.ts`, `walk.ts`, `evaluability.ts`,
+`reactivity.ts`, `first-refs.ts`, and the front-end-neutral `front-end.ts`/
+`lower-shared.ts` (which import no parser values by design, only the loose
+`TsrxNode` type) — with no runtime value cycles; the machinery does not
+depend on either front end. Within `analysis/`, `plan.ts` orchestrates
+`{selectors, naming, harvest, loops, effects}`, with `harvest.ts` imported
+back by `loops.ts` and `effects.ts` for a few shared signal-read predicates
+— the one edge that isn't a strict fan-out from `plan.ts`.
 
 ## 4. Core data model
 
@@ -165,9 +248,9 @@ text.
 | `expr` | `expr, lazy` | A child expression; `lazy` marks it reactive (decided by `reactivity.ts`: a lexically visible signal or `host.<prop>` read lifts; an expression over server args stays static; a signal escaping into an opaque call is TSRX017) |
 | `if` | `test, then, alternate` | Server-known condition; server renders the taken branch, client addresses both roots |
 | `switch` | `discriminant, cases[]` | Mutually exclusive arms |
-| `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ async boundary: all three arms render, `hidden`-toggled |
-| `compose` | `component, source, attrs, children` | PascalCase tag bound to a `.tsrx` import; server splices the child's render |
-| `client-stmt` | `text` | Bare client-only side effect inside a branch |
+| `try` | `children, catchParam, catchChildren, pendingChildren?, staleChildren?` | `pendingChildren ≠ null` ⇒ async boundary: all arms render, `hidden`-toggled. `staleChildren` — the re-fetching-with-retained-value arm — is set only by the `.tsx` front end's four-arm `boundary({ ok, nil, err, stale })` spelling; null everywhere else, so `.tsrx` lowering and both emitters are byte-identical to the three-arm shape |
+| `compose` | `component, source, attrs, children` | PascalCase tag bound to an authored-source import (either surface); server splices the child's render |
+| `client-stmt` | `text` | Bare client-only side effect inside a branch (`.tsrx` only — a `.tsx` branch must return JSX) |
 
 **`AttributeIR`** — per-attribute: `static`, `server` (render-time expression),
 `reactive` (thunk → `watch()`), `pass` (`truc:pass={{ }}`), `class-map` /
@@ -224,7 +307,8 @@ walked locale onto the attribute at connect — the same thing the server
 render did, so the DOM carries one answer both paths agree on.
 
 **Message resolution** (ADR 0030): a component declares each message key
-*with its source-locale string inline in the `.tsrx`* — `export const i18n =
+*with its source-locale string inline in the authored source, either
+surface* — `export const i18n =
 { key: 'Source string', … }` (extracted by `i18n.ts`, same posture as
 `readConfig`; quoted keys are keys too — a dotted key is a string Literal,
 which no bare identifier can spell) — so there is deliberately no
@@ -401,9 +485,10 @@ pass alongside `analysis/compose-refs.ts`.
 
 `emit-server.ts` walks the IR and emits a `render<Name>(args): string`
 function: per-kind dispatch over the template (escaped text, server
-expressions, real JS conditionals for `@if`/`@switch`, isolated arm buffers
-for `@try`, composition calls for `compose` nodes), and setup re-declared
-verbatim against the `runtime.ts` harness, where a signal is its initial value
+expressions, real JS conditionals for `if`/`switch` nodes, isolated arm
+buffers for async boundaries, composition calls for `compose` nodes), and
+setup re-declared verbatim against the `runtime.ts` harness, where a signal
+is its initial value
 in a box (`.get()` reads once, `.set()` is a no-op) — "signals as plain
 values". A thunk whose closure is not directly server-known gets the
 **host-derived fold**: an expression whose every read has a compiler-known
@@ -413,13 +498,12 @@ initial value. The fold is all-or-nothing: one non-substitutable read
 disqualifies the expression — and, under ADR 0029, routes the component out
 of the Folded tier.
 
-Measured against the migrated corpus, the Folded tier is the **majority** path:
-the classifier folds 19 of 22 components (Simulated: `basic-pluralize`,
-`form-combobox` via compose-read, `form-listbox`; Static: none yet). An earlier
-estimate put it at about 6 of 22 by counting every component that needs a DOM
-fact for any purpose, but `first()` in `watch()`/`on()` positions is a client
-concern that reaches no served byte and was never a refusal site — what routes a
-component is a site whose *server render* phase 1 cannot complete.
+Measured against the corpus, the Folded tier is the **majority** path: the
+classifier folds 20 of 22 components (Simulated: `form-combobox` via
+compose-read, `form-listbox`; Static: none yet). `first()` in
+`watch()`/`on()` positions is a client concern that reaches no served byte
+and was never a refusal site — what routes a component is a site whose
+*server render* phase 1 cannot complete.
 
 ### 5.4 The Simulated tier — Server Simulation (ADR 0027)
 
@@ -431,7 +515,7 @@ stays ground truth and corrects at connect. The driver lives in `sim/`:
   forced from the jsdom window, inert stubs for absent APIs
   (`ResizeObserver`, `matchMedia`, …), network globals replaced with
   never-settling no-ops (a build can never depend on the network; a fetching
-  component stays on its `@pending` arm). `PROTOTYPE_PATCHES` is empty since
+  component stays on its pending arm). `PROTOTYPE_PATCHES` is empty since
   LT-177: `attachInternals()` is left alone so jsdom's skeletal internals
   reaches the library and `bindAria()` can bind the attribute the served HTML
   carries. Also the second conjunct of the tier classifier (§ 5.2).
@@ -454,7 +538,7 @@ stays ground truth and corrects at connect. The driver lives in `sim/`:
 - **`boundary.ts`** — the serialization boundary: the instantiate→serialize
   window performs no IO and advances no timers, draining microtasks to a
   bounded quiescence, so the compiler — not microtask timing — decides which
-  `@try` arm ships.
+  async-boundary arm ships.
 - **`report.ts`** — turns realm diagnostics into the build report (contained
   throws, network attempts, console errors become build warnings attributed
   to the component), and carries the **tier census** (§ 6).
@@ -462,11 +546,11 @@ stays ground truth and corrects at connect. The driver lives in `sim/`:
 Two gates make simulation safe to ship: **connect must be a fixed point**
 (the driver runs the connect pass twice and requires byte-identical
 `outerHTML`), and the resolved async arm ships only when its value is
-harvestable from the markup the component itself rendered — otherwise
-`@pending`.
+harvestable from the markup the component itself rendered — otherwise the
+pending arm ships.
 
 For a Simulated-tier component `emit-server.ts` emits the same skeleton it emits
-for everyone, minus the parts of the verbatim `@{ }` setup re-declaration that
+for everyone, minus the parts of the verbatim setup re-declaration that
 skeleton does not need. Only the Folded tier evaluates setup in the value harness,
 and the setup shapes that would break the harness are precisely the ones that
 routed the component here.
@@ -500,14 +584,17 @@ byte-identical across all three tiers**, pinned corpus-wide in
 A Static-tier component gets the phase-1 skeleton with its unresolved expressions
 omitted, and the client corrects at connect. No realm is opened.
 
-This is where the cost argument for tiering mostly pays. `module-scrollarea`
-(2,091 occurrences, the corpus's largest cost driver) reads `scrollLeft`/
-`scrollTop`/`scrollWidth`/`offsetWidth`/`scrollHeight`/`offsetHeight` and
-emits exclusively through `bindState(internals, …)` — both unanswerable by
-the realm's own stub posture. Simulating it would cost ~2.3 s of the measured
-~3.9 s full-corpus figure and produce nothing. `card-mediaqueries`
-(`matchMedia`), `form-colorgraph` (`getBoundingClientRect`), `form-textbox`
-and `form-spinbutton` (`internals.states`) are in the same position.
+No corpus component routes here today — the census is 20 Folded / 2 Simulated /
+0 Static. The components with unanswerable reads (`module-scrollarea`'s scroll
+geometry — at 2,091 occurrences the corpus's largest would-be cost driver —
+`card-mediaqueries`' `matchMedia`, `form-colorgraph`'s `getBoundingClientRect`,
+`form-textbox`'s and `form-spinbutton`'s `internals.states`) keep those reads in
+client-only positions: `watch()`/`on()` sources reach no served byte, so phase 1
+completes and the Folded tier covers them. The tier exists for the shape where
+an unanswerable read reaches a RENDERED site — a scroll-overflow state folded
+into an attribute, a media query baked into markup — and every unresolved
+expression is of that kind. Simulating such a component would spend the realm's
+per-occurrence cost and produce nothing the client does not already correct.
 
 ### 5.6 The equivalence audit
 
@@ -537,12 +624,24 @@ at).
 
 **`check:tsrx`.** Generated client *and* server modules are type-checked by
 `tsc` emit-then-check (`scripts/check-tsrx.ts`); diagnostics at generated
-positions are remapped onto the `.tsrx` source through
+positions are remapped onto the authored source through
 `findSpanForGeneratedOffset`. Server modules are checked because composition
 makes them import each other's real types — a missing or mistyped server arg
-is a real `tsc` diagnostic, remapped to the compose site.
+is a real `tsc` diagnostic, remapped to the compose site. Authored `.tsx`
+sources skip the detour entirely: plain `tsc` checks them directly against
+`frontend/tsx/host-profile.d.ts`, with no span table and no remapping (the
+`typecheck` script compiles the corpus first, so the generated modules and
+ambients exist).
 
-**Diagnostic codes** (`diagnostics.ts`, TSRX001–047) fall into families:
+**Harness types ride the same gate.** Generated code calls into the
+`runtime.ts` value harness (`pluralCategories`, the compose post-processing,
+the fold helpers), and a harness signature narrower than what the
+pruning/splice emitters pass it is caught ONLY by the
+tsc-against-generated-modules gate — no unit test sits between the emitter
+and the gate. Widen both sides in the same change, and treat a `check:tsrx`
+failure there as a contract break, not a fixture problem.
+
+**Diagnostic codes** (`diagnostics.ts`, TSRX001–048) fall into families:
 
 - *Grammar and shape gates*: unrecognized setup statements, reactive `@for`
   over a non-`createList` (TSRX001), async component functions, deferred
@@ -565,10 +664,14 @@ is a real `tsc` diagnostic, remapped to the compose site.
   string (TSRX040), and the rendered-client-only-const error (TSRX046 — the
   narrow residue of this family that stays an error; see the reclassification
   below).
-- *i18n* (LT-173): literal prose in a component that declares
+- *i18n*: literal prose in a component that declares
   `export const i18n` (TSRX047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and
   rides the translation census instead.
+- *Corpus-level*: one component tag declared by more than one corpus source
+  (TSRX048) — fires before pass 2, names every declaring file whatever
+  surface each is written in, and drops them all; the dual front end's
+  one-tag-one-source rule.
 
 **Reclassification under ADR 0029.** The impure-ambient refusal is not in the
 table below because it does not become a routing signal at all: it becomes
@@ -608,7 +711,11 @@ follows the tiering decision recorded with each rule.
 
 **Vocabulary parity.** `ast-utils.ts`'s recognized-name sets are mirrored in
 `globals.d.ts` and pinned by `server/tests/compiler/globals.test.ts`, so the
-compiler's ambient contract and the editor surface cannot drift.
+compiler's ambient contract and the editor surface cannot drift. The `.tsx`
+profile needs no such pin: `host-profile.d.ts` derives its ambients from the
+real `@zeix/le-truc` types, and authored `.tsx` gets editor feedback through
+plain tsserver — the planned span-table editor plugin retired as moot once
+the primary surface stopped needing a projection.
 
 ## 7. Embedding in the server infrastructure
 
@@ -616,10 +723,14 @@ The compiler is build-time tooling; `@zeix/le-truc` stays browser-only and
 never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
 
 - **Corpus orchestration** (`server/effects/tsrx.ts`, a docs-build effect):
-  pass 1 compiles every `examples/**/*.tsrx` against a registry seeded with
-  hand-written example tags, collecting compilable tags and the corpus-wide
-  `composeRegistry`; pass 2 re-compiles with the full registry, child imports,
-  and compose registry. Artifacts land in the gitignored
+  the scan globs `examples/**/*.tsrx` AND `examples/**/*.tsx` into one file
+  list and `compileTsrxCorpus` dispatches per extension; pass 1 compiles
+  every file against a registry seeded with hand-written example tags,
+  collecting compilable tags and the corpus-wide `composeRegistry`; pass 2
+  re-compiles with the full registry, child imports, and compose registry.
+  The duplicate-tag check (TSRX048) runs between the passes: it names every
+  declaring file and drops them all before pass 2's registry could make
+  their order load-bearing. Artifacts land in the gitignored
   `server/generated/tsrx/` plus `registry.json`. Errors fail the run;
   warnings skip the file with a notice.
 - **Consumers**: `server/build.ts` (via the `index.ts` facade plus direct
@@ -634,10 +745,16 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   compiler.
 - **Golden tests** (`server/tests/compiler/*.golden.test.ts`) pin server renders,
   CSS bytes, client snapshots, and diagnostics for the corpus; regenerate
-  with `UPDATE_SNAPSHOTS=1 bun test server/tests/tsrx`. The fixture-pinned
+  with `bun server/tests/compiler/update-snapshots.ts`. The fixture-pinned
   corpus is load-bearing for simulation: where the simulated answer can only
   approximate (layout reads return zeros, absent APIs are `undefined`), drift
   is caught by fixtures, not assumed absent.
+- **Parity suite** (`server/tests/compiler/tsx/parity.test.ts`): the
+  equivalence contract — each fixture authored in both surfaces must render
+  byte-identically through the same machinery, including a four-arm
+  `boundary` render with its `stale` client handler. It is the mechanical
+  form of "the door stays open": a front-end change that makes the surfaces
+  diverge fails here before it can ship.
 
 See `server/SERVER.md` for the effect wiring, `check:sim` (portability probe
 across runtimes) and `eval:substrate` (substrate evaluation scripts).
@@ -674,9 +791,19 @@ across runtimes) and `eval:substrate` (substrate evaluation scripts).
   carries an identical construct signature, per-branch guarded otherwise; a
   `first()`-addressed element is exempt — it has its own query and presence
   guard); composed children accept statics and server expressions only.
-- **A control-flow arm is statement context**: `@if`/`@else` bodies parse as
-  JS statements, not JSX children — a grammar fact of the pinned parser.
-- **Pin isolation**: `@tsrx/core` values enter through `core.ts` only (§ 1).
+- **One machinery, two front ends**: after lowering, both surfaces consume
+  identical stages through `pipeline.ts`, and the shared `front-end.ts`/
+  `lower-shared.ts` modules import no parser values — a pipeline change
+  cannot drift between surfaces. The parity suite is the render-level pin
+  (§ 7).
+- **A control-flow arm is statement context on `.tsrx` only**: `@if`/`@else`
+  bodies parse as JS statements, not JSX children — a grammar fact of the
+  pinned parser. The `.tsx` front end's branches are expressions that must
+  return JSX; bare statements live in setup.
+- **Pin isolation**: `@tsrx/core` values enter through `core.ts` only, and
+  only the `.tsrx` front end imports them; `typescript`-API access is
+  confined to `frontend/tsx/to-estree.ts`. Each surface's parser churn stops
+  at its own leaf.
 - **Server stubs never reach the markup**: the server module may stub
   client-only free names for type-checking, but never a `first()` ref — a ref
   stub whose value reached the markup would render an empty string where the
@@ -687,7 +814,8 @@ across runtimes) and `eval:substrate` (substrate evaluation scripts).
 
 *Companion documents: `server/SERVER.md` (build-pipeline integration),
 `adr/0024-adopt-tsrx-as-isomorphic-component-format.md` (format decisions),
+`adr/0032-adopt-tsx-as-the-authored-component-surface.md` (the dual front end),
 `adr/0027-server-simulation.md` (Server Simulation),
 `adr/0029-tiered-server-evaluation.md` (tiered server evaluation),
-`server/TESTS.md` (test strategy), `TSRX-HOST-PROFILE.md` (host decisions for
-authored `.tsrx` components).*
+`server/TESTS.md` (test strategy), `HOST_PROFILE.md` (host decisions for
+both authored surfaces).*

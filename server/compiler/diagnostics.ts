@@ -222,7 +222,7 @@ export const diagnostic = {
 			'TSRX039',
 			formManaged
 				? `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. On a form-associated host \`${prop}\` is the reset baseline (\`default${prop === 'checked' ? 'Checked' : 'Value'}\`) — render the host attribute too (\`<… ${prop}={${prop}}>\`) rather than dropping it; do not stop rendering the value here either, since the baseline attribute alone gives no initial DOM state for the control to mirror.`
-				: `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. Harvest it from the site instead (\`expose({ ${prop}: <ref read> })\`, TSRX-HOST-PROFILE § data account) and drop the attribute, or stop rendering the value here.`,
+				: `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. Harvest it from the site instead (\`expose({ ${prop}: <ref read> })\`, HOST_PROFILE § data account) and drop the attribute, or stop rendering the value here.`,
 			lineOf(source, offset),
 		),
 
@@ -772,7 +772,7 @@ export const diagnostic = {
 	 * fix is ownership, not generation — the compiler inventing an id would
 	 * make the server render non-deterministic and give the client nothing
 	 * stable to re-derive, so the id belongs to whoever instantiates the
-	 * component (TSRX-HOST-PROFILE § data account, bullet 3).
+	 * component (HOST_PROFILE § data account, bullet 3).
 	 */
 	staticIdInTemplate: (
 		source: string,

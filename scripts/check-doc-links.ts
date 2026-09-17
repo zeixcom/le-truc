@@ -47,6 +47,8 @@ for (const f of ['ARCHITECTURE.md', 'REQUIREMENTS.md', 'AGENTS.md']) {
 	const full = join(ROOT, f)
 	if (existsSync(full)) scanFiles.push(full)
 }
+// compiler tree docs (HOST_PROFILE.md, LE_TRUC_COMPILER.md)
+addMarkdownFiles(join(ROOT, 'server', 'compiler'), false)
 
 // --- Markdown link regex -----------------------------------------------------
 // Matches [text](target), skipping code spans (`` ` ``), image links, and

@@ -181,7 +181,7 @@ The Simulated tier renders initial HTML by executing the generated client module
 
 #### M21. Composition and interop
 
-Compiled components compose: PascalCase invocation with typed server args at the boundary, `class`/`id` discriminators that reach the served DOM, a reserved `children` parameter for content insertion, and `truc:pass={{ … }}` as the sole channel for client-side signal interop with a custom-element target ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s10). A composed child declares its pass surface on its own args type (`'truc:pass'?: { … }`), so a parent's pass checks against the child's real shape ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s3). Reaching into a sub-component's owned markup is a compile-checked ownership violation — composition goes through the child's declared public interface (TSRX-HOST-PROFILE.md, the data account).
+Compiled components compose: PascalCase invocation with typed server args at the boundary, `class`/`id` discriminators that reach the served DOM, a reserved `children` parameter for content insertion, and `truc:pass={{ … }}` as the sole channel for client-side signal interop with a custom-element target ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s10). A composed child declares its pass surface on its own args type (`'truc:pass'?: { … }`), so a parent's pass checks against the child's real shape ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s3). Reaching into a sub-component's owned markup is a compile-checked ownership violation — composition goes through the child's declared public interface (`server/compiler/HOST_PROFILE.md`, the data account).
 
 #### M22. Tiered error surfacing
 
@@ -193,7 +193,7 @@ The compile-warning channel stays author-fixable-only, with a zero target. Findi
 
 #### M24. Build-time internationalization
 
-Locale and translations are build-time server data ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)): one SSG page per locale with the locale fixed before rendering begins; a reserved compiler-supplied `i18n` parameter (`lang`, `t`, `timeZone`, `currency`, `dir`); an authored `lang` arg overriding the record; explicit keys with source strings declared inline in the `.tsrx`; additive per-locale catalog files with no override stack; a missing key falling back to the source locale and recorded in the translation census. The catalog never ships to the client — runtime variance is rendered (all alternatives, pruned per locale) and toggled by the client.
+Locale and translations are build-time server data ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)): one SSG page per locale with the locale fixed before rendering begins; a reserved compiler-supplied `i18n` parameter (`lang`, `t`, `timeZone`, `currency`, `dir`); an authored `lang` arg overriding the record; explicit keys with source strings declared inline in the authored source, either surface; additive per-locale catalog files with no override stack; a missing key falling back to the source locale and recorded in the translation census. The catalog never ships to the client — runtime variance is rendered (all alternatives, pruned per locale) and toggled by the client.
 
 #### M25. Tooling continuity
 

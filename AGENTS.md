@@ -1,6 +1,6 @@
 # Agent Context — Le Truc
 
-> Non-obvious facts and easy-to-get-wrong behaviors only. Structure: `ARCHITECTURE.md`. API details: JSDoc in `src/`. Authoring or reviewing a `.tsrx` component? Read `TSRX-HOST-PROFILE.md` first — this project's host decisions (styles, `truc:pass`, element references) differ from Ripple's, the only other TSRX host profile.
+> Non-obvious facts and easy-to-get-wrong behaviors only. Structure: `ARCHITECTURE.md`. API details: JSDoc in `src/`. Authoring or reviewing a compiled component? Read `server/compiler/HOST_PROFILE.md` first — `.tsx` is the default authored surface, `.tsrx` stays supported where statement-context control flow reads better (ADR 0032), and this project's host decisions (styles, `truc:pass`, element references) differ from Ripple's, the only other TSRX host profile.
 
 ## Factory Form
 
@@ -16,6 +16,10 @@ defineComponent<MyProps>('my-element', ({ expose, first, on, watch }) => {
 ```
 
 ## Surprising Behaviors
+
+- **One tag, one authored source, whichever surface**: the corpus scan globs `.tsrx` AND `.tsx` into one registry, and a tag two files declare fails the build naming both, dropping both (TSRX048). Migrate a tag to `.tsx` by replacing the `.tsrx` source in the same change, not alongside it.
+
+- **`boundary()`'s fourth arm and the `css` tag are `.tsx` vocabulary; the `{count}` shorthand is `.tsrx`-only**: `.tsx`'s async boundary takes `{ ok, nil, err, stale? }` — `.tsrx`'s `@try`/`@pending`/`@catch` has no stale arm (the pinned grammar lacks one). `.tsx` stylesheets are `css`-tagged template literals inside `<style>`; `.tsrx` `<style>` blocks are raw CSS. Default to `.tsx`; author `.tsrx` where statement-context control-flow arms read better.
 
 - **`observedAttributes` is opt-in — parsers run once**: `defineComponent` never registers `observedAttributes`/`attributeChangedCallback` on its own. Parsers passed to `expose()` read the attribute once at connect, for server-rendered configuration. Pass the `observedAttributes()` extension to re-run a Parser-backed prop's parser on later attribute mutations; otherwise react via events or `watch()`.
 

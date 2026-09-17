@@ -5,7 +5,7 @@
  * six tags it names — so a generated `render*()` that THROWS the
  * moment it is called shipped unnoticed for the whole corpus. It did:
  * every component following the children-are-data rule
- * (TSRX-HOST-PROFILE § data account bullet 2) seeds its props by
+ * (HOST_PROFILE § data account bullet 2) seeds its props by
  * reading a `first()`-bound ref inside `expose()`, and `emit-server.ts`
  * used to declare those refs as `undefined` — so `renderFormSpinbutton()`
  * and `renderFormColorgraph()` both threw `undefined is not an object`
@@ -25,9 +25,9 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { Glob } from 'bun'
+import { isVoidElement } from '../../compiler/core'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { FileInfo } from '../../file-signals'
-import { isVoidElement } from '../../compiler/core'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { PLURALIZE_I18N } from './corpus-args'
 

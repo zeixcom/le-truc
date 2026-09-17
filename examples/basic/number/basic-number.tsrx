@@ -5,7 +5,7 @@
  * `watch(() => formatter.format(host.value), bindText(host))`.
  *
  * Contract notes (restored to the hand-written twin verbatim, per the
- * TSRX-HOST-PROFILE data account — no documented deviations):
+ * HOST_PROFILE data account — no documented deviations):
  * - `value` is Parser-exposed (`asNumber()`), read from the `value` attribute
  *   at connect time, writable and reactive. A pre-upgrade property write
  *   ("explicit DOM value wins", src/component.ts) is preserved the same way

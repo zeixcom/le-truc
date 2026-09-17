@@ -4,7 +4,7 @@ Le Truc is a reactive custom elements library. This document provides the mental
 
 The single external dependency is `@zeix/cause-effect`, which provides the reactive primitives (see [ADR 0001](adr/0001-use-cause-effect-as-reactive-primitive-layer.md)).
 
-Components may also be authored in an isomorphic single-file format compiled to this same runtime (see [ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md)): `.tsx` is the default authored surface, `.tsrx` remains supported where its statement-context control flow reads better (see [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)). `TSRX-HOST-PROFILE.md` states Le Truc's host-specific decisions for both surfaces.
+Components may also be authored in an isomorphic single-file format compiled to this same runtime (see [ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md)): `.tsx` is the default authored surface, `.tsrx` remains supported where its statement-context control flow reads better (see [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)). `server/compiler/HOST_PROFILE.md` states Le Truc's host-specific decisions for both surfaces.
 
 ## Component Model
 

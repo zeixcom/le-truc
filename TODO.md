@@ -6,7 +6,7 @@ names its own dependency.
 **Where the history went.** Everything landed and reviewed has been removed from this file
 (architect, 2026-09-06; i18n band pruned 2026-09-17). The rationale for what shipped lives in
 `adr/` (0024, 0026–0032), `ARCHITECTURE.md`, `server/compiler/LE_TRUC_COMPILER.md` and
-`TSRX-HOST-PROFILE.md`; the user-facing summary lives in `CHANGELOG.md` `[Unreleased]`; the
+`server/compiler/HOST_PROFILE.md`; the user-facing summary lives in `CHANGELOG.md` `[Unreleased]`; the
 task-by-task record lives in `git log -p -- TODO.md`. Do not re-derive a decision from a task
 entry — read the ADR. LT-199/LT-200 (pre-connect property writes, ADR 0031) landed via the
 `next` merge (PR #130); the i18n lineage (LT-165, LT-169/180, LT-173–175, LT-185, LT-190–192)
@@ -220,7 +220,7 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   client goldens + all three bun snapshot files renamed with 0 content lines (byte-identical);
   spike tsconfigs re-checked (main exit 0, both negative probes exit 2 as designed).
 
-- [ ] LT-204: Docs and requirements round for the dual front end (ADR 0032 follow-up f). **The REQUIREMENTS.md/ARCHITECTURE.md/CONTEXT.md drafts landed 2026-09-17 (architect) — review them, don't re-derive them; `LE_TRUC_COMPILER.md` waits for LT-206's new paths.**
+- [x] LT-204: Docs and requirements round for the dual front end (ADR 0032 follow-up f). **The REQUIREMENTS.md/ARCHITECTURE.md/CONTEXT.md drafts landed 2026-09-17 (architect) — review them, don't re-derive them; `LE_TRUC_COMPILER.md` waits for LT-206's new paths.** — done ✓ (docs round + mechanical biome sweep)
   **Skill:** tech-writer (architect co-owns REQUIREMENTS.md/ARCHITECTURE.md touchpoints)
   **Context:** ADR 0032 changes the authoring story; the documentation follows.
   **Architect drafts landed (2026-09-17), tech-writer reviews and owns final copy:**
@@ -256,6 +256,53 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
      spike merge left drift, e.g. `to-estree.ts` fails `biome check` format at tip) —
      mechanical, rides this docs round (LT-202 NOTES residue).
   **Verification:** `bun run check:links` green; Tech Writer owns final copy.
+  **Changed:** reviewed all three architect drafts — accurate against ADR 0032 and the
+  landed tree; one surgical fix, REQUIREMENTS.md M24 ("declared inline in the `.tsrx`" →
+  "in the authored source, either surface"; architect co-owner may reword). Drafted the
+  dual `TSRX-HOST-PROFILE.md` (retitled framing + new "Two surfaces, one profile" and
+  "The `.tsx` surface" sections; styles/data-account/tier/i18n/imports sections
+  surface-neutralized; the stale "Folded tier is rare / fifteen of twenty-two" bullet
+  corrected to the live 20/22 census; `.tsrx`-only sections marked). `AGENTS.md`: header
+  pointer now surface-aware + two dual-surface entries (TSRX048 one-tag-one-source; the
+  boundary/css/shorthand asymmetries). `LE_TRUC_COMPILER.md` retitled "The Le Truc
+  Component Compiler": §1 rewritten around the two front ends + both parser boundaries +
+  the wave-4 default rule; §2 diagram redrawn (dual front ends over the shared bands);
+  §3 module map rebuilt at the LT-206 paths with `front-end.ts`/`lower-shared.ts`/
+  `pipeline.ts`/`tier.ts`/`ast-utils.ts` rows and the never-share-a-program note; §4
+  four-arm `try` IR + cross-surface compose; §5 census corrected to 20/2/0 and the stale
+  Static-tier component claims rewritten (those components are Folded — their
+  unanswerable reads never reach rendered sites); §6 gains the direct-`.tsx` checking
+  path, the harness-types contract ("no unit test between the emitter and the gate"),
+  TSRX048's corpus-level family, and the LT-014 mirror line; §7 dual glob + TSRX048
+  timing + parity suite + snapshot-regen path fix; §8 one-machinery invariant + pin
+  isolation scoped per front end. LT-014 re-open condition verified in P7; mirrors live
+  in the profile's imports section and the compiler doc's §6.
+  **Biome sweep:** `biome check --write server/` fixed 23 files (format +
+  organizeImports only — verified by diff scan); `biome check server/` now clean.
+  One incident, caught and reverted: `noUnusedImports` is project-aware in Biome 2.x,
+  so `--write` crossed the `server/` path scope and stripped two imports from
+  `spike/tsx/form/combobox/form-combobox.tsx` plus a suppression comment into
+  `async-el.tsx` — reverted (`git restore`); parity pins unaffected.
+  **Verification (run):** `bun test server/tests` 1548 pass / 0 fail (1 pre-existing
+  unhandled inter-test error, LT-207); `bun run typecheck` exit 0; `check:tsrx` exit 0,
+  warning baseline 0, tier census 20/2/0; `biome check server/` clean; `check:links` 387
+  green.
+  **Folded in, same day (owner ruling, 2026-09-17):** the profile doc is no longer
+  TSRX-named — `TSRX-HOST-PROFILE.md` → `server/compiler/HOST_PROFILE.md`, retitled
+  "The Le Truc Host Profile", beside `LE_TRUC_COMPILER.md`, where its strict-ambient
+  twins (`frontend/tsx/host-profile.d.ts`, `frontend/tsrx/globals.d.ts`) already live.
+  Repointed: AGENTS.md's header pointer, ARCHITECTURE.md's intro, REQUIREMENTS.md M21,
+  this file's header orientation + LT-208's task text, the compiler doc (sibling-form
+  references), the profile's own relative links (`../../` from its new depth), the
+  ADR 0024/0030 links (labels + hrefs), `docs-src/pages/styling.md` (pointer moved out
+  of "the repo root"; its `.tsrx`-only callout reworded surface-neutral), and the short
+  citations in comments across `server/compiler/`, `server/tests/compiler/`, and three
+  `.tsrx` examples. ADR prose quotations and spike-era records (TSX_SPIKE.md, this
+  file's historical entries) keep the old name per the LT-206 precedent. One enabling
+  edit rode the ruling: `scripts/check-doc-links.ts`'s scan list gains
+  `server/compiler/*.md` — the relocation had moved the profile's 10 links out of the
+  gate's scope (adr/ + three root docs only), making its green vacuous for the moved
+  file; count 387 → 397.
 
 - [ ] LT-205: A `.tsrx` spelling for the four-state async boundary (the dual-contract debt LT-202's `boundary({ ok, nil, err, stale })` created).
   **Skill:** architect (rules the grammar question) with le-truc-dev (implements against the pin)
@@ -294,7 +341,7 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   - Declare a minimal `interface Element {}` in the profile's `JSX` namespace so arm
     element expressions have a name (today they fall back to `any`); attribute checking
     is unaffected.
-  Update the profile header's `boundary` doc and `TSRX-HOST-PROFILE.md`'s (LT-204's)
+  Update the profile header's `boundary` doc and `server/compiler/HOST_PROFILE.md`'s (LT-204's)
   `.tsx` module-shape section to match.
   **Acceptance:** the six spike fixtures compile clean under the typed ambient;
   `tsconfig.neg.json`-style probe: an arm returning a non-element or an err body reading

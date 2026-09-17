@@ -58,7 +58,7 @@ export type LiftVerdict =
  * That coincidence is the children-are-data contract written out: the
  * component receives `label` as a server arg, renders it into its own
  * markup, and exposes a `label` prop the client seeds by HARVESTING
- * that same markup back (TSRX-HOST-PROFILE § data account bullet 4).
+ * that same markup back (HOST_PROFILE § data account bullet 4).
  * The site is therefore three things at once, and each spelling on its
  * own only covers part of it — `{label}` renders but never rebinds,
  * `{host.label}` rebinds but renders empty, which is what pushed

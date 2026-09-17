@@ -3,7 +3,7 @@
  * (LT-117, reopened): this component OWNS its markup — the server
  * renders the `<button>` and its `span.label`/`span.badge` from
  * the args — and harvests the exposed props back out of that same
- * markup at connect (TSRX-HOST-PROFILE § data account bullet 4).
+ * markup at connect (HOST_PROFILE § data account bullet 4).
  * One site per value, three roles: the server's render target, the
  * client's harvest source (ADR 0003, DOM-is-truth), and the
  * client's binding target.

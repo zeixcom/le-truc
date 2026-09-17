@@ -48,8 +48,8 @@ my-component {
 **Avoid if** you expect style clashes from third-party styles.
 {% /callout %}
 
-{% callout .note title="Authoring in .tsrx" %}
-A `.tsrx` component's `<style>` block is emitted verbatim, unscoped — the same tag-name convention above applies, just written once and compiled through unchanged. See `TSRX-HOST-PROFILE.md` in the repo root.
+{% callout .note title="Authoring in the isomorphic format" %}
+A compiled component's stylesheet is emitted verbatim, unscoped — whichever surface authored it (`.tsx` via the `css` template tag, `.tsrx` as a raw `<style>` block). The same tag-name convention above applies, just written once and compiled through unchanged. See `server/compiler/HOST_PROFILE.md`.
 {% /callout %}
 
 {% /section %}

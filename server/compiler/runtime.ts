@@ -198,7 +198,7 @@ export const pluralCategories = (
  * generated module evaluates: a component following the
  * children-are-data rule seeds its props by READING the reference
  * (`expose({ value: asNumber(asNumber(0)(input.value)) })`,
- * TSRX-HOST-PROFILE § data account bullet 2), so an `undefined` stub —
+ * HOST_PROFILE § data account bullet 2), so an `undefined` stub —
  * what this used to be — made `renderFormSpinbutton()` throw
  * `undefined is not an object` the moment it was called.
  *
