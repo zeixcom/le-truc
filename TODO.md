@@ -91,8 +91,21 @@ round, scope widened).
   over-report = conservative). Verified: section order and code fences intact, `check:links`
   374 green, no code moved.
 
-- [x] LT-193: Remove LT-166's render cache and LT-175's locale containment with it. — done, pending review ⏳ (build-pipeline behavior change)
+- [x] LT-193: Remove LT-166's render cache and LT-175's locale containment with it. — reviewed ✓ (2026-09-17)
   **Skill:** docs-server-dev
+  **Review (architect, 2026-09-17):** Approved with one defect found and fixed in the review
+  commit: `server/tsrx/sim/index.ts` still re-exported the deleted `RenderStats` type —
+  `bun test` does not type-check, so the handoff's green test runs masked it and CI's
+  Typecheck step would have failed. Removed; `bun run typecheck` exits 0 (verified with
+  explicit exit-code capture — a piped tail masks it). Also applied in the same commit: two
+  tense fixes the landing makes stale — ADR 0030's retraction bullet ("is being removed" →
+  "was removed"), and ADR 0029's per-request-path consequence, which cited LT-166's
+  memoization as an existing per-process cache and now records it as removed with the
+  cache itself left undesigned for that hypothetical path. The rest of the handoff verified
+  against the diff: every removed symbol accounted for, the reframed tests assert what
+  their names claim, the registry's `declaresI18n` flag correctly survives for
+  emit-server's compose-graph inheritance, and the build's occurrence count, gate, and
+  census baselines are unchanged.
   **Changed:** `server/tsrx/sim/realm.ts` (deleted `renderCache`/`renderStats`, the
   `RenderStats` type, the `declaresI18n` realm option, and the module header's "Render
   memoization" + "conditional locale" sections); `server/effects/simulate.ts` (dropped
