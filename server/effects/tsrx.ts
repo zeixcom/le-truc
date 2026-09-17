@@ -19,8 +19,11 @@ import { componentTsrx, type FileInfo } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
 import { type CompileDiagnostic, compileComponent } from '../tsrx'
 import { type RegistryEntry, registryJson } from '../tsrx/registry'
+import { formatCensus, translationCensus } from '../tsrx/sim/report'
 import type { SourceSpan } from '../tsrx/spans'
+import { contaminateComposeReads } from '../tsrx/tier'
 import { createBuildEffect } from './build-effect'
+import { collectI18n, writeI18nModule, writeI18nReport } from './i18n'
 
 /**
  * One compiled component's generated-module span tables (LT-011, `check:tsrx`;
@@ -41,7 +44,12 @@ export type CompiledSpanInfo = {
 
 /* === Internal Functions === */
 
-const GENERATED_DIR = join(import.meta.dir, '..', 'generated', 'tsrx')
+/**
+ * Where the corpus compile writes its artifacts, including the registry the
+ * tier census reads (`scripts/check-tsrx.ts`). Exported for the scripts and
+ * tests that address the same directory the pipeline defaults to.
+ */
+export const GENERATED_DIR = join(import.meta.dir, '..', 'generated', 'tsrx')
 const ROOT = join(import.meta.dir, '..', '..')
 
 /**
@@ -185,10 +193,47 @@ export const compileTsrxCorpus = async (
 		console.log(`✅ Compiled ${entry.tag} from ${rel}`)
 	}
 
+	// ADR 0029 sub-design 3, LT-165: compose contamination is a FIXPOINT over
+	// the whole corpus's compose-read graph, so it can only run here — the
+	// first point where every component's own first-pass tier is known. A
+	// component's tier can only move downward (towards the Simulated tier).
+	const contaminated = contaminateComposeReads(
+		new Map(
+			entries.map(entry => [
+				entry.tag,
+				{ tag: entry.tag, tier: entry.tier, signals: entry.routingSignals },
+			]),
+		),
+		tag => entries.find(entry => entry.tag === tag)?.composeReadTags ?? [],
+	)
+	for (const entry of entries) {
+		const classification = contaminated.get(entry.tag)
+		if (!classification) continue
+		entry.tier = classification.tier
+		entry.routingSignals = [...classification.signals]
+	}
+
 	await writeFileSafe(
 		getFilePath(outDir, 'registry.json'),
 		registryJson(entries),
 	)
+	// ADR 0030 sub-designs 4+5 (LT-173): the catalog pipeline's corpus half.
+	// The generated i18n module folds every component's inline sources and
+	// the committed per-locale overrides into `i18nRecord(tag, lang?)`; the
+	// report artifact is gitignored; the census count rides the build
+	// summary. The build writes NO tracked file — missing keys land in the
+	// census, and `i18n:sync` is the person-run writer for the catalogs.
+	const i18nCollection = await collectI18n(entries)
+	await writeI18nModule(outDir, i18nCollection)
+	await writeI18nReport(outDir, i18nCollection)
+	const i18nCensus = translationCensus(
+		i18nCollection.gaps,
+		i18nCollection.locales,
+	)
+	console.log(
+		`🌐 Translation census: ${i18nCensus.entries.length} gap(s) across ${i18nCollection.locales.length} locale(s)`,
+	)
+	if (i18nCensus.entries.length > 0) console.log(formatCensus(i18nCensus))
 	console.log(`📝 TSRX compilation completed (${entries.length} component(s))`)
 	if (errorLabels.size > 0) {
 		throw new Error(

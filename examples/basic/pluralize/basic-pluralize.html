@@ -32,10 +32,34 @@
 <!-- Welsh locale example - demonstrates complex pluralization rules
      Welsh has 6 plural categories: zero, one, two, few, many, other
      Example: "dog" in Welsh
-     0 = cŵn (zero), 1 = ci (one), 2 = gi (two), 3 = chi (few), 6 = chi (many), 4/5/7+ = ci (other) -->
+     0 = cŵn (zero), 1 = ci (one), 2 = gi (two), 3 = chi (few), 6 = chi (many), 4/5/7+ = ci (other)
+     LT-173 put lang="cy" on the element; LT-191 restored ancestor
+     inheritance, and this instance now pins the precedence: an OWN
+     attribute beats the nearest [lang] ancestor (see the wrapper
+     instance below). -->
+<p>Number of dogs in Welsh:</p>
+<basic-pluralize id="welsh-test" count="0" lang="cy">
+	<p class="none">Dim anifeiliaid!</p>
+	<p class="some">
+		<span class="count"></span>
+		<span class="zero">cŵn</span>
+		<span class="one">ci</span>
+		<span class="two">gi</span>
+		<span class="few">chi</span>
+		<span class="many">chi</span>
+		<span class="other">ci</span>
+	</p>
+</basic-pluralize>
+
+<hr>
+
+<!-- Ancestor inheritance (LT-191): this instance carries NO own lang
+     attribute — the locale is walked from the nearest [lang] ancestor at
+     connect, exactly like CSS :lang() and the hand-written twin. The one
+     above pins that an OWN attribute still beats the ancestor. -->
+<p>Number of dogs in Welsh (inherited from the wrapper):</p>
 <div lang="cy">
-	<p>Number of dogs in Welsh:</p>
-	<basic-pluralize id="welsh-test" count="0">
+	<basic-pluralize id="welsh-ancestor-test" count="2">
 		<p class="none">Dim anifeiliaid!</p>
 		<p class="some">
 			<span class="count"></span>
@@ -48,6 +72,106 @@
 		</p>
 	</basic-pluralize>
 </div>
+
+<hr>
+
+<!-- German - same two categories as English ({one, other}), so only the
+     .one/.other spans ever show; the rest stay hidden on this page.
+     Aufgabe → Aufgaben: the plural is NOT "add s" (it would be "Aufgabes"). -->
+<p>Number of tasks in German:</p>
+<basic-pluralize id="german-test" count="3" lang="de">
+	<p class="none">Keine Aufgaben</p>
+	<p class="some">
+		<span class="count"></span>
+		<span class="zero"></span>
+		<span class="one">Aufgabe</span>
+		<span class="two"></span>
+		<span class="few"></span>
+		<span class="many"></span>
+		<span class="other">Aufgaben</span>
+		verbleibend
+	</p>
+</basic-pluralize>
+
+<hr>
+
+<!-- Chinese - exactly ONE category ({other}): no plural marking at all,
+     the classifier 个 does the counting. Every other span stays hidden
+     whatever the count does. -->
+<p>Number of tasks in Chinese:</p>
+<basic-pluralize id="chinese-test" count="5" lang="zh">
+	<p class="none">没有任务了！</p>
+	<p class="some">
+		<span class="count"></span>
+		<span class="zero"></span>
+		<span class="one"></span>
+		<span class="two"></span>
+		<span class="few"></span>
+		<span class="many"></span>
+		<span class="other">个任务</span>
+		剩余
+	</p>
+</basic-pluralize>
+
+<hr>
+
+<!-- Arabic - all six categories with six DIFFERENT word forms, including
+     the dual (مهمتان for exactly 2). dir="rtl" is the page author's job
+     (the record's dir is for component logic, never rendered per component). -->
+<p>Number of tasks in Arabic:</p>
+<basic-pluralize id="arabic-test" count="2" lang="ar" dir="rtl">
+	<p class="none">لا مهام!</p>
+	<p class="some">
+		<span class="count"></span>
+		<span class="zero">مهام</span>
+		<span class="one">مهمة</span>
+		<span class="two">مهمتان</span>
+		<span class="few">مهام</span>
+		<span class="many">مهمة</span>
+		<span class="other">مهمة</span>
+		متبقية
+	</p>
+</basic-pluralize>
+
+<hr>
+
+<!-- Polish - the widespread Slavic shape {one, few, many, other}: no zero
+     and no two (those spans stay hidden forever), and the count=5 lands in
+     `many` (zadań, genitive plural) while count=2-4 would land in `few`. -->
+<p>Number of tasks in Polish:</p>
+<basic-pluralize id="polish-test" count="5" lang="pl">
+	<p class="none">Brak zadań</p>
+	<p class="some">
+		<span class="count"></span>
+		<span class="zero"></span>
+		<span class="one">zadanie</span>
+		<span class="two"></span>
+		<span class="few">zadania</span>
+		<span class="many">zadań</span>
+		<span class="other">zadania</span>
+		pozostało
+	</p>
+</basic-pluralize>
+
+<hr>
+
+<!-- Latvian - the zero surprise: {zero, one, other} where zero is for ANY
+     count ending in 0, not just 0 itself — count=10 shows the ZERO form
+     (uzdevumu), count=1 the singular, count=11 the zero form again. -->
+<p>Number of tasks in Latvian:</p>
+<basic-pluralize id="latvian-test" count="10" lang="lv">
+	<p class="none">Neviens uzdevums!</p>
+	<p class="some">
+		<span class="count"></span>
+		<span class="zero">uzdevumu</span>
+		<span class="one">uzdevums</span>
+		<span class="two"></span>
+		<span class="few"></span>
+		<span class="many"></span>
+		<span class="other">uzdevumu</span>
+		atlicis
+	</p>
+</basic-pluralize>
 
 <hr>
 

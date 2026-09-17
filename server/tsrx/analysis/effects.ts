@@ -18,16 +18,18 @@ import {
 	SEMANTICALLY_LOADED_ATTRS,
 	sanitizeVarName,
 } from '../ast-utils'
-import { diagnostic } from '../diagnostics'
+import { diagnostic, lineOf } from '../diagnostics'
 import {
 	containsImpureAmbient,
 	dependenciesOf,
 	foldableHostProps,
 	foldableRefGuards,
+	foldableRenderScope,
 	hostDerivedFold,
 } from '../evaluability'
 import type { AttributeIR, ForIR, PassEntryIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
+import { lineFields, resolutionOf, SUPPRESSED_HOST_SELECTOR } from '../tier'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
 import type { AnalysisContext, TopEffectPlan } from './plan'
@@ -96,7 +98,11 @@ const isClientConstructAttr = (a: AttributeIR): boolean =>
 	// A server attribute is normally render-only — except LT-122's
 	// arg-and-prop coincidence, which renders server-side AND binds.
 	(a.kind === 'server' ? a.bindsProp != null : a.kind !== 'static') &&
-	!(a.kind === 'html' && !a.reactive)
+	!(a.kind === 'html' && !a.reactive) &&
+	// `truc:case`/`truc:case-type` are compiler-consumed pruning markers,
+	// never client constructs of their own (ADR 0030 sub-design 6).
+	a.kind !== 'plural-case' &&
+	a.kind !== 'plural-case-type'
 
 /* === Exported Functions === */
 
@@ -106,6 +112,8 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		component,
 		source,
 		diagnostics,
+		routingSignals,
+		suppressedSites,
 		registry,
 		composeRegistry,
 		effects,
@@ -117,6 +125,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		reconcilePlans,
 		usedNames,
 		ambiguousComposeNodes,
+		queries,
 	} = ctx
 	/**
 	 * Registry entries by TAG (LT-158). `composeRegistry` is keyed by source
@@ -191,6 +200,29 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	// actually fold, or TSRX034 warns about an attribute that does render.
 	const derivableHostProps = foldableHostProps(component)
 	const derivableRefGuards = foldableRefGuards(component)
+	// LT-173 step 6: the render-scope names a host-derived fold may leave in
+	// a spliced thunk (args, signals, transitive-pure setup consts). Must be
+	// the same set `emit-server.ts` folds with, or this check warns about an
+	// attribute that does render (or silences one that doesn't).
+	const foldScope = foldableRenderScope(component)
+
+	/**
+	 * ADR 0029 sub-design 1 (LT-165 step 7): is this reactive expression
+	 * unresolvable — no server phase can answer it, because its value is a
+	 * function of the viewing moment or the build machine's own state (limb
+	 * b)? Such a site is omitted server-side in every tier and SILENT (step
+	 * 5), but the generated client still binds it and the realm replays that
+	 * module, so the site is recorded for the driver's serialization-time
+	 * suppression. Limb (a) (stubbed-API reads) is deliberately not
+	 * recorded — see {@link SuppressedSite}.
+	 */
+	const suppresses = (node: TsrxNode): boolean => {
+		const resolution = resolutionOf(node, component.serverKnown)
+		return resolution.by === 'none' && resolution.limb === 'not-a-server-fact'
+	}
+	/** The selector a plan query addresses; `'host'` stays the sentinel. */
+	const selectorOf = (query: string): string =>
+		queries.find(q => q.name === query)?.selector ?? query
 
 	/**
 	 * Validate and lower one target's `pass={{ }}` entries into `pass` effect
@@ -315,20 +347,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						),
 					)
 				}
-				// CHECKLIST §4 / TSRX033: this thunk's free names are otherwise
-				// all server-known — it would have folded to an initial server
-				// value — but it also reads an impure ambient (Date/Intl/
-				// Math.random/toLocaleString/getTimezoneOffset). `isServerEvaluable`
-				// (evaluability.ts) already refuses to fold it (the attribute is
-				// omitted server-side, same as any non-portable thunk); this warns
-				// so the omission doesn't read as an unrelated bug.
-				if (
-					dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
-					containsImpureAmbient(attr.thunk, component.serverKnown)
-				)
-					diagnostics.push(
-						diagnostic.impureServerFold(source, attr.thunk.start, attr.name),
-					)
 				// CHECKLIST §5 / TSRX034: omission is not neutral for these
 				// attribute names — `hidden` omitted means visible, `disabled`
 				// omitted means enabled AND submittable, same for `checked`/
@@ -336,12 +354,24 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				// `host.<prop>` fold (LT-085, `hostDerivedFold` below), and a
 				// server-evaluable thunk all render an initial value — all
 				// three safe. Anything else (a sensor, or any other
-				// non-portable dependency) would be silently OMITTED
-				// (`emit-server.ts`'s `case 'reactive'` pushes nothing at all
-				// when none of the three paths applies), rendering the
-				// interactive/visible/submittable default regardless of what
-				// the author intended — the worst of the two possible
-				// defaults, not a neutral one.
+				// non-portable dependency) is OMITTED (`emit-server.ts`'s
+				// `case 'reactive'` pushes nothing at all when none of the
+				// three paths applies).
+				//
+				// ADR 0029 sub-design 5 (LT-165 step 5): every such site is a
+				// ROUTING SIGNAL, not a diagnostic — "phase 1 cannot fold
+				// this" was a statement about the harness, not the author's
+				// code. The one exception is the severe form (`disabled`/
+				// `checked` on a real submittable control), and it is scoped
+				// per-EXPRESSION, not per-component (LT-184): the error fires
+				// iff THIS site's own resolution is `none`, so no server phase
+				// resolves it in any tier and the wrong default is permanent.
+				// A component routed Simulated by some other realm-answerable
+				// signal still omits this value, so a component-level Static
+				// check would have missed it. Sound without a tier check: a
+				// `none` resolution can never occur on a Folded-tier
+				// component, since the signal recorded right here would have
+				// made it non-Folded.
 				if (
 					SEMANTICALLY_LOADED_ATTRS.has(attr.name) &&
 					hostPropOf(attr.thunk) === null &&
@@ -349,27 +379,34 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						attr.thunk,
 						derivableHostProps,
 						derivableRefGuards,
+						foldScope,
 					) === null &&
 					!(
 						dependenciesOf(attr.thunk).isSubsetOf(component.serverKnown) &&
 						!containsImpureAmbient(attr.thunk, component.serverKnown)
 					)
-				)
-					diagnostics.push(
-						diagnostic.unsafeLoadedAttributeDefault(
-							source,
-							attr.thunk.start,
-							attr.name,
-							// LT-062/LT-085: escalate to ERROR only for `disabled`/
-							// `checked` on a real submittable native form control
-							// inside a form-associated component — there, the wrong
-							// default is a submission-correctness bug, not a
-							// cosmetic flash.
-							(attr.name === 'disabled' || attr.name === 'checked') &&
-								component.config?.form != null &&
-								SUBMITTABLE_FORM_CONTROL_TAGS.has(el.tag),
-						),
+				) {
+					const resolution = resolutionOf(attr.thunk, component.serverKnown)
+					routingSignals.push({
+						origin: 'TSRX034',
+						detail: `\`${attr.name}\` on <${el.tag}> has no server-renderable value`,
+						...lineFields(source, attr.thunk.start),
+						resolution,
+					})
+					if (
+						resolution.by === 'none' &&
+						(attr.name === 'disabled' || attr.name === 'checked') &&
+						component.config?.form != null &&
+						SUBMITTABLE_FORM_CONTROL_TAGS.has(el.tag)
 					)
+						diagnostics.push(
+							diagnostic.unsafeLoadedAttributeDefault(
+								source,
+								attr.thunk.start,
+								attr.name,
+							),
+						)
+				}
 				if (isCustom) {
 					// ADR 0023 sub-design 4 (amended by sub-design 10): a
 					// function-valued attribute is only ever a reactive binding
@@ -416,6 +453,19 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					sourceStart: attr.thunk.start,
 					sourceEnd: attr.thunk.end,
 				})
+				// ADR 0029 sub-design 1 (LT-165 step 7): the binding installs in
+				// the shipped client even though phase 1 omits the site — record
+				// where its connect-time write would land so the driver can
+				// revert it after the connect window stabilizes.
+				if (suppresses(attr.thunk))
+					suppressedSites.push({
+						kind: 'attr',
+						selector: selectorOf(query),
+						attr: attr.name,
+						// Property dispatch (LT-116) writes the IDL property, which
+						// a content-attribute revert alone does not undo.
+						...(dispatch === 'property' ? { prop: attr.name } : {}),
+					})
 			} else if (attr.kind === 'pass') {
 				if (!isCustom || !registry.has(el.tag)) {
 					diagnostics.push(
@@ -511,17 +561,11 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					diagnostic.managedPropWithoutForm(source, child.node.start, managed),
 				)
 			collectAmbient(child.expr)
-			// CHECKLIST §4 / TSRX033: same "would have folded, refuse to fold,
-			// warn" as the reactive-attribute site above, for a lazy text child
-			// (the checklist's own example: `{formatRemaining(maxlength, length)}`
-			// shaped, but reading `Date`/`Intl`/`Math.random` instead).
-			if (
-				dependenciesOf(child.expr).isSubsetOf(component.serverKnown) &&
-				containsImpureAmbient(child.expr, component.serverKnown)
-			)
-				diagnostics.push(
-					diagnostic.impureServerFold(source, child.node.start, null),
-				)
+			// CHECKLIST §4: a lazy text child reading an impure ambient
+			// (`Date`/`Intl`/`Math.random`) is omitted server-side and set by
+			// the client's first binding pass — unresolvability, not an author
+			// error, so it draws no diagnostic (LT-165 step 5, ADR 0029 s1
+			// limb b).
 			if (lazyChildren.length > 1) {
 				diagnostics.push(
 					diagnostic.unsupported(
@@ -554,6 +598,11 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				query,
 				source: lazyWatchSource(child),
 			})
+			// Same record for the text-child form (LT-165 step 7): the emission
+			// gate makes the site the element's whole textContent, so the
+			// element's pre-connect text is the entire revert.
+			if (suppresses(child.expr))
+				suppressedSites.push({ kind: 'text', selector: selectorOf(query) })
 		}
 	}
 
@@ -1456,18 +1505,9 @@ export const runEffects = (ctx: AnalysisContext): void => {
 							),
 						)
 					collectAmbient(child.expr)
-					// CHECKLIST §4 / TSRX033: same "would have folded, refuse
-					// to fold, warn" as the nested path's lazy-child site —
-					// the server omits the child and the client's first
-					// binding pass corrects it, which the author should not
-					// mistake for an unrelated bug.
-					if (
-						dependenciesOf(child.expr).isSubsetOf(component.serverKnown) &&
-						containsImpureAmbient(child.expr, component.serverKnown)
-					)
-						diagnostics.push(
-							diagnostic.impureServerFold(source, child.node.start, null),
-						)
+					// CHECKLIST §4: same as the nested path — an impure-ambient
+					// lazy child is omitted server-side, corrected by the
+					// client's first binding pass, and silent (LT-165 step 5).
 				}
 				// Emission gate: bindText() replaces the element's ENTIRE
 				// textContent, so the one sanctioned shape is a lazy child
@@ -1504,12 +1544,51 @@ export const runEffects = (ctx: AnalysisContext): void => {
 						query: 'host',
 						source: lazyWatchSource(lazyChildren[0] as ExprNode),
 					})
+					// Same record for the root form (LT-165 step 7): the target is
+					// the component's own element, addressed by the host sentinel.
+					if (suppresses((lazyChildren[0] as ExprNode).expr))
+						suppressedSites.push({
+							kind: 'text',
+							selector: SUPPRESSED_HOST_SELECTOR,
+						})
 				}
 			}
 		} else {
 			const hasClientConstruct =
 				node.attrs.some(isClientConstructAttr) ||
 				node.children.some(c => c.kind === 'expr' && c.lazy)
+			// ADR 0030 sub-design 6 (LT-173 step 7): a `truc:case` element is
+			// pruned at render time to the locale's actual plural-category set,
+			// so it MAY not render — its client effects need existence-guarded
+			// addressing ('maybe' cardinality + a guarded block), exactly the
+			// shape a single-branch @if root gets. Deeper constructs have no
+			// such shape here (their elements don't exist unless the branch
+			// rendered, and there is no branch) — rejected, same posture as the
+			// @if depth guard.
+			const caseAttr = node.attrs.find(
+				(a): a is Extract<AttributeIR, { kind: 'plural-case' }> =>
+					a.kind === 'plural-case',
+			)
+			if (caseAttr && component.langBinding === null) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						node.node.start,
+						"A truc:case element needs a locale to prune against — bind `lang` (as a server arg, or nested in the reserved `i18n` record) so the compiler can read the locale's plural-category set at render time (ADR 0030 sub-design 6)",
+					),
+				)
+				return
+			}
+			if (caseAttr && hasDeepConstruct(node, 0)) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						node.node.start,
+						"Client constructs inside a truc:case element must sit on the element itself — the locale's plural-category set is decided at render time, so deeper elements have no addressing when this alternative is pruned",
+					),
+				)
+				return
+			}
 			if (hasClientConstruct) {
 				const { selector, unique } = resolveSelector(node)
 				if (!unique) {
@@ -1527,9 +1606,13 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				const query = addQuery(
 					refAttr?.name ?? sanitizeVarName(node.tag),
 					selector,
-					'one',
+					caseAttr ? 'maybe' : 'one',
 				)
-				emitConstructEffects(node, query)
+				if (caseAttr) {
+					const guarded: TopEffectPlan[] = []
+					emitConstructEffects(node, query, guarded)
+					effects.push({ kind: 'guarded', query, effects: guarded })
+				} else emitConstructEffects(node, query)
 			}
 		}
 		for (const child of node.children) emitTopEffects(child)

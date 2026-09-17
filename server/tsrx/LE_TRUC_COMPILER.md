@@ -110,6 +110,7 @@ lives in the consumer, `server/effects/tsrx.ts` (§ 6).
 | `classify-attributes.ts` | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser |
 | `reactivity.ts` | `classifyChild` — the reactive-lift rule: is a template child reactive, static, or untraceable? |
 | `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers. Under ADR 0029 this is also the first conjunct of the **tier classifier** (§ 5) |
+| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary (LT-173): `export const i18n` extraction (quoted keys included; dotted keys must end in a CLDR category — LT-190), the `lang` binding/default lookup, `PLURAL_CATEGORIES` |
 | `infer-type.ts` | Signal value-type inference |
 | `config.ts` | `export const config` extraction |
 | `imports.ts` | Compose-import resolution + plain import collection and placement |
@@ -209,35 +210,78 @@ the locale record: `lang`, the component's resolved messages `t`,
 it; declaring it costs the caller nothing, so composition never threads
 locale by hand. Both are ordinary destructurable args, so the value is
 server-known and folds in phase 1 — which is why an i18n component is Folded-tier
-eligible rather than the Simulated tier (§ 5). An authored `lang` arg, or one supplied at
-a compose site, overrides the record's locale; the EFFECTIVE locale renders
-onto the root `lang` attribute, exempt from TSRX039 by ADR 0024 s3's
-root-attribute exclusion.
+eligible rather than the Simulated tier (§ 5). The record's locale resolves by
+precedence (ADR 0030 s3 as amended by LT-191): an explicit `lang` arg at the
+compose site, else the PARENT'S effective locale — compose-graph inheritance,
+the SSR analog of the DOM ancestor walk, since the composition tree is the
+rendered ancestor chain — else the component's authored default, else the
+build's page locale. The EFFECTIVE locale renders onto the root `lang`
+attribute, exempt from TSRX039 by ADR 0024 s3's root-attribute exclusion.
+Client-side, `lang` is a CONFIG attribute, not a reactive property: it is a
+built-in IDL property, so `expose()` cannot install an accessor over it
+(`prop in this` skips silently), and a compiled component MATERIALIZES the
+walked locale onto the attribute at connect — the same thing the server
+render did, so the DOM carries one answer both paths agree on.
 
 **Message resolution** (ADR 0030): a component declares each message key
-*with its source-locale string inline in the `.tsrx`* — there is deliberately
-no per-component catalog file, which would reintroduce the sibling-file drift
-ADR 0024 cures. Translations are additive per-locale override files,
-component-namespaced (`i18n/de.json`, keys `<tag>.<key>`), with **no tiering
-and no override stack**: a key resolves in exactly one place. The compiler
-resolves `t` at render time and the catalog never reaches the client. A
-missing key renders the source-locale string and is recorded in the build
-report's **translation census** — not a compile warning, since it is not
-author-fixable. Literal prose inside a catalog-using component IS
-author-fixable and warns. The build stays read-only: it emits a gitignored
-report artifact (machine-readable per locale plus a human summary), and an
-explicit `i18n:sync` script — never the build — writes missing keys back into
-the committed catalogs.
+*with its source-locale string inline in the `.tsrx`* — `export const i18n =
+{ key: 'Source string', … }` (extracted by `i18n.ts`, same posture as
+`readConfig`; quoted keys are keys too — a dotted key is a string Literal,
+which no bare identifier can spell) — so there is deliberately no
+per-component catalog file, which would reintroduce the sibling-file drift
+ADR 0024 cures. Values must be string literals: they are the fallback every
+locale resolves against and the bytes the staleness manifest hashes, so the
+source locale declares EVERY key its template references — the fallback
+bytes always exist. **Plural word forms are per-category keys**
+(`<key>.<category>` — `'task.one'`, `'task.other'`; LT-190): a dotted key
+must end in a CLDR plural category (a shape error otherwise — a typo'd
+suffix would silently never resolve AND corrupt the census's reachability
+input), and the span carrying each `truc:case` category references its own
+key. Translations are additive per-locale
+override files, component-namespaced (`i18n/de.json`, keys `<tag>.<key>`),
+with **no tiering and no override stack**: a key resolves in exactly one
+place. The compiler resolves `t` at render time — the generated `i18n`
+module (`server/effects/i18n.ts` folds the corpus catalogs into it) exposes
+`i18nRecord(tag, lang?)`, which every render call boundary uses to supply
+the reserved record — and the catalog never reaches the client. A missing
+key renders the source-locale string and is recorded in the build report's
+**translation census** (`translationCensus`, `sim/report.ts`; machine-
+readable artifact at `server/generated/tsrx/i18n-report.json`) — not a
+compile warning, since it is not author-fixable. The census is
+REACHABILITY-AWARE (LT-190): a `<key>.<category>` message whose category is
+outside the locale's platform set — read per locale for the component's
+statically proven `truc:case-type` (`RegistryEntry.caseType`:
+`'cardinal'`/`'ordinal'` when provable, `'union'` otherwise — the runtime's
+own fallback) — sits in a pruned span that cannot render there, so its
+absence is the translator's nothing-to-do, not a gap; a locale's catalog
+carries exactly its own reachable set. Staleness rides a committed
+manifest (`i18n/manifest.json`, per locale per key the source hash the
+translation was recorded against): a source-string edit is a `.tsrx` edit
+that silently invalidates that key's translations, so an override without a
+matching manifest hash reports `stale`. Literal prose inside a
+catalog-using component IS author-fixable and warns (TSRX047 — template
+text with two or more adjacent letters; single-letter fragments are page
+data). The build stays read-only: an explicit `i18n:sync` script — never
+the build — writes missing keys into the committed catalogs and refreshes
+the manifest.
 
 **Per-locale pruning of rendered alternatives** (ADR 0030 s6): with the locale
 a build constant, a component rendering one alternative per plural category
 prunes to the set the locale actually uses (`{one, other}` for English rather
-than all six). The set comes from
+than all six). The set comes from `runtime.ts`'s `pluralCategories` —
 `Intl.PluralRules(lang, opts).resolvedOptions().pluralCategories`, a platform
 fact rather than a hand-maintained table — the same posture as the ARIA
-mapping in ADR 0024 s4. Cardinal and ordinal have different sets, so pruning
-uses the configured `type` and falls back to their union when the compiler
-cannot prove which is in play. **The client-side toggles do NOT retire**: the
+mapping in ADR 0024 s4. The author marks each alternative `truc:case="one"`
+(a CLDR category literal; consumed by the compiler, renders no attribute) and
+declares the configured `type` once per group with
+`truc:case-type={ordinal ? 'ordinal' : undefined}` — evaluated per render
+call, so a dynamic configuration prunes tightly in both states; an
+explicit `undefined` is the `Intl` default (cardinal), and a group with no
+declared type prunes to the cardinal∪ordinal union, the ADR's sanctioned
+fallback. The client keeps the element's `hidden` toggle over the pruned set,
+addressed with `'maybe'` cardinality (the element may not render at all);
+deeper constructs inside a case element have no addressing and are rejected.
+**The client-side toggles do NOT retire**: the
 locale is fixed but the category-selecting input (`host.count`) is reactive,
 and the client can only select among strings the server rendered.
 
@@ -326,10 +370,18 @@ could resolve; component-level the Simulated tier would bake the random walk's s
 the page. It is the Simulated tier with one suppressed expression.
 
 `Intl` splits along the same seam: a locale resolving to a server-known value
-keeps a component Folded-tier-eligible; a locale read from the DOM (`getLocale(el)`,
-`host.lang`) is a Simulated-tier routing signal, because the realm executes that read
-for real; only a runtime-default locale is unresolvable under limb (b).
-`basic-pluralize` is the middle case and stays Simulated-tier.
+keeps a component Folded-tier-eligible. A locale READ from the DOM folds only
+when the compiler can splice the read to server truth: `host.lang` mirrors
+the root `lang` attribute when that attribute is server-rendered — `lang`
+and `dir` are platform config attributes whose native accessors read the
+attribute verbatim, so they need no parser (LT-191's third `foldableHostProps`
+route; parser-exposed and arg-rendered props are the first two) — while an
+ANCESTOR WALK through a user-land helper (`getLocale(el)`) is outside the
+fold vocabulary and routes Simulated, because the realm executes that read
+for real. Only a runtime-default locale is unresolvable under limb (b).
+`basic-pluralize` reads `host.lang` over a root-rendered config attribute and
+is Folded-tier (LT-173): its locale is server-known through the reserved
+record.
 
 **Classification is static and conservative.** There is no render-time
 fallback from phase 1 to phase 2 — the fallback condition is exactly what the
@@ -361,9 +413,13 @@ initial value. The fold is all-or-nothing: one non-substitutable read
 disqualifies the expression — and, under ADR 0029, routes the component out
 of the Folded tier.
 
-Measured against the migrated corpus, the Folded tier is the minority path:
-about 6 of 22 components qualify. Fifteen use `first()`, which is irreducibly a DOM
-question.
+Measured against the migrated corpus, the Folded tier is the **majority** path:
+the classifier folds 19 of 22 components (Simulated: `basic-pluralize`,
+`form-combobox` via compose-read, `form-listbox`; Static: none yet). An earlier
+estimate put it at about 6 of 22 by counting every component that needs a DOM
+fact for any purpose, but `first()` in `watch()`/`on()` positions is a client
+concern that reaches no served byte and was never a refusal site — what routes a
+component is a site whose *server render* phase 1 cannot complete.
 
 ### 5.4 The Simulated tier — Server Simulation (ADR 0027)
 
@@ -388,7 +444,13 @@ stays ground truth and corrects at connect. The driver lives in `sim/`:
   `'en'` fallback regardless of the page's actual locale; realm diagnostics are
   attributed to the component whose window was open. Renders are isolated
   enough to be a function of `(component, args)` — each component loads once
-  against a shared registry, disposal is end-of-process.
+  against a shared registry, disposal is end-of-process. Suppression (LT-165
+  step 7): the registry's `suppressedSites` (§ 5.2 limb b) records each
+  unresolvable expression's target site; the driver snapshots the sites'
+  skeleton state from an inert parse of the markup and reverts them after
+  the quiescence drain and before serializing — never inside the drain — so
+  an impure binding's connect-time write never bakes the build machine's
+  reading into the served HTML.
 - **`boundary.ts`** — the serialization boundary: the instantiate→serialize
   window performs no IO and advances no timers, draining microtasks to a
   bounded quiescence, so the compiler — not microtask timing — decides which
@@ -403,10 +465,35 @@ Two gates make simulation safe to ship: **connect must be a fixed point**
 harvestable from the markup the component itself rendered — otherwise
 `@pending`.
 
-For a Simulated-tier component `emit-server.ts` emits the same skeleton it emits for
-everyone, minus the verbatim `@{ }` setup re-declaration: only the Folded tier
-evaluates setup in the value harness, and the setup shapes that would break
-the harness are precisely the ones that routed the component here.
+For a Simulated-tier component `emit-server.ts` emits the same skeleton it emits
+for everyone, minus the parts of the verbatim `@{ }` setup re-declaration that
+skeleton does not need. Only the Folded tier evaluates setup in the value harness,
+and the setup shapes that would break the harness are precisely the ones that
+routed the component here.
+
+The filter is one criterion, applied by `retainReferenced` in `emit-server.ts`:
+**retain a setup statement when the emitted markup depends on its declared name,
+transitively; drop the rest.** It cannot be the coarser "drop the setup, keep the
+skeleton", because the skeleton and the harness are not separable layers —
+`lazyValueExpression` splices `<name>.get()` into the markup, so a folded signal
+is not dead code server-side and dropping its declaration emits a module that
+references an undeclared name (`TS2304`).
+
+Three cases fall out of the one criterion. A plain const is retained when the
+skeleton interpolates it (`form-combobox`'s `inputId` folds into `<label for>`,
+`<input id>`, `<p id>` and `aria-describedby`, which nothing downstream restores).
+A folded signal is retained for the same reason. `expose()` is dropped without
+being named, because it declares nothing the markup can reference — an
+exposed-prop lazy child resolves through the prop→signal map at compile time to a
+literal — and its `refStub` any-stubs go with it, since they exist only so its
+free names resolve. Retention is transitive, which the corpus needs exactly once:
+`form-textbox`'s markup reads `remainingCount`, whose thunk reads
+`descriptionCell`, a name the markup never mentions — seeding from the markup
+alone would drop it.
+
+The invariant that makes the flag safe is that **the emitted markup is
+byte-identical across all three tiers**, pinned corpus-wide in
+`server/tests/tsrx/emit-tier.test.ts`.
 
 ### 5.5 The Static tier — the static skeleton
 
@@ -455,7 +542,7 @@ positions are remapped onto the `.tsrx` source through
 makes them import each other's real types — a missing or mistyped server arg
 is a real `tsc` diagnostic, remapped to the compose site.
 
-**Diagnostic codes** (`diagnostics.ts`, TSRX001–043) fall into families:
+**Diagnostic codes** (`diagnostics.ts`, TSRX001–047) fall into families:
 
 - *Grammar and shape gates*: unrecognized setup statements, reactive `@for`
   over a non-`createList` (TSRX001), async component functions, deferred
@@ -475,7 +562,13 @@ is a real `tsc` diagnostic, remapped to the compose site.
 - *Harvest and evaluability*: no render site or harvest route for a signal
   (TSRX004), no server-renderable value for a reactive attribute (TSRX034),
   the Parser-prop double-render warning (TSRX039), a dead required-reason
-  string (TSRX040).
+  string (TSRX040), and the rendered-client-only-const error (TSRX046 — the
+  narrow residue of this family that stays an error; see the reclassification
+  below).
+- *i18n* (LT-173): literal prose in a component that declares
+  `export const i18n` (TSRX047) — author-fixable, so a genuine warning that
+  converges to zero; a missing *translation* is the translator's work and
+  rides the translation census instead.
 
 **Reclassification under ADR 0029.** The impure-ambient refusal is not in the
 table below because it does not become a routing signal at all: it becomes
@@ -490,22 +583,25 @@ per component, its tier and the reason — rather than as warnings:
 | --- | --- |
 | `TSRX004` | Simulated-tier routing signal; leaves the diagnostic channel |
 | `TSRX034` non-severe | routing signal; leaves the diagnostic channel |
-| `TSRX034` **severe** (`disabled`/`checked` on a real submittable control) | **survives, scoped to the Static tier** — the only tier where nothing resolves the value, and its own copy is right that this is a correctness bug rather than a flash |
+| `TSRX034` **severe** (`disabled`/`checked` on a real submittable control) | **survives, scoped per-expression** (LT-184) — it fires when the SITE's own resolution is `none`, so no tier resolves the value, even if another signal routes the component Simulated. Its own copy is right that this is a correctness bug rather than a flash |
 | `TSRX013` → `clientOnlySetupConst`, `clientOnlySignalCompute` | Simulated-tier routing signals |
-| `TSRX013` → `conditionalSignalConstructor` | **unchanged**, and gets its own code — an ADR 0024 s12 format rule, not a server-evaluation guard |
-| `TSRX013` → `deferredCollectorCall` | **unchanged**, and gets its own code — a client-side `NoActiveCollectorError` bug, tier-independent |
+| `TSRX013` → `conditionalSignalConstructor` | **unchanged** as `TSRX044` — an ADR 0024 s12 format rule, not a server-evaluation guard |
+| `TSRX013` → `deferredCollectorCall` | **unchanged** as `TSRX045` — a client-side `NoActiveCollectorError` bug, tier-independent |
 | `TSRX043` | Simulated-tier routing signal |
 | `TSRX039` | **unchanged** — a data-ownership rule; tiering does not answer it |
 
-`TSRX013`'s four factories must be split into distinct codes BEFORE any part
-of it retires; only two of the four are server-evaluation guards.
+`TSRX013`'s four factories are split into distinct codes (LT-165): only the
+two that keep the code are server-evaluation guards.
 
 The consequence for the regression signal: **the compile-warning baseline's
 target stays zero.** Once routing signals leave the channel, the remaining
 warnings are all genuinely author-fixable again. The tier census is a
 separate, non-zero, expected-to-grow record with its own regression story — a
 component drifting from the Folded tier to the Simulated tier is a build-cost regression worth
-seeing, and it is now visible without being miscast as a warning.
+seeing, and it is now visible without being miscast as a warning. The census
+rides the build-report channel (`server/tsrx/sim/report.ts`'s generic
+`Census` records via `tierCensus`/`formatCensus`), and `check:tsrx` prints it
+as its own section after the compile-warning baseline.
 
 Message copy is owned by the Tech Writer per ADR 0028's lifecycle; severity
 follows the tiering decision recorded with each rule.

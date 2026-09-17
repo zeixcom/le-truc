@@ -56,5 +56,26 @@ declare const provideContexts: LeTrucFactoryContext['provideContexts']
  * `declare global` HTMLElementTagNameMap augmentation when
  * `config.formAssociated` leads the extensions.
  */
-// biome-ignore lint/correctness/noUnusedVariables: used in components
 type FormAssociatedElement = import('@zeix/le-truc').FormAssociatedElement
+
+/**
+ * The reserved `i18n` parameter's record (ADR 0030 sub-design 2, LT-173).
+ * Ambient in raw `.tsrx` sources — the compiler supplies the value at
+ * every render call boundary and the generated server modules import the
+ * concrete declaration from the generated `i18n` module — so a component
+ * annotating `{ …, i18n: I18n }` type-checks without an authored import
+ * (the library gains no i18n surface: ADR 0030 sub-design 8).
+ *
+ * `t` is the component's own resolved messages (`export const i18n`'s
+ * keys); `lang` is the effective BCP 47 tag after precedence; `timeZone`/
+ * `currency` are the formatting configuration for `Intl` consumers;
+ * `dir` is the text direction derived from `lang` (never rendered per
+ * component — direction belongs on the page's `<html>`).
+ */
+interface I18n {
+	lang: string
+	t: Record<string, string>
+	timeZone: string
+	currency: string
+	dir: 'ltr' | 'rtl'
+}

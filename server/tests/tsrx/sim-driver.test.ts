@@ -59,66 +59,15 @@ import {
 	CLASSIFIED_DIAGNOSTICS,
 	formatSimReport,
 	reportDiagnostics,
+	tierCensus,
 } from '../../tsrx/sim/report'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
+// LT-165 step 8: the args table and the tag→render-fn mapping moved to
+// `corpus-args.ts` so the equivalence audit (equivalence-audit.test.ts)
+// drives BOTH mechanisms from the identical fixture inputs this file uses —
+// one copy, no drift. Data is unchanged.
+import { CORPUS_ARGS as ARGS, renderName } from './corpus-args'
 import { loadTsrxCorpus } from './corpus-fixture'
-
-/** `form-spinbutton` → `renderFormSpinbutton`. */
-const renderName = (tag: string): string =>
-	`render${tag
-		.split('-')
-		.map(part => part.charAt(0).toUpperCase() + part.slice(1))
-		.join('')}`
-
-/**
- * Same posture as `server-render-smoke.test.ts`: components whose args are
- * genuinely required get a value, everything else renders from `{}`.
- * Diverges from the smoke test's copy in three entries (LT-167): the smoke
- * passes `label` where form-radiogroup's prop is `legend`, and title/href
- * (card-blogpost) / title (card-callout) where the cards' prop is
- * `children` — copied verbatim, those rendered literal `undefined` into the
- * goldens; here the authored props are bound so the goldens pin authored
- * behavior.
- */
-const ARGS: Record<string, Record<string, unknown>> = {
-	'form-spinbutton': { name: 'quantity' },
-	'form-checkbox': { name: 'agree', label: 'I agree' },
-	'form-radiogroup': {
-		name: 'choice',
-		legend: 'Pick one',
-		options: [
-			{ value: 'a', label: 'A' },
-			{ value: 'b', label: 'B' },
-		],
-	},
-	'form-textbox': { name: 'title', label: 'Title' },
-	'form-combobox': {
-		name: 'fruit',
-		label: 'Fruit',
-		options: [
-			{ value: 'a', label: 'Apple' },
-			{ value: 'b', label: 'Banana' },
-		],
-	},
-	'form-tokenbox': { name: 'tags', label: 'Tags' },
-	'form-listbox': {
-		name: 'fruit',
-		options: [
-			{ value: 'a', label: 'Apple' },
-			{ value: 'b', label: 'Banana' },
-		],
-	},
-	'module-tabgroup': {
-		tabs: [
-			{ id: 'one', label: 'One', content: 'First' },
-			{ id: 'two', label: 'Two', content: 'Second' },
-		],
-	},
-	'card-blogpost': { children: 'An excerpt from the post.' },
-	'card-callout': { children: 'Heads up' },
-	'card-collapsible': { title: 'Details' },
-	'basic-button': { label: 'Add' },
-}
 
 const generated = createGeneratedDir('sim-driver')
 afterAll(() => generated.cleanup())
@@ -133,6 +82,11 @@ const registry = JSON.parse(
 // review's disposal finding).
 const realm = createSimulationRealm({
 	composesTags: tag => registry[tag]?.composesTags ?? [],
+	// LT-165 step 7: revert each unresolvable expression's site to its
+	// skeleton state after the drain — a no-op while no corpus component
+	// carries records, and what keeps the fixed-point gate below honest
+	// the day one does (module-ticker's shape).
+	suppressedSites: tag => registry[tag]?.suppressedSites ?? [],
 })
 afterAll(() => realm.dispose())
 
@@ -246,6 +200,23 @@ describe('build-report baseline (LT-163) — the wave-4 regression signal', () =
 		for (const { classification } of report.classified)
 			expect(formatSimReport(report)).toContain(classification.reason)
 	})
+
+	test('the tier census rides its own channel, never the diagnostic one (ADR 0029 s6)', () => {
+		// The census (LT-165 step 6) is a second KIND of build-report record,
+		// not a diagnostic: none of its reasons may be admitted by — or be
+		// needed by — the classification table, and the zero-unclassified gate
+		// above is unchanged by the census's existence. A census record that
+		// showed up here would mean the two record kinds were merged, which
+		// would make the census trippable and the baseline lies-prone.
+		const census = tierCensus(Object.values(registry))
+		for (const entry of census.entries)
+			for (const reason of entry.reasons)
+				expect(CLASSIFIED_DIAGNOSTICS.some(c => c.message.test(reason))).toBe(
+					false,
+				)
+		const report = reportDiagnostics(realm.diagnostics)
+		expect(report.unclassified).toEqual([])
+	})
 })
 
 describe('two-order hermeticity (sub-design 10, LT-164)', () => {
@@ -280,6 +251,7 @@ describe('two-order hermeticity (sub-design 10, LT-164)', () => {
 			cpSync(generated.path, order2.path, { recursive: true })
 			const realm2 = createSimulationRealm({
 				composesTags: tag => registry[tag]?.composesTags ?? [],
+				suppressedSites: tag => registry[tag]?.suppressedSites ?? [],
 			})
 			try {
 				const clientInOrder2 = (info: CompiledInfo): string =>

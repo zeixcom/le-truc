@@ -30,7 +30,14 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Glob } from 'bun'
-import { compileTsrxCorpus } from '../server/effects/tsrx'
+import { collectI18n } from '../server/effects/i18n'
+import { compileTsrxCorpus, GENERATED_DIR } from '../server/effects/tsrx'
+import type { ComponentRegistry } from '../server/tsrx/registry'
+import {
+	formatCensus,
+	tierCensus,
+	translationCensus,
+} from '../server/tsrx/sim/report'
 import {
 	fileLineColToOffset,
 	fileOffsetToLineCol,
@@ -204,6 +211,27 @@ console.log(
 		`warning(s) (${warningLines.length} lines across the two compilation ` +
 		"passes) — the wave-4 regression signal's first number. Read this " +
 		'count; do not tail-read the ⚠️ lines.',
+)
+
+// The tier census (ADR 0029 sub-design 6, LT-165 step 6): a build-report
+// record, NOT a warning — its own section below, never merged into the
+// counted baseline above. Read from the registry the compile just wrote;
+// the compose-read fixpoint in compileTsrxCorpus runs BEFORE registry.json
+// is written, so the census records post-contamination tiers (the form-
+// combobox ruling). This census is expected to grow; its regression story
+// is build cost, and it is pinned corpus-wide by tier-corpus.test.ts.
+const registry = JSON.parse(
+	readFileSync(join(GENERATED_DIR, 'registry.json'), 'utf8'),
+) as ComponentRegistry
+console.log(`\n${formatCensus(tierCensus(Object.values(registry)))}`)
+const i18nGaps = await collectI18n(Object.values(registry))
+
+// The translation census (ADR 0030 sub-design 5, LT-173 step 4): the same
+// channel and the same reasoning as the tier census above — a missing
+// translation is the translator's work, not author-fixable, so it is a
+// census record and never a compile warning. Zero locales ⇒ zero entries.
+console.log(
+	`\n${formatCensus(translationCensus(i18nGaps.gaps, i18nGaps.locales))}`,
 )
 
 process.exit(exitCode)

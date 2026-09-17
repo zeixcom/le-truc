@@ -48,6 +48,12 @@ import {
 	shareExclusiveIf,
 } from './first-refs'
 import {
+	declaresI18nOf,
+	langArgDefaultOf,
+	langBindingOf,
+	readI18nDecl,
+} from './i18n'
+import {
 	type LeTrucImport,
 	parseComposeImports,
 	parseLeTrucImports,
@@ -70,6 +76,7 @@ import type {
 } from './ir'
 import { lowerChildren, lowerElement } from './lower-template'
 import { malformedSelectorReason } from './selector-syntax'
+import { lineFields, type RoutingSignal, resolutionOf } from './tier'
 import { walkTemplate } from './walk'
 
 /* === Types === */
@@ -77,6 +84,11 @@ import { walkTemplate } from './walk'
 export type CompileResult = {
 	component: ComponentIR | null
 	diagnostics: CompileDiagnostic[]
+	/**
+	 * Setup-extraction routing signals (ADR 0029, LT-165). Merged with the
+	 * analysis pass's own in `index.ts`, where the tier is classified.
+	 */
+	routingSignals: RoutingSignal[]
 }
 
 /* === Internal Functions === */
@@ -635,6 +647,7 @@ export const compileSource = (
 	const ctx: ExtractContext = {
 		source,
 		diagnostics: [],
+		routingSignals: [],
 		exposedProps: new Set<string>(),
 		serverKnown: new Set<string>(),
 		argNames: new Set<string>(),
@@ -650,6 +663,7 @@ export const compileSource = (
 	} catch (e) {
 		return {
 			component: null,
+			routingSignals: [],
 			diagnostics: [
 				diagnostic.invalidSource(
 					`Failed to parse ${filename}: ${e instanceof Error ? e.message : String(e)}${newerGrammarHint(source, e)}`,
@@ -707,7 +721,11 @@ export const compileSource = (
 				`${filename}: no exported component function with an @{ } container found.`,
 			),
 		)
-		return { component: null, diagnostics: ctx.diagnostics }
+		return {
+			component: null,
+			diagnostics: ctx.diagnostics,
+			routingSignals: ctx.routingSignals,
+		}
 	}
 
 	// An `async` component function (TSRX008, LT-157d): every statement
@@ -724,7 +742,11 @@ export const compileSource = (
 				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
 			),
 		)
-		return { component: null, diagnostics: ctx.diagnostics }
+		return {
+			component: null,
+			diagnostics: ctx.diagnostics,
+			routingSignals: ctx.routingSignals,
+		}
 	}
 	reportDeferredCollectorCalls(ctx, fn)
 
@@ -738,7 +760,11 @@ export const compileSource = (
 				`${filename}: the component function must take a single destructured args object.`,
 			),
 		)
-		return { component: null, diagnostics: ctx.diagnostics }
+		return {
+			component: null,
+			diagnostics: ctx.diagnostics,
+			routingSignals: ctx.routingSignals,
+		}
 	}
 	const paramNames = new Set<string>()
 	if (paramsNode) collectBoundNames(paramsNode, paramNames)
@@ -900,15 +926,20 @@ export const compileSource = (
 				const refReads = [...freeIdentifiers(init)]
 					.filter(n => elementRefs.has(n))
 					.sort()
-				if (refReads.length > 0)
-					ctx.diagnostics.push(
-						diagnostic.refDerivedSetupConst(
-							source,
-							stmt.start,
-							declName,
-							refReads,
-						),
-					)
+				if (refReads.length > 0) {
+					// ADR 0029 sub-design 5 (LT-165 step 5): a ROUTING SIGNAL,
+					// not a diagnostic. The realm has a real DOM, so the ref
+					// read the value harness could not evaluate is exactly what
+					// phase 2 answers — and the component routes Simulated so
+					// the tier-aware emit drops the statement from the server
+					// module instead of refusing the file.
+					ctx.routingSignals.push({
+						origin: 'TSRX043',
+						detail: `\`${declName}\` reads element ref(s) ${refReads.join(', ')} in setup`,
+						...lineFields(source, stmt.start),
+						resolution: { by: 'realm' },
+					})
+				}
 			}
 			const calleeName = identifierName(init.callee)
 			if (calleeName === 'requestContext') {
@@ -976,15 +1007,22 @@ export const compileSource = (
 						)
 					: []
 				if (badContextNames.length > 0) {
-					ctx.diagnostics.push(
-						diagnostic.clientOnlySignalCompute(
-							source,
-							stmt.start,
-							declName,
-							calleeName,
-							badContextNames,
-						),
-					)
+					// ADR 0029 sub-design 5 (LT-165 step 5): a ROUTING SIGNAL,
+					// not a diagnostic — `host`/`internals` resolve in the
+					// realm, which is the whole difference between the harness
+					// and phase 2. The declaration still has to exist somewhere
+					// the component can run it: registered as a plain setup
+					// const, so the generated CLIENT module emits it when its
+					// name is needed (`computeClientNeededNames`), while the
+					// Simulated-tier server module drops it (`retainReferenced`
+					// — no server-known name can reach the markup).
+					plainSetup.push(setupStmt)
+					ctx.routingSignals.push({
+						origin: 'TSRX013',
+						detail: `\`${declName}\`'s ${calleeName}() compute reads ${badContextNames.join('/')}`,
+						...lineFields(source, stmt.start),
+						resolution: resolutionOf(init, ctx.serverKnown),
+					})
 				} else {
 					const signal: SignalIR = {
 						name: declName,
@@ -1028,20 +1066,21 @@ export const compileSource = (
 			} else {
 				plainSetup.push(setupStmt)
 				// A plain setup const calling a client-only primitive directly —
-				// `component.setup` is emitted verbatim into the SERVER render
-				// function too, where these don't exist (ADR 0023 sub-design 12).
+				// the value harness cannot run it (ADR 0023 sub-design 12).
+				// ADR 0029 sub-design 5 (LT-165 step 5): a ROUTING SIGNAL, not
+				// a diagnostic — the const already sits in `plainSetup`, so the
+				// generated CLIENT module emits it when needed and the
+				// Simulated-tier server module drops it.
 				const badPrimitives = [...freeIdentifiers(init)]
 					.filter(n => CLIENT_ONLY_PRIMITIVES.has(n))
 					.sort()
 				if (badPrimitives.length > 0) {
-					ctx.diagnostics.push(
-						diagnostic.clientOnlySetupConst(
-							source,
-							stmt.start,
-							declName,
-							badPrimitives,
-						),
-					)
+					ctx.routingSignals.push({
+						origin: 'TSRX013',
+						detail: `\`${declName}\` calls client-only primitive(s) ${badPrimitives.join(', ')}`,
+						...lineFields(source, stmt.start),
+						resolution: resolutionOf(init, ctx.serverKnown),
+					})
 				}
 			}
 			continue
@@ -1219,7 +1258,11 @@ export const compileSource = (
 				`${filename}: the @{ } container's output must be a single root element, or a fragment (element + <style>).`,
 			),
 		)
-		return { component: null, diagnostics: ctx.diagnostics }
+		return {
+			component: null,
+			diagnostics: ctx.diagnostics,
+			routingSignals: ctx.routingSignals,
+		}
 	}
 	const fors = new Map<TsrxNode, ForIR>()
 	// @if conditions validate against server-known names — args and setup
@@ -1294,7 +1337,11 @@ export const compileSource = (
 					`${filename}: no root element found in the @{ } output.`,
 				),
 			)
-			return { component: null, diagnostics: ctx.diagnostics }
+			return {
+				component: null,
+				diagnostics: ctx.diagnostics,
+				routingSignals: ctx.routingSignals,
+			}
 		}
 		if (!root.tag.includes('-')) {
 			ctx.diagnostics.push(
@@ -1302,7 +1349,11 @@ export const compileSource = (
 					`${filename}: the root element must be the component's custom element tag (got \`${root.tag}\`).`,
 				),
 			)
-			return { component: null, diagnostics: ctx.diagnostics }
+			return {
+				component: null,
+				diagnostics: ctx.diagnostics,
+				routingSignals: ctx.routingSignals,
+			}
 		}
 
 		// Resolve `first(selector, required)` element references (LT-055) now
@@ -1436,10 +1487,18 @@ export const compileSource = (
 	let globalDecl: string | null = null
 	let propsTypeName: string | null = null
 	let config: ConfigIR | null = null
+	// `export const i18n` (ADR 0030 sub-design 4, LT-173): the component's
+	// message keys with their source-locale strings inline.
+	let i18nMessages: Record<string, string> | null = null
 	for (const stmt of asArray(ast.body)) {
 		const declaredConfig = readConfig(ctx, stmt)
 		if (declaredConfig) {
 			config = declaredConfig
+			continue
+		}
+		const declaredI18n = readI18nDecl(ctx, stmt)
+		if (declaredI18n) {
+			i18nMessages = declaredI18n
 			continue
 		}
 		if (
@@ -1479,6 +1538,52 @@ export const compileSource = (
 				: 'checked'
 			: null,
 	})
+
+	// TSRX047 (LT-173 step 5, ADR 0030 sub-design 4): literal prose inside a
+	// component that declared `export const i18n`. Author-fixable, so a
+	// genuine compile warning that converges to zero — unlike a missing
+	// translation, which is the translator's work and rides the build
+	// report's translation census instead. Two or more adjacent letters is
+	// the prose test: a single-letter fragment (basic-pluralize's `s`
+	// suffix spans) is per-instance page data, not catalog material.
+	if (i18nMessages)
+		walkTemplate(root, node => {
+			if (node.kind !== 'text' || !/[A-Za-z]{2}/.test(node.value)) return
+			ctx.diagnostics.push(
+				diagnostic.untranslatedLiteral(source, node.node?.start, node.value),
+			)
+		})
+
+	// LT-190: the component's static `truc:case-type` configuration, for the
+	// translation census's reachability filter (effects/i18n.ts). A literal
+	// `'ordinal'`/`'cardinal'` — or an explicit `undefined`, which is
+	// cardinal by Intl's own default — proves the pruning type; a dynamic
+	// expression (basic-pluralize's `ordinal ? 'ordinal' : undefined`) or no
+	// declaration at all stays `'union'`, the runtime's own fallback, so the
+	// census only skips categories NEITHER configuration reaches in a locale.
+	let caseType: 'cardinal' | 'ordinal' | 'union' = 'union'
+	{
+		let sawType = false
+		let proven: 'cardinal' | 'ordinal' | null = null
+		let conflicted = false
+		walkTemplate(root, node => {
+			if (node.kind !== 'element') return
+			for (const attr of node.attrs) {
+				if (attr.kind !== 'plural-case-type') continue
+				sawType = true
+				const thisType: 'cardinal' | 'ordinal' | null =
+					attr.exprText === '"ordinal"'
+						? 'ordinal'
+						: attr.exprText === '"cardinal"' || attr.exprText === 'undefined'
+							? 'cardinal'
+							: null
+				if (thisType === null) conflicted = true
+				else if (proven === null) proven = thisType
+				else if (proven !== thisType) conflicted = true
+			}
+		})
+		if (sawType && !conflicted && proven !== null) caseType = proven
+	}
 
 	// observedAttributes only fires for Parser-backed initializers — a name
 	// that is not Parser-exposed would make the extension silently inert.
@@ -1582,6 +1687,11 @@ export const compileSource = (
 					tag: root.tag,
 					paramsText: paramsNode ? text(ctx.source, paramsNode) : '',
 					paramNames: [...paramNames],
+					i18nMessages,
+					declaresI18n: declaresI18nOf(paramsNode),
+					langBinding: langBindingOf(paramsNode),
+					langArgDefault: langArgDefaultOf(paramsNode),
+					caseType,
 					setup,
 					clientSetup,
 					plainSetup,
@@ -1610,6 +1720,7 @@ export const compileSource = (
 					imports,
 				},
 		diagnostics: ctx.diagnostics,
+		routingSignals: ctx.routingSignals,
 	}
 }
 

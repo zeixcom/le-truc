@@ -12,7 +12,12 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import { freeIdentifiers, isNode, JS_GLOBALS } from './ast-utils'
+import {
+	collectBoundNames,
+	freeIdentifiers,
+	isNode,
+	JS_GLOBALS,
+} from './ast-utils'
 import { refBranchGuard } from './first-refs'
 import type { ComponentIR, TemplateNode } from './ir'
 
@@ -24,7 +29,12 @@ import type { ComponentIR, TemplateNode } from './ir'
  * these bakes the BUILD MACHINE's reading into the page permanently
  * (CHECKLIST §4). `Date.now()`/`new Date()` are not deterministic at all —
  * there is no argument that could make them server-known — so `Date` is
- * unconditionally impure, unlike `Intl` (handled separately below, LT-142).
+ * impure at the root, with ONE exception (`Date.UTC`, below): the local
+ * constructor and the zone-less formatter read the build machine's
+ * TIMEZONE, while `Date.UTC(y, m - 1, d)` is a pure function of its
+ * arguments (LT-165 step 5's analysis; ADR 0030 s2 resolved the shape this
+ * way — pair it with a `timeZone: 'UTC'` formatter, which `Intl`'s own
+ * locale rule already admits). `Intl` is handled separately below (LT-142).
  */
 const IMPURE_AMBIENT_ROOTS: ReadonlySet<string> = new Set(['Date'])
 
@@ -63,7 +73,8 @@ const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
 
 /**
  * Whether `node` contains a call/read against an impure ambient (CHECKLIST
- * §4): `Date` (and its members — `Date.now()`, `new Date()`), `Math.random()`
+ * §4): `Date` (and its members — `Date.now()`, `new Date()`; `Date.UTC(...)`
+ * excepted — a pure function of its arguments), `Math.random()`
  * specifically (not `Math` at large — `Math.max`/`Math.min`/etc. are pure
  * functions of their arguments, safe to fold), the locale/timezone-reading
  * instance methods (`x.toLocaleString()`, `x.getTimezoneOffset()`) regardless
@@ -76,8 +87,47 @@ const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
 export const containsImpureAmbient = (
 	node: TsrxNode,
 	scope: ReadonlySet<string> = new Set(),
-): boolean => {
+): boolean => impureAmbientCauses(node, scope).length > 0
+
+/**
+ * Why `node` is impure, rather than merely whether it is — the same walk as
+ * {@link containsImpureAmbient}, which is defined in terms of this one so
+ * the two cannot drift.
+ *
+ * The distinction exists for the tier classifier (ADR 0029 sub-design 5,
+ * LT-165). Impurity means "phase 1 must not fold this", which is one
+ * question; "can any server phase answer it" is a different one, and
+ * LT-142's `Intl` rule splits three ways along exactly this seam:
+ *
+ * - `intl-server-locale` never appears here — a resolvable locale is not
+ *   impure at all, and the call folds.
+ * - `intl-dom-locale` is impure for FOLDING (the value harness has no DOM
+ *   to read the locale from) but the REALM can answer it, because it
+ *   executes `getLocale(el)` against a real simulated element. A
+ *   Simulated-tier routing signal, not an unresolvable expression.
+ * - `intl-default-locale` is unresolvable: the default is the build
+ *   machine's own setting, and no driver capability can change that.
+ *
+ * `date`, `rng` and `locale-method` are unresolvable in every tier for the
+ * same reason — their input is the viewing moment or the build machine.
+ */
+export type ImpureAmbientCause =
+	| 'date'
+	| 'rng'
+	| 'locale-method'
+	| 'intl-default-locale'
+	| 'intl-dom-locale'
+
+export const impureAmbientCauses = (
+	node: TsrxNode,
+	scope: ReadonlySet<string> = new Set(),
+): ImpureAmbientCause[] => {
+	const causes: ImpureAmbientCause[] = []
 	let found = false
+	const flag = (cause: ImpureAmbientCause) => {
+		causes.push(cause)
+		found = true
+	}
 	const visit = (current: unknown): void => {
 		if (found) return
 		if (Array.isArray(current)) {
@@ -85,13 +135,20 @@ export const containsImpureAmbient = (
 			return
 		}
 		if (!isNode(current)) return
-		if (
-			current.type === 'Identifier' &&
-			(IMPURE_AMBIENT_ROOTS.has(String(current.name)) ||
-				String(current.name) === 'Intl')
-		) {
-			found = true
-			return
+		if (current.type === 'Identifier') {
+			const name = String(current.name)
+			// A bare `Intl` read reached without matching the call shape below
+			// (a computed member, an aliasing assignment) — conservative, and
+			// unresolvable rather than realm-answerable, since nothing here
+			// proves a locale ever reaches it.
+			if (name === 'Intl') {
+				flag('intl-default-locale')
+				return
+			}
+			if (IMPURE_AMBIENT_ROOTS.has(name)) {
+				flag('date')
+				return
+			}
 		}
 		if (
 			(current.type === 'CallExpression' ||
@@ -106,12 +163,37 @@ export const containsImpureAmbient = (
 			if (
 				isNode(obj) &&
 				obj.type === 'Identifier' &&
+				String(obj.name) === 'Date' &&
+				isNode(prop) &&
+				prop.type === 'Identifier' &&
+				String(prop.name) === 'UTC'
+			) {
+				// The one pure `Date` form: `Date.UTC(...)` converts fixed
+				// arguments to a timestamp with no clock and no timezone read,
+				// so it folds (LT-165 step 5). Still walk the arguments — a
+				// nested `Date.now()` inside them stays flagged — but skip the
+				// callee, whose `Date` identifier would otherwise trip the
+				// generic root check. The LOCAL constructor (`new Date(y, m,
+				// d)`) gets no such admission: it interprets its arguments in
+				// the build machine's timezone, which is limb (b) ambient state
+				// even though it reads no viewing-moment fact (the day must not
+				// depend on where the build ran — ADR 0030 s2 prescribes the
+				// `Date.UTC` + `timeZone: 'UTC'` shape instead).
+				const utcArgs = Array.isArray(current.arguments)
+					? current.arguments
+					: []
+				for (const arg of utcArgs) visit(arg)
+				return
+			}
+			if (
+				isNode(obj) &&
+				obj.type === 'Identifier' &&
 				String(obj.name) === 'Math' &&
 				isNode(prop) &&
 				prop.type === 'Identifier' &&
 				String(prop.name) === 'random'
 			) {
-				found = true
+				flag('rng')
 				return
 			}
 			if (
@@ -119,7 +201,7 @@ export const containsImpureAmbient = (
 				prop.type === 'Identifier' &&
 				IMPURE_AMBIENT_METHODS.has(String(prop.name))
 			) {
-				found = true
+				flag('locale-method')
 				return
 			}
 			if (
@@ -129,7 +211,12 @@ export const containsImpureAmbient = (
 			) {
 				const args = Array.isArray(current.arguments) ? current.arguments : []
 				if (!isLocaleResolvable(args[0], scope)) {
-					found = true
+					// Absent locale → the runtime default, the build machine's own
+					// setting, unresolvable. Present but not server-known → a DOM
+					// read the realm can execute for real (LT-142's middle case).
+					flag(
+						args[0] === undefined ? 'intl-default-locale' : 'intl-dom-locale',
+					)
 					return
 				}
 				// Locale resolved: still walk the remaining arguments (e.g. an
@@ -146,7 +233,7 @@ export const containsImpureAmbient = (
 		}
 	}
 	visit(node)
-	return found
+	return causes
 }
 
 /**
@@ -218,9 +305,21 @@ export const foldableRefGuards = (
 }
 
 /**
+ * Global config attributes the PLATFORM itself reflects (LT-191): `lang`
+ * and `dir` are built-in IDL properties whose accessors read the attribute
+ * verbatim, so a `host.<name>` read mirrors the root attribute's server
+ * expression WITHOUT Parser exposure — there is no parser owning the
+ * attribute→value semantics because the platform owns them. A component
+ * that treats `lang` as config-only (the ADR 0030 posture: the locale
+ * materializes onto the attribute, never a reactive prop) keeps its fold
+ * through this route.
+ */
+const PLATFORM_CONFIG_ATTRS: ReadonlySet<string> = new Set(['lang', 'dir'])
+
+/**
  * Host props whose SERVER-SIDE truth the compiler knows — the
  * substitutable set for {@link hostDerivedFold} (CHECKLIST §5, LT-085).
- * Two ways a prop earns membership, and they are the same fact reached
+ * Three ways a prop earns membership, and they are the same fact reached
  * from opposite directions:
  *
  * 1. **Parser-exposed with a server-rendered root attribute** — the host
@@ -232,6 +331,11 @@ export const foldableRefGuards = (
  *    the site seeds the prop at connect, so the ARG is the value. The
  *    substituted expression is the arg name itself, in scope in the
  *    generated render function.
+ * 3. **A platform config attribute rendered onto the root** (LT-191) —
+ *    `lang`/`dir` are not reactive properties at all (the native accessor
+ *    shadows any expose() accessor, `prop in this`), and the native
+ *    accessor reads the attribute verbatim, so the root attribute's
+ *    `exprText` is the value exactly as in (1), no parser required.
  *
  * Without (2), following the data account costs you the fold: a component
  * that harvests `zero` from its own `.zero` span instead of duplicating it
@@ -244,7 +348,11 @@ export const foldableHostProps = (
 ): ReadonlySet<string> => {
 	const names = new Set<string>()
 	for (const attr of component.root.attrs)
-		if (attr.kind === 'server' && component.parserExposeProps.has(attr.name))
+		if (
+			attr.kind === 'server' &&
+			(component.parserExposeProps.has(attr.name) ||
+				PLATFORM_CONFIG_ATTRS.has(attr.name))
+		)
 			names.add(attr.name)
 	for (const prop of argRenderedProps(component.root)) names.add(prop)
 	return names
@@ -282,11 +390,23 @@ export type HostPropRead = {
  * say it too. Client-side a ref is simply in scope; server-side its
  * presence is whatever `refBranchGuard` (first-refs.ts) computed for it.
  *
+ * `allow` (LT-173 step 6) widens the third refusal — "reads some other
+ * free name" — to names that RESOLVE IN THE RENDER FUNCTION'S SCOPE:
+ * server args, signals (`.get()` is the harness's initial value), and the
+ * transitive-pure setup consts `foldableRenderScope` admits. The spliced
+ * thunk is IIFE-invoked inside the generated render function, so a call to
+ * a setup const (`pluralCategory(host.lang, host.ordinal, host.count)`)
+ * evaluates there exactly as the author wrote it; the same set doubles as
+ * the impure-ambient WALK's scope, so an `Intl` constructor whose locale
+ * is a server-known name (or a such-scoped call's parameter) counts as
+ * locale-resolvable (LT-142's rule, applied transitively). Undefined
+ * restores the pre-LT-173 behavior (no allowances, empty impurity scope).
+ *
  * All-or-nothing: one `host` read that isn't a member of `foldable` (a
  * signal-shaped prop the root doesn't render, a computed member, `host`
  * itself escaping as a bare value), or one free name that is neither
- * foldable nor a foldable ref, disqualifies the WHOLE expression —
- * substituting only some of several reads would fold a
+ * foldable, nor a foldable ref, nor in `allow`, disqualifies the WHOLE
+ * expression — substituting only some of several reads would fold a
  * plausible-looking but wrong initial value, worse than omitting the
  * attribute entirely and letting the client's first pass render it.
  */
@@ -294,8 +414,9 @@ export const hostDerivedFold = (
 	node: TsrxNode,
 	foldable: ReadonlySet<string>,
 	foldableRefs: ReadonlyMap<string, string> = new Map(),
+	allow?: ReadonlySet<string>,
 ): readonly HostPropRead[] | null => {
-	if (containsImpureAmbient(node)) return null
+	if (containsImpureAmbient(node, allow ?? new Set())) return null
 	const reads: HostPropRead[] = []
 	let escaped = false
 	const visit = (current: unknown, bound: ReadonlySet<string>): void => {
@@ -392,8 +513,95 @@ export const hostDerivedFold = (
 	const others = dependenciesOf(node)
 	others.delete('host')
 	for (const ref of foldableRefs.keys()) others.delete(ref)
+	if (allow) for (const name of allow) others.delete(name)
 	if (others.size > 0) return null
 	return reads
+}
+
+/**
+ * The names a host-derived fold may leave IN the spliced thunk for the
+ * render function's scope to resolve (LT-173 step 6): the component's
+ * `serverKnown`, with every setup const replaced by the subset that is
+ * TRANSITIVELY PURE — its initializer contains no impure ambient (checked
+ * against `serverKnown` widened by the initializer's own bound parameters,
+ * so an `Intl` constructor whose locale is a helper parameter counts as
+ * resolvable — the value arrives from the spliced call sites) and every
+ * setup const it references is admitted too, to a fixpoint. A rejected
+ * const stays rejected, and so does every thunk that calls it: an impure
+ * body would only run AT fold time (the declaration doesn't execute it),
+ * which is exactly what the fold must not do.
+ *
+ * Signals keep their `serverKnown` membership: under the value harness a
+ * signal IS its initial value (`.get()` reads once, `.set()` is a no-op),
+ * so a `.get()` inside a spliced thunk renders the declared initial — the
+ * same exposure the plain `isServerEvaluable` path already has.
+ *
+ * Consumers: `hostDerivedFold`'s `allow` in `analysis/effects.ts` (the
+ * TSRX034 routing check — it must agree with what the emitter folds) and
+ * `emit-server.ts` (the fold itself). One implementation for both, or the
+ * two drift.
+ */
+export const foldableRenderScope = (
+	component: ComponentIR,
+): ReadonlySet<string> => {
+	/** Plain setup consts, by declared name (signals excluded). */
+	const constInits = new Map<string, TsrxNode>()
+	for (const stmt of component.setup) {
+		if (stmt.name === null) continue
+		if (component.signals.some(signal => signal.name === stmt.name)) continue
+		constInits.set(stmt.name, stmt.node)
+	}
+	const scope = new Set<string>(
+		[...component.serverKnown].filter(name => !constInits.has(name)),
+	)
+	/** Names bound by function parameters / catch clauses within `node`. */
+	const boundWithin = (node: unknown, into: Set<string>): void => {
+		if (Array.isArray(node)) {
+			for (const child of node) boundWithin(child, into)
+			return
+		}
+		if (!isNode(node)) return
+		if (
+			node.type === 'ArrowFunctionExpression' ||
+			node.type === 'FunctionExpression' ||
+			node.type === 'FunctionDeclaration'
+		) {
+			for (const param of Array.isArray(node.params) ? node.params : [])
+				collectBoundNames(param, into)
+		}
+		if (node.type === 'CatchClause' && isNode(node.param))
+			collectBoundNames(node.param, into)
+		for (const [key, value] of Object.entries(node)) {
+			if (
+				key === 'loc' ||
+				key === 'range' ||
+				key === 'parent' ||
+				key === 'type' ||
+				key === 'start' ||
+				key === 'end'
+			)
+				continue
+			if (value && typeof value === 'object') boundWithin(value, into)
+		}
+	}
+	let changed = true
+	while (changed) {
+		changed = false
+		for (const [name, init] of constInits) {
+			if (scope.has(name)) continue
+			const params = new Set<string>()
+			boundWithin(init, params)
+			const checkScope = new Set([...component.serverKnown, ...params])
+			if (impureAmbientCauses(init, checkScope).length > 0) continue
+			let callsRejected = false
+			for (const free of dependenciesOf(init))
+				if (constInits.has(free) && !scope.has(free)) callsRejected = true
+			if (callsRejected) continue
+			scope.add(name)
+			changed = true
+		}
+	}
+	return scope
 }
 
 /**

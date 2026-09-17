@@ -194,7 +194,10 @@ signal is **two numbers**, not one:
    route") and does not move `check:tsrx`'s count — `form-listbox`'s TSRX034 stays standing.
    The gate-wave target is **7 unique**, not 6: `LT-146` alone delivers the compile
    reduction (8 → 7), and `form-listbox`'s TSRX034 joins the six `basic-pluralize` refusals
-   in the stage-3 (LT-165) retirement bucket, seven total.]
+   in the stage-3 (LT-165) retirement bucket, seven total.
+   **Landed, 2026-09-06 (LT-165 step 5):** the seven retired with the channel
+   reclassification (ADR 0029 § 5) — the standing `check:tsrx` count is **0**, and those
+   conditions ride the tier census (`server/tsrx/tier.ts`) instead of the warning channel.]
 2. **The build-report baseline** — `server/tests/tsrx/sim-driver.test.ts` runs the corpus
    through the simulation driver and requires **zero unclassified diagnostics**. The driver
    raises a diagnostic per condition (a jsdom `jsdomError`, an unhandled rejection, a
@@ -212,6 +215,33 @@ stops matching anything (the condition was fixed), retire the classification; th
 test says so. Tech Writer owns the report copy — see the `tech-writer` skill's
 `workflows/error-message-lifecycle.md` (the five conditions are tier 2: wording says the
 component *keeps* its server-rendered markup, never that the page broke).
+
+The **tier census** (LT-165 step 6, ADR 0029 § 6) is a third record, not a third baseline
+number: `check:tsrx` prints it as its own section after the compile-warning baseline
+(`Tier census — N entries: …`), never inside any warning count. It is built from the
+registry's post-contamination tiers by `tierCensus`/`formatCensus` in
+`server/tsrx/sim/report.ts` and is expected to grow — a component moving Folded → Simulated
+is a build-cost regression visible there. `census.test.ts` pins the record shape and its
+formatting; `tier-corpus.test.ts` pins what the census decides about the corpus, including
+form-combobox's post-contamination Simulated record.
+
+The **realm-side suppression of unresolvable sites** (LT-165 step 7, ADR 0029 § 1's
+implementation constraint) is pinned by `suppression.test.ts` over synthetic
+Simulated-tier fixtures: attribute, text-child, and dirty-flag (`prop`) record forms, both
+upgrade timings (define-replay and parse-time), and an unwired realm as the standing
+negative control. The corpus carries no suppressed sites today, so the
+`sim-driver.test.ts` fixtures and the baselines above are unchanged by it.
+
+The **CI equivalence audit** (LT-165 step 8, ADR 0029 § 7 as amended 2026-09-06) runs the
+realm over every Folded-tier component's harness render and pins the per-component connect
+diff as a snapshot (`equivalence-audit.test.ts`, one per Folded component) — the record of
+that component's hydration boundary: serializer normalization, the client's designed
+connect-time writes, and any overwrite of server-rendered state, which is the class a
+changed diff is a review trigger for. The original byte-identity rule was found structurally
+void at landing — in a Folded component every signal seeds from a DOM harvest, so the two
+mechanisms share their input by construction and cannot independently disagree on a server
+value; see the amendment in the ADR. A changed diff is a review trigger, not an automatic
+mechanism failure.
 
 ---
 

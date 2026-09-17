@@ -24,7 +24,7 @@ describe('Bundle size', () => {
 	// mechanism in src/extension.ts. Each tier measures a fresh minified
 	// build, matching what a consumer's bundler ships (not the published,
 	// unminified index.js).
-	test('minimal entry (defineComponent, no extensions) must stay under 8 kB gzipped', async () => {
+	test('minimal entry (defineComponent, no extensions) must stay at or under 9 kB gzipped', async () => {
 		const gzipped = await buildGzipped('./test/fixtures/minimal-entry.ts')
 		console.log(`  minimalGzipped: ${gzipped}B (ceiling: ${MINIMAL_CEILING}B)`)
 		expect(gzipped).toBeLessThanOrEqual(MINIMAL_CEILING)
@@ -54,7 +54,7 @@ describe('Bundle size', () => {
 		expect(code).not.toContain('[le-truc debug]')
 	})
 
-	test('core + formAssociated() warns if it exceeds 14 kB gzipped', async () => {
+	test('core + formAssociated() warns if it exceeds 10 kB gzipped', async () => {
 		const gzipped = await buildGzipped('./test/fixtures/core-form-entry.ts')
 		console.log(`  coreFormGzipped: ${gzipped}B (warn: ${CORE_FORM_WARN}B)`)
 		if (gzipped > CORE_FORM_WARN) {

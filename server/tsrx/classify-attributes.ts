@@ -16,6 +16,7 @@ import {
 	text,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
+import { PLURAL_CATEGORIES } from './i18n'
 import type {
 	AttributeIR,
 	ComposeAttrIR,
@@ -115,6 +116,14 @@ const renamedPassReason =
 /** The host-owned dynamic-rendering attribute, and its pre-LT-137 name. */
 const HTML_ATTR = 'truc:html'
 const LEGACY_HTML_ATTR = 'html'
+
+/**
+ * The plural-alternative marker (ADR 0030 sub-design 6, LT-173 step 7).
+ * Consumed by the compiler — the element is pruned to the locale's actual
+ * CLDR category set at render time — so it renders no attribute.
+ */
+const PLURAL_CASE_ATTR = 'truc:case'
+const PLURAL_CASE_TYPE_ATTR = 'truc:case-type'
 
 const renamedHtmlReason =
 	'`html={…}` is now `truc:html={…}` — host-owned attributes are namespaced so they cannot collide with a user prop called `html` (LT-128). Core TSRX defines no `{html expr}` keyword in any published release; it delegates raw markup to the host, and Le Truc owns this one because it routes the value through `sanitizeHtml` rather than assigning it raw.'
@@ -250,6 +259,52 @@ export const classifyAttribute = (
 			reactive: false,
 		}
 	}
+	if (name === PLURAL_CASE_ATTR) {
+		// Checked before the ordinary static/server fallthroughs: the
+		// marker's value must be a CLDR category literal (the pruning target
+		// is a compile-time fact, not a render-time expression), and it
+		// renders no attribute of its own.
+		const category =
+			isNode(value) && value.type === 'Literal'
+				? String(value.value ?? '')
+				: null
+		if (category !== null && PLURAL_CATEGORIES.has(category))
+			return { kind: 'plural-case', category }
+		return {
+			kind: 'invalid',
+			reason: `truc:case must be a CLDR plural category literal (one of zero, one, two, few, many, other)${category === null ? '' : `, got \`${category}\``} — the element is one rendered alternative per category, pruned to the locale's actual set at render time (ADR 0030 sub-design 6).`,
+		}
+	}
+	if (name === PLURAL_CASE_TYPE_ATTR) {
+		// The group's configured `Intl.PluralRules` type, evaluated per
+		// render call: a string literal, or a server expression (typically
+		// `ordinal ? 'ordinal' : undefined` over the component's own args).
+		// Both emit verbatim as `pluralCategories`'s second argument; a
+		// runtime `undefined` is the union fallback.
+		if (!isNode(value))
+			return {
+				kind: 'plural-case-type',
+				exprText: 'undefined',
+				node: attr,
+			}
+		if (value.type === 'Literal')
+			return {
+				kind: 'plural-case-type',
+				exprText: JSON.stringify(String(value.value ?? '')),
+				node: value,
+			}
+		if (value.type === 'JSXExpressionContainer' && isNode(value.expression))
+			return {
+				kind: 'plural-case-type',
+				exprText: text(ctx.source, value.expression),
+				node: value.expression,
+			}
+		return {
+			kind: 'invalid',
+			reason:
+				"truc:case-type expects a string literal or a server expression (e.g. truc:case-type={ordinal ? 'ordinal' : undefined}) — the Intl.PluralRules type the truc:case group prunes by (ADR 0030 sub-design 6).",
+		}
+	}
 	if (!isNode(value)) return { kind: 'static', name, value: null }
 	if (value.type === 'Literal')
 		return { kind: 'static', name, value: String(value.value ?? '') }
@@ -363,6 +418,17 @@ export const classifyComposeAttribute = (
 			kind: 'invalid',
 			reason:
 				"`ref={name}` is retired (LT-055/LT-127) — use `const name = first(selector, required)` in setup instead. A composed element is addressed by the tag it renders plus its own compose-site class/id, e.g. `const lightness = first('form-spinbutton.lightness', 'required')`.",
+		}
+	// The reserved `i18n` parameter (ADR 0030 sub-design 2, LT-173): the
+	// compiler supplies it at every render call boundary — a caller-authored
+	// `i18n` attribute here would collide with the compiler's own record
+	// argument in the generated call. Same reserved-name posture as the
+	// markup-between-tags channel for `children`.
+	if (name === 'i18n')
+		return {
+			kind: 'invalid',
+			reason:
+				"`i18n` is a reserved parameter (ADR 0030) — the compiler supplies the locale record; callers never pass it. To set the child's locale, pass `lang` instead.",
 		}
 	if (!isNode(value)) return { kind: 'arg', name, exprText: 'true', node: null }
 	if (value.type === 'Literal')

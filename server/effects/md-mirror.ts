@@ -1,4 +1,4 @@
-import { OUTPUT_DIR, PAGES_DIR } from '../config'
+import { LOCALES, OUTPUT_DIR, PAGES_DIR } from '../config'
 import { docsMarkdown, type PageMetadata } from '../file-signals'
 import { getFilePath, getRelativePath, writeFileSafe } from '../io'
 import { createBuildEffect } from './build-effect'
@@ -111,8 +111,13 @@ export const mdMirrorEffect = (onRebuild?: () => void) =>
 		async ([processedFiles]) => {
 			console.log('🪞 Generating Markdown mirrors...')
 
-			const writePromises = Array.from(processedFiles.entries()).map(
-				async ([path, file]) => {
+			// Mirrored per locale alongside the pages they mirror (LT-174): the
+			// layout's `alternate-link` is page-relative, so the mirror has to
+			// live in the same locale tree as its `.html`. The CONTENT is the
+			// source markdown either way — a locale whose catalog has not landed
+			// mirrors the source text, exactly as its rendered page does.
+			const writePromises = LOCALES.flatMap(locale =>
+				Array.from(processedFiles.entries()).map(async ([path, file]) => {
 					const relativePath = getRelativePath(PAGES_DIR, path)
 					if (!relativePath) return
 
@@ -120,13 +125,16 @@ export const mdMirrorEffect = (onRebuild?: () => void) =>
 					const cleanContent = stripMarkdocTags(file.content)
 					const output = `${frontmatter}${cleanContent}\n`
 
-					await writeFileSafe(getFilePath(OUTPUT_DIR, relativePath), output)
-				},
+					await writeFileSafe(
+						getFilePath(OUTPUT_DIR, locale, relativePath),
+						output,
+					)
+				}),
 			)
 
 			await Promise.all(writePromises)
 			console.log(
-				`🪞 Generated ${processedFiles.size} Markdown mirror${processedFiles.size === 1 ? '' : 's'}`,
+				`🪞 Generated ${writePromises.length} Markdown mirror${writePromises.length === 1 ? '' : 's'} across ${LOCALES.length} locale(s)`,
 			)
 		},
 		onRebuild,

@@ -11,8 +11,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import {
 	ASSETS_DIR,
-	BLOG_OUTPUT_DIR,
+	DEFAULT_LOCALE,
 	EXAMPLES_DIR,
+	LOCALES,
 	OUTPUT_DIR,
 	SOURCES_DIR,
 } from '../config'
@@ -83,6 +84,10 @@ type TestServer = {
 	close: () => void
 }
 
+/** Mirrors serve.ts's locale-prefix guard (LT-174). */
+const isLocale = (segment: string): boolean =>
+	(LOCALES as readonly string[]).includes(segment)
+
 function startTestServer(opts: { development?: boolean } = {}): TestServer {
 	const isDev = opts.development ?? false
 
@@ -137,31 +142,51 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 				return serveFile(filePath)
 			},
 
-			'/blog/:slug': req => {
-				const slug = req.params.slug.replace(/\.html$/, '')
-				const filePath = getFilePath(BLOG_OUTPUT_DIR, `${slug}.html`)
-				// Guard against path traversal
-				const rel = filePath.startsWith(BLOG_OUTPUT_DIR) ? filePath : null
+			// Pages live under a locale prefix since LT-174; these mirror
+			// serve.ts's locale-prefixed routes.
+			'/:locale/blog/:slug': req => {
+				const { locale, slug } = req.params
+				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
+				const blogDir = getFilePath(OUTPUT_DIR, locale, 'blog')
+				const filePath = getFilePath(
+					blogDir,
+					`${slug.replace(/\.html$/, '')}.html`,
+				)
+				const rel = filePath.startsWith(blogDir) ? filePath : null
 				return rel ? serveFile(rel) : new Response('Not Found', { status: 404 })
 			},
 
-			'/:page': req => {
-				const filePath = getFilePath(OUTPUT_DIR, req.params.page)
-				// Bare section roots (/blog, /examples, /api) resolve to
-				// directories — redirect to the matching page if it exists
-				if (isDirectory(filePath)) {
-					const page = req.params.page.replace(/\.html$/, '')
-					if (fileExists(getFilePath(OUTPUT_DIR, `${page}.html`)))
+			'/:locale/:page': req => {
+				const { locale, page } = req.params
+				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
+				const localeDir = getFilePath(OUTPUT_DIR, locale)
+				const filePath = getFilePath(localeDir, page)
+				// Extensionless page URLs redirect to the page (LT-174)
+				if (!page.includes('.') || isDirectory(filePath)) {
+					const name = page.replace(/\.html$/, '')
+					if (fileExists(getFilePath(localeDir, `${name}.html`)))
 						return new Response(null, {
 							status: 301,
-							headers: { Location: `/${page}.html` },
+							headers: { Location: `/${locale}/${name}.html` },
 						})
 					return new Response('Not Found', { status: 404 })
 				}
 				return serveFile(filePath)
 			},
 
-			'/': () => serveFile(getFilePath(OUTPUT_DIR, 'index.html')),
+			'/:locale': req => {
+				const { locale } = req.params
+				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
+				return serveFile(getFilePath(OUTPUT_DIR, locale, 'index.html'))
+			},
+
+			'/index.html': () => serveFile(getFilePath(OUTPUT_DIR, 'index.html')),
+
+			'/': () =>
+				new Response(null, {
+					status: 302,
+					headers: { Location: `/${DEFAULT_LOCALE}/index.html` },
+				}),
 		},
 
 		fetch() {
@@ -200,8 +225,14 @@ describe('route responses', () => {
 		expect(await res.text()).toBe('Not available in production')
 	})
 
-	test('GET / → 200 with HTML', async () => {
-		const res = await fetch(`${server.url}/`)
+	test('GET / → 302 to the default locale', async () => {
+		const res = await fetch(`${server.url}/`, { redirect: 'manual' })
+		expect(res.status).toBe(302)
+		expect(res.headers.get('location')).toBe(`/${DEFAULT_LOCALE}/index.html`)
+	})
+
+	test('GET /en → 200 with HTML (bare locale root)', async () => {
+		const res = await fetch(`${server.url}/en`)
 		expect(res.status).toBe(200)
 		const body = await res.text()
 		expect(body.toLowerCase()).toContain('<!doctype html')
@@ -214,9 +245,19 @@ describe('route responses', () => {
 		expect(body.toLowerCase()).toContain('<!doctype html')
 	})
 
-	test('GET /getting-started.html → 200 (existing page)', async () => {
-		const res = await fetch(`${server.url}/getting-started.html`)
+	test('GET /en/getting-started.html → 200 (existing page)', async () => {
+		const res = await fetch(`${server.url}/en/getting-started.html`)
 		expect(res.status).toBe(200)
+	})
+
+	test('GET /de/getting-started.html → 200 (the second locale tree)', async () => {
+		const res = await fetch(`${server.url}/de/getting-started.html`)
+		expect(res.status).toBe(200)
+	})
+
+	test('GET /fr/getting-started.html → 404 (locale not built)', async () => {
+		const res = await fetch(`${server.url}/fr/getting-started.html`)
+		expect(res.status).toBe(404)
 	})
 
 	test('GET /nonexistent.html → 404', async () => {
@@ -354,26 +395,26 @@ describe('bare section roots', () => {
 		server.close()
 	})
 
-	test('GET /blog → 301 to /blog.html', async () => {
-		const res = await fetch(`${server.url}/blog`, { redirect: 'manual' })
+	test('GET /en/blog → 301 to /en/blog.html', async () => {
+		const res = await fetch(`${server.url}/en/blog`, { redirect: 'manual' })
 		expect(res.status).toBe(301)
-		expect(res.headers.get('location')).toBe('/blog.html')
+		expect(res.headers.get('location')).toBe('/en/blog.html')
 	})
 
-	test('GET /examples → 301 to /examples.html', async () => {
-		const res = await fetch(`${server.url}/examples`, { redirect: 'manual' })
+	test('GET /en/examples → 301 to /en/examples.html', async () => {
+		const res = await fetch(`${server.url}/en/examples`, { redirect: 'manual' })
 		expect(res.status).toBe(301)
-		expect(res.headers.get('location')).toBe('/examples.html')
+		expect(res.headers.get('location')).toBe('/en/examples.html')
 	})
 
-	test('GET /api → 301 to /api.html', async () => {
-		const res = await fetch(`${server.url}/api`, { redirect: 'manual' })
+	test('GET /en/api → 301 to /en/api.html', async () => {
+		const res = await fetch(`${server.url}/en/api`, { redirect: 'manual' })
 		expect(res.status).toBe(301)
-		expect(res.headers.get('location')).toBe('/api.html')
+		expect(res.headers.get('location')).toBe('/en/api.html')
 	})
 
-	test('GET /blog follows the redirect to the blog index page', async () => {
-		const res = await fetch(`${server.url}/blog`)
+	test('GET /en/blog follows the redirect to the blog index page', async () => {
+		const res = await fetch(`${server.url}/en/blog`)
 		expect(res.status).toBe(200)
 		const body = await res.text()
 		expect(body.toLowerCase()).toContain('<!doctype html')

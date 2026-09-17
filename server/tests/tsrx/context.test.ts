@@ -115,7 +115,10 @@ describe('requestContext() — misuse diagnostics', () => {
 		expect(diagnostics.some(d => d.code === 'TSRX016')).toBe(true)
 	})
 
-	test('requestContext nested inside a plain setup const is TSRX013', () => {
+	test('requestContext nested inside a plain setup const is a routing signal (LT-165 step 5)', () => {
+		// ADR 0029 s5: a setup const the harness cannot evaluate routes the
+		// component Simulated instead of erroring — the realm runs the client
+		// module, where `requestContext` resolves for real.
 		const source = `export function C({}: {})
 		@{
 			const wrapped = [requestContext('motion', 'unknown')]
@@ -125,8 +128,16 @@ describe('requestContext() — misuse diagnostics', () => {
 				<style>c-el { color: red }</style>
 			</>
 		}`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(true)
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
+		expect(
+			component?.entry.routingSignals.some(s => s.origin === 'TSRX013'),
+		).toBe(true)
+		expect(component?.entry.tier).toBe('simulated')
 	})
 })
 
@@ -162,7 +173,7 @@ import { createCell } from '@zeix/le-truc'`
 		)
 	})
 
-	test('assigning its result to a const is TSRX013 (client-only primitive in a plain setup const)', () => {
+	test('assigning its result to a const routes, not errors (LT-165 step 5)', () => {
 		const badSource = `export function C({}: {})
 		@{
 			const count = createCell(0)
@@ -174,7 +185,15 @@ import { createCell } from '@zeix/le-truc'`
 			</>
 		}
 import { createCell } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(badSource, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(true)
+		const { component, diagnostics } = compileComponent(
+			badSource,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
+		expect(
+			component?.entry.routingSignals.some(s => s.origin === 'TSRX013'),
+		).toBe(true)
+		expect(component?.entry.tier).toBe('simulated')
 	})
 })

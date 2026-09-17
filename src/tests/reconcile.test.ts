@@ -40,6 +40,54 @@ afterEach(() => {
 	restoreActiveCollector(previousCollector)
 })
 
+/* === DEV_MODE + console capture === */
+
+const captureWarns = <T>(fn: () => T): { calls: unknown[][]; result: T } => {
+	const original = console.warn
+	const calls: unknown[][] = []
+	console.warn = (...args: unknown[]) => calls.push(args)
+	try {
+		return { calls, result: fn() }
+	} finally {
+		console.warn = original
+	}
+}
+
+const captureWarnsAsync = async <T>(
+	fn: () => Promise<T>,
+): Promise<{ calls: unknown[][]; result: T }> => {
+	const original = console.warn
+	const calls: unknown[][] = []
+	console.warn = (...args: unknown[]) => calls.push(args)
+	try {
+		return { calls, result: await fn() }
+	} finally {
+		console.warn = original
+	}
+}
+
+const withDevMode = <T>(fn: () => T): T => {
+	const prev = process.env.DEV_MODE
+	process.env.DEV_MODE = 'true'
+	try {
+		return fn()
+	} finally {
+		if (prev === undefined) delete process.env.DEV_MODE
+		else process.env.DEV_MODE = prev
+	}
+}
+
+const withDevModeAsync = async <T>(fn: () => Promise<T>): Promise<T> => {
+	const prev = process.env.DEV_MODE
+	process.env.DEV_MODE = 'true'
+	try {
+		return await fn()
+	} finally {
+		if (prev === undefined) delete process.env.DEV_MODE
+		else process.env.DEV_MODE = prev
+	}
+}
+
 /* === Fake DOM === */
 
 class FakeElement {
@@ -249,6 +297,94 @@ describe('reconcile — first run', () => {
 		)
 
 		expect(childKeys(container)).toEqual(['item0'])
+		dispose()
+	})
+
+	test('warns in DEV_MODE for every removal in the adoption pass, keyed or not', () => {
+		// LT-185: the adoption pass discards markup the AUTHOR wrote, so an
+		// unkeyed child dropped here used to vanish at upgrade with no signal
+		// at all — the shape that cost form-tokenbox its only text input.
+		const container = new FakeElement('ul')
+		container.appendChild(keyedChild('stale'))
+		container.appendChild(new FakeElement('input')) // unkeyed, authored
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+
+		const { calls } = captureWarns(() =>
+			withDevMode(() => {
+				const dispose = createScope(() =>
+					reconcile(
+						container as unknown as Element,
+						makeTemplate(),
+						list,
+						() => {},
+					)(),
+				)
+				dispose()
+			}),
+		)
+
+		const messages = calls.map(c => String(c[0]))
+		expect(messages).toHaveLength(2)
+		// The keyed message is unchanged; the unkeyed one is new and must name
+		// the element and the opt-out, or it does not help the author.
+		expect(messages.some(m => m.includes('data-key="stale"'))).toBe(true)
+		const unkeyed = messages.find(m => m.includes('<input>'))
+		expect(unkeyed).toBeDefined()
+		expect(unkeyed).toContain('initial reconciliation')
+		expect(unkeyed).toContain('data-unreconciled')
+	})
+
+	test('the data-unreconciled opt-out silences the adoption-pass warning', () => {
+		// The negative direction: the documented escape hatch must not warn, or
+		// the warning trains authors to ignore it.
+		const container = new FakeElement('ul')
+		const authored = new FakeElement('input')
+		authored.setAttribute('data-unreconciled', '')
+		container.appendChild(authored)
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+
+		const { calls } = captureWarns(() =>
+			withDevMode(() => {
+				const dispose = createScope(() =>
+					reconcile(
+						container as unknown as Element,
+						makeTemplate(),
+						list,
+						() => {},
+					)(),
+				)
+				dispose()
+			}),
+		)
+
+		expect(calls).toHaveLength(0)
+		expect(container.children).toContain(authored)
+	})
+
+	test('unkeyed removals AFTER the first run stay silent — self-cleaning is the point', async () => {
+		// The scoping the warning depends on: once reconcile owns the
+		// container, discarding foreign children is designed behaviour, and
+		// warning on it would be noise on every structural update.
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+		const dispose = createScope(() =>
+			reconcile(
+				container as unknown as Element,
+				makeTemplate(),
+				list,
+				() => {},
+			)(),
+		)
+
+		const { calls } = await captureWarnsAsync(async () =>
+			withDevModeAsync(async () => {
+				container.appendChild(new FakeElement('div')) // external mutation
+				list.add('b')
+				await Promise.resolve()
+			}),
+		)
+
+		expect(calls).toHaveLength(0)
 		dispose()
 	})
 

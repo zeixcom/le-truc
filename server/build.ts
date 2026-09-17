@@ -11,6 +11,7 @@ import { mdMirrorEffect } from './effects/md-mirror'
 import { mocksEffect } from './effects/mocks'
 import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
+import { simulateTsrxCorpus } from './effects/simulate'
 import { sitemapEffect } from './effects/sitemap'
 import { sourcesEffect } from './effects/sources'
 import { staticAssetsEffect } from './effects/static-assets'
@@ -70,6 +71,15 @@ export async function build(
 		const tsrx = tsrxEffect(scheduleReload)
 
 		await Promise.all([api.ready, css.ready, staticAssets.ready, tsrx.ready])
+
+		// ADR 0027 stage 2 (LT-169): execute every Simulated-tier component's
+		// generated client against the realm and gate on the build report.
+		// One-shot builds only — a watch rebuild re-imports the same generated
+		// client paths, and one module cache per process means the second load
+		// records no definitions (ADR 0027 sub-design 10). The realm is
+		// therefore created and disposed exactly once per build process, which
+		// is also the disposal posture the driver requires.
+		if (!watch) await simulateTsrxCorpus()
 
 		const js = jsEffect(scheduleReload)
 		await js.ready

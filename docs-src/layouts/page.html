@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}">
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,6 +23,7 @@
 			src="{{ base-path }}assets/main.js?v={{ js-hash }}"
 		></script>
 		<link rel="alternate" type="text/markdown" title="Agent-readable content" href="{{ alternate-link }}">
+		{{ hreflang-alternates }}
 	</head>
 
 	<body class="{{ section }}">

@@ -354,7 +354,27 @@ export const emitClientModule = (
 	// Signals seeded by DOM harvest
 	for (const signal of component.signals) {
 		const harvest = plan.harvests.find(h => h.signal === signal.name)
-		if (!harvest) continue
+		if (!harvest) {
+			// No harvest site — under tiering (LT-165 step 5, ADR 0029 s5) this
+			// is a routing signal, not a compile error, and the client module is
+			// the artifact every tier's mechanism runs (the realm replays it for
+			// Simulated-tier components; Static-tier components are "the client
+			// corrects at connect"). So the declaration MUST exist here: seeded
+			// from its own initializer, exactly as a hand-written factory would
+			// declare it. An initializer naming a server param has no client
+			// representation — that surfaces as a tsc failure on this generated
+			// module (`check:tsrx`), mapped back through the span table to the
+			// declaration's own line (the LT-136 posture: loud, not silent).
+			// `requestContext` signals never get a harvest and are declared by
+			// the dedicated verbatim path below.
+			if (signal.constructor === 'requestContext') continue
+			imports.add(signal.constructor)
+			push(
+				`const ${signal.name} = ${signal.text}`,
+				sliceOf(signal.text, signal.textStart),
+			)
+			continue
+		}
 		imports.add(signal.constructor)
 		if (harvest.kind === 'list') {
 			if (harvest.seed === 'verbatim') {

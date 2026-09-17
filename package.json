@@ -59,6 +59,7 @@
 		"dev": "NODE_ENV=development bun --watch server/dev.ts",
 		"lint": "bunx biome check --write ./src",
 		"lint:examples": "bunx biome check --write ./examples",
+		"lint:server": "bunx biome check --write ./server",
 		"serve": "bun server/serve.ts",
 		"serve:docs": "bun server/serve.ts --build-first",
 		"serve:examples": "bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts",
@@ -76,6 +77,7 @@
 		"verify:cem": "bun run scripts/verify-cem.ts",
 		"check:tsrx": "bun run scripts/check-tsrx.ts",
 		"check:sim": "bun run scripts/sim-portability-check.ts",
+		"i18n:sync": "bun run scripts/i18n-sync.ts",
 		"eval:substrate": "bun run scripts/substrate-evaluation.ts",
 		"build:tsrx:browser": "bun run scripts/build-tsrx-browser.ts"
 	},

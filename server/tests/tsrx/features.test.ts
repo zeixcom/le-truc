@@ -540,7 +540,43 @@ import { createState, createMemo } from '@zeix/le-truc'`
 		)
 	})
 
-	test('a compute function reading host/internals is TSRX013, not broken server codegen', () => {
+	test('a compute function reading host/internals routes Simulated when unrendered (LT-165 step 5)', () => {
+		// ADR 0029 s5: the shape the harness cannot run (`createMemo` invokes
+		// its compute at render time, where `host` doesn't exist) is a routing
+		// signal. The Simulated-tier server module drops the const; the client
+		// declares it when something client-side reads it.
+		const source = `export function C({}: {})
+	@{
+		expose({ filter: asString('') })
+		const lowerFilter = createMemo(() => host.filter.toLowerCase())
+		<>
+			<c-el>
+				<p>static</p>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { asString, createMemo } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).not.toBeNull()
+		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
+		const hit = component?.entry.routingSignals.find(
+			s => s.origin === 'TSRX013',
+		)
+		expect(hit?.detail).toContain('`lowerFilter`')
+		expect(component?.entry.tier).toBe('simulated')
+		expect(component?.serverCode).not.toContain('createMemo')
+	})
+
+	test('the same compute rendered into the markup is a hard error (TSRX046, LT-165 step 5)', () => {
+		// The residue the reclassification must not paper over: `{lowerFilter}`
+		// is a static server splice, and no tier can produce its value — the
+		// fold cannot run the read and no client binding ever corrects a
+		// static splice. Unrendered consts route (above); rendered ones error.
 		const source = `export function C({}: {})
 	@{
 		expose({ filter: asString('') })
@@ -559,11 +595,11 @@ import { asString, createMemo } from '@zeix/le-truc'`
 			new Set(),
 		)
 		expect(component).toBeNull()
-		expect(
-			diagnostics.some(
-				d => d.code === 'TSRX013' && d.message.includes('createMemo'),
-			),
-		).toBe(true)
+		const hit = diagnostics.find(d => d.code === 'TSRX046')
+		expect(hit).toBeDefined()
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('`lowerFilter`')
+		expect(hit?.message).toContain('`host`')
 	})
 })
 

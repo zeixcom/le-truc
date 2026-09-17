@@ -459,7 +459,13 @@ describe('rewrite-rule enforcement', () => {
 		expect(hit?.message).toContain('Render it')
 	})
 
-	test('signal never rendered is TSRX004 (no harvestable site)', () => {
+	test('signal never rendered is a routing signal, not a diagnostic (LT-165 step 5)', () => {
+		// ADR 0029 s5: TSRX004 left the channel — "no harvestable site" is a
+		// statement about the harness, and the tier machinery now routes on it.
+		// The component still compiles, classifies Simulated (a literal
+		// initializer is realm-answerable), and the generated client declares
+		// the signal from its own initializer — the realm replays that module,
+		// so the declaration is what makes the shape actually work.
 		const source = `export function C({}: {})
 	@{
 		const ghost = createCell(1)
@@ -471,10 +477,19 @@ describe('rewrite-rule enforcement', () => {
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX004')
-		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('`ghost`')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
+		const signals = component?.entry.routingSignals ?? []
+		const hit = signals.find(s => s.origin === 'TSRX004')
+		expect(hit?.detail).toContain('`ghost`')
+		expect(hit?.resolution).toEqual({ by: 'realm' })
+		expect(component?.entry.tier).toBe('simulated')
+		expect(component?.clientCode).toContain('const ghost = createCell(1)')
 	})
 
 	test('signal read only in a computed reactive thunk is NOT TSRX004 (LT-036)', () => {
@@ -556,7 +571,7 @@ import { createCell } from '@zeix/le-truc'`
 		expect(hits.some(h => h.message.includes('span'))).toBe(true)
 	})
 
-	test('a signal conditionally choosing between two constructors is TSRX013', () => {
+	test('a signal conditionally choosing between two constructors is TSRX044', () => {
 		const source = `export function C({ big = false }: { big?: boolean })
 	@{
 		const n = big ? deriveCell(() => 1) : createCell(0)
@@ -568,17 +583,25 @@ import { createCell } from '@zeix/le-truc'`
 	}
 import { deriveCell, createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX013')
+		// Own code since LT-165's split: a format rule (ADR 0024 s12), not a
+		// server-evaluation guard, so it stays an error under tiering.
+		const hit = diagnostics.find(d => d.code === 'TSRX044')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`n`')
 		expect(hit?.message).toContain('conditionally chooses')
+		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
 	})
 
-	test('a plain setup const calling a client-only primitive directly is TSRX013', () => {
+	test('a plain setup const calling a client-only primitive routes, not errors (LT-165 step 5)', () => {
 		// `first()` is deliberately excluded from this example since LT-055:
 		// a two-string-literal-argument `first()` call is now the sanctioned
 		// `ref={}` replacement (see the "first() element references" describe
 		// block below), not a generic client-only primitive.
+		//
+		// ADR 0029 s5: the shape the value harness cannot run is a Simulated-
+		// tier routing signal. The const lands in plainSetup, so the client
+		// module still declares it (`all` resolves in the factory) and the
+		// tier-aware server emit drops it.
 		const source = `export function C({}: {})
 	@{
 		const n = createCell(1)
@@ -590,11 +613,23 @@ import { deriveCell, createCell } from '@zeix/le-truc'`
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX013')
-		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('`el`')
-		expect(hit?.message).toContain('`all`')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
+		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
+		const signals = component?.entry.routingSignals ?? []
+		const hit = signals.find(s => s.origin === 'TSRX013')
+		expect(hit?.detail).toContain('`el`')
+		expect(hit?.detail).toContain('all')
+		expect(hit?.resolution).toEqual({ by: 'realm' })
+		expect(component?.entry.tier).toBe('simulated')
+		// The const is referenced by nothing else in the fixture, so it is
+		// dead code and the tier-aware server emit drops it rather than
+		// re-declaring a call the render function cannot run.
+		expect(component?.serverCode).not.toContain("all('.foo')")
 	})
 })
 
@@ -1310,7 +1345,7 @@ describe('default value on a non-optional prop type (CHECKLIST §10, TSRX032)', 
 	})
 })
 
-describe('impure server fold (CHECKLIST §4, TSRX033)', () => {
+describe('impure ambients (CHECKLIST §4, TSRX033 — static forms only after LT-165 step 5)', () => {
 	test('a static child (no signal dependency) reading Date is a hard error — no client correction exists', () => {
 		const source = `export function C({ label }: { label: string })
 	@{
@@ -1357,7 +1392,11 @@ describe('impure server fold (CHECKLIST §4, TSRX033)', () => {
 		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
 	})
 
-	test('a reactive attribute that would otherwise fold, reading Date, is a WARNING — the client corrects the omission', () => {
+	test('a reactive attribute reading Date is omitted silently — unresolvability, not a warning (LT-165 step 5)', () => {
+		// ADR 0029 s1 limb b / s5: the expression has no server answer in ANY
+		// tier, so it is omitted and the client's first binding pass corrects
+		// it — no diagnostic, and (this site is not semantically loaded) no
+		// routing signal either: impure-ambient is not what routes a component.
 		const source = `export function C({}: {})
 	@{
 		const length = createCell(0)
@@ -1376,13 +1415,14 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX033')
-		expect(hit).toBeDefined()
-		expect(hit?.severity).toBe('warning')
-		expect(hit?.message).toContain('`title`')
-		// A warning must not fail the build — the omission is safe.
+		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+		expect(diagnostics.some(d => d.severity === 'warning')).toBe(false)
 		expect(component).not.toBeNull()
 		expect(component?.serverCode).not.toContain('Date.now')
+		// Not a routing signal: the component stays Folded — the omission is
+		// per-expression, and nothing else failed phase 1.
+		expect(component?.entry.tier).toBe('folded')
+		expect(component?.entry.routingSignals).toHaveLength(0)
 	})
 
 	test('a purely client-side reactive expression whose deps are NOT server-known is unaffected (nothing would have folded anyway)', () => {
@@ -1404,13 +1444,15 @@ import { createCell } from '@zeix/le-truc'`
 	})
 })
 
-describe('semantically-loaded attribute has no server default (CHECKLIST §5, TSRX034)', () => {
-	test('hidden bound to a comparison over a host prop the root does NOT render is a warning, not an error', () => {
+describe('semantically-loaded attribute with no server default (CHECKLIST §5, TSRX034 — routing signal + severe-on-Static after LT-165 step 5)', () => {
+	test('hidden bound to a comparison over a host prop the root does NOT render is a routing signal, not a warning (LT-165 step 5)', () => {
 		// `count` is Parser-exposed but never seeded onto <c-el> as a server
 		// attribute — LT-085's derived-fold widening can't substitute it (no
 		// root expression to splice in), so this stays genuinely unfoldable,
 		// unlike the identical-shaped `host.count !== 0` comparison in
 		// basic-pluralize.tsrx (which DOES render `count` on its root).
+		// ADR 0029 s5: unfoldable ≠ author error — the site routes Simulated
+		// (the realm reads `host.count` for real) and the channel stays quiet.
 		const source = `export function C({ count }: { count: number })
 	@{
 		expose({ count: asInteger() })
@@ -1427,12 +1469,13 @@ import { asInteger } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX034')
-		expect(hit).toBeDefined()
-		expect(hit?.severity).toBe('warning')
-		expect(hit?.message).toContain('visible')
-		// A warning must not fail the build.
-		expect(component).not.toBeNull()
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		const hit = component?.entry.routingSignals.find(
+			s => s.origin === 'TSRX034',
+		)
+		expect(hit?.detail).toContain('`hidden`')
+		expect(hit?.resolution).toEqual({ by: 'realm' })
+		expect(component?.entry.tier).toBe('simulated')
 	})
 
 	test('hidden bound to a comparison over a host prop the root DOES render folds — no diagnostic (LT-085)', () => {
@@ -1458,10 +1501,12 @@ import { asInteger } from '@zeix/le-truc'`
 		)
 	})
 
-	test('disabled bound to a derived-but-unrenderable comparison over two host props stays unfoldable', () => {
+	test('disabled bound to a derived-but-unrenderable comparison over two host props routes instead of warning', () => {
 		// Both `min`/`max` are Parser-exposed and rendered — but `value` is
 		// not rendered on the root, so the whole expression can't fold
 		// (all-or-nothing: one unfoldable `host.<prop>` read disqualifies it).
+		// No formAssociated → not the severe form → routing signal only, and
+		// the realm answers the host reads, so the tier lands Simulated.
 		const source = `export function C({ value, min, max }: { value: number; min: number; max: number })
 	@{
 		expose({ value: asInteger(), min: asInteger(), max: asInteger() })
@@ -1473,13 +1518,23 @@ import { asInteger } from '@zeix/le-truc'`
 		</>
 	}
 import { asInteger } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX034')
-		expect(hit).toBeDefined()
-		expect(hit?.severity).toBe('warning')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(
+			component?.entry.routingSignals.some(s => s.origin === 'TSRX034'),
+		).toBe(true)
+		expect(component?.entry.tier).toBe('simulated')
 	})
 
-	test('disabled on a real submittable form control inside a form-associated component escalates to an error (LT-062/LT-085)', () => {
+	test('disabled on a real submittable form control inside a form-associated component stays an error on the Static tier (LT-062/LT-085, ADR 0029 s5)', () => {
+		// The RNG makes the site unresolvable — the realm could not answer it
+		// either, so the conjunction lands Static and the severe diagnostic
+		// survives: nothing will ever render `disabled`, and "enabled and
+		// submittable" regardless of intent is a correctness bug.
 		const source = `export const config = { formAssociated: true }
 export function C({}: {})
 	@{
@@ -1494,14 +1549,92 @@ export function C({}: {})
 		</>
 	}
 import { createCell, asString } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'TSRX034')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('correctness bug')
+		expect(hit?.message).toContain('in any tier')
 	})
 
-	test('disabled on the same unfoldable thunk without formAssociated stays a warning', () => {
+	test('a severe site the realm cannot answer fires even on a Simulated-tier component (LT-184)', () => {
+		// The edge the per-component scoping missed: the `disabled` thunk is
+		// unresolvable in EVERY tier (a time-window lockout reading the
+		// viewing moment), but another site (`hidden` over `host.busy`) is
+		// realm-answerable, so the component routes Simulated. The value is
+		// still omitted, shipping "enabled and submittable" on a submittable
+		// control — the diagnostic must fire on the SITE's resolution, not
+		// the component's tier.
+		const source = `export const config = { formAssociated: true }
+export function C({ busy }: { busy: boolean })
+	@{
+		expose({ value: asString(''), busy: asBoolean(false) })
+		<>
+			<c-el>
+				<p hidden={() => host.busy !== false}>waiting</p>
+				<input disabled={() => Date.now() < 1_000} />
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { asString, asBoolean } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('in any tier')
+		// The premise, pinned separately because the erroring compile returns
+		// no component to read a tier off: the very same markup without
+		// `formAssociated` (so nothing is severe) really does route Simulated.
+		const notSevere = compileComponent(
+			source.replace('export const config = { formAssociated: true }\n', ''),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(notSevere.component?.entry.tier).toBe('simulated')
+	})
+
+	test('the same severe site is silenced on the Simulated tier (ADR 0029 s5: the realm renders the value)', () => {
+		// Same submittable control, but the thunk is realm-answerable
+		// (`host.busy` — no stub, no impurity), so no error: the realm
+		// renders the value, so the diagnostic would be noise. The other
+		// direction of the LT-184 pin above — assert the component really
+		// did route Simulated, or the silence is vacuous.
+		const source = `export const config = { formAssociated: true }
+export function C({ busy }: { busy: boolean })
+	@{
+		expose({ value: asString(''), busy: asBoolean(false) })
+		<>
+			<c-el>
+				<input disabled={() => host.busy !== false} />
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { asString, asBoolean } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
+		expect(component?.entry.tier).toBe('simulated')
+	})
+
+	test('disabled on the same unfoldable thunk without formAssociated routes Static with no diagnostic', () => {
+		// Not formAssociated → not the severe form → the site is a routing
+		// signal only. Its RNG read is unresolvable, so the component itself
+		// lands Static — the census record the warning used to fake.
 		const source = `export function C({}: {})
 	@{
 		const busy = createCell(false)
@@ -1515,13 +1648,22 @@ import { createCell, asString } from '@zeix/le-truc'`
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX034')
-		expect(hit).toBeDefined()
-		expect(hit?.severity).toBe('warning')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		const hit = component?.entry.routingSignals.find(
+			s => s.origin === 'TSRX034',
+		)
+		expect(hit?.resolution.by).toBe('none')
+		expect(component?.entry.tier).toBe('static')
 	})
 
-	test('disabled on a non-form-control element inside a form-associated component stays a warning', () => {
+	test('disabled on a non-form-control element inside a form-associated component routes with no diagnostic', () => {
+		// A fieldset is not a submittable control, so the site is not severe:
+		// routing signal only (resolution none — the RNG), component Static.
 		const source = `export const config = { formAssociated: true }
 export function C({}: {})
 	@{
@@ -1538,13 +1680,16 @@ export function C({}: {})
 		</>
 	}
 import { createCell, asString } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX034')
-		expect(hit).toBeDefined()
-		expect(hit?.severity).toBe('warning')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(component?.entry.tier).toBe('static')
 	})
 
-	test('disabled bound to a non-foldable thunk names the enabled-and-submittable risk', () => {
+	test('disabled bound to a non-foldable thunk records the routing signal without a diagnostic', () => {
 		const source = `export function C({}: {})
 	@{
 		const busy = createCell(false)
@@ -1558,10 +1703,17 @@ import { createCell, asString } from '@zeix/le-truc'`
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX034')
-		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('enabled AND submittable')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		const hit = component?.entry.routingSignals.find(
+			s => s.origin === 'TSRX034',
+		)
+		expect(hit?.detail).toContain('`disabled`')
+		expect(hit?.resolution.by).toBe('none')
 	})
 
 	test('a bare host-prop mirror on hidden is not flagged — it always renders from the root arg', () => {
@@ -1725,14 +1877,17 @@ describe('static ids in a template (TSRX042, LT-131)', () => {
 	})
 })
 
-describe('ref-derived setup const reaching the server render (TSRX043)', () => {
-	// LT-125. Every non-`first()` setup const lands in `component.setup`, which
-	// `emit-server.ts` re-declares VERBATIM into the render function — so a
-	// const whose initializer reads a `first()`-bound ref is evaluated at
-	// server-render time, where no DOM exists. Which of two bad outcomes you
-	// get depends on an unrelated accident: whether the same ref also appears
-	// inside `expose()`'s argument, which is what `stubNames` is computed from.
-	const refConst = (extra: string, setup: string): string =>
+describe('setup const reading a first()-bound ref (TSRX043 routing / TSRX046 rendered, LT-165 step 5)', () => {
+	// LT-125 historically. Every non-`first()` setup const lands in
+	// `component.setup`, which the FOLDED emit re-declares VERBATIM into the
+	// render function — so a const whose initializer reads a `first()`-bound
+	// ref would evaluate at server-render time, where no DOM exists. ADR 0029
+	// s5: that is a fact about the harness, not an author error — an
+	// UNrendered const is a routing signal and the component routes Simulated.
+	// The retired error survives, precisely scoped (TSRX046), for the one case
+	// where the const's VALUE is rendered into the markup: a static splice no
+	// tier can produce and no client binding ever corrects.
+	const refConst = (extra: string, setup: string, child: string): string =>
 		`import { asString } from '@zeix/le-truc'
 export function C({}: {})
 @{
@@ -1742,47 +1897,64 @@ export function C({}: {})
 	<>
 		<c-el>
 			<input type="text" />
-			<span class="label">{initial}</span>
+			<span class="label">${child}</span>
 		</c-el>
 		<style>c-el { color: red }</style>
 	</>
 }`
 
-	test('unstubbed ref — the tsc failure gets a source-mapped diagnostic', () => {
-		const { diagnostics } = compileComponent(
-			refConst('', 'const initial = input.value'),
+	test('an unrendered ref read routes Simulated and compiles', () => {
+		const { component, diagnostics } = compileComponent(
+			refConst('', 'const initial = input.value', 'static'),
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX043')
+		expect(diagnostics.some(d => d.code === 'TSRX043')).toBe(false)
+		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
+		const hit = component?.entry.routingSignals.find(
+			s => s.origin === 'TSRX043',
+		)
+		expect(hit?.detail).toContain('`initial`')
+		expect(hit?.detail).toContain('ref(s) input')
+		expect(hit?.resolution).toEqual({ by: 'realm' })
+		expect(component?.entry.tier).toBe('simulated')
+		// The server module must not evaluate the ref read it cannot run: the
+		// tier-aware emit drops the const instead.
+		expect(component?.serverCode).not.toContain('input.value')
+	})
+
+	test('a rendered ref read is a hard error naming the site (TSRX046)', () => {
+		const { component, diagnostics } = compileComponent(
+			refConst('', 'const initial = input.value', '{initial}'),
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX046')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('`initial`')
 		expect(hit?.message).toContain('`input`')
 	})
 
-	test('stubbed ref — the SILENT empty render is diagnosed too', () => {
-		// `input` appears in expose()'s argument, so it gets `const input: any =
-		// refStub` and the module compiles clean — rendering `esc(String(refStub))`,
-		// an empty site where the author asked for a DOM read. Before LT-125 this
-		// shape produced ZERO diagnostics; it is the reason the fix cannot be
-		// "make the unstubbed case compile".
-		const { diagnostics } = compileComponent(
-			refConst(' value: asString(input.value),', 'const initial = input.value'),
+	test('a ref also named inside expose() records the same single routing signal when unrendered', () => {
+		// Pre-step-5 this was the SILENT variant: the ref got a `refStub` any-
+		// stub and the module compiled clean, rendering an empty site. Under
+		// tiering both spellings are the same routing fact.
+		const { component, diagnostics } = compileComponent(
+			refConst(
+				' value: asString(input.value),',
+				'const initial = input.value',
+				'static',
+			),
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX043')).toHaveLength(1)
-	})
-
-	test('the message names the harvest form, not just the problem', () => {
-		const { diagnostics } = compileComponent(
-			refConst('', 'const initial = input.value'),
-			'c.tsrx',
-			new Set(['c-el']),
-		)
-		const hit = diagnostics.find(d => d.code === 'TSRX043')
-		expect(hit?.message).toContain('expose(')
+		expect(diagnostics.some(d => d.code === 'TSRX043')).toBe(false)
+		expect(
+			component?.entry.routingSignals.filter(s => s.origin === 'TSRX043'),
+		).toHaveLength(1)
+		expect(component?.entry.tier).toBe('simulated')
 	})
 
 	test('a ref read inside a FUNCTION body does NOT fire', () => {
@@ -2100,17 +2272,19 @@ describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
 		).toHaveLength(1)
 	})
 
-	test('a REACTIVE thunk over the same ambient stays a warning', () => {
+	test('a REACTIVE thunk over the same ambient is omitted silently (LT-165 step 5)', () => {
 		// The client's first binding pass corrects an omitted fold, so the
-		// reactive form keeps the softer verdict — LT-075 must not escalate it.
-		const { diagnostics } = compileComponent(
+		// reactive form is unresolvability (ADR 0029 s1 limb b), not an author
+		// error — no diagnostic, no routing signal (impure-ambient does not
+		// route; the `title` site is not semantically loaded either).
+		const { component, diagnostics } = compileComponent(
 			withAttrs('<div title={() => String(Date.now())}></div>'),
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const hits = diagnostics.filter(d => d.code === 'TSRX033')
-		expect(hits).toHaveLength(1)
-		expect(hits[0]?.severity).toBe('warning')
+		expect(diagnostics.filter(d => d.code === 'TSRX033')).toEqual([])
+		expect(diagnostics.some(d => d.severity === 'warning')).toBe(false)
+		expect(component?.entry.tier).toBe('folded')
 	})
 
 	test('a pure server-rendered attribute is untouched', () => {
@@ -2278,7 +2452,7 @@ describe('malformed selector (TSRX026, LT-157b)', () => {
 	})
 })
 
-describe('deferred collector call (TSRX013, LT-157d)', () => {
+describe('deferred collector call (TSRX045, LT-157d)', () => {
 	const withSetup = (setup: string): string =>
 		`export function C({}: {})
 @{
@@ -2290,20 +2464,20 @@ describe('deferred collector call (TSRX013, LT-157d)', () => {
 	</>
 }`
 
-	test('watch() inside a setTimeout callback is TSRX013', () => {
+	test('watch() inside a setTimeout callback is TSRX045', () => {
 		const { diagnostics } = compileComponent(
 			withSetup(`setTimeout(() => { watch(() => 1, () => {}) }, 0)`),
 			'c.tsrx',
 			new Set(),
 		)
 		const hit = diagnostics.find(
-			d => d.code === 'TSRX013' && d.message.includes('NoActiveCollectorError'),
+			d => d.code === 'TSRX045' && d.message.includes('NoActiveCollectorError'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`watch(…)`')
 	})
 
-	test('on() inside a promise callback is TSRX013', () => {
+	test('on() inside a promise callback is TSRX045', () => {
 		const { diagnostics } = compileComponent(
 			withSetup(`Promise.resolve().then(() => { on('click', () => {}) })`),
 			'c.tsrx',
@@ -2311,7 +2485,7 @@ describe('deferred collector call (TSRX013, LT-157d)', () => {
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX013' && d.message.includes('`on(…)`'),
+				d => d.code === 'TSRX045' && d.message.includes('`on(…)`'),
 			),
 		).toBe(true)
 	})

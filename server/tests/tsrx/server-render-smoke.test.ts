@@ -29,6 +29,7 @@ import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { FileInfo } from '../../file-signals'
 import { isVoidElement } from '../../tsrx/core'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { PLURALIZE_I18N } from './corpus-args'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -81,6 +82,7 @@ const ARGS: Record<string, Record<string, unknown>> = {
 	'card-callout': { title: 'Heads up' },
 	'card-collapsible': { title: 'Details' },
 	'basic-button': { label: 'Add' },
+	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
 }
 
 const corpus = async (): Promise<FileInfo[]> => {

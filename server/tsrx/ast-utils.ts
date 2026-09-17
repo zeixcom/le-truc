@@ -350,8 +350,10 @@ export const MANAGED_FORM_MEMBERS: ReadonlySet<string> = new Set<string>([
  * the generated client factory's context object — never in the server render
  * function's scope, even though `component.setup`'s plain `const` statements
  * are emitted verbatim into both (ADR 0023 sub-design 12). A setup const that
- * calls one of these directly is silently broken server-side; diagnosed as
- * TSRX013 rather than left to surface as a raw tsc "cannot find name" error.
+ * calls one of these directly used to be the `TSRX013` error; under tiering
+ * (LT-165 step 5, ADR 0029 s5) it is a routing signal, and the tier-aware
+ * server emit drops the statement from the render function rather than
+ * emitting a call that cannot resolve.
  */
 export const CLIENT_ONLY_PRIMITIVES: ReadonlySet<string> = new Set<string>([
 	'first',

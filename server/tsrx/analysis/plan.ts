@@ -11,11 +11,19 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import { CONTEXT_NAMES, freeIdentifiers, JS_GLOBALS } from '../ast-utils'
+import {
+	CLIENT_ONLY_PRIMITIVES,
+	CONTEXT_NAMES,
+	freeIdentifiers,
+	JS_GLOBALS,
+} from '../ast-utils'
 import type { CompileDiagnostic } from '../diagnostics'
+import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
+import { serverUsageNames } from '../imports'
 import type { ComponentIR, ForIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
+import type { RoutingSignal, SuppressedSite } from '../tier'
 import { walkTemplate } from '../walk'
 import { resolveComposeRefs } from './compose-refs'
 import { runEffects } from './effects'
@@ -352,6 +360,20 @@ export type ClientPlan = {
 	 * tag-map augmentation is present for the factory's typed queries.
 	 */
 	childTags: string[]
+	/**
+	 * Why this component cannot be answered by phase 1 alone (ADR 0029,
+	 * LT-165) — the tier classifier's input, collected at the same sites
+	 * that used to raise `TSRX004`/`TSRX034`. Empty means phase 1 is total,
+	 * which is the Folded tier.
+	 */
+	routingSignals: RoutingSignal[]
+	/**
+	 * Reactive sites whose expression no server phase can answer (ADR 0029
+	 * sub-design 1 limb b, LT-165 step 7) — recorded at the same sites for
+	 * the driver's serialization-time suppression: the generated client
+	 * still binds them, and the realm replays that module.
+	 */
+	suppressedSites: SuppressedSite[]
 }
 
 /**
@@ -368,6 +390,13 @@ export type AnalysisContext = {
 	component: ComponentIR
 	source: string
 	diagnostics: CompileDiagnostic[]
+	/** Tier routing signals (ADR 0029) — see {@link ClientPlan.routingSignals}. */
+	routingSignals: RoutingSignal[]
+	/**
+	 * Suppression sites (ADR 0029 s1 limb b, LT-165 step 7) — see
+	 * {@link ClientPlan.suppressedSites}.
+	 */
+	suppressedSites: SuppressedSite[]
 	registry: ReadonlySet<string>
 	/**
 	 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
@@ -526,10 +555,14 @@ export const analyzeClient = (
 				!component.imports.plainLocalNames.has(name),
 		)
 
+	const routingSignals: RoutingSignal[] = []
+	const suppressedSites: SuppressedSite[] = []
 	const ctx: AnalysisContext = {
 		component,
 		source,
 		diagnostics,
+		routingSignals,
+		suppressedSites,
 		registry,
 		composeRegistry,
 		queries,
@@ -561,6 +594,40 @@ export const analyzeClient = (
 	runLoops(ctx)
 	runHarvest(ctx)
 	runEffects(ctx)
+
+	// LT-165 step 5: the narrow residue of the retired TSRX013/TSRX043
+	// refusals. An UNrendered setup const the value harness cannot evaluate
+	// is a routing signal (recorded during extraction) and routes Simulated —
+	// but a const whose VALUE reaches a server-evaluated position asks the
+	// server to splice a value no phase can produce: the fold cannot run the
+	// read, the realm would have to serialize the site, and the Static tier
+	// omits it with no client binding to correct it. Same structural class as
+	// `impureStaticChild` — a permanent wrong-or-empty site — so it stays an
+	// error even under tiering.
+	const serverUsed = serverUsageNames(component)
+	const harnessUnevaluableNames = new Set([
+		...CLIENT_ONLY_PRIMITIVES,
+		...refNames,
+		'host',
+		'internals',
+	])
+	for (const stmt of component.plainSetup) {
+		if (stmt.name === null) continue
+		if (!/Function(Expression)?$/.test(String(stmt.node.type))) {
+			const badNames = [...freeIdentifiers(stmt.node)]
+				.filter(name => harnessUnevaluableNames.has(name))
+				.sort()
+			if (badNames.length > 0 && serverUsed.has(stmt.name))
+				diagnostics.push(
+					diagnostic.renderedClientOnlyConst(
+						source,
+						stmt.range.start,
+						stmt.name,
+						badNames,
+					),
+				)
+		}
+	}
 
 	// LT-123: an effect over an author-declared OPTIONAL ref
 	// needs the same existence guard a single-branch `@if` root
@@ -602,5 +669,7 @@ export const analyzeClient = (
 		effects: guardedEffects,
 		ambientContext: [...ambient].sort(),
 		childTags: [...childTags].sort(),
+		routingSignals,
+		suppressedSites,
 	}
 }

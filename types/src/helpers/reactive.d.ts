@@ -202,8 +202,11 @@ declare function each<E extends Element>(memo: Signal<E[]>, callback: (element: 
  *
  * On first run, existing children whose `data-key` matches a source key are
  * adopted (`bindItem` runs for them too, so make it idempotent against
- * server-rendered content). Everything else is removed. Children carrying
- * `data-unreconciled` are left alone entirely.
+ * server-rendered content). Everything else is removed, and every removal in
+ * that first pass warns in DEV_MODE — it is the one run that discards markup
+ * the author wrote. Children carrying `data-unreconciled` are left alone
+ * entirely; that is the opt-out for an authored sibling the source does not
+ * own, such as a text input sharing the container with the items.
  *
  * `bindItem` is called once per entering element, with the same collector
  * support as `each()`'s callback: `watch()`, `on()`, `pass()`, and

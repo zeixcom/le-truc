@@ -14,6 +14,7 @@
  */
 
 import type { ExposeKind } from './ir'
+import type { EvaluationTier, RoutingSignal, SuppressedSite } from './tier'
 
 /* === Types === */
 
@@ -64,6 +65,74 @@ export type RegistryEntry = {
 	 * compiler has to hand it down explicitly.
 	 */
 	composesTags: string[]
+	/**
+	 * Which server-evaluation mechanism renders this component's initial
+	 * HTML (ADR 0029, LT-165), and why it was routed there.
+	 *
+	 * Recorded here rather than kept inside the compiler because the tier is
+	 * product surface, not an implementation detail: it decides build cost,
+	 * it feeds the build report's tier census, and a component drifting from
+	 * the Folded tier to the Simulated tier is a cost regression worth
+	 * seeing. `emit-server.ts` also reads it — a Simulated-tier or
+	 * Static-tier module does not re-declare `@{ }` setup verbatim.
+	 *
+	 * The value written by the FIRST pass is pre-contamination. The
+	 * registry-aware second pass applies ADR 0029 sub-design 3's compose-read
+	 * fixpoint, which can only move a component downward, towards the
+	 * Simulated tier.
+	 */
+	tier: EvaluationTier
+	/** Why this component is not Folded-tier; empty for the Folded tier. */
+	routingSignals: RoutingSignal[]
+	/**
+	 * Reactive sites whose expression no server phase can answer (ADR 0029
+	 * sub-design 1 limb b, LT-165 step 7), so the simulation driver can
+	 * revert each one to its server-rendered skeleton state after the
+	 * connect window stabilizes. Recorded per EXPRESSION, not per tier —
+	 * unresolvability is a property of an expression — and keyed here
+	 * because the driver already reads this registry for `composesTags`; it
+	 * must not re-derive the list by re-analyzing source. Inert for Folded-
+	 * and Static-tier components, for which no realm ever opens.
+	 */
+	suppressedSites: SuppressedSite[]
+	/**
+	 * Composed children this component READS — the contamination edges of
+	 * ADR 0029 sub-design 3, and a strict subset of `composesTags`.
+	 * Containment alone does not contaminate; only a `first()` on the
+	 * compose site or a `truc:pass={{ }}` into it does.
+	 */
+	composeReadTags: string[]
+	/**
+	 * Whether the component declares the reserved `i18n` parameter (ADR
+	 * 0030 sub-design 2, LT-173). A parent's generated server module reads
+	 * this off the child's entry at a compose site to supply the record the
+	 * child never receives from its caller — and to know that a caller
+	 * cannot have authored it either.
+	 */
+	declaresI18n: boolean
+	/**
+	 * The component's authored `lang` default (`lang = 'en'`), or null —
+	 * ADR 0030 sub-design 3's precedence: a compose site builds the child's
+	 * record with the site's `lang` arg when authored, else this default,
+	 * else the build's page locale.
+	 */
+	langArgDefault: string | null
+	/**
+	 * The component's inline message catalog (ADR 0030 sub-design 4): key →
+	 * source-locale string, from `export const i18n`. Null when the
+	 * component declares none. The corpus effect folds every entry's
+	 * catalog into the generated `i18n` module the render boundaries use.
+	 */
+	i18nMessages: Record<string, string> | null
+	/**
+	 * The component's static `truc:case-type` configuration (LT-190): the
+	 * plural type its `truc:case` groups prune by — `'cardinal'`/`'ordinal'`
+	 * when provable, `'union'` otherwise (the runtime's own fallback). The
+	 * translation census consults it per locale: a `<key>.<category>` message
+	 * whose category is outside `pluralCategories(locale, caseType)` sits in
+	 * a pruned span that can never render there, so its absence is not a gap.
+	 */
+	caseType: 'cardinal' | 'ordinal' | 'union'
 }
 
 export type ComponentRegistry = Record<string, RegistryEntry>

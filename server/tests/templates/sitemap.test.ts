@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
+import { DEFAULT_LOCALE, LOCALES } from '../../config'
 import type { PageInfo } from '../../file-signals'
 import { sitemap, sitemapUrl } from '../../templates/sitemap'
 
@@ -37,10 +38,39 @@ describe('sitemapUrl', () => {
 		expect(result).toContain('</url>')
 	})
 
-	test('includes a <loc> element with the full URL', () => {
+	test('includes a <loc> element with the locale-prefixed URL', () => {
 		const result = sitemapUrl(mockPage({ url: 'about.html' }), BASE, LAST_MOD)
 		expect(result).toContain('<loc>')
-		expect(result).toContain(`${BASE}/about.html`)
+		// Defaults to the default locale; pages live under a prefix (LT-174)
+		expect(result).toContain(`${BASE}/${DEFAULT_LOCALE}/about.html`)
+	})
+
+	test('the locale argument selects the prefix', () => {
+		const result = sitemapUrl(
+			mockPage({ url: 'about.html' }),
+			BASE,
+			LAST_MOD,
+			'de',
+		)
+		expect(result).toContain(`<loc>${BASE}/de/about.html</loc>`)
+	})
+
+	test('carries the full reciprocal hreflang alternate set', () => {
+		const result = sitemapUrl(
+			mockPage({ url: 'about.html' }),
+			BASE,
+			LAST_MOD,
+			'de',
+		)
+		for (const locale of LOCALES)
+			expect(result).toContain(
+				`<xhtml:link rel="alternate" hreflang="${locale}" href="${BASE}/${locale}/about.html" />`,
+			)
+		// x-default points at the default locale, matching the page-head
+		// alternates pages.ts emits
+		expect(result).toContain(
+			`<xhtml:link rel="alternate" hreflang="x-default" href="${BASE}/${DEFAULT_LOCALE}/about.html" />`,
+		)
 	})
 
 	test('includes a <lastmod> element', () => {
@@ -99,18 +129,25 @@ describe('sitemap', () => {
 		expect(result).toContain('</urlset>')
 	})
 
-	test('includes one <url> per page', () => {
+	test('includes one <url> per page PER LOCALE', () => {
 		const pages = [mockPage({ url: 'a.html' }), mockPage({ url: 'b.html' })]
 		const result = sitemap(pages, BASE)
 		const urlCount = (result.match(/<url>/g) || []).length
-		expect(urlCount).toBe(2)
+		expect(urlCount).toBe(2 * LOCALES.length)
 	})
 
-	test('includes all page URLs', () => {
+	test('includes all page URLs in every locale', () => {
 		const pages = [mockPage({ url: 'foo.html' }), mockPage({ url: 'bar.html' })]
 		const result = sitemap(pages, BASE)
-		expect(result).toContain(`${BASE}/foo.html`)
-		expect(result).toContain(`${BASE}/bar.html`)
+		for (const locale of LOCALES) {
+			expect(result).toContain(`${BASE}/${locale}/foo.html`)
+			expect(result).toContain(`${BASE}/${locale}/bar.html`)
+		}
+	})
+
+	test('declares the xhtml namespace the alternates need', () => {
+		const result = sitemap([mockPage({ url: 'a.html' })], BASE)
+		expect(result).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"')
 	})
 
 	test('handles empty page list', () => {

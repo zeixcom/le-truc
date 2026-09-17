@@ -2619,6 +2619,20 @@ class ContextRequestEvent extends Event {
     this.subscribe = subscribe;
   }
 }
+var contextRequestEvent = (host, context, callback, subscribe = false) => {
+  const hostEvent = host.ownerDocument?.defaultView?.Event;
+  if (!hostEvent || hostEvent === Object.getPrototypeOf(ContextRequestEvent))
+    return new ContextRequestEvent(context, callback, subscribe);
+  const event = new hostEvent(CONTEXT_REQUEST, {
+    bubbles: true,
+    composed: true
+  });
+  return Object.assign(event, {
+    context,
+    callback,
+    subscribe
+  });
+};
 var createContext = (key) => key;
 var makeProvideContexts = (host) => (contexts) => {
   const descriptor = () => createScope(() => {
@@ -2647,7 +2661,7 @@ var makeRequestContext = (host) => (context, fallback) => {
   const slot = createSlot(createCell(fallback));
   let answered = false;
   const dispatch = () => {
-    host.dispatchEvent(new ContextRequestEvent(context, (getter) => {
+    host.dispatchEvent(contextRequestEvent(host, context, (getter) => {
       answered = true;
       slot.replace(deriveCell(getter));
     }));
@@ -2999,6 +3013,7 @@ function reconcile(container, template, source, bindItem) {
     const itemRoot = template.content.firstElementChild;
     const keyOf = new WeakMap;
     const disposers = new Map;
+    let firstRun = true;
     const nextKeyed = (after) => {
       let node = after ? after.nextElementSibling : container.firstElementChild;
       while (node && (!keyOf.has(node) || node.hasAttribute("data-unreconciled")))
@@ -3091,6 +3106,7 @@ function reconcile(container, template, source, bindItem) {
           const { current, adopted, pinned, leavers } = classify(keySet);
           leave(keySet, leavers);
           enter(keys, current, adopted, pinned);
+          firstRun = false;
         });
       });
       return () => {

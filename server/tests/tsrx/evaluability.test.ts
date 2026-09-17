@@ -196,6 +196,58 @@ describe('LT-142: Intl split from Date', () => {
 		expect(isServerEvaluable(thunk, new Set())).toBe(false)
 	})
 
+	test('the local Date constructor stays impure — it reads the build machine timezone (LT-165 step 5)', () => {
+		// `new Date(y, m, d)` over server-known args reads no viewing-moment
+		// fact, but the local-time constructor (and the zone-less formatter)
+		// interpret in the build machine's timezone — limb (b) ambient state:
+		// the rendered day must not depend on where the build ran. ADR 0030 s2
+		// prescribes the `Date.UTC` + `timeZone: 'UTC'` shape instead.
+		const thunk = thunkOf(
+			`export function C({ y, m, d }: { y: number; m: number; d: number })
+			@{
+				expose({})
+				<>
+					<c-el title={() => new Date(y, m - 1, d).toLocaleDateString()}>ok</c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+		)
+		expect(containsImpureAmbient(thunk, new Set(['y', 'm', 'd']))).toBe(true)
+		expect(isServerEvaluable(thunk, new Set(['y', 'm', 'd']))).toBe(false)
+	})
+
+	test('Date.UTC over server-known args is pure — the one admissible Date form (LT-165 step 5)', () => {
+		// The UTC conversion is a fixed function of its arguments: no wall
+		// clock, no timezone read. This is what makes LT-095's prescribed
+		// `Date.UTC(y, m - 1, d)` + `timeZone: 'UTC'` blogmeta shape foldable.
+		const thunk = thunkOf(
+			`export function C({ y, m, d }: { y: number; m: number; d: number })
+			@{
+				expose({})
+				<>
+					<c-el title={() => new Intl.DateTimeFormat('en', { timeZone: 'UTC' }).format(Date.UTC(y, m - 1, d))}>ok</c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+		)
+		expect(containsImpureAmbient(thunk, new Set(['y', 'm', 'd']))).toBe(false)
+		expect(isServerEvaluable(thunk, new Set(['y', 'm', 'd']))).toBe(true)
+	})
+
+	test('an impure ambient nested inside Date.UTC arguments is still caught', () => {
+		const thunk = thunkOf(
+			`export function C({}: {})
+			@{
+				expose({})
+				<>
+					<c-el title={() => String(Date.UTC(2026, 0, Date.now()))}>ok</c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+		)
+		expect(containsImpureAmbient(thunk, new Set())).toBe(true)
+	})
+
 	test('bare Intl read outside a recognized constructor call stays impure', () => {
 		const thunk = thunkOf(
 			`export function C({ lang }: { lang: string })
