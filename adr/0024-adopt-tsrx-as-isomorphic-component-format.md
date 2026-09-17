@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted — **sub-designs 2 and 3 amended by [ADR 0029](0029-tiered-server-evaluation.md) (2026-09-04)**
+✅ Accepted — **sub-designs 2 and 3 amended by [ADR 0029](0029-tiered-server-evaluation.md) (2026-09-04)**; **surface sub-designs 1, 4, 6, 14 superseded and 16 amended by [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) (2026-09-17, `.tsx` front end — spike GO, execution pending)**. Sub-designs 3, 5, 7–13, 15 and the machinery carry over unchanged.
 
 ADR 0029 tiers server evaluation: initial HTML is rendered by whichever mechanism the component's tier calls for, not unconditionally by Server Simulation. **Sub-design 1 (template lowering) and sub-design 7 (library boundary) are untouched** — the compiler still lowers every template to markup server-side for every component in every tier, and `@zeix/le-truc` still never renders. Only the *evaluation of reactive initial values* is tiered.
 

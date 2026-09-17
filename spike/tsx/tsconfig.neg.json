@@ -1,0 +1,5 @@
+{
+	"extends": "./tsconfig.json",
+	"include": ["./combobox-bad-args.tsx", "./form/listbox/form-listbox.tsx", "./host-profile.d.ts"],
+	"exclude": [],
+}
