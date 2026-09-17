@@ -1,0 +1,33 @@
+{
+	"compilerOptions": {
+		"lib": ["ESNext", "DOM"],
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleDetection": "force",
+		"jsx": "preserve",
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
+		"resolveJsonModule": true,
+		"types": ["bun", "node"],
+		"paths": {
+			"@zeix/le-truc": ["../../index.ts"],
+		},
+		"noEmit": true,
+		"strict": true,
+		"skipLibCheck": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"useUnknownInCatchVariables": true,
+		"noFallthroughCasesInSwitch": true,
+		"forceConsistentCasingInFileNames": true,
+	},
+	"include": ["./**/*.tsx", "./**/*.ts", "./host-profile.d.ts"],
+	"exclude": [
+		"node_modules",
+		"jsx-probe.tsx",
+		"jsx-probe-neg.tsx",
+		"combobox-bad-args.tsx",
+	],
+}

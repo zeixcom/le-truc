@@ -1,6 +1,8 @@
 # TSX Surface Spike — Re-targeting the Compiler Front End from `.tsrx` to `.tsx`
 
-> **Status:** plan, not yet executed. Written 2026-09-06 after an architecture review of
+> **Status:** EXECUTED 2026-09-17 — verdict **GO** (`spike/tsx/FINDINGS.md`, commit db0a0be5);
+> ADR 0032 Accepted with the owner's dual-front-end amendment (`.tsrx` retained). This plan is
+> now the historical record of the spike's design; the ADR owns the decision. Written 2026-09-06 after an architecture review of
 > ADRs 0024/0027/0028/0029/0030, `TSRX-HOST-PROFILE.md` and
 > `server/tsrx/LE_TRUC_COMPILER.md`; facts refreshed 2026-09-17 after the `next`
 > (ADR 0031) and `feature/internationalization` merges landed on v3. Execute on a spike
