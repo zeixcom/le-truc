@@ -34,8 +34,8 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import { emitServerModule } from '../../compiler/emit-server'
+import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import { compileComponent } from '../../compiler/frontend/tsrx/index'
 import type { EvaluationTier } from '../../compiler/tier'
 import { loadTsrxCorpus } from './corpus-fixture'

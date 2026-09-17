@@ -7,9 +7,9 @@
  */
 import * as fs from 'node:fs'
 import { analyzeClient } from './analysis/plan'
-import { compileSource } from './frontend/tsrx'
 import { emitClientModule } from './emit-client'
 import { emitServerModule } from './emit-server'
+import { compileSource } from './frontend/tsrx'
 
 const ROOT = new URL('../../..', import.meta.url).pathname
 const OUT_DIR = 'server/generated/tsrx'

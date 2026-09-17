@@ -43,9 +43,9 @@
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { pathToFileURL } from 'node:url'
-import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { ComponentRegistry } from '../../compiler/registry'
 import { createSimulationRealm } from '../../compiler/sim/realm'
+import { compileTsrxCorpus } from '../../effects/tsrx'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { CORPUS_ARGS, renderName } from './corpus-args'
 import { loadTsrxCorpus } from './corpus-fixture'

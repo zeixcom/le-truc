@@ -18,16 +18,16 @@
 
 import { describe, expect, test } from 'bun:test'
 import { JSDOM } from 'jsdom'
+import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
+import type { SimDiagnostic, SimulationRealm } from '../../compiler/sim/realm'
+import { reportDiagnostics } from '../../compiler/sim/report'
+import type { EvaluationTier } from '../../compiler/tier'
 import { LOCALES } from '../../config'
 import {
 	assertSimulatedTier,
 	gateOnSimReport,
 	simulateTsrxCorpus,
 } from '../../effects/simulate'
-import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
-import type { SimDiagnostic, SimulationRealm } from '../../compiler/sim/realm'
-import { reportDiagnostics } from '../../compiler/sim/report'
-import type { EvaluationTier } from '../../compiler/tier'
 
 /* === Fixtures === */
 

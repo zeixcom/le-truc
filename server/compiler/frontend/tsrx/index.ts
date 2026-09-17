@@ -16,9 +16,9 @@
  * ROADMAP "Packaging"); with Le Truc v3.0 it ships as `@tsrx/le-truc`.
  */
 
-import { compileSource } from './compiler'
 import { type CompileFileResult, compileFromIR } from '../../pipeline'
 import type { RegistryEntry } from '../../registry'
+import { compileSource } from './compiler'
 
 /* === Exported Functions === */
 
@@ -53,9 +53,6 @@ export const compileComponent = (
 
 export type { ClientPlan } from '../../analysis/plan'
 export { analyzeClient } from '../../analysis/plan'
-export type { CompileResult } from './compiler'
-export { compileSource } from './compiler'
-export { collectComposeElements } from '../../walk'
 export { dedentCss } from '../../css'
 export type { CompileDiagnostic, DiagnosticCode } from '../../diagnostics'
 export type { EmittedClientModule } from '../../emit-client'
@@ -75,3 +72,6 @@ export {
 	fileOffsetToLineCol,
 	findSpanForGeneratedOffset,
 } from '../../spans'
+export { collectComposeElements } from '../../walk'
+export type { CompileResult } from './compiler'
+export { compileSource } from './compiler'

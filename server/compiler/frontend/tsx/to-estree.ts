@@ -37,13 +37,20 @@ export type TsrxNode = {
 }
 
 /** Exact token-bracket offsets of `node` in `sf` (estree semantics). */
-const span = (node: ts.Node, sf: ts.SourceFile): { start: number; end: number } => ({
+const span = (
+	node: ts.Node,
+	sf: ts.SourceFile,
+): { start: number; end: number } => ({
 	start: node.getStart(sf),
 	end: node.end,
 })
 
 /** A node with only `type` and source span — for unhandled constructs. */
-const passthrough = (type: string, node: ts.Node, sf: ts.SourceFile): TsrxNode => ({
+const passthrough = (
+	type: string,
+	node: ts.Node,
+	sf: ts.SourceFile,
+): TsrxNode => ({
 	type,
 	...span(node, sf),
 })
@@ -142,12 +149,17 @@ const convertTemplate = (
 		value: { raw: q.text, cooked: q.text },
 	})),
 	expressions: ts.isTemplateExpression(node)
-		? convAll(node.templateSpans.map(s => s.expression), sf)
+		? convAll(
+				node.templateSpans.map(s => s.expression),
+				sf,
+			)
 		: [],
 })
 
 /** Prefix/postfix operator token text for Unary/Update expressions. */
-const unaryOperator = (node: ts.PrefixUnaryExpression | ts.PostfixUnaryExpression): string => {
+const unaryOperator = (
+	node: ts.PrefixUnaryExpression | ts.PostfixUnaryExpression,
+): string => {
 	const op = node.operator as number
 	switch (op) {
 		case ts.SyntaxKind.PlusPlusToken:
@@ -163,7 +175,9 @@ const unaryOperator = (node: ts.PrefixUnaryExpression | ts.PostfixUnaryExpressio
 		case ts.SyntaxKind.TildeToken:
 			return '~'
 		default:
-			return (ts.SyntaxKind as unknown as Record<number, string>)[op] ?? String(op)
+			return (
+				(ts.SyntaxKind as unknown as Record<number, string>)[op] ?? String(op)
+			)
 	}
 }
 
@@ -188,7 +202,7 @@ const convertFunctionLike = (
 			: (convertPattern(p.name, sf) as TsrxNode),
 	),
 	body: conv(node.body, sf),
-	async: !!(node.modifiers?.some(m => m.kind === ts.SyntaxKind.AsyncKeyword)),
+	async: !!node.modifiers?.some(m => m.kind === ts.SyntaxKind.AsyncKeyword),
 	generator: !!node.asteriskToken,
 	// The original TS node, for param-pattern span queries. Safe to attach:
 	// every downstream walker guards on `isNode` (a `type` string), and TS
@@ -212,9 +226,16 @@ const convertJsxName = (
 				...span(node.namespace, sf),
 				name: node.namespace.text,
 			},
-			name: { type: 'JSXIdentifier', ...span(node.name, sf), name: node.name.text },
+			name: {
+				type: 'JSXIdentifier',
+				...span(node.name, sf),
+				name: node.name.text,
+			},
 		}
-	if (node.kind === (ts.SyntaxKind as { JsxMemberExpression?: number }).JsxMemberExpression) {
+	if (
+		node.kind ===
+		(ts.SyntaxKind as { JsxMemberExpression?: number }).JsxMemberExpression
+	) {
 		const member = node as unknown as {
 			left: ts.Node & { text?: string }
 			right: ts.Node & { text: string }
@@ -224,8 +245,16 @@ const convertJsxName = (
 			...span(node, sf),
 			object:
 				typeof member.left.text === 'string'
-					? { type: 'JSXIdentifier', start: member.left.getStart(sf), end: member.left.end, name: member.left.text }
-					: convertJsxName(member.left as unknown as ts.JsxTagNameExpression, sf),
+					? {
+							type: 'JSXIdentifier',
+							start: member.left.getStart(sf),
+							end: member.left.end,
+							name: member.left.text,
+						}
+					: convertJsxName(
+							member.left as unknown as ts.JsxTagNameExpression,
+							sf,
+						),
 			property: { type: 'JSXIdentifier', name: member.right.text },
 		}
 	}
@@ -254,11 +283,18 @@ const convertJsxElementLike = (
 						type: 'JSXExpressionContainer',
 						...span(init, sf),
 						expression:
-							init.expression === undefined ? null : convert(init.expression, sf),
+							init.expression === undefined
+								? null
+								: convert(init.expression, sf),
 					}
 				else value = convert(init, sf)
 			}
-			return { type: 'JSXAttribute', ...span(attr, sf), name, value } as TsrxNode
+			return {
+				type: 'JSXAttribute',
+				...span(attr, sf),
+				name,
+				value,
+			} as TsrxNode
 		}
 		return {
 			type: 'JSXSpreadAttribute',
@@ -290,7 +326,10 @@ const convertJsxElementLike = (
 }
 
 /** One JSX child: text, expression container, element, or fragment. */
-const convertJsxChild = (node: ts.JsxChild, sf: ts.SourceFile): TsrxNode | null => {
+const convertJsxChild = (
+	node: ts.JsxChild,
+	sf: ts.SourceFile,
+): TsrxNode | null => {
 	if (ts.isJsxText(node)) {
 		// `getStart()` trims leading whitespace as trivia; the RAW text
 		// (what `collapseJsxText` consumes) is the full [pos, end) slice.
@@ -300,7 +339,8 @@ const convertJsxChild = (node: ts.JsxChild, sf: ts.SourceFile): TsrxNode | null 
 		return {
 			type: 'JSXExpressionContainer',
 			...span(node, sf),
-			expression: node.expression === undefined ? null : convert(node.expression, sf),
+			expression:
+				node.expression === undefined ? null : convert(node.expression, sf),
 		}
 	if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node))
 		return convertJsxElementLike(node, sf)
@@ -315,7 +355,10 @@ const convertJsxChild = (node: ts.JsxChild, sf: ts.SourceFile): TsrxNode | null 
 }
 
 /** One statement → estree statement node. */
-const convertStatement = (node: ts.Statement, sf: ts.SourceFile): TsrxNode | null => {
+const convertStatement = (
+	node: ts.Statement,
+	sf: ts.SourceFile,
+): TsrxNode | null => {
 	if (ts.isVariableStatement(node)) {
 		const list = node.declarationList
 		return {
@@ -336,9 +379,17 @@ const convertStatement = (node: ts.Statement, sf: ts.SourceFile): TsrxNode | nul
 		}
 	}
 	if (ts.isExpressionStatement(node))
-		return { type: 'ExpressionStatement', ...span(node, sf), expression: conv(node.expression, sf) }
+		return {
+			type: 'ExpressionStatement',
+			...span(node, sf),
+			expression: conv(node.expression, sf),
+		}
 	if (ts.isReturnStatement(node))
-		return { type: 'ReturnStatement', ...span(node, sf), argument: conv(node.expression, sf) }
+		return {
+			type: 'ReturnStatement',
+			...span(node, sf),
+			argument: conv(node.expression, sf),
+		}
 	if (ts.isSwitchStatement(node))
 		return {
 			type: 'SwitchStatement',
@@ -385,7 +436,11 @@ const convertStatement = (node: ts.Statement, sf: ts.SourceFile): TsrxNode | nul
 			body: convert(node.statement, sf),
 		}
 	if (ts.isThrowStatement(node))
-		return { type: 'ThrowStatement', ...span(node, sf), argument: conv(node.expression, sf) }
+		return {
+			type: 'ThrowStatement',
+			...span(node, sf),
+			argument: conv(node.expression, sf),
+		}
 	if (ts.isTryStatement(node))
 		return {
 			type: 'TryStatement',
@@ -403,7 +458,8 @@ const convertStatement = (node: ts.Statement, sf: ts.SourceFile): TsrxNode | nul
 				: null,
 			finalizer: node.finallyBlock ? convert(node.finallyBlock, sf) : null,
 		}
-	if (ts.isFunctionDeclaration(node)) return convertFunctionLike(node, sf, 'FunctionDeclaration')
+	if (ts.isFunctionDeclaration(node))
+		return convertFunctionLike(node, sf, 'FunctionDeclaration')
 	if (ts.isImportDeclaration(node)) {
 		const clause = node.importClause
 		const specifiers: TsrxNode[] = []
@@ -411,7 +467,11 @@ const convertStatement = (node: ts.Statement, sf: ts.SourceFile): TsrxNode | nul
 			specifiers.push({
 				type: 'ImportDefaultSpecifier',
 				...span(clause, sf),
-				local: { type: 'Identifier', ...span(clause.name, sf), name: clause.name.text },
+				local: {
+					type: 'Identifier',
+					...span(clause.name, sf),
+					name: clause.name.text,
+				},
 			})
 		if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings))
 			for (const e of clause.namedBindings.elements)
@@ -419,7 +479,11 @@ const convertStatement = (node: ts.Statement, sf: ts.SourceFile): TsrxNode | nul
 					type: 'ImportSpecifier',
 					...span(e, sf),
 					imported: e.propertyName
-						? { type: 'Identifier', ...span(e.propertyName, sf), name: e.propertyName.text }
+						? {
+								type: 'Identifier',
+								...span(e.propertyName, sf),
+								name: e.propertyName.text,
+							}
 						: undefined,
 					local: { type: 'Identifier', ...span(e.name, sf), name: e.name.text },
 					importKind: e.isTypeOnly ? 'type' : undefined,
@@ -446,7 +510,10 @@ const convertStatement = (node: ts.Statement, sf: ts.SourceFile): TsrxNode | nul
 }
 
 /** `(a, b, c)` — TS nests left-assoc; estree wants a flat list. */
-const flattenSequence = (node: ts.BinaryExpression, sf: ts.SourceFile): TsrxNode[] => {
+const flattenSequence = (
+	node: ts.BinaryExpression,
+	sf: ts.SourceFile,
+): TsrxNode[] => {
 	const out: TsrxNode[] = []
 	if (
 		ts.isBinaryExpression(node.left) &&
@@ -465,9 +532,14 @@ const flattenSequence = (node: ts.BinaryExpression, sf: ts.SourceFile): TsrxNode
 /** The full dispatch. Returns `null` only for nodes with no value shape. */
 export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 	/* --- Statements --- */
-	if (ts.isStatement(node) && !ts.isBlock(node)) return convertStatement(node, sf)
+	if (ts.isStatement(node) && !ts.isBlock(node))
+		return convertStatement(node, sf)
 	if (ts.isBlock(node))
-		return { type: 'BlockStatement', ...span(node, sf), body: convAll(node.statements, sf) }
+		return {
+			type: 'BlockStatement',
+			...span(node, sf),
+			body: convAll(node.statements, sf),
+		}
 
 	/* --- JSX --- */
 	if (
@@ -480,7 +552,8 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 		return convertJsxChild(node as ts.JsxChild, sf)
 
 	/* --- Expressions --- */
-	if (ts.isIdentifier(node)) return { type: 'Identifier', ...span(node, sf), name: node.text }
+	if (ts.isIdentifier(node))
+		return { type: 'Identifier', ...span(node, sf), name: node.text }
 	if (ts.isStringLiteral(node)) return literal(node, sf, node.text)
 	if (ts.isNumericLiteral(node)) return literal(node, sf, Number(node.text))
 	if (node.kind === ts.SyntaxKind.TrueKeyword) return literal(node, sf, true)
@@ -534,10 +607,13 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 			type: 'NewExpression',
 			...span(node, sf),
 			callee: conv(node.expression, sf),
-			arguments: node.arguments === undefined ? [] : convAll(node.arguments, sf),
+			arguments:
+				node.arguments === undefined ? [] : convAll(node.arguments, sf),
 		}
-	if (ts.isArrowFunction(node)) return convertFunctionLike(node, sf, 'ArrowFunctionExpression')
-	if (ts.isFunctionExpression(node)) return convertFunctionLike(node, sf, 'FunctionExpression')
+	if (ts.isArrowFunction(node))
+		return convertFunctionLike(node, sf, 'ArrowFunctionExpression')
+	if (ts.isFunctionExpression(node))
+		return convertFunctionLike(node, sf, 'FunctionExpression')
 	if (ts.isConditionalExpression(node))
 		return {
 			type: 'ConditionalExpression',
@@ -549,7 +625,10 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 	if (ts.isBinaryExpression(node)) {
 		const op = node.operatorToken.getText(sf)
 		return {
-			type: op === '&&' || op === '||' || op === '??' ? 'LogicalExpression' : 'BinaryExpression',
+			type:
+				op === '&&' || op === '||' || op === '??'
+					? 'LogicalExpression'
+					: 'BinaryExpression',
 			...span(node, sf),
 			operator: op,
 			left: conv(node.left, sf),
@@ -558,7 +637,9 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 	}
 	if (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node))
 		return {
-			type: ts.isPostfixUnaryExpression(node) ? 'UpdateExpression' : 'UnaryExpression',
+			type: ts.isPostfixUnaryExpression(node)
+				? 'UpdateExpression'
+				: 'UnaryExpression',
 			...span(node, sf),
 			operator: unaryOperator(
 				node as ts.PrefixUnaryExpression | ts.PostfixUnaryExpression,
@@ -606,7 +687,11 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 							? {
 									type: 'AssignmentPattern',
 									...span(p, sf),
-									left: { type: 'Identifier', ...span(p.name, sf), name: p.name.text },
+									left: {
+										type: 'Identifier',
+										...span(p.name, sf),
+										name: p.name.text,
+									},
 									right: conv(p.objectAssignmentInitializer, sf),
 								}
 							: { type: 'Identifier', ...span(p.name, sf), name: p.name.text },
@@ -615,7 +700,11 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 						shorthand: true,
 					}
 				if (ts.isSpreadAssignment(p))
-					return { type: 'SpreadElement', ...span(p, sf), argument: conv(p.expression, sf) }
+					return {
+						type: 'SpreadElement',
+						...span(p, sf),
+						argument: conv(p.expression, sf),
+					}
 				if (ts.isMethodDeclaration(p))
 					return {
 						type: 'Property',
@@ -624,7 +713,11 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 							? { type: 'Identifier', ...span(p.name, sf), name: p.name.text }
 							: conv(p.name, sf),
 						value: p.body
-							? convertFunctionLike(p as unknown as ts.FunctionExpression, sf, 'FunctionExpression')
+							? convertFunctionLike(
+									p as unknown as ts.FunctionExpression,
+									sf,
+									'FunctionExpression',
+								)
 							: null,
 						computed: false,
 						kind: 'init',
@@ -650,11 +743,23 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 			),
 		}
 	if (ts.isSpreadElement(node))
-		return { type: 'SpreadElement', ...span(node, sf), argument: conv(node.expression, sf) }
+		return {
+			type: 'SpreadElement',
+			...span(node, sf),
+			argument: conv(node.expression, sf),
+		}
 	if (ts.isAwaitExpression(node))
-		return { type: 'AwaitExpression', ...span(node, sf), argument: conv(node.expression, sf) }
+		return {
+			type: 'AwaitExpression',
+			...span(node, sf),
+			argument: conv(node.expression, sf),
+		}
 	if (ts.isYieldExpression(node))
-		return { type: 'YieldExpression', ...span(node, sf), argument: conv(node.expression, sf) }
+		return {
+			type: 'YieldExpression',
+			...span(node, sf),
+			argument: conv(node.expression, sf),
+		}
 	if (ts.isTaggedTemplateExpression(node))
 		return {
 			type: 'TaggedTemplateExpression',
@@ -663,14 +768,22 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 			quasi: convert(node.template, sf),
 		}
 	if (ts.isParenthesizedExpression(node)) return conv(node.expression, sf)
-	if (ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node))
+	if (
+		ts.isAsExpression(node) ||
+		ts.isSatisfiesExpression(node) ||
+		ts.isNonNullExpression(node)
+	)
 		return {
 			type: `TS${ts.SyntaxKind[node.kind]}`,
 			...span(node, sf),
 			expression: conv(node.expression, sf),
 		}
 	if (ts.isTypeAssertionExpression(node))
-		return { type: 'TSTypeAssertion', ...span(node, sf), expression: conv(node.expression, sf) }
+		return {
+			type: 'TSTypeAssertion',
+			...span(node, sf),
+			expression: conv(node.expression, sf),
+		}
 	if (ts.isVoidExpression(node))
 		return {
 			type: 'UnaryExpression',
@@ -695,21 +808,38 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 			prefix: true,
 			argument: conv(node.expression, sf),
 		}
-	if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.CommaToken)
-		return { type: 'SequenceExpression', ...span(node, sf), expressions: flattenSequence(node, sf) }
+	if (
+		ts.isBinaryExpression(node) &&
+		node.operatorToken.kind === ts.SyntaxKind.CommaToken
+	)
+		return {
+			type: 'SequenceExpression',
+			...span(node, sf),
+			expressions: flattenSequence(node, sf),
+		}
 
 	/* --- Type declarations: kept for verbatim text/name extraction --- */
 	if (ts.isTypeAliasDeclaration(node))
 		return {
 			type: 'TSTypeAliasDeclaration',
 			...span(node, sf),
-			id: { type: 'Identifier', start: node.name.getStart(sf), end: node.name.end, name: node.name.text },
+			id: {
+				type: 'Identifier',
+				start: node.name.getStart(sf),
+				end: node.name.end,
+				name: node.name.text,
+			},
 		}
 	if (ts.isInterfaceDeclaration(node))
 		return {
 			type: 'TSInterfaceDeclaration',
 			...span(node, sf),
-			id: { type: 'Identifier', start: node.name.getStart(sf), end: node.name.end, name: node.name.text },
+			id: {
+				type: 'Identifier',
+				start: node.name.getStart(sf),
+				end: node.name.end,
+				name: node.name.text,
+			},
 		}
 
 	/* --- Everything else: TS-named leaf (no value children). --- */
@@ -725,11 +855,20 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
  * WRAPPER for verbatim text and read only names/kinds from the inner).
  */
 export const parseTsxModule = (source: string, filename: string): TsrxNode => {
-	const sf = ts.createSourceFile(filename, source, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TSX)
+	const sf = ts.createSourceFile(
+		filename,
+		source,
+		ts.ScriptTarget.ESNext,
+		true,
+		ts.ScriptKind.TSX,
+	)
 	const body: TsrxNode[] = []
 	for (const stmt of sf.statements) {
-		const mods = (stmt as ts.Node & { modifiers?: readonly ts.Modifier[] }).modifiers
-		if (mods?.some((m: ts.Modifier) => m.kind === ts.SyntaxKind.ExportKeyword)) {
+		const mods = (stmt as ts.Node & { modifiers?: readonly ts.Modifier[] })
+			.modifiers
+		if (
+			mods?.some((m: ts.Modifier) => m.kind === ts.SyntaxKind.ExportKeyword)
+		) {
 			const inner = convert(stmt, sf)
 			if (inner)
 				body.push({

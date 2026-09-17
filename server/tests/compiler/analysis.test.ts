@@ -8,7 +8,10 @@
 import { describe, expect, test } from 'bun:test'
 import { runEffects } from '../../compiler/analysis/effects'
 import { runHarvest } from '../../compiler/analysis/harvest'
-import { type AnalysisContext, analyzeClient } from '../../compiler/analysis/plan'
+import {
+	type AnalysisContext,
+	analyzeClient,
+} from '../../compiler/analysis/plan'
 import {
 	countForSelector,
 	matchesSelector,

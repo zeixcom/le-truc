@@ -42,8 +42,8 @@ import {
 	parsePlainImports,
 } from '../../imports'
 import type { ComponentIR, ExtractContext, ForIR, TemplateNode } from '../../ir'
-import { lowerChildren, lowerElement } from './lower-template'
 import type { RoutingSignal } from '../../tier'
+import { lowerChildren, lowerElement } from './lower-template'
 
 /* === Types === */
 

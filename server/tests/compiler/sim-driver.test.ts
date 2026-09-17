@@ -49,7 +49,6 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { cpSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { ComponentRegistry } from '../../compiler/registry'
 import {
 	createSimulationRealm,
@@ -61,6 +60,7 @@ import {
 	reportDiagnostics,
 	tierCensus,
 } from '../../compiler/sim/report'
+import { compileTsrxCorpus } from '../../effects/tsrx'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 // LT-165 step 8: the args table and the tag→render-fn mapping moved to
 // `corpus-args.ts` so the equivalence audit (equivalence-audit.test.ts)

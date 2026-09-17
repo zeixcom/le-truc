@@ -9,7 +9,6 @@
  */
 
 import { analyzeClient } from './analysis/plan'
-import { collectComposeElements } from './walk'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
 import { emitServerModule } from './emit-server'
@@ -18,6 +17,7 @@ import type { RegistryEntry } from './registry'
 import type { SourceSpan } from './spans'
 import type { RoutingSignal } from './tier'
 import { classifyTier } from './tier'
+import { collectComposeElements } from './walk'
 
 /* === Types === */
 

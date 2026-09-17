@@ -66,15 +66,18 @@
 
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { LOCALES } from '../config'
 import type { ComponentRegistry, RegistryEntry } from '../compiler/registry'
-import { createSimulationRealm, type SimulationRealm } from '../compiler/sim/realm'
+import {
+	createSimulationRealm,
+	type SimulationRealm,
+} from '../compiler/sim/realm'
 import {
 	formatSimReport,
 	reportDiagnostics,
 	type SimReport,
 } from '../compiler/sim/report'
 import type { EvaluationTier } from '../compiler/tier'
+import { LOCALES } from '../config'
 import { GENERATED_DIR } from './tsrx'
 
 const ROOT = join(import.meta.dir, '..', '..')

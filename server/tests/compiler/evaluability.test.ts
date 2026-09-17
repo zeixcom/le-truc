@@ -5,12 +5,12 @@
  * tests — a divergence here is a wrong component, not a wrong message.
  */
 import { describe, expect, test } from 'bun:test'
-import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import {
 	containsImpureAmbient,
 	dependenciesOf,
 	isServerEvaluable,
 } from '../../compiler/evaluability'
+import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 
 describe('dependenciesOf', () => {
 	test('reports signal reads, excluding JS globals', () => {

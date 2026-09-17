@@ -15,15 +15,18 @@
 
 import { mkdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
-import { componentTsrx, type FileInfo } from '../file-signals'
-import { getFilePath, writeFileSafe } from '../io'
-import { type CompileDiagnostic, compileComponent } from '../compiler/frontend/tsrx'
 import { diagnostic } from '../compiler/diagnostics'
+import {
+	type CompileDiagnostic,
+	compileComponent,
+} from '../compiler/frontend/tsrx'
+import { compileComponentTsx } from '../compiler/frontend/tsx'
 import { type RegistryEntry, registryJson } from '../compiler/registry'
 import { formatCensus, translationCensus } from '../compiler/sim/report'
 import type { SourceSpan } from '../compiler/spans'
 import { contaminateComposeReads } from '../compiler/tier'
-import { compileComponentTsx } from '../compiler/frontend/tsx'
+import { componentTsrx, type FileInfo } from '../file-signals'
+import { getFilePath, writeFileSafe } from '../io'
 import { createBuildEffect } from './build-effect'
 import { collectI18n, writeI18nModule, writeI18nReport } from './i18n'
 

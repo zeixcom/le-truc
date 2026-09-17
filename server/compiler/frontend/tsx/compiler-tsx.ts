@@ -46,12 +46,7 @@ import {
 	parseLeTrucImports,
 	parsePlainImports,
 } from '../../imports'
-import type {
-	ComponentIR,
-	ExtractContext,
-	ForIR,
-	TemplateNode,
-} from '../../ir'
+import type { ComponentIR, ExtractContext, ForIR, TemplateNode } from '../../ir'
 import type { RoutingSignal } from '../../tier'
 import { lowerChildren, lowerElement } from './lower-tsx'
 import { parseTsxModule, type TsrxNode } from './to-estree'

@@ -603,10 +603,7 @@ export const emitClientModule = (
 					depth + 2,
 				)
 			append('},', depth + 1)
-			if (
-				effect.staleQuery !== null &&
-				effect.staleFieldsetQuery !== null
-			) {
+			if (effect.staleQuery !== null && effect.staleFieldsetQuery !== null) {
 				// The four-arm boundary's stale handler: re-fetching WITH a
 				// retained value — hide every other arm, show the stale arm,
 				// optionally refreshing its retained-value text.

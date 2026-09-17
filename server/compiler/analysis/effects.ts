@@ -1201,7 +1201,11 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		)
 		const staleQuery =
 			staleRoot !== null && staleSelector
-				? addQuery(sanitizeVarName(staleRoot.tag), staleSelector.selector, 'one')
+				? addQuery(
+						sanitizeVarName(staleRoot.tag),
+						staleSelector.selector,
+						'one',
+					)
 				: null
 		// The synthetic `<fieldset disabled>` `emit-server.ts` wraps around
 		// each arm root (LT-077, CHECKLIST §8) is addressed structurally, not
@@ -1265,8 +1269,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			// lazy signal child the ok arm shows) — when it does, the client's
 			// stale handler refreshes its text on every re-fetch.
 			staleText:
-				staleRoot !== null &&
-				signal === directLazyIdentifier(staleRoot),
+				staleRoot !== null && signal === directLazyIdentifier(staleRoot),
 			okText: true,
 			errText,
 		})

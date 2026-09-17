@@ -8,11 +8,11 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { collectI18n } from '../../effects/i18n'
-import { compileTsrxCorpus } from '../../effects/tsrx'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
 import { formatCensus, translationCensus } from '../../compiler/sim/report'
+import { collectI18n } from '../../effects/i18n'
+import { compileTsrxCorpus } from '../../effects/tsrx'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { loadTsrxCorpus } from './corpus-fixture'
 

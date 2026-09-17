@@ -3,8 +3,8 @@
  * JSX text collapsing, free-identifier scoping, and template classification.
  */
 import { describe, expect, test } from 'bun:test'
-import { compileComponent } from '../../compiler/frontend/tsrx'
 import { collapseJsxText, freeIdentifiers } from '../../compiler/ast-utils'
+import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import type { TemplateNode } from '../../compiler/ir'
 

@@ -33,7 +33,8 @@ import { createGeneratedDir } from '../../helpers/generated-tsrx'
 import { CORPUS_ARGS, PLURALIZE_I18N } from '../corpus-args'
 
 const ROOT = path.resolve(import.meta.dir, '../../../..')
-const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8')
+const read = (rel: string): string =>
+	fs.readFileSync(path.join(ROOT, rel), 'utf8')
 
 type Fixture = {
 	tag: string
@@ -148,7 +149,8 @@ describe('TSX spike — front-end parity (§4.3)', () => {
 			})
 
 			test('server render byte-identical to the .tsrx original (value harness)', async () => {
-				if (!tsrx.component || !tsxx.component) throw new Error('compile failed')
+				if (!tsrx.component || !tsxx.component)
+					throw new Error('compile failed')
 				const render = renderOf(fx.tag, fx.name)
 				const a = await render(tsrx.component.serverCode, fx.args)
 				const b = await render(tsxx.component.serverCode, fx.args)
@@ -166,38 +168,36 @@ describe('TSX spike — front-end parity (§4.3)', () => {
 			})
 
 			if (fx.tag === 'form-combobox' || fx.tag === 'form-listbox') {
-				test(
-					'server render byte-identical through the UNMODIFIED sim realm (Simulated tier)',
-					async () => {
-						if (!tsrx.component || !tsxx.component) throw new Error('compile failed')
-						const realm = createSimulationRealm({
-							composesTags: tag =>
-								tag === 'form-combobox' ? ['form-listbox'] : [],
+				test('server render byte-identical through the UNMODIFIED sim realm (Simulated tier)', async () => {
+					if (!tsrx.component || !tsxx.component)
+						throw new Error('compile failed')
+					const realm = createSimulationRealm({
+						composesTags: tag =>
+							tag === 'form-combobox' ? ['form-listbox'] : [],
+					})
+					try {
+						generated.emit(`${fx.tag}.client.ts`, tsrx.component.clientCode)
+						await realm.load(() =>
+							generated
+								.importModule(`${fx.tag}.client.ts`)
+								.then(() => undefined),
+						)
+						const render = renderOf(fx.tag, fx.name)
+						const phase1A = await render(tsrx.component.serverCode, fx.args)
+						const phase1B = await render(tsxx.component.serverCode, fx.args)
+						const phase2A = await realm.render({
+							markup: phase1A,
+							component: fx.tag,
 						})
-						try {
-							generated.emit(`${fx.tag}.client.ts`, tsrx.component.clientCode)
-							await realm.load(() =>
-								generated
-									.importModule(`${fx.tag}.client.ts`)
-									.then(() => undefined),
-							)
-							const render = renderOf(fx.tag, fx.name)
-							const phase1A = await render(tsrx.component.serverCode, fx.args)
-							const phase1B = await render(tsxx.component.serverCode, fx.args)
-							const phase2A = await realm.render({
-								markup: phase1A,
-								component: fx.tag,
-							})
-							const phase2B = await realm.render({
-								markup: phase1B,
-								component: fx.tag,
-							})
-							expect(phase2B).toBe(phase2A)
-						} finally {
-							realm.dispose()
-						}
-					},
-				)
+						const phase2B = await realm.render({
+							markup: phase1B,
+							component: fx.tag,
+						})
+						expect(phase2B).toBe(phase2A)
+					} finally {
+						realm.dispose()
+					}
+				})
 			}
 		})
 	}
@@ -295,7 +295,7 @@ export function Seeded({ initial }: { initial?: string[] })
 		if (!component) throw new Error('seeded fixture must compile')
 		// The reconcile path: an extracted <template> and a reconcile() call,
 		// keyed by the list's own keyConfig (no authored key clause needed).
-		expect(component.serverCode).toContain("<template>")
+		expect(component.serverCode).toContain('<template>')
 		expect(component.clientCode).toContain('reconcile(')
 	})
 
@@ -313,8 +313,14 @@ export function Seeded({ initial }: { initial?: string[] })
 		</c-el3>
 	)
 }`
-		const { component, diagnostics } = compileComponentTsx(source, 'no-stmt.tsx', new Set(['c-el3']))
+		const { component, diagnostics } = compileComponentTsx(
+			source,
+			'no-stmt.tsx',
+			new Set(['c-el3']),
+		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.message.includes('if arms must be JSX elements'))).toBe(true)
+		expect(
+			diagnostics.some(d => d.message.includes('if arms must be JSX elements')),
+		).toBe(true)
 	})
 })

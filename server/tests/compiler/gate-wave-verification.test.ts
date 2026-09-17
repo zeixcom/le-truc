@@ -11,12 +11,12 @@
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { pathToFileURL } from 'node:url'
-import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { ComponentRegistry } from '../../compiler/registry'
 import {
 	createSimulationRealm,
 	type SimulationRealm,
 } from '../../compiler/sim/realm'
+import { compileTsrxCorpus } from '../../effects/tsrx'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { PLURALIZE_I18N } from './corpus-args'
 import { loadTsrxCorpus } from './corpus-fixture'

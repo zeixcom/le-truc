@@ -27,12 +27,12 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { DEFAULT_LOCALE, LOCALES } from '../config'
-import { getFilePath, writeFileSafe } from '../io'
 import { PLURAL_CATEGORIES } from '../compiler/i18n'
 import type { RegistryEntry } from '../compiler/registry'
 import { pluralCategories } from '../compiler/runtime'
 import type { TranslationGap } from '../compiler/sim/report'
+import { DEFAULT_LOCALE, LOCALES } from '../config'
+import { getFilePath, writeFileSafe } from '../io'
 
 /** The repo-root directory holding the committed per-locale catalogs. */
 export const I18N_DIR = join(import.meta.dir, '..', '..', 'i18n')
