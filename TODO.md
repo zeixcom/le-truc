@@ -21,28 +21,83 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-202.**
+**Next free task ID: LT-205.**
 
 ---
 
-## P0 — Format spike (gates P5; parallel-safe with P1/P2)
+## P0 — TSX surface adoption (ADR 0032 — dual front end, `.tsx` primary, `.tsrx` retained)
 
-- [ ] LT-183: TSX surface spike — decide `.tsrx` vs `.tsx` compiler surface. **Plan: `TSX_SPIKE.md`.**
+**LT-183 closed 2026-09-17 — spike verdict GO, reviewed ✓ (architect).** Executed in one
+session on `spike/tsx-surface` (`db0a0be5`): all four ported components render
+**byte-identical** through the unmodified machinery (`git diff v3 -- server/tsrx` is
+empty), the corpus's two Simulated-tier components match through the unmodified realm, a
+deliberate compose type error reports on the authored parent, and both hard control-flow
+shapes work (`boundary({ ok, pending, err })` for the async boundary). Record:
+`spike/tsx/FINDINGS.md`; parity suite `server/tests/tsrx-tsx/parity.test.ts` (26/26).
+ADR 0032 Accepted with the **owner's dual-front-end amendment (2026-09-17)**: `.tsx` is
+the primary authored surface, `.tsrx` stays supported (statement-context control flow is
+its ergonomic edge; the forced 22-component codemod is cancelled — it becomes an optional
+consolidation pass), and the parity suite + shared front-end modules are the anti-drift
+contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
+
+- [ ] LT-202: Production merge — land the `.tsx` front end in the v3 build as the second first-class surface (ADR 0032).
   **Skill:** le-truc-dev
-  **Context:** The 2026-09-06 architecture review concluded the compiler machinery
-  (analysis, emitters, simulation, tiering) is format-independent while the surface
-  (`.tsrx` grammar on a pinned `@tsrx/core`) carries the mounting costs: broken editor
-  support, the React-near-miss diagnostic family, pin churn, emit-then-check type flow.
-  A time-boxed spike on branch `spike/tsx-surface` re-targets the compiler front end onto
-  the TypeScript parser (stand-alone core; no Babel; `sim/` stays out of its import
-  graph — decisions §2 of the plan) and ports `basic-counter`, `basic-pluralize`,
-  `form-combobox` + `form-listbox`, diffing server renders **byte-wise** against the
-  existing `.tsrx` goldens. §7 records probe-verified facts (TS 6.0.3 parses and
-  type-checks `truc:pass` namespaced JSX attributes; function-valued attributes and IIFE
-  arms check under `--strict`). **Gates wave 4:** do not start LT-095–LT-111 before the
-  go/no-go — a surface switch after migrating 21 more components would double the churn.
-  On GO, an ADR supersedes ADR 0024's surface sub-designs; on NO-GO, TSRX stands with
-  evidence. Read the plan; it is self-contained.
+  **Context:** The spike proved the machinery reuse with zero `server/tsrx/` changes; this
+  task turns the spike branch into production reality:
+  1. Merge `spike/tsx-surface` into v3 (the branch carries `server/tsrx-tsx/`, the
+     fixtures under `spike/tsx/`, and the parity suite — already committed).
+  2. **Extract the shared front-end halves** (mandatory under dual, not a nicety): the
+     setup-extraction loop and the element/children lowering shared by
+     `compiler.ts`/`compiler-tsx.ts` and `lower-template.ts`/`lower-tsx.ts` move into
+     shared modules used by both front ends, deleting the spike's ~950 copied lines
+     (FINDINGS projection: ≈2.4k `.tsx` front end). This is the anti-drift half of the
+     dual contract; the parity suite is the other half and must stay green through the
+     extraction.
+  3. **Dual corpus scan:** the build globs `.tsrx` AND `.tsx` into one registry; a tag
+     declared by two sources fails the corpus compile naming both files (channel:
+     compiler, tier 1 Prevented per ADR 0028 — statically decidable, no runtime half).
+  4. Widen `imports.ts`'s plain-import filter to both extensions (FINDINGS fact 7: it
+     filters `.tsrx` specifiers only today; the spike worked around it by local-name
+     overlap — the production shape belongs in `imports.ts`).
+  5. Note FINDINGS fact 6 for the extraction: IIFE recognition must be shape-based
+     (object identity does not survive TS→estree conversion).
+  **Verification:** parity 26/26 green post-extraction; full `bun test server/tests`
+  green; `bun run typecheck` exit 0 (capture directly); `check:tsrx` over the unified
+  corpus (22 `.tsrx` + the fixtures' tags) with warning baseline 0 and tier census
+  unchanged; `build:docs` green.
+
+- [ ] LT-203: Harden the `.tsx` host profile — strict per-element typing, the `host` ambient, and the compose `'truc:pass'` convention (ADR 0032 s3).
+  **Skill:** le-truc-dev
+  **Context:** The spike's `spike/tsx/host-profile.d.ts` is a permissive stand-in; the
+  probes already prove strict typing works. Three items (FINDINGS facts 4–5):
+  1. **Per-element strict `IntrinsicElements`:** light-DOM attribute types per element
+     (no blanket `HostAttrs`), function-valued thunk overloads, `class`/`for` (no
+     `className`/`htmlFor` entries), and value-shape checking of `truc:pass` entries.
+  2. **Widen the `host` ambient** beyond `HTMLElement & Record<string, unknown>` — the
+     spike's `FormAssociatedElement & Record<string, any>` shape makes managed-form
+     member calls (`host.setCustomValidity(…)`) type-check; the generated client keeps
+     precise types.
+  3. **The compose convention, productionized:** a composed child declares its
+     compiler-consumed pass surface on its args type (`'truc:pass'?: { … }`); apply it to
+     the corpus's composed children, not just the fixture's form-listbox.
+  **Verification:** the negative probes keep failing for the right reasons; fixtures
+  type-check under `--strict`; `bun test server/tests` green.
+
+- [ ] LT-204: Docs and requirements round for the dual front end (ADR 0032 follow-up f).
+  **Skill:** tech-writer (architect co-owns REQUIREMENTS.md/ARCHITECTURE.md touchpoints)
+  **Context:** ADR 0032 changes the authoring story; the documentation follows:
+  1. `TSRX-HOST-PROFILE.md` becomes the **dual host profile**: `.tsx` primary (module
+     shape, expression control flow, `boundary()`, template-literal CSS, no shorthand)
+     with the `.tsrx` profile retained.
+  2. REQUIREMENTS M17/M25 wording follows the ADR (`.tsx` primary, `.tsrx` supported).
+  3. **LT-014 (Volar plugin) retires as moot** — `.tsx` authored code gets editors
+     through tsserver; record the re-open condition (`.tsrx` authoring resurgence).
+  4. `AGENTS.md`/`ARCHITECTURE.md`/`CONTEXT.md` gain the dual-surface facts;
+     `server/tsrx/LE_TRUC_COMPILER.md`'s module map gains the second front end + shared
+     modules from LT-202.
+  5. The wave-4 authoring rule lands where authors will meet it: default `.tsx`;
+     `.tsrx` where statement-context control flow argues otherwise.
+  **Verification:** `bun run check:links` green; Tech Writer owns final copy.
 
 ---
 
@@ -471,8 +526,10 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
 
 ## P5 — Wave 4: example migrations
 
-**Gated on LT-183's go/no-go AND LT-178/LT-179** (owner sequencing). Otherwise unblocked. The
-canonical pattern is LT-092's: same-commit cutover — delete the `.ts` twin, point
+**Gated on LT-202 (the `.tsx` front end in the build) AND LT-178/LT-179** (owner
+sequencing). LT-183 returned GO (ADR 0032, dual front end) — **migrations author `.tsx`**;
+the spike's four fixtures (`spike/tsx/`) and FINDINGS' surface mapping are the shape
+reference. Otherwise unblocked. The canonical pattern is LT-092's: same-commit cutover — delete the `.ts` twin, point
 `examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green
 against the served compiled component. Surface compiler gaps in NOTES.md — or fix them
 directly if small (LT-088 precedent) — never weaken a component to dodge a gap. **Per

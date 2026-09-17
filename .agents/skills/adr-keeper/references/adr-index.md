@@ -36,9 +36,9 @@ This file is auto-generated. Do not edit manually.
 | [0029](0029-tiered-server-evaluation.md) | Tiered Server Evaluation — Route Each Component to the Cheapest Phase That Can Answer | ✅ Accepted | §1, §5, §7 |
 | [0030](0030-internationalization-as-build-time-server-data.md) | Internationalization as Build-Time Server Data | ✅ Accepted | §4, §5, §7 |
 | [0031](0031-pre-connect-property-writes-capture-and-install.md) | Pre-Connect Property Writes Are Captured and Installed | ✅ Accepted | M2, M3 |
-| [0032](0032-adopt-tsx-as-the-authored-component-surface.md) | Adopt `.tsx` as the Authored Component Surface | 🔄 Proposed | M1, M3, M4, §5, §7 |
+| [0032](0032-adopt-tsx-as-the-authored-component-surface.md) | Adopt `.tsx` as the Primary Authored Component Surface (`.tsrx` Retained) | ✅ Accepted | M1, M3, M4, §5, §7 |
 
 ---
 
-**Last updated:** 2026-09-15
+**Last updated:** 2026-09-17
 **Total ADRs:** 31 (excluding template)
