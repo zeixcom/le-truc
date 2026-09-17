@@ -304,7 +304,7 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   gate's scope (adr/ + three root docs only), making its green vacuous for the moved
   file; count 387 → 397.
 
-- [ ] LT-205: A `.tsrx` spelling for the four-state async boundary (the dual-contract debt LT-202's `boundary({ ok, nil, err, stale })` created).
+- [x] LT-205: A `.tsrx` spelling for the four-state async boundary (the dual-contract debt LT-202's `boundary({ ok, nil, err, stale })` created). — ruled ✓ (architect, 2026-09-17): option (c), the asymmetry stands
   **Skill:** architect (rules the grammar question) with le-truc-dev (implements against the pin)
   **Context:** The owner folded the four-arm boundary into the `.tsx` front end
   (2026-09-17): `nil` (no value yet) and `stale` (re-fetching with retained value) are
@@ -323,6 +323,21 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   **Acceptance (once ruled):** the chosen spelling compiles through the unmodified
   machinery to the same four-arm IR; parity's four-arm pin extends to the `.tsrx` twin;
   goldens otherwise unchanged.
+  **Ruling (architect, 2026-09-17): option (c).** Upstream has moved past the pin —
+  0.1.64–0.1.71, then a 0.2 minor line (0.2.0 2026-09-15 → 0.2.3 2026-09-17) — and NO
+  version carries a stale arm: the try directive is block/`@catch`/`@pending` in the
+  0.2.3 AST vocabulary and in the draft specification alike; the only "stale" strings
+  in the package are tokenizer-internals comments. So (a) is dead — there is nothing to
+  upgrade to — and the owner rejects (b) on principle: Le Truc introduces no construct
+  unavailable to other TSRX hosts. `boundary({ ok, nil, err, stale? })` stays
+  `.tsx`-only vocabulary for as long as upstream's grammar lags; a `.tsrx` author who
+  needs the stale arm authors `.tsx` or accepts the three-arm fallback (`watch()`'s
+  own). ADR 0032 s6 records the exception mechanism (a capability lands in one surface
+  only when the other's grammar cannot express it; re-opens when upstream grows the
+  construct, caught at the next pin-upgrade review) and notes the pin stays at 0.1.63 —
+  nothing in 0.1.64–0.2.3 bears on this gap, and 0.2.x's headline (scoped styles/theme
+  machinery) cuts against the host's unscoped-light-DOM profile. Nothing to implement:
+  no code, goldens, or parity pins change.
 
 - [ ] LT-208: Type the `boundary` arms precisely in the shared profile (owner precision ruling, 2026-09-17).
   **Skill:** le-truc-dev

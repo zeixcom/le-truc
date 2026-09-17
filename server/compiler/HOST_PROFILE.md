@@ -36,7 +36,7 @@ One exported component function per file:
 | A try/catch IIFE | the error boundary |
 | `boundary({ ok, nil, err, stale? })` | the async boundary |
 
-`boundary()` is the recognized ambient for the async boundary: **all arms render**, `hidden`-toggled by which state won — `nil` is no-value-yet, `stale` is re-fetching with a retained value (ADR 0029's precedence; omitting `stale` falls back the way `watch()` does), and `err`'s callback receives the rejection value. The `.tsrx` grammar has no `stale` spelling yet, so its `@try`/`@pending`/`@catch` boundary stays three-arm.
+`boundary()` is the recognized ambient for the async boundary: **all arms render**, `hidden`-toggled by which state won — `nil` is no-value-yet, `stale` is re-fetching with a retained value (ADR 0029's precedence; omitting `stale` falls back the way `watch()` does), and `err`'s callback receives the rejection value. The `.tsrx` grammar has no `stale` spelling — no published `@tsrx/core` through 0.2.3 does — so its `@try`/`@pending`/`@catch` boundary stays three-arm: a standing surface asymmetry, not a pending gap ([ADR 0032](../../adr/0032-adopt-tsx-as-the-authored-component-surface.md) s6). A `.tsrx` author who needs the stale arm authors `.tsx` or accepts the three-arm fallback; Le Truc introduces no host-invented construct to fill the gap.
 
 The one thing `.tsx` cannot express is a **statement** in branch position: an IIFE arm must return JSX, and there is no directive block to hide a bare client-side statement in. Statements live in setup. Where statement-context arms read better — a branch that mutates, a loop body that needs statements — author `.tsrx`; that is the surface split's whole point.
 
