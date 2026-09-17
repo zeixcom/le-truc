@@ -44,6 +44,10 @@ _Avoid_: container, wrapper, holder
 A function that transforms HTML attribute strings to typed values (e.g., `asBoolean`, `asInteger`). Called once at connect time.
 _Avoid_: converter, transformer, decoder
 
+**Pre-Connect Write**:
+A plain own data property left on a host by a write before its connect-time initialization (e.g. a parent factory writing a child's prop — parent-first `connectedCallback` order). Captured at connect as the initial **Signal** value; the accessor installs anyway (ADR 0031).
+_Avoid_: early write, pre-upgrade assignment, DOM value
+
 **Binding**:
 The connection between a **Signal** and a DOM property/attribute on any **HTMLElement**, established by helpers like `bindAttribute`, `bindText`, `bindProperty`. Used for one-way updates from signals to DOM. For non-Le Truc elements, this is the only available mechanism.
 _Avoid_: link, connection, sync, pass
@@ -123,6 +127,7 @@ _Avoid_: dictionary, translations file, i18n bundle. "Locale data" is not a syno
 - A **Factory** receives a **Factory Context**, whose helpers register **Effect Descriptor** thunks into an ambient collector as they are called (explicit `return` of a descriptor array is still supported but deprecated as of v3.0)
 - A **Signal** may be wrapped in a **Slot** to enable **Pass** between **Component** instances
 - A **Parser** converts attribute strings to values that may back a **Signal**
+- A **Pre-Connect Write** captured at connect time seeds the initial value of a **Signal**-backed property instead of suppressing it
 - **Binding** helpers connect **Signal** values to DOM properties/attributes on any element
 - **Pass** connects **Slot**-backed **Signal** instances between Le Truc **Component** instances
 - A **Component** is a **Custom Element** with JavaScript-enhanced functionality (a Web Component)

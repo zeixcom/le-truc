@@ -2203,7 +2203,7 @@ var schedule = (key, task) => {
 var throttle = (fn, signal) => {
   let pending = false;
   let lastArgs;
-  const flush2 = () => {
+  const flush = () => {
     pending = false;
     fn(...lastArgs);
   };
@@ -2212,12 +2212,12 @@ var throttle = (fn, signal) => {
     if (pending)
       return;
     pending = true;
-    throttledCallbacks.add(flush2);
+    throttledCallbacks.add(flush);
     requestTick();
   };
   wrapped.cancel = () => {
     if (pending) {
-      throttledCallbacks.delete(flush2);
+      throttledCallbacks.delete(flush);
       pending = false;
     }
   };
@@ -2290,12 +2290,12 @@ var bindText = (element, preserveComments = false) => {
 function bindProperty(object, keyOrKeys) {
   if (typeof keyOrKeys === "string") {
     const key = keyOrKeys;
-    const setter2 = (value) => {
+    const setter = (value) => {
       object[key] = value;
     };
     if (typeof Element !== "undefined" && object instanceof Element)
-      registerDebugBindingTarget(setter2, object);
-    return setter2;
+      registerDebugBindingTarget(setter, object);
+    return setter;
   }
   const keys = keyOrKeys;
   const setter = (value) => {
@@ -2311,11 +2311,11 @@ function bindProperty(object, keyOrKeys) {
 function bindClass(element, tokenOrTokens) {
   if (typeof tokenOrTokens === "string") {
     const token = tokenOrTokens;
-    const setter2 = (value) => {
+    const setter = (value) => {
       element.classList.toggle(token, Boolean(value));
     };
-    registerDebugBindingTarget(setter2, element);
-    return setter2;
+    registerDebugBindingTarget(setter, element);
+    return setter;
   }
   const tokens = tokenOrTokens;
   const setter = (value) => {
@@ -2361,7 +2361,7 @@ var bindVisible = (element) => {
 function bindAttribute(element, nameOrNames, allowUnsafe = false) {
   if (typeof nameOrNames === "string") {
     const name = nameOrNames;
-    const handlers2 = {
+    const handlers = {
       ok: (value) => {
         if (typeof value === "boolean") {
           element.toggleAttribute(name, value);
@@ -2375,8 +2375,8 @@ function bindAttribute(element, nameOrNames, allowUnsafe = false) {
         element.removeAttribute(name);
       }
     };
-    registerDebugBindingTarget(handlers2, element);
-    return handlers2;
+    registerDebugBindingTarget(handlers, element);
+    return handlers;
   }
   const names = nameOrNames;
   const handlers = {
@@ -2458,7 +2458,7 @@ function bindAria(target, nameOrNames) {
   };
   if (typeof nameOrNames === "string") {
     const name = nameOrNames;
-    const handlers2 = {
+    const handlers = {
       ok: (value) => {
         assign(name, value);
       },
@@ -2467,8 +2467,8 @@ function bindAria(target, nameOrNames) {
       }
     };
     if (isElementTarget)
-      registerDebugBindingTarget(handlers2, target);
-    return handlers2;
+      registerDebugBindingTarget(handlers, target);
+    return handlers;
   }
   const names = nameOrNames;
   const handlers = {
@@ -2488,7 +2488,7 @@ function bindAria(target, nameOrNames) {
 function bindStyle(element, propOrProps) {
   if (typeof propOrProps === "string") {
     const prop = propOrProps;
-    const handlers2 = {
+    const handlers = {
       ok: (value) => {
         element.style.setProperty(prop, value);
       },
@@ -2496,8 +2496,8 @@ function bindStyle(element, propOrProps) {
         element.style.removeProperty(prop);
       }
     };
-    registerDebugBindingTarget(handlers2, element);
-    return handlers2;
+    registerDebugBindingTarget(handlers, element);
+    return handlers;
   }
   const props = propOrProps;
   const handlers = {
@@ -3012,10 +3012,10 @@ function reconcile(container, template, source, bindItem) {
       const leavers = [];
       for (const child of Array.from(container.children)) {
         if (child.hasAttribute("data-unreconciled")) {
-          const key2 = keyOf.get(child);
-          if (key2 !== undefined && keySet.has(key2)) {
-            current.set(key2, child);
-            pinned.add(key2);
+          const key = keyOf.get(child);
+          if (key !== undefined && keySet.has(key)) {
+            current.set(key, child);
+            pinned.add(key);
           }
           continue;
         }
@@ -3325,9 +3325,9 @@ function defineComponent(name, factory, extensions) {
           host,
           ...elementQueries,
           get internals() {
-            const internals2 = internalsMap.get(instance) ?? null;
+            const internals = internalsMap.get(instance) ?? null;
             if (false) {}
-            return internals2;
+            return internals;
           },
           watch: makeWatch(host),
           on: makeOn(host),
@@ -3381,15 +3381,16 @@ function defineComponent(name, factory, extensions) {
         this.#cleanup();
     }
     #initSignals(instanceProps) {
-      const createReactiveProperty = (key, initializer) => {
+      const createReactiveProperty = (key, initializer, earlyValue) => {
         if (isParser(initializer)) {
-          const result = initializer(this.getAttribute(key));
-          if (result != null)
-            this.#setAccessor(key, result);
+          const value = earlyValue ?? initializer(this.getAttribute(key));
+          if (value != null)
+            this.#setAccessor(key, value);
         } else if (isMethodProducer(initializer)) {
           this[key] = initializer;
         } else {
-          const value = initializer;
+          const init = initializer;
+          const value = earlyValue != null && !isSignal(init) && !isSlotDescriptor(init) && !isFunction(init) ? earlyValue : init;
           if (value != null)
             this.#setAccessor(key, value);
         }
@@ -3405,7 +3406,8 @@ function defineComponent(name, factory, extensions) {
             ;
           throw new InvalidPropertyNameError(this.localName, prop, reason);
         }
-        if (prop in this)
+        const earlyValue = Object.hasOwn(this, prop) ? this[prop] : undefined;
+        if (prop in this && earlyValue === undefined)
           continue;
         let retained = retainedInitializers.get(this);
         if (!retained) {
@@ -3413,7 +3415,7 @@ function defineComponent(name, factory, extensions) {
           retainedInitializers.set(this, retained);
         }
         retained[prop] = initializer;
-        createReactiveProperty(prop, initializer);
+        createReactiveProperty(prop, initializer, earlyValue);
       }
     }
     #setAccessor(key, value) {
@@ -3789,115 +3791,115 @@ var asEnum = (valid) => asParser((value) => {
   return matchingValid ?? valid[0];
 });
 export {
-  untrack,
-  unown,
-  throttle,
-  setTextPreservingComments,
-  schedule,
-  safeSetAttribute,
-  relayValidity,
-  reconcile,
-  queryAll,
-  query,
-  observedAttributes,
-  match,
-  isTask,
-  isStore,
-  isState,
-  isSlot,
-  isSignalOfType,
-  isSignal,
-  isSensor,
-  isRecord,
-  isPending,
-  isParser,
-  isMutableStore,
-  isMutableSignal,
-  isMutableList,
-  isMutableCell,
-  isMethodProducer,
-  isMemo,
-  isList,
-  isFunction,
-  isDerivedList,
-  isComputed,
-  isCollection,
-  isCell,
-  isAsyncFunction,
-  formAssociatedCheckbox,
-  formAssociated,
-  escapeHTML,
-  each,
-  deriveStore,
-  deriveSignal,
-  deriveList,
-  deriveCell,
-  defineMethod,
-  defineComponent,
-  dangerouslyBindInnerHTML,
-  createTask,
-  createStore,
-  createState,
-  createSlot,
-  createSignal,
-  createSensor,
-  createScope,
-  createMutableSignal,
-  createMemo,
-  createList,
-  createElementsMemo,
-  createEffect,
-  createContext,
-  createComputed,
-  createCollection,
-  createCell,
-  configureHtmlSanitizer,
-  bindVisible,
-  bindText,
-  bindStyle,
-  bindState,
-  bindProperty,
-  bindClass,
-  bindAttribute,
-  bindAria,
-  batch,
-  asString,
-  asParser,
-  asNumber,
-  asJSON,
-  asInteger,
-  asEnum,
-  asClampedInteger,
-  asBoolean,
-  abort,
-  UnsetSignalValueError,
-  UnsafeAttributeError,
-  UnresolvableKeyError,
-  SKIP_EQUALITY,
-  RequiredOwnerError,
-  ReadonlySignalError,
-  RESERVED_WORDS_LIST,
-  PromiseValueError,
-  NullishSignalValueError,
-  NoActiveCollectorError,
-  MissingElementError,
-  InvalidTemplateError,
-  InvalidStoreMutationError,
-  InvalidSignalValueError,
-  InvalidSelectorError,
-  InvalidReactivesError,
-  InvalidPropertyNameError,
-  InvalidPassPropertyError,
-  InvalidCustomElementError,
-  InvalidComponentNameError,
-  InvalidCallbackError,
-  ExtensionCollisionError,
-  EffectConvergenceError,
-  DuplicateKeyError,
-  DependencyTimeoutError,
-  DEFAULT_EQUALITY,
-  DEEP_EQUALITY,
-  ContextRequestEvent,
+  CONTEXT_REQUEST,
   CircularDependencyError,
-  CONTEXT_REQUEST
+  ContextRequestEvent,
+  DEEP_EQUALITY,
+  DEFAULT_EQUALITY,
+  DependencyTimeoutError,
+  DuplicateKeyError,
+  EffectConvergenceError,
+  ExtensionCollisionError,
+  InvalidCallbackError,
+  InvalidComponentNameError,
+  InvalidCustomElementError,
+  InvalidPassPropertyError,
+  InvalidPropertyNameError,
+  InvalidReactivesError,
+  InvalidSelectorError,
+  InvalidSignalValueError,
+  InvalidStoreMutationError,
+  InvalidTemplateError,
+  MissingElementError,
+  NoActiveCollectorError,
+  NullishSignalValueError,
+  PromiseValueError,
+  RESERVED_WORDS_LIST,
+  ReadonlySignalError,
+  RequiredOwnerError,
+  SKIP_EQUALITY,
+  UnresolvableKeyError,
+  UnsafeAttributeError,
+  UnsetSignalValueError,
+  abort,
+  asBoolean,
+  asClampedInteger,
+  asEnum,
+  asInteger,
+  asJSON,
+  asNumber,
+  asParser,
+  asString,
+  batch,
+  bindAria,
+  bindAttribute,
+  bindClass,
+  bindProperty,
+  bindState,
+  bindStyle,
+  bindText,
+  bindVisible,
+  configureHtmlSanitizer,
+  createCell,
+  createCollection,
+  createComputed,
+  createContext,
+  createEffect,
+  createElementsMemo,
+  createList,
+  createMemo,
+  createMutableSignal,
+  createScope,
+  createSensor,
+  createSignal,
+  createSlot,
+  createState,
+  createStore,
+  createTask,
+  dangerouslyBindInnerHTML,
+  defineComponent,
+  defineMethod,
+  deriveCell,
+  deriveList,
+  deriveSignal,
+  deriveStore,
+  each,
+  escapeHTML,
+  formAssociated,
+  formAssociatedCheckbox,
+  isAsyncFunction,
+  isCell,
+  isCollection,
+  isComputed,
+  isDerivedList,
+  isFunction,
+  isList,
+  isMemo,
+  isMethodProducer,
+  isMutableCell,
+  isMutableList,
+  isMutableSignal,
+  isMutableStore,
+  isParser,
+  isPending,
+  isRecord,
+  isSensor,
+  isSignal,
+  isSignalOfType,
+  isSlot,
+  isState,
+  isStore,
+  isTask,
+  match,
+  observedAttributes,
+  query,
+  queryAll,
+  reconcile,
+  relayValidity,
+  safeSetAttribute,
+  schedule,
+  setTextPreservingComments,
+  throttle,
+  unown,
+  untrack
 };

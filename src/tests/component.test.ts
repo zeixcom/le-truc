@@ -21,17 +21,27 @@ import {
 	InvalidPropertyNameError,
 	NoActiveCollectorError,
 } from '../errors'
-import { internalsHosts } from '../internal'
+import { internalsHosts, retainedInitializers } from '../internal'
 import { asParser, defineMethod } from '../types'
 
 /* === Fake customElements registry + HTMLElement base === */
 
 class FakeHTMLElement {
 	#attrs = new Map<string, string>()
-	localName = 'fake-element'
 	shadowRoot: null = null
 	formAssociated = false
 	#internals: FakeElementInternals | null = null
+
+	// Prototype-defined and readonly, like Element.localName in the real DOM —
+	// resolved from the registry via the constructor. An own class field would
+	// be indistinguishable from a pre-connect write, which #initSignals
+	// detects via Object.hasOwn.
+	get localName(): string {
+		return (
+			ctorNames.get(this.constructor as CustomElementConstructor) ??
+			'fake-element'
+		)
+	}
 
 	getAttribute(name: string): string | null {
 		return this.#attrs.has(name) ? this.#attrs.get(name)! : null
@@ -116,6 +126,7 @@ class FakeElementInternals {
 }
 
 const registry = new Map<string, CustomElementConstructor>()
+const ctorNames = new WeakMap<CustomElementConstructor, string>()
 
 const installFakeCustomElements = () => {
 	;(globalThis as any).HTMLElement = FakeHTMLElement
@@ -123,6 +134,7 @@ const installFakeCustomElements = () => {
 		define: (name: string, ctor: CustomElementConstructor) => {
 			if (registry.has(name)) throw new Error(`already defined: <${name}>`)
 			registry.set(name, ctor)
+			ctorNames.set(ctor, name)
 		},
 		get: (name: string) => registry.get(name),
 		whenDefined: (name: string) =>
@@ -362,21 +374,52 @@ describe('#initSignals dispatch order', () => {
 	})
 })
 
-/* === prop in this guard === */
+/* === pre-connect property writes (LT-199) === */
 
-describe('prop in this guard', () => {
-	test('skips an initializer when the property already exists on the host', () => {
-		const Ctor = defineComponent<{ localName: string }>(
+describe('pre-connect property writes', () => {
+	test('captures a pre-connect write as the initial value and installs the accessor', async () => {
+		const seen: string[] = []
+		const Ctor = defineComponent<{ value: string }>(
 			uniqueName(),
-			({ expose }) => {
-				// `localName` already exists on the HTMLElement instance — the
-				// guard must skip it rather than overwrite it with a signal.
-				expose({ localName: 'should-be-ignored' })
+			({ expose, watch }) => {
+				expose({ value: 'init' })
+				watch('value', v => {
+					seen.push(v)
+				})
 			},
 		)!
+		const el = new Ctor() as any
+
+		// Parent-first connectedCallback order: an inserting ancestor's
+		// factory runs before a child in the same subtree upgrades, so the
+		// write lands before expose() initializes the property.
+		el.value = 'early'
+		el.connectedCallback()
+		await new Promise(r => setTimeout(r, 0))
+
+		// The early write is the initial signal value, not the initializer
+		expect(seen).toEqual(['early'])
+
+		// The accessor is installed: later writes stay reactive
+		el.value = 'late'
+		await new Promise(r => setTimeout(r, 0))
+		expect(seen).toEqual(['early', 'late'])
+
+		// The plain own data property was replaced by the accessor
+		expect(Object.getOwnPropertyDescriptor(el, 'value')?.get).toBeDefined()
+	})
+
+	test('skips an inherited, prototype-managed member (real-DOM localName)', () => {
+		const name = uniqueName()
+		const Ctor = defineComponent<{ localName: string }>(name, ({ expose }) => {
+			// `localName` is prototype-defined on HTMLElement — the guard
+			// must skip it rather than shadow it with a signal.
+			expose({ localName: 'should-be-ignored' })
+		})!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
-		expect(instance.localName).toBe('fake-element')
+		// The registry-resolved prototype value survives untouched
+		expect(instance.localName).toBe(name)
 	})
 
 	test('does not skip a genuinely new property name', () => {
@@ -389,6 +432,78 @@ describe('prop in this guard', () => {
 		const instance = new Ctor() as any
 		instance.connectedCallback()
 		expect(instance.totallyNewProp).toBe(42)
+	})
+
+	test('parser-backed prop: a pre-connect write wins over the attribute', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: asParser(v => v ?? '') })
+			},
+		)!
+		const written = new Ctor() as any
+		written.setAttribute('value', 'from-attribute')
+		written.value = 'early'
+		written.connectedCallback()
+		expect(written.value).toBe('early')
+
+		// Control: without an early write the attribute drives the parser
+		const unwritten = new Ctor() as any
+		unwritten.setAttribute('value', 'from-attribute')
+		unwritten.connectedCallback()
+		expect(unwritten.value).toBe('from-attribute')
+	})
+
+	test('a declared signal initializer stays the source of truth over a pre-connect write', () => {
+		const tokens = createState('declared')
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: tokens.get })
+			},
+		)!
+		const el = new Ctor() as any
+		el.value = 'early'
+		el.connectedCallback()
+		// Substituting the early write would downgrade the prop to a static
+		// cell and drop the signal's reactive edges
+		expect(el.value).toBe('declared')
+
+		// The prop stays live-backed by the declared signal (read-only, since
+		// `tokens.get` alone exposes no setter)
+		tokens.set('updated')
+		expect(el.value).toBe('updated')
+		expect(() => {
+			el.value = 'x'
+		}).toThrow()
+	})
+
+	test('method producer still overwrites a pre-connect write', () => {
+		const Ctor = defineComponent<{ reset: () => void }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ reset: defineMethod(() => {}) })
+			},
+		)!
+		const el = new Ctor() as any
+		el.reset = () => {
+			throw new Error('junk method left by the pre-connect write')
+		}
+		el.connectedCallback()
+		expect(() => el.reset()).not.toThrow()
+	})
+
+	test('retains the initializer for an early-written prop (form reset / observedAttributes re-run)', () => {
+		const Ctor = defineComponent<{ value: string }>(
+			uniqueName(),
+			({ expose }) => {
+				expose({ value: 'declared-default' })
+			},
+		)!
+		const el = new Ctor() as any
+		el.value = 'early'
+		el.connectedCallback()
+		expect(retainedInitializers.get(el)?.['value']).toBe('declared-default')
 	})
 })
 
@@ -580,11 +695,11 @@ describe('connect-time error containment (ADR 0028)', () => {
 
 	test('the DEV_MODE diagnostic names the component and its degradation', () => {
 		const prevDevMode = process.env.DEV_MODE
-		const Ctor = defineComponent(uniqueName(), () => {
+		const name = uniqueName()
+		const Ctor = defineComponent(name, () => {
 			throw new Error('factory boom')
 		})!
 		const instance = new Ctor() as any
-		instance.localName = 'test-broken-factory'
 		let calls: unknown[][] = []
 		try {
 			process.env.DEV_MODE = 'true'
@@ -593,7 +708,7 @@ describe('connect-time error containment (ADR 0028)', () => {
 			if (prevDevMode === undefined) delete process.env.DEV_MODE
 			else process.env.DEV_MODE = prevDevMode
 		}
-		expect(String(calls[0]?.[0])).toContain('<test-broken-factory>')
+		expect(String(calls[0]?.[0])).toContain(`<${name}>`)
 		expect(String(calls[0]?.[0])).toContain('the component factory')
 		// Tier 2 wording: degraded, not broken (ADR 0028 sub-design 4).
 		expect(String(calls[0]?.[0])).toContain('server-rendered markup')
@@ -615,8 +730,9 @@ describe('connect-time error containment (ADR 0028)', () => {
 			localName: 'my-target',
 			greeting: 'plain-value',
 		} as unknown as HTMLElement & { greeting: string }
+		const name = uniqueName()
 		const Ctor = defineComponent<{ greeting: string }>(
-			uniqueName(),
+			name,
 			({ expose, host, pass, watch }) => {
 				expose({ greeting: 'from-host' })
 				pass(target, { greeting: () => host.greeting })
@@ -629,7 +745,6 @@ describe('connect-time error containment (ADR 0028)', () => {
 			},
 		)!
 		const instance = new Ctor() as any
-		instance.localName = 'test-broken-pass'
 		let calls: unknown[][] = []
 		try {
 			process.env.DEV_MODE = 'true'
@@ -642,7 +757,7 @@ describe('connect-time error containment (ADR 0028)', () => {
 		}
 		expect(calls).toHaveLength(1)
 		expect(String(calls[0]?.[0])).toContain('pass()')
-		expect(String(calls[0]?.[0])).toContain('<test-broken-pass>')
+		expect(String(calls[0]?.[0])).toContain(`<${name}>`)
 		expect(calls[0]?.[1]).toBeInstanceOf(InvalidPassPropertyError)
 		// The sibling effect activated anyway, and the target is untouched —
 		// no partial swap (ADR 0011's atomicity, preserved).

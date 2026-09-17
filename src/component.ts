@@ -458,6 +458,10 @@ function defineComponent<P extends ComponentProps>(
 		 * Initializes signals for each property in the given initializers map.
 		 *
 		 * Dispatch order: Parser, then MethodProducer, then static value/Signal.
+		 * A pre-connect write (plain own data property) is captured as the
+		 * initial value instead of skipping installation — a skipped property
+		 * would stay a plain own data property forever: no signal, no accessor,
+		 * so `watch()` effects and `pass()` never observe later writes (LT-199).
 		 *
 		 * @param instanceProps - Property initializers to process.
 		 */
@@ -465,23 +469,39 @@ function defineComponent<P extends ComponentProps>(
 			const createReactiveProperty = <K extends keyof P & string>(
 				key: K,
 				initializer: Initializers<P>[K],
+				earlyValue?: P[K],
 			) => {
 				if (isParser<P[K]>(initializer)) {
-					const result = initializer(this.getAttribute(key))
-					if (result != null) this.#setAccessor(key, result)
+					// Explicit DOM value wins: a pre-connect write takes
+					// precedence over the attribute-derived value.
+					const value = earlyValue ?? initializer(this.getAttribute(key))
+					if (value != null) this.#setAccessor(key, value)
 				} else if (isMethodProducer(initializer)) {
+					// The branded method replaces any pre-connect write.
 					;(this as any)[key] = initializer
 				} else {
-					const value = initializer as MaybeSignal<P[K]>
+					const init = initializer as MaybeSignal<P[K]>
+					// A declared Signal, computed thunk, or SlotDescriptor stays
+					// the source of truth — substituting the early write would
+					// silently downgrade the prop to a static cell and drop the
+					// signal's reactive edges. Only a static value is seeded
+					// by the early write.
+					const value =
+						earlyValue != null &&
+						!isSignal(init) &&
+						!isSlotDescriptor<P[K]>(init) &&
+						!isFunction<P[K]>(init)
+							? earlyValue
+							: init
 					if (value != null) this.#setAccessor(key, value)
 				}
 			}
 
 			for (const [prop, initializer] of Object.entries(instanceProps)) {
 				if (initializer == null) continue
-				// Every ReservedWord is an inherited own-property of Object, so
-				// this must run before the `prop in this` guard below, or that
-				// guard would silently skip them.
+				// Every ReservedWord resolves on Object.prototype, so this must
+				// run before the inherited-member skip below, or that skip
+				// would silently ignore them instead of rejecting them.
 				if (isReservedWord(prop))
 					throw new InvalidPropertyNameError(
 						this.localName,
@@ -489,16 +509,26 @@ function defineComponent<P extends ComponentProps>(
 						'It is a reserved word or object builtin, so defining an accessor for it would shadow an inherited member.',
 					)
 				// Extension-reserved names (e.g. form, name, labels, validity)
-				// are prototype-defined, so `prop in this` would otherwise
-				// silently skip the colliding initializer.
+				// are prototype-defined, so the inherited-member skip below
+				// would otherwise silently ignore the colliding initializer.
 				if (merged.reservedMembers.has(prop)) {
 					let reason = 'It is a member reserved by an extension.'
 					if (process.env.DEV_MODE === 'true')
 						reason = `It is a member reserved and managed automatically by the '${merged.reservedMemberOwners.get(prop)}' extension.`
 					throw new InvalidPropertyNameError(this.localName, prop, reason)
 				}
-				// Skip properties already set on the host (explicit DOM value wins).
-				if (prop in this) continue
+				// A plain own data property means the host was written before
+				// connect: parent-first connectedCallback order runs an
+				// inserting ancestor's factory before a child in the same
+				// subtree upgrades. Capture the written value as the initial
+				// value but still install the accessor (Lit deferred-properties
+				// pattern). Inherited members (real-DOM `localName`, `lang`, …)
+				// are not own properties and keep being skipped — they are
+				// prototype-managed (ADR 0031).
+				const earlyValue = Object.hasOwn(this, prop)
+					? ((this as any)[prop] as P[keyof P & string])
+					: undefined
+				if (prop in this && earlyValue === undefined) continue
 				// Retain the initializer before createReactiveProperty consumes
 				// it: formAssociated()'s formResetCallback re-runs a retained
 				// `value`, and observedAttributes() re-runs a retained Parser
@@ -509,7 +539,11 @@ function defineComponent<P extends ComponentProps>(
 					retainedInitializers.set(this, retained)
 				}
 				retained[prop] = initializer
-				createReactiveProperty(prop as keyof P & string, initializer)
+				createReactiveProperty(
+					prop as keyof P & string,
+					initializer,
+					earlyValue,
+				)
 			}
 		}
 

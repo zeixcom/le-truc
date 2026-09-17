@@ -134,7 +134,7 @@ Selector strings infer correct `HTMLElement` subtypes at compile time (e.g., `fi
 
 ### Parsers
 
-Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/0005-branded-parsers-and-methods-with-symbol-based-branding.md)). By default, they are called once at connect time with `getAttribute(key)` (see [ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)). The `observedAttributes()` extension (`src/extensions/attributes.ts`) is an opt-in escape hatch: it registers `observedAttributes`/`attributeChangedCallback` and re-runs the retained `Parser` for named props on each attribute mutation after connect.
+Parsers transform HTML attribute strings to typed values (see [ADR 0005](adr/0005-branded-parsers-and-methods-with-symbol-based-branding.md)). By default, they are called once at connect time with `getAttribute(key)` (see [ADR 0003](adr/0003-attributes-drive-state-at-connect-time-only.md)). An explicit pre-connect property write outranks the attribute: `#initSignals` captures a plain own data property present at connect as the initial value and installs the accessor anyway (see [ADR 0031](adr/0031-pre-connect-property-writes-capture-and-install.md)) — declared `Signal`/thunk/`SlotDescriptor` initializers win over such a write, and inherited prototype-managed members (`localName`, `lang`, …) are skipped as before. The `observedAttributes()` extension (`src/extensions/attributes.ts`) is an opt-in escape hatch: it registers `observedAttributes`/`attributeChangedCallback` and re-runs the retained `Parser` for named props on each attribute mutation after connect.
 
 ### Context Protocol
 

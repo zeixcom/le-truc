@@ -34,6 +34,12 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Typecheck
+        # Root tsconfig covers examples/ and test/ on top of src/ — the build's
+        # tsconfig.build.json only checks src/, and bun's bundler transpiles
+        # examples without checking, so this is the only gate over all of it.
+        run: bun run typecheck
+
       - name: Build
         run: bun run build
 

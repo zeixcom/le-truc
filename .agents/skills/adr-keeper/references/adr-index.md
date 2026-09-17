@@ -33,8 +33,11 @@ This file is auto-generated. Do not edit manually.
 | [0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) | ARIA Reflection via ElementInternals and `bindAria()` | ✅ Accepted | M1, M3, M5, §4 |
 | [0027](0027-server-simulation.md) | Server Simulation — Render Initial HTML by Executing the Client Module | ✅ Accepted | §1, M5, M6, M8, §5, §7 |
 | [0028](0028-tiered-error-surfacing.md) | Tiered Error Surfacing — Compiler First, Contained Runtime | ✅ Accepted | M11, M15, M16, S2, S3, S5, §4 |
+| [0029](0029-tiered-server-evaluation.md) | Tiered Server Evaluation — Route Each Component to the Cheapest Phase That Can Answer | ✅ Accepted | §1, §5, §7 |
+| [0030](0030-internationalization-as-build-time-server-data.md) | Internationalization as Build-Time Server Data | ✅ Accepted | §4, §5, §7 |
+| [0031](0031-pre-connect-property-writes-capture-and-install.md) | Pre-Connect Property Writes Are Captured and Installed | ✅ Accepted | M2, M3 |
 
 ---
 
-**Last updated:** 2026-09-03
-**Total ADRs:** 28 (excluding template)
+**Last updated:** 2026-09-15
+**Total ADRs:** 31 (excluding template)

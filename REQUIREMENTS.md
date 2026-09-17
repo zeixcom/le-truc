@@ -68,7 +68,7 @@ For the v3 authoring program (ADRs 0024–0030):
 - The compile-warning baseline holds at zero, with the tier census and translation census reported separately and growing only when the build genuinely learns something new
 - The CI equivalence audit (Folded-tier components rendered byte-identically by both evaluation mechanisms) is green
 - A second locale ships end to end: per-locale pages, the reserved `i18n` parameter, and a visible translation census
-- The shipped 2.x contract (M1–M16) is unchanged through v3 except the two removals scheduled by ADR 0012/0018 ([M26](#m26-v3-api-cleanup-removal-of-the-deprecated-surfaces))
+- The shipped 2.x contract (M1–M16) is unchanged through v3 except the two removals scheduled by ADR 0012/0018 ([M26](#m26-v3-api-cleanup--removal-of-the-deprecated-surfaces))
 
 ---
 
