@@ -2,8 +2,10 @@
 
 > **Status:** plan, not yet executed. Written 2026-09-06 after an architecture review of
 > ADRs 0024/0027/0028/0029/0030, `TSRX-HOST-PROFILE.md` and
-> `server/tsrx/LE_TRUC_COMPILER.md`. Execute on a spike branch
-> (`spike/tsx-surface`) in a dedicated session; time-box to one session.
+> `server/tsrx/LE_TRUC_COMPILER.md`; facts refreshed 2026-09-17 after the `next`
+> (ADR 0031) and `feature/internationalization` merges landed on v3. Execute on a spike
+> branch (`spike/tsx-surface`, fast-forwarded to the v3 tip, baseline verified green) in a
+> dedicated session; time-box to one session.
 > §2 records decisions already made — do not re-litigate them. §8 is the decision gate.
 
 ## 1. Why this spike exists
@@ -130,8 +132,8 @@ semantically identical to the `.tsrx` originals:
 | Component | Why it is in the set |
 | --- | --- |
 | `examples/basic/counter/basic-counter.tsrx` | Smallest Folded-tier component; exercises `expose`, `first`, `on`, `watch`+`bind` lowering |
-| `examples/basic/pluralize/basic-pluralize.tsrx` | Simulated tier today; `Intl` reads; proves the sim/ machinery seam end to end. Its six standing TSRX034 warnings are not ported — equivalence is judged on resolved markup |
-| `examples/form/combobox/form-combobox.tsrx` | Compose site (`import { FormListbox } from '../listbox/form-listbox.tsrx'`) + `truc:pass` filter wiring; Simulated via compose-read |
+| `examples/basic/pluralize/basic-pluralize.tsrx` | **Folded-tier since LT-173/190/191** (the i18n record makes its locale server-known; its six standing TSRX034/routing warnings dissolved). Now the corpus's i18n fixture: reserved `i18n` parameter, per-category dotted keys (`t['task.one']`), `truc:case`/`truc:case-type` attributes, `lang` as a config attribute folding via the platform-config route, and the `materializeLocale` connect-time setup shape — the newest authored surface, proven under `.tsx` |
+| `examples/form/combobox/form-combobox.tsrx` | Compose site (`import { FormListbox } from '../listbox/form-listbox.tsrx'`) + `truc:pass` filter wiring; **Simulated tier via compose-read — with listbox, the corpus's only two Simulated-tier components, so the sim/ machinery seam is exercised end to end by this pair** |
 | `examples/form/listbox/form-listbox.tsrx` | Pulled in as the compose child of form-combobox; also the corpus's async-boundary consumer |
 
 ### 4.3 Compare against the existing goldens
@@ -249,18 +251,20 @@ IR seam first.
 ## 9. Sequencing
 
 - **Gates wave 4 (P5, LT-095–LT-111):** do not migrate further components to `.tsrx`
-  before the go/no-go — a surface switch after migrating 21 more components would
-  double the churn. The LT-178/LT-179 gate window is the natural place to run the spike.
-- **Parallel-safe with P1 (LT-165 steps 5–8) and P2 (LT-173):** those are machinery-side
-  and survive both outcomes. Only note: if the spike returns GO, the diagnostic-channel
-  work in step 5 lands against the new front end instead — coordination, not a block.
+  before the go/no-go — a surface switch after migrating 17 more components would double
+  the churn. The LT-178/LT-179 gate window is the natural place to run the spike.
+- **P1 (LT-165) and P2 (LT-173–175/190–192) have landed** — the parallel-safety note is
+  history: the spike is now the sole decision gate before wave 4. ADR 0031 (pre-connect
+  property writes, merged from `next`) is machinery-side and survives both outcomes
+  untouched; LT-193 removed the sim render cache, so the realm renders every occurrence
+  fresh — nothing in the spike touches or depends on that either way.
 
 ## Appendix A: Complexity ledger
 
 | Complexity | Cause | Shed by `.tsx` surface? |
 | --- | --- | --- |
 | jsdom realm, fixed-point gate, quiescence boundary | SSR-without-hydration | No — inherent |
-| Tiering, census, equivalence audit | Cost of the realm at corpus scale | No (partially deferrable — the full simulated pass is ~3.9 s, the Static tier is empty today) |
+| Tiering, census, equivalence audit | Cost of the realm at corpus scale | No (and tiering already paid it down: the simulated stage is ~60 ms for 8 occurrences, LT-175/LT-193; the Static tier is empty today) |
 | Harvest / one-site-three-roles / arg-and-prop rules | The enhancement data account | No — format-independent |
 | `@tsrx/core` pin, shim, `newerGrammarHint` | Bespoke parser at 0.x | **Yes** |
 | TSRX021–024 family, `REACT_ATTR_RENAMES`, codemod, agent-grounding caveat | JSX-adjacent-but-not-JSX | **Yes** — prior becomes correct |
