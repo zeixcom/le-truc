@@ -4,10 +4,13 @@ Prioritized task queue, highest band first. Within a band, work top to bottom un
 names its own dependency.
 
 **Where the history went.** Everything landed and reviewed has been removed from this file
-(architect, 2026-09-06). The rationale for what shipped lives in `adr/` (0024, 0026–0030),
-`ARCHITECTURE.md`, `server/tsrx/LE_TRUC_COMPILER.md` and `TSRX-HOST-PROFILE.md`; the
-user-facing summary lives in `CHANGELOG.md` `[Unreleased]`; the task-by-task record lives in
-`git log -p -- TODO.md`. Do not re-derive a decision from a task entry — read the ADR.
+(architect, 2026-09-06; i18n band pruned 2026-09-17). The rationale for what shipped lives in
+`adr/` (0024, 0026–0031), `ARCHITECTURE.md`, `server/tsrx/LE_TRUC_COMPILER.md` and
+`TSRX-HOST-PROFILE.md`; the user-facing summary lives in `CHANGELOG.md` `[Unreleased]`; the
+task-by-task record lives in `git log -p -- TODO.md`. Do not re-derive a decision from a task
+entry — read the ADR. LT-199/LT-200 (pre-connect property writes, ADR 0031) landed via the
+`next` merge (PR #130); the i18n lineage (LT-165, LT-169/180, LT-173–175, LT-185, LT-190–192)
+via `feature/internationalization` — both merged into v3 on 2026-09-17.
 
 **Standing framing** (ADR 0029, accepted 2026-09-04). Server evaluation is three tiers:
 **Folded** (phase 1 resolves it; string folding, no jsdom), **Simulated** (phase 1 cannot
@@ -18,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-188.**
+**Next free task ID: LT-202.**
 
 ---
 
@@ -45,508 +48,57 @@ on zero warnings *plus* its recorded tier and reason.
 
 ## P1 — Tiered server evaluation — CLOSED 2026-09-06
 
-Everything in this band landed and is reviewed: **LT-165** (the eight ADR 0029 steps),
-**LT-185** (form-tokenbox's hydration regression), **LT-184** (the severe `TSRX034` scoped
+Everything landed and reviewed: **LT-165** (the eight ADR 0029 steps), **LT-185**
+(form-tokenbox's hydration regression), **LT-184** (the severe `TSRX034` scoped
 per-expression), **LT-180** (library-contained connect failures reach the build report) and
-**LT-169** (the simulation driver runs inside `build:docs`). Corpus split **19 Folded /
-3 Simulated / 0 Static**, compile-warning baseline **0**, simulation build-report baseline
-**0 unclassified**. Measured cost: the simulated build stage is ~90 ms against ~224 ms for the
-whole corpus, so tiering saves ~150 ms per build today; the Static-tier saving is still 0,
-because no corpus component routes Static until `module-scrollarea` migrates (LT-103). Read
-ADR 0027 and ADR 0029 plus `LE_TRUC_COMPILER.md` § 5.4 for the rationale, and
-`git log -p -- TODO.md` for the step record. P1's wave-4 obligations live in the P5 preamble;
-P2 and P3 no longer wait on anything here.
+**LT-169** (the simulation driver runs inside `build:docs`). Post-LT-190 census: **20 Folded /
+2 Simulated / 0 Static** (`form-combobox`, `form-listbox`), compile-warning baseline **0**,
+simulation build-report baseline **0 unclassified**. Rationale: ADR 0027, ADR 0029,
+`LE_TRUC_COMPILER.md` §5.4; step record: `git log -p -- TODO.md`.
 
-**Review decisions worth keeping (2026-09-06).** The build pass simulates each component's
-authored demo HTML (`examples/**/<tag>.html`) rather than the server render function over
-fixture args — approved: the fixture args are a test artifact, the demo markup is what the docs
-serve, and it keeps the build free of an args table it would have to maintain. The pass runs for
-one-shot builds only — approved: one module cache per process makes a second load of the same
-generated client unsound (ADR 0027 sub-design 10), and the gate belongs where CI runs it; the
-cost is that a watch session never sees the gate. Capturing every host `console.error`/`warn`
-during a load/render window, rather than only the library's containment messages — approved:
-the console carries no marker that separates them, and `CLASSIFIED_DIAGNOSTICS` is the designed
-escape hatch for anything that provably cannot affect serialized markup. LT-180's library fix
-(building the `context-request` event in the host's realm) is **protocol-conformant and needs no
-ADR**: the Web Components Community Protocol specifies the event's FIELDS, not its class — but
-it does need documenting, which is **LT-189** in P6. The one defect the review found is
-**LT-188** in P3.
+**Review decisions that live nowhere else (2026-09-06).** The simulation pass renders each
+component's authored demo HTML (`examples/**/<tag>.html`), not the server render function
+over fixture args — the fixture args are a test artifact, the demo markup is what the docs
+serve. The pass runs for one-shot builds only — one module cache per process makes a second
+load of the same generated client unsound (ADR 0027 sub-design 10), so a watch session never
+sees the gate. It captures every host `console.error`/`warn` during a load/render window,
+not only the library's containment messages — the console carries no separating marker, and
+`CLASSIFIED_DIAGNOSTICS` is the designed escape hatch.
 
-## P2 — Internationalization (ADR 0030)
+---
 
-- [x] LT-173: Implement the reserved `i18n` parameter and the catalog pipeline. — reviewed ✓ (public-surface change: new authoring vocabulary, see handoffs)
-  **Skill:** le-truc-dev
-  **Review (architect, 2026-09-06):** Approved. The mechanism is ADR 0024 s10's
-  reserved-parameter precedent applied once, not a second one; the census rides the
-  sim/report channel so the warning baseline survives; the build's read-only posture
-  held under a real end-to-end pass (six locale catalogs committed, `i18n:sync`
-  manifest written by the person-run script, census 0 gaps). One finding, routed to
-  **LT-190**: the component template's per-category span contents are literal
-  source-language morphology (`s`), which a single-string catalog key cannot override
-  — a German compose-site render reads "Aufgabe + s", a Chinese one litters a Latin
-  "s" into its only form. Pinned as a KNOWN GAP fixture in
-  `gate-wave-verification.test.ts` (per-locale pruning pins for de/zh/ar/pl/lv added
-  in the same pass, incl. ar's ordinal set collapsing to `{other}` and Latvian's
-  count=10 selecting `zero`). Also fixed during review: two standing type errors in
-  `server/tests` (no script typechecked `server/` — new `check:types` script closes
-  that gap). NOTES review notes resolved: the fold widening's form-colorgraph side
-  effect re-verified and kept; the ancestor-walk retirement was ruled too aggressive
-  the same day — **LT-191** restores inheritance (it was the components' own
-  documented contract); refs into pruned alternatives stay rejected until a real
-  authoring case appears.
-  The TSRX047 copy handoff to Tech Writer remains open.
-  **Implemented, in the task's own order.** (1) The reserved parameter: a component
-  declaring `i18n` in its param pattern gets the record supplied by the compiler at every
-  render call boundary — compose sites emit `i18n: i18nRecord("<tag>", <lang-expr>)`
-  (`emit-server.ts`, child's registry entry carries `declaresI18n`/`langArgDefault`); a
-  caller-authored `i18n` attribute at a compose site is rejected (TSRX006). Record shape per
-  the ADR; `I18n` is ambient in `globals.d.ts` for sources and imported from the generated
-  `./i18n` module in generated server code. (2) Precedence: compose-site `lang` arg >
-  authored `lang` default > build page locale, computed at the record's construction; the
-  compiler renders `attr('lang', <binding>)` on the root for an i18n component that binds
-  `lang` but does not render it — **TSRX039 confirmation: no new exemption needed**, the
-  root-element exclusion in `reportDuplicatedChannels` already covers both routes.
-  (3+3b+4) Catalog pipeline in `server/effects/i18n.ts`: inline sources via `export const
-  i18n` (string literals only — they are the fallback bytes the manifest hashes); overrides
-  in `i18n/<locale>.json` (`<tag>.<key>`); staleness via a committed `i18n/manifest.json`
-  (per locale per key, the source hash at translation time — a moved source string reports
-  `stale`, verified live); the generated `server/generated/tsrx/i18n.ts` module; the
-  gitignored `i18n-report.json`; the census rides `sim/report.ts` (`CensusKind
-  'translation'`, `translationCensus`) with the count in the build summary and the full
-  section in `check:tsrx`; `bun run i18n:sync` is the person-run writer (exercised end to
-  end, throwaway artifacts removed — no catalogs committed until translation starts).
-  (5) **TSRX047** (warning): literal prose (two or more adjacent letters) in a
-  catalog-using component; single-letter fragments exempt (page data, not prose). Copy is a
-  first draft — **Tech Writer owns the final copy** per
-  `workflows/error-message-lifecycle.md`. (6) **The payoff verified**: the fold rule widened
-  so a host-derived fold may call TRANSITIVELY-PURE setup consts
-  (`foldableRenderScope`, shared by analyzer and emitter so they cannot drift) —
-  `basic-pluralize` re-cut onto `i18n` classifies **Folded with zero routing signals**, the
-  six standing signals dissolved; blogmeta's fold stays deferred to LT-095 as recorded
-  there. Side effect, reviewed and kept: `form-colorgraph`'s `aria-valuenow`/`aria-valuetext`
-  now fold at phase 1 too (same pure-const shape through `asOklch()`), shrinking its
-  hydration boundary — audit snapshot re-pinned, fixed-point gate green. (7) Pruning:
-  `truc:case="<category>"` marks an alternative; `truc:case-type={expr}` (once per group,
-  per render call) prunes by the configured `Intl.PluralRules` type — an explicit
-  `undefined` is cardinal (Intl's own default), no declaration falls back to the
-  cardinal∪ordinal union; the set is read from the platform at render time
-  (`runtime.ts`'s `pluralCategories`); case elements address as `'maybe'` + guarded effects,
-  deeper constructs inside them rejected; **the count-change-after-connect fixture pins the
-  toggles** (count 1 → 0 flips `.one` → `.other` on the pruned en set).
-  **Changed:** `server/tsrx/` (`i18n.ts` new; `ir.ts`, `compiler.ts`, `diagnostics.ts`,
-  `classify-attributes.ts`, `evaluability.ts`, `analysis/effects.ts`, `emit-server.ts`,
-  `runtime.ts`, `registry.ts`, `index.ts`, `lower-template.ts` text-node spans,
-  `sim/report.ts`, `sim/index.ts`, `globals.d.ts`); `server/effects/` (`i18n.ts` new,
-  `tsrx.ts`); `scripts/` (`i18n-sync.ts` new, `check-tsrx.ts`); `examples/basic/pluralize/`
-  (`.tsrx` migration, `.html` Welsh instance now carries `lang="cy"` directly); fixtures
-  (`corpus-args.ts`, smoke ARGS); `i18n/README.md` new.
-  **Verification:** acceptance walked item by item — record supplied with no caller change;
-  authored `lang` overrides and renders as the root attribute; missing key renders the
-  source string and lands in the census, never the warning stream (compile-warning baseline
-  stays 0); untranslated literal warns; pluralize Folded with two category spans on an `en`
-  page and correct re-selection when `count` changes after connect; the build writes only
-  gitignored files; `bun test server` 1500 pass / 0 fail; `check:tsrx` clean; biome clean.
+## P2 — Internationalization follow-ups (ADR 0030)
 
-- [x] LT-175: Measure and contain the per-locale impact on LT-166's render cache (exploration). — done, pending review ⏳ (measurement + ruling; no production code changed)
-  **Skill:** docs-server-dev
-  **Findings (2026-09-06, measured on this checkout):**
-  **The premise is stale — the corpus the ADR feared no longer reaches the realm.**
-  The simulated stage today is **2 components, 4 occurrences, 4 renders, 0 cache hits, 83 ms**
-  (`form-combobox`, `form-listbox`; 20 of 22 components skipped). ADR 0030's
-  `~3,700 occurrences / 93.5% hit rate` is a pre-ADR-0029 figure: tiering routes the
-  corpus away from the realm, and the build's pass renders authored demo markup per
-  component, not page occurrences. **Neither simulated component declares `i18n`.**
-  The one i18n component (`basic-pluralize`) classifies **Folded**, exactly as
-  ADR 0030 sub-design 1 predicted.
-  **Render cache, 1 locale vs. N** (spike over the real compiled corpus; occurrences /
-  renders / hits / hit rate / wall time):
+**Pruned 2026-09-17** — LT-173 (reserved `i18n` parameter + catalog pipeline), LT-175
+(render-cache measurement; its containment landed in LT-174, its removal ruling became
+LT-193), LT-174 (per-locale page rendering), LT-190 (per-category message keys), LT-191
+(locale inheritance, `lang` config-only), LT-192 (review residue) all landed and reviewed;
+ADR 0030's corpus-multiplication consequences bullet was retracted in place 2026-09-07.
+History: `git log -p -- TODO.md`, ADR 0030, `CHANGELOG.md` `[Unreleased]`. Two review
+handoffs became tasks: **LT-201** (the ADR amendment) and **LT-189** (the Tech Writer copy
+round, scope widened).
 
-  | Variant | occ | renders | hits | hit rate | ms |
-  |---|---|---|---|---|---|
-  | 1 locale, no locale seeded (today) | 4 | 4 | 0 | 0% | 18 |
-  | 1 locale (`en` seeded) | 4 | 4 | 0 | 0% | 19 |
-  | 2 locales, locale in key | 8 | 8 | 0 | 0% | 27 |
-  | 2 locales, locale-invariant key for non-i18n | 8 | 4 | 4 | 50% | 19 |
-  | 4 locales, locale in key | 16 | 16 | 0 | 0% | 37 |
-  | 4 locales, locale-invariant key for non-i18n | 16 | 4 | 12 | 75% | 19 |
-
-  **At 1 locale the cache is pure overhead** — a Map write per render and zero hits,
-  because the 4 occurrences are 4 distinct `(component, markup)` pairs. It only
-  becomes a saving under per-locale multiplication, and only if the key drops the
-  locale for components that do not consume it.
-  **Split by tier:** the Folded (20) and Static (0) tiers cost the realm nothing at any
-  locale count — the ADR 0029 saving holds unchanged under i18n.
-  **With/without pruning: no effect on the cache, structurally.** Per-locale span pruning
-  lives in `emit-server.ts` (the Folded server-render path); every component that
-  prunes is Folded and never reaches a realm. This axis is empty, not small.
-  **Ruling — containment is worth taking, but it is not where LT-174's cost is.**
-  Key on locale only when `declaresI18n` is true; otherwise use a locale-invariant
-  key. That makes the simulated stage locale-count-independent (19 ms flat vs. 37 ms at
-  4 locales) for a three-line change with a checkable invariant. Land it in LT-174.
-  **The figure LT-174 actually owes** (same build, instrumented per stage): phase 1
-  (TypeDoc + CSS + TSRX compile) **3032 ms and locale-independent**; simulate **85 ms**;
-  js 22 ms; mdMirror 41 ms; apiPages **731 ms**; pages **1544 ms** (28 pages);
-  examples **1597 ms** (35 pages); total 4816 ms.
-  **Correction, measured after LT-174 landed:** the projection this spike drew from those
-  figures — "≈ 3.9 s per additional locale" — was **wrong by two orders of magnitude**. The
-  per-stage timings are wall-clock from phase-2 start, so `pages`' 1544 ms is dominated by
-  WAITING on `docsMarkdown.fullyProcessed` (Markdoc parse + transform + Shiki, computed once
-  and shared by every locale); the marginal per-locale work is template application and file
-  writes. Measured end to end, twice each: **1 locale 3723 ms, 2 locales 3746 ms — +23 ms for
-  a whole second locale.** The stage split still correctly identifies WHERE cost lives; it
-  does not license reading any stage's total as per-locale marginal cost. The conclusion the
-  spike was for is unchanged and now doubly true: the render cache is a rounding error.
-  **Follow-up:** ADR 0030's consequences bullet (`~3,700 occurrences`, `93.5% hit
-  rate will drop`) is measurably wrong post-ADR-0029 and should be amended — flagged for
-  the Architect, not edited here.
-  **Check:** whether the containment invariant belongs in `realm.ts` (cache key) or at
-  the `simulate.ts` call site, and whether the ADR amendment is in scope for LT-174.
-  **Context:** A measurement round before designing anything — the direction of the net effect
-  is genuinely unknown, which is why it is a spike and not an obligation buried inside LT-174.
-  Pulling one way: per-locale rendering multiplies the corpus (~3,700 occurrences → N × 3,700)
-  and LT-166's `(component, locale, markup)` memoization now varies by locale, so the measured
-  **93.5% hit rate will drop**. Pulling back: ADR 0030's Folded-tier promotion means i18n
-  components stop being simulated at all, and per-locale pruning (LT-173 step 7) shrinks the
-  markup that is the cache key. **Measure, don't estimate:** hit rate and simulated-stage wall
-  time at 1 locale vs. 2, split by tier, with and without pruning. Then decide whether
-  containment is needed at all and what shape it takes (locale in the key vs. a locale-invariant
-  key for components that don't consume `i18n`; the latter looks promising since most components
-  won't declare the parameter, but confirm rather than assume). Record the figures in the
-  handoff — ADR 0030's consequences section says explicitly that nobody has measured the net.
-
-- [x] LT-174: Per-locale page rendering for the docs site (ADR 0030 s1). — done, reviewed
-  (2026-09-15): two regressions the review caught are fixed in this commit (llms.txt now
-  links the default locale's mirrors; blog avatars resolve from the docs root, tested), the
-  sitemap gained `x-default`, and the raw-NUL test file is escape-encoded so its cache-key
-  coverage is diffable. Minors queued as LT-198. (public-surface change: URL structure,
-  output layout, server routes)
-  **Skill:** docs-server-dev
-  **Changed:** `server/config.ts` (`LOCALES`/`DEFAULT_LOCALE`, `LOCALE_INDEPENDENT_DIRS`,
-  `localeAssetPath`, `rewriteFragmentRefs`); `server/effects/pages.ts` (per-locale loop,
-  `pageDepth`, `hreflangAlternates`, `rootRedirectPage`); `server/effects/md-mirror.ts`
-  (per-locale mirrors); `server/effects/simulate.ts` (locale loop, `declaresI18n` wiring,
-  `locales` in the result); `server/tsrx/sim/realm.ts` (conditional locale in the cache key);
-  `server/effects/i18n.ts` (`BUILD_I18N.pageLocale` from config, new `I18N_LOCALES`);
-  `server/templates/sitemap.ts` (per-locale `<loc>` + reciprocal `xhtml:link` alternates);
-  `server/serve.ts` (locale-prefixed routes, `/` → 302, `/index.html`, extensionless
-  redirect); `docs-src/layouts/*.html` (`{{ lang }}`, `{{ hreflang-alternates }}`); tests
-  (`serve.test.ts`, `templates/sitemap.test.ts`, `effects/simulate.test.ts`).
-  **How:** `LOCALES = ['en', 'de']`; the pages effect emits one complete page tree per locale
-  into `docs/<locale>/`, with the locale fixed before rendering begins.
-  **Two design calls worth the Architect's attention:**
-  1. **Only PAGES multiply.** `docs/api/`, `docs/examples/` and `docs/sources/` hold
-     lazy-loaded FRAGMENTS (verified: no `<!doctype>`, no layout) generated from TypeDoc and
-     `examples/` — content no catalog can translate. They stay single-copy at the docs root;
-     `rewriteFragmentRefs` retargets pages' `./api/…` references to `../api/…` at build time.
-     The alternative (duplicating them per locale) writes byte-identical output. Done as a
-     build transform rather than an authoring change because `docs-src/` is read-only to this
-     skill and content should not have to know a locale prefix exists.
-  2. **`base-path` split in two.** A locale prefix separates two things that used to
-     coincide: `{{ base-path }}` now reaches the DOCS ROOT (`localeAssetPath(depth)` — assets,
-     `llms.txt`, fragments), while `processedFile.basePath` stays LOCALE-RELATIVE and keeps
-     driving page links unchanged. `file-signals.ts` needed no change as a result.
-  **Two things the change had to add rather than move:**
-  - `docs/index.html` is now a redirect stub (meta-refresh + canonical + no-JS link). Every
-    page moved under a prefix, and a static host has no route hook — the dev server's 302
-    does not exist on GitHub Pages.
-  - Extensionless page URLs (`/en/examples`) now redirect on the MISSING EXTENSION. The old
-    301 fired only where a same-named directory happened to sit beside the page; the locale
-    split removed those directories for `api/` and `examples/`, so the affordance had to be
-    made deliberate or it would have silently become a 404.
-  **Perf obligation (the ADR's own ask), measured end to end, twice each:** **1 locale
-  3723 ms, 2 locales 3746 ms — +23 ms.** Simulated stage flat: 4 occurrences / 4 renders /
-  0 hits / 80 ms at one locale, 8 occurrences / **4 renders / 4 hits** / 76 ms at two. LT-175's
-  containment (locale in the cache key only when `declaresI18n`) is doing exactly what it was
-  measured to do. This does NOT meaningfully offset ADR 0029's Static-tier savings — the ADR's
-  fear was calibrated on a pre-0029 corpus. See LT-175's correction note for why the earlier
-  ≈3.9 s/locale projection was wrong.
-  **Check:**
-  - The two design calls above, especially #1 — if fragments SHOULD be per-locale, the
-    `rewriteFragmentRefs` layer comes out and routing changes with it.
-  - `rewriteFragmentRefs` is a regex over rendered HTML (`href|src|value="./<dir>/`). It is
-    the same class of transform as `resolveInternalLinks`, but it is a regex over HTML.
-  - **Deliberately NOT done:** the document-level page renderer and the page-position ambient
-    `lang` walk (`<section lang="cy">` around arbitrary occurrences) that LT-191's scope ruling
-    parks in LT-174. LT-174's own entry scopes it to path-prefix routing and per-locale SSG,
-    and the walk needs a renderer that server-renders compose sites INTO pages — which the
-    build still does not do (pages embed authored markup; examples html is copied verbatim).
-    That is a separate task, not a detail of this one; **it needs its own ticket.**
-  - ADR 0030's consequences bullet is now doubly stale (see LT-175) and wants amending.
-  **Context:** Path-prefix routing (`/de/guide`, `/en/guide`), one SSG page per locale, locale
-  fixed before rendering begins. **The build-time-constant property is load-bearing, not an
-  infrastructure preference** — it is what lets `Intl` fold and keeps i18n components on the
-  Folded tier; a request-time locale would unfold every `Intl` call and push the whole i18n
-  corpus to Simulated. **Perf obligation:** re-measure when the second locale lands and record
-  the figure — it partially offsets ADR 0029's Static-tier savings. LT-175 is that measurement
-  and lands first.
-
-- [x] LT-190: `<key>.<category>` message keys — plural word forms the catalog can actually translate (LT-173 review finding). — reviewed ✓ (public-surface change: catalog convention + validation)
-  **Skill:** le-truc-dev
-  **Review (architect, 2026-09-06):** Approved. The flat-key ruling implemented
-  faithfully, and the subtle part is right: census reachability reads the PLATFORM
-  per locale (never a table) with the case type's provenance on the registry, and
-  the `'union'` fallback over-reports reachability — the conservative direction,
-  since a translation that might render should exist. The quoted-key bug
-  (`identifierName` silently dropped `'task.other'`) is exactly the kind of thing
-  the validation rule now makes loud. End-to-end record resolution verified during
-  review (`i18nRecord('basic-pluralize', 'de').t['task.other'] === 'Aufgaben'`; zh
-  carries only `task.other` and falls back to source for the rest); its fixture is
-  queued in **LT-192**.
-  **Context:** LT-173's catalog keys each resolve to ONE string, so per-category word
-  forms have no home: `basic-pluralize`'s template spells the plural as the catalog
-  noun plus a literal `s` in the two/few/many/other spans — English morphology the
-  catalog cannot override (a German compose-site render reads "Aufgabe + s", a
-  Chinese one litters a Latin `s` into its only form, and no irregular English noun —
-  person/people, foot/feet — can be expressed either). Pinned as the KNOWN GAP
-  fixture in `gate-wave-verification.test.ts`; rewriting that pin is the completion
-  signal. **Architect ruling (2026-09-06): flat keys with a `.<category>` suffix** —
-  `task.one`, `task.other` — NOT camelCased keys. Dots carry the CLDR category names
-  verbatim, stay greppable and JSON-friendly, and change nothing about the format: a
-  suffixed key is just a longer flat key, so the `<tag>.<key>` namespacing, the
-  generated module, and the staleness hashing all work unchanged.
-  **How:**
-  1. Authoring: the component declares per-category keys in its `export const i18n`
-     (`'task.one': 'task'`, `'task.other': 'tasks'`) and references them by dynamic
-     lookup through the EXISTING flat record — `t['task.' + category]`, conventionally
-     inside the matching `truc:case` span (`<span truc:case="one">{t['task.one']}
-     </span>`). No new runtime surface: `t` stays `Record<string, string>`. Base and
-     suffixed keys coexist; the suffix is optional per key.
-  2. Validation — **channel: compiler, Tier 1 (Prevented) per ADR 0028**: a declared
-     key whose dot-suffix is not one of the six CLDR categories (`task.onee`) is a
-     shape error (TSRX008-family or a new code — developer's call, one code; Tech
-     Writer owns the copy per `workflows/error-message-lifecycle.md`).
-  3. **Census awareness is the subtle part.** A suffixed key whose category is not in
-     the locale's platform set is UNREACHABLE there — the span is pruned — so the
-     translation census must not report it missing or stale. The census needs the
-     component's configured case type (`cardinal`/`ordinal`/`union`) on the
-     RegistryEntry, derived from the `truc:case-type` analysis the compiler already
-     does, then skips suffixed keys outside `pluralCategories(locale, caseType)`.
-     Without this, the first English catalog of a six-category component reports five
-     phantom gaps. Census keys become `<tag>.<key>.<category>` leaves; staleness
-     detection is unchanged (per flat leaf — verify by editing a source string).
-  4. **No implicit fallback chain** (the ruling's corollary): a reference resolves
-     the exact suffixed key or nothing — no category→`other`→bare chain. The source
-     locale declares every key its template references, so the source set is complete
-     by construction; a locale missing `task.one` renders the source string and shows
-     in the census like any other missing key.
-  5. Migrate `basic-pluralize` to per-category keys and rewrite the KNOWN GAP pin to
-     the correct forms ("Aufgaben" from the de catalog's `task.other`; no Latin `s`
-     on the zh page). The committed catalogs (de/cy/zh/ar/pl/lv) gain the suffixed
-     entries; `bun run i18n:sync` records their manifest hashes.
-  6. **Scope note for the docs (Tech Writer):** per-category keys fix MORPHOLOGY, not
-     word ORDER — "剩余 3 个任务" cannot be assembled from the count-noun-remaining
-     template order. The stage-2 endgame is whole-phrase keys per category with a
-     `{count}` placeholder (the ICU MessageFormat/Fluent shape). Record this as the
-     documented next step; do not build it here.
-  Acceptance: a German compose-site render reads "3 Aufgaben verbleibend" with the
-  plural noun form coming from the de catalog's `task.other`; a zh render contains
-  no Latin letters; an en render is unchanged apart from the migrated keys; the
-  census does NOT count a category-suffixed key as a gap for a locale that prunes
-  that category (fixture) and still counts genuinely missing ones; a moved
-  `task.other` source string reports stale; compile-warning baseline stays 0;
-  `bun test server` green; `bun run check:types` clean.
-  **Implemented, per the ruling.** (1) `readI18nDecl` (server/tsrx/i18n.ts) accepts
-  QUOTED keys — `identifierName` silently dropped `'task.other'` (string-literal
-  keys are Literals, not Identifiers) — and validates that every dotted key's
-  suffix is one of the six CLDR categories (TSRX008 shape error; the census treats
-  the suffix as reachability input, so a typo'd suffix would corrupt that too).
-  (2) `ComponentIR.caseType`/`RegistryEntry.caseType` (`'cardinal'|'ordinal'|'union'`,
-  ir.ts/compiler.ts/registry.ts/index.ts): every `truc:case-type` expr statically
-  provable and unanimous proves the type; an explicit `undefined` is cardinal;
-  basic-pluralize's dynamic ternary stays `'union'` — the runtime's own fallback.
-  (3) `collectI18n` (server/effects/i18n.ts) computes the locale's platform set for
-  the entry's case type and skips suffixed keys outside it — a pruned span's key is
-  unreachable, not a gap. (4) `basic-pluralize` migrated: six `task.<category>`
-  source keys (en declares zero/two/few/many too — its ORDINAL set uses two/few,
-  and the source set must cover every referenced key's fallback), spans reference
-  `{t['task.one']}` … directly, the bare `{t.task}` noun is gone. (5) The six
-  committed catalogs rewritten to their own reachable sets (de 4 keys, zh 3, cy/ar
-  8, pl 6, lv 5), manifest regenerated via `i18n:sync` — census 0 gaps.
-  **Changed:** `server/tsrx/` (`i18n.ts` quoted keys + validation, `ir.ts`,
-  `compiler.ts` caseType walk, `registry.ts`, `index.ts`); `server/effects/i18n.ts`;
-  `examples/basic/pluralize/basic-pluralize.tsrx`; `i18n/*.json` + `manifest.json`;
-  tests (`i18n.test.ts` validation + reachability + gap-free-corpus fixtures,
-  `gate-wave-verification.test.ts` KNOWN GAP pin rewritten to correct forms);
-  `i18n/README.md`, `TSRX-HOST-PROFILE.md`, `CHANGELOG.md`.
-  **Verification:** `bun test server` 1514 pass / 0 fail; `check:tsrx` clean
-  (baseline 0, tier census 20 folded / 2 simulated unchanged, translation census
-  0 gaps across 6 locales); `check:types` clean; biome clean. Snapshots re-pinned
-  (span contents now carry the catalog's per-category words; connect diff verified
-  to be exactly the count-fill boundary).
-  **Handoffs:** Tech Writer owns the TSRX008 dotted-key message copy (first draft
-  in `server/tsrx/i18n.ts`; propagation per `workflows/error-message-lifecycle.md`)
-  and the stage-2 endgame note (whole-phrase keys with `{count}` — morphology vs
-  word order) is recorded in the host profile for docs capture.
-
-- [x] LT-191: Restore ancestor `lang` inheritance for compiled components (LT-173 review follow-up; amends ADR 0030 s7's posture, not its mechanism). — reviewed ✓ (public-surface change: locale resolution + config-attribute rule)
-  **Skill:** le-truc-dev
-  **Review (architect, 2026-09-06):** Approved. The config-only ruling carried to
-  its structural conclusion — expose on an IDL property was a silent no-op all
-  along, and materializing the walked locale onto the attribute gives the SSR and
-  client paths ONE DOM shape; the CI equivalence audit passing without re-pinning
-  is the soundness property demonstrating itself. The config-attribute fold route
-  is principled (HTML's own global locale config, not a hand table) and minimal
-  (only pluralize matched; the tier map is byte-for-byte unchanged). Stage 2 as
-  compose-graph inheritance is the right scope given that no document-level
-  renderer exists; the page-position walk belongs to LT-174, which builds that
-  renderer. Residue queued in **LT-192**.
-  **Context:** LT-173 made `basic-pluralize` read its OWN `lang` attribute as a
-  connect-time Parser prop, retiring the ancestor walk for compiled components — a
-  pluralize under `<div lang="cy">` (or `<html lang="de">`) with no own attribute now
-  resolves `'en'`. That contradicts the platform (CSS `:lang()`, font selection, and
-  screen readers all inherit language) AND the corpus's own contracts: `basic-number`
-  still documents "falls back to the nearest ancestor's `lang`" and still calls
-  `getLocale(host)` live, so LT-173 left the corpus split-brained. **Architect ruling
-  (2026-09-06): inheritance itself is NOT fundamentally blocked.** The ambient `lang`
-  at a static page position is as build-time-constant as the page locale, so the
-  fold, the `truc:case` pruning, and the root-attribute render all survive — and the
-  one hard limit stays where ADR 0030 s6 put it: the catalog never ships, so the
-  client can never RE-translate server-rendered words at a different locale. Stages:
-  1. **Client, small:** seed the prop from the walk at connect —
-     `expose({ lang: asString()(getLocale(host)) })` (`getLocale`'s
-     `closest('[lang]')` includes the element itself, so own-attribute-first is
-     preserved). Sound by construction: an SSR'd instance carries the build locale on
-     its root attribute and terminates the walk immediately, so the walk can never
-     disagree with the build there; the walk only answers for client-authored markup
-     (demo pages, third-party pages). Revert the demo's Welsh instance to the
-     ancestor-wrapper shape and add an own-attribute-beats-ancestor instance.
-  2. **Server, the real fix:** ambient-lang tracking in the page/example renderers —
-     walk the document being rendered, maintain the `lang` stack, feed the ambient
-     locale into each occurrence's record. Precedence becomes: explicit
-     compose-site/authored arg > ambient `lang` at the render position > authored
-     default > build page locale (note the reorder: page-authored context outranks
-     the component's fallback default). The effective locale still renders onto the
-     root attribute — DOM-is-truth, already the rule.
-  3. **NOT restored — the fundamental limit, document it:** per-evaluation re-walking.
-     The LT-115 twin re-read `getLocale(host)` per thunk evaluation, so moving an
-     element across lang subtrees at runtime re-selected its category spans; the
-     connect-time seed freezes the walked locale for the connection, and for
-     server-rendered words re-selection at a new locale is impossible in principle
-     (frozen words, no catalog on the client — the mongrel state: new-language
-     category selection over old-language text). Restoring the live walk would also
-     need the compiler to splice a blessed walk idiom server-side (user-land
-     `getLocale` is outside the fold vocabulary — exactly why pluralize's six thunks
-     didn't fold pre-LT-173) without adding library i18n surface (ADR 0030 s8).
-     Defer until a real case appears; state the boundary in the host profile.
-  Acceptance: a compiled pluralize with NO own `lang` under `[lang="cy"]` selects
-  Welsh categories at connect (fixture); an SSR'd instance's root attribute still
-  wins over any ancestor; a compose site's explicit `lang` still overrides
-  everything; pluralize stays Folded with unchanged pruning (stage 1 touches only
-  the client seed); under stage 2, an occurrence beneath `<section lang="cy">` in a
-  page renders the six-span cy set while an occurrence above it renders the page
-  locale's set (fixture); `bun test server` green; ADR 0030 amended via adr-keeper
-  (s3 precedence chain, s7 posture: the walk returns as the client-side route for
-  client-authored markup, the record stays canonical for rendered pages); host
-  profile and both components' JSDoc updated to match.
-  **Implemented — with two rulings from execution.**
-  **Ruling 1 (user, 2026-09-06): `lang` is a CONFIG attribute only, not a reactive
-  property — it must not be exposed.** And it structurally cannot be: `lang` is a
-  built-in IDL property, so `'lang' in this` is always true and `expose()`'s
-  initializer is skipped silently (component.ts `#initSignals`) — the LT-173
-  `lang: asString()` expose entry never actually ran; `host.lang` in the thunks
-  reads the NATIVE accessor, i.e. the element's own attribute, live. The first
-  draft's `asString()(getLocale(host))` seed therefore landed as the native
-  accessor's `''`, and `Intl.PluralRules('')` threw per span — caught by the walk
-  fixture before landing. The shape that works: **materialize** the walked locale
-  onto the attribute at connect (`const materializeLocale = () => { if
-  (!host.getAttribute('lang')) host.setAttribute('lang', getLocale(host)) };
-  materializeLocale()` — the const+call is the sanctioned client-only setup shape;
-  a bare `if` statement is not, TSRX005). Both paths now converge on one DOM
-  shape: SSR renders the effective locale onto the root attribute, client-authored
-  instances materialize the walked one. (2) The fold needed a new membership route:
-  removing the parser exposure dropped `lang` from `foldableHostProps` and pluralize
-  routed Simulated (tier canary caught it). Route 3 in `evaluability.ts`:
-  **platform config attributes** (`lang`, `dir` — HTML's own global locale config,
-  not a hand table) render onto the root and read back verbatim through the native
-  accessor, so the root attribute's `exprText` is the server truth without a
-  parser. Tier restored: pluralize Folded, census 20/2/0 unchanged.
-  **Ruling 2 (scope): stage 2 landed as COMPOSE-GRAPH inheritance.** No
-  document-level server renderer exists in the build today (examples html is
-  copied verbatim; docs pages don't server-render compose sites), so
-  position-level ambient tracking has nothing to ride on. `emit-server.ts`'s
-  compose emission now resolves a child's record locale as: explicit site `lang`
-  arg > the PARENT'S effective `lang` binding > authored default > page locale —
-  the SSR analog of the ancestor walk, since the composition tree IS the rendered
-  ancestor chain. The page-position walk (`<section lang="cy">` around arbitrary
-  occurrences) is LT-174's, which builds the page renderer — its acceptance
-  fixture belongs there.
-  **Changed:** `server/tsrx/emit-server.ts` (compose inheritance), `server/tsrx/
-  evaluability.ts` (PLATFORM_CONFIG_ATTRS fold route), `examples/basic/pluralize/
-  basic-pluralize.tsrx` (materializeLocale; `lang` out of expose per the ruling),
-  `examples/basic/pluralize/basic-pluralize.html` (ancestor-wrapper instance +
-  own-attr-beats-ancestor pin), tests (`gate-wave-verification.test.ts`
-  ancestor-only + own-attr realm fixtures, `i18n.test.ts` compose-inheritance
-  fixture), `TSRX-HOST-PROFILE.md`, `CHANGELOG.md`.
-  **Verification:** `bun test server` 1514 pass / 0 fail; `check:types` clean;
-  biome clean; tier census unchanged (20 folded / 2 simulated); the CI equivalence
-  audit passed WITHOUT re-pinning — an SSR'd instance's root attribute makes
-  materializeLocale a no-op, which is the soundness property itself.
-  **Also fold in (architect, 2026-09-07):** sub-design 1 gains the LT-174 output shape —
-  pages multiply per locale under `docs/<locale>/`, but the lazy-loaded FRAGMENT trees
-  (`api/`, `examples/`, `sources/`) stay single-copy at the docs root, because they are
-  derived from TypeDoc and `examples/` and no catalog can translate them. **Architect
-  confirmed 2026-09-07**, resolving the LT-174 NOTES entry. The consequences bullet on
-  corpus multiplication was retracted in place on the same date.
-  **Handoffs:** adr-keeper amends ADR 0030 (s3 precedence chain, s4 per-category
-  convention + census reachability — folded in per LT-192, s7 posture: the
-  walk returns as the client-side route for client-authored markup, the record
-  stays canonical for rendered pages, `lang` config-only); Tech Writer reviews the
-  host-profile `lang`/precedence rewording. `basic-number` keeps its live
-  per-evaluation `getLocale(host)` walk (its spec contract) — untouched, and it
-  never exposed `lang` either.
-
-- [x] LT-192: LT-190/LT-191 review residue — compiler-doc staleness, the AGENTS IDL-skip surprise, and the catalog→record pin. — done ✓ (docs + test; internal-only)
-  **Skill:** le-truc-dev (docs items route to Tech Writer)
-  **Context:** The LT-190/LT-191 review approved both but found three small items
-  too concrete to leave in handoff prose:
-  1. `server/tsrx/LE_TRUC_COMPILER.md` is stale in three places: (a) the
-     classification section still says a locale read from the DOM (`getLocale(el)`,
-     `host.lang`) routes Simulated and that "`basic-pluralize` … stays
-     Simulated-tier" — stale since LT-173 (Folded) and doubly stale since LT-191
-     (root-rendered `lang`/`dir` now fold via the platform-config-attribute route
-     in `foldableHostProps` route 3); (b) the i18n section's precedence chain stops
-     at "site lang > authored default > page locale" — LT-191 inserted the parent's
-     effective locale and made `lang` config-only; (c) the message-keys paragraph
-     predates the `<key>.<category>` convention (dotted-key validation, census
-     reachability, quoted-key extraction). Tech Writer owns the rewording; the
-     review lines on LT-190/191 carry the facts.
-  2. `AGENTS.md` "Surprising Behaviors" never documents that `expose()` on a
-     built-in IDL property name (`lang`, `dir`, `title`, …) is SILENTLY SKIPPED by
-     the `prop in this` guard — the attribute stays the only channel, and a prop
-     you meant to react on just... doesn't. This cost a debugging cycle in LT-191
-     (`asString()(getLocale(host))` landed as the native accessor's `''` and
-     `Intl.PluralRules('')` threw per span). One bullet, platform's own rule.
-  3. Pin the end-to-end catalog→record path in `server/tests/tsrx/i18n.test.ts`'s
-     generated-module block: `i18nRecord('basic-pluralize', 'de').t['task.other']
-     === 'Aufgaben'` and the zh source-fallback (`t['task.one'] === 'task'`) — the
-     LT-190 acceptance verified this manually during review, but no fixture pins
-     the OVERRIDES-embedded module resolution; the gate fixtures pass their `t`
-     by hand and bypass the catalog.
-  Also fold into the adr-keeper pass already queued on LT-191: ADR 0030 s4 gains
-  the `<key>.<category>` convention and the census's reachability rule (the
-  handoff previously named only s3/s7).
-  Acceptance: the three doc spots name LT-190/191 and match the implemented
-  behavior; the AGENTS bullet exists; the i18n.test.ts assertions land (and fail
-  if someone drops the de.json override path); `bun test server` green.
-  **Done.** (1) `LE_TRUC_COMPILER.md`: the classification paragraph rewritten —
-  a locale read from the DOM folds only when the compiler can splice it
-  (`host.lang` over a root-rendered platform config attribute = LT-191's route 3;
-  an ancestor walk through a user-land helper still routes Simulated), and the
-  "pluralize stays Simulated-tier" claim replaced with its actual Folded fact;
-  the reserved-parameters paragraph carries the full LT-191 precedence chain and
-  the config-attribute rule; the message-resolution paragraph carries the
-  `<key>.<category>` convention (quoted keys, suffix validation, source-declares-
-  every-referenced-key, census reachability with `RegistryEntry.caseType`); the
-  module-map row updated. (2) `AGENTS.md` "Surprising Behaviors" gains the IDL
-  bullet: expose() on a built-in IDL property (`lang`, `dir`, `title`, …) is
-  silently skipped by `prop in this` — the attribute is the only channel; seed
-  it, don't expose it (the parser-applied-seed shape does not help either). (3)
-  `i18n.test.ts` pins the catalog→record path: `i18nRecord('basic-pluralize',
-  'de')` resolves `task.one`/`task.other` from the committed de.json through the
-  generated module's OVERRIDES, and zh resolves `task.other` from its catalog
-  with `task.one` falling back to the source string. Tech Writer review of the
-  reworded paragraphs folds into the open copy handoffs (TSRX008 message, ADR
-  0030 amendment).
+- [ ] LT-201: Amend ADR 0030 — s1 output shape, s3 precedence chain, s4 per-category keys (the adr-keeper pass queued on LT-191, never run).
+  **Skill:** adr-keeper
+  **Context:** The implemented system is ahead of the ADR text; the last ADR 0030 edit was
+  LT-174's consequences retraction (2026-09-15), and the amendments from the LT-190/LT-191
+  handoffs never landed. Three sub-designs:
+  1. **s1** gains LT-174's output shape (architect-confirmed 2026-09-07): pages multiply per
+     locale under `docs/<locale>/`, but the lazy-loaded fragment trees (`api/`, `examples/`,
+     `sources/`) stay single-copy at the docs root — derived from TypeDoc and `examples/`,
+     with no catalog to translate them.
+  2. **s3** precedence chain gains LT-191's insertions: a compose site without a `lang` arg
+     inherits the parent's effective locale (explicit site arg > parent's locale > authored
+     default > page locale), and `lang` is config-only — a built-in IDL property, never a
+     reactive prop; the walked locale is materialized onto the root attribute at connect,
+     so SSR and client paths share one DOM shape.
+  3. **s4** gains LT-190's keying convention: `<key>.<category>` suffixes with quoted-key
+     extraction and the six CLDR categories validated (TSRX008); no implicit fallback
+     chain (a reference resolves the exact suffixed key or falls back to the source
+     string via the census); census reachability — a suffixed key outside the locale's
+     platform category set is unreachable, not a gap (`RegistryEntry.caseType` is the
+     input). s7 already carries its amendment (platform verification + materialization).
+  Acceptance: ADR 0030 reads as the implemented system; `check:links` green; no code moves.
 
 - [ ] LT-193: Remove LT-166's render cache and LT-175's locale containment with it.
   **Skill:** docs-server-dev
@@ -586,31 +138,6 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   after removal such an entry fires once per occurrence instead of once. The gate counts
   unclassified entries, so this changes noise, not verdicts — but say so in the handoff if the
   build report's shape visibly changes.
-
-- [ ] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174.**
-  **Skill:** docs-server-dev
-  **Context:** Resolves the second NOTES.md entry from LT-174. LT-191's scope ruling parked
-  the page-position walk in LT-174; LT-174's own entry scoped it to path-prefix routing, and
-  the developer built the stated scope and flagged the gap. **The developer was right to
-  split it** — the walk needs a renderer that does not exist, so it was never a detail of
-  LT-174. It is this ticket.
-  **The gap:** the docs build does not server-render compose sites INTO pages. Pages embed
-  authored markup; `examples/**/<tag>.html` is copied verbatim. So `emit-server.ts`'s compose
-  inheritance (LT-191 stage 2) resolves a child's locale down the COMPOSITION tree, but a
-  component's ambient `lang` from its POSITION on the page (`<section lang="cy">` wrapping
-  arbitrary occurrences) has nothing to ride on. **LT-191's acceptance fixture has no home
-  until this lands** — that is the completion signal.
-  **Scope this deliberately, and expect it to be large.** Before building, answer: does the
-  renderer replace the verbatim copy of authored markup, or wrap it? What is the unit of
-  render — the page, or each occurrence? How does it interact with LT-174's per-locale page
-  trees (one renderer pass per locale, locale already fixed)? Write those answers into
-  NOTES.md or back to the Architect BEFORE implementing; a wrong shape here is expensive.
-  **Constraint that survives regardless:** the page locale and the ambient `lang` at a static
-  page position are both build-time constants (LT-191's ruling), so the `Intl` fold, the
-  `truc:case` pruning and the root-attribute render all still hold. Do not introduce anything
-  that makes either a runtime variable.
-  **Perf note:** LT-193's data applies — the Simulated-tier share of page occurrences is 9 of
-  3,249. Do not reintroduce a render cache for this; measure first if you think you need one.
 
 - [ ] LT-195: Internationalize the corpus's hard-coded accessibility strings (demand check, 2026-09-07). **Depends on LT-173; sequence after LT-193.**
   **Skill:** le-truc-dev
@@ -673,26 +200,6 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
   pass it writes missing keys — the census names the problem, `i18n:sync` is where a person
   fixes it.
 
-- [ ] LT-197: Decide how client-side runtime strings get translated (exploration). **Depends on LT-195.**
-  **Skill:** architect (with le-truc-dev for feasibility)
-  **Context:** LT-195's survey turned up a category ADR 0030's mechanism **structurally
-  cannot serve**: strings built at event time in the browser.
-  - `form-tokenbox`: `` `Added token: ${trimmed}` `` and `` `Removed token: ${removedValue}` ``
-    written into a `role="status" aria-live="polite"` region.
-  - `form-colorgraph`: `setCustomValidity('Color out of gamut')`, three sites.
-  ADR 0030 sub-design 6 is explicit that **no message catalog and no locale runtime ship to
-  the browser**. These strings are therefore untranslatable today, on any locale, and the
-  tokenbox ones are announced to screen-reader users — the accessibility case is the strongest
-  one in the corpus, and it is the one the current design cannot reach.
-  **Do not assume the answer is "ship the catalog."** That would contradict ADR 0030's payload
-  posture and ADR 0003. Weigh at least: (a) server-render the message variants into the DOM
-  and have the client select among them (the `truc:case` pattern, generalized — no payload,
-  but only works for a closed set); (b) a tiny per-component compiled-in string map in the
-  generated client, scoped to that component's declared keys (small payload, ADR 0030's
-  "no catalog" is about the CORPUS catalog — is a per-component map the same thing?); (c)
-  accept the gap and document it as a known limit. **Measure the payload cost of (b) before
-  arguing about it.** Outcome is an ADR 0030 amendment or a new ADR, then tickets.
-
 - [ ] LT-198: LT-174 review residue — four deferred minors. **Depends on nothing; any time.**
   **Skill:** docs-server-dev
   **Context:** The LT-174 code review (2026-09-15) returned ready-after-fixes; the two
@@ -714,6 +221,76 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
      `hreflangAlternates`, `rootRedirectPage`) have no direct unit tests — the most
      corner-case-prone surface of LT-174. Route-level tests partially compensate; the
      avatar fix added tests for the path math it touched.
+
+- [ ] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174 (landed 2026-09-15).**
+  **Skill:** docs-server-dev
+  **Context:** Resolves the second NOTES.md entry from LT-174. LT-191's scope ruling parked
+  the page-position walk in LT-174; LT-174's own entry scoped it to path-prefix routing, and
+  the developer built the stated scope and flagged the gap. **The developer was right to
+  split it** — the walk needs a renderer that does not exist, so it was never a detail of
+  LT-174. It is this ticket.
+  **The gap:** the docs build does not server-render compose sites INTO pages. Pages embed
+  authored markup; `examples/**/<tag>.html` is copied verbatim. So `emit-server.ts`'s compose
+  inheritance (LT-191 stage 2) resolves a child's locale down the COMPOSITION tree, but a
+  component's ambient `lang` from its POSITION on the page (`<section lang="cy">` wrapping
+  arbitrary occurrences) has nothing to ride on. **LT-191's acceptance fixture has no home
+  until this lands** — that is the completion signal.
+  **Scope this deliberately, and expect it to be large.** Before building, answer: does the
+  renderer replace the verbatim copy of authored markup, or wrap it? What is the unit of
+  render — the page, or each occurrence? How does it interact with LT-174's per-locale page
+  trees (one renderer pass per locale, locale already fixed)? Write those answers into
+  NOTES.md or back to the Architect BEFORE implementing; a wrong shape here is expensive.
+  **Constraint that survives regardless:** the page locale and the ambient `lang` at a static
+  page position are both build-time constants (LT-191's ruling), so the `Intl` fold, the
+  `truc:case` pruning and the root-attribute render all still hold. Do not introduce anything
+  that makes either a runtime variable.
+  **Perf note:** LT-193's data applies — the Simulated-tier share of page occurrences is 9 of
+  3,249. Do not reintroduce a render cache for this; measure first if you think you need one.
+
+- [ ] LT-197: Decide how client-side runtime strings get translated (exploration). **Depends on LT-195.**
+  **Skill:** architect (with le-truc-dev for feasibility)
+  **Context:** LT-195's survey turned up a category ADR 0030's mechanism **structurally
+  cannot serve**: strings built at event time in the browser.
+  - `form-tokenbox`: `` `Added token: ${trimmed}` `` and `` `Removed token: ${removedValue}` ``
+    written into a `role="status" aria-live="polite"` region.
+  - `form-colorgraph`: `setCustomValidity('Color out of gamut')`, three sites.
+  ADR 0030 sub-design 6 is explicit that **no message catalog and no locale runtime ship to
+  the browser**. These strings are therefore untranslatable today, on any locale, and the
+  tokenbox ones are announced to screen-reader users — the accessibility case is the strongest
+  one in the corpus, and it is the one the current design cannot reach.
+  **Do not assume the answer is "ship the catalog."** That would contradict ADR 0030's payload
+  posture and ADR 0003. Weigh at least: (a) server-render the message variants into the DOM
+  and have the client select among them (the `truc:case` pattern, generalized — no payload,
+  but only works for a closed set); (b) a tiny per-component compiled-in string map in the
+  generated client, scoped to that component's declared keys (small payload, ADR 0030's
+  "no catalog" is about the CORPUS catalog — is a per-component map the same thing?); (c)
+  accept the gap and document it as a known limit. **Measure the payload cost of (b) before
+  arguing about it.** Outcome is an ADR 0030 amendment or a new ADR, then tickets.
+
+- [ ] LT-189: Tech Writer round — `ContextRequestEvent` cross-realm docs plus the standing i18n copy handoffs.
+  **Skill:** tech-writer
+  **Context:** Three copy items queued from landed work; batch them so the messages read as
+  one voice. All follow `workflows/error-message-lifecycle.md`.
+  1. **`ContextRequestEvent`'s cross-realm dispatch** (LT-180 review finding):
+     `requestContext()` now builds the `context-request` event from the HOST's own realm
+     whenever the exported class does not belong to it (`src/helpers/context.ts`, LT-180).
+     The class stays exported and unchanged, and in the normal same-realm case it is still
+     what gets dispatched — but in a cross-realm host (an iframe, the build's simulation
+     realm) the dispatched object is a duck-typed `Event` carrying
+     `context`/`callback`/`subscribe`, so a provider written as
+     `if (e instanceof ContextRequestEvent)` would stop matching. This is
+     protocol-conformant — the Web Components Community Protocol specifies the event's
+     fields, not its class, and Le Truc's own `provideContexts()` reads the fields — so it
+     is a documentation gap, not an ADR question (Architect ruling, 2026-09-06). Scope: the
+     JSDoc on `ContextRequestEvent` and on `requestContext()`, plus the context section in
+     `docs-src/pages/` and the `le-truc` skill's context reference. One rule to state: a
+     provider checks `event.context`, never `instanceof`.
+  2. **TSRX008's dotted-key message** (LT-190 handoff): final copy over the first draft in
+     `server/tsrx/i18n.ts` — a declared key whose dot-suffix is not one of the six CLDR
+     categories is a shape error.
+  3. **TSRX047's literal-prose warning** (LT-173 handoff): final copy; the single-letter
+     exemption (page data, not prose) must survive the rewording, and the missing-
+     *translation*-rides-the-census distinction is the point of the message.
 
 ---
 
@@ -780,17 +357,17 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
 
 - [ ] LT-170: Strengthen two gate-wave assertions in `gate-wave-verification.test.ts` that don't test what they claim.
   **Skill:** docs-server-dev
-  **Context:** Filed by the LT-144/LT-145 review (2026-09-03). Two tests in
-  `server/tests/tsrx/gate-wave-verification.test.ts` pass today but don't verify the behavior
-  their name/comment claims — a regression in the underlying compiler behavior would fail
-  neither.
+  **Context:** Filed by the LT-144/LT-145 review (2026-09-03), re-confirmed present 2026-09-17.
+  Two tests in `server/tests/tsrx/gate-wave-verification.test.ts` pass today but don't verify
+  the behavior their name/comment claims — a regression in the underlying compiler behavior
+  would fail neither.
   1. **`'the reactive spelling plans a client binding the static spelling does not'`** (line
-     ~220) only asserts `hostVariant.spans`/`bareVariant.spans` are truthy — true of any
+     ~440) only asserts `hostVariant.spans`/`bareVariant.spans` are truthy — true of any
      compiled component. Fix: assert on the actual compiled `clientCode`, e.g.
      `hostVariant.clientCode` contains a `watch(...host.count...bindText(` call and
      `bareVariant.clientCode` does not (confirmed by hand at review: the distinction is real and
      present today).
-  2. **`'composed under form-combobox, initial render stays hermetic'`** (line ~263) only
+  2. **`'composed under form-combobox, initial render stays hermetic'`** (line ~483) only
      asserts the string `<form-listbox` appears in the composed output — trivially true.
      `form-combobox` composes its listbox with `filterable={false}`, so there is no clear button
      to check; the acceptance-relevant behavior is the other known composed-filter case from the
@@ -827,7 +404,7 @@ it does need documenting, which is **LT-189** in P6. The one defect the review f
      `bindAttribute`. All of the corpus's IDREF ARIA is server-static today, so nothing
      regresses.
   Acceptance: the 7 sites lower to `bindAria` with no `String()`; the golden clients update; all
-  842 Playwright example specs stay green (they assert on the ARIA *attributes*, which native
+  Playwright example specs stay green (they assert on the ARIA *attributes*, which native
   reflection still mirrors for element targets); the post-ADR-0029 zero-warning gate holds (use
   the gate, not a hand-maintained expected count).
 
@@ -904,13 +481,14 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
 
 ## P5 — Wave 4: example migrations
 
-**Gated on LT-178/LT-179** (owner sequencing). Otherwise unblocked. The canonical pattern is
-LT-092's: same-commit cutover — delete the `.ts` twin, point `examples/main.ts` at the generated
-client, drop any CEM exclusion, keep the demo/spec green against the served compiled component.
-Surface compiler gaps in NOTES.md — or fix them directly if small (LT-088 precedent) — never
-weaken a component to dodge a gap. **Per migration, record the tier and the reason** alongside
-the zero-warning check; only the Simulated tier opens a realm, so Folded and Static both mean
-near-zero added build cost regardless of occurrence count.
+**Gated on LT-183's go/no-go AND LT-178/LT-179** (owner sequencing). Otherwise unblocked. The
+canonical pattern is LT-092's: same-commit cutover — delete the `.ts` twin, point
+`examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green
+against the served compiled component. Surface compiler gaps in NOTES.md — or fix them
+directly if small (LT-088 precedent) — never weaken a component to dodge a gap. **Per
+migration, record the tier and the reason** alongside the zero-warning check; only the
+Simulated tier opens a realm, so Folded and Static both mean near-zero added build cost
+regardless of occurrence count.
 
 **Two LT-165 obligations land on wave 4's first Static-tier component.** (a) `check:tsrx`
 type-checks each module at its OWN classified tier and the Static census is empty, so the build
@@ -939,7 +517,7 @@ twin's before calling the port done, and assert the opt-out survives hydration t
 this a compile error** — if it has landed by then, these two migrations get the check for free
 and this note is redundant; if it has not, do the manual diff.
 
-- [ ] LT-095: Migrate `basic-blogmeta` by reshaping it into a template owner with typed byline props (LT-033 decision). **Blocks LT-173's blogmeta fold verification.**
+- [ ] LT-095: Migrate `basic-blogmeta` by reshaping it into a template owner with typed byline props (LT-033 decision). **Carries LT-173's deferred blogmeta fold verification.**
   **Skill:** le-truc-dev
   **Context:** Design decided 2026-08-29: fully-typed props, NO arbitrary pass-through
   (mediaqueries precedent) — `author` (string), `avatar` (optional URL string), `published`
@@ -957,7 +535,7 @@ and this note is redundant; if it has not, do the manual diff.
   `Date.UTC(y, m - 1, d)` with `timeZone: 'UTC'` in the formatter — never shifts the day, reads
   no ambient state. The current `new Date(year, month - 1, day)` + zone-less
   `Intl.DateTimeFormat` reads the build machine's timezone and must not survive the migration.
-  Verify the component classifies Folded once migrated; LT-173 step 6 defers its fold
+  Verify the component classifies Folded once migrated; LT-173 step 6 deferred its fold
   verification here.
 
 - [ ] LT-096: Migrate `module-codeblock` to `.tsrx` with same-commit cutover.
@@ -968,10 +546,11 @@ and this note is redundant; if it has not, do the manual diff.
   stays "Copy" on click; verified at HEAD). Per AGENTS.md it needs registration —
   `watch(() => true, copyToClipboard(...))` — plus a spec assertion that click actually
   copies/toggles the label. **Perf:** this is one of the two components that move page chrome
-  into the simulated corpus (299 occurrences in the built docs). Record the simulated build
-  stage's wall time before and after, verify the render cache engages, and record the tier. Its
-  `first('code')`/`first('button.overlay')`/`first('basic-button.copy')` refs predict Simulated,
-  but ~299 occurrences make that ~0.33 s — not a blocker.
+  into the simulated corpus (~299 occurrences in the built docs). Record the simulated build
+  stage's wall time before and after, and record the tier and reason. (LT-193 has since removed
+  the render cache this entry originally said to verify engaging — the cache no longer exists
+  by the time wave 4 runs.) Its `first('code')`/`first('button.overlay')`/`first('basic-button.
+  copy')` refs predict Simulated, but ~299 occurrences make that ~0.33 s — not a blocker.
 
 - [ ] LT-097: Migrate `module-cem-list` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -1015,8 +594,8 @@ and this note is redundant; if it has not, do the manual diff.
   Folded** — the geometry reads live in scroll/observer callbacks and the
   `bindState(internals, …)` output never reaches served HTML (Static is equally acceptable; both
   are never simulated, so the ~2.3 s is unpaid either way). **Simulated is the outcome to
-  investigate:** at 2,091 occurrences it reproduces the ~2.3 s ADR 0029 exists to avoid — either
-  reshape the migrated component so its reads stay in client-only positions (per its
+  investigate:** at 1,966–2,091 occurrences it reproduces the ~2.3 s ADR 0029 exists to avoid —
+  either reshape the migrated component so its reads stay in client-only positions (per its
   demonstrated patterns) or surface the over-signal in NOTES.md. Record the actual tier, the
   reason, and the wall-time figures either way; only wrong served HTML is a correctness bug.
 
@@ -1044,7 +623,9 @@ and this note is redundant; if it has not, do the manual diff.
   **Context:** ~129 lines, navigation list. Also ports
   `examples/module/listnav/module-listnav.test.ts` — a unit test file — to run against the
   compiled artifact (or the served page, matching the corpus's spec conventions); mocks served
-  under `/test/module-listnav/mocks/...` stay working.
+  under `/test/module-listnav/mocks/...` stay working. Note: LT-200 (merged with `next`)
+  moved this component's initial hash sync into effect activation — the ported template must
+  keep that shape.
 
 - [ ] LT-108: Migrate `module-carousel` to `.tsrx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -1111,37 +692,18 @@ and this note is redundant; if it has not, do the manual diff.
   predicate into a plain setup const — `const isOpen = () => open.get(); watch(() => !isOpen(),
   …)` — moves the read out of the statement and the signal draws TSRX004 again, so the author
   must repeat the predicate at every site (`form-combobox.tsrx` does, with a comment saying
-  why). The diagnostic is loud, not silent, and the workaround is one line, so this is a DX wart
-  rather than a correctness gap. **Fix:** resolve reads through `component.plainSetup` consts
-  the statement names — the same one-hop widening `computeClientNeededNames` already does — or
-  fold into LT-093, which is the same free-name-through-a-const wall from the other direction.
-  The negative case is pinned in `server/tests/tsrx/client-setup-credit.test.ts`; flip that test
-  when fixing.
-  **Re-checked 2026-09-06 (LT-165 step 5 landed) — the premise above is now false.** "The
-  diagnostic is loud, not silent" no longer holds: TSRX004 left the diagnostic channel, so
+  why). **Re-checked 2026-09-06 (LT-165 step 5 landed) — the original premise is false.**
+  "The diagnostic is loud, not silent" no longer holds: TSRX004 left the diagnostic channel, so
   hoisting a predicate into a plain setup const now routes the whole component to the Simulated
-  tier with **no warning at all** — the author gets a jsdom realm instead of a one-line fix-it.
-  That is a worse failure than the DX wart this was filed as, and it makes the
-  `form-combobox.tsrx` comment ("repeat the predicate, here is why") unenforced guidance that
-  the next author has no way to discover. The census reason still names the origin, so it is
-  diagnosable after the fact. **Architect question at pickup:** this may warrant moving out of
-  P6 — raise it rather than assuming the P6 placement still reflects its cost.
-
-- [ ] LT-189: Document `ContextRequestEvent`'s cross-realm dispatch (LT-180 review finding).
-  **Skill:** tech-writer
-  **Context:** `requestContext()` now builds the `context-request` event from the HOST's own
-  realm whenever the exported `ContextRequestEvent` class does not belong to it
-  (`src/helpers/context.ts`, LT-180). The class stays exported and unchanged, and in the normal
-  same-realm case it is still what gets dispatched — but in a cross-realm host (an iframe, the
-  build's simulation realm) the dispatched object is a duck-typed `Event` carrying
-  `context`/`callback`/`subscribe`, so a provider written as
-  `if (e instanceof ContextRequestEvent)` would stop matching. This is protocol-conformant — the
-  Web Components Community Protocol specifies the event's fields, not its class, and Le Truc's
-  own `provideContexts()` reads the fields — so it is a documentation gap, not an ADR question
-  (Architect ruling, 2026-09-06).
-  Scope: the JSDoc on `ContextRequestEvent` and on `requestContext()`, plus the context section
-  in `docs-src/pages/` and the `le-truc` skill's context reference. One rule to state: a
-  provider checks `event.context`, never `instanceof`. No error copy moves.
+  tier with **no warning at all** — the author gets a jsdom realm instead of a one-line fix-it,
+  and the `form-combobox.tsrx` comment ("repeat the predicate, here is why") is unenforced
+  guidance the next author has no way to discover. The census reason still names the origin, so
+  it is diagnosable after the fact. **Architect question at pickup:** this may warrant moving
+  out of P6 — raise it rather than assuming the P6 placement still reflects its cost.
+  **Fix:** resolve reads through `component.plainSetup` consts the statement names — the same
+  one-hop widening `computeClientNeededNames` already does — or fold into LT-093, which is the
+  same free-name-through-a-const wall from the other direction. The negative case is pinned in
+  `server/tests/tsrx/client-setup-credit.test.ts`; flip that test when fixing.
 
 - [ ] LT-187: `reconcile()` misreports a DUPLICATE `data-key` as "key not present in the source" (LT-185 review finding).
   **Skill:** le-truc-dev
