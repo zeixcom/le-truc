@@ -15,7 +15,7 @@
  * unclassified.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { ComponentRegistry } from '../../tsrx/registry'
 import { tierCensus } from '../../tsrx/sim/report'
@@ -25,10 +25,18 @@ import { loadTsrxCorpus } from './corpus-fixture'
 const generated = createGeneratedDir('tier-corpus')
 afterAll(() => generated.cleanup())
 
-await compileTsrxCorpus(await loadTsrxCorpus(), generated.path)
-const registry = JSON.parse(
-	await Bun.file(`${generated.path}/registry.json`).text(),
-) as ComponentRegistry
+// Compiled in beforeAll, not at module top level: a top-level await before
+// describe() races the runner — under a heavier suite load (the tsrx-tsx
+// parity file joined the run) registration landed after the run completed
+// and the whole block silently never executed. Register synchronously; the
+// corpus compile is setup, and setup belongs inside the lifecycle.
+let registry: ComponentRegistry
+beforeAll(async () => {
+	await compileTsrxCorpus(await loadTsrxCorpus(), generated.path)
+	registry = JSON.parse(
+		await Bun.file(`${generated.path}/registry.json`).text(),
+	) as ComponentRegistry
+})
 
 describe('tier assignment over the migrated corpus', () => {
 	test('every component carries a tier', () => {
