@@ -1154,10 +1154,11 @@ export const emitServerModule = (
 
 	/**
 	 * LT-194: the page-occurrence args helper. Emitted when the component
-	 * consumes locale (declares the reserved `i18n` parameter or binds a
-	 * `lang` arg) and takes no `children` arg — the page renderer
-	 * (`server/effects/page-render.ts`) qualifies an occurrence by the
-	 * PRESENCE of this export, so these conditions are the qualification.
+	 * declares the reserved `i18n` parameter — its server bytes are the ones
+	 * the locale actually determines — and takes no `children` arg. The page
+	 * renderer (`server/effects/page-render.ts`) qualifies an occurrence by
+	 * the PRESENCE of this export, so these conditions are the
+	 * qualification.
 	 *
 	 * The mapping mirrors the client's connect-time seeding exactly: a
 	 * Parser-backed prop parses its attribute; a plain `string`-annotated arg

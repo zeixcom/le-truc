@@ -265,7 +265,16 @@ export const renderPageOccurrences = async (
 		}
 		const attrs: Record<string, string | null> = {}
 		for (const a of el.attrs) attrs[a.name] = a.value
-		const args = argsFromAttrs(attrs)
+		// LT-090 alignment: `class`/`id` address the HOST element — they
+		// splice onto the rendered root below and never ride the forwarded
+		// args, exactly what a compose site does (it filters them from the
+		// child's forwarded args for the same reason). A component whose
+		// `id = name` default derives internal wiring keeps deriving it from
+		// `name`, compose render and page render alike.
+		const argAttrs = { ...attrs }
+		delete argAttrs['class']
+		delete argAttrs['id']
+		const args = argsFromAttrs(argAttrs)
 		if (args === null) {
 			skipped.push({ tag, reason: 'unrenderable-args' })
 			return

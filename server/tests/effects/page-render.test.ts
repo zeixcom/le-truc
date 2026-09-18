@@ -216,6 +216,33 @@ describe('byte discipline', () => {
 		expect(result.html).toContain('class="own mine"')
 		expect(result.html).toContain('id="the-id"')
 	})
+
+	test('class and id never ride the forwarded args (LT-090: they address the host)', async () => {
+		// A component like form-textbox has an `id = name` string arg; the
+		// review found the renderer letting the occurrence's id through BOTH
+		// channels. Pinned: the host splice happens, the arg does not — a
+		// compose site filters them from the child's args the same way, so
+		// internal wiring derives from `name` in both renders alike.
+		const seenAttrs: Record<string, string | null>[] = []
+		const result = await renderPageOccurrences(
+			'<div lang="cy"><x-el class="mine" id="the-id" name="email" count="1">a</x-el></div>',
+			{
+				registry: registryOf(entry({ tag: 'x-el' })),
+				pageLocale: null,
+				resolveModule: async tag => ({
+					argsFromAttrs: (attrs: Record<string, string | null>) => {
+						seenAttrs.push(attrs)
+						return { ...attrs }
+					},
+					i18nRecord: (t: string, lang?: string) => ({ t, lang }),
+					renderXEl: () => '<x-el></x-el>',
+				}),
+			},
+		)
+		expect(result.html).toContain('id="the-id"')
+		expect(result.html).toContain('class="mine"')
+		expect(Object.keys(seenAttrs[0] ?? {})).toEqual(['name', 'count'])
+	})
 })
 
 /* === The renderer-supplied lang and i18n record === */
