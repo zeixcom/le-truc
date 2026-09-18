@@ -557,13 +557,8 @@ import { createState, createMemo } from '@zeix/le-truc'`
 		</>
 	}
 import { asString, createMemo } from '@zeix/le-truc'`
-		const { component, diagnostics } = compileComponent(
-			source,
-			'c.tsrx',
-			new Set(),
-		)
+		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		expect(component).not.toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
 		const hit = component?.entry.routingSignals.find(
 			s => s.origin === 'TSRX013',
 		)

@@ -226,6 +226,8 @@ export const compileSource = (
 			routingSignals: [],
 			diagnostics: [
 				diagnostic.invalidSource(
+					source,
+					undefined,
 					`Failed to parse ${filename}: ${e instanceof Error ? e.message : String(e)}${newerGrammarHint(source, e)}`,
 				),
 			],
@@ -258,6 +260,8 @@ export const compileSource = (
 			if (fn) {
 				ctx.diagnostics.push(
 					diagnostic.invalidSource(
+						ctx.source,
+						stmt.start,
 						`${filename}: multiple component functions per file are outside the sanctioned subset.`,
 					),
 				)
@@ -270,6 +274,8 @@ export const compileSource = (
 	if (!fn) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				undefined,
 				`${filename}: no exported component function with an @{ } container found.`,
 			),
 		)
@@ -291,6 +297,8 @@ export const compileSource = (
 	if (fn.async === true) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				fn.start,
 				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
 			),
 		)
@@ -333,6 +341,8 @@ export const compileSource = (
 	if (!bareRoot && (!render || render.type !== 'JSXFragment')) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				render?.start,
 				`${filename}: the @{ } container's output must be a single root element, or a fragment (element + <style>).`,
 			),
 		)

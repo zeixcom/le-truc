@@ -75,12 +75,35 @@ export type EvaluationTier =
 	/** Tier 0: phase-1 skeleton only; the client corrects at connect. */
 	| 'static'
 
-/** Which limb of sub-design 1 makes an expression unresolvable. */
+/**
+ * Which limb of sub-design 1 makes an expression unresolvable.
+ */
 export type UnresolvableLimb =
 	/** (a) Every read routes through something the patch table stubs. */
 	| 'stubbed-api'
 	/** (b) The input is the viewing moment or the build machine's state. */
 	| 'not-a-server-fact'
+
+/**
+ * The phase-1 refusal spellings a routing signal can carry (LT-223: a named
+ * union of its own, because most are NOT diagnostic codes — they are
+ * retired codes living on as provenance).
+ *
+ * - `TSRX034` is the only spelling that is ALSO a live diagnostic (its
+ *   severe per-expression form, see `diagnostics.ts`).
+ * - `TSRX004`, `TSRX013`, `TSRX043` were emitted diagnostics until LT-165
+ *   step 5 retired them; the refusals they named became routing signals,
+ *   and these spellings are their census provenance. The numbers stay
+ *   spent in `DiagnosticCode`'s numbering — they are not emitted codes.
+ * - `compose-read` was never a diagnostic: a compose site reading a
+ *   simulated-tier dependency.
+ */
+export type RoutingSignalOrigin =
+	| 'TSRX004'
+	| 'TSRX013'
+	| 'TSRX034'
+	| 'TSRX043'
+	| 'compose-read'
 
 /** Whether some server phase can answer an unresolved expression. */
 export type Resolution =
@@ -98,7 +121,7 @@ export type Resolution =
  * diagnostics (ADR 0029 sub-design 5).
  */
 export type RoutingSignal = {
-	origin: 'TSRX004' | 'TSRX013' | 'TSRX034' | 'TSRX043' | 'compose-read'
+	origin: RoutingSignalOrigin
 	/** The name or expression the signal is about, for the census line. */
 	detail: string
 	/** 1-based line in the `.tsrx` source, when known. */

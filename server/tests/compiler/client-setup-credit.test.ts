@@ -31,9 +31,13 @@ describe('client-only setup statements credit a signal as rendered', () => {
 }
 import { bindAttribute, createState } from '@zeix/le-truc'`
 
-	test('no TSRX004 — the signal is consumed, not dead', () => {
-		const { diagnostics } = compile(source)
-		expect(diagnostics.filter(d => d.code === 'TSRX004')).toHaveLength(0)
+	test('no error — the signal is consumed, not dead', () => {
+		// Pre-tiering this was the TSRX004 refusal; since LT-165 step 5 the
+		// code is retired onto tier.ts's RoutingSignalOrigin, so the pin is
+		// the positive: the module compiles with no diagnostic at all.
+		const { component, diagnostics } = compile(source)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
 	})
 
 	test('the signal seeds from its initializer, not from a DOM site', () => {
@@ -53,13 +57,12 @@ import { bindAttribute, createState } from '@zeix/le-truc'`
 		// tiering (LT-165 step 5) the consequence is a routing signal, not a
 		// diagnostic — the signal is still unharvestable, the component still
 		// routes Simulated, and the client still declares it verbatim.
-		const { component, diagnostics } = compile(
+		const { component } = compile(
 			source.replace(
 				"\twatch(() => !open.get(), bindAttribute(panel, 'hidden'))",
 				"\tconst isOpen = () => open.get()\n\twatch(() => !isOpen(), bindAttribute(panel, 'hidden'))",
 			),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
 		expect(
 			component?.entry.routingSignals.some(s => s.origin === 'TSRX004'),
 		).toBe(true)

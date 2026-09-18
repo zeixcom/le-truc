@@ -514,7 +514,6 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
 		const signals = component?.entry.routingSignals ?? []
 		const hit = signals.find(s => s.origin === 'TSRX004')
@@ -535,12 +534,7 @@ import { createCell } from '@zeix/le-truc'`
 	</>
 }
 import { createCell } from '@zeix/le-truc'`
-		const { component, diagnostics } = compileComponent(
-			source,
-			'c.tsrx',
-			new Set(),
-		)
-		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		// Not a direct site, so no DOM read-back: both halves reuse the
 		// identical initializer, like a derived callback.
 		expect(component?.clientCode).toContain("createCell('a')")
@@ -671,7 +665,6 @@ import { deriveCell, createCell } from '@zeix/le-truc'`
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`n`')
 		expect(hit?.message).toContain('conditionally chooses')
-		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
 	})
 
 	test('a plain setup const calling a client-only primitive routes, not errors (LT-165 step 5)', () => {
@@ -700,7 +693,6 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
 		const signals = component?.entry.routingSignals ?? []
 		const hit = signals.find(s => s.origin === 'TSRX013')
@@ -1991,7 +1983,6 @@ export function C({}: {})
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX043')).toBe(false)
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
 		const hit = component?.entry.routingSignals.find(
 			s => s.origin === 'TSRX043',
@@ -2023,7 +2014,7 @@ export function C({}: {})
 		// Pre-step-5 this was the SILENT variant: the ref got a `refStub` any-
 		// stub and the module compiled clean, rendering an empty site. Under
 		// tiering both spellings are the same routing fact.
-		const { component, diagnostics } = compileComponent(
+		const { component } = compileComponent(
 			refConst(
 				' value: asString(input.value),',
 				'const initial = input.value',
@@ -2032,7 +2023,6 @@ export function C({}: {})
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX043')).toBe(false)
 		expect(
 			component?.entry.routingSignals.filter(s => s.origin === 'TSRX043'),
 		).toHaveLength(1)
@@ -2058,7 +2048,9 @@ export function C({}: {})
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX043')).toEqual([])
+		// TSRX043 is retired onto RoutingSignalOrigin (LT-223); the pin is
+		// now the absence of ANY diagnostic.
+		expect(diagnostics).toEqual([])
 	})
 
 	test('a setup const that reads no ref is untouched', () => {
@@ -2077,7 +2069,9 @@ export function C({}: {})
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX043')).toEqual([])
+		// TSRX043 is retired onto RoutingSignalOrigin (LT-223); the pin is
+		// now the absence of ANY diagnostic.
+		expect(diagnostics).toEqual([])
 	})
 })
 

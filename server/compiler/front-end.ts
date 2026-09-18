@@ -579,6 +579,8 @@ export const extractParams = (
 	if (params.length > 2 || paramsNode?.type !== 'ObjectPattern') {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				fn.start,
 				`${filename}: the component function must take a single destructured args object (plus, optionally, a typed factory-context parameter: \`, { host, expose }: FactoryContext<Props>\`).`,
 			),
 		)
@@ -609,6 +611,8 @@ export const extractParams = (
 		if (contextNode.type !== 'ObjectPattern') {
 			ctx.diagnostics.push(
 				diagnostic.invalidSource(
+					ctx.source,
+					contextNode.start,
 					`${filename}: the factory-context parameter must be a destructured object: \`, { host, expose }: FactoryContext<Props>\`.`,
 				),
 			)
@@ -1259,6 +1263,8 @@ export const resolveTemplateOutput = (
 	if (!root) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				undefined,
 				`${filename}: no root element found in ${outputShapeLabel}.`,
 			),
 		)
@@ -1267,6 +1273,8 @@ export const resolveTemplateOutput = (
 	if (!root.tag.includes('-')) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				root.node.start,
 				`${filename}: the root element must be the component's custom element tag (got \`${root.tag}\`).`,
 			),
 		)
@@ -1689,16 +1697,12 @@ export const assembleComponentIR = (
 	if (contextParam?.annotationName) {
 		const formAssociated = !!decls.config?.form
 		if (formAssociated && contextParam.annotationName === 'FactoryContext')
-			ctx.diagnostics.push(
-				diagnostic.formContextMismatch(ctx.source, 'FactoryContext'),
-			)
+			ctx.diagnostics.push(diagnostic.formContextMismatch('FactoryContext'))
 		else if (
 			!formAssociated &&
 			contextParam.annotationName === 'FormFactoryContext'
 		)
-			ctx.diagnostics.push(
-				diagnostic.formContextMismatch(ctx.source, 'FormFactoryContext'),
-			)
+			ctx.diagnostics.push(diagnostic.formContextMismatch('FormFactoryContext'))
 	}
 	// The same set `seedExtractionContext` built into `ctx.serverKnown`
 	// (args + `isPending` + signals + setup consts) — reused, not recomputed:

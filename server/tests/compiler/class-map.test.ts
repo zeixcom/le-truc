@@ -107,9 +107,7 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(
-			diagnostics.some(d => d.code === 'TSRX005' || d.code === 'TSRX004'),
-		).toBe(false)
+		expect(diagnostics.some(d => d.code === 'TSRX005')).toBe(false)
 		expect(component).not.toBeNull()
 	})
 
@@ -146,12 +144,7 @@ import { createCell } from '@zeix/le-truc'`
 import { createCell } from '@zeix/le-truc'`
 
 	test('descendant case: no TSRX004, client seeds by initializer reuse', () => {
-		const { component, diagnostics } = compileComponent(
-			descendant,
-			'c.tsrx',
-			new Set(),
-		)
-		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		const { component } = compileComponent(descendant, 'c.tsrx', new Set())
 		expect(component).not.toBeNull()
 		expect(component?.clientCode).toContain('createCell(true)')
 		expect(component?.serverCode).toContain('createCell(true)')
@@ -161,12 +154,7 @@ import { createCell } from '@zeix/le-truc'`
 	})
 
 	test('root case (targets host): no TSRX004 either', () => {
-		const { component, diagnostics } = compileComponent(
-			root,
-			'c.tsrx',
-			new Set(),
-		)
-		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
+		const { component } = compileComponent(root, 'c.tsrx', new Set())
 		expect(component?.clientCode).toContain("bindClass(host, ['active'])")
 	})
 })

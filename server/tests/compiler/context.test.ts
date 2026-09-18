@@ -28,7 +28,6 @@ describe('requestContext() — consumer side', () => {
 			new Set(),
 		)
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
-		expect(diagnostics.some(d => d.code === 'TSRX004')).toBe(false)
 		// Server: no ancestor DOM to walk — renders the fallback directly, via
 		// a substituted createCell(fallback), never the real requestContext call.
 		expect(component?.serverCode).toContain(
@@ -128,12 +127,7 @@ describe('requestContext() — misuse diagnostics', () => {
 				<style>c-el { color: red }</style>
 			</>
 		}`
-		const { component, diagnostics } = compileComponent(
-			source,
-			'c.tsrx',
-			new Set(),
-		)
-		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
+		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			component?.entry.routingSignals.some(s => s.origin === 'TSRX013'),
 		).toBe(true)
@@ -185,12 +179,7 @@ import { createCell } from '@zeix/le-truc'`
 			</>
 		}
 import { createCell } from '@zeix/le-truc'`
-		const { component, diagnostics } = compileComponent(
-			badSource,
-			'c.tsrx',
-			new Set(),
-		)
-		expect(diagnostics.some(d => d.code === 'TSRX013')).toBe(false)
+		const { component } = compileComponent(badSource, 'c.tsrx', new Set())
 		expect(
 			component?.entry.routingSignals.some(s => s.origin === 'TSRX013'),
 		).toBe(true)

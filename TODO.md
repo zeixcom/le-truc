@@ -845,6 +845,22 @@ round, scope widened).
      narrows the carve-out to declared keys and rewords the sync header step 3 and
      the ADR 0030 s5 orphan-direction sentence itself — run item 8 after it (or
      accept a second pass over those two spots).
+  9. **The `class:`-prefix rejection copy** (LT-222 handoff, 2026-09-18): the new
+     TSRX006 reason in `server/compiler/classify-attributes.ts` (first draft:
+     "`class:token={…}` is not a TSRX spelling — a per-class reactive binding is a
+     class map: `class={() => ({ token: value })}`. A `class:token` attribute
+     renders into the markup verbatim and the browser ignores it."). No new code —
+     the existing malformed-attribute channel carries it — but the copy is new, and
+     both prior spellings were SILENT, so the fix-it line is the load-bearing part.
+     Batch with items 2–8.
+  10. **The union restructure** (LT-223 handoff, 2026-09-18): retirement treatment
+     standardized to the keep-member form the lifecycle doc prescribes — `TSRX020`
+     is a kept member again (was deleted-with-comment, the file's one outlier),
+     `TSRX031` keeps its member with an expanded note, and `TSRX004`/`013`/`043`
+     left the `DiagnosticCode` union for tier.ts's named `RoutingSignalOrigin`
+     (they are census origins, not emitted codes; position comments mark where the
+     numbers are spent). Check `.agents/skills/le-truc/references/errors.md` and the
+     lifecycle doc itself still describe the treatment accurately.
 
 ---
 
@@ -1051,7 +1067,7 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   pre-existing at HEAD c11f22bf** (proven in a clean worktree; the LT-219 migration
   area — not this task's); biome clean on all 20 touched files; check:links 412 green.
 
-- [ ] LT-223: `diagnostics.ts` hygiene — sort by code, retire TSRX031, named `RoutingSignalOrigin`, `invalidSource` line numbers.
+- [x] LT-223: `diagnostics.ts` hygiene — sort by code, retire TSRX031, named `RoutingSignalOrigin`, `invalidSource` line numbers — done ✓ (2026-09-18, with one ruling reversed).
   **Skill:** le-truc-dev
   **Context:** Review §2.9. The 54-factory object is unordered (TSRX039 sits between 008
   and 009) — sort by code and band-comment the groups; the cheapest anti-drift win in the
@@ -1071,6 +1087,36 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   style drift and the `DiagnosticSite` parameter collapse.
   **Verification:** `bun test server/tests` (the 2.6k-line diagnostics suite is the
   harness), typecheck, warning baseline 0, census 20/2/0.
+  **Done (2026-09-18).** **TSRX031 ruling REVERSED:** the entry scheduled deleting it
+  from the union, but the tech-writer lifecycle doc explicitly prescribes the opposite
+  ("mark it retired in the union comment rather than deleting the member, so the next
+  reader knows the number is spent") and `errors.md` already documents it as retired —
+  the union member STAYS. The review's actual complaint was two retirement treatments
+  in one file (TSRX020 deleted-with-comment vs 004/013/031/043 kept-with-comment);
+  standardized on the documented keep-member form: **TSRX020 restored as a kept member**
+  with a full retirement note, TSRX031's note expanded, 004/013/043 genuinely moved out
+  — they are not emitted codes at all, so they now live in tier.ts's **named,
+  exported `RoutingSignalOrigin`** union (with per-spelling docs) and `DiagnosticCode`
+  carries position comments pointing there. This surfaced ~19 test-side comparisons
+  (`d.code === 'TSRX004'` etc.) that were only typeable while the dead members sat in
+  the union — a diagnostic with those codes is now UNREPRESENTABLE, which is the
+  stronger pin; the vacuous asserts were deleted (the diagnostics.test.ts sites keep
+  their `origin === 'TSRX0XX'` routing-signal asserts, which are real), and the
+  one whole-body pin (client-setup-credit) rewritten positive (compiles with zero
+  diagnostics). **Sorted:** the 54-factory object is now strictly code-ordered with
+  twelve band comments (script-assisted move — per-entry multiset equality asserted
+  before writing; all factories byte-identical, only reordered). **invalidSource**
+  takes the family's `(source, offset, what)` shape: all 17 callers updated — i18n's
+  three sites now cite the declarator/value line (RED→GREEN pin in i18n.test.ts:
+  a malformed `export const i18n` reports `line: 2`); file-level shapes (parse
+  failures, missing component fn) pass `undefined` and stay line-less by design.
+  **formContextMismatch** dropped its unused `source` param (2 callers). Not done
+  here, recorded as LT-189 items 9–10 (class: copy review + union restructure
+  voice-check for Tech Writer). **Verification (run):** typecheck exit 0; full
+  `bun test server/tests` 1632 pass / 0 fail / 1 pre-existing error; generated dir
+  git-diff-clean (byte-identical goldens); check:tsrx baseline 0, census 20/2/0
+  (only the pre-existing form-spinbutton tsc failures remain); biome clean on all
+  13 touched files.
 
 - [ ] LT-224: Split `front-end.ts` into the six modules of review §2.2.
   **Skill:** le-truc-dev

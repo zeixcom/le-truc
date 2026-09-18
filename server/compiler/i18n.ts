@@ -68,6 +68,8 @@ export const readI18nDecl = (
 	if (init.type !== 'ObjectExpression') {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				declarator.start,
 				'`export const i18n` must be an object literal mapping message keys to their source-locale strings (ADR 0030).',
 			),
 		)
@@ -84,6 +86,8 @@ export const readI18nDecl = (
 		} else {
 			ctx.diagnostics.push(
 				diagnostic.invalidSource(
+					ctx.source,
+					value.start,
 					`\`export const i18n\` value for \`${key}\` must be a string literal — the inline source string is the fallback every locale resolves against and the bytes the staleness manifest hashes.`,
 				),
 			)
@@ -102,6 +106,8 @@ export const readI18nDecl = (
 		if (!PLURAL_CATEGORIES.has(suffix))
 			ctx.diagnostics.push(
 				diagnostic.invalidSource(
+					ctx.source,
+					init.start,
 					`\`export const i18n\` key \`${key}\` — a dotted key must end in a CLDR plural category (zero, one, two, few, many, other), e.g. \`task.one\` / \`task.other\` (ADR 0030 sub-design 4, LT-190). Rename the key with a category suffix, or drop the dot.`,
 				),
 			)

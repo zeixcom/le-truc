@@ -39,6 +39,17 @@ const injectedCatalogs = (
 
 /* === The inline declaration + the untranslated-literal warning (TSRX047) === */
 
+describe('TSRX008 from the i18n walk carries a line (LT-223)', () => {
+	test('a malformed inline i18n declaration reports its line number', () => {
+		const { diagnostics } = compile(
+			catalogSource(`{t['task.other']}`, `export const i18n = 'task'`),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX008')
+		expect(hit).toBeDefined()
+		expect(hit?.line).toBe(2)
+	})
+})
+
 const catalogSource = (
 	template: string,
 	decl = `export const i18n = { task: 'task' }`,

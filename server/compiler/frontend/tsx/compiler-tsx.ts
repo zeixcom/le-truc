@@ -150,6 +150,8 @@ export const compileSourceTsx = (
 			if (fn) {
 				ctx.diagnostics.push(
 					diagnostic.invalidSource(
+						ctx.source,
+						stmt.start,
 						`${filename}: multiple component functions per file are outside the sanctioned subset.`,
 					),
 				)
@@ -162,6 +164,8 @@ export const compileSourceTsx = (
 	if (!fn) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				undefined,
 				`${filename}: no exported component function found (one per file, setup statements then a single \`return <jsx/>\`).`,
 			),
 		)
@@ -174,6 +178,8 @@ export const compileSourceTsx = (
 	if (fn.async === true) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				fn.start,
 				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
 			),
 		)
@@ -206,6 +212,8 @@ export const compileSourceTsx = (
 	) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				fn.start,
 				`${filename}: the component function must end in a single \`return <jsx/>\` (setup statements before it).`,
 			),
 		)
@@ -231,6 +239,8 @@ export const compileSourceTsx = (
 	if (!bareRoot && render.type !== 'JSXFragment') {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
+				ctx.source,
+				render.start,
 				`${filename}: the return value must be a single root element, or a fragment (element + <style>).`,
 			),
 		)

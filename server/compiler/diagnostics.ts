@@ -14,7 +14,9 @@ export type DiagnosticCode =
 	| 'TSRX001' // @for over a reactive source that is not a declared createList
 	| 'TSRX002' // loop variable referenced inside a reactive thunk — hoist it first
 	| 'TSRX003' // hoisted const not rebindable to a server-rendered attribute
-	| 'TSRX004' // RETIRED (LT-165 step 5) — Simulated/Static routing signal; census provenance in tier.ts
+	// ('TSRX004' is spent: retired as an emitted code at LT-165 step 5, it
+	// survives ONLY as a routing-signal origin — see tier.ts's
+	// `RoutingSignalOrigin`, which owns the spelling now)
 	| 'TSRX005' // construct outside the sanctioned milestone-2 subset
 	| 'TSRX006' // malformed or unsupported attribute shape
 	| 'TSRX007' // template structure the compiler cannot address
@@ -23,16 +25,17 @@ export type DiagnosticCode =
 	| 'TSRX010' // managed form prop used without formAssociated
 	| 'TSRX011' // composed (PascalCase) element with no resolvable .tsrx import
 	| 'TSRX012' // pass={{ }}/reactive dispatch legality on a custom-element target, incl. per-prop Slot-backedness (LT-158)
-	| 'TSRX013' // RETIRED (LT-165 step 5) — its two server-evaluation factories became routing signals; the other two split to TSRX044/TSRX045 in step 1
+	// ('TSRX013' is spent: retired as an emitted code at LT-165 step 5 — its
+	// two server-evaluation factories became routing signals, the other two
+	// split to TSRX044/TSRX045 in step 1 — and survives ONLY as a
+	// routing-signal origin; see tier.ts's `RoutingSignalOrigin`)
 	| 'TSRX014' // plain (non-.tsrx) import whose bindings are never used anywhere the compiler can place them
 	| 'TSRX015' // requestContext() called with other than exactly two arguments
 	| 'TSRX016' // requestContext()'s fallback argument is not server-known
 	| 'TSRX017' // template child whose reactivity cannot be traced — needs a thunk
 	| 'TSRX018' // retired `&{}` lazy-child sigil
 	| 'TSRX019' // string-literal prop name in child position — write host.<prop>
-	// ('TSRX020' retired at the LT-210 pin bump: @tsrx/core 0.2 dropped lazy
-	// destructuring from the grammar, so `&{ … }`/`&[ … ]` no longer parse and
-	// the rejection is the parser's own syntax error, surfaced as TSRX008)
+	| 'TSRX020' // RETIRED (LT-210 pin bump) — @tsrx/core 0.2 dropped lazy destructuring from the grammar, so `&{ … }`/`&[ … ]` no longer parse; the rejection is the parser's own syntax error, surfaced as TSRX008. No builder emits this code; the member stays so every spent number is visible in the union (ADR 0028 lifecycle)
 	| 'TSRX021' // React `{cond && <jsx/>}` conditional-render idiom in child position
 	| 'TSRX022' // React `{cond ? <a/> : <b/>}` conditional-render idiom in child position
 	| 'TSRX023' // React `.map()` producing JSX in child position
@@ -43,7 +46,7 @@ export type DiagnosticCode =
 	| 'TSRX028' // expose() names a member it cannot: managed by formAssociated(), or a reserved word
 	| 'TSRX029' // a form-associated component's inner control carries a name
 	| 'TSRX030' // <textarea value={…}> — textarea has no value content attribute
-	| 'TSRX031' // RETIRED — per-branch addressing replaced it; no builder emits this code
+	| 'TSRX031' // RETIRED — per-branch addressing replaced it; no builder emits this code; the member stays so every spent number is visible in the union (ADR 0028 lifecycle)
 	| 'TSRX032' // destructured prop has a default value but its type isn't marked optional
 	| 'TSRX033' // a static child or server-rendered attribute reads an impure ambient (Date/Intl/Math.random/toLocaleString) — reactive thunks are omitted silently instead (LT-165 step 5)
 	| 'TSRX034' // severe only (LT-165 step 5): disabled/checked unresolvable on a submittable control of a Static-tier component; non-severe sites are routing signals
@@ -55,7 +58,9 @@ export type DiagnosticCode =
 	| 'TSRX040' // required first() whose only match sits in a branch that may not render (LT-123)
 	| 'TSRX041' // two first() names resolve to the same element (LT-132)
 	| 'TSRX042' // a static id in a template duplicates once the component is instantiated twice (LT-131)
-	| 'TSRX043' // RETIRED (LT-165 step 5) — Simulated-tier routing signal; census provenance in tier.ts
+	// ('TSRX043' is spent: retired as an emitted code at LT-165 step 5, it
+	// survives ONLY as a routing-signal origin — see tier.ts's
+	// `RoutingSignalOrigin`, which owns the spelling now)
 	| 'TSRX044' // a signal's initializer conditionally chooses between two constructor calls (ADR 0024 sub-design 12 format rule; split from TSRX013 by LT-165)
 	| 'TSRX045' // a collector-requiring helper deferred into a callback, so it throws NoActiveCollectorError at connect (split from TSRX013 by LT-165)
 	| 'TSRX046' // a setup const the value harness cannot evaluate has its value rendered into the markup — no tier can produce the site (LT-165 step 5)
@@ -126,6 +131,7 @@ export const lineOf = (
 /* === Exported Functions === */
 
 export const diagnostic = {
+	// --- @for and hoisted-const rebinding ---
 	/**
 	 * `@for` over a reactive source that is not a declared `createList` — the
 	 * reconcile lowering (milestone 3) covers declared Lists only.
@@ -166,6 +172,7 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
+	// --- subset, attribute shapes, addressing, source structure ---
 	/** Anything outside the sanctioned milestone-2 construct set. */
 	unsupported: (source: string, offset: number | undefined, what: string) =>
 		error(
@@ -188,48 +195,17 @@ export const diagnostic = {
 		what: string,
 	) => error('TSRX007', what, lineOf(source, offset)),
 
-	/** Source-level structure violations. */
-	invalidSource: (what: string) => error('TSRX008', what, undefined),
-
 	/**
-	 * A prop that is Parser-exposed AND rendered into the component's
-	 * own markup from a same-named server arg (LT-122). Two seeding
-	 * stories for one value: the Parser reads the HOST ATTRIBUTE at
-	 * connect, the site carries the same value as CONTENT. The page
-	 * therefore has to carry it twice, and if the host attribute is
-	 * absent the Parser's fallback wins and the first binding pass
-	 * OVERWRITES the text the server rendered.
-	 *
-	 * A warning rather than an error (owner decision, 2026-08-30):
-	 * harvesting from the DOM is the preferred contract, but an
-	 * attribute-driven prop whose site merely displays it is a
-	 * legitimate shape the corpus has not yet argued either way.
-	 *
-	 * `formManaged` (LT-141) branches the fix-it for `value`/`checked` on a
-	 * `formAssociated()`/`formAssociatedCheckbox()` host that renders the
-	 * prop into an owned site but does NOT carry the corresponding host
-	 * attribute: there, the ordinary advice ("drop the attribute") is
-	 * backwards, because the host attribute IS the reset baseline
-	 * (`defaultValue`/`defaultChecked`) the extension's `formResetCallback`
-	 * needs. The exemption in `reportDuplicatedChannels` only fires when
-	 * that attribute IS present — this message covers the case where it
-	 * should be present and isn't.
+	 * Source-level structure violations. `invalidSource` takes the family's
+	 * `(source, offset, what)` shape like its siblings (LT-223): sites that
+	 * have a node in scope pass its offset so the report carries a line;
+	 * file-level shapes (parse failures, a missing component function) pass
+	 * `undefined` and stay line-less.
 	 */
-	duplicatedPropChannel: (
-		source: string,
-		offset: number | undefined,
-		prop: string,
-		parser: string,
-		formManaged: boolean,
-	) =>
-		warning(
-			'TSRX039',
-			formManaged
-				? `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. On a form-associated host \`${prop}\` is the reset baseline (\`default${prop === 'checked' ? 'Checked' : 'Value'}\`) — render the host attribute too (\`<… ${prop}={${prop}}>\`) rather than dropping it; do not stop rendering the value here either, since the baseline attribute alone gives no initial DOM state for the control to mirror.`
-				: `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. Harvest it from the site instead (\`expose({ ${prop}: <ref read> })\`, HOST_PROFILE § data account) and drop the attribute, or stop rendering the value here.`,
-			lineOf(source, offset),
-		),
+	invalidSource: (source: string, offset: number | undefined, what: string) =>
+		error('TSRX008', what, lineOf(source, offset)),
 
+	// --- config, managed form props, composition, pass legality ---
 	/** Invalid `export const config` declaration (ADR 0023 sub-design 8). */
 	invalidConfig: (source: string, offset: number | undefined, what: string) =>
 		error('TSRX009', what, lineOf(source, offset)),
@@ -395,98 +371,7 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
-	/**
-	 * A setup const's initializer conditionally chooses between two signal-
-	 * constructor calls (`cond ? deriveCell(...) : createCell(...)`) — the
-	 * initializer must be a SINGLE, unconditional call to a recognized
-	 * constructor; conditional logic belongs inside the callback, not as a
-	 * choice between constructors (ADR 0023 sub-design 12).
-	 *
-	 * Own code since LT-165 (was `TSRX013`). It is a FORMAT rule, not a
-	 * server-evaluation guard: harvest planning needs one shape to plan for,
-	 * and no tier supersedes that — so unlike its former code-mates it stays
-	 * an error rather than becoming a routing signal (ADR 0029 s5).
-	 */
-	conditionalSignalConstructor: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
-		error(
-			'TSRX044',
-			`\`${name}\`'s initializer conditionally chooses between two signal-constructor calls — a signal must be a single, unconditional call to a recognized constructor (createCell/createState/deriveCell/…). Move the condition inside the callback instead (e.g. \`deriveCell(() => cond ? a : b)\`).`,
-			lineOf(source, offset),
-		),
-
-	/**
-	 * A collector-requiring helper (`watch`/`on`/`pass`/`provideContexts`/
-	 * `each`/`reconcile`) called from inside a nested function in a
-	 * client-only setup statement (LT-157d, ADR 0028 sub-design 5). Those
-	 * helpers do not create their effect — they push a descriptor into the
-	 * ambient collector (`src/internal.ts`'s `pushDescriptor`), which is
-	 * active only while the factory itself is running (ADR 0018). A call
-	 * deferred into a callback therefore runs after the factory returned,
-	 * with no collector to push into, and throws `NoActiveCollectorError`.
-	 *
-	 * The compiler cannot EMIT this shape — every generated `watch`/`on`/
-	 * `pass` call sits at the top level of the factory — so the whole rule
-	 * exists for hand-authored client-setup statements, which are exactly
-	 * the half ADR 0028 says the compiler owes ([M15] keeps the runtime
-	 * check as the backstop for no-build components it never sees).
-	 *
-	 * Deliberately silent on a call nested inside `reconcile()`/`each()`'s
-	 * own `bindItem` callback: that one runs INSIDE a per-item collector,
-	 * which is the whole point of those helpers.
-	 *
-	 * Own code since LT-165 (was `TSRX013`). It is a CLIENT-side bug —
-	 * `NoActiveCollectorError` at connect — so it is tier-independent and
-	 * stays an error; retiring it with the server-evaluation guards would
-	 * have deleted a real check (ADR 0029 s5).
-	 */
-	deferredCollectorCall: (
-		source: string,
-		offset: number | undefined,
-		helper: string,
-	) =>
-		error(
-			'TSRX045',
-			`\`${helper}(…)\` is called from inside a callback — it collects an effect descriptor into the factory's ambient collector, which is gone by the time a deferred callback runs, so this throws NoActiveCollectorError at connect (contained per ADR 0028, so the effect silently never activates). Call \`${helper}(…)\` directly in setup and make the callback's condition part of the effect instead (e.g. \`watch(() => cond ? … : …, sink)\`).`,
-			lineOf(source, offset),
-		),
-
-	/**
-	 * A setup const the value harness cannot evaluate — its initializer reads
-	 * a client-only primitive (`first`/`all`/`watch`/…), a `first()`-bound
-	 * ref, or `host`/`internals` — has its VALUE rendered into the markup
-	 * (LT-165 step 5). This is the narrow residue of the retired `TSRX013`/
-	 * `TSRX043` refusals, and it stays an error where they did not: an
-	 * UNrendered client-only const routes the component Simulated and the
-	 * realm runs it for real, but a RENDERED one asks the server to splice a
-	 * value no phase can produce — the fold cannot run the read, the realm
-	 * would have to serialize the site, and the Static tier omits the
-	 * expression with no client binding to correct it (a static splice is
-	 * never re-set at connect). Same structural class as `impureStaticChild`:
-	 * not a flash, a permanent wrong-or-empty site.
-	 *
-	 * Deliberately not fired for a FUNCTION initializer: a setup helper is
-	 * dead code server-side (defined, never called), so its free names never
-	 * evaluate — and a const reached only INDIRECTLY (this const's
-	 * initializer reads another const that reads a ref) is not caught either;
-	 * both surface as a source-mapped tsc failure on the generated module
-	 * instead (the LT-136 posture, tracked with LT-093/LT-135).
-	 */
-	renderedClientOnlyConst: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-		badNames: string[],
-	) =>
-		error(
-			'TSRX046',
-			`\`${name}\`'s value is rendered into this component's markup, but its initializer reads ${badNames.map(n => `\`${n}\``).join(', ')} — client-only name(s) the server cannot evaluate in ANY tier, so the site would render broken or stay permanently empty (no client binding ever corrects a static splice). Render the site from a server arg or signal instead, or make the site reactive (wrap the read in a thunk, e.g. \`title={() => …}\`) so the client's first binding pass supplies the value.`,
-			lineOf(source, offset),
-		),
-
+	// --- imports, requestContext, children, ref spellings ---
 	/**
 	 * A plain (non-`.tsrx`) import whose local bindings never appear as a
 	 * free identifier anywhere in setup or the template (LT-034, ADR 0024
@@ -595,6 +480,7 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
+	// --- React near-miss idioms ---
 	/**
 	 * `{cond && <jsx/>}` (LT-054): React's short-circuit conditional-render
 	 * idiom. TSRX has no implicit "falsy renders nothing" rule — this renders
@@ -660,6 +546,7 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
+	// --- first()/all() selectors ---
 	/**
 	 * `first(…)` (LT-055) called with anything other than one or two
 	 * string literals. Two (selector + a human required-reason) is the
@@ -676,24 +563,6 @@ export const diagnostic = {
 		error(
 			'TSRX025',
 			`\`const ${name} = first(…)\` must be called with one or two string literals — a selector alone for an optional reference (\`first('span.badge')\`, yields \`undefined\` when absent), or a selector plus a required-reason string (\`first('input', 'required')\`, throws with that reason) — so the compiler can resolve the reference structurally at compile time.`,
-			lineOf(source, offset),
-		),
-
-	/**
-	 * A REQUIRED `first(selector, reason)` whose only match sits
-	 * inside a branch that may not render (LT-123) — the reason
-	 * can never be thrown, because the analysis addresses such an
-	 * element with a non-throwing query under a presence guard.
-	 */
-	deadRequiredReason: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-		selector: string,
-	) =>
-		warning(
-			'TSRX040',
-			`\`const ${name} = first('${selector}', …)\` is declared REQUIRED, but its only match in this template sits inside a branch that may not render — the client addresses it with an existence guard either way, so the required-reason string is never thrown. Drop it (\`first('${selector}')\`) to say optional outright. For a template-owning component the compiler controls the markup, so a required-reason only earns its keep on a selector that may match markup this component did not itself render.`,
 			lineOf(source, offset),
 		),
 
@@ -746,57 +615,6 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A STATIC `id` attribute in a template (LT-131). An `id` is unique per
-	 * DOCUMENT, but a template is a per-INSTANCE thing: the moment a page
-	 * places the component twice, the constant renders twice and every
-	 * `aria-labelledby`/`aria-describedby`/`<label for>` pointing at it
-	 * resolves to the FIRST instance — invalid HTML and, when it is an
-	 * `aria-*` wiring, a real accessibility defect.
-	 *
-	 * A warning, not an error: a single-instance component is legitimate,
-	 * and the compiler cannot know how many times a page will place it. The
-	 * fix is ownership, not generation — the compiler inventing an id would
-	 * make the server render non-deterministic and give the client nothing
-	 * stable to re-derive, so the id belongs to whoever instantiates the
-	 * component (HOST_PROFILE § data account, bullet 3).
-	 */
-	staticIdInTemplate: (
-		source: string,
-		offset: number | undefined,
-		tag: string,
-		id: string,
-	) =>
-		warning(
-			'TSRX042',
-			`\`<${tag} id="${id}">\` is a constant \`id\` in a template — it duplicates the moment a page places this component twice, and any \`aria-labelledby\`/\`aria-describedby\`/\`<label for>\` pointing at it resolves to the FIRST instance. Take the id as a server arg with a default instead (\`{ ${sanitizeArgName(id)} = '${id}' }\`) and render it as \`id={${sanitizeArgName(id)}}\`, so whoever instantiates the component owns the value; wire every reference from that same arg.`,
-			lineOf(source, offset),
-		),
-
-	/**
-	 * Two `first()` declarations resolve to the SAME element (LT-132).
-	 * Silent until now: the ref IR is a list, but every consumer reads it
-	 * with `.find(a => a.kind === 'ref')`, so only the first name ever
-	 * became a query — the generated client then declared one const and
-	 * referenced the other, which surfaced as a tsc error on GENERATED
-	 * code with nothing pointing back at the `.tsrx` line that caused it.
-	 * Two names for one element is a mistake, not a shorthand: an alias
-	 * would work mechanically (`addQuery` dedups by selector+cardinality)
-	 * but would leave the author believing they had addressed two things.
-	 */
-	firstSelectorDuplicate: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-		selector: string,
-		existing: string,
-	) =>
-		error(
-			'TSRX041',
-			`\`first('${selector}', …)\` (bound to \`${name}\`) resolves to the same element as \`${existing}\` — two names for one element. Only one of them would become a query and the other would be undefined at runtime. Use \`${existing}\` in both places, or give the two elements distinguishing \`class\`/\`id\`/\`data-*\` attributes and address them separately.`,
-			lineOf(source, offset),
-		),
-
-	/**
 	 * `first()`'s selector matches more than one element that aren't all
 	 * direct branch roots of the same `@if` (LT-055) — the compiler cannot
 	 * tell which one the author means. A selector spanning an `@if`/`@else`
@@ -816,6 +634,7 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
+	// --- formAssociated surface ---
 	/**
 	 * `expose()` names a reserved word or `Object` builtin (LT-157a, ADR
 	 * 0028 sub-design 5) — `src/types.ts`'s `RESERVED_WORDS_LIST`. The
@@ -897,6 +716,7 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
+	// --- binding defaults, impure ambients, loaded-attribute defaults ---
 	/**
 	 * A destructured prop has a default value (`foo = 'x'`) but its type
 	 * annotation doesn't mark the field optional (`foo: string`, not `foo?:
@@ -1006,6 +826,7 @@ export const diagnostic = {
 		)
 	},
 
+	// --- duplicate ids, import hygiene, duplicated channels ---
 	/**
 	 * A literal `id` is duplicated across `@try`/`@catch`/`@pending` arms
 	 * (CHECKLIST §8). All three arms render into the initial HTML
@@ -1024,26 +845,6 @@ export const diagnostic = {
 		error(
 			'TSRX035',
 			`id="${id}" appears in both ${firstArm} and ${secondArm} — all arms of a \`@try\`/\`@catch\`/\`@pending\` boundary render into the initial HTML at once (non-active arms are hidden, not removed), so this is two elements sharing an id in the same document simultaneously. Give each arm's element a distinct id.`,
-			lineOf(source, offset),
-		),
-
-	/**
-	 * The same static `id` appears on more than one composed element
-	 * (LT-090). A compose site's `id` materializes on that instance's host
-	 * element in the initial HTML (`composeHostAttrs`) — duplicated, that is
-	 * two elements sharing an id in the SAME document: invalid HTML, and
-	 * id-based addressing (`first('#x')`, label `for`) resolves to at most
-	 * one of them, never reliably the right one.
-	 */
-	duplicateComposeId: (
-		source: string,
-		offset: number | undefined,
-		id: string,
-		count: number,
-	) =>
-		error(
-			'TSRX038',
-			`id="${id}" appears on ${count} composed elements — each compose site's id is materialized on that instance's host element, so this is ${count} elements sharing an id in the same document. Give each site a distinct id, or address the instances with a static class instead.`,
 			lineOf(source, offset),
 		),
 
@@ -1087,6 +888,229 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
+	/**
+	 * The same static `id` appears on more than one composed element
+	 * (LT-090). A compose site's `id` materializes on that instance's host
+	 * element in the initial HTML (`composeHostAttrs`) — duplicated, that is
+	 * two elements sharing an id in the SAME document: invalid HTML, and
+	 * id-based addressing (`first('#x')`, label `for`) resolves to at most
+	 * one of them, never reliably the right one.
+	 */
+	duplicateComposeId: (
+		source: string,
+		offset: number | undefined,
+		id: string,
+		count: number,
+	) =>
+		error(
+			'TSRX038',
+			`id="${id}" appears on ${count} composed elements — each compose site's id is materialized on that instance's host element, so this is ${count} elements sharing an id in the same document. Give each site a distinct id, or address the instances with a static class instead.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A prop that is Parser-exposed AND rendered into the component's
+	 * own markup from a same-named server arg (LT-122). Two seeding
+	 * stories for one value: the Parser reads the HOST ATTRIBUTE at
+	 * connect, the site carries the same value as CONTENT. The page
+	 * therefore has to carry it twice, and if the host attribute is
+	 * absent the Parser's fallback wins and the first binding pass
+	 * OVERWRITES the text the server rendered.
+	 *
+	 * A warning rather than an error (owner decision, 2026-08-30):
+	 * harvesting from the DOM is the preferred contract, but an
+	 * attribute-driven prop whose site merely displays it is a
+	 * legitimate shape the corpus has not yet argued either way.
+	 *
+	 * `formManaged` (LT-141) branches the fix-it for `value`/`checked` on a
+	 * `formAssociated()`/`formAssociatedCheckbox()` host that renders the
+	 * prop into an owned site but does NOT carry the corresponding host
+	 * attribute: there, the ordinary advice ("drop the attribute") is
+	 * backwards, because the host attribute IS the reset baseline
+	 * (`defaultValue`/`defaultChecked`) the extension's `formResetCallback`
+	 * needs. The exemption in `reportDuplicatedChannels` only fires when
+	 * that attribute IS present — this message covers the case where it
+	 * should be present and isn't.
+	 */
+	duplicatedPropChannel: (
+		source: string,
+		offset: number | undefined,
+		prop: string,
+		parser: string,
+		formManaged: boolean,
+	) =>
+		warning(
+			'TSRX039',
+			formManaged
+				? `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. On a form-associated host \`${prop}\` is the reset baseline (\`default${prop === 'checked' ? 'Checked' : 'Value'}\`) — render the host attribute too (\`<… ${prop}={${prop}}>\`) rather than dropping it; do not stop rendering the value here either, since the baseline attribute alone gives no initial DOM state for the control to mirror.`
+				: `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. Harvest it from the site instead (\`expose({ ${prop}: <ref read> })\`, HOST_PROFILE § data account) and drop the attribute, or stop rendering the value here.`,
+			lineOf(source, offset),
+		),
+
+	// --- reference identity and per-instance ids ---
+	/**
+	 * A REQUIRED `first(selector, reason)` whose only match sits
+	 * inside a branch that may not render (LT-123) — the reason
+	 * can never be thrown, because the analysis addresses such an
+	 * element with a non-throwing query under a presence guard.
+	 */
+	deadRequiredReason: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		selector: string,
+	) =>
+		warning(
+			'TSRX040',
+			`\`const ${name} = first('${selector}', …)\` is declared REQUIRED, but its only match in this template sits inside a branch that may not render — the client addresses it with an existence guard either way, so the required-reason string is never thrown. Drop it (\`first('${selector}')\`) to say optional outright. For a template-owning component the compiler controls the markup, so a required-reason only earns its keep on a selector that may match markup this component did not itself render.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * Two `first()` declarations resolve to the SAME element (LT-132).
+	 * Silent until now: the ref IR is a list, but every consumer reads it
+	 * with `.find(a => a.kind === 'ref')`, so only the first name ever
+	 * became a query — the generated client then declared one const and
+	 * referenced the other, which surfaced as a tsc error on GENERATED
+	 * code with nothing pointing back at the `.tsrx` line that caused it.
+	 * Two names for one element is a mistake, not a shorthand: an alias
+	 * would work mechanically (`addQuery` dedups by selector+cardinality)
+	 * but would leave the author believing they had addressed two things.
+	 */
+	firstSelectorDuplicate: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		selector: string,
+		existing: string,
+	) =>
+		error(
+			'TSRX041',
+			`\`first('${selector}', …)\` (bound to \`${name}\`) resolves to the same element as \`${existing}\` — two names for one element. Only one of them would become a query and the other would be undefined at runtime. Use \`${existing}\` in both places, or give the two elements distinguishing \`class\`/\`id\`/\`data-*\` attributes and address them separately.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A STATIC `id` attribute in a template (LT-131). An `id` is unique per
+	 * DOCUMENT, but a template is a per-INSTANCE thing: the moment a page
+	 * places the component twice, the constant renders twice and every
+	 * `aria-labelledby`/`aria-describedby`/`<label for>` pointing at it
+	 * resolves to the FIRST instance — invalid HTML and, when it is an
+	 * `aria-*` wiring, a real accessibility defect.
+	 *
+	 * A warning, not an error: a single-instance component is legitimate,
+	 * and the compiler cannot know how many times a page will place it. The
+	 * fix is ownership, not generation — the compiler inventing an id would
+	 * make the server render non-deterministic and give the client nothing
+	 * stable to re-derive, so the id belongs to whoever instantiates the
+	 * component (HOST_PROFILE § data account, bullet 3).
+	 */
+	staticIdInTemplate: (
+		source: string,
+		offset: number | undefined,
+		tag: string,
+		id: string,
+	) =>
+		warning(
+			'TSRX042',
+			`\`<${tag} id="${id}">\` is a constant \`id\` in a template — it duplicates the moment a page places this component twice, and any \`aria-labelledby\`/\`aria-describedby\`/\`<label for>\` pointing at it resolves to the FIRST instance. Take the id as a server arg with a default instead (\`{ ${sanitizeArgName(id)} = '${id}' }\`) and render it as \`id={${sanitizeArgName(id)}}\`, so whoever instantiates the component owns the value; wire every reference from that same arg.`,
+			lineOf(source, offset),
+		),
+
+	// --- signal initializer shapes ---
+	/**
+	 * A setup const's initializer conditionally chooses between two signal-
+	 * constructor calls (`cond ? deriveCell(...) : createCell(...)`) — the
+	 * initializer must be a SINGLE, unconditional call to a recognized
+	 * constructor; conditional logic belongs inside the callback, not as a
+	 * choice between constructors (ADR 0023 sub-design 12).
+	 *
+	 * Own code since LT-165 (was `TSRX013`). It is a FORMAT rule, not a
+	 * server-evaluation guard: harvest planning needs one shape to plan for,
+	 * and no tier supersedes that — so unlike its former code-mates it stays
+	 * an error rather than becoming a routing signal (ADR 0029 s5).
+	 */
+	conditionalSignalConstructor: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+	) =>
+		error(
+			'TSRX044',
+			`\`${name}\`'s initializer conditionally chooses between two signal-constructor calls — a signal must be a single, unconditional call to a recognized constructor (createCell/createState/deriveCell/…). Move the condition inside the callback instead (e.g. \`deriveCell(() => cond ? a : b)\`).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A collector-requiring helper (`watch`/`on`/`pass`/`provideContexts`/
+	 * `each`/`reconcile`) called from inside a nested function in a
+	 * client-only setup statement (LT-157d, ADR 0028 sub-design 5). Those
+	 * helpers do not create their effect — they push a descriptor into the
+	 * ambient collector (`src/internal.ts`'s `pushDescriptor`), which is
+	 * active only while the factory itself is running (ADR 0018). A call
+	 * deferred into a callback therefore runs after the factory returned,
+	 * with no collector to push into, and throws `NoActiveCollectorError`.
+	 *
+	 * The compiler cannot EMIT this shape — every generated `watch`/`on`/
+	 * `pass` call sits at the top level of the factory — so the whole rule
+	 * exists for hand-authored client-setup statements, which are exactly
+	 * the half ADR 0028 says the compiler owes ([M15] keeps the runtime
+	 * check as the backstop for no-build components it never sees).
+	 *
+	 * Deliberately silent on a call nested inside `reconcile()`/`each()`'s
+	 * own `bindItem` callback: that one runs INSIDE a per-item collector,
+	 * which is the whole point of those helpers.
+	 *
+	 * Own code since LT-165 (was `TSRX013`). It is a CLIENT-side bug —
+	 * `NoActiveCollectorError` at connect — so it is tier-independent and
+	 * stays an error; retiring it with the server-evaluation guards would
+	 * have deleted a real check (ADR 0029 s5).
+	 */
+	deferredCollectorCall: (
+		source: string,
+		offset: number | undefined,
+		helper: string,
+	) =>
+		error(
+			'TSRX045',
+			`\`${helper}(…)\` is called from inside a callback — it collects an effect descriptor into the factory's ambient collector, which is gone by the time a deferred callback runs, so this throws NoActiveCollectorError at connect (contained per ADR 0028, so the effect silently never activates). Call \`${helper}(…)\` directly in setup and make the callback's condition part of the effect instead (e.g. \`watch(() => cond ? … : …, sink)\`).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A setup const the value harness cannot evaluate — its initializer reads
+	 * a client-only primitive (`first`/`all`/`watch`/…), a `first()`-bound
+	 * ref, or `host`/`internals` — has its VALUE rendered into the markup
+	 * (LT-165 step 5). This is the narrow residue of the retired `TSRX013`/
+	 * `TSRX043` refusals, and it stays an error where they did not: an
+	 * UNrendered client-only const routes the component Simulated and the
+	 * realm runs it for real, but a RENDERED one asks the server to splice a
+	 * value no phase can produce — the fold cannot run the read, the realm
+	 * would have to serialize the site, and the Static tier omits the
+	 * expression with no client binding to correct it (a static splice is
+	 * never re-set at connect). Same structural class as `impureStaticChild`:
+	 * not a flash, a permanent wrong-or-empty site.
+	 *
+	 * Deliberately not fired for a FUNCTION initializer: a setup helper is
+	 * dead code server-side (defined, never called), so its free names never
+	 * evaluate — and a const reached only INDIRECTLY (this const's
+	 * initializer reads another const that reads a ref) is not caught either;
+	 * both surface as a source-mapped tsc failure on the generated module
+	 * instead (the LT-136 posture, tracked with LT-093/LT-135).
+	 */
+	renderedClientOnlyConst: (
+		source: string,
+		offset: number | undefined,
+		name: string,
+		badNames: string[],
+	) =>
+		error(
+			'TSRX046',
+			`\`${name}\`'s value is rendered into this component's markup, but its initializer reads ${badNames.map(n => `\`${n}\``).join(', ')} — client-only name(s) the server cannot evaluate in ANY tier, so the site would render broken or stay permanently empty (no client binding ever corrects a static splice). Render the site from a server arg or signal instead, or make the site reactive (wrap the read in a thunk, e.g. \`title={() => …}\`) so the client's first binding pass supplies the value.`,
+			lineOf(source, offset),
+		),
+
+	// --- i18n and the tier-1 prevented surface ---
 	/**
 	 * Literal prose inside a component that declares `export const i18n`
 	 * (LT-173 step 5, ADR 0030 sub-design 4).
@@ -1170,10 +1194,7 @@ export const diagnostic = {
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
 	 * draft is the LT-209 handoff.
 	 */
-	formContextMismatch: (
-		source: string,
-		annotated: 'FactoryContext' | 'FormFactoryContext',
-	) =>
+	formContextMismatch: (annotated: 'FactoryContext' | 'FormFactoryContext') =>
 		error(
 			'TSRX050',
 			annotated === 'FactoryContext'
