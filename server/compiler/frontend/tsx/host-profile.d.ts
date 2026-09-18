@@ -81,12 +81,19 @@ interface I18n {
  * reactive `isPending` idiom beside the boundary (`isPending` is a real
  * package export — import it; the compiler folds the read server-side and
  * the generated `watch` re-fires when the task settles).
+ *
+ * Typed precisely per the owner precision ruling (LT-208): every arm IS a
+ * JSX element expression — the compiler's `singleRootOf` checks are the
+ * semantics — so the arm positions are `JSX.Element` (branded, below), and
+ * `err`'s parameter is `Error` because cause-effect's `match()` wraps
+ * non-Errors before dispatch. Deliberately NOT generic `boundary<T>`: a
+ * divergent arm ("oops" beside `<div/>`) would union `T` and pass.
  */
 declare function boundary(arms: {
-	ok: unknown
-	nil: unknown
-	err: (error: any) => unknown
-}): unknown
+	ok: JSX.Element
+	nil: JSX.Element
+	err: (error: Error) => JSX.Element
+}): JSX.Element
 
 /**
  * The CSS template tag (LT-202): `<style>{css`…`}</style>` is the default
@@ -109,6 +116,18 @@ declare function css(
 // LT-183 FINDINGS fact 2.)
 // biome-ignore lint/style/noNamespace: global-script .d.ts has no module-free alternative for JSX.IntrinsicElements
 namespace JSX {
+	/**
+	 * The type of every JSX element expression (LT-208): branded so a
+	 * boundary arm position (`ok`/`nil`, and `err`'s return) rejects
+	 * anything that is not an element — a string, number, or function arm
+	 * is a tsc error, which the generic-`T` and empty-`{}` attempts could
+	 * not deliver. An element expression satisfies the brand by
+	 * construction: its type IS this interface.
+	 */
+	interface Element {
+		readonly $$leTrucJsx: 'element'
+	}
+
 	/** A reactive value: static, or a thunk re-evaluated client-side. */
 	type Thunk<T> = () => T
 	type Reactive<T> = T | Thunk<T>
@@ -131,7 +150,7 @@ namespace JSX {
 	 * is deliberately absent — see the module header.
 	 */
 	interface CommonLightDom {
-		class?: Reactive<string>
+		class?: Reactive<string | null>
 		hidden?: Reactive<boolean>
 		id?: Reactive<string>
 		role?: string

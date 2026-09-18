@@ -24,10 +24,11 @@
 		"forceConsistentCasingInFileNames": true,
 	},
 	"include": ["./**/*.tsx", "./**/*.ts", "../../server/compiler/frontend/tsx/host-profile.d.ts"],
-	"exclude": [
-		"node_modules",
-		"jsx-probe.tsx",
-		"jsx-probe-neg.tsx",
-		"combobox-bad-args.tsx",
-	],
+		"exclude": [
+			"node_modules",
+			"jsx-probe.tsx",
+			"jsx-probe-neg.tsx",
+			"combobox-bad-args.tsx",
+			"async-bad-arms.tsx",
+		],
 }
