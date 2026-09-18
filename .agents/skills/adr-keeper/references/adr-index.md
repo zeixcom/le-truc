@@ -37,7 +37,7 @@ This file is auto-generated. Do not edit manually.
 | [0030](0030-internationalization-as-build-time-server-data.md) | Internationalization as Build-Time Server Data | ✅ Accepted | §4, §5, §7 |
 | [0031](0031-pre-connect-property-writes-capture-and-install.md) | Pre-Connect Property Writes Are Captured and Installed | ✅ Accepted | M2, M3 |
 | [0032](0032-adopt-tsx-as-the-authored-component-surface.md) | Adopt `.tsx` as the Primary Authored Component Surface (`.tsrx` Retained) | ✅ Accepted | M1, M3, M4, §5, §7 |
-| [0033](0033-scope-component-styles-by-custom-element-name.md) | Scope Component Styles by Custom Element Name; Shadow DOM as the Opt-in; Compose with Custom Properties | 🔄 Proposed | M17, M18 |
+| [0033](0033-scope-component-styles-by-custom-element-name.md) | Scope Component Styles by Custom Element Name; Shadow DOM as the Opt-in; TSRX Style Composition Translated to It | 🔄 Proposed | M17, M18 |
 
 ---
 

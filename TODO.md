@@ -519,7 +519,10 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   per-component opt-in, NOT scheduled; upstream's hash-class stamping is declined
   (client-transform machinery, no server-render counterpart, served-byte pollution,
   compose-addressing erosion); the prefix graduates to a compiler warning (→ LT-214);
-  style composition stays with CSS custom properties.
+  style composition per upstream's PATTERN is the adopted direction — `class={theme.dark}`
+  translating to `my-element .dark` / `:host(.dark)` — BACKLOGGED to ROADMAP.md (owner,
+  2026-09-18: ADR 0033 deliberately stays Proposed until the project commits to the TSRX
+  style features, likely 3.1 at TSRX 1.0; v3 behavior unchanged).
 
 - [ ] LT-212: `@for`'s `@empty` arm (LT-210 item 1, re-anchored). **Gate: before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent — no migrated component uses it today.**
   **Skill:** le-truc-dev
@@ -546,7 +549,7 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   **Acceptance:** the unknown-tag case has a ruled tier and a pinned fixture;
   compose dispatch unaffected.
 
-- [ ] LT-214: Selector-prefix warning — ADR 0033 sub-design 5 (the scoped-styles "support" that lands in code). **GATED on owner acceptance of ADR 0033.**
+- [ ] LT-214: Selector-prefix warning — ADR 0033 sub-design 5 (the scoped-styles "support" that lands in code). **GATED on owner acceptance of ADR 0033 — parked with it: the whole package is a ROADMAP.md backlog item (likely 3.1) pending the TSRX-feature commitment, so this task waits too.**
   **Skill:** le-truc-dev (Tech Writer owns the message copy)
   **Context:** The profile's open question answered: the compiler parses the authored
   stylesheet (upstream exports reusable `parseStyle`/`analyzeCss` — evaluate against
