@@ -21,32 +21,31 @@
  * Everything else — the malformed-selector and import-mismatch scans, the
  * params contract, the setup-extraction loop, context seeding,
  * template-output resolution, the post-lowering validation tail, and the
- * final IR assembly — is SHARED with the `.tsrx` front end through
- * `server/compiler/front-end.ts` (LT-202, ADR 0032 sub-design 6's anti-drift
- * contract).
+ * final IR assembly — is SHARED with the `.tsrx` front end through the
+ * front-end stage modules (`module-scans.ts`, `params.ts`,
+ * `setup-extraction.ts`, `template-output.ts`, `validate-lowered.ts`,
+ * `assemble-ir.ts`; LT-202, ADR 0032 sub-design 6's anti-drift contract).
  */
 
+import { assembleComponentIR, readModuleDecls } from '../../assemble-ir'
 import { asArray, identifierName, isNode } from '../../ast-utils'
 import { type CompileDiagnostic, diagnostic } from '../../diagnostics'
-import {
-	assembleComponentIR,
-	extractParams,
-	extractSetup,
-	readModuleDecls,
-	reportDeferredCollectorCalls,
-	reportLeTrucImportMismatch,
-	reportMalformedSelectors,
-	resolveTemplateOutput,
-	seedExtractionContext,
-	validateLoweredComponent,
-} from '../../front-end'
 import {
 	parseComposeImports,
 	parseLeTrucImports,
 	parsePlainImports,
 } from '../../imports'
 import type { ComponentIR, ExtractContext, ForIR, TemplateNode } from '../../ir'
+import {
+	reportDeferredCollectorCalls,
+	reportLeTrucImportMismatch,
+	reportMalformedSelectors,
+} from '../../module-scans'
+import { extractParams } from '../../params'
+import { extractSetup, seedExtractionContext } from '../../setup-extraction'
+import { resolveTemplateOutput } from '../../template-output'
 import type { RoutingSignal } from '../../tier'
+import { validateLoweredComponent } from '../../validate-lowered'
 import { lowerChildren, lowerElement } from './lower-tsx'
 import { parseTsxModule, type TsrxNode } from './to-estree'
 

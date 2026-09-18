@@ -56,7 +56,7 @@ import {
  * Native form-control tags a form-associated component's `disabled`/
  * `checked` omission (TSRX034) escalates to an ERROR for (LT-062/LT-085):
  * a real submittable control, not the host itself. Compiler-side duplicate
- * of `compiler.ts`'s `NAMED_FORM_CONTROL_TAGS` (LT-059) — front-end/
+ * of `validate-lowered.ts`'s `NAMED_FORM_CONTROL_TAGS` (LT-059) — front-end/
  * analysis-layer duplication is the established pattern here (same
  * precedent as `MANAGED_FORM_MEMBERS`, ast-utils.ts) rather than an import
  * against the documented front-end → analysis direction.

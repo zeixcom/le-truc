@@ -7,7 +7,8 @@
  * own control-flow dispatch (`.tsrx`: `@if`/`@switch`/`@try`/`@for`
  * directive nodes; `.tsx`: ternaries, `.map()`, IIFEs, `boundary()`).
  *
- * Front-end-neutral like `front-end.ts`: no parser values, only the loose
+ * Front-end-neutral like the front-end stage modules (`setup-extraction.ts`
+ * et al.): no parser values, only the loose
  * `TsrxNode` type. The recursion into `lowerChildren` arrives through the
  * `Lowering` interface — each front end passes its own dispatcher, since the
  * child-node vocabulary is the one genuinely surface-specific decision.

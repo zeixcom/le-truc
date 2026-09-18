@@ -11,9 +11,10 @@
  * slice its setup statements and trailing output verbatim, plus the
  * grammar's own scans). The setup-extraction loop, context seeding,
  * template-output resolution, and the post-lowering validation tail are
- * SHARED with the `.tsx` front end through `front-end.ts` (LT-202, ADR 0032
- * sub-design 6's anti-drift contract); template lowering shares
- * `lower-shared.ts` under `lower-template.ts`'s directive dispatch.
+ * SHARED with the `.tsx` front end through the front-end stage modules
+ * (`setup-extraction.ts`, `template-output.ts`, `validate-lowered.ts`, …;
+ * LT-202, ADR 0032 sub-design 6's anti-drift contract); template lowering
+ * shares `lower-shared.ts` under `lower-template.ts`'s directive dispatch.
  * Attribute classification lives in `classify-attributes.ts`, signal type
  * inference in `infer-type.ts`, `export const config` extraction and
  * compose-import resolution in `config.ts`/`imports.ts`, and shared AST
@@ -21,28 +22,26 @@
  */
 
 import type { TsrxNode } from '@tsrx/core'
+import { assembleComponentIR, readModuleDecls } from '../../assemble-ir'
 import { asArray, identifierName, isNode, text } from '../../ast-utils'
 import { getStyleElementStylesheet, parseModule } from '../../core'
 import { type CompileDiagnostic, diagnostic } from '../../diagnostics'
-import {
-	assembleComponentIR,
-	extractParams,
-	extractSetup,
-	readModuleDecls,
-	reportDeferredCollectorCalls,
-	reportLeTrucImportMismatch,
-	reportMalformedSelectors,
-	resolveTemplateOutput,
-	seedExtractionContext,
-	validateLoweredComponent,
-} from '../../front-end'
 import {
 	parseComposeImports,
 	parseLeTrucImports,
 	parsePlainImports,
 } from '../../imports'
 import type { ComponentIR, ExtractContext, ForIR, TemplateNode } from '../../ir'
+import {
+	reportDeferredCollectorCalls,
+	reportLeTrucImportMismatch,
+	reportMalformedSelectors,
+} from '../../module-scans'
+import { extractParams } from '../../params'
+import { extractSetup, seedExtractionContext } from '../../setup-extraction'
+import { resolveTemplateOutput } from '../../template-output'
 import type { RoutingSignal } from '../../tier'
+import { validateLoweredComponent } from '../../validate-lowered'
 import { lowerChildren, lowerElement } from './lower-template'
 
 /* === Types === */

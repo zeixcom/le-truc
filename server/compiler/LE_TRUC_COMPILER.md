@@ -133,9 +133,11 @@ strict ambient profile (`frontend/tsx/host-profile.d.ts`,
                │                                 │
 ┌──────────────┴─────────────────────────────────┴───────────────┐
 │ SHARED FRONT-END STAGES                                        │
-│ setup extraction, params contract, context seeding,            │
-│ template-output resolution, validation tail, verbatim          │
-│ module scans, IR assembly — front-end.ts                       │
+│ module scans — module-scans.ts · params contract — params.ts   │
+│ setup extraction + context seeding — setup-extraction.ts       │
+│ template-output resolution — template-output.ts                │
+│ post-lowering validation — validate-lowered.ts                 │
+│ IR assembly — assemble-ir.ts                                   │
 │ condition validation, element/compose lowering,                │
 │ expression-child lift rule, positional reactivity —            │
 │ lower-shared.ts (each surface passes its dispatch hooks)       │
@@ -180,7 +182,12 @@ Machinery first, then the shared front-end modules, then the two front ends:
 | `frontend/tsrx/index.ts` | `.tsrx` public API: `compileComponent` = `compileSource` + the shared pipeline |
 | `frontend/tsx/index.ts` | `.tsx` public API: `compileComponentTsx` = `compileSourceTsx` + the shared pipeline |
 | `ir.ts` | Pure type leaf: the whole IR vocabulary (`ComponentIR`, `TemplateNode`, `AttributeIR`, `SignalIR`, `ForIR`, `ConfigIR`, …) |
-| `front-end.ts` | Front-end-neutral shared stages: setup extraction (`extractSetup`), the params contract (`extractParams`), context seeding, template-output resolution, the post-lowering validation tail, the verbatim module scans (malformed selectors, import mismatches, deferred collector calls), and IR assembly |
+| `module-scans.ts` | Front-end-neutral whole-module scans: malformed selectors (TSRX026), deferred collector calls (TSRX045), `'@zeix/le-truc'` import mismatches (TSRX036/037) |
+| `params.ts` | The params contract (`extractParams`): the destructured args object (TSRX008) plus the LT-209 factory-context parameter |
+| `setup-extraction.ts` | The setup-statement loop (`extractSetup`) and context seeding (`seedExtractionContext`) |
+| `template-output.ts` | Template-output resolution (`resolveTemplateOutput`): root, `<style>` block, CSS, `first()`/`all()` reference resolution (LT-055) |
+| `validate-lowered.ts` | The post-lowering validation tail (`validateLoweredComponent`): TSRX039/047/028/010, `config.observedAttributes`, LT-059 |
+| `assemble-ir.ts` | IR assembly (`assembleComponentIR`), import placement, module-level declarations (`readModuleDecls`) |
 | `lower-shared.ts` | Surface-independent lowering core: condition validation, element/compose lowering, the expression-child lift rule, positional reactivity, and `lowerChildrenSkeleton` — the `Lowering` hooks carry each surface's child-node dispatch |
 | `ast-utils.ts` | Shared AST predicates and the recognized-name vocabulary constants both front ends' walks run on |
 | `walk.ts` | Generic structural `TemplateNode` visitor (`walkTemplate`, `collectAttrs`, `collectComposeElements`) |
@@ -222,8 +229,10 @@ Machinery first, then the shared front-end modules, then the two front ends:
 
 **Dependency shape**: every module points strictly at `ir.ts` (types) and
 the shared leaves — `ast-utils.ts`, `walk.ts`, `evaluability.ts`,
-`reactivity.ts`, `first-refs.ts`, and the front-end-neutral `front-end.ts`/
-`lower-shared.ts` (which import no parser values by design, only the loose
+`reactivity.ts`, `first-refs.ts`, and the front-end-neutral stage modules
+`module-scans.ts`, `params.ts`, `setup-extraction.ts`, `template-output.ts`,
+`validate-lowered.ts`, `assemble-ir.ts`, and `lower-shared.ts` (which import
+no parser values by design, only the loose
 `TsrxNode` type) — with no runtime value cycles; the machinery does not
 depend on either front end. Within `analysis/`, `plan.ts` orchestrates
 `{selectors, naming, harvest, loops, effects}`, with `harvest.ts` imported
@@ -828,8 +837,9 @@ across runtimes) and `eval:substrate` (substrate evaluation scripts).
   `first()`-addressed element is exempt — it has its own query and presence
   guard); composed children accept statics and server expressions only.
 - **One machinery, two front ends**: after lowering, both surfaces consume
-  identical stages through `pipeline.ts`, and the shared `front-end.ts`/
-  `lower-shared.ts` modules import no parser values — a pipeline change
+  identical stages through `pipeline.ts`, and the shared front-end stage
+  modules (`setup-extraction.ts` … `assemble-ir.ts`) and `lower-shared.ts`
+  import no parser values — a pipeline change
   cannot drift between surfaces. The parity suite is the render-level pin
   (§ 7).
 - **A control-flow arm is statement context on `.tsrx` only**: `@if`/`@else`

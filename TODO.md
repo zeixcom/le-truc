@@ -1118,18 +1118,36 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   (only the pre-existing form-spinbutton tsc failures remain); biome clean on all
   13 touched files.
 
-- [ ] LT-224: Split `front-end.ts` into the six modules of review §2.2.
+- [x] LT-224: Split `front-end.ts` into the six modules of review §2.2 — done ✓ (2026-09-18).
   **Skill:** le-truc-dev
-  **Context:** The single highest-value move in the review: verbatim module scans
-  (~197–417), params contract (~565–673), setup extraction (~692–1161), template-output
-  resolution (~1233–1400), post-lowering validation (~1482–1601), IR assembly
-  (~1610–1745) — nothing couples them except `SetupExtraction`, so the split is file
-  surgery, and `extractSetup` becomes the front end's only remaining monster. **Sequence
-  after LT-194 lands and is reviewed** (its edits to `front-end.ts` were uncommitted in
-  this tree at scheduling, 2026-09-18). `ExtractContext`'s relocation is wave 4 (LT-235)
-  — do not smuggle it in here. Check `LE_TRUC_COMPILER.md`/`HOST_PROFILE.md` for
-  file-path references to `front-end.ts`; run check:links after.
-  **Verification:** goldens + parity byte-identical; full gates green.
+  **Landed:** `front-end.ts` deleted (1799 lines → six flat modules in `server/compiler/`):
+  `module-scans.ts` (the three whole-module scans: malformed selectors, deferred
+  collector calls, import mismatches), `params.ts` (`extractParams` +
+  `contextAnnotationName` + `ComponentParams`), `setup-extraction.ts` (`extractSetup` +
+  `classifyExposeInit`/`MUTABLE_SIGNAL_CONSTRUCTORS` + context seeding
+  (`seedExtractionContext`, per LE_TRUC_COMPILER.md's own stage list) + the
+  `SetupExtraction`/`ElementRefEntry`/`ParserExposeEntry` types), `template-output.ts`
+  (`resolveTemplateOutput` + `ResolvedTemplate`), `validate-lowered.ts`
+  (`validateLoweredComponent` + private `reportNamedFormControls`), `assemble-ir.ts`
+  (`assembleComponentIR` + `paramPropsOf` + `leadingDocComment` + `readModuleDecls` +
+  `ModuleDecls`). `readModuleDecls` was in no review band (the §2.2 enumeration skips
+  it) — placed with IR assembly because it produces exactly assemble's `ModuleDecls`
+  input; move it if LT-235's reshuffle disagrees. Private helpers went with their only
+  consumers, so the public surface is unchanged: the same 11 functions + 6 types, now
+  imported by the two front ends from five/six modules. `ExtractContext` untouched
+  (wave 4, LT-235). Docs: LE_TRUC_COMPILER.md (diagram box, module table row → six
+  rows, dependency-shape paragraph, §7 two-front-ends bullet), both front ends' module
+  docs, `lower-shared.ts`'s "front-end-neutral" pointer, `analysis/effects.ts`'s
+  `NAMED_FORM_CONTROL_TAGS` comment (which said "compiler.ts" — wrong file since it was
+  written). Forward pointers re-grepped for LT-229 (the ×3 estree walks +
+  `reportLeTrucImportMismatch`) and LT-232 (`MUTABLE_SIGNAL_CONSTRUCTORS`). HOST_PROFILE.md
+  has no `front-end.ts` references. No error copy touched — no Tech Writer handoff.
+  **Verification (run):** typecheck exit 0; `bun test server/tests` 1632 pass / 0 fail /
+  1 error (the pre-existing LT-207 tier-corpus leak); generated dir git-diff-clean after
+  regeneration (goldens + parity byte-identical); check:tsrx baseline 0, census 20/2/0
+  (its tsc step still fails only on the pre-existing `form-spinbutton.tsrx` issue,
+  proven at HEAD c11f22bf during LT-222); check:links 412 green; biome clean on all 10
+  touched TS files.
 
 - [ ] LT-225: Lift `emitServerModule`'s four closures to module scope behind an `EmitContext`.
   **Skill:** le-truc-dev
@@ -1174,7 +1192,8 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
 
 - [ ] LT-229: One `walkEstree(node, visit, { skip })` for the twelve hand-rolled estree walks.
   **Skill:** le-truc-dev
-  **Context:** Review §2.4/§3 item 10. Twelve `Object.entries` walks (`front-end.ts` ×3,
+  **Context:** Review §2.4/§3 item 10. Twelve `Object.entries` walks (`module-scans.ts`
+  ×3 — ex-`front-end.ts`, LT-224,
   `analysis/reactivity.ts`, `evaluability.ts` ×3 — compiler root, not `analysis/`,
   `analysis/tier.ts`, `ast-utils.ts`, `frontend/tsrx/compiler.ts`, `analysis/harvest.ts`
   ×2) carry five different skip-lists; only `ast-utils.ts:676` skips type positions
@@ -1182,7 +1201,7 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   preserving its current behavior, and converging divergent answers (notably: do we
   descend into type positions?) is an explicit per-site decision with a test or a stated
   no-op rationale — silently converging could change analyses. Migrating
-  `reportLeTrucImportMismatch`'s inner visit (`front-end.ts`) onto the shared walk fixes
+  `reportLeTrucImportMismatch`'s inner visit (`module-scans.ts`) onto the shared walk fixes
   a latent bug for free: the copy lacks the `ForStatement`/`ForOfStatement`/`CatchClause`
   cases `freeIdentifiers` later grew — pin the corrected behavior.
   **Verification:** goldens + parity byte-identical; the import-mismatch pin; full gates.
@@ -1222,7 +1241,7 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   **Context:** Review §2.5/§3 item 13. `REAL_EXPORT_NAMES` duplicates
   `SIGNAL_CONSTRUCTORS` and `PARSER_FACTORIES` entry-for-entry (its own comment admits
   "hand-maintained against the barrel"); `MUTABLE_SIGNAL_CONSTRUCTORS` is a hand-copied
-  subset living in `front-end.ts:427`. Derive subsets from supersets; relocate the
+  subset living in `setup-extraction.ts` (ex-`front-end.ts:427`, LT-224). Derive subsets from supersets; relocate the
   mutable set beside `SIGNAL_CONSTRUCTORS` (post-LT-228: into `vocabulary.ts`); extend
   `globals.test.ts`'s parity test (only `FACTORY_CONTEXT_MEMBER_NAMES` has one) to pin
   every set against the `@tsrx/core` barrel.
