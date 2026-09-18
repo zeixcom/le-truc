@@ -8,6 +8,7 @@
  */
 import { describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../compiler/frontend/tsrx'
+import { compileComponentTsx } from '../../compiler/frontend/tsx'
 
 describe('class-map on a descendant native element', () => {
 	const source = `export function C({}: {})
@@ -232,5 +233,79 @@ import { createCell } from '@zeix/le-truc'`
 		const code = component?.clientCode ?? ''
 		expect(code).toContain("['is-active']")
 		expect(code).not.toContain('.is-active')
+	})
+})
+
+describe('the class:-prefix spelling is rejected (LT-222)', () => {
+	// `class:token={…}` used to slip through classification: the call form
+	// rendered a literal `class:token` attribute the browser ignores, and the
+	// thunk form emitted a watch that read `.token` off the thunk's result —
+	// a class that could never apply. Both silently wrong; now TSRX006.
+
+	test('a reactive class:-prefix attr is rejected on .tsrx', () => {
+		const source = `export function C({}: {})
+	@{
+		const open = createCell(true)
+		expose({})
+		<>
+			<c-el>
+				<span class:has-error={() => open.get()}>ok</span>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { createCell } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		const errors = diagnostics.filter(d => d.code === 'TSRX006')
+		expect(errors).toHaveLength(1)
+		expect(errors[0]?.message).toContain('class={() => ({')
+		expect(component?.clientCode ?? '').not.toContain('has-error')
+	})
+
+	test('a server class:-prefix attr is rejected too (the call form)', () => {
+		const source = `export function C({}: {})
+	@{
+		const open = createCell(true)
+		expose({})
+		<>
+			<c-el>
+				<span class:has-error={open.get()}>ok</span>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { createCell } from '@zeix/le-truc'`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const errors = diagnostics.filter(d => d.code === 'TSRX006')
+		expect(errors).toHaveLength(1)
+		expect(errors[0]?.message).toContain('class={() => ({')
+	})
+
+	test('the same rejection fires on .tsx', () => {
+		const source = `export function C({}: {}) {
+	const open = createCell(true)
+	expose({})
+	return (
+		<>
+			<c-el>
+				<span class:has-error={() => open.get()}>ok</span>
+			</c-el>
+			<style>c-el {'{ color: red }'}</style>
+		</>
+	)
+}
+import { createCell } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponentTsx(
+			source,
+			'c.tsx',
+			new Set(),
+		)
+		const errors = diagnostics.filter(d => d.code === 'TSRX006')
+		expect(errors).toHaveLength(1)
+		expect(component?.clientCode ?? '').not.toContain('has-error')
 	})
 })

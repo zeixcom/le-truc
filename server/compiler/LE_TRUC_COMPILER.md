@@ -550,10 +550,11 @@ stays ground truth and corrects at connect. The driver lives in `sim/`:
   forced from the jsdom window, inert stubs for absent APIs
   (`ResizeObserver`, `matchMedia`, …), network globals replaced with
   never-settling no-ops (a build can never depend on the network; a fetching
-  component stays on its pending arm). `PROTOTYPE_PATCHES` is empty since
-  LT-177: `attachInternals()` is left alone so jsdom's skeletal internals
-  reaches the library and `bindAria()` can bind the attribute the served HTML
-  carries. Also the second conjunct of the tier classifier (§ 5.2).
+  component stays on its pending arm). `CAPABILITY_PATCHES` feeds the tier
+  classifier (never applied): `attachInternals()` is left alone so jsdom's
+  skeletal internals reaches the library and `bindAria()` can bind the
+  attribute the served HTML carries, while its members are classified
+  unanswerable. Also the second conjunct of the tier classifier (§ 5.2).
 - **`realm.ts`** — `createSimulationRealm`: loads the client module with a
   recording `customElements`, parses the SSR'd markup, replays the
   definitions so the upgrade runs, serializes. It seeds the simulated

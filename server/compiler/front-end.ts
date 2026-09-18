@@ -1700,14 +1700,15 @@ export const assembleComponentIR = (
 				diagnostic.formContextMismatch(ctx.source, 'FormFactoryContext'),
 			)
 	}
-	// `isPending` is server-known (LT-211): the harness always provides it
-	// (the generated module binds it from the harness whenever its emitted
-	// text references it), so a reactive thunk reading
-	// `isPending(knownSignal)` folds server-side. This does NOT reopen @if
-	// over signals — `validateCondition` diagnoses signal reads first.
-	const serverKnown = new Set<string>([...paramNames, 'isPending'])
-	for (const s of extraction.signals) serverKnown.add(s.name)
-	for (const n of extraction.setupInits.keys()) serverKnown.add(n)
+	// The same set `seedExtractionContext` built into `ctx.serverKnown`
+	// (args + `isPending` + signals + setup consts) — reused, not recomputed:
+	// a second construction could drift from the first and make lowering and
+	// downstream analysis silently disagree (LT-222). `isPending` itself is
+	// server-known (LT-211): the harness always provides it, so a reactive
+	// thunk reading `isPending(knownSignal)` folds server-side. This does
+	// NOT reopen @if over signals — `validateCondition` diagnoses signal
+	// reads first.
+	const serverKnown = ctx.serverKnown
 
 	// Placements run BEFORE the milestone-gate check: an unused-import
 	// warning (TSRX014) belongs in the report even when the file is gated

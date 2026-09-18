@@ -56,7 +56,7 @@ export const inferType = (
 }
 
 /** Return-type heuristic for setup helper arrows (`(id) => \`panel-${id}\``). */
-export const returnTypeOfFunction = (
+const returnTypeOfFunction = (
 	fn: TsrxNode,
 	ctx: TypeContext,
 	depth: number,

@@ -509,26 +509,6 @@ const convertStatement = (
 	return passthrough(`TS${ts.SyntaxKind[node.kind]}`, node, sf)
 }
 
-/** `(a, b, c)` — TS nests left-assoc; estree wants a flat list. */
-const flattenSequence = (
-	node: ts.BinaryExpression,
-	sf: ts.SourceFile,
-): TsrxNode[] => {
-	const out: TsrxNode[] = []
-	if (
-		ts.isBinaryExpression(node.left) &&
-		node.left.operatorToken.kind === ts.SyntaxKind.CommaToken
-	)
-		out.push(...flattenSequence(node.left, sf))
-	else {
-		const l = conv(node.left, sf)
-		if (l) out.push(l)
-	}
-	const r = conv(node.right, sf)
-	if (r) out.push(r)
-	return out
-}
-
 /** The full dispatch. Returns `null` only for nodes with no value shape. */
 export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 	/* --- Statements --- */
@@ -647,18 +627,9 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 			prefix: ts.isPrefixUnaryExpression(node),
 			argument: conv(node.operand, sf),
 		}
-	if (
-		ts.isBinaryExpression(node) &&
-		node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
-		node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
-	)
-		return {
-			type: 'AssignmentExpression',
-			...span(node, sf),
-			operator: node.operatorToken.getText(sf),
-			left: convertPattern(node.left, sf) ?? conv(node.left, sf),
-			right: conv(node.right, sf),
-		}
+	// No AssignmentExpression or SequenceExpression arm (LT-222): template
+	// expressions are emitted verbatim and never reach `conv` as either —
+	// verified by instrumentation 2026-09-18; the arms were unreachable.
 	if (ts.isObjectLiteralExpression(node))
 		return {
 			type: 'ObjectExpression',
@@ -807,15 +778,6 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 			operator: 'typeof',
 			prefix: true,
 			argument: conv(node.expression, sf),
-		}
-	if (
-		ts.isBinaryExpression(node) &&
-		node.operatorToken.kind === ts.SyntaxKind.CommaToken
-	)
-		return {
-			type: 'SequenceExpression',
-			...span(node, sf),
-			expressions: flattenSequence(node, sf),
 		}
 
 	/* --- Type declarations: kept for verbatim text/name extraction --- */

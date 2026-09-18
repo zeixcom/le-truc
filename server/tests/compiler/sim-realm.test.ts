@@ -16,12 +16,11 @@ import {
 	SimulationBoundaryError,
 } from '../../compiler/sim/boundary.ts'
 import {
+	CAPABILITY_PATCHES,
 	detectRuntime,
 	NETWORK_GLOBALS,
-	PROTOTYPE_PATCHES,
 	patchesFor,
 	REALM_GLOBALS,
-	SIM_PATCH_TABLE,
 	STUB_GLOBALS,
 } from '../../compiler/sim/patch-table.ts'
 import {
@@ -87,12 +86,17 @@ const foreignLibrary = await importLibrary()
 
 describe('patch table', () => {
 	test('is declarative data, not behaviour', () => {
-		for (const patch of SIM_PATCH_TABLE) {
+		// The whole-table export went with LT-222; the contract it pinned —
+		// data, not conditionals — is asserted over the columns themselves.
+		for (const patch of [
+			...REALM_GLOBALS,
+			...STUB_GLOBALS,
+			...NETWORK_GLOBALS,
+			...CAPABILITY_PATCHES,
+		]) {
 			for (const value of Object.values(patch))
 				expect(typeof value).not.toBe('function')
-			expect(['realm', 'stub', 'network', 'prototype', 'capability']).toContain(
-				patch.kind,
-			)
+			expect(['realm', 'stub', 'network', 'capability']).toContain(patch.kind)
 		}
 	})
 
@@ -118,10 +122,6 @@ describe('patch table', () => {
 			expect(stubs).toContain(name)
 
 		expect(NETWORK_GLOBALS.map(patch => patch.name)).toContain('fetch')
-		// Empty since LT-177: `attachInternals()` is no longer forced to
-		// throw, so jsdom's skeletal internals reaches the library and
-		// `bindAria()` can bind the host attribute the served HTML needs.
-		expect(PROTOTYPE_PATCHES).toHaveLength(0)
 	})
 
 	test('patchesFor keeps unscoped entries for every runtime', () => {

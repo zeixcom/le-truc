@@ -45,7 +45,6 @@ import type { ExtractContext, ForIR, SignalIR, TemplateNode } from '../../ir'
 import {
 	type Lowering,
 	lowerChildrenSkeleton,
-	lowerComposeElement as lowerComposeElementShared,
 	lowerElement as lowerElementShared,
 	markPositionallyReactive,
 	type SurfaceWording,
@@ -870,23 +869,6 @@ export const lowerElement = (
 	lowerElementShared(
 		ctx,
 		element,
-		signals,
-		fors,
-		TSX_LOWERING,
-		TSX_SURFACE_WORDING,
-	)
-
-export const lowerComposeElement = (
-	ctx: ExtractContext,
-	element: TsrxNode,
-	tag: string,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
-): (TemplateNode & { kind: 'compose' }) | null =>
-	lowerComposeElementShared(
-		ctx,
-		element,
-		tag,
 		signals,
 		fors,
 		TSX_LOWERING,

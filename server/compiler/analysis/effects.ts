@@ -18,7 +18,7 @@ import {
 	SEMANTICALLY_LOADED_ATTRS,
 	sanitizeVarName,
 } from '../ast-utils'
-import { diagnostic, lineOf } from '../diagnostics'
+import { diagnostic } from '../diagnostics'
 import {
 	containsImpureAmbient,
 	dependenciesOf,
@@ -1227,25 +1227,10 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			pendingFieldsetQuery,
 			okFieldsetQuery,
 			errFieldsetQuery,
-			okText: true,
 			errText,
 		})
 	}
 
-	/**
-	 * @try error boundaries: the body and catch arm render mutually
-	 * exclusively — whichever one the server actually rendered is the only
-	 * one that exists in the DOM, exactly the DOM-existence-guarded shape a
-	 * single-branch `@if` has (LT-025: each arm gets its own
-	 * `handleOptionalBranch` call, independently — NOT union addressing like
-	 * `@if`/`@else`, since the two arms are different content, not the same
-	 * construct duplicated).
-	 *
-	 * A `@pending` arm present routes to `handleAsyncBoundary` instead (ADR
-	 * 0023 sub-design 13, LT-012) — a fundamentally different shape (all
-	 * three arms render unconditionally, toggled `hidden`) from this plain
-	 * mutually-exclusive error boundary.
-	 */
 	/**
 	 * Static `id` attribute values under a subtree (CHECKLIST §8's duplicate-
 	 * id rule) — walks every element, not just roots, since an id collision
@@ -1273,6 +1258,20 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		return ids
 	}
 
+	/**
+	 * @try error boundaries: the body and catch arm render mutually
+	 * exclusively — whichever one the server actually rendered is the only
+	 * one that exists in the DOM, exactly the DOM-existence-guarded shape a
+	 * single-branch `@if` has (LT-025: each arm gets its own
+	 * `handleOptionalBranch` call, independently — NOT union addressing like
+	 * `@if`/`@else`, since the two arms are different content, not the same
+	 * construct duplicated).
+	 *
+	 * A `@pending` arm present routes to `handleAsyncBoundary` instead (ADR
+	 * 0023 sub-design 13, LT-012) — a fundamentally different shape (all
+	 * three arms render unconditionally, toggled `hidden`) from this plain
+	 * mutually-exclusive error boundary.
+	 */
 	const handleTryEffects = (node: TryNode): void => {
 		// CHECKLIST §8: all three arms render into the initial HTML at once
 		// (two hidden, not removed) — a literal `id` duplicated across arms

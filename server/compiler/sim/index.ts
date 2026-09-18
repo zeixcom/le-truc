@@ -4,8 +4,11 @@
  * `patch-table.ts` holds the per-runtime data, `realm.ts` applies it,
  * `boundary.ts` enforces the hermetic-quiescence serialization boundary, and
  * `report.ts` turns the realm's diagnostics into the build report — the
- * channel that replaced compile-time refusals (LT-153 decision 1). Swapping
- * the substrate (LT-152) is confined to `realm.ts` plus the table.
+ * channel that replaced compile-time refusals (LT-153 decision 1). The
+ * patch DATA is substrate-swappable (LT-152), but the realm's public type
+ * is not: `SimulationRealm` exposes jsdom's own `window`/`Document` types,
+ * so a substrate change is an API change to this surface, not a swap
+ * confined to `realm.ts`.
  */
 
 export {
@@ -17,10 +20,8 @@ export {
 export {
 	detectRuntime,
 	NETWORK_GLOBALS,
-	PROTOTYPE_PATCHES,
 	patchesFor,
 	REALM_GLOBALS,
-	SIM_PATCH_TABLE,
 	type SimPatch,
 	type SimRuntime,
 	STUB_GLOBALS,

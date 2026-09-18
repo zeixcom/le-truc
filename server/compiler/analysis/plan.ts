@@ -33,7 +33,8 @@ import { addQuery } from './naming'
 
 /* === Types === */
 
-export type ParserKind = 'asInteger' | 'asBoolean' | 'asString' | null
+/** The harvest parser an attr/text seed reads through (from `parserForType`). */
+export type ParserKind = 'asInteger' | 'asBoolean' | 'asString'
 
 /** A generated element query. */
 export type QueryPlan = {
@@ -48,15 +49,6 @@ export type QueryPlan = {
 	 */
 	cardinality: 'one' | 'many' | 'maybe'
 	message: string
-	/**
-	 * Override for `first()`'s own string-literal type inference (LT-077):
-	 * needed when the selector embeds a functional pseudo-class argument
-	 * (`fieldset:has(.content)`) — the type-level parser has no notion of
-	 * parens and misreads the class selector inside `:has()` as the outer
-	 * selector's own class/id/attribute suffix. `undefined` everywhere else;
-	 * inference stays selector-driven as before.
-	 */
-	explicitType?: string
 }
 
 /** How a signal seeds itself from the server-rendered DOM. */
@@ -314,9 +306,10 @@ export type TopEffectPlan =
 			 * 13, LT-012): one `watch(signal, { ok, err, nil })` call toggles the
 			 * three server-rendered roots' `hidden` property — pure enhance, no
 			 * client DOM creation, mirroring `module-lazyload.ts`'s hand-written
-			 * shape. `okText`/`errText`, when present, are the arm's own lazy
-			 * text child — the resolved value for `okQuery`, the error (or a
-			 * member expression over it, e.g. `error.message`) for `errQuery`.
+			 * shape. `errText`, when present, is the err arm's own lazy text
+			 * child — the error (or a member expression over it, e.g.
+			 * `error.message`); the ok arm's text is always the resolved
+			 * value itself.
 			 *
 			 * The `*FieldsetQuery` trio (LT-077, CHECKLIST §8) names the
 			 * synthetic `<fieldset disabled>` `emit-server.ts` wraps around each
@@ -340,7 +333,6 @@ export type TopEffectPlan =
 			pendingFieldsetQuery: string
 			okFieldsetQuery: string
 			errFieldsetQuery: string
-			okText: boolean
 			errText: string | null
 	  }
 
@@ -435,7 +427,6 @@ export type AnalysisContext = {
 		base: string,
 		selector: string,
 		cardinality: 'one' | 'many' | 'maybe',
-		explicitType?: string,
 	) => string
 	/** Note context members (`host`, `internals`) a client code position reads. */
 	collectAmbient: (node: TsrxNode | null | undefined) => void
@@ -580,7 +571,7 @@ export const analyzeClient = (
 		ambiguousComposeNodes,
 		forPlans: new Map(),
 		reconcilePlans: new Map(),
-		addQuery: (base, selector, cardinality, explicitType) =>
+		addQuery: (base, selector, cardinality) =>
 			addQuery(
 				usedNames,
 				queries,
@@ -590,7 +581,6 @@ export const analyzeClient = (
 				base,
 				selector,
 				cardinality,
-				explicitType,
 			),
 		collectAmbient,
 		badFreeNames,

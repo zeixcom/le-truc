@@ -77,26 +77,6 @@ export type LiftVerdict =
  * moment the user typed. Those shapes get TSRX039 instead, which
  * names the two channels and asks the author to pick one.
  */
-/**
- * The TSRX039 shape (LT-122): a site rendering a server arg whose
- * name is a PARSER-exposed prop — the value's real seeding channel
- * is the host attribute, so this site is a second copy of it.
- * Returns the shared name, or `null`.
- *
- * Deliberately independent of `bindsExposedArg`, which excludes
- * exactly this case: the compiler declines to bind such a site AND
- * says why, rather than doing neither or both.
- */
-export const duplicatedChannelArg = (
-	expr: TsrxNode,
-	args: NameSet,
-	parserProps: NameSet,
-): string | null => {
-	if (nodeType(expr) !== 'Identifier') return null
-	const name = String(expr.name)
-	return args.has(name) && parserProps.has(name) ? name : null
-}
-
 export const bindsExposedArg = (
 	expr: TsrxNode,
 	args: NameSet,

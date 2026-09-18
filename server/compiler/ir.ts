@@ -48,7 +48,6 @@ export type SignalConstructor =
 	| 'createMemo'
 	| 'requestContext'
 
-/** A signal declared in the component's setup. */
 /**
  * How an `expose()` initializer lands on the host, which decides whether
  * `pass()` can bind to it (LT-158, ADR 0028 sub-design 6).
@@ -67,6 +66,7 @@ export type SignalConstructor =
  */
 export type ExposeKind = 'slot' | 'computed' | 'method'
 
+/** A signal declared in the component's setup. */
 export type SignalIR = {
 	name: string
 	/** Declaring expression text, e.g. `createCell(start)`. */

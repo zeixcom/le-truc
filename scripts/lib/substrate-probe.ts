@@ -25,7 +25,6 @@ import { assertSynchronousWindow } from '../../server/compiler/sim/boundary.ts'
 import {
 	detectRuntime,
 	NETWORK_GLOBALS,
-	PROTOTYPE_PATCHES,
 	patchesFor,
 	REALM_GLOBALS,
 	type RealmGlobalPatch,
@@ -283,22 +282,6 @@ export const applyPatches = (
 		if (patch.name === 'navigator.sendBeacon') continue
 		force(patch.name, deny(patch.name))
 	}
-
-	for (const patch of PROTOTYPE_PATCHES) {
-		const owner = winRecord[patch.owner] as
-			| { prototype: Record<string, unknown> }
-			| undefined
-		if (!owner?.prototype) continue
-		Object.defineProperty(owner.prototype, patch.method, {
-			value: function patched() {
-				throw new Error(patch.message)
-			},
-			writable: true,
-			configurable: true,
-		})
-	}
-	// The prototype patch replaces rather than restores; the window is
-	// disposed right after, so no restore entry is kept for it.
 
 	return () => {
 		for (const restore of restores.reverse()) restore()

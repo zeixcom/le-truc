@@ -37,7 +37,6 @@ export const addQuery = (
 	base: string,
 	selector: string,
 	cardinality: 'one' | 'many' | 'maybe',
-	explicitType?: string,
 ): string => {
 	// LT-123: an author-declared optional ref stays optional
 	// however unconditional its site looks — the component's
@@ -69,10 +68,6 @@ export const addQuery = (
 	// selector itself stays compiler-proven, same as `ref={}` before it).
 	const message =
 		component.refReasons.get(base) ?? `${component.tag}: ${selector} missing`
-	queries.push(
-		explicitType
-			? { name, selector, cardinality: effective, message, explicitType }
-			: { name, selector, cardinality: effective, message },
-	)
+	queries.push({ name, selector, cardinality: effective, message })
 	return name
 }

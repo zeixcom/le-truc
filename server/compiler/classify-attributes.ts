@@ -305,6 +305,20 @@ export const classifyAttribute = (
 				"truc:case-type expects a string literal or a server expression (e.g. truc:case-type={ordinal ? 'ordinal' : undefined}) — the Intl.PluralRules type the truc:case group prunes by (ADR 0030 sub-design 6).",
 		}
 	}
+	// The Svelte-style per-class spelling (LT-222): `class:`-prefixed names
+	// used to slip past every check above into the ordinary fallthrough —
+	// the server-evaluable call form rendered a literal `class:token`
+	// attribute the browser ignores, and the thunk form classified reactive
+	// and emitted a watch that read `.token` off the thunk's RESULT (a class
+	// that could never apply). Both silently wrong; rejected outright, since
+	// the class map below is the sanctioned spelling and the corpus never
+	// used the prefix.
+	if (name.startsWith('class:'))
+		return {
+			kind: 'invalid',
+			reason:
+				'`class:token={…}` is not a TSRX spelling — a per-class reactive binding is a class map: `class={() => ({ token: value })}`. A `class:token` attribute renders into the markup verbatim and the browser ignores it.',
+		}
 	if (!isNode(value)) return { kind: 'static', name, value: null }
 	if (value.type === 'Literal')
 		return { kind: 'static', name, value: String(value.value ?? '') }

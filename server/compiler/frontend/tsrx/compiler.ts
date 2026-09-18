@@ -65,8 +65,8 @@ const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
 /**
  * When a parse fails, check the error position for constructs the pinned
  * @tsrx/core cannot parse in that POSITION — a statement-form `switch`
- * inside a template, or `await` in setup. The hint turns a bare "Unexpected
- * token" into an actionable diagnosis.
+ * inside a template. The hint turns a bare "Unexpected token" into an
+ * actionable diagnosis.
  *
  * Four signatures were removed in LT-137: `{html …}`, `{text …}`, `{ref …}`
  * and `component` declarations. They named constructs that do not exist in
@@ -77,6 +77,11 @@ const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
  * would not have helped, which is worse than the bare parse error they
  * replaced. Le Truc's own dynamic-rendering attribute is `truc:html={…}`
  * (LT-128); it is host-owned, not a polyfill for upstream vocabulary.
+ *
+ * The `await in setup` entry went the same way (LT-222): no pin upgrade
+ * helps, because the component function must not be `async` at all
+ * (TSRX008) — `await` belongs in an event handler or a client-only setup
+ * statement, which the live rejection already says.
  */
 const newerGrammarHint = (source: string, error: unknown): string => {
 	const pos =
@@ -89,7 +94,6 @@ const newerGrammarHint = (source: string, error: unknown): string => {
 		pos !== undefined ? source.slice(Math.max(0, pos - 24), pos + 48) : ''
 	const signatures: Array<[RegExp, string]> = [
 		[/\bswitch\b/, 'a statement-form switch inside a template'],
-		[/\bawait\b/, 'await in setup'],
 	]
 	for (const [pattern, what] of signatures)
 		if (pattern.test(around))

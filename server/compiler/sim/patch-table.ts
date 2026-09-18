@@ -91,24 +91,12 @@ export type NetworkGlobalPatch = {
 	note?: string
 }
 
-/** A patch that rewrites a prototype method inside the realm. */
-export type PrototypePatch = {
-	kind: 'prototype'
-	/** `window` property holding the constructor. */
-	owner: string
-	method: string
-	/** `throw` is the only behaviour needed so far. */
-	behavior: 'throw'
-	message: string
-	note?: string
-}
-
 /**
  * A MEMBER read the realm cannot answer, even though the global carrying it
  * is present (ADR 0029 sub-design 1 limb (a); the capability-row shape ADR
  * 0026 §2's amendment requires).
  *
- * The other four patch kinds describe globals that are absent, stubbed or
+ * The other three patch kinds describe globals that are absent, stubbed or
  * closed, so a missing NAME is the whole story. These rows describe the
  * opposite case: `HTMLElement` is real and `element.scrollLeft` reads
  * without throwing — it just returns a silent zero, because jsdom has no
@@ -137,7 +125,6 @@ export type SimPatch =
 	| RealmGlobalPatch
 	| StubGlobalPatch
 	| NetworkGlobalPatch
-	| PrototypePatch
 	| CapabilityPatch
 
 /* === Patch Table === */
@@ -270,23 +257,6 @@ export const NETWORK_GLOBALS: readonly NetworkGlobalPatch[] = [
 ]
 
 /**
- * Prototype normalizations inside the realm.
- *
- * Empty since LT-177. The forced `attachInternals()` throw that used to live
- * here is gone: jsdom's skeletal `ElementInternals` now flows through
- * non-null, which is what populates `internalsHosts` and lets `bindAria()`
- * bind the host's content attribute so the served HTML carries the value
- * (ADR 0026 §2, *Capability fallback*). Polyfilling internals here was
- * rejected for the same reason — a working reflection surface would fire the
- * stale-attribute removal at simulated connect and strip `role`/`aria-*` from
- * the served markup. Form association keeps its own global degradation: the
- * library's LT-150 shape check still sees the skeletal object and treats it
- * as no internals, which is the honest posture for a form-associated
- * component (an incomplete stub is worse than none).
- */
-export const PROTOTYPE_PATCHES: readonly PrototypePatch[] = []
-
-/**
  * Member reads the realm executes without throwing and answers WRONG — the
  * second half of ADR 0029 sub-design 1 limb (a). See {@link CapabilityPatch}
  * for why these cannot be expressed as absent globals.
@@ -304,8 +274,15 @@ export const PROTOTYPE_PATCHES: readonly PrototypePatch[] = []
  *    `bindAria()`'s attribute fallback — the served HTML carries the value —
  *    so `ariaExpanded` and friends are deliberately absent from this list.
  *    Custom states and the form members remain unanswerable: jsdom's
- *    skeletal object has no `states` set, and the library's own LT-150
- *    shape check treats it as no internals at all.
+ *    skeletal object flows through non-null (which populates
+ *    `internalsHosts` and lets `bindAria()` bind the host content
+ *    attribute), and the library's own LT-150 shape check treats it as no
+ *    internals at all — the honest posture for a form-associated component,
+ *    since an incomplete stub is worse than none, and polyfilling a working
+ *    reflection surface would fire the stale-attribute removal at simulated
+ *    connect and strip `role`/`aria-*` from the served markup. The former
+ *    `PROTOTYPE_PATCHES` column (prototype-method rewrites) was deleted
+ *    with LT-222 — it had been empty since LT-177.
  */
 export const CAPABILITY_PATCHES: readonly CapabilityPatch[] = [
 	// --- Layout geometry: jsdom returns silent zeros -----------------------
@@ -364,15 +341,6 @@ export const CAPABILITY_PATCHES: readonly CapabilityPatch[] = [
 		receiver: 'internals',
 		note: 'form association degrades to no internals (LT-150 shape check)',
 	},
-]
-
-/** The whole table, in application order. */
-export const SIM_PATCH_TABLE: readonly SimPatch[] = [
-	...REALM_GLOBALS,
-	...STUB_GLOBALS,
-	...NETWORK_GLOBALS,
-	...PROTOTYPE_PATCHES,
-	...CAPABILITY_PATCHES,
 ]
 
 /* === Runtime Detection === */

@@ -18,7 +18,6 @@
 import type {
 	ClientPlan,
 	ForClientPlan,
-	ParserKind,
 	ReconcilePlan,
 	TopEffectPlan,
 } from './analysis/plan'
@@ -82,23 +81,18 @@ const memberAccess = (object: string, key: string): string =>
 		? `${object}.${key}`
 		: `${object}[${jsString(key)}]`
 
-const parserImport = (parser: ParserKind): string | null => parser
-
 const harvestInitializer = (
 	plan: ClientPlan['harvests'][number],
-	queries: ClientPlan['queries'],
 	imports: Set<string>,
 ): string | null => {
-	const queryName = (name: string): string =>
-		queries.find(q => q.name === name)?.name ?? name
 	if (plan.kind === 'substitute') return plan.expr
 	if (plan.kind === 'text') {
-		if (plan.parser && parserImport(plan.parser)) imports.add(plan.parser)
-		const read = `${queryName(plan.query)}.textContent`
-		return plan.parser ? `${plan.parser}()(${read})` : read
+		imports.add(plan.parser)
+		const read = `${plan.query}.textContent`
+		return `${plan.parser}()(${read})`
 	}
 	if (plan.kind === 'attr') {
-		if (plan.parser && parserImport(plan.parser)) imports.add(plan.parser)
+		imports.add(plan.parser)
 		// CHECKLIST §6 (BUG): `value`/`checked`/`selected` are dirty-flag
 		// attributes — between server render and upgrade, the user can type,
 		// or the browser can refill via session restore/password-manager
@@ -109,11 +103,11 @@ const harvestInitializer = (
 		// content attribute IS the current source of truth for those, so
 		// `getAttribute` stays correct there.
 		if (DIRTY_FLAG_ATTRS.has(plan.attr)) {
-			const live = `${queryName(plan.query)}.${plan.attr}`
-			return plan.parser ? `${plan.parser}()(String(${live}))` : live
+			const live = `${plan.query}.${plan.attr}`
+			return `${plan.parser}()(String(${live}))`
 		}
-		const raw = `${queryName(plan.query)}.getAttribute(${jsString(plan.attr)})`
-		return plan.parser ? `${plan.parser}()(${raw})` : `${raw} ?? ''`
+		const raw = `${plan.query}.getAttribute(${jsString(plan.attr)})`
+		return `${plan.parser}()(${raw})`
 	}
 	// The list kind is emitted directly from its declaration (verbatim or
 	// substituted seed) and never reaches this initializer path.
@@ -123,7 +117,7 @@ const harvestInitializer = (
 	const predicate = markProp
 		? `el => el.${markProp} === 'true'`
 		: `el => el.getAttribute(${jsString(plan.markAttr)}) === 'true'`
-	return `${queryName(plan.collection)}.get().find(${predicate})?.getAttribute('${plan.valueAttr}') ?? ${plan.default}`
+	return `${plan.collection}.get().find(${predicate})?.getAttribute(${jsString(plan.valueAttr)}) ?? ${plan.default}`
 }
 
 /**
@@ -343,17 +337,16 @@ export const emitClientModule = (
 		// factory context member. Skip defensively and let the root's reads
 		// resolve to the destructured `host`.
 		if (query.name === 'host') continue
-		const typeArg = query.explicitType ? `<${query.explicitType}>` : ''
 		if (query.cardinality === 'maybe') {
 			// A single-branch @if (no @else) root: `first()` without a
 			// `required` message returns `Element | undefined` instead of
 			// throwing — the element only exists when that branch rendered.
 			imports.add('first')
-			push(`const ${query.name} = first${typeArg}(${jsString(query.selector)})`)
+			push(`const ${query.name} = first(${jsString(query.selector)})`)
 		} else if (query.cardinality === 'one') {
 			imports.add('first')
 			push(
-				`const ${query.name} = first${typeArg}(${jsString(query.selector)}, ${jsString(query.message)})`,
+				`const ${query.name} = first(${jsString(query.selector)}, ${jsString(query.message)})`,
 			)
 		} else {
 			imports.add('all')
@@ -414,7 +407,7 @@ export const emitClientModule = (
 			}
 			continue
 		}
-		const initializer = harvestInitializer(harvest, plan.queries, imports)
+		const initializer = harvestInitializer(harvest, imports)
 		if (initializer)
 			push(`const ${signal.name} = ${signal.constructor}(${initializer})`)
 	}
@@ -470,14 +463,9 @@ export const emitClientModule = (
 		if (effect.kind === 'watch-attr') {
 			imports.add('watch')
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
-			if (effect.attr.startsWith('class:')) {
-				imports.add('bindClass')
-				const key = effect.attr.slice('class:'.length)
-				at(
-					`watch(() => Boolean(${memberAccess(`((${effect.thunkText})())`, key)}), bindClass(${effect.query}, ${jsString(key)}))`,
-					slices,
-				)
-			} else if (effect.dispatch === 'property') {
+			// No `class:` prefix arm (LT-222): the spelling is rejected at
+			// classification, so no watch-attr plan can carry one.
+			if (effect.dispatch === 'property') {
 				imports.add('bindProperty')
 				// LT-116 widened this beyond bare host-prop mirrors: dirty-flag
 				// IDL attrs on native form controls dispatch here too, so a
@@ -600,8 +588,9 @@ export const emitClientModule = (
 			append(`${effect.errFieldsetQuery}.disabled = true`, depth + 2)
 			append(`${effect.okQuery}.hidden = false`, depth + 2)
 			append(`${effect.okFieldsetQuery}.disabled = false`, depth + 2)
-			if (effect.okText)
-				append(`${effect.okQuery}.textContent = String(value)`, depth + 2)
+			// The ok arm always carries the resolved value as its text —
+			// `okText` was an always-true plan field (LT-222).
+			append(`${effect.okQuery}.textContent = String(value)`, depth + 2)
 			append('},', depth + 1)
 			append('nil: () => {', depth + 1)
 			append(`${effect.okQuery}.hidden = true`, depth + 2)

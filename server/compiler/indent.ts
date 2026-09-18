@@ -2,13 +2,14 @@
  * Template-literal-safe line classification for verbatim-slice reindentation
  * (LT-010).
  *
- * `reindent` (emit-server) and `pushStatement` (emit-client) strip the
- * source's common leading indentation from continuation lines of verbatim
- * slices. Inside a multi-line template literal that leading whitespace is
- * STRING CONTENT — stripping it silently changes the rendered value (a
- * validity message carrying `Min length is ${n}\nPlease enter…` loses the
- * second line's indentation). The emitters consult `lineStartsInTemplate` and
- * leave interior lines byte-identical, including their indentation.
+ * `reindent` and `appendWithSpans` — both in `spans.ts`, the reindentation
+ * family's home — strip the source's common leading indentation from
+ * continuation lines of verbatim slices (emit-server and emit-client import
+ * them from there). Inside a multi-line template literal that leading
+ * whitespace is STRING CONTENT — stripping it silently changes the rendered
+ * value (a validity message carrying `Min length is ${n}\nPlease enter…`
+ * loses the second line's indentation). Both consult `lineStartsInTemplate`
+ * and leave interior lines byte-identical, including their indentation.
  *
  * The scanner is a conservative single-pass lexer over the slice: strings,
  * template literals with `${ … }` interpolation (nested templates included),

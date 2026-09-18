@@ -93,7 +93,6 @@ import {
 	detectRuntime,
 	NETWORK_GLOBALS,
 	type NetworkGlobalPatch,
-	PROTOTYPE_PATCHES,
 	patchesFor,
 	REALM_GLOBALS,
 	type SimRuntime,
@@ -477,29 +476,6 @@ export function createSimulationRealm(
 				/* realm-side copy is best effort; the global is the load-bearing one */
 			}
 		}
-	}
-
-	for (const patch of PROTOTYPE_PATCHES) {
-		const owner = windowRecord[patch.owner] as
-			| { prototype: Record<string, unknown> }
-			| undefined
-		if (!owner?.prototype) continue
-		const previous = Object.getOwnPropertyDescriptor(
-			owner.prototype,
-			patch.method,
-		)
-		Object.defineProperty(owner.prototype, patch.method, {
-			value: function patched() {
-				throw new Error(patch.message)
-			},
-			writable: true,
-			configurable: true,
-		})
-		restores.push(() => {
-			if (previous)
-				Object.defineProperty(owner.prototype, patch.method, previous)
-			else delete owner.prototype[patch.method]
-		})
 	}
 
 	const onRejection = (reason: unknown) => {

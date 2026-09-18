@@ -414,14 +414,6 @@ export const reportStaticIds = (
 }
 
 /**
- * Does every path to `target` from `root` pass through an `@if`
- * with no `@else` (LT-123)? Such an element is absent from the
- * rendered DOM whenever that branch didn't take, so a reference
- * to it is optional NO MATTER how `first()` was called — the
- * analysis addresses it with a non-throwing query under a
- * presence guard (`handleOptionalBranch`, analysis/effects.ts).
- */
-/**
  * The server-side condition deciding whether `refName`'s matched element
  * is in this component's OWN rendered output (LT-118) — the expression
  * text to substitute for a `Boolean(ref)` presence read when folding a
@@ -501,6 +493,14 @@ export const refBranchGuard = (
 	return guards.length === 0 ? 'true' : guards.join(' && ')
 }
 
+/**
+ * Does every path to `target` from `root` pass through an `@if`
+ * with no `@else` (LT-123)? Such an element is absent from the
+ * rendered DOM whenever that branch didn't take, so a reference
+ * to it is optional NO MATTER how `first()` was called — the
+ * analysis addresses it with a non-throwing query under a
+ * presence guard (`handleOptionalBranch`, analysis/effects.ts).
+ */
 export const inOptionalBranch = (
 	root: TemplateNode,
 	target: TemplateNode,

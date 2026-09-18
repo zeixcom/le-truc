@@ -960,7 +960,7 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   20/2/0; `build:docs` exit 0, simulation pass 2/8/20 unchanged; biome clean on
   touched files.
 
-- [ ] LT-222: Delete the compiler's dead surface (review §2.10); fix stranded docs; honest `sim/` labels (§2.12).
+- [x] LT-222: Delete the compiler's dead surface (review §2.10); fix stranded docs; honest `sim/` labels (§2.12) — done ✓ (2026-09-18).
   **Skill:** le-truc-dev
   **Context:** All verified by grep at evaluation. Delete: `duplicatedChannelArg`
   (`analysis/reactivity.ts:90` — zero callers; the inline twin at `first-refs.ts:310`
@@ -1002,6 +1002,54 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   **Verification:** `bun run typecheck` first (deleted exports surface there — bun test
   does not type-check), `bun test server/tests` green, goldens + parity byte-identical,
   warning baseline 0, census 20/2/0; grep confirms each deleted name is gone repo-wide.
+  **Done (2026-09-18).** Every target re-verified by grep + live probe before deletion;
+  two entry corrections surfaced: (a) `typeAnnotationForBinding`/`typeOfAnnotation`
+  are NOT internal-only — `front-end.ts` imports both — so only
+  `returnTypeOfFunction` was de-exported; (b) the `class:`-prefix emission branch was
+  NOT unreachable. **class: ruling executed:** live probes showed the call form
+  (`class:has-error={open.get()}`) classifies as a SERVER attribute and renders a
+  literal `class:has="…"`-shaped attribute the browser ignores, while the thunk form
+  (`class:has-error={() => …}`) classified reactive and DID reach the emitter — emitting
+  a semantically WRONG watch that read `.has-error` off the thunk's boolean result (a
+  class that could never apply). Silent wrong on both spellings, so deletion alone was
+  not enough: `classifyAttribute` now rejects `class:`-prefixed names outright (TSRX006,
+  reason copy points to the class map — Tech Writer owns the wording), and the emitter
+  branch is deleted. **Wiring `class:x={thunk}` as Svelte-style sugar remains a real
+  feature decision — deferred to the Architect (LT-235 agenda).** Cousins flagged, NOT
+  fixed here (same silent fallthrough, same one-line guard would cover them): a
+  `style:x={…}` prefix and an `on:click={fn}` spelling also classify as server attrs
+  today. **Deleted:** `duplicatedChannelArg` (+ its doc — which also un-stranded
+  `bindsExposedArg`'s), `QueryPlan.explicitType` + `addQuery`'s param + ctx-wrapper
+  threading + the `first<…>` typeArg consumer (typecheck proved no caller supplied it),
+  `parserImport`, `queryName` (identity — plus `valueAttr` now goes through `jsString`:
+  it is author-derived and was the last raw `'${…}'` interpolation in the file),
+  `TopEffectPlan.async.okText` (emission now unconditional), `ParserKind`'s `null` arm
+  (parserForType never returns null — the parser-less consumer branches were already
+  dead), the to-estree `AssignmentExpression`/`SequenceExpression` arms +
+  `flattenSequence` (unreachability proven by instrumentation, not just grep),
+  `lowerComposeElement` in lower-tsx.ts (zero callers; the shared lowerer dispatches
+  compose internally), `returnTypeOfFunction`'s export, `newerGrammarHint`'s `await`
+  entry (no pin upgrade helps — TSRX008 rejects async components regardless; doc
+  comment records why), the unused `lineOf` import, `SIM_PATCH_TABLE` +
+  `PROTOTYPE_PATCHES` + `PrototypePatch` + realm.ts's 23-line applier + the
+  substrate-probe loop + the test's length-0 pin (the declarative-data pin now iterates
+  the four live columns). **Kept honest:** the LT-177 `attachInternals` rationale moved
+  into `CAPABILITY_PATCHES`'s doc rather than dying with the array;
+  `sim/index.ts`'s "substrate swap confined to realm.ts" claim corrected (the public
+  `SimulationRealm` type hard-binds jsdom's `window`/`Document`); SERVER.md +
+  LE_TRUC_COMPILER.md patch-table paragraphs updated. **Consolidated:** `serverKnown`
+  is computed once in `seedExtractionContext`; `assembleComponentIR` reuses
+  `ctx.serverKnown` (both front ends seed before assembling). **Docs:** indent.ts's
+  module doc now names `reindent`/`appendWithSpans` in spans.ts (not the nonexistent
+  `pushStatement`); stranded blocks moved onto their subjects (ir.ts's SignalIR
+  one-liner, first-refs.ts's LT-123 block → `inOptionalBranch`, effects.ts's @try block
+  → `handleTryEffects`). **Verification (run):** typecheck exit 0; full
+  `bun test server/tests` 1631 pass / 0 fail / 1 error (the pre-existing LT-207
+  tier-corpus leak); **generated dir git-diff-clean after regeneration (byte-identical
+  goldens)**; check:tsrx baseline 0, census 20/2/0 — its tsc step FAILS on
+  `form-spinbutton.tsrx` (`Cannot find name 'input'` ×5+) but **that failure is
+  pre-existing at HEAD c11f22bf** (proven in a clean worktree; the LT-219 migration
+  area — not this task's); biome clean on all 20 touched files; check:links 412 green.
 
 - [ ] LT-223: `diagnostics.ts` hygiene — sort by code, retire TSRX031, named `RoutingSignalOrigin`, `invalidSource` line numbers.
   **Skill:** le-truc-dev
