@@ -339,7 +339,7 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   machinery) cuts against the host's unscoped-light-DOM profile. Nothing to implement:
   no code, goldens, or parity pins change.
 
-- [ ] LT-208: Type the `boundary` arms precisely — three arms, branded `JSX.Element`, `err: Error` (owner precision ruling 2026-09-17; stale arm withdrawn by owner ruling 2026-09-18, see LT-211).
+- [x] LT-208: Type the `boundary` arms precisely — three arms, branded `JSX.Element`, `err: Error` (owner precision ruling 2026-09-17; stale arm withdrawn by owner ruling 2026-09-18, see LT-211). — done ✓ (awaiting review; commit 3a576fdf)
   **Skill:** le-truc-dev
   **Context:** `host-profile.d.ts` declares `boundary(arms: { ok: unknown; nil: unknown;
   err: (error: any) => unknown; stale?: unknown })` while the compiler REQUIRES every arm
@@ -375,7 +375,7 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   on the authored file; parity and `bun test server/tests` green (type text only). No
   new TSRX code — the channel is TypeScript, tier 1 Prevented (ADR 0028 s1 accounting).
 
-- [ ] LT-209: Type the authored `.tsx` factory context precisely — a second, author-annotated `FactoryContext`/`FormFactoryContext` parameter (owner ruling, 2026-09-18). **Land before or at the very start of wave 4 (LT-095), so migrated authors get feedback from day one.**
+- [x] LT-209: Type the authored `.tsx` factory context precisely — a second, author-annotated `FactoryContext`/`FormFactoryContext` parameter (owner ruling, 2026-09-18). **Land before or at the very start of wave 4 (LT-095), so migrated authors get feedback from day one.** — done ✓ (awaiting review; commit 559eeec6; NOTES carries the deviations + Tech Writer handoff)
   **Skill:** le-truc-dev
   **Context:** The owner rejected both ambient-based mechanisms (compiler-emitted
   `<tag>.host.d.ts` imports; per-file checker programs): authored files already declare
@@ -441,7 +441,7 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   `FactoryContext` (or the reverse) is the new TSRX diagnostic; all six fixtures and
   all gates green; editors see full precision with no tsserver changes.
 
-- [ ] LT-211: Remove the boundary's `stale` arm end-to-end and teach the `isPending` idiom (owner ruling, 2026-09-18).
+- [x] LT-211: Remove the boundary's `stale` arm end-to-end and teach the `isPending` idiom (owner ruling, 2026-09-18). — done ✓ (awaiting review; commit e864c2fa; the `.tsrx` `@if` spelling in this text cannot exist — see NOTES)
   **Skill:** le-truc-dev
   **Context:** The owner withdrew the four-arm boundary: the client never re-renders arm
   content — it toggles `hidden`/`disabled` on server-rendered arms — so a stale arm
@@ -775,11 +775,13 @@ round, scope widened).
      `server/tsrx/diagnostics.ts` — one tag, two corpus sources, both files named; the
      "whatever surface it is written in" clause is the dual-front-end fact the message
      teaches.
-  5. **The four-arm `boundary` diagnostic wordings** (LT-202 handoff): the arm-shape
-     errors in `server/tsrx-tsx/lower-tsx.ts` (missing/ill-typed arms, single-root rule
-     per arm, err-arrow requirement) — final copy; `nil` vs `stale` vocabulary must
-     match `watch()`'s and ADR 0029's precedence wording. Batch with items 2–3 so the
-     diagnostic families read as one voice.
+  5. **The three-arm `boundary` diagnostic wordings** (LT-202 handoff, amended by
+     LT-211/208): the arm-shape errors in `server/compiler/frontend/tsx/lower-tsx.ts`
+     (missing/ill-typed arms, single-root rule per arm, err-arrow requirement) — final
+     copy; the four-arm vocabulary is gone (owner withdrawal, 2026-09-18), so the copy
+     covers the three arms plus LT-209's new TSRX049/TSRX050 drafts in
+     `server/compiler/diagnostics.ts`. Batch with items 2–3 so the diagnostic families
+     read as one voice.
 
 ---
 

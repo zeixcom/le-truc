@@ -18,7 +18,17 @@ Most of this profile is grammar-independent, and both surfaces live under it: st
 
 One exported component function per file:
 
-- The function's single destructured parameter is the **server args**. Its TypeScript type is what compose sites check against — a wrong or missing arg at a parent's compose site is a `tsc` error on the parent's authored file, with no span table in between.
+- The function's first parameter is the destructured **server args**. Its TypeScript type is what compose sites check against — a wrong or missing arg at a parent's compose site is a `tsc` error on the parent's authored file, with no span table in between.
+- **The second, optional parameter is the typed factory context** (LT-209) — the author's opt in to precise context typing:
+
+  ```
+  export function FormCombobox(
+    { name, label, options }: FormComboboxArgs,
+    { host, first, expose }: FormFactoryContext<FormComboboxProps>,
+  ) { … }
+  ```
+
+  Form-associated components annotate `FormFactoryContext<Props>` (host: `FormAssociatedElement & Props`); plain ones `FactoryContext<Props>` — annotating the wrong one is a compile error (TSRX050), as is destructuring a name that is not factory vocabulary (TSRX049). The precision covers everything: `watch`/`on`/`pass` prop-key overloads, `host.setCustomValidity(…)` on form components, and a mistyped `expose()` key against `Initializers<Props>` is a free `tsc` error. **Wave-4 rule: destructure every factory name you use from the context param.** The `Record<string, any>` ambient `host` stand-in the profile started with is what this replaces; the ambients remain legal until the ambient retirement question is settled (owner, 2026-09-18: deliberately deferred until this convention has had use). `i18n` is NOT part of this parameter — it stays in the args destructure (the generated client has zero i18n; it is server-render-time data).
 - Statements before the single `return` are the **setup** — the `.tsrx` `@{ }` block's replacement. `export const i18n`, `export const config`, type declarations, and `declare global` interface augmentations carry over from `.tsrx` unchanged.
 - The returned JSX — a bare root element or a fragment — is the **template**.
 - The stylesheet is a `<style>` sibling inside the fragment, carrying a `css`-tagged template literal: ``<style>{css`…`}</style>``. JSX text cannot hold raw CSS braces, and the tag is what makes editors highlight the block as CSS. A bare template literal is accepted; the `css` spelling is what this profile teaches. The tag is compile-consumed — evaluated by nothing, and a `${}` substitution inside is a compile error.
@@ -34,9 +44,17 @@ One exported component function per file:
 | `{items.map((item, i) => …)}` | `for` — `each()` over server data, the `reconcile()` path over a declared `createList`; decided by the iterable's type, not the spelling |
 | An IIFE whose body is a `switch` returning JSX per arm | `switch` |
 | A try/catch IIFE | the error boundary |
-| `boundary({ ok, nil, err, stale? })` | the async boundary |
+| `boundary({ ok, nil, err })` | the async boundary |
 
-`boundary()` is the recognized ambient for the async boundary: **all arms render**, `hidden`-toggled by which state won — `nil` is no-value-yet, `stale` is re-fetching with a retained value (ADR 0029's precedence; omitting `stale` falls back the way `watch()` does), and `err`'s callback receives the rejection value. The `.tsrx` grammar has no `stale` spelling — no published `@tsrx/core` through 0.2.3 does — so its `@try`/`@pending`/`@catch` boundary stays three-arm: a standing surface asymmetry, not a pending gap ([ADR 0032](../../adr/0032-adopt-tsx-as-the-authored-component-surface.md) s6). A `.tsrx` author who needs the stale arm authors `.tsx` or accepts the three-arm fallback; Le Truc introduces no host-invented construct to fill the gap.
+`boundary()` is the recognized ambient for the async boundary: **all arms render**, `hidden`-toggled by which state won — `nil` is no-value-yet, and `err`'s callback receives the rejection as an `Error` (cause-effect wraps non-Errors before dispatch, so an unannotated `(e) => <p>{e.message}</p>` type-checks). The arms are typed `JSX.Element` — a branded interface an element expression satisfies by construction, so a string or function arm is a plain `tsc` error (LT-208).
+
+There is **no `stale` arm** — the owner withdrew the four-arm boundary (LT-211): the client never re-renders arm content, it toggles `hidden`/`disabled` on server-rendered arms, so a re-fetching-with-retained-value state has no arm to show. Both surfaces are three-arm; the s6 asymmetry ADR 0032 recorded is dissolved. The idiom for the in-flight state is a reactive `isPending(signal)` read beside the boundary:
+
+```
+<p role="status" class={() => (isPending(data) ? 'pending' : null)}>…</p>
+```
+
+`isPending` is a real `@zeix/le-truc` re-export (import it, either surface). Two authoring rules make the idiom work: the binding must be the **arrow thunk** — the reactive spelling; a bare `class={isPending(data) ? … : null}` expression is a render-time `server` attribute and never updates once connected. And `@if` conditions still cannot read signals on either surface (`validateCondition` diagnoses them — the DOM keeps the initially rendered branch, so a signal condition would silently stop matching); only watched constructs react.
 
 The one thing `.tsx` cannot express is a **statement** in branch position: an IIFE arm must return JSX, and there is no directive block to hide a bare client-side statement in. Statements live in setup. Where statement-context arms read better — a branch that mutates, a loop body that needs statements — author `.tsrx`; that is the surface split's whole point.
 
@@ -48,7 +66,7 @@ Authored `.tsx` is checked **directly** by `tsc` — no generated module, no spa
 - `data-*` is open through a pattern index signature; `truc:case`/`truc:case-type` are declared on every element (the compiler consumes them; they render no attribute).
 - **`truc:pass` is deliberately absent from the common set.** A pass replaces the child's Slot, so only pass targets declare one — on their own args types (`'truc:pass'?: { value?: () => number }`). A parent's `truc:pass={{ … }}` checks against the child's real shape, and an excess pass key is a `tsc` error.
 - **A migration to `.tsx` extends the table in the same commit** — the entry IS the migrated tag's light-DOM contract.
-- The `host`/`first`/`all`/`watch`/… ambients come from the same file. `host` is the authored-source stand-in (`FormAssociatedElement & Record<string, any>`); the generated client keeps the component's precise per-property types.
+- The `host`/`first`/`all`/`watch`/… ambients come from the same file. Since LT-209 the convention is to **annotate a second, typed context parameter instead** — see the module shape above — and destructure every factory name you use from it; the wide ambients remain for the migration period, their fate deferred (owner, 2026-09-18).
 
 The two ambient profiles — this one and `frontend/tsrx/globals.d.ts` — declare the same global names and **must never share a `tsc` program**: an authored-`.tsx` tsconfig includes `host-profile.d.ts`, a raw-`.tsrx` view includes `globals.d.ts`, never both.
 
@@ -178,7 +196,7 @@ Core TSRX's `&{` / `&[` lazy-pattern introducers (`LazyObjectBindingPattern`, `L
 
 A compiled source imports the real `@zeix/le-truc` exports its setup code references — signal constructors (`createCell`, `deriveCell`, …), parsers (`asString`, `asNumber`, …), `defineMethod`, form utilities — with an ordinary `import { ... } from '@zeix/le-truc'` naming only what is used. These are true module exports, so an authored source is valid TypeScript by construction, on either surface. The effect machinery — `watch`, `on`, `pass`, `each`, every `bind*` — is never authored at all: template syntax lowers to it in generated code. A function-valued attribute becomes `watch()` plus a `bind*` helper, `on*` attributes become `on()`, `truc:pass={{ ... }}` becomes `pass()`, and a loop becomes `each()` (the `reconcile()` path over a declared list). The compiler errors when a real export is used without its import (TSRX036) and when a FactoryContext name appears inside an authored import (TSRX037), both with fix-its (ADR [0024](../../adr/0024-adopt-tsrx-as-isomorphic-component-format.md), sub-design 16).
 
-The FactoryContext vocabulary an author actually writes — `expose`, `first`, `all`, `host`, `internals`, `requestContext`, `provideContexts` — stays ambient. The factory parameter these names arrive on is compiler-generated: there is no authored binding site an import or destructure could honestly occupy, and the names are not package exports, so an import line naming one is a false declaration. Each surface declares the ambients in its own profile file: `server/compiler/frontend/tsrx/globals.d.ts` for the raw `.tsrx` view, `server/compiler/frontend/tsx/host-profile.d.ts` for authored `.tsx` (which adds the strict `IntrinsicElements` table).
+The FactoryContext vocabulary an author actually writes — `expose`, `first`, `all`, `host`, `internals`, `requestContext`, `provideContexts` — stays ambient, with the `.tsx` parameter convention (LT-209) layered on top: a source that annotates the second, typed context parameter destructures these names from it, shadowing the ambients at function scope (the annotation types are `import type`-only and never reach generated output). The ambients remain the fallback for sources that omit the parameter — and the whole vocabulary on `.tsrx`, whose grammar has no parameter form. Each surface declares the ambients in its own profile file: `server/compiler/frontend/tsrx/globals.d.ts` for the raw `.tsrx` view, `server/compiler/frontend/tsx/host-profile.d.ts` for authored `.tsx` (which adds the strict `IntrinsicElements` table and the typed `boundary`/`css` ambients).
 
 The editor story differs by surface. Authored `.tsx` type-checks through plain tsserver against `host-profile.d.ts` — no projection, no plugin; this is what retired the planned span-table editor plugin, whose premise was `.tsrx`-everywhere authoring. The `.tsrx` grammar is not TS syntax — `@{ }` blocks and `@for`/`@if` directives parse only through the pinned core — so its editor surface is a projection over the generated client, and the ambient globals are the fallback that keeps the identifier set honest. A TSRX language service cannot resolve even explicit imports, which is why the ambients stay ambient rather than imported; the explicit-import policy earns its keep in the one benefit that holds regardless of editors: authored sources that are honest TypeScript the moment a working language service arrives.
 
