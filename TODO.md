@@ -205,26 +205,59 @@ round, scope widened).
   render-level `aria-label="Eingabe leeren"` pin; de translations are real (Eingabe
   leeren / Filtern / Filter leeren / Verringern / Erhöhen / Ziehen), not source echoes.
 
-- [ ] LT-215: Rule on server-static expressions inside reactive-list `@for` bodies (LT-195 residue: form-tokenbox's `Remove`).
-  **Skill:** architect (rules the milestone-subset question), le-truc-dev (implements)
-  **Context:** LT-195's survey counted form-tokenbox's `aria-label="Remove"` as
-  translatable by the existing mechanism. It is not: the button lives in the
-  reactive-list `@for` body, and `validateListBody` (milestone-3 subset, ADR 0023
-  sub-design 5) admits only static attrs, event attrs, and the one `{token}` hole —
-  `aria-label={t.remove}` is TSRX005 ("Dynamic attribute … inside a reactive-list @for
-  body"). Tokenbox therefore keeps its static English label and declares no `i18n`
-  (a declared key whose translation nothing can render would be dishonest).
-  **The question:** may a reactive-list body carry expressions that classify
-  SERVER-STATIC (reads only server-known names — `t`, args, literals; no per-item
-  binding)? The subset gate exists so "the emitted template is provably complete" —
-  but a build-folded constant needs no client binding at all: the initial items render
-  it via the ordinary server-attr path, and `listTemplateLines` would interpolate it
-  into the extracted `<template>` (the client clones the served template, so the
-  folded bytes ride along). Weigh that extension against (a) accepting a permanent
-  English label on per-item controls, or (b) an aria-labelledby/id restructure (ids
-  inside a loop duplicate — likely dead). Outcome: an ADR 0023 sub-design 5 amendment
-  or a recorded refusal; then implement, extend the `.tsx` front end + parity, and
-  route tokenbox's string through the catalog.
+- [ ] LT-215: Admit server-static expressions inside reactive-list `@for` bodies (LT-195 residue: form-tokenbox's `Remove`). — ruled ✓ (Architect, 2026-09-18): the blanket rejection is a subset-boundary defect, not a designed exclusion
+  **Skill:** le-truc-dev
+  **Ruling (Architect, 2026-09-18, owner concur — "clearly seems to be a bug"):** the
+  invariant `validateListBody` protects is ADR 0017's slot-fill contract — the extracted
+  `<template>` must be renderable with NO per-item client binding. "Statics only" is
+  sufficient for that invariant but not necessary: an expression whose free identifiers
+  are ALL server-known (args ∪ the reserved record's `t`/`lang` bindings, minus anything
+  bound in loop scope — item, index, key, hoisted consts) folds identically into every
+  item at every render call and needs no client binding at all. The client clones the
+  SERVED template (`first('template', …)` → `reconcile()`), so folded bytes baked into
+  the template at render time ride along to every cloned item; the in-place items already
+  fold via the ordinary server-attr emission (`attr('aria-label', t.clearInput)` in
+  form-textbox is the same classification). Rejected alternative: relaxing only the
+  in-place render while the template stays statics-only — that would make cloned items
+  diverge from initial items, the silent-wrong-answer class this project polices.
+  **Scope of the admitted class — by classification, not by "t":** any expression
+  `isServerEvaluable(node, serverScope)` admits (evaluability.ts; `containsImpureAmbient`
+  stays a hard error inside it — an impure read must not sneak through the relaxation).
+  `hidden={() => …}` thunks, item/index-derived expressions (`aria-label={token}`,
+  `{token.toUpperCase()}` — the slot-fill contract has no channel for a per-item
+  VALUE), refs, and control flow stay rejected; the item-derived diagnostic needs
+  rewording to say WHY it rejects (per-item value, no slot channel) — Tech Writer
+  reviews that copy (batch with LT-189's diagnostic family). No new TSRX code: this is
+  a false-positive removal from an existing tier-1 Prevented check, channel compiler.
+  **Implementation:**
+  1. `validateListBody` in BOTH front ends (`frontend/tsrx/lower-template.ts` and the
+     ported `frontend/tsx/lower-tsx.ts:627` — they must stay in lockstep, the ADR 0032
+     anti-drift contract): admit expr ATTRS and expr TEXT children that classify
+     server-static; the `holes !== 1` count keeps counting ITEM holes only. Fix the
+     citation drift while there — the comments say "ADR 0023 sub-design 5"; the
+     dual-`@for` content lives in adr/0024 s5.
+  2. `listTemplateLines` (emit-server.ts): emit admitted attr exprs as `{ expr }` Parts
+     (`esc()` covers attribute-value quoting) and admitted expr text children as
+     `esc(String(…))` pushes; the `<template>` is emitted per render call, so each
+     locale bakes its own strings. Verify the in-place path needs nothing (it already
+     folds server attrs).
+  3. Parity: the §4.4 synthetic reactive-list shape gains an admitted server-static attr,
+     pinned byte-identical across both front ends; a negative pin keeps item-derived
+     expressions rejected at the reworded diagnostic.
+  4. form-tokenbox (the demand that exposed the gate): declare `export const i18n`,
+     `aria-label={t.remove}` in the @for body; add the tokenbox record to
+     corpus-args' `inlineI18n` consumers; run `i18n:sync`; de gains `Entfernen`; extend
+     the i18n.test.ts de fixture pin. The loop-body remove button is the corpus's first
+     in-body case — note it in the tokenbox header where the old static-attr
+     rationale sits.
+  5. ADR 0024 s5 amendment via adr-keeper (server-static expressions admitted in
+     reactive-list bodies; baked into the extracted template at render time; item-derived
+     still out). HOST_PROFILE.md's list/reconciliation guidance gains one sentence.
+  **Acceptance:** `aria-label={t.remove}` compiles clean in tokenbox's reactive-list
+  body; the de render emits `aria-label="Entfernen"` on the initial pills AND inside the
+  served `<template>` (pinned); an item-derived attr still rejects, at the reworded
+  message; tier census 20/2/0 and warning baseline 0 unchanged; parity green; gates
+  green (typecheck, `bun test server/tests`, check:tsrx, build:docs, check:links).
 
 - [ ] LT-196: Report orphaned catalog keys in the translation census (ADR 0030 s5 gap).
   **Skill:** docs-server-dev
@@ -328,6 +361,14 @@ round, scope widened).
   "no catalog" is about the CORPUS catalog — is a per-component map the same thing?); (c)
   accept the gap and document it as a known limit. **Measure the payload cost of (b) before
   arguing about it.** Outcome is an ADR 0030 amendment or a new ADR, then tickets.
+  **Worked evidence from LT-195 (Architect, 2026-09-18):** the boundary that blocks `t` in
+  reactive thunks (TSRX005, server-only name) is correct and stays; the interim idiom for
+  translatable strings a REACTIVE binding must re-apply is already option (a) specialized
+  to attribute sites — form-spinbutton's hidden `.increment-label` carrier renders the
+  translated fallback server-side and the client thunk reads its textContent
+  (rendered alternatives, ADR 0030 s6). LT-195's ruling sanctions that idiom for the
+  corpus today (taught in HOST_PROFILE.md); this task rules whether it generalizes,
+  gets replaced by (b), or stays the documented limit.
 
 - [ ] LT-189: Tech Writer round — `ContextRequestEvent` cross-realm docs plus the standing i18n copy handoffs.
   **Skill:** tech-writer
