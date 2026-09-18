@@ -58,6 +58,30 @@ export type EmittedClientModule = {
 const ariaProperty = (attr: string): string | null =>
 	attr.startsWith('aria-') ? sanitizeVarName(attr) : null
 
+/**
+ * The only sanctioned way to put an author string into generated source
+ * (LT-221 §1.2 point-fix; the shared `jsString()`/`CodeBuilder` kit is
+ * LT-234). Plain printable ASCII keeps today's single-quoted bytes (the
+ * corpus goldens stay put); anything else — apostrophes, backslashes,
+ * quotes, non-ASCII — goes out JSON-quoted, and a JSON string literal IS a
+ * JS string literal. Raw `'${author}'` interpolation was a syntax error on
+ * generated code at best and a source-injection channel at worst.
+ */
+const JS_PLAIN_STRING = /^[\x20-\x26\x28-\x5b\x5d-\x7e]*$/
+const jsString = (value: string): string =>
+	JS_PLAIN_STRING.test(value) ? `'${value}'` : JSON.stringify(value)
+
+/**
+ * Member access on a runtime object by a class/style map key (LT-221
+ * §1.3). Identifier-safe keys keep today's dot bytes; everything else
+ * (hyphenated class tokens can ONLY be written quoted) goes through
+ * bracket access — `(thunk)()).has-error` parses as subtraction.
+ */
+const memberAccess = (object: string, key: string): string =>
+	/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)
+		? `${object}.${key}`
+		: `${object}[${jsString(key)}]`
+
 const parserImport = (parser: ParserKind): string | null => parser
 
 const harvestInitializer = (
@@ -88,7 +112,7 @@ const harvestInitializer = (
 			const live = `${queryName(plan.query)}.${plan.attr}`
 			return plan.parser ? `${plan.parser}()(String(${live}))` : live
 		}
-		const raw = `${queryName(plan.query)}.getAttribute('${plan.attr}')`
+		const raw = `${queryName(plan.query)}.getAttribute(${jsString(plan.attr)})`
 		return plan.parser ? `${plan.parser}()(${raw})` : `${raw} ?? ''`
 	}
 	// The list kind is emitted directly from its declaration (verbatim or
@@ -98,7 +122,7 @@ const harvestInitializer = (
 	const markProp = ariaProperty(plan.markAttr)
 	const predicate = markProp
 		? `el => el.${markProp} === 'true'`
-		: `el => el.getAttribute('${plan.markAttr}') === 'true'`
+		: `el => el.getAttribute(${jsString(plan.markAttr)}) === 'true'`
 	return `${queryName(plan.collection)}.get().find(${predicate})?.getAttribute('${plan.valueAttr}') ?? ${plan.default}`
 }
 
@@ -172,7 +196,7 @@ const emitEachBlock = (
 		const tag = tagMatch?.[0] ?? ''
 		const typeArg = DIRTY_FLAG_CONTROL_TAGS.get(tag)
 		append(
-			`const ${name} = ${plan.itemParam}.querySelector${typeArg ? `<${typeArg}>` : ''}('${effect.target}')!`,
+			`const ${name} = ${plan.itemParam}.querySelector${typeArg ? `<${typeArg}>` : ''}(${jsString(effect.target)})!`,
 			depth + 1,
 		)
 	}
@@ -192,14 +216,14 @@ const emitEachBlock = (
 				// counterpart of the top-level property dispatch.
 				imports.add('bindProperty')
 				append(
-					`watch(${source}, bindProperty(${targetOf(effect.target)}, '${effect.attr}'))`,
+					`watch(${source}, bindProperty(${targetOf(effect.target)}, ${jsString(effect.attr)}))`,
 					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
 			} else {
 				imports.add('bindAttribute')
 				append(
-					`watch(${source}, bindAttribute(${targetOf(effect.target)}, '${effect.attr}'))`,
+					`watch(${source}, bindAttribute(${targetOf(effect.target)}, ${jsString(effect.attr)}))`,
 					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
@@ -209,7 +233,7 @@ const emitEachBlock = (
 			imports.add('bindClass')
 			for (const key of effect.keys) {
 				append(
-					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${targetOf(effect.target)}, '${key}'))`,
+					`watch(() => Boolean(${memberAccess(`((${effect.thunkText})())`, key)}), bindClass(${targetOf(effect.target)}, ${jsString(key)}))`,
 					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
@@ -217,7 +241,7 @@ const emitEachBlock = (
 		} else {
 			imports.add('on')
 			append(
-				`on(${targetOf(effect.target)}, '${effect.event}', ${effect.handlerText})`,
+				`on(${targetOf(effect.target)}, ${jsString(effect.event)}, ${effect.handlerText})`,
 				depth + 1,
 				sliceOf(effect.handlerText, effect.sourceStart),
 			)
@@ -257,19 +281,19 @@ const emitReconcileBlock = (
 		depth,
 	)
 	append(
-		`watch(${plan.itemParam}, bindText(first('${plan.holeSelector}', '${plan.tag}: ${plan.holeSelector} missing')))`,
+		`watch(${plan.itemParam}, bindText(first(${jsString(plan.holeSelector)}, ${jsString(`${plan.tag}: ${plan.holeSelector} missing`)})))`,
 		depth + 1,
 	)
 	for (const target of plan.itemEvents) {
 		if (target.selector !== null)
 			append(
-				`const ${target.name} = first('${target.selector}', '${target.message}')`,
+				`const ${target.name} = first(${jsString(target.selector)}, ${jsString(target.message)})`,
 				depth + 1,
 			)
 		for (const event of target.events) {
 			imports.add('on')
 			append(
-				`on(${target.name}, '${event.event}', ${event.handlerText})`,
+				`on(${target.name}, ${jsString(event.event)}, ${event.handlerText})`,
 				depth + 1,
 				sliceOf(event.handlerText, event.sourceStart),
 			)
@@ -325,15 +349,17 @@ export const emitClientModule = (
 			// `required` message returns `Element | undefined` instead of
 			// throwing — the element only exists when that branch rendered.
 			imports.add('first')
-			push(`const ${query.name} = first${typeArg}('${query.selector}')`)
+			push(`const ${query.name} = first${typeArg}(${jsString(query.selector)})`)
 		} else if (query.cardinality === 'one') {
 			imports.add('first')
 			push(
-				`const ${query.name} = first${typeArg}('${query.selector}', '${query.message}')`,
+				`const ${query.name} = first${typeArg}(${jsString(query.selector)}, ${jsString(query.message)})`,
 			)
 		} else {
 			imports.add('all')
-			push(`const ${query.name} = all('${query.selector}', '${query.message}')`)
+			push(
+				`const ${query.name} = all(${jsString(query.selector)}, ${jsString(query.message)})`,
+			)
 		}
 	}
 
@@ -448,7 +474,7 @@ export const emitClientModule = (
 				imports.add('bindClass')
 				const key = effect.attr.slice('class:'.length)
 				at(
-					`watch(() => Boolean(((${effect.thunkText})()).${key}), bindClass(${effect.query}, '${key}'))`,
+					`watch(() => Boolean(${memberAccess(`((${effect.thunkText})())`, key)}), bindClass(${effect.query}, ${jsString(key)}))`,
 					slices,
 				)
 			} else if (effect.dispatch === 'property') {
@@ -462,7 +488,7 @@ export const emitClientModule = (
 					? `() => String((${effect.thunkText})())`
 					: effect.thunkText
 				at(
-					`watch(${source}, bindProperty(${effect.query}, '${effect.attr}'))`,
+					`watch(${source}, bindProperty(${effect.query}, ${jsString(effect.attr)}))`,
 					slices,
 				)
 			} else {
@@ -471,7 +497,7 @@ export const emitClientModule = (
 					? `() => String((${effect.thunkText})())`
 					: effect.thunkText
 				at(
-					`watch(${source}, bindAttribute(${effect.query}, '${effect.attr}'))`,
+					`watch(${source}, bindAttribute(${effect.query}, ${jsString(effect.attr)}))`,
 					slices,
 				)
 			}
@@ -484,7 +510,7 @@ export const emitClientModule = (
 			imports.add('watch')
 			imports.add('bindStyle')
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
-			const keys = effect.keys.map(key => `'${key}'`).join(', ')
+			const keys = effect.keys.map(jsString).join(', ')
 			at(
 				`watch(${effect.thunkText}, bindStyle(${effect.query}, [${keys}]))`,
 				slices,
@@ -498,7 +524,7 @@ export const emitClientModule = (
 			imports.add('watch')
 			imports.add('bindClass')
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
-			const keys = effect.keys.map(key => `'${key}'`).join(', ')
+			const keys = effect.keys.map(jsString).join(', ')
 			at(
 				`watch(${effect.thunkText}, bindClass(${effect.query}, [${keys}]))`,
 				slices,
@@ -651,7 +677,7 @@ export const emitClientModule = (
 	if (component.config && component.config.observedAttributes.length > 0) {
 		imports.add('observedAttributes')
 		extensions.push(
-			`observedAttributes([${component.config.observedAttributes.map(n => `'${n}'`).join(', ')}])`,
+			`observedAttributes([${component.config.observedAttributes.map(n => jsString(n)).join(', ')}])`,
 		)
 	}
 	// The widened host typing (FormAssociatedElement & P) is authored via

@@ -874,7 +874,7 @@ problem; a second implicit-consistency contract is the disease being treated) an
 restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). The review's
 "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
-- [ ] LT-221: Fix the compiler's verified correctness defects (review §1).
+- [x] LT-221: Fix the compiler's verified correctness defects (review §1). — done ✓ (2026-09-18)
   **Skill:** le-truc-dev
   **Context:** All verified at evaluation. (1) `notBuildTime` in
   `frontend/tsx/lower-tsx.ts:637` returns `offenders ? … : 'reads impure ambient state'` —
@@ -907,6 +907,58 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   error arm or currently-broken output; if any golden moves, investigate — don't re-pin
   blind); warning baseline 0; tier census 20/2/0; gates green (typecheck,
   `bun test server/tests`, check:tsrx, build:docs).
+  **Done (2026-09-18):** all five findings plus the probe landed; every fix TDD'd
+  (failing pin first). (1) `notBuildTime` now joins before testing — the impure-ambient
+  arm is reachable on `.tsx`, `reads ,` is gone. (2) `jsString()` (module-local, LT-234
+  supersedes): plain printable ASCII keeps today's single-quoted bytes, anything else
+  goes out JSON-quoted — applied at ALL author-data sites in `emit-client.ts`
+  (first/all selectors+messages incl. the reconcile itemEvents path, query/hole
+  selectors and their synthesized messages, attribute/event/harvest-mark names,
+  observedAttributes, style/class key arrays) — the `', evil(), '` injection payload now
+  emits as an inert string literal, and a backslash no longer round-trips into a
+  backspace escape. (3) Two halves, one family: `objectKeys` DROPPED its
+  `allowStrings` option — string-literal keys are always extracted — because the old
+  "class maps never use string keys" assumption silently discarded every quoted key
+  (`bindClass(el, [])`, no diagnostic: the server rendered the class, the client could
+  never toggle it); AND the two per-key dot-access sites now route through
+  `memberAccess()` — identifier-safe keys keep today's dot bytes, everything else
+  emits bracket access. **Finding beyond the review: §1.3's example was imprecise** —
+  a quoted MAP key never reached dot access because it never extracted at all (the
+  sixth defect, found by the RED pin); the `class:`-PREFIX spelling was the reachable
+  dot-access path. (4) `resolveComposeRefs` keeps immediate attachment but the claimed
+  check is now name-aware: a claimed ref bound to the SAME name is the pass's own
+  earlier attachment — idempotent re-analysis attaches nothing and reports nothing;
+  two distinct names on one element still draws TSRX041. (5) **Ruled N/A, no code
+  change:** both `.tsx` loop lowerers hard-set `keyName: null` — the `.map()` grammar
+  has no key clause (keys live in `createList`'s keyConfig), so the missing arm is
+  grammar asymmetry, not a defect; a `.tsx` pin for the `itemName === 'first'` arm
+  (which both surfaces have) already exists in the loop tests.
+  **Probe ruling (§1.4 adjacent): UNREACHABLE.** `singleRootOf` filters
+  `kind === 'element'` and the `@pending` arm demands exactly one root ELEMENT, so a
+  compose site cannot reach a pending arm through valid authoring — the compose walks'
+  pending-arm omission is consistent garbage-in protection, not a live duplicate-`id`/
+  resolution gap. The probe test pins the arm-shape rejection; revisit the walks in the
+  same commit if compose-in-pending ever becomes a supported shape (LT-230 settles the
+  walk policy). **Second finding flagged for LT-222:** the `class:`-prefix emission
+  branch in `emitTopEffect` (`effects.ts` watch-attr, `attr.startsWith('class:')`) has
+  NO producer in either front end — `class:has-error={…}` compiles silently and
+  emits nothing (the attr is dropped before classification) — a vestigial authoring
+  spelling and a silent drop; decide there whether to wire it or delete the branch
+  (the branch is now memberAccess-safe either way).
+  **Changed:** `server/compiler/frontend/tsx/lower-tsx.ts` (join-first notBuildTime);
+  `server/compiler/emit-client.ts` (`jsString`/`memberAccess`, all author-data sites);
+  `server/compiler/ast-utils.ts` (`objectKeys` accepts string keys, option deleted);
+  `server/compiler/analysis/loops.ts` + `analysis/effects.ts` (call sites, 5×);
+  `server/compiler/analysis/compose-refs.ts` (name-aware claimed check);
+  tests: `emitted-literals.test.ts` (new, 4), `class-map.test.ts` (+2),
+  `compose.test.ts` (+2: idempotence, probe ruling), `diagnostics.test.ts` (+2: the
+  impure message on both surfaces).
+  **Verification (run):** `bun run typecheck` exit 0; full `bun test server/tests`
+  1628 pass / 0 fail / 1 error (the pre-existing LT-207 tier-corpus inter-test error);
+  **goldens + parity byte-identical — the generated dir is `git diff`-clean after a
+  full corpus regeneration**; `check:tsrx` exit 0, warning baseline 0, tier census
+  20/2/0; `build:docs` exit 0, simulation pass 2/8/20 unchanged; biome clean on
+  touched files.
 
 - [ ] LT-222: Delete the compiler's dead surface (review §2.10); fix stranded docs; honest `sim/` labels (§2.12).
   **Skill:** le-truc-dev
@@ -926,6 +978,14 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   `SIM_PATCH_TABLE` (test-only) and `PROTOTYPE_PATCHES` (empty array with a live 23-line
   applier in `sim/realm.ts:482`, a re-export, and ONE caller outside the compiler —
   `scripts/lib/substrate-probe.ts:287`; handle it, don't break the probe).
+  **Found by LT-221 (2026-09-18), decide here:** the `class:`-prefix emission branch in
+  `emitTopEffect`'s watch-attr handling (`attr.startsWith('class:')`) has NO producer in
+  either front end — an authored `class:has-error={…}` compiles silently and emits
+  NOTHING (dropped before classification; the corpus never uses the spelling). Either
+  wire the classification (a reactive `class:` attr becomes a per-key watch — a real
+  feature decision, take it back to the Architect) or delete the branch and let the
+  unknown-attr diagnostics fire; the silent drop is the one unacceptable state. The
+  branch is already memberAccess-safe from LT-221.
   **Ruled: KEEP the retired-spelling tombstones** — `LEGACY_PASS_ATTR`/`LEGACY_HTML_ATTR`
   (classify-attributes.ts:111/118) and the `onText` sigil hook (its sole consumer
   diagnoses the retired `&{expr}` via LIVE TSRX018, whose fix-it LT-189 item 6 is still in

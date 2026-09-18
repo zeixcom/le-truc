@@ -7,6 +7,7 @@ import { describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
+import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../compiler/registry'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -2614,5 +2615,59 @@ describe('deferred collector call (TSRX045, LT-157d)', () => {
 			d => d.code === 'TSRX008' && d.message.includes('async'),
 		)
 		expect(hit).toBeDefined()
+	})
+})
+
+describe('reactive-list body impure-ambient diagnostic (LT-221 §1.1)', () => {
+	// `Date` is a JS global, so `dependenciesOf` strips it and the offender
+	// list is EMPTY — the expression is rejected by `containsImpureAmbient`
+	// alone. That is the only input shape that reaches the message's second
+	// arm, on both surfaces.
+	const mapBody = '{items.map(item => <li>{item} {Date.now()}</li>)}'
+
+	test('.tsx names impure ambient state — an empty offender list is not `reads ,`', () => {
+		const source = `import { createList } from '@zeix/le-truc'
+
+export function C({}, { expose }: FactoryContext<{}>) {
+	const items = createList([])
+	expose({})
+	return (
+		<>
+			<c-el>
+				<ul>${mapBody}</ul>
+			</c-el>
+			<style>{css\`c-el { color: red }\`}</style>
+		</>
+	)
+}`
+		const { diagnostics } = compileComponentTsx(source, 'c.tsx', new Set())
+		const hit = diagnostics.find(d => d.message.includes('reactive-list'))
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('reads impure ambient state')
+		expect(hit?.message).not.toContain('reads ,')
+	})
+
+	test('.tsrx names impure ambient state too (twin — regression guard)', () => {
+		const source = `export function C({}: {})
+	@{
+		const items = createList([])
+		expose({})
+		<>
+			<c-el>
+				<ul>
+					@for (const item of items) {
+						<li>{item} {Date.now()}</li>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { createList } from '@zeix/le-truc'`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		const hit = diagnostics.find(d => d.message.includes('reactive-list'))
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('reads impure ambient state')
+		expect(hit?.message).not.toContain('reads ,')
 	})
 })

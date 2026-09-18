@@ -102,8 +102,10 @@ export const resolveComposeRefs = (
 		// The compose-site half of LT-132: same IR limitation, same
 		// silence. `ref={}` made this shape unwritable; `first()` does
 		// not, so it needs the same check the raw path got.
-		const claimed = target.attrs.find(a => a.kind === 'ref')
-		if (claimed) {
+		const claimed = target.attrs.find(a => a.kind === 'ref') as
+			| { kind: 'ref'; name: string }
+			| undefined
+		if (claimed && claimed.name !== ref.name) {
 			diagnostics.push(
 				diagnostic.firstSelectorDuplicate(
 					component.source,
@@ -115,7 +117,16 @@ export const resolveComposeRefs = (
 			)
 			continue
 		}
-		target.attrs.push({ kind: 'ref', name: ref.name })
+		// A claimed ref bound to the SAME name is this pass's own earlier
+		// attachment (LT-221 §1.4): the attachment rides the shared IR, so
+		// a second `analyzeClient` over it — a test harness, a future
+		// caller — re-finds it here. Re-attaching would be a duplicate
+		// attr; reporting TSRX041 would be a spurious error on the pass's
+		// own work. Attach once, report once: idempotent re-analysis
+		// attaches nothing and reports nothing. (Two distinct names on one
+		// element remains the TSRX041 above; a repeated const name is
+		// invalid JS the generated module's own type-check catches.)
+		if (!claimed) target.attrs.push({ kind: 'ref', name: ref.name })
 	}
 	return result
 }

@@ -471,15 +471,15 @@ export const hostPropOf = (thunk: TsrxNode): string | null => {
 }
 
 /**
- * Property names of an object literal keyed by identifier. `allowStrings`
- * (style maps) also accepts string-literal keys — CSS custom properties
- * (`'--gauge-color'`) are not valid JS identifiers and must be quoted at
- * the call site; class maps never use them.
+ * Property names of an object literal. String-literal keys are accepted
+ * alongside identifiers: CSS-y class/style tokens (`'has-error'`,
+ * `'--gauge-color'`) are not valid JS identifiers and can ONLY be written
+ * quoted. LT-221: the old "class maps never use string keys" assumption
+ * silently dropped every quoted class key — the server rendered the
+ * initial class and the client was emitted `bindClass(el, [])`, never
+ * toggling it, with no diagnostic.
  */
-export const objectKeys = (
-	object: TsrxNode,
-	opts: { allowStrings: boolean },
-): string[] => {
+export const objectKeys = (object: TsrxNode): string[] => {
 	const keys: string[] = []
 	if (nodeType(object) !== 'ObjectExpression') return keys
 	for (const prop of asArray(object.properties)) {
@@ -488,7 +488,6 @@ export const objectKeys = (
 		if (nodeType(key) === 'Identifier')
 			keys.push(String((key as TsrxNode).name))
 		else if (
-			opts.allowStrings &&
 			nodeType(key) === 'Literal' &&
 			typeof (key as TsrxNode).value === 'string'
 		)

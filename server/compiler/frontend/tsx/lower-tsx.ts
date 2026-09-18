@@ -635,11 +635,15 @@ const validateListBody = (
 	itemName: string,
 ): void => {
 	const notBuildTime = (node: TsrxNode): string => {
-		const offenders = [...dependenciesOf(node)].filter(
-			name => !ctx.serverKnown.has(name),
-		)
+		// Join FIRST, then test the string: the offender list is an array,
+		// and an empty array is truthy — testing it directly made the
+		// impure-ambient arm unreachable and printed `reads , …` (LT-221
+		// §1.1, the .tsrx twin's join-first shape).
+		const offenders = [...dependenciesOf(node)]
+			.filter(name => !ctx.serverKnown.has(name))
+			.join(', ')
 		return offenders
-			? `reads ${offenders.join(', ')}, which derive per item or client-side`
+			? `reads ${offenders}, which derive per item or client-side`
 			: 'reads impure ambient state'
 	}
 	let holes = 0

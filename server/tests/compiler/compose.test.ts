@@ -7,7 +7,9 @@
  * server module imports and calls the child's `render<Name>()`.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
-import { compileComponent } from '../../compiler/frontend/tsrx'
+import { analyzeClient } from '../../compiler/analysis/plan'
+import type { CompileDiagnostic } from '../../compiler/diagnostics'
+import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import type { RegistryEntry } from '../../compiler/registry'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 
@@ -651,5 +653,103 @@ export function BasicParent({ title }: { title: string })
 		if (!component)
 			throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
 		expect(component.serverCode).toContain('<basic-child>')
+	})
+})
+
+describe('compose-ref attachment idempotence (LT-221 §1.4)', () => {
+	// `resolveComposeRefs` attaches the synthetic `{kind: 'ref'}` attr onto
+	// the shared IR — the pipeline runs it once inside `analyzeClient`, and
+	// any SECOND `analyzeClient` over the same IR (a test harness, a future
+	// caller) used to trip the claimed-ref check and report a spurious
+	// TSRX041 against the pass's own attachment.
+	const parentWithRef = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		const child = first('basic-child')
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={title} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+
+	test('a second analyzeClient over the same IR reports no spurious duplicate', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const composeRegistry = composeRegistryOf(childComponent.entry)
+		const extracted = compileSource(
+			parentWithRef,
+			'examples/parent/basic-parent.tsrx',
+		)
+		if (!extracted.component)
+			throw new Error(
+				`parent must extract: ${JSON.stringify(extracted.diagnostics)}`,
+			)
+		const tags = new Set(['basic-child'])
+		const firstRun: CompileDiagnostic[] = []
+		analyzeClient(extracted.component, tags, firstRun, composeRegistry)
+		expect(firstRun.filter(d => d.code === 'TSRX041')).toEqual([])
+		const secondRun: CompileDiagnostic[] = []
+		analyzeClient(extracted.component, tags, secondRun, composeRegistry)
+		expect(secondRun.filter(d => d.code === 'TSRX041')).toEqual([])
+	})
+})
+
+describe('compose site inside a @pending arm (LT-221 §1.4 probe)', () => {
+	// `countForSelector` sums the @pending arm (async arms coexist in the
+	// DOM), but `allComposeNodes`/`composeNodesBySource`/`countComposeBySource`
+	// omit it — so whether the gap is reachable turns on whether a compose
+	// site can legally sit in a pending arm. The arm's only shape rule is
+	// "exactly one root element"; a single compose root satisfies it.
+	const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+import { deriveCell } from '@zeix/le-truc'
+
+export function BasicParent({}: {})
+	@{
+		const data = deriveCell(async () => 'x')
+		const loading = first('basic-child.pending')
+		expose({})
+		<>
+			<basic-parent>
+				@try {
+					<div class="content">{data}</div>
+				} @pending {
+					<BasicChild label={'loading'} class="pending" />
+				} @catch (e) {
+					<p class="error">{e.message}</p>
+				}
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+
+	test('a compose site in a @pending arm is rejected — the walks omit pending arms by ruling (LT-221 probe)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const { diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		// The probe's outcome (2026-09-18): the @pending arm-shape rule
+		// demands exactly one root ELEMENT — `singleRootOf` filters
+		// `kind === 'element'` — so a compose site can never reach a
+		// @pending arm through valid authoring. The compose walks omitting
+		// the pending arm (`allComposeNodes`/`composeNodesBySource`/
+		// `countComposeBySource`) is therefore consistent garbage-in
+		// protection, not a live duplicate-`id`/resolution gap; the
+		// review's §1.4-adjacent concern is ruled unreachable. Revisit the
+		// walks in the same commit if compose-in-pending ever becomes a
+		// supported shape (LT-230 settles the walk policy).
+		expect(
+			diagnostics.some(
+				d =>
+					d.severity === 'error' &&
+					d.message.includes('must render exactly one root element'),
+			),
+		).toBe(true)
 	})
 })

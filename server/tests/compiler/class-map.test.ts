@@ -169,3 +169,68 @@ import { createCell } from '@zeix/le-truc'`
 		expect(component?.clientCode).toContain("bindClass(host, ['active'])")
 	})
 })
+
+describe('quoted class keys (LT-221 §1.3)', () => {
+	// Two defects, one family. (1) Extraction: `objectKeys` assumed class
+	// maps "never use" string-literal keys, so a quoted key — the ONLY way
+	// to write a hyphenated class token in TS — was silently dropped from
+	// the key list (`bindClass(el, [])`: server renders the class, the
+	// client can never toggle it, no diagnostic). (2) Emission: the
+	// per-key watch sites interpolate the key into a MEMBER ACCESS —
+	// `((thunk)()).${key}` — which for a hyphenated key parses as
+	// subtraction (`x.has - error`). Dot-safe keys keep today's bytes;
+	// everything else goes through bracket access.
+
+	test('a quoted key in a top-level class map reaches the client binding', () => {
+		const source = `export function C({}: {})
+	@{
+		const open = createCell(true)
+		expose({})
+		<>
+			<c-el>
+				<p>{open}</p>
+				<span class={() => ({ 'has-error': open.get() })}>ok</span>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { createCell } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		const code = component?.clientCode ?? ''
+		expect(code).toContain("bindClass(span, ['has-error'])")
+		expect(code).not.toContain('bindClass(span, [])')
+	})
+
+	test('a quoted key in a server-data loop body class map emits bracket access', () => {
+		const source = `export function C({ tabs }: { tabs: { id: string }[] })
+	@{
+		const open = createCell(false)
+		expose({})
+		<>
+			<c-el>
+				<ul>
+					@for (const tab of tabs) {
+						<li class={() => ({ 'is-active': open.get() })}>{tab.id}</li>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}
+import { createCell } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		const code = component?.clientCode ?? ''
+		expect(code).toContain("['is-active']")
+		expect(code).not.toContain('.is-active')
+	})
+})

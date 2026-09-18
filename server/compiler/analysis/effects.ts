@@ -480,7 +480,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				sink.push({
 					kind: 'watch-class',
 					query,
-					keys: objectKeys(attr.object, { allowStrings: false }),
+					keys: objectKeys(attr.object),
 					thunkText: attr.thunkText,
 					sourceStart: attr.thunk.start,
 					sourceEnd: attr.thunk.end,
@@ -490,7 +490,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 				sink.push({
 					kind: 'watch-style',
 					query,
-					keys: objectKeys(attr.object, { allowStrings: true }),
+					keys: objectKeys(attr.object),
 					thunkText: attr.thunkText,
 					sourceStart: attr.thunk.start,
 					sourceEnd: attr.thunk.end,
@@ -1432,7 +1432,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					effects.push({
 						kind: 'watch-style',
 						query: 'host',
-						keys: objectKeys(attr.object, { allowStrings: true }),
+						keys: objectKeys(attr.object),
 						thunkText: attr.thunkText,
 						sourceStart: attr.thunk.start,
 						sourceEnd: attr.thunk.end,
@@ -1447,7 +1447,7 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					effects.push({
 						kind: 'watch-class',
 						query: 'host',
-						keys: objectKeys(attr.object, { allowStrings: false }),
+						keys: objectKeys(attr.object),
 						thunkText: attr.thunkText,
 						sourceStart: attr.thunk.start,
 						sourceEnd: attr.thunk.end,

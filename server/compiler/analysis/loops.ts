@@ -160,7 +160,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 					checkClientNames(attr.object, 'Reactive class map')
 					effectsPlan.push({
 						kind: 'watch-class',
-						keys: objectKeys(attr.object, { allowStrings: false }),
+						keys: objectKeys(attr.object),
 						thunkText: attr.thunkText,
 						sourceStart: attr.thunk.start,
 						sourceEnd: attr.thunk.end,
