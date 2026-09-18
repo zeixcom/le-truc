@@ -1173,18 +1173,43 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   baseline 0, census 20/2/0 (only the pre-existing form-spinbutton tsc failure);
   check:links 412 green; biome clean.
 
-- [ ] LT-226: Split `runEffects` at its own comment bands; dedupe the lazy-text gate.
+- [x] LT-226: Split `runEffects` at its own comment bands; dedupe the lazy-text gate — done ✓ (2026-09-18).
   **Skill:** le-truc-dev
-  **Context:** Review §2.1/§2.5. Construct lowering (~232–607), control-flow addressing
-  (~657–1309), compose (~1327–1393), and the duplicate-compose-`id` *validation*
-  (~1622–1647 — shares nothing with effect planning) become units with `ctx` passed
-  explicitly instead of captured by 22 nested closures. Extract the ~70-line lazy-text
-  emission gate cloned at `effects.ts:542`/`:1483` — the comment at `:1519` records that
-  the copies ALREADY drifted (the nested path tolerates violations silently): converge on
-  the strict behavior only if the corpus holds warning baseline 0; otherwise keep the
-  tolerance, stated once in the shared helper. Lift the compose-`id` scan as
-  `validateComposeIds`.
-  **Verification:** goldens + parity byte-identical; warning baseline 0; census 20/2/0.
+  **Landed:** `runEffects` (1,537 lines) is now a ~60-line context builder + two calls.
+  The 22 nested closures are module-scope units in `analysis/effects.ts` taking an
+  explicit `EffectsContext` (21 fields: the 17 `AnalysisContext` fields the pass reads
+  plus the derived `entryByTag`/`derivableHostProps`/`derivableRefGuards`/`foldScope`);
+  each unit destructures only what it uses, so bodies moved verbatim. Per-band: construct
+  lowering (`checkPassEntries`, `emitPassEntries`, `emitConstructEffects`), control-flow
+  addressing (`handleOptionalBranch`/`...IfEffects`/`PerBranchIfEffects`/`handleIfEffects`/
+  `handleSwitchEffects`/`handleAsyncBoundary`/`handleTryEffects` + pure helpers
+  `hasOwnConstruct`/`hasDeepConstruct`/`refOf`/`constructSignatureOf`/`hasClientConstructs`/
+  `directLazyIdentifier`/`directLazyCatchRef`/`staticIdsUnder`), compose
+  (`emitComposeEffects`), the dispatcher (`emitTopEffects`), and the compose-`id` scan
+  lifted as `validateComposeIds`. The per-component adapters (`selectorFor`,
+  `resolveSelector`, `countComposeBySource`, `composeNodesBySource`, `loopFor`,
+  `suppresses`, `selectorOf`) are module functions taking `fx` — no function members on
+  the context. **The lazy-text gate is one shared `emitLazyTextChildren`**: both copies
+  were ALREADY strict (LT-115 mirrored the root's gate), so the review's recorded drift
+  ("the nested path tolerates these silently") is stale — convergence needed no
+  tolerance call. Parameterized by `targetLabel` (`<el.tag>` nested / `the component
+  root` at the root — diagnostic strings byte-preserved) and `suppressedSelector`
+  (`selectorOf(query)` nested / `SUPPRESSED_HOST_SELECTOR` at the root — an author-named
+  `first()` ref could collide with the literal `'host'`); `addressHost` keeps the root's
+  unconditional `host` ambient. One real behavior convergence: the nested path pushed
+  the multiple-lazy-children diagnostic once PER child (doubled); the shared gate pushes
+  it once — nothing pinned the double, corpus holds baseline 0. No error copy changed —
+  no Tech Writer handoff. **Gate note:** the transform's one bug (missing
+  `collectAmbient`/`badFreeNames` in `emitConstructEffects`'s destructure) was caught by
+  the test suite as runtime ReferenceErrors, NOT by typecheck — a compiler crash in
+  `build-tsrx` makes `bun run typecheck`'s `&&`-chained tsc step silently not run, so
+  check typecheck's EXIT CODE, never a grep for "error TS" (probe-verified tsc
+  tsconfig.json does cover `server/**`).
+  **Verification (run):** goldens + parity byte-identical (generated dir git-diff-clean
+  after regeneration); typecheck exit 0 (exit code, not grep); `bun test server/tests`
+  1632 pass / 0 fail / 1 error (the pre-existing LT-207 tier-corpus leak); check:tsrx
+  warning baseline 0, census 20/2/0 (its tsc step still fails only on the pre-existing
+  form-spinbutton issue); check:links 412 green; biome clean.
 
 - [ ] LT-227: Split `runLoops` and `runHarvest` at their existing pass banners.
   **Skill:** le-truc-dev
