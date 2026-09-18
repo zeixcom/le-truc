@@ -9,7 +9,8 @@
 		"form-listbox.filter": "d7decf1aa22b",
 		"form-spinbutton.decrement": "0b826d21ae7a",
 		"form-spinbutton.increment": "d12f1fabbb58",
-		"form-textbox.clearInput": "8b3816231374"
+		"form-textbox.clearInput": "8b3816231374",
+		"form-tokenbox.remove": "e963907dac5c"
 	},
 	"de": {
 		"basic-pluralize.done": "6a5db21a2281",
@@ -22,7 +23,8 @@
 		"form-listbox.filter": "d7decf1aa22b",
 		"form-spinbutton.decrement": "0b826d21ae7a",
 		"form-spinbutton.increment": "d12f1fabbb58",
-		"form-textbox.clearInput": "8b3816231374"
+		"form-textbox.clearInput": "8b3816231374",
+		"form-tokenbox.remove": "e963907dac5c"
 	},
 	"pl": {
 		"basic-pluralize.done": "6a5db21a2281",
@@ -37,7 +39,8 @@
 		"form-listbox.filter": "d7decf1aa22b",
 		"form-spinbutton.decrement": "0b826d21ae7a",
 		"form-spinbutton.increment": "d12f1fabbb58",
-		"form-textbox.clearInput": "8b3816231374"
+		"form-textbox.clearInput": "8b3816231374",
+		"form-tokenbox.remove": "e963907dac5c"
 	},
 	"cy": {
 		"basic-pluralize.done": "6a5db21a2281",
@@ -54,7 +57,8 @@
 		"form-listbox.filter": "d7decf1aa22b",
 		"form-spinbutton.decrement": "0b826d21ae7a",
 		"form-spinbutton.increment": "d12f1fabbb58",
-		"form-textbox.clearInput": "8b3816231374"
+		"form-textbox.clearInput": "8b3816231374",
+		"form-tokenbox.remove": "e963907dac5c"
 	},
 	"lv": {
 		"basic-pluralize.done": "6a5db21a2281",
@@ -68,7 +72,8 @@
 		"form-listbox.filter": "d7decf1aa22b",
 		"form-spinbutton.decrement": "0b826d21ae7a",
 		"form-spinbutton.increment": "d12f1fabbb58",
-		"form-textbox.clearInput": "8b3816231374"
+		"form-textbox.clearInput": "8b3816231374",
+		"form-tokenbox.remove": "e963907dac5c"
 	},
 	"ar": {
 		"basic-pluralize.done": "6a5db21a2281",
@@ -85,6 +90,7 @@
 		"form-listbox.filter": "d7decf1aa22b",
 		"form-spinbutton.decrement": "0b826d21ae7a",
 		"form-spinbutton.increment": "d12f1fabbb58",
-		"form-textbox.clearInput": "8b3816231374"
+		"form-textbox.clearInput": "8b3816231374",
+		"form-tokenbox.remove": "e963907dac5c"
 	}
 }

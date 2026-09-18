@@ -855,7 +855,12 @@ export const emitServerModule = (
 		if (queue) queue.push(...listTemplateLines(loop, depth))
 	}
 
-	/** The extracted `<template>`: statics render, the hole becomes a slot. */
+	/**
+	 * The extracted `<template>`: statics render, the hole becomes a slot,
+	 * and server-static expressions (LT-215 — admitted by validateListBody)
+	 * are baked in at render time: the template is emitted per render call,
+	 * so each locale's folded strings ride along to every cloned item.
+	 */
 	const listTemplateLines = (loop: ForIR, depth: number): string[] => {
 		const out: string[] = [`${tab(depth)}${buffer}.push('<template>')`]
 		const shape = (node: TemplateNode, atDepth: number): void => {
@@ -870,19 +875,34 @@ export const emitServerModule = (
 					node.exprText === loop.itemName
 				)
 					out.push(`${tab(atDepth)}${buffer}.push('<slot></slot>')`)
+				else if (!node.lazy) {
+					used.add('esc')
+					out.push(
+						`${tab(atDepth)}${buffer}.push(esc(String(${node.exprText})))`,
+					)
+				}
 				return
 			}
-			// Statics only — validateListBody rejected everything else, and
-			// events/refs never render server-side.
+			// Statics and server-static expressions only — validateListBody
+			// rejected everything else, and events/refs never render
+			// server-side.
 			if (node.kind !== 'element') return
 			const parts: Part[] = [{ static: `<${node.tag}` }]
 			for (const attr of node.attrs) {
-				if (attr.kind !== 'static') continue
-				if (attr.value === null) parts.push({ static: ` ${attr.name}` })
-				else
-					parts.push({
-						static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
-					})
+				if (attr.kind === 'static') {
+					if (attr.value === null) parts.push({ static: ` ${attr.name}` })
+					else
+						parts.push({
+							static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
+						})
+				} else if (attr.kind === 'server') {
+					// esc() escapes quotes too, so the value is safe inside the
+					// double-quoted attribute the static parts open and close.
+					used.add('esc')
+					parts.push({ static: ` ${attr.name}="` })
+					parts.push({ expr: `esc(String(${attr.exprText}))` })
+					parts.push({ static: '"' })
+				}
 			}
 			parts.push({ static: '>' })
 			out.push(`${tab(atDepth)}${buffer}.push(${pushArgument(parts)})`)

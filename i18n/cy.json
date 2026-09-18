@@ -13,5 +13,6 @@
 	"form-listbox.filter": "",
 	"form-spinbutton.decrement": "",
 	"form-spinbutton.increment": "",
-	"form-textbox.clearInput": ""
+	"form-textbox.clearInput": "",
+	"form-tokenbox.remove": ""
 }

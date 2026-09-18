@@ -24,6 +24,23 @@
 import { createList, defineMethod } from '@zeix/le-truc'
 import { DuplicateKeyError } from '@zeix/le-truc'
 
+/**
+ * The token pill's remove-button aria-label is component-owned text
+ * assistive tech announces, so it routes through the reserved `i18n`
+ * parameter (ADR 0030); this inline record is the source-locale fallback
+ * every catalog resolves against. The label sits INSIDE the reactive-list
+ * @for body — the corpus's first server-static interpolation there
+ * (LT-215): it folds per render call and is baked into the extracted
+ * `<template>`, so client-cloned pills carry the translated label too.
+ * Deliberately NOT here: the status-region messages (`Added token: …` /
+ * `Removed token: …`) are built at event time in the browser, where no
+ * catalog exists (ADR 0030 sub-design 6 — no catalog ships to the client)
+ * — see LT-197.
+ */
+export const i18n = {
+	remove: 'Remove',
+}
+
 export const config = { formAssociated: true }
 
 export type FormTokenboxProps = {
@@ -57,6 +74,7 @@ export function FormTokenbox(
 		value = '',
 		type = 'text',
 		description = '',
+		i18n: { t },
 	}:
 		{
 			name: string
@@ -64,6 +82,7 @@ export function FormTokenbox(
 			value?: string
 			type?: string
 			description?: string
+			i18n: I18n
 		},
 )
 @{
@@ -118,7 +137,7 @@ export function FormTokenbox(
 						<button
 							type="button"
 							class="remove"
-							aria-label="Remove"
+							aria-label={t.remove}
 							onClick={() => {
 								const removedValue = tokens.byKey(k)?.get()
 								tokens.remove(k)

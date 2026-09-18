@@ -340,9 +340,11 @@ export function C({}: {})
 	})
 
 	// Since LT-052 a bare `{item}` IS the slot fill — the item binding is
-	// reactive by position, marked in `lowerListFor`. The "must be lazy"
-	// gate still covers every OTHER expression in the body, which has no
-	// per-item client binding.
+	// reactive by position, marked in `lowerListFor`. Since LT-215 the old
+	// "must be lazy" gate is split: a non-item expression is ADMITTED when
+	// it classifies server-static (a build-time value baked into the
+	// extracted template), still rejected when it reads names outside
+	// `serverKnown` — the slot fill has no channel for those.
 	test('a bare {item} is the slot fill, not an error', () => {
 		const { diagnostics } = compileComponent(
 			listSource('<li>{item}</li>'),
@@ -352,13 +354,42 @@ export function C({}: {})
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
 	})
 
-	test('a non-item expression in a reactive-list body is TSRX005', () => {
+	test('a non-item expression reading unknown names is TSRX005', () => {
 		const { diagnostics } = compileComponent(
 			listSource('<li>{item}{label}</li>'),
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.message.includes('must be lazy'))).toBe(true)
+		expect(
+			diagnostics.some(d =>
+				d.message.includes('only server-known build-time values'),
+			),
+		).toBe(true)
+	})
+
+	test('a non-item server-known expression in the body is admitted (LT-215)', () => {
+		const { component, diagnostics } = compileComponent(
+			`import { createList } from '@zeix/le-truc'
+export function C({ label }: { label: string })
+	@{
+		const items = createList<string>([], { keyConfig: 'item' })
+		<>
+			<c-el>
+				<ul data-container>
+					@for (const item of items; key k) {
+						<li>{item}{label}</li>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		// Baked into the extracted template at render time.
+		expect(component?.serverCode).toContain('__html.push(esc(String(label)))')
 	})
 
 	test('missing or duplicated item hole is TSRX005', () => {
@@ -543,6 +574,56 @@ import { createCell } from '@zeix/le-truc'`
 		expect(diagnostics.some(d => d.message.includes('template slots'))).toBe(
 			true,
 		)
+	})
+
+	test('a server-static attribute inside a reactive-list body compiles clean (LT-215)', () => {
+		const { diagnostics } = compileComponent(
+			`import { createList } from '@zeix/le-truc'
+export function C({ initial, removeLabel }: { initial?: string[]; removeLabel: string })
+@{
+	const items = createList<string>(initial, { keyConfig: 'item' })
+	expose({})
+	<>
+		<c-el>
+			<ul data-container>
+				@for (const item of items) {
+					<li aria-label={removeLabel}><span>{item}</span></li>
+				}
+			</ul>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		expect(diagnostics).toEqual([])
+	})
+
+	test('an item-derived attribute inside a reactive-list body still rejects, naming the offender (LT-215)', () => {
+		const { diagnostics } = compileComponent(
+			`import { createList } from '@zeix/le-truc'
+export function C({ initial }: { initial?: string[] })
+@{
+	const items = createList<string>(initial, { keyConfig: 'item' })
+	expose({})
+	<>
+		<c-el>
+			<ul data-container>
+				@for (const item of items) {
+					<li aria-label={item}><span>{item}</span></li>
+				}
+			</ul>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`,
+			'c.tsrx',
+			new Set(['c-el']),
+		)
+		const hit = diagnostics.find(d => d.message.includes('Dynamic attribute'))
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('reads item')
 	})
 
 	test('client constructs on the root element are outside the subset', () => {

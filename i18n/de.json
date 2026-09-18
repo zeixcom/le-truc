@@ -9,5 +9,6 @@
 	"form-listbox.filter": "Filtern",
 	"form-spinbutton.decrement": "Verringern",
 	"form-spinbutton.increment": "Erhöhen",
-	"form-textbox.clearInput": "Eingabe leeren"
+	"form-textbox.clearInput": "Eingabe leeren",
+	"form-tokenbox.remove": "Entfernen"
 }

@@ -74,7 +74,11 @@ const ARGS: Record<string, Record<string, unknown>> = {
 		],
 		i18n: inlineI18n({ clearInput: 'Clear input' }),
 	},
-	'form-tokenbox': { name: 'tags', label: 'Tags' },
+	'form-tokenbox': {
+		name: 'tags',
+		label: 'Tags',
+		i18n: inlineI18n({ remove: 'Remove' }),
+	},
 	'form-colorgraph': {
 		i18n: inlineI18n({ drag: 'Drag' }),
 	},

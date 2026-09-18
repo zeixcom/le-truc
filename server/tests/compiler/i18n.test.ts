@@ -458,6 +458,9 @@ describe('the generated i18n module', () => {
 			'Erhöhen',
 		)
 		expect(i18nModule.i18nRecord('form-colorgraph', 'de').t.drag).toBe('Ziehen')
+		expect(i18nModule.i18nRecord('form-tokenbox', 'de').t.remove).toBe(
+			'Entfernen',
+		)
 	})
 
 	test("an i18n:sync placeholder ('' override) resolves the source string (LT-195)", () => {
@@ -488,5 +491,34 @@ describe('the generated i18n module', () => {
 			i18n: i18nModule.i18nRecord('form-textbox', 'de'),
 		})
 		expect(html).toContain('aria-label="Eingabe leeren"')
+	})
+
+	test('the de catalog bakes into the extracted list template (LT-215 fixture)', async () => {
+		// The tokenbox remove button is the corpus's first server-static
+		// interpolation inside a reactive-list body: the translated label must
+		// reach BOTH the initial (server-rendered) pills AND the served
+		// `<template>` the client clones for pills added after connect.
+		const mod = (await import(
+			pathToFileURL(`${generated.path}/form-tokenbox.server.ts`).href
+		)) as Record<string, (args: unknown) => string>
+		const render = mod.renderFormTokenbox
+		if (!render) throw new Error('renderFormTokenbox missing')
+		const html = render({
+			name: 'tags',
+			label: 'Tags',
+			value: 'one, two',
+			i18n: i18nModule.i18nRecord('form-tokenbox', 'de'),
+		})
+		// Initial items carry the folded value through the ordinary
+		// server-attr path.
+		expect(html).toContain('aria-label="Entfernen"')
+		const templateStart = html.indexOf('<template>')
+		const templateEnd = html.indexOf('</template>')
+		expect(templateStart).toBeGreaterThan(-1)
+		const template = html.slice(templateStart, templateEnd)
+		// The template itself carries the folded value, not a slot for it —
+		// cloned pills announce the translation without any client catalog.
+		expect(template).toContain('aria-label="Entfernen"')
+		expect(template).toContain('<slot></slot>')
 	})
 })

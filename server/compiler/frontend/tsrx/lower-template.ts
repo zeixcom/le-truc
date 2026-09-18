@@ -24,6 +24,7 @@ import {
 } from '../../ast-utils'
 import { isTemplateForOfNode } from '../../core'
 import { diagnostic } from '../../diagnostics'
+import { dependenciesOf, isServerEvaluable } from '../../evaluability'
 import type { ExtractContext, ForIR, SignalIR, TemplateNode } from '../../ir'
 import {
 	type Lowering,
@@ -625,17 +626,33 @@ export const lowerFor = (
 }
 
 /**
- * Validate the reactive-list body shape (ADR 0023 sub-design 5): statics and
- * event attributes anywhere, exactly one lazy `&{item}` hole (the slot fill),
- * no dynamic attributes, refs, or non-item expressions — those need per-item
- * client bindings beyond the slot-fill contract and are gated so the emitted
- * template is provably complete.
+ * Validate the reactive-list body shape (ADR 0024 sub-design 5, extended by
+ * LT-215): statics and event attributes anywhere, exactly one lazy `{item}`
+ * hole (the slot fill), and — since LT-215 — expressions that classify
+ * SERVER-STATIC (`isServerEvaluable` against `ctx.serverKnown`: server args,
+ * the reserved record's `t`/`lang`, no impure ambient state). A server-static
+ * value folds identically into every item at every render call and needs no
+ * per-item client binding, so `listTemplateLines` bakes it into the extracted
+ * `<template>` at render time — the client clones the SERVED template, so the
+ * folded bytes ride along to cloned items. Item-derived expressions (they
+ * read names outside `serverKnown`), refs, and control flow stay rejected:
+ * the slot-fill contract has no channel for a per-item value.
  */
 const validateListBody = (
 	ctx: ExtractContext,
 	output: TemplateNode & { kind: 'element' },
 	itemName: string,
 ): void => {
+	const offenderNames = (node: TsrxNode): string =>
+		[...dependenciesOf(node)]
+			.filter(name => !ctx.serverKnown.has(name))
+			.join(', ')
+	const notBuildTime = (node: TsrxNode): string => {
+		const offenders = offenderNames(node)
+		return offenders
+			? `reads ${offenders}, which derive per item or client-side`
+			: 'reads impure ambient state'
+	}
 	let holes = 0
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'expr') {
@@ -649,15 +666,15 @@ const validateListBody = (
 					diagnostic.unsupported(
 						ctx.source,
 						node.node.start,
-						`Lazy children inside a reactive-list @for body must be the bare item (&{${itemName}}) — the slot fill. &{${node.exprText}} needs per-item bindings outside the milestone-3 subset.`,
+						`Lazy children inside a reactive-list @for body must be the bare item ({${itemName}}) — the slot fill; {${node.exprText}} derives per item, and the extracted <template> has no per-item binding channel (ADR 0024 sub-design 5).`,
 					),
 				)
-			else
+			else if (!isServerEvaluable(node.expr, ctx.serverKnown))
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						ctx.source,
 						node.node.start,
-						`Expressions inside a reactive-list @for body must be lazy (&{${itemName}}) — server-data interpolation {${node.exprText}} has no per-item client binding.`,
+						`{${node.exprText}} inside a reactive-list @for body ${notBuildTime(node.expr)} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5).`,
 					),
 				)
 			return
@@ -684,12 +701,17 @@ const validateListBody = (
 						'ref={…} inside a reactive-list @for body (per-item element refs are bindItem-scoped, not host-scoped)',
 					),
 				)
+			else if (
+				attr.kind === 'server' &&
+				isServerEvaluable(attr.node, ctx.serverKnown)
+			)
+				continue
 			else
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						ctx.source,
 						node.node.start,
-						`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list @for body — per-item attribute bindings are outside the milestone-3 subset`,
+						`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list @for body${attr.kind === 'server' ? ` ${notBuildTime(attr.node)}` : ''} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5, LT-215).`,
 					),
 				)
 		}
@@ -701,7 +723,7 @@ const validateListBody = (
 			diagnostic.unsupported(
 				ctx.source,
 				output.node.start,
-				`A reactive-list @for body must render the item exactly once via &{${itemName}} — that hole is the template slot the client fills (found ${holes}).`,
+				`A reactive-list @for body must render the item exactly once via {${itemName}} — that hole is the template slot the client fills (found ${holes}).`,
 			),
 		)
 	}

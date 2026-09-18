@@ -141,7 +141,9 @@ const listboxEntries = [
 // record (`i18n: i18nRecord("form-listbox", …)`), which imports './i18n' —
 // write the generated i18n module from the compiled .tsrx entry, the same
 // derivation the real corpus pipeline performs (ADR 0030 sub-design 2).
-await writeI18nModule(generated.path, await collectI18n([listboxEntries[0]]))
+const tsrxListboxEntry = listboxEntries[0]
+if (!tsrxListboxEntry) throw new Error('tsrx listbox entry missing')
+await writeI18nModule(generated.path, await collectI18n([tsrxListboxEntry]))
 
 describe('TSX spike — front-end parity (§4.3)', () => {
 	for (const fx of FIXTURES) {
@@ -279,7 +281,7 @@ describe('TSX spike — §4.4 synthetic shapes through the unmodified analysis',
 
 	test('reactive createList .map lowers to the reconcile plan (unmodified analysis)', () => {
 		const source = `import { createList } from '@zeix/le-truc'
-export function Seeded({ initial }: { initial?: string[] })
+export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLabel: string })
 {
 	const items = createList<string>(initial, { keyConfig: 'item' })
 	expose({})
@@ -289,7 +291,7 @@ export function Seeded({ initial }: { initial?: string[] })
 			<c-el2>
 				<ul data-container>
 					{items.map(item => (
-						<li><span>{item}</span></li>
+						<li aria-label={removeLabel}><span>{item}</span></li>
 					))}
 				</ul>
 			</c-el2>
@@ -308,6 +310,46 @@ export function Seeded({ initial }: { initial?: string[] })
 		// keyed by the list's own keyConfig (no authored key clause needed).
 		expect(component.serverCode).toContain('<template>')
 		expect(component.clientCode).toContain('reconcile(')
+		// LT-215: a server-static attribute inside the reactive-list body is
+		// admitted — folded into the initial items AND baked into the served
+		// template, so cloned items carry the value with no client binding.
+		expect(component.serverCode).toContain(`attr('aria-label', removeLabel)`)
+		expect(component.serverCode).toContain(
+			'aria-label="${esc(String(removeLabel))}"',
+		)
+	})
+
+	test('a server-static attribute in a reactive-list body emits identically on both surfaces (LT-215)', () => {
+		// The .tsrx twin of the synthetic above: same args, same body shape.
+		// The template-baked emission — the load-bearing lines — must be
+		// byte-identical, the anti-drift contract applied to the admitted
+		// class.
+		const tsrxSource = `import { createList } from '@zeix/le-truc'
+export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLabel: string })
+	@{
+		const items = createList<string>(initial, { keyConfig: 'item' })
+		expose({})
+		<>
+			<c-el2>
+				<ul data-container>
+					@for (const item of items) {
+						<li aria-label={removeLabel}><span>{item}</span></li>
+					}
+				</ul>
+			</c-el2>
+			<style>c-el2 { color: red }</style>
+		</>
+	}`
+		const tsrx = compileComponent(tsrxSource, 'seeded.tsrx', new Set(['c-el2']))
+		if (!tsrx.component) throw new Error('tsrx twin must compile')
+		expect(tsrx.diagnostics).toEqual([])
+		// The baked template line is front-end-neutral (emit-server's
+		// listTemplateLines): identical bytes from either parser.
+		const bakedLine = 'aria-label="${esc(String(removeLabel))}"'
+		expect(tsrx.component.serverCode).toContain(bakedLine)
+		expect(tsrx.component.serverCode).toContain(
+			`attr('aria-label', removeLabel)`,
+		)
 	})
 
 	test('statement-context arms are diagnosed — bare client-stmt inside a branch is not expressible', () => {

@@ -40,6 +40,7 @@ import {
 	text,
 } from '../../ast-utils'
 import { diagnostic } from '../../diagnostics'
+import { dependenciesOf, isServerEvaluable } from '../../evaluability'
 import type { ExtractContext, ForIR, SignalIR, TemplateNode } from '../../ir'
 import {
 	type Lowering,
@@ -620,15 +621,27 @@ export const lowerFor = (
 }
 
 /**
- * Validate the reactive-list body shape (ported): statics and event
- * attributes anywhere, exactly one lazy `{item}` hole, no dynamic
- * attributes or refs.
+ * Validate the reactive-list body shape (ported; ADR 0024 sub-design 5,
+ * extended by LT-215): statics and event attributes anywhere, exactly one
+ * lazy `{item}` hole, and — since LT-215 — expressions that classify
+ * SERVER-STATIC (`isServerEvaluable` against `ctx.serverKnown`): they fold
+ * identically into every item per render call, so the extracted template
+ * bakes them at render time. Item-derived expressions and refs stay
+ * rejected — the slot-fill contract has no channel for a per-item value.
  */
 const validateListBody = (
 	ctx: ExtractContext,
 	output: TemplateNode & { kind: 'element' },
 	itemName: string,
 ): void => {
+	const notBuildTime = (node: TsrxNode): string => {
+		const offenders = [...dependenciesOf(node)].filter(
+			name => !ctx.serverKnown.has(name),
+		)
+		return offenders
+			? `reads ${offenders.join(', ')}, which derive per item or client-side`
+			: 'reads impure ambient state'
+	}
 	let holes = 0
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'expr') {
@@ -637,12 +650,20 @@ const validateListBody = (
 				node.expr.type === 'Identifier' &&
 				node.exprText === itemName
 			if (isItemHole) holes++
-			else
+			else if (node.lazy)
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						ctx.source,
 						node.node.start,
-						`Expressions inside a reactive-list map body must be the bare item ({${itemName}}) — the slot fill; other expressions need per-item bindings outside the milestone-3 subset.`,
+						`Lazy children inside a reactive-list map body must be the bare item ({${itemName}}) — the slot fill; {${node.exprText}} derives per item, and the extracted <template> has no per-item binding channel (ADR 0024 sub-design 5).`,
+					),
+				)
+			else if (!isServerEvaluable(node.expr, ctx.serverKnown))
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						`{${node.exprText}} inside a reactive-list map body ${notBuildTime(node.expr)} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5).`,
 					),
 				)
 			return
@@ -660,11 +681,16 @@ const validateListBody = (
 		}
 		for (const attr of node.attrs) {
 			if (attr.kind === 'event' || attr.kind === 'static') continue
+			if (
+				attr.kind === 'server' &&
+				isServerEvaluable(attr.node, ctx.serverKnown)
+			)
+				continue
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
 					node.node.start,
-					`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list map body — per-item attribute bindings are outside the milestone-3 subset`,
+					`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list map body${attr.kind === 'server' ? ` ${notBuildTime(attr.node)}` : ''} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5, LT-215).`,
 				),
 			)
 		}

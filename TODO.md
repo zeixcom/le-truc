@@ -146,8 +146,15 @@ round, scope widened).
   **Check:** the reframed `sim-realm.test.ts` block (byte-stability + `connects === 2` as
   the pinned post-cache behavior) and the SERVER.md/TESTS.md touch-ups.
 
-- [ ] LT-195: Internationalize the corpus's hard-coded accessibility strings (demand check, 2026-09-07). **Depends on LT-173; sequence after LT-193.**
+- [x] LT-195: Internationalize the corpus's hard-coded accessibility strings (demand check, 2026-09-07). **Depends on LT-173; sequence after LT-193.** — reviewed ✓ (Architect, 2026-09-18)
   **Skill:** le-truc-dev
+  **Review (Architect, 2026-09-18):** Approved. Both falsified premises ruled on the
+  record: the `t`-in-reactive-thunk boundary is correct by design (the carrier-span idiom
+  is the sanctioned interim expression of LT-197 option (a), taught in HOST_PROFILE.md),
+  and the reactive-list body gate was over-broad relative to its own invariant — filed as
+  LT-215 and ruled the same day. The `i18n:sync` `""`-placeholder fix is endorsed (the old
+  `?? source` resolution contradicted the sync script's doc and ADR 0030 s5). Tokenbox's
+  seventh string lands with LT-215; the remaining six are final.
   **Context:** Surveyed the 22-component `.tsrx` corpus for user-visible English literals.
   **Demand is real but small and sharply bounded** — 7 strings across 6 components, all of
   them static template attributes or visually-hidden text, all server-rendered, all
@@ -205,7 +212,7 @@ round, scope widened).
   render-level `aria-label="Eingabe leeren"` pin; de translations are real (Eingabe
   leeren / Filtern / Filter leeren / Verringern / Erhöhen / Ziehen), not source echoes.
 
-- [ ] LT-215: Admit server-static expressions inside reactive-list `@for` bodies (LT-195 residue: form-tokenbox's `Remove`). — ruled ✓ (Architect, 2026-09-18): the blanket rejection is a subset-boundary defect, not a designed exclusion
+- [x] LT-215: Admit server-static expressions inside reactive-list `@for` bodies (LT-195 residue: form-tokenbox's `Remove`). — done ✓ (2026-09-18; ruled by the Architect and landed in the same day's implementation)
   **Skill:** le-truc-dev
   **Ruling (Architect, 2026-09-18, owner concur — "clearly seems to be a bug"):** the
   invariant `validateListBody` protects is ADR 0017's slot-fill contract — the extracted
@@ -258,6 +265,27 @@ round, scope widened).
   served `<template>` (pinned); an item-derived attr still rejects, at the reworded
   message; tier census 20/2/0 and warning baseline 0 unchanged; parity green; gates
   green (typecheck, `bun test server/tests`, check:tsrx, build:docs, check:links).
+  **Done (2026-09-18):** all five items landed. `validateListBody` in both front ends
+  admits `kind: 'server'` attrs and non-lazy expr children passing
+  `isServerEvaluable(node, ctx.serverKnown)` (which also keeps the impure-ambient hard
+  error in force); the rejections now name the offending reads, and the stale `&{item}`
+  sigil spellings in the touched messages modernized — copy handed to LT-189 item 7.
+  `listTemplateLines` bakes admitted attrs as `{ expr }` Parts
+  (`aria-label="${esc(String(t.remove))}"`) and text children as `esc(String(…))`
+  pushes, with `used.add('esc')` wiring the runtime import; the in-place path needed no
+  change, as ruled. Citation drift fixed in the touched comments (ADR 0024 s5, was
+  cited as 0023). Tokenbox declares `remove: 'Remove'`, sync wrote the placeholders
+  (6 keys → manifest confirmed), de carries `Entfernen`; the i18n fixture pins cover
+  the record AND both render sites, and the sim-driver tokenbox snapshot is
+  byte-unchanged at en — the baked `'Remove'` equals the old static literal, exactly
+  the no-drift property the ruling predicted. New pins: diagnostics.test.ts admission +
+  item-derived rejection (naming the offender), parity's extended §4.4 synthetic +
+  the cross-surface baked-line pin.
+  **Verification (run):** `check:tsrx` exit 0, warning baseline 0, tier census 20/2/0,
+  translation census 0 gaps; `typecheck` exit 0; `bun test server/tests` 1564 pass /
+  0 fail (1 pre-existing inter-test error, LT-207 family); parity green incl. the new
+  cross-surface pin; `build:docs` green, simulation pass 2/8/20 unchanged; biome clean;
+  `check:links` 410 green.
 
 - [ ] LT-196: Report orphaned catalog keys in the translation census (ADR 0030 s5 gap).
   **Skill:** docs-server-dev
@@ -413,6 +441,14 @@ round, scope widened).
      section, LE_TRUC_COMPILER.md §106/§184, and `.agents/skills/le-truc/references/errors.md`
      were updated in the bump commit — verify voice consistency across them. Batch
      with items 2–5.
+  7. **The LT-215 reactive-list body diagnostics** (2026-09-18): `validateListBody` in
+     both front ends reworded — the admitted server-static class dropped the
+     "milestone-3 subset" phrasing for a statement of what the slot-fill contract
+     actually reserves (per-item values), and the rejections now name the offending
+     reads (`reads item, which derive per item or client-side`). The stale `&{item}`
+     sigil spellings in the touched messages modernized to `{item}`. Final copy over
+     the drafts in `frontend/tsrx/lower-template.ts` and `frontend/tsx/lower-tsx.ts`;
+     batch with items 2–6 so the compiler families read as one voice.
 
 ---
 
