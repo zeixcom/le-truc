@@ -814,6 +814,302 @@ round, scope widened).
 
 ---
 
+## P2b — Compiler partitioning & hardening (external review, 2026-09-18)
+
+**Provenance:** [COMPILER_REVIEW.md](COMPILER_REVIEW.md) — an external review of all of
+`server/compiler/` (46 modules, ~21.9k lines) by Claude Opus, evaluated by the Architect
+2026-09-18. **The review held up:** all four correctness findings (§1) were independently
+verified against the source (two by direct read — the `offenders`-array truthiness bug at
+`frontend/tsx/lower-tsx.ts:641`, the `resolveComposeRefs` IR mutation at
+`analysis/compose-refs.ts:118`; the rest via a verification pass), and a 16-claim structural
+spot-check came back 13 clean / 3 with minor count drift and zero refutations
+(`emitServerModule` is ~1,076 lines, not 993; the estree walks number 12, not ~11; the
+drivers' early-exit literal appears 6× per file, multi-line). Task text cites the review's
+section numbers; its file:line citations were accurate at capture except where noted —
+`front-end.ts`/`emit-server.ts` line numbers drift while LT-194's (now-landed, pending
+review) edits sit uncommitted in this tree (re-grep before trusting them in those files).
+
+**Sequencing:** **LT-221 first** (defects). LT-224–LT-234 are behaviour-preserving mechanical
+moves verified against the existing golden + parity suites — interleavable with feature
+work; the only hard edges are **LT-233 before LT-218 (P2)** and wave ordering (LT-228 before
+LT-229/LT-232, which name the files it creates). **LT-235 is a grilling session, not
+cleanup.** **No ADR is owed for LT-221–LT-234** — nothing there changes a documented
+decision (review §3; Architect concurs). **Declined with the review, recorded so future
+reviews don't re-propose:** memoising the §2.11 redundant traversals (not a measured
+problem; a second implicit-consistency contract is the disease being treated) and
+restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). The review's
+"LT-222+" numbering assumed LT-221 was taken; it wasn't.
+
+- [ ] LT-221: Fix the compiler's verified correctness defects (review §1).
+  **Skill:** le-truc-dev
+  **Context:** All verified at evaluation. (1) `notBuildTime` in
+  `frontend/tsx/lower-tsx.ts:637` returns `offenders ? … : 'reads impure ambient state'` —
+  an ARRAY is always truthy, so the impure arm is unreachable and an empty offender list
+  prints `reads , which derive per item or client-side` (the `.tsrx` twin,
+  `lower-template.ts:646`, joins first and is correct — port its shape). Pin: a
+  reactive-list expr reading `Date.now()` draws the impure message on `.tsx`. (2) `first()`
+  reason strings interpolate UNESCAPED into generated client source (`emit-client.ts:267`
+  and `:332–338`; `naming.ts:66` carries the author's message verbatim; ~15 further
+  `'<…>'` interpolation sites in the file): `first('input', "the user's name")` emits a
+  syntax error in the generated module, and arbitrary content is source injection into
+  build output. `emit-server.ts` already `JSON.stringify`s the equivalent positions —
+  point-fix the same way (the `jsString()` consolidation is LT-234). Pins: apostrophe,
+  backslash, and `', evil(), '` payloads compile and round-trip. (3) Quoted class-map keys
+  emit dot access (`emit-client.ts:452` and `:212`): `class={() => ({ 'has-error': invalid
+  })}` generates `(…).has-error` — bracket access with an escaped key; same pin shape.
+  (4) `resolveComposeRefs` MUTATES the `ComponentIR` (`analysis/compose-refs.ts:118` pushes
+  a `ref` attr), so a second `analyzeClient` over the same IR trips the `claimed` check at
+  `:105` and emits a spurious `firstSelectorDuplicate`; the ordering contract lives only in
+  a comment in `analysis/plan.ts`. Fix: return the resolved attachments and apply once at
+  the caller; pin idempotence. (5) The `.tsx` `@for` reserved-name check omits the
+  `keyName === 'first'` arm its `.tsrx` twin has (`lower-tsx.ts:738` vs
+  `lower-template.ts:766`) — add it; pin both surfaces.
+  **Also settle the §1.4 adjacent gap:** `countForSelector` (`analysis/selectors.ts:197`)
+  includes `pendingChildren` while `allComposeNodes`/`composeNodesBySource`
+  (`:291`/`:317`) omit them — write the probe (a compose site inside a `@pending` arm
+  against the duplicate-`id` check at `effects.ts:1629`); if reachable, align with
+  `countForSelector` or rule why excluded, in the handoff.
+  **Verification:** goldens + parity byte-identical for the corpus (every fix touches an
+  error arm or currently-broken output; if any golden moves, investigate — don't re-pin
+  blind); warning baseline 0; tier census 20/2/0; gates green (typecheck,
+  `bun test server/tests`, check:tsrx, build:docs).
+
+- [ ] LT-222: Delete the compiler's dead surface (review §2.10); fix stranded docs; honest `sim/` labels (§2.12).
+  **Skill:** le-truc-dev
+  **Context:** All verified by grep at evaluation. Delete: `duplicatedChannelArg`
+  (`analysis/reactivity.ts:90` — zero callers; the inline twin at `first-refs.ts:310`
+  stays); `QueryPlan.explicitType` (threaded through 5 signatures, no caller ever supplies
+  a value — `naming.ts:74`'s conditional write of the never-truthy param goes with it);
+  `parserImport` (`emit-client.ts:61`, identity fn used only as a truthiness test);
+  `queryName` (`emit-client.ts:68`, returns its own argument in both branches); the unused
+  `lineOf` import (`analysis/effects.ts:21`); `TopEffectPlan.async.okText`
+  (`analysis/plan.ts:343`, only ever `true`); `ParserKind`'s `null` arm (`plan.ts:36`);
+  the unreachable `AssignmentExpression`/`SequenceExpression` branches and with them dead
+  `flattenSequence` (`to-estree.ts`); the exported-never-imported `lowerComposeElement`
+  (`frontend/tsx/lower-tsx.ts:874`); `returnTypeOfFunction`/`typeAnnotationForBinding`/
+  `typeOfAnnotation` exports used only internally (`infer-type.ts`);
+  `newerGrammarHint`'s already-rejected `await` entry (`frontend/tsrx/compiler.ts:81`);
+  `SIM_PATCH_TABLE` (test-only) and `PROTOTYPE_PATCHES` (empty array with a live 23-line
+  applier in `sim/realm.ts:482`, a re-export, and ONE caller outside the compiler —
+  `scripts/lib/substrate-probe.ts:287`; handle it, don't break the probe).
+  **Ruled: KEEP the retired-spelling tombstones** — `LEGACY_PASS_ATTR`/`LEGACY_HTML_ATTR`
+  (classify-attributes.ts:111/118) and the `onText` sigil hook (its sole consumer
+  diagnoses the retired `&{expr}` via LIVE TSRX018, whose fix-it LT-189 item 6 is still in
+  copy): they power a live diagnostic for pre-0.2 spellings, not dead code; revisit at
+  packaging. Consolidate: `serverKnown` is computed identically at `front-end.ts:1191` and
+  `:1660` — compute once and thread (divergence would make lowering and downstream
+  silently disagree). Docs: `indent.ts`'s module doc names a nonexistent `pushStatement`
+  and mislocates `reindent`; move the four stranded doc blocks onto their subjects
+  (`ir.ts:51`, `analysis/reactivity.ts:54`, `first-refs.ts:416`, `analysis/effects.ts:1235`).
+  While in `sim/patch-table.ts`, fix §2.12's dishonest labels: `CAPABILITY_PATCHES` is a
+  classifier input (read by `tier.ts`), never applied; `SIM_PATCH_TABLE`'s "whole table"
+  comment; `sim/index.ts`'s substrate-swapping claim vs `SimulationRealm`'s public jsdom
+  type (`realm.ts:155`) — fix the comments/types, not the design.
+  **Verification:** `bun run typecheck` first (deleted exports surface there — bun test
+  does not type-check), `bun test server/tests` green, goldens + parity byte-identical,
+  warning baseline 0, census 20/2/0; grep confirms each deleted name is gone repo-wide.
+
+- [ ] LT-223: `diagnostics.ts` hygiene — sort by code, retire TSRX031, named `RoutingSignalOrigin`, `invalidSource` line numbers.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.9. The 54-factory object is unordered (TSRX039 sits between 008
+  and 009) — sort by code and band-comment the groups; the cheapest anti-drift win in the
+  file. **Retire `TSRX031`** from the `DiagnosticCode` union (no factory, no emitter; the
+  prose mentions at `analysis/effects.ts:790/929` go too) — **a TSRX code is being
+  retired: Tech Writer reviews the removal** per the error-message lifecycle (a deleted
+  code leaves references behind; sweep
+  `.agents/skills/le-truc/references/errors.md` and docs even though nothing ever emitted
+  it). Move the `TSRX004/013/043` spellings out of the union into a named
+  `RoutingSignalOrigin` union in `analysis/tier.ts` (they exist only to document that
+  separate `origin` union). `formContextMismatch` (`diagnostics.ts:1173`) takes
+  `source: string` it never uses — drop the param. `invalidSource` (`:192`) hard-codes its
+  line to `undefined`, so every `export const i18n` error reports NO line number despite
+  offsets being in scope at callers (e.g. `front-end.ts:581`) — thread the offset and give
+  the line; pin the improved output. Not scheduled from the same section (recorded for
+  Tech Writer's next compiler copy batch): the TSRX005/006/007/009 `what`-passthrough
+  style drift and the `DiagnosticSite` parameter collapse.
+  **Verification:** `bun test server/tests` (the 2.6k-line diagnostics suite is the
+  harness), typecheck, warning baseline 0, census 20/2/0.
+
+- [ ] LT-224: Split `front-end.ts` into the six modules of review §2.2.
+  **Skill:** le-truc-dev
+  **Context:** The single highest-value move in the review: verbatim module scans
+  (~197–417), params contract (~565–673), setup extraction (~692–1161), template-output
+  resolution (~1233–1400), post-lowering validation (~1482–1601), IR assembly
+  (~1610–1745) — nothing couples them except `SetupExtraction`, so the split is file
+  surgery, and `extractSetup` becomes the front end's only remaining monster. **Sequence
+  after LT-194 lands and is reviewed** (its edits to `front-end.ts` were uncommitted in
+  this tree at scheduling, 2026-09-18). `ExtractContext`'s relocation is wave 4 (LT-235)
+  — do not smuggle it in here. Check `LE_TRUC_COMPILER.md`/`HOST_PROFILE.md` for
+  file-path references to `front-end.ts`; run check:links after.
+  **Verification:** goldens + parity byte-identical; full gates green.
+
+- [ ] LT-225: Lift `emitServerModule`'s four closures to module scope behind an `EmitContext`.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.1. `emit`/`emitElement`/`emitFor`/`emitListFor` are already
+  lexically separate, close over 7 variables, and sit inside a ~1,076-line function (the
+  review's 993 undercounted — the file ends inside the function). Pass an explicit context
+  instead; the async-boundary and compose branches may split out of `emit` in the same
+  move if they lift cleanly.
+  **Verification:** goldens byte-identical (the whole point — the golden suite is the
+  proof), full gates green.
+
+- [ ] LT-226: Split `runEffects` at its own comment bands; dedupe the lazy-text gate.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.1/§2.5. Construct lowering (~232–607), control-flow addressing
+  (~657–1309), compose (~1327–1393), and the duplicate-compose-`id` *validation*
+  (~1622–1647 — shares nothing with effect planning) become units with `ctx` passed
+  explicitly instead of captured by 22 nested closures. Extract the ~70-line lazy-text
+  emission gate cloned at `effects.ts:542`/`:1483` — the comment at `:1519` records that
+  the copies ALREADY drifted (the nested path tolerates violations silently): converge on
+  the strict behavior only if the corpus holds warning baseline 0; otherwise keep the
+  tolerance, stated once in the shared helper. Lift the compose-`id` scan as
+  `validateComposeIds`.
+  **Verification:** goldens + parity byte-identical; warning baseline 0; census 20/2/0.
+
+- [ ] LT-227: Split `runLoops` and `runHarvest` at their existing pass banners.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.1. `runLoops` (433 lines) is two unrelated algorithms separated
+  by a `// --- Pass 1b` banner → `runEachLoops`/`runReconcileLoops`. `runHarvest` (628)
+  Pass 2 (~240–378) already produces the `Site[]` + `thunkRendered` that Pass 3 consumes
+  — make it a return type: `collectRenderSites`/`planHarvests`.
+  **Verification:** goldens + parity byte-identical; full gates green.
+
+- [ ] LT-228: Split `ast-utils.ts` into `vocabulary.ts` + `ast-utils.ts`.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.2 tail. A ~420-line name-table module (~17–438) and an
+  AST-helper module (~442–765) share one file, and DOM knowledge
+  (`DIRTY_FLAG_CONTROL_TAGS`) that is emitter business sits in the shared layer — move it
+  emitter-side. Primes LT-232 (derive the subsets) and gives LT-229/LT-231 homes named
+  for what they hold.
+  **Verification:** goldens + parity byte-identical; typecheck (import paths move); full
+  gates green.
+
+- [ ] LT-229: One `walkEstree(node, visit, { skip })` for the twelve hand-rolled estree walks.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.4/§3 item 10. Twelve `Object.entries` walks (`front-end.ts` ×3,
+  `analysis/reactivity.ts`, `evaluability.ts` ×3 — compiler root, not `analysis/`,
+  `analysis/tier.ts`, `ast-utils.ts`, `frontend/tsrx/compiler.ts`, `analysis/harvest.ts`
+  ×2) carry five different skip-lists; only `ast-utils.ts:676` skips type positions
+  today. The shared walk takes the skip-list as a parameter; EACH site migrates
+  preserving its current behavior, and converging divergent answers (notably: do we
+  descend into type positions?) is an explicit per-site decision with a test or a stated
+  no-op rationale — silently converging could change analyses. Migrating
+  `reportLeTrucImportMismatch`'s inner visit (`front-end.ts`) onto the shared walk fixes
+  a latent bug for free: the copy lacks the `ForStatement`/`ForOfStatement`/`CatchClause`
+  cases `freeIdentifiers` later grew — pin the corrected behavior.
+  **Verification:** goldens + parity byte-identical; the import-mismatch pin; full gates.
+
+- [ ] LT-230: Route the sixteen `TemplateNode` walks through `walk.ts`; settle the `pendingChildren` policy once.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.4/§3 item 11. Sixteen hand-rolled template walks against a
+  `walk.ts` whose authorized-exception list (`walk.ts:11`) is shorter than the actual
+  list; five exclusivity-aware cascades in `analysis/selectors.ts` alone disagree on
+  max-vs-sum and pending-arm handling — the soil the §1.4 adjacent gap grew in. Route
+  them through `walk.ts` (keeping per-site aggregation semantics), narrow the
+  authorized-exception list to what genuinely remains (walks whose recursion IS the
+  semantics), and record ONE policy for `pendingChildren` arms, informed by LT-221's
+  probe.
+  **Verification:** goldens + parity byte-identical; the LT-221 probe still pins; full
+  gates.
+
+- [ ] LT-231: Collapse the hand-maintained compiler vocabularies (review §2.5).
+  **Skill:** le-truc-dev
+  **Context:** Five divergent "names the client can resolve" lists (`analysis/plan.ts:546`;
+  `analysis/loops.ts:98` — missing `plainLocalNames`/`clientLeTrucNames`/`isPending`;
+  `loops.ts:384`; `analysis/harvest.ts:579`; the inverse at `plan.ts:614`) plus six
+  copies of the user-facing message string; four subtly different "is this a signal read"
+  answers (`harvest.ts:38`, `analysis/reactivity.ts:160`, `harvest.ts:163`,
+  `ast-utils.ts:461`); `refOf` defined at `effects.ts:633` then hand-inlined at
+  `:983`/`:1603`; three "element has its own client construct" versions, one
+  (`loops.ts:194`) a hand-written kind list missing `style-map`/`pass`/reactive
+  `html`/`server`+`bindsProp`. One function per question. Where convergence changes an
+  answer (the `loops.ts` lists look like false-rejection bugs), the corpus must stay
+  byte-identical and warning-0 — pin each converged answer on synthetic fixtures so the
+  fix is visible.
+  **Verification:** goldens + parity byte-identical; warning baseline 0; census 20/2/0;
+  synthetic pins for each converged answer.
+
+- [ ] LT-232: Derive the name-set subsets; extend the parity test.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.5/§3 item 13. `REAL_EXPORT_NAMES` duplicates
+  `SIGNAL_CONSTRUCTORS` and `PARSER_FACTORIES` entry-for-entry (its own comment admits
+  "hand-maintained against the barrel"); `MUTABLE_SIGNAL_CONSTRUCTORS` is a hand-copied
+  subset living in `front-end.ts:427`. Derive subsets from supersets; relocate the
+  mutable set beside `SIGNAL_CONSTRUCTORS` (post-LT-228: into `vocabulary.ts`); extend
+  `globals.test.ts`'s parity test (only `FACTORY_CONTEXT_MEMBER_NAMES` has one) to pin
+  every set against the `@tsrx/core` barrel.
+  **Verification:** typecheck; the extended parity test; goldens + parity
+  byte-identical.
+
+- [ ] LT-233: `SurfaceAdapter` + shared `runFrontEnd` — collapse the copied front-end drivers. **GATES LT-218 (P2): land before it.**
+  **Skill:** le-truc-dev
+  **Context:** Review §2.3/§3 item 14. `compileSource` (`frontend/tsrx/compiler.ts:199`)
+  and `compileSourceTsx` (`frontend/tsx/compiler-tsx.ts:106`) are the same eight-step
+  script — the setup slice, `decl.body.type`, three message strings, and a
+  verbatim-duplicated ~200-character async-rejection message are the only differences;
+  the early-exit literal repeated 6× per driver collapses into the shared driver. Same
+  for the `lowerFor`/`lowerListFor`/`validateListBody` triples: header parsing genuinely
+  differs, the program after `itemName`/`iterableName` is one — this copied seam is
+  where the §1.1 and §1-(5) drifts happened. Shape: a `SurfaceAdapter`
+  (`componentBodyType`, `splitSetupAndOutput`, `stylesheetOf`, `outputShapeLabel`,
+  `lowerChildren`, `lowerElement`, `preScans`) + `runFrontEnd(ctx, ast, adapter)`; each
+  `compileSource*` becomes parse + adapter + call. Fold `SurfaceWording`
+  (`lower-shared.ts:56` — three strings while ~30 surface-specific fragments sit inline
+  at call sites) into one complete surface vocabulary; the current version is worse than
+  nothing (anti-drift theatre). The per-item `ref` message drift (.tsx generic vs .tsrx
+  explicit rejection) closes here; final wording batches with the LT-189 compiler
+  families.
+  **Verification:** goldens + parity byte-identical (the parity suite is the standing
+  cross-surface contract); warning baseline 0; census 20/2/0; full gates green.
+
+- [ ] LT-234: Shared code-generation kit — `CodeBuilder`, `jsString()`/`jsTemplate()`, `HtmlWriter`, `commonIndent()`.
+  **Skill:** le-truc-dev
+  **Context:** Review §2.8/§3 items 15–16. `emit-server.ts` interpolates `${tab(depth)}`
+  ~60 times with every call site hand-managing depth; `emit-client.ts` runs 33
+  consecutive `append` calls with trailing commas written as string suffixes; escaping is
+  three functions plus bare `JSON.stringify` plus raw interpolation — the inconsistency
+  behind §1.2/§1.3, which LT-221 point-fixed and this task closes structurally (migrate
+  those point-fixes onto `jsString()`). Extract: a `CodeBuilder` owning
+  lines/depth/open/close (making the three copied `cursor.offset` bookkeeping sites —
+  `emit-client.ts:227/279/611` — an invariant); the `jsString`/`jsTemplate` pair as THE
+  sanctioned way to put an author string into generated source; an `HtmlWriter`
+  generalising the existing private `Part[]`/`pushArgument` model
+  (`emit-server.ts:70/79`); and `commonIndent()` shared by `spans.ts`'s twin
+  computations (differing only in whether line 0 participates — make it a parameter).
+  Give the server emitter the client's reserved-name policy: it mints
+  `__html`/`__arm${n}`/`__async${n}`/`__children${n}`/`__key` with no collision check
+  against author names (an author `const __html` shadows the buffer and confuses
+  `retainReferenced`'s token match). Channel/tier note (ADR 0028): compiler-internal
+  naming policy — it renames, it does not error; no new runtime check, no new TSRX code.
+  **Verification:** goldens byte-identical for the corpus (escaping output must not
+  change for legal inputs); a pin that an author `__html` no longer collides; full gates
+  green.
+
+- [ ] LT-235: Wave-4 type-level design session — IR discriminated unions, pass contracts (review §2.6–2.7). **Grilling first; produces an ADR + tasks.**
+  **Skill:** architect
+  **Context:** The one band that is design work, not cleanup — it changes the IR contract
+  `LE_TRUC_COMPILER.md` §4 documents, so it wants an ADR (via adr-keeper) and a Tech
+  Writer pass on that doc. Grill before scheduling implementation: (a)
+  `ForIR.listSignal: string | null` discriminating two entirely different lowerings →
+  `ServerForIR | ReactiveForIR`; (b) `try.pendingChildren: TemplateNode[] | null`
+  discriminating error-vs-async boundary (with the immediate cast back at
+  `effects.ts:1081`); (c) `SignalIR.init` meaning different things per `constructor`;
+  (d) consolidating the four parallel `first()` collections on `ComponentIR`
+  (`refReasons`, `unmatchedOptionalRefs`, `deferredComposeRefs`, `optionalRefs` — a Map,
+  two differently-shaped arrays, a Set) and the seven parallel `expose()` fields; (e)
+  relocating `ExtractContext` (front-end-only mutable state WITH function members) out of
+  `ir.ts`, restoring its "no runtime values" leaf property; (f) typed pass contracts for
+  `AnalysisContext` (`analysis/plan.ts:389`) — loops-before-harvest, byte-stable query
+  registration order, `composeRegistry === undefined` silently disabling a pass,
+  `ambiguousComposeNodes` as the already-reported channel — the hardest item: failure
+  modes today are silent WRONG TIERS, not errors. **Coordinate with LT-212** (P4:
+  `@for`'s `@empty` arm adds ForIR surface) — this redesign should land first or
+  LT-212's shape gets reshaped under it; LT-212 is not urgent.
+  **Deliverable:** ADR, amended LE_TRUC_COMPILER.md §4, and LT-236+ implementation tasks
+  with the channel/tier fields the ADR 0028 process requires.
+
+---
+
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
 - [ ] LT-207: Stop the simulation realm's dependency-wait timers from leaking past teardown (LT-202 NOTES residue).
