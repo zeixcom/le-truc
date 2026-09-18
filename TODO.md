@@ -1149,15 +1149,29 @@ restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into LT-222). T
   proven at HEAD c11f22bf during LT-222); check:links 412 green; biome clean on all 10
   touched TS files.
 
-- [ ] LT-225: Lift `emitServerModule`'s four closures to module scope behind an `EmitContext`.
+- [x] LT-225: Lift `emitServerModule`'s four closures to module scope behind an `EmitContext` — done ✓ (2026-09-18).
   **Skill:** le-truc-dev
-  **Context:** Review §2.1. `emit`/`emitElement`/`emitFor`/`emitListFor` are already
-  lexically separate, close over 7 variables, and sit inside a ~1,076-line function (the
-  review's 993 undercounted — the file ends inside the function). Pass an explicit context
-  instead; the async-boundary and compose branches may split out of `emit` in the same
-  move if they lift cleanly.
-  **Verification:** goldens byte-identical (the whole point — the golden suite is the
-  proof), full gates green.
+  **Landed:** the five closures — `emit`/`emitElement`/`emitFor`/`emitListFor` plus
+  `listTemplateLines` (called only from `emitListFor`) — are module-scope functions
+  taking an explicit `EmitContext` (the ten pieces of state they closed over:
+  `component`, `composeRegistry`, `lines`, `used`, `composeImports`, the mutable
+  `buffer`/`armCounter`/`childrenCounter`/`usedI18nRecord`/`pluralTypeExpr`,
+  `templateQueue`, `foldScope`; their declaring comments moved onto the type's fields).
+  The async-boundary and compose branches split out of `emit` as `emitAsyncBoundary`
+  and `emitCompose` (they lifted cleanly, per the task's license) — `emit` is now a
+  ~200-line dispatcher. `tab` moved to module scope beside `tplEscape`. In
+  `emitServerModule` the tail destructures the four reference-stable collections
+  (`lines`/`used`/`composeImports`/`templateQueue`) — only identity-stable mutation,
+  so the ~600-line assembly tail is diff-untouched — while the mutable scalars stay
+  ctx-only (`ctx.usedI18nRecord` is its one tail read). Options jsdoc's "`emit` never
+  needs to handle a missing entry" now says `emitCompose`. No error copy touched — no
+  Tech Writer handoff. Async-boundary emission is golden-covered (form-listbox's
+  `@pending`), compose by form-combobox/form-listbox compose sites.
+  **Verification (run):** goldens byte-identical (the task's whole point — generated
+  dir git-diff-clean after regeneration); typecheck/tsc exit 0; `bun test server/tests`
+  1632 pass / 0 fail / 1 error (the pre-existing LT-207 tier-corpus leak); check:tsrx
+  baseline 0, census 20/2/0 (only the pre-existing form-spinbutton tsc failure);
+  check:links 412 green; biome clean.
 
 - [ ] LT-226: Split `runEffects` at its own comment bands; dedupe the lazy-text gate.
   **Skill:** le-truc-dev

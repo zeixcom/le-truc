@@ -68,13 +68,79 @@ export type EmittedServerModule = {
 }
 
 type ElementNode = Extract<TemplateNode, { kind: 'element' }>
+type TryNode = Extract<TemplateNode, { kind: 'try' }>
+type ComposeNode = Extract<TemplateNode, { kind: 'compose' }>
 type Part = { static: string } | { expr: string }
+
+/**
+ * The template emitters' shared state (LT-225): what `emit`/`emitElement`/
+ * `emitFor`/`emitListFor` used to close over inside `emitServerModule`,
+ * threaded explicitly so the emitters can live at module scope. The scalar
+ * fields are reassigned in place by the emitters — the save/restore
+ * discipline around `buffer` and `pluralTypeExpr` and the unique-buffer
+ * counter sequences are unchanged from the closure era (the golden suite
+ * is the proof).
+ */
+type EmitContext = {
+	component: ComponentIR
+	/**
+	 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
+	 * source path (ADR 0023 sub-design 10). A compose node whose `source`
+	 * is missing here was already diagnosed as an error upstream
+	 * (`index.ts`), so `emitCompose` never needs to handle a missing entry.
+	 */
+	composeRegistry: ReadonlyMap<string, RegistryEntry> | undefined
+	/** The render function's statement lines, in emission order. */
+	lines: string[]
+	/** Runtime harness names referenced by the emitted code → import line. */
+	used: Set<string>
+	/** Composed component name → generated server module specifier. */
+	composeImports: Map<string, string>
+	/**
+	 * The current push target: `__html` normally; @try arms render into an
+	 * isolated `__arm` buffer so a mid-arm throw cannot leak partial markup
+	 * into the output (the catch arm renders its own fresh buffer), and
+	 * composed elements' children (LT-018) render into their own uniquely
+	 * named buffers — a nested arm must never shadow its enclosing one.
+	 */
+	buffer: string
+	/** Unique suffix counters for @try arm / composed-children buffers. */
+	armCounter: number
+	childrenCounter: number
+	/**
+	 * Set when a compose site supplies a child's reserved `i18n` record
+	 * (ADR 0030 sub-design 2): pulls the `i18nRecord` import into the module.
+	 */
+	usedI18nRecord: boolean
+	/**
+	 * The innermost enclosing `truc:case-type` expression (LT-173 step 7) —
+	 * declared on a case element itself or any ancestor, evaluated per
+	 * render call so a dynamic plural configuration prunes tightly in both
+	 * states. Null ⇒ the union fallback inside `pluralCategories`.
+	 */
+	pluralTypeExpr: string | null
+	/**
+	 * Extracted reactive-list templates, one pending queue per open element:
+	 * `<template>` is emitted after its container's close tag (outside the
+	 * reconciled container's children — ADR 0017 removes unkeyed children).
+	 */
+	templateQueue: string[][]
+	/**
+	 * LT-173 step 6: the render-scope names a host-derived fold may leave in
+	 * a spliced thunk — computed once per module, the same set the analyzer's
+	 * TSRX034 check passes to `hostDerivedFold` (the two must agree).
+	 */
+	foldScope: ReadonlySet<string>
+}
 
 /* === Internal Functions === */
 
 /** Escape a static segment for use inside a generated template literal. */
 const tplEscape = (s: string): string =>
 	s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
+
+/** Generated statement indentation at `depth` (one tab per level). */
+const tab = (depth: number) => '\t'.repeat(depth)
 
 /** Render push parts as one `__html.push(...)` argument. */
 const pushArgument = (parts: Part[]): string => {
@@ -244,6 +310,657 @@ const hostDerivedExpr = (
 	return `(${spliced})()`
 }
 
+/**
+ * The extracted `<template>`: statics render, the hole becomes a slot,
+ * and server-static expressions (LT-215 — admitted by validateListBody)
+ * are baked in at render time: the template is emitted per render call,
+ * so each locale's folded strings ride along to every cloned item.
+ */
+const listTemplateLines = (
+	ctx: EmitContext,
+	loop: ForIR,
+	depth: number,
+): string[] => {
+	const out: string[] = [`${tab(depth)}${ctx.buffer}.push('<template>')`]
+	const shape = (node: TemplateNode, atDepth: number): void => {
+		if (node.kind === 'text') {
+			out.push(
+				`${tab(atDepth)}${ctx.buffer}.push(${JSON.stringify(node.value)})`,
+			)
+			return
+		}
+		if (node.kind === 'expr') {
+			if (
+				node.lazy &&
+				node.expr.type === 'Identifier' &&
+				node.exprText === loop.itemName
+			)
+				out.push(`${tab(atDepth)}${ctx.buffer}.push('<slot></slot>')`)
+			else if (!node.lazy) {
+				ctx.used.add('esc')
+				out.push(
+					`${tab(atDepth)}${ctx.buffer}.push(esc(String(${node.exprText})))`,
+				)
+			}
+			return
+		}
+		// Statics and server-static expressions only — validateListBody
+		// rejected everything else, and events/refs never render
+		// server-side.
+		if (node.kind !== 'element') return
+		const parts: Part[] = [{ static: `<${node.tag}` }]
+		for (const attr of node.attrs) {
+			if (attr.kind === 'static') {
+				if (attr.value === null) parts.push({ static: ` ${attr.name}` })
+				else
+					parts.push({
+						static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
+					})
+			} else if (attr.kind === 'server') {
+				// esc() escapes quotes too, so the value is safe inside the
+				// double-quoted attribute the static parts open and close.
+				ctx.used.add('esc')
+				parts.push({ static: ` ${attr.name}="` })
+				parts.push({ expr: `esc(String(${attr.exprText}))` })
+				parts.push({ static: '"' })
+			}
+		}
+		parts.push({ static: '>' })
+		out.push(`${tab(atDepth)}${ctx.buffer}.push(${pushArgument(parts)})`)
+		for (const child of node.children) shape(child, atDepth)
+		if (!isVoidElement(node.tag))
+			out.push(`${tab(atDepth)}${ctx.buffer}.push('</${node.tag}>')`)
+	}
+	shape(loop.output, depth + 1)
+	out.push(`${tab(depth)}${ctx.buffer}.push('</template>')`)
+	return out
+}
+
+/**
+ * Reactive `@for` over a declared List (ADR 0023 sub-design 5): initial
+ * keyed items render in place (adopted children are complete — values, no
+ * slot markers) with `data-key` from the shim's cause-effect-parity key
+ * generation, and the item shape is extracted as a sibling `<template>`
+ * whose `&{item}` hole becomes a `<slot>` marker. `validateListBody`
+ * (compiler) already proved the body is statics + events + the one hole.
+ */
+const emitListFor = (
+	ctx: EmitContext,
+	loop: ForIR,
+	scope: ReadonlySet<string>,
+	depth: number,
+): void => {
+	const keyVar = loop.keyName ?? '__key'
+	const loopScope = new Set(scope)
+	loopScope.add(loop.itemName)
+	if (loop.keyName) loopScope.add(keyVar)
+	ctx.lines.push(
+		`${tab(depth)}for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
+	)
+	const dataKey: AttributeIR = {
+		kind: 'server',
+		name: 'data-key',
+		exprText: keyVar,
+		node: loop.node,
+	}
+	emitElement(ctx, loop.output, loopScope, depth + 1, [dataKey])
+	for (const child of loop.output.children)
+		emit(ctx, child, loopScope, depth + 1)
+	if (!isVoidElement(loop.output.tag))
+		ctx.lines.push(
+			`${tab(depth + 1)}${ctx.buffer}.push('</${loop.output.tag}>')`,
+		)
+	ctx.lines.push(`${tab(depth)}}`)
+
+	// Extracted template → the innermost open element's pending queue
+	// (flushed after that element's close tag).
+	const queue = ctx.templateQueue.at(-1)
+	if (queue) queue.push(...listTemplateLines(ctx, loop, depth))
+}
+
+const emitFor = (
+	ctx: EmitContext,
+	loop: ForIR,
+	scope: ReadonlySet<string>,
+	depth: number,
+): void => {
+	if (loop.listSignal) {
+		emitListFor(ctx, loop, scope, depth)
+		return
+	}
+	const bodyText = [
+		...loop.hoisted.map(h => h.initText),
+		...loop.output.attrs.map(a =>
+			'thunkText' in a ? a.thunkText : 'exprText' in a ? a.exprText : '',
+		),
+		...loop.output.children.map(c => ('exprText' in c ? c.exprText : '')),
+	].join(' ')
+	const usesIndex =
+		loop.indexName !== null &&
+		new RegExp(`\\b${loop.indexName}\\b`).test(bodyText)
+	ctx.used.add(usesIndex ? 'entries' : 'items')
+	const loopScope = new Set(scope)
+	loopScope.add(loop.itemName)
+	if (loop.indexName) loopScope.add(loop.indexName)
+	for (const hoisted of loop.hoisted) loopScope.add(hoisted.name)
+	const binding = usesIndex
+		? `const [${loop.indexName}, ${loop.itemName}] of entries(${loop.iterableText})`
+		: `const ${loop.itemName} of items(${loop.iterableText})`
+	ctx.lines.push(`${tab(depth)}for (${binding}) {`)
+	for (const hoisted of loop.hoisted)
+		ctx.lines.push(
+			`${tab(depth + 1)}const ${hoisted.name} = ${hoisted.initText}`,
+		)
+	emitElement(ctx, loop.output, loopScope, depth + 1)
+	for (const child of loop.output.children)
+		emit(ctx, child, loopScope, depth + 1)
+	if (!isVoidElement(loop.output.tag))
+		ctx.lines.push(
+			`${tab(depth + 1)}${ctx.buffer}.push('</${loop.output.tag}>')`,
+		)
+	ctx.lines.push(`${tab(depth)}}`)
+}
+
+const emitElement = (
+	ctx: EmitContext,
+	element: ElementNode,
+	scope: ReadonlySet<string>,
+	depth: number,
+	extraAttrs: AttributeIR[] = [],
+): void => {
+	const parts: Part[] = [{ static: `<${element.tag}` }]
+	let staticClass: string | null = null
+	let classExpr: string | null = null
+	for (const attr of [...extraAttrs, ...element.attrs]) {
+		switch (attr.kind) {
+			case 'static':
+				if (attr.name === 'class') staticClass = attr.value ?? ''
+				else if (attr.value === null) parts.push({ static: ` ${attr.name}` })
+				else
+					parts.push({
+						static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
+					})
+				break
+			case 'server':
+				ctx.used.add('attr')
+				parts.push({ expr: `attr('${attr.name}', ${attr.exprText})` })
+				break
+			case 'reactive': {
+				const mirror = hostPropMirrorExpr(ctx.component, attr.thunk)
+				const derived =
+					mirror === null
+						? hostDerivedExpr(
+								ctx.component,
+								attr.thunk,
+								attr.thunkText,
+								ctx.foldScope,
+							)
+						: null
+				if (mirror !== null) {
+					ctx.used.add('attr')
+					parts.push({ expr: `attr('${attr.name}', ${mirror})` })
+				} else if (derived !== null) {
+					ctx.used.add('attr')
+					parts.push({ expr: `attr('${attr.name}', ${derived})` })
+				} else if (isServerEvaluable(attr.thunk, scope)) {
+					ctx.used.add('attr')
+					parts.push({ expr: `attr('${attr.name}', (${attr.thunkText})())` })
+				}
+				break
+			}
+			case 'class-map':
+				if (isServerEvaluable(attr.object, scope)) {
+					ctx.used.add('cls')
+					classExpr = `cls((${attr.thunkText})())`
+				}
+				break
+			case 'style-map':
+				if (isServerEvaluable(attr.object, scope)) {
+					ctx.used.add('attr')
+					ctx.used.add('styleAttr')
+					parts.push({
+						expr: `attr('style', styleAttr((${attr.thunkText})()) || null)`,
+					})
+				}
+				break
+			case 'event':
+			case 'ref':
+				break
+		}
+	}
+	if (classExpr || staticClass !== null) {
+		const prefix = staticClass
+			? `${escapeAttrValue(staticClass)}${classExpr ? ' ' : ''}`
+			: ''
+		if (classExpr) {
+			parts.push({ static: ` class="${prefix}` })
+			parts.push({ expr: classExpr })
+			parts.push({ static: '"' })
+		} else {
+			parts.push({ static: ` class="${prefix}"` })
+		}
+	}
+	parts.push({ static: '>' })
+	ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(${pushArgument(parts)})`)
+}
+
+/**
+ * A composed element (ADR 0023 sub-design 10): splice the child's
+ * generated `render<Name>()` call inline. Composed elements never had
+ * their diagnostics escalate to an error (index.ts validates every
+ * `node.source` against composeRegistry before emitServerModule runs at
+ * all), so a missing entry is unreachable here.
+ */
+const emitCompose = (
+	ctx: EmitContext,
+	node: ComposeNode,
+	scope: ReadonlySet<string>,
+	depth: number,
+): void => {
+	const entry = ctx.composeRegistry?.get(node.source)
+	if (!entry) return
+	ctx.composeImports.set(entry.name, `./${entry.tag}.server`)
+	const args = node.attrs
+		.filter(
+			(a): a is Extract<typeof a, { kind: 'arg' }> =>
+				a.kind === 'arg' &&
+				// `class`/`id` on a composed element address the COMPOSE
+				// SITE (the child's host element), not typed props —
+				// filtered out of the forwarded args and spliced onto
+				// the child's rendered root via `composeHostAttrs` below
+				// (LT-089's discriminator vocabulary, materialized by
+				// LT-090). `data-*` stays forwarded (a pre-existing,
+				// tested convention, LT-015/016) — it can double as BOTH
+				// a real server arg and a discriminator; no conflict,
+				// `composeStaticAttrs` only reads it, never removes it.
+				a.name !== 'class' &&
+				a.name !== 'id',
+		)
+		.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
+	// A composed element's children (LT-018) render into their own
+	// buffer, once, server-side — the joined string is forwarded as
+	// the child's `children` server arg (self-closing tags pass none,
+	// matching "no children supplied" at the type level).
+	if (node.children.length > 0) {
+		const childrenVar = `__children${++ctx.childrenCounter}`
+		ctx.lines.push(`${tab(depth)}const ${childrenVar}: string[] = []`)
+		const outerBuffer = ctx.buffer
+		ctx.buffer = childrenVar
+		for (const child of node.children) emit(ctx, child, scope, depth)
+		ctx.buffer = outerBuffer
+		args.push(`children: ${childrenVar}.join('')`)
+	}
+	// The reserved `i18n` record (ADR 0030 sub-design 2, LT-173): the
+	// compiler supplies it at every render call boundary — callers
+	// never author it (a caller-authored `i18n` attribute is rejected
+	// in classify-attributes). Locale precedence (ADR 0030 sub-design
+	// 3 as amended by LT-191): the compose site's own `lang` arg, else
+	// the PARENT'S effective locale — compose-graph inheritance, the
+	// SSR analog of the DOM ancestor walk, since the composition tree
+	// is the rendered ancestor chain — else the child's authored
+	// default, else `i18nRecord`'s page-locale fallback.
+	if (entry.declaresI18n) {
+		ctx.usedI18nRecord = true
+		const langAttr = node.attrs.find(
+			(a): a is Extract<(typeof node.attrs)[number], { kind: 'arg' }> =>
+				a.kind === 'arg' && a.name === 'lang',
+		)
+		const parentLang =
+			ctx.component.declaresI18n && ctx.component.langBinding !== null
+				? ctx.component.langBinding
+				: null
+		const langExpr =
+			langAttr !== undefined
+				? langAttr.exprText
+				: parentLang !== null
+					? parentLang
+					: entry.langArgDefault !== null
+						? JSON.stringify(entry.langArgDefault)
+						: null
+		args.push(
+			langExpr !== null
+				? `i18n: i18nRecord(${JSON.stringify(entry.tag)}, ${langExpr})`
+				: `i18n: i18nRecord(${JSON.stringify(entry.tag)})`,
+		)
+	}
+	// LT-090: materialize compose-site class/id on the child root so
+	// the discriminator the client selector relies on (e.g.
+	// `first('form-spinbutton.lightness')`) exists in the served DOM.
+	// Values pass through as the authored expressions — static string
+	// literals AND server-evaluable dynamic ones — evaluated at render
+	// time in this module's scope, exactly like any other arg.
+	const hostAttrs = node.attrs.filter(
+		(a): a is Extract<typeof a, { kind: 'arg' }> =>
+			a.kind === 'arg' && (a.name === 'class' || a.name === 'id'),
+	)
+	const renderCall = `render${entry.name}({ ${args.join(', ')} })`
+	if (hostAttrs.length > 0) {
+		ctx.used.add('composeHostAttrs')
+		const attrsArg = hostAttrs
+			.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
+			.join(', ')
+		ctx.lines.push(
+			`${tab(depth)}${ctx.buffer}.push(composeHostAttrs(${renderCall}, ${JSON.stringify(entry.tag)}, { ${attrsArg} }))`,
+		)
+	} else {
+		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(${renderCall})`)
+	}
+}
+
+/**
+ * The async boundary form of `@try` (ADR 0023 sub-design 13, LT-012): all
+ * arms render UNCONDITIONALLY (analyzeClient already proved each is a
+ * single root element and found the guarded signal — errors would have
+ * failed the build before emitServerModule runs), each `hidden` unless
+ * it's the arm that won at render time. The client's later
+ * `watch(signal, { ok, err, nil })` flips the same `hidden` property
+ * going forward — no separate client rendering path, no divergent markup.
+ * There is no `stale` arm — the owner withdrew the four-arm spelling
+ * (LT-211); a re-fetching task keeps its `ok` arm visible, and the
+ * reactive idiom for the in-flight state is an `isPending(signal)` read
+ * beside the boundary, which folds right here (the harness answers it).
+ */
+const emitAsyncBoundary = (
+	ctx: EmitContext,
+	node: TryNode,
+	scope: ReadonlySet<string>,
+	depth: number,
+): void => {
+	// The dispatcher routes here only for the async form (a `@pending`
+	// arm exists).
+	const pendingChildren = node.pendingChildren
+	if (pendingChildren === null) return
+	ctx.used.add('isPending')
+	const asyncId = ++ctx.armCounter
+	const stateVar = `__async${asyncId}`
+	const errVar = `__async${asyncId}Err`
+	const okRoot = node.children.find(
+		(c): c is ElementNode => c.kind === 'element',
+	) as ElementNode
+	const pendingRoot = pendingChildren.find(
+		(c): c is ElementNode => c.kind === 'element',
+	) as ElementNode
+	const errRoot = node.catchChildren.find(
+		(c): c is ElementNode => c.kind === 'element',
+	) as ElementNode
+	const signalChild = okRoot.children.find(
+		(c): c is TemplateNode & { kind: 'expr' } =>
+			c.kind === 'expr' && c.lazy && c.expr.type === 'Identifier',
+	)
+	const signalName = signalChild
+		? String((signalChild.expr as TsrxNode).name)
+		: ''
+	const errChild = errRoot.children.find(
+		(c): c is TemplateNode & { kind: 'expr' } => c.kind === 'expr' && c.lazy,
+	)
+	ctx.lines.push(
+		`${tab(depth)}let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`,
+	)
+	ctx.lines.push(`${tab(depth)}let ${errVar}: unknown = undefined`)
+	ctx.lines.push(`${tab(depth)}if (!isPending(${signalName})) {`)
+	ctx.lines.push(`${tab(depth + 1)}try {`)
+	ctx.lines.push(`${tab(depth + 2)}${signalName}.get()`)
+	ctx.lines.push(`${tab(depth + 2)}${stateVar} = 'ok'`)
+	ctx.lines.push(`${tab(depth + 1)}} catch (e) {`)
+	ctx.lines.push(`${tab(depth + 2)}${errVar} = e`)
+	ctx.lines.push(`${tab(depth + 2)}${stateVar} = 'err'`)
+	ctx.lines.push(`${tab(depth + 1)}}`)
+	ctx.lines.push(`${tab(depth)}}`)
+	const hiddenAttr = (cond: string): AttributeIR => ({
+		kind: 'server',
+		name: 'hidden',
+		exprText: cond,
+		node: node.node,
+	})
+	// The ok/err arms' own recognized lazy child (the guarded signal;
+	// the catch param or a member read over it) must NOT evaluate its
+	// real expression except in the arm that actually won: `data.get()`
+	// throws while pending, and the catch param is `undefined` outside
+	// the err arm. Emitting it unconditionally (the generic `emit()`
+	// walker's usual behavior) would crash rendering the OTHER two
+	// arms' hidden copies — guard each with the same tri-state var, and
+	// let the ternary's short-circuiting keep the unsafe branch unread.
+	const emitGuardedChild = (
+		child: TemplateNode,
+		armScope: ReadonlySet<string>,
+		guardedExpr: string | null,
+	): void => {
+		if (guardedExpr !== null && child.kind === 'expr' && child.lazy) {
+			ctx.used.add('esc')
+			ctx.lines.push(
+				`${tab(depth)}${ctx.buffer}.push(esc(String(${guardedExpr})))`,
+			)
+			return
+		}
+		emit(ctx, child, armScope, depth)
+	}
+	// `hidden`/`display:none` exclude nothing from form submission,
+	// only `disabled` does (CHECKLIST §8, LT-077) — a named control in
+	// a non-active arm would otherwise submit alongside `@pending`'s.
+	// Every arm root is unconditionally wrapped in a synthetic
+	// `<fieldset disabled>`, toggled by the SAME condition as the root's
+	// own `hidden` (nested form-associated custom elements inherit the
+	// disabled state natively); the inline style resets the box model
+	// (border/padding/margin/min-width — the `min-content` quirk breaks
+	// flex/grid children) so the always-present wrapper stays invisible
+	// chrome around whichever arm is actually hidden.
+	const emitArmRoot = (
+		root: ElementNode,
+		armScope: ReadonlySet<string>,
+		hiddenCond: string,
+		guardedExpr: string | null,
+	): void => {
+		ctx.used.add('attr')
+		ctx.lines.push(
+			`${tab(depth)}${ctx.buffer}.push(${pushArgument([
+				{
+					static: '<fieldset style="border:0;padding:0;margin:0;min-width:0"',
+				},
+				{ expr: `attr('disabled', ${hiddenCond})` },
+				{ static: '>' },
+			])})`,
+		)
+		emitElement(ctx, root, armScope, depth, [hiddenAttr(hiddenCond)])
+		for (const child of root.children)
+			emitGuardedChild(child, armScope, guardedExpr)
+		if (!isVoidElement(root.tag))
+			ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</${root.tag}>')`)
+		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</fieldset>')`)
+	}
+	emitArmRoot(pendingRoot, scope, `${stateVar} !== 'pending'`, null)
+	emitArmRoot(
+		okRoot,
+		scope,
+		`${stateVar} !== 'ok'`,
+		`${stateVar} === 'ok' ? ${signalName}.get() : ''`,
+	)
+	const errScope = new Set(scope)
+	if (node.catchParam) {
+		ctx.lines.push(`${tab(depth)}const ${node.catchParam} = ${errVar}`)
+		errScope.add(node.catchParam)
+	}
+	emitArmRoot(
+		errRoot,
+		errScope,
+		`${stateVar} !== 'err'`,
+		errChild ? `${stateVar} === 'err' ? (${errChild.exprText}) : ''` : null,
+	)
+}
+
+/**
+ * The template emitter dispatcher (LT-225): one arm per `TemplateNode`
+ * kind, with the two standalone branches (`emitAsyncBoundary`,
+ * `emitCompose`) split out. The element tail resolves reactive-`@for`
+ * output nodes to their loop, applies the `truc:case-type` scope, and
+ * dispatches plain elements and `truc:case` alternatives.
+ */
+const emit = (
+	ctx: EmitContext,
+	node: TemplateNode,
+	scope: ReadonlySet<string>,
+	depth: number,
+): void => {
+	if (node.kind === 'client-stmt') {
+		// Client-only side effect beside conditionally rendered markup
+		// (`internals?.states.add('clearable')`) — the server never runs
+		// connect-time DOM/ElementInternals APIs, so this renders nothing.
+		return
+	}
+	if (node.kind === 'text') {
+		ctx.lines.push(
+			`${tab(depth)}${ctx.buffer}.push(${JSON.stringify(node.value)})`,
+		)
+		return
+	}
+	if (node.kind === 'expr') {
+		// The reserved `{children}` insertion point (ADR 0023 sub-design 10,
+		// LT-018): a composed call already rendered this component's own
+		// children into an HTML string — trusted, compiler-generated markup,
+		// not user input, so it renders UNESCAPED here (analogous to the
+		// MANAGED_TEXT_PROPS/host-prop-mirror special-casing above).
+		if (
+			!node.lazy &&
+			node.expr.type === 'Identifier' &&
+			node.exprText === 'children'
+		) {
+			ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(String(children))`)
+			return
+		}
+		ctx.used.add('esc')
+		const value = node.lazy
+			? lazyValueExpression(ctx.component, node.exprText, node.expr, scope)
+			: node.exprText
+		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(esc(String(${value})))`)
+		return
+	}
+	if (node.kind === 'if') {
+		// The condition is server-known (validated at lowering) — the
+		// render function evaluates it against the real args.
+		ctx.lines.push(`${tab(depth)}if (${node.testText}) {`)
+		for (const child of node.then) emit(ctx, child, scope, depth + 1)
+		if (node.alternate.length > 0) {
+			ctx.lines.push(`${tab(depth)}} else {`)
+			for (const child of node.alternate) emit(ctx, child, scope, depth + 1)
+		}
+		ctx.lines.push(`${tab(depth)}}`)
+		return
+	}
+	if (node.kind === 'switch') {
+		// Arms are mutually exclusive — each case block breaks so JS
+		// fall-through cannot blend arms.
+		ctx.lines.push(`${tab(depth)}switch (${node.discriminantText}) {`)
+		for (const arm of node.cases) {
+			ctx.lines.push(
+				`${tab(depth + 1)}${arm.testText === null ? 'default' : `case ${arm.testText}`}: {`,
+			)
+			for (const child of arm.children) emit(ctx, child, scope, depth + 2)
+			ctx.lines.push(`${tab(depth + 2)}break`)
+			ctx.lines.push(`${tab(depth + 1)}}`)
+		}
+		ctx.lines.push(`${tab(depth)}}`)
+		return
+	}
+	if (node.kind === 'try' && node.pendingChildren !== null) {
+		emitAsyncBoundary(ctx, node, scope, depth)
+		return
+	}
+	if (node.kind === 'try') {
+		// Render-time error boundary. Arms render into an isolated
+		// buffer so a throw mid-arm (after partial pushes) cannot leak
+		// markup into the output — the catch arm starts fresh. The join
+		// targets the OUTER buffer; arm names are unique so a nested @try
+		// contributes through its own buffer, never shadowing.
+		const armName = `__arm${++ctx.armCounter}`
+		ctx.lines.push(`${tab(depth)}try {`)
+		ctx.lines.push(`${tab(depth + 1)}const ${armName}: string[] = []`)
+		const outerBuffer = ctx.buffer
+		ctx.buffer = armName
+		for (const child of node.children) emit(ctx, child, scope, depth + 1)
+		ctx.buffer = outerBuffer
+		ctx.lines.push(`${tab(depth + 1)}${outerBuffer}.push(${armName}.join(''))`)
+		if (node.catchChildren.length > 0) {
+			ctx.lines.push(
+				`${tab(depth)}} catch${node.catchParam ? ` (${node.catchParam})` : ''} {`,
+			)
+			const catchName = `__arm${++ctx.armCounter}`
+			ctx.lines.push(`${tab(depth + 1)}const ${catchName}: string[] = []`)
+			ctx.buffer = catchName
+			const catchScope = new Set(scope)
+			if (node.catchParam) catchScope.add(node.catchParam)
+			for (const child of node.catchChildren)
+				emit(ctx, child, catchScope, depth + 1)
+			ctx.buffer = outerBuffer
+			ctx.lines.push(
+				`${tab(depth + 1)}${outerBuffer}.push(${catchName}.join(''))`,
+			)
+		}
+		ctx.lines.push(`${tab(depth)}}`)
+		return
+	}
+	if (node.kind === 'compose') {
+		emitCompose(ctx, node, scope, depth)
+		return
+	}
+	const loop = [...ctx.component.fors.values()].find(f => f.output === node)
+	const typeAttr = node.attrs.find(
+		(a): a is Extract<AttributeIR, { kind: 'plural-case-type' }> =>
+			a.kind === 'plural-case-type',
+	)
+	const previousTypeExpr = ctx.pluralTypeExpr
+	if (typeAttr) ctx.pluralTypeExpr = `(${typeAttr.exprText})`
+	if (loop) {
+		emitFor(ctx, loop, scope, depth)
+		ctx.pluralTypeExpr = previousTypeExpr
+		return
+	}
+	const emitPlainElement = (): void => {
+		// Reactive-for templates flush after this element's close tag — the
+		// spec shape (adopted items, </container>, then <template>) keeps the
+		// template out of the reconciled container's children.
+		ctx.templateQueue.push([])
+		emitElement(ctx, node, scope, depth)
+		// truc:html={dataRef} renders as sanitized raw children before authored
+		// children (dependency-provable, else omitted for the client pass).
+		const htmlAttr = node.attrs.find(a => a.kind === 'html') as
+			| Extract<AttributeIR, { kind: 'html' }>
+			| undefined
+		if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
+			ctx.used.add('sanitizeHtml')
+			ctx.lines.push(
+				`${tab(depth)}${ctx.buffer}.push(sanitizeHtml(String(${htmlAttr.exprText})))`,
+			)
+		}
+		for (const child of node.children) emit(ctx, child, scope, depth)
+		if (!isVoidElement(node.tag))
+			ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</${node.tag}>')`)
+		ctx.lines.push(...(ctx.templateQueue.pop() ?? []))
+	}
+	// A `truc:case` element (ADR 0030 sub-design 6, LT-173 step 7) is one
+	// plural alternative: pruned to the locale's actual category set, read
+	// from the platform at render time — never a hand-maintained table.
+	// The union of cardinal and ordinal is the sanctioned fallback (the
+	// compiler cannot prove which `type` the component's own plural logic
+	// configures), and a superset prunes only categories NEITHER type
+	// uses. The locale expression is the component's own bound `lang` —
+	// its presence the analyzer enforces when the marker is authored.
+	const caseAttr = node.attrs.find(
+		(a): a is Extract<AttributeIR, { kind: 'plural-case' }> =>
+			a.kind === 'plural-case',
+	)
+	if (caseAttr) {
+		ctx.used.add('pluralCategories')
+		ctx.lines.push(
+			`${tab(depth)}if (pluralCategories(${ctx.component.langBinding}${ctx.pluralTypeExpr ? `, ${ctx.pluralTypeExpr}` : ''}).has('${caseAttr.category}')) {`,
+		)
+		emitPlainElement()
+		ctx.lines.push(`${tab(depth)}}`)
+		ctx.pluralTypeExpr = previousTypeExpr
+		return
+	}
+	emitPlainElement()
+	ctx.pluralTypeExpr = previousTypeExpr
+}
+
 /* === Exported Functions === */
 
 /**
@@ -262,7 +979,7 @@ export const emitServerModule = (
 		 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
 		 * source path (ADR 0023 sub-design 10). A compose node whose `source`
 		 * is missing here was already diagnosed as an error upstream
-		 * (`index.ts`), so `emit` never needs to handle a missing entry.
+		 * (`index.ts`), so `emitCompose` never needs to handle a missing entry.
 		 */
 		composeRegistry?: ReadonlyMap<string, RegistryEntry> | undefined
 		/**
@@ -285,641 +1002,30 @@ export const emitServerModule = (
 		tier?: EvaluationTier | undefined
 	},
 ): EmittedServerModule => {
-	const used = new Set<string>()
-	const lines: string[] = []
-	/** Composed component name → generated server module specifier. */
-	const composeImports = new Map<string, string>()
-	// Pushes target __html normally; @try arms render into an isolated __arm
-	// buffer so a mid-arm throw cannot leak partial markup into the output
-	// (the catch arm renders its own fresh buffer).
-	let buffer = '__html'
-	// @try arms render into uniquely named buffers: a nested @try must not
-	// shadow its enclosing arm's buffer (content would be lost).
-	let armCounter = 0
-	// Composed elements' children (LT-018) render into their own uniquely
-	// named buffers, for the same reason.
-	let childrenCounter = 0
-	// LT-173 step 6: the render-scope names a host-derived fold may leave in
-	// a spliced thunk — computed once per module, the same set the analyzer's
-	// TSRX034 check passes to `hostDerivedFold` (the two must agree).
-	const foldScope = foldableRenderScope(component)
-	// Set when a compose site supplies a child's reserved `i18n` record
-	// (ADR 0030 sub-design 2): pulls the `i18nRecord` import into the module.
-	let usedI18nRecord = false
-	// The innermost enclosing `truc:case-type` expression (LT-173 step 7) —
-	// declared on a case element itself or any ancestor, evaluated per
-	// render call so a dynamic plural configuration prunes tightly in both
-	// states. Null ⇒ the union fallback inside `pluralCategories`.
-	let pluralTypeExpr: string | null = null
-	const tab = (depth: number) => '\t'.repeat(depth)
-	/**
-	 * Extracted reactive-list templates, one pending queue per open element:
-	 * `<template>` is emitted after its container's close tag (outside the
-	 * reconciled container's children — ADR 0017 removes unkeyed children).
-	 */
-	const templateQueue: string[][] = []
-
-	const emit = (
-		node: TemplateNode,
-		scope: ReadonlySet<string>,
-		depth: number,
-	): void => {
-		if (node.kind === 'client-stmt') {
-			// Client-only side effect beside conditionally rendered markup
-			// (`internals?.states.add('clearable')`) — the server never runs
-			// connect-time DOM/ElementInternals APIs, so this renders nothing.
-			return
-		}
-		if (node.kind === 'text') {
-			lines.push(`${tab(depth)}${buffer}.push(${JSON.stringify(node.value)})`)
-			return
-		}
-		if (node.kind === 'expr') {
-			// The reserved `{children}` insertion point (ADR 0023 sub-design 10,
-			// LT-018): a composed call already rendered this component's own
-			// children into an HTML string — trusted, compiler-generated markup,
-			// not user input, so it renders UNESCAPED here (analogous to the
-			// MANAGED_TEXT_PROPS/host-prop-mirror special-casing above).
-			if (
-				!node.lazy &&
-				node.expr.type === 'Identifier' &&
-				node.exprText === 'children'
-			) {
-				lines.push(`${tab(depth)}${buffer}.push(String(children))`)
-				return
-			}
-			used.add('esc')
-			const value = node.lazy
-				? lazyValueExpression(component, node.exprText, node.expr, scope)
-				: node.exprText
-			lines.push(`${tab(depth)}${buffer}.push(esc(String(${value})))`)
-			return
-		}
-		if (node.kind === 'if') {
-			// The condition is server-known (validated at lowering) — the
-			// render function evaluates it against the real args.
-			lines.push(`${tab(depth)}if (${node.testText}) {`)
-			for (const child of node.then) emit(child, scope, depth + 1)
-			if (node.alternate.length > 0) {
-				lines.push(`${tab(depth)}} else {`)
-				for (const child of node.alternate) emit(child, scope, depth + 1)
-			}
-			lines.push(`${tab(depth)}}`)
-			return
-		}
-		if (node.kind === 'switch') {
-			// Arms are mutually exclusive — each case block breaks so JS
-			// fall-through cannot blend arms.
-			lines.push(`${tab(depth)}switch (${node.discriminantText}) {`)
-			for (const arm of node.cases) {
-				lines.push(
-					`${tab(depth + 1)}${arm.testText === null ? 'default' : `case ${arm.testText}`}: {`,
-				)
-				for (const child of arm.children) emit(child, scope, depth + 2)
-				lines.push(`${tab(depth + 2)}break`)
-				lines.push(`${tab(depth + 1)}}`)
-			}
-			lines.push(`${tab(depth)}}`)
-			return
-		}
-		if (node.kind === 'try' && node.pendingChildren !== null) {
-			// Async boundary (ADR 0023 sub-design 13, LT-012): all arms
-			// render UNCONDITIONALLY (analyzeClient already proved each is a
-			// single root element and found the guarded signal — errors would
-			// have failed the build before emitServerModule runs), each
-			// `hidden` unless it's the arm that won at render time. The
-			// client's later `watch(signal, { ok, err, nil })` flips
-			// the same `hidden` property going forward — no separate client
-			// rendering path, no divergent markup. There is no `stale` arm —
-			// the owner withdrew the four-arm spelling (LT-211); a re-fetching
-			// task keeps its `ok` arm visible, and the reactive idiom for the
-			// in-flight state is an `isPending(signal)` read beside the
-			// boundary, which folds right here (the harness answers it).
-			used.add('isPending')
-			const asyncId = ++armCounter
-			const stateVar = `__async${asyncId}`
-			const errVar = `__async${asyncId}Err`
-			const okRoot = node.children.find(
-				(c): c is ElementNode => c.kind === 'element',
-			) as ElementNode
-			const pendingRoot = node.pendingChildren.find(
-				(c): c is ElementNode => c.kind === 'element',
-			) as ElementNode
-			const errRoot = node.catchChildren.find(
-				(c): c is ElementNode => c.kind === 'element',
-			) as ElementNode
-			const signalChild = okRoot.children.find(
-				(c): c is TemplateNode & { kind: 'expr' } =>
-					c.kind === 'expr' && c.lazy && c.expr.type === 'Identifier',
-			)
-			const signalName = signalChild
-				? String((signalChild.expr as TsrxNode).name)
-				: ''
-			const errChild = errRoot.children.find(
-				(c): c is TemplateNode & { kind: 'expr' } =>
-					c.kind === 'expr' && c.lazy,
-			)
-			lines.push(
-				`${tab(depth)}let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`,
-			)
-			lines.push(`${tab(depth)}let ${errVar}: unknown = undefined`)
-			lines.push(`${tab(depth)}if (!isPending(${signalName})) {`)
-			lines.push(`${tab(depth + 1)}try {`)
-			lines.push(`${tab(depth + 2)}${signalName}.get()`)
-			lines.push(`${tab(depth + 2)}${stateVar} = 'ok'`)
-			lines.push(`${tab(depth + 1)}} catch (e) {`)
-			lines.push(`${tab(depth + 2)}${errVar} = e`)
-			lines.push(`${tab(depth + 2)}${stateVar} = 'err'`)
-			lines.push(`${tab(depth + 1)}}`)
-			lines.push(`${tab(depth)}}`)
-			const hiddenAttr = (cond: string): AttributeIR => ({
-				kind: 'server',
-				name: 'hidden',
-				exprText: cond,
-				node: node.node,
-			})
-			// The ok/err arms' own recognized lazy child (the guarded signal;
-			// the catch param or a member read over it) must NOT evaluate its
-			// real expression except in the arm that actually won: `data.get()`
-			// throws while pending, and the catch param is `undefined` outside
-			// the err arm. Emitting it unconditionally (the generic `emit()`
-			// walker's usual behavior) would crash rendering the OTHER two
-			// arms' hidden copies — guard each with the same tri-state var, and
-			// let the ternary's short-circuiting keep the unsafe branch unread.
-			const emitGuardedChild = (
-				child: TemplateNode,
-				armScope: ReadonlySet<string>,
-				guardedExpr: string | null,
-			): void => {
-				if (guardedExpr !== null && child.kind === 'expr' && child.lazy) {
-					used.add('esc')
-					lines.push(`${tab(depth)}${buffer}.push(esc(String(${guardedExpr})))`)
-					return
-				}
-				emit(child, armScope, depth)
-			}
-			// `hidden`/`display:none` exclude nothing from form submission,
-			// only `disabled` does (CHECKLIST §8, LT-077) — a named control in
-			// a non-active arm would otherwise submit alongside `@pending`'s.
-			// Every arm root is unconditionally wrapped in a synthetic
-			// `<fieldset disabled>`, toggled by the SAME condition as the root's
-			// own `hidden` (nested form-associated custom elements inherit the
-			// disabled state natively); the inline style resets the box model
-			// (border/padding/margin/min-width — the `min-content` quirk breaks
-			// flex/grid children) so the always-present wrapper stays invisible
-			// chrome around whichever arm is actually hidden.
-			const emitArmRoot = (
-				root: ElementNode,
-				armScope: ReadonlySet<string>,
-				hiddenCond: string,
-				guardedExpr: string | null,
-			): void => {
-				used.add('attr')
-				lines.push(
-					`${tab(depth)}${buffer}.push(${pushArgument([
-						{
-							static:
-								'<fieldset style="border:0;padding:0;margin:0;min-width:0"',
-						},
-						{ expr: `attr('disabled', ${hiddenCond})` },
-						{ static: '>' },
-					])})`,
-				)
-				emitElement(root, armScope, depth, [hiddenAttr(hiddenCond)])
-				for (const child of root.children)
-					emitGuardedChild(child, armScope, guardedExpr)
-				if (!isVoidElement(root.tag))
-					lines.push(`${tab(depth)}${buffer}.push('</${root.tag}>')`)
-				lines.push(`${tab(depth)}${buffer}.push('</fieldset>')`)
-			}
-			emitArmRoot(pendingRoot, scope, `${stateVar} !== 'pending'`, null)
-			emitArmRoot(
-				okRoot,
-				scope,
-				`${stateVar} !== 'ok'`,
-				`${stateVar} === 'ok' ? ${signalName}.get() : ''`,
-			)
-			const errScope = new Set(scope)
-			if (node.catchParam) {
-				lines.push(`${tab(depth)}const ${node.catchParam} = ${errVar}`)
-				errScope.add(node.catchParam)
-			}
-			emitArmRoot(
-				errRoot,
-				errScope,
-				`${stateVar} !== 'err'`,
-				errChild ? `${stateVar} === 'err' ? (${errChild.exprText}) : ''` : null,
-			)
-			return
-		}
-		if (node.kind === 'try') {
-			// Render-time error boundary. Arms render into an isolated
-			// buffer so a throw mid-arm (after partial pushes) cannot leak
-			// markup into the output — the catch arm starts fresh. The join
-			// targets the OUTER buffer; arm names are unique so a nested @try
-			// contributes through its own buffer, never shadowing.
-			const armName = `__arm${++armCounter}`
-			lines.push(`${tab(depth)}try {`)
-			lines.push(`${tab(depth + 1)}const ${armName}: string[] = []`)
-			const outerBuffer = buffer
-			buffer = armName
-			for (const child of node.children) emit(child, scope, depth + 1)
-			buffer = outerBuffer
-			lines.push(`${tab(depth + 1)}${outerBuffer}.push(${armName}.join(''))`)
-			if (node.catchChildren.length > 0) {
-				lines.push(
-					`${tab(depth)}} catch${node.catchParam ? ` (${node.catchParam})` : ''} {`,
-				)
-				const catchName = `__arm${++armCounter}`
-				lines.push(`${tab(depth + 1)}const ${catchName}: string[] = []`)
-				buffer = catchName
-				const catchScope = new Set(scope)
-				if (node.catchParam) catchScope.add(node.catchParam)
-				for (const child of node.catchChildren)
-					emit(child, catchScope, depth + 1)
-				buffer = outerBuffer
-				lines.push(
-					`${tab(depth + 1)}${outerBuffer}.push(${catchName}.join(''))`,
-				)
-			}
-			lines.push(`${tab(depth)}}`)
-			return
-		}
-		if (node.kind === 'compose') {
-			// Composed elements never had their diagnostics escalate to an
-			// error (index.ts validates every `node.source` against
-			// composeRegistry before emitServerModule runs at all).
-			const entry = options.composeRegistry?.get(node.source)
-			if (!entry) return
-			composeImports.set(entry.name, `./${entry.tag}.server`)
-			const args = node.attrs
-				.filter(
-					(a): a is Extract<typeof a, { kind: 'arg' }> =>
-						a.kind === 'arg' &&
-						// `class`/`id` on a composed element address the COMPOSE
-						// SITE (the child's host element), not typed props —
-						// filtered out of the forwarded args and spliced onto
-						// the child's rendered root via `composeHostAttrs` below
-						// (LT-089's discriminator vocabulary, materialized by
-						// LT-090). `data-*` stays forwarded (a pre-existing,
-						// tested convention, LT-015/016) — it can double as BOTH
-						// a real server arg and a discriminator; no conflict,
-						// `composeStaticAttrs` only reads it, never removes it.
-						a.name !== 'class' &&
-						a.name !== 'id',
-				)
-				.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
-			// A composed element's children (LT-018) render into their own
-			// buffer, once, server-side — the joined string is forwarded as
-			// the child's `children` server arg (self-closing tags pass none,
-			// matching "no children supplied" at the type level).
-			if (node.children.length > 0) {
-				const childrenVar = `__children${++childrenCounter}`
-				lines.push(`${tab(depth)}const ${childrenVar}: string[] = []`)
-				const outerBuffer = buffer
-				buffer = childrenVar
-				for (const child of node.children) emit(child, scope, depth)
-				buffer = outerBuffer
-				args.push(`children: ${childrenVar}.join('')`)
-			}
-			// The reserved `i18n` record (ADR 0030 sub-design 2, LT-173): the
-			// compiler supplies it at every render call boundary — callers
-			// never author it (a caller-authored `i18n` attribute is rejected
-			// in classify-attributes). Locale precedence (ADR 0030 sub-design
-			// 3 as amended by LT-191): the compose site's own `lang` arg, else
-			// the PARENT'S effective locale — compose-graph inheritance, the
-			// SSR analog of the DOM ancestor walk, since the composition tree
-			// is the rendered ancestor chain — else the child's authored
-			// default, else `i18nRecord`'s page-locale fallback.
-			if (entry.declaresI18n) {
-				usedI18nRecord = true
-				const langAttr = node.attrs.find(
-					(a): a is Extract<(typeof node.attrs)[number], { kind: 'arg' }> =>
-						a.kind === 'arg' && a.name === 'lang',
-				)
-				const parentLang =
-					component.declaresI18n && component.langBinding !== null
-						? component.langBinding
-						: null
-				const langExpr =
-					langAttr !== undefined
-						? langAttr.exprText
-						: parentLang !== null
-							? parentLang
-							: entry.langArgDefault !== null
-								? JSON.stringify(entry.langArgDefault)
-								: null
-				args.push(
-					langExpr !== null
-						? `i18n: i18nRecord(${JSON.stringify(entry.tag)}, ${langExpr})`
-						: `i18n: i18nRecord(${JSON.stringify(entry.tag)})`,
-				)
-			}
-			// LT-090: materialize compose-site class/id on the child root so
-			// the discriminator the client selector relies on (e.g.
-			// `first('form-spinbutton.lightness')`) exists in the served DOM.
-			// Values pass through as the authored expressions — static string
-			// literals AND server-evaluable dynamic ones — evaluated at render
-			// time in this module's scope, exactly like any other arg.
-			const hostAttrs = node.attrs.filter(
-				(a): a is Extract<typeof a, { kind: 'arg' }> =>
-					a.kind === 'arg' && (a.name === 'class' || a.name === 'id'),
-			)
-			const renderCall = `render${entry.name}({ ${args.join(', ')} })`
-			if (hostAttrs.length > 0) {
-				used.add('composeHostAttrs')
-				const attrsArg = hostAttrs
-					.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
-					.join(', ')
-				lines.push(
-					`${tab(depth)}${buffer}.push(composeHostAttrs(${renderCall}, ${JSON.stringify(entry.tag)}, { ${attrsArg} }))`,
-				)
-			} else {
-				lines.push(`${tab(depth)}${buffer}.push(${renderCall})`)
-			}
-			return
-		}
-		const loop = [...component.fors.values()].find(f => f.output === node)
-		const typeAttr = node.attrs.find(
-			(a): a is Extract<AttributeIR, { kind: 'plural-case-type' }> =>
-				a.kind === 'plural-case-type',
-		)
-		const previousTypeExpr = pluralTypeExpr
-		if (typeAttr) pluralTypeExpr = `(${typeAttr.exprText})`
-		if (loop) {
-			emitFor(loop, scope, depth)
-			pluralTypeExpr = previousTypeExpr
-			return
-		}
-		const emitPlainElement = (): void => {
-			// Reactive-for templates flush after this element's close tag — the
-			// spec shape (adopted items, </container>, then <template>) keeps the
-			// template out of the reconciled container's children.
-			templateQueue.push([])
-			emitElement(node, scope, depth)
-			// truc:html={dataRef} renders as sanitized raw children before authored
-			// children (dependency-provable, else omitted for the client pass).
-			const htmlAttr = node.attrs.find(a => a.kind === 'html') as
-				| Extract<AttributeIR, { kind: 'html' }>
-				| undefined
-			if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
-				used.add('sanitizeHtml')
-				lines.push(
-					`${tab(depth)}${buffer}.push(sanitizeHtml(String(${htmlAttr.exprText})))`,
-				)
-			}
-			for (const child of node.children) emit(child, scope, depth)
-			if (!isVoidElement(node.tag))
-				lines.push(`${tab(depth)}${buffer}.push('</${node.tag}>')`)
-			lines.push(...(templateQueue.pop() ?? []))
-		}
-		// A `truc:case` element (ADR 0030 sub-design 6, LT-173 step 7) is one
-		// plural alternative: pruned to the locale's actual category set, read
-		// from the platform at render time — never a hand-maintained table.
-		// The union of cardinal and ordinal is the sanctioned fallback (the
-		// compiler cannot prove which `type` the component's own plural logic
-		// configures), and a superset prunes only categories NEITHER type
-		// uses. The locale expression is the component's own bound `lang` —
-		// its presence the analyzer enforces when the marker is authored.
-		const caseAttr = node.attrs.find(
-			(a): a is Extract<AttributeIR, { kind: 'plural-case' }> =>
-				a.kind === 'plural-case',
-		)
-		if (caseAttr) {
-			used.add('pluralCategories')
-			lines.push(
-				`${tab(depth)}if (pluralCategories(${component.langBinding}${pluralTypeExpr ? `, ${pluralTypeExpr}` : ''}).has('${caseAttr.category}')) {`,
-			)
-			emitPlainElement()
-			lines.push(`${tab(depth)}}`)
-			pluralTypeExpr = previousTypeExpr
-			return
-		}
-		emitPlainElement()
-		pluralTypeExpr = previousTypeExpr
+	const ctx: EmitContext = {
+		component,
+		composeRegistry: options.composeRegistry,
+		lines: [],
+		used: new Set<string>(),
+		composeImports: new Map<string, string>(),
+		buffer: '__html',
+		armCounter: 0,
+		childrenCounter: 0,
+		usedI18nRecord: false,
+		pluralTypeExpr: null,
+		templateQueue: [],
+		foldScope: foldableRenderScope(component),
 	}
-
-	const emitElement = (
-		element: ElementNode,
-		scope: ReadonlySet<string>,
-		depth: number,
-		extraAttrs: AttributeIR[] = [],
-	): void => {
-		const parts: Part[] = [{ static: `<${element.tag}` }]
-		let staticClass: string | null = null
-		let classExpr: string | null = null
-		for (const attr of [...extraAttrs, ...element.attrs]) {
-			switch (attr.kind) {
-				case 'static':
-					if (attr.name === 'class') staticClass = attr.value ?? ''
-					else if (attr.value === null) parts.push({ static: ` ${attr.name}` })
-					else
-						parts.push({
-							static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
-						})
-					break
-				case 'server':
-					used.add('attr')
-					parts.push({ expr: `attr('${attr.name}', ${attr.exprText})` })
-					break
-				case 'reactive': {
-					const mirror = hostPropMirrorExpr(component, attr.thunk)
-					const derived =
-						mirror === null
-							? hostDerivedExpr(
-									component,
-									attr.thunk,
-									attr.thunkText,
-									foldScope,
-								)
-							: null
-					if (mirror !== null) {
-						used.add('attr')
-						parts.push({ expr: `attr('${attr.name}', ${mirror})` })
-					} else if (derived !== null) {
-						used.add('attr')
-						parts.push({ expr: `attr('${attr.name}', ${derived})` })
-					} else if (isServerEvaluable(attr.thunk, scope)) {
-						used.add('attr')
-						parts.push({ expr: `attr('${attr.name}', (${attr.thunkText})())` })
-					}
-					break
-				}
-				case 'class-map':
-					if (isServerEvaluable(attr.object, scope)) {
-						used.add('cls')
-						classExpr = `cls((${attr.thunkText})())`
-					}
-					break
-				case 'style-map':
-					if (isServerEvaluable(attr.object, scope)) {
-						used.add('attr')
-						used.add('styleAttr')
-						parts.push({
-							expr: `attr('style', styleAttr((${attr.thunkText})()) || null)`,
-						})
-					}
-					break
-				case 'event':
-				case 'ref':
-					break
-			}
-		}
-		if (classExpr || staticClass !== null) {
-			const prefix = staticClass
-				? `${escapeAttrValue(staticClass)}${classExpr ? ' ' : ''}`
-				: ''
-			if (classExpr) {
-				parts.push({ static: ` class="${prefix}` })
-				parts.push({ expr: classExpr })
-				parts.push({ static: '"' })
-			} else {
-				parts.push({ static: ` class="${prefix}"` })
-			}
-		}
-		parts.push({ static: '>' })
-		lines.push(`${tab(depth)}${buffer}.push(${pushArgument(parts)})`)
-	}
-
-	const emitFor = (
-		loop: ForIR,
-		scope: ReadonlySet<string>,
-		depth: number,
-	): void => {
-		if (loop.listSignal) {
-			emitListFor(loop, scope, depth)
-			return
-		}
-		const bodyText = [
-			...loop.hoisted.map(h => h.initText),
-			...loop.output.attrs.map(a =>
-				'thunkText' in a ? a.thunkText : 'exprText' in a ? a.exprText : '',
-			),
-			...loop.output.children.map(c => ('exprText' in c ? c.exprText : '')),
-		].join(' ')
-		const usesIndex =
-			loop.indexName !== null &&
-			new RegExp(`\\b${loop.indexName}\\b`).test(bodyText)
-		used.add(usesIndex ? 'entries' : 'items')
-		const loopScope = new Set(scope)
-		loopScope.add(loop.itemName)
-		if (loop.indexName) loopScope.add(loop.indexName)
-		for (const hoisted of loop.hoisted) loopScope.add(hoisted.name)
-		const binding = usesIndex
-			? `const [${loop.indexName}, ${loop.itemName}] of entries(${loop.iterableText})`
-			: `const ${loop.itemName} of items(${loop.iterableText})`
-		lines.push(`${tab(depth)}for (${binding}) {`)
-		for (const hoisted of loop.hoisted)
-			lines.push(`${tab(depth + 1)}const ${hoisted.name} = ${hoisted.initText}`)
-		emitElement(loop.output, loopScope, depth + 1)
-		for (const child of loop.output.children) emit(child, loopScope, depth + 1)
-		if (!isVoidElement(loop.output.tag))
-			lines.push(`${tab(depth + 1)}${buffer}.push('</${loop.output.tag}>')`)
-		lines.push(`${tab(depth)}}`)
-	}
-
-	/**
-	 * Reactive `@for` over a declared List (ADR 0023 sub-design 5): initial
-	 * keyed items render in place (adopted children are complete — values, no
-	 * slot markers) with `data-key` from the shim's cause-effect-parity key
-	 * generation, and the item shape is extracted as a sibling `<template>`
-	 * whose `&{item}` hole becomes a `<slot>` marker. `validateListBody`
-	 * (compiler) already proved the body is statics + events + the one hole.
-	 */
-	const emitListFor = (
-		loop: ForIR,
-		scope: ReadonlySet<string>,
-		depth: number,
-	): void => {
-		const keyVar = loop.keyName ?? '__key'
-		const loopScope = new Set(scope)
-		loopScope.add(loop.itemName)
-		if (loop.keyName) loopScope.add(keyVar)
-		lines.push(
-			`${tab(depth)}for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
-		)
-		const dataKey: AttributeIR = {
-			kind: 'server',
-			name: 'data-key',
-			exprText: keyVar,
-			node: loop.node,
-		}
-		emitElement(loop.output, loopScope, depth + 1, [dataKey])
-		for (const child of loop.output.children) emit(child, loopScope, depth + 1)
-		if (!isVoidElement(loop.output.tag))
-			lines.push(`${tab(depth + 1)}${buffer}.push('</${loop.output.tag}>')`)
-		lines.push(`${tab(depth)}}`)
-
-		// Extracted template → the innermost open element's pending queue
-		// (flushed after that element's close tag).
-		const queue = templateQueue.at(-1)
-		if (queue) queue.push(...listTemplateLines(loop, depth))
-	}
-
-	/**
-	 * The extracted `<template>`: statics render, the hole becomes a slot,
-	 * and server-static expressions (LT-215 — admitted by validateListBody)
-	 * are baked in at render time: the template is emitted per render call,
-	 * so each locale's folded strings ride along to every cloned item.
-	 */
-	const listTemplateLines = (loop: ForIR, depth: number): string[] => {
-		const out: string[] = [`${tab(depth)}${buffer}.push('<template>')`]
-		const shape = (node: TemplateNode, atDepth: number): void => {
-			if (node.kind === 'text') {
-				out.push(`${tab(atDepth)}${buffer}.push(${JSON.stringify(node.value)})`)
-				return
-			}
-			if (node.kind === 'expr') {
-				if (
-					node.lazy &&
-					node.expr.type === 'Identifier' &&
-					node.exprText === loop.itemName
-				)
-					out.push(`${tab(atDepth)}${buffer}.push('<slot></slot>')`)
-				else if (!node.lazy) {
-					used.add('esc')
-					out.push(
-						`${tab(atDepth)}${buffer}.push(esc(String(${node.exprText})))`,
-					)
-				}
-				return
-			}
-			// Statics and server-static expressions only — validateListBody
-			// rejected everything else, and events/refs never render
-			// server-side.
-			if (node.kind !== 'element') return
-			const parts: Part[] = [{ static: `<${node.tag}` }]
-			for (const attr of node.attrs) {
-				if (attr.kind === 'static') {
-					if (attr.value === null) parts.push({ static: ` ${attr.name}` })
-					else
-						parts.push({
-							static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
-						})
-				} else if (attr.kind === 'server') {
-					// esc() escapes quotes too, so the value is safe inside the
-					// double-quoted attribute the static parts open and close.
-					used.add('esc')
-					parts.push({ static: ` ${attr.name}="` })
-					parts.push({ expr: `esc(String(${attr.exprText}))` })
-					parts.push({ static: '"' })
-				}
-			}
-			parts.push({ static: '>' })
-			out.push(`${tab(atDepth)}${buffer}.push(${pushArgument(parts)})`)
-			for (const child of node.children) shape(child, atDepth)
-			if (!isVoidElement(node.tag))
-				out.push(`${tab(atDepth)}${buffer}.push('</${node.tag}>')`)
-		}
-		shape(loop.output, depth + 1)
-		out.push(`${tab(depth)}${buffer}.push('</template>')`)
-		return out
-	}
+	// The emitters mutate these in place and never rebind them, so the
+	// assembly tail binds the identities directly; the mutable scalars
+	// (`buffer`, the counters, `usedI18nRecord`, `pluralTypeExpr`) stay
+	// ctx-only.
+	const { lines, used, composeImports, templateQueue } = ctx
 
 	// Root-level reactive lists flush their template before the root close.
 	templateQueue.push([])
 	for (const child of component.root.children)
-		emit(child, component.serverKnown, 1)
+		emit(ctx, child, component.serverKnown, 1)
 	lines.push(...(templateQueue.pop() ?? []))
 
 	// Root element opening: only static and server-definitive attributes
@@ -1265,7 +1371,7 @@ export const emitServerModule = (
 	// artifacts. Type import when this component declares the parameter;
 	// value import when this module composes a child that declares it.
 	if (component.declaresI18n) body.push(`import type { I18n } from './i18n'`)
-	if (usedI18nRecord) body.push(`import { i18nRecord } from './i18n'`)
+	if (ctx.usedI18nRecord) body.push(`import { i18nRecord } from './i18n'`)
 	for (const importText of component.imports.server) body.push(importText)
 	body.push('')
 	for (const decl of component.typeDecls) body.push(decl, '')
