@@ -58,15 +58,15 @@ History: `git log -p`, ADR 0030, `CHANGELOG.md` `[Unreleased]`, and the compacte
 handoffs became tasks: **LT-201** (the ADR amendment; done — DONE.md) and **LT-189** (the
 Tech Writer copy round, scope widened).
 
-- [ ] LT-218: The client-string `i18n` attribute — compiler analysis, server emission, client preamble (ADR 0030 sub-design 9).
+- [ ] LT-218: The client-message `i18n` attribute — compiler analysis, server emission, client evaluator preamble (ADR 0030 sub-design 9). **Depends on LT-250.**
   **Skill:** le-truc-dev
-  **Sequencing (re-ruled 2026-09-18):** two gates. Land the P2b SurfaceAdapter consolidation
-  (**LT-233**) first — it collapses the two copied front ends this task must currently edit in
-  lockstep, and LT-218 is the next surface-capability task that would pay the double-edit cost.
-  And land the S0 i18n message-model ruling (**LT-240**) first — it decides the pattern grammar
-  this task's client preamble serializes (the `{token}` subset vs compiled ICU functions) and
-  whether the placeholder validation is a subset check or an ICU compile; landing LT-218 before
-  the ruling risks shipping a serialization shape the ruling then reshapes.
+  **Sequencing (re-ruled 2026-09-19):** two gates, one now discharged. Land the P2b
+  SurfaceAdapter consolidation (**LT-233**) first — it collapses the two copied front ends this
+  task must edit in lockstep. The **LT-240** message-model gate is **resolved** (owner ruling
+  2026-09-19, ADR 0030 amended): the grammar is ICU MessageFormat 1, and the serialization
+  shape is **the build-parsed AST**, not the raw pattern and not a compiled function. Land
+  **LT-250** (the parser, the shared evaluator, the server fold) before this task — it supplies
+  the AST shape this task serializes and the evaluator this task inlines.
   **Context:** Implements the LT-197 ruling. Three pieces; both authored surfaces stay in
   lockstep (ADR 0032 anti-drift) — the classification lives in the shared analysis, the
   per-front-end diagnostics as today.
@@ -80,22 +80,26 @@ Tech Writer copy round, scope widened).
   2. **Emission:** when the component's client-referenced key set is non-empty,
      `emit-server.ts` appends `attr('i18n', JSON.stringify({ …picked… }))` to `rootParts` —
      the materialized-`lang` precedent — evaluated per render call, so each locale bakes its
-     own strings and compose-graph inheritance applies unchanged. Only client-referenced
-     keys (owner ruling): a server-folded key never rides the attribute. The
-     root-attribute exclusion covers TSRX039; authored `i18n` attributes are already
-     rejected in classify-attributes.
+     own **parsed patterns** and compose-graph inheritance applies unchanged. An
+     argument-less message serializes as a plain string (unchanged); a message with
+     arguments serializes as LT-250's compact AST. Only client-referenced keys (owner
+     ruling): a server-folded key never rides the attribute. The root-attribute exclusion
+     covers TSRX039; authored `i18n` attributes are already rejected in classify-attributes.
   3. **Client preamble:** the generated client factory gains an inlined, guarded
-     `JSON.parse(host.getAttribute('i18n'))` merged over the declared source-locale record —
-     NO new `@zeix/le-truc` export (ADR 0030 s8). Pattern keys (`{placeholder}` values,
-     statically known from the authored record) materialize as interpolating functions,
-     plain keys as strings; client-position `t.key` reads rewrite to the local; a pattern
-     call site compiles to a call the compiler validates against the declared placeholders —
-     **new TSRX code, tier 1 Prevented, error** (author-fixable; Tech Writer owns the copy,
-     batch with LT-189). Parsed once at connect, fixed for the connection; malformed JSON
-     warns in DEV_MODE and falls back to the source record in production.
+     `JSON.parse(host.getAttribute('i18n'))` merged over the declared source-locale record,
+     which the compiler emits already parsed for the same keys — NO new `@zeix/le-truc`
+     export (ADR 0030 s8). Alongside it the compiler inlines **LT-250's evaluator, narrowed
+     to the constructs this component's patterns actually use** — an interpolation-only
+     component gets a concatenation; `Intl.PluralRules(host.lang)` does category selection;
+     nobody pays for `select` or date formatting unless used. No ICU parser on the client,
+     no `eval` (CSP-clean). Client-position `t.key` reads rewrite to the local; a call site
+     is validated by LT-250's diagnostic. Parsed once at connect, fixed for the connection;
+     malformed JSON warns in DEV_MODE and falls back to the source record in production.
   **Pins:** the attribute carries only client-referenced keys (a folded-only key stays off
-  it); absent when the set is empty (a component without event-time strings renders
-  byte-identical — pin one); a de render bakes translated patterns into the attribute;
+  it); absent when the set is empty (a component without client-evaluated messages renders
+  byte-identical — pin one); a de render bakes translated **parsed** patterns into the
+  attribute; the inlined evaluator is narrowed (a component with no plural message emits no
+  `Intl.PluralRules` call — pin by fixture);
   parity green with identical attribute bytes across both surfaces; a client-created
   instance (attribute stripped) falls back to the source record (jsdom pin); the DEV_MODE
   malformed-attribute warning pins.
@@ -122,29 +126,42 @@ Tech Writer copy round, scope widened).
   - `i18n:sync` records the new keys; de gains real translations with placeholders
     preserved („Token hinzugefügt: {token}" shape); extend the i18n.test.ts de fixture pins
     to the attribute + patterns.
-  - **Census placeholder-preservation direction:** a translation whose placeholder set
-    differs from the declared pattern's is a census entry (new `TranslationGap['status']`
-    case, report channel — not a warning, translator-paced, same reasoning as
-    missing/stale/orphaned; Tech Writer owns wording, batch with LT-189 item 8).
-    `i18n:sync` flags it in its summary; it cannot auto-fix (a placeholder cannot be
-    invented). Follow the LT-196 pattern for the inverse-walk tests: falsification probes
-    over the real catalogs, injectable for units.
+  - **Census pattern-integrity walks (ADR 0030 s5, re-ruled 2026-09-19):** two new
+    `TranslationGap['status']` cases, both report channel — not warnings, translator-paced,
+    same reasoning as missing/stale/orphaned; Tech Writer owns wording, batch with LT-189
+    item 8. (a) **argument preservation** — a translation whose argument set differs from the
+    source pattern's; (b) **plural-arm coverage** — a translation whose `plural` arms do not
+    cover `Intl.PluralRules(lang).resolvedOptions().pluralCategories`. A third case,
+    **unparseable pattern**, falls back to the source pattern and reports — it must NOT fail
+    the build (a translator typo cannot make a locale unbuildable; same ruling as a missing
+    key). `i18n:sync` flags all three and can auto-fix none. Follow the LT-196 pattern for the
+    inverse-walk tests: falsification probes over the real catalogs, injectable for units.
+    **Note this replaces, not extends, the deleted reachability carve-outs** (LT-251) — the
+    census gets simpler in shape, not smaller in line count.
   **Verification:** payload pinned — the sim-driver tokenbox snapshot carries the
   attribute, asserted to stay in the low hundreds of bytes (the ADR's measure); translation
   census 0 gaps on the real corpus with the placeholder walk live; tier census 20/2/0;
   warning baseline 0; Playwright tokenbox spec green (status strings announce in en/de);
   gates green (typecheck, `bun test server/tests`, check:tsrx, build:docs, check:links).
 
-- [ ] LT-220: Docs round for the client-string channel — HOST_PROFILE, compiler doc, diagnostic sweep, CHANGELOG. **Sequence with or after LT-189 (batches into its one-voice copy round).**
+- [ ] LT-220: Docs round for the ICU message model and the client-message channel — HOST_PROFILE, compiler doc, diagnostic sweep, CHANGELOG. **Sequence with or after LT-189 (batches into its one-voice copy round); scope widened 2026-09-19 by the LT-240 ruling.**
   **Skill:** tech-writer
-  **Context:** The copy/docs obligations ADR 0030 s9 leaves behind; the error-message
-  lifecycle applies (a diagnostic face retired, a new TSRX code gained).
+  **Context:** The copy/docs obligations ADR 0030 s4/s5/s6/s9 leave behind; the error-message
+  lifecycle applies (diagnostic faces retired, new TSRX codes gained).
+  0. **The message model itself** (new, LT-240): messages are ICU MF1 patterns; `t.key` is a
+     string or `t.key({ … })` a call; plurals/`select`/inline formatting live in the pattern.
+     The per-category key convention and `truc:case`/`truc:case-type` are **retired** — remove
+     their teaching outright rather than deprecating it, and state the replacement for exotic
+     variance (a ternary, or `@if`/`@switch`). State the type caveat explicitly: `t` is
+     `string | ((args) => string)` and **authors must not rely on the wider type**, because
+     per-key precision arrives later and tightens it.
   1. HOST_PROFILE.md: the i18n section re-taught — client-position `t` reads, the root
-     `i18n` attribute, patterns and the `t.key({ … })` call syntax; the carrier-span
-     idiom's teaching REPLACED (superseded, not deprecated — remove the LT-195 interim
-     guidance, point at ADR 0030 s9).
+     `i18n` attribute carrying parsed patterns, and the `t.key({ … })` call syntax; the
+     carrier-span idiom's teaching REPLACED (superseded, not deprecated — remove the LT-195
+     interim guidance, point at ADR 0030 s9).
   2. LE_TRUC_COMPILER.md: the classification (client positions, literal keys only), the
-     emission point, the census paragraph's placeholder walk.
+     emission point, the census paragraph's two pattern-integrity walks, and the removal of
+     the pruning/`pluralCategories` description.
   3. The retired `t` face of the server-only diagnostic: sweep
      `.agents/skills/le-truc/references/errors.md` and any prose teaching "`t` is
      server-only" — the retirement counts per the lifecycle.
@@ -162,11 +179,15 @@ Tech Writer copy round, scope widened).
   **Skill:** tech-writer
   **Context:** Three copy items queued from landed work; batch them so the messages read as
   one voice. All follow `workflows/error-message-lifecycle.md`.
-  **S0 hold (2026-09-18):** the i18n-message-family items — item 2 (TSRX008's dotted-key
-  message) and item 8 (the orphaned census/sync copy), plus LT-219's placeholder-census
-  wording — **hold pending LT-240** (the S0 message-model ruling): an ICU adoption deletes the
-  dotted-key shape rule and reshapes the census walks these messages document. The non-i18n
-  items (1, 3–7, 9, 10) proceed now.
+  **S0 hold — RESOLVED 2026-09-19 (LT-240 ruled: ICU MF1).** Consequences for the held items:
+  **item 2 is WITHDRAWN** — the dotted-key CLDR shape rule is deleted by LT-251, so TSRX008's
+  message is retired rather than reworded; the retirement still runs the error-message
+  lifecycle sweep (that is LT-251's obligation, verified here). **Item 8 proceeds**, with one
+  amendment: the orphan census/sync copy must no longer reference reachability or plural
+  categories — every locale now carries the same key set, so an orphan is unconditional.
+  LT-219's census wording is no longer "placeholder preservation" but the three cases in that
+  task (argument preservation, arm coverage, unparseable). The non-i18n items (1, 3–7, 9, 10)
+  were never held.
   1. **`ContextRequestEvent`'s cross-realm dispatch** (LT-180 review finding):
      `requestContext()` now builds the `context-request` event from the HOST's own realm
      whenever the exported class does not belong to it (`src/helpers/context.ts`, LT-180).
@@ -181,9 +202,10 @@ Tech Writer copy round, scope widened).
      JSDoc on `ContextRequestEvent` and on `requestContext()`, plus the context section in
      `docs-src/pages/` and the `le-truc` skill's context reference. One rule to state: a
      provider checks `event.context`, never `instanceof`.
-  2. **TSRX008's dotted-key message** (LT-190 handoff): final copy over the first draft in
-     `server/compiler/i18n.ts` — a declared key whose dot-suffix is not one of the six CLDR
-     categories is a shape error.
+  2. ~~**TSRX008's dotted-key message** (LT-190 handoff)~~ — **withdrawn 2026-09-19.** The
+     rule the message documents (a dot-suffix must name one of the six CLDR categories) is
+     deleted by the LT-240 ruling; the code is retired in LT-251, which owns the lifecycle
+     sweep. Nothing to word here.
   3. **TSRX047's literal-prose warning** (LT-173 handoff): final copy; the single-letter
      exemption (page data, not prose) must survive the rewording, and the missing-
      *translation*-rides-the-census distinction is the point of the message.
@@ -243,6 +265,107 @@ Tech Writer copy round, scope widened).
      (they are census origins, not emitted codes; position comments mark where the
      numbers are spent). Check `.agents/skills/le-truc/references/errors.md` and the
      lifecycle doc itself still describe the treatment accurately.
+
+- [ ] LT-250: ICU MessageFormat — the build half: parser dependency, AST, shared evaluator, server fold, argument diagnostic (ADR 0030 s4). **Gated by LT-233 (SurfaceAdapter); gates LT-218, LT-251, LT-252.**
+  **Skill:** le-truc-dev
+  **Context:** The LT-240 ruling (owner, 2026-09-19; ADR 0030 s4 amended) in code. A message
+  value becomes an ICU MF1 pattern; `t.<key>` resolves to a string when the pattern takes no
+  arguments and to a function of its arguments when it does.
+  1. **Parse, don't compile.** Add `@messageformat/parser` as a **devDependency** (build-time
+     only), plus `@messageformat/number-skeleton` / `@messageformat/date-skeleton` where
+     skeletons appear — they resolve to plain `Intl` options at build time, so nothing
+     skeleton-shaped survives into the AST. `@messageformat/core` goes in as a **test oracle
+     only** and must not be imported from `server/compiler/` production paths (pin that with
+     a dependency test).
+  2. **One evaluator, ours, used by both sides.** A compact AST walk over the parsed pattern.
+     `Intl.PluralRules` / `NumberFormat` / `DateTimeFormat` do the locale work. The SAME
+     evaluator runs the server fold and is inlined into the client preamble by LT-218 — the
+     point of owning it is that a server-rendered string and the client's recomputation
+     cannot disagree. Keep it emitter-agnostic and free of compiler imports so LT-218 can
+     inline a narrowed form of it.
+  3. **Fold at render.** `t.key({ … })` with server-known arguments folds in the value
+     harness like any other call (`evaluability.ts` — new node shape, existing rule). A
+     message with client-reactive arguments is left to LT-218's channel.
+  4. **Argument validation** — the compiler checks a call site's arguments against the parsed
+     pattern's argument set: **new TSRX code, tier 1 Prevented, error** (statically decidable,
+     author-fixable; Tech Writer owns copy, batch with LT-189). Lives in the shared
+     post-lowering pass so it cannot drift between the two authored surfaces. A computed
+     `t[dynamicKey]` stays rejected, unchanged.
+  5. **Types stay loose deliberately.** `t` is `string | ((args: …) => string)`; per-key
+     precision via compiler-generated `.d.ts` is explicitly deferred (owner ruling: build-time
+     diagnostics suffice for v3). It is additive to every artifact here — but it TIGHTENS the
+     type, so the "do not rely on the wider type" note is an LT-220 obligation, not optional.
+  **Check:** the evaluator's server output is differentially tested against
+  `@messageformat/core` over the corpus patterns plus a negatives set (this is what the oracle
+  is for); folded markup for an argument-less message is byte-identical to today's; gates green
+  (typecheck, `bun test server/tests`, check:tsrx, build:docs, check:links); warning baseline 0;
+  tier census unchanged (a folded message is not a routing signal).
+
+- [ ] LT-251: Delete the per-category machinery — `truc:case`, pruning, `pluralCategories`, the dotted-key rule, the census reachability carve-outs. **Depends on LT-250 and LT-252 (nothing may still author the retired vocabulary when this lands).**
+  **Skill:** le-truc-dev
+  **Context:** The deletion half of the LT-240 ruling (ADR 0030 s5/s6 amended). Survey at
+  ruling time: **86 references across 25 non-generated files.** Not all are deletions — count
+  it as the touch set, not the win.
+  - **Vocabulary:** `truc:case` / `truc:case-type` out of `classify-attributes.ts`, `ir.ts`,
+    `validate-lowered.ts`, `registry.ts`, `runtime.ts`, `assemble-ir.ts`, both front-end
+    lowerings, and both surface profiles (`frontend/tsx/host-profile.d.ts`,
+    `frontend/tsrx/globals.d.ts`).
+  - **Pruning:** ADR 0030 s6's per-locale alternative pruning in `emit-server.ts` and its
+    `pluralCategories` plumbing — including the cardinal∪ordinal union fallback, which has no
+    successor because the pattern states which type is in play.
+  - **Census:** the reachability carve-outs in BOTH walks (the LT-190 missing/stale direction
+    and the LT-217 orphan direction), and the registry's case-type input to them. Every locale
+    now carries the same key set; an orphan is unconditional.
+  - **Shape rule:** the `<key>.<category>` convention and its CLDR-category validation;
+    **TSRX008 retires** (LT-189 item 2 withdrawn accordingly). Retirement runs
+    `tech-writer`'s `workflows/error-message-lifecycle.md` in full — keep-member treatment in
+    the `DiagnosticCode` union per LT-223, and sweep
+    `.agents/skills/le-truc/references/errors.md`, HOST_PROFILE.md and LE_TRUC_COMPILER.md.
+  **Check:** `grep -r "truc:case\|pluralCategor\|caseType"` over non-generated sources returns
+  nothing outside the retirement notes; no fixture still pins per-locale pruned markup; gates
+  green; warning baseline 0.
+
+- [ ] LT-252: Corpus and catalog migration to ICU patterns — `basic-pluralize` (both surfaces), six locale catalogs, manifest rebaseline. **Depends on LT-250; gates LT-251.**
+  **Skill:** le-truc-dev
+  **Context:** The ruling's own check: *every component authored against `truc:case` is a
+  component rewritten.* At ruling time that is exactly one — `basic-pluralize`, in
+  `examples/basic/pluralize/basic-pluralize.tsrx` and its `.tsx` twin — which is why the
+  ruling landed on 2026-09-19 rather than after the next authoring.
+  - **Component:** the six `truc:case` spans plus their six `hidden` thunks collapse to one
+    element and one thunk: `{() => t.tasks({ count: host.count })}`. The `.none` / `.some`
+    split and the `ordinal` prop survive (ordinal selection moves inside the pattern via
+    `selectordinal`). Both surfaces stay byte-identical per the ADR 0032 parity contract.
+  - **Catalogs:** rewrite `i18n/{ar,cy,de,lv,pl,zh}.json` — `basic-pluralize.task.{zero,one,
+    two,few,many,other}` collapse into one `basic-pluralize.tasks` pattern per locale.
+    **The six-category locales (ar, cy) are the real test**: their arms move inside the value,
+    which is the whole point. de's four category keys become one.
+  - **Manifest:** this is the ADR 0030 s5 **sanctioned rebaseline** — sources, translations and
+    `i18n/manifest.json` change in ONE commit, so no translation is marked stale for a change
+    that altered no meaning. Say so in the commit message; it is the precedent the MF2
+    migration will cite.
+  **Check:** translation census 0 gaps across all six locales with the new pattern walks live;
+  rendered markup for an en page shrinks from six spans to one (pin the byte delta — it is the
+  ADR's headline consequence); `basic-pluralize.spec.ts` green in en and de; tier census 20/2/0
+  (the component must stay Folded); parity green across both surfaces.
+
+- [ ] LT-253: MF2 migration insurance — round-trip fixtures and the documented rebaseline procedure. **Depends on LT-252.**
+  **Skill:** le-truc-dev
+  **Context:** ADR 0030's Alternatives records MF1 as a deliberate bet with a kept-open exit:
+  `@messageformat/icu-messageformat-1` parses MF1 into the MF2 data model and `messageformat@4`
+  serializes it, both from the same maintainers. The bet is only cheap if the exit is *tested*
+  rather than asserted. Cost grows with pattern and locale count, so build the harness while
+  the corpus is one component.
+  - A test that walks every corpus pattern MF1 → MF2 → renders both → asserts identical output
+    for a matrix of argument values across all six locales. This is the claim "the migration is
+    mechanical," turned into a gate.
+  - Pin the two known-lossy spots explicitly: **nested-to-flat arm expansion** (MF1 nests
+    plural-inside-select; MF2 uses one flat multi-selector, so arms multiply out — semantically
+    identical, textually larger) and **escaping** (MF1 `'{'` quoting vs MF2 `|literal|` /
+    backslash — where codemods go subtly wrong). At least one fixture per spot.
+  - Write the rebaseline procedure down beside the fixtures, citing LT-252's commit as the
+    precedent: one commit, sources + translations + manifest together.
+  **Check:** the round-trip suite is green and is wired into `bun test server/tests`, so an MF1
+  pattern the exit cannot carry fails at authoring time rather than at migration time.
 
 ---
 
@@ -1050,7 +1173,7 @@ and this note is redundant; if it has not, do the manual diff.
 
 ## P6 — Cleanup round (after the corpus port)
 
-- [ ] LT-249: Report non-string catalog values — a malformed `i18n/<locale>.json` entry is silent in both the census and sync (LT-217 review falsification).
+- [ ] LT-249: Report non-string catalog values — a malformed `i18n/<locale>.json` entry is silent in both the census and sync (LT-217 review falsification). **Survives the LT-240 ruling, and grows a sibling:** ICU adds a second malformed-value class (a string that is not a parseable pattern), handled in LT-219 — land them as one `malformed` family with consistent copy, and drop the "LT-219 placeholder precedent" phrasing below for LT-219's argument-preservation case.
   **Skill:** docs-server-dev
   **Context:** Found by accident during the LT-217 review (2026-09-18): a catalog entry whose
   value is not a string — probed as a nested group, `{"basic-pluralize": {"stray.few":

@@ -11,7 +11,7 @@ nothing else.** Each is an architect session with the owner; the deliverable of 
 decision plus an ADR amendment (via `adr-keeper`), and the rulings gate the backlog bands
 beneath them (see BACKLOG.md's strategic framing).
 
-**Next free task ID: LT-250.**
+**Next free task ID: LT-254.**
 
 ---
 
@@ -49,42 +49,6 @@ the decision, not the implementation, is the deliverable — recorded via `adr-k
   **Check:** the reflection's falsifiable framing — "what is materially worse if the tier is
   deleted and form-combobox/form-listbox route Static?" — is answered in the ADR either way, so
   the next reviewer does not re-open it.
-
-- [ ] LT-240: Decide the i18n message model — generalize the ruled pattern channel to ICU MessageFormat, or ratify the static-plus-category ceiling (ADR 0030; M24).
-  **Skill:** architect
-  **Context:** The reflection's §4 — its most confident push, and the ruling the framework premise
-  moves most. The message model today is a static string taking no arguments: no interpolation
-  ("Hello, {name}" is unexpressible), plurals cost O(categories) in DOM/markup/keys/translations
-  (the `basic-pluralize` six-span exhibit), no select/nesting/inline number-date-currency
-  formatting. **The reflection's own deadline — decide before the second locale ships end to end —
-  has arrived**: de per-locale pages shipped (LT-174), the census covers 6 locales, and the
-  component corpus now includes three `truc:case` consumers authored against the category shape.
-  Under the framework premise this is pre-adoption public API: counts, names, dates and currency
-  inside sentences are table stakes for product UI in thousands of projects. **The already-ruled
-  pattern channel points the way:** LT-197's ruling (2026-09-18) pulled ADR 0030 s4's stage-2 shape
-  forward — `{placeholder}` message values, `t.key({ param })` call syntax, compiler-validated
-  placeholders (LT-218/219 pending) — and `{token}` is literally ICU syntax. The ruling: adopt
-  `@messageformat/core` at build time (patterns compile to plain JS functions; server-known calls
-  fold in the value harness like any other expression) and delete what the category shape costs —
-  `truc:case`/`truc:case-type`, per-locale pruning of rendered alternatives (ADR 0030 s6) and its
-  `pluralCategories` plumbing, the reachability carve-outs in both census directions (the LT-190 /
-  LT-217 machinery just landed — every further per-category investment is machinery an ICU win
-  deletes), the dotted-key shape rule and its CLDR validation — or ratify the current shape with
-  its ceiling recorded. **The honest cost to weigh, quantified not vibes:** a *reactive* message
-  (client-reactive arguments) ships its compiled function, narrowing M24's "the catalog never
-  ships to the client" invariant from "never" to "only for client-reactive messages of one
-  component" — a few hundred bytes pinned by LT-219's measure, versus six pre-rendered spans plus
-  six thunks per pluralized noun in the served HTML. **Same ruling declares the per-request seam:**
-  render fns + `i18nRecord(tag, lang)` per call are the CMS path (REQUIREMENTS §1's PHP/Java/
-  Python/C# targets render per request, at per-user locale); per-locale SSG pages are the docs-site
-  convenience path — M24's "one SSG page per locale" framing gets this boundary stated.
-  **Deliverable:** owner decision; ADR 0030 amendment + M24 amendment via `adr-keeper`.
-  **Gates:** LT-218's pattern serialization shape (the client preamble carries either the
-  `{token}` subset or compiled ICU functions), LT-219's census placeholder walk, and the LT-189
-  i18n copy items (2, 8). The census *bookkeeping* (bidirectional walks, staleness manifest, no
-  override stack — the reflection's "keep all of that" list) survives either outcome.
-  **Check:** every corpus component authored against `truc:case` after this ruling is a component
-  rewritten if ICU wins — the ruling lands before the next one is authored.
 
 - [ ] LT-241: Declare the general-purpose framework goal in REQUIREMENTS and schedule the packaging track (the second-consumer milestone).
   **Skill:** architect

@@ -193,7 +193,11 @@ The compile-warning channel stays author-fixable-only, with a zero target. Findi
 
 #### M24. Build-time internationalization
 
-Locale and translations are build-time server data ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)): one SSG page per locale with the locale fixed before rendering begins; a reserved compiler-supplied `i18n` parameter (`lang`, `t`, `timeZone`, `currency`, `dir`); an authored `lang` arg overriding the record; explicit keys with source strings declared inline in the authored source, either surface; additive per-locale catalog files with no override stack; a missing key falling back to the source locale and recorded in the translation census. The catalog never ships to the client — runtime variance is rendered (all alternatives, pruned per locale) and toggled by the client.
+Locale and translations are build-time server data ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)): a reserved compiler-supplied `i18n` parameter (`lang`, `t`, `timeZone`, `currency`, `dir`); an authored `lang` arg overriding the record; explicit keys with source strings declared inline in the authored source, either surface; additive per-locale catalog files with no override stack; a missing key falling back to the source locale and recorded in the translation census.
+
+**Message values are ICU MessageFormat 1 patterns**, parsed at build time — so interpolation, plurals, `select` and inline number/date/currency formatting are expressible in the format translation tooling already speaks, and argument mismatches are compile-time diagnostics. A message whose arguments are all server-known folds into the markup and ships no catalog; only a message with client-reactive arguments reaches the browser, as a parsed pattern on the component's own root plus a compiler-inlined evaluator — never the catalog, never a third-party runtime.
+
+**Locale is a parameter of the render boundary.** One SSG page per locale, with the locale fixed before rendering begins, is the docs-site path and what the build implements; rendering per request at a per-user locale — the §1 CMS targets' model — is the same render function called with a different `lang`, and must not be foreclosed.
 
 #### M25. Tooling continuity
 

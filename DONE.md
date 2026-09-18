@@ -11,6 +11,43 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-240: Decide the i18n message model — **ICU MessageFormat 1 adopted** (ADR 0030 s1/s4/s5/s6/s8/s9 + M24 amended) — reviewed ✓
+  **Skill:** architect
+  **Ruling (owner, 2026-09-19):** a message value is an **ICU MF1 pattern**; `t.<key>` is a string
+  when the pattern takes no arguments and a function of its arguments when it does. Rulings that
+  live nowhere else:
+  1. **The client-render premise narrows deliberately.** ADR 0024 s1's "never client-renders" was
+     about not shipping template+data twice and not re-rendering DOM subtrees. Substituting a text
+     node from an already-parsed pattern is neither — same category as `basic-number`'s
+     `Intl.NumberFormat` call. Recorded in ADR 0030 s6.
+  2. **MF1, not MF2** — decisive reason: MF2 spells placeholders `{$token}` where MF1 spells them
+     `{token}`, so MF2 would break LT-197's already-ruled pattern channel on day one; TMS tooling
+     also speaks MF1 natively. The exit is kept open and *tested* (LT-253), since
+     `@messageformat/icu-messageformat-1` + `messageformat@4` make the migration mechanical, and
+     `messageformat@4` is itself the `Intl.MessageFormat` polyfill — so MF2 never waits on browsers.
+  3. **Parse, don't compile; own the evaluator.** `@messageformat/parser` at build time;
+     `@messageformat/core` is a **test oracle only**. One evaluator serves the server fold AND the
+     client, so the two sides cannot disagree — the reason a third-party compiler was rejected.
+  4. **What ships is the parsed AST**, not a pattern (would need a client parser) and not a compiled
+     function (is code, cannot ride the JSON attribute, forces per-locale client bundles). Keeps one
+     universal client bundle; evaluator inlined narrowed to the constructs each component uses.
+  5. **Build-time diagnostics only for v3**; `t` stays `string | ((args) => string)` and authors must
+     not rely on the wider type — per-key `.d.ts` precision is deferred and will tighten it.
+  6. **Delete, don't preserve**, the per-category vocabulary: exotic variance has ternaries and
+     `@if`/`@switch` on both surfaces.
+  7. **A format migration is a sanctioned manifest rebaseline** (ADR 0030 s5) — sources,
+     translations and hashes in one commit, so a meaning-preserving rewrite marks nothing stale.
+  8. **The per-request seam is declared** (ADR 0030 s1 + M24): per-locale SSG pages are the
+     docs-site path; locale is a parameter of the render boundary, and the CMS targets' per-request
+     model must not be foreclosed.
+  **Changed:** `adr/0030-internationalization-as-build-time-server-data.md` (s1, s2, s4, s5, s6, s8,
+  s9, Context fact 3, Alternatives +8 entries, Consequences); `REQUIREMENTS.md` M24.
+  **Handoffs:** new **LT-250** (build half), **LT-251** (deletion sweep, 86 refs / 25 files),
+  **LT-252** (corpus + catalog migration, manifest rebaseline), **LT-253** (MF2 round-trip
+  insurance). Reframed: **LT-218** (gate discharged; serializes the AST), **LT-219** (three census
+  cases replace placeholder-preservation), **LT-220** (scope widened to the message model),
+  **LT-249** (joins the `malformed` family). **LT-189 item 2 withdrawn** — TSRX008 retires in LT-251.
+
 ## P0 — TSX surface adoption (ADR 0032) — reviewed ✓ (closed 2026-09-18)
 
 **LT-183, LT-202, LT-203, LT-204, LT-205, LT-206, LT-208/209, LT-210, LT-211** — all landed and
