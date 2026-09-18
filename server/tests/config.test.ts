@@ -15,6 +15,8 @@ import {
 	INCLUDES_DIR,
 	INPUT_DIR,
 	LAYOUTS_DIR,
+	LOCALE_INDEPENDENT_DIRS,
+	localeAssetPath,
 	MENU_GROUPS,
 	MIME_TYPES,
 	OUTPUT_DIR,
@@ -22,6 +24,7 @@ import {
 	PAGES_DIR,
 	ROOT,
 	ROUTE_LAYOUT_MAP,
+	rewriteFragmentRefs,
 	SITEMAP_FILE,
 	SOURCES_DIR,
 	TEST_DIR,
@@ -216,5 +219,77 @@ describe('MIME_TYPES', () => {
 
 	test('woff2 maps to a font MIME type', () => {
 		expect(MIME_TYPES.woff2).toMatch(/^font\//)
+	})
+})
+
+/* === localeAssetPath (LT-174) === */
+
+describe('localeAssetPath', () => {
+	test('depth 0 (a root page of the locale tree) is one level up', () => {
+		expect(localeAssetPath(0)).toBe('../')
+	})
+
+	test('depth 1 (a blog post) is two levels up', () => {
+		expect(localeAssetPath(1)).toBe('../../')
+	})
+
+	test('depth 2 is three levels up', () => {
+		expect(localeAssetPath(2)).toBe('../../../')
+	})
+
+	test('every level is a trailing ../ segment', () => {
+		expect(localeAssetPath(3)).toBe('../../../../')
+	})
+})
+
+/* === rewriteFragmentRefs (LT-174) === */
+
+describe('rewriteFragmentRefs', () => {
+	test('rewrites href to the docs root at depth 0', () => {
+		expect(
+			rewriteFragmentRefs('<a href="./api/functions/abort.html">abort</a>', 0),
+		).toBe('<a href="../api/functions/abort.html">abort</a>')
+	})
+
+	test('rewrites src and value attributes too', () => {
+		const input =
+			'<img src="./assets/img/x.png" listnav value="./examples/basic-button.html">'
+		const output = rewriteFragmentRefs(input, 0)
+		expect(output).toContain('src="../assets/img/x.png"')
+		expect(output).toContain('value="../examples/basic-button.html"')
+	})
+
+	test('covers every locale-independent directory', () => {
+		for (const dir of LOCALE_INDEPENDENT_DIRS) {
+			const output = rewriteFragmentRefs(`href="./${dir}/x"`, 0)
+			expect(output).toBe(`href="../${dir}/x"`)
+		}
+	})
+
+	test('goes one level deeper for a nested page (depth 1)', () => {
+		expect(rewriteFragmentRefs('<a href="./sources/foo.html">s</a>', 1)).toBe(
+			'<a href="../../sources/foo.html">s</a>',
+		)
+	})
+
+	test('rewrites every occurrence in one document', () => {
+		const output = rewriteFragmentRefs(
+			'<a href="./api/a.html">a</a><a href="./examples/b.html">b</a>',
+			0,
+		)
+		expect(output).toContain('href="../api/a.html"')
+		expect(output).toContain('href="../examples/b.html"')
+	})
+
+	test('leaves page-relative links inside the locale tree alone', () => {
+		const input =
+			'<a href="./guide.html">g</a><a href="./blog/post.html">p</a><a href="./api.html">a</a>'
+		expect(rewriteFragmentRefs(input, 0)).toBe(input)
+	})
+
+	test('leaves absolute and parent-relative URLs alone', () => {
+		const input =
+			'<a href="https://example.com/api/x">e</a><a href="../api/y.html">y</a>'
+		expect(rewriteFragmentRefs(input, 0)).toBe(input)
 	})
 })

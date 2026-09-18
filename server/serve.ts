@@ -2,7 +2,6 @@ import pkg from '../package.json'
 import { buildOnce } from './build'
 import {
 	ASSETS_DIR,
-	BLOG_OUTPUT_DIR,
 	COMPONENTS_DIR,
 	DEFAULT_LOCALE,
 	EXAMPLES_DIR,
@@ -350,14 +349,20 @@ async function startServer() {
 					: new Response('Not Found', { status: 404 })
 			},
 
-			// Individual blog post pages, inside a locale tree
+			// Individual blog post pages, inside a locale tree. A `.md` suffix
+			// serves the markdown mirror that sits next to the page (LT-174):
+			// static hosts serve it at this URL directly, so the dev server
+			// does too instead of force-suffixing `.html` (LT-198).
 			'/:locale/blog/:slug': req => {
 				const { locale, slug } = req.params
 				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
 				const localeBlogDir = getFilePath(OUTPUT_DIR, locale, 'blog')
+				const name = slug.endsWith('.md')
+					? slug
+					: `${slug.replace(/\.html$/, '')}.html`
 				const filePath = guardPath(
 					localeBlogDir,
-					getFilePath(localeBlogDir, `${slug.replace(/\.html$/, '')}.html`),
+					getFilePath(localeBlogDir, name),
 				)
 				return filePath
 					? handleStaticFile(filePath)

@@ -31,7 +31,6 @@ const STATIC_DIR = join(ROOT, 'docs-src/static')
 
 const OUTPUT_DIR = join(ROOT, 'docs')
 const ASSETS_DIR = join(ROOT, 'docs/assets')
-const BLOG_OUTPUT_DIR = join(ROOT, 'docs/blog')
 const EXAMPLES_DIR = join(ROOT, 'docs/examples')
 const SOURCES_DIR = join(ROOT, 'docs/sources')
 const TEST_DIR = join(ROOT, 'docs/test')
@@ -260,7 +259,6 @@ export {
 	API_DIR,
 	ASSETS_DIR,
 	BASE_URL,
-	BLOG_OUTPUT_DIR,
 	CHAPTERS,
 	COMPONENTS_DIR,
 	COMPRESSIBLE_TYPES,

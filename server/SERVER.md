@@ -27,8 +27,8 @@ The system has two cooperating halves — a **reactive build pipeline** and an *
 │  │  (reactive pipeline) │───▶│  (HTTP + WebSocket server)          │ │
 │  │                      │    │                                     │ │
 │  │  file-signals.ts     │    │  Routes: /, /api/status, /assets/*, │ │
-│  │  file-watcher.ts     │    │  /examples/*, /test/*, /:page, /ws  │ │
-│  │  effects/*           │    │                                     │ │
+│  │  file-watcher.ts     │    │  /examples/*, /test/*, /:locale/*,  │ │
+│  │  effects/*           │    │  /ws                                │ │
 │  └──────────────────────┘    └─────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -327,20 +327,24 @@ The `fence` schema override provides:
 
 | Route | Serves | Source |
 |-------|--------|--------|
-| `GET /` | Home page | `docs/index.html` |
+| `GET /` | 302 redirect to the default locale's index (`Accept: text/markdown` → source) | Inline |
+| `GET /index.html` | The root redirect stub the build emits for static hosts | `docs/index.html` |
 | `GET /api/status` | Health check (`"OK"`) | Inline |
 | `GET /ws` | WebSocket upgrade (HMR) | In-memory |
-| `GET /api/:category/:page` | API doc fragment | `docs/api/<category>/<page>` |
-| `GET /assets/:file` | Static assets | `docs/assets/` |
+| `GET /api/:category/:page` | API doc fragment (locale-independent, at the docs root) | `docs/api/<category>/<page>` |
+| `GET /assets/*` | Static assets | `docs/assets/` |
 | `GET /examples/:component` | Pre-built example HTML | `docs/examples/` |
 | `GET /sources/:file` | Source code fragments | `docs/sources/` |
 | `GET /test/:component/mocks/:mock` | Test mock files | `examples/<component>/mocks/` |
 | `GET /test/:component` | Component test page | `docs-src/layouts/test.html` + `examples/<component>/<component>.html` |
-| `GET /blog/:slug` | Individual blog post | `docs/blog/<slug>.html` |
-| `GET /:page` | Documentation page | `docs/<page>.html` |
+| `GET /:locale/blog/:slug` | Blog post page; `<slug>.md` serves the markdown mirror next to it | `docs/<locale>/blog/<slug>.html\|.md` |
+| `GET /:locale/:page` | Documentation page inside a locale tree | `docs/<locale>/<page>` |
+| `GET /:locale` | That locale's index page | `docs/<locale>/index.html` |
 | `GET /favicon.ico` | Favicon | `docs/favicon.ico` |
 
-All HTML routes support `Accept: text/markdown` to return raw `.md` source from `docs-src/pages/`. Bare section roots (`/blog`, `/examples`, `/api`) resolve to directories under `docs/` via `GET /:page` — they redirect 301 to the matching `<page>.html` when it exists and 404 otherwise; `handleStaticFile` 404s on directory paths generally, so no route can attempt `sendfile` on a directory.
+Pages live under `docs/<locale>/` — one complete tree per locale (LT-174) — while the api/, examples/ and sources/ fragment trees stay single-copy at the docs root. `GET /:locale/:page` redirects 301 extensionless URLs (`/en/guide`) to the matching `<page>.html` when it exists and 404s otherwise. `Accept: text/markdown` returns raw `.md` source from `docs-src/pages/` on `/` and `/:locale/:page`; blog posts serve their built markdown mirror directly at `/<locale>/blog/<slug>.md`. `handleStaticFile` 404s on directory paths generally, so no route can attempt `sendfile` on a directory.
+
+**Legacy root-level URLs** (`/guide.html`, `/blog/<slug>`, …) 404 by design (LT-198 ruling): a redirect map in `serve.ts` would not reach the static host that actually serves the site, and the locale layout is unreleased, so there is no population of broken external links yet. Only `/` got the stub treatment, because it is the URL people actually type. Pinned by the `legacy root URLs` tests in `server/tests/serve.test.ts`.
 
 ### Layout and Template System
 
@@ -471,7 +475,6 @@ All path constants are **absolute paths** computed from `ROOT = join(import.meta
 | `STATIC_DIR` | `docs-src/static/` | Static assets copied verbatim by `staticAssetsEffect` |
 | `OUTPUT_DIR` | `docs/` | Final build output |
 | `ASSETS_DIR` | `docs/assets/` | Built assets |
-| `BLOG_OUTPUT_DIR` | `docs/blog/` | Built blog post HTML pages |
 | `EXAMPLES_DIR` | `docs/examples/` | Built example pages |
 | `SOURCES_DIR` | `docs/sources/` | Highlighted source fragments |
 | `TEST_DIR` | `docs/test/` | Copied mock files for component tests |
@@ -525,4 +528,4 @@ Constraint: member slugs must appear in `PAGE_ORDER`, and each chapter's members
 
 ## Blog Support
 
-Blog posts live in `docs-src/pages/blog/` (`YYYY-MM-DD-slug.md` naming) and are processed by the existing `docsMarkdown` signal and `pagesEffect` — no dedicated signal or effect. `PageMetadata` carries blog-only optional fields (`date`, `author`, `author-avatar`, `modified-date`, `tags`); `pagesEffect` injects derived template variables (`published-date`, `modified-date`, `reading-time`, `blog-tags`, `author-avatar`, `prev-post(-title)`, `next-post(-title)`) via `applyTemplate`'s `extraReplacements` parameter when `section === 'blog'`. The blog overview page (`blog.md`, `page.html` layout) has its body replaced with 3 latest-post excerpt cards (`<card-blogpost>`) built directly by `generateBlogExcerpts()` in `pages.ts`, followed by a `<module-blogarchive>` of the remaining posts, grouped by year into `<details>`/`<summary>` sections (current year open), built by `generateBlogArchive()` (both not via a Markdoc tag); individual posts use the `blog.html` layout, which hardcodes a `<basic-blogmeta>` element filled in via `{{ published-date }}`-style template variables. Routing: `GET /blog/:slug` in `serve.ts`, guarded by the `BLOG_OUTPUT_DIR` constant.
+Blog posts live in `docs-src/pages/blog/` (`YYYY-MM-DD-slug.md` naming) and are processed by the existing `docsMarkdown` signal and `pagesEffect` — no dedicated signal or effect. `PageMetadata` carries blog-only optional fields (`date`, `author`, `author-avatar`, `modified-date`, `tags`); `pagesEffect` injects derived template variables (`published-date`, `modified-date`, `reading-time`, `blog-tags`, `author-avatar`, `prev-post(-title)`, `next-post(-title)`) via `applyTemplate`'s `extraReplacements` parameter when `section === 'blog'`. The blog overview page (`blog.md`, `page.html` layout) has its body replaced with 3 latest-post excerpt cards (`<card-blogpost>`) built directly by `generateBlogExcerpts()` in `pages.ts`, followed by a `<module-blogarchive>` of the remaining posts, grouped by year into `<details>`/`<summary>` sections (current year open), built by `generateBlogArchive()` (both not via a Markdoc tag); individual posts use the `blog.html` layout, which hardcodes a `<basic-blogmeta>` element filled in via `{{ published-date }}`-style template variables. Routing: `GET /:locale/blog/:slug` in `serve.ts` serves `docs/<locale>/blog/<slug>.html`; the markdown mirror written next to it is served at `/<locale>/blog/<slug>.md` (LT-198).

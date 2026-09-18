@@ -148,10 +148,11 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 				const { locale, slug } = req.params
 				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
 				const blogDir = getFilePath(OUTPUT_DIR, locale, 'blog')
-				const filePath = getFilePath(
-					blogDir,
-					`${slug.replace(/\.html$/, '')}.html`,
-				)
+				// `.md` serves the markdown mirror next to the page (LT-198)
+				const name = slug.endsWith('.md')
+					? slug
+					: `${slug.replace(/\.html$/, '')}.html`
+				const filePath = getFilePath(blogDir, name)
 				const rel = filePath.startsWith(blogDir) ? filePath : null
 				return rel ? serveFile(rel) : new Response('Not Found', { status: 404 })
 			},
@@ -346,9 +347,13 @@ describe('path traversal', () => {
 	})
 })
 
-/* === §14.6 Blog route (/blog/:slug) === */
+/* === §14.6 Blog posts under a locale tree (/:locale/blog/:slug) === */
 
-describe('/blog/:slug route', () => {
+// The launch post is the corpus's oldest and stablest slug; both locale
+// trees carry its .html page and .md mirror after a build.
+const BLOG_SLUG = '2026-03-09-introducing-le-truc'
+
+describe('/:locale/blog/:slug route', () => {
 	let server: TestServer
 
 	beforeAll(() => {
@@ -357,6 +362,81 @@ describe('/blog/:slug route', () => {
 
 	afterAll(() => {
 		server.close()
+	})
+
+	test('GET /en/blog/<slug>.md → 200 text/markdown (LT-198: the mirror)', async () => {
+		const res = await fetch(`${server.url}/en/blog/${BLOG_SLUG}.md`)
+		expect(res.status).toBe(200)
+		expect(res.headers.get('content-type')).toContain('text/markdown')
+		const body = await res.text()
+		expect(body.length).toBeGreaterThan(0)
+		expect(body).not.toContain('<!doctype html')
+	})
+
+	test('GET /de/blog/<slug>.md → 200 (the second locale tree)', async () => {
+		const res = await fetch(`${server.url}/de/blog/${BLOG_SLUG}.md`)
+		expect(res.status).toBe(200)
+		expect(res.headers.get('content-type')).toContain('text/markdown')
+	})
+
+	test('GET /en/blog/<slug>.html → 200 with HTML', async () => {
+		const res = await fetch(`${server.url}/en/blog/${BLOG_SLUG}.html`)
+		expect(res.status).toBe(200)
+		const body = await res.text()
+		expect(body.toLowerCase()).toContain('<!doctype html')
+	})
+
+	test('GET /en/blog/<slug> → 200 (extensionless serves the page)', async () => {
+		const res = await fetch(`${server.url}/en/blog/${BLOG_SLUG}`)
+		expect(res.status).toBe(200)
+	})
+
+	test('GET /en/blog/unknown-post.md → 404', async () => {
+		const res = await fetch(`${server.url}/en/blog/unknown-post.md`)
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /fr/blog/<slug>.md → 404 (locale not built)', async () => {
+		const res = await fetch(`${server.url}/fr/blog/${BLOG_SLUG}.md`)
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /en/blog/../../server/config.md → no source leak (traversal)', async () => {
+		const res = await fetch(`${server.url}/en/blog/../../server/config.md`)
+		if (res.status === 200) {
+			const body = await res.text()
+			expect(body).not.toContain('SERVER_CONFIG')
+		} else {
+			expect(res.status).toBe(404)
+		}
+	})
+})
+
+/* === Legacy root-level URLs (pre-LT-174 layout) === */
+
+// Ruling (LT-198): these 404 by design. serve.ts redirects would not reach
+// the static host that actually serves the site, and the locale layout has
+// not shipped, so there is no population of broken external links yet.
+
+describe('legacy root URLs', () => {
+	let server: TestServer
+
+	beforeAll(() => {
+		server = startTestServer()
+	})
+
+	afterAll(() => {
+		server.close()
+	})
+
+	test('GET /guide.html → 404 (root-level pages are gone)', async () => {
+		const res = await fetch(`${server.url}/guide.html`)
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /blog/<existing-slug>.html → 404 (even for real posts)', async () => {
+		const res = await fetch(`${server.url}/blog/${BLOG_SLUG}.html`)
+		expect(res.status).toBe(404)
 	})
 
 	test('GET /blog/unknown-post → 404', async () => {

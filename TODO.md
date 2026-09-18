@@ -313,7 +313,7 @@ round, scope widened).
   pass it writes missing keys — the census names the problem, `i18n:sync` is where a person
   fixes it.
 
-- [ ] LT-198: LT-174 review residue — four deferred minors. **Depends on nothing; any time.**
+- [x] LT-198: LT-174 review residue — four deferred minors. **Depends on nothing; any time.** — done, pending review ⏳ (2026-09-18)
   **Skill:** docs-server-dev
   **Context:** The LT-174 code review (2026-09-15) returned ready-after-fixes; the two
   regressions it caught — llms.txt linking root-level mirrors that had moved into the locale
@@ -334,6 +334,50 @@ round, scope widened).
      `hreflangAlternates`, `rootRedirectPage`) have no direct unit tests — the most
      corner-case-prone surface of LT-174. Route-level tests partially compensate; the
      avatar fix added tests for the path math it touched.
+  **Done (2026-09-18):** all four landed.
+  1. `/:locale/blog/:slug` serves the mirror at `/<locale>/blog/<slug>.md`
+     (Bun.file supplies `text/markdown`; no MIME map change); extensionless
+     and `.html` forms unchanged.
+  2. **Ruled: accept the 404s.** A serve.ts 301 map cannot reach the surface
+     that actually serves the site — the static host gets the built `docs/`
+     verbatim — so the map would be an imprecise stand-in, and the locale
+     layout is unreleased, so no population of broken external links exists
+     yet. Only `/` keeps its stub, because it is the URL people actually
+     type. Pinned by the new `legacy root URLs` describe: a REAL post's
+     root-level URL 404s, not just an unknown one; the ruling is also
+     recorded in SERVER.md's route section. Reversing it means adding the
+     map AND reconsidering static-host stubs, and touching the pins.
+  3. SERVER.md route table, architecture diagram, and blog-section routing
+     sentence rewritten to the locale-prefix layout; "All HTML routes support
+     `Accept: text/markdown`" narrowed to the two routes that do (`/`,
+     `/:locale/:page`); the dead `BLOG_OUTPUT_DIR` removed from config.ts,
+     serve.ts's import, and the constants table (the blog route builds its
+     path from `OUTPUT_DIR` directly).
+  4. Direct unit tests: `localeAssetPath` + `rewriteFragmentRefs` (all four
+     dirs, src/value attrs, depth, page-link + absolute-URL negatives) in
+     config.test.ts; `pageDepth` / `hreflangAlternates` / `rootRedirectPage`
+     in new `effects/pages-locale.test.ts`; route-level `.md` tests (en + de
+     mirrors, unknown slug, un-built locale, traversal) in serve.test.ts,
+     whose mirrored test server was updated in lockstep with the route.
+  **Changed:** `server/serve.ts` (blog route `.md` branch; dropped the unused
+  BLOG_OUTPUT_DIR import); `server/config.ts` (removed BLOG_OUTPUT_DIR);
+  `server/SERVER.md` (diagram, route table, legacy-URL ruling paragraph,
+  constants table, blog routing sentence); `server/tests/serve.test.ts`;
+  `server/tests/config.test.ts`; `server/tests/effects/pages-locale.test.ts`
+  (new).
+  **Check:** the item-2 ruling (accept legacy-root 404s) is the judgment call
+  to ratify — it is pinned by tests, so a reversal is not free. Second look
+  at pages-locale.test.ts for over-fitting to `LOCALES = ['en', 'de']`.
+  **Verification (run):** touched files 110 pass / 0 fail; full
+  `bun test server/tests` 1600 pass / 1 fail / 1 error — the fail
+  (`i18n.test.ts` "a category outside the locale's platform set is not a
+  gap") involves none of my files: a PARALLEL LT-196 implementation sits
+  uncommitted in this tree (its census change makes the old LT-190 probe
+  report the real corpus as orphaned; its own LT-196 tests pass), and the
+  error is the pre-existing LT-207-family tier-corpus inter-test error.
+  `typecheck` exit 0; biome clean on the touched files (one pre-existing
+  noUnusedVariables error in committed host-profile.d.ts:127, not this
+  task's); `check:links` 410 green.
 
 - [ ] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174 (landed 2026-09-15). Re-verified 2026-09-18: premise holds, demand still zero — demand-gated.**
   **Skill:** docs-server-dev
