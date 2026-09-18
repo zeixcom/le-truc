@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-216.**
+**Next free task ID: LT-217.**
 
 ---
 
@@ -354,8 +354,26 @@ round, scope widened).
   committed state sync is a clean no-op (`0 missing / 0 pruned`, `git status i18n/`
   empty).
 
-- [x] LT-198: LT-174 review residue — four deferred minors. **Depends on nothing; any time.** — done, pending review ⏳ (2026-09-18)
+- [x] LT-198: LT-174 review residue — four deferred minors. **Depends on nothing; any time.** — reviewed ✓ (Architect, 2026-09-18)
   **Skill:** docs-server-dev
+  **Review (Architect, 2026-09-18):** Approved. Verified against the diff, not the
+  handoff: all four items landed as described, the mirrored test server in
+  serve.test.ts is in lockstep with the route, the architecture-diagram box
+  alignment survives, and the full suite in the current tree (LT-196 landed
+  since the handoff) is 1601 pass / 0 fail with only the pre-existing
+  LT-207-family inter-test error. The item-2 ruling is **ratified**: a
+  serve.ts redirect map cannot reach the static host that actually serves the
+  site, the locale layout is unreleased so nothing external rots, and the
+  pins — a REAL post's root-level URL 404s, not just an unknown slug — keep a
+  later reversal honest about its cost. The `Accept: text/markdown` narrowing
+  in SERVER.md was checked against pre-LT-174 serve.ts (`ba81fa65^`): the old
+  `/blog/:slug` route never handled the header either, so the "all HTML
+  routes" claim was already stale before LT-174 — documented a pre-existing
+  inaccuracy, no capability regressed. One residue filed: TESTS.md's
+  test-file tree omits `pages-locale.test.ts` and ~50 pre-existing files
+  (**LT-216**). Noted, no action: the `noUnusedVariables` biome error at
+  `host-profile.d.ts:127` predates this task (arrived with LT-208) and CI has
+  no biome step — local noise only.
   **Context:** The LT-174 code review (2026-09-15) returned ready-after-fixes; the two
   regressions it caught — llms.txt linking root-level mirrors that had moved into the locale
   trees, and blog author avatars resolving into the non-existent `<locale>/assets/` — plus
@@ -697,6 +715,19 @@ round, scope widened).
   Acceptance: a root `aria-*` thunk lowers to the internals form; a host `[aria-*]` style
   selector warns; the three child selectors stay silent; the simulation serialization pin holds;
   the zero-warning gate holds.
+
+- [ ] LT-216: Refresh TESTS.md's test-file tree and count (LT-198 review residue, mostly pre-existing).
+  **Skill:** docs-server-dev
+  **Context:** TESTS.md's "File naming and location" tree bills itself as "the source of
+  truth" while missing roughly fifty files: the entire `compiler/` subtree,
+  `effects/{build-effect,chapter-pages,simulate}.test.ts`, `helpers/generated-tsrx.ts`,
+  and — added by LT-198 — `effects/pages-locale.test.ts`. The count line
+  ("31 files, 671 tests") predates the tier/i18n/compiler test waves; the suite is
+  84 files / 1601 tests as of 2026-09-18. Regenerate the tree from
+  `find server/tests -name '*.test.ts'` and re-pin the count with a date — or, if the
+  hand-maintained tree keeps rotting, replace it with the instruction to list the files
+  (`find` or `bun test --list`) so the doc stops promising a snapshot it cannot keep.
+  While there, check the per-area verification recipes still name files that exist.
 
 ---
 
