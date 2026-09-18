@@ -1082,19 +1082,12 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			isElement,
 		) as ElementNode
 		const errRoot = node.catchChildren.find(isElement) as ElementNode
-		// The four-arm `.tsx` boundary's stale arm (re-fetch with retained
-		// value) — absent for the `.tsrx` grammar's three-arm shape and for
-		// the plain try/catch IIFE.
-		const staleRoot = node.staleChildren
-			? ((node.staleChildren.find(isElement) ?? null) as ElementNode | null)
-			: null
 		const catchParam = node.catchParam
 
 		if (
 			hasDeepConstruct(okRoot) ||
 			hasDeepConstruct(pendingRoot) ||
-			hasDeepConstruct(errRoot) ||
-			(staleRoot !== null && hasDeepConstruct(staleRoot))
+			hasDeepConstruct(errRoot)
 		) {
 			diagnostics.push(
 				diagnostic.unsupported(
@@ -1111,16 +1104,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 					source,
 					pendingRoot.node.start,
 					'@pending arm of an async boundary must be static/server markup — nothing watches it once resolved',
-				),
-			)
-			return
-		}
-		if (staleRoot !== null && staleRoot.attrs.some(isClientConstructAttr)) {
-			diagnostics.push(
-				diagnostic.unsupported(
-					source,
-					staleRoot.node.start,
-					'stale arm of an async boundary may only carry static/server attributes and its one lazy signal child — the retained value is what the arm shows',
 				),
 			)
 			return
@@ -1166,14 +1149,10 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		const okSelector = resolveSelector(okRoot)
 		const pendingSelector = resolveSelector(pendingRoot)
 		const errSelector = resolveSelector(errRoot)
-		const staleSelector = staleRoot !== null ? resolveSelector(staleRoot) : null
 		for (const [label, resolved, el] of [
 			['@try body', okSelector, okRoot],
 			['@pending arm', pendingSelector, pendingRoot],
 			['@catch arm', errSelector, errRoot],
-			...(staleRoot !== null && staleSelector
-				? [['stale arm', staleSelector, staleRoot] as const]
-				: []),
 		] as const) {
 			if (!resolved.unique)
 				diagnostics.push(
@@ -1199,14 +1178,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			errSelector.selector,
 			'one',
 		)
-		const staleQuery =
-			staleRoot !== null && staleSelector
-				? addQuery(
-						sanitizeVarName(staleRoot.tag),
-						staleSelector.selector,
-						'one',
-					)
-				: null
 		// The synthetic `<fieldset disabled>` `emit-server.ts` wraps around
 		// each arm root (LT-077, CHECKLIST §8) is addressed structurally, not
 		// via a CSS query (LT-086): `emit-server.ts` always makes it the arm
@@ -1231,13 +1202,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			usedNames,
 			`${sanitizeVarName(errRoot.tag)}Fieldset`,
 		)
-		const staleFieldsetQuery =
-			staleQuery !== null
-				? uniqueName(
-						usedNames,
-						`${sanitizeVarName((staleRoot as ElementNode).tag)}Fieldset`,
-					)
-				: null
 
 		const errText = catchParam ? directLazyCatchRef(errRoot, catchParam) : null
 		if (
@@ -1263,13 +1227,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 			pendingFieldsetQuery,
 			okFieldsetQuery,
 			errFieldsetQuery,
-			staleQuery,
-			staleFieldsetQuery,
-			// The stale arm may render the retained value (the same direct
-			// lazy signal child the ok arm shows) — when it does, the client's
-			// stale handler refreshes its text on every re-fetch.
-			staleText:
-				staleRoot !== null && signal === directLazyIdentifier(staleRoot),
 			okText: true,
 			errText,
 		})
@@ -1327,8 +1284,6 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		]
 		if (node.pendingChildren !== null)
 			branches.push(['@pending arm', node.pendingChildren])
-		if (node.staleChildren !== null)
-			branches.push(['stale arm', node.staleChildren])
 		const seenIn = new Map<string, string>()
 		for (const [label, branch] of branches)
 			for (const id of staticIdsUnder(branch)) {

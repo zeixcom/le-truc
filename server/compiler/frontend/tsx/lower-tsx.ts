@@ -14,7 +14,7 @@
  *   IIFE whose body is a `switch` returning JSX per arm → `switch`.
  * - The `@try` family gets two real-JS spellings: a try/catch IIFE for the
  *   plain error boundary, and the recognized ambient
- *   `boundary({ ok, nil, err, stale? })` call for the async boundary (which
+ *   `boundary({ ok, nil, err })` call for the async boundary (which
  *   arm ships stays a compiler decision; only the authored shape changed).
  * - Bare statements inside a branch are NOT expressible in JSX child
  *   position — an IIFE arm must return JSX — so `client-stmt` inside a
@@ -235,7 +235,7 @@ const lowerSwitchIife = (
 	}
 }
 
-/* === @try family → try/catch IIFE + boundary({ ok, nil, err, stale? }) === */
+/* === @try family → try/catch IIFE + boundary({ ok, nil, err }) === */
 
 /**
  * The plain error boundary: `{(() => { try { return <ok/> } catch (e) { return <fallback/> } })()}`
@@ -300,28 +300,26 @@ const lowerTryIife = (
 		catchSrc,
 		catchParam,
 		null,
-		null,
 		signals,
 		fors,
 	)
 }
 
 /**
- * The async boundary: `{boundary({ ok, nil, err, stale? })}` — a recognized
+ * The async boundary: `{boundary({ ok, nil, err })}` — a recognized
  * ambient call. All arms render, `hidden`-toggled by which state won at
  * render time; which arm SHIPS stays the compiler decision it was under
  * `@try`/`@pending`/`@catch`. The err arm's arrow parameter is the catch
  * parameter.
  *
- * Four arms map onto the Task-state vocabulary `watch()` already speaks
- * (ADR 0029's precedence: nil > err > stale > ok): `nil` is the
- * no-value-yet pending arm (the `.tsrx` `@pending` arm's exact IR), and the
- * optional `stale` arm is the re-fetching-with-retained-value state —
- * differentiable from `nil`, which the three-arm grammar could not express.
- * Omitting `stale` falls back the way `watch()` does: the retained value's
- * `ok` arm stays visible during a re-fetch. The `.tsrx` grammar has no
- * stale spelling yet (pinned `@tsrx/core`), so this is `.tsx`-only surface
- * for now — recorded as the dual-front-end asymmetry of ADR 0032 s6.
+ * Three arms map onto the Task-state vocabulary `watch()` already speaks:
+ * `nil` is the no-value-yet pending arm (the `.tsrx` `@pending` arm's exact
+ * IR). There is no `stale` arm — the owner withdrew it on 2026-09-18
+ * (LT-211): the client never re-renders arm content, it toggles
+ * `hidden`/`disabled` on server-rendered arms, so a re-fetching state has
+ * no arm to show; the reactive idiom for that is an `isPending(signal)`
+ * read beside the boundary (`class={ isPending(data) ? 'dimmed' : null }`),
+ * which the compiler folds server-side and watches client-side.
  */
 const lowerBoundaryCall = (
 	ctx: ExtractContext,
@@ -341,13 +339,12 @@ const lowerBoundaryCall = (
 	const ok = armOf('ok')
 	const nil = armOf('nil')
 	const errFn = armOf('err')
-	const stale = armOf('stale')
 	if (!isJsxNode(ok) || !isJsxNode(nil) || !isNode(errFn)) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				'boundary({ … }) expects ok and nil as JSX elements and err as an arrow: boundary({ ok: <div/>, nil: <p/>, err: (e) => <p/>, stale?: <p/> })',
+				'boundary({ … }) expects ok and nil as JSX elements and err as an arrow: boundary({ ok: <div/>, nil: <p/>, err: (e) => <p/> })',
 			),
 		)
 		return null
@@ -374,17 +371,7 @@ const lowerBoundaryCall = (
 		)
 		return null
 	}
-	return lowerTryArms(
-		ctx,
-		node,
-		ok,
-		errArm,
-		catchParam,
-		nil,
-		stale,
-		signals,
-		fors,
-	)
+	return lowerTryArms(ctx, node, ok, errArm, catchParam, nil, signals, fors)
 }
 
 /** Shared arm lowering for both async/plain spellings. */
@@ -395,7 +382,6 @@ const lowerTryArms = (
 	catchSrc: TsrxNode,
 	catchParam: string | null,
 	nilSrc: TsrxNode | null,
-	staleSrc: TsrxNode | null,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<TsrxNode, ForIR>,
 ): (TemplateNode & { kind: 'try' }) | null => {
@@ -404,7 +390,6 @@ const lowerTryArms = (
 	const children = lowerValue(okSrc)
 	const catchChildren = lowerValue(catchSrc)
 	const pendingChildren = nilSrc === null ? null : lowerValue(nilSrc)
-	const staleChildren = staleSrc === null ? null : lowerValue(staleSrc)
 	if (pendingChildren !== null) {
 		if (!singleRootOf(children)) {
 			ctx.diagnostics.push(
@@ -436,16 +421,6 @@ const lowerTryArms = (
 			)
 			return null
 		}
-		if (staleChildren !== null && !singleRootOf(staleChildren)) {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					(staleSrc?.start ?? node.start) as number,
-					'stale arm must render exactly one root element',
-				),
-			)
-			return null
-		}
 	}
 	if (children.length === 0 && catchChildren.length === 0) {
 		ctx.diagnostics.push(
@@ -465,7 +440,6 @@ const lowerTryArms = (
 		catchParam,
 		catchChildren,
 		pendingChildren,
-		staleChildren,
 		node,
 	}
 }

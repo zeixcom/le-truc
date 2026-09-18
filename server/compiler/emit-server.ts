@@ -387,18 +387,13 @@ export const emitServerModule = (
 			// single root element and found the guarded signal — errors would
 			// have failed the build before emitServerModule runs), each
 			// `hidden` unless it's the arm that won at render time. The
-			// client's later `watch(signal, { ok, err, nil, stale? })` flips
+			// client's later `watch(signal, { ok, err, nil })` flips
 			// the same `hidden` property going forward — no separate client
-			// rendering path, no divergent markup.
-			//
-			// The four-arm `.tsx` boundary (ADR 0032) adds the `stale` arm —
-			// re-fetching WITH a retained value, differentiable from `nil`
-			// (no value yet). Without it the emitted state machine is
-			// byte-identical to the three-arm shape ('pending' | 'ok' |
-			// 'err'); with it, a pending task that answers `.get()` with its
-			// retained value routes 'stale', and omitting the arm keeps the
-			// watch's own fallback (the retained value's `ok` arm stays
-			// visible during a re-fetch).
+			// rendering path, no divergent markup. There is no `stale` arm —
+			// the owner withdrew the four-arm spelling (LT-211); a re-fetching
+			// task keeps its `ok` arm visible, and the reactive idiom for the
+			// in-flight state is an `isPending(signal)` read beside the
+			// boundary, which folds right here (the harness answers it).
 			used.add('isPending')
 			const asyncId = ++armCounter
 			const stateVar = `__async${asyncId}`
@@ -412,12 +407,6 @@ export const emitServerModule = (
 			const errRoot = node.catchChildren.find(
 				(c): c is ElementNode => c.kind === 'element',
 			) as ElementNode
-			const staleRoot = node.staleChildren
-				? ((node.staleChildren.find(
-						(c): c is ElementNode => c.kind === 'element',
-					) ?? null) as ElementNode | null)
-				: null
-			const nilState = staleRoot !== null ? 'nil' : 'pending'
 			const signalChild = okRoot.children.find(
 				(c): c is TemplateNode & { kind: 'expr' } =>
 					c.kind === 'expr' && c.lazy && c.expr.type === 'Identifier',
@@ -429,15 +418,9 @@ export const emitServerModule = (
 				(c): c is TemplateNode & { kind: 'expr' } =>
 					c.kind === 'expr' && c.lazy,
 			)
-			if (staleRoot === null) {
-				lines.push(
-					`${tab(depth)}let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`,
-				)
-			} else {
-				lines.push(
-					`${tab(depth)}let ${stateVar}: 'nil' | 'stale' | 'ok' | 'err' = 'nil'`,
-				)
-			}
+			lines.push(
+				`${tab(depth)}let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`,
+			)
 			lines.push(`${tab(depth)}let ${errVar}: unknown = undefined`)
 			lines.push(`${tab(depth)}if (!isPending(${signalName})) {`)
 			lines.push(`${tab(depth + 1)}try {`)
@@ -447,21 +430,7 @@ export const emitServerModule = (
 			lines.push(`${tab(depth + 2)}${errVar} = e`)
 			lines.push(`${tab(depth + 2)}${stateVar} = 'err'`)
 			lines.push(`${tab(depth + 1)}}`)
-			if (staleRoot === null) {
-				lines.push(`${tab(depth)}}`)
-			} else {
-				// Pending WITH a retained value: `.get()` answers, so the
-				// re-fetch shows the stale arm; pending without one throws
-				// and stays on the nil arm.
-				lines.push(`${tab(depth)}} else {`)
-				lines.push(`${tab(depth + 1)}try {`)
-				lines.push(`${tab(depth + 2)}${signalName}.get()`)
-				lines.push(`${tab(depth + 2)}${stateVar} = 'stale'`)
-				lines.push(`${tab(depth + 1)}} catch {`)
-				lines.push(`${tab(depth + 2)}${stateVar} = '${nilState}'`)
-				lines.push(`${tab(depth + 1)}}`)
-				lines.push(`${tab(depth)}}`)
-			}
+			lines.push(`${tab(depth)}}`)
 			const hiddenAttr = (cond: string): AttributeIR => ({
 				kind: 'server',
 				name: 'hidden',
@@ -522,20 +491,13 @@ export const emitServerModule = (
 					lines.push(`${tab(depth)}${buffer}.push('</${root.tag}>')`)
 				lines.push(`${tab(depth)}${buffer}.push('</fieldset>')`)
 			}
-			emitArmRoot(pendingRoot, scope, `${stateVar} !== '${nilState}'`, null)
+			emitArmRoot(pendingRoot, scope, `${stateVar} !== 'pending'`, null)
 			emitArmRoot(
 				okRoot,
 				scope,
 				`${stateVar} !== 'ok'`,
 				`${stateVar} === 'ok' ? ${signalName}.get() : ''`,
 			)
-			if (staleRoot !== null)
-				emitArmRoot(
-					staleRoot,
-					scope,
-					`${stateVar} !== 'stale'`,
-					`${stateVar} === 'stale' ? ${signalName}.get() : ''`,
-				)
 			const errScope = new Set(scope)
 			if (node.catchParam) {
 				lines.push(`${tab(depth)}const ${node.catchParam} = ${errVar}`)
@@ -1146,6 +1108,22 @@ export const emitServerModule = (
 				setupContextNames.add(name)
 	const stubNamesAll = [...new Set([...stubNames, ...setupContextNames])].sort()
 	if (stubNamesAll.length > 0) used.add('refStub')
+
+	// `isPending` is harness-provided (LT-211): an authored import of it is
+	// filtered out server-side (RUNTIME_HARNESS_EXPORTS), so the module's
+	// binding must come from here whenever any emitted position references
+	// it — markup lines, the re-declared setup, or `expose()`. Tokenized
+	// like `retainReferenced` (identifier-boundary over the generated
+	// text): it can over-retain on a string literal mentioning the name,
+	// which at worst adds one unused harness import.
+	const referencesIsPending = (scan: string): boolean =>
+		/\bisPending\b/.test(scan)
+	if (
+		lines.some(line => referencesIsPending(line)) ||
+		emittedSetup.some(stmt => referencesIsPending(stmt.text)) ||
+		(component.exposeText !== null && referencesIsPending(component.exposeText))
+	)
+		used.add('isPending')
 
 	const body: string[] = [
 		'/**',

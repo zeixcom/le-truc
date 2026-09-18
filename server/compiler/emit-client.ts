@@ -566,11 +566,6 @@ export const emitClientModule = (
 				`const ${effect.errFieldsetQuery} = ${effect.errQuery}.parentElement as HTMLFieldSetElement`,
 				depth,
 			)
-			if (effect.staleQuery !== null && effect.staleFieldsetQuery !== null)
-				append(
-					`const ${effect.staleFieldsetQuery} = ${effect.staleQuery}.parentElement as HTMLFieldSetElement`,
-					depth,
-				)
 			append(`watch(${effect.signal}, {`, depth)
 			append('ok: value => {', depth + 1)
 			append(`${effect.pendingQuery}.hidden = true`, depth + 2)
@@ -603,23 +598,6 @@ export const emitClientModule = (
 					depth + 2,
 				)
 			append('},', depth + 1)
-			if (effect.staleQuery !== null && effect.staleFieldsetQuery !== null) {
-				// The four-arm boundary's stale handler: re-fetching WITH a
-				// retained value — hide every other arm, show the stale arm,
-				// optionally refreshing its retained-value text.
-				append('stale: value => {', depth + 1)
-				append(`${effect.pendingQuery}.hidden = true`, depth + 2)
-				append(`${effect.pendingFieldsetQuery}.disabled = true`, depth + 2)
-				append(`${effect.okQuery}.hidden = true`, depth + 2)
-				append(`${effect.okFieldsetQuery}.disabled = true`, depth + 2)
-				append(`${effect.errQuery}.hidden = true`, depth + 2)
-				append(`${effect.errFieldsetQuery}.disabled = true`, depth + 2)
-				append(`${effect.staleQuery}.hidden = false`, depth + 2)
-				append(`${effect.staleFieldsetQuery}.disabled = false`, depth + 2)
-				if (effect.staleText)
-					append(`${effect.staleQuery}.textContent = String(value)`, depth + 2)
-				append('},', depth + 1)
-			}
 			append('})', depth)
 			return
 		}
@@ -694,6 +672,14 @@ export const emitClientModule = (
 	// Real-export names an authored `import { … } from '@zeix/le-truc'` line
 	// already provides to this module (sub-design 16) — synthesized names
 	// are subtracted so no name is bound by two import statements.
+	// The `isPending` idiom (LT-211): a reactive thunk reading
+	// `isPending(knownSignal)` needs the binding in the generated module
+	// whether or not the author imported the name (the profile declares it
+	// ambient). Tokenized over the emitted text like the server emitter's
+	// scan — it cannot under-match, and an authored import is deduplicated
+	// by the `clientLeTrucNames` filter below.
+	if (lines.some(line => /\bisPending\b/.test(line))) imports.add('isPending')
+
 	const importList = [...imports]
 		.filter(name => !FACTORY_CONTEXT_MEMBERS.has(name))
 		.filter(name => !component.imports.clientLeTrucNames.has(name))

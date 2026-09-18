@@ -262,9 +262,11 @@ const lowerBodyStatements = (
  *   `watch(signal, { ok, err, nil })` call — no client DOM creation, pure
  *   enhance, mirroring `module-lazyload.ts`'s hand-written shape).
  *
- * `@finally` is gated outright in both modes. The grammar has no stale arm —
- * the four-state boundary is `.tsx`-only vocabulary (`boundary({ ok, nil,
- * err, stale })`, ADR 0032) — so `staleChildren` is always null here.
+ * `@finally` is gated outright in both modes. The grammar has no stale arm
+ * and never will — the four-arm `.tsx` spelling that briefly added one was
+ * withdrawn by the owner (LT-211): a re-fetching state has no arm, only the
+ * reactive `isPending` idiom beside the boundary. Both surfaces now lower
+ * the same three-arm shape.
  */
 export const lowerTry = (
 	ctx: ExtractContext,
@@ -362,7 +364,6 @@ export const lowerTry = (
 		catchParam,
 		catchChildren,
 		pendingChildren,
-		staleChildren: null,
 		node,
 	}
 }

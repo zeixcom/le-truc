@@ -530,8 +530,6 @@ const reportNamedFormControls = (
 			for (const child of node.catchChildren) visit(child)
 			if (node.pendingChildren)
 				for (const child of node.pendingChildren) visit(child)
-			if (node.staleChildren)
-				for (const child of node.staleChildren) visit(child)
 			return
 		}
 		// 'compose', 'text', 'expr', 'client-stmt' — nothing to check/recurse.
@@ -1087,8 +1085,13 @@ export const seedExtractionContext = (
 	},
 ): void => {
 	// @if conditions validate against server-known names — args and setup
-	// declarations, all parsed by this point.
-	ctx.serverKnown = new Set<string>([...paramNames])
+	// declarations, all parsed by this point. `isPending` is included: the
+	// server harness always provides it (the generated module binds it from
+	// the harness whenever its emitted text references it), so a reactive
+	// thunk reading `isPending(knownSignal)` folds server-side. This does
+	// NOT reopen `@if` over signals — `validateCondition` diagnoses signal
+	// reads before the unknown-name check.
+	ctx.serverKnown = new Set<string>([...paramNames, 'isPending'])
 	// LT-122 consults the caller-supplied names alone (see
 	// `ExtractContext.argNames`), so they are kept apart from the
 	// signals/setup consts folded into `serverKnown` below.
@@ -1533,7 +1536,12 @@ export const assembleComponentIR = (
 		leTrucImports: LeTrucImport[]
 	},
 ): ComponentIR | null => {
-	const serverKnown = new Set<string>([...paramNames])
+	// `isPending` is server-known (LT-211): the harness always provides it
+	// (the generated module binds it from the harness whenever its emitted
+	// text references it), so a reactive thunk reading
+	// `isPending(knownSignal)` folds server-side. This does NOT reopen @if
+	// over signals — `validateCondition` diagnoses signal reads first.
+	const serverKnown = new Set<string>([...paramNames, 'isPending'])
 	for (const s of extraction.signals) serverKnown.add(s.name)
 	for (const n of extraction.setupInits.keys()) serverKnown.add(n)
 

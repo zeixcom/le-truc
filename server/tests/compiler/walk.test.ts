@@ -111,7 +111,6 @@ const tree: TemplateNode & { kind: 'element' } = {
 					node: n('JSXElement'),
 				},
 			],
-			staleChildren: null,
 			pendingChildren: [
 				{
 					kind: 'element',

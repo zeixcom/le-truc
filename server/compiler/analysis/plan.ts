@@ -340,18 +340,6 @@ export type TopEffectPlan =
 			pendingFieldsetQuery: string
 			okFieldsetQuery: string
 			errFieldsetQuery: string
-			/**
-			 * The four-arm `.tsx` boundary's stale arm (re-fetching with a
-			 * retained value), or null when the boundary has no stale arm —
-			 * the `.tsrx` grammar's three-arm shape and the plain try/catch
-			 * IIFE both leave it null, keeping their emitted bytes identical.
-			 * When present, the client's single `watch()` gains the matching
-			 * `stale` handler (ADR 0029's precedence: nil > err > stale > ok).
-			 */
-			staleQuery: string | null
-			staleFieldsetQuery: string | null
-			/** Whether the stale arm renders the retained signal value. */
-			staleText: boolean
 			okText: boolean
 			errText: string | null
 	  }
@@ -562,6 +550,11 @@ export const analyzeClient = (
 				!refNames.has(name) &&
 				!JS_GLOBALS.has(name) &&
 				!CONTEXT_NAMES.has(name) &&
+				// The `isPending` idiom beside an async boundary (LT-211): the
+				// generated client imports it from '@zeix/le-truc' whenever an
+				// emitted position references it — an authored import works too
+				// (isPending is a real package export).
+				name !== 'isPending' &&
 				!setupNames.has(name) &&
 				!component.imports.clientLeTrucNames.has(name) &&
 				!component.imports.plainLocalNames.has(name),

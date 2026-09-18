@@ -204,7 +204,7 @@ describe('TSX spike — front-end parity (§4.3)', () => {
 })
 
 describe('TSX spike — §4.4 synthetic shapes through the unmodified analysis', () => {
-	test('async boundary (boundary({ ok, nil, err, stale })) renders the nil arm', async () => {
+	test('async boundary (boundary({ ok, nil, err })) renders the nil arm and folds the isPending idiom', async () => {
 		const source = read('spike/tsx/async/async-el.tsx')
 		const { component, diagnostics } = compileComponentTsx(
 			source,
@@ -216,18 +216,20 @@ describe('TSX spike — §4.4 synthetic shapes through the unmodified analysis',
 		const render = renderOf('async-el', 'AsyncEl')
 		const html = await render(component.serverCode, {})
 		// Fresh task in the value harness: pending WITHOUT a retained value —
-		// the nil arm shows; ok/err/stale render hidden alongside it.
+		// the nil arm shows; ok/err render hidden alongside it.
 		expect(html).toContain('<p class="loading">Loading</p>')
 		expect(html).toContain('hidden class="content"')
 		expect(html).toContain('hidden class="error"')
-		// The stale arm renders hidden with its retained value un-evaluated
-		// (guarded off while the nil arm won).
-		expect(html).toContain('<p hidden data-state="stale" class="stale"></p>')
-		// One watch() toggles all four roots — the stale handler present
-		// (ADR 0029's nil > err > stale > ok precedence), the client shape
-		// the .tsrx fixture pinned (features.test.ts) plus the fourth arm.
+		// The stale arm is gone (LT-211): no fourth root anywhere.
+		expect(html).not.toContain('stale')
+		// The `isPending(data)` class binding folds server-side — the fresh
+		// task is pending at build time, so the class renders on (LT-211).
+		expect(html).toContain('<p role="status" class="pending">')
+		// One watch() toggles the three roots; the client-side class binding
+		// reads isPending(data) so it re-fires when the task settles.
 		expect(component.clientCode).toContain('watch(')
-		expect(component.clientCode).toContain('stale: value =>')
+		expect(component.clientCode).toContain('isPending(data)')
+		expect(component.clientCode).not.toContain('stale')
 		expect(component.clientCode).not.toContain('document.createElement')
 	})
 

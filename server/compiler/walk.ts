@@ -36,7 +36,6 @@ export const childNodes = (node: TemplateNode): readonly TemplateNode[] => {
 				...node.children,
 				...node.catchChildren,
 				...(node.pendingChildren ?? []),
-				...(node.staleChildren ?? []),
 			]
 		default:
 			return []
@@ -45,10 +44,9 @@ export const childNodes = (node: TemplateNode): readonly TemplateNode[] => {
 
 export type WalkOptions = {
 	/**
-	 * Enter a `@try`'s `@pending` (and `.tsx` four-arm `stale`) async-boundary
-	 * arms. Default true. Consumers whose constructs cannot exist there
-	 * (composed elements, ref declarations) pass false — preserving their
-	 * pre-visitor reach.
+	 * Enter a `@try`'s `@pending` async-boundary arm. Default true.
+	 * Consumers whose constructs cannot exist there (composed elements,
+	 * ref declarations) pass false — preserving their pre-visitor reach.
 	 */
 	intoPending?: boolean
 	/**

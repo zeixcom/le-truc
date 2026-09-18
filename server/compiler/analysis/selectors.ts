@@ -196,8 +196,7 @@ export const countForSelector = (
 	if (node.kind === 'try') {
 		// An async boundary (@pending present, ADR 0023 sub-design 13): all
 		// arms coexist in the DOM simultaneously (hidden-toggled, not
-		// mutually exclusive) — sum, don't max, and include the pending and
-		// (four-arm .tsx) stale arms.
+		// mutually exclusive) — sum, don't max, and include the pending arm.
 		if (node.pendingChildren !== null)
 			return (
 				node.children.reduce(
@@ -205,10 +204,6 @@ export const countForSelector = (
 					0,
 				) +
 				node.pendingChildren.reduce(
-					(sum, c) => sum + countForSelector(c, selector),
-					0,
-				) +
-				(node.staleChildren ?? []).reduce(
 					(sum, c) => sum + countForSelector(c, selector),
 					0,
 				) +
@@ -492,9 +487,7 @@ export const matchesUnder = (
 			if (
 				matchesUnder([...node.children, ...node.catchChildren], selector) ||
 				(node.pendingChildren !== null &&
-					matchesUnder(node.pendingChildren, selector)) ||
-				(node.staleChildren !== null &&
-					matchesUnder(node.staleChildren, selector))
+					matchesUnder(node.pendingChildren, selector))
 			)
 				return true
 			continue

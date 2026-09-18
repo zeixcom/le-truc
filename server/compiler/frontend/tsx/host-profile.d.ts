@@ -74,19 +74,18 @@ interface I18n {
 
 /**
  * The recognized async boundary (the `.tsx` spelling of
- * `@try`/`@pending`/`@catch`, four-arm per LT-202): all arms render,
- * `hidden`-toggled by which state won at render time. `nil` is the
- * no-value-yet arm; the optional `stale` arm is the re-fetching-with-
- * retained-value state (ADR 0029's precedence: nil > err > stale > ok —
- * omitting `stale` falls back the way `watch()` does). The `.tsrx`
- * grammar has no stale spelling yet (pinned `@tsrx/core`), so the fourth
- * arm is `.tsx`-only surface for now.
+ * `@try`/`@pending`/`@catch`): all arms render, `hidden`-toggled by which
+ * state won at render time. `nil` is the no-value-yet arm. There is no
+ * `stale` arm — the owner withdrew the four-arm spelling (LT-211): a
+ * re-fetching task keeps its `ok` arm, and the in-flight state is the
+ * reactive `isPending` idiom beside the boundary (`isPending` is a real
+ * package export — import it; the compiler folds the read server-side and
+ * the generated `watch` re-fires when the task settles).
  */
 declare function boundary(arms: {
 	ok: unknown
 	nil: unknown
 	err: (error: any) => unknown
-	stale?: unknown
 }): unknown
 
 /**
