@@ -30,5 +30,6 @@
 			"jsx-probe-neg.tsx",
 			"combobox-bad-args.tsx",
 			"async-bad-arms.tsx",
+			"bad-host-typo.tsx",
 		],
 }

@@ -8,6 +8,7 @@
  * stays the analysis's. Setup statements are copied verbatim.
  */
 import { asString, defineMethod } from '@zeix/le-truc'
+import type { FormFactoryContext } from '@zeix/le-truc'
 
 export const config = { formAssociated: true }
 
@@ -71,9 +72,10 @@ export function FormListbox(
 			 * parent's `truc:pass={{ … }}` type-checks against the child's
 			 * real shape.
 			 */
-			'truc:pass'?: { filter?: () => string }
-		},
-) {
+				'truc:pass'?: { filter?: () => string }
+			},
+		{ host, all, expose }: FormFactoryContext<FormListboxProps>,
+	) {
 	expose({
 		value: asString(''),
 		filter: asString(''),

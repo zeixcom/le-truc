@@ -7,6 +7,7 @@
  * examples/ helper. Setup statements are copied verbatim.
  */
 import { asBoolean, asClampedInteger } from '@zeix/le-truc'
+import type { FactoryContext } from '@zeix/le-truc'
 import { getLocale } from '../../../../examples/_common/getLocale'
 
 export const i18n = {
@@ -57,6 +58,7 @@ export function BasicPluralize(
 		ordinal?: boolean
 		i18n: I18n
 	},
+	{ host, expose }: FactoryContext<BasicPluralizeProps>,
 ) {
 	const pluralCategory = (
 		locale: string,

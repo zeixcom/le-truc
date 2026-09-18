@@ -59,6 +59,8 @@ export type DiagnosticCode =
 	| 'TSRX046' // a setup const the value harness cannot evaluate has its value rendered into the markup — no tier can produce the site (LT-165 step 5)
 	| 'TSRX047' // literal prose in a component that declares `export const i18n` — route it through a message key (LT-173 step 5, ADR 0030 sub-design 4)
 	| 'TSRX048' // one component tag declared by multiple corpus sources (dual front end, ADR 0032 sub-design 6; LT-202) — tier 1 Prevented, statically decidable, no runtime half
+	| 'TSRX049' // the factory-context parameter destructures a name that is not FactoryContext vocabulary, or is not a destructured object (LT-209) — tier 1 Prevented, statically decidable, no runtime half
+	| 'TSRX050' // the factory-context annotation's surface disagrees with `config.formAssociated` (LT-209) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -1147,5 +1149,51 @@ export const diagnostic = {
 		error(
 			'TSRX048',
 			`Component tag \`${tag}\` is declared by more than one corpus source — every tag must have exactly one authored file, whatever surface it is written in (.tsrx or .tsx). Keep one of: ${sources.join(', ')} — delete the other or rename its tag.`,
+		),
+
+	/**
+	 * The authored second (factory-context) parameter is not a destructured
+	 * object of FactoryContext vocabulary (LT-209). The generated client
+	 * destructures the same names from ITS factory parameter, so a name the
+	 * context does not carry would be a "Cannot find name" in the generated
+	 * module — and a silent `any` anywhere the ambient stood in before.
+	 * ADR 0028 tier 1 (Prevented): statically decidable from the parameter
+	 * list alone, no runtime half exists. Error severity: the shape cannot
+	 * be lowered honestly.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
+	 * draft is the LT-209 handoff.
+	 */
+	badFactoryContextParam: (
+		source: string,
+		offset: number | undefined,
+		bad: ReadonlyArray<string>,
+	) =>
+		error(
+			'TSRX049',
+			`The factory context parameter destructures ${bad.map(b => `\`${b}\``).join(', ')}, which ${bad.length === 1 ? 'is' : 'are'} not FactoryContext member${bad.length === 1 ? '' : 's'} — destructure only \`host\`, \`first\`, \`all\`, \`expose\`, \`watch\`, \`on\`, \`pass\`, \`internals\`, \`requestContext\`, and \`provideContexts\`, e.g. \`, { host, expose }: FactoryContext<MyProps>\`.`,
+		),
+
+	/**
+	 * The factory-context annotation's surface disagrees with the
+	 * component's own `config.formAssociated` (LT-209): a form-associated
+	 * component annotating plain `FactoryContext` types `host` without the
+	 * managed form members it really has (`setCustomValidity(…)` would not
+	 * type-check), and a plain component annotating `FormFactoryContext`
+	 * claims members the element does not carry. ADR 0028 tier 1
+	 * (Prevented): both facts are AST-visible, no runtime half exists.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
+	 * draft is the LT-209 handoff.
+	 */
+	formContextMismatch: (
+		source: string,
+		annotated: 'FactoryContext' | 'FormFactoryContext',
+	) =>
+		error(
+			'TSRX050',
+			annotated === 'FactoryContext'
+				? `This component sets \`config.formAssociated\` but annotates its factory context as plain \`FactoryContext\` — \`host\` is missing the managed form members the element really carries. Annotate \`FormFactoryContext<MyProps>\` instead (its \`host\` is \`FormAssociatedElement & MyProps\`).`
+				: `This component annotates its factory context as \`FormFactoryContext\` but is not form-associated (no \`config.formAssociated\`) — \`host\` would claim form members the element does not have. Annotate \`FactoryContext<MyProps>\` instead, or configure \`config.formAssociated\` if the component really participates in forms.`,
 		),
 }

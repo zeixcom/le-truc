@@ -326,3 +326,75 @@ export function Seeded({ initial }: { initial?: string[] })
 		).toBe(true)
 	})
 })
+
+describe('the typed factory-context parameter (LT-209)', () => {
+	const withContext = (contextParam: string): string =>
+		`import { asString } from '@zeix/le-truc'
+import type { FactoryContext } from '@zeix/le-truc'
+
+export type BadHostProps = { value: string }
+
+export const config = { formAssociated: true }
+
+export function BadHost(
+	{ label = 'x' }: { label?: string },
+	${contextParam},
+) {
+	const span = first('span', 'the span')
+	expose({ value: asString('') })
+	return (
+		<bad-host>
+			<span>{label}</span>
+		</bad-host>
+	)
+}`
+
+	test('an unknown context destructure is TSRX049', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			withContext(
+				'{ host, first, expose, grimoire }: FactoryContext<BadHostProps>',
+			),
+			'bad-host.tsx',
+			new Set(['bad-host']),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'TSRX049')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`grimoire`')
+	})
+
+	test('a form-associated component annotating plain FactoryContext is TSRX050', () => {
+		const { diagnostics } = compileComponentTsx(
+			withContext('{ host, first, expose }: FactoryContext<BadHostProps>'),
+			'bad-host.tsx',
+			new Set(['bad-host']),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX050')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('FormFactoryContext')
+	})
+
+	test('a plain component annotating FormFactoryContext is TSRX050 too', () => {
+		const source = withContext(
+			'{ host, first, expose }: FormFactoryContext<BadHostProps>',
+		).replace(`export const config = { formAssociated: true }\n\n`, '')
+		const { diagnostics } = compileComponentTsx(
+			source,
+			'bad-host.tsx',
+			new Set(['bad-host']),
+		)
+		const hit = diagnostics.find(d => d.code === 'TSRX050')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('not form-associated')
+	})
+
+	test('a matching FormFactoryContext annotation compiles clean', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			withContext('{ host, first, expose }: FormFactoryContext<BadHostProps>'),
+			'bad-host.tsx',
+			new Set(['bad-host']),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+	})
+})

@@ -7,6 +7,7 @@
  * negative test exploits exactly this). Setup statements are copied verbatim.
  */
 import { bindAttribute, createCell, createState, asString, defineMethod } from '@zeix/le-truc'
+import type { FormFactoryContext } from '@zeix/le-truc'
 import { FormListbox } from '../listbox/form-listbox.tsx'
 
 export type FormComboboxOption = {
@@ -58,7 +59,8 @@ export function FormCombobox(
 			description?: string
 			clearable?: boolean
 		},
-) {
+		{ host, first, expose, watch }: FormFactoryContext<FormComboboxProps>,
+	) {
 	const inputId = `${name}-input`;
 	const descriptionId = `${name}-description`;
 	const showPopup = createState(false);

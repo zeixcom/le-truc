@@ -6,6 +6,7 @@
  * RENDER (server.golden parity), not the source text.
  */
 import { createCell } from '@zeix/le-truc'
+import type { FactoryContext } from '@zeix/le-truc'
 
 export type BasicCounterProps = {
 	/** Current counter value. Increments on each button click. */
@@ -27,7 +28,10 @@ declare global {
  *
  * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-counter} Interactive preview and usage examples
  **/
-export function BasicCounter({ start = 42 }: { start?: number }) {
+export function BasicCounter(
+	{ start = 42 }: { start?: number },
+	{ expose }: FactoryContext<BasicCounterProps>,
+) {
 	const count = createCell(start)
 	expose({ count: count.get })
 

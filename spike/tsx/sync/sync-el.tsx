@@ -9,10 +9,16 @@
  *   this one adds the INDEX binding);
  * - single-branch `@if` (`&&`) and both-arms ternary, beside each other.
  */
+import type { FactoryContext } from '@zeix/le-truc'
+
 export type SyncItem = { id: string; label: string }
+
+/** No exposed properties — the component renders server data only. */
+export type SyncElProps = Record<string, never>
 
 export function SyncEl(
 	{ mode, items }: { mode: string; items: SyncItem[] },
+	{ expose }: FactoryContext<SyncElProps>,
 ) {
 	expose({})
 

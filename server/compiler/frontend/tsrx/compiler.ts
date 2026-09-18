@@ -412,6 +412,7 @@ export const compileSource = (
 			fnStmtStart,
 			paramsNode: params.paramsNode,
 			paramNames: params.paramNames,
+			contextParam: params.contextParam,
 			extraction,
 			resolved: { ...resolved, fors },
 			decls,

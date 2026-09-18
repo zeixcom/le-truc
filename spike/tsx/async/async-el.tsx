@@ -12,8 +12,17 @@
  * signal shape, same arm markup).
  */
 import { deriveCell, isPending } from '@zeix/le-truc'
+import type { FactoryContext } from '@zeix/le-truc'
 
-export function AsyncEl({}: {}) {
+export type AsyncElProps = {
+	/** The async result once the task settles; empty until then. */
+	data: string
+}
+
+export function AsyncEl(
+	{}: {},
+	{ expose }: FactoryContext<AsyncElProps>,
+) {
 	const data = deriveCell(async () => 'loaded')
 	expose({ data: data.get })
 
