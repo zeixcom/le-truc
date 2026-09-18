@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-217.**
+**Next free task ID: LT-218.**
 
 ---
 
@@ -353,6 +353,25 @@ round, scope widened).
   planted orphans had them pruned (census listed both during the same run); on the
   committed state sync is a clean no-op (`0 missing / 0 pruned`, `git status i18n/`
   empty).
+  **Review (Architect, 2026-09-18):** Approved. Verified against the diff at
+  8b429d8f, not the handoff: the status union, the inverse walk, the report
+  buckets, and the sync prune (catalog AND manifest) are as described; the
+  falsification pair is pinned over the REAL catalogs, which also pins the
+  committed catalogs orphan-free; `git status i18n/` is clean, so sync is a
+  verified no-op on the committed state. Channel posture ratified — a census
+  record, never a build failure; no new TSRX code, no error class, so ADR 0028
+  owes nothing. The LT-190-probe injection fix is the right call: with the
+  inverse walk live, a synthetic corpus against the real catalogs reports
+  every committed key, so the old test was asserting isolation it no longer
+  had. One narrowing ruled, filed as **LT-217**: the reachability carve-out
+  as landed is UNCONDITIONAL, but its motivating case (the wholesale-translated
+  `task.one`) is a DECLARED key — the protection only needs declared keys, and
+  as landed, undeclared residue (a renamed `few`-suffixed key, a deleted
+  component) goes unreported and unpruned in de/lv/zh, whose union sets lack
+  `few`. That is the renamed-key/deleted-component residue this task's own
+  "Why" paragraph names, surviving in three of six catalogs. Census + sync
+  wording handed to Tech Writer as LT-189 item 8 (batch with or after LT-217,
+  which rewords the sync header and the ADR sentence again).
 
 - [x] LT-198: LT-174 review residue — four deferred minors. **Depends on nothing; any time.** — reviewed ✓ (Architect, 2026-09-18)
   **Skill:** docs-server-dev
@@ -437,6 +456,45 @@ round, scope widened).
   `typecheck` exit 0; biome clean on the touched files (one pre-existing
   noUnusedVariables error in committed host-profile.d.ts:127, not this
   task's); `check:links` 410 green.
+
+- [ ] LT-217: Narrow the orphan walk's reachability carve-out to DECLARED keys (LT-196 review).
+  **Skill:** le-truc-dev
+  **Context:** LT-196 (8b429d8f, reviewed same day) runs LT-190's reachability rule
+  inverted as an UNCONDITIONAL carve-out in `collectI18n`'s orphan walk: a
+  category-suffixed catalog key outside the locale's platform set is never
+  orphaned, whatever its declaration state. But the carve-out's motivating case —
+  a wholesale translation carrying `task.one` into an `{other}`-only locale — is a
+  DECLARED key, so the protection only needs to cover declared keys. For
+  UNDECLARED keys the unconditional carve-out is a blind spot: rename
+  `task.few` away (or delete the declaring component) and the old key reports
+  and prunes in ar/cy/pl but survives forever in **de/lv/zh, whose cardinal AND
+  union sets both lack `few`** — the renamed-key/deleted-component residue
+  LT-196's own "Why" paragraph names, uncaught in three of six catalogs. The
+  shape is pinned today by `i18n.test.ts`'s "the reachability carve-out is
+  unconditional — but only per locale" test, which asserts the unconditional
+  regime and flips under this ruling (its de half reports; its cy half is
+  unchanged).
+  **How:** in the orphan walk, check declaration BEFORE reachability: a key the
+  component declares (tag known, key in `i18nMessages`) and whose category is
+  unreachable skips — the wholesale protection, unchanged; an UNDECLARED key
+  under a known tag, or any key under an unknown tag, reports `orphaned` in
+  every locale with no `pluralCategories` call at all (reachability is then
+  computed only for declared keys, hoistable per locale — removes the per-key
+  recomputation nit en route). The compile gate already guards the
+  dropped-component-then-sync hazard: a corpus with error-severity diagnostics
+  throws before `i18n:sync` reaches any catalog.
+  **Docs that flip with the behavior (code commit carries them):** the pinned
+  test above; `scripts/i18n-sync.ts` header step 3 ("Unreachable category keys
+  are not orphans" → unreachable DECLARED keys); ADR 0030 s5's orphan-direction
+  sentence (unpublished on v3, amend in place); LE_TRUC_COMPILER.md's census
+  paragraph. The census reason line and the sync summary line are LT-189
+  item 8's copy jurisdiction — land the behavior wording as first draft there,
+  final copy in that batch.
+  **Acceptance:** an undeclared `few`-suffixed key in de.json reports
+  `orphaned` and `i18n:sync` prunes it (the rename-residue case, currently
+  silent); a wholesale-translated declared `task.one` in zh stays unreported
+  and unpruned (unchanged); the committed catalogs stay gap-free; full gates
+  green (`bun test server/tests`, typecheck, `check:tsrx`, `build:docs`).
 
 - [ ] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174 (landed 2026-09-15). Re-verified 2026-09-18: premise holds, demand still zero — demand-gated.**
   **Skill:** docs-server-dev
@@ -552,6 +610,19 @@ round, scope widened).
      sigil spellings in the touched messages modernized to `{item}`. Final copy over
      the drafts in `frontend/tsrx/lower-template.ts` and `frontend/tsx/lower-tsx.ts`;
      batch with items 2–6 so the compiler families read as one voice.
+  8. **The LT-196 orphaned-key copy** (2026-09-18): the census reason line in
+     `server/compiler/sim/report.ts` (first draft: `orphaned — nothing in the corpus
+     declares this key; the entry can never render` — a report record like
+     missing/stale, so the wording names the subject, the fact, and stops; census
+     records never carry fix-its) and the sync summary line + header step 3 in
+     `scripts/i18n-sync.ts` (first draft: `N orphaned key(s) PRUNED — nothing in the
+     corpus declares them, so they could never render`). Propagation sweep per
+     `workflows/error-message-lifecycle.md`: HOST_PROFILE.md's census sentence,
+     LE_TRUC_COMPILER.md's census paragraph, and the CHANGELOG Added bullet must
+     read as one voice with the final wording. **Sequence with LT-217**, which
+     narrows the carve-out to declared keys and rewords the sync header step 3 and
+     the ADR 0030 s5 orphan-direction sentence itself — run item 8 after it (or
+     accept a second pass over those two spots).
 
 ---
 
