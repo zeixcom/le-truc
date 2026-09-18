@@ -524,46 +524,6 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   2026-09-18: ADR 0033 deliberately stays Proposed until the project commits to the TSRX
   style features, likely 3.1 at TSRX 1.0; v3 behavior unchanged).
 
-- [ ] LT-212: `@for`'s `@empty` arm (LT-210 item 1, re-anchored). **Gate: before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent — no migrated component uses it today.**
-  **Skill:** le-truc-dev
-  **Context:** Spec: optional arm after the template block. New IR (an empty arm on
-  `ForIR`), both emitters, analysis addressing. `.tsx` needs no new spelling — an
-  empty state is already `{items.length === 0 ? … : items.map(…)}` — so decide
-  whether `@empty` lowers to that shared conditional+loop shape or earns its own IR
-  (keys and addressing may differ). Dual-surface story per ADR 0032 s6: paid in both
-  surfaces (the `.tsx` lowering is the conditional+map shape) or the s6 exception
-  recorded.
-  **Acceptance:** parity extended for the empty case; goldens unchanged for untouched
-  behavior; warning baseline 0, census 20/2/0 hold.
-
-- [ ] LT-213: Dynamic `<{expression}>` tags (LT-210 item 2, re-anchored). **Gate: before P5's first wave-4 migration; not urgent.**
-  **Skill:** le-truc-dev, with architect ruling the tier story if it needs one
-  **Context:** Spec: closing tag repeats (`</{expression}>`). Not expressible in
-  standard TSX — if the capability stays `.tsrx`-only, ADR 0032 s6's exception
-  mechanism records it. The server semantics are the hard part: a tag name unknown at
-  compile time folds only when the expression is server-known; decide which tier
-  renders the unknown case and what the client does at connect. Also check the
-  `.tsx` collision: a capitalized local-variable tag reads as compose (PascalCase =
-  compose), so a `.tsx` spelling via a local tag variable must not blur compose
-  dispatch.
-  **Acceptance:** the unknown-tag case has a ruled tier and a pinned fixture;
-  compose dispatch unaffected.
-
-- [ ] LT-214: Selector-prefix warning — ADR 0033 sub-design 5 (the scoped-styles "support" that lands in code). **GATED on owner acceptance of ADR 0033 — parked with it: the whole package is a ROADMAP.md backlog item (likely 3.1) pending the TSRX-feature commitment, so this task waits too.**
-  **Skill:** le-truc-dev (Tech Writer owns the message copy)
-  **Context:** The profile's open question answered: the compiler parses the authored
-  stylesheet (upstream exports reusable `parseStyle`/`analyzeCss` — evaluate against
-  a minimal hand parser) and **warns when a top-level selector neither leads with the
-  component's tag name nor is an at-rule**. Channel: compiler; **tier 2 Contained**
-  (ADR 0028 s1) — a warning, not an error, because a deliberately global rule must
-  stay possible (the structural escape hatch). All 22 corpus components already
-  conform (verified 2026-09-18), so the warning baseline must stay 0 at landing —
-  the gate that proves the check neither fires on the corpus nor misses its shape.
-  HOST_PROFILE.md's styles section and `docs-src/pages/styling.md`'s compiled-component
-  callout update from "documentation-only guarantee" to the warning.
-  **Acceptance:** a fixture with an unprefixed top-level selector warns with the
-  ruled copy; the corpus stays at warning baseline 0; `check:tsrx`/`typecheck` green.
-
 ---
 
 ## P1 — Tiered server evaluation — CLOSED 2026-09-06
@@ -1022,6 +982,31 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
   Acceptance: helpers return `void`; `FactoryResult` is not exported; a bare-statement helper
   call cannot silently no-op (the collector is the only registration path); `bun test` green.
 
+- [ ] LT-212: `@for`'s `@empty` arm (LT-210 item 1, re-anchored). **Gate: before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent — no migrated component uses it today.**
+  **Skill:** le-truc-dev
+  **Context:** Spec: optional arm after the template block. New IR (an empty arm on
+  `ForIR`), both emitters, analysis addressing. `.tsx` needs no new spelling — an
+  empty state is already `{items.length === 0 ? … : items.map(…)}` — so decide
+  whether `@empty` lowers to that shared conditional+loop shape or earns its own IR
+  (keys and addressing may differ). Dual-surface story per ADR 0032 s6: paid in both
+  surfaces (the `.tsx` lowering is the conditional+map shape) or the s6 exception
+  recorded.
+  **Acceptance:** parity extended for the empty case; goldens unchanged for untouched
+  behavior; warning baseline 0, census 20/2/0 hold.
+
+- [ ] LT-213: Dynamic `<{expression}>` tags (LT-210 item 2, re-anchored). **Gate: before P5's first wave-4 migration; not urgent.**
+  **Skill:** le-truc-dev, with architect ruling the tier story if it needs one
+  **Context:** Spec: closing tag repeats (`</{expression}>`). Not expressible in
+  standard TSX — if the capability stays `.tsrx`-only, ADR 0032 s6's exception
+  mechanism records it. The server semantics are the hard part: a tag name unknown at
+  compile time folds only when the expression is server-known; decide which tier
+  renders the unknown case and what the client does at connect. Also check the
+  `.tsx` collision: a capitalized local-variable tag reads as compose (PascalCase =
+  compose), so a `.tsx` spelling via a local tag variable must not blur compose
+  dispatch.
+  **Acceptance:** the unknown-tag case has a ruled tier and a pinned fixture;
+  compose dispatch unaffected.
+
 ---
 
 ## P5 — Wave 4: example migrations
@@ -1382,3 +1367,18 @@ and this note is redundant; if it has not, do the manual diff.
   library's own `--define`). With that signal in place, implement CHECKLIST §6's hydration
   assertion: on upgrade, recompute each folded expression and `console.warn` on mismatch —
   emitted only under the generation-time dev flag and folded away entirely otherwise.
+
+- [ ] LT-214: Selector-prefix warning — ADR 0033 sub-design 5 (the scoped-styles "support" that lands in code). **GATED on owner acceptance of ADR 0033 — parked with it: the whole package is a ROADMAP.md backlog item (likely 3.1) pending the TSRX-feature commitment, so this task waits too.**
+  **Skill:** le-truc-dev (Tech Writer owns the message copy)
+  **Context:** The profile's open question answered: the compiler parses the authored
+  stylesheet (upstream exports reusable `parseStyle`/`analyzeCss` — evaluate against
+  a minimal hand parser) and **warns when a top-level selector neither leads with the
+  component's tag name nor is an at-rule**. Channel: compiler; **tier 2 Contained**
+  (ADR 0028 s1) — a warning, not an error, because a deliberately global rule must
+  stay possible (the structural escape hatch). All 22 corpus components already
+  conform (verified 2026-09-18), so the warning baseline must stay 0 at landing —
+  the gate that proves the check neither fires on the corpus nor misses its shape.
+  HOST_PROFILE.md's styles section and `docs-src/pages/styling.md`'s compiled-component
+  callout update from "documentation-only guarantee" to the warning.
+  **Acceptance:** a fixture with an unprefixed top-level selector warns with the
+  ruled copy; the corpus stays at warning baseline 0; `check:tsrx`/`typecheck` green.
