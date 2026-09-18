@@ -16,7 +16,10 @@
  *   made against. Override present + manifest hash ≠ current source hash
  *   ⇒ `stale`; no override ⇒ `missing`.
  * - the translation census (`translationCensus`, `sim/report.ts`) and the
- *   gitignored machine-readable report (`writeI18nReport`).
+ *   gitignored machine-readable report (`writeI18nReport`). The census
+ *   walks BOTH directions (LT-196): declared keys missing from a catalog
+ *   (`missing`/`stale`) and catalog keys nothing declares (`orphaned` —
+ *   a translator's typo, a renamed key, a deleted component).
  *
  * The build stays READ-ONLY over tracked files (ADR 0030 sub-design 5):
  * writing missing keys into `i18n/<locale>.json` is the separate,
@@ -97,7 +100,7 @@ export const sourceHash = (source: string): string =>
 	createHash('sha1').update(source).digest('hex').slice(0, 12)
 
 /** One locale's committed catalog facts. */
-type Catalogs = {
+export type Catalogs = {
 	/** Every locale an override file exists for (never the source locale). */
 	locales: string[]
 	/** Per locale: the override map keyed by `<tag>.<key>`. */
@@ -156,7 +159,7 @@ const readCatalogs = async (): Promise<Catalogs> => {
  * The corpus's i18n facts, collected from the compiled registry plus the
  * committed catalogs: every declared key's source strings, the per-locale
  * override maps (for the generated module), and every locale's gaps
- * (missing or stale) against them.
+ * (missing, stale, or orphaned) against them.
  */
 export type I18nCollection = {
 	locales: readonly string[]
@@ -167,13 +170,28 @@ export type I18nCollection = {
 	gaps: TranslationGap[]
 }
 
+/**
+ * Walk BOTH directions between declarations and catalogs (ADR 0030
+ * sub-design 5, LT-196). The declared-key walk below asks "does every
+ * declared key have a translation?"; the orphan walk (LT-196) asks the
+ * inverse — "does every catalog key have a declaration?" — because a
+ * translator's typo, a renamed key, or a deleted component otherwise
+ * leaves residue in the catalogs that nothing ever reports. `catalogs` is
+ * injectable for tests; production reads the committed `i18n/` files.
+ */
 export const collectI18n = async (
 	entries: readonly RegistryEntry[],
+	catalogs?: Catalogs,
 ): Promise<I18nCollection> => {
-	const { locales, overrides, manifest } = await readCatalogs()
+	const { locales, overrides, manifest } = catalogs ?? (await readCatalogs())
 	const sources = new Map<string, Record<string, string>>()
+	// Every registry entry by tag — the orphan walk needs each component's
+	// `caseType` for the reachability carve-out, including components that
+	// declare no keys at all.
+	const byTag = new Map<string, RegistryEntry>()
 	const gaps: TranslationGap[] = []
 	for (const entry of entries) {
+		byTag.set(entry.tag, entry)
 		if (!entry.i18nMessages) continue
 		sources.set(entry.tag, entry.i18nMessages)
 		for (const locale of locales) {
@@ -207,6 +225,38 @@ export const collectI18n = async (
 				if (localeManifest[compound] !== sourceHash(source))
 					gaps.push({ key: compound, locale, status: 'stale' })
 			}
+		}
+	}
+	// The orphan walk (LT-196): catalog keys nothing declares. The LT-190
+	// reachability rule runs here INVERTED, as a carve-out before the
+	// declaration check — a category-suffixed key outside the locale's
+	// platform set is unreachable-but-legitimate, never orphaned, whatever
+	// its declaration state. That is what keeps a wholesale translation of
+	// `task.one` into an `{other}`-only locale from reporting: the key is
+	// declared and merely pruned there. A key whose tag is unknown (the
+	// component was deleted) gets the union fallback — the same conservative
+	// answer the compiler uses when it cannot prove a case type.
+	for (const locale of locales) {
+		const localeOverrides = overrides.get(locale) ?? {}
+		for (const compound of Object.keys(localeOverrides).sort()) {
+			const dot = compound.indexOf('.')
+			const tag = dot === -1 ? compound : compound.slice(0, dot)
+			const key = dot === -1 ? '' : compound.slice(dot + 1)
+			const entry = byTag.get(tag)
+			const reachableCategories =
+				entry === undefined || entry.caseType === 'union'
+					? pluralCategories(locale)
+					: pluralCategories(locale, entry.caseType)
+			const keyDot = key.lastIndexOf('.')
+			const category = keyDot === -1 ? null : key.slice(keyDot + 1)
+			if (
+				category !== null &&
+				PLURAL_CATEGORIES.has(category) &&
+				!reachableCategories.has(category)
+			)
+				continue
+			if (entry === undefined || entry.i18nMessages?.[key] === undefined)
+				gaps.push({ key: compound, locale, status: 'orphaned' })
 		}
 	}
 	return { locales, sources, overrides, gaps }
@@ -334,13 +384,20 @@ export const writeI18nReport = async (
 	outDir: string,
 	collection: I18nCollection,
 ): Promise<void> => {
-	const perLocale: Record<string, { missing: string[]; stale: string[] }> = {}
+	const perLocale: Record<
+		string,
+		{ missing: string[]; stale: string[]; orphaned: string[] }
+	> = {}
 	for (const locale of collection.locales)
-		perLocale[locale] = { missing: [], stale: [] }
+		perLocale[locale] = { missing: [], stale: [], orphaned: [] }
 	for (const gap of [...collection.gaps].sort((a, b) =>
 		a.key < b.key ? -1 : a.key > b.key ? 1 : a.locale < b.locale ? -1 : 1,
 	)) {
-		const bucket = (perLocale[gap.locale] ??= { missing: [], stale: [] })
+		const bucket = (perLocale[gap.locale] ??= {
+			missing: [],
+			stale: [],
+			orphaned: [],
+		})
 		bucket[gap.status].push(gap.key)
 	}
 	const report = {
@@ -350,6 +407,7 @@ export const writeI18nReport = async (
 		counts: {
 			missing: collection.gaps.filter(g => g.status === 'missing').length,
 			stale: collection.gaps.filter(g => g.status === 'stale').length,
+			orphaned: collection.gaps.filter(g => g.status === 'orphaned').length,
 		},
 	}
 	await mkdir(outDir, { recursive: true })

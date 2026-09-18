@@ -338,14 +338,21 @@ the reserved record — and the catalog never reaches the client. A missing
 key renders the source-locale string and is recorded in the build report's
 **translation census** (`translationCensus`, `sim/report.ts`; machine-
 readable artifact at `server/generated/tsrx/i18n-report.json`) — not a
-compile warning, since it is not author-fixable. The census is
-REACHABILITY-AWARE (LT-190): a `<key>.<category>` message whose category is
+compile warning, since it is not author-fixable. The census walks BOTH
+directions between declarations and catalogs (LT-196): every declared key
+must be translated, and every catalog key must be declared — an entry
+nothing declares (a translator's typo, a renamed key, a deleted
+component) reports `orphaned`, since it can never render. The census is
+REACHABILITY-AWARE (LT-190), in both directions: a `<key>.<category>`
+message whose category is
 outside the locale's platform set — read per locale for the component's
 statically proven `truc:case-type` (`RegistryEntry.caseType`:
 `'cardinal'`/`'ordinal'` when provable, `'union'` otherwise — the runtime's
 own fallback) — sits in a pruned span that cannot render there, so its
-absence is the translator's nothing-to-do, not a gap; a locale's catalog
-carries exactly its own reachable set. Staleness rides a committed
+absence is the translator's nothing-to-do, not a gap; the same carve-out
+keeps the orphan walk from reporting a wholesale-translated pruned
+category, so a locale's catalog carries exactly its own reachable set.
+Staleness rides a committed
 manifest (`i18n/manifest.json`, per locale per key the source hash the
 translation was recorded against): a source-string edit is a `.tsrx` edit
 that silently invalidates that key's translations, so an override without a
@@ -353,7 +360,8 @@ matching manifest hash reports `stale`. Literal prose inside a
 catalog-using component IS author-fixable and warns (TSRX047 — template
 text with two or more adjacent letters; single-letter fragments are page
 data). The build stays read-only: an explicit `i18n:sync` script — never
-the build — writes missing keys into the committed catalogs and refreshes
+the build — writes missing keys into the committed catalogs, prunes
+orphaned keys out of them, and refreshes
 the manifest.
 
 **Per-locale pruning of rendered alternatives** (ADR 0030 s6): with the locale

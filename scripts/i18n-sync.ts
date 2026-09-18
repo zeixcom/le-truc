@@ -15,7 +15,13 @@
  *    person running this confirms the translation matches the source it
  *    will ship against. Stale keys are listed, not silently confirmed:
  *    review the diff and decide whether the translation needs rework
- *    before committing.
+ *    before committing,
+ * 3. every ORPHANED key — a catalog entry nothing in the corpus declares
+ *    (a translator's typo, a renamed key, a deleted component; the
+ *    census's `orphaned` status, LT-196) — is pruned from the catalog and
+ *    from the staleness manifest. Unreachable category keys are not
+ *    orphans (the census's carve-out), so a wholesale translation of a
+ *    pruned category survives the pass untouched.
  *
  * Run by a person, diffable in review. The compile this performs writes
  * only into the gitignored `server/generated/tsrx/`.
@@ -24,6 +30,7 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Glob } from 'bun'
+import type { ComponentRegistry } from '../server/compiler/registry'
 import {
 	collectI18n,
 	I18N_DIR,
@@ -31,7 +38,6 @@ import {
 	sourceHash,
 } from '../server/effects/i18n'
 import { compileTsrxCorpus } from '../server/effects/tsrx'
-import type { ComponentRegistry } from '../server/compiler/registry'
 import type { FileInfo } from '../server/file-signals'
 
 const ROOT = resolve(import.meta.dir, '..')
@@ -82,7 +88,9 @@ const manifest: Record<string, Record<string, string>> = (() => {
 
 let writtenKeys = 0
 let confirmedKeys = 0
+let prunedKeys = 0
 const staleKeys: string[] = []
+const orphanKeys: string[] = []
 
 for (const locale of collection.locales) {
 	const catalogPath = join(I18N_DIR, `${locale}.json`)
@@ -97,11 +105,19 @@ for (const locale of collection.locales) {
 		if (gap.status === 'missing') {
 			next[gap.key] = next[gap.key] ?? ''
 			writtenKeys++
-		} else {
+		} else if (gap.status === 'stale') {
 			// Stale: listed for review. The manifest entry is refreshed like
 			// every carried key — the translator decides whether the wording
 			// needs rework; the census stops counting it either way.
 			staleKeys.push(`${gap.key} (${locale})`)
+		} else {
+			// Orphaned: pruned. The entry can never render — no component
+			// declares it — so keeping it would be residue the census counts
+			// forever. The manifest entry goes with it.
+			delete next[gap.key]
+			delete manifest[locale]?.[gap.key]
+			prunedKeys++
+			orphanKeys.push(`${gap.key} (${locale})`)
 		}
 	}
 	// Confirm every carried key against the CURRENT source strings.
@@ -127,10 +143,7 @@ for (const locale of collection.locales) {
 	await Bun.write(catalogPath, `${JSON.stringify(sorted, null, '\t')}\n`)
 }
 
-await Bun.write(
-	manifestPath,
-	`${JSON.stringify(manifest, null, '\t')}\n`,
-)
+await Bun.write(manifestPath, `${JSON.stringify(manifest, null, '\t')}\n`)
 
 console.log(
 	`i18n:sync — ${writtenKeys} missing key(s) written as empty entries, ${confirmedKeys} carried key(s) confirmed against current sources across ${collection.locales.length} locale(s).`,
@@ -139,5 +152,11 @@ if (staleKeys.length > 0) {
 	console.log(
 		`${staleKeys.length} STALE key(s) — the source string moved after the translation was recorded; review the wording before committing:\n` +
 			staleKeys.map(key => `  • ${key}`).join('\n'),
+	)
+}
+if (orphanKeys.length > 0) {
+	console.log(
+		`${prunedKeys} orphaned key(s) PRUNED — nothing in the corpus declares them, so they could never render:\n` +
+			orphanKeys.map(key => `  • ${key}`).join('\n'),
 	)
 }

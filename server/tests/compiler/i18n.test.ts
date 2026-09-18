@@ -6,7 +6,8 @@
  * the generated record runtime.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
@@ -21,6 +22,20 @@ const compile = (source: string, path = 'examples/x/c-i18n.tsrx') =>
 
 const composeRegistryOf = (...entries: RegistryEntry[]) =>
 	new Map(entries.map(entry => [entry.source, entry]))
+
+/**
+ * Catalog facts injected into `collectI18n` — the census's census-half
+ * tests run against synthetic corpora, so the committed `i18n/` files
+ * must not leak real keys into their gap sets. Locale facts (the platform
+ * plural sets) stay real: they are keyed by locale name, not by file.
+ */
+const injectedCatalogs = (
+	overrides: Record<string, Record<string, string>>,
+) => ({
+	locales: Object.keys(overrides),
+	overrides: new Map(Object.entries(overrides)),
+	manifest: new Map<string, Record<string, string>>(),
+})
 
 /* === The inline declaration + the untranslated-literal warning (TSRX047) === */
 
@@ -321,20 +336,26 @@ export function C({ lang = 'en' }: { lang?: string })
 /* === The translation census (ADR 0030 sub-design 5, LT-173 step 4) === */
 
 describe('the translation census', () => {
-	test('rides the census channel with missing and stale records', () => {
+	test('rides the census channel with missing, stale, and orphaned records', () => {
 		const census = translationCensus(
 			[
 				{ key: 'basic-pluralize.remaining', locale: 'de', status: 'missing' },
 				{ key: 'basic-pluralize.task', locale: 'de', status: 'stale' },
+				{
+					key: 'basic-deleted-component.gone',
+					locale: 'cy',
+					status: 'orphaned',
+				},
 			],
-			['de', 'fr'],
+			['de', 'cy'],
 		)
 		expect(census.kind).toBe('translation')
-		expect(census.values).toEqual(['de', 'fr'])
+		expect(census.values).toEqual(['cy', 'de'])
 		const formatted = formatCensus(census)
-		expect(formatted).toContain('Translation census — 2 entries: 2 de, 0 fr')
+		expect(formatted).toContain('Translation census — 3 entries: 2 de, 1 cy')
 		expect(formatted).toContain('missing — no entry')
 		expect(formatted).toContain('stale — the source string moved')
+		expect(formatted).toContain('orphaned — nothing in the corpus declares')
 		// Census records never ride the warning channel (census.test.ts's pin,
 		// restated for the second kind).
 		expect(formatted).not.toContain('⚠️')
@@ -345,9 +366,10 @@ describe('the translation census', () => {
 
 describe('the census skips pruned categories (LT-190)', () => {
 	// A synthetic corpus entry — collectI18n reads only tag/i18nMessages/
-	// caseType off an entry. The catalogs are the COMMITTED ones, so the
-	// locale facts are the platform's own: de's cardinal set is {one, other},
-	// cy's is all six.
+	// caseType off an entry. The catalogs are INJECTED (empty: the probe
+	// declares keys no catalog carries yet), so the synthetic corpus is the
+	// walk's whole world; the locale facts are still the platform's own:
+	// de's cardinal set is {one, other}, cy's is all six.
 	const probe = {
 		tag: 'census-probe',
 		i18nMessages: { 'label.one': 'one', 'label.two': 'two' },
@@ -355,7 +377,10 @@ describe('the census skips pruned categories (LT-190)', () => {
 	} as unknown as RegistryEntry
 
 	test("a category outside the locale's platform set is not a gap", async () => {
-		const { gaps } = await collectI18n([probe])
+		const { gaps } = await collectI18n(
+			[probe],
+			injectedCatalogs({ de: {}, cy: {} }),
+		)
 		// label.one is reachable everywhere and in no catalog -> one gap per
 		// locale. label.two is pruned in de (cardinal de never selects two)
 		// -> no de gap for it — the phantom-gap case the filter exists for.
@@ -381,6 +406,76 @@ describe('the census skips pruned categories (LT-190)', () => {
 		) as ComponentRegistry
 		const collection = await collectI18n(Object.values(registry))
 		expect(collection.gaps).toEqual([])
+	})
+})
+
+/* === Orphaned catalog keys — the census's inverse walk (LT-196) === */
+
+describe('orphaned catalog keys (LT-196)', () => {
+	// The same synthetic probe the LT-190 reachability tests use, with
+	// INJECTED catalogs — collectI18n takes the catalog facts as a second
+	// argument so the inverse walk is testable without touching the
+	// committed files. Locale facts are the platform's own: de's cardinal
+	// set is {one, other}, zh's is {other}, cy's is all six.
+	const probe = {
+		tag: 'census-probe',
+		i18nMessages: { 'label.one': 'one', 'label.two': 'two' },
+		caseType: 'cardinal',
+	} as unknown as RegistryEntry
+
+	test('a catalog key whose component is gone is orphaned', async () => {
+		const { gaps } = await collectI18n(
+			[probe],
+			injectedCatalogs({ de: { 'basic-deleted-component.gone': 'weg' } }),
+		)
+		expect(gaps.filter(gap => gap.status === 'orphaned')).toEqual([
+			{ key: 'basic-deleted-component.gone', locale: 'de', status: 'orphaned' },
+		])
+	})
+
+	test('a key the component does not declare is orphaned (the translator-typo case)', async () => {
+		const { gaps } = await collectI18n(
+			[probe],
+			injectedCatalogs({ de: { 'census-probe.typo': 'Tippfehler' } }),
+		)
+		expect(gaps.filter(gap => gap.status === 'orphaned')).toEqual([
+			{ key: 'census-probe.typo', locale: 'de', status: 'orphaned' },
+		])
+	})
+
+	test('a declared key outside the locale’s platform set is legitimate, not orphaned', async () => {
+		// The wholesale-translation shape the inversion must not report: a
+		// translator carries every DECLARED key over, including categories
+		// this locale prunes — `task.one` in an {other}-only locale. The key
+		// is unreachable there (no missing record either, LT-190's rule) and
+		// declared, so the orphan walk has nothing to say.
+		const { gaps } = await collectI18n(
+			[probe],
+			injectedCatalogs({
+				zh: { 'census-probe.label.one': '一', 'census-probe.label.two': '二' },
+			}),
+		)
+		expect(gaps.filter(gap => gap.status === 'orphaned')).toEqual([])
+		expect(gaps.filter(gap => gap.key === 'census-probe.label.one')).toEqual([])
+	})
+
+	test('the reachability carve-out is unconditional — but only per locale', async () => {
+		// An UNDECLARED category key outside the locale's platform set is
+		// unreachable-and-therefore-unreportable there (de has no `two`)…
+		const de = await collectI18n(
+			[probe],
+			injectedCatalogs({ de: { 'census-probe.stray.two': 'zwei' } }),
+		)
+		expect(de.gaps.filter(gap => gap.status === 'orphaned')).toEqual([])
+		// …while a locale whose platform set DOES select that category
+		// reports it — the residue stays loud where it could actually render.
+		const cy = await collectI18n(
+			[probe],
+			injectedCatalogs({ cy: { 'census-probe.stray.two': 'dau' } }),
+		)
+		expect(cy.gaps.filter(gap => gap.status === 'orphaned')).toEqual([
+			{ key: 'census-probe.stray.two', locale: 'cy', status: 'orphaned' },
+		])
 	})
 })
 
@@ -520,5 +615,59 @@ describe('the generated i18n module', () => {
 		// cloned pills announce the translation without any client catalog.
 		expect(template).toContain('aria-label="Entfernen"')
 		expect(template).toContain('<slot></slot>')
+	})
+})
+
+/* === The committed catalogs against the inverse walk (LT-196) === */
+
+describe('orphaned keys over the real corpus (LT-196)', () => {
+	// The falsification that demonstrated the gap (LT-196's context): the
+	// two foreign keys planted in de.json reported "0 gap(s)" before the
+	// inverse walk existed. Injected here over the REAL catalogs — so this
+	// also pins that the committed catalogs carry no orphans of their own:
+	// any entry beyond the two plants is a real residue finding.
+	const asStringRecord = (value: unknown): Record<string, string> =>
+		typeof value === 'object' && value !== null
+			? Object.fromEntries(
+					Object.entries(value as Record<string, unknown>).map(([k, v]) => [
+						k,
+						String(v),
+					]),
+				)
+			: {}
+
+	test('the planted falsification keys report orphaned; the committed catalogs report nothing else', async () => {
+		const registry = JSON.parse(
+			readFileSync(`${generated.path}/registry.json`, 'utf8'),
+		) as ComponentRegistry
+		const i18nDir = join(import.meta.dir, '../../../i18n')
+		const locales: string[] = []
+		const overrides = new Map<string, Record<string, string>>()
+		for (const file of readdirSync(i18nDir)) {
+			if (!file.endsWith('.json') || file === 'manifest.json') continue
+			const locale = file.replace(/\.json$/, '')
+			locales.push(locale)
+			overrides.set(
+				locale,
+				asStringRecord(JSON.parse(readFileSync(join(i18nDir, file), 'utf8'))),
+			)
+		}
+		const de = overrides.get('de')
+		if (!de) throw new Error('the committed de catalog is missing')
+		de['basic-deleted-component.gone'] = 'weg'
+		de['basic-pluralize.typo-key'] = 'Tippfehler'
+		const { gaps } = await collectI18n(Object.values(registry), {
+			locales,
+			overrides,
+			manifest: new Map(),
+		})
+		expect(gaps.filter(gap => gap.status === 'orphaned')).toEqual([
+			{
+				key: 'basic-deleted-component.gone',
+				locale: 'de',
+				status: 'orphaned',
+			},
+			{ key: 'basic-pluralize.typo-key', locale: 'de', status: 'orphaned' },
+		])
 	})
 })

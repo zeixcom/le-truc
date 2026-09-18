@@ -306,14 +306,16 @@ export const tierCensus = (subjects: readonly TierCensusSubject[]): Census => ({
 export type TranslationGap = {
 	/** The component-namespaced catalog key (`basic-pluralize.remaining`). */
 	key: string
-	/** The locale the key is missing or stale in. */
+	/** The locale the key is missing, stale, or orphaned in. */
 	locale: string
 	/**
 	 * `missing` — no entry in the locale's catalog (the source-locale
 	 * string renders); `stale` — an entry exists but the source string
-	 * moved after the translation was recorded, so it may no longer match.
+	 * moved after the translation was recorded, so it may no longer match;
+	 * `orphaned` — an entry exists in the locale's catalog but nothing in
+	 * the corpus declares it (LT-196), so it can never render.
 	 */
-	status: 'missing' | 'stale'
+	status: 'missing' | 'stale' | 'orphaned'
 }
 
 /**
@@ -342,9 +344,13 @@ export const translationCensus = (
 					? [
 							'missing — no entry in this locale’s catalog; the source-locale string renders',
 						]
-					: [
-							'stale — the source string moved after this translation was recorded',
-						],
+					: gap.status === 'stale'
+						? [
+								'stale — the source string moved after this translation was recorded',
+							]
+						: [
+								'orphaned — nothing in the corpus declares this key; the entry can never render',
+							],
 		}))
 		.sort((a, b) =>
 			a.subject < b.subject

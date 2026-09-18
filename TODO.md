@@ -287,7 +287,7 @@ round, scope widened).
   cross-surface pin; `build:docs` green, simulation pass 2/8/20 unchanged; biome clean;
   `check:links` 410 green.
 
-- [ ] LT-196: Report orphaned catalog keys in the translation census (ADR 0030 s5 gap).
+- [x] LT-196: Report orphaned catalog keys in the translation census (ADR 0030 s5 gap). — done, pending review ⏳ (2026-09-18)
   **Skill:** docs-server-dev
   **Context:** **Demonstrated by falsification, not inspection** (architect, 2026-09-07):
   adding `"basic-deleted-component.gone"` and `"basic-pluralize.typo-key"` to `i18n/de.json`
@@ -312,6 +312,47 @@ round, scope widened).
   **Also:** `scripts/i18n-sync.ts` should prune orphans (or list them for removal) in the same
   pass it writes missing keys — the census names the problem, `i18n:sync` is where a person
   fixes it.
+  **Changed:** `server/compiler/sim/report.ts` (`TranslationGap['status']` gains
+  `'orphaned'`; `translationCensus` emits the third reason line); `server/effects/i18n.ts`
+  (`collectI18n` grows the inverse walk — every catalog key must be declared, with the
+  LT-190 reachability rule inverted into a carve-out that runs BEFORE the declaration
+  check; `Catalogs` is now exported and injectable as a second `collectI18n` parameter
+  for tests; `writeI18nReport` gains the `orphaned` bucket and count); `scripts/i18n-sync.ts`
+  (orphaned keys pruned from the catalog AND the staleness manifest, listed in the
+  summary; header doc gains step 3); `server/tests/compiler/i18n.test.ts`.
+  **How:** the carve-out is unconditional but per locale — a suffixed key outside the
+  locale's platform set is never orphaned, whatever its declaration state, which is the
+  wholesale-translation protection the task text warned about (`task.one` in an
+  `{other}`-only locale). A key whose TAG is unknown (deleted component) takes the union
+  fallback — the compiler's own conservative answer — so a deleted component's keys still
+  report everywhere their categories could render; only genuinely pruned-category keys
+  slip the report, and only in the locales that could never render them. No new TSRX
+  code, no error class — census/report channel only, the build never fails on a catalog.
+  The census wording is FIRST DRAFT for Tech Writer (batch with LT-189 items 2–7):
+  census reason `orphaned — nothing in the corpus declares this key; the entry can
+  never render`, sync log `N orphaned key(s) PRUNED — nothing in the corpus declares
+  them, so they could never render`.
+  **Test note:** the LT-190 probe test now injects empty catalogs — with the inverse
+  walk live, a synthetic one-entry corpus against the REAL catalogs reports every
+  committed key orphaned (the parallel LT-198 run transiently observed exactly this);
+  locale facts are platform-derived, so nothing real was lost.
+  **Check:** (1) the unknown-tag union fallback — deleted-component residue in a
+  pruned category stays unreported in locales that cannot render that category, by
+  design; a global prune would need cross-locale knowledge `i18n:sync` deliberately
+  lacks. (2) ADR 0030 s5 amended in place (both-directions walk, inverted carve-out,
+  sync prunes) — unpublished on v3, same precedent as LT-201; adr-keeper pass can
+  ratify. (3) LE_TRUC_COMPILER.md's census paragraph + HOST_PROFILE.md's census
+  sentence + a CHANGELOG Added bullet carry the same fact.
+  **Verification (run):** `i18n.test.ts` 31/31 (incl. the falsification pair pinned
+  over the REAL catalogs + committed-catalogs-report-nothing-else); full
+  `bun test server/tests` 1601 pass / 0 fail (1 pre-existing LT-207 inter-test
+  error); `typecheck` exit 0; `check:tsrx` warning baseline 0, tier census 20/2/0,
+  translation census 0 gap(s) across 6 locale(s) WITH the inverse walk live;
+  `build:docs` exit 0, simulation pass 2/8/20 unchanged; `check:links` 410 green;
+  biome clean on touched files. `i18n:sync` live-verified: a scratch catalog with two
+  planted orphans had them pruned (census listed both during the same run); on the
+  committed state sync is a clean no-op (`0 missing / 0 pruned`, `git status i18n/`
+  empty).
 
 - [x] LT-198: LT-174 review residue — four deferred minors. **Depends on nothing; any time.** — done, pending review ⏳ (2026-09-18)
   **Skill:** docs-server-dev
