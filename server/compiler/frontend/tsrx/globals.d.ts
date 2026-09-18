@@ -22,7 +22,12 @@
  */
 
 type LeTrucFactoryContext = import('@zeix/le-truc').FactoryContext<
-	Record<string, unknown>
+	// `ComponentProps` constrains values to `NonNullable<unknown>` (`{}`),
+	// so plain `unknown` does not satisfy it. This ambient never names a
+	// component's real props — the generated modules do — so the widest
+	// SATISFYING record is the right stand-in. Kept identical to the
+	// `.tsx` profile's (`frontend/tsx/host-profile.d.ts`).
+	Record<string, NonNullable<unknown>>
 >
 
 /** Effect helpers received via the compiler-generated factory parameter. */

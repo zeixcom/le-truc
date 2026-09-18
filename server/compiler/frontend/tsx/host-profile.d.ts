@@ -32,7 +32,11 @@
  */
 
 type LeTrucFactoryContext = import('@zeix/le-truc').FactoryContext<
-	Record<string, unknown>
+	// `ComponentProps` constrains values to `NonNullable<unknown>` (`{}`),
+	// so plain `unknown` does not satisfy it. This ambient never names a
+	// component's real props — the generated modules do — so the widest
+	// SATISFYING record is the right stand-in.
+	Record<string, NonNullable<unknown>>
 >
 
 /** Effect helpers received via the compiler-generated factory parameter. */
@@ -113,9 +117,9 @@ declare function css(
 // namespace is declared at top level — the classic global-JSX pattern.
 // (`declare global { … }` wrappers are only valid inside modules, which is
 // why the probe .tsx files use that spelling and this file does not —
-// LT-183 FINDINGS fact 2.)
+// LT-183 spike findings fact 2, adr/archive/0032-spike-findings.md.)
 // biome-ignore lint/style/noNamespace: global-script .d.ts has no module-free alternative for JSX.IntrinsicElements
-namespace JSX {
+declare namespace JSX {
 	/**
 	 * The type of every JSX element expression (LT-208): branded so a
 	 * boundary arm position (`ok`/`nil`, and `err`'s return) rejects
@@ -242,7 +246,6 @@ namespace JSX {
 	}
 	type AsyncElAttrs = CommonLightDom
 
-	// biome-ignore lint/correctness/noUnusedVariables: consumed by tsc's JSX checking of authored .tsx, not referenced in-file
 	interface IntrinsicElements {
 		button: button
 		div: div

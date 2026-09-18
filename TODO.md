@@ -28,7 +28,7 @@ on zero warnings *plus* its recorded tier and reason.
 ## P0 — TSX surface adoption (ADR 0032) — CLOSED 2026-09-18
 
 Everything landed and reviewed: **LT-183** (spike verdict GO; record
-`spike/tsx/FINDINGS.md`), **LT-202** (production merge: the shared front-end modules
+`adr/archive/0032-spike-findings.md`), **LT-202** (production merge: the shared front-end modules
 `front-end.ts`/`lower-shared.ts`/`pipeline.ts`, the dual `.tsrx`+`.tsx` corpus with
 TSRX048, the `css` template tag), **LT-203** (the strict per-element host profile,
 `server/compiler/frontend/tsx/host-profile.d.ts`), **LT-206** (the `server/compiler/`
@@ -1467,8 +1467,8 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
 `.tsx` front end in the build) and LT-210 (the TSRX pin upgrade, 0.2.3; owner sequencing
 2026-09-17). LT-183 returned GO (ADR 0032, dual front end) — **migrations author
 `.tsx`**;
-the spike's four fixtures (`spike/tsx/`) and FINDINGS' surface mapping are the shape
-reference. Otherwise unblocked. The canonical pattern is LT-092's: same-commit cutover — delete the `.ts` twin, point
+the spike's four fixtures (`spike/tsx/`, moving to the example folders by LT-237) and
+`ARCHITECTURE.md` § Authoring Surfaces are the shape reference. Otherwise unblocked. The canonical pattern is LT-092's: same-commit cutover — delete the `.ts` twin, point
 `examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green
 against the served compiled component. Surface compiler gaps in NOTES.md — or fix them
 directly if small (LT-088 precedent) — never weaken a component to dodge a gap. **Per
@@ -1502,6 +1502,68 @@ twin's before calling the port done, and assert the opt-out survives hydration t
 `equivalence-audit.test.ts`'s LT-185 regression test does for form-tokenbox. **LT-186 (P3) makes
 this a compile error** — if it has landed by then, these two migrations get the check for free
 and this note is redundant; if it has not, do the manual diff.
+
+- [ ] LT-238: Relax "one authored source per component tag" to a canonical-plus-variants rule (owner ruling, 2026-09-18). **Gates LT-237 and every remaining wave-4 migration.**
+  **Skill:** architect (design + ADR) → le-truc-dev (implementation)
+  **Context:** The owner has ruled that this repo must carry **all three spellings of a
+  component side by side** — the hand-written `.ts` twin, the `.tsx` compile and the `.tsrx`
+  compile — for two reasons: (a) each must pass the same Playwright spec, so the spec is the
+  equivalence contract at runtime the way the parity suite is at build time; (b) the three
+  spellings side by side are the honest showcase of the surfaces' trade-offs, which is
+  exactly what ADR 0032's dual ruling asks readers to weigh. Today the corpus forbids this:
+  one tag declared by two corpus files fails the build (TSRX048), and the P5 migration
+  pattern above says "delete the `.ts` twin."
+  **The design question this needs answered first — do not skip to the code.** Three
+  spellings of one tag collide in three places, not one: the emitted artifact names
+  (`<tag>.server.ts` / `<tag>.client.ts` / `<tag>.css`), the corpus registry (`RegistryEntry`
+  is keyed by tag, and `truc:pass` legality is decided through it), and the browser
+  (`customElements.define` throws on the second registration). Two shapes answer it, and
+  they trade off differently:
+  (a) **Canonical + suffixed variants** — one spelling owns the tag, the others compile to a
+  derived tag (`basic-counter--tsx`) and their own artifacts. All three can be registered on
+  one page, so the showcase is a side-by-side demo and the spec can address each directly.
+  Cost: the derived tag leaks into the registry, compose sites, and CEM output.
+  (b) **Canonical + build-selected variants** — one tag, three builds, a page-level or
+  build-level switch picking which spelling is served. The spec is run three times unchanged,
+  which is the cleanest possible reading of goal (a). Cost: the showcase is no longer
+  simultaneous, so goal (b) needs the docs to render sources rather than live components.
+  Recommendation to grill, not to assume: (b) for the test contract, with the docs showing
+  all three sources from the same folder — but this is the owner's call and it should be
+  made before either LT-237 or the next migration.
+  **Obligations.** This amends ADR 0032 sub-design 6 and the `ARCHITECTURE.md` § Authoring
+  Surfaces sentence "One component tag has exactly one authored source" — record via
+  `adr-keeper`, do not edit the ruling in place. TSRX048 narrows rather than retires (it must
+  still catch two *canonical* sources for one tag): **channel = compiler, tier 1 Prevented**,
+  statically decidable, no runtime half. **Tech Writer reviews the new TSRX048 copy** — the
+  message names both files today and will need to name the canonical-source rule instead.
+  Rewrite the P5 migration pattern above in the same commit: "delete the `.ts` twin" becomes
+  "retain the `.ts` twin as a variant."
+  **Verification:** a corpus carrying all three spellings of one example compiles clean; the
+  example's Playwright spec passes against each; TSRX048 still fires for two canonical
+  sources; `bun test server/tests`, typecheck, warning baseline 0.
+
+- [ ] LT-237: Move the spike's `.tsx` fixtures into their example component folders. **Depends on LT-238.**
+  **Skill:** le-truc-dev
+  **Context:** `spike/tsx/` is not spike residue — it is the live corpus for
+  `server/tests/compiler/tsx/parity.test.ts`, `tsx/typecheck.test.ts` and
+  `dual-corpus.test.ts`, and the only `.tsx` source in the repo. `spike/` implies disposable;
+  these are permanent gates. Move the four ported components beside their `.tsrx` twins —
+  `spike/tsx/basic/counter/basic-counter.tsx` → `examples/basic/counter/`, likewise
+  `basic/pluralize`, `form/listbox`, `form/combobox` — which is what LT-238's rule change
+  makes legal. The synthetics, negatives, probes and four tsconfigs
+  (`sync-el`, `async-el`, `combobox-bad-args`, `async-bad-arms`, `bad-host-typo`,
+  `jsx-probe`, `jsx-probe-neg`) are test fixtures, not examples: move them to
+  `server/tests/compiler/fixtures/tsx/` instead, which also shortens their relative paths
+  into `server/compiler/frontend/tsx/host-profile.d.ts`. Update the three test files' path
+  constants, the four tsconfigs' `include`/`exclude`, and the `spike/tsx/` references in this
+  file and `adr/archive/0032-spike-findings.md`; delete `spike/` once empty.
+  **Watch:** the parity suite pairs `examples/**.tsrx` against the `.tsx` copy. Once the four
+  live in one folder under LT-238's rule, the pair is a folder-local fact rather than a
+  cross-tree one — keep the test asserting byte-identical server output and CSS, since that
+  is the standing equivalence contract `ARCHITECTURE.md` § Authoring Surfaces names.
+  **Verification:** `bun test server/tests` green with no fixture-path skips; the four tsc
+  gates keep their exit codes (0 positive, 2 negative); check:links.
+
 
 - [ ] LT-095: Migrate `basic-blogmeta` by reshaping it into a template owner with typed byline props (LT-033 decision). **Carries LT-173's deferred blogmeta fold verification.**
   **Skill:** le-truc-dev

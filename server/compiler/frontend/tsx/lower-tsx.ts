@@ -155,7 +155,8 @@ const lowerIfExpr = (
  * IIFE recognition is SHAPE-based (0-arg call of a 0-param arrow with a
  * block body): object identity between `callee` and `arguments[0]` does NOT
  * survive a TS→estree conversion — each subtree converts separately
- * (LT-183 FINDINGS fact 6), so an identity check would never match.
+ * (LT-183 spike findings fact 6, `adr/archive/0032-spike-findings.md`),
+ * so an identity check would never match.
  */
 const lowerSwitchIife = (
 	ctx: ExtractContext,

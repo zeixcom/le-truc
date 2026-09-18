@@ -291,7 +291,8 @@ export type PlainImportIR = {
  * Every top-level `ImportDeclaration` whose specifier does NOT resolve to a
  * composable target — `.tsrx` OR `.tsx` (`parseComposeImports` above claims
  * both; the dual-extension filter is the production shape LT-183's spike
- * worked around by local-name overlap, FINDINGS fact 7) — and is not
+ * worked around by local-name overlap; LT-183 spike findings fact 7,
+ * `adr/archive/0032-spike-findings.md`) — and is not
  * `'@zeix/le-truc'` (`parseLeTrucImports` above claims that specifier — its
  * placement is per-name against the runtime-harness filter, not the
  * verbatim re-emission plain imports get). Side-effect-only imports
