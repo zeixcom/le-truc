@@ -26,6 +26,7 @@ import { menu } from '../templates/menu'
 import { performanceHints } from '../templates/performance-hints'
 import { escapeHtml, generateSlug, html, raw } from '../templates/utils'
 import { createBuildEffect } from './build-effect'
+import { renderPageOccurrences } from './page-render'
 
 /* === Internal Functionals === */
 
@@ -449,12 +450,26 @@ const applyTemplate = async (
 		// Load includes first
 		layout = await loadIncludes(layout)
 
+		// LT-194: server-render locale-consuming component occurrences in the
+		// page content at THIS tree's locale. Runs per locale, inside the
+		// loop that already fixed the locale as a build constant, so each
+		// locale tree bakes its own renders; a positional `[lang]` ancestor
+		// or the occurrence's own `lang` attribute wins over the page locale.
+		const occurrenceResult = await renderPageOccurrences(
+			processedFile.htmlContent,
+			{ pageLocale: locale },
+		)
+		if (occurrenceResult.rendered.length > 0)
+			console.log(
+				`🌐 Server-rendered ${occurrenceResult.rendered.length} component occurrence(s) in ${locale}/${processedFile.relativePath.replace('.md', '.html')}`,
+			)
+
 		// Generate performance hints
 		const additionalPreloads = analyzePageForPreloads(processedFile.htmlContent)
 		const performanceHintsHtml = performanceHints(additionalPreloads)
 
 		// Replace content
-		layout = layout.replace('{{ content }}', processedFile.htmlContent)
+		layout = layout.replace('{{ content }}', occurrenceResult.html)
 
 		// Render the sidebar menu for this page, marking the current page
 		// active. Sectioned pages (blog posts, API symbols) mark their parent

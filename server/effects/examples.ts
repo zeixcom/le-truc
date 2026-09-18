@@ -10,6 +10,7 @@ import { highlightCodeBlocks, injectModuleDemoPreview } from '../html-shaping'
 import { getFilePath, writeFileSafe } from '../io'
 import markdocConfig from '../markdoc.config'
 import { createBuildEffect } from './build-effect'
+import { renderPageOccurrences } from './page-render'
 
 /* === Internal Functions === */
 
@@ -71,6 +72,19 @@ const processExample = async (
 
 	htmlContent = await highlightCodeBlocks(htmlContent)
 	htmlContent = injectModuleDemoPreview(htmlContent)
+
+	// LT-194: the single-copy fragment tree has NO page locale, so only
+	// occurrences with an own or positional `lang` render — exactly the
+	// ADR 0030 s3 clause this keeps true: baseless markup stays authored,
+	// client-upgraded, the walk's client-authored half.
+	const occurrenceResult = await renderPageOccurrences(htmlContent, {
+		pageLocale: null,
+	})
+	if (occurrenceResult.rendered.length > 0)
+		console.log(
+			`🌐 Server-rendered ${occurrenceResult.rendered.length} component occurrence(s) in examples/${componentName}`,
+		)
+	htmlContent = occurrenceResult.html
 
 	return htmlContent
 }

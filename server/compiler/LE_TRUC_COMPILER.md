@@ -515,6 +515,24 @@ initial value. The fold is all-or-nothing: one non-substitutable read
 disqualifies the expression — and, under ADR 0029, routes the component out
 of the Folded tier.
 
+**The `argsFromAttrs` export (LT-194).** A folded module that declares the
+reserved `i18n` parameter also exports
+`argsFromAttrs(attrs): Record<string, unknown> | null` — the mapping an
+authored page occurrence's attributes need before the document-level page
+renderer (`server/effects/page-render.ts`) may replace the occurrence with
+a render call. Parser-backed props re-emit their factory expression
+verbatim (`asString('')(attr)` — the same text `expose()` re-declares
+against the harness, fallbacks and their ref reads included); plain
+`string`-annotated args take the raw attribute; non-Parser, non-string
+args have no attribute channel client-side, so their attribute is ignored,
+never re-typed. An absent attribute omits the key only when the pattern
+marks the arg optional or defaulted — otherwise the helper returns null
+and the renderer leaves the occurrence authored. `lang` and `i18n` are the
+renderer's to supply (the resolved page-position locale and the
+`i18nRecord` at it). The export's PRESENCE is the renderer's static
+qualification: a component with a `children` arg, a required compose-only
+arg, or a suppressed harness emits no helper and is never page-rendered.
+
 Measured against the corpus, the Folded tier is the **majority** path: the
 classifier folds 20 of 22 components (Simulated: `form-combobox` via
 compose-read, `form-listbox`; Static: none yet). `first()` in

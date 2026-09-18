@@ -195,6 +195,14 @@ const RUNTIME_HARNESS_EXPORTS: ReadonlySet<string> = new Set<string>([
 ])
 
 /**
+ * `emit-server.ts`'s `argsFromAttrs` emission (LT-194) re-emits Parser
+ * expressions outside `expose()`, so it needs to know which of a parsed
+ * expression's free identifiers are harness-provided (importable) and which
+ * resolve through the existing stubs/imports instead.
+ */
+export { RUNTIME_HARNESS_EXPORTS }
+
+/**
  * Place each authored `'@zeix/le-truc'` import into the generated modules,
  * per name (ADR 0024 sub-design 16): a name lands in the CLIENT module when
  * a client-emitted position uses it (the real package IS the client

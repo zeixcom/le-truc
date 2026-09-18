@@ -56,9 +56,16 @@ import {
 	placeLeTrucImports,
 	placePlainImports,
 } from './imports'
-import { inferType, isOptionalBinding, type TypeContext } from './infer-type'
+import {
+	inferType,
+	isOptionalBinding,
+	type TypeContext,
+	typeAnnotationForBinding,
+	typeOfAnnotation,
+} from './infer-type'
 import type {
 	ComponentIR,
+	ComponentParam,
 	ConfigIR,
 	ExposeKind,
 	ExtractContext,
@@ -1601,6 +1608,47 @@ export const validateLoweredComponent = (
 }
 
 /**
+ * Per-parameter pattern facts for the page-occurrence renderer (LT-194):
+ * `emit-server.ts`'s `argsFromAttrs` emission decides, from these, whether
+ * an authored occurrence's attribute can source each server arg — a raw
+ * string only passes for a `string`-annotated non-Parser arg, and an absent
+ * attribute only omits the key when the pattern marks the arg optional or
+ * defaulted. Everything else leaves the occurrence unrenderable rather than
+ * silently re-typed.
+ */
+const paramPropsOf = (
+	ctx: ExtractContext,
+	paramsNode: TsrxNode | null,
+): ComponentParam[] => {
+	if (!paramsNode || paramsNode.type !== 'ObjectPattern') return []
+	const props: ComponentParam[] = []
+	for (const prop of asArray(paramsNode.properties)) {
+		if (prop.type !== 'Property') continue
+		const name = identifierName(prop.key)
+		if (!name || !isNode(prop.value)) continue
+		const value = prop.value
+		const annotation = typeAnnotationForBinding(paramsNode, name)
+		const annotationText = annotation
+			? text(
+					ctx.source,
+					annotation.type === 'TSTypeAnnotation' &&
+						isNode(annotation.typeAnnotation)
+						? (annotation.typeAnnotation as TsrxNode)
+						: annotation,
+				)
+			: 'unknown'
+		props.push({
+			name,
+			typeText: annotationText,
+			optional: isOptionalBinding(paramsNode, name),
+			hasDefault: value.type === 'AssignmentPattern',
+			isString: annotation ? typeOfAnnotation(annotation) === 'string' : false,
+		})
+	}
+	return props
+}
+
+/**
  * The final `ComponentIR` assembly, shared by both front ends. `gated`
  * (the reactive-@for milestone gate) skips the whole file: rendering the
  * remaining markup without the gated construct would be silently wrong.
@@ -1710,6 +1758,7 @@ export const assembleComponentIR = (
 		tag: resolved.root.tag,
 		paramsText: paramsNode ? text(ctx.source, paramsNode) : '',
 		paramNames: [...paramNames],
+		paramProps: paramPropsOf(ctx, paramsNode),
 		i18nMessages: decls.i18nMessages,
 		declaresI18n: declaresI18nOf(paramsNode),
 		langBinding: langBindingOf(paramsNode),

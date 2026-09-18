@@ -127,15 +127,21 @@ const emit = (source: string, tier: EvaluationTier) => {
 
 /**
  * The module's rendering half: everything from the `__html` accumulator to the
- * end of the function. That is the whole markup — the `__html.push` lines AND
- * the `@for` loop scaffolding around them, which a push-line filter would
- * miss — and nothing above it, so the setup block the tier flag filters is
- * excluded by construction.
+ * end of the render function. That is the whole markup — the `__html.push`
+ * lines AND the `@for` loop scaffolding around them, which a push-line filter
+ * would miss — and nothing above it, so the setup block the tier flag filters
+ * is excluded by construction. (LT-194: the slice must stop at the render
+ * function's end — a Folded-tier module that declares the reserved `i18n`
+ * parameter now also carries an `argsFromAttrs` export after it, which is
+ * page-renderer plumbing, not markup.)
  */
 const markupOf = (code: string) => {
 	const at = code.indexOf('\tconst __html: string[] = []')
 	expect(at).toBeGreaterThan(-1)
-	return code.slice(at)
+	const endMarker = "\treturn __html.join('')\n}"
+	const end = code.indexOf(endMarker, at)
+	expect(end).toBeGreaterThan(-1)
+	return code.slice(at, end + endMarker.length)
 }
 
 describe('the synthetic Static-tier fixture', () => {

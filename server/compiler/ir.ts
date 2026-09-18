@@ -392,6 +392,19 @@ export type ConfigIR = {
 	observedAttributes: string[]
 }
 
+/** One top-level property of the component's parameter pattern. */
+export type ComponentParam = {
+	name: string
+	/** Verbatim type annotation text (`'string'`, `'number | null'`, …). */
+	typeText: string
+	/** The pattern declares the key optional (`name?:`). */
+	optional: boolean
+	/** The pattern carries a default (`name = expr`). */
+	hasDefault: boolean
+	/** The annotation is `string` — a raw attribute value may pass for it. */
+	isString: boolean
+}
+
 /** A complete component extracted from one `.tsrx` source. */
 export type ComponentIR = {
 	/** Function name, e.g. `BasicCounter`. */
@@ -404,6 +417,14 @@ export type ComponentIR = {
 	paramsText: string
 	/** Names bound by the parameter pattern (server args). */
 	paramNames: string[]
+	/**
+	 * Per-parameter pattern facts the page-occurrence renderer needs
+	 * (LT-194): one entry per top-level property, in source order. `typeText`
+	 * is the verbatim type annotation; `optional`/`hasDefault` decide whether
+	 * an absent attribute may omit the key; `isString` decides whether a raw
+	 * attribute value may pass for a non-parser arg.
+	 */
+	paramProps: ComponentParam[]
 	/**
 	 * The component's `export const i18n` declaration (ADR 0030 sub-design
 	 * 4, LT-173): message key → source-locale string, inline in the `.tsrx`.

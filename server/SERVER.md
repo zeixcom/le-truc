@@ -118,6 +118,18 @@ Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild
 | `llmsFullManifestEffect` | `docsMarkdown.processed` | `docs/llms-full.txt` | Curated concatenation |
 | `tsrxEffect` | `componentTsrx.sources` | `server/generated/tsrx/*` (gitignored) | Inlined TSRX compiler (ADR 0024) |
 
+### Page-Occurrence Renderer (LT-194)
+
+`renderPageOccurrences` (`server/effects/page-render.ts`) is not its own effect — `pagesEffect` calls it per locale inside `applyTemplate`, and `examplesEffect` calls it at the end of `processExample` (after demo-preview injection). It parses the assembled page HTML with parse5 (source-offset mode), replaces qualifying component occurrences with their generated server render, and splices the original string by offsets, so every byte outside a replaced occurrence — including all non-qualifying markup — survives verbatim.
+
+An occurrence qualifies when **all three** hold:
+
+1. The component is Folded-tier and declares the reserved `i18n` parameter — its server bytes actually depend on the locale (folded catalog words, `truc:case` pruning, materialized root `lang`). Simulated-tier occurrences stay authored (the realm cannot run per watch rebuild, ADR 0027 sub-design 10); a `lang`-arg component without `i18n` (`basic-number`) computes its value client-side and stays authored too.
+2. The generated `<tag>.server.ts` module exports `argsFromAttrs` (emitted by `emit-server.ts` exactly when the component is statically renderable from attributes — see `LE_TRUC_COMPILER.md` §5.3). Occurrence `class`/`id` splice onto the rendered root like LT-090 compose-site discriminators.
+3. The occurrence's effective locale resolves at build time: own `lang` attribute > nearest positional `[lang]` ancestor > the page tree's locale. The single-copy fragment trees (`examples/`) pass no page locale, so baseless occurrences there stay authored — client-upgraded, ADR 0030 s3's client-authored half.
+
+Locale stays a build-time constant per rendered occurrence (the per-locale page loop fixes it before the pass), so the `Intl` fold and the census baselines are unaffected; there is no render cache (LT-193 posture). Generated modules are imported with mtime cache-busting so watch rebuilds serve fresh renders.
+
 ### Build Outputs
 
 ```

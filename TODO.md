@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-221.**
+**Next free task ID: LT-236.**
 
 ---
 
@@ -524,7 +524,7 @@ round, scope widened).
   — the locale whose category set hid it before this task) and was pruned by
   `i18n:sync`, leaving `git status i18n/` byte-clean.
 
-- [ ] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174 (landed 2026-09-15). Re-verified 2026-09-18: premise holds, demand still zero — demand-gated.**
+- [x] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174 (landed 2026-09-15).** — done, pending review ⏳ (2026-09-18; owner lifted the demand gate by requesting the task; shape ruling obtained per the task's own before-implementing protocol)
   **Skill:** docs-server-dev
   **Re-verified 2026-09-18 (architect):** the premise still holds — the examples effect
   embeds authored markup verbatim (`server/effects/examples.ts`: the component HTML is
@@ -547,17 +547,81 @@ round, scope widened).
   component's ambient `lang` from its POSITION on the page (`<section lang="cy">` wrapping
   arbitrary occurrences) has nothing to ride on. **LT-191's acceptance fixture has no home
   until this lands** — that is the completion signal.
-  **Scope this deliberately, and expect it to be large.** Before building, answer: does the
-  renderer replace the verbatim copy of authored markup, or wrap it? What is the unit of
-  render — the page, or each occurrence? How does it interact with LT-174's per-locale page
-  trees (one renderer pass per locale, locale already fixed)? Write those answers into
-  NOTES.md or back to the Architect BEFORE implementing; a wrong shape here is expensive.
-  **Constraint that survives regardless:** the page locale and the ambient `lang` at a static
-  page position are both build-time constants (LT-191's ruling), so the `Intl` fold, the
-  `truc:case` pruning and the root-attribute render all still hold. Do not introduce anything
-  that makes either a runtime variable.
-  **Perf note:** LT-193's data applies — the Simulated-tier share of page occurrences is 9 of
-  3,249. Do not reintroduce a render cache for this; measure first if you think you need one.
+  **Shape ruling (owner, 2026-09-18, via the task's three scoping questions):**
+  (1) the renderer SERVER-RENDERS a qualifying occurrence (generated render fn, args
+  parsed from the authored attributes, `i18nRecord` at the resolved locale) — not an
+  attribute-only augment; (2) qualification is BOUNDED to locale-consuming occurrences;
+  (3) it runs over BOTH trees under one rule: own `lang` attr > nearest positional
+  `[lang]` ancestor > page locale, and where no page locale exists (single-copy
+  `examples/`) a baseless occurrence stays authored. The unit is the page (positional
+  resolution needs the document); locale stays a build-time constant per occurrence; no
+  render cache (LT-193 posture).
+  **Bounded to `declaresI18n` Folded-tier — one refinement to the ruling's wording,**
+  owner attention drawn: the second question's option said "declares i18n OR takes a
+  `lang` server arg — 5 components today". The `lang`-arg arm is dropped on evidence:
+  `basic-number` takes a `lang` arg but computes its locale-dependent value CLIENT-side
+  (`getLocale(host)` in a lazy child), so its server render is empty-inside — page-
+  rendering it would EMPTIFY authored text, the silent-wrong-answer class this project
+  polices. Qualifies = Folded + `declaresI18n`: basic-pluralize, form-textbox,
+  form-spinbutton, form-colorgraph, form-tokenbox (5). Simulated combobox/listbox stay
+  authored regardless — the realm cannot run per watch rebuild (ADR 0027 sub-design 10).
+  **Changed:** `server/effects/page-render.ts` (NEW — `renderPageOccurrences`: parse5 in
+  source-offset mode, right-to-left splicing of the ORIGINAL string, so bytes outside a
+  replaced occurrence survive verbatim; resolution precedence per the ruling; occurrence
+  `class`/`id` splice onto the rendered root via `composeHostAttrs` (the LT-090
+  discriminator channel); generated modules imported with mtime cache-busting so watch
+  rebuilds serve fresh renders); `server/compiler/emit-server.ts` (folded `i18n`-declaring
+  modules now emit `argsFromAttrs(attrs)` — Parser-backed props re-emit their factory
+  call verbatim `asString('')(attr)`, plain-`string` args take the raw attribute,
+  non-Parser non-string args are IGNORED not re-typed (no attribute channel client-side
+  either), absent attr omits the key only when optional/defaulted, else null = leave
+  authored; the export's PRESENCE is the renderer's static qualification — a `children`
+  arg or a required compose-only arg emits no helper); `server/compiler/ir.ts` +
+  `front-end.ts` (new `paramProps` on the IR: per top-level pattern property name /
+  typeText / optional / hasDefault / isString, computed once in the SHARED assembly, both
+  surfaces); `server/compiler/imports.ts` (RUNTIME_HARNESS_EXPORTS exported);
+  `server/effects/pages.ts` (renderer inside `applyTemplate`, per locale) and
+  `server/effects/examples.ts` (renderer after demo-preview injection, `pageLocale:
+  null`); `parse5` devDependency pinned **^7** — NOT v8: jsdom requires parse5
+  CommonJS-side and v8 is ESM-only; a hoisted v8 broke `build:docs` via the simulation
+  driver until jsdom fell back to its nested copy (pin both consumers stable: hoisted v7
+  for us, nested v8 for jsdom); `server/tests/effects/page-render.test.ts` (NEW — 16
+  tests: resolution precedence incl. empty-lang-attr and single-copy baseless,
+  qualification negatives, byte discipline incl. escaped fence content, class/id merge,
+  renderer-supplied lang/i18n; integration over the REAL corpus compiled into an isolated
+  generated dir); `server/tests/compiler/emit-tier.test.ts` (`markupOf` now slices to the
+  render fn's end — the folded-only helper rode its to-EOF slice and the tier
+  byte-identity comparison correctly failed on it); `server/compiler/LE_TRUC_COMPILER.md`
+  (§5.3 gains the `argsFromAttrs` contract); `server/SERVER.md` (new Page-Occurrence
+  Renderer section); `adr/0030` s3 (the LT-194 sentence amended in place — unpublished on
+  v3, same precedent as LT-201/LT-217).
+  **How:** the page renderer replaces the occurrence wholesale with the render fn's
+  output — the component's template IS the canonical content, so per-instance authored
+  words converge to the component's catalog words (the six demo-locale catalogs already
+  carry real translations — ar/cy/de/lv/pl/zh, which is the census's "6 locale(s)" — so
+  the Welsh/Arabic/etc. instances keep their languages; the pluralize demo's per-instance
+  DOG words become the component's tasg/tasgiau — Tech Writer may want a demo-copy pass).
+  Docs content consequence, flagged not blocking: the fence shows authored source while
+  the preview shows rendered bytes for the 7 pluralize instances (post-upgrade DOM
+  already diverged from served bytes before this change; no-JS output is now CORRECT
+  instead of all-categories-visible).
+  **Check:** (1) the `declaresI18n`-only refinement above is the ruling call to ratify.
+  (2) The mtimes-busted module cache is per-process: a watch session that changes only a
+  CATALOG (not a component) may serve stale `i18nRecord` results until dev-server restart
+  (one-shot builds and CI are always fresh) — accepted, documented in page-render.ts.
+  (3) `parse5@^7` pin rationale (jsdom requires CJS) deserves a glance at the next
+  jsdom bump.
+  **Verification (run):** `bun test server/tests` 1617 pass / 0 fail (16 new; 1
+  pre-existing LT-207 inter-test error); `typecheck` exit 0; `check:tsrx` exit 0,
+  warning baseline 0, tier census 20/2/0 unchanged, translation census 0 gap(s) across
+  6 locale(s); `build:docs` exit 0, simulation pass 2/8/20 unchanged (59 ms), the
+  build log now reports `Server-rendered 7 component occurrence(s) in
+  examples/basic-pluralize`, served page carries `<basic-pluralize count="2"
+  lang="cy" id="welsh-ancestor-test">` with the cy `two` form `dasg` visible and all
+  other categories hidden — **LT-191's acceptance fixture is served at its home**;
+  the German instance converges byte-wise with the de catalog (Aufgabe/Aufgaben/
+  verbleibend); `check:links` 410 green; biome clean on touched files (the
+  pre-existing host-profile.d.ts:127 noise excepted).
 
 - [x] LT-197: Decide how client-side runtime strings get translated (exploration). **Depends on LT-195.** — done ✓ (ruled 2026-09-18, owner concurred; ADR 0030 sub-design 9, amended in place)
   **Skill:** architect (with le-truc-dev for feasibility)
@@ -589,6 +653,9 @@ round, scope widened).
 
 - [ ] LT-218: The client-string `i18n` attribute — compiler analysis, server emission, client preamble (ADR 0030 sub-design 9).
   **Skill:** le-truc-dev
+  **Sequencing (2026-09-18):** land the P2b SurfaceAdapter consolidation (**LT-233**) before
+  this task — it collapses the two copied front ends this task must currently edit in
+  lockstep, and LT-218 is the next surface-capability task that would pay the double-edit cost.
   **Context:** Implements the LT-197 ruling. Three pieces; both authored surfaces stay in
   lockstep (ADR 0032 anti-drift) — the classification lives in the shared analysis, the
   per-front-end diagnostics as today.
