@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-211.**
+**Next free task ID: LT-212.**
 
 ---
 
@@ -339,65 +339,153 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   machinery) cuts against the host's unscoped-light-DOM profile. Nothing to implement:
   no code, goldens, or parity pins change.
 
-- [ ] LT-208: Type the `boundary` arms precisely in the shared profile (owner precision ruling, 2026-09-17).
+- [ ] LT-208: Type the `boundary` arms precisely — three arms, branded `JSX.Element`, `err: Error` (owner precision ruling 2026-09-17; stale arm withdrawn by owner ruling 2026-09-18, see LT-211).
   **Skill:** le-truc-dev
   **Context:** `host-profile.d.ts` declares `boundary(arms: { ok: unknown; nil: unknown;
-  err: (error: any) => unknown; stale?: unknown })` — all four arms typed `unknown`/`any`
-  when the compiler itself REQUIRES every arm to be a single root JSX element
-  (`lower-tsx.ts`'s `singleRootOf` checks are the semantics). Type-level only, no new
-  diagnostic, no compiler change: make the ambient tell the same truth.
-  - Generic arms: `declare function boundary<T>(arms: { ok: T; nil: T;
-    err: (error: unknown) => T; stale?: T }): T` — `T` unifies the four arms, so an arm
-    that is not an element expression stands out against the others.
-  - `err`'s parameter contextually `unknown`, never `any`: an unannotated arrow param
-    stops being silently `any` (the author must narrow — honest, since the rejected
-    value's type is whatever the task rejected with); an explicitly annotated param
-    (`async-el.tsx`'s `(e: Error)`) keeps its annotation — verified no fixture breaks.
-  - Declare a minimal `interface Element {}` in the profile's `JSX` namespace so arm
-    element expressions have a name (today they fall back to `any`); attribute checking
-    is unaffected.
-  Update the profile header's `boundary` doc and `server/compiler/HOST_PROFILE.md`'s (LT-204's)
-  `.tsx` module-shape section to match.
+  err: (error: any) => unknown; stale?: unknown })` while the compiler REQUIRES every arm
+  to be a single-root JSX element (`lower-tsx.ts`'s `singleRootOf` checks are the
+  semantics) and ok/nil/stale to be element expressions — only `err` is an arrow. Two
+  mechanisms considered do NOT meet the acceptance below, recorded so they are not
+  retried: a generic `boundary<T>(arms: { ok: T; … })` cannot reject a non-element arm
+  (divergent inference candidates union — `ok: <div/>` + `nil: "oops"` infers
+  `T = Element | string`, no error anywhere), and a bare `interface Element {}` cannot
+  either (the empty interface accepts any non-nullish value, so `ok: "hi"` passes). The
+  shape that does:
+  - `interface Element { readonly $$leTrucJsx: 'element' }` in the profile's `JSX`
+    namespace. A JSX element expression's type IS `JSX.Element`, so the brand is
+    satisfied by construction; a string, number, or function arm fails it.
+  - `declare function boundary(arms: { ok: JSX.Element; nil: JSX.Element;
+    err: (error: Error) => JSX.Element }): JSX.Element` — `err`'s parameter
+    contextually `Error`, never `any`/`unknown`: cause-effect's `match()` guarantees the
+    delivered value is an `Error` (non-Errors are wrapped before dispatch —
+    `@zeix/cause-effect` 1.5.2 `src/nodes/effect.ts:222,239`), so an unannotated
+    `(e) => <p>{e.message}</p>` type-checks and an explicit `(e: string)` is a tsc
+    error on the authored file. The `T`-awareness `watch()` gets by inference has no
+    channel here — `boundary()` takes no source argument (the compiler discovers the
+    signal from the ok arm's lazy child, `analysis/effects.ts:1129`) and the arms are
+    elements, not handlers; the value reads inside arms (`{data}`) are already precisely
+    typed by ordinary setup inference.
+  - No `stale` arm: the owner withdrew the four-arm boundary on 2026-09-18 (LT-211
+    carries the machinery removal); this ambient lands three-arm.
+  Update the profile header's `boundary` doc and `server/compiler/HOST_PROFILE.md`'s
+  `.tsx` control-flow section to match.
   **Acceptance:** the six spike fixtures compile clean under the typed ambient;
-  `tsconfig.neg.json`-style probe: an arm returning a non-element or an err body reading
-  a property off the un-narrowed param is a tsc error on the authored file; parity and
-  `bun test server/tests` green (type text only).
+  `tsconfig.neg.json`-style probes: a string in an element-arm position and an `err`
+  arrow annotated `(e: string)` reading `e.message` are tsc errors at native positions
+  on the authored file; parity and `bun test server/tests` green (type text only). No
+  new TSRX code — the channel is TypeScript, tier 1 Prevented (ADR 0028 s1 accounting).
 
-- [ ] LT-209: Precise per-file `host` typing for authored `.tsx` sources — per-file check programs over compiler-emitted ambients (owner precision ruling, 2026-09-17). **Land before or at the very start of wave 4 (LT-095), so migrated authors get feedback from day one.**
+- [ ] LT-209: Type the authored `.tsx` factory context precisely — a second, author-annotated `FactoryContext`/`FormFactoryContext` parameter (owner ruling, 2026-09-18). **Land before or at the very start of wave 4 (LT-095), so migrated authors get feedback from day one.**
   **Skill:** le-truc-dev
-  **Context:** The authored-source `host` ambient is `FormAssociatedElement &
-  Record<string, any>` — every prop read passes, typos included, while everything around
-  it is precise. The information exists in the same file (`expose({ value: asNumber() })`
-  names the prop AND its type), and the compiler already emits the precise per-component
-  host interface for the GENERATED client. Why the shared profile cannot simply carry the
-  precision: a global `declare const host` has no FILE dimension — one program, one
-  declaration — and merging per-component surfaces into one global interface is unsound
-  exactly where it matters: `value` is exposed as `asNumber()` (basic-number) and
-  `asString('')` (form-textbox) in this corpus, and TS interface merging requires
-  identical member types. The sound shape:
-  1. Split the wide `host` out of `host-profile.d.ts` into its own overlay (e.g.
-     `host-wide.d.ts`) — per-file programs take the shared profile + ONE generated
-     precise ambient; duplicate `host` declarations would otherwise collide.
-  2. The compiler emits the precise ambient per tag alongside the generated client
-     (`<tag>.host.d.ts`: `declare const host: FormAssociatedElement & <the interface the
-     client already declares>`) — single source of truth, no second hand-maintained
-     table. `exposedProps`/`ExposeKind` in the registry already carries the keys and
-     kinds.
-  3. A checker (script over the `typescript` API the repo already depends on — the same
-     package the `.tsx` front end parses with) builds ONE PROGRAM PER AUTHORED FILE
-     (shared `DocumentRegistry`, cached lib files — cheap at corpus scale), reporting
-     native positions: the ADR 0032 s3 dividend — no span remapping, the authored file
-     IS the source file. Wire it into the `typecheck` script (which already runs
-     `build-tsrx` first, so the ambients exist).
-  **Known limit, stated not hidden:** editors keep the wide overlay — tsserver checks
-  one program per tsconfig and cannot do per-file programs. Precise EDITOR feedback
-  needs the LT-014-shaped projection (see that entry's amended re-open condition).
-  CI-side precision is complete once this lands.
+  **Context:** The owner rejected both ambient-based mechanisms (compiler-emitted
+  `<tag>.host.d.ts` imports; per-file checker programs): authored files already declare
+  their own props type and `HTMLElementTagNameMap` augmentation (every spike fixture
+  does), and importing generated artifacts for typing is unwanted — the generated client
+  "may not exist yet" at authoring time. Global ambients cannot see a file's type
+  parameters (a `declare const` cannot reference `<P>`), so the realization of "the
+  context uses `FormFactoryContext<P>`" is a VALUE parameter: the component function
+  takes a second, destructured, author-annotated context —
+  ```tsx
+  export function FormCombobox(
+  	{ name, label, options, … }: FormComboboxArgs,
+  	{ host, first, expose }: FormFactoryContext<FormComboboxProps>,
+  ) { … }
+  ```
+  Both types are already exported (`index.ts:139`). Form-associated components annotate
+  `FormFactoryContext<P>` (host: `FormAssociatedElement & P`), plain ones
+  `FactoryContext<P>` (host: `HTMLElement & P`) — annotating the wrong one is a compiler
+  check: `config.formAssociated` and the annotation's type name are both AST-visible
+  (new TSRX diagnostic, channel compiler, tier 1 Prevented; Tech Writer owns the copy).
+  The precision is bigger than `host` alone: `watch`/`expose`/`pass`/`on` become
+  P-precise (prop-key overloads work), and the P-drift check is FREE — `expose({
+  value: asNumber() })` against `Initializers<P>` is an excess-property/assignability
+  tsc error when P misses or mistypes the prop, so no compiler check is needed for that
+  (channel TypeScript, tier 1).
+  1. `extractParams` (`front-end.ts:551`) admits the second param: an ObjectPattern
+     whose bound names must be factory-context vocabulary (unknown name → the new TSRX
+     diagnostic). The annotation is type-only and erased — `parsePlainImports` must
+     admit `import type { FactoryContext, FormFactoryContext } from '@zeix/le-truc'`
+     without it reaching emitted imports. The generated factory destructures the SAME
+     vocabulary names, so body lowering is unchanged.
+  2. Convention (stated in the profile header as the wave-4 rule): destructure every
+     factory name you use from the context param; the global ambients remain for the
+     migration period (per-file destructures shadow them at function scope). The fate
+     of the wide `host` ambient after migration is EXPLICITLY DEFERRED (owner,
+     2026-09-18: "we'll see as soon as we have a decent solution") — this task is what
+     makes that question concrete.
+  3. The six spike fixtures adopt the convention (mechanical). `.tsrx` keeps
+     `globals.d.ts` ambients (no parameter grammar; precision stays emit-then-check per
+     REQUIREMENTS M25) — document the asymmetry as designed.
+  4. Settlements from the owner's 2026-09-18 follow-ups (do not re-open at
+     implementation): `i18n` stays a member of the ARGS destructure, not the context —
+     the generated client never receives i18n at all (it is server-render-time data;
+     the client factory has zero i18n today), so the context parameter structurally
+     cannot carry it, and the ambient `i18n: I18n` annotation stays mandatory to
+     destructure it (destructuring it from an args type without the member is already
+     a tsc error). There are NO silent type fallbacks: unannotated args or context
+     params are implicit-`any` hard errors under the strict tsconfigs both surfaces
+     check under (channel TypeScript, tier 1 — no TSRX code needed); omitting the
+     context param entirely is the ambient form and stays legal until the deferred
+     ambient retirement (item 2). An author hand-writing
+     `FactoryContext<Record<string, any>>` recreates the hole deliberately — legal TS,
+     out of compiler jurisdiction (convention and review, not a diagnostic).
+  5. Docs: `HOST_PROFILE.md`'s module-shape / "Types and editors" sections rewritten
+     around the param (the `Record<string, any>` stand-in paragraph retires); ADR 0032
+     s3 amendment via adr-keeper — context-by-annotated-parameter replaces the
+     authored-source ambient stand-in for `.tsx`; AGENTS.md gains the convention.
   **Acceptance:** a typo'd `host.cout` in an authored fixture is a tsc error at native
-  position; correct reads get real prop types (`host.value = ''` assignability-checked
-  against `Signal<string>`-backed props; `host.setCustomValidity(…)` still checks via
-  `FormAssociatedElement`); the whole authored corpus passes; the editor path (wide
-  overlay) is untouched and documented; `typecheck` runs the new checker.
+  position in the ORDINARY tsconfig (no per-file programs, no generated-import);
+  `host.value = ''` checks against `Signal<string>`-backed props and
+  `host.setCustomValidity(…)` works on form components; a P member missing or mistyped
+  against `expose()` is a tsc error; a `formAssociated` component annotating plain
+  `FactoryContext` (or the reverse) is the new TSRX diagnostic; all six fixtures and
+  all gates green; editors see full precision with no tsserver changes.
+
+- [ ] LT-211: Remove the boundary's `stale` arm end-to-end and teach the `isPending` idiom (owner ruling, 2026-09-18).
+  **Skill:** le-truc-dev
+  **Context:** The owner withdrew the four-arm boundary: the client never re-renders arm
+  content — it toggles `hidden`/`disabled` on server-rendered arms — so a stale arm
+  whose only client-side update is its own textContent refresh has no place on a
+  server-evaluated construct. At build time a task is resolved (ok), rejected (err), or
+  unsettled (nil); "re-fetching with a retained value" exists only once a source updates
+  on the client, and the idiom for that is a reactive `isPending` read beside the
+  boundary, not a fourth arm: `class={ isPending(signal) ? 'dimmed' : null }` (.tsx) /
+  `@if (isPending(signal)) { … }` (.tsrx). This supersedes the four-arm fold-in of
+  LT-202 and evaporates the ADR 0032 s6 stale-arm asymmetry that LT-205 ruled on (that
+  ruling stands as history; no upstream `@stale` will ever be needed). Note the latent
+  defects this removes before they could bite: the emitted `stale: value => …`
+  handler (emit-client.ts:606-621) assumes a retained value that cause-effect never
+  passes (type AND runtime — `stale?: () => …`, `out = stale()`,
+  `effect.ts:34,236`), so the first four-arm generated client would fail typecheck and
+  a set `staleText` would render the literal string `"undefined"` (the stale arm ships
+  empty server-side — parity.test.ts:225).
+  1. Surface: drop `stale` from `lowerBoundaryCall`/`lowerTryArms` (the arm read and
+     its single-root diagnostic) and from the `async-el.tsx` fixture. `.tsrx` is
+     untouched — it never had a stale spelling.
+  2. Machinery: `TryIR.staleChildren` and every consumer — `walk.ts`, `first-refs.ts`,
+     `front-end.ts`, `selectors.ts`, `emit-server.ts` (stale root + fieldset),
+     `plan.ts` (`staleQuery`/`staleFieldsetQuery`/`staleText`), `effects.ts` (stale-arm
+     constraints, `staleText`, and the nil-vs-stale `.get()` probe, which simplifies to
+     a three-state machine), `emit-client.ts` (the `stale:` handler). Beware the word:
+     census/manifest "staleness" (`TranslationGap['status']`, the i18n staleness
+     manifest, memo staleness) is UNRELATED — scope to the boundary arm.
+  3. `isPending`: re-export cause-effect's graph-level `isPending` (already exported
+     there, `index.ts:32`; tracked via `pendingSubscribe`, so a client watch re-fires
+     when the task settles) through le-truc's index; ambient in BOTH profiles; the
+     server fold must evaluate `isPending(knownSignal)` (evaluability.ts) — pin a
+     fixture with the idiom whose tier stays put and whose class binding updates
+     client-side on settle.
+  4. Pins: parity's four-arm test becomes three-arm; the `stale: value =>` pin
+     (parity.test.ts:230) dies with the handler; `.tsrx` goldens stay byte-identical
+     (`staleChildren` was always null).
+  5. Docs: ADR 0032 s3/s6 amendment via adr-keeper; `HOST_PROFILE.md`'s boundary
+     section teaches the `isPending` idiom; ARCHITECTURE.md's Authoring Surfaces
+     boundary paragraph (architect co-owns); AGENTS.md's "fourth arm" bullet. Tech
+     Writer reviews the diagnostics-copy residue (LT-189 item 5 loses its stale part).
+  **Acceptance:** `grep -rn "staleChildren\|staleText\|staleQuery" server/compiler` is
+  empty; a three-arm boundary renders and toggles exactly as before (goldens
+  unchanged); the `isPending` fixture passes with the tier census unchanged at 20/2/0;
+  `check:tsrx`, typecheck, parity, `bun test server/tests` all green.
 
 - [ ] LT-210: TSRX pin upgrade — 0.1.63 → the chosen 0.2.x, carrying three owner-wanted features: `@for`'s `@empty` arm, dynamic `<{expression}>` tags, and scoped styles. **Gate: land before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent before that — no migrated component uses these today.**
   **Skill:** le-truc-dev, with architect co-owning the scoped-styles ruling (it revisits a HOST_PROFILE decision — expect a new ADR)
