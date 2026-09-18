@@ -164,7 +164,7 @@ describe('the retired &{} sigil (LT-052)', () => {
 	})
 })
 
-describe('lazy destructuring in binding position (LT-052)', () => {
+describe('lazy destructuring in binding position (LT-052, retired at the 0.2 pin)', () => {
 	const compile = (setup: string) =>
 		compileSource(
 			`export function C({}: {})
@@ -179,21 +179,35 @@ describe('lazy destructuring in binding position (LT-052)', () => {
 			'c.tsrx',
 		).diagnostics
 
-	test('&{ … } object pattern is TSRX020', () => {
+	// @tsrx/core 0.2 dropped lazy destructuring from the grammar entirely, so
+	// `&{ … }`/`&[ … ]` no longer parse — the dedicated TSRX020 scan retired
+	// with the LT-210 pin bump and the rejection is the parser's own syntax
+	// error, surfaced as TSRX008. Same tier-1 guarantee, one link earlier.
+	test('&{ … } object pattern is a parse error (TSRX008)', () => {
 		const d = compile('const obj = { a: 1 }\n\t\t\t\tconst &{ a } = obj')
-		expect(d.map(x => x.code)).toContain('TSRX020')
-		expect(d.find(x => x.code === 'TSRX020')?.message).toContain(
-			'evaluates setup eagerly',
+		expect(d.map(x => x.code)).toContain('TSRX008')
+		expect(d.find(x => x.code === 'TSRX008')?.message).toContain(
+			'Failed to parse',
 		)
 	})
 
-	test('&[ … ] array pattern is TSRX020', () => {
+	test('&[ … ] array pattern is a parse error (TSRX008)', () => {
 		const d = compile('const &[ b ] = [1]')
-		expect(d.map(x => x.code)).toContain('TSRX020')
+		expect(d.map(x => x.code)).toContain('TSRX008')
 	})
 
-	test('a plain destructuring pattern is untouched', () => {
+	test('a plain identifier const is untouched', () => {
+		const d = compile('const obj = { a: 1 }\n\t\t\t\tconst b = obj.a')
+		expect(d.map(x => x.code)).toEqual([])
+	})
+
+	// The setup subset only sanctions NAMED single consts (setupInits maps
+	// name → init for rebinding); a destructuring pattern has no single name.
+	// The 0.1.63 parse silently tolerated the shape; the 0.2.3 parse reaches
+	// the subset check and rejects it honestly.
+	test('a plain destructuring const is TSRX005, not silently tolerated', () => {
 		const d = compile('const obj = { a: 1 }\n\t\t\t\tconst { a } = obj')
-		expect(d.filter(x => x.code === 'TSRX020')).toEqual([])
+		expect(d.map(x => x.code)).toEqual(['TSRX005'])
+		expect(d[0]?.message).toContain('milestone-2 subset')
 	})
 })

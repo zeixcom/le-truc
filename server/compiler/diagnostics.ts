@@ -30,7 +30,9 @@ export type DiagnosticCode =
 	| 'TSRX017' // template child whose reactivity cannot be traced — needs a thunk
 	| 'TSRX018' // retired `&{}` lazy-child sigil
 	| 'TSRX019' // string-literal prop name in child position — write host.<prop>
-	| 'TSRX020' // lazy destructuring pattern — not applicable to the Le Truc profile
+	// ('TSRX020' retired at the LT-210 pin bump: @tsrx/core 0.2 dropped lazy
+	// destructuring from the grammar, so `&{ … }`/`&[ … ]` no longer parse and
+	// the rejection is the parser's own syntax error, surfaced as TSRX008)
 	| 'TSRX021' // React `{cond && <jsx/>}` conditional-render idiom in child position
 	| 'TSRX022' // React `{cond ? <a/> : <b/>}` conditional-render idiom in child position
 	| 'TSRX023' // React `.map()` producing JSX in child position
@@ -559,10 +561,10 @@ export const diagnostic = {
 		),
 
 	/**
-	 * The retired `&{expr}` lazy-child sigil (LT-052). In TSRX, `&{` and `&[`
-	 * introduce lazy DESTRUCTURING patterns in binding position; there is no
-	 * `&{}` template-child form. Reactivity is decided by the lift rule
-	 * (`reactivity.ts`) now, so the sigil carries no information.
+	 * The retired `&{expr}` lazy-child sigil (LT-052). The `&` sigil has no
+	 * template-child meaning — under the 0.2 pin it introduces nothing at all
+	 * (lazy destructuring left the grammar), and reactivity is decided by the
+	 * lift rule (`reactivity.ts`), so the sigil carries no information.
 	 */
 	retiredLazySigil: (
 		source: string,
@@ -571,7 +573,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX018',
-			`\`&{…}\` is not a TSRX template child — \`&{\` and \`&[\` introduce lazy destructuring patterns in binding position. Reactivity is now decided by analysis, so drop the sigil: \`{${exprText}}\`.`,
+			`\`&{…}\` is not a TSRX template child — the \`&\` sigil carries no meaning here (lazy destructuring left the TSRX 0.2 grammar). Reactivity is decided by analysis, so drop the sigil: \`{${exprText}}\`.`,
 			lineOf(source, offset),
 		),
 
@@ -590,24 +592,6 @@ export const diagnostic = {
 		error(
 			'TSRX019',
 			`\`{'${prop}'}\` names a prop but reads as the literal string "${prop}" — the \`&\` sigil that used to distinguish them is gone (LT-052). Write the read explicitly: \`{host.${prop}}\`.`,
-			lineOf(source, offset),
-		),
-
-	/**
-	 * A lazy destructuring pattern (`&{ … }` / `&[ … ]`) in binding position
-	 * (LT-052). These are real TSRX grammar, but they defer evaluation to
-	 * first read — and Le Truc's server half must evaluate setup eagerly to
-	 * produce markup at render time, where there is nothing to defer to.
-	 * Unsupported in this host profile rather than silently half-working.
-	 */
-	lazyDestructuring: (
-		source: string,
-		offset: number | undefined,
-		form: 'object' | 'array',
-	) =>
-		error(
-			'TSRX020',
-			`Lazy destructuring (\`&${form === 'object' ? '{ … }' : '[ … ]'}\`) is not supported in the Le Truc profile — server composition evaluates setup eagerly to render markup, so there is no first-read to defer to. Use a plain \`${form === 'object' ? '{ … }' : '[ … ]'}\` pattern.`,
 			lineOf(source, offset),
 		),
 

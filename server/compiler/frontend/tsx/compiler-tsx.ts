@@ -14,10 +14,9 @@
  *   statements + a single `return <jsx/>`. Statements before the return are
  *   the setup (the `@{ }` block's replacement); the returned JSX (bare root
  *   or fragment) is the template (ADR 0032 sub-design 1).
- * - The `.tsrx`-only scans (`reportLazyPatterns` TSRX018/020,
- *   `reportReactJsxNearMisses` TSRX021–024, `newerGrammarHint`) are absent —
- *   lazy destructuring doesn't exist in TS, and the React idioms are this
- *   surface's CORRECT spellings.
+ * - The `.tsrx`-only scans (`reportReactJsxNearMisses` TSRX018/021–024,
+ *   `newerGrammarHint`) are absent — the lazy sigil doesn't exist in TS, and
+ *   the React idioms are this surface's CORRECT spellings.
  *
  * Everything else — the malformed-selector and import-mismatch scans, the
  * params contract, the setup-extraction loop, context seeding,

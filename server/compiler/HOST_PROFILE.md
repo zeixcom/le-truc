@@ -186,7 +186,7 @@ A COMPOSED child is addressed by the tag it renders plus the compose site's own 
 
 ## Lazy destructuring does not apply (`.tsrx`)
 
-Core TSRX's `&{` / `&[` lazy-pattern introducers (`LazyObjectBindingPattern`, `LazyArrayBindingPattern`) have no role in this profile. Le Truc's server composition requires eager snapshot evaluation to generate markup — a lazily-destructured binding has nothing to evaluate against at render time. The compiler rejects `&{}`/`&[}` outright (diagnostics TSRX018/TSRX020; see the adjacent `LE_TRUC_COMPILER.md`). This is enforced, not just documented — the one item in this profile that graduated from a doc note to a compiler diagnostic once real authoring surfaced the ambiguity.
+Core TSRX's `&{` / `&[` lazy-pattern introducers (`LazyObjectBindingPattern`, `LazyArrayBindingPattern`) have no role in this profile. Le Truc's server composition requires eager snapshot evaluation to generate markup — a lazily-destructured binding has nothing to evaluate against at render time. The rejection is enforced, not just documented, and since the 0.2 pin it is the GRAMMAR's own: `@tsrx/core` 0.2 dropped lazy destructuring, so `&{ … }`/`&[ … ]` in binding position no longer parse and fail the build as a syntax error (surfaced as TSRX008; the dedicated TSRX020 scan retired with the LT-210 bump — same tier-1 guarantee, one link earlier). The one surviving diagnostic is TSRX018 for an `&{expr}` sigil in template-child position, which still parses as an ordinary expression and must still be named to the author. See the adjacent `LE_TRUC_COMPILER.md`.
 
 ## Statements before output are legal (`.tsrx`)
 

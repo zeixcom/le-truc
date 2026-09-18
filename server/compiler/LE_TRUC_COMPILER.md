@@ -104,8 +104,11 @@ observed failure modes; TSRX021–024 and the `classify-attributes.ts`
 broken output — on the `.tsrx` surface only; on `.tsx` those idioms are the
 correct spellings, and `className`/`htmlFor` simply fail the strict ambient
 table). One caveat is host-specific: `&{}`/`&[]` lazy destructuring, real
-in core TSRX, is retired outright here (TSRX018/020) — Le Truc's server
-composition needs eager snapshot evaluation. The default surface needs no
+in core TSRX 0.1, is retired outright here — Le Truc's server composition
+needs eager snapshot evaluation (TSRX018/020 at the 0.1 pin; since the 0.2
+pin the grammar itself drops the construct and a binding-position `&{ … }`
+fails as a parse error, TSRX008, with TSRX018 surviving for the child
+sigil). The default surface needs no
 grammar grounding: `.tsx` is standard TypeScript, and its contract is the
 strict ambient profile (`frontend/tsx/host-profile.d.ts`,
 `HOST_PROFILE.md`).
@@ -181,7 +184,7 @@ Machinery first, then the shared front-end modules, then the two front ends:
 | `lower-shared.ts` | Surface-independent lowering core: condition validation, element/compose lowering, the expression-child lift rule, positional reactivity, and `lowerChildrenSkeleton` — the `Lowering` hooks carry each surface's child-node dispatch |
 | `ast-utils.ts` | Shared AST predicates and the recognized-name vocabulary constants both front ends' walks run on |
 | `walk.ts` | Generic structural `TemplateNode` visitor (`walkTemplate`, `collectAttrs`, `collectComposeElements`) |
-| `frontend/tsrx/compiler.ts` | `.tsrx` front end: `compileSource` (locate the `@{ }` component, slice setup + output verbatim) plus the grammar's own scans (lazy patterns, React JSX near-misses, `newerGrammarHint`) |
+| `frontend/tsrx/compiler.ts` | `.tsrx` front end: `compileSource` (locate the `@{ }` component, slice setup + output verbatim) plus the grammar's own scans (React JSX near-misses, `newerGrammarHint`; the lazy-pattern scan retired at the 0.2 pin — the grammar now rejects the construct itself) |
 | `frontend/tsrx/lower-template.ts` | `.tsrx` directives (`@if`/`@switch`/`@try`/`@for`) → `TemplateNode` IR; list-body validation |
 | `frontend/tsrx/globals.d.ts` | Ambient FactoryContext vocabulary for the raw `.tsrx` view; parity-tested against `ast-utils` |
 | `frontend/tsx/compiler-tsx.ts` | `.tsx` front end: `compileSourceTsx` (locate the exported component function, statements + single `return` shape, `boundary()`/`css` recognition) |

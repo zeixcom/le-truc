@@ -97,39 +97,6 @@ const newerGrammarHint = (source: string, error: unknown): string => {
 	return ''
 }
 
-/**
- * Report every lazy destructuring pattern in the module (TSRX020, LT-052).
- * `&{ … }`/`&[ … ]` are real TSRX grammar — the parser sets `lazy` on the
- * ObjectPattern/ArrayPattern — but they defer evaluation to first read, and
- * the server half must evaluate setup eagerly to produce markup. Scanning the
- * whole AST rather than just setup catches params and nested functions too.
- */
-const reportLazyPatterns = (ctx: ExtractContext, ast: TsrxNode): void => {
-	const visit = (node: unknown): void => {
-		if (Array.isArray(node)) {
-			for (const child of node) visit(child)
-			return
-		}
-		if (!isNode(node)) return
-		if (
-			(node.type === 'ObjectPattern' || node.type === 'ArrayPattern') &&
-			node.lazy === true
-		)
-			ctx.diagnostics.push(
-				diagnostic.lazyDestructuring(
-					ctx.source,
-					node.start,
-					node.type === 'ObjectPattern' ? 'object' : 'array',
-				),
-			)
-		for (const [key, value] of Object.entries(node)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			visit(value)
-		}
-	}
-	visit(ast)
-}
-
 /** Is `node` a JSX value (`<x/>` or `<>…</>`)? */
 const isJsxNode = (node: unknown): boolean => {
 	const t = isNode(node) ? String(node.type) : null
@@ -152,9 +119,8 @@ const producesJsx = (body: unknown): boolean => {
  * to parse — @tsrx/core accepts every one as an ordinary expression — so
  * without this scan they compile silently into broken output (a JSX node,
  * or an array of them, stringified into the HTML; verified empirically
- * before scoping this task). Scanning the whole AST, the same shape as
- * `reportLazyPatterns`, also catches the idiom nested inside setup
- * expressions, not just direct template children.
+ * before scoping this task). Scanning the whole AST also catches the idiom
+ * nested inside setup expressions, not just direct template children.
  *
  * `.tsx`-authored components have no counterpart: these idioms are that
  * surface's CORRECT spellings (ADR 0032 sub-design 2), so the TSRX021–024
@@ -261,7 +227,6 @@ export const compileSource = (
 			],
 		}
 	}
-	reportLazyPatterns(ctx, ast)
 	reportReactJsxNearMisses(ctx, ast)
 	reportMalformedSelectors(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)

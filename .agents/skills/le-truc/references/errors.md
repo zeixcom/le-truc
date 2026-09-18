@@ -119,7 +119,7 @@ The selector rules are deliberately **one-sided**: `TSRX026` reports only what n
 
 ### Retired idioms
 
-`TSRX018`–`TSRX024` catch constructs that would compile to something silently wrong. `TSRX018` (`&{…}` lazy-child sigil) and `TSRX019` (`{'prop'}` string-literal prop child) are retired TSRX forms; `TSRX020` rejects lazy destructuring, which the eager server half has nothing to defer to. `TSRX021`–`TSRX024` are the React idioms — `{cond && …}`, `{cond ? … : …}`, `.map()`, and `return (<>…</>)`. None of them fail loudly on their own: TSRX would render each one **literally**, stringified. Each message names the TSRX construct to use instead (`@if`, `@if`/`@else`, `@for`, a bare trailing expression).
+`TSRX018`–`TSRX024` catch constructs that would compile to something silently wrong. `TSRX018` (`&{…}` lazy-child sigil) and `TSRX019` (`{'prop'}` string-literal prop child) are retired TSRX forms. `TSRX020` (lazy destructuring in binding position) is **retired at the 0.2 pin**: `@tsrx/core` 0.2 dropped the construct from the grammar, so `&{ … }`/`&[ … ]` no longer parse and fail as TSRX008 — same tier-1 guarantee, one link earlier. `TSRX021`–`TSRX024` are the React idioms — `{cond && …}`, `{cond ? … : …}`, `.map()`, and `return (<>…</>)`. None of them fail loudly on their own: TSRX would render each one **literally**, stringified. Each message names the TSRX construct to use instead (`@if`, `@if`/`@else`, `@for`, a bare trailing expression).
 
 `TSRX031` is **retired**. No builder emits it; per-branch addressing replaced the rule.
 
