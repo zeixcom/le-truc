@@ -25,9 +25,9 @@ For documentation updates, use the `tech-writer` skill.
 
 **ARCHITECTURE.md is owned by this skill.** Only the Architect updates the architecture document — developers propose changes via NOTES.md, not by editing ARCHITECTURE.md directly.
 
-**TODO.md is the task queue.** Write new tasks there; do not assign work verbally. Keep task IDs sequential (`LT-NNN`).
+**The task queue is three files.** New tasks are created in `BACKLOG.md` with full context; `TODO.md` holds the current iteration only (its header states what the iteration is and tracks the next free task ID); `DONE.md` holds compacted done-and-reviewed tasks since the last release, as the Changelog Keeper's release-notes source. Movement between files is the Architect's job — developers annotate the status suffix in place, never move entries. Task IDs (`LT-NNN`) are global and sequential across all three files. Do not assign work verbally.
 
-**NOTES.md is transitory.** Developer-written questions and blockers live there until resolved. Resolve by deleting the entry and either creating a follow-up task in TODO.md or making a decision.
+**NOTES.md is transitory.** Developer-written questions and blockers live there until resolved. Resolve by deleting the entry and either creating a follow-up task in BACKLOG.md or making a decision.
 
 **A wrong direction is worse than a slow one.** When uncertain, ask the user rather than assuming.
 
@@ -37,7 +37,7 @@ For documentation updates, use the `tech-writer` skill.
 </essential_principles>
 
 <todo_format>
-All tasks in `TODO.md` use this format:
+All tasks use this format, in `BACKLOG.md`, `TODO.md`, and `DONE.md` alike:
 
 ```markdown
 # TODO
@@ -66,6 +66,8 @@ All tasks in `TODO.md` use this format:
 - `— done, pending review ⏳` — developer finished; Architect review required (API surface changed)
 - `— done ✓` — complete, no review needed (bug fixes, docs updates, non-API changes)
 - `— reviewed ✓` — Architect approved
+
+**File placement.** New tasks go to `BACKLOG.md`; only iteration-scoped work lives in `TODO.md`. After review, the Architect moves the entry to `DONE.md` in compacted form — keep ID, title, final status, rulings recorded nowhere else, live handoffs into open tasks (by LT-ID), and the changed-artifact facts the Changelog Keeper needs; drop verification transcripts and file-line inventories. The entry format is identical in all three files; entries move between files, developers annotate the status suffix in place.
 </todo_format>
 
 <notes_format>
@@ -81,7 +83,7 @@ Developers append to `NOTES.md` when blocked or deviating from plan. Each entry:
 **Question:** Specific question for Architect or user to resolve.
 ```
 
-Architect resolves by deleting the entry and either creating a follow-up task in `TODO.md` or making a decision inline.
+Architect resolves by deleting the entry and either creating a follow-up task in `BACKLOG.md` or making a decision inline.
 </notes_format>
 
 <intake>
@@ -111,7 +113,7 @@ What kind of task is this?
 - Pastes or links a GitHub issue → workflows/triage.md
 - Describes a new feature to think through → workflows/requirements.md
 - Has requirements ready and needs a design → workflows/architecture.md
-- References a completed TODO.md task for review → workflows/review-api.md
+- References a completed task for review → workflows/review-api.md
 - "We decided to use X for Y" → workflows/record-adr.md
 
 **After identifying the workflow, read it and follow it exactly.**
@@ -125,7 +127,9 @@ Key files to read as needed:
 | `REQUIREMENTS.md` | Project goals, personas, functional requirements, constraints |
 | `CONTEXT.md` | Domain-specific vocabulary, term definitions, and relationships |
 | `ARCHITECTURE.md` | Current system design and key decisions |
-| `TODO.md` | Active task queue (create if absent) |
+| `BACKLOG.md` | Planned tasks out of iteration scope (new tasks are created here) |
+| `TODO.md` | Current iteration's tasks; header states the iteration and tracks the next free task ID |
+| `DONE.md` | Compacted done-and-reviewed tasks since the last release; release-notes source for Changelog Keeper |
 | `NOTES.md` | Developer-written blockers and questions (resolve and delete entries) |
 | `adr/` | Architectural Decision Records (use `adr-keeper` skill) |
 </reference_index>
@@ -137,7 +141,8 @@ All in `workflows/`:
 |---|---|
 | triage.md | Assess a GitHub issue or user report; route to tasks or answer directly |
 | requirements.md | Gather or update REQUIREMENTS.md |
-| architecture.md | Design a solution; update ARCHITECTURE.md; write tasks to TODO.md |
+| architecture.md | Design a solution; update ARCHITECTURE.md; write tasks to BACKLOG.md |
 | review-api.md | Review API changes from developer handoff for DX and goals alignment |
 | record-adr.md | Record an architectural decision as an ADR |
+| improve-architecture.md | Identify deepening opportunities in existing code and turn them into tasks |
 </workflows_index>

@@ -74,7 +74,7 @@ Message shape: a sentence stating the condition, an em-dash clause for the mecha
 2. Check every runtime class against the ADR 0028 inventory table. Every row must name a channel that exists — no `TSRX` code that no builder emits, no ✅ for a rule that was never written.
 3. Check every message for part 3.
 4. Check every Tier 2 message against criterion 3.
-5. Record anything you cannot fix as copy — a missing rule, a builder that cannot name its site — as a `TODO.md` task for the owning skill, not as a hedge in the message.
+5. Record anything you cannot fix as copy — a missing rule, a builder that cannot name its site — as a `BACKLOG.md` task for the owning skill, not as a hedge in the message.
 
 ---
 

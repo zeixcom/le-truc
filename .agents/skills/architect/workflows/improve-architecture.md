@@ -59,7 +59,7 @@ Once user picks a candidate, drop into a grilling conversation:
 
 1. For significant decisions: use `adr-keeper` skill to create ADR
 2. Update `ARCHITECTURE.md` with new structure and add to Key Decisions table
-3. Write implementation tasks to `TODO.md` using LT-NNN format
+3. Write implementation tasks to `BACKLOG.md` using LT-NNN format
 
 ## Glossary (use these terms exactly)
 
@@ -81,5 +81,5 @@ Once user picks a candidate, drop into a grilling conversation:
 - Domain terms updated in CONTEXT.md inline during grilling
 - Significant rejections recorded as ADRs
 - ARCHITECTURE.md updated with new structure
-- TODO.md has ordered, actionable implementation tasks
+- BACKLOG.md has ordered, actionable implementation tasks
 </success_criteria>

@@ -15,6 +15,8 @@ For building components with the le-truc public API, use a different skill. For 
 
 **Authoritative documents are the source of truth.** ARCHITECTURE.md, REQUIREMENTS.md, CONTEXT.md, AGENTS.md, and ADR files in `adr/` define the precise behavior. Check them before assuming.
 
+**Work only tasks in `TODO.md`.** A task still only in `BACKLOG.md` is out of iteration scope — it enters `TODO.md` when the Architect moves it in at iteration planning. When done, annotate the status suffix in place, in whichever file the entry lives; developers never move tasks between files.
+
 **Library boundary is firm.** `@zeix/cause-effect` owns all reactive primitives. Le Truc owns the component model, DOM effects, parsers, context protocol, and accessibility. If a proposed feature requires no DOM API, it belongs in cause-effect, not here. See references/library-boundaries.md.
 
 **`asParser()` and `defineMethod()` branding is required.** `isParser()` checks only for `PARSER_BRAND` — unbranded functions are NOT treated as parsers. Always brand custom parsers and method producers.
@@ -71,7 +73,7 @@ After completing any task, in this order:
 
 1. **Run tests** — all tests must pass
 2. **Run linter** — no new lint errors
-3. **Update TODO.md** (only if the task was assigned via TODO.md):
+3. **Update the task entry** (only if the task was assigned via the task queue): annotate the status suffix in place, in whichever file the entry lives (`BACKLOG.md`, `TODO.md`, or `DONE.md`) — never move the task between files:
    - If the change affects the **public API surface** → mark as pending review with handoff notes
    - If the change is a **bug fix, test, or internal-only** → mark as done
 4. **Hand off error-message copy to Tech Writer** — required before the task is marked done if you added, reworded, or removed either:

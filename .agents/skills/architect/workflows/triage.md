@@ -25,16 +25,16 @@ To classify correctly:
 
 **Won't do:** Answer the user directly. Explain why the behavior is intentional or out of scope. Reference the relevant section of `REQUIREMENTS.md` if helpful.
 
-**Confirmed bug:** Identify the affected area. Write a task in `TODO.md`:
+**Confirmed bug:** Identify the affected area. Write a task in `BACKLOG.md`:
 - Use the next available task ID (`LT-NNN`)
 - **Skill:** based on affected area: `le-truc-dev` (src/), `docs-server-dev` (server/), `le-truc` (examples/)
 - **Context:** include the reproduction and expected behavior
 
-**Clear win feature:** Confirm alignment with REQUIREMENTS.md. Write a task in `TODO.md`:
+**Clear win feature:** Confirm alignment with REQUIREMENTS.md. Write a task in `BACKLOG.md`:
 - **Skill:** appropriate developer skill
 - **Context:** what to add and why it aligns with project goals
 
-**Docs gap:** Write a task in `TODO.md`:
+**Docs gap:** Write a task in `BACKLOG.md`:
 - **Skill:** tech-writer
 - **Context:** which document is unclear and what the correct behavior actually is
 
@@ -44,6 +44,6 @@ To classify correctly:
 <success_criteria>
 - Issue is classified with clear reasoning
 - Won't do: user has a specific explanation grounded in REQUIREMENTS.md or ARCHITECTURE.md
-- All other resolvable cases: a correctly formatted task exists in TODO.md
+- All other resolvable cases: a correctly formatted task exists in BACKLOG.md
 - Unclear cases: escalated to the user, not guessed
 </success_criteria>

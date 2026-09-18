@@ -1,6 +1,6 @@
 # Improve Docs Architecture
 
-Restructure the guide: split or merge pages, improve navigation, add interactive teaching components. This skill plans the restructure, executes the content work itself, and routes pipeline work to `docs-server-dev` through the Architect's `TODO.md`/`NOTES.md` protocol.
+Restructure the guide: split or merge pages, improve navigation, add interactive teaching components. This skill plans the restructure, executes the content work itself, and routes pipeline work to `docs-server-dev` through the Architect's `BACKLOG.md`/`NOTES.md` protocol.
 
 Triggered by: "docs are too long", "split this page", "merge pages", "improve navigation", "add a teaching component", "restructure the guide".
 
@@ -60,7 +60,7 @@ Decide before touching files:
 
    **tech-writer executes:** page prose, link repair, `README.md` docs list, document-map entries, and declarative config edits (`PAGE_ORDER`, `CHAPTERS` membership, `CURATED_PAGES`).
 
-   **docs-server-dev executes** (TODO.md `LT-NNN` task): any pipeline *code* — effects, templates, schemas, routes, template variables, Markdoc tags. Write the task so no design decisions are left open: behavior, acceptance criteria, files involved. Pattern from `architect/workflows/architecture.md` Step 7.
+   **docs-server-dev executes** (BACKLOG.md `LT-NNN` task): any pipeline *code* — effects, templates, schemas, routes, template variables, Markdoc tags. Write the task so no design decisions are left open: behavior, acceptance criteria, files involved. Pattern from `architect/workflows/architecture.md` Step 7.
 
    ```markdown
    - [ ] LT-NNN: Brief task title
@@ -72,7 +72,7 @@ Decide before touching files:
 
    **ADR-worthy decisions:** apply architect's three criteria — hard to reverse, surprising without context, real trade-off. URL structure and chapter layout qualify. Invoke the `adr-keeper` skill directly with the gathered context (pattern from `architect/workflows/record-adr.md` Step 4). Status 🔄 Proposed unless the user confirms Accepted.
 
-   **Follow-ups in other domains:** TODO.md tasks with the right `**Skill:**` (`le-truc-dev` for example-component review, `architect` for REQUIREMENTS/ARCHITECTURE fallout).
+   **Follow-ups in other domains:** BACKLOG.md tasks with the right `**Skill:**` (`le-truc-dev` for example-component review, `architect` for REQUIREMENTS/ARCHITECTURE fallout).
 
    **Mid-work escalation:** if blocked or a deviation is needed, append to `NOTES.md` in the architect's format and stop that piece of work until resolved:
 
@@ -92,7 +92,7 @@ Decide before touching files:
 - **One interactive per page at most.**
 - **Contract:** the component lives in `examples/<type>/<dir>/` named `<type>-<dir>`; it needs the component files (`.ts`, `.html`, `.css`), a `<name>.md` doc — the examples effect skips components without one — and a Playwright spec served at `http://localhost:3000/test/<name>`.
 - **Reference implementations:** `examples/docs/lifecycle/docs-lifecycle` (connect/disconnect log), `examples/docs/reconcile/docs-reconcile` (keyed list with surviving row state).
-- Component code is `examples/` territory. Spec it in the restructure plan, build it alongside the page, and flag substantial components for `le-truc-dev` review via a TODO.md task (`— done, pending review ⏳` with the Changed/How/Check handoff).
+- Component code is `examples/` territory. Spec it in the restructure plan, build it alongside the page, and flag substantial components for `le-truc-dev` review by annotating the task entry in place (`— done, pending review ⏳` with the Changed/How/Check handoff).
 
 ## Step 6: Execute and verify
 
@@ -108,7 +108,7 @@ Decide before touching files:
 ## Step 7: Close out
 
 - Add a **Skill changes** CHANGELOG entry if this skill's files changed, following the `changelog-keeper` conventions.
-- Update TODO.md statuses per the Post-Task Protocol in `SKILL.md`.
+- Update task statuses per the Post-Task Protocol in `SKILL.md`.
 - Report: what changed, what was handed off, what remains open.
 
 ## Glossary (use these terms exactly)
@@ -124,7 +124,7 @@ Decide before touching files:
 
 - Candidates presented before execution; user selected one
 - Every existing URL still resolves unless the user approved breaking it
-- No TODO task requires docs-server-dev to make design decisions
+- No task requires docs-server-dev to make design decisions
 - ADR-worthy structure decisions recorded as ADRs
 - document-map, `README.md`, `PAGE_ORDER`, `CHAPTERS`, `CURATED_PAGES` consistent with the new structure
 - `bun run build:docs` and `bun test server/tests` green; browser click-through done

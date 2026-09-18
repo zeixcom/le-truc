@@ -75,4 +75,4 @@ Follow the post-task protocol defined in SKILL.md. Bug fixes do not require API 
 - A regression test covers the fixed case
 - `bun test server/tests` passes with no new failures, linter clean
 - No unrelated code changed
-- TODO.md updated if task was assigned via TODO.md
+- Task entry annotated in place if the task was assigned via the task queue

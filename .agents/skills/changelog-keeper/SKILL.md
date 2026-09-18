@@ -46,6 +46,8 @@ When asked to release a version:
 2. Update `version` in `package.json` to match.
 3. Update the version comment in `index.ts` to match: `// Le Truc X.Y.Z`.
 
+`DONE.md` is a release-planning input: read it alongside `## [Unreleased]` — its compacted done-and-reviewed entries are the living record of work since the last release, including rulings recorded nowhere else and changed-artifact facts for release notes. Consume it read-only; the Architect prunes it afterwards.
+
 ## Entry Style
 - **One behavior change per bullet.**
 - **Bold the API name or short summary** at the start, followed by a colon:

@@ -14,7 +14,7 @@ This skill maintains the **authored documentation** for the @zeix/le-truc librar
 - `examples/*/` — component source files; use the `le-truc` or `le-truc-dev` skill instead
 - `CHANGELOG.md` — use the `changelog-keeper` skill instead
 - `adr/` — use the `adr-keeper` skill instead
-- Pipeline code in `server/` (effects, templates, schemas, routes) — write a `TODO.md` task for the `docs-server-dev` skill instead of editing it directly; `server/SERVER.md` and the message strings in `server/compiler/diagnostics.ts` are the two exceptions
+- Pipeline code in `server/` (effects, templates, schemas, routes) — write a `BACKLOG.md` task for the `docs-server-dev` skill instead of editing it directly; `server/SERVER.md` and the message strings in `server/compiler/diagnostics.ts` are the two exceptions
 
 ## Essential Principles
 
@@ -109,12 +109,12 @@ All in `workflows/`:
 | update-server-md.md | Update `server/SERVER.md` after dev server or build pipeline changes |
 | consistency-review.md | Review all documents for consistency with current source |
 | write-blog-post.md | Draft a new blog post in `docs-src/pages/blog/` |
-| improve-docs-architecture.md | Plan and lead a guide restructure — split or merge pages, improve navigation, add teaching components; coordinate pipeline work via `TODO.md` |
+| improve-docs-architecture.md | Plan and lead a guide restructure — split or merge pages, improve navigation, add teaching components; coordinate pipeline work via `BACKLOG.md` tasks |
 | error-message-lifecycle.md | Write and propagate error-message copy in `src/errors.ts` and `server/compiler/diagnostics.ts` — new, revised, retired, and periodic review |
 
 ## Post-Task Protocol
 
-When working a task assigned via `TODO.md`:
+When working a task assigned via the task queue (`BACKLOG.md`, `TODO.md`, or `DONE.md`):
 
 1. **Content-only changes** (pages, `README.md`, skill files, `SERVER.md`, declarative config: `PAGE_ORDER`, `CHAPTERS`, `CURATED_PAGES`) → mark `— done ✓` and add a one-line `**Changed:**`.
 2. **Teaching-component code in `examples/` or edits beyond declarative config in `server/`** → mark `— done, pending review ⏳` and add the handoff:
@@ -127,4 +127,6 @@ When working a task assigned via `TODO.md`:
 
 3. **Blocked or deviating?** Append to `NOTES.md` using the format defined in the `architect` skill's `<notes_format>` section. Stop work on the task. Wait for Architect or user to resolve before proceeding.
 
-Task IDs, status suffixes, and the `**Skill:**` routing field follow the `architect` skill's `<todo_format>` — read it before writing to `TODO.md` for the first time.
+Task IDs, status suffixes, and the `**Skill:**` routing field follow the `architect` skill's `<todo_format>` — read it before writing to a task file for the first time.
+
+The task queue is three files. New tasks are created in `BACKLOG.md`; `TODO.md` holds the current iteration only; `DONE.md` holds compacted done-and-reviewed entries and is the release-notes source for the Changelog Keeper. Edit task copy where the entry lives and annotate status suffixes in place — never move a task between files unless the Architect delegates the mechanical move (for example, at release planning).

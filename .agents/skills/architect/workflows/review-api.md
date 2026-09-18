@@ -1,7 +1,7 @@
 <process>
 ## Step 1: Read the handoff
 
-Locate the task in `TODO.md` marked `— done, pending review ⏳`. Read the full handoff block:
+Locate the task marked `— done, pending review ⏳` — in `TODO.md` or `DONE.md`. Read the full handoff block:
 - **Changed:** which files and locations were modified
 - **How:** the implementation approach
 - **Check:** where the developer flagged review focus
@@ -27,10 +27,10 @@ Read `ARCHITECTURE.md` and existing ADRs for established patterns. Ask:
 
 ## Step 5: Resolve
 
-**Approved:** Update the task status in `TODO.md` from `— done, pending review ⏳` to `— reviewed ✓`. Add a one-line **Review:** note if useful for the record.
+**Approved:** Update the task status in place — in whichever file the entry lives — from `— done, pending review ⏳` to `— reviewed ✓`. Add a one-line **Review:** note if useful for the record. Then move the entry to `DONE.md` in compacted form: keep the ID, title, final status, rulings recorded nowhere else, live handoffs into open tasks (referenced by LT-ID), and the changed-artifact facts the Changelog Keeper needs; drop verification transcripts and file-line inventories.
 
 **Issues found:** Do not ask the developer to re-open or redo the task. Instead:
-- Create one or more follow-up tasks in `TODO.md` that reference the original (e.g. "Refine API surface from LT-002 review")
+- Create one or more follow-up tasks in `BACKLOG.md` that reference the original (e.g. "Refine API surface from LT-002 review")
 - Be specific: name the exact API, describe the problem, and suggest what a better design would look like
 - If an issue is architectural (requires design work first), do that design work, then write the task
 </process>
@@ -38,6 +38,6 @@ Read `ARCHITECTURE.md` and existing ADRs for established patterns. Ask:
 <success_criteria>
 - Changed files read in full, not just the handoff summary
 - Review grounded in REQUIREMENTS.md and ARCHITECTURE.md — not personal preference
-- Task status updated in TODO.md
+- Task status updated in place; approved entries moved to DONE.md in compacted form
 - Issues produce concrete, actionable follow-up tasks with sufficient context
 </success_criteria>

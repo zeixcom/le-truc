@@ -35,7 +35,7 @@ Update only what changed. Preserve the structure and tone — SERVER.md is a tec
 
 **Markdoc tag table (`stripMarkdocTags()`):** Each row maps a source pattern to its Markdown output. Add rows for new tags; remove rows for deleted tags. Order: block → inline, most complex patterns first within each group.
 
-**Planned or roadmap items:** SERVER.md is Reference type — current shape only (references/tone-guide.md, Shared Rules). Do not add a "Future Improvements" or changelog-style section; route planned work to `TODO.md` instead.
+**Planned or roadmap items:** SERVER.md is Reference type — current shape only (references/tone-guide.md, Shared Rules). Do not add a "Future Improvements" or changelog-style section; route planned work to `BACKLOG.md` instead.
 
 ### Step 4: Verify
 

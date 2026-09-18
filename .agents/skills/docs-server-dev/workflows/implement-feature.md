@@ -80,4 +80,4 @@ Follow the post-task protocol defined in SKILL.md.
 - All file writes use `writeFileSafe()` (skips unchanged files)
 - All dynamic paths guarded with `guardPath()` where applicable
 - `server/SERVER.md` reflects the change
-- TODO.md updated with handoff (if task was assigned via TODO.md)
+- Task entry annotated in place with handoff (if the task was assigned via the task queue)

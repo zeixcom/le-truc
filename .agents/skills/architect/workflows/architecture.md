@@ -58,21 +58,21 @@ For decisions that should be permanently documented:
 - Use the `adr-keeper` skill to create an ADR
 - Reference the ADR number in ARCHITECTURE.md
 
-## Step 7: Write tasks to TODO.md
+## Step 7: Write tasks to BACKLOG.md
 
 Break the implementation into ordered, actionable tasks. Each task must:
-- Have a unique ID (`LT-NNN`, next available number)
+- Have a unique ID (`LT-NNN`, continuing the global sequence tracked in TODO.md's header)
 - Be scoped to a single skill (`le-truc-dev`, `docs-server-dev`, `tech-writer`)
 - Have enough **Context:** that the developer doesn't need to make architectural decisions
 - Be ordered so dependencies come first
 
-Use the format defined in the skill's `<todo_format>` section. Create `TODO.md` at the project root if it doesn't exist.
+Use the format defined in the skill's `<todo_format>` section. Create `BACKLOG.md` at the project root if it doesn't exist. Moving iteration-scoped tasks into `TODO.md` is iteration planning, done by the Architect.
 </process>
 
 <success_criteria>
 - Design traces back to REQUIREMENTS.md — no features invented
 - Key Decisions table updated in ARCHITECTURE.md for every significant choice
-- TODO.md has ordered tasks with IDs and sufficient context
+- BACKLOG.md has ordered tasks with IDs and sufficient context
 - No task requires the developer to guess intent or make architectural decisions
 - Significant decisions recorded as ADRs
 - Open questions either resolved or escalated to the user

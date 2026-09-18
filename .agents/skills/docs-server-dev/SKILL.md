@@ -35,6 +35,8 @@ Never use the templates `html` inside a Markdoc schema transform. Never use mark
 
 **`SERVER.md` is authoritative.** Read it before changing any major component.
 
+**Work only tasks in `TODO.md`.** A task still only in `BACKLOG.md` is out of iteration scope — it enters `TODO.md` when the Architect moves it in at iteration planning. When done, annotate the status suffix in place, in whichever file the entry lives; developers never move tasks between files.
+
 **Run `bun test server/tests` after every change.**
 
 **Run the linter** after every change to `server/`: `bunx biome check --write ./server`.
@@ -72,7 +74,7 @@ After completing any task, in order:
 
 1. **Run tests:** `bun test server/tests` — all tests must pass
 2. **Run linter:** `bunx biome check --write ./server` — no new lint errors
-3. **Update TODO.md** (only if task was assigned via TODO.md):
+3. **Update the task entry** (only if the task was assigned via the task queue): annotate the status suffix in place, in whichever file the entry lives (`BACKLOG.md`, `TODO.md`, or `DONE.md`) — never move the task between files:
    - If change affects **server API, HTTP routes, build pipeline behavior, or template output** → mark `— done, pending review ⏳` and add handoff:
      ```
      **Changed:** which file(s) and what (function name, route, effect)
