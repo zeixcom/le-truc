@@ -459,22 +459,37 @@ describe('orphaned catalog keys (LT-196)', () => {
 		expect(gaps.filter(gap => gap.key === 'census-probe.label.one')).toEqual([])
 	})
 
-	test('the reachability carve-out is unconditional — but only per locale', async () => {
-		// An UNDECLARED category key outside the locale's platform set is
-		// unreachable-and-therefore-unreportable there (de has no `two`)…
+	test('the carve-out protects only DECLARED keys — undeclared residue reports everywhere (LT-217)', async () => {
+		// The wholesale case keeps its protection: `label.two` in de
+		// (cardinal {one, other}) is a DECLARED category form whose span de
+		// prunes — a real translation, unreported (and no missing record
+		// either, LT-190's declared-walk rule). The UNDECLARED `stray.few`
+		// is rename/typo residue no span can ever reference, so no category
+		// set shelters it: de lacks `few` even in its union set, and the key
+		// reports there anyway — the locale set that hid it before LT-217.
 		const de = await collectI18n(
 			[probe],
-			injectedCatalogs({ de: { 'census-probe.stray.two': 'zwei' } }),
+			injectedCatalogs({
+				de: {
+					'census-probe.stray.few': 'wenige',
+					'census-probe.label.two': 'zwei',
+				},
+			}),
 		)
-		expect(de.gaps.filter(gap => gap.status === 'orphaned')).toEqual([])
-		// …while a locale whose platform set DOES select that category
-		// reports it — the residue stays loud where it could actually render.
+		expect(de.gaps.filter(gap => gap.status === 'orphaned')).toEqual([
+			{ key: 'census-probe.stray.few', locale: 'de', status: 'orphaned' },
+		])
+		expect(de.gaps.filter(gap => gap.key === 'census-probe.label.two')).toEqual(
+			[],
+		)
+		// "Every locale" is the point: cy selects `few`, de does not — both
+		// report the undeclared key.
 		const cy = await collectI18n(
 			[probe],
-			injectedCatalogs({ cy: { 'census-probe.stray.two': 'dau' } }),
+			injectedCatalogs({ cy: { 'census-probe.stray.few': 'dau' } }),
 		)
 		expect(cy.gaps.filter(gap => gap.status === 'orphaned')).toEqual([
-			{ key: 'census-probe.stray.two', locale: 'cy', status: 'orphaned' },
+			{ key: 'census-probe.stray.few', locale: 'cy', status: 'orphaned' },
 		])
 	})
 })

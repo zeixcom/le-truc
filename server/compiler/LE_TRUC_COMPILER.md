@@ -349,9 +349,11 @@ outside the locale's platform set — read per locale for the component's
 statically proven `truc:case-type` (`RegistryEntry.caseType`:
 `'cardinal'`/`'ordinal'` when provable, `'union'` otherwise — the runtime's
 own fallback) — sits in a pruned span that cannot render there, so its
-absence is the translator's nothing-to-do, not a gap; the same carve-out
-keeps the orphan walk from reporting a wholesale-translated pruned
-category, so a locale's catalog carries exactly its own reachable set.
+absence is the translator's nothing-to-do, not a gap. The orphan walk
+applies the same carve-out to DECLARED keys only (LT-217): a
+wholesale-translated pruned category reports nothing, while an undeclared
+key reports in every locale — nothing prunes a span that was never
+authored — so a locale's catalog carries exactly its own reachable set.
 Staleness rides a committed
 manifest (`i18n/manifest.json`, per locale per key the source hash the
 translation was recorded against): a source-string edit is a `.tsrx` edit

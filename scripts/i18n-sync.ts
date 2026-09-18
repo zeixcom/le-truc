@@ -19,9 +19,11 @@
  * 3. every ORPHANED key — a catalog entry nothing in the corpus declares
  *    (a translator's typo, a renamed key, a deleted component; the
  *    census's `orphaned` status, LT-196) — is pruned from the catalog and
- *    from the staleness manifest. Unreachable category keys are not
- *    orphans (the census's carve-out), so a wholesale translation of a
- *    pruned category survives the pass untouched.
+ *    from the staleness manifest. An unreachable DECLARED key is not an
+ *    orphan (the census's carve-out, LT-217), so a wholesale translation
+ *    of a pruned category survives the pass untouched; an undeclared key
+ *    is sheltered by no category set and reports — and prunes — in every
+ *    locale.
  *
  * Run by a person, diffable in review. The compile this performs writes
  * only into the gitignored `server/generated/tsrx/`.

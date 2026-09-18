@@ -457,7 +457,7 @@ round, scope widened).
   noUnusedVariables error in committed host-profile.d.ts:127, not this
   task's); `check:links` 410 green.
 
-- [ ] LT-217: Narrow the orphan walk's reachability carve-out to DECLARED keys (LT-196 review).
+- [x] LT-217: Narrow the orphan walk's reachability carve-out to DECLARED keys (LT-196 review). — done, pending review ⏳ (2026-09-18)
   **Skill:** le-truc-dev
   **Context:** LT-196 (8b429d8f, reviewed same day) runs LT-190's reachability rule
   inverted as an UNCONDITIONAL carve-out in `collectI18n`'s orphan walk: a
@@ -495,6 +495,34 @@ round, scope widened).
   silent); a wholesale-translated declared `task.one` in zh stays unreported
   and unpruned (unchanged); the committed catalogs stay gap-free; full gates
   green (`bun test server/tests`, typecheck, `check:tsrx`, `build:docs`).
+  **Changed:** `server/effects/i18n.ts` (the orphan walk checks DECLARATION
+  first — an undeclared key under a known tag, or any key under an unknown
+  tag, pushes `orphaned` and continues with no `pluralCategories` call; the
+  carve-out runs only for declared keys and only after the
+  `PLURAL_CATEGORIES` suffix check, so plain declared keys fall out with
+  zero `Intl` work — the per-key recomputation nit resolved as a side
+  effect); `server/tests/compiler/i18n.test.ts` (the pinned test flipped to
+  "the carve-out protects only DECLARED keys — undeclared residue reports
+  everywhere": de now reports `stray.few`, the wholesale `label.two`
+  negative stays, and a cy injection pins the every-locale claim).
+  **How:** pure reorder, no new state — `if (undeclared) { push; continue }`
+  before the reachability branch. The census reason line and sync summary
+  line are UNCHANGED first drafts (LT-189 item 8's jurisdiction); the docs
+  that restate the OLD unconditional rule were amended with the behavior:
+  sync header step 3, ADR 0030 s5's orphan-direction sentence (unpublished
+  on v3, in place), LE_TRUC_COMPILER.md's census paragraph, and the
+  CHANGELOG bullet tightened to "protecting declared keys only".
+  HOST_PROFILE.md needed nothing — its sentence says residue "never outlives
+  the declaration", which this landing makes true in every locale.
+  **Verification (run):** `i18n.test.ts` 31/31; full `bun test server/tests`
+  1601 pass / 0 fail (1 pre-existing LT-207 inter-test error); `typecheck`
+  exit 0; `check:tsrx` warning baseline 0, tier census 20/2/0, translation
+  census 0 gap(s) across 6 locale(s); `build:docs` exit 0, simulation pass
+  2/8/20 unchanged; `check:links` 410 green; biome clean on touched files.
+  **Acceptance live-proven:** `basic-pluralize.stray.few` planted in the
+  committed `i18n/de.json` reported as orphaned in the compile's census (de
+  — the locale whose category set hid it before this task) and was pruned by
+  `i18n:sync`, leaving `git status i18n/` byte-clean.
 
 - [ ] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174 (landed 2026-09-15). Re-verified 2026-09-18: premise holds, demand still zero — demand-gated.**
   **Skill:** docs-server-dev
