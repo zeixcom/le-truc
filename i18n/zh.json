@@ -1,5 +1,12 @@
 {
 	"basic-pluralize.done": "全部完成！",
 	"basic-pluralize.remaining": "剩余",
-	"basic-pluralize.task.other": "个任务"
+	"basic-pluralize.task.other": "个任务",
+	"form-colorgraph.drag": "",
+	"form-combobox.clearInput": "",
+	"form-listbox.clearFilter": "",
+	"form-listbox.filter": "",
+	"form-spinbutton.decrement": "",
+	"form-spinbutton.increment": "",
+	"form-textbox.clearInput": ""
 }

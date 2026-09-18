@@ -29,7 +29,7 @@ import { isVoidElement } from '../../compiler/core'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
-import { PLURALIZE_I18N } from './corpus-args'
+import { inlineI18n, PLURALIZE_I18N } from './corpus-args'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -42,10 +42,15 @@ const renderName = (tag: string): string =>
 
 /**
  * Args for the components whose contract has genuinely required
- * fields. Everything absent here renders from `{}` on purpose.
+ * fields — and, since the LT-195 i18n round, the reserved `i18n`
+ * records (an omitted record throws at the `i18n: { t }` destructure).
+ * Everything absent here renders from `{}` on purpose.
  */
 const ARGS: Record<string, Record<string, unknown>> = {
-	'form-spinbutton': { name: 'quantity' },
+	'form-spinbutton': {
+		name: 'quantity',
+		i18n: inlineI18n({ decrement: 'Decrement', increment: 'Increment' }),
+	},
 	'form-checkbox': { name: 'agree', label: 'I agree' },
 	'form-radiogroup': {
 		name: 'choice',
@@ -55,7 +60,11 @@ const ARGS: Record<string, Record<string, unknown>> = {
 			{ value: 'b', label: 'B' },
 		],
 	},
-	'form-textbox': { name: 'title', label: 'Title' },
+	'form-textbox': {
+		name: 'title',
+		label: 'Title',
+		i18n: inlineI18n({ clearInput: 'Clear input' }),
+	},
 	'form-combobox': {
 		name: 'fruit',
 		label: 'Fruit',
@@ -63,14 +72,19 @@ const ARGS: Record<string, Record<string, unknown>> = {
 			{ value: 'a', label: 'Apple' },
 			{ value: 'b', label: 'Banana' },
 		],
+		i18n: inlineI18n({ clearInput: 'Clear input' }),
 	},
 	'form-tokenbox': { name: 'tags', label: 'Tags' },
+	'form-colorgraph': {
+		i18n: inlineI18n({ drag: 'Drag' }),
+	},
 	'form-listbox': {
 		name: 'fruit',
 		options: [
 			{ value: 'a', label: 'Apple' },
 			{ value: 'b', label: 'Banana' },
 		],
+		i18n: inlineI18n({ filter: 'Filter', clearFilter: 'Clear filter' }),
 	},
 	'module-tabgroup': {
 		tabs: [

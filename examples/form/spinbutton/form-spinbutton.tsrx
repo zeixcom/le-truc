@@ -72,6 +72,20 @@
  */
 import { asNumber, defineMethod, relayValidity } from '@zeix/le-truc'
 
+/**
+ * The step buttons' aria-labels are component-owned text assistive tech
+ * announces, so they route through the reserved `i18n` parameter
+ * (ADR 0030): the compiler resolves `t` per locale at render time; this
+ * inline record is the source-locale fallback every catalog resolves
+ * against. The increment label's zero-state variant is NOT here — the
+ * call-to-action text is the page's `zero` arg (author data, like
+ * basic-gauge's thresholds), read live off its rendered span.
+ */
+export const i18n = {
+	decrement: 'Decrement',
+	increment: 'Increment',
+}
+
 export const config = { formAssociated: true }
 
 export type FormSpinbuttonProps = {
@@ -120,6 +134,7 @@ export function FormSpinbutton(
 		bigStep,
 		unit,
 		zero,
+		i18n: { t },
 	}:
 		{
 			name: string
@@ -131,6 +146,7 @@ export function FormSpinbutton(
 			bigStep?: number
 			unit?: string
 			zero?: string
+			i18n: I18n
 		},
 )
 @{
@@ -145,6 +161,14 @@ export function FormSpinbutton(
 	// by hand without them (module-catalog does).
 	const zeroSpan = first('span.zero')
 	const otherSpan = first('span.other')
+	// The increment label's non-zero fallback, carried where the client can
+	// read it: `t` is a server-only name (the compiler rejects it in a
+	// reactive thunk — TSRX005 — and no catalog ships to the browser,
+	// ADR 0030 sub-design 6), so the translated string is RENDERED into this
+	// hidden span and the thunk reads its textContent — the same
+	// rendered-alternatives idiom the zero-state span below already uses for
+	// the page's call-to-action text.
+	const incrementLabel = first('span.increment-label')
 
 	/**
 	 * Commit `next` as the new value: mirror it into the live input, then
@@ -272,7 +296,7 @@ export function FormSpinbutton(
 					<button
 						type="button"
 						class="decrement"
-						aria-label="Decrement"
+						aria-label={t.decrement}
 						hidden={() => Boolean(zeroSpan) && host.value === 0}
 						disabled={() => host.value <= host.min}
 						onClick={(e: MouseEvent) => host.stepDown(e.shiftKey)}
@@ -306,8 +330,8 @@ export function FormSpinbutton(
 						class="increment"
 						aria-label={() =>
 							zeroSpan && host.value === 0
-								? (zeroSpan.textContent ?? 'Increment')
-								: 'Increment'
+								? (zeroSpan.textContent ?? incrementLabel?.textContent)
+								: incrementLabel?.textContent
 						}
 						disabled={() => host.value >= host.max}
 						onClick={(e: MouseEvent) => host.stepUp(e.shiftKey)}
@@ -323,6 +347,7 @@ export function FormSpinbutton(
 						} @else {
 							<>+</>
 						}
+						<span class="increment-label" hidden>{t.increment}</span>
 					</button>
 				</div>
 			</fieldset>

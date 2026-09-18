@@ -57,6 +57,19 @@ import { FormSpinbutton } from '../spinbutton/form-spinbutton.tsrx'
 
 export const config = { formAssociated: true }
 
+/**
+ * The knob's visually-hidden drag hint is component-owned text assistive
+ * tech announces, so it routes through the reserved `i18n` parameter
+ * (ADR 0030): the compiler resolves `t` per locale at render time; this
+ * inline record is the source-locale fallback every catalog resolves
+ * against. Deliberately NOT here: the `first()` guidance messages below
+ * address the PAGE AUTHOR in their console — developer-facing English, a
+ * different audience than the end user the catalog serves.
+ */
+export const i18n = {
+	drag: 'Drag',
+}
+
 export type FormColorgraphAxis = 'l' | 'c' | 'h'
 
 export type FormColorgraphProps = {
@@ -89,10 +102,12 @@ export function FormColorgraph(
 	{
 		name,
 		value = 'oklch(0.48 0.23 263)',
+		i18n: { t },
 	}:
 		{
 			name: string
 			value?: string
+			i18n: I18n
 		},
 )
 @{
@@ -396,7 +411,7 @@ export function FormColorgraph(
 						'--color-border': parseOklch(host.value).l > CONTRAST_THRESHOLD ? 'black' : 'white',
 					})}
 				>
-					<span class="visually-hidden">Drag</span>
+					<span class="visually-hidden">{t.drag}</span>
 				</button>
 				<ol role="presentation">
 					<li class="lighten80" style={() => ({

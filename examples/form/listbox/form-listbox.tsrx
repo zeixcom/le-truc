@@ -38,6 +38,20 @@
 
 import { asString, defineMethod } from '@zeix/le-truc'
 
+/**
+ * The filter input's placeholder and the clear button's aria-label are
+ * component-owned text (the placeholder is read by assistive tech, the
+ * label is what it announces), so they route through the reserved `i18n`
+ * parameter (ADR 0030): the compiler resolves `t` per locale at render
+ * time; this inline record is the source-locale fallback every catalog
+ * resolves against. `ariaLabel` (the listbox's own label) is author data
+ * and stays a prop.
+ */
+export const i18n = {
+	filter: 'Filter',
+	clearFilter: 'Clear filter',
+}
+
 export const config = { formAssociated: true }
 
 export type FormListboxOption = {
@@ -94,6 +108,7 @@ export function FormListbox(
 		options,
 		value = '',
 		filterable = false,
+		i18n: { t },
 	}:
 		{
 			name: string
@@ -101,6 +116,7 @@ export function FormListbox(
 			options: FormListboxOption[]
 			value?: string
 			filterable?: boolean
+			i18n: I18n
 		},
 )
 @{
@@ -137,7 +153,7 @@ export function FormListbox(
 					<input
 						type="text"
 						class="filter"
-						placeholder="Filter"
+						placeholder={t.filter}
 						onInput={(e: Event) => ({ filter: (e.target as HTMLInputElement).value })}
 					/>
 				}
@@ -145,7 +161,7 @@ export function FormListbox(
 					<button
 						type="button"
 						class="clear"
-						aria-label="Clear filter"
+						aria-label={t.clearFilter}
 						hidden={() => !host.filter}
 						onClick={() => ({ filter: '' })}
 					>✕</button>

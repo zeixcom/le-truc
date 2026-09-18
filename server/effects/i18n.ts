@@ -288,17 +288,22 @@ ${overrideEntries}
 /**
  * The reserved \`i18n\` record for one component at one locale (ADR 0030
  * sub-design 2). A key resolves in exactly one place: the locale's
- * override when present, else the inline source string (sub-design 5's
- * fallback — a missing key is a census record, never a build error). The
- * catalog never reaches the client: \`t\` resolves here, at build time.
+ * override when one is present and non-empty, else the inline source
+ * string (sub-design 5's fallback — a missing key is a census record,
+ * never a build error). An EMPTY override is \`i18n:sync\`'s
+ * not-yet-translated placeholder, so it falls back to the source string
+ * too; the catalog never reaches the client: \`t\` resolves here, at
+ * build time.
  */
 export function i18nRecord(tag: string, lang?: string): I18n {
 	const locale = lang || I18N_PAGE_LOCALE
 	const primary = locale.split(/[-_]/)[0]?.toLowerCase() ?? ''
 	const t: Record<string, string> = {}
 	const localeOverrides = OVERRIDES[locale] ?? {}
-	for (const [key, source] of Object.entries(SOURCES[tag] ?? {}))
-		t[key] = localeOverrides[\`\${tag}.\${key}\`] ?? source
+	for (const [key, source] of Object.entries(SOURCES[tag] ?? {})) {
+		const override = localeOverrides[\`\${tag}.\${key}\`]
+		t[key] = override || source
+	}
 	return {
 		lang: locale,
 		t,

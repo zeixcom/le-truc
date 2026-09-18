@@ -3,5 +3,12 @@
 	"basic-pluralize.remaining": "atlicis",
 	"basic-pluralize.task.one": "uzdevums",
 	"basic-pluralize.task.other": "uzdevumu",
-	"basic-pluralize.task.zero": "uzdevumu"
+	"basic-pluralize.task.zero": "uzdevumu",
+	"form-colorgraph.drag": "",
+	"form-combobox.clearInput": "",
+	"form-listbox.clearFilter": "",
+	"form-listbox.filter": "",
+	"form-spinbutton.decrement": "",
+	"form-spinbutton.increment": "",
+	"form-textbox.clearInput": ""
 }

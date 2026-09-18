@@ -18,7 +18,7 @@ import {
 } from '../../compiler/sim/realm'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
-import { PLURALIZE_I18N } from './corpus-args'
+import { inlineI18n, PLURALIZE_I18N } from './corpus-args'
 import { loadTsrxCorpus } from './corpus-fixture'
 
 const generated = createGeneratedDir('gate-wave')
@@ -473,6 +473,7 @@ describe('LT-145 — a Parser-exposed prop with no server arg renders its fallba
 				name: 'fruit',
 				options,
 				filterable: true,
+				i18n: inlineI18n({ filter: 'Filter', clearFilter: 'Clear filter' }),
 			}),
 			component: 'form-listbox',
 		})
@@ -486,6 +487,7 @@ describe('LT-145 — a Parser-exposed prop with no server arg renders its fallba
 				name: 'fruit',
 				label: 'Fruit',
 				options,
+				i18n: inlineI18n({ clearInput: 'Clear input' }),
 			}),
 			component: 'form-combobox',
 		})

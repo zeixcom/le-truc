@@ -29,6 +29,7 @@ import { compileComponent } from '../../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../../compiler/registry'
 import { createSimulationRealm } from '../../../compiler/sim/realm'
+import { collectI18n, writeI18nModule } from '../../../effects/i18n'
 import { createGeneratedDir } from '../../helpers/generated-tsrx'
 import { CORPUS_ARGS, PLURALIZE_I18N } from '../corpus-args'
 
@@ -121,20 +122,28 @@ const renderOf =
 		return fn(args)
 	}
 
-describe('TSX spike — front-end parity (§4.3)', () => {
-	// Pass 1: listbox alone (feeds the compose registry), then the rest with it.
-	const listboxPair = compilePair(FIXTURES[2] as Fixture, [])
-	for (const compiled of [listboxPair.tsrx, listboxPair.tsxx]) {
-		if (!compiled.component)
-			throw new Error(
-				`form-listbox must compile on both surfaces: ${JSON.stringify(compiled.diagnostics)}`,
-			)
-	}
-	const listboxEntries = [
-		(listboxPair.tsrx.component as { entry: RegistryEntry }).entry,
-		(listboxPair.tsxx.component as { entry: RegistryEntry }).entry,
-	]
+// Pass 1: listbox alone (feeds the compose registry), then the rest with it.
+// Hoisted to module scope because the generated i18n module write below is
+// top-level await (describe callbacks are sync).
+const listboxPair = compilePair(FIXTURES[2] as Fixture, [])
+for (const compiled of [listboxPair.tsrx, listboxPair.tsxx]) {
+	if (!compiled.component)
+		throw new Error(
+			`form-listbox must compile on both surfaces: ${JSON.stringify(compiled.diagnostics)}`,
+		)
+}
+const listboxEntries = [
+	(listboxPair.tsrx.component as { entry: RegistryEntry }).entry,
+	(listboxPair.tsxx.component as { entry: RegistryEntry }).entry,
+]
 
+// form-combobox's server module supplies its composed listbox's reserved
+// record (`i18n: i18nRecord("form-listbox", …)`), which imports './i18n' —
+// write the generated i18n module from the compiled .tsrx entry, the same
+// derivation the real corpus pipeline performs (ADR 0030 sub-design 2).
+await writeI18nModule(generated.path, await collectI18n([listboxEntries[0]]))
+
+describe('TSX spike — front-end parity (§4.3)', () => {
 	for (const fx of FIXTURES) {
 		describe(fx.tag, () => {
 			const { tsrx, tsxx } = compilePair(fx, listboxEntries)

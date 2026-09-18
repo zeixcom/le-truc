@@ -21,7 +21,9 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent } from '../../compiler/frontend/tsrx'
+import { collectI18n, writeI18nModule } from '../../effects/i18n'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { CORPUS_ARGS } from './corpus-args'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const read = (rel: string): string =>
@@ -111,6 +113,21 @@ ensureEmitted('form-textbox', formTextbox.component.serverCode)
 ensureEmitted('module-list', moduleList.component.serverCode)
 ensureEmitted('form-checkbox', formCheckbox.component.serverCode)
 ensureEmitted('c-el', seeded.component.serverCode)
+// module-list's compose site supplies form-textbox's reserved record
+// (`i18n: i18nRecord("form-textbox", …)`), which imports './i18n' — the
+// generated i18n module must exist beside the emitted server modules. The
+// real pipeline derives it from the corpus collection; the fixture derives
+// it from the same five compiled entries (ADR 0030 sub-design 2).
+await writeI18nModule(
+	generated.path,
+	await collectI18n([
+		counter.component.entry,
+		tabgroup.component.entry,
+		formTextbox.component.entry,
+		moduleList.component.entry,
+		formCheckbox.component.entry,
+	]),
+)
 
 const render = async (
 	name: string,
@@ -121,7 +138,12 @@ const render = async (
 	const fn = mod[`render${name}`] as (args: unknown) => string
 	if (typeof fn !== 'function')
 		throw new Error(`render function for ${tag} missing`)
-	return fn(args)
+	// The reserved `i18n` parameter is the compiler's supply at real render
+	// boundaries; a fixture passes the record itself. The shared fixture
+	// table is the single home for those records (corpus-args.ts) — a
+	// component without one simply renders without `i18n`.
+	const fixture = CORPUS_ARGS[tag] ?? {}
+	return fn({ ...fixture, ...(args as object) })
 }
 
 const counterHtml = (seed: number | string): string =>

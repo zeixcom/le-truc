@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-215.**
+**Next free task ID: LT-216.**
 
 ---
 
@@ -180,6 +180,51 @@ round, scope widened).
   **Verification:** tier census unchanged (20 folded / 2 simulated); compile-warning baseline
   stays 0; `bun run i18n:sync` records the new keys' manifest hashes; the de catalog gains real
   translations (not source echoes) for at least one component, pinned as a fixture.
+  **Done (2026-09-18):** five components declare `export const i18n` and route six strings
+  through `{t.key}` server-folded sites (combobox, listbox ×2, textbox, spinbutton ×2,
+  colorgraph); tokenbox's `Remove` is NOT landed — falsified premise, filed as **LT-215**.
+  The spinbutton increment label falsified the watch item: `t` in a reactive thunk is
+  **TSRX005** (server-only name — the thunk is a client-only watch, and no catalog ships),
+  so the translated fallback renders into a hidden `.increment-label` span the thunk reads
+  back: the component's own CTA-span idiom, ADR 0030 s6 rendered alternatives; demo HTML
+  updated in kind. Developer-facing `first()` guidance and tokenbox's client-built status
+  strings are commented as deliberately out of scope (the latter is LT-197's). **Defect
+  found and fixed en route:** the `i18n:sync` `""` placeholder resolved as EMPTY text
+  (`?? source` let the empty override win), contradicting sync's own doc and ADR 0030 s5 —
+  `i18nRecord` now falls back on empty overrides, pinned in i18n.test.ts; noted in
+  HOST_PROFILE.md + CHANGELOG. Fixture renders needing the record were updated
+  (corpus-args `inlineI18n`, consumed by smoke/golden/gate-wave/parity/audit — a
+  render-fn call without `i18n` now throws at the destructure).
+  **Verification (run):** `check:tsrx` exit 0, warning baseline 0, tier census 20/2/0
+  (reasons unchanged), translation census 0 gaps; `typecheck` exit 0; `bun test
+  server/tests` 1559 pass / 0 fail (1 pre-existing unhandled inter-test error, the
+  tier-corpus face of LT-207, NOTES.md); parity 31/31; `build:docs` green, simulation
+  pass 2/8/20 unchanged; form-spinbutton Playwright spec 21/21 Chromium (the aria-label
+  update cycle exercises the re-sourced fallback); biome clean. De fixture pins:
+  `i18nRecord('form-textbox', 'de').t.clearInput === 'Eingabe leeren'` et al. plus a
+  render-level `aria-label="Eingabe leeren"` pin; de translations are real (Eingabe
+  leeren / Filtern / Filter leeren / Verringern / Erhöhen / Ziehen), not source echoes.
+
+- [ ] LT-215: Rule on server-static expressions inside reactive-list `@for` bodies (LT-195 residue: form-tokenbox's `Remove`).
+  **Skill:** architect (rules the milestone-subset question), le-truc-dev (implements)
+  **Context:** LT-195's survey counted form-tokenbox's `aria-label="Remove"` as
+  translatable by the existing mechanism. It is not: the button lives in the
+  reactive-list `@for` body, and `validateListBody` (milestone-3 subset, ADR 0023
+  sub-design 5) admits only static attrs, event attrs, and the one `{token}` hole —
+  `aria-label={t.remove}` is TSRX005 ("Dynamic attribute … inside a reactive-list @for
+  body"). Tokenbox therefore keeps its static English label and declares no `i18n`
+  (a declared key whose translation nothing can render would be dishonest).
+  **The question:** may a reactive-list body carry expressions that classify
+  SERVER-STATIC (reads only server-known names — `t`, args, literals; no per-item
+  binding)? The subset gate exists so "the emitted template is provably complete" —
+  but a build-folded constant needs no client binding at all: the initial items render
+  it via the ordinary server-attr path, and `listTemplateLines` would interpolate it
+  into the extracted `<template>` (the client clones the served template, so the
+  folded bytes ride along). Weigh that extension against (a) accepting a permanent
+  English label on per-item controls, or (b) an aria-labelledby/id restructure (ids
+  inside a loop duplicate — likely dead). Outcome: an ADR 0023 sub-design 5 amendment
+  or a recorded refusal; then implement, extend the `.tsx` front end + parity, and
+  route tokenbox's string through the catalog.
 
 - [ ] LT-196: Report orphaned catalog keys in the translation census (ADR 0030 s5 gap).
   **Skill:** docs-server-dev

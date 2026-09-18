@@ -4,6 +4,47 @@ Deviation notes and unexpected challenges from agent sessions, newest first. Ent
 
 ---
 
+## LT-195 — two survey premises falsified: the spinbutton thunk and the tokenbox @for body
+**Date:** 2026-09-18 | **Skill:** le-truc-dev
+LT-195's demand survey assumed all seven strings are "translatable by ADR 0030's existing
+mechanism with no new surface", and its watch item said "`t['increment']` inside the thunk
+is fine". Both halves were falsified empirically:
+
+1. **`t` cannot ride a reactive thunk — at all.** form-spinbutton's increment
+   `aria-label={() => … ? zeroSpan.textContent ?? 'Increment' : 'Increment'}` is a
+   CLIENT-only watch (the server omits the attribute), and the compiler diagnoses `t`
+   inside any reactive position as a server-only name — **TSRX005** ("references
+   server-only name(s) `t`"), demonstrated with a scratch component (deleted). The
+   plain member read `aria-label={t.key}` is the sanctioned server-folded shape: it
+   emits `attr('aria-label', t.clearInput)` and NO client construct. The landed shape
+   is the rendered-alternatives idiom the component already used for the CTA text: a
+   hidden `.increment-label` span carries the translated fallback; the thunk reads
+   `incrementLabel?.textContent` (TSRX005-clean, tier unchanged).
+2. **form-tokenbox's `Remove` cannot declare `i18n` today.** The remove button lives in
+   the reactive-list `@for` body, where `validateListBody` (milestone-3 subset,
+   ADR 0023 sub-design 5) admits ONLY static attrs, event attrs, and the one `{token}`
+   hole — `aria-label={t.remove}` is TSRX005 "Dynamic attribute … inside a
+   reactive-list @for body". Extending the gate to server-static expressions (a folded
+   value needs no per-item binding; `listTemplateLines` would interpolate it into the
+   extracted `<template>`) is an ADR-level ruling, filed as **LT-215** — NOT done
+   unilaterally. Tokenbox keeps its static English `aria-label="Remove"` and declares
+   no i18n (a declared-but-unreachable key would render a translation nothing can
+   reach).
+
+**Bonus defect found and fixed here**: the `i18n:sync` "" placeholder rendered as EMPTY
+text, not the source fallback — `i18nRecord`'s `localeOverrides[key] ?? source` let the
+`""` win. Sync's own doc ("the source-locale string renders until it is filled") and
+ADR 0030 s5 both say the opposite; running sync before the fix would have blanked five
+locales' new aria-labels. Fixed to `override || source` in `server/effects/i18n.ts`
+(generated-module writer), pinned in i18n.test.ts, noted in HOST_PROFILE.md's missing-
+translation paragraph, CHANGELOG [Unreleased] Fixed.
+
+Fixture-args note for future renders: a component whose signature destructures
+`i18n: { t }` THROWS when a fixture calls its render fn without a record
+("Cannot destructure … 'undefined'"). The records live in `corpus-args.ts`
+(`inlineI18n`), consumed by sim-driver/equivalence-audit and now also
+server-render-smoke/server.golden/gate-wave/parity — a new i18n component must add one.
+
 ## LT-208/209/211 — Tech Writer handoff (deviations ruled ✓, Architect 2026-09-18)
 **Date:** 2026-09-18 | **Skill:** le-truc-dev → resolved by review
 The three implementation deviations from the task texts are RULED as accepted and

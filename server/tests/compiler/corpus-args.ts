@@ -44,6 +44,21 @@ export const PLURALIZE_I18N = {
 } as const
 
 /**
+ * An inline record for one component's declared keys (same posture as
+ * `PLURALIZE_I18N`): mirrors what `i18nRecord(tag, 'en')` resolves at the
+ * current corpus — every key at its source-locale string, since the source
+ * locale has no override file. Kept explicit per component so a key or
+ * source-string edit fails the render fixtures that need updating.
+ */
+export const inlineI18n = (t: Record<string, string>) => ({
+	lang: 'en',
+	t,
+	timeZone: 'UTC',
+	currency: 'USD',
+	dir: 'ltr',
+})
+
+/**
  * Same posture as `server-render-smoke.test.ts`: components whose args are
  * genuinely required get a value, everything else renders from `{}`.
  * Diverges from the smoke test's copy in three entries (LT-167): the smoke
@@ -54,7 +69,10 @@ export const PLURALIZE_I18N = {
  * behavior.
  */
 export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
-	'form-spinbutton': { name: 'quantity' },
+	'form-spinbutton': {
+		name: 'quantity',
+		i18n: inlineI18n({ decrement: 'Decrement', increment: 'Increment' }),
+	},
 	'form-checkbox': { name: 'agree', label: 'I agree' },
 	'form-radiogroup': {
 		name: 'choice',
@@ -64,7 +82,11 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 			{ value: 'b', label: 'B' },
 		],
 	},
-	'form-textbox': { name: 'title', label: 'Title' },
+	'form-textbox': {
+		name: 'title',
+		label: 'Title',
+		i18n: inlineI18n({ clearInput: 'Clear input' }),
+	},
 	'form-combobox': {
 		name: 'fruit',
 		label: 'Fruit',
@@ -72,6 +94,7 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 			{ value: 'a', label: 'Apple' },
 			{ value: 'b', label: 'Banana' },
 		],
+		i18n: inlineI18n({ clearInput: 'Clear input' }),
 	},
 	'form-tokenbox': { name: 'tags', label: 'Tags' },
 	'form-listbox': {
@@ -80,6 +103,13 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 			{ value: 'a', label: 'Apple' },
 			{ value: 'b', label: 'Banana' },
 		],
+		i18n: inlineI18n({ filter: 'Filter', clearFilter: 'Clear filter' }),
+	},
+	// No `name`: the audit rendered form-colorgraph from `{}` before the i18n
+	// declaration existed — keep its phase-1 output unchanged except for the
+	// record the render signature now requires.
+	'form-colorgraph': {
+		i18n: inlineI18n({ drag: 'Drag' }),
 	},
 	'module-tabgroup': {
 		tabs: [

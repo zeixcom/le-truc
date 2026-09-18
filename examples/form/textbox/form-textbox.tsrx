@@ -48,6 +48,18 @@
 
 import { createCell, deriveCell, asString, defineMethod } from '@zeix/le-truc'
 
+/**
+ * The clear button's aria-label is component-owned text assistive tech
+ * announces, so it routes through the reserved `i18n` parameter (ADR 0030):
+ * the compiler resolves `t` per locale at render time; this inline record is
+ * the source-locale fallback every catalog resolves against. The error and
+ * description paragraphs are NOT here — their text is author-supplied prop
+ * data (`description`, native validationMessage), not component-owned.
+ */
+export const i18n = {
+	clearInput: 'Clear input',
+}
+
 export const config = {
 	formAssociated: true,
 }
@@ -105,6 +117,7 @@ export function FormTextbox(
 		multiline = false,
 		clearable = false,
 		description = '',
+		i18n: { t },
 	}:
 		{
 			name: string
@@ -116,6 +129,7 @@ export function FormTextbox(
 			multiline?: boolean
 			clearable?: boolean
 			description?: string
+			i18n: I18n
 		}
 )
 @{
@@ -213,7 +227,7 @@ export function FormTextbox(
 					<button
 						type="button"
 						class="clear"
-						aria-label="Clear input"
+						aria-label={t.clearInput}
 						hidden={() => length.get() === 0}
 						onClick={() => host.clear()}
 					>

@@ -30,6 +30,18 @@
 import { bindAttribute, createCell, createState, asString, defineMethod } from '@zeix/le-truc'
 import { FormListbox } from '../listbox/form-listbox.tsrx'
 
+/**
+ * The clear button's aria-label is component-owned text assistive tech
+ * announces, so it routes through the reserved `i18n` parameter (ADR 0030):
+ * the compiler resolves `t` per locale at render time; this inline record is
+ * the source-locale fallback every catalog resolves against. The composed
+ * form-listbox declares its own keys — the compiler supplies each composed
+ * child its record at the render boundary, callers never pass one.
+ */
+export const i18n = {
+	clearInput: 'Clear input',
+}
+
 export type FormComboboxOption = {
 	value: string
 	label: string
@@ -70,6 +82,7 @@ export function FormCombobox(
 		value = '',
 		description = '',
 		clearable = false,
+		i18n: { t },
 	}:
 		{
 			name: string
@@ -78,6 +91,7 @@ export function FormCombobox(
 			value?: string
 			description?: string
 			clearable?: boolean
+			i18n: I18n
 		},
 )
 @{
@@ -168,7 +182,7 @@ export function FormCombobox(
 					<button
 						type="button"
 						class="clear"
-						aria-label="Clear input"
+						aria-label={t.clearInput}
 						hidden={() => host.value === ''}
 						onClick={() => host.clear()}
 					>✕</button>

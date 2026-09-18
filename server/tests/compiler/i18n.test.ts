@@ -434,4 +434,59 @@ describe('the generated i18n module', () => {
 		expect(zh.t['task.other']).toBe('个任务')
 		expect(zh.t['task.one']).toBe('task')
 	})
+
+	test("the corpus's accessibility strings resolve at de (LT-195 fixture)", () => {
+		// LT-195 routed the corpus's component-owned aria-labels/placeholder/
+		// visually-hidden text through the catalog; the de translations are
+		// real (not source echoes) and pinned here per component. A changed
+		// expectation here means either a source string moved (re-run
+		// `i18n:sync`, check the census) or a translation was reworked.
+		expect(i18nModule.i18nRecord('form-combobox', 'de').t.clearInput).toBe(
+			'Eingabe leeren',
+		)
+		expect(i18nModule.i18nRecord('form-listbox', 'de').t.filter).toBe('Filtern')
+		expect(i18nModule.i18nRecord('form-listbox', 'de').t.clearFilter).toBe(
+			'Filter leeren',
+		)
+		expect(i18nModule.i18nRecord('form-textbox', 'de').t.clearInput).toBe(
+			'Eingabe leeren',
+		)
+		expect(i18nModule.i18nRecord('form-spinbutton', 'de').t.decrement).toBe(
+			'Verringern',
+		)
+		expect(i18nModule.i18nRecord('form-spinbutton', 'de').t.increment).toBe(
+			'Erhöhen',
+		)
+		expect(i18nModule.i18nRecord('form-colorgraph', 'de').t.drag).toBe('Ziehen')
+	})
+
+	test("an i18n:sync placeholder ('' override) resolves the source string (LT-195)", () => {
+		// Locales still awaiting a translation carry "" entries for the new
+		// keys — the placeholder must fall back to the source string, or an
+		// untranslated locale would render EMPTY aria-labels (strictly worse
+		// than the English fallback). Pinned at pl, which carries "" for the
+		// LT-195 keys; a translator filling it updates this pin with the
+		// landed string, exactly like the zh pin above.
+		expect(i18nModule.i18nRecord('form-textbox', 'pl').t.clearInput).toBe(
+			'Clear input',
+		)
+	})
+
+	test('the de catalog renders into the served markup (LT-195 fixture)', async () => {
+		// The render half of the fixture: the record a page render supplies
+		// reaches the emitted attribute — the end-to-end claim "the de build
+		// serves Eingabe leeren" rides on this plus the resolution pins.
+		const mod = (await import(
+			pathToFileURL(`${generated.path}/form-textbox.server.ts`).href
+		)) as Record<string, (args: unknown) => string>
+		const render = mod.renderFormTextbox
+		if (!render) throw new Error('renderFormTextbox missing')
+		const html = render({
+			name: 'title',
+			label: 'Title',
+			clearable: true,
+			i18n: i18nModule.i18nRecord('form-textbox', 'de'),
+		})
+		expect(html).toContain('aria-label="Eingabe leeren"')
+	})
 })

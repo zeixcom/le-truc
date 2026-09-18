@@ -4,7 +4,10 @@
      (children-are-data, LT-112); `zero` opts an instance into the "Add to Cart"
      zero-state affordance and is harvested from its own `.zero` span — at value
      0 the input and decrement button are `hidden`, the increment button carries
-     the call-to-action label, and `.other` hides. -->
+     the call-to-action label, and `.other` hides. The hidden `.increment-label`
+     span (LT-195) carries the i18n'd non-zero aria-label where the client can
+     read it: `t` is a server-only name, so the translated fallback renders
+     here and the aria-label thunk reads its textContent. -->
 
 <form-spinbutton id="default-test" name="amount" value="0" min="0" max="10" step="1" bigStep="10">
 	<label for="amount-input">Amount</label>
@@ -13,8 +16,9 @@
 			<button type="button" aria-label="Decrement" hidden disabled class="decrement">−</button>
 			<input id="amount-input" type="number" value="0" min="0" max="10" step="1" hidden class="value">
 			<button type="button" class="increment">
-				<span class="zero">Add to Cart</span>
+<span class="zero">Add to Cart</span>
 				<span hidden class="other">+</span>
+				<span hidden class="increment-label">Increment</span>
 			</button>
 		</div>
 	</fieldset>
@@ -33,8 +37,9 @@
 			<button type="button" aria-label="Decrement" hidden disabled class="decrement">−</button>
 			<input id="count-input" type="number" value="0" min="0" max="5" step="1" hidden class="value">
 			<button type="button" class="increment">
-				<span class="zero">Start</span>
+<span class="zero">Start</span>
 				<span hidden class="other">+</span>
+				<span hidden class="increment-label">Increment</span>
 			</button>
 		</div>
 	</fieldset>
@@ -54,7 +59,8 @@
 			<input id="number-input" type="number" value="3" min="0" max="15" step="1" class="value">
 			<button type="button" class="increment">
 				<span hidden class="zero">Begin</span>
-				<span class="other">+</span>
+<span class="other">+</span>
+				<span hidden class="increment-label">Increment</span>
 			</button>
 		</div>
 	</fieldset>
@@ -73,7 +79,8 @@
 			<button type="button" aria-label="Decrement" disabled class="decrement">−</button>
 			<input id="counter-input" type="number" value="0" min="0" max="999" step="1" class="value">
 			<button type="button" class="increment">
-				+
++
+				<span hidden class="increment-label">Increment</span>
 			</button>
 		</div>
 	</fieldset>
@@ -93,7 +100,8 @@
 			<input id="weight-input" type="number" value="0" min="0" max="5" step="any" class="value">
 			<span class="unit">kg</span>
 			<button type="button" class="increment">
-				+
++
+				<span hidden class="increment-label">Increment</span>
 			</button>
 		</div>
 	</fieldset>
@@ -112,7 +120,8 @@
 			<button type="button" aria-label="Decrement" disabled class="decrement">−</button>
 			<input id="points-input" type="number" value="0" min="0" max="100" step="1" class="value">
 			<button type="button" class="increment">
-				+
++
+				<span hidden class="increment-label">Increment</span>
 			</button>
 		</div>
 	</fieldset>
@@ -131,7 +140,8 @@
 			<button type="button" aria-label="Decrement" class="decrement">−</button>
 			<input id="temperature-input" type="number" value="0" min="-10" max="10" step="1" class="value">
 			<button type="button" class="increment">
-				+
++
+				<span hidden class="increment-label">Increment</span>
 			</button>
 		</div>
 	</fieldset>
@@ -152,8 +162,9 @@
 				<button type="button" aria-label="Decrement" hidden disabled class="decrement">−</button>
 				<input id="interactive-input" type="number" value="0" min="0" max="12" step="1" hidden class="value">
 				<button type="button" class="increment">
-					<span class="zero">Begin</span>
+<span class="zero">Begin</span>
 					<span hidden class="other">+</span>
+					<span hidden class="increment-label">Increment</span>
 				</button>
 			</div>
 		</fieldset>

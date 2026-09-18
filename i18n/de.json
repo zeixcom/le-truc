@@ -2,5 +2,12 @@
 	"basic-pluralize.done": "Alles erledigt!",
 	"basic-pluralize.remaining": "verbleibend",
 	"basic-pluralize.task.one": "Aufgabe",
-	"basic-pluralize.task.other": "Aufgaben"
+	"basic-pluralize.task.other": "Aufgaben",
+	"form-colorgraph.drag": "Ziehen",
+	"form-combobox.clearInput": "Eingabe leeren",
+	"form-listbox.clearFilter": "Filter leeren",
+	"form-listbox.filter": "Filtern",
+	"form-spinbutton.decrement": "Verringern",
+	"form-spinbutton.increment": "Erhöhen",
+	"form-textbox.clearInput": "Eingabe leeren"
 }

@@ -4,5 +4,12 @@
 	"basic-pluralize.task.few": "zadania",
 	"basic-pluralize.task.many": "zadań",
 	"basic-pluralize.task.one": "zadanie",
-	"basic-pluralize.task.other": "zadania"
+	"basic-pluralize.task.other": "zadania",
+	"form-colorgraph.drag": "",
+	"form-combobox.clearInput": "",
+	"form-listbox.clearFilter": "",
+	"form-listbox.filter": "",
+	"form-spinbutton.decrement": "",
+	"form-spinbutton.increment": "",
+	"form-textbox.clearInput": ""
 }

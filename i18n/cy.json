@@ -6,5 +6,12 @@
 	"basic-pluralize.task.one": "tasg",
 	"basic-pluralize.task.other": "tasgiau",
 	"basic-pluralize.task.two": "dasg",
-	"basic-pluralize.task.zero": "tasg"
+	"basic-pluralize.task.zero": "tasg",
+	"form-colorgraph.drag": "",
+	"form-combobox.clearInput": "",
+	"form-listbox.clearFilter": "",
+	"form-listbox.filter": "",
+	"form-spinbutton.decrement": "",
+	"form-spinbutton.increment": "",
+	"form-textbox.clearInput": ""
 }
