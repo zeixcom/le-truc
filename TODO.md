@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-212.**
+**Next free task ID: LT-215.**
 
 ---
 
@@ -490,52 +490,76 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   unchanged); the `isPending` fixture passes with the tier census unchanged at 20/2/0;
   `check:tsrx`, typecheck, parity, `bun test server/tests` all green.
 
-- [ ] LT-210: TSRX pin upgrade — 0.1.63 → the chosen 0.2.x, carrying three owner-wanted features: `@for`'s `@empty` arm, dynamic `<{expression}>` tags, and scoped styles. **Gate: land before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent before that — no migrated component uses these today.**
-  **Skill:** le-truc-dev, with architect co-owning the scoped-styles ruling (it revisits a HOST_PROFILE decision — expect a new ADR)
-  **Context (researched 2026-09-17 during LT-205):** upstream moved 0.1.64–0.1.71, then
-  the 0.2 minor line (0.2.0 2026-09-15 → 0.2.3 2026-09-17, latest at ruling time).
-  0.1.68+ was never evaluated; 0.1.67 was (2026-09-06: additive, corpus
-  byte-identical, reverted only for owner-pending timing). ADR 0023 sub-design 2 and
-  ADR 0032 s6 govern the review: the bump touches `core.ts`/`core-shim.d.ts` only, on
-  the `.tsrx` front end. The verification recipe that worked then: bump pin →
-  `bun install` → `bun test server/tests/compiler` → `bun run scripts/build-tsrx.ts` →
-  `git status --porcelain` (zero generated-artifact changes = byte-identical corpus) →
-  `check:tsrx` (read the standing-warning count; baseline is 0) — plus the parity suite
-  and `build:docs`.
-  **Corpus risk to clear at the bump itself, before any feature work:** the corpus's 22
-  raw `<style>` blocks may trip upstream 0.2's new style diagnostics
-  (`STYLE_STANDALONE_*`, including `STYLE_STANDALONE_OUTSIDE_TEMPLATE` for CSS outside
-  a template block). The bump lands only with the warning baseline still 0 — configure
-  or scope the new diagnostics per the review, never weaken our own.
-  **The three features, each with its design questions:**
-  1. `@empty` arm on `@for` (spec: optional arm after the template block). New IR (an
-     empty arm on `ForIR`), both emitters, analysis addressing. `.tsx` needs no new
-     spelling — an empty state is already `{items.length === 0 ? … : items.map(…)}` —
-     so decide whether `@empty` lowers to that shared conditional+loop shape or earns
-     its own IR (keys and addressing may differ).
-  2. Dynamic `<{expression}>` tags (spec: closing tag repeats, `</{expression}>`). Not
-     expressible in standard TSX — if the capability stays `.tsrx`-only, ADR 0032 s6's
-     exception mechanism records it. The server semantics are the hard part: a tag
-     name unknown at compile time folds only when the expression is server-known;
-     decide which tier renders the unknown case and what the client does at connect.
-     Also check the `.tsx` collision: a capitalized local-variable tag reads as
-     compose (PascalCase = compose), so a `.tsx` spelling via a local tag variable
-     must not blur compose dispatch.
-  3. Scoped styles — the host-decision change. HOST_PROFILE.md's "Styles are unscoped,
-     light DOM" (the deliberate divergence from Ripple) is the recorded decision; the
-     owner wants scoping supported. 0.2 ships the machinery (`STYLE_*` diagnostics,
-     `prepareStylesheetForRender(sheet, mode)` with `scope`/`class-map`/`theme`,
-     hash-class application, standalone blocks scoped to siblings). Rule FIRST
-     (architect, new ADR): opt-in per component vs new default; interaction with the
-     tag-name-prefix convention and docs-src/pages/styling.md; whether upstream's
-     sibling-scoping model fits light-DOM SSR output. Implementation follows the
-     ruling.
-  **Acceptance:** the pin moved to the chosen 0.2.x with the ADR 0023 s2 review
-  recorded (what changed 0.1.63 → chosen version, why safe); warning baseline 0 and
-  tier census 20/2/0 hold; goldens byte-identical for untouched behavior (or updated
-  pinning the new lowerings); each feature's dual-surface story lands per ADR 0032 s6
-  — paid in both surfaces, or its s6 exception recorded; parity extended accordingly;
-  `check:tsrx`/`typecheck`/`build:docs` green.
+- [x] LT-210: TSRX pin upgrade — 0.1.63 → 0.2.3, plus the scoped-styles ruling. — done ✓ (bump + ADR 0033 draft landed 2026-09-18; the three features' implementations re-anchored as LT-212/213/214)
+  **Skill:** le-truc-dev, with architect co-owning the scoped-styles ruling
+  **Done (2026-09-18, commit 4b1c20c3):** pin moved to **0.2.3** (latest; 0.2.0
+  2026-09-15 → 0.2.3 2026-09-17). **The corpus is byte-identical** — zero
+  generated-artifact changes across all 22 components; tier census 20/2/0, warning
+  baseline 0, parity green, `bun test server/tests` 1556/0, `typecheck` 0,
+  `build:docs` simulation pass 2/8/20 unchanged. The feared `STYLE_STANDALONE_*`
+  corpus risk did not materialize: those diagnostics run in upstream's FULL compile
+  pipeline, which this host does not invoke (we call `parseModule` + five accessors;
+  the export-surface delta 0.1.63 → 0.2.3 is style machinery only — `PLATFORMS`,
+  `createScopeRoot`, nine `TSRX_STYLE_*`/`TSRX_CSS_*` codes — plus nothing our five
+  re-exports touch).
+  **ADR 0023 s2 review (what changed, why safe):** 0.2 dropped lazy destructuring
+  (`&{ … }`/`&[ … ]`) from the grammar outright, so the dedicated **TSRX020** scan
+  became unreachable and is retired — the parser's own syntax error (surfaced as
+  TSRX008) now enforces the same tier-1 rejection one link earlier; tests pin the new
+  channel. The 0.1.63 parse had also silently tolerated a plain destructuring const
+  in setup (`const { a } = obj`), which 0.2.3's parse delivers to the subset check and
+  it rejects honestly (TSRX005 — the subset only sanctions NAMED single consts);
+  pinned in tests. TSRX018 survives (the `&{expr}` child sigil still parses as an
+  ordinary expression); its fix-it wording updated for the sigil-less grammar.
+  Tech Writer copy handoff: see LT-189 item 6.
+  **Scoped-styles ruling (architect, 2026-09-18):** drafted as [ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md)
+  (🔄 Proposed, owner acceptance pending): tag-name nesting is the compiled scoping
+  model; the escape hatch is structural (an unprefixed selector IS a global rule —
+  no `:global()` needed); Shadow DOM via declarative shadow root is the sanctioned
+  per-component opt-in, NOT scheduled; upstream's hash-class stamping is declined
+  (client-transform machinery, no server-render counterpart, served-byte pollution,
+  compose-addressing erosion); the prefix graduates to a compiler warning (→ LT-214);
+  style composition stays with CSS custom properties.
+
+- [ ] LT-212: `@for`'s `@empty` arm (LT-210 item 1, re-anchored). **Gate: before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent — no migrated component uses it today.**
+  **Skill:** le-truc-dev
+  **Context:** Spec: optional arm after the template block. New IR (an empty arm on
+  `ForIR`), both emitters, analysis addressing. `.tsx` needs no new spelling — an
+  empty state is already `{items.length === 0 ? … : items.map(…)}` — so decide
+  whether `@empty` lowers to that shared conditional+loop shape or earns its own IR
+  (keys and addressing may differ). Dual-surface story per ADR 0032 s6: paid in both
+  surfaces (the `.tsx` lowering is the conditional+map shape) or the s6 exception
+  recorded.
+  **Acceptance:** parity extended for the empty case; goldens unchanged for untouched
+  behavior; warning baseline 0, census 20/2/0 hold.
+
+- [ ] LT-213: Dynamic `<{expression}>` tags (LT-210 item 2, re-anchored). **Gate: before P5's first wave-4 migration; not urgent.**
+  **Skill:** le-truc-dev, with architect ruling the tier story if it needs one
+  **Context:** Spec: closing tag repeats (`</{expression}>`). Not expressible in
+  standard TSX — if the capability stays `.tsrx`-only, ADR 0032 s6's exception
+  mechanism records it. The server semantics are the hard part: a tag name unknown at
+  compile time folds only when the expression is server-known; decide which tier
+  renders the unknown case and what the client does at connect. Also check the
+  `.tsx` collision: a capitalized local-variable tag reads as compose (PascalCase =
+  compose), so a `.tsx` spelling via a local tag variable must not blur compose
+  dispatch.
+  **Acceptance:** the unknown-tag case has a ruled tier and a pinned fixture;
+  compose dispatch unaffected.
+
+- [ ] LT-214: Selector-prefix warning — ADR 0033 sub-design 5 (the scoped-styles "support" that lands in code). **GATED on owner acceptance of ADR 0033.**
+  **Skill:** le-truc-dev (Tech Writer owns the message copy)
+  **Context:** The profile's open question answered: the compiler parses the authored
+  stylesheet (upstream exports reusable `parseStyle`/`analyzeCss` — evaluate against
+  a minimal hand parser) and **warns when a top-level selector neither leads with the
+  component's tag name nor is an at-rule**. Channel: compiler; **tier 2 Contained**
+  (ADR 0028 s1) — a warning, not an error, because a deliberately global rule must
+  stay possible (the structural escape hatch). All 22 corpus components already
+  conform (verified 2026-09-18), so the warning baseline must stay 0 at landing —
+  the gate that proves the check neither fires on the corpus nor misses its shape.
+  HOST_PROFILE.md's styles section and `docs-src/pages/styling.md`'s compiled-component
+  callout update from "documentation-only guarantee" to the warning.
+  **Acceptance:** a fixture with an unprefixed top-level selector warns with the
+  ruled copy; the corpus stays at warning baseline 0; `check:tsrx`/`typecheck` green.
 
 ---
 
@@ -785,6 +809,14 @@ round, scope widened).
      covers the three arms plus LT-209's new TSRX049/TSRX050 drafts in
      `server/compiler/diagnostics.ts`. Batch with items 2–3 so the diagnostic families
      read as one voice.
+  6. **The TSRX020 retirement copy** (LT-210 handoff, 2026-09-18): the retirement note
+     in `server/compiler/diagnostics.ts`'s code union, TSRX018's reworded fix-it
+     (`&{`/`&[` no longer introduce anything under the 0.2 pin — drafted, final copy
+     owed), and the propagation sweep the retirement leaves behind (per
+     `workflows/error-message-lifecycle.md`): HOST_PROFILE.md's lazy-destructuring
+     section, LE_TRUC_COMPILER.md §106/§184, and `.agents/skills/le-truc/references/errors.md`
+     were updated in the bump commit — verify voice consistency across them. Batch
+     with items 2–5.
 
 ---
 
