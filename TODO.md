@@ -524,7 +524,7 @@ round, scope widened).
   — the locale whose category set hid it before this task) and was pruned by
   `i18n:sync`, leaving `git status i18n/` byte-clean.
 
-- [x] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174 (landed 2026-09-15).** — done, pending review ⏳ (2026-09-18; owner lifted the demand gate by requesting the task; shape ruling obtained per the task's own before-implementing protocol)
+- [x] LT-194: The document-level page renderer and the page-position ambient `lang` walk. **Depends on LT-174 (landed 2026-09-15).** — reviewed ✓ (Architect, 2026-09-18)
   **Skill:** docs-server-dev
   **Re-verified 2026-09-18 (architect):** the premise still holds — the examples effect
   embeds authored markup verbatim (`server/effects/examples.ts`: the component HTML is
@@ -622,6 +622,40 @@ round, scope widened).
   the German instance converges byte-wise with the de catalog (Aufgabe/Aufgaben/
   verbleibend); `check:links` 410 green; biome clean on touched files (the
   pre-existing host-profile.d.ts:127 noise excepted).
+  **Review (Architect, 2026-09-18):** Approved, with one defect found and fixed in the
+  review commit 27652642. Verified against the diff at c05d6c29, not the handoff, and
+  the handoff's verification claims were independently re-run, not trusted: tier census
+  **20/2/0**, warning baseline **0**, translation census **0 gaps / 6 locales** all hold
+  with the renderer live. The served bytes confirm the deep semantics, not just the
+  counts: the de instance prunes to exactly `{one, other}` spans (four categories
+  ABSENT, not hidden — the `truc:case` pruning is real), zh to `{other}`, `id` splices
+  after the rendered attrs. **The `declaresI18n`-only refinement is ratified** — the
+  evidence (basic-number's server render is empty-inside; page-rendering it would
+  EMPTIFY authored text) makes the lang-arg arm of the original shape ruling untenable,
+  and the five-component set is what the question option named anyway. **The defect
+  (fixed in review):** the renderer passed the occurrence's `class`/`id` to
+  `argsFromAttrs` while ALSO splicing them onto the rendered root — a compose site
+  filters them from the child's forwarded args (LT-090: they address the HOST), so a
+  page occurrence of form-textbox would have let `id` shape internal wiring
+  (`id = name`-derived inputId/aria wiring) where a compose render derives it from
+  `name`. Renderer now strips both before the helper call; new test pins the arg view
+  to exactly the non-host attrs. A stale comment fixed alongside: the helper gate's
+  JSDoc still advertised the withdrawn lang-arg arm. **Accepted with rationale, no
+  action:** (a) a self-closing authored occurrence (`<form-textbox … />`) parses with
+  following content as its children — but that is the BROWSER's parse of the same
+  bytes (DOM-is-truth), the replacement range matches it exactly, and the corpus has
+  zero such occurrences (scan run); (b) catalog-only watch staleness (documented in
+  page-render.ts); (c) the `!location` silent return is unreachable — a custom element
+  always originates in authored source bytes, which always carry parse5 locations.
+  **Noted, not blocking:** the pagesEffect wiring seam (`applyTemplate` passing the
+  loop locale) has no direct pin — it is 6 auditable lines; and LT-193's perf posture
+  is respected (no cache; 7 occurrences corpus-wide). **LT-224 is unblocked** by this
+  review; its `front-end.ts` line citations should be re-grepped against the landed
+  state (paramPropsOf sits at ~1610, the IR assembly moved ~46 lines down).
+  Demand-gate provenance, kept for the record: the architect re-verified this task as
+  demand-gated with zero demand the same morning; the owner lifted the gate by
+  requesting it that afternoon, and the task's before-implementing protocol was
+  honored via the three scoping questions put to the owner first.
 
 - [x] LT-197: Decide how client-side runtime strings get translated (exploration). **Depends on LT-195.** — done ✓ (ruled 2026-09-18, owner concurred; ADR 0030 sub-design 9, amended in place)
   **Skill:** architect (with le-truc-dev for feasibility)
