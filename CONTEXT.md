@@ -132,6 +132,14 @@ _Avoid_: warning, diagnostic, error, report (too generic)
 The per-locale translation overrides for a build ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)). A **Component** declares each message key with its source-locale string, and the catalog supplies the other locales. The catalog never reaches a browser.
 _Avoid_: dictionary, translations file, i18n bundle. "Locale data" is not a synonym — it names the whole `i18n` record, of which the catalog is one field.
 
+**Event-Time String**:
+A translated string built in the browser after an interaction — a status announcement, a constraint-validation message — rather than rendered ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md) sub-design 9). It routes through `t` in a client position; the compiler ships its component's client-referenced keys per instance on the root `i18n` attribute, and the client parses that once at connect. A no-JS reader can never miss one — the interaction that produces it requires JavaScript; strings a no-JS reader must see fold into the markup or render as alternatives instead.
+_Avoid_: client-side string (too broad — client code also reads folded strings), runtime string, dynamic string
+
+**Message Pattern**:
+A message key whose value contains `{placeholder}` fields, filled at use time — `t.added({ token })` ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md) sub-design 9). Declared inline in the `i18n` record like any other key; the compiler validates call sites against the declared placeholders, and a translation that drops one is a **Census** entry, not a warning.
+_Avoid_: ICU message, template literal (that names the authored `` `…${x}…` `` it replaces), format string
+
 ## Relationships
 
 - A **Module** (ESM file) contains one or more **Component** definitions
@@ -144,6 +152,7 @@ _Avoid_: dictionary, translations file, i18n bundle. "Locale data" is not a syno
 - **Pass** connects **Slot**-backed **Signal** instances between Le Truc **Component** instances
 - A **Component** is a **Custom Element** with JavaScript-enhanced functionality (a Web Component)
 - A **Component** declares **Server Args**; the compiler supplies any **Reserved Parameter** among them
+- An **Event-Time String** reaches the client through the root `i18n` attribute, never through the **Message Catalog**
 - An **Authored Surface** is parsed and lowered by its **Front End**; both front ends feed the same **Machinery**
 - **Phase 1** **Folds** the expressions it can resolve; **Phase 2** runs the client module in the **Simulation Realm**
 - A **Component** has exactly one **Evaluation Tier**, which decides the phases it runs

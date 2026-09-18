@@ -21,7 +21,7 @@ tier and is not a routing signal. The compile-warning baseline's target is **zer
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
 
-**Next free task ID: LT-218.**
+**Next free task ID: LT-221.**
 
 ---
 
@@ -531,33 +531,126 @@ round, scope widened).
   **Perf note:** LT-193's data applies — the Simulated-tier share of page occurrences is 9 of
   3,249. Do not reintroduce a render cache for this; measure first if you think you need one.
 
-- [ ] LT-197: Decide how client-side runtime strings get translated (exploration). **Depends on LT-195.**
+- [x] LT-197: Decide how client-side runtime strings get translated (exploration). **Depends on LT-195.** — done ✓ (ruled 2026-09-18, owner concurred; ADR 0030 sub-design 9, amended in place)
   **Skill:** architect (with le-truc-dev for feasibility)
-  **Context:** LT-195's survey turned up a category ADR 0030's mechanism **structurally
-  cannot serve**: strings built at event time in the browser.
-  - `form-tokenbox`: `` `Added token: ${trimmed}` `` and `` `Removed token: ${removedValue}` ``
-    written into a `role="status" aria-live="polite"` region.
-  - `form-colorgraph`: `setCustomValidity('Color out of gamut')`, three sites.
-  ADR 0030 sub-design 6 is explicit that **no message catalog and no locale runtime ship to
-  the browser**. These strings are therefore untranslatable today, on any locale, and the
-  tokenbox ones are announced to screen-reader users — the accessibility case is the strongest
-  one in the corpus, and it is the one the current design cannot reach.
-  **Do not assume the answer is "ship the catalog."** That would contradict ADR 0030's payload
-  posture and ADR 0003. Weigh at least: (a) server-render the message variants into the DOM
-  and have the client select among them (the `truc:case` pattern, generalized — no payload,
-  but only works for a closed set); (b) a tiny per-component compiled-in string map in the
-  generated client, scoped to that component's declared keys (small payload, ADR 0030's
-  "no catalog" is about the CORPUS catalog — is a per-component map the same thing?); (c)
-  accept the gap and document it as a known limit. **Measure the payload cost of (b) before
-  arguing about it.** Outcome is an ADR 0030 amendment or a new ADR, then tickets.
-  **Worked evidence from LT-195 (Architect, 2026-09-18):** the boundary that blocks `t` in
-  reactive thunks (TSRX005, server-only name) is correct and stays; the interim idiom for
-  translatable strings a REACTIVE binding must re-apply is already option (a) specialized
-  to attribute sites — form-spinbutton's hidden `.increment-label` carrier renders the
-  translated fallback server-side and the client thunk reads its textContent
-  (rendered alternatives, ADR 0030 s6). LT-195's ruling sanctions that idiom for the
-  corpus today (taught in HOST_PROFILE.md); this task rules whether it generalizes,
-  gets replaced by (b), or stays the documented limit.
+  **Ruling (Architect, 2026-09-18):** option (b′) — the task's (b) with the delivery channel
+  changed. A per-component map **compiled into the generated client** is rejected: the client
+  bundle is shared across locales while pages multiply per locale (ADR 0030 s1), so baked-in
+  translations would force per-locale client bundles. Instead the compiler classifies
+  `t.<key>` reads in client positions and serializes only those keys onto the root as a
+  config-only `i18n` attribute, resolved per render call through the existing
+  `i18nRecord(tag, lang)` — locale stays build-time server data and one client bundle stays
+  universal. Option (a) keeps jurisdiction over strings a no-JS reader must see (folded or
+  rendered alternatives); the attribute serves event-time-only strings, which by definition
+  need JavaScript to exist, so the progressive-enhancement story costs nothing. A page-level
+  JSON payload was weighed and rejected (lookup plumbing, per-instance locale lost). Owner
+  rulings: **client-referenced keys only** (server-folded keys are already bytes in the
+  markup); the name is **`i18n`** — `truc:`-namespaced attributes are server-resolved
+  directives, a different purpose; **the carrier-span idiom retires in this landing**
+  (superseded by s9, not sanctioned alongside); ADR 0030 amended in place (s4 exception
+  line, s6 jurisdiction pointer, sub-design 9, three new alternatives, consequences).
+  Boundary consequences: TSRX005's `t` face retires; `lang` stays server-only (client reads
+  `host.lang`); computed `t[dynamicKey]` stays rejected; `{placeholder}` message patterns
+  with `t.key({ param })` call syntax (the s4 stage-2 shape pulled forward for this channel),
+  compiler-validated placeholders (new TSRX code, tier Prevented), census
+  placeholder-preservation check (report channel). Payload measured ~150–250 B/instance on
+  tokenbox (3 patterns), ~60 B on colorgraph (1 key) — pinned by LT-219. The parse is
+  compiler-inlined into the generated client; ADR 0030 s8 (no library surface) holds.
+  Implementation: **LT-218** (analysis + emission + client preamble), **LT-219** (corpus
+  adoption + census check), **LT-220** (docs/Tech Writer round).
+
+- [ ] LT-218: The client-string `i18n` attribute — compiler analysis, server emission, client preamble (ADR 0030 sub-design 9).
+  **Skill:** le-truc-dev
+  **Context:** Implements the LT-197 ruling. Three pieces; both authored surfaces stay in
+  lockstep (ADR 0032 anti-drift) — the classification lives in the shared analysis, the
+  per-front-end diagnostics as today.
+  1. **Analysis:** admit `t.<key>` reads in client positions — event handlers, reactive
+     thunks, `truc:html` thunks, expose get/set, `defineMethod` bodies, pass get/set — the
+     positions the server-only name diagnostic rejects today. Literal/static keys only; a
+     computed `t[dynamicKey]` stays rejected (tier Prevented). `lang` stays server-only, its
+     message pointing at `host.lang`. The `t` face of the server-only rejection retires for
+     these reads — a false-negative removal from an existing check, no new error class
+     (retirement sweep is LT-220's).
+  2. **Emission:** when the component's client-referenced key set is non-empty,
+     `emit-server.ts` appends `attr('i18n', JSON.stringify({ …picked… }))` to `rootParts` —
+     the materialized-`lang` precedent — evaluated per render call, so each locale bakes its
+     own strings and compose-graph inheritance applies unchanged. Only client-referenced
+     keys (owner ruling): a server-folded key never rides the attribute. The
+     root-attribute exclusion covers TSRX039; authored `i18n` attributes are already
+     rejected in classify-attributes.
+  3. **Client preamble:** the generated client factory gains an inlined, guarded
+     `JSON.parse(host.getAttribute('i18n'))` merged over the declared source-locale record —
+     NO new `@zeix/le-truc` export (ADR 0030 s8). Pattern keys (`{placeholder}` values,
+     statically known from the authored record) materialize as interpolating functions,
+     plain keys as strings; client-position `t.key` reads rewrite to the local; a pattern
+     call site compiles to a call the compiler validates against the declared placeholders —
+     **new TSRX code, tier 1 Prevented, error** (author-fixable; Tech Writer owns the copy,
+     batch with LT-189). Parsed once at connect, fixed for the connection; malformed JSON
+     warns in DEV_MODE and falls back to the source record in production.
+  **Pins:** the attribute carries only client-referenced keys (a folded-only key stays off
+  it); absent when the set is empty (a component without event-time strings renders
+  byte-identical — pin one); a de render bakes translated patterns into the attribute;
+  parity green with identical attribute bytes across both surfaces; a client-created
+  instance (attribute stripped) falls back to the source record (jsdom pin); the DEV_MODE
+  malformed-attribute warning pins.
+  **Acceptance:** tier census 20/2/0 and compile-warning baseline 0 unchanged (client keys
+  are not a routing signal); gates green (typecheck, `bun test server/tests`, check:tsrx,
+  build:docs, check:links). Corpus snapshots should not move yet — no corpus component has
+  client-position `t` reads until LT-219; pin via fixtures.
+
+- [ ] LT-219: Corpus adoption — tokenbox + colorgraph event-time strings; retire the carrier-span idiom; census placeholder check. **Depends on LT-218.**
+  **Skill:** le-truc-dev
+  **Context:** The corpus's event-time strings (LT-195's survey; ADR 0030 s9):
+  - **form-tokenbox**: declare `added`/`removed`/`duplicate` message patterns
+    (`'Added token: {token}'`, `'Removed token: {token}'`, `'{token} is already in the
+    list'` — the duplicate-validity message is user-visible via `setCustomValidity`; the
+    platform's own `validationMessage` reads stay as-is, browser-localized); route the two
+    status-region writes and the duplicate `setCustomValidity` through `t.<key>({ … })`.
+    The header's "deliberately NOT here" comment shrinks to the validationMessage note.
+  - **form-colorgraph**: `outOfGamut` key; the three `setCustomValidity('Color out of
+    gamut')` sites route through `t.outOfGamut`.
+  - **form-spinbutton**: retire the hidden `.increment-label` carrier span — the thunk reads
+    `t.increment`/`t.decrement` directly (the LT-195 interim idiom, superseded by ADR 0030
+    s9; owner ruling: retire in this landing). The keys become client-referenced; the span
+    and its read-back die.
+  - `i18n:sync` records the new keys; de gains real translations with placeholders
+    preserved („Token hinzugefügt: {token}" shape); extend the i18n.test.ts de fixture pins
+    to the attribute + patterns.
+  - **Census placeholder-preservation direction:** a translation whose placeholder set
+    differs from the declared pattern's is a census entry (new `TranslationGap['status']`
+    case, report channel — not a warning, translator-paced, same reasoning as
+    missing/stale/orphaned; Tech Writer owns wording, batch with LT-189 item 8).
+    `i18n:sync` flags it in its summary; it cannot auto-fix (a placeholder cannot be
+    invented). Follow the LT-196 pattern for the inverse-walk tests: falsification probes
+    over the real catalogs, injectable for units.
+  **Verification:** payload pinned — the sim-driver tokenbox snapshot carries the
+  attribute, asserted to stay in the low hundreds of bytes (the ADR's measure); translation
+  census 0 gaps on the real corpus with the placeholder walk live; tier census 20/2/0;
+  warning baseline 0; Playwright tokenbox spec green (status strings announce in en/de);
+  gates green (typecheck, `bun test server/tests`, check:tsrx, build:docs, check:links).
+
+- [ ] LT-220: Docs round for the client-string channel — HOST_PROFILE, compiler doc, diagnostic sweep, CHANGELOG. **Sequence with or after LT-189 (batches into its one-voice copy round).**
+  **Skill:** tech-writer
+  **Context:** The copy/docs obligations ADR 0030 s9 leaves behind; the error-message
+  lifecycle applies (a diagnostic face retired, a new TSRX code gained).
+  1. HOST_PROFILE.md: the i18n section re-taught — client-position `t` reads, the root
+     `i18n` attribute, patterns and the `t.key({ … })` call syntax; the carrier-span
+     idiom's teaching REPLACED (superseded, not deprecated — remove the LT-195 interim
+     guidance, point at ADR 0030 s9).
+  2. LE_TRUC_COMPILER.md: the classification (client positions, literal keys only), the
+     emission point, the census paragraph's placeholder walk.
+  3. The retired `t` face of the server-only diagnostic: sweep
+     `.agents/skills/le-truc/references/errors.md` and any prose teaching "`t` is
+     server-only" — the retirement counts per the lifecycle.
+  4. Final copy: the pattern-placeholder TSRX code (drafted in LT-218), the census
+     placeholder-mismatch wording (drafted in LT-219), the computed-`t[dynamicKey]`
+     wording if split from the generic message. Batch with LT-189 items 2–8.
+  5. CHANGELOG `[Unreleased]` Added bullets (client-string channel, patterns, census
+     check); an AGENTS.md "Surprising Behaviors" i18n bullet if the changed `t`-in-thunk
+     rule warrants one.
+  **Check:** `check:links` after doc moves; errors.md's entry inventory matches the
+  diagnostics union (code added, none deleted — the `t` face was message scope, not a
+  code).
 
 - [ ] LT-189: Tech Writer round — `ContextRequestEvent` cross-realm docs plus the standing i18n copy handoffs.
   **Skill:** tech-writer

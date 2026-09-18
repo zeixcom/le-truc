@@ -84,7 +84,7 @@ One file per language is also what translation work actually wants; N files per 
 
 **No catalog tiering.** There is no global/page/component override stack: a key resolves in exactly one place. Three layers that can each carry the same key would be the duplication smell `TSRX039` and data-account bullet 4 police everywhere else, and it would need precedence rules of the kind this project has repeatedly rejected. Page prose is not a catalog concern at all — a translated page is a per-locale page source (sub-design 1), not a catalog override. A shared namespace for genuinely cross-component terms is deliberately deferred until a real case appears.
 
-**The catalog never reaches the client.** Messages are resolved into the rendered markup; nothing is serialized, consistent with ADR 0003.
+**The catalog never reaches the client.** Messages are resolved into the rendered markup; nothing is serialized, consistent with ADR 0003. The one bounded exception is the event-time string channel of sub-design 9, which serializes a component's own client-referenced keys as per-instance data — never the catalog.
 
 ### 5. A missing key falls back to the source locale and is reported as a translation census
 
@@ -107,6 +107,8 @@ Two mechanisms, both already in the corpus:
 
 **The toggles do not retire under a build-constant locale, and assuming they do would be a correctness regression.** Folding the locale fixes the *locale* input, not the other inputs: `basic-pluralize` exposes `count` as a reactive prop, so its CLDR category still changes at runtime, and the client cannot compute a translated plural form — Le Truc never client-renders (ADR 0024 sub-design 1). It can only select among strings the server rendered.
 
+Rendered alternatives keep jurisdiction over strings a no-JS reader must see; strings that only exist at event time take the per-instance attribute of sub-design 9 instead.
+
 **What a build-constant locale does buy is pruning.** The compiler knows which categories the locale actually uses, so the rendered alternatives shrink to that set: `{one, other}` for English instead of all six, with the toggles intact over the smaller set. The category set is read from the platform — `Intl.PluralRules(lang, opts).resolvedOptions().pluralCategories` — not a hand-maintained table, for the same reason ADR 0024 sub-design 4 derives its ARIA mapping from `ARIAMixin`. One edge: cardinal and ordinal have different category sets, so pruning must use the set for the `type` actually configured, and fall back to the union of both when the compiler cannot prove which is in play.
 
 ### 7. `getLocale` survives; the realm gets seeded
@@ -121,6 +123,24 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 
 `@zeix/le-truc` gains no i18n surface: no catalog, no message runtime, no locale resolution. Everything here is compiler and build tooling (ADR 0024 sub-design 7). The client-side i18n primitives are the platform's own `Intl`, plus the DOM the server rendered.
 
+### 9. Event-time strings ride a per-instance `i18n` attribute
+
+Three classes of translated string exist, and the channel follows one question: **must a reader without JavaScript see it?**
+
+- **Rendered into the markup** — fold at render time (sub-design 4): `aria-label={t.clearInput}`.
+- **Selected at runtime among visible alternatives** — rendered alternatives (sub-design 6). The client can only toggle among strings the server rendered; the plural-category spans stay this shape, because a no-JS reader must see the form the server pruned and rendered.
+- **Built at event time in the browser** — this sub-design. A status announcement (`Added token: …`) or a constraint-validation message exists only after an interaction that itself requires JavaScript, so no no-JS reader can ever miss it — and no other channel can serve it: there is nothing to fold (no render-time value) and nothing to select among (no rendered alternative).
+
+For the third class the compiler admits `t.<key>` reads in client positions — the positions the server-only name diagnostic rejects today: event handlers, reactive thunks, method bodies, expose thunks. The component's **client-referenced keys** — only those; keys used purely server-side are already bytes in the markup — serialize onto the component's root as a config-only **`i18n` attribute**, resolved per render call through the same `i18nRecord(tag, lang)` every render boundary already threads, so compose-graph inheritance and a per-occurrence locale apply unchanged. The root renders it exactly where the materialized `lang` renders, and the root-attribute exclusion applies for the same reason. The attribute is absent entirely when a component has no client-referenced keys: the payload is opt-in by demand.
+
+The generated client preamble parses the attribute once at connect — a compiler-inlined, guarded `JSON.parse`, not a library export (sub-design 8 holds) — and merges it over the component's declared source-locale record. The merged `t` is fixed for the connection, the same posture as the materialized `lang`. A client-created instance (no server render, no attribute) speaks the source locale: the documented limit, the same class as a page Le Truc did not render. The source record ships in the client bundle either way — those strings were handler literals before this sub-design — so the fallback costs no new bytes.
+
+**Patterns.** An event-time message usually interpolates runtime values, and a catalog entry is data, not code: a key whose value contains `{placeholder}` fields is a **message pattern**, filled at use time — `t.added({ token })` on the client, a server-known interpolation folded at render in server-visible positions. This is the whole-phrase shape sub-design 4 recorded as the stage-2 endgame, pulled forward for this channel; per-category plural keys stay sub-design 4's, and runtime category selection stays rendered alternatives. The compiler validates a call site's parameters against the declared pattern's placeholders (a new `TSRX` code, tier **Prevented** — statically decidable, author-fixable). The translation census gains the inverse direction: a translation that drops a placeholder its source declares can render broken text and is reported as a census entry — report channel, not a warning, for the same translator-paced reason as `missing`/`stale`/`orphaned`.
+
+**Boundary changes.** The `t` face of the server-only name diagnostic retires — a client-position `t.<key>` read compiles. `lang` stays server-only (the client reads `host.lang`, sub-design 3), and a computed `t[dynamicKey]` stays rejected: which keys to ship is statically decidable only for literal keys. The read-back-from-a-rendered-hidden-label interim taught for reactive thunks is superseded by this sub-design, not sanctioned alongside it — a thunk reads `t.increment` directly.
+
+**The name is `i18n`.** It mirrors the reserved parameter — the attribute is that record's DOM-side face. The `truc:` prefix is not available for it: `truc:`-namespaced markup attributes are server-resolved directives, a different purpose.
+
 ## Alternatives Considered
 
 - **Locale via the context protocol** (`requestContext(LOCALE, 'en')`): rejected, and the reason is specific to i18n rather than general. ADR 0024 sub-design 15 renders a context's *fallback* server-side and lets the client correct once a provider resolves. For a number format that is the accepted flash; for translated prose it is a flash from English into German, and for a reader without JavaScript it is **the wrong language permanently**. The one channel whose server answer must be right the first time cannot be the channel designed around a fallback.
@@ -134,6 +154,9 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 - **The build writing missing keys into committed catalogs** (i18next/Fluent "save missing" mode): rejected — self-maintaining and diffable, but it makes the build non-idempotent and has CI writing to tracked files. The same benefit is available from an explicit `i18n:sync` script a person runs.
 - **Retiring `getLocale()` in favor of the server arg alone**: rejected — the ancestor walk is correct client-side behavior on pages Le Truc did not render, and it is the hand-written twins' documented contract. Seeding the realm addresses the divergence without deleting a working mechanism.
 - **Discrete args (`lang`, `timeZone`, `currency`) instead of one record**: rejected — it multiplies the threading problem by the number of configuration axes, and the reserved-parameter mechanism makes the record free to pass.
+- **Baking the per-component map into the generated client**: rejected — the client bundle is shared across locales while pages multiply per locale (sub-design 1), so baked-in translations force per-locale client bundles. Rendering the map as a per-instance attribute keeps the locale a build-time server fact and one client bundle universal.
+- **A page-level JSON payload** (`<script type="application/json">`, deduplicated across instances): rejected — it needs a tag-to-instance lookup layer, cannot serve two occurrences in different locales without keying by locale anyway, and saves bytes only where an event-time string recurs per page; the attribute is per-instance the way every other rendered fact is.
+- **Generalizing rendered alternatives to event-time strings** (a hidden carrier element per client string): rejected — an event-time string is never no-JS-visible, so a hidden carrier is plumbing without a progressive-enhancement payoff, and it couples the component to refs and DOM positions it would not otherwise need. Superseded by sub-design 9.
 
 ## Consequences
 
@@ -147,6 +170,9 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 - Composition does not thread locale by hand; the reserved-parameter mechanism keeps the compose graph free of plumbing, and a component that does not want i18n pays nothing.
 - The realm seeding fixes a live silent-wrong-answer bug that exists today, independent of i18n.
 - Both new reporting needs reuse the census pattern rather than inventing channels, and the compile-warning zero target survives.
+- The corpus's strongest untranslated strings — screen-reader status announcements built at event time — become translatable without shipping a catalog or a locale runtime (sub-design 9).
+- The `i18n` attribute is absent on every component without client-referenced keys, so the payload is paid only where event-time strings exist.
+- Reactive thunks read `t` directly; the hidden rendered-label read-back interim retires rather than accumulating as a second sanctioned idiom.
 
 **Bad / accepted tradeoffs:**
 
@@ -158,6 +184,9 @@ The driver seeds the simulated document's `<html lang>` from the build's page lo
 - Pruning rendered alternatives to the locale's category set is now part of the decision (sub-design 6), which means the served markup for a component differs per locale beyond its text — a fact fixtures must pin per locale rather than once.
 - Two locale channels coexist (the reserved record and an authored `lang` override), which needs the precedence rule documented wherever authors will meet it. The alternative — retiring the authored `lang` — would have broken two components' published attribute contracts.
 - `dir` is exposed but deliberately not rendered per component, so RTL page setup remains the page author's job. A component that assumed otherwise would be wrong in a way nothing here catches.
+- The per-instance `i18n` attribute (sub-design 9) repeats per occurrence. Accepted: it is bounded by client-referenced keys only and absent on components that need no event-time strings.
+- Client-created instances fall back to the source locale (sub-design 9). Accepted: the same class as a page the compiler did not render; a server render is what localizes.
+- Two message shapes coexist — plain keys and `{placeholder}` patterns, selected per key by the value's shape — and the translation census grows a third data-quality walk (placeholder preservation). The catalog pipeline must carry patterns through `i18n:sync` unchanged.
 
 ## Related
 
