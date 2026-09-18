@@ -1,7 +1,7 @@
 /**
  * TSX spike (LT-183): TypeScript-AST → estree-shaped `TsrxNode` converter.
  *
- * The reuse thesis (TSX_SPIKE.md §3) is that `ComponentIR` is the seam and
+ * The reuse thesis is that `ComponentIR` is the seam and
  * everything downstream of the front end — `ast-utils.ts` walks,
  * `reactivity.ts`, `evaluability.ts`, `analysis/*`, both emitters, `sim/` —
  * consumes the estree-shaped loose `TsrxNode` structural type declared by
