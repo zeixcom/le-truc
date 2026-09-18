@@ -339,7 +339,8 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   machinery) cuts against the host's unscoped-light-DOM profile. Nothing to implement:
   no code, goldens, or parity pins change.
 
-- [x] LT-208: Type the `boundary` arms precisely — three arms, branded `JSX.Element`, `err: Error` (owner precision ruling 2026-09-17; stale arm withdrawn by owner ruling 2026-09-18, see LT-211). — done ✓ (awaiting review; commit 3a576fdf)
+- [x] LT-208: Type the `boundary` arms precisely — three arms, branded `JSX.Element`, `err: Error` (owner precision ruling 2026-09-17; stale arm withdrawn by owner ruling 2026-09-18, see LT-211). — reviewed ✓ (Architect, 2026-09-18)
+  **Review:** Approved. Branded Element + contextual `Error` are the right mechanisms and the rejected alternatives are recorded so they stay rejected; the `class: Reactive<string | null>` widening is correct (bindAttribute's nil path removes the attribute). The tsc gate (`typecheck.test.ts`) makes the spike probes standing CI instead of manual.
   **Skill:** le-truc-dev
   **Context:** `host-profile.d.ts` declares `boundary(arms: { ok: unknown; nil: unknown;
   err: (error: any) => unknown; stale?: unknown })` while the compiler REQUIRES every arm
@@ -375,7 +376,8 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   on the authored file; parity and `bun test server/tests` green (type text only). No
   new TSRX code — the channel is TypeScript, tier 1 Prevented (ADR 0028 s1 accounting).
 
-- [x] LT-209: Type the authored `.tsx` factory context precisely — a second, author-annotated `FactoryContext`/`FormFactoryContext` parameter (owner ruling, 2026-09-18). **Land before or at the very start of wave 4 (LT-095), so migrated authors get feedback from day one.** — done ✓ (awaiting review; commit 559eeec6; NOTES carries the deviations + Tech Writer handoff)
+- [x] LT-209: Type the authored `.tsx` factory context precisely — a second, author-annotated `FactoryContext`/`FormFactoryContext` parameter (owner ruling, 2026-09-18). **Land before or at the very start of wave 4 (LT-095), so migrated authors get feedback from day one.** — reviewed ✓ (Architect, 2026-09-18)
+  **Review:** Approved. The value-parameter realization is sound (generated clients byte-identical — snapshots untouched), the tsNode duck-type read keeps `typescript` out of the shared front end (ADR 0025 s6), and the P-drift pins are exactly the acceptance. Deviations ruled: `isPending` imported-not-ambient and the `.tsrx`-keeps-ambients asymmetry both stand (see NOTES + ADR 0032 s3). Mechanism accepts the param on `.tsrx` sources too — harmless permissiveness; the convention docs say `.tsx` and the raw `.tsrx` editor view cannot resolve the annotation type, so no doc change needed.
   **Skill:** le-truc-dev
   **Context:** The owner rejected both ambient-based mechanisms (compiler-emitted
   `<tag>.host.d.ts` imports; per-file checker programs): authored files already declare
@@ -441,7 +443,8 @@ contract. Wave 4 is unblocked once LT-202 lands the front end in the build.
   `FactoryContext` (or the reverse) is the new TSRX diagnostic; all six fixtures and
   all gates green; editors see full precision with no tsserver changes.
 
-- [x] LT-211: Remove the boundary's `stale` arm end-to-end and teach the `isPending` idiom (owner ruling, 2026-09-18). — done ✓ (awaiting review; commit e864c2fa; the `.tsrx` `@if` spelling in this text cannot exist — see NOTES)
+- [x] LT-211: Remove the boundary's `stale` arm end-to-end and teach the `isPending` idiom (owner ruling, 2026-09-18). — reviewed ✓ (Architect, 2026-09-18)
+  **Review:** Approved with one review fix: the isPending binding scan in `emit-server.ts` read only `lines`/setup/`exposeText`, but the ROOT element's folded attributes are assembled into `rootParts` and pushed into the module body after the scan — a root `class={() => ({ dimmed: isPending(data) })}` emitted an unbound `isPending` reference (TS2304 under check:tsrx). Scan extended to rootParts expressions; regression pin added to parity.test.ts. The `.tsrx` `@if` spelling in this task's text cannot exist (`validateCondition` diagnoses signal conditions by design) — the arrow-thunk attribute is the idiom on both surfaces, taught in HOST_PROFILE.md; ADR 0032 s6's asymmetry dissolved as the amended paragraph records.
   **Skill:** le-truc-dev
   **Context:** The owner withdrew the four-arm boundary: the client never re-renders arm
   content — it toggles `hidden`/`disabled` on server-rendered arms — so a stale arm

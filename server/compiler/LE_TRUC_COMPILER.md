@@ -29,13 +29,18 @@ same artifacts (ADR 0032):
 
 - **`.tsx` — the default.** Parsed by the repo's `typescript` dependency
   (`ts.createSourceFile`, `ScriptKind.TSX`). One exported component function
-  per file: its single destructured parameter is the server args (its type
-  is what compose sites check against), the statements before the single
+  per file: its first destructured parameter is the server args (its type
+  is what compose sites check against), an optional second destructured
+  parameter is the author-annotated factory context (`, { host, expose }:
+  FactoryContext<Props>`; vocabulary-checked TSRX049, surface-checked
+  TSRX050 — LT-209), the statements before the single
   `return` are the setup, the returned JSX is the template, and a `<style>`
   sibling carries the CSS as a `css`-tagged template literal. Control flow
   is expression-shaped — ternaries and `&&`, `.map()`, IIFEs for switch and
-  try/catch, and the recognized ambient `boundary({ ok, nil, err, stale? })`
-  for the async boundary. There is no `{count}` shorthand; spell
+  try/catch, and the recognized ambient `boundary({ ok, nil, err })`
+  for the async boundary (three arms; the in-flight state is the reactive
+  `isPending(signal)` read beside it, folded server-side — LT-211). There
+  is no `{count}` shorthand; spell
   `count={count}`.
 - **`.tsrx` — retained.** The pinned `@tsrx/core` grammar: the `@{ }` setup
   block, `@if`/`@switch`/`@try`/`@for` directives with statement-context
@@ -120,8 +125,7 @@ strict ambient profile (`frontend/tsx/host-profile.d.ts`,
 │ ternary/&& → if               │  │ @if @switch @try @for       │
 │ .map() → for                  │  │ statement-context arms      │
 │ IIFE → switch / try-catch     │  │                             │
-│ boundary({ ok, nil,           │  │                             │
-│   err, stale? })              │  │                             │
+│ boundary({ ok, nil, err })    │  │                             │
 └──────────────┬────────────────┘  └─────────────┬───────────────┘
                │                                 │
 ┌──────────────┴─────────────────────────────────┴───────────────┐
@@ -248,7 +252,7 @@ text.
 | `expr` | `expr, lazy` | A child expression; `lazy` marks it reactive (decided by `reactivity.ts`: a lexically visible signal or `host.<prop>` read lifts; an expression over server args stays static; a signal escaping into an opaque call is TSRX017) |
 | `if` | `test, then, alternate` | Server-known condition; server renders the taken branch, client addresses both roots |
 | `switch` | `discriminant, cases[]` | Mutually exclusive arms |
-| `try` | `children, catchParam, catchChildren, pendingChildren?, staleChildren?` | `pendingChildren ≠ null` ⇒ async boundary: all arms render, `hidden`-toggled. `staleChildren` — the re-fetching-with-retained-value arm — is set only by the `.tsx` front end's four-arm `boundary({ ok, nil, err, stale })` spelling; null everywhere else, so `.tsrx` lowering and both emitters are byte-identical to the three-arm shape |
+| `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ async boundary: all arms render, `hidden`-toggled. Three arms on both surfaces — the four-arm `stale` spelling the `.tsx` front end briefly carried was withdrawn by the owner (LT-211); the in-flight state is the reactive `isPending` idiom beside the boundary, folded server-side |
 | `compose` | `component, source, attrs, children` | PascalCase tag bound to an authored-source import (either surface); server splices the child's render |
 | `client-stmt` | `text` | Bare client-only side effect inside a branch (`.tsrx` only — a `.tsx` branch must return JSX) |
 
@@ -751,8 +755,8 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   is caught by fixtures, not assumed absent.
 - **Parity suite** (`server/tests/compiler/tsx/parity.test.ts`): the
   equivalence contract — each fixture authored in both surfaces must render
-  byte-identically through the same machinery, including a four-arm
-  `boundary` render with its `stale` client handler. It is the mechanical
+  byte-identically through the same machinery, including a three-arm
+  `boundary` render and the `isPending` class binding (LT-211). It is the mechanical
   form of "the door stays open": a front-end change that makes the surfaces
   diverge fails here before it can ship.
 

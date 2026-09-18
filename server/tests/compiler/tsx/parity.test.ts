@@ -398,3 +398,37 @@ export function BadHost(
 		expect(component).not.toBeNull()
 	})
 })
+
+describe('the isPending fold (LT-211, review pin)', () => {
+	test('a ROOT class-map over isPending binds the harness import too', () => {
+		// The root element's folded attributes are assembled into rootParts
+		// and pushed into the module body AFTER the isPending reference scan
+		// — without the rootParts clause the scan misses them and the
+		// generated server module references isPending without importing it.
+		const source = `import { deriveCell, isPending } from '@zeix/le-truc'
+
+export function PendingRoot({}: {}) {
+	const data = deriveCell(async () => 'loaded')
+	expose({})
+	return (
+		<pending-root class={() => ({ dimmed: isPending(data) })}>
+			<p>ok</p>
+		</pending-root>
+	)
+}`
+		const { component, diagnostics } = compileComponentTsx(
+			source,
+			'pending-root.tsx',
+			new Set(['pending-root']),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('pending-root fixture must compile')
+		// The harness import line carries the binding...
+		expect(component.serverCode).toMatch(
+			/import \{[^}]*\bisPending\b[^}]*\} from/,
+		)
+		// ...and the fold renders the class (fresh task: pending at build).
+		const html = component.serverCode
+		expect(html).toContain('isPending(data)')
+	})
+})

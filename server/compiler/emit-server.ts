@@ -1112,16 +1112,22 @@ export const emitServerModule = (
 	// `isPending` is harness-provided (LT-211): an authored import of it is
 	// filtered out server-side (RUNTIME_HARNESS_EXPORTS), so the module's
 	// binding must come from here whenever any emitted position references
-	// it — markup lines, the re-declared setup, or `expose()`. Tokenized
-	// like `retainReferenced` (identifier-boundary over the generated
-	// text): it can over-retain on a string literal mentioning the name,
-	// which at worst adds one unused harness import.
+	// it — markup lines, the re-declared setup, `expose()`, or the ROOT
+	// element's folded attributes (rootParts bypass `lines` and are pushed
+	// into the module body only after this scan; the LT-211 review found a
+	// root `class={() => ({ dimmed: isPending(data) })}` emitting an unbound
+	// reference without this clause). Tokenized like `retainReferenced`
+	// (identifier-boundary over the generated text): it can over-retain on
+	// a string literal mentioning the name, which at worst adds one unused
+	// harness import.
 	const referencesIsPending = (scan: string): boolean =>
 		/\bisPending\b/.test(scan)
 	if (
 		lines.some(line => referencesIsPending(line)) ||
 		emittedSetup.some(stmt => referencesIsPending(stmt.text)) ||
-		(component.exposeText !== null && referencesIsPending(component.exposeText))
+		(component.exposeText !== null &&
+			referencesIsPending(component.exposeText)) ||
+		rootParts.some(part => 'expr' in part && referencesIsPending(part.expr))
 	)
 		used.add('isPending')
 
