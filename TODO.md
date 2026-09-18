@@ -787,7 +787,7 @@ round, scope widened).
   selector warns; the three child selectors stay silent; the simulation serialization pin holds;
   the zero-warning gate holds.
 
-- [ ] LT-216: Refresh TESTS.md's test-file tree and count (LT-198 review residue, mostly pre-existing).
+- [x] LT-216: Refresh TESTS.md's test-file tree and count (LT-198 review residue, mostly pre-existing). — done ✓ (2026-09-18)
   **Skill:** docs-server-dev
   **Context:** TESTS.md's "File naming and location" tree bills itself as "the source of
   truth" while missing roughly fifty files: the entire `compiler/` subtree,
@@ -799,6 +799,24 @@ round, scope widened).
   hand-maintained tree keeps rotting, replace it with the instruction to list the files
   (`find` or `bun test --list`) so the doc stops promising a snapshot it cannot keep.
   While there, check the per-area verification recipes still name files that exist.
+  **Done (2026-09-18):** took the task's second option — replaced, not regenerated. The
+  hand-maintained tree was missing 53 of the suite's 84 test files (the entire `compiler/`
+  subtree incl. `compiler/tsx/`, plus `schema/collapsible`, `templates/chapter-nav`, and
+  four `effects/` tests) while billing itself "the source of truth", and tests are added in
+  nearly every task, so a regenerated enumeration rots the same way. TESTS.md now carries a
+  directory-level skeleton (dirs + naming convention + the stable root modules, explicitly
+  labelled NOT an enumeration), the authoritative file list is the command
+  `find server/tests -name '*.test.ts' | sort`, and the count line is re-pinned with a date
+  (84 files / 1601 tests, 2026-09-18) pointing at the `bun test` summary line as the live
+  source. Deviation from the task text, verified: `bun test --list` does NOT list — the
+  flag is silently ignored and the suite runs — so the doc recommends `find` only. Recipe
+  check: all six verification Processes name files and scripts that exist (incl. the
+  Playwright bin and all five Process-5 output files on disk), and both helper files
+  (`test-utils.ts`, `generated-tsrx.ts`) are as documented.
+  **Changed:** `server/TESTS.md` only (the File-naming-and-location skeleton + count line).
+  **Verification (run):** `bun test server/tests` 1601 pass / 0 fail / 1 error across 84
+  files (the 1 error is the pre-existing LT-207-family inter-test error, not this change);
+  `check:links` 410 green.
 
 ---
 

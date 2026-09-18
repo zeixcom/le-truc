@@ -38,47 +38,39 @@ Reference: [SERVER.md](./SERVER.md) for architecture details.
 
 ### File naming and location
 
+Tests live under `server/tests/`, one `<module>.test.ts` file per source module, mirroring
+the `server/` tree:
+
 ```text
 server/tests/
-├── helpers/
-│   └── test-utils.ts              # Shared test utilities
-├── config.test.ts                 # Configuration constants
-├── file-watcher.test.ts           # File watcher
-├── html-shaping.test.ts           # Final HTML shaping (link handling, demo previews)
-├── io.test.ts                     # IO utilities
-├── markdoc-constants.test.ts      # Markdoc constants
-├── markdoc-helpers.test.ts        # Markdoc helper utilities
-├── serve.test.ts                  # HTTP server routes
-├── schema/
-│   ├── callout.test.ts
-│   ├── carousel.test.ts
-│   ├── demo.test.ts
-│   ├── fence.test.ts
-│   ├── heading.test.ts
-│   ├── hero.test.ts
-│   ├── listnav.test.ts
-│   ├── section.test.ts
-│   ├── sources.test.ts
-│   └── table.test.ts
-├── templates/
-│   ├── fragments.test.ts
-│   ├── hmr.test.ts
-│   ├── menu.test.ts
-│   ├── sitemap.test.ts
-│   └── utils.test.ts
-└── effects/
-    ├── api-pages.test.ts
-    ├── api.test.ts
-    ├── blog-pages.test.ts
-    ├── examples.test.ts
-    ├── llms-full-manifest.test.ts
-    ├── llms-manifest.test.ts
-    ├── md-mirror.test.ts
-    ├── mocks.test.ts
-    └── sources.test.ts
+├── helpers/                    # Shared test utilities, NOT *.test.ts files (see below)
+├── compiler/                   # The TSRX compiler: lowering, diagnostics, tiers, i18n,
+│   └── tsx/                    #   the sim realm (ADR 0027); tsx/ = .tsx front end parity + typecheck
+├── schema/                     # One test file per Markdoc schema tag
+├── templates/                  # One test file per template module
+├── effects/                    # One test file per build effect
+├── config.test.ts              # Configuration constants
+├── file-watcher.test.ts        # File watcher
+├── html-shaping.test.ts        # Final HTML shaping (link handling, demo previews)
+├── io.test.ts                  # IO utilities
+├── markdoc-constants.test.ts   # Markdoc constants
+├── markdoc-helpers.test.ts     # Markdoc helper utilities
+└── serve.test.ts               # HTTP server routes
 ```
 
-31 files, 671 tests as of this writing (`bun test server/tests`) — treat as approximate; the file tree above is the source of truth.
+The tree names directories and the naming convention — it is deliberately NOT a file
+enumeration, and should not be turned back into one: the last enumeration rotted within
+weeks, omitting the entire `compiler/` subtree (53 of the 84 files the suite had grown to)
+while still billing itself "the source of truth" (LT-216). The authoritative file list is a
+command, not a doc:
+
+```sh
+find server/tests -name '*.test.ts' | sort
+```
+
+(`bun test --list` does not list — the flag is silently ignored and the suite runs.) For the
+test count, the `bun test server/tests` summary line prints both numbers live; as of
+2026-09-18 that is **84 files / 1601 tests**.
 
 ### Running tests
 
