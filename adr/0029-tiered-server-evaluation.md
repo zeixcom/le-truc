@@ -116,6 +116,8 @@ The consequence for the regression signal matters more than the reclassification
 
 This supersedes the framing that the baseline's target "is no longer zero." It is zero; the eight standing warnings' successors are simply not warnings.
 
+**[Amended 2026-09-19, owner, at LT-241: the census gains an `unavailable substrate` reason.** [ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s5 makes jsdom an optional peer dependency of the published compiler. When it is absent, a component the classifier routed Simulated routes Static instead and records `unavailable substrate` as its reason. This is a routing outcome, not an author-fixable problem, so it rides the census exactly like every other reason and the zero-warning baseline is unaffected. A missing substrate must never fail the build.]
+
 ### 7. Two mechanisms, kept honest by an equivalence audit
 
 ADR 0027 rejected retaining the determinism gate alongside simulation, on the grounds that *"two mechanisms answering the same question is exactly the hazard the original gate's own design existed to prevent."* Tiering reinstates two mechanisms — the value harness and the realm — differing per component. That objection is not dismissed here; it is answered with a test rather than an argument.
@@ -131,6 +133,8 @@ So the disagreement is not resolved, it is **dissolved**: impure-ambient express
 ### 8. Scope: SSG now, per-request SSR anticipated but not designed
 
 The ~1.1 ms / ~3.9 s figures are build-time SSG numbers. **This ADR commits to no per-request SSR runtime**; ADR 0024 sub-design 7 stands unchanged — the compiler and the driver are build-time tooling and jsdom never ships to clients.
+
+**[Amended 2026-09-19, owner, at LT-241: what travels off SSG in 3.0 is emitted templates, not a runtime.** [ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s3 routes the non-JS-backend case through template emission — the fold resolves everything prop-independent and the server args become holes in the backend's own template language — so a CMS consumer gets a folded initial view without any per-request JS. This ADR's no-SSR-runtime commitment is therefore unchanged and now has a designed alternative rather than only a deferral. ADR 0034 s4's partial-readiness invariant is the standing constraint that keeps both this path and a future 4.0 per-request path reachable.]
 
 What the tiering *does* do is make a future per-request path possible without re-architecting: the Folded tier and the Static tier are already per-request-cheap (string concatenation, no realm), so a per-request server would pay the realm cost only for Simulated-tier components, which the classifier has already identified. A per-request path would need a server-scoped render cache with an eviction policy (LT-166's `(component, markup)` memoization served that role within a process until its removal, LT-193), plus a decision about realm lifetime across requests — both deliberately left undesigned here, because designing a cache for a workload that does not exist yet would fix the wrong shape. Recorded as anticipated, not decided.
 

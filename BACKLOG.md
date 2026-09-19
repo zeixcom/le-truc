@@ -35,6 +35,17 @@ contract extends to diagnostics (LT-242). REQUIREMENTS already declares the comp
 separate package (§5 Required) and the Simulated realm as a Must-Have (M20) — both face the
 framework question explicitly, as owner-gated rulings, not by default.
 
+**LT-241 is resolved** (owner, 2026-09-19; [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md),
+REQUIREMENTS §1 / M27 / M28). The framework goal is declared, the criteria are external and
+falsifiable, and the packaging track is the new **P1** band above. Three consequences reach the
+rest of this file: (1) the published package is **`@zeix/le-truc-compiler`, TSX-only at 3.0** —
+`@tsrx/le-truc` is dead and `.tsrx` publishes in a later 3.x, so any task naming the package or
+treating `.tsrx` support as shippable at 3.0 is stale; (2) **template emission** (M27) is a v3.0
+requirement on pioneer 2's critical path, and the **partial-readiness invariant** (ADR 0034 s4)
+constrains every design in every band from here forward, not only P1's; (3) **LT-239's floor is
+set** — jsdom becomes an optional peer dependency (LT-256), so the Simulated tier is opt-in per
+consumer whatever that ruling decides about pluggability or survival.
+
 **Standing framing** (ADR 0029, accepted 2026-09-04). Server evaluation is three tiers:
 **Folded** (phase 1 resolves it; string folding, no jsdom), **Simulated** (phase 1 cannot
 complete AND the realm can answer; pre-played in jsdom), **Static** (neither; static skeleton,
@@ -43,6 +54,179 @@ the client corrects at connect). Tier is per **component**; unresolvability is p
 tier and is not a routing signal. The compile-warning baseline's target is **zero**: routing
 signals ride the tier census on `sim/report.ts`, not the diagnostic channel. Judge a migration
 on zero warnings *plus* its recorded tier and reason.
+
+---
+
+## P1 — The v3.0 release track: packaging, template emission, pioneer adoption (ADR 0034)
+
+**Provenance:** the LT-241 owner grilling session (2026-09-19) and [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md).
+This band is **release-gating**: v3.0 does not ship until pioneer 1 is live on the published
+package and template emission is verified against pioneer 2 (ADR 0034 s6, REQUIREMENTS §1
+success criteria). It is placed above P2 for that reason, not because the work is larger.
+
+**The fact that produced this band.** The compiler emits `*.client.ts`, `*.css` and
+`*.server.ts` — a TypeScript module only a JS build can execute — so the Folded and Simulated
+tiers have exactly one consumer runtime today: this repo's SSG docs site. Pioneers 2 and 3 are
+CMS projects (Craft/PHP, AEM/Java) that cannot run it, and folding is build-time while CMS
+markup is request-time. **LT-257 is the answer and it is on pioneer 2's critical path**; every
+other task here is either what makes the package installable or what proves it worked.
+
+**The standing invariant every task in every band must respect** (ADR 0034 s4, [M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)):
+a component's folded output may depend only on its own props and a **closed, enumerable set of
+page-ambient values** — today the reserved `i18n` parameter's `lang`, `t`, `timeZone`,
+`currency`, `dir`. A design that lets the fold read arbitrary page context forecloses template
+emission and the CMS persona with it. LT-258 makes this checkable rather than remembered.
+
+- [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals.
+  **Skill:** le-truc-dev
+  **Context:** ADR 0034 s1–s2. The compiler ships separate from the browser-only
+  `@zeix/le-truc`, named for its function rather than its input format. **v3.0 publishes the
+  `.tsx` front end only** — `.tsrx` stays a first-class repo-internal surface under ADR 0032's
+  parity contract and publishes in a later 3.x gated on `@tsrx/core` 1.0, so the published tree
+  must not carry the pinned pre-1.0 parser as a runtime dependency.
+  **Deliverable:** (a) register `@zeix/le-truc-compiler` on npm **before the first pre-release**
+  — verified available 2026-09-19, and a package name is the one decision that cannot be revised
+  after first publish; (b) the package manifest, entry points, and a build that excludes the
+  `.tsrx` front end from the published artifact without deleting it from the repo; (c) the
+  LT-206 deferrals, now scheduled rather than parked: the `check:tsrx`/`build:tsrx` script names,
+  `server/effects/tsrx.ts`, the `server/generated/tsrx/` output directory, the `@tsrx/core`
+  package names in internal APIs, and the `TSRX###` diagnostic codes — each either renamed to
+  surface-neutral vocabulary or consciously kept, with the reason recorded. **Diagnostic codes
+  become public API on first publish**: a code that keeps the `TSRX` prefix while the published
+  surface is `.tsx` needs a stated rationale, and Tech Writer reviews the copy of anything
+  renamed (channel: compiler; the error-message-lifecycle sweep applies).
+  **Check:** `npm pack` on a clean checkout produces a tarball that installs into an empty
+  project and compiles a single `.tsx` component, with no `@tsrx/core` in the dependency tree.
+
+- [ ] LT-255: Generalize the corpus scan — glob the consumer's components, not `examples/`.
+  **Skill:** le-truc-dev
+  **Context:** ADR 0034 s1; the reflection's §7. `scripts/build-tsrx.ts` globs
+  `examples/**/*.tsrx` and writes to `server/generated/tsrx/`; the registry and the TSRX048
+  contract are this-repo-shaped. A consumer's sources live wherever their project puts them, and
+  their output directory is theirs to choose.
+  **Deliverable:** a configured source glob and output root with this repo's paths as defaults,
+  so the docs build is one consumer of the general mechanism rather than the mechanism itself;
+  the registry contract restated in consumer terms; the config surface documented where an
+  installing user will read it. **Depends on LT-254** for where the config lives.
+  **Check:** the repo's own build produces byte-identical output through the generalized path,
+  and a scratch project outside the repo compiles a component with only a config file.
+
+- [ ] LT-256: jsdom as an optional peer dependency; `unavailable substrate` as a tier-census reason.
+  **Skill:** le-truc-dev
+  **Context:** ADR 0034 s5 and the ADR 0029 s6 amendment (2026-09-19). A published compiler's
+  dependency weight is a consumer-visible cost, and jsdom serves a capability two of 22 corpus
+  components use. It becomes an **optional peer dependency** — not gated on SSG vs SSR, since
+  simulation is build-time in both cases.
+  **Deliverable:** the peer-dependency declaration; substrate detection at build start;
+  components the classifier routed Simulated route **Static** when the substrate is absent and
+  record `unavailable substrate` as their census reason. **This is a census row, not a
+  diagnostic** — the zero-warning baseline ([M23](REQUIREMENTS.md#m23-census-reporting-zero-warning-baseline))
+  is unaffected, and a missing substrate must never fail the build (channel: none — it is a
+  routing outcome, not an author-fixable problem; no tier applies). CI gains a second
+  configuration: the compiler exercised **with and without** the substrate installed.
+  **Sequencing note:** this sets the floor for **LT-239** (the open Simulated-tier ruling) — the
+  tier is opt-in per consumer because an optional peer dependency *is* opt-in. LT-239 still owns
+  substrate pluggability and whether the tier survives; it can no longer make the tier mandatory.
+  **Check:** `npm install` without the optional peer, then a corpus build: green, with the two
+  Simulated components routed Static and named in the census with the new reason.
+
+- [ ] LT-257: Template emission — the Twig target ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
+  **Skill:** le-truc-dev
+  **Context:** ADR 0034 s3. For a CMS, a folded HTML partial and a template are the same
+  artifact: a Craft page's props are *content* — arbitrary title text, an entry list — so
+  pre-folding per prop signature is combinatorially dead. What folding can do is resolve
+  everything prop-independent and leave the props as **holes**, which is what a template is.
+  **Deliverable:** a third emission target beside the client module and the CSS — the
+  component's markup with every prop-independent expression folded and every server arg emitted
+  as a Twig variable. Locale dimensionality is locale × component (ADR 0030 commits 3.0 to
+  per-locale pages), so the emitter emits one partial per component per locale **or** one
+  partial with a locale hole — the choice is the emitter's and must be recorded in the ADR
+  either way.
+  **The escaping contract is a security boundary, not a formatting detail.** The compiler
+  becomes responsible for output encoding in a language it does not execute; a mis-encoded hole
+  is an XSS in a consumer's page. The emitter places Twig's escaping at every hole, and a hole
+  in a position Twig cannot escape safely is a **compile-time diagnostic** (channel: compiler;
+  tier 1 Prevented per [ADR 0028](adr/0028-tiered-error-surfacing.md) s1) — never a silently
+  unsafe emit. A per-target escaping test corpus is part of this task, not a follow-up. New
+  diagnostic code: Tech Writer owns the final copy.
+  **Depends on** LT-254 (where it ships), LT-258 (the invariant it relies on).
+  **Check:** every corpus component emits a Twig partial; the escaping corpus passes, including
+  the negative cases; a Twig render of the partial with the same args produces output equivalent
+  to the SSG fold (the same equivalence discipline [ADR 0029](adr/0029-tiered-server-evaluation.md) s7 applies to the two evaluation mechanisms).
+
+- [ ] LT-258: Make the partial-readiness invariant a compiler check.
+  **Skill:** le-truc-dev
+  **Context:** ADR 0034 s4. The invariant — folded output depends only on the component's own
+  props plus a closed, enumerable set of page-ambient values — is checkable **now**, before the
+  emitter exists, and it must be, because the failure mode is a design landing between now and
+  LT-257 that quietly forecloses template emission. The closed ambient set today is the reserved
+  `i18n` parameter's five members ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md) s2).
+  **Deliverable:** a check in the fold path that a folded expression's inputs are the component's
+  own args or a member of the declared ambient set, and nothing else; the ambient set declared in
+  **one** place the check reads, so adding to it is a visible, reviewable act rather than a
+  diffuse one. Violations are a compile-time diagnostic (channel: compiler; tier 1 Prevented);
+  new code, Tech Writer owns the copy.
+  **Check:** the corpus passes unchanged; a fixture that reaches page context outside the
+  declared set fails the build with the ruled message.
+
+- [ ] LT-259: The 2.x → 3.0 codemod, and the drift-cost measurement it instruments.
+  **Skill:** le-truc-dev
+  **Context:** ADR 0034 s6. Pioneer 1 is a Zeix SSG project migrated from Le Truc 2.x, and
+  nothing in the queue covered `.ts` + `.html` + `.css` → `.tsx` until now. The owner's read,
+  recorded because it scopes the task: the conversion is always possible — JSX reflects the
+  static HTML, the factory body copies over verbatim and already runs, and deterministic
+  transforms (inline event handlers, 1:1 effects) do ~80%.
+  **It is codemod-assisted, not push-button, and must be documented as such.** The residue is
+  chiefly resolving `first()` selectors to structural JSX — the hard cases land exactly where the
+  old code was sloppiest, which is the drift the compiler exists to eliminate. Deliverable shape:
+  a compiling `.tsx` plus a **report of what it could not resolve**, for judgement. At pioneer
+  scale (~50 components) that residue is affordable; sold as push-button it disappoints on
+  pioneer 1.
+  **Second job — it is the measurement instrument.** The drift-cost data point is a before/after
+  on the same components, so the 2.x baseline must be captured **before the codemod runs**.
+  Define what is measured (the metric is the task's first decision, not an afterthought) and
+  record it where REQUIREMENTS §1's criterion can cite it.
+  **Check:** the codemod run over this repo's remaining hand-written twins, and over pioneer 1,
+  produces compiling sources plus an honest residue report; the baseline exists before either run.
+
+- [ ] LT-260: Pioneer 1 — take the Zeix SSG project live on the published package, through pre-releases. **Release gate.**
+  **Skill:** architect
+  **Context:** ADR 0034 s6; REQUIREMENTS §1 success criteria. This is the criterion that can
+  actually fail: until a project outside `examples/` compiles through the published tool, every
+  compiler line amortizes over 22 demo components. Verified through a **series of pre-releases**,
+  so the feedback arrives while the API can still change.
+  **Deliverable:** the migration executed with LT-259; the pre-release cadence and what each one
+  is meant to learn; the drift-cost number captured and written into REQUIREMENTS §1; a recorded
+  list of everything the engagement forced back into the compiler, since that list is the honest
+  measure of how repo-shaped the tool still was. **Blocks the v3.0 release.**
+  **Check:** the project is in production as the release showcase and builds from a published
+  version, not a workspace link.
+
+- [ ] LT-261: Pioneer 2 — verify template emission against the Zeix Craft (PHP) project. **Release gate.**
+  **Skill:** architect
+  **Context:** ADR 0034 s3/s6. LT-257 is the mechanism; this is the proof, and the owner has
+  ruled it must pass **before v3.0 releases**. What is being verified is not that Twig files are
+  produced but that a CMS page carries **real content in its initial HTML with no JavaScript**.
+  **Deliverable:** the Craft integration — where partials land, how the build fits their
+  pipeline, how the `i18n` ambient set is passed through the include; the escaping contract
+  exercised against real content, adversarial cases included; a recorded list of what the
+  emitter had to grow. **Depends on LT-257. Blocks the v3.0 release.**
+  **Check:** JavaScript disabled, a Craft-rendered page shows content-bearing folded markup from
+  a compiler-emitted partial; enabling JavaScript corrects nothing that was already right.
+
+- [ ] LT-262: AEM/HTL integration spike — ahead of pioneer 3, not during it.
+  **Skill:** architect
+  **Context:** ADR 0034 s3 and its Bad consequence: AEM is a build-**integration** problem, not
+  an emit problem. Component dialogs, the authoring model and clientlibs are undesigned, and the
+  HTL emitter is the smallest part of it. Pioneer 3 is a client engagement, which is the wrong
+  place to discover the shape.
+  **Deliverable:** a spike answering how a compiler-emitted HTL partial reaches an AEM component,
+  how clientlibs consume the generated client module and CSS, what the dialog/authoring model
+  demands of the server-args surface, and what HTL's escaping contract requires that Twig's did
+  not; the verdict written as tasks or as a recorded limitation. **Not release-gating for 3.0**,
+  but scheduled well before pioneer 3 commits.
+  **Check:** the spike either produces the HTL target's task list or records, with reasons, that
+  AEM needs something the current artifact set cannot give it.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > This document is the north star for Le Truc's design and development. It captures the problem, the users, the constraints, and the success criteria from which all architectural decisions should be derived. It is not a changelog or a roadmap — it describes _what_ and _why_, not _when_.
 
-**Scope note (2026-09-04).** v3.0 is a two-track release. Track 1 is the committed library contract ([M1](#m1-component-definition-via-a-single-function)–[M16](#m16-security-validation-in-setattribute), shipped through 2.x). Track 2 is the isomorphic authoring and build-time server-evaluation program defined by [ADRs 0024–0032](adr/0024-adopt-tsrx-as-isomorphic-component-format.md), together with the amendments those ADRs carry in place — most recently ADR 0032's dual authored surface (2026-09-17). **Where a shipped 2.x contract and an unpublished v3 decision conflict, the shipped contract wins**: the build-time tooling adapts to the library, never the reverse. ADR 0025 (client-side playground) remains Proposed and is in scope only if accepted.
+**Scope note (2026-09-04).** v3.0 is a two-track release. Track 1 is the committed library contract ([M1](#m1-component-definition-via-a-single-function)–[M16](#m16-security-validation-in-setattribute), shipped through 2.x). Track 2 is the isomorphic authoring and build-time server-evaluation program defined by [ADRs 0024–0034](adr/0024-adopt-tsrx-as-isomorphic-component-format.md), together with the amendments those ADRs carry in place — most recently ADR 0034's distribution and template-emission decisions (2026-09-19). **Where a shipped 2.x contract and an unpublished v3 decision conflict, the shipped contract wins**: the build-time tooling adapts to the library, never the reverse. ADR 0025 (client-side playground) remains Proposed and is in scope only if accepted.
 
 ---
 
@@ -37,6 +37,14 @@ The library contract above held, and a second problem grew under it. A Le Truc c
 
 Alongside it sits a question hand authoring cannot answer systematically: **what does a reactive initial value render before JavaScript loads?** A `{signal}` text child or a `checked={() => …}` thunk has a value only once the component connects. Serving blank is honest but degrades the no-JS experience; baking in a guess ships wrong HTML. Server evaluation needs to be a designed mechanism, not a per-component judgment call.
 
+### The v3 goal: a general-purpose framework, not repo tooling
+
+This repository is the playground, not the product. The v3 compiler was built here against this corpus, but the goal is a general-purpose framework used across many projects by consumers of the open-source library. Two consequences follow, and both are load-bearing rather than aspirational ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md)).
+
+**The compiler's output must reach non-JS backends.** The compiler emits a TypeScript server module that only a JS build can execute, so today the Folded and Simulated tiers have exactly one consumer runtime — this repo's SSG docs site. The CMS backends named above cannot run it, and the mismatch is not only language but *time*: folding happens at build time, CMS markup is produced at request time. v3.0 closes this with **template emission** ([M27](#m27-backend-neutral-template-emission)): the compiler resolves everything prop-independent and emits a partial whose holes are the component's server args, in the backend's own template language.
+
+**Adoption is staged over three pioneer projects**, in order: a Zeix SSG project migrated from Le Truc 2.x; a Zeix Craft CMS (PHP) project; a client AEM (Java) project. Outside adoption is expected only after these three. They are the criteria's evidence base — the thesis that the compiler pays for itself is confirmed by a real project outside this repo, or not at all.
+
 ### Business impact
 
 Without Le Truc (or an equivalent), frontend teams often face:
@@ -62,13 +70,20 @@ For the library itself:
 - Performance in benchmarks (js-reactivity-benchmark for Cause & Effect, js-framework-benchmark for Le Truc) is among the 5 best-in-class
 - Bundle size for a minimal consumer (`defineComponent`, no extensions) remains below 9 kB gzipped; core + `formAssociated()` warns above 10 kB. Opt-in extensions (`formAssociated()`, `observedAttributes()`, ...) are tree-shaken away when unused — see the `ComponentExtension` mechanism
 
-For the v3 authoring program (ADRs 0024–0030):
+For the v3 authoring program (ADRs 0024–0030, 0032–0034) — repo-internal:
 
 - The example corpus is 100% compiled — every component authored in the isomorphic single-file format, `.tsx` by default with `.tsrx` retained ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)) — no hand-written component twins remain outside test and docs helpers, and every markup/selector/style contract error that used to surface as a runtime `MissingElementError` is a build failure
 - The compile-warning baseline holds at zero, with the tier census and translation census reported separately and growing only when the build genuinely learns something new
 - The CI equivalence audit (Folded-tier components rendered byte-identically by both evaluation mechanisms) is green
 - A second locale ships end to end: per-locale pages, the reserved `i18n` parameter, and a visible translation census
 - The shipped 2.x contract (M1–M16) is unchanged through v3 except the two removals scheduled by ADR 0012/0018 ([M26](#m26-v3-api-cleanup--removal-of-the-deprecated-surfaces))
+
+For v3.0 as a released framework — these are the criteria that can fail ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s6):
+
+- **Pioneer 1 is live**: a Zeix SSG project, migrated from Le Truc 2.x, compiling through the published `@zeix/le-truc-compiler` and in production as the release showcase. Verified through a series of pre-releases, not at the release itself
+- **A measured drift-cost data point** from that migration — before/after on the same components, with the 2.x baseline captured *before* the codemod runs. Without the number the drift-cost thesis stays an assertion
+- **Pioneer 2 verifies template emission**: a Zeix Craft (PHP) project consuming compiler-emitted Twig partials, with real content in the initial HTML and no JavaScript required to see it ([M27](#m27-backend-neutral-template-emission))
+- **The published package installs and builds without the optional simulation substrate**, routing the affected components Static with a recorded census reason rather than failing ([M28](#m28-distribution-and-dependency-weight))
 
 ---
 
@@ -207,6 +222,18 @@ Custom Elements Manifest generation continues through the migration (analyzer + 
 
 The two removals scheduled by ADR and declared in ROADMAP land in v3.0, before the corpus migration completes: the `pass()` unrestricted-write short forms ([ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)) are removed, leaving the thunk (read-only) and `{ get, set }` descriptor (mediated) forms; and the explicit factory return contract ([ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md)) is removed — helpers register effects implicitly and return `void`, `FactoryResult`/`EffectDescriptor` leave the public return contract, and `watch(() => true, descriptor)` is the only registration path for a hand-authored descriptor.
 
+#### M27. Backend-neutral template emission
+
+The compiler emits, alongside the client module and the CSS, a **partial with holes** for consumption by a non-JS backend ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s3): every prop-independent expression folded, every server arg emitted as a variable in a target template language. **Twig is the v3.0 target**; HTL (AEM) follows. Each target owns an explicit escaping contract — the emitter places the target language's escaping at every hole, and a hole in a position the target cannot escape safely is a compile-time diagnostic ([M22](#m22-tiered-error-surfacing), Prevented), never a silently unsafe emit.
+
+This obliges a standing invariant on every design from here forward, emitter or not: **a component's folded output may depend only on its own props and a closed, enumerable set of page-ambient values** — today the reserved `i18n` parameter's `lang`, `t`, `timeZone`, `currency`, `dir` ([M24](#m24-build-time-internationalization)). A design that lets the fold read arbitrary page context forecloses template emission and the CMS persona with it.
+
+#### M28. Distribution and dependency weight
+
+The compiler ships as **`@zeix/le-truc-compiler`**, separate from the browser-only `@zeix/le-truc` client layer ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s1). v3.0 publishes the **`.tsx` front end only**; `.tsrx` remains a first-class repo-internal surface under the ADR 0032 parity contract and publishes in a later 3.x, gated on `@tsrx/core` reaching 1.0 (s2).
+
+A published compiler's dependencies are a consumer-visible cost, so every build dependency carries a stated justification and, where it serves an opt-in capability, an opt-out. jsdom is an **optional peer dependency**: present, the Simulated tier is available; absent, components that would route Simulated route Static and record an `unavailable substrate` reason in the tier census — a census row, not a warning ([M23](#m23-census-reporting-zero-warning-baseline)), and never a failed build (s5).
+
 ### Should Have
 
 #### S1. Parser/Method distinction via explicit API
@@ -305,7 +332,7 @@ _Conditional._ A docs-site playground compiling components entirely in the visit
 - **Language**: TypeScript. The library is authored in TypeScript and published with full type declarations.
 - **Module format**: ESM only. CommonJS is not a target.
 - **Build tooling**: Bun (primary), Vite compatible. Tests run via Playwright against real browsers.
-- **(v3) Compiler**: the component compiler is built in-repo with two front ends behind one shared machinery layer ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)): `.tsx` parsed by the repo's `typescript` dependency, `.tsrx` on a pinned `@tsrx/core` — both parser upgrades are reviewed changes. It is build-time tooling only; jsdom is a build-time-only dependency. From v3.0 it ships as a separate package (`@tsrx/le-truc` or `@zeix/tsrx-le-truc`), while `@zeix/le-truc` remains the backend-agnostic client layer.
+- **(v3) Compiler**: the component compiler is built in-repo with two front ends behind one shared machinery layer ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)): `.tsx` parsed by the repo's `typescript` dependency, `.tsrx` on a pinned `@tsrx/core` — both parser upgrades are reviewed changes. It is build-time tooling only; jsdom is a build-time-only dependency. From v3.0 it ships as a separate package, **`@zeix/le-truc-compiler`**, publishing the `.tsx` front end only — `.tsrx` stays repo-internal until `@tsrx/core` reaches 1.0 ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s1–s2). `@zeix/le-truc` remains the backend-agnostic client layer. jsdom is an **optional peer dependency** of the compiler package ([M28](#m28-distribution-and-dependency-weight)).
 
 ### Prohibited
 
@@ -340,14 +367,14 @@ _Conditional._ A docs-site playground compiling components entirely in the visit
 - `@zeix/cause-effect` ^1.0.0 — reactive primitive layer. Le Truc and Cause & Effect are co-developed at Zeix AG and released 1.0 together.
 - Playwright — browser-based integration tests
 - Bun — build tooling and test runner script
-- _(v3)_ `@tsrx/core` (pinned) — `.tsrx` front-end parser; `typescript` — `.tsx` front-end parser ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)); jsdom (build-time only) — simulation substrate
+- _(v3)_ `@tsrx/core` (pinned) — `.tsrx` front-end parser; `typescript` — `.tsx` front-end parser ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)); jsdom (build-time only, **optional peer dependency** of the published compiler — [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s5) — simulation substrate
 
 ---
 
 ## 7. Out of Scope
 
 - **Client-side rendering or templating**: Le Truc will never generate initial HTML at runtime. Component authors who need client-side rendering should use a different tool or implement it themselves with template literals or `<template>` cloning.
-- **Per-request server-side rendering**: initial HTML is produced at build time (SSG). A per-request runtime is anticipated but deliberately undesigned ([ADR 0029](adr/0029-tiered-server-evaluation.md) s8); the Folded and Static tiers are already per-request-cheap if it is ever wanted. The build-time compiler itself is in-repo tooling and ships as a separate package with v3.0 — it is not part of the `@zeix/le-truc` package.
+- **Per-request server-side rendering**: initial HTML is produced at build time (SSG). A per-request runtime is anticipated but deliberately undesigned ([ADR 0029](adr/0029-tiered-server-evaluation.md) s8); the Folded and Static tiers are already per-request-cheap if it is ever wanted. A request-time JS sidecar would serve the CMS personas and would contradict the founding constraint — no JavaScript layer on the backend — so it is out of scope for all of 3.x and reconsidered no earlier than 4.0; [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s3–s4 is what keeps it reachable without an authoring break. What does travel off SSG in 3.0 is emitted templates, not a runtime ([M27](#m27-backend-neutral-template-emission)). The build-time compiler itself ships as a separate package with v3.0 (`@zeix/le-truc-compiler`) — it is not part of the `@zeix/le-truc` package.
 - **Internationalization runtime**: the library ships no message catalog, no translation function, and no locale resolution. Locale and translations are build-time server data handled by the compiler ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)); at runtime a component uses the platform's own `Intl` and the `lang` the server rendered into the DOM.
 - **Styled components / design system**: Visual styling is entirely the consumer's responsibility. Le Truc provides behavioral primitives only.
 - **Framework adapters**: No React wrappers, Vue plugins, Angular modules, or similar.

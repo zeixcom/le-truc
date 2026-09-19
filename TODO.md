@@ -7,11 +7,16 @@ Architect moves tasks between files; developers annotate the status suffix on th
 place. Task IDs are global and sequential across all three files.
 
 **Current iteration (opened 2026-09-18): the three S0 framework-goal grilling sessions — and
-nothing else.** Each is an architect session with the owner; the deliverable of each is a
+nothing else.** Two are closed: **LT-240** (i18n message model → ICU MessageFormat 1; ADR 0030,
+M24) and **LT-241** (framework goal + packaging track → [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md),
+REQUIREMENTS §1/M27/M28, BACKLOG's new P1 band). **LT-239 is the last one**, and LT-241 narrowed
+it: ADR 0034 s5 makes jsdom an optional peer dependency, so the Simulated tier is already opt-in
+per consumer — the session decides substrate pluggability and whether the tier survives, not
+whether every downstream build must carry it. Each is an architect session with the owner; the deliverable of each is a
 decision plus an ADR amendment (via `adr-keeper`), and the rulings gate the backlog bands
 beneath them (see BACKLOG.md's strategic framing).
 
-**Next free task ID: LT-254.**
+**Next free task ID: LT-263.**
 
 ---
 
@@ -49,31 +54,3 @@ the decision, not the implementation, is the deliverable — recorded via `adr-k
   **Check:** the reflection's falsifiable framing — "what is materially worse if the tier is
   deleted and form-combobox/form-listbox route Static?" — is answered in the ADR either way, so
   the next reviewer does not re-open it.
-
-- [ ] LT-241: Declare the general-purpose framework goal in REQUIREMENTS and schedule the packaging track (the second-consumer milestone).
-  **Skill:** architect
-  **Context:** The reflection's §1 ratio test and §7's non-compiler item, made concrete by the
-  owner's premise. The ambition is now stated — thousands of projects via the OSS library — but
-  **every v3 success criterion is repo-internal** ("the example corpus is 100% compiled", "the
-  warning baseline holds at zero", "the equivalence audit is green"): they confirm the compiler
-  works, not that it was worth building. REQUIREMENTS already declares the destination
-  (§5 Required: "From v3.0 it [the compiler] ships as a separate package (`@tsrx/le-truc` or
-  `@zeix/tsrx-le-truc`), while `@zeix/le-truc` remains the backend-agnostic client layer") — what
-  is missing is the track that gets there and the criteria that test the thesis.
-  **Deliverable:** (a) REQUIREMENTS round: the framework-goal framing in §1; success criteria that
-  can fail — **one real project outside this repo compiling through the published tool** (the only
-  evidence that confirms the drift-cost thesis), and a measured drift-cost data point from it;
-  the distribution constraints a published compiler inherits stated where users will read them
-  (dependency weight policy — jsdom stays build-time-only; browser purity per M25; adapter
-  surface). (b) The packaging track written as tasks: the publishable package (the LT-206
-  deferrals — `check:tsrx`/`build:tsrx` script names, `server/effects/tsrx.ts`,
-  `server/generated/tsrx/`, `@tsrx/core` names, TSRX diagnostic codes as public API — become
-  scheduled work, not "revisit at packaging only"); the corpus-scan generalization (glob the
-  *user's* components; today's registry/TSRX048 contract is this-repo-shaped); an adapter beyond
-  Bun (Vite-first was the transform-basis ruling; adapter surface = the second-consumer
-  onboarding path). Personas: REQUIREMENTS §2's design-system author is the first external
-  consumer — write the track against their setup, not the docs-site's.
-  **Check:** the reflection's standard holds — until a project outside `examples/` compiles
-  through it, every compiler line amortizes over 22 demo components; this task is what stops that
-  being permanently true. Compiler growth beyond v3's corpus goal gates on this track, not the
-  reverse.

@@ -11,6 +11,67 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-241: Declare the general-purpose framework goal and schedule the packaging track — **ADR 0034 written; REQUIREMENTS §1/M27/M28 amended; BACKLOG P1 band opened** — reviewed ✓
+  **Skill:** architect
+  **The fact the session surfaced, which reframed the task:** the compiler emits `*.client.ts`,
+  `*.css` and `*.server.ts` — a TypeScript module only a JS build can execute — so the Folded
+  and Simulated tiers had exactly **one consumer runtime**, this repo's SSG docs site. The §1
+  target backends (Java/PHP/Python/C# CMS) cannot run it, and the mismatch is not only language
+  but **time**: folding is build-time, CMS markup is request-time. That is the sharp form of the
+  reflection's ratio test, and it made LT-241 a capability question rather than a packaging one.
+  **Rulings (owner, 2026-09-19) that live nowhere else:**
+  1. **SSG-first for 3.0, but folding must travel.** The SSG path is where the compiler pays off
+     today. Emitting folded partials plus pre-bundled JS/CSS is a stated 3.x goal and **must not
+     require an authoring change**; per-request SSR stays out of scope for all of 3.x and is
+     reconsidered no earlier than 4.0.
+  2. **For a CMS, a folded partial and a template are the same artifact.** Content-driven props
+     are unbounded, so pre-folding per prop signature is combinatorially dead. Folding resolves
+     everything prop-independent and leaves the props as **holes** — which is a template. The
+     rejected alternatives are recorded in ADR 0034: the default-state partial (no content in the
+     initial HTML — Static tier with nicer structure, so it would verify nothing at pioneer 2)
+     and the per-instantiation manifest (solves the easy half, adds a public API surface).
+  3. **Template emission is pulled into v3.0**, not 3.x — it is on pioneer 2's critical path, and
+     it must be verified against a Zeix Craft project **before release**.
+  4. **`@tsrx/le-truc` is dead.** The package is `@zeix/le-truc-compiler` (npm availability
+     verified 2026-09-19). **v3.0 publishes the `.tsx` front end only**; `.tsrx` stays first-class
+     in-repo under ADR 0032's parity contract and publishes in a later 3.x gated on `@tsrx/core`
+     reaching 1.0.
+  5. **jsdom becomes an optional peer dependency**, orthogonal to SSG vs SSR. Absent substrate is
+     a **routing outcome**: affected components route Static with an `unavailable substrate`
+     census reason — never a failed build, never a warning.
+  6. **The adoption sequence is three pioneers**: Zeix SSG migrated from 2.x (live as the release
+     showcase, via pre-releases) → Zeix Craft/PHP (verifies template emission) → client AEM/Java.
+     Outside adoption expected only after these three.
+  7. **The codemod is real but not push-button.** Owner's read: conversion is always possible —
+     JSX reflects the static HTML, the factory body copies verbatim and already runs, and
+     deterministic transforms do ~80%; the ~20% residue (chiefly `first()` selectors → structural
+     JSX) needs judgement and is affordable at ~50 components. Its second job is instrumentation:
+     the 2.x baseline is captured **before** it runs.
+  **The invariant this session added, which binds every band:** a component's folded output may
+  depend only on its own props and a **closed, enumerable set of page-ambient values** (today the
+  `i18n` parameter's `lang`/`t`/`timeZone`/`currency`/`dir`). It is what keeps template emission
+  reachable without an authoring break, and a 4.0 per-request path reachable after that. LT-258
+  makes it a compiler check rather than a remembered rule.
+  **Changed:** `adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md` (new,
+  Accepted); `adr/0029-tiered-server-evaluation.md` (s6 gains the `unavailable substrate` census
+  reason; s8 gains template emission as the designed alternative to an SSR runtime);
+  `adr/0032-adopt-tsx-as-the-authored-component-surface.md` (parity contract is repo-internal at
+  3.0; published package is TSX-only); `REQUIREMENTS.md` (scope note → ADRs 0024–0034; new §1
+  subsection "The v3 goal: a general-purpose framework, not repo tooling"; a second success-
+  criteria block that can fail; **M27** backend-neutral template emission; **M28** distribution
+  and dependency weight; §5 Required, §6 Dependencies, §7 Out of Scope); `BACKLOG.md` (new **P1**
+  band, LT-254…LT-262; strategic framing records the three consequences); `TODO.md` (LT-241
+  removed; next free ID → LT-263).
+  **Handoffs:** LT-254…LT-262 in BACKLOG P1. **LT-239's floor is set** by ruling 5 — it decides
+  substrate pluggability and tier survival, not whether the tier is mandatory downstream. Any
+  open task naming `@tsrx/le-truc` or assuming `.tsrx` ships at 3.0 is stale (ruling 4).
+  **Changelog note:** nothing integrator-visible yet — ADRs, REQUIREMENTS and planning only. The
+  package rename becomes release-notes material when LT-254 lands.
+  **Not done by this session (sandbox):** the `adr-keeper` index row for ADR 0034 —
+  `.claude/skills/adr-keeper/references/adr-index.md` is write-denied in the agent sandbox.
+
+---
+
 - [x] LT-240: Decide the i18n message model — **ICU MessageFormat 1 adopted** (ADR 0030 s1/s4/s5/s6/s8/s9 + M24 amended) — reviewed ✓
   **Skill:** architect
   **Ruling (owner, 2026-09-19):** a message value is an **ICU MF1 pattern**; `t.<key>` is a string
