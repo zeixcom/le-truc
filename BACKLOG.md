@@ -83,6 +83,18 @@ page-ambient values** — today the reserved `i18n` parameter's `lang`, `t`, `ti
 `currency`, `dir`. A design that lets the fold read arbitrary page context forecloses template
 emission and the CMS persona with it. LT-258 makes this checkable rather than remembered.
 
+**[Amended 2026-09-19, owner — the publish date moves, and the band splits in two.]** The
+earlier plan led with LT-254 on a squatting-risk argument. That argument does not apply:
+`@zeix/le-truc-compiler` is in a namespace this project owns, so the name cannot be taken and
+nothing about first publish is urgent. **The first publish happens no earlier than after the
+P6 cleanup round** — publishing a package outside consumers cannot yet use is not a milestone,
+and the pioneers being Zeix-owned does not change that. Consequently **LT-254, LT-259, LT-260,
+LT-261 all sit behind P6**, and the P1 work that can proceed now is the part that has nothing to
+do with distribution: the seams, the interfaces, and the de-TSRX-ification of a compiler still
+shaped like this repo's internal tool. That part is **LT-271** (carved out of LT-254(c)),
+**LT-263**, **LT-255 + LT-267**, **LT-256** and **LT-265** — the iteration opened in `TODO.md`.
+**LT-262 and LT-264 are non-goals for 3.0 and have moved to P7.**
+
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals.
   **Skill:** le-truc-dev
   **Context:** ADR 0034 s1–s2. The compiler ships separate from the browser-only
@@ -103,86 +115,13 @@ emission and the CMS persona with it. LT-258 makes this checkable rather than re
   renamed (channel: compiler; the error-message-lifecycle sweep applies).
   **Check:** `npm pack` on a clean checkout produces a tarball that installs into an empty
   project and compiles a single `.tsx` component, with no `@tsrx/core` in the dependency tree.
-
-- [ ] LT-255: Generalize the corpus scan — glob the consumer's components, not `examples/`.
-  **Skill:** le-truc-dev
-  **Context:** ADR 0034 s1; the reflection's §7. `scripts/build-tsrx.ts` globs
-  `examples/**/*.tsrx` and writes to `server/generated/tsrx/`; the registry and the TSRX048
-  contract are this-repo-shaped. A consumer's sources live wherever their project puts them, and
-  their output directory is theirs to choose.
-  **Deliverable:** a configured source glob and output root with this repo's paths as defaults,
-  so the docs build is one consumer of the general mechanism rather than the mechanism itself;
-  the registry contract restated in consumer terms; the config surface documented where an
-  installing user will read it. **Depends on LT-254** for where the config lives.
-  **Check:** the repo's own build produces byte-identical output through the generalized path,
-  and a scratch project outside the repo compiles a component with only a config file.
-
-- [ ] LT-263: The simulation seam — move the build report out of `sim/`, split the patch table by audience, make the realm interface DOM-free. **Blocks LT-256.**
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s3–s4.
-  ADR 0034 s5 committed jsdom to an optional peer dependency; the code cannot honour that commitment.
-  Three couplings, each verified in the LT-239 session: `server/compiler/tier.ts:62` imports
-  `./sim/patch-table` — the **classifier** consults the simulation to decide which components are
-  Simulated, and `tier.ts:243` returns the table's `note` as the census reason; `sim/report.ts` is
-  not simulation at all but the **build report** (`tierCensus`, `translationCensus`, `formatCensus`,
-  `Census`, `CensusEntry`, `CLASSIFIED_DIAGNOSTICS`), imported by `server/effects/i18n.ts`,
-  `server/effects/tsrx.ts` and `scripts/check-tsrx.ts`, none of which simulate; and
-  `SimulationRealm.window` is typed `JSDOM['window']`, which `sim/index.ts`'s own header already
-  flags — so the published compiler's `.d.ts` names jsdom and an opted-out consumer cannot typecheck.
-  **Deliverable:** (a) the census and build-report channel moves compiler-side, leaving only *realm*
-  diagnostic classification in `sim/`; (b) `patch-table.ts` splits by audience — the classifier-facing
-  half (what the realm cannot answer, plus the reason vocabulary) compiler-side, the applier-facing
-  per-runtime force/fill/stub entries with the realm; (c) the realm interface becomes DOM-free,
-  `(markup, component, locale, options) → (html, diagnostics)`, with no `window`, `Document` or
-  substrate type crossing it — the driver keeps jsdom's types internally. **Shape the seam as a
-  versioned, resolver-based package boundary, not an in-process module boundary** (s4): activation is
-  intended to become *installation*, and retrofitting a package boundary later is a breaking change.
-  **Channel:** none new — this moves existing reporting, it does not add a check. The
-  `unavailable substrate` reason is LT-256's, and this task only makes it emittable.
-  **Check:** with jsdom uninstalled, `tsc --noEmit` passes against the published type surface, the
-  corpus compiles, and the tier census prints with every component classified — before LT-256 adds
-  the routing change. Census 20/2/0 and warning baseline 0 unchanged with jsdom present; the
-  equivalence audit (ADR 0029 s7) and its pinned per-component diffs are byte-unchanged.
-
-- [ ] LT-264: Split `@zeix/le-truc-simulation` out of the compiler package. **Not a v3.0 deliverable — a later 3.x, once the seam has a consumer.**
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s4.
-  With LT-263's seam in place the substrate can ship as its own package, so activation is
-  installation: present or absent, no configuration flag, no dynamic import, no degradation path
-  threaded through the compiler. Deliberately **not** scheduled for 3.0 — a third npm name, release
-  process and changelog on a release already gated on two external projects (ADR 0034 s6), against a
-  saving of ~50 KB of JavaScript over the optional peer dependency, since jsdom is the weight and an
-  opted-out consumer never installs it either way.
-  **Deliverable:** the package, an exact-range peer on `@zeix/le-truc-compiler`, and a CI matrix — the
-  substrate executes *generated client modules*, so the two-phase load/render contract, the `define()`
-  recording, the children-first compose ordering key and the emission shape all cross the boundary and
-  the pair is in permanent version lockstep. **jsdom must be a regular `dependency` of the new package,
-  not a devDependency** — a devDependency is not installed for consumers.
-  **Check:** a consumer project installs the compiler alone and builds green with Simulated components
-  routed Static; adding the substrate package alone re-enables the tier with no config change.
-
-- [ ] LT-256: jsdom as an optional peer dependency; `unavailable substrate` as a tier-census reason.
-  **Skill:** le-truc-dev
-  **Context:** ADR 0034 s5 and the ADR 0029 s6 amendment (2026-09-19). A published compiler's
-  dependency weight is a consumer-visible cost, and jsdom serves a capability two of 22 corpus
-  components use. It becomes an **optional peer dependency** — not gated on SSG vs SSR, since
-  simulation is build-time in both cases.
-  **Deliverable:** the peer-dependency declaration; substrate detection at build start;
-  components the classifier routed Simulated route **Static** when the substrate is absent and
-  record `unavailable substrate` as their census reason. **This is a census row, not a
-  diagnostic** — the zero-warning baseline ([M23](REQUIREMENTS.md#m23-census-reporting-zero-warning-baseline))
-  is unaffected, and a missing substrate must never fail the build (channel: none — it is a
-  routing outcome, not an author-fixable problem; no tier applies). CI gains a second
-  configuration: the compiler exercised **with and without** the substrate installed.
-  **Depends on LT-263 — hard, not preferential** ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s5
-  amendment; [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s5).
-  This task's premise does not hold until the seam lands: `tier.ts` imports `sim/patch-table` to
-  decide tiers *and* to source the reason vocabulary, the census itself lives in `sim/report.ts`,
-  and `SimulationRealm` names `JSDOM['window']` in the published type surface. Absent the
-  substrate there is no classifier, no census, and no typecheck — so "route Static and record
-  `unavailable substrate`" cannot be implemented first and de-tangled afterwards.
-  **Check:** `npm install` without the optional peer, then a corpus build: green, with the two
-  Simulated components routed Static and named in the census with the new reason.
+  **Re-scoped 2026-09-19 (owner):** deliverable **(c) — the LT-206 deferral sweep — is carved out
+  as LT-271** and runs now, because stripping TSRX-only vocabulary from a compiler whose published
+  surface is `.tsx` is a shape problem, not a distribution problem, and it should not wait on a
+  publish date. What remains here is (a) and (b): the npm registration and the package manifest,
+  entry points and `.tsrx`-excluding build. **Gated behind the P6 cleanup round** — the namespace
+  is owned, so the name cannot be taken, and there is no value in publishing a package an outside
+  consumer could not yet use. LT-259, LT-260 and LT-261 inherit that gate.
 
 - [ ] LT-257: Template emission — **the target-emitter interface, with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
   **Skill:** le-truc-dev
@@ -277,47 +216,9 @@ emission and the CMS persona with it. LT-258 makes this checkable rather than re
   **Check:** JavaScript disabled, a Craft-rendered page shows content-bearing folded markup from
   a compiler-emitted partial; enabling JavaScript corrects nothing that was already right.
 
-- [ ] LT-262: AEM/HTL integration spike — ahead of pioneer 3, not during it.
-  **Skill:** architect
-  **Context:** ADR 0034 s3 and its Bad consequence: AEM is a build-**integration** problem, not
-  an emit problem. Component dialogs, the authoring model and clientlibs are undesigned, and the
-  HTL emitter is the smallest part of it. Pioneer 3 is a client engagement, which is the wrong
-  place to discover the shape.
-  **Deliverable:** a spike answering how a compiler-emitted HTL partial reaches an AEM component,
-  how clientlibs consume the generated client module and CSS, what the dialog/authoring model
-  demands of the server-args surface, and what HTL's escaping contract requires that Twig's did
-  not; the verdict written as tasks or as a recorded limitation. **Not release-gating for 3.0**,
-  but scheduled well before pioneer 3 commits.
-  **Check:** the spike either produces the HTL target's task list or records, with reasons, that
-  AEM needs something the current artifact set cannot give it.
-
 ---
 
-- [ ] LT-265: Document, version and export the front-end contract. **Not release-gating; do it while LT-254 is shaping the package.**
-  **Skill:** le-truc-dev + tech-writer
-  **Context:** [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md), amended
-  2026-09-19. The front-end boundary this repo built for two surfaces is already minimal and
-  already the one an arbitrary front end would use — a front end is
-  `source → { component, diagnostics, routingSignals }`, handed to `compileFromIR`, and
-  `frontend/tsx/index.ts` and `frontend/tsrx/index.ts` are the *same shell* over it. Its only
-  defect is that it is internal, unversioned, undocumented and unexported. **This task is
-  documentation and versioning — not a plugin API**: no registry, no lifecycle hooks, no
-  discovery mechanism. Those would be a guess at an interface that already has two real
-  implementations telling us its shape.
-  **Deliverable:** the IR's shape and the three front-end outputs documented where an
-  implementer will read them; the [ADR 0028](adr/0028-tiered-error-surfacing.md) diagnostic
-  tiers and the meaning of a routing signal documented as part of the contract (this is the
-  refusal channel a third-party front end needs to fail honestly rather than emit a silently
-  wrong component); `compileFromIR` and the IR types exported from `@zeix/le-truc-compiler`
-  under a stated stability policy. Record in the docs that **component-model connectors
-  (React/Vue/Solid) are third-party by name** — the engineering risk of tracking a target
-  framework's minor versions transfers with ownership, the reputational risk does not.
-  **Depends on LT-254** (what "exported from the package" means).
-  **Check:** a scratch front end outside the repo — even a trivial one over a toy syntax —
-  compiles a component end-to-end using only the published exports and the written contract,
-  and its refusal path produces a real diagnostic.
-
-- [ ] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React.
+- [ ] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React. **Scheduled early — the iteration after the current one, not this one (owner, 2026-09-19): it depends on nothing and blocks nothing, which is exactly why it needs a date rather than a priority.**
   **Skill:** le-truc-dev
   **Context:** [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md), amended
   2026-09-19. The project's thesis is that a JSON payload, JS-ified templates and a framework
@@ -338,25 +239,6 @@ emission and the CMS persona with it. LT-258 makes this checkable rather than re
   **Check:** the numbers are reproducible from a script in `scripts/`, and the finding is
   recorded whichever way it comes out. **A result that does not favour Le Truc is the valuable
   outcome, not a reason to re-run the study.**
-
-- [ ] LT-267: Make the build's file IO runtime-neutral — Node, Bun and Deno.
-  **Skill:** docs-server-dev
-  **Context:** the LT-239 follow-up (2026-09-19). A published compiler should need *a* JS
-  runtime, not Bun specifically, and should emit standard `.ts` and `.css` that any bundler
-  consumes — the emitted files are the interface, so no bundler abstraction is wanted or
-  planned. Good news from the survey: **`server/compiler/` contains no Bun-specific API at
-  all**, and `scripts/sim-portability-check.ts` already proves the realm serializes
-  byte-identically on Bun, Node and Deno. The coupling is entirely in the build orchestration —
-  `Bun.Glob`, `Bun.file`, `Bun.write`, `Bun.spawn` and `import.meta.dir` across
-  `server/effects/` (`static-assets.ts`, `examples.ts`, `css.ts`, `build-effect.ts`,
-  `page-render.ts`, `simulate.ts`, `tsrx.ts`, `llms-full-manifest.ts`) plus `scripts/`.
-  **Deliverable:** a thin file-IO and process-spawn layer those effects call, with a Bun
-  implementation and at least one other, so the published package's own build path is not
-  Bun-only. **Coordinate with LT-255**, which is already touching exactly these globs — doing
-  both at once is cheaper than sequencing them, and LT-255 should not harden a Bun-shaped glob
-  API on its way through.
-  **Check:** the corpus compiles and the emitted `.ts`/`.css` are byte-identical under Bun and
-  under at least one other runtime.
 
 ## P2 — Internationalization follow-ups (ADR 0030)
 
@@ -1653,6 +1535,49 @@ and this note is redundant; if it has not, do the manual diff.
 ---
 
 ## P7 — Backlog (not scheduled)
+
+**[2026-09-19, owner: explicit 3.0 non-goals parked here.]** Everything the framework-goal
+sessions and their follow-ups deferred now sits in this band rather than floating as an
+unstated intention. From P1: **LT-262** (the AEM/HTL spike — pioneer 3 is not a release gate;
+ADR 0034 s6 names pioneers 1 and 2) and **LT-264** (the `@zeix/le-truc-simulation` split —
+ADR 0035 s4 defers it to a later 3.x, once the seam has a consumer). Already here and
+unchanged in status: **LT-214**, **LT-268**, **LT-269**, **LT-270** (the ADR 0033 styling
+package — note that LT-268 is gated only on wanting it, not on ADR 0033's acceptance).
+Also non-goals for 3.0, recorded in their ADRs rather than as tasks: stage 2 of style
+composition (ADR 0033 s10, ROADMAP), the declarative shadow-root spelling (ADR 0033 s3),
+the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishing the
+`.tsrx` front end (ADR 0034 s1, gated on `@tsrx/core` 1.0).
+
+- [ ] LT-262: AEM/HTL integration spike — ahead of pioneer 3, not during it.
+  **Skill:** architect
+  **Context:** ADR 0034 s3 and its Bad consequence: AEM is a build-**integration** problem, not
+  an emit problem. Component dialogs, the authoring model and clientlibs are undesigned, and the
+  HTL emitter is the smallest part of it. Pioneer 3 is a client engagement, which is the wrong
+  place to discover the shape.
+  **Deliverable:** a spike answering how a compiler-emitted HTL partial reaches an AEM component,
+  how clientlibs consume the generated client module and CSS, what the dialog/authoring model
+  demands of the server-args surface, and what HTL's escaping contract requires that Twig's did
+  not; the verdict written as tasks or as a recorded limitation. **Not release-gating for 3.0**,
+  but scheduled well before pioneer 3 commits.
+  **Check:** the spike either produces the HTL target's task list or records, with reasons, that
+  AEM needs something the current artifact set cannot give it.
+
+- [ ] LT-264: Split `@zeix/le-truc-simulation` out of the compiler package. **Not a v3.0 deliverable — a later 3.x, once the seam has a consumer.**
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s4.
+  With LT-263's seam in place the substrate can ship as its own package, so activation is
+  installation: present or absent, no configuration flag, no dynamic import, no degradation path
+  threaded through the compiler. Deliberately **not** scheduled for 3.0 — a third npm name, release
+  process and changelog on a release already gated on two external projects (ADR 0034 s6), against a
+  saving of ~50 KB of JavaScript over the optional peer dependency, since jsdom is the weight and an
+  opted-out consumer never installs it either way.
+  **Deliverable:** the package, an exact-range peer on `@zeix/le-truc-compiler`, and a CI matrix — the
+  substrate executes *generated client modules*, so the two-phase load/render contract, the `define()`
+  recording, the children-first compose ordering key and the emission shape all cross the boundary and
+  the pair is in permanent version lockstep. **jsdom must be a regular `dependency` of the new package,
+  not a devDependency** — a devDependency is not installed for consumers.
+  **Check:** a consumer project installs the compiler alone and builds green with Simulated components
+  routed Static; adding the substrate package alone re-enables the tier with no config change.
 
 - [ ] LT-078: Implement conditional branch tree-shaking for `@try`/`@pending`/`@catch` (CHECKLIST §9).
   **Skill:** le-truc-dev
