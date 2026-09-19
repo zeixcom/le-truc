@@ -70,3 +70,18 @@ Le Truc 3.0 follows Cause & Effect 2.0: the deprecated 2.5 re-exports are remove
 The backlog item proper is **style composition with TSRX parity**: the pattern TSRX authors know — scoped style blocks composed with style variables, consumed as `class={theme.dark}` — translated through Le Truc's vocabulary. `class={theme.dark}` resolves to `my-element .dark` in light DOM or `:host(.dark)` under a shadow root, never upstream's hash classes (`tsrx-1a2b3c4d dark`). That means CSS is **generated** from composed variables and scoped style blocks rather than copied verbatim — a real machinery step for the compiler, and the reason this is not v3 work: `.tsx` is v3's primary authored surface and has no such construct, so v3 carries no parity debt. Until it lands, styles emit verbatim, CSS custom properties are the composition mechanism, and the tag-name convention is documentation, not a diagnostic.
 
 **Trigger:** TSRX reaching 1.0 — or a corpus need that genuinely requires composition earlier. At that point this entry converts to accepted work, ADR 0033 graduates to Accepted, and the selector-prefix warning (the enforcement half of the ADR) lands with it.
+
+**[Amended 2026-09-19, owner — the gate narrowed; ADR 0033 sub-designs 7–10.]** Two of the
+three things parked here turned out not to depend on this trigger at all. The compiler has
+never parsed the authored stylesheet — `css.ts` only dedents — and once it does, via the
+`lightningcss` swap the reflection already wanted (**LT-268**, deliberately *not* gated on
+this entry), three separate wants become small: **dead-rule detection** folded into LT-214,
+the **typed custom-property seam** (**LT-269**, gated instead on a real consumer, since
+`bindStyle` has none in the corpus), and — the correction to this section's own premise —
+**stage 1 of style composition** (**LT-270**). `.tsx` lacking the construct is true of
+*standalone* blocks only; assigned blocks (`const theme = <style>{css`…`}</style>`) and
+`class={theme.dark}` are ordinary TSX, and the anti-drift property that makes composition
+worth wanting lives entirely there — a class name absent from the sheet becomes a compile
+error, with emission still verbatim and output byte-identical. What genuinely still waits on
+this trigger is **stage 2**: `apply={theme}`, merged sheets, and selectors regenerated into
+`my-element .dark` / `:host(.dark)` — the CSS-generation step this section describes.

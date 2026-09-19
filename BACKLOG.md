@@ -1688,3 +1688,79 @@ and this note is redundant; if it has not, do the manual diff.
   callout update from "documentation-only guarantee" to the warning.
   **Acceptance:** a fixture with an unprefixed top-level selector warns with the
   ruled copy; the corpus stays at warning baseline 0; `check:tsrx`/`typecheck` green.
+  **Scope change 2026-09-19 (ADR 0033 sub-designs 7–8, owner):** this task now carries
+  **two** checks, and its prerequisite is named. The prefix warning above is the
+  *spelling* half. The second is **dead-rule detection**: a top-level rule under the
+  component's own tag that matches **zero** elements of the rendered template — a typo,
+  a renamed class, a rule left stale by a markup refactor, which the prefix rule cannot
+  see. `matchesSelector`/`countForSelector` (`server/compiler/analysis/selectors.ts`)
+  already answer it and are already load-bearing for LT-118's branch-root collision
+  check. Same channel and tier (compiler, **tier 2 Contained**) for the same reason:
+  light-DOM markup is not closed, so the check must **exempt** any subtree holding a
+  compose node or `dangerouslyBindInnerHTML`, exempt `::slotted` and reaches into
+  composed children, and respect LT-124's deliberate widening of class matching for
+  page-authored enhancement. An over-eager version is worse than none.
+  **Depends on LT-268** (the stylesheet must be parsed before either check is more than
+  a regex). **Coordinate with LT-245**: if the `css-select` + `parse5` spike lands, the
+  dead-rule check gets cheaper, so do not hand-roll a CSS matcher for it first.
+  **Acceptance (added):** a fixture whose stylesheet names a class no element carries
+  warns; a fixture with a compose site or `dangerouslyBindInnerHTML` in the matched
+  subtree does **not** warn; corpus baseline stays 0 for both checks.
+
+- [ ] LT-268: Parse the authored stylesheet in the compiler — the `lightningcss` swap for `css.ts` (ADR 0033 sub-design 7). **NOT gated on ADR 0033's acceptance**: it is a library swap the reflection already wanted, and it is the prerequisite three parked items share.
+  **Skill:** le-truc-dev (Tech Writer owns the message copy)
+  **Context:** `server/compiler/css.ts` is 38 lines that dedent and emit verbatim — the
+  compiler holds **no model of the CSS at all**, which is why ADR 0033 sub-design 5 could
+  only ever be specified as a spelling lint. `lightningcss` is **already a devDependency
+  and already the build's CSS effect** (`server/effects/css.ts`, `server/SERVER.md`), and
+  `COMPILER_REFLECTION.md`'s library table already proposes it here (nesting downlevel and
+  minification come along). Alternative to evaluate: `css-tree`'s `lexer.matchProperty`,
+  where per-declaration value-grammar diagnostics are wanted rather than a whole-sheet
+  parse failure. **Spec-grammar validation of authored CSS — unknown property, invalid
+  unit, malformed value — rides this swap and gets no task of its own.** Channel:
+  compiler; **tier 1 Prevented** (ADR 0028 s1) for a parse or grammar error — the sheet is
+  the compiler's own input and a malformed one has no correct emission.
+  **Unblocks:** LT-214 (both checks), LT-269, LT-270.
+  **Check:** emitted CSS stays **byte-identical** for all 22 corpus components — this
+  swap adds a model, it does not change output; a fixture with an invalid unit fails the
+  build with the ruled copy; M25 browser-purity review of the dependency, as LT-245 does
+  for its candidates.
+
+- [ ] LT-269: Typed custom-property seam — `@property` registration derived from the signal's type (ADR 0033 sub-design 9). **GATED on a real consumer**: `bindStyle`/`setStyle` appears **nowhere** in the corpus or the docs components today, so this must follow a use, not precede one.
+  **Skill:** le-truc-dev (Tech Writer owns the message copy)
+  **Context:** `bindStyle` (`src/bindings.ts`) takes `string`, so every value crossing from
+  a signal into CSS is stringly-typed at exactly the point where both sides are known at
+  compile time — `infer-type.ts` has the signal's value type and the stylesheet is in the
+  same file. Where a signal drives a custom property, check the two agree and emit
+  `@property --x { syntax: '<number>'; inherits: false; initial-value: … }`, which hands
+  enforcement to the browser too (invalid-at-computed-value-time instead of a silently
+  dead declaration) and brings interpolation and animation along. **The hard part is the
+  syntax, not the plumbing:** `inferType` returns only `string`/`number`/`boolean`/
+  `unknown`, and `<length>` vs `<number>` is precisely the distinction CSS makes and
+  TypeScript does not — so infer the syntax from the **CSS side**, where the property is
+  consumed (`width: var(--w)` implies `<length>`), reusing LT-268's parse rather than
+  inventing author-facing branded types. Channel: compiler; **tier 2 Contained** for the
+  TS↔CSS disagreement, with the emitted registration carrying the runtime half.
+  **Depends on LT-268.** **Check:** a fixture whose numeric signal drives a `<length>`
+  property warns; the emitted `@property` block round-trips through the equivalence audit.
+
+- [ ] LT-270: Typed style handle — stage 1 of style composition, unblocked from TSRX 1.0 (ADR 0033 sub-design 10).
+  **Skill:** le-truc-dev
+  **Context:** ADR 0033 sub-design 6 parked the whole composition package on TSRX 1.0
+  because `.tsx` "has no such construct". That holds for **standalone** blocks only — a
+  `<style>` in a children list with raw CSS as template syntax, which JSX cannot spell and
+  which Le Truc wants least anyway (one tag-scoped sheet per component leaves
+  sibling-scoping no role). **Assigned blocks** (`const theme = <style>{css`…`}</style>`)
+  and `class={theme.dark}` are ordinary TSX, and that is where the anti-drift property
+  lives: the class map is minted from the sheet the compiler parsed, so `theme.dark`
+  cannot name a class the sheet does not define — a typo becomes a compile error instead
+  of a silently dead class. **Stage 1 is the whole benefit with none of the machinery:**
+  `theme.dark` lowers to the literal `"dark"`, emission stays verbatim, output stays
+  byte-identical, no hashing and no selector rewriting. The one real surface change is
+  accepting a `<style>` in **setup** position — today the sheet must be the root
+  fragment's second child — and `.tsrx` must accept the same spelling or the two front
+  ends drift (ADR 0032 s6). **Stage 2 (`apply={theme}`, several sheets merged, selectors
+  regenerated into `my-element .dark` / `:host(.dark)`) stays backlogged on the original
+  terms** — that is where sub-design 6's "CSS must be generated" cost actually sits.
+  **Depends on LT-268.** **Check:** a fixture naming a class absent from its own sheet
+  fails the build; corpus output byte-identical; both front ends accept the same spelling.
