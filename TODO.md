@@ -20,6 +20,6 @@ framing, whose three cross-cutting consequences are now all resolved rather than
 **The next iteration is opened from BACKLOG P1**, which is release-gating: LT-263 first, since
 everything in the distribution story depends on it and its absence fails silently.
 
-**Next free task ID: LT-265.**
+**Next free task ID: LT-268.**
 
 ---

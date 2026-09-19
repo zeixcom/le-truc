@@ -70,6 +70,35 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
   **Changelog note:** nothing integrator-visible yet — decisions and scheduling only. At release
   the user-facing facts are that the Simulated tier is an SSG capability and that jsdom is an
   optional peer dependency.
+  **Unplanned follow-up in the same session — the pluggability brainstorm (owner, 2026-09-19).**
+  The owner asked whether input format, simulation, bundler and output format could all be
+  pluggable. Outcome, recorded in the [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)
+  amendment and four tickets:
+  - **Bundler: no interface at all.** The emitted `.ts`/`.css` *are* the interface. What is
+    wanted is runtime neutrality (Node/Bun/Deno), and the survey found `server/compiler/` already
+    free of Bun APIs — the coupling is entirely in `server/effects/`. **LT-267.**
+  - **Output format: the interface is the 3.0 commitment, the target set is not.** LT-257 is
+    rescoped from "the Twig emitter" to "the target-emitter interface, Twig first", decided
+    *before* the first emitter rather than extracted from it afterwards; its check now requires a
+    second trivial target so the claim is tested. This was the only item with a deadline.
+  - **Input: the interface already exists** — `source → { component, diagnostics, routingSignals }`
+    into `compileFromIR`, with both front ends the same shell over it. Front ends are cheap
+    (3,731 lines for two, against 16,751 of shared machinery). Its defect is that it is internal,
+    unversioned, undocumented and unexported: **LT-265**, documentation and versioning only, not a
+    plugin API. Component-model connectors (React/Vue/Solid) are **third-party by name**.
+  - **The size bet is unmeasured.** Owner ruling: everything a framework does is representable
+    (subtree variance as inert `<template>` tags, non-rendering state as a component-local
+    attribute payload), and the combinatorial case costs a framework the same n templates, so the
+    ceiling is **economic, not expressive** — and it becomes the acceptance criterion for any
+    future connector. **LT-266** measures it. M19 was reworded accordingly: a serialized payload
+    is avoided by default, component-local authored config via `asJSON` is the allowed form, and
+    what is forbidden is an automatically synthesized hydration blob.
+  - **A foreign-runtime "Mounted" tier is parked, not adopted.** It is a fourth tier that changes
+    distribution (a foreign runtime in the consumer's bundle), not a reuse of the refusal channel.
+    Useful as a migration ramp and a measurement baseline; the worst case as a permanent state,
+    since the consumer pays for every framework at once. The owner's note that this configuration
+    is *common* in corporate settings is recorded in the ADR as the strongest form of the motive:
+    the value is compiling several surfaces away to one runtime, not adding support for each.
   **Not done by this session (sandbox):** the `adr-keeper` index row for ADR 0035.
   `.claude/skills/adr-keeper/references/adr-index.md` is hardlinked to the write-denied
   `.agents/skills/…` path, so the row must be added by the user.

@@ -184,15 +184,22 @@ emission and the CMS persona with it. LT-258 makes this checkable rather than re
   **Check:** `npm install` without the optional peer, then a corpus build: green, with the two
   Simulated components routed Static and named in the census with the new reason.
 
-- [ ] LT-257: Template emission — the Twig target ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
+- [ ] LT-257: Template emission — **the target-emitter interface, with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
   **Skill:** le-truc-dev
   **Context:** ADR 0034 s3. For a CMS, a folded HTML partial and a template are the same
   artifact: a Craft page's props are *content* — arbitrary title text, an entry list — so
   pre-folding per prop signature is combinatorially dead. What folding can do is resolve
   everything prop-independent and leave the props as **holes**, which is what a template is.
+  **Scope change (owner, 2026-09-19, LT-239 follow-up; ADR 0034 s3 amendment, [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) amendment):
+  the deliverable is **a target-emitter interface with Twig as its first implementation**, not a
+  Twig emitter. Only the interface is a 3.0 commitment; the set of targets is not. This is a
+  scope sentence now and a rewrite later — HTL is already known to be coming, and a second target
+  hard-coded against a shape never designed to have two is the expensive outcome. **Decide the
+  interface before writing the first emitter**, not by extracting it from Twig afterwards.
   **Deliverable:** a third emission target beside the client module and the CSS — the
   component's markup with every prop-independent expression folded and every server arg emitted
-  as a Twig variable. Locale dimensionality is locale × component (ADR 0030 commits 3.0 to
+  as a variable in the target's language. The interface carries at minimum: hole emission, the
+  per-target escaping contract, and the unescapable-position refusal. Locale dimensionality is locale × component (ADR 0030 commits 3.0 to
   per-locale pages), so the emitter emits one partial per component per locale **or** one
   partial with a locale hole — the choice is the emitter's and must be recorded in the ADR
   either way.
@@ -205,7 +212,9 @@ emission and the CMS persona with it. LT-258 makes this checkable rather than re
   diagnostic code: Tech Writer owns the final copy.
   **Depends on** LT-254 (where it ships), LT-258 (the invariant it relies on).
   **Check:** every corpus component emits a Twig partial; the escaping corpus passes, including
-  the negative cases; a Twig render of the partial with the same args produces output equivalent
+  the negative cases; **the interface is exercised by a second, deliberately trivial target**
+  (even a debug/JSON dump) so "a second target needs no reshaping of the first" is tested rather
+  than asserted; a Twig render of the partial with the same args produces output equivalent
   to the SSG fold (the same equivalence discipline [ADR 0029](adr/0029-tiered-server-evaluation.md) s7 applies to the two evaluation mechanisms).
 
 - [ ] LT-258: Make the partial-readiness invariant a compiler check.
@@ -283,6 +292,71 @@ emission and the CMS persona with it. LT-258 makes this checkable rather than re
   AEM needs something the current artifact set cannot give it.
 
 ---
+
+- [ ] LT-265: Document, version and export the front-end contract. **Not release-gating; do it while LT-254 is shaping the package.**
+  **Skill:** le-truc-dev + tech-writer
+  **Context:** [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md), amended
+  2026-09-19. The front-end boundary this repo built for two surfaces is already minimal and
+  already the one an arbitrary front end would use — a front end is
+  `source → { component, diagnostics, routingSignals }`, handed to `compileFromIR`, and
+  `frontend/tsx/index.ts` and `frontend/tsrx/index.ts` are the *same shell* over it. Its only
+  defect is that it is internal, unversioned, undocumented and unexported. **This task is
+  documentation and versioning — not a plugin API**: no registry, no lifecycle hooks, no
+  discovery mechanism. Those would be a guess at an interface that already has two real
+  implementations telling us its shape.
+  **Deliverable:** the IR's shape and the three front-end outputs documented where an
+  implementer will read them; the [ADR 0028](adr/0028-tiered-error-surfacing.md) diagnostic
+  tiers and the meaning of a routing signal documented as part of the contract (this is the
+  refusal channel a third-party front end needs to fail honestly rather than emit a silently
+  wrong component); `compileFromIR` and the IR types exported from `@zeix/le-truc-compiler`
+  under a stated stability policy. Record in the docs that **component-model connectors
+  (React/Vue/Solid) are third-party by name** — the engineering risk of tracking a target
+  framework's minor versions transfers with ownership, the reputational risk does not.
+  **Depends on LT-254** (what "exported from the package" means).
+  **Check:** a scratch front end outside the repo — even a trivial one over a toy syntax —
+  compiles a component end-to-end using only the published exports and the written contract,
+  and its refusal path produces a real diagnostic.
+
+- [ ] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React.
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md), amended
+  2026-09-19. The project's thesis is that a JSON payload, JS-ified templates and a framework
+  runtime are replaceable by HTML plus a small runtime that harvests initial state from the DOM
+  and applies fine-grained effects. Everything a framework does is *representable* — subtree
+  variance as inert `<template>` tags, non-rendering state as a component-local attribute
+  payload — so the ceiling is not expressive but **economic**, and it has never been measured.
+  The shared JSX shape makes the comparison cheap, which is the reason to do it now rather than
+  after anyone proposes a connector.
+  **Deliverable:** a small set of representative components (at minimum: one static-ish, one
+  with a few shape variants, one with client-only derived state needing a config payload)
+  implemented both ways, with **emitted bytes + runtime, over the wire, compressed** reported
+  per component per side. Report the payload separately from the runtime, since the runtime
+  amortizes across a page and the payload does not.
+  **Why it matters beyond curiosity:** this number is the acceptance criterion for any future
+  front-end connector — a connector whose output approaches what it replaces has failed the bet
+  while technically working — and it is a REQUIREMENTS §1 claim that is currently unevidenced.
+  **Check:** the numbers are reproducible from a script in `scripts/`, and the finding is
+  recorded whichever way it comes out. **A result that does not favour Le Truc is the valuable
+  outcome, not a reason to re-run the study.**
+
+- [ ] LT-267: Make the build's file IO runtime-neutral — Node, Bun and Deno.
+  **Skill:** docs-server-dev
+  **Context:** the LT-239 follow-up (2026-09-19). A published compiler should need *a* JS
+  runtime, not Bun specifically, and should emit standard `.ts` and `.css` that any bundler
+  consumes — the emitted files are the interface, so no bundler abstraction is wanted or
+  planned. Good news from the survey: **`server/compiler/` contains no Bun-specific API at
+  all**, and `scripts/sim-portability-check.ts` already proves the realm serializes
+  byte-identically on Bun, Node and Deno. The coupling is entirely in the build orchestration —
+  `Bun.Glob`, `Bun.file`, `Bun.write`, `Bun.spawn` and `import.meta.dir` across
+  `server/effects/` (`static-assets.ts`, `examples.ts`, `css.ts`, `build-effect.ts`,
+  `page-render.ts`, `simulate.ts`, `tsrx.ts`, `llms-full-manifest.ts`) plus `scripts/`.
+  **Deliverable:** a thin file-IO and process-spawn layer those effects call, with a Bun
+  implementation and at least one other, so the published package's own build path is not
+  Bun-only. **Coordinate with LT-255**, which is already touching exactly these globs — doing
+  both at once is cheaper than sequencing them, and LT-255 should not harden a Bun-shaped glob
+  API on its way through.
+  **Check:** the corpus compiles and the emitted `.ts`/`.css` are byte-identical under Bun and
+  under at least one other runtime.
 
 ## P2 — Internationalization follow-ups (ADR 0030)
 
