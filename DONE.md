@@ -11,6 +11,62 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-272: Propagate the `LTC###` rename into the skill files; state the two-prefix rule where the namespace lives — reviewed ✓
+  **Skill:** tech-writer
+  **Changed:** `.agents/skills/le-truc/references/errors.md` (every renamed code re-prefixed;
+  the two-prefix rule stated in the tier cell, the compiler-diagnostics intro and the Retired
+  idioms paragraph, with the ledger pointer; new rows `LTC047`–`LTC050` — Template structure /
+  Source shape and imports), `.agents/skills/le-truc-dev/references/non-obvious.md` (`LTC012`),
+  `.agents/skills/tech-writer/workflows/error-message-lifecycle.md` (`LTC031`; new *Which
+  prefix a new code gets* section; a prefix step in the new-error event),
+  `server/compiler/diagnostics.ts` (module doc names the compiler surface-neutrally and states
+  the two-prefix rule — the LT-271 review finding, discharged).
+  **Two copy fixes rode along** (message strings only, no logic): `LTC049`'s "not
+  FactoryContext member(s)" → "not FactoryContext vocabulary"; `LTC011`'s message/JSDoc name
+  both `.tsrx` and `.tsx` imports (`imports.ts` has resolved both since LT-202). No test
+  asserts either old fragment.
+  **Review (Architect, 2026-09-19): approved** — verified independently of the handoff: no
+  `TSRX0NN` outside the six kept codes anywhere under `.agents/`; all 48 codes named in
+  errors.md exist in the `DiagnosticCode` union (`TSRX022`/`023` covered by the 021–024
+  range); the repo-wide sweep found only kept codes in every live tracked file; the
+  `diagnostics.ts` diff is module doc + the two message strings and nothing else; affected
+  tests re-run green (54/0); `check:links` 504/504 re-run.
+  **Riders fixed in review:** `NOTES.md`'s parity-pin note re-pointed `TSRX008` → `LTC008`;
+  the local `docs-src/api/_media/0028` mirror (untracked, hand-copied, no build mechanism —
+  pre-existing staleness class, not this task's residue) refreshed to the amended ADR.
+
+- [x] LT-271: Prune TSRX-only vocabulary from the compiler — **reviewed ✓** (closure waited on LT-272)
+  **Skill:** le-truc-dev (Tech Writer owns the copy of anything renamed)
+  **Canonical disposition:** `server/compiler/VOCABULARY_LEDGER.md`; the two-prefix rule is
+  stated where the namespace lives (`diagnostics.ts` module doc), in ADR 0028 sub-design 1 as
+  amended, and in the tech-writer workflow.
+  **The ruling (owner, during the task): diagnostic codes split by ownership.** The 44
+  surface-neutral codes became `LTC0NN` with numbers preserved (ADR 0028's rows and the
+  spent-number ledger re-pointed mechanically); `TSRX018`/`TSRX020`/`TSRX021`–`TSRX024` keep
+  `TSRX` because they diagnose `.tsrx` grammar with no `.tsx` counterpart (the React idioms
+  are `.tsx`'s correct spellings) and none is in the published package. Codes become public
+  API at first publish, so the vocabulary was settled before P6 by design.
+  **Renamed:** `check:tsrx`→`check:corpus`; `scripts/build-tsrx.ts`→`scripts/build-corpus.ts`
+  (+ the never-existing `build:corpus` script entry); `server/effects/tsrx.ts`→`compile.ts`
+  (`compileTsrxCorpus`→`compileCorpus`, `tsrxEffect`→`compileEffect`);
+  `server/generated/tsrx/`→`server/generated/components/`. The 21 machinery modules now type
+  on a machinery-owned `AstNode` (`server/compiler/ast-node.ts`) instead of `@tsrx/core`'s
+  `TsrxNode` — also deleting the `.tsx` front end's duplicate declaration and narrowing the
+  pin's entire footprint to `core.ts`+`core-shim.d.ts` (values and types). Kept with reasons
+  in the ledger: `build:tsrx:browser` and its bundle, `core.ts`/`core-shim.d.ts`, the
+  `@tsrx/core` pin, `scripts/codemod-react-jsx.ts`.
+  **Review rulings:** the split-by-ownership call ratified as implemented; NOTES item 3 — the
+  ADR 0028 amendment stands, the table is not rewritten (ADRs amend, not rewrite). Review
+  findings: the two-prefix rule missing from `diagnostics.ts` → **LT-272**; the forward queue
+  (TODO/BACKLOG) unswept — fixed in review; DONE/CHANGELOG/COMPILER_*/ADR bodies correctly
+  left as records.
+  **Check results (release-relevant):** corpus output byte-identical in 67/69 artifacts (the
+  two diffs are the renamed vocabulary itself — provenance header, one registry origin
+  string); census 20 folded / 2 simulated / 0 static and warning baseline 0 unmoved; the 13
+  failing tests on the sandbox tree pre-existing (verified identical pre-sweep).
+  **Changelog note:** the diagnostic-code namespace (`LTC###` default, six `TSRX###`
+  exceptions) is release-notes material at first publish — the ledger is the source.
+
 - [x] LT-263: The simulation seam — build report out of `sim/`, patch table split by audience, realm interface DOM-free — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** new `server/compiler/census.ts` (`Census`/`CensusEntry`/`CensusKind`/

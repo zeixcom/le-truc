@@ -20,7 +20,7 @@ cancelling realm timers alone will not make full runs exit 0.
 At session start the working tree carried an uncommitted one-line edit to async-el.tsx
 (`export function AsyncEl({}: {})` → `AsyncEl()`), not made by this session. The parity suite
 compiles that fixture from disk, and the parameterless form violates the single-destructured-
-args contract → TSRX008 → the four-arm nil-arm render pin failed. Restored to the HEAD form
+args contract → LTC008 → the four-arm nil-arm render pin failed. Restored to the HEAD form
 via inverse edit (no `git checkout`); suite green after. Whoever made that edit: a `.tsx`
 component function must take a single destructured args object, even when empty — `{}: {}` is
 the contract-conformant spelling.
