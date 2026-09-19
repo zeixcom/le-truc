@@ -112,11 +112,11 @@ describe('attribute sites (LT-122)', () => {
 			`<other-el disabled={disabled}></other-el><span>y</span>`,
 			`{ disabled = false }: { disabled?: boolean }`,
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX012')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC012')).toBe(true)
 	})
 })
 
-describe('TSRX039 — one value, two channels (LT-122)', () => {
+describe('LTC039 — one value, two channels (LT-122)', () => {
 	test('a Parser-exposed prop also rendered from its own arg warns', () => {
 		const { diagnostics } = compileComponent(
 			`import { asString } from '@zeix/le-truc'
@@ -131,7 +131,7 @@ export function C({ label }: { label: string })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX039')
+		const hit = diagnostics.find(d => d.code === 'LTC039')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('warning')
 		expect(hit?.message).toContain('asString')
@@ -143,7 +143,7 @@ export function C({ label }: { label: string })
 			`expose({ label: el.textContent ?? '' })`,
 			`<span>{label}</span>`,
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX039')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC039')).toBe(false)
 	})
 })
 
@@ -160,7 +160,7 @@ export function C({ label }: { label: string })
  * the arg renders the site, the site seeds the prop at connect, so
  * the ARG is that prop's server truth. Without this, a component that
  * follows the data account (harvest, don't duplicate onto a host
- * attribute) pays for it with TSRX034 — every `hidden` thunk reading
+ * attribute) pays for it with LTC034 — every `hidden` thunk reading
  * the harvested prop silently drops out of the initial HTML, which is
  * exactly the pre-JS flash the fold exists to prevent.
  */
@@ -192,9 +192,9 @@ describe('host-derived folds over a harvested prop (LT-118)', () => {
 		expect(component?.serverCode).toContain('(() => Boolean((zero)))()')
 	})
 
-	test('no TSRX034 — the initial `hidden` is server-renderable', () => {
+	test('no LTC034 — the initial `hidden` is server-renderable', () => {
 		const { diagnostics } = compileZero(`zero: zeroSpan?.textContent ?? ''`)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 	})
 
 	test('the client still binds the thunk', () => {
@@ -223,10 +223,8 @@ describe('host-derived folds over a harvested prop (LT-118)', () => {
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
-		const hit = component?.entry.routingSignals.find(
-			s => s.origin === 'TSRX034',
-		)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
+		const hit = component?.entry.routingSignals.find(s => s.origin === 'LTC034')
 		expect(hit?.detail).toContain('`hidden`')
 		expect(component?.entry.tier).toBe('simulated')
 		expect(component?.serverCode).not.toContain('Boolean(other)')
@@ -245,7 +243,7 @@ describe('host-derived folds over a harvested prop (LT-118)', () => {
  *
  * The client half already worked (a ref is in scope in the factory). The
  * server half did not: a ref name is not server-known, so the whole thunk
- * fell out of the initial HTML (TSRX034) — a real pre-JS flash, and the
+ * fell out of the initial HTML (LTC034) — a real pre-JS flash, and the
  * pressure that made an earlier draft expose `zero` as a public prop just
  * to have something server-known to read. But the server DOES decide the
  * answer: it renders `.zero` exactly when the `@if (zero)` it sits in is
@@ -277,7 +275,7 @@ import { asNumber } from '@zeix/le-truc'`,
 			`() => Boolean(zeroSpan)`,
 		)
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(component?.serverCode).toContain('Boolean(((zero)))')
 	})
 
@@ -303,7 +301,7 @@ import { asNumber } from '@zeix/le-truc'`,
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(component?.serverCode).toContain(
 			'Boolean(((zero))) && (value) === 0',
 		)
@@ -322,7 +320,7 @@ import { asNumber } from '@zeix/le-truc'`,
 			`@if (zero) { <i>y</i> } @else { <span class="zero">n</span> }`,
 			`() => Boolean(zeroSpan)`,
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(component?.serverCode).toContain('Boolean((!(zero)))')
 	})
 
@@ -331,7 +329,7 @@ import { asNumber } from '@zeix/le-truc'`,
 			`<span class="zero">y</span>`,
 			`() => Boolean(zeroSpan)`,
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(component?.serverCode).toContain('Boolean((true))')
 	})
 
@@ -342,7 +340,7 @@ import { asNumber } from '@zeix/le-truc'`,
 			`<span class="elsewhere">y</span>`,
 			`() => Boolean(zeroSpan)`,
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(component?.serverCode).toContain('Boolean((false))')
 	})
 })

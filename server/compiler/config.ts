@@ -5,7 +5,7 @@
  * resolution moved to `imports.ts`, LT-044.)
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import { asArray, identifierName, isNode } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import type { ConfigIR, ExtractContext } from './ir'
@@ -18,7 +18,7 @@ import type { ConfigIR, ExtractContext } from './ir'
  */
 export const readConfig = (
 	ctx: ExtractContext,
-	stmt: TsrxNode,
+	stmt: AstNode,
 ): ConfigIR | null => {
 	const decl =
 		stmt.type === 'ExportNamedDeclaration' && isNode(stmt.declaration)

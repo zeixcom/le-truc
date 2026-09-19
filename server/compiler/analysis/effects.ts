@@ -7,7 +7,7 @@
  * async boundaries, loops, and composed elements.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from '../ast-node'
 import {
 	hostPropOf,
 	isDirtyFlagControlAttr,
@@ -70,7 +70,7 @@ import {
 
 /**
  * Native form-control tags a form-associated component's `disabled`/
- * `checked` omission (TSRX034) escalates to an ERROR for (LT-062/LT-085):
+ * `checked` omission (LTC034) escalates to an ERROR for (LT-062/LT-085):
  * a real submittable control, not the host itself. Compiler-side duplicate
  * of `validate-lowered.ts`'s `NAMED_FORM_CONTROL_TAGS` (LT-059) — front-end/
  * analysis-layer duplication is the established pattern here (same
@@ -90,7 +90,7 @@ const SUBMITTABLE_FORM_CONTROL_TAGS: ReadonlySet<string> = new Set([
  * spelling is still recognised so a stale source reports the managed-prop
  * message instead of a downstream type error.
  */
-const managedPropRead = (expr: TsrxNode): string | null => {
+const managedPropRead = (expr: AstNode): string | null => {
 	if (nodeType(expr) === 'Literal' && typeof expr.value === 'string') {
 		const prop = String(expr.value)
 		return MANAGED_TEXT_PROPS.has(prop) ? prop : null
@@ -148,8 +148,8 @@ type EffectsContext = {
 		selector: string,
 		cardinality: 'one' | 'many' | 'maybe',
 	) => string
-	collectAmbient: (node: TsrxNode | null | undefined) => void
-	badFreeNames: (node: TsrxNode) => string[]
+	collectAmbient: (node: AstNode | null | undefined) => void
+	badFreeNames: (node: AstNode) => string[]
 	/**
 	 * Registry entries by TAG (LT-158). `composeRegistry` is keyed by source
 	 * path because composition resolves through import specifiers; a
@@ -163,7 +163,7 @@ type EffectsContext = {
 	// below — host props with a known server truth, and refs whose
 	// presence the server decides — computed once per component rather
 	// than per attribute. Both must match what `emit-server.ts` will
-	// actually fold, or TSRX034 warns about an attribute that does render.
+	// actually fold, or LTC034 warns about an attribute that does render.
 	derivableHostProps: ReturnType<typeof foldableHostProps>
 	derivableRefGuards: ReturnType<typeof foldableRefGuards>
 	// LT-173 step 6: the render-scope names a host-derived fold may leave in
@@ -195,7 +195,7 @@ const loopFor = (fx: EffectsContext, node: TemplateNode): ForIR | null =>
  * suppression. Limb (a) (stubbed-API reads) is deliberately not
  * recorded — see {@link SuppressedSite}.
  */
-const suppresses = (fx: EffectsContext, node: TsrxNode): boolean => {
+const suppresses = (fx: EffectsContext, node: AstNode): boolean => {
 	const resolution = resolutionOf(node, fx.component.serverKnown)
 	return resolution.by === 'none' && resolution.limb === 'not-a-server-fact'
 }
@@ -329,7 +329,7 @@ const refOf = (el: ElementNode): { kind: 'ref'; name: string } | undefined =>
  * attributes' `key=text` pairs, sorted. Two roots with equal signatures
  * are interchangeable for union addressing (one query, one effect set,
  * whichever branch rendered); differing signatures — a construct key
- * present on only some roots (the old TSRX031 case) or the same key with
+ * present on only some roots (the old LTC031 case) or the same key with
  * different text (the old "constructs differ" case) — route to per-branch
  * addressing instead. Same key/text extraction those diagnostics compared.
  */
@@ -370,7 +370,7 @@ const directLazyIdentifier = (el: ElementNode): string | null => {
 			child.lazy &&
 			nodeType(child.expr) === 'Identifier'
 		)
-			return String((child.expr as TsrxNode).name)
+			return String((child.expr as AstNode).name)
 	}
 	return null
 }
@@ -389,18 +389,18 @@ const directLazyCatchRef = (
 		const expr = child.expr
 		if (
 			nodeType(expr) === 'Identifier' &&
-			String((expr as TsrxNode).name) === catchParam
+			String((expr as AstNode).name) === catchParam
 		)
 			return 'error'
-		if (nodeType(expr) === 'MemberExpression' && !(expr as TsrxNode).computed) {
-			const obj = (expr as TsrxNode).object
-			const prop = (expr as TsrxNode).property
+		if (nodeType(expr) === 'MemberExpression' && !(expr as AstNode).computed) {
+			const obj = (expr as AstNode).object
+			const prop = (expr as AstNode).property
 			if (
 				nodeType(obj) === 'Identifier' &&
-				String((obj as TsrxNode).name) === catchParam &&
+				String((obj as AstNode).name) === catchParam &&
 				nodeType(prop) === 'Identifier'
 			)
-				return `error.${String((prop as TsrxNode).name)}`
+				return `error.${String((prop as AstNode).name)}`
 		}
 	}
 	return null
@@ -449,7 +449,7 @@ const checkPassEntries = (
 	fx: EffectsContext,
 	entries: readonly PassEntryIR[],
 	tag: string,
-	node: TsrxNode,
+	node: AstNode,
 ): void => {
 	const { entryByTag, source, diagnostics } = fx
 	const entry = entryByTag.get(tag)
@@ -620,7 +620,7 @@ const emitConstructEffects = (
 					),
 				)
 			}
-			// CHECKLIST §5 / TSRX034: omission is not neutral for these
+			// CHECKLIST §5 / LTC034: omission is not neutral for these
 			// attribute names — `hidden` omitted means visible, `disabled`
 			// omitted means enabled AND submittable, same for `checked`/
 			// `selected`/`aria-expanded`. A host-prop mirror, a derived
@@ -661,7 +661,7 @@ const emitConstructEffects = (
 			) {
 				const resolution = resolutionOf(attr.thunk, component.serverKnown)
 				routingSignals.push({
-					origin: 'TSRX034',
+					origin: 'LTC034',
 					detail: `\`${attr.name}\` on <${el.tag}> has no server-renderable value`,
 					...lineFields(source, attr.thunk.start),
 					resolution,
@@ -841,7 +841,7 @@ const handleOptionalBranch = (
 	// `readonly` so `handlePerBranchIfEffects` can pass a branch out of its
 	// `readonly` tuple without a cast (LT-118).
 	body: readonly TemplateNode[],
-	atNode: { node: TsrxNode },
+	atNode: { node: AstNode },
 	label: string,
 	resolve: (el: ElementNode) => { selector: string; unique: boolean } = (
 		el: ElementNode,
@@ -980,7 +980,7 @@ const handleOptionalIfEffects = (fx: EffectsContext, node: IfNode): void =>
  * root's selector must not match the OTHER branch's markup
  * (`resolveExclusiveSelectorIn`) — two existence guards over one
  * selector would both be true on the one rendered element. Roots
- * indistinguishable by statics keep a TSRX007 error naming the fix,
+ * indistinguishable by statics keep a LTC007 error naming the fix,
  * rather than a plausible-but-wrong double binding.
  */
 const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
@@ -1084,7 +1084,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	// LT-118 routing: identical construct signatures on every branch
 	// root AND an element root in every branch → union addressing (one
 	// query, one effect set, unchanged emission); any difference — a
-	// construct on only some roots (the old TSRX031 hazard: union
+	// construct on only some roots (the old LTC031 hazard: union
 	// emission reads the FIRST constructed root only, so a sibling
 	// branch's construct was silently dropped, or worse, bound onto the
 	// wrong branch's element) or the same key with different text (the
@@ -1425,7 +1425,7 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 	)
 	if (passAttrs.length === 0 && !refAttr) return
 	if (!refAttr) {
-		// An ambiguous `first()` already explained itself (TSRX027,
+		// An ambiguous `first()` already explained itself (LTC027,
 		// `analysis/compose-refs.ts`) — don't pile a second error on
 		// the same mistake.
 		if (ambiguousComposeNodes.has(node)) return
@@ -1647,7 +1647,7 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
  * instance's host element (`composeHostAttrs`) — duplicated across
  * sites it is two elements sharing an id in the same rendered
  * document, invalid HTML, and id-based addressing resolves to at most
- * one of them. Same rationale as TSRX035's across-arms rule,
+ * one of them. Same rationale as LTC035's across-arms rule,
  * generalized to compose sites. Shares nothing with effect planning —
  * a standalone validation (LT-226), like the front end's post-lowering
  * tail.

@@ -1,15 +1,15 @@
 /**
  * Authored `'@zeix/le-truc'` imports (ADR 0024 sub-design 16, LT-082):
  *
- * - TSRX036 — a real package export used in authored code without an
+ * - LTC036 — a real package export used in authored code without an
  *   import; scope-aware, so a local shadowing an export name never fires.
- * - TSRX037 — a FactoryContext member named inside an authored import
+ * - LTC037 — a FactoryContext member named inside an authored import
  *   line: not a package export, never re-emitted into generated output.
  * - Placement — the authored line re-emits into the client module while
  *   the synthesized `@zeix/le-truc` line drops the names it provides; the
  *   server module's runtime-harness import keeps providing
  *   harness-covered names (signal constructors, parsers, `defineMethod`).
- * - TSRX014 — an authored `'@zeix/le-truc'` import no name uses anywhere.
+ * - LTC014 — an authored `'@zeix/le-truc'` import no name uses anywhere.
  */
 import { describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../compiler/frontend/tsrx'
@@ -31,11 +31,11 @@ ${setup}
 }`
 
 describe('sub-design 16 — real-export imports', () => {
-	test('a real export used without import fires TSRX036 with the name', () => {
+	test('a real export used without import fires LTC036 with the name', () => {
 		const { diagnostics } = compile(
 			fixture('', '\tconst count = createCell(0)'),
 		)
-		const d = diagnostics.filter(x => x.code === 'TSRX036')
+		const d = diagnostics.filter(x => x.code === 'LTC036')
 		expect(d).toHaveLength(1)
 		expect(d[0]?.message).toContain('createCell')
 	})
@@ -60,7 +60,7 @@ describe('sub-design 16 — real-export imports', () => {
 		expect(diagnostics).toEqual([])
 	})
 
-	test('a FactoryContext name inside the import line fires TSRX037 and is never re-emitted', () => {
+	test('a FactoryContext name inside the import line fires LTC037 and is never re-emitted', () => {
 		const source = fixture(
 			"import { expose } from '@zeix/le-truc'",
 			'\tconst count = createCell(0)',
@@ -68,7 +68,7 @@ describe('sub-design 16 — real-export imports', () => {
 		// compileComponent nulls the component on the 037 error — inspect
 		// the IR's import arrays directly (they are built before the gate).
 		const { component, diagnostics } = compileSource(source, 'c.tsrx')
-		const d = diagnostics.filter(x => x.code === 'TSRX037')
+		const d = diagnostics.filter(x => x.code === 'LTC037')
 		expect(d).toHaveLength(1)
 		expect(d[0]?.message).toContain('expose')
 		expect(
@@ -87,13 +87,13 @@ describe('sub-design 16 — real-export imports', () => {
 		const { diagnostics } = compile(
 			fixture('', "\tconst match = createCell('x')\n\tconst count = match"),
 		)
-		const d = diagnostics.filter(x => x.code === 'TSRX036')
+		const d = diagnostics.filter(x => x.code === 'LTC036')
 		expect(d).toHaveLength(1)
 		expect(d[0]?.message).toContain('createCell')
 		expect(d[0]?.message).not.toContain('match')
 	})
 
-	test('an authored import no name uses anywhere fires TSRX014', () => {
+	test('an authored import no name uses anywhere fires LTC014', () => {
 		const { diagnostics } = compile(
 			fixture(
 				"import { createCell, createTask } from '@zeix/le-truc'",
@@ -101,8 +101,8 @@ describe('sub-design 16 — real-export imports', () => {
 			),
 		)
 		// The statement as a whole has a used name (createCell), so no
-		// statement-level TSRX014 — but drop createCell and it fires.
-		expect(diagnostics.filter(x => x.code === 'TSRX014')).toEqual([])
+		// statement-level LTC014 — but drop createCell and it fires.
+		expect(diagnostics.filter(x => x.code === 'LTC014')).toEqual([])
 		const unused = compile(
 			fixture(
 				"import { createTask } from '@zeix/le-truc'",
@@ -111,7 +111,7 @@ describe('sub-design 16 — real-export imports', () => {
 		)
 		expect(
 			unused.diagnostics.some(
-				x => x.code === 'TSRX014' && x.message.includes('createTask'),
+				x => x.code === 'LTC014' && x.message.includes('createTask'),
 			),
 		).toBe(true)
 	})

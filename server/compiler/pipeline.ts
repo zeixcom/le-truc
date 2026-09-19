@@ -30,7 +30,7 @@ export type CompiledComponent = {
 	/** Dedented verbatim CSS artifact. */
 	css: string
 	/**
-	 * Client-module span table (LT-011, `check:tsrx`): maps tsc diagnostics
+	 * Client-module span table (LT-011, `check:corpus`): maps tsc diagnostics
 	 * over `clientCode` back onto the authored source.
 	 */
 	clientSpans: SourceSpan[]
@@ -85,12 +85,12 @@ export const compileFromIR = (
 	/**
 	 * The per-component half of the tier decision (ADR 0029, LT-165). Both
 	 * halves of the analysis contribute: setup extraction sees the
-	 * `TSRX013`/`TSRX043` shapes, the client analysis sees `TSRX004`/
-	 * `TSRX034`.
+	 * `LTC013`/`LTC043` shapes, the client analysis sees `LTC004`/
+	 * `LTC034`.
 	 *
 	 * Compose contamination (sub-design 3) is deliberately NOT applied here
 	 * — it is a fixpoint over the whole corpus's compose graph, so it runs
-	 * in the registry-aware second pass (`server/effects/tsrx.ts`) where
+	 * in the registry-aware second pass (`server/effects/compile.ts`) where
 	 * every component's first-pass tier is known. This value is therefore
 	 * the component's tier BEFORE contamination, and can only move
 	 * downward (towards the Simulated tier) from here.

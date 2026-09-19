@@ -125,9 +125,9 @@ describe('lowerChildren — lift applied to template children', () => {
 		expect(diagnostics).toHaveLength(0)
 	})
 
-	test('an untraceable child is TSRX017, not a silent static emit', () => {
+	test('an untraceable child is LTC017, not a silent static emit', () => {
 		const { child, diagnostics } = childOf('{fmt(count)}')
-		expect(diagnostics.map(d => d.code)).toEqual(['TSRX017'])
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC017'])
 		expect(diagnostics[0]?.message).toContain('{() => fmt(count)}')
 		// Not lifted — but the error fails the file, so it never reaches emit.
 		if (child?.kind !== 'expr') throw new Error('expected expr child')
@@ -150,9 +150,9 @@ describe('the retired &{} sigil (LT-052)', () => {
 		expect(diagnostics.map(d => d.code)).toContain('TSRX018')
 	})
 
-	test('a string literal naming a prop is TSRX019, not silent text', () => {
+	test('a string literal naming a prop is LTC019, not silent text', () => {
 		const { diagnostics } = childOf("{'count'}")
-		expect(diagnostics.map(d => d.code)).toEqual(['TSRX019'])
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC019'])
 		expect(diagnostics[0]?.message).toContain('{host.count}')
 	})
 
@@ -182,18 +182,18 @@ describe('lazy destructuring in binding position (LT-052, retired at the 0.2 pin
 	// @tsrx/core 0.2 dropped lazy destructuring from the grammar entirely, so
 	// `&{ … }`/`&[ … ]` no longer parse — the dedicated TSRX020 scan retired
 	// with the LT-210 pin bump and the rejection is the parser's own syntax
-	// error, surfaced as TSRX008. Same tier-1 guarantee, one link earlier.
-	test('&{ … } object pattern is a parse error (TSRX008)', () => {
+	// error, surfaced as LTC008. Same tier-1 guarantee, one link earlier.
+	test('&{ … } object pattern is a parse error (LTC008)', () => {
 		const d = compile('const obj = { a: 1 }\n\t\t\t\tconst &{ a } = obj')
-		expect(d.map(x => x.code)).toContain('TSRX008')
-		expect(d.find(x => x.code === 'TSRX008')?.message).toContain(
+		expect(d.map(x => x.code)).toContain('LTC008')
+		expect(d.find(x => x.code === 'LTC008')?.message).toContain(
 			'Failed to parse',
 		)
 	})
 
-	test('&[ … ] array pattern is a parse error (TSRX008)', () => {
+	test('&[ … ] array pattern is a parse error (LTC008)', () => {
 		const d = compile('const &[ b ] = [1]')
-		expect(d.map(x => x.code)).toContain('TSRX008')
+		expect(d.map(x => x.code)).toContain('LTC008')
 	})
 
 	test('a plain identifier const is untouched', () => {
@@ -205,9 +205,9 @@ describe('lazy destructuring in binding position (LT-052, retired at the 0.2 pin
 	// name → init for rebinding); a destructuring pattern has no single name.
 	// The 0.1.63 parse silently tolerated the shape; the 0.2.3 parse reaches
 	// the subset check and rejects it honestly.
-	test('a plain destructuring const is TSRX005, not silently tolerated', () => {
+	test('a plain destructuring const is LTC005, not silently tolerated', () => {
 		const d = compile('const obj = { a: 1 }\n\t\t\t\tconst { a } = obj')
-		expect(d.map(x => x.code)).toEqual(['TSRX005'])
+		expect(d.map(x => x.code)).toEqual(['LTC005'])
 		expect(d[0]?.message).toContain('milestone-2 subset')
 	})
 })

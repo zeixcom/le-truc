@@ -22,7 +22,7 @@
  * The per-property math is factored into plain setup helper functions
  * (`step`, `isLight`) rather than a `deriveCell` — a `deriveCell` used only
  * inside a `style-map`/`class-map` thunk isn't registered as a harvest site
- * (TSRX004 "signal never rendered"; tracked separately as LT-036), so it
+ * (LTC004 "signal never rendered"; tracked separately as LT-036), so it
  * would need an unused dummy render site. Plain functions sidestep that gap
  * entirely — recompute per key, no caching, but no dummy DOM either.
  *

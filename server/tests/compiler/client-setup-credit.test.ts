@@ -5,7 +5,7 @@
  * site, and is the only route open to a predicate over a composed child's
  * public prop: as a reactive JSX attribute the same predicate cannot be
  * folded by the server, so the attribute is omitted from the served HTML
- * (TSRX034) instead. The credit seeds by initializer reuse, which is sound
+ * (LTC034) instead. The credit seeds by initializer reuse, which is sound
  * here by construction — `clientSetup` exists only in the generated client,
  * so the server rendered nothing for the reused initializer to contradict.
  */
@@ -32,7 +32,7 @@ describe('client-only setup statements credit a signal as rendered', () => {
 import { bindAttribute, createState } from '@zeix/le-truc'`
 
 	test('no error — the signal is consumed, not dead', () => {
-		// Pre-tiering this was the TSRX004 refusal; since LT-165 step 5 the
+		// Pre-tiering this was the LTC004 refusal; since LT-165 step 5 the
 		// code is retired onto tier.ts's RoutingSignalOrigin, so the pin is
 		// the positive: the module compiles with no diagnostic at all.
 		const { component, diagnostics } = compile(source)
@@ -64,7 +64,7 @@ import { bindAttribute, createState } from '@zeix/le-truc'`
 			),
 		)
 		expect(
-			component?.entry.routingSignals.some(s => s.origin === 'TSRX004'),
+			component?.entry.routingSignals.some(s => s.origin === 'LTC004'),
 		).toBe(true)
 		expect(component?.entry.tier).toBe('simulated')
 		expect(component?.clientCode).toContain('createState(false)')

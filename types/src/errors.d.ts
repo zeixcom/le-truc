@@ -109,7 +109,7 @@ declare class InvalidCustomElementError extends TypeError {
  * target.
  *
  * Tier 2 ([ADR 0028](../adr/0028-tiered-error-surfacing.md), which supersedes
- * ADR 0011): `TSRX012` decides the same question at compile time for a
+ * ADR 0011): `LTC012` decides the same question at compile time for a
  * registry-known target, so this is the backstop for hand-authored and
  * foreign custom elements. Validation is eager and the commit is atomic — a
  * failure leaves the target exactly as it was.

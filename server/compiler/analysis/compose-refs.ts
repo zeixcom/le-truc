@@ -36,7 +36,7 @@ import { allComposeNodes, composeStaticAttrs } from './selectors'
  * treatment `component.unmatchedOptionalRefs` gets (LT-123). `ambiguous` are
  * the compose nodes an ambiguous selector matched — already reported here,
  * so `emitComposeEffects` must not ALSO report them as unaddressed `pass`
- * sites (TSRX012): one authoring mistake, one diagnostic, and TSRX027 is
+ * sites (LTC012): one authoring mistake, one diagnostic, and LTC027 is
  * the one that names the fix.
  */
 export const resolveComposeRefs = (
@@ -52,7 +52,7 @@ export const resolveComposeRefs = (
 	const result = { unmatchedOptional, ambiguous }
 	if (component.deferredComposeRefs.length === 0) return result
 	// No registry: this is the discovery pass. Resolving is impossible and
-	// not needed — say nothing rather than reporting a false TSRX026.
+	// not needed — say nothing rather than reporting a false LTC026.
 	if (!composeRegistry) return result
 	const nodes = allComposeNodes(component.root)
 	for (const ref of component.deferredComposeRefs) {
@@ -121,10 +121,10 @@ export const resolveComposeRefs = (
 		// attachment (LT-221 §1.4): the attachment rides the shared IR, so
 		// a second `analyzeClient` over it — a test harness, a future
 		// caller — re-finds it here. Re-attaching would be a duplicate
-		// attr; reporting TSRX041 would be a spurious error on the pass's
+		// attr; reporting LTC041 would be a spurious error on the pass's
 		// own work. Attach once, report once: idempotent re-analysis
 		// attaches nothing and reports nothing. (Two distinct names on one
-		// element remains the TSRX041 above; a repeated const name is
+		// element remains the LTC041 above; a repeated const name is
 		// invalid JS the generated module's own type-check catches.)
 		if (!claimed) target.attrs.push({ kind: 'ref', name: ref.name })
 	}

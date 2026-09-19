@@ -10,7 +10,7 @@
  * authored files (the ADR 0032 s3 dividend — no span remapping needed).
  *
  * This is the standing CI form of the spike's manual `tsconfig.neg.json`
- * probes; `check:tsrx` is the corpus-side analog.
+ * probes; `check:corpus` is the corpus-side analog.
  */
 import { describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { spawnSync } from 'node:child_process'

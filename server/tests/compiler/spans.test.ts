@@ -2,7 +2,7 @@
  * Unit tests for the LT-011 span table (ADR 0023 sub-design 6 amendment,
  * stage 1): `appendWithSpans` records generated-file ↔ source-file offsets
  * for verbatim slices (setup statements, thunks, handlers), and
- * `check:tsrx` uses `fileLineColToOffset`/`fileOffsetToLineCol`/
+ * `check:corpus` uses `fileLineColToOffset`/`fileOffsetToLineCol`/
  * `findSpanForGeneratedOffset` to remap a tsc diagnostic through them.
  */
 import { describe, expect, test } from 'bun:test'

@@ -107,7 +107,7 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX005')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC005')).toBe(false)
 		expect(component).not.toBeNull()
 	})
 
@@ -143,7 +143,7 @@ import { createCell } from '@zeix/le-truc'`
 }
 import { createCell } from '@zeix/le-truc'`
 
-	test('descendant case: no TSRX004, client seeds by initializer reuse', () => {
+	test('descendant case: no LTC004, client seeds by initializer reuse', () => {
 		const { component } = compileComponent(descendant, 'c.tsrx', new Set())
 		expect(component).not.toBeNull()
 		expect(component?.clientCode).toContain('createCell(true)')
@@ -153,7 +153,7 @@ import { createCell } from '@zeix/le-truc'`
 		)
 	})
 
-	test('root case (targets host): no TSRX004 either', () => {
+	test('root case (targets host): no LTC004 either', () => {
 		const { component } = compileComponent(root, 'c.tsrx', new Set())
 		expect(component?.clientCode).toContain("bindClass(host, ['active'])")
 	})
@@ -228,7 +228,7 @@ describe('the class:-prefix spelling is rejected (LT-222)', () => {
 	// `class:token={…}` used to slip through classification: the call form
 	// rendered a literal `class:token` attribute the browser ignores, and the
 	// thunk form emitted a watch that read `.token` off the thunk's result —
-	// a class that could never apply. Both silently wrong; now TSRX006.
+	// a class that could never apply. Both silently wrong; now LTC006.
 
 	test('a reactive class:-prefix attr is rejected on .tsrx', () => {
 		const source = `export function C({}: {})
@@ -248,7 +248,7 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		const errors = diagnostics.filter(d => d.code === 'TSRX006')
+		const errors = diagnostics.filter(d => d.code === 'LTC006')
 		expect(errors).toHaveLength(1)
 		expect(errors[0]?.message).toContain('class={() => ({')
 		expect(component?.clientCode ?? '').not.toContain('has-error')
@@ -268,7 +268,7 @@ import { createCell } from '@zeix/le-truc'`
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const errors = diagnostics.filter(d => d.code === 'TSRX006')
+		const errors = diagnostics.filter(d => d.code === 'LTC006')
 		expect(errors).toHaveLength(1)
 		expect(errors[0]?.message).toContain('class={() => ({')
 	})
@@ -292,7 +292,7 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsx',
 			new Set(),
 		)
-		const errors = diagnostics.filter(d => d.code === 'TSRX006')
+		const errors = diagnostics.filter(d => d.code === 'LTC006')
 		expect(errors).toHaveLength(1)
 		expect(component?.clientCode ?? '').not.toContain('has-error')
 	})

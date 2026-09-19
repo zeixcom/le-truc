@@ -5,11 +5,11 @@
  * (`compiler.ts`) and its lowering/classification/type-inference siblings.
  *
  * This module is a pure leaf: it holds no `@tsrx/core` VALUE import (only
- * the `TsrxNode` type, erased at compile time) — `compiler.ts` remains the
+ * the `AstNode` type, erased at compile time) — `compiler.ts` remains the
  * ONE module importing `@tsrx/core` for parsing (ADR 0023 sub-design 2).
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 
 /* === Vocabulary constants === */
 
@@ -40,7 +40,7 @@ export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
  * Attribute names whose ABSENCE carries meaning (CHECKLIST §5): `hidden`
  * omitted means visible, `disabled` omitted means enabled AND submittable,
  * likewise `checked`/`selected`/`aria-expanded`. A reactive binding on one of
- * these that the server can't render an initial value for (TSRX034) doesn't
+ * these that the server can't render an initial value for (LTC034) doesn't
  * degrade neutrally like an ordinary omitted attribute (`title`, `class`) —
  * it renders the more dangerous of the two states regardless of what the
  * author intended.
@@ -156,7 +156,7 @@ export const FACTORY_CONTEXT_MEMBERS: ReadonlySet<string> = new Set<string>(
  * this set). Hand-maintained against the barrel — the duplication
  * precedent is `MANAGED_FORM_MEMBERS`; a barrel change that forgets this
  * list fails the corpus check, since a newly exported name used in
- * authored code would fire TSRX036 until listed here.
+ * authored code would fire LTC036 until listed here.
  */
 export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
 	// @zeix/cause-effect bridge (index.ts re-exports)
@@ -283,7 +283,7 @@ export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
  * own-property of `Object`, so `component.ts`'s `#initSignals` checks them
  * BEFORE its `prop in this` guard — that ordering, not the throw escaping,
  * is what protects the prototype chain (ADR 0028 sub-design 5). Since the
- * throw is contained (LT-155) the compiler carries the loud half: TSRX028
+ * throw is contained (LT-155) the compiler carries the loud half: LTC028
  * (LT-157a).
  */
 export const RESERVED_PROP_NAMES: ReadonlySet<string> = new Set<string>([
@@ -301,7 +301,7 @@ export const RESERVED_PROP_NAMES: ReadonlySet<string> = new Set<string>([
 /**
  * FactoryContext helpers that push an effect descriptor into the ambient
  * collector (`src/internal.ts`'s `pushDescriptor`). Calling one after the
- * factory has returned throws `NoActiveCollectorError`; TSRX013 (LT-157d)
+ * factory has returned throws `NoActiveCollectorError`; LTC013 (LT-157d)
  * decides the statically visible half of that.
  */
 export const COLLECTOR_HELPERS: ReadonlySet<string> = new Set<string>([
@@ -325,7 +325,7 @@ export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
  * any of these shadows the managed member — `expose()` already throws
  * `InvalidPropertyNameError` for it at RUNTIME (component.ts's
  * `reservedMembers` check), but only once the component actually connects;
- * TSRX010's family (LT-058) catches it at compile time instead, naming the
+ * LTC010's family (LT-058) catches it at compile time instead, naming the
  * exact source line and the extension it collides with. `value`/`checked`
  * are the deliberate exceptions the component MUST expose — never included
  * here; the variant-specific reset-baseline prop (`defaultValue`/
@@ -350,7 +350,7 @@ export const MANAGED_FORM_MEMBERS: ReadonlySet<string> = new Set<string>([
  * the generated client factory's context object — never in the server render
  * function's scope, even though `component.setup`'s plain `const` statements
  * are emitted verbatim into both (ADR 0023 sub-design 12). A setup const that
- * calls one of these directly used to be the `TSRX013` error; under tiering
+ * calls one of these directly used to be the `LTC013` error; under tiering
  * (LT-165 step 5, ADR 0029 s5) it is a routing signal, and the tier-aware
  * server emit drops the statement from the render function rather than
  * emitting a call that cannot resolve.
@@ -439,13 +439,13 @@ export const JS_GLOBALS: ReadonlySet<string> = new Set<string>([
 
 /* === AST predicates === */
 
-export const isNode = (value: unknown): value is TsrxNode =>
+export const isNode = (value: unknown): value is AstNode =>
 	!!value &&
 	typeof value === 'object' &&
-	typeof (value as TsrxNode).type === 'string'
+	typeof (value as AstNode).type === 'string'
 
-export const asArray = (value: unknown): TsrxNode[] =>
-	Array.isArray(value) ? (value.filter(isNode) as TsrxNode[]) : []
+export const asArray = (value: unknown): AstNode[] =>
+	Array.isArray(value) ? (value.filter(isNode) as AstNode[]) : []
 
 /** The `.type` discriminator of an AST node, or null for non-nodes. */
 export const nodeType = (node: unknown): string | null =>
@@ -458,7 +458,7 @@ export const nodeType = (node: unknown): string | null =>
  * `bindAttribute`) and the server emitter (render from the parser-exposed
  * prop's root attribute).
  */
-export const hostPropOf = (thunk: TsrxNode): string | null => {
+export const hostPropOf = (thunk: AstNode): string | null => {
 	const body = thunk.body
 	if (!isNode(body) || body.type !== 'MemberExpression' || body.computed)
 		return null
@@ -479,19 +479,18 @@ export const hostPropOf = (thunk: TsrxNode): string | null => {
  * initial class and the client was emitted `bindClass(el, [])`, never
  * toggling it, with no diagnostic.
  */
-export const objectKeys = (object: TsrxNode): string[] => {
+export const objectKeys = (object: AstNode): string[] => {
 	const keys: string[] = []
 	if (nodeType(object) !== 'ObjectExpression') return keys
 	for (const prop of asArray(object.properties)) {
 		if (prop.type !== 'Property') continue
 		const key = prop.key
-		if (nodeType(key) === 'Identifier')
-			keys.push(String((key as TsrxNode).name))
+		if (nodeType(key) === 'Identifier') keys.push(String((key as AstNode).name))
 		else if (
 			nodeType(key) === 'Literal' &&
-			typeof (key as TsrxNode).value === 'string'
+			typeof (key as AstNode).value === 'string'
 		)
-			keys.push(String((key as TsrxNode).value))
+			keys.push(String((key as AstNode).value))
 	}
 	return keys
 }
@@ -517,7 +516,7 @@ export const jsxName = (node: unknown): string | null =>
  * params, local declarators, property keys, and non-computed member
  * properties never count as reads.
  */
-export const freeIdentifiers = (node: TsrxNode): Set<string> => {
+export const freeIdentifiers = (node: AstNode): Set<string> => {
 	const free = new Set<string>()
 	const visit = (current: unknown, bound: ReadonlySet<string>) => {
 		if (Array.isArray(current)) {
@@ -736,13 +735,13 @@ export const collapseJsxText = (raw: string): string => {
 /** Source text of a node, by its `[start, end)` offsets. */
 export const text = (
 	source: string,
-	node: TsrxNode | null | undefined,
+	node: AstNode | null | undefined,
 ): string =>
 	node && typeof node.start === 'number' && typeof node.end === 'number'
 		? source.slice(node.start, node.end)
 		: ''
 
-export const attrName = (attr: TsrxNode): string => {
+export const attrName = (attr: AstNode): string => {
 	// `truc:pass` parses as a JSXNamespacedName (namespace + name), which
 	// `jsxName` deliberately does not flatten — it is also used for element
 	// tags, where a namespace would mean something else. Host-owned

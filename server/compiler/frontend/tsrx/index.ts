@@ -30,7 +30,7 @@ export const compileComponent = (
 	/**
 	 * Composed (PascalCase) elements' targets, keyed by resolved source
 	 * path (ADR 0023 sub-design 10) — built corpus-wide from every
-	 * component's own registry entry (`server/effects/tsrx.ts`). Undefined
+	 * component's own registry entry (`server/effects/compile.ts`). Undefined
 	 * during registry-discovery passes (composition isn't validated yet, the
 	 * same tolerance an empty `registry` gets for raw-tag `pass()` dispatch).
 	 */

@@ -1,7 +1,7 @@
 /**
  * Stage-1 server-simulation driver (ADR 0027 sub-design 7, LT-154).
  *
- * Runs the WHOLE `.tsrx` corpus (`server/generated/tsrx/` scope only — page
+ * Runs the WHOLE `.tsrx` corpus (`server/generated/components/` scope only — page
  * chrome is out of stage 1, LT-152) through the driver in `server/compiler/sim/`:
  * one shared realm, each component's client module loaded exactly once
  * (`realm.load()`'s own assertion enforces that — see `realm.ts`), every
@@ -57,19 +57,19 @@ import {
 	createSimulationRealm,
 	type JsdomSimulationRealm,
 } from '../../compiler/sim/realm'
-import { compileTsrxCorpus } from '../../effects/tsrx'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { compileCorpus } from '../../effects/compile'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 // LT-165 step 8: the args table and the tag→render-fn mapping moved to
 // `corpus-args.ts` so the equivalence audit (equivalence-audit.test.ts)
 // drives BOTH mechanisms from the identical fixture inputs this file uses —
 // one copy, no drift. Data is unchanged.
 import { CORPUS_ARGS as ARGS, renderName } from './corpus-args'
-import { loadTsrxCorpus } from './corpus-fixture'
+import { loadCorpus } from './corpus-fixture'
 
 const generated = createGeneratedDir('sim-driver')
 afterAll(() => generated.cleanup())
 
-const compiled = await compileTsrxCorpus(await loadTsrxCorpus(), generated.path)
+const compiled = await compileCorpus(await loadCorpus(), generated.path)
 const registry = JSON.parse(
 	await Bun.file(`${generated.path}/registry.json`).text(),
 ) as ComponentRegistry
@@ -98,7 +98,7 @@ for (const info of compiled) {
 	await realm.load(() => import(pathToFileURL(info.clientModulePath).href))
 }
 
-/** One compiled corpus entry, as `compileTsrxCorpus` reported it. */
+/** One compiled corpus entry, as `compileCorpus` reported it. */
 type CompiledInfo = (typeof compiled)[number]
 
 /** Run the component's server render fn over this file's shared ARGS. */

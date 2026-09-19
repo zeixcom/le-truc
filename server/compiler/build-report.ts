@@ -24,7 +24,7 @@
  * build cannot affect is **classified**, never silenced: it stays listed with
  * the reason it cannot affect the serialized markup, and a new —
  * unclassified — entry fails the gate. Together with the compile baseline
- * (`check:tsrx`), this is one of the two wave-4 regression numbers: a
+ * (`check:corpus`), this is one of the two wave-4 regression numbers: a
  * migration that renders wrong shows up here as a new entry.
  *
  * ## Why the classifications are a parameter

@@ -21,8 +21,8 @@
  * predicates/vocabulary constants in `ast-utils.ts`.
  */
 
-import type { TsrxNode } from '@tsrx/core'
 import { assembleComponentIR, readModuleDecls } from '../../assemble-ir'
+import type { AstNode } from '../../ast-node'
 import { asArray, identifierName, isNode, text } from '../../ast-utils'
 import { getStyleElementStylesheet, parseModule } from '../../core'
 import { type CompileDiagnostic, diagnostic } from '../../diagnostics'
@@ -79,7 +79,7 @@ const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
  *
  * The `await in setup` entry went the same way (LT-222): no pin upgrade
  * helps, because the component function must not be `async` at all
- * (TSRX008) — `await` belongs in an event handler or a client-only setup
+ * (LTC008) — `await` belongs in an event handler or a client-only setup
  * statement, which the live rejection already says.
  */
 const newerGrammarHint = (source: string, error: unknown): string => {
@@ -129,7 +129,7 @@ const producesJsx = (body: unknown): boolean => {
  * surface's CORRECT spellings (ADR 0032 sub-design 2), so the TSRX021–024
  * family stays in force for `.tsrx` sources only.
  */
-const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
+const reportReactJsxNearMisses = (ctx: ExtractContext, ast: AstNode): void => {
 	const visit = (node: unknown): void => {
 		if (Array.isArray(node)) {
 			for (const child of node) visit(child)
@@ -145,7 +145,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
 				diagnostic.reactLogicalJsx(
 					ctx.source,
 					node.start,
-					text(ctx.source, node.left as TsrxNode),
+					text(ctx.source, node.left as AstNode),
 					text(ctx.source, node),
 				),
 			)
@@ -157,7 +157,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
 				diagnostic.reactTernaryJsx(
 					ctx.source,
 					node.start,
-					text(ctx.source, node.test as TsrxNode),
+					text(ctx.source, node.test as AstNode),
 					text(ctx.source, node),
 				),
 			)
@@ -179,7 +179,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
 						ctx.source,
 						node.start,
 						identifierName(asArray(callback.params)[0]) ?? 'item',
-						text(ctx.source, node.callee.object as TsrxNode),
+						text(ctx.source, node.callee.object as AstNode),
 						text(ctx.source, node),
 					),
 				)
@@ -197,7 +197,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: TsrxNode): void => {
 /**
  * Parse and extract the single exported component from a `.tsrx` source.
  * Returns `{ component: null }` with diagnostics when the source does not
- * lower cleanly; milestone gates (e.g. TSRX001) surface as warnings.
+ * lower cleanly; milestone gates (e.g. LTC001) surface as warnings.
  */
 export const compileSource = (
 	source: string,
@@ -214,9 +214,9 @@ export const compileSource = (
 		parserFactoryOf: () => '',
 		parserFallbackRefsOf: () => EMPTY_NAMES,
 		composeImports: new Map<string, string>(),
-		setupInits: new Map<string, TsrxNode>(),
+		setupInits: new Map<string, AstNode>(),
 	}
-	let ast: TsrxNode
+	let ast: AstNode
 	try {
 		ast = parseModule(source, filename)
 	} catch (e) {
@@ -244,7 +244,7 @@ export const compileSource = (
 	])
 
 	// Locate the exported component function (body = JSXCodeBlock).
-	let fn: TsrxNode | null = null
+	let fn: AstNode | null = null
 	let fnStmtStart = 0
 	for (const stmt of asArray(ast.body)) {
 		const decl =
@@ -285,7 +285,7 @@ export const compileSource = (
 		}
 	}
 
-	// An `async` component function (TSRX008, LT-157d): every statement
+	// An `async` component function (LTC008, LT-157d): every statement
 	// after the first `await` runs in a later microtask, when the ambient
 	// effect collector is gone (ADR 0018) — so `expose()`/`watch()`/`on()`
 	// there throw `NoActiveCollectorError`, contained and silent since
@@ -319,7 +319,7 @@ export const compileSource = (
 
 	// Setup statements: the `@{ }` container's statements minus the trailing
 	// output expression, classified by the shared extraction loop.
-	const codeBlock = fn.body as TsrxNode
+	const codeBlock = fn.body as AstNode
 	const name = identifierName(fn.id) ?? 'Component'
 	const extraction = extractSetup(
 		ctx,
@@ -331,7 +331,7 @@ export const compileSource = (
 
 	// Output: a single root element, or a fragment of
 	// [root element, <style>?].
-	const render = codeBlock.render as TsrxNode | undefined
+	const render = codeBlock.render as AstNode | undefined
 	// A bare single root element is a legal output (LT-123): the
 	// fragment exists to carry a SECOND node beside the root (the
 	// `<style>` block), so a component with no styles of its own has
@@ -353,14 +353,14 @@ export const compileSource = (
 	}
 	seedExtractionContext(ctx, { paramNames: params.paramNames, extraction })
 
-	const fors = new Map<TsrxNode, ForIR>()
+	const fors = new Map<AstNode, ForIR>()
 	{
 		// A bare root element has no fragment to walk children of
 		// — lower it as the single-node list the fragment path
 		// would have produced.
 		const lowered: TemplateNode[] = bareRoot
 			? [lowerElement(ctx, bareRoot, extraction.signalByName, fors)]
-			: lowerChildren(ctx, render as TsrxNode, extraction.signalByName, fors)
+			: lowerChildren(ctx, render as AstNode, extraction.signalByName, fors)
 		const resolved = resolveTemplateOutput(
 			ctx,
 			filename,

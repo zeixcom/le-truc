@@ -8,7 +8,7 @@
  * - the generated `i18n` module (`writeI18nModule`) — the record type, the
  *   compiled-in source catalogs and per-locale overrides, and the
  *   `i18nRecord(tag, lang?)` constructor every render call boundary uses.
- *   Generated output, gitignored like the rest of `server/generated/tsrx/`.
+ *   Generated output, gitignored like the rest of `server/generated/components/`.
  * - staleness detection — a source-string edit is a `.tsrx` edit that
  *   silently invalidates that key's translations, so an override alone is
  *   not enough: `i18n/manifest.json` (committed, maintained by
@@ -296,7 +296,7 @@ const i18nModuleText = (collection: I18nCollection): string => {
  * fold in the committed \`i18n/<locale>.json\` files. The staleness
  * manifest lives in the committed \`i18n/manifest.json\` — regenerate this
  * module with the TSRX compile (\`bun run build:docs\`, \`bun run
- * scripts/build-tsrx.ts\`, or \`bun test server\`'s corpus fixture).
+ * scripts/build-corpus.ts\`, or \`bun test server\`'s corpus fixture).
  */
 
 export interface I18n {

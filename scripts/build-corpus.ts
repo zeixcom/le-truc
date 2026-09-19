@@ -4,7 +4,7 @@
  * Standalone TSRX corpus compile — the tsrx effect's pipeline without the
  * build system. Runs the same two-pass compile over every `.tsrx` source
  * under `examples/` and writes the generated clients (plus server modules,
- * CSS, and the registry) to `server/generated/tsrx/`.
+ * CSS, and the registry) to `server/generated/components/`.
  *
  * `build:cem` runs this before `cem analyze`: the Custom Element Manifest
  * reads the corpus entries from the generated clients (ADR 0023, LT-006),
@@ -14,7 +14,7 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Glob } from 'bun'
-import { compileTsrxCorpus } from '../server/effects/tsrx'
+import { compileCorpus } from '../server/effects/compile'
 
 const ROOT = resolve(import.meta.dir, '..')
 
@@ -27,7 +27,7 @@ for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {
 		path,
 		filename: rel,
 		content: readFileSync(path, 'utf8'),
-		hash: '', // unused by compileTsrxCorpus
+		hash: '', // unused by compileCorpus
 		lastModified: stat.mtimeMs,
 		size: stat.size,
 		exists: true,
@@ -37,4 +37,4 @@ if (files.length === 0) {
 	console.error('❌ No .tsrx sources found under examples/')
 	process.exit(1)
 }
-await compileTsrxCorpus(files)
+await compileCorpus(files)

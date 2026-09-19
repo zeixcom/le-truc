@@ -10,7 +10,7 @@
  * component's root template.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from '../../ast-node'
 import {
 	asArray,
 	CONTEXT_NAMES,
@@ -59,9 +59,9 @@ export const TSRX_SURFACE_WORDING: SurfaceWording = {
  */
 export const lowerIf = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'if' }) | null => {
 	const test = node.test
 	if (!isNode(test)) return null
@@ -101,9 +101,9 @@ export const lowerIf = (
  */
 export const lowerSwitch = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'switch' }) | null => {
 	const discriminant = node.discriminant
 	if (!isNode(discriminant)) return null
@@ -121,7 +121,7 @@ export const lowerSwitch = (
 		return null
 	}
 	const cases: Array<{ testText: string | null; children: TemplateNode[] }> = []
-	for (const raw of rawCases as TsrxNode[]) {
+	for (const raw of rawCases as AstNode[]) {
 		const children = lowerBodyStatements(ctx, raw.consequent, signals, fors)
 		if (children.length === 0) {
 			ctx.diagnostics.push(
@@ -159,7 +159,7 @@ const lowerBodyStatements = (
 	ctx: ExtractContext,
 	statements: unknown,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): TemplateNode[] => {
 	const body = Array.isArray(statements) ? statements : []
 	const out: TemplateNode[] = []
@@ -271,9 +271,9 @@ const lowerBodyStatements = (
  */
 export const lowerTry = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'try' }) | null => {
 	const lowerBlock = (block: unknown): TemplateNode[] =>
 		lowerBodyStatements(
@@ -337,7 +337,7 @@ export const lowerTry = (
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
-					(node.handler as TsrxNode).start,
+					(node.handler as AstNode).start,
 					'@catch arm of an async boundary must render exactly one root element',
 				),
 			)
@@ -377,9 +377,9 @@ export const lowerTry = (
  */
 export const lowerChildren = (
 	ctx: ExtractContext,
-	parent: TsrxNode,
+	parent: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): TemplateNode[] =>
 	lowerChildrenSkeleton(
 		ctx,
@@ -466,9 +466,9 @@ export const lowerChildren = (
 
 export const lowerElement = (
 	ctx: ExtractContext,
-	element: TsrxNode,
+	element: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): TemplateNode & { kind: 'element' } =>
 	lowerElementShared(
 		ctx,
@@ -481,10 +481,10 @@ export const lowerElement = (
 
 export const lowerComposeElement = (
 	ctx: ExtractContext,
-	element: TsrxNode,
+	element: AstNode,
 	tag: string,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'compose' }) | null =>
 	lowerComposeElementShared(
 		ctx,
@@ -499,13 +499,13 @@ export const lowerComposeElement = (
 /**
  * Lower a `@for` loop. Server-data iterables lower to `each()`; reactive
  * `createList` iterables to the milestone-3 reconcile lowering; other
- * reactive sources stay gated (TSRX001).
+ * reactive sources stay gated (LTC001).
  */
 export const lowerFor = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'element' }) | null => {
 	const declarations = isNode(node.left) ? asArray(node.left.declarations) : []
 	const itemName =
@@ -543,7 +543,7 @@ export const lowerFor = (
 	}
 	const bodyStmts = isNode(node.body) ? asArray(node.body.body) : []
 	const hoisted: ForIR['hoisted'] = []
-	let outputNode: TsrxNode | null = null
+	let outputNode: AstNode | null = null
 	for (const stmt of bodyStmts) {
 		if (stmt.type === 'VariableDeclaration') {
 			if (stmt.kind !== 'const') {
@@ -615,7 +615,7 @@ export const lowerFor = (
 		keyText: isNode(node.key) ? text(ctx.source, node.key) : null,
 		keyName: isNode(node.key) ? identifierName(node.key) : null,
 		listSignal: null,
-		iterableText: text(ctx.source, node.right as TsrxNode),
+		iterableText: text(ctx.source, node.right as AstNode),
 		iterableName,
 		hoisted,
 		output,
@@ -643,11 +643,11 @@ const validateListBody = (
 	output: TemplateNode & { kind: 'element' },
 	itemName: string,
 ): void => {
-	const offenderNames = (node: TsrxNode): string =>
+	const offenderNames = (node: AstNode): string =>
 		[...dependenciesOf(node)]
 			.filter(name => !ctx.serverKnown.has(name))
 			.join(', ')
-	const notBuildTime = (node: TsrxNode): string => {
+	const notBuildTime = (node: AstNode): string => {
 		const offenders = offenderNames(node)
 		return offenders
 			? `reads ${offenders}, which derive per item or client-side`
@@ -731,11 +731,11 @@ const validateListBody = (
 
 export const lowerListFor = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	itemName: string,
 	listSignal: string,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'element' }) | null => {
 	const indexNode = isNode(node.index) ? node.index : null
 	const indexName = identifierName(indexNode)
@@ -774,7 +774,7 @@ export const lowerListFor = (
 		return null
 	}
 	const bodyStmts = isNode(node.body) ? asArray(node.body.body) : []
-	let outputNode: TsrxNode | null = null
+	let outputNode: AstNode | null = null
 	for (const stmt of bodyStmts) {
 		if (stmt.type === 'JSXElement' && !outputNode) {
 			outputNode = stmt
@@ -812,7 +812,7 @@ export const lowerListFor = (
 		keyText: isNode(node.key) ? text(ctx.source, node.key) : null,
 		keyName,
 		listSignal,
-		iterableText: text(ctx.source, node.right as TsrxNode),
+		iterableText: text(ctx.source, node.right as AstNode),
 		iterableName: listSignal,
 		hoisted: [],
 		output,

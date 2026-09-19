@@ -44,7 +44,7 @@ const subject = (
 describe('tierCensus', () => {
 	test('entries are sorted by tag, whatever order the registry emits them in', () => {
 		const census = tierCensus([
-			subject('form-b', 'simulated', [signal('TSRX034', 'x')]),
+			subject('form-b', 'simulated', [signal('LTC034', 'x')]),
 			subject('basic-a', 'folded'),
 		])
 		expect(census.entries.map(entry => entry.subject)).toEqual([
@@ -69,7 +69,7 @@ describe('tierCensus', () => {
 	test('a routing signal becomes a factual reason: origin, detail, and the line when known', () => {
 		const census = tierCensus([
 			subject('form-b', 'simulated', [
-				signal('TSRX004', 'no harvestable render site'),
+				signal('LTC004', 'no harvestable render site'),
 				signal(
 					'compose-read',
 					'reads composed <basic-a> (folded-tier) at a compose site',
@@ -78,7 +78,7 @@ describe('tierCensus', () => {
 			]),
 		])
 		expect(census.entries[0]?.reasons).toEqual([
-			'TSRX004: no harvestable render site',
+			'LTC004: no harvestable render site',
 			'compose-read: reads composed <basic-a> (folded-tier) at a compose site (line 7)',
 		])
 	})
@@ -94,7 +94,7 @@ describe('formatCensus', () => {
 		subject('basic-a', 'folded'),
 		subject('basic-b', 'folded'),
 		subject('form-c', 'simulated', [
-			signal('TSRX004', 'no harvestable render site'),
+			signal('LTC004', 'no harvestable render site'),
 		]),
 	])
 
@@ -116,19 +116,19 @@ describe('formatCensus', () => {
 	test('an entry with reasons lists them under its subject', () => {
 		const text = formatCensus(census)
 		expect(text).toContain('  form-c: simulated')
-		expect(text).toContain('    - TSRX004: no harvestable render site')
+		expect(text).toContain('    - LTC004: no harvestable render site')
 	})
 
 	test('the format is stable — the census regression story reads this output', () => {
 		expect(formatCensus(census)).toBe(
 			'Tier census — 3 entries: 2 folded, 1 simulated, 0 static\n' +
 				'  form-c: simulated\n' +
-				'    - TSRX004: no harvestable render site',
+				'    - LTC004: no harvestable render site',
 		)
 	})
 
 	test('census lines never carry the warning marker the counted baseline reads', () => {
-		// `check:tsrx` counts console.warn lines that start with ⚠️; the
+		// `check:corpus` counts console.warn lines that start with ⚠️; the
 		// census is not a warning (ADR 0029 sub-design 6) and must never be
 		// countable as one.
 		expect(formatCensus(census)).not.toContain('⚠️')

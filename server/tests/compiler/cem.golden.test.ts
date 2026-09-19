@@ -8,7 +8,7 @@
  *
  * Mechanism: compile the corpus in-process, run `cem analyze` with a shadow
  * config (globs at this run's own gitignored output directory only, never
- * the build pipeline's server/generated/tsrx/ — LT-140), then compare
+ * the build pipeline's server/generated/components/ — LT-140), then compare
  * declarations against the pinned
  * hand-written-derived expectations below — captured from the committed
  * manifest before the globs switched (2026-08-22).
@@ -25,7 +25,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent } from '../../compiler/frontend/tsrx'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const generated = createGeneratedDir('cem-golden')
@@ -42,7 +42,7 @@ const registry = new Set<string>([
 // Every tag asserted below must be listed here. Until LT-140 gave this file
 // its own output directory, form-checkbox was asserted but never compiled —
 // its declaration came from a client another writer had left in the shared
-// server/generated/tsrx/.
+// server/generated/components/.
 const SOURCES = [
 	'examples/basic/counter/basic-counter.tsrx',
 	'examples/module/tabgroup/module-tabgroup.tsrx',

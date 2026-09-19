@@ -22,7 +22,7 @@
  * tracing fails.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import { isNode, nodeType } from './ast-utils'
 
 /**
@@ -74,11 +74,11 @@ export type LiftVerdict =
  * it would make that worse, not better: `<textarea …>{value}</textarea>`
  * (form-textbox) is a native control's INITIAL content, and a
  * live `bindText` over it would fight the dirty-value flag the
- * moment the user typed. Those shapes get TSRX039 instead, which
+ * moment the user typed. Those shapes get LTC039 instead, which
  * names the two channels and asks the author to pick one.
  */
 export const bindsExposedArg = (
-	expr: TsrxNode,
+	expr: AstNode,
 	args: NameSet,
 	exposedProps: NameSet,
 	signals: NameSet,
@@ -101,10 +101,7 @@ export const bindsExposedArg = (
  * args and plain setup consts are neither, so they classify `static` — which
  * is why adding this rule left the existing corpus byte-identical.
  */
-export const classifyChild = (
-	expr: TsrxNode,
-	signals: NameSet,
-): LiftVerdict => {
+export const classifyChild = (expr: AstNode, signals: NameSet): LiftVerdict => {
 	// An authored thunk is the explicit override: always reactive, never
 	// inspected. Nothing inside it can be "missed", so nothing inside it can
 	// be an error.

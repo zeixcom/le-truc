@@ -107,25 +107,25 @@ test count, the `bun test server/tests` summary line prints both numbers live; a
   so the awaited-matcher form draws TS 80007 while still leaving the assertion unawaited.
   Assert on the outcome — see the JSDoc for the canonical shape.
 
-`server/tests/helpers/generated-tsrx.ts` provides:
+`server/tests/helpers/generated-corpus.ts` provides:
 
 - `createGeneratedDir(label)` — a per-run output directory for tests that EMIT or EXECUTE
   generated TSRX modules; returns `{ path, relativePath, emit, importModule, cleanup }`
 
-**Never write into `server/generated/tsrx/` from a test** (LT-140). That directory belongs to
+**Never write into `server/generated/components/` from a test** (LT-140). That directory belongs to
 the build pipeline, and sharing it makes the suite intermittently red in two ways: a
-concurrent `build-tsrx` / `check:tsrx` / dev server overwrites a module between a test's write
+concurrent `build-corpus` / `check:corpus` / dev server overwrites a module between a test's write
 and its import, and two test files choosing the same tag overwrite each other, since
 `bun test` shares one process and one module registry. Take a `createGeneratedDir()` instead
 and `afterAll(() => generated.cleanup())`. Tests that drive the real corpus runner pass the
-directory through: `compileTsrxCorpus(files, generated.path)`.
+directory through: `compileCorpus(files, generated.path)`.
 
 The directory is deliberately a sibling of the real one rather than an OS temp dir — emitted
 modules address `../../tsrx/runtime` and `../../../examples/…` relatively, so only the same
 depth under the repo root keeps those specifiers resolving.
 
 Sharing the directory also HIDES bugs, not just causes flakes: two tests were passing on
-artifacts a previous `build-tsrx` had left behind, asserting over modules they never compiled.
+artifacts a previous `build-corpus` had left behind, asserting over modules they never compiled.
 If a test needs a module it does not itself emit, emit it explicitly.
 
 ### Server Simulation driver tests
@@ -169,21 +169,21 @@ invariants (LT-164). Three things to know about the snapshots and invariants:
 Since the simulation driver took over renderability from the compiler, the wave-4 regression
 signal is **two numbers**, not one:
 
-1. **The compile baseline** — `bun run check:tsrx` counts the standing corpus warnings in
+1. **The compile baseline** — `bun run check:corpus` counts the standing corpus warnings in
    its summary line (`Compile-warning baseline: N unique…`) — read that count, never a
    tail-read of the ⚠️ lines (LT-168). The gate-wave target is the counted **6 unique**
    (LT-145 and LT-146 remove form-listbox and form-tokenbox); the six `basic-pluralize`
    warnings are **correct refusals** — the fold cannot follow the authored `pluralCategory`
    const, its opaque `getLocale` helper, or the `hasAttribute` sensor — and they retire with
-   TSRX034 at stage 3 (LT-165). Zero compile warnings is the stage-3 state. This is the
+   LTC034 at stage 3 (LT-165). Zero compile warnings is the stage-3 state. This is the
    channel for what is statically decidable. [**Corrected by LT-145's review, 2026-09-03:**
    LT-145 landed as a pure runtime pin (its own instruction was "pin it, not build the
-   route") and does not move `check:tsrx`'s count — `form-listbox`'s TSRX034 stays standing.
+   route") and does not move `check:corpus`'s count — `form-listbox`'s LTC034 stays standing.
    The gate-wave target is **7 unique**, not 6: `LT-146` alone delivers the compile
-   reduction (8 → 7), and `form-listbox`'s TSRX034 joins the six `basic-pluralize` refusals
+   reduction (8 → 7), and `form-listbox`'s LTC034 joins the six `basic-pluralize` refusals
    in the stage-3 (LT-165) retirement bucket, seven total.
    **Landed, 2026-09-06 (LT-165 step 5):** the seven retired with the channel
-   reclassification (ADR 0029 § 5) — the standing `check:tsrx` count is **0**, and those
+   reclassification (ADR 0029 § 5) — the standing `check:corpus` count is **0**, and those
    conditions ride the tier census (`server/compiler/tier.ts`) instead of the warning channel.]
 2. **The build-report baseline** — `server/tests/compiler/sim-driver.test.ts` runs the corpus
    through the simulation driver and requires **zero unclassified diagnostics**. The driver
@@ -206,7 +206,7 @@ test says so. Tech Writer owns the report copy — see the `tech-writer` skill's
 component *keeps* its server-rendered markup, never that the page broke).
 
 The **tier census** (LT-165 step 6, ADR 0029 § 6) is a third record, not a third baseline
-number: `check:tsrx` prints it as its own section after the compile-warning baseline
+number: `check:corpus` prints it as its own section after the compile-warning baseline
 (`Tier census — N entries: …`), never inside any warning count. It is built from the
 registry's post-contamination tiers by `tierCensus`/`formatCensus` in
 `server/compiler/census.ts` and is expected to grow — a component moving Folded → Simulated

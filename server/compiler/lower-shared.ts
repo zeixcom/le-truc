@@ -9,12 +9,12 @@
  *
  * Front-end-neutral like the front-end stage modules (`setup-extraction.ts`
  * et al.): no parser values, only the loose
- * `TsrxNode` type. The recursion into `lowerChildren` arrives through the
+ * `AstNode` type. The recursion into `lowerChildren` arrives through the
  * `Lowering` interface — each front end passes its own dispatcher, since the
  * child-node vocabulary is the one genuinely surface-specific decision.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import {
 	asArray,
 	attrName,
@@ -47,9 +47,9 @@ import { bindsExposedArg, classifyChild } from './reactivity'
 export type Lowering = {
 	lowerChildren: (
 		ctx: ExtractContext,
-		parent: TsrxNode,
+		parent: AstNode,
 		signals: ReadonlyMap<string, SignalIR>,
-		fors: Map<TsrxNode, ForIR>,
+		fors: Map<AstNode, ForIR>,
 	) => TemplateNode[]
 }
 
@@ -75,7 +75,7 @@ export type SurfaceWording = {
 export const validateCondition = (
 	ctx: ExtractContext,
 	signals: ReadonlyMap<string, SignalIR>,
-	test: TsrxNode,
+	test: AstNode,
 	what: string,
 ): boolean => {
 	const free = freeIdentifiers(test)
@@ -157,16 +157,16 @@ export const markPositionallyReactive = (
 /**
  * Whether a plain `{expr}` child lifts into a `watch()` (LT-051). The rule
  * and its rationale live in `reactivity.ts`; this wrapper only turns the
- * `opaque` verdict into a TSRX017 diagnostic. The `{children}` insertion
+ * `opaque` verdict into a LTC017 diagnostic. The `{children}` insertion
  * point (ADR 0024 sub-design 10) is a server arg, so it classifies `static`
  * without a special case here.
  */
 const liftsToReactive = (
 	ctx: ExtractContext,
 	signals: ReadonlyMap<string, SignalIR>,
-	expr: TsrxNode,
+	expr: AstNode,
 	exprText: string,
-	container: TsrxNode,
+	container: AstNode,
 ): boolean => {
 	// `{'label'}` used to mean "watch the prop named label" — legible only
 	// because `&` marked it as not-text. Bare, it is the literal string, so
@@ -197,7 +197,7 @@ const liftsToReactive = (
 		)
 		return false
 	}
-	// CHECKLIST §4 / TSRX033 (error form): a `static` child renders ONCE,
+	// CHECKLIST §4 / LTC033 (error form): a `static` child renders ONCE,
 	// server-side, forever — there is no watch() to ever correct it, unlike
 	// a `reactive` child (which gets the WARNING form of this check in
 	// analysis/effects.ts, since the client's first binding pass corrects
@@ -218,8 +218,8 @@ const liftsToReactive = (
  */
 export const lowerExpressionChild = (
 	ctx: ExtractContext,
-	expr: TsrxNode,
-	container: TsrxNode,
+	expr: AstNode,
+	container: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
 ): TemplateNode & { kind: 'expr' } => {
 	const exprText = text(ctx.source, expr)
@@ -319,10 +319,10 @@ export const validateComposedChildren = (
  */
 export const lowerComposeElement = (
 	ctx: ExtractContext,
-	element: TsrxNode,
+	element: AstNode,
 	tag: string,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 	lowering: Lowering,
 	wording: SurfaceWording,
 ): (TemplateNode & { kind: 'compose' }) | null => {
@@ -378,16 +378,16 @@ export const lowerComposeElement = (
 /**
  * Lower one plain element: classify its attributes
  * (`classify-attributes.ts`, reused verbatim), diagnose a PascalCase tag in
- * a non-child-list position (TSRX011's sibling — the wording names the
+ * a non-child-list position (LTC011's sibling — the wording names the
  * surface's loop spelling), run the impure-server-attribute and textarea-
- * value checks (TSRX033/TSRX030), and recurse into children through the
+ * value checks (LTC033/LTC030), and recurse into children through the
  * front end's own dispatcher.
  */
 export const lowerElement = (
 	ctx: ExtractContext,
-	element: TsrxNode,
+	element: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 	lowering: Lowering,
 	wording: SurfaceWording,
 ): TemplateNode & { kind: 'element' } => {
@@ -421,7 +421,7 @@ export const lowerElement = (
 				)
 				continue
 			}
-			// CHECKLIST §4 / TSRX033 (error form), LT-075: the attribute
+			// CHECKLIST §4 / LTC033 (error form), LT-075: the attribute
 			// counterpart of the static-CHILD check in `liftsToReactive`.
 			// A `server` attribute is rendered once into the initial HTML and
 			// never bound client-side, so an impure ambient here bakes one
@@ -443,7 +443,7 @@ export const lowerElement = (
 			attrs.push(classified)
 		}
 	}
-	// CHECKLIST §10 / TSRX030: `value` is not a real HTML attribute on
+	// CHECKLIST §10 / LTC030: `value` is not a real HTML attribute on
 	// `<textarea>` — the browser ignores it, and with no compensating write
 	// the pre-hydration control renders empty. Only flags the STATIC/
 	// server-rendered forms (`value="x"`, `value={arg}`): those have no
@@ -494,9 +494,9 @@ export const lowerElement = (
  */
 export const lowerChildrenSkeleton = (
 	ctx: ExtractContext,
-	parent: TsrxNode,
+	parent: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 	lowering: Lowering,
 	wording: SurfaceWording,
 	hooks: {
@@ -504,8 +504,8 @@ export const lowerChildrenSkeleton = (
 		 * check needs the NEXT sibling — a diagnose-only hook). */
 		onText?: (
 			ctx: ExtractContext,
-			child: TsrxNode,
-			next: TsrxNode | undefined,
+			child: AstNode,
+			next: AstNode | undefined,
 		) => void
 		/** Grammar-specific child node types. Consume the child by pushing
 		 * the lowered node (or nothing, when diagnosed) into `out` and
@@ -513,10 +513,10 @@ export const lowerChildrenSkeleton = (
 		 * shapes handle it. */
 		dispatchChild?: (
 			ctx: ExtractContext,
-			child: TsrxNode,
+			child: AstNode,
 			out: TemplateNode[],
 			signals: ReadonlyMap<string, SignalIR>,
-			fors: Map<TsrxNode, ForIR>,
+			fors: Map<AstNode, ForIR>,
 		) => boolean
 		/** Control-flow expression shapes inside an expression container.
 		 * Consumes the expression by pushing the lowered node (or nothing,
@@ -524,11 +524,11 @@ export const lowerChildrenSkeleton = (
 		 * lower it as an ordinary expression child. */
 		dispatchControlFlow?: (
 			ctx: ExtractContext,
-			expr: TsrxNode,
+			expr: AstNode,
 			out: TemplateNode[],
-			container: TsrxNode,
+			container: AstNode,
 			signals: ReadonlyMap<string, SignalIR>,
-			fors: Map<TsrxNode, ForIR>,
+			fors: Map<AstNode, ForIR>,
 		) => boolean
 	},
 ): TemplateNode[] => {
@@ -538,9 +538,9 @@ export const lowerChildrenSkeleton = (
 			? asArray(parent.children)
 			: []
 	for (let i = 0; i < children.length; i++) {
-		const child = children[i] as TsrxNode
+		const child = children[i] as AstNode
 		if (child.type === 'JSXText') {
-			hooks.onText?.(ctx, child, children[i + 1] as TsrxNode | undefined)
+			hooks.onText?.(ctx, child, children[i + 1] as AstNode | undefined)
 			const collapsed = collapseJsxText(String(child.value ?? ''))
 			if (collapsed) out.push({ kind: 'text', value: collapsed, node: child })
 			continue

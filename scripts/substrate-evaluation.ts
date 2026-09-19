@@ -49,7 +49,7 @@ import {
 /* === Constants === */
 
 const ROOT = resolve(import.meta.dir, '..')
-const GENERATED = join(ROOT, 'server', 'generated', 'tsrx')
+const GENERATED = join(ROOT, 'server', 'generated', 'components')
 const DOCS = join(ROOT, 'docs')
 
 /** hostile payload for the DOMPurify verification */

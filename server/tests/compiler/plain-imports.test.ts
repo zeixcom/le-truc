@@ -124,14 +124,14 @@ describe('plain import used only inside a bare (non-arrow) attribute expression'
 		</>
 	}`
 
-	test('lands in the server module only, with no TSRX014', () => {
+	test('lands in the server module only, with no LTC014', () => {
 		const { component, diagnostics } = compileComponent(
 			source,
 			'examples/card/c.tsrx',
 			new Set(),
 		)
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
-		expect(diagnostics.some(d => d.code === 'TSRX014')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC014')).toBe(false)
 		expect(component?.serverCode).toContain('helper')
 		expect(component?.clientCode).not.toContain('helper')
 	})
@@ -178,13 +178,13 @@ describe('an unused plain import', () => {
 		</>
 	}`
 
-	test('is diagnosed (TSRX014), not silently dropped', () => {
+	test('is diagnosed (LTC014), not silently dropped', () => {
 		const { diagnostics } = compileComponent(
 			source,
 			'examples/card/c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX014')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC014')).toBe(true)
 	})
 })
 
@@ -207,7 +207,7 @@ describe('a side-effect-only plain import', () => {
 			new Set(),
 		)
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
-		expect(diagnostics.some(d => d.code === 'TSRX014')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC014')).toBe(false)
 		expect(component?.serverCode).toContain('registerSomething')
 		expect(component?.clientCode).toContain('registerSomething')
 	})

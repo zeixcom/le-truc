@@ -1,7 +1,7 @@
 /**
  * Browser-bundle smoke test (LT-045, ADR 0025 sub-design 6): CI-pins two
  * invariants of `server/compiler/frontend/tsrx/index.ts` — the same `compileComponent` API the
- * Node-side build effect (`server/effects/tsrx.ts`) uses:
+ * Node-side build effect (`server/effects/compile.ts`) uses:
  *
  * 1. **Compiler purity** — the bundle built for `target: 'browser'` contains
  *    no surviving `node:` import (`assertNodeFree`, in the build script

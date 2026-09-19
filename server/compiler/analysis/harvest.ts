@@ -9,7 +9,7 @@
  * with the loop and effect passes.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from '../ast-node'
 import {
 	CONTEXT_NAMES,
 	hostPropOf,
@@ -37,14 +37,14 @@ import {
 /** `sig.get()` call check for direct/membership matching. */
 export const isSignalGetCall = (node: unknown, signal: string): boolean => {
 	if (nodeType(node) !== 'CallExpression') return false
-	const callee = (node as TsrxNode).callee
+	const callee = (node as AstNode).callee
 	if (nodeType(callee) !== 'MemberExpression') return false
-	const member = callee as TsrxNode
+	const member = callee as AstNode
 	return (
 		nodeType(member.object) === 'Identifier' &&
-		String((member.object as TsrxNode).name) === signal &&
+		String((member.object as AstNode).name) === signal &&
 		nodeType(member.property) === 'Identifier' &&
-		String((member.property as TsrxNode).name) === 'get'
+		String((member.property as AstNode).name) === 'get'
 	)
 }
 
@@ -60,7 +60,7 @@ export const containsSignalGet = (node: unknown, signal: string): boolean => {
 	if (
 		!node ||
 		typeof node !== 'object' ||
-		typeof (node as TsrxNode).type !== 'string'
+		typeof (node as AstNode).type !== 'string'
 	)
 		return false
 	for (const [key, value] of Object.entries(node)) {
@@ -75,7 +75,7 @@ export const containsSignalGet = (node: unknown, signal: string): boolean => {
  * `() => sig.get() === C`. Returns the const identifier.
  */
 export const membershipConst = (
-	thunk: TsrxNode,
+	thunk: AstNode,
 	signal: string,
 ): string | null => {
 	const body = thunk.body
@@ -84,35 +84,35 @@ export const membershipConst = (
 		nodeType(body) !== 'CallExpression'
 	)
 		return null
-	let comparison = body as TsrxNode
+	let comparison = body as AstNode
 	if (nodeType(body) === 'CallExpression') {
-		const call = body as TsrxNode
+		const call = body as AstNode
 		const callee = call.callee
 		if (
 			nodeType(callee) !== 'Identifier' ||
-			String((callee as TsrxNode).name) !== 'String' ||
+			String((callee as AstNode).name) !== 'String' ||
 			!Array.isArray(call.arguments)
 		)
 			return null
-		comparison = call.arguments[0] as TsrxNode
+		comparison = call.arguments[0] as AstNode
 	}
 	if (nodeType(comparison) !== 'BinaryExpression') return null
 	const bin = comparison as Record<string, unknown>
 	if (bin.operator !== '===') return null
-	const left = bin.left as TsrxNode
-	const right = bin.right as TsrxNode
+	const left = bin.left as AstNode
+	const right = bin.right as AstNode
 	for (const [a, b] of [
 		[left, right],
 		[right, left],
 	] as const) {
 		if (isSignalGetCall(a, signal) && nodeType(b) === 'Identifier')
-			return String((b as TsrxNode).name)
+			return String((b as AstNode).name)
 	}
 	return null
 }
 
 /** `() => sig.get()` (direct attribute render of a signal). */
-export const isDirectAttrThunk = (thunk: TsrxNode, signal: string): boolean =>
+export const isDirectAttrThunk = (thunk: AstNode, signal: string): boolean =>
 	isSignalGetCall(thunk.body, signal)
 
 export const parserForType = (type: string): ParserKind => {
@@ -145,7 +145,7 @@ export const defaultForType = (type: string): string => {
  *
  * The signal case matters because of LT-116: `value` on a native form
  * control now dispatches as a PROPERTY write, and `HTMLInputElement.value`
- * is DOMString-typed, so an uncoerced number thunk fails `check:tsrx` on
+ * is DOMString-typed, so an uncoerced number thunk fails `check:corpus` on
  * the generated client. Callers that have no signal list keep the old
  * literal-only behaviour.
  */
@@ -154,19 +154,19 @@ export const returnsNumber = (
 	signals: readonly SignalIR[] = [],
 ): boolean => {
 	if (nodeType(body) === 'Literal')
-		return typeof (body as TsrxNode).value === 'number'
+		return typeof (body as AstNode).value === 'number'
 	if (nodeType(body) === 'ConditionalExpression')
-		return returnsNumber((body as TsrxNode).consequent, signals)
+		return returnsNumber((body as AstNode).consequent, signals)
 	// `<signal>.get()` — the identifier form only. A `.get()` on anything
 	// else (a member chain, a call result) is not a signal read this
 	// compiler tracks, so it stays undetected rather than guessed at.
 	if (nodeType(body) === 'CallExpression') {
-		const callee = (body as TsrxNode).callee
+		const callee = (body as AstNode).callee
 		if (
 			nodeType(callee) === 'MemberExpression' &&
-			identifierName((callee as TsrxNode).property) === 'get'
+			identifierName((callee as AstNode).property) === 'get'
 		) {
-			const name = identifierName((callee as TsrxNode).object)
+			const name = identifierName((callee as AstNode).object)
 			if (name)
 				return signals.some(s => s.name === name && s.inferredType === 'number')
 		}
@@ -223,7 +223,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	 */
 	const reportUnharvestable = (signal: SignalIR): void => {
 		routingSignals.push({
-			origin: 'TSRX004',
+			origin: 'LTC004',
 			detail: `signal \`${signal.name}\` has no harvestable initial-DOM site`,
 			...lineFields(source, signal.init?.start),
 			resolution:
@@ -243,7 +243,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	// else the first membership mark. Signals whose values reach the DOM
 	// only through thunks none of these can splice into — style-map/class-map
 	// objects, computed (non-`sig.get()`) reactive thunks — are credited in
-	// `thunkRendered` instead (LT-036): rendered, so not TSRX004-dead, but
+	// `thunkRendered` instead (LT-036): rendered, so not LTC004-dead, but
 	// never a harvest site; Pass 3 seeds them by initializer reuse.
 	type Site =
 		| {
@@ -334,19 +334,19 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 				const order = documentOrder++
 				const expr = child.expr
 				if (nodeType(expr) === 'Identifier') {
-					const name = String((expr as TsrxNode).name)
+					const name = String((expr as AstNode).name)
 					if (component.signals.some(s => s.name === name))
 						sites.push({ kind: 'text', signal: name, element: node, order })
 				} else if (
 					nodeType(expr) === 'Literal' &&
-					typeof (expr as TsrxNode).value === 'string'
+					typeof (expr as AstNode).value === 'string'
 				) {
 					const signal = component.exposeProps.get(
-						String((expr as TsrxNode).value),
+						String((expr as AstNode).value),
 					)
 					if (signal) sites.push({ kind: 'text', signal, element: node, order })
 				} else if (nodeType(expr) === 'ArrowFunctionExpression') {
-					const body = (expr as TsrxNode).body
+					const body = (expr as AstNode).body
 					for (const signal of component.signals.map(s => s.name)) {
 						if (isSignalGetCall(body, signal)) {
 							sites.push({ kind: 'text', signal, element: node, order })
@@ -370,7 +370,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	// from this signal and there is no server output for the reused
 	// initializer to disagree with. Reaching the DOM this way is the only
 	// route open to a predicate over a COMPOSED CHILD's public prop, which
-	// no server fold can resolve (TSRX034) — see the popup gate in
+	// no server fold can resolve (LTC034) — see the popup gate in
 	// form-combobox.tsrx.
 	for (const stmt of component.clientSetup)
 		for (const signal of component.signals)
@@ -546,7 +546,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	 * signal, needing none).
 	 */
 	const substituteArgExpr = (
-		init: TsrxNode,
+		init: AstNode,
 		/**
 		 * Allow a no-params-to-substitute initializer to pass through
 		 * verbatim (ADR 0023 sub-design 13): sound for `deriveCell`/
@@ -558,7 +558,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		 * provably not dead, and the server rendered that output from this
 		 * same initializer (DOM agrees by construction). A `createCell`/
 		 * `createState` signal with a literal initializer and NO rendered
-		 * site at all must still fail (TSRX004): those DO have a direct-site
+		 * site at all must still fail (LTC004): those DO have a direct-site
 		 * harvest route, and a silently-never-rendered signal is exactly
 		 * the drift ADR 0003 exists to catch.
 		 */
@@ -612,10 +612,10 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			if (
 				!node ||
 				typeof node !== 'object' ||
-				typeof (node as TsrxNode).type !== 'string'
+				typeof (node as AstNode).type !== 'string'
 			)
 				return
-			const current = node as TsrxNode & Record<string, unknown>
+			const current = node as AstNode & Record<string, unknown>
 			if (current.type === 'Identifier') {
 				const name = String(current.name)
 				if (
@@ -655,7 +655,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		// requestContext-backed signals (LT-035) never need a harvest site —
 		// the client re-dispatches the context-request itself and owns its
 		// own initial value (a Slot seeded with the fallback), rather than
-		// reading it back from server-rendered DOM. TSRX004 ("signal never
+		// reading it back from server-rendered DOM. LTC004 ("signal never
 		// rendered") does not apply: emit-client.ts emits them through a
 		// dedicated verbatim path, never this harvest machinery.
 		if (signal.constructor === 'requestContext') continue
@@ -742,7 +742,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		// unknown query names through verbatim, and `usedNames` already
 		// reserves `'host'` (analysis/plan.ts) so `addQuery` can never allocate
 		// it. (An `attr` site on the root is unreachable in a compiling
-		// component — reactive attributes on the root are TSRX005 — but routed
+		// component — reactive attributes on the root are LTC005 — but routed
 		// uniformly rather than left emitting a broken query.)
 		if (direct && direct.element === component.root) {
 			ambient.add('host')

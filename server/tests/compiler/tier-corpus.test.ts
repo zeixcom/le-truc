@@ -18,9 +18,9 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { tierCensus } from '../../compiler/census'
 import type { ComponentRegistry } from '../../compiler/registry'
-import { compileTsrxCorpus } from '../../effects/tsrx'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
-import { loadTsrxCorpus } from './corpus-fixture'
+import { compileCorpus } from '../../effects/compile'
+import { createGeneratedDir } from '../helpers/generated-corpus'
+import { loadCorpus } from './corpus-fixture'
 
 const generated = createGeneratedDir('tier-corpus')
 afterAll(() => generated.cleanup())
@@ -32,7 +32,7 @@ afterAll(() => generated.cleanup())
 // corpus compile is setup, and setup belongs inside the lifecycle.
 let registry: ComponentRegistry
 beforeAll(async () => {
-	await compileTsrxCorpus(await loadTsrxCorpus(), generated.path)
+	await compileCorpus(await loadCorpus(), generated.path)
 	registry = JSON.parse(
 		await Bun.file(`${generated.path}/registry.json`).text(),
 	) as ComponentRegistry
@@ -68,7 +68,7 @@ describe('tier assignment over the migrated corpus', () => {
 	test('LT-173 acceptance: basic-pluralize classifies Folded — the six standing signals dissolved', () => {
 		// The flip this pin always anticipated: the reserved `i18n` parameter
 		// (ADR 0030) makes the locale server-known, so `Intl.PluralRules` folds
-		// (LT-142) and the six TSRX034 routing signals — one per category
+		// (LT-142) and the six LTC034 routing signals — one per category
 		// span's `hidden` thunk, each "locale read from the DOM" — are gone.
 		// If a NEW signal ever appears here, the fold rule or the classifier
 		// moved underneath the component; investigate rather than reclassify.
@@ -123,7 +123,7 @@ describe('tier assignment over the migrated corpus', () => {
 
 describe('the tier census (LT-165 step 6, ADR 0029 sub-design 6)', () => {
 	// Built from the registry the corpus runner wrote — which the fixpoint in
-	// `compileTsrxCorpus` updated BEFORE the write, so the census records
+	// `compileCorpus` updated BEFORE the write, so the census records
 	// POST-contamination tiers by construction (the architect ruling for
 	// step 6).
 	const census = tierCensus(Object.values(registry))

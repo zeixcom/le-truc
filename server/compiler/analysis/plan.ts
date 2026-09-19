@@ -10,7 +10,7 @@
  * product (ADR 0024 consequences): a wrong rewrite is a wrong component.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from '../ast-node'
 import {
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
@@ -356,7 +356,7 @@ export type ClientPlan = {
 	/**
 	 * Why this component cannot be answered by phase 1 alone (ADR 0029,
 	 * LT-165) — the tier classifier's input, collected at the same sites
-	 * that used to raise `TSRX004`/`TSRX034`. Empty means phase 1 is total,
+	 * that used to raise `LTC004`/`LTC034`. Empty means phase 1 is total,
 	 * which is the Folded tier.
 	 */
 	routingSignals: RoutingSignal[]
@@ -414,7 +414,7 @@ export type AnalysisContext = {
 	refNames: Set<string>
 	/**
 	 * Compose sites an ambiguous `first()` selector matched (LT-127) —
-	 * already reported as TSRX027 by `resolveComposeRefs`, so
+	 * already reported as LTC027 by `resolveComposeRefs`, so
 	 * `emitComposeEffects` must not report them a second time as
 	 * unaddressed `pass={{ }}` sites.
 	 */
@@ -430,9 +430,9 @@ export type AnalysisContext = {
 		cardinality: 'one' | 'many' | 'maybe',
 	) => string
 	/** Note context members (`host`, `internals`) a client code position reads. */
-	collectAmbient: (node: TsrxNode | null | undefined) => void
+	collectAmbient: (node: AstNode | null | undefined) => void
 	/** Free names in a reactive/pass thunk the client cannot resolve. */
-	badFreeNames: (node: TsrxNode) => string[]
+	badFreeNames: (node: AstNode) => string[]
 }
 
 /* === Exported Functions === */
@@ -449,7 +449,7 @@ export const analyzeClient = (
 	const effects: TopEffectPlan[] = []
 	const childTags = new Set<string>()
 	const ambient = new Set<string>(component.contextRefs)
-	const collectAmbient = (node: TsrxNode | null | undefined): void => {
+	const collectAmbient = (node: AstNode | null | undefined): void => {
 		if (!node) return
 		for (const name of freeIdentifiers(node))
 			if (CONTEXT_NAMES.has(name)) ambient.add(name)
@@ -490,7 +490,7 @@ export const analyzeClient = (
 	// reference whether or not this pass can resolve it: the registry-
 	// discovery pass has no `composeRegistry` and attaches no `ref` attr for
 	// the walk above to find, and a pass thunk reading the name there must
-	// not be rejected as server-only (TSRX005) for a name that resolves in
+	// not be rejected as server-only (LTC005) for a name that resolves in
 	// pass 2.
 	for (const ref of component.deferredComposeRefs) refNames.add(ref.name)
 
@@ -535,7 +535,7 @@ export const analyzeClient = (
 	)
 
 	/** Free names in a reactive/pass thunk the client cannot resolve. */
-	const badFreeNames = (node: TsrxNode): string[] =>
+	const badFreeNames = (node: AstNode): string[] =>
 		[...dependenciesOf(node)].filter(
 			name =>
 				!component.signals.some(s => s.name === name) &&
@@ -591,7 +591,7 @@ export const analyzeClient = (
 	runHarvest(ctx)
 	runEffects(ctx)
 
-	// LT-165 step 5: the narrow residue of the retired TSRX013/TSRX043
+	// LT-165 step 5: the narrow residue of the retired LTC013/LTC043
 	// refusals. An UNrendered setup const the value harness cannot evaluate
 	// is a routing signal (recorded during extraction) and routes Simulated —
 	// but a const whose VALUE reaches a server-evaluated position asks the

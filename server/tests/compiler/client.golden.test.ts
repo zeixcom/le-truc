@@ -14,7 +14,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent } from '../../compiler/frontend/tsrx'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const read = (rel: string): string =>
@@ -30,7 +30,7 @@ const registry = new Set<string>([
 ])
 // Child-module map: migrated tags → generated clients. This fixture models a
 // FULLY-CUT corpus (every tag served from its generated client) so the
-// emit-then-check typecheck resolves; the live pipeline (server/effects/tsrx)
+// emit-then-check typecheck resolves; the live pipeline (server/effects/compile)
 // additionally keeps hand-written twins mapped to their source modules while
 // they remain mounted (LT-112 dual-state rule) — basic-button is such a tag
 // today, so real module-list.client.ts imports the twin, not the client.
@@ -55,7 +55,7 @@ const TYPECHECK_DEPS = ['examples/basic/button/basic-button.tsrx'] as const
 
 // module-list composes FormTextbox (ADR 0023 sub-design 10, LT-020) — the
 // compose registry must be built before it compiles, keyed by form-textbox's
-// own repo-relative source path (mirroring server/effects/tsrx.ts).
+// own repo-relative source path (mirroring server/effects/compile.ts).
 const formTextboxResult = compileComponent(
 	read('examples/form/textbox/form-textbox.tsrx'),
 	'examples/form/textbox/form-textbox.tsrx',
@@ -289,7 +289,7 @@ describe('client golden — convergence with the hand-written trio', () => {
 
 // A per-run directory for the emit-then-check pass, not the build pipeline's
 // output (LT-140). It sits at the same depth under the repo root as the real
-// `server/generated/tsrx/`, so relative specifiers in the emitted clients
+// `server/generated/components/`, so relative specifiers in the emitted clients
 // resolve identically.
 const generated = createGeneratedDir('client-golden')
 afterAll(() => generated.cleanup())
@@ -308,7 +308,7 @@ describe('client golden — emit-then-check (ADR 0023 sub-design 6)', () => {
 		// because `childImports` models a fully-cut corpus. basic-button has
 		// no snapshot of its own and is deliberately not in SOURCES, but the
 		// typecheck program still needs the module to exist. Emit it here:
-		// until LT-140 this test passed only when a previous `build-tsrx` had
+		// until LT-140 this test passed only when a previous `build-corpus` had
 		// happened to leave the file in the shared output directory.
 		for (const rel of TYPECHECK_DEPS) {
 			const { component } = compileComponent(

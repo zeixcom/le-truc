@@ -8,7 +8,7 @@
  * `.set()` is a no-op, because the server renders once and never reacts
  * (ADR 0023 sub-design 2: "signals as plain values").
  *
- * This module is imported by *generated* code (`server/generated/tsrx/`),
+ * This module is imported by *generated* code (`server/generated/components/`),
  * never by the compiler itself.
  */
 

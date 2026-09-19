@@ -5,10 +5,10 @@
  * i18n`) and the component's leading doc comment — shared by both front
  * ends (LT-202, ADR 0032 sub-design 6: the anti-drift half of the dual
  * front-end contract). Front-end-neutral like the other front-end stage
- * modules: no parser values, only the loose `TsrxNode` type.
+ * modules: no parser values, only the loose `AstNode` type.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import { asArray, identifierName, isNode, text } from './ast-utils'
 import { readConfig } from './config'
 import { diagnostic } from './diagnostics'
@@ -56,7 +56,7 @@ export type ModuleDecls = {
  */
 export const readModuleDecls = (
 	ctx: ExtractContext,
-	ast: TsrxNode,
+	ast: AstNode,
 	componentName: string,
 ): ModuleDecls => {
 	const typeDecls: string[] = []
@@ -120,7 +120,7 @@ const leadingDocComment = (source: string, before: number): string | null => {
  */
 const paramPropsOf = (
 	ctx: ExtractContext,
-	paramsNode: TsrxNode | null,
+	paramsNode: AstNode | null,
 ): ComponentParam[] => {
 	if (!paramsNode || paramsNode.type !== 'ObjectPattern') return []
 	const props: ComponentParam[] = []
@@ -135,7 +135,7 @@ const paramPropsOf = (
 					ctx.source,
 					annotation.type === 'TSTypeAnnotation' &&
 						isNode(annotation.typeAnnotation)
-						? (annotation.typeAnnotation as TsrxNode)
+						? (annotation.typeAnnotation as AstNode)
 						: annotation,
 				)
 			: 'unknown'
@@ -174,20 +174,20 @@ export const assembleComponentIR = (
 	}: {
 		componentName: string
 		fnStmtStart: number
-		paramsNode: TsrxNode | null
+		paramsNode: AstNode | null
 		paramNames: ReadonlySet<string>
 		contextParam: ComponentParams['contextParam']
 		extraction: SetupExtraction
-		resolved: ResolvedTemplate & { fors: Map<TsrxNode, ForIR> }
+		resolved: ResolvedTemplate & { fors: Map<AstNode, ForIR> }
 		decls: ModuleDecls
 		caseType: 'cardinal' | 'ordinal' | 'union'
 		plainImports: PlainImportIR[]
 		leTrucImports: LeTrucImport[]
 	},
 ): ComponentIR | null => {
-	// The annotation-surface check (TSRX050, LT-209) — `config` is what the
+	// The annotation-surface check (LTC050, LT-209) — `config` is what the
 	// extract-time vocabulary check could not see. Runs before the gate so
-	// the diagnostic lands even on gated files (the TSRX014 posture).
+	// the diagnostic lands even on gated files (the LTC014 posture).
 	if (contextParam?.annotationName) {
 		const formAssociated = !!decls.config?.form
 		if (formAssociated && contextParam.annotationName === 'FactoryContext')
@@ -209,7 +209,7 @@ export const assembleComponentIR = (
 	const serverKnown = ctx.serverKnown
 
 	// Placements run BEFORE the milestone-gate check: an unused-import
-	// warning (TSRX014) belongs in the report even when the file is gated
+	// warning (LTC014) belongs in the report even when the file is gated
 	// (diagnostic-order parity with the pre-extraction pipeline).
 	const plainPlacement = placePlainImports(
 		ctx,
@@ -248,7 +248,7 @@ export const assembleComponentIR = (
 
 	// A milestone gate (reactive @for) skips the whole file: rendering the
 	// remaining markup without the gated construct would be silently wrong.
-	const gated = ctx.diagnostics.some(d => d.code === 'TSRX001')
+	const gated = ctx.diagnostics.some(d => d.code === 'LTC001')
 	if (gated) return null
 
 	return {

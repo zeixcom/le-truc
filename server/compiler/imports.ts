@@ -24,7 +24,7 @@
  * `node:path` — the compiler must stay loadable in a browser bundle.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import {
 	asArray,
 	CONTEXT_NAMES,
@@ -81,7 +81,7 @@ const normalize = (p: string): string => {
  * import) is not a composable import.
  */
 export const parseComposeImports = (
-	ast: TsrxNode,
+	ast: AstNode,
 	filename: string,
 ): Map<string, string> => {
 	const imports = new Map<string, string>()
@@ -129,7 +129,7 @@ export type LeTrucImport = {
  * below): placement is per-name against the runtime-harness filter
  * (`placeLeTrucImports`), not the verbatim re-emission plain imports get.
  */
-export const parseLeTrucImports = (ast: TsrxNode): LeTrucImport[] => {
+export const parseLeTrucImports = (ast: AstNode): LeTrucImport[] => {
 	const result: LeTrucImport[] = []
 	for (const stmt of asArray(ast.body)) {
 		if (stmt.type !== 'ImportDeclaration') continue
@@ -210,7 +210,7 @@ export { RUNTIME_HARNESS_EXPORTS }
  * runtime harness cannot provide it — the harness keeps providing its
  * plain-value shims for signal constructors, parsers, `defineMethod`, so the
  * authored line is filtered per name rather than re-emitted verbatim. A
- * statement no name uses anywhere warns via TSRX014, same as plain imports.
+ * statement no name uses anywhere warns via LTC014, same as plain imports.
  */
 export const placeLeTrucImports = (
 	ctx: ExtractContext,
@@ -232,7 +232,7 @@ export const placeLeTrucImports = (
 	const serverUsage = serverUsageNames(component)
 	const clientUsage = computeClientNeededNames(component)
 	// A FactoryContext member inside an authored '@zeix/le-truc' import is
-	// TSRX037 (compiler.ts) — never re-emit one: it is not a package export
+	// LTC037 (compiler.ts) — never re-emit one: it is not a package export
 	// and would break the generated module's imports.
 	const contextVocabulary = new Set<string>([
 		...FACTORY_CONTEXT_MEMBERS,
@@ -240,7 +240,7 @@ export const placeLeTrucImports = (
 	])
 	for (const imp of leTrucImports) {
 		// A FactoryContext member inside an authored '@zeix/le-truc' import is
-		// TSRX037 (compiler.ts) — excluded here so it is neither placed nor
+		// LTC037 (compiler.ts) — excluded here so it is neither placed nor
 		// double-reported as an unused import.
 		const names = imp.names.filter(n => !contextVocabulary.has(n))
 		if (names.length === 0) continue
@@ -268,9 +268,9 @@ export const placeLeTrucImports = (
 /* === Plain imports (from plain-imports.ts) === */
 
 /**
- * Every generated module lives flat in `server/generated/tsrx/`, regardless
+ * Every generated module lives flat in `server/generated/components/`, regardless
  * of the source `.tsrx` file's own nesting under `examples/` (same flattening
- * `effects/tsrx.ts`'s `handwrittenExampleModules()` and compose imports
+ * `effects/compile.ts`'s `handwrittenExampleModules()` and compose imports
  * already rely on) — so a relative plain-import specifier, resolved to a
  * repo-relative path, always needs this fixed prefix back to the repo root.
  */
@@ -304,7 +304,7 @@ export type PlainImportIR = {
  */
 export const parsePlainImports = (
 	ctx: ExtractContext,
-	ast: TsrxNode,
+	ast: AstNode,
 	filename: string,
 ): PlainImportIR[] => {
 	const result: PlainImportIR[] = []
@@ -364,8 +364,8 @@ export const parsePlainImports = (
  * and dropped from the server module even though the generated code
  * referenced it).
  */
-const serverExprNodes = (root: TemplateNode): TsrxNode[] => {
-	const out: TsrxNode[] = []
+const serverExprNodes = (root: TemplateNode): AstNode[] => {
+	const out: AstNode[] = []
 	walkTemplate(root, node => {
 		if (node.kind === 'expr' && !node.lazy) out.push(node.expr)
 		else if (node.kind === 'if') out.push(node.test)
@@ -380,8 +380,8 @@ const serverExprNodes = (root: TemplateNode): TsrxNode[] => {
 }
 
 /** Every client-always expression node anywhere in the template. */
-const clientExprNodes = (root: TemplateNode): TsrxNode[] => {
-	const out: TsrxNode[] = []
+const clientExprNodes = (root: TemplateNode): AstNode[] => {
+	const out: AstNode[] = []
 	walkTemplate(root, node => {
 		if (node.kind === 'expr' && node.lazy) out.push(node.expr)
 		else if (node.kind === 'client-stmt') out.push(node.node)
@@ -424,8 +424,8 @@ const clientExprNodes = (root: TemplateNode): TsrxNode[] => {
 const serverRenderedThunkNodes = (
 	root: TemplateNode,
 	serverKnown: ReadonlySet<string>,
-): TsrxNode[] => {
-	const out: TsrxNode[] = []
+): AstNode[] => {
+	const out: AstNode[] = []
 	for (const attr of collectAttrs(root)) {
 		if (attr.kind === 'reactive' && isServerEvaluable(attr.thunk, serverKnown))
 			out.push(attr.thunk)
@@ -500,7 +500,7 @@ export const computeClientNeededNames = (
  * verbatim into the server module unconditionally, ADR 0024 sub-design 12),
  * always-server template expressions, and server-conditional reactive-family
  * thunks. Shared by `placePlainImports` and `placeLeTrucImports`; exported
- * since LT-165 step 5 for the rendered-client-only-const check (`TSRX046`),
+ * since LT-165 step 5 for the rendered-client-only-const check (`LTC046`),
  * which asks the complementary question — did a setup const the harness
  * cannot evaluate reach one of these positions?
  */
@@ -523,7 +523,7 @@ export const serverUsageNames = (
 /**
  * Place each plain import into the generated server module, client module,
  * or both — inferred from where its bindings are actually used. Pushes a
- * TSRX014 warning (not dropped silently) for an import with no detectable
+ * LTC014 warning (not dropped silently) for an import with no detectable
  * usage anywhere the compiler looks.
  */
 export const placePlainImports = (

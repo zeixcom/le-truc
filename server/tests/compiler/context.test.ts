@@ -86,7 +86,7 @@ describe('requestContext() — reactive attribute referencing the context signal
 })
 
 describe('requestContext() — misuse diagnostics', () => {
-	test('wrong argument count is TSRX015', () => {
+	test('wrong argument count is LTC015', () => {
 		const source = `export function C({}: {})
 		@{
 			const motion = requestContext('motion')
@@ -97,10 +97,10 @@ describe('requestContext() — misuse diagnostics', () => {
 			</>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX015')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC015')).toBe(true)
 	})
 
-	test('a fallback referencing a non-server-known name is TSRX016', () => {
+	test('a fallback referencing a non-server-known name is LTC016', () => {
 		const source = `export function C({}: {})
 		@{
 			const motion = requestContext('motion', host.value)
@@ -111,7 +111,7 @@ describe('requestContext() — misuse diagnostics', () => {
 			</>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX016')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC016')).toBe(true)
 	})
 
 	test('requestContext nested inside a plain setup const is a routing signal (LT-165 step 5)', () => {
@@ -129,7 +129,7 @@ describe('requestContext() — misuse diagnostics', () => {
 		}`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
-			component?.entry.routingSignals.some(s => s.origin === 'TSRX013'),
+			component?.entry.routingSignals.some(s => s.origin === 'LTC013'),
 		).toBe(true)
 		expect(component?.entry.tier).toBe('simulated')
 	})
@@ -181,7 +181,7 @@ import { createCell } from '@zeix/le-truc'`
 import { createCell } from '@zeix/le-truc'`
 		const { component } = compileComponent(badSource, 'c.tsrx', new Set())
 		expect(
-			component?.entry.routingSignals.some(s => s.origin === 'TSRX013'),
+			component?.entry.routingSignals.some(s => s.origin === 'LTC013'),
 		).toBe(true)
 		expect(component?.entry.tier).toBe('simulated')
 	})

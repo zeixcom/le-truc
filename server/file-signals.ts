@@ -300,7 +300,7 @@ const [
 	componentMarkdownSources,
 	componentStylesSources,
 	componentScriptsSources,
-	componentTsrxSources,
+	componentSources,
 	generatedClientScriptsSources,
 ] = await Promise.all([
 	watchFiles(INPUT_DIR, '*.css'),
@@ -314,7 +314,7 @@ const [
 	watchFiles(COMPONENTS_DIR, '**/*.css'),
 	watchFiles(COMPONENTS_DIR, '**/*.ts'),
 	// ADR 0032 (LT-202): the corpus watches BOTH authored surfaces — the
-	// front end is chosen per file by extension (`server/effects/tsrx.ts`).
+	// front end is chosen per file by extension (`server/effects/compile.ts`).
 	watchFiles(COMPONENTS_DIR, '**/*.tsrx', '**/*.tsx'),
 	// LT-091: migrated components' generated clients are bundle inputs
 	// (examples/main.ts imports them) — a `.tsrx` edit re-runs the compiler
@@ -342,17 +342,17 @@ const componentMocks = { sources: componentMocksSources }
 const componentMarkdown = { sources: componentMarkdownSources }
 const componentStyles = { sources: componentStylesSources }
 const componentScripts = { sources: componentScriptsSources }
-const componentTsrx = { sources: componentTsrxSources }
+const componentFiles = { sources: componentSources }
 const generatedClientScripts = { sources: generatedClientScriptsSources }
 
 export {
 	apiMarkdown,
+	componentFiles,
 	componentMarkdown,
 	componentMarkup,
 	componentMocks,
 	componentScripts,
 	componentStyles,
-	componentTsrx,
 	docsMarkdown,
 	docsScripts,
 	docsStyles,

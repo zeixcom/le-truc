@@ -20,7 +20,7 @@ import {
 	PARSER_FACTORIES,
 	SIGNAL_CONSTRUCTORS,
 } from '../../compiler/ast-utils'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const GLOBALS = fs.readFileSync(

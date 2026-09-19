@@ -2,15 +2,15 @@
  * Dual-corpus runner tests (LT-202, ADR 0032 sub-design 6): the corpus
  * globs `.tsrx` AND `.tsx` into one registry, the front end chosen per file
  * by extension — and a tag declared by two sources fails the compile naming
- * both files (TSRX048, tier 1 Prevented).
+ * both files (LTC048, tier 1 Prevented).
  */
 
 import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { compileTsrxCorpus } from '../../effects/tsrx'
+import { compileCorpus } from '../../effects/compile'
 import type { FileInfo } from '../../file-signals'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 import { settle } from '../helpers/test-utils'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -39,7 +39,7 @@ const SYNC_EL = 'spike/tsx/sync/sync-el.tsx'
 describe('dual corpus (ADR 0032 sub-design 6)', () => {
 	test('a .tsx source compiles through the corpus runner end to end', async () => {
 		const outDir = path.join(scratch.path, 'single')
-		const spanInfos = await compileTsrxCorpus([fileInfo(SYNC_EL)], outDir)
+		const spanInfos = await compileCorpus([fileInfo(SYNC_EL)], outDir)
 		const tags = spanInfos.map(s => s.tag)
 		expect(tags).toContain('sync-el')
 		// The entry's source carries the .tsx path — the registry says which
@@ -56,7 +56,7 @@ describe('dual corpus (ADR 0032 sub-design 6)', () => {
 		expect(registryJson).toContain('sync-el')
 	})
 
-	test('a tag declared by a .tsrx AND a .tsx source fails naming both files (TSRX048)', () => {
+	test('a tag declared by a .tsrx AND a .tsx source fails naming both files (LTC048)', () => {
 		// The .tsrx twin exists only as an in-memory FileInfo — the runner
 		// keys duplicates off the file NAME's tag and reads `content` only,
 		// so nothing is written into examples/ (a real file there would race
@@ -71,21 +71,21 @@ describe('dual corpus (ADR 0032 sub-design 6)', () => {
 			size: 0,
 			exists: true,
 		}
-		return settle(
-			compileTsrxCorpus([fileInfo(SYNC_EL), twin], scratch.path),
-		).then(settled => {
-			if (settled.status !== 'rejected')
-				throw new Error('the run should have failed with TSRX048')
-			const message = String(settled.reason)
-			expect(message).toContain('TSRX048')
-			expect(message).toContain(SYNC_EL)
-			expect(message).toContain(twinRel)
-			// Both files are named against the same tag.
-			expect(message).toContain('`sync-el`')
-		})
+		return settle(compileCorpus([fileInfo(SYNC_EL), twin], scratch.path)).then(
+			settled => {
+				if (settled.status !== 'rejected')
+					throw new Error('the run should have failed with LTC048')
+				const message = String(settled.reason)
+				expect(message).toContain('LTC048')
+				expect(message).toContain(SYNC_EL)
+				expect(message).toContain(twinRel)
+				// Both files are named against the same tag.
+				expect(message).toContain('`sync-el`')
+			},
+		)
 	})
 	// The full 22-component .tsrx corpus through this same runner is pinned
-	// by tier-corpus.test.ts; check:tsrx runs it every CI pass. A third
+	// by tier-corpus.test.ts; check:corpus runs it every CI pass. A third
 	// "mixed corpus compiles clean" re-run here only adds process time —
 	// bun shares one module registry across test files, and the extra wall
 	// time shifted a pre-existing stray dependency-timeout window onto this

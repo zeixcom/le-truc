@@ -6,7 +6,7 @@
  * addressing, item hole, bindItem-scoped events).
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from '../ast-node'
 import {
 	CONTEXT_NAMES,
 	hostPropOf,
@@ -95,7 +95,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 		 * and (rebuilt) hoisted consts are fine; loop variables are the
 		 * hoist-first error; anything else is server-only.
 		 */
-		const checkClientNames = (node: TsrxNode, what: string): void => {
+		const checkClientNames = (node: AstNode, what: string): void => {
 			collectAmbient(node)
 			const free = dependenciesOf(node)
 			const loopRefs = [...free].filter(name => loopBound.has(name))
@@ -369,7 +369,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 			'first',
 			'_element',
 		])
-		const checkItemHandler = (handler: TsrxNode, what: string): void => {
+		const checkItemHandler = (handler: AstNode, what: string): void => {
 			collectAmbient(handler)
 			const free = dependenciesOf(handler)
 			if (free.has(loop.itemName)) {

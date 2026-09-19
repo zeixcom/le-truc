@@ -3,13 +3,13 @@
  * LE_TRUC_COMPILER.md §7): every type the pipeline stages share — the
  * front end (`compiler.ts`) produces a `ComponentIR` of `TemplateNode`s,
  * `analyze.ts` consumes it into a `ClientPlan`, and the two emitters
- * consume both. A pure leaf: type-only imports (`TsrxNode` erases at
+ * consume both. A pure leaf: type-only imports (`AstNode` erases at
  * compile time and carries no pin footprint, `CompileDiagnostic` from the
  * diagnostics leaf), no runtime values, no imports of any pipeline stage —
  * so every stage can depend on this file without depending on each other.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import type { CompileDiagnostic } from './diagnostics'
 import type { RoutingSignal } from './tier'
 
@@ -23,7 +23,7 @@ export type SetupStmt = {
 	text: string
 	range: SourceRange
 	/** The statement's own free-name-bearing expression (LT-034 import placement). */
-	node: TsrxNode
+	node: AstNode
 	/** Declared const name (signals, plain consts), or `null` for `expose()`. */
 	name: string | null
 }
@@ -79,7 +79,7 @@ export type SignalIR = {
 	 * constructor; the FALLBACK argument (second call argument) for
 	 * `requestContext` — the value the server substitutes for the whole call.
 	 */
-	init: TsrxNode | null
+	init: AstNode | null
 	inferredType: 'string' | 'number' | 'boolean' | 'unknown'
 	/**
 	 * `requestContext`-only (LT-035): the fallback argument's verbatim source
@@ -99,21 +99,21 @@ export type TemplateNode =
 			tag: string
 			attrs: AttributeIR[]
 			children: TemplateNode[]
-			node: TsrxNode
+			node: AstNode
 	  }
 	| {
 			kind: 'text'
 			value: string
 			/**
 			 * The JSXText node, when one produced this text (LT-173's
-			 * TSRX047 cites its offset). Absent for synthesized text.
+			 * LTC047 cites its offset). Absent for synthesized text.
 			 */
-			node?: TsrxNode
+			node?: AstNode
 	  }
 	| {
 			kind: 'expr'
 			/** `{expr}` or `&{expr}` child expression. */
-			expr: TsrxNode
+			expr: AstNode
 			exprText: string
 			lazy: boolean
 			/**
@@ -125,7 +125,7 @@ export type TemplateNode =
 			 * still render it.
 			 */
 			bindsProp?: string
-			node: TsrxNode
+			node: AstNode
 	  }
 	| {
 			/**
@@ -136,10 +136,10 @@ export type TemplateNode =
 			 */
 			kind: 'if'
 			testText: string
-			test: TsrxNode
+			test: AstNode
 			then: TemplateNode[]
 			alternate: TemplateNode[]
-			node: TsrxNode
+			node: AstNode
 	  }
 	| {
 			/**
@@ -149,9 +149,9 @@ export type TemplateNode =
 			 */
 			kind: 'switch'
 			discriminantText: string
-			discriminant: TsrxNode
+			discriminant: AstNode
 			cases: Array<{ testText: string | null; children: TemplateNode[] }>
-			node: TsrxNode
+			node: AstNode
 	  }
 	| {
 			/**
@@ -173,7 +173,7 @@ export type TemplateNode =
 			catchParam: string | null
 			catchChildren: TemplateNode[]
 			pendingChildren: TemplateNode[] | null
-			node: TsrxNode
+			node: AstNode
 	  }
 	| {
 			/**
@@ -189,7 +189,7 @@ export type TemplateNode =
 			source: string
 			attrs: ComposeAttrIR[]
 			children: TemplateNode[]
-			node: TsrxNode
+			node: AstNode
 	  }
 	| {
 			/**
@@ -202,7 +202,7 @@ export type TemplateNode =
 			 */
 			kind: 'client-stmt'
 			text: string
-			node: TsrxNode
+			node: AstNode
 	  }
 
 /**
@@ -212,9 +212,9 @@ export type TemplateNode =
  */
 export type PassEntryIR = {
 	prop: string
-	thunk: TsrxNode
+	thunk: AstNode
 	thunkText: string
-	setThunk?: TsrxNode
+	setThunk?: AstNode
 	setThunkText?: string
 }
 
@@ -224,7 +224,7 @@ export type AttributeIR =
 			kind: 'server'
 			name: string
 			exprText: string
-			node: TsrxNode
+			node: AstNode
 			/**
 			 * The exposed prop this server-rendered attribute ALSO binds
 			 * client-side (LT-122) — set when `exprText` is a bare
@@ -236,14 +236,14 @@ export type AttributeIR =
 			 */
 			bindsProp?: string
 	  }
-	| { kind: 'reactive'; name: string; thunk: TsrxNode; thunkText: string }
+	| { kind: 'reactive'; name: string; thunk: AstNode; thunkText: string }
 	| { kind: 'pass'; entries: PassEntryIR[] }
 	| {
 			kind: 'class-map'
 			thunkText: string
 			/** The arrow function node — thunkText's own source range (LT-011). */
-			thunk: TsrxNode
-			object: TsrxNode
+			thunk: AstNode
+			object: AstNode
 	  }
 	| {
 			/**
@@ -258,8 +258,8 @@ export type AttributeIR =
 			kind: 'style-map'
 			thunkText: string
 			/** The arrow function node — thunkText's own source range (LT-011). */
-			thunk: TsrxNode
-			object: TsrxNode
+			thunk: AstNode
+			object: AstNode
 	  }
 	| ({
 			/**
@@ -276,16 +276,16 @@ export type AttributeIR =
 			 */
 			kind: 'html'
 			exprText: string
-			node: TsrxNode
+			node: AstNode
 	  } & (
 			| { reactive: false }
-			| { reactive: true; thunk: TsrxNode; thunkText: string }
+			| { reactive: true; thunk: AstNode; thunkText: string }
 	  ))
 	| {
 			kind: 'event'
 			name: string
 			event: string
-			handler: TsrxNode
+			handler: AstNode
 			handlerText: string
 	  }
 	| {
@@ -316,14 +316,14 @@ export type AttributeIR =
 			 */
 			kind: 'plural-case-type'
 			exprText: string
-			node: TsrxNode
+			node: AstNode
 	  }
 	| {
 			/**
 			 * An element bound to a name usable as a client-side reference. On
 			 * a RAW (dashed-tag) element this is never authored as a JSX
 			 * attribute — `classifyAttribute` hard-errors a bare `ref={}`
-			 * (TSRX006) — this variant is instead populated exclusively by
+			 * (LTC006) — this variant is instead populated exclusively by
 			 * `compiler.ts`'s post-lowering `first(selector, required)`
 			 * resolution (LT-055), which structurally matches the author's
 			 * selector against the template and attaches this to the matched
@@ -354,7 +354,7 @@ export type AttributeIR =
  */
 export type ComposeAttrIR =
 	| { kind: 'ref'; name: string }
-	| { kind: 'arg'; name: string; exprText: string; node: TsrxNode | null }
+	| { kind: 'arg'; name: string; exprText: string; node: AstNode | null }
 	| { kind: 'pass'; entries: PassEntryIR[] }
 
 /**
@@ -375,9 +375,9 @@ export type ForIR = {
 	iterableText: string
 	iterableName: string | null
 	/** const declarations before the output element, in order. */
-	hoisted: Array<{ name: string; initText: string; node: TsrxNode }>
+	hoisted: Array<{ name: string; initText: string; node: AstNode }>
 	output: TemplateNode & { kind: 'element' }
-	node: TsrxNode
+	node: AstNode
 }
 
 /**
@@ -497,7 +497,7 @@ export type ComponentIR = {
 	 * the generated module still needs it to TYPE-CHECK). `emit-server.ts`
 	 * uses this node to find those free names and stub them.
 	 */
-	exposeArgNode: TsrxNode | null
+	exposeArgNode: AstNode | null
 	/** Prop name → signal name, from `expose({ prop: signal.get })`. */
 	exposeProps: Map<string, string>
 	/**
@@ -519,12 +519,12 @@ export type ComponentIR = {
 			fallbackText: string | null
 			/**
 			 * The fallback argument's AST, when it has one. Kept beside the
-			 * text because TSRX039 has to ask what the fallback READS, not
+			 * text because LTC039 has to ask what the fallback READS, not
 			 * just how it prints: a fallback whose expression reads the very
 			 * site the arg renders into is bullet 2's sanctioned override,
 			 * not a duplicated channel (LT-129).
 			 */
-			fallbackNode: TsrxNode | null
+			fallbackNode: AstNode | null
 		}
 	>
 	/** Ambient names `expose()` uses (parser factories, `defineMethod`). */
@@ -556,7 +556,7 @@ export type ComponentIR = {
 	 * (LT-123) — legitimate: an optional ref may address markup
 	 * the PAGE authored beside the component's own children. The
 	 * structural check that rejects an unmatched REQUIRED ref
-	 * (TSRX026) cannot say anything about those, so the client
+	 * (LTC026) cannot say anything about those, so the client
 	 * queries them from the authored selector verbatim.
 	 */
 	unmatchedOptionalRefs: ReadonlyArray<{ name: string; selector: string }>
@@ -568,7 +568,7 @@ export type ComponentIR = {
 	 * compose-refs.ts`). A composed child's eventual DOM tag lives in
 	 * another file's registry entry, so `compileSource` cannot decide
 	 * whether such a selector matches something or nothing — deferring is
-	 * the only sound answer, and TSRX026/TSRX027 are raised there instead.
+	 * the only sound answer, and LTC026/LTC027 are raised there instead.
 	 */
 	deferredComposeRefs: ReadonlyArray<{
 		name: string
@@ -589,7 +589,7 @@ export type ComponentIR = {
 	 */
 	optionalRefs: ReadonlySet<string>
 	/** `@for` loops, keyed by their template node. */
-	fors: Map<TsrxNode, ForIR>
+	fors: Map<AstNode, ForIR>
 	/** Dedented verbatim CSS ("" when no style block). */
 	css: string
 	/** Exported `type`/`interface` declarations, verbatim. */
@@ -650,14 +650,14 @@ export type ExtractContext = {
 	/**
 	 * Why this component cannot be answered by phase 1 alone (ADR 0029,
 	 * LT-165). Collected at the same setup-extraction sites that raise
-	 * `TSRX013`/`TSRX043`, and merged in `index.ts` with the analysis pass's
+	 * `LTC013`/`LTC043`, and merged in `index.ts` with the analysis pass's
 	 * own signals before the tier is classified.
 	 */
 	routingSignals: RoutingSignal[]
 	/**
 	 * Prop names `expose()` declares, plus the managed form props. Populated
 	 * before template lowering so a string-literal child naming a prop can be
-	 * diagnosed (TSRX019) — that spelling meant "watch this prop by name"
+	 * diagnosed (LTC019) — that spelling meant "watch this prop by name"
 	 * only while the `&` sigil disambiguated it from ordinary text.
 	 */
 	exposedProps: Set<string>
@@ -670,14 +670,14 @@ export type ExtractContext = {
 	 * `bindsExposedArg`.
 	 */
 	parserProps: Set<string>
-	/** The Parser factory name backing a `parserProps` entry (TSRX039). */
+	/** The Parser factory name backing a `parserProps` entry (LTC039). */
 	parserFactoryOf: (prop: string) => string
 	/**
 	 * The `first()`-bound ref names a Parser-exposed prop's FALLBACK
 	 * expression reads (LT-129). `asNumber(asNumber(1)(input.step))` returns
 	 * `{'input'}` — the fallback re-reads the very element the arg renders
 	 * into, which is the data account's sanctioned OVERRIDE precedence rather
-	 * than a second copy, so TSRX039 must not fire on it.
+	 * than a second copy, so LTC039 must not fire on it.
 	 */
 	parserFallbackRefsOf: (prop: string) => ReadonlySet<string>
 	/**
@@ -699,5 +699,5 @@ export type ExtractContext = {
 	 * initializer is treated exactly like an inline one (same handler text,
 	 * so `@if` branches that share the identifier automatically agree).
 	 */
-	setupInits: ReadonlyMap<string, TsrxNode>
+	setupInits: ReadonlyMap<string, AstNode>
 }

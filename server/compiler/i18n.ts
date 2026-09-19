@@ -18,7 +18,7 @@
  *   (`runtime.ts`'s `pluralCategories`); this is only the spelling check.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import { asArray, collectBoundNames, identifierName, isNode } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './ir'
@@ -50,11 +50,11 @@ const messagesKey = (node: unknown): string | null => {
  * string IS the fallback every locale resolves against, so a computed value
  * would have no stable bytes for the staleness manifest to hash. Null when
  * the statement is not an i18n declaration; a MALFORMED one reports
- * TSRX008 (source shape) and still returns null.
+ * LTC008 (source shape) and still returns null.
  */
 export const readI18nDecl = (
 	ctx: ExtractContext,
-	stmt: TsrxNode,
+	stmt: AstNode,
 ): Record<string, string> | null => {
 	const decl =
 		stmt.type === 'ExportNamedDeclaration' && isNode(stmt.declaration)
@@ -124,7 +124,7 @@ export const readI18nDecl = (
  * A component binding `lang` in BOTH places cannot compile (duplicate
  * binding), so first match wins is unambiguous.
  */
-export const langBindingOf = (paramsNode: TsrxNode | null): string | null => {
+export const langBindingOf = (paramsNode: AstNode | null): string | null => {
 	if (!paramsNode || paramsNode.type !== 'ObjectPattern') return null
 	for (const prop of asArray(paramsNode.properties)) {
 		if (prop.type !== 'Property') continue
@@ -158,9 +158,7 @@ export const langBindingOf = (paramsNode: TsrxNode | null): string | null => {
  * a compose site the record's locale is the site's own `lang` arg when one
  * is authored, else this default, else the build's page locale.
  */
-export const langArgDefaultOf = (
-	paramsNode: TsrxNode | null,
-): string | null => {
+export const langArgDefaultOf = (paramsNode: AstNode | null): string | null => {
 	if (!paramsNode || paramsNode.type !== 'ObjectPattern') return null
 	for (const prop of asArray(paramsNode.properties)) {
 		if (prop.type !== 'Property') continue
@@ -184,7 +182,7 @@ export const langArgDefaultOf = (
  * (top-level property named `i18n` — `collectBoundNames` sees only leaf
  * bindings, so the reserved name itself has to be looked up by key).
  */
-export const declaresI18nOf = (paramsNode: TsrxNode | null): boolean => {
+export const declaresI18nOf = (paramsNode: AstNode | null): boolean => {
 	if (!paramsNode || paramsNode.type !== 'ObjectPattern') return false
 	return asArray(paramsNode.properties).some(
 		prop => prop.type === 'Property' && identifierName(prop.key) === 'i18n',

@@ -16,15 +16,15 @@ import {
 	createSimulationRealm,
 	type JsdomSimulationRealm,
 } from '../../compiler/sim/realm'
-import { compileTsrxCorpus } from '../../effects/tsrx'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { compileCorpus } from '../../effects/compile'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 import { inlineI18n, PLURALIZE_I18N } from './corpus-args'
-import { loadTsrxCorpus } from './corpus-fixture'
+import { loadCorpus } from './corpus-fixture'
 
 const generated = createGeneratedDir('gate-wave')
 afterAll(() => generated.cleanup())
 
-const corpus = await loadTsrxCorpus()
+const corpus = await loadCorpus()
 const only = (tags: readonly string[]) =>
 	corpus.filter(file =>
 		tags.some(tag => file.filename.endsWith(`/${tag}.tsrx`)),
@@ -42,7 +42,7 @@ const renderName = (tag: string): string => `render${pascal(tag)}`
 
 /** Compile `tags` from the real corpus into the shared generated dir. */
 const compileSubset = async (tags: readonly string[]) => {
-	const compiled = await compileTsrxCorpus(only(tags), generated.path)
+	const compiled = await compileCorpus(only(tags), generated.path)
 	const registry = JSON.parse(
 		await Bun.file(`${generated.path}/registry.json`).text(),
 	) as ComponentRegistry
@@ -397,7 +397,7 @@ const spellingVariant = (tag: string, spelling: 'host.count' | 'count') => ({
 		),
 })
 
-const spellingCompiled = await compileTsrxCorpus(
+const spellingCompiled = await compileCorpus(
 	[
 		spellingVariant('c-count-host', 'host.count'),
 		spellingVariant('c-count-bare', 'count'),

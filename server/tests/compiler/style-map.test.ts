@@ -105,7 +105,7 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX005')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC005')).toBe(false)
 		expect(component).not.toBeNull()
 	})
 
@@ -141,7 +141,7 @@ import { createCell } from '@zeix/le-truc'`
 }
 import { createCell } from '@zeix/le-truc'`
 
-	test('descendant case: no TSRX004, client seeds by initializer reuse', () => {
+	test('descendant case: no LTC004, client seeds by initializer reuse', () => {
 		const { component } = compileComponent(descendant, 'c.tsrx', new Set())
 		expect(component).not.toBeNull()
 		// The map object can't be splice-harvested; both halves construct the
@@ -154,7 +154,7 @@ import { createCell } from '@zeix/le-truc'`
 		)
 	})
 
-	test('root case (targets host): no TSRX004 either', () => {
+	test('root case (targets host): no LTC004 either', () => {
 		const { component } = compileComponent(root, 'c.tsrx', new Set())
 		expect(component?.clientCode).toContain("bindStyle(host, ['color'])")
 	})

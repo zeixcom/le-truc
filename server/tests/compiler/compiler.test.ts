@@ -226,7 +226,7 @@ import { createCell } from '@zeix/le-truc'`,
 		])
 	})
 
-	test('bare ref={} on a raw element is retired (TSRX006, LT-055)', () => {
+	test('bare ref={} on a raw element is retired (LTC006, LT-055)', () => {
 		const { component, diagnostics } = compileComponent(
 			`export function C({}: {})
 			@{
@@ -242,7 +242,7 @@ import { createCell } from '@zeix/le-truc'`,
 		expect(component).toBeNull()
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX006' && d.message.includes('first('),
+				d => d.code === 'LTC006' && d.message.includes('first('),
 			),
 		).toBe(true)
 	})

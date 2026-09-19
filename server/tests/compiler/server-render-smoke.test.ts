@@ -26,9 +26,9 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { Glob } from 'bun'
 import { isVoidElement } from '../../compiler/core'
-import { compileTsrxCorpus } from '../../effects/tsrx'
+import { compileCorpus } from '../../effects/compile'
 import type { FileInfo } from '../../file-signals'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 import { inlineI18n, PLURALIZE_I18N } from './corpus-args'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -128,7 +128,7 @@ const corpus = async (): Promise<FileInfo[]> => {
 const generated = createGeneratedDir('render-smoke')
 afterAll(() => generated.cleanup())
 
-const compiled = await compileTsrxCorpus(await corpus(), generated.path)
+const compiled = await compileCorpus(await corpus(), generated.path)
 
 describe('server render smoke — every corpus tag renders (LT-121)', () => {
 	test('the corpus compiled at all', () => {

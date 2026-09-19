@@ -28,7 +28,7 @@ import { LOCALES } from '../../config'
 import {
 	assertSimulatedTier,
 	gateOnSimReport,
-	simulateTsrxCorpus,
+	simulateCorpus,
 } from '../../effects/simulate'
 
 /* === Fixtures === */
@@ -95,7 +95,7 @@ describe('the tier invariant (ADR 0029 — a realm is opened for the Simulated t
 
 	test('the pass renders Simulated-tier components and only those', async () => {
 		const { realm, log } = fakeRealm()
-		const result = await simulateTsrxCorpus({
+		const result = await simulateCorpus({
 			registry: registryOf(
 				entry('x-folded', 'folded'),
 				entry('x-sim', 'simulated'),
@@ -125,7 +125,7 @@ describe('the tier invariant (ADR 0029 — a realm is opened for the Simulated t
 
 	test('a corpus with no Simulated-tier component opens no realm at all', async () => {
 		let created = 0
-		const result = await simulateTsrxCorpus({
+		const result = await simulateCorpus({
 			registry: registryOf(entry('x-folded', 'folded'), entry('x-s', 'static')),
 			createRealm: () => {
 				created++
@@ -143,7 +143,7 @@ describe('the tier invariant (ADR 0029 — a realm is opened for the Simulated t
 describe('disposal is end-of-build (LT-152 review, obligation 1)', () => {
 	test('dispose runs once, after every render, never between them', async () => {
 		const { realm, log } = fakeRealm()
-		await simulateTsrxCorpus({
+		await simulateCorpus({
 			registry: registryOf(
 				entry('x-a', 'simulated'),
 				entry('x-b', 'simulated'),
@@ -165,7 +165,7 @@ describe('disposal is end-of-build (LT-152 review, obligation 1)', () => {
 			{ kind: 'component-throw', component: 'x-a', message: 'boom' },
 		])
 		await expect(
-			simulateTsrxCorpus({
+			simulateCorpus({
 				registry: registryOf(entry('x-a', 'simulated')),
 				createRealm: () => realm,
 				readMarkup: async () => '<x-a></x-a>',
@@ -192,7 +192,7 @@ describe('the build report is the gate (LT-163 baseline, now the build’s own)'
 
 	test('the pass surfaces the report it gated on', async () => {
 		const { realm } = fakeRealm()
-		const result = await simulateTsrxCorpus({
+		const result = await simulateCorpus({
 			registry: registryOf(entry('x-a', 'simulated')),
 			createRealm: () => realm,
 			readMarkup: async () => '<x-a></x-a>',
@@ -205,7 +205,7 @@ describe('the build report is the gate (LT-163 baseline, now the build’s own)'
 describe('occurrence scope', () => {
 	test('each top-level occurrence renders, once per locale', async () => {
 		const { realm, log } = fakeRealm()
-		const result = await simulateTsrxCorpus({
+		const result = await simulateCorpus({
 			registry: registryOf(entry('x-a', 'simulated')),
 			createRealm: () => realm,
 			// Three occurrences, two of them byte-identical.
@@ -223,7 +223,7 @@ describe('occurrence scope', () => {
 
 	test('a nested occurrence renders with its outer one, not on its own', async () => {
 		const { realm, log } = fakeRealm()
-		const result = await simulateTsrxCorpus({
+		const result = await simulateCorpus({
 			registry: registryOf(entry('x-a', 'simulated')),
 			createRealm: () => realm,
 			readMarkup: async () => '<x-a><div><x-a>inner</x-a></div></x-a>',
@@ -237,7 +237,7 @@ describe('occurrence scope', () => {
 
 	test('a Simulated-tier component with no authored markup is reported, not skipped silently', async () => {
 		const { realm } = fakeRealm()
-		const result = await simulateTsrxCorpus({
+		const result = await simulateCorpus({
 			registry: registryOf(entry('x-a', 'simulated')),
 			createRealm: () => realm,
 			readMarkup: async () => null,

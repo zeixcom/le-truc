@@ -1,6 +1,6 @@
 import './basic/blogmeta/basic-blogmeta.ts'
 // Site cutover (LT-092): every migrated component mounts its COMPILED client
-// from server/generated/tsrx (gitignored build output — scripts/build-tsrx.ts
+// from server/generated/components (gitignored build output — scripts/build-corpus.ts
 // regenerates it; build:examples:js runs that compiler step before bundling,
 // and server/build.ts sequences the tsrx effect in phase 1 ahead of the js
 // bundle for the same reason). The hand-written .ts twins are deleted per the
@@ -9,8 +9,8 @@ import './basic/blogmeta/basic-blogmeta.ts'
 // renders the button and its spans from the args) and harvests
 // label/badge/disabled back out of that same markup at connect, so a
 // page may also author the markup itself, in whole or in part.
-import '../server/generated/tsrx/basic-button.client.ts'
-import '../server/generated/tsrx/basic-counter.client.ts'
+import '../server/generated/components/basic-button.client.ts'
+import '../server/generated/components/basic-counter.client.ts'
 // basic-gauge and basic-pluralize cut over in LT-115: the arg→DOM
 // substitution now routes derived signals through the exposed prop's Slot
 // (a tracked source — post-connect writes re-derive instead of freezing),
@@ -18,29 +18,29 @@ import '../server/generated/tsrx/basic-counter.client.ts'
 // `first('<own-tag>')` self-query. Both components were reshaped to their
 // twins' contracts (gauge: meter-fallback harvest + observedAttributes;
 // pluralize: getLocale thunks, no setup signals) — see their .tsrx headers.
-import '../server/generated/tsrx/basic-gauge.client.ts'
-import '../server/generated/tsrx/basic-number.client.ts'
-import '../server/generated/tsrx/basic-hello.client.ts'
-import '../server/generated/tsrx/basic-pluralize.client.ts'
-import '../server/generated/tsrx/card-collapsible.client.ts'
-import '../server/generated/tsrx/card-colorscale.client.ts'
-import '../server/generated/tsrx/card-mediaqueries.client.ts'
+import '../server/generated/components/basic-gauge.client.ts'
+import '../server/generated/components/basic-number.client.ts'
+import '../server/generated/components/basic-hello.client.ts'
+import '../server/generated/components/basic-pluralize.client.ts'
+import '../server/generated/components/card-collapsible.client.ts'
+import '../server/generated/components/card-colorscale.client.ts'
+import '../server/generated/components/card-mediaqueries.client.ts'
 import './context/media/context-media.ts'
 import './docs/lifecycle/docs-lifecycle.ts'
 import './docs/reconcile/docs-reconcile.ts'
 import './docs/task-states/docs-task-states.ts'
-import '../server/generated/tsrx/form-checkbox.client.ts'
-import '../server/generated/tsrx/form-colorgraph.client.ts'
-import '../server/generated/tsrx/form-combobox.client.ts'
-import '../server/generated/tsrx/form-inplace-edit.client.ts'
-import '../server/generated/tsrx/form-listbox.client.ts'
+import '../server/generated/components/form-checkbox.client.ts'
+import '../server/generated/components/form-colorgraph.client.ts'
+import '../server/generated/components/form-combobox.client.ts'
+import '../server/generated/components/form-inplace-edit.client.ts'
+import '../server/generated/components/form-listbox.client.ts'
 // form-radiogroup cut over in LT-116: the loop-body `checked` mirror lowers
 // to a property write (the compiler's dirty-flag dispatch widening), so the
 // compiled client restores the twin's mutual exclusion after interaction.
-import '../server/generated/tsrx/form-radiogroup.client.ts'
-import '../server/generated/tsrx/form-spinbutton.client.ts'
-import '../server/generated/tsrx/form-textbox.client.ts'
-import '../server/generated/tsrx/form-tokenbox.client.ts'
+import '../server/generated/components/form-radiogroup.client.ts'
+import '../server/generated/components/form-spinbutton.client.ts'
+import '../server/generated/components/form-textbox.client.ts'
+import '../server/generated/components/form-tokenbox.client.ts'
 import './module/calctable/module-calctable.ts'
 import './module/carousel/module-carousel.ts'
 import './module/catalog/module-catalog.ts'
@@ -50,12 +50,12 @@ import './module/coloreditor/module-coloreditor.ts'
 import './module/colorinfo/module-colorinfo.ts'
 import './module/dialog/module-dialog.ts'
 import './module/lazyload/module-lazyload.ts'
-import '../server/generated/tsrx/module-list.client.ts'
+import '../server/generated/components/module-list.client.ts'
 import './module/listnav/module-listnav.ts'
 import './module/pagination/module-pagination.ts'
 import './module/scrollarea/module-scrollarea.ts'
 import './module/splitview/module-splitview.ts'
-import '../server/generated/tsrx/module-tabgroup.client.ts'
+import '../server/generated/components/module-tabgroup.client.ts'
 import './module/ticker/module-ticker.ts'
 import './module/todo/module-todo.ts'
 import './section/menu/section-menu.ts'

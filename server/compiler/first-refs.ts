@@ -17,7 +17,7 @@
  * so every existing dedup/union-addressing guarantee carries over unchanged.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import { isNode } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import type { TemplateNode } from './ir'
@@ -183,7 +183,7 @@ export const collectMatchingElements = (
  * (PascalCase) child — whose eventual tag lives in another file's registry
  * entry and is unknown inside single-file `compileSource`. Such a selector
  * is handed to the registry-aware second pass (`analysis/compose-refs.ts`)
- * instead of being rejected here; anything else is a genuine TSRX026.
+ * instead of being rejected here; anything else is a genuine LTC026.
  */
 export const namesCustomElementTag = (selectorList: string): boolean =>
 	selectorList
@@ -243,7 +243,7 @@ export const shareExclusiveIf = (
 }
 
 /**
- * TSRX039 (LT-122): report every site that renders a server arg
+ * LTC039 (LT-122): report every site that renders a server arg
  * whose name is a PARSER-exposed prop — the value's own seeding
  * channel is the host attribute, so such a site is a second copy.
  *
@@ -307,7 +307,7 @@ export const reportDuplicatedChannels = ({
 	formResetProp,
 }: DuplicatedChannelsCheck): void => {
 	if (parserProps.size === 0 || argNames.size === 0) return
-	const named = (expr: TsrxNode): string | null => {
+	const named = (expr: AstNode): string | null => {
 		if (!isNode(expr) || expr.type !== 'Identifier') return null
 		const name = String(expr.name)
 		return argNames.has(name) && parserProps.has(name) ? name : null
@@ -383,7 +383,7 @@ export const reportDuplicatedChannels = ({
 }
 
 /**
- * TSRX042 (LT-131): every element in the template carrying a STATIC `id`.
+ * LTC042 (LT-131): every element in the template carrying a STATIC `id`.
  * A template is per-INSTANCE; an `id` is per-DOCUMENT. The constant is
  * correct for exactly one instance on a page and silently wrong for the
  * second — including the root element, which is the host itself.

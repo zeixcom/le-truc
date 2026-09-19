@@ -1,6 +1,6 @@
 /**
  * Development smoke check (not a test file): compile the corpus sources,
- * emit server modules into server/generated/tsrx/, execute the render
+ * emit server modules into server/generated/components/, execute the render
  * functions, and print output next to diagnostics. Run:
  *
  *   bun server/compiler/smoke.ts
@@ -12,7 +12,7 @@ import { emitServerModule } from './emit-server'
 import { compileSource } from './frontend/tsrx'
 
 const ROOT = new URL('../../..', import.meta.url).pathname
-const OUT_DIR = 'server/generated/tsrx'
+const OUT_DIR = 'server/generated/components'
 const CASES = [
 	'examples/basic/counter/basic-counter.tsrx',
 	'examples/module/tabgroup/module-tabgroup.tsrx',

@@ -278,7 +278,7 @@ Tech Writer copy round, scope widened).
      argument-less message serializes as a plain string (unchanged); a message with
      arguments serializes as LT-250's compact AST. Only client-referenced keys (owner
      ruling): a server-folded key never rides the attribute. The root-attribute exclusion
-     covers TSRX039; authored `i18n` attributes are already rejected in classify-attributes.
+     covers LTC039; authored `i18n` attributes are already rejected in classify-attributes.
   3. **Client preamble:** the generated client factory gains an inlined, guarded
      `JSON.parse(host.getAttribute('i18n'))` merged over the declared source-locale record,
      which the compiler emits already parsed for the same keys — NO new `@zeix/le-truc`
@@ -374,7 +374,7 @@ Tech Writer copy round, scope widened).
   **Context:** Three copy items queued from landed work; batch them so the messages read as
   one voice. All follow `workflows/error-message-lifecycle.md`.
   **S0 hold — RESOLVED 2026-09-19 (LT-240 ruled: ICU MF1).** Consequences for the held items:
-  **item 2 is WITHDRAWN** — the dotted-key CLDR shape rule is deleted by LT-251, so TSRX008's
+  **item 2 is WITHDRAWN** — the dotted-key CLDR shape rule is deleted by LT-251, so LTC008's
   message is retired rather than reworded; the retirement still runs the error-message
   lifecycle sweep (that is LT-251's obligation, verified here). **Item 8 proceeds**, with one
   amendment: the orphan census/sync copy must no longer reference reachability or plural
@@ -396,14 +396,14 @@ Tech Writer copy round, scope widened).
      JSDoc on `ContextRequestEvent` and on `requestContext()`, plus the context section in
      `docs-src/pages/` and the `le-truc` skill's context reference. One rule to state: a
      provider checks `event.context`, never `instanceof`.
-  2. ~~**TSRX008's dotted-key message** (LT-190 handoff)~~ — **withdrawn 2026-09-19.** The
+  2. ~~**LTC008's dotted-key message** (LT-190 handoff)~~ — **withdrawn 2026-09-19.** The
      rule the message documents (a dot-suffix must name one of the six CLDR categories) is
      deleted by the LT-240 ruling; the code is retired in LT-251, which owns the lifecycle
      sweep. Nothing to word here.
-  3. **TSRX047's literal-prose warning** (LT-173 handoff): final copy; the single-letter
+  3. **LTC047's literal-prose warning** (LT-173 handoff): final copy; the single-letter
      exemption (page data, not prose) must survive the rewording, and the missing-
      *translation*-rides-the-census distinction is the point of the message.
-  4. **TSRX048's duplicate-tag error** (LT-202 handoff): final copy over the draft in
+  4. **LTC048's duplicate-tag error** (LT-202 handoff): final copy over the draft in
      `server/compiler/diagnostics.ts` — one tag, two corpus sources, both files named; the
      "whatever surface it is written in" clause is the dual-front-end fact the message
      teaches.
@@ -411,7 +411,7 @@ Tech Writer copy round, scope widened).
      LT-211/208): the arm-shape errors in `server/compiler/frontend/tsx/lower-tsx.ts`
      (missing/ill-typed arms, single-root rule per arm, err-arrow requirement) — final
      copy; the four-arm vocabulary is gone (owner withdrawal, 2026-09-18), so the copy
-     covers the three arms plus LT-209's new TSRX049/TSRX050 drafts in
+     covers the three arms plus LT-209's new LTC049/LTC050 drafts in
      `server/compiler/diagnostics.ts`. Batch with items 2–3 so the diagnostic families
      read as one voice.
   6. **The TSRX020 retirement copy** (LT-210 handoff, 2026-09-18): the retirement note
@@ -444,7 +444,7 @@ Tech Writer copy round, scope widened).
      the ADR 0030 s5 orphan-direction sentence itself — run item 8 after it (or
      accept a second pass over those two spots).
   9. **The `class:`-prefix rejection copy** (LT-222 handoff, 2026-09-18): the new
-     TSRX006 reason in `server/compiler/classify-attributes.ts` (first draft:
+     LTC006 reason in `server/compiler/classify-attributes.ts` (first draft:
      "`class:token={…}` is not a TSRX spelling — a per-class reactive binding is a
      class map: `class={() => ({ token: value })}`. A `class:token` attribute
      renders into the markup verbatim and the browser ignores it."). No new code —
@@ -454,7 +454,7 @@ Tech Writer copy round, scope widened).
   10. **The union restructure** (LT-223 handoff, 2026-09-18): retirement treatment
      standardized to the keep-member form the lifecycle doc prescribes — `TSRX020`
      is a kept member again (was deleted-with-comment, the file's one outlier),
-     `TSRX031` keeps its member with an expanded note, and `TSRX004`/`013`/`043`
+     `LTC031` keeps its member with an expanded note, and `LTC004`/`013`/`043`
      left the `DiagnosticCode` union for tier.ts's named `RoutingSignalOrigin`
      (they are census origins, not emitted codes; position comments mark where the
      numbers are spent). Check `.agents/skills/le-truc/references/errors.md` and the
@@ -511,7 +511,7 @@ Tech Writer copy round, scope widened).
     and the LT-217 orphan direction), and the registry's case-type input to them. Every locale
     now carries the same key set; an orphan is unconditional.
   - **Shape rule:** the `<key>.<category>` convention and its CLDR-category validation;
-    **TSRX008 retires** (LT-189 item 2 withdrawn accordingly). Retirement runs
+    **LTC008 retires** (LT-189 item 2 withdrawn accordingly). Retirement runs
     `tech-writer`'s `workflows/error-message-lifecycle.md` in full — keep-member treatment in
     the `DiagnosticCode` union per LT-223, and sweep
     `.agents/skills/le-truc/references/errors.md`, HOST_PROFILE.md and LE_TRUC_COMPILER.md.
@@ -1169,7 +1169,7 @@ and this note is redundant; if it has not, do the manual diff.
   equivalence contract at runtime the way the parity suite is at build time; (b) the three
   spellings side by side are the honest showcase of the surfaces' trade-offs, which is
   exactly what ADR 0032's dual ruling asks readers to weigh. Today the corpus forbids this:
-  one tag declared by two corpus files fails the build (TSRX048), and the P5 migration
+  one tag declared by two corpus files fails the build (LTC048), and the P5 migration
   pattern above says "delete the `.ts` twin."
   **The design question this needs answered first — do not skip to the code.** Three
   spellings of one tag collide in three places, not one: the emitted artifact names
@@ -1193,14 +1193,14 @@ and this note is redundant; if it has not, do the manual diff.
   weight when grilling, not as a nice-to-have.
   **Obligations.** This amends ADR 0032 sub-design 6 and the `ARCHITECTURE.md` § Authoring
   Surfaces sentence "One component tag has exactly one authored source" — record via
-  `adr-keeper`, do not edit the ruling in place. TSRX048 narrows rather than retires (it must
+  `adr-keeper`, do not edit the ruling in place. LTC048 narrows rather than retires (it must
   still catch two *canonical* sources for one tag): **channel = compiler, tier 1 Prevented**,
-  statically decidable, no runtime half. **Tech Writer reviews the new TSRX048 copy** — the
+  statically decidable, no runtime half. **Tech Writer reviews the new LTC048 copy** — the
   message names both files today and will need to name the canonical-source rule instead.
   Rewrite the P5 migration pattern above in the same commit: "delete the `.ts` twin" becomes
   "retain the `.ts` twin as a variant."
   **Verification:** a corpus carrying all three spellings of one example compiles clean; the
-  example's Playwright spec passes against each; TSRX048 still fires for two canonical
+  example's Playwright spec passes against each; LTC048 still fires for two canonical
   sources; `bun test server/tests`, typecheck, warning baseline 0.
 
 - [ ] LT-237: Move the spike's `.tsx` fixtures into their example component folders. **Depends on LT-238.**
@@ -1391,10 +1391,10 @@ and this note is redundant; if it has not, do the manual diff.
   **Acceptance:** the probe above pinned over the real catalogs with injection (LT-196 test
   pattern); committed catalogs stay gap-free; census/sync summaries unchanged when all values
   are strings.
-- [ ] LT-093: Make TSRX004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall).
+- [ ] LT-093: Make LTC004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall).
   **Skill:** le-truc-dev
   **Context:** Re-confirmed empirically 2026-08-29: `const DEFAULT = 'red'; const color =
-  createCell(DEFAULT)` consumed only through a style-map still fires TSRX004's "never rendered"
+  createCell(DEFAULT)` consumed only through a style-map still fires LTC004's "never rendered"
   message, though the signal IS credited as rendered (`thunkRendered`) —
   `substituteArgExpr`'s free-name gate rejects the verbatim initializer because the client
   module may not define the name. **Step 1 (small):** split the diagnostic — "rendered but
@@ -1409,12 +1409,12 @@ and this note is redundant; if it has not, do the manual diff.
   thunks, which now lack `String()` coercion under property dispatch — consult `inferredType` so
   the coercion fires for number-typed signal reads (no corpus offender today; add the unit test).
   **Re-triaged 2026-09-06 (LT-165 step 5 landed).** The ADR 0029 concern stands and has
-  sharpened: TSRX004 left the diagnostic channel, so a false firing on a fully
+  sharpened: LTC004 left the diagnostic channel, so a false firing on a fully
   phase-1-resolvable component now tiers it into simulation **silently** — it buys a realm and
   says nothing. It is not invisible, though: the tier census records the reason with its
-  TSRX004 origin and line, so the failure mode is inspectable rather than lost. Stays in P6 on
+  LTC004 origin and line, so the failure mode is inspectable rather than lost. Stays in P6 on
   that basis. **Cheap check to run at the end of wave 4, before this task:** scan the census for
-  any Simulated component whose ONLY reason is a TSRX004 origin — each one is a candidate false
+  any Simulated component whose ONLY reason is a LTC004 origin — each one is a candidate false
   firing, and the list sizes this task's real payoff.
 
 - [ ] LT-135: Follow plain-const indirection when crediting client-only setup reads (LT-119 sharp edge).
@@ -1422,10 +1422,10 @@ and this note is redundant; if it has not, do the manual diff.
   **Context:** LT-119 credits a signal in `thunkRendered` when a `clientSetup` statement reads
   it, but the check is `containsSignalGet(stmt.node, …)` on the statement itself. Hoisting the
   predicate into a plain setup const — `const isOpen = () => open.get(); watch(() => !isOpen(),
-  …)` — moves the read out of the statement and the signal draws TSRX004 again, so the author
+  …)` — moves the read out of the statement and the signal draws LTC004 again, so the author
   must repeat the predicate at every site (`form-combobox.tsrx` does, with a comment saying
   why). **Re-checked 2026-09-06 (LT-165 step 5 landed) — the original premise is false.**
-  "The diagnostic is loud, not silent" no longer holds: TSRX004 left the diagnostic channel, so
+  "The diagnostic is loud, not silent" no longer holds: LTC004 left the diagnostic channel, so
   hoisting a predicate into a plain setup const now routes the whole component to the Simulated
   tier with **no warning at all** — the author gets a jsdom realm instead of a one-line fix-it,
   and the `form-combobox.tsrx` comment ("repeat the predicate, here is why") is unenforced
@@ -1461,16 +1461,16 @@ and this note is redundant; if it has not, do the manual diff.
   draws the existing one, and both are pinned (the existing message has no test today — add one
   while there); `test:src` green.
 
-- [ ] LT-134: TSRX035 and TSRX042 give opposite advice on the same construct (LT-131 review finding).
+- [ ] LT-134: LTC035 and LTC042 give opposite advice on the same construct (LT-131 review finding).
   **Skill:** le-truc-dev
-  **Context:** TSRX035 (`duplicateIdAcrossArms`) tells the author "Give each arm's element a
-  distinct id" — a static id per arm. TSRX042 then warns on each of those static ids. Both are
-  individually true (TSRX035 is about two ids colliding within ONE instance, TSRX042 about one
+  **Context:** LTC035 (`duplicateIdAcrossArms`) tells the author "Give each arm's element a
+  distinct id" — a static id per arm. LTC042 then warns on each of those static ids. Both are
+  individually true (LTC035 is about two ids colliding within ONE instance, LTC042 about one
   id colliding across TWO instances) and the server-arg fix satisfies both at once, but neither
-  message says so, and an author fixing TSRX035 as instructed walks straight into TSRX042. No
-  corpus component hits it today. **Fix:** make TSRX035's fix-it name the server-arg shape too —
+  message says so, and an author fixing LTC035 as instructed walks straight into LTC042. No
+  corpus component hits it today. **Fix:** make LTC035's fix-it name the server-arg shape too —
   "give each arm's element a distinct id, taken as server args so they stay unique per instance
-  (TSRX042)" — and check whether TSRX038 (`duplicateComposeId`) needs the same. Cheap,
+  (LTC042)" — and check whether LTC038 (`duplicateComposeId`) needs the same. Cheap,
   message-only; the point is that the diagnostic set should not contain a loop. **Tech Writer
   reviews the copy.**
 

@@ -30,7 +30,7 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 		)
 	})
 
-	test('a native element target is diagnosed (TSRX012)', () => {
+	test('a native element target is diagnosed (LTC012)', () => {
 		const source = `export function C({}: {})
 	@{
 		<>
@@ -46,10 +46,10 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 			new Set(),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX012')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC012')).toBe(true)
 	})
 
-	test('an unregistered dashed tag is diagnosed (TSRX012)', () => {
+	test('an unregistered dashed tag is diagnosed (LTC012)', () => {
 		const source = `export function C({}: {})
 	@{
 		<>
@@ -65,10 +65,10 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 			new Set(),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX012')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC012')).toBe(true)
 	})
 
-	test('a bare function-valued attribute on a custom element no longer dispatches to pass() (TSRX012)', () => {
+	test('a bare function-valued attribute on a custom element no longer dispatches to pass() (LTC012)', () => {
 		const source = `export function C({}: {})
 	@{
 		<>
@@ -84,7 +84,7 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 			new Set(['basic-child']),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX012')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC012')).toBe(true)
 	})
 
 	test('a bare function-valued attribute on a native element is unaffected', () => {
@@ -156,7 +156,7 @@ export function C({}: {})
 		)
 	})
 
-	test('truc:pass={{ }} with a non-object value is invalid (TSRX006)', () => {
+	test('truc:pass={{ }} with a non-object value is invalid (LTC006)', () => {
 		const source = `export function C({}: {})
 	@{
 		<>
@@ -172,7 +172,7 @@ export function C({}: {})
 			new Set(['basic-child']),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX006')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC006')).toBe(true)
 	})
 })
 
@@ -249,7 +249,7 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 		</>
 	}`
 
-	/** A `createCell` declaration plus the render site TSRX004 requires. */
+	/** A `createCell` declaration plus the render site LTC004 requires. */
 	const cell = {
 		imports: 'createCell',
 		setup: `const v = createCell('')`,
@@ -310,7 +310,7 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 		expect(component).not.toBeNull()
 	})
 
-	test('a `sig.get` expose is READ-ONLY and is diagnosed (TSRX012)', () => {
+	test('a `sig.get` expose is READ-ONLY and is diagnosed (LTC012)', () => {
 		// The surprise this rule exists for: `sig.get` is a bare function,
 		// so `#setAccessor` wraps it in `deriveCell` — read-only however
 		// mutable `sig` is. The corpus's single most common expose shape.
@@ -319,7 +319,7 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 			expose: 'value: v.get',
 		})
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX012')
+		const hit = diagnostics.find(d => d.code === 'LTC012')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`value`')
 		expect(hit?.message).toContain('READ-ONLY')
@@ -332,7 +332,7 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 		expect(component).toBeNull()
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX012' && d.message.includes('READ-ONLY'),
+				d => d.code === 'LTC012' && d.message.includes('READ-ONLY'),
 			),
 		).toBe(true)
 	})
@@ -343,7 +343,7 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 			expose: 'value: defineMethod(() => {})',
 		})
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX012')
+		const hit = diagnostics.find(d => d.code === 'LTC012')
 		expect(hit?.message).toContain('defineMethod()')
 		expect(hit?.message).toContain('has no Slot to swap')
 	})
@@ -351,7 +351,7 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 	test('a prop the target does not expose at all is diagnosed, naming the ones it does', () => {
 		const { component, diagnostics } = compilePair({ expose: `label: ''` })
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX012')
+		const hit = diagnostics.find(d => d.code === 'LTC012')
 		expect(hit?.message).toContain('does not expose `value`')
 		expect(hit?.message).toContain('`label`')
 	})
@@ -368,7 +368,7 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 			new Set(['basic-child']),
 		)
 		expect(component).not.toBeNull()
-		expect(diagnostics.filter(d => d.code === 'TSRX012')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC012')).toEqual([])
 	})
 
 	test('the registry entry records every expose() key with its kind', () => {

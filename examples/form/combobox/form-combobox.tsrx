@@ -129,7 +129,7 @@ export function FormCombobox(
 	// form-inplace-edit precedent) rather than reactive JSX attributes: the
 	// predicate reads a ref, so the server cannot fold it, and as attribute
 	// thunks both attributes would be silently OMITTED from the initial HTML
-	// (TSRX034) — which for `hidden` means serving the popup OPEN until
+	// (LTC034) — which for `hidden` means serving the popup OPEN until
 	// hydration. The template carries the closed state statically instead
 	// (`hidden`, `aria-expanded="false"`), which is what the server rendered
 	// anyway with `showPopup` seeded false, and these two watches take over

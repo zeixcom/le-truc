@@ -31,7 +31,7 @@
  * `host.zero`/`host.value` and still render server-side, because LT-118
  * taught `foldableHostProps` that a harvested prop's server truth is the
  * arg that renders its site — without that, following the data account
- * here would have cost three TSRX034 warnings and a real pre-JS flash.
+ * here would have cost three LTC034 warnings and a real pre-JS flash.
  *
  * `stepBy`'s clamp/commit logic isn't a shared plain setup const (a plain
  * const referencing `host`/refs breaks server compilation once emitted
@@ -163,7 +163,7 @@ export function FormSpinbutton(
 	const otherSpan = first('span.other')
 	// The increment label's non-zero fallback, carried where the client can
 	// read it: `t` is a server-only name (the compiler rejects it in a
-	// reactive thunk — TSRX005 — and no catalog ships to the browser,
+	// reactive thunk — LTC005 — and no catalog ships to the browser,
 	// ADR 0030 sub-design 6), so the translated string is RENDERED into this
 	// hidden span and the thunk reads its textContent — the same
 	// rendered-alternatives idiom the zero-state span below already uses for

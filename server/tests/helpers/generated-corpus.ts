@@ -2,10 +2,10 @@
  * Per-run output directories for tests that must EXECUTE generated TSRX
  * modules (LT-140).
  *
- * Emitting into the real `server/generated/tsrx/` couples the test suite to
+ * Emitting into the real `server/generated/components/` couples the test suite to
  * a directory the build pipeline owns, in two ways that both surface as an
  * unreproducible red run:
- * - any concurrent writer (`bun run scripts/build-tsrx.ts`, `check:tsrx`, a
+ * - any concurrent writer (`bun run scripts/build-corpus.ts`, `check:corpus`, a
  *   running dev server) overwrites a module between a test's write and its
  *   import;
  * - two test files that pick the same tag (`c-el`) overwrite each other,
@@ -20,7 +20,7 @@ import * as path from 'node:path'
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
 /**
- * Sibling of the real `server/generated/tsrx/`, NOT an OS temp dir: emitted
+ * Sibling of the real `server/generated/components/`, NOT an OS temp dir: emitted
  * modules import `'../../compiler/runtime'` (and examples/ helpers three levels
  * up), so the output has to sit at the same depth under the repo root for
  * those relative specifiers to resolve. `server/generated/` is gitignored,
@@ -54,7 +54,7 @@ process.on('exit', () => {
  */
 export function createGeneratedDir(label: string): GeneratedDir {
 	mkdirSync(BASE, { recursive: true })
-	const dir = mkdtempSync(path.join(BASE, `tsrx-test-${label}-`))
+	const dir = mkdtempSync(path.join(BASE, `corpus-test-${label}-`))
 	live.add(dir)
 
 	// The module registry keys on the resolved specifier, so a file re-emitted

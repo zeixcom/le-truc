@@ -1,13 +1,13 @@
 /**
  * The component function's params contract, shared by both front ends
  * (LT-202, ADR 0032 sub-design 6: the anti-drift half of the dual
- * front-end contract): exactly one destructured args object (TSRX008)
+ * front-end contract): exactly one destructured args object (LTC008)
  * plus, per the LT-209 convention, an optional author-annotated
  * factory-context parameter. Front-end-neutral like the other front-end
- * stage modules: no parser values, only the loose `TsrxNode` type.
+ * stage modules: no parser values, only the loose `AstNode` type.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import {
 	asArray,
 	CONTEXT_NAMES,
@@ -22,7 +22,7 @@ import type { ExtractContext } from './ir'
 
 /** The component function's destructured args parameter, extracted. */
 export type ComponentParams = {
-	paramsNode: TsrxNode | null
+	paramsNode: AstNode | null
 	paramNames: Set<string>
 	/**
 	 * The authored second (factory-context) parameter, when present — the
@@ -32,7 +32,7 @@ export type ComponentParams = {
 	 * generated factory destructures the SAME names from its own context,
 	 * so body lowering is unchanged. `annotationName` is the written type's
 	 * name when it names `FactoryContext`/`FormFactoryContext` — the input
-	 * to TSRX050's surface check (which needs `config`, known later).
+	 * to LTC050's surface check (which needs `config`, known later).
 	 */
 	contextParam: {
 		names: ReadonlySet<string>
@@ -42,20 +42,20 @@ export type ComponentParams = {
 
 /**
  * Validate the component function's parameter list: exactly one destructured
- * args object (TSRX008) — plus, per the LT-209 convention, an optional
+ * args object (LTC008) — plus, per the LT-209 convention, an optional
  * second, author-annotated factory-context parameter. Pushes the diagnostic
  * and returns null otherwise. A destructured default paired with a
- * non-optional type is TSRX032 (CHECKLIST §10): the type annotation is what
+ * non-optional type is LTC032 (CHECKLIST §10): the type annotation is what
  * callers see, and it says the prop is required, so the default is
  * unreachable for any external caller.
  */
 export const extractParams = (
 	ctx: ExtractContext,
 	filename: string,
-	fn: TsrxNode,
+	fn: AstNode,
 ): ComponentParams | null => {
 	const params = asArray(fn.params)
-	const paramsNode = (params[0] as TsrxNode | undefined) ?? null
+	const paramsNode = (params[0] as AstNode | undefined) ?? null
 	if (params.length > 2 || paramsNode?.type !== 'ObjectPattern') {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
@@ -83,10 +83,10 @@ export const extractParams = (
 	// the compiler only validates the vocabulary — the generated factory
 	// destructures the same names, so body lowering is unchanged. Type-only
 	// imports of the annotation never reach generated output
-	// (`parseLeTrucImports` skips type-only statements; TSRX037 keeps the
+	// (`parseLeTrucImports` skips type-only statements; LTC037 keeps the
 	// vocabulary out of value imports).
 	let contextParam: ComponentParams['contextParam'] = null
-	const contextNode = (params[1] as TsrxNode | undefined) ?? undefined
+	const contextNode = (params[1] as AstNode | undefined) ?? undefined
 	if (contextNode !== undefined) {
 		if (contextNode.type !== 'ObjectPattern') {
 			ctx.diagnostics.push(
@@ -131,8 +131,8 @@ export const extractParams = (
  * `.tsrx` parser keeps an estree-shaped `typeAnnotation` on the node.
  */
 const contextAnnotationName = (
-	fn: TsrxNode,
-	contextNode: TsrxNode,
+	fn: AstNode,
+	contextNode: AstNode,
 ): 'FactoryContext' | 'FormFactoryContext' | null => {
 	const written = (
 		fn as {
@@ -149,10 +149,10 @@ const contextAnnotationName = (
 		return null
 	}
 	if (isNode(contextNode.typeAnnotation)) {
-		const wrapped = contextNode.typeAnnotation as TsrxNode
+		const wrapped = contextNode.typeAnnotation as AstNode
 		const literal =
 			wrapped.type === 'TSTypeAnnotation' && isNode(wrapped.typeAnnotation)
-				? (wrapped.typeAnnotation as TsrxNode)
+				? (wrapped.typeAnnotation as AstNode)
 				: wrapped
 		if (literal.type === 'TSTypeReference') {
 			const name = identifierName(literal.typeName)

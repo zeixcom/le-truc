@@ -3,8 +3,8 @@
  *
  * `evaluability.ts` decides what the server can render; this module decides
  * WHICH MECHANISM should try. The two are the same analysis with opposite
- * polarity — every site that used to be a refusal (`TSRX004`, non-severe
- * `TSRX034`, `TSRX043`, and `TSRX013`'s two server-evaluation factories) is
+ * polarity — every site that used to be a refusal (`LTC004`, non-severe
+ * `LTC034`, `LTC043`, and `LTC013`'s two server-evaluation factories) is
  * now a *routing signal*, because "phase 1 cannot fold this" was never a
  * statement about the author's code. It was a statement about the harness.
  *
@@ -57,7 +57,7 @@
  * reads back, moved to `simulation/contract.ts` for the same reason.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import { isNode } from './ast-utils'
 import { lineOf } from './diagnostics'
 import { type ImpureAmbientCause, impureAmbientCauses } from './evaluability'
@@ -96,9 +96,9 @@ export type UnresolvableLimb =
  * union of its own, because most are NOT diagnostic codes — they are
  * retired codes living on as provenance).
  *
- * - `TSRX034` is the only spelling that is ALSO a live diagnostic (its
+ * - `LTC034` is the only spelling that is ALSO a live diagnostic (its
  *   severe per-expression form, see `diagnostics.ts`).
- * - `TSRX004`, `TSRX013`, `TSRX043` were emitted diagnostics until LT-165
+ * - `LTC004`, `LTC013`, `LTC043` were emitted diagnostics until LT-165
  *   step 5 retired them; the refusals they named became routing signals,
  *   and these spellings are their census provenance. The numbers stay
  *   spent in `DiagnosticCode`'s numbering — they are not emitted codes.
@@ -106,10 +106,10 @@ export type UnresolvableLimb =
  *   simulated-tier dependency.
  */
 export type RoutingSignalOrigin =
-	| 'TSRX004'
-	| 'TSRX013'
-	| 'TSRX034'
-	| 'TSRX043'
+	| 'LTC004'
+	| 'LTC013'
+	| 'LTC034'
+	| 'LTC043'
 	| 'compose-read'
 
 /** Whether some server phase can answer an unresolved expression. */
@@ -186,7 +186,7 @@ export const lineFields = (
  * explains itself in the table's words rather than a paraphrase that can
  * drift.
  */
-export const stubbedApiRead = (node: TsrxNode): string | null => {
+export const stubbedApiRead = (node: AstNode): string | null => {
 	let reason: string | null = null
 	const visit = (current: unknown): void => {
 		if (reason !== null) return
@@ -237,7 +237,7 @@ export const stubbedApiRead = (node: TsrxNode): string | null => {
  * specific; an expression matching both is unresolvable either way.
  */
 export const resolutionOf = (
-	node: TsrxNode,
+	node: AstNode,
 	scope: ReadonlySet<string>,
 ): Resolution => {
 	const stubbed = stubbedApiRead(node)

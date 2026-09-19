@@ -3,7 +3,7 @@
  * sub-design 10, LT-015). Scoped to server splicing: a capitalized JSX tag
  * bound to an `import` of another `.tsrx` module resolves against a
  * corpus-wide compose registry (keyed by resolved source path, mirroring
- * `server/effects/tsrx.ts`'s two-pass compile) and the parent's generated
+ * `server/effects/compile.ts`'s two-pass compile) and the parent's generated
  * server module imports and calls the child's `render<Name>()`.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
@@ -11,10 +11,10 @@ import { analyzeClient } from '../../compiler/analysis/plan'
 import type { CompileDiagnostic } from '../../compiler/diagnostics'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import type { RegistryEntry } from '../../compiler/registry'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 
 // `value` is exposed from a plain literal, i.e. Slot-backed (LT-158): the
-// parent fixtures below pass to it, and since TSRX012 now decides a pass
+// parent fixtures below pass to it, and since LTC012 now decides a pass
 // target's prop against the CHILD's own expose(), a child that exposed
 // nothing would make every one of them a compile error.
 const child = `export function BasicChild({ label }: { label: string })
@@ -190,7 +190,7 @@ export function BasicRoot({ title }: { title: string })
 		)
 	})
 
-	test('TSRX011: capitalized tag with no matching import', () => {
+	test('LTC011: capitalized tag with no matching import', () => {
 		const source = `export function BasicParent({}: {})
 	@{
 		expose({})
@@ -207,10 +207,10 @@ export function BasicRoot({ title }: { title: string })
 			new Set(),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX011')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC011')).toBe(true)
 	})
 
-	test('TSRX011: import resolves to a path the compose registry does not have', () => {
+	test('LTC011: import resolves to a path the compose registry does not have', () => {
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
 export function BasicParent({}: {})
@@ -231,7 +231,7 @@ export function BasicParent({}: {})
 			new Map(), // composeRegistry provided but empty — child never compiled
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX011')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC011')).toBe(true)
 	})
 
 	const childWithChildren = `export function BasicChild({ label, children }: { label: string; children?: string })
@@ -321,7 +321,7 @@ export function BasicParent({ title }: { title: string })
 		expect(childComponent.serverCode).not.toContain('esc(String(children))')
 	})
 
-	test('a construct requiring client wiring inside composed-element children is diagnosed (TSRX011)', () => {
+	test('a construct requiring client wiring inside composed-element children is diagnosed (LTC011)', () => {
 		const childComponent = compileChild(
 			'examples/child/basic-child.tsrx',
 			childWithChildren,
@@ -348,7 +348,7 @@ export function BasicParent({ title }: { title: string })
 			composeRegistryOf(childComponent.entry),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX011')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC011')).toBe(true)
 	})
 
 	test('`truc:pass={{ }}` on a composed element without a `ref` is diagnosed', () => {
@@ -373,7 +373,7 @@ export function BasicParent({ title }: { title: string })
 			composeRegistryOf(childComponent.entry),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'TSRX012')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC012')).toBe(true)
 	})
 
 	test('`truc:pass={{ }}` on a composed element addressed by first() lowers to pass() on the child tag', () => {
@@ -577,7 +577,7 @@ export function BasicParent({ title }: { title: string })
 		expect(component).not.toBeNull()
 	})
 
-	test('two same-source composed instances with no distinguishing static attr are unaddressable (TSRX027, LT-127)', () => {
+	test('two same-source composed instances with no distinguishing static attr are unaddressable (LTC027, LT-127)', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
@@ -603,12 +603,12 @@ export function BasicParent({ title }: { title: string })
 		)
 		expect(component).toBeNull()
 		// One diagnostic per unresolvable reference, and no second helping
-		// of TSRX012 for the same two compose sites.
-		expect(diagnostics.filter(d => d.code === 'TSRX027')).toHaveLength(2)
-		expect(diagnostics.filter(d => d.code === 'TSRX012')).toHaveLength(0)
+		// of LTC012 for the same two compose sites.
+		expect(diagnostics.filter(d => d.code === 'LTC027')).toHaveLength(2)
+		expect(diagnostics.filter(d => d.code === 'LTC012')).toHaveLength(0)
 	})
 
-	test('the same static id on two compose sites is diagnosed (TSRX038, LT-090)', () => {
+	test('the same static id on two compose sites is diagnosed (LTC038, LT-090)', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
 
@@ -631,7 +631,7 @@ export function BasicParent({ title }: { title: string })
 			composeRegistryOf(childComponent.entry),
 		)
 		expect(component).toBeNull()
-		expect(diagnostics.filter(d => d.code === 'TSRX038')).toHaveLength(1)
+		expect(diagnostics.filter(d => d.code === 'LTC038')).toHaveLength(1)
 	})
 
 	test('a raw lowercase dashed tag is unaffected by composition', () => {
@@ -661,7 +661,7 @@ describe('compose-ref attachment idempotence (LT-221 §1.4)', () => {
 	// the shared IR — the pipeline runs it once inside `analyzeClient`, and
 	// any SECOND `analyzeClient` over the same IR (a test harness, a future
 	// caller) used to trip the claimed-ref check and report a spurious
-	// TSRX041 against the pass's own attachment.
+	// LTC041 against the pass's own attachment.
 	const parentWithRef = `import { BasicChild } from '../child/basic-child.tsrx'
 
 export function BasicParent({ title }: { title: string })
@@ -690,10 +690,10 @@ export function BasicParent({ title }: { title: string })
 		const tags = new Set(['basic-child'])
 		const firstRun: CompileDiagnostic[] = []
 		analyzeClient(extracted.component, tags, firstRun, composeRegistry)
-		expect(firstRun.filter(d => d.code === 'TSRX041')).toEqual([])
+		expect(firstRun.filter(d => d.code === 'LTC041')).toEqual([])
 		const secondRun: CompileDiagnostic[] = []
 		analyzeClient(extracted.component, tags, secondRun, composeRegistry)
-		expect(secondRun.filter(d => d.code === 'TSRX041')).toEqual([])
+		expect(secondRun.filter(d => d.code === 'LTC041')).toEqual([])
 	})
 })
 

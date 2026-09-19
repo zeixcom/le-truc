@@ -202,7 +202,7 @@ export function C({}: {})
 	test('a bare number-SIGNAL read stringifies too (LT-126)', () => {
 		// `returnsNumber` used to recognise only literals and conditionals over
 		// them, so `() => count.get()` reached `bindProperty`'s DOMString setter
-		// uncoerced and the generated client failed `check:tsrx`. The signal's
+		// uncoerced and the generated client failed `check:corpus`. The signal's
 		// `inferredType` settles it.
 		const { component, diagnostics } =
 			compiled(`import { createState } from '@zeix/le-truc'

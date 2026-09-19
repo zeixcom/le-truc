@@ -4,10 +4,10 @@
  * root element, the `<style>` block, the CSS, and the `first()`/`all()`
  * element-reference resolution against the lowered template. Front-end-
  * neutral like the other front-end stage modules: no parser values, only
- * the loose `TsrxNode` type.
+ * the loose `AstNode` type.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import { dedentCss } from './css'
 import { diagnostic } from './diagnostics'
 import {
@@ -45,7 +45,7 @@ export type ResolvedTemplate = {
  * shape `ref={}` used to populate directly. Every downstream consumer
  * (addQuery's naming in `analysis/effects.ts` and `analysis/harvest.ts`,
  * refNames collection in `analysis/plan.ts`) is unchanged: only how that IR
- * gets populated moved. Also runs TSRX042 (LT-131, static ids duplicate per
+ * gets populated moved. Also runs LTC042 (LT-131, static ids duplicate per
  * instance) and extracts the CSS verbatim via `stylesheetOf`.
  *
  * `outputShapeLabel` names the surface's output shape in the no-root
@@ -57,7 +57,7 @@ export const resolveTemplateOutput = (
 	filename: string,
 	extraction: SetupExtraction,
 	lowered: TemplateNode[],
-	stylesheetOf: (node: TsrxNode) => string,
+	stylesheetOf: (node: AstNode) => string,
 	outputShapeLabel: string,
 ): ResolvedTemplate | null => {
 	const source = ctx.source
@@ -127,7 +127,7 @@ export const resolveTemplateOutput = (
 			// An OPTIONAL ref is allowed to match nothing here
 			// (LT-123): "may be absent" includes "the page, not
 			// this template, authors it". The structural proof
-			// TSRX026 rests on — the compiler wrote this HTML,
+			// LTC026 rests on — the compiler wrote this HTML,
 			// so counting matches in the IR is counting matches
 			// in the DOM — simply has nothing to say about
 			// markup the component didn't render, so the client
@@ -202,9 +202,9 @@ export const resolveTemplateOutput = (
 		refReasons.set(refName, reasonText as string)
 	}
 
-	// TSRX042 (LT-131): a constant `id` in a template duplicates as
+	// LTC042 (LT-131): a constant `id` in a template duplicates as
 	// soon as a page places the component twice. Runs here, beside
-	// TSRX039, for the same reason — the walk needs `root`.
+	// LTC039, for the same reason — the walk needs `root`.
 	reportStaticIds(root, source, ctx.diagnostics)
 
 	// CSS: verbatim, dedented (see css.ts).

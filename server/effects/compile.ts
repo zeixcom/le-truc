@@ -5,11 +5,11 @@
  * end, ADR 0032 sub-design 6; LT-202), compiles each through the front end
  * its extension selects, and writes the generated artifacts (server render
  * module, generated client module, verbatim tag-scoped CSS) plus the
- * component registry into the gitignored `server/generated/tsrx/` directory.
+ * component registry into the gitignored `server/generated/components/` directory.
  * A tag declared by two sources fails the compile naming both files
- * (TSRX048).
+ * (LTC048).
  *
- * Severity policy: milestone gates (warnings, e.g. TSRX001 reactive `@for`)
+ * Severity policy: milestone gates (warnings, e.g. LTC001 reactive `@for`)
  * skip the file with a logged notice; errors fail the build run.
  */
 
@@ -25,13 +25,13 @@ import { compileComponentTsx } from '../compiler/frontend/tsx'
 import { type RegistryEntry, registryJson } from '../compiler/registry'
 import type { SourceSpan } from '../compiler/spans'
 import { contaminateComposeReads } from '../compiler/tier'
-import { componentTsrx, type FileInfo } from '../file-signals'
+import { componentFiles, type FileInfo } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
 import { createBuildEffect } from './build-effect'
 import { collectI18n, writeI18nModule, writeI18nReport } from './i18n'
 
 /**
- * One compiled component's generated-module span tables (LT-011, `check:tsrx`;
+ * One compiled component's generated-module span tables (LT-011, `check:corpus`;
  * server coverage added by LT-019 — composition is the first construct that
  * makes server modules import each other's real types).
  */
@@ -51,10 +51,15 @@ export type CompiledSpanInfo = {
 
 /**
  * Where the corpus compile writes its artifacts, including the registry the
- * tier census reads (`scripts/check-tsrx.ts`). Exported for the scripts and
+ * tier census reads (`scripts/check-corpus.ts`). Exported for the scripts and
  * tests that address the same directory the pipeline defaults to.
  */
-export const GENERATED_DIR = join(import.meta.dir, '..', 'generated', 'tsrx')
+export const GENERATED_DIR = join(
+	import.meta.dir,
+	'..',
+	'generated',
+	'components',
+)
 const ROOT = join(import.meta.dir, '..', '..')
 
 /**
@@ -73,7 +78,7 @@ export const handwrittenExampleModules = (): Map<string, string> => {
 		// Component files are named for their tag (dashed); helpers (main.ts,
 		// copyToClipboard.ts) and tests carry no dash or a dot suffix.
 		if (!/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(tag)) continue
-		// Specifiers are relative to the generated dir (server/generated/tsrx)
+		// Specifiers are relative to the generated dir (server/generated/components)
 		// and extensionless (bundler-style resolution, TS5097-safe).
 		modules.set(tag, `../../../${rel.replace(/\.ts$/, '')}`)
 	}
@@ -84,7 +89,7 @@ export const handwrittenExampleModules = (): Map<string, string> => {
  * The corpus covers BOTH authored surfaces (ADR 0032 sub-design 6, LT-202):
  * one registry, one generated directory, the front end chosen per file by
  * extension. A tag declared by two sources fails the compile naming both
- * files (TSRX048, tier 1 Prevented).
+ * files (LTC048, tier 1 Prevented).
  */
 const compileCorpusFile = (
 	content: string,
@@ -102,16 +107,16 @@ const corpusTagOf = (filename: string): string =>
 	(filename.split('/').pop() ?? '').replace(/\.(tsrx|tsx)$/, '')
 
 /**
- * Compile the whole corpus (exported for the standalone `scripts/build-tsrx.ts`
+ * Compile the whole corpus (exported for the standalone `scripts/build-corpus.ts`
  * runner — `build:cem` needs the generated clients on disk before `cem
  * analyze` reads them).
  *
- * `outDir` defaults to the pipeline's own `server/generated/tsrx/`. Tests
+ * `outDir` defaults to the pipeline's own `server/generated/components/`. Tests
  * pass a per-run directory instead so they never race the build (LT-140); it
  * must sit at the same depth under the repo root, since emitted modules
  * address the runtime and the hand-written examples relatively.
  */
-export const compileTsrxCorpus = async (
+export const compileCorpus = async (
 	files: FileInfo[],
 	outDir: string = GENERATED_DIR,
 ): Promise<CompiledSpanInfo[]> => {
@@ -133,7 +138,7 @@ export const compileTsrxCorpus = async (
 	// Pass 1 legality checks must not depend on visit order: a fully
 	// migrated tag has no hand-written twin to seed `registry` with, so its
 	// tag only enters the set when its OWN file is visited — a raw-tag
-	// `pass={{ }}` target (module-list → basic-button) failed [TSRX012] in
+	// `pass={{ }}` target (module-list → basic-button) failed [LTC012] in
 	// one glob order and passed in another, silently dropping the whole
 	// file from pass 2 (CI regression 2026-08-30). Seed the discovery pass
 	// with every corpus file's conventional tag instead; pass 2 still
@@ -160,7 +165,7 @@ export const compileTsrxCorpus = async (
 			} else console.warn(`⚠️ ${rel} — ${label}`)
 		}
 	}
-	// Dual-surface duplicate detection (TSRX048): a tag two corpus files
+	// Dual-surface duplicate detection (LTC048): a tag two corpus files
 	// both declare is ambiguous at the registry level — neither file can be
 	// compiled, because pass 2's registry would have last-write-wins
 	// semantics for the generated module names, the tag map augmentation,
@@ -299,13 +304,13 @@ export const compileTsrxCorpus = async (
 
 /* === Exported Effect === */
 
-export const tsrxEffect = (onRebuild?: () => void) =>
+export const compileEffect = (onRebuild?: () => void) =>
 	createBuildEffect(
 		'TSRX compiler',
-		[componentTsrx.sources],
+		[componentFiles.sources],
 		async ([files]) => {
 			console.log('🔄 Compiling TSRX components...')
-			await compileTsrxCorpus(files)
+			await compileCorpus(files)
 		},
 		onRebuild,
 	)

@@ -5,7 +5,7 @@
  * Units run on a synthetic registry and injected modules (the
  * `resolveModule` seam — no generated dir needed). The integration block
  * compiles the REAL corpus into an isolated generated dir (the
- * `compileTsrxCorpus` + `createGeneratedDir` pattern) and renders the real
+ * `compileCorpus` + `createGeneratedDir` pattern) and renders the real
  * authored demo markup — pinning the LT-191 acceptance fixture (the
  * `<div lang="cy">` wrapper instance) at its served home.
  */
@@ -13,13 +13,13 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import * as path from 'node:path'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
+import { compileCorpus } from '../../effects/compile'
 import {
 	type PageRenderModule,
 	renderPageOccurrences,
 } from '../../effects/page-render'
-import { compileTsrxCorpus } from '../../effects/tsrx'
-import { loadTsrxCorpus } from '../compiler/corpus-fixture'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { loadCorpus } from '../compiler/corpus-fixture'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 
 /* === Fixtures === */
 
@@ -313,8 +313,8 @@ const generated = createGeneratedDir('page-render')
 afterAll(() => generated.cleanup())
 
 describe('the real corpus (integration)', () => {
-	const compiled = loadTsrxCorpus().then(files =>
-		compileTsrxCorpus(files, generated.path),
+	const compiled = loadCorpus().then(files =>
+		compileCorpus(files, generated.path),
 	)
 
 	test('the LT-191 fixture: the <div lang="cy"> wrapper instance server-renders', async () => {

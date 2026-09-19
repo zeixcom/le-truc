@@ -26,20 +26,20 @@
  *    locale.
  *
  * Run by a person, diffable in review. The compile this performs writes
- * only into the gitignored `server/generated/tsrx/`.
+ * only into the gitignored `server/generated/components/`.
  */
 
 import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Glob } from 'bun'
 import type { ComponentRegistry } from '../server/compiler/registry'
+import { compileCorpus } from '../server/effects/compile'
 import {
 	collectI18n,
 	I18N_DIR,
 	SOURCE_LOCALE,
 	sourceHash,
 } from '../server/effects/i18n'
-import { compileTsrxCorpus } from '../server/effects/tsrx'
 import type { FileInfo } from '../server/file-signals'
 
 const ROOT = resolve(import.meta.dir, '..')
@@ -62,10 +62,10 @@ for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {
 
 // The compile writes the generated artifacts (gitignored) and, as a side
 // effect, the freshest registry.json — the same corpus view the build sees.
-await compileTsrxCorpus(files)
+await compileCorpus(files)
 
 const registry = JSON.parse(
-	readFileSync(join(ROOT, 'server/generated/tsrx/registry.json'), 'utf8'),
+	readFileSync(join(ROOT, 'server/generated/components/registry.json'), 'utf8'),
 ) as ComponentRegistry
 const collection = await collectI18n(Object.values(registry))
 

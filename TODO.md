@@ -42,11 +42,11 @@ contract it documents has stopped moving.
 why it needs a date — and it gets more expensive once anyone proposes a connector, because
 then the number has a stake in it.
 
-**Next free task ID: LT-272.**
+**Next free task ID: LT-273.**
 
 ---
 
-- [ ] LT-271: Prune TSRX-only vocabulary from the compiler — the LT-206 deferral sweep, carved out of LT-254(c).
+- [x] LT-271: Prune TSRX-only vocabulary from the compiler — **reviewed ✓** (closure blocked on LT-272).
   **Skill:** le-truc-dev (Tech Writer owns the copy of anything renamed)
   **Context:** ADR 0034 s1–s2; carved out of LT-254 on 2026-09-19 because this is a **shape**
   problem, not a distribution one, and it should not wait on a publish date. v3.0's published
@@ -69,13 +69,129 @@ then the number has a stake in it.
   green (typecheck, `bun test server/tests`, the renamed check/build scripts, build:docs,
   check:links); corpus output **byte-identical** — this sweep renames, it does not emit
   differently; the census and warning baselines unmoved.
+  **Landed 2026-09-19 — PENDING REVIEW (public API surface: the diagnostic codes).**
+  Ledger: [`server/compiler/VOCABULARY_LEDGER.md`](server/compiler/VOCABULARY_LEDGER.md).
+  Owner ruling taken during the task: diagnostic codes **split by ownership** — the 44
+  surface-neutral codes become `LTC0NN` (numbers preserved, so ADR 0028's spent-number
+  ledger survives); `TSRX018`/`020`/`021`–`024` keep `TSRX` because they diagnose `.tsrx`
+  grammar and are not in the v3.0 published package. ADR 0028 carries an amendment.
+  Renamed: `check:tsrx`→`check:corpus`, `scripts/build-tsrx.ts`→`scripts/build-corpus.ts`
+  (+ a new `build:corpus` script entry — it had never existed), `server/effects/tsrx.ts`→
+  `server/effects/compile.ts` (`compileTsrxCorpus`→`compileCorpus`, `tsrxEffect`→
+  `compileEffect`), `server/generated/tsrx/`→`server/generated/components/`, and the
+  21 machinery modules' `TsrxNode` from `@tsrx/core` → a machinery-owned `AstNode`
+  (`server/compiler/ast-node.ts`), which also removed the `.tsx` front end's duplicate
+  declaration. Kept with reasons recorded: `build:tsrx:browser` and its bundle output,
+  `core.ts`/`core-shim.d.ts`, the `@tsrx/core` pin, `scripts/codemod-react-jsx.ts`.
+  **Check results:** corpus output byte-identical in **67 of 69** artifacts — the two
+  diffs are the renamed vocabulary itself (the script name in `i18n.ts`'s generated
+  provenance header, and one `origin` string in `registry.json`), all 22 components'
+  `.server.ts`/`.client.ts`/`.css` unchanged; census 20 folded / 2 simulated / 0 static
+  and warning baseline 0, both unmoved; `bun test server/tests` 1602 pass / 13 fail, the
+  13 pre-existing sandbox failures verified identical on the pre-sweep tree; typecheck,
+  `check:corpus`, `build:docs` and `check:links` (504/504) green.
+  **Blocked handoff:** the sandbox denies writes to `.agents/skills/` — now **LT-272**.
+
+  **Review (Architect, 2026-09-19): approved.** Verified independently of the handoff —
+  census 20/2/0 and warning baseline 0 reproduced from a clean rebuild; the two corpus
+  diffs confirmed to be the renamed vocabulary itself and nothing else; `src/errors.ts`'s
+  only change confirmed to be **JSDoc**, so no shipped runtime message moved and the
+  library bundle is untouched.
+  - **The split-by-ownership ruling is right and is implemented as ruled.** Keeping the
+    numbers is what makes it cheap: ADR 0028's rows and the spent-number ledger re-point
+    mechanically, and `TSRX020`'s own comment correctly now reads "surfaced as LTC008".
+  - **The `AstNode` extraction is the find of this task, and it is more than a rename.**
+    21 machinery modules were typed on the minority surface's parser package, and the
+    `.tsx` front end was carrying a *duplicate declaration* precisely because the shared
+    one was misnamed. Removing it tightened the pin boundary past what ADR 0024 s2 asked
+    for: `core.ts` + `core-shim.d.ts` are now the pin's entire footprint, values **and**
+    types. That is a structural improvement the vocabulary question happened to expose.
+  - **Keeping `build:tsrx:browser`, `core-shim.d.ts` and `codemod-react-jsx.ts` is
+    correct** — each names `.tsrx` because it *is* `.tsrx`-specific. The instruction that
+    a blanket rename would be as wrong as none was applied, not just quoted.
+  - **One finding, carried into LT-272** (below): the two-prefix rule is stated in the
+    ledger and in ADR 0028, but **not in `server/compiler/diagnostics.ts` — the file that
+    owns the namespace.** Its module doc still opens "Compile diagnostics for the inlined
+    TSRX compiler", and the union interleaves `LTC017` / `TSRX018` / `LTC019` / `TSRX020`
+    with nothing local saying why. That is where a developer adding `LTC051` will land,
+    and where the ruling will decay first if it is not written down.
+  - **Second finding, fixed here by the Architect: the forward queue was not swept.** The
+    sweep classified `BACKLOG.md` and `TODO.md` as historical records alongside `DONE.md`
+    and left them. They are not — they are the open work queue, and 30 dead code names in
+    it would have sent whoever picks up LT-189 or LT-220 hunting for codes that no longer
+    exist. Both files re-prefixed (the six kept codes untouched). `DONE.md`, `CHANGELOG.md`,
+    `COMPILER_REFLECTION.md`, `COMPILER_REVIEW.md` and the ADR bodies **are** records and
+    stay as written — that part of the call was right.
+  - **NOTES item 3 ruled: the ADR 0028 amendment stands; do not rewrite the table.** The
+    repo amends ADRs rather than rewriting them, and 0028 records a decision made when the
+    codes carried that name. The amendment states the mechanical re-point, which is what a
+    reader needs.
+
+- [ ] LT-272: Propagate the `LTC###` rename into the skill files, and state the two-prefix rule where the namespace lives.
+  **Skill:** tech-writer
+  **Context:** Discharges the blocked handoff from LT-271 (ledger:
+  [`server/compiler/VOCABULARY_LEDGER.md`](server/compiler/VOCABULARY_LEDGER.md); ruling
+  amended into [ADR 0028](adr/0028-tiered-error-surfacing.md) sub-design 1). LT-271 renamed
+  44 diagnostic codes `TSRX0NN` → `LTC0NN` with numbers preserved, and kept `TSRX018`,
+  `TSRX020`, `TSRX021`–`TSRX024` because those six diagnose `.tsrx` grammar and are not in
+  the v3.0 published package. **The developer could not write `.agents/skills/` — the
+  sandbox denies it** — so the skill files still carry the old spelling. Nothing about any
+  condition, message or severity changed: this is propagation, not copy authorship, with
+  one exception called out below. `docs-src/pages/` and `README.md` were checked and carry
+  no code references, so nothing is owed there.
+  **Deliverable — four files:**
+  1. `.agents/skills/le-truc/references/errors.md` — the canonical catalog, 48 code
+     references across 44 distinct codes. Re-prefix every one **except** `TSRX018`,
+     `TSRX020`, `TSRX021` and `TSRX024` (the only kept codes that appear here). The
+     `TSRX018`–`TSRX024` paragraph currently explains what that family catches; it now also
+     has to say **why that family alone keeps the `TSRX` prefix** — they are `.tsrx`-grammar
+     rules with no `.tsx` counterpart, since the React idioms are `.tsx`'s *correct*
+     spellings (ADR 0032 s6).
+  2. `.agents/skills/le-truc-dev/references/non-obvious.md` — one reference, `LTC012` →
+     `LTC012` (line 69, the `pass()` backstop paragraph).
+  3. `.agents/skills/tech-writer/workflows/error-message-lifecycle.md` — one reference,
+     `LTC031` → `LTC031` (the spent-number example). Then **state the two-prefix rule in
+     the workflow itself**, so the next code added lands in the right namespace without
+     anyone rediscovering the ledger: new codes are `LTC###` unless the rule is specific to
+     `.tsrx` grammar.
+  4. `server/compiler/diagnostics.ts` — **the review finding, and the most important item
+     here.** The file owning `DiagnosticCode` says nothing about the split: its module doc
+     still opens "Compile diagnostics for the inlined TSRX compiler (ADR 0023)", and the
+     union interleaves `LTC017` / `TSRX018` / `LTC019` / `TSRX020` with no local
+     explanation. Rewrite the module doc to name the compiler surface-neutrally and state
+     the two-prefix rule in one short paragraph, pointing at the ledger. This is prose in a
+     source file — Tech Writer's `update-jsdoc` territory, not a logic change.
+  **Also in scope, because it is the same sweep:** the catalog's tables stop at `LTC046`,
+  so **`LTC047`, `LTC048`, `LTC049` and `LTC050` have no rows at all**. This is the
+  still-live LT-208/209/211 handoff (which named `LTC049`/`LTC050`) plus two older codes
+  that never landed — real copy authorship, not re-prefixing, and the reason the two
+  batches are one task. First-draft conditions and messages are already in
+  `server/compiler/diagnostics.ts`; Tech Writer owns the final wording. That handoff also
+  carries the boundary's arm-shape diagnostic (`frontend/tsx/lower-tsx.ts`, dropped its
+  `stale?: <p/>` fragment), the deleted stale-arm constraint diagnostic in
+  `analysis/effects.ts`, and HOST_PROFILE.md's boundary section as the copy reference for
+  the three-arm + `isPending` story.
+  **Do not restate** the propagation checklist — it is
+  `workflows/error-message-lifecycle.md`'s own, and this task runs it.
+  **Why it is in this iteration and not the backlog:** LT-271 is reviewed but cannot close
+  until this lands, and LT-271 is iteration work.
+  **Check:** no `TSRX0NN` outside the six kept codes anywhere under `.agents/`; the four
+  kept codes still spelled `TSRX` in the catalog with the reason stated; rows exist for
+  `LTC047`–`LTC050`; `bun run check:links` green; no source logic touched — `bun test
+  server/tests` and `bun run check:corpus` unmoved (census 20 folded / 2 simulated / 0
+  static, warning baseline 0).
 
 - [ ] LT-255: Generalize the corpus scan — glob the consumer's components, not `examples/`.
   **Skill:** le-truc-dev
   **Context:** ADR 0034 s1; the reflection's §7. `scripts/build-tsrx.ts` globs
-  `examples/**/*.tsrx` and writes to `server/generated/tsrx/`; the registry and the TSRX048
+  `examples/**/*.tsrx` and writes to `server/generated/tsrx/`; the registry and the LTC048
   contract are this-repo-shaped. A consumer's sources live wherever their project puts them, and
   their output directory is theirs to choose.
+  **Carried in from LT-271 (2026-09-19):** the file is now `scripts/build-corpus.ts` writing to
+  `server/generated/components/`, and its glob is **single-extension** (`.tsrx` only) while
+  `check:corpus` and the build effect glob both — so a `.tsx` component under `examples/` is
+  today invisible to `build:cem`/`typecheck`. The configured glob must cover **both**
+  extensions; that closes the gap as a side effect. See `NOTES.md` (LT-271 item 2).
   **Deliverable:** a configured source glob and output root with this repo's paths as defaults,
   so the docs build is one consumer of the general mechanism rather than the mechanism itself;
   the registry contract restated in consumer terms; the config surface documented where an

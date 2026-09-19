@@ -4,7 +4,7 @@
  * Migration codemod for LT-054's five React JSX near-misses. TSRX hard-
  * errors on `{cond && <jsx/>}` (TSRX021), `{cond ? <a/> : <b/>}` (TSRX022),
  * `.map()` producing JSX in child position (TSRX023), `return (<>…</>)`
- * (TSRX024), and `className`/`htmlFor` (TSRX006) — not because they fail to
+ * (TSRX024), and `className`/`htmlFor` (LTC006) — not because they fail to
  * parse (they're ordinary JS/JSX), but because @tsrx/core's pinned grammar
  * has no implicit conditional-render or loop-render rule: every one of them
  * compiled silently into broken output before those diagnostics existed
@@ -20,14 +20,19 @@
  * Deliberately single-pass and non-recursive into a rewritten span: a
  * near-miss nested inside another near-miss (`{a ? <x/> : b ? <y/> : <z/>}`)
  * is fixed one level per run. Re-run until it reports no more matches, or
- * until `check:tsrx` reports no more TSRX021-024/TSRX006 diagnostics for the
+ * until `check:corpus` reports no more TSRX021-024/LTC006 diagnostics for the
  * file.
  *
  * Usage: bun scripts/codemod-react-jsx.ts <file.tsrx> [...more files]
  */
 
 import type { TsrxNode } from '@tsrx/core'
-import { asArray, identifierName, isNode, text } from '../server/compiler/ast-utils'
+import {
+	asArray,
+	identifierName,
+	isNode,
+	text,
+} from '../server/compiler/ast-utils'
 import { parseModule } from '../server/compiler/core'
 
 /* === Types === */

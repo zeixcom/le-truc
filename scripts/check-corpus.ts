@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * `check:tsrx` (LT-011, ADR 0023 sub-design 6 amendment, stage 1; server
+ * `check:corpus` (LT-011, ADR 0023 sub-design 6 amendment, stage 1; server
  * coverage added by LT-019).
  *
  * Compiles the whole `.tsrx` corpus, runs `tsc --noEmit` against the
@@ -21,7 +21,7 @@
  * this purpose until now).
  *
  * This is the CLI-first half of LT-011: zero editor tooling, just `bun run
- * check:tsrx` reporting type errors at their authored `.tsrx` location.
+ * check:corpus` reporting type errors at their authored `.tsrx` location.
  * Stage 2 (optional, later, scheduled after the `examples/` wholesale
  * migration — LT-014) reuses this same span table in a `@volar/language-core`
  * plugin for in-editor diagnostics.
@@ -42,8 +42,8 @@ import {
 	findSpanForGeneratedOffset,
 	type SourceSpan,
 } from '../server/compiler/spans'
+import { compileCorpus, GENERATED_DIR } from '../server/effects/compile'
 import { collectI18n } from '../server/effects/i18n'
-import { compileTsrxCorpus, GENERATED_DIR } from '../server/effects/tsrx'
 
 const ROOT = resolve(import.meta.dir, '..')
 
@@ -89,7 +89,7 @@ console.warn = (...args: unknown[]) => {
 }
 let spanInfos
 try {
-	spanInfos = await compileTsrxCorpus(files)
+	spanInfos = await compileCorpus(files)
 } finally {
 	console.warn = realWarn
 }
@@ -220,7 +220,7 @@ console.log(
 // The tier census (ADR 0029 sub-design 6, LT-165 step 6): a build-report
 // record, NOT a warning — its own section below, never merged into the
 // counted baseline above. Read from the registry the compile just wrote;
-// the compose-read fixpoint in compileTsrxCorpus runs BEFORE registry.json
+// the compose-read fixpoint in compileCorpus runs BEFORE registry.json
 // is written, so the census records post-contamination tiers (the form-
 // combobox ruling). This census is expected to grow; its regression story
 // is build cost, and it is pinned corpus-wide by tier-corpus.test.ts.

@@ -51,7 +51,7 @@ import {
 	singleRootOf,
 	validateCondition,
 } from '../../lower-shared'
-import type { TsrxNode } from './to-estree'
+import type { AstNode } from './to-estree'
 
 /**
  * The `.tsx` surface vocabulary for diagnostics that name authored shapes —
@@ -64,7 +64,7 @@ const TSX_SURFACE_WORDING: SurfaceWording = {
 }
 
 /** Whether `node` is a JSX value (`<x/>` or `<>…</>`). */
-const isJsxNode = (node: unknown): node is TsrxNode => {
+const isJsxNode = (node: unknown): node is AstNode => {
 	const t = isNode(node) ? String(node.type) : null
 	return t === 'JSXElement' || t === 'JSXFragment'
 }
@@ -72,9 +72,9 @@ const isJsxNode = (node: unknown): node is TsrxNode => {
 /** Lower one JSX value (element/fragment) into a children list. */
 const lowerJsxValue = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): TemplateNode[] =>
 	node.type === 'JSXFragment'
 		? lowerChildren(ctx, node, signals, fors)
@@ -88,23 +88,23 @@ const lowerJsxValue = (
  */
 const lowerIfExpr = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'if' }) | null => {
-	let test: TsrxNode | null = null
-	let thenSrc: TsrxNode | null = null
-	let alternateSrc: TsrxNode | null = null
+	let test: AstNode | null = null
+	let thenSrc: AstNode | null = null
+	let alternateSrc: AstNode | null = null
 	if (node.type === 'ConditionalExpression') {
-		test = (node.test as TsrxNode | null) ?? null
-		thenSrc = (node.consequent as TsrxNode | null) ?? null
-		alternateSrc = (node.alternate as TsrxNode | null) ?? null
+		test = (node.test as AstNode | null) ?? null
+		thenSrc = (node.consequent as AstNode | null) ?? null
+		alternateSrc = (node.alternate as AstNode | null) ?? null
 	} else if (
 		node.type === 'LogicalExpression' &&
 		String(node.operator) === '&&'
 	) {
-		test = (node.left as TsrxNode | null) ?? null
-		thenSrc = (node.right as TsrxNode | null) ?? null
+		test = (node.left as AstNode | null) ?? null
+		thenSrc = (node.right as AstNode | null) ?? null
 	}
 	if (!isNode(test)) return null
 	if (!validateCondition(ctx, signals, test, 'if condition')) return null
@@ -159,12 +159,12 @@ const lowerIfExpr = (
  */
 const lowerSwitchIife = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'switch' }) | null => {
-	const fn = node.callee as TsrxNode | undefined
-	const body = fn?.body as TsrxNode | undefined
+	const fn = node.callee as AstNode | undefined
+	const body = fn?.body as AstNode | undefined
 	if (!isNode(body) || body.type !== 'BlockStatement') return null
 	const stmts = asArray(body.body)
 	const switchStmt = stmts.find(s => s.type === 'SwitchStatement')
@@ -179,7 +179,7 @@ const lowerSwitchIife = (
 		)
 		return null
 	}
-	const discriminant = switchStmt.discriminant as TsrxNode | undefined
+	const discriminant = switchStmt.discriminant as AstNode | undefined
 	if (!isNode(discriminant)) return null
 	if (!validateCondition(ctx, signals, discriminant, 'switch discriminant'))
 		return null
@@ -198,9 +198,9 @@ const lowerSwitchIife = (
 	for (const raw of rawCases) {
 		const armStmts = asArray(raw.consequent)
 		const ret = armStmts.find(s => s.type === 'ReturnStatement') as
-			| TsrxNode
+			| AstNode
 			| undefined
-		const arm = ret?.argument as TsrxNode | undefined
+		const arm = ret?.argument as AstNode | undefined
 		if (armStmts.length !== 1 || !isJsxNode(arm)) {
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
@@ -245,16 +245,16 @@ const lowerSwitchIife = (
  */
 const lowerTryIife = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'try' }) | null => {
-	const fn = node.callee as TsrxNode | undefined
-	const body = fn?.body as TsrxNode | undefined
+	const fn = node.callee as AstNode | undefined
+	const body = fn?.body as AstNode | undefined
 	if (!isNode(body) || body.type !== 'BlockStatement') return null
 	const stmts = asArray(body.body)
 	const tryStmt = stmts.find(s => s.type === 'TryStatement') as
-		| TsrxNode
+		| AstNode
 		| undefined
 	if (!tryStmt || stmts.length !== 1) return null
 	if (isNode(tryStmt.finalizer)) {
@@ -267,19 +267,19 @@ const lowerTryIife = (
 		)
 		return null
 	}
-	const returnedJsx = (block: TsrxNode | undefined): TsrxNode | null => {
+	const returnedJsx = (block: AstNode | undefined): AstNode | null => {
 		if (!isNode(block) || block.type !== 'BlockStatement') return null
 		const inner = asArray(block.body)
 		const ret = inner.find(s => s.type === 'ReturnStatement') as
-			| TsrxNode
+			| AstNode
 			| undefined
-		const arg = ret?.argument as TsrxNode | undefined
+		const arg = ret?.argument as AstNode | undefined
 		return inner.length === 1 && isJsxNode(arg) ? arg : null
 	}
-	const okSrc = returnedJsx(tryStmt.block as TsrxNode | undefined)
-	const handler = tryStmt.handler as TsrxNode | undefined
+	const okSrc = returnedJsx(tryStmt.block as AstNode | undefined)
+	const handler = tryStmt.handler as AstNode | undefined
 	const catchSrc = handler
-		? returnedJsx(handler.body as TsrxNode | undefined)
+		? returnedJsx(handler.body as AstNode | undefined)
 		: null
 	if (!okSrc || !catchSrc || !handler) {
 		ctx.diagnostics.push(
@@ -324,16 +324,16 @@ const lowerTryIife = (
  */
 const lowerBoundaryCall = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'try' }) | null => {
 	const arg = asArray(node.arguments)[0]
 	if (!isNode(arg) || arg.type !== 'ObjectExpression') return null
-	const armOf = (key: string): TsrxNode | null => {
+	const armOf = (key: string): AstNode | null => {
 		for (const prop of asArray(arg.properties)) {
 			if (prop.type === 'Property' && identifierName(prop.key) === key)
-				return (prop.value as TsrxNode | undefined) ?? null
+				return (prop.value as AstNode | undefined) ?? null
 		}
 		return null
 	}
@@ -361,7 +361,7 @@ const lowerBoundaryCall = (
 		return null
 	}
 	const catchParam = identifierName(asArray(errFn.params)[0]) ?? null
-	const errArm = (errFn.body as TsrxNode | undefined) ?? null
+	const errArm = (errFn.body as AstNode | undefined) ?? null
 	if (!isJsxNode(errArm)) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
@@ -378,15 +378,15 @@ const lowerBoundaryCall = (
 /** Shared arm lowering for both async/plain spellings. */
 const lowerTryArms = (
 	ctx: ExtractContext,
-	node: TsrxNode,
-	okSrc: TsrxNode,
-	catchSrc: TsrxNode,
+	node: AstNode,
+	okSrc: AstNode,
+	catchSrc: AstNode,
 	catchParam: string | null,
-	nilSrc: TsrxNode | null,
+	nilSrc: AstNode | null,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'try' }) | null => {
-	const lowerValue = (src: TsrxNode | null): TemplateNode[] =>
+	const lowerValue = (src: AstNode | null): TemplateNode[] =>
 		src !== null && isJsxNode(src) ? lowerJsxValue(ctx, src, signals, fors) : []
 	const children = lowerValue(okSrc)
 	const catchChildren = lowerValue(catchSrc)
@@ -452,9 +452,9 @@ const lowerTryArms = (
  * with a single arrow argument and a block body. SHAPE-based — see
  * `lowerSwitchIife` on why identity does not survive the conversion.
  */
-const asIife = (node: TsrxNode): TsrxNode | null => {
+const asIife = (node: AstNode): AstNode | null => {
 	if (node.type !== 'CallExpression') return null
-	const callee = node.callee as TsrxNode | undefined
+	const callee = node.callee as AstNode | undefined
 	if (
 		!isNode(callee) ||
 		callee.type !== 'ArrowFunctionExpression' ||
@@ -462,15 +462,15 @@ const asIife = (node: TsrxNode): TsrxNode | null => {
 		asArray(node.arguments).length !== 0
 	)
 		return null
-	const body = callee.body as TsrxNode | undefined
+	const body = callee.body as AstNode | undefined
 	if (!isNode(body) || body.type !== 'BlockStatement') return null
 	return node
 }
 
 /** Is this `.map()`-shaped call producing JSX (a loop)? */
-const isMapCall = (node: TsrxNode): boolean => {
+const isMapCall = (node: AstNode): boolean => {
 	if (node.type !== 'CallExpression') return false
-	const callee = node.callee as TsrxNode | undefined
+	const callee = node.callee as AstNode | undefined
 	return (
 		isNode(callee) &&
 		callee.type === 'MemberExpression' &&
@@ -491,12 +491,12 @@ const isMapCall = (node: TsrxNode): boolean => {
  */
 export const lowerFor = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): TemplateNode | null => {
-	const callee = node.callee as TsrxNode
-	const iterable = callee.object as TsrxNode
+	const callee = node.callee as AstNode
+	const iterable = callee.object as AstNode
 	const callback = asArray(node.arguments)[0]
 	if (!isNode(callback) || !/Function(Expression)?$/.test(callback.type))
 		return null
@@ -538,10 +538,10 @@ export const lowerFor = (
 		)
 		return null
 	}
-	const body = callback.body as TsrxNode | undefined
+	const body = callback.body as AstNode | undefined
 	if (!isNode(body)) return null
 	const hoisted: ForIR['hoisted'] = []
-	let outputNode: TsrxNode | null = null
+	let outputNode: AstNode | null = null
 	if (body.type === 'BlockStatement') {
 		for (const stmt of asArray(body.body)) {
 			if (stmt.type === 'VariableDeclaration') {
@@ -576,7 +576,7 @@ export const lowerFor = (
 				continue
 			}
 			if (stmt.type === 'ReturnStatement' && !outputNode) {
-				const arg = stmt.argument as TsrxNode | undefined
+				const arg = stmt.argument as AstNode | undefined
 				if (isJsxNode(arg)) {
 					outputNode = arg
 					continue
@@ -634,7 +634,7 @@ const validateListBody = (
 	output: TemplateNode & { kind: 'element' },
 	itemName: string,
 ): void => {
-	const notBuildTime = (node: TsrxNode): string => {
+	const notBuildTime = (node: AstNode): string => {
 		// Join FIRST, then test the string: the offender list is an array,
 		// and an empty array is truthy — testing it directly made the
 		// impure-ambient arm unreachable and printed `reads , …` (LT-221
@@ -720,13 +720,13 @@ const validateListBody = (
  */
 export const lowerListFor = (
 	ctx: ExtractContext,
-	node: TsrxNode,
+	node: AstNode,
 	itemName: string,
 	listSignal: string,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'element' }) | null => {
-	const callback = asArray(node.arguments)[0] as TsrxNode | undefined
+	const callback = asArray(node.arguments)[0] as AstNode | undefined
 	const params = callback ? asArray(callback.params) : []
 	const indexName = identifierName(params[1])
 	if (indexName) {
@@ -749,14 +749,14 @@ export const lowerListFor = (
 		)
 		return null
 	}
-	const body = (callback?.body ?? null) as TsrxNode | null
+	const body = (callback?.body ?? null) as AstNode | null
 	const blockBody = body
-	let outputNode: TsrxNode | null = null
+	let outputNode: AstNode | null = null
 	if (body && isJsxNode(body)) outputNode = body
 	if (!outputNode && blockBody && blockBody.type === 'BlockStatement') {
 		for (const stmt of asArray(blockBody.body)) {
 			if (stmt.type === 'ReturnStatement' && !outputNode) {
-				const arg = stmt.argument as TsrxNode | undefined
+				const arg = stmt.argument as AstNode | undefined
 				if (isJsxNode(arg)) outputNode = arg
 			}
 		}
@@ -781,10 +781,7 @@ export const lowerListFor = (
 		keyText: null,
 		keyName: null,
 		listSignal,
-		iterableText: text(
-			ctx.source,
-			(node.callee as TsrxNode).object as TsrxNode,
-		),
+		iterableText: text(ctx.source, (node.callee as AstNode).object as AstNode),
 		iterableName: listSignal,
 		hoisted: [],
 		output,
@@ -803,9 +800,9 @@ export const lowerListFor = (
  */
 export const lowerChildren = (
 	ctx: ExtractContext,
-	parent: TsrxNode,
+	parent: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): TemplateNode[] =>
 	lowerChildrenSkeleton(
 		ctx,
@@ -838,8 +835,8 @@ export const lowerChildren = (
 						return true
 					}
 					if (asIife(expr)) {
-						const fn = expr.callee as TsrxNode
-						const body = fn.body as TsrxNode
+						const fn = expr.callee as AstNode
+						const body = fn.body as AstNode
 						const inner = asArray(body.body)
 						if (inner.some(s => s.type === 'SwitchStatement')) {
 							const lowered = lowerSwitchIife(ctx, expr, signals, fors)
@@ -862,9 +859,9 @@ export const lowerChildren = (
 
 export const lowerElement = (
 	ctx: ExtractContext,
-	element: TsrxNode,
+	element: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<TsrxNode, ForIR>,
+	fors: Map<AstNode, ForIR>,
 ): TemplateNode & { kind: 'element' } =>
 	lowerElementShared(
 		ctx,

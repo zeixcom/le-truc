@@ -1,11 +1,11 @@
 /**
- * TSX spike (LT-183): TypeScript-AST → estree-shaped `TsrxNode` converter.
+ * TSX spike (LT-183): TypeScript-AST → estree-shaped `AstNode` converter.
  *
  * The reuse thesis is that `ComponentIR` is the seam and
  * everything downstream of the front end — `ast-utils.ts` walks,
  * `reactivity.ts`, `evaluability.ts`, `analysis/*`, both emitters, `sim/` —
- * consumes the estree-shaped loose `TsrxNode` structural type declared by
- * `server/compiler/core-shim.d.ts` (`{ type: string; start?; end?; … }`). This
+ * consumes the estree-shaped loose `AstNode` structural type declared by
+ * `server/compiler/ast-node.ts` (`{ type: string; start?; end?; … }`). This
  * module is the NEW bridge the `.tsx` front end needs: it converts the
  * `typescript` package's own AST into exactly those estree shapes, with
  * `start`/`end` brackets that slice the authored `.tsx` source verbatim
@@ -27,14 +27,9 @@
  */
 
 import * as ts from 'typescript'
+import type { AstNode } from '../../ast-node'
 
-/** Mirrors the loose structural type from `server/compiler/core-shim.d.ts`. */
-export type TsrxNode = {
-	type: string
-	start?: number
-	end?: number
-	[key: string]: unknown
-}
+export type { AstNode }
 
 /** Exact token-bracket offsets of `node` in `sf` (estree semantics). */
 const span = (
@@ -50,25 +45,25 @@ const passthrough = (
 	type: string,
 	node: ts.Node,
 	sf: ts.SourceFile,
-): TsrxNode => ({
+): AstNode => ({
 	type,
 	...span(node, sf),
 })
 
 /** Convert a possibly-absent node; `undefined` becomes `null` in parents. */
-const conv = (node: ts.Node | undefined, sf: ts.SourceFile): TsrxNode | null =>
+const conv = (node: ts.Node | undefined, sf: ts.SourceFile): AstNode | null =>
 	node === undefined ? null : convert(node, sf)
 
 const convAll = (
 	nodes: readonly ts.Node[] | undefined,
 	sf: ts.SourceFile,
-): TsrxNode[] =>
+): AstNode[] =>
 	nodes === undefined
 		? []
-		: nodes.map(n => convert(n, sf)).filter((n): n is TsrxNode => n !== null)
+		: nodes.map(n => convert(n, sf)).filter((n): n is AstNode => n !== null)
 
 /** One binding pattern (params, declarator ids) → estree pattern node. */
-const convertPattern = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
+const convertPattern = (node: ts.Node, sf: ts.SourceFile): AstNode | null => {
 	if (ts.isIdentifier(node))
 		return { type: 'Identifier', ...span(node, sf), name: node.text }
 	if (ts.isObjectBindingPattern(node))
@@ -77,7 +72,7 @@ const convertPattern = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 			...span(node, sf),
 			properties: node.elements
 				.map(el => convertPattern(el, sf))
-				.filter((p): p is TsrxNode => p !== null),
+				.filter((p): p is AstNode => p !== null),
 		}
 	if (ts.isArrayBindingPattern(node))
 		return {
@@ -125,7 +120,7 @@ const literal = (
 	node: ts.Node,
 	sf: ts.SourceFile,
 	value: string | number | boolean | null,
-): TsrxNode => ({
+): AstNode => ({
 	type: 'Literal',
 	...span(node, sf),
 	value,
@@ -136,7 +131,7 @@ const literal = (
 const convertTemplate = (
 	node: ts.TemplateExpression | ts.NoSubstitutionTemplateLiteral,
 	sf: ts.SourceFile,
-): TsrxNode => ({
+): AstNode => ({
 	type: 'TemplateLiteral',
 	...span(node, sf),
 	quasis: (ts.isTemplateExpression(node)
@@ -186,7 +181,7 @@ const convertFunctionLike = (
 	node: ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration,
 	sf: ts.SourceFile,
 	type: string,
-): TsrxNode => ({
+): AstNode => ({
 	type,
 	...span(node, sf),
 	id: node.name
@@ -198,8 +193,8 @@ const convertFunctionLike = (
 					type: 'RestElement',
 					...span(p, sf),
 					argument: convertPattern(p.name, sf),
-				} as TsrxNode)
-			: (convertPattern(p.name, sf) as TsrxNode),
+				} as AstNode)
+			: (convertPattern(p.name, sf) as AstNode),
 	),
 	body: conv(node.body, sf),
 	async: !!node.modifiers?.some(m => m.kind === ts.SyntaxKind.AsyncKeyword),
@@ -214,7 +209,7 @@ const convertFunctionLike = (
 const convertJsxName = (
 	node: ts.JsxTagNameExpression,
 	sf: ts.SourceFile,
-): TsrxNode | null => {
+): AstNode | null => {
 	if (ts.isIdentifier(node))
 		return { type: 'JSXIdentifier', ...span(node, sf), name: node.text }
 	if (ts.isJsxNamespacedName(node))
@@ -264,7 +259,7 @@ const convertJsxName = (
 const convertJsxElementLike = (
 	node: ts.JsxElement | ts.JsxSelfClosingElement,
 	sf: ts.SourceFile,
-): TsrxNode => {
+): AstNode => {
 	// `JsxElement` keeps its attributes on `openingElement`; only the
 	// self-closing form carries them directly.
 	const attrsParent = ts.isJsxSelfClosingElement(node)
@@ -274,7 +269,7 @@ const convertJsxElementLike = (
 	const attributes = attrsParent.attributes.properties.map(attr => {
 		if (ts.isJsxAttribute(attr)) {
 			const name = convertJsxName(attr.name, sf)
-			let value: TsrxNode | null = null
+			let value: AstNode | null = null
 			const init = attr.initializer
 			if (init !== undefined) {
 				if (ts.isStringLiteral(init)) value = literal(init, sf, init.text)
@@ -294,14 +289,14 @@ const convertJsxElementLike = (
 				...span(attr, sf),
 				name,
 				value,
-			} as TsrxNode
+			} as AstNode
 		}
 		return {
 			type: 'JSXSpreadAttribute',
 			...span(attr, sf),
 			argument:
 				attr.expression === undefined ? null : convert(attr.expression, sf),
-		} as TsrxNode
+		} as AstNode
 	})
 	return {
 		type: 'JSXElement',
@@ -329,7 +324,7 @@ const convertJsxElementLike = (
 const convertJsxChild = (
 	node: ts.JsxChild,
 	sf: ts.SourceFile,
-): TsrxNode | null => {
+): AstNode | null => {
 	if (ts.isJsxText(node)) {
 		// `getStart()` trims leading whitespace as trivia; the RAW text
 		// (what `collapseJsxText` consumes) is the full [pos, end) slice.
@@ -358,7 +353,7 @@ const convertJsxChild = (
 const convertStatement = (
 	node: ts.Statement,
 	sf: ts.SourceFile,
-): TsrxNode | null => {
+): AstNode | null => {
 	if (ts.isVariableStatement(node)) {
 		const list = node.declarationList
 		return {
@@ -462,7 +457,7 @@ const convertStatement = (
 		return convertFunctionLike(node, sf, 'FunctionDeclaration')
 	if (ts.isImportDeclaration(node)) {
 		const clause = node.importClause
-		const specifiers: TsrxNode[] = []
+		const specifiers: AstNode[] = []
 		if (clause?.name)
 			specifiers.push({
 				type: 'ImportDefaultSpecifier',
@@ -510,7 +505,7 @@ const convertStatement = (
 }
 
 /** The full dispatch. Returns `null` only for nodes with no value shape. */
-export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
+export const convert = (node: ts.Node, sf: ts.SourceFile): AstNode | null => {
 	/* --- Statements --- */
 	if (ts.isStatement(node) && !ts.isBlock(node))
 		return convertStatement(node, sf)
@@ -634,7 +629,7 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 		return {
 			type: 'ObjectExpression',
 			...span(node, sf),
-			properties: node.properties.map((p): TsrxNode => {
+			properties: node.properties.map((p): AstNode => {
 				if (ts.isPropertyAssignment(p))
 					return {
 						type: 'Property',
@@ -709,7 +704,7 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
 								type: 'SpreadElement',
 								...span(el, sf),
 								argument: conv(el.expression, sf),
-							} as TsrxNode)
+							} as AstNode)
 						: convert(el, sf),
 			),
 		}
@@ -816,7 +811,7 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): TsrxNode | null => {
  * whose own span starts at the `export` keyword — consumers slice the
  * WRAPPER for verbatim text and read only names/kinds from the inner).
  */
-export const parseTsxModule = (source: string, filename: string): TsrxNode => {
+export const parseTsxModule = (source: string, filename: string): AstNode => {
 	const sf = ts.createSourceFile(
 		filename,
 		source,
@@ -824,7 +819,7 @@ export const parseTsxModule = (source: string, filename: string): TsrxNode => {
 		true,
 		ts.ScriptKind.TSX,
 	)
-	const body: TsrxNode[] = []
+	const body: AstNode[] = []
 	for (const stmt of sf.statements) {
 		const mods = (stmt as ts.Node & { modifiers?: readonly ts.Modifier[] })
 			.modifiers

@@ -48,7 +48,7 @@ import { pathToFileURL } from 'node:url'
 import { type DefaultTreeAdapterMap, parseFragment } from 'parse5'
 import { composeHostAttrs } from '../compiler/compose-attrs'
 import type { ComponentRegistry, RegistryEntry } from '../compiler/registry'
-import { GENERATED_DIR } from './tsrx'
+import { GENERATED_DIR } from './compile'
 
 /* === Types === */
 
@@ -86,7 +86,7 @@ export type PageOccurrencesResult = {
 export type RenderPageOccurrencesOptions = {
 	/** Defaults to the registry the pipeline wrote (`generatedDir/registry.json`). */
 	registry?: ComponentRegistry
-	/** Defaults to `server/generated/tsrx/`. */
+	/** Defaults to `server/generated/components/`. */
 	generatedDir?: string
 	/**
 	 * The page tree's locale. `null`/`undefined` for the single-copy fragment

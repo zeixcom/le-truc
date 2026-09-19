@@ -47,7 +47,7 @@ import { resolveTemplateOutput } from '../../template-output'
 import type { RoutingSignal } from '../../tier'
 import { validateLoweredComponent } from '../../validate-lowered'
 import { lowerChildren, lowerElement } from './lower-tsx'
-import { parseTsxModule, type TsrxNode } from './to-estree'
+import { type AstNode, parseTsxModule } from './to-estree'
 
 /* === Types === */
 
@@ -72,20 +72,20 @@ export type CompileResult = {
  */
 const styleElementStylesheet = (
 	source: string,
-	node: TsrxNode,
+	node: AstNode,
 ): string | null => {
 	const child = Array.isArray(node.children)
-		? ((node.children as TsrxNode[])[0] as TsrxNode | undefined)
+		? ((node.children as AstNode[])[0] as AstNode | undefined)
 		: undefined
 	const expr =
 		child && child.type === 'JSXExpressionContainer'
-			? (child.expression as TsrxNode | undefined)
+			? (child.expression as AstNode | undefined)
 			: undefined
 	let template = expr
 	if (expr?.type === 'TaggedTemplateExpression') {
-		const tag = expr.tag as TsrxNode | undefined
+		const tag = expr.tag as AstNode | undefined
 		if (!isNode(tag) || identifierName(tag) !== 'css') return null
-		template = expr.quasi as TsrxNode | undefined
+		template = expr.quasi as AstNode | undefined
 	}
 	if (!template || template.type !== 'TemplateLiteral') return null
 	if ((template.expressions as unknown[] | undefined)?.length) return null
@@ -117,7 +117,7 @@ export const compileSourceTsx = (
 		parserFactoryOf: () => '',
 		parserFallbackRefsOf: () => new Set<string>(),
 		composeImports: new Map<string, string>(),
-		setupInits: new Map<string, TsrxNode>(),
+		setupInits: new Map<string, AstNode>(),
 	}
 
 	const ast = parseTsxModule(source, filename)
@@ -134,7 +134,7 @@ export const compileSourceTsx = (
 
 	// Locate the exported component function: exported, takes the single
 	// destructured args object, its body ends in `return <jsx/>`.
-	let fn: TsrxNode | null = null
+	let fn: AstNode | null = null
 	let fnStmtStart = 0
 	for (const stmt of asArray(ast.body)) {
 		const decl =
@@ -200,9 +200,9 @@ export const compileSourceTsx = (
 
 	// Setup = statements before the single return; template = the returned JSX.
 	const name = identifierName(fn.id) ?? 'Component'
-	const bodyStmts = asArray((fn.body as TsrxNode).body)
+	const bodyStmts = asArray((fn.body as AstNode).body)
 	const returnStmt = bodyStmts.find(s => s.type === 'ReturnStatement') as
-		| TsrxNode
+		| AstNode
 		| undefined
 	if (
 		!returnStmt ||
@@ -222,7 +222,7 @@ export const compileSourceTsx = (
 			routingSignals: ctx.routingSignals,
 		}
 	}
-	const render = returnStmt.argument as TsrxNode
+	const render = returnStmt.argument as AstNode
 	const setupStmts = bodyStmts.slice(0, -1)
 
 	const extraction = extractSetup(
@@ -251,7 +251,7 @@ export const compileSourceTsx = (
 	}
 	seedExtractionContext(ctx, { paramNames: params.paramNames, extraction })
 
-	const fors = new Map<TsrxNode, ForIR>()
+	const fors = new Map<AstNode, ForIR>()
 	const lowered: TemplateNode[] = bareRoot
 		? [lowerElement(ctx, bareRoot, extraction.signalByName, fors)]
 		: lowerChildren(ctx, render, extraction.signalByName, fors)

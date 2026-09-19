@@ -1,15 +1,15 @@
 /**
  * Whole-module verbatim scans shared by both front ends (LT-202, ADR 0032
  * sub-design 6: the anti-drift half of the dual front-end contract) —
- * malformed `first()`/`all()` selectors (TSRX026), collector-requiring
- * helpers deferred into nested functions (TSRX045), and authored
- * `'@zeix/le-truc'` import mismatches (TSRX036/037). Front-end-neutral like
+ * malformed `first()`/`all()` selectors (LTC026), collector-requiring
+ * helpers deferred into nested functions (LTC045), and authored
+ * `'@zeix/le-truc'` import mismatches (LTC036/037). Front-end-neutral like
  * the other front-end stage modules: no parser values, only the loose
- * `TsrxNode` structural type. The walks are estree-generic, so they run
+ * `AstNode` structural type. The walks are estree-generic, so they run
  * unchanged over either surface's AST.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import {
 	asArray,
 	COLLECTOR_HELPERS,
@@ -26,7 +26,7 @@ import type { ExtractContext } from './ir'
 import { malformedSelectorReason } from './selector-syntax'
 
 /**
- * Report every malformed `first()`/`all()` selector in the module (TSRX026,
+ * Report every malformed `first()`/`all()` selector in the module (LTC026,
  * LT-157b, ADR 0028 sub-design 5). Scanning the whole AST rather than just
  * setup is what makes this worth having: `all()` is legitimately called from
  * inside an event handler or a `defineMethod()` body (form-listbox does
@@ -39,7 +39,7 @@ import { malformedSelectorReason } from './selector-syntax'
  */
 export const reportMalformedSelectors = (
 	ctx: ExtractContext,
-	ast: TsrxNode,
+	ast: AstNode,
 ): void => {
 	const visit = (node: unknown): void => {
 		if (Array.isArray(node)) {
@@ -80,7 +80,7 @@ export const reportMalformedSelectors = (
 
 /**
  * Report every collector-requiring helper called from inside a nested
- * function in the component body (TSRX045, LT-157d, ADR 0028 sub-design 5).
+ * function in the component body (LTC045, LT-157d, ADR 0028 sub-design 5).
  *
  * `watch`/`on`/`pass`/`provideContexts` do not create their effect where
  * they are called — they push a descriptor into the ambient collector, which
@@ -95,7 +95,7 @@ export const reportMalformedSelectors = (
  */
 export const reportDeferredCollectorCalls = (
 	ctx: ExtractContext,
-	fn: TsrxNode,
+	fn: AstNode,
 ): void => {
 	const FUNCTION_TYPES = new Set([
 		'FunctionDeclaration',
@@ -133,10 +133,10 @@ export const reportDeferredCollectorCalls = (
  * property keys and member properties never count as reads — a local
  * `const createCell = …` shadowing the export must not fire. Two checks:
  *
- * - TSRX036: a `REAL_EXPORT_NAMES` identifier is read somewhere in the
+ * - LTC036: a `REAL_EXPORT_NAMES` identifier is read somewhere in the
  *   module but not imported from `'@zeix/le-truc'` — the first read
  *   position is reported.
- * - TSRX037: a FactoryContext member (`FACTORY_CONTEXT_MEMBERS` ∪
+ * - LTC037: a FactoryContext member (`FACTORY_CONTEXT_MEMBERS` ∪
  *   `CONTEXT_NAMES`) is named in an authored `'@zeix/le-truc'` import —
  *   not a package export; the line is a false declaration.
  *
@@ -147,7 +147,7 @@ export const reportDeferredCollectorCalls = (
  */
 export const reportLeTrucImportMismatch = (
 	ctx: ExtractContext,
-	ast: TsrxNode,
+	ast: AstNode,
 	leTrucImports: LeTrucImport[],
 ): void => {
 	const usage = new Map<string, number>()

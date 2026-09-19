@@ -23,7 +23,7 @@ const wrap = (template: string): string =>
 		</>
 	}`
 
-describe('extension activation (TSRX009)', () => {
+describe('extension activation (LTC009)', () => {
 	const configSource = (config: string): string =>
 		`export const config = ${config}
 export function C({ value = '' }: { value?: string })
@@ -35,30 +35,30 @@ export function C({ value = '' }: { value?: string })
 	</>
 }`
 
-	test('unknown config key is TSRX009', () => {
+	test('unknown config key is LTC009', () => {
 		const { diagnostics } = compileComponent(
 			configSource(`{ formAssociated: true, reactivity: true }`),
 			'c.tsrx',
 			new Set(),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX009')
+		const hit = diagnostics.find(d => d.code === 'LTC009')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`reactivity`')
 		expect(hit?.message).toContain('Known keys')
 	})
 
-	test('combining formAssociated and formAssociatedCheckbox is TSRX009', () => {
+	test('combining formAssociated and formAssociatedCheckbox is LTC009', () => {
 		const { diagnostics } = compileComponent(
 			configSource(`{ formAssociated: true, formAssociatedCheckbox: true }`),
 			'c.tsrx',
 			new Set(),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX009')
+		const hit = diagnostics.find(d => d.code === 'LTC009')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('ExtensionCollisionError')
 	})
 
-	test('formAssociated with a non-true literal is TSRX009', () => {
+	test('formAssociated with a non-true literal is LTC009', () => {
 		const { diagnostics } = compileComponent(
 			configSource(`{ formAssociated: 'yes' }`),
 			'c.tsrx',
@@ -66,7 +66,7 @@ export function C({ value = '' }: { value?: string })
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX009' && d.message.includes('must be `true`'),
+				d => d.code === 'LTC009' && d.message.includes('must be `true`'),
 			),
 		).toBe(true)
 	})
@@ -80,13 +80,12 @@ export function C({ value = '' }: { value?: string })
 		expect(
 			diagnostics.some(
 				d =>
-					d.code === 'TSRX009' &&
-					d.message.includes('array of string literals'),
+					d.code === 'LTC009' && d.message.includes('array of string literals'),
 			),
 		).toBe(true)
 	})
 
-	test('observedAttributes naming a non-Parser prop is TSRX009 (inert extension)', () => {
+	test('observedAttributes naming a non-Parser prop is LTC009 (inert extension)', () => {
 		const source = `export const config = { observedAttributes: ['label'] }
 export function C({ label }: { label?: string })
 @{
@@ -97,13 +96,13 @@ export function C({ label }: { label?: string })
 	</>
 }`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX009')
+		const hit = diagnostics.find(d => d.code === 'LTC009')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`label`')
 		expect(hit?.message).toContain('inert')
 	})
 
-	test('non-object config declaration is TSRX009', () => {
+	test('non-object config declaration is LTC009', () => {
 		const { diagnostics } = compileComponent(
 			configSource(`[formAssociated]`),
 			'c.tsrx',
@@ -111,7 +110,7 @@ export function C({ label }: { label?: string })
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX009' && d.message.includes('object literal'),
+				d => d.code === 'LTC009' && d.message.includes('object literal'),
 			),
 		).toBe(true)
 	})
@@ -132,7 +131,7 @@ import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		expect(component?.parserExposeProps.has('data')).toBe(true)
 	})
 
-	test('managed lazy child without formAssociated is TSRX010', () => {
+	test('managed lazy child without formAssociated is LTC010', () => {
 		const source = `export function C({}: {})
 	@{
 		expose({})
@@ -142,12 +141,12 @@ import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX010')
+		const hit = diagnostics.find(d => d.code === 'LTC010')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('formAssociated')
 	})
 
-	test('setup side effect over a server arg is TSRX005 (client-only subset)', () => {
+	test('setup side effect over a server arg is LTC005 (client-only subset)', () => {
 		const source = `export function C({ note }: { note?: string })
 	@{
 		expose({})
@@ -160,7 +159,7 @@ import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX005' && d.message.includes('side effects'),
+				d => d.code === 'LTC005' && d.message.includes('side effects'),
 			),
 		).toBe(true)
 	})
@@ -191,7 +190,7 @@ describe('@if conditional markup (LT-008)', () => {
 		expect(component).not.toBeNull()
 	})
 
-	test('@if over a reactive signal is TSRX005', () => {
+	test('@if over a reactive signal is LTC005', () => {
 		const source = `export function C({}: {})
 	@{
 		const open = createCell(false)
@@ -210,7 +209,7 @@ import { createCell } from '@zeix/le-truc'`
 		expect(
 			diagnostics.some(
 				d =>
-					d.code === 'TSRX005' &&
+					d.code === 'LTC005' &&
 					d.message.includes('signal(s)') &&
 					d.message.includes('initially rendered branch'),
 			),
@@ -257,7 +256,7 @@ import { createCell } from '@zeix/le-truc'`
 		</>
 		}`
 		const clash = compileComponent(indistinguishable, 'c.tsrx', new Set())
-		const hit = clash.diagnostics.find(d => d.code === 'TSRX007')
+		const hit = clash.diagnostics.find(d => d.code === 'LTC007')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('distinguishing')
 	})
@@ -278,7 +277,7 @@ describe('milestone gates', () => {
 		expect(diagnostics).toEqual([])
 	})
 
-	test('inline: @for over deriveList still warns TSRX001', () => {
+	test('inline: @for over deriveList still warns LTC001', () => {
 		const source = `export function C({}: {})
 	@{
 		const items = deriveList(() => ['a'])
@@ -293,7 +292,7 @@ describe('milestone gates', () => {
 	}
 import { deriveList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX001')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC001')).toBe(true)
 	})
 })
 
@@ -327,7 +326,7 @@ export function C({}: {})
 		expect(component).not.toBeNull()
 	})
 
-	test('reactive attribute inside the body is TSRX005', () => {
+	test('reactive attribute inside the body is LTC005', () => {
 		const { diagnostics } = compileComponent(
 			listSource('<li class={() => item}>no</li>'),
 			'c.tsrx',
@@ -335,7 +334,7 @@ export function C({}: {})
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX005' && d.message.includes('Dynamic attribute'),
+				d => d.code === 'LTC005' && d.message.includes('Dynamic attribute'),
 			),
 		).toBe(true)
 	})
@@ -355,7 +354,7 @@ export function C({}: {})
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
 	})
 
-	test('a non-item expression reading unknown names is TSRX005', () => {
+	test('a non-item expression reading unknown names is LTC005', () => {
 		const { diagnostics } = compileComponent(
 			listSource('<li>{item}{label}</li>'),
 			'c.tsrx',
@@ -393,7 +392,7 @@ export function C({ label }: { label: string })
 		expect(component?.serverCode).toContain('__html.push(esc(String(label)))')
 	})
 
-	test('missing or duplicated item hole is TSRX005', () => {
+	test('missing or duplicated item hole is LTC005', () => {
 		const { diagnostics } = compileComponent(
 			listSource('<li>static</li>'),
 			'c.tsrx',
@@ -402,7 +401,7 @@ export function C({ label }: { label: string })
 		expect(diagnostics.some(d => d.message.includes('exactly once'))).toBe(true)
 	})
 
-	test('handler referencing the loop item is TSRX005 (bindItem Signal)', () => {
+	test('handler referencing the loop item is LTC005 (bindItem Signal)', () => {
 		const { diagnostics } = compileComponent(
 			listSource(
 				'<li><span>{item}</span><button type="button" onClick={() => items.remove(item)}>✕</button></li>',
@@ -412,13 +411,12 @@ export function C({ label }: { label: string })
 		)
 		expect(
 			diagnostics.some(
-				d =>
-					d.code === 'TSRX005' && d.message.includes('Signal, not the value'),
+				d => d.code === 'LTC005' && d.message.includes('Signal, not the value'),
 			),
 		).toBe(true)
 	})
 
-	test('index binding is TSRX005', () => {
+	test('index binding is LTC005', () => {
 		const source = `export function C({}: {})
 	@{
 		const items = createList<string>(['a'], { keyConfig: 'item' })
@@ -440,7 +438,7 @@ import { createList } from '@zeix/le-truc'`
 		)
 	})
 
-	test('list directly under the root is TSRX005 (no container)', () => {
+	test('list directly under the root is LTC005 (no container)', () => {
 		const source = `export function C({}: {})
 	@{
 		const items = createList<string>(['a'], { keyConfig: 'item' })
@@ -464,20 +462,20 @@ import { createList } from '@zeix/le-truc'`
 })
 
 describe('rewrite-rule enforcement', () => {
-	test('loop variable inside a reactive thunk is TSRX002 with hoist-first hint', () => {
+	test('loop variable inside a reactive thunk is LTC002 with hoist-first hint', () => {
 		const source = wrap(
 			`@for (const tab of tabs) {
 				<button aria-selected={() => String(selected.get() === tab.id)}>{tab.id}</button>
 			}`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX002')
+		const hit = diagnostics.find(d => d.code === 'LTC002')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('Hoist the derived value')
 		expect(hit?.message).toContain('`tab`')
 	})
 
-	test('hoisted const never rendered as a bare attribute is TSRX003', () => {
+	test('hoisted const never rendered as a bare attribute is LTC003', () => {
 		const source = wrap(
 			`@for (const tab of tabs) {
 				const label = tab.id
@@ -485,14 +483,14 @@ describe('rewrite-rule enforcement', () => {
 			}`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX003')
+		const hit = diagnostics.find(d => d.code === 'LTC003')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`label`')
 		expect(hit?.message).toContain('Render it')
 	})
 
 	test('signal never rendered is a routing signal, not a diagnostic (LT-165 step 5)', () => {
-		// ADR 0029 s5: TSRX004 left the channel — "no harvestable site" is a
+		// ADR 0029 s5: LTC004 left the channel — "no harvestable site" is a
 		// statement about the harness, and the tier machinery now routes on it.
 		// The component still compiles, classifies Simulated (a literal
 		// initializer is realm-answerable), and the generated client declares
@@ -516,14 +514,14 @@ import { createCell } from '@zeix/le-truc'`
 		)
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
 		const signals = component?.entry.routingSignals ?? []
-		const hit = signals.find(s => s.origin === 'TSRX004')
+		const hit = signals.find(s => s.origin === 'LTC004')
 		expect(hit?.detail).toContain('`ghost`')
 		expect(hit?.resolution).toEqual({ by: 'realm' })
 		expect(component?.entry.tier).toBe('simulated')
 		expect(component?.clientCode).toContain('const ghost = createCell(1)')
 	})
 
-	test('signal read only in a computed reactive thunk is NOT TSRX004 (LT-036)', () => {
+	test('signal read only in a computed reactive thunk is NOT LTC004 (LT-036)', () => {
 		const source = `export function C({}: {})
 @{
 	const prefix = createCell('a')
@@ -540,7 +538,7 @@ import { createCell } from '@zeix/le-truc'`
 		expect(component?.clientCode).toContain("createCell('a')")
 	})
 
-	test('a { get, set } pass entry missing set is invalid (TSRX006)', () => {
+	test('a { get, set } pass entry missing set is invalid (LTC006)', () => {
 		const source = `export function C({}: {})
 	@{
 		const value = createCell('x')
@@ -556,7 +554,7 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX006')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC006')).toBe(true)
 	})
 
 	test('lazy child inside @for body is gated as milestone-3', () => {
@@ -636,18 +634,18 @@ import { createCell } from '@zeix/le-truc'`
 		expect(diagnostics.some(d => d.message.includes('root element'))).toBe(true)
 	})
 
-	test('ambiguous selector is TSRX007', () => {
+	test('ambiguous selector is LTC007', () => {
 		const source = wrap(
 			`<span>{selected}</span>
 			<span>other</span>`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hits = diagnostics.filter(d => d.code === 'TSRX007')
+		const hits = diagnostics.filter(d => d.code === 'LTC007')
 		expect(hits.length).toBeGreaterThan(0)
 		expect(hits.some(h => h.message.includes('span'))).toBe(true)
 	})
 
-	test('a signal conditionally choosing between two constructors is TSRX044', () => {
+	test('a signal conditionally choosing between two constructors is LTC044', () => {
 		const source = `export function C({ big = false }: { big?: boolean })
 	@{
 		const n = big ? deriveCell(() => 1) : createCell(0)
@@ -661,7 +659,7 @@ import { deriveCell, createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		// Own code since LT-165's split: a format rule (ADR 0024 s12), not a
 		// server-evaluation guard, so it stays an error under tiering.
-		const hit = diagnostics.find(d => d.code === 'TSRX044')
+		const hit = diagnostics.find(d => d.code === 'LTC044')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`n`')
 		expect(hit?.message).toContain('conditionally chooses')
@@ -695,7 +693,7 @@ import { createCell } from '@zeix/le-truc'`
 		)
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
 		const signals = component?.entry.routingSignals ?? []
-		const hit = signals.find(s => s.origin === 'TSRX013')
+		const hit = signals.find(s => s.origin === 'LTC013')
 		expect(hit?.detail).toContain('`el`')
 		expect(hit?.detail).toContain('all')
 		expect(hit?.resolution).toEqual({ by: 'realm' })
@@ -764,7 +762,7 @@ describe('React JSX near-misses (LT-054)', () => {
 		expect(diagnostics.some(d => d.code === 'TSRX023')).toBe(false)
 	})
 
-	test('return (<>…</>) in setup is TSRX024, not the generic TSRX005', () => {
+	test('return (<>…</>) in setup is TSRX024, not the generic LTC005', () => {
 		const source = `export function C({ cond }: { cond: boolean })
 	@{
 		expose({})
@@ -780,10 +778,10 @@ describe('React JSX near-misses (LT-054)', () => {
 		)
 		expect(component).toBeNull()
 		expect(diagnostics.some(d => d.code === 'TSRX024')).toBe(true)
-		expect(diagnostics.some(d => d.code === 'TSRX005')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC005')).toBe(false)
 	})
 
-	test('className/htmlFor are TSRX006 naming the real HTML attribute', () => {
+	test('className/htmlFor are LTC006 naming the real HTML attribute', () => {
 		const source = el('<label className="x" htmlFor="y">{cond}</label>')
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -791,7 +789,7 @@ describe('React JSX near-misses (LT-054)', () => {
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hits = diagnostics.filter(d => d.code === 'TSRX006')
+		const hits = diagnostics.filter(d => d.code === 'LTC006')
 		expect(hits.some(h => h.message.includes('`class`'))).toBe(true)
 		expect(hits.some(h => h.message.includes('`for`'))).toBe(true)
 	})
@@ -838,7 +836,7 @@ export function BasicParent({ title }: { title: string })
 		expect(component).toBeNull()
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX006' && d.message.includes('`class`'),
+				d => d.code === 'LTC006' && d.message.includes('`class`'),
 			),
 		).toBe(true)
 	})
@@ -896,43 +894,43 @@ describe('first(selector, required) element references (LT-055)', () => {
 		expect(component).not.toBeNull()
 	})
 
-	test('a malformed first() call (wrong arg count/shape) is TSRX025', () => {
+	test('a malformed first() call (wrong arg count/shape) is LTC025', () => {
 		// One literal is the OPTIONAL form since LT-123 — malformed
 		// now means neither one nor two string literals.
 		const source = el("const input = first('input', 'a', 'b')", '<input />')
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX025')
+		const hit = diagnostics.find(d => d.code === 'LTC025')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('const input = first(…)')
 	})
 
-	test('a selector matching no element is TSRX026', () => {
+	test('a selector matching no element is LTC026', () => {
 		const source = el(
 			"const input = first('.nonexistent', 'required')",
 			'<input />',
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX026')
+		const hit = diagnostics.find(d => d.code === 'LTC026')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`input`')
 	})
 
-	test('a selector using unsupported syntax is TSRX026', () => {
+	test('a selector using unsupported syntax is LTC026', () => {
 		const source = el(
 			"const input = first('c-el input', 'required')",
 			'<input />',
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX026')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC026')).toBe(true)
 	})
 
-	test('a selector matching multiple, non-exclusive elements is TSRX027', () => {
+	test('a selector matching multiple, non-exclusive elements is LTC027', () => {
 		const source = el(
 			"const input = first('input', 'required')",
 			'<input /><input />',
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX027')
+		const hit = diagnostics.find(d => d.code === 'LTC027')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('2 elements')
 	})
@@ -996,7 +994,7 @@ export function BasicParent({ title }: { title: string })
 		)
 	})
 
-	test('two first() names resolving to the same RAW element is TSRX041 (LT-132)', () => {
+	test('two first() names resolving to the same RAW element is LTC041 (LT-132)', () => {
 		const source = `export function C({}: {})
 	@{
 		const a = first('input', 'a')
@@ -1016,13 +1014,13 @@ export function BasicParent({ title }: { title: string })
 		// Before LT-132 this compiled silently: `b` never became a query,
 		// and the generated client referenced an undeclared const — a tsc
 		// error on GENERATED code with nothing pointing at this line.
-		const dup = diagnostics.filter(d => d.code === 'TSRX041')
+		const dup = diagnostics.filter(d => d.code === 'LTC041')
 		expect(dup).toHaveLength(1)
 		expect(dup[0]?.message).toContain('`a`')
 		expect(component).toBeNull()
 	})
 
-	test('two first() names resolving to the same COMPOSE site is TSRX041 (LT-132)', () => {
+	test('two first() names resolving to the same COMPOSE site is LTC041 (LT-132)', () => {
 		const childSource = `export function BasicChild({ label }: { label: string })
 	@{
 		expose({})
@@ -1058,10 +1056,10 @@ export function BasicParent({ title }: { title: string })
 			new Map([[child.entry.source, child.entry]]),
 		)
 		// `ref={}` made this shape unwritable; `first()` does not.
-		expect(diagnostics.filter(d => d.code === 'TSRX041')).toHaveLength(1)
+		expect(diagnostics.filter(d => d.code === 'LTC041')).toHaveLength(1)
 	})
 
-	test('an unmatched required `first()` on a custom-element tag is TSRX026 in the registry pass (LT-127)', () => {
+	test('an unmatched required `first()` on a custom-element tag is LTC026 in the registry pass (LT-127)', () => {
 		const source = `export function C({}: {})
 	@{
 		const stray = first('no-such-child', 'a child this template never composes')
@@ -1081,7 +1079,7 @@ export function BasicParent({ title }: { title: string })
 			undefined,
 			new Map(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX026')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC026')).toBe(true)
 	})
 })
 
@@ -1097,7 +1095,7 @@ export function C({ name }: { name: string })
 		</>
 	}`
 
-	test('exposing a member formAssociated() installs is TSRX028', () => {
+	test('exposing a member formAssociated() installs is LTC028', () => {
 		const source = el(
 			`{ formAssociated: true }`,
 			`value: asString(''), validationMessage: asString('')`,
@@ -1108,13 +1106,13 @@ export function C({ name }: { name: string })
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX028')
+		const hit = diagnostics.find(d => d.code === 'LTC028')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`validationMessage`')
 		expect(hit?.message).toContain('formAssociated()')
 	})
 
-	test('exposing defaultValue (the reset-baseline prop) is TSRX028', () => {
+	test('exposing defaultValue (the reset-baseline prop) is LTC028', () => {
 		const source = el(
 			`{ formAssociated: true }`,
 			`value: asString(''), defaultValue: asString('')`,
@@ -1122,18 +1120,18 @@ export function C({ name }: { name: string })
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX028' && d.message.includes('`defaultValue`'),
+				d => d.code === 'LTC028' && d.message.includes('`defaultValue`'),
 			),
 		).toBe(true)
 	})
 
-	test('exposing defaultChecked on formAssociatedCheckbox() is TSRX028', () => {
+	test('exposing defaultChecked on formAssociatedCheckbox() is LTC028', () => {
 		const source = el(
 			`{ formAssociatedCheckbox: true }`,
 			`checked: asBoolean(false), defaultChecked: asBoolean(false)`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX028')
+		const hit = diagnostics.find(d => d.code === 'LTC028')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('formAssociatedCheckbox()')
 	})
@@ -1141,7 +1139,7 @@ export function C({ name }: { name: string })
 	test('exposing value/checked themselves is never flagged', () => {
 		const source = el(`{ formAssociated: true }`, `value: asString('')`)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX028')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC028')).toBe(false)
 	})
 
 	test('a non-form-associated component is unaffected', () => {
@@ -1155,7 +1153,7 @@ export function C({ name }: { name: string })
 	}
 import { asString } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX028')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC028')).toBe(false)
 	})
 })
 
@@ -1171,7 +1169,7 @@ export function C({ name }: { name: string })
 		</>
 	}`
 
-	test('a static name on a descendant input is TSRX029', () => {
+	test('a static name on a descendant input is LTC029', () => {
 		const source = el('<input name="inner" />')
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -1179,17 +1177,17 @@ export function C({ name }: { name: string })
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX029')
+		const hit = diagnostics.find(d => d.code === 'LTC029')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('<input>')
 	})
 
-	test('a bound (reactive) name is also TSRX029', () => {
+	test('a bound (reactive) name is also LTC029', () => {
 		const source = el('<textarea name={() => host.value} />')
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX029' && d.message.includes('<textarea>'),
+				d => d.code === 'LTC029' && d.message.includes('<textarea>'),
 			),
 		).toBe(true)
 	})
@@ -1199,7 +1197,7 @@ export function C({ name }: { name: string })
 			'<select name="a"></select><button name="b" type="button"></button>',
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hits = diagnostics.filter(d => d.code === 'TSRX029')
+		const hits = diagnostics.filter(d => d.code === 'LTC029')
 		expect(hits.some(h => h.message.includes('<select>'))).toBe(true)
 		expect(hits.some(h => h.message.includes('<button>'))).toBe(true)
 	})
@@ -1207,13 +1205,13 @@ export function C({ name }: { name: string })
 	test('an unnamed inner control is not flagged', () => {
 		const source = el('<input />')
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX029')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC029')).toBe(false)
 	})
 
 	test('name on a non-form-control element is not flagged', () => {
 		const source = el('<div name="whatever"></div>')
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX029')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC029')).toBe(false)
 	})
 
 	test('not gated behind formAssociated is unaffected', () => {
@@ -1226,12 +1224,12 @@ export function C({ name }: { name: string })
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX029')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC029')).toBe(false)
 	})
 })
 
-describe('textarea value attribute (CHECKLIST §10, TSRX030)', () => {
-	test('a static value attribute on textarea is TSRX030', () => {
+describe('textarea value attribute (CHECKLIST §10, LTC030)', () => {
+	test('a static value attribute on textarea is LTC030', () => {
 		const source = `export function C({}: {})
 	@{
 		expose({})
@@ -1248,12 +1246,12 @@ describe('textarea value attribute (CHECKLIST §10, TSRX030)', () => {
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX030')
+		const hit = diagnostics.find(d => d.code === 'LTC030')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('text content')
 	})
 
-	test('a server-arg value attribute on textarea is TSRX030', () => {
+	test('a server-arg value attribute on textarea is LTC030', () => {
 		const source = `export function C({ value }: { value: string })
 	@{
 		expose({})
@@ -1265,7 +1263,7 @@ describe('textarea value attribute (CHECKLIST §10, TSRX030)', () => {
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX030')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC030')).toBe(true)
 	})
 
 	test('a reactive host-mirror value attribute on textarea is NOT flagged — paired with text content it is sound', () => {
@@ -1281,7 +1279,7 @@ describe('textarea value attribute (CHECKLIST §10, TSRX030)', () => {
 	}
 import { asString } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX030')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC030')).toBe(false)
 	})
 
 	test('a value attribute on input is not flagged — only textarea lacks the content attribute', () => {
@@ -1296,7 +1294,7 @@ import { asString } from '@zeix/le-truc'`
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX030')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC030')).toBe(false)
 	})
 })
 
@@ -1330,10 +1328,10 @@ describe('asymmetric @if branch client constructs (per-branch addressing since L
 		expect(component?.clientCode).toContain('if (button) {')
 	})
 
-	test('a construct unique to one INDISTINGUISHABLE branch root stays an error (was TSRX031)', () => {
+	test('a construct unique to one INDISTINGUISHABLE branch root stays an error (was LTC031)', () => {
 		// Both roots are bare <strong> — union addressing cannot carry the
 		// asymmetric construct, and per-branch guards over one selector
-		// would both bind the rendered element. TSRX007 keeps the hazard an
+		// would both bind the rendered element. LTC007 keeps the hazard an
 		// error, naming the fix.
 		const source = `export function C({ big }: { big?: boolean })
 	@{
@@ -1350,7 +1348,7 @@ describe('asymmetric @if branch client constructs (per-branch addressing since L
 		</>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX007')
+		const hit = diagnostics.find(d => d.code === 'LTC007')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('distinguishing')
 	})
@@ -1371,12 +1369,12 @@ describe('asymmetric @if branch client constructs (per-branch addressing since L
 		</>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX007')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC007')).toBe(false)
 	})
 })
 
-describe('default value on a non-optional prop type (CHECKLIST §10, TSRX032)', () => {
-	test('a default paired with a required type is TSRX032', () => {
+describe('default value on a non-optional prop type (CHECKLIST §10, LTC032)', () => {
+	test('a default paired with a required type is LTC032', () => {
 		const source = `export function C({ label = 'x' }: { label: string })
 	@{
 		expose({})
@@ -1386,7 +1384,7 @@ describe('default value on a non-optional prop type (CHECKLIST §10, TSRX032)', 
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX032')
+		const hit = diagnostics.find(d => d.code === 'LTC032')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`label`')
 		expect(hit?.message).toContain('label?:')
@@ -1402,7 +1400,7 @@ describe('default value on a non-optional prop type (CHECKLIST §10, TSRX032)', 
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX032')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC032')).toBe(false)
 	})
 
 	test('no default value is not flagged regardless of optionality', () => {
@@ -1415,11 +1413,11 @@ describe('default value on a non-optional prop type (CHECKLIST §10, TSRX032)', 
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX032')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC032')).toBe(false)
 	})
 })
 
-describe('impure ambients (CHECKLIST §4, TSRX033 — static forms only after LT-165 step 5)', () => {
+describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-165 step 5)', () => {
 	test('a static child (no signal dependency) reading Date is a hard error — no client correction exists', () => {
 		const source = `export function C({ label }: { label: string })
 	@{
@@ -1435,12 +1433,12 @@ describe('impure ambients (CHECKLIST §4, TSRX033 — static forms only after LT
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX033')
+		const hit = diagnostics.find(d => d.code === 'LTC033')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 	})
 
-	test('Math.random() in a static child is also TSRX033', () => {
+	test('Math.random() in a static child is also LTC033', () => {
 		const source = `export function C({}: {})
 	@{
 		expose({})
@@ -1450,7 +1448,7 @@ describe('impure ambients (CHECKLIST §4, TSRX033 — static forms only after LT
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(true)
 	})
 
 	test('Math.max (not Math.random) in a static child is not flagged — pure function of its args', () => {
@@ -1463,7 +1461,7 @@ describe('impure ambients (CHECKLIST §4, TSRX033 — static forms only after LT
 		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(false)
 	})
 
 	test('a reactive attribute reading Date is omitted silently — unresolvability, not a warning (LT-165 step 5)', () => {
@@ -1489,7 +1487,7 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(false)
 		expect(diagnostics.some(d => d.severity === 'warning')).toBe(false)
 		expect(component).not.toBeNull()
 		expect(component?.serverCode).not.toContain('Date.now')
@@ -1514,11 +1512,11 @@ import { createCell } from '@zeix/le-truc'`
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(false)
 	})
 })
 
-describe('semantically-loaded attribute with no server default (CHECKLIST §5, TSRX034 — routing signal + severe-on-Static after LT-165 step 5)', () => {
+describe('semantically-loaded attribute with no server default (CHECKLIST §5, LTC034 — routing signal + severe-on-Static after LT-165 step 5)', () => {
 	test('hidden bound to a comparison over a host prop the root does NOT render is a routing signal, not a warning (LT-165 step 5)', () => {
 		// `count` is Parser-exposed but never seeded onto <c-el> as a server
 		// attribute — LT-085's derived-fold widening can't substitute it (no
@@ -1543,10 +1541,8 @@ import { asInteger } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
-		const hit = component?.entry.routingSignals.find(
-			s => s.origin === 'TSRX034',
-		)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
+		const hit = component?.entry.routingSignals.find(s => s.origin === 'LTC034')
 		expect(hit?.detail).toContain('`hidden`')
 		expect(hit?.resolution).toEqual({ by: 'realm' })
 		expect(component?.entry.tier).toBe('simulated')
@@ -1569,7 +1565,7 @@ import { asInteger } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(component?.serverCode).toContain(
 			"attr('hidden', (() => (count) !== 0)())",
 		)
@@ -1597,9 +1593,9 @@ import { asInteger } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(
-			component?.entry.routingSignals.some(s => s.origin === 'TSRX034'),
+			component?.entry.routingSignals.some(s => s.origin === 'LTC034'),
 		).toBe(true)
 		expect(component?.entry.tier).toBe('simulated')
 	})
@@ -1629,7 +1625,7 @@ import { createCell, asString } from '@zeix/le-truc'`
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		const hit = diagnostics.find(d => d.code === 'LTC034')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('correctness bug')
@@ -1663,7 +1659,7 @@ import { asString, asBoolean } from '@zeix/le-truc'`
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX034')
+		const hit = diagnostics.find(d => d.code === 'LTC034')
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('in any tier')
 		// The premise, pinned separately because the erroring compile returns
@@ -1700,7 +1696,7 @@ import { asString, asBoolean } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
 		expect(component?.entry.tier).toBe('simulated')
 	})
@@ -1727,10 +1723,8 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
-		const hit = component?.entry.routingSignals.find(
-			s => s.origin === 'TSRX034',
-		)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
+		const hit = component?.entry.routingSignals.find(s => s.origin === 'LTC034')
 		expect(hit?.resolution.by).toBe('none')
 		expect(component?.entry.tier).toBe('static')
 	})
@@ -1759,7 +1753,7 @@ import { createCell, asString } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(component?.entry.tier).toBe('static')
 	})
 
@@ -1782,10 +1776,8 @@ import { createCell } from '@zeix/le-truc'`
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
-		const hit = component?.entry.routingSignals.find(
-			s => s.origin === 'TSRX034',
-		)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
+		const hit = component?.entry.routingSignals.find(s => s.origin === 'LTC034')
 		expect(hit?.detail).toContain('`disabled`')
 		expect(hit?.resolution.by).toBe('none')
 	})
@@ -1803,7 +1795,7 @@ import { createCell } from '@zeix/le-truc'`
 	}
 import { asBoolean } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 	})
 
 	test('a server-evaluable thunk over a signal is not flagged — it folds normally', () => {
@@ -1821,7 +1813,7 @@ import { asBoolean } from '@zeix/le-truc'`
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 	})
 
 	test('a non-loaded attribute (e.g. title) with the same non-foldable shape is not flagged', () => {
@@ -1837,11 +1829,11 @@ import { createCell } from '@zeix/le-truc'`
 	}
 import { asInteger } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX034')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 	})
 })
 
-describe('duplicate id across @try/@catch arms (CHECKLIST §8, TSRX035)', () => {
+describe('duplicate id across @try/@catch arms (CHECKLIST §8, LTC035)', () => {
 	const wrapTry = (template: string): string =>
 		`export function C({ status }: { status?: string })
 	@{
@@ -1854,28 +1846,28 @@ describe('duplicate id across @try/@catch arms (CHECKLIST §8, TSRX035)', () => 
 		</>
 	}`
 
-	test('the same literal id on the @try body and @catch arm is TSRX035', () => {
+	test('the same literal id on the @try body and @catch arm is LTC035', () => {
 		const source = wrapTry(`@try {
 			<p id="msg">{status.length}</p>
 		} @catch (error) {
 			<p id="msg">Failed</p>
 		}`)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'TSRX035')
+		const hit = diagnostics.find(d => d.code === 'LTC035')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('id="msg"')
 		expect(hit?.message).toContain('@try body')
 		expect(hit?.message).toContain('@catch arm')
 	})
 
-	test('a duplicate id on a NESTED element (not just the arm root) is still TSRX035', () => {
+	test('a duplicate id on a NESTED element (not just the arm root) is still LTC035', () => {
 		const source = wrapTry(`@try {
 			<div><span id="inner">{status.length}</span></div>
 		} @catch (error) {
 			<div><span id="inner">Failed</span></div>
 		}`)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX035')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC035')).toBe(true)
 	})
 
 	test('distinct ids across arms are not flagged', () => {
@@ -1885,11 +1877,11 @@ describe('duplicate id across @try/@catch arms (CHECKLIST §8, TSRX035)', () => 
 			<p id="msg-error">Failed</p>
 		}`)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'TSRX035')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC035')).toBe(false)
 	})
 })
 
-describe('static ids in a template (TSRX042, LT-131)', () => {
+describe('static ids in a template (LTC042, LT-131)', () => {
 	const withBody = (body: string): string =>
 		`export function C({ label, labelId = 'c-label' }: { label?: string; labelId?: string })
 	@{
@@ -1911,7 +1903,7 @@ describe('static ids in a template (TSRX042, LT-131)', () => {
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const warn = diagnostics.filter(d => d.code === 'TSRX042')
+		const warn = diagnostics.filter(d => d.code === 'LTC042')
 		expect(warn).toHaveLength(1)
 		expect(warn[0]?.severity).toBe('warning')
 		// The fix-it names a concrete arg, not just the problem.
@@ -1930,7 +1922,7 @@ describe('static ids in a template (TSRX042, LT-131)', () => {
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX042')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC042')).toEqual([])
 	})
 
 	test('the ROOT element is checked too — the root is the host', () => {
@@ -1947,18 +1939,18 @@ describe('static ids in a template (TSRX042, LT-131)', () => {
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX042')).toHaveLength(1)
+		expect(diagnostics.filter(d => d.code === 'LTC042')).toHaveLength(1)
 	})
 })
 
-describe('setup const reading a first()-bound ref (TSRX043 routing / TSRX046 rendered, LT-165 step 5)', () => {
+describe('setup const reading a first()-bound ref (LTC043 routing / LTC046 rendered, LT-165 step 5)', () => {
 	// LT-125 historically. Every non-`first()` setup const lands in
 	// `component.setup`, which the FOLDED emit re-declares VERBATIM into the
 	// render function — so a const whose initializer reads a `first()`-bound
 	// ref would evaluate at server-render time, where no DOM exists. ADR 0029
 	// s5: that is a fact about the harness, not an author error — an
 	// UNrendered const is a routing signal and the component routes Simulated.
-	// The retired error survives, precisely scoped (TSRX046), for the one case
+	// The retired error survives, precisely scoped (LTC046), for the one case
 	// where the const's VALUE is rendered into the markup: a static splice no
 	// tier can produce and no client binding ever corrects.
 	const refConst = (extra: string, setup: string, child: string): string =>
@@ -1984,9 +1976,7 @@ export function C({}: {})
 			new Set(['c-el']),
 		)
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
-		const hit = component?.entry.routingSignals.find(
-			s => s.origin === 'TSRX043',
-		)
+		const hit = component?.entry.routingSignals.find(s => s.origin === 'LTC043')
 		expect(hit?.detail).toContain('`initial`')
 		expect(hit?.detail).toContain('ref(s) input')
 		expect(hit?.resolution).toEqual({ by: 'realm' })
@@ -1996,14 +1986,14 @@ export function C({}: {})
 		expect(component?.serverCode).not.toContain('input.value')
 	})
 
-	test('a rendered ref read is a hard error naming the site (TSRX046)', () => {
+	test('a rendered ref read is a hard error naming the site (LTC046)', () => {
 		const { component, diagnostics } = compileComponent(
 			refConst('', 'const initial = input.value', '{initial}'),
 			'c.tsrx',
 			new Set(['c-el']),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX046')
+		const hit = diagnostics.find(d => d.code === 'LTC046')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('`initial`')
@@ -2024,7 +2014,7 @@ export function C({}: {})
 			new Set(['c-el']),
 		)
 		expect(
-			component?.entry.routingSignals.filter(s => s.origin === 'TSRX043'),
+			component?.entry.routingSignals.filter(s => s.origin === 'LTC043'),
 		).toHaveLength(1)
 		expect(component?.entry.tier).toBe('simulated')
 	})
@@ -2048,7 +2038,7 @@ export function C({}: {})
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		// TSRX043 is retired onto RoutingSignalOrigin (LT-223); the pin is
+		// LTC043 is retired onto RoutingSignalOrigin (LT-223); the pin is
 		// now the absence of ANY diagnostic.
 		expect(diagnostics).toEqual([])
 	})
@@ -2069,13 +2059,13 @@ export function C({}: {})
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		// TSRX043 is retired onto RoutingSignalOrigin (LT-223); the pin is
+		// LTC043 is retired onto RoutingSignalOrigin (LT-223); the pin is
 		// now the absence of ANY diagnostic.
 		expect(diagnostics).toEqual([])
 	})
 })
 
-describe('TSRX039 and the sanctioned override shape (LT-129)', () => {
+describe('LTC039 and the sanctioned override shape (LT-129)', () => {
 	// The criterion (owner, 2026-08-30): warn only when the two channels carry
 	// the SAME value by INDEPENDENT routes. A Parser whose fallback expression
 	// reads the very site the arg renders into is bullet 2's declared
@@ -2099,7 +2089,7 @@ export function C({ step = 1 }: { step?: number })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX039')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC039')).toEqual([])
 	})
 
 	test('a Parser whose fallback reads NOTHING still warns', () => {
@@ -2120,7 +2110,7 @@ export function C({ step = 1 }: { step?: number })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
+		expect(diagnostics.filter(d => d.code === 'LTC039')).toHaveLength(1)
 	})
 
 	test('the exclusion is per-SITE — a DIFFERENT element still warns', () => {
@@ -2145,11 +2135,11 @@ export function C({ step = 1 }: { step?: number })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
+		expect(diagnostics.filter(d => d.code === 'LTC039')).toHaveLength(1)
 	})
 })
 
-describe('TSRX039 override exclusion reaches TEXT CHILDREN too (LT-139)', () => {
+describe('LTC039 override exclusion reaches TEXT CHILDREN too (LT-139)', () => {
 	// LT-129 excluded the sanctioned override on ATTRIBUTE sites only. The same
 	// relationship spelled as a text child is bullet 4's canonical harvest site
 	// (`<span class="label">{label}</span>`) with bullet 2's host-attribute
@@ -2170,7 +2160,7 @@ export function C({ label = '' }: { label?: string })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX039')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC039')).toEqual([])
 	})
 
 	test('per-SITE still holds — a text child in a DIFFERENT element warns', () => {
@@ -2194,7 +2184,7 @@ export function C({ label = '' }: { label?: string })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
+		expect(diagnostics.filter(d => d.code === 'LTC039')).toHaveLength(1)
 	})
 
 	test('a Parser with no fallback read still warns on a text child', () => {
@@ -2212,11 +2202,11 @@ export function C({ label = '' }: { label?: string })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX039')).toHaveLength(1)
+		expect(diagnostics.filter(d => d.code === 'LTC039')).toHaveLength(1)
 	})
 })
 
-describe('TSRX039 exempts a formAssociated() reset baseline (LT-141)', () => {
+describe('LTC039 exempts a formAssociated() reset baseline (LT-141)', () => {
 	// form-textbox's real shape: `value` is Parser-exposed, rendered into an
 	// owned text child (`<textarea>{value}</textarea>`), AND rendered onto
 	// the root as the host attribute (`<form-textbox {value}>`) — which is
@@ -2238,7 +2228,7 @@ export function C({ value = '' }: { value?: string })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX039')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC039')).toEqual([])
 	})
 
 	test('formAssociatedCheckbox() root carrying the checked attribute — no warning', () => {
@@ -2257,7 +2247,7 @@ export function C({ checked = false }: { checked?: boolean })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX039')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC039')).toEqual([])
 	})
 
 	test('formAssociated() root WITHOUT the value attribute still warns, with the baseline fix-it', () => {
@@ -2281,7 +2271,7 @@ export function C({ value = '' }: { value?: string })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const found = diagnostics.filter(d => d.code === 'TSRX039')
+		const found = diagnostics.filter(d => d.code === 'LTC039')
 		expect(found).toHaveLength(1)
 		expect(found[0]?.message).toContain('reset baseline')
 		expect(found[0]?.message).toContain('defaultValue')
@@ -2306,13 +2296,13 @@ export function C({ value = '' }: { value?: string })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const found = diagnostics.filter(d => d.code === 'TSRX039')
+		const found = diagnostics.filter(d => d.code === 'LTC039')
 		expect(found).toHaveLength(1)
 		expect(found[0]?.message).toContain('drop the attribute')
 	})
 })
 
-describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
+describe('LTC033 covers static/server-rendered attributes (LT-075)', () => {
 	const withAttrs = (tpl: string): string => `export function C({}: {})
 @{
 	expose({})
@@ -2331,7 +2321,7 @@ describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX033')
+		const hit = diagnostics.find(d => d.code === 'LTC033')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('title')
@@ -2344,7 +2334,7 @@ describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
 			new Set(['c-el']),
 		)
 		expect(
-			diagnostics.filter(d => d.code === 'TSRX033' && d.severity === 'error'),
+			diagnostics.filter(d => d.code === 'LTC033' && d.severity === 'error'),
 		).toHaveLength(1)
 	})
 
@@ -2358,7 +2348,7 @@ describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX033')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC033')).toEqual([])
 		expect(diagnostics.some(d => d.severity === 'warning')).toBe(false)
 		expect(component?.entry.tier).toBe('folded')
 	})
@@ -2369,7 +2359,7 @@ describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX033')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC033')).toEqual([])
 	})
 })
 
@@ -2382,7 +2372,7 @@ describe('TSRX033 covers static/server-rendered attributes (LT-075)', () => {
  * line on a page that already degraded — these four rules are what buys
  * containment back.
  */
-describe('reserved expose() key (TSRX028, LT-157a)', () => {
+describe('reserved expose() key (LTC028, LT-157a)', () => {
 	const exposing = (props: string): string =>
 		`export function C({}: {})
 @{
@@ -2393,13 +2383,13 @@ describe('reserved expose() key (TSRX028, LT-157a)', () => {
 	</>
 }`
 
-	test('a reserved word as an expose() key is TSRX028', () => {
+	test('a reserved word as an expose() key is LTC028', () => {
 		const { diagnostics } = compileComponent(
 			exposing(`toString: 'x'`),
 			'c.tsrx',
 			new Set(),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX028')
+		const hit = diagnostics.find(d => d.code === 'LTC028')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('`toString`')
@@ -2428,21 +2418,21 @@ describe('reserved expose() key (TSRX028, LT-157a)', () => {
 			)
 			expect(
 				diagnostics.some(
-					d => d.code === 'TSRX028' && d.message.includes(`\`${word}\``),
+					d => d.code === 'LTC028' && d.message.includes(`\`${word}\``),
 				),
 			).toBe(true)
 		}
 	})
 
 	test('the check is ungated — it does not need config.formAssociated', () => {
-		// TSRX028's other builder only fires for a form-associated
+		// LTC028's other builder only fires for a form-associated
 		// component; this one has nothing to do with form participation.
 		const { diagnostics } = compileComponent(
 			exposing(`valueOf: 1`),
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX028')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC028')).toBe(true)
 	})
 
 	test('an ordinary prop name is untouched', () => {
@@ -2451,11 +2441,11 @@ describe('reserved expose() key (TSRX028, LT-157a)', () => {
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.filter(d => d.code === 'TSRX028')).toEqual([])
+		expect(diagnostics.filter(d => d.code === 'LTC028')).toEqual([])
 	})
 })
 
-describe('malformed selector (TSRX026, LT-157b)', () => {
+describe('malformed selector (LTC026, LT-157b)', () => {
 	const withSetup = (setup: string): string =>
 		`export function C({}: {})
 @{
@@ -2467,20 +2457,20 @@ describe('malformed selector (TSRX026, LT-157b)', () => {
 	</>
 }`
 
-	test('a malformed all() selector is TSRX026', () => {
+	test('a malformed all() selector is LTC026', () => {
 		const { diagnostics } = compileComponent(
 			withSetup(`const opts = all('button[role="option"')`),
 			'c.tsrx',
 			new Set(),
 		)
 		const hit = diagnostics.find(
-			d => d.code === 'TSRX026' && d.message.includes('valid CSS selector'),
+			d => d.code === 'LTC026' && d.message.includes('valid CSS selector'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('leaves a `[` unclosed')
 	})
 
-	test('a trailing combinator is TSRX026', () => {
+	test('a trailing combinator is LTC026', () => {
 		const { diagnostics } = compileComponent(
 			withSetup(`const opts = all('button >')`),
 			'c.tsrx',
@@ -2489,7 +2479,7 @@ describe('malformed selector (TSRX026, LT-157b)', () => {
 		expect(
 			diagnostics.some(
 				d =>
-					d.code === 'TSRX026' && d.message.includes('ends with a combinator'),
+					d.code === 'LTC026' && d.message.includes('ends with a combinator'),
 			),
 		).toBe(true)
 	})
@@ -2507,8 +2497,7 @@ describe('malformed selector (TSRX026, LT-157b)', () => {
 		)
 		expect(
 			diagnostics.some(
-				d =>
-					d.code === 'TSRX026' && d.message.includes('leaves a `[` unclosed'),
+				d => d.code === 'LTC026' && d.message.includes('leaves a `[` unclosed'),
 			),
 		).toBe(true)
 	})
@@ -2528,7 +2517,7 @@ describe('malformed selector (TSRX026, LT-157b)', () => {
 	})
 })
 
-describe('deferred collector call (TSRX045, LT-157d)', () => {
+describe('deferred collector call (LTC045, LT-157d)', () => {
 	const withSetup = (setup: string): string =>
 		`export function C({}: {})
 @{
@@ -2540,20 +2529,20 @@ describe('deferred collector call (TSRX045, LT-157d)', () => {
 	</>
 }`
 
-	test('watch() inside a setTimeout callback is TSRX045', () => {
+	test('watch() inside a setTimeout callback is LTC045', () => {
 		const { diagnostics } = compileComponent(
 			withSetup(`setTimeout(() => { watch(() => 1, () => {}) }, 0)`),
 			'c.tsrx',
 			new Set(),
 		)
 		const hit = diagnostics.find(
-			d => d.code === 'TSRX045' && d.message.includes('NoActiveCollectorError'),
+			d => d.code === 'LTC045' && d.message.includes('NoActiveCollectorError'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`watch(…)`')
 	})
 
-	test('on() inside a promise callback is TSRX045', () => {
+	test('on() inside a promise callback is LTC045', () => {
 		const { diagnostics } = compileComponent(
 			withSetup(`Promise.resolve().then(() => { on('click', () => {}) })`),
 			'c.tsrx',
@@ -2561,7 +2550,7 @@ describe('deferred collector call (TSRX045, LT-157d)', () => {
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'TSRX045' && d.message.includes('`on(…)`'),
+				d => d.code === 'LTC045' && d.message.includes('`on(…)`'),
 			),
 		).toBe(true)
 	})
@@ -2590,7 +2579,7 @@ describe('deferred collector call (TSRX045, LT-157d)', () => {
 		).toEqual([])
 	})
 
-	test('an async component function is rejected outright (TSRX008)', () => {
+	test('an async component function is rejected outright (LTC008)', () => {
 		const source = `export async function C({}: {})
 @{
 	expose({})
@@ -2606,7 +2595,7 @@ describe('deferred collector call (TSRX045, LT-157d)', () => {
 		)
 		expect(component).toBeNull()
 		const hit = diagnostics.find(
-			d => d.code === 'TSRX008' && d.message.includes('async'),
+			d => d.code === 'LTC008' && d.message.includes('async'),
 		)
 		expect(hit).toBeDefined()
 	})

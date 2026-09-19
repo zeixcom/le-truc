@@ -2,6 +2,7 @@
 
 import { apiEffect } from './effects/api'
 import { apiPagesEffect } from './effects/api-pages'
+import { compileEffect } from './effects/compile'
 import { cssEffect } from './effects/css'
 import { examplesEffect } from './effects/examples'
 import { jsEffect } from './effects/js'
@@ -11,11 +12,10 @@ import { mdMirrorEffect } from './effects/md-mirror'
 import { mocksEffect } from './effects/mocks'
 import { pagesEffect } from './effects/pages'
 import { serviceWorkerEffect } from './effects/service-worker'
-import { simulateTsrxCorpus } from './effects/simulate'
+import { simulateCorpus } from './effects/simulate'
 import { sitemapEffect } from './effects/sitemap'
 import { sourcesEffect } from './effects/sources'
 import { staticAssetsEffect } from './effects/static-assets'
-import { tsrxEffect } from './effects/tsrx'
 
 /**
  * Simple reactive build system orchestration with HMR integration
@@ -54,7 +54,7 @@ export async function build(
 		// Phase 1: generator effects that produce gitignored inputs consumed by
 		// later effects — TypeDoc markdown (docs-src/api, docs-src/pages/api.md),
 		// the bundled assets (docs/assets/main.{css,js}), and the TSRX compiler's
-		// generated modules (server/generated/tsrx). On a fresh checkout none of
+		// generated modules (server/generated/components). On a fresh checkout none of
 		// these exist yet, so the consumers must not take their first-run
 		// snapshot until phase 1 has completed; a one-shot build would otherwise
 		// finish (and clean up subscriptions) before the reactive re-runs settle.
@@ -68,7 +68,7 @@ export async function build(
 		// The compiler used to be a phase-2 effect, racing it AFTER the js
 		// build on a fresh checkout (generated dir not yet written) and
 		// breaking the bundle with an unresolved import.
-		const tsrx = tsrxEffect(scheduleReload)
+		const tsrx = compileEffect(scheduleReload)
 
 		await Promise.all([api.ready, css.ready, staticAssets.ready, tsrx.ready])
 
@@ -79,7 +79,7 @@ export async function build(
 		// records no definitions (ADR 0027 sub-design 10). The realm is
 		// therefore created and disposed exactly once per build process, which
 		// is also the disposal posture the driver requires.
-		if (!watch) await simulateTsrxCorpus()
+		if (!watch) await simulateCorpus()
 
 		const js = jsEffect(scheduleReload)
 		await js.ready

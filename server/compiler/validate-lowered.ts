@@ -3,7 +3,7 @@
  * ADR 0032 sub-design 6: the anti-drift half of the dual front-end
  * contract): every check that needs the lowered `root`, `config`, or the
  * extracted `expose()` argument. Front-end-neutral like the other
- * front-end stage modules: no parser values, only the loose `TsrxNode`
+ * front-end stage modules: no parser values, only the loose `AstNode`
  * type.
  */
 
@@ -97,13 +97,13 @@ const reportNamedFormControls = (
  * `resolveTemplateOutput` and `readModuleDecls` because every check below
  * needs `root`, `config`, or `exposeArgNode`:
  *
- * - TSRX039 (LT-122): one value, two channels. Skips the ROOT element (the
+ * - LTC039 (LT-122): one value, two channels. Skips the ROOT element (the
  *   root is the host, so a Parser prop rendered as its attribute is the
  *   correct channel) and the sanctioned override (LT-141); a
  *   `formAssociated()`/`formAssociatedCheckbox()` host's reserved prop
  *   (`value`/`checked`) is a third exclusion — the root's own content
  *   attribute is the reset baseline, not a duplicate copy.
- * - TSRX047 (LT-173, ADR 0030 sub-design 4): literal prose inside a
+ * - LTC047 (LT-173, ADR 0030 sub-design 4): literal prose inside a
  *   component that declared `export const i18n`. Author-fixable, so a
  *   genuine compile warning that converges to zero — unlike a missing
  *   translation, which rides the build report's translation census instead.
@@ -115,11 +115,11 @@ const reportNamedFormControls = (
  * - `config.observedAttributes` must name Parser-exposed props only — a
  *   name that is not Parser-exposed would make the extension silently
  *   inert.
- * - TSRX028 (LT-157a): an expose() key that is a reserved word or Object
+ * - LTC028 (LT-157a): an expose() key that is a reserved word or Object
  *   builtin. Ungated: the runtime throws `InvalidPropertyNameError` before
  *   its `prop in this` guard, and since LT-155 contains that throw, this
  *   rule is what the author actually sees.
- * - The TSRX010 family (LT-058): a form-associated component's expose()
+ * - The LTC010 family (LT-058): a form-associated component's expose()
  *   naming a member the extension installs on the prototype — silently
  *   shadows it at the JS level. `value`/`checked` (config.form) are the
  *   deliberate exceptions the component MUST expose; the variant's own

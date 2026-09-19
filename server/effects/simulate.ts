@@ -2,7 +2,7 @@
  * The simulation pass of the docs build (ADR 0027 stage 2, LT-169).
  *
  * Runs the server-simulation driver (`server/compiler/sim/`) over the compiled
- * corpus in `server/generated/tsrx/` and gates the build on what it reports.
+ * corpus in `server/generated/components/` and gates the build on what it reports.
  * This is the first build stage that EXECUTES a generated client module — up
  * to LT-165 the driver existed only under test.
  *
@@ -18,7 +18,7 @@
  * path that reaches `render()`.
  *
  * The tier read here is the registry's — the POST-contamination one written
- * by `compileTsrxCorpus` after `contaminateComposeReads` runs. The
+ * by `compileCorpus` after `contaminateComposeReads` runs. The
  * classifier's own per-file verdict (`server/compiler/frontend/tsrx/index.ts`) is taken before
  * the corpus compose fixpoint, so a component that is Simulated purely
  * because it READS a simulated composed child (`form-combobox` today) still
@@ -82,7 +82,7 @@ import type {
 import { resolveSimulationProvider } from '../compiler/simulation/resolve'
 import type { EvaluationTier } from '../compiler/tier'
 import { LOCALES } from '../config'
-import { GENERATED_DIR } from './tsrx'
+import { GENERATED_DIR } from './compile'
 
 const ROOT = join(import.meta.dir, '..', '..')
 
@@ -118,7 +118,7 @@ export type SimulationPassResult = {
 export type SimulationPassOptions = {
 	/** Defaults to the registry the pipeline just wrote. */
 	registry?: ComponentRegistry
-	/** Defaults to `server/generated/tsrx/`. */
+	/** Defaults to `server/generated/components/`. */
 	generatedDir?: string
 	/**
 	 * Seam for tests: defaults to the driver the resolver finds
@@ -241,7 +241,7 @@ const occurrencesOf = (tag: string, html: string): string[] => {
  * Throws on an unclassified build-report entry (the gate) and on any attempt
  * to simulate a component of another tier (the invariant).
  */
-export const simulateTsrxCorpus = async ({
+export const simulateCorpus = async ({
 	registry,
 	generatedDir = GENERATED_DIR,
 	createRealm,

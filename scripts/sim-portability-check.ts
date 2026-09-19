@@ -118,7 +118,7 @@ const hasRuntime = async (command: string): Promise<boolean> => {
 /* === Main === */
 
 const keep = process.argv.includes('--keep')
-const generated = join(ROOT, 'server', 'generated', 'tsrx')
+const generated = join(ROOT, 'server', 'generated', 'components')
 const workDir = mkdtempSync(join(tmpdir(), 'le-truc-sim-'))
 
 try {

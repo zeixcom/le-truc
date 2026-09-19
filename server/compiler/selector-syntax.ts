@@ -6,7 +6,7 @@
  * this compiler *structurally match* the selector against the component's
  * own template IR? It returns `null` for anything richer than its subset —
  * `:not([hidden])`, descendant combinators — which means "cannot verify,"
- * never "malformed." Those two answers must not be conflated: TSRX026's
+ * never "malformed." Those two answers must not be conflated: LTC026's
  * unverifiable-syntax half is a limit of the compiler, whereas a genuinely
  * malformed selector is a limit of CSS, and the runtime's
  * `InvalidSelectorError` (`createElementsMemo`'s eager `querySelector`

@@ -14,7 +14,7 @@
  * harness are not separable layers, because `lazyValueExpression` emits
  * `<name>.get()` INTO the markup — a folded signal is not dead code
  * server-side, and dropping its declaration leaves the generated module
- * referencing an undeclared name (`TS2304` under `check:tsrx`).
+ * referencing an undeclared name (`TS2304` under `check:corpus`).
  *
  * Under the corrected rule, three cases fall out of one criterion instead of
  * being special-cased: plain consts stay when the skeleton interpolates them
@@ -38,15 +38,15 @@ import { emitServerModule } from '../../compiler/emit-server'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import { compileComponent } from '../../compiler/frontend/tsrx/index'
 import type { EvaluationTier } from '../../compiler/tier'
-import { loadTsrxCorpus } from './corpus-fixture'
+import { loadCorpus } from './corpus-fixture'
 
 /**
  * A component whose only routing signal is served-relevant and unresolvable,
  * reached through the HARVEST path: `seed` is never rendered into the DOM
- * (the retired TSRX004 shape) and its initializer reads the wall clock, which
+ * (the retired LTC004 shape) and its initializer reads the wall clock, which
  * no phase can answer — limb (b), `not-a-server-fact`. With no
  * realm-answerable signal to pull it up, the conjunction lands on the Static
- * tier. Until step 5 this shape could not compile at all (TSRX004 was an
+ * tier. Until step 5 this shape could not compile at all (LTC004 was an
  * error), which is why the fixture originally routed through an impure
  * `hidden` thunk instead; step 5 rewired that route and the fixture was
  * re-pinned deliberately (LT-165).
@@ -96,7 +96,7 @@ const foldedFixture = staticFixture.replace(
 /**
  * The OTHER route to the Static tier, kept pinned because it exercises a
  * different origin: a semantically-loaded attribute (omitted `hidden` means
- * VISIBLE, a real TSRX034 site) whose thunk reads the RNG. Step 5 left this
+ * VISIBLE, a real LTC034 site) whose thunk reads the RNG. Step 5 left this
  * route intact — the fixture that used to be the only compilable Static pin.
  */
 const impureHiddenFixture = `import { asString } from '@zeix/le-truc'
@@ -151,13 +151,13 @@ describe('the synthetic Static-tier fixture', () => {
 			'c.tsrx',
 			new Set(),
 		)
-		// The unrendered signal no longer errors (TSRX004 left the channel in
+		// The unrendered signal no longer errors (LTC004 left the channel in
 		// step 5) — the compile success is itself part of the pin.
 		expect(diagnostics.some(d => d.severity === 'error')).toBe(false)
 		expect(component?.entry.tier).toBe('static')
 		const signals = component?.entry.routingSignals ?? []
 		expect(signals).toHaveLength(1)
-		expect(signals[0]?.origin).toBe('TSRX004')
+		expect(signals[0]?.origin).toBe('LTC004')
 		expect(signals[0]?.detail).toContain('`seed`')
 		expect(signals[0]?.resolution).toEqual({
 			by: 'none',
@@ -169,7 +169,7 @@ describe('the synthetic Static-tier fixture', () => {
 		expect(component?.clientCode).toContain('const seed = createCell(')
 	})
 
-	test('the impure-`hidden` route still classifies Static (TSRX034 origin)', () => {
+	test('the impure-`hidden` route still classifies Static (LTC034 origin)', () => {
 		// The route the fixture used before step 5 made the harvest path
 		// compilable — kept pinned because the origin differs.
 		const { component } = compileComponent(
@@ -180,11 +180,11 @@ describe('the synthetic Static-tier fixture', () => {
 		expect(component?.entry.tier).toBe('static')
 		const signals = component?.entry.routingSignals ?? []
 		expect(signals).toHaveLength(1)
-		expect(signals[0]?.origin).toBe('TSRX034')
+		expect(signals[0]?.origin).toBe('LTC034')
 	})
 
 	test('the same signal with a realm-answerable value is Simulated, not Static', () => {
-		// The conjunction, isolated: same component, same TSRX004 origin, only
+		// The conjunction, isolated: same component, same LTC004 origin, only
 		// the resolution limb differs. Without this the Static assertion above
 		// proves the fixture has a routing signal, not that the wall clock is
 		// why.
@@ -196,7 +196,7 @@ describe('the synthetic Static-tier fixture', () => {
 		expect(component?.entry.tier).toBe('simulated')
 		const signals = component?.entry.routingSignals ?? []
 		expect(signals).toHaveLength(1)
-		expect(signals[0]?.origin).toBe('TSRX004')
+		expect(signals[0]?.origin).toBe('LTC004')
 		expect(signals[0]?.resolution).toEqual({ by: 'realm' })
 	})
 
@@ -212,7 +212,7 @@ describe('the tier flag filters setup to what the markup references', () => {
 		const code = emit(staticFixture, 'static')
 		expect(code).not.toContain('expose(')
 		// The import line has to follow the suppression, or the generated
-		// module fails `check:tsrx` on an unused import rather than on
+		// module fails `check:corpus` on an unused import rather than on
 		// anything to do with tiering.
 		expect(code).not.toContain('asString')
 		expect(code).not.toContain('expose')
@@ -324,7 +324,7 @@ describe('a folded signal the markup reads survives every tier', () => {
  * reason — it is identical across the three emits, so it cannot affect a
  * difference between them.
  */
-const corpus = await loadTsrxCorpus()
+const corpus = await loadCorpus()
 
 const emitCorpus = (tier: EvaluationTier) =>
 	corpus.map(file => {
@@ -362,7 +362,7 @@ describe('every corpus component, emitted at every tier', () => {
 		test(`\`${tier}\` declares every setup name the module still uses`, () => {
 			// The acceptance criterion, and the defect's own failure mode: a
 			// statement dropped while its name survives elsewhere in the module
-			// is an undeclared reference — `TS2304` under `check:tsrx`. Stated
+			// is an undeclared reference — `TS2304` under `check:corpus`. Stated
 			// as "dropped ⇒ absent" rather than over a markup slice, so it
 			// covers loop scaffolding and retained statements' own bodies too.
 			const undeclared: string[] = []

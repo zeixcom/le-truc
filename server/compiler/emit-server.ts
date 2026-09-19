@@ -17,7 +17,7 @@
  * - `@for` over server data renders once per item, hoisted consts included
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import {
 	CLIENT_ONLY_PRIMITIVES,
 	freeIdentifiers,
@@ -60,7 +60,7 @@ export type EmittedServerModule = {
 	/**
 	 * Generated-file ↔ `.tsrx`-source span table (LT-011) for the verbatim
 	 * setup statements re-declared in this module. The server half is not
-	 * type-checked by `check:tsrx` today (TS diagnostics only arise in code
+	 * type-checked by `check:corpus` today (TS diagnostics only arise in code
 	 * that lowers into the client module), but the setup statements ARE
 	 * verbatim here too, so the table is recorded for parity and future use.
 	 */
@@ -128,7 +128,7 @@ type EmitContext = {
 	/**
 	 * LT-173 step 6: the render-scope names a host-derived fold may leave in
 	 * a spliced thunk — computed once per module, the same set the analyzer's
-	 * TSRX034 check passes to `hostDerivedFold` (the two must agree).
+	 * LTC034 check passes to `hostDerivedFold` (the two must agree).
 	 */
 	foldScope: ReadonlySet<string>
 }
@@ -216,7 +216,7 @@ const escapeAttrValue = (value: string): string =>
 const lazyValueExpression = (
 	component: ComponentIR,
 	exprText: string,
-	expr: TsrxNode,
+	expr: AstNode,
 	scope: ReadonlySet<string>,
 ): string => {
 	if (expr.type === 'Identifier') {
@@ -251,7 +251,7 @@ const lazyValueExpression = (
  */
 const hostPropMirrorExpr = (
 	component: ComponentIR,
-	thunk: TsrxNode,
+	thunk: AstNode,
 ): string | null => {
 	const propName = hostPropOf(thunk)
 	if (propName === null || !component.parserExposeProps.has(propName))
@@ -275,7 +275,7 @@ const hostPropMirrorExpr = (
  */
 const hostDerivedExpr = (
 	component: ComponentIR,
-	thunk: TsrxNode,
+	thunk: AstNode,
 	thunkText: string,
 	allow: ReadonlySet<string>,
 ): string | null => {
@@ -688,7 +688,7 @@ const emitAsyncBoundary = (
 			c.kind === 'expr' && c.lazy && c.expr.type === 'Identifier',
 	)
 	const signalName = signalChild
-		? String((signalChild.expr as TsrxNode).name)
+		? String((signalChild.expr as AstNode).name)
 		: ''
 	const errChild = errRoot.children.find(
 		(c): c is TemplateNode & { kind: 'expr' } => c.kind === 'expr' && c.lazy,
@@ -992,7 +992,7 @@ export const emitServerModule = (
 		 * tiers drop and, deliberately, what they keep.
 		 *
 		 * This is the component's tier BEFORE compose contamination
-		 * (`index.ts` classifies, `server/effects/tsrx.ts` runs the corpus
+		 * (`index.ts` classifies, `server/effects/compile.ts` runs the corpus
 		 * fixpoint afterwards). A contaminated component is therefore emitted
 		 * on the Folded path even though it ends up Simulated — harmless, and
 		 * deliberate: contamination fires on a parent whose OWN setup the
@@ -1069,7 +1069,7 @@ export const emitServerModule = (
 	// reserved `i18n` parameter and binds a `lang` it does not render
 	// itself, the compiler renders it here — the root IS the host, so a
 	// value rendered there is the channel, not a duplicate copy (ADR 0024
-	// sub-design 3's root-attribute exclusion; confirmed: no new TSRX039
+	// sub-design 3's root-attribute exclusion; confirmed: no new LTC039
 	// exemption is needed, because `reportDuplicatedChannels` already skips
 	// the root element outright).
 	if (
@@ -1093,7 +1093,7 @@ export const emitServerModule = (
 	 * setup" cannot be implemented as the ADR words it. `lazyValueExpression`
 	 * emits `<name>.get()` straight into the markup, so a folded signal is not
 	 * dead code server-side: dropping its declaration leaves the generated
-	 * module referencing an undeclared name (`TS2304` under `check:tsrx`).
+	 * module referencing an undeclared name (`TS2304` under `check:corpus`).
 	 *
 	 * One criterion replaces the layer split: **retain a setup statement when
 	 * the emitted markup depends on its declared name, transitively; drop the
@@ -1118,7 +1118,7 @@ export const emitServerModule = (
 	/**
 	 * LT-165 step 5: statements the value harness can never evaluate — they
 	 * read a client-only primitive (`first`/`all`/`watch`/…) or a
-	 * `first()`-bound ref (the retired `TSRX013`/`TSRX043` shapes). The
+	 * `first()`-bound ref (the retired `LTC013`/`LTC043` shapes). The
 	 * retention rule keeps what the emitted code references, and its token
 	 * match cannot tell a genuine reference from a word that happens to
 	 * appear in one — `<c-el>` tokenises as containing `el`. Over-retaining
@@ -1137,7 +1137,7 @@ export const emitServerModule = (
 	// A `requestContext` statement is NOT excluded by the primitive check
 	// below: the primitive's name appears in its free identifiers, but the
 	// emitted form substitutes `createCell(fallback)` for the whole call and
-	// the fallback is enforced server-known (TSRX016) — the harness evaluates
+	// the fallback is enforced server-known (LTC016) — the harness evaluates
 	// it fine (card-mediaqueries folds all four context signals into markup).
 	const requestContextNames = new Set(
 		component.signals
@@ -1163,7 +1163,7 @@ export const emitServerModule = (
 	for (const signal of component.signals) {
 		// A signal whose declaration the markup does not reference is not
 		// emitted, so its constructor must not be imported either. Hygiene,
-		// not a gate: `check:tsrx` runs `tsc` under the project's
+		// not a gate: `check:corpus` runs `tsc` under the project's
 		// `noUnusedLocals: false`, and the plain `imports.server` lines are
 		// emitted unconditionally anyway, so orphaned imports are survivable
 		// in every tier (the Folded baseline carries more of them than the

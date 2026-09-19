@@ -11,7 +11,7 @@
  * goldens pin the render set byte-for-byte.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import {
 	collectBoundNames,
 	freeIdentifiers,
@@ -85,7 +85,7 @@ const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
  * unresolvable locale) stays impure.
  */
 export const containsImpureAmbient = (
-	node: TsrxNode,
+	node: AstNode,
 	scope: ReadonlySet<string> = new Set(),
 ): boolean => impureAmbientCauses(node, scope).length > 0
 
@@ -119,7 +119,7 @@ export type ImpureAmbientCause =
 	| 'intl-dom-locale'
 
 export const impureAmbientCauses = (
-	node: TsrxNode,
+	node: AstNode,
 	scope: ReadonlySet<string> = new Set(),
 ): ImpureAmbientCause[] => {
 	const causes: ImpureAmbientCause[] = []
@@ -242,7 +242,7 @@ export const impureAmbientCauses = (
  * its CLIENT-portability checks (a thunk the factory can resolve) — same
  * helper, different scope vocabulary.
  */
-export const dependenciesOf = (node: TsrxNode): Set<string> => {
+export const dependenciesOf = (node: AstNode): Set<string> => {
 	const free = freeIdentifiers(node)
 	for (const global of JS_GLOBALS) free.delete(global)
 	return free
@@ -256,7 +256,7 @@ export const dependenciesOf = (node: TsrxNode): Set<string> => {
  * and the root's initial class/style (LT-028/LT-032 exemptions).
  */
 export const isServerEvaluable = (
-	node: TsrxNode,
+	node: AstNode,
 	scope: ReadonlySet<string>,
 ): boolean =>
 	dependenciesOf(node).isSubsetOf(scope) && !containsImpureAmbient(node, scope)
@@ -340,7 +340,7 @@ const PLATFORM_CONFIG_ATTRS: ReadonlySet<string> = new Set(['lang', 'dir'])
  * Without (2), following the data account costs you the fold: a component
  * that harvests `zero` from its own `.zero` span instead of duplicating it
  * onto a host attribute would see every `hidden={() => …host.zero…}` thunk
- * drop out of the initial HTML (TSRX034) — the pre-JS flash this fold
+ * drop out of the initial HTML (LTC034) — the pre-JS flash this fold
  * exists to prevent, charged as a penalty for doing the right thing.
  */
 export const foldableHostProps = (
@@ -379,7 +379,7 @@ export type HostPropRead = {
  * ast-utils.ts) to derived reads like `() => host.value <= host.min` or
  * `() => !host.editing` (CHECKLIST §5, LT-085) — `emit-server.ts` splices
  * each returned range in place with the corresponding root attribute's
- * server expression to fold the whole thunk to an initial value; TSRX034
+ * server expression to fold the whole thunk to an initial value; LTC034
  * (`analysis/effects.ts`) treats a non-null result the same as a bare
  * mirror when deciding whether omission is safe.
  *
@@ -411,7 +411,7 @@ export type HostPropRead = {
  * attribute entirely and letting the client's first pass render it.
  */
 export const hostDerivedFold = (
-	node: TsrxNode,
+	node: AstNode,
 	foldable: ReadonlySet<string>,
 	foldableRefs: ReadonlyMap<string, string> = new Map(),
 	allow?: ReadonlySet<string>,
@@ -537,7 +537,7 @@ export const hostDerivedFold = (
  * same exposure the plain `isServerEvaluable` path already has.
  *
  * Consumers: `hostDerivedFold`'s `allow` in `analysis/effects.ts` (the
- * TSRX034 routing check — it must agree with what the emitter folds) and
+ * LTC034 routing check — it must agree with what the emitter folds) and
  * `emit-server.ts` (the fold itself). One implementation for both, or the
  * two drift.
  */
@@ -545,7 +545,7 @@ export const foldableRenderScope = (
 	component: ComponentIR,
 ): ReadonlySet<string> => {
 	/** Plain setup consts, by declared name (signals excluded). */
-	const constInits = new Map<string, TsrxNode>()
+	const constInits = new Map<string, AstNode>()
 	for (const stmt of component.setup) {
 		if (stmt.name === null) continue
 		if (component.signals.some(signal => signal.name === stmt.name)) continue

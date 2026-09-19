@@ -7,17 +7,17 @@
  * type annotations, and setup helper call/return types.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import { asArray, identifierName, isNode } from './ast-utils'
 
 export type TypeContext = {
-	paramsNode: TsrxNode | null
-	setupInits: Map<string, TsrxNode>
+	paramsNode: AstNode | null
+	setupInits: Map<string, AstNode>
 }
 
 /** Infer a signal's TS-ish value type, for parser and harvest defaults. */
 export const inferType = (
-	init: TsrxNode | null,
+	init: AstNode | null,
 	ctx: TypeContext,
 	depth = 0,
 ): 'string' | 'number' | 'boolean' | 'unknown' => {
@@ -57,12 +57,12 @@ export const inferType = (
 
 /** Return-type heuristic for setup helper arrows (`(id) => \`panel-${id}\``). */
 const returnTypeOfFunction = (
-	fn: TsrxNode,
+	fn: AstNode,
 	ctx: TypeContext,
 	depth: number,
 ): 'string' | 'number' | 'boolean' | 'unknown' => {
 	if (isNode(fn.returnType)) {
-		const t = typeOfAnnotation(fn.returnType as TsrxNode)
+		const t = typeOfAnnotation(fn.returnType as AstNode)
 		if (t !== 'unknown') return t
 	}
 	const body = fn.body
@@ -77,14 +77,14 @@ const returnTypeOfFunction = (
 }
 
 export const typeAnnotationForBinding = (
-	paramsNode: TsrxNode | null,
+	paramsNode: AstNode | null,
 	bindingName: string,
-): TsrxNode | null => {
+): AstNode | null => {
 	if (!paramsNode || !isNode(paramsNode.typeAnnotation)) return null
-	const wrapped = paramsNode.typeAnnotation as TsrxNode
+	const wrapped = paramsNode.typeAnnotation as AstNode
 	const literal =
 		wrapped.type === 'TSTypeAnnotation' && isNode(wrapped.typeAnnotation)
-			? (wrapped.typeAnnotation as TsrxNode)
+			? (wrapped.typeAnnotation as AstNode)
 			: wrapped
 	if (literal.type !== 'TSTypeLiteral') return null
 	for (const member of asArray(literal.members)) {
@@ -93,7 +93,7 @@ export const typeAnnotationForBinding = (
 			identifierName(member.key) === bindingName &&
 			isNode(member.typeAnnotation)
 		)
-			return member.typeAnnotation as TsrxNode
+			return member.typeAnnotation as AstNode
 	}
 	return null
 }
@@ -102,18 +102,18 @@ export const typeAnnotationForBinding = (
  * Whether a destructured prop's TS type annotation marks it optional
  * (`foo?: string`). Mirrors {@link typeAnnotationForBinding}'s traversal but
  * reads `TSPropertySignature.optional` instead of the annotation itself —
- * used by TSRX032 to catch a default value paired with a non-optional type
+ * used by LTC032 to catch a default value paired with a non-optional type
  * (CHECKLIST §10: the default becomes unreachable for any external caller).
  */
 export const isOptionalBinding = (
-	paramsNode: TsrxNode | null,
+	paramsNode: AstNode | null,
 	bindingName: string,
 ): boolean => {
 	if (!paramsNode || !isNode(paramsNode.typeAnnotation)) return true
-	const wrapped = paramsNode.typeAnnotation as TsrxNode
+	const wrapped = paramsNode.typeAnnotation as AstNode
 	const literal =
 		wrapped.type === 'TSTypeAnnotation' && isNode(wrapped.typeAnnotation)
-			? (wrapped.typeAnnotation as TsrxNode)
+			? (wrapped.typeAnnotation as AstNode)
 			: wrapped
 	if (literal.type !== 'TSTypeLiteral') return true
 	for (const member of asArray(literal.members)) {
@@ -126,11 +126,11 @@ export const isOptionalBinding = (
 }
 
 export const typeOfAnnotation = (
-	annotation: TsrxNode,
+	annotation: AstNode,
 ): 'string' | 'number' | 'boolean' | 'unknown' => {
 	const inner =
 		annotation.type === 'TSTypeAnnotation' && isNode(annotation.typeAnnotation)
-			? (annotation.typeAnnotation as TsrxNode)
+			? (annotation.typeAnnotation as AstNode)
 			: annotation
 	switch (inner.type) {
 		case 'TSStringKeyword':

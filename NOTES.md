@@ -4,30 +4,6 @@ Deviation notes and unexpected challenges from agent sessions, newest first. Ent
 
 ---
 
-## LT-208/209/211 — Tech Writer handoff (deviations ruled ✓, Architect 2026-09-18)
-**Date:** 2026-09-18 | **Skill:** le-truc-dev → resolved by review
-The three implementation deviations from the task texts are RULED as accepted and
-incorporated elsewhere (ADR 0032 s3 + the amended LT-205 paragraph, HOST_PROFILE.md,
-the review notes in TODO.md): (1) `isPending` is IMPORTED, not ambient — globals.test.ts's
-closed vocabulary and TSRX036 both forbid an ambient for a real package export; (2) the
-`.tsrx` `@if (isPending(signal))` spelling from the LT-211 text cannot exist —
-`validateCondition` diagnoses signal conditions by design, and the reactive idiom on both
-surfaces is the ARROW-thunk attribute; (3) the fold needed both `serverKnown`
-construction sites plus emitter-side tokenization of the emitted text.
-
-**Still live — Tech Writer handoff (ADR 0028 lifecycle, batched into LT-189 item 5):**
-new diagnostics TSRX049 (`badFactoryContextParam`) and TSRX050 (`formContextMismatch`) in
-`server/compiler/diagnostics.ts` carry first-draft copy; the boundary's arm-shape
-diagnostic in `frontend/tsx/lower-tsx.ts` dropped its `stale?: <p/>` fragment; the
-stale-arm constraint diagnostic in `analysis/effects.ts` is deleted outright.
-Propagation targets: `.agents/skills/le-truc/references/errors.md` needs TSRX049/050
-rows (the tables currently end at TSRX037/042-era entries), plus the usual
-docs-src/skill sweep per the lifecycle checklist. Also in this batch: the boundary's
-diagnostic message and HOST_PROFILE.md's boundary section are the copy reference for
-the three-arm + isPending story.
-
----
-
 ## LT-207's error family has a second, non-timer face: the tier-corpus census describe body
 **Date:** 2026-09-17 | **Skill:** le-truc-dev (LT-206)
 While gating LT-206, the "unhandled error between tests" family showed a face that is NOT the

@@ -31,7 +31,7 @@ const expr = (code: string) =>
 const signal = (
 	resolution: RoutingSignal['resolution'],
 	detail = 'x',
-): RoutingSignal => ({ origin: 'TSRX034', detail, resolution })
+): RoutingSignal => ({ origin: 'LTC034', detail, resolution })
 
 const classification = (
 	tag: string,

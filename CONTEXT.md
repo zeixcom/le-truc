@@ -168,7 +168,7 @@ _Avoid_: ICU message, template literal (that names the authored `` `…${x}…` 
 > **Dev:** "Can I use **Pass** to share a non-**Slot** **Signal**?"
 > **Architect:** "No — **Pass** requires **Slot**-wrapped **Signal** instances because it swaps the signal references. Regular **Signal** instances don't support this swapping mechanism. Use **Binding** helpers for one-way signal→DOM updates on non-Le Truc elements."
 
-> **Dev:** "This component trips `TSRX004`. What did I do wrong?"
+> **Dev:** "This component trips `LTC004`. What did I do wrong?"
 > **Architect:** "Nothing. That is a **Routing Signal**, not a diagnostic — it selects the **Simulated** tier, because the server cannot **Fold** the value and the **Simulation Realm** can. You would only act on it if the value were **Unresolvable**, which routes to the **Static** tier instead."
 
 ## Flagged Ambiguities

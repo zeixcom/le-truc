@@ -89,7 +89,7 @@ describe('multiple lazy root children (LT-114)', () => {
 		const { component, diagnostics } = compile('{host.value}{host.value}')
 		const hit = diagnostics.find(
 			d =>
-				d.code === 'TSRX005' &&
+				d.code === 'LTC005' &&
 				d.message.includes('Multiple lazy text children'),
 		)
 		expect(hit).toBeDefined()
@@ -123,7 +123,7 @@ export function C({}: {})
 		const { component, diagnostics } = nested('{host.value}{host.value}')
 		const hit = diagnostics.find(
 			d =>
-				d.code === 'TSRX005' &&
+				d.code === 'LTC005' &&
 				d.message.includes('Multiple lazy text children on <span>'),
 		)
 		expect(hit).toBeDefined()
@@ -135,7 +135,7 @@ export function C({}: {})
 		const { component, diagnostics } = nested('Total: {host.value}')
 		const hit = diagnostics.find(
 			d =>
-				d.code === 'TSRX005' &&
+				d.code === 'LTC005' &&
 				d.message.includes("must be <span>'s only content"),
 		)
 		expect(hit).toBeDefined()
@@ -147,7 +147,7 @@ export function C({}: {})
 		const { component, diagnostics } = nested('{host.value}<b>fixed</b>')
 		const hit = diagnostics.find(
 			d =>
-				d.code === 'TSRX005' &&
+				d.code === 'LTC005' &&
 				d.message.includes("must be <span>'s only content"),
 		)
 		expect(hit).toBeDefined()
@@ -167,7 +167,7 @@ describe('a static+lazy text mix on the component root (LT-114)', () => {
 	test('is rejected — the first bindText write would wipe the static text', () => {
 		const { component, diagnostics } = compile('Total: {host.value}')
 		const hit = diagnostics.find(
-			d => d.code === 'TSRX005' && d.message.includes('only content'),
+			d => d.code === 'LTC005' && d.message.includes('only content'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
@@ -177,14 +177,14 @@ describe('a static+lazy text mix on the component root (LT-114)', () => {
 	test('an element sibling beside the lazy child is rejected too — textContent writes remove element children', () => {
 		const { component, diagnostics } = compile('<span>fixed</span>{host.value}')
 		const hit = diagnostics.find(
-			d => d.code === 'TSRX005' && d.message.includes('only content'),
+			d => d.code === 'LTC005' && d.message.includes('only content'),
 		)
 		expect(hit).toBeDefined()
 		expect(component?.clientCode ?? '').not.toContain('bindText')
 	})
 })
 
-describe('the impure-ambient fold check on a lazy root child (CHECKLIST §4, TSRX033)', () => {
+describe('the impure-ambient fold check on a lazy root child (CHECKLIST §4, LTC033)', () => {
 	const impure = `import { deriveCell } from '@zeix/le-truc'
 
 export function C({}: {})
@@ -208,7 +208,7 @@ export function C({}: {})
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(false)
 		expect(diagnostics.some(d => d.severity === 'warning')).toBe(false)
 		expect(component).not.toBeNull()
 		expect(component?.clientCode).toContain('bindText(host)')
@@ -221,7 +221,7 @@ export function C({}: {})
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX033')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(false)
 		expect(component?.clientCode).toContain('bindText(host)')
 	})
 })

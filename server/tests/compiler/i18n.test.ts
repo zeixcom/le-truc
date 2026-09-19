@@ -12,10 +12,10 @@ import { pathToFileURL } from 'node:url'
 import { formatCensus, translationCensus } from '../../compiler/census'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
+import { compileCorpus } from '../../effects/compile'
 import { collectI18n } from '../../effects/i18n'
-import { compileTsrxCorpus } from '../../effects/tsrx'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
-import { loadTsrxCorpus } from './corpus-fixture'
+import { createGeneratedDir } from '../helpers/generated-corpus'
+import { loadCorpus } from './corpus-fixture'
 
 const compile = (source: string, path = 'examples/x/c-i18n.tsrx') =>
 	compileComponent(source, path, new Set())
@@ -37,14 +37,14 @@ const injectedCatalogs = (
 	manifest: new Map<string, Record<string, string>>(),
 })
 
-/* === The inline declaration + the untranslated-literal warning (TSRX047) === */
+/* === The inline declaration + the untranslated-literal warning (LTC047) === */
 
-describe('TSRX008 from the i18n walk carries a line (LT-223)', () => {
+describe('LTC008 from the i18n walk carries a line (LT-223)', () => {
 	test('a malformed inline i18n declaration reports its line number', () => {
 		const { diagnostics } = compile(
 			catalogSource(`{t['task.other']}`, `export const i18n = 'task'`),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX008')
+		const hit = diagnostics.find(d => d.code === 'LTC008')
 		expect(hit).toBeDefined()
 		expect(hit?.line).toBe(2)
 	})
@@ -64,10 +64,10 @@ export function C({ i18n: { t } }: { i18n: I18n })
 	</>
 }`
 
-describe('TSRX047 — untranslated literal prose (LT-173 step 5)', () => {
+describe('LTC047 — untranslated literal prose (LT-173 step 5)', () => {
 	test('literal prose in a catalog-using component warns', () => {
 		const { diagnostics } = compile(catalogSource(`Hello world`))
-		const hit = diagnostics.find(d => d.code === 'TSRX047')
+		const hit = diagnostics.find(d => d.code === 'LTC047')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('warning')
 		expect(hit?.line).toBe(7)
@@ -75,14 +75,14 @@ describe('TSRX047 — untranslated literal prose (LT-173 step 5)', () => {
 
 	test('a single-letter fragment is page data, not prose — exempt', () => {
 		const { diagnostics } = compile(catalogSource(`s`))
-		expect(diagnostics.some(d => d.code === 'TSRX047')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC047')).toBe(false)
 	})
 
 	test('literal prose without `export const i18n` is not a catalog concern', () => {
 		const { diagnostics } = compile(
 			catalogSource(`Hello world`, `export const config = {}`),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX047')).toBe(false)
+		expect(diagnostics.some(d => d.code === 'LTC047')).toBe(false)
 	})
 })
 
@@ -105,7 +105,7 @@ describe('dotted message keys (LT-190)', () => {
 		const { diagnostics } = compile(
 			catalogSource(`x`, `export const i18n = { 'task.onee': 'tasks' }`),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX008')
+		const hit = diagnostics.find(d => d.code === 'LTC008')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('CLDR plural category')
 		expect(hit?.message).toContain('task.onee')
@@ -176,7 +176,7 @@ describe('the reserved `i18n` parameter (ADR 0030 sub-design 2)', () => {
 			undefined,
 			composeRegistryOf(child.component.entry),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX006')
+		const hit = diagnostics.find(d => d.code === 'LTC006')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('reserved parameter')
 		expect(hit?.message).toContain('never pass it')
@@ -320,7 +320,7 @@ describe('truc:case pruning (LT-173 step 7)', () => {
 
 	test('a case element without a bound locale is an error', () => {
 		const { diagnostics } = compile(caseSource(``, ``))
-		const hit = diagnostics.find(d => d.code === 'TSRX005')
+		const hit = diagnostics.find(d => d.code === 'LTC005')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('needs a locale')
 	})
@@ -338,7 +338,7 @@ export function C({ lang = 'en' }: { lang?: string })
 	</>
 }`
 		const { diagnostics } = compile(source)
-		const hit = diagnostics.find(d => d.code === 'TSRX006')
+		const hit = diagnostics.find(d => d.code === 'LTC006')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('CLDR plural category literal')
 	})
@@ -511,7 +511,7 @@ const generated = createGeneratedDir('i18n')
 afterAll(() => generated.cleanup())
 
 const i18nModule = await (async () => {
-	await compileTsrxCorpus(await loadTsrxCorpus(), generated.path)
+	await compileCorpus(await loadCorpus(), generated.path)
 	return await import(pathToFileURL(`${generated.path}/i18n.ts`).href)
 })()
 

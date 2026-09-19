@@ -36,7 +36,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { createSimulationRealm } from '../../compiler/sim/realm'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 
 /**
  * Simulated-tier fixture with all three record forms: an impure reactive

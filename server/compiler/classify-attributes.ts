@@ -6,7 +6,7 @@
  * dispatch path, not two.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import {
 	asArray,
 	attrName,
@@ -33,7 +33,7 @@ import { bindsExposedArg } from './reactivity'
  */
 export const classifyPassEntries = (
 	ctx: ExtractContext,
-	attr: TsrxNode,
+	attr: AstNode,
 ): PassEntryIR[] | { kind: 'invalid'; reason: string } => {
 	const value = attr.value
 	const expr =
@@ -143,7 +143,7 @@ const REACT_ATTR_RENAMES: ReadonlyMap<string, string> = new Map([
 /** Classify one JSXAttribute into the attribute IR. */
 export const classifyAttribute = (
 	ctx: ExtractContext,
-	attr: TsrxNode,
+	attr: AstNode,
 	/** Declared signal names — LT-122's exclusion (see `bindsExposedArg`). */
 	signals: { has(name: string): boolean },
 ): AttributeIR | { kind: 'invalid'; reason: string } => {
@@ -394,7 +394,7 @@ export const classifyAttribute = (
  */
 export const classifyComposeAttribute = (
 	ctx: ExtractContext,
-	attr: TsrxNode,
+	attr: AstNode,
 ): ComposeAttrIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
 	const value = attr.value

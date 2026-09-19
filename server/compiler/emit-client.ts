@@ -45,7 +45,7 @@ export type EmittedClientModule = {
 	imports: Set<string>
 	/**
 	 * Generated-file ↔ `.tsrx`-source span table (LT-011): one entry per
-	 * verbatim setup statement, thunk, or event handler slice. `check:tsrx`
+	 * verbatim setup statement, thunk, or event handler slice. `check:corpus`
 	 * maps tsc diagnostics back through it onto the source location.
 	 */
 	spans: SourceSpan[]
@@ -382,7 +382,7 @@ export const emitClientModule = (
 			// from its own initializer, exactly as a hand-written factory would
 			// declare it. An initializer naming a server param has no client
 			// representation — that surfaces as a tsc failure on this generated
-			// module (`check:tsrx`), mapped back through the span table to the
+			// module (`check:corpus`), mapped back through the span table to the
 			// declaration's own line (the LT-136 posture: loud, not silent).
 			// `requestContext` signals never get a harvest and are declared by
 			// the dedicated verbatim path below.
@@ -471,7 +471,7 @@ export const emitClientModule = (
 				// IDL attrs on native form controls dispatch here too, so a
 				// number-valued `value` thunk now needs the same String
 				// coercion the attribute branch applies (the DOMString-typed
-				// property setter would otherwise fail check:tsrx).
+				// property setter would otherwise fail check:corpus).
 				const source = effect.coerceToString
 					? `() => String((${effect.thunkText})())`
 					: effect.thunkText

@@ -13,7 +13,7 @@
  *
  * It never was simulation. `tierCensus` reads the registry, `translationCensus`
  * reads catalog gaps, and its three importers — `server/effects/i18n.ts`,
- * `server/effects/tsrx.ts` and `scripts/check-tsrx.ts` — simulate nothing.
+ * `server/effects/compile.ts` and `scripts/check-corpus.ts` — simulate nothing.
  * Sharing a module with the realm's diagnostic classification was history,
  * and it was also what made the census unavailable to a build with no
  * substrate installed (ADR 0034 sub-design 5). The census must print with
@@ -99,7 +99,7 @@ export type TranslationGap = {
 /**
  * Build the tier census (ADR 0029 sub-design 6) from the corpus registry's
  * POST-contamination entries — the `tier`/`routingSignals` the compose-read
- * fixpoint in `compileTsrxCorpus` leaves on each entry (so `form-combobox`
+ * fixpoint in `compileCorpus` leaves on each entry (so `form-combobox`
  * records Simulated with its `compose-read` reason, not the pre-contamination
  * Folded tier its emit used). Sorted by tag so the output is stable whatever
  * order the corpus glob scanned in.

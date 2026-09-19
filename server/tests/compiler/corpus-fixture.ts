@@ -1,6 +1,6 @@
 /**
  * Shared .tsrx corpus fixture for tests that exercise the corpus runner
- * (`compileTsrxCorpus`) the way the build does.
+ * (`compileCorpus`) the way the build does.
  */
 
 import * as fs from 'node:fs'
@@ -12,10 +12,10 @@ const ROOT = path.resolve(import.meta.dir, '../../..')
 
 /**
  * The .tsrx corpus under `examples/` as `FileInfo[]`, in glob scan order —
- * the same shape `scripts/build-tsrx.ts` and the tsrx build effect feed
- * `compileTsrxCorpus`.
+ * the same shape `scripts/build-corpus.ts` and the tsrx build effect feed
+ * `compileCorpus`.
  */
-export const loadTsrxCorpus = async (): Promise<FileInfo[]> => {
+export const loadCorpus = async (): Promise<FileInfo[]> => {
 	const files: FileInfo[] = []
 	const glob = new Glob('examples/**/*.tsrx')
 	for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {

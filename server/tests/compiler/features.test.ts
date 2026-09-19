@@ -10,7 +10,7 @@ import { afterAll, afterEach, describe, expect, test } from 'bun:test'
 import sanitizeHtml from 'sanitize-html'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { configureHtmlSanitizer } from '../../compiler/runtime'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 
 // The runtime's default sanitizer (unconfigured state): escape everything,
 // safe but inert. Tests that configure a permissive/stripping sanitizer to
@@ -98,7 +98,7 @@ describe('@switch — multi-branch conditional rendering', () => {
 		)
 	})
 
-	test('client constructs inside arms are TSRX005 (exclusive rendering)', () => {
+	test('client constructs inside arms are LTC005 (exclusive rendering)', () => {
 		const { diagnostics: d } = compiled(`@switch (status) {
 			@case "a": {
 				<button type="button" onClick={() => {}}>a</button>
@@ -112,7 +112,7 @@ describe('@switch — multi-branch conditional rendering', () => {
 		)
 	})
 
-	test('signal discriminant is TSRX005 (DOM keeps the rendered arm)', () => {
+	test('signal discriminant is LTC005 (DOM keeps the rendered arm)', () => {
 		const source2 = `export function C({}: {})
 	@{
 		const mode = createCell('a')
@@ -195,7 +195,7 @@ describe('@try — error boundaries', () => {
 		)
 	})
 
-	test('deeper (non-root) constructs inside a @try arm are still TSRX005', () => {
+	test('deeper (non-root) constructs inside a @try arm are still LTC005', () => {
 		const { diagnostics: d } = compiled(`@try {
 			<div class="wrap"><button type="button" onClick={() => {}}>go</button></div>
 		} @catch (error) {
@@ -559,15 +559,13 @@ import { createState, createMemo } from '@zeix/le-truc'`
 import { asString, createMemo } from '@zeix/le-truc'`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		expect(component).not.toBeNull()
-		const hit = component?.entry.routingSignals.find(
-			s => s.origin === 'TSRX013',
-		)
+		const hit = component?.entry.routingSignals.find(s => s.origin === 'LTC013')
 		expect(hit?.detail).toContain('`lowerFilter`')
 		expect(component?.entry.tier).toBe('simulated')
 		expect(component?.serverCode).not.toContain('createMemo')
 	})
 
-	test('the same compute rendered into the markup is a hard error (TSRX046, LT-165 step 5)', () => {
+	test('the same compute rendered into the markup is a hard error (LTC046, LT-165 step 5)', () => {
 		// The residue the reclassification must not paper over: `{lowerFilter}`
 		// is a static server splice, and no tier can produce its value — the
 		// fold cannot run the read and no client binding ever corrects a
@@ -590,7 +588,7 @@ import { asString, createMemo } from '@zeix/le-truc'`
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX046')
+		const hit = diagnostics.find(d => d.code === 'LTC046')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain('`lowerFilter`')
@@ -708,7 +706,7 @@ import { createList } from '@zeix/le-truc'`
 		)
 	})
 
-	test('a second reactive list in one component is TSRX005', () => {
+	test('a second reactive list in one component is LTC005', () => {
 		const source = `export function C({}: {})
 	@{
 		const a = createList<string>(['x'], { keyConfig: 'a' })
@@ -762,7 +760,7 @@ describe('newer-grammar constructs — parse-error hints', () => {
 			new Set(),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX008')
+		const hit = diagnostics.find(d => d.code === 'LTC008')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('not parseable by the pinned')
 		expect(hit?.message).toContain('statement-form switch')
@@ -780,7 +778,7 @@ describe('newer-grammar constructs — parse-error hints', () => {
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.code === 'TSRX008')).toBe(true)
+		expect(diagnostics.some(d => d.code === 'LTC008')).toBe(true)
 		expect(
 			diagnostics.some(d => d.message.includes('{html expr} keyword')),
 		).toBe(false)
@@ -797,9 +795,7 @@ describe('newer-grammar constructs — parse-error hints', () => {
 		</}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
-			diagnostics.some(
-				d => d.code === 'TSRX008' && d.message.includes('await'),
-			),
+			diagnostics.some(d => d.code === 'LTC008' && d.message.includes('await')),
 		).toBe(true)
 	})
 })

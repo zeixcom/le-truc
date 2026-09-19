@@ -9,7 +9,7 @@
  * two outputs to be byte-identical. **The audit found that rule structurally
  * void, and it was amended (see ADR 0029 s7, amendment 2026-09-06):** in a
  * Folded-tier component EVERY signal seeds from a DOM harvest (a signal with
- * no harvestable site is a TSRX004 routing signal and routes Simulated), so
+ * no harvestable site is a LTC004 routing signal and routes Simulated), so
  * the realm's entire state derives from the phase-1 bytes themselves — the
  * two mechanisms cannot independently disagree on a server value. What the
  * byte comparison actually measures is the hydration boundary: serializer
@@ -39,21 +39,21 @@
  * CI cost is bounded by corpus size, not by the tier split (ADR 0029 s7):
  * one corpus compile, one shared realm, one render per Folded component.
  * The audit is CI-only machinery — nothing here rides the docs build or
- * `check:tsrx`.
+ * `check:corpus`.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { pathToFileURL } from 'node:url'
 import type { ComponentRegistry } from '../../compiler/registry'
 import { createSimulationRealm } from '../../compiler/sim/realm'
-import { compileTsrxCorpus } from '../../effects/tsrx'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { compileCorpus } from '../../effects/compile'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 import { CORPUS_ARGS, renderName } from './corpus-args'
-import { loadTsrxCorpus } from './corpus-fixture'
+import { loadCorpus } from './corpus-fixture'
 
 const generated = createGeneratedDir('equivalence-audit')
 afterAll(() => generated.cleanup())
 
-const compiled = await compileTsrxCorpus(await loadTsrxCorpus(), generated.path)
+const compiled = await compileCorpus(await loadCorpus(), generated.path)
 const registry = JSON.parse(
 	await Bun.file(`${generated.path}/registry.json`).text(),
 ) as ComponentRegistry
@@ -71,7 +71,7 @@ for (const info of compiled) {
 	await realm.load(() => import(pathToFileURL(info.clientModulePath).href))
 }
 
-/** One compiled corpus entry, as `compileTsrxCorpus` reported it. */
+/** One compiled corpus entry, as `compileCorpus` reported it. */
 type CompiledInfo = (typeof compiled)[number]
 
 const foldedEntries = Object.values(registry).filter(

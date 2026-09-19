@@ -6,11 +6,11 @@
  * point of extracting the visitor.
  */
 import { describe, expect, test } from 'bun:test'
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from '../../compiler/ast-node'
 import type { TemplateNode } from '../../compiler/ir'
 import { childNodes, collectAttrs, walkTemplate } from '../../compiler/walk'
 
-const n = (type: string): TsrxNode => ({ type }) as TsrxNode
+const n = (type: string): AstNode => ({ type }) as AstNode
 
 /** A tree exercising every TemplateNode kind:
  *  root(el) → [ text, expr, if(then: el(a), else: client-stmt),

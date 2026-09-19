@@ -3,11 +3,11 @@
  * it, shared verbatim by both front ends (LT-202, ADR 0032 sub-design 6:
  * the anti-drift half of the dual front-end contract) — a change to either
  * lands on both surfaces at once. Front-end-neutral like the other
- * front-end stage modules: no parser values, only the loose `TsrxNode`
+ * front-end stage modules: no parser values, only the loose `AstNode`
  * structural type; the node walks are estree-generic.
  */
 
-import type { TsrxNode } from '@tsrx/core'
+import type { AstNode } from './ast-node'
 import {
 	asArray,
 	CLIENT_ONLY_PRIMITIVES,
@@ -38,14 +38,14 @@ export type ElementRefEntry = {
 	selectorText: string
 	reasonText: string | null
 	maybe: boolean
-	node: TsrxNode
+	node: AstNode
 }
 
 /** One Parser-backed expose() initializer (`prop: asString(…)`). */
 export type ParserExposeEntry = {
 	parser: string
 	fallbackText: string | null
-	fallbackNode: TsrxNode | null
+	fallbackNode: AstNode | null
 }
 
 /**
@@ -59,11 +59,11 @@ export type SetupExtraction = {
 	plainSetup: SetupStmt[]
 	signals: SignalIR[]
 	signalByName: Map<string, SignalIR>
-	setupInits: Map<string, TsrxNode>
+	setupInits: Map<string, AstNode>
 	elementRefs: Map<string, ElementRefEntry>
 	exposeText: string | null
 	exposeRange: SourceRange | null
-	exposeArgNode: TsrxNode | null
+	exposeArgNode: AstNode | null
 	exposeProps: Map<string, string>
 	exposeKinds: Map<string, ExposeKind>
 	exposedPropNames: Set<string>
@@ -142,7 +142,7 @@ const classifyExposeInit = (
  * (LT-202). Classifies each statement: single-const declarations (signals
  * vs. helpers), `first()` element references, `expose()`, and client-only
  * side effects — everything else is diagnosed. ADR 0029's setup routing
- * signals (TSRX013/TSRX043 shapes) are pushed here, at the same sites that
+ * signals (LTC013/LTC043 shapes) are pushed here, at the same sites that
  * raised the pre-LT-165 diagnostics.
  *
  * `importedNames` are the authored import bindings (plain or real
@@ -156,8 +156,8 @@ const classifyExposeInit = (
  */
 export const extractSetup = (
 	ctx: ExtractContext,
-	setupStmts: TsrxNode[],
-	paramsNode: TsrxNode | null,
+	setupStmts: AstNode[],
+	paramsNode: AstNode | null,
 	paramNames: ReadonlySet<string>,
 	importedNames: ReadonlySet<string>,
 ): SetupExtraction => {
@@ -174,7 +174,7 @@ export const extractSetup = (
 	const plainSetup: SetupStmt[] = []
 	const signals: SignalIR[] = []
 	const signalByName = new Map<string, SignalIR>()
-	const setupInits = new Map<string, TsrxNode>()
+	const setupInits = new Map<string, AstNode>()
 	/**
 	 * `const name = first(selector, required)` declarations (LT-055),
 	 * pending post-lowering resolution — the template doesn't exist yet at
@@ -187,7 +187,7 @@ export const extractSetup = (
 	const elementRefs = new Map<string, ElementRefEntry>()
 	let exposeText: string | null = null
 	let exposeRange: SourceRange | null = null
-	let exposeArgNode: TsrxNode | null = null
+	let exposeArgNode: AstNode | null = null
 	const exposeProps = new Map<string, string>()
 	const exposeKinds = new Map<string, ExposeKind>()
 	/** Every name `expose()` declares — see the loop below. */
@@ -216,7 +216,7 @@ export const extractSetup = (
 				)
 				continue
 			}
-			const init = (decl as TsrxNode).init as TsrxNode
+			const init = (decl as AstNode).init as AstNode
 			// `first(selector, required)` element reference (LT-055, replacing
 			// `ref={}`): doesn't exist server-side and has no server
 			// substitution the way `requestContext` does, so it must never
@@ -241,7 +241,7 @@ export const extractSetup = (
 				// (LT-123): the reference may be absent at activation
 				// and effects over it register under a presence guard.
 				// Two literals (selector + required-reason) is the
-				// required form. Anything else is TSRX025.
+				// required form. Anything else is LTC025.
 				const validArity = args.length === 1 || args.length === 2
 				if (
 					!validArity ||
@@ -296,7 +296,7 @@ export const extractSetup = (
 					// the tier-aware emit drops the statement from the server
 					// module instead of refusing the file.
 					ctx.routingSignals.push({
-						origin: 'TSRX043',
+						origin: 'LTC043',
 						detail: `\`${declName}\` reads element ref(s) ${refReads.join(', ')} in setup`,
 						...lineFields(source, stmt.start),
 						resolution: { by: 'realm' },
@@ -320,7 +320,7 @@ export const extractSetup = (
 						diagnostic.invalidRequestContextCall(source, stmt.start, declName),
 					)
 				} else {
-					const fallbackNode = args[1] as TsrxNode
+					const fallbackNode = args[1] as AstNode
 					const knownSoFar = new Set([...paramNames, ...setupInits.keys()])
 					const badFallbackNames = [...freeIdentifiers(fallbackNode)].filter(
 						n => !JS_GLOBALS.has(n) && !knownSoFar.has(n),
@@ -364,7 +364,7 @@ export const extractSetup = (
 					isNode(computeArg) &&
 					/Function(Expression)?$/.test(computeArg.type)
 				const badContextNames = isDerivedCallback
-					? [...freeIdentifiers(computeArg as TsrxNode)].filter(n =>
+					? [...freeIdentifiers(computeArg as AstNode)].filter(n =>
 							CONTEXT_NAMES.has(n),
 						)
 					: []
@@ -380,7 +380,7 @@ export const extractSetup = (
 					// — no server-known name can reach the markup).
 					plainSetup.push(setupStmt)
 					ctx.routingSignals.push({
-						origin: 'TSRX013',
+						origin: 'LTC013',
 						detail: `\`${declName}\`'s ${calleeName}() compute reads ${badContextNames.join('/')}`,
 						...lineFields(source, stmt.start),
 						resolution: resolutionOf(init, ctx.serverKnown),
@@ -404,10 +404,10 @@ export const extractSetup = (
 				// rather than silently treating it as an ordinary setup const
 				// (ADR 0023 sub-design 12).
 				const consequentName = identifierName(
-					(init.consequent as TsrxNode | undefined)?.callee,
+					(init.consequent as AstNode | undefined)?.callee,
 				)
 				const alternateName = identifierName(
-					(init.alternate as TsrxNode | undefined)?.callee,
+					(init.alternate as AstNode | undefined)?.callee,
 				)
 				if (
 					consequentName &&
@@ -438,7 +438,7 @@ export const extractSetup = (
 					.sort()
 				if (badPrimitives.length > 0) {
 					ctx.routingSignals.push({
-						origin: 'TSRX013',
+						origin: 'LTC013',
 						detail: `\`${declName}\` calls client-only primitive(s) ${badPrimitives.join(', ')}`,
 						...lineFields(source, stmt.start),
 						resolution: resolutionOf(init, ctx.serverKnown),
@@ -453,9 +453,9 @@ export const extractSetup = (
 		// "unsupported statement" message below.
 		if (
 			stmt.type === 'ReturnStatement' &&
-			isNode((stmt as TsrxNode).argument) &&
+			isNode((stmt as AstNode).argument) &&
 			['JSXElement', 'JSXFragment'].includes(
-				String(((stmt as TsrxNode).argument as TsrxNode).type),
+				String(((stmt as AstNode).argument as AstNode).type),
 			)
 		) {
 			ctx.diagnostics.push(diagnostic.reactReturnJsx(source, stmt.start))
@@ -486,21 +486,21 @@ export const extractSetup = (
 		}
 		const expression =
 			stmt.type === 'ExpressionStatement'
-				? (stmt.expression as TsrxNode | undefined)
+				? (stmt.expression as AstNode | undefined)
 				: undefined
 		if (
 			stmt.type === 'ExpressionStatement' &&
 			identifierName(expression?.callee) === 'expose'
 		) {
-			exposeText = text(ctx.source, expression as TsrxNode)
+			exposeText = text(ctx.source, expression as AstNode)
 			exposeRange = {
 				start:
-					typeof (expression as TsrxNode).start === 'number'
-						? ((expression as TsrxNode).start as number)
+					typeof (expression as AstNode).start === 'number'
+						? ((expression as AstNode).start as number)
 						: 0,
 				end:
-					typeof (expression as TsrxNode).end === 'number'
-						? ((expression as TsrxNode).end as number)
+					typeof (expression as AstNode).end === 'number'
+						? ((expression as AstNode).end as number)
 						: 0,
 			}
 			// prop → signal from expose({ prop: signal.get })
@@ -509,12 +509,12 @@ export const extractSetup = (
 			setup.push({
 				text: exposeText,
 				range: exposeRange,
-				node: arg ?? (expression as TsrxNode),
+				node: arg ?? (expression as AstNode),
 				name: null,
 			})
 			for (const name of freeIdentifiers(
 				arg ??
-					({ type: 'ObjectExpression', properties: [] } as unknown as TsrxNode),
+					({ type: 'ObjectExpression', properties: [] } as unknown as AstNode),
 			)) {
 				if (CONTEXT_NAMES.has(name)) contextRefs.add(name)
 			}
@@ -629,7 +629,7 @@ export const extractSetup = (
  * Seed the extraction context from the setup extraction: the server-known
  * name set (args + signals + setup consts), the caller-supplied arg names
  * LT-122 consults alone, the exposed-prop set the lift rule consults for
- * TSRX019, and the Parser hooks. Runs after setup extraction and before
+ * LTC019, and the Parser hooks. Runs after setup extraction and before
  * template lowering.
  *
  * `config` has not been parsed yet when the managed form props are included

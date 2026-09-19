@@ -30,7 +30,7 @@ import { compileComponentTsx } from '../../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../../compiler/registry'
 import { createSimulationRealm } from '../../../compiler/sim/realm'
 import { collectI18n, writeI18nModule } from '../../../effects/i18n'
-import { createGeneratedDir } from '../../helpers/generated-tsrx'
+import { createGeneratedDir } from '../../helpers/generated-corpus'
 import { CORPUS_ARGS, PLURALIZE_I18N } from '../corpus-args'
 
 const ROOT = path.resolve(import.meta.dir, '../../../..')
@@ -400,7 +400,7 @@ export function BadHost(
 	)
 }`
 
-	test('an unknown context destructure is TSRX049', () => {
+	test('an unknown context destructure is LTC049', () => {
 		const { component, diagnostics } = compileComponentTsx(
 			withContext(
 				'{ host, first, expose, grimoire }: FactoryContext<BadHostProps>',
@@ -409,23 +409,23 @@ export function BadHost(
 			new Set(['bad-host']),
 		)
 		expect(component).toBeNull()
-		const hit = diagnostics.find(d => d.code === 'TSRX049')
+		const hit = diagnostics.find(d => d.code === 'LTC049')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('`grimoire`')
 	})
 
-	test('a form-associated component annotating plain FactoryContext is TSRX050', () => {
+	test('a form-associated component annotating plain FactoryContext is LTC050', () => {
 		const { diagnostics } = compileComponentTsx(
 			withContext('{ host, first, expose }: FactoryContext<BadHostProps>'),
 			'bad-host.tsx',
 			new Set(['bad-host']),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX050')
+		const hit = diagnostics.find(d => d.code === 'LTC050')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('FormFactoryContext')
 	})
 
-	test('a plain component annotating FormFactoryContext is TSRX050 too', () => {
+	test('a plain component annotating FormFactoryContext is LTC050 too', () => {
 		const source = withContext(
 			'{ host, first, expose }: FormFactoryContext<BadHostProps>',
 		).replace(`export const config = { formAssociated: true }\n\n`, '')
@@ -434,7 +434,7 @@ export function BadHost(
 			'bad-host.tsx',
 			new Set(['bad-host']),
 		)
-		const hit = diagnostics.find(d => d.code === 'TSRX050')
+		const hit = diagnostics.find(d => d.code === 'LTC050')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('not form-associated')
 	})

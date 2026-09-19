@@ -22,7 +22,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { collectI18n, writeI18nModule } from '../../effects/i18n'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 import { CORPUS_ARGS } from './corpus-args'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -52,7 +52,7 @@ const moduleList = compileComponent(
 	undefined,
 	// module-list composes FormTextbox (ADR 0023 sub-design 10, LT-020) —
 	// keyed by form-textbox's own repo-relative source path, mirroring
-	// server/effects/tsrx.ts's corpus-wide compose registry.
+	// server/effects/compile.ts's corpus-wide compose registry.
 	new Map(
 		formTextbox.component
 			? [

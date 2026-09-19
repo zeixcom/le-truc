@@ -6,8 +6,8 @@
  *   byte-for-byte: ONE throwing query whose selector unions both roots —
  *   whichever branch rendered is the element found (LT-008).
  * - DIFFERING constructs (different construct key sets, or the same key with
- *   different text — the shapes that used to be TSRX005/"constructs differ"
- *   and TSRX031/asymmetric) now route to per-branch addressing: each branch
+ *   different text — the shapes that used to be LTC005/"constructs differ"
+ *   and LTC031/asymmetric) now route to per-branch addressing: each branch
  *   is addressed independently with a non-throwing `first()` and a
  *   `'guarded'` effect block — exactly how a plain `@try`'s two arms are
  *   addressed (LT-025), since the branches are different content, not the
@@ -16,12 +16,12 @@
  *   so at most one guard is ever true — mutually-exclusive branches never
  *   double-bind. But only if each branch root's selector cannot match the
  *   OTHER branch's markup; roots indistinguishable by statics keep an error
- *   (TSRX007) naming the fix, because two existence guards over one
+ *   (LTC007) naming the fix, because two existence guards over one
  *   selector would BOTH be true on the one rendered element.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../compiler/frontend/tsrx'
-import { createGeneratedDir } from '../helpers/generated-tsrx'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 
 // Both fixtures below execute their generated module, so they need a per-run
 // directory rather than the build pipeline's output — `c-el` in particular
@@ -31,7 +31,7 @@ afterAll(() => generated.cleanup())
 
 // `text` (the server arg) and `note` (the Parser-exposed prop) are
 // deliberately DIFFERENT names: a site rendering an arg that is also
-// a Parser prop is TSRX039 (LT-122, one value through two channels),
+// a Parser prop is LTC039 (LT-122, one value through two channels),
 // which these fixtures are not about.
 const wrap = (template: string, tag = 'c-el'): string =>
 	`export function C({ big, text }: { big?: boolean; text?: string })
@@ -87,7 +87,7 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		expect(elseGuard).not.toContain('host.stepDown')
 	})
 
-	test('a construct on only one branch root is addressable when the roots are distinguishable (was TSRX031)', () => {
+	test('a construct on only one branch root is addressable when the roots are distinguishable (was LTC031)', () => {
 		const { component, diagnostics } = compile(`@if (big) {
 			<button type="button" class="cta" onClick={() => {}}>a</button>
 		} @else {
@@ -103,29 +103,29 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		expect(guardBodies(code).length).toBe(1)
 	})
 
-	test('mutually-exclusive branches never double-bind: indistinguishable roots stay an error (TSRX007)', () => {
+	test('mutually-exclusive branches never double-bind: indistinguishable roots stay an error (LTC007)', () => {
 		// Both branch roots are bare <strong> — per-branch guards could not
 		// tell the branches apart (both queries would find the one rendered
 		// element), and union addressing cannot carry the asymmetric
-		// construct. This is the shape the old TSRX031 protected; an
+		// construct. This is the shape the old LTC031 protected; an
 		// error is still reported, naming the fix.
 		const { diagnostics } = compile(`@if (big) {
 			<strong>a</strong>
 		} @else {
 			<strong onClick={() => {}}>b</strong>
 		}`)
-		const hit = diagnostics.find(d => d.code === 'TSRX007')
+		const hit = diagnostics.find(d => d.code === 'LTC007')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('distinguishing')
 	})
 
-	test('differing construct text on same-tag, same-class roots is TSRX007 (the old "constructs differ" shape)', () => {
+	test('differing construct text on same-tag, same-class roots is LTC007 (the old "constructs differ" shape)', () => {
 		const { diagnostics } = compile(`@if (big) {
 			<strong onClick={() => {}}>a</strong>
 		} @else {
 			<strong onClick={() => { }}>b</strong>
 		}`)
-		const hit = diagnostics.find(d => d.code === 'TSRX007')
+		const hit = diagnostics.find(d => d.code === 'LTC007')
 		expect(hit).toBeDefined()
 	})
 
@@ -180,7 +180,7 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		expect(wrapping).toBeDefined()
 	})
 
-	test('a branch root selector matching a DEEP element of the other branch is TSRX007', () => {
+	test('a branch root selector matching a DEEP element of the other branch is LTC007', () => {
 		// The @else branch's static inner <button class="cta"> would be
 		// found by the @if branch's per-branch query when the @else branch
 		// rendered — the wrong element gets the @if branch's effects.
@@ -189,7 +189,7 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		} @else {
 			<p class="fallback"><button type="button" class="cta">b</button></p>
 		}`)
-		const hit = diagnostics.find(d => d.code === 'TSRX007')
+		const hit = diagnostics.find(d => d.code === 'LTC007')
 		expect(hit).toBeDefined()
 	})
 
@@ -221,7 +221,7 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		} @else {
 			+
 		}`)
-		expect(bare.diagnostics.some(d => d.code === 'TSRX008')).toBe(true)
+		expect(bare.diagnostics.some(d => d.code === 'LTC008')).toBe(true)
 
 		// A bare word parses (as an expression statement) and is then
 		// rejected by the sanctioned-statement gate rather than the parser.
@@ -230,7 +230,7 @@ describe('@if/@else union addressing over differing branch roots (LT-118)', () =
 		} @else {
 			fallback
 		}`)
-		expect(word.diagnostics.some(d => d.code === 'TSRX005')).toBe(true)
+		expect(word.diagnostics.some(d => d.code === 'LTC005')).toBe(true)
 	})
 
 	test('server render picks the branch per args for per-branch-addressed constructs', async () => {

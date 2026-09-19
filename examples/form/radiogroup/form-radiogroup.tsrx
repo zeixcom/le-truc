@@ -15,7 +15,7 @@
  * `document.activeElement` rather than a separate `focusIndex` signal — the
  * original's own click handler existed only to sync a hand-kept index to the
  * DOM's native focus-follows-click behavior, which `document.activeElement`
- * already reflects directly, so no extra state (and no TSRX004 "never
+ * already reflects directly, so no extra state (and no LTC004 "never
  * rendered" signal) is needed at all.
  *
  * Cutover notes (LT-116): the loop input's `checked` mirror lowers to a
