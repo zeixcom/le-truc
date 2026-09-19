@@ -11,6 +11,69 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-239: Grill the Simulated tier against the framework goal — **tier kept and SSG-scoped; ADR 0035 written; ADR 0027/0029/0034 amended; the seam scheduled as LT-263** — reviewed ✓
+  **Skill:** architect
+  **Three facts from the code that reframed the task** (the entry inherited the reflection's
+  framing; all three contradict it):
+  1. **`sim/` has two consumers, not two components.** ADR 0029 s7's equivalence audit renders
+     every **Folded**-tier component through the realm in CI and pins the per-component connect
+     diff. It is the Folded tier's only hydration-boundary check and it caught a real instance of
+     the dangerous class on first run (LT-185, form-tokenbox's input removed at hydration).
+     Retiring the tier without retiring the audit saves the routing code and
+     `server/effects/simulate.ts` (~330 lines) — not `sim/` (1,687), not jsdom, not the ~4 s.
+  2. **Substrate pluggability has no candidate.** The reflection's §5 defers the happy-dom/linkedom
+     evaluation; ADR 0027 had already run it (`scripts/substrate-evaluation.ts`). linkedom has no
+     custom elements; happy-dom **fails DOMPurify open**. Under simulation that is a security
+     result, not a harness detail: the realm executes the client module at connect, so a
+     consumer's `sanitize` hook runs *inside the substrate*.
+  3. **ADR 0034 s5's premise was false.** `tier.ts:62` imports `sim/patch-table` (the classifier
+     consults the simulation, and `tier.ts:243` sources the census reason from it);
+     `sim/report.ts` is the build report, imported by three non-simulating modules; and
+     `SimulationRealm.window` is typed `JSDOM['window']`, so the published `.d.ts` names jsdom and
+     an opted-out consumer cannot typecheck.
+  **Rulings (owner, 2026-09-19) that live nowhere else:**
+  1. **Keep the Simulated tier** — fact 1 is half the justification. The reflection's falsifiable
+     question is answered in ADR 0035 s1 so it is not re-opened: two components ship a skeleton
+     instead of their options' initial state, *and* the other twenty lose the LT-185 detector.
+  2. **Scope it SSG-only for all of 3.x.** A simulated component's output is computed by executing
+     code against concrete args and concrete parsed markup, so it cannot be a template with holes
+     and never travels through M27; its fold also reads light-DOM content, so ADR 0034 s4's
+     invariant does not hold for it. The tier's claimed CMS differentiator does not exist —
+     pioneers 2 and 3 get a Static partial either way. Recorded as scope, not defect.
+  3. **Ship it with 3.0** rather than deferring it like `.tsrx` — pioneer 1 is an SSG project and
+     is the release gate, so the tier is on the showcase's path.
+  4. **Build the seam** (report out of `sim/`; patch table split by audience; DOM-free realm
+     interface), and **shape it as a versioned package boundary**, not an in-process one — the
+     owner chose the package boundary explicitly for the flexibility it preserves. Activation is
+     intended to become *installation*.
+  5. **Do not split `@zeix/le-truc-simulation` at 3.0.** Deferred to a later 3.x: the split's
+     saving over the optional peer dependency is ~50 KB of JS, against a third release process on
+     a release already gated on two external projects plus permanent version lockstep.
+  6. **No pluggability mechanism until a candidate passes the sanitizer criterion**, which is now
+     a standing acceptance criterion rather than a one-off verdict. **Speed is not a qualifying
+     argument.** The evaluation harness is retained as scripts.
+  **Changed:** `adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md` (new,
+  ✅ Accepted, 6 sub-designs); ADR 0027 (status note + s2 gains the substrate acceptance
+  criterion); ADR 0029 (s6 — the reason needs a substrate-free classifier; s7 — the audit is the
+  realm's second consumer; s8 — the tier is SSG-scoped); ADR 0034 (s5 — decision stands, premise
+  corrected, the seam is its prerequisite); REQUIREMENTS (scope note → 0024–0035, M20, M28, §5,
+  §6); BACKLOG (LT-263 and LT-264 added to P1 above LT-256; LT-256 gains a hard dependency on
+  LT-263; strategic framing consequence (3) rewritten; LT-188's gate discharged; the wave-3
+  sequencing sentence no longer holds items behind LT-239).
+  **Handoffs:** **LT-263 blocks LT-256** — ADR 0034 s5's opt-out is unimplementable until the seam
+  lands, and the failure mode is silent (a build that simply cannot run without jsdom). **LT-188
+  runs** now that the tier survives. **LT-264** is explicitly out of 3.0. Any tier- or
+  report-adjacent task touching `sim/report.ts`, `sim/patch-table.ts` or the realm's type surface
+  must coordinate with LT-263. **M20 is now a Must-Have two of three target personas structurally
+  cannot use** — flagged in ADR 0035's Consequences as a legitimate thing for a later reviewer to
+  re-open.
+  **Changelog note:** nothing integrator-visible yet — decisions and scheduling only. At release
+  the user-facing facts are that the Simulated tier is an SSG capability and that jsdom is an
+  optional peer dependency.
+  **Not done by this session (sandbox):** the `adr-keeper` index row for ADR 0035.
+  `.claude/skills/adr-keeper/references/adr-index.md` is hardlinked to the write-denied
+  `.agents/skills/…` path, so the row must be added by the user.
+
 - [x] LT-241: Declare the general-purpose framework goal and schedule the packaging track — **ADR 0034 written; REQUIREMENTS §1/M27/M28 amended; BACKLOG P1 band opened** — reviewed ✓
   **Skill:** architect
   **The fact the session surfaced, which reframed the task:** the compiler emits `*.client.ts`,

@@ -42,9 +42,15 @@ rest of this file: (1) the published package is **`@zeix/le-truc-compiler`, TSX-
 `@tsrx/le-truc` is dead and `.tsrx` publishes in a later 3.x, so any task naming the package or
 treating `.tsrx` support as shippable at 3.0 is stale; (2) **template emission** (M27) is a v3.0
 requirement on pioneer 2's critical path, and the **partial-readiness invariant** (ADR 0034 s4)
-constrains every design in every band from here forward, not only P1's; (3) **LT-239's floor is
-set** — jsdom becomes an optional peer dependency (LT-256), so the Simulated tier is opt-in per
-consumer whatever that ruling decides about pluggability or survival.
+constrains every design in every band from here forward, not only P1's; (3) **LT-239 is resolved** ([ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md),
+2026-09-19): the Simulated tier is **kept** and scoped **SSG-only for all of 3.x**, because a
+simulated component's output cannot be expressed as a template and so never reaches pioneers 2
+and 3. jsdom stays an optional peer dependency, but that policy has a prerequisite this file
+must sequence — **LT-263, the seam** — without which the compiler cannot classify, report or
+typecheck with the substrate absent. Substrate pluggability is **not built** until a candidate
+passes the sanitizer criterion (ADR 0027 s2, amended). Consequences elsewhere: **LT-188 runs**
+(the tier survives), and the CI equivalence audit is now documented as the *second* consumer of
+`sim/` — tier-adjacent tasks must not treat the realm as two components' machinery.
 
 **Standing framing** (ADR 0029, accepted 2026-09-04). Server evaluation is three tiers:
 **Folded** (phase 1 resolves it; string folding, no jsdom), **Simulated** (phase 1 cannot
@@ -111,6 +117,50 @@ emission and the CMS persona with it. LT-258 makes this checkable rather than re
   **Check:** the repo's own build produces byte-identical output through the generalized path,
   and a scratch project outside the repo compiles a component with only a config file.
 
+- [ ] LT-263: The simulation seam — move the build report out of `sim/`, split the patch table by audience, make the realm interface DOM-free. **Blocks LT-256.**
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s3–s4.
+  ADR 0034 s5 committed jsdom to an optional peer dependency; the code cannot honour that commitment.
+  Three couplings, each verified in the LT-239 session: `server/compiler/tier.ts:62` imports
+  `./sim/patch-table` — the **classifier** consults the simulation to decide which components are
+  Simulated, and `tier.ts:243` returns the table's `note` as the census reason; `sim/report.ts` is
+  not simulation at all but the **build report** (`tierCensus`, `translationCensus`, `formatCensus`,
+  `Census`, `CensusEntry`, `CLASSIFIED_DIAGNOSTICS`), imported by `server/effects/i18n.ts`,
+  `server/effects/tsrx.ts` and `scripts/check-tsrx.ts`, none of which simulate; and
+  `SimulationRealm.window` is typed `JSDOM['window']`, which `sim/index.ts`'s own header already
+  flags — so the published compiler's `.d.ts` names jsdom and an opted-out consumer cannot typecheck.
+  **Deliverable:** (a) the census and build-report channel moves compiler-side, leaving only *realm*
+  diagnostic classification in `sim/`; (b) `patch-table.ts` splits by audience — the classifier-facing
+  half (what the realm cannot answer, plus the reason vocabulary) compiler-side, the applier-facing
+  per-runtime force/fill/stub entries with the realm; (c) the realm interface becomes DOM-free,
+  `(markup, component, locale, options) → (html, diagnostics)`, with no `window`, `Document` or
+  substrate type crossing it — the driver keeps jsdom's types internally. **Shape the seam as a
+  versioned, resolver-based package boundary, not an in-process module boundary** (s4): activation is
+  intended to become *installation*, and retrofitting a package boundary later is a breaking change.
+  **Channel:** none new — this moves existing reporting, it does not add a check. The
+  `unavailable substrate` reason is LT-256's, and this task only makes it emittable.
+  **Check:** with jsdom uninstalled, `tsc --noEmit` passes against the published type surface, the
+  corpus compiles, and the tier census prints with every component classified — before LT-256 adds
+  the routing change. Census 20/2/0 and warning baseline 0 unchanged with jsdom present; the
+  equivalence audit (ADR 0029 s7) and its pinned per-component diffs are byte-unchanged.
+
+- [ ] LT-264: Split `@zeix/le-truc-simulation` out of the compiler package. **Not a v3.0 deliverable — a later 3.x, once the seam has a consumer.**
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s4.
+  With LT-263's seam in place the substrate can ship as its own package, so activation is
+  installation: present or absent, no configuration flag, no dynamic import, no degradation path
+  threaded through the compiler. Deliberately **not** scheduled for 3.0 — a third npm name, release
+  process and changelog on a release already gated on two external projects (ADR 0034 s6), against a
+  saving of ~50 KB of JavaScript over the optional peer dependency, since jsdom is the weight and an
+  opted-out consumer never installs it either way.
+  **Deliverable:** the package, an exact-range peer on `@zeix/le-truc-compiler`, and a CI matrix — the
+  substrate executes *generated client modules*, so the two-phase load/render contract, the `define()`
+  recording, the children-first compose ordering key and the emission shape all cross the boundary and
+  the pair is in permanent version lockstep. **jsdom must be a regular `dependency` of the new package,
+  not a devDependency** — a devDependency is not installed for consumers.
+  **Check:** a consumer project installs the compiler alone and builds green with Simulated components
+  routed Static; adding the substrate package alone re-enables the tier with no config change.
+
 - [ ] LT-256: jsdom as an optional peer dependency; `unavailable substrate` as a tier-census reason.
   **Skill:** le-truc-dev
   **Context:** ADR 0034 s5 and the ADR 0029 s6 amendment (2026-09-19). A published compiler's
@@ -124,9 +174,13 @@ emission and the CMS persona with it. LT-258 makes this checkable rather than re
   is unaffected, and a missing substrate must never fail the build (channel: none — it is a
   routing outcome, not an author-fixable problem; no tier applies). CI gains a second
   configuration: the compiler exercised **with and without** the substrate installed.
-  **Sequencing note:** this sets the floor for **LT-239** (the open Simulated-tier ruling) — the
-  tier is opt-in per consumer because an optional peer dependency *is* opt-in. LT-239 still owns
-  substrate pluggability and whether the tier survives; it can no longer make the tier mandatory.
+  **Depends on LT-263 — hard, not preferential** ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s5
+  amendment; [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s5).
+  This task's premise does not hold until the seam lands: `tier.ts` imports `sim/patch-table` to
+  decide tiers *and* to source the reason vocabulary, the census itself lives in `sim/report.ts`,
+  and `SimulationRealm` names `JSDOM['window']` in the published type surface. Absent the
+  substrate there is no classifier, no census, and no typecheck — so "route Static and record
+  `unavailable substrate`" cannot be implemented first and de-tangled afterwards.
   **Check:** `npm install` without the optional peer, then a corpus build: green, with the two
   Simulated components routed Static and named in the census with the new reason.
 
@@ -579,8 +633,9 @@ diagnostic-parity net — it then
 verifies LT-233's message consolidation), **LT-233 before LT-218** as before; the
 behaviour-preserving mechanical moves (LT-227/228) stay interleavable with feature work;
 wave ordering holds (LT-228 before LT-229/LT-232, which name the files it creates); the library
-substitutions (LT-243/LT-229/LT-231/LT-245) sit behind S0's LT-239 only where they touch
-tier/evaluability code — the front-end swaps proceed regardless; LT-247 after LT-234 (both
+substitutions (LT-243/LT-229/LT-231/LT-245) no longer sit behind S0's LT-239 — it is resolved
+(ADR 0035: the tier is kept, SSG-scoped), so tier/evaluability-adjacent items proceed, coordinating
+with **LT-263** where they touch `sim/report.ts`, `sim/patch-table.ts` or the realm's type surface; LT-247 after LT-234 (both
 touch `spans.ts`); LT-246 after the wave-3 churn so the report format settles once; **LT-235 is
 a grilling session, not cleanup** (its item (e) is carved out as LT-244). **No ADR is owed for
 the mechanical band** — nothing there changes a documented decision (review §3; Architect
@@ -883,7 +938,7 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   3-file subset that failed during LT-202 exits 0 repeatedly; no test asserts on the
   leaked rejection today, so fixing it changes no pinned behavior.
 
-- [ ] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding). **Land before P5 adds composition across tiers. Runs only if S0's LT-239 keeps the Simulated tier — a retirement folds this into that outcome.**
+- [ ] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding). **Land before P5 adds composition across tiers. Gate discharged: LT-239 kept the Simulated tier ([ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s1), so this runs.**
   **Skill:** docs-server-dev
   **Context:** `server/effects/simulate.ts` loads a client module for each Simulated-tier
   component and nothing else. Children-first replay needs every composed child's tag DEFINED in

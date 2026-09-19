@@ -38,8 +38,10 @@ This file is auto-generated. Do not edit manually.
 | [0031](0031-pre-connect-property-writes-capture-and-install.md) | Pre-Connect Property Writes Are Captured and Installed | ✅ Accepted | M2, M3 |
 | [0032](0032-adopt-tsx-as-the-authored-component-surface.md) | Adopt `.tsx` as the Primary Authored Component Surface (`.tsrx` Retained) | ✅ Accepted | M1, M3, M4, §5, §7 |
 | [0033](0033-scope-component-styles-by-custom-element-name.md) | Scope Component Styles by Custom Element Name; Shadow DOM as the Opt-in; TSRX Style Composition Translated to It | 🔄 Proposed | M17, M18 |
+| [0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) | Distribution — `@zeix/le-truc-compiler`, TSX-Only at 3.0, Folding Travels as Template Emission | ✅ Accepted | §1, §5, §7, M19, M20, M23, M24, M27, M28 |
+| [0035](0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) | The Simulation Seam — an SSG-Scoped Simulated Tier, a DOM-Free Realm Boundary, and a Substrate Package | ✅ Accepted | §1, §5, §6, M19, M20, M23, M27, M28 |
 
 ---
 
-**Last updated:** 2026-09-18
-**Total ADRs:** 32 (excluding template)
+**Last updated:** 2026-09-19
+**Total ADRs:** 34 (excluding template)
