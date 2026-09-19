@@ -15,7 +15,7 @@
  *   `i18n:sync`) records the source hash each locale's translation was
  *   made against. Override present + manifest hash ≠ current source hash
  *   ⇒ `stale`; no override ⇒ `missing`.
- * - the translation census (`translationCensus`, `sim/report.ts`) and the
+ * - the translation census (`translationCensus`, `compiler/census.ts`) and the
  *   gitignored machine-readable report (`writeI18nReport`). The census
  *   walks BOTH directions (LT-196): declared keys missing from a catalog
  *   (`missing`/`stale`) and catalog keys nothing declares (`orphaned` —
@@ -30,10 +30,10 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { TranslationGap } from '../compiler/census'
 import { PLURAL_CATEGORIES } from '../compiler/i18n'
 import type { RegistryEntry } from '../compiler/registry'
 import { pluralCategories } from '../compiler/runtime'
-import type { TranslationGap } from '../compiler/sim/report'
 import { DEFAULT_LOCALE, LOCALES } from '../config'
 import { getFilePath, writeFileSafe } from '../io'
 

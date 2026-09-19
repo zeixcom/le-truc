@@ -48,9 +48,10 @@
  * jsdom's `virtualConsole` is the diagnostic channel (ADR 0027 Consequences).
  * `jsdomError`s, realm console errors/warnings, attempted network calls,
  * contained per-component throws and non-quiescent drains all land in
- * `diagnostics`; `report.ts` turns them into the build report (LT-163) —
- * per-kind copy, the classification registry for standing entries, and the
- * zero-unclassified baseline.
+ * `diagnostics`; the compiler-side channel (`../build-report.ts`) turns them
+ * into the build report (LT-163) — per-kind copy and the zero-unclassified
+ * baseline — against the standing entries this driver publishes in
+ * `classifications.ts` (LT-263).
  *
  * ## Attribution
  *
@@ -87,7 +88,16 @@
  */
 
 import { JSDOM, VirtualConsole } from 'jsdom'
-import { SUPPRESSED_HOST_SELECTOR, type SuppressedSite } from '../tier'
+import {
+	type SimDiagnostic,
+	type SimRenderRequest,
+	type SimRenderResult,
+	type SimRuntime,
+	type SimulationRealm,
+	type SimulationRealmOptions,
+	SUPPRESSED_HOST_SELECTOR,
+	type SuppressedSite,
+} from '../simulation/contract.ts'
 import { assertSynchronousWindow, drainToQuiescence } from './boundary.ts'
 import {
 	detectRuntime,
@@ -95,35 +105,11 @@ import {
 	type NetworkGlobalPatch,
 	patchesFor,
 	REALM_GLOBALS,
-	type SimRuntime,
 	STUB_GLOBALS,
 	type StubShape,
 } from './patch-table.ts'
 
 /* === Types === */
-
-export type SimDiagnosticKind =
-	| 'jsdom-error'
-	| 'console'
-	| 'network'
-	| 'unhandled-rejection'
-	| 'component-throw'
-	| 'non-quiescent'
-
-/** One build warning from a simulated run, attributed where possible. */
-export type SimDiagnostic = {
-	kind: SimDiagnosticKind
-	/** Custom element name, when the driver knows which component caused it. */
-	component?: string
-	/**
-	 * For `console`: which channel logged. The level is part of the condition
-	 * (`console.error` and `console.warn` mean different things), so it is
-	 * data, not message text.
-	 */
-	level?: 'error' | 'warn'
-	message: string
-	stack?: string
-}
 
 /** A `customElements.define()` call captured during the resolution phase. */
 export type RecordedDefinition = {
@@ -132,43 +118,34 @@ export type RecordedDefinition = {
 	options?: ElementDefinitionOptions
 }
 
-export type RenderOptions = {
-	/** The SSR'd markup for one component, as `emit-server` produced it. */
-	markup: string
-	/** Custom element name, used to attribute diagnostics and pick the root. */
-	component: string
-	/**
-	 * BCP 47 tag for the page this occurrence is being built into (LT-172,
-	 * ADR 0030 sub-design 7). Seeds the simulated document's `<html lang>` so
-	 * `getLocale()`'s `closest('[lang]')` walk resolves the page's locale
-	 * instead of the `'en'` fallback. Omitted means "no page locale known",
-	 * which clears the attribute — a previous render's locale never leaks
-	 * into the next one.
-	 */
-	locale?: string
-	/** Bound passed through to `drainToQuiescence`; defaults to 10 turns. */
-	maxTurns?: number
-}
+/**
+ * One render, as the driver takes it. Structurally the seam's
+ * {@link SimRenderRequest}; kept as a local alias so the driver's own
+ * call sites read in its vocabulary.
+ */
+export type RenderOptions = SimRenderRequest
 
-export type SimulationRealm = {
-	readonly runtime: SimRuntime
+/**
+ * The jsdom driver's own handle — the seam's {@link SimulationRealm} plus
+ * the substrate-shaped members its tests and the portability probe need.
+ *
+ * The split is the point (ADR 0035 sub-design 3 limb 3). `window`,
+ * `document` and the recorded constructors are jsdom's types, so they
+ * cannot appear on the interface the compiler programs against — a
+ * consumer who opted out of jsdom would not be able to typecheck it. They
+ * are still legitimate INSIDE the driver, which is where the substrate is
+ * known; when `@zeix/le-truc-simulation` splits out (sub-design 4), this
+ * type goes with it and the compiler is left holding the contract alone.
+ *
+ * Nothing compiler-side may widen to this type. `loadedTags` exists on the
+ * seam precisely so no caller needs `definitions` for the one thing it was
+ * ever read for.
+ */
+export type JsdomSimulationRealm = SimulationRealm & {
 	readonly window: JSDOM['window']
 	readonly document: Document
-	readonly diagnostics: readonly SimDiagnostic[]
+	/** Definitions captured during the resolution phase, in recording order. */
 	readonly definitions: readonly RecordedDefinition[]
-	/**
-	 * Resolution phase: import client modules, recording their definitions.
-	 * Throws if the import records no NEW definitions (sub-design 10's
-	 * load-once assertion) — see module header.
-	 */
-	load(importer: () => Promise<unknown>): Promise<void>
-	/**
-	 * Parse, upgrade, drain to quiescence, serialize. The parse+upgrade step
-	 * is asserted synchronous; the quiescence drain after it is not, so this
-	 * is async end to end.
-	 */
-	render(options: RenderOptions): Promise<string>
-	dispose(): void
 }
 
 /* === Internal Functions === */
@@ -272,19 +249,8 @@ export function childrenFirstOrder(
  * @returns the realm handle
  */
 export function createSimulationRealm(
-	options: {
-		html?: string
-		composesTags?: (tag: string) => readonly string[]
-		/**
-		 * Suppression records per component tag (ADR 0029 sub-design 1,
-		 * LT-165 step 7), from the same registry entry the compile wrote.
-		 * Defaults to "no records" — correct for the driver's own inline test
-		 * fixtures and for tiers whose components carry none. Consulted once
-		 * per render, for the rendered tag.
-		 */
-		suppressedSites?: (tag: string) => readonly SuppressedSite[]
-	} = {},
-): SimulationRealm {
+	options: SimulationRealmOptions = {},
+): JsdomSimulationRealm {
 	const composesTags = options.composesTags ?? (() => [])
 	const suppressedSites = options.suppressedSites ?? (() => [])
 	const runtime = detectRuntime()
@@ -715,11 +681,23 @@ export function createSimulationRealm(
 	 * (LT-180) — the connect this drives is where the library's own
 	 * containment reports, and that report is the build's only signal that
 	 * a component degraded instead of enhancing.
+	 *
+	 * The returned `diagnostics` are the ones this call recorded, sliced off
+	 * the cumulative list by index. It is deliberately not the whole story:
+	 * the process-level channels report LATE (an `unhandledRejection` fires
+	 * in a macrotask after this has returned), so the build gate reads
+	 * {@link JsdomSimulationRealm.diagnostics} at the end of the pass. The
+	 * per-call slice answers "what did THIS render say", which is what a
+	 * caller rendering one occurrence at a time can act on.
 	 */
-	const render = async (options: RenderOptions): Promise<string> => {
+	const render = async (
+		request: SimRenderRequest,
+	): Promise<SimRenderResult> => {
+		const before = diagnostics.length
 		const releaseConsole = captureHostConsole()
 		try {
-			return await renderWindow(options)
+			const html = await renderWindow(request)
+			return { html, diagnostics: diagnostics.slice(before) }
 		} finally {
 			releaseConsole()
 		}
@@ -737,6 +715,12 @@ export function createSimulationRealm(
 		document,
 		diagnostics,
 		definitions,
+		// Live, because `load()` appends: a caller checking whether a composed
+		// child was already recorded by its parent's load must see the result
+		// of the load it just awaited.
+		get loadedTags() {
+			return definitions.map(entry => entry.name)
+		},
 		load,
 		render,
 		dispose,

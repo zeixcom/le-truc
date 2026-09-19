@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { parseModule } from '../../compiler/core.ts'
-import { CAPABILITY_PATCHES } from '../../compiler/sim/patch-table.ts'
+import { CAPABILITY_PATCHES } from '../../compiler/simulation/capabilities.ts'
 import {
 	classifyTier,
 	contaminateComposeReads,

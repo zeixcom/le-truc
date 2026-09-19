@@ -12,11 +12,17 @@
 
 import { afterEach, describe, expect, test } from 'bun:test'
 import {
+	classifyDiagnostic,
+	formatSimDiagnostic,
+	formatSimReport,
+	reportDiagnostics,
+} from '../../compiler/build-report.ts'
+import {
 	assertSynchronousWindow,
 	SimulationBoundaryError,
 } from '../../compiler/sim/boundary.ts'
+import { CLASSIFIED_DIAGNOSTICS } from '../../compiler/sim/classifications.ts'
 import {
-	CAPABILITY_PATCHES,
 	detectRuntime,
 	NETWORK_GLOBALS,
 	patchesFor,
@@ -26,23 +32,23 @@ import {
 import {
 	childrenFirstOrder,
 	createSimulationRealm,
-	type SimDiagnostic,
-	type SimulationRealm,
+	type JsdomSimulationRealm,
 } from '../../compiler/sim/realm.ts'
 import {
-	type ClassifiedDiagnostic,
-	classifyDiagnostic,
-	formatSimDiagnostic,
-	formatSimReport,
-	reportDiagnostics,
-} from '../../compiler/sim/report.ts'
+	CAPABILITY_PATCHES,
+	UNANSWERABLE_GLOBALS,
+} from '../../compiler/simulation/capabilities.ts'
+import type {
+	ClassifiedDiagnostic,
+	SimDiagnostic,
+} from '../../compiler/simulation/contract.ts'
 
 /* === Helpers === */
 
-let active: SimulationRealm | null = null
+let active: JsdomSimulationRealm | null = null
 
 /** Create a realm that is disposed after the test, whatever happens. */
-const withRealm = (): SimulationRealm => {
+const withRealm = (): JsdomSimulationRealm => {
 	active = createSimulationRealm()
 	return active
 }
@@ -92,12 +98,36 @@ describe('patch table', () => {
 			...REALM_GLOBALS,
 			...STUB_GLOBALS,
 			...NETWORK_GLOBALS,
-			...CAPABILITY_PATCHES,
 		]) {
 			for (const value of Object.values(patch))
 				expect(typeof value).not.toBe('function')
-			expect(['realm', 'stub', 'network', 'capability']).toContain(patch.kind)
+			expect(['realm', 'stub', 'network']).toContain(patch.kind)
 		}
+		// The classifier-facing half (LT-263) carries no `kind` — it is not
+		// applied to anything — but the same data-not-behaviour rule holds.
+		for (const patch of CAPABILITY_PATCHES)
+			for (const value of Object.values(patch))
+				expect(typeof value).not.toBe('function')
+	})
+
+	test('agrees with the classifier half on which globals are unanswerable', () => {
+		// LT-263 split the table by audience (ADR 0035 sub-design 3 limb 2).
+		// The two halves answer different questions about the SAME set of
+		// names, and nothing derives one from the other — so drift is caught
+		// here rather than by a component silently re-routing.
+		const applier = {
+			stub: STUB_GLOBALS.map(patch => patch.name).sort(),
+			network: NETWORK_GLOBALS.map(patch => patch.name).sort(),
+		}
+		const classifier = {
+			stub: UNANSWERABLE_GLOBALS.filter(g => g.kind === 'stub')
+				.map(g => g.name)
+				.sort(),
+			network: UNANSWERABLE_GLOBALS.filter(g => g.kind === 'network')
+				.map(g => g.name)
+				.sort(),
+		}
+		expect(classifier).toEqual(applier)
 	})
 
 	test('names are unique within each column', () => {
@@ -238,7 +268,7 @@ describe('ARIA under simulation (LT-177)', () => {
 		})
 		// The server-rendered attribute is the initial-state channel; the
 		// binding must update it in place, never remove it.
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-aria aria-expanded="false"></probe-aria>',
 			component: 'probe-aria',
 		})
@@ -265,7 +295,7 @@ describe('ARIA under simulation (LT-177)', () => {
 				[formAssociated()],
 			)
 		})
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-form></probe-form>',
 			component: 'probe-form',
 		})
@@ -294,7 +324,7 @@ describe('ARIA under simulation (LT-177)', () => {
 				},
 			)
 		})
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-state></probe-state>',
 			component: 'probe-state',
 		})
@@ -415,7 +445,7 @@ describe('library-contained connect failures reach the report (LT-180)', () => {
 				throw new Error('boom in setup')
 			})
 		})
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-contained>skeleton</probe-contained>',
 			component: 'probe-contained',
 		})
@@ -448,7 +478,7 @@ describe('library-contained connect failures reach the report (LT-180)', () => {
 			markup: '<probe-contained2></probe-contained2>',
 			component: 'probe-contained2',
 		})
-		const report = reportDiagnostics(realm.diagnostics)
+		const report = reportDiagnostics(realm.diagnostics, CLASSIFIED_DIAGNOSTICS)
 		expect(report.unclassified.length).toBeGreaterThan(0)
 		expect(
 			report.unclassified.some(entry => entry.component === 'probe-contained2'),
@@ -480,7 +510,7 @@ describe('library-contained connect failures reach the report (LT-180)', () => {
 				host.setAttribute('data-theme', theme.get())
 			})
 		})
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-consumer></probe-consumer>',
 			component: 'probe-consumer',
 		})
@@ -502,7 +532,7 @@ describe('library-contained connect failures reach the report (LT-180)', () => {
 				},
 			)
 		})
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-quiet></probe-quiet>',
 			component: 'probe-quiet',
 		})
@@ -547,7 +577,10 @@ describe('serialization boundary (sub-design 9)', () => {
 
 	test('render() runs under the assertion', async () => {
 		const realm = withRealm()
-		const html = await realm.render({ markup: '<p>plain</p>', component: 'p' })
+		const { html } = await realm.render({
+			markup: '<p>plain</p>',
+			component: 'p',
+		})
 		expect(html).toBe('<p>plain</p>')
 	})
 })
@@ -615,7 +648,7 @@ describe('two-phase load and render', () => {
 				},
 			)
 		})
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-writer count="7"><span></span></probe-writer>',
 			component: 'probe-writer',
 		})
@@ -669,7 +702,7 @@ describe('two-phase load and render', () => {
 		// jsdom's own CEReactions wrapper contains a connectedCallback throw and
 		// routes it to the virtualConsole, so the build continues and the element
 		// serializes with whatever it wrote before throwing.
-		const html = await realm.render({ markup, component: 'probe-thrower' })
+		const { html } = await realm.render({ markup, component: 'probe-thrower' })
 		expect(html).toContain('fallback')
 		const contained = realm.diagnostics.find(entry =>
 			entry.message.includes('boom at connect'),
@@ -686,7 +719,7 @@ describe('two-phase load and render', () => {
 			customElements.define('probeinvalid', class extends HTMLElement {})
 		})
 		const markup = '<probe-holder>fallback</probe-holder>'
-		const html = await realm.render({ markup, component: 'probe-holder' })
+		const { html } = await realm.render({ markup, component: 'probe-holder' })
 		expect(html).toBe(markup)
 		const contained = realm.diagnostics.find(
 			entry => entry.kind === 'component-throw',
@@ -708,7 +741,7 @@ describe('two-phase load and render', () => {
 				},
 			)
 		})
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-deferred></probe-deferred>',
 			component: 'probe-deferred',
 		})
@@ -739,7 +772,7 @@ describe('two-phase load and render', () => {
 				},
 			)
 		})
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-looping></probe-looping>',
 			component: 'probe-looping',
 			maxTurns: 3,
@@ -768,8 +801,14 @@ describe('repeat renders (LT-193 removed the render cache)', () => {
 			)
 		})
 		const markup = '<probe-memo></probe-memo>'
-		const first = await realm.render({ markup, component: 'probe-memo' })
-		const second = await realm.render({ markup, component: 'probe-memo' })
+		const { html: first } = await realm.render({
+			markup,
+			component: 'probe-memo',
+		})
+		const { html: second } = await realm.render({
+			markup,
+			component: 'probe-memo',
+		})
 		// Byte-stable repeat renders stay a pinned invariant (the same
 		// fixed-point property sub-design 10 rides); with the cache gone,
 		// every render connects — the documented post-LT-193 behavior.
@@ -785,8 +824,14 @@ describe('repeat renders (LT-193 removed the render cache)', () => {
 			customElements.define('probeinvalid', class extends HTMLElement {})
 		})
 		const markup = '<probe-holder>fallback</probe-holder>'
-		const first = await realm.render({ markup, component: 'probe-holder' })
-		const second = await realm.render({ markup, component: 'probe-holder' })
+		const { html: first } = await realm.render({
+			markup,
+			component: 'probe-holder',
+		})
+		const { html: second } = await realm.render({
+			markup,
+			component: 'probe-holder',
+		})
 		expect(first).toBe(markup)
 		expect(second).toBe(markup)
 		const throws = realm.diagnostics.filter(
@@ -883,10 +928,10 @@ describe('build report (LT-163)', () => {
 			component: 'form-colorgraph',
 			message: "Not implemented: HTMLCanvasElement's getContext() method",
 		})
-		const report = reportDiagnostics([
-			known,
-			diagnostic({ component: 'probe-new', message: 'surprise' }),
-		])
+		const report = reportDiagnostics(
+			[known, diagnostic({ component: 'probe-new', message: 'surprise' })],
+			CLASSIFIED_DIAGNOSTICS,
+		)
 		expect(report.classified.length).toBe(1)
 		expect(report.unclassified.length).toBe(1)
 		const text = formatSimReport(report)
@@ -920,7 +965,7 @@ describe('page locale seeding (LT-172, ADR 0030 sub-design 7)', () => {
 	 * realm's `<html>`-less ancestor chain and resolves the `'en'` fallback —
 	 * silently, on every page, whatever its locale.
 	 */
-	const loadLocaleProbe = (realm: SimulationRealm) =>
+	const loadLocaleProbe = (realm: JsdomSimulationRealm) =>
 		realm.load(async () => {
 			const { defineComponent } = await importLibrary()
 			defineComponent('probe-locale', ({ host }) => {
@@ -932,7 +977,7 @@ describe('page locale seeding (LT-172, ADR 0030 sub-design 7)', () => {
 	test("seeds <html lang> from the render's page locale", async () => {
 		const realm = withRealm()
 		await loadLocaleProbe(realm)
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: '<probe-locale></probe-locale>',
 			component: 'probe-locale',
 			locale: 'de-CH',
@@ -951,14 +996,14 @@ describe('page locale seeding (LT-172, ADR 0030 sub-design 7)', () => {
 		})
 		// Same markup, different page: the memo key carries the locale, so this
 		// is a fresh render rather than the `fr` pass's cached bytes.
-		const second = await realm.render({
+		const { html: second } = await realm.render({
 			markup: '<probe-locale></probe-locale>',
 			component: 'probe-locale',
 			locale: 'it',
 		})
 		expect(second).toContain('data-locale="it"')
 		// No locale means no page answer, not the previous page's answer.
-		const third = await realm.render({
+		const { html: third } = await realm.render({
 			markup: '<probe-locale></probe-locale>',
 			component: 'probe-locale',
 		})

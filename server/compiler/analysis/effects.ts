@@ -36,12 +36,10 @@ import type {
 } from '../ir'
 import type { RegistryEntry } from '../registry'
 import {
-	lineFields,
-	type RoutingSignal,
-	resolutionOf,
 	SUPPRESSED_HOST_SELECTOR,
 	type SuppressedSite,
-} from '../tier'
+} from '../simulation/contract.ts'
+import { lineFields, type RoutingSignal, resolutionOf } from '../tier'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
 import type {

@@ -20,10 +20,8 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import {
-	formatSimDiagnostic,
-	type SimDiagnostic,
-} from '../server/compiler/sim/index.ts'
+import { formatSimDiagnostic } from '../server/compiler/build-report.ts'
+import type { SimDiagnostic } from '../server/compiler/simulation/contract.ts'
 
 /* === Types === */
 

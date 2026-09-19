@@ -17,10 +17,12 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { JSDOM } from 'jsdom'
+import { reportDiagnostics } from '../../compiler/build-report'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
-import type { SimDiagnostic, SimulationRealm } from '../../compiler/sim/realm'
-import { reportDiagnostics } from '../../compiler/sim/report'
+import type {
+	SimDiagnostic,
+	SimulationRealm,
+} from '../../compiler/simulation/contract'
 import type { EvaluationTier } from '../../compiler/tier'
 import { LOCALES } from '../../config'
 import {
@@ -52,35 +54,31 @@ const registryOf = (...entries: RegistryEntry[]): ComponentRegistry =>
 
 /**
  * A realm that records what the pass asked it to do, in order.
+ *
+ * Note what it does NOT need since LT-263: a document. The seam is
+ * `(markup, component, locale, options) → (html, diagnostics)`, so a fake
+ * that satisfies it is plain data — which is the cheapest available proof
+ * that no DOM crosses the boundary (ADR 0035 sub-design 3 limb 3).
  */
 const fakeRealm = (diagnostics: SimDiagnostic[] = []) => {
 	const log: string[] = []
-	const definitions: Array<{ name: string }> = []
-	const realm = {
+	const loadedTags: string[] = []
+	const realm: SimulationRealm = {
 		runtime: 'bun',
-		window: undefined,
-		document: new JSDOM('').window.document,
 		diagnostics,
-		definitions,
+		loadedTags,
 		async load() {
 			log.push('load')
-			definitions.push({ name: `def-${definitions.length}` })
+			loadedTags.push(`def-${loadedTags.length}`)
 		},
-		async render({
-			markup,
-			component,
-		}: {
-			markup: string
-			component: string
-			locale?: string
-		}) {
+		async render({ markup, component }) {
 			log.push(`render:${component}`)
-			return markup
+			return { html: markup, diagnostics: [] }
 		},
 		dispose() {
 			log.push('dispose')
 		},
-	} as unknown as SimulationRealm
+	}
 	return { realm, log }
 }
 
@@ -180,15 +178,16 @@ describe('disposal is end-of-build (LT-152 review, obligation 1)', () => {
 
 describe('the build report is the gate (LT-163 baseline, now the build’s own)', () => {
 	test('an unclassified entry fails the build and names the component', () => {
-		const report = reportDiagnostics([
-			{ kind: 'component-throw', component: 'x-a', message: 'boom' },
-		])
+		const report = reportDiagnostics(
+			[{ kind: 'component-throw', component: 'x-a', message: 'boom' }],
+			[],
+		)
 		expect(report.unclassified.length).toBe(1)
 		expect(() => gateOnSimReport(report)).toThrow(/<x-a>/)
 	})
 
 	test('a clean report does not fail the build', () => {
-		expect(() => gateOnSimReport(reportDiagnostics([]))).not.toThrow()
+		expect(() => gateOnSimReport(reportDiagnostics([], []))).not.toThrow()
 	})
 
 	test('the pass surfaces the report it gated on', async () => {

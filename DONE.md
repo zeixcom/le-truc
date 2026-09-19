@@ -11,6 +11,48 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-263: The simulation seam — build report out of `sim/`, patch table split by audience, realm interface DOM-free — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new `server/compiler/census.ts` (`Census`/`CensusEntry`/`CensusKind`/
+  `TierCensusSubject`/`TranslationGap`/`tierCensus`/`translationCensus`/`formatCensus`),
+  `server/compiler/build-report.ts` (`SimReport`/`reportDiagnostics`/`classificationFor`/
+  `classifyDiagnostic`/`formatSimDiagnostic`/`formatSimReport`), and
+  `server/compiler/simulation/{contract,capabilities,resolve}.ts`. `sim/report.ts` deleted;
+  `sim/classifications.ts` keeps `CLASSIFIED_DIAGNOSTICS` only. `render()` now answers
+  `{ html, diagnostics }`; `window`/`document`/`definitions` left `SimulationRealm`
+  (`loadedTags` replaced the only read of `definitions`) and the wider `JsdomSimulationRealm`
+  stays in `realm.ts`. `SuppressedSite`/`SUPPRESSED_HOST_SELECTOR` moved off `tier.ts` to the
+  contract. `effects/simulate.ts` resolves the driver instead of importing it and splits
+  occurrences with parse5. New `check:nosubstrate` script + `tsconfig.nosubstrate.json`, and
+  `server/tests/compiler/simulation-seam.test.ts`. Docs updated: `server/SERVER.md`,
+  `server/TESTS.md`, `server/compiler/LE_TRUC_COMPILER.md`.
+  **Rulings made at review:**
+  1. **The channel/registry split is correct, and ADR 0035 s3 limb 1 was amended to say so.**
+     The ADR listed `CLASSIFIED_DIAGNOSTICS` among what moves compiler-side while its next
+     sentence said only realm classification stays behind — a contradiction. Resolved the
+     developer's way: the channel moves, the registry stays with the driver and reaches the
+     channel as `SimulationProvider.classifications`, because which notices a substrate emits
+     is a fact about that substrate (s6's future substrate would invalidate a compiler-side
+     list). `reportDiagnostics` takes them as a required second argument.
+  2. **The two new build-time errors are channel `build`, tier 1 Prevented, no `TSRX` rule.**
+     Neither is statically decidable — both are facts about the install, not the author's code.
+     `SimulationSeamVersionError` (driver present, wrong `seamVersion`) is permanent. The
+     "no driver installed" throw in `simulate.ts` is a **deliberate placeholder** that LT-256
+     replaces with the `unavailable substrate` routing outcome.
+  3. **ADR 0035 s4 gained the resolver's two decided properties**: the specifier the
+     typechecker does not follow (this, not the type surface alone, is what makes the opt-out
+     typecheck), and absence-answers-`null` vs mismatch-throws.
+  **Fixed during review:** a stale orphaned JSDoc block left above `createRealm` in
+  `SimulationPassOptions`, and an internal task ID (`LT-256`) leaking into build-facing error
+  copy in `simulate.ts`.
+  **Live handoff:** **LT-256** — carries the placeholder-throw removal and a defect raised
+  here: `resolveSimulationProvider()` catches every dynamic-import error, so a broken driver
+  is indistinguishable from an absent one. Harmless today (the build fails either way, with a
+  misleading message); a silent wrong-HTML degradation once LT-256 routes on it.
+  **Known gap, pre-existing and unrelated:** `bun run check:sim` fails on the parent commit
+  too — `renderFormColorgraph` destructures a null i18n record. The cross-runtime portability
+  gate has been dark for a while.
+
 - [x] LT-239: Grill the Simulated tier against the framework goal — **tier kept and SSG-scoped; ADR 0035 written; ADR 0027/0029/0034 amended; the seam scheduled as LT-263** — reviewed ✓
   **Skill:** architect
   **Three facts from the code that reframed the task** (the entry inherited the reflection's

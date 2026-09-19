@@ -150,7 +150,7 @@ describe('CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 
 			// Phase 2 — the realm parses that exact markup and replays the
 			// connect. No locale on either side: identical inputs are the
 			// audit's validity condition.
-			const phase2 = await realm.render({
+			const { html: phase2 } = await realm.render({
 				markup: phase1,
 				component: entry.tag,
 			})
@@ -177,7 +177,7 @@ describe('CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 
 		) => string
 		const phase1 = renderFn(CORPUS_ARGS['form-tokenbox'] ?? {})
 		expect(phase1).toContain('id="tags-input"')
-		const phase2 = await realm.render({
+		const { html: phase2 } = await realm.render({
 			markup: phase1,
 			component: 'form-tokenbox',
 		})

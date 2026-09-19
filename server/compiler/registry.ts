@@ -14,7 +14,8 @@
  */
 
 import type { ExposeKind } from './ir'
-import type { EvaluationTier, RoutingSignal, SuppressedSite } from './tier'
+import type { SuppressedSite } from './simulation/contract.ts'
+import type { EvaluationTier, RoutingSignal } from './tier'
 
 /* === Types === */
 

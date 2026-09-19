@@ -24,12 +24,27 @@
  * genuinely differs; no entry needs it today, because forcing a value that is
  * already absent is a fill and forcing one that is present is the de-shadow —
  * the same operation covers both cases.
+ *
+ * ## The applier's half only (LT-263)
+ *
+ * This table used to serve two audiences. The CLASSIFIER's half — the names
+ * of the globals no realm answers, the member reads a realm answers wrong,
+ * and the census copy for each — moved to
+ * `../simulation/capabilities.ts` so `tier.ts` classifies and the census
+ * prints with no substrate installed (ADR 0035 sub-design 3 limb 2). What
+ * remains is per-runtime force/fill/stub data, which only `realm.ts` reads.
+ *
+ * The two halves name the same globals and are held together by a test
+ * (`sim-realm.test.ts`) rather than by a shared literal: they answer
+ * different questions, and deriving one from the other would make both
+ * unreadable.
  */
 
-/* === Types === */
+import type { SimRuntime } from '../simulation/contract.ts'
 
-/** The server runtimes the driver must run under. */
-export type SimRuntime = 'bun' | 'node' | 'deno' | 'unknown'
+export type { SimRuntime }
+
+/* === Types === */
 
 /**
  * A global whose value must come from the jsdom realm. Forced, not filled:
@@ -91,41 +106,7 @@ export type NetworkGlobalPatch = {
 	note?: string
 }
 
-/**
- * A MEMBER read the realm cannot answer, even though the global carrying it
- * is present (ADR 0029 sub-design 1 limb (a); the capability-row shape ADR
- * 0026 §2's amendment requires).
- *
- * The other three patch kinds describe globals that are absent, stubbed or
- * closed, so a missing NAME is the whole story. These rows describe the
- * opposite case: `HTMLElement` is real and `element.scrollLeft` reads
- * without throwing — it just returns a silent zero, because jsdom has no
- * layout engine. A name-based check cannot see that, so the classifier
- * would call a layout-reading component realm-answerable and route it to
- * the Simulated tier, which is exactly the `module-scrollarea` misrouting
- * ADR 0029 exists to prevent (~2.3 s of build time to compute nothing).
- *
- * Kept in THIS table rather than in the classifier so the ADR's
- * delete-a-row-to-re-route property holds for capabilities too: when a
- * driver gains real layout or a fuller `ElementInternals`, deleting the row
- * re-routes the affected components from the Static tier to the Simulated
- * tier automatically, with no second list to remember.
- */
-export type CapabilityPatch = {
-	kind: 'capability'
-	/** Member name as authored (`scrollLeft`, `getBoundingClientRect`). */
-	member: string
-	/** Restrict to reads off this receiver name; omitted means any. */
-	receiver?: string
-	/** Why the realm cannot answer it. */
-	note: string
-}
-
-export type SimPatch =
-	| RealmGlobalPatch
-	| StubGlobalPatch
-	| NetworkGlobalPatch
-	| CapabilityPatch
+export type SimPatch = RealmGlobalPatch | StubGlobalPatch | NetworkGlobalPatch
 
 /* === Patch Table === */
 
@@ -254,93 +235,6 @@ export const NETWORK_GLOBALS: readonly NetworkGlobalPatch[] = [
 	{ kind: 'network', name: 'EventSource', form: 'constructor' },
 	{ kind: 'network', name: 'Request', form: 'constructor' },
 	{ kind: 'network', name: 'navigator.sendBeacon', form: 'function' },
-]
-
-/**
- * Member reads the realm executes without throwing and answers WRONG — the
- * second half of ADR 0029 sub-design 1 limb (a). See {@link CapabilityPatch}
- * for why these cannot be expressed as absent globals.
- *
- * Two families, and they are unanswerable for different reasons:
- *
- * 1. **Layout geometry.** jsdom has no layout engine, so every one of these
- *    returns 0. Not fixable at this substrate (ADR 0029's "layout is out of
- *    scope for jsdom by construction"), which is why `module-scrollarea` —
- *    the corpus's single largest cost driver at 2,091 occurrences — is a
- *    Static-tier component rather than a Simulated-tier one.
- * 2. **`ElementInternals` members with no jsdom implementation.** Scoped
- *    per ADR 0026 §2's amendment: `internals` is NOT one unanswerable row
- *    any more. ARIA expressions ARE realm-answerable since LT-177, through
- *    `bindAria()`'s attribute fallback — the served HTML carries the value —
- *    so `ariaExpanded` and friends are deliberately absent from this list.
- *    Custom states and the form members remain unanswerable: jsdom's
- *    skeletal object flows through non-null (which populates
- *    `internalsHosts` and lets `bindAria()` bind the host content
- *    attribute), and the library's own LT-150 shape check treats it as no
- *    internals at all — the honest posture for a form-associated component,
- *    since an incomplete stub is worse than none, and polyfilling a working
- *    reflection surface would fire the stale-attribute removal at simulated
- *    connect and strip `role`/`aria-*` from the served markup. The former
- *    `PROTOTYPE_PATCHES` column (prototype-method rewrites) was deleted
- *    with LT-222 — it had been empty since LT-177.
- */
-export const CAPABILITY_PATCHES: readonly CapabilityPatch[] = [
-	// --- Layout geometry: jsdom returns silent zeros -----------------------
-	...(
-		[
-			'scrollLeft',
-			'scrollTop',
-			'scrollWidth',
-			'scrollHeight',
-			'offsetWidth',
-			'offsetHeight',
-			'offsetLeft',
-			'offsetTop',
-			'clientWidth',
-			'clientHeight',
-			'clientLeft',
-			'clientTop',
-			'getBoundingClientRect',
-			'getClientRects',
-		] as const
-	).map(
-		(member): CapabilityPatch => ({
-			kind: 'capability',
-			member,
-			note: 'jsdom has no layout engine — this reads as a silent zero',
-		}),
-	),
-	// --- ElementInternals: only the members jsdom does not implement -------
-	{
-		kind: 'capability',
-		member: 'states',
-		receiver: 'internals',
-		note: "jsdom's skeletal ElementInternals has no custom-state set",
-	},
-	{
-		kind: 'capability',
-		member: 'setFormValue',
-		receiver: 'internals',
-		note: 'form association degrades to no internals (LT-150 shape check)',
-	},
-	{
-		kind: 'capability',
-		member: 'setValidity',
-		receiver: 'internals',
-		note: 'form association degrades to no internals (LT-150 shape check)',
-	},
-	{
-		kind: 'capability',
-		member: 'form',
-		receiver: 'internals',
-		note: 'form association degrades to no internals (LT-150 shape check)',
-	},
-	{
-		kind: 'capability',
-		member: 'validity',
-		receiver: 'internals',
-		note: 'form association degrades to no internals (LT-150 shape check)',
-	},
 ]
 
 /* === Runtime Detection === */

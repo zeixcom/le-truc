@@ -16,8 +16,8 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { tierCensus } from '../../compiler/census'
 import type { ComponentRegistry } from '../../compiler/registry'
-import { tierCensus } from '../../compiler/sim/report'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 import { loadTsrxCorpus } from './corpus-fixture'

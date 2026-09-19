@@ -49,7 +49,7 @@ await realm.load(() => import(pathToFileURL(job.clientBundle).href))
 
 // Phase 2 — parse+upgrade (synchronous), then drain to hermetic quiescence
 // (ADR 0027 sub-design 9, amended) before serializing.
-const html = await realm.render({
+const { html } = await realm.render({
 	markup: job.markup,
 	component: job.component,
 })
@@ -69,7 +69,7 @@ console.log(
 	JSON.stringify(
 		{
 			runtime: realm.runtime,
-			definitions: realm.definitions.map(entry => entry.name).sort(),
+			definitions: [...realm.loadedTags].sort(),
 			html,
 			values,
 			diagnostics: realm.diagnostics.map(

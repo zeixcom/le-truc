@@ -17,7 +17,7 @@ import {
 	formatCensus,
 	type TierCensusSubject,
 	tierCensus,
-} from '../../compiler/sim/report'
+} from '../../compiler/census'
 import type { RoutingSignal } from '../../compiler/tier'
 
 /* === Helpers === */

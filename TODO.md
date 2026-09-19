@@ -46,33 +46,6 @@ then the number has a stake in it.
 
 ---
 
-- [ ] LT-263: The simulation seam — move the build report out of `sim/`, split the patch table by audience, make the realm interface DOM-free. **Blocks LT-256.**
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s3–s4.
-  ADR 0034 s5 committed jsdom to an optional peer dependency; the code cannot honour that commitment.
-  Three couplings, each verified in the LT-239 session: `server/compiler/tier.ts:62` imports
-  `./sim/patch-table` — the **classifier** consults the simulation to decide which components are
-  Simulated, and `tier.ts:243` returns the table's `note` as the census reason; `sim/report.ts` is
-  not simulation at all but the **build report** (`tierCensus`, `translationCensus`, `formatCensus`,
-  `Census`, `CensusEntry`, `CLASSIFIED_DIAGNOSTICS`), imported by `server/effects/i18n.ts`,
-  `server/effects/tsrx.ts` and `scripts/check-tsrx.ts`, none of which simulate; and
-  `SimulationRealm.window` is typed `JSDOM['window']`, which `sim/index.ts`'s own header already
-  flags — so the published compiler's `.d.ts` names jsdom and an opted-out consumer cannot typecheck.
-  **Deliverable:** (a) the census and build-report channel moves compiler-side, leaving only *realm*
-  diagnostic classification in `sim/`; (b) `patch-table.ts` splits by audience — the classifier-facing
-  half (what the realm cannot answer, plus the reason vocabulary) compiler-side, the applier-facing
-  per-runtime force/fill/stub entries with the realm; (c) the realm interface becomes DOM-free,
-  `(markup, component, locale, options) → (html, diagnostics)`, with no `window`, `Document` or
-  substrate type crossing it — the driver keeps jsdom's types internally. **Shape the seam as a
-  versioned, resolver-based package boundary, not an in-process module boundary** (s4): activation is
-  intended to become *installation*, and retrofitting a package boundary later is a breaking change.
-  **Channel:** none new — this moves existing reporting, it does not add a check. The
-  `unavailable substrate` reason is LT-256's, and this task only makes it emittable.
-  **Check:** with jsdom uninstalled, `tsc --noEmit` passes against the published type surface, the
-  corpus compiles, and the tier census prints with every component classified — before LT-256 adds
-  the routing change. Census 20/2/0 and warning baseline 0 unchanged with jsdom present; the
-  equivalence audit (ADR 0029 s7) and its pinned per-component diffs are byte-unchanged.
-
 - [ ] LT-271: Prune TSRX-only vocabulary from the compiler — the LT-206 deferral sweep, carved out of LT-254(c).
   **Skill:** le-truc-dev (Tech Writer owns the copy of anything renamed)
   **Context:** ADR 0034 s1–s2; carved out of LT-254 on 2026-09-19 because this is a **shape**
@@ -142,15 +115,28 @@ then the number has a stake in it.
   is unaffected, and a missing substrate must never fail the build (channel: none — it is a
   routing outcome, not an author-fixable problem; no tier applies). CI gains a second
   configuration: the compiler exercised **with and without** the substrate installed.
-  **Depends on LT-263 — hard, not preferential** ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s5
-  amendment; [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s5).
-  This task's premise does not hold until the seam lands: `tier.ts` imports `sim/patch-table` to
-  decide tiers *and* to source the reason vocabulary, the census itself lives in `sim/report.ts`,
-  and `SimulationRealm` names `JSDOM['window']` in the published type surface. Absent the
-  substrate there is no classifier, no census, and no typecheck — so "route Static and record
-  `unavailable substrate`" cannot be implemented first and de-tangled afterwards.
+  **LT-263 landed the seam (reviewed 2026-09-19); this is what plugs into it.**
+  `resolveSimulationProvider()` in `server/compiler/simulation/resolve.ts` already answers
+  `null` on absence — detection exists. What is missing is the routing: `effects/simulate.ts`
+  currently **throws** a named error when no driver is installed and Simulated-tier components
+  exist, which is the one configuration [M28](REQUIREMENTS.md#m28-distribution-and-dependency-weight)
+  says must never fail a build. That throw is a deliberate placeholder and its removal is part
+  of this task, not a separate cleanup. The census reason text is yours to draft; Tech Writer
+  owns the final copy.
+  **Also required — raised at the LT-263 review, and only dangerous once this task lands.**
+  `resolveSimulationProvider()` catches *every* error from the dynamic import, so a driver that
+  is installed but **broken** (a throw during module init, a bad transitive dependency) is
+  indistinguishable from one that was never installed. Today that still fails the build, so the
+  worst outcome is a misleading message. After this task it becomes a silent degradation: the
+  build would route every Simulated component Static, print `unavailable substrate`, and ship
+  skeleton HTML for a substrate that *is* there — exactly the class of failure the channel
+  discipline exists to prevent. Narrow the catch to genuine module-resolution failure
+  (`ERR_MODULE_NOT_FOUND` / Bun's `ResolveMessage`) and let anything else surface, the same way
+  `SimulationSeamVersionError` already distinguishes a broken install from an opt-out.
   **Check:** `npm install` without the optional peer, then a corpus build: green, with the two
-  Simulated components routed Static and named in the census with the new reason.
+  Simulated components routed Static and named in the census with the new reason. Plus the
+  negative: a driver present but throwing at import fails the build and says so, rather than
+  reporting `unavailable substrate`.
 
 - [ ] LT-265: Define and document the front-end contract; designate its export surface. **Re-scoped 2026-09-19 (owner): “clear interfaces defined” is this iteration's exit criterion, so the contract is settled now — the `exports` entry itself rides LT-254 behind the P6 gate.**
   **Skill:** le-truc-dev + tech-writer

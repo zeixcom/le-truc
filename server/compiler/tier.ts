@@ -15,7 +15,7 @@
  *
  * 1. **Unresolvability is a property of an EXPRESSION** — no server phase
  *    can produce its value. Two limbs: `stubbed-api` (every read routes
- *    through something `sim/patch-table.ts` declares unanswerable) and
+ *    through something `simulation/capabilities.ts` declares unanswerable) and
  *    `not-a-server-fact` (the value is a function of the viewing moment or
  *    the build machine's ambient state — the wall clock, the RNG, a
  *    runtime-default locale). An unresolvable expression is omitted in
@@ -40,15 +40,21 @@
  * classifier is sound, not complete, and the completeness gap is a build-time
  * cost rather than a correctness one (ADR 0029 sub-design 2).
  *
- * ## Why limb (a) reads the patch table
+ * ## Why limb (a) reads the capability table
  *
  * The stub posture and the tier assignment are the same data. When the driver
- * gains a real capability, deleting that patch-table row re-routes the
+ * gains a real capability, deleting that capability row re-routes the
  * affected expressions from unresolvable to realm-answerable, and their
  * components from the Static tier to the Simulated tier — automatically,
  * with no second list to keep in sync. Limb (b) has no such escape hatch by
  * construction: no driver capability can tell the build machine what time it
  * will be when the page is read.
+ *
+ * The table it reads is `simulation/capabilities.ts`, compiler-side and
+ * substrate-free — NOT `sim/patch-table.ts` (LT-263, ADR 0035 sub-design 3
+ * limb 2). The classifier must answer with no substrate installed, so it
+ * cannot import from behind the seam; `SuppressedSite`, which the driver
+ * reads back, moved to `simulation/contract.ts` for the same reason.
  */
 
 import type { TsrxNode } from '@tsrx/core'
@@ -56,10 +62,11 @@ import { isNode } from './ast-utils'
 import { lineOf } from './diagnostics'
 import { type ImpureAmbientCause, impureAmbientCauses } from './evaluability'
 import {
-	CAPABILITY_PATCHES,
-	NETWORK_GLOBALS,
-	STUB_GLOBALS,
-} from './sim/patch-table'
+	UNANSWERABLE_GLOBAL_NAMES,
+	UNANSWERABLE_MEMBERS,
+	unanswerableGlobalReason,
+	unanswerableMemberReason,
+} from './simulation/capabilities.ts'
 
 /* === Types === */
 
@@ -79,7 +86,7 @@ export type EvaluationTier =
  * Which limb of sub-design 1 makes an expression unresolvable.
  */
 export type UnresolvableLimb =
-	/** (a) Every read routes through something the patch table stubs. */
+	/** (a) Every read routes through something the capability table names. */
 	| 'stubbed-api'
 	/** (b) The input is the viewing moment or the build machine's state. */
 	| 'not-a-server-fact'
@@ -136,72 +143,7 @@ export type TierClassification = {
 	signals: readonly RoutingSignal[]
 }
 
-/**
- * The {@link SuppressedSite} selector that addresses the component's own
- * root element — the ambient `host`, the same sentinel the effect plans use
- * for root-exempt constructs (`query: 'host'`). The realm resolves it
- * against the rendered root, not against the document at large.
- */
-export const SUPPRESSED_HOST_SELECTOR = 'host'
-
-/**
- * One unresolvable expression's target site, recorded at compile time for
- * the simulation driver (ADR 0029 sub-design 1's implementation constraint,
- * LT-165 step 7).
- *
- * The generated client module is the shipped artifact and the realm replays
- * it, so the realm cannot decline to install a binding whose thunk reads the
- * wall clock or the RNG — its connect-time write would bake the build
- * machine's reading into the serialized HTML permanently. Instead the driver
- * snapshots each recorded site's server-rendered state before the upgrade
- * and restores that state after the connect window stabilizes, so the site
- * ships in the omitted (skeleton) form sub-design 1 mandates and the client
- * answers at connect.
- *
- * Only limb (b) sites (`not-a-server-fact`) are recorded. Limb (a)
- * (stubbed-API) sites keep ADR 0027 sub-design 6's unamended remainder —
- * the realm's stub answer (silent zero, never-matching media list), which
- * the client corrects at connect — and that answer is deterministic inside
- * the realm, so the fixed-point gate is not threatened by it.
- */
-export type SuppressedSite =
-	| {
-			kind: 'attr'
-			/** CSS selector for the element, or {@link SUPPRESSED_HOST_SELECTOR}. */
-			selector: string
-			/** The content attribute the binding writes. */
-			attr: string
-			/**
-			 * The IDL property the binding writes instead of the attribute
-			 * (dirty-flag dispatch, LT-116). The revert must restore the
-			 * property too: once the control is dirty, the stale reading
-			 * survives `removeAttribute`.
-			 */
-			prop?: string
-	  }
-	| {
-			kind: 'text'
-			/** CSS selector for the element, or {@link SUPPRESSED_HOST_SELECTOR}. */
-			selector: string
-	  }
-
 /* === Internal Functions === */
-
-/**
- * Every global the patch table declares absent-and-stubbed or closed.
- * `REALM_GLOBALS` is deliberately excluded: those are the globals the realm
- * DOES provide, and reading one is precisely what makes a component
- * realm-answerable.
- */
-const STUBBED_GLOBALS: ReadonlySet<string> = new Set([
-	...STUB_GLOBALS.map(patch => patch.name),
-	...NETWORK_GLOBALS.map(patch => patch.name.split('.')[0] ?? patch.name),
-])
-
-/** Capability rows keyed by member name, for the member-read check. */
-const UNANSWERABLE_MEMBERS = new Map(
-	CAPABILITY_PATCHES.map(patch => [patch.member, patch]),
-)
 
 /** Census copy for each unresolvable impurity, in the table's own terms. */
 const IMPURITY_REASONS: Record<ImpureAmbientCause, string> = {
@@ -234,14 +176,15 @@ export const lineFields = (
 /**
  * Whether `node` reads something the realm cannot answer — limb (a).
  *
- * Two shapes, both sourced from `sim/patch-table.ts`:
+ * Two shapes, both sourced from `simulation/capabilities.ts`:
  * - a free identifier naming a stubbed or closed global (`ResizeObserver`,
  *   `matchMedia`, `fetch`);
  * - a member read the realm answers WRONG rather than not at all
  *   (`el.scrollWidth` → a silent zero, `internals.states` → absent).
  *
- * Returns the patch-table `note` as the reason so the census explains
- * itself in the table's own words rather than a paraphrase that can drift.
+ * Returns the capability table's own `note` as the reason so the census
+ * explains itself in the table's words rather than a paraphrase that can
+ * drift.
  */
 export const stubbedApiRead = (node: TsrxNode): string | null => {
 	let reason: string | null = null
@@ -254,9 +197,9 @@ export const stubbedApiRead = (node: TsrxNode): string | null => {
 		if (!isNode(current)) return
 		if (
 			current.type === 'Identifier' &&
-			STUBBED_GLOBALS.has(String(current.name))
+			UNANSWERABLE_GLOBAL_NAMES.has(String(current.name))
 		) {
-			reason = `\`${String(current.name)}\` is stubbed in the simulation realm`
+			reason = unanswerableGlobalReason(String(current.name))
 			return
 		}
 		if (current.type === 'MemberExpression' && !current.computed) {
@@ -273,7 +216,7 @@ export const stubbedApiRead = (node: TsrxNode): string | null => {
 						object.type === 'Identifier' &&
 						String(object.name) === patch.receiver)
 				if (patch && receiverMatches) {
-					reason = `\`${String(property.name)}\`: ${patch.note}`
+					reason = unanswerableMemberReason(patch)
 					return
 				}
 			}

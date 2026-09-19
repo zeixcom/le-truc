@@ -15,6 +15,7 @@
 
 import { mkdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
+import { formatCensus, translationCensus } from '../compiler/census'
 import { diagnostic } from '../compiler/diagnostics'
 import {
 	type CompileDiagnostic,
@@ -22,7 +23,6 @@ import {
 } from '../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../compiler/frontend/tsx'
 import { type RegistryEntry, registryJson } from '../compiler/registry'
-import { formatCensus, translationCensus } from '../compiler/sim/report'
 import type { SourceSpan } from '../compiler/spans'
 import { contaminateComposeReads } from '../compiler/tier'
 import { componentTsrx, type FileInfo } from '../file-signals'

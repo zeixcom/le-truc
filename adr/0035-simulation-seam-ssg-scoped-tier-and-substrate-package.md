@@ -36,7 +36,9 @@ It still ships with 3.0 rather than deferring to a later 3.x, because pioneer 1 
 
 Before the tier can be optional in any form, three couplings are cut. This is the substantive engineering of this ADR.
 
-1. **The build report leaves `sim/`.** The census and report channel — `tierCensus`, `translationCensus`, `formatCensus`, `Census`, `CensusEntry`, `CLASSIFIED_DIAGNOSTICS` — moves compiler-side. It was never simulation; it is the build's reporting surface, and three non-simulating importers already depend on it. Only the classification of *realm* diagnostics stays behind.
+1. **The build report leaves `sim/`.** The census and report channel — `tierCensus`, `translationCensus`, `formatCensus`, `Census`, `CensusEntry`, and the diagnostic channel's partitioning, matching and copy — moves compiler-side. It was never simulation; it is the build's reporting surface, and three non-simulating importers already depend on it.
+
+   The **registry** of standing entries (`CLASSIFIED_DIAGNOSTICS`) stays behind, and the split runs between the channel and its data rather than through the module: *which* notices a substrate emits is a fact about that substrate — jsdom's unimplemented canvas is not linkedom's — so a registry shipped with the compiler would be wrong the moment sub-design 6's future substrate arrives. The driver publishes its entries as `SimulationProvider.classifications` and the compiler-side channel takes them as an argument.
 2. **`patch-table.ts` splits by audience.** The classifier-facing half — what the realm cannot answer, and the reason vocabulary the census prints — moves compiler-side so `tier.ts` classifies with no substrate present. The applier-facing half — the per-runtime force/fill/stub entries — stays with the realm.
 3. **The realm interface goes DOM-free.** `SimulationRealm` stops naming jsdom types. The seam is `(markup, component, locale, options) → (html, diagnostics)`: no `window`, no `Document`, no substrate type crosses it. This is also the precondition for sub-design 6 — a substrate cannot be swapped behind a type that names the substrate.
 
@@ -44,7 +46,9 @@ After the seam, classification, the census, and the whole no-substrate build pat
 
 ### 4. The seam is designed as a package boundary
 
-The seam is specified as a **versioned, resolver-based package interface**, not an in-process module boundary, so that `@zeix/le-truc-simulation` can be split out in a later 3.x without a breaking change. Activation is then *installation*: the substrate package is present or it is not, with no configuration flag, no dynamic import, and no degradation path threaded through the compiler.
+The seam is specified as a **versioned, resolver-based package interface**, not an in-process module boundary, so that `@zeix/le-truc-simulation` can be split out in a later 3.x without a breaking change. Activation is then *installation*: the substrate package is present or it is not, with no configuration flag and no degradation path threaded through the compiler.
+
+Two properties make that work. The resolver reaches the driver through a **specifier the typechecker does not follow**, so the compiler's own `tsc --noEmit` never walks the edge into the substrate — this, not the type surface alone, is what makes the opt-out typecheck. And the driver declares a `seamVersion` the resolver checks, with the two failure modes kept apart: **absence answers "no driver" and is a supported configuration; a version mismatch throws**, because a driver that is installed and wrong is a broken install, not an opt-out.
 
 **The split does not happen at 3.0.** The seam lands at 3.0 and the realm continues to ship inside `@zeix/le-truc-compiler`, because the split's costs are all schedule costs at exactly the wrong moment: a third npm name, release process and changelog on a release already gated on two external projects (ADR 0034 s6); and permanent version lockstep, since the substrate package executes *generated client modules* whose two-phase load/render contract, `define()` recording, children-first compose ordering and emission shape all cross the boundary. Against that, the split's saving over an optional peer dependency is ~50 KB of JavaScript — jsdom is the weight, and an opted-out consumer never installs it either way.
 

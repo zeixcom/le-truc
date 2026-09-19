@@ -231,7 +231,7 @@ describe('the realm reverts suppressed sites before serializing', () => {
 
 	test('attribute site: the build machine’s clock does not reach the HTML', async () => {
 		const render = await serverRenderOf('c-el.server.ts')
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: render({ name: 'x' }),
 			component: 'c-el',
 		})
@@ -247,7 +247,7 @@ describe('the realm reverts suppressed sites before serializing', () => {
 
 	test('text-child site: the RNG reading does not reach the HTML', async () => {
 		const render = await serverRenderOf('c-el.server.ts')
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: render({ name: 'x' }),
 			component: 'c-el',
 		})
@@ -262,7 +262,7 @@ describe('the realm reverts suppressed sites before serializing', () => {
 
 	test('root form: the host sentinel resolves against the rendered root', async () => {
 		const render = await serverRenderOf('r-el.server.ts')
-		const html = await realm.render({
+		const { html } = await realm.render({
 			markup: render({ name: 'x' }),
 			component: 'r-el',
 		})
@@ -273,15 +273,21 @@ describe('the realm reverts suppressed sites before serializing', () => {
 		// assignment that parses the markup — the binding writes before the
 		// connect window's define replay even runs. The inert-skeleton
 		// snapshot must still revert it.
-		const second = await realm.render({ markup: html, component: 'r-el' })
+		const { html: second } = await realm.render({
+			markup: html,
+			component: 'r-el',
+		})
 		expect(second).toBe(html)
 	})
 
 	test('the render is still a connect fixed point, and quiescent (sub-designs 8/9)', async () => {
 		const render = await serverRenderOf('c-el.server.ts')
 		const markup = render({ name: 'x' })
-		const first = await realm.render({ markup, component: 'c-el' })
-		const second = await realm.render({ markup: first, component: 'c-el' })
+		const { html: first } = await realm.render({ markup, component: 'c-el' })
+		const { html: second } = await realm.render({
+			markup: first,
+			component: 'c-el',
+		})
 		expect(second).toBe(first)
 		const overruns = realm.diagnostics.filter(
 			entry => entry.kind === 'non-quiescent',
@@ -305,7 +311,7 @@ describe('the realm reverts suppressed sites before serializing', () => {
 						import(pathToFileURL(join(unwired.path, 'c-el.client.ts')).href),
 				)
 				const render = await serverRenderOf('c-el.server.ts')
-				const html = await realm2.render({
+				const { html } = await realm2.render({
 					markup: render({ name: 'x' }),
 					component: 'c-el',
 				})

@@ -189,13 +189,15 @@ signal is **two numbers**, not one:
    through the simulation driver and requires **zero unclassified diagnostics**. The driver
    raises a diagnostic per condition (a jsdom `jsdomError`, an unhandled rejection, a
    contained connect throw, an attempted network call, a non-quiescent drain); the report
-   layer in `server/compiler/sim/report.ts` formats each as a build warning attributed to the
+   layer in `server/compiler/build-report.ts` formats each as a build warning attributed to the
    component (tier 2, Contained — the build completes and the component keeps its
    server-rendered markup). A migration that renders wrong shows up here as a new entry, and
    the test fails naming it.
 
 A diagnostic the build cannot fix is **classified, never silenced**: add a narrow
-`{ kind, component, message, reason }` entry to `CLASSIFIED_DIAGNOSTICS` in `report.ts`, and
+`{ kind, component, message, reason }` entry to `CLASSIFIED_DIAGNOSTICS` in
+`server/compiler/sim/classifications.ts` — it stays with the driver because which notices a
+substrate emits is a fact about that substrate — and
 the report keeps listing every occurrence with its reason. Never widen an existing pattern to
 admit a new diagnostic — that is how a real regression gets allowed through. When an entry
 stops matching anything (the condition was fixed), retire the classification; the baseline
@@ -207,7 +209,7 @@ The **tier census** (LT-165 step 6, ADR 0029 § 6) is a third record, not a thir
 number: `check:tsrx` prints it as its own section after the compile-warning baseline
 (`Tier census — N entries: …`), never inside any warning count. It is built from the
 registry's post-contamination tiers by `tierCensus`/`formatCensus` in
-`server/compiler/sim/report.ts` and is expected to grow — a component moving Folded → Simulated
+`server/compiler/census.ts` and is expected to grow — a component moving Folded → Simulated
 is a build-cost regression visible there. `census.test.ts` pins the record shape and its
 formatting; `tier-corpus.test.ts` pins what the census decides about the corpus, including
 form-combobox's post-contamination Simulated record.

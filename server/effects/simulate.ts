@@ -66,16 +66,20 @@
 
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { ComponentRegistry, RegistryEntry } from '../compiler/registry'
-import {
-	createSimulationRealm,
-	type SimulationRealm,
-} from '../compiler/sim/realm'
+import { type DefaultTreeAdapterMap, parseFragment } from 'parse5'
 import {
 	formatSimReport,
 	reportDiagnostics,
 	type SimReport,
-} from '../compiler/sim/report'
+} from '../compiler/build-report'
+import type { ComponentRegistry, RegistryEntry } from '../compiler/registry'
+import type {
+	ClassifiedDiagnostic,
+	SimulationProvider,
+	SimulationRealm,
+	SimulationRealmOptions,
+} from '../compiler/simulation/contract'
+import { resolveSimulationProvider } from '../compiler/simulation/resolve'
 import type { EvaluationTier } from '../compiler/tier'
 import { LOCALES } from '../config'
 import { GENERATED_DIR } from './tsrx'
@@ -116,10 +120,15 @@ export type SimulationPassOptions = {
 	registry?: ComponentRegistry
 	/** Defaults to `server/generated/tsrx/`. */
 	generatedDir?: string
-	/** Seam for tests: defaults to `createSimulationRealm`. */
-	createRealm?: (
-		options: Parameters<typeof createSimulationRealm>[0],
-	) => SimulationRealm
+	/**
+	 * Seam for tests: defaults to the driver the resolver finds
+	 * (`../compiler/simulation/resolve.ts`). A test that supplies this also
+	 * supplies {@link SimulationPassOptions.classifications}, since the two
+	 * travel together on a real provider.
+	 */
+	createRealm?: (options: SimulationRealmOptions) => SimulationRealm
+	/** Standing entries for the substrate in use; defaults to the driver's. */
+	classifications?: readonly ClassifiedDiagnostic[]
 	/** Seam for tests: defaults to reading `subject.markupPath`. */
 	readMarkup?: (subject: SimulationSubject) => Promise<string | null>
 	log?: (message: string) => void
@@ -160,7 +169,8 @@ export const gateOnSimReport = (report: SimReport) => {
 		`Simulation build report — ${report.unclassified.length} unclassified ` +
 			`entr${report.unclassified.length === 1 ? 'y' : 'ies'} on ` +
 			`${components.map(tag => `<${tag}>`).join(', ')}. Fix the component, ` +
-			'or classify the entry with a reason in server/compiler/sim/report.ts:\n' +
+			'or classify the entry with a reason in ' +
+			'server/compiler/sim/classifications.ts:\n' +
 			formatSimReport(report),
 	)
 }
@@ -192,21 +202,35 @@ const simulationSubjects = (
 /**
  * Split authored demo markup into the top-level occurrences of `tag`.
  *
- * Parsed inertly (`createHTMLDocument` has no browsing context, so nothing
- * upgrades) through the realm's own document, which is the only DOM the pass
- * has. A nested occurrence of the same tag belongs to its outer one's markup
- * and is not rendered on its own.
+ * parse5, not the realm's document (LT-263). This is build-side work — it
+ * happens before any substrate is involved and the result is a string the
+ * seam takes as input — so routing it through `realm.document` was the last
+ * place a `Document` crossed the boundary (ADR 0035 sub-design 3 limb 3).
+ * parse5 is already the build's HTML reader (`page-render.ts`), and slicing
+ * by source location hands the driver the author's own bytes rather than a
+ * re-serialization of them.
+ *
+ * A nested occurrence of the same tag belongs to its outer one's markup and
+ * is not rendered on its own.
  */
-const occurrencesOf = (
-	realm: SimulationRealm,
-	tag: string,
-	html: string,
-): string[] => {
-	const inert = realm.document.implementation.createHTMLDocument('')
-	inert.body.innerHTML = html
-	return [...inert.body.querySelectorAll(tag)]
-		.filter(el => el.parentElement?.closest(tag) == null)
-		.map(el => el.outerHTML)
+const occurrencesOf = (tag: string, html: string): string[] => {
+	const found: string[] = []
+	const walk = (node: DefaultTreeAdapterMap['node']): void => {
+		const children = 'childNodes' in node ? node.childNodes : []
+		for (const child of children) {
+			const element = child as DefaultTreeAdapterMap['element']
+			if (element.nodeName === tag) {
+				// Top-level only: descend no further, so a nested occurrence
+				// stays part of its outer one's markup.
+				const at = element.sourceCodeLocation
+				if (at) found.push(html.slice(at.startOffset, at.endOffset))
+				continue
+			}
+			walk(child)
+		}
+	}
+	walk(parseFragment(html, { sourceCodeLocationInfo: true }))
+	return found
 }
 
 /* === Exported Functions === */
@@ -220,7 +244,8 @@ const occurrencesOf = (
 export const simulateTsrxCorpus = async ({
 	registry,
 	generatedDir = GENERATED_DIR,
-	createRealm = createSimulationRealm,
+	createRealm,
+	classifications,
 	readMarkup = async subject => {
 		const file = Bun.file(subject.markupPath)
 		return (await file.exists()) ? file.text() : null
@@ -245,7 +270,7 @@ export const simulateTsrxCorpus = async ({
 		log(
 			`🎭 Simulation pass: no Simulated-tier component (${skipped.length} skipped) — no realm opened`,
 		)
-		const report = reportDiagnostics([])
+		const report = reportDiagnostics([], [])
 		return {
 			simulated,
 			skipped,
@@ -258,7 +283,26 @@ export const simulateTsrxCorpus = async ({
 		}
 	}
 
-	const realm = createRealm({
+	// Activation is installation (ADR 0035 sub-design 4): the driver is
+	// resolved, never configured. The test seam short-circuits it.
+	const provider =
+		createRealm === undefined ? await resolveSimulationProvider() : null
+	if (createRealm === undefined && provider === null)
+		throw new Error(
+			`No simulation driver is installed, but ${subjects.length} component(s) ` +
+				`route to the Simulated tier (${subjects
+					.map(subject => `<${subject.tag}>`)
+					.join(', ')}). Install the optional jsdom dependency to render ` +
+				'them through the realm. Routing them to the Static tier instead — ' +
+				'an `unavailable substrate` census row rather than a failed build ' +
+				'(ADR 0034 sub-design 5) — is not implemented yet.',
+		)
+	const openRealm =
+		createRealm ??
+		((options: SimulationRealmOptions) =>
+			(provider as SimulationProvider).createSimulationRealm(options))
+	const standingEntries = classifications ?? provider?.classifications ?? []
+	const realm = openRealm({
 		composesTags: tag => entries[tag]?.composesTags ?? [],
 		suppressedSites: tag => entries[tag]?.suppressedSites ?? [],
 	})
@@ -268,7 +312,7 @@ export const simulateTsrxCorpus = async ({
 		// load, so its own load() would record nothing NEW and trip the
 		// load-once assertion (ADR 0027 sub-design 10).
 		for (const subject of subjects) {
-			if (realm.definitions.some(entry => entry.name === subject.tag)) continue
+			if (realm.loadedTags.includes(subject.tag)) continue
 			await realm.load(
 				() => import(pathToFileURL(subject.clientModulePath).href),
 			)
@@ -280,7 +324,7 @@ export const simulateTsrxCorpus = async ({
 				withoutMarkup.push(subject.tag)
 				continue
 			}
-			const occurrenceMarkup = occurrencesOf(realm, subject.tag, markup)
+			const occurrenceMarkup = occurrencesOf(subject.tag, markup)
 			// Locale is the OUTER dimension of the render matrix: one full pass
 			// per locale, matching how the pages effect emits one page tree per
 			// locale (LT-174).
@@ -296,7 +340,7 @@ export const simulateTsrxCorpus = async ({
 			}
 			simulated.push(subject.tag)
 		}
-		const report = reportDiagnostics(realm.diagnostics)
+		const report = reportDiagnostics(realm.diagnostics, standingEntries)
 		const ms = performance.now() - started
 		log(
 			`🎭 Simulation pass: ${simulated.length} Simulated-tier component(s), ` +

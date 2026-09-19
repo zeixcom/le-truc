@@ -196,11 +196,11 @@ describe('TSX spike — front-end parity (§4.3)', () => {
 						const render = renderOf(fx.tag, fx.name)
 						const phase1A = await render(tsrx.component.serverCode, fx.args)
 						const phase1B = await render(tsxx.component.serverCode, fx.args)
-						const phase2A = await realm.render({
+						const { html: phase2A } = await realm.render({
 							markup: phase1A,
 							component: fx.tag,
 						})
-						const phase2B = await realm.render({
+						const { html: phase2B } = await realm.render({
 							markup: phase1B,
 							component: fx.tag,
 						})

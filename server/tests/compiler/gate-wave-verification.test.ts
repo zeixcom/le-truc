@@ -14,7 +14,7 @@ import { pathToFileURL } from 'node:url'
 import type { ComponentRegistry } from '../../compiler/registry'
 import {
 	createSimulationRealm,
-	type SimulationRealm,
+	type JsdomSimulationRealm,
 } from '../../compiler/sim/realm'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
@@ -65,7 +65,7 @@ const serverMarkupOf = async (
 const loadRealm = async (
 	registry: ComponentRegistry,
 	infos: readonly Compiled[number][],
-): Promise<SimulationRealm> => {
+): Promise<JsdomSimulationRealm> => {
 	const realm = createSimulationRealm({
 		composesTags: tag => registry[tag]?.composesTags ?? [],
 		// LT-165 step 7: registry-driven suppression (no corpus component
@@ -265,7 +265,7 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 	test.each([0, 1, 2, 3, 5, 11])(
 		'count=%d renders exactly one visible plural span and the count text',
 		async count => {
-			const html = await pluralizeRealm.render({
+			const { html } = await pluralizeRealm.render({
 				markup: await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(count)),
 				component: 'basic-pluralize',
 			})
@@ -284,7 +284,7 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 			<p class="none">none</p>
 			<p class="some"><span class="count"></span><span class="zero">cwn</span><span class="one">ci</span><span class="two">gi</span><span class="few">chi</span><span class="many">chi</span><span class="other">ci</span></p>
 		</basic-pluralize></div>`
-		const html = await pluralizeRealm.render({
+		const { html } = await pluralizeRealm.render({
 			markup,
 			component: 'basic-pluralize',
 		})
@@ -298,7 +298,7 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 			<p class="none">none</p>
 			<p class="some"><span class="count"></span><span class="zero"></span><span class="one">person</span><span class="two"></span><span class="few"></span><span class="many"></span><span class="other">people</span></p>
 		</basic-pluralize></div>`
-		const html = await pluralizeRealm.render({
+		const { html } = await pluralizeRealm.render({
 			markup,
 			component: 'basic-pluralize',
 		})
@@ -311,7 +311,7 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		// runtime, and the client can only select among strings the server
 		// rendered. count=1 renders; moving to 0 must flip the selection to
 		// `other` — which an en page DID render (pruning to {one, other}).
-		const html = await pluralizeRealm.render({
+		const { html } = await pluralizeRealm.render({
 			markup: await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(1)),
 			component: 'basic-pluralize',
 		})
@@ -350,7 +350,7 @@ describe('LT-133 — basic-number renders the formatted value under simulation',
 		[0.65, '65%'],
 		[0.205_667_88, '20.6%'],
 	])('value=%p formats to %p standalone', async (value, expected) => {
-		const html = await numberRealm.render({
+		const { html } = await numberRealm.render({
 			markup: await serverMarkupOf(numberInfo, {
 				value,
 				options: '{"style":"percent","maximumFractionDigits":1}',
@@ -361,7 +361,7 @@ describe('LT-133 — basic-number renders the formatted value under simulation',
 	})
 
 	test('composed under basic-gauge, the percentage renders without a hand-authored fallback', async () => {
-		const html = await numberRealm.render({
+		const { html } = await numberRealm.render({
 			markup: await serverMarkupOf(gaugeInfo, {
 				value: 0.84,
 				thresholds: '[{"min":0.8,"label":"Good job!","color":"green"}]',
@@ -416,11 +416,11 @@ describe('LT-144 — {host.count} and {count} converge on the same initial rende
 	test.each([0, 1, 3])(
 		'count=%d renders identical text for both spellings after simulated connect',
 		async count => {
-			const hostHtml = await spellingRealm.render({
+			const { html: hostHtml } = await spellingRealm.render({
 				markup: await serverMarkupOf(hostVariant, PLURALIZE_ARGS(count)),
 				component: 'c-count-host',
 			})
-			const bareHtml = await spellingRealm.render({
+			const { html: bareHtml } = await spellingRealm.render({
 				markup: await serverMarkupOf(bareVariant, PLURALIZE_ARGS(count)),
 				component: 'c-count-bare',
 			})
@@ -468,7 +468,7 @@ describe('LT-145 — a Parser-exposed prop with no server arg renders its fallba
 	]
 
 	test('the clear button renders hidden — filter has no seed, so the Parser default resolves', async () => {
-		const html = await listboxRealm.render({
+		const { html } = await listboxRealm.render({
 			markup: await serverMarkupOf(listboxInfo, {
 				name: 'fruit',
 				options,
@@ -482,7 +482,7 @@ describe('LT-145 — a Parser-exposed prop with no server arg renders its fallba
 	})
 
 	test('composed under form-combobox, initial render stays hermetic', async () => {
-		const html = await listboxRealm.render({
+		const { html } = await listboxRealm.render({
 			markup: await serverMarkupOf(comboboxInfo, {
 				name: 'fruit',
 				label: 'Fruit',

@@ -225,7 +225,10 @@ Machinery first, then the shared front-end modules, then the two front ends:
 | `diagnostics.ts` | Diagnostic codes TSRX001–048, message factories |
 | `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup) |
 | `smoke.ts` | Dev script: compile corpus, execute renders, print |
-| `sim/` | Server Simulation driver (§ 5): `patch-table.ts`, `realm.ts`, `boundary.ts`, `report.ts` |
+| `census.ts` | The census channel (§ 5.2): `Census` records, `tierCensus`, `translationCensus`, `formatCensus` |
+| `build-report.ts` | The build-report channel (§ 5): partitioning, matching, and the tier-2 warning copy |
+| `simulation/` | The simulation **seam** (ADR 0035 s3–s4): `contract.ts` (DOM-free interface + version), `capabilities.ts` (classifier-facing unanswerable table), `resolve.ts` (the resolver) |
+| `sim/` | Server Simulation driver behind the seam (§ 5): `patch-table.ts`, `realm.ts`, `boundary.ts`, `classifications.ts`, `index.ts` |
 
 **Dependency shape**: every module points strictly at `ir.ts` (types) and
 the shared leaves — `ast-utils.ts`, `walk.ts`, `evaluability.ts`,
@@ -345,7 +348,7 @@ module (`server/effects/i18n.ts` folds the corpus catalogs into it) exposes
 `i18nRecord(tag, lang?)`, which every render call boundary uses to supply
 the reserved record — and the catalog never reaches the client. A missing
 key renders the source-locale string and is recorded in the build report's
-**translation census** (`translationCensus`, `sim/report.ts`; machine-
+**translation census** (`translationCensus`, `census.ts`; machine-
 readable artifact at `server/generated/tsrx/i18n-report.json`) — not a
 compile warning, since it is not author-fixable. The census walks BOTH
 directions between declarations and catalogs (LT-196): every declared key
@@ -431,7 +434,7 @@ Two different facts, deliberately kept apart (ADR 0029 s1).
 produce its value. Two limbs —
 
 - **(a) stubbed API** — every read routes through something
-  `sim/patch-table.ts` declares the realm cannot answer: layout geometry
+  `simulation/capabilities.ts` declares the realm cannot answer: layout geometry
   (jsdom has no layout engine; reads return zeros), the absent-API stubs
   (`ResizeObserver`, `matchMedia`, `IntersectionObserver`,
   `requestAnimationFrame`), the closed network globals. `ElementInternals` is
@@ -467,9 +470,11 @@ or the gate compares a suppressed tree against an unsuppressed one.
 - **The Static tier is the degenerate case**: every phase-1-unresolved expression is
   unresolvable, so no mechanism needs to run at all.
 
-Keeping the stub table load-bearing for limb (a) is deliberate: when the
-driver gains a capability, deleting the patch-table row re-routes the
-affected expressions and their components automatically. Limb (b) has no such
+Keeping the capability table load-bearing for limb (a) is deliberate: when
+the driver gains a capability, deleting the row in
+`simulation/capabilities.ts` re-routes the affected expressions and their
+components automatically. The table is compiler-side rather than behind the
+seam (ADR 0035 s3) so the classifier answers with no substrate installed. Limb (b) has no such
 escape hatch — no driver capability can tell the build machine what time it
 will be when the page is read.
 
@@ -553,17 +558,24 @@ and was never a refusal site — what routes a component is a site whose
 
 The server renders initial HTML by **executing the generated client module**
 against jsdom and serializing the reactive graph's initial state. The client
-stays ground truth and corrects at connect. The driver lives in `sim/`:
+stays ground truth and corrects at connect. The driver lives in `sim/`,
+behind the seam in `simulation/` (ADR 0035 s3–s4): the compiler programs
+against `contract.ts` — `(markup, component, locale, options) → (html,
+diagnostics)`, no `window`, `Document` or substrate type crossing — and
+reaches the driver through `resolve.ts`, whose specifier is a variable so
+the typechecker never follows it into jsdom. Activation is installation.
 
-- **`patch-table.ts`** — declarative substrate data: real DOM constructors
-  forced from the jsdom window, inert stubs for absent APIs
-  (`ResizeObserver`, `matchMedia`, …), network globals replaced with
+- **`patch-table.ts`** — declarative substrate data, the applier's half:
+  real DOM constructors forced from the jsdom window, inert stubs for absent
+  APIs (`ResizeObserver`, `matchMedia`, …), network globals replaced with
   never-settling no-ops (a build can never depend on the network; a fetching
-  component stays on its pending arm). `CAPABILITY_PATCHES` feeds the tier
-  classifier (never applied): `attachInternals()` is left alone so jsdom's
-  skeletal internals reaches the library and `bindAria()` can bind the
-  attribute the served HTML carries, while its members are classified
-  unanswerable. Also the second conjunct of the tier classifier (§ 5.2).
+  component stays on its pending arm). The classifier's half —
+  `UNANSWERABLE_GLOBALS` and `CAPABILITY_PATCHES`, the second conjunct of
+  the tier classifier (§ 5.2) — is compiler-side in
+  `simulation/capabilities.ts`; `attachInternals()` is left alone there so
+  jsdom's skeletal internals reaches the library and `bindAria()` can bind
+  the attribute the served HTML carries, while its members are classified
+  unanswerable.
 - **`realm.ts`** — `createSimulationRealm`: loads the client module with a
   recording `customElements`, parses the SSR'd markup, replays the
   definitions so the upgrade runs, serializes. It seeds the simulated
@@ -584,9 +596,19 @@ stays ground truth and corrects at connect. The driver lives in `sim/`:
   window performs no IO and advances no timers, draining microtasks to a
   bounded quiescence, so the compiler — not microtask timing — decides which
   async-boundary arm ships.
-- **`report.ts`** — turns realm diagnostics into the build report (contained
-  throws, network attempts, console errors become build warnings attributed
-  to the component), and carries the **tier census** (§ 6).
+- **`classifications.ts`** — the standing notices jsdom is known to emit,
+  published to the report channel through the provider. Which notices a
+  substrate emits is a fact about that substrate, so the registry travels
+  with the driver while the channel does not.
+- **`index.ts`** — the provider: `seamVersion`, `substrate`,
+  `classifications`, `createSimulationRealm`. The only export the compiler
+  reaches, and it reaches it through `simulation/resolve.ts`.
+
+The report CHANNEL is compiler-side — `build-report.ts` turns realm
+diagnostics into build warnings attributed to the component (contained
+throws, network attempts, console errors), and `census.ts` carries the
+**tier census** (§ 6). Both moved out of `sim/` with the seam (ADR 0035 s3):
+neither was simulation, and a build with no substrate still needs them.
 
 Two gates make simulation safe to ship: **connect must be a fixed point**
 (the driver runs the connect pass twice and requires byte-identical
@@ -747,7 +769,7 @@ warnings are all genuinely author-fixable again. The tier census is a
 separate, non-zero, expected-to-grow record with its own regression story — a
 component drifting from the Folded tier to the Simulated tier is a build-cost regression worth
 seeing, and it is now visible without being miscast as a warning. The census
-rides the build-report channel (`server/compiler/sim/report.ts`'s generic
+rides the build-report channel (`server/compiler/census.ts`'s generic
 `Census` records via `tierCensus`/`formatCensus`), and `check:tsrx` prints it
 as its own section after the compile-warning baseline.
 

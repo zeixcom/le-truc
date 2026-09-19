@@ -30,20 +30,20 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Glob } from 'bun'
-import { collectI18n } from '../server/effects/i18n'
-import { compileTsrxCorpus, GENERATED_DIR } from '../server/effects/tsrx'
-import type { ComponentRegistry } from '../server/compiler/registry'
 import {
 	formatCensus,
 	tierCensus,
 	translationCensus,
-} from '../server/compiler/sim/report'
+} from '../server/compiler/census'
+import type { ComponentRegistry } from '../server/compiler/registry'
 import {
 	fileLineColToOffset,
 	fileOffsetToLineCol,
 	findSpanForGeneratedOffset,
 	type SourceSpan,
 } from '../server/compiler/spans'
+import { collectI18n } from '../server/effects/i18n'
+import { compileTsrxCorpus, GENERATED_DIR } from '../server/effects/tsrx'
 
 const ROOT = resolve(import.meta.dir, '..')
 

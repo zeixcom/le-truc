@@ -49,17 +49,14 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { cpSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { formatSimReport, reportDiagnostics } from '../../compiler/build-report'
+import { tierCensus } from '../../compiler/census'
 import type { ComponentRegistry } from '../../compiler/registry'
+import { CLASSIFIED_DIAGNOSTICS } from '../../compiler/sim/classifications'
 import {
 	createSimulationRealm,
-	type SimulationRealm,
+	type JsdomSimulationRealm,
 } from '../../compiler/sim/realm'
-import {
-	CLASSIFIED_DIAGNOSTICS,
-	formatSimReport,
-	reportDiagnostics,
-	tierCensus,
-} from '../../compiler/sim/report'
 import { compileTsrxCorpus } from '../../effects/tsrx'
 import { createGeneratedDir } from '../helpers/generated-tsrx'
 // LT-165 step 8: the args table and the tag→render-fn mapping moved to
@@ -115,10 +112,11 @@ const serverMarkupOf = async (info: CompiledInfo): Promise<string> => {
 
 /** Parse `markup` into the realm and simulate one connect pass over it. */
 const simulateConnect = (
-	r: SimulationRealm,
+	r: JsdomSimulationRealm,
 	info: CompiledInfo,
 	markup: string,
-): Promise<string> => r.render({ markup, component: info.tag })
+): Promise<string> =>
+	r.render({ markup, component: info.tag }).then(result => result.html)
 
 describe('stage-1 server-simulation driver — corpus fixtures (LT-154)', () => {
 	test('every corpus component was loaded exactly once', () => {
@@ -168,11 +166,12 @@ describe('quiescence is hermetic (sub-design 9) — no build warning on the stan
 
 describe('build-report baseline (LT-163) — the wave-4 regression signal', () => {
 	test('zero unclassified build-report warnings on the corpus', () => {
-		const report = reportDiagnostics(realm.diagnostics)
+		const report = reportDiagnostics(realm.diagnostics, CLASSIFIED_DIAGNOSTICS)
 		if (report.unclassified.length > 0)
 			throw new Error(
 				'New build-report warnings on the corpus — fix the component, or ' +
-					'classify the entry with a reason in server/compiler/sim/report.ts:\n' +
+					'classify the entry with a reason in\n' +
+					'server/compiler/sim/classifications.ts:\n' +
 					formatSimReport(report),
 			)
 	})
@@ -180,8 +179,8 @@ describe('build-report baseline (LT-163) — the wave-4 regression signal', () =
 	test('every classification still matches a standing entry', () => {
 		// A classification that admits nothing is a dead allowlist entry: the
 		// diagnostic it classified was fixed, so retire the classification
-		// with it (recorded, not silenced — report.ts).
-		const report = reportDiagnostics(realm.diagnostics)
+		// with it (recorded, not silenced — build-report.ts).
+		const report = reportDiagnostics(realm.diagnostics, CLASSIFIED_DIAGNOSTICS)
 		for (const classification of CLASSIFIED_DIAGNOSTICS) {
 			const used = report.classified.some(
 				entry => entry.classification === classification,
@@ -196,7 +195,7 @@ describe('build-report baseline (LT-163) — the wave-4 regression signal', () =
 	})
 
 	test('classified entries are listed with their reason, not silenced', () => {
-		const report = reportDiagnostics(realm.diagnostics)
+		const report = reportDiagnostics(realm.diagnostics, CLASSIFIED_DIAGNOSTICS)
 		for (const { classification } of report.classified)
 			expect(formatSimReport(report)).toContain(classification.reason)
 	})
@@ -214,7 +213,7 @@ describe('build-report baseline (LT-163) — the wave-4 regression signal', () =
 				expect(CLASSIFIED_DIAGNOSTICS.some(c => c.message.test(reason))).toBe(
 					false,
 				)
-		const report = reportDiagnostics(realm.diagnostics)
+		const report = reportDiagnostics(realm.diagnostics, CLASSIFIED_DIAGNOSTICS)
 		expect(report.unclassified).toEqual([])
 	})
 })

@@ -1,0 +1,43 @@
+{
+	// The no-substrate program (ADR 0035 sub-design 3, LT-263).
+	//
+	// ADR 0034 sub-design 5 makes jsdom an OPTIONAL peer dependency: a
+	// consumer who does not want the Simulated tier does not install it, and
+	// the compiler must still classify, report and TYPECHECK. This program is
+	// that promise made checkable — everything the compiler ships except the
+	// driver, with no path that resolves `jsdom`.
+	//
+	// `bun run check:nosubstrate`. It has teeth only when jsdom AND
+	// @types/jsdom are genuinely absent — with them installed, a stray import
+	// of the driver still resolves. Verified 2026-09-19 both ways: clean with
+	// both packages removed, and failing with `TS2307: Cannot find module
+	// 'jsdom'` the moment a compiler-side module imports `./sim/realm.ts`.
+	// The same invariant is guarded with jsdom present by
+	// `server/tests/compiler/simulation-seam.test.ts`, which reads the import
+	// edges directly. A failure here names the edge;
+	// `simulation/contract.ts` is where it belongs instead.
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"tsBuildInfoFile": "./.nosubstrate.tsbuildinfo",
+	},
+	"include": [
+		"./index.ts",
+		"./src/**/*.ts",
+		"./server/compiler/**/*.ts",
+		"./server/effects/**/*.ts",
+		"./server/*.ts",
+		"./scripts/check-tsrx.ts",
+	],
+	"exclude": [
+		"node_modules",
+		"docs",
+		"types",
+		"server/compiler/frontend/tsx/host-profile.d.ts",
+		"server/generated",
+		// The driver and its jsdom-aware scripts. Present in the published
+		// package (the `@zeix/le-truc-simulation` split is deferred — ADR 0035
+		// sub-design 4), but never on a path the compiler's own types reach:
+		// `simulation/resolve.ts` loads it through an opaque specifier.
+		"server/compiler/sim",
+	],
+}
