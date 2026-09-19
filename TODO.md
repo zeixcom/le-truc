@@ -127,7 +127,7 @@ then the number has a stake in it.
     codes carried that name. The amendment states the mechanical re-point, which is what a
     reader needs.
 
-- [ ] LT-272: Propagate the `LTC###` rename into the skill files, and state the two-prefix rule where the namespace lives.
+- [x] LT-272: Propagate the `LTC###` rename into the skill files, and state the two-prefix rule where the namespace lives. — **done, pending review ⏳** (message copy in `server/` touched).
   **Skill:** tech-writer
   **Context:** Discharges the blocked handoff from LT-271 (ledger:
   [`server/compiler/VOCABULARY_LEDGER.md`](server/compiler/VOCABULARY_LEDGER.md); ruling
@@ -180,6 +180,31 @@ then the number has a stake in it.
   `LTC047`–`LTC050`; `bun run check:links` green; no source logic touched — `bun test
   server/tests` and `bun run check:corpus` unmoved (census 20 folded / 2 simulated / 0
   static, warning baseline 0).
+  **Landed 2026-09-19 — PENDING REVIEW.**
+  **Changed:** all four deliverable files. `errors.md` — every renamed code re-prefixed;
+  tier-table cell, compiler-diagnostics intro and the Retired idioms paragraph now state
+  the two-prefix rule and why the kept family alone keeps `TSRX` (ledger pointer
+  included); new rows for `LTC047`–`LTC050` (Template structure / Source shape and
+  imports). `non-obvious.md` — `LTC012`. `error-message-lifecycle.md` — `LTC031`, the
+  generic `TSRX0NN`/`TSRX` mentions de-TSRX'd, a new *Which prefix a new code gets*
+  section, and a prefix step in the new-error event. `server/compiler/diagnostics.ts` —
+  module doc rewritten surface-neutral ("the Le Truc component compiler") with the
+  two-prefix rule and the ledger pointer.
+  **How:** two copy fixes went beyond pure propagation, both message-string-only, no
+  logic: `LTC049`'s grammar ("not FactoryContext member(s)" → "not FactoryContext
+  vocabulary"; the parity test asserts only the `` `grimoire` `` fragment, which is
+  untouched), and `LTC011`'s message/JSDoc/union comment still said
+  ``import … from '….tsrx'`` while `server/compiler/imports.ts` resolves `.tsx`
+  specifiers too (LT-202) — now "a `.tsrx` or `.tsx` module"; no test asserts the old
+  fragment.
+  **Check:** `grep TSRX0[0-9][0-9] .agents/` yields only the six kept codes;
+  `check:links` 504/504; `bun test server/tests` 1637 pass / 0 fail with **1 pre-existing
+  unhandled error** (tier-corpus census block, `registry` read at describe-body scope
+  before `beforeAll` assigns it — proven identical on pristine `diagnostics.ts` via
+  stash; the ledger's 1602/13 baseline was sandbox port-bind failures that do not
+  reproduce here); `check:corpus` baseline unmoved (same 5 spinbutton TS2552s, warning
+  baseline 0, census 20/2/0); `tsc -p tsconfig.json --noEmit` clean; biome clean on
+  `diagnostics.ts`.
 
 - [ ] LT-255: Generalize the corpus scan — glob the consumer's components, not `examples/`.
   **Skill:** le-truc-dev

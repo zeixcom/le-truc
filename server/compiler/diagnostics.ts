@@ -1,11 +1,20 @@
 /**
- * Compile diagnostics for the inlined TSRX compiler (ADR 0023).
+ * Compile diagnostics for the Le Truc component compiler (ADR 0023).
  *
  * Diagnostics are the compiler's product surface: a wrong rewrite is a wrong
  * component, so every rule that cannot be applied reports a code, a message,
  * and — where the author can act on it — a suggested fix. `severity` decides
  * how the build effect treats a file (see effects/compile.ts): errors fail the
  * build, known milestone gates warn and skip the file.
+ *
+ * The `DiagnosticCode` union carries two prefixes, split by ownership (ADR
+ * 0028 sub-design 1, as amended 2026-09-19): rules the shared machinery emits
+ * on both authored surfaces are `LTC###`; the six `TSRX###` codes diagnose
+ * `.tsrx` grammar specifically — the React idioms they guard against are
+ * `.tsx`'s correct spellings, so those rules cannot be compiler-wide. The
+ * number spaces do not overlap and the union stays one type. A new code is
+ * `LTC###` unless the rule is specific to `.tsrx` grammar. Full disposition:
+ * `VOCABULARY_LEDGER.md` beside this file.
  */
 
 /* === Types === */
@@ -23,7 +32,7 @@ export type DiagnosticCode =
 	| 'LTC008' // source shape violation (root tag, exports, style placement)
 	| 'LTC009' // invalid `export const config` extension declaration
 	| 'LTC010' // managed form prop used without formAssociated
-	| 'LTC011' // composed (PascalCase) element with no resolvable .tsrx import
+	| 'LTC011' // composed (PascalCase) element with no resolvable .tsrx/.tsx import
 	| 'LTC012' // pass={{ }}/reactive dispatch legality on a custom-element target, incl. per-prop Slot-backedness (LT-158)
 	// ('LTC013' is spent: retired as an emitted code at LT-165 step 5 — its
 	// two server-evaluation factories became routing signals, the other two
@@ -226,9 +235,9 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A capitalized JSX tag with no matching `import { Name } from '….tsrx'`
-	 * (ADR 0023 sub-design 10) — composition resolves by import, never falls
-	 * back to raw custom-element treatment.
+	 * A capitalized JSX tag with no matching component import (`'….tsrx'` or
+	 * `'….tsx'`; ADR 0023 sub-design 10) — composition resolves by import,
+	 * never falls back to raw custom-element treatment.
 	 */
 	unresolvedComposedComponent: (
 		source: string,
@@ -237,7 +246,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC011',
-			`\`<${name}>\` has no matching \`import { ${name} } from '….tsrx'\` — composed (capitalized) tags must import the component they compose (ADR 0023 sub-design 10). A lowercase dashed tag addresses a raw custom element instead.`,
+			`\`<${name}>\` has no matching \`import { ${name} }\` of a \`.tsrx\` or \`.tsx\` module — composed (capitalized) tags must import the component they compose (ADR 0023 sub-design 10). A lowercase dashed tag addresses a raw custom element instead.`,
 			lineOf(source, offset),
 		),
 
@@ -1179,7 +1188,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC049',
-			`The factory context parameter destructures ${bad.map(b => `\`${b}\``).join(', ')}, which ${bad.length === 1 ? 'is' : 'are'} not FactoryContext member${bad.length === 1 ? '' : 's'} — destructure only \`host\`, \`first\`, \`all\`, \`expose\`, \`watch\`, \`on\`, \`pass\`, \`internals\`, \`requestContext\`, and \`provideContexts\`, e.g. \`, { host, expose }: FactoryContext<MyProps>\`.`,
+			`The factory context parameter destructures ${bad.map(b => `\`${b}\``).join(', ')}, which ${bad.length === 1 ? 'is' : 'are'} not FactoryContext vocabulary — destructure only \`host\`, \`first\`, \`all\`, \`expose\`, \`watch\`, \`on\`, \`pass\`, \`internals\`, \`requestContext\`, and \`provideContexts\`, e.g. \`, { host, expose }: FactoryContext<MyProps>\`.`,
 		),
 
 	/**

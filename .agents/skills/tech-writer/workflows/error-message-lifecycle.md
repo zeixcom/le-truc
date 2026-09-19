@@ -1,6 +1,6 @@
 # Error Message Lifecycle Workflow
 
-**Use when:** an error class in `src/errors.ts` or a `TSRX0NN` code in `server/compiler/diagnostics.ts` is added, reworded, or removed — or when the two lists need a consistency pass.
+**Use when:** an error class in `src/errors.ts` or a diagnostic code in `server/compiler/diagnostics.ts` (`LTC###`, or `TSRX###` for a `.tsrx`-grammar rule) is added, reworded, or removed — or when the two lists need a consistency pass.
 
 **Ownership:** developers own the *condition* that fires an error; Tech Writer owns the *copy*. A developer writes a first-draft message with the condition; this workflow turns it into final copy and propagates it. See `.agents/skills/le-truc-dev/SKILL.md` and `.agents/skills/architect/SKILL.md` for the handoff triggers.
 
@@ -24,9 +24,9 @@ Where the fix genuinely depends on information the builder does not have, name t
 
 ### 2. Name the paired rule
 
-A runtime message whose condition has a compiler rule **must not name that rule's code**. TSRX is not the only way to author Le Truc components, and for a no-build setup the compiler message would be non-actionable noise. Instead, [errors.md](../../le-truc/references/errors.md) in Le Truc skills a tells agents that hit the backstop about the TSRX compiler check upstream (ADR 0028 sub-design 1 — the runtime is a backstop, not the notification).
+A runtime message whose condition has a compiler rule **must not name that rule's code**. The compiler is not the only way to author Le Truc components — hand-authored, no-build setups exist — and a compiler code would be non-actionable noise there. Instead, [errors.md](../../le-truc/references/errors.md) tells agents that hit the backstop about the compiler check upstream (ADR 0028 sub-design 1 — the runtime is a backstop, not the notification).
 
-The reverse cross-reference belongs on the compiler side: a `TSRX0NN` message whose condition also throws at connect names the runtime error class.
+The reverse cross-reference belongs on the compiler side: a compiler message whose condition also throws at connect names the runtime error class.
 
 ### 3. Do not imply a Tier 2 failure broke the page
 
@@ -40,15 +40,27 @@ Message shape: a sentence stating the condition, an em-dash clause for the mecha
 
 ---
 
+## Which prefix a new code gets
+
+The `DiagnosticCode` union carries two prefixes, split by ownership ([ADR 0028](../../../../adr/0028-tiered-error-surfacing.md) sub-design 1, as amended 2026-09-19; full disposition in `server/compiler/VOCABULARY_LEDGER.md`):
+
+- **`LTC###` — the default.** Every rule the shared machinery emits on both authored surfaces.
+- **`TSRX###` — the exception.** Only for a rule specific to `.tsrx` grammar with no `.tsx` counterpart. Today that is exactly `TSRX018`, `TSRX020` and `TSRX021`–`TSRX024`: the React idioms they guard against are `.tsx`'s *correct* spellings ([ADR 0032](../../../../adr/0032-adopt-tsx-as-the-authored-component-surface.md) s6), so those rules cannot be compiler-wide, and none of them is in the published package.
+
+The number spaces do not overlap; both prefixes live in the one union. New codes are `LTC###` unless the rule is specific to `.tsrx` grammar — do not re-litigate the split per code; the ledger records the reasoning.
+
+---
+
 ## Event: a new error
 
 **Trigger:** a developer adds a class to `src/errors.ts` or a code to `server/compiler/diagnostics.ts`.
 
 1. **Confirm the tier is recorded.** The Architect decides the tier at task-writing time; if the task does not say, ask before writing copy — the tier decides the wording.
-2. **Confirm the channel.** If the condition is statically decidable and the new error is a runtime class, ADR 0028 sub-design 1 obliges a `TSRX` rule too. Flag its absence rather than writing a message that pretends the compiler covers it.
-3. Write the message to the four criteria above.
-4. Write or extend the JSDoc on the builder: the mechanism, the tier, and the paired channel.
-5. Propagate (checklist below).
+2. **Pick the prefix.** `LTC###` unless the rule is specific to `.tsrx` grammar — see *Which prefix a new code gets* above.
+3. **Confirm the channel.** If the condition is statically decidable and the new error is a runtime class, ADR 0028 sub-design 1 obliges a compiler rule too. Flag its absence rather than writing a message that pretends the compiler covers it.
+4. Write the message to the four criteria above.
+5. Write or extend the JSDoc on the builder: the mechanism, the tier, and the paired channel.
+6. Propagate (checklist below).
 
 ## Event: a revised message
 
@@ -62,7 +74,7 @@ Message shape: a sentence stating the condition, an em-dash clause for the mecha
 
 **Trigger:** a class is deleted, or a rule stops being emitted.
 
-1. Search the whole repo for the name or code, not just the source file. A retired code often survives in a union type with no builder behind it — `TSRX031` was exactly this. Mark it retired in the union comment rather than deleting the member silently, so the next reader knows the number is spent.
+1. Search the whole repo for the name or code, not just the source file. A retired code often survives in a union type with no builder behind it — `LTC031` was exactly this. Mark it retired in the union comment rather than deleting the member silently, so the next reader knows the number is spent.
 2. Remove its row from `references/errors.md`, or mark it retired if authors may still meet it in an older build.
 3. Propagate (checklist below), including the ADR that decided the retirement.
 
@@ -71,7 +83,7 @@ Message shape: a sentence stating the condition, an em-dash clause for the mecha
 **Trigger:** after a batch of error work, or when the two lists have drifted.
 
 1. Read both lists end to end in one sitting. Drift is only visible in aggregate: the two channels evolved independently, and it showed as compiler messages naming the fix inline while runtime messages stated the condition and stopped.
-2. Check every runtime class against the ADR 0028 inventory table. Every row must name a channel that exists — no `TSRX` code that no builder emits, no ✅ for a rule that was never written.
+2. Check every runtime class against the ADR 0028 inventory table. Every row must name a channel that exists — no code that no builder emits, no ✅ for a rule that was never written.
 3. Check every message for part 3.
 4. Check every Tier 2 message against criterion 3.
 5. Record anything you cannot fix as copy — a missing rule, a builder that cannot name its site — as a `BACKLOG.md` task for the owning skill, not as a hedge in the message.
@@ -93,7 +105,7 @@ An error message has more downstream copies than any other string in the project
 | `docs-src/api/classes/*.md` | **Generated.** Never hand-edit — regenerate with `bun run build:docs` after the JSDoc change |
 | **Message-substring tests** | See below — these fail the build, so find them first |
 | `adr/0028-tiered-error-surfacing.md` | The inventory table, if the channel or tier changed. Use the `adr-keeper` skill |
-| `server/compiler/LE_TRUC_COMPILER.md` | The diagnostic inventory, for a new or retired `TSRX` code |
+| `server/compiler/LE_TRUC_COMPILER.md` | The diagnostic inventory, for a new or retired code |
 | `CHANGELOG.md` | A user-visible message change is a change. Use the `changelog-keeper` skill |
 
 ### Message-substring tests
