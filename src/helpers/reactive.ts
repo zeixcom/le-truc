@@ -45,13 +45,13 @@ import { bindFirst, type FirstElement } from './dom'
  * `each`, and `reconcile`.
  *
  * A `Reactive<T, P>` source is a property name, a `Signal`, or a thunk
- * wrapped in `deriveCell()`. `watch()` and `pass()` resolve sources through
- * `toSignal()`.
+ * wrapped in `deriveCell()`. `watch()` resolves sources through `toSignal()`;
+ * `pass()` resolves its entries through `toPassedSignal()` (thunk and slot
+ * descriptor forms only).
  *
- * `pass()` accepts a read-only thunk, a mediated `{ get, set }` descriptor, a
- * bare property name, or a bare writable `Signal`. Prefer the thunk or
- * descriptor form; the last two hand the child unrestricted `.set()` on the
- * parent's signal (ADR-0012) and warn in DEV_MODE.
+ * `pass()` accepts a read-only thunk or a mediated `{ get, set }` descriptor
+ * (ADR-0012) — the retired property-key and bare-signal short forms were
+ * removed in v3.0 and fail the eager validation.
  *
  * `watch()`, `pass()`, `each()`, and `reconcile()` push an `EffectDescriptor`
  * into the active ambient collector and do not require an explicit `return`
@@ -61,7 +61,7 @@ import { bindFirst, type FirstElement } from './dom'
 /* === Types === */
 
 /**
- * A reactive value that drives a DOM update or a slot injection.
+ * A reactive value that drives a DOM update.
  *
  * Accepts three forms:
  * - `keyof P` — a host property name; reads `host[name]` and registers it
@@ -119,13 +119,20 @@ type ResolvedReactiveSignals<
 /**
  * Map of child component property names to the reactive values `pass()` injects into them.
  *
+ * Since v3.0 (ADR-0012 removal) each entry accepts exactly two forms: a
+ * thunk (`() => host.<prop>`, read-only) or a `{ get, set }` slot descriptor
+ * (mediated writes). The retired property-key and bare-signal short forms
+ * fail `pass()`'s eager validation.
+ *
  * `Q` is bound to `HTMLElement`, not `ComponentProps`, because native
  * members on a target's element type (e.g. `form: HTMLFormElement | null`)
  * fail a `Record<string, {}>`-style constraint. `keyof Q & ComponentProp`
  * filters to the author-exposed reactive props instead.
  */
-type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
-	[K in keyof Q & ComponentProp]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>
+type PassedProps<Q extends HTMLElement> = {
+	[K in keyof Q & ComponentProp]?:
+		| (() => Q[K] | Promise<Q[K]> | null | undefined)
+		| SlotDescriptor<Q[K] & {}>
 }
 
 /**
@@ -184,14 +191,14 @@ type WatchHelper<P extends ComponentProps> = {
  * signals. Supports a single element or a `Signal<Element[]>` target, with
  * per-element lifecycle for the latter.
  */
-type PassHelper<P extends ComponentProps> = {
+type PassHelper = {
 	<Q extends HTMLElement>(
 		target: Q | Falsy,
-		props: PassedProps<P, Q>,
+		props: PassedProps<Q>,
 	): EffectDescriptor
 	<Q extends HTMLElement>(
 		target: Signal<Q[]> | Falsy,
-		props: PassedProps<P, Q>,
+		props: PassedProps<Q>,
 	): EffectDescriptor
 }
 
@@ -329,6 +336,25 @@ const toSignal = <T extends {}, P extends ComponentProps>(
 	}
 	if (isSlotDescriptor(source)) return source as SlotDescriptor<T>
 	return source as Signal<T>
+}
+
+/**
+ * Resolve a `pass()` entry to its signal — the thunk and `{ get, set }` slot
+ * descriptor forms only (ADR-0012). Anything else, including the retired
+ * property-key and bare-signal short forms, resolves to `undefined` so the
+ * eager validation reports the entry (ADR 0011) instead of swapping it in
+ * silently. A thunk wraps in `deriveCell` exactly as `toSignal` does; an
+ * async thunk becomes a `Task` signal.
+ *
+ * @param reactive - Thunk or slot descriptor to resolve
+ * @returns Resolved signal or slot descriptor, or `undefined` for a retired or invalid form
+ */
+const toPassedSignal = <T extends {}>(
+	reactive: unknown,
+): Signal<T> | SlotDescriptor<T> | undefined => {
+	if (isSlotDescriptor(reactive)) return reactive as SlotDescriptor<T>
+	if (isFunction(reactive)) return deriveCell(reactive as () => T)
+	return undefined
 }
 
 /* === Exported Functions === */
@@ -472,11 +498,14 @@ const makeWatch = <P extends ComponentProps>(
  * restores signals per element as it enters and leaves the collection.
  *
  * ```ts
- * // deprecated — child can write freely
- * pass(child, { value: parentSignal })
- * // preferred — child writes are mediated by the parent
- * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
+ * // read-only — the child observes the parent's value
+ * pass(child, { value: () => host.value })
+ * // mediated — child writes route through the parent's setter
+ * pass(child, { value: { get: parentState.get, set: parentState.set } })
  * ```
+ *
+ * The property-key and bare-signal short forms were removed in v3.0
+ * (ADR-0012); a retired form fails the eager validation (ADR 0011).
  *
  * @since 2.0
  * @param host - The component host element
@@ -484,11 +513,11 @@ const makeWatch = <P extends ComponentProps>(
  */
 const makePass = <P extends ComponentProps>(
 	host: HTMLElement & P,
-): PassHelper<P> => {
+): PassHelper => {
 	/** Perform the slot-swap for a single target element. */
 	const swapSlots = <Q extends HTMLElement>(
 		target: Q,
-		props: PassedProps<P, Q>,
+		props: PassedProps<Q>,
 	): (() => void) | undefined =>
 		createScope(() => {
 			if (!isCustomElement(target))
@@ -516,29 +545,13 @@ const makePass = <P extends ComponentProps>(
 					continue
 				}
 
-				const signal = toSignal(host, reactive)
+				const signal = toPassedSignal<unknown & {}>(reactive)
 				if (!signal) {
-					failures.set(prop, 'could not be resolved to a signal')
-					continue
-				}
-
-				// ADR-0012: the property-key and bare-writable-signal short forms
-				// hand the child unrestricted `.set()` on the parent's signal —
-				// warn in DEV_MODE. A branded CE signal (`Symbol.toStringTag`)
-				// exposing both `get` and `set` is one of CE's mutable signal
-				// types; a mediated `{ get, set }` descriptor is unbranded and
-				// correctly does not match.
-				if (
-					process.env.DEV_MODE === 'true' &&
-					signal &&
-					typeof signal === 'object' &&
-					Symbol.toStringTag in signal &&
-					'get' in signal &&
-					'set' in signal
-				) {
-					console.warn(
-						`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`,
+					failures.set(
+						prop,
+						'could not be resolved to a signal — pass() accepts a thunk () => … for read-only access or a { get, set } descriptor to mediate writes (ADR 0012)',
 					)
+					continue
 				}
 
 				const slot = signals[prop]
@@ -569,16 +582,16 @@ const makePass = <P extends ComponentProps>(
 
 	/**
 	 * Resolve every entry in `props` to its current value, for logging in
-	 * DEV_MODE. A prop that fails to resolve logs the raw reactive instead.
+	 * DEV_MODE. An entry in a retired or invalid form logs the raw reactive.
 	 */
 	const resolvePassedValues = <Q extends HTMLElement>(
-		props: PassedProps<P, Q>,
+		props: PassedProps<Q>,
 	): Record<string, unknown> => {
 		const resolved: Record<string, unknown> = {}
 		for (const [prop, reactive] of Object.entries(props)) {
 			if (reactive == null) continue
 			try {
-				const signal = toSignal(host, reactive as Reactive<unknown, P>)
+				const signal = toPassedSignal(reactive)
 				resolved[prop] =
 					signal && typeof signal === 'object' && 'get' in signal
 						? (signal as { get: () => unknown }).get()
@@ -592,15 +605,15 @@ const makePass = <P extends ComponentProps>(
 
 	function pass<Q extends HTMLElement>(
 		target: Q | Falsy,
-		props: PassedProps<P, Q>,
+		props: PassedProps<Q>,
 	): EffectDescriptor
 	function pass<Q extends HTMLElement>(
 		target: Signal<Q[]> | Falsy,
-		props: PassedProps<P, Q>,
+		props: PassedProps<Q>,
 	): EffectDescriptor
 	function pass<Q extends HTMLElement>(
 		target: Q | Signal<Q[]> | Falsy,
-		props: PassedProps<P, Q>,
+		props: PassedProps<Q>,
 	): EffectDescriptor {
 		const descriptor: EffectDescriptor = () => {
 			if (!target) return

@@ -2888,6 +2888,13 @@ var toSignal = (host, source) => {
     return source;
   return source;
 };
+var toPassedSignal = (reactive) => {
+  if (isSlotDescriptor(reactive))
+    return reactive;
+  if (isFunction(reactive))
+    return deriveCell(reactive);
+  return;
+};
 var makeWatch = (host) => {
   function watch(source, handlerOrHandlers) {
     const descriptor = () => {
@@ -2934,12 +2941,11 @@ var makePass = (host) => {
         failures.set(prop, `is not a property of ${targetName}`);
         continue;
       }
-      const signal = toSignal(host, reactive);
+      const signal = toPassedSignal(reactive);
       if (!signal) {
-        failures.set(prop, "could not be resolved to a signal");
+        failures.set(prop, "could not be resolved to a signal — pass() accepts a thunk () => … for read-only access or a { get, set } descriptor to mediate writes (ADR 0012)");
         continue;
       }
-      if (false) {}
       const slot = signals[prop];
       if (!isSlot(slot)) {
         failures.set(prop, `is not Slot-backed on ${targetName} (exposed read-only, or it is not a Le Truc component)`);
@@ -2966,7 +2972,7 @@ var makePass = (host) => {
       if (reactive == null)
         continue;
       try {
-        const signal = toSignal(host, reactive);
+        const signal = toPassedSignal(reactive);
         resolved[prop] = signal && typeof signal === "object" && "get" in signal ? signal.get() : reactive;
       } catch {
         resolved[prop] = reactive;

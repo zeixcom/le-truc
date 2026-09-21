@@ -164,7 +164,7 @@ type FactoryContext<P extends ComponentProps> = ElementQueries & {
 	expose: (props: Initializers<P>) => void
 	watch: WatchHelper<P>
 	on: OnHelper<P>
-	pass: PassHelper<P>
+	pass: PassHelper
 	provideContexts: ProvideContextsHelper<P>
 	requestContext: RequestContextHelper
 }

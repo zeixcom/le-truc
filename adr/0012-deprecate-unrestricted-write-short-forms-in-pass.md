@@ -6,6 +6,8 @@
 
 Implemented in 2.2.0: the DEV_MODE deprecation warning ships in `src/helpers/reactive.ts` (`swapSlots`), JSDoc on `pass()` and `PassedProps` documents the deprecation, all examples are migrated to thunk/descriptor forms, and the CHANGELOG 2.2.0 Deprecated entry records it (merged as PR #57). Removal of the short forms is scheduled for the next major.
 
+**Removal landed (v3.0, LT-178):** the property-key and bare-signal forms are gone from the types and the runtime — a thunk or a `{ get, set }` descriptor is the only accepted input, including for read-only signals, which 2.x admitted bare without a warning. A retired form fails `pass()`'s eager validation ([ADR 0011](0011-throw-on-pass-binding-failure.md)) naming the prop and the accepted forms; the DEV_MODE warning is retired with the forms it flagged (a check retired, none added). `PassedProps`/`PassHelper` lost their parent-props type parameter, which only existed to type the property-key form.
+
 ## Context
 
 `pass(target, props)` swaps a child component's Slot-backed signal for one supplied by the parent (see [ADR-0004](0004-slot-based-signal-swapping-for-inter-component-binding.md)). Today each entry in `props` accepts four input forms: a **property key** (`'value'`) and a **bare writable signal** (`someState`) both resolve to the parent's writable signal and grant the child unrestricted `.set()` access; the **thunk** (`() => host.value`) and **descriptor** (`{ get, set }`) forms keep the parent in control of writes. The first two are the "short forms."

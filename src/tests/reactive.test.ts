@@ -18,6 +18,8 @@ import {
 	createState,
 	createTask,
 } from '@zeix/cause-effect'
+import { InvalidPassPropertyError } from '../errors'
+import type { PassedProps } from '../helpers/reactive'
 import { activateResult, each, makePass, makeWatch } from '../helpers/reactive'
 import {
 	getSignals,
@@ -599,7 +601,7 @@ describe('makePass', () => {
 })
 
 describe('makePass — real slot swap and restore', () => {
-	test('swaps a Slot-backed property to the host signal, and restores the original on cleanup', () => {
+	test('swaps a Slot-backed property to a mediated descriptor of the host signal, and restores the original on cleanup', () => {
 		const hostState = createState('host-value')
 		const targetState = createState('original-value')
 		const host = { greeting: hostState } as unknown as HTMLElement &
@@ -612,7 +614,9 @@ describe('makePass — real slot swap and restore', () => {
 		Object.defineProperty(target, 'greeting', slot)
 
 		const pass = makePass(host)
-		const descriptor = pass(target, { greeting: hostState })
+		const descriptor = pass(target, {
+			greeting: { get: hostState.get, set: hostState.set },
+		})
 
 		const cleanup = createScope(() => descriptor())
 		expect((target as any).greeting).toBe('host-value')
@@ -631,7 +635,9 @@ describe('makePass — real slot swap and restore', () => {
 		} as unknown as HTMLElement & ComponentProps
 
 		const pass = makePass(host)
-		const descriptor = pass(target, { greeting: hostState })
+		const descriptor = pass(target, {
+			greeting: { get: hostState.get, set: hostState.set },
+		})
 
 		// No Slot was registered for 'greeting' — e.g. a non-Le-Truc custom element,
 		// or a read-only/computed Le Truc prop (see ADR 0011).
@@ -648,7 +654,9 @@ describe('makePass — real slot swap and restore', () => {
 			ComponentProps
 
 		const pass = makePass(host)
-		const descriptor = pass(target, { greeting: hostState })
+		const descriptor = pass(target, {
+			greeting: { get: hostState.get, set: hostState.set },
+		})
 
 		expect(() => createScope(() => descriptor())).toThrow(/'greeting'/)
 	})
@@ -667,8 +675,8 @@ describe('makePass — real slot swap and restore', () => {
 		const pass = makePass(host)
 		// 'greeting' is not Slot-backed; 'farewell' does not exist on target at all.
 		const descriptor = pass(target, {
-			greeting: hostState,
-			farewell: hostState,
+			greeting: { get: hostState.get, set: hostState.set },
+			farewell: { get: hostState.get, set: hostState.set },
 		})
 
 		let error: unknown
@@ -701,8 +709,8 @@ describe('makePass — real slot swap and restore', () => {
 
 		const pass = makePass(host)
 		const descriptor = pass(target, {
-			greeting: hostGreeting,
-			farewell: hostFarewell,
+			greeting: { get: hostGreeting.get, set: hostGreeting.set },
+			farewell: { get: hostFarewell.get, set: hostFarewell.set },
 		})
 
 		expect(() => createScope(() => descriptor())).toThrow(/'farewell'/)
@@ -718,180 +726,95 @@ describe('makePass — real slot swap and restore', () => {
 			ComponentProps
 
 		const pass = makePass(host)
-		const descriptor = pass(target, { greeting: hostState })
+		const descriptor = pass(target, {
+			greeting: { get: hostState.get, set: hostState.set },
+		})
 		expect(() => createScope(() => descriptor())).toThrow()
 	})
 })
 
-describe('makePass — ADR-0012 DEV_MODE warning for writable short forms', () => {
-	// Shared helper: a Le-Truc-style target with one Slot-backed prop, so the
-	// warning fires before the eager slot validation rejects the binding.
+describe('makePass — retired short forms fail validation (ADR-0012 removal)', () => {
+	// A Le-Truc-style target with one Slot-backed prop, so the entry would be
+	// bindable if the retired form still resolved — the failure is the FORM,
+	// not the target.
 	const makeTarget = (prop: string) => {
-		const targetState = createState('original')
-		const slot = createSlot(targetState)
+		const originalState = createState('original')
+		const slot = createSlot(originalState)
 		const target = { localName: 'my-target' } as unknown as HTMLElement &
 			ComponentProps
 		getSignals(target)[prop] = slot
 		Object.defineProperty(target, prop, slot)
-		return target
+		return { target, slot, originalState }
 	}
 
-	// DEV guards read `process.env.DEV_MODE` at call time, so flipping the
-	// env var around the call is enough — no module mocking required.
-	const captureWarnings = () => {
-		const warnings: unknown[][] = []
-		const originalWarn = console.warn
-		const prevDevMode = process.env.DEV_MODE
-		console.warn = (...args: unknown[]) => warnings.push(args)
-		process.env.DEV_MODE = 'true'
-		return {
-			warnings,
-			restore: () => {
-				if (prevDevMode === undefined) delete process.env.DEV_MODE
-				else process.env.DEV_MODE = prevDevMode
-				console.warn = originalWarn
-			},
+	// A retired form can no longer be written as a type-checked `pass()` call,
+	// so the props object is built untyped on purpose — the shape an untyped
+	// JS consumer (or a not-yet-migrated 2.x call) produces at runtime.
+	const retiredProps = (props: Record<string, unknown>) =>
+		props as unknown as PassedProps<HTMLElement & ComponentProps>
+
+	test('rejects a bare State passed directly, swapping nothing', () => {
+		const hostState = createState('host')
+		const host = {} as unknown as HTMLElement & ComponentProps
+		const { target, slot, originalState } = makeTarget('value')
+
+		const descriptor = makePass(host)(
+			target,
+			retiredProps({ value: hostState }),
+		)
+
+		let error: unknown
+		try {
+			createScope(() => descriptor())
+		} catch (e) {
+			error = e
 		}
-	}
+		expect(error).toBeInstanceOf(InvalidPassPropertyError)
+		expect((error as Error).message).toContain("'value'")
+		expect((error as Error).message).toContain('ADR 0012')
+		// The slot still holds the original signal — nothing was swapped.
+		expect(slot.current()).toBe(originalState)
+		expect((target as any).value).toBe('original')
+	})
 
-	const EXPECTED = (prop: string) =>
-		`pass() received a writable signal for '${prop}'. Use () => host.${prop} for read-only access, or { get, set } to mediate writes.`
-
-	// Detection is reversed (ADR-0012): allow only what is provably read-only.
-
-	test('warns for a property key resolving to a writable host State', () => {
+	test('rejects the property-key form (a string resolving to the parent signal)', () => {
 		const hostState = createState('host')
 		const host = { value: hostState } as unknown as HTMLElement & ComponentProps
-		// Register the host signal like a real Le Truc component, so the
-		// property-key form resolves to the writable State (not a createMemo
-		// fallback, which is read-only and would not warn).
+		// Register the host signal like a real Le Truc component — the retired
+		// property-key form resolved through it; today nothing may resolve.
 		getSignals(host)['value'] = hostState
-		const target = makeTarget('value')
-		const { warnings, restore } = captureWarnings()
-		try {
-			createScope(() => makePass(host)(target, { value: 'value' })())
-		} finally {
-			restore()
-		}
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
+		const { target, slot, originalState } = makeTarget('value')
+
+		const descriptor = makePass(host)(target, retiredProps({ value: 'value' }))
+
+		expect(() => createScope(() => descriptor())).toThrow(
+			InvalidPassPropertyError,
+		)
+		expect(slot.current()).toBe(originalState)
 	})
 
-	test('warns for a bare State passed directly', () => {
-		const hostState = createState('host')
-		const host = {} as unknown as HTMLElement & ComponentProps
-		const target = makeTarget('value')
-		const { warnings, restore } = captureWarnings()
-		try {
-			createScope(() => makePass(host)(target, { value: hostState })())
-		} finally {
-			restore()
-		}
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
-	})
-
-	test('warns for a bare Slot passed directly (backing may swap to mutable at runtime)', () => {
-		const backingState = createState('host')
-		const slot = createSlot(backingState)
-		const host = {} as unknown as HTMLElement & ComponentProps
-		const target = makeTarget('value')
-		const { warnings, restore } = captureWarnings()
-		try {
-			createScope(() => makePass(host)(target, { value: slot })())
-		} finally {
-			restore()
-		}
-		expect(warnings).toHaveLength(1)
-		expect(warnings[0]?.[0]).toBe(EXPECTED('value'))
-	})
-
-	test('does NOT warn for a { get, set } descriptor (explicit mediated form)', () => {
-		const hostState = createState('host')
-		const host = {} as unknown as HTMLElement & ComponentProps
-		const target = makeTarget('value')
-		const { warnings, restore } = captureWarnings()
-		try {
-			createScope(() =>
-				makePass(host)(target, {
-					value: { get: hostState.get, set: hostState.set },
-				})(),
-			)
-		} finally {
-			restore()
-		}
-		expect(warnings).toHaveLength(0)
-	})
-
-	test('does NOT warn for a thunk () => ... (toSignal wraps it as a Memo)', () => {
-		const hostState = createState('host')
-		const host = { value: hostState } as unknown as HTMLElement & ComponentProps
-		const target = makeTarget('value')
-		const { warnings, restore } = captureWarnings()
-		try {
-			createScope(() =>
-				makePass(host)(target, { value: () => hostState.get() })(),
-			)
-		} finally {
-			restore()
-		}
-		expect(warnings).toHaveLength(0)
-	})
-
-	test('does NOT warn for a bare Memo passed directly (read-only derived)', () => {
+	test('rejects a bare read-only signal too — no silent continuation', () => {
 		const memo = createMemo(() => 'derived')
 		const host = {} as unknown as HTMLElement & ComponentProps
-		const target = makeTarget('value')
-		const { warnings, restore } = captureWarnings()
-		try {
-			createScope(() => makePass(host)(target, { value: memo })())
-		} finally {
-			restore()
-		}
-		expect(warnings).toHaveLength(0)
+		const { target, slot, originalState } = makeTarget('value')
+
+		const descriptor = makePass(host)(target, retiredProps({ value: memo }))
+
+		expect(() => createScope(() => descriptor())).toThrow(
+			InvalidPassPropertyError,
+		)
+		expect(slot.current()).toBe(originalState)
 	})
 
-	test('does NOT warn for a bare Task passed directly (read-only derived)', () => {
-		const task = createTask(async () => 'resolved', { value: 'seeded' })
-		const host = {} as unknown as HTMLElement & ComponentProps
-		const target = makeTarget('value')
-		const { warnings, restore } = captureWarnings()
-		try {
-			createScope(() => makePass(host)(target, { value: task })())
-		} finally {
-			restore()
-		}
-		expect(warnings).toHaveLength(0)
-	})
-
-	test('warns once per writable prop and aggregates across multiple props', () => {
+	test('the accepted thunk form still swaps (control)', () => {
 		const hostState = createState('host')
-		const host = { a: hostState, b: hostState } as unknown as HTMLElement &
-			ComponentProps
-		// Register the 'a' host signal so the property-key form resolves to
-		// the writable State (the 'b' entry passes the State directly).
-		getSignals(host)['a'] = hostState
-		const target = makeTarget('a')
-		// second Slot-backed prop
-		const slotB = createSlot(createState('orig-b'))
-		getSignals(target)['b'] = slotB
-		Object.defineProperty(target, 'b', slotB)
+		const host = { value: hostState } as unknown as HTMLElement & ComponentProps
+		const { target } = makeTarget('value')
 
-		const { warnings, restore } = captureWarnings()
-		try {
-			createScope(() =>
-				makePass(host)(target, {
-					a: 'a',
-					b: hostState,
-				})(),
-			)
-		} finally {
-			restore()
-		}
-		expect(warnings).toHaveLength(2)
-		const messages = warnings.map(w => w[0])
-		expect(messages).toContain(EXPECTED('a'))
-		expect(messages).toContain(EXPECTED('b'))
+		const descriptor = makePass(host)(target, { value: () => hostState.get() })
+		createScope(() => descriptor())
+
+		expect((target as any).value).toBe('host')
 	})
 })
 

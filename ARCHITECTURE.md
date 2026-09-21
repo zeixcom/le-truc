@@ -158,7 +158,7 @@ Once a provider answers, the consumer retains its value for the lifetime of the 
 
 Validation runs eagerly, before any signal is swapped, so a failure never leaves a partial bind (see [ADR 0011](adr/0011-throw-on-pass-binding-failure.md)).
 
-The property-key and bare-writable-signal short forms grant the child unrestricted `.set()` on the parent's signal. They are deprecated in favor of the thunk (read-only) and `{ get, set }` descriptor (mediated writable) forms, and warn in `DEV_MODE` (see [ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)).
+The property-key and bare-writable-signal short forms — which granted the child unrestricted `.set()` on the parent's signal — were removed in v3.0 ([ADR 0012](adr/0012-deprecate-unrestricted-write-short-forms-in-pass.md)). The thunk (read-only) and `{ get, set }` descriptor (mediated writable) forms are the only accepted inputs, at the types and at runtime; a retired form fails the eager validation above, including a bare read-only signal (`Memo`/`Task`), which 2.x admitted without a warning.
 
 ## Naming Conventions
 
