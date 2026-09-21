@@ -794,7 +794,9 @@ the primary surface stopped needing a projection.
 The compiler is build-time tooling; `@zeix/le-truc` stays browser-only and
 never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
 
-- **Corpus orchestration** (`server/effects/compile.ts`, a docs-build effect):
+- **Corpus orchestration** (`server/corpus-compile.ts` — standalone, importable
+  without the reactive machinery; `server/effects/compile.ts` is the docs
+  build's effect wrapper around it, LT-267):
   the scan globs every CONFIGURED source pattern (§ 7.1) — `.tsrx` and
   `.tsx` — into one file list and `compileCorpus` dispatches per extension;
   pass 1 compiles every file against a registry seeded with the configured
@@ -847,7 +849,7 @@ its cwd, and every relative path field resolves against it.
 
 | Field | Default | What it selects |
 | --- | --- | --- |
-| `sources` | `["examples/**/*.tsrx", "examples/**/*.tsx"]` | The authored component sources. The front end is chosen per file by extension, so one list covers both surfaces; overlapping globs compile each file once |
+| `sources` | `["examples/**/*.tsrx", "examples/**/*.tsx"]` | The authored component sources. The front end is chosen per file by extension, so one list covers both surfaces; overlapping globs compile each file once. Glob grammar: `*`, `?`, `**/` (zero or more directories), a trailing `**`, and literals — scans are sorted, and dotfiles only match a pattern segment starting with a dot. Deliberately one grammar on every runtime (LT-267): braces and character classes are not part of it |
 | `siblingModules` | `["examples/**/*.ts"]` | Hand-written custom-element modules the corpus may address. Matched to tags by filename — a stem that is not a valid dashed tag (`main.ts`) is skipped |
 | `outDir` | `"server/generated/components"` | Where the generated `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json` and `i18n.ts` land. Must sit inside the project root (see below) |
 | `i18nDir` | `"i18n"` | The committed per-locale translation catalogs (ADR 0030 s5). A project with no such directory censuses zero locales and zero gaps |

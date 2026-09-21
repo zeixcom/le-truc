@@ -17,7 +17,7 @@
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import * as path from 'node:path'
-import { compileCorpus } from '../../effects/compile'
+import { compileCorpus } from '../../corpus-compile'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { settle } from '../helpers/test-utils'

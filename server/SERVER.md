@@ -62,9 +62,21 @@ The system has two cooperating halves — a **reactive build pipeline** and an *
 
 The build system is powered by `@zeix/cause-effect` reactive signals:
 
-- **`file-watcher.ts`** — `watchFiles(directory, include, exclude?)` creates a reactive `List<FileInfo>` backed by `Bun.Glob` scanning. Under non-Playwright conditions, attaches `fs.watch` for incremental updates via the `watched` option of `createList`.
+- **`file-watcher.ts`** — `watchFiles(directory, include, exclude?)` creates a reactive `List<FileInfo>` backed by runtime-neutral glob scanning (the `server/runtimes/` seam, LT-267). Under non-Playwright conditions, attaches `fs.watch` for incremental updates via the `watched` option of `createList`.
 - **`file-signals.ts`** — Defines all source signals and the Markdoc processing pipeline.
 - **`build.ts`** — Orchestrates effects; forwards HMR notifications via `options.hmrBroadcast`.
+
+### The Runtime Seam (`server/runtimes/`, LT-267)
+
+All file IO, globbing and process spawning on the build path goes through one interface, `RuntimeIO`, with two implementations selected at module load: `bun.ts` (Bun.file / Bun.write / Bun.spawn / Bun.Glob) and `node.ts` (node:fs / node:child_process) — both loadable under any runtime, so `typeof Bun` is the only detection needed. This is what makes the published compiler package's own build path need *a* JS runtime, not Bun specifically; the emitted `.ts`/`.css` files are the interface to consumers and were already runtime-neutral (no bundler abstraction exists or is planned).
+
+Deliberate properties:
+
+- **One glob grammar.** `glob.ts` holds the shared translator both implementations use for scanning and matching, so a consumer's configured globs cannot match one file set under Bun and another under Node. Supported: `*`, `?`, `**/`, a trailing `**`, literals — not braces or character classes. Scans are sorted and skip dotfiles (matching Bun.Glob's scanner), and matching applies the same dot rule so a watcher filter cannot admit a file the scanner would never yield.
+- **No Bun.* outside the seam** on the build path — the only exceptions are the HTTP dev server (`serve.ts`/`dev.ts`, repo tooling) and intentionally Bun-only harnesses (`sim-portability-check.ts`, `substrate-evaluation.ts`, `build-tsrx-browser.ts`).
+- **`compileCorpus` lives outside `server/effects/`** (`server/corpus-compile.ts`): importing it must not drag the reactive machinery, the watchers, or a repo-shaped module graph. `server/effects/compile.ts` is the docs build's thin reactive wrapper around it.
+- **Anchors are portable.** Module-relative roots use `dirname(fileURLToPath(import.meta.url))` wherever repo-anchoring is by design (the site config, the in-repo defaults); configuration-relative paths come from the resolved `CorpusConfig` — never from a module's location (the i18n lesson: `simulateCorpus` takes `root`, defaulting to the configured corpus root).
+- **The gate:** `bun run check:portability` bundles the corpus build once and runs it under Bun, Node and Deno, diffing the emitted trees byte-for-byte. Module resolution rides the bundle (the source graph's extensionless imports are a bundler-facing fact the packaging step will normalize); what the check proves is that the build behaves identically once the graph is resolvable.
 
 ### File Signals
 
@@ -237,7 +249,7 @@ While `llms.txt` is a link index, `llms-full.txt` is the **authoritative concate
 3. `ARCHITECTURE.md` (repo root, plain Markdown)
 4. `AGENTS.md` (repo root, plain Markdown — includes the factory form and the "Surprising Behaviors" gotchas)
 
-Sections are delimited by `---` and headed with an H1. Blog posts, `about.md`, `examples.md`, and the per-symbol TypeDoc API files are excluded to keep the file focused on authoring guidance. Narrative pages have Markdoc tags stripped; standalone root docs pass through unchanged (they are plain Markdown). Standalone docs are read from `ROOT` via `Bun.file().text()` inside the effect.
+Sections are delimited by `---` and headed with an H1. Blog posts, `about.md`, `examples.md`, and the per-symbol TypeDoc API files are excluded to keep the file focused on authoring guidance. Narrative pages have Markdoc tags stripped; standalone root docs pass through unchanged (they are plain Markdown). Standalone docs are read from `ROOT` through the runtime seam (`io.readTextFile`) inside the effect.
 
 ### Component Compiler (`compileEffect`)
 
@@ -251,7 +263,11 @@ and this repo's paths are the DEFAULTS — which is why the docs build carries
 no config file. The surface, the field table, and the output-root depth rule
 are documented in `server/compiler/LE_TRUC_COMPILER.md` § 7.1; the resolution
 lives in `server/compiler/corpus-config.ts` (pure) and the globbing in
-`server/corpus-sources.ts` (the file-IO layer LT-267 replaces).
+`server/corpus-sources.ts`, through the runtime seam since LT-267. The
+compile itself lives in `server/corpus-compile.ts` — deliberately outside
+`server/effects/`, so a consumer imports the build path without the reactive
+machinery — and `server/effects/compile.ts` (`compileEffect`) is the docs
+build's reactive wrapper around it.
 
 The inlined TSRX compiler (ADR 0024) compiles isomorphic single-file `.tsrx` components — server args, signals, `expose()`, markup, event handlers, and scoped styles in one source — into the split compiler's two halves. The server module re-declares the `@{ }` setup against the runtime harness (`server/compiler/runtime.ts`) and renders HTML strings; the client module is a generated factory importing solely from `@zeix/le-truc`. Extension activation is declared as `export const config` in the source; the compiler validates it, auto-imports the extension factories, and carries `expose()`/`defineMethod()` as ambients. `bun run build:cem` runs `scripts/build-corpus.ts` before `cem analyze` so `@zeix/cem-plugin-le-truc` reads the generated clients unchanged. Errors fail the build; `@for` over a non-List reactive source logs `LTC001` and skips the file.
 
@@ -271,7 +287,7 @@ Renders initial HTML by *executing* the generated client module against jsdom in
 - **`realm.ts`** — the uniform applier, in two phases because a client module registers its element as an import side effect: `load()` imports with a recording `customElements` that captures `define()` calls; `render()` seeds the page's locale onto `<html lang>` (LT-172, so `getLocale()`'s ancestor walk resolves the page's answer rather than the `'en'` fallback), parses the SSR'd markup, replays the definitions so the upgrade runs, and serializes. `dispose()` restores every touched global. jsdom's `virtualConsole`, network attempts, unhandled rejections, and contained throws all land in `diagnostics`, attributed to the component whose window was open.
 - **`boundary.ts`** — `runSynchronously()` asserts the instantiate-to-serialize window never awaits, so the compiler (not microtask timing) decides which `@try` arm ships.
 
-**`server/effects/simulate.ts`** is the build's entry to the driver, called from `build.ts` after the compiler effect is ready. It reads the registry's post-contamination tier and opens a realm **only** for the Simulated tier — a Folded-tier component renders through `emit-server.ts` and the value harness, and a Static-tier component renders its skeleton, so a realm changes neither output (ADR 0029). `assertSimulatedTier()` fails the build on any attempt to simulate another tier, because that waste has no output symptom. Each Simulated-tier component renders once per top-level occurrence of its tag in its authored demo markup (`examples/**/<tag>.html`), once per locale. The realm is created and disposed exactly once per build process, never between renders. `reportDiagnostics()` (in `server/compiler/build-report.ts`, against the classifications the resolved driver published) then partitions the realm's diagnostics: classified entries are listed with their reason, and one unclassified entry fails the build and names the component. The pass runs for a one-shot `build:docs` only — a watch rebuild re-imports the same generated client paths, and one module cache per process makes the second load record no definitions (ADR 0027 sub-design 10).
+**`server/effects/simulate.ts`** is the build's entry to the driver, called from `build.ts` after the compiler effect is ready. It reads the registry's post-contamination tier and opens a realm **only** for the Simulated tier — a Folded-tier component renders through `emit-server.ts` and the value harness, and a Static-tier component renders its skeleton, so a realm changes neither output (ADR 0029). `assertSimulatedTier()` fails the build on any attempt to simulate another tier, because that waste has no output symptom. Each Simulated-tier component renders once per top-level occurrence of its tag in its authored demo markup (`examples/**/<tag>.html`, resolved against the configured corpus **root** — an option, not a module anchor, LT-267), once per locale. The realm is created and disposed exactly once per build process, never between renders. `reportDiagnostics()` (in `server/compiler/build-report.ts`, against the classifications the resolved driver published) then partitions the realm's diagnostics: classified entries are listed with their reason, and one unclassified entry fails the build and names the component. The pass runs for a one-shot `build:docs` only — a watch rebuild re-imports the same generated client paths, and one module cache per process makes the second load record no definitions (ADR 0027 sub-design 10).
 
 `bun run check:sim` (`scripts/sim-portability-check.ts`) renders the ADR's stress case, bundles its client module, runs it under every runtime on PATH via `scripts/sim-portability-probe.ts`, and diffs the serialized HTML; it exits non-zero on disagreement.
 
@@ -481,7 +497,7 @@ See [TESTS.md](./TESTS.md) for the full test plan: scope, conventions, file-by-f
 
 ### Directory Constants
 
-All path constants are **absolute paths** computed from `ROOT = join(import.meta.dir, '..')` at module load time, so the server never needs to `process.chdir`.
+All path constants are **absolute paths** computed from `ROOT` (this module's directory's parent, anchored portably per LT-267) at module load time, so the server never needs to `process.chdir`.
 
 | Constant | Path (relative to project root) | Description |
 |----------|--------------------------------|-------------|

@@ -54,7 +54,7 @@ then the number has a stake in it.
 
 ---
 
-- [ ] LT-267: Make the build's file IO runtime-neutral — Node, Bun and Deno.
+- [x] LT-267: Make the build's file IO runtime-neutral — Node, Bun and Deno. — done, pending review ⏳
   **Skill:** docs-server-dev
   **Context:** the LT-239 follow-up (2026-09-19). A published compiler should need *a* JS
   runtime, not Bun specifically, and should emit standard `.ts` and `.css` that any bundler
@@ -89,6 +89,46 @@ then the number has a stake in it.
     cross-runtime one.
   **Check:** the corpus compiles and the emitted `.ts`/`.css` are byte-identical under Bun and
   under at least one other runtime.
+  **Changed:** new `server/runtimes/` (`types.ts` the `RuntimeIO` interface, `glob.ts` the ONE
+  shared glob translator both implementations use, `bun.ts`, `node.ts`, `index.ts` selecting via
+  `typeof Bun` — both impls loadable under any runtime, no `import('bun')` anywhere), new
+  `server/corpus-compile.ts` (`compileCorpus`, `REPO_CONFIG`, `GENERATED_DIR`,
+  `handwrittenExampleModules` moved out of `effects/compile.ts` so the published build path
+  imports without the reactive machinery — `effects/compile.ts` is now only the `compileEffect`
+  wrapper), new `scripts/corpus-portability-check.ts` + `check:portability` (bundles the corpus
+  build once, runs the SAME bundle under Bun/Node/Deno, diffs the emitted trees byte-for-byte),
+  new `server/tests/runtimes.test.ts` (19 tests: glob grammar, Node impl file/spawn behavior,
+  Bun.Glob parity on the repo's real trees). Migrated onto the seam: `io.ts`,
+  `corpus-sources.ts`, `file-watcher.ts`, `effects/{build-effect,examples,page-render,llms-full-manifest,
+  static-assets,simulate,i18n}.ts`, `scripts/{check-corpus,i18n-sync}.ts`. Anchors: every
+  `import.meta.dir` on the build path → `dirname(fileURLToPath(import.meta.url))` where
+  repo-anchoring is by design; `simulateCorpus` takes a `root` OPTION (default: the configured
+  corpus root) — the module-anchored markup-root pattern the i18n lesson warned about, removed
+  rather than ported.
+  **How:** glob pattern SEMANTICS are deliberately not per-runtime — one translator in
+  `runtimes/glob.ts` (`*`, `?`, `**/`, trailing `**`, literals; scans sorted, dotfiles skipped,
+  match applies the same dot rule as scan) so a consumer's globs cannot match differently per
+  runtime; what differs per runtime is only the machinery under read/write/copy/spawn. Two
+  behavior notes for review: (1) the scan now returns SORTED relative paths — Bun.Glob's FS
+  order was never sorted, so registry.json/census entry order is now deterministic across
+  runs and runtimes (emitted per-file bytes unchanged); (2) `file-watcher.ts`'s activation
+  rescan went through `scheduleFlush(fileList, null)` instead of a synchronous
+  `flushChanges` — the sync seam scan removed the old async boundary, and a synchronous
+  flush re-entered the list's own `watched` activation to stack exhaustion (caught by
+  `file-watcher.test.ts`, comment in place).
+  **Check:** `bun run check:portability` — `✓ corpus build is runtime-neutral: 3 runtime(s),
+  identical emitted bytes` (bun + node v26.7 + deno, same bundle, byte-for-byte). Also run
+  live: full docs build (4 s, favicon binary copy byte-identical), `check:corpus` (5/5
+  diagnostics mapped through the seam-spawned tsc, baseline 0), and the scratch-project run —
+  a `/tmp` project with its own `le-truc.config.json` (`sources`/`outDir`/`i18nDir` all
+  redirected) compiling one i18n `.tsrx` component: config discovered at the scratch root,
+  census lists ONLY the scratch key — this repo's ~30 translation keys stayed invisible, the
+  i18n lesson's failure mode is structurally gone (config-relative paths only; no
+  module-anchored default survives on the compileCorpus path).
+  **Known residue (not filed):** `scripts/i18n-sync.ts` still globs `examples/**/*.tsrx` only —
+  harmless today (no `.tsx` component declares i18n) but it will silently prune a translated
+  key the day one migrates; one-line fix when wave 4 lands, or fold into i18n-sync's next
+  touch.
 
 - [ ] LT-256: jsdom as an optional peer dependency; `unavailable substrate` as a tier-census reason.
   **Skill:** le-truc-dev

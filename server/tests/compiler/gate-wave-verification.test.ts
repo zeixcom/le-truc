@@ -16,7 +16,7 @@ import {
 	createSimulationRealm,
 	type JsdomSimulationRealm,
 } from '../../compiler/sim/realm'
-import { compileCorpus } from '../../effects/compile'
+import { compileCorpus } from '../../corpus-compile'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { inlineI18n, PLURALIZE_I18N } from './corpus-args'
 import { loadCorpus } from './corpus-fixture'

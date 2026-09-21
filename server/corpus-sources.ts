@@ -3,14 +3,16 @@
  *
  * The file-IO half of the corpus configuration surface — everything in
  * `server/compiler/corpus-config.ts` is pure path math, and everything that
- * touches a disk lives here. That split is deliberate: LT-267 makes the
- * build's file IO runtime-neutral, and this module is one of the places it
- * replaces. `server/compiler/` stays free of `Bun.*` and `import.meta.dir`.
+ * touches a disk lives here. Since LT-267 the disk half goes through the
+ * runtime seam (`server/runtimes/`): the glob scan is runtime-neutral, so
+ * the published package's build path needs *a* JS runtime, not Bun.
+ * `server/compiler/` stays free of `Bun.*`, `import.meta.dir` and every
+ * other runtime-specific API.
  */
 
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { Glob } from 'bun'
+import { fileURLToPath } from 'node:url'
 import {
 	CONFIG_FILENAME,
 	type CorpusConfig,
@@ -19,14 +21,17 @@ import {
 	resolveCorpusConfig,
 } from './compiler/corpus-config'
 import type { FileInfo } from './file-signals'
+import { io } from './runtimes'
 
 /* === Constants === */
 
 /**
  * This repo's own root — the default project root, and the reason the docs
- * build needs no config file: the defaults ARE this repo's paths.
+ * build needs no config file: the defaults ARE this repo's paths. Anchored
+ * to this module's location, portably (LT-267): the module is the constant,
+ * whichever runtime loads it.
  */
-export const REPO_ROOT = resolve(import.meta.dir, '..')
+export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /* === Internal Functions === */
 
@@ -73,15 +78,13 @@ export const loadCorpusConfig = (cwd: string = process.cwd()): CorpusConfig => {
  * Deduplicated by path: overlapping globs are a reasonable thing for a
  * consumer to write, and a file compiled twice would look like a duplicate
  * tag (LTC048) to a check that exists to catch two different files declaring
- * the same one.
+ * the same one. The scan is the runtime seam's, so the matched set and its
+ * order are the same under every runtime.
  */
 export const collectCorpusSources = (config: CorpusConfig): FileInfo[] => {
 	const byPath = new Map<string, FileInfo>()
 	for (const pattern of config.sources) {
-		for (const rel of new Glob(pattern).scanSync({
-			cwd: config.root,
-			onlyFiles: true,
-		})) {
+		for (const rel of io.scanGlob(pattern, { cwd: config.root })) {
 			const path = join(config.root, rel)
 			if (byPath.has(path)) continue
 			const stat = statSync(path)
@@ -115,7 +118,7 @@ export const collectSiblingModules = (
 	const prefix = outDirPrefix(config.root, config.outDir)
 	const modules = new Map<string, string>()
 	for (const pattern of config.siblingModules) {
-		for (const rel of new Glob(pattern).scanSync({ cwd: config.root })) {
+		for (const rel of io.scanGlob(pattern, { cwd: config.root })) {
 			const tag = (rel.split('/').pop() ?? '').replace(/\.ts$/, '')
 			if (!/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(tag)) continue
 			modules.set(tag, `${prefix}${rel.replace(/\.ts$/, '')}`)

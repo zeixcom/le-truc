@@ -18,7 +18,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { tierCensus } from '../../compiler/census'
 import type { ComponentRegistry } from '../../compiler/registry'
-import { compileCorpus } from '../../effects/compile'
+import { compileCorpus } from '../../corpus-compile'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { loadCorpus } from './corpus-fixture'
 

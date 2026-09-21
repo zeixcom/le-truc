@@ -30,10 +30,10 @@
  */
 
 import { readFileSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { Glob } from 'bun'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { ComponentRegistry } from '../server/compiler/registry'
-import { compileCorpus } from '../server/effects/compile'
+import { compileCorpus } from '../server/corpus-compile'
 import {
 	collectI18n,
 	I18N_DIR,
@@ -41,12 +41,12 @@ import {
 	sourceHash,
 } from '../server/effects/i18n'
 import type { FileInfo } from '../server/file-signals'
+import { io } from '../server/runtimes'
 
-const ROOT = resolve(import.meta.dir, '..')
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const files: FileInfo[] = []
-const glob = new Glob('examples/**/*.tsrx')
-for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {
+for (const rel of io.scanGlob('examples/**/*.tsrx', { cwd: ROOT })) {
 	const path = join(ROOT, rel)
 	const stat = statSync(path)
 	files.push({
@@ -142,10 +142,13 @@ for (const locale of collection.locales) {
 	const sorted = Object.fromEntries(
 		Object.entries(next).sort(([a], [b]) => (a < b ? -1 : 1)),
 	)
-	await Bun.write(catalogPath, `${JSON.stringify(sorted, null, '\t')}\n`)
+	await io.writeTextFile(catalogPath, `${JSON.stringify(sorted, null, '\t')}\n`)
 }
 
-await Bun.write(manifestPath, `${JSON.stringify(manifest, null, '\t')}\n`)
+await io.writeTextFile(
+	manifestPath,
+	`${JSON.stringify(manifest, null, '\t')}\n`,
+)
 
 console.log(
 	`i18n:sync — ${writtenKeys} missing key(s) written as empty entries, ${confirmedKeys} carried key(s) confirmed against current sources across ${collection.locales.length} locale(s).`,

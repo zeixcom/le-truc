@@ -57,7 +57,7 @@ import {
 	createSimulationRealm,
 	type JsdomSimulationRealm,
 } from '../../compiler/sim/realm'
-import { compileCorpus } from '../../effects/compile'
+import { compileCorpus } from '../../corpus-compile'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 // LT-165 step 8: the args table and the tag→render-fn mapping moved to
 // `corpus-args.ts` so the equivalence audit (equivalence-audit.test.ts)

@@ -1,9 +1,10 @@
 import { createHash } from 'crypto'
 import { existsSync, statSync } from 'fs'
-import { mkdir, readdir, stat } from 'fs/promises'
-import { basename, dirname, extname, join, relative } from 'path'
+import { readdir, stat } from 'fs/promises'
+import { basename, extname, join, relative } from 'path'
 import { brotliCompressSync, gzipSync } from 'zlib'
 import type { FileInfo } from './file-signals'
+import { io } from './runtimes'
 import type { RequestContext } from './serve'
 
 /* === Exported Functions === */
@@ -41,7 +42,7 @@ const createFileInfo = async (
 		if (!existsSync(filePath)) return fallback
 
 		const [content, stats] = await Promise.all([
-			Bun.file(filePath).text(),
+			io.readTextFile(filePath),
 			stat(filePath),
 		])
 
@@ -90,7 +91,7 @@ const getDirectoryEntries = async (directoryPath: string, recursive = false) =>
 	})
 
 const getFileContent = async (filePath: string): Promise<string> =>
-	await Bun.file(filePath).text()
+	await io.readTextFile(filePath)
 
 const getFileExtension = (filePath: string): string => extname(filePath)
 
@@ -125,20 +126,16 @@ const getRelativePath = (basePath: string, filePath: string): string | null => {
 }
 
 /**
- * Write file asynchronously and safely (ensure parent dir exists) using Bun.write.
+ * Write file asynchronously and safely (ensure parent dir exists) through
+ * the runtime seam (LT-267). Returns false instead of throwing so callers
+ * that report their own failure keep doing so.
  */
 const writeFileSafe = async (
 	filePath: string,
 	content: string,
 ): Promise<boolean> => {
 	try {
-		// Ensure directory exists
-		const dir = dirname(filePath)
-		if (!existsSync(dir)) {
-			await mkdir(dir, { recursive: true })
-		}
-
-		await Bun.write(filePath, content)
+		await io.writeTextFile(filePath, content)
 		return true
 	} catch (error) {
 		console.error(`Error writing file ${filePath}:`, error)

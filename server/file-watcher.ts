@@ -1,8 +1,8 @@
 import { existsSync, watch } from 'node:fs'
 import { batch, createList, type List } from '@zeix/cause-effect'
-import { Glob } from 'bun'
 import type { FileInfo } from './file-signals'
 import { createFileInfo, getFilePath, isPlaywrightRunning } from './io'
+import { io } from './runtimes'
 
 /* === Exported Types === */
 
@@ -22,22 +22,19 @@ export const watchFiles = async (
 	exclude?: string,
 	recursive?: boolean,
 ): Promise<WatchedFiles> => {
-	const glob = new Glob(include)
-	const excludeGlob = exclude ? new Glob(exclude) : null
 	const playwrightDetected = isPlaywrightRunning()
 	const isRecursive = recursive ?? include.includes('**/')
 
-	const isMatching = (file: string): boolean => {
-		if (!glob.match(file)) return false
-		if (excludeGlob && excludeGlob.match(file)) return false
-		return true
-	}
+	// The seam's matcher (LT-267): one glob semantics on every runtime, and
+	// the same one the scans below apply.
+	const isMatching = (file: string): boolean =>
+		io.matchGlob(include, file) && !(exclude && io.matchGlob(exclude, file))
 
 	// Scan initial files
 	const initialFiles: FileInfo[] = []
 	if (existsSync(directory)) {
-		for await (const file of glob.scan(directory)) {
-			if (excludeGlob && excludeGlob.match(file)) continue
+		for (const file of io.scanGlob(include, { cwd: directory })) {
+			if (exclude && io.matchGlob(exclude, file)) continue
 			const filePath = getFilePath(directory, file)
 			const filename = file.split(/[\\/]/).pop() || ''
 			const fileInfo = await createFileInfo(filePath, filename)
@@ -58,8 +55,8 @@ export const watchFiles = async (
 		// Rescan the entire directory so no events are missed
 		const scannedFiles = new Map<string, FileInfo>()
 		if (existsSync(directory)) {
-			for await (const file of glob.scan(directory)) {
-				if (excludeGlob && excludeGlob.match(file)) continue
+			for (const file of io.scanGlob(include, { cwd: directory })) {
+				if (exclude && io.matchGlob(exclude, file)) continue
 				const filePath = getFilePath(directory, file)
 				const filename = file.split(/[\\/]/).pop() || ''
 				const fileInfo = await createFileInfo(filePath, filename)
@@ -121,9 +118,14 @@ export const watchFiles = async (
 								)
 							},
 						)
-						// Rescan immediately on activation to pick up any files written
-						// between initial scan and watcher setup (lazy activation gap).
-						flushChanges(fileList)
+						// Rescan on activation to pick up any files written between
+						// initial scan and watcher setup (lazy activation gap).
+						// Scheduled, not called directly: the scan is synchronous
+						// now (LT-267), and a synchronous flush would read the
+						// list from inside its own watched activation — re-entering
+						// the getter until the stack blows. The debounce's async
+						// boundary settles the activation first.
+						scheduleFlush(fileList, null)
 						return () => watcher.close()
 					},
 				}

@@ -9,6 +9,7 @@ import {
 import { highlightCodeBlocks, injectModuleDemoPreview } from '../html-shaping'
 import { getFilePath, writeFileSafe } from '../io'
 import markdocConfig from '../markdoc.config'
+import { io } from '../runtimes'
 import { createBuildEffect } from './build-effect'
 import { renderPageOccurrences } from './page-render'
 
@@ -31,7 +32,7 @@ const PARTIALS: Record<string, string> = {
 const loadPartials = async (): Promise<Record<string, Node>> => {
 	const entries = await Promise.all(
 		Object.entries(PARTIALS).map(async ([name, path]) => {
-			const content = await Bun.file(path).text()
+			const content = await io.readTextFile(path)
 			return [name, Markdoc.parse(content)] as const
 		}),
 	)

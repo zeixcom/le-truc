@@ -82,9 +82,8 @@ import type {
 import { resolveSimulationProvider } from '../compiler/simulation/resolve'
 import type { EvaluationTier } from '../compiler/tier'
 import { LOCALES } from '../config'
-import { GENERATED_DIR } from './compile'
-
-const ROOT = join(import.meta.dir, '..', '..')
+import { GENERATED_DIR, REPO_CONFIG } from '../corpus-compile'
+import { io } from '../runtimes'
 
 /* === Types === */
 
@@ -120,6 +119,14 @@ export type SimulationPassOptions = {
 	registry?: ComponentRegistry
 	/** Defaults to `server/generated/components/`. */
 	generatedDir?: string
+	/**
+	 * The PROJECT ROOT the registry's `source` paths are relative to.
+	 * Defaults to the configured corpus root — NOT this module's location:
+	 * a module-anchored root was the same latent bug the i18n census hit
+	 * (LT-255), silently resolved against the wrong project the first time
+	 * the pass ran outside this repo.
+	 */
+	root?: string
 	/**
 	 * Seam for tests: defaults to the driver the resolver finds
 	 * (`../compiler/simulation/resolve.ts`). A test that supplies this also
@@ -179,6 +186,7 @@ export const gateOnSimReport = (report: SimReport) => {
 const simulationSubjects = (
 	registry: ComponentRegistry,
 	generatedDir: string,
+	root: string,
 ): {
 	subjects: SimulationSubject[]
 	skipped: SimulationPassResult['skipped']
@@ -193,7 +201,7 @@ const simulationSubjects = (
 		subjects.push({
 			tag: entry.tag,
 			clientModulePath: join(generatedDir, entry.clientModule),
-			markupPath: join(ROOT, entry.source.replace(/\.tsrx$/, '.html')),
+			markupPath: join(root, entry.source.replace(/\.tsrx$/, '.html')),
 		})
 	}
 	return { subjects, skipped }
@@ -244,21 +252,22 @@ const occurrencesOf = (tag: string, html: string): string[] => {
 export const simulateCorpus = async ({
 	registry,
 	generatedDir = GENERATED_DIR,
+	root = REPO_CONFIG.root,
 	createRealm,
 	classifications,
 	readMarkup = async subject => {
-		const file = Bun.file(subject.markupPath)
-		return (await file.exists()) ? file.text() : null
+		if (!(await io.fileExists(subject.markupPath))) return null
+		return await io.readTextFile(subject.markupPath)
 	},
 	log = message => console.log(message),
 }: SimulationPassOptions = {}): Promise<SimulationPassResult> => {
 	const started = performance.now()
 	const entries: ComponentRegistry =
 		registry ??
-		((await Bun.file(
-			join(generatedDir, 'registry.json'),
-		).json()) as ComponentRegistry)
-	const { subjects, skipped } = simulationSubjects(entries, generatedDir)
+		(JSON.parse(
+			await io.readTextFile(join(generatedDir, 'registry.json')),
+		) as ComponentRegistry)
+	const { subjects, skipped } = simulationSubjects(entries, generatedDir, root)
 
 	const simulated: string[] = []
 	const withoutMarkup: string[] = []

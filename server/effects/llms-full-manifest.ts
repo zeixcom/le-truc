@@ -1,6 +1,8 @@
+import { join } from 'node:path'
 import { LLMS_FULL_TXT_FILE, ROOT } from '../config'
 import { docsMarkdown } from '../file-signals'
 import { writeFileSafe } from '../io'
+import { io } from '../runtimes'
 import { createBuildEffect } from './build-effect'
 import { stripMarkdocTags } from './md-mirror'
 
@@ -177,9 +179,9 @@ export const llmsFullManifestEffect = (onRebuild?: () => void) =>
 			// degrades to string[]) keeps each element typed as `string`
 			// under noUncheckedIndexedAccess.
 			const [readme, architecture, agents] = await Promise.all([
-				Bun.file(`${ROOT}/${STANDALONE_DOCS[0].filename}`).text(),
-				Bun.file(`${ROOT}/${STANDALONE_DOCS[1].filename}`).text(),
-				Bun.file(`${ROOT}/${STANDALONE_DOCS[2].filename}`).text(),
+				io.readTextFile(join(ROOT, STANDALONE_DOCS[0].filename)),
+				io.readTextFile(join(ROOT, STANDALONE_DOCS[1].filename)),
+				io.readTextFile(join(ROOT, STANDALONE_DOCS[2].filename)),
 			])
 
 			await writeFileSafe(

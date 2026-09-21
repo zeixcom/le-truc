@@ -13,7 +13,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import * as path from 'node:path'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
-import { compileCorpus } from '../../effects/compile'
+import { compileCorpus } from '../../corpus-compile'
 import {
 	type PageRenderModule,
 	renderPageOccurrences,

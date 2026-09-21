@@ -48,7 +48,8 @@ import { pathToFileURL } from 'node:url'
 import { type DefaultTreeAdapterMap, parseFragment } from 'parse5'
 import { composeHostAttrs } from '../compiler/compose-attrs'
 import type { ComponentRegistry, RegistryEntry } from '../compiler/registry'
-import { GENERATED_DIR } from './compile'
+import { GENERATED_DIR } from '../corpus-compile'
+import { io } from '../runtimes'
 
 /* === Types === */
 
@@ -205,9 +206,9 @@ export const renderPageOccurrences = async (
 ): Promise<PageOccurrencesResult> => {
 	const entries: ComponentRegistry =
 		registry ??
-		((await Bun.file(
-			join(generatedDir, 'registry.json'),
-		).json()) as ComponentRegistry)
+		(JSON.parse(
+			await io.readTextFile(join(generatedDir, 'registry.json')),
+		) as ComponentRegistry)
 	const qualified = qualifyingEntries(entries)
 	if (qualified.size === 0) return { html, rendered: [], skipped: [] }
 

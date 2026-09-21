@@ -29,7 +29,8 @@
 
 import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { TranslationGap } from '../compiler/census'
 import { PLURAL_CATEGORIES } from '../compiler/i18n'
 import type { RegistryEntry } from '../compiler/registry'
@@ -40,9 +41,16 @@ import { getFilePath, writeFileSafe } from '../io'
 /**
  * This repo's own catalog directory — the DEFAULT, kept so every in-repo
  * caller behaves exactly as before. A consumer's is configured
- * (`i18nDir`, LT-255) and threaded in through `collectI18n`.
+ * (`i18nDir`, LT-255) and threaded in through `collectI18n` from their
+ * configuration, which is what keeps a consumer's census from ever seeing
+ * THIS repo's keys (the i18n lesson). Anchored portably (LT-267).
  */
-export const I18N_DIR = join(import.meta.dir, '..', '..', 'i18n')
+export const I18N_DIR = join(
+	dirname(fileURLToPath(import.meta.url)),
+	'..',
+	'..',
+	'i18n',
+)
 
 /**
  * The source locale — the language the inline strings are written in, and
@@ -139,7 +147,10 @@ const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
 	const overrides = new Map<string, Record<string, string>>()
 	const locales: string[] = []
 	try {
-		for (const file of await readdir(i18nDir)) {
+		// Sorted: readdir order is the runtime's, and the locale order flows
+		// into the generated module, the census and the report — which must
+		// not differ between runtimes (LT-267).
+		for (const file of (await readdir(i18nDir)).sort()) {
 			if (!file.endsWith('.json') || file === 'manifest.json') continue
 			const locale = file.replace(/\.json$/, '')
 			locales.push(locale)

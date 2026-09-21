@@ -55,6 +55,8 @@ server/tests/
 ├── io.test.ts                  # IO utilities
 ├── markdoc-constants.test.ts   # Markdoc constants
 ├── markdoc-helpers.test.ts     # Markdoc helper utilities
+├── runtimes.test.ts            # The runtime seam (LT-267): glob grammar, the Node
+│                               #   implementation, Bun↔Node parity on the real trees
 └── serve.test.ts               # HTTP server routes
 ```
 
@@ -70,7 +72,7 @@ find server/tests -name '*.test.ts' | sort
 
 (`bun test --list` does not list — the flag is silently ignored and the suite runs.) For the
 test count, the `bun test server/tests` summary line prints both numbers live; as of
-2026-09-18 that is **84 files / 1601 tests**.
+2026-09-21 that is **89 files / 1668 tests**.
 
 ### Running tests
 

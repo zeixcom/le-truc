@@ -1,12 +1,15 @@
-import { join } from 'path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /**
  * Development server configuration
  */
 const BASE_URL = 'https://zeixcom.github.io/le-truc'
 
-// Absolute path to project root — avoids relying on process.chdir
-const ROOT = join(import.meta.dir, '..')
+// Absolute path to project root — avoids relying on process.chdir. Anchored
+// portably (LT-267): this repo's site config stays repo-anchored BY DESIGN,
+// but no longer through Bun's `import.meta.dir`.
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 // Path constants
 const SRC_DIR = join(ROOT, 'src')

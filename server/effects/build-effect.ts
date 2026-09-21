@@ -14,6 +14,7 @@
  */
 
 import { createEffect, match, type Signal } from '@zeix/cause-effect'
+import { io } from '../runtimes'
 
 /* === Types === */
 
@@ -102,18 +103,18 @@ export const createBuildEffect = <T extends readonly Signal<unknown & {}>[]>(
  * Spawns an external tool (TypeDoc, LightningCSS, `bun build`, ...) with
  * inherited stdio and throws if it exits non-zero, so a failing subprocess
  * becomes a `run` failure instead of a console.error that build effects used
- * to swallow.
+ * to swallow. The spawn itself goes through the runtime seam (LT-267) — the
+ * tools named here remain this repo's own choices, not the seam's concern.
  */
 export const runCommand = async (
 	cmd: string[],
 	options?: { cwd?: string },
 ): Promise<void> => {
-	const proc = Bun.spawn(cmd, {
+	const { exitCode } = await io.spawn(cmd, {
+		...options,
 		stdout: 'inherit',
 		stderr: 'inherit',
-		...(options?.cwd ? { cwd: options.cwd } : {}),
 	})
-	const exitCode = await proc.exited
 	if (exitCode !== 0) {
 		throw new Error(`${cmd[0]} exited with code ${exitCode}`)
 	}

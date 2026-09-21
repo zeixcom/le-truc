@@ -41,12 +41,13 @@ import {
 	findSpanForGeneratedOffset,
 	type SourceSpan,
 } from '../server/compiler/spans'
+import { compileCorpus } from '../server/corpus-compile'
 import {
 	collectCorpusSources,
 	loadCorpusConfig,
 } from '../server/corpus-sources'
-import { compileCorpus } from '../server/effects/compile'
 import { collectI18n } from '../server/effects/i18n'
+import { io } from '../server/runtimes'
 
 // The configuration this run compiles under (LT-255): a consumer's
 // `le-truc.config.json`, or — as in this repo — the defaults, which are this
@@ -113,7 +114,7 @@ for (const info of spanInfos) {
 	})
 }
 
-const proc = Bun.spawn(
+const { exitCode, stdout, stderr } = await io.spawn(
 	[
 		'bunx',
 		'tsc',
@@ -138,11 +139,6 @@ const proc = Bun.spawn(
 	],
 	{ stdout: 'pipe', stderr: 'pipe', cwd: ROOT },
 )
-const [stdout, stderr, exitCode] = await Promise.all([
-	new Response(proc.stdout).text(),
-	new Response(proc.stderr).text(),
-	proc.exited,
-])
 
 if (stderr.trim()) console.error(stderr.trim())
 

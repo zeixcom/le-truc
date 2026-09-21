@@ -18,11 +18,11 @@
  */
 
 import { relative } from 'node:path'
+import { compileCorpus } from '../server/corpus-compile'
 import {
 	collectCorpusSources,
 	loadCorpusConfig,
 } from '../server/corpus-sources'
-import { compileCorpus } from '../server/effects/compile'
 
 const config = loadCorpusConfig()
 const files = collectCorpusSources(config)

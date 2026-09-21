@@ -78,6 +78,7 @@
 		"verify:cem": "bun run scripts/verify-cem.ts",
 		"check:corpus": "bun run scripts/check-corpus.ts",
 		"check:sim": "bun run scripts/sim-portability-check.ts",
+		"check:portability": "bun run scripts/corpus-portability-check.ts",
 		"check:nosubstrate": "bun run scripts/build-corpus.ts && tsc -p tsconfig.nosubstrate.json --noEmit",
 		"i18n:sync": "bun run scripts/i18n-sync.ts",
 		"eval:substrate": "bun run scripts/substrate-evaluation.ts",
