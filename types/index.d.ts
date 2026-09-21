@@ -14,4 +14,4 @@ export { asJSON } from './src/parsers/json';
 export { asClampedInteger, asInteger, asNumber } from './src/parsers/number';
 export { asEnum, asString } from './src/parsers/string';
 export { schedule, throttle } from './src/scheduler';
-export { asParser, type ComponentProp, type ComponentProps, defineMethod, type EffectDescriptor, type FactoryResult, type Falsy, isMethodProducer, isParser, type MethodProducer, type Parser, RESERVED_WORDS_LIST, type ReservedWords, } from './src/types';
+export { asParser, type ComponentProp, type ComponentProps, defineMethod, type EffectDescriptor, type Falsy, isMethodProducer, isParser, type MethodProducer, type Parser, RESERVED_WORDS_LIST, type ReservedWords, } from './src/types';

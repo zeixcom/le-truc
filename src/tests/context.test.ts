@@ -11,8 +11,13 @@ import {
 	makeProvideContexts,
 	makeRequestContext,
 } from '../helpers/context'
-import { installActiveCollector, restoreActiveCollector } from '../internal'
+import {
+	installActiveCollector,
+	restoreActiveCollector,
+	withCollector,
+} from '../internal'
 import type { ComponentProps, EffectDescriptor } from '../types'
+import { activate } from './activate'
 
 // DEV guards read `process.env.DEV_MODE` at call time, so tests exercise DEV
 // branches by flipping the env var around the call — no module mocking needed.
@@ -173,20 +178,23 @@ describe('makeProvideContexts', () => {
 		const provideContexts = makeProvideContexts(host)
 		const collector: EffectDescriptor[] = []
 		const previous = installActiveCollector(collector)
-		const descriptor = provideContexts(['theme'])
+		provideContexts(['theme'])
 		restoreActiveCollector(previous)
-		expect(collector).toEqual([descriptor])
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 
-	test('returns a function that accepts contexts array', () => {
+	test('registers via the collector when called with a contexts array', () => {
 		const provideContexts = makeProvideContexts(host)
-		const descriptor = provideContexts(['theme', 'count'])
-		expect(typeof descriptor).toBe('function')
+		const collector: EffectDescriptor[] = []
+		withCollector(collector, () => provideContexts(['theme', 'count']))
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 
 	test('attaches context-request listener to host when descriptor is called', () => {
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		expect(eventMap.listeners.has(CONTEXT_REQUEST)).toBe(true)
 
@@ -195,7 +203,7 @@ describe('makeProvideContexts', () => {
 
 	test('provides matching context value via callback', () => {
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		let receivedGetter: (() => string) | null = null
 		const context = createContext<() => string>('theme')
@@ -213,7 +221,7 @@ describe('makeProvideContexts', () => {
 
 	test('does not provide non-matching context', () => {
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		let callbackCalled = false
 		const context = createContext<() => number>('count')
@@ -230,7 +238,7 @@ describe('makeProvideContexts', () => {
 
 	test('stops immediate propagation when context matches', () => {
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		let propagationStopped = false
 		const context = createContext<() => string>('theme')
@@ -249,7 +257,9 @@ describe('makeProvideContexts', () => {
 
 	test('provides multiple contexts', () => {
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme', 'count', 'enabled'])()
+		const cleanup = activate(() =>
+			provideContexts(['theme', 'count', 'enabled']),
+		)
 
 		const received: string[] = []
 
@@ -288,7 +298,7 @@ describe('makeProvideContexts', () => {
 
 	test('removes listener on cleanup', () => {
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		const initialListenerCount =
 			eventMap.listeners.get(CONTEXT_REQUEST)?.length ?? 0
@@ -303,7 +313,7 @@ describe('makeProvideContexts', () => {
 
 	test('does not call callback when callback is not a function', () => {
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		const context = createContext<() => string>('theme')
 		// Intentionally passing non-function callback - using any to bypass type check
@@ -328,7 +338,7 @@ describe('makeProvideContexts', () => {
 		})
 
 		const provideContexts = makeProvideContexts(throwingHost)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		let receivedGetter: (() => string) | null = null
 		const context = createContext<() => string>('theme')
@@ -364,7 +374,7 @@ describe('makeProvideContexts', () => {
 				})
 
 				const provideContexts = makeProvideContexts(throwingHost)
-				const cleanup = provideContexts(['theme'])()
+				const cleanup = activate(() => provideContexts(['theme']))
 
 				let receivedGetter: (() => string) | null = null
 				const context = createContext<() => string>('theme')
@@ -389,7 +399,7 @@ describe('makeProvideContexts', () => {
 
 	test('only matches string context keys', () => {
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		let callbackCalled = false
 		// Symbol context - should not match - need to cast since createContext expects string
@@ -461,7 +471,7 @@ describe('makeRequestContext', () => {
 	test('returns memo with provider value when provider responds', () => {
 		// Set up a provider first
 		const provideContexts = makeProvideContexts(host)
-		const provideCleanup = provideContexts(['theme'])()
+		const provideCleanup = activate(() => provideContexts(['theme']))
 
 		const requestContext = makeRequestContext(host)
 		const context = createContext<() => string>('theme')
@@ -476,7 +486,7 @@ describe('makeRequestContext', () => {
 
 	test('memo returns getter that reads current host value', () => {
 		const provideContexts = makeProvideContexts(host)
-		const provideCleanup = provideContexts(['count'])()
+		const provideCleanup = activate(() => provideContexts(['count']))
 
 		const requestContext = makeRequestContext(host)
 		const context = createContext<() => number>('count')
@@ -541,7 +551,7 @@ describe('makeRequestContext late-provider resolution', () => {
 
 		// The provider upgrades now, attaching its listener.
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		// Flush the microtask retry.
 		await Promise.resolve()
@@ -569,7 +579,7 @@ describe('makeRequestContext late-provider resolution', () => {
 
 		// Provider appears after the synchronous dispatch but before the retry.
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		await Promise.resolve()
 		await Promise.resolve()
@@ -595,7 +605,7 @@ describe('makeRequestContext late-provider resolution', () => {
 
 		// Now the provider upgrades — after the microtask, before the timeout.
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		// Wait past the CONTEXT_RETRY_DELAY (210 ms).
 		await new Promise(r => setTimeout(r, 260))
@@ -653,7 +663,7 @@ describe('makeRequestContext late-provider resolution', () => {
 		// Provider present at the synchronous dispatch #1 → the microtask and
 		// timeout retries must be skipped (no gratuitous event traffic).
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		const requestContext = makeRequestContext(host)
 		const context = createContext<() => string>('theme')
@@ -704,7 +714,7 @@ describe('Context integration', () => {
 		const provideContexts = makeProvideContexts(host)
 		const requestContext = makeRequestContext(host)
 
-		const provideCleanup = provideContexts(['theme'])()
+		const provideCleanup = activate(() => provideContexts(['theme']))
 		const context = createContext<() => string>('theme')
 		const memo = requestContext(context, 'light')
 
@@ -724,7 +734,7 @@ describe('Context integration', () => {
 
 		// Host provides 'theme' context
 		const provideContexts = makeProvideContexts(host)
-		const cleanup = provideContexts(['theme'])()
+		const cleanup = activate(() => provideContexts(['theme']))
 
 		// Request from same host
 		const requestContext = makeRequestContext(host)

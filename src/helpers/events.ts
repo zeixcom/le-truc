@@ -44,25 +44,25 @@ type OnHelper<P extends ComponentProps> = {
 		type: T,
 		handler: OnEventHandler<P, HTMLElementEventMap[T], E>,
 		options?: AddEventListenerOptions,
-	): EffectDescriptor
+	): void
 	<E extends Element>(
 		target: Signal<E[]> | Falsy,
 		type: string,
 		handler: OnEventHandler<P, Event, E>,
 		options?: AddEventListenerOptions,
-	): EffectDescriptor
+	): void
 	<E extends Element, T extends keyof HTMLElementEventMap>(
 		target: E | Falsy,
 		type: T,
 		handler: OnEventHandler<P, HTMLElementEventMap[T], E>,
 		options?: AddEventListenerOptions,
-	): EffectDescriptor
+	): void
 	<E extends Element>(
 		target: E | Falsy,
 		type: string,
 		handler: OnEventHandler<P, Event, E>,
 		options?: AddEventListenerOptions,
-	): EffectDescriptor
+	): void
 }
 
 /* === Constants === */
@@ -177,31 +177,31 @@ const makeOn = <P extends ComponentProps>(
 		type: T,
 		handler: OnEventHandler<P, HTMLElementEventMap[T], E>,
 		options?: AddEventListenerOptions,
-	): EffectDescriptor
+	): void
 	function on<E extends Element>(
 		target: Signal<E[]> | Falsy,
 		type: string,
 		handler: OnEventHandler<P, Event, E>,
 		options?: AddEventListenerOptions,
-	): EffectDescriptor
+	): void
 	function on<E extends Element, T extends keyof HTMLElementEventMap>(
 		target: E | Falsy,
 		type: T,
 		handler: OnEventHandler<P, HTMLElementEventMap[T], E>,
 		options?: AddEventListenerOptions,
-	): EffectDescriptor
+	): void
 	function on<E extends Element>(
 		target: E | Falsy,
 		type: string,
 		handler: OnEventHandler<P, Event, E>,
 		options?: AddEventListenerOptions,
-	): EffectDescriptor
+	): void
 	function on(
 		target: Element | Signal<Element[]> | Falsy,
 		type: string,
 		handler: OnEventHandler<P, Event, Element>,
 		options: AddEventListenerOptions = {},
-	): EffectDescriptor {
+	): void {
 		const descriptor: EffectDescriptor = () => {
 			if (!target) return
 
@@ -300,7 +300,6 @@ const makeOn = <P extends ComponentProps>(
 			})
 		}
 		pushDescriptor(host, 'on', descriptor)
-		return descriptor
 	}
 	return on
 }

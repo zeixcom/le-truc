@@ -34,7 +34,6 @@ import type {
 	ComponentProp,
 	ComponentProps,
 	EffectDescriptor,
-	FactoryResult,
 	Falsy,
 } from '../types'
 import { elementName, isCustomElement, isSlotDescriptor } from '../util'
@@ -54,8 +53,8 @@ import { bindFirst, type FirstElement } from './dom'
  * removed in v3.0 and fail the eager validation.
  *
  * `watch()`, `pass()`, `each()`, and `reconcile()` push an `EffectDescriptor`
- * into the active ambient collector and do not require an explicit `return`
- * (ADR 0018), though `return` is still supported.
+ * into the active ambient collector and return `void` — the collector is the
+ * only registration path (ADR 0018).
  */
 
 /* === Types === */
@@ -140,7 +139,8 @@ type PassedProps<Q extends HTMLElement> = {
  *
  * Drives a reactive effect from one or more `Reactive` sources. Only the
  * declared sources trigger re-runs; other reads inside the handler are not
- * tracked. Returns an `EffectDescriptor`.
+ * tracked. Returns `void` — the descriptor registers in the active ambient
+ * collector (ADR 0018).
  *
  * Every source form accepts a plain handler receiving the value, or match
  * handlers for `ok`/`nil`/`err`/`stale` routing with `match()`'s
@@ -151,37 +151,34 @@ type WatchHelper<P extends ComponentProps> = {
 	<K extends keyof P & string>(
 		source: K,
 		handler: (value: P[K]) => MaybePromise<MaybeCleanup>,
-	): EffectDescriptor
+	): void
 	<K extends keyof P & string>(
 		source: K,
 		handlers: SingleMatchHandlers<P[K]>,
-	): EffectDescriptor
+	): void
 	<T extends {}>(
 		source: Signal<T>,
 		handler: (value: T) => MaybePromise<MaybeCleanup>,
-	): EffectDescriptor
-	<T extends {}>(
-		source: Signal<T>,
-		handlers: SingleMatchHandlers<T>,
-	): EffectDescriptor
+	): void
+	<T extends {}>(source: Signal<T>, handlers: SingleMatchHandlers<T>): void
 	<T extends {}>(
 		source: () => T | Promise<T> | null | undefined,
 		handler: (value: T) => MaybePromise<MaybeCleanup>,
-	): EffectDescriptor
+	): void
 	<T extends {}>(
 		source: () => T | Promise<T> | null | undefined,
 		handlers: SingleMatchHandlers<T>,
-	): EffectDescriptor
+	): void
 	<S extends readonly Reactive<unknown, P>[]>(
 		source: [...S],
 		handler: (
 			values: ResolvedReactiveValues<S, P>,
 		) => MaybePromise<MaybeCleanup>,
-	): EffectDescriptor
+	): void
 	<S extends readonly Reactive<unknown, P>[]>(
 		source: [...S],
 		handlers: MatchHandlers<ResolvedReactiveSignals<S, P>>,
-	): EffectDescriptor
+	): void
 }
 
 /**
@@ -189,78 +186,47 @@ type WatchHelper<P extends ComponentProps> = {
  *
  * Passes reactive values to a descendant Le Truc component's Slot-backed
  * signals. Supports a single element or a `Signal<Element[]>` target, with
- * per-element lifecycle for the latter.
+ * per-element lifecycle for the latter. Returns `void` — the descriptor
+ * registers in the active ambient collector (ADR 0018).
  */
 type PassHelper = {
-	<Q extends HTMLElement>(
-		target: Q | Falsy,
-		props: PassedProps<Q>,
-	): EffectDescriptor
+	<Q extends HTMLElement>(target: Q | Falsy, props: PassedProps<Q>): void
 	<Q extends HTMLElement>(
 		target: Signal<Q[]> | Falsy,
 		props: PassedProps<Q>,
-	): EffectDescriptor
+	): void
 }
 
 /* === Internal Helpers === */
 
 /**
- * Recursively activate a `FactoryResult` array of effect descriptors.
+ * Activate the collected effect descriptors in registration order.
  *
- * Nested arrays are flattened; falsy values are skipped. Each truthy
- * descriptor is called immediately so its effects register in the current scope.
+ * Each descriptor is called immediately so its effects register in the
+ * current scope. This is the whole activation pipeline: the ambient
+ * collector (ADR 0018) is the only way a descriptor reaches it.
  *
  * @since 2.0
- * @param result - Flat or nested array of effect descriptors to activate
+ * @param descriptors - Collected effect descriptors to activate
  * @param onError - When given, each descriptor is contained individually and a throw is reported here instead of propagating (ADR 0028)
  */
-const activateResult = (
-	result: FactoryResult,
+const activateDescriptors = (
+	descriptors: EffectDescriptor[],
 	onError?: (error: unknown, descriptor: EffectDescriptor) => void,
 ): void => {
-	for (const descriptor of result) {
-		if (Array.isArray(descriptor)) activateResult(descriptor, onError)
-		else if (descriptor) {
-			// Without a handler, a throw propagates — that is what `each()`'s
-			// and `reconcile()`'s nested calls want, since they run *inside* a
-			// descriptor that the host's own containment already wraps. The
-			// host passes a handler so one failing effect costs only itself
-			// (ADR 0028 sub-design 3).
-			if (!onError) descriptor()
-			else
-				try {
-					descriptor()
-				} catch (error) {
-					onError(error, descriptor)
-				}
-		}
-	}
-}
-
-/**
- * Recursively flatten a `FactoryResult` (or a single descriptor, or a falsy
- * value), invoking `visit` for each descriptor not already present in `seen`.
- *
- * Reconciles the explicit-`return` form with descriptors already pushed
- * into the active collector by `watch()`/`on()`/`pass()`/`each()` (ADR
- * 0018), so a descriptor already pushed is visited only once. A manually
- * constructed `EffectDescriptor` that bypasses every helper is never
- * pushed, so it is still visited here.
- *
- * @since 2.3
- * @param result - Flat or nested array, single descriptor, falsy value, or nothing to reconcile
- * @param seen - Descriptors already accounted for (by reference) — skipped
- * @param visit - Called once per not-yet-seen descriptor, in encounter order
- */
-const forEachUnseen = (
-	result: FactoryResult | EffectDescriptor | Falsy | void,
-	seen: ReadonlySet<EffectDescriptor>,
-	visit: (descriptor: EffectDescriptor) => void,
-): void => {
-	if (Array.isArray(result)) {
-		for (const item of result) forEachUnseen(item, seen, visit)
-	} else if (typeof result === 'function' && !seen.has(result)) {
-		visit(result)
+	for (const descriptor of descriptors) {
+		// Without a handler, a throw propagates — that is what `each()`'s
+		// and `reconcile()`'s nested calls want, since they run *inside* a
+		// descriptor that the host's own containment already wraps. The
+		// host passes a handler so one failing effect costs only itself
+		// (ADR 0028 sub-design 3).
+		if (!onError) descriptor()
+		else
+			try {
+				descriptor()
+			} catch (error) {
+				onError(error, descriptor)
+			}
 	}
 }
 
@@ -376,37 +342,37 @@ const makeWatch = <P extends ComponentProps>(
 	function watch<K extends keyof P & string>(
 		source: K,
 		handler: (value: P[K]) => MaybePromise<MaybeCleanup>,
-	): EffectDescriptor
+	): void
 	function watch<K extends keyof P & string>(
 		source: K,
 		handlers: SingleMatchHandlers<P[K]>,
-	): EffectDescriptor
+	): void
 	function watch<T extends {}>(
 		source: Signal<T>,
 		handler: (value: T) => MaybePromise<MaybeCleanup>,
-	): EffectDescriptor
+	): void
 	function watch<T extends {}>(
 		source: Signal<T>,
 		handlers: SingleMatchHandlers<T>,
-	): EffectDescriptor
+	): void
 	function watch<T extends {}>(
 		source: () => T | Promise<T> | null | undefined,
 		handler: (value: T) => MaybePromise<MaybeCleanup>,
-	): EffectDescriptor
+	): void
 	function watch<T extends {}>(
 		source: () => T | Promise<T> | null | undefined,
 		handlers: SingleMatchHandlers<T>,
-	): EffectDescriptor
+	): void
 	function watch<S extends readonly Reactive<unknown, P>[]>(
 		source: [...S],
 		handler: (
 			values: ResolvedReactiveValues<S, P>,
 		) => MaybePromise<MaybeCleanup>,
-	): EffectDescriptor
+	): void
 	function watch<S extends readonly Reactive<unknown, P>[]>(
 		source: [...S],
 		handlers: MatchHandlers<ResolvedReactiveSignals<S, P>>,
-	): EffectDescriptor
+	): void
 	function watch(
 		source:
 			| Reactive<NonNullable<unknown>, P>
@@ -415,7 +381,7 @@ const makeWatch = <P extends ComponentProps>(
 			| ((value: any) => MaybePromise<MaybeCleanup>)
 			| SingleMatchHandlers<any>
 			| MatchHandlers<any>,
-	): EffectDescriptor {
+	): void {
 		const descriptor: EffectDescriptor = () => {
 			if (Array.isArray(source)) {
 				const signals = source.map(s => toSignal(host, s))
@@ -485,7 +451,6 @@ const makeWatch = <P extends ComponentProps>(
 			)
 		}
 		pushDescriptor(host, 'watch', descriptor)
-		return descriptor
 	}
 	return watch
 }
@@ -606,15 +571,15 @@ const makePass = <P extends ComponentProps>(
 	function pass<Q extends HTMLElement>(
 		target: Q | Falsy,
 		props: PassedProps<Q>,
-	): EffectDescriptor
+	): void
 	function pass<Q extends HTMLElement>(
 		target: Signal<Q[]> | Falsy,
 		props: PassedProps<Q>,
-	): EffectDescriptor
+	): void
 	function pass<Q extends HTMLElement>(
 		target: Q | Signal<Q[]> | Falsy,
 		props: PassedProps<Q>,
-	): EffectDescriptor {
+	): void {
 		const descriptor: EffectDescriptor = () => {
 			if (!target) return
 			if (isSignal<Q[]>(target)) {
@@ -649,7 +614,6 @@ const makePass = <P extends ComponentProps>(
 			}
 		}
 		pushDescriptor(host, 'pass', descriptor)
-		return descriptor
 	}
 	return pass
 }
@@ -660,10 +624,11 @@ const makePass = <P extends ComponentProps>(
  * Entering elements get their own scope; when they leave, that scope — and
  * everything registered in it — is disposed.
  *
- * The callback can call `watch()`, `on()`, and `pass()` directly instead of
- * returning them; each call registers against that element's scope. A
- * callback that calls `each()` again gets its own nested scope. Returning
- * descriptors still works and is not double-activated alongside direct calls.
+ * The callback can call `watch()`, `on()`, and `pass()` directly — each call
+ * registers against that element's scope, the only registration path (ADR
+ * 0018). A callback that calls `each()` again gets its own nested scope. A
+ * returned cleanup registers on that element's scope, exactly like
+ * `reconcile()`'s `bindItem` cleanup.
  *
  * The callback's 2nd parameter, `first`, is a type-safe, throwing lookup
  * scoped to `element` instead of the host (see ADR 0021).
@@ -672,23 +637,19 @@ const makePass = <P extends ComponentProps>(
  */
 function each<E extends Element>(
 	memo: Signal<E[]>,
-	callback: (
-		element: E,
-		first: FirstElement,
-	) => FactoryResult | EffectDescriptor | Falsy | void,
-): EffectDescriptor {
+	callback: (element: E, first: FirstElement) => MaybeCleanup,
+): void {
 	const descriptor: EffectDescriptor = () => {
 		keyedScopes(memo, element => {
 			const collected: EffectDescriptor[] = []
-			const result = withCollector(collected, () =>
+			const cleanup = withCollector(collected, () =>
 				callback(element, bindFirst(element)),
 			)
-			activateResult(collected)
-			forEachUnseen(result, new Set(collected), d => d())
+			activateDescriptors(collected)
+			return cleanup
 		})
 	}
 	pushDescriptor(undefined, 'each', descriptor)
-	return descriptor
 }
 
 /**
@@ -725,7 +686,6 @@ function each<E extends Element>(
  * @param template - Template whose single root element is cloned for entering keys
  * @param source - Keyed reactive data source
  * @param bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
- * @returns Effect descriptor to include in the component's factory result
  * @throws {InvalidTemplateError} if the template content does not contain exactly one root element
  */
 function reconcile<T extends {}, S extends MutableSignal<T>>(
@@ -738,7 +698,7 @@ function reconcile<T extends {}, S extends MutableSignal<T>>(
 		key: string,
 		first: FirstElement,
 	) => MaybeCleanup,
-): EffectDescriptor
+): void
 function reconcile<T extends {}, S extends Signal<T>>(
 	container: Element,
 	template: HTMLTemplateElement,
@@ -749,7 +709,7 @@ function reconcile<T extends {}, S extends Signal<T>>(
 		key: string,
 		first: FirstElement,
 	) => MaybeCleanup,
-): EffectDescriptor
+): void
 function reconcile<T extends {}>(
 	container: Element,
 	template: HTMLTemplateElement,
@@ -760,7 +720,7 @@ function reconcile<T extends {}>(
 		key: string,
 		first: FirstElement,
 	) => MaybeCleanup,
-): EffectDescriptor {
+): void {
 	const descriptor: EffectDescriptor = () => {
 		if (template.content.childElementCount !== 1)
 			throw new InvalidTemplateError(
@@ -888,7 +848,7 @@ function reconcile<T extends {}>(
 									const cleanup = withCollector(collected, () =>
 										bindItem(element, item, key, bindFirst(element)),
 									)
-									activateResult(collected)
+									activateDescriptors(collected)
 									return cleanup
 								},
 								{
@@ -926,15 +886,12 @@ function reconcile<T extends {}>(
 		})
 	}
 	pushDescriptor(undefined, 'reconcile', descriptor)
-	return descriptor
 }
 
 export {
-	activateResult,
+	activateDescriptors,
 	each,
-	type FactoryResult,
 	type Falsy,
-	forEachUnseen,
 	keyedScopes,
 	makePass,
 	makeWatch,

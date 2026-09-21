@@ -8,7 +8,7 @@
  */
 
 import { ExtensionCollisionError } from './errors'
-import type { FactoryResult, Falsy } from './types'
+import type { EffectDescriptor } from './types'
 
 /* === Types === */
 
@@ -25,13 +25,13 @@ type ComponentExtension = {
 	installOnPrototype?: (proto: HTMLElement) => void
 	/**
 	 * Called once per instance during `connectedCallback`, after the factory
-	 * runs. May return extra effect descriptors to activate in the same
-	 * deferred-activation pipeline as author effects.
+	 * runs. May return one extra effect descriptor, which activates in the
+	 * same deferred-activation pipeline as author effects.
 	 */
 	onConnect?: (
 		instance: HTMLElement,
 		internals: ElementInternals | null,
-	) => FactoryResult | Falsy | void
+	) => EffectDescriptor | void
 	/** Called for every observed attribute mutation, in extension array order. */
 	onAttributeChanged?: (
 		instance: HTMLElement,

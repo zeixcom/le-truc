@@ -27,6 +27,7 @@ import { InvalidTemplateError } from '../errors'
 import { makeWatch, reconcile } from '../helpers/reactive'
 import { installActiveCollector, restoreActiveCollector } from '../internal'
 import type { ComponentProps, EffectDescriptor } from '../types'
+import { activate } from './activate'
 
 // reconcile() pushes into the currently active effect-descriptor collector
 // (ADR 0018) and throws NoActiveCollectorError if none is active. These
@@ -212,25 +213,31 @@ describe('reconcile — template validation', () => {
 	test('throws InvalidTemplateError when template content is empty', () => {
 		const container = new FakeElement('ul')
 		const list = createList<string>(['a'], { keyConfig: 'item' })
-		const descriptor = reconcile(
-			container as unknown as Element,
-			makeTemplate(0),
-			list,
-			() => {},
-		)
-		expect(() => createScope(() => descriptor())).toThrow(InvalidTemplateError)
+		expect(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(0),
+					list,
+					() => {},
+				),
+			),
+		).toThrow(InvalidTemplateError)
 	})
 
 	test('throws InvalidTemplateError when template content has two root elements', () => {
 		const container = new FakeElement('ul')
 		const list = createList<string>(['a'], { keyConfig: 'item' })
-		const descriptor = reconcile(
-			container as unknown as Element,
-			makeTemplate(2),
-			list,
-			() => {},
-		)
-		expect(() => createScope(() => descriptor())).toThrow(InvalidTemplateError)
+		expect(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(2),
+					list,
+					() => {},
+				),
+			),
+		).toThrow(InvalidTemplateError)
 	})
 })
 
@@ -241,12 +248,14 @@ describe('reconcile — first run', () => {
 		const { mounted, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 
 		expect(childKeys(container)).toEqual(['item0', 'item1', 'item2'])
@@ -264,12 +273,14 @@ describe('reconcile — first run', () => {
 		const { mounted, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 
 		expect(childKeys(container)).toEqual(['item0', 'item1'])
@@ -288,12 +299,14 @@ describe('reconcile — first run', () => {
 		const list = createList<string>(['a'], { keyConfig: 'item' })
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				() => {},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					() => {},
+				),
+			),
 		)
 
 		expect(childKeys(container)).toEqual(['item0'])
@@ -312,12 +325,14 @@ describe('reconcile — first run', () => {
 		const { calls } = captureWarns(() =>
 			withDevMode(() => {
 				const dispose = createScope(() =>
-					reconcile(
-						container as unknown as Element,
-						makeTemplate(),
-						list,
-						() => {},
-					)(),
+					activate(() =>
+						reconcile(
+							container as unknown as Element,
+							makeTemplate(),
+							list,
+							() => {},
+						),
+					),
 				)
 				dispose()
 			}),
@@ -346,12 +361,14 @@ describe('reconcile — first run', () => {
 		const { calls } = captureWarns(() =>
 			withDevMode(() => {
 				const dispose = createScope(() =>
-					reconcile(
-						container as unknown as Element,
-						makeTemplate(),
-						list,
-						() => {},
-					)(),
+					activate(() =>
+						reconcile(
+							container as unknown as Element,
+							makeTemplate(),
+							list,
+							() => {},
+						),
+					),
 				)
 				dispose()
 			}),
@@ -368,12 +385,14 @@ describe('reconcile — first run', () => {
 		const container = new FakeElement('ul')
 		const list = createList<string>(['a'], { keyConfig: 'item' })
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				() => {},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					() => {},
+				),
+			),
 		)
 
 		const { calls } = await captureWarnsAsync(async () =>
@@ -397,12 +416,14 @@ describe('reconcile — first run', () => {
 		const { mounted, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 
 		// The unreconciled child is kept as-is; a fresh clone is created for the
@@ -421,12 +442,14 @@ describe('reconcile — enter, leave, move', () => {
 		const { mounted, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 
 		list.add('b')
@@ -443,12 +466,14 @@ describe('reconcile — enter, leave, move', () => {
 		const { mounted, disposed, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 
 		list.remove('item0')
@@ -475,12 +500,14 @@ describe('reconcile — enter, leave, move', () => {
 		const { mounted, disposed, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 		const [elX, elY, elZ] = container.children
 
@@ -502,12 +529,14 @@ describe('reconcile — enter, leave, move', () => {
 		const { mounted, disposed, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 		const before = [...container.children]
 
@@ -532,12 +561,14 @@ describe('reconcile — keyed-relative positioning', () => {
 		const { mounted, disposed, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 
 		// Mid-drag: the dragged item is pinned by the event handlers
@@ -572,12 +603,14 @@ describe('reconcile — keyed-relative positioning', () => {
 		})
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				() => {},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					() => {},
+				),
+			),
 		)
 
 		// Simulate a transient marker between the two keyed items
@@ -602,12 +635,14 @@ describe('reconcile — keyed-relative positioning', () => {
 		const list = createList<string>(['a'], { keyConfig: 'item' })
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				() => {},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					() => {},
+				),
+			),
 		)
 
 		const marker = new FakeElement('li')
@@ -629,12 +664,14 @@ describe('reconcile — ownership', () => {
 		const { disposed, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 
 		expect(disposed).toEqual([])
@@ -648,12 +685,14 @@ describe('reconcile — ownership', () => {
 		const { disposed, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					bindItem,
+				),
+			),
 		)
 
 		list.add('b')
@@ -684,12 +723,14 @@ describe('reconcile — Collection source', () => {
 		const { mounted, disposed, bindItem } = makeBindRecorder()
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				collection,
-				bindItem,
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					collection,
+					bindItem,
+				),
+			),
 		)
 
 		expect(childKeys(container)).toEqual(['x'])
@@ -726,16 +767,18 @@ describe('reconcile — collector parity with each() (ADR 0017)', () => {
 
 		const seen: string[] = []
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				(_element, item) => {
-					watch(item, ({ label }) => {
-						seen.push(label)
-					})
-				},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					(_element, item) => {
+						watch(item, ({ label }) => {
+							seen.push(label)
+						})
+					},
+				),
+			),
 		)
 
 		expect(seen).toEqual(['X'])
@@ -753,14 +796,16 @@ describe('reconcile — collector parity with each() (ADR 0017)', () => {
 		const cleanedUp: string[] = []
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				(_element, _item, key) => () => {
-					cleanedUp.push(key)
-				},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					(_element, _item, key) => () => {
+						cleanedUp.push(key)
+					},
+				),
+			),
 		)
 
 		expect(cleanedUp).toEqual([])
@@ -789,12 +834,14 @@ describe('reconcile — collector parity with each() (ADR 0017)', () => {
 		const watch = makeWatch(host)
 
 		const dispose = createScope(() =>
-			reconcile(container as unknown as Element, makeTemplate(), list, () => {
-				mountCount.value++
-				// If the structural effect shared this dependency, every item
-				// mutation would re-run structural work and re-mount items.
-				watch(createState('sentinel'), () => {})
-			})(),
+			activate(() =>
+				reconcile(container as unknown as Element, makeTemplate(), list, () => {
+					mountCount.value++
+					// If the structural effect shared this dependency, every item
+					// mutation would re-run structural work and re-mount items.
+					watch(createState('sentinel'), () => {})
+				}),
+			),
 		)
 		const mountsAfterInitial = mountCount.value
 		expect(mountsAfterInitial).toBe(2)
@@ -822,17 +869,19 @@ describe('reconcile — scoped first (ADR 0021)', () => {
 
 		const found: (FakeElement | undefined)[] = []
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				(element, _item, _key, first) => {
-					;(element as unknown as FakeElement).appendChild(
-						new FakeElement('input'),
-					)
-					found.push(first('input') as unknown as FakeElement | undefined)
-				},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					(element, _item, _key, first) => {
+						;(element as unknown as FakeElement).appendChild(
+							new FakeElement('input'),
+						)
+						found.push(first('input') as unknown as FakeElement | undefined)
+					},
+				),
+			),
 		)
 
 		expect(found).toHaveLength(1)
@@ -846,14 +895,16 @@ describe('reconcile — scoped first (ADR 0021)', () => {
 
 		const found: unknown[] = []
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				(_element, _item, _key, first) => {
-					found.push(first('input'))
-				},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					(_element, _item, _key, first) => {
+						found.push(first('input'))
+					},
+				),
+			),
 		)
 
 		expect(found).toEqual([undefined])
@@ -865,7 +916,7 @@ describe('reconcile — scoped first (ADR 0021)', () => {
 		const list = createList<string>(['a'], { keyConfig: 'item' })
 
 		expect(() =>
-			createScope(() =>
+			activate(() =>
 				reconcile(
 					container as unknown as Element,
 					makeTemplate(),
@@ -873,7 +924,7 @@ describe('reconcile — scoped first (ADR 0021)', () => {
 					(_element, _item, _key, first) => {
 						first('input', 'needed for label association')
 					},
-				)(),
+				),
 			),
 		).toThrow(/in item /)
 	})
@@ -886,18 +937,20 @@ describe('reconcile — scoped first (ADR 0021)', () => {
 		const calls: string[] = []
 
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				list,
-				(element, _item, _key, first) => {
-					;(element as unknown as FakeElement).appendChild(
-						new FakeElement('not-yet-defined-el'),
-					)
-					first('not-yet-defined-el')
-					calls.push('bound')
-				},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					(element, _item, _key, first) => {
+						;(element as unknown as FakeElement).appendChild(
+							new FakeElement('not-yet-defined-el'),
+						)
+						first('not-yet-defined-el')
+						calls.push('bound')
+					},
+				),
+			),
 		)
 
 		// bindItem's body ran synchronously to completion — no deferral occurred.
@@ -921,15 +974,17 @@ describe('reconcile — bridge-name source types (CE 1.5)', () => {
 		})
 		const container = new FakeElement('ul')
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				rows,
-				(_element, item) => {
-					// item: Store<Row> — per-item granularity preserved
-					void item.label.get()
-				},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					rows,
+					(_element, item) => {
+						// item: Store<Row> — per-item granularity preserved
+						void item.label.get()
+					},
+				),
+			),
 		)
 		expect(childKeys(container)).toEqual([])
 		dispose()
@@ -940,14 +995,16 @@ describe('reconcile — bridge-name source types (CE 1.5)', () => {
 		const labels = deriveList(rows, row => row.label)
 		const container = new FakeElement('ul')
 		const dispose = createScope(() =>
-			reconcile(
-				container as unknown as Element,
-				makeTemplate(),
-				labels,
-				(_element, item) => {
-					void item.get()
-				},
-			)(),
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					labels,
+					(_element, item) => {
+						void item.get()
+					},
+				),
+			),
 		)
 		expect(childKeys(container)).toEqual([])
 		dispose()
@@ -966,23 +1023,27 @@ describe('reconcile — bridge-name source types (CE 1.5)', () => {
 		// never matched a single overload, before or after the rename.
 		const listContainer = new FakeElement('ul')
 		const disposeList = createScope(() =>
-			reconcile(
-				listContainer as unknown as Element,
-				makeTemplate(),
-				asList,
-				() => {},
-			)(),
+			activate(() =>
+				reconcile(
+					listContainer as unknown as Element,
+					makeTemplate(),
+					asList,
+					() => {},
+				),
+			),
 		)
 		expect(childKeys(listContainer)).toEqual([])
 		disposeList()
 		const collectionContainer = new FakeElement('ul')
 		const disposeCollection = createScope(() =>
-			reconcile(
-				collectionContainer as unknown as Element,
-				makeTemplate(),
-				asCollection,
-				() => {},
-			)(),
+			activate(() =>
+				reconcile(
+					collectionContainer as unknown as Element,
+					makeTemplate(),
+					asCollection,
+					() => {},
+				),
+			),
 		)
 		expect(childKeys(collectionContainer)).toEqual([])
 		disposeCollection()

@@ -215,7 +215,6 @@ export {
 	type ComponentProps,
 	defineMethod,
 	type EffectDescriptor,
-	type FactoryResult,
 	type Falsy,
 	isMethodProducer,
 	isParser,

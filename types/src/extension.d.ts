@@ -6,7 +6,7 @@
  * imports a concrete feature module, so an unused extension does not reach
  * the bundle.
  */
-import type { FactoryResult, Falsy } from './types';
+import type { EffectDescriptor } from './types';
 type ComponentExtension = {
     /** Identifies the extension in collision error messages. */
     name: string;
@@ -20,10 +20,10 @@ type ComponentExtension = {
     installOnPrototype?: (proto: HTMLElement) => void;
     /**
      * Called once per instance during `connectedCallback`, after the factory
-     * runs. May return extra effect descriptors to activate in the same
-     * deferred-activation pipeline as author effects.
+     * runs. May return one extra effect descriptor, which activates in the
+     * same deferred-activation pipeline as author effects.
      */
-    onConnect?: (instance: HTMLElement, internals: ElementInternals | null) => FactoryResult | Falsy | void;
+    onConnect?: (instance: HTMLElement, internals: ElementInternals | null) => EffectDescriptor | void;
     /** Called for every observed attribute mutation, in extension array order. */
     onAttributeChanged?: (instance: HTMLElement, name: string, oldValue: string | null, newValue: string | null) => void;
 };

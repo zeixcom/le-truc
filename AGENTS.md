@@ -4,7 +4,7 @@
 
 ## Factory Form
 
-The factory form is the only way to define components. Effect helpers (`watch`, `on`, `pass`, `each`, `provideContexts`) self-register in an ambient collector when called — no `return` needed (ADR 0018). Explicit `return [...]` of a `FactoryResult` still works but is deprecated.
+The factory form is the only way to define components. Effect helpers (`watch`, `on`, `pass`, `each`, `provideContexts`) self-register in an ambient collector when called and return `void` — the collector is the only registration path, so a factory returns nothing (ADR 0018; since v3.0 `FactoryResult` is gone).
 
 ```ts
 defineComponent<MyProps>('my-element', ({ expose, first, on, watch }) => {

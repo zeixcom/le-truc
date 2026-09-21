@@ -4,7 +4,7 @@ import type { FormAssociatedCheckboxExtension, FormAssociatedExtension } from '.
 import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
 import { type ElementQueries } from './helpers/dom';
 import { type OnHelper } from './helpers/events';
-import { type FactoryResult, type Falsy, type PassHelper, type WatchHelper } from './helpers/reactive';
+import { type PassHelper, type WatchHelper } from './helpers/reactive';
 import { type ComponentProps, type MethodProducer, type Parser } from './types';
 /**
  * Any value that `#setAccessor` can turn into a signal.
@@ -118,25 +118,26 @@ type FormFactoryContext<P extends ComponentProps, HostElement extends FormAssoci
  *
  * The factory receives a `FactoryContext` at connect time: query helpers
  * (`first`, `all`), the `host` element, and `expose()` for declaring
- * reactive properties. It returns effect descriptors created by helpers
- * like `watch()`, `on()`, `pass()`, `provideContexts()`, and
- * `requestContext()`. Effects activate after dependency resolution, so
+ * reactive properties. Effect helpers (`watch()`, `on()`, `pass()`,
+ * `provideContexts()`, `each()`) register their effects in the ambient
+ * collector as they are called and return `void` — the factory returns
+ * nothing (ADR 0018). Effects activate after dependency resolution, so
  * child custom elements are defined before any descriptor runs.
  *
  * @since 2.0
  * @param name - Custom element name; must contain a hyphen and start with a lowercase letter.
- * @param factory - Function that queries elements, calls `expose()`, and returns effect descriptors.
+ * @param factory - Function that queries elements, calls `expose()`, and registers effects by calling helpers.
  * @param extensions - Dependency-injected features, e.g. `[formAssociated()]`, `[observedAttributes([...])]`. If present, `formAssociated()`/`formAssociatedCheckbox()` must be first.
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name.
  */
 declare function defineComponent<P extends ComponentProps & {
     value: string | number;
-}>(name: string, factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void, extensions: readonly [FormAssociatedExtension, ...ComponentExtension[]]): CustomElementConstructor | undefined;
+}>(name: string, factory: (context: FormFactoryContext<P>) => void, extensions: readonly [FormAssociatedExtension, ...ComponentExtension[]]): CustomElementConstructor | undefined;
 declare function defineComponent<P extends ComponentProps & {
     checked: boolean;
-}>(name: string, factory: (context: FormFactoryContext<P, FormAssociatedCheckboxElement>) => FactoryResult | Falsy | void, extensions: readonly [
+}>(name: string, factory: (context: FormFactoryContext<P, FormAssociatedCheckboxElement>) => void, extensions: readonly [
     FormAssociatedCheckboxExtension,
     ...ComponentExtension[]
 ]): CustomElementConstructor | undefined;
-declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void, extensions?: readonly ComponentExtension[]): CustomElementConstructor | undefined;
+declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => void, extensions?: readonly ComponentExtension[]): CustomElementConstructor | undefined;
 export { defineComponent, type FactoryContext, type FormAssociatedCheckboxElement, type FormAssociatedElement, type FormAssociatedValueElement, type FormFactoryContext, type Initializers, type MaybeSignal, };

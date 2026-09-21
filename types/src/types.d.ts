@@ -30,17 +30,14 @@ type Falsy = false | null | undefined | '' | 0 | 0n;
 /**
  * A deferred effect: creates a reactive effect when called inside a reactive scope.
  *
- * Returned by `watch()`, `on()`, `each()`, `pass()`, and `provideContexts()`.
- * Activates after dependency resolution, not when the factory function runs.
+ * Created by `watch()`, `on()`, `each()`, `pass()`, `reconcile()`, and
+ * `provideContexts()`, which push it into the ambient collector (ADR 0018)
+ * and return `void` — the collector is the only registration path. A
+ * hand-authored descriptor registers via `watch(() => true, descriptor)`.
+ * Descriptors activate after dependency resolution, not when the factory
+ * function runs.
  */
 type EffectDescriptor = () => MaybeCleanup;
-/**
- * The factory function's return value: an array of effect descriptors and optional falsy guards.
- *
- * Nested arrays flatten automatically. Falsy values are filtered out before
- * activation, enabling the `element && [watch(...)]` conditional pattern.
- */
-type FactoryResult = Array<EffectDescriptor | FactoryResult | Falsy>;
 /**
  * Checks whether a value is a branded parser function.
  *
@@ -85,4 +82,4 @@ declare const asParser: <T extends {}>(fn: Parser<T>) => Parser<T>;
 declare const defineMethod: <T extends (...args: any[]) => void>(fn: T) => T & {
     readonly [METHOD_BRAND]: true;
 };
-export { asParser, type ComponentProp, type ComponentProps, defineMethod, type EffectDescriptor, type FactoryResult, type Falsy, isMethodProducer, isParser, isReservedWord, type MethodProducer, type Parser, RESERVED_WORDS, RESERVED_WORDS_LIST, type ReservedWords, };
+export { asParser, type ComponentProp, type ComponentProps, defineMethod, type EffectDescriptor, type Falsy, isMethodProducer, isParser, isReservedWord, type MethodProducer, type Parser, RESERVED_WORDS, RESERVED_WORDS_LIST, type ReservedWords, };

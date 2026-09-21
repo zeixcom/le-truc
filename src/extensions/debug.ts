@@ -3,7 +3,7 @@ import { bindState } from '../bindings'
 import type { ComponentExtension } from '../extension'
 import { getSignals } from '../internal'
 import { schedule } from '../scheduler'
-import type { FactoryResult } from '../types'
+import type { EffectDescriptor } from '../types'
 import { elementName, isCustomElement } from '../util'
 
 /**
@@ -257,7 +257,7 @@ const installDebugToggle = (): void => {
 const debug = (): ComponentExtension => ({
 	name: 'debug',
 	reservedMembers: new Set(['debug']),
-	onConnect: (instance, internals): FactoryResult | void => {
+	onConnect: (instance, internals): EffectDescriptor | void => {
 		injectDebugStyle()
 		installDebugToggle()
 		const state = createCell(false)
@@ -275,7 +275,7 @@ const debug = (): ComponentExtension => ({
 		// only the resting `*:state(debug)` outline is missing.
 		if (!internals) return
 		const setState = bindState(internals, 'debug')
-		return [() => createEffect(() => setState(slot.get()))]
+		return () => createEffect(() => setState(slot.get()))
 	},
 })
 

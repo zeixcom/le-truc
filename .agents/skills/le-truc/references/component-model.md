@@ -13,7 +13,7 @@ defineComponent<P extends ComponentProps>(name, factory, extensions?)
 | Argument | Type | Purpose |
 |---|---|---|
 | `name` | `string` | Tag name — lowercase, must contain hyphen |
-| `factory` | `(context: FactoryContext<P>) => FactoryResult \| Falsy \| void` | Called at connect time; queries elements, calls `expose()`, calls effect helpers |
+| `factory` | `(context: FactoryContext<P>) => void` | Called at connect time; queries elements, calls `expose()`, calls effect helpers |
 | `extensions` | `ComponentExtension[]` (optional) | Opt-in capabilities — see [Extensions](#extensions) |
 
 ### Factory Context Helpers
@@ -86,7 +86,7 @@ A fourth extension, `debug()`, is **not exported and never appears in this array
 - On form-associated components, `value`/`checked` is the sole live edit path — never pass it to `observedAttributes()`: the attribute is the reset baseline (`defaultValue`/`defaultChecked`), and re-parsing it into the live prop conflates the two channels. `defaultValue`/`defaultChecked` are reserved member names — `expose()` throws `InvalidPropertyNameError` for them
 - Parsers in `expose()` called **once at connect time** — HTML authors configure via attributes in server-rendered markup
 - Attribute changes after connect **are not re-parsed** — reactive state flows through property interface only
-- Effect helpers register themselves when called — no `return` needed. Explicit `return [...]` of a `FactoryResult` (`Array<EffectDescriptor | FactoryResult | Falsy>`) still works but is deprecated; nested arrays are flattened and falsy values filtered, so the legacy `element && watch(...)` pattern still works too, but prefer `if (element) watch(...)` in new code
+- Effect helpers register themselves when called and return `void` — no `return` needed or honored; the collector is the only registration path. Conditional registration is plain control flow: `if (element) watch(...)`
 
 ---
 

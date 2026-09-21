@@ -35,10 +35,7 @@ import {
 import { type ElementQueries, makeElementQueries } from './helpers/dom'
 import { makeOn, type OnHelper } from './helpers/events'
 import {
-	activateResult,
-	type FactoryResult,
-	type Falsy,
-	forEachUnseen,
+	activateDescriptors,
 	makePass,
 	makeWatch,
 	type PassHelper,
@@ -223,27 +220,28 @@ const elementInternalsRegistry = (): WeakMap<Element, ElementInternals> => {
  *
  * The factory receives a `FactoryContext` at connect time: query helpers
  * (`first`, `all`), the `host` element, and `expose()` for declaring
- * reactive properties. It returns effect descriptors created by helpers
- * like `watch()`, `on()`, `pass()`, `provideContexts()`, and
- * `requestContext()`. Effects activate after dependency resolution, so
+ * reactive properties. Effect helpers (`watch()`, `on()`, `pass()`,
+ * `provideContexts()`, `each()`) register their effects in the ambient
+ * collector as they are called and return `void` — the factory returns
+ * nothing (ADR 0018). Effects activate after dependency resolution, so
  * child custom elements are defined before any descriptor runs.
  *
  * @since 2.0
  * @param name - Custom element name; must contain a hyphen and start with a lowercase letter.
- * @param factory - Function that queries elements, calls `expose()`, and returns effect descriptors.
+ * @param factory - Function that queries elements, calls `expose()`, and registers effects by calling helpers.
  * @param extensions - Dependency-injected features, e.g. `[formAssociated()]`, `[observedAttributes([...])]`. If present, `formAssociated()`/`formAssociatedCheckbox()` must be first.
  * @throws {InvalidComponentNameError} If the component name is not a valid custom element name.
  */
 function defineComponent<P extends ComponentProps & { value: string | number }>(
 	name: string,
-	factory: (context: FormFactoryContext<P>) => FactoryResult | Falsy | void,
+	factory: (context: FormFactoryContext<P>) => void,
 	extensions: readonly [FormAssociatedExtension, ...ComponentExtension[]],
 ): CustomElementConstructor | undefined
 function defineComponent<P extends ComponentProps & { checked: boolean }>(
 	name: string,
 	factory: (
 		context: FormFactoryContext<P, FormAssociatedCheckboxElement>,
-	) => FactoryResult | Falsy | void,
+	) => void,
 	extensions: readonly [
 		FormAssociatedCheckboxExtension,
 		...ComponentExtension[],
@@ -251,12 +249,12 @@ function defineComponent<P extends ComponentProps & { checked: boolean }>(
 ): CustomElementConstructor | undefined
 function defineComponent<P extends ComponentProps>(
 	name: string,
-	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
+	factory: (context: FactoryContext<P>) => void,
 	extensions?: readonly ComponentExtension[],
 ): CustomElementConstructor | undefined
 function defineComponent<P extends ComponentProps>(
 	name: string,
-	factory: (context: FactoryContext<P>) => FactoryResult | Falsy | void,
+	factory: (context: FactoryContext<P>) => void,
 	extensions?: readonly ComponentExtension[],
 ): CustomElementConstructor | undefined {
 	if (!name.includes('-') || !name.match(/^[a-z][a-z0-9-]*$/))
@@ -275,7 +273,7 @@ function defineComponent<P extends ComponentProps>(
 		static observedAttributes = merged.observedAttributes
 
 		#initialized = false
-		#setup: FactoryResult = []
+		#setup: EffectDescriptor[] = []
 		#cleanup: MaybeCleanup
 		#internalsAccessed = false
 		/** Set when the factory or an extension threw — the component never enhances. */
@@ -338,7 +336,7 @@ function defineComponent<P extends ComponentProps>(
 			const runSetup = () => {
 				this.#cleanup = createScope(
 					() => {
-						activateResult(this.#setup, onDescriptorError)
+						activateDescriptors(this.#setup, onDescriptorError)
 					},
 					{
 						root: true,
@@ -385,10 +383,9 @@ function defineComponent<P extends ComponentProps>(
 					requestContext: makeRequestContext(host),
 				}
 
-				// The factory's return value is reconciled too, so a raw
-				// EffectDescriptor authored by hand (bypassing every helper)
-				// still activates. forEachUnseen skips anything already
-				// collected, so nothing activates twice. See ADR 0018.
+				// The collector is the only registration path (ADR 0018): the
+				// helpers push into it as they are called, and the factory's
+				// return value — if any — is ignored.
 				const collector: EffectDescriptor[] = []
 
 				// The factory phase is contained whole-component: a factory is
@@ -404,12 +401,8 @@ function defineComponent<P extends ComponentProps>(
 				}
 
 				try {
-					const result = withCollector(collector, () => factory(context))
+					withCollector(collector, () => factory(context))
 					this.#setup = collector
-					if (result) {
-						const seen = new Set(collector)
-						forEachUnseen(result, seen, d => this.#setup.push(d))
-					}
 				} catch (error) {
 					failConnect('the component factory', error)
 					return
@@ -423,10 +416,7 @@ function defineComponent<P extends ComponentProps>(
 				for (const ext of exts) {
 					try {
 						const extra = ext.onConnect?.(this, internals)
-						if (extra) {
-							const seen = new Set(this.#setup as EffectDescriptor[])
-							forEachUnseen(extra, seen, d => this.#setup.push(d))
-						}
+						if (extra) this.#setup.push(extra)
 					} catch (error) {
 						failConnect(`the '${ext.name}' extension`, error)
 						return

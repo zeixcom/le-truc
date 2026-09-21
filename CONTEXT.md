@@ -21,7 +21,7 @@ A complete HTML document or route that uses Le Truc components. Not a Le Truc co
 _Avoid_: view, route, screen
 
 **Factory**:
-The function passed to `defineComponent()` that receives the factory context. Factory context helpers (`watch`, `on`, `pass`, `each`, `provideContexts`) register effect descriptors into an ambient per-instance collector as they are called; as of v2.3 the factory does not need to `return` them (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md)). Explicitly returning a `FactoryResult` array is still supported for backward compatibility and is deprecated as of v3.0 (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md), superseded).
+The function passed to `defineComponent()` that receives the factory context. Factory context helpers (`watch`, `on`, `pass`, `each`, `provideContexts`) register effect descriptors into an ambient per-instance collector as they are called and return `void` — the collector is the only registration path, and the factory returns nothing (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md), which supersedes [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md)). Since v3.0 the explicit-return form is removed: `FactoryResult` no longer exists.
 _Avoid_: builder, constructor, initializer
 
 **Factory Context**:
@@ -29,7 +29,7 @@ The object passed to a factory function containing helpers like `watch`, `on`, `
 _Avoid_: component context, element context
 
 **Effect Descriptor**:
-A thunk (function) produced internally by factory context helpers like `watch()`, `on()`, `pass()`, `each()`. Pushed into the active ambient collector when the helper is called, then activated after dependency resolution. Prior to v2.3 these were returned by the factory for explicit collection; that form still works but is deprecated as of v3.0.
+A thunk (function) produced internally by factory context helpers like `watch()`, `on()`, `pass()`, `each()`. Pushed into the active ambient collector when the helper is called, then activated after dependency resolution. Prior to v3.0 these could also be returned by the factory for explicit collection; that form is removed — the collector is the only registration path.
 _Avoid_: effect, reaction, subscriber
 
 **Signal**:
@@ -144,7 +144,7 @@ _Avoid_: ICU message, template literal (that names the authored `` `…${x}…` 
 
 - A **Module** (ESM file) contains one or more **Component** definitions
 - A **Component** is a Web Component instance (a **Custom Element** with JS functionality) created by a **Factory** function
-- A **Factory** receives a **Factory Context**, whose helpers register **Effect Descriptor** thunks into an ambient collector as they are called (explicit `return` of a descriptor array is still supported but deprecated as of v3.0)
+- A **Factory** receives a **Factory Context**, whose helpers register **Effect Descriptor** thunks into an ambient collector as they are called and return `void` — the factory returns nothing
 - A **Signal** may be wrapped in a **Slot** to enable **Pass** between **Component** instances
 - A **Parser** converts attribute strings to values that may back a **Signal**
 - A **Pre-Connect Write** captured at connect time seeds the initial value of a **Signal**-backed property instead of suppressing it

@@ -21,6 +21,7 @@ import {
 	InvalidPropertyNameError,
 	NoActiveCollectorError,
 } from '../errors'
+import type { ComponentExtension } from '../extension'
 import { internalsHosts, retainedInitializers } from '../internal'
 import { asParser, defineMethod } from '../types'
 
@@ -157,32 +158,32 @@ afterEach(() => {
 
 describe('defineComponent name validation', () => {
 	test('throws InvalidComponentNameError when the name has no hyphen', () => {
-		expect(() => defineComponent('foo', () => [])).toThrow(
+		expect(() => defineComponent('foo', () => {})).toThrow(
 			InvalidComponentNameError,
 		)
 	})
 
 	test('throws when the name starts with an uppercase letter', () => {
-		expect(() => defineComponent('Foo-bar', () => [])).toThrow(
+		expect(() => defineComponent('Foo-bar', () => {})).toThrow(
 			InvalidComponentNameError,
 		)
 	})
 
 	test('throws when the name starts with a digit', () => {
-		expect(() => defineComponent('1foo-bar', () => [])).toThrow(
+		expect(() => defineComponent('1foo-bar', () => {})).toThrow(
 			InvalidComponentNameError,
 		)
 	})
 
 	test('throws when the name contains disallowed characters', () => {
-		expect(() => defineComponent('foo_bar-baz', () => [])).toThrow(
+		expect(() => defineComponent('foo_bar-baz', () => {})).toThrow(
 			InvalidComponentNameError,
 		)
 	})
 
 	test('accepts a valid name and registers a constructor', () => {
 		const name = uniqueName()
-		const ctor = defineComponent(name, () => [])
+		const ctor = defineComponent(name, () => {})
 		expect(ctor).toBeDefined()
 		expect((globalThis as any).customElements.get(name)).toBe(ctor)
 	})
@@ -193,18 +194,21 @@ describe('defineComponent name validation', () => {
 describe('connectedCallback / disconnectedCallback', () => {
 	test('activates factory effect descriptors on connect', () => {
 		let ran = false
-		const Ctor = defineComponent(uniqueName(), () => [
-			() => {
-				ran = true
-			},
-		])!
+		const Ctor = defineComponent(uniqueName(), ({ watch }) => {
+			watch(
+				() => true,
+				() => {
+					ran = true
+				},
+			)
+		})!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
 		expect(ran).toBe(true)
 	})
 
 	test('a factory returning no descriptors does not throw on connect or disconnect', () => {
-		const Ctor = defineComponent(uniqueName(), () => [])!
+		const Ctor = defineComponent(uniqueName(), () => {})!
 		const instance = new Ctor() as any
 		expect(() => instance.connectedCallback()).not.toThrow()
 		expect(() => instance.disconnectedCallback()).not.toThrow()
@@ -212,14 +216,14 @@ describe('connectedCallback / disconnectedCallback', () => {
 
 	test('disconnectedCallback disposes effects created during connect', () => {
 		let cleaned = false
-		const Ctor = defineComponent(uniqueName(), () => [
-			() =>
-				createEffect(() => {
-					return () => {
-						cleaned = true
-					}
-				}),
-		])!
+		const Ctor = defineComponent(uniqueName(), ({ watch }) => {
+			watch(
+				() => true,
+				() => () => {
+					cleaned = true
+				},
+			)
+		})!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
 		expect(cleaned).toBe(false)
@@ -228,7 +232,12 @@ describe('connectedCallback / disconnectedCallback', () => {
 	})
 
 	test('disconnectedCallback before any connect does not throw', () => {
-		const Ctor = defineComponent(uniqueName(), () => [() => {}])!
+		const Ctor = defineComponent(uniqueName(), ({ watch }) => {
+			watch(
+				() => true,
+				() => {},
+			)
+		})!
 		const instance = new Ctor() as any
 		expect(() => instance.disconnectedCallback()).not.toThrow()
 	})
@@ -240,15 +249,17 @@ describe('reconnect', () => {
 	test('disposes the previous scope before re-activating, instead of leaking it', () => {
 		let runCount = 0
 		let cleanupCount = 0
-		const Ctor = defineComponent(uniqueName(), () => [
-			() =>
-				createEffect(() => {
+		const Ctor = defineComponent(uniqueName(), ({ watch }) => {
+			watch(
+				() => true,
+				() => {
 					runCount++
 					return () => {
 						cleanupCount++
 					}
-				}),
-		])!
+				},
+			)
+		})!
 		const instance = new Ctor() as any
 
 		instance.connectedCallback()
@@ -555,6 +566,19 @@ describe('reserved word guard', () => {
 
 /* === ADR 0028: connect-time error containment === */
 
+/**
+ * An extension whose extra effect descriptor throws at activation — the
+ * remaining path a RAW (non-helper-produced) descriptor reaches the
+ * activation pipeline by, since the factory's return contract is gone
+ * (ADR 0018 v3.0) and extension `onConnect` returns one descriptor.
+ */
+const boomExtension = (error: unknown): ComponentExtension => ({
+	name: 'boom',
+	onConnect: () => () => {
+		throw error
+	},
+})
+
 describe('connect-time error containment (ADR 0028)', () => {
 	test('a factory that throws does not escape connectedCallback', () => {
 		const Ctor = defineComponent(uniqueName(), () => {
@@ -604,7 +628,10 @@ describe('connect-time error containment (ADR 0028)', () => {
 	test('a throwing descriptor costs only itself — its siblings still activate', () => {
 		// The substantive change from whole-component containment (ADR 0028
 		// sub-design 3): descriptors are independent thunks, so one failing
-		// binding must not cost the component its working effects.
+		// binding must not cost the component its working effects. The
+		// failing one is the extension's raw descriptor — activateDescriptors
+		// calls it directly, so a throw is contained per descriptor instead
+		// of being routed through match()'s err handler.
 		const ran: string[] = []
 		const Ctor = defineComponent<{ count: number }>(
 			uniqueName(),
@@ -616,18 +643,14 @@ describe('connect-time error containment (ADR 0028)', () => {
 						ran.push('before')
 					},
 				)
-				// Hand-authored descriptors: activateResult calls them
-				// directly, so a throw is not routed through match()'s err
-				// handler the way a watch() handler's would be.
-				return [
-					() => {
-						throw new Error('activation boom')
-					},
+				watch(
+					() => true,
 					() => {
 						ran.push('after')
 					},
-				]
+				)
 			},
+			[boomExtension(new Error('activation boom'))],
 		)!
 		const instance = new Ctor() as any
 		const { calls } = captureErrors(() => {
@@ -647,12 +670,8 @@ describe('connect-time error containment (ADR 0028)', () => {
 					() => true,
 					() => () => cleaned.push('survivor'),
 				)
-				return [
-					() => {
-						throw new Error('activation boom')
-					},
-				]
 			},
+			[boomExtension(new Error('activation boom'))],
 		)!
 		const instance = new Ctor() as any
 		captureErrors(() => instance.connectedCallback())
@@ -664,10 +683,8 @@ describe('connect-time error containment (ADR 0028)', () => {
 	})
 
 	test('a failing descriptor is reported once, not once per reconnect', () => {
-		const Ctor = defineComponent(uniqueName(), () => [
-			() => {
-				throw new Error('activation boom')
-			},
+		const Ctor = defineComponent(uniqueName(), () => {}, [
+			boomExtension(new Error('activation boom')),
 		])!
 		const instance = new Ctor() as any
 		const { calls } = captureErrors(() => {
@@ -765,12 +782,13 @@ describe('connect-time error containment (ADR 0028)', () => {
 		expect((target as any).greeting).toBe('plain-value')
 	})
 
-	test('a hand-authored descriptor gets a generic label', () => {
+	test('a raw extension descriptor gets a generic label', () => {
+		// A raw descriptor that never passed through a helper's
+		// pushDescriptor() has no helper label — extension extras are the
+		// one such path left now that the factory return contract is gone.
 		const prevDevMode = process.env.DEV_MODE
-		const Ctor = defineComponent(uniqueName(), () => [
-			() => {
-				throw new Error('activation boom')
-			},
+		const Ctor = defineComponent(uniqueName(), () => {}, [
+			boomExtension(new Error('activation boom')),
 		])!
 		const instance = new Ctor() as any
 		let calls: unknown[][] = []
@@ -787,10 +805,8 @@ describe('connect-time error containment (ADR 0028)', () => {
 	test('an error Le Truc raises itself is contained too — the brand is gone (ADR 0028)', () => {
 		// ADR 0011's carve-out is retired. Nothing reaching connectedCallback
 		// escapes it, and no marker decides otherwise.
-		const Ctor = defineComponent(uniqueName(), () => [
-			() => {
-				throw new NoActiveCollectorError(undefined, 'watch')
-			},
+		const Ctor = defineComponent(uniqueName(), () => {}, [
+			boomExtension(new NoActiveCollectorError(undefined, 'watch')),
 		])!
 		const instance = new Ctor() as any
 		const { calls } = captureErrors(() => {
@@ -831,28 +847,28 @@ describe('implicit effect collection — regression (ADR 0018)', () => {
 		expect(ranWith).toEqual(['A'])
 	})
 
-	test('mixed bare and returned helper calls in one factory each activate exactly once', () => {
+	test('a factory return value is ignored — the collector is the only registration path', () => {
 		const runs: string[] = []
 		const Ctor = defineComponent<{ count: number }>(
 			uniqueName(),
 			({ expose, watch }) => {
 				expose({ count: 1 })
-				// Bare call — registers only via the implicit collector.
 				watch('count', v => {
-					runs.push(`bare:${v}`)
+					runs.push(`collected:${v}`)
 				})
-				// Explicit return — already pushed into the collector too; must not
-				// activate twice.
+				// The 2.x explicit-return shape: still compiles (a non-void
+				// return is assignable to a void factory type), but the value
+				// is discarded — the raw descriptor must NOT activate.
 				return [
-					watch('count', v => {
-						runs.push(`returned:${v}`)
-					}),
+					() => {
+						runs.push('returned')
+					},
 				]
 			},
 		)!
 		const instance = new Ctor() as any
 		instance.connectedCallback()
-		expect(runs).toEqual(['bare:1', 'returned:1'])
+		expect(runs).toEqual(['collected:1'])
 	})
 
 	// each() with implicit collection nested 2+ levels deep is covered by the

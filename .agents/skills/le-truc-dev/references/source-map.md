@@ -21,8 +21,8 @@ Core files in `src/`:
 | File | Contents |
 |---|---|
 | `component.ts` | `defineComponent`, `Truc` class, component lifecycle, `#setAccessor`, `#initSignals`, `FactoryContext`, parser/method dispatch via `isParser`/`isMethodProducer` |
-| `types.ts` | `Parser`, `MethodProducer`, `asParser`, `defineMethod`, `isParser`, `isMethodProducer`, parser/method branding (`PARSER_BRAND`/`METHOD_BRAND`), `ComponentProps`, `EffectDescriptor`, `FactoryResult`, `Falsy`, `ReservedWords` |
-| `helpers/reactive.ts` | `makeWatch`, `makePass`, `each`, `reconcile`, `activateResult`, `forEachUnseen`, `keyedScopes`, `EffectDescriptor`, `FactoryResult`, `Reactive`, `WatchHelper`, `PassHelper` |
+| `types.ts` | `Parser`, `MethodProducer`, `asParser`, `defineMethod`, `isParser`, `isMethodProducer`, parser/method branding (`PARSER_BRAND`/`METHOD_BRAND`), `ComponentProps`, `EffectDescriptor`, `Falsy`, `ReservedWords` |
+| `helpers/reactive.ts` | `makeWatch`, `makePass`, `each`, `reconcile`, `activateDescriptors`, `keyedScopes`, `EffectDescriptor`, `Reactive`, `WatchHelper`, `PassHelper` |
 | `helpers/events.ts` | `makeOn`, `OnHelper`, event delegation, passive event throttling |
 | `bindings.ts` | `bindText`, `bindProperty`, `bindClass`, `bindState`, `bindVisible`, `bindAttribute`, `bindStyle`, `bindAria`, `dangerouslyBindInnerHTML`, `safeSetAttribute`, `escapeHTML`, `setTextPreservingComments` |
 | `helpers/dom.ts` | `first`, `all`, `makeElementQueries`, `createElementsMemo`, selector type inference |

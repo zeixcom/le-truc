@@ -20,7 +20,12 @@ import {
 } from '@zeix/cause-effect'
 import { InvalidPassPropertyError } from '../errors'
 import type { PassedProps } from '../helpers/reactive'
-import { activateResult, each, makePass, makeWatch } from '../helpers/reactive'
+import {
+	activateDescriptors,
+	each,
+	makePass,
+	makeWatch,
+} from '../helpers/reactive'
 import {
 	getSignals,
 	installActiveCollector,
@@ -28,6 +33,7 @@ import {
 	withCollector,
 } from '../internal'
 import type { ComponentProps, EffectDescriptor } from '../types'
+import { activate } from './activate'
 
 /* === Helpers === */
 
@@ -53,11 +59,11 @@ describe('implicit effect collection (ADR 0018)', () => {
 		const host = stubHost() as unknown as HTMLElement & ComponentProps
 		const watch = makeWatch(host)
 		const collector: EffectDescriptor[] = []
-		let descriptor: EffectDescriptor
 		withCollector(collector, () => {
-			descriptor = watch(createState('x'), () => {})
+			watch(createState('x'), () => {})
 		})
-		expect(collector).toEqual([descriptor!])
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 
 	test('pass() pushes its descriptor into the active collector', () => {
@@ -66,11 +72,11 @@ describe('implicit effect collection (ADR 0018)', () => {
 		const target = { localName: 'my-el' } as unknown as HTMLElement &
 			ComponentProps
 		const collector: EffectDescriptor[] = []
-		let descriptor: EffectDescriptor
 		withCollector(collector, () => {
-			descriptor = pass(target, {})
+			pass(target, {})
 		})
-		expect(collector).toEqual([descriptor!])
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 
 	test('throws NoActiveCollectorError when called with no active collector', () => {
@@ -93,30 +99,38 @@ describe('makeWatch — basic function signature', () => {
 		expect(typeof watch).toBe('function')
 	})
 
-	test('returns effect descriptor when called with signal and handler', () => {
+	test('registers via the collector when called with signal and handler', () => {
 		const host = stubHost() as unknown as HTMLElement & ComponentProps
 		const watch = makeWatch(host)
 		const signal = createState('test')
-		const descriptor = watch(signal, () => {})
-		expect(typeof descriptor).toBe('function')
+		const collector: EffectDescriptor[] = []
+		withCollector(collector, () => watch(signal, () => {}))
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 
-	test('returns effect descriptor when called with property name and handler', () => {
+	test('registers via the collector when called with property name and handler', () => {
 		const host = { testProp: 'value' } as unknown as HTMLElement &
 			ComponentProps
 		const watch = makeWatch(host)
-		const descriptor = watch('testProp', () => {})
-		expect(typeof descriptor).toBe('function')
+		const collector: EffectDescriptor[] = []
+		withCollector(collector, () => watch('testProp', () => {}))
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 
-	test('returns effect descriptor when called with thunk and handler', () => {
+	test('registers via the collector when called with thunk and handler', () => {
 		const host = stubHost() as unknown as HTMLElement & ComponentProps
 		const watch = makeWatch(host)
-		const descriptor = watch(
-			() => 'test',
-			() => {},
+		const collector: EffectDescriptor[] = []
+		withCollector(collector, () =>
+			watch(
+				() => 'test',
+				() => {},
+			),
 		)
-		expect(typeof descriptor).toBe('function')
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 })
 
@@ -141,7 +155,7 @@ describe('makeWatch — SingleMatchHandlers', () => {
 			stubHost() as unknown as HTMLElement & ComponentProps,
 		)
 
-		const cleanup = createScope(() => {
+		const cleanup = activate(() => {
 			watch(task, {
 				ok: v => {
 					calls.push(`ok:${v}`)
@@ -149,7 +163,7 @@ describe('makeWatch — SingleMatchHandlers', () => {
 				stale: () => {
 					calls.push('stale')
 				},
-			})()
+			})
 		})
 
 		// First run: task has 'seeded' value but is computing → stale
@@ -171,7 +185,7 @@ describe('makeWatch — SingleMatchHandlers', () => {
 			stubHost() as unknown as HTMLElement & ComponentProps,
 		)
 
-		const cleanup = createScope(() => {
+		const cleanup = activate(() => {
 			watch(state, {
 				ok: (v: string) => {
 					calls.push(`ok:${v}`)
@@ -179,7 +193,7 @@ describe('makeWatch — SingleMatchHandlers', () => {
 				stale: () => {
 					calls.push('stale')
 				},
-			})()
+			})
 		})
 
 		expect(calls).toEqual(['ok:hello'])
@@ -200,10 +214,10 @@ describe('makeWatch — array source', () => {
 		)
 		const num = createState(1)
 		const str = createState('a')
-		const cleanup = createScope(() => {
+		const cleanup = activate(() => {
 			watch([num, str], values => {
 				calls.push([...values])
-			})()
+			})
 		})
 
 		expect(calls).toEqual([[1, 'a']])
@@ -224,7 +238,7 @@ describe('makeWatch — array source', () => {
 		}
 		const watch = makeWatch(host)
 		const num = createState(1)
-		const cleanup = createScope(() => {
+		const cleanup = activate(() => {
 			watch([num, 'testProp', () => 2], values => {
 				// Compile-time pin: Signal → V, prop key → P[K], thunk →
 				// awaited non-null return. Load-bearing both ways — if the
@@ -235,7 +249,7 @@ describe('makeWatch — array source', () => {
 				const wrong: [string, string, string] = values
 				void wrong
 				calls.push([...typed])
-			})()
+			})
 		})
 
 		expect(calls).toEqual([[1, 'value', 2]])
@@ -256,7 +270,7 @@ describe('makeWatch — array source', () => {
 		const watch = makeWatch(
 			stubHost() as unknown as HTMLElement & ComponentProps,
 		)
-		const cleanup = createScope(() => {
+		const cleanup = activate(() => {
 			watch([set, pending], {
 				ok: values => {
 					calls.push(`ok:${values[1]}`)
@@ -264,7 +278,7 @@ describe('makeWatch — array source', () => {
 				nil: () => {
 					calls.push('nil')
 				},
-			})()
+			})
 		})
 
 		// Unseeded task source → UnsetSignalValueError → nil for the whole
@@ -287,7 +301,7 @@ describe('makeWatch — array source', () => {
 		const watch = makeWatch(
 			stubHost() as unknown as HTMLElement & ComponentProps,
 		)
-		const cleanup = createScope(() => {
+		const cleanup = activate(() => {
 			watch([set, failing], {
 				ok: () => {
 					calls.push('ok')
@@ -298,7 +312,7 @@ describe('makeWatch — array source', () => {
 				err: errors => {
 					calls.push(`err:${errors.map(e => e.message).join(',')}`)
 				},
-			})()
+			})
 		})
 
 		expect(calls).toEqual(['nil'])
@@ -327,7 +341,7 @@ describe('makeWatch — array source', () => {
 		const watch = makeWatch(
 			stubHost() as unknown as HTMLElement & ComponentProps,
 		)
-		const cleanup = createScope(() => {
+		const cleanup = activate(() => {
 			watch([set, task], {
 				ok: values => {
 					calls.push(`ok:${values[1]}`)
@@ -335,7 +349,7 @@ describe('makeWatch — array source', () => {
 				stale: () => {
 					calls.push('stale')
 				},
-			})()
+			})
 		})
 
 		// Retained 'seeded' value while computing → stale, not ok.
@@ -349,11 +363,11 @@ describe('makeWatch — array source', () => {
 	})
 })
 
-/* === activateResult === */
+/* === activateDescriptors === */
 
-describe('activateResult', () => {
+describe('activateDescriptors', () => {
 	test('activates empty array without error', () => {
-		expect(() => activateResult([])).not.toThrow()
+		expect(() => activateDescriptors([])).not.toThrow()
 	})
 
 	test('activates single effect descriptor', () => {
@@ -361,11 +375,11 @@ describe('activateResult', () => {
 		const descriptor = () => {
 			called = true
 		}
-		activateResult([descriptor])
+		activateDescriptors([descriptor])
 		expect(called).toBe(true)
 	})
 
-	test('activates multiple effect descriptors', () => {
+	test('activates multiple effect descriptors in registration order', () => {
 		const calls: number[] = []
 		const descriptor1 = () => {
 			calls.push(1)
@@ -373,86 +387,45 @@ describe('activateResult', () => {
 		const descriptor2 = () => {
 			calls.push(2)
 		}
-		activateResult([descriptor1, descriptor2])
+		activateDescriptors([descriptor1, descriptor2])
 		expect(calls).toEqual([1, 2])
-	})
-
-	test('flattens nested arrays', () => {
-		const calls: number[] = []
-		const descriptor1 = () => {
-			calls.push(1)
-		}
-		const descriptor2 = () => {
-			calls.push(2)
-		}
-		const descriptor3 = () => {
-			calls.push(3)
-		}
-		activateResult([[descriptor1, descriptor2], descriptor3])
-		expect(calls).toEqual([1, 2, 3])
-	})
-
-	test('skips falsy values', () => {
-		let called = false
-		const descriptor = () => {
-			called = true
-		}
-		activateResult([null, undefined, false, 0, '', descriptor])
-		expect(called).toBe(true)
-	})
-
-	test('handles deeply nested arrays', () => {
-		const calls: number[] = []
-		const descriptor1 = () => {
-			calls.push(1)
-		}
-		const descriptor2 = () => {
-			calls.push(2)
-		}
-		const descriptor3 = () => {
-			calls.push(3)
-		}
-		activateResult([[[descriptor1], [descriptor2]], descriptor3])
-		expect(calls).toEqual([1, 2, 3])
 	})
 })
 
 /* === each === */
 
 describe('each', () => {
-	test('returns an effect descriptor', () => {
+	test('registers its descriptor via the collector', () => {
 		const memo = createMemo(() => [] as Element[])
-		const descriptor = each(memo, () => {})
-		expect(typeof descriptor).toBe('function')
+		const collector: EffectDescriptor[] = []
+		withCollector(collector, () => each(memo, () => {}))
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 
 	test('calls callback for each element in memo', () => {
 		const elements = [{}, {}, {}] as Element[]
 		const memo = createMemo(() => elements)
 		const callbacks: Element[] = []
-		const descriptor = each(memo, (el: Element) => {
-			callbacks.push(el)
+		activate(() => {
+			each(memo, (el: Element) => {
+				callbacks.push(el)
+			})
 		})
-		// Need to run the descriptor in a scope
-		createScope(() => descriptor())
 		expect(callbacks).toHaveLength(3)
 	})
 
-	test('activates FactoryResult from callback', () => {
+	test('registers the callback\u2019s returned cleanup on the per-element scope', () => {
 		const elements = [{} as Element]
 		const memo = createMemo(() => elements)
-		let called = false
-		const descriptor = each(memo, () => {
-			// Return a descriptor that sets called to true
-			return [
-				() => {
-					called = true
-				},
-			]
+		const log: string[] = []
+		const dispose = activate(() => {
+			each(memo, () => () => log.push('leave'))
 		})
-		createScope(() => descriptor())
-		// The callback should have been called and the descriptor activated
-		expect(called).toBe(true)
+		// The cleanup runs only when the per-element scope is disposed
+		expect(log).toEqual([])
+		dispose?.()
+		expect(log).toEqual(['leave'])
 	})
 })
 
@@ -467,10 +440,11 @@ describe('each — scoped first (ADR 0021)', () => {
 		const memo = createMemo(() => [el])
 
 		const found: unknown[] = []
-		const descriptor = each(memo, (_el, first) => {
-			found.push(first('span'))
+		activate(() => {
+			each(memo, (_el, first) => {
+				found.push(first('span'))
+			})
 		})
-		createScope(() => descriptor())
 
 		expect(found).toEqual([child])
 	})
@@ -480,10 +454,11 @@ describe('each — scoped first (ADR 0021)', () => {
 		const memo = createMemo(() => [el])
 
 		const found: unknown[] = []
-		const descriptor = each(memo, (_el, first) => {
-			found.push(first('.missing'))
+		activate(() => {
+			each(memo, (_el, first) => {
+				found.push(first('.missing'))
+			})
 		})
-		createScope(() => descriptor())
 
 		expect(found).toEqual([undefined])
 	})
@@ -492,11 +467,13 @@ describe('each — scoped first (ADR 0021)', () => {
 		const el = { querySelector: () => null } as unknown as Element
 		const memo = createMemo(() => [el])
 
-		const descriptor = each(memo, (_el, first) => {
-			first('.missing', 'needed for X')
-		})
-
-		expect(() => createScope(() => descriptor())).toThrow(/in item /)
+		expect(() =>
+			activate(() => {
+				each(memo, (_el, first) => {
+					first('.missing', 'needed for X')
+				})
+			}),
+		).toThrow(/in item /)
 	})
 })
 
@@ -508,32 +485,15 @@ describe('each — implicit collection (ADR 0018)', () => {
 		const state = createState('a')
 		const seen: string[] = []
 		const watch = makeWatch(host)
-		const descriptor = each(memo, () => {
-			// Bare call, no return — must still register and run.
-			watch(state, value => {
-				seen.push(value)
+		activate(() => {
+			each(memo, () => {
+				// Bare call, no return — must still register and run.
+				watch(state, value => {
+					seen.push(value)
+				})
 			})
 		})
-		createScope(() => descriptor())
 		expect(seen).toEqual(['a'])
-	})
-
-	test('does not double-activate a descriptor that is both collected and returned', () => {
-		const el = {} as Element
-		const memo = createMemo(() => [el])
-		const host = stubHost() as unknown as HTMLElement & ComponentProps
-		const state = createState('a')
-		const runs: string[] = []
-		const watch = makeWatch(host)
-		const descriptor = each(memo, () =>
-			// Old explicit-return style: watch() both pushes into the active
-			// collector AND is returned — must run exactly once, not twice.
-			watch(state, value => {
-				runs.push(value)
-			}),
-		)
-		createScope(() => descriptor())
-		expect(runs).toEqual(['a'])
 	})
 
 	test('supports each() nested 3+ levels deep with implicit collection', () => {
@@ -554,22 +514,23 @@ describe('each — implicit collection (ADR 0018)', () => {
 		// nesting (an expression-bodied arrow returning a non-void value). Any
 		// void-returning handler compiles fine at any depth; see LT-009's TODO.md
 		// entry for the full root-cause writeup.
-		const descriptor = each(rowMemo, () => {
-			watch(state, v => {
-				seen.push(`row:${v}`)
-			})
-			each(colMemo, () => {
+		activate(() => {
+			each(rowMemo, () => {
 				watch(state, v => {
-					seen.push(`col:${v}`)
+					seen.push(`row:${v}`)
 				})
-				each(cellMemo, () => {
+				each(colMemo, () => {
 					watch(state, v => {
-						seen.push(`cell:${v}`)
+						seen.push(`col:${v}`)
+					})
+					each(cellMemo, () => {
+						watch(state, v => {
+							seen.push(`cell:${v}`)
+						})
 					})
 				})
 			})
 		})
-		createScope(() => descriptor())
 		expect(seen).toEqual(['row:grid', 'col:grid', 'cell:grid'])
 	})
 })
@@ -583,20 +544,24 @@ describe('makePass', () => {
 		expect(typeof pass).toBe('function')
 	})
 
-	test('returns effect descriptor when called with target and props', () => {
+	test('registers via the collector when called with target and props', () => {
 		const host = {} as unknown as HTMLElement & ComponentProps
 		const pass = makePass(host)
 		const target = {} as unknown as HTMLElement & ComponentProps
-		const descriptor = pass(target, {})
-		expect(typeof descriptor).toBe('function')
+		const collector: EffectDescriptor[] = []
+		withCollector(collector, () => pass(target, {}))
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 
-	test('returns effect descriptor when called with memo target and props', () => {
+	test('registers via the collector when called with memo target and props', () => {
 		const host = {} as unknown as HTMLElement & ComponentProps
 		const pass = makePass(host)
 		const memo = createMemo(() => [] as (HTMLElement & ComponentProps)[])
-		const descriptor = pass(memo, {})
-		expect(typeof descriptor).toBe('function')
+		const collector: EffectDescriptor[] = []
+		withCollector(collector, () => pass(memo, {}))
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 })
 
@@ -614,11 +579,11 @@ describe('makePass — real slot swap and restore', () => {
 		Object.defineProperty(target, 'greeting', slot)
 
 		const pass = makePass(host)
-		const descriptor = pass(target, {
-			greeting: { get: hostState.get, set: hostState.set },
-		})
-
-		const cleanup = createScope(() => descriptor())
+		const cleanup = activate(() =>
+			pass(target, {
+				greeting: { get: hostState.get, set: hostState.set },
+			}),
+		)
 		expect((target as any).greeting).toBe('host-value')
 
 		cleanup?.()
@@ -635,13 +600,16 @@ describe('makePass — real slot swap and restore', () => {
 		} as unknown as HTMLElement & ComponentProps
 
 		const pass = makePass(host)
-		const descriptor = pass(target, {
-			greeting: { get: hostState.get, set: hostState.set },
-		})
 
 		// No Slot was registered for 'greeting' — e.g. a non-Le-Truc custom element,
 		// or a read-only/computed Le Truc prop (see ADR 0011).
-		expect(() => createScope(() => descriptor())).toThrow(/'greeting'/)
+		expect(() =>
+			activate(() =>
+				pass(target, {
+					greeting: { get: hostState.get, set: hostState.set },
+				}),
+			),
+		).toThrow(/'greeting'/)
 		// The plain own value is untouched — no partial swap on failure.
 		expect(target.greeting).toBe('plain-value')
 	})
@@ -654,11 +622,14 @@ describe('makePass — real slot swap and restore', () => {
 			ComponentProps
 
 		const pass = makePass(host)
-		const descriptor = pass(target, {
-			greeting: { get: hostState.get, set: hostState.set },
-		})
 
-		expect(() => createScope(() => descriptor())).toThrow(/'greeting'/)
+		expect(() =>
+			activate(() =>
+				pass(target, {
+					greeting: { get: hostState.get, set: hostState.set },
+				}),
+			),
+		).toThrow(/'greeting'/)
 	})
 
 	test('aggregates multiple failing props into a single InvalidPassPropertyError', () => {
@@ -674,14 +645,14 @@ describe('makePass — real slot swap and restore', () => {
 
 		const pass = makePass(host)
 		// 'greeting' is not Slot-backed; 'farewell' does not exist on target at all.
-		const descriptor = pass(target, {
-			greeting: { get: hostState.get, set: hostState.set },
-			farewell: { get: hostState.get, set: hostState.set },
-		})
-
 		let error: unknown
 		try {
-			createScope(() => descriptor())
+			activate(() =>
+				pass(target, {
+					greeting: { get: hostState.get, set: hostState.set },
+					farewell: { get: hostState.get, set: hostState.set },
+				}),
+			)
 		} catch (e) {
 			error = e
 		}
@@ -708,12 +679,15 @@ describe('makePass — real slot swap and restore', () => {
 		// 'farewell' does not exist on target — this entry fails validation.
 
 		const pass = makePass(host)
-		const descriptor = pass(target, {
-			greeting: { get: hostGreeting.get, set: hostGreeting.set },
-			farewell: { get: hostFarewell.get, set: hostFarewell.set },
-		})
 
-		expect(() => createScope(() => descriptor())).toThrow(/'farewell'/)
+		expect(() =>
+			activate(() =>
+				pass(target, {
+					greeting: { get: hostGreeting.get, set: hostGreeting.set },
+					farewell: { get: hostFarewell.get, set: hostFarewell.set },
+				}),
+			),
+		).toThrow(/'farewell'/)
 		// 'greeting' would have succeeded in isolation, but the whole call is
 		// atomic — its slot must still hold the original signal, unswapped.
 		expect(slot.current()).toBe(targetGreetingState)
@@ -726,10 +700,13 @@ describe('makePass — real slot swap and restore', () => {
 			ComponentProps
 
 		const pass = makePass(host)
-		const descriptor = pass(target, {
-			greeting: { get: hostState.get, set: hostState.set },
-		})
-		expect(() => createScope(() => descriptor())).toThrow()
+		expect(() =>
+			activate(() =>
+				pass(target, {
+					greeting: { get: hostState.get, set: hostState.set },
+				}),
+			),
+		).toThrow()
 	})
 })
 
@@ -758,20 +735,20 @@ describe('makePass — retired short forms fail validation (ADR-0012 removal)', 
 		const host = {} as unknown as HTMLElement & ComponentProps
 		const { target, slot, originalState } = makeTarget('value')
 
-		const descriptor = makePass(host)(
-			target,
-			retiredProps({ value: hostState }),
-		)
-
 		let error: unknown
 		try {
-			createScope(() => descriptor())
+			activate(() => makePass(host)(target, retiredProps({ value: hostState })))
 		} catch (e) {
 			error = e
 		}
 		expect(error).toBeInstanceOf(InvalidPassPropertyError)
 		expect((error as Error).message).toContain("'value'")
-		expect((error as Error).message).toContain('ADR 0012')
+		// Pin the resolution wording, not the reason string's punctuation —
+		// that copy is the Tech Writer's (LT-178 copy rider, may land in
+		// either spelling).
+		expect((error as Error).message).toContain(
+			'could not be resolved to a signal',
+		)
 		// The slot still holds the original signal — nothing was swapped.
 		expect(slot.current()).toBe(originalState)
 		expect((target as any).value).toBe('original')
@@ -785,11 +762,9 @@ describe('makePass — retired short forms fail validation (ADR-0012 removal)', 
 		getSignals(host)['value'] = hostState
 		const { target, slot, originalState } = makeTarget('value')
 
-		const descriptor = makePass(host)(target, retiredProps({ value: 'value' }))
-
-		expect(() => createScope(() => descriptor())).toThrow(
-			InvalidPassPropertyError,
-		)
+		expect(() =>
+			activate(() => makePass(host)(target, retiredProps({ value: 'value' }))),
+		).toThrow(InvalidPassPropertyError)
 		expect(slot.current()).toBe(originalState)
 	})
 
@@ -798,11 +773,9 @@ describe('makePass — retired short forms fail validation (ADR-0012 removal)', 
 		const host = {} as unknown as HTMLElement & ComponentProps
 		const { target, slot, originalState } = makeTarget('value')
 
-		const descriptor = makePass(host)(target, retiredProps({ value: memo }))
-
-		expect(() => createScope(() => descriptor())).toThrow(
-			InvalidPassPropertyError,
-		)
+		expect(() =>
+			activate(() => makePass(host)(target, retiredProps({ value: memo }))),
+		).toThrow(InvalidPassPropertyError)
 		expect(slot.current()).toBe(originalState)
 	})
 
@@ -811,24 +784,19 @@ describe('makePass — retired short forms fail validation (ADR-0012 removal)', 
 		const host = { value: hostState } as unknown as HTMLElement & ComponentProps
 		const { target } = makeTarget('value')
 
-		const descriptor = makePass(host)(target, { value: () => hostState.get() })
-		createScope(() => descriptor())
+		activate(() => makePass(host)(target, { value: () => hostState.get() }))
 
 		expect((target as any).value).toBe('host')
 	})
 })
 
 describe('each — element leave/enter disposal', () => {
-	// The callback's returned descriptor is invoked and its return value
-	// discarded (see `activateResult`) — a bare `() => cleanupFn` registers
-	// nothing. Cleanup must come from a primitive that self-registers with
-	// the active owner, e.g. `createEffect`, which is what `watch()` uses
-	// internally. That's why the descriptor here wraps `createEffect`.
-	const trackedDescriptor = (log: string[], id: string) => () =>
-		createEffect(() => {
-			log.push(`enter:${id}`)
-			return () => log.push(`leave:${id}`)
-		})
+	// The callback runs at mount; its returned cleanup registers on the
+	// per-element scope — the same contract as `reconcile()`'s `bindItem`.
+	const track = (log: string[], id: string) => {
+		log.push(`enter:${id}`)
+		return () => log.push(`leave:${id}`)
+	}
 
 	test('disposes the per-element scope when an element leaves, before creating scopes for the new set', () => {
 		const elA = { id: 'a' } as unknown as Element
@@ -837,11 +805,9 @@ describe('each — element leave/enter disposal', () => {
 		const memo = createMemo(() => source.get())
 
 		const log: string[] = []
-		const descriptor = each(memo, (el: Element) =>
-			trackedDescriptor(log, (el as any).id),
+		const cleanup = activate(() =>
+			each(memo, (el: Element) => track(log, (el as any).id)),
 		)
-
-		const cleanup = createScope(() => descriptor())
 		expect(log).toEqual(['enter:a'])
 
 		source.set([elB])
@@ -858,11 +824,9 @@ describe('each — element leave/enter disposal', () => {
 		const memo = createMemo(() => source.get())
 
 		const log: string[] = []
-		const descriptor = each(memo, (el: Element) =>
-			trackedDescriptor(log, (el as any).id),
+		const cleanup = activate(() =>
+			each(memo, (el: Element) => track(log, (el as any).id)),
 		)
-
-		const cleanup = createScope(() => descriptor())
 		expect(log).toEqual(['enter:a'])
 
 		// elA stays, elB is added — scopes are keyed by element identity, so
@@ -900,9 +864,9 @@ describe('makePass — keyed per-element lifecycle for Memo targets', () => {
 		const memo = createMemo(() => source.get())
 
 		const pass = makePass(host)
-		const descriptor = pass(memo, { greeting: () => hostState.get() })
-
-		const cleanup = createScope(() => descriptor())
+		const cleanup = activate(() =>
+			pass(memo, { greeting: () => hostState.get() }),
+		)
 		expect((a.target as any).greeting).toBe('host-value')
 		const injectedIntoA = a.slot.current()
 

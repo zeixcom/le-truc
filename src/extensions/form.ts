@@ -11,7 +11,7 @@ import {
 } from '@zeix/cause-effect'
 import type { ComponentExtension } from '../extension'
 import { getSignals, internalsMap, retainedInitializers } from '../internal'
-import type { FactoryResult } from '../types'
+import type { EffectDescriptor } from '../types'
 import { isParser } from '../types'
 import { elementName, isSlotDescriptor } from '../util'
 
@@ -346,7 +346,7 @@ const makeFormAssociatedExtension = <Tag extends string>(
 	staticProps: { formAssociated: true },
 	reservedMembers: new Set([...MANAGED_FORM_MEMBERS, config.defaultPropName]),
 	installOnPrototype: config.installOnPrototype,
-	onConnect: (instance, internals): FactoryResult | void => {
+	onConnect: (instance, internals): EffectDescriptor | void => {
 		if (!internals) return
 		const { propName } = config
 		const hasSignal = propName in instance && getSignals(instance)[propName]
@@ -355,7 +355,7 @@ const makeFormAssociatedExtension = <Tag extends string>(
 				`${config.__kind} component ${elementName(instance)} did not expose a reactive '${propName}' property. The managed ${config.__kind === 'form-associated-checkbox' ? 'checkbox' : 'form-control'} convention requires a reactive '${propName}' for form value sync, reset, and state restore.`,
 			)
 		createManagedProperties(instance, internals)
-		return [config.makeSyncDescriptor(instance, internals)]
+		return config.makeSyncDescriptor(instance, internals)
 	},
 })
 

@@ -749,11 +749,9 @@ describe('managed formDisabledCallback', () => {
 			uniqueName(),
 			({ expose, watch }) => {
 				expose({ value: '' })
-				return [
-					watch('disabled', d => {
-						lastDisabled = d
-					}),
-				]
+				watch('disabled', d => {
+					lastDisabled = d
+				})
 			},
 			[formAssociated()],
 		)!
@@ -914,11 +912,9 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose, watch }) => {
 				expose({ value: '' })
-				return [
-					watch('validationMessage', msg => {
-						lastMessage = msg
-					}),
-				]
+				watch('validationMessage', msg => {
+					lastMessage = msg
+				})
 			},
 			[formAssociated()],
 		)!
@@ -963,11 +959,9 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose, watch }) => {
 				expose({ value: '' })
-				return [
-					watch('validity', v => {
-						lastValid = v.valid
-					}),
-				]
+				watch('validity', v => {
+					lastValid = v.valid
+				})
 			},
 			[formAssociated()],
 		)!
@@ -1030,11 +1024,9 @@ describe('native-parity host contract', () => {
 			uniqueName(),
 			({ expose, watch }) => {
 				expose({ value: '' })
-				return [
-					watch('validity', () => {
-						runCount++
-					}),
-				]
+				watch('validity', () => {
+					runCount++
+				})
 			},
 			[formAssociated()],
 		)!
@@ -1504,12 +1496,10 @@ describe('internals.states', () => {
 			uniqueName(),
 			({ expose, internals, watch }) => {
 				expose({ open: false })
-				return [
-					watch('open', open => {
-						if (open) internals?.states.add('open')
-						else internals?.states.delete('open')
-					}),
-				]
+				watch('open', open => {
+					if (open) internals?.states.add('open')
+					else internals?.states.delete('open')
+				})
 			},
 		)!
 		const instance = new Ctor() as any
