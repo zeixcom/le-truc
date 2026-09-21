@@ -45,4 +45,3 @@ Maintained by the `adr-keeper` workflows — update whenever an ADR is created, 
 ---
 
 **Last updated:** 2026-09-21
-**Total ADRs:** 35 (excluding template)

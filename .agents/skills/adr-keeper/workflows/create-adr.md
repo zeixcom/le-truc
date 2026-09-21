@@ -31,7 +31,7 @@
 5. **Update the index**
    - Add entry to `/adr/adr-index.md`
    - Format: `| [000X](000X-title-in-kebab-case.md) | Title | 🔄 Proposed | M1, S3 |`
-   - Update "Last updated" date and "Total ADRs" count
+   - Update "Last updated" date
 
 6. **Verify**
    - Read back the created ADR
