@@ -10,7 +10,8 @@ place. Task IDs are global and sequential across all three files.
 the last v3.0 deprecation gates cleared.** Drawn from [BACKLOG.md](BACKLOG.md)'s P1 and P4
 bands. The previous iteration ("the compiler's shape") is fully landed and reviewed —
 LT-263, LT-271/272, LT-255 + LT-267, LT-256 and LT-265 are in `DONE.md`. **Landed within
-this iteration (2026-09-21, also in `DONE.md`):** LT-273 (config validation, bounded
+this iteration (2026-09-21, also in `DONE.md`):** LT-266 (the size bet, measured — the bet
+holds, 3.7× less over the wire; reviewed ✓), LT-273 (config validation, bounded
 search, configured scan everywhere — reviewed ✓), LT-278 (ADR 0038) and LT-279
 (absent-substrate docs).
 
@@ -38,43 +39,10 @@ LT-273 `DONE.md` entry); the `pass()` short forms and the factory return contrac
 on the removal branch (wave 4 unblocked); the runtime-neutrality decision has its ADR, and
 SERVER.md/TESTS.md tell the truth again.
 
-**Next free task ID: LT-280.**
+**Next free task ID: LT-281.** (LT-280 filed in BACKLOG.md P5 on LT-266 review: the
+reactive-list per-item channel design that gates the loop-heavy composite migrations.)
 
 ---
-
-- [x] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React. **Scheduled early — the iteration after the current one, not this one (owner, 2026-09-19): it depends on nothing and blocks nothing, which is exactly why it needs a date rather than a priority.** — done ✓
-  **Status:** 2026-09-21, the bet holds: for the module-todo application seeded with 5 items,
-  Le Truc ships **18.61 kB gzip / 16.53 kB brotli** over the wire against React 19.3's
-  **68.62 / 59.21** (3.7× less). The whole margin is the RUNTIME (8.72 vs 64.38 kB gzip) — the
-  payload line alone favours React (3.07 vs 8.54): its compiled templates are smaller than our
-  harvest-and-bind code per component. Any connector claim must quote both lines. The React
-  side additionally pays a JSON state payload (231 B gzip per 5 items, scaling) that ADR 0003
-  structuralizes away on ours. Numbers + method + honest reading:
-  [spike/size-bet/FINDING.md](spike/size-bet/FINDING.md); reproducible via
-  `bun scripts/measure-size-bet.ts`; React twin with the identical component split lives in
-  `spike/size-bet/react/`. Residue: the requested TSX conversion of module-todo hit compiler
-  walls and did NOT land (hand-authored `.ts` stays the one source) — filed for the Architect
-  in NOTES.md.
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md), amended
-  2026-09-19. The project's thesis is that a JSON payload, JS-ified templates and a framework
-  runtime are replaceable by HTML plus a small runtime that harvests initial state from the DOM
-  and applies fine-grained effects. Everything a framework does is *representable* — subtree
-  variance as inert `<template>` tags, non-rendering state as a component-local attribute
-  payload — so the ceiling is not expressive but **economic**, and it has never been measured.
-  The shared JSX shape makes the comparison cheap, which is the reason to do it now rather than
-  after anyone proposes a connector.
-  **Deliverable:** a small set of representative components (at minimum: one static-ish, one
-  with a few shape variants, one with client-only derived state needing a config payload)
-  implemented both ways, with **emitted bytes + runtime, over the wire, compressed** reported
-  per component per side. Report the payload separately from the runtime, since the runtime
-  amortizes across a page and the payload does not.
-  **Why it matters beyond curiosity:** this number is the acceptance criterion for any future
-  front-end connector — a connector whose output approaches what it replaces has failed the bet
-  while technically working — and it is a REQUIREMENTS §1 claim that is currently unevidenced.
-  **Check:** the numbers are reproducible from a script in `scripts/`, and the finding is
-  recorded whichever way it comes out. **A result that does not favour Le Truc is the valuable
-  outcome, not a reason to re-run the study.**
 
 - [ ] LT-179: Remove the explicit factory return contract and `forEachUnseen` (ADR 0018 v3.0 milestone).
   **Skill:** le-truc-dev

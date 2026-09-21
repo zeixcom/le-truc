@@ -1168,7 +1168,12 @@ LT-238 ruling (all three spellings side by side) makes the corpus the honest sid
 of the surfaces' trade-offs, and the wave-4 migrations bank the `.tsx`-default DX story the
 reflection asked to see banked somewhere. **Gated on LT-178/LT-179 only** (P4) — the other gates landed 2026-09-18: LT-202 (the
 `.tsx` front end in the build) and LT-210 (the TSRX pin upgrade, 0.2.3; owner sequencing
-2026-09-17). LT-183 returned GO (ADR 0032, dual front end) — **migrations author
+2026-09-17). **LT-266 addendum (2026-09-21, Architect ruling on review):** the loop-heavy
+composites — LT-109 `module-calctable`, LT-110 `module-ticker`, LT-111 `module-todo` — are
+**additionally gated on LT-280**: the size-bet conversion proved reactive-list loops lower to
+a per-item text fill + events and nothing richer ([spike/size-bet/FINDING.md](spike/size-bet/FINDING.md)),
+which cannot express their per-item pass/attribute wiring. The text-shape migrations
+(LT-095–LT-108) are unaffected. LT-183 returned GO (ADR 0032, dual front end) — **migrations author
 `.tsx`**;
 the spike's four fixtures (`spike/tsx/`, moving to the example folders by LT-237) and
 `ARCHITECTURE.md` § Authoring Surfaces are the shape reference. Otherwise unblocked. The canonical pattern is LT-092's: same-commit cutover — delete the `.ts` twin, point
@@ -1247,6 +1252,42 @@ and this note is redundant; if it has not, do the manual diff.
   **Verification:** a corpus carrying all three spellings of one example compiles clean; the
   example's Playwright spec passes against each; LTC048 still fires for two canonical
   sources; `bun test server/tests`, typecheck, warning baseline 0.
+
+- [ ] LT-280: Per-item effect channels in reactive-list loops — the lowering covers text fill + events and nothing richer (LT-266 evidence). **Design first (grilling); gates the loop-heavy composite migrations LT-109/LT-110/LT-111.**
+  **Skill:** architect (design + ADR) → le-truc-dev (implementation)
+  **Context:** The LT-266 size-bet conversion drafted module-todo on `.tsx` in full and drove
+  it through the compiler until it hit structural walls; the evidence and full analysis are
+  pinned in [spike/size-bet/FINDING.md](spike/size-bet/FINDING.md) § "The TSX conversion
+  attempt". The `ReconcilePlan`/`emitReconcileBlock` reactive-list lowering emits a per-item
+  text fill (`watch(item, bindText(…))`, bare `{item}` only) plus event listeners — no
+  per-item `truc:pass` (the composite children's `checked`/`value` wiring), no per-item
+  reactive attribute (the reorder button's `disabled`), no per-item id/`for`, and a
+  non-string item renders as `[object Object]` (module-todo's items are store-backed
+  `createStore` objects). Composed children inside reactive-list bodies have no per-item arg
+  channel at all (ADR 0024 sub-design 5). The same walls stand on `.tsrx` — this is a
+  capability gap in the shared lowering, not a surface gap, and the module-list shape is the
+  only loop it fully covers today.
+  **Design questions to rule, not to skip:** (1) which per-item channels the lowering earns —
+  pass, reactive attribute, id/`for`, composed-child args — and their reconcile semantics
+  alongside the existing text fill; (2) the `.tsx` key spelling (`keyName` is hard-coded
+  `null` on `.tsx`, `frontend/tsx/lower-tsx.ts` — a `.tsrx` `key k` loop has no `.tsx`
+  spelling; ADR 0032 parity gap, related to the keyName grammar-asymmetry ruling LT-221
+  recorded); (3) whether non-string item fills stay out of scope — if so that is a
+  **silent-trap fix: channel = compiler, tier 1 Prevented** (today it misrenders as
+  `[object Object]` with no diagnostic); (4) module-todo's own fate — hand-authored today by
+  LT-266's ruling, but under LT-238's three-spelling showcase the flagship composite without
+  a `.tsx` spelling is a standing hole in the product story, so the ruling must say which
+  spellings module-todo carries when this lands. Coordinate with LT-274 (template-cloned-arm
+  machinery may share extraction/addressing vocabulary; both touch the reconcile container),
+  LT-242 (any new diagnostic must diagnose identically on both surfaces from day one).
+  **Obligations:** the rulings amend ADR 0024 sub-design 5 and likely ADR 0032 (key
+  spelling, equivalence scope) — record via `adr-keeper`, do not edit in place. Any new
+  diagnostic names **Tech Writer as copy reviewer** (developer drafts; Tech Writer owns
+  final wording) and enters the catalog per the error-message lifecycle.
+  **Verification:** the design ruling recorded (ADR + task split if implementation is more
+  than one change); module-todo (or the design's chosen flagship probe) compiles on the
+  sanctioned subset with per-item wiring surviving hydration; parity suite extended;
+  `bun test server/tests`, typecheck, warning baseline 0.
 
 - [ ] LT-237: Move the spike's `.tsx` fixtures into their example component folders. **Depends on LT-238.**
   **Skill:** le-truc-dev

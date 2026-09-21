@@ -27,6 +27,36 @@ LT-278's ADR duty, LT-279's SERVER.md/TESTS.md re-pin). Full entry text: `git lo
 
 ---
 
+- [x] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React — reviewed ✓
+  **Skill:** le-truc-dev
+  **Review:** Approved 2026-09-21 (78577706 on v3). Every number reproduced live from
+  `bun scripts/measure-size-bet.ts`: the React side is byte-exact against the run of record;
+  the Le Truc total drifted +0.07 kB gzip (18.61 → 18.68) because the pass-short-forms
+  removal merged after the pinned run-of-record tree — expected drift, conclusions
+  unchanged. The React twin's feature parity (filter, in-place edit, drag-and-drop +
+  keyboard reorder, live region) and the fixture's isolation from the root tsc program both
+  verified; typecheck green at HEAD.
+  **Ruling (recorded nowhere else):** the bet holds — **18.61 kB gzip / 16.53 kB brotli**
+  over the wire against React 19.3's **68.62 / 59.21** (3.7×) for the seeded module-todo
+  application. **Any connector claim must quote BOTH lines**: the whole margin is the
+  runtime (8.72 vs 64.38 kB gzip); the payload line alone favours React (3.07 vs 8.54) and
+  never flips in Le Truc's favour for this split. Le Truc ships its state once (the DOM);
+  React ships it twice (DOM + a JSON payload that scales ~46 B gzip per item). This is the
+  REQUIREMENTS §1 acceptance number for any future hydration-blob proposal.
+  **Residue (Architect ruling on review):** the requested TSX conversion of module-todo did
+  NOT land — reactive-list loops lower to a per-item text fill + events and nothing richer,
+  so the flagship composite is not expressible on the authored surface. Hand-authored
+  `.ts` stays the one source today; the design work is filed as **LT-280** (P5), which
+  additionally gates the loop-heavy composite migrations LT-109/LT-110/LT-111 per the P5
+  header addendum. Method gotcha worth keeping: `Bun.build` with `target: browser` defaults
+  `NODE_ENV` to `"development"` — the measurement script pins it, or React silently ships
+  its dev bundle (~2× bytes).
+  **Changed:** `scripts/measure-size-bet.ts` (reproducible measurement), `spike/size-bet/`
+  (FINDING.md run of record + the React twin, own tsconfig, subprocess-rendered),
+  react/react-dom + types added as **devDependencies** (fixture-only).
+  **Changelog:** nothing consumer-facing — measurement script and spike fixture only;
+  devDependencies are not release notes.
+
 - [x] LT-178: Remove the `pass()` unrestricted-write short forms (ADR 0012 removal) — reviewed ✓
   **Skill:** le-truc-dev
   **Review:** Approved 2026-09-21 (e609f6a8 on `remove/pass-short-forms`, the owner's
