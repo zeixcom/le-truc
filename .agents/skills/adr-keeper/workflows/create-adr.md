@@ -22,14 +22,14 @@
      - Related architecture sections (from ARCHITECTURE.md)
 
 4. **Create the ADR file**
-   - Use the template from `references/adr-template.md`
+   - Use the template from `/adr/0000-template.md`
    - Filename: `/adr/000X-title-in-kebab-case.md`
    - Set status to "🔄 Proposed" initially
    - Fill in all sections
    - Keep sections tight per SKILL.md `<essential_principles>`: Context a few problem-first sentences, Decision commitment + mechanism, Consequences compact Good/Bad lists. No postscripts.
 
 5. **Update the index**
-   - Add entry to `references/adr-index.md`
+   - Add entry to `/adr/adr-index.md`
    - Format: `| [000X](000X-title-in-kebab-case.md) | Title | 🔄 Proposed | M1, S3 |`
    - Update "Last updated" date and "Total ADRs" count
 
@@ -60,5 +60,5 @@ User: "We need to document our choice of Cause & Effect as the reactive primitiv
    - Alternatives: SolidJS signals, Vue reactivity, custom implementation
    - Consequences: Tight coupling but provides Slot, Memo, Sensor types
 4. Create: `/adr/0001-use-cause-effect-for-reactive-primitives.md`
-5. Update: `references/adr-index.md`
+5. Update: `/adr/adr-index.md`
 6. Verify: Read back and confirm

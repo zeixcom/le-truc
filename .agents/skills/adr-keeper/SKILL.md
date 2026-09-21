@@ -60,14 +60,14 @@ Wait for response before proceeding.
 - "Find ADRs about reactivity" → workflows/list-adr.md
 </routing>
 
-<reference_index>
-All in `references/`:
+<file_locations>
+The skill's data files live in `/adr/`, not under this skill — `adr/` stays writable in sandboxes that deny writes to `.agents/`:
 
 | File | Contents |
 |---|---|
-| adr-template.md | The template for new ADRs |
-| adr-index.md | Index of all ADRs with status |
-</reference_index>
+| `/adr/adr-index.md` | Index of all ADRs with status |
+| `/adr/0000-template.md` | The template for new ADRs |
+</file_locations>
 
 <workflows_index>
 All in `workflows/`:

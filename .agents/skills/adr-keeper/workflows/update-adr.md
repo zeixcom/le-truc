@@ -51,7 +51,7 @@ If a change touches both — e.g., an additive option plus one unrelated behavio
 
 4. **Update the index if status changes**
    - If status changes (e.g. Proposed to Accepted/Rejected):
-     - Update status in `references/adr-index.md`
+      - Update status in `/adr/adr-index.md`
      - Update "Last updated" date
 
 5. **Verify**

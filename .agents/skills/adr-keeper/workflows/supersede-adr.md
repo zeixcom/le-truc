@@ -16,7 +16,7 @@ This workflow is for a **breaking** change to a **published** ADR — the ADR ex
    - In the old ADR, add: `🗑️ Superseded by [ADR-000Y](000Y-title.md)` to the status line
 
 3. **Update the index**
-   - Update the old ADR's status in `references/adr-index.md` to "🗑️ Superseded by [000Y](000Y-title.md)"
+   - Update the old ADR's status in `/adr/adr-index.md` to "🗑️ Superseded by [000Y](000Y-title.md)"
    - Add the new ADR to the index with status "🔄 Proposed" (or "✅ Accepted" if immediately accepted)
    - Update "Last updated" date
 

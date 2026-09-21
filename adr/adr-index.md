@@ -1,6 +1,6 @@
 # ADR Index
 
-This file is auto-generated. Do not edit manually.
+Maintained by the `adr-keeper` workflows — update whenever an ADR is created, superseded, or changes status.
 
 | Number | Title | Status | Related Requirements |
 |--------|-------|--------|---------------------|
@@ -40,8 +40,9 @@ This file is auto-generated. Do not edit manually.
 | [0033](0033-scope-component-styles-by-custom-element-name.md) | Scope Component Styles by Custom Element Name; Shadow DOM as the Opt-in; TSRX Style Composition Translated to It | 🔄 Proposed | M17, M18 |
 | [0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) | Distribution — `@zeix/le-truc-compiler`, TSX-Only at 3.0, Folding Travels as Template Emission | ✅ Accepted | §1, §5, §7, M19, M20, M23, M24, M27, M28 |
 | [0035](0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) | The Simulation Seam — an SSG-Scoped Simulated Tier, a DOM-Free Realm Boundary, and a Substrate Package | ✅ Accepted | §1, §5, §6, M19, M20, M23, M27, M28 |
+| [0036](0036-corpus-configuration-surface.md) | The Corpus Configuration Surface — `le-truc.config.json`, This Repo as a Consumer | ✅ Accepted | §1, §2, §5, M24, M28 |
 
 ---
 
-**Last updated:** 2026-09-19
-**Total ADRs:** 34 (excluding template)
+**Last updated:** 2026-09-21
+**Total ADRs:** 35 (excluding template)

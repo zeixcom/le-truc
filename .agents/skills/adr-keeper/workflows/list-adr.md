@@ -3,7 +3,7 @@
 ## Steps
 
 1. **Read the index**
-   - Display the contents of `references/adr-index.md`
+   - Display the contents of `/adr/adr-index.md`
 
 2. **Optionally filter by keyword**
    - If user provided a keyword:
