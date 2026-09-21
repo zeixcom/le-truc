@@ -37,6 +37,10 @@
 - **Unresolvable expressions are a per-expression property, not a per-component one**: an expression reading impure ambient state (`Date.now()`, `Math.random()`) is now omitted from the served HTML in every tier and raises no diagnostic, instead of routing its whole component to simulation.
 - **`le-truc` skill `errors.md` and the compiler docs cover the split codes**: `TSRX044`/`TSRX045` have their own rows and fix-its, and the `NoActiveCollectorError` reference points at `TSRX045`.
 - **Bundle-size thresholds now read the same everywhere**: the size tests' titles state the limits their constants actually enforce (9 kB minimal hard ceiling, 10 kB `formAssociated()` warning), and stale ceiling citations in ADRs and docs carry dated correction pointers.
+- **jsdom is an optional peer dependency** (LT-256): declared alongside TypeScript so the compiler tooling can run without it — nothing is auto-installed, and the published library never touches jsdom at runtime. Package managers treat its absence as a supported configuration, not a missing peer.
+- **The docs build runs without jsdom** (LT-256, [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s5): Simulated-tier components route Static with an `unavailable substrate` census reason and the build stays green, with `generated/registry.json` recording the outcome. A substrate that is present but broken still fails the build naming the real cause instead of being swallowed as absence.
+- **`le-truc` and `le-truc-dev` skill references adopt the two-prefix diagnostic vocabulary** (LT-271/LT-272): the 44 surface-neutral codes are `LTC0NN`, six `TSRX0NN` remain for `.tsrx`-grammar-only checks; `errors.md` states the rule where the namespace lives and adds rows `LTC047`–`LTC050`.
+- **`tech-writer` `error-message-lifecycle.md` decides a new code's prefix up front**: a "Which prefix a new code gets" section and a prefix step in the new-error event encode the `LTC`/`TSRX` split, so new diagnostics get the right namespace at creation.
 
 ### Fixed
 
