@@ -27,144 +27,26 @@ LT-278's ADR duty, LT-279's SERVER.md/TESTS.md re-pin). Full entry text: `git lo
 
 ---
 
+Pruned again 2026-09-21 (Architect, owner direction: `CHANGELOG.md [Unreleased]` carries
+everything public-facing, so keep only what a future task still needs): **LT-273** (the
+consumer-facing behavior is the CHANGELOG entry; the provenance-header disposition lives in
+`VOCABULARY_LEDGER.md` §6; the design in [ADR 0036](adr/0036-corpus-configuration-surface.md)),
+**LT-278** ([ADR 0038](adr/0038-runtime-neutral-build-path.md) is the record),
+**LT-279** (`server/SERVER.md` and `server/TESTS.md` carry it), and **LT-178** (the
+retirement ruling is verbatim in AGENTS.md's `pass()` bullet and the CHANGELOG Removed
+entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text:
+`git log -p -- DONE.md`.
+
 - [x] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React — reviewed ✓
-  **Skill:** le-truc-dev
-  **Review:** Approved 2026-09-21 (78577706 on v3). Every number reproduced live from
-  `bun scripts/measure-size-bet.ts`: the React side is byte-exact against the run of record;
-  the Le Truc total drifted +0.07 kB gzip (18.61 → 18.68) because the pass-short-forms
-  removal merged after the pinned run-of-record tree — expected drift, conclusions
-  unchanged. The React twin's feature parity (filter, in-place edit, drag-and-drop +
-  keyboard reorder, live region) and the fixture's isolation from the root tsc program both
-  verified; typecheck green at HEAD.
-  **Ruling (recorded nowhere else):** the bet holds — **18.61 kB gzip / 16.53 kB brotli**
-  over the wire against React 19.3's **68.62 / 59.21** (3.7×) for the seeded module-todo
-  application. **Any connector claim must quote BOTH lines**: the whole margin is the
-  runtime (8.72 vs 64.38 kB gzip); the payload line alone favours React (3.07 vs 8.54) and
-  never flips in Le Truc's favour for this split. Le Truc ships its state once (the DOM);
-  React ships it twice (DOM + a JSON payload that scales ~46 B gzip per item). This is the
-  REQUIREMENTS §1 acceptance number for any future hydration-blob proposal.
-  **Residue (Architect ruling on review):** the requested TSX conversion of module-todo did
-  NOT land — reactive-list loops lower to a per-item text fill + events and nothing richer,
-  so the flagship composite is not expressible on the authored surface. Hand-authored
-  `.ts` stays the one source today; the design work is filed as **LT-280** (P5), which
-  additionally gates the loop-heavy composite migrations LT-109/LT-110/LT-111 per the P5
-  header addendum. Method gotcha worth keeping: `Bun.build` with `target: browser` defaults
-  `NODE_ENV` to `"development"` — the measurement script pins it, or React silently ships
-  its dev bundle (~2× bytes).
-  **Changed:** `scripts/measure-size-bet.ts` (reproducible measurement), `spike/size-bet/`
-  (FINDING.md run of record + the React twin, own tsconfig, subprocess-rendered),
-  react/react-dom + types added as **devDependencies** (fixture-only).
-  **Changelog:** nothing consumer-facing — measurement script and spike fixture only;
-  devDependencies are not release notes.
-
-- [x] LT-178: Remove the `pass()` unrestricted-write short forms (ADR 0012 removal) — reviewed ✓
-  **Skill:** le-truc-dev
-  **Review:** Approved 2026-09-21 (e609f6a8 on `remove/pass-short-forms`, the owner's
-  separate removal branch; LT-179 joins it there). Executes M26 and converges the
-  implementation to M11's mediated-write requirement. Gates re-run live on the committed
-  rev: src suite 487/487, server suite 1691/1691 across 91 files, typecheck (corpus + tsc)
-  clean, `check:contract`, `check:size`, `check:links` (614), targeted Playwright pass/debug
-  specs (Chromium) 17/17. Review fix landed: the module docblock still claimed `pass()`
-  resolves through `toSignal()`.
-  **Ruling (recorded nowhere else):** retired forms fail the **pre-existing** ADR 0011 eager
-  validation (`InvalidPassPropertyError` naming the prop, nothing swapped) — no new check,
-  channel none (TypeScript is the compile-time channel; the runtime rejection backstops
-  untyped JS), no LTC code. **Bare read-only `Memo`/`Task` signals are retired too** — 2.x
-  admitted them without a warning; the thunk is the only read-only form. Check count
-  net-negative: the 2.2.0 DEV_MODE deprecation warning is deleted with the forms it flagged.
-  `PassedProps`/`PassHelper` lost the `<P>` parameter (public type surface; it existed only
-  to type the property-key form).
-  **Changed:** `src/helpers/reactive.ts` (`toPassedSignal` — thunk | `SlotDescriptor` only;
-  watch()'s shared `toSignal` untouched), `src/component.ts`, `src/tests/reactive.test.ts`
-  (warning suite → retirement suite), regenerated `index.js`/`types/`, ADR 0012 status,
-  ROADMAP dead-end bullet struck, AGENTS/ARCHITECTURE/CONTEXT, both `le-truc` skill
-  references + `le-truc-dev` non-obvious.md, CHANGELOG [Unreleased] Removed entry. Sweep:
-  zero stragglers (examples already thunk/descriptor-only; the compiler's `truc:pass` IR
-  never carried short forms); `docs-src/api/**` TypeDoc output and `_media/` mirrors not
-  regenerated (known `_media` gap).
-  **Rider (Tech Writer, owed):** copy review of the reworded `swapSlots` failure reason
-  ("could not be resolved to a signal — pass() accepts a thunk () => … …"), the CHANGELOG
-  Removed entry wording, and the `errors.md` `InvalidPassPropertyError` row (its
-  "unresolvable to a signal" condition now also means "retired form"; the fix-it column may
-  name the accepted forms).
-  **Changelog:** in `CHANGELOG.md [Unreleased]` (Removed) — breaking; migration
-  `{ value: 'count' }` → `{ value: () => host.count }`, `{ value: someState }` →
-  `{ value: { get: someState.get, set: someState.set } }`.
-
-- [x] LT-273: Validate `le-truc.config.json`, and retire the last hard-coded corpus glob — reviewed ✓
-  **Skill:** le-truc-dev
-  **Review:** Approved 2026-09-21. Gates re-run live on the committed rev: server suite
-  1691/1691 across 91 files, `tsc -p tsconfig.build.json` clean, census 22 = 20 folded /
-  2 simulated / 0 static with warning baseline 0, `check:portability` 3/3 byte-identical,
-  `i18n:sync` compiles both surfaces (22 components) off the configured scan, live probe of
-  the mis-cased key through `loadCorpusConfig` returns the did-you-mean message verbatim.
-  **Ruling (recorded nowhere else):** the grep acceptance is reworded — `examples/**` hits
-  now admit the pin test and doc prose; the binding form is **no runnable scan code outside
-  `corpus-config.ts`'s defaults**.
-  **Changed:** `resolveCorpusConfig` validates untrusted config JSON before any path math —
-  unknown keys rejected naming the accepted keys (did-you-mean on casing), string-where-array
-  reported with the array spelling, indexed entry errors (`"sources[1]"`), non-empty string
-  fields, non-object rejected; thrown startup errors, **channel: none, no LTC code** (as
-  ruled in the task entry; ADR 0028-untiered, ADR 0036 s3). `findConfigFile` stops at the
-  nearest `package.json`/`.git`; a config in the boundary directory itself still applies
-  (config checked before the marker). `scripts/i18n-sync.ts` runs the configured scan —
-  sources, `outDir` for the registry, `i18nDir` for catalogs/manifest — and the two test-side
-  single-extension loaders (corpus-fixture `loadCorpus()`, server-render-smoke `corpus()`)
-  folded onto `collectCorpusSources` (the grep acceptance surfaced both; "i18n:sync was the
-  last place" was off by two). Vocabulary "TSRX compilation/compiler" → "Corpus …" with
-  dispositions in VOCABULARY_LEDGER.md §6 — including the **kept** generated provenance
-  header (baked into goldens; rename with the next deliberate emission change, not a
-  vocabulary sweep). Validation + boundary documented in LE_TRUC_COMPILER.md §7.1. Review
-  rider: `server/TESTS.md` count re-pinned 1683 → 1691 (the eight new tests).
-  **Changelog:** consumer-facing behavior change to the unpublished config surface —
-  malformed `le-truc.config.json` now fails fast instead of silently defaulting.
-
-- [x] LT-278: Record the runtime-neutral build path as an ADR (LT-267 review) — done ✓
-  **Skill:** adr-keeper
-  **Changed:** [ADR 0038](adr/0038-runtime-neutral-build-path.md) — standalone, beside
-  ADR 0034 rather than a sub-design of it (0034's sub-designs govern what the package is and
-  emits; this governs how the build path executes and binds the in-repo docs build today):
-  the `RuntimeIO` seam; the compiler staying pure beside it; glob semantics as **one
-  grammar decided once**, pinned to `Bun.Glob`'s scanner, with the three LT-277 edges
-  recorded as pending rulings owned by LT-277; `check:portability` (Bun/Node/Deno,
-  byte-identical emitted trees) as the standing gate. adr-index row added; ADR 0034 s1 and
-  ADR 0036 s5 cross-linked. `check:links` clean. Recorded before the compiler package's
-  first publication (P1, P6-gated), as required.
-
-- [x] LT-279: Document the absent-substrate routing (LT-256 review docs gap) — done ✓
-  **Skill:** tech-writer
-  **Changed:** `server/SERVER.md`'s simulation section states the absent-substrate routing —
-  no jsdom: one-shot build routes Simulated-tier components Static, appends an
-  `unavailable-substrate` routing signal, rewrites `generated/registry.json` so the tier
-  census reports the outcome, stays green; substrate present but broken fails the build
-  naming the real cause; registry.json reflects the **last one-shot build's** routing
-  outcome. The `resolve.ts` bullet gains the `isSubstrateAbsence` narrowing.
-  `server/TESTS.md` re-pinned and the `contract.test.ts` / `simulation-resolve.test.ts` rows
-  added (count since moved to 1691 by LT-273 — see its entry). `check:links` clean.
+  **Ruling (recorded nowhere else):** the bet holds, and the margin is the **runtime, not
+  the payload** — 8.72 vs 64.38 kB gzip runtime, while the payload line (3.07 vs 8.54)
+  favours React and never flips. **Any connector claim quotes BOTH lines** (totals
+  18.61/16.53 gzip/brotli vs React 19.3's 68.62/59.21; run of record in
+  `spike/size-bet/FINDING.md`). This is the REQUIREMENTS §1 acceptance number for any
+  future hydration-blob proposal.
 
 - [x] LT-179: Remove the explicit factory return contract and `forEachUnseen` (ADR 0018 v3.0 milestone) — reviewed ✓
-  **Skill:** le-truc-dev
-  **Review:** Approved 2026-09-21 (7206e4c1 on `remove/factory-return`, unmerged — owner PRs
-  the branch per the 2026-09-04 sequencing). Gates re-pinned live at the committed rev: 483
-  src + 1691 server tests, typecheck, lint, `check:links`, `check:size`, and a full
-  `build:docs` whose regenerated TypeDoc output shows the new signatures. Acceptance met
-  exactly; the REQUIREMENTS §v3.0 statement implemented to the letter.
-  **Rulings (recorded nowhere else):** `each()`'s callback adopts `reconcile()`'s `bindItem`
-  contract — a returned `MaybeCleanup` registers on the per-element scope (typing it `void`
-  would have silently dropped returned cleanups; a legacy descriptor-returning callback now
-  runs at disposal, so migration inside callbacks is a bare `watch(() => true, d)` — covered
-  by the CHANGELOG entry). Extension `onConnect` narrowed to a single `EffectDescriptor |
-  void` (both built-ins returned exactly one). `EffectDescriptor` stays exported as the input
-  type of `watch(() => true, descriptor)` — only `FactoryResult` is deleted.
-  `describeDescriptor()`'s generic hand-authored label is now reachable only via
-  extension-registered raw descriptors (component.test.ts covers it with a `boomExtension`
-  helper, which also gives the extension-extra pipeline its first direct coverage).
-  `activateResult` renamed flat `activateDescriptors` (not in the index export surface).
-  **Handoffs:** LT-281 (flag a non-void factory return: TS void-return assignability lets
-  legacy `return [...]` compile silently — compiler rule tier 1 + DEV_MODE warn tier 2;
-  pinned by a component.test.ts test). The LT-178 Tech Writer copy rider remains OPEN: a
-  parallel session's in-flight `swapSlots` reason-string edit appeared in this tree mid-task
-  and was reverted so the branch lands pure; one reactive.test.ts assertion is worded to pass
-  under either spelling. Doc touchpoints (AGENTS/ARCHITECTURE/CONTEXT/ROADMAP/CHANGELOG
-  breaking entry + le-truc/le-truc-dev skill refs) shipped with the commit for Tech Writer
-  review; LT-282 filed for the `_media` mirror gap observed en route.
+  **Trap (recorded nowhere else):** one `src/tests/reactive.test.ts` assertion is worded
+  to pass under either the pre- or post-LT-178 spelling — a leftover of a parallel
+  session's in-flight `swapSlots` edit reverted so the branch landed pure. Tightening it
+  is free once the LT-178 copy rider (LT-189 item 11) settles the final wording.
