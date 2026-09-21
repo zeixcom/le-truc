@@ -27,6 +27,40 @@ LT-278's ADR duty, LT-279's SERVER.md/TESTS.md re-pin). Full entry text: `git lo
 
 ---
 
+- [x] LT-178: Remove the `pass()` unrestricted-write short forms (ADR 0012 removal) — reviewed ✓
+  **Skill:** le-truc-dev
+  **Review:** Approved 2026-09-21 (e609f6a8 on `remove/pass-short-forms`, the owner's
+  separate removal branch; LT-179 joins it there). Executes M26 and converges the
+  implementation to M11's mediated-write requirement. Gates re-run live on the committed
+  rev: src suite 487/487, server suite 1691/1691 across 91 files, typecheck (corpus + tsc)
+  clean, `check:contract`, `check:size`, `check:links` (614), targeted Playwright pass/debug
+  specs (Chromium) 17/17. Review fix landed: the module docblock still claimed `pass()`
+  resolves through `toSignal()`.
+  **Ruling (recorded nowhere else):** retired forms fail the **pre-existing** ADR 0011 eager
+  validation (`InvalidPassPropertyError` naming the prop, nothing swapped) — no new check,
+  channel none (TypeScript is the compile-time channel; the runtime rejection backstops
+  untyped JS), no LTC code. **Bare read-only `Memo`/`Task` signals are retired too** — 2.x
+  admitted them without a warning; the thunk is the only read-only form. Check count
+  net-negative: the 2.2.0 DEV_MODE deprecation warning is deleted with the forms it flagged.
+  `PassedProps`/`PassHelper` lost the `<P>` parameter (public type surface; it existed only
+  to type the property-key form).
+  **Changed:** `src/helpers/reactive.ts` (`toPassedSignal` — thunk | `SlotDescriptor` only;
+  watch()'s shared `toSignal` untouched), `src/component.ts`, `src/tests/reactive.test.ts`
+  (warning suite → retirement suite), regenerated `index.js`/`types/`, ADR 0012 status,
+  ROADMAP dead-end bullet struck, AGENTS/ARCHITECTURE/CONTEXT, both `le-truc` skill
+  references + `le-truc-dev` non-obvious.md, CHANGELOG [Unreleased] Removed entry. Sweep:
+  zero stragglers (examples already thunk/descriptor-only; the compiler's `truc:pass` IR
+  never carried short forms); `docs-src/api/**` TypeDoc output and `_media/` mirrors not
+  regenerated (known `_media` gap).
+  **Rider (Tech Writer, owed):** copy review of the reworded `swapSlots` failure reason
+  ("could not be resolved to a signal — pass() accepts a thunk () => … …"), the CHANGELOG
+  Removed entry wording, and the `errors.md` `InvalidPassPropertyError` row (its
+  "unresolvable to a signal" condition now also means "retired form"; the fix-it column may
+  name the accepted forms).
+  **Changelog:** in `CHANGELOG.md [Unreleased]` (Removed) — breaking; migration
+  `{ value: 'count' }` → `{ value: () => host.count }`, `{ value: someState }` →
+  `{ value: { get: someState.get, set: someState.set } }`.
+
 - [x] LT-273: Validate `le-truc.config.json`, and retire the last hard-coded corpus glob — reviewed ✓
   **Skill:** le-truc-dev
   **Review:** Approved 2026-09-21. Gates re-run live on the committed rev: server suite
