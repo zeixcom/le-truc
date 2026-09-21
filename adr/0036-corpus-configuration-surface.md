@@ -38,7 +38,7 @@ It follows that an `outDir` **outside** the project root (or equal to it) is ref
 
 ### 5. Configuration is pure; discovery is IO
 
-Config resolution and path math live in `server/compiler/corpus-config.ts` and touch no disk and no runtime-specific API; config reading and globbing live in `server/corpus-sources.ts`. Two standing constraints require this split and pull against each other: `server/compiler/` must stay free of `Bun.*` and `import.meta.dir` (LT-267), and `imports.ts`/`pipeline.ts` are in the CI-pinned browser bundle and may carry no `node:` specifier at all. The emitter-facing subset is therefore a third leaf, `server/compiler/emit-paths.ts`, which the browser graph may reach.
+Config resolution and path math live in `server/compiler/corpus-config.ts` and touch no disk and no runtime-specific API; config reading and globbing live in `server/corpus-sources.ts`. Two standing constraints require this split and pull against each other: `server/compiler/` must stay free of `Bun.*` and `import.meta.dir` (LT-267, [ADR 0038](0038-runtime-neutral-build-path.md)), and `imports.ts`/`pipeline.ts` are in the CI-pinned browser bundle and may carry no `node:` specifier at all. The emitter-facing subset is therefore a third leaf, `server/compiler/emit-paths.ts`, which the browser graph may reach.
 
 The configuration reaches the emitters as one trailing optional argument threaded through both front ends, defaulting to this repo's layout — not as module-scoped mutable state, which would put a hidden global under a compiler whose soundness claim is that it is a pure function of its inputs.
 

@@ -42,6 +42,7 @@ Maintained by the `adr-keeper` workflows — update whenever an ADR is created, 
 | [0035](0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) | The Simulation Seam — an SSG-Scoped Simulated Tier, a DOM-Free Realm Boundary, and a Substrate Package | ✅ Accepted | §1, §5, §6, M19, M20, M23, M27, M28 |
 | [0036](0036-corpus-configuration-surface.md) | The Corpus Configuration Surface — `le-truc.config.json`, This Repo as a Consumer | ✅ Accepted | §1, §2, §5, M24, M28 |
 | [0037](0037-reactive-conditions-via-template-cloned-arms.md) | Reactive Conditions — Conditional Arms as Template-Cloned Branches | 🔄 Proposed | M5, M6, M14, §1, §4 |
+| [0038](0038-runtime-neutral-build-path.md) | Runtime-Neutral Build Path — the `RuntimeIO` Seam, One Glob Grammar, and the Portability Gate | ✅ Accepted | §5, M25, M28 |
 
 ---
 
