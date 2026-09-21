@@ -11,6 +11,97 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-265: Define and document the front-end contract; designate its export surface. — reviewed ✓
+  **Skill:** le-truc-dev + tech-writer
+  **Changed:** `server/compiler/contract.ts` designates the export surface — `compileFromIR`,
+  the IR vocabulary, both refusal channels, the consumer half,
+  `EmitPaths`/`DEFAULT_EMIT_PATHS`, and the bundled `compileComponentTsx` (3 values + 26
+  types; `.tsrx`'s `compileComponent` deliberately absent until `@tsrx/core` 1.0) — with the
+  stability policy in the module doc: semver over the set and nothing else; emitted artifact
+  BYTES are not contract; new optional IR fields and new `DiagnosticCode`/`RoutingSignalOrigin`
+  members are additive-minor; a diagnostic number is never reused (`VOCABULARY_LEDGER.md` is
+  the spent-number ledger); component-model connectors are third-party by name. Exports map
+  entry and version stamp ride LT-254. `contract.test.ts` pins the set (runtime value keys +
+  textual type re-exports — widening or shrinking fails a test). `scripts/contract-check.ts` +
+  `check:contract` institutionalize the task's Check: a toy front end outside the repo imports
+  ONLY `contract.ts`, compiles all three tiers, and proves both refusal channels — and
+  doubles as the enforcer of the "new IR fields are optional" rule (a new REQUIRED field
+  breaks the toy's literal). Docs half (Tech Writer): LE_TRUC_COMPILER.md §2 "The front-end
+  contract", all seven required points — a §2 subsection, not a new numbered section, because
+  §4–8 are cited by number from ADRs (renumber forbidden); §1/§3/§8 wiring; drive-by: two
+  stale "LTC001–048" claims now state the two-prefix rule. Riders: the two `line?` JSDoc
+  fields now read "authored source (either front end)".
+  **Owner rulings in-session (2026-09-21, recorded in 6b92ec42):** the refusal vocabularies
+  are CLOSED — `DiagnosticCode` and `RoutingSignalOrigin` are the compiler's; a third-party
+  front end reuses the nearest existing member rather than minting its own. The tier-corpus
+  "1 error" fixed (1179455b): the census describe body builds lazily per test — the block's
+  3 tests register again and the suite's long-standing "1 error between tests" is gone.
+  **Review:** Approved (architect, 2026-09-21). Gates re-run at 6b92ec42: `check:contract`
+  11/11; scoped server suite 91 files / 1683 tests, 0 real failures (only the artifact-404
+  set) and 0 errors; src suite 491/0; typecheck clean; biome clean. Coordination with LT-271
+  holds — the contract and its docs speak the two-prefix LTC/TSRX vocabulary.
+  **Handoffs:** LT-279 (updated in this review: TESTS.md's re-pin target is now 91/1683, with
+  rows for both new test files).
+
+- [x] LT-256: jsdom as an optional peer dependency; `unavailable substrate` as a tier-census reason. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** the simulation pass routes Simulated-tier components Static when no substrate
+  is installed (ADR 0034 s5, ADR 0029 s6 amendment) — tier set directly (classifyTier would
+  re-yield simulated from the realm-answerable signals), an `unavailable-substrate` routing
+  signal appended per component, `generated/registry.json` rewritten so the tier census
+  reports the outcome, the reason carried in the pass log; the build stays green. One-shot
+  builds only — the pass never runs on watch, so a watch session's on-disk registry keeps
+  the simulated tiers until the next substrate-less one-shot. The resolver's catch narrowed
+  to genuine resolution failures for the driver or jsdom itself (`isSubstrateAbsence`:
+  ERR_MODULE_NOT_FOUND / Bun `ResolveMessage` AND the failing specifier is the driver file
+  or the substrate package; a broken install — an init throw, a missing transitive dep —
+  surfaces with its real cause). jsdom joins typescript as an optional peerDependency
+  (devDependency kept). CI gains `test-no-substrate` (delete node_modules/jsdom, one-shot
+  build, grep the census token). New `server/tests/compiler/simulation-resolve.test.ts`
+  (absence discrimination in both Bun and Node error shapes) + reroute tests in
+  `simulate.test.ts` (reroute scoped, registry untouched when the substrate is present).
+  **Review:** Approved (architect, 2026-09-21). Re-proven live at the commit in a clean
+  worktree: without jsdom the one-shot build exits 0 with exactly 2 components
+  (form-combobox, form-listbox) rerouted Static and named in the census; with jsdom restored
+  the registry returns to 2 simulated and the realm runs; a jsdom stub that throws at init
+  FAILS the build naming the real cause — the silent-degradation class the narrowed catch
+  exists for is closed. Typecheck clean; scoped suite green. The handoff's flagged design
+  decision — rewriting the generated registry on absence — is ratified: registry.json is
+  the census's input and reflects the last build's routing outcome by design.
+  **Handoffs:** LT-279 (tech-writer: SERVER.md's simulation section predates the routing —
+  state the absent-substrate behavior, the one-shot scope and the registry semantics;
+  re-pin TESTS.md's count 89/1668 → 90/1678 and add the simulation-resolve.test.ts row).
+
+- [x] LT-267: Make the build's file IO runtime-neutral — Node, Bun and Deno. — reviewed ✓
+  **Skill:** docs-server-dev
+  **Changed:** new `server/runtimes/` seam — `RuntimeIO` (`types.ts`), ONE shared glob
+  translator (`glob.ts`), Bun and Node implementations both loadable under any runtime
+  (`bun.ts`, `node.ts`), selected once at module load via `typeof Bun` (`index.ts`) — now
+  carrying every file IO, glob and spawn on the build path. `compileCorpus` moved to
+  `server/corpus-compile.ts` so the published build path imports without the reactive
+  machinery (`effects/compile.ts` is the `compileEffect` wrapper only). New
+  `scripts/corpus-portability-check.ts` + `check:portability` (bundles the corpus build once,
+  runs the SAME bundle under Bun/Node/Deno, diffs emitted trees byte-for-byte — the release
+  gate). New `server/tests/runtimes.test.ts` (glob grammar, the Node impl exercised under
+  Bun, Bun↔Node parity on the real trees). Migrated onto the seam: `io.ts`,
+  `corpus-sources.ts`, `file-watcher.ts`, seven `effects/` modules, `check-corpus.ts`,
+  `i18n-sync.ts`; every `import.meta.dir` anchor on the build path →
+  `dirname(fileURLToPath(import.meta.url))` where repo-anchoring is by design.
+  **Review:** Approved (architect, 2026-09-21). Gates re-run independently at the commit:
+  `check:portability` 3/3 runtimes byte-identical, typecheck clean, `bun test server/tests`
+  89 files / 1668 tests green (TESTS.md's pinned count is exact); the outside-the-repo
+  scratch run reproduced (config discovered at the scratch root, census lists ONLY the
+  scratch key under one locale, Bun and Node emit byte-identical trees) — the i18n lesson's
+  failure mode is structurally gone. Two behavior notes ratified: scans return SORTED
+  relative paths (registry/census entry order deterministic across runs and runtimes;
+  per-file emitted bytes unchanged), and `file-watcher.ts`'s activation rescan is debounced
+  (`scheduleFlush`) because the sync seam scan removed the async boundary that kept a direct
+  flush re-entrant.
+  **Handoffs:** LT-277 (seam edge hardening from this review: glob dot-rule divergences,
+  `fileExists`'s regular-file contract, SERVER.md's exception enumeration, i18n-sync's
+  `.tsrx`-only glob), LT-278 (record the runtime-neutrality decision as an ADR — no ADR owns
+  it yet; only SERVER.md and the queue carry it).
+
 - [x] LT-255: Generalize the corpus scan — glob the consumer's components, not `examples/` — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** three new modules split by what each may depend on —

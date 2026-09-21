@@ -302,6 +302,82 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   recorded whichever way it comes out. **A result that does not favour Le Truc is the valuable
   outcome, not a reason to re-run the study.**
 
+- [ ] LT-277: Seam hardening from the LT-267 review — glob dot-rule edges, `fileExists` contract, doc enumeration.
+  **Skill:** docs-server-dev
+  **Context:** the LT-267 review (2026-09-21) probed `server/runtimes/glob.ts` beyond the
+  real-tree parity tests and found two edges where the seam's categorical claims do not
+  hold, both verified live at 4097198c. Neither is reachable with any glob the repo or a
+  realistic consumer writes today (they need an explicit-dot pattern segment, or a
+  dot-prefixed path under a trailing `**`), but both contradict claims pinned in `glob.ts`'s
+  JSDoc and `server/SERVER.md` — and the whole point of the shared translator is that these
+  semantics are decided ONCE:
+  1. **Trailing `**` matcher leak.** The trailing-`**` branch compiles to an unguarded
+     `.*`: `matchGlob('mocks/**', 'mocks/.tmp')` and `matchGlob('**', '.hidden')` are TRUE
+     while no scanner ever yields those paths — violating "a watcher filter cannot admit a
+     file the scanner would never yield". Give the remainder the shape the interior `**`
+     already uses (zero-or-more dot-guarded directory segments plus an optional dot-guarded
+     file) and pin it with a test.
+  2. **Explicit-dot scan patterns diverge per runtime.** `scanGlobSync` skips dotfiles
+     unconditionally during the walk, but `Bun.Glob` yields files matched by an
+     explicit-dot pattern segment (`new Bun.Glob('.env')` scans it; the walk returns `[]`).
+     A consumer configuring a dot-prefixed source glob would get a different corpus under
+     Bun than under Node — the exact divergence the seam exists to prevent. Decide at
+     pickup: make the walk's skip rule pattern-aware (a pattern segment starting with `.`
+     un-skips that level, matching Bun), or declare dot-prefixed patterns outside the
+     grammar and reject them at config resolution. **Channel and tier (ADR 0028 s1) if
+     rejected:** compiler/config resolution, tier 1 Prevented; if adopted, runtime seam
+     semantics with parity tests, tier 2 Contained.
+  3. **`node.ts` `fileExists` returns true for directories** (`access(F_OK)`) while the
+     interface says "regular file exists" — the Bun impl matches the contract. Unreachable
+     today (every caller passes a file path), but it is latent per-runtime divergence
+     inside the seam itself; check the file type, not just existence.
+  4. **Doc accuracy riders:** SERVER.md's "No Bun.* outside the seam" exception list omits
+     `corpus-portability-check.ts` and `codemod-react-jsx.ts` under a "the only exceptions
+     are" phrasing; and the portability check's diff report prints "first differing byte
+     at N" where N is a code-unit index computed by a variable named `line`. One-line
+     fixes. **Rider:** `scripts/i18n-sync.ts` still globs `examples/**/*.tsrx` only (the
+     LT-267 handoff's unfiled residue) — fold here or into wave 4's migration of the first
+     i18n-declaring `.tsx` component; until then it silently prunes nothing.
+  **Check:** `server/tests/runtimes.test.ts` pins the trailing-`**` dot rule and the chosen
+  dot-segment scan semantics on BOTH implementations; `check:portability` stays 3/3
+  byte-identical.
+
+- [ ] LT-278: Record the runtime-neutral build path as an ADR (LT-267 review).
+  **Skill:** adr-keeper
+  **Context:** the LT-267 review (2026-09-21). The decision — the published compiler
+  package's build path requires *a* JS runtime, not Bun specifically; `RuntimeIO` is the
+  seam; glob pattern semantics are one shared grammar decided once in
+  `server/runtimes/glob.ts`; `check:portability` (Bun/Node/Deno, byte-identical emitted
+  trees) is the standing gate — is implemented, gated, and documented operationally in
+  `server/SERVER.md`, but no ADR owns it. [ADR 0036](adr/0036-corpus-configuration-surface.md)
+  cites LT-267 as a constraint from the config side; [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md)
+  is the natural home (the runtime contract is part of the distribution story) or a
+  standalone ADR beside it — adr-keeper's call. Record BEFORE the compiler package's first
+  publication (this band): the runtime contract is consumer-visible the moment the package
+  exists.
+  **Check:** the ADR records the decision, the one-grammar ruling (including the LT-277
+  edges or their resolution), and the gate; adr-index and cross-links updated;
+  `bun run check:links` clean.
+
+- [ ] LT-279: Document the absent-substrate routing (LT-256 review docs gap).
+  **Skill:** tech-writer
+  **Context:** the LT-256 review (2026-09-21). The landed behavior — no jsdom installed:
+  the one-shot build routes the Simulated-tier components Static, appends an
+  `unavailable-substrate` routing signal, rewrites `generated/registry.json` (the tier
+  census's input), logs the census rows, and stays green; a substrate present but broken
+  fails the build naming the real cause — is recorded only in code comments and the ADRs
+  ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s5,
+  [ADR 0029](adr/0029-tiered-server-evaluation.md) s6). `server/SERVER.md`'s simulation
+  section still reads as if the pass always opens a realm. State it there (the LT-256
+  handoff's flagged ask): the absence behavior, the one-shot-only scope, and that
+  registry.json reflects the last build's routing outcome. Also re-pin `server/TESTS.md`'s
+  count line (says 89 files / 1668 tests as of 2026-09-21; LT-256 + LT-265 made it
+  91 files / 1683) and add the `simulation-resolve.test.ts` and `contract.test.ts` rows to
+  its tree. Tech Writer owns the census reason and pass-log copy (drafted by the LT-256
+  handoff, landed verbatim).
+  **Check:** `bun run check:links` clean; the SERVER.md paragraph matches the landed log
+  copy.
+
 ## P2 — Internationalization follow-ups (ADR 0030)
 
 **Pruned 2026-09-17** — LT-173 (reserved `i18n` parameter + catalog pipeline), LT-175
