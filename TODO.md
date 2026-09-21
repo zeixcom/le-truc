@@ -36,39 +36,11 @@ both skills that do not contend for the dev slots.
 spelling, and `grep -rn "examples/\*\*" scripts/ server/` has no runnable scan code outside
 `corpus-config.ts`'s defaults (pin test and doc prose excepted — ruling recorded in the
 LT-273 `DONE.md` entry); the `pass()` short forms and the factory return contract are gone from the library
-on the removal branch (wave 4 unblocked); the runtime-neutrality decision has its ADR, and
+on the removal branch (met — LT-178 merged via PR #131, LT-179 reviewed on
+`remove/factory-return`; wave 4 unblocked); the runtime-neutrality decision has its ADR, and
 SERVER.md/TESTS.md tell the truth again.
 
-**Next free task ID: LT-281.** (LT-280 filed in BACKLOG.md P5 on LT-266 review: the
+**Next free task ID: LT-283.** (LT-280 filed in BACKLOG.md P5 on LT-266 review: the
 reactive-list per-item channel design that gates the loop-heavy composite migrations.)
 
 ---
-
-- [x] LT-179: Remove the explicit factory return contract and `forEachUnseen` (ADR 0018 v3.0 milestone).
-  **Skill:** le-truc-dev
-  **Status:** 2026-09-21, done on `remove/factory-return`, pending review ⏳. Helpers
-  (`watch`, `on`, `pass`, `each`, `reconcile`, `provideContexts`) return `void` and push into the
-  ambient collector — the only registration path; `FactoryResult` is deleted from
-  `src/types.ts`/`index.ts` (acceptance met), `forEachUnseen` and the factory/extension
-  return-reconciliation in `src/component.ts` are gone, and `activateResult` is now the flat
-  `activateDescriptors`. `EffectDescriptor` stays exported as the input type of the one
-  documented hand-authored path, `watch(() => true, descriptor)`. `each()`'s callback adopts
-  `reconcile()`'s `bindItem` contract (returned `MaybeCleanup` = per-element scope teardown);
-  extension `onConnect` returns a single `EffectDescriptor`. All 483 src tests green;
-  typecheck, lint, `check:links`, `check:size` clean; index.js + types/ regenerated. Docs
-  touched for Tech Writer review (AGENTS.md, ARCHITECTURE.md ×2 sections, CONTEXT.md ×3
-  entries, ROADMAP.md dead-ends band, CHANGELOG breaking entry, le-truc + le-truc-dev skill
-  references). **Open Tech Writer rider (pre-existing, LT-178):** a parallel session's
-  in-flight `swapSlots` reason-string edit was present in this tree mid-task and was reverted
-  so this branch lands pure — see NOTES.md.
-  **Context:** ADR 0018's v3.0 milestone, still pending at 3.0.0-next.1:
-  `watch()`/`on()`/`pass()`/`each()`/`provideContexts()` return `void`;
-  `FactoryResult`/`EffectDescriptor` leave the public return contract (`src/types.ts`,
-  `index.ts`); the `forEachUnseen` return-reconciliation in `src/component.ts` is deleted, as is
-  `each()`'s copy kept only for the v2.3→v3.0 window (ADR 0017). Hand-authored descriptor
-  registration remains `watch(() => true, descriptor)` — the only documented path. Sweep
-  examples/tests for `return [...]` factories. **Tech Writer reviews the doc touchpoints**
-  (AGENTS.md, ARCHITECTURE.md § Effect Descriptors, CONTEXT.md Factory/Effect Descriptor
-  entries, CHANGELOG breaking entry).
-  Acceptance: helpers return `void`; `FactoryResult` is not exported; a bare-statement helper
-  call cannot silently no-op (the collector is the only registration path); `bun test` green.

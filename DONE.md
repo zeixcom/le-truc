@@ -141,3 +141,30 @@ LT-278's ADR duty, LT-279's SERVER.md/TESTS.md re-pin). Full entry text: `git lo
   outcome. The `resolve.ts` bullet gains the `isSubstrateAbsence` narrowing.
   `server/TESTS.md` re-pinned and the `contract.test.ts` / `simulation-resolve.test.ts` rows
   added (count since moved to 1691 by LT-273 — see its entry). `check:links` clean.
+
+- [x] LT-179: Remove the explicit factory return contract and `forEachUnseen` (ADR 0018 v3.0 milestone) — reviewed ✓
+  **Skill:** le-truc-dev
+  **Review:** Approved 2026-09-21 (7206e4c1 on `remove/factory-return`, unmerged — owner PRs
+  the branch per the 2026-09-04 sequencing). Gates re-pinned live at the committed rev: 483
+  src + 1691 server tests, typecheck, lint, `check:links`, `check:size`, and a full
+  `build:docs` whose regenerated TypeDoc output shows the new signatures. Acceptance met
+  exactly; the REQUIREMENTS §v3.0 statement implemented to the letter.
+  **Rulings (recorded nowhere else):** `each()`'s callback adopts `reconcile()`'s `bindItem`
+  contract — a returned `MaybeCleanup` registers on the per-element scope (typing it `void`
+  would have silently dropped returned cleanups; a legacy descriptor-returning callback now
+  runs at disposal, so migration inside callbacks is a bare `watch(() => true, d)` — covered
+  by the CHANGELOG entry). Extension `onConnect` narrowed to a single `EffectDescriptor |
+  void` (both built-ins returned exactly one). `EffectDescriptor` stays exported as the input
+  type of `watch(() => true, descriptor)` — only `FactoryResult` is deleted.
+  `describeDescriptor()`'s generic hand-authored label is now reachable only via
+  extension-registered raw descriptors (component.test.ts covers it with a `boomExtension`
+  helper, which also gives the extension-extra pipeline its first direct coverage).
+  `activateResult` renamed flat `activateDescriptors` (not in the index export surface).
+  **Handoffs:** LT-281 (flag a non-void factory return: TS void-return assignability lets
+  legacy `return [...]` compile silently — compiler rule tier 1 + DEV_MODE warn tier 2;
+  pinned by a component.test.ts test). The LT-178 Tech Writer copy rider remains OPEN: a
+  parallel session's in-flight `swapSlots` reason-string edit appeared in this tree mid-task
+  and was reverted so the branch lands pure; one reactive.test.ts assertion is worded to pass
+  under either spelling. Doc touchpoints (AGENTS/ARCHITECTURE/CONTEXT/ROADMAP/CHANGELOG
+  breaking entry + le-truc/le-truc-dev skill refs) shipped with the commit for Tech Writer
+  review; LT-282 filed for the `_media` mirror gap observed en route.
