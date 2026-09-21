@@ -1,6 +1,6 @@
 /** @see https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md */
 import { type Signal } from '@zeix/cause-effect';
-import type { ComponentProps, EffectDescriptor } from '../types';
+import type { ComponentProps } from '../types';
 /**
  * A context key. Can be any object, including a string or symbol. Brands
  * the key type with a `__context__` property carrying the value type.
@@ -34,7 +34,7 @@ declare global {
  * `context-request` listener to the host, providing the listed property
  * values as context to descendant consumers.
  */
-type ProvideContextsHelper<P extends ComponentProps> = (contexts: Array<keyof P>) => EffectDescriptor;
+type ProvideContextsHelper<P extends ComponentProps> = (contexts: Array<keyof P>) => void;
 /**
  * The `requestContext` helper type in `FactoryContext`. Dispatches a
  * `context-request` event from the host and returns a `Signal<T>` that

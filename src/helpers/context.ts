@@ -53,7 +53,7 @@ declare global {
  */
 type ProvideContextsHelper<P extends ComponentProps> = (
 	contexts: Array<keyof P>,
-) => EffectDescriptor
+) => void
 
 /**
  * The `requestContext` helper type in `FactoryContext`. Dispatches a
@@ -171,7 +171,7 @@ const createContext = <V>(key: string): Context<string, V> =>
  */
 const makeProvideContexts =
 	<P extends ComponentProps>(host: HTMLElement & P): ProvideContextsHelper<P> =>
-	(contexts: Array<keyof P>): EffectDescriptor => {
+	(contexts: Array<keyof P>): void => {
 		const descriptor: EffectDescriptor = () =>
 			createScope(() => {
 				const listener = (e: ContextRequestEvent<UnknownContext>) => {
@@ -201,7 +201,6 @@ const makeProvideContexts =
 				return () => host.removeEventListener(CONTEXT_REQUEST, listener)
 			})
 		pushDescriptor(host, 'provideContexts', descriptor)
-		return descriptor
 	}
 
 /**

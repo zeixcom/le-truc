@@ -1157,6 +1157,22 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
   **Acceptance:** the unknown-tag case has a ruled tier and a pinned fixture;
   compose dispatch unaffected.
 
+- [ ] LT-281: Flag a non-void factory return — authored-surface rule + DEV_MODE warning (LT-179 residue).
+  **Skill:** le-truc-dev (compiler half); Tech Writer owns both messages
+  **Context:** TypeScript's void-return assignability means a legacy 2.x `return [...]`
+  factory still compiles against LT-179's `(context) => void` factory type while its value is
+  silently ignored — a migration trap the types cannot catch (pinned by the "a factory return
+  value is ignored" test in `component.test.ts`). ADR 0028 sub-design 1: a factory
+  `return`-with-value is statically decidable, so a runtime check owes a compiler rule.
+  **Channel and tier (ADR 0028 s1):** compiler — an `LTC` rule for a `return` statement
+  carrying a value in factory-body position on authored surfaces, tier 1 Prevented; runtime —
+  a `DEV_MODE` warn in `connectedCallback` for hand-authored `.ts` consumers, tier 2
+  Contained (the component still enhances; the return is ignored). Not urgent for the
+  compiler-authored corpus (generated clients never return); aimed at prerelease early
+  adopters migrating 2.x hand-authored components.
+  **Check:** catalog rows added; compile-warning baseline 0 holds; batch the copy with the
+  LT-275/LT-189 rounds.
+
 ---
 
 ## P5 — Wave 4: example migrations
@@ -1453,6 +1469,15 @@ and this note is redundant; if it has not, do the manual diff.
 ---
 
 ## P6 — Cleanup round (after the corpus port)
+
+- [ ] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review).
+  **Skill:** docs-server-dev
+  **Context:** `_media/*.md` inside the gitignored TypeDoc output dir are hand-copied mirrors
+  of repo docs (`REQUIREMENTS.md`, ADRs). No build generates or refreshes them, so they go
+  stale silently and freshness depends on somebody remembering (LT-272 hand-refreshed them
+  once; the gap was left unfiled). Decide: generate the mirror in `build:docs` from the repo
+  sources, or delete it and link the repo files instead. Filed while its staleness was
+  re-observed during the LT-179 review.
 
 - [ ] LT-249: Report non-string catalog values — a malformed `i18n/<locale>.json` entry is silent in both the census and sync (LT-217 review falsification). **Survives the LT-240 ruling, and grows a sibling:** ICU adds a second malformed-value class (a string that is not a parseable pattern), handled in LT-219 — land them as one `malformed` family with consistent copy, and drop the "LT-219 placeholder precedent" phrasing below for LT-219's argument-preservation case.
   **Skill:** docs-server-dev

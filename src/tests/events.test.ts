@@ -10,6 +10,7 @@ import { createMemo, createState, type Signal } from '@zeix/cause-effect'
 import { makeOn } from '../helpers/events'
 import { installActiveCollector, restoreActiveCollector } from '../internal'
 import type { EffectDescriptor } from '../types'
+import { activate } from './activate'
 
 /* === RAF Mock === */
 
@@ -54,9 +55,10 @@ describe('makeOn — implicit collection (ADR 0018)', () => {
 		const on = makeOn(host)
 		const collector: EffectDescriptor[] = []
 		const previous = installActiveCollector(collector)
-		const descriptor = on(target, 'click', () => {})
+		on(target, 'click', () => {})
 		restoreActiveCollector(previous)
-		expect(collector).toEqual([descriptor])
+		expect(collector).toHaveLength(1)
+		expect(typeof collector[0]).toBe('function')
 	})
 })
 
@@ -90,8 +92,7 @@ describe('makeOn async handlers', () => {
 		const on = makeOn(host)
 
 		// @ts-expect-error async handler should not return a value
-		const descriptor = on(target, 'click', async () => ({ count: 42 }))
-		descriptor()
+		activate(() => on(target, 'click', async () => ({ count: 42 })))
 
 		dispatch('click')
 		await Promise.resolve()
@@ -123,8 +124,7 @@ describe('makeOn passive scheduling', () => {
 	test('passive events (e.g. scroll) are throttled to one call per animation frame', () => {
 		const { host, target, dispatch } = makeStubs()
 		const on = makeOn(host)
-		const descriptor = on(target, 'scroll', () => ({ count: 1 }))
-		descriptor()
+		activate(() => on(target, 'scroll', () => ({ count: 1 })))
 
 		dispatch('scroll')
 		// Throttled via requestAnimationFrame — not applied until the frame flushes
@@ -136,8 +136,7 @@ describe('makeOn passive scheduling', () => {
 	test('non-passive events (e.g. click) apply synchronously, without RAF', () => {
 		const { host, target, dispatch } = makeStubs()
 		const on = makeOn(host)
-		const descriptor = on(target, 'click', () => ({ count: 1 }))
-		descriptor()
+		activate(() => on(target, 'click', () => ({ count: 1 })))
 
 		dispatch('click')
 		expect(host.count).toBe(1)
@@ -146,10 +145,9 @@ describe('makeOn passive scheduling', () => {
 	test('explicit passive:false on a default-passive event type disables throttling', () => {
 		const { host, target, dispatch } = makeStubs()
 		const on = makeOn(host)
-		const descriptor = on(target, 'scroll', () => ({ count: 1 }), {
-			passive: false,
-		})
-		descriptor()
+		activate(() =>
+			on(target, 'scroll', () => ({ count: 1 }), { passive: false }),
+		)
 
 		dispatch('scroll')
 		expect(host.count).toBe(1)
@@ -196,10 +194,11 @@ describe('makeOn Signal target dispatch', () => {
 
 		const calls: Element[] = []
 		const on = makeOn(host)
-		const descriptor = on(memo, 'click', (_e, el) => {
-			calls.push(el)
-		})
-		descriptor()
+		activate(() =>
+			on(memo, 'click', (_e, el) => {
+				calls.push(el)
+			}),
+		)
 
 		// Delegation — no listener attached to the individual elements
 		expect(el1._listeners.size).toBe(0)
@@ -218,10 +217,11 @@ describe('makeOn Signal target dispatch', () => {
 
 		let called = false
 		const on = makeOn(host)
-		const descriptor = on(memo, 'click', () => {
-			called = true
-		})
-		descriptor()
+		activate(() =>
+			on(memo, 'click', () => {
+				called = true
+			}),
+		)
 
 		const event = { composedPath: () => [] } as unknown as Event
 		host._listeners.get('click')!(event)
@@ -235,8 +235,7 @@ describe('makeOn Signal target dispatch', () => {
 		const memo = createMemo(() => [el1, el2]) as unknown as Signal<Element[]>
 
 		const on = makeOn(host)
-		const descriptor = on(memo, 'focus', () => {})
-		descriptor()
+		activate(() => on(memo, 'focus', () => {}))
 
 		expect(el1._listeners.has('focus')).toBe(true)
 		expect(el2._listeners.has('focus')).toBe(true)
@@ -269,7 +268,7 @@ describe('makeOn Signal target dispatch', () => {
 		const memo = createMemo(() => source.get())
 
 		const on = makeOn(host)
-		on(memo, 'focus', () => {})()
+		activate(() => on(memo, 'focus', () => {}))
 
 		expect(el1._counts).toEqual({ added: 1, removed: 0 })
 		expect(el2._counts).toEqual({ added: 1, removed: 0 })
@@ -302,7 +301,7 @@ describe('makeOn Signal target dispatch', () => {
 			const host = makeHost()
 			const memo = createMemo(() => [el1]) as unknown as Signal<Element[]>
 			const on = makeOn(host)
-			on(memo, 'focus', () => {})()
+			activate(() => on(memo, 'focus', () => {}))
 		} finally {
 			if (prevDevMode === undefined) delete process.env.DEV_MODE
 			else process.env.DEV_MODE = prevDevMode
@@ -396,11 +395,12 @@ describe('makeOn debug companion listener ordering', () => {
 
 			const on = makeOn(host)
 			let authorCalled = false
-			const descriptor = on(target, 'click', (e: Event) => {
-				authorCalled = true
-				e.stopImmediatePropagation()
-			})
-			descriptor()
+			activate(() =>
+				on(target, 'click', (e: Event) => {
+					authorCalled = true
+					e.stopImmediatePropagation()
+				}),
+			)
 
 			target.dispatch('click')
 			flushRAF()
@@ -420,11 +420,12 @@ describe('makeOn debug companion listener ordering', () => {
 
 			const on = makeOn(host)
 			let authorCalled = false
-			const descriptor = on(memo, 'click', (e: Event) => {
-				authorCalled = true
-				e.stopImmediatePropagation()
-			})
-			descriptor()
+			activate(() =>
+				on(memo, 'click', (e: Event) => {
+					authorCalled = true
+					e.stopImmediatePropagation()
+				}),
+			)
 
 			// Delegated: dispatched on the host (root), path includes el1
 			hostRaw.dispatch('click', [el1 as any])
@@ -444,11 +445,12 @@ describe('makeOn debug companion listener ordering', () => {
 
 			const on = makeOn(host)
 			let authorCalled = false
-			const descriptor = on(memo, 'focus', (e: Event) => {
-				authorCalled = true
-				e.stopImmediatePropagation()
-			})
-			descriptor()
+			activate(() =>
+				on(memo, 'focus', (e: Event) => {
+					authorCalled = true
+					e.stopImmediatePropagation()
+				}),
+			)
 
 			el1.dispatch('focus')
 			flushRAF()

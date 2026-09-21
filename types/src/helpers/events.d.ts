@@ -1,5 +1,5 @@
 import { type Signal } from '@zeix/cause-effect';
-import type { ComponentProps, EffectDescriptor, Falsy } from '../types';
+import type { ComponentProps, Falsy } from '../types';
 type EventType<K extends string> = K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K] : Event;
 /**
  * Handler for `on()`. Receives `(event, element)`.
@@ -16,10 +16,10 @@ type OnEventHandler<P extends ComponentProps, Evt extends Event, E extends Eleme
  * `Signal<E[]>` target, and typed event names.
  */
 type OnHelper<P extends ComponentProps> = {
-    <E extends Element, T extends keyof HTMLElementEventMap>(target: Signal<E[]> | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: Signal<E[]> | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element, T extends keyof HTMLElementEventMap>(target: E | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): EffectDescriptor;
-    <E extends Element>(target: E | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): EffectDescriptor;
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: Signal<E[]> | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): void;
+    <E extends Element>(target: Signal<E[]> | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): void;
+    <E extends Element, T extends keyof HTMLElementEventMap>(target: E | Falsy, type: T, handler: OnEventHandler<P, HTMLElementEventMap[T], E>, options?: AddEventListenerOptions): void;
+    <E extends Element>(target: E | Falsy, type: string, handler: OnEventHandler<P, Event, E>, options?: AddEventListenerOptions): void;
 };
 /**
  * Creates an `on` helper bound to a component host.

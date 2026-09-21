@@ -2655,7 +2655,6 @@ var makeProvideContexts = (host) => (contexts) => {
     return () => host.removeEventListener(CONTEXT_REQUEST, listener);
   });
   pushDescriptor(host, "provideContexts", descriptor);
-  return descriptor;
 };
 var makeRequestContext = (host) => (context, fallback) => {
   const slot = createSlot(createCell(fallback));
@@ -2825,28 +2824,16 @@ var makeElementQueries = (host) => {
 };
 
 // src/helpers/reactive.ts
-var activateResult = (result, onError) => {
-  for (const descriptor of result) {
-    if (Array.isArray(descriptor))
-      activateResult(descriptor, onError);
-    else if (descriptor) {
-      if (!onError)
+var activateDescriptors = (descriptors, onError) => {
+  for (const descriptor of descriptors) {
+    if (!onError)
+      descriptor();
+    else
+      try {
         descriptor();
-      else
-        try {
-          descriptor();
-        } catch (error) {
-          onError(error, descriptor);
-        }
-    }
-  }
-};
-var forEachUnseen = (result, seen, visit) => {
-  if (Array.isArray(result)) {
-    for (const item of result)
-      forEachUnseen(item, seen, visit);
-  } else if (typeof result === "function" && !seen.has(result)) {
-    visit(result);
+      } catch (error) {
+        onError(error, descriptor);
+      }
   }
 };
 var keyedScopes = (memo, mount) => {
@@ -2920,7 +2907,6 @@ var makeWatch = (host) => {
       return createEffect(() => match(signal, handlerOrHandlers));
     };
     pushDescriptor(host, "watch", descriptor);
-    return descriptor;
   }
   return watch;
 };
@@ -2996,7 +2982,6 @@ var makePass = (host) => {
       }
     };
     pushDescriptor(host, "pass", descriptor);
-    return descriptor;
   }
   return pass;
 };
@@ -3004,13 +2989,12 @@ function each(memo, callback) {
   const descriptor = () => {
     keyedScopes(memo, (element) => {
       const collected = [];
-      const result = withCollector(collected, () => callback(element, bindFirst(element)));
-      activateResult(collected);
-      forEachUnseen(result, new Set(collected), (d) => d());
+      const cleanup = withCollector(collected, () => callback(element, bindFirst(element)));
+      activateDescriptors(collected);
+      return cleanup;
     });
   };
   pushDescriptor(undefined, "each", descriptor);
-  return descriptor;
 }
 function reconcile(container, template, source, bindItem) {
   const descriptor = () => {
@@ -3090,7 +3074,7 @@ function reconcile(container, template, source, bindItem) {
             disposers.set(key, createScope(() => {
               const collected = [];
               const cleanup = withCollector(collected, () => bindItem(element, item, key, bindFirst(element)));
-              activateResult(collected);
+              activateDescriptors(collected);
               return cleanup;
             }, {
               root: true
@@ -3123,7 +3107,6 @@ function reconcile(container, template, source, bindItem) {
     });
   };
   pushDescriptor(undefined, "reconcile", descriptor);
-  return descriptor;
 }
 
 // src/helpers/events.ts
@@ -3254,7 +3237,6 @@ var makeOn = (host) => {
       });
     };
     pushDescriptor(host, "on", descriptor);
-    return descriptor;
   }
   return on;
 };
@@ -3327,7 +3309,7 @@ function defineComponent(name, factory, extensions) {
       };
       const runSetup = () => {
         this.#cleanup = createScope(() => {
-          activateResult(this.#setup, onDescriptorError);
+          activateDescriptors(this.#setup, onDescriptorError);
         }, {
           root: true
         });
@@ -3365,12 +3347,8 @@ function defineComponent(name, factory, extensions) {
           reportConnectFailure(this, phase, error);
         };
         try {
-          const result = withCollector(collector, () => factory(context));
+          withCollector(collector, () => factory(context));
           this.#setup = collector;
-          if (result) {
-            const seen = new Set(collector);
-            forEachUnseen(result, seen, (d) => this.#setup.push(d));
-          }
         } catch (error) {
           failConnect("the component factory", error);
           return;
@@ -3379,10 +3357,8 @@ function defineComponent(name, factory, extensions) {
         for (const ext of exts) {
           try {
             const extra = ext.onConnect?.(this, internals);
-            if (extra) {
-              const seen = new Set(this.#setup);
-              forEachUnseen(extra, seen, (d) => this.#setup.push(d));
-            }
+            if (extra)
+              this.#setup.push(extra);
           } catch (error) {
             failConnect(`the '${ext.name}' extension`, error);
             return;
@@ -3684,7 +3660,7 @@ var makeFormAssociatedExtension = (config) => ({
     if (false)
       ;
     createManagedProperties(instance, internals);
-    return [config.makeSyncDescriptor(instance, internals)];
+    return config.makeSyncDescriptor(instance, internals);
   }
 });
 var makeResetCallback = (prop, defaultProp) => function() {

@@ -12,8 +12,8 @@ declare global {
 }
 
 /**
- * Test component for the v2 factory `watch()` helper.
- * Exercises: single prop, array form, direct Signal, MatchHandlers, conditional false.
+ * Test component for the factory `watch()` helper.
+ * Exercises: single prop, array form, direct Signal, MatchHandlers, conditional registration.
  */
 export default defineComponent<TestWatchProps>(
 	'test-watch',
@@ -54,11 +54,9 @@ export default defineComponent<TestWatchProps>(
 			},
 		})
 
-		// Conditional falsy guards — must be filtered out and never activate
-		return [
-			([false, undefined, null, '', 0, 0n] as const).map(
-				falsy => falsy && watch('label', () => {}),
-			),
-		]
+		// Conditional registration — plain control flow; an unmet condition
+		// simply never registers
+		const enableLogging: boolean = false
+		if (enableLogging) watch('label', () => {})
 	},
 )

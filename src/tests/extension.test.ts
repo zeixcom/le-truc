@@ -90,7 +90,7 @@ describe('extension composition', () => {
 				order.push('connect:second')
 			},
 		}
-		const Ctor = defineComponent(uniqueName(), () => [], [first, second])!
+		const Ctor = defineComponent(uniqueName(), () => {}, [first, second])!
 		expect(order).toEqual(['install:first', 'install:second'])
 		const instance = new Ctor() as any
 		instance.connectedCallback()
@@ -143,7 +143,7 @@ describe('extension staticProps collision', () => {
 		try {
 			const a: ComponentExtension = { name: 'a', staticProps: { flag: 1 } }
 			const b: ComponentExtension = { name: 'b', staticProps: { flag: 2 } }
-			expect(() => defineComponent(uniqueName(), () => [], [a, b])).toThrow(
+			expect(() => defineComponent(uniqueName(), () => {}, [a, b])).toThrow(
 				ExtensionCollisionError,
 			)
 		} finally {
@@ -158,7 +158,7 @@ describe('extension staticProps collision', () => {
 		try {
 			const a: ComponentExtension = { name: 'a', staticProps: { flag: 1 } }
 			const b: ComponentExtension = { name: 'b', staticProps: { flag: 2 } }
-			const Ctor = defineComponent(uniqueName(), () => [], [a, b])!
+			const Ctor = defineComponent(uniqueName(), () => {}, [a, b])!
 			expect((Ctor as any).flag).toBe(1)
 		} finally {
 			if (prevDevMode === undefined) delete process.env.DEV_MODE
@@ -171,7 +171,7 @@ describe('extension staticProps collision', () => {
 
 describe('observedAttributes()', () => {
 	test('static observedAttributes reflects the requested names', () => {
-		const Ctor = defineComponent(uniqueName(), () => [], [
+		const Ctor = defineComponent(uniqueName(), () => {}, [
 			observedAttributes(['variant']),
 		])!
 		expect((Ctor as any).observedAttributes).toEqual(['variant'])

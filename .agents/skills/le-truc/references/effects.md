@@ -256,7 +256,7 @@ each(items, item => {
 
 The callback's 2nd parameter is `first`, a type-safe, throwing lookup scoped to `item` instead of the host — same shape as the factory's own `first()`, minus dependency resolution for undefined custom elements. Use it instead of `item.querySelector()`.
 
-The callback can call `watch()`, `on()`, `each()` (nested, to any depth), `pass()`, and `provideContexts()` directly — same as the factory itself — or return a single `EffectDescriptor` / `FactoryResult` array (legacy form, still supported).
+The callback can call `watch()`, `on()`, `each()` (nested, to any depth), `pass()`, and `provideContexts()` directly — same as the factory itself. A returned `MaybeCleanup` registers on that element's scope, like `reconcile()`'s `bindItem` cleanup.
 
 ### `reconcile(container, template, source, bindItem)`
 

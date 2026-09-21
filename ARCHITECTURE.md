@@ -18,7 +18,7 @@ defineComponent('my-element', ({ expose, first, watch }) => {
 })
 ```
 
-`watch()` and the other factory context helpers register into an ambient per-instance collector when called (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md)). The factory does not need to `return` anything. Explicit `return` of a `FactoryResult` array still works but is deprecated (see [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md), superseded).
+`watch()` and the other factory context helpers register into an ambient per-instance collector when called and return `void` (see [ADR 0018](adr/0018-implicit-effect-collection-via-ambient-context.md), superseding [ADR 0007](adr/0007-effect-descriptors-with-deferred-activation.md)). The factory returns nothing — the collector is the only registration path, so a bare-statement helper call cannot silently no-op.
 
 ### Lifecycle
 
@@ -47,10 +47,10 @@ Each helper pushes its descriptor into an ambient collector instead of relying o
 - Each component instance has a closure-scoped collector, created in `connectedCallback`.
 - `each()`'s per-element `mount` callback pushes its own nested collector for the callback's duration, popped in a `try`/`finally`. This supports arbitrarily nested per-element structures such as grids.
 - Calling a helper with no active collector — outside synchronous factory or callback execution, for example after an `await` or inside a detached `setTimeout` — throws immediately.
+- Since v3.0, helpers return `void` and `FactoryResult` no longer exists: a factory's return value is ignored, and `watch(() => true, descriptor)` is the only registration path for a hand-authored descriptor.
+- A helper callback's returned cleanup registers on its scope — `each()`'s callback and `reconcile()`'s `bindItem` on the per-element scope, `watch()`'s handler on the active owner via its internal `createEffect()`.
 
-Explicit `return` of a `FactoryResult` array still works but is deprecated. Descriptors from `watch()`, `on()`, `pass()`, `each()`, and `provideContexts()` are already in the collector by the time they're returned, so returning them is redundant, not required. The return value is not discarded: `forEachUnseen()` (in `helpers/reactive.ts`) reconciles it against the collector, deduping by reference, so a hand-authored `EffectDescriptor` that bypasses every helper is still picked up if returned.
-
-To wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primitive without a `return`, use `watch(() => true, descriptor)`. `deriveCell(() => true)` has no signal dependencies, so it never reruns. `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup on the active owner.
+To wrap a native API (`IntersectionObserver`, etc.) or a raw cause-effect primitive, use `watch(() => true, descriptor)`. `deriveCell(() => true)` has no signal dependencies, so it never reruns. `watch()`'s internal `createEffect()` call self-registers the descriptor's returned cleanup on the active owner.
 
 ### DOM Binding Helpers
 
@@ -96,7 +96,7 @@ Per-item bindings mount via `bindItem` in root-keyed scopes, reusing the `keyedS
 **`bindItem` has collector parity with `each()`'s callback.** Both run inside an ambient effect-descriptor collector:
 
 - The callback is wrapped in `withCollector(collected, ...)`.
-- `activateResult(collected)` activates every descriptor the helpers pushed.
+- `activateDescriptors(collected)` activates every descriptor the helpers pushed.
 - Any returned `Cleanup` is captured by the per-item `createScope`.
 
 So `watch()`, `on()`, `pass()`, and `provideContexts()` are all usable inside `bindItem`, exactly as inside `each()`'s callback. Per-item reactivity does not require a raw `createEffect`, and per-item events do not require container-level delegation.
@@ -105,7 +105,7 @@ So `watch()`, `on()`, `pass()`, and `provideContexts()` are all usable inside `b
 
 Collected descriptors activate against the per-item `{ root: true }` scope, not the driving structural effect. Item-level `watch(item, …)` therefore does not make the structural effect depend on item signals.
 
-Unlike `each()`, `reconcile()` does not apply `forEachUnseen` to the return value: the return is a teardown, not a descriptor.
+The collector is the only registration path in both seams, so there is no return-reconciliation anywhere: `bindItem`'s returned `MaybeCleanup` is the per-item scope's teardown, and `each()`'s callback now shares exactly that contract.
 
 ## Query System
 
