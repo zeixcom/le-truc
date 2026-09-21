@@ -64,7 +64,7 @@ SERVER.md/TESTS.md tell the truth again.
   recorded whichever way it comes out. **A result that does not favour Le Truc is the valuable
   outcome, not a reason to re-run the study.**
 
-- [ ] LT-178: Remove the `pass()` unrestricted-write short forms (ADR 0012 removal).
+- [x] LT-178: Remove the `pass()` unrestricted-write short forms (ADR 0012 removal). — done, pending review ⏳
   **Skill:** le-truc-dev
   **Context:** ADR 0012 scheduled removal for the next major; the major is in pre-release
   (3.0.0-next.1) and the DEV_MODE warning still fires in `swapSlots`
@@ -77,6 +77,37 @@ SERVER.md/TESTS.md tell the truth again.
   check-off). Channel note: this retires a check and adds none.
   Acceptance: the short forms are gone from the types and the runtime; nothing warns because
   nothing exists to warn about; `bun test` green; CHANGELOG carries the breaking entry.
+
+  **Landed 2026-09-21 on `remove/pass-short-forms` (branched from v3 @ a8a3bdee per the
+  owner's 2026-09-04 separate-branch sequencing) — done, pending review ⏳.** Handoff for
+  review:
+  - **Runtime decision worth review:** `pass()` no longer resolves entries through the shared
+    `toSignal` (watch() keeps it untouched) — a new `toPassedSignal` accepts exactly thunk |
+    `{ get, set }` descriptor and returns `undefined` for everything else, so a retired form
+    (prop-key string, bare writable signal, AND bare read-only `Memo`/`Task`, which 2.x
+    admitted without warning) now fails the PRE-EXISTING eager validation
+    (`InvalidPassPropertyError`, nothing swapped) instead of silently resolving. The check
+    count is net-negative (DEV_MODE warning deleted; the throw rides the ADR 0011 validation
+    that already existed). First-draft copy for the failure reason lives in `swapSlots`
+    (`'could not be resolved to a signal — pass() accepts a thunk () => … …'`) — Tech Writer,
+    that caller-side reason string plus the CHANGELOG Removed entry and the ADR 0012 status
+    paragraph are the copy to review; `InvalidPassPropertyError` itself and `errors.ts` are
+    untouched.
+  - `PassedProps`/`PassHelper` lost the `<P>` type parameter (it existed only to type the
+    property-key form); `FactoryContext.pass` follows. JSDoc updated; regenerated `index.js` +
+    `types/` committed (source-driven diffs only, no minifier churn).
+  - Sweep verdict: zero stragglers — `examples/` already thunk/descriptor-only (compiler's
+    `truc:pass` IR only ever carried thunks/descriptor-thunks), root `test/` clean,
+    `docs-src/pages/` clean; prose updated where it still said "deprecated, warns in
+    DEV_MODE": AGENTS.md, ARCHITECTURE.md § Pass, CONTEXT.md **Pass**, ROADMAP dead-end
+    bullet struck (removed, LT-178), both `le-truc` skill references, `le-truc-dev`
+    non-obvious.md. ADR 0012 status records the removal. `docs-src/api/**` TypeDoc output and
+    `_media/` mirrors NOT regenerated/refreshed (no build refreshes `_media` — the known
+    systemic gap).
+  - Gates re-verified live in THIS tree: `bun test src/tests` 487 ✓, `bun test server/tests`
+    1691 ✓ (91 files, matches the re-pinned TESTS.md), `check:size` ✓, `check:links` ✓ (614),
+    targeted Playwright (pass + debug specs, Chromium) 17 ✓. Bare `bun test` is NOT a gate —
+    it sweeps the Playwright specs and reports 40 false failures.
 
 - [ ] LT-179: Remove the explicit factory return contract and `forEachUnseen` (ADR 0018 v3.0 milestone).
   **Skill:** le-truc-dev

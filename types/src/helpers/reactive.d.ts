@@ -9,17 +9,16 @@ import { type FirstElement } from './dom';
  * wrapped in `deriveCell()`. `watch()` and `pass()` resolve sources through
  * `toSignal()`.
  *
- * `pass()` accepts a read-only thunk, a mediated `{ get, set }` descriptor, a
- * bare property name, or a bare writable `Signal`. Prefer the thunk or
- * descriptor form; the last two hand the child unrestricted `.set()` on the
- * parent's signal (ADR-0012) and warn in DEV_MODE.
+ * `pass()` accepts a read-only thunk or a mediated `{ get, set }` descriptor
+ * (ADR-0012) — the retired property-key and bare-signal short forms were
+ * removed in v3.0 and fail the eager validation.
  *
  * `watch()`, `pass()`, `each()`, and `reconcile()` push an `EffectDescriptor`
  * into the active ambient collector and do not require an explicit `return`
  * (ADR 0018), though `return` is still supported.
  */
 /**
- * A reactive value that drives a DOM update or a slot injection.
+ * A reactive value that drives a DOM update.
  *
  * Accepts three forms:
  * - `keyof P` — a host property name; reads `host[name]` and registers it
@@ -58,13 +57,18 @@ type ResolvedReactiveSignals<S extends readonly unknown[], P extends ComponentPr
 /**
  * Map of child component property names to the reactive values `pass()` injects into them.
  *
+ * Since v3.0 (ADR-0012 removal) each entry accepts exactly two forms: a
+ * thunk (`() => host.<prop>`, read-only) or a `{ get, set }` slot descriptor
+ * (mediated writes). The retired property-key and bare-signal short forms
+ * fail `pass()`'s eager validation.
+ *
  * `Q` is bound to `HTMLElement`, not `ComponentProps`, because native
  * members on a target's element type (e.g. `form: HTMLFormElement | null`)
  * fail a `Record<string, {}>`-style constraint. `keyof Q & ComponentProp`
  * filters to the author-exposed reactive props instead.
  */
-type PassedProps<P extends ComponentProps, Q extends HTMLElement> = {
-    [K in keyof Q & ComponentProp]?: Reactive<Q[K], P> | SlotDescriptor<Q[K] & {}>;
+type PassedProps<Q extends HTMLElement> = {
+    [K in keyof Q & ComponentProp]?: (() => Q[K] | Promise<Q[K]> | null | undefined) | SlotDescriptor<Q[K] & {}>;
 };
 /**
  * The `watch` helper type in `FactoryContext`.
@@ -95,9 +99,9 @@ type WatchHelper<P extends ComponentProps> = {
  * signals. Supports a single element or a `Signal<Element[]>` target, with
  * per-element lifecycle for the latter.
  */
-type PassHelper<P extends ComponentProps> = {
-    <Q extends HTMLElement>(target: Q | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
-    <Q extends HTMLElement>(target: Signal<Q[]> | Falsy, props: PassedProps<P, Q>): EffectDescriptor;
+type PassHelper = {
+    <Q extends HTMLElement>(target: Q | Falsy, props: PassedProps<Q>): EffectDescriptor;
+    <Q extends HTMLElement>(target: Signal<Q[]> | Falsy, props: PassedProps<Q>): EffectDescriptor;
 };
 /**
  * Recursively activate a `FactoryResult` array of effect descriptors.
@@ -163,17 +167,20 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => Wa
  * restores signals per element as it enters and leaves the collection.
  *
  * ```ts
- * // deprecated — child can write freely
- * pass(child, { value: parentSignal })
- * // preferred — child writes are mediated by the parent
- * pass(child, { value: { get: parentSignal.get, set: parentSignal.set } })
+ * // read-only — the child observes the parent's value
+ * pass(child, { value: () => host.value })
+ * // mediated — child writes route through the parent's setter
+ * pass(child, { value: { get: parentState.get, set: parentState.set } })
  * ```
+ *
+ * The property-key and bare-signal short forms were removed in v3.0
+ * (ADR-0012); a retired form fails the eager validation (ADR 0011).
  *
  * @since 2.0
  * @param host - The component host element
  * @returns Bound `pass` function for the given host
  */
-declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => PassHelper<P>;
+declare const makePass: <P extends ComponentProps>(host: HTMLElement & P) => PassHelper;
 /**
  * Create per-element reactive effects from a `Signal<Element[]>`.
  *

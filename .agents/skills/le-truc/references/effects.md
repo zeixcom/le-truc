@@ -238,7 +238,7 @@ pass(child, {
 })
 ```
 
-The property-key form (`{ disabled: 'disabled' }`) and bare-writable-signal form (`{ value: mySignal }`) are deprecated (removed in v3.0) — see `references/coordination.md` for why.
+The property-key form (`{ disabled: 'disabled' }`) and bare-signal form (`{ value: mySignal }`) were removed in v3.0 — a thunk or a `{ get, set }` descriptor is the only accepted input; see `references/coordination.md` for why.
 
 **Use `bindProperty()` inside `watch()` for non-Le Truc elements** (Lit, Stencil, plain custom elements).
 

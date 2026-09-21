@@ -36,7 +36,7 @@ defineComponent<ParentProps>('parent-el', ({ expose, first, pass }) => {
 })
 ```
 
-**Deprecated short forms (removed in v3.0):** the property-key form (`disabled: 'disabled'`) and the bare-writable-signal form (`value: someState`) hand the child unrestricted `.set()` on the parent's signal and warn in DEV_MODE. Use a thunk for read-only access or a `{ get, set }` descriptor to mediate writes.
+**Retired short forms (removed in v3.0):** the property-key form (`disabled: 'disabled'`) and the bare-signal form (`value: someState`) — which handed the child unrestricted `.set()` on the parent's signal — no longer exist. A thunk for read-only access or a `{ get, set }` descriptor to mediate writes is the only accepted input; a retired form, including a bare read-only signal, fails `pass()`'s eager validation and swaps nothing.
 
 **Scope: Le Truc components only.** For Lit, Stencil, FAST, plain custom elements, or native elements, use `watch('prop', bindProperty(el, 'key'))` instead — `pass()` bypasses external frameworks' change-detection and has no effect on them.
 
