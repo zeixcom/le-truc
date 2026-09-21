@@ -112,9 +112,13 @@
 		"typescript": "^6.0.3"
 	},
 	"peerDependencies": {
+		"jsdom": "^30.0.0",
 		"typescript": ">=5.8.0"
 	},
 	"peerDependenciesMeta": {
+		"jsdom": {
+			"optional": true
+		},
 		"typescript": {
 			"optional": true
 		}

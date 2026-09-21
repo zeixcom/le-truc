@@ -62,6 +62,17 @@
  * baseline `sim-driver.test.ts` holds — a new entry fails the build and
  * names the component. The channel is the build report, not the compile
  * warnings: nothing the realm reports is statically decidable.
+ *
+ * ## The absent substrate
+ *
+ * jsdom is an optional peer dependency (ADR 0034 s5), so a consumer build
+ * may have no substrate at all — and that configuration must stay green
+ * ([M28](REQUIREMENTS.md#m28-distribution-and-dependency-weight)). The pass
+ * then routes the Simulated-tier components Static, appends an
+ * `unavailable-substrate` routing signal to each (the census prints it),
+ * and rewrites the registry so the tier census reports the outcome; the
+ * resolver's narrowed catch (`isSubstrateAbsence`) is what keeps a broken
+ * substrate from masquerading as this benign configuration.
  */
 
 import { join } from 'node:path'
@@ -72,7 +83,16 @@ import {
 	reportDiagnostics,
 	type SimReport,
 } from '../compiler/build-report'
-import type { ComponentRegistry, RegistryEntry } from '../compiler/registry'
+import {
+	formatCensus,
+	type TierCensusSubject,
+	tierCensus,
+} from '../compiler/census'
+import {
+	type ComponentRegistry,
+	type RegistryEntry,
+	registryJson,
+} from '../compiler/registry'
 import type {
 	ClassifiedDiagnostic,
 	SimulationProvider,
@@ -80,7 +100,7 @@ import type {
 	SimulationRealmOptions,
 } from '../compiler/simulation/contract'
 import { resolveSimulationProvider } from '../compiler/simulation/resolve'
-import type { EvaluationTier } from '../compiler/tier'
+import type { EvaluationTier, RoutingSignal } from '../compiler/tier'
 import { LOCALES } from '../config'
 import { GENERATED_DIR, REPO_CONFIG } from '../corpus-compile'
 import { io } from '../runtimes'
@@ -103,6 +123,11 @@ export type SimulationPassResult = {
 	skipped: Array<{ tag: string; tier: EvaluationTier }>
 	/** Simulated-tier tags with no authored demo markup to render. */
 	withoutMarkup: string[]
+	/**
+	 * Tags routed Static because no substrate is installed (ADR 0034 s5) —
+	 * the census records why on each one's registry entry.
+	 */
+	rerouted: string[]
 	/** `render()` calls — one per occurrence PER LOCALE. */
 	occurrences: number
 	/** Locales the pass rendered each occurrence for (LT-174). */
@@ -136,6 +161,19 @@ export type SimulationPassOptions = {
 	createRealm?: (options: SimulationRealmOptions) => SimulationRealm
 	/** Standing entries for the substrate in use; defaults to the driver's. */
 	classifications?: readonly ClassifiedDiagnostic[]
+	/**
+	 * Seam for tests: defaults to the real resolver. Answering `null` is the
+	 * substrate-absent configuration (ADR 0034 s5), which routes the
+	 * Simulated-tier components Static instead of failing the build.
+	 */
+	resolveProvider?: () => Promise<SimulationProvider | null>
+	/**
+	 * Seam for tests: defaults to rewriting `generatedDir/registry.json` with
+	 * the re-routed entries, so the tier census — which reads the registry —
+	 * reports the routing outcome. Called only when a reroute happened; a
+	 * build with the substrate present never touches the written registry.
+	 */
+	writeRegistry?: (registry: ComponentRegistry) => Promise<void>
 	/** Seam for tests: defaults to reading `subject.markupPath`. */
 	readMarkup?: (subject: SimulationSubject) => Promise<string | null>
 	log?: (message: string) => void
@@ -246,8 +284,10 @@ const occurrencesOf = (tag: string, html: string): string[] => {
 /**
  * Run the driver over every Simulated-tier component of the compiled corpus.
  *
- * Throws on an unclassified build-report entry (the gate) and on any attempt
- * to simulate a component of another tier (the invariant).
+ * Routes the Simulated-tier components Static when no substrate is
+ * installed (ADR 0034 s5) — a census outcome, never a failed build. Throws
+ * on an unclassified build-report entry (the gate) and on any attempt to
+ * simulate a component of another tier (the invariant).
  */
 export const simulateCorpus = async ({
 	registry,
@@ -255,6 +295,12 @@ export const simulateCorpus = async ({
 	root = REPO_CONFIG.root,
 	createRealm,
 	classifications,
+	resolveProvider = resolveSimulationProvider,
+	writeRegistry = async reroutedEntries =>
+		io.writeTextFile(
+			join(generatedDir, 'registry.json'),
+			registryJson(Object.values(reroutedEntries) as RegistryEntry[]),
+		),
 	readMarkup = async subject => {
 		if (!(await io.fileExists(subject.markupPath))) return null
 		return await io.readTextFile(subject.markupPath)
@@ -284,6 +330,7 @@ export const simulateCorpus = async ({
 			simulated,
 			skipped,
 			withoutMarkup,
+			rerouted: [],
 			occurrences,
 			locales: LOCALES,
 			realmOpened: false,
@@ -294,18 +341,56 @@ export const simulateCorpus = async ({
 
 	// Activation is installation (ADR 0035 sub-design 4): the driver is
 	// resolved, never configured. The test seam short-circuits it.
-	const provider =
-		createRealm === undefined ? await resolveSimulationProvider() : null
-	if (createRealm === undefined && provider === null)
-		throw new Error(
-			`No simulation driver is installed, but ${subjects.length} component(s) ` +
-				`route to the Simulated tier (${subjects
-					.map(subject => `<${subject.tag}>`)
-					.join(', ')}). Install the optional jsdom dependency to render ` +
-				'them through the realm. Routing them to the Static tier instead — ' +
-				'an `unavailable substrate` census row rather than a failed build ' +
-				'(ADR 0034 sub-design 5) — is not implemented yet.',
+	const provider = createRealm === undefined ? await resolveProvider() : null
+	if (createRealm === undefined && provider === null) {
+		// ADR 0034 s5 (ADR 0029 s6, amended 2026-09-19): absence is a routing
+		// outcome, never a failure. The classifier's Simulated verdict stands
+		// in the signals — it is a fact about the code — but the mechanism
+		// that would serve it is not installed, so the tier is set to Static
+		// DIRECTLY rather than through classifyTier (whose realm-answerable
+		// signals would re-yield simulated) and the substrate signal records
+		// why. Served bytes are unaffected either way: a Simulated-tier
+		// occurrence rides pages authored exactly as a Static one does
+		// (page-render.ts qualifies Folded-tier components only).
+		const rerouted: string[] = []
+		const reroutedSubjects: TierCensusSubject[] = []
+		for (const subject of subjects) {
+			const routedEntry = entries[subject.tag]
+			if (!routedEntry) continue
+			const signal: RoutingSignal = {
+				origin: 'unavailable-substrate',
+				detail:
+					'the jsdom substrate is not installed; no realm can run, so the component serves its phase-1 skeleton',
+				resolution: { by: 'substrate-unavailable' },
+			}
+			routedEntry.tier = 'static'
+			routedEntry.routingSignals = [...routedEntry.routingSignals, signal]
+			rerouted.push(subject.tag)
+			reroutedSubjects.push({
+				tag: routedEntry.tag,
+				tier: routedEntry.tier,
+				routingSignals: routedEntry.routingSignals,
+			})
+		}
+		await writeRegistry(entries)
+		log(
+			`🎭 Simulation pass: the jsdom substrate is not installed — ` +
+				`${rerouted.length} Simulated-tier component(s) routed Static ` +
+				'(ADR 0034 s5); the build is green, their initial markup is the skeleton',
 		)
+		log(formatCensus(tierCensus(reroutedSubjects)))
+		return {
+			simulated,
+			skipped,
+			withoutMarkup,
+			rerouted,
+			occurrences,
+			locales: LOCALES,
+			realmOpened: false,
+			ms: performance.now() - started,
+			report: reportDiagnostics([], []),
+		}
+	}
 	const openRealm =
 		createRealm ??
 		((options: SimulationRealmOptions) =>
@@ -369,6 +454,7 @@ export const simulateCorpus = async ({
 			simulated,
 			skipped,
 			withoutMarkup,
+			rerouted: [],
 			occurrences,
 			locales: LOCALES,
 			realmOpened: true,

@@ -104,6 +104,10 @@ export type UnresolvableLimb =
  *   spent in `DiagnosticCode`'s numbering — they are not emitted codes.
  * - `compose-read` was never a diagnostic: a compose site reading a
  *   simulated-tier dependency.
+ * - `unavailable-substrate` was never a diagnostic either: the build found
+ *   no simulation substrate installed (ADR 0034 s5), so the Simulated
+ *   verdict stands in the signals but the routing degrades to the Static
+ *   tier and this origin records why.
  */
 export type RoutingSignalOrigin =
 	| 'LTC004'
@@ -111,6 +115,7 @@ export type RoutingSignalOrigin =
 	| 'LTC034'
 	| 'LTC043'
 	| 'compose-read'
+	| 'unavailable-substrate'
 
 /** Whether some server phase can answer an unresolved expression. */
 export type Resolution =
@@ -118,6 +123,14 @@ export type Resolution =
 	| { by: 'realm' }
 	/** No phase can answer it; omitted in every tier. */
 	| { by: 'none'; limb: UnresolvableLimb; reason: string }
+	/**
+	 * The realm WOULD answer it, but no substrate is installed (ADR 0034 s5).
+	 * Never counted realm-answerable — the classifier is substrate-blind by
+	 * design (ADR 0035 sub-design 4), so this variant only ever appears on a
+	 * signal the build pass appended AFTER classification, on a routing
+	 * override that sets the tier itself.
+	 */
+	| { by: 'substrate-unavailable' }
 
 /**
  * One reason a component left the Folded tier.

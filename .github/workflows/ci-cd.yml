@@ -80,3 +80,43 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+
+  test-no-substrate:
+    # The second supported configuration (ADR 0034 s5, M28): the compiler
+    # exercised WITHOUT the optional simulation substrate. The `test` job
+    # above covers the with-substrate configuration.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Remove the simulation substrate
+        # jsdom is an optional peer dependency: a consumer whose install line
+        # skips it never sees the package. Deleting it reproduces exactly
+        # that configuration — the driver resolves, its substrate import
+        # fails with ERR_MODULE_NOT_FOUND for `jsdom`, and the build must
+        # treat that as absence, not as a broken install.
+        run: rm -rf node_modules/jsdom
+
+      - name: Build the corpus without the substrate
+        # The one-shot build runs the simulation pass after the compile
+        # (build.ts orders it): must stay green with the Simulated-tier
+        # components routed Static and named in the census — never a failed
+        # build. Piped through tee so the census assertion below can read
+        # the report; pipefail keeps a build failure failing this step.
+        shell: bash
+        run: set -o pipefail; bun run build:docs 2>&1 | tee no-substrate-build.log
+
+      - name: The census records the routing outcome
+        run: grep -q "unavailable-substrate" no-substrate-build.log

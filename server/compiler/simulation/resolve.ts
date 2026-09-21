@@ -26,9 +26,13 @@
  * ## Absence is not an error here
  *
  * {@link resolveSimulationProvider} answers `null` when the driver or its
- * substrate is not installed. Turning that into a routing outcome with an
- * `unavailable substrate` census reason is LT-256's work; this module only
- * makes the condition observable without a crash.
+ * substrate is not installed; the simulation pass turns that into a routing
+ * outcome with an `unavailable substrate` census reason (LT-256, ADR 0034
+ * sub-design 5). Absence is narrowly construed: only a resolution failure
+ * for the driver or its substrate ({@link isSubstrateAbsence}) counts. A
+ * driver that IS installed but broken — an init throw, a missing transitive
+ * dependency — surfaces, the same distinction
+ * {@link SimulationSeamVersionError} draws for a version mismatch.
  */
 
 import { SIMULATION_SEAM_VERSION, type SimulationProvider } from './contract.ts'
@@ -39,6 +43,12 @@ import { SIMULATION_SEAM_VERSION, type SimulationProvider } from './contract.ts'
  * typechecker does not follow it — see the module header.
  */
 const SIMULATION_DRIVER = '../sim/index.ts'
+
+/** The substrate package the driver itself loads (`sim/realm.ts`'s import). */
+const SUBSTRATE_PACKAGE = 'jsdom'
+
+/** What the driver specifier resolves to, as it appears in a resolve error. */
+const DRIVER_SPECIFIER_TAIL = 'sim/index.ts'
 
 /** Cached across calls: one resolution per process, driver or not. */
 let resolved: SimulationProvider | null | undefined
@@ -61,10 +71,48 @@ export class SimulationSeamVersionError extends Error {
 }
 
 /**
+ * Whether `error` is a genuine resolution failure for the driver or its
+ * substrate — the one shape of absence (ADR 0035 sub-design 4). Exported
+ * for the discrimination tests; the resolver is the only caller.
+ *
+ * Both gates are load-bearing. The error must BE a module-resolution
+ * failure — `ERR_MODULE_NOT_FOUND` (Node's code; Bun's `ResolveMessage`
+ * carries the same code and this name) — because anything else is a driver
+ * that is present but broken, which must surface rather than masquerade as
+ * an opt-out. And the failing specifier must be the driver itself or its
+ * substrate package: in a build with no jsdom installed, the import that
+ * fails is the substrate load INSIDE the otherwise-present driver, while a
+ * missing transitive dependency names some third specifier — a broken
+ * install, which surfaces the same way. An error of unrecorded shape
+ * surfaces too: ambiguity resolves to "broken", never to "absent".
+ */
+export const isSubstrateAbsence = (error: unknown): boolean => {
+	if (typeof error !== 'object' || error === null) return false
+	const { code, name, specifier } = error as {
+		code?: string
+		name?: string
+		specifier?: string
+	}
+	if (code !== 'ERR_MODULE_NOT_FOUND' && name !== 'ResolveMessage') return false
+	// Bun carries the failing specifier as a field; under Node it appears
+	// only in the message ("Cannot find package 'x' imported from …").
+	const failed =
+		specifier ??
+		/^(?:Cannot find (?:module|package)) ['"]([^'"]+)['"]/.exec(
+			error instanceof Error ? error.message : '',
+		)?.[1]
+	if (failed === undefined) return false
+	return failed === SUBSTRATE_PACKAGE || failed.endsWith(DRIVER_SPECIFIER_TAIL)
+}
+
+/**
  * Resolve the installed simulation driver, or `null` when there is none.
  *
- * Throws only on a version mismatch — a driver that is present but wrong is
- * a broken install, not an opt-out.
+ * Throws on a version mismatch — a driver that is present but wrong is a
+ * broken install, not an opt-out — and on any error from loading the
+ * driver that is not a resolution failure for the driver or its substrate
+ * (LT-256): a driver that is present but broken surfaces with its real
+ * cause instead of degrading the Simulated tier silently.
  */
 export const resolveSimulationProvider =
 	async (): Promise<SimulationProvider | null> => {
@@ -75,9 +123,11 @@ export const resolveSimulationProvider =
 				simulationProvider?: SimulationProvider
 			}
 			provider = loaded.simulationProvider ?? null
-		} catch {
-			// No driver, or no substrate under it. Either way the build has no
-			// Simulated tier available; the caller decides what that means.
+		} catch (error) {
+			if (!isSubstrateAbsence(error)) throw error
+			// The driver or its substrate is genuinely not installed. The build
+			// has no Simulated tier available; the caller decides what that
+			// means (LT-256: it routes Static and records a census reason).
 			provider = null
 		}
 		if (provider !== null && provider.seamVersion !== SIMULATION_SEAM_VERSION)

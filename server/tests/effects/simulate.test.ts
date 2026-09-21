@@ -140,6 +140,87 @@ describe('the tier invariant (ADR 0029 — a realm is opened for the Simulated t
 	})
 })
 
+describe('an absent substrate routes Static (ADR 0034 s5, LT-256)', () => {
+	test('the pass reroutes the Simulated subjects, records why, and rewrites the registry', async () => {
+		const written: ComponentRegistry[] = []
+		const log: string[] = []
+		const result = await simulateCorpus({
+			registry: registryOf(
+				entry('x-folded', 'folded'),
+				entry('x-sim', 'simulated'),
+			),
+			resolveProvider: async () => null,
+			writeRegistry: async reg => {
+				written.push(reg)
+			},
+			readMarkup: async () => {
+				throw new Error('no substrate means no realm, so no render call')
+			},
+			log: message => log.push(message),
+		})
+		// The routing outcome: rerouted, realm never opened, nothing rendered.
+		expect(result.rerouted).toEqual(['x-sim'])
+		expect(result.realmOpened).toBe(false)
+		expect(result.simulated).toEqual([])
+		// The census row names the component and the reason — a census record,
+		// not a warning, so it rides the plain log.
+		expect(log.join('\n')).toContain('x-sim')
+		expect(log.join('\n')).toContain('unavailable-substrate')
+		// The registry rewrite is what the tier census later reads.
+		expect(written).toHaveLength(1)
+		const simEntry = written[0]?.['x-sim']
+		expect(simEntry?.tier).toBe('static')
+		expect(simEntry?.routingSignals).toHaveLength(1)
+		expect(simEntry?.routingSignals?.[0]?.origin).toBe('unavailable-substrate')
+		expect(simEntry?.routingSignals?.[0]?.resolution.by).toBe(
+			'substrate-unavailable',
+		)
+		// The Folded entry rides along untouched — the reroute is scoped to
+		// the components the classifier routed Simulated.
+		expect(written[0]?.['x-folded']?.tier).toBe('folded')
+		expect(written[0]?.['x-folded']?.routingSignals).toEqual([])
+	})
+
+	test('a substrate present never touches the registry and reroutes nothing', async () => {
+		const { realm } = fakeRealm()
+		const written: ComponentRegistry[] = []
+		const result = await simulateCorpus({
+			registry: registryOf(entry('x-sim', 'simulated')),
+			createRealm: () => realm,
+			// The seam realm means the substrate IS present: the pass must not
+			// resolve (or consult) the provider at all, even though it would
+			// answer null.
+			resolveProvider: async () => null,
+			writeRegistry: async reg => {
+				written.push(reg)
+			},
+			readMarkup: async () => '<x-sim></x-sim>',
+			log: () => {},
+		})
+		expect(result.rerouted).toEqual([])
+		expect(written).toHaveLength(0)
+		expect(result.simulated).toEqual(['x-sim'])
+	})
+
+	test('rerouted components are accounted in rerouted, not in skipped', async () => {
+		const result = await simulateCorpus({
+			registry: registryOf(
+				entry('x-folded', 'folded'),
+				entry('x-static', 'static'),
+				entry('x-sim', 'simulated'),
+			),
+			resolveProvider: async () => null,
+			writeRegistry: async () => {},
+			log: () => {},
+		})
+		expect(result.skipped).toEqual([
+			{ tag: 'x-folded', tier: 'folded' },
+			{ tag: 'x-static', tier: 'static' },
+		])
+		expect(result.rerouted).toEqual(['x-sim'])
+	})
+})
+
 describe('disposal is end-of-build (LT-152 review, obligation 1)', () => {
 	test('dispose runs once, after every render, never between them', async () => {
 		const { realm, log } = fakeRealm()

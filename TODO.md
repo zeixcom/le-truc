@@ -130,7 +130,7 @@ then the number has a stake in it.
   key the day one migrates; one-line fix when wave 4 lands, or fold into i18n-sync's next
   touch.
 
-- [ ] LT-256: jsdom as an optional peer dependency; `unavailable substrate` as a tier-census reason.
+- [x] LT-256: jsdom as an optional peer dependency; `unavailable substrate` as a tier-census reason. — done, pending review ⏳ (2026-09-21; handoff notes in NOTES.md)
   **Skill:** le-truc-dev
   **Context:** ADR 0034 s5 and the ADR 0029 s6 amendment (2026-09-19). A published compiler's
   dependency weight is a consumer-visible cost, and jsdom serves a capability two of 22 corpus
