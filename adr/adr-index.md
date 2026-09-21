@@ -29,7 +29,7 @@ Maintained by the `adr-keeper` workflows — update whenever an ADR is created, 
 | [0022](0022-debug-extension-for-visual-and-console-instrumentation.md) | `debug()` Extension for Visual and Console Instrumentation | ✅ Accepted | S3, N1, M5, M6 |
 | [0023](0023-map-form-overloads-for-bind-helpers.md) | Map-Form Overloads for `bindStyle`/`bindAttribute`/`bindClass`/`bindProperty`/`bindState` | ✅ Accepted | M5 |
 | [0024](0024-adopt-tsrx-as-isomorphic-component-format.md) | Adopt TSRX as the Isomorphic Component Format | ✅ Accepted | M1, M3, M4, M10, §1, §4, §5, §7 |
-| [0025](0025-client-side-tsrx-playground.md) | Client-Side TSRX Playground | 🔄 Proposed | §1, M12, M13, S2 |
+| [0025](0025-client-side-component-playground.md) | Client-Side Component Playground | 🔄 Proposed | §1, M12, M13, S2 |
 | [0026](0026-aria-reflection-via-elementinternals-and-bindaria.md) | ARIA Reflection via ElementInternals and `bindAria()` | ✅ Accepted | M1, M3, M5, §4 |
 | [0027](0027-server-simulation.md) | Server Simulation — Render Initial HTML by Executing the Client Module | ✅ Accepted | §1, M5, M6, M8, §5, §7 |
 | [0028](0028-tiered-error-surfacing.md) | Tiered Error Surfacing — Compiler First, Contained Runtime | ✅ Accepted | M11, M15, M16, S2, S3, S5, §4 |

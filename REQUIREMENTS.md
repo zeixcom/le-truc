@@ -280,7 +280,7 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 
 #### N3. Client-side TSRX playground
 
-_Conditional._ A docs-site playground compiling components entirely in the visitor's browser ([ADR 0025](adr/0025-client-side-tsrx-playground.md) — **Proposed**, not accepted). In scope only if the ADR is accepted; it rides M25's browser-purity invariant, but commits nothing until decided.
+_Conditional._ A docs-site playground compiling components entirely in the visitor's browser ([ADR 0025](adr/0025-client-side-component-playground.md) — **Proposed**, not accepted). In scope only if the ADR is accepted; it rides M25's browser-purity invariant, but commits nothing until decided.
 
 ---
 
