@@ -134,8 +134,9 @@ SERVER.md/TESTS.md tell the truth again.
   Acceptance: helpers return `void`; `FactoryResult` is not exported; a bare-statement helper
   call cannot silently no-op (the collector is the only registration path); `bun test` green.
 
-- [ ] LT-278: Record the runtime-neutral build path as an ADR (LT-267 review).
+- [x] LT-278: Record the runtime-neutral build path as an ADR (LT-267 review). — done ✓
   **Skill:** adr-keeper
+  **Changed:** [ADR 0038](adr/0038-runtime-neutral-build-path.md) created — standalone, beside ADR 0034 rather than a sub-design of it (0034's sub-designs govern what the package is and emits; this governs how the build path executes, and it binds the in-repo docs build today): the `RuntimeIO` seam; the compiler staying pure beside it; glob semantics as one grammar decided once, pinned to `Bun.Glob`'s scanner, with the three LT-277 edges recorded as pending rulings owned by LT-277; `check:portability` as the standing gate. adr-index row added; ADR 0034 s1 and ADR 0036 s5 cross-linked (SERVER.md's runtime-seam header link rode the LT-279 commit, 3d56c355). `bun run check:links` clean (611 links).
   **Context:** the LT-267 review (2026-09-21). The decision — the published compiler
   package's build path requires *a* JS runtime, not Bun specifically; `RuntimeIO` is the
   seam; glob pattern semantics are one shared grammar decided once in
