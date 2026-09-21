@@ -82,7 +82,7 @@ export type CompileDiagnostic = {
 	code: DiagnosticCode
 	severity: 'error' | 'warning'
 	message: string
-	/** 1-based line in the .tsrx source, when known. */
+	/** 1-based line in the authored source (either front end), when known. */
 	line?: number
 }
 

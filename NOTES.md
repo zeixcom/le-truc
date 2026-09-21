@@ -29,34 +29,68 @@ the contract-conformant spelling.
 **Date:** 2026-08-29 | **Skill:** le-truc-dev
 During LT-090, Mimosa twice rejected Edits to `runtime.ts` as "command injection" — a false positive on HTML-escaping string building (that module has no process execution; the flagged region was pre-existing `esc()`/`attr()` code). Workaround: place render-time helpers in their own module (`compose-attrs.ts`) and re-export through `runtime.ts`. Future edits to `runtime.ts` may hit the same heuristic — if a legitimate edit is blocked, check whether the flagged pattern is pre-existing escaping code before restructuring.
 
-## LT-256 sat out a same-file collision with LT-267, then landed on its seam
+## LT-265 landed: the front-end contract is named, pinned, and check-proven
 **Date:** 2026-09-21 | **Skill:** le-truc-dev
-LT-256 and LT-267 were run in parallel and both needed `server/effects/simulate.ts` (LT-267
-to de-Bun it, LT-256 to replace the no-provider throw). Per the owner's instruction this
-session paused all edits until LT-267's commit landed (watching `git log` subject lines — a
-first watcher grepping commit BODIES false-fired instantly on a cross-reference; landing
-commits here cite the task ID in the subject). Resumed on 4097198c, re-read the post-LT-267
-file, and built LT-256 on the new `server/runtimes` io seam. **Handoff for review:**
-- Census reason copy is my draft — Tech Writer owns: origin `unavailable-substrate`, detail
-  "the jsdom substrate is not installed; no realm can run, so the component serves its
-  phase-1 skeleton", pass log line "the jsdom substrate is not installed — N Simulated-tier
-  component(s) routed Static (ADR 0034 s5); the build is green, their initial markup is the
-  skeleton".
-- Design decision worth eyes: on absence the pass REWRITES `generated/registry.json`
-  (entries → tier static + appended signal) — the tier census reads the registry
-  (`check-corpus.ts`), so the rewrite is what makes the census reflect the outcome. The
-  classifier's verdict stays in the signals; only the tier flips, set directly (classifyTier
-  would re-yield simulated from the realm-answerable signals). Reroute runs on ONE-SHOT
-  builds only (the pass never runs on watch), so a watch session's on-disk registry keeps
-  the simulated tiers until the next substrate-less one-shot — acceptable for a generated
-  artifact, but a reviewer may want it stated in SERVER.md.
-- Proven live both ways: `rm -rf node_modules/jsdom && bun run build:docs` → exit 0, census
-  names form-combobox + form-listbox with `unavailable-substrate`; rebuild with jsdom →
-  realm runs, zero reroute lines, registry back to simulated. Negative half is pinned by
-  unit tests (`simulation-resolve.test.ts`): a driver present but throwing, or missing a
-  TRANSITIVE dep, surfaces instead of reporting absence — Bun's ResolveMessage carries
-  `.specifier` (probed), Node's shape is message-parsed; unrecorded shapes surface, never
-  masquerade as absence.
-- CI gains `test-no-substrate` (ci-cd.yml): install, delete node_modules/jsdom,
-  `bun run build:docs`, grep the census token. Deliberately NOT test:server (the
-  sim-driver tests need jsdom).
+**Changed:** new `server/compiler/contract.ts` — the designated export surface (LT-265's
+"exact set of symbols named"): `compileFromIR`, the full IR type vocabulary (`ComponentIR`
+and every type it is composed of, plus `AstNode`), both refusal channels (`CompileDiagnostic`/
+`DiagnosticCode`, `RoutingSignal`/`RoutingSignalOrigin`/`Resolution`/`UnresolvableLimb`/
+`EvaluationTier`), the consumer half (`CompileFileResult`/`CompiledComponent`/`RegistryEntry`/
+`SourceSpan`), `EmitPaths`/`DEFAULT_EMIT_PATHS`, and the bundled `compileComponentTsx`
+(ADR 0034 s2 — `.tsrx`'s `compileComponent` is deliberately absent until `@tsrx/core` 1.0).
+The stability policy lives in the module doc: semver over this set and nothing else from
+first publish; emitted artifact BYTES are not contract; new codes/origins/optional IR fields
+are additive-minor. Two new files pin it: `server/tests/compiler/contract.test.ts` (value set
+at runtime, type set textually — widening/shrinking the surface now fails a test) and
+`scripts/contract-check.ts` + `check:contract` (the task's Check, institutionalized
+LT-267-style). Two JSDoc wordings rode along (`line?` fields: ".tsrx source" → "authored
+source (either front end)" — the contract is dual-surface).
+**Check (live):** the scratch front end OUTSIDE the repo — a toy one-line syntax, neither
+surface — imports only `contract.ts`, compiles end-to-end in all three tiers (no signals →
+folded; realm-answerable signal → simulated; unresolvable → static, each recorded on the
+entry), and proves both refusal channels (error diagnostic → component null, diagnostic
+carried; routing signal → tier degrades, signal kept for the census). 11/11 assertions;
+`bun run check:contract` is a gate. The script interpolates the repo module path in exactly
+ONE marked place — LT-254 flips that specifier to the package name and re-runs.
+**Design observation for review (not decided here):** the refusal channels are CLOSED
+vocabularies — a foreign front end constructs `CompileDiagnostic` literals whose `code` must
+come from our `DiagnosticCode` union, and `RoutingSignalOrigin` is equally closed. The toy
+front end reuses `LTC005` (sanctioned-subset refusal) and the `LTC004` spelling (can't-fold
+provenance), which is honest today. If a real third front end ever needs to mint its own
+codes/origins, that is an owner decision (naming, the spent-number ledger, the census) —
+flagged, not changed.
+**Gates:** server suite 1680 pass / 0 fail; src 491 pass / 0 fail; typecheck clean; biome
+clean; `check:contract` green.
+**Pre-existing defect noticed (not mine to fix mid-review):** `tier-corpus.test.ts`'s
+"the tier census" describe block calls `tierCensus(Object.values(registry))` at REGISTRATION
+time, but `registry` is assigned in `beforeAll` — so the describe body throws
+(`Object.values requires that input parameter not be null or undefined`), bun surfaces it as
+the suite's "1 error between tests", and that block's 3 tests silently NEVER register (same
+failure mode the file's own beforeAll comment warns about). Verified identical with and
+without my changes. The fix is mechanical (build the census inside the tests or read the
+registry lazily) — filed here for the Architect to route.
+**Tech Writer handoff (docs half, dispatched in the same session):** the contract narrative
+belongs where an implementer reads — `server/compiler/LE_TRUC_COMPILER.md` is the
+recommendation — and must state: (1) the contract itself, `source → { component, diagnostics,
+routingSignals }` handed to `compileFromIR`, both shipped front ends the same shell (ADR 0032
+sub-design 6's anti-drift evidence); (2) the IR's shape with `ir.ts` JSDoc as the normative
+field reference, and the three outputs (serverCode/clientCode/css) + entry + span tables;
+(3) the refusal channel as part of the contract: ADR 0028's tiers and the meaning of a
+routing signal — how a front end says "I cannot answer this" and gets a designed outcome
+rather than a silently wrong component; (4) the stability policy (copy of contract.ts's
+module doc, kept in sync with it); (5) the exact designated symbol set (the test is the
+source); (6) component-model connectors (React/Vue/Solid) are THIRD-PARTY by name —
+ADR 0032's amendment wording; (7) `check:contract` as the standing acceptance run, re-run
+against the published exports when LT-254 lands.
+**Tech Writer back-report (same day):** docs half landed in `server/compiler/LE_TRUC_COMPILER.md`
+only — new §2 subsection "The front-end contract" (all seven required points; the designated
+symbol set as a role-grouped table verified count-for-count against the pin test), wired into
+the §1 entry-points paragraph, the §3 module map (`contract.ts` row first), and §8's
+two-front-ends invariant. Placement note: a NEW NUMBERED section was impossible without
+renumbering §4–8, which adr/0029 (§5), adr/0036 (§7.1), adr/0025 (§7) and the queue files all
+cite by number — so it is a §2 subsection and every external pointer survives. Drive-by it
+owns: two stale "LTC001–048" claims (§3 row + §6 heading) predated LTC049/050; both now state
+the two-prefix rule. Deliberately untouched: adr/ (0032's now-superseded "unexported"
+sentence stays — adr-keeper's), CONTEXT.md (no pointer needed), SERVER.md (no pointer, but it
+carries PRE-EXISTING single-`.tsrx` compiler wording that wants an update-server-md pass of
+its own). check:links 588/588; pin test and check:contract re-run green.

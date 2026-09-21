@@ -77,6 +77,7 @@
 		"build:cem": "bun run scripts/build-corpus.ts && cem analyze && bun run verify:cem",
 		"verify:cem": "bun run scripts/verify-cem.ts",
 		"check:corpus": "bun run scripts/check-corpus.ts",
+		"check:contract": "bun run scripts/contract-check.ts",
 		"check:sim": "bun run scripts/sim-portability-check.ts",
 		"check:portability": "bun run scripts/corpus-portability-check.ts",
 		"check:nosubstrate": "bun run scripts/build-corpus.ts && tsc -p tsconfig.nosubstrate.json --noEmit",

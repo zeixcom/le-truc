@@ -1,7 +1,8 @@
 # The Le Truc Component Compiler
 
 > High-level overview of the inlined component compiler for Le Truc
-> (`server/compiler/`): how the pipeline works, how the two front ends relate
+> (`server/compiler/`): how the pipeline works, what the front-end contract
+> designates as its public surface (§ 2), how the two front ends relate
 > to their parsers, how the server half is evaluated (tiered — value harness,
 > Server Simulation, or neither), how type checking and diagnostics flow back
 > to the author, and how it is embedded in the server build infrastructure.
@@ -74,7 +75,8 @@ Entry points: `frontend/tsrx/index.ts` exports
 and `frontend/tsx/index.ts` exports `compileComponentTsx` with the same
 signature. Both are thin shells over the shared `compileFromIR`
 (`pipeline.ts`), differing only in which front end parses the source, so a
-pipeline change cannot drift between surfaces. Severity policy: **errors
+pipeline change cannot drift between surfaces. That shared seam is the
+compiler's designated public API (§ 2). Severity policy: **errors
 fail the file**; **warnings skip it** (the build effect logs and moves on).
 
 ### The parser boundaries
@@ -175,12 +177,125 @@ surfaces cannot drift after lowering. The two-pass corpus orchestration
 (registry discovery, then real compilation) lives in the consumer,
 `server/effects/compile.ts` (§ 7).
 
+### The front-end contract
+
+A front end turns authored source into
+`{ component, diagnostics, routingSignals }` and hands all three to
+`compileFromIR` (`pipeline.ts`). Everything after that is shared machinery:
+compose validation, client analysis, tier classification, both emitters, and
+the registry entry. The two shipped front ends (`frontend/tsx/index.ts`,
+`frontend/tsrx/index.ts`) are the same shell over this seam. They differ only
+in which parser runs. That sameness is the anti-drift contract of ADR 0032
+sub-design 6. It is also the evidence that this is the seam an arbitrary
+front end would use.
+
+`contract.ts` names the seam's symbols. It is the compiler's designated
+export surface: the exact set published as `@zeix/le-truc-compiler`
+(ADR 0034 s1), by role:
+
+| Role | Symbols |
+| --- | --- |
+| Pipeline entry | `compileFromIR` |
+| The IR a front end produces | `AstNode`, `ComponentIR`, `TemplateNode`, `AttributeIR`, `ComposeAttrIR`, `SignalIR`, `SignalConstructor`, `SetupStmt`, `ForIR`, `ConfigIR`, `ComponentParam`, `PassEntryIR`, `ExposeKind`, `SourceRange` |
+| Refusal channels | `CompileDiagnostic`, `DiagnosticCode`, `RoutingSignal`, `RoutingSignalOrigin`, `Resolution`, `UnresolvableLimb`, `EvaluationTier` |
+| Consumer half | `CompileFileResult`, `CompiledComponent`, `RegistryEntry`, `SourceSpan` |
+| Emit-path facts | `EmitPaths`, `DEFAULT_EMIT_PATHS` |
+| Bundled front ends | `compileComponentTsx` |
+
+`contract.test.ts` pins the set against two lists. Widening it is a
+public-API decision; shrinking it is a breaking one. Either change fails the
+test until the lists move with it. `compileComponentTsx` is the only front
+end published at 3.0 (ADR 0034 s2); the `.tsrx` shell's `compileComponent`
+stays repo-internal until `@tsrx/core` reaches 1.0.
+
+**The IR and the result.** A front end's `component` is a `ComponentIR`: one
+extracted component — name, tag, and source; the verbatim server args; the
+setup statements; the verbatim `expose()` call with per-key kinds; the
+lowered template root; `@for` IR; the dedented CSS; `config`; type
+declarations; the placed imports. The JSDoc in `ir.ts` is the normative
+field-level reference, and § 4 tours the model. `compileFromIR` returns a
+`CompileFileResult`: the three artifacts (`serverCode`, `clientCode`, `css`),
+the registry entry, and the two span tables (`clientSpans`, `serverSpans`;
+§ 6).
+
+**The refusal channel is part of the contract.** ADR 0028 names three
+surfacing tiers, and a front end's refusals land in the first:
+
+- **Prevented** — a compile-time diagnostic exists, and the build fails.
+- **Contained** — the check fires at runtime; the component degrades; one
+  attributed `console.error` names it.
+- **Escalated** — the failure escapes containment: definition-time failures
+  and security-boundary violations only.
+
+The runtime tiers stay the backstop for what no front end can decide
+statically. A front end refuses through two shapes:
+
+- An **error diagnostic** (`severity: 'error'`) refuses the component: the
+  result's `component` is `null`, and the diagnostics carry through. The
+  author never ships the failure — the Prevented tier.
+- A **routing signal** is not a diagnostic. It reports no fault: the author
+  wrote nothing wrong. It marks an expression the fold cannot resolve, and
+  the tier classifier routes the component on it. Fields:
+  - `origin` — which refusal produced the signal. The retired diagnostic
+    spellings (`LTC004`, `LTC013`, `LTC043`) survive as census provenance;
+    `compose-read` and `unavailable-substrate` were never diagnostics.
+  - `resolution` — `{ by: 'realm' }` when the simulation realm answers the
+    expression for real; `{ by: 'none', limb, reason }` when no server phase
+    can answer it in any tier, with the limb (`stubbed-api` or
+    `not-a-server-fact`) and the census reason. A third variant,
+    `{ by: 'substrate-unavailable' }`, records a realm-answerable expression
+    the build could not run for lack of a substrate; only the build pass
+    appends it.
+  - `detail` — the name or expression the signal is about; the census
+    prints it.
+  - `line` — the 1-based line in the authored source (either front end),
+    when known.
+
+  The classifier's conjunction: no signals routes Folded; any
+  realm-answerable signal routes Simulated; otherwise Static. Every signal
+  rides the registry entry (`entry.routingSignals`) into the tier census
+  (§ 6). This is how a front end says "I cannot answer this" and gets a
+  routed tier and a census record instead of a silently wrong component.
+
+**The stability policy.** The module doc on `contract.ts` is the normative
+text. Its points:
+
+- From the first publish, semantic versioning applies to the designated set
+  and to nothing else. Everything else under `server/compiler/` is internal
+  and may change in any release.
+- Emitted artifact BYTES are not contract. In-repo goldens pin the
+  `*.server.ts`/`*.client.ts`/`*.css` bytes; stability covers the typed
+  contract and behavior, never byte identity.
+- New optional IR fields, new `DiagnosticCode` members, and new
+  `RoutingSignalOrigin` members are additive — a minor release. Renames,
+  removals, and tightened required shapes are major.
+- Diagnostic codes are public API at first publish, and a number is never
+  reused. `VOCABULARY_LEDGER.md` is the spent-number ledger.
+
+**Connectors are third-party.** A component-model connector — a front end
+for React, Vue, or Solid semantics — is third-party by name (ADR 0032,
+amended 2026-09-19). The engineering risk of tracking a target framework's
+minor versions transfers with ownership; the reputational risk does not.
+This contract is documentation and naming, not a plugin API: no registry, no
+lifecycle hooks, no discovery mechanism.
+
+**The standing acceptance run.** `bun run check:contract` writes a toy front
+end — a one-line syntax that is neither authored surface — into a scratch
+project outside the repo. The toy imports only `contract.ts` and compiles
+end-to-end through `compileFromIR` in all three tiers, then proves both
+refusal channels: the error diagnostic returns `component: null`, and the
+routing signal degrades the tier and lands on the entry. The run goes
+through the repo's own module paths; re-running it against the published
+package's exports belongs to the packaging step, not to this check.
+
 ## 3. Module map
 
-Machinery first, then the shared front-end modules, then the two front ends:
+The designated contract surface first, then the machinery, then the shared
+front-end modules, then the two front ends:
 
 | Module | Role |
 | --- | --- |
+| `contract.ts` | The designated export surface ("The front-end contract", § 2): the exact set published as `@zeix/le-truc-compiler`, with the stability policy in its module doc |
 | `pipeline.ts` | Shared post-front-end pipeline (`compileFromIR`): compose validation, `analyzeClient`, tier classification, both emitters, the registry entry — `CompiledComponent`/`CompileFileResult` live here |
 | `frontend/tsrx/index.ts` | `.tsrx` public API: `compileComponent` = `compileSource` + the shared pipeline |
 | `frontend/tsx/index.ts` | `.tsx` public API: `compileComponentTsx` = `compileSourceTsx` + the shared pipeline |
@@ -227,7 +342,7 @@ Machinery first, then the shared front-end modules, then the two front ends:
 | `spans.ts` | Generated↔source span recording + lookup |
 | `tier.ts` | The tier classifier (§ 5): routing signals in, the component's tier + recorded reasons out |
 | `indent.ts` / `css.ts` | Template-literal-safe reindentation / `<style>` dedent |
-| `diagnostics.ts` | Diagnostic codes LTC001–048, message factories |
+| `diagnostics.ts` | Diagnostic codes (`LTC###` plus the six `.tsrx`-grammar `TSRX###` codes), message factories |
 | `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup) |
 | `smoke.ts` | Dev script: compile corpus, execute renders, print |
 | `census.ts` | The census channel (§ 5.2): `Census` records, `tierCensus`, `translationCensus`, `formatCensus` |
@@ -713,7 +828,8 @@ tsc-against-generated-modules gate — no unit test sits between the emitter
 and the gate. Widen both sides in the same change, and treat a `check:corpus`
 failure there as a contract break, not a fixture problem.
 
-**Diagnostic codes** (`diagnostics.ts`, LTC001–048) fall into families:
+**Diagnostic codes** (`diagnostics.ts` — surface-neutral `LTC###` codes plus
+the six `.tsrx`-grammar `TSRX###` codes) fall into families:
 
 - *Grammar and shape gates*: unrecognized setup statements, reactive `@for`
   over a non-`createList` (LTC001), async component functions, deferred
@@ -917,7 +1033,8 @@ compile naming both, because a tag is the registry's key.
   modules (`setup-extraction.ts` … `assemble-ir.ts`) and `lower-shared.ts`
   import no parser values — a pipeline change
   cannot drift between surfaces. The parity suite is the render-level pin
-  (§ 7).
+  (§ 7). The seam the front ends share is the designated export surface
+  (`contract.ts`, § 2).
 - **A control-flow arm is statement context on `.tsrx` only**: `@if`/`@else`
   bodies parse as JS statements, not JSX children — a grammar fact of the
   pinned parser. The `.tsx` front end's branches are expressions that must

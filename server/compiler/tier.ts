@@ -144,7 +144,7 @@ export type RoutingSignal = {
 	origin: RoutingSignalOrigin
 	/** The name or expression the signal is about, for the census line. */
 	detail: string
-	/** 1-based line in the `.tsrx` source, when known. */
+	/** 1-based line in the authored source (either front end), when known. */
 	line?: number
 	resolution: Resolution
 }
