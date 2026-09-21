@@ -27,9 +27,8 @@
  * plugin for in-editor diagnostics.
  */
 
-import { readFileSync, statSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { Glob } from 'bun'
 import {
 	formatCensus,
 	tierCensus,
@@ -42,36 +41,32 @@ import {
 	findSpanForGeneratedOffset,
 	type SourceSpan,
 } from '../server/compiler/spans'
-import { compileCorpus, GENERATED_DIR } from '../server/effects/compile'
+import {
+	collectCorpusSources,
+	loadCorpusConfig,
+} from '../server/corpus-sources'
+import { compileCorpus } from '../server/effects/compile'
 import { collectI18n } from '../server/effects/i18n'
 
-const ROOT = resolve(import.meta.dir, '..')
+// The configuration this run compiles under (LT-255): a consumer's
+// `le-truc.config.json`, or — as in this repo — the defaults, which are this
+// repo's own paths.
+const config = loadCorpusConfig()
+const ROOT = config.root
+const GENERATED_DIR = config.outDir
 
 /** `path(line,col): error TSxxxx: message` — tsc's `--pretty false` format. */
 const DIAGNOSTIC_LINE =
 	/^(?<file>.+?)\((?<line>\d+),(?<col>\d+)\): (?<severity>error|warning) (?<code>TS\d+): (?<message>.*)$/
 
-const files = []
 // Dual corpus (ADR 0032 sub-design 6, LT-202): both authored surfaces feed
-// the same runner; the front end is chosen per file by extension.
-for (const pattern of ['examples/**/*.tsrx', 'examples/**/*.tsx']) {
-	const glob = new Glob(pattern)
-	for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {
-		const path = join(ROOT, rel)
-		const stat = statSync(path)
-		files.push({
-			path,
-			filename: rel,
-			content: readFileSync(path, 'utf8'),
-			hash: '',
-			lastModified: stat.mtimeMs,
-			size: stat.size,
-			exists: true,
-		})
-	}
-}
+// the same runner; the front end is chosen per file by extension. Which files
+// those are is the configured glob list's answer, not this script's.
+const files = collectCorpusSources(config)
 if (files.length === 0) {
-	console.error('❌ No .tsrx/.tsx sources found under examples/')
+	console.error(
+		`❌ No component sources matched ${config.sources.join(', ')} under ${ROOT}`,
+	)
 	process.exit(1)
 }
 
@@ -89,7 +84,7 @@ console.warn = (...args: unknown[]) => {
 }
 let spanInfos
 try {
-	spanInfos = await compileCorpus(files)
+	spanInfos = await compileCorpus(files, config)
 } finally {
 	console.warn = realWarn
 }
@@ -228,7 +223,11 @@ const registry = JSON.parse(
 	readFileSync(join(GENERATED_DIR, 'registry.json'), 'utf8'),
 ) as ComponentRegistry
 console.log(`\n${formatCensus(tierCensus(Object.values(registry)))}`)
-const i18nGaps = await collectI18n(Object.values(registry))
+const i18nGaps = await collectI18n(
+	Object.values(registry),
+	undefined,
+	config.i18nDir,
+)
 
 // The translation census (ADR 0030 sub-design 5, LT-173 step 4): the same
 // channel and the same reasoning as the tier census above — a missing

@@ -37,32 +37,22 @@ the same `server/effects/` globs, and sequencing them lets LT-255 harden a Bun-s
 that LT-267 then has to undo). LT-256 closes out LT-263's payoff; LT-265 lands last, when the
 contract it documents has stopped moving.
 
+**Status, 2026-09-19.** LT-263, LT-271, LT-272 and **LT-255** are landed and reviewed (in
+`DONE.md`). LT-255 ran ahead of LT-267 rather than beside it, and the pairing paid off in the
+direction the note hoped: it left the corpus scan touching `Bun.Glob` in exactly one module
+(`server/corpus-sources.ts`) and `server/compiler/` free of Bun APIs, so LT-267 has a seam to
+replace rather than a hardened API to undo. It also settled the compiler's configuration
+surface without LT-254 ([ADR 0036](adr/0036-corpus-configuration-surface.md)), and spun off
+**LT-273** (validate that surface) to `BACKLOG.md`.
+
 **Deferred with a date, not a priority:** **LT-266** (measure the size bet) is scheduled for
 **the iteration after this one**. It depends on nothing and blocks nothing, which is exactly
 why it needs a date — and it gets more expensive once anyone proposes a connector, because
 then the number has a stake in it.
 
-**Next free task ID: LT-273.**
+**Next free task ID: LT-274.**
 
 ---
-
-- [ ] LT-255: Generalize the corpus scan — glob the consumer's components, not `examples/`.
-  **Skill:** le-truc-dev
-  **Context:** ADR 0034 s1; the reflection's §7. `scripts/build-tsrx.ts` globs
-  `examples/**/*.tsrx` and writes to `server/generated/tsrx/`; the registry and the LTC048
-  contract are this-repo-shaped. A consumer's sources live wherever their project puts them, and
-  their output directory is theirs to choose.
-  **Carried in from LT-271 (2026-09-19):** the file is now `scripts/build-corpus.ts` writing to
-  `server/generated/components/`, and its glob is **single-extension** (`.tsrx` only) while
-  `check:corpus` and the build effect glob both — so a `.tsx` component under `examples/` is
-  today invisible to `build:cem`/`typecheck`. The configured glob must cover **both**
-  extensions; that closes the gap as a side effect. See `NOTES.md` (LT-271 item 2).
-  **Deliverable:** a configured source glob and output root with this repo's paths as defaults,
-  so the docs build is one consumer of the general mechanism rather than the mechanism itself;
-  the registry contract restated in consumer terms; the config surface documented where an
-  installing user will read it. **Depends on LT-254** for where the config lives.
-  **Check:** the repo's own build produces byte-identical output through the generalized path,
-  and a scratch project outside the repo compiles a component with only a config file.
 
 - [ ] LT-267: Make the build's file IO runtime-neutral — Node, Bun and Deno.
   **Skill:** docs-server-dev
@@ -80,6 +70,23 @@ then the number has a stake in it.
   Bun-only. **Coordinate with LT-255**, which is already touching exactly these globs — doing
   both at once is cheaper than sequencing them, and LT-255 should not harden a Bun-shaped glob
   API on its way through.
+  **Carried in from the LT-255 review (2026-09-19):** LT-255 landed first and left this task
+  *less* to undo than the sequencing note feared — `server/corpus-sources.ts` is now the ONE
+  place the corpus scan touches `Bun.Glob`, and `server/compiler/` still contains no Bun API
+  and no `import.meta.dir`, so no Bun-shaped glob API was hardened on the way through. Two
+  things it deliberately left for this task:
+  - **The watch path is still repo-shaped.** `compileCorpus` and both runner scripts are
+    configured, but `server/file-signals.ts` builds `componentFiles.sources` from
+    `watchFiles(COMPONENTS_DIR, '**/*.tsrx', '**/*.tsx')` with `COMPONENTS_DIR` fixed in
+    `server/config.ts`. Half-wiring it for a consumer that does not exist before pioneer 1
+    would have been speculative; it is one glob translation when a watching consumer needs it,
+    and this task is already in that file's neighbourhood.
+  - **The i18n lesson, which cost a real defect.** `I18N_DIR` was `import.meta.dir`-anchored,
+    so the first outside-the-repo compile censused ~30 of THIS repo's translation keys as the
+    consumer's orphans. Every other `import.meta.dir` anchor in `server/effects/` is the same
+    latent bug, and **only an outside-the-repo run surfaces it** — an in-repo check is
+    byte-identical either way. Budget a scratch-project run in this task's Check, not just a
+    cross-runtime one.
   **Check:** the corpus compiles and the emitted `.ts`/`.css` are byte-identical under Bun and
   under at least one other runtime.
 

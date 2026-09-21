@@ -11,6 +11,7 @@
 import { analyzeClient } from './analysis/plan'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
+import { DEFAULT_EMIT_PATHS, type EmitPaths } from './emit-paths'
 import { emitServerModule } from './emit-server'
 import type { ComponentIR } from './ir'
 import type { RegistryEntry } from './registry'
@@ -53,7 +54,10 @@ export type CompileFileResult = {
  * Run the shared pipeline over a front end's extraction result. `registry`,
  * `childImports`, and `composeRegistry` mean exactly what they mean on
  * `compileComponent` (see the `.tsrx` index for the compose-registry
- * tolerance notes); `sourcePath` is the authored file's repo-relative path.
+ * tolerance notes); `sourcePath` is the authored file's project-root-relative
+ * path. `emitPaths` carries the configured output root's consequences for the
+ * emitted specifiers (LT-255, `emit-paths.ts`); its default is this repo's
+ * layout, so an unconfigured call emits what it always emitted.
  */
 export const compileFromIR = (
 	component: ComponentIR | null,
@@ -63,6 +67,7 @@ export const compileFromIR = (
 	registry: ReadonlySet<string>,
 	childImports?: ReadonlyMap<string, string>,
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
 ): CompileFileResult => {
 	if (!component) return { component: null, diagnostics }
 	const composeNodes = collectComposeElements(component)
@@ -124,7 +129,7 @@ export const compileFromIR = (
 			]
 		: []
 	const server = emitServerModule(component, {
-		runtimeImport: '../../compiler/runtime',
+		runtimeImport: emitPaths.runtimeImport,
 		sourcePath: filename,
 		composeRegistry,
 		// ADR 0029 sub-design 4: the tier decides whether the module

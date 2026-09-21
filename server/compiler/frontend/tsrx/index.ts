@@ -16,6 +16,7 @@
  * ROADMAP "Packaging"); with Le Truc v3.0 it ships as `@tsrx/le-truc`.
  */
 
+import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import { type CompileFileResult, compileFromIR } from '../../pipeline'
 import type { RegistryEntry } from '../../registry'
 import { compileSource } from './compiler'
@@ -35,10 +36,19 @@ export const compileComponent = (
 	 * same tolerance an empty `registry` gets for raw-tag `pass()` dispatch).
 	 */
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+	/**
+	 * What the CONFIGURED output root implies for the emitted specifiers
+	 * (LT-255, `emit-paths.ts`): the `../` prefix back to the project root for
+	 * rewritten relative plain imports, and the specifier the generated server
+	 * module imports the render harness from. Defaults to this repo's layout,
+	 * so an unconfigured call emits exactly what it emitted before.
+	 */
+	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
 ): CompileFileResult => {
 	const { component, diagnostics, routingSignals } = compileSource(
 		source,
 		filename,
+		emitPaths,
 	)
 	return compileFromIR(
 		component,
@@ -48,6 +58,7 @@ export const compileComponent = (
 		registry,
 		childImports,
 		composeRegistry,
+		emitPaths,
 	)
 }
 
@@ -57,6 +68,8 @@ export { dedentCss } from '../../css'
 export type { CompileDiagnostic, DiagnosticCode } from '../../diagnostics'
 export type { EmittedClientModule } from '../../emit-client'
 export { emitClientModule } from '../../emit-client'
+export type { EmitPaths } from '../../emit-paths'
+export { DEFAULT_EMIT_PATHS } from '../../emit-paths'
 export type { EmittedServerModule } from '../../emit-server'
 export { emitServerModule } from '../../emit-server'
 export type { ComponentIR } from '../../ir'

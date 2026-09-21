@@ -63,6 +63,52 @@ on zero warnings *plus* its recorded tier and reason.
 
 ---
 
+- [ ] LT-273: Validate `le-truc.config.json`, and retire the last hard-coded corpus glob.
+  **Skill:** le-truc-dev
+  **Context:** LT-255 review finding (2026-09-19); [ADR 0036](adr/0036-corpus-configuration-surface.md).
+  The config file is **the entire public surface a consumer touches at install time** — the
+  first thing the agency-developer persona ([§2](REQUIREMENTS.md#2-user-personas),
+  [M28](REQUIREMENTS.md#m28-distribution-and-dependency-weight)) interacts with — and it is
+  currently parsed with `JSON.parse(...) as CorpusConfigInput` and no validation at all. Three
+  failure modes, all confirmed by probe at review:
+  1. **`"outdir"` (wrong case) silently writes to the repo default path** inside the consumer's
+     project. It succeeds, in the wrong place, with no signal. This is the one that matters —
+     "it compiled but nothing is where I asked" is the worst failure shape for a first install.
+  2. `"sources": "src/**/*.tsx"` — a string where an array belongs — spreads into twelve
+     single-character globs (`["s","r","c",…]`) and reports twelve garbage patterns.
+  3. Any unknown key is silently ignored, so the run falls back to **this repo's**
+     `examples/**` globs, which in a consumer project match nothing.
+  **Also in scope, because it is the same drift:** `scripts/i18n-sync.ts` still globs
+  `examples/**/*.tsrx` **hard-coded and single-extension**, and calls `collectI18n` without
+  `i18nDir`. It is an in-repo person-run tool so the defaults are correct today and nothing is
+  broken — but it is now the LAST place that hardcodes the corpus scan, and it re-opens exactly
+  the ledger gap LT-255 closed: widen `DEFAULT_SOURCES` and `i18n:sync` silently stops seeing
+  the new files. LT-255's "a single place to widen" is not true until this is folded in.
+  **Third item, small:** `server/effects/compile.ts` still prints `📝 TSRX compilation
+  completed (N …)` and throws `TSRX compilation failed — …` on a path that compiles both
+  surfaces and is now consumer-configured. The developer was right not to rename it inside a
+  byte-identity task; do it here, **with a row in
+  [`VOCABULARY_LEDGER.md`](server/compiler/VOCABULARY_LEDGER.md)** recording the disposition —
+  that file owns the call, not a side edit.
+  **Fourth, a containment guard:** `findConfigFile` walks to the filesystem root, so a stray
+  `le-truc.config.json` anywhere above a checkout silently retargets that checkout's build.
+  Stop the search at the nearest `package.json` (or `.git`), whichever the project boundary is.
+  **Channel and tier — decided here, do not re-litigate:** a malformed config is a **thrown
+  startup error, channel: none**. It is read before any component is parsed, so there is no
+  source span and no author-fixable *component* mistake, which is what
+  [ADR 0028](adr/0028-tiered-error-surfacing.md)'s tiers grade. **No `LTC` code and no Tech
+  Writer handoff is owed** — and precisely because the error is untiered, the message text IS
+  the whole user experience: name the file, the field, what was received and what was expected,
+  and list the accepted keys on an unknown one.
+  **Deliverable:** field-level validation of `CorpusConfigInput` (types, unknown keys rejected
+  rather than ignored, actionable messages); `i18n:sync` on the configured scan; the vocabulary
+  rename plus its ledger row; the config-search boundary.
+  **Check:** each of the three probed failure modes produces a message naming the offending key
+  and the accepted spelling; `i18n:sync` picks up a `.tsx` component under `examples/`; corpus
+  output byte-identical; census 20 folded / 2 simulated / 0 static and warning baseline 0
+  unmoved; `grep -rn "examples/\*\*" scripts/ server/` returns only `corpus-config.ts`'s
+  defaults.
+
 ## P1 — The v3.0 release track: packaging, template emission, pioneer adoption (ADR 0034)
 
 **Provenance:** the LT-241 owner grilling session (2026-09-19) and [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md).
@@ -122,6 +168,15 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   entry points and `.tsrx`-excluding build. **Gated behind the P6 cleanup round** — the namespace
   is owned, so the name cannot be taken, and there is no value in publishing a package an outside
   consumer could not yet use. LT-259, LT-260 and LT-261 inherit that gate.
+  **Carried in from the LT-255 review (2026-09-19):** LT-255 shipped the corpus configuration
+  surface without waiting for this task ([ADR 0036](adr/0036-corpus-configuration-surface.md)),
+  so "where the config lives" is settled and no longer gates it. One line comes back here:
+  **`runtimeImport`'s default must flip** from this repo's relative
+  `'../../compiler/runtime'` to the published package specifier
+  (`DEFAULT_RUNTIME_IMPORT` in `server/compiler/emit-paths.ts`), at which point consumers stop
+  having to set the field at all. Until then every installing project must set it by hand —
+  which is the single most visible "this is not published yet" seam in the config surface, and
+  a reason the first pre-release should not be demoed without it.
 
 - [ ] LT-257: Template emission — **the target-emitter interface, with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
   **Skill:** le-truc-dev

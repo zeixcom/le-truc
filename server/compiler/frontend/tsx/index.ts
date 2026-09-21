@@ -8,6 +8,7 @@
  * anti-drift contract of ADR 0032 sub-design 6.
  */
 
+import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import { type CompileFileResult, compileFromIR } from '../../pipeline'
 import type { RegistryEntry } from '../../registry'
 import { compileSourceTsx } from './compiler-tsx'
@@ -27,10 +28,13 @@ export const compileComponentTsx = (
 	 * path — the same tolerance semantics as `compileComponent`.
 	 */
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+	/** The configured output root's emit consequences — same as `compileComponent`. */
+	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
 ): CompileFileResult => {
 	const { component, diagnostics, routingSignals } = compileSourceTsx(
 		source,
 		filename,
+		emitPaths,
 	)
 	return compileFromIR(
 		component,
@@ -40,5 +44,6 @@ export const compileComponentTsx = (
 		registry,
 		childImports,
 		composeRegistry,
+		emitPaths,
 	)
 }

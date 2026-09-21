@@ -11,6 +11,62 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-255: Generalize the corpus scan — glob the consumer's components, not `examples/` — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** three new modules split by what each may depend on —
+  `server/compiler/corpus-config.ts` (pure: `CorpusConfig`, the defaults, `resolveCorpusConfig`,
+  `outDirPrefix`, `emitPathsFor`), `server/compiler/emit-paths.ts` (`EmitPaths` +
+  `DEFAULT_EMIT_PATHS`; no `node:` import, because the CI-pinned browser bundle reaches it), and
+  `server/corpus-sources.ts` (config read + globbing — the only place the corpus scan touches
+  `Bun.Glob`). Threaded through `pipeline.ts`, both front ends' `compileSource*`/`compileComponent*`,
+  `imports.ts` (`parsePlainImports`), `effects/compile.ts` (`compileCorpus`), `effects/i18n.ts`
+  (`collectI18n`), and both runner scripts. Docs: `LE_TRUC_COMPILER.md` § 7.1 (field table, worked
+  example, depth rule, registry contract in consumer terms), `SERVER.md`, `TESTS.md`,
+  `registry.ts`. Tests: `server/tests/compiler/corpus-config.test.ts` (10).
+  **Config surface:** a **`le-truc.config.json`** at the project root, found by searching upward
+  from the working directory; the directory holding it IS the project root. Five optional fields,
+  every one defaulting to this repo's paths so the docs build carries no config file: `sources`
+  (**both** extensions — closes the LT-271 ledger gap), `siblingModules`, `outDir`, `i18nDir`,
+  `runtimeImport`.
+  **The find:** the output root's DEPTH was load-bearing and was what made it un-configurable in
+  practice. `GENERATED_DIR_DEPTH_PREFIX = '../../../'` in `imports.ts`, the same literal in
+  `handwrittenExampleModules()`, and `pipeline.ts`'s hard-coded
+  `runtimeImport: '../../compiler/runtime'` are now all derived from the configured root
+  (`emitPathsFor`). `compileCorpus`'s "the test directory must sit at the same depth" caveat is
+  retired.
+  **Second find, and the one that justifies the Check as written:** the first outside-the-repo
+  compile read THIS repo's `i18n/` catalogs and censused ~30 `form-tokenbox.*` keys as another
+  project's orphans. `i18nDir` is now configured. The in-repo half of the Check is byte-identical
+  either way — only the scratch-project half surfaces this class of defect.
+  **Architect rulings taken at review (2026-09-19):**
+  - **The config location decision stands** — `le-truc.config.json`, JSON rather than a `.ts`
+    module (nothing for LT-267 to inherit), upward discovery. Recorded as
+    [ADR 0036](adr/0036-corpus-configuration-surface.md); LT-254 no longer gates it.
+  - **A malformed config is a thrown startup error, not a diagnostic. Channel: none.** It is read
+    before any component is parsed, so there is no source span and no author-fixable component
+    mistake in the [ADR 0028](adr/0028-tiered-error-surfacing.md) sense. No `LTC` code, no Tech
+    Writer handoff — which is why the *message* is the whole UX and why **LT-273** exists.
+  - **`runtimeImport`'s default flips to the package specifier at LT-254** — recorded in LT-254's
+    own entry so it survives this one.
+  **Handoffs into open tasks:** **LT-273** (config validation + the last hard-coded glob);
+  **LT-267** inherits the watch path (`file-signals.ts`/`config.ts` still fix `COMPONENTS_DIR`)
+  and the i18n lesson; **LT-254** inherits the `runtimeImport` default flip.
+  **Review (Architect, 2026-09-19): approved.** Byte-identity reproduced independently rather
+  than taken from the handoff — stashed the tracked changes, clean-rebuilt the pre-LT-255 tree,
+  rebuilt again after restoring, `diff -r` clean across all 69 artifacts. Census 20 folded / 2
+  simulated / 0 static and warning baseline 0 both unmoved; `bun test server/tests` 1612/13, the
+  13 the known sandbox port-bind and debounce failures.
+  - **The module split is the quality of this task.** Two standing constraints had to hold at
+    once — LT-267's finding that `server/compiler/` contains no Bun API, and the CI-pinned
+    browser purity of `imports.ts`/`pipeline.ts` — and they pull in opposite directions the
+    moment path math enters. Three leaves instead of one is the right answer, and
+    `emit-paths.ts` earns its existence rather than padding the map.
+  - **Threading `EmitPaths` as one trailing optional argument was the right shape.** The
+    alternative — a module-scoped active-config holder — would have put mutable global state
+    under a compiler whose whole claim is that it is a pure function of its inputs.
+  - **Leaving the watch path alone was correct**, not a gap: half-wiring it for a consumer that
+    does not exist before pioneer 1 would be speculative. Recorded against LT-267.
+
 - [x] LT-272: Propagate the `LTC###` rename into the skill files; state the two-prefix rule where the namespace lives — reviewed ✓
   **Skill:** tech-writer
   **Changed:** `.agents/skills/le-truc/references/errors.md` (every renamed code re-prefixed;

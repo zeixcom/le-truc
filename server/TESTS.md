@@ -121,8 +121,11 @@ and `afterAll(() => generated.cleanup())`. Tests that drive the real corpus runn
 directory through: `compileCorpus(files, generated.path)`.
 
 The directory is deliberately a sibling of the real one rather than an OS temp dir — emitted
-modules address `../../tsrx/runtime` and `../../../examples/…` relatively, so only the same
-depth under the repo root keeps those specifiers resolving.
+modules address the runtime and the hand-written examples relatively, and a sibling keeps
+those specifiers resolving without configuring anything. Since LT-255 the DEPTH is no longer
+load-bearing on its own: `compileCorpus` derives the `../` prefix from the output root it is
+given (`outDirPrefix`). What still matters is that the directory sits inside the repo root, so
+the relative specifiers have something to point at.
 
 Sharing the directory also HIDES bugs, not just causes flakes: two tests were passing on
 artifacts a previous `build-corpus` had left behind, asserting over modules they never compiled.

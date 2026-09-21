@@ -26,6 +26,7 @@ import type { AstNode } from '../../ast-node'
 import { asArray, identifierName, isNode, text } from '../../ast-utils'
 import { getStyleElementStylesheet, parseModule } from '../../core'
 import { type CompileDiagnostic, diagnostic } from '../../diagnostics'
+import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import {
 	parseComposeImports,
 	parseLeTrucImports,
@@ -202,6 +203,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: AstNode): void => {
 export const compileSource = (
 	source: string,
 	filename: string,
+	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
 ): CompileResult => {
 	const ctx: ExtractContext = {
 		source,
@@ -235,7 +237,12 @@ export const compileSource = (
 	reportReactJsxNearMisses(ctx, ast)
 	reportMalformedSelectors(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
-	const plainImports = parsePlainImports(ctx, ast, filename)
+	const plainImports = parsePlainImports(
+		ctx,
+		ast,
+		filename,
+		emitPaths.outDirPrefix,
+	)
 	const leTrucImports = parseLeTrucImports(ast)
 	reportLeTrucImportMismatch(ctx, ast, leTrucImports)
 	const importedNames = new Set<string>([

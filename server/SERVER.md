@@ -116,7 +116,7 @@ Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild
 | `mdMirrorEffect` | `docsMarkdown.processed` | `docs/**/*.md` | Regex tag stripping |
 | `llmsManifestEffect` | `docsMarkdown.pageInfos` | `docs/llms.txt` | Template generation |
 | `llmsFullManifestEffect` | `docsMarkdown.processed` | `docs/llms-full.txt` | Curated concatenation |
-| `compileEffect` | `componentFiles.sources` | `server/generated/components/*` (gitignored) | Inlined component compiler (ADR 0024/0032) |
+| `compileEffect` | `componentFiles.sources` | the configured output root, by default `server/generated/components/*` (gitignored) | Inlined component compiler (ADR 0024/0032) |
 
 ### Page-Occurrence Renderer (LT-194)
 
@@ -242,8 +242,16 @@ Sections are delimited by `---` and headed with an H1. Blog posts, `about.md`, `
 ### Component Compiler (`compileEffect`)
 
 **File:** `server/effects/compile.ts`  
-**Depends on:** `componentFiles.sources` (`examples/**/*.tsrx`)  
-**Outputs:** `server/generated/components/` — `<tag>.server.ts` (render function), `<tag>.client.ts` (generated `defineComponent` module), `<tag>.css` (verbatim tag-scoped CSS), and `registry.json`
+**Depends on:** `componentFiles.sources` (the configured source globs — by default `examples/**/*.tsrx` and `examples/**/*.tsx`)  
+**Outputs:** the configured output root — by default `server/generated/components/` — `<tag>.server.ts` (render function), `<tag>.client.ts` (generated `defineComponent` module), `<tag>.css` (verbatim tag-scoped CSS), and `registry.json`
+
+**Corpus configuration (LT-255).** The globs and the output root are not this
+repo's: they are a project's, read from a `le-truc.config.json` at its root,
+and this repo's paths are the DEFAULTS — which is why the docs build carries
+no config file. The surface, the field table, and the output-root depth rule
+are documented in `server/compiler/LE_TRUC_COMPILER.md` § 7.1; the resolution
+lives in `server/compiler/corpus-config.ts` (pure) and the globbing in
+`server/corpus-sources.ts` (the file-IO layer LT-267 replaces).
 
 The inlined TSRX compiler (ADR 0024) compiles isomorphic single-file `.tsrx` components — server args, signals, `expose()`, markup, event handlers, and scoped styles in one source — into the split compiler's two halves. The server module re-declares the `@{ }` setup against the runtime harness (`server/compiler/runtime.ts`) and renders HTML strings; the client module is a generated factory importing solely from `@zeix/le-truc`. Extension activation is declared as `export const config` in the source; the compiler validates it, auto-imports the extension factories, and carries `expose()`/`defineMethod()` as ambients. `bun run build:cem` runs `scripts/build-corpus.ts` before `cem analyze` so `@zeix/cem-plugin-le-truc` reads the generated clients unchanged. Errors fail the build; `@for` over a non-List reactive source logs `LTC001` and skips the file.
 

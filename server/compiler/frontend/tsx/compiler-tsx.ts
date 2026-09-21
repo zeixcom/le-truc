@@ -30,6 +30,7 @@
 import { assembleComponentIR, readModuleDecls } from '../../assemble-ir'
 import { asArray, identifierName, isNode } from '../../ast-utils'
 import { type CompileDiagnostic, diagnostic } from '../../diagnostics'
+import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import {
 	parseComposeImports,
 	parseLeTrucImports,
@@ -105,6 +106,7 @@ const styleElementStylesheet = (
 export const compileSourceTsx = (
 	source: string,
 	filename: string,
+	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
 ): CompileResult => {
 	const ctx: ExtractContext = {
 		source,
@@ -124,7 +126,12 @@ export const compileSourceTsx = (
 
 	reportMalformedSelectors(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
-	const plainImports = parsePlainImports(ctx, ast, filename)
+	const plainImports = parsePlainImports(
+		ctx,
+		ast,
+		filename,
+		emitPaths.outDirPrefix,
+	)
 	const leTrucImports = parseLeTrucImports(ast)
 	reportLeTrucImportMismatch(ctx, ast, leTrucImports)
 	const importedNames = new Set<string>([

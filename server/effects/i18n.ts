@@ -37,7 +37,11 @@ import { pluralCategories } from '../compiler/runtime'
 import { DEFAULT_LOCALE, LOCALES } from '../config'
 import { getFilePath, writeFileSafe } from '../io'
 
-/** The repo-root directory holding the committed per-locale catalogs. */
+/**
+ * This repo's own catalog directory — the DEFAULT, kept so every in-repo
+ * caller behaves exactly as before. A consumer's is configured
+ * (`i18nDir`, LT-255) and threaded in through `collectI18n`.
+ */
 export const I18N_DIR = join(import.meta.dir, '..', '..', 'i18n')
 
 /**
@@ -131,24 +135,21 @@ const asStringRecord = (value: unknown): Record<string, string> =>
 			)
 		: {}
 
-const readCatalogs = async (): Promise<Catalogs> => {
+const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
 	const overrides = new Map<string, Record<string, string>>()
 	const locales: string[] = []
 	try {
-		for (const file of await readdir(I18N_DIR)) {
+		for (const file of await readdir(i18nDir)) {
 			if (!file.endsWith('.json') || file === 'manifest.json') continue
 			const locale = file.replace(/\.json$/, '')
 			locales.push(locale)
-			overrides.set(
-				locale,
-				asStringRecord(await readJson(join(I18N_DIR, file))),
-			)
+			overrides.set(locale, asStringRecord(await readJson(join(i18nDir, file))))
 		}
 	} catch {
 		// No i18n directory yet: zero locales, zero gaps.
 	}
 	const manifest = new Map<string, Record<string, string>>()
-	const rawManifest = await readJson(join(I18N_DIR, 'manifest.json'))
+	const rawManifest = await readJson(join(i18nDir, 'manifest.json'))
 	if (typeof rawManifest === 'object' && rawManifest !== null)
 		for (const [locale, entries] of Object.entries(rawManifest))
 			manifest.set(locale, asStringRecord(entries))
@@ -177,13 +178,17 @@ export type I18nCollection = {
  * inverse — "does every catalog key have a declaration?" — because a
  * translator's typo, a renamed key, or a deleted component otherwise
  * leaves residue in the catalogs that nothing ever reports. `catalogs` is
- * injectable for tests; production reads the committed `i18n/` files.
+ * injectable for tests; production reads the committed catalogs under
+ * `i18nDir` — this repo's `i18n/` by default, a consumer's wherever their
+ * config puts it (LT-255).
  */
 export const collectI18n = async (
 	entries: readonly RegistryEntry[],
 	catalogs?: Catalogs,
+	i18nDir: string = I18N_DIR,
 ): Promise<I18nCollection> => {
-	const { locales, overrides, manifest } = catalogs ?? (await readCatalogs())
+	const { locales, overrides, manifest } =
+		catalogs ?? (await readCatalogs(i18nDir))
 	const sources = new Map<string, Record<string, string>>()
 	// Every registry entry by tag — the orphan walk needs each component's
 	// `caseType` for the reachability carve-out, including components that

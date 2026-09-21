@@ -1,8 +1,15 @@
 /**
  * Component registry (ADR 0023 milestone 1).
  *
- * One entry per compiled component: where its artifacts live and which
- * types it exports. Three consumers:
+ * One entry per compiled component: where its artifacts live and which types
+ * it exports. Written as `registry.json` into the configured output root, and
+ * scoped to ONE PROJECT'S corpus — every component the configured source
+ * globs select, wherever that project keeps them (LT-255,
+ * `corpus-config.ts`). The tag is the key, which is why two sources anywhere
+ * in a project declaring the same tag fail the compile naming both (LTC048)
+ * rather than letting compile order decide.
+ *
+ * Three consumers:
  * - the client analyzer — registry-aware attribute dispatch (a reactive
  *   attribute on a registry tag lowers to `pass()`, any other dashed tag
  *   to `bindProperty()`; AGENTS.md's own rule, encoded — the compiler has
@@ -24,7 +31,7 @@ export type RegistryEntry = {
 	tag: string
 	/** Component function name (`BasicCounter`). */
 	name: string
-	/** Path of the .tsrx source, relative to the repo root. */
+	/** Path of the authored source, relative to the PROJECT root. */
 	source: string
 	/** Generated artifacts, relative to the registry file. */
 	serverModule: string

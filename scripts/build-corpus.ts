@@ -1,40 +1,38 @@
 #!/usr/bin/env bun
 
 /**
- * Standalone TSRX corpus compile — the tsrx effect's pipeline without the
- * build system. Runs the same two-pass compile over every `.tsrx` source
- * under `examples/` and writes the generated clients (plus server modules,
- * CSS, and the registry) to `server/generated/components/`.
+ * Standalone corpus compile — the compile effect's pipeline without the build
+ * system. Runs the same two-pass compile over every authored component source
+ * the configured globs select and writes the generated clients (plus server
+ * modules, CSS, and the registry) to the configured output root.
+ *
+ * Configuration (LT-255): a `le-truc.config.json` at the project root, found
+ * by searching upward from the working directory. With none — which is this
+ * repo's case — the defaults apply, and the defaults ARE this repo's paths:
+ * `examples/**\/*.tsrx` + `examples/**\/*.tsx` in, `server/generated/components/`
+ * out. See `server/compiler/corpus-config.ts`.
  *
  * `build:cem` runs this before `cem analyze`: the Custom Element Manifest
  * reads the corpus entries from the generated clients (ADR 0023, LT-006),
  * and that output is gitignored — a fresh checkout has none until compiled.
  */
 
-import { readFileSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { Glob } from 'bun'
+import { relative } from 'node:path'
+import {
+	collectCorpusSources,
+	loadCorpusConfig,
+} from '../server/corpus-sources'
 import { compileCorpus } from '../server/effects/compile'
 
-const ROOT = resolve(import.meta.dir, '..')
-
-const files = []
-const glob = new Glob('examples/**/*.tsrx')
-for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {
-	const path = join(ROOT, rel)
-	const stat = statSync(path)
-	files.push({
-		path,
-		filename: rel,
-		content: readFileSync(path, 'utf8'),
-		hash: '', // unused by compileCorpus
-		lastModified: stat.mtimeMs,
-		size: stat.size,
-		exists: true,
-	})
-}
+const config = loadCorpusConfig()
+const files = collectCorpusSources(config)
 if (files.length === 0) {
-	console.error('❌ No .tsrx sources found under examples/')
+	console.error(
+		`❌ No component sources matched ${config.sources.join(', ')} under ${config.root}`,
+	)
 	process.exit(1)
 }
-await compileCorpus(files)
+console.log(
+	`📦 ${files.length} source(s) → ${relative(config.root, config.outDir)}`,
+)
+await compileCorpus(files, config)

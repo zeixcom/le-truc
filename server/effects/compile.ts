@@ -1,22 +1,33 @@
 /**
- * TSRX compiler build effect (ADR 0023 milestone 1, LT-001).
+ * Component compiler build effect (ADR 0023 milestone 1, LT-001).
  *
- * Watches every `.tsrx` AND `.tsx` source under `examples/` (dual front
- * end, ADR 0032 sub-design 6; LT-202), compiles each through the front end
- * its extension selects, and writes the generated artifacts (server render
- * module, generated client module, verbatim tag-scoped CSS) plus the
- * component registry into the gitignored `server/generated/components/` directory.
- * A tag declared by two sources fails the compile naming both files
+ * Watches every authored `.tsrx` AND `.tsx` source the CONFIGURED source
+ * globs select (dual front end, ADR 0032 sub-design 6; LT-202), compiles each
+ * through the front end its extension selects, and writes the generated
+ * artifacts (server render module, generated client module, verbatim
+ * tag-scoped CSS) plus the component registry into the configured output
+ * root. A tag declared by two sources fails the compile naming both files
  * (LTC048).
+ *
+ * The configuration (LT-255, `server/compiler/corpus-config.ts`) defaults to
+ * THIS repo's paths — `examples/**` in, `server/generated/components/` out —
+ * so the docs build is one consumer of the general mechanism rather than the
+ * mechanism itself. An installing project supplies a `le-truc.config.json`.
  *
  * Severity policy: milestone gates (warnings, e.g. LTC001 reactive `@for`)
  * skip the file with a logged notice; errors fail the build run.
  */
 
 import { mkdir } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { relative } from 'node:path'
 import { formatCensus, translationCensus } from '../compiler/census'
+import {
+	type CorpusConfig,
+	emitPathsFor,
+	resolveCorpusConfig,
+} from '../compiler/corpus-config'
 import { diagnostic } from '../compiler/diagnostics'
+import type { EmitPaths } from '../compiler/emit-paths'
 import {
 	type CompileDiagnostic,
 	compileComponent,
@@ -25,6 +36,7 @@ import { compileComponentTsx } from '../compiler/frontend/tsx'
 import { type RegistryEntry, registryJson } from '../compiler/registry'
 import type { SourceSpan } from '../compiler/spans'
 import { contaminateComposeReads } from '../compiler/tier'
+import { collectSiblingModules, REPO_ROOT } from '../corpus-sources'
 import { componentFiles, type FileInfo } from '../file-signals'
 import { getFilePath, writeFileSafe } from '../io'
 import { createBuildEffect } from './build-effect'
@@ -37,7 +49,7 @@ import { collectI18n, writeI18nModule, writeI18nReport } from './i18n'
  */
 export type CompiledSpanInfo = {
 	tag: string
-	/** `.tsrx` source path, relative to the repo root. */
+	/** Authored source path, relative to the project root. */
 	source: string
 	/** Generated client module path on disk, absolute. */
 	clientModulePath: string
@@ -50,17 +62,18 @@ export type CompiledSpanInfo = {
 /* === Internal Functions === */
 
 /**
+ * The configuration the in-repo pipeline runs under: the defaults, which ARE
+ * this repo's paths. A consumer's own configuration is loaded from their
+ * `le-truc.config.json` by `loadCorpusConfig` and handed to `compileCorpus`.
+ */
+export const REPO_CONFIG: CorpusConfig = resolveCorpusConfig(REPO_ROOT)
+
+/**
  * Where the corpus compile writes its artifacts, including the registry the
  * tier census reads (`scripts/check-corpus.ts`). Exported for the scripts and
  * tests that address the same directory the pipeline defaults to.
  */
-export const GENERATED_DIR = join(
-	import.meta.dir,
-	'..',
-	'generated',
-	'components',
-)
-const ROOT = join(import.meta.dir, '..', '..')
+export const GENERATED_DIR = REPO_CONFIG.outDir
 
 /**
  * Custom element tags of the hand-written example components, mapped to
@@ -69,21 +82,13 @@ const ROOT = join(import.meta.dir, '..', '..')
  * custom element the docs pages load alongside (e.g. `basic-button` inside
  * module-list) lowers to `pass()`, exactly as for migrated .tsrx tags — and
  * the generated client imports the module for its `declare global` entry.
+ *
+ * LT-255 moved the glob and the back-to-the-root prefix into the
+ * configuration (`collectSiblingModules`); this wrapper keeps the in-repo
+ * name and behaviour.
  */
-export const handwrittenExampleModules = (): Map<string, string> => {
-	const modules = new Map<string, string>()
-	const glob = new Bun.Glob('examples/**\/*.ts')
-	for (const rel of glob.scanSync({ cwd: ROOT })) {
-		const tag = (rel.split('/').pop() ?? '').replace(/\.ts$/, '')
-		// Component files are named for their tag (dashed); helpers (main.ts,
-		// copyToClipboard.ts) and tests carry no dash or a dot suffix.
-		if (!/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(tag)) continue
-		// Specifiers are relative to the generated dir (server/generated/components)
-		// and extensionless (bundler-style resolution, TS5097-safe).
-		modules.set(tag, `../../../${rel.replace(/\.ts$/, '')}`)
-	}
-	return modules
-}
+export const handwrittenExampleModules = (): Map<string, string> =>
+	collectSiblingModules(REPO_CONFIG)
 
 /**
  * The corpus covers BOTH authored surfaces (ADR 0032 sub-design 6, LT-202):
@@ -95,12 +100,27 @@ const compileCorpusFile = (
 	content: string,
 	rel: string,
 	registry: ReadonlySet<string>,
+	emitPaths: EmitPaths,
 	childImports?: ReadonlyMap<string, string>,
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 ) =>
 	rel.endsWith('.tsx')
-		? compileComponentTsx(content, rel, registry, childImports, composeRegistry)
-		: compileComponent(content, rel, registry, childImports, composeRegistry)
+		? compileComponentTsx(
+				content,
+				rel,
+				registry,
+				childImports,
+				composeRegistry,
+				emitPaths,
+			)
+		: compileComponent(
+				content,
+				rel,
+				registry,
+				childImports,
+				composeRegistry,
+				emitPaths,
+			)
 
 /** `basic-counter.tsrx`/`basic-counter.tsx` → `basic-counter`. */
 const corpusTagOf = (filename: string): string =>
@@ -111,15 +131,22 @@ const corpusTagOf = (filename: string): string =>
  * runner — `build:cem` needs the generated clients on disk before `cem
  * analyze` reads them).
  *
- * `outDir` defaults to the pipeline's own `server/generated/components/`. Tests
- * pass a per-run directory instead so they never race the build (LT-140); it
- * must sit at the same depth under the repo root, since emitted modules
- * address the runtime and the hand-written examples relatively.
+ * `target` is the CONFIGURATION the run compiles under — a consumer's, loaded
+ * from their `le-truc.config.json` by `loadCorpusConfig`, or this repo's
+ * defaults. Passing a bare path is the shorthand for "the repo's config, but
+ * write here", which is what tests do so they never race the build (LT-140).
+ * Since LT-255 that directory no longer has to sit at a particular depth: the
+ * `../` prefix the emitted specifiers need is derived from it
+ * (`emitPathsFor`).
  */
 export const compileCorpus = async (
 	files: FileInfo[],
-	outDir: string = GENERATED_DIR,
+	target: string | CorpusConfig = REPO_CONFIG,
 ): Promise<CompiledSpanInfo[]> => {
+	const config: CorpusConfig =
+		typeof target === 'string' ? { ...REPO_CONFIG, outDir: target } : target
+	const { outDir, root } = config
+	const emitPaths = emitPathsFor(config)
 	await mkdir(outDir, { recursive: true })
 
 	// Registry-aware dispatch needs every compilable tag up front: first
@@ -130,7 +157,7 @@ export const compileCorpus = async (
 	// so every file's entry is keyed by that path for the second pass to
 	// look up regardless of compile order (composition is not order-dependent
 	// the way registry-tag `pass()` dispatch is).
-	const childImports = handwrittenExampleModules()
+	const childImports = collectSiblingModules(config)
 	const registry = new Set<string>(childImports.keys())
 	const compilable = new Map<string, string>()
 	const compiledTags = new Set<string>()
@@ -174,7 +201,7 @@ export const compileCorpus = async (
 	// decidable, no runtime half).
 	const tagsBySource = new Map<string, string[]>()
 	for (const file of files) {
-		const rel = relative(join(import.meta.dir, '..', '..'), file.path)
+		const rel = relative(root, file.path)
 		const base = corpusTagOf(file.filename)
 		if (!/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(base)) continue
 		const decls = tagsBySource.get(base) ?? []
@@ -190,7 +217,7 @@ export const compileCorpus = async (
 		}
 	}
 	for (const file of files) {
-		const rel = relative(join(import.meta.dir, '..', '..'), file.path)
+		const rel = relative(root, file.path)
 		if (errorLabels.has(rel)) continue
 		// Pass 1 must see the hand-written tags too (`registry` starts seeded
 		// from `childImports`, LT-020 fix): a raw-tag `pass={{ }}` target
@@ -201,6 +228,7 @@ export const compileCorpus = async (
 			file.content,
 			rel,
 			discoveryRegistry,
+			emitPaths,
 		)
 		report(rel, diagnostics)
 		if (component) {
@@ -226,6 +254,7 @@ export const compileCorpus = async (
 			content,
 			rel,
 			registry,
+			emitPaths,
 			childImports,
 			composeRegistry,
 		)
@@ -279,7 +308,7 @@ export const compileCorpus = async (
 	// report artifact is gitignored; the census count rides the build
 	// summary. The build writes NO tracked file — missing keys land in the
 	// census, and `i18n:sync` is the person-run writer for the catalogs.
-	const i18nCollection = await collectI18n(entries)
+	const i18nCollection = await collectI18n(entries, undefined, config.i18nDir)
 	await writeI18nModule(outDir, i18nCollection)
 	await writeI18nReport(outDir, i18nCollection)
 	const i18nCensus = translationCensus(

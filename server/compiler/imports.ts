@@ -36,6 +36,7 @@ import {
 	text,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
+import { DEFAULT_EMIT_PATHS } from './emit-paths'
 import { dependenciesOf, isServerEvaluable } from './evaluability'
 import type { ComponentIR, ExtractContext, TemplateNode } from './ir'
 import { collectAttrs, walkTemplate } from './walk'
@@ -267,15 +268,6 @@ export const placeLeTrucImports = (
 
 /* === Plain imports (from plain-imports.ts) === */
 
-/**
- * Every generated module lives flat in `server/generated/components/`, regardless
- * of the source `.tsrx` file's own nesting under `examples/` (same flattening
- * `effects/compile.ts`'s `handwrittenExampleModules()` and compose imports
- * already rely on) — so a relative plain-import specifier, resolved to a
- * repo-relative path, always needs this fixed prefix back to the repo root.
- */
-const GENERATED_DIR_DEPTH_PREFIX = '../../../'
-
 /** One plain top-level import, not yet placed into server/client output. */
 export type PlainImportIR = {
 	/** Verbatim import statement source text. */
@@ -301,11 +293,18 @@ export type PlainImportIR = {
  * modules' flat output directory — it was authored relative to the source
  * file's own location, which is almost never where the compiled module ends
  * up.
+ *
+ * `outDirPrefix` is that rewrite's prefix back to the project root — `../`
+ * once per segment of the CONFIGURED output root (LT-255,
+ * `corpus-config.ts`). It was a hard-coded `'../../../'` until the output
+ * root became a consumer's choice; the default still is, so an unconfigured
+ * call emits exactly what it emitted before.
  */
 export const parsePlainImports = (
 	ctx: ExtractContext,
 	ast: AstNode,
 	filename: string,
+	outDirPrefix: string = DEFAULT_EMIT_PATHS.outDirPrefix,
 ): PlainImportIR[] => {
 	const result: PlainImportIR[] = []
 	const dir = dirname(filename)
@@ -333,7 +332,7 @@ export const parsePlainImports = (
 		let importText = text(ctx.source, stmt)
 		if (specifier.startsWith('.') && isNode(specifierNode)) {
 			const resolved = normalize(join(dir, specifier)).replace(/\.ts$/, '')
-			const rewritten = `${GENERATED_DIR_DEPTH_PREFIX}${resolved}`
+			const rewritten = `${outDirPrefix}${resolved}`
 			importText = importText.replace(
 				text(ctx.source, specifierNode),
 				JSON.stringify(rewritten),

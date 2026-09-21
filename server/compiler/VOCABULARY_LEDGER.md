@@ -31,7 +31,10 @@ behavioural defect, not a naming one, and LT-271 is a rename sweep whose
 acceptance criterion is byte-identical corpus output; widening the glob is a
 separate change. **Ruled at the LT-271 review: LT-255 owns it** — that task replaces this
 glob with a configured one, and the requirement to cover both extensions is written
-into its entry.
+into its entry. **Closed by LT-255 (2026-09-19):** both extensions are now one
+configured glob list (`DEFAULT_SOURCES` in `server/compiler/corpus-config.ts`), read
+by `build:corpus`, `check:corpus` and the build effect alike — there is a single
+place to widen, so the three cannot drift apart again.
 
 ## 2. Module and directory names
 

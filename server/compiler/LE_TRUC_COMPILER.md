@@ -212,6 +212,8 @@ Machinery first, then the shared front-end modules, then the two front ends:
 | `imports.ts` | Compose-import resolution (accepts `.tsrx` AND `.tsx` specifiers — cross-surface composition falls out of the path-keyed registry) + plain import collection and placement |
 | `first-refs.ts` | Structural matcher for `first(selector, reason?)`: which template element(s) an author's selector refers to; compose-deferral test; ref-presence guards |
 | `selector-syntax.ts` | Conservative CSS selector *parse* validation for `first()`/`all()` — reports only what no CSS parser accepts |
+| `corpus-config.ts` | The corpus configuration surface (§ 7.1): `CorpusConfig`, the defaults, `resolveCorpusConfig`, `outDirPrefix`, `emitPathsFor` — pure path math, no file IO |
+| `emit-paths.ts` | `EmitPaths` + `DEFAULT_EMIT_PATHS`: the two facts the emitters take from the configuration. A leaf with no `node:` import, because the browser bundle reaches it |
 | `registry.ts` | `RegistryEntry` type (incl. per-prop `ExposeKind`) + `registryJson` |
 | `analysis/plan.ts` | `ClientPlan` types, `AnalysisContext` assembly, `analyzeClient` orchestration |
 | `analysis/selectors.ts` | Pure selector engine: synthesis, structural uniqueness, union/compose addressing |
@@ -793,16 +795,17 @@ The compiler is build-time tooling; `@zeix/le-truc` stays browser-only and
 never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
 
 - **Corpus orchestration** (`server/effects/compile.ts`, a docs-build effect):
-  the scan globs `examples/**/*.tsrx` AND `examples/**/*.tsx` into one file
-  list and `compileCorpus` dispatches per extension; pass 1 compiles
-  every file against a registry seeded with hand-written example tags,
-  collecting compilable tags and the corpus-wide `composeRegistry`; pass 2
-  re-compiles with the full registry, child imports, and compose registry.
-  The duplicate-tag check (LTC048) runs between the passes: it names every
-  declaring file and drops them all before pass 2's registry could make
-  their order load-bearing. Artifacts land in the gitignored
-  `server/generated/components/` plus `registry.json`. Errors fail the run;
-  warnings skip the file with a notice.
+  the scan globs every CONFIGURED source pattern (§ 7.1) — `.tsrx` and
+  `.tsx` — into one file list and `compileCorpus` dispatches per extension;
+  pass 1 compiles every file against a registry seeded with the configured
+  hand-written sibling tags, collecting compilable tags and the corpus-wide
+  `composeRegistry`; pass 2 re-compiles with the full registry, child
+  imports, and compose registry. The duplicate-tag check (LTC048) runs
+  between the passes: it names every declaring file and drops them all
+  before pass 2's registry could make their order load-bearing. Artifacts
+  land in the configured output root plus `registry.json` — in this repo the
+  gitignored `server/generated/components/`. Errors fail the run; warnings
+  skip the file with a notice.
 - **Consumers**: `server/build.ts` (via the `index.ts` facade plus direct
   `registry`/`spans` imports), `check:corpus` (§ 6), and the CEM build
   (`scripts/build-corpus.ts` feeds `cem analyze`, which reads the generated
@@ -828,6 +831,52 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
 
 See `server/SERVER.md` for the effect wiring, `check:sim` (portability probe
 across runtimes) and `eval:substrate` (substrate evaluation scripts).
+
+### 7.1 Configuring the corpus
+
+The compiler compiles **a project's** components, not this repo's. Which
+sources it reads and where it writes are configuration (LT-255, ADR 0034
+sub-design 1); this repo's paths are the DEFAULTS, so the docs build is one
+consumer of the mechanism rather than the mechanism itself, and it needs no
+config file.
+
+An installing project puts a **`le-truc.config.json` at its own root**. The
+runner searches upward from the working directory for it, and the directory
+holding it becomes the **project root** — every glob is scanned with that as
+its cwd, and every relative path field resolves against it.
+
+| Field | Default | What it selects |
+| --- | --- | --- |
+| `sources` | `["examples/**/*.tsrx", "examples/**/*.tsx"]` | The authored component sources. The front end is chosen per file by extension, so one list covers both surfaces; overlapping globs compile each file once |
+| `siblingModules` | `["examples/**/*.ts"]` | Hand-written custom-element modules the corpus may address. Matched to tags by filename — a stem that is not a valid dashed tag (`main.ts`) is skipped |
+| `outDir` | `"server/generated/components"` | Where the generated `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json` and `i18n.ts` land. Must sit inside the project root (see below) |
+| `i18nDir` | `"i18n"` | The committed per-locale translation catalogs (ADR 0030 s5). A project with no such directory censuses zero locales and zero gaps |
+| `runtimeImport` | `"../../compiler/runtime"` | The specifier the generated SERVER modules import the render harness from. The default is this repo's relative path; a consumer sets their own until LT-254 publishes the compiler and it becomes a package specifier |
+
+```json
+{
+  "sources": ["src/**/*.tsx"],
+  "siblingModules": ["lib/**/*.ts"],
+  "outDir": "build/le-truc",
+  "runtimeImport": "@zeix/le-truc-compiler/runtime"
+}
+```
+
+**The output root's depth is derived, not assumed.** Every generated module
+lands FLAT in the output root whatever nesting the authored source had, so a
+relative specifier the author wrote is rewritten as "`../` back to the project
+root, then a root-relative path". The prefix is `../` once per segment of
+`outDir` (`outDirPrefix`) — three for this repo's default, two for a
+`build/le-truc`. That is also why an `outDir` **outside** the project root is
+refused with a thrown configuration error: the scheme cannot address a
+directory the root does not contain.
+
+**The registry, in consumer terms.** `registry.json` in the output root is the
+corpus's index, one entry per compiled component, and its `source` is the
+authored file's path **relative to the project root** — not to this repo. The
+duplicate-tag rule (LTC048) is likewise corpus-scoped: two files anywhere in a
+project's configured sources declaring the same custom-element tag fail the
+compile naming both, because a tag is the registry's key.
 
 ## 8. Cross-cutting invariants
 
