@@ -17,7 +17,9 @@ branch, so wave 4's original gate is discharged.
 open the wave-4 migrations (P5, the biggest remaining band). Opening the wave is gate work
 first, and the gates are serialized in front of the first migration: **LT-238** gates every
 remaining migration and LT-237 (the canonical-plus-variants ruling is the owner's call and
-must be grilled before any migration lands). **LT-235** runs before LT-212's implementation
+must be grilled before any migration lands — **ruled 2026-09-21: build-selected variants,
+[ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md); the gate is now carried by
+its implementation tasks LT-283 → LT-285**). **LT-235** runs before LT-212's implementation
 per its own sequencing note and lays the IR foundation the ADR 0037 chain and LT-280 both
 coordinate against. **LT-212 and LT-213** are the owner-sequenced gates in front of the
 FIRST migration; **LT-188** must land before the wave adds composition across tiers (the
@@ -36,7 +38,8 @@ gates hold; the i18n chain (LT-242 → LT-233 → LT-250) and the ADR 0037 imple
 (LT-274/275/276) keep for later iterations — nothing in this iteration contends with them.
 
 **Exit criterion:** a corpus carrying all three spellings of one example compiles clean,
-its spec passes against each, and LTC048 still fires for two canonical sources (LT-238);
+its spec passes against each, and LTC048 still fires for two canonical sources
+(LT-283–LT-285, the LT-238 ruling's implementation);
 the IR ADR is recorded (LT-235) and `@empty` + dynamic tags land with parity green, the
 warning baseline at 0 and census 20/2/0 (LT-212, LT-213); a Simulated parent
 server-splicing a Folded child renders the child UPGRADED (LT-188); `spike/` is deleted
@@ -47,53 +50,117 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-283.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
-wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
-LT-235 sessions will consume LT-283+ for the implementation tasks and riders they file.)
+**Next free task ID: LT-286.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-235 session
+will consume LT-286+ for the implementation tasks and riders it files.)
 
 ---
 
-- [ ] LT-238: Relax "one authored source per component tag" to a canonical-plus-variants rule (owner ruling, 2026-09-18). **Gates LT-237 and every remaining wave-4 migration.**
+- [x] LT-238: Relax "one authored source per component tag" to a canonical-plus-variants rule — done ✓ (design + owner ruling + ADR; implementation handoff below)
   **Skill:** architect (design + ADR) → le-truc-dev (implementation)
-  **Context:** The owner has ruled that this repo must carry **all three spellings of a
-  component side by side** — the hand-written `.ts` twin, the `.tsx` compile and the `.tsrx`
-  compile — for two reasons: (a) each must pass the same Playwright spec, so the spec is the
-  equivalence contract at runtime the way the parity suite is at build time; (b) the three
-  spellings side by side are the honest showcase of the surfaces' trade-offs, which is
-  exactly what ADR 0032's dual ruling asks readers to weigh. Today the corpus forbids this:
-  one tag declared by two corpus files fails the build (LTC048), and the P5 migration
-  pattern above says "delete the `.ts` twin."
-  **The design question this needs answered first — do not skip to the code.** Three
-  spellings of one tag collide in three places, not one: the emitted artifact names
-  (`<tag>.server.ts` / `<tag>.client.ts` / `<tag>.css`), the corpus registry (`RegistryEntry`
-  is keyed by tag, and `truc:pass` legality is decided through it), and the browser
-  (`customElements.define` throws on the second registration). Two shapes answer it, and
-  they trade off differently:
-  (a) **Canonical + suffixed variants** — one spelling owns the tag, the others compile to a
-  derived tag (`basic-counter--tsx`) and their own artifacts. All three can be registered on
-  one page, so the showcase is a side-by-side demo and the spec can address each directly.
-  Cost: the derived tag leaks into the registry, compose sites, and CEM output.
-  (b) **Canonical + build-selected variants** — one tag, three builds, a page-level or
-  build-level switch picking which spelling is served. The spec is run three times unchanged,
-  which is the cleanest possible reading of goal (a). Cost: the showcase is no longer
-  simultaneous, so goal (b) needs the docs to render sources rather than live components.
-  Recommendation to grill, not to assume: (b) for the test contract, with the docs showing
-  all three sources from the same folder — but this is the owner's call and it should be
-  made before either LT-237 or the next migration. **Framework note (S0):** under the
-  general-purpose goal the showcase is external-facing — the side-by-side demo is part of
-  the product story for library users, so weigh goal (b) (simultaneous live demos) at full
-  weight when grilling, not as a nice-to-have.
-  **Obligations.** This amends ADR 0032 sub-design 6 and the `ARCHITECTURE.md` § Authoring
-  Surfaces sentence "One component tag has exactly one authored source" — record via
-  `adr-keeper`, do not edit the ruling in place. LTC048 narrows rather than retires (it must
-  still catch two *canonical* sources for one tag): **channel = compiler, tier 1 Prevented**,
-  statically decidable, no runtime half. **Tech Writer reviews the new LTC048 copy** — the
-  message names both files today and will need to name the canonical-source rule instead.
-  Rewrite the P5 migration pattern above in the same commit: "delete the `.ts` twin" becomes
-  "retain the `.ts` twin as a variant."
-  **Verification:** a corpus carrying all three spellings of one example compiles clean; the
-  example's Playwright spec passes against each; LTC048 still fires for two canonical
-  sources; `bun test server/tests`, typecheck, warning baseline 0.
+  **Ruling (owner, 2026-09-21, grilled this session):** **shape B — build-selected variants**
+  with the `.tsx` surface as the default served spelling (per-tag override). Recorded as
+  [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md), amending
+  [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s6 by reference.
+  Suffixed variants (derived tags, three live registrations on one page) were rejected on
+  three measured grounds: authored CSS is tag-scoped by convention, so a derived tag is
+  unstyled by verbatim CSS (a selector-rewrite capability would be bought for showcase
+  presentation); registry/census/CEM rows would triple per showcased component; and the
+  parity suite pins client modules only structurally, so the live side-by-side demonstrates
+  identity, not trade-offs — the trade-offs live in the source text, which shape B displays
+  directly. The simultaneous-demo cost was weighed at full weight (S0 framework note) and
+  accepted.
+  **Changed:** `adr/0039-canonical-plus-variants-authored-surfaces.md` (new, Accepted);
+  `adr/0032-…md` (amendment note in Status + Alternatives, ruling text unedited);
+  `adr/adr-index.md`; `ARCHITECTURE.md` § Authoring Surfaces (the one-source sentence
+  rewritten); `AGENTS.md` (one-tag bullet → variant-set rule; migration instruction now
+  "add alongside, not replace"); `BACKLOG.md` P5 pattern ("delete the `.ts` twin" →
+  "retain the `.ts` twin as a variant").
+  **Check:** implementation split into LT-283 (compiler), LT-284 (test-route serving + spec
+  matrix), LT-285 (three-spelling exemplar = the exit criterion). No code changed — the
+  corpus still forbids variant sets until LT-283 lands.
+
+- [ ] LT-283: Variant sets in the corpus scan — compile-both/serve-selected, LTC048 narrowing, surface-selection config (LT-238/ADR 0039 implementation). **Unblocks LT-237 and every remaining migration.**
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (owner
+  ruling LT-238): a corpus folder may carry a **variant set** — at most one authored source
+  per surface sharing one base name in one directory (the `.ts` twin is never compiled; it
+  reaches the scan only as sibling-module tag knowledge, `corpus-config.ts`
+  `DEFAULT_SIBLING_MODULES`). Work in `server/corpus-compile.ts` (the LTC048 pre-check and
+  the two-pass compile) and `server/compiler/corpus-config.ts` (configuration):
+  (1) **Group sources into variant sets** — folder-local base name; every member compiles
+  clean or the set fails as today.
+  (2) **CSS byte-identity across the compiled members of a set** — a drift is an
+  error-severity diagnostic (the served member's CSS would hide the other member's
+  rendering). **Channel: compiler, tier 1 Prevented; Tech Writer drafts/owns the copy** —
+  new rule, next free `LTC` code, added to the diagnostics union and catalog.
+  (3) **Write only the selected surface's artifacts** under the canonical names —
+  selection is `.tsx` by default (the ADR 0032 default surface), overridden by
+  `variantSurface` (`'tsx'|'tsrx'`) and `variantOverrides` (per-tag) in
+  `le-truc.config.json` — the [ADR 0036](adr/0036-corpus-configuration-surface.md) surface;
+  the LT-273 config validation extends to the new keys (unknown surface value, non-tag
+  override key → config error).
+  (4) **One registry entry per tag**: dedupe to the selected member's entry before every
+  consumer — the registry write, `contaminateComposeReads`' input map, the i18n collection,
+  the span infos, and the census (its `20/2/0` semantics must not change); the entry's
+  `source` names the selected member. The compose registry keeps both source-keyed entries
+  (compose imports point at a same-surface sibling file, verified against
+  `form-combobox` → `form-listbox` on both surfaces).
+  (5) **LTC048 narrows** (`diagnostics.ts` `duplicateTag`): still fires — error, both files
+  dropped — for two same-surface sources declaring one tag, and for same-tag sources that
+  are not a folder-local variant set; silent for a folder-local set.
+  **Channel and tier (ADR 0028 s1):** both new/changed rules compiler, tier 1 Prevented,
+  statically decidable, no runtime half. **Tech Writer reviews the narrowed LTC048 copy** —
+  the message says "exactly one authored file" today and must state the per-surface rule
+  instead.
+  (6) The `declare global` ownership convention (twin > `.tsrx` > `.tsx` owns the
+  `HTMLElementTagNameMap` entry) is TypeScript-channel (duplicate entries are a TS 2717
+  error — no compiler rule; already documented in AGENTS.md). Confirm the examples
+  typecheck stays green once sets exist.
+  **Check:** a fixture variant set compiles clean and serves the selected surface's client
+  (assert the served bytes equal that member's compile); a CSS drift between set members
+  fails the build with the new diagnostic; LTC048 fires for a same-surface duplicate and a
+  cross-folder pair, stays silent for a folder-local set; the config override flips the
+  served client; the `dual-corpus.test.ts` pin INVERTS (a folder-local `.tsrx`+`.tsx` pair
+  is now legal — rewrite it to pin the still-illegal cases); `bun test server/tests`,
+  typecheck, warning baseline 0, census 20/2/0 unchanged.
+
+- [ ] LT-284: Per-surface test-route serving + the variant spec matrix (LT-238/ADR 0039 s2).
+  **Skill:** docs-server-dev
+  **Context:** ADR 0039's runtime equivalence contract: the same Playwright spec runs
+  unchanged against each spelling of a variant set. `/test/:component`
+  (`server/serve.ts` `handleComponentTest`) gains a surface selection —
+  `?surface=ts|tsrx|tsx` — serving, for a variant-set component, a page that registers
+  exactly that surface's module: the hand-written twin module from the example folder
+  (`ts`), the generated client (`tsrx`/`tsx`). The page must define the tag exactly once
+  (the default layout bundle keeps registering the selected surface; a surface page must
+  not double-define — the twin-served page is the pre-migration serving mode rebuilt as an
+  explicit selection). Keep `serve.test.ts` in lockstep (it mirrors `serve.ts` routes).
+  Then the runner: a script (e.g. `test:variants`) that exercises the variant-carrying
+  examples' specs once per surface — scoped to those specs, not the whole suite ×3.
+  **Check:** a variant-set component's spec passes against all three surfaces locally
+  (against a stub fixture if LT-285 has not landed yet); the default route is unchanged
+  for non-variant components; no page load defines a tag twice.
+  **Depends on** nothing compiler-side (can land parallel to LT-283); **LT-285 gates on it.**
+
+- [ ] LT-285: The three-spelling exemplar — restore `basic-counter`'s `.ts` twin as a variant. **The LT-238 exit criterion.**
+  **Skill:** le-truc-dev
+  **Context:** Restore the deleted hand-written twin from history
+  (`git log --oneline -- examples/basic/counter/`) as `examples/basic/counter/basic-counter.ts`
+  beside its `.tsrx` (in place) and `.tsx` (LT-237 moved it in) — the first corpus folder
+  carrying all three spellings of one component. Apply the ADR 0039 conventions: the twin
+  owns the `declare global` `HTMLElementTagNameMap` entry (the compiled members dropped
+  theirs at LT-237); the twin stays the artifact of record, byte-for-byte its deleted self
+  except the map-entry ownership if history differs; the twin leaves the CEM globs while
+  its component is compiled (`custom-elements-manifest.config.mjs` — derive the exclusion
+  from the variant set so `verify-cem` stays green; first live proof of the CEM rule).
+  The same `basic-counter.spec.ts` must pass against all three surfaces through LT-284's
+  selection.
+  **Check:** `test:variants` (LT-284) green ×3 for basic-counter; LTC048's narrowed pins
+  proven live (a same-surface duplicate fixture fails the build naming both); census
+  20/2/0 (the twin adds no registry entry); warning baseline 0; typecheck green (the
+  absence of a TS 2717 error proves the declaration convention).
+  **Depends on** LT-283, LT-237, LT-284.
 
 - [ ] LT-235: Wave-4 type-level design session — IR discriminated unions, pass contracts (review §2.6–2.7). **Grilling first; produces an ADR + tasks.**
   **Skill:** architect
@@ -194,9 +261,12 @@ LT-235 sessions will consume LT-283+ for the implementation tasks and riders the
   constants, the four tsconfigs' `include`/`exclude`, and the `spike/tsx/` references in this
   file and `adr/archive/0032-spike-findings.md`; delete `spike/` once empty.
   **Watch:** the parity suite pairs `examples/**.tsrx` against the `.tsx` copy. Once the four
-  live in one folder under LT-238's rule, the pair is a folder-local fact rather than a
-  cross-tree one — keep the test asserting byte-identical server output and CSS, since that
-  is the standing equivalence contract `ARCHITECTURE.md` § Authoring Surfaces names.
+  live in one folder under LT-238's rule (ADR 0039), the pair is a folder-local fact rather
+  than a cross-tree one — keep the test asserting byte-identical server output and CSS, since
+  that is the standing equivalence contract `ARCHITECTURE.md` § Authoring Surfaces names.
+  Apply the ADR 0039 declaration convention in the same move: each ported `.tsx` DROPS its
+  `declare global` `HTMLElementTagNameMap` block (the `.tsrx` twin owns the entry; duplicate
+  entries are a TS 2717 error under the examples typecheck).
   **Verification:** `bun test server/tests` green with no fixture-path skips; the four tsc
   gates keep their exit codes (0 positive, 2 negative); check:links.
 

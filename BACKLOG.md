@@ -1085,8 +1085,8 @@ which cannot express their per-item pass/attribute wiring. The text-shape migrat
 (LT-095–LT-108) are unaffected. LT-183 returned GO (ADR 0032, dual front end) — **migrations author
 `.tsx`**;
 the spike's four fixtures (`spike/tsx/`, moving to the example folders by LT-237) and
-`ARCHITECTURE.md` § Authoring Surfaces are the shape reference. Otherwise unblocked. The canonical pattern is LT-092's: same-commit cutover — delete the `.ts` twin, point
-`examples/main.ts` at the generated client, drop any CEM exclusion, keep the demo/spec green
+`ARCHITECTURE.md` § Authoring Surfaces are the shape reference. Otherwise unblocked. The canonical pattern is LT-092's, amended by [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (LT-238): same-commit cutover — **retain the `.ts` twin as a variant** beside the new `.tsx` source (it stops being the served surface but stays the artifact of record, and leaves the CEM globs while its component is compiled), point
+`examples/main.ts` at the generated client, keep the demo/spec green
 against the served compiled component. Surface compiler gaps in NOTES.md — or fix them
 directly if small (LT-088 precedent) — never weaken a component to dodge a gap. **Per
 migration, record the tier and the reason** alongside the zero-warning check; only the

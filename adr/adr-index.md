@@ -43,6 +43,8 @@ Maintained by the `adr-keeper` workflows — update whenever an ADR is created, 
 | [0036](0036-corpus-configuration-surface.md) | The Corpus Configuration Surface — `le-truc.config.json`, This Repo as a Consumer | ✅ Accepted | §1, §2, §5, M24, M28 |
 | [0037](0037-reactive-conditions-via-template-cloned-arms.md) | Reactive Conditions — Conditional Arms as Template-Cloned Branches | 🔄 Proposed | M5, M6, M14, §1, §4 |
 | [0038](0038-runtime-neutral-build-path.md) | Runtime-Neutral Build Path — the `RuntimeIO` Seam, One Glob Grammar, and the Portability Gate | ✅ Accepted | §5, M25, M28 |
+| [0039](0039-canonical-plus-variants-authored-surfaces.md) | Canonical-Plus-Variants — One Tag, Build-Selected Surface Spellings | ✅ Accepted | §1, M17, M18 |
+| [0040](0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md) | Typed IR Contracts — Discriminated Unions and Pass Signatures | 🔄 Proposed | §1, §4 |
 
 ---
 

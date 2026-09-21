@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted — spike verdict **GO** (LT-183, [spike findings](archive/0032-spike-findings.md)); owner acceptance 2026-09-17, carrying the dual-front-end amendment recorded the same day: `.tsrx` is not deleted. Amended in place 2026-09-18 (LT-208/209/211, owner rulings): the boundary is three-arm in both surfaces with the reactive `isPending` idiom beside it, and the authored `.tsx` factory context is typed by an annotated second parameter.
+✅ Accepted — spike verdict **GO** (LT-183, [spike findings](archive/0032-spike-findings.md)); owner acceptance 2026-09-17, carrying the dual-front-end amendment recorded the same day: `.tsrx` is not deleted. Amended in place 2026-09-18 (LT-208/209/211, owner rulings): the boundary is three-arm in both surfaces with the reactive `isPending` idiom beside it, and the authored `.tsx` factory context is typed by an annotated second parameter. Amended 2026-09-21 (LT-238, owner ruling): sub-design 6's one-source-per-tag rule is relaxed to canonical-plus-variants — [ADR 0039](0039-canonical-plus-variants-authored-surfaces.md).
 
 ## Context
 
@@ -50,6 +50,8 @@ Adopt standard **`.tsx`** as the **primary** authored component surface — pars
 *The interface's gap is documentation, not design.* The contract is internal, unversioned, undocumented and unexported. That — not a plugin API, a registry or lifecycle hooks — is the whole deliverable (LT-265). The refusal channel a connector needs already exists: `routingSignals` and the [ADR 0028](0028-tiered-error-surfacing.md) tiers let a front end say "I cannot answer this" and get a designed outcome rather than a silently wrong component.
 
 *A foreign-runtime "Mounted" tier is an escape hatch, recorded and not adopted.* Routing an uncompilable component to static markup with the target framework's own runtime mounted over it (the Astro-islands shape) would ease incremental migration and is a useful measurement baseline. It is **not** a reuse of the refusal channel — Folded/Simulated/Static all emit Le Truc, whereas this is a fourth tier that changes distribution, putting a foreign runtime in the consumer's bundle. As a permanent state it is the worst case: the consumer pays for every framework at once and interoperability degrades. That configuration is common in corporate settings where each team picks its own stack — which is the strongest form of the motive here: **the value is compiling several surfaces away to one runtime, not adding support for each.** Any adoption is a separate decision with its own ADR.]
+
+**[Amended 2026-09-21, owner, at LT-238: sub-design 6's one-source-per-tag rule is relaxed to canonical-plus-variants.** A corpus folder may carry a **variant set** — the hand-written `.ts` twin plus `.tsrx` and `.tsx` spellings, at most one per surface, all declaring one canonical tag — with the served surface build-selected, `.tsx` by default ([ADR 0039](0039-canonical-plus-variants-authored-surfaces.md)). LTC048 narrows rather than retires: it still fails a tag declared by two same-surface sources or by sources that are not a folder-local variant set. The closed two-surface set and the parity suite's standing equivalence contract are unchanged; the example spec joins it as the runtime equivalence contract.]
 
 ## Consequences
 
