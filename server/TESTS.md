@@ -75,7 +75,8 @@ find server/tests -name '*.test.ts' | sort
 
 (`bun test --list` does not list — the flag is silently ignored and the suite runs.) For the
 test count, the `bun test server/tests` summary line prints both numbers live; as of
-2026-09-21 that is **91 files / 1683 tests**.
+2026-09-21 that is **91 files / 1691 tests** (LT-273 added eight config-validation and
+search-boundary tests).
 
 ### Running tests
 

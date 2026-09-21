@@ -9,7 +9,10 @@ place. Task IDs are global and sequential across all three files.
 **Current iteration (opened 2026-09-21): the compiler measured, its install story sound, and
 the last v3.0 deprecation gates cleared.** Drawn from [BACKLOG.md](BACKLOG.md)'s P1 and P4
 bands. The previous iteration ("the compiler's shape") is fully landed and reviewed —
-LT-263, LT-271/272, LT-255 + LT-267, LT-256 and LT-265 are in `DONE.md`.
+LT-263, LT-271/272, LT-255 + LT-267, LT-256 and LT-265 are in `DONE.md`. **Landed within
+this iteration (2026-09-21, also in `DONE.md`):** LT-273 (config validation, bounded
+search, configured scan everywhere — reviewed ✓), LT-278 (ADR 0038) and LT-279
+(absent-substrate docs).
 
 **Why these six.** **LT-266 leads by owner schedule** (2026-09-19): the size bet was
 deferred to "the iteration after the current one" — this one — and it is the acceptance
@@ -29,8 +32,9 @@ both skills that do not contend for the dev slots.
 
 **Exit criterion:** the size bet has a recorded number, whichever way it comes out;
 `le-truc.config.json` rejects malformed input naming the offending key and the accepted
-spelling, and `grep -rn "examples/\*\*" scripts/ server/` returns only `corpus-config.ts`'s
-defaults; the `pass()` short forms and the factory return contract are gone from the library
+spelling, and `grep -rn "examples/\*\*" scripts/ server/` has no runnable scan code outside
+`corpus-config.ts`'s defaults (pin test and doc prose excepted — ruling recorded in the
+LT-273 `DONE.md` entry); the `pass()` short forms and the factory return contract are gone from the library
 on the removal branch (wave 4 unblocked); the runtime-neutrality decision has its ADR, and
 SERVER.md/TESTS.md tell the truth again.
 
@@ -60,72 +64,6 @@ SERVER.md/TESTS.md tell the truth again.
   recorded whichever way it comes out. **A result that does not favour Le Truc is the valuable
   outcome, not a reason to re-run the study.**
 
-- [ ] LT-273: Validate `le-truc.config.json`, and retire the last hard-coded corpus glob.
-  **Skill:** le-truc-dev
-  **Context:** LT-255 review finding (2026-09-19); [ADR 0036](adr/0036-corpus-configuration-surface.md).
-  The config file is **the entire public surface a consumer touches at install time** — the
-  first thing the agency-developer persona ([§2](REQUIREMENTS.md#2-user-personas),
-  [M28](REQUIREMENTS.md#m28-distribution-and-dependency-weight)) interacts with — and it is
-  currently parsed with `JSON.parse(...) as CorpusConfigInput` and no validation at all. Three
-  failure modes, all confirmed by probe at review:
-  1. **`"outdir"` (wrong case) silently writes to the repo default path** inside the consumer's
-     project. It succeeds, in the wrong place, with no signal. This is the one that matters —
-     "it compiled but nothing is where I asked" is the worst failure shape for a first install.
-  2. `"sources": "src/**/*.tsx"` — a string where an array belongs — spreads into twelve
-     single-character globs (`["s","r","c",…]`) and reports twelve garbage patterns.
-  3. Any unknown key is silently ignored, so the run falls back to **this repo's**
-     `examples/**` globs, which in a consumer project match nothing.
-  **Also in scope, because it is the same drift:** `scripts/i18n-sync.ts` still globs
-  `examples/**/*.tsrx` **hard-coded and single-extension**, and calls `collectI18n` without
-  `i18nDir`. It is an in-repo person-run tool so the defaults are correct today and nothing is
-  broken — but it is now the LAST place that hardcodes the corpus scan, and it re-opens exactly
-  the ledger gap LT-255 closed: widen `DEFAULT_SOURCES` and `i18n:sync` silently stops seeing
-  the new files. LT-255's "a single place to widen" is not true until this is folded in.
-  **Third item, small:** `server/effects/compile.ts` still prints `📝 TSRX compilation
-  completed (N …)` and throws `TSRX compilation failed — …` on a path that compiles both
-  surfaces and is now consumer-configured. The developer was right not to rename it inside a
-  byte-identity task; do it here, **with a row in
-  [`VOCABULARY_LEDGER.md`](server/compiler/VOCABULARY_LEDGER.md)** recording the disposition —
-  that file owns the call, not a side edit.
-  **Fourth, a containment guard:** `findConfigFile` walks to the filesystem root, so a stray
-  `le-truc.config.json` anywhere above a checkout silently retargets that checkout's build.
-  Stop the search at the nearest `package.json` (or `.git`), whichever the project boundary is.
-  **Channel and tier — decided here, do not re-litigate:** a malformed config is a **thrown
-  startup error, channel: none**. It is read before any component is parsed, so there is no
-  source span and no author-fixable *component* mistake, which is what
-  [ADR 0028](adr/0028-tiered-error-surfacing.md)'s tiers grade. **No `LTC` code and no Tech
-  Writer handoff is owed** — and precisely because the error is untiered, the message text IS
-  the whole user experience: name the file, the field, what was received and what was expected,
-  and list the accepted keys on an unknown one.
-  **Deliverable:** field-level validation of `CorpusConfigInput` (types, unknown keys rejected
-  rather than ignored, actionable messages); `i18n:sync` on the configured scan; the vocabulary
-  rename plus its ledger row; the config-search boundary.
-  **Check:** each of the three probed failure modes produces a message naming the offending key
-  and the accepted spelling; `i18n:sync` picks up a `.tsx` component under `examples/`; corpus
-  output byte-identical; census 20 folded / 2 simulated / 0 static and warning baseline 0
-  unmoved; `grep -rn "examples/\*\*" scripts/ server/` returns only `corpus-config.ts`'s
-  defaults.
-
-  **Landed 2026-09-21 (09124713) — done, pending review ⏳.** All four items plus validation
-  docs in LE_TRUC_COMPILER.md §7.1. Handoff for review:
-  - The grep acceptance surfaced TWO MORE runnable single-extension globs the entry didn't name
-    ("i18n:sync was the LAST place" was off by two): `server/tests/compiler/corpus-fixture.ts`
-    `loadCorpus()` and `server-render-smoke.test.ts` `corpus()` both hand-rolled
-    `examples/**/*.tsrx` scans. Both now go through `collectCorpusSources` + the repo defaults.
-    Post-fold grep state: every remaining hit is corpus-config.ts's defaults, the pin test
-    asserting them, or doc prose (build-corpus.ts header, glob.ts/simulate.ts comments, .md
-    files) — zero runnable scan code outside the defaults. Reviewer may want to reword the
-    acceptance to "no runnable glob" if prose hits are unacceptable.
-  - The rename went one string-pair wider than the two the entry named: the
-    `'TSRX compiler'` label and `🔄 Compiling TSRX components...` in
-    `server/effects/compile.ts` rode along (same drift; the ledger row owns the call). Ledger
-    §6 also records the KEPT generated provenance header ("Generated by the Le Truc TSRX
-    compiler" — baked into every golden; rename it with the next deliberate emission change).
-  - Live-probe evidence was taken in a HEAD worktree because a parallel session was actively
-    churning this checkout mid-task (an untracked `module-todo.tsx` migration appeared and was
-    then removed; `package.json`/`bun.lock` edited for LT-266). Re-running gates in THIS
-    checkout should be done on a clean tree. Fail set (14) verified byte-identical to HEAD's.
-
 - [ ] LT-178: Remove the `pass()` unrestricted-write short forms (ADR 0012 removal).
   **Skill:** le-truc-dev
   **Context:** ADR 0012 scheduled removal for the next major; the major is in pre-release
@@ -153,41 +91,3 @@ SERVER.md/TESTS.md tell the truth again.
   entries, CHANGELOG breaking entry).
   Acceptance: helpers return `void`; `FactoryResult` is not exported; a bare-statement helper
   call cannot silently no-op (the collector is the only registration path); `bun test` green.
-
-- [x] LT-278: Record the runtime-neutral build path as an ADR (LT-267 review). — done ✓
-  **Skill:** adr-keeper
-  **Changed:** [ADR 0038](adr/0038-runtime-neutral-build-path.md) created — standalone, beside ADR 0034 rather than a sub-design of it (0034's sub-designs govern what the package is and emits; this governs how the build path executes, and it binds the in-repo docs build today): the `RuntimeIO` seam; the compiler staying pure beside it; glob semantics as one grammar decided once, pinned to `Bun.Glob`'s scanner, with the three LT-277 edges recorded as pending rulings owned by LT-277; `check:portability` as the standing gate. adr-index row added; ADR 0034 s1 and ADR 0036 s5 cross-linked (SERVER.md's runtime-seam header link rode the LT-279 commit, 3d56c355). `bun run check:links` clean (611 links).
-  **Context:** the LT-267 review (2026-09-21). The decision — the published compiler
-  package's build path requires *a* JS runtime, not Bun specifically; `RuntimeIO` is the
-  seam; glob pattern semantics are one shared grammar decided once in
-  `server/runtimes/glob.ts`; `check:portability` (Bun/Node/Deno, byte-identical emitted
-  trees) is the standing gate — is implemented, gated, and documented operationally in
-  `server/SERVER.md`, but no ADR owns it. [ADR 0036](adr/0036-corpus-configuration-surface.md)
-  cites LT-267 as a constraint from the config side; [ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md)
-  is the natural home (the runtime contract is part of the distribution story) or a
-  standalone ADR beside it — adr-keeper's call. Record BEFORE the compiler package's first
-  publication (P1, P6-gated): the runtime contract is consumer-visible the moment the package
-  exists.
-  **Check:** the ADR records the decision, the one-grammar ruling (including the LT-277
-  edges or their resolution), and the gate; adr-index and cross-links updated;
-  `bun run check:links` clean.
-
-- [x] LT-279: Document the absent-substrate routing (LT-256 review docs gap) — done ✓
-  **Skill:** tech-writer
-  **Changed:** `server/SERVER.md` (simulation section states the absent-substrate routing — Static reroute, `unavailable-substrate` signal, registry rewrite, census rows, green build — plus the broken-substrate failure and registry.json's last-one-shot-build semantics; the `resolve.ts` bullet gains the `isSubstrateAbsence` narrowing); `server/TESTS.md` (count re-pinned to 91 files / 1683 tests, verified live; `contract.test.ts` and `simulation-resolve.test.ts` rows added to the tree). `bun run check:links` clean (611 links); SERVER.md wording matches the landed pass-log copy.
-  **Context:** the LT-256 review (2026-09-21). The landed behavior — no jsdom installed:
-  the one-shot build routes the Simulated-tier components Static, appends an
-  `unavailable-substrate` routing signal, rewrites `generated/registry.json` (the tier
-  census's input), logs the census rows, and stays green; a substrate present but broken
-  fails the build naming the real cause — is recorded only in code comments and the ADRs
-  ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s5,
-  [ADR 0029](adr/0029-tiered-server-evaluation.md) s6). `server/SERVER.md`'s simulation
-  section still reads as if the pass always opens a realm. State it there (the LT-256
-  handoff's flagged ask): the absence behavior, the one-shot-only scope, and that
-  registry.json reflects the last build's routing outcome. Also re-pin `server/TESTS.md`'s
-  count line (says 89 files / 1668 tests as of 2026-09-21; LT-256 + LT-265 made it
-  91 files / 1683) and add the `simulation-resolve.test.ts` and `contract.test.ts` rows to
-  its tree. Tech Writer owns the census reason and pass-log copy (drafted by the LT-256
-  handoff, landed verbatim).
-  **Check:** `bun run check:links` clean; the SERVER.md paragraph matches the landed log
-  copy.
