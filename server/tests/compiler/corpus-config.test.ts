@@ -15,6 +15,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import {
 	CONFIG_FILENAME,
+	type CorpusConfigInput,
 	DEFAULT_OUT_DIR,
 	DEFAULT_RUNTIME_IMPORT,
 	DEFAULT_SOURCES,
@@ -96,6 +97,126 @@ describe('the output root is the consumer’s to choose', () => {
 		expect(() => resolveCorpusConfig('/p', { sources: [] })).toThrow(
 			/at least one glob/,
 		)
+	})
+})
+
+describe('the config file is validated, not trusted (LT-273)', () => {
+	// The loader reads untrusted JSON; the input type describes the ACCEPTED
+	// shape, so the malformed values a test feeds in are cast through here —
+	// the runtime check under test is what the cast claims.
+	const untrusted = (value: unknown): CorpusConfigInput =>
+		value as CorpusConfigInput
+
+	test('an unknown key is rejected naming it and the accepted keys', () => {
+		// Probed at the LT-255 review: a mis-cased "outdir" silently wrote to
+		// the repo default path inside the consumer's project.
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ outdir: 'build' })),
+		).toThrow(
+			/unknown key "outdir" — accepted keys are: sources, siblingModules, outDir, i18nDir, runtimeImport\. Did you mean "outDir"\?/,
+		)
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ emitting: 'build' })),
+		).toThrow(/unknown key "emitting"/)
+		// ...and no did-you-mean when nothing is a casing match.
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ emitting: 'build' })),
+		).toThrow(/unknown key "emitting" — accepted keys are: [^.]+\.$/)
+	})
+
+	test('a string where an array belongs reports the array spelling', () => {
+		// Probed at the LT-255 review: a bare string spread into twelve
+		// single-character globs and reported twelve garbage patterns.
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ sources: 'src/**/*.tsx' })),
+		).toThrow(
+			/"sources" must be an array of glob strings — received the string "src\/\*\*\/\*\.tsx"\. Wrap it in an array: "sources": \["src\/\*\*\/\*\.tsx"\]/,
+		)
+		expect(() => resolveCorpusConfig('/p', untrusted({ sources: 42 }))).toThrow(
+			/"sources" must be an array of glob strings — received a number/,
+		)
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ siblingModules: 'lib/**' })),
+		).toThrow(/"siblingModules" must be an array of glob strings/)
+	})
+
+	test('a non-string glob entry names its index', () => {
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ sources: ['a/**/*.tsx', ''] })),
+		).toThrow(/"sources\[1\]" must be a non-empty string — received ""/)
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ sources: ['a/**/*.tsx', 42] })),
+		).toThrow(/"sources\[1\]" must be a non-empty string — received 42/)
+	})
+
+	test('path and string fields must be non-empty strings', () => {
+		expect(() => resolveCorpusConfig('/p', untrusted({ outDir: 42 }))).toThrow(
+			/"outDir" must be a non-empty string — received 42/,
+		)
+		expect(() => resolveCorpusConfig('/p', untrusted({ i18nDir: '' }))).toThrow(
+			/"i18nDir" must be a non-empty string/,
+		)
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ runtimeImport: null })),
+		).toThrow(/"runtimeImport" must be a non-empty string/)
+	})
+
+	test('a non-object config is rejected listing the accepted keys', () => {
+		for (const value of [null, 'src/**', 42, []]) {
+			expect(() => resolveCorpusConfig('/p', untrusted(value))).toThrow(
+				new RegExp(
+					`expected a JSON object with keys drawn from: sources, siblingModules, outDir, i18nDir, runtimeImport — received ${JSON.stringify(value) ?? String(value)}`.replace(
+						/[.*+?^${}()|[\]\\]/g,
+						'\\$&',
+					),
+				),
+			)
+		}
+	})
+})
+
+describe('the config search stops at the project boundary (LT-273)', () => {
+	test('a stray config above the nearest package.json does not capture the build', () => {
+		const outer = scratchProject({
+			[CONFIG_FILENAME]: JSON.stringify({ outDir: 'captured' }),
+			'checkout/package.json': '{}',
+			'checkout/src/keep.ts': '',
+		})
+		try {
+			const config = loadCorpusConfig(path.join(outer, 'checkout', 'src'))
+			// The repo defaults, not the stray file's root.
+			expect(config.root).toBe(REPO_ROOT)
+		} finally {
+			fs.rmSync(outer, { recursive: true, force: true })
+		}
+	})
+
+	test('.git bounds the search the same way', () => {
+		const outer = scratchProject({
+			[CONFIG_FILENAME]: JSON.stringify({ outDir: 'captured' }),
+			'checkout/.git': '',
+		})
+		try {
+			const config = loadCorpusConfig(path.join(outer, 'checkout'))
+			expect(config.root).toBe(REPO_ROOT)
+		} finally {
+			fs.rmSync(outer, { recursive: true, force: true })
+		}
+	})
+
+	test('a config at the boundary directory itself still applies', () => {
+		const root = scratchProject({
+			[CONFIG_FILENAME]: JSON.stringify({ outDir: 'gen' }),
+			'package.json': '{}',
+			'sub/keep.txt': '',
+		})
+		try {
+			const config = loadCorpusConfig(path.join(root, 'sub'))
+			expect(config.root).toBe(path.resolve(root))
+			expect(config.outDir).toBe(path.join(path.resolve(root), 'gen'))
+		} finally {
+			fs.rmSync(root, { recursive: true, force: true })
+		}
 	})
 })
 

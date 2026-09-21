@@ -35,12 +35,22 @@ export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /* === Internal Functions === */
 
-/** Nearest `le-truc.config.json` at or above `from`, or null. */
+/**
+ * Nearest `le-truc.config.json` at or above `from`, or null.
+ *
+ * The walk stops at the project boundary (LT-273): the first directory —
+ * `from` itself included — holding a `package.json` or a `.git`. A stray
+ * config file anywhere above a checkout must not retarget that checkout's
+ * build, and a config at the boundary directory itself still applies (the
+ * config is checked before the marker in the same directory).
+ */
 const findConfigFile = (from: string): string | null => {
 	let dir = resolve(from)
 	for (;;) {
 		const candidate = join(dir, CONFIG_FILENAME)
 		if (existsSync(candidate)) return candidate
+		if (existsSync(join(dir, 'package.json')) || existsSync(join(dir, '.git')))
+			return null
 		const parent = dirname(dir)
 		if (parent === dir) return null
 		dir = parent
@@ -52,10 +62,12 @@ const findConfigFile = (from: string): string | null => {
 /**
  * The configuration in force for a compile run.
  *
- * Searches from `cwd` upward for a `le-truc.config.json` and takes the
- * directory holding it as the project root. With no config file anywhere
- * above `cwd`, falls back to this repo's defaults — which is what every
- * in-repo script and the docs build get, so their output is unchanged.
+ * Searches from `cwd` upward — no further than the project boundary, the
+ * nearest directory holding a `package.json` or a `.git` (LT-273) — for a
+ * `le-truc.config.json`, and takes the directory holding it as the project
+ * root. With no config file within that boundary, falls back to this repo's
+ * defaults — which is what every in-repo script and the docs build get, so
+ * their output is unchanged.
  */
 export const loadCorpusConfig = (cwd: string = process.cwd()): CorpusConfig => {
 	const file = findConfigFile(cwd)

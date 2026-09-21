@@ -5,13 +5,13 @@
  *
  * The one writer for the committed catalogs — the build itself stays
  * read-only over tracked files. For every locale that has an
- * `i18n/<locale>.json` catalog:
+ * `<i18nDir>/<locale>.json` catalog:
  *
  * 1. every declared key the catalog is MISSING lands as an empty entry
  *    (`""`) — the translator's placeholder; the source-locale string
  *    renders until it is filled,
  * 2. every key the catalog CARRIES gets its staleness-manifest entry set
- *    to the CURRENT source string's hash (`i18n/manifest.json`) — the
+ *    to the CURRENT source string's hash (`<i18nDir>/manifest.json`) — the
  *    person running this confirms the translation matches the source it
  *    will ship against. Stale keys are listed, not silently confirmed:
  *    review the diff and decide whether the translation needs rework
@@ -25,61 +25,53 @@
  *    is sheltered by no category set and reports — and prunes — in every
  *    locale.
  *
- * Run by a person, diffable in review. The compile this performs writes
- * only into the gitignored `server/generated/components/`.
+ * The corpus scan is the CONFIGURED one (LT-273): `le-truc.config.json`
+ * selects the sources, the output root and the catalog directory, exactly
+ * as for the build — this was the last script that hard-coded the corpus
+ * glob, which re-opened the drift LT-255 closed. Run by a person, diffable
+ * in review. The compile this performs writes only into the configured
+ * output root (gitignored).
  */
 
-import { readFileSync, statSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ComponentRegistry } from '../server/compiler/registry'
 import { compileCorpus } from '../server/corpus-compile'
 import {
-	collectI18n,
-	I18N_DIR,
-	SOURCE_LOCALE,
-	sourceHash,
-} from '../server/effects/i18n'
-import type { FileInfo } from '../server/file-signals'
+	collectCorpusSources,
+	loadCorpusConfig,
+	REPO_ROOT,
+} from '../server/corpus-sources'
+import { collectI18n, SOURCE_LOCALE, sourceHash } from '../server/effects/i18n'
 import { io } from '../server/runtimes'
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-
-const files: FileInfo[] = []
-for (const rel of io.scanGlob('examples/**/*.tsrx', { cwd: ROOT })) {
-	const path = join(ROOT, rel)
-	const stat = statSync(path)
-	files.push({
-		path,
-		filename: rel,
-		content: readFileSync(path, 'utf8'),
-		hash: '',
-		lastModified: stat.mtimeMs,
-		size: stat.size,
-		exists: true,
-	})
-}
+const config = loadCorpusConfig(REPO_ROOT)
 
 // The compile writes the generated artifacts (gitignored) and, as a side
 // effect, the freshest registry.json — the same corpus view the build sees.
-await compileCorpus(files)
+await compileCorpus(collectCorpusSources(config), config)
 
 const registry = JSON.parse(
-	readFileSync(join(ROOT, 'server/generated/components/registry.json'), 'utf8'),
+	readFileSync(join(config.outDir, 'registry.json'), 'utf8'),
 ) as ComponentRegistry
-const collection = await collectI18n(Object.values(registry))
+const collection = await collectI18n(
+	Object.values(registry),
+	undefined,
+	config.i18nDir,
+)
 
 if (collection.locales.length === 0) {
 	console.log(
-		`No catalogs to sync — create one first (e.g. ${join('i18n', 'de.json')} = "{}"), then re-run \`bun run i18n:sync\`.`,
+		`No catalogs to sync — create one first (e.g. ${join(config.i18nDir, 'de.json')} = "{}"), then re-run \`bun run i18n:sync\`.`,
 	)
 	console.log(
-		`Source locale is '${SOURCE_LOCALE}' — its strings live inline in the .tsrx sources, no catalog file.`,
+		`Source locale is '${SOURCE_LOCALE}' — its strings live inline in the component sources, no catalog file.`,
 	)
 	process.exit(0)
 }
 
-const manifestPath = join(I18N_DIR, 'manifest.json')
+const manifestPath = join(config.i18nDir, 'manifest.json')
 const manifest: Record<string, Record<string, string>> = (() => {
 	try {
 		return JSON.parse(readFileSync(manifestPath, 'utf8'))
@@ -95,7 +87,7 @@ const staleKeys: string[] = []
 const orphanKeys: string[] = []
 
 for (const locale of collection.locales) {
-	const catalogPath = join(I18N_DIR, `${locale}.json`)
+	const catalogPath = join(config.i18nDir, `${locale}.json`)
 	let catalog: Record<string, string> = {}
 	try {
 		catalog = JSON.parse(readFileSync(catalogPath, 'utf8'))

@@ -69,7 +69,13 @@ export { DEFAULT_OUT_DIR, DEFAULT_RUNTIME_IMPORT }
 
 /* === Types === */
 
-/** The config file's shape — every field optional, defaults as above. */
+/**
+ * The config file's shape — every field optional, defaults as above.
+ *
+ * A `CorpusConfigInput` in hand is NOT proof one came from a trusted file:
+ * the resolver validates the runtime value (LT-273), rejecting unknown keys
+ * and mistyped fields instead of silently defaulting them.
+ */
 export type CorpusConfigInput = {
 	/** Globs selecting authored `.tsx`/`.tsrx` component sources. */
 	sources?: string[]
@@ -94,6 +100,94 @@ export type CorpusConfig = {
 	runtimeImport: string
 }
 
+/* === Internal Functions === */
+
+/**
+ * The keys `CorpusConfigInput` accepts, spelled for the unknown-key error.
+ * Kept beside the type it mirrors; the validation test pins the list, so a
+ * field added to the type without this list fails the suite.
+ */
+const ACCEPTED_KEYS: readonly string[] = [
+	'sources',
+	'siblingModules',
+	'outDir',
+	'i18nDir',
+	'runtimeImport',
+]
+
+/** A short quote of a received JSON value for an error message. */
+const received = (value: unknown): string => {
+	const quote = JSON.stringify(value) ?? String(value)
+	return quote.length <= 60 ? quote : `${quote.slice(0, 57)}...`
+}
+
+const fail = (message: string): never => {
+	throw new Error(`${CONFIG_FILENAME}: ${message}`)
+}
+
+/**
+ * Shape-check untrusted config JSON before any path math runs (LT-273).
+ *
+ * The config file is the entire surface a consumer touches at install time,
+ * and until LT-273 it was parsed as trusted: a mis-cased key was silently
+ * ignored and fell back to THIS repo's defaults — which, in a consumer
+ * project, match nothing — and a string where an array belongs spread into
+ * single-character globs. Every departure from the documented shape is
+ * therefore a thrown startup error naming the file, the field, what was
+ * received and what was expected (ADR 0036 s3's untiered corollary: the
+ * message text IS the whole user experience — no `LTC` code applies).
+ */
+const validateConfigInput = (input: CorpusConfigInput): void => {
+	if (typeof input !== 'object' || input === null || Array.isArray(input))
+		fail(
+			`expected a JSON object with keys drawn from: ${ACCEPTED_KEYS.join(', ')} — received ${received(input)}.`,
+		)
+	const value = (key: string): unknown =>
+		(input as Record<string, unknown>)[key]
+	for (const key of Object.keys(input)) {
+		if (ACCEPTED_KEYS.includes(key)) continue
+		// A mis-cased key ("outdir") is the worst silent case — it reads as
+		// configured and writes to the default. The did-you-mean is free:
+		// the key set is closed and tiny.
+		const suggestion = ACCEPTED_KEYS.find(
+			accepted => accepted.toLowerCase() === key.toLowerCase(),
+		)
+		fail(
+			`unknown key "${key}" — accepted keys are: ${ACCEPTED_KEYS.join(', ')}.` +
+				(suggestion && suggestion !== key
+					? ` Did you mean "${suggestion}"?`
+					: ''),
+		)
+	}
+	const stringArray = (field: string): void => {
+		const v = value(field)
+		if (v === undefined) return
+		if (!Array.isArray(v))
+			fail(
+				`"${field}" must be an array of glob strings — received ` +
+					(typeof v === 'string'
+						? `the string ${received(v)}. Wrap it in an array: "${field}": [${received(v)}]`
+						: `a ${typeof v}.`),
+			)
+		for (const [index, item] of (v as unknown[]).entries())
+			if (typeof item !== 'string' || item.length === 0)
+				fail(
+					`"${field}[${index}]" must be a non-empty string — received ${received(item)}.`,
+				)
+	}
+	const nonEmptyString = (field: string): void => {
+		const v = value(field)
+		if (v === undefined) return
+		if (typeof v !== 'string' || v.length === 0)
+			fail(`"${field}" must be a non-empty string — received ${received(v)}.`)
+	}
+	stringArray('sources')
+	stringArray('siblingModules')
+	nonEmptyString('outDir')
+	nonEmptyString('i18nDir')
+	nonEmptyString('runtimeImport')
+}
+
 /* === Exported Functions === */
 
 /**
@@ -111,8 +205,10 @@ export const outDirPrefix = (root: string, outDir: string): string => {
 /**
  * Resolve a config file's contents (or nothing) against a project root.
  *
- * Relative path fields resolve against `root`; an absolute one is taken as
- * given. Throws on an output root outside the project root — the emitted
+ * The input is untrusted JSON (LT-273): `validateConfigInput` throws on an
+ * unknown key or a mistyped field before any of the semantic checks below
+ * run. Relative path fields resolve against `root`; an absolute one is taken
+ * as given. Throws on an output root outside the project root — the emitted
  * relative specifiers are expressed as "`../` back to the root, then a
  * root-relative path", a scheme that cannot address an output root the root
  * does not contain. That is a configuration mistake, not an authoring one, so
@@ -122,6 +218,7 @@ export const resolveCorpusConfig = (
 	root: string,
 	input: CorpusConfigInput = {},
 ): CorpusConfig => {
+	validateConfigInput(input)
 	const resolvedRoot = resolve(root)
 	const at = (p: string) =>
 		isAbsolute(p) ? resolve(p) : resolve(resolvedRoot, p)

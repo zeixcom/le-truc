@@ -320,10 +320,12 @@ export const compileCorpus = async (
 		`🌐 Translation census: ${i18nCensus.entries.length} gap(s) across ${i18nCollection.locales.length} locale(s)`,
 	)
 	if (i18nCensus.entries.length > 0) console.log(formatCensus(i18nCensus))
-	console.log(`📝 TSRX compilation completed (${entries.length} component(s))`)
+	console.log(
+		`📝 Corpus compilation completed (${entries.length} component(s))`,
+	)
 	if (errorLabels.size > 0) {
 		throw new Error(
-			`TSRX compilation failed — ${errorLabels.size} file(s) with error-severity diagnostics (dropped from the generated output):\n` +
+			`Corpus compilation failed — ${errorLabels.size} file(s) with error-severity diagnostics (dropped from the generated output):\n` +
 				[...errorLabels]
 					.map(([rel, label]) => `  • ${rel} — ${label}`)
 					.join('\n'),

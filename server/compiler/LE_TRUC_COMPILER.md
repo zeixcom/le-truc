@@ -962,9 +962,12 @@ consumer of the mechanism rather than the mechanism itself, and it needs no
 config file.
 
 An installing project puts a **`le-truc.config.json` at its own root**. The
-runner searches upward from the working directory for it, and the directory
-holding it becomes the **project root** — every glob is scanned with that as
-its cwd, and every relative path field resolves against it.
+runner searches upward from the working directory for it — no further than
+the **project boundary**, the nearest directory holding a `package.json` or a
+`.git` (LT-273), so a stray config file above a checkout cannot retarget that
+checkout's build. The directory holding the file becomes the **project root**
+— every glob is scanned with that as its cwd, and every relative path field
+resolves against it.
 
 | Field | Default | What it selects |
 | --- | --- | --- |
@@ -982,6 +985,26 @@ its cwd, and every relative path field resolves against it.
   "runtimeImport": "@zeix/le-truc-compiler/runtime"
 }
 ```
+
+**The file is validated, not trusted (LT-273).** A malformed config is a
+**thrown startup error** — untiered by construction ([ADR 0028](../../adr/0028-tiered-error-surfacing.md)):
+it is read before any component is parsed, so there is no source span and no
+component mistake for a tier to grade, and no `LTC` code applies. Because the
+message carries the whole user experience, it names the file, the offending
+field, what was received and what was expected:
+
+- an **unknown key** — including a mis-cased one, `"outdir"` instead of
+  `"outDir"` — is rejected listing the accepted keys (`sources`,
+  `siblingModules`, `outDir`, `i18nDir`, `runtimeImport`), with a
+  did-you-mean when only the casing differs. Silently ignoring a key would
+  fall back to THIS repo's defaults, which in a consumer project match
+  nothing — the worst first-install failure is "it compiled, but nothing is
+  where I asked";
+- `sources` and `siblingModules` must be **arrays of glob strings** — a bare
+  string is reported with the array spelling to use (a string would spread
+  into twelve single-character globs), and a non-string entry names its
+  index (`"sources[1]"`);
+- `outDir`, `i18nDir` and `runtimeImport` must be **non-empty strings**.
 
 **The output root's depth is derived, not assumed.** Every generated module
 lands FLAT in the output root whatever nesting the authored source had, so a

@@ -18,10 +18,10 @@ import { createBuildEffect } from './build-effect'
 
 export const compileEffect = (onRebuild?: () => void) =>
 	createBuildEffect(
-		'TSRX compiler',
+		'Corpus compiler',
 		[componentFiles.sources],
 		async ([files]) => {
-			console.log('🔄 Compiling TSRX components...')
+			console.log('🔄 Compiling corpus components...')
 			await compileCorpus(files)
 		},
 		onRebuild,

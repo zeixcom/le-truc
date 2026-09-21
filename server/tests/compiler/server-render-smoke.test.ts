@@ -22,11 +22,11 @@
  * renders from `{}`, which is also what proves the defaults work.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
-import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { Glob } from 'bun'
 import { isVoidElement } from '../../compiler/core'
+import { resolveCorpusConfig } from '../../compiler/corpus-config'
 import { compileCorpus } from '../../corpus-compile'
+import { collectCorpusSources } from '../../corpus-sources'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { inlineI18n, PLURALIZE_I18N } from './corpus-args'
@@ -103,24 +103,10 @@ const ARGS: Record<string, Record<string, unknown>> = {
 	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
 }
 
-const corpus = async (): Promise<FileInfo[]> => {
-	const files: FileInfo[] = []
-	const glob = new Glob('examples/**/*.tsrx')
-	for (const rel of glob.scanSync({ cwd: ROOT, onlyFiles: true })) {
-		const full = path.join(ROOT, rel)
-		const stat = fs.statSync(full)
-		files.push({
-			path: full,
-			filename: rel,
-			content: fs.readFileSync(full, 'utf8'),
-			hash: '',
-			lastModified: stat.mtimeMs,
-			size: stat.size,
-			exists: true,
-		})
-	}
-	return files
-}
+// The CONFIGURED corpus scan (LT-273) — the same source set the build
+// compiles, not a hand-rolled single-extension glob.
+const corpus = async (): Promise<FileInfo[]> =>
+	collectCorpusSources(resolveCorpusConfig(ROOT))
 
 // The REAL corpus runner writes every generated module; a per-run directory
 // keeps that out of the build pipeline's own output (LT-140). Render happens
