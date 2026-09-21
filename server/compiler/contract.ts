@@ -48,7 +48,11 @@
  * (ADR 0032, 2026-09-19): the engineering risk of tracking a target
  * framework's minor versions transfers with ownership, the reputational
  * risk does not. This contract is documentation and naming, not a plugin
- * API — no registry, no lifecycle hooks, no discovery mechanism.
+ * API — no registry, no lifecycle hooks, no discovery mechanism. The
+ * refusal vocabularies are closed in the same spirit (owner ruling,
+ * 2026-09-21): `DiagnosticCode` and `RoutingSignalOrigin` are the
+ * compiler's, and a third-party front end reuses the nearest existing
+ * member rather than minting its own.
  */
 
 /* === The IR — what a front end produces === */

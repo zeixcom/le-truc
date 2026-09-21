@@ -277,7 +277,10 @@ for React, Vue, or Solid semantics — is third-party by name (ADR 0032,
 amended 2026-09-19). The engineering risk of tracking a target framework's
 minor versions transfers with ownership; the reputational risk does not.
 This contract is documentation and naming, not a plugin API: no registry, no
-lifecycle hooks, no discovery mechanism.
+lifecycle hooks, no discovery mechanism. Both refusal vocabularies are
+closed the same way (owner ruling, 2026-09-21): `DiagnosticCode` and
+`RoutingSignalOrigin` are the compiler's, and a third-party front end
+reuses the nearest existing member rather than minting its own.
 
 **The standing acceptance run.** `bun run check:contract` writes a toy front
 end — a one-line syntax that is neither authored surface — into a scratch

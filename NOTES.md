@@ -94,3 +94,9 @@ the two-prefix rule. Deliberately untouched: adr/ (0032's now-superseded "unexpo
 sentence stays — adr-keeper's), CONTEXT.md (no pointer needed), SERVER.md (no pointer, but it
 carries PRE-EXISTING single-`.tsrx` compiler wording that wants an update-server-md pass of
 its own). check:links 588/588; pin test and check:contract re-run green.
+**Both LT-265 flags resolved (owner, 2026-09-21, in session).** (1) Closed vocabularies
+APPROVED as implemented: the compiler and its error messages are ours; a third-party front
+end reuses our error codes. Recorded in `contract.ts`'s module doc and LE_TRUC_COMPILER.md
+§2's connectors paragraph. (2) The tier-corpus "1 error" FIXED: the census describe block now
+builds the census inside each test (`censusOf()`); the 3 tests register and pass — suite went
+1683 pass / 0 fail / 0 errors, up from 1680 + 1 error. Committed separately from 14beff85.
