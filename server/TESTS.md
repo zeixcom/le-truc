@@ -45,7 +45,10 @@ the `server/` tree:
 server/tests/
 ├── helpers/                    # Shared test utilities, NOT *.test.ts files (see below)
 ├── compiler/                   # The TSRX compiler: lowering, diagnostics, tiers, i18n,
-│   └── tsx/                    #   the sim realm (ADR 0027); tsx/ = .tsx front end parity + typecheck
+│   │                           #   the sim realm (ADR 0027); tsx/ = .tsx front end parity + typecheck
+│   ├── contract.test.ts        #   Export-surface pin (LT-265) — substrate-free
+│   ├── simulation-resolve.test.ts  # Absence-discrimination pin (LT-256) — substrate-free
+│   └── tsx/
 ├── schema/                     # One test file per Markdoc schema tag
 ├── templates/                  # One test file per template module
 ├── effects/                    # One test file per build effect
@@ -72,7 +75,7 @@ find server/tests -name '*.test.ts' | sort
 
 (`bun test --list` does not list — the flag is silently ignored and the suite runs.) For the
 test count, the `bun test server/tests` summary line prints both numbers live; as of
-2026-09-21 that is **89 files / 1668 tests**.
+2026-09-21 that is **91 files / 1683 tests**.
 
 ### Running tests
 

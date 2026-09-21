@@ -151,8 +151,9 @@ SERVER.md/TESTS.md tell the truth again.
   edges or their resolution), and the gate; adr-index and cross-links updated;
   `bun run check:links` clean.
 
-- [ ] LT-279: Document the absent-substrate routing (LT-256 review docs gap).
+- [x] LT-279: Document the absent-substrate routing (LT-256 review docs gap) — done ✓
   **Skill:** tech-writer
+  **Changed:** `server/SERVER.md` (simulation section states the absent-substrate routing — Static reroute, `unavailable-substrate` signal, registry rewrite, census rows, green build — plus the broken-substrate failure and registry.json's last-one-shot-build semantics; the `resolve.ts` bullet gains the `isSubstrateAbsence` narrowing); `server/TESTS.md` (count re-pinned to 91 files / 1683 tests, verified live; `contract.test.ts` and `simulation-resolve.test.ts` rows added to the tree). `bun run check:links` clean (611 links); SERVER.md wording matches the landed pass-log copy.
   **Context:** the LT-256 review (2026-09-21). The landed behavior — no jsdom installed:
   the one-shot build routes the Simulated-tier components Static, appends an
   `unavailable-substrate` routing signal, rewrites `generated/registry.json` (the tier
