@@ -42,7 +42,19 @@ SERVER.md/TESTS.md tell the truth again.
 
 ---
 
-- [ ] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React. **Scheduled early — the iteration after the current one, not this one (owner, 2026-09-19): it depends on nothing and blocks nothing, which is exactly why it needs a date rather than a priority.**
+- [x] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React. **Scheduled early — the iteration after the current one, not this one (owner, 2026-09-19): it depends on nothing and blocks nothing, which is exactly why it needs a date rather than a priority.** — done ✓
+  **Status:** 2026-09-21, the bet holds: for the module-todo application seeded with 5 items,
+  Le Truc ships **18.61 kB gzip / 16.53 kB brotli** over the wire against React 19.3's
+  **68.62 / 59.21** (3.7× less). The whole margin is the RUNTIME (8.72 vs 64.38 kB gzip) — the
+  payload line alone favours React (3.07 vs 8.54): its compiled templates are smaller than our
+  harvest-and-bind code per component. Any connector claim must quote both lines. The React
+  side additionally pays a JSON state payload (231 B gzip per 5 items, scaling) that ADR 0003
+  structuralizes away on ours. Numbers + method + honest reading:
+  [spike/size-bet/FINDING.md](spike/size-bet/FINDING.md); reproducible via
+  `bun scripts/measure-size-bet.ts`; React twin with the identical component split lives in
+  `spike/size-bet/react/`. Residue: the requested TSX conversion of module-todo hit compiler
+  walls and did NOT land (hand-authored `.ts` stays the one source) — filed for the Architect
+  in NOTES.md.
   **Skill:** le-truc-dev
   **Context:** [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md), amended
   2026-09-19. The project's thesis is that a JSON payload, JS-ified templates and a framework
