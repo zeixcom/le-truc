@@ -45,8 +45,9 @@ import { bindFirst, type FirstElement } from './dom'
  * `each`, and `reconcile`.
  *
  * A `Reactive<T, P>` source is a property name, a `Signal`, or a thunk
- * wrapped in `deriveCell()`. `watch()` and `pass()` resolve sources through
- * `toSignal()`.
+ * wrapped in `deriveCell()`. `watch()` resolves sources through `toSignal()`;
+ * `pass()` resolves its entries through `toPassedSignal()` (thunk and slot
+ * descriptor forms only).
  *
  * `pass()` accepts a read-only thunk or a mediated `{ get, set }` descriptor
  * (ADR-0012) — the retired property-key and bare-signal short forms were
