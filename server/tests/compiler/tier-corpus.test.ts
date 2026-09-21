@@ -125,10 +125,15 @@ describe('the tier census (LT-165 step 6, ADR 0029 sub-design 6)', () => {
 	// Built from the registry the corpus runner wrote — which the fixpoint in
 	// `compileCorpus` updated BEFORE the write, so the census records
 	// POST-contamination tiers by construction (the architect ruling for
-	// step 6).
-	const census = tierCensus(Object.values(registry))
+	// step 6). Built inside each test, not eagerly at describe registration:
+	// the describe body runs before `beforeAll` has compiled the corpus, and
+	// the eager `tierCensus(Object.values(registry))` threw on the undefined
+	// registry — bun surfaced it as one "error between tests" while this
+	// whole block silently never registered.
+	const censusOf = () => tierCensus(Object.values(registry))
 
 	test('every corpus component appears exactly once, with its final tier', () => {
+		const census = censusOf()
 		expect(census.entries.map(entry => entry.subject).sort()).toEqual(
 			Object.keys(registry).sort(),
 		)
@@ -137,6 +142,7 @@ describe('the tier census (LT-165 step 6, ADR 0029 sub-design 6)', () => {
 	})
 
 	test('folded entries carry no reasons; non-folded entries carry at least one', () => {
+		const census = censusOf()
 		for (const entry of census.entries) {
 			if (entry.value === 'folded') expect(entry.reasons).toEqual([])
 			else expect(entry.reasons.length).toBeGreaterThan(0)
@@ -150,6 +156,7 @@ describe('the tier census (LT-165 step 6, ADR 0029 sub-design 6)', () => {
 		// of form-listbox — must be census-recorded Simulated with the
 		// compose-read signal as the reason, not the pre-contamination Folded
 		// tier its emit used.
+		const census = censusOf()
 		const entry = census.entries.find(e => e.subject === 'form-combobox')
 		expect(entry?.value).toBe('simulated')
 		expect(
