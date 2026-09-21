@@ -50,7 +50,7 @@ surface without LT-254 ([ADR 0036](adr/0036-corpus-configuration-surface.md)), a
 why it needs a date — and it gets more expensive once anyone proposes a connector, because
 then the number has a stake in it.
 
-**Next free task ID: LT-274.**
+**Next free task ID: LT-277.**
 
 ---
 

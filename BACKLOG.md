@@ -210,6 +210,10 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   (even a debug/JSON dump) so "a second target needs no reshaping of the first" is tested rather
   than asserted; a Twig render of the partial with the same args produces output equivalent
   to the SSG fold (the same equivalence discipline [ADR 0029](adr/0029-tiered-server-evaluation.md) s7 applies to the two evaluation mechanisms).
+  **ADR 0037 rider (2026-09-21):** the target-emitter interface must represent a reactive
+  condition's prop-dependent initial state — a backend conditional or hidden-by-expression
+  ([ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md), Related). Decide the
+  representation with the interface, not retrofitted onto it.
 
 - [ ] LT-258: Make the partial-readiness invariant a compiler check.
   **Skill:** le-truc-dev
@@ -225,6 +229,9 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   new code, Tech Writer owns the copy.
   **Check:** the corpus passes unchanged; a fixture that reaches page context outside the
   declared set fails the build with the ruled message.
+  **ADR 0037 rider (2026-09-21):** the check classifies a reactive condition's initial
+  winner as prop-dependent output — legal, but the emitted backend conditional must be one of
+  the invariant's named representations (see the LT-257 rider).
 
 - [ ] LT-259: The 2.x → 3.0 codemod, and the drift-cost measurement it instruments.
   **Skill:** le-truc-dev
@@ -420,6 +427,10 @@ Tech Writer copy round, scope widened).
   5. CHANGELOG `[Unreleased]` Added bullets (client-string channel, patterns, census
      check); an AGENTS.md "Surprising Behaviors" i18n bullet if the changed `t`-in-thunk
      rule warrants one.
+  **ADR 0037 rider (2026-09-21):** this round also carries the branch-DOM-lifetime copy —
+  the HOST_PROFILE control-flow table row and the arrow-thunk section's reversal, the
+  ARCHITECTURE/AGENTS "`@if` cannot read signals" sentences, and the new construct's
+  teaching ([ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md)).
   **Check:** `check:links` after doc moves; errors.md's entry inventory matches the
   diagnostics union (code added, none deleted — the `t` face was message scope, not a
   code).
@@ -437,6 +448,9 @@ Tech Writer copy round, scope widened).
   LT-219's census wording is no longer "placeholder preservation" but the three cases in that
   task (argument preservation, arm coverage, unparseable). The non-i18n items (1, 3–7, 9, 10)
   were never held.
+  **ADR 0037 rider (2026-09-21):** batch item — the LTC005 condition-face retirement message
+  and [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md)'s new codes join
+  this round's one-voice copy handoffs (drafted in LT-275).
   1. **`ContextRequestEvent`'s cross-realm dispatch** (LT-180 review finding):
      `requestContext()` now builds the `context-request` event from the HOST's own realm
      whenever the exported class does not belong to it (`src/helpers/context.ts`, LT-180).
@@ -679,6 +693,9 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   § Authoring Surfaces gains "and diagnose identically."
   **Verification:** the three §2.3 shapes are pinned (two already fixed — the pins prove they
   stay fixed); `bun test server/tests` green; `check:links` after the doc touches.
+  **ADR 0037 rider (2026-09-21):** seed coverage includes the LTC005 condition-face
+  retirement and [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md)'s new
+  codes — both surfaces must diagnose reactive-condition shapes identically from day one.
 
 - [ ] LT-233: `SurfaceAdapter` + shared `runFrontEnd` — collapse the copied front-end drivers. **GATES LT-218 (P2, with S0's LT-240): land before it.**
   **Skill:** le-truc-dev
@@ -928,6 +945,10 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   LT-212's shape gets reshaped under it; LT-212 is not urgent.
   **Deliverable:** ADR, amended LE_TRUC_COMPILER.md §4, and LT-236+ implementation tasks
   with the channel/tier fields the ADR 0028 process requires.
+  **ADR 0037 rider (2026-09-21):** the conditional-over-signal IR node (and the boundary's
+  arm-template shape) joins the discriminated-union inventory this session designs;
+  [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md)'s LT-274 should land
+  through or after it, not before.
 
 ---
 
@@ -1007,6 +1028,10 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   carrying `data-unreconciled` does not, and neither does `module-list.tsrx` (whose container
   holds only the `@for`) — pin both negatives, the vacuous assertion is the failure mode; the
   compile-warning baseline stays at 0 over the corpus; `bun test server` green.
+  **ADR 0037 rider (2026-09-21):** reactive conditions inside a reconcile container are
+  **banned** (compiler, tier 1) until this rule exists — and this rule must also cover (or
+  explicitly exempt) ADR 0037's arm templates as container children. See
+  [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) sub-design 5.
 
 - [ ] LT-170: Strengthen two gate-wave assertions in `gate-wave-verification.test.ts` that don't test what they claim.
   **Skill:** docs-server-dev
@@ -1142,6 +1167,25 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
   Acceptance: helpers return `void`; `FactoryResult` is not exported; a bare-statement helper
   call cannot silently no-op (the collector is the only registration path); `bun test` green.
 
+- [ ] LT-274: Lower reactive conditions to template-cloned arms on both surfaces (ADR 0037 sub-designs 1–3 and 5).
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) (🔄 Proposed, owner ruling 2026-09-21). A condition that reads a signal — `@if`/`@else`, `.tsx` ternary/`&&`, IIFE switch, `@switch`/`@case` with literal cases — lowers to inert arm `<template>`s plus the server-folded initial winner rendered live, and client-side to `reconcile()` over the new **current-arm-key source** (`Signal<string | null>`; ADR 0017 amendment). Arm keys are the named compile-time constants (`then`/`else`, `case:<literal>`; sub-design 2). Arm effects mount under keyedScopes with collector parity. Static conditions are unchanged — the Folded tier still renders the single winner and omits the rest, so byte-identity across tiers holds. Reactive conditions inside reconcile containers stay banned (LT-186's rule).
+  **Deliverable:** shared lowering in both front ends; arm extraction + initial-winner fold rules; the arm-key source form on `reconcile()`; diagnostics with channel/tier fields (dynamic `@case` value: compiler, tier 1 Prevented; reactive-if-in-reconcile-container: compiler, tier 1); goldens and parity extension.
+  **Check:** byte-identical skeletons across all three tiers for reactive-if components; both-surface parity for renders *and* diagnostics; equivalence-audit pins refreshed (initial arm adoption is a new designed connect-diff class); M14 bundle budget re-measured; compile-warning baseline 0.
+  **Coordinate:** the IR node rides LT-235's discriminated-union session; the boundary switch is LT-276, sequenced after this; diagnostic copy is LT-275.
+
+- [ ] LT-275: Diagnostics lifecycle for reactive conditions — retire LTC005's signal-condition face; Tech Writer copy.
+  **Skill:** tech-writer (drafting: le-truc-dev)
+  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) reverses "`@if` conditions cannot read signals" (`validateCondition`, `server/compiler/lower-shared.ts`). Only the **condition face** of LTC005 retires — the `t`-in-reactive-position face stays. The error-message lifecycle applies to every face touched: the LTC005 message, the arrow-thunk section's sentence in `server/compiler/HOST_PROFILE.md`, and the teaching in ARCHITECTURE.md, AGENTS.md and the le-truc/cause-effect skills; the new ADR 0037 codes' final wording lands here. Batch with the LT-220/LT-189 copy rounds.
+  **Check:** catalog rows added/retired match the diagnostics union; `check:links`; compile-warning baseline 0.
+  **Depends on** LT-274.
+
+- [ ] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4).
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md), owner ruling 2026-09-21: `@try`/`@pending`/`@catch` arms become templates plus the adopted winner, keyed `ok`/`nil`/`err`. Retires the fieldset wrappers `emit-server.ts` places at every arm root, the client's `hidden`+`disabled` sweep, and the LT-086 `.parentElement` addressing — all of it existed only because both arms were live simultaneously. The ok arm's resolved-value text and the err arm's bound catch-param text move into the per-arm mount. LT-211's no-stale-arm ruling and the `isPending` idiom are untouched; LT-078's tree-shaking question is re-pinned against templates.
+  **Depends on** LT-274 (the mechanism).
+  **Check:** every boundary-using corpus component's goldens refreshed; a form-submission negative test (named controls in non-active arms cannot submit — structural now, pinned anyway); audit pins; baseline 0.
+
 - [ ] LT-212: `@for`'s `@empty` arm (LT-210 item 1, re-anchored). **Gate: before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent — no migrated component uses it today.**
   **Skill:** le-truc-dev
   **Context:** Spec: optional arm after the template block. New IR (an empty arm on
@@ -1153,6 +1197,10 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
   recorded.
   **Acceptance:** parity extended for the empty case; goldens unchanged for untouched
   behavior; warning baseline 0, census 20/2/0 hold.
+  **ADR 0037 rider (2026-09-21):** `@empty` stays on the toggle path, out of the keyed arm
+  space ([ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) sub-design 5 —
+  it shares the item container's `data-key` namespace); coordinate arm-extraction vocabulary
+  with LT-274.
 
 - [ ] LT-213: Dynamic `<{expression}>` tags (LT-210 item 2, re-anchored). **Gate: before P5's first wave-4 migration; not urgent.**
   **Skill:** le-truc-dev, with architect ruling the tier story if it needs one
