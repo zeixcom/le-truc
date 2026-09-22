@@ -11,19 +11,24 @@
  * not drag a repo-shaped watch pipeline with it.
  *
  * The two-pass compile, the severity policy and the artifact layout are
- * LT-255/LT-202 heritage, unchanged here.
+ * LT-255/LT-202 heritage, unchanged here. Since LT-283 (ADR 0039) a corpus
+ * folder may carry a variant set — one authored source per surface, one
+ * base name, one directory: every member compiles, the set's CSS must be
+ * byte-identical (LTC051), and only the selected surface's artifacts are
+ * written under the canonical names.
  *
  * Writes go through `writeFileSafe` (the runtime seam, LT-267) and the
  * configuration defaults to THIS repo's paths, so the docs build and the
  * runner scripts behave exactly as before.
  */
 
-import { relative } from 'node:path'
+import { dirname, relative } from 'node:path'
 import { formatCensus, translationCensus } from './compiler/census'
 import {
 	type CorpusConfig,
 	emitPathsFor,
 	resolveCorpusConfig,
+	type VariantSurface,
 } from './compiler/corpus-config'
 import { diagnostic } from './compiler/diagnostics'
 import type { EmitPaths } from './compiler/emit-paths'
@@ -94,7 +99,9 @@ export const handwrittenExampleModules = (): Map<string, string> =>
  * The corpus covers BOTH authored surfaces (ADR 0032 sub-design 6, LT-202):
  * one registry, one generated directory, the front end chosen per file by
  * extension. A tag declared by two sources fails the compile naming both
- * files (LTC048, tier 1 Prevented).
+ * files (LTC048, tier 1 Prevented) — unless the sources are a folder-local
+ * variant set (ADR 0039, LT-283), which compiles every member and serves
+ * the selected surface.
  */
 const compileCorpusFile = (
 	content: string,
@@ -125,6 +132,21 @@ const compileCorpusFile = (
 /** `basic-counter.tsrx`/`basic-counter.tsx` → `basic-counter`. */
 const corpusTagOf = (filename: string): string =>
 	(filename.split('/').pop() ?? '').replace(/\.(tsrx|tsx)$/, '')
+
+/** `spike/tsx/sync/sync-el.tsx` → `tsx`; a `.tsrx` path → `tsrx`. */
+const surfaceOf = (rel: string): VariantSurface =>
+	rel.endsWith('.tsx') ? 'tsx' : 'tsrx'
+
+/**
+ * A folder-local variant set (ADR 0039): every source in ONE directory, at
+ * most one authored source per surface. The `.ts` twin never reaches the
+ * scan (`DEFAULT_SIBLING_MODULES` glob) — it only seeds sibling-module tag
+ * knowledge — so a set is the `.tsrx` and the `.tsx` spelling in practice;
+ * the check stays generic over the compiled extensions.
+ */
+const isVariantSet = (sources: readonly string[]): boolean =>
+	new Set(sources.map(dirname)).size === 1 &&
+	new Set(sources.map(surfaceOf)).size === sources.length
 
 /* === Exported Functions === */
 
@@ -193,13 +215,16 @@ export const compileCorpus = async (
 			} else console.warn(`⚠️ ${rel} — ${label}`)
 		}
 	}
-	// Dual-surface duplicate detection (LTC048): a tag two corpus files
-	// both declare is ambiguous at the registry level — neither file can be
-	// compiled, because pass 2's registry would have last-write-wins
-	// semantics for the generated module names, the tag map augmentation,
-	// and every compose/pass resolution. Checked BEFORE pass 2, naming both
-	// files (ADR 0032 sub-design 6; tier 1 Prevented — statically
-	// decidable, no runtime half).
+	// Dual-surface duplicate detection (LTC048, narrowed by ADR 0039): a tag
+	// two corpus files both declare is ambiguous at the registry level —
+	// neither file can be compiled, because pass 2's registry would have
+	// last-write-wins semantics for the generated module names, the tag map
+	// augmentation, and every compose/pass resolution — UNLESS the sources
+	// are a folder-local variant set, the legal multi-source shape: it
+	// compiles every member below and serves the selected surface's
+	// artifacts under the canonical names. Checked BEFORE pass 2, naming
+	// every involved file (ADR 0032 sub-design 6; tier 1 Prevented —
+	// statically decidable, no runtime half).
 	const tagsBySource = new Map<string, string[]>()
 	for (const file of files) {
 		const rel = relative(root, file.path)
@@ -211,10 +236,11 @@ export const compileCorpus = async (
 	}
 	for (const [tag, sources] of tagsBySource) {
 		if (sources.length < 2) continue
+		if (isVariantSet(sources)) continue
 		for (const rel of sources) {
 			report(rel, [diagnostic.duplicateTag(tag, sources)])
-			compilable.delete(rel)
-			composeRegistry.delete(rel)
+			// Both files are dropped by never reaching pass 1: `report` put
+			// them in `errorLabels`, which the pass-1 loop skips.
 		}
 	}
 	for (const file of files) {
@@ -250,33 +276,94 @@ export const compileCorpus = async (
 
 	const entries: RegistryEntry[] = []
 	const spanInfos: CompiledSpanInfo[] = []
+	// Group the compilable sources by tag — pass 1's visit order preserved —
+	// so a variant set's members compile together (ADR 0039): every member
+	// compiles clean or fails as today, the set's CSS must agree
+	// byte-for-byte (LTC051), and only the SELECTED surface's artifacts are
+	// written under the canonical names. Singleton tags — the whole corpus
+	// today — take the same path as a one-member group.
+	const membersByTag = new Map<string, { rel: string; content: string }[]>()
 	for (const [rel, content] of compilable) {
-		const { component, diagnostics } = compileCorpusFile(
-			content,
-			rel,
-			registry,
-			emitPaths,
-			childImports,
-			composeRegistry,
-		)
-		report(rel, diagnostics)
-		if (!component) continue
-		const { entry } = component
-		const clientModulePath = getFilePath(outDir, entry.clientModule)
-		const serverModulePath = getFilePath(outDir, entry.serverModule)
-		await writeFileSafe(serverModulePath, component.serverCode)
-		await writeFileSafe(clientModulePath, component.clientCode)
-		await writeFileSafe(getFilePath(outDir, entry.css), component.css)
-		entries.push(entry)
-		spanInfos.push({
-			tag: entry.tag,
-			source: rel,
-			clientModulePath,
-			spans: component.clientSpans,
-			serverModulePath,
-			serverSpans: component.serverSpans,
+		const tag = corpusTagOf(rel)
+		const members = membersByTag.get(tag) ?? []
+		members.push({ rel, content })
+		membersByTag.set(tag, members)
+	}
+	for (const [tag, members] of membersByTag) {
+		const results = members.map(({ rel, content }) => {
+			const { component, diagnostics } = compileCorpusFile(
+				content,
+				rel,
+				registry,
+				emitPaths,
+				childImports,
+				composeRegistry,
+			)
+			report(rel, diagnostics)
+			return { rel, component }
 		})
-		console.log(`✅ Compiled ${entry.tag} from ${rel}`)
+		// CSS byte-identity across a set's compiled members (ADR 0039): the
+		// served stylesheet is written for the WHOLE set, so a drift would
+		// leave the unserved member's rendering unstyled. Skipped when a
+		// member failed — its own error already fails the build run.
+		if (results.length > 1) {
+			const compiled = results.filter(r => r.component)
+			const head = compiled[0]
+			if (head?.component && compiled.length > 1) {
+				const headCss = head.component.css
+				const drifted = compiled.filter(
+					r => r.component && r.component.css !== headCss,
+				)
+				if (drifted.length > 0) {
+					const sources = [head.rel, ...drifted.map(r => r.rel)]
+					for (const rel of sources)
+						report(rel, [diagnostic.variantCssDrift(tag, sources)])
+					// The set serves nothing — LTC048's all-dropped semantics.
+					continue
+				}
+			}
+		}
+		// Serve the selected surface's artifacts under the canonical names
+		// (ADR 0039): `.tsx` by default, overridden per tag by
+		// `variantOverrides` and corpus-wide by `variantSurface`. Selection
+		// applies WITHIN a set — a single-source tag is its own served
+		// surface, whatever it is authored in. A member whose surface is
+		// not selected still compiles (its CSS parity is asserted above)
+		// but writes nothing — the registry write, the compose-contamination
+		// fixpoint, the span tables, the i18n collection and the census all
+		// see one entry per tag, and that entry's `source` names the
+		// selected member.
+		const want = config.variantOverrides[tag] ?? config.variantSurface
+		const servedRel =
+			results.length === 1
+				? results[0]?.rel
+				: results.find(r => r.component && surfaceOf(r.rel) === want)?.rel
+		for (const { rel, component } of results) {
+			if (!component) continue
+			if (rel !== servedRel) {
+				console.log(
+					`· Compiled ${component.entry.tag} from ${rel} — variant set member, not served` +
+						(servedRel ? '' : ` (selected surface "${want}" did not compile)`),
+				)
+				continue
+			}
+			const { entry } = component
+			const clientModulePath = getFilePath(outDir, entry.clientModule)
+			const serverModulePath = getFilePath(outDir, entry.serverModule)
+			await writeFileSafe(serverModulePath, component.serverCode)
+			await writeFileSafe(clientModulePath, component.clientCode)
+			await writeFileSafe(getFilePath(outDir, entry.css), component.css)
+			entries.push(entry)
+			spanInfos.push({
+				tag: entry.tag,
+				source: rel,
+				clientModulePath,
+				spans: component.clientSpans,
+				serverModulePath,
+				serverSpans: component.serverSpans,
+			})
+			console.log(`✅ Compiled ${entry.tag} from ${rel}`)
+		}
 	}
 
 	// ADR 0029 sub-design 3, LT-165: compose contamination is a FIXPOINT over

@@ -67,6 +67,30 @@ export const DEFAULT_I18N_DIR = 'i18n'
 
 export { DEFAULT_OUT_DIR, DEFAULT_RUNTIME_IMPORT }
 
+/* === Variant surface selection (ADR 0039) === */
+
+/**
+ * The authored surface a variant set serves, when the corpus folder carries
+ * more than one spelling of one tag (ADR 0039).
+ */
+export type VariantSurface = 'tsx' | 'tsrx'
+
+/**
+ * The served surface for a variant set with no per-tag override: `.tsx`, the
+ * ADR 0032 default surface — default by rule, not by practice (ADR 0039,
+ * declining the explicit-selection alternative).
+ */
+export const DEFAULT_VARIANT_SURFACE: VariantSurface = 'tsx'
+
+const VARIANT_SURFACES: readonly VariantSurface[] = ['tsx', 'tsrx']
+
+/**
+ * A custom-element tag — the shape `variantOverrides` keys must have.
+ * Mirrors the discovery rule in `compileCorpus`, which derives a source's
+ * tag from its file stem the same way.
+ */
+const TAG_PATTERN = /^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/
+
 /* === Types === */
 
 /**
@@ -87,6 +111,16 @@ export type CorpusConfigInput = {
 	i18nDir?: string
 	/** Specifier the generated server modules import the harness from. */
 	runtimeImport?: string
+	/**
+	 * Surface a variant set serves when no per-tag override applies
+	 * (ADR 0039). Defaults to `.tsx`.
+	 */
+	variantSurface?: VariantSurface
+	/**
+	 * Per-tag surface overrides for variant sets, keyed by custom-element
+	 * tag (ADR 0039).
+	 */
+	variantOverrides?: Partial<Record<string, VariantSurface>>
 }
 
 /** A fully resolved corpus configuration; all paths absolute. */
@@ -98,6 +132,10 @@ export type CorpusConfig = {
 	outDir: string
 	i18nDir: string
 	runtimeImport: string
+	/** Surface a variant set serves with no override (ADR 0039). */
+	variantSurface: VariantSurface
+	/** Per-tag variant-surface overrides (ADR 0039). */
+	variantOverrides: Readonly<Record<string, VariantSurface>>
 }
 
 /* === Internal Functions === */
@@ -113,6 +151,8 @@ const ACCEPTED_KEYS: readonly string[] = [
 	'outDir',
 	'i18nDir',
 	'runtimeImport',
+	'variantSurface',
+	'variantOverrides',
 ]
 
 /** A short quote of a received JSON value for an error message. */
@@ -181,11 +221,40 @@ const validateConfigInput = (input: CorpusConfigInput): void => {
 		if (typeof v !== 'string' || v.length === 0)
 			fail(`"${field}" must be a non-empty string — received ${received(v)}.`)
 	}
+	const variantSurfaceValue = (where: string, v: unknown): void => {
+		if (
+			typeof v !== 'string' ||
+			!VARIANT_SURFACES.includes(v as VariantSurface)
+		)
+			fail(
+				`${where} must be one of: ${VARIANT_SURFACES.map(s => `"${s}"`).join(', ')} — received ${received(v)}.`,
+			)
+	}
 	stringArray('sources')
 	stringArray('siblingModules')
 	nonEmptyString('outDir')
 	nonEmptyString('i18nDir')
 	nonEmptyString('runtimeImport')
+	if (value('variantSurface') !== undefined)
+		variantSurfaceValue('"variantSurface"', value('variantSurface'))
+	const overrides = value('variantOverrides')
+	if (overrides !== undefined) {
+		if (
+			typeof overrides !== 'object' ||
+			overrides === null ||
+			Array.isArray(overrides)
+		)
+			fail(
+				`"variantOverrides" must be an object mapping component tags to surfaces — received ${received(overrides)}.`,
+			)
+		for (const [tag, surface] of Object.entries(overrides as object)) {
+			if (!TAG_PATTERN.test(tag))
+				fail(
+					`"variantOverrides" keys must be custom-element tags (dashed lowercase, e.g. "basic-counter") — received "${tag}".`,
+				)
+			variantSurfaceValue(`"variantOverrides["${tag}"]"`, surface)
+		}
+	}
 }
 
 /* === Exported Functions === */
@@ -236,6 +305,12 @@ export const resolveCorpusConfig = (
 		throw new Error(
 			`${CONFIG_FILENAME}: "sources" must list at least one glob.`,
 		)
+	// Validation guarantees every present override value is a surface; the
+	// Partial type still admits undefined, so build the resolved map
+	// explicitly instead of spreading.
+	const variantOverrides: Record<string, VariantSurface> = {}
+	for (const [tag, surface] of Object.entries(input.variantOverrides ?? {}))
+		if (surface !== undefined) variantOverrides[tag] = surface
 	return {
 		root: resolvedRoot,
 		sources: [...sources],
@@ -243,6 +318,8 @@ export const resolveCorpusConfig = (
 		outDir,
 		i18nDir: at(input.i18nDir ?? DEFAULT_I18N_DIR),
 		runtimeImport: input.runtimeImport ?? DEFAULT_RUNTIME_IMPORT,
+		variantSurface: input.variantSurface ?? DEFAULT_VARIANT_SURFACE,
+		variantOverrides,
 	}
 }
 

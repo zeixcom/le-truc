@@ -104,6 +104,13 @@ because renaming after first publish is impossible.
 (`LT-206`, `LT-271`). `LT034` beside `LT-034` in prose is a collision waiting to
 happen.
 
+**Post-rename codes continue the `LTC` space** with the next free number:
+`LTC051` (a variant set's compiled members disagree on CSS — ADR 0039, LT-283)
+is the first, and LTC048's rule narrows in the same commit: a folder-local
+variant set (one source per surface, one base name, one directory) is the
+legal multi-source shape, and every other collision still fails the build
+naming all files.
+
 ## 5. Kept, with the surface named correctly
 
 Not part of the LT-206 list, but checked in the same sweep and left alone: the

@@ -7,7 +7,9 @@
  * globs select, wherever that project keeps them (LT-255,
  * `corpus-config.ts`). The tag is the key, which is why two sources anywhere
  * in a project declaring the same tag fail the compile naming both (LTC048)
- * rather than letting compile order decide.
+ * rather than letting compile order decide — a folder-local variant set
+ * (ADR 0039) excepted: its members compile, and only the selected surface's
+ * entry, naming that member's source, reaches this registry.
  *
  * Three consumers:
  * - the client analyzer — registry-aware attribute dispatch (a reactive

@@ -113,7 +113,7 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		expect(() =>
 			resolveCorpusConfig('/p', untrusted({ outdir: 'build' })),
 		).toThrow(
-			/unknown key "outdir" — accepted keys are: sources, siblingModules, outDir, i18nDir, runtimeImport\. Did you mean "outDir"\?/,
+			/unknown key "outdir" — accepted keys are: sources, siblingModules, outDir, i18nDir, runtimeImport, variantSurface, variantOverrides\. Did you mean "outDir"\?/,
 		)
 		expect(() =>
 			resolveCorpusConfig('/p', untrusted({ emitting: 'build' })),
@@ -165,13 +165,57 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		for (const value of [null, 'src/**', 42, []]) {
 			expect(() => resolveCorpusConfig('/p', untrusted(value))).toThrow(
 				new RegExp(
-					`expected a JSON object with keys drawn from: sources, siblingModules, outDir, i18nDir, runtimeImport — received ${JSON.stringify(value) ?? String(value)}`.replace(
+					`expected a JSON object with keys drawn from: sources, siblingModules, outDir, i18nDir, runtimeImport, variantSurface, variantOverrides — received ${JSON.stringify(value) ?? String(value)}`.replace(
 						/[.*+?^${}()|[\]\\]/g,
 						'\\$&',
 					),
 				),
 			)
 		}
+	})
+
+	test('variant-surface selection validates the surface vocabulary and the override keys (LT-283)', () => {
+		// An unknown surface value is rejected naming the closed vocabulary —
+		// a mistyped surface would otherwise silently serve the default.
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ variantSurface: 'jsx' })),
+		).toThrow(/"variantSurface" must be one of: "tsx", "tsrx" — received "jsx"/)
+		expect(() =>
+			resolveCorpusConfig(
+				'/p',
+				untrusted({ variantOverrides: { 'x-el': 'JSX' } }),
+			),
+		).toThrow(/"variantOverrides\["x-el"\]" must be one of: "tsx", "tsrx"/)
+		// A non-tag override key would never match a corpus tag — reject the
+		// key shape itself, not just let the entry sit unused.
+		expect(() =>
+			resolveCorpusConfig(
+				'/p',
+				untrusted({ variantOverrides: { counter: 'tsx' } }),
+			),
+		).toThrow(/"variantOverrides" keys must be custom-element tags/)
+		expect(() =>
+			resolveCorpusConfig(
+				'/p',
+				untrusted({ variantOverrides: { 'X-El': 'tsx' } }),
+			),
+		).toThrow(/"variantOverrides" keys must be custom-element tags/)
+		// A non-object override map is a shape error like any other field.
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ variantOverrides: 'x-el' })),
+		).toThrow(/"variantOverrides" must be an object mapping component tags/)
+		// ...and the accepted shapes resolve.
+		const config = resolveCorpusConfig('/p', {
+			variantSurface: 'tsrx',
+			variantOverrides: { 'basic-counter': 'tsx' },
+		})
+		expect(config.variantSurface).toBe('tsrx')
+		expect(config.variantOverrides).toEqual({ 'basic-counter': 'tsx' })
+		// Defaults when absent: `.tsx`, the ADR 0032 default surface, by
+		// rule rather than by practice (ADR 0039).
+		const defaults = resolveCorpusConfig('/p')
+		expect(defaults.variantSurface).toBe('tsx')
+		expect(defaults.variantOverrides).toEqual({})
 	})
 })
 

@@ -74,9 +74,10 @@ export type DiagnosticCode =
 	| 'LTC045' // a collector-requiring helper deferred into a callback, so it throws NoActiveCollectorError at connect (split from LTC013 by LT-165)
 	| 'LTC046' // a setup const the value harness cannot evaluate has its value rendered into the markup — no tier can produce the site (LT-165 step 5)
 	| 'LTC047' // literal prose in a component that declares `export const i18n` — route it through a message key (LT-173 step 5, ADR 0030 sub-design 4)
-	| 'LTC048' // one component tag declared by multiple corpus sources (dual front end, ADR 0032 sub-design 6; LT-202) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC048' // one component tag declared by multiple corpus sources outside a folder-local variant set (dual front end, ADR 0032 sub-design 6; narrowed to the ADR 0039 variant-set rule, LT-283) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC049' // the factory-context parameter destructures a name that is not FactoryContext vocabulary, or is not a destructured object (LT-209) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC050' // the factory-context annotation's surface disagrees with `config.formAssociated` (LT-209) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC051' // a variant set's compiled members disagree on CSS (ADR 0039, LT-283) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -1149,23 +1150,49 @@ export const diagnostic = {
 		),
 
 	/**
-	 * One component tag declared by MULTIPLE corpus sources (LT-202, ADR
-	 * 0032 sub-design 6): the corpus scan globs `.tsrx` AND `.tsx` into one
+	 * One component tag declared by MULTIPLE corpus sources that are not a
+	 * folder-local variant set (LT-202, ADR 0032 sub-design 6; narrowed by
+	 * ADR 0039 / LT-283): the corpus scan globs `.tsrx` AND `.tsx` into one
 	 * registry, and a tag with two authored owners would make the registry,
 	 * the generated module names, and every `pass()`/compose resolution
-	 * ambiguous. ADR 0028 tier 1 (Prevented) — statically decidable at
-	 * corpus-compile time from the tag map alone, no runtime half exists.
-	 * Error severity: the build fails naming every declaring file, and both
-	 * files are dropped from the generated output.
+	 * ambiguous. A corpus folder MAY carry a variant set — at most one
+	 * authored source per surface sharing one base name in one directory —
+	 * which compiles every member and serves the selected surface; any other
+	 * collision (two same-surface sources, or same-tag sources in different
+	 * folders) still fails. ADR 0028 tier 1 (Prevented) — statically
+	 * decidable at corpus-compile time from the tag map alone, no runtime
+	 * half exists. Error severity: the build fails naming every declaring
+	 * file, and all files are dropped from the generated output.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
-	 * draft is the LT-202 handoff. Corpus-level: fires once per involved
-	 * file, no source offset.
+	 * draft is the LT-283 handoff (narrowed from the LT-202 one-source rule).
+	 * Corpus-level: fires once per involved file, no source offset.
 	 */
 	duplicateTag: (tag: string, sources: ReadonlyArray<string>) =>
 		error(
 			'LTC048',
-			`Component tag \`${tag}\` is declared by more than one corpus source — every tag must have exactly one authored file, whatever surface it is written in (.tsrx or .tsx). Keep one of: ${sources.join(', ')} — delete the other or rename its tag.`,
+			`Component tag \`${tag}\` is declared by more than one corpus source — a folder may carry a variant set (one source per surface: the .tsrx and the .tsx spelling, same base name, same directory), but these sources are not one. Keep at most one authored file per surface in a single folder: ${sources.join(', ')} — move or delete the extra, or rename its tag.`,
+		),
+
+	/**
+	 * The compiled members of a variant set disagree on CSS (ADR 0039,
+	 * LT-283). A variant set serves ONE surface's stylesheet under the
+	 * canonical name, so a drift means the unserved member renders with CSS
+	 * that was never compiled for it — the parity contract (byte-identical
+	 * CSS across surfaces) is what makes the set one component rather than
+	 * two. ADR 0028 tier 1 (Prevented) — a byte comparison over the members'
+	 * compiled CSS, statically decidable, no runtime half. Error severity:
+	 * the build fails naming every member, and none of the set's artifacts
+	 * are written (mirroring LTC048's both-dropped semantics).
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
+	 * draft is the LT-283 handoff. Corpus-level: fires once per involved
+	 * file, no source offset.
+	 */
+	variantCssDrift: (tag: string, sources: ReadonlyArray<string>) =>
+		error(
+			'LTC051',
+			`Variant set \`${tag}\` compiles to different CSS across its members (${sources.join(', ')}) — the served surface's stylesheet is written for the whole set, so a drift would leave the other member's rendering unstyled. Author the CSS once and keep it byte-identical across the set's sources.`,
 		),
 
 	/**
