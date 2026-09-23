@@ -76,7 +76,7 @@ review sandbox (no port binding).
 
 ---
 
-- [ ] LT-290: `argsFromAttrs` re-emits Parser fallbacks that read `first()` refs out of scope (LT-194 defect; filed from the 2026-09-23 compiler review). **Pulled into the iteration 2026-09-23: `check:corpus` exits 2 at HEAD, so every task's gate reads red.**
+- [x] LT-290: `argsFromAttrs` re-emits Parser fallbacks that read `first()` refs out of scope (LT-194 defect; filed from the 2026-09-23 compiler review). **Pulled into the iteration 2026-09-23: `check:corpus` exits 2 at HEAD, so every task's gate reads red.** — done ✓
   **Skill:** le-truc-dev
   **Context:** `emit-server.ts` (the `argsFromAttrs` builder beside the render function)
   copies each Parser-backed prop's fallback text as-is:
@@ -109,6 +109,30 @@ review sandbox (no port binding).
   with a spinbutton occurrence carrying `value` renders or skips without throwing; an
   emitter pin asserts no `argsFromAttrs` body references a `refStub` name; goldens change
   only in `form-spinbutton.server.ts`; census 20/2/0.
+  **Changed:** `server/compiler/emit-server.ts` (the `argsFromAttrs` builder: a new
+  `resolvesInHelper` rule, under which a Parser fallback qualifies only when every free name
+  is a JS global, a harness export, or a server import local; a non-qualifying prop emits
+  `if (attrs[k] != null) return null`, and a required one withholds the helper through the
+  qualification gate); `server/tests/effects/page-render.test.ts` (2 real-corpus pins:
+  no helper names a `refStub` stub, and a `<form-spinbutton value>` occurrence stays
+  authored as `unrenderable-args` without throwing; both verified failing without the fix);
+  `LE_TRUC_COMPILER.md` § 5.3 (the "ref reads included" sentence replaced with the
+  module-scope rule; developer draft, **Tech Writer to review the wording**).
+  **How:** a present attribute returns null instead of dropping the key. Dropping it would
+  render the default where the page asked for another value, so the served markup would be
+  wrong until connect. Only `form-spinbutton` changes: `value`/`min`/`max`/`step`/`bigStep`
+  lose their channel, and `name`/`label`/`unit`/`zero` keep theirs. No render bytes and no
+  golden change (the helper is not golden-pinned).
+  **Check:** `check:corpus` exits 0 with 0 remapped diagnostics; census 20/2/0, warning
+  baseline 0. `bun test server/tests`: 1657 pass / 23 fail. All 23 are pre-existing:
+  9 are LT-237's loaders (at HEAD since 58b343f7 swept the staged `basic-counter.tsx` move
+  in), and 14 are `serve.test.ts` port binding in the sandbox. tsc: only the 2 LT-284
+  `serve.ts` errors. Biome: clean on the changed code; the one remaining error
+  (`page-render.test.ts:232`, an unused `tag`) is pre-existing at HEAD.
+  **Observed, not fixed:** the helper keys attributes by the arg's camelCase name
+  (`attrs["bigStep"]`), but HTML attribute names are case-insensitive and serialize
+  lowercase. Any future camelCase string or Parser arg would never match an authored
+  occurrence. It is moot for spinbutton now (no channel), and there is no other live case.
 
 - [ ] LT-293: Propagate the LT-283 variant-set rule and LTC051 through the docs and the error copy (LT-283 review rider — the commit's Tech Writer handoff was never executed).
   **Skill:** tech-writer

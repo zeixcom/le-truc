@@ -348,6 +348,41 @@ describe('the real corpus (integration)', () => {
 		expect(instance).toContain('Wedi cwblhau pob tasg!')
 	})
 
+	test('LT-290: no argsFromAttrs helper names a render-scope stub', async () => {
+		await compiled
+		const glob = new Bun.Glob('*.server.ts')
+		let helpers = 0
+		for await (const file of glob.scan(generated.path)) {
+			const code = await Bun.file(path.join(generated.path, file)).text()
+			const helper = code.match(
+				/^export function argsFromAttrs[\s\S]*?^\}/m,
+			)?.[0]
+			if (!helper) continue
+			helpers++
+			const stubs = [...code.matchAll(/const (\w+): any = refStub/g)].map(
+				m => m[1] as string,
+			)
+			for (const stub of stubs)
+				expect(helper).not.toMatch(new RegExp(`\\b${stub}\\b`))
+		}
+		expect(helpers).toBeGreaterThan(0)
+	})
+
+	test('LT-290: a spinbutton occurrence whose fallback reads a ref stays authored, without throwing', async () => {
+		await compiled
+		const markup =
+			'<form-spinbutton lang="en" name="qty" value="5"><input type="number"></form-spinbutton>'
+		const result = await renderPageOccurrences(markup, {
+			generatedDir: generated.path,
+			pageLocale: null,
+		})
+		expect(result.html).toBe(markup)
+		expect(result.rendered).toEqual([])
+		expect(result.skipped).toEqual([
+			{ tag: 'form-spinbutton', reason: 'unrenderable-args' },
+		])
+	})
+
 	test('a lang-arg component without i18n stays authored (basic-number)', async () => {
 		await compiled
 		const markup = await corpusMarkup(

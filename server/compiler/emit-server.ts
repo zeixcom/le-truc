@@ -1277,11 +1277,27 @@ export const emitServerModule = (
 	 * the renderer's to supply: the resolved page-position locale and the
 	 * `i18nRecord` at it (ADR 0030 sub-design 3's precedence, rung 1+2).
 	 *
-	 * A Parser expression is emitted VERBATIM, fallback expressions included
-	 * — the same text `expose()` already re-declares server-side against the
-	 * harness stubs (folded render functions run that line today), so the
-	 * helper's resolution risk is the status quo's, not new.
+	 * A Parser expression is emitted VERBATIM — but only when its fallback
+	 * resolves at MODULE scope (LT-290): the helper is a separate export,
+	 * so a fallback reading a `first()` ref, a setup const, `host`, or
+	 * another arg names a binding that exists only inside the render
+	 * function (form-spinbutton's `asNumber(asNumber(0)(input.value))` was
+	 * a ReferenceError at page render and 5 × TS2552 in check:corpus).
+	 * Declaring the stub in the helper would be worse: a `refStub` value
+	 * would reach the markup (LE_TRUC_COMPILER.md § 8). Such a prop has NO
+	 * attribute channel here — an occurrence carrying its attribute
+	 * returns null (left authored; the renderer records it
+	 * `unrenderable-args`), an absent attribute omits the key when the arg
+	 * is optional/defaulted, and a required one withholds the whole helper.
 	 */
+	const resolvesInHelper = (node: AstNode | null): boolean =>
+		node === null ||
+		[...freeIdentifiers(node)].every(
+			name =>
+				JS_GLOBALS.has(name) ||
+				RUNTIME_HARNESS_EXPORTS.has(name) ||
+				component.imports.serverLocalNames.has(name),
+		)
 	const argsHelperLines: string[] | null =
 		// Only components whose SERVER bytes the locale actually determines
 		// (the reserved record: folded catalog words, `truc:case` pruning,
@@ -1296,13 +1312,11 @@ export const emitServerModule = (
 		// component is STATICALLY unrenderable from an authored occurrence, so
 		// no export is emitted and the renderer never qualifies it.
 		component.paramProps.every(param => {
-			if (
-				param.name === 'i18n' ||
-				param.name === 'lang' ||
-				component.parserExposeProps.has(param.name) ||
-				param.isString
-			)
-				return true
+			if (param.name === 'i18n' || param.name === 'lang') return true
+			const parser = component.parserExposeProps.get(param.name)
+			if (parser && !resolvesInHelper(parser.fallbackNode))
+				return param.optional || param.hasDefault
+			if (parser || param.isString) return true
 			return param.optional || param.hasDefault
 		})
 			? (() => {
@@ -1313,7 +1327,12 @@ export const emitServerModule = (
 						const key = JSON.stringify(param.name)
 						const attrVar = `${param.name}Attr`
 						const parser = component.parserExposeProps.get(param.name)
-						if (parser) {
+						if (parser && !resolvesInHelper(parser.fallbackNode)) {
+							// LT-290: no attribute channel — the gate above proved
+							// the arg optional/defaulted, so an absent attribute
+							// omits the key and a present one is unrenderable.
+							stmts.push(`\tif (attrs[${key}] != null) return null`)
+						} else if (parser) {
 							stmts.push(`\tconst ${attrVar} = attrs[${key}] ?? null`)
 							stmts.push(
 								`\tif (${attrVar} !== null) args[${key}] = ${parser.parser}(${parser.fallbackText ?? ''})(${attrVar})`,
