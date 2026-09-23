@@ -941,6 +941,43 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
+- [ ] LT-297: `argsFromAttrs` keys attributes by the arg's camelCase name (LT-290 close-out; latent).
+  **Skill:** le-truc-dev
+  **Context:** the page-occurrence helper reads `attrs["bigStep"]`, but HTML attribute
+  names are case-insensitive and serialize lowercase, so an authored `big-step`/`bigstep`
+  occurrence never matches. A camelCase string or Parser arg would silently lose its
+  channel and render the default. Not live today: LT-290 removed spinbutton's only
+  camelCase channel, and no other corpus arg is camelCase. Key by the attribute name the
+  client parser reads (the same mapping `expose()`'s Parser reads at connect), and pin
+  it with a camelCase fixture.
+  **Check:** a fixture with a camelCase Parser arg renders its authored attribute value;
+  goldens unchanged.
+
+- [ ] LT-295: Run the variant spec matrix in CI (LT-284 review follow-up; ADR 0039 s2).
+  **Skill:** docs-server-dev
+  **Context:** ADR 0039 s2 makes the spec the runtime equivalence contract across a
+  variant set's spellings, but `ci-cd.yml` runs only `bun run test`. That exercises the
+  default page, so only the selected surface is covered. A regression in the twin or the
+  unserved compiled member would pass CI. Add a `bun run test:variants` step after
+  `bun run test`, which frees port 3000 when its webServer exits. The runner rebuilds
+  examples itself; skipping that duplicate build in CI (a `--no-build` flag) is optional.
+  **Check:** CI runs the matrix for every variant set; a deliberately broken twin fails
+  the job.
+
+- [ ] LT-296: Surface-route hardening: stale `variants/` clients and vacuous surface tests (LT-284 review follow-up).
+  **Skill:** docs-server-dev
+  **Context:** (a) `compileCorpus` writes `variants/<tag>.<surface>.client.ts` but never
+  prunes the directory. A dissolved variant set (a `.tsx` deleted), or a flipped
+  `variantOverrides`, leaves a stale client, and `?surface=` then serves it with 200
+  instead of 404. Prune `variants/` of every file this compile did not write, the way the
+  canonical artifacts are owned. (b) Every surface leg of `serve.test.ts`'s
+  `component test surface selection` block returns early when the corpus is not built or
+  no variants file exists, so it passes vacuously in exactly the state where it proves
+  nothing. The block's header says CI builds the corpus first, so assert that
+  precondition (fail loudly) instead of returning.
+  **Check:** deleting a set member and rebuilding removes its `variants/` client, and
+  `?surface=` for it → 404; the surface tests fail, not pass, without a corpus build.
+
 - [ ] LT-291: A compiled parent must register a variant set's SERVED surface, not its retained twin (LT-283 review follow-up; ADR 0039). **Gate: before the first wave-4 migration that retains a twin whose tag a compiled component references.**
   **Skill:** le-truc-dev
   **Context:** `compileCorpus` seeds `childImports` from the sibling modules

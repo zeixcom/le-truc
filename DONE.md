@@ -58,6 +58,45 @@ entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text
   equivalence is CSS-only). **Gate-reading rule, recorded nowhere else:** a handoff's
   `check:corpus` claim is its exit code.
 
+- [x] LT-284: Per-surface test-route serving + the variant spec matrix (LT-238/ADR 0039 s2) — reviewed ✓
+  **Changed:** `/test/:component?surface=ts|tsrx|tsx` and `/test/:component/surface.js`
+  (`server/serve.ts`); `{{ test-script }}` slot in `docs-src/layouts/test.html`; the
+  unserved member's client under `variants/<tag>.<surface>.client.ts`, with
+  `relocateClientSpecifiers` (`server/corpus-compile.ts`); `bun run test:variants`
+  (`scripts/test-variants.ts`); `server/SERVER.md`.
+  **Rulings (recorded nowhere else):** (1) surface selection is **server-side**: specs keep
+  hard-coding `/test/<tag>`, and the runner sets `TEST_SURFACE` per server process. That is
+  ADR 0039 s2's "unchanged spec" in its purest form, so specs never learn about surfaces.
+  (2) "Defined once" holds **by construction**: the surface bundle is the `main.ts` graph
+  with the tag's canonical client emptied and one module appended, not a per-surface
+  bundle. (3) The runner refuses to start while port 3000 is taken, because Playwright's
+  `reuseExistingServer` would otherwise test the default page.
+  **Review (Architect, 2026-09-23):** design approved. **Unproven gate:** no run of
+  `test:variants` exists yet (the sandbox can't bind a port), so the Check "spec passes
+  against all three surfaces" moves to LT-285's Check, which already requires it green ×3.
+  Follow-ups: LT-295 (CI runs the matrix), LT-296 (stale `variants/` clients; the vacuous
+  surface tests).
+
+- [x] LT-290: `argsFromAttrs` re-emits Parser fallbacks that read `first()` refs out of scope (LT-194 defect) — done ✓
+  **Changed:** `server/compiler/emit-server.ts`: a Parser prop keeps its attribute channel
+  in the page-occurrence helper only when its fallback's free names resolve at module scope
+  (JS globals, harness exports, server imports). Otherwise a present attribute leaves the
+  occurrence authored (`unrenderable-args`), and a required prop withholds the helper.
+  `form-spinbutton` is the only live case (`value`/`min`/`max`/`step`/`bigStep` lose their
+  channel). `LE_TRUC_COMPILER.md` § 5.3 amended; Architect read the wording at close-out and
+  it matches the code. Commit 6ce64761; `check:corpus` exits 0 again.
+  **Ruling (recorded nowhere else):** declaring the ref stub inside the helper was rejected,
+  because a `refStub` value would reach the markup (§ 8). Follow-up: LT-297 (camelCase
+  attribute keys).
+
+- [x] LT-293: Propagate the LT-283 variant-set rule and LTC051 through the docs and the error copy — done ✓
+  **Changed (for Changelog Keeper):** final copy for LTC048 (the fix names the variant-set
+  shape: one source per surface, one base name, one directory) and LTC051 (no artifact of
+  the set is written; copy the served member's styles into the others), plus the
+  `errors.md` rows. `HOST_PROFILE.md` and `LE_TRUC_COMPILER.md` §§ 1, 6, 7, 7.1 now state
+  the variant-set rule and the `variantSurface`/`variantOverrides` keys. It landed inside
+  640922d5 (titled LT-284). The § 7 `variants/` sentence became true in the same commit.
+
 - [x] LT-235: Wave-4 type-level design session — IR discriminated unions, pass contracts (review §2.6–2.7) — reviewed ✓
   **Ruling:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
   (🔄 Proposed; owner rulings 2026-09-21). Implementation: LT-286 (ForIR — this iteration,

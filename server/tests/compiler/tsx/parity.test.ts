@@ -108,6 +108,33 @@ const compilePair = (fx: Fixture, listboxEntries: RegistryEntry[]) => {
 	return { tsrx, tsxx }
 }
 
+/**
+ * What a client module derives from the authored types (LT-298): the
+ * `defineComponent<Props>` type argument and every Parser call, in order.
+ * Author comments are copied verbatim and may legitimately differ.
+ */
+const clientTypeFacts = (code: string | undefined): string[] =>
+	[
+		...(code ?? '').matchAll(
+			/defineComponent(?:<\w+>)?\(|\bas(?:String|Integer|Boolean|Number)\(/g,
+		),
+	].map(m => m[0])
+
+/** A server module's `argsFromAttrs` export, or '' where it is withheld. */
+const argsFromAttrsOf = (code: string | undefined): string =>
+	/export function argsFromAttrs[\s\S]*?\n}\n/.exec(code ?? '')?.[0] ?? ''
+
+/** A server module's render function signature (`paramsText`). */
+const renderSignatureOf = (code: string | undefined): string =>
+	/export function render\w+\([\s\S]*?\): string \{/.exec(code ?? '')?.[0] ?? ''
+
+/**
+ * Pairs whose `.tsx` spike fixture authors different args than the
+ * `.tsrx` original: no `i18n` arg, and listbox's `'truc:pass'` compose
+ * surface. LT-237 reconciles them when it moves the fixtures.
+ */
+const AUTHORED_ARGS_DRIFT = new Set(['form-listbox', 'form-combobox'])
+
 const generated = createGeneratedDir('tsx-parity')
 afterAll(() => generated.cleanup())
 
@@ -175,6 +202,33 @@ describe('TSX spike — front-end parity (§4.3)', () => {
 
 			test('CSS byte-identical', () => {
 				expect(tsxx.component?.css).toBe(tsrx.component?.css)
+			})
+
+			// LT-298: the `.tsx` converter once dropped the args annotation, so
+			// every arg read as untyped — `asString` harvests, all args
+			// optional, no `string` channels — and the snapshot above pinned
+			// it. Pin the two surfaces' derived facts against each other.
+			test('client facts derived from the args type identical (props type argument, harvest parsers)', () => {
+				expect(clientTypeFacts(tsxx.component?.clientCode)).toEqual(
+					clientTypeFacts(tsrx.component?.clientCode),
+				)
+			})
+
+			test('page-occurrence helper identical (arg optionality, string and Parser channels)', () => {
+				expect(argsFromAttrsOf(tsxx.component?.serverCode)).toBe(
+					argsFromAttrsOf(tsrx.component?.serverCode),
+				)
+			})
+
+			// The render signature is the authored args pattern verbatim, so it
+			// can only match where the two sources author the same args.
+			// AUTHORED_ARGS_DRIFT pins the pairs that do not yet; the inverted
+			// assertion fails once a pair converges, so the set cannot go stale.
+			test('render signature (the typed args pattern) identical', () => {
+				const a = renderSignatureOf(tsrx.component?.serverCode)
+				const b = renderSignatureOf(tsxx.component?.serverCode)
+				if (AUTHORED_ARGS_DRIFT.has(fx.tag)) expect(b).not.toBe(a)
+				else expect(b).toBe(a)
 			})
 
 			test('client module snapshot (structural review, not bytes)', () => {
@@ -450,6 +504,50 @@ export function BadHost(
 		)
 		expect(diagnostics).toEqual([])
 		expect(component).not.toBeNull()
+	})
+})
+
+describe('the args type annotation reaches the shared stages (LT-298)', () => {
+	const component = (params: string): string => `export function C(${params}) {
+	expose({})
+	return (
+		<>
+			<c-el>{label}</c-el>
+			<style>{css\`c-el { color: red }\`}</style>
+		</>
+	)
+}`
+
+	test('a default paired with a required type is LTC032 on .tsx too', () => {
+		const { diagnostics } = compileComponentTsx(
+			component(`{ label = 'x' }: { label: string }`),
+			'c.tsx',
+			new Set(),
+		)
+		const hit = diagnostics.find(d => d.code === 'LTC032')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('`label`')
+	})
+
+	test('a default paired with an optional type is not flagged', () => {
+		const { diagnostics } = compileComponentTsx(
+			component(`{ label = 'x' }: { label?: string }`),
+			'c.tsx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'LTC032')).toBe(false)
+	})
+
+	test('a renamed destructure keeps its property key', () => {
+		const { component: compiled, diagnostics } = compileComponentTsx(
+			component(`{ title: label }: { title: string }`),
+			'c.tsx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(compiled?.serverCode).toContain(
+			'renderC({ title: label }: { title: string })',
+		)
 	})
 })
 

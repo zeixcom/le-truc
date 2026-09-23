@@ -16,7 +16,8 @@
  * expressions, and JSX. Type-only children (annotations, type arguments,
  * return types) are NOT converted — they name types, not values, and the
  * existing walks already refuse to count them (`freeIdentifiers`'s
- * skip-list). Constructs outside the vocabulary pass through as TS-named
+ * skip-list). The one exception is a function PARAMETER's annotation, which
+ * the shared stages read for arg types (LT-298, `withParamAnnotation`). Constructs outside the vocabulary pass through as TS-named
  * passthrough nodes with no value children, so the generic `Object.entries`
  * walks stay conservative (they may miss a read, never invent one); every
  * construct the corpus's authored code uses has a real mapping.
@@ -89,26 +90,32 @@ const convertPattern = (node: ts.Node, sf: ts.SourceFile): AstNode | null => {
 				...span(node, sf),
 				argument: conv(node.name, sf),
 			}
-		const key = ts.isIdentifier(node.name)
-			? { type: 'Identifier', ...span(node.name, sf), name: node.name.text }
-			: conv(node.name, sf)
+		// `{ a: b }` / `{ i18n: { t } }`: the KEY is `propertyName`, the
+		// value the (possibly nested) binding — reading the key off the value
+		// lost every renamed or nested arg (LT-298: the reserved `i18n` arg).
+		const keyNode = node.propertyName ?? node.name
+		const key = ts.isIdentifier(keyNode)
+			? { type: 'Identifier', ...span(keyNode, sf), name: keyNode.text }
+			: conv(keyNode, sf)
+		const target = convertPattern(node.name, sf)
 		const value = node.initializer
 			? {
 					type: 'AssignmentPattern',
 					// Bracket the whole `x = d` so the initializer text slices
 					// include the element verbatim.
 					...span(node, sf),
-					left: conv(node.name, sf),
+					left: target,
 					right: conv(node.initializer, sf),
 				}
-			: conv(node.name, sf)
+			: target
 		return {
 			type: 'Property',
 			...span(node, sf),
 			key,
 			value,
-			computed: false,
-			shorthand: !node.initializer,
+			computed:
+				!!node.propertyName && ts.isComputedPropertyName(node.propertyName),
+			shorthand: !node.propertyName,
 			kind: 'init',
 		}
 	}
@@ -176,6 +183,85 @@ const unaryOperator = (
 	}
 }
 
+/**
+ * A type node → the estree-TS shape the shared stages read (LT-298). Only
+ * what `infer-type.ts` and `paramPropsOf` inspect gets structure: inline
+ * type literals with their property signatures (`optional` included), the
+ * three primitive keywords, and named references. Anything else is a
+ * spanned passthrough, so `text()` still slices its written form.
+ */
+const convertType = (node: ts.TypeNode, sf: ts.SourceFile): AstNode => {
+	if (ts.isTypeLiteralNode(node))
+		return {
+			type: 'TSTypeLiteral',
+			...span(node, sf),
+			members: node.members.map(member =>
+				ts.isPropertySignature(member) && ts.isIdentifier(member.name)
+					? {
+							type: 'TSPropertySignature',
+							...span(member, sf),
+							key: {
+								type: 'Identifier',
+								...span(member.name, sf),
+								name: member.name.text,
+							},
+							optional: !!member.questionToken,
+							typeAnnotation: member.type
+								? typeAnnotationOf(member.type, sf)
+								: null,
+						}
+					: passthrough(`TS${ts.SyntaxKind[member.kind]}`, member, sf),
+			),
+		}
+	if (ts.isTypeReferenceNode(node) && ts.isIdentifier(node.typeName))
+		return {
+			type: 'TSTypeReference',
+			...span(node, sf),
+			typeName: {
+				type: 'Identifier',
+				...span(node.typeName, sf),
+				name: node.typeName.text,
+			},
+		}
+	switch (node.kind) {
+		case ts.SyntaxKind.StringKeyword:
+			return passthrough('TSStringKeyword', node, sf)
+		case ts.SyntaxKind.NumberKeyword:
+			return passthrough('TSNumberKeyword', node, sf)
+		case ts.SyntaxKind.BooleanKeyword:
+			return passthrough('TSBooleanKeyword', node, sf)
+		default:
+			return passthrough(`TS${ts.SyntaxKind[node.kind]}`, node, sf)
+	}
+}
+
+const typeAnnotationOf = (node: ts.TypeNode, sf: ts.SourceFile): AstNode => ({
+	type: 'TSTypeAnnotation',
+	...span(node, sf),
+	typeAnnotation: convertType(node, sf),
+})
+
+/**
+ * A parameter's annotation rides its pattern as `typeAnnotation`, and the
+ * pattern's span extends over it — both the shape the `.tsrx` parser
+ * produces (LT-298). The args type decides harvest parsers, arg optionality
+ * and `string` channels, LTC032, and the server render signature
+ * (`paramsText` slices the pattern). Walks already skip the
+ * `typeAnnotation` key, so type names never count as value reads.
+ */
+const withParamAnnotation = (
+	pattern: AstNode,
+	param: ts.ParameterDeclaration,
+	sf: ts.SourceFile,
+): AstNode =>
+	param.type
+		? {
+				...pattern,
+				end: param.type.end,
+				typeAnnotation: typeAnnotationOf(param.type, sf),
+			}
+		: pattern
+
 /** One function-like (arrow, function expression, declaration). */
 const convertFunctionLike = (
 	node: ts.ArrowFunction | ts.FunctionExpression | ts.FunctionDeclaration,
@@ -194,7 +280,7 @@ const convertFunctionLike = (
 					...span(p, sf),
 					argument: convertPattern(p.name, sf),
 				} as AstNode)
-			: (convertPattern(p.name, sf) as AstNode),
+			: withParamAnnotation(convertPattern(p.name, sf) as AstNode, p, sf),
 	),
 	body: conv(node.body, sf),
 	async: !!node.modifiers?.some(m => m.kind === ts.SyntaxKind.AsyncKeyword),
@@ -501,6 +587,18 @@ const convertStatement = (
 			...span(node, sf),
 			kind: ts.isStringLiteral(node.name) ? node.name.text : 'global',
 		}
+	// Type declarations: kept for verbatim text and name extraction —
+	// `readModuleDecls` finds `<Component>Props` by `id` (LT-298: these
+	// branches sat after `convert`'s statement dispatch, unreachable, so
+	// `.tsx` clients lost their `defineComponent<Props>` type argument).
+	if (ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node))
+		return {
+			type: ts.isTypeAliasDeclaration(node)
+				? 'TSTypeAliasDeclaration'
+				: 'TSInterfaceDeclaration',
+			...span(node, sf),
+			id: { type: 'Identifier', ...span(node.name, sf), name: node.name.text },
+		}
 	return passthrough(`TS${ts.SyntaxKind[node.kind]}`, node, sf)
 }
 
@@ -773,30 +871,6 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): AstNode | null => {
 			operator: 'typeof',
 			prefix: true,
 			argument: conv(node.expression, sf),
-		}
-
-	/* --- Type declarations: kept for verbatim text/name extraction --- */
-	if (ts.isTypeAliasDeclaration(node))
-		return {
-			type: 'TSTypeAliasDeclaration',
-			...span(node, sf),
-			id: {
-				type: 'Identifier',
-				start: node.name.getStart(sf),
-				end: node.name.end,
-				name: node.name.text,
-			},
-		}
-	if (ts.isInterfaceDeclaration(node))
-		return {
-			type: 'TSInterfaceDeclaration',
-			...span(node, sf),
-			id: {
-				type: 'Identifier',
-				start: node.name.getStart(sf),
-				end: node.name.end,
-				name: node.name.text,
-			},
 		}
 
 	/* --- Everything else: TS-named leaf (no value children). --- */
