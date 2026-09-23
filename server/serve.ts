@@ -5,13 +5,16 @@ import {
 	COMPONENTS_DIR,
 	DEFAULT_LOCALE,
 	EXAMPLES_DIR,
+	GENERATED_CLIENTS_DIR,
 	LAYOUTS_DIR,
 	LOCALES,
 	OUTPUT_DIR,
 	PAGES_DIR,
+	ROOT,
 	ROUTE_LAYOUT_MAP,
 	SERVER_CONFIG,
 	SOURCES_DIR,
+	TS_FILE,
 } from './config'
 import { fileExists, getFilePath, getRelativePath, isDirectory } from './io'
 import { hmrScriptTag } from './templates/hmr'
@@ -124,13 +127,280 @@ const findMockFilePath = (
 	return mockPath
 }
 
-const handleComponentTest = async (
+/* === Component test surface selection (LT-284, ADR 0039 s2) === */
+
+/**
+ * The authored spellings a variant set may carry: the hand-written twin
+ * (`ts`, served from the example folder) and the two compiled members
+ * (`tsrx`/`tsx`, served from their generated clients).
+ */
+export type SurfaceSpelling = 'ts' | 'tsrx' | 'tsx'
+
+const SURFACE_SPELLINGS: readonly SurfaceSpelling[] = ['ts', 'tsrx', 'tsx']
+
+const isSurfaceSpelling = (value: string): value is SurfaceSpelling =>
+	(SURFACE_SPELLINGS as readonly string[]).includes(value)
+
+/**
+ * Per-request surface override for the spec matrix runner
+ * (`scripts/test-variants.ts`): with `TEST_SURFACE=ts|tsrx|tsx` in the
+ * server's environment, the plain `/test/<tag>` URL serves that surface's
+ * page, so the same unchanged Playwright spec exercises every spelling.
+ * Read per request (not cached at module load) so tests can toggle it.
+ */
+const readEnvSurface = (): SurfaceSpelling | undefined => {
+	const raw = process.env.TEST_SURFACE
+	return isSurfaceSpelling(raw || '') ? (raw as SurfaceSpelling) : undefined
+}
+
+if (process.env.TEST_SURFACE && !readEnvSurface()) {
+	console.error(
+		`❌ Invalid TEST_SURFACE "${process.env.TEST_SURFACE}" — expected one of: ts, tsrx, tsx`,
+	)
+	process.exit(1)
+}
+
+/**
+ * Effective surface for a `/test/:component` request: an explicit
+ * `?surface=` query wins; otherwise the runner's `TEST_SURFACE` env override
+ * applies; otherwise the default (selected-surface) page is served.
+ */
+const effectiveSurface = (
+	query: string | null,
+): SurfaceSpelling | 'invalid' | undefined => {
+	if (query) return isSurfaceSpelling(query) ? query : 'invalid'
+	return readEnvSurface()
+}
+
+/**
+ * The surface whose compiled client occupies the canonical artifact names:
+ * the registry entry's `source` names the selected authored member
+ * (LT-283), so its extension decides. Null when no corpus has been built.
+ */
+const registrySelectedSurface = async (
+	tag: string,
+): Promise<SurfaceSpelling | null> => {
+	const registryPath = getFilePath(GENERATED_CLIENTS_DIR, 'registry.json')
+	if (!fileExists(registryPath)) return null
+	try {
+		const registry = JSON.parse(await Bun.file(registryPath).text())
+		const source: unknown = registry?.[tag]?.source
+		if (typeof source !== 'string') return null
+		return source.endsWith('.tsx') ? 'tsx' : 'tsrx'
+	} catch {
+		return null
+	}
+}
+
+/**
+ * Resolve the authored module a surface page must register for a component:
+ * the hand-written twin from the example folder (`ts`), or the generated
+ * client of the requested compiled member (`tsrx`/`tsx`) — the canonical
+ * artifact when that member is the registry's selected surface, otherwise
+ * the per-surface variant module the corpus compile writes for the
+ * non-selected member (`variants/<tag>.<surface>.client.ts`, the LT-283
+ * contract). Null when the component does not carry that surface.
+ */
+const resolveSurfaceModule = async (
+	tag: string,
+	componentDir: string,
+	surface: SurfaceSpelling,
+): Promise<string | null> => {
+	if (surface === 'ts') {
+		const twinPath = getFilePath(componentDir, `${tag}.ts`)
+		return fileExists(twinPath) ? twinPath : null
+	}
+	const selected = await registrySelectedSurface(tag)
+	if (selected === surface) {
+		const canonicalPath = getFilePath(GENERATED_CLIENTS_DIR, `${tag}.client.ts`)
+		if (fileExists(canonicalPath)) return canonicalPath
+	}
+	const variantPath = getFilePath(
+		GENERATED_CLIENTS_DIR,
+		'variants',
+		`${tag}.${surface}.client.ts`,
+	)
+	return fileExists(variantPath) ? variantPath : null
+}
+
+const escapeRegExp = (value: string): string =>
+	value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Bundled surface pages, keyed by tag, surface and the swapped module's
+ * mtime — so a dev-mode edit to the twin or a variant client rebuilds on
+ * the next page load. Fresh server processes (the runner starts one per
+ * surface) always start cold.
+ */
+const surfaceBundleCache = new Map<string, string>()
+
+/**
+ * Build a browser bundle that registers exactly one surface's module for
+ * the component: the full `examples/main.ts` graph, with the component's
+ * generated-client slot emptied out and the selected surface's module
+ * appended through a virtual entry. Emptied slot + appended module means
+ * the tag is defined exactly once by construction — never twice, whether
+ * or not the component is part of the default layout bundle. Every other
+ * component keeps registering from the default bundle, so a spec passing
+ * against the default page sees an identical page state apart from the
+ * component under test.
+ *
+ * When the requested surface IS the canonical client (the registry's
+ * selected member), the default graph already registers it: nothing is
+ * emptied or appended.
+ */
+const buildSurfaceBundle = async (
+	tag: string,
+	surface: SurfaceSpelling,
+	modulePath: string,
+): Promise<string> => {
+	const mtime = Bun.file(modulePath).lastModified
+	const cacheKey = `${tag}::${surface}::${mtime}`
+	const cached = surfaceBundleCache.get(cacheKey)
+	if (cached) return cached
+
+	const canonicalPath = getFilePath(GENERATED_CLIENTS_DIR, `${tag}.client.ts`)
+	const swap = modulePath !== canonicalPath
+	const entryId = 'le-truc-surface-entry'
+	const entry = [TS_FILE, ...(swap ? [modulePath] : [])]
+		.map(path => `import ${JSON.stringify(path)};`)
+		.join('\n')
+	const result = await Bun.build({
+		entrypoints: [entryId],
+		target: 'browser',
+		minify: true,
+		// Matches build:examples:js — the library's dev-mode guards compare
+		// `process.env.DEV_MODE === 'true'` inline, and Playwright always
+		// wants DEV_MODE instrumentation live (SERVER.md § Environment).
+		define: { 'process.env.DEV_MODE': '"true"' },
+		plugins: [
+			{
+				name: 'le-truc-surface-serving',
+				setup(build) {
+					build.onResolve({ filter: new RegExp(`^${entryId}$`) }, () => ({
+						path: entryId,
+						namespace: 'surface-entry',
+					}))
+					build.onLoad({ filter: /.*/, namespace: 'surface-entry' }, () => ({
+						contents: entry,
+						loader: 'ts',
+						resolveDir: ROOT,
+					}))
+					if (!swap) return
+					// Empty the component's canonical client slot in the default
+					// graph — main.ts and any composing parent import it — so the
+					// appended surface module is the tag's single definition.
+					build.onLoad(
+						{
+							filter: new RegExp(
+								`generated[\\\\/]components[\\\\/]${escapeRegExp(tag)}\\.client\\.ts$`,
+							),
+						},
+						() => ({
+							contents: 'export {}',
+							loader: 'ts',
+							resolveDir: GENERATED_CLIENTS_DIR,
+						}),
+					)
+				},
+			},
+		],
+	})
+	if (!result.success) {
+		const logs = await Promise.all(result.logs.map(String))
+		throw new Error(
+			`Surface bundle for ${tag} (${surface}) failed to build:\n${logs.join('\n')}`,
+		)
+	}
+	const [output] = result.outputs
+	if (!output)
+		throw new Error(`Surface bundle for ${tag} (${surface}) produced no output`)
+	const js = await output.text()
+	surfaceBundleCache.set(cacheKey, js)
+	return js
+}
+
+const handleSurfaceModule = async (
 	componentName: string,
+	surface: SurfaceSpelling | 'invalid' | undefined,
 ): Promise<Response> => {
 	try {
+		if (!surface || surface === 'invalid') {
+			return new Response(
+				'Missing or invalid surface — expected ts, tsrx or tsx',
+				{
+					status: 400,
+				},
+			)
+		}
 		const componentPath = findComponentHtmlPath(componentName)
 		if (!componentPath) {
 			return new Response('Component not found', { status: 404 })
+		}
+		const componentDir = componentPath.substring(
+			0,
+			componentPath.lastIndexOf('/'),
+		)
+		const modulePath = await resolveSurfaceModule(
+			componentName,
+			componentDir,
+			surface,
+		)
+		if (!modulePath) {
+			return new Response(
+				`Surface "${surface}" is not available for component "${componentName}"`,
+				{ status: 404 },
+			)
+		}
+		const js = await buildSurfaceBundle(componentName, surface, modulePath)
+		return new Response(js, {
+			headers: {
+				'Content-Type': 'text/javascript; charset=utf-8',
+				'Cache-Control': 'no-cache, no-store, must-revalidate',
+			},
+		})
+	} catch (error) {
+		console.error('Error building component surface module:', error)
+		return new Response('Internal server error', { status: 500 })
+	}
+}
+
+const handleComponentTest = async (
+	componentName: string,
+	surface?: SurfaceSpelling | 'invalid',
+): Promise<Response> => {
+	try {
+		if (surface === 'invalid') {
+			return new Response('Invalid surface — expected ts, tsrx or tsx', {
+				status: 400,
+			})
+		}
+		const componentPath = findComponentHtmlPath(componentName)
+		if (!componentPath) {
+			return new Response('Component not found', { status: 404 })
+		}
+
+		// The default page keeps the layout bundle (which registers the
+		// selected surface); a surface page swaps in exactly that surface's
+		// module instead (LT-284).
+		let testScript = '/assets/main.js'
+		if (surface) {
+			const componentDir = componentPath.substring(
+				0,
+				componentPath.lastIndexOf('/'),
+			)
+			const modulePath = await resolveSurfaceModule(
+				componentName,
+				componentDir,
+				surface,
+			)
+			if (!modulePath) {
+				return new Response(
+					`Surface "${surface}" is not available for component "${componentName}"`,
+					{ status: 404 },
+				)
+			}
+			testScript = `/test/${componentName}/surface.js?surface=${surface}`
 		}
 
 		const componentContent = await Bun.file(componentPath).text()
@@ -144,6 +414,7 @@ const handleComponentTest = async (
 			// (LT-174); an unreplaced key renders `lang=""`, which is worse
 			// than the default it stands in for.
 			lang: DEFAULT_LOCALE,
+			'test-script': testScript,
 		})
 
 		// Inject HMR script in development
@@ -332,8 +603,29 @@ async function startServer() {
 					: new Response('Not Found', { status: 404 })
 			},
 
-			// Component tests
-			'/test/:component': req => handleComponentTest(req.params.component),
+			// A variant set component's per-surface client bundle (LT-284):
+			// the full layout graph with the component's module swapped for the
+			// requested surface's. The page references it; specs hit it only
+			// through the page.
+			'/test/:component/surface.js': req => {
+				const query = new URL(req.url).searchParams.get('surface')
+				return handleSurfaceModule(
+					req.params.component,
+					effectiveSurface(query),
+				)
+			},
+
+			// Component tests. `?surface=ts|tsrx|tsx` (LT-284, ADR 0039 s2)
+			// selects which spelling of a variant set the page registers; the
+			// TEST_SURFACE env override (the spec matrix runner) applies when
+			// the query is absent. Without either, the page is unchanged.
+			'/test/:component': req => {
+				const query = new URL(req.url).searchParams.get('surface')
+				return handleComponentTest(
+					req.params.component,
+					effectiveSurface(query),
+				)
+			},
 
 			// Not found for test routes
 			'/test/*': new Response('Not Found', { status: 404 }),
@@ -484,6 +776,8 @@ export {
 	broadcastToHMRClients,
 	clearLayoutCache,
 	getLayoutForPath,
+	handleComponentTest,
+	handleSurfaceModule,
 	hmrClients,
 	startServer,
 }

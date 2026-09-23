@@ -8,7 +8,7 @@ The `.tsx` surface has no core-TSRX relationship — it is standard TypeScript J
 
 ## Two surfaces, one profile
 
-Since [ADR 0032](../../adr/0032-adopt-tsx-as-the-authored-component-surface.md) Le Truc compiles two authored surfaces through one machinery layer: **`.tsx` is the default for new authoring**, and **`.tsrx` stays supported** where its statement-context control flow (`@if`/`@for`/`@try` arms) reads better than expression shapes. The choice is per component. The corpus scan globs both extensions into one registry, and one component tag has exactly one authored source — a tag two files declare fails the build naming both (LTC048).
+Since [ADR 0032](../../adr/0032-adopt-tsx-as-the-authored-component-surface.md) Le Truc compiles two authored surfaces through one machinery layer: **`.tsx` is the default for new authoring**, and **`.tsrx` stays supported** where its statement-context control flow (`@if`/`@for`/`@try` arms) reads better than expression shapes. The choice is per component. The corpus scan globs both extensions into one registry. A folder may carry a variant set — one `.tsrx` and one `.tsx` spelling of one tag, same base name, same directory — that compiles both, requires byte-identical CSS (LTC051), and serves the selected surface, `.tsx` by default ([ADR 0039](../../adr/0039-canonical-plus-variants-authored-surfaces.md)). Any other tag that two files declare fails the build naming both (LTC048).
 
 Most of this profile is grammar-independent, and both surfaces live under it: styles, the data account, the evaluation-tier posture, `truc:pass`, locale, and element references. The grammar-shaped remainder is split: "The `.tsx` surface" below, and the `.tsrx`-specific sections marked as such further down.
 

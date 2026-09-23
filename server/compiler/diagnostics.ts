@@ -1164,14 +1164,13 @@ export const diagnostic = {
 	 * half exists. Error severity: the build fails naming every declaring
 	 * file, and all files are dropped from the generated output.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
-	 * draft is the LT-283 handoff (narrowed from the LT-202 one-source rule).
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle.
 	 * Corpus-level: fires once per involved file, no source offset.
 	 */
 	duplicateTag: (tag: string, sources: ReadonlyArray<string>) =>
 		error(
 			'LTC048',
-			`Component tag \`${tag}\` is declared by more than one corpus source — a folder may carry a variant set (one source per surface: the .tsrx and the .tsx spelling, same base name, same directory), but these sources are not one. Keep at most one authored file per surface in a single folder: ${sources.join(', ')} — move or delete the extra, or rename its tag.`,
+			`Component tag \`${tag}\` is declared by more than one corpus source, and the sources are not one variant set: ${sources.join(', ')} — a variant set is at most one source per surface (\`.tsrx\`, \`.tsx\`) with one base name in one directory. Delete the extra same-surface source, move the spellings into one folder under one base name, or rename the tag of one source.`,
 		),
 
 	/**
@@ -1185,14 +1184,14 @@ export const diagnostic = {
 	 * the build fails naming every member, and none of the set's artifacts
 	 * are written (mirroring LTC048's both-dropped semantics).
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
-	 * draft is the LT-283 handoff. Corpus-level: fires once per involved
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle.
+	 * Corpus-level: fires once per involved
 	 * file, no source offset.
 	 */
 	variantCssDrift: (tag: string, sources: ReadonlyArray<string>) =>
 		error(
 			'LTC051',
-			`Variant set \`${tag}\` compiles to different CSS across its members (${sources.join(', ')}) — the served surface's stylesheet is written for the whole set, so a drift would leave the other member's rendering unstyled. Author the CSS once and keep it byte-identical across the set's sources.`,
+			`Variant set \`${tag}\` compiles to different CSS across its members: ${sources.join(', ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make the styles of every member byte-identical: copy the styles of the served member into the others.`,
 		),
 
 	/**

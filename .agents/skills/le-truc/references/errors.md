@@ -117,9 +117,10 @@ The selector rules are deliberately **one-sided**: `LTC026` reports only what no
 | `LTC016` | `requestContext()`'s fallback references a name the server cannot resolve. | Use a literal or an expression over server args/setup. | error |
 | `LTC036` | A real `@zeix/le-truc` export used without importing it. | Add the import. Factory-context helpers are ambient and need none. | error |
 | `LTC037` | Factory-context vocabulary (`expose`, `first`, `host`, …) named in an import. | Remove it from the import line. | error |
-| `LTC048` | One component tag is declared by more than one corpus source — the scan globs `.tsrx` and `.tsx` into one registry, and both files are dropped from the generated output. | Keep exactly one authored file per tag: delete the other or rename its tag. | error |
+| `LTC048` | One component tag is declared by more than one corpus source, and the sources are not one folder-local variant set — two sources of the same surface, or spellings in different folders or under different base names. All the files are dropped from the generated output. | Keep at most one source per surface (`.tsrx`, `.tsx`) for a tag, with one base name in one directory: delete the extra, move the spellings together, or rename one tag. | error |
 | `LTC049` | The typed factory-context parameter destructures a name that is not FactoryContext vocabulary, or is not a destructured object at all — the generated client would inherit a name that does not exist. | Destructure only `host`, `first`, `all`, `expose`, `watch`, `on`, `pass`, `internals`, `requestContext`, `provideContexts` — e.g. `, { host, expose }: FactoryContext<MyProps>`. | error |
 | `LTC050` | The factory-context annotation's surface disagrees with the component: `config.formAssociated` set but plain `FactoryContext` annotated — `host` is missing the managed form members — or `FormFactoryContext` annotated without it. | Annotate `FormFactoryContext<MyProps>` for a form-associated component; `FactoryContext<MyProps>` otherwise. | error |
+| `LTC051` | The compiled members of a variant set produce different CSS. The build writes one stylesheet for the whole set, so it writes no artifact of the set. | Make the styles byte-identical in every member: copy the served member's styles into the others. | error |
 
 ### Retired idioms
 

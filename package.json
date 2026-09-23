@@ -65,6 +65,7 @@
 		"serve:examples": "bun run build:examples && PLAYWRIGHT=1 bun server/serve.ts",
 		"test": "bun test src/tests && node node_modules/.bin/playwright test examples",
 		"test:component": "bun scripts/test-component.ts",
+		"test:variants": "bun scripts/test-variants.ts",
 		"test:src": "bun test src/tests",
 		"test:server": "bun test server/tests",
 		"test:server:unit": "bun test server/tests --bail",

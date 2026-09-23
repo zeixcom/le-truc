@@ -134,6 +134,21 @@ const corpusTagOf = (filename: string): string =>
 	(filename.split('/').pop() ?? '').replace(/\.(tsrx|tsx)$/, '')
 
 /** `spike/tsx/sync/sync-el.tsx` → `tsx`; a `.tsrx` path → `tsrx`. */
+/**
+ * Re-anchor a generated client's relative specifiers one directory deeper,
+ * for the unserved variant client written to `variants/` (LT-284): every
+ * static `import`/`export … from` and dynamic `import()` whose specifier
+ * starts with `./` or `../` climbs one more level — child imports
+ * (`'./x.client'` → `'../x.client'`) and author imports already rewritten
+ * with `outDirPrefix` (`'../../../lib/x'` → `'../../../../lib/x'`) alike.
+ */
+export const relocateClientSpecifiers = (code: string): string =>
+	code.replace(
+		/(\bimport\s*\(?\s*|\bfrom\s*)(['"])(\.\.?\/)/g,
+		(_, lead: string, quote: string, dots: string) =>
+			`${lead}${quote}${dots === './' ? '../' : '../../'}`,
+	)
+
 const surfaceOf = (rel: string): VariantSurface =>
 	rel.endsWith('.tsx') ? 'tsx' : 'tsrx'
 
@@ -341,9 +356,29 @@ export const compileCorpus = async (
 		for (const { rel, component } of results) {
 			if (!component) continue
 			if (rel !== servedRel) {
+				// The non-selected member's CLIENT is still written (LT-284,
+				// ADR 0039 decision 2): the component test route serves it for
+				// the per-surface spec matrix, under a per-surface name in
+				// variants/ so no canonical consumer can mistake it — the CEM
+				// globs are flat, the registry stays one entry per tag, and
+				// server/CSS artifacts of the unserved member are not needed.
+				// Emitted child imports are relative to the canonical
+				// directory (`import './form-listbox.client'`), so they climb
+				// one level out of variants/.
+				const clientCode = relocateClientSpecifiers(component.clientCode)
+				await writeFileSafe(
+					getFilePath(
+						outDir,
+						'variants',
+						`${component.entry.tag}.${surfaceOf(rel)}.client.ts`,
+					),
+					clientCode,
+				)
 				console.log(
 					`· Compiled ${component.entry.tag} from ${rel} — variant set member, not served` +
-						(servedRel ? '' : ` (selected surface "${want}" did not compile)`),
+						(servedRel
+							? ` (client kept at variants/${component.entry.tag}.${surfaceOf(rel)}.client.ts)`
+							: ` (selected surface "${want}" did not compile)`),
 				)
 				continue
 			}

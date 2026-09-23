@@ -12,6 +12,7 @@ bun run serve:examples   # Build examples, then serve (Playwright-safe)
 bun run build:docs       # One-shot docs build
 bun run test             # Run src/ unit tests + all Playwright tests
 bun run test:component <name>  # Run tests for a single component
+bun run test:variants    # Run variant-set specs once per spelling (ADR 0039)
 bun run test:server      # Run server unit/integration tests
 ```
 
@@ -53,6 +54,7 @@ The system has two cooperating halves — a **reactive build pipeline** and an *
 | `build:examples` | `bun run build:examples:js && bun run build:examples:css` | N/A | No | N/A |
 | `test` | `bun test src/tests && node node_modules/.bin/playwright test examples` | N/A | N/A | N/A |
 | `test:component` | `bun scripts/test-component.ts <name>` | N/A | N/A | N/A |
+| `test:variants` | `bun scripts/test-variants.ts [<name>] [--flag]` | N/A | N/A | N/A |
 | `test:server` | `bun test server/tests` | N/A | N/A | N/A |
 | `test:server:watch` | `bun test server/tests --watch` | N/A | N/A | N/A |
 
@@ -376,13 +378,16 @@ The `fence` schema override provides:
 | `GET /examples/:component` | Pre-built example HTML | `docs/examples/` |
 | `GET /sources/:file` | Source code fragments | `docs/sources/` |
 | `GET /test/:component/mocks/:mock` | Test mock files | `examples/<component>/mocks/` |
-| `GET /test/:component` | Component test page | `docs-src/layouts/test.html` + `examples/<component>/<component>.html` |
+| `GET /test/:component/surface.js?surface=ts\|tsrx\|tsx` | Layout bundle with the component's client swapped for one spelling | `examples/main.ts` graph + the twin, canonical or `variants/` client |
+| `GET /test/:component` | Component test page; `?surface=` (or `TEST_SURFACE`) selects the spelling | `docs-src/layouts/test.html` + `examples/<component>/<component>.html` |
 | `GET /:locale/blog/:slug` | Blog post page; `<slug>.md` serves the markdown mirror next to it | `docs/<locale>/blog/<slug>.html\|.md` |
 | `GET /:locale/:page` | Documentation page inside a locale tree | `docs/<locale>/<page>` |
 | `GET /:locale` | That locale's index page | `docs/<locale>/index.html` |
 | `GET /favicon.ico` | Favicon | `docs/favicon.ico` |
 
 Pages live under `docs/<locale>/` — one complete tree per locale (LT-174) — while the api/, examples/ and sources/ fragment trees stay single-copy at the docs root. `GET /:locale/:page` redirects 301 extensionless URLs (`/en/guide`) to the matching `<page>.html` when it exists and 404s otherwise. `Accept: text/markdown` returns raw `.md` source from `docs-src/pages/` on `/` and `/:locale/:page`; blog posts serve their built markdown mirror directly at `/<locale>/blog/<slug>.md`. `handleStaticFile` 404s on directory paths generally, so no route can attempt `sendfile` on a directory.
+
+**Component test surfaces** (LT-284, ADR 0039 s2). A variant set carries up to three spellings of one tag; `?surface=ts|tsrx|tsx` on `/test/:component` swaps the page's `{{ test-script }}` from `/assets/main.js` to `surface.js`. That bundle is the full `examples/main.ts` graph with the component's canonical client emptied and one module appended: the hand-written twin (`ts`), the canonical client when that surface is the registry's selected member, or else `variants/<tag>.<surface>.client.ts`. The tag is therefore defined exactly once. A surface the component does not carry is a 404, an unknown one a 400. With no query, the `TEST_SURFACE` env var applies. Specs hard-code `/test/<tag>`, so `scripts/test-variants.ts` uses the env var: it builds once and, per surface, starts `serve.ts` with `TEST_SURFACE` set, then runs the specs of the folders that carry that surface. It refuses to start while port 3000 is taken, because Playwright's `reuseExistingServer` would test the default page.
 
 **Legacy root-level URLs** (`/guide.html`, `/blog/<slug>`, …) 404 by design (LT-198 ruling): a redirect map in `serve.ts` would not reach the static host that actually serves the site, and the locale layout is unreleased, so there is no population of broken external links yet. Only `/` got the stub treatment, because it is the URL people actually type. Pinned by the `legacy root URLs` tests in `server/tests/serve.test.ts`.
 

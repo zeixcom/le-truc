@@ -4,19 +4,16 @@
  * body, the trailing JSX becomes the return. Setup statements and template
  * attribute order are copied verbatim; the byte-identity bar is the SERVER
  * RENDER (server.golden parity), not the source text.
+ *
+ * Lives beside its `.tsrx` twin and the hand-written `.ts` twin as a variant
+ * set (ADR 0039): the hand-written twin owns the `HTMLElementTagNameMap`
+ * entry, so this member declares none (duplicates are a TS 2717 error).
  */
-import { createCell } from '@zeix/le-truc'
-import type { FactoryContext } from '@zeix/le-truc'
+import { createCell, type FactoryContext } from '@zeix/le-truc'
 
 export type BasicCounterProps = {
 	/** Current counter value. Increments on each button click. */
 	count: number
-}
-
-declare global {
-	interface HTMLElementTagNameMap {
-		'basic-counter': HTMLElement & BasicCounterProps
-	}
 }
 
 /**

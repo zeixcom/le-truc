@@ -9,16 +9,24 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import {
 	ASSETS_DIR,
 	DEFAULT_LOCALE,
 	EXAMPLES_DIR,
+	GENERATED_CLIENTS_DIR,
 	LOCALES,
 	OUTPUT_DIR,
+	ROOT,
 	SOURCES_DIR,
 } from '../config'
 import { fileExists, getFilePath, isDirectory } from '../io'
-import { getLayoutForPath } from '../serve'
+import {
+	getLayoutForPath,
+	handleComponentTest,
+	handleSurfaceModule,
+} from '../serve'
 import { hmrScriptTag } from '../templates/hmr'
 
 /* === §14.4 getLayoutForPath — unit tests (no server needed) === */
@@ -88,6 +96,24 @@ type TestServer = {
 const isLocale = (segment: string): boolean =>
 	(LOCALES as readonly string[]).includes(segment)
 
+// Mirrors serve.ts's `effectiveSurface` (kept in lockstep by hand): an
+// explicit ?surface= query wins over the TEST_SURFACE env override.
+const SURFACES = ['ts', 'tsrx', 'tsx'] as const
+
+const parseSurface = (
+	query: string | null,
+): (typeof SURFACES)[number] | 'invalid' | undefined => {
+	if (query) {
+		return (SURFACES as readonly string[]).includes(query)
+			? (query as (typeof SURFACES)[number])
+			: 'invalid'
+	}
+	const env = process.env.TEST_SURFACE
+	return (SURFACES as readonly string[]).includes(env || '')
+		? (env as (typeof SURFACES)[number])
+		: undefined
+}
+
 function startTestServer(opts: { development?: boolean } = {}): TestServer {
 	const isDev = opts.development ?? false
 
@@ -141,6 +167,20 @@ function startTestServer(opts: { development?: boolean } = {}): TestServer {
 				const filePath = getFilePath(SOURCES_DIR, req.params.file)
 				return serveFile(filePath)
 			},
+
+			// Component test routes (LT-284) — wired to the REAL handlers, the
+			// way serve.ts routes them.
+			'/test/:component/surface.js': req =>
+				handleSurfaceModule(
+					req.params.component,
+					parseSurface(new URL(req.url).searchParams.get('surface')),
+				),
+
+			'/test/:component': req =>
+				handleComponentTest(
+					req.params.component,
+					parseSurface(new URL(req.url).searchParams.get('surface')),
+				),
 
 			// Pages live under a locale prefix since LT-174; these mirror
 			// serve.ts's locale-prefixed routes.
@@ -507,6 +547,217 @@ describe('bare section roots', () => {
 
 	test('GET /examples/basic → 404 (example group directory)', async () => {
 		const res = await fetch(`${server.url}/examples/basic`)
+		expect(res.status).toBe(404)
+	})
+})
+
+/* === §14.7 Component test surface selection (LT-284, ADR 0039 s2) === */
+
+// basic-counter is the fixture subject. The pins are corpus-state-ADAPTIVE
+// rather than frozen: before the exemplar lands (LT-285) it is a singleton
+// .tsrx tag with no twin; after, it is a three-surface variant set whose
+// selected surface is whatever the last corpus build served. Either way the
+// route must serve exactly the surfaces the corpus carries — availability
+// on disk and response status have to agree. The surface legs need the
+// corpus build (server/generated/) to exist — CI builds it in the
+// typecheck step; locally run `bun run build:corpus` first.
+
+const COMPONENT_TAG = 'basic-counter'
+const COMPONENT_DIR = path.resolve(ROOT, 'examples/basic/counter')
+type Surface = (typeof SURFACES)[number]
+
+const twinExists = (): boolean =>
+	fs.existsSync(path.join(COMPONENT_DIR, `${COMPONENT_TAG}.ts`))
+
+const variantClientExists = (surface: Surface): boolean =>
+	fs.existsSync(
+		path.join(
+			GENERATED_CLIENTS_DIR,
+			'variants',
+			`${COMPONENT_TAG}.${surface}.client.ts`,
+		),
+	)
+
+const canonicalClientExists = (): boolean =>
+	fs.existsSync(path.join(GENERATED_CLIENTS_DIR, `${COMPONENT_TAG}.client.ts`))
+
+/** The registry's selected compiled surface, or null without a corpus build. */
+const selectedSurface = (): Surface | null => {
+	const registryPath = path.join(GENERATED_CLIENTS_DIR, 'registry.json')
+	if (!fs.existsSync(registryPath)) return null
+	try {
+		const registry = JSON.parse(
+			fs.readFileSync(registryPath, 'utf8'),
+		) as Record<string, { source?: string }>
+		const source = registry[COMPONENT_TAG]?.source
+		if (typeof source !== 'string') return null
+		return source.endsWith('.tsx') ? 'tsx' : 'tsrx'
+	} catch {
+		return null
+	}
+}
+
+/** A compiled surface is servable when the registry selected it (canonical
+ * client) or a variants/ copy of it exists. */
+const servableCompiled = (surface: Surface): boolean =>
+	surface === selectedSurface()
+		? canonicalClientExists()
+		: variantClientExists(surface)
+
+const corpusBuilt = (): boolean => selectedSurface() !== null
+
+describe('component test surface selection', () => {
+	let server: TestServer
+
+	beforeAll(() => {
+		server = startTestServer()
+	})
+
+	afterAll(() => {
+		server.close()
+	})
+
+	test('GET /test/basic-counter → 200 with the default layout bundle, unchanged', async () => {
+		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}`)
+		expect(res.status).toBe(200)
+		const body = await res.text()
+		expect(body).toContain('src="/assets/main.js"')
+		expect(body).toContain('href="/assets/main.js"')
+		expect(body).not.toContain('surface.js')
+		// The fixture markup is still spliced in
+		expect(body).toContain('<basic-counter')
+	})
+
+	test('GET /test/basic-counter?surface=bogus → 400 (unknown spelling)', async () => {
+		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}?surface=bogus`)
+		expect(res.status).toBe(400)
+	})
+
+	test('the twin surface is served iff the twin exists', async () => {
+		if (!corpusBuilt()) return // no corpus build — nothing to agree with
+		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}?surface=ts`)
+		expect(res.status).toBe(twinExists() ? 200 : 404)
+		if (twinExists()) {
+			const body = await res.text()
+			expect(body).toContain(
+				`src="/test/${COMPONENT_TAG}/surface.js?surface=ts"`,
+			)
+			expect(body).not.toContain('src="/assets/main.js"')
+		}
+	})
+
+	test('each compiled surface is served iff its client is on disk', async () => {
+		if (!corpusBuilt()) return
+		for (const surface of ['tsrx', 'tsx'] as const) {
+			const res = await fetch(
+				`${server.url}/test/${COMPONENT_TAG}?surface=${surface}`,
+			)
+			expect(res.status).toBe(servableCompiled(surface) ? 200 : 404)
+			if (res.status === 200) {
+				const body = await res.text()
+				expect(body).toContain(
+					`src="/test/${COMPONENT_TAG}/surface.js?surface=${surface}"`,
+				)
+				expect(body).not.toContain('src="/assets/main.js"')
+			}
+		}
+	})
+
+	test('TEST_SURFACE env override serves the surface page without a query', async () => {
+		if (!corpusBuilt()) return
+		const surface = selectedSurface()
+		if (!surface) return
+		process.env.TEST_SURFACE = surface
+		try {
+			const res = await fetch(`${server.url}/test/${COMPONENT_TAG}`)
+			expect(res.status).toBe(200)
+			const body = await res.text()
+			expect(body).toContain(
+				`src="/test/${COMPONENT_TAG}/surface.js?surface=${surface}"`,
+			)
+			// An explicit query still wins over the env: an uncarried surface
+			// must 404 even with the override set
+			const other = (['tsrx', 'tsx'] as const).find(
+				s => s !== surface && !variantClientExists(s),
+			)
+			if (other) {
+				const explicit = await fetch(
+					`${server.url}/test/${COMPONENT_TAG}?surface=${other}`,
+				)
+				expect(explicit.status).toBe(404)
+			}
+		} finally {
+			delete process.env.TEST_SURFACE
+		}
+	})
+
+	test('the surface module registers the tag exactly once (selected surface)', async () => {
+		if (!corpusBuilt()) return
+		const surface = selectedSurface()
+		if (!surface) return
+		const res = await fetch(
+			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=${surface}`,
+		)
+		expect(res.status).toBe(200)
+		expect(res.headers.get('content-type')).toContain('text/javascript')
+		const js = await res.text()
+		// The tag's component factory call appears exactly once — the
+		// generated-client slot is emptied and the surface module is the
+		// only registration, so a page load can never define it twice.
+		// (Minifiers rename defineComponent; the quoted tag literal at a
+		// call site is the stable marker.)
+		const callSites = [
+			...js.matchAll(new RegExp(`\\(['"]${COMPONENT_TAG}['"]`, 'g')),
+		]
+		expect(callSites.length).toBe(1)
+		// The rest of the default layout graph rode along
+		expect(js).toContain('basic-button')
+	})
+
+	test('the twin surface module also registers the tag exactly once', async () => {
+		if (!corpusBuilt() || !twinExists()) return
+		const res = await fetch(
+			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=ts`,
+		)
+		expect(res.status).toBe(200)
+		const js = await res.text()
+		const callSites = [
+			...js.matchAll(new RegExp(`\\(['"]${COMPONENT_TAG}['"]`, 'g')),
+		]
+		expect(callSites.length).toBe(1)
+	})
+
+	test('an on-disk variants client serves its surface module', async () => {
+		if (!corpusBuilt()) return
+		const kept = (['tsrx', 'tsx'] as const).find(s => variantClientExists(s))
+		if (!kept) return
+		const res = await fetch(
+			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=${kept}`,
+		)
+		expect(res.status).toBe(200)
+		const js = await res.text()
+		const callSites = [
+			...js.matchAll(new RegExp(`\\(['"]${COMPONENT_TAG}['"]`, 'g')),
+		]
+		expect(callSites.length).toBe(1)
+	})
+
+	test('GET /test/basic-counter/surface.js?surface=bogus → 400', async () => {
+		const res = await fetch(
+			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=bogus`,
+		)
+		expect(res.status).toBe(400)
+	})
+
+	test('GET /test/basic-counter/surface.js (no surface) → 400', async () => {
+		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}/surface.js`)
+		expect(res.status).toBe(400)
+	})
+
+	test('GET /test/unknown-component/surface.js?surface=tsrx → 404', async () => {
+		const res = await fetch(
+			`${server.url}/test/unknown-component/surface.js?surface=tsrx`,
+		)
 		expect(res.status).toBe(404)
 	})
 })

@@ -134,7 +134,7 @@ review sandbox (no port binding).
   lowercase. Any future camelCase string or Parser arg would never match an authored
   occurrence. It is moot for spinbutton now (no channel), and there is no other live case.
 
-- [ ] LT-293: Propagate the LT-283 variant-set rule and LTC051 through the docs and the error copy (LT-283 review rider — the commit's Tech Writer handoff was never executed).
+- [x] LT-293: Propagate the LT-283 variant-set rule and LTC051 through the docs and the error copy (LT-283 review rider — the commit's Tech Writer handoff was never executed). — done ✓
   **Skill:** tech-writer
   **Context:** 4d15eac6 landed LTC048's narrowing and the new LTC051 with draft copy in
   `server/compiler/diagnostics.ts`. Its handoff list has not been executed anywhere:
@@ -155,6 +155,7 @@ review sandbox (no port binding).
   Follow the error-message lifecycle checklist in the tech-writer skill.
   **Check:** `git grep -n "exactly one authored"` returns no hits outside ADR history;
   check:links green.
+  **Changed:** `diagnostics.ts` — LTC048/LTC051 copy final (fix part names the variant-set shape; LTC051 no longer claims "unstyled"); `errors.md` LTC048 row rewritten, LTC051 row added; `HOST_PROFILE.md` intro; `LE_TRUC_COMPILER.md` §§ 1, 6, 7, 7.1 (field table, accepted keys, value rules, registry sentence). § 7 already describes the LT-284 `variants/` client from the working tree — it reads true only once LT-284 commits. `bun test` dual-corpus + diagnostics green; check:links 642/642.
 
 - [ ] LT-294: Point the CEM at the corpus output directory — it still globs the pre-LT-255 `server/generated/tsrx/` (review finding, 2026-09-23).
   **Skill:** docs-server-dev
@@ -171,7 +172,7 @@ review sandbox (no port binding).
   pass; the regenerated manifest's paths name `server/generated/components/`; the manifest
   diff is otherwise empty.
 
-- [ ] LT-284: Per-surface test-route serving + the variant spec matrix (LT-238/ADR 0039 s2).
+- [x] LT-284: Per-surface test-route serving + the variant spec matrix (LT-238/ADR 0039 s2). — done, pending review ⏳
   **Skill:** docs-server-dev
   **Context:** ADR 0039's runtime equivalence contract: the same Playwright spec runs
   unchanged against each spelling of a variant set. `/test/:component`
@@ -199,6 +200,9 @@ review sandbox (no port binding).
   `variants/`. No generated client carries one today, so this is latent. Either rewrite
   every relative specifier, or pin with a test that variant clients carry only side-effect
   child imports.
+  **Changed:** `server/serve.ts`: `/test/:component?surface=` plus the `TEST_SURFACE` env override, and `/test/:component/surface.js` (`buildSurfaceBundle`, `resolveSurfaceModule`). `docs-src/layouts/test.html` gets a `{{ test-script }}` slot. `server/corpus-compile.ts`: `relocateClientSpecifiers` for `variants/` clients. New `scripts/test-variants.ts` + `test:variants`. `serve.test.ts` surface-selection block. `SERVER.md` routes, commands and the surface paragraph.
+  **How:** the surface bundle is the `examples/main.ts` graph with the tag's canonical client emptied and the surface module appended by its real path. When the surface is the canonical client, nothing is swapped. So the tag is defined once by construction. Rider (a): both tsc errors fixed. Rider (b): every relative specifier (`import`, `from`, `import()`) now climbs one level, pinned by a unit test in `dual-corpus.test.ts`. Also fixed: the `ts` surface bundle failed to build, because the twin was loaded in a custom namespace where its `../../../index` import did not resolve.
+  **Check:** **Playwright not run.** The sandbox refuses every port bind, so `bun run test:variants` and the 14 `serve.test.ts` route tests could not run here. Run `bun run test:variants` locally. Verified without a port: the handlers answer 200 for default/`ts`/`tsrx`/`tsx`, 400 for an unknown surface, and the default page is unchanged. Each surface bundle has exactly one `basic-counter` tag literal, as in `main.js`. tsc is clean and biome is clean on the changed files. `bun test server/tests`: 1658 pass / 23 fail = 14 port-bind + the 9 LT-237 rider failures, unchanged.
 
 - [ ] LT-285: The three-spelling exemplar — restore `basic-counter`'s `.ts` twin as a variant. **The LT-238 exit criterion.**
   **Skill:** le-truc-dev

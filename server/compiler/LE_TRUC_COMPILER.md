@@ -54,8 +54,10 @@ same artifacts (ADR 0032):
 The default is a rule, not a residue: new authoring is `.tsx` unless
 statement-context control flow argues otherwise. Both surfaces are
 first-class inputs — the corpus scan globs both extensions into one
-registry, and a tag two sources declare fails the compile naming both files
-(LTC048). The parity suite
+registry. A corpus folder may carry a **variant set** — one `.tsrx` and one
+`.tsx` spelling of one tag, same base name, same directory (ADR 0039) — which
+compiles both and serves one; any other tag that two sources declare fails
+the compile naming both files (LTC048). The parity suite
 (`server/tests/compiler/tsx/parity.test.ts`) is the standing equivalence
 contract: the same component authored in both surfaces must render
 byte-identically, which is what keeps the surfaces from drifting apart
@@ -892,9 +894,11 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   converges to zero; a missing *translation* is the translator's work and
   rides the translation census instead.
 - *Corpus-level*: one component tag declared by more than one corpus source
-  (LTC048) — fires before pass 2, names every declaring file whatever
-  surface each is written in, and drops them all; the dual front end's
-  one-tag-one-source rule.
+  outside a folder-local variant set (LTC048) — fires before pass 2, names
+  every declaring file whatever surface each is written in, and drops them
+  all; and a variant set whose compiled members disagree on CSS (LTC051) —
+  names every member and writes no artifact of the set, because the set
+  serves one stylesheet (ADR 0039).
 
 **Reclassification under ADR 0029.** The impure-ambient refusal is not in the
 table below because it does not become a routing signal at all: it becomes
@@ -955,10 +959,18 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   `composeRegistry`; pass 2 re-compiles with the full registry, child
   imports, and compose registry. The duplicate-tag check (LTC048) runs
   between the passes: it names every declaring file and drops them all
-  before pass 2's registry could make their order load-bearing. Artifacts
-  land in the configured output root plus `registry.json` — in this repo the
-  gitignored `server/generated/components/`. Errors fail the run; warnings
-  skip the file with a notice.
+  before pass 2's registry could make their order load-bearing. A
+  folder-local **variant set** (ADR 0039) is exempt: every member compiles
+  and must compile clean, their CSS must be byte-identical (LTC051), and
+  only the **selected surface** (§ 7.1 `variantSurface`/`variantOverrides`,
+  `.tsx` by default) writes the canonical `<tag>.server.ts`/`.client.ts`/`.css`
+  and the one registry entry, whose `source` names the selected member. The
+  unserved member's client lands in `variants/<tag>.<surface>.client.ts` for
+  the per-surface spec matrix on the component test route; no canonical
+  consumer reads it. Artifacts land in the configured output root plus
+  `registry.json` — in this repo the gitignored
+  `server/generated/components/`. Errors fail the run; warnings skip the
+  file with a notice.
 - **Consumers**: `server/build.ts` (via the `index.ts` facade plus direct
   `registry`/`spans` imports), `check:corpus` (§ 6), and the CEM build
   (`scripts/build-corpus.ts` feeds `cem analyze`, which reads the generated
@@ -1008,6 +1020,8 @@ resolves against it.
 | `outDir` | `"server/generated/components"` | Where the generated `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json` and `i18n.ts` land. Must sit inside the project root (see below) |
 | `i18nDir` | `"i18n"` | The committed per-locale translation catalogs (ADR 0030 s5). A project with no such directory censuses zero locales and zero gaps |
 | `runtimeImport` | `"../../compiler/runtime"` | The specifier the generated SERVER modules import the render harness from. The default is this repo's relative path; a consumer sets their own until LT-254 publishes the compiler and it becomes a package specifier |
+| `variantSurface` | `"tsx"` | The surface a variant set serves when no per-tag override applies (ADR 0039): `"tsx"` or `"tsrx"` |
+| `variantOverrides` | `{}` | Per-tag served surface for variant sets, e.g. `{ "basic-counter": "tsrx" }`. Keys must be custom-element tags; values `"tsx"` or `"tsrx"` |
 
 ```json
 {
@@ -1027,7 +1041,8 @@ field, what was received and what was expected:
 
 - an **unknown key** — including a mis-cased one, `"outdir"` instead of
   `"outDir"` — is rejected listing the accepted keys (`sources`,
-  `siblingModules`, `outDir`, `i18nDir`, `runtimeImport`), with a
+  `siblingModules`, `outDir`, `i18nDir`, `runtimeImport`, `variantSurface`,
+  `variantOverrides`), with a
   did-you-mean when only the casing differs. Silently ignoring a key would
   fall back to THIS repo's defaults, which in a consumer project match
   nothing — the worst first-install failure is "it compiled, but nothing is
@@ -1036,7 +1051,9 @@ field, what was received and what was expected:
   string is reported with the array spelling to use (a string would spread
   into twelve single-character globs), and a non-string entry names its
   index (`"sources[1]"`);
-- `outDir`, `i18nDir` and `runtimeImport` must be **non-empty strings**.
+- `outDir`, `i18nDir` and `runtimeImport` must be **non-empty strings**;
+- `variantSurface` and every `variantOverrides` value must be `"tsx"` or
+  `"tsrx"`, and every `variantOverrides` key a dashed lowercase tag.
 
 **The output root's depth is derived, not assumed.** Every generated module
 lands FLAT in the output root whatever nesting the authored source had, so a
@@ -1052,7 +1069,9 @@ corpus's index, one entry per compiled component, and its `source` is the
 authored file's path **relative to the project root** — not to this repo. The
 duplicate-tag rule (LTC048) is likewise corpus-scoped: two files anywhere in a
 project's configured sources declaring the same custom-element tag fail the
-compile naming both, because a tag is the registry's key.
+compile naming both, because a tag is the registry's key — unless they are
+one folder-local variant set, which keeps one entry naming the selected
+member.
 
 ## 8. Cross-cutting invariants
 

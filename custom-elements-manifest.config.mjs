@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { leTrucPlugin } from '@zeix/cem-plugin-le-truc'
 
@@ -13,16 +14,31 @@ let typeChecker
 // LT-114, form-radiogroup in LT-116 (the loop-body dirty-flag dispatch
 // widening), basic-button in LT-117 (enhancer mode — the template-less
 // light-DOM enhancer contract).
+// Since LT-285 (ADR 0039) variant sets bring the twins back: a folder may
+// carry the hand-written .ts twin beside the compiled .tsrx/.tsx spellings.
+// The twin is the set's artifact of record but NOT its CEM declaration — the
+// component is compiled, and the generated client owns the declaration. The
+// exclusion below is derived from the variant set itself (a .ts glob hit
+// whose stem has a same-directory .tsrx or .tsx sibling), so the next
+// variant set needs no config edit. verify-cem.ts's duplicate-tag check is
+// the acceptance.
 // Run `bun run scripts/build-tsrx.ts` (or build:docs / build:examples:js,
 // which both sequence the compiler first) before `cem analyze` — the
 // generated output is gitignored.
+
+/** A hand-written .ts twin of a compiled sibling — a variant set's record. */
+const isVariantTwin = glob =>
+	glob.endsWith('.ts') &&
+	['.tsrx', '.tsx'].some(ext => existsSync(glob.replace(/\.ts$/, ext)))
+
 export default {
 	globs: ['examples/**/*.ts', 'server/generated/tsrx/*.client.ts'],
 	exclude: ['**/*.spec.ts', '**/*.test.ts'],
 	outdir: '.',
 	plugins: [leTrucPlugin(() => typeChecker)],
 	overrideModuleCreation({ ts, globs }) {
-		const program = ts.createProgram(globs, {
+		const requested = globs.filter(g => !isVariantTwin(g))
+		const program = ts.createProgram(requested, {
 			target: ts.ScriptTarget.ESNext,
 			lib: ['lib.esnext.d.ts', 'lib.dom.d.ts'],
 		})
@@ -41,9 +57,9 @@ export default {
 		// as import resolutions are absolute and deduped over the root entry).
 		// Comparing raw names silently dropped such files — examples/main.ts
 		// (latent) and every generated client (LT-006).
-		const requested = new Set(globs.map(g => resolve(g)))
+		const analyzed = new Set(requested.map(g => resolve(g)))
 		return program
 			.getSourceFiles()
-			.filter(sf => requested.has(resolve(sf.fileName)))
+			.filter(sf => analyzed.has(resolve(sf.fileName)))
 	},
 }

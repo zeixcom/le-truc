@@ -9,6 +9,12 @@
  * diagnostics the ambients exist to surface, at native positions on the
  * authored files (the ADR 0032 s3 dividend — no span remapping needed).
  *
+ * The EXAMPLES config (`examples/tsconfig.json`, LT-285) typechecks the
+ * variant-set folder — the hand-written `.ts` twin and the compiled `.tsx`
+ * member in one program — so the ADR 0039 declaration convention (exactly
+ * one `HTMLElementTagNameMap` entry per set, the twin's) is a real tsc
+ * gate: a second member re-declaring the entry fails with TS 2717 here.
+ *
  * This is the standing CI form of the spike's manual `tsconfig.neg.json`
  * probes; `check:corpus` is the corpus-side analog.
  */
@@ -16,7 +22,7 @@ import { describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { spawnSync } from 'node:child_process'
 import * as path from 'node:path'
 
-// Two cold `tsc -p` runs per test — well over the 5s default on a cold
+// Three cold `tsc -p` runs per file — well over the 5s default on a cold
 // cache, comfortably under a minute.
 setDefaultTimeout(60_000)
 
@@ -67,5 +73,18 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 			"bad-host-typo.tsx(33,29): error TS2339: Property 'cout' does not exist on type 'FormAssociatedValueElement & BadHostProps'",
 		)
 		expect(status).not.toBe(0)
+	})
+
+	test('the variant-set folder typechecks — one tag-map entry, the twin-owned one (LT-285, ADR 0039)', () => {
+		// The twin, the `.tsrx` and the `.tsx` of basic-counter share the
+		// folder; only the twin declares the HTMLElementTagNameMap entry.
+		// The tsc backstop (verified live with a temporary duplicate): two
+		// structurally IDENTICAL entries merge silently, but the moment the
+		// spellings' Props types diverge, the duplicate fails with TS 2717
+		// naming the offending member — the divergence the convention
+		// exists to prevent.
+		const { status, output } = runTsc(path.join(ROOT, 'examples/tsconfig.json'))
+		expect(output).toBe('')
+		expect(status).toBe(0)
 	})
 })

@@ -50,7 +50,10 @@ const FIXTURES: Fixture[] = [
 		tag: 'basic-counter',
 		name: 'BasicCounter',
 		tsrx: 'examples/basic/counter/basic-counter.tsrx',
-		tsxx: 'spike/tsx/basic/counter/basic-counter.tsx',
+		// The ported `.tsx` lives beside its `.tsrx` twin since LT-285 (the
+		// LT-237 move, applied to this component first as the ADR 0039
+		// three-spelling exemplar) — the pair is now a folder-local fact.
+		tsxx: 'examples/basic/counter/basic-counter.tsx',
 		args: { start: 42 },
 	},
 	{

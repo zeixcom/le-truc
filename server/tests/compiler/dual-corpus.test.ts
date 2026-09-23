@@ -13,7 +13,11 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { CorpusConfig } from '../../compiler/corpus-config'
-import { compileCorpus, REPO_CONFIG } from '../../corpus-compile'
+import {
+	compileCorpus,
+	REPO_CONFIG,
+	relocateClientSpecifiers,
+} from '../../corpus-compile'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { settle } from '../helpers/test-utils'
@@ -174,6 +178,81 @@ describe('dual corpus (ADR 0032 sub-design 6, narrowed by ADR 0039)', () => {
 		)
 		expect(fs.readFileSync(path.join(outDir, 'var-el.client.ts'), 'utf8')).toBe(
 			fs.readFileSync(path.join(soloDir, 'var-el.client.ts'), 'utf8'),
+		)
+	})
+
+	test('the non-selected member keeps its client under variants/ (LT-284)', async () => {
+		// ADR 0039 decision 2's runtime equivalence contract: the component
+		// test route serves EACH compiled surface, so the corpus compile
+		// keeps the non-selected member's client at
+		// `variants/<tag>.<surface>.client.ts` — never a canonical name, so
+		// the flat CEM globs and the one-entry-per-tag registry are blind to
+		// it. (Composing sets prove the child-import climb live when the
+		// first one migrates; a dangling `./` specifier would fail the
+		// route's bundle build loudly.)
+		const outDir = path.join(scratch.path, 'variant-client-kept')
+		await compileCorpus(variantSet(), outDir)
+		const soloTsxDir = path.join(scratch.path, 'variant-client-kept-solo-tsx')
+		const soloTsrxDir = path.join(scratch.path, 'variant-client-kept-solo-tsrx')
+		await compileCorpus(
+			[memoryFile(VAR_TSX, varTsx('display: block'))],
+			soloTsxDir,
+		)
+		await compileCorpus(
+			[memoryFile(VAR_TSRX, varTsrx('display: block'))],
+			soloTsrxDir,
+		)
+		// `.tsx` is the default served surface; the `.tsrx` member's client
+		// is kept, byte-identical to that member's solo compile…
+		const keptPath = path.join(outDir, 'variants', 'var-el.tsrx.client.ts')
+		expect(fs.readFileSync(keptPath, 'utf8')).toBe(
+			fs.readFileSync(path.join(soloTsrxDir, 'var-el.client.ts'), 'utf8'),
+		)
+		// …its relative specifiers climb out of variants/ (nothing dangles)…
+		expect(fs.readFileSync(keptPath, 'utf8')).not.toMatch(/import\s+['"]\.\//)
+		// …and the served surface keeps no variants copy.
+		expect(
+			fs.existsSync(path.join(outDir, 'variants', 'var-el.tsx.client.ts')),
+		).toBe(false)
+		// The canonical artifacts stay the selected member's.
+		expect(fs.readFileSync(path.join(outDir, 'var-el.client.ts'), 'utf8')).toBe(
+			fs.readFileSync(path.join(soloTsxDir, 'var-el.client.ts'), 'utf8'),
+		)
+		// With the override flipped, the kept copy flips with it.
+		const flippedDir = path.join(scratch.path, 'variant-client-kept-flipped')
+		await compileCorpus(
+			variantSet(),
+			configAt(flippedDir, { variantSurface: 'tsrx' }),
+		)
+		expect(
+			fs.readFileSync(
+				path.join(flippedDir, 'variants', 'var-el.tsx.client.ts'),
+				'utf8',
+			),
+		).toBe(fs.readFileSync(path.join(soloTsxDir, 'var-el.client.ts'), 'utf8'))
+		expect(
+			fs.existsSync(path.join(flippedDir, 'variants', 'var-el.tsrx.client.ts')),
+		).toBe(false)
+	})
+
+	test('a variants/ client climbs every relative specifier one level (LT-284)', () => {
+		const code = [
+			"import './child.client'",
+			"import { x } from './helper'",
+			"import { y } from '../../../lib/y'",
+			"export { z } from './z'",
+			"const m = import('./lazy')",
+			"import { defineComponent } from '@zeix/le-truc'",
+		].join('\n')
+		expect(relocateClientSpecifiers(code)).toBe(
+			[
+				"import '../child.client'",
+				"import { x } from '../helper'",
+				"import { y } from '../../../../lib/y'",
+				"export { z } from '../z'",
+				"const m = import('../lazy')",
+				"import { defineComponent } from '@zeix/le-truc'",
+			].join('\n'),
 		)
 	})
 
