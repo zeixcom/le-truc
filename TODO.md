@@ -52,11 +52,11 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-295.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-299.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
-review filed LT-291–LT-294.)
+review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298.)
 
 **Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
 are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
@@ -69,93 +69,77 @@ BACKLOG P3. LT-291 is latent today, but it gates the first wave-4 migration that
 twin that a compiled parent references. The exit criterion gains: `check:corpus` exits 0
 (LT-290).
 
-**Working-tree state at review (2026-09-23).** Uncommitted LT-284/LT-237/LT-285 work:
-`bun test server/tests/compiler` has 9 failures (0 at HEAD — LT-237 rider); `typecheck`
-has 2 errors in `server/serve.ts` (LT-284 rider); `serve.test.ts` could not be run in the
-review sandbox (no port binding).
+**HEAD state after 640922d5 (LT-284 review, 2026-09-23).** That commit, titled LT-284,
+also carries LT-293 (error copy + compiler docs) and the in-progress LT-237/LT-285 work
+(`basic-counter.ts` twin, `examples/tsconfig.json`, CEM twin exclusion, the parity/typecheck
+test edits). It is pushed, so history stays; attribute by file, not by title. HEAD is red:
+`bun test server/tests/compiler` has the 9 LT-237 rider failures. tsc is clean. The
+`serve.test.ts` route legs and the Playwright matrix need port binding, which no review
+sandbox has.
 
 ---
 
-- [x] LT-290: `argsFromAttrs` re-emits Parser fallbacks that read `first()` refs out of scope (LT-194 defect; filed from the 2026-09-23 compiler review). **Pulled into the iteration 2026-09-23: `check:corpus` exits 2 at HEAD, so every task's gate reads red.** — done ✓
+- [x] LT-298: The `.tsx` front end drops the args parameter's type annotation, so every arg reads as untyped (found by the first `test:variants` run, 2026-09-23). **Pulled into the iteration: `basic-counter` is served from `.tsx`, so the default `bun run test` is red too.** — done ✓
   **Skill:** le-truc-dev
-  **Context:** `emit-server.ts` (the `argsFromAttrs` builder beside the render function)
-  copies each Parser-backed prop's fallback text as-is:
-  `${parser.parser}(${parser.fallbackText})(${attrVar})`. When the fallback reads a
-  `first()` ref, the emitted helper names a binding that exists only inside the render
-  function (`const input: any = refStub`). Live case: `form-spinbutton`
-  (`asNumber(asNumber(0)(input.value))(valueAttr)`, and likewise for `min`/`max`/`step`/`bigStep`),
-  the only corpus module affected today (checked across `server/generated/components`).
-  Three consequences:
-  (1) `check:corpus` reports 5 × TS2552 "Cannot find name 'input'" remapped onto
-  `form-spinbutton.tsrx` and exits 2. This was already true at 4d15eac6, even though LT-283's
-  gate line reported check:corpus green. The "warning baseline 0" line is not the gate; the
-  exit code is.
-  (2) At runtime, `server/effects/page-render.ts` calls `argsFromAttrs` without a guard, so
-  an authored page occurrence of `<form-spinbutton value=…>` (or `min`/`max`/`step`) throws
-  a ReferenceError during the page render.
-  (3) Even if the scope were fixed, a ref-reading fallback would put a `refStub` value into
-  the render args, and from there into the markup. That breaks LE_TRUC_COMPILER.md § 8
-  "Server stubs never reach the markup". § 5.3's "fallbacks and their ref reads included"
-  describes the defect as design.
-  Fix direction (le-truc-dev decides): a Parser prop whose fallback's free names include a
-  `first()`/`all()` ref gets no attribute channel in the helper. It is omitted when it is
-  optional or defaulted, and otherwise the whole helper is withheld, so the component stays
-  authored and is never page-rendered (the export's PRESENCE is the renderer's
-  qualification). This follows the existing "suppressed harness emits no helper" rule.
-  Tech Writer amends § 5.3 in the same commit.
-  **Channel:** none new. This is an emitter fix, and the page renderer's existing
-  `skipped` channel (`unrenderable-args`) records the withheld case.
-  **Check:** `check:corpus` exits 0 with 0 remapped diagnostics; a page-render fixture
-  with a spinbutton occurrence carrying `value` renders or skips without throwing; an
-  emitter pin asserts no `argsFromAttrs` body references a `refStub` name; goldens change
-  only in `form-spinbutton.server.ts`; census 20/2/0.
-  **Changed:** `server/compiler/emit-server.ts` (the `argsFromAttrs` builder: a new
-  `resolvesInHelper` rule, under which a Parser fallback qualifies only when every free name
-  is a JS global, a harness export, or a server import local; a non-qualifying prop emits
-  `if (attrs[k] != null) return null`, and a required one withholds the helper through the
-  qualification gate); `server/tests/effects/page-render.test.ts` (2 real-corpus pins:
-  no helper names a `refStub` stub, and a `<form-spinbutton value>` occurrence stays
-  authored as `unrenderable-args` without throwing; both verified failing without the fix);
-  `LE_TRUC_COMPILER.md` § 5.3 (the "ref reads included" sentence replaced with the
-  module-scope rule; developer draft, **Tech Writer to review the wording**).
-  **How:** a present attribute returns null instead of dropping the key. Dropping it would
-  render the default where the page asked for another value, so the served markup would be
-  wrong until connect. Only `form-spinbutton` changes: `value`/`min`/`max`/`step`/`bigStep`
-  lose their channel, and `name`/`label`/`unit`/`zero` keep theirs. No render bytes and no
-  golden change (the helper is not golden-pinned).
-  **Check:** `check:corpus` exits 0 with 0 remapped diagnostics; census 20/2/0, warning
-  baseline 0. `bun test server/tests`: 1657 pass / 23 fail. All 23 are pre-existing:
-  9 are LT-237's loaders (at HEAD since 58b343f7 swept the staged `basic-counter.tsx` move
-  in), and 14 are `serve.test.ts` port binding in the sandbox. tsc: only the 2 LT-284
-  `serve.ts` errors. Biome: clean on the changed code; the one remaining error
-  (`page-render.test.ts:232`, an unused `tag`) is pre-existing at HEAD.
-  **Observed, not fixed:** the helper keys attributes by the arg's camelCase name
-  (`attrs["bigStep"]`), but HTML attribute names are case-insensitive and serialize
-  lowercase. Any future camelCase string or Parser arg would never match an authored
-  occurrence. It is moot for spinbutton now (no channel), and there is no other live case.
+  **Context:** `server/compiler/frontend/tsx/to-estree.ts` converts no type-only children
+  ("annotations … are NOT converted"), so the args `ObjectPattern` carries no
+  `typeAnnotation`. Everything the shared stages derive from that annotation then silently
+  takes its no-annotation default on `.tsx` only:
+  - **the harvest parser:** `inferType` → `'unknown'` → `asString`. The live failure:
+    `basic-counter.tsx`'s client harvests `count` with `asString()`, so a click gives
+    `"42" + 1 = "421"`. Both `basic-counter.spec.ts` tests fail on the `tsx` surface in
+    Chromium and WebKit, while `ts` and `tsrx` pass;
+  - **`paramPropsOf` (`assemble-ir.ts`):** `typeText: 'unknown'`, `optional: true`
+    (`isOptionalBinding` says optional when it cannot see a type), and `isString: false`.
+    So a plain `string` arg loses its `argsFromAttrs` channel, and required args read as
+    optional;
+  - **LTC032** (a default on a non-optional prop) can never fire on `.tsx`.
 
-- [x] LT-293: Propagate the LT-283 variant-set rule and LTC051 through the docs and the error copy (LT-283 review rider — the commit's Tech Writer handoff was never executed). — done ✓
-  **Skill:** tech-writer
-  **Context:** 4d15eac6 landed LTC048's narrowing and the new LTC051 with draft copy in
-  `server/compiler/diagnostics.ts`. Its handoff list has not been executed anywhere:
-  (1) review both messages (`duplicateTag`, `variantCssDrift`) per the ADR 0028 lifecycle;
-  (2) `.agents/skills/le-truc/references/errors.md`: the LTC048 row still says "Keep exactly
-  one authored file per tag", and LTC051 has no row;
-  (3) `server/compiler/HOST_PROFILE.md` intro: "one component tag has exactly one authored
-  source";
-  (4) `server/compiler/LE_TRUC_COMPILER.md`:
-  - § 1 (the corpus-scan paragraph);
-  - § 6 "Corpus-level" (add LTC051);
-  - § 7 "Corpus orchestration" (variant sets compile together, only the selected surface
-    writes canonical artifacts, the unserved client lands in `variants/` once LT-284
-    commits);
-  - § 7.1: add `variantSurface`/`variantOverrides` to the field table and to the
-    accepted-key list, and fix the LTC048 sentence in "The registry, in consumer terms".
-
-  Follow the error-message lifecycle checklist in the tech-writer skill.
-  **Check:** `git grep -n "exactly one authored"` returns no hits outside ADR history;
-  check:links green.
-  **Changed:** `diagnostics.ts` — LTC048/LTC051 copy final (fix part names the variant-set shape; LTC051 no longer claims "unstyled"); `errors.md` LTC048 row rewritten, LTC051 row added; `HOST_PROFILE.md` intro; `LE_TRUC_COMPILER.md` §§ 1, 6, 7, 7.1 (field table, accepted keys, value rules, registry sentence). § 7 already describes the LT-284 `variants/` client from the working tree — it reads true only once LT-284 commits. `bun test` dual-corpus + diagnostics green; check:links 642/642.
+  The parity suite missed it because it pins client modules structurally, and its
+  snapshot records `asString()(span.textContent)` for `basic-counter.tsx` (since LT-183).
+  Fix direction: convert the args parameter's annotation to the estree-TS shapes that
+  `infer-type.ts` reads (`TSTypeAnnotation` → `TSTypeLiteral` → `TSPropertySignature` with
+  `optional`, plus the `TSStringKeyword`/`TSNumberKeyword`/`TSBooleanKeyword` keywords;
+  anything else as a spanned passthrough, so `text()` still slices `typeText`). Scope it to
+  the component's args parameter unless converting annotations everywhere is free.
+  Walks must not start counting type names as value reads (check `freeIdentifiers`'s
+  skip-list).
+  **Channel:** none new. This is a front-end conversion gap, and LTC032 starts firing on
+  `.tsx` as designed.
+  **Check:** `bun run test:variants` green on all three surfaces; `bun run test` green for
+  basic-counter; regenerate the parity snapshot, which should now say
+  `asInteger()(span.textContent)` and `defineComponent<BasicCounterProps>` if the
+  `.tsrx` output has it; a new parity pin asserts that each variant pair's
+  `paramPropsOf` output and harvest parser kinds are equal; an LTC032 `.tsx` fixture fails
+  the build; goldens and census 20/2/0 unchanged apart from the corrected `.tsx` client.
+  **Related:** LT-237's LT-283 review rider (the unserved member's equivalence is proven
+  nowhere) covers the general gap. This task closes the instance and adds the pin.
+  **Changed:** `server/compiler/frontend/tsx/to-estree.ts`, three conversion gaps with one
+  root, each making `.tsx` diverge from `.tsrx` silently:
+  (1) parameter annotations: `withParamAnnotation` attaches an estree-TS `typeAnnotation`
+  (`convertType`: type literals and property signatures with `optional`, the primitive
+  keywords, named references, everything else a spanned passthrough) and extends the
+  pattern span over it, as `.tsrx` does. That fixes harvest parsers (`asInteger`), arg
+  optionality and `string` channels, LTC032, and the typed server render signature;
+  (2) exported `type`/`interface` declarations were converted by unreachable branches
+  (`convert`'s statement dispatch came first), so their `id` was lost and `.tsx` clients
+  never got `defineComponent<Props>`. Moved into `convertStatement`;
+  (3) renamed and nested destructures (`i18n: { t }`) took their key from the value
+  pattern, so `.tsx` never saw the reserved `i18n` arg: `declaresI18n` was false and
+  `basic-pluralize` withheld its `argsFromAttrs` helper. The key is now `propertyName`.
+  `server/tests/compiler/tsx/parity.test.ts`: per-pair pins on the derived client facts
+  (props type argument + Parser calls), the `argsFromAttrs` helper, and the render
+  signature, with a self-pruning `AUTHORED_ARGS_DRIFT` set (listbox/combobox's spike
+  fixtures author different args; LT-237 reconciles them). Plus LTC032, the no-false-
+  positive case and a renamed-destructure case on `.tsx`. All the new pins fail against
+  HEAD's converter. The parity snapshot is regenerated: counter `asInteger` + props
+  generic + the LT-237 path, and the props generic for pluralize, listbox and combobox.
+  **Gates:** typecheck 0; `check:corpus` exit 0, warning baseline 0, census 20/2/0; parity
+  50/50; `bun test server/tests` 1674 pass / 22 fail = 14 `serve.test.ts` port-bind +
+  8 LT-237 loaders (the 9th, the parity counter snapshot, is fixed here). The generated
+  `basic-counter` `.tsx` client is now identical to the `.tsrx` one apart from its header.
+  **Not run here:** `bun run test:variants` and `bun run test` (no port binding in the
+  sandbox). Run them to close the Check.
 
 - [ ] LT-294: Point the CEM at the corpus output directory — it still globs the pre-LT-255 `server/generated/tsrx/` (review finding, 2026-09-23).
   **Skill:** docs-server-dev
@@ -171,38 +155,6 @@ review sandbox (no port binding).
   **Check:** after deleting `server/generated/tsrx/`, `bun run build:cem` and `verify-cem`
   pass; the regenerated manifest's paths name `server/generated/components/`; the manifest
   diff is otherwise empty.
-
-- [x] LT-284: Per-surface test-route serving + the variant spec matrix (LT-238/ADR 0039 s2). — done, pending review ⏳
-  **Skill:** docs-server-dev
-  **Context:** ADR 0039's runtime equivalence contract: the same Playwright spec runs
-  unchanged against each spelling of a variant set. `/test/:component`
-  (`server/serve.ts` `handleComponentTest`) gains a surface selection —
-  `?surface=ts|tsrx|tsx` — serving, for a variant-set component, a page that registers
-  exactly that surface's module: the hand-written twin module from the example folder
-  (`ts`), the generated client (`tsrx`/`tsx`). The page must define the tag exactly once
-  (the default layout bundle keeps registering the selected surface; a surface page must
-  not double-define — the twin-served page is the pre-migration serving mode rebuilt as an
-  explicit selection). Keep `serve.test.ts` in lockstep (it mirrors `serve.ts` routes).
-  Then the runner: a script (e.g. `test:variants`) that exercises the variant-carrying
-  examples' specs once per surface — scoped to those specs, not the whole suite ×3.
-  **Check:** a variant-set component's spec passes against all three surfaces locally
-  (against a stub fixture if LT-285 has not landed yet); the default route is unchanged
-  for non-variant components; no page load defines a tag twice.
-  **Depends on** nothing compiler-side (can land parallel to LT-283); **LT-285 gates on it.**
-  **Review rider (2026-09-23, working tree in progress):**
-  (a) `typecheck` fails in `server/serve.ts`. At :341 there is TS2532: `result.outputs[0]`
-  can be undefined under `noUncheckedIndexedAccess`. At :798 there is TS2484:
-  `SurfaceSpelling` is exported both at its declaration (:139) and again in an export list.
-  Add typecheck to this task's Check.
-  (b) The `variants/` client write in `server/corpus-compile.ts` rewrites only side-effect
-  imports (`import './x'`) to `../`. Any `from './…'` import, or an author's relative import
-  already rewritten with `outDirPrefix`, would resolve one level too shallow from
-  `variants/`. No generated client carries one today, so this is latent. Either rewrite
-  every relative specifier, or pin with a test that variant clients carry only side-effect
-  child imports.
-  **Changed:** `server/serve.ts`: `/test/:component?surface=` plus the `TEST_SURFACE` env override, and `/test/:component/surface.js` (`buildSurfaceBundle`, `resolveSurfaceModule`). `docs-src/layouts/test.html` gets a `{{ test-script }}` slot. `server/corpus-compile.ts`: `relocateClientSpecifiers` for `variants/` clients. New `scripts/test-variants.ts` + `test:variants`. `serve.test.ts` surface-selection block. `SERVER.md` routes, commands and the surface paragraph.
-  **How:** the surface bundle is the `examples/main.ts` graph with the tag's canonical client emptied and the surface module appended by its real path. When the surface is the canonical client, nothing is swapped. So the tag is defined once by construction. Rider (a): both tsc errors fixed. Rider (b): every relative specifier (`import`, `from`, `import()`) now climbs one level, pinned by a unit test in `dual-corpus.test.ts`. Also fixed: the `ts` surface bundle failed to build, because the twin was loaded in a custom namespace where its `../../../index` import did not resolve.
-  **Check:** **Playwright not run.** The sandbox refuses every port bind, so `bun run test:variants` and the 14 `serve.test.ts` route tests could not run here. Run `bun run test:variants` locally. Verified without a port: the handlers answer 200 for default/`ts`/`tsrx`/`tsx`, 400 for an unknown surface, and the default page is unchanged. Each surface bundle has exactly one `basic-counter` tag literal, as in `main.js`. tsc is clean and biome is clean on the changed files. `bun test server/tests`: 1658 pass / 23 fail = 14 port-bind + the 9 LT-237 rider failures, unchanged.
 
 - [ ] LT-285: The three-spelling exemplar — restore `basic-counter`'s `.ts` twin as a variant. **The LT-238 exit criterion.**
   **Skill:** le-truc-dev
