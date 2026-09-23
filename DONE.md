@@ -37,6 +37,38 @@ retirement ruling is verbatim in AGENTS.md's `pass()` bullet and the CHANGELOG R
 entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text:
 `git log -p -- DONE.md`.
 
+- [x] LT-238: Relax "one authored source per component tag" to a canonical-plus-variants rule — reviewed ✓
+  **Ruling:** build-selected variants, `.tsx` served by default — recorded in
+  [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (amends ADR 0032 s6 by
+  reference). Implementation: LT-283 (below), LT-284, LT-285 (open, `TODO.md`).
+
+- [x] LT-283: Variant sets in the corpus scan — compile-both/serve-selected, LTC048 narrowed, LTC051 added, surface-selection config — reviewed ✓
+  **Changed (for Changelog Keeper):** `le-truc.config.json` accepts `variantSurface`
+  (`"tsx"`|`"tsrx"`, default `"tsx"`) and `variantOverrides` (tag → surface), both validated
+  per LT-273; LTC048 narrowed to "not a folder-local variant set"; new error LTC051 (a
+  variant set's members compile to different CSS). One registry entry per tag, and its
+  `source` names the served member. Commit 4d15eac6.
+  **Review (Architect, 2026-09-23):** approved. The ADR 0039 shape is implemented as ruled:
+  grouping by folder-local base name, all-dropped semantics for both rules, and the compose
+  registry keeping both source-keyed entries. Live handoffs: **LT-293** (the Tech Writer
+  handoff was never executed), **LT-290** (the gate line's "check:corpus green" was the
+  warning baseline, not the exit code, which was 2), **LT-291** (`childImports` prefers a
+  retained twin over the served client, which is wrong under ADR 0039), **LT-292** (stale
+  `variantOverrides` are silently ignored), and the LT-237 parity rider (build-time
+  equivalence is CSS-only). **Gate-reading rule, recorded nowhere else:** a handoff's
+  `check:corpus` claim is its exit code.
+
+- [x] LT-235: Wave-4 type-level design session — IR discriminated unions, pass contracts (review §2.6–2.7) — reviewed ✓
+  **Ruling:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
+  (🔄 Proposed; owner rulings 2026-09-21). Implementation: LT-286 (ForIR — this iteration,
+  gates LT-212), and LT-287/288/289 (SignalIR, first()/expose(), pass contracts — BACKLOG
+  P2b); item (e) stays LT-244.
+  **Review (Architect, 2026-09-23):** approved. The ADR's "Related → Tasks" line cited
+  LT-283–LT-286, which collided with LT-238's implementation IDs; it is corrected to
+  LT-286–LT-289. The `LE_TRUC_COMPILER.md` §4 amendment had described the ruled shapes as
+  landed; it now states today's shape plus each *target shape* with its landing task. **Live
+  handoff:** each of LT-286/287/289 flips its own §4 passage to present tense when it lands.
+
 - [x] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React — reviewed ✓
   **Ruling (recorded nowhere else):** the bet holds, and the margin is the **runtime, not
   the payload** — 8.72 vs 64.38 kB gzip runtime, while the payload line (3.07 vs 8.54)

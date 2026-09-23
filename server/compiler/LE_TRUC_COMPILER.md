@@ -377,9 +377,16 @@ leading JSDoc, and the placed plain imports (`server` / `client`).
 
 **`SignalIR`** — one declared signal: name, verbatim text/span, recognized
 constructor (`createCell`/`createState`/`createList`/`createStore`/
-`deriveCell`/`deriveList`/`deriveStore`/`requestContext`), initializer,
-inferred type. `requestContext` additionally carries its verbatim fallback
-text.
+`deriveCell`/`deriveList`/`deriveStore`/`createMemo`/`requestContext`),
+initializer, inferred type. `requestContext` additionally carries its
+verbatim fallback text (`fallbackText`, `null` for every other constructor).
+*Target shape (ADR 0040 s2, lands with LT-287):* a three-member union by
+constructor family — `DeclaredSignalIR` (`createCell`/`createState`/
+`createList`/`createStore` — init is the initializer), `DerivedSignalIR`
+(`deriveCell`/`deriveList`/`deriveStore`/`createMemo` — init is the derive
+expression), and `ContextSignalIR` (`requestContext` — the fallback node and
+its verbatim text, no initializer), with `constructor` narrowed within each
+member.
 
 **`TemplateNode`** — the template IR union:
 
@@ -394,6 +401,16 @@ text.
 | `compose` | `component, source, attrs, children` | PascalCase tag bound to an authored-source import (either surface); server splices the child's render |
 | `client-stmt` | `text` | Bare client-only side effect inside a branch (`.tsrx` only — a `.tsx` branch must return JSX) |
 
+**`ForIR`** — one `@for` loop. Today one shape discriminated by nullability:
+`listSignal` null lowers to `each()` over server data, a declared `createList`
+name lowers to `reconcile()` (ADR 0017). *Target shape (ADR 0040 s1, lands
+with LT-286):* a two-member union on a `kind` discriminant — `EachForIR` and
+`ReconcileForIR`, each carrying only the fields its lowering uses — with
+`emptyArm` reserved on the union base for the `.tsrx` `@empty` arm (LT-212;
+ADR 0037 s5 keeps it on the toggle path, out of the keyed arm space), and a
+`key` clause on an each-loop becomes a compile error (tier 1 Prevented) where
+it is silently dropped today.
+
 **`AttributeIR`** — per-attribute: `static`, `server` (render-time expression),
 `reactive` (thunk → `watch()`), `pass` (`truc:pass={{ }}`), `class-map` /
 `style-map`, `html` (sanitized dynamic rendering), `event` (stripped
@@ -407,6 +424,12 @@ adoption; a `requestContext` signal never appears: it has no DOM seed), and
 `effects` (the document-ordered effect list: `watch`-bindings, `pass`, `on`,
 `each`/`reconcile` blocks, guarded optional-branch effects, async tri-state
 toggles). Every plan node carries source spans for the remapping tables.
+Pass order (loops before harvest before effects) and byte-stable query
+registration are conventions of `analyzeClient` today. *Target shape (ADR
+0040 s5, lands with LT-289):* the passes run as functions over a typed shared
+environment (`PassShared` — the order-carrying accumulators), each taking the
+previous pass's output as a required parameter, so loops-before-harvest
+becomes a type error rather than a convention.
 
 Two rules worth naming because they shape both halves:
 

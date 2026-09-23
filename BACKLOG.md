@@ -882,9 +882,109 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   **Verification:** typecheck (import moves); goldens + parity byte-identical; `ir.ts` imports
   no function-bearing front-end state (grep pin); full gates green.
 
+- [ ] LT-287: SignalIR → three members by constructor family (LT-235 item (c); ADR 0040 s2).
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
+  (owner rulings, LT-235 grilling 2026-09-21). `SignalIR` splits into `DeclaredSignalIR`
+  (`createCell`/`createState`/`createList`/`createStore` — init is the initializer),
+  `DerivedSignalIR` (`deriveCell`/`deriveList`/`deriveStore`/`createMemo` — init is the derive
+  expression) and `ContextSignalIR` (`requestContext` — carries the fallback node and its
+  verbatim text; the `null`-everywhere-else `fallbackText` field dies). `constructor` stays as
+  a field narrowed within each member, so exact-constructor dispatch (reactive `@for`'s
+  `createList` requirement) keeps working. The hand-rolled special-case sites become
+  narrowings: the two `emit-client.ts` requestContext skips, the three `emit-server.ts`
+  substitution sites, `harvest.ts`'s no-seed skip and derive grouping, and `effects.ts`'s
+  deriveCell case.
+  **Check:** goldens + parity byte-identical (type-level only); `bun test server/tests`,
+  typecheck, warning baseline 0.
+  **Doc handoff (LT-235 review):** flip the LE_TRUC_COMPILER.md §4 `SignalIR` passage from *target
+  shape* to present tense in the same commit.
+
+- [ ] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (LT-235 item (d); ADR 0040 s4).
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
+  s4. The four parallel `first()` collections (`refReasons`, `unmatchedOptionalRefs`,
+  `deferredComposeRefs`, `optionalRefs` — a Map, two differently-shaped arrays, a Set)
+  consolidate into one `FirstRefDecl` (name, selector, required, reason, resolution stage,
+  offset) in a name-keyed Map — the resolution stage is data, not a different shape. The seven
+  `expose()` fields split into `expose: ExposeStmt | null` (text, range, argNode, ambients —
+  four views of the one call) and one per-prop `ReadonlyMap<string, ExposePropDecl>` (kind,
+  signalName?, parser?) — `exposeProps`/`exposeKinds`/`parserExposeProps` merge.
+  `RegistryEntry.exposedProps` is a projection and unchanged. The
+  `setup`/`plainSetup`/`clientSetup`/`signals` arrays stay as-is — ADR 0040's explicit
+  exclusion (behavior-bearing emission contracts, not redundancy). Hottest consumer is
+  `template-output.ts`; keep its lookups O(1) via the Map.
+  **Check:** goldens + parity byte-identical; `bun test server/tests`, typecheck, warning
+  baseline 0, census 20/2/0.
+
+- [ ] LT-289: Typed pass contracts — functional passes over `PassShared` (LT-235 item (f); ADR 0040 s5).
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
+  s5 — the review's "one item that is design work rather than refactoring"; the design is now
+  recorded, this task lands it. The order-carrying accumulators (queries, usedNames, ambient,
+  childTags, refNames, diagnostics — byte-stable query order is their documented invariant)
+  become an explicitly typed `PassShared` environment; each pass's productions become return
+  values the next pass receives as REQUIRED parameters (`runLoops(shared) → LoopPlans`;
+  `runHarvest(shared, loopPlans) → HarvestPlans`; `runEffects(shared, loopPlans, harvests) →
+  EffectPlans`), so harvest-before-loops is a compile error in `analyzeClient` and "harvest
+  read an empty `forPlans` map" is unrepresentable. `resolveComposeRefs` returns a typed
+  `{ mode: 'resolved' | 'skipped' }` so a missing `composeRegistry` must be acknowledged;
+  `ambiguousComposeNodes` stays the already-reported channel, carried on the resolved result.
+  The `diagnostics` threading is deliberately untouched (ADR 0040's accepted tradeoff).
+  LT-226's EffectsContext extraction is the structural pattern.
+  **Check:** goldens + parity byte-identical; a harness calling `runHarvest` without
+  `loopPlans` fails typecheck; `bun test server/tests`, typecheck, warning baseline 0.
+  **Doc handoff (LT-235 review):** flip the LE_TRUC_COMPILER.md §4 pass-order passage from *target
+  shape* to present tense in the same commit.
+
 ---
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
+
+- [ ] LT-291: A compiled parent must register a variant set's SERVED surface, not its retained twin (LT-283 review follow-up; ADR 0039). **Gate: before the first wave-4 migration that retains a twin whose tag a compiled component references.**
+  **Skill:** le-truc-dev
+  **Context:** `compileCorpus` seeds `childImports` from the sibling modules
+  (`examples/**/*.ts`) and keeps them over the generated client: "a tag in a dual state —
+  compiled AND its hand-written twin still on disk — keeps the TWIN's module: the twin is
+  what main.ts registers". ADR 0039 inverts that premise. The twin is the artifact of record
+  and is never served, while `examples/main.ts` imports the generated client. So a compiled
+  parent referencing a twin-carrying tag (a `pass()` target, or a compose-import child tag)
+  would emit a side-effect import of the twin. The bundle would then define the tag twice,
+  or ship the unselected surface. The premise holds only for a tag that is not compiled at
+  all.
+  **Ruling (Architect, this review):** two concerns, two channels.
+  - **Runtime registration** always follows the served surface: a compiled tag's child
+    import is `./<tag>.client`, whether or not a twin exists.
+  - **Type visibility** of the twin's `declare global` entry (ADR 0039 s4 makes the twin
+    the owner, and the compiled members declare none) needs a types-only channel, so that
+    `check:corpus`'s program still sees `HTMLElementTagNameMap['<tag>']` at the parent's
+    `first()`/`pass()` sites.
+
+  le-truc-dev picks the mechanism (a triple-slash `reference` is the obvious candidate,
+  since it carries no runtime import) and records it in the `childImports` comment. Test
+  it under `verbatimModuleSyntax`, where an empty `import {}` is NOT elided.
+  **Channel:** none new. This fixes the emitter and the corpus orchestration.
+  **Check:** a fixture with a retained twin that a compiled parent references bundles with
+  exactly one `customElements.define` for the tag, from the generated client; check:corpus
+  still reports a mistyped `pass()` prop on that tag (the types channel is live); goldens
+  unchanged for twin-less tags.
+
+- [ ] LT-292: A `variantOverrides` entry that names no variant set is a configuration error (LT-283 review follow-up).
+  **Skill:** le-truc-dev
+  **Context:** `compileCorpus` applies `config.variantOverrides[tag]` only inside a variant
+  set. An override for a tag with one authored source, or for no tag at all (a renamed or
+  deleted component, or a typo that is still tag-shaped), is silently ignored. That is the
+  failure LT-273 ruled out for unknown keys: "it compiled, but nothing is where I asked".
+  Validation cannot catch it at config-load time, because the variant sets are only known
+  after the scan. So check after the LTC048 pre-check and throw the LT-273-style config
+  error, naming the file, the key (`variantOverrides["<tag>"]`), and the reason ("no
+  variant set declares this tag" / "only one surface authors it"). **Channel:** config
+  validation, a thrown startup error, untiered by construction like LT-273 (ADR 0028). No
+  `LTC` code applies, because no component source is at fault. Also consider whether a
+  corpus-wide `variantSurface` with no variant sets present deserves the same treatment.
+  The recommended answer is no: it is a policy default, not a pointer.
+  **Check:** unit tests in `corpus-config.test.ts`/`dual-corpus.test.ts` for both
+  stale-override shapes; the repo corpus (no overrides) is unaffected.
 
 - [ ] LT-186: A TSRX rule for an unkeyed element sibling of a `@for` in a reconcile container (LT-185's compiler half).
   **Skill:** le-truc-dev

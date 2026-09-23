@@ -21,7 +21,9 @@ must be grilled before any migration lands — **ruled 2026-09-21: build-selecte
 [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md); the gate is now carried by
 its implementation tasks LT-283 → LT-285**). **LT-235** runs before LT-212's implementation
 per its own sequencing note and lays the IR foundation the ADR 0037 chain and LT-280 both
-coordinate against. **LT-212 and LT-213** are the owner-sequenced gates in front of the
+coordinate against — **ruled 2026-09-21:
+[ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md); the
+type-level gate is carried by LT-286**. **LT-212 and LT-213** are the owner-sequenced gates in front of the
 FIRST migration; **LT-188** must land before the wave adds composition across tiers (the
 first migrated component, module-codeblock, composes basic-button). With the gates
 through, **LT-237** gives the spike fixtures a real home and **LT-096** — the smallest
@@ -50,80 +52,100 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-286.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
-wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-235 session
-will consume LT-286+ for the implementation tasks and riders it files.)
+**Next free task ID: LT-295.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
+LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
+implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
+review filed LT-291–LT-294.)
+
+**Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
+are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
+LT-284 → LT-237 → LT-285 chain: **LT-290** (pulled from BACKLOG P3 — `check:corpus` exits 2
+at HEAD, so no task's gate can read green until it lands), **LT-293** (the LT-283 Tech
+Writer handoff, never executed — the exit criterion's LTC048 must read true in the docs as
+well as the build), and **LT-294** (the CEM reads a stale output directory, so LT-285's CEM
+proof would prove nothing). LT-291 and LT-292 (LT-283 review follow-ups) are filed in
+BACKLOG P3. LT-291 is latent today, but it gates the first wave-4 migration that retains a
+twin that a compiled parent references. The exit criterion gains: `check:corpus` exits 0
+(LT-290).
+
+**Working-tree state at review (2026-09-23).** Uncommitted LT-284/LT-237/LT-285 work:
+`bun test server/tests/compiler` has 9 failures (0 at HEAD — LT-237 rider); `typecheck`
+has 2 errors in `server/serve.ts` (LT-284 rider); `serve.test.ts` could not be run in the
+review sandbox (no port binding).
 
 ---
 
-- [x] LT-238: Relax "one authored source per component tag" to a canonical-plus-variants rule — done ✓ (design + owner ruling + ADR; implementation handoff below)
-  **Skill:** architect (design + ADR) → le-truc-dev (implementation)
-  **Ruling (owner, 2026-09-21, grilled this session):** **shape B — build-selected variants**
-  with the `.tsx` surface as the default served spelling (per-tag override). Recorded as
-  [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md), amending
-  [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s6 by reference.
-  Suffixed variants (derived tags, three live registrations on one page) were rejected on
-  three measured grounds: authored CSS is tag-scoped by convention, so a derived tag is
-  unstyled by verbatim CSS (a selector-rewrite capability would be bought for showcase
-  presentation); registry/census/CEM rows would triple per showcased component; and the
-  parity suite pins client modules only structurally, so the live side-by-side demonstrates
-  identity, not trade-offs — the trade-offs live in the source text, which shape B displays
-  directly. The simultaneous-demo cost was weighed at full weight (S0 framework note) and
-  accepted.
-  **Changed:** `adr/0039-canonical-plus-variants-authored-surfaces.md` (new, Accepted);
-  `adr/0032-…md` (amendment note in Status + Alternatives, ruling text unedited);
-  `adr/adr-index.md`; `ARCHITECTURE.md` § Authoring Surfaces (the one-source sentence
-  rewritten); `AGENTS.md` (one-tag bullet → variant-set rule; migration instruction now
-  "add alongside, not replace"); `BACKLOG.md` P5 pattern ("delete the `.ts` twin" →
-  "retain the `.ts` twin as a variant").
-  **Check:** implementation split into LT-283 (compiler), LT-284 (test-route serving + spec
-  matrix), LT-285 (three-spelling exemplar = the exit criterion). No code changed — the
-  corpus still forbids variant sets until LT-283 lands.
-
-- [ ] LT-283: Variant sets in the corpus scan — compile-both/serve-selected, LTC048 narrowing, surface-selection config (LT-238/ADR 0039 implementation). **Unblocks LT-237 and every remaining migration.**
+- [ ] LT-290: `argsFromAttrs` re-emits Parser fallbacks that read `first()` refs out of scope (LT-194 defect; filed from the 2026-09-23 compiler review). **Pulled into the iteration 2026-09-23: `check:corpus` exits 2 at HEAD, so every task's gate reads red.**
   **Skill:** le-truc-dev
-  **Context:** [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (owner
-  ruling LT-238): a corpus folder may carry a **variant set** — at most one authored source
-  per surface sharing one base name in one directory (the `.ts` twin is never compiled; it
-  reaches the scan only as sibling-module tag knowledge, `corpus-config.ts`
-  `DEFAULT_SIBLING_MODULES`). Work in `server/corpus-compile.ts` (the LTC048 pre-check and
-  the two-pass compile) and `server/compiler/corpus-config.ts` (configuration):
-  (1) **Group sources into variant sets** — folder-local base name; every member compiles
-  clean or the set fails as today.
-  (2) **CSS byte-identity across the compiled members of a set** — a drift is an
-  error-severity diagnostic (the served member's CSS would hide the other member's
-  rendering). **Channel: compiler, tier 1 Prevented; Tech Writer drafts/owns the copy** —
-  new rule, next free `LTC` code, added to the diagnostics union and catalog.
-  (3) **Write only the selected surface's artifacts** under the canonical names —
-  selection is `.tsx` by default (the ADR 0032 default surface), overridden by
-  `variantSurface` (`'tsx'|'tsrx'`) and `variantOverrides` (per-tag) in
-  `le-truc.config.json` — the [ADR 0036](adr/0036-corpus-configuration-surface.md) surface;
-  the LT-273 config validation extends to the new keys (unknown surface value, non-tag
-  override key → config error).
-  (4) **One registry entry per tag**: dedupe to the selected member's entry before every
-  consumer — the registry write, `contaminateComposeReads`' input map, the i18n collection,
-  the span infos, and the census (its `20/2/0` semantics must not change); the entry's
-  `source` names the selected member. The compose registry keeps both source-keyed entries
-  (compose imports point at a same-surface sibling file, verified against
-  `form-combobox` → `form-listbox` on both surfaces).
-  (5) **LTC048 narrows** (`diagnostics.ts` `duplicateTag`): still fires — error, both files
-  dropped — for two same-surface sources declaring one tag, and for same-tag sources that
-  are not a folder-local variant set; silent for a folder-local set.
-  **Channel and tier (ADR 0028 s1):** both new/changed rules compiler, tier 1 Prevented,
-  statically decidable, no runtime half. **Tech Writer reviews the narrowed LTC048 copy** —
-  the message says "exactly one authored file" today and must state the per-surface rule
-  instead.
-  (6) The `declare global` ownership convention (twin > `.tsrx` > `.tsx` owns the
-  `HTMLElementTagNameMap` entry) is TypeScript-channel (duplicate entries are a TS 2717
-  error — no compiler rule; already documented in AGENTS.md). Confirm the examples
-  typecheck stays green once sets exist.
-  **Check:** a fixture variant set compiles clean and serves the selected surface's client
-  (assert the served bytes equal that member's compile); a CSS drift between set members
-  fails the build with the new diagnostic; LTC048 fires for a same-surface duplicate and a
-  cross-folder pair, stays silent for a folder-local set; the config override flips the
-  served client; the `dual-corpus.test.ts` pin INVERTS (a folder-local `.tsrx`+`.tsx` pair
-  is now legal — rewrite it to pin the still-illegal cases); `bun test server/tests`,
-  typecheck, warning baseline 0, census 20/2/0 unchanged.
+  **Context:** `emit-server.ts` (the `argsFromAttrs` builder beside the render function)
+  copies each Parser-backed prop's fallback text as-is:
+  `${parser.parser}(${parser.fallbackText})(${attrVar})`. When the fallback reads a
+  `first()` ref, the emitted helper names a binding that exists only inside the render
+  function (`const input: any = refStub`). Live case: `form-spinbutton`
+  (`asNumber(asNumber(0)(input.value))(valueAttr)`, and likewise for `min`/`max`/`step`/`bigStep`),
+  the only corpus module affected today (checked across `server/generated/components`).
+  Three consequences:
+  (1) `check:corpus` reports 5 × TS2552 "Cannot find name 'input'" remapped onto
+  `form-spinbutton.tsrx` and exits 2. This was already true at 4d15eac6, even though LT-283's
+  gate line reported check:corpus green. The "warning baseline 0" line is not the gate; the
+  exit code is.
+  (2) At runtime, `server/effects/page-render.ts` calls `argsFromAttrs` without a guard, so
+  an authored page occurrence of `<form-spinbutton value=…>` (or `min`/`max`/`step`) throws
+  a ReferenceError during the page render.
+  (3) Even if the scope were fixed, a ref-reading fallback would put a `refStub` value into
+  the render args, and from there into the markup. That breaks LE_TRUC_COMPILER.md § 8
+  "Server stubs never reach the markup". § 5.3's "fallbacks and their ref reads included"
+  describes the defect as design.
+  Fix direction (le-truc-dev decides): a Parser prop whose fallback's free names include a
+  `first()`/`all()` ref gets no attribute channel in the helper. It is omitted when it is
+  optional or defaulted, and otherwise the whole helper is withheld, so the component stays
+  authored and is never page-rendered (the export's PRESENCE is the renderer's
+  qualification). This follows the existing "suppressed harness emits no helper" rule.
+  Tech Writer amends § 5.3 in the same commit.
+  **Channel:** none new. This is an emitter fix, and the page renderer's existing
+  `skipped` channel (`unrenderable-args`) records the withheld case.
+  **Check:** `check:corpus` exits 0 with 0 remapped diagnostics; a page-render fixture
+  with a spinbutton occurrence carrying `value` renders or skips without throwing; an
+  emitter pin asserts no `argsFromAttrs` body references a `refStub` name; goldens change
+  only in `form-spinbutton.server.ts`; census 20/2/0.
+
+- [ ] LT-293: Propagate the LT-283 variant-set rule and LTC051 through the docs and the error copy (LT-283 review rider — the commit's Tech Writer handoff was never executed).
+  **Skill:** tech-writer
+  **Context:** 4d15eac6 landed LTC048's narrowing and the new LTC051 with draft copy in
+  `server/compiler/diagnostics.ts`. Its handoff list has not been executed anywhere:
+  (1) review both messages (`duplicateTag`, `variantCssDrift`) per the ADR 0028 lifecycle;
+  (2) `.agents/skills/le-truc/references/errors.md`: the LTC048 row still says "Keep exactly
+  one authored file per tag", and LTC051 has no row;
+  (3) `server/compiler/HOST_PROFILE.md` intro: "one component tag has exactly one authored
+  source";
+  (4) `server/compiler/LE_TRUC_COMPILER.md`:
+  - § 1 (the corpus-scan paragraph);
+  - § 6 "Corpus-level" (add LTC051);
+  - § 7 "Corpus orchestration" (variant sets compile together, only the selected surface
+    writes canonical artifacts, the unserved client lands in `variants/` once LT-284
+    commits);
+  - § 7.1: add `variantSurface`/`variantOverrides` to the field table and to the
+    accepted-key list, and fix the LTC048 sentence in "The registry, in consumer terms".
+
+  Follow the error-message lifecycle checklist in the tech-writer skill.
+  **Check:** `git grep -n "exactly one authored"` returns no hits outside ADR history;
+  check:links green.
+
+- [ ] LT-294: Point the CEM at the corpus output directory — it still globs the pre-LT-255 `server/generated/tsrx/` (review finding, 2026-09-23).
+  **Skill:** docs-server-dev
+  **Context:** `custom-elements-manifest.config.mjs` globs `server/generated/tsrx/*.client.ts`.
+  Since LT-255 (609923e0) the corpus writes to `server/generated/components/`
+  (`corpus-config.ts` `DEFAULT_OUT_DIR`). Locally the old directory survives, last written
+  2026-09-19, so `cem analyze` reads stale clients, and the committed `custom-elements.json`
+  carries `server/generated/tsrx/…` paths. On a clean checkout the directory does not exist,
+  every compiled tag would vanish from the manifest, and `verify-cem`'s REQUIRED_TAGS guard
+  would fail. Derive the glob from the corpus configuration's `outDir` rather than hard-coding a
+  second copy, and update the config's header comment. LT-285's variant-twin CEM exclusion
+  (working tree) edits the same file, so land this first or together with it.
+  **Check:** after deleting `server/generated/tsrx/`, `bun run build:cem` and `verify-cem`
+  pass; the regenerated manifest's paths name `server/generated/components/`; the manifest
+  diff is otherwise empty.
 
 - [ ] LT-284: Per-surface test-route serving + the variant spec matrix (LT-238/ADR 0039 s2).
   **Skill:** docs-server-dev
@@ -142,6 +164,17 @@ will consume LT-286+ for the implementation tasks and riders it files.)
   (against a stub fixture if LT-285 has not landed yet); the default route is unchanged
   for non-variant components; no page load defines a tag twice.
   **Depends on** nothing compiler-side (can land parallel to LT-283); **LT-285 gates on it.**
+  **Review rider (2026-09-23, working tree in progress):**
+  (a) `typecheck` fails in `server/serve.ts`. At :341 there is TS2532: `result.outputs[0]`
+  can be undefined under `noUncheckedIndexedAccess`. At :798 there is TS2484:
+  `SurfaceSpelling` is exported both at its declaration (:139) and again in an export list.
+  Add typecheck to this task's Check.
+  (b) The `variants/` client write in `server/corpus-compile.ts` rewrites only side-effect
+  imports (`import './x'`) to `../`. Any `from './…'` import, or an author's relative import
+  already rewritten with `outDirPrefix`, would resolve one level too shallow from
+  `variants/`. No generated client carries one today, so this is latent. Either rewrite
+  every relative specifier, or pin with a test that variant clients carry only side-effect
+  child imports.
 
 - [ ] LT-285: The three-spelling exemplar — restore `basic-counter`'s `.ts` twin as a variant. **The LT-238 exit criterion.**
   **Skill:** le-truc-dev
@@ -161,33 +194,35 @@ will consume LT-286+ for the implementation tasks and riders it files.)
   20/2/0 (the twin adds no registry entry); warning baseline 0; typecheck green (the
   absence of a TS 2717 error proves the declaration convention).
   **Depends on** LT-283, LT-237, LT-284.
+  **Review rider (2026-09-23, LT-283 review):**
+  (a) the CEM half of this task's Check is only meaningful after LT-294, because today the
+  CEM reads a stale output directory;
+  (b) restoring the twin puts `basic-counter` into `childImports` as the TWIN's module.
+  `compileCorpus` keeps a sibling module over the generated client ("dual state keeps the
+  twin"), so any compiled parent referencing the tag would import the twin, while
+  `examples/main.ts` registers the generated client. That is LT-291. No compiled component
+  references `basic-counter` today, so this task is unaffected, but add a pin that
+  none does, so the first one fails loudly until LT-291 lands.
 
-- [ ] LT-235: Wave-4 type-level design session — IR discriminated unions, pass contracts (review §2.6–2.7). **Grilling first; produces an ADR + tasks.**
-  **Skill:** architect
-  **Context:** The one band that is design work, not cleanup — it changes the IR contract
-  `LE_TRUC_COMPILER.md` §4 documents, so it wants an ADR (via adr-keeper) and a Tech
-  Writer pass on that doc. Grill before scheduling implementation: (a)
-  `ForIR.listSignal: string | null` discriminating two entirely different lowerings →
-  `ServerForIR | ReactiveForIR`; (b) `try.pendingChildren: TemplateNode[] | null`
-  discriminating error-vs-async boundary (with the immediate cast back at
-  `effects.ts:1081`); (c) `SignalIR.init` meaning different things per `constructor`;
-  (d) consolidating the four parallel `first()` collections on `ComponentIR`
-  (`refReasons`, `unmatchedOptionalRefs`, `deferredComposeRefs`, `optionalRefs` — a Map,
-  two differently-shaped arrays, a Set) and the seven parallel `expose()` fields; (e)
-  **carved out as LT-244** (the reflection §6 free option — landed ahead of this session so
-  the IR's leaf property holds while it designs against the IR); (f) typed pass contracts for
-  `AnalysisContext` (`analysis/plan.ts:389`) — loops-before-harvest, byte-stable query
-  registration order, `composeRegistry === undefined` silently disabling a pass,
-  `ambiguousComposeNodes` as the already-reported channel — the hardest item: failure
-  modes today are silent WRONG TIERS, not errors. **Coordinate with LT-212** (P4:
-  `@for`'s `@empty` arm adds ForIR surface) — this redesign should land first or
-  LT-212's shape gets reshaped under it; LT-212 is not urgent.
-  **Deliverable:** ADR, amended LE_TRUC_COMPILER.md §4, and LT-236+ implementation tasks
-  with the channel/tier fields the ADR 0028 process requires.
-  **ADR 0037 rider (2026-09-21):** the conditional-over-signal IR node (and the boundary's
-  arm-template shape) joins the discriminated-union inventory this session designs;
-  [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md)'s LT-274 should land
-  through or after it, not before.
+- [ ] LT-286: ForIR → `EachForIR | ReconcileForIR`, with the `@empty` reservation and the key-clause rule (LT-235 item (a); ADR 0040 s1). **The type-level gate in front of LT-212's implementation.**
+  **Skill:** le-truc-dev
+  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
+  s1 (owner rulings, LT-235 grilling 2026-09-21). `ForIR` splits into
+  `EachForIR | ReconcileForIR` on a `kind: 'each' | 'reconcile'` discriminant; fields live on
+  the member that uses them (`hoisted`/`indexName` each-only; `keyName`/`keyText`
+  reconcile-only — `keyText` has zero consumers anywhere today). The plan maps tighten to
+  `Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR, ReconcilePlan>`; the truthiness
+  dispatch in `analysis/loops.ts`, `analysis/effects.ts` and `emit-server.ts` becomes
+  narrowing. `emptyArm: TemplateNode[] | null` rides the union base — LT-212's reserved
+  surface; populate nothing yet (the `.tsx` production story is LT-212's ruling). A
+  server-data `@for` carrying a `key` clause — silently collected and dropped today —
+  becomes a compile diagnostic: **channel compiler, tier 1 Prevented** (ADR 0028 s1), next
+  free LTC code, mirroring the `.tsx` surface's existing "the key clause is a reactive-List
+  concern" message; **Tech Writer reviews the copy**, and flips the LE_TRUC_COMPILER.md
+  §4 ForIR passage from *target shape* to present tense in the same commit (LT-235 review).
+  **Check:** goldens + parity byte-identical (no emission change); a fixture with `key` on a
+  server-data `@for` fails the build with the new code; `bun test server/tests`, typecheck,
+  warning baseline 0, census 20/2/0. **Unblocks LT-212.**
 
 - [ ] LT-212: `@for`'s `@empty` arm (LT-210 item 1, re-anchored). **Gate: before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent — no migrated component uses it today.**
   **Skill:** le-truc-dev
@@ -269,6 +304,26 @@ will consume LT-286+ for the implementation tasks and riders it files.)
   entries are a TS 2717 error under the examples typecheck).
   **Verification:** `bun test server/tests` green with no fixture-path skips; the four tsc
   gates keep their exit codes (0 positive, 2 negative); check:links.
+  **Review rider (2026-09-23, working tree in progress — basic-counter moved, three to
+  go):** the first `.tsx` in `examples/` breaks corpus loaders outside the three test
+  files named above, because they assume every corpus file is `.tsrx`:
+  - `server/tests/compiler/emit-tier.test.ts` (6 failures) compiles every
+    `loadCorpus()` file with the `.tsrx` `compileSource`;
+  - the client golden has no `basic-counter.tsx` snapshot handling;
+  - `corpus compile order invariance` fails.
+
+  Dispatch per extension in `server/tests/compiler/corpus-fixture.ts` (or in each
+  consumer), the same way `compileCorpus` does. Also regenerate the parity client snapshot:
+  its path changed, and the `declare global` drop is intended. Add "0 failures in
+  `bun test server/tests/compiler`" to Verification. The remaining three moves will hit the
+  same loaders.
+  **Review rider (2026-09-23, LT-283 review):** ADR 0039 s1 leaves cross-surface markup
+  equivalence to "the parity suite for its fixtures". Once the pairs are folder-local, make
+  the suite discover every variant set in the corpus instead of listing fixtures, so a new
+  set cannot escape it. The build-time check covers CSS only (LTC051). The server render
+  and the registry entry (`exposedProps`, props type) of the unserved member are proven
+  equivalent nowhere else, and the compose registry validates `pass()` legality against
+  whichever member a parent's import names.
 
 - [ ] LT-096: Migrate `module-codeblock` to `.tsx` with same-commit cutover.
   **Skill:** le-truc-dev
