@@ -95,7 +95,7 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
 **LT-263**, **LT-255 + LT-267**, **LT-256** and **LT-265** — the iteration opened in `TODO.md`.
 **LT-262 and LT-264 are non-goals for 3.0 and have moved to P7.**
 
-- [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals.
+- [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-287, LT-288, LT-274 and LT-276** (ADR 0040, accepted 2026-09-24: every reshape of a published IR type lands before the first publish, or it becomes a 4.0 change).
   **Skill:** le-truc-dev
   **Context:** ADR 0034 s1–s2. The compiler ships separate from the browser-only
   `@zeix/le-truc`, named for its function rather than its input format. **v3.0 publishes the
@@ -115,6 +115,11 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   renamed (channel: compiler; the error-message-lifecycle sweep applies).
   **Check:** `npm pack` on a clean checkout produces a tarball that installs into an empty
   project and compiles a single `.tsx` component, with no `@tsrx/core` in the dependency tree.
+  **Added 2026-09-24 (ADR 0034 s8):** declare `@zeix/le-truc` as a peer dependency with a
+  floor, and add a build check that every runtime export the emitted client modules import
+  exists at that floor (resolve the imports against the floor version's published export
+  list). State in `contract.ts`'s stability policy that adding a member to an IR union is a
+  minor, and that exhaustive switching over IR unions is not covered.
   **Re-scoped 2026-09-19 (owner):** deliverable **(c) — the LT-206 deferral sweep — is carved out
   as LT-271** and runs now, because stripping TSRX-only vocabulary from a compiler whose published
   surface is `.tsx` is a shape problem, not a distribution problem, and it should not wait on a
@@ -886,7 +891,7 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   **Verification:** typecheck (import moves); goldens + parity byte-identical; `ir.ts` imports
   no function-bearing front-end state (grep pin); full gates green.
 
-- [ ] LT-287: SignalIR → three members by constructor family (LT-235 item (c); ADR 0040 s2).
+- [ ] LT-287: SignalIR → three members by constructor family (LT-235 item (c); ADR 0040 s2). **Gates LT-254** (ADR 0040, accepted 2026-09-24: a published IR type).
   **Skill:** le-truc-dev
   **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
   (owner rulings, LT-235 grilling 2026-09-21). `SignalIR` splits into `DeclaredSignalIR`
@@ -904,7 +909,7 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   **Doc handoff (LT-235 review):** flip the LE_TRUC_COMPILER.md §4 `SignalIR` passage from *target
   shape* to present tense in the same commit.
 
-- [ ] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (LT-235 item (d); ADR 0040 s4).
+- [ ] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (LT-235 item (d); ADR 0040 s4). **Gates LT-254** (ADR 0040, accepted 2026-09-24: a published IR type).
   **Skill:** le-truc-dev
   **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
   s4. The four parallel `first()` collections (`refReasons`, `unmatchedOptionalRefs`,
@@ -1009,14 +1014,15 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   major release to three years before it (3.0 → 2023); **minor and patch releases never move
   it**. The stated floor drifted once already (REQUIREMENTS said 2020 while `Object.hasOwn`
   set 2022), so a check replaces the prose. Record the pinned year in one place
-  (`package.json`, e.g. `"leTruc": { "baseline": 2023 }`) and scan what ships: `src/`, the
-  bundled `@zeix/cause-effect`, and the compiler's generated client modules and emitted CSS
-  under the default `cssTargets`. Resolve features to Baseline dates with `web-features`;
+  (the runtime's `package.json`, e.g. `"leTruc": { "baseline": 2023 }`; the baseline belongs
+  to the runtime's major, ADR 0034 s8) and scan what ships: `src/`, the bundled
+  `@zeix/cause-effect`, and the compiler's generated client modules and emitted CSS under the
+  default `cssTargets`, against that year. Resolve features to Baseline dates with `web-features`;
   choose the scanner (a browserslist `baseline 2023` query fed to an API/syntax compat
   linter, or a direct `web-features` mapping) and justify it in the handoff. Features the
   runtime uses only behind a guard (`CustomStateSet`, ARIA reflection on internals) are
   allowlisted by name with the reason, never by pattern. A check that the pinned year only
-  changes on a major version bump is part of the gate. **Channel: build check, tier 1**
+  changes on a runtime major version bump is part of the gate. **Channel: build check, tier 1**
   (a CI failure; no runtime half).
   **Check:** the gate is green at HEAD with Baseline 2023; a fixture using a 2024-only API
   unguarded fails it; bumping the year without a major version fails it.
@@ -1074,7 +1080,7 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 - [ ] LT-299: Hygiene sweep from the 2026-09-24 review (LT-286, LT-294, NOTES).
   **Skill:** le-truc-dev
-  **Context:** three small items, none behavior-bearing:
+  **Context:** four small items, none behavior-bearing:
   (a) `bunx biome check ./server` is red on HEAD because of an unused `tag` parameter at
   `server/tests/effects/page-render.test.ts:232` (the `resolveModule` callback, dating from
   LT-194). Drop the parameter or rename it `_tag`, so the server lint gate reads green again;
@@ -1083,7 +1089,10 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   last `ForIR` cast after LT-286, and it doesn't conflict with LT-289's rewrite;
   (c) the demo comments in `examples/form/radiogroup/form-radiogroup.html` and
   `examples/form/colorgraph/form-colorgraph.html` still name `server/generated/tsrx/`.
-  Since LT-255 the path is `server/generated/components/` (LT-294 residue).
+  Since LT-255 the path is `server/generated/components/` (LT-294 residue);
+  (d) `ir.ts`'s `ForIRBase.emptyArm` doc still says "No front end populates it yet: always
+  `null`". LT-212 made both front ends produce it; state the shared-roots placement ADR 0040
+  s1 records instead (ADR 0040 acceptance review, 2026-09-24).
   **Check:** `bunx biome check ./server` exits 0; goldens and parity byte-identical;
   typecheck 0.
 
@@ -1342,7 +1351,7 @@ target the removed forms. ROADMAP § "Dead ends: deprecated in 2.x, removed in 3
 declares both; these tasks implement it. The Cause & Effect 2.0 re-export surface rewrite is a
 separate track, blocked on CE 2.0 shipping — out of scope here.
 
-- [ ] LT-274: Lower reactive conditions to template-cloned arms on both surfaces (ADR 0037 sub-designs 1–3 and 5).
+- [ ] LT-274: Lower reactive conditions to template-cloned arms on both surfaces (ADR 0037 sub-designs 1–3 and 5). **Gates LT-254** (ADR 0040: the `conditional` `TemplateNode` variant must exist before the first publish).
   **Skill:** le-truc-dev
   **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) (🔄 Proposed, owner ruling 2026-09-21). A condition that reads a signal — `@if`/`@else`, `.tsx` ternary/`&&`, IIFE switch, `@switch`/`@case` with literal cases — lowers to inert arm `<template>`s plus the server-folded initial winner rendered live, and client-side to `reconcile()` over the new **current-arm-key source** (`Signal<string | null>`; ADR 0017 amendment). Arm keys are the named compile-time constants (`then`/`else`, `case:<literal>`; sub-design 2). Arm effects mount under keyedScopes with collector parity. Static conditions are unchanged — the Folded tier still renders the single winner and omits the rest, so byte-identity across tiers holds. Reactive conditions inside reconcile containers stay banned (LT-186's rule).
   **Deliverable:** shared lowering in both front ends; arm extraction + initial-winner fold rules; the arm-key source form on `reconcile()`; diagnostics with channel/tier fields (dynamic `@case` value: compiler, tier 1 Prevented; reactive-if-in-reconcile-container: compiler, tier 1); goldens and parity extension.
@@ -1355,7 +1364,7 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
   **Check:** catalog rows added/retired match the diagnostics union; `check:links`; compile-warning baseline 0.
   **Depends on** LT-274.
 
-- [ ] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4).
+- [ ] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4). **Sequenced after LT-303** (ADR 0040 s3: LT-303 changes only the `.tsx` spelling of today's `try` node; this task then reshapes it under both front ends). **Gates LT-254** (ADR 0040).
   **Skill:** le-truc-dev
   **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md), owner ruling 2026-09-21: `@try`/`@pending`/`@catch` arms become templates plus the adopted winner, keyed `ok`/`nil`/`err`. Retires the fieldset wrappers `emit-server.ts` places at every arm root, the client's `hidden`+`disabled` sweep, and the LT-086 `.parentElement` addressing — all of it existed only because both arms were live simultaneously. The ok arm's resolved-value text and the err arm's bound catch-param text move into the per-arm mount. LT-211's no-stale-arm ruling and the `isPending` idiom are untouched; LT-078's tree-shaking question is re-pinned against templates.
   **Depends on** LT-274 (the mechanism).

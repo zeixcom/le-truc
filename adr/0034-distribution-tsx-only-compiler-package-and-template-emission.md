@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted
+✅ Accepted. Amended 2026-09-24 (owner, at the ADR 0040 acceptance): sub-design 8 adds independent versioning of the two packages.
 
 ## Context
 
@@ -57,6 +57,21 @@ The 2.x → 3.0 migration is codemod-assisted, not push-button: `.html` and `.cs
 ### 7. Per-request SSR stays out of scope for 3.x
 
 [§7](../REQUIREMENTS.md#7-out-of-scope) stands and [ADR 0029](0029-tiered-server-evaluation.md) s8 is unchanged. A JS sidecar the CMS calls at request time would serve the persona and would contradict the project's founding constraint — no JavaScript layer on the backend. It is reconsidered no earlier than 4.0, and sub-designs 3 and 4 are what keep it reachable without an authoring break.
+
+### 8. The compiler and the runtime version independently; a peer range ties them
+
+`@zeix/le-truc-compiler` and `@zeix/le-truc` serve different consumers and carry separate semver lines. The compiler's public API is `contract.ts` plus the generated-module API (the server render signature, the client module's exports); emitted bytes are not part of it. Emitted client modules import the runtime, so the compiler declares `@zeix/le-truc` as a **peer dependency**, and the peer range is where the two lines meet:
+
+| Change | Compiler | Runtime |
+|---|---|---|
+| New IR member or optional IR field, e.g. for a third front end | minor | none |
+| Emitted code starts using a newer runtime API | minor, raising the peer floor to that runtime minor | the minor that added the API |
+| Tightened or removed `contract.ts` types, or a changed generated-module API | major | none |
+| Runtime major | new peer range; major if the emitted code must change | major |
+
+- **Raising the peer floor is a compiler minor**, never a major: a project on a current runtime is unaffected, and one on an older runtime gets a peer-dependency warning instead of a silent break. Emitted code must never use a runtime export newer than the declared floor; a build check enforces it (LT-254).
+- **Adding a member to a published IR union is a minor.** The contract is written for front ends, which produce IR; `contract.ts` states that exhaustive switching over IR unions is not covered by its stability policy.
+- **The browser baseline belongs to the runtime's major** ([REQUIREMENTS § Browser support](../REQUIREMENTS.md#browser-support)). The compiler's default output (emitted JS, and CSS under the default `cssTargets`) stays within the baseline of the runtime major its peer range names, so a compiler major never moves the baseline on its own.
 
 ## Alternatives Considered
 

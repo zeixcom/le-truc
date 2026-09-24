@@ -2,7 +2,7 @@
 
 ## Status
 
-🔄 Proposed (owner rulings 2026-09-21, LT-235 grilling; implementation tasks LT-286–LT-289)
+✅ Accepted — owner acceptance 2026-09-24, after LT-286 landed sub-design 1 byte-identical and the remaining sub-designs were checked against the code (owner rulings 2026-09-21, LT-235 grilling; implementation tasks LT-286–LT-289).
 
 ## Context
 
@@ -26,16 +26,29 @@ The IR discriminates variants by tags, not nullability, and each analysis pass's
 is its signature. Every task under this ADR lands byte-identical on goldens and parity —
 wave-4 type work changes types, not behavior (COMPILER_REVIEW §3 items 17–20).
 
+**Every IR reshape lands before the first publish of `@zeix/le-truc-compiler` (LT-254).**
+`ComponentIR`, `SignalIR`, `ForIR` and `TemplateNode` are exported from `contract.ts`, whose
+stability policy makes renames, removals and tightened shapes a major change after the first
+publish. Sub-designs 2 and 4 (LT-287, LT-288) and the two deferred shapes of sub-designs 3
+and 6 (LT-276, LT-274) therefore gate LT-254; otherwise each becomes a 4.0 change. Sub-design
+5 (LT-289) changes internal signatures only and has no publish constraint.
+
 ### 1. `ForIR` → `EachForIR | ReconcileForIR`
 
 A `kind: 'each' | 'reconcile'` discriminant; fields live on the member that uses them
 (`hoisted`/`indexName`/`iterableText` each-only; `keyName`/`keyText` reconcile-only). The
 plan maps tighten to `Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR,
 ReconcilePlan>`, so a pass reading the wrong map is a type error. `emptyArm: TemplateNode[]
-| null` rides the union base — the reserved surface for LT-212's `@empty` arm, produced by
-the `.tsrx` front end; whether `.tsx` produces it is LT-212's dual-surface ruling under
-[ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6, and ADR 0037 s5 keeps
-`@empty` on the toggle path, out of the keyed arm space. A server-data `@for` carrying a
+| null` rides the union base, produced by both front ends (LT-212: `.tsrx` `@empty`, and the
+`.tsx` `{xs.length === 0 ? <empty/> : xs.map(…)}` idiom, per
+[ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6); ADR 0037 s5 keeps
+`@empty` on the toggle path, out of the keyed arm space. **As landed, the arm's roots are
+shared, not moved:** they sit both in `emptyArm` and in the template tree as the loop
+output's following siblings, so selector resolution, id checks and prose checks cover them
+with no extra code, and the server emitter skips them in its plain walk through an identity
+set (`emptyArmNodes`) and renders them from the loop. This follows the existing convention
+(`ForIR.output` is shared the same way). It is an identity side table, the one implicit
+contract this ADR accepts rather than removes. A server-data `@for` carrying a
 `key` clause — silently collected and dropped today — becomes a compile diagnostic
 (channel: compiler; tier 1 Prevented; next free LTC code; Tech Writer reviews the copy,
 mirroring the `.tsx` surface's existing "the key clause is a reactive-List concern"
@@ -58,7 +71,9 @@ sub-design 4's keyed-arm boundary (arms `ok`/`nil`/`err` as `ArmTemplate`s, sub-
 below) replaces the toggle machinery with LT-276 — IR reshape and emission flip together.
 Splitting `try` now would rewrite the ~20 walk sites that touch `pendingChildren` twice;
 the cast at `analysis/effects.ts` survives until LT-276, documented as the scheduled
-survivor.
+survivor. LT-303 ([ADR 0041](0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md)'s
+`<truc:try>`) changes only the `.tsx` spelling and lowers to today's `try` node, so it lands
+before LT-276, which then reshapes the node under both front ends in one change.
 
 ### 4. One `first()` record, two `expose()` shapes
 
