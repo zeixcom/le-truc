@@ -132,6 +132,15 @@ type EmitContext = {
 	 * LTC034 check passes to `hostDerivedFold` (the two must agree).
 	 */
 	foldScope: ReadonlySet<string>
+	/**
+	 * Every loop's `emptyArm` roots (LT-212). They sit in the template tree
+	 * as the loop output's following siblings, so selector resolution and
+	 * the id/prose checks see them, but they render from inside the loop
+	 * emission: the plain child walk skips them.
+	 */
+	emptyArmNodes: ReadonlySet<TemplateNode>
+	/** Unique suffix counter for the loops' `__emptyN` flags. */
+	emptyCounter: number
 }
 
 /* === Internal Functions === */
@@ -395,9 +404,11 @@ const emitListFor = (
 	const loopScope = new Set(scope)
 	loopScope.add(loop.itemName)
 	if (loop.keyName) loopScope.add(keyVar)
+	const emptyFlag = openEmptyFlag(ctx, loop, depth)
 	ctx.lines.push(
 		`${tab(depth)}for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
 	)
+	if (emptyFlag) ctx.lines.push(`${tab(depth + 1)}${emptyFlag} = false`)
 	const dataKey: AttributeIR = {
 		kind: 'server',
 		name: 'data-key',
@@ -413,10 +424,49 @@ const emitListFor = (
 		)
 	ctx.lines.push(`${tab(depth)}}`)
 
+	// The empty arm stays in the container on the toggle path (ADR 0037
+	// s5): always rendered, exempt from reconciliation, hidden while the
+	// list has items. The client toggles `hidden` from the list's length.
+	if (emptyFlag && loop.emptyArm) {
+		ctx.used.add('attr')
+		for (const root of loop.emptyArm) {
+			if (root.kind !== 'element') continue
+			emitElement(ctx, root, scope, depth, [
+				{ kind: 'static', name: 'data-unreconciled', value: null },
+				{
+					kind: 'server',
+					name: 'hidden',
+					exprText: `!${emptyFlag}`,
+					node: loop.node,
+				},
+			])
+			for (const child of root.children) emit(ctx, child, scope, depth)
+			if (!isVoidElement(root.tag))
+				ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</${root.tag}>')`)
+		}
+	}
+
 	// Extracted template → the innermost open element's pending queue
 	// (flushed after that element's close tag).
 	const queue = ctx.templateQueue.at(-1)
 	if (queue) queue.push(...listTemplateLines(ctx, loop, depth))
+}
+
+/**
+ * A loop with an empty arm (LT-212) tracks whether it rendered any item in
+ * a `let __emptyN = true` flag, so the arm works over any iterable, not
+ * only over values with a `length`. Returns the flag name, or null (and
+ * emits nothing) for a loop without an arm.
+ */
+const openEmptyFlag = (
+	ctx: EmitContext,
+	loop: ForIR,
+	depth: number,
+): string | null => {
+	if (!loop.emptyArm) return null
+	const flag = `__empty${ctx.emptyCounter++}`
+	ctx.lines.push(`${tab(depth)}let ${flag} = true`)
+	return flag
 }
 
 const emitFor = (
@@ -447,7 +497,9 @@ const emitFor = (
 	const binding = usesIndex
 		? `const [${loop.indexName}, ${loop.itemName}] of entries(${loop.iterableText})`
 		: `const ${loop.itemName} of items(${loop.iterableText})`
+	const emptyFlag = openEmptyFlag(ctx, loop, depth)
 	ctx.lines.push(`${tab(depth)}for (${binding}) {`)
+	if (emptyFlag) ctx.lines.push(`${tab(depth + 1)}${emptyFlag} = false`)
 	for (const hoisted of loop.hoisted)
 		ctx.lines.push(
 			`${tab(depth + 1)}const ${hoisted.name} = ${hoisted.initText}`,
@@ -460,6 +512,11 @@ const emitFor = (
 			`${tab(depth + 1)}${ctx.buffer}.push('</${loop.output.tag}>')`,
 		)
 	ctx.lines.push(`${tab(depth)}}`)
+	if (emptyFlag && loop.emptyArm) {
+		ctx.lines.push(`${tab(depth)}if (${emptyFlag}) {`)
+		for (const node of loop.emptyArm) emit(ctx, node, scope, depth + 1, true)
+		ctx.lines.push(`${tab(depth)}}`)
+	}
 }
 
 const emitElement = (
@@ -800,7 +857,10 @@ const emit = (
 	node: TemplateNode,
 	scope: ReadonlySet<string>,
 	depth: number,
+	/** Set by the loop emitters, which render their own empty arm. */
+	emptyArm = false,
 ): void => {
+	if (!emptyArm && ctx.emptyArmNodes.has(node)) return
 	if (node.kind === 'client-stmt') {
 		// Client-only side effect beside conditionally rendered markup
 		// (`internals?.states.add('clearable')`) — the server never runs
@@ -1010,6 +1070,10 @@ export const emitServerModule = (
 		used: new Set<string>(),
 		composeImports: new Map<string, string>(),
 		buffer: '__html',
+		emptyArmNodes: new Set(
+			[...component.fors.values()].flatMap(loop => loop.emptyArm ?? []),
+		),
+		emptyCounter: 0,
 		armCounter: 0,
 		childrenCounter: 0,
 		usedI18nRecord: false,

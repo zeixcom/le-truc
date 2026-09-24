@@ -58,6 +58,32 @@ entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text
   equivalence is CSS-only). **Gate-reading rule, recorded nowhere else:** a handoff's
   `check:corpus` claim is its exit code.
 
+- [x] LT-212: `@for`'s `@empty` arm, on both surfaces and both loop paths — reviewed ✓
+  **Changed (for Changelog Keeper):** `.tsrx` `@for (…) { … } @empty { … }` and the `.tsx`
+  empty-state idiom `{xs.length === 0 ? <empty/> : xs.map(…)}` now compile. Before this, `.tsrx`
+  rejected `@empty` (LTC005), and `.tsx` compiled the ternary+map shape with no diagnostic but
+  **silently dropped the loop**. A `.map()` in any other conditional arm is now LTC005. Over
+  server data the arm renders when the loop renders no item. Over a reactive List it is always
+  rendered in the container with `data-unreconciled`, and the client toggles `hidden` from the
+  List's `length`. The arm is client-inert (LTC005 otherwise). Emitted output for components
+  without an arm is unchanged.
+  **Rulings (owner, 2026-09-24; recorded nowhere else):** (1) `.tsx` pays the cost too (ADR 0032
+  s6, no exception): the idiom is recognized by SHAPE, like the switch IIFE. The test must
+  compare the map receiver's own `length` to `0`, and it is never evaluated as an `if`
+  condition, which is what lets it cover a reactive List. (2) `@empty` has its own IR
+  (`emptyArm`), not a desugaring to `@if` + `@for`. The shared conditional+loop shape is
+  mis-addressed on both surfaces (LT-301). (3) The arm's roots sit in the template tree as the
+  loop output's following siblings, so selector resolution, id checks and prose checks cover them
+  by construction, and the server emitter defers them into the loop.
+  **Review (Architect, 2026-09-24):** approved. It matches ADR 0037 s5 (toggle path, out of the
+  keyed arm space) and ADR 0040 s1 (the reserved field, produced without reshaping). The
+  premise correction was the right call: the task's "`.tsx` needs no new spelling" was false at
+  HEAD. Live handoffs: **LT-300** (Tech Writer: the three new LTC005 phrases), **LT-301** (the
+  loop-in-branch mis-addressing, plus an authored `hidden` on a reactive-List arm root that is
+  emitted twice), **LT-302** (arg names that shadow the render harness). Not proven: no browser run
+  of the toggle, because no corpus component uses `@empty` yet. The first migration that does
+  owes a spec leg for the empty→filled→empty cycle.
+
 - [x] LT-298: The `.tsx` front end dropped the args parameter's type annotation, so every arg read as untyped — done ✓
   **Changed (for Changelog Keeper):** `server/compiler/frontend/tsx/to-estree.ts` closes
   three conversion gaps that made `.tsx` differ silently from `.tsrx`. (1) The args

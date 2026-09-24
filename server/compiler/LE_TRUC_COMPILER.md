@@ -133,7 +133,7 @@ strict ambient profile (`frontend/tsx/host-profile.d.ts`,
 │ control-flow dispatch         │  │ control-flow dispatch       │
 │   (lower-tsx.ts)              │  │   (lower-template.ts)       │
 │ ternary/&& → if               │  │ @if @switch @try @for       │
-│ .map() → for                  │  │ statement-context arms      │
+│ .map() → for (+ empty arm)    │  │ statement-context arms      │
 │ IIFE → switch / try-catch     │  │                             │
 │ boundary({ ok, nil, err })    │  │                             │
 └──────────────┬────────────────┘  └─────────────┬───────────────┘
@@ -411,9 +411,16 @@ lowers to `each()`; it carries `indexName`, `iterableText`, `iterableName` and
 `keyName` and `keyText`. The plan maps are typed per member —
 `Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR, ReconcilePlan>` — so
 a pass that reads the wrong map fails to type-check. `emptyArm` on the union
-base is reserved for the `.tsrx` `@empty` arm (LT-212; ADR 0037 s5 keeps it on
-the toggle path, out of the keyed arm space). No front end sets it yet, so it
-is always `null`. A `key` clause on a server-data loop is a compile error
+base is the loop's empty arm (LT-212): `.tsrx` `@for … @empty { … }`, and
+`.tsx` `{xs.length === 0 ? <empty/> : xs.map(…)}`. The arm roots sit in the
+template tree as the loop output's following siblings, so selector
+resolution and the id and prose checks see them; the server emitter renders
+them from inside the loop. The arm is client-inert (static and server-known
+content only; LTC005 otherwise). Over server data the server renders it when
+the loop renders no item. Over a reactive List it stays on the toggle path
+(ADR 0037 s5): every root is an element, always rendered in the container
+with `data-unreconciled`, and the client toggles its `hidden` from the
+List's `length`. A `key` clause on a server-data loop is a compile error
 (LTC052, tier 1 Prevented): only `reconcile()` reads a key.
 
 **`AttributeIR`** — per-attribute: `static`, `server` (render-time expression),

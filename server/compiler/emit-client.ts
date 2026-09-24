@@ -296,6 +296,15 @@ const emitReconcileBlock = (
 	const closing = `${'\t'.repeat(depth)}})`
 	lines.push(closing)
 	cursor.offset += closing.length + 1
+	// The @empty arm on the toggle path (LT-212, ADR 0037 s5): the List's
+	// `length` read subscribes, so each root shows exactly while it is empty.
+	for (const query of plan.emptyQueries) {
+		imports.add('bindVisible')
+		append(
+			`watch(() => ${plan.signal}.length === 0, bindVisible(${query}))`,
+			depth,
+		)
+	}
 }
 
 /* === Exported Functions === */

@@ -42,6 +42,7 @@ import {
 	type SurfaceWording,
 	singleRootOf,
 	validateCondition,
+	validateEmptyArm,
 } from '../../lower-shared'
 
 /**
@@ -193,7 +194,7 @@ const lowerBodyStatements = (
 		}
 		if (isTemplateForOfNode(stmt)) {
 			const lowered = lowerFor(ctx, stmt, signals, fors)
-			if (lowered) out.push(lowered)
+			if (lowered) out.push(lowered, ...(fors.get(stmt)?.emptyArm ?? []))
 			continue
 		}
 		if (stmt.type === 'JSXIfExpression') {
@@ -422,7 +423,7 @@ export const lowerChildren = (
 			dispatchChild: (ctx, child, out, signals, fors) => {
 				if (isTemplateForOfNode(child)) {
 					const lowered = lowerFor(ctx, child, signals, fors)
-					if (lowered) out.push(lowered)
+					if (lowered) out.push(lowered, ...(fors.get(child)?.emptyArm ?? []))
 					return true
 				}
 				if (child.type === 'JSXIfExpression') {
@@ -504,6 +505,26 @@ export const lowerComposeElement = (
 	)
 
 /**
+ * Lower a `@for`'s `@empty { … }` arm (LT-212): `null` when the loop has
+ * none, `false` when the arm was diagnosed (the loop is dropped).
+ */
+const lowerEmptyArm = (
+	ctx: ExtractContext,
+	node: AstNode,
+	kind: ForIR['kind'],
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<AstNode, ForIR>,
+): TemplateNode[] | null | false => {
+	if (!isNode(node.empty)) return null
+	const arm = lowerBodyStatements(ctx, asArray(node.empty.body), signals, fors)
+	if (arm.length === 0) return null
+	return (
+		validateEmptyArm(ctx, arm, kind, fors, node.empty.start, '@empty arm') ??
+		false
+	)
+}
+
+/**
  * Lower a `@for` loop. Server-data iterables lower to `each()`; reactive
  * `createList` iterables to the milestone-3 reconcile lowering; other
  * reactive sources stay gated (LTC001).
@@ -524,12 +545,6 @@ export const lowerFor = (
 				node.start,
 				'@for with a destructuring loop variable',
 			),
-		)
-		return null
-	}
-	if (isNode(node.empty)) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(ctx.source, node.start, '@empty blocks'),
 		)
 		return null
 	}
@@ -622,6 +637,8 @@ export const lowerFor = (
 		)
 		return null
 	}
+	const emptyArm = lowerEmptyArm(ctx, node, 'each', signals, fors)
+	if (emptyArm === false) return null
 	const forIR: EachForIR = {
 		kind: 'each',
 		itemName,
@@ -631,7 +648,7 @@ export const lowerFor = (
 		hoisted,
 		output,
 		node,
-		emptyArm: null,
+		emptyArm,
 	}
 	fors.set(node, forIR)
 	return output
@@ -818,6 +835,8 @@ export const lowerListFor = (
 	// `validateListBody` would then see zero holes.
 	markPositionallyReactive([output], new Set([itemName]))
 	validateListBody(ctx, output, itemName)
+	const emptyArm = lowerEmptyArm(ctx, node, 'reconcile', signals, fors)
+	if (emptyArm === false) return null
 	const forIR: ReconcileForIR = {
 		kind: 'reconcile',
 		itemName,
@@ -826,7 +845,7 @@ export const lowerListFor = (
 		keyName,
 		output,
 		node,
-		emptyArm: null,
+		emptyArm,
 	}
 	fors.set(node, forIR)
 	return output

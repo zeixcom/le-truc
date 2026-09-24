@@ -941,6 +941,55 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
+- [ ] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them (LT-212 review; NOTES 2026-09-24). **Gate: before any wave-4 migration whose component nests a loop inside a branch.**
+  **Skill:** le-truc-dev
+  **Context:** `.tsrx` `@if (…) { … } @else { @for (…) { <li class="item" onClick={…}/> } }` renders
+  correctly on the server. The client, though, treats the loop output as a branch root: it binds
+  `first('li.item')`, so only the FIRST item gets its handler, and it registers an unused `all()`
+  collection instead of an `each()`. `.tsx` reaches the same path through a fragment arm,
+  `{c ? <>{xs.map(…)}</> : …}`. **Ruling (Architect, 2026-09-24): diagnose, don't support.**
+  A loop output whose nearest control-flow ancestor is an `if`/`switch` branch, on either
+  surface, becomes an error. **Channel:** compiler. **Tier:** 1 Prevented (statically
+  decidable from the tree). Reuse LTC005: the construct is outside the supported subset, not a
+  new rule family. The message must name the fix: `@empty` in `.tsrx`, the empty-state idiom
+  in `.tsx`, or move the loop out of the branch. Supporting branch-scoped `each()` is deferred
+  until a migration needs it, at which point this becomes a design task. **Tech Writer**
+  reviews the copy. Rider from the LT-212 review: an authored `hidden` or `data-unreconciled`
+  on a reactive-List `@empty` root is emitted twice beside the compiler's own. Reject both as
+  LTC005 in `validateEmptyArm`, because the compiler owns them on that path.
+  **Check:** both surface spellings fail the build with LTC005; `@empty` and the idiom still
+  compile; corpus output byte-identical; typecheck 0; warning baseline 0, census 20/2/0.
+
+- [ ] LT-302: Arg and setup names shadow the render-harness imports in generated server modules (LT-212 review; NOTES 2026-09-24).
+  **Skill:** le-truc-dev
+  **Context:** with an arg named `items`, the server module emits
+  `for (const item of items(items))`, which throws `items is not a function` at render. Every
+  `RUNTIME_HARNESS_EXPORTS` name is exposed the same way (`entries`, `esc`, `attr`, `cls`, …).
+  The corpus avoids them by luck. **Ruling (Architect, 2026-09-24): alias, don't forbid**,
+  because `items` is an ordinary arg name. Alias a harness import only when a render-scope
+  name collides with it (`import { items as __items }`, and the emitter uses the alias), so every
+  module without a collision stays byte-identical. Also audit the generated CLIENT module: an
+  arg or setup name equal to a destructured factory-context name or an imported `@zeix/le-truc`
+  export (`first`, `each`, `watch`, …) is the same hazard. If the client side can collide,
+  alias there too, or diagnose if aliasing is impossible because the name is authored
+  vocabulary. **Channel:** none for the aliased cases (the collision stops being an error). Any
+  collision that can't be aliased is compiler, tier 1 Prevented, with Tech Writer on the copy.
+  **Check:** a fixture with args `items`/`esc` renders on both surfaces; corpus output
+  byte-identical; typecheck 0; warning baseline 0.
+
+- [ ] LT-300: Review the three LTC005 phrases LT-212 added (LT-212 review).
+  **Skill:** tech-writer
+  **Context:** new `what` strings passed to the existing `diagnostic.unsupported` builder:
+  two in `server/compiler/lower-shared.ts` `validateEmptyArm` (a client construct in an empty
+  arm, and a non-element reactive-List arm root) and one in `server/compiler/frontend/tsx/lower-tsx.ts`
+  `lowerIfExpr` (a `.map()` as a conditional arm). They read inside the builder's template
+  "`<what>` is outside the sanctioned milestone-2 subset of ADR 0023. Supported: …". Review
+  them in that assembled form. That template's "Supported:" list itself predates reactive
+  lists, `@empty` and the `.tsx` surface; review it in the same pass.
+  **Check:** assembled messages meet the error-message lifecycle's criteria;
+  `bun test server/tests/compiler/diagnostics.test.ts` green (the LT-212 pins assert on
+  `'@empty arm'`, `'non-element root'` and `'conditional arm'`).
+
 - [ ] LT-299: Hygiene sweep from the 2026-09-24 review (LT-286, LT-294, NOTES).
   **Skill:** le-truc-dev
   **Context:** three small items, none behavior-bearing:

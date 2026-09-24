@@ -52,11 +52,11 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-300.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-303.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
-review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299.)
+review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302.)
 
 **Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
 are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
@@ -78,26 +78,6 @@ test edits). It is pushed, so history stays; attribute by file, not by title. HE
 sandbox has.
 
 ---
-
-- [ ] LT-212: `@for`'s `@empty` arm (LT-210 item 1, re-anchored). **Gate: before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent — no migrated component uses it today.**
-  **Skill:** le-truc-dev
-  **Context:** Spec: optional arm after the template block. New IR (an empty arm on
-  `ForIR`), both emitters, analysis addressing. `.tsx` needs no new spelling — an
-  empty state is already `{items.length === 0 ? … : items.map(…)}` — so decide
-  whether `@empty` lowers to that shared conditional+loop shape or earns its own IR
-  (keys and addressing may differ). Dual-surface story per ADR 0032 s6: paid in both
-  surfaces (the `.tsx` lowering is the conditional+map shape) or the s6 exception
-  recorded.
-  **IR surface landed (LT-286, 2026-09-24):** `emptyArm: TemplateNode[] | null` sits on
-  `ForIRBase` in `ir.ts`, so both `EachForIR` and `ReconcileForIR` carry it, and every front
-  end sets it to `null` today. Produce it from the `.tsrx` `@empty` arm, and rule the `.tsx`
-  story here. Consumers branch on `loop.kind`; don't test `listSignal` for truthiness.
-  **Acceptance:** parity extended for the empty case; goldens unchanged for untouched
-  behavior; warning baseline 0, census 20/2/0 hold.
-  **ADR 0037 rider (2026-09-21):** `@empty` stays on the toggle path, out of the keyed arm
-  space ([ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) sub-design 5 —
-  it shares the item container's `data-key` namespace); coordinate arm-extraction vocabulary
-  with LT-274.
 
 - [ ] LT-213: Dynamic `<{expression}>` tags (LT-210 item 2, re-anchored). **Gate: before P5's first wave-4 migration; not urgent.**
   **Skill:** le-truc-dev, with architect ruling the tier story if it needs one

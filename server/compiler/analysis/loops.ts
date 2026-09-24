@@ -340,6 +340,25 @@ export const runLoops = (ctx: AnalysisContext): void => {
 		}
 		const templateName = addQuery('template', 'template', 'one')
 
+		// The @empty arm's roots (LT-212): server-rendered in the container,
+		// `hidden` toggled by the client — each root needs its own query.
+		const emptyQueries: string[] = []
+		for (const root of loop.emptyArm ?? []) {
+			if (!isElement(root)) continue
+			const resolved = resolveSelector(root)
+			if (!resolved.unique) {
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						source,
+						root.node.start,
+						`No unique selector for the @empty arm root <${root.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
+					),
+				)
+				continue
+			}
+			emptyQueries.push(addQuery('empty', resolved.selector, 'one'))
+		}
+
 		// The item hole's parent element — the item value's DOM site, used by
 		// the arg-seeded harvest read.
 		const findHoleParent = (node: TemplateNode): ElementNode | null => {
@@ -469,6 +488,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 			keyParam: loop.keyName,
 			holeSelector,
 			itemEvents,
+			emptyQueries,
 		})
 	}
 }

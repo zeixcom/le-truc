@@ -596,3 +596,83 @@ export const lowerChildrenSkeleton = (
 	}
 	return out
 }
+
+/* === Loop empty arm (LT-212) === */
+
+/**
+ * Validate a loop's empty arm (`.tsrx` `@empty { … }`, `.tsx`
+ * `{xs.length === 0 ? <empty/> : xs.map(…)}`) and return it, or `null` when
+ * a diagnostic was pushed. The arm is CLIENT-INERT: static markup plus
+ * server-rendered expressions and attributes, optionally under a
+ * server-known `@if`/`@switch`. Over server data the server alone decides
+ * whether the arm renders, so a client construct inside it would bind to an
+ * element that may not exist. Over a reactive List (ADR 0037 s5: the
+ * toggle path) every root must be an element, because the client toggles
+ * each root's `hidden` as the list empties and fills.
+ *
+ * `what` carries the surface's spelling (`'@empty arm'` / `'empty-state
+ * arm'`).
+ */
+export const validateEmptyArm = (
+	ctx: ExtractContext,
+	arm: TemplateNode[],
+	kind: ForIR['kind'],
+	fors: ReadonlyMap<AstNode, ForIR>,
+	at: number | undefined,
+	what: string,
+): TemplateNode[] | null => {
+	const outputs = new Set([...fors.values()].map(f => f.output))
+	let offending: AstNode | undefined
+	const inert = (node: TemplateNode): boolean => {
+		switch (node.kind) {
+			case 'text':
+				return true
+			case 'expr':
+				if (node.lazy) offending = node.node
+				return !node.lazy
+			case 'element':
+				if (outputs.has(node)) {
+					offending = node.node
+					return false
+				}
+				for (const attr of node.attrs) {
+					if (attr.kind !== 'static' && attr.kind !== 'server') {
+						offending = node.node
+						return false
+					}
+				}
+				return node.children.every(inert)
+			case 'if':
+				return [...node.then, ...node.alternate].every(inert)
+			case 'switch':
+				return node.cases.every(c => c.children.every(inert))
+			default:
+				offending = node.node
+				return false
+		}
+	}
+	if (!arm.every(inert)) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				offending?.start ?? at,
+				`Client constructs (events, reactive bindings, refs, composed elements, loops, boundaries) inside an ${what} (the arm renders static and server-known content only)`,
+			),
+		)
+		return null
+	}
+	if (kind === 'reconcile') {
+		const loose = arm.find(n => n.kind !== 'element')
+		if (loose) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					loose.node?.start ?? at,
+					`A non-element root in the ${what} of a reactive-list loop (the client toggles each root's \`hidden\` as the list empties and fills, so every root must be an element)`,
+				),
+			)
+			return null
+		}
+	}
+	return arm
+}

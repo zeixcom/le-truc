@@ -321,6 +321,111 @@ import { deriveList } from '@zeix/le-truc'`
 	})
 })
 
+describe('the loop empty arm (LT-212)', () => {
+	const eachSource = (
+		arm: string,
+	): string => `export function C({ rows }: { rows: string[] })
+	@{
+		<>
+			<c-el>
+				<ul>
+					@for (const row of rows) {
+						<li class="row">{row}</li>
+					} @empty {
+						${arm}
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+
+	test('a static arm compiles clean', () => {
+		const { component, diagnostics } = compileComponent(
+			eachSource('<li class="none">Nothing yet</li>'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+	})
+
+	test('a client construct inside the arm is LTC005', () => {
+		const { component, diagnostics } = compileComponent(
+			eachSource(
+				'<li class="none"><button type="button" onClick={() => console.log(1)}>Add</button></li>',
+			),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.message).toContain('@empty arm')
+	})
+
+	test('an arm root the item selector cannot be told apart from is LTC007', () => {
+		const { diagnostics } = compileComponent(
+			eachSource('<li class="row">Nothing yet</li>'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'LTC007')).toBe(true)
+	})
+
+	test('a non-element root in a reactive-list arm is LTC005', () => {
+		const { component, diagnostics } = compileComponent(
+			`import { createList } from '@zeix/le-truc'
+export function C({}: {})
+	@{
+		const items = createList<string>([], { keyConfig: 'item' })
+		<>
+			<c-el>
+				<ul data-container>
+					@for (const item of items) {
+						<li><span>{item}</span></li>
+					} @empty {
+						<>Nothing yet</>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.message).toContain('non-element root')
+	})
+
+	test('.tsx: a `.map()` arm outside the empty-state idiom is LTC005, not a silent drop', () => {
+		for (const expr of [
+			'ready ? <li class="none">none</li> : rows.map(row => <li>{row}</li>)',
+			'ready && rows.map(row => <li>{row}</li>)',
+			'rows.length === 0 ? <li class="none">none</li> : other.map(row => <li>{row}</li>)',
+		]) {
+			const { component, diagnostics } = compileComponentTsx(
+				`export function C({ rows, other, ready }: { rows: string[]; other: string[]; ready: boolean }) {
+	return (
+		<>
+			<c-el>
+				<ul>{${expr}}</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	)
+}`,
+				'c.tsx',
+				new Set(),
+			)
+			expect(component).toBeNull()
+			const hit = diagnostics.find(d => d.code === 'LTC005')
+			expect(hit?.message).toContain('conditional arm')
+		}
+	})
+})
+
 describe('reactive-list rewrite rules (milestone 3)', () => {
 	const listSource = (body: string): string =>
 		`import { createList } from '@zeix/le-truc'

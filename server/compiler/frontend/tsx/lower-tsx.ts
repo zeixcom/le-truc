@@ -57,6 +57,7 @@ import {
 	type SurfaceWording,
 	singleRootOf,
 	validateCondition,
+	validateEmptyArm,
 } from '../../lower-shared'
 import type { AstNode } from './to-estree'
 
@@ -114,6 +115,19 @@ const lowerIfExpr = (
 		thenSrc = (node.right as AstNode | null) ?? null
 	}
 	if (!isNode(test)) return null
+	if (
+		(isNode(thenSrc) && isMapCall(thenSrc)) ||
+		(isNode(alternateSrc) && isMapCall(alternateSrc))
+	) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.start,
+				'A `.map()` loop as a conditional arm (the only conditional-plus-loop shape is the empty state, `{xs.length === 0 ? <empty/> : xs.map(…)}`)',
+			),
+		)
+		return null
+	}
 	if (!validateCondition(ctx, signals, test, 'if condition')) return null
 	const then = isJsxNode(thenSrc)
 		? lowerJsxValue(ctx, thenSrc, signals, fors)
@@ -455,6 +469,62 @@ const lowerTryArms = (
 /* === @for → `.map()` === */
 
 /**
+ * The empty-state idiom (LT-212): `{xs.length === 0 ? <empty/> : xs.map(…)}`
+ * is `.tsx`'s spelling of `@for … @empty`. Recognized by SHAPE, like the
+ * switch IIFE: the test compares the map receiver's own `length` to `0`,
+ * so the loop and its arm lower together to one `ForIR` with an
+ * `emptyArm`, and the test is never evaluated as an `if` condition (over a
+ * reactive List it would read a signal). Any other conditional with a
+ * `.map()` arm is diagnosed in `lowerIfExpr`.
+ */
+const emptyStateIdiomOf = (
+	node: AstNode,
+): { loop: AstNode; empty: AstNode } | null => {
+	if (node.type !== 'ConditionalExpression') return null
+	const test = node.test as AstNode | undefined
+	const empty = node.consequent as AstNode | undefined
+	const loop = node.alternate as AstNode | undefined
+	if (!isNode(test) || test.type !== 'BinaryExpression') return null
+	if (String(test.operator) !== '===') return null
+	const left = test.left as AstNode | undefined
+	const right = test.right as AstNode | undefined
+	if (
+		!isNode(left) ||
+		left.type !== 'MemberExpression' ||
+		left.computed ||
+		identifierName(left.property) !== 'length'
+	)
+		return null
+	if (!isNode(right) || right.type !== 'Literal' || right.value !== 0)
+		return null
+	if (!isJsxNode(empty) || !isNode(loop) || !isMapCall(loop)) return null
+	const subject = identifierName(left.object)
+	const receiver = identifierName((loop.callee as AstNode).object)
+	if (!subject || subject !== receiver) return null
+	return { loop, empty }
+}
+
+/**
+ * Lower the empty-state idiom's arm (LT-212): `null` when the loop has
+ * none, `false` when the arm was diagnosed (the loop is dropped).
+ */
+const lowerEmptyArm = (
+	ctx: ExtractContext,
+	emptySrc: AstNode | null,
+	kind: ForIR['kind'],
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<AstNode, ForIR>,
+): TemplateNode[] | null | false => {
+	if (!emptySrc) return null
+	const arm = lowerJsxValue(ctx, emptySrc, signals, fors)
+	if (arm.length === 0) return null
+	return (
+		validateEmptyArm(ctx, arm, kind, fors, emptySrc.start, 'empty-state arm') ??
+		false
+	)
+}
+
+/**
  * Whether `node` is an IIFE recognized by this lowering: `(() => { … })()`
  * with a single arrow argument and a block body. SHAPE-based — see
  * `lowerSwitchIife` on why identity does not survive the conversion.
@@ -501,6 +571,8 @@ export const lowerFor = (
 	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
+	/** The empty-state idiom's `<empty/>` arm, when the loop came from one. */
+	emptySrc: AstNode | null = null,
 ): TemplateNode | null => {
 	const callee = node.callee as AstNode
 	const iterable = callee.object as AstNode
@@ -532,7 +604,15 @@ export const lowerFor = (
 			)
 			return null
 		}
-		return lowerListFor(ctx, node, itemName, iterableSignal.name, signals, fors)
+		return lowerListFor(
+			ctx,
+			node,
+			itemName,
+			iterableSignal.name,
+			signals,
+			fors,
+			emptySrc,
+		)
 	}
 	const indexName = identifierName(params[1])
 	if (params.length > 2) {
@@ -611,6 +691,8 @@ export const lowerFor = (
 		return null
 	}
 	const output = lowerElement(ctx, outputNode, signals, fors)
+	const emptyArm = lowerEmptyArm(ctx, emptySrc, 'each', signals, fors)
+	if (emptyArm === false) return null
 	const forIR: EachForIR = {
 		kind: 'each',
 		itemName,
@@ -620,7 +702,7 @@ export const lowerFor = (
 		hoisted,
 		output,
 		node,
-		emptyArm: null,
+		emptyArm,
 	}
 	fors.set(node, forIR)
 	return output
@@ -731,6 +813,7 @@ export const lowerListFor = (
 	listSignal: string,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
+	emptySrc: AstNode | null = null,
 ): (TemplateNode & { kind: 'element' }) | null => {
 	const callback = asArray(node.arguments)[0] as AstNode | undefined
 	const params = callback ? asArray(callback.params) : []
@@ -781,6 +864,8 @@ export const lowerListFor = (
 	// The item binding is the slot fill — reactive by position.
 	markPositionallyReactive([output], new Set([itemName]))
 	validateListBody(ctx, output, itemName)
+	const emptyArm = lowerEmptyArm(ctx, emptySrc, 'reconcile', signals, fors)
+	if (emptyArm === false) return null
 	const forIR: ReconcileForIR = {
 		kind: 'reconcile',
 		itemName,
@@ -789,7 +874,7 @@ export const lowerListFor = (
 		keyName: null,
 		output,
 		node,
-		emptyArm: null,
+		emptyArm,
 	}
 	fors.set(node, forIR)
 	return output
@@ -818,6 +903,13 @@ export const lowerChildren = (
 		{
 			dispatchControlFlow: (ctx, expr, out, _container, signals, fors) => {
 				// Control-flow shapes in child position:
+				const idiom = emptyStateIdiomOf(expr)
+				if (idiom) {
+					const lowered = lowerFor(ctx, idiom.loop, signals, fors, idiom.empty)
+					if (lowered)
+						out.push(lowered, ...(fors.get(idiom.loop)?.emptyArm ?? []))
+					return true
+				}
 				if (
 					expr.type === 'ConditionalExpression' ||
 					(expr.type === 'LogicalExpression' && String(expr.operator) === '&&')

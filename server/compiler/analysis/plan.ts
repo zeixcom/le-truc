@@ -203,6 +203,13 @@ export type ReconcilePlan = {
 	/** Scoped selector of the element carrying the &{item} hole. */
 	holeSelector: string
 	itemEvents: ReconcileItemEvents[]
+	/**
+	 * Query variables of the `@empty` arm's roots (LT-212), in order. Each
+	 * root is always server-rendered inside the container with
+	 * `data-unreconciled`; the client toggles its `hidden` from the list's
+	 * length (ADR 0037 s5: the toggle path). Empty when the loop has no arm.
+	 */
+	emptyQueries: string[]
 }
 
 export type TopEffectPlan =

@@ -584,3 +584,142 @@ export function PendingRoot({}: {}) {
 		expect(html).toContain('isPending(data)')
 	})
 })
+
+describe('the loop empty arm on both surfaces (LT-212)', () => {
+	/** Generated modules minus their provenance header (names the source). */
+	const body = (code: string | undefined): string =>
+		(code ?? '').replace(/^\/\*\*[\s\S]*?\*\/\n/, '')
+
+	const pairs = [
+		{
+			path: 'each',
+			tag: 'empty-each',
+			name: 'EmptyEach',
+			tsrx: `export function EmptyEach({ rows }: { rows: string[] })
+	@{
+		<>
+			<empty-each>
+				<ul>
+					@for (const row of rows) {
+						<li class="row">{row}</li>
+					} @empty {
+						<li class="none">Nothing yet</li>
+					}
+				</ul>
+			</empty-each>
+			<style>empty-each { color: red }</style>
+		</>
+	}`,
+			tsxx: `export function EmptyEach({ rows }: { rows: string[] }) {
+	return (
+		<>
+			<empty-each>
+				<ul>
+					{rows.length === 0 ? (
+						<li class="none">Nothing yet</li>
+					) : (
+						rows.map(row => <li class="row">{row}</li>)
+					)}
+				</ul>
+			</empty-each>
+			<style>empty-each { color: red }</style>
+		</>
+	)
+}`,
+			args: (rows: string[]) => ({ rows }),
+		},
+		{
+			path: 'reconcile',
+			tag: 'empty-list',
+			name: 'EmptyList',
+			tsrx: `import { createList } from '@zeix/le-truc'
+export function EmptyList({ initial }: { initial?: string[] })
+	@{
+		const items = createList<string>(initial, { keyConfig: 'item' })
+		<>
+			<empty-list>
+				<ul data-container>
+					@for (const item of items) {
+						<li><span>{item}</span></li>
+					} @empty {
+						<p class="none">Nothing yet</p>
+					}
+				</ul>
+			</empty-list>
+			<style>empty-list { color: red }</style>
+		</>
+	}`,
+			tsxx: `import { createList } from '@zeix/le-truc'
+export function EmptyList({ initial }: { initial?: string[] }) {
+	const items = createList<string>(initial, { keyConfig: 'item' })
+	return (
+		<>
+			<empty-list>
+				<ul data-container>
+					{items.length === 0 ? (
+						<p class="none">Nothing yet</p>
+					) : (
+						items.map(item => <li><span>{item}</span></li>)
+					)}
+				</ul>
+			</empty-list>
+			<style>empty-list { color: red }</style>
+		</>
+	)
+}`,
+			args: (initial: string[]) => ({ initial }),
+		},
+	]
+
+	for (const pair of pairs) {
+		describe(`${pair.path} path`, () => {
+			const tsrx = compileComponent(pair.tsrx, `${pair.tag}.tsrx`, new Set())
+			const tsxx = compileComponentTsx(pair.tsxx, `${pair.tag}.tsx`, new Set())
+
+			test('compiles clean on both surfaces', () => {
+				expect(tsrx.diagnostics).toEqual([])
+				expect(tsxx.diagnostics).toEqual([])
+			})
+
+			test('generated modules identical apart from the provenance header', () => {
+				expect(body(tsxx.component?.serverCode)).toBe(
+					body(tsrx.component?.serverCode),
+				)
+				expect(body(tsxx.component?.clientCode)).toBe(
+					body(tsrx.component?.clientCode),
+				)
+			})
+
+			test('renders the arm exactly when the iterable is empty', async () => {
+				if (!tsrx.component) throw new Error('compile failed')
+				const render = renderOf(pair.tag, pair.name)
+				const empty = await render(tsrx.component.serverCode, pair.args([]))
+				const full = await render(
+					tsrx.component.serverCode,
+					pair.args(['a', 'b']),
+				)
+				expect(empty).toContain('Nothing yet')
+				expect(full).toContain('>a<')
+				if (pair.path === 'each') {
+					expect(full).not.toContain('Nothing yet')
+				} else {
+					// The toggle path: always rendered, exempt from
+					// reconciliation, hidden while the list has items.
+					expect(empty).toContain('<p data-unreconciled class="none">')
+					expect(full).toContain('<p data-unreconciled hidden class="none">')
+				}
+			})
+		})
+	}
+
+	test('the reconcile path toggles each arm root from the list length', () => {
+		const { component } = compileComponent(
+			pairs[1]?.tsrx ?? '',
+			'empty-list.tsrx',
+			new Set(),
+		)
+		expect(component?.clientCode).toContain(
+			'watch(() => items.length === 0, bindVisible(empty))',
+		)
+	})
+})
