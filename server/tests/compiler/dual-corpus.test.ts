@@ -183,6 +183,38 @@ describe('dual corpus (ADR 0032 sub-design 6, narrowed by ADR 0039)', () => {
 		)
 	})
 
+	test('a stale variantOverrides entry fails the run as a config error (LT-292)', async () => {
+		// No source declares the tag (a renamed or deleted component, a
+		// tag-shaped typo) ...
+		const missing = await settle(
+			compileCorpus(
+				variantSet(),
+				configAt(path.join(scratch.path, 'override-missing'), {
+					variantOverrides: { 'var-elm': 'tsrx' },
+				}),
+			),
+		)
+		if (missing.status !== 'rejected')
+			throw new Error('the run should have failed on the stale override')
+		expect(String(missing.reason)).toContain(
+			'le-truc.config.json: "variantOverrides["var-elm"]" names no variant set — no variant set declares this tag.',
+		)
+		// ... or only one surface authors it.
+		const single = await settle(
+			compileCorpus(
+				[memoryFile(VAR_TSX, varTsx('display: block'))],
+				configAt(path.join(scratch.path, 'override-single'), {
+					variantOverrides: { 'var-el': 'tsrx' },
+				}),
+			),
+		)
+		if (single.status !== 'rejected')
+			throw new Error('the run should have failed on the stale override')
+		expect(String(single.reason)).toContain(
+			`"variantOverrides["var-el"]" names no variant set — only one surface authors it (${VAR_TSX})`,
+		)
+	})
+
 	test('the non-selected member keeps its client under variants/ (LT-284)', async () => {
 		// ADR 0039 decision 2's runtime equivalence contract: the component
 		// test route serves EACH compiled surface, so the corpus compile

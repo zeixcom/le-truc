@@ -1036,6 +1036,13 @@ field, what was received and what was expected:
 - `outDir`, `i18nDir` and `runtimeImport` must be **non-empty strings**;
 - `variantSurface` and every `variantOverrides` value must be `"tsx"` or
   `"tsrx"`, and every `variantOverrides` key a dashed lowercase tag.
+- a `variantOverrides` key must also **name a variant set** (LT-292). The
+  sets are known only after the corpus scan, so this one is checked there,
+  not at load, but it throws the same kind of configuration error. An
+  override for a tag no source declares, or one only a single surface
+  authors, would otherwise be silently ignored. A corpus-wide
+  `variantSurface` with no variant set present is not an error: it is a
+  policy default, not a pointer.
 
 **The output root's depth is derived, not assumed.** Every generated module
 lands FLAT in the output root whatever nesting the authored source had, so a

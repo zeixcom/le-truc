@@ -103,7 +103,7 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   pass target. The test fails on the old code. `check:corpus` passes and the client goldens
   are unchanged.
 
-- [ ] LT-292: A `variantOverrides` entry that names no variant set is a configuration error (LT-283 review follow-up).
+- [x] LT-292: A `variantOverrides` entry that names no variant set is a configuration error (LT-283 review follow-up). — done
   **Skill:** le-truc-dev
   **Context:** `compileCorpus` applies `config.variantOverrides[tag]` only inside a variant
   set. An override for a tag with one authored source, or for no tag at all (a renamed or
@@ -119,6 +119,16 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   The recommended answer is no: it is a policy default, not a pointer.
   **Check:** unit tests in `corpus-config.test.ts`/`dual-corpus.test.ts` for both
   stale-override shapes; the repo corpus (no overrides) is unaffected.
+  **Done (2026-09-25):** added `validateVariantOverrides(config, sourcesByTag)` in
+  `corpus-config.ts`. `compileCorpus` calls it right after the LTC048 pre-check. It throws
+  `le-truc.config.json: "variantOverrides["<tag>"]" names no variant set — no variant set
+  declares this tag.` or `… — only one surface authors it (<source>).` A tag with several
+  sources that are not a set is left to LTC048. Following the recommendation, a corpus-wide
+  `variantSurface` with no sets present is not an error, and a test pins that. Tests: three
+  unit tests in `corpus-config.test.ts` and one end-to-end test in `dual-corpus.test.ts`
+  covering both stale shapes. `check:corpus` is unaffected. The rule is documented in
+  LE_TRUC_COMPILER.md § 7.1. The message copy is new config-error text; it is not in
+  `errors.ts` or a TSRX code, but Tech Writer may want to review it.
 
 - [ ] LT-312: Generate the `.tsx` → `.tsrx` compose-import typings
   **Skill:** le-truc-dev

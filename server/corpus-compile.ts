@@ -29,6 +29,7 @@ import {
 	emitPathsFor,
 	resolveCorpusConfig,
 	type VariantSurface,
+	validateVariantOverrides,
 } from './compiler/corpus-config'
 import { diagnostic } from './compiler/diagnostics'
 import type { EmitPaths } from './compiler/emit-paths'
@@ -280,6 +281,9 @@ export const compileCorpus = async (
 			// them in `errorLabels`, which the pass-1 loop skips.
 		}
 	}
+	// A `variantOverrides` entry naming no variant set is a configuration
+	// error (LT-292): the sets are only known now, after the scan.
+	validateVariantOverrides(config, tagsBySource)
 	for (const file of files) {
 		const rel = relative(root, file.path)
 		if (errorLabels.has(rel)) continue

@@ -323,6 +323,39 @@ export const resolveCorpusConfig = (
 	}
 }
 
+/**
+ * Reject a `variantOverrides` entry that points at no variant set (LT-292).
+ *
+ * Selection applies only WITHIN a set, so an override for a tag with one
+ * authored source, or for no tag at all (a renamed or deleted component, a
+ * tag-shaped typo), would be silently ignored — LT-273's "it compiled, but
+ * nothing is where I asked". The sets are only known after the corpus scan,
+ * so this runs there (after the LTC048 pre-check), not at config load; the
+ * error is still a thrown configuration error, untiered like LT-273's. No
+ * `LTC` code applies: no component source is at fault.
+ *
+ * `sourcesByTag` maps each declared tag to its authored sources. A tag with
+ * two or more sources that are NOT a set is LTC048's to report, not this
+ * check's. A corpus-wide `variantSurface` with no set present is not an
+ * error: it is a policy default, not a pointer.
+ */
+export const validateVariantOverrides = (
+	config: CorpusConfig,
+	sourcesByTag: ReadonlyMap<string, readonly string[]>,
+): void => {
+	for (const tag of Object.keys(config.variantOverrides)) {
+		const sources = sourcesByTag.get(tag) ?? []
+		if (sources.length === 0)
+			fail(
+				`"variantOverrides["${tag}"]" names no variant set — no variant set declares this tag. Remove the entry, or correct the tag.`,
+			)
+		if (sources.length === 1)
+			fail(
+				`"variantOverrides["${tag}"]" names no variant set — only one surface authors it (${sources[0]}). An override selects between the members of a variant set; remove the entry, or add the other surface's source beside it.`,
+			)
+	}
+}
+
 /** The emitter-facing projection of a configuration. */
 export const emitPathsFor = (config: CorpusConfig): EmitPaths => ({
 	outDirPrefix: outDirPrefix(config.root, config.outDir),

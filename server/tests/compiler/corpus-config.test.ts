@@ -22,6 +22,7 @@ import {
 	emitPathsFor,
 	outDirPrefix,
 	resolveCorpusConfig,
+	validateVariantOverrides,
 } from '../../compiler/corpus-config'
 import { DEFAULT_EMIT_PATHS } from '../../compiler/emit-paths'
 import {
@@ -216,6 +217,47 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		const defaults = resolveCorpusConfig('/p')
 		expect(defaults.variantSurface).toBe('tsx')
 		expect(defaults.variantOverrides).toEqual({})
+	})
+})
+
+describe('a variantOverrides entry must name a variant set (LT-292)', () => {
+	// Selection applies only within a set, so a stale override would be
+	// silently ignored. The sets are known only after the scan, so the check
+	// takes the scan's tag → sources map rather than running at load time.
+	const config = resolveCorpusConfig('/p', {
+		variantOverrides: { 'x-el': 'tsrx' },
+	})
+
+	test('an override for a tag no source declares throws', () => {
+		expect(() => validateVariantOverrides(config, new Map())).toThrow(
+			`${CONFIG_FILENAME}: "variantOverrides["x-el"]" names no variant set — no variant set declares this tag.`,
+		)
+	})
+
+	test('an override for a single-source tag throws, naming the source', () => {
+		expect(() =>
+			validateVariantOverrides(
+				config,
+				new Map([['x-el', ['examples/x/x-el.tsx']]]),
+			),
+		).toThrow(
+			/"variantOverrides\["x-el"\]" names no variant set — only one surface authors it \(examples\/x\/x-el\.tsx\)/,
+		)
+	})
+
+	test('an override for a variant set passes; no overrides pass anything', () => {
+		const sets = new Map([
+			['x-el', ['examples/x/x-el.tsrx', 'examples/x/x-el.tsx']],
+		])
+		expect(() => validateVariantOverrides(config, sets)).not.toThrow()
+		// A corpus-wide `variantSurface` with no set present is a policy
+		// default, not a pointer — never an error.
+		expect(() =>
+			validateVariantOverrides(
+				resolveCorpusConfig('/p', { variantSurface: 'tsrx' }),
+				new Map(),
+			),
+		).not.toThrow()
 	})
 })
 
