@@ -5,6 +5,8 @@
 
 import * as path from 'node:path'
 import { resolveCorpusConfig } from '../../compiler/corpus-config'
+import { compileSource } from '../../compiler/frontend/tsrx/compiler'
+import { compileSourceTsx } from '../../compiler/frontend/tsx/compiler-tsx'
 import { collectCorpusSources } from '../../corpus-sources'
 import type { FileInfo } from '../../file-signals'
 
@@ -18,3 +20,13 @@ const ROOT = path.resolve(import.meta.dir, '../../..')
  */
 export const loadCorpus = async (): Promise<FileInfo[]> =>
 	collectCorpusSources(resolveCorpusConfig(ROOT))
+
+/**
+ * Front-end-only compile of one corpus file, the surface chosen by
+ * extension — the same dispatch `compileCorpus` makes (ADR 0039 variant
+ * sets put a `.tsx` beside a `.tsrx` in one folder, LT-237).
+ */
+export const compileCorpusSource = (content: string, filename: string) =>
+	filename.endsWith('.tsx')
+		? compileSourceTsx(content, filename)
+		: compileSource(content, filename)

@@ -66,6 +66,6 @@ Everything else mapped directly: `@{ }` → statements + `return`; `@if`/`@else`
 | `server/tsrx/` (machinery) | `server/compiler/` |
 | `spike/tsx/host-profile.d.ts` | `server/compiler/frontend/tsx/host-profile.d.ts` |
 | `server/tests/tsrx-tsx/parity.test.ts` | `server/tests/compiler/tsx/parity.test.ts` (plus `tsx/typecheck.test.ts` for the tsconfig gates) |
-| `spike/tsx/` fixtures | `spike/tsx/` — still the live parity and typecheck corpus; **scheduled to move into the example component folders by LT-237** |
+| `spike/tsx/` fixtures | the four ports beside their `.tsrx` twins in `examples/` (ADR 0039 variant sets); synthetics, negatives, probes and tsconfigs in `server/tests/compiler/fixtures/tsx/` (LT-237) |
 
 Spike constraints honored at the time: no changes under `examples/`, `server/generated/tsrx/` or `src/`, and the machinery untouched.

@@ -1,22 +1,23 @@
 /**
  * The typed `.tsx` ambient gate (LT-208, LT-209): tsc over the authored
- * spike fixtures against `host-profile.d.ts`.
+ * `.tsx` sources against `host-profile.d.ts`.
  *
- * The POSITIVE config (`spike/tsx/tsconfig.json`) must compile clean — six
- * fixtures under the precise `FactoryContext` parameter convention and the
- * branded three-arm `boundary`. The NEGATIVE config
- * (`spike/tsx/tsconfig.neg.json`) must fail with exactly the mistyped-arm
+ * The POSITIVE config (`server/tests/compiler/fixtures/tsx/tsconfig.json`)
+ * must compile clean — the synthetic fixtures under the precise
+ * `FactoryContext` parameter convention and the branded three-arm
+ * `boundary`. The NEGATIVE config (`fixtures/tsx/tsconfig.neg.json`) must fail with exactly the mistyped-arm
  * diagnostics the ambients exist to surface, at native positions on the
  * authored files (the ADR 0032 s3 dividend — no span remapping needed).
  *
- * The EXAMPLES config (`examples/tsconfig.json`, LT-285) typechecks the
- * variant-set folder — the hand-written `.ts` twin and the compiled `.tsx`
- * member in one program — so the ADR 0039 declaration convention (exactly
- * one `HTMLElementTagNameMap` entry per set, the twin's) is a real tsc
- * gate: a second member re-declaring the entry fails with TS 2717 here.
+ * The EXAMPLES config (`examples/tsconfig.json`, LT-285, LT-237) typechecks
+ * every `.tsx` variant-set member in `examples/` — with basic-counter's
+ * hand-written `.ts` twin in the same program. Under ADR 0039 s4 every
+ * member declares its own `HTMLElementTagNameMap` entry, so this program is
+ * the cross-spelling Props-drift gate: a `.tsx` Props type diverging from
+ * the twin's fails with TS 2717 here.
  *
- * This is the standing CI form of the spike's manual `tsconfig.neg.json`
- * probes; `check:corpus` is the corpus-side analog.
+ * This is the standing CI form of the LT-183 spike's manual
+ * `tsconfig.neg.json` probes; `check:corpus` is the corpus-side analog.
  */
 import { describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { spawnSync } from 'node:child_process'
@@ -27,7 +28,7 @@ import * as path from 'node:path'
 setDefaultTimeout(60_000)
 
 const ROOT = path.resolve(import.meta.dir, '../../../..')
-const SPIKE = path.join(ROOT, 'spike/tsx')
+const FIXTURES = path.join(ROOT, 'server/tests/compiler/fixtures/tsx')
 
 const runTsc = (config: string): { status: number; output: string } => {
 	const proc = spawnSync(
@@ -45,14 +46,14 @@ const runTsc = (config: string): { status: number; output: string } => {
 }
 
 describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
-	test('the six fixtures compile clean under the typed ambients', () => {
-		const { status, output } = runTsc(path.join(SPIKE, 'tsconfig.json'))
+	test('the synthetic fixtures compile clean under the typed ambients', () => {
+		const { status, output } = runTsc(path.join(FIXTURES, 'tsconfig.json'))
 		expect(output).toBe('')
 		expect(status).toBe(0)
 	})
 
 	test('the negative probes fail at native positions on the authored file', () => {
-		const { status, output } = runTsc(path.join(SPIKE, 'tsconfig.neg.json'))
+		const { status, output } = runTsc(path.join(FIXTURES, 'tsconfig.neg.json'))
 		// The string arm: the branded JSX.Element rejects it — the
 		// generic-`T` shape the ruling rejected would have union-absorbed it.
 		expect(output).toContain(
@@ -75,14 +76,12 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 		expect(status).not.toBe(0)
 	})
 
-	test('the variant-set folder typechecks — one tag-map entry, the twin-owned one (LT-285, ADR 0039)', () => {
-		// The twin, the `.tsrx` and the `.tsx` of basic-counter share the
-		// folder; only the twin declares the HTMLElementTagNameMap entry.
-		// The tsc backstop (verified live with a temporary duplicate): two
-		// structurally IDENTICAL entries merge silently, but the moment the
-		// spellings' Props types diverge, the duplicate fails with TS 2717
-		// naming the offending member — the divergence the convention
-		// exists to prevent.
+	test('the examples variant-set members typecheck — every member declares the tag-map entry (LT-285, LT-237, ADR 0039 s4)', () => {
+		// basic-counter's twin and `.tsx` each declare the entry in one
+		// program. Verified live (LT-237, temporary divergence): structurally
+		// IDENTICAL entries merge silently, and the moment the spellings'
+		// Props types diverge, the second fails with TS 2717 naming the
+		// offending member.
 		const { status, output } = runTsc(path.join(ROOT, 'examples/tsconfig.json'))
 		expect(output).toBe('')
 		expect(status).toBe(0)

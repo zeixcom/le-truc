@@ -37,6 +37,28 @@ retirement ruling is verbatim in AGENTS.md's `pass()` bullet and the CHANGELOG R
 entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text:
 `git log -p -- DONE.md`.
 
+- [x] LT-237: Move the spike's `.tsx` fixtures into their example component folders — reviewed ✓
+  **Changed:**
+  - `basic-pluralize`, `form-listbox` and `form-combobox` `.tsx` now sit beside their
+    `.tsrx` twins as variant sets, and are served as `.tsx` by default. They are the first
+    composites served from `.tsx`. Listbox and combobox gained their twins' `i18n`: the
+    spike ports had hardcoded English, which would have shipped.
+  - The synthetics, negatives, probes and four tsconfigs moved to
+    `server/tests/compiler/fixtures/tsx/`, which `biome.json` excludes (the negative
+    probes pin error positions). `spike/tsx/` is gone; `spike/size-bet/` stays, since it
+    is live.
+  - Corpus loaders dispatch per extension (`compileCorpusSource`). The parity suite
+    discovers every variant set from the corpus scan, compares render signatures
+    token-wise (Biome-formatted `.tsx` against unformatted `.tsrx`), and asserts
+    registry-entry equality.
+  - `host-profile.d.ts`: intrinsic attributes accept `undefined` (`Attr<T>`), and
+    `JSX.LibraryManagedAttributes` omits `i18n`.
+  **Ruling:** ADR 0039 s4 amended (owner, 2026-09-24): every variant-set member declares
+  its own `HTMLElementTagNameMap` entry. It dissolved LT-291's type-visibility channel.
+  **Live handoff:** the `Attr<T>` widening is a stopgap; **LT-308** narrows it
+  (key-typed `I18n`, then revert).
+  **Review:** approved 2026-09-24; `test:variants` is green on all surfaces (owner run).
+
 - [x] LT-238: Relax "one authored source per component tag" to a canonical-plus-variants rule — reviewed ✓
   **Ruling:** build-selected variants, `.tsx` served by default — recorded in
   [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (amends ADR 0032 s6 by
@@ -123,8 +145,8 @@ entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text
 
 - [x] LT-285: The three-spelling exemplar — `basic-counter`'s `.ts` twin restored as a variant (the LT-238 exit criterion) — done ✓
   **Changed:** `examples/basic/counter/` carries `.ts`, `.tsrx` and `.tsx` for one tag. The
-  twin is byte-identical to its pre-deletion self and owns the `HTMLElementTagNameMap`
-  entry. The CEM leaves the twin out while its component is compiled (`isVariantTwin`,
+  twin is byte-identical to its pre-deletion self and declares the `HTMLElementTagNameMap`
+  entry (since the LT-237 amendment of ADR 0039 s4, every member does). The CEM leaves the twin out while its component is compiled (`isVariantTwin`,
   `custom-elements-manifest.config.mjs`). The twin restore landed in 640922d5 (titled
   LT-284); this task adds the live pins in `dual-corpus.test.ts`.
   **Live handoff:** `childImports` resolves `basic-counter` to the twin, not the served

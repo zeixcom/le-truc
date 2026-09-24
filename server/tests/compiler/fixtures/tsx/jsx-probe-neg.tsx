@@ -6,7 +6,7 @@
  * not merely parseable.
  *
  * This file is EXPECTED to fail type-checking; the runner captures the exit
- * code and greps the diagnostic. It is excluded from the spike tsconfig's
+ * code and greps the diagnostic. It is excluded from the positive tsconfig's
  * default project (see tsconfig.probe-neg.json) so the clean probe stays
  * clean.
  */

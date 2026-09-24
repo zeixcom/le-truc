@@ -6,14 +6,21 @@
  * RENDER (server.golden parity), not the source text.
  *
  * Lives beside its `.tsrx` twin and the hand-written `.ts` twin as a variant
- * set (ADR 0039): the hand-written twin owns the `HTMLElementTagNameMap`
- * entry, so this member declares none (duplicates are a TS 2717 error).
+ * set (ADR 0039). Every member declares its own `HTMLElementTagNameMap`
+ * entry (s4): the served member's generated client must carry it, and a
+ * Props type diverging from the twin's fails TS 2717.
  */
 import { createCell, type FactoryContext } from '@zeix/le-truc'
 
 export type BasicCounterProps = {
 	/** Current counter value. Increments on each button click. */
 	count: number
+}
+
+declare global {
+	interface HTMLElementTagNameMap {
+		'basic-counter': HTMLElement & BasicCounterProps
+	}
 }
 
 /**

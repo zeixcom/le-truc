@@ -38,7 +38,7 @@ import { emitServerModule } from '../../compiler/emit-server'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import { compileComponent } from '../../compiler/frontend/tsrx/index'
 import type { EvaluationTier } from '../../compiler/tier'
-import { loadCorpus } from './corpus-fixture'
+import { compileCorpusSource, loadCorpus } from './corpus-fixture'
 
 /**
  * A component whose only routing signal is served-relevant and unresolvable,
@@ -317,7 +317,7 @@ describe('a folded signal the markup reads survives every tier', () => {
  * rule meets folded signals, `@for` scaffolding, compose sites and setup
  * chains, so the corpus is where the invariant has to be pinned.
  *
- * Compiled per file with `compileSource` rather than through the corpus
+ * Compiled per file with `compileCorpusSource` rather than through the corpus
  * runner: the tier flag is an `emitServerModule` option, and the runner emits
  * each component at its OWN classified tier only. Cross-tier comparison needs
  * all three from one IR. No compose registry is threaded in for the same
@@ -328,7 +328,7 @@ const corpus = await loadCorpus()
 
 const emitCorpus = (tier: EvaluationTier) =>
 	corpus.map(file => {
-		const { component } = compileSource(file.content, file.filename)
+		const { component } = compileCorpusSource(file.content, file.filename)
 		if (!component) throw new Error(`${file.filename} failed to compile`)
 		return {
 			component,

@@ -26,6 +26,9 @@
 	"files": [
 		"basic/counter/basic-counter.ts",
 		"basic/counter/basic-counter.tsx",
+		"basic/pluralize/basic-pluralize.tsx",
+		"form/listbox/form-listbox.tsx",
+		"form/combobox/form-combobox.tsx",
 		"../server/compiler/frontend/tsx/host-profile.d.ts"
 	]
 }

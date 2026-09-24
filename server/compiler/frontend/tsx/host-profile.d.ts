@@ -132,9 +132,25 @@ declare namespace JSX {
 		readonly $$leTrucJsx: 'element'
 	}
 
+	/**
+	 * The props a JSX parent passes to a composed (PascalCase) child: the
+	 * child's args minus the reserved `i18n` parameter, which the compiler
+	 * supplies at every render boundary — callers never pass it (ADR 0030
+	 * sub-design 2, LT-237). `children` stays: JSX children supply it.
+	 */
+	type LibraryManagedAttributes<_C, P> = Omit<P, 'i18n'>
+
 	/** A reactive value: static, or a thunk re-evaluated client-side. */
 	type Thunk<T> = () => T
 	type Reactive<T> = T | Thunk<T>
+	/**
+	 * A light-DOM attribute value. `undefined` renders the attribute absent
+	 * (`attr()` in the server runtime), so it is admitted explicitly — under
+	 * `exactOptionalPropertyTypes` an optional key alone would reject it, and
+	 * an `i18n` read (`placeholder={t.filter}`) is `string | undefined` under
+	 * `noUncheckedIndexedAccess` (LT-237).
+	 */
+	type Attr<T> = Reactive<T> | undefined
 
 	/**
 	 * One `truc:pass` entry: a read-only thunk, or a mediated descriptor —
@@ -154,24 +170,24 @@ declare namespace JSX {
 	 * is deliberately absent — see the module header.
 	 */
 	interface CommonLightDom {
-		class?: Reactive<string | null>
-		hidden?: Reactive<boolean>
-		id?: Reactive<string>
-		role?: string
-		tabindex?: Reactive<number>
-		title?: string
-		'aria-label'?: Reactive<string>
-		'aria-live'?: 'polite' | 'assertive' | 'off'
-		'aria-expanded'?: Reactive<string | boolean>
-		'aria-selected'?: Reactive<string | boolean>
-		'aria-describedby'?: string | null
+		class?: Attr<string | null>
+		hidden?: Attr<boolean>
+		id?: Attr<string>
+		role?: string | undefined
+		tabindex?: Attr<number>
+		title?: string | undefined
+		'aria-label'?: Attr<string>
+		'aria-live'?: 'polite' | 'assertive' | 'off' | undefined
+		'aria-expanded'?: Attr<string | boolean>
+		'aria-selected'?: Attr<string | boolean>
+		'aria-describedby'?: string | null | undefined
 		onClick?: (event: MouseEvent) => unknown
 		onInput?: (event: Event) => unknown
 		onChange?: (event: Event) => unknown
 		onKeydown?: (event: KeyboardEvent) => unknown
 		onKeyup?: (event: KeyboardEvent) => unknown
-		[key: `data-${string}`]: Reactive<string>
-		'truc:case'?: string
+		[key: `data-${string}`]: Attr<string>
+		'truc:case'?: string | undefined
 		'truc:case-type'?: 'cardinal' | 'ordinal' | undefined
 		children?: unknown
 	}
@@ -180,21 +196,21 @@ declare namespace JSX {
 	 * an element with NO entry here is a tsc error, which is the point:
 	 * the strict table is what makes the React prior fail loudly. */
 	interface button extends CommonLightDom {
-		type?: 'button' | 'submit' | 'reset'
-		disabled?: Reactive<boolean>
+		type?: 'button' | 'submit' | 'reset' | undefined
+		disabled?: Attr<boolean>
 	}
 	interface div extends CommonLightDom {}
 	interface form extends CommonLightDom {}
 	interface input extends CommonLightDom {
-		type?: string
-		name?: string
-		value?: Reactive<string>
-		placeholder?: Reactive<string>
-		autocomplete?: string
+		type?: string | undefined
+		name?: string | undefined
+		value?: Attr<string>
+		placeholder?: Attr<string>
+		autocomplete?: string | undefined
 	}
 	interface label extends CommonLightDom {
 		/** The native attribute is `for` — there is no `htmlFor` here. */
-		for?: string
+		for?: string | undefined
 	}
 	interface li extends CommonLightDom {}
 	interface p extends CommonLightDom {}

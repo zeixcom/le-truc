@@ -138,7 +138,7 @@ When a composition needs a child-writable prop whose value the parent derives (a
 
 The client is the wrong layer to answer "what language is this page in" — by the time a component runs, the answer is already in the DOM, put there by whoever rendered the page. So locale is **build-time server data** ([ADR 0030](../../adr/0030-internationalization-as-build-time-server-data.md)), and it reaches a component the way all server data does: as a server arg.
 
-**The reserved parameter.** A component that needs locale data declares a parameter named `i18n` and the compiler supplies it — the same reserved-name mechanism as `children` (ADR 0024 sub-design 10). **Callers never pass it**, so composition does not thread it through the graph by hand, and a component that does not declare it receives nothing and pays nothing. It destructures like any other arg, so the source stays honest TypeScript:
+**The reserved parameter.** A component that needs locale data declares a parameter named `i18n` and the compiler supplies it — the same reserved-name mechanism as `children` (ADR 0024 sub-design 10). **Callers never pass it** — on `.tsx` the host profile's `JSX.LibraryManagedAttributes` omits `i18n` from a composed child's props, so a JSX parent that leaves it out typechecks — so composition does not thread it through the graph by hand, and a component that does not declare it receives nothing and pays nothing. It destructures like any other arg, so the source stays honest TypeScript:
 
 ```
 export function BasicPluralize(

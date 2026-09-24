@@ -5,10 +5,33 @@
  * declares the compiler-consumed `'truc:pass'` key so the parent's
  * `truc:pass={{ … }}` type-checks against the CHILD'S REAL ARGS (the §8
  * negative test exploits exactly this). Setup statements are copied verbatim.
+ *
+ * Lives beside its `.tsrx` twin as a variant set (ADR 0039). Every member
+ * declares its own `HTMLElementTagNameMap` entry (s4): the served member's
+ * generated client must carry it.
  */
-import { bindAttribute, createCell, createState, asString, defineMethod } from '@zeix/le-truc'
+
 import type { FormFactoryContext } from '@zeix/le-truc'
+import {
+	asString,
+	bindAttribute,
+	createCell,
+	createState,
+	defineMethod,
+} from '@zeix/le-truc'
 import { FormListbox } from '../listbox/form-listbox.tsx'
+
+/**
+ * The clear button's aria-label is component-owned text assistive tech
+ * announces, so it routes through the reserved `i18n` parameter (ADR 0030):
+ * the compiler resolves `t` per locale at render time; this inline record is
+ * the source-locale fallback every catalog resolves against. The composed
+ * form-listbox declares its own keys — the compiler supplies each composed
+ * child its record at the render boundary, callers never pass one.
+ */
+export const i18n = {
+	clearInput: 'Clear input',
+}
 
 export type FormComboboxOption = {
 	value: string
@@ -50,39 +73,40 @@ export function FormCombobox(
 		value = '',
 		description = '',
 		clearable = false,
-	}:
-		{
-			name: string
-			label: string
-			options: FormComboboxOption[]
-			value?: string
-			description?: string
-			clearable?: boolean
-		},
-		{ host, first, expose, watch }: FormFactoryContext<FormComboboxProps>,
-	) {
-	const inputId = `${name}-input`;
-	const descriptionId = `${name}-description`;
-	const showPopup = createState(false);
-	const textbox = first('input', 'combobox input');
-	const listbox = first('form-listbox', 'combobox listbox');
-	const popup = first('.popup', 'listbox popup wrapper');
-	const descriptionEl = first('.description');
+		i18n: { t },
+	}: {
+		name: string
+		label: string
+		options: FormComboboxOption[]
+		value?: string
+		description?: string
+		clearable?: boolean
+		i18n: I18n
+	},
+	{ host, first, expose, watch }: FormFactoryContext<FormComboboxProps>,
+) {
+	const inputId = `${name}-input`
+	const descriptionId = `${name}-description`
+	const showPopup = createState(false)
+	const textbox = first('input', 'combobox input')
+	const listbox = first('form-listbox', 'combobox listbox')
+	const popup = first('.popup', 'listbox popup wrapper')
+	const descriptionEl = first('.description')
 
 	expose({
 		value: asString(''),
 		length: () => host.value.length,
 		description: descriptionEl?.textContent ?? '',
 		clear: defineMethod(() => {
-			host.value = '';
-			textbox.value = '';
-			textbox.setCustomValidity('');
-			textbox.checkValidity();
-			textbox.dispatchEvent(new Event('input', { bubbles: true }));
-			textbox.dispatchEvent(new Event('change', { bubbles: true }));
-			textbox.focus();
+			host.value = ''
+			textbox.value = ''
+			textbox.setCustomValidity('')
+			textbox.checkValidity()
+			textbox.dispatchEvent(new Event('input', { bubbles: true }))
+			textbox.dispatchEvent(new Event('change', { bubbles: true }))
+			textbox.focus()
 		}),
-	});
+	})
 
 	// LT-119: popup visibility also requires at least one matching option —
 	// read from the composed listbox's public `visibleOptions` prop. Both
@@ -91,11 +115,11 @@ export function FormCombobox(
 	watch(
 		() => String(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
 		bindAttribute(textbox, 'aria-expanded'),
-	);
+	)
 	watch(
 		() => !(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
 		bindAttribute(popup, 'hidden'),
-	);
+	)
 
 	return (
 		<>
@@ -111,44 +135,46 @@ export function FormCombobox(
 						aria-expanded="false"
 						aria-describedby={description ? descriptionId : null}
 						onInput={() => {
-							host.value = textbox.value;
-							textbox.checkValidity();
-							host.setCustomValidity(textbox.validationMessage ?? '');
-							showPopup.set(true);
+							host.value = textbox.value
+							textbox.checkValidity()
+							host.setCustomValidity(textbox.validationMessage ?? '')
+							showPopup.set(true)
 						}}
 						onKeyup={(e: KeyboardEvent) => {
 							if (e.key === 'Escape') {
-								showPopup.set(false);
-								textbox.focus();
+								showPopup.set(false)
+								textbox.focus()
 							}
-							if (e.key === 'Delete') host.clear();
+							if (e.key === 'Delete') host.clear()
 						}}
 						onKeydown={(e: KeyboardEvent) => {
-							if (e.key !== 'ArrowDown') return;
-							if (e.altKey) showPopup.set(true);
-							if (showPopup.get()) listbox.focusFirstOption();
+							if (e.key !== 'ArrowDown') return
+							if (e.altKey) showPopup.set(true)
+							if (showPopup.get()) listbox.focusFirstOption()
 						}}
 					/>
 					{clearable && (
 						<button
 							type="button"
 							class="clear"
-							aria-label="Clear input"
+							aria-label={t.clearInput}
 							hidden={() => host.value === ''}
 							onClick={() => host.clear()}
-						>✕</button>
+						>
+							✕
+						</button>
 					)}
 				</div>
 				<div
 					class="popup"
 					hidden
 					onChange={() => {
-						textbox.value = listbox.value;
-						host.value = listbox.value;
-						textbox.checkValidity();
-						host.setCustomValidity(textbox.validationMessage ?? '');
-						showPopup.set(false);
-						textbox.focus();
+						textbox.value = listbox.value
+						host.value = listbox.value
+						textbox.checkValidity()
+						host.setCustomValidity(textbox.validationMessage ?? '')
+						showPopup.set(false)
+						textbox.focus()
 					}}
 				>
 					<FormListbox

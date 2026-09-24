@@ -271,6 +271,42 @@ History: `git log -p`, ADR 0030, `CHANGELOG.md` `[Unreleased]`, and the compacte
 handoffs became tasks: **LT-201** (the ADR amendment; done — DONE.md) and **LT-189** (the
 Tech Writer copy round, scope widened).
 
+- [ ] LT-308: Key-type the reserved `i18n` record, then revert the intrinsic-attribute `undefined` widening (LT-237 review follow-up).
+  **Skill:** le-truc-dev
+  **Context:** `I18n.t` is `Record<string, string>` in both the `.tsx` host profile
+  (`server/compiler/frontend/tsx/host-profile.d.ts`) and the generated `i18n.ts`. So
+  under `noUncheckedIndexedAccess` every `t.<key>` read is `string | undefined`, although
+  the build always supplies the source string. It also accepts any key: a typo like
+  `t.fliter` passes tsc on both surfaces, no LTC rule checks keys, and it renders
+  `undefined`. LT-237 unblocked `placeholder={t.filter}` by widening every intrinsic
+  attribute to admit `undefined` (`Attr<T> = Reactive<T> | undefined`). That also
+  silently admits a possibly-undefined `aria-label={maybeLabel}`, which tsc used to
+  force a fallback for; the attribute now just disappears, an accessibility regression
+  tsc no longer reports. Fix the cause instead:
+  1. `interface I18n<K extends string = string> { t: Record<K, string>; … }` in the host
+     profile, the `.tsrx` `globals.d.ts`, and the generated `i18n.ts`. The default
+     keeps every existing annotation valid.
+  2. Authors annotate `i18n: I18n<keyof typeof i18n>`. The args type is copied into the
+     generated server signature, and the server module does not carry the `i18n` const
+     (it imports only the `I18n` type). So the compiler rewrites the annotation to the
+     literal key union it already knows from the `export const i18n` extraction, which
+     keeps generated modules self-contained. The alternative, emitting the const into
+     the server module, duplicates the fallback bytes the staleness manifest hashes.
+     Rejected.
+  3. Annotate every i18n-declaring component on both surfaces. Then revert `Attr<T>` to
+     `Reactive<T>` and drop the `| undefined` on the plain attributes. Re-add
+     `?? ''`-style fallbacks only where a value is genuinely optional (form-listbox's
+     `aria-label={ariaLabel ?? ''}` already is).
+  **Channel:** TypeScript, tier 1 Prevented, for an undeclared key on `.tsx` and in
+  `check:corpus`'s generated program. No new LTC rule. Whether `.tsrx` authoring also
+  wants a compiler-side unknown-key rule (the authored `.tsrx` is in no tsc program) is a
+  separate question; raise it in NOTES.md if the generated-program check proves too
+  late.
+  **Check:** `placeholder={t.filter}` typechecks with `Reactive<string>` attributes;
+  `t.fliter` fails tsc in the examples program and in `check:corpus`; a temporary
+  `aria-label={maybeUndefined}` fails again; the parity suite and goldens show only the
+  annotation change; HOST_PROFILE.md's i18n paragraph shows the annotated spelling.
+
 - [ ] LT-218: The client-message `i18n` attribute — compiler analysis, server emission, client evaluator preamble (ADR 0030 sub-design 9). **Depends on LT-250.**
   **Skill:** le-truc-dev
   **Sequencing (re-ruled 2026-09-19):** two gates, one now discharged. Land the P2b
@@ -1147,14 +1183,13 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   **Ruling (Architect, this review):** two concerns, two channels.
   - **Runtime registration** always follows the served surface: a compiled tag's child
     import is `./<tag>.client`, whether or not a twin exists.
-  - **Type visibility** of the twin's `declare global` entry (ADR 0039 s4 makes the twin
-    the owner, and the compiled members declare none) needs a types-only channel, so that
-    `check:corpus`'s program still sees `HTMLElementTagNameMap['<tag>']` at the parent's
-    `first()`/`pass()` sites.
+  - **Type visibility** needs no separate channel any more. ADR 0039 s4 as amended
+    2026-09-24 (LT-237) has every member declare its own `HTMLElementTagNameMap` entry,
+    so the served client that `./<tag>.client` imports already carries it for the
+    parent's `first()`/`pass()` sites. (This superseded the earlier ruling here: a
+    types-only channel to a twin-owned entry.)
 
-  le-truc-dev picks the mechanism (a triple-slash `reference` is the obvious candidate,
-  since it carries no runtime import) and records it in the `childImports` comment. Test
-  it under `verbatimModuleSyntax`, where an empty `import {}` is NOT elided.
+  Record the served-surface rule in the `childImports` comment.
   **Channel:** none new. This fixes the emitter and the corpus orchestration.
   **Check:** a fixture with a retained twin that a compiled parent references bundles with
   exactly one `customElements.define` for the tag, from the generated client; check:corpus
@@ -1331,8 +1366,8 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   `lowerTryIife` and the `boundary` call dispatch, and lower `truc:try` elements instead.
   The switch IIFE and `asIife` stay. The single-root-per-arm rules carry over. The
   arrow-shape and missing-arm errors retire where `tsc` now covers them; a surviving
-  shape error keeps channel compiler, tier 1 Prevented. (3) Rewrite `spike/tsx/async/`,
-  `spike/tsx/sync/` and `spike/tsx/async-bad-arms.tsx` (the negative type test becomes a
+  shape error keeps channel compiler, tier 1 Prevented. (3) Rewrite `fixtures/tsx/async/`,
+  `fixtures/tsx/sync/` and `fixtures/tsx/async-bad-arms.tsx` (under `server/tests/compiler/`) (the negative type test becomes a
   bad `pending`/`catch` attribute) and the parity tests. Byte-identical server output
   against the `.tsrx` twins is the acceptance proof. (4) Sweep JSDoc and comments
   (`lower-tsx.ts` header, `lower-shared.ts:8`/`:487`) so no `boundary()` or try/catch
@@ -1411,7 +1446,7 @@ a per-item text fill + events and nothing richer ([spike/size-bet/FINDING.md](sp
 which cannot express their per-item pass/attribute wiring. The text-shape migrations
 (LT-095–LT-108) are unaffected. LT-183 returned GO (ADR 0032, dual front end) — **migrations author
 `.tsx`**;
-the spike's four fixtures (`spike/tsx/`, moving to the example folders by LT-237) and
+the four `.tsx` variant-set members in `examples/` (moved there by LT-237) and
 `ARCHITECTURE.md` § Authoring Surfaces are the shape reference. Otherwise unblocked. The canonical pattern is LT-092's, amended by [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (LT-238): same-commit cutover — **retain the `.ts` twin as a variant** beside the new `.tsx` source (it stops being the served surface but stays the artifact of record, and leaves the CEM globs while its component is compiled), point
 `examples/main.ts` at the generated client, keep the demo/spec green
 against the served compiled component. Surface compiler gaps in NOTES.md — or fix them

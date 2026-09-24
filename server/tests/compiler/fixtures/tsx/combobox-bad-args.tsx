@@ -6,11 +6,11 @@
  * child's real parameter types without the registry + span remap
  * (ADR 0024 sub-design 6's emit-then-check detour, retired).
  *
- * Excluded from the spike tsconfig (see tsconfig.neg.json) — like
+ * Excluded from the positive tsconfig (see tsconfig.neg.json) — like
  * jsx-probe-neg.tsx, this file is EXPECTED to fail type-checking; the
  * runner captures the exit code and greps the diagnostic.
  */
-import { FormListbox } from './form/listbox/form-listbox.tsx'
+import { FormListbox } from '../../../../../examples/form/listbox/form-listbox.tsx'
 
 export const ComboboxBadArgs = () => (
 	<async-el>

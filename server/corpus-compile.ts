@@ -133,7 +133,6 @@ const compileCorpusFile = (
 const corpusTagOf = (filename: string): string =>
 	(filename.split('/').pop() ?? '').replace(/\.(tsrx|tsx)$/, '')
 
-/** `spike/tsx/sync/sync-el.tsx` → `tsx`; a `.tsrx` path → `tsrx`. */
 /**
  * Re-anchor a generated client's relative specifiers one directory deeper,
  * for the unserved variant client written to `variants/` (LT-284): every
@@ -149,6 +148,7 @@ export const relocateClientSpecifiers = (code: string): string =>
 			`${lead}${quote}${dots === './' ? '../' : '../../'}`,
 	)
 
+/** A `.tsx` path → `tsx`; a `.tsrx` path → `tsrx`. */
 const surfaceOf = (rel: string): VariantSurface =>
 	rel.endsWith('.tsx') ? 'tsx' : 'tsrx'
 

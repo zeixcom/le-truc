@@ -22,6 +22,12 @@ export type BasicCounterProps = {
 	count: number
 }
 
+declare global {
+	interface HTMLElementTagNameMap {
+		'basic-counter': HTMLElement & BasicCounterProps
+	}
+}
+
 /**
  * A simple click counter that increments on each button press.
  * Use it for demonstrating reactive property updates — the count

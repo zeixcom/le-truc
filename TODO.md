@@ -44,7 +44,7 @@ its spec passes against each, and LTC048 still fires for two canonical sources
 (LT-283–LT-285, the LT-238 ruling's implementation);
 the IR ADR is recorded (LT-235) and `@empty` lands and dynamic tags are rejected (A0 ruling) with parity green, the
 warning baseline at 0 and census 20/2/0 (LT-212, LT-213); a Simulated parent
-server-splicing a Folded child renders the child UPGRADED (LT-188); `spike/` is deleted
+server-splicing a Folded child renders the child UPGRADED (LT-188); `spike/tsx/` is deleted
 and the parity suite, tsx typecheck gates and dual-corpus test run from the new fixture
 homes (LT-237); module-codeblock serves as compiled `.tsx` with its spec green, the
 copy-click bug fixed and pinned, zero warnings and tier + reason recorded (LT-096); a
@@ -52,11 +52,11 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-308.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-309.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
-review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041); the ADR 0033 ruling filed LT-304–LT-306.)
+review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041); the ADR 0033 ruling filed LT-304–LT-306; the LT-237 review filed LT-308.)
 
 **Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
 are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
@@ -78,51 +78,6 @@ test edits). It is pushed, so history stays; attribute by file, not by title. HE
 sandbox has.
 
 ---
-
-- [ ] LT-237: Move the spike's `.tsx` fixtures into their example component folders. **Depends on LT-238.**
-  **Skill:** le-truc-dev
-  **Context:** `spike/tsx/` is not spike residue — it is the live corpus for
-  `server/tests/compiler/tsx/parity.test.ts`, `tsx/typecheck.test.ts` and
-  `dual-corpus.test.ts`, and the only `.tsx` source in the repo. `spike/` implies disposable;
-  these are permanent gates. Move the four ported components beside their `.tsrx` twins —
-  `spike/tsx/basic/counter/basic-counter.tsx` → `examples/basic/counter/`, likewise
-  `basic/pluralize`, `form/listbox`, `form/combobox` — which is what LT-238's rule change
-  makes legal. The synthetics, negatives, probes and four tsconfigs
-  (`sync-el`, `async-el`, `combobox-bad-args`, `async-bad-arms`, `bad-host-typo`,
-  `jsx-probe`, `jsx-probe-neg`) are test fixtures, not examples: move them to
-  `server/tests/compiler/fixtures/tsx/` instead, which also shortens their relative paths
-  into `server/compiler/frontend/tsx/host-profile.d.ts`. Update the three test files' path
-  constants, the four tsconfigs' `include`/`exclude`, and the `spike/tsx/` references in this
-  file and `adr/archive/0032-spike-findings.md`; delete `spike/` once empty.
-  **Watch:** the parity suite pairs `examples/**.tsrx` against the `.tsx` copy. Once the four
-  live in one folder under LT-238's rule (ADR 0039), the pair is a folder-local fact rather
-  than a cross-tree one — keep the test asserting byte-identical server output and CSS, since
-  that is the standing equivalence contract `ARCHITECTURE.md` § Authoring Surfaces names.
-  Apply the ADR 0039 declaration convention in the same move: each ported `.tsx` DROPS its
-  `declare global` `HTMLElementTagNameMap` block (the `.tsrx` twin owns the entry; duplicate
-  entries are a TS 2717 error under the examples typecheck).
-  **Verification:** `bun test server/tests` green with no fixture-path skips; the four tsc
-  gates keep their exit codes (0 positive, 2 negative); check:links.
-  **Review rider (2026-09-23, working tree in progress — basic-counter moved, three to
-  go):** the first `.tsx` in `examples/` breaks corpus loaders outside the three test
-  files named above, because they assume every corpus file is `.tsrx`:
-  - `server/tests/compiler/emit-tier.test.ts` (6 failures) compiles every
-    `loadCorpus()` file with the `.tsrx` `compileSource`;
-  - the client golden has no `basic-counter.tsx` snapshot handling;
-  - `corpus compile order invariance` fails.
-
-  Dispatch per extension in `server/tests/compiler/corpus-fixture.ts` (or in each
-  consumer), the same way `compileCorpus` does. Also regenerate the parity client snapshot:
-  its path changed, and the `declare global` drop is intended. Add "0 failures in
-  `bun test server/tests/compiler`" to Verification. The remaining three moves will hit the
-  same loaders.
-  **Review rider (2026-09-23, LT-283 review):** ADR 0039 s1 leaves cross-surface markup
-  equivalence to "the parity suite for its fixtures". Once the pairs are folder-local, make
-  the suite discover every variant set in the corpus instead of listing fixtures, so a new
-  set cannot escape it. The build-time check covers CSS only (LTC051). The server render
-  and the registry entry (`exposedProps`, props type) of the unserved member are proven
-  equivalent nowhere else, and the compose registry validates `pass()` legality against
-  whichever member a parent's import names.
 
 - [ ] LT-096: Migrate `module-codeblock` to `.tsx` with same-commit cutover.
   **Skill:** le-truc-dev

@@ -229,7 +229,7 @@ describe('byte discipline', () => {
 			{
 				registry: registryOf(entry({ tag: 'x-el' })),
 				pageLocale: null,
-				resolveModule: async tag => ({
+				resolveModule: async _tag => ({
 					argsFromAttrs: (attrs: Record<string, string | null>) => {
 						seenAttrs.push(attrs)
 						return { ...attrs }

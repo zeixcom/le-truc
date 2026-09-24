@@ -1,6 +1,6 @@
 /**
  * LT-208 negative probe (must FAIL tsc under the typed boundary ambient —
- * wired through `spike/tsx/tsconfig.neg.json`; asserted in
+ * wired through `fixtures/tsx/tsconfig.neg.json`; asserted in
  * server/tests/compiler/tsx/typecheck.test.ts):
  *
  * - a string in the `nil` element-arm position — the branded

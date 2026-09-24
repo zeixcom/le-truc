@@ -1,20 +1,27 @@
 /**
- * TSX spike parity harness (LT-183, TSX_SPIKE.md §4.3).
+ * Cross-surface parity for every corpus variant set (LT-183, LT-237,
+ * ADR 0039 s1).
  *
- * For each of the four ported components, compile the `.tsrx` original
- * (`server/tsrx`) and the `.tsx` port (`server/tsrx-tsx`) with identical
- * registries, compose registries, and args, then compare:
+ * The suite DISCOVERS its pairs: every folder in the corpus holding a
+ * `.tsrx` and a `.tsx` spelling of one tag is a variant set, and each is
+ * compiled on both front ends with identical registries, compose
+ * registries and args, then compared:
  *
  * - server renders through the VALUE HARNESS byte-for-byte (the bar: ADR
  *   0029's markup-identical-across-tiers invariant extends across surfaces
- *   for identically-authored components);
- * - CSS artifacts byte-for-byte;
- * - Simulated-tier components (the combobox+listbox pair — the corpus's only
- *   two) render through the UNMODIFIED `sim/` realm byte-for-byte;
+ *   for identically-authored components) — the build serves ONE member, so
+ *   this is the only place the unserved member's render is proven equal;
+ * - CSS artifacts byte-for-byte (the build's own LTC051 check covers CSS
+ *   only);
+ * - the registry entry (`exposedProps`, `propsType`, tier) — the compose
+ *   registry validates `pass()` against whichever member a parent imports;
+ * - Simulated-tier sets render through the UNMODIFIED `sim/` realm
+ *   byte-for-byte;
  * - client modules structurally (snapshot review, not bytes — naming and
  *   import placement may differ);
- * - the §4.4 synthetic fixtures compile through the unmodified analysis and
- *   render (async boundary: pending arm; control-flow shapes: taken arms).
+ * - the §4.4 synthetic fixtures (`server/tests/compiler/fixtures/tsx/`)
+ *   compile through the unmodified analysis and render (async boundary:
+ *   pending arm; control-flow shapes: taken arms).
  *
  * The comparison runs BOTH-SIDES LIVE (the .tsrx originals compile in the
  * same process) rather than against copied golden strings — the repo's
@@ -31,9 +38,12 @@ import type { RegistryEntry } from '../../../compiler/registry'
 import { createSimulationRealm } from '../../../compiler/sim/realm'
 import { collectI18n, writeI18nModule } from '../../../effects/i18n'
 import { createGeneratedDir } from '../../helpers/generated-corpus'
-import { CORPUS_ARGS, PLURALIZE_I18N } from '../corpus-args'
+import { CORPUS_ARGS, renderName } from '../corpus-args'
+import { loadCorpus } from '../corpus-fixture'
 
 const ROOT = path.resolve(import.meta.dir, '../../../..')
+/** Synthetic `.tsx` shapes and tsc probes — test fixtures, not examples (LT-237). */
+const FIXTURES_TSX = 'server/tests/compiler/fixtures/tsx'
 const read = (rel: string): string =>
 	fs.readFileSync(path.join(ROOT, rel), 'utf8')
 
@@ -45,51 +55,49 @@ type Fixture = {
 	args: Record<string, unknown>
 }
 
-const FIXTURES: Fixture[] = [
-	{
-		tag: 'basic-counter',
-		name: 'BasicCounter',
-		tsrx: 'examples/basic/counter/basic-counter.tsrx',
-		// The ported `.tsx` lives beside its `.tsrx` twin since LT-285 (the
-		// LT-237 move, applied to this component first as the ADR 0039
-		// three-spelling exemplar) — the pair is now a folder-local fact.
-		tsxx: 'examples/basic/counter/basic-counter.tsx',
-		args: { start: 42 },
-	},
-	{
-		tag: 'basic-pluralize',
-		name: 'BasicPluralize',
-		tsrx: 'examples/basic/pluralize/basic-pluralize.tsrx',
-		tsxx: 'spike/tsx/basic/pluralize/basic-pluralize.tsx',
-		args: { count: 1, i18n: PLURALIZE_I18N },
-	},
-	{
-		tag: 'form-listbox',
-		name: 'FormListbox',
-		tsrx: 'examples/form/listbox/form-listbox.tsrx',
-		tsxx: 'spike/tsx/form/listbox/form-listbox.tsx',
-		args: CORPUS_ARGS['form-listbox'] as Record<string, unknown>,
-	},
-	{
-		tag: 'form-combobox',
-		name: 'FormCombobox',
-		tsrx: 'examples/form/combobox/form-combobox.tsrx',
-		tsxx: 'spike/tsx/form/combobox/form-combobox.tsx',
-		args: CORPUS_ARGS['form-combobox'] as Record<string, unknown>,
-	},
-]
+const pascal = (tag: string): string => renderName(tag).slice('render'.length)
 
-const registry = new Set<string>([
-	'basic-counter',
-	'basic-pluralize',
-	'form-listbox',
-	'form-combobox',
-])
+/**
+ * Every folder-local variant set in the configured corpus scan — a `.tsrx`
+ * and a `.tsx` in ONE directory, named for one tag (ADR 0039). A new set
+ * joins the suite by existing; none can escape it.
+ */
+const discoverVariantSets = async (): Promise<Fixture[]> => {
+	const byStem = new Map<string, { tsrx?: string; tsxx?: string }>()
+	for (const { filename } of await loadCorpus()) {
+		const match = /^(.*)\.(tsrx|tsx)$/.exec(filename)
+		if (!match?.[1]) continue
+		const pair = byStem.get(match[1]) ?? {}
+		if (match[2] === 'tsx') pair.tsxx = filename
+		else pair.tsrx = filename
+		byStem.set(match[1], pair)
+	}
+	return [...byStem.values()]
+		.filter(
+			(pair): pair is { tsrx: string; tsxx: string } =>
+				pair.tsrx !== undefined && pair.tsxx !== undefined,
+		)
+		.map(({ tsrx, tsxx }) => {
+			const tag = path.basename(tsrx, '.tsrx')
+			return {
+				tag,
+				name: pascal(tag),
+				tsrx,
+				tsxx,
+				args: CORPUS_ARGS[tag] ?? {},
+			}
+		})
+		.sort((a, b) => a.tag.localeCompare(b.tag))
+}
 
-/** Both front ends get the same compose graph: combobox composes listbox. */
-const compilePair = (fx: Fixture, listboxEntries: RegistryEntry[]) => {
+const FIXTURES = await discoverVariantSets()
+
+const registry = new Set<string>(FIXTURES.map(fx => fx.tag))
+
+/** Both front ends get the same compose graph (e.g. combobox composes listbox). */
+const compilePair = (fx: Fixture, entries: RegistryEntry[]) => {
 	const composeRegistry = new Map<string, RegistryEntry>(
-		listboxEntries.map(e => [e.source, e]),
+		entries.map(e => [e.source, e]),
 	)
 	const tsrx = compileComponent(
 		read(fx.tsrx),
@@ -124,16 +132,31 @@ const clientTypeFacts = (code: string | undefined): string[] =>
 const argsFromAttrsOf = (code: string | undefined): string =>
 	/export function argsFromAttrs[\s\S]*?\n}\n/.exec(code ?? '')?.[0] ?? ''
 
-/** A server module's render function signature (`paramsText`). */
+/**
+ * A server module's render function signature (`paramsText`), compared
+ * token-wise: comments, whitespace and separator punctuation are layout,
+ * not the args contract. The `.tsx` members are Biome-formatted and their
+ * `.tsrx` twins are not (Biome skips `.tsrx`), so byte equality would pin
+ * formatting rather than the authored args (LT-237 review).
+ */
 const renderSignatureOf = (code: string | undefined): string =>
-	/export function render\w+\([\s\S]*?\): string \{/.exec(code ?? '')?.[0] ?? ''
+	(
+		/export function render\w+\([\s\S]*?\): string \{/.exec(code ?? '')?.[0] ??
+		''
+	)
+		.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '')
+		.replace(/\s+/g, ' ')
+		.replace(/\s*([{}()[\]:;,=|&<>?])\s*/g, '$1')
+		.replace(/[,;]+([}\])\]])/g, '$1')
+		.replace(/;/g, ',')
 
 /**
- * Pairs whose `.tsx` spike fixture authors different args than the
- * `.tsrx` original: no `i18n` arg, and listbox's `'truc:pass'` compose
- * surface. LT-237 reconciles them when it moves the fixtures.
+ * Pairs whose `.tsx` member authors different args than its `.tsrx` twin:
+ * listbox's `'truc:pass'` compose surface sits on the `.tsx` ARGS type (a
+ * JSX parent type-checks against the child's first parameter) but on the
+ * `.tsrx` Props type. The `i18n` drift was reconciled in the LT-237 move.
  */
-const AUTHORED_ARGS_DRIFT = new Set(['form-listbox', 'form-combobox'])
+const AUTHORED_ARGS_DRIFT = new Set(['form-listbox'])
 
 const generated = createGeneratedDir('tsx-parity')
 afterAll(() => generated.cleanup())
@@ -152,33 +175,55 @@ const renderOf =
 		return fn(args)
 	}
 
-// Pass 1: listbox alone (feeds the compose registry), then the rest with it.
-// Hoisted to module scope because the generated i18n module write below is
-// top-level await (describe callbacks are sync).
-const listboxPair = compilePair(FIXTURES[2] as Fixture, [])
-for (const compiled of [listboxPair.tsrx, listboxPair.tsxx]) {
-	if (!compiled.component)
-		throw new Error(
-			`form-listbox must compile on both surfaces: ${JSON.stringify(compiled.diagnostics)}`,
-		)
-}
-const listboxEntries = [
-	(listboxPair.tsrx.component as { entry: RegistryEntry }).entry,
-	(listboxPair.tsxx.component as { entry: RegistryEntry }).entry,
-]
+// Pass 1: every set alone — the registry-discovery pass that feeds the
+// compose registry — then each set again with every member's entry, the
+// same two-pass shape as `compileCorpus`. Hoisted to module scope because
+// the generated i18n module write below is top-level await (describe
+// callbacks are sync).
+const discoveryEntries = FIXTURES.flatMap(fx => {
+	const { tsrx, tsxx } = compilePair(fx, [])
+	return [tsrx, tsxx].flatMap(compiled =>
+		compiled.component ? [compiled.component.entry] : [],
+	)
+})
 
-// form-combobox's server module supplies its composed listbox's reserved
-// record (`i18n: i18nRecord("form-listbox", …)`), which imports './i18n' —
-// write the generated i18n module from the compiled .tsrx entry, the same
+// A composing set's server module supplies its composed children's reserved
+// records (`i18n: i18nRecord("form-listbox", …)`), which import './i18n' —
+// write the generated i18n module from the compiled .tsrx entries, the same
 // derivation the real corpus pipeline performs (ADR 0030 sub-design 2).
-const tsrxListboxEntry = listboxEntries[0]
-if (!tsrxListboxEntry) throw new Error('tsrx listbox entry missing')
-await writeI18nModule(generated.path, await collectI18n([tsrxListboxEntry]))
+await writeI18nModule(
+	generated.path,
+	await collectI18n(
+		discoveryEntries.filter(entry => entry.source.endsWith('.tsrx')),
+	),
+)
 
-describe('TSX spike — front-end parity (§4.3)', () => {
+// Pass 2, compiled once. Every set's `.tsrx` server module is on disk
+// before any render, so a composing set's import of its child's module
+// ('./form-listbox.server') resolves whatever order the sets run in.
+const COMPILED = new Map(
+	FIXTURES.map(fx => [fx.tag, compilePair(fx, discoveryEntries)]),
+)
+for (const [tag, { tsrx }] of COMPILED)
+	if (tsrx.component)
+		generated.emit(`${tag}.server.ts`, tsrx.component.serverCode)
+
+describe('variant sets — front-end parity (§4.3, ADR 0039 s1)', () => {
+	test('discovers every corpus variant set (non-vacuous)', () => {
+		expect(FIXTURES.map(fx => fx.tag)).toEqual(
+			expect.arrayContaining([
+				'basic-counter',
+				'basic-pluralize',
+				'form-combobox',
+				'form-listbox',
+			]),
+		)
+	})
+
 	for (const fx of FIXTURES) {
 		describe(fx.tag, () => {
-			const { tsrx, tsxx } = compilePair(fx, listboxEntries)
+			const { tsrx, tsxx } =
+				COMPILED.get(fx.tag) ?? compilePair(fx, discoveryEntries)
 
 			test('compiles clean on the .tsx front end (no errors/warnings)', () => {
 				expect(tsxx.diagnostics).toEqual([])
@@ -235,13 +280,30 @@ describe('TSX spike — front-end parity (§4.3)', () => {
 				expect(tsxx.component?.clientCode).toMatchSnapshot()
 			})
 
-			if (fx.tag === 'form-combobox' || fx.tag === 'form-listbox') {
+			test('registry entry identical (exposed props, props type)', () => {
+				// The compose registry validates a parent's `pass()` against the
+				// member its import names, so the unserved member's entry must
+				// agree with the served one's.
+				expect(tsxx.component?.entry.exposedProps).toEqual(
+					tsrx.component?.entry.exposedProps ?? {},
+				)
+				expect(tsxx.component?.entry.propsType).toBe(
+					tsrx.component?.entry.propsType ?? null,
+				)
+			})
+
+			if (tsrx.component?.entry.tier === 'simulated') {
 				test('server render byte-identical through the UNMODIFIED sim realm (Simulated tier)', async () => {
 					if (!tsrx.component || !tsxx.component)
 						throw new Error('compile failed')
+					const composes = new Map(
+						discoveryEntries.map(e => [e.tag, e.composesTags]),
+					)
 					const realm = createSimulationRealm({
 						composesTags: tag =>
-							tag === 'form-combobox' ? ['form-listbox'] : [],
+							tag === fx.tag
+								? (tsrx.component?.entry.composesTags ?? [])
+								: (composes.get(tag) ?? []),
 					})
 					try {
 						generated.emit(`${fx.tag}.client.ts`, tsrx.component.clientCode)
@@ -271,12 +333,12 @@ describe('TSX spike — front-end parity (§4.3)', () => {
 	}
 })
 
-describe('TSX spike — §4.4 synthetic shapes through the unmodified analysis', () => {
+describe('§4.4 synthetic shapes through the unmodified analysis', () => {
 	test('async boundary (boundary({ ok, nil, err })) renders the nil arm and folds the isPending idiom', async () => {
-		const source = read('spike/tsx/async/async-el.tsx')
+		const source = read(`${FIXTURES_TSX}/async/async-el.tsx`)
 		const { component, diagnostics } = compileComponentTsx(
 			source,
-			'spike/tsx/async/async-el.tsx',
+			`${FIXTURES_TSX}/async/async-el.tsx`,
 			new Set(['async-el']),
 		)
 		expect(diagnostics).toEqual([])
@@ -302,10 +364,10 @@ describe('TSX spike — §4.4 synthetic shapes through the unmodified analysis',
 	})
 
 	test('switch IIFE / try-catch IIFE / indexed map / && and ternary arms', async () => {
-		const source = read('spike/tsx/sync/sync-el.tsx')
+		const source = read(`${FIXTURES_TSX}/sync/sync-el.tsx`)
 		const { component, diagnostics } = compileComponentTsx(
 			source,
-			'spike/tsx/sync/sync-el.tsx',
+			`${FIXTURES_TSX}/sync/sync-el.tsx`,
 			new Set(['sync-el']),
 		)
 		expect(diagnostics).toEqual([])

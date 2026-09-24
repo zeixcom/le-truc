@@ -1,6 +1,6 @@
 /**
  * LT-209 negative probe (must FAIL tsc in the ORDINARY tsconfig — wired
- * through `spike/tsx/tsconfig.neg.json`; asserted in
+ * through `fixtures/tsx/tsconfig.neg.json`; asserted in
  * server/tests/compiler/tsx/typecheck.test.ts). The precise
  * `FormFactoryContext<P>` parameter is what makes both planted errors
  * surface at native positions on the authored file — under the wide

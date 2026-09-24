@@ -2,13 +2,17 @@
  * TSX spike port (LT-183) of examples/basic/pluralize/basic-pluralize.tsrx —
  * semantically identical. The `@{ }` setup becomes the function body; the
  * attribute shorthands (`{count} {lang} {ordinal}`) spell out
- * `count={count} lang={lang} ordinal={ordinal}` (same server-attr IR); the
- * `getLocale` import is re-pointed from the fixture's location to the
- * examples/ helper. Setup statements are copied verbatim.
+ * `count={count} lang={lang} ordinal={ordinal}` (same server-attr IR).
+ * Setup statements are copied verbatim.
+ *
+ * Lives beside its `.tsrx` twin as a variant set (ADR 0039). Every member
+ * declares its own `HTMLElementTagNameMap` entry (s4): the served member's
+ * generated client must carry it.
  */
-import { asBoolean, asClampedInteger } from '@zeix/le-truc'
+
 import type { FactoryContext } from '@zeix/le-truc'
-import { getLocale } from '../../../../examples/_common/getLocale'
+import { asBoolean, asClampedInteger } from '@zeix/le-truc'
+import { getLocale } from '../../_common/getLocale'
 
 export const i18n = {
 	done: 'Well done, all done!',
@@ -52,7 +56,12 @@ declare global {
  * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-pluralize} Interactive preview and usage examples
  **/
 export function BasicPluralize(
-	{ count, lang = 'en', ordinal = false, i18n: { t } }: {
+	{
+		count,
+		lang = 'en',
+		ordinal = false,
+		i18n: { t },
+	}: {
 		count: number
 		lang?: string
 		ordinal?: boolean
@@ -83,8 +92,7 @@ export function BasicPluralize(
 	// call alone classifies as the connect-time side effect and never
 	// runs in the server harness.)
 	const materializeLocale = (): void => {
-		if (!host.getAttribute('lang'))
-			host.setAttribute('lang', getLocale(host))
+		if (!host.getAttribute('lang')) host.setAttribute('lang', getLocale(host))
 	}
 	materializeLocale()
 	expose({
@@ -95,15 +103,69 @@ export function BasicPluralize(
 	return (
 		<>
 			<basic-pluralize count={count} lang={lang} ordinal={ordinal}>
-				<p class="none" hidden={() => host.count !== 0}>{t.done}</p>
-				<p class="some" truc:case-type={ordinal ? 'ordinal' : undefined} hidden={() => host.count === 0}>
+				<p class="none" hidden={() => host.count !== 0}>
+					{t.done}
+				</p>
+				<p
+					class="some"
+					truc:case-type={ordinal ? 'ordinal' : undefined}
+					hidden={() => host.count === 0}
+				>
 					<span class="count">{host.count}</span>
-					<span class="zero" truc:case="zero" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'zero'}>{t['task.zero']}</span>
-					<span class="one" truc:case="one" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'one'}>{t['task.one']}</span>
-					<span class="two" truc:case="two" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'two'}>{t['task.two']}</span>
-					<span class="few" truc:case="few" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'few'}>{t['task.few']}</span>
-					<span class="many" truc:case="many" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'many'}>{t['task.many']}</span>
-					<span class="other" truc:case="other" hidden={() => pluralCategory(host.lang, host.ordinal, host.count) !== 'other'}>{t['task.other']}</span>
+					<span
+						class="zero"
+						truc:case="zero"
+						hidden={() =>
+							pluralCategory(host.lang, host.ordinal, host.count) !== 'zero'
+						}
+					>
+						{t['task.zero']}
+					</span>
+					<span
+						class="one"
+						truc:case="one"
+						hidden={() =>
+							pluralCategory(host.lang, host.ordinal, host.count) !== 'one'
+						}
+					>
+						{t['task.one']}
+					</span>
+					<span
+						class="two"
+						truc:case="two"
+						hidden={() =>
+							pluralCategory(host.lang, host.ordinal, host.count) !== 'two'
+						}
+					>
+						{t['task.two']}
+					</span>
+					<span
+						class="few"
+						truc:case="few"
+						hidden={() =>
+							pluralCategory(host.lang, host.ordinal, host.count) !== 'few'
+						}
+					>
+						{t['task.few']}
+					</span>
+					<span
+						class="many"
+						truc:case="many"
+						hidden={() =>
+							pluralCategory(host.lang, host.ordinal, host.count) !== 'many'
+						}
+					>
+						{t['task.many']}
+					</span>
+					<span
+						class="other"
+						truc:case="other"
+						hidden={() =>
+							pluralCategory(host.lang, host.ordinal, host.count) !== 'other'
+						}
+					>
+						{t['task.other']}
+					</span>
 					{t.remaining}
 				</p>
 			</basic-pluralize>

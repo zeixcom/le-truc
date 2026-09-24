@@ -6,9 +6,28 @@
  * becomes `options.map((option, i) => { hoisted consts; return <button/> })`
  * — same ForIR (item, index, iterable, hoisted), the dual lowering decision
  * stays the analysis's. Setup statements are copied verbatim.
+ *
+ * Lives beside its `.tsrx` twin as a variant set (ADR 0039). Every member
+ * declares its own `HTMLElementTagNameMap` entry (s4): the served member's
+ * generated client must carry it.
  */
-import { asString, defineMethod } from '@zeix/le-truc'
+
 import type { FormFactoryContext } from '@zeix/le-truc'
+import { asString, defineMethod } from '@zeix/le-truc'
+
+/**
+ * The filter input's placeholder and the clear button's aria-label are
+ * component-owned text (the placeholder is read by assistive tech, the
+ * label is what it announces), so they route through the reserved `i18n`
+ * parameter (ADR 0030): the compiler resolves `t` per locale at render
+ * time; this inline record is the source-locale fallback every catalog
+ * resolves against. `ariaLabel` (the listbox's own label) is author data
+ * and stays a prop.
+ */
+export const i18n = {
+	filter: 'Filter',
+	clearFilter: 'Clear filter',
+}
 
 export const config = { formAssociated: true }
 
@@ -58,24 +77,25 @@ export function FormListbox(
 		options,
 		value = '',
 		filterable = false,
-	}:
-		{
-			name: string
-			ariaLabel?: string
-			options: FormListboxOption[]
-			value?: string
-			filterable?: boolean
-			/**
-			 * Compiler-consumed compose surface (truc:pass), never a render
-			 * arg — the `.tsx` surface's answer to ADR 0024 s10: a composed
-			 * child declares its pass-able props on its args type so a
-			 * parent's `truc:pass={{ … }}` type-checks against the child's
-			 * real shape.
-			 */
-				'truc:pass'?: { filter?: () => string }
-			},
-		{ host, all, expose }: FormFactoryContext<FormListboxProps>,
-	) {
+		i18n: { t },
+	}: {
+		name: string
+		ariaLabel?: string
+		options: FormListboxOption[]
+		value?: string
+		filterable?: boolean
+		i18n: I18n
+		/**
+		 * Compiler-consumed compose surface (truc:pass), never a render
+		 * arg — the `.tsx` surface's answer to ADR 0024 s10: a composed
+		 * child declares its pass-able props on its args type so a
+		 * parent's `truc:pass={{ … }}` type-checks against the child's
+		 * real shape.
+		 */
+		'truc:pass'?: { filter?: () => string }
+	},
+	{ host, all, expose }: FormFactoryContext<FormListboxProps>,
+) {
 	expose({
 		value: asString(''),
 		filter: asString(''),
@@ -93,14 +113,12 @@ export function FormListbox(
 					label: el.getAttribute('data-label') ?? '',
 				}))
 				.filter((option: FormListboxOption) =>
-					option.label
-						.toLowerCase()
-						.includes(host.filter.toLowerCase()),
+					option.label.toLowerCase().includes(host.filter.toLowerCase()),
 				),
 		focusFirstOption: defineMethod(() => {
-			all('button[role="option"]:not([hidden])').get()[0]?.focus();
+			all('button[role="option"]:not([hidden])').get()[0]?.focus()
 		}),
-	});
+	})
 
 	return (
 		<>
@@ -110,18 +128,22 @@ export function FormListbox(
 						<input
 							type="text"
 							class="filter"
-							placeholder="Filter"
-							onInput={(e: Event) => ({ filter: (e.target as HTMLInputElement).value })}
+							placeholder={t.filter}
+							onInput={(e: Event) => ({
+								filter: (e.target as HTMLInputElement).value,
+							})}
 						/>
 					)}
 					{filterable && (
 						<button
 							type="button"
 							class="clear"
-							aria-label="Clear filter"
+							aria-label={t.clearFilter}
 							hidden={() => !host.filter}
 							onClick={() => ({ filter: '' })}
-						>✕</button>
+						>
+							✕
+						</button>
 					)}
 				</div>
 				<div
@@ -133,13 +155,18 @@ export function FormListbox(
 						const elements = all('button[role="option"]:not([hidden])').get()
 						e.preventDefault()
 						e.stopPropagation()
-						const current = elements.indexOf(document.activeElement as HTMLButtonElement)
+						const current = elements.indexOf(
+							document.activeElement as HTMLButtonElement,
+						)
 						const next =
 							key === 'Home'
 								? 0
 								: key === 'End'
 									? elements.length - 1
-									: (current + (key === 'ArrowDown' ? 1 : -1) + elements.length) % elements.length
+									: (current +
+											(key === 'ArrowDown' ? 1 : -1) +
+											elements.length) %
+										elements.length
 						elements[next]?.focus()
 					}}
 					onKeyup={(e: KeyboardEvent) => {
@@ -159,12 +186,16 @@ export function FormListbox(
 								data-label={optLabel}
 								tabindex={() => (host.value === optValue ? 0 : -1)}
 								aria-selected={() => String(host.value === optValue)}
-								hidden={() => !optLabel.toLowerCase().includes(host.filter.toLowerCase())}
+								hidden={() =>
+									!optLabel.toLowerCase().includes(host.filter.toLowerCase())
+								}
 								onClick={() => {
 									host.value = optValue
 									host.dispatchEvent(new Event('change', { bubbles: true }))
 								}}
-							>{optLabel}</button>
+							>
+								{optLabel}
+							</button>
 						)
 					})}
 				</div>

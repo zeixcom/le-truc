@@ -49,7 +49,10 @@ describe('corpus compile order invariance', () => {
 		for (const file of files) {
 			// Component files are named for their tag (repo convention, the
 			// same one handwrittenExampleModules relies on).
-			const tag = (file.filename.split('/').pop() ?? '').replace(/\.tsrx$/, '')
+			const tag = (file.filename.split('/').pop() ?? '').replace(
+				/\.(tsrx|tsx)$/,
+				'',
+			)
 			expect(tags.has(tag)).toBeTrue()
 		}
 	})

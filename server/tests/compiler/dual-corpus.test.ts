@@ -56,7 +56,7 @@ const memoryFile = (rel: string, content: string): FileInfo => ({
 const scratch = createGeneratedDir('dual-corpus')
 afterAll(() => scratch.cleanup())
 
-const SYNC_EL = 'spike/tsx/sync/sync-el.tsx'
+const SYNC_EL = 'server/tests/compiler/fixtures/tsx/sync/sync-el.tsx'
 
 // A minimal component with a REAL spelling on each surface — the twin pair
 // below must compile clean for the variant-set serving to mean anything.
@@ -342,16 +342,18 @@ const COUNTER_TSRX = `${COUNTER_DIR}/basic-counter.tsrx`
 const COUNTER_TSX = `${COUNTER_DIR}/basic-counter.tsx`
 
 describe('basic-counter three-spelling variant set (LT-285, ADR 0039)', () => {
-	test('the folder carries all three spellings; only the twin declares the tag map', () => {
+	test('the folder carries all three spellings; every member declares the tag map (ADR 0039 s4)', () => {
 		for (const rel of [COUNTER_TS, COUNTER_TSRX, COUNTER_TSX])
 			expect(fs.existsSync(path.resolve(ROOT, rel))).toBe(true)
 		const declaresMap = (rel: string) =>
 			/interface HTMLElementTagNameMap/.test(
 				fs.readFileSync(path.resolve(ROOT, rel), 'utf8'),
 			)
+		// Whichever member is served, its generated client carries the entry
+		// a composing parent types through (LT-237 amendment).
 		expect(declaresMap(COUNTER_TS)).toBe(true)
-		expect(declaresMap(COUNTER_TSRX)).toBe(false)
-		expect(declaresMap(COUNTER_TSX)).toBe(false)
+		expect(declaresMap(COUNTER_TSRX)).toBe(true)
+		expect(declaresMap(COUNTER_TSX)).toBe(true)
 	})
 
 	test('the compiled members compile as one set serving .tsx — the twin adds no registry entry', async () => {

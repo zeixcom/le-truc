@@ -12,7 +12,7 @@
 		"resolveJsonModule": true,
 		"types": ["bun", "node"],
 		"paths": {
-			"@zeix/le-truc": ["../../index.ts"],
+			"@zeix/le-truc": ["../../../../../index.ts"],
 		},
 		"noEmit": true,
 		"strict": true,
@@ -23,7 +23,7 @@
 		"noFallthroughCasesInSwitch": true,
 		"forceConsistentCasingInFileNames": true,
 	},
-	"include": ["./**/*.tsx", "./**/*.ts", "../../server/compiler/frontend/tsx/host-profile.d.ts"],
+	"include": ["./**/*.tsx", "./**/*.ts", "../../../../compiler/frontend/tsx/host-profile.d.ts"],
 		"exclude": [
 			"node_modules",
 			"jsx-probe.tsx",
