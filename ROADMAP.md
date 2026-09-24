@@ -63,25 +63,12 @@ Le Truc 3.0 follows Cause & Effect 2.0: the deprecated 2.5 re-exports are remove
 - **CE core budget: under 3 kB gzipped for the synchronous core (`createState`, `deriveComputed`, `createEffect`); full library 8036 B (~7.9 kB) gzipped** (per CE's current `README.md`, superseding this section's earlier "state/memo/sensor trio" figure, which named types v2 no longer has). Our own ≤9 kB consumer budget is unaffected.
 - Remaining workstreams: `index.ts` re-export surface rewrite per the points above (mostly additive/renaming — internal `src/` usage already avoids the removed origin types), `types/` regeneration, coordinated release once CE 2.0 actually ships (still `2.0.0-next.1`, unreleased).
 
-## Scoped styles and style composition (backlog — likely 3.1)
+## Style composition (backlog — likely 3.1)
 
-[ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) (🔄 Proposed — this backlog entry is its commitment gate) records the direction: **tag-name nesting stays the scoping model** — `my-element { … }` as the outermost selector, `>` where only direct descendants must match, which is what every compiled stylesheet already does — and the escape hatch is structural: an unprefixed selector simply IS a global rule. **Shadow DOM is the sanctioned per-component opt-in** for native encapsulation (`<template shadowrootmode="open|closed">`); the runtime is already shadow-aware (`first()`/`all()` query `host.shadowRoot ?? host`), so what's missing is compiler-side only — the authored spelling and the server render emitting the declarative form.
+Scoping itself is decided: [ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) (✅ Accepted 2026-09-24) treats compiled component CSS as shadow-root CSS (`:host` plus bare selectors) and scopes it in light DOM, stopping at the custom elements the template renders, emitted as native `@scope` or as a flat-selector lowering depending on the consumer's CSS target. It ships in 3.0. Checks over the parsed sheet, including stage 1 of composition (the typed class handle, LT-270), are recorded in [ADR 0042](adr/0042-the-component-stylesheet-as-a-compiler-artifact.md).
 
-The backlog item proper is **style composition with TSRX parity**: the pattern TSRX authors know — scoped style blocks composed with style variables, consumed as `class={theme.dark}` — translated through Le Truc's vocabulary. `class={theme.dark}` resolves to `my-element .dark` in light DOM or `:host(.dark)` under a shadow root, never upstream's hash classes (`tsrx-1a2b3c4d dark`). That means CSS is **generated** from composed variables and scoped style blocks rather than copied verbatim — a real machinery step for the compiler, and the reason this is not v3 work: `.tsx` is v3's primary authored surface and has no such construct, so v3 carries no parity debt. Until it lands, styles emit verbatim, CSS custom properties are the composition mechanism, and the tag-name convention is documentation, not a diagnostic.
+The backlog item is **stage 2 of style composition with TSRX parity**: `apply={theme}`, several sheets merged, selectors regenerated into `my-element .dark` / `:host(.dark)`, never upstream's hash classes. That means CSS is **generated** from composed blocks, which is the real machinery step and the reason it is not v3 work. Until it lands, CSS custom properties are the composition mechanism.
 
-**Trigger:** TSRX reaching 1.0 — or a corpus need that genuinely requires composition earlier. At that point this entry converts to accepted work, ADR 0033 graduates to Accepted, and the selector-prefix warning (the enforcement half of the ADR) lands with it.
+**Trigger:** TSRX reaching 1.0, or a corpus need that genuinely requires composition earlier.
 
-**[Amended 2026-09-19, owner — the gate narrowed; ADR 0033 sub-designs 7–10.]** Two of the
-three things parked here turned out not to depend on this trigger at all. The compiler has
-never parsed the authored stylesheet — `css.ts` only dedents — and once it does, via the
-`lightningcss` swap the reflection already wanted (**LT-268**, deliberately *not* gated on
-this entry), three separate wants become small: **dead-rule detection** folded into LT-214,
-the **typed custom-property seam** (**LT-269**, gated instead on a real consumer, since
-`bindStyle` has none in the corpus), and — the correction to this section's own premise —
-**stage 1 of style composition** (**LT-270**). `.tsx` lacking the construct is true of
-*standalone* blocks only; assigned blocks (`const theme = <style>{css`…`}</style>`) and
-`class={theme.dark}` are ordinary TSX, and the anti-drift property that makes composition
-worth wanting lives entirely there — a class name absent from the sheet becomes a compile
-error, with emission still verbatim and output byte-identical. What genuinely still waits on
-this trigger is **stage 2**: `apply={theme}`, merged sheets, and selectors regenerated into
-`my-element .dark` / `:host(.dark)` — the CSS-generation step this section describes.
+The declarative shadow-root opt-in (ADR 0033 s8, the only route to inward isolation) is likewise unscheduled. The stylesheet needs no change for it, but slots, children-are-data harvest, cross-root ID references, page-global styles and the Baseline 2024 floor of Declarative Shadow DOM all do, so it waits for a real use.

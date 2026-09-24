@@ -304,7 +304,9 @@ _Conditional._ A docs-site playground compiling components entirely in the visit
 
 ### Browser support
 
-- Target: all evergreen browsers (Chrome, Firefox, Safari, Edge) as of Web Platform 2020 baseline
+- Target: **Baseline 2023** — every feature the runtime and the compiler's default output rely on is Baseline (interoperable in Chrome, Edge, Firefox and Safari) by the end of 2023. `ElementInternals` is part of that baseline and is counted on: form association requires it. Newer sub-features degrade gracefully where absent: `CustomStateSet` and `:state()` (Baseline 2024) become no-ops, and ARIA reflection falls back to the host content attribute.
+- Baseline policy (owner, 2026-09-24): each **major** release pins the baseline to the year three years before its release (3.0 → 2023). **Minor and patch releases never move it**, however much time has passed; only the next major may. A build-time check fails when shipped code uses a feature newer than the pinned year (LT-305).
+- Compiler CSS output follows the consumer's configured CSS target (`cssTargets`, default Baseline widely available), and never needs more than the pinned baseline: newer CSS is lowered for older targets ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md)). The CSS a component author writes by hand is the author's own baseline.
 - Required APIs: Custom Elements v1, `MutationObserver`, `requestAnimationFrame`, `AbortSignal`, CSS selector matching, `customElements.whenDefined()`
 - Explicitly not supported: IE11 or any non-evergreen browser
 - Declarative Shadow DOM: supported but not required by the library itself; component authors may use it

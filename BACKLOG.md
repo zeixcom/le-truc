@@ -943,6 +943,84 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 ---
 
+- [ ] LT-268: Parse the authored stylesheet in the compiler — the `lightningcss` swap for `css.ts` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s9). **Ships in 3.0.** Prerequisite of LT-304, LT-214, LT-269, LT-270.
+  **Skill:** le-truc-dev (Tech Writer owns the message copy)
+  **Context:** `server/compiler/css.ts` dedents and emits verbatim; the compiler holds **no
+  model of the CSS at all**. `lightningcss` is **already a devDependency and already the
+  build's CSS effect** (`server/effects/css.ts`). Parse the component's sheet and make its
+  rules, selectors and at-rules reachable from the IR. **Spec-grammar validation of authored
+  CSS (unknown property, invalid unit, malformed value) rides this swap**: channel compiler,
+  **tier 1 Prevented** (ADR 0028 s1), since a malformed sheet has no correct emission.
+  Evaluate `css-tree`'s `lexer.matchProperty` only where per-declaration diagnostics are
+  wanted rather than a whole-sheet parse failure. This task adds the model and changes no
+  output; the scoped emission and the `cssTargets` key are LT-304's.
+  **Check:** emitted CSS stays **byte-identical** for every corpus component; a fixture with
+  an invalid unit fails the build with the ruled copy; M25 browser-purity review of the
+  dependency, as LT-245 does for its candidates.
+
+- [ ] LT-304: Scoped emission of shadow-root-form CSS — native `@scope` or the `:where(:not(…))` lowering, per `cssTargets` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s1–s7). **Ships in 3.0. Depends on LT-268; lands together with LT-306** (the corpus migration), since the old tag-led form becomes an error.
+  **Skill:** le-truc-dev (Tech Writer owns the new LTC copy; LT-248 is the docs half)
+  **Context:** Owner ruling 2026-09-24. A compiled sheet is authored as shadow-root CSS
+  (`:host` plus bare selectors) and the compiler gives it shadow-root scoping in light DOM.
+  (1) **`cssTargets`**: a browserslist-style key in `le-truc.config.json` (ADR 0036
+  validation rules apply), default Baseline widely available, also fed to `lightningcss`'s
+  own lowering. (2) **Boundary**: every custom-element tag the lowered template renders,
+  composed and raw dashed tags alike. (3) **Native**: wrap the sheet in
+  `@scope (my-element) to (<tag> > *, …)`, or `@scope (my-element)` for a leaf; emit
+  `:host` as `:where(:scope)` and `:host(<sel>)` as `:where(:scope:is(<sel>))`; hoist
+  `@keyframes`/`@font-face`/`@property` out unchanged. (4) **Lowered**: flat selectors led
+  by the tag with a zero-specificity guard per boundary tag, e.g.
+  `my-element .input:where(:not(my-element form-listbox > *, my-element form-listbox > * *))`,
+  and `:host` as `:where(my-element)`. (5) **New tier 1 errors** (channel compiler, tier 1
+  Prevented; next free LTC codes after LTC053): a rule led by the component's own tag
+  (fix-it: `:host`), `::slotted()` in a light-DOM component, `:host-context()` anywhere
+  (removed from the spec), and every `:global` form except the two whole-rule forms. (5a)
+  **`:global`** (s6a): top-level `:global(<whole selector>) { … }` and `:global { … }`
+  blocks are hoisted out of the scope verbatim; nested blocks, prefixed,
+  trailing (fix-it: plain compound), leading-ancestor and mid-selector forms are the tier 1
+  errors above, each with its own reason in the copy. (6)
+  **Served CSS**: where a folder serves a compiled surface, the page imports the compiler's
+  emitted CSS; the `.ts` twin's hand-written `.css` is served only with the twin (s10).
+  **Check:** a fixture per contract point in s1/s3 compares the compiled light-DOM output
+  with the same sheet inside a real shadow root: the host rule loses to a page type
+  selector in both, and a parent rule never reaches a composed child's internals in
+  either; a `:global` rule is emitted outside the scope in both modes; fixtures pin the s7 differences (inward reach, page-authored children, and the
+  three lowering differences); the corpus Playwright specs pass once per mode (override
+  `cssTargets`); each new error fires on its fixture; LTC051 still compares authored
+  sheets; corpus warning baseline 0.
+
+- [ ] LT-306: Migrate every compiled corpus stylesheet to the shadow-root form (ADR 0033 s2) and split the twins' CSS (s10). **Ships in 3.0. Lands together with LT-304.**
+  **Skill:** le-truc-dev
+  **Context:** Every compiled sheet (`.tsx` and `.tsrx`, both members of a variant set
+  identically) moves from tag-led nesting (`my-element { … & .x { … } }`) to `:host { … }`
+  plus bare rules, and drops the defensive `>` chains that only guarded against downward
+  leakage, keeping a `>` where it expresses real intent (direct children only). Write it as
+  a codemod over the parsed sheet (LT-268) rather than by hand, and keep it for pioneer
+  projects. `module-dialog`'s `body.scroll-lock` becomes `:global(body.scroll-lock)`.
+  The `.ts` twins' hand-written `.css` files stay tag-led and verbatim; point
+  `examples/main.css` at the emitted CSS for every folder whose served surface is compiled.
+  **Check:** the served pages render pixel-identically before and after where no leak was
+  present (Playwright screenshot comparison per example, both CSS modes); LTC051 green
+  across every variant set; no compiled sheet contains a rule led by its own tag.
+
+- [ ] LT-305: Baseline guard — fail the build when shipped code needs a feature newer than the pinned baseline (REQUIREMENTS § Browser support). **Ships in 3.0.**
+  **Skill:** le-truc-dev
+  **Context:** Owner ruling 2026-09-24: the runtime baseline is **Baseline 2023**, pinned per
+  major release to three years before it (3.0 → 2023); **minor and patch releases never move
+  it**. The stated floor drifted once already (REQUIREMENTS said 2020 while `Object.hasOwn`
+  set 2022), so a check replaces the prose. Record the pinned year in one place
+  (`package.json`, e.g. `"leTruc": { "baseline": 2023 }`) and scan what ships: `src/`, the
+  bundled `@zeix/cause-effect`, and the compiler's generated client modules and emitted CSS
+  under the default `cssTargets`. Resolve features to Baseline dates with `web-features`;
+  choose the scanner (a browserslist `baseline 2023` query fed to an API/syntax compat
+  linter, or a direct `web-features` mapping) and justify it in the handoff. Features the
+  runtime uses only behind a guard (`CustomStateSet`, ARIA reflection on internals) are
+  allowlisted by name with the reason, never by pattern. A check that the pinned year only
+  changes on a major version bump is part of the gate. **Channel: build check, tier 1**
+  (a CI failure; no runtime half).
+  **Check:** the gate is green at HEAD with Baseline 2023; a fixture using a 2024-only API
+  unguarded fails it; bumping the year without a major version fails it.
+
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
 - [ ] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them (LT-212 review; NOTES 2026-09-24). **Gate: before any wave-4 migration whose component nests a loop inside a branch.**
@@ -1211,19 +1289,24 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   selector warns; the three child selectors stay silent; the simulation serialization pin holds;
   the zero-warning gate holds.
 
-- [ ] LT-248: Document tag-name style scoping as a known limit, not a feature (reflection §2).
+- [ ] LT-248: Document compiled-component style scoping (ADR 0033, accepted 2026-09-24) where users read.
   **Skill:** tech-writer
-  **Context:** ADR 0033 scopes component styles by custom-element name — right for light-DOM
-  components, but it means co-location buys no isolation: two components can collide through a
-  shared descendant selector, and collision safety rests on convention. In-house that was a
-  footnote; **for a framework in thousands of projects it is a doc obligation** — state the
-  limit where users read (`docs-src/pages/styling.md`'s compiled-component callout and
-  `server/compiler/HOST_PROFILE.md`'s styles section): scoped by tag name, global-ish by
-  default for descendant selectors, no encapsulation boundary. This is NOT the parked ADR 0033
-  work (tag-name nesting, upstream-pattern composition — ROADMAP backlog, LT-214 rides with
-  it); it is the one honest sentence the reflection asks for.
-  **Verification:** `check:links` green; the two docs say the same thing in the same words
-  (one is user-facing, one is the authoring profile).
+  **Context:** Re-scoped by the ADR 0033 ruling: the doc obligation is no longer "scoped by
+  tag name, a known limit" but the ruled model. `docs-src/pages/styling.md`'s compiled-component
+  callout and `server/compiler/HOST_PROFILE.md` § Styles (including its selector-enforcement
+  open question, now answered) state: a compiled sheet is shadow-root CSS (`:host` plus bare
+  selectors), scoped in light DOM so rules stop at every custom element the template renders,
+  emitted as native `@scope` or a `:where(:not(…))` lowering per `cssTargets`; host rules lose
+  to page styles, as in a shadow root; defensive `>` chains are no longer needed; hand-written
+  CSS for runtime-only components stays verbatim and tag-led. **Be plain that only a real
+  shadow root gives inward encapsulation**: page CSS can still reach a light-DOM component's
+  internals. Name every ADR 0033 s7 difference where an author would otherwise hit it, and
+  list what switching to a shadow root changes beyond the stylesheet (s8). Also state the runtime
+  baseline (Baseline 2023, REQUIREMENTS § Browser support) in the getting-started or
+  installation page. **Lands with LT-304**, not before: until then the docs describe verbatim
+  emission.
+  **Verification:** `check:links` green; styling.md and HOST_PROFILE.md say the same thing in
+  the same words (one is user-facing, one is the authoring profile).
 
 - [ ] LT-303: `<truc:try pending catch>` replaces `boundary()` and the try/catch IIFE in `.tsx` ([ADR 0041](adr/0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md)). **Gate: before the first wave-4 migration that authors a boundary.**
   **Skill:** le-truc-dev; Tech Writer reviews the diagnostic copy (retirement counts)
@@ -1692,10 +1775,11 @@ sessions and their follow-ups deferred now sits in this band rather than floatin
 unstated intention. From P1: **LT-262** (the AEM/HTL spike — pioneer 3 is not a release gate;
 ADR 0034 s6 names pioneers 1 and 2) and **LT-264** (the `@zeix/le-truc-simulation` split —
 ADR 0035 s4 defers it to a later 3.x, once the seam has a consumer). Already here and
-unchanged in status: **LT-214**, **LT-268**, **LT-269**, **LT-270** (the ADR 0033 styling
-package — note that LT-268 is gated only on wanting it, not on ADR 0033's acceptance).
+unchanged in status: **LT-214**, **LT-269**, **LT-270** (ADR 0042's checks over the parsed
+sheet, each gated on a real need). **LT-268**, **LT-304**, **LT-305** and **LT-306** (the
+accepted ADR 0033 scoping and the baseline guard) moved to P2b on 2026-09-24: they ship in 3.0.
 Also non-goals for 3.0, recorded in their ADRs rather than as tasks: stage 2 of style
-composition (ADR 0033 s10, ROADMAP), the declarative shadow-root spelling (ADR 0033 s3),
+composition (ADR 0042 s3, ROADMAP), the declarative shadow-root spelling (ADR 0033 s8),
 the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishing the
 `.tsrx` front end (ADR 0034 s1, gated on `@tsrx/core` 1.0).
 
@@ -1750,59 +1834,23 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   assertion: on upgrade, recompute each folded expression and `console.warn` on mismatch —
   emitted only under the generation-time dev flag and folded away entirely otherwise.
 
-- [ ] LT-214: Selector-prefix warning — ADR 0033 sub-design 5 (the scoped-styles "support" that lands in code). **GATED on owner acceptance of ADR 0033 — parked with it: the whole package is a ROADMAP.md backlog item (likely 3.1) pending the TSRX-feature commitment, so this task waits too.**
+- [ ] LT-214: Dead-rule detection over the parsed stylesheet (ADR 0042 s1). **GATED on a real need** (ADR 0042 is Proposed): the selector-prefix half of this task moved to LT-304 with the ADR 0033 ruling (2026-09-24).
   **Skill:** le-truc-dev (Tech Writer owns the message copy)
-  **Context:** The profile's open question answered: the compiler parses the authored
-  stylesheet (upstream exports reusable `parseStyle`/`analyzeCss` — evaluate against
-  a minimal hand parser) and **warns when a top-level selector neither leads with the
-  component's tag name nor is an at-rule**. Channel: compiler; **tier 2 Contained**
-  (ADR 0028 s1) — a warning, not an error, because a deliberately global rule must
-  stay possible (the structural escape hatch). All 22 corpus components already
-  conform (verified 2026-09-18), so the warning baseline must stay 0 at landing —
-  the gate that proves the check neither fires on the corpus nor misses its shape.
-  HOST_PROFILE.md's styles section and `docs-src/pages/styling.md`'s compiled-component
-  callout update from "documentation-only guarantee" to the warning.
-  **Acceptance:** a fixture with an unprefixed top-level selector warns with the
-  ruled copy; the corpus stays at warning baseline 0; `check:tsrx`/`typecheck` green.
-  **Scope change 2026-09-19 (ADR 0033 sub-designs 7–8, owner):** this task now carries
-  **two** checks, and its prerequisite is named. The prefix warning above is the
-  *spelling* half. The second is **dead-rule detection**: a top-level rule under the
-  component's own tag that matches **zero** elements of the rendered template — a typo,
-  a renamed class, a rule left stale by a markup refactor, which the prefix rule cannot
-  see. `matchesSelector`/`countForSelector` (`server/compiler/analysis/selectors.ts`)
-  already answer it and are already load-bearing for LT-118's branch-root collision
-  check. Same channel and tier (compiler, **tier 2 Contained**) for the same reason:
-  light-DOM markup is not closed, so the check must **exempt** any subtree holding a
-  compose node or `dangerouslyBindInnerHTML`, exempt `::slotted` and reaches into
-  composed children, and respect LT-124's deliberate widening of class matching for
-  page-authored enhancement. An over-eager version is worse than none.
-  **Depends on LT-268** (the stylesheet must be parsed before either check is more than
-  a regex). **Coordinate with LT-245**: if the `css-select` + `parse5` spike lands, the
-  dead-rule check gets cheaper, so do not hand-roll a CSS matcher for it first.
-  **Acceptance (added):** a fixture whose stylesheet names a class no element carries
-  warns; a fixture with a compose site or `dangerouslyBindInnerHTML` in the matched
-  subtree does **not** warn; corpus baseline stays 0 for both checks.
+  **Context:** A rule under the component's own tag that matches **zero** elements of the
+  rendered template warns: a typo, a renamed class, a rule left stale by a markup refactor.
+  `matchesSelector`/`countForSelector` (`server/compiler/analysis/selectors.ts`) already
+  answer it and are load-bearing for LT-118's branch-root collision check. **Channel
+  compiler, tier 2 Contained**: light-DOM markup is not closed, so the check must
+  **exempt** any subtree holding a compose node or `dangerouslyBindInnerHTML`, exempt
+  `::slotted` and reaches into composed children, and respect LT-124's deliberate widening
+  of class matching for page-authored enhancement. An over-eager version is worse than none.
+  **Depends on LT-268.** **Coordinate with LT-245**: if the `css-select` + `parse5` spike
+  lands, the check gets cheaper, so do not hand-roll a CSS matcher for it first.
+  **Acceptance:** a fixture whose stylesheet names a class no element carries warns; a
+  fixture with a compose site or `dangerouslyBindInnerHTML` in the matched subtree does
+  **not** warn; corpus warning baseline stays 0.
 
-- [ ] LT-268: Parse the authored stylesheet in the compiler — the `lightningcss` swap for `css.ts` (ADR 0033 sub-design 7). **NOT gated on ADR 0033's acceptance**: it is a library swap the reflection already wanted, and it is the prerequisite three parked items share.
-  **Skill:** le-truc-dev (Tech Writer owns the message copy)
-  **Context:** `server/compiler/css.ts` is 38 lines that dedent and emit verbatim — the
-  compiler holds **no model of the CSS at all**, which is why ADR 0033 sub-design 5 could
-  only ever be specified as a spelling lint. `lightningcss` is **already a devDependency
-  and already the build's CSS effect** (`server/effects/css.ts`, `server/SERVER.md`), and
-  `COMPILER_REFLECTION.md`'s library table already proposes it here (nesting downlevel and
-  minification come along). Alternative to evaluate: `css-tree`'s `lexer.matchProperty`,
-  where per-declaration value-grammar diagnostics are wanted rather than a whole-sheet
-  parse failure. **Spec-grammar validation of authored CSS — unknown property, invalid
-  unit, malformed value — rides this swap and gets no task of its own.** Channel:
-  compiler; **tier 1 Prevented** (ADR 0028 s1) for a parse or grammar error — the sheet is
-  the compiler's own input and a malformed one has no correct emission.
-  **Unblocks:** LT-214 (both checks), LT-269, LT-270.
-  **Check:** emitted CSS stays **byte-identical** for all 22 corpus components — this
-  swap adds a model, it does not change output; a fixture with an invalid unit fails the
-  build with the ruled copy; M25 browser-purity review of the dependency, as LT-245 does
-  for its candidates.
-
-- [ ] LT-269: Typed custom-property seam — `@property` registration derived from the signal's type (ADR 0033 sub-design 9). **GATED on a real consumer**: `bindStyle`/`setStyle` appears **nowhere** in the corpus or the docs components today, so this must follow a use, not precede one.
+- [ ] LT-269: Typed custom-property seam — `@property` registration derived from the signal's type (ADR 0042 s2). **GATED on a real consumer**: `bindStyle`/`setStyle` appears **nowhere** in the corpus or the docs components today, so this must follow a use, not precede one.
   **Skill:** le-truc-dev (Tech Writer owns the message copy)
   **Context:** `bindStyle` (`src/bindings.ts`) takes `string`, so every value crossing from
   a signal into CSS is stringly-typed at exactly the point where both sides are known at
@@ -1820,7 +1868,7 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Depends on LT-268.** **Check:** a fixture whose numeric signal drives a `<length>`
   property warns; the emitted `@property` block round-trips through the equivalence audit.
 
-- [ ] LT-270: Typed style handle — stage 1 of style composition, unblocked from TSRX 1.0 (ADR 0033 sub-design 10).
+- [ ] LT-270: Typed style handle — stage 1 of style composition, unblocked from TSRX 1.0 (ADR 0042 s3).
   **Skill:** le-truc-dev
   **Context:** ADR 0033 sub-design 6 parked the whole composition package on TSRX 1.0
   because `.tsx` "has no such construct". That holds for **standalone** blocks only — a

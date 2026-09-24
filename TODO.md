@@ -52,11 +52,11 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-304.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-307.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
-review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041).)
+review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041); the ADR 0033 ruling filed LT-304–LT-306.)
 
 **Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
 are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
