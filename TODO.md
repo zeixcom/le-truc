@@ -52,11 +52,11 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-313.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-316.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
-review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041); the ADR 0033 ruling filed LT-304–LT-306; the LT-237 review filed LT-308; the LT-096 review filed LT-309–LT-312.)
+review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041); the ADR 0033 ruling filed LT-304–LT-306; the LT-237 review filed LT-308; the LT-096 review filed LT-309–LT-312; the LT-258 review filed LT-313–LT-315.)
 
 **Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
 are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
@@ -78,24 +78,6 @@ test edits). It is pushed, so history stays; attribute by file, not by title. HE
 sandbox has.
 
 ---
-
-- [ ] LT-258: Make the partial-readiness invariant a compiler check.
-  **Skill:** le-truc-dev
-  **Context:** ADR 0034 s4. The invariant — folded output depends only on the component's own
-  props plus a closed, enumerable set of page-ambient values — is checkable **now**, before the
-  emitter exists, and it must be, because the failure mode is a design landing between now and
-  LT-257 that quietly forecloses template emission. The closed ambient set today is the reserved
-  `i18n` parameter's five members ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md) s2).
-  **Deliverable:** a check in the fold path that a folded expression's inputs are the component's
-  own args or a member of the declared ambient set, and nothing else; the ambient set declared in
-  **one** place the check reads, so adding to it is a visible, reviewable act rather than a
-  diffuse one. Violations are a compile-time diagnostic (channel: compiler; tier 1 Prevented);
-  new code, Tech Writer owns the copy.
-  **Check:** the corpus passes unchanged; a fixture that reaches page context outside the
-  declared set fails the build with the ruled message.
-  **ADR 0037 rider (2026-09-21):** the check classifies a reactive condition's initial
-  winner as prop-dependent output — legal, but the emitted backend conditional must be one of
-  the invariant's named representations (see the LT-257 rider).
 
 - [ ] LT-207: Stop the simulation realm's dependency-wait timers from leaking past teardown (LT-202 NOTES residue).
   **Skill:** le-truc-dev

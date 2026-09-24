@@ -6,6 +6,7 @@
 import { describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { assertFoldScopeClosed } from '../../compiler/fold-inputs'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../compiler/registry'
@@ -2844,5 +2845,188 @@ import { createList } from '@zeix/le-truc'`
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('reads impure ambient state')
 		expect(hit?.message).not.toContain('reads ,')
+	})
+})
+
+describe('partial-readiness invariant (LTC054, ADR 0034 s4, LT-258)', () => {
+	const tsx = (
+		template: string,
+		{
+			params = '{ label }: { label: string }',
+			setup = '',
+		}: { params?: string; setup?: string } = {},
+	): string =>
+		`export function C(${params}) {
+${setup}	return (
+		<>
+			${template}
+			<style>c-el { color: red }</style>
+		</>
+	)
+}`
+	const ltc054 = (source: string, file = 'c.tsx') => {
+		const result = file.endsWith('.tsx')
+			? compileComponentTsx(source, file, new Set())
+			: compileComponent(source, file, new Set())
+		return {
+			component: result.component,
+			hits: result.diagnostics.filter(d => d.code === 'LTC054'),
+		}
+	}
+
+	test.each([
+		[
+			'a static attribute',
+			'<c-el title={document.title}><span>x</span></c-el>',
+			'document',
+		],
+		[
+			'a static text child',
+			'<c-el><span>{window.location.href}</span></c-el>',
+			'window',
+		],
+		[
+			'a folded reactive attribute',
+			'<c-el><span title={() => navigator.language}>x</span></c-el>',
+			'navigator',
+		],
+		[
+			'a condition',
+			'<c-el>{globalThis.flag ? <span>a</span> : <b>b</b>}</c-el>',
+			'globalThis',
+		],
+	])('%s reading page context fails the build', (_, template, read) => {
+		const { component, hits } = ltc054(tsx(template))
+		expect(component).toBeNull()
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.severity).toBe('error')
+		expect(hits[0]?.message).toContain(`\`${read}\``)
+		expect(hits[0]?.message).toContain('page context')
+	})
+
+	test('a setup const the render evaluates is a fold input', () => {
+		const { hits } = ltc054(
+			tsx('<c-el><span>{w}</span></c-el>', {
+				setup: '\tconst w = String(window.innerWidth)\n',
+			}),
+		)
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('setup const `w`')
+		expect(hits[0]?.line).toBe(2)
+	})
+
+	test('a setup helper reading page context taints the fold that calls it', () => {
+		const { hits } = ltc054(
+			tsx('<c-el><span>{inner(label)}</span></c-el>', {
+				setup:
+					'\tconst outer = () => document.title\n\tconst inner = (s: string) => s + outer()\n',
+			}),
+		)
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('a text child')
+		expect(hits[0]?.message).toContain('`document`')
+	})
+
+	test('a helper never called by a fold is not a fold input', () => {
+		const { component, hits } = ltc054(
+			tsx(
+				'<c-el><button type="button" onClick={() => focusActive()}>{label}</button></c-el>',
+				{
+					setup:
+						'\tconst focusActive = () => (document.activeElement as HTMLElement | null)?.focus()\n',
+				},
+			),
+		)
+		expect(hits).toHaveLength(0)
+		expect(component).not.toBeNull()
+	})
+
+	test('a reactive thunk the server does not fold is left to the client', () => {
+		const { component, hits } = ltc054(
+			tsx(
+				'<c-el><span title={() => host.label + document.title}>x</span></c-el>',
+				{
+					params:
+						'{ label }: { label: string }, { host, expose }: FactoryContext<{ label: string }>',
+					setup: "\texpose({ label: asString('') })\n",
+				},
+			).replace(
+				'export function',
+				"import type { FactoryContext } from '@zeix/le-truc'\nimport { asString } from '@zeix/le-truc'\nexport function",
+			),
+		)
+		expect(hits).toHaveLength(0)
+		expect(component).not.toBeNull()
+	})
+
+	test('destructuring an undeclared member of the i18n record fails', () => {
+		const { component, hits } = ltc054(
+			tsx('<c-el><span>{page}</span></c-el>', {
+				params: '{ i18n: { lang, page } }: { i18n: I18n }',
+			}),
+		)
+		expect(component).toBeNull()
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`page` is not a member')
+		// The member list is interpolated from PAGE_AMBIENTS, not hard-coded.
+		expect(hits[0]?.message).toContain(
+			'`lang`, `t`, `timeZone`, `currency` and `dir`',
+		)
+		expect(hits[0]?.message).toContain('declare `page` as an arg')
+	})
+
+	test('a rest element over the i18n record fails', () => {
+		const { hits } = ltc054(
+			tsx('<c-el><span>{rest.lang}</span></c-el>', {
+				params: '{ i18n: { ...rest } }: { i18n: I18n }',
+			}),
+		)
+		expect(hits.some(h => h.message.includes('undeclared member'))).toBe(true)
+	})
+
+	test('a whole-record read outside the declared set fails', () => {
+		const { hits } = ltc054(
+			tsx('<c-el><span>{i18n.url}</span></c-el>', {
+				params: '{ i18n }: { i18n: I18n }',
+			}),
+		)
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`i18n.url`')
+	})
+
+	test('the declared ambient members pass', () => {
+		const { hits } = ltc054(
+			tsx('<c-el><span title={i18n.timeZone}>{i18n.lang}</span></c-el>', {
+				params: '{ i18n }: { i18n: I18n }',
+			}),
+		)
+		expect(hits).toHaveLength(0)
+	})
+
+	test('.tsrx twin: a page-context read fails the build', () => {
+		const { component, hits } = ltc054(
+			`export function C({ label }: { label: string })
+	@{
+		<>
+			<c-el title={document.title}><span>{label}</span></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`,
+			'c.tsrx',
+		)
+		expect(component).toBeNull()
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`document`')
+	})
+
+	test('the render scope admits only own names and declared harness names', () => {
+		const component = {
+			tag: 'c-el',
+			paramNames: ['label'],
+			setup: [],
+			signals: [],
+			serverKnown: new Set(['label', 'isPending', 'pageUrl']),
+		} as unknown as Parameters<typeof assertFoldScopeClosed>[0]
+		expect(() => assertFoldScopeClosed(component)).toThrow('`pageUrl`')
 	})
 })

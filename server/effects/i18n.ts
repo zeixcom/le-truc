@@ -32,6 +32,7 @@ import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { TranslationGap } from '../compiler/census'
+import { PAGE_AMBIENT_TYPES } from '../compiler/fold-inputs'
 import { PLURAL_CATEGORIES } from '../compiler/i18n'
 import type { RegistryEntry } from '../compiler/registry'
 import { pluralCategories } from '../compiler/runtime'
@@ -316,11 +317,9 @@ const i18nModuleText = (collection: I18nCollection): string => {
  */
 
 export interface I18n {
-	lang: string
-	t: Record<string, string>
-	timeZone: string
-	currency: string
-	dir: 'ltr' | 'rtl'
+${Object.entries(PAGE_AMBIENT_TYPES)
+	.map(([member, type]) => `\t${member}: ${type}`)
+	.join('\n')}
 }
 
 /**

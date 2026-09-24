@@ -37,6 +37,39 @@ retirement ruling is verbatim in AGENTS.md's `pass()` bullet and the CHANGELOG R
 entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text:
 `git log -p -- DONE.md`.
 
+- [x] LT-315: Tech Writer copy review for LTC054 (LT-258 handoff) — done ✓
+  **Changed:** final copy for `foldReadsPageContext` and `undeclaredPageAmbient` in
+  `server/compiler/diagnostics.ts`. The ambient member list is interpolated from
+  `PAGE_AMBIENTS`, passed in by `fold-inputs.ts` so the copy follows the set, and a new
+  `codeList` helper formats it. The `errors.md` LTC054 row is added. **Open:** the CHANGELOG
+  entry for LTC054 (changelog-keeper).
+
+- [x] LT-258: Make the partial-readiness invariant a compiler check — reviewed ✓
+  **Changed:** new `server/compiler/fold-inputs.ts` is the single declaration of the invariant's
+  vocabulary: `PAGE_AMBIENT_TYPES`/`PAGE_AMBIENTS` (the closed set; the generated `I18n`
+  interface in `server/effects/i18n.ts` is now written from it, byte-identical),
+  `PAGE_CONTEXT_GLOBALS`, `FOLD_HARNESS_NAMES`. It adds a new compiler error, **`LTC054`**
+  (tier 1 Prevented), raised in two places: `checkFoldInputs`, run from `pipeline.ts` over every
+  server-evaluated position (including through setup helpers), and `ambientRecordViolations`,
+  run from `params.ts` (`i18n` destructured for an undeclared member, or through a rest element).
+  `assertFoldScopeClosed` throws if `serverKnown` ever holds a name that is not an own arg, an
+  own setup name, or a declared harness name. The corpus is unchanged: goldens identical, census
+  unmoved.
+  **Rulings (Architect, 2026-09-25):**
+  - **A folded reactive thunk that reads page context is an error, not an omission.** This
+    upholds the developer's call. LTC033's omit-the-reactive-form precedent does not transfer:
+    `Date.now()` is *unresolvable*, since no tier has an answer, so omitting it leaves the
+    component's tier alone. A page-context read is *realm-answerable*. Omitting it through
+    `impureAmbientCauses` would silently re-route the component Folded → Simulated, and ADR
+    0035 s2 keeps Simulated components out of template emission. That silent re-route is the
+    quiet foreclosure ADR 0034 s4 exists to prevent. A thunk only errors when the server would
+    actually fold it; one it leaves to the client is untouched.
+  - **The page-context side is an explicit deny-list**, and the positive side is closed by
+    `assertFoldScopeClosed`. Together they make the invariant checkable without a pure-globals
+    allow-list over the whole of `JS_GLOBALS`.
+  **Live handoffs:** LT-313 (a `@for` iterable is not checked; gates LT-257), LT-314 (the
+  `crypto` impurity gap found during review), LT-315 (Tech Writer copy for LTC054).
+
 - [x] LT-096: Migrate `module-codeblock` to `.tsx` with same-commit cutover — reviewed ✓
   **Changed:**
   - `module-codeblock.tsx` is served (`examples/main.ts` imports the generated client). The

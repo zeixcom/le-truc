@@ -112,7 +112,10 @@ legal multi-source shape, and every other collision still fails the build
 naming all files.
 `LTC052` (a server-data `@for` carries a `key` clause — ADR 0040 s1, LT-286)
 follows, then `LTC053` (an element tag that is not a static name — `.tsrx`'s
-`<{expr}>`, `.tsx`'s unrecognized namespaced or member tag — LT-213).
+`<{expr}>`, `.tsx`'s unrecognized namespaced or member tag — LT-213), then
+`LTC054` (a server-evaluated position reads page context outside the declared
+ambient set, or the reserved `i18n` record is destructured for an undeclared
+member — the partial-readiness invariant, ADR 0034 s4, LT-258).
 
 ## 5. Kept, with the surface named correctly
 

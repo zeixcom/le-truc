@@ -80,6 +80,7 @@ export type DiagnosticCode =
 	| 'LTC051' // a variant set's compiled members disagree on CSS (ADR 0039, LT-283) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC052' // a server-data @for carries a `key` clause, which only a reactive List's reconcile() reads (ADR 0040 s1, LT-286) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC053' // an element tag that is not a static name: a `.tsrx` dynamic `<{expr}>` tag, or a `.tsx` namespaced/member tag the front end does not recognize (LT-213, scope A0) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC054' // a position the server render evaluates reads page context outside the declared ambient set, or the reserved `i18n` record is destructured for a member outside it (ADR 0034 s4, LT-258) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -113,6 +114,14 @@ const sanitizeArgName = (id: string): string => {
 		.replace(/^[0-9]+/, '')
 	const base = camel === '' ? 'element' : camel
 	return /id$/i.test(base) ? base : `${base}Id`
+}
+
+/** `a`, `b` and `c` — each item in backticks, for a closed list in copy. */
+const codeList = (items: Iterable<string>): string => {
+	const quoted = [...items].map(item => `\`${item}\``)
+	return quoted.length < 2
+		? quoted.join('')
+		: `${quoted.slice(0, -1).join(', ')} and ${quoted.at(-1)}`
 }
 
 const warning = (
@@ -203,6 +212,55 @@ export const diagnostic = {
 		error(
 			'LTC053',
 			`The tag \`<${spelled}>\` is not a static element name — the compiler supports only static tag names, so it cannot make an element from this tag. Choose between static tags with a conditional, for example \`${conditional}\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * The partial-readiness invariant (ADR 0034 sub-design 4, LT-258): a
+	 * position the server render evaluates — a static child or attribute, a
+	 * condition, a setup const, a folded reactive thunk — reads page context
+	 * (`document`, `window`, `navigator`, …; the list is
+	 * `PAGE_CONTEXT_GLOBALS` in fold-inputs.ts), directly or through a setup
+	 * helper. The fold would bake the build's answer into the markup, and a
+	 * template emitter has no variable to carry it to a backend. ADR 0028
+	 * tier 1 (Prevented): statically decidable, no runtime half. `where`
+	 * names the position in lower case (`attribute \`title\` on <c-el>`);
+	 * `ambients` is `PAGE_AMBIENTS`, passed in so the copy follows the set.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-09-25).
+	 */
+	foldReadsPageContext: (
+		source: string,
+		offset: number | undefined,
+		where: string,
+		reads: readonly string[],
+		ambients: Iterable<string>,
+	) =>
+		error(
+			'LTC054',
+			`The server evaluates ${where} at build time, but it reads ${codeList(reads)}, which is page context. Server-rendered HTML can depend only on the component's own args and on ${codeList(ambients)} from the \`i18n\` record — a template backend has no variable for page context. Pass the value in as an arg, or read it in the factory (in \`watch()\` or an \`on()\` handler), where it runs in the browser.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * The params-side half of LTC054: the reserved `i18n` record is
+	 * destructured for a member outside the declared ambient set, or through
+	 * a rest element. `member` is null for a rest element or a computed key.
+	 * `ambients` is `PAGE_AMBIENTS`, passed in so the copy follows the set.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-09-25).
+	 */
+	undeclaredPageAmbient: (
+		source: string,
+		offset: number | undefined,
+		member: string | null,
+		ambients: Iterable<string>,
+	) =>
+		error(
+			'LTC054',
+			`${member === null ? 'This destructuring takes an undeclared member' : `\`${member}\` is not a member`} of the reserved \`i18n\` record. The record carries only ${codeList(ambients)} — the page values that server-rendered HTML can depend on besides the component's own args. ${member === null ? 'Destructure the members you need by name' : `Destructure one of these members, or declare \`${member}\` as an arg`}.`,
 			lineOf(source, offset),
 		),
 

@@ -14,6 +14,7 @@ import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from './emit-paths'
 import { emitServerModule } from './emit-server'
+import { checkFoldInputs } from './fold-inputs'
 import type { ComponentIR } from './ir'
 import type { RegistryEntry } from './registry'
 import type { SourceSpan } from './spans'
@@ -86,6 +87,9 @@ export const compileFromIR = (
 		}
 	}
 	const plan = analyzeClient(component, registry, diagnostics, composeRegistry)
+	// LT-258: the partial-readiness invariant (ADR 0034 s4) — nothing but
+	// own args and the declared ambient set may reach the fold.
+	checkFoldInputs(component, diagnostics)
 	if (diagnostics.some(d => d.severity === 'error'))
 		return { component: null, diagnostics }
 	/**

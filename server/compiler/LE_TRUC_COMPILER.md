@@ -326,6 +326,7 @@ front-end modules, then the two front ends:
 | `classify-attributes.ts` | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser |
 | `reactivity.ts` | `classifyChild` — the reactive-lift rule: is a template child reactive, static, or untraceable? |
 | `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers. Under ADR 0029 this is also the first conjunct of the **tier classifier** (§ 5) |
+| `fold-inputs.ts` | The partial-readiness invariant (ADR 0034 s4, LT-258): the ONE declaration of the closed page-ambient set (`PAGE_AMBIENT_TYPES`, which also writes the generated `I18n` interface) and the page-context globals; `checkFoldInputs` (LTC054 over every server-evaluated position, run by `pipeline.ts`), `ambientRecordViolations` (LTC054 at the params pattern), `assertFoldScopeClosed` (throws if `serverKnown` gains a non-own, undeclared name) |
 | `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary: `export const i18n` extraction (quoted keys included), the `lang` binding/default lookup |
 | `infer-type.ts` | Signal value-type inference |
 | `config.ts` | `export const config` extraction |

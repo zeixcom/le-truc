@@ -95,6 +95,19 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
 **LT-263**, **LT-255 + LT-267**, **LT-256** and **LT-265** — the iteration opened in `TODO.md`.
 **LT-262 and LT-264 are non-goals for 3.0 and have moved to P7.**
 
+- [ ] LT-313: Check a server-data `@for`'s iterable against the partial-readiness invariant (LT-258 review). **Gate: before LT-257.**
+  **Skill:** le-truc-dev
+  **Context:** LT-258's `checkFoldInputs` covers every server-evaluated position except one:
+  the iterable of a server-data loop, because `EachForIR` carries only `iterableText`, not a
+  node. Verified at review: `{[...document.querySelectorAll('a')].map(a => <li>{a.href}</li>)}`
+  compiles clean and classifies Folded, so the loop's item set is the build page's DOM. Add the
+  iterable's `AstNode` to `EachForIR`, populated by both front ends. Adding an IR field before
+  first publish is free under ADR 0034 s8 and ADR 0040, and the task has to land before LT-254
+  anyway. Then check it in `checkFoldInputs` as an always-evaluated position. **Channel:**
+  compiler. **Tier:** 1 Prevented. It reuses LTC054, so no new copy is needed beyond the
+  `where` phrase (e.g. "the items of a loop"). Tech Writer reviews that phrase.
+  **Check:** the probe above fails with LTC054 on both surfaces; the corpus is unchanged.
+
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-287, LT-288, LT-274 and LT-276** (ADR 0040, accepted 2026-09-24: every reshape of a published IR type lands before the first publish, or it becomes a 4.0 change).
   **Skill:** le-truc-dev
   **Context:** ADR 0034 s1–s2. The compiler ships separate from the browser-only
@@ -163,7 +176,8 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   tier 1 Prevented per [ADR 0028](adr/0028-tiered-error-surfacing.md) s1) — never a silently
   unsafe emit. A per-target escaping test corpus is part of this task, not a follow-up. New
   diagnostic code: Tech Writer owns the final copy.
-  **Depends on** LT-254 (where it ships), LT-258 (the invariant it relies on).
+  **Depends on** LT-254 (where it ships), LT-258 (the invariant it relies on), LT-313 (the
+  invariant's one unchecked fold position).
   **Check:** every corpus component emits a Twig partial; the escaping corpus passes, including
   the negative cases; **the interface is exercised by a second, deliberately trivial target**
   (even a debug/JSON dump) so "a second target needs no reshaping of the first" is tested rather
@@ -1064,6 +1078,19 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   unguarded fails it; bumping the year without a major version fails it.
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
+
+- [ ] LT-314: `crypto.randomUUID()`/`getRandomValues()` fold silently — close the impure-ambient gap (LT-258 review).
+  **Skill:** le-truc-dev
+  **Context:** `impureAmbientCauses` (`evaluability.ts`) flags `Math.random()` as `rng` but
+  not `crypto`, which sits in `JS_GLOBALS`. Verified at review: `<span id={crypto.randomUUID()}>`
+  compiles clean and classifies Folded, which bakes one build-time random id into the page. That
+  is exactly the hazard LTC033 exists for. Add `crypto.randomUUID`/`crypto.getRandomValues` to
+  the `rng` cause, so static positions get LTC033 and reactive ones are omitted, following the
+  existing precedent. This is not the partial-readiness invariant: the RNG is unresolvable, not
+  page context. **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033, whose copy
+  already names "a random id").
+  **Check:** the probe errors LTC033 in a static position and omits in a reactive one; the
+  corpus is unchanged.
 
 - [ ] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them (LT-212 review; NOTES 2026-09-24). **Gate: before any wave-4 migration whose component nests a loop inside a branch.**
   **Skill:** le-truc-dev

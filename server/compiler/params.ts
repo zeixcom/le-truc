@@ -17,6 +17,7 @@ import {
 	isNode,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
+import { ambientRecordViolations } from './fold-inputs'
 import { isOptionalBinding } from './infer-type'
 import type { ExtractContext } from './ir'
 
@@ -77,6 +78,9 @@ export const extractParams = (
 				diagnostic.defaultOnRequiredProp(ctx.source, prop.start, bindingName),
 			)
 	}
+	// LT-258 (ADR 0034 s4): the reserved `i18n` record yields only the
+	// declared page-ambient members.
+	ctx.diagnostics.push(...ambientRecordViolations(ctx.source, paramsNode))
 
 	// The factory-context parameter (LT-209): the author's opt IN to precise
 	// context typing. Names shadow the profile ambients at function scope;
