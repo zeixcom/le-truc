@@ -543,6 +543,10 @@ Tech Writer copy round, scope widened).
     `tech-writer`'s `workflows/error-message-lifecycle.md` in full — keep-member treatment in
     the `DiagnosticCode` union per LT-223, and sweep
     `.agents/skills/le-truc/references/errors.md`, HOST_PROFILE.md and LE_TRUC_COMPILER.md.
+  **Docs:** the authoritative documents were swept on 2026-09-24 (HOST_PROFILE.md,
+  LE_TRUC_COMPILER.md, SERVER.md, ADR 0032/0041). Still owed here: `CHANGELOG.md`
+  [Unreleased] drops its `truc:case` and per-category-key Added entries (the feature
+  never ships), via `changelog-keeper`.
   **Check:** `grep -r "truc:case\|pluralCategor\|caseType"` over non-generated sources returns
   nothing outside the retirement notes; no fixture still pins per-locale pruned markup; gates
   green; warning baseline 0.

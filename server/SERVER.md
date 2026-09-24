@@ -138,7 +138,7 @@ Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild
 
 An occurrence qualifies when **all three** hold:
 
-1. The component is Folded-tier and declares the reserved `i18n` parameter — its server bytes actually depend on the locale (folded catalog words, `truc:case` pruning, materialized root `lang`). Simulated-tier occurrences stay authored (the realm cannot run per watch rebuild, ADR 0027 sub-design 10); a `lang`-arg component without `i18n` (`basic-number`) computes its value client-side and stays authored too.
+1. The component is Folded-tier and declares the reserved `i18n` parameter — its server bytes actually depend on the locale (folded catalog words, materialized root `lang`). Simulated-tier occurrences stay authored (the realm cannot run per watch rebuild, ADR 0027 sub-design 10); a `lang`-arg component without `i18n` (`basic-number`) computes its value client-side and stays authored too.
 2. The generated `<tag>.server.ts` module exports `argsFromAttrs` (emitted by `emit-server.ts` exactly when the component is statically renderable from attributes — see `LE_TRUC_COMPILER.md` §5.3). Occurrence `class`/`id` splice onto the rendered root like LT-090 compose-site discriminators.
 3. The occurrence's effective locale resolves at build time: own `lang` attribute > nearest positional `[lang]` ancestor > the page tree's locale. The single-copy fragment trees (`examples/`) pass no page locale, so baseless occurrences there stay authored — client-upgraded, ADR 0030 s3's client-authored half.
 

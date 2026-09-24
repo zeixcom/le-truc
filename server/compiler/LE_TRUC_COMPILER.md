@@ -326,7 +326,7 @@ front-end modules, then the two front ends:
 | `classify-attributes.ts` | `JSXAttribute` → `AttributeIR`/`ComposeAttrIR`; shared `truc:pass={{ }}` parser |
 | `reactivity.ts` | `classifyChild` — the reactive-lift rule: is a template child reactive, static, or untraceable? |
 | `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers. Under ADR 0029 this is also the first conjunct of the **tier classifier** (§ 5) |
-| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary: `export const i18n` extraction (quoted keys included; dotted keys must end in a CLDR category), the `lang` binding/default lookup, `PLURAL_CATEGORIES` |
+| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary: `export const i18n` extraction (quoted keys included), the `lang` binding/default lookup |
 | `infer-type.ts` | Signal value-type inference |
 | `config.ts` | `export const config` extraction |
 | `imports.ts` | Compose-import resolution (accepts `.tsrx` AND `.tsx` specifiers — cross-surface composition falls out of the path-keyed registry) + plain import collection and placement |
@@ -493,12 +493,12 @@ per-component catalog file, which would reintroduce the sibling-file drift
 ADR 0024 cures. Values must be string literals: they are the fallback every
 locale resolves against and the bytes the staleness manifest hashes, so the
 source locale declares EVERY key its template references — the fallback
-bytes always exist. **Plural word forms are per-category keys**
-(`<key>.<category>` — `'task.one'`, `'task.other'`; LT-190): a dotted key
-must end in a CLDR plural category (a shape error otherwise — a typo'd
-suffix would silently never resolve AND corrupt the census's reachability
-input), and the span carrying each `truc:case` category references its own
-key. Translations are additive per-locale
+bytes always exist. **A value is an ICU MessageFormat 1 pattern** (ADR 0030
+s4; lands with LT-250): `t.<key>` is a string for an argument-less pattern
+and a function of its arguments otherwise, plural morphology lives inside
+the pattern, and dotted keys are plain namespacing. Patterns are parsed at
+build time, and one evaluator serves the server fold and the client.
+Translations are additive per-locale
 override files, component-namespaced (`i18n/de.json`, keys `<tag>.<key>`),
 with **no tiering and no override stack**: a key resolves in exactly one
 place. The compiler resolves `t` at render time — the generated `i18n`
@@ -512,19 +512,10 @@ compile warning, since it is not author-fixable. The census walks BOTH
 directions between declarations and catalogs (LT-196): every declared key
 must be translated, and every catalog key must be declared — an entry
 nothing declares (a translator's typo, a renamed key, a deleted
-component) reports `orphaned`, since it can never render. The census is
-REACHABILITY-AWARE (LT-190), in both directions: a `<key>.<category>`
-message whose category is
-outside the locale's platform set — read per locale for the component's
-statically proven `truc:case-type` (`RegistryEntry.caseType`:
-`'cardinal'`/`'ordinal'` when provable, `'union'` otherwise — the runtime's
-own fallback) — sits in a pruned span that cannot render there, so its
-absence is the translator's nothing-to-do, not a gap. The orphan walk
-applies the same carve-out to DECLARED keys only (LT-217): a
-wholesale-translated pruned category reports nothing, while an undeclared
-key reports in every locale — nothing prunes a span that was never
-authored — so a locale's catalog carries exactly its own reachable set.
-Staleness rides a committed
+component) reports `orphaned`, since it can never render. Every locale
+carries the same key set, so neither walk needs reachability rules; the
+census also checks each translation's argument set and its `plural` arm
+coverage against the locale's CLDR categories (ADR 0030 s5). Staleness rides a committed
 manifest (`i18n/manifest.json`, per locale per key the source hash the
 translation was recorded against): a source-string edit is a `.tsrx` edit
 that silently invalidates that key's translations, so an override without a
@@ -535,26 +526,6 @@ data). The build stays read-only: an explicit `i18n:sync` script — never
 the build — writes missing keys into the committed catalogs, prunes
 orphaned keys out of them, and refreshes
 the manifest.
-
-**Per-locale pruning of rendered alternatives** (ADR 0030 s6): with the locale
-a build constant, a component rendering one alternative per plural category
-prunes to the set the locale actually uses (`{one, other}` for English rather
-than all six). The set comes from `runtime.ts`'s `pluralCategories` —
-`Intl.PluralRules(lang, opts).resolvedOptions().pluralCategories`, a platform
-fact rather than a hand-maintained table — the same posture as the ARIA
-mapping in ADR 0024 s4. The author marks each alternative `truc:case="one"`
-(a CLDR category literal; consumed by the compiler, renders no attribute) and
-declares the configured `type` once per group with
-`truc:case-type={ordinal ? 'ordinal' : undefined}` — evaluated per render
-call, so a dynamic configuration prunes tightly in both states; an
-explicit `undefined` is the `Intl` default (cardinal), and a group with no
-declared type prunes to the cardinal∪ordinal union, the ADR's sanctioned
-fallback. The client keeps the element's `hidden` toggle over the pruned set,
-addressed with `'maybe'` cardinality (the element may not render at all);
-deeper constructs inside a case element have no addressing and are rejected.
-**The client-side toggles do NOT retire**: the
-locale is fixed but the category-selecting input (`host.count`) is reactive,
-and the client can only select among strings the server rendered.
 
 **Context protocol** (ADR 0024 sub-design 15): `requestContext(Context,
 fallback)` is a recognized signal-constructor form — its fallback must be
@@ -868,9 +839,9 @@ sources skip the detour entirely: plain `tsc` checks them directly against
 ambients exist).
 
 **Harness types ride the same gate.** Generated code calls into the
-`runtime.ts` value harness (`pluralCategories`, the compose post-processing,
-the fold helpers), and a harness signature narrower than what the
-pruning/splice emitters pass it is caught ONLY by the
+`runtime.ts` value harness (the compose post-processing, the fold
+helpers), and a harness signature narrower than what the splice
+emitters pass it is caught ONLY by the
 tsc-against-generated-modules gate — no unit test sits between the emitter
 and the gate. Widen both sides in the same change, and treat a `check:corpus`
 failure there as a contract break, not a fixture problem.

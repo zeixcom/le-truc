@@ -16,7 +16,7 @@
 2. **It needs no generic type parameter.** `JSX.IntrinsicElements` entries cannot be generic, so a construct whose children are typed by its input (a loop item) cannot be one.
 3. **It joins a closed vocabulary** declared in the `.tsx` host profile (`host-profile.d.ts`), and it passes the capability rule on both surfaces.
 
-Namespaced tag names are standard JSX grammar. TypeScript resolves `<truc:x>` against `IntrinsicElements['truc:x']`, so attribute types, contextually typed function children, and duplicate-attribute errors (TS17001) come free from `tsc`. A lowercase namespaced name cannot collide with PascalCase compose dispatch. The vocabulary extends the existing `truc:` attribute namespace (`truc:pass`, `truc:case`).
+Namespaced tag names are standard JSX grammar. TypeScript resolves `<truc:x>` against `IntrinsicElements['truc:x']`, so attribute types, contextually typed function children, and duplicate-attribute errors (TS17001) come free from `tsc`. A lowercase namespaced name cannot collide with PascalCase compose dispatch. The vocabulary extends the existing `truc:` attribute namespace (`truc:pass`).
 
 **Arms are attributes, not child elements.** TypeScript cannot constrain the count or order of children, so child arms would each need a compiler diagnostic. As attributes, the arms get uniqueness and types from `tsc`, and the children are the primary content.
 
