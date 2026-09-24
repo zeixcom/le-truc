@@ -44,6 +44,7 @@ import { collectSiblingModules, REPO_ROOT } from './corpus-sources'
 import { collectI18n, writeI18nModule, writeI18nReport } from './effects/i18n'
 import type { FileInfo } from './file-signals'
 import { getFilePath, writeFileSafe } from './io'
+import { io } from './runtimes'
 
 /**
  * One compiled component's generated-module span tables (LT-011, `check:corpus`;
@@ -162,6 +163,27 @@ const surfaceOf = (rel: string): VariantSurface =>
 const isVariantSet = (sources: readonly string[]): boolean =>
 	new Set(sources.map(dirname)).size === 1 &&
 	new Set(sources.map(surfaceOf)).size === sources.length
+
+/**
+ * Delete every file under `variantsDir` not named in `keep` (LT-296). A
+ * missing directory — no variant set has ever compiled here — is a no-op.
+ */
+const pruneVariantClients = async (
+	variantsDir: string,
+	keep: ReadonlySet<string>,
+): Promise<void> => {
+	let present: string[]
+	try {
+		present = io.scanGlob('**/*', { cwd: variantsDir })
+	} catch {
+		return
+	}
+	for (const file of present) {
+		if (keep.has(file)) continue
+		await io.removeFile(getFilePath(variantsDir, file))
+		console.log(`🧹 Pruned stale variants/${file}`)
+	}
+}
 
 /* === Exported Functions === */
 
@@ -291,6 +313,9 @@ export const compileCorpus = async (
 
 	const entries: RegistryEntry[] = []
 	const spanInfos: CompiledSpanInfo[] = []
+	// Every variants/ client THIS run writes (LT-296): the directory is
+	// owned by the compile, so anything else in it is pruned below.
+	const variantClients = new Set<string>()
 	// Group the compilable sources by tag — pass 1's visit order preserved —
 	// so a variant set's members compile together (ADR 0039): every member
 	// compiles clean or fails as today, the set's CSS must agree
@@ -366,14 +391,12 @@ export const compileCorpus = async (
 				// directory (`import './form-listbox.client'`), so they climb
 				// one level out of variants/.
 				const clientCode = relocateClientSpecifiers(component.clientCode)
+				const variantFile = `${component.entry.tag}.${surfaceOf(rel)}.client.ts`
 				await writeFileSafe(
-					getFilePath(
-						outDir,
-						'variants',
-						`${component.entry.tag}.${surfaceOf(rel)}.client.ts`,
-					),
+					getFilePath(outDir, 'variants', variantFile),
 					clientCode,
 				)
+				variantClients.add(variantFile)
 				console.log(
 					`· Compiled ${component.entry.tag} from ${rel} — variant set member, not served` +
 						(servedRel
@@ -400,6 +423,13 @@ export const compileCorpus = async (
 			console.log(`✅ Compiled ${entry.tag} from ${rel}`)
 		}
 	}
+
+	// Prune variants/ of every client this run did not write (LT-296): a
+	// dissolved set (a member deleted), a flipped `variantOverrides`, a set
+	// dropped by LTC051, or a member that stopped compiling would otherwise
+	// leave a stale client the component test route's `?surface=` serves
+	// with 200 instead of 404.
+	await pruneVariantClients(getFilePath(outDir, 'variants'), variantClients)
 
 	// ADR 0029 sub-design 3, LT-165: compose contamination is a FIXPOINT over
 	// the whole corpus's compose-read graph, so it can only run here — the

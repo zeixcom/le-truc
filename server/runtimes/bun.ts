@@ -30,6 +30,11 @@ const io: RuntimeIO = {
 		await Bun.write(dest, Bun.file(source))
 	},
 
+	async removeFile(path) {
+		const file = Bun.file(path)
+		if (await file.exists()) await file.delete()
+	},
+
 	scanGlob(pattern, options: GlobScanOptions) {
 		const matched = [...new Bun.Glob(pattern).scanSync({ cwd: options.cwd })]
 		return matched.sort()

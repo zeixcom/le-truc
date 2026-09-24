@@ -237,6 +237,25 @@ describe('dual corpus (ADR 0032 sub-design 6, narrowed by ADR 0039)', () => {
 		).toBe(false)
 	})
 
+	test('a rebuild prunes variants/ clients it did not write (LT-296)', async () => {
+		const outDir = path.join(scratch.path, 'variant-client-pruned')
+		const kept = path.join(outDir, 'variants', 'var-el.tsrx.client.ts')
+		const flipped = path.join(outDir, 'variants', 'var-el.tsx.client.ts')
+		await compileCorpus(variantSet(), outDir)
+		expect(fs.existsSync(kept)).toBe(true)
+		// A flipped override swaps the kept client — the old one goes.
+		await compileCorpus(
+			variantSet(),
+			configAt(outDir, { variantSurface: 'tsrx' }),
+		)
+		expect(fs.existsSync(flipped)).toBe(true)
+		expect(fs.existsSync(kept)).toBe(false)
+		// A dissolved set (the .tsrx member deleted) keeps no variants client.
+		await compileCorpus([memoryFile(VAR_TSX, varTsx('display: block'))], outDir)
+		expect(fs.existsSync(flipped)).toBe(false)
+		expect(fs.readdirSync(path.join(outDir, 'variants'))).toEqual([])
+	})
+
 	test('a variants/ client climbs every relative specifier one level (LT-284)', () => {
 		const code = [
 			"import './child.client'",

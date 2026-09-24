@@ -560,7 +560,9 @@ describe('bare section roots', () => {
 // route must serve exactly the surfaces the corpus carries — availability
 // on disk and response status have to agree. The surface legs need the
 // corpus build (server/generated/) to exist — CI builds it in the
-// typecheck step; locally run `bun run build:corpus` first.
+// typecheck step; locally run `bun run build:corpus` first. Without it
+// they FAIL (LT-296): an early return would pass vacuously in exactly the
+// state where the legs prove nothing.
 
 const COMPONENT_TAG = 'basic-counter'
 const COMPONENT_DIR = path.resolve(ROOT, 'examples/basic/counter')
@@ -597,14 +599,20 @@ const selectedSurface = (): Surface | null => {
 	}
 }
 
-/** A compiled surface is servable when the registry selected it (canonical
- * client) or a variants/ copy of it exists. */
-const servableCompiled = (surface: Surface): boolean =>
-	surface === selectedSurface()
-		? canonicalClientExists()
-		: variantClientExists(surface)
+/** Whether the fixture folder carries an authored source for `surface`. */
+const sourceExists = (surface: Surface): boolean =>
+	fs.existsSync(path.join(COMPONENT_DIR, `${COMPONENT_TAG}.${surface}`))
 
-const corpusBuilt = (): boolean => selectedSurface() !== null
+/** The corpus build's selected surface — the surface legs' precondition,
+ * asserted loudly rather than skipped (LT-296). */
+const requireCorpusBuild = (): Surface => {
+	const surface = selectedSurface()
+	if (!surface)
+		throw new Error(
+			`No corpus build: ${GENERATED_CLIENTS_DIR}/registry.json is missing or has no ${COMPONENT_TAG} entry — run \`bun run build:corpus\` first`,
+		)
+	return surface
+}
 
 describe('component test surface selection', () => {
 	let server: TestServer
@@ -634,7 +642,7 @@ describe('component test surface selection', () => {
 	})
 
 	test('the twin surface is served iff the twin exists', async () => {
-		if (!corpusBuilt()) return // no corpus build — nothing to agree with
+		requireCorpusBuild()
 		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}?surface=ts`)
 		expect(res.status).toBe(twinExists() ? 200 : 404)
 		if (twinExists()) {
@@ -646,13 +654,19 @@ describe('component test surface selection', () => {
 		}
 	})
 
-	test('each compiled surface is served iff its client is on disk', async () => {
-		if (!corpusBuilt()) return
+	test('each compiled surface is served iff its source is authored', async () => {
+		const selected = requireCorpusBuild()
+		expect(sourceExists(selected)).toBe(true)
+		expect(canonicalClientExists()).toBe(true)
 		for (const surface of ['tsrx', 'tsx'] as const) {
+			// The kept variants/ client tracks the source set exactly — a
+			// stale one left by a dissolved set would 200 here (LT-296).
+			if (surface !== selected)
+				expect(variantClientExists(surface)).toBe(sourceExists(surface))
 			const res = await fetch(
 				`${server.url}/test/${COMPONENT_TAG}?surface=${surface}`,
 			)
-			expect(res.status).toBe(servableCompiled(surface) ? 200 : 404)
+			expect(res.status).toBe(sourceExists(surface) ? 200 : 404)
 			if (res.status === 200) {
 				const body = await res.text()
 				expect(body).toContain(
@@ -664,9 +678,7 @@ describe('component test surface selection', () => {
 	})
 
 	test('TEST_SURFACE env override serves the surface page without a query', async () => {
-		if (!corpusBuilt()) return
-		const surface = selectedSurface()
-		if (!surface) return
+		const surface = requireCorpusBuild()
 		process.env.TEST_SURFACE = surface
 		try {
 			const res = await fetch(`${server.url}/test/${COMPONENT_TAG}`)
@@ -692,9 +704,7 @@ describe('component test surface selection', () => {
 	})
 
 	test('the surface module registers the tag exactly once (selected surface)', async () => {
-		if (!corpusBuilt()) return
-		const surface = selectedSurface()
-		if (!surface) return
+		const surface = requireCorpusBuild()
 		const res = await fetch(
 			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=${surface}`,
 		)
@@ -715,7 +725,8 @@ describe('component test surface selection', () => {
 	})
 
 	test('the twin surface module also registers the tag exactly once', async () => {
-		if (!corpusBuilt() || !twinExists()) return
+		requireCorpusBuild()
+		if (!twinExists()) return // no twin authored: the leg above pins the 404
 		const res = await fetch(
 			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=ts`,
 		)
@@ -728,9 +739,14 @@ describe('component test surface selection', () => {
 	})
 
 	test('an on-disk variants client serves its surface module', async () => {
-		if (!corpusBuilt()) return
-		const kept = (['tsrx', 'tsx'] as const).find(s => variantClientExists(s))
+		const selected = requireCorpusBuild()
+		const kept = (['tsrx', 'tsx'] as const).find(
+			s => s !== selected && sourceExists(s),
+		)
+		// A single-surface fixture keeps no variants client; the leg above
+		// pins that nothing stale is served in its place.
 		if (!kept) return
+		expect(variantClientExists(kept)).toBe(true)
 		const res = await fetch(
 			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=${kept}`,
 		)

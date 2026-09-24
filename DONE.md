@@ -30,6 +30,17 @@ entry text: `git log -p -- DONE.md`.
 
 ---
 
+- [x] LT-296: Surface-route hardening: stale `variants/` clients and vacuous surface tests — reviewed ✓
+  **Changed:** `compileCorpus` owns `variants/`: each run deletes every client there it did
+  not write (a dissolved set, a flipped `variantOverrides`, an LTC051-dropped set, a member
+  that stopped compiling). The runtime seam gains `removeFile` (Bun + Node).
+  `serve.test.ts`'s surface legs now throw without a corpus build and pin `?surface=X` → 200
+  iff `basic-counter.X` is authored. Internal tooling, no changelog entry.
+  **Ruling (recorded nowhere else):** the canonical directory is deliberately NOT pruned — the
+  route serves a canonical client only when `registry.json` selects that surface, so a
+  stale canonical file cannot 200. Verified by the owner (2026-09-25): `serve.test.ts` passes
+  with a corpus build and fails without.
+
 - [x] LT-295: Run the variant spec matrix in CI (ADR 0039 s2) — reviewed ✓
   **Changed:** `ci-cd.yml` `test` job gains a "Run variant spec matrix" step
   (`bun run test:variants --no-build`) after "Run tests"; `scripts/test-variants.ts` gains

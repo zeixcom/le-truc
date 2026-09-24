@@ -55,20 +55,6 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
 
 ### Gate and hygiene (first; parallel with each other)
 
-- [ ] LT-296: Surface-route hardening: stale `variants/` clients and vacuous surface tests (LT-284 review follow-up).
-  **Skill:** docs-server-dev
-  **Context:** (a) `compileCorpus` writes `variants/<tag>.<surface>.client.ts` but never
-  prunes the directory. A dissolved variant set (a `.tsx` deleted), or a flipped
-  `variantOverrides`, leaves a stale client, and `?surface=` then serves it with 200
-  instead of 404. Prune `variants/` of every file this compile did not write, the way the
-  canonical artifacts are owned. (b) Every surface leg of `serve.test.ts`'s
-  `component test surface selection` block returns early when the corpus is not built or
-  no variants file exists, so it passes vacuously in exactly the state where it proves
-  nothing. The block's header says CI builds the corpus first, so assert that
-  precondition (fail loudly) instead of returning.
-  **Check:** deleting a set member and rebuilding removes its `variants/` client, and
-  `?surface=` for it → 404; the surface tests fail, not pass, without a corpus build.
-
 - [ ] LT-291: A compiled parent must register a variant set's SERVED surface, not its retained twin (LT-283 review follow-up; ADR 0039). **Gate: before the first wave-4 migration that retains a twin whose tag a compiled component references.**
   **Skill:** le-truc-dev
   **Context:** `compileCorpus` seeds `childImports` from the sibling modules

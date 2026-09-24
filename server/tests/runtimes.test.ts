@@ -119,6 +119,14 @@ describe('nodeIO (LT-267 seam, Node half)', () => {
 		expect(back.charCodeAt(0)).toBe(0x00)
 	})
 
+	test('removeFile deletes a file and tolerates absence', async () => {
+		const path = join(fixtureDir, 'doomed.txt')
+		writeFileSync(path, 'x')
+		await nodeIO.removeFile(path)
+		expect(await nodeIO.fileExists(path)).toBe(false)
+		await nodeIO.removeFile(path)
+	})
+
 	test('fileExists answers files and absence', async () => {
 		expect(
 			await nodeIO.fileExists(join(fixtureDir, 'nested', 'dir', 'file.txt')),

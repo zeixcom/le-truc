@@ -14,6 +14,7 @@ import {
 	copyFile as copyFileFs,
 	mkdir,
 	readFile,
+	rm,
 	writeFile,
 } from 'node:fs/promises'
 import { dirname } from 'node:path'
@@ -46,6 +47,10 @@ const io: RuntimeIO = {
 	async copyFile(source, dest) {
 		await mkdir(ensureParentDir(dest), { recursive: true })
 		await copyFileFs(source, dest)
+	},
+
+	async removeFile(path) {
+		await rm(path, { force: true })
 	},
 
 	scanGlob(pattern, options: GlobScanOptions) {

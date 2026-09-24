@@ -51,6 +51,8 @@ export type RuntimeIO = {
 	writeTextFile(path: string, content: string): Promise<void>
 	/** Copy a file byte-for-byte (binary-safe), creating parent directories. */
 	copyFile(source: string, dest: string): Promise<void>
+	/** Delete a file; a missing file is not an error. */
+	removeFile(path: string): Promise<void>
 	/**
 	 * Every FILE the glob selects under `cwd`, as sorted relative paths with
 	 * forward slashes. Dotfiles and directories inside dot-directories never
