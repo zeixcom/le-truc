@@ -79,6 +79,7 @@ export type DiagnosticCode =
 	| 'LTC050' // the factory-context annotation's surface disagrees with `config.formAssociated` (LT-209) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC051' // a variant set's compiled members disagree on CSS (ADR 0039, LT-283) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC052' // a server-data @for carries a `key` clause, which only a reactive List's reconcile() reads (ADR 0040 s1, LT-286) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC053' // an element tag that is not a static name: a `.tsrx` dynamic `<{expr}>` tag, or a `.tsx` namespaced/member tag the front end does not recognize (LT-213, scope A0) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -175,6 +176,33 @@ export const diagnostic = {
 		error(
 			'LTC052',
 			'This `@for` iterates server data but has a `key` clause — only a `@for` over a declared `createList(…)` signal reconciles its items by key, so this key has no effect. Remove the `key` clause, or declare the items with `createList(…)` if they must be keyed.',
+			lineOf(source, offset),
+		),
+
+	/**
+	 * An element whose tag is not a static name (LT-213, owner ruling
+	 * 2026-09-24: scope A0). `.tsrx`: `@tsrx/core` parses `<{expr}>…</{expr}>`
+	 * into a dynamic-name container that the lowering used to flatten to
+	 * `tag: ""` with no diagnostic. `.tsx`: a namespaced (`<truc:element>`)
+	 * or member (`<a.b>`) tag the front end does not recognize — `tsc` would
+	 * reject the missing `IntrinsicElements` entry, but the build does not
+	 * necessarily run `tsc`. ADR 0028 tier 1 (Prevented): statically
+	 * decidable from the tag node alone, no runtime half. The recorded
+	 * server-known-tag design (TODO LT-213) is built only when a migration
+	 * needs it.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-09-24).
+	 */
+	unsupportedElementTag: (
+		source: string,
+		offset: number | undefined,
+		spelled: string,
+		conditional: string,
+	) =>
+		error(
+			'LTC053',
+			`The tag \`<${spelled}>\` is not a static element name — the compiler supports only static tag names, so it cannot make an element from this tag. Choose between static tags with a conditional, for example \`${conditional}\`.`,
 			lineOf(source, offset),
 		),
 

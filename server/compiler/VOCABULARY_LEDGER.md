@@ -111,7 +111,8 @@ variant set (one source per surface, one base name, one directory) is the
 legal multi-source shape, and every other collision still fails the build
 naming all files.
 `LTC052` (a server-data `@for` carries a `key` clause — ADR 0040 s1, LT-286)
-follows.
+follows, then `LTC053` (an element tag that is not a static name — `.tsrx`'s
+`<{expr}>`, `.tsx`'s unrecognized namespaced or member tag — LT-213).
 
 ## 5. Kept, with the surface named correctly
 

@@ -69,6 +69,7 @@ const TSX_SURFACE_WORDING: SurfaceWording = {
 	lazyChild: 'A lazy child expression',
 	controlFlow: 'A control-flow expression (ternary/map/boundary)',
 	composedPosition: 'map output',
+	conditionalTag: '{level === 2 ? <h2>…</h2> : <h3>…</h3>}',
 }
 
 /** Whether `node` is a JSX value (`<x/>` or `<>…</>`). */

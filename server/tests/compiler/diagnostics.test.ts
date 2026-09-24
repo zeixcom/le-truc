@@ -321,6 +321,68 @@ import { deriveList } from '@zeix/le-truc'`
 	})
 })
 
+describe('non-static element tags (LTC053, LT-213)', () => {
+	test('.tsrx dynamic <{expr}> tag is LTC053, never a tag: "" element', () => {
+		const source = `export function C({ level }: { level: string })
+	@{
+		<>
+			<c-el>
+				<{level}>Hi</{level}>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC053')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.line).toBe(5)
+		expect(hit?.message).toContain('<{level}>')
+		expect(hit?.message).toContain('@else')
+	})
+
+	test('.tsx unrecognized namespaced tag <truc:element> is LTC053', () => {
+		const source = `export function C({ level }: { level: string }) {
+	return (
+		<>
+			<c-el>
+				<truc:element tag={level}>Hi</truc:element>
+			</c-el>
+			<style>{css\`c-el { color: red }\`}</style>
+		</>
+	)
+}`
+		const { component, diagnostics } = compileComponentTsx(
+			source,
+			'c.tsx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC053')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.line).toBe(5)
+		expect(hit?.message).toContain('<truc:element>')
+		expect(hit?.message).toContain('? <h2>')
+	})
+
+	test('compose dispatch is unaffected: a PascalCase tag is not LTC053', () => {
+		const source = fs.readFileSync(
+			path.join(ROOT, 'examples/module/list/module-list.tsrx'),
+			'utf8',
+		)
+		const { diagnostics } = compileComponent(
+			source,
+			'module-list.tsrx',
+			new Set(['basic-button']),
+		)
+		expect(diagnostics.some(d => d.code === 'LTC053')).toBe(false)
+	})
+})
+
 describe('the loop empty arm (LT-212)', () => {
 	const eachSource = (
 		arm: string,

@@ -1340,6 +1340,10 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   2026-09-24. BACKLOG P1's Tech Writer batch item 5 (the boundary diagnostic wordings)
   now covers the `truc:try` copy instead. Independent of LT-276 (arm mechanism) but
   touches the same goldens — land either first and refresh.
+  **Handoff from LT-213 (2026-09-24):** LTC053 in `lower-shared.ts`'s `lowerElement`
+  currently rejects every tag `jsxName` cannot flatten, namespaced ones included. Lower
+  `truc:try` in `lower-tsx.ts`'s dispatch before it reaches `lowerElement`, or exempt it
+  there, so that any other `truc:*` name stays LTC053.
   **Check:** `grep -rn "boundary(" server spike` is empty outside history; parity suite
   green; compile-warning baseline 0.
 

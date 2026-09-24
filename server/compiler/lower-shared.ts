@@ -61,6 +61,8 @@ export type SurfaceWording = {
 	controlFlow: string
 	/** Where a composed element is illegal (the non-child-list context). */
 	composedPosition: string
+	/** The conditional spelling that picks between two static tags (LTC053). */
+	conditionalTag: string
 }
 
 /* === Condition validation === */
@@ -392,7 +394,22 @@ export const lowerElement = (
 	wording: SurfaceWording,
 ): TemplateNode & { kind: 'element' } => {
 	const opening = element.openingElement
-	const tag = jsxName(isNode(opening) ? opening.name : null) ?? ''
+	const tagNode = isNode(opening) ? opening.name : null
+	const tag = jsxName(tagNode) ?? ''
+	// LTC053 (LT-213): a tag that is not a plain identifier — `.tsrx`'s
+	// dynamic `<{expr}>` container, `.tsx`'s namespaced or member name —
+	// has no static element to lower; `jsxName` returns null for all of
+	// them. The error fails the compile, so the `tag: ''` placeholder
+	// returned below never reaches an emitted component.
+	if (tag === '')
+		ctx.diagnostics.push(
+			diagnostic.unsupportedElementTag(
+				ctx.source,
+				element.start,
+				isNode(tagNode) ? text(ctx.source, tagNode) : '?',
+				wording.conditionalTag,
+			),
+		)
 	if (/^[A-Z]/.test(tag))
 		ctx.diagnostics.push(
 			diagnostic.composedElementUnsupported(

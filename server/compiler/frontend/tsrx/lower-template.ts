@@ -54,6 +54,7 @@ export const TSRX_SURFACE_WORDING: SurfaceWording = {
 	lazyChild: 'A lazy child (&{expr})',
 	controlFlow: 'A control-flow directive (@if/@switch/@try)',
 	composedPosition: '@for output',
+	conditionalTag: '@if (level === 2) { <h2>…</h2> } @else { <h3>…</h3> }',
 }
 
 /* === Condition validation === */

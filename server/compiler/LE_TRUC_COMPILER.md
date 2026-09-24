@@ -394,7 +394,7 @@ member.
 
 | Kind | Payload | Notes |
 | --- | --- | --- |
-| `element` | `tag, attrs, children` | Lowered JSX element; `<style>` becomes a placeholder |
+| `element` | `tag, attrs, children` | Lowered JSX element; `<style>` becomes a placeholder. `tag` is always a static name: a `.tsrx` dynamic `<{expr}>` tag or an unrecognized `.tsx` namespaced/member tag is a compile error (LTC053, tier 1 Prevented) |
 | `text` | `value` | JSX text after whitespace collapse |
 | `expr` | `expr, lazy` | A child expression; `lazy` marks it reactive (decided by `reactivity.ts`: a lexically visible signal or `host.<prop>` read lifts; an expression over server args stays static; a signal escaping into an opaque call is LTC017) |
 | `if` | `test, then, alternate` | Server-known condition; server renders the taken branch, client addresses both roots |

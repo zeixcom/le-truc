@@ -79,37 +79,6 @@ sandbox has.
 
 ---
 
-- [ ] LT-213: Dynamic `<{expression}>` tags (LT-210 item 2, re-anchored). **Gate: before P5's first wave-4 migration; not urgent.**
-  **Skill:** le-truc-dev; Tech Writer reviews the new LTC copy
-  **Context:** **Owner ruling 2026-09-24: scope A0 — reject on both surfaces now; the
-  design below is recorded, built only when a migration needs it** (no corpus
-  component chooses its tag; `{level === 2 ? <h2/> : <h3/>}` already covers the
-  server-arg case). The live defect: `@tsrx/core` 0.2.3 parses `<{expr}>…</{expr}>`
-  and sets `isDynamic` on the element node, which `frontend/tsrx/lower-template.ts`
-  never reads — it lowers to `{ kind: 'element', tag: "" }` with no diagnostic
-  (verified 2026-09-24 against a `basic-button.tsrx` copy). Fix: a new LTC code
-  (next free, LTC053) raised on any `isDynamic` element — **channel compiler, tier 1
-  Prevented**, statically decidable, no runtime half — whose copy says dynamic tags are
-  not supported yet and names the conditional spelling as the workaround. In `.tsx`,
-  `<truc:element>` has no `IntrinsicElements` entry yet, so `tsc` rejects it. The build
-  does not necessarily run `tsc`, so the `.tsx` front end also raises LTC053 on a
-  namespaced tag name it does not recognize (once LT-303 lands, only `truc:try` is
-  recognized). **The recorded design, for when it is built:** (1) only a server-known tag
-  expression (a literal, a server arg, `i18n`) is admitted — it folds in the Folded
-  tier and the client sees a static element; a host/DOM, reactive or unresolvable tag
-  expression is rejected (tier 1 Prevented: the client never creates structure, and
-  server args are the build-time configuration channel); (2) values are HTML element
-  names only — no dashed names, so compose stays PascalCase-only and `composesTags`
-  stays static; `script`/`style`/`template`/`iframe` and void-with-children are
-  rejected at fold (build error, tier 1); (3) `first()`/CSS address the element by
-  class/id/`data-*`, never by tag (LT-127's discriminator rule); (4) `.tsx` spells it
-  `<truc:element tag={…}>` (namespaced intrinsic, `tag` typed as the allowed union)
-  — the React `const Tag = …; <Tag>` idiom is rejected because it collides with
-  PascalCase compose dispatch; (5) one IR change, `tag: { kind: 'static', name } |
-  { kind: 'server', exprText }`, fed by both front ends.
-  **Acceptance:** a negative fixture per surface (`.tsrx` `<{expr}>` → LTC053, no
-  `tag: ""` element reaches the IR); compose dispatch unaffected.
-
 - [ ] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding). **Land before P5 adds composition across tiers. Gate discharged: LT-239 kept the Simulated tier ([ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s1), so this runs.**
   **Skill:** docs-server-dev
   **Context:** `server/effects/simulate.ts` loads a client module for each Simulated-tier

@@ -58,6 +58,30 @@ entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text
   equivalence is CSS-only). **Gate-reading rule, recorded nowhere else:** a handoff's
   `check:corpus` claim is its exit code.
 
+- [x] LT-213: Dynamic `<{expression}>` tags — reject on both surfaces (scope A0) — reviewed ✓
+  **Changed (for Changelog Keeper):** new compile error **LTC053**. An element tag that is not
+  a static name used to lower silently to `tag: ""`. Now it fails the compile on both
+  surfaces: the `.tsrx` dynamic `<{expr}>…</{expr}>`, and in `.tsx` any namespaced
+  (`<truc:element>`) or member (`<a.b>`) tag. It is raised in the shared `lowerElement`,
+  so host root, nested, `@for`/`map` bodies and branch arms are all covered. The fix-it
+  names each surface's conditional spelling: `@if … @else` in `.tsrx` (the ternary is
+  TSRX022 there), the ternary in `.tsx` (`SurfaceWording.conditionalTag`). Compose
+  dispatch is unchanged.
+  **Ruling (owner, 2026-09-24):** scope A0 — reject now. The server-known-tag design is
+  recorded but built only when a migration needs it: (1) only a server-known tag
+  expression (literal, server arg, `i18n`), folded so the client sees a static element;
+  (2) HTML element names only — no dashed names, no `script`/`style`/`template`/`iframe`,
+  no void-with-children; (3) `first()`/CSS address it by class/id/`data-*`, never by tag;
+  (4) `.tsx` spells it `<truc:element tag={…}>`, not React's `const Tag = …; <Tag>`
+  (collides with PascalCase compose dispatch); (5) IR `tag: { kind: 'static', name } |
+  { kind: 'server', exprText }`.
+  **Review (Architect, 2026-09-24):** approved. Channel compiler, tier 1 Prevented, as
+  specified. A probe confirmed that host-root, member and map-body placements all raise
+  LTC053. Live handoffs: **LT-303** must exempt `truc:try` from LTC053 in
+  `lower-shared.ts` (recorded there). **Copy (Tech Writer, 2026-09-24):** final LTC053
+  wording in `diagnostics.ts`, plus new rows in `errors.md` and the `LE_TRUC_COMPILER.md`
+  `TemplateNode` table.
+
 - [x] LT-212: `@for`'s `@empty` arm, on both surfaces and both loop paths — reviewed ✓
   **Changed (for Changelog Keeper):** `.tsrx` `@for (…) { … } @empty { … }` and the `.tsx`
   empty-state idiom `{xs.length === 0 ? <empty/> : xs.map(…)}` now compile. Before this, `.tsrx`
