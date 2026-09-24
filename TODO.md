@@ -141,7 +141,7 @@ sandbox has.
   **Not run here:** `bun run test:variants` and `bun run test` (no port binding in the
   sandbox). Run them to close the Check.
 
-- [ ] LT-294: Point the CEM at the corpus output directory — it still globs the pre-LT-255 `server/generated/tsrx/` (review finding, 2026-09-23).
+- [x] LT-294: Point the CEM at the corpus output directory — it still globs the pre-LT-255 `server/generated/tsrx/` (review finding, 2026-09-23). — done ✓
   **Skill:** docs-server-dev
   **Context:** `custom-elements-manifest.config.mjs` globs `server/generated/tsrx/*.client.ts`.
   Since LT-255 (609923e0) the corpus writes to `server/generated/components/`
@@ -155,6 +155,16 @@ sandbox has.
   **Check:** after deleting `server/generated/tsrx/`, `bun run build:cem` and `verify-cem`
   pass; the regenerated manifest's paths name `server/generated/components/`; the manifest
   diff is otherwise empty.
+  **Changed:** `custom-elements-manifest.config.mjs` — the client glob is now
+  `${corpusOutDir}/*.client.ts`, where `corpusOutDir` is `loadCorpusConfig().outDir` asked of
+  `server/corpus-sources.ts` via a `bun -e` subprocess (the loader is TypeScript and `cem` runs
+  under Node), so a `le-truc.config.json` `outDir` is honoured too; header comment updated
+  (also the stale `scripts/build-tsrx.ts` → `build-corpus.ts`). Verified with
+  `server/generated/tsrx/` deleted: `build:cem` + `verify-cem` pass (70 declarations), all 66
+  generated-module paths name `server/generated/components/`. Note: `custom-elements.json` is
+  gitignored, not committed, so there is no manifest diff to review. Two example demo comments
+  (`form-radiogroup.html`, `form-colorgraph.html`) still name `server/generated/tsrx/` — out of
+  this skill's scope.
 
 - [ ] LT-285: The three-spelling exemplar — restore `basic-counter`'s `.ts` twin as a variant. **The LT-238 exit criterion.**
   **Skill:** le-truc-dev

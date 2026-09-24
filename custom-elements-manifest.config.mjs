@@ -1,11 +1,17 @@
+import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { relative, resolve } from 'node:path'
 import { leTrucPlugin } from '@zeix/cem-plugin-le-truc'
 
 let typeChecker
 
-// The migrated corpus (.tsrx components) is read from its GENERATED clients
-// in server/generated/tsrx/ — the plugin extracts the same declarations from
+// The compiled corpus (.tsrx/.tsx components) is read from its GENERATED
+// clients in the corpus output root — server/generated/components/ by
+// default, or `outDir` in a le-truc.config.json (LT-255, LT-294). The root is
+// asked of the corpus configuration itself (`loadCorpusConfig()`, run under
+// Bun because the loader is TypeScript), never hard-coded here: a second
+// copy of the path is what left this glob on the pre-LT-255 tsrx/ directory
+// after the rename. The plugin extracts the same declarations from
 // the generated defineComponent() shape (ADR 0023, LT-006). Since the site
 // cutover (LT-092) the hand-written .ts twins are deleted per component, so
 // nearly all exclusions are gone — main.ts imports the generated clients
@@ -22,9 +28,22 @@ let typeChecker
 // whose stem has a same-directory .tsrx or .tsx sibling), so the next
 // variant set needs no config edit. verify-cem.ts's duplicate-tag check is
 // the acceptance.
-// Run `bun run scripts/build-tsrx.ts` (or build:docs / build:examples:js,
+// Run `bun run scripts/build-corpus.ts` (or build:docs / build:examples:js,
 // which both sequence the compiler first) before `cem analyze` — the
 // generated output is gitignored.
+
+/** The corpus output root, relative to this config — from the corpus config. */
+const corpusOutDir = relative(
+	process.cwd(),
+	execFileSync(
+		'bun',
+		[
+			'-e',
+			"import { loadCorpusConfig } from './server/corpus-sources'; process.stdout.write(loadCorpusConfig().outDir)",
+		],
+		{ encoding: 'utf8' },
+	),
+)
 
 /** A hand-written .ts twin of a compiled sibling — a variant set's record. */
 const isVariantTwin = glob =>
@@ -32,7 +51,7 @@ const isVariantTwin = glob =>
 	['.tsrx', '.tsx'].some(ext => existsSync(glob.replace(/\.ts$/, ext)))
 
 export default {
-	globs: ['examples/**/*.ts', 'server/generated/tsrx/*.client.ts'],
+	globs: ['examples/**/*.ts', `${corpusOutDir}/*.client.ts`],
 	exclude: ['**/*.spec.ts', '**/*.test.ts'],
 	outdir: '.',
 	plugins: [leTrucPlugin(() => typeChecker)],
