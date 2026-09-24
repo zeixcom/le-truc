@@ -63,6 +63,14 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Run variant spec matrix
+        # ADR 0039 s2: the spec is the runtime equivalence contract across a
+        # variant set's spellings. `bun run test` covers only the served
+        # surface; this reruns each variant set's spec per spelling (.ts twin,
+        # .tsrx, .tsx). Port 3000 is free again once the previous step's
+        # webServer exits; that step already built the examples.
+        run: bun run test:variants --no-build
+
       - name: Run server tests
         run: bun run test:server
 

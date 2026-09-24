@@ -55,36 +55,6 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
 
 ### Gate and hygiene (first; parallel with each other)
 
-- [x] LT-299: Hygiene sweep from the 2026-09-24 review (LT-286, LT-294, NOTES). — done
-  **Skill:** le-truc-dev
-  **Context:** four small items, none behavior-bearing:
-  (a) `bunx biome check ./server` is red on HEAD because of an unused `tag` parameter at
-  `server/tests/effects/page-render.test.ts:232` (the `resolveModule` callback, dating from
-  LT-194). Drop the parameter or rename it `_tag`, so the server lint gate reads green again;
-  (b) `analysis/effects.ts` `emitTopEffects` calls `loopFor(fx, node)` twice and casts
-  the second call `as ForIR`. Bind it once and let the null check narrow it. This is the
-  last `ForIR` cast after LT-286, and it doesn't conflict with LT-289's rewrite;
-  (c) the demo comments in `examples/form/radiogroup/form-radiogroup.html` and
-  `examples/form/colorgraph/form-colorgraph.html` still name `server/generated/tsrx/`.
-  Since LT-255 the path is `server/generated/components/` (LT-294 residue);
-  (d) `ir.ts`'s `ForIRBase.emptyArm` doc still says "No front end populates it yet: always
-  `null`". LT-212 made both front ends produce it; state the shared-roots placement ADR 0040
-  s1 records instead (ADR 0040 acceptance review, 2026-09-24).
-  **Check:** `bunx biome check ./server` exits 0; goldens and parity byte-identical;
-  typecheck 0.
-  **Done (2026-09-25):** (a) already green on HEAD — the parameter already reads `_tag`, no change; (b) `emitTopEffects` binds `loopFor` once, the `ForIR` cast is gone; (c) both demo comments now name `server/generated/components/`; (d) the `emptyArm` doc states both front ends and the shared-roots placement (ADR 0040 s1). biome `./server` 0, tsc 0, `bun test server/tests` 1739 pass — the 14 failures are the dev-server route suites failing to bind a port under the sandbox, identical with the change stashed.
-
-- [ ] LT-295: Run the variant spec matrix in CI (LT-284 review follow-up; ADR 0039 s2).
-  **Skill:** docs-server-dev
-  **Context:** ADR 0039 s2 makes the spec the runtime equivalence contract across a
-  variant set's spellings, but `ci-cd.yml` runs only `bun run test`. That exercises the
-  default page, so only the selected surface is covered. A regression in the twin or the
-  unserved compiled member would pass CI. Add a `bun run test:variants` step after
-  `bun run test`, which frees port 3000 when its webServer exits. The runner rebuilds
-  examples itself; skipping that duplicate build in CI (a `--no-build` flag) is optional.
-  **Check:** CI runs the matrix for every variant set; a deliberately broken twin fails
-  the job.
-
 - [ ] LT-296: Surface-route hardening: stale `variants/` clients and vacuous surface tests (LT-284 review follow-up).
   **Skill:** docs-server-dev
   **Context:** (a) `compileCorpus` writes `variants/<tag>.<surface>.client.ts` but never

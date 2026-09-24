@@ -20,6 +20,7 @@
  *   bun run test:variants                  # every variant set, every surface
  *   bun run test:variants basic-counter    # one component
  *   bun run test:variants --project=Chromium
+ *   bun run test:variants --no-build       # reuse the examples build (CI)
  */
 
 import { type ChildProcess, spawn } from 'node:child_process'
@@ -100,7 +101,11 @@ const stopServer = (server: ChildProcess): Promise<void> =>
 const main = async () => {
 	// `bun run` drops a bare `--`, so flags are told apart by shape: a
 	// `--flag` goes to Playwright, anything else names a component
-	const args = process.argv.slice(2).filter(arg => arg !== '--')
+	// `--no-build` is the runner's own flag: skip `build:examples` when the
+	// caller has just built them (CI runs this right after `bun run test`)
+	const argv = process.argv.slice(2).filter(arg => arg !== '--')
+	const noBuild = argv.includes('--no-build')
+	const args = argv.filter(arg => arg !== '--no-build')
 	const filters = args.filter(arg => !arg.startsWith('-'))
 	const playwrightArgs = args.filter(arg => arg.startsWith('-'))
 	if (playwrightArgs.some(arg => !/^--[a-z][a-z0-9-]*(=.+)?$/.test(arg))) {
@@ -129,7 +134,8 @@ const main = async () => {
 	console.log(
 		`🧬 Variant sets: ${sets.map(s => `${s.tag} (${s.surfaces.join('/')})`).join(', ')}`,
 	)
-	if ((await run('bun', ['run', 'build:examples'])) !== 0) process.exit(1)
+	if (!noBuild && (await run('bun', ['run', 'build:examples'])) !== 0)
+		process.exit(1)
 
 	const failed: Surface[] = []
 	for (const surface of SURFACES) {

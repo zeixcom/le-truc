@@ -54,7 +54,7 @@ The system has two cooperating halves — a **reactive build pipeline** and an *
 | `build:examples` | `bun run build:examples:js && bun run build:examples:css` | N/A | No | N/A |
 | `test` | `bun test src/tests && node node_modules/.bin/playwright test examples` | N/A | N/A | N/A |
 | `test:component` | `bun scripts/test-component.ts <name>` | N/A | N/A | N/A |
-| `test:variants` | `bun scripts/test-variants.ts [<name>] [--flag]` | N/A | N/A | N/A |
+| `test:variants` | `bun scripts/test-variants.ts [<name>] [--no-build] [--flag]` | N/A | N/A | N/A |
 | `test:server` | `bun test server/tests` | N/A | N/A | N/A |
 | `test:server:watch` | `bun test server/tests --watch` | N/A | N/A | N/A |
 

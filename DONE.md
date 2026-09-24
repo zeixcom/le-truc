@@ -30,6 +30,22 @@ entry text: `git log -p -- DONE.md`.
 
 ---
 
+- [x] LT-295: Run the variant spec matrix in CI (ADR 0039 s2) — reviewed ✓
+  **Changed:** `ci-cd.yml` `test` job gains a "Run variant spec matrix" step
+  (`bun run test:variants --no-build`) after "Run tests"; `scripts/test-variants.ts` gains
+  `--no-build` (runner-owned, not forwarded to Playwright). Internal tooling, no changelog entry.
+  **Open verification (recorded nowhere else):** not run locally, because the agent sandbox cannot bind
+  a port. CI triggers only on pushes and PRs to `main`/`next`, not on `v3`, so the first proof
+  is the next PR's run. It must list all five sets (basic-counter, basic-pluralize,
+  form-combobox, form-listbox, module-codeblock), and a throwaway broken `.ts` twin must fail
+  the job on surface "ts". Every migration in this iteration (LT-098–LT-103) adds a set, so
+  its handoff's `test:variants` claim also stands as a local proof of the runner.
+
+- [x] LT-299: Hygiene sweep from the 2026-09-24 review — reviewed ✓
+  **Changed:** `emitTopEffects` drops the last `as ForIR` cast; `ForIRBase.emptyArm` doc now
+  states both front ends and ADR 0040 s1's shared-roots placement; two demo comments point to
+  `server/generated/components/`. Item (a) needed no change (`biome check ./server` already 0).
+
 - [x] LT-207: Stop the simulation realm's dependency-wait timers from leaking past teardown — reviewed ✓
   **Ruling (recorded nowhere else):** timer ownership is process-wide, not realm-scoped — ANY
   host timer scheduled while a realm is open is cancelled at `dispose()`. That is safe because
