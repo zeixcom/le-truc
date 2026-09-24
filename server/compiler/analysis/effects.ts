@@ -1515,8 +1515,8 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 		return
 	}
 	if (!isElement(node)) return
-	if (node !== component.root && loopFor(fx, node)) {
-		const loop = loopFor(fx, node) as ForIR
+	const loop = node !== component.root ? loopFor(fx, node) : null
+	if (loop) {
 		if (loop.kind === 'reconcile') {
 			const plan = reconcilePlans.get(loop)
 			if (plan) effects.push({ kind: 'reconcile', for: plan })

@@ -55,7 +55,7 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
 
 ### Gate and hygiene (first; parallel with each other)
 
-- [ ] LT-299: Hygiene sweep from the 2026-09-24 review (LT-286, LT-294, NOTES).
+- [x] LT-299: Hygiene sweep from the 2026-09-24 review (LT-286, LT-294, NOTES). — done
   **Skill:** le-truc-dev
   **Context:** four small items, none behavior-bearing:
   (a) `bunx biome check ./server` is red on HEAD because of an unused `tag` parameter at
@@ -72,6 +72,7 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   s1 records instead (ADR 0040 acceptance review, 2026-09-24).
   **Check:** `bunx biome check ./server` exits 0; goldens and parity byte-identical;
   typecheck 0.
+  **Done (2026-09-25):** (a) already green on HEAD — the parameter already reads `_tag`, no change; (b) `emitTopEffects` binds `loopFor` once, the `ForIR` cast is gone; (c) both demo comments now name `server/generated/components/`; (d) the `emptyArm` doc states both front ends and the shared-roots placement (ADR 0040 s1). biome `./server` 0, tsc 0, `bun test server/tests` 1739 pass — the 14 failures are the dev-server route suites failing to bind a port under the sandbox, identical with the change stashed.
 
 - [ ] LT-295: Run the variant spec matrix in CI (LT-284 review follow-up; ADR 0039 s2).
   **Skill:** docs-server-dev

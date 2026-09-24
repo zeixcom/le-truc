@@ -363,9 +363,14 @@ type ForIRBase = {
 	output: TemplateNode & { kind: 'element' }
 	node: AstNode
 	/**
-	 * Reserved for the `.tsrx` `@empty` arm (LT-212; ADR 0040 s1) — rendered
-	 * when the iterable is empty, kept on the toggle path out of the keyed arm
-	 * space (ADR 0037 s5). No front end populates it yet: always `null`.
+	 * The empty arm (LT-212; ADR 0040 s1) — `.tsrx` `@empty`, or the `.tsx`
+	 * `{xs.length === 0 ? <empty/> : xs.map(…)}` idiom — rendered when the
+	 * iterable is empty, kept on the toggle path out of the keyed arm space
+	 * (ADR 0037 s5); `null` when the loop has none. Its roots are shared, not
+	 * moved: they also sit in the template tree as `output`'s following
+	 * siblings, so selector, id and prose checks cover them; the server
+	 * emitter skips them in its plain walk (`emptyArmNodes`) and renders them
+	 * from the loop.
 	 */
 	emptyArm: TemplateNode[] | null
 }
