@@ -11,11 +11,18 @@ import { describe, expect, test } from 'bun:test'
 import { InvalidSelectorError, MissingElementError } from '../errors'
 import {
 	createElementsMemo,
+	type ElementFromSelector,
 	extractAttributes,
 	makeElementQueries,
 	query,
 	queryAll,
 } from '../helpers/dom'
+
+/** Compile-time equality: `true` only when `A` and `B` are identical. */
+type Equal<A, B> =
+	(<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+		? true
+		: false
 
 const makeParent = (
 	querySelector: (selector: string) => Element | null = () => null,
@@ -329,5 +336,32 @@ describe('resolveDependencies defers for a registered-but-uninitialized child', 
 		} finally {
 			;(globalThis as any).customElements = originalCustomElements
 		}
+	})
+})
+
+/* === ElementFromSelector (type-level; enforced by tsc) === */
+
+describe('ElementFromSelector ignores pseudo-class arguments (LT-096)', () => {
+	test('a descendant :not() exclusion keeps the subject tag', () => {
+		// The compiler emits `button:not(child-tag *)` when a composed child
+		// renders a matching element; the space inside the argument must not
+		// read as a descendant combinator.
+		const excluded: Equal<
+			ElementFromSelector<'button:not(basic-button *)'>,
+			HTMLButtonElement
+		> = true
+		expect(excluded).toBe(true)
+	})
+
+	test('a comma inside the argument is not a selector list', () => {
+		const list: Equal<
+			ElementFromSelector<'p:not(a-el *, b-el *)'>,
+			HTMLParagraphElement
+		> = true
+		const union: Equal<
+			ElementFromSelector<'input:is(.a, .b), textarea'>,
+			HTMLInputElement | HTMLTextAreaElement
+		> = true
+		expect(list && union).toBe(true)
 	})
 })

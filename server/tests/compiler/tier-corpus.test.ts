@@ -112,6 +112,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'form-spinbutton',
 				'form-textbox',
 				'form-tokenbox',
+				'module-codeblock',
 				'module-list',
 				'module-tabgroup',
 			],

@@ -9,6 +9,7 @@
  */
 
 import { analyzeClient } from './analysis/plan'
+import { renderedShapesOf } from './analysis/selectors'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from './emit-paths'
@@ -160,6 +161,7 @@ export const compileFromIR = (
 				langArgDefault: component.langArgDefault,
 				i18nMessages: component.i18nMessages,
 				caseType: component.caseType,
+				renderedShapes: renderedShapesOf(component),
 				composesTags: composeRegistry
 					? [
 							...new Set(

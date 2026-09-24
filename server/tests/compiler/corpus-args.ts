@@ -124,6 +124,13 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	'card-blogpost': { children: 'An excerpt from the post.' },
 	'card-callout': { children: 'Heads up' },
 	'card-collapsible': { title: 'Details' },
+	'module-codeblock': {
+		id: 'codeblock-demo',
+		language: 'ts',
+		file: 'demo.ts',
+		collapsed: true,
+		children: '<span class="line">const a = 1</span>',
+	},
 	'basic-button': { label: 'Add' },
 	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
 }

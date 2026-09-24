@@ -499,3 +499,28 @@ describe('captured diagnostics survive an early throw (LT-188)', () => {
 		expect(printed.join('\n')).not.toContain('aborted')
 	})
 })
+
+describe('the demo markup path covers both authored surfaces (LT-096)', () => {
+	test('a .tsx source reads its sibling .html, not itself', async () => {
+		const { realm } = fakeRealm()
+		const read: string[] = []
+		const tsx = {
+			...entry('x-tsx', 'simulated'),
+			source: 'examples/fake/x-tsx/x-tsx.tsx',
+		} as RegistryEntry
+		await simulateCorpus({
+			registry: registryOf(tsx, entry('x-tsrx', 'simulated')),
+			root: '/repo',
+			createRealm: () => realm,
+			readMarkup: async subject => {
+				read.push(subject.markupPath)
+				return `<${subject.tag}></${subject.tag}>`
+			},
+			log: () => {},
+		})
+		expect(read).toEqual([
+			'/repo/examples/fake/x-tsx/x-tsx.html',
+			'/repo/examples/fake/x-tsrx/x-tsrx.html',
+		])
+	})
+})

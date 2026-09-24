@@ -22,7 +22,7 @@
  *   functions and stylesheets through this file.
  */
 
-import type { ExposeKind } from './ir'
+import type { ExposeKind, RenderedShape } from './ir'
 import type { SuppressedSite } from './simulation/contract.ts'
 import type { EvaluationTier, RoutingSignal } from './tier'
 
@@ -75,6 +75,16 @@ export type RegistryEntry = {
 	 * compiler has to hand it down explicitly.
 	 */
 	composesTags: string[]
+	/**
+	 * Every element this component's template can render (LT-096), for the
+	 * PARENT's selector engine: a composing parent's synthesized `first()`
+	 * query runs over the whole subtree, the child's markup included, so a
+	 * candidate that one of these shapes could match is not unique. Composed
+	 * grandchildren appear as `compose` shapes and are resolved through the
+	 * registry, so the list is complete from the discovery pass on. Optional
+	 * for hand-built entries; an entry without it constrains nothing.
+	 */
+	renderedShapes?: RenderedShape[]
 	/**
 	 * Which server-evaluation mechanism renders this component's initial
 	 * HTML (ADR 0029, LT-165), and why it was routed there.

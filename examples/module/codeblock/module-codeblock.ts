@@ -30,13 +30,18 @@ export default defineComponent<ModuleCodeblockProps>(
 		on(overlay, 'click', () => ({ collapsed: false }))
 
 		const copy = first('basic-button.copy')
+		// A raw EffectDescriptor only runs (and cleans up) when registered
+		// through an effect helper — called bare it is discarded (LT-096).
 		if (copy)
-			copyToClipboard(code, copy, {
-				success: copy.getAttribute('copy-success') || 'Copied!',
-				error:
-					copy.getAttribute('copy-error') ||
-					'Error trying to copy to clipboard!',
-			})
+			watch(
+				() => true,
+				copyToClipboard(code, copy, {
+					success: copy.getAttribute('copy-success') || 'Copied!',
+					error:
+						copy.getAttribute('copy-error') ||
+						'Error trying to copy to clipboard!',
+				}),
+			)
 
 		watch('collapsed', bindAttribute(host, 'collapsed'))
 	},

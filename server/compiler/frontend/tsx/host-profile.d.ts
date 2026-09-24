@@ -137,8 +137,17 @@ declare namespace JSX {
 	 * child's args minus the reserved `i18n` parameter, which the compiler
 	 * supplies at every render boundary — callers never pass it (ADR 0030
 	 * sub-design 2, LT-237). `children` stays: JSX children supply it.
+	 * Every compose site also admits the static discriminators the
+	 * compiler splices onto the child's rendered root — `class`, `id`,
+	 * `data-*` — the only way to address one of two same-source sites
+	 * (HOST_PROFILE § element references; LT-096).
 	 */
-	type LibraryManagedAttributes<_C, P> = Omit<P, 'i18n'>
+	type LibraryManagedAttributes<_C, P> = Omit<P, 'i18n'> & ComposeSiteAttrs
+	interface ComposeSiteAttrs {
+		class?: string
+		id?: string
+		[key: `data-${string}`]: string
+	}
 
 	/** A reactive value: static, or a thunk re-evaluated client-side. */
 	type Thunk<T> = () => T
@@ -181,6 +190,7 @@ declare namespace JSX {
 		'aria-expanded'?: Attr<string | boolean>
 		'aria-selected'?: Attr<string | boolean>
 		'aria-describedby'?: string | null | undefined
+		'aria-controls'?: Attr<string>
 		onClick?: (event: MouseEvent) => unknown
 		onInput?: (event: Event) => unknown
 		onChange?: (event: Event) => unknown
@@ -212,8 +222,10 @@ declare namespace JSX {
 		/** The native attribute is `for` — there is no `htmlFor` here. */
 		for?: string | undefined
 	}
+	interface code extends CommonLightDom {}
 	interface li extends CommonLightDom {}
 	interface p extends CommonLightDom {}
+	interface pre extends CommonLightDom {}
 	interface span extends CommonLightDom {}
 	interface ul extends CommonLightDom {}
 	/** A component's stylesheet: content only, no attributes. */
@@ -256,6 +268,14 @@ declare namespace JSX {
 		filterable?: Reactive<boolean>
 		'truc:pass'?: { filter?: PassEntry }
 	}
+	type ModuleCodeblockAttrs = CommonLightDom & {
+		collapsed?: Reactive<boolean>
+		language?: string
+	}
+	/** Hand-written (not yet migrated): its light-DOM config attribute only. */
+	type ModuleScrollareaAttrs = CommonLightDom & {
+		orientation?: 'horizontal' | 'vertical' | undefined
+	}
 	type SyncElAttrs = CommonLightDom & {
 		mode?: string
 		items?: unknown
@@ -267,9 +287,11 @@ declare namespace JSX {
 		div: div
 		form: form
 		input: input
+		code: code
 		label: label
 		li: li
 		p: p
+		pre: pre
 		span: span
 		ul: ul
 		style: style
@@ -278,6 +300,8 @@ declare namespace JSX {
 		'basic-number': BasicNumberAttrs
 		'form-combobox': FormComboboxAttrs
 		'form-listbox': FormListboxAttrs
+		'module-codeblock': ModuleCodeblockAttrs
+		'module-scrollarea': ModuleScrollareaAttrs
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs
 	}

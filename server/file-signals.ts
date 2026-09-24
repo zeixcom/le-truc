@@ -315,7 +315,10 @@ const [
 	watchFiles(COMPONENTS_DIR, '**/*.ts'),
 	// ADR 0032 (LT-202): the corpus watches BOTH authored surfaces — the
 	// front end is chosen per file by extension (`server/effects/compile.ts`).
-	watchFiles(COMPONENTS_DIR, '**/*.tsrx', '**/*.tsx'),
+	// `watchFiles` takes ONE include and an EXCLUDE, and the glob seam has no
+	// braces: `*.ts*` minus `*.ts` is exactly `.tsx` + `.tsrx` (LT-096 —
+	// passing `'**/*.tsx'` second had excluded every `.tsx` source).
+	watchFiles(COMPONENTS_DIR, '**/*.ts*', '**/*.ts'),
 	// LT-091: migrated components' generated clients are bundle inputs
 	// (examples/main.ts imports them) — a `.tsrx` edit re-runs the compiler
 	// effect, which rewrites these files, which must re-trigger the js

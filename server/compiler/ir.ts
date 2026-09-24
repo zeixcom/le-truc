@@ -661,7 +661,42 @@ export type ComponentIR = {
 		 */
 		plainLocalNames: ReadonlySet<string>
 	}
+	/**
+	 * What each composed child can render into this component's DOM, keyed
+	 * by compose source and closed over the child's own compose graph
+	 * (LT-096). Set by `analyzeClient` in the registry-aware pass; absent in
+	 * the discovery pass, where the selector engine keeps its single-template
+	 * view. See `RenderedShape`.
+	 */
+	composedShapes?: ReadonlyMap<string, ComposedMarkup>
 }
+
+/** A composed child's DOM tag and every shape its subtree renders (LT-096). */
+export type ComposedMarkup = {
+	/** Null when the source has no registry entry — unknown markup. */
+	tag: string | null
+	shapes: readonly RenderedShape[]
+}
+
+/**
+ * One element a component's template can render, as the selector engine
+ * sees it (LT-096) — recorded on the registry entry so a PARENT can prove a
+ * synthesized selector cannot match inside this component's markup, which
+ * `querySelector` descends into at runtime. `attrs` are the static
+ * attributes; `dynamic` names attributes whose value is only known at render
+ * time (they may match anything). `compose` stands for a composed child's
+ * own shapes, resolved through the registry; `any` for markup the template
+ * cannot know (a raw `children` or `truc:html` site).
+ */
+export type RenderedShape =
+	| {
+			kind: 'element'
+			tag: string
+			attrs: Record<string, string | null>
+			dynamic: string[]
+	  }
+	| { kind: 'compose'; source: string }
+	| { kind: 'any' }
 
 /**
  * Shared lowering/classification context, threaded through `compileSource`,

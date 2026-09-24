@@ -1654,6 +1654,62 @@ and this note is redundant; if it has not, do the manual diff.
 
 ---
 
+- [ ] LT-309: module-codeblock follow-through from the LT-096 review
+  **Skill:** le-truc-dev
+  **Context:** Two changes, both on `module-codeblock` (both surfaces where applicable).
+  (a) The overlay's `on(overlay, 'click', …)` in `.tsx` setup is a workaround that LT-096's own
+  selector fix made unnecessary. Its comment is now false. Inline it as `onClick={() => ({
+  collapsed: false })}` on the overlay button and drop the explicit `overlay` ref if nothing
+  else reads it. Verified in review: it lowers to `first('button:not(basic-button *)')` plus a
+  guarded `on()`. Also fix the emitter printing an empty `if (overlay) {}` guard when a ref's
+  only use is a setup `on()`.
+  (b) The copy messages are read from the COMPOSED child's host (`copy.getAttribute(
+  'copy-success')`). `copy-success` is not an attribute basic-button declares, so this reaches
+  past the child's boundary (HOST_PROFILE § data account, bullet 3). The page chrome is also
+  inconsistent: `fence.markdoc.ts` writes the pair on both hosts, while `fragments.ts`
+  `tabPanel` writes it on the codeblock host only, so tab panels silently fall back. Make
+  `copy-success`/`copy-error` module-codeblock's own config attributes: optional args with the
+  current defaults, rendered on the root, read from `host`. Drop the duplicate on the inner
+  basic-button in both chrome generators, and update the twin in the same commit. This is a
+  contract reshape, approved here (the LT-095 checkpoint pattern). Spec: add a tab-panel-shaped
+  fixture carrying custom messages on the host only.
+
+- [ ] LT-310: Reactive attributes on the component root element
+  **Skill:** architect → le-truc-dev
+  **Context:** `collapsed={() => host.collapsed}` on a template root is LTC005 today ("reactive
+  constructs on the component root"). So reflecting a Parser-exposed prop back onto the host
+  stays a hand-written setup `watch('collapsed', bindAttribute(host, 'collapsed'))`, the last
+  non-template statement module-codeblock needs besides the copy wiring. The pattern recurs
+  (open/collapsed/expanded state on hosts). Design first: the server renders the root attribute
+  from the arg, the Parser seeds from it at connect, and the thunk rebinds it. That is one
+  channel, but LTC039's root-attribute exemption and the fold of `host.<prop>` on the root need
+  checking against ADR 0024 s3 before implementation. Needs an ADR amendment or a short ADR;
+  new diagnostics owe Tech Writer copy review.
+
+- [ ] LT-311: Event handlers on compose sites
+  **Skill:** architect → le-truc-dev
+  **Context:** A PascalCase compose site has no event-attribute kind (only arg/pass/ref), so a
+  parent's reaction to a composed child's event must be a setup `on(childRef, …)` or a raw
+  `EffectDescriptor`. module-codeblock's copy wiring is the case: a guarded
+  `watch(() => true, copy ? copyToClipboard(…) : () => {})`, because `if` is LTC005 and
+  `watch()` in a const-call is LTC045. Proposal: `onClick={…}` on `<BasicButton>` lowers to
+  `on(<compose-ref>, 'click', …)` on the child's host. The listener attaches to the child's
+  public element, not its internals, so it respects the boundary; the compiler's optional-ref
+  guard replaces the hand-written ternary. `copyToClipboard` then becomes a plain click-handler
+  factory. Decide the typing: the `.tsx` host profile needs `on*` in `ComposeSiteAttrs`, and
+  `.tsrx` needs the same classification. Depends on LT-309(b) for the message channel.
+
+- [ ] LT-312: Generate the `.tsx` → `.tsrx` compose-import typings
+  **Skill:** le-truc-dev
+  **Context:** `server/compiler/frontend/tsx/tsrx-imports.d.ts` (LT-096) hand-lists one
+  `declare module '*/<tag>.tsrx'` per `.tsrx` child that a `.tsx` parent composes, typed through
+  the generated server module's args. The next migration composing a still-`.tsrx` child
+  (module-list, form-colorgraph) would add entries by hand, and a wildcard pattern colliding
+  across two same-named files would mistype silently. Emit the file from the registry during the
+  corpus compile, one entry per compiled `.tsrx` source keyed by its path suffix, and have
+  `examples/tsconfig.json` include the generated file. Acceptance: deleting the hand-written
+  file leaves `bunx tsc -p examples/tsconfig.json` green.
+
 ## P6 — Cleanup round (after the corpus port)
 
 - [ ] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review).

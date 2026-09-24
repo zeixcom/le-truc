@@ -9,7 +9,9 @@ type ElementFromSingleSelector<S extends string> = KnownTag<S> extends never ? H
 type ElementsFromSelectorArray<Selectors extends readonly string[]> = {
     [K in keyof Selectors]: Selectors[K] extends string ? ElementFromSingleSelector<Selectors[K]> : never;
 }[number];
-type ElementFromSelector<S extends string> = S extends `${string},${string}` ? ElementsFromSelectorArray<SplitByComma<S>> : ElementFromSingleSelector<S>;
+type StripPseudoArguments<S extends string> = S extends `${infer Head}(${string})${infer Tail}` ? StripPseudoArguments<`${Head}${Tail}`> : S;
+type ElementFromSelectorList<S extends string> = S extends `${string},${string}` ? ElementsFromSelectorArray<SplitByComma<S>> : ElementFromSingleSelector<S>;
+type ElementFromSelector<S extends string> = ElementFromSelectorList<StripPseudoArguments<S>>;
 type FirstElement = {
     <S extends string>(selector: S, required: string): ElementFromSelector<S>;
     <S extends string>(selector: S): ElementFromSelector<S> | undefined;
@@ -99,4 +101,4 @@ declare function createElementsMemo<E extends Element>(parent: ParentNode, selec
  * @returns Query helpers and a dependency resolver
  */
 declare const makeElementQueries: (host: HTMLElement) => [ElementQueries, (run: () => void) => void];
-export { type AllElements, bindFirst, createElementsMemo, type ElementFromSelector, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, extractAttributes, type FirstElement, type KnownTag, makeElementQueries, query, queryAll, type SplitByComma, type TrimWhitespace, };
+export { type AllElements, bindFirst, createElementsMemo, type ElementFromSelector, type ElementFromSelectorList, type ElementFromSingleSelector, type ElementQueries, type ElementsFromSelectorArray, type ExtractRightmostSelector, type ExtractTag, type ExtractTagFromSimpleSelector, extractAttributes, type FirstElement, type KnownTag, makeElementQueries, query, queryAll, type SplitByComma, type StripPseudoArguments, type TrimWhitespace, };

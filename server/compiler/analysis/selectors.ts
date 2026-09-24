@@ -7,7 +7,15 @@
  * matches in the DOM. Pure functions only; no analysis state.
  */
 
-import type { ComponentIR, ForIR, TemplateNode } from '../ir'
+import type {
+	ComponentIR,
+	ComposedMarkup,
+	ForIR,
+	RenderedShape,
+	TemplateNode,
+} from '../ir'
+import type { RegistryEntry } from '../registry'
+import { walkTemplate } from '../walk'
 
 /* === Types === */
 
@@ -434,6 +442,80 @@ export const composeDiscriminatorClause = (
 }
 
 /**
+ * Could `selector` (the synthesized grammar `matchesSelector` parses) match
+ * an element of `shape`? A dynamic attribute may hold any value, and a
+ * selector outside the grammar is assumed to match — the conservative
+ * direction, since a false "no" binds an effect onto a child's element.
+ */
+const mayMatchShape = (shape: RenderedShape, selector: string): boolean => {
+	if (shape.kind !== 'element') return true
+	const match = selector.match(
+		/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\]|\.([A-Za-z_-][\w-]*)|#([A-Za-z_-][\w-]*))?$/,
+	)
+	if (!match) return true
+	const [, tag, attr, value, classToken, id] = match
+	if (tag && shape.tag !== tag) return false
+	const name =
+		classToken !== undefined ? 'class' : id !== undefined ? 'id' : attr
+	if (!name) return true
+	if (shape.dynamic.includes(name)) return true
+	const actual = shape.attrs[name]
+	if (actual === undefined || actual === null) return false
+	if (classToken !== undefined) return actual.split(/\s+/).includes(classToken)
+	return actual === (id ?? value)
+}
+
+/**
+ * Resolution candidates for `element`, in priority order, each paired with
+ * the selector to EMIT for it. Uniqueness is counted over the component's
+ * OWN template (`base`), but the runtime query also descends into every
+ * composed child's rendered markup (LT-096: module-codeblock's overlay
+ * resolved to a bare `button`, which found the composed basic-button's own
+ * `<button>` first). With `composed` known — the registry-aware pass — a
+ * candidate no composed child's element could match is emitted as is; one
+ * that some could is emitted with a `:not(<child-tag> *)` exclusion per
+ * such child, and dropped when a child's tag is unknown. Clean candidates
+ * come first, so the exclusion only appears where no clean one is unique.
+ *
+ * The exclusion is sound because a composed child's markup is exactly its
+ * root tag's descendants; it would also exclude an element of this
+ * component that sat inside a same-tag ANCESTOR of the host, which no
+ * composition produces.
+ */
+const selectorCandidates = (
+	tree: TemplateNode,
+	element: ElementNode,
+	composed: ReadonlyMap<string, ComposedMarkup> | undefined,
+): Array<{ base: string; emit: string }> => {
+	const bases = [
+		buildSelector(element, 'role'),
+		buildSelector(element, 'bare'),
+		...discriminatorCandidates(element),
+	].filter((s): s is string => s !== null)
+	if (!composed) return bases.map(base => ({ base, emit: base }))
+	const children = allComposeNodes(tree).map(
+		node => composed.get(node.source) ?? { tag: null, shapes: [] },
+	)
+	const clean: Array<{ base: string; emit: string }> = []
+	const excluded: Array<{ base: string; emit: string }> = []
+	for (const base of bases) {
+		const clashing = children.filter(
+			child =>
+				child.tag === null ||
+				child.shapes.some(shape => mayMatchShape(shape, base)),
+		)
+		if (clashing.length === 0) {
+			clean.push({ base, emit: base })
+			continue
+		}
+		if (clashing.some(child => child.tag === null)) continue
+		const tags = [...new Set(clashing.map(child => `${child.tag} *`))]
+		excluded.push({ base, emit: `${base}:not(${tags.join(', ')})` })
+	}
+	return [...clean, ...excluded]
+}
+
+/**
  * Resolve the selector for an element: try role, bare, then upgrade to a
  * discriminator; accept the first structurally unique candidate. Counting is
  * scoped to `tree` — the whole template, or a loop output subtree for
@@ -442,24 +524,21 @@ export const composeDiscriminatorClause = (
 export const resolveSelectorIn = (
 	tree: ElementNode,
 	element: ElementNode,
+	composed?: ReadonlyMap<string, ComposedMarkup>,
 ): { selector: string; unique: boolean } => {
-	const candidates = [
-		buildSelector(element, 'role'),
-		buildSelector(element, 'bare'),
-		...discriminatorCandidates(element),
-	].filter((s): s is string => s !== null)
-	for (const selector of candidates) {
-		if (countForSelector(tree, selector) === 1)
-			return { selector, unique: true }
+	const candidates = selectorCandidates(tree, element, composed)
+	for (const { base, emit } of candidates) {
+		if (countForSelector(tree, base) === 1)
+			return { selector: emit, unique: true }
 	}
-	return { selector: candidates[0] ?? element.tag, unique: false }
+	return { selector: candidates[0]?.emit ?? element.tag, unique: false }
 }
 
 export const resolveSelector = (
 	component: ComponentIR,
 	element: ElementNode,
 ): { selector: string; unique: boolean } =>
-	resolveSelectorIn(component.root, element)
+	resolveSelectorIn(component.root, element, component.composedShapes)
 
 /**
  * Does any element under `nodes` (any depth, entering nested control flow,
@@ -516,18 +595,15 @@ export const resolveExclusiveSelectorIn = (
 	tree: ElementNode,
 	element: ElementNode,
 	clash: readonly TemplateNode[],
+	composed?: ReadonlyMap<string, ComposedMarkup>,
 ): { selector: string; unique: boolean } => {
-	const candidates = [
-		buildSelector(element, 'role'),
-		buildSelector(element, 'bare'),
-		...discriminatorCandidates(element),
-	].filter((s): s is string => s !== null)
-	for (const selector of candidates) {
-		if (countForSelector(tree, selector) !== 1) continue
-		if (matchesUnder(clash, selector)) continue
-		return { selector, unique: true }
+	const candidates = selectorCandidates(tree, element, composed)
+	for (const { base, emit } of candidates) {
+		if (countForSelector(tree, base) !== 1) continue
+		if (matchesUnder(clash, base)) continue
+		return { selector: emit, unique: true }
 	}
-	return { selector: candidates[0] ?? element.tag, unique: false }
+	return { selector: candidates[0]?.emit ?? element.tag, unique: false }
 }
 
 /** The `@for` loop whose output element is `node`, if any. */
@@ -582,9 +658,87 @@ export const selectorFor = (
 		// always unique among itself), so a same-tag sibling elsewhere in
 		// the template (two plain `<p>`s, one per @if) was never caught
 		// and the bare-tag candidate always won even when ambiguous.
-		const self = resolveSelectorIn(component.root, root)
+		const self = resolveSelectorIn(
+			component.root,
+			root,
+			component.composedShapes,
+		)
 		if (!self.unique) return { selector: self.selector, unique: false }
 		if (!clauses.includes(self.selector)) clauses.push(self.selector)
 	}
 	return { selector: clauses.join(', '), unique: true }
+}
+
+/**
+ * Every element `component`'s template can render, for its registry entry
+ * (LT-096). Composed children stay references (`compose`), resolved by the
+ * parent through the registry; compose-site children are the parent's own
+ * elements rendered inside the child, so they are collected too. A raw
+ * `children` site or a `truc:html` element renders markup the template
+ * cannot know (`any`).
+ */
+export const renderedShapesOf = (component: ComponentIR): RenderedShape[] => {
+	const shapes: RenderedShape[] = []
+	let any = false
+	walkTemplate(component.root, node => {
+		if (node.kind === 'compose') {
+			shapes.push({ kind: 'compose', source: node.source })
+			return
+		}
+		if (node.kind === 'expr' && node.exprText === 'children') any = true
+		if (node.kind !== 'element') return
+		const attrs: Record<string, string | null> = {}
+		const dynamic = new Set<string>()
+		for (const attr of node.attrs) {
+			if (attr.kind === 'static') attrs[attr.name] = attr.value
+			else if (attr.kind === 'server' || attr.kind === 'reactive')
+				dynamic.add(attr.name)
+			else if (attr.kind === 'class-map') dynamic.add('class')
+			else if (attr.kind === 'style-map') dynamic.add('style')
+			else if (attr.kind === 'html') any = true
+		}
+		shapes.push({
+			kind: 'element',
+			tag: node.tag,
+			attrs,
+			dynamic: [...dynamic],
+		})
+	})
+	if (any) shapes.push({ kind: 'any' })
+	return shapes
+}
+
+/**
+ * Each compose source under `root`, mapped to its DOM tag and every shape
+ * its subtree renders — closed over the compose graph through
+ * `composeRegistry` (a grandchild's markup is in the DOM too). A source with
+ * no entry, or an entry without `renderedShapes`, renders unknown markup
+ * (`any`).
+ */
+export const composedShapesFor = (
+	root: TemplateNode,
+	composeRegistry: ReadonlyMap<string, RegistryEntry>,
+): Map<string, ComposedMarkup> => {
+	const closure = (
+		source: string,
+		seen: ReadonlySet<string>,
+	): RenderedShape[] => {
+		const own = composeRegistry.get(source)?.renderedShapes
+		if (!own) return [{ kind: 'any' }]
+		return own.flatMap(shape =>
+			shape.kind !== 'compose'
+				? [shape]
+				: seen.has(shape.source)
+					? []
+					: closure(shape.source, new Set([...seen, shape.source])),
+		)
+	}
+	const result = new Map<string, ComposedMarkup>()
+	for (const node of allComposeNodes(root))
+		if (!result.has(node.source))
+			result.set(node.source, {
+				tag: composeRegistry.get(node.source)?.tag ?? null,
+				shapes: closure(node.source, new Set([node.source])),
+			})
+	return result
 }

@@ -999,7 +999,12 @@ const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
 		const own = body.filter(isElement).filter(hasOwnConstruct)
 		if (own.length === 0) continue
 		const root = own[0] as ElementNode
-		const resolved = resolveExclusiveSelectorIn(component.root, root, other)
+		const resolved = resolveExclusiveSelectorIn(
+			component.root,
+			root,
+			other,
+			component.composedShapes,
+		)
 		if (resolved.unique) continue
 		const plain = resolveSelector(fx, root)
 		if (!plain.unique) continue // no unique selector at all — reported below
@@ -1015,7 +1020,12 @@ const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	}
 	for (const [label, body, other] of branches)
 		handleOptionalBranch(fx, body, node, `the ${label} branch`, el =>
-			resolveExclusiveSelectorIn(component.root, el, other),
+			resolveExclusiveSelectorIn(
+				component.root,
+				el,
+				other,
+				component.composedShapes,
+			),
 		)
 }
 

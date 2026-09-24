@@ -13,12 +13,15 @@ import {
 	analyzeClient,
 } from '../../compiler/analysis/plan'
 import {
+	composedShapesFor,
 	countForSelector,
 	matchesSelector,
+	renderedShapesOf,
 	resolveSelector,
 } from '../../compiler/analysis/selectors'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import type { ComponentIR } from '../../compiler/ir'
+import type { RegistryEntry } from '../../compiler/registry'
 
 const source = `export function C({}: {})
 @{
@@ -252,5 +255,142 @@ describe('id discriminators use the hash form (LT-124)', () => {
 			selector: 'input[id="1st.field"]',
 			unique: true,
 		})
+	})
+})
+
+/**
+ * LT-096: a synthesized selector's uniqueness is counted over the OWN
+ * template, but the runtime query descends into every composed child's
+ * rendered markup. With the children's shapes known, a candidate a child
+ * could match is emitted with a `:not(<child-tag> *)` exclusion — the bare
+ * `button` module-codeblock's overlay resolved to found the composed
+ * basic-button's own `<button>` first.
+ */
+describe('selectors account for composed children (LT-096)', () => {
+	const child = (body: string): ComponentIR =>
+		compileSource(
+			`export function Child({ size = 'small' }: { size?: string })
+@{
+	<>
+		<child-el>${body}</child-el>
+		<style>child-el { color: red }</style>
+	</>
+}`,
+			'child.tsrx',
+		).component as ComponentIR
+
+	const parent = (): ComponentIR =>
+		compileSource(
+			`import { Child } from './child.tsrx'
+export function P({}: {})
+@{
+	const overlay = first('button.overlay')
+	const code = first('code')
+	expose({})
+	<>
+		<p-el>
+			<code>x</code>
+			<Child />
+			<button type="button" class="overlay">Go</button>
+		</p-el>
+		<style>p-el { color: red }</style>
+	</>
+}`,
+			'p.tsrx',
+		).component as ComponentIR
+
+	const elementByTag = (component: ComponentIR, tag: string) =>
+		(
+			component.root.children as ReadonlyArray<{ kind: string; tag?: string }>
+		).find(n => n.kind === 'element' && n.tag === tag) as Extract<
+			ComponentIR['root'],
+			{ kind: 'element' }
+		>
+
+	const withChild = (childIR: ComponentIR | null): ComponentIR => {
+		const component = parent()
+		const composeSource = (
+			component.root.children.find(n => n.kind === 'compose') as {
+				source: string
+			}
+		).source
+		const registry = new Map<string, RegistryEntry>(
+			childIR
+				? [
+						[
+							composeSource,
+							{
+								tag: 'child-el',
+								renderedShapes: renderedShapesOf(childIR),
+							} as RegistryEntry,
+						],
+					]
+				: [],
+		)
+		component.composedShapes = composedShapesFor(component.root, registry)
+		return component
+	}
+
+	test('the child renders a button with a dynamic class — every button candidate clashes', () => {
+		const component = withChild(
+			child('<button type="button" class={size}>in</button>'),
+		)
+		expect(
+			resolveSelector(component, elementByTag(component, 'button')),
+		).toEqual({ selector: 'button:not(child-el *)', unique: true })
+	})
+
+	test('a static child class leaves a non-clashing discriminator clean', () => {
+		const component = withChild(
+			child('<button type="button" class="inner">in</button>'),
+		)
+		expect(
+			resolveSelector(component, elementByTag(component, 'button')),
+		).toEqual({ selector: 'button.overlay', unique: true })
+	})
+
+	test('a tag the child never renders keeps its bare selector', () => {
+		const component = withChild(child('<button type="button">in</button>'))
+		expect(resolveSelector(component, elementByTag(component, 'code'))).toEqual(
+			{
+				selector: 'code',
+				unique: true,
+			},
+		)
+	})
+
+	test('raw `children` in the child is unknown markup — every candidate clashes', () => {
+		const rawChild = compileSource(
+			`export function Child({ children }: { children?: string })
+@{
+	<>
+		<child-el>{children}</child-el>
+		<style>child-el { color: red }</style>
+	</>
+}`,
+			'child.tsrx',
+		).component as ComponentIR
+		expect(renderedShapesOf(rawChild)).toContainEqual({ kind: 'any' })
+		const component = withChild(rawChild)
+		expect(resolveSelector(component, elementByTag(component, 'code'))).toEqual(
+			{
+				selector: 'code:not(child-el *)',
+				unique: true,
+			},
+		)
+	})
+
+	test('an unregistered child cannot be excluded — no candidate is unique', () => {
+		const component = withChild(null)
+		expect(
+			resolveSelector(component, elementByTag(component, 'button')).unique,
+		).toBe(false)
+	})
+
+	test('without composed shapes (the discovery pass) the single-template view stands', () => {
+		const component = parent()
+		expect(
+			resolveSelector(component, elementByTag(component, 'button')),
+		).toEqual({ selector: 'button', unique: true })
 	})
 })

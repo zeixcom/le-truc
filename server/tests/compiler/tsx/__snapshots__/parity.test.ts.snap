@@ -183,7 +183,7 @@ export default defineComponent<FormComboboxProps>(
 	'form-combobox',
 	({ expose, first, host, on, pass, watch }) => {
 		const textbox = first('input[role="combobox"]', 'combobox input')
-		const button = first('button')
+		const button = first('button:not(form-listbox *)')
 		const popup = first('.popup', 'listbox popup wrapper')
 		const listbox = first('form-listbox', 'combobox listbox')
 		const descriptionEl = first('p.description')

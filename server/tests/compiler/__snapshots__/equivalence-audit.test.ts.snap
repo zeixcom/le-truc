@@ -122,3 +122,8 @@ exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8
 @201 (-0/+14)  P1: …></label><label data-value="b"><input type="radio" value="b"><span>B</span></label></fieldset></form-radiogroup>…
           P2: …></label><label data-value="b"><input type="radio" value="b" tabindex="-1"><span>B</span></label></fieldset></form-radiogroup>…"
 `;
+
+exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) module-codeblock: the connect diff against the harness render is the recorded hydration boundary 1`] = `
+"@47 (-0/+3)  P1: …<module-codeblock id="codeblock-demo" collapsed language="ts"><p class="meta"><span class="file">demo.ts</s…
+          P2: …<module-codeblock id="codeblock-demo" collapsed="" language="ts"><p class="meta"><span class="file">demo.ts</s…"
+`;

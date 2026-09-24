@@ -37,6 +37,36 @@ retirement ruling is verbatim in AGENTS.md's `pass()` bullet and the CHANGELOG R
 entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text:
 `git log -p -- DONE.md`.
 
+- [x] LT-096: Migrate `module-codeblock` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:**
+  - `module-codeblock.tsx` is served (`examples/main.ts` imports the generated client). The
+    `.ts` twin stays as the variant. The copy bug (a bare `EffectDescriptor` that never attached)
+    is fixed on both surfaces and pinned by the new `module-codeblock.spec.ts`. **Tier: Folded,
+    no routing signals** — the Simulated prediction was wrong: refs used only in `watch`/`on`
+    never route. Simulation-stage wall time was unchanged (~340–550 ms, 2 components). Census
+    21/2/0; zero warnings.
+  - **Compiler selector soundness:** registry entries record `renderedShapes`. A synthesized
+    selector that a composed child's markup could match is emitted as `base:not(<child-tag> *)`.
+    This fixed a live form-combobox bug: the clear button's `hidden` binding landed on the
+    listbox's first option.
+  - **Public types:** `ElementFromSelector` ignores pseudo-class arguments, so
+    `first('button:not(x *)')` infers `HTMLButtonElement`. New exports
+    `ElementFromSelectorList` and `StripPseudoArguments` (CHANGELOG).
+  - `.tsx` host profile: compose sites admit `class`/`id`/`data-*`. `.tsrx` compose imports are
+    typed through `frontend/tsx/tsrx-imports.d.ts`, which is hand-listed (**LT-312**).
+  - Docs build: `.tsx` sources were never compiled (the glob sat in `watchFiles`' exclude slot),
+    and a `.tsx` source was read as its own demo markup (`simulate.ts`). Both are fixed.
+  **Rulings (2026-09-25):** the `:not(<tag> *)` exclusion is accepted. Its only miss is an own
+  element inside a same-tag ancestor of the host, which no composition produces. **No
+  compiler-stamped hash class for addressing:** the component's occurrences are page-authored
+  (fence schema, tab fragments) and never pass through the compiler's render, so a stamped hook
+  would be absent exactly where the enhancer must bind. It would also put a compiler-versioned
+  token into the hand-authoring contract, which is the move ADR 0033 declined for styles.
+  **Live handoffs:** LT-309 (inline the overlay `onClick`; the host copy-message contract),
+  LT-310 (reactive root attributes), LT-311 (compose-site event handlers), LT-312 (generate the
+  `.tsrx` import typings).
+  **Review:** approved; `test:variants module-codeblock` green on both surfaces (owner run).
+
 - [x] LT-237: Move the spike's `.tsx` fixtures into their example component folders — reviewed ✓
   **Changed:**
   - `basic-pluralize`, `form-listbox` and `form-combobox` `.tsx` now sit beside their

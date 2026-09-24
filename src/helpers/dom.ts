@@ -77,9 +77,22 @@ type ElementsFromSelectorArray<Selectors extends readonly string[]> = {
 		: never
 }[number]
 
-type ElementFromSelector<S extends string> = S extends `${string},${string}`
+// Drop every parenthesized pseudo-class argument before splitting, so the
+// comma and descendant spaces in `button:not(a *, b *)` or `:is(a, b)` never
+// read as a selector list or a combinator: the subject stays `button:not`.
+// One nesting level — `:not(:is(a, b))` keeps a stray `)`, still typed wide.
+type StripPseudoArguments<S extends string> =
+	S extends `${infer Head}(${string})${infer Tail}`
+		? StripPseudoArguments<`${Head}${Tail}`>
+		: S
+
+type ElementFromSelectorList<S extends string> = S extends `${string},${string}`
 	? ElementsFromSelectorArray<SplitByComma<S>>
 	: ElementFromSingleSelector<S>
+
+type ElementFromSelector<S extends string> = ElementFromSelectorList<
+	StripPseudoArguments<S>
+>
 
 type FirstElement = {
 	<S extends string>(selector: S, required: string): ElementFromSelector<S>
@@ -471,6 +484,7 @@ export {
 	bindFirst,
 	createElementsMemo,
 	type ElementFromSelector,
+	type ElementFromSelectorList,
 	type ElementFromSingleSelector,
 	type ElementQueries,
 	type ElementsFromSelectorArray,
@@ -484,5 +498,6 @@ export {
 	query,
 	queryAll,
 	type SplitByComma,
+	type StripPseudoArguments,
 	type TrimWhitespace,
 }

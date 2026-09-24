@@ -248,7 +248,9 @@ const simulationSubjects = (
 		subjects.push({
 			tag: entry.tag,
 			clientModulePath: join(generatedDir, entry.clientModule),
-			markupPath: join(root, entry.source.replace(/\.tsrx$/, '.html')),
+			// Either authored surface (LT-096: a `.tsx` source used to be read
+			// as its own markup).
+			markupPath: join(root, entry.source.replace(/\.tsr?x$/, '.html')),
 		})
 	}
 	return { subjects, skipped }

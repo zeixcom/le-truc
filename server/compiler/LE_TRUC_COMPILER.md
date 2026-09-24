@@ -686,7 +686,7 @@ arg, a required Parser arg whose fallback does not resolve at module scope,
 or a suppressed harness emits no helper and is never page-rendered.
 
 Measured against the corpus, the Folded tier is the **majority** path: the
-classifier folds 20 of 22 components (Simulated: `form-combobox` via
+classifier folds 21 of 23 components (Simulated: `form-combobox` via
 compose-read, `form-listbox`; Static: none yet). `first()` in
 `watch()`/`on()` positions is a client concern that reaches no served byte
 and was never a refusal site — what routes a component is a site whose
@@ -1072,7 +1072,15 @@ member.
   canonical CSS spellings — classes match by token membership, ids and
   `type`/`data-*` exactly. `matchesSelector` must parse exactly the grammar
   the synthesizer emits: an unparsed selector reads as "no collision" and
-  would quietly disarm per-branch addressing.
+  would quietly disarm per-branch addressing. The count covers the OWN
+  template, but the runtime query also descends into composed children's
+  markup, so in the registry-aware pass each candidate is also checked
+  against the `renderedShapes` every composed child records on its registry
+  entry (closed over the compose graph; a raw `children`/`truc:html` site is
+  unknown markup). A candidate a child could match is emitted as
+  `base:not(<child-tag> *)`; clean candidates win first (LT-096 — a bare
+  `button` had bound module-codeblock's overlay, and form-combobox's clear
+  button, onto a composed child's `<button>`).
 - **The template proves what a component RENDERS, never what it will FIND**
   (ADR 0024 s11): `first()` cardinality is the weaker of author claim and
   site proof — one literal is optional (non-throwing, guarded effects), two

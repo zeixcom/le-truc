@@ -179,6 +179,7 @@ export {
 	type AllElements,
 	createElementsMemo,
 	type ElementFromSelector,
+	type ElementFromSelectorList,
 	type ElementFromSingleSelector,
 	type ElementQueries,
 	type ElementsFromSelectorArray,
@@ -190,6 +191,7 @@ export {
 	query,
 	queryAll,
 	type SplitByComma,
+	type StripPseudoArguments,
 	type TrimWhitespace,
 } from './src/helpers/dom'
 export type { EventType, OnEventHandler, OnHelper } from './src/helpers/events'

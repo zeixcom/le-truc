@@ -198,7 +198,11 @@ export const runLoops = (ctx: AnalysisContext): void => {
 						a.kind === 'event',
 				)
 				if (hasConstruct) {
-					const resolved = resolveSelectorScoped(output, child)
+					const resolved = resolveSelectorScoped(
+						output,
+						child,
+						component.composedShapes,
+					)
 					if (!resolved.unique) {
 						diagnostics.push(
 							diagnostic.unaddressableElement(
@@ -377,7 +381,8 @@ export const runLoops = (ctx: AnalysisContext): void => {
 		}
 		const holeParent = findHoleParent(output)
 		const holeSelector = holeParent
-			? resolveSelectorScoped(output, holeParent).selector
+			? resolveSelectorScoped(output, holeParent, component.composedShapes)
+					.selector
 			: output.tag
 
 		// Per-item events, grouped per target element, bindItem-scoped.
@@ -441,7 +446,11 @@ export const runLoops = (ctx: AnalysisContext): void => {
 						itemEvents.push(target)
 					}
 				} else {
-					const scoped = resolveSelectorScoped(output, node)
+					const scoped = resolveSelectorScoped(
+						output,
+						node,
+						component.composedShapes,
+					)
 					if (!scoped.unique) {
 						diagnostics.push(
 							diagnostic.unaddressableElement(

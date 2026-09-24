@@ -52,11 +52,11 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-309.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-313.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
-review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041); the ADR 0033 ruling filed LT-304–LT-306; the LT-237 review filed LT-308.)
+review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041); the ADR 0033 ruling filed LT-304–LT-306; the LT-237 review filed LT-308; the LT-096 review filed LT-309–LT-312.)
 
 **Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
 are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
@@ -78,20 +78,6 @@ test edits). It is pushed, so history stays; attribute by file, not by title. HE
 sandbox has.
 
 ---
-
-- [ ] LT-096: Migrate `module-codeblock` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** Smallest hand-written example (~43 lines). **Known pre-existing bug to fix during
-  this migration** (LT-117 review): the twin calls `copyToClipboard(code, copy, {...}` bare — the
-  `EffectDescriptor` is created and discarded, so the copy-click listener never attaches (label
-  stays "Copy" on click; verified at HEAD). Per AGENTS.md it needs registration —
-  `watch(() => true, copyToClipboard(...))` — plus a spec assertion that click actually
-  copies/toggles the label. **Perf:** this is one of the two components that move page chrome
-  into the simulated corpus (~299 occurrences in the built docs). Record the simulated build
-  stage's wall time before and after, and record the tier and reason. (LT-193 has since removed
-  the render cache this entry originally said to verify engaging — the cache no longer exists
-  by the time wave 4 runs.) Its `first('code')`/`first('button.overlay')`/`first('basic-button.
-  copy')` refs predict Simulated, but ~299 occurrences make that ~0.33 s — not a blocker.
 
 - [ ] LT-258: Make the partial-readiness invariant a compiler check.
   **Skill:** le-truc-dev

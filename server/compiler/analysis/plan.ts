@@ -36,6 +36,7 @@ import { runEffects } from './effects'
 import { runHarvest } from './harvest'
 import { runLoops } from './loops'
 import { addQuery } from './naming'
+import { composedShapesFor } from './selectors'
 
 /* === Types === */
 
@@ -479,6 +480,14 @@ export const analyzeClient = (
 		unmatchedOptional: unmatchedComposeRefs,
 		ambiguous: ambiguousComposeNodes,
 	} = resolveComposeRefs(component, diagnostics, composeRegistry)
+	// LT-096: what each composed child renders, so every selector resolved
+	// below is unique over the DOM the query actually searches — the
+	// children's markup included — not just over this template.
+	if (composeRegistry)
+		component.composedShapes = composedShapesFor(
+			component.root,
+			composeRegistry,
+		)
 
 	// Pre-collect ref names — thunks may reference any ref in the template.
 	// Traversal via `walkTemplate` (LT-042): refs are declared on plain and
