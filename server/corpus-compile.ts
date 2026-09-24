@@ -302,14 +302,17 @@ export const compileCorpus = async (
 			composeRegistry.set(rel, component.entry)
 		}
 	}
-	// Migrated tags import their generated clients (side-effect: the tag-map
-	// augmentation and the runtime registration arrive together). A tag in a
-	// dual state — .tsrx compiled AND its hand-written twin still on disk —
-	// keeps the TWIN's module: the twin is what main.ts registers, and a
-	// generated client importing the other half would double-define the tag
-	// in the bundle.
-	for (const tag of compiledTags)
-		if (!childImports.has(tag)) childImports.set(tag, `./${tag}.client`)
+	// Runtime registration follows the SERVED surface (ADR 0039, LT-291): a
+	// compiled tag's child import is always its generated client, whether or
+	// not a hand-written `.ts` twin is still on disk. The twin is the
+	// artifact of record and is never served — `examples/main.ts` imports
+	// the generated client — so importing it would define the tag twice in
+	// the bundle, or ship the unselected surface. Type visibility rides the
+	// same import: every variant-set member declares its own
+	// `HTMLElementTagNameMap` entry (ADR 0039 s4), so the served client
+	// carries it for the parent's `first()`/`pass()` sites. Only a tag that
+	// is not compiled at all keeps its hand-written module.
+	for (const tag of compiledTags) childImports.set(tag, `./${tag}.client`)
 
 	const entries: RegistryEntry[] = []
 	const spanInfos: CompiledSpanInfo[] = []

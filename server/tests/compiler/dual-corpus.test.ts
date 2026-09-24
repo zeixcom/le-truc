@@ -416,25 +416,120 @@ describe('basic-counter three-spelling variant set (LT-285, ADR 0039)', () => {
 			expect(message).toContain(rel)
 	})
 
-	test('the retained twin is what childImports resolves the tag to (review rider b)', () => {
+	test('the retained twin still seeds the sibling-module map (review rider b)', () => {
+		// The twin keeps seeding tag knowledge; LT-291 only stops a COMPILED
+		// tag's child import from resolving to it (see the pins below).
 		expect(collectSiblingModules(REPO_CONFIG).get('basic-counter')).toEndWith(
 			'examples/basic/counter/basic-counter',
 		)
 	})
+})
 
-	test('no compiled component references basic-counter until LT-291 lands', async () => {
-		// childImports keeps the TWIN's module over the generated client, so a
-		// compiled parent referencing the tag would import the twin while
-		// examples/main.ts registers the served client — a double define.
-		// LT-291 makes childImports prefer the served surface; until then the
-		// first referrer must fail here, loudly. Matches markup (`<basic-counter`)
-		// and module specifiers (`…/basic-counter'`), not prose in comments.
-		const referrers = (await loadCorpus())
-			.filter(f => !f.filename.startsWith(`${COUNTER_DIR}/`))
-			.filter(f =>
-				/<basic-counter\b|\/basic-counter(\.[a-z]+)?['"]/.test(f.content),
-			)
-			.map(f => f.filename)
-		expect(referrers).toEqual([])
+// LT-291 (ADR 0039): a compiled parent referencing a tag whose variant set
+// retains its hand-written `.ts` twin registers the SERVED surface — the
+// generated client — never the twin, which `examples/main.ts` does not
+// import. In memory, like the pins above.
+const PARENT_REL = 'examples/twin-parent-tmp/twin-parent.tsx'
+const twinParent = (prop: string): string =>
+	`import type { FactoryContext } from '@zeix/le-truc'
+
+export type TwinParentProps = { total: number }
+
+export function TwinParent(
+	{}: {},
+	{ first, expose }: FactoryContext<TwinParentProps>,
+) {
+	const counter = first('basic-counter', 'Needed to read its count.')
+	expose({ total: () => counter.${prop} })
+
+	return (
+		<>
+			<twin-parent>
+				<basic-counter>
+					<button type="button">
+						💐 <span>0</span>
+					</button>
+				</basic-counter>
+			</twin-parent>
+			<style>{css\`
+			twin-parent { display: block }
+			\`}</style>
+		</>
+	)
+}`
+
+const compileWithParent = async (label: string, prop: string) => {
+	const outDir = path.join(scratch.path, label)
+	await compileCorpus(
+		[
+			fileInfo(COUNTER_TSRX),
+			fileInfo(COUNTER_TSX),
+			memoryFile(PARENT_REL, twinParent(prop)),
+		],
+		outDir,
+	)
+	return outDir
+}
+
+const typecheck = async (file: string) => {
+	const proc = Bun.spawn(
+		[
+			'bunx',
+			'tsc',
+			'--ignoreConfig',
+			'--noEmit',
+			'--strict',
+			'--target',
+			'esnext',
+			'--module',
+			'esnext',
+			'--moduleResolution',
+			'bundler',
+			'--lib',
+			'esnext,dom',
+			'--skipLibCheck',
+			'--types',
+			'node',
+			file,
+		],
+		{ stdout: 'pipe', stderr: 'pipe', cwd: ROOT },
+	)
+	const [stdout, stderr, exitCode] = await Promise.all([
+		new Response(proc.stdout).text(),
+		new Response(proc.stderr).text(),
+		proc.exited,
+	])
+	return { output: `${stdout}${stderr}`, exitCode }
+}
+
+describe('a compiled parent registers the served surface of a twin-carrying tag (LT-291)', () => {
+	test('the child import is the generated client, and the bundle defines the tag once', async () => {
+		const outDir = await compileWithParent('twin-parent', 'count')
+		const parentClient = path.join(outDir, 'twin-parent.client.ts')
+		const code = fs.readFileSync(parentClient, 'utf8')
+		expect(code).toContain("import './basic-counter.client'")
+		expect(code).not.toMatch(/examples\/basic\/counter\/basic-counter['"]/)
+		const build = await Bun.build({ entrypoints: [parentClient] })
+		expect(build.success).toBe(true)
+		const bundle = (await Promise.all(build.outputs.map(o => o.text()))).join(
+			'\n',
+		)
+		const defines = bundle.match(/defineComponent\(\s*["']basic-counter["']/g)
+		expect(defines).toHaveLength(1)
+		// Bun's per-module banner names every bundled source: the served
+		// client made it in, the retained twin did not.
+		expect(bundle).toContain('basic-counter.client.ts')
+		expect(bundle).not.toMatch(/examples\/basic\/counter\/basic-counter\.ts/)
 	})
+
+	test('the served client carries the tag map: a mistyped child prop still fails tsc', async () => {
+		const good = await compileWithParent('twin-parent-typed', 'count')
+		const ok = await typecheck(path.join(good, 'twin-parent.client.ts'))
+		expect(ok.output).toBe('')
+		expect(ok.exitCode).toBe(0)
+		const bad = await compileWithParent('twin-parent-mistyped', 'cuont')
+		const ko = await typecheck(path.join(bad, 'twin-parent.client.ts'))
+		expect(ko.exitCode).not.toBe(0)
+		expect(ko.output).toContain('cuont')
+	}, 60000)
 })

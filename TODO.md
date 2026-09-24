@@ -55,7 +55,7 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
 
 ### Gate and hygiene (first; parallel with each other)
 
-- [ ] LT-291: A compiled parent must register a variant set's SERVED surface, not its retained twin (LT-283 review follow-up; ADR 0039). **Gate: before the first wave-4 migration that retains a twin whose tag a compiled component references.**
+- [x] LT-291: A compiled parent must register a variant set's SERVED surface, not its retained twin (LT-283 review follow-up; ADR 0039). **Gate: before the first wave-4 migration that retains a twin whose tag a compiled component references.** — done
   **Skill:** le-truc-dev
   **Context:** `compileCorpus` seeds `childImports` from the sibling modules
   (`examples/**/*.ts`) and keeps them over the generated client: "a tag in a dual state —
@@ -88,6 +88,20 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   left a tripwire pin in `dual-corpus.test.ts` that fails as soon as a corpus source outside
   `examples/basic/counter/` references `basic-counter`; this task retires it for the real
   assertion.
+  **Done (2026-09-25):** `compileCorpus` now sets `./<tag>.client` for every compiled tag,
+  overriding the sibling twin's module; the served-surface rule is recorded in the
+  `childImports` comment. Pickup answer: a raw dashed tag seeds a child import only when a
+  query addresses it (`addQuery`: a `first()` ref or a `truc:pass` target, the same path a
+  compose child takes). A bare `<module-scrollarea>` with no binding imports nothing, and
+  `main.ts` registers it. Both paths read the same `childImports` map, so the one fix covers
+  them. The tripwire pin is gone. In its place, `dual-corpus.test.ts` has a compiled parent
+  that holds a `first('basic-counter')` ref beside the live counter set. The test asserts
+  that the parent's client imports `./basic-counter.client`, that a `Bun.build` bundle has
+  exactly one `defineComponent('basic-counter'…)` and no twin, and that tsc passes on
+  `counter.count` but reports a mistyped `counter.cuont`. The fixture uses a `first()` ref,
+  not `truc:pass`: basic-counter's `count` is read-only (LTC012), so it cannot be a legal
+  pass target. The test fails on the old code. `check:corpus` passes and the client goldens
+  are unchanged.
 
 - [ ] LT-292: A `variantOverrides` entry that names no variant set is a configuration error (LT-283 review follow-up).
   **Skill:** le-truc-dev
