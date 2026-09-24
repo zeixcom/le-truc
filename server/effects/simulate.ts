@@ -25,6 +25,15 @@
  * carries a Folded verdict there. Gating on that verdict would silently skip
  * exactly the component that needs the realm most.
  *
+ * ## What it loads
+ *
+ * More than it renders: every subject's client module plus the transitive
+ * `composesTags` closure over the registry, whatever the children's tier
+ * (LT-188). Children-first replay can only order definitions the realm has
+ * recorded, and a server-spliced child its parent never imports would
+ * otherwise stay undefined. Loading a Folded-tier child's module DEFINES its
+ * tag; it never renders it, so the tier invariant below is unaffected.
+ *
  * ## What it renders
  *
  * One render per OCCURRENCE, not per component: the markup is the
@@ -246,6 +255,46 @@ const simulationSubjects = (
 }
 
 /**
+ * The client modules the realm must LOAD: every subject plus the transitive
+ * `composesTags` closure over the registry, children-first and de-duplicated
+ * (LT-188).
+ *
+ * Children-first replay (LT-154) can only order definitions the realm has
+ * RECORDED, and a composed child that its parent's client module never
+ * imports (pure server-splice composition, no `pass()`/`first()` binding) is
+ * never pulled in by the import graph. Without the closure a Simulated-tier
+ * parent composing a Folded- or Static-tier child renders that child
+ * un-upgraded — silently wrong markup that looks like ordinary SSR output.
+ *
+ * The closure widens the LOAD set only. Defining a tag is not simulating a
+ * component: the RENDER set stays the Simulated-tier subjects, so
+ * {@link assertSimulatedTier} and the ADR 0029 saving are untouched. A
+ * composed tag with no registry entry (not a compiled component) has no
+ * client module to load and is left to the page.
+ */
+const loadClosure = (
+	subjects: readonly SimulationSubject[],
+	registry: ComponentRegistry,
+	generatedDir: string,
+): Array<{ tag: string; clientModulePath: string }> => {
+	const visited = new Set<string>()
+	const ordered: Array<{ tag: string; clientModulePath: string }> = []
+	const visit = (tag: string): void => {
+		if (visited.has(tag)) return
+		visited.add(tag)
+		const entry = registry[tag]
+		if (!entry) return
+		for (const child of entry.composesTags) visit(child)
+		ordered.push({
+			tag,
+			clientModulePath: join(generatedDir, entry.clientModule),
+		})
+	}
+	for (const subject of subjects) visit(subject.tag)
+	return ordered
+}
+
+/**
  * Split authored demo markup into the top-level occurrences of `tag`.
  *
  * parse5, not the realm's document (LT-263). This is build-side work — it
@@ -400,15 +449,19 @@ export const simulateCorpus = async ({
 		composesTags: tag => entries[tag]?.composesTags ?? [],
 		suppressedSites: tag => entries[tag]?.suppressedSites ?? [],
 	})
+	// Set once the normal path has printed the report, so the catch below
+	// prints captured diagnostics only when an earlier throw would lose them.
+	let reported = false
 	try {
-		// Resolution phase. A composed child whose parent's client module
-		// already imports it is recorded as a side effect of the parent's
-		// load, so its own load() would record nothing NEW and trip the
-		// load-once assertion (ADR 0027 sub-design 10).
-		for (const subject of subjects) {
-			if (realm.loadedTags.includes(subject.tag)) continue
+		// Resolution phase, over the composed-children closure (LT-188). A
+		// module already recorded — a child its parent's client module
+		// imports, or one an earlier load pulled in — is skipped: its own
+		// load() would record nothing NEW and trip the load-once assertion
+		// (ADR 0027 sub-design 10).
+		for (const module of loadClosure(subjects, entries, generatedDir)) {
+			if (realm.loadedTags.includes(module.tag)) continue
 			await realm.load(
-				() => import(pathToFileURL(subject.clientModulePath).href),
+				() => import(pathToFileURL(module.clientModulePath).href),
 			)
 		}
 		for (const subject of subjects) {
@@ -448,6 +501,7 @@ export const simulateCorpus = async ({
 					.map(tag => `<${tag}>`)
 					.join(', ')} — not simulated`,
 			)
+		reported = true
 		if (report.classified.length > 0) log(formatSimReport(report))
 		gateOnSimReport(report)
 		return {
@@ -461,6 +515,18 @@ export const simulateCorpus = async ({
 			ms,
 			report,
 		}
+	} catch (error) {
+		// A throw before the report (a load() assertion, an importer error)
+		// would otherwise take the captured host-console lines down with the
+		// realm — and they are often the only account of why it threw.
+		if (!reported && realm.diagnostics.length > 0)
+			log(
+				'🎭 Simulation pass aborted — diagnostics captured before the throw:\n' +
+					formatSimReport(
+						reportDiagnostics(realm.diagnostics, standingEntries),
+					),
+			)
+		throw error
 	} finally {
 		// End of build, not between renders: every render the build will ever
 		// do has happened by here, including the ones an exception cut short.

@@ -16,9 +16,13 @@
  * here is paired with the positive that proves the pass ran.
  */
 
-import { describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, test } from 'bun:test'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { reportDiagnostics } from '../../compiler/build-report'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
+import { createSimulationRealm } from '../../compiler/sim/realm'
 import type {
 	SimDiagnostic,
 	SimulationRealm,
@@ -48,6 +52,11 @@ const entry = (tag: string, tier: EvaluationTier): RegistryEntry =>
 		routingSignals: [],
 		suppressedSites: [],
 	}) as unknown as RegistryEntry
+
+const composing = (
+	base: RegistryEntry,
+	...composesTags: string[]
+): RegistryEntry => ({ ...base, composesTags }) as RegistryEntry
 
 const registryOf = (...entries: RegistryEntry[]): ComponentRegistry =>
 	Object.fromEntries(entries.map(e => [e.tag, e]))
@@ -326,5 +335,167 @@ describe('occurrence scope', () => {
 		})
 		expect(result.withoutMarkup).toEqual(['x-a'])
 		expect(result.simulated).toEqual([])
+	})
+})
+
+describe('the composed-children closure is loaded, not rendered (LT-188)', () => {
+	test('a Folded child composed by a Simulated parent is loaded but never rendered', async () => {
+		const { realm, log } = fakeRealm()
+		const result = await simulateCorpus({
+			registry: registryOf(
+				composing(entry('x-parent', 'simulated'), 'x-child'),
+				entry('x-child', 'folded'),
+			),
+			createRealm: () => realm,
+			readMarkup: async subject => `<${subject.tag}></${subject.tag}>`,
+			log: () => {},
+		})
+		// Positive: the child's module was loaded alongside the parent's.
+		expect(log.filter(step => step === 'load').length).toBe(2)
+		// Negative: loading is not rendering — the render set and the tier
+		// accounting are exactly what they were before the closure.
+		expect(result.simulated).toEqual(['x-parent'])
+		expect(log.some(step => step === 'render:x-child')).toBe(false)
+		expect(result.skipped).toEqual([{ tag: 'x-child', tier: 'folded' }])
+	})
+
+	test('the closure is transitive and loads a shared child once', async () => {
+		const { realm, log } = fakeRealm()
+		await simulateCorpus({
+			registry: registryOf(
+				composing(entry('x-a', 'simulated'), 'x-mid', 'x-leaf'),
+				composing(entry('x-mid', 'folded'), 'x-leaf'),
+				entry('x-leaf', 'static'),
+				composing(entry('x-b', 'simulated'), 'x-leaf', 'x-unregistered'),
+			),
+			createRealm: () => realm,
+			readMarkup: async subject => `<${subject.tag}></${subject.tag}>`,
+			log: () => {},
+		})
+		// x-a, x-mid, x-leaf, x-b — x-leaf once, and the tag with no registry
+		// entry (no client module) is not loaded at all.
+		expect(log.filter(step => step === 'load').length).toBe(4)
+	})
+})
+
+describe('a real realm upgrades a server-spliced Folded child (LT-188)', () => {
+	let fixtureDir: string | null = null
+	afterEach(async () => {
+		if (fixtureDir) await rm(fixtureDir, { recursive: true, force: true })
+		fixtureDir = null
+	})
+
+	/**
+	 * Two plain custom elements on disk, the parent's module deliberately NOT
+	 * importing the child's — pure server-splice composition, so nothing but
+	 * the closure can get the child defined. A fresh directory per test keeps
+	 * each import out of the process module cache (ADR 0027 sub-design 10).
+	 */
+	const renderParent = async (parentComposes: string[]) => {
+		fixtureDir = await mkdtemp(join(tmpdir(), 'le-truc-lt188-'))
+		await writeFile(
+			join(fixtureDir, 'x-parent.client.js'),
+			"customElements.define('x-parent', class extends HTMLElement {\n" +
+				"\tconnectedCallback() { this.setAttribute('parent-upgraded', '') }\n" +
+				'})\n',
+		)
+		await writeFile(
+			join(fixtureDir, 'x-child.client.js'),
+			"customElements.define('x-child', class extends HTMLElement {\n" +
+				"\tconnectedCallback() { this.setAttribute('upgraded', '') }\n" +
+				'})\n',
+		)
+		const rendered: string[] = []
+		const result = await simulateCorpus({
+			registry: registryOf(
+				{
+					...composing(entry('x-parent', 'simulated'), ...parentComposes),
+					clientModule: 'x-parent.client.js',
+				} as RegistryEntry,
+				{
+					...entry('x-child', 'folded'),
+					clientModule: 'x-child.client.js',
+				} as RegistryEntry,
+			),
+			generatedDir: fixtureDir,
+			createRealm: options => {
+				const realm = createSimulationRealm(options)
+				const render = realm.render
+				realm.render = async request => {
+					const answer = await render(request)
+					rendered.push(answer.html)
+					return answer
+				}
+				return realm
+			},
+			classifications: [],
+			readMarkup: async () => '<x-parent><x-child></x-child></x-parent>',
+			log: () => {},
+		})
+		return { result, rendered }
+	}
+
+	test('the child renders UPGRADED when the parent composes it', async () => {
+		const { result, rendered } = await renderParent(['x-child'])
+		expect(result.simulated).toEqual(['x-parent'])
+		expect(rendered.length).toBe(LOCALES.length)
+		for (const html of rendered) {
+			expect(html).toContain('parent-upgraded')
+			expect(html).toMatch(/<x-child upgraded="">/)
+		}
+	})
+
+	test('without the compose edge the same child stays un-upgraded', async () => {
+		// The negative pin: the closure, not the fixture, is what upgrades the
+		// child — drop the edge and the served markup is silently wrong.
+		const { rendered } = await renderParent([])
+		expect(rendered.length).toBe(LOCALES.length)
+		for (const html of rendered) {
+			expect(html).toContain('parent-upgraded')
+			expect(html).toContain('<x-child></x-child>')
+		}
+	})
+})
+
+describe('captured diagnostics survive an early throw (LT-188)', () => {
+	test('a pass that throws during load prints what the realm captured', async () => {
+		const { realm } = fakeRealm([
+			{
+				kind: 'console',
+				component: 'x-a',
+				message: 'captured before the throw',
+			} as SimDiagnostic,
+		])
+		realm.load = async () => {
+			throw new Error('load() recorded no element definitions')
+		}
+		const printed: string[] = []
+		await expect(
+			simulateCorpus({
+				registry: registryOf(entry('x-a', 'simulated')),
+				createRealm: () => realm,
+				readMarkup: async () => '<x-a></x-a>',
+				log: message => printed.push(message),
+			}),
+		).rejects.toThrow(/no element definitions/)
+		expect(printed.join('\n')).toContain('captured before the throw')
+	})
+
+	test('the normal path does not print the report twice', async () => {
+		const { realm } = fakeRealm([
+			{ kind: 'component-throw', component: 'x-a', message: 'boom' },
+		])
+		const printed: string[] = []
+		await expect(
+			simulateCorpus({
+				registry: registryOf(entry('x-a', 'simulated')),
+				createRealm: () => realm,
+				readMarkup: async () => '<x-a></x-a>',
+				log: message => printed.push(message),
+			}),
+		).rejects.toThrow(/x-a/)
+		// The gate's own error carries the report; the abort print is for
+		// throws that never reach it.
+		expect(printed.join('\n')).not.toContain('aborted')
 	})
 })

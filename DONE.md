@@ -219,3 +219,16 @@ entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text
   to pass under either the pre- or post-LT-178 spelling — a leftover of a parallel
   session's in-flight `swapSlots` edit reverted so the branch landed pure. Tightening it
   is free once the LT-178 copy rider (LT-189 item 11) settles the final wording.
+
+- [x] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding) — reviewed ✓
+  **Skill:** docs-server-dev
+  **Changed:** `server/effects/simulate.ts` — the realm now LOADS each Simulated subject plus the
+  transitive `composesTags` closure over the registry (children-first, de-duplicated against
+  `realm.loadedTags`, unregistered tags skipped), whatever the children's tier; the RENDER set
+  is unchanged. A pass that throws before its report prints the captured diagnostics first.
+  Build-internal; no changelog line.
+  **Review:** Approved. Ruling recorded nowhere else: a Folded/Static child in the closure now
+  runs its connect inside the realm, so its diagnostics land in the build report attributed to
+  the rendering parent — intended (it is what the browser runs) and gated like any other entry.
+  Follow-up LT-307 (the `.tsx` markup-path derivation found in review) must land before any
+  Simulated-tier component migrates to a `.tsx` source.

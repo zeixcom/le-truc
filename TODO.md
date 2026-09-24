@@ -24,7 +24,7 @@ per its own sequencing note and lays the IR foundation the ADR 0037 chain and LT
 coordinate against — **ruled 2026-09-21:
 [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md); the
 type-level gate is carried by LT-286**. **LT-212 and LT-213** are the owner-sequenced gates in front of the
-FIRST migration; **LT-188** must land before the wave adds composition across tiers (the
+FIRST migration; **LT-188** (reviewed, in DONE.md) cleared composition across tiers (the
 first migrated component, module-codeblock, composes basic-button). With the gates
 through, **LT-237** gives the spike fixtures a real home and **LT-096** — the smallest
 example — proves the wave actually opened: compiled `.tsx`, spec green, tier + reason
@@ -52,7 +52,7 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-307.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-308.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
@@ -78,33 +78,6 @@ test edits). It is pushed, so history stays; attribute by file, not by title. HE
 sandbox has.
 
 ---
-
-- [ ] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding). **Land before P5 adds composition across tiers. Gate discharged: LT-239 kept the Simulated tier ([ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s1), so this runs.**
-  **Skill:** docs-server-dev
-  **Context:** `server/effects/simulate.ts` loads a client module for each Simulated-tier
-  component and nothing else. Children-first replay needs every composed child's tag DEFINED in
-  the realm before its ancestor upgrades — `RegistryEntry.composesTags` exists for exactly this,
-  and its own JSDoc states the case: a child that a parent's client module never imports (pure
-  server-splice composition, no `pass()`/`first()` binding) is never pulled in by the import
-  graph. A Simulated-tier parent composing a **Folded**-tier child therefore renders that child
-  un-upgraded, and the served markup is silently wrong with no assertion to catch it. Today's
-  corpus hides the hole: the only composing Simulated parent is `form-combobox` →
-  `form-listbox`, and both are Simulated. Wave 4 (P5) will break that coincidence.
-  Fix: the LOAD set becomes the subjects plus the transitive `composesTags` closure over the
-  registry, children-first and de-duplicated against `realm.definitions` (the load-once
-  assertion). The RENDER set stays Simulated-tier only, so `assertSimulatedTier()` and the
-  no-realm-work-for-another-tier invariant are untouched — defining a tag is not simulating a
-  component, and the ADR 0029 saving is unaffected.
-  Second gap, same file: captured host-console output reaches `realm.diagnostics` but is only
-  PRINTED on the normal path, through `gateOnSimReport`/`formatSimReport`. If the pass throws
-  earlier (a `load()` assertion, an importer error), those lines die with the realm — print what
-  was captured before rethrowing.
-  **Channel:** the build report, unchanged; no new diagnostic kind and no TSRX code moves.
-  Acceptance: a fixture with a Simulated parent server-splicing a Folded child renders the child
-  UPGRADED, and removing the closure fails that test (pin the negative — a fixture whose child
-  happens to be Simulated proves nothing); the existing "no realm render for another tier" pin
-  stays green; a pass that throws during load still prints its captured diagnostics;
-  `bun test server` green.
 
 - [ ] LT-237: Move the spike's `.tsx` fixtures into their example component folders. **Depends on LT-238.**
   **Skill:** le-truc-dev

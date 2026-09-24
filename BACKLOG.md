@@ -1447,6 +1447,21 @@ twin's before calling the port done, and assert the opt-out survives hydration t
 this a compile error** — if it has landed by then, these two migrations get the check for free
 and this note is redundant; if it has not, do the manual diff.
 
+- [ ] LT-307: Derive the simulation pass's demo-markup path from the component folder, not by rewriting `.tsrx` (LT-188 review finding). **Land before any Simulated-tier component's served surface becomes `.tsx`.**
+  **Skill:** docs-server-dev
+  **Context:** `simulationSubjects()` in `server/effects/simulate.ts` builds `markupPath` as
+  `entry.source.replace(/\.tsrx$/, '.html')`. For a `.tsx`-sourced entry (the default served
+  surface since ADR 0039 — `basic-counter` already is one) the regex misses and `markupPath` IS
+  the `.tsx` source, which exists, so `readMarkup` returns TypeScript and `occurrencesOf` finds
+  whatever JSX literals happen to parse as the tag — silently wrong input, no assertion fires.
+  No symptom today only because every Simulated-tier entry is still `.tsrx`-sourced. Fix: derive
+  `<dir>/<tag>.html` from the source's folder and the tag (the demo file's own naming rule),
+  independent of the source's extension; `.ts` twins included.
+  **Channel:** none new — a missing demo file keeps reporting through `withoutMarkup`.
+  Acceptance: a `.tsx`-sourced Simulated entry resolves to its `.html` sibling (pin with the
+  `readMarkup` seam capturing `subject.markupPath`), a `.tsrx` one still does; `bun test server`
+  green.
+
 - [ ] LT-280: Per-item effect channels in reactive-list loops — the lowering covers text fill + events and nothing richer (LT-266 evidence). **Design first (grilling); gates the loop-heavy composite migrations LT-109/LT-110/LT-111.**
   **Skill:** architect (design + ADR) → le-truc-dev (implementation)
   **Context:** The LT-266 size-bet conversion drafted module-todo on `.tsx` in full and drove
