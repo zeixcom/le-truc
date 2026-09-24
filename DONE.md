@@ -37,6 +37,21 @@ retirement ruling is verbatim in AGENTS.md's `pass()` bullet and the CHANGELOG R
 entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text:
 `git log -p -- DONE.md`.
 
+- [x] LT-207: Stop the simulation realm's dependency-wait timers from leaking past teardown — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `server/compiler/sim/realm.ts` — the realm forces tracking wraps over
+  `setTimeout`/`setInterval` (+ `clear*`, host handles preserved) for its lifetime, and
+  `dispose()` cancels every timer still pending before restoring globals. Root cause: the
+  library's `DEPENDENCY_TIMEOUT` wait runs on the host queue, which `window.close()` does not
+  own, so it fired post-dispose into `customElements is not defined`. Pinned by
+  `sim-realm.test.ts` "dispose cancels the timers the realm still has pending (LT-207)".
+  Internal only — no CHANGELOG entry.
+  **Review:** Approved. Ruling: timer ownership is process-wide, not realm-scoped — ANY host
+  timer scheduled while a realm is open is cancelled at dispose. Safe today because
+  `build.ts` runs `simulateCorpus()` only for one-shot builds, never beside the watch-mode
+  debounce/reload timers; a future task that opens a realm inside a long-lived process
+  (dev server, watch rebuilds) must revisit this.
+
 - [x] LT-315: Tech Writer copy review for LTC054 (LT-258 handoff) — done ✓
   **Changed:** final copy for `foldReadsPageContext` and `undeclaredPageAmbient` in
   `server/compiler/diagnostics.ts`. The ambient member list is interpolated from

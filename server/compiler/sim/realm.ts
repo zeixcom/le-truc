@@ -41,7 +41,11 @@
  * deleted globals turn a contained component's lingering dependency-wait
  * into a synchronous `customElements is not defined` flood that aborts the
  * process — so `dispose()` must be called at most once, after every render
- * the realm will ever do, never between them. One realm per build.
+ * the realm will ever do, never between them. One realm per build. Since
+ * LT-207 the realm also owns the host timers scheduled while it is open, and
+ * `dispose()` cancels those still pending — so a wait that outlives the
+ * realm (tests dispose per file or per test) never fires against its
+ * restored globals and lands as an uncaught error in whatever runs next.
  *
  * ## Diagnostics
  *
@@ -444,6 +448,41 @@ export function createSimulationRealm(
 		}
 	}
 
+	// Timers scheduled while the realm is open are the realm's (LT-207). A
+	// contained component's dependency wait (`DEPENDENCY_TIMEOUT`) and context
+	// retries run on the HOST timer queue, which `window.close()` does not
+	// own — so a timer outliving `dispose()` fires against restored globals
+	// (`customElements is not defined`) and lands as an uncaught error in
+	// whatever runs next. Tracking wraps keep the host handles (`.unref()`
+	// and friends still work); `dispose()` cancels whatever is still pending.
+	const pendingTimers = new Map<unknown, (handle: unknown) => void>()
+	type TimerFn = (fn: unknown, delay?: number, ...args: unknown[]) => unknown
+	type ClearFn = (handle: unknown) => void
+	const ownTimers = (set: string, clear: string, repeats: boolean) => {
+		const hostSet = root[set] as TimerFn | undefined
+		const hostClear = root[clear] as ClearFn | undefined
+		if (typeof hostSet !== 'function' || typeof hostClear !== 'function') return
+		force(set, (fn: unknown, delay?: number, ...args: unknown[]) => {
+			if (typeof fn !== 'function') return hostSet(fn, delay, ...args)
+			const handle = hostSet(
+				(...fired: unknown[]) => {
+					if (!repeats) pendingTimers.delete(handle)
+					return (fn as (...a: unknown[]) => unknown)(...fired)
+				},
+				delay,
+				...args,
+			)
+			pendingTimers.set(handle, hostClear)
+			return handle
+		})
+		force(clear, (handle: unknown) => {
+			pendingTimers.delete(handle)
+			hostClear(handle)
+		})
+	}
+	ownTimers('setTimeout', 'clearTimeout', false)
+	ownTimers('setInterval', 'clearInterval', true)
+
 	const onRejection = (reason: unknown) => {
 		report({
 			kind: 'unhandled-rejection',
@@ -705,6 +744,8 @@ export function createSimulationRealm(
 
 	const dispose = () => {
 		processLike?.off?.('unhandledRejection', onRejection)
+		for (const [handle, clear] of pendingTimers) clear(handle)
+		pendingTimers.clear()
 		for (const restore of restores.reverse()) restore()
 		window.close()
 	}

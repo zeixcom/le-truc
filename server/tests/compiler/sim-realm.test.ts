@@ -184,14 +184,54 @@ describe('realm application', () => {
 
 	test('restores every touched global on dispose', () => {
 		const before = new Map(
-			['HTMLElement', 'document', 'customElements', 'Event', 'fetch'].map(
-				name => [name, globalRecord[name]],
-			),
+			[
+				'HTMLElement',
+				'document',
+				'customElements',
+				'Event',
+				'fetch',
+				'setTimeout',
+			].map(name => [name, globalRecord[name]]),
 		)
 		const realm = createSimulationRealm()
 		realm.dispose()
 		for (const [name, value] of before)
 			expect(globalRecord[name]).toBe(value as never)
+	})
+
+	test('dispose cancels the timers the realm still has pending (LT-207)', async () => {
+		// The leak this pins: a contained component waiting on a never-defined
+		// child keeps a DEPENDENCY_TIMEOUT timer on the host queue. Fired after
+		// dispose, it hit `customElements.get` on restored globals and failed
+		// whatever test was awaiting when it landed.
+		const hostSetTimeout = setTimeout
+		const realm = createSimulationRealm()
+		let fired = false
+		try {
+			const { defineComponent } = await importLibrary()
+			await realm.load(async () => {
+				defineComponent('probe-waiter', ({ first, watch }) => {
+					const child = first('probe-never-defined')
+					watch(
+						() => true,
+						() => child?.setAttribute('data-bound', ''),
+					)
+				})
+			})
+			await realm.render({
+				markup:
+					'<probe-waiter><probe-never-defined></probe-never-defined></probe-waiter>',
+				component: 'probe-waiter',
+			})
+			globalThis.setTimeout(() => {
+				fired = true
+			}, 0)
+		} finally {
+			realm.dispose()
+		}
+		// Past DEPENDENCY_TIMEOUT (200 ms): the wait would have fired by now.
+		await new Promise(resolve => hostSetTimeout(resolve, 300))
+		expect(fired).toBe(false)
 	})
 
 	test('stubs absent constructors inert', () => {

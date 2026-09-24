@@ -79,18 +79,3 @@ sandbox has.
 
 ---
 
-- [ ] LT-207: Stop the simulation realm's dependency-wait timers from leaking past teardown (LT-202 NOTES residue).
-  **Skill:** le-truc-dev
-  **Context:** `bun test server/tests` exits 0 or 1 nondeterministically at HEAD: 3
-  unhandled `DependencyTimeoutError` "errors between tests" with 0 failures (verified
-  pre-existing on the clean base, f4d66be0). Mechanism (hypothesis from LT-202): the
-  parity suite's sim-realm disposal leaves the library's 200 ms dependency-resolution
-  timer running; its rejection then lands on the torn-down window (`customElements.get`
-  on a disposed realm) and bun fails whichever test is awaiting when it arrives.
-  Timing-dependent — corpus-order failed twice in a 3-file subset run, passed in both
-  full-suite runs. The realm should cancel or absorb in-flight dependency-resolution
-  timers on `dispose()` (or the driver should drain them before teardown) so a disposed
-  realm can never emit an unhandled rejection into the next test.
-  **Acceptance:** three consecutive full `bun test server/tests` runs exit 0; the
-  3-file subset that failed during LT-202 exits 0 repeatedly; no test asserts on the
-  leaked rejection today, so fixing it changes no pinned behavior.
