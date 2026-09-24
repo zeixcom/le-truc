@@ -18,9 +18,11 @@ import {
 	REPO_CONFIG,
 	relocateClientSpecifiers,
 } from '../../corpus-compile'
+import { collectSiblingModules } from '../../corpus-sources'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { settle } from '../helpers/test-utils'
+import { loadCorpus } from './corpus-fixture'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -329,4 +331,89 @@ describe('dual corpus (ADR 0032 sub-design 6, narrowed by ADR 0039)', () => {
 	// bun shares one module registry across test files, and the extra wall
 	// time shifted a pre-existing stray dependency-timeout window onto this
 	// file in the first full-suite run (see NOTES.md, LT-202).
+})
+
+// The three-spelling exemplar (LT-285, the LT-238 exit criterion): the REAL
+// basic-counter folder carries the hand-written `.ts` twin beside its
+// `.tsrx` and `.tsx` spellings — the pins above, proven against the live set.
+const COUNTER_DIR = 'examples/basic/counter'
+const COUNTER_TS = `${COUNTER_DIR}/basic-counter.ts`
+const COUNTER_TSRX = `${COUNTER_DIR}/basic-counter.tsrx`
+const COUNTER_TSX = `${COUNTER_DIR}/basic-counter.tsx`
+
+describe('basic-counter three-spelling variant set (LT-285, ADR 0039)', () => {
+	test('the folder carries all three spellings; only the twin declares the tag map', () => {
+		for (const rel of [COUNTER_TS, COUNTER_TSRX, COUNTER_TSX])
+			expect(fs.existsSync(path.resolve(ROOT, rel))).toBe(true)
+		const declaresMap = (rel: string) =>
+			/interface HTMLElementTagNameMap/.test(
+				fs.readFileSync(path.resolve(ROOT, rel), 'utf8'),
+			)
+		expect(declaresMap(COUNTER_TS)).toBe(true)
+		expect(declaresMap(COUNTER_TSRX)).toBe(false)
+		expect(declaresMap(COUNTER_TSX)).toBe(false)
+	})
+
+	test('the compiled members compile as one set serving .tsx — the twin adds no registry entry', async () => {
+		const outDir = path.join(scratch.path, 'counter-set')
+		const spanInfos = await compileCorpus(
+			[fileInfo(COUNTER_TSRX), fileInfo(COUNTER_TSX)],
+			outDir,
+		)
+		expect(spanInfos).toHaveLength(1)
+		expect(spanInfos[0]?.tag).toBe('basic-counter')
+		expect(spanInfos[0]?.source).toBe(COUNTER_TSX)
+		const registry = JSON.parse(
+			fs.readFileSync(path.join(outDir, 'registry.json'), 'utf8'),
+		) as Record<string, unknown>
+		expect(Object.keys(registry)).toEqual(['basic-counter'])
+	})
+
+	test('a same-surface duplicate of the live set fails the build naming every source (LTC048)', async () => {
+		// In memory only, like the pins above: a real file would race every
+		// concurrent corpus glob.
+		const dupRel = 'examples/basic/counter-copy/basic-counter.tsx'
+		const settled = await settle(
+			compileCorpus(
+				[
+					fileInfo(COUNTER_TSRX),
+					fileInfo(COUNTER_TSX),
+					memoryFile(
+						dupRel,
+						fs.readFileSync(path.resolve(ROOT, COUNTER_TSX), 'utf8'),
+					),
+				],
+				path.join(scratch.path, 'counter-dup'),
+			),
+		)
+		if (settled.status !== 'rejected')
+			throw new Error('the run should have failed with LTC048')
+		const message = String(settled.reason)
+		expect(message).toContain('LTC048')
+		expect(message).toContain('`basic-counter`')
+		for (const rel of [COUNTER_TSRX, COUNTER_TSX, dupRel])
+			expect(message).toContain(rel)
+	})
+
+	test('the retained twin is what childImports resolves the tag to (review rider b)', () => {
+		expect(collectSiblingModules(REPO_CONFIG).get('basic-counter')).toEndWith(
+			'examples/basic/counter/basic-counter',
+		)
+	})
+
+	test('no compiled component references basic-counter until LT-291 lands', async () => {
+		// childImports keeps the TWIN's module over the generated client, so a
+		// compiled parent referencing the tag would import the twin while
+		// examples/main.ts registers the served client — a double define.
+		// LT-291 makes childImports prefer the served surface; until then the
+		// first referrer must fail here, loudly. Matches markup (`<basic-counter`)
+		// and module specifiers (`…/basic-counter'`), not prose in comments.
+		const referrers = (await loadCorpus())
+			.filter(f => !f.filename.startsWith(`${COUNTER_DIR}/`))
+			.filter(f =>
+				/<basic-counter\b|\/basic-counter(\.[a-z]+)?['"]/.test(f.content),
+			)
+			.map(f => f.filename)
+		expect(referrers).toEqual([])
+	})
 })

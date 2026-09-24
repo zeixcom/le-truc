@@ -166,7 +166,7 @@ sandbox has.
   (`form-radiogroup.html`, `form-colorgraph.html`) still name `server/generated/tsrx/` — out of
   this skill's scope.
 
-- [ ] LT-285: The three-spelling exemplar — restore `basic-counter`'s `.ts` twin as a variant. **The LT-238 exit criterion.**
+- [x] LT-285: The three-spelling exemplar — restore `basic-counter`'s `.ts` twin as a variant. **The LT-238 exit criterion.** — done ✓ (`test:variants` pending, see Changed)
   **Skill:** le-truc-dev
   **Context:** Restore the deleted hand-written twin from history
   (`git log --oneline -- examples/basic/counter/`) as `examples/basic/counter/basic-counter.ts`
@@ -193,6 +193,25 @@ sandbox has.
   `examples/main.ts` registers the generated client. That is LT-291. No compiled component
   references `basic-counter` today, so this task is unaffected, but add a pin that
   none does, so the first one fails loudly until LT-291 lands.
+  **Changed:** the twin restore, the `.tsx`/`.tsrx` map-entry drop and the variant-derived
+  CEM exclusion (`isVariantTwin` in `custom-elements-manifest.config.mjs`) had already landed
+  in 640922d5 (LT-284). The restored twin is byte-identical to its pre-deletion self
+  (`git diff ad811c7f^ HEAD -- examples/basic/counter/basic-counter.ts` is empty), so it
+  already owned the map entry. This task adds the live pins in
+  `server/tests/compiler/dual-corpus.test.ts` (describe *basic-counter three-spelling variant
+  set*): all three spellings present and only the twin declares `HTMLElementTagNameMap`; the
+  real `.tsrx` + `.tsx` compile as one set serving `.tsx` with one registry entry; a
+  same-surface duplicate of the live set (`examples/basic/counter-copy/basic-counter.tsx`,
+  in memory) fails with LTC048 naming all three sources; `childImports` resolves the tag to
+  the twin (rider b, documented); no corpus source outside the folder references
+  `basic-counter` by markup or module specifier (the LT-291 tripwire).
+  **Gates:** typecheck 0 (no TS 2717); `check:corpus` warning baseline 0, census 20/2/0;
+  `build:cem` + `verify-cem` green (70 declarations; `basic-counter`'s single declaration comes
+  from `server/generated/components/basic-counter.client.ts`, so the twin exclusion is live);
+  `bun test server/tests` 1679 pass / 22 fail, the same 22 as LT-283's baseline (14 `serve.test.ts`
+  port-bind + 8 LT-237 loaders).
+  **Not run here:** `bun run test:variants basic-counter` (the sandbox can't bind port 3000).
+  Run it to close the ×3 half of the Check.
 
 - [ ] LT-286: ForIR → `EachForIR | ReconcileForIR`, with the `@empty` reservation and the key-clause rule (LT-235 item (a); ADR 0040 s1). **The type-level gate in front of LT-212's implementation.**
   **Skill:** le-truc-dev
