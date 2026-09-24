@@ -1221,6 +1221,32 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   **Verification:** `check:links` green; the two docs say the same thing in the same words
   (one is user-facing, one is the authoring profile).
 
+- [ ] LT-303: `<truc:try pending catch>` replaces `boundary()` and the try/catch IIFE in `.tsx` ([ADR 0041](adr/0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md)). **Gate: before the first wave-4 migration that authors a boundary.**
+  **Skill:** le-truc-dev; Tech Writer reviews the diagnostic copy (retirement counts)
+  **Context:** Owner ruling 2026-09-24. `.tsx` spells both boundaries as one namespaced
+  intrinsic: `<truc:try catch={e => <jsx/>}>ok</truc:try>` is the error boundary, and
+  adding `pending={<jsx/>}` makes it the async boundary. Both lower to the existing `try`
+  IR node (`pendingChildren` set iff `pending` is present), so nothing past the front end
+  changes and `.tsrx` is untouched. (1) `host-profile.d.ts`: delete the `boundary`
+  ambient; add `IntrinsicElements['truc:try']` with `pending?: JSX.Element`,
+  `catch: (error: Error) => JSX.Element` and `children: JSX.Element`, keeping LT-208's
+  branded arm typing (verified 2026-09-24: namespaced intrinsics give `tsc` arm types,
+  contextual `Error`, and TS17001 on a repeated arm). (2) `lower-tsx.ts`: delete
+  `lowerTryIife` and the `boundary` call dispatch, and lower `truc:try` elements instead.
+  The switch IIFE and `asIife` stay. The single-root-per-arm rules carry over. The
+  arrow-shape and missing-arm errors retire where `tsc` now covers them; a surviving
+  shape error keeps channel compiler, tier 1 Prevented. (3) Rewrite `spike/tsx/async/`,
+  `spike/tsx/sync/` and `spike/tsx/async-bad-arms.tsx` (the negative type test becomes a
+  bad `pending`/`catch` attribute) and the parity tests. Byte-identical server output
+  against the `.tsrx` twins is the acceptance proof. (4) Sweep JSDoc and comments
+  (`lower-tsx.ts` header, `lower-shared.ts:8`/`:487`) so no `boundary()` or try/catch
+  IIFE reference survives in code. The authoritative docs were already swept on
+  2026-09-24. BACKLOG P1's Tech Writer batch item 5 (the boundary diagnostic wordings)
+  now covers the `truc:try` copy instead. Independent of LT-276 (arm mechanism) but
+  touches the same goldens — land either first and refresh.
+  **Check:** `grep -rn "boundary(" server spike` is empty outside history; parity suite
+  green; compile-warning baseline 0.
+
 ## P4 — v3.0 deprecated-surface removal (separate branch; gates wave 4)
 
 **Owner sequencing, 2026-09-04:** both removals run on a **separate branch**, and land **before

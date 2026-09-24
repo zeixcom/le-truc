@@ -42,7 +42,7 @@ gates hold; the i18n chain (LT-242 → LT-233 → LT-250) and the ADR 0037 imple
 **Exit criterion:** a corpus carrying all three spellings of one example compiles clean,
 its spec passes against each, and LTC048 still fires for two canonical sources
 (LT-283–LT-285, the LT-238 ruling's implementation);
-the IR ADR is recorded (LT-235) and `@empty` + dynamic tags land with parity green, the
+the IR ADR is recorded (LT-235) and `@empty` lands and dynamic tags are rejected (A0 ruling) with parity green, the
 warning baseline at 0 and census 20/2/0 (LT-212, LT-213); a Simulated parent
 server-splicing a Folded child renders the child UPGRADED (LT-188); `spike/` is deleted
 and the parity suite, tsx typecheck gates and dual-corpus test run from the new fixture
@@ -52,11 +52,11 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-303.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-304.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
-review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302.)
+review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299; the LT-212 review filed LT-300–LT-302; the LT-213 deliberation filed LT-303 (ADR 0041).)
 
 **Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
 are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
@@ -80,17 +80,35 @@ sandbox has.
 ---
 
 - [ ] LT-213: Dynamic `<{expression}>` tags (LT-210 item 2, re-anchored). **Gate: before P5's first wave-4 migration; not urgent.**
-  **Skill:** le-truc-dev, with architect ruling the tier story if it needs one
-  **Context:** Spec: closing tag repeats (`</{expression}>`). Not expressible in
-  standard TSX — if the capability stays `.tsrx`-only, ADR 0032 s6's exception
-  mechanism records it. The server semantics are the hard part: a tag name unknown at
-  compile time folds only when the expression is server-known; decide which tier
-  renders the unknown case and what the client does at connect. Also check the
-  `.tsx` collision: a capitalized local-variable tag reads as compose (PascalCase =
-  compose), so a `.tsx` spelling via a local tag variable must not blur compose
-  dispatch.
-  **Acceptance:** the unknown-tag case has a ruled tier and a pinned fixture;
-  compose dispatch unaffected.
+  **Skill:** le-truc-dev; Tech Writer reviews the new LTC copy
+  **Context:** **Owner ruling 2026-09-24: scope A0 — reject on both surfaces now; the
+  design below is recorded, built only when a migration needs it** (no corpus
+  component chooses its tag; `{level === 2 ? <h2/> : <h3/>}` already covers the
+  server-arg case). The live defect: `@tsrx/core` 0.2.3 parses `<{expr}>…</{expr}>`
+  and sets `isDynamic` on the element node, which `frontend/tsrx/lower-template.ts`
+  never reads — it lowers to `{ kind: 'element', tag: "" }` with no diagnostic
+  (verified 2026-09-24 against a `basic-button.tsrx` copy). Fix: a new LTC code
+  (next free, LTC053) raised on any `isDynamic` element — **channel compiler, tier 1
+  Prevented**, statically decidable, no runtime half — whose copy says dynamic tags are
+  not supported yet and names the conditional spelling as the workaround. In `.tsx`,
+  `<truc:element>` has no `IntrinsicElements` entry yet, so `tsc` rejects it. The build
+  does not necessarily run `tsc`, so the `.tsx` front end also raises LTC053 on a
+  namespaced tag name it does not recognize (once LT-303 lands, only `truc:try` is
+  recognized). **The recorded design, for when it is built:** (1) only a server-known tag
+  expression (a literal, a server arg, `i18n`) is admitted — it folds in the Folded
+  tier and the client sees a static element; a host/DOM, reactive or unresolvable tag
+  expression is rejected (tier 1 Prevented: the client never creates structure, and
+  server args are the build-time configuration channel); (2) values are HTML element
+  names only — no dashed names, so compose stays PascalCase-only and `composesTags`
+  stays static; `script`/`style`/`template`/`iframe` and void-with-children are
+  rejected at fold (build error, tier 1); (3) `first()`/CSS address the element by
+  class/id/`data-*`, never by tag (LT-127's discriminator rule); (4) `.tsx` spells it
+  `<truc:element tag={…}>` (namespaced intrinsic, `tag` typed as the allowed union)
+  — the React `const Tag = …; <Tag>` idiom is rejected because it collides with
+  PascalCase compose dispatch; (5) one IR change, `tag: { kind: 'static', name } |
+  { kind: 'server', exprText }`, fed by both front ends.
+  **Acceptance:** a negative fixture per surface (`.tsrx` `<{expr}>` → LTC053, no
+  `tag: ""` element reaches the IR); compose dispatch unaffected.
 
 - [ ] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding). **Land before P5 adds composition across tiers. Gate discharged: LT-239 kept the Simulated tier ([ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s1), so this runs.**
   **Skill:** docs-server-dev

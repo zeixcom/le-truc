@@ -45,7 +45,8 @@ Maintained by the `adr-keeper` workflows — update whenever an ADR is created, 
 | [0038](0038-runtime-neutral-build-path.md) | Runtime-Neutral Build Path — the `RuntimeIO` Seam, One Glob Grammar, and the Portability Gate | ✅ Accepted | §5, M25, M28 |
 | [0039](0039-canonical-plus-variants-authored-surfaces.md) | Canonical-Plus-Variants — One Tag, Build-Selected Surface Spellings | ✅ Accepted | §1, M17, M18 |
 | [0040](0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md) | Typed IR Contracts — Discriminated Unions and Pass Signatures | 🔄 Proposed | §1, §4 |
+| [0041](0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md) | `truc:` Intrinsic Elements for Compiler-Consumed Constructs in `.tsx` | ✅ Accepted | M17, M18, M21 |
 
 ---
 
-**Last updated:** 2026-09-21
+**Last updated:** 2026-09-24

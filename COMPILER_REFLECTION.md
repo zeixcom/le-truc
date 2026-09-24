@@ -184,8 +184,8 @@ architectural and will never close:
 | --- | --- |
 | **Everything the client can show must already exist in server HTML.** The client toggles `hidden`; it never creates alternatives. | **No.** This is DOM-is-truth (ADR 0003/0024 s3). It is the trade the whole project is built on. See §4 for what it costs i18n. |
 | **Addressing limits**: one reactive list per component; one addressable construct root per `@if` branch; composed children accept statics and server expressions only. | **No.** These are consequences of proving selectors structurally. They will be the top source of "why won't my component compile," and they have no analogue in any framework. |
-| IIFEs for `switch`/`try` on `.tsx`; no statement-context arms. | Partly — this is exactly the ergonomics loss the dual ruling exists to soften. |
-| `boundary({ ok, nil, err })` is host vocabulary to learn. | Acceptable; it is one construct. |
+| An IIFE for `switch` on `.tsx`; no statement-context arms. | Partly — this is exactly the ergonomics loss the dual ruling exists to soften. |
+| `truc:` intrinsic elements (`<truc:try>`, ADR 0041) are host vocabulary to learn. | Acceptable; it is a small closed set, type-checked by `tsc`. |
 | CSS needs template-literal wrapping inside `<style>`; no `{count}` shorthand. | Cosmetic. |
 | Styles are scoped **by tag name** (ADR 0033), not encapsulated. | By design; collision safety rests on convention. Worth stating in docs as a known limit rather than a feature. |
 

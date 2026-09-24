@@ -44,10 +44,10 @@ One exported component function per file:
 | `{items.map((item, i) => …)}` | `for` — `each()` over server data, the `reconcile()` path over a declared `createList`; decided by the iterable's type, not the spelling |
 | `{items.length === 0 ? <empty/> : items.map(…)}` | `for` with an empty arm — the spelling of `.tsrx`'s `@for … @empty`. It is recognized by shape: the test compares the map receiver's own `length` to `0`. A `.map()` in any other conditional arm is an error (LTC005) |
 | An IIFE whose body is a `switch` returning JSX per arm | `switch` |
-| A try/catch IIFE | the error boundary |
-| `boundary({ ok, nil, err })` | the async boundary |
+| `<truc:try catch={e => …}>…</truc:try>` | the error boundary |
+| `<truc:try pending={…} catch={e => …}>…</truc:try>` | the async boundary |
 
-`boundary()` is the recognized ambient for the async boundary: **all arms render**, `hidden`-toggled by which state won — `nil` is no-value-yet, and `err`'s callback receives the rejection as an `Error` (cause-effect wraps non-Errors before dispatch, so an unannotated `(e) => <p>{e.message}</p>` type-checks). The arms are typed `JSX.Element` — a branded interface an element expression satisfies by construction, so a string or function arm is a plain `tsc` error (LT-208).
+`<truc:try>` is the spelling of `.tsrx`'s `@try`/`@pending`/`@catch` ([ADR 0041](../../adr/0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md); it lands with LT-303). The children are the success content and the arms are attributes, so `tsc` checks each arm's type and rejects a repeated one. With `catch` only, it is the error boundary. With `pending` as well, it is the async boundary: **all arms render**, `hidden`-toggled by which state won. `pending` renders while the task has no value yet, the narrow case of `isPending()`. `catch`'s callback receives the rejection as an `Error` (cause-effect wraps non-Errors before dispatch, so an unannotated `e => <p>{e.message}</p>` type-checks). The arms are typed `JSX.Element`, a branded interface an element expression satisfies by construction, so a string or function arm is a plain `tsc` error (LT-208).
 
 There is **no `stale` arm** — the owner withdrew the four-arm boundary (LT-211): the client never re-renders arm content, it toggles `hidden`/`disabled` on server-rendered arms, so a re-fetching-with-retained-value state has no arm to show. Both surfaces are three-arm; the s6 asymmetry ADR 0032 recorded is dissolved. The idiom for the in-flight state is a reactive `isPending(signal)` read beside the boundary:
 
@@ -57,7 +57,7 @@ There is **no `stale` arm** — the owner withdrew the four-arm boundary (LT-211
 
 `isPending` is a real `@zeix/le-truc` re-export (import it, either surface). Two authoring rules make the idiom work: the binding must be the **arrow thunk** — the reactive spelling; a bare `class={isPending(data) ? … : null}` expression is a render-time `server` attribute and never updates once connected. And `@if` conditions still cannot read signals on either surface (`validateCondition` diagnoses them — the DOM keeps the initially rendered branch, so a signal condition would silently stop matching); only watched constructs react.
 
-The one thing `.tsx` cannot express is a **statement** in branch position: an IIFE arm must return JSX, and there is no directive block to hide a bare client-side statement in. Statements live in setup. Where statement-context arms read better — a branch that mutates, a loop body that needs statements — author `.tsrx`; that is the surface split's whole point.
+The one thing `.tsx` cannot express is a **statement** in branch position: every arm must return JSX, and there is no directive block to hide a bare client-side statement in. Statements live in setup. Where statement-context arms read better — a branch that mutates, a loop body that needs statements — author `.tsrx`; that is the surface split's whole point.
 
 ### Types and editors
 

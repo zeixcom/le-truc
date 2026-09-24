@@ -39,9 +39,9 @@ same artifacts (ADR 0032):
   LTC050 — LT-209), the statements before the single
   `return` are the setup, the returned JSX is the template, and a `<style>`
   sibling carries the CSS as a `css`-tagged template literal. Control flow
-  is expression-shaped — ternaries and `&&`, `.map()`, IIFEs for switch and
-  try/catch, and the recognized ambient `boundary({ ok, nil, err })`
-  for the async boundary (three arms; the in-flight state is the reactive
+  is expression-shaped — ternaries and `&&`, `.map()`, an IIFE for switch
+  — plus `<truc:try pending={…} catch={e => …}>` for the error and async
+  boundaries (ADR 0041; three arms; the in-flight state is the reactive
   `isPending(signal)` read beside it, folded server-side — LT-211). There
   is no `{count}` shorthand; spell
   `count={count}`.
@@ -134,8 +134,8 @@ strict ambient profile (`frontend/tsx/host-profile.d.ts`,
 │   (lower-tsx.ts)              │  │   (lower-template.ts)       │
 │ ternary/&& → if               │  │ @if @switch @try @for       │
 │ .map() → for (+ empty arm)    │  │ statement-context arms      │
-│ IIFE → switch / try-catch     │  │                             │
-│ boundary({ ok, nil, err })    │  │                             │
+│ IIFE → switch                 │  │                             │
+│ <truc:try> → try              │  │                             │
 └──────────────┬────────────────┘  └─────────────┬───────────────┘
                │                                 │
 ┌──────────────┴─────────────────────────────────┴───────────────┐
@@ -317,8 +317,8 @@ front-end modules, then the two front ends:
 | `frontend/tsrx/compiler.ts` | `.tsrx` front end: `compileSource` (locate the `@{ }` component, slice setup + output verbatim) plus the grammar's own scans (React JSX near-misses, `newerGrammarHint`; the lazy-pattern scan retired at the 0.2 pin — the grammar now rejects the construct itself) |
 | `frontend/tsrx/lower-template.ts` | `.tsrx` directives (`@if`/`@switch`/`@try`/`@for`) → `TemplateNode` IR; list-body validation |
 | `frontend/tsrx/globals.d.ts` | Ambient FactoryContext vocabulary for the raw `.tsrx` view; parity-tested against `ast-utils` |
-| `frontend/tsx/compiler-tsx.ts` | `.tsx` front end: `compileSourceTsx` (locate the exported component function, statements + single `return` shape, `boundary()`/`css` recognition) |
-| `frontend/tsx/lower-tsx.ts` | `.tsx` expression shapes → `TemplateNode` IR; shape-based IIFE recognition (`asIife`, `lowerSwitchIife`) |
+| `frontend/tsx/compiler-tsx.ts` | `.tsx` front end: `compileSourceTsx` (locate the exported component function, statements + single `return` shape, `css` recognition) |
+| `frontend/tsx/lower-tsx.ts` | `.tsx` expression shapes → `TemplateNode` IR; shape-based switch-IIFE recognition (`asIife`, `lowerSwitchIife`); `<truc:try>` recognition (ADR 0041) |
 | `frontend/tsx/to-estree.ts` | `typescript`-AST → estree-shaped `AstNode` converter — the only `typescript`-API leaf |
 | `frontend/tsx/host-profile.d.ts` | The strict authored-`.tsx` ambient profile: FactoryContext vocabulary plus the strict per-element `JSX.IntrinsicElements` light-DOM contract (migrations extend it in the same commit). Never in one `tsc` program with `globals.d.ts` |
 | `core.ts` | The only `@tsrx/core` value-import leaf (`.tsrx` front end only) |
@@ -399,7 +399,7 @@ member.
 | `expr` | `expr, lazy` | A child expression; `lazy` marks it reactive (decided by `reactivity.ts`: a lexically visible signal or `host.<prop>` read lifts; an expression over server args stays static; a signal escaping into an opaque call is LTC017) |
 | `if` | `test, then, alternate` | Server-known condition; server renders the taken branch, client addresses both roots |
 | `switch` | `discriminant, cases[]` | Mutually exclusive arms |
-| `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ async boundary: all arms render, `hidden`-toggled. Three arms on both surfaces — the four-arm `stale` spelling the `.tsx` front end briefly carried was withdrawn by the owner (LT-211); the in-flight state is the reactive `isPending` idiom beside the boundary, folded server-side |
+| `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ async boundary: all arms render, `hidden`-toggled. Three arms on both surfaces — `.tsx` spells them `<truc:try pending catch>` (ADR 0041), and there is no `stale` arm (LT-211); the in-flight state is the reactive `isPending` idiom beside the boundary, folded server-side |
 | `compose` | `component, source, attrs, children` | PascalCase tag bound to an authored-source import (either surface); server splices the child's render |
 | `client-stmt` | `text` | Bare client-only side effect inside a branch (`.tsrx` only — a `.tsx` branch must return JSX) |
 
