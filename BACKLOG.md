@@ -95,19 +95,6 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
 **LT-263**, **LT-255 + LT-267**, **LT-256** and **LT-265** — the iteration opened in `TODO.md`.
 **LT-262 and LT-264 are non-goals for 3.0 and have moved to P7.**
 
-- [ ] LT-313: Check a server-data `@for`'s iterable against the partial-readiness invariant (LT-258 review). **Gate: before LT-257.**
-  **Skill:** le-truc-dev
-  **Context:** LT-258's `checkFoldInputs` covers every server-evaluated position except one:
-  the iterable of a server-data loop, because `EachForIR` carries only `iterableText`, not a
-  node. Verified at review: `{[...document.querySelectorAll('a')].map(a => <li>{a.href}</li>)}`
-  compiles clean and classifies Folded, so the loop's item set is the build page's DOM. Add the
-  iterable's `AstNode` to `EachForIR`, populated by both front ends. Adding an IR field before
-  first publish is free under ADR 0034 s8 and ADR 0040, and the task has to land before LT-254
-  anyway. Then check it in `checkFoldInputs` as an always-evaluated position. **Channel:**
-  compiler. **Tier:** 1 Prevented. It reuses LTC054, so no new copy is needed beyond the
-  `where` phrase (e.g. "the items of a loop"). Tech Writer reviews that phrase.
-  **Check:** the probe above fails with LTC054 on both surfaces; the corpus is unchanged.
-
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-287, LT-288, LT-274 and LT-276** (ADR 0040, accepted 2026-09-24: every reshape of a published IR type lands before the first publish, or it becomes a 4.0 change).
   **Skill:** le-truc-dev
   **Context:** ADR 0034 s1–s2. The compiler ships separate from the browser-only
@@ -1079,19 +1066,6 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
-- [ ] LT-314: `crypto.randomUUID()`/`getRandomValues()` fold silently — close the impure-ambient gap (LT-258 review).
-  **Skill:** le-truc-dev
-  **Context:** `impureAmbientCauses` (`evaluability.ts`) flags `Math.random()` as `rng` but
-  not `crypto`, which sits in `JS_GLOBALS`. Verified at review: `<span id={crypto.randomUUID()}>`
-  compiles clean and classifies Folded, which bakes one build-time random id into the page. That
-  is exactly the hazard LTC033 exists for. Add `crypto.randomUUID`/`crypto.getRandomValues` to
-  the `rng` cause, so static positions get LTC033 and reactive ones are omitted, following the
-  existing precedent. This is not the partial-readiness invariant: the RNG is unresolvable, not
-  page context. **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033, whose copy
-  already names "a random id").
-  **Check:** the probe errors LTC033 in a static position and omits in a reactive one; the
-  corpus is unchanged.
-
 - [ ] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them (LT-212 review; NOTES 2026-09-24). **Gate: before any wave-4 migration whose component nests a loop inside a branch.**
   **Skill:** le-truc-dev
   **Context:** `.tsrx` `@if (…) { … } @else { @for (…) { <li class="item" onClick={…}/> } }` renders
@@ -1141,24 +1115,6 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   `bun test server/tests/compiler/diagnostics.test.ts` green (the LT-212 pins assert on
   `'@empty arm'`, `'non-element root'` and `'conditional arm'`).
 
-- [ ] LT-299: Hygiene sweep from the 2026-09-24 review (LT-286, LT-294, NOTES).
-  **Skill:** le-truc-dev
-  **Context:** four small items, none behavior-bearing:
-  (a) `bunx biome check ./server` is red on HEAD because of an unused `tag` parameter at
-  `server/tests/effects/page-render.test.ts:232` (the `resolveModule` callback, dating from
-  LT-194). Drop the parameter or rename it `_tag`, so the server lint gate reads green again;
-  (b) `analysis/effects.ts` `emitTopEffects` calls `loopFor(fx, node)` twice and casts
-  the second call `as ForIR`. Bind it once and let the null check narrow it. This is the
-  last `ForIR` cast after LT-286, and it doesn't conflict with LT-289's rewrite;
-  (c) the demo comments in `examples/form/radiogroup/form-radiogroup.html` and
-  `examples/form/colorgraph/form-colorgraph.html` still name `server/generated/tsrx/`.
-  Since LT-255 the path is `server/generated/components/` (LT-294 residue);
-  (d) `ir.ts`'s `ForIRBase.emptyArm` doc still says "No front end populates it yet: always
-  `null`". LT-212 made both front ends produce it; state the shared-roots placement ADR 0040
-  s1 records instead (ADR 0040 acceptance review, 2026-09-24).
-  **Check:** `bunx biome check ./server` exits 0; goldens and parity byte-identical;
-  typecheck 0.
-
 - [ ] LT-297: `argsFromAttrs` keys attributes by the arg's camelCase name (LT-290 close-out; latent).
   **Skill:** le-truc-dev
   **Context:** the page-occurrence helper reads `attrs["bigStep"]`, but HTML attribute
@@ -1170,75 +1126,6 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   it with a camelCase fixture.
   **Check:** a fixture with a camelCase Parser arg renders its authored attribute value;
   goldens unchanged.
-
-- [ ] LT-295: Run the variant spec matrix in CI (LT-284 review follow-up; ADR 0039 s2).
-  **Skill:** docs-server-dev
-  **Context:** ADR 0039 s2 makes the spec the runtime equivalence contract across a
-  variant set's spellings, but `ci-cd.yml` runs only `bun run test`. That exercises the
-  default page, so only the selected surface is covered. A regression in the twin or the
-  unserved compiled member would pass CI. Add a `bun run test:variants` step after
-  `bun run test`, which frees port 3000 when its webServer exits. The runner rebuilds
-  examples itself; skipping that duplicate build in CI (a `--no-build` flag) is optional.
-  **Check:** CI runs the matrix for every variant set; a deliberately broken twin fails
-  the job.
-
-- [ ] LT-296: Surface-route hardening: stale `variants/` clients and vacuous surface tests (LT-284 review follow-up).
-  **Skill:** docs-server-dev
-  **Context:** (a) `compileCorpus` writes `variants/<tag>.<surface>.client.ts` but never
-  prunes the directory. A dissolved variant set (a `.tsx` deleted), or a flipped
-  `variantOverrides`, leaves a stale client, and `?surface=` then serves it with 200
-  instead of 404. Prune `variants/` of every file this compile did not write, the way the
-  canonical artifacts are owned. (b) Every surface leg of `serve.test.ts`'s
-  `component test surface selection` block returns early when the corpus is not built or
-  no variants file exists, so it passes vacuously in exactly the state where it proves
-  nothing. The block's header says CI builds the corpus first, so assert that
-  precondition (fail loudly) instead of returning.
-  **Check:** deleting a set member and rebuilding removes its `variants/` client, and
-  `?surface=` for it → 404; the surface tests fail, not pass, without a corpus build.
-
-- [ ] LT-291: A compiled parent must register a variant set's SERVED surface, not its retained twin (LT-283 review follow-up; ADR 0039). **Gate: before the first wave-4 migration that retains a twin whose tag a compiled component references.**
-  **Skill:** le-truc-dev
-  **Context:** `compileCorpus` seeds `childImports` from the sibling modules
-  (`examples/**/*.ts`) and keeps them over the generated client: "a tag in a dual state —
-  compiled AND its hand-written twin still on disk — keeps the TWIN's module: the twin is
-  what main.ts registers". ADR 0039 inverts that premise. The twin is the artifact of record
-  and is never served, while `examples/main.ts` imports the generated client. So a compiled
-  parent referencing a twin-carrying tag (a `pass()` target, or a compose-import child tag)
-  would emit a side-effect import of the twin. The bundle would then define the tag twice,
-  or ship the unselected surface. The premise holds only for a tag that is not compiled at
-  all.
-  **Ruling (Architect, this review):** two concerns, two channels.
-  - **Runtime registration** always follows the served surface: a compiled tag's child
-    import is `./<tag>.client`, whether or not a twin exists.
-  - **Type visibility** needs no separate channel any more. ADR 0039 s4 as amended
-    2026-09-24 (LT-237) has every member declare its own `HTMLElementTagNameMap` entry,
-    so the served client that `./<tag>.client` imports already carries it for the
-    parent's `first()`/`pass()` sites. (This superseded the earlier ruling here: a
-    types-only channel to a twin-owned entry.)
-
-  Record the served-surface rule in the `childImports` comment.
-  **Channel:** none new. This fixes the emitter and the corpus orchestration.
-  **Check:** a fixture with a retained twin that a compiled parent references bundles with
-  exactly one `customElements.define` for the tag, from the generated client; check:corpus
-  still reports a mistyped `pass()` prop on that tag (the types channel is live); goldens
-  unchanged for twin-less tags.
-
-- [ ] LT-292: A `variantOverrides` entry that names no variant set is a configuration error (LT-283 review follow-up).
-  **Skill:** le-truc-dev
-  **Context:** `compileCorpus` applies `config.variantOverrides[tag]` only inside a variant
-  set. An override for a tag with one authored source, or for no tag at all (a renamed or
-  deleted component, or a typo that is still tag-shaped), is silently ignored. That is the
-  failure LT-273 ruled out for unknown keys: "it compiled, but nothing is where I asked".
-  Validation cannot catch it at config-load time, because the variant sets are only known
-  after the scan. So check after the LTC048 pre-check and throw the LT-273-style config
-  error, naming the file, the key (`variantOverrides["<tag>"]`), and the reason ("no
-  variant set declares this tag" / "only one surface authors it"). **Channel:** config
-  validation, a thrown startup error, untiered by construction like LT-273 (ADR 0028). No
-  `LTC` code applies, because no component source is at fault. Also consider whether a
-  corpus-wide `variantSurface` with no variant sets present deserves the same treatment.
-  The recommended answer is no: it is a policy default, not a pointer.
-  **Check:** unit tests in `corpus-config.test.ts`/`dual-corpus.test.ts` for both
-  stale-override shapes; the repo corpus (no overrides) is unaffected.
 
 - [ ] LT-186: A TSRX rule for an unkeyed element sibling of a `@for` in a reconcile container (LT-185's compiler half).
   **Skill:** le-truc-dev
@@ -1464,9 +1351,12 @@ of the surfaces' trade-offs, and the wave-4 migrations bank the `.tsx`-default D
 reflection asked to see banked somewhere. ~~**Gated on LT-178/LT-179 only** (P4) — the other gates landed 2026-09-18: LT-202 (the
 `.tsx` front end in the build) and LT-210 (the TSRX pin upgrade, 0.2.3; owner sequencing
 2026-09-17).~~ **[2026-09-21] Those gates are merged (PRs #131/#132) and the wave is
-opening in `TODO.md`.** The operative gates are now LT-238 (every remaining migration,
-owner ruling pending), LT-212 + LT-213 (before the first migration) and LT-280 (the
-loop-heavy composites). **LT-266 addendum (2026-09-21, Architect ruling on review):** the loop-heavy
+opening in `TODO.md`.** **[2026-09-25]** LT-238, LT-212 and LT-213 are landed (module-codeblock
+was the first migration). The remaining per-shape gates are: LT-291 (a compiled parent references a
+twin-carrying tag), LT-303 (a migration authors a boundary: LT-104), LT-301 (a loop inside a
+branch), LT-307 (a Simulated `.tsx`-served entry), LT-312 (a `.tsx` parent over a `.tsrx`
+child), and LT-280 (the loop-heavy composites). LT-291, LT-307 and LT-312 are in the
+2026-09-25 iteration, with LT-098–LT-103. **LT-266 addendum (2026-09-21, Architect ruling on review):** the loop-heavy
 composites — LT-109 `module-calctable`, LT-110 `module-ticker`, LT-111 `module-todo` — are
 **additionally gated on LT-280**: the size-bet conversion proved reactive-list loops lower to
 a per-item text fill + events and nothing richer ([spike/size-bet/FINDING.md](spike/size-bet/FINDING.md)),
@@ -1508,21 +1398,6 @@ twin's before calling the port done, and assert the opt-out survives hydration t
 `equivalence-audit.test.ts`'s LT-185 regression test does for form-tokenbox. **LT-186 (P3) makes
 this a compile error** — if it has landed by then, these two migrations get the check for free
 and this note is redundant; if it has not, do the manual diff.
-
-- [ ] LT-307: Derive the simulation pass's demo-markup path from the component folder, not by rewriting `.tsrx` (LT-188 review finding). **Land before any Simulated-tier component's served surface becomes `.tsx`.**
-  **Skill:** docs-server-dev
-  **Context:** `simulationSubjects()` in `server/effects/simulate.ts` builds `markupPath` as
-  `entry.source.replace(/\.tsrx$/, '.html')`. For a `.tsx`-sourced entry (the default served
-  surface since ADR 0039 — `basic-counter` already is one) the regex misses and `markupPath` IS
-  the `.tsx` source, which exists, so `readMarkup` returns TypeScript and `occurrencesOf` finds
-  whatever JSX literals happen to parse as the tag — silently wrong input, no assertion fires.
-  No symptom today only because every Simulated-tier entry is still `.tsrx`-sourced. Fix: derive
-  `<dir>/<tag>.html` from the source's folder and the tag (the demo file's own naming rule),
-  independent of the source's extension; `.ts` twins included.
-  **Channel:** none new — a missing demo file keeps reporting through `withoutMarkup`.
-  Acceptance: a `.tsx`-sourced Simulated entry resolves to its `.html` sibling (pin with the
-  `readMarkup` seam capturing `subject.markupPath`), a `.tsrx` one still does; `bun test server`
-  green.
 
 - [ ] LT-280: Per-item effect channels in reactive-list loops — the lowering covers text fill + events and nothing richer (LT-266 evidence). **Design first (grilling); gates the loop-heavy composite migrations LT-109/LT-110/LT-111.**
   **Skill:** architect (design + ADR) → le-truc-dev (implementation)
@@ -1580,48 +1455,6 @@ and this note is redundant; if it has not, do the manual diff.
   `Intl.DateTimeFormat` reads the build machine's timezone and must not survive the migration.
   Verify the component classifies Folded once migrated; LT-173 step 6 deferred its fold
   verification here.
-
-- [ ] LT-098: Migrate `module-colorinfo` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~86 lines, color info display. culori usage follows the `asOklch.ts`/`_common`
-  setup point (modes must be registered there, LT-091 finding 3).
-
-- [ ] LT-099: Migrate `module-pagination` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~94 lines, pagination controls. Has a spec — keep it green against
-  `/test/module-pagination`.
-
-- [ ] LT-100: Migrate `module-catalog` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~94 lines, component catalog. Has a spec — keep it green against
-  `/test/module-catalog`.
-
-- [ ] LT-101: Migrate `module-dialog` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~75 lines, native `<dialog>` + `showModal()` orchestration. Has a spec. Watch
-  for: `dialog.` method calls from client-only setup statements (LT-069 gate), focus-related
-  event handlers as bare `on()` statements.
-
-- [ ] LT-102: Migrate `module-splitview` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~77 lines, pointer-capture drag between panes. Watch for:
-  `setPointerCapture`/`PointerEvent` client-only ambients (LT-069 widened `JS_GLOBALS` for
-  exactly this class of code).
-
-- [ ] LT-103: Migrate `module-scrollarea` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~104 lines, scroll area with `IntersectionObserver`. Has a spec. Watch for: the
-  effect-with-cleanup idiom (`watch` + `return () => observer.disconnect()`, the LT-069
-  acceptance case). **This component drove ADR 0029's three-tier shape and its tier is the thing
-  to verify.** It reads `scrollLeft`/`scrollTop`/`scrollWidth`/`offsetWidth`/`scrollHeight`/
-  `offsetHeight` and emits exclusively through `bindState(internals, …)`. **Expected tier:
-  Folded** — the geometry reads live in scroll/observer callbacks and the
-  `bindState(internals, …)` output never reaches served HTML (Static is equally acceptable; both
-  are never simulated, so the ~2.3 s is unpaid either way). **Simulated is the outcome to
-  investigate:** at 1,966–2,091 occurrences it reproduces the ~2.3 s ADR 0029 exists to avoid —
-  either reshape the migrated component so its reads stay in client-only positions (per its
-  demonstrated patterns) or surface the over-signal in NOTES.md. Record the actual tier, the
-  reason, and the wall-time figures either way; only wrong served HTML is a correctness bug.
 
 - [ ] LT-104: Migrate `module-lazyload` to `.tsx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -1725,17 +1558,6 @@ and this note is redundant; if it has not, do the manual diff.
   guard replaces the hand-written ternary. `copyToClipboard` then becomes a plain click-handler
   factory. Decide the typing: the `.tsx` host profile needs `on*` in `ComposeSiteAttrs`, and
   `.tsrx` needs the same classification. Depends on LT-309(b) for the message channel.
-
-- [ ] LT-312: Generate the `.tsx` → `.tsrx` compose-import typings
-  **Skill:** le-truc-dev
-  **Context:** `server/compiler/frontend/tsx/tsrx-imports.d.ts` (LT-096) hand-lists one
-  `declare module '*/<tag>.tsrx'` per `.tsrx` child that a `.tsx` parent composes, typed through
-  the generated server module's args. The next migration composing a still-`.tsrx` child
-  (module-list, form-colorgraph) would add entries by hand, and a wildcard pattern colliding
-  across two same-named files would mistype silently. Emit the file from the registry during the
-  corpus compile, one entry per compiled `.tsrx` source keyed by its path suffix, and have
-  `examples/tsconfig.json` include the generated file. Acceptance: deleting the hand-written
-  file leaves `bunx tsc -p examples/tsconfig.json` green.
 
 ## P6 — Cleanup round (after the corpus port)
 

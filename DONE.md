@@ -11,324 +11,92 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
-Pruned empty 2026-09-21 (Changelog Keeper, after the 2026-09-21 iteration opened): the
-2026-09-18/21 entries — LT-239/240/241, LT-263, LT-265/267, LT-255/256, LT-271/272 and the
-closed P0–P7 bands — are consumed. The integrator-visible facts are in
-`CHANGELOG.md [Unreleased]` (jsdom optional peer + absent-substrate routing, the two-prefix
-`LTC`/`TSRX` skill vocabulary); the rulings live in `adr/0027`–`adr/0037`,
-`server/compiler/VOCABULARY_LEDGER.md` and `LE_TRUC_COMPILER.md` §2; and every live handoff is
-restated in the owning `TODO.md`/`BACKLOG.md` entry (LT-254's `runtimeImport` default flip,
-LT-257's emitter-interface rescope, LT-273's validation + channel ruling, LT-277's glob edges,
-LT-278's ADR duty, LT-279's SERVER.md/TESTS.md re-pin). Full entry text: `git log -p -- DONE.md`.
+Pruned 2026-09-25 (Architect, after the "opening wave 4" iteration closed; Changelog Keeper had
+already merged it into `CHANGELOG.md [Unreleased]`). Consumed with nothing left to carry:
+**LT-238, LT-283, LT-284, LT-285, LT-286, LT-293, LT-294, LT-298, LT-235, LT-237,
+LT-315**. Their rulings live in [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md)
+(s4 as amended 2026-09-24), [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md),
+`server/SERVER.md` § Component test surfaces (LT-284's surface selection), and
+`LE_TRUC_COMPILER.md` §§ 4, 5.3, 7. Every live handoff is restated in its own open entry:
+LT-287/LT-289 (§ 4 present-tense flips), LT-291 (with LT-285's tripwire pin), LT-292, LT-295,
+LT-296, LT-297, LT-299, LT-308. Earlier prunes: 2026-09-21 ×2 (LT-239–LT-279 era, LT-178). Full
+entry text: `git log -p -- DONE.md`.
 
-**Standing note for compiler-adjacent tasks:** a compiler crash during a corpus build makes
-`typecheck`'s `&&`-chained `tsc` silently skip — check the exit code, never grep for
-"error TS" (LT-226 review).
+**Standing notes for compiler-adjacent tasks:**
+- A compiler crash during a corpus build makes `typecheck`'s `&&`-chained `tsc` silently skip.
+  Check the exit code, never grep for "error TS" (LT-226 review).
+- A handoff's `check:corpus` claim is its **exit code**, not the warning baseline (LT-283
+  review, after a "green" gate turned out to be exit 2).
 
 ---
 
-Pruned again 2026-09-21 (Architect, owner direction: `CHANGELOG.md [Unreleased]` carries
-everything public-facing, so keep only what a future task still needs): **LT-273** (the
-consumer-facing behavior is the CHANGELOG entry; the provenance-header disposition lives in
-`VOCABULARY_LEDGER.md` §6; the design in [ADR 0036](adr/0036-corpus-configuration-surface.md)),
-**LT-278** ([ADR 0038](adr/0038-runtime-neutral-build-path.md) is the record),
-**LT-279** (`server/SERVER.md` and `server/TESTS.md` carry it), and **LT-178** (the
-retirement ruling is verbatim in AGENTS.md's `pass()` bullet and the CHANGELOG Removed
-entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text:
-`git log -p -- DONE.md`.
-
 - [x] LT-207: Stop the simulation realm's dependency-wait timers from leaking past teardown — reviewed ✓
-  **Skill:** le-truc-dev
-  **Changed:** `server/compiler/sim/realm.ts` — the realm forces tracking wraps over
-  `setTimeout`/`setInterval` (+ `clear*`, host handles preserved) for its lifetime, and
-  `dispose()` cancels every timer still pending before restoring globals. Root cause: the
-  library's `DEPENDENCY_TIMEOUT` wait runs on the host queue, which `window.close()` does not
-  own, so it fired post-dispose into `customElements is not defined`. Pinned by
-  `sim-realm.test.ts` "dispose cancels the timers the realm still has pending (LT-207)".
-  Internal only — no CHANGELOG entry.
-  **Review:** Approved. Ruling: timer ownership is process-wide, not realm-scoped — ANY host
-  timer scheduled while a realm is open is cancelled at dispose. Safe today because
-  `build.ts` runs `simulateCorpus()` only for one-shot builds, never beside the watch-mode
-  debounce/reload timers; a future task that opens a realm inside a long-lived process
-  (dev server, watch rebuilds) must revisit this.
+  **Ruling (recorded nowhere else):** timer ownership is process-wide, not realm-scoped — ANY
+  host timer scheduled while a realm is open is cancelled at `dispose()`. That is safe because
+  `build.ts` runs `simulateCorpus()` only for one-shot builds. A future task that opens a realm
+  inside a long-lived process (dev server, watch rebuilds) must revisit this.
 
-- [x] LT-315: Tech Writer copy review for LTC054 (LT-258 handoff) — done ✓
-  **Changed:** final copy for `foldReadsPageContext` and `undeclaredPageAmbient` in
-  `server/compiler/diagnostics.ts`. The ambient member list is interpolated from
-  `PAGE_AMBIENTS`, passed in by `fold-inputs.ts` so the copy follows the set, and a new
-  `codeList` helper formats it. The `errors.md` LTC054 row is added. **Open:** the CHANGELOG
-  entry for LTC054 (changelog-keeper).
-
-- [x] LT-258: Make the partial-readiness invariant a compiler check — reviewed ✓
-  **Changed:** new `server/compiler/fold-inputs.ts` is the single declaration of the invariant's
-  vocabulary: `PAGE_AMBIENT_TYPES`/`PAGE_AMBIENTS` (the closed set; the generated `I18n`
-  interface in `server/effects/i18n.ts` is now written from it, byte-identical),
-  `PAGE_CONTEXT_GLOBALS`, `FOLD_HARNESS_NAMES`. It adds a new compiler error, **`LTC054`**
-  (tier 1 Prevented), raised in two places: `checkFoldInputs`, run from `pipeline.ts` over every
-  server-evaluated position (including through setup helpers), and `ambientRecordViolations`,
-  run from `params.ts` (`i18n` destructured for an undeclared member, or through a rest element).
-  `assertFoldScopeClosed` throws if `serverKnown` ever holds a name that is not an own arg, an
-  own setup name, or a declared harness name. The corpus is unchanged: goldens identical, census
-  unmoved.
-  **Rulings (Architect, 2026-09-25):**
-  - **A folded reactive thunk that reads page context is an error, not an omission.** This
-    upholds the developer's call. LTC033's omit-the-reactive-form precedent does not transfer:
-    `Date.now()` is *unresolvable*, since no tier has an answer, so omitting it leaves the
-    component's tier alone. A page-context read is *realm-answerable*. Omitting it through
-    `impureAmbientCauses` would silently re-route the component Folded → Simulated, and ADR
-    0035 s2 keeps Simulated components out of template emission. That silent re-route is the
-    quiet foreclosure ADR 0034 s4 exists to prevent. A thunk only errors when the server would
-    actually fold it; one it leaves to the client is untouched.
-  - **The page-context side is an explicit deny-list**, and the positive side is closed by
-    `assertFoldScopeClosed`. Together they make the invariant checkable without a pure-globals
-    allow-list over the whole of `JS_GLOBALS`.
-  **Live handoffs:** LT-313 (a `@for` iterable is not checked; gates LT-257), LT-314 (the
-  `crypto` impurity gap found during review), LT-315 (Tech Writer copy for LTC054).
+- [x] LT-258: Make the partial-readiness invariant a compiler check (LTC054) — reviewed ✓
+  **Rulings (Architect, 2026-09-25; recorded nowhere else):**
+  - **A folded reactive thunk that reads page context is an error, not an omission.** LTC033's
+    omit-the-reactive-form precedent does not transfer: `Date.now()` is *unresolvable* (no tier
+    has an answer), while a page-context read is *realm-answerable*, so omitting it would
+    silently re-route the component Folded → Simulated and out of template emission (ADR 0035
+    s2) — the quiet foreclosure ADR 0034 s4 exists to prevent. A thunk only errors when the
+    server would actually fold it.
+  - **The page-context side is an explicit deny-list** (`PAGE_CONTEXT_GLOBALS` in
+    `server/compiler/fold-inputs.ts`); the positive side is closed by `assertFoldScopeClosed`.
+    Together they make the invariant checkable without a pure-globals allow-list over
+    `JS_GLOBALS`. LT-313 and LT-314 extend this, and must keep that split.
 
 - [x] LT-096: Migrate `module-codeblock` to `.tsx` with same-commit cutover — reviewed ✓
-  **Changed:**
-  - `module-codeblock.tsx` is served (`examples/main.ts` imports the generated client). The
-    `.ts` twin stays as the variant. The copy bug (a bare `EffectDescriptor` that never attached)
-    is fixed on both surfaces and pinned by the new `module-codeblock.spec.ts`. **Tier: Folded,
-    no routing signals** — the Simulated prediction was wrong: refs used only in `watch`/`on`
-    never route. Simulation-stage wall time was unchanged (~340–550 ms, 2 components). Census
-    21/2/0; zero warnings.
-  - **Compiler selector soundness:** registry entries record `renderedShapes`. A synthesized
-    selector that a composed child's markup could match is emitted as `base:not(<child-tag> *)`.
-    This fixed a live form-combobox bug: the clear button's `hidden` binding landed on the
-    listbox's first option.
-  - **Public types:** `ElementFromSelector` ignores pseudo-class arguments, so
-    `first('button:not(x *)')` infers `HTMLButtonElement`. New exports
-    `ElementFromSelectorList` and `StripPseudoArguments` (CHANGELOG).
-  - `.tsx` host profile: compose sites admit `class`/`id`/`data-*`. `.tsrx` compose imports are
-    typed through `frontend/tsx/tsrx-imports.d.ts`, which is hand-listed (**LT-312**).
-  - Docs build: `.tsx` sources were never compiled (the glob sat in `watchFiles`' exclude slot),
-    and a `.tsx` source was read as its own demo markup (`simulate.ts`). Both are fixed.
-  **Rulings (2026-09-25):** the `:not(<tag> *)` exclusion is accepted. Its only miss is an own
+  **For the next migrations:** the tier prediction was wrong (predicted Simulated, landed
+  **Folded, no routing signals**): refs used only in `watch`/`on` never route. The compiler now
+  emits `base:not(<child-tag> *)` for a synthesized selector that a composed child's markup
+  could match; `ElementFromSelector` ignores pseudo-class arguments.
+  **Rulings (2026-09-25):** the `:not(<tag> *)` exclusion is accepted — its only miss is an own
   element inside a same-tag ancestor of the host, which no composition produces. **No
   compiler-stamped hash class for addressing:** the component's occurrences are page-authored
   (fence schema, tab fragments) and never pass through the compiler's render, so a stamped hook
-  would be absent exactly where the enhancer must bind. It would also put a compiler-versioned
-  token into the hand-authoring contract, which is the move ADR 0033 declined for styles.
-  **Live handoffs:** LT-309 (inline the overlay `onClick`; the host copy-message contract),
-  LT-310 (reactive root attributes), LT-311 (compose-site event handlers), LT-312 (generate the
-  `.tsrx` import typings).
-  **Review:** approved; `test:variants module-codeblock` green on both surfaces (owner run).
-
-- [x] LT-237: Move the spike's `.tsx` fixtures into their example component folders — reviewed ✓
-  **Changed:**
-  - `basic-pluralize`, `form-listbox` and `form-combobox` `.tsx` now sit beside their
-    `.tsrx` twins as variant sets, and are served as `.tsx` by default. They are the first
-    composites served from `.tsx`. Listbox and combobox gained their twins' `i18n`: the
-    spike ports had hardcoded English, which would have shipped.
-  - The synthetics, negatives, probes and four tsconfigs moved to
-    `server/tests/compiler/fixtures/tsx/`, which `biome.json` excludes (the negative
-    probes pin error positions). `spike/tsx/` is gone; `spike/size-bet/` stays, since it
-    is live.
-  - Corpus loaders dispatch per extension (`compileCorpusSource`). The parity suite
-    discovers every variant set from the corpus scan, compares render signatures
-    token-wise (Biome-formatted `.tsx` against unformatted `.tsrx`), and asserts
-    registry-entry equality.
-  - `host-profile.d.ts`: intrinsic attributes accept `undefined` (`Attr<T>`), and
-    `JSX.LibraryManagedAttributes` omits `i18n`.
-  **Ruling:** ADR 0039 s4 amended (owner, 2026-09-24): every variant-set member declares
-  its own `HTMLElementTagNameMap` entry. It dissolved LT-291's type-visibility channel.
-  **Live handoff:** the `Attr<T>` widening is a stopgap; **LT-308** narrows it
-  (key-typed `I18n`, then revert).
-  **Review:** approved 2026-09-24; `test:variants` is green on all surfaces (owner run).
-
-- [x] LT-238: Relax "one authored source per component tag" to a canonical-plus-variants rule — reviewed ✓
-  **Ruling:** build-selected variants, `.tsx` served by default — recorded in
-  [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (amends ADR 0032 s6 by
-  reference). Implementation: LT-283, LT-284, LT-285 (all below).
-
-- [x] LT-283: Variant sets in the corpus scan — compile-both/serve-selected, LTC048 narrowed, LTC051 added, surface-selection config — reviewed ✓
-  **Changed (for Changelog Keeper):** `le-truc.config.json` accepts `variantSurface`
-  (`"tsx"`|`"tsrx"`, default `"tsx"`) and `variantOverrides` (tag → surface), both validated
-  per LT-273; LTC048 narrowed to "not a folder-local variant set"; new error LTC051 (a
-  variant set's members compile to different CSS). One registry entry per tag, and its
-  `source` names the served member. Commit 4d15eac6.
-  **Review (Architect, 2026-09-23):** approved. The ADR 0039 shape is implemented as ruled:
-  grouping by folder-local base name, all-dropped semantics for both rules, and the compose
-  registry keeping both source-keyed entries. Live handoffs: **LT-293** (the Tech Writer
-  handoff was never executed), **LT-290** (the gate line's "check:corpus green" was the
-  warning baseline, not the exit code, which was 2), **LT-291** (`childImports` prefers a
-  retained twin over the served client, which is wrong under ADR 0039), **LT-292** (stale
-  `variantOverrides` are silently ignored), and the LT-237 parity rider (build-time
-  equivalence is CSS-only). **Gate-reading rule, recorded nowhere else:** a handoff's
-  `check:corpus` claim is its exit code.
-
-- [x] LT-213: Dynamic `<{expression}>` tags — reject on both surfaces (scope A0) — reviewed ✓
-  **Changed (for Changelog Keeper):** new compile error **LTC053**. An element tag that is not
-  a static name used to lower silently to `tag: ""`. Now it fails the compile on both
-  surfaces: the `.tsrx` dynamic `<{expr}>…</{expr}>`, and in `.tsx` any namespaced
-  (`<truc:element>`) or member (`<a.b>`) tag. It is raised in the shared `lowerElement`,
-  so host root, nested, `@for`/`map` bodies and branch arms are all covered. The fix-it
-  names each surface's conditional spelling: `@if … @else` in `.tsrx` (the ternary is
-  TSRX022 there), the ternary in `.tsx` (`SurfaceWording.conditionalTag`). Compose
-  dispatch is unchanged.
-  **Ruling (owner, 2026-09-24):** scope A0 — reject now. The server-known-tag design is
-  recorded but built only when a migration needs it: (1) only a server-known tag
-  expression (literal, server arg, `i18n`), folded so the client sees a static element;
-  (2) HTML element names only — no dashed names, no `script`/`style`/`template`/`iframe`,
-  no void-with-children; (3) `first()`/CSS address it by class/id/`data-*`, never by tag;
-  (4) `.tsx` spells it `<truc:element tag={…}>`, not React's `const Tag = …; <Tag>`
-  (collides with PascalCase compose dispatch); (5) IR `tag: { kind: 'static', name } |
-  { kind: 'server', exprText }`.
-  **Review (Architect, 2026-09-24):** approved. Channel compiler, tier 1 Prevented, as
-  specified. A probe confirmed that host-root, member and map-body placements all raise
-  LTC053. Live handoffs: **LT-303** must exempt `truc:try` from LTC053 in
-  `lower-shared.ts` (recorded there). **Copy (Tech Writer, 2026-09-24):** final LTC053
-  wording in `diagnostics.ts`, plus new rows in `errors.md` and the `LE_TRUC_COMPILER.md`
-  `TemplateNode` table.
+  would be absent exactly where the enhancer must bind, and it would put a compiler-versioned
+  token into the hand-authoring contract (the move ADR 0033 declined for styles).
+  **Live handoffs:** LT-309, LT-310, LT-311, LT-312.
 
 - [x] LT-212: `@for`'s `@empty` arm, on both surfaces and both loop paths — reviewed ✓
-  **Changed (for Changelog Keeper):** `.tsrx` `@for (…) { … } @empty { … }` and the `.tsx`
-  empty-state idiom `{xs.length === 0 ? <empty/> : xs.map(…)}` now compile. Before this, `.tsrx`
-  rejected `@empty` (LTC005), and `.tsx` compiled the ternary+map shape with no diagnostic but
-  **silently dropped the loop**. A `.map()` in any other conditional arm is now LTC005. Over
-  server data the arm renders when the loop renders no item. Over a reactive List it is always
-  rendered in the container with `data-unreconciled`, and the client toggles `hidden` from the
-  List's `length`. The arm is client-inert (LTC005 otherwise). Emitted output for components
-  without an arm is unchanged.
-  **Rulings (owner, 2026-09-24; recorded nowhere else):** (1) `.tsx` pays the cost too (ADR 0032
-  s6, no exception): the idiom is recognized by SHAPE, like the switch IIFE. The test must
-  compare the map receiver's own `length` to `0`, and it is never evaluated as an `if`
-  condition, which is what lets it cover a reactive List. (2) `@empty` has its own IR
-  (`emptyArm`), not a desugaring to `@if` + `@for`. The shared conditional+loop shape is
-  mis-addressed on both surfaces (LT-301). (3) The arm's roots sit in the template tree as the
-  loop output's following siblings, so selector resolution, id checks and prose checks cover them
-  by construction, and the server emitter defers them into the loop.
-  **Review (Architect, 2026-09-24):** approved. It matches ADR 0037 s5 (toggle path, out of the
-  keyed arm space) and ADR 0040 s1 (the reserved field, produced without reshaping). The
-  premise correction was the right call: the task's "`.tsx` needs no new spelling" was false at
-  HEAD. Live handoffs: **LT-300** (Tech Writer: the three new LTC005 phrases), **LT-301** (the
-  loop-in-branch mis-addressing, plus an authored `hidden` on a reactive-List arm root that is
-  emitted twice), **LT-302** (arg names that shadow the render harness). Not proven: no browser run
-  of the toggle, because no corpus component uses `@empty` yet. The first migration that does
-  owes a spec leg for the empty→filled→empty cycle.
+  **Ruling (owner, 2026-09-24):** `.tsx` pays the cost too (ADR 0032 s6, no exception) — the
+  empty-state idiom is recognized by shape, and its test is never evaluated as an `if`
+  condition, which is what lets it cover a reactive List. The IR shape is ADR 0040 s1's.
+  **Open obligation:** no browser run of the reactive-List toggle exists, because no corpus
+  component uses `@empty` yet. **The first migration that does owes a spec leg for the
+  empty → filled → empty cycle.** Live handoffs: LT-300, LT-301, LT-302.
 
-- [x] LT-298: The `.tsx` front end dropped the args parameter's type annotation, so every arg read as untyped — done ✓
-  **Changed (for Changelog Keeper):** `server/compiler/frontend/tsx/to-estree.ts` closes
-  three conversion gaps that made `.tsx` differ silently from `.tsrx`. (1) The args
-  parameter annotation is now converted, so `.tsx` gets the right harvest parsers
-  (`basic-counter` counted `"42" + 1 = "421"`), arg optionality, `string` attribute channels,
-  LTC032, and a typed render signature. (2) Exported `type`/`interface` declarations are now
-  converted, so `.tsx` clients get `defineComponent<Props>`. (3) The key of a renamed or
-  nested destructure is now read from the property name, so `.tsx` sees the reserved `i18n`
-  arg. Parity pins each variant pair's derived client facts. Its `AUTHORED_ARGS_DRIFT` set
-  (listbox/combobox) removes its own entries when they stop drifting; LT-237 reconciles them.
-  **Closed 2026-09-24:** the owner ran `bun run test:variants` and `bun run test`, and both
-  are green.
+- [x] LT-213: Dynamic `<{expression}>` tags — reject on both surfaces (LTC053, scope A0) — reviewed ✓
+  **Ruling (owner, 2026-09-24):** reject now. [ADR 0041](adr/0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md)
+  records `<truc:element tag={…}>` (server-known HTML element names only), built when a migration
+  needs it. **Recorded only here, for that task:** `first()`/CSS address such an element by
+  class/id/`data-*`, never by tag; `.tsx` does not use React's `const Tag = …; <Tag>` (collides
+  with PascalCase compose dispatch); the IR shape is `tag: { kind: 'static', name } |
+  { kind: 'server', exprText }`. Live handoff: LT-303 exempts `truc:try` from LTC053 (recorded
+  there).
 
-- [x] LT-285: The three-spelling exemplar — `basic-counter`'s `.ts` twin restored as a variant (the LT-238 exit criterion) — done ✓
-  **Changed:** `examples/basic/counter/` carries `.ts`, `.tsrx` and `.tsx` for one tag. The
-  twin is byte-identical to its pre-deletion self and declares the `HTMLElementTagNameMap`
-  entry (since the LT-237 amendment of ADR 0039 s4, every member does). The CEM leaves the twin out while its component is compiled (`isVariantTwin`,
-  `custom-elements-manifest.config.mjs`). The twin restore landed in 640922d5 (titled
-  LT-284); this task adds the live pins in `dual-corpus.test.ts`.
-  **Live handoff:** `childImports` resolves `basic-counter` to the twin, not the served
-  client. That is **LT-291**, and a tripwire pin fails as soon as a corpus source outside the
-  folder references the tag.
-  **Closed 2026-09-24:** `bun run test:variants basic-counter` is green on all three
-  surfaces (owner run).
+- [x] LT-188: Load the composed-children closure before the simulation pass renders — reviewed ✓
+  **Ruling (recorded nowhere else):** a Folded/Static child in the closure now runs its connect
+  inside the realm, so its diagnostics land in the build report attributed to the rendering
+  parent. That is intended (it is what the browser runs) and gated like any other entry.
+  Live handoff: LT-307 (in the current iteration).
 
-- [x] LT-286: ForIR → `EachForIR | ReconcileForIR`, with the `@empty` reservation and the key-clause rule (ADR 0040 s1) — reviewed ✓
-  **Changed (for Changelog Keeper):** the compiler contract (`contract.ts`) now exports
-  `EachForIR` and `ReconcileForIR` next to the `ForIR` union, and loops are discriminated by
-  `kind: 'each' | 'reconcile'`. New error **LTC052**: a `key` clause on a `@for` over server
-  data fails the build. The clause used to be silently dropped. It is tier 1 Prevented and
-  fires in the `.tsrx` front end only: `.tsx` has no spelling for a key on a server-data
-  `map`, and a third `map` callback parameter stays LTC005. Emitted output is byte-identical.
-  **Review (Architect, 2026-09-24):** approved. It matches ADR 0040 s1 as ruled.
-  `iterableText`/`iterableName` went each-only, following the ADR over the task text (reconcile
-  never read them). The plan maps are member-typed, so reading the wrong map is a type error.
-  Live handoffs: **LT-212** (produce `emptyArm`) and **LT-299** (`effects.ts`'s residual
-  `loopFor(…) as ForIR` null cast).
-  **Copy (Tech Writer, 2026-09-24):** LTC052 final wording is in `diagnostics.ts`, and the
-  `errors.md` row was applied by the owner.
+- [x] LT-266: Measure the size bet — reviewed ✓
+  **Ruling (recorded nowhere else):** the bet holds, and the margin is the **runtime, not the
+  payload** (8.72 vs 64.38 kB gzip runtime; the payload line, 3.07 vs 8.54, favours React and
+  never flips). **Any connector claim quotes BOTH lines.** Run of record:
+  `spike/size-bet/FINDING.md`. It is the REQUIREMENTS §1 acceptance number for any future
+  hydration-blob proposal.
 
-- [x] LT-294: Point the CEM at the corpus output directory — done ✓
-  **Changed:** `custom-elements-manifest.config.mjs` derives its client glob from the corpus
-  configuration's `outDir` (a `bun -e` subprocess into `server/corpus-sources.ts`, because
-  `cem` runs under Node), so a `le-truc.config.json` `outDir` is honoured.
-  `custom-elements.json` is gitignored, so no manifest diff exists. **Residue:** two example
-  demo comments (`form-radiogroup.html`, `form-colorgraph.html`) still name
-  `server/generated/tsrx/`. That is folded into LT-299.
+- [x] LT-290: `argsFromAttrs` re-emits Parser fallbacks that read `first()` refs out of scope — done ✓
+  **Ruling (recorded nowhere else):** declaring the ref stub inside the page-occurrence helper
+  was rejected, because a `refStub` value would reach the markup (§ 8). Live handoff: LT-297.
 
-- [x] LT-284: Per-surface test-route serving + the variant spec matrix (LT-238/ADR 0039 s2) — reviewed ✓
-  **Changed:** `/test/:component?surface=ts|tsrx|tsx` and `/test/:component/surface.js`
-  (`server/serve.ts`); `{{ test-script }}` slot in `docs-src/layouts/test.html`; the
-  unserved member's client under `variants/<tag>.<surface>.client.ts`, with
-  `relocateClientSpecifiers` (`server/corpus-compile.ts`); `bun run test:variants`
-  (`scripts/test-variants.ts`); `server/SERVER.md`.
-  **Rulings (recorded nowhere else):** (1) surface selection is **server-side**: specs keep
-  hard-coding `/test/<tag>`, and the runner sets `TEST_SURFACE` per server process. That is
-  ADR 0039 s2's "unchanged spec" in its purest form, so specs never learn about surfaces.
-  (2) "Defined once" holds **by construction**: the surface bundle is the `main.ts` graph
-  with the tag's canonical client emptied and one module appended, not a per-surface
-  bundle. (3) The runner refuses to start while port 3000 is taken, because Playwright's
-  `reuseExistingServer` would otherwise test the default page.
-  **Review (Architect, 2026-09-23):** design approved. **Unproven gate:** no run of
-  `test:variants` exists yet (the sandbox can't bind a port), so the Check "spec passes
-  against all three surfaces" moves to LT-285's Check, which already requires it green ×3.
-  Follow-ups: LT-295 (CI runs the matrix), LT-296 (stale `variants/` clients; the vacuous
-  surface tests).
-
-- [x] LT-290: `argsFromAttrs` re-emits Parser fallbacks that read `first()` refs out of scope (LT-194 defect) — done ✓
-  **Changed:** `server/compiler/emit-server.ts`: a Parser prop keeps its attribute channel
-  in the page-occurrence helper only when its fallback's free names resolve at module scope
-  (JS globals, harness exports, server imports). Otherwise a present attribute leaves the
-  occurrence authored (`unrenderable-args`), and a required prop withholds the helper.
-  `form-spinbutton` is the only live case (`value`/`min`/`max`/`step`/`bigStep` lose their
-  channel). `LE_TRUC_COMPILER.md` § 5.3 amended; Architect read the wording at close-out and
-  it matches the code. Commit 6ce64761; `check:corpus` exits 0 again.
-  **Ruling (recorded nowhere else):** declaring the ref stub inside the helper was rejected,
-  because a `refStub` value would reach the markup (§ 8). Follow-up: LT-297 (camelCase
-  attribute keys).
-
-- [x] LT-293: Propagate the LT-283 variant-set rule and LTC051 through the docs and the error copy — done ✓
-  **Changed (for Changelog Keeper):** final copy for LTC048 (the fix names the variant-set
-  shape: one source per surface, one base name, one directory) and LTC051 (no artifact of
-  the set is written; copy the served member's styles into the others), plus the
-  `errors.md` rows. `HOST_PROFILE.md` and `LE_TRUC_COMPILER.md` §§ 1, 6, 7, 7.1 now state
-  the variant-set rule and the `variantSurface`/`variantOverrides` keys. It landed inside
-  640922d5 (titled LT-284). The § 7 `variants/` sentence became true in the same commit.
-
-- [x] LT-235: Wave-4 type-level design session — IR discriminated unions, pass contracts (review §2.6–2.7) — reviewed ✓
-  **Ruling:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
-  (🔄 Proposed; owner rulings 2026-09-21). Implementation: LT-286 (ForIR — this iteration,
-  gates LT-212), and LT-287/288/289 (SignalIR, first()/expose(), pass contracts — BACKLOG
-  P2b); item (e) stays LT-244.
-  **Review (Architect, 2026-09-23):** approved. The ADR's "Related → Tasks" line cited
-  LT-283–LT-286, which collided with LT-238's implementation IDs; it is corrected to
-  LT-286–LT-289. The `LE_TRUC_COMPILER.md` §4 amendment had described the ruled shapes as
-  landed; it now states today's shape plus each *target shape* with its landing task. **Live
-  handoff:** each of LT-286/287/289 flips its own §4 passage to present tense when it lands.
-
-- [x] LT-266: Measure the size bet — emitted bytes for the same component authored in Le Truc and in React — reviewed ✓
-  **Ruling (recorded nowhere else):** the bet holds, and the margin is the **runtime, not
-  the payload** — 8.72 vs 64.38 kB gzip runtime, while the payload line (3.07 vs 8.54)
-  favours React and never flips. **Any connector claim quotes BOTH lines** (totals
-  18.61/16.53 gzip/brotli vs React 19.3's 68.62/59.21; run of record in
-  `spike/size-bet/FINDING.md`). This is the REQUIREMENTS §1 acceptance number for any
-  future hydration-blob proposal.
-
-- [x] LT-179: Remove the explicit factory return contract and `forEachUnseen` (ADR 0018 v3.0 milestone) — reviewed ✓
-  **Trap (recorded nowhere else):** one `src/tests/reactive.test.ts` assertion is worded
-  to pass under either the pre- or post-LT-178 spelling — a leftover of a parallel
-  session's in-flight `swapSlots` edit reverted so the branch landed pure. Tightening it
-  is free once the LT-178 copy rider (LT-189 item 11) settles the final wording.
-
-- [x] LT-188: Load the composed-children closure before the simulation pass renders (LT-169 review finding) — reviewed ✓
-  **Skill:** docs-server-dev
-  **Changed:** `server/effects/simulate.ts` — the realm now LOADS each Simulated subject plus the
-  transitive `composesTags` closure over the registry (children-first, de-duplicated against
-  `realm.loadedTags`, unregistered tags skipped), whatever the children's tier; the RENDER set
-  is unchanged. A pass that throws before its report prints the captured diagnostics first.
-  Build-internal; no changelog line.
-  **Review:** Approved. Ruling recorded nowhere else: a Folded/Static child in the closure now
-  runs its connect inside the realm, so its diagnostics land in the build report attributed to
-  the rendering parent — intended (it is what the browser runs) and gated like any other entry.
-  Follow-up LT-307 (the `.tsx` markup-path derivation found in review) must land before any
-  Simulated-tier component migrates to a `.tsx` source.
+- [x] LT-179: Remove the explicit factory return contract and `forEachUnseen` — reviewed ✓
+  **Trap (recorded nowhere else):** one `src/tests/reactive.test.ts` assertion is worded to pass
+  under either the pre- or post-LT-178 spelling. Tightening it is free once the LT-178 copy
+  rider (LT-189 item 11) settles the final wording.
