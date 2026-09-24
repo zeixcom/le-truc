@@ -21,7 +21,12 @@ import type { CompileDiagnostic } from '../diagnostics'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import { serverUsageNames } from '../imports'
-import type { ComponentIR, ForIR, TemplateNode } from '../ir'
+import type {
+	ComponentIR,
+	EachForIR,
+	ReconcileForIR,
+	TemplateNode,
+} from '../ir'
 import type { RegistryEntry } from '../registry'
 import type { SuppressedSite } from '../simulation/contract.ts'
 import type { RoutingSignal } from '../tier'
@@ -420,9 +425,9 @@ export type AnalysisContext = {
 	 */
 	ambiguousComposeNodes: ReadonlySet<TemplateNode>
 	/** Pass 1 output: server-data `@for` → `each()` plans. */
-	forPlans: Map<ForIR, ForClientPlan>
+	forPlans: Map<EachForIR, ForClientPlan>
 	/** Pass 1b output: reactive-list `@for` → `reconcile()` plans. */
-	reconcilePlans: Map<ForIR, ReconcilePlan>
+	reconcilePlans: Map<ReconcileForIR, ReconcilePlan>
 	/** Register (or reuse) a query; returns its variable name. */
 	addQuery: (
 		base: string,

@@ -30,8 +30,10 @@ import {
 import type {
 	AttributeIR,
 	ComponentIR,
+	EachForIR,
 	ForIR,
 	PassEntryIR,
+	ReconcileForIR,
 	TemplateNode,
 } from '../ir'
 import type { RegistryEntry } from '../registry'
@@ -141,8 +143,8 @@ type EffectsContext = {
 	ambient: Set<string>
 	usedNames: Set<string>
 	ambiguousComposeNodes: ReadonlySet<TemplateNode>
-	forPlans: Map<ForIR, ForClientPlan>
-	reconcilePlans: Map<ForIR, ReconcilePlan>
+	forPlans: Map<EachForIR, ForClientPlan>
+	reconcilePlans: Map<ReconcileForIR, ReconcilePlan>
 	addQuery: (
 		base: string,
 		selector: string,
@@ -1505,7 +1507,7 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 	if (!isElement(node)) return
 	if (node !== component.root && loopFor(fx, node)) {
 		const loop = loopFor(fx, node) as ForIR
-		if (loop.listSignal) {
+		if (loop.kind === 'reconcile') {
 			const plan = reconcilePlans.get(loop)
 			if (plan) effects.push({ kind: 'reconcile', for: plan })
 			return

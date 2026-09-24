@@ -78,6 +78,7 @@ export type DiagnosticCode =
 	| 'LTC049' // the factory-context parameter destructures a name that is not FactoryContext vocabulary, or is not a destructured object (LT-209) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC050' // the factory-context annotation's surface disagrees with `config.formAssociated` (LT-209) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC051' // a variant set's compiled members disagree on CSS (ADR 0039, LT-283) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC052' // a server-data @for carries a `key` clause, which only a reactive List's reconcile() reads (ADR 0040 s1, LT-286) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -154,6 +155,26 @@ export const diagnostic = {
 		warning(
 			'LTC001',
 			`@for over reactive source \`${iterable ?? '?'}\` — only declared createList(…) signals lower (reconcile(), ADR 0017); derived or non-List reactive sources are not supported. File skipped.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A `@for` over server data carries a `key` clause (ADR 0040 s1,
+	 * LT-286). Keys identify items across `reconcile()`'s keyed diff — a
+	 * reactive-List concern; a server-data loop lowers to `each()`, which
+	 * has no key parameter, so the clause was silently collected and
+	 * dropped. ADR 0028 tier 1 (Prevented): statically decidable from the
+	 * loop's iterable alone, no runtime half exists. Mirrors the `.tsx`
+	 * surface's existing `map` arity rejection ("the key clause is a
+	 * reactive-List concern").
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-09-24).
+	 */
+	keyOnServerDataFor: (source: string, offset: number | undefined) =>
+		error(
+			'LTC052',
+			'This `@for` iterates server data but has a `key` clause — only a `@for` over a declared `createList(…)` signal reconciles its items by key, so this key has no effect. Remove the `key` clause, or declare the items with `createList(…)` if they must be keyed.',
 			lineOf(source, offset),
 		),
 

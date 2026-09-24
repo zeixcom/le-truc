@@ -110,6 +110,8 @@ is the first, and LTC048's rule narrows in the same commit: a folder-local
 variant set (one source per surface, one base name, one directory) is the
 legal multi-source shape, and every other collision still fails the build
 naming all files.
+`LTC052` (a server-data `@for` carries a `key` clause — ADR 0040 s1, LT-286)
+follows.
 
 ## 5. Kept, with the surface named correctly
 

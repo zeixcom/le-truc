@@ -807,7 +807,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			constName: string
 		}
 		const loop = loopFor(mark.element)
-		const plan = loop ? ctx.forPlans.get(loop) : undefined
+		const plan = loop?.kind === 'each' ? ctx.forPlans.get(loop) : undefined
 		const valueAttr = loop
 			? [...loop.output.attrs].find(
 					(attr): attr is Extract<AttributeIR, { kind: 'server' }> =>

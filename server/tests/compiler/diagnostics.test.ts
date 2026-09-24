@@ -294,6 +294,31 @@ import { deriveList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC001')).toBe(true)
 	})
+
+	test('key clause on a server-data @for is LTC052 (ADR 0040 s1)', () => {
+		const source = `export function C({ items }: { items: string[] })
+	@{
+		<>
+			<c-el>
+				<ul>
+					@for (const item of items; key k) {
+						<li>{item}</li>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC052')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.line).toBe(6)
+	})
 })
 
 describe('reactive-list rewrite rules (milestone 3)', () => {

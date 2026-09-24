@@ -41,7 +41,14 @@ import {
 } from '../../ast-utils'
 import { diagnostic } from '../../diagnostics'
 import { dependenciesOf, isServerEvaluable } from '../../evaluability'
-import type { ExtractContext, ForIR, SignalIR, TemplateNode } from '../../ir'
+import type {
+	EachForIR,
+	ExtractContext,
+	ForIR,
+	ReconcileForIR,
+	SignalIR,
+	TemplateNode,
+} from '../../ir'
 import {
 	type Lowering,
 	lowerChildrenSkeleton,
@@ -540,7 +547,7 @@ export const lowerFor = (
 	}
 	const body = callback.body as AstNode | undefined
 	if (!isNode(body)) return null
-	const hoisted: ForIR['hoisted'] = []
+	const hoisted: EachForIR['hoisted'] = []
 	let outputNode: AstNode | null = null
 	if (body.type === 'BlockStatement') {
 		for (const stmt of asArray(body.body)) {
@@ -604,17 +611,16 @@ export const lowerFor = (
 		return null
 	}
 	const output = lowerElement(ctx, outputNode, signals, fors)
-	const forIR: ForIR = {
+	const forIR: EachForIR = {
+		kind: 'each',
 		itemName,
 		indexName,
-		keyText: null,
-		keyName: null,
-		listSignal: null,
 		iterableText: text(ctx.source, iterable),
 		iterableName,
 		hoisted,
 		output,
 		node,
+		emptyArm: null,
 	}
 	fors.set(node, forIR)
 	return output
@@ -775,17 +781,15 @@ export const lowerListFor = (
 	// The item binding is the slot fill — reactive by position.
 	markPositionallyReactive([output], new Set([itemName]))
 	validateListBody(ctx, output, itemName)
-	const forIR: ForIR = {
+	const forIR: ReconcileForIR = {
+		kind: 'reconcile',
 		itemName,
-		indexName: null,
+		listSignal,
 		keyText: null,
 		keyName: null,
-		listSignal,
-		iterableText: text(ctx.source, (node.callee as AstNode).object as AstNode),
-		iterableName: listSignal,
-		hoisted: [],
 		output,
 		node,
+		emptyArm: null,
 	}
 	fors.set(node, forIR)
 	return output

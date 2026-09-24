@@ -941,6 +941,21 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
+- [ ] LT-299: Hygiene sweep from the 2026-09-24 review (LT-286, LT-294, NOTES).
+  **Skill:** le-truc-dev
+  **Context:** three small items, none behavior-bearing:
+  (a) `bunx biome check ./server` is red on HEAD because of an unused `tag` parameter at
+  `server/tests/effects/page-render.test.ts:232` (the `resolveModule` callback, dating from
+  LT-194). Drop the parameter or rename it `_tag`, so the server lint gate reads green again;
+  (b) `analysis/effects.ts` `emitTopEffects` calls `loopFor(fx, node)` twice and casts
+  the second call `as ForIR`. Bind it once and let the null check narrow it. This is the
+  last `ForIR` cast after LT-286, and it doesn't conflict with LT-289's rewrite;
+  (c) the demo comments in `examples/form/radiogroup/form-radiogroup.html` and
+  `examples/form/colorgraph/form-colorgraph.html` still name `server/generated/tsrx/`.
+  Since LT-255 the path is `server/generated/components/` (LT-294 residue).
+  **Check:** `bunx biome check ./server` exits 0; goldens and parity byte-identical;
+  typecheck 0.
+
 - [ ] LT-297: `argsFromAttrs` keys attributes by the arg's camelCase name (LT-290 close-out; latent).
   **Skill:** le-truc-dev
   **Context:** the page-occurrence helper reads `attrs["bigStep"]`, but HTML attribute

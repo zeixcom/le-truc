@@ -55,7 +55,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 	// --- Pass 1: @for loops → each() plans ---------------------------------
 
 	for (const loop of component.fors.values()) {
-		if (loop.listSignal) continue // reactive loops → pass 1b (reconcile)
+		if (loop.kind !== 'each') continue // reactive loops → pass 1b (reconcile)
 		const output = loop.output
 		const { selector, unique } = resolveSelector(output)
 		if (!unique) {
@@ -280,7 +280,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 	}
 
 	for (const loop of component.fors.values()) {
-		if (!loop.listSignal) continue
+		if (loop.kind !== 'reconcile') continue
 		// One reactive list per component: every extracted template would
 		// match the same `first('template')` query, and the second list's
 		// reconcile would clone the FIRST list's item shape with no

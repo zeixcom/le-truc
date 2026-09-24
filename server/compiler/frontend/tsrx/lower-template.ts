@@ -25,7 +25,14 @@ import {
 import { isTemplateForOfNode } from '../../core'
 import { diagnostic } from '../../diagnostics'
 import { dependenciesOf, isServerEvaluable } from '../../evaluability'
-import type { ExtractContext, ForIR, SignalIR, TemplateNode } from '../../ir'
+import type {
+	EachForIR,
+	ExtractContext,
+	ForIR,
+	ReconcileForIR,
+	SignalIR,
+	TemplateNode,
+} from '../../ir'
 import {
 	type Lowering,
 	lowerChildrenSkeleton,
@@ -541,8 +548,14 @@ export const lowerFor = (
 		}
 		return lowerListFor(ctx, node, itemName, iterableSignal.name, signals, fors)
 	}
+	if (isNode(node.key)) {
+		ctx.diagnostics.push(
+			diagnostic.keyOnServerDataFor(ctx.source, node.key.start),
+		)
+		return null
+	}
 	const bodyStmts = isNode(node.body) ? asArray(node.body.body) : []
-	const hoisted: ForIR['hoisted'] = []
+	const hoisted: EachForIR['hoisted'] = []
 	let outputNode: AstNode | null = null
 	for (const stmt of bodyStmts) {
 		if (stmt.type === 'VariableDeclaration') {
@@ -609,17 +622,16 @@ export const lowerFor = (
 		)
 		return null
 	}
-	const forIR: ForIR = {
+	const forIR: EachForIR = {
+		kind: 'each',
 		itemName,
 		indexName: identifierName(node.index),
-		keyText: isNode(node.key) ? text(ctx.source, node.key) : null,
-		keyName: isNode(node.key) ? identifierName(node.key) : null,
-		listSignal: null,
 		iterableText: text(ctx.source, node.right as AstNode),
 		iterableName,
 		hoisted,
 		output,
 		node,
+		emptyArm: null,
 	}
 	fors.set(node, forIR)
 	return output
@@ -806,17 +818,15 @@ export const lowerListFor = (
 	// `validateListBody` would then see zero holes.
 	markPositionallyReactive([output], new Set([itemName]))
 	validateListBody(ctx, output, itemName)
-	const forIR: ForIR = {
+	const forIR: ReconcileForIR = {
+		kind: 'reconcile',
 		itemName,
-		indexName: null,
+		listSignal,
 		keyText: isNode(node.key) ? text(ctx.source, node.key) : null,
 		keyName,
-		listSignal,
-		iterableText: text(ctx.source, node.right as AstNode),
-		iterableName: listSignal,
-		hoisted: [],
 		output,
 		node,
+		emptyArm: null,
 	}
 	fors.set(node, forIR)
 	return output

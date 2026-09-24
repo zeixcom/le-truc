@@ -52,11 +52,11 @@ fixture reaching page context outside the declared ambient set fails the build w
 corpus passes unchanged (LT-258); three consecutive full `bun test server/tests` runs exit
 0 (LT-207).
 
-**Next free task ID: LT-299.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
+**Next free task ID: LT-300.** (LT-280/281/282 are filed in BACKLOG.md — LT-280 gates the
 wave's loop-heavy composites, LT-281/LT-282 are the LT-179 review riders. The LT-238 and
 LT-235 sessions consumed LT-283–LT-285 and LT-286–LT-289 respectively for their
 implementation tasks. The 2026-09-23 compiler review filed LT-290; the LT-238/LT-283/LT-235
-review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298.)
+review filed LT-291–LT-294; the LT-284 review filed LT-295/LT-296; LT-290's close-out filed LT-297; the first `test:variants` run filed LT-298; the LT-286 review filed LT-299.)
 
 **Iteration amendment (Architect, 2026-09-23 review of LT-238, LT-283, LT-235).** All three
 are reviewed ✓ and moved to `DONE.md`. Three tasks join the iteration, ahead of the in-flight
@@ -79,160 +79,6 @@ sandbox has.
 
 ---
 
-- [x] LT-298: The `.tsx` front end drops the args parameter's type annotation, so every arg reads as untyped (found by the first `test:variants` run, 2026-09-23). **Pulled into the iteration: `basic-counter` is served from `.tsx`, so the default `bun run test` is red too.** — done ✓
-  **Skill:** le-truc-dev
-  **Context:** `server/compiler/frontend/tsx/to-estree.ts` converts no type-only children
-  ("annotations … are NOT converted"), so the args `ObjectPattern` carries no
-  `typeAnnotation`. Everything the shared stages derive from that annotation then silently
-  takes its no-annotation default on `.tsx` only:
-  - **the harvest parser:** `inferType` → `'unknown'` → `asString`. The live failure:
-    `basic-counter.tsx`'s client harvests `count` with `asString()`, so a click gives
-    `"42" + 1 = "421"`. Both `basic-counter.spec.ts` tests fail on the `tsx` surface in
-    Chromium and WebKit, while `ts` and `tsrx` pass;
-  - **`paramPropsOf` (`assemble-ir.ts`):** `typeText: 'unknown'`, `optional: true`
-    (`isOptionalBinding` says optional when it cannot see a type), and `isString: false`.
-    So a plain `string` arg loses its `argsFromAttrs` channel, and required args read as
-    optional;
-  - **LTC032** (a default on a non-optional prop) can never fire on `.tsx`.
-
-  The parity suite missed it because it pins client modules structurally, and its
-  snapshot records `asString()(span.textContent)` for `basic-counter.tsx` (since LT-183).
-  Fix direction: convert the args parameter's annotation to the estree-TS shapes that
-  `infer-type.ts` reads (`TSTypeAnnotation` → `TSTypeLiteral` → `TSPropertySignature` with
-  `optional`, plus the `TSStringKeyword`/`TSNumberKeyword`/`TSBooleanKeyword` keywords;
-  anything else as a spanned passthrough, so `text()` still slices `typeText`). Scope it to
-  the component's args parameter unless converting annotations everywhere is free.
-  Walks must not start counting type names as value reads (check `freeIdentifiers`'s
-  skip-list).
-  **Channel:** none new. This is a front-end conversion gap, and LTC032 starts firing on
-  `.tsx` as designed.
-  **Check:** `bun run test:variants` green on all three surfaces; `bun run test` green for
-  basic-counter; regenerate the parity snapshot, which should now say
-  `asInteger()(span.textContent)` and `defineComponent<BasicCounterProps>` if the
-  `.tsrx` output has it; a new parity pin asserts that each variant pair's
-  `paramPropsOf` output and harvest parser kinds are equal; an LTC032 `.tsx` fixture fails
-  the build; goldens and census 20/2/0 unchanged apart from the corrected `.tsx` client.
-  **Related:** LT-237's LT-283 review rider (the unserved member's equivalence is proven
-  nowhere) covers the general gap. This task closes the instance and adds the pin.
-  **Changed:** `server/compiler/frontend/tsx/to-estree.ts`, three conversion gaps with one
-  root, each making `.tsx` diverge from `.tsrx` silently:
-  (1) parameter annotations: `withParamAnnotation` attaches an estree-TS `typeAnnotation`
-  (`convertType`: type literals and property signatures with `optional`, the primitive
-  keywords, named references, everything else a spanned passthrough) and extends the
-  pattern span over it, as `.tsrx` does. That fixes harvest parsers (`asInteger`), arg
-  optionality and `string` channels, LTC032, and the typed server render signature;
-  (2) exported `type`/`interface` declarations were converted by unreachable branches
-  (`convert`'s statement dispatch came first), so their `id` was lost and `.tsx` clients
-  never got `defineComponent<Props>`. Moved into `convertStatement`;
-  (3) renamed and nested destructures (`i18n: { t }`) took their key from the value
-  pattern, so `.tsx` never saw the reserved `i18n` arg: `declaresI18n` was false and
-  `basic-pluralize` withheld its `argsFromAttrs` helper. The key is now `propertyName`.
-  `server/tests/compiler/tsx/parity.test.ts`: per-pair pins on the derived client facts
-  (props type argument + Parser calls), the `argsFromAttrs` helper, and the render
-  signature, with a self-pruning `AUTHORED_ARGS_DRIFT` set (listbox/combobox's spike
-  fixtures author different args; LT-237 reconciles them). Plus LTC032, the no-false-
-  positive case and a renamed-destructure case on `.tsx`. All the new pins fail against
-  HEAD's converter. The parity snapshot is regenerated: counter `asInteger` + props
-  generic + the LT-237 path, and the props generic for pluralize, listbox and combobox.
-  **Gates:** typecheck 0; `check:corpus` exit 0, warning baseline 0, census 20/2/0; parity
-  50/50; `bun test server/tests` 1674 pass / 22 fail = 14 `serve.test.ts` port-bind +
-  8 LT-237 loaders (the 9th, the parity counter snapshot, is fixed here). The generated
-  `basic-counter` `.tsx` client is now identical to the `.tsrx` one apart from its header.
-  **Not run here:** `bun run test:variants` and `bun run test` (no port binding in the
-  sandbox). Run them to close the Check.
-
-- [x] LT-294: Point the CEM at the corpus output directory — it still globs the pre-LT-255 `server/generated/tsrx/` (review finding, 2026-09-23). — done ✓
-  **Skill:** docs-server-dev
-  **Context:** `custom-elements-manifest.config.mjs` globs `server/generated/tsrx/*.client.ts`.
-  Since LT-255 (609923e0) the corpus writes to `server/generated/components/`
-  (`corpus-config.ts` `DEFAULT_OUT_DIR`). Locally the old directory survives, last written
-  2026-09-19, so `cem analyze` reads stale clients, and the committed `custom-elements.json`
-  carries `server/generated/tsrx/…` paths. On a clean checkout the directory does not exist,
-  every compiled tag would vanish from the manifest, and `verify-cem`'s REQUIRED_TAGS guard
-  would fail. Derive the glob from the corpus configuration's `outDir` rather than hard-coding a
-  second copy, and update the config's header comment. LT-285's variant-twin CEM exclusion
-  (working tree) edits the same file, so land this first or together with it.
-  **Check:** after deleting `server/generated/tsrx/`, `bun run build:cem` and `verify-cem`
-  pass; the regenerated manifest's paths name `server/generated/components/`; the manifest
-  diff is otherwise empty.
-  **Changed:** `custom-elements-manifest.config.mjs` — the client glob is now
-  `${corpusOutDir}/*.client.ts`, where `corpusOutDir` is `loadCorpusConfig().outDir` asked of
-  `server/corpus-sources.ts` via a `bun -e` subprocess (the loader is TypeScript and `cem` runs
-  under Node), so a `le-truc.config.json` `outDir` is honoured too; header comment updated
-  (also the stale `scripts/build-tsrx.ts` → `build-corpus.ts`). Verified with
-  `server/generated/tsrx/` deleted: `build:cem` + `verify-cem` pass (70 declarations), all 66
-  generated-module paths name `server/generated/components/`. Note: `custom-elements.json` is
-  gitignored, not committed, so there is no manifest diff to review. Two example demo comments
-  (`form-radiogroup.html`, `form-colorgraph.html`) still name `server/generated/tsrx/` — out of
-  this skill's scope.
-
-- [x] LT-285: The three-spelling exemplar — restore `basic-counter`'s `.ts` twin as a variant. **The LT-238 exit criterion.** — done ✓ (`test:variants` pending, see Changed)
-  **Skill:** le-truc-dev
-  **Context:** Restore the deleted hand-written twin from history
-  (`git log --oneline -- examples/basic/counter/`) as `examples/basic/counter/basic-counter.ts`
-  beside its `.tsrx` (in place) and `.tsx` (LT-237 moved it in) — the first corpus folder
-  carrying all three spellings of one component. Apply the ADR 0039 conventions: the twin
-  owns the `declare global` `HTMLElementTagNameMap` entry (the compiled members dropped
-  theirs at LT-237); the twin stays the artifact of record, byte-for-byte its deleted self
-  except the map-entry ownership if history differs; the twin leaves the CEM globs while
-  its component is compiled (`custom-elements-manifest.config.mjs` — derive the exclusion
-  from the variant set so `verify-cem` stays green; first live proof of the CEM rule).
-  The same `basic-counter.spec.ts` must pass against all three surfaces through LT-284's
-  selection.
-  **Check:** `test:variants` (LT-284) green ×3 for basic-counter; LTC048's narrowed pins
-  proven live (a same-surface duplicate fixture fails the build naming both); census
-  20/2/0 (the twin adds no registry entry); warning baseline 0; typecheck green (the
-  absence of a TS 2717 error proves the declaration convention).
-  **Depends on** LT-283, LT-237, LT-284.
-  **Review rider (2026-09-23, LT-283 review):**
-  (a) the CEM half of this task's Check is only meaningful after LT-294, because today the
-  CEM reads a stale output directory;
-  (b) restoring the twin puts `basic-counter` into `childImports` as the TWIN's module.
-  `compileCorpus` keeps a sibling module over the generated client ("dual state keeps the
-  twin"), so any compiled parent referencing the tag would import the twin, while
-  `examples/main.ts` registers the generated client. That is LT-291. No compiled component
-  references `basic-counter` today, so this task is unaffected, but add a pin that
-  none does, so the first one fails loudly until LT-291 lands.
-  **Changed:** the twin restore, the `.tsx`/`.tsrx` map-entry drop and the variant-derived
-  CEM exclusion (`isVariantTwin` in `custom-elements-manifest.config.mjs`) had already landed
-  in 640922d5 (LT-284). The restored twin is byte-identical to its pre-deletion self
-  (`git diff ad811c7f^ HEAD -- examples/basic/counter/basic-counter.ts` is empty), so it
-  already owned the map entry. This task adds the live pins in
-  `server/tests/compiler/dual-corpus.test.ts` (describe *basic-counter three-spelling variant
-  set*): all three spellings present and only the twin declares `HTMLElementTagNameMap`; the
-  real `.tsrx` + `.tsx` compile as one set serving `.tsx` with one registry entry; a
-  same-surface duplicate of the live set (`examples/basic/counter-copy/basic-counter.tsx`,
-  in memory) fails with LTC048 naming all three sources; `childImports` resolves the tag to
-  the twin (rider b, documented); no corpus source outside the folder references
-  `basic-counter` by markup or module specifier (the LT-291 tripwire).
-  **Gates:** typecheck 0 (no TS 2717); `check:corpus` warning baseline 0, census 20/2/0;
-  `build:cem` + `verify-cem` green (70 declarations; `basic-counter`'s single declaration comes
-  from `server/generated/components/basic-counter.client.ts`, so the twin exclusion is live);
-  `bun test server/tests` 1679 pass / 22 fail, the same 22 as LT-283's baseline (14 `serve.test.ts`
-  port-bind + 8 LT-237 loaders).
-  **Not run here:** `bun run test:variants basic-counter` (the sandbox can't bind port 3000).
-  Run it to close the ×3 half of the Check.
-
-- [ ] LT-286: ForIR → `EachForIR | ReconcileForIR`, with the `@empty` reservation and the key-clause rule (LT-235 item (a); ADR 0040 s1). **The type-level gate in front of LT-212's implementation.**
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
-  s1 (owner rulings, LT-235 grilling 2026-09-21). `ForIR` splits into
-  `EachForIR | ReconcileForIR` on a `kind: 'each' | 'reconcile'` discriminant; fields live on
-  the member that uses them (`hoisted`/`indexName` each-only; `keyName`/`keyText`
-  reconcile-only — `keyText` has zero consumers anywhere today). The plan maps tighten to
-  `Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR, ReconcilePlan>`; the truthiness
-  dispatch in `analysis/loops.ts`, `analysis/effects.ts` and `emit-server.ts` becomes
-  narrowing. `emptyArm: TemplateNode[] | null` rides the union base — LT-212's reserved
-  surface; populate nothing yet (the `.tsx` production story is LT-212's ruling). A
-  server-data `@for` carrying a `key` clause — silently collected and dropped today —
-  becomes a compile diagnostic: **channel compiler, tier 1 Prevented** (ADR 0028 s1), next
-  free LTC code, mirroring the `.tsx` surface's existing "the key clause is a reactive-List
-  concern" message; **Tech Writer reviews the copy**, and flips the LE_TRUC_COMPILER.md
-  §4 ForIR passage from *target shape* to present tense in the same commit (LT-235 review).
-  **Check:** goldens + parity byte-identical (no emission change); a fixture with `key` on a
-  server-data `@for` fails the build with the new code; `bun test server/tests`, typecheck,
-  warning baseline 0, census 20/2/0. **Unblocks LT-212.**
-
 - [ ] LT-212: `@for`'s `@empty` arm (LT-210 item 1, re-anchored). **Gate: before P5's first wave-4 migration (owner sequencing, 2026-09-17); not urgent — no migrated component uses it today.**
   **Skill:** le-truc-dev
   **Context:** Spec: optional arm after the template block. New IR (an empty arm on
@@ -242,6 +88,10 @@ sandbox has.
   (keys and addressing may differ). Dual-surface story per ADR 0032 s6: paid in both
   surfaces (the `.tsx` lowering is the conditional+map shape) or the s6 exception
   recorded.
+  **IR surface landed (LT-286, 2026-09-24):** `emptyArm: TemplateNode[] | null` sits on
+  `ForIRBase` in `ir.ts`, so both `EachForIR` and `ReconcileForIR` carry it, and every front
+  end sets it to `null` today. Produce it from the `.tsrx` `@empty` arm, and rule the `.tsx`
+  story here. Consumers branch on `loop.kind`; don't test `listSignal` for truthiness.
   **Acceptance:** parity extended for the empty case; goldens unchanged for untouched
   behavior; warning baseline 0, census 20/2/0 hold.
   **ADR 0037 rider (2026-09-21):** `@empty` stays on the toggle path, out of the keyed arm

@@ -198,7 +198,7 @@ export surface: the exact set published as `@zeix/le-truc-compiler`
 | Role | Symbols |
 | --- | --- |
 | Pipeline entry | `compileFromIR` |
-| The IR a front end produces | `AstNode`, `ComponentIR`, `TemplateNode`, `AttributeIR`, `ComposeAttrIR`, `SignalIR`, `SignalConstructor`, `SetupStmt`, `ForIR`, `ConfigIR`, `ComponentParam`, `PassEntryIR`, `ExposeKind`, `SourceRange` |
+| The IR a front end produces | `AstNode`, `ComponentIR`, `TemplateNode`, `AttributeIR`, `ComposeAttrIR`, `SignalIR`, `SignalConstructor`, `SetupStmt`, `ForIR` (`EachForIR`, `ReconcileForIR`), `ConfigIR`, `ComponentParam`, `PassEntryIR`, `ExposeKind`, `SourceRange` |
 | Refusal channels | `CompileDiagnostic`, `DiagnosticCode`, `RoutingSignal`, `RoutingSignalOrigin`, `Resolution`, `UnresolvableLimb`, `EvaluationTier` |
 | Consumer half | `CompileFileResult`, `CompiledComponent`, `RegistryEntry`, `SourceSpan` |
 | Emit-path facts | `EmitPaths`, `DEFAULT_EMIT_PATHS` |
@@ -403,15 +403,18 @@ member.
 | `compose` | `component, source, attrs, children` | PascalCase tag bound to an authored-source import (either surface); server splices the child's render |
 | `client-stmt` | `text` | Bare client-only side effect inside a branch (`.tsrx` only — a `.tsx` branch must return JSX) |
 
-**`ForIR`** — one `@for` loop. Today one shape discriminated by nullability:
-`listSignal` null lowers to `each()` over server data, a declared `createList`
-name lowers to `reconcile()` (ADR 0017). *Target shape (ADR 0040 s1, lands
-with LT-286):* a two-member union on a `kind` discriminant — `EachForIR` and
-`ReconcileForIR`, each carrying only the fields its lowering uses — with
-`emptyArm` reserved on the union base for the `.tsrx` `@empty` arm (LT-212;
-ADR 0037 s5 keeps it on the toggle path, out of the keyed arm space), and a
-`key` clause on an each-loop becomes a compile error (tier 1 Prevented) where
-it is silently dropped today.
+**`ForIR`** — one `@for` loop, a two-member union on a `kind` discriminant
+(ADR 0040 s1). `EachForIR` (`kind: 'each'`) is a loop over server data and
+lowers to `each()`; it carries `indexName`, `iterableText`, `iterableName` and
+`hoisted`. `ReconcileForIR` (`kind: 'reconcile'`) is a loop over a declared
+`createList` and lowers to `reconcile()` (ADR 0017); it carries `listSignal`,
+`keyName` and `keyText`. The plan maps are typed per member —
+`Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR, ReconcilePlan>` — so
+a pass that reads the wrong map fails to type-check. `emptyArm` on the union
+base is reserved for the `.tsrx` `@empty` arm (LT-212; ADR 0037 s5 keeps it on
+the toggle path, out of the keyed arm space). No front end sets it yet, so it
+is always `null`. A `key` clause on a server-data loop is a compile error
+(LTC052, tier 1 Prevented): only `reconcile()` reads a key.
 
 **`AttributeIR`** — per-attribute: `static`, `server` (render-time expression),
 `reactive` (thunk → `watch()`), `pass` (`truc:pass={{ }}`), `class-map` /

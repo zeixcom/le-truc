@@ -40,7 +40,7 @@ entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text
 - [x] LT-238: Relax "one authored source per component tag" to a canonical-plus-variants rule — reviewed ✓
   **Ruling:** build-selected variants, `.tsx` served by default — recorded in
   [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (amends ADR 0032 s6 by
-  reference). Implementation: LT-283 (below), LT-284, LT-285 (open, `TODO.md`).
+  reference). Implementation: LT-283, LT-284, LT-285 (all below).
 
 - [x] LT-283: Variant sets in the corpus scan — compile-both/serve-selected, LTC048 narrowed, LTC051 added, surface-selection config — reviewed ✓
   **Changed (for Changelog Keeper):** `le-truc.config.json` accepts `variantSurface`
@@ -57,6 +57,54 @@ entry; its OPEN Tech Writer copy rider moved to LT-189 item 11). Full entry text
   `variantOverrides` are silently ignored), and the LT-237 parity rider (build-time
   equivalence is CSS-only). **Gate-reading rule, recorded nowhere else:** a handoff's
   `check:corpus` claim is its exit code.
+
+- [x] LT-298: The `.tsx` front end dropped the args parameter's type annotation, so every arg read as untyped — done ✓
+  **Changed (for Changelog Keeper):** `server/compiler/frontend/tsx/to-estree.ts` closes
+  three conversion gaps that made `.tsx` differ silently from `.tsrx`. (1) The args
+  parameter annotation is now converted, so `.tsx` gets the right harvest parsers
+  (`basic-counter` counted `"42" + 1 = "421"`), arg optionality, `string` attribute channels,
+  LTC032, and a typed render signature. (2) Exported `type`/`interface` declarations are now
+  converted, so `.tsx` clients get `defineComponent<Props>`. (3) The key of a renamed or
+  nested destructure is now read from the property name, so `.tsx` sees the reserved `i18n`
+  arg. Parity pins each variant pair's derived client facts. Its `AUTHORED_ARGS_DRIFT` set
+  (listbox/combobox) removes its own entries when they stop drifting; LT-237 reconciles them.
+  **Closed 2026-09-24:** the owner ran `bun run test:variants` and `bun run test`, and both
+  are green.
+
+- [x] LT-285: The three-spelling exemplar — `basic-counter`'s `.ts` twin restored as a variant (the LT-238 exit criterion) — done ✓
+  **Changed:** `examples/basic/counter/` carries `.ts`, `.tsrx` and `.tsx` for one tag. The
+  twin is byte-identical to its pre-deletion self and owns the `HTMLElementTagNameMap`
+  entry. The CEM leaves the twin out while its component is compiled (`isVariantTwin`,
+  `custom-elements-manifest.config.mjs`). The twin restore landed in 640922d5 (titled
+  LT-284); this task adds the live pins in `dual-corpus.test.ts`.
+  **Live handoff:** `childImports` resolves `basic-counter` to the twin, not the served
+  client. That is **LT-291**, and a tripwire pin fails as soon as a corpus source outside the
+  folder references the tag.
+  **Closed 2026-09-24:** `bun run test:variants basic-counter` is green on all three
+  surfaces (owner run).
+
+- [x] LT-286: ForIR → `EachForIR | ReconcileForIR`, with the `@empty` reservation and the key-clause rule (ADR 0040 s1) — reviewed ✓
+  **Changed (for Changelog Keeper):** the compiler contract (`contract.ts`) now exports
+  `EachForIR` and `ReconcileForIR` next to the `ForIR` union, and loops are discriminated by
+  `kind: 'each' | 'reconcile'`. New error **LTC052**: a `key` clause on a `@for` over server
+  data fails the build. The clause used to be silently dropped. It is tier 1 Prevented and
+  fires in the `.tsrx` front end only: `.tsx` has no spelling for a key on a server-data
+  `map`, and a third `map` callback parameter stays LTC005. Emitted output is byte-identical.
+  **Review (Architect, 2026-09-24):** approved. It matches ADR 0040 s1 as ruled.
+  `iterableText`/`iterableName` went each-only, following the ADR over the task text (reconcile
+  never read them). The plan maps are member-typed, so reading the wrong map is a type error.
+  Live handoffs: **LT-212** (produce `emptyArm`) and **LT-299** (`effects.ts`'s residual
+  `loopFor(…) as ForIR` null cast).
+  **Copy (Tech Writer, 2026-09-24):** LTC052 final wording is in `diagnostics.ts`, and the
+  `errors.md` row was applied by the owner.
+
+- [x] LT-294: Point the CEM at the corpus output directory — done ✓
+  **Changed:** `custom-elements-manifest.config.mjs` derives its client glob from the corpus
+  configuration's `outDir` (a `bun -e` subprocess into `server/corpus-sources.ts`, because
+  `cem` runs under Node), so a `le-truc.config.json` `outDir` is honoured.
+  `custom-elements.json` is gitignored, so no manifest diff exists. **Residue:** two example
+  demo comments (`form-radiogroup.html`, `form-colorgraph.html`) still name
+  `server/generated/tsrx/`. That is folded into LT-299.
 
 - [x] LT-284: Per-surface test-route serving + the variant spec matrix (LT-238/ADR 0039 s2) — reviewed ✓
   **Changed:** `/test/:component?surface=ts|tsrx|tsx` and `/test/:component/surface.js`

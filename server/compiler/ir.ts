@@ -357,28 +357,51 @@ export type ComposeAttrIR =
 	| { kind: 'arg'; name: string; exprText: string; node: AstNode | null }
 	| { kind: 'pass'; entries: PassEntryIR[] }
 
-/**
- * A `@for` loop. Over server data (`listSignal` null) it lowers to `each()`;
- * over a declared reactive `List` (ADR 0023 sub-design 5, milestone 3) the
- * server renders initial keyed items in place plus an extracted `<template>`
- * whose item hole becomes a `<slot>` marker, and the client lowers to
- * `reconcile()` (ADR 0017).
- */
-export type ForIR = {
+/** Fields every `@for` loop carries, whichever lowering it takes. */
+type ForIRBase = {
 	itemName: string
+	output: TemplateNode & { kind: 'element' }
+	node: AstNode
+	/**
+	 * Reserved for the `.tsrx` `@empty` arm (LT-212; ADR 0040 s1) — rendered
+	 * when the iterable is empty, kept on the toggle path out of the keyed arm
+	 * space (ADR 0037 s5). No front end populates it yet: always `null`.
+	 */
+	emptyArm: TemplateNode[] | null
+}
+
+/**
+ * A `@for` over server data: lowers to `each()` on the client. A `key`
+ * clause is a compile error here (LTC052) — keys are a reactive-List concern.
+ */
+export type EachForIR = ForIRBase & {
+	kind: 'each'
 	indexName: string | null
-	keyText: string | null
-	/** Key binding name when the key clause is a bare identifier (`key k`). */
-	keyName: string | null
-	/** Declared createList signal name for reactive loops, else null. */
-	listSignal: string | null
 	iterableText: string
+	/** The iterable when it is a bare identifier, else null. */
 	iterableName: string | null
 	/** const declarations before the output element, in order. */
 	hoisted: Array<{ name: string; initText: string; node: AstNode }>
-	output: TemplateNode & { kind: 'element' }
-	node: AstNode
 }
+
+/**
+ * A `@for` over a declared reactive `List` (ADR 0023 sub-design 5,
+ * milestone 3): the server renders initial keyed items in place plus an
+ * extracted `<template>` whose item hole becomes a `<slot>` marker, and the
+ * client lowers to `reconcile()` (ADR 0017).
+ */
+export type ReconcileForIR = ForIRBase & {
+	kind: 'reconcile'
+	/** Declared createList signal name. */
+	listSignal: string
+	/** Verbatim key clause text, when present. */
+	keyText: string | null
+	/** Key binding name when the key clause is a bare identifier (`key k`). */
+	keyName: string | null
+}
+
+/** A `@for` loop, discriminated by its lowering (ADR 0040 s1). */
+export type ForIR = EachForIR | ReconcileForIR
 
 /**
  * Extension activation declared as `export const config = { … }` (ADR 0023

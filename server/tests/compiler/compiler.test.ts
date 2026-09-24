@@ -323,9 +323,11 @@ import { createCell } from '@zeix/le-truc'`,
 		expect(diagnostics).toEqual([])
 		expect(component?.fors.size).toBe(1)
 		const loop = [...(component?.fors.values() ?? [])][0]
-		expect(loop?.itemName).toBe('tab')
-		expect(loop?.indexName).toBe('i')
-		expect(loop?.hoisted.map(h => h.name)).toEqual(['pid'])
+		if (loop?.kind !== 'each') throw new Error('expected an each-loop')
+		expect(loop.itemName).toBe('tab')
+		expect(loop.indexName).toBe('i')
+		expect(loop.hoisted.map(h => h.name)).toEqual(['pid'])
+		expect(loop.emptyArm).toBeNull()
 	})
 })
 

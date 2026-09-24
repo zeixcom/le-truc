@@ -38,6 +38,7 @@ import type {
 	AttributeIR,
 	ComponentIR,
 	ForIR,
+	ReconcileForIR,
 	SetupStmt,
 	TemplateNode,
 } from './ir'
@@ -318,7 +319,7 @@ const hostDerivedExpr = (
  */
 const listTemplateLines = (
 	ctx: EmitContext,
-	loop: ForIR,
+	loop: ReconcileForIR,
 	depth: number,
 ): string[] => {
 	const out: string[] = [`${tab(depth)}${ctx.buffer}.push('<template>')`]
@@ -386,7 +387,7 @@ const listTemplateLines = (
  */
 const emitListFor = (
 	ctx: EmitContext,
-	loop: ForIR,
+	loop: ReconcileForIR,
 	scope: ReadonlySet<string>,
 	depth: number,
 ): void => {
@@ -424,7 +425,7 @@ const emitFor = (
 	scope: ReadonlySet<string>,
 	depth: number,
 ): void => {
-	if (loop.listSignal) {
+	if (loop.kind === 'reconcile') {
 		emitListFor(ctx, loop, scope, depth)
 		return
 	}
