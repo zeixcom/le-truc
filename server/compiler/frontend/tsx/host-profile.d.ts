@@ -77,29 +77,6 @@ interface I18n {
 }
 
 /**
- * The recognized async boundary (the `.tsx` spelling of
- * `@try`/`@pending`/`@catch`): all arms render, `hidden`-toggled by which
- * state won at render time. `nil` is the no-value-yet arm. There is no
- * `stale` arm — the owner withdrew the four-arm spelling (LT-211): a
- * re-fetching task keeps its `ok` arm, and the in-flight state is the
- * reactive `isPending` idiom beside the boundary (`isPending` is a real
- * package export — import it; the compiler folds the read server-side and
- * the generated `watch` re-fires when the task settles).
- *
- * Typed precisely per the owner precision ruling (LT-208): every arm IS a
- * JSX element expression — the compiler's `singleRootOf` checks are the
- * semantics — so the arm positions are `JSX.Element` (branded, below), and
- * `err`'s parameter is `Error` because cause-effect's `match()` wraps
- * non-Errors before dispatch. Deliberately NOT generic `boundary<T>`: a
- * divergent arm ("oops" beside `<div/>`) would union `T` and pass.
- */
-declare function boundary(arms: {
-	ok: JSX.Element
-	nil: JSX.Element
-	err: (error: Error) => JSX.Element
-}): JSX.Element
-
-/**
  * The CSS template tag (LT-202): `<style>{css`…`}</style>` is the default
  * spelling for a component's stylesheet — editors highlight a `css`-tagged
  * template literal as CSS out of the box. The tag is compile-consumed:
@@ -122,7 +99,7 @@ declare function css(
 declare namespace JSX {
 	/**
 	 * The type of every JSX element expression (LT-208): branded so a
-	 * boundary arm position (`ok`/`nil`, and `err`'s return) rejects
+	 * `<truc:try>` arm position (`pending`, and `catch`'s return) rejects
 	 * anything that is not an element — a string, number, or function arm
 	 * is a tsc error, which the generic-`T` and empty-`{}` attempts could
 	 * not deliver. An element expression satisfies the brand by
@@ -130,6 +107,15 @@ declare namespace JSX {
 	 */
 	interface Element {
 		readonly $$leTrucJsx: 'element'
+	}
+
+	/**
+	 * JSX children are checked against the `children` prop — what makes
+	 * `<truc:try>`'s single-element content (`children: Element`) a tsc
+	 * fact. Every other entry types `children` as `unknown`.
+	 */
+	interface ElementChildrenAttribute {
+		children: unknown
 	}
 
 	/**
@@ -328,6 +314,31 @@ declare namespace JSX {
 	}
 	type AsyncElAttrs = CommonLightDom
 
+	/**
+	 * `<truc:try>` (ADR 0041), the `.tsx` spelling of
+	 * `@try`/`@pending`/`@catch`. The children are the success content.
+	 * With `catch` only it is the error boundary; adding `pending` makes it
+	 * the async boundary — all arms render, `hidden`-toggled by which state
+	 * won at render time, and `pending` is the no-value-yet arm. There is no
+	 * `stale` arm (LT-211): a re-fetching task keeps its content, and the
+	 * in-flight state is the reactive `isPending` idiom beside the boundary
+	 * (`isPending` is a real package export — import it; the compiler folds
+	 * the read server-side and the generated `watch` re-fires when the task
+	 * settles).
+	 *
+	 * Typed precisely per the owner precision ruling (LT-208): every arm IS
+	 * a JSX element expression — the compiler's `singleRootOf` checks are
+	 * the semantics — so the arm positions are the branded `JSX.Element`,
+	 * and `catch`'s parameter is `Error` because cause-effect's `match()`
+	 * wraps non-Errors before dispatch. As attributes, a repeated arm is a
+	 * tsc error (TS17001). Compile-consumed: nothing evaluates the arms.
+	 */
+	interface TrucTryAttrs {
+		pending?: Element
+		catch: (error: Error) => Element
+		children: Element
+	}
+
 	interface IntrinsicElements {
 		button: button
 		dd: dd
@@ -365,5 +376,6 @@ declare namespace JSX {
 		'module-splitview': ModuleSplitviewAttrs
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs
+		'truc:try': TrucTryAttrs
 	}
 }

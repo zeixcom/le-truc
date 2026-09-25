@@ -5,7 +5,8 @@
  * core — condition validation, element/compose lowering, the expression-
  * child lift rule, positional reactivity — while each front end keeps its
  * own control-flow dispatch (`.tsrx`: `@if`/`@switch`/`@try`/`@for`
- * directive nodes; `.tsx`: ternaries, `.map()`, IIFEs, `boundary()`).
+ * directive nodes; `.tsx`: ternaries, `.map()`, the switch IIFE,
+ * `<truc:try>`).
  *
  * Front-end-neutral like the front-end stage modules (`setup-extraction.ts`
  * et al.): no parser values, only the loose
@@ -498,11 +499,11 @@ export const lowerElement = (
  *
  * - `dispatchChild` — grammar-specific CHILD NODE TYPES outside the four
  *   universal shapes (`.tsrx`: `@for`/`@if`/`@switch`/`@try` directives,
- *   `JSXStyleElement`, `@for`-in). Consumes the child by pushing the lowered
+ *   `JSXStyleElement`, `@for`-in; `.tsx`: the `<truc:try>` element). Consumes the child by pushing the lowered
  *   node into `out` and returning true.
  * - `dispatchControlFlow` — control-flow EXPRESSION SHAPES inside an
- *   expression container (`.tsx`: ternary/`&&`, `.map()`, `boundary()`,
- *   switch/try IIFEs). Returns true when the expression was handled; false
+ *   expression container (`.tsx`: ternary/`&&`, `.map()`, the switch
+ *   IIFE). Returns true when the expression was handled; false
  *   falls through to the ordinary expression-child lift.
  *
  * JSXText collapsing runs for both; the `.tsrx` retired-`&{}`-sigil check

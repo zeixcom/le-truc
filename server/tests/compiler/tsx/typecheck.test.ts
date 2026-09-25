@@ -4,8 +4,8 @@
  *
  * The POSITIVE config (`server/tests/compiler/fixtures/tsx/tsconfig.json`)
  * must compile clean — the synthetic fixtures under the precise
- * `FactoryContext` parameter convention and the branded three-arm
- * `boundary`. The NEGATIVE config (`fixtures/tsx/tsconfig.neg.json`) must fail with exactly the mistyped-arm
+ * `FactoryContext` parameter convention and the branded
+ * `IntrinsicElements['truc:try']` arms (ADR 0041). The NEGATIVE config (`fixtures/tsx/tsconfig.neg.json`) must fail with exactly the mistyped-arm
  * diagnostics the ambients exist to surface, at native positions on the
  * authored files (the ADR 0032 s3 dividend — no span remapping needed).
  *
@@ -54,15 +54,22 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 
 	test('the negative probes fail at native positions on the authored file', () => {
 		const { status, output } = runTsc(path.join(FIXTURES, 'tsconfig.neg.json'))
-		// The string arm: the branded JSX.Element rejects it — the
+		// The string `pending` arm: the branded JSX.Element rejects it — the
 		// generic-`T` shape the ruling rejected would have union-absorbed it.
 		expect(output).toContain(
-			"async-bad-arms.tsx(23,5): error TS2322: Type 'string' is not assignable to type 'Element'",
+			"async-bad-arms.tsx(24,14): error TS2322: Type 'string' is not assignable to type 'Element'",
 		)
-		// The mistyped err annotation: the contextual Error parameter makes
-		// both the annotation and the `.message` read errors.
+		// The mistyped `catch` annotation: the contextual Error parameter
+		// makes both the annotation and the `.message` read errors.
 		expect(output).toContain(
-			"async-bad-arms.tsx(24,31): error TS2339: Property 'message' does not exist on type 'string'",
+			"async-bad-arms.tsx(24,29): error TS2322: Type '(e: string) => JSX.Element' is not assignable to type '(error: Error) => Element'",
+		)
+		expect(output).toContain(
+			"async-bad-arms.tsx(24,57): error TS2339: Property 'message' does not exist on type 'string'",
+		)
+		// A repeated arm: attributes make arm uniqueness tsc's (LT-303).
+		expect(output).toContain(
+			'async-bad-arms.tsx(27,46): error TS17001: JSX elements cannot have multiple attributes with the same name',
 		)
 		// The typed context parameter (LT-209): a typo'd host read and a
 		// mistyped expose() key — the free P-drift check — are errors at

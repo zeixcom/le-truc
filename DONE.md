@@ -44,6 +44,24 @@ LT-283–LT-286, LT-293, LT-294, LT-298, LT-315), 2026-09-21 ×2. Full entry tex
 - **Scrollarea's wall-time at demo scale is noise** (474/341/330 ms Simulated vs 432 ms Folded).
   The ~2.3 s ADR 0029 cites returns only once page occurrences are simulated (LT-103).
 
+- [x] LT-303: `<truc:try pending catch>` replaces `boundary()` and the try/catch IIFE in `.tsx` (ADR 0041) — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `.tsx` authors both boundaries as `<truc:try catch={e => …}>content</truc:try>`,
+  and adding `pending={…}` makes it the async boundary. `host-profile.d.ts` drops the `boundary`
+  declaration and adds `IntrinsicElements['truc:try']`, plus a global
+  `JSX.ElementChildrenAttribute`. Both surfaces lower onto the unchanged `try` IR. The
+  async and sync fixtures now have `.tsrx` twins, and a parity test pins their server
+  modules byte-for-byte.
+  **Rulings:** `tsc` owns the arm types, a repeated arm (TS17001) and the missing `catch`.
+  The compiler keeps one shape error (LTC005, compiler channel, tier 1): arms written
+  inline, `catch` an arrow with a JSX body, no other attributes. It also guards the missing
+  `catch`, because the compiler never runs `tsc`. `<truc:try>` is recognized in child
+  position and as a ternary or `&&` arm. As a `.map()` output root it stays LTC053, the same
+  as `.tsrx`, which rejects `@try` as a loop body root.
+  **Review:** Approved. The global `ElementChildrenAttribute` regresses compose sites whose
+  child takes `children?: string` → **LT-331**. Diagnostic copy, including the misleading
+  LTC053 wording for a loop root, goes to BACKLOG P1 Tech Writer batch item 5.
+
 - [x] LT-323: A signal whose consumers are all client-only does not route Simulated — ADR 0029 conformance — reviewed ✓
   **Ruling (recorded nowhere else):** the credit is "at least one client-only read, none a
   render read", not "every consumer client-only". A literal-initializer signal is sound either

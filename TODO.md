@@ -54,41 +54,11 @@ context-member-seeded signal routes Simulated (LT-330). `bun run check:sim` exit
 build-time shuffle in a loop iterable fails LTC033 (LT-326). Args named `items`/`esc` render on
 both surfaces (LT-302). The census is 27/2/0 before the batch; each migration adds its own entry.
 
-**Next free task ID: LT-331.**
+**Next free task ID: LT-332.**
 
 ---
 
 ### Gates (run first)
-
-- [ ] LT-303: `<truc:try pending catch>` replaces `boundary()` and the try/catch IIFE in `.tsx` ([ADR 0041](adr/0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md)). **Gate: before the first wave-4 migration that authors a boundary.**
-  **Skill:** le-truc-dev; Tech Writer reviews the diagnostic copy (retirement counts)
-  **Context:** Owner ruling 2026-09-24. `.tsx` spells both boundaries as one namespaced
-  intrinsic: `<truc:try catch={e => <jsx/>}>ok</truc:try>` is the error boundary, and
-  adding `pending={<jsx/>}` makes it the async boundary. Both lower to the existing `try`
-  IR node (`pendingChildren` set iff `pending` is present), so nothing past the front end
-  changes and `.tsrx` is untouched. (1) `host-profile.d.ts`: delete the `boundary`
-  ambient; add `IntrinsicElements['truc:try']` with `pending?: JSX.Element`,
-  `catch: (error: Error) => JSX.Element` and `children: JSX.Element`, keeping LT-208's
-  branded arm typing (verified 2026-09-24: namespaced intrinsics give `tsc` arm types,
-  contextual `Error`, and TS17001 on a repeated arm). (2) `lower-tsx.ts`: delete
-  `lowerTryIife` and the `boundary` call dispatch, and lower `truc:try` elements instead.
-  The switch IIFE and `asIife` stay. The single-root-per-arm rules carry over. The
-  arrow-shape and missing-arm errors retire where `tsc` now covers them; a surviving
-  shape error keeps channel compiler, tier 1 Prevented. (3) Rewrite `fixtures/tsx/async/`,
-  `fixtures/tsx/sync/` and `fixtures/tsx/async-bad-arms.tsx` (under `server/tests/compiler/`) (the negative type test becomes a
-  bad `pending`/`catch` attribute) and the parity tests. Byte-identical server output
-  against the `.tsrx` twins is the acceptance proof. (4) Sweep JSDoc and comments
-  (`lower-tsx.ts` header, `lower-shared.ts:8`/`:487`) so no `boundary()` or try/catch
-  IIFE reference survives in code. The authoritative docs were already swept on
-  2026-09-24. BACKLOG P1's Tech Writer batch item 5 (the boundary diagnostic wordings)
-  now covers the `truc:try` copy instead. Independent of LT-276 (arm mechanism) but
-  touches the same goldens — land either first and refresh.
-  **Handoff from LT-213 (2026-09-24):** LTC053 in `lower-shared.ts`'s `lowerElement`
-  currently rejects every tag `jsxName` cannot flatten, namespaced ones included. Lower
-  `truc:try` in `lower-tsx.ts`'s dispatch before it reaches `lowerElement`, or exempt it
-  there, so that any other `truc:*` name stays LTC053.
-  **Check:** `grep -rn "boundary(" server spike` is empty outside history; parity suite
-  green; compile-warning baseline 0.
 
 - [ ] LT-325: Generate `.tsrx` tag-map typings instead of hand-listing generated clients in `examples/tsconfig.json`.
   **Skill:** le-truc-dev

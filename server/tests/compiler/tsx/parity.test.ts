@@ -334,7 +334,7 @@ describe('variant sets — front-end parity (§4.3, ADR 0039 s1)', () => {
 })
 
 describe('§4.4 synthetic shapes through the unmodified analysis', () => {
-	test('async boundary (boundary({ ok, nil, err })) renders the nil arm and folds the isPending idiom', async () => {
+	test('async boundary (<truc:try pending catch>) renders the pending arm and folds the isPending idiom', async () => {
 		const source = read(`${FIXTURES_TSX}/async/async-el.tsx`)
 		const { component, diagnostics } = compileComponentTsx(
 			source,
@@ -346,7 +346,7 @@ describe('§4.4 synthetic shapes through the unmodified analysis', () => {
 		const render = renderOf('async-el', 'AsyncEl')
 		const html = await render(component.serverCode, {})
 		// Fresh task in the value harness: pending WITHOUT a retained value —
-		// the nil arm shows; ok/err render hidden alongside it.
+		// the pending arm shows; content/catch render hidden alongside it.
 		expect(html).toContain('<p class="loading">Loading</p>')
 		expect(html).toContain('hidden class="content"')
 		expect(html).toContain('hidden class="error"')
@@ -363,7 +363,7 @@ describe('§4.4 synthetic shapes through the unmodified analysis', () => {
 		expect(component.clientCode).not.toContain('document.createElement')
 	})
 
-	test('switch IIFE / try-catch IIFE / indexed map / && and ternary arms', async () => {
+	test('switch IIFE / <truc:try catch> / indexed map / && and ternary arms', async () => {
 		const source = read(`${FIXTURES_TSX}/sync/sync-el.tsx`)
 		const { component, diagnostics } = compileComponentTsx(
 			source,
@@ -397,6 +397,37 @@ describe('§4.4 synthetic shapes through the unmodified analysis', () => {
 		expect(flipped).toContain('class="none"')
 		expect(flipped).toContain('class="zero"')
 	})
+
+	test.each([
+		['async', 'async-el'],
+		['sync', 'sync-el'],
+	])(
+		'%s: the server module is byte-identical to its .tsrx twin (LT-303)',
+		(dir, tag) => {
+			// `<truc:try>` lowers onto the unchanged `try` IR, so nothing past
+			// the front end can tell the spellings apart. Only the provenance
+			// header (it names the source file) differs.
+			const body = (code: string | undefined): string =>
+				(code ?? '').replace(/^\/\*\*[\s\S]*?\*\/\n/, '')
+			const base = `${FIXTURES_TSX}/${dir}/${tag}`
+			const tsrx = compileComponent(
+				read(`${base}.tsrx`),
+				`${base}.tsrx`,
+				new Set([tag]),
+			)
+			const tsxx = compileComponentTsx(
+				read(`${base}.tsx`),
+				`${base}.tsx`,
+				new Set([tag]),
+			)
+			expect(tsrx.diagnostics).toEqual([])
+			expect(tsxx.diagnostics).toEqual([])
+			expect(body(tsxx.component?.serverCode)).toBe(
+				body(tsrx.component?.serverCode),
+			)
+			expect(body(tsxx.component?.serverCode)).not.toBe('')
+		},
+	)
 
 	test('reactive createList .map lowers to the reconcile plan (unmodified analysis)', () => {
 		const source = `import { createList } from '@zeix/le-truc'

@@ -470,12 +470,16 @@ Tech Writer copy round, scope widened).
      `server/compiler/diagnostics.ts` — one tag, two corpus sources, both files named; the
      "whatever surface it is written in" clause is the dual-front-end fact the message
      teaches.
-  5. **The three-arm `boundary` diagnostic wordings** (LT-202 handoff, amended by
-     LT-211/208): the arm-shape errors in `server/compiler/frontend/tsx/lower-tsx.ts`
-     (missing/ill-typed arms, single-root rule per arm, err-arrow requirement) — final
-     copy; the four-arm vocabulary is gone (owner withdrawal, 2026-09-18), so the copy
-     covers the three arms plus LT-209's new LTC049/LTC050 drafts in
-     `server/compiler/diagnostics.ts`. Batch with items 2–3 so the diagnostic families
+  5. **The `<truc:try>` diagnostic wordings** (LT-202 handoff, amended by LT-211/208,
+     respelled by LT-303 on 2026-09-25): in `server/compiler/frontend/tsx/lower-tsx.ts`,
+     the one surviving arm-shape error (LTC005: arms inline, `catch` an arrow with a JSX
+     body, no other attributes) and the content/pending/catch single-root wordings.
+     The `boundary()` and try/catch-IIFE wordings are retired, so check that nothing in
+     `.agents/skills/le-truc/references/errors.md` or `docs-src/pages/` still quotes them.
+     Also word LTC053 for a `<truc:try>` used as a `.map()` output root. It currently says
+     "not a static element name" and suggests a ternary, but the real rule is that a loop
+     body root must be an element (`.tsrx` rejects `@try` there too). The copy also covers
+     LT-209's LTC049/LTC050 drafts in `server/compiler/diagnostics.ts`. Batch with items 2–3 so the diagnostic families
      read as one voice.
   6. **The TSRX020 retirement copy** (LT-210 handoff, 2026-09-18): the retirement note
      in `server/compiler/diagnostics.ts`'s code union, TSRX018's reworded fix-it
@@ -1447,6 +1451,8 @@ and moved straight to `TODO.md`. LT-328 and LT-329 stay here.
 credit.
 **[2026-09-25, iteration planning]** LT-325, LT-328, LT-329 and LT-330 moved to `TODO.md`
 (wave 4, second batch). LT-319 stays here.
+**[2026-09-25, LT-303 review]** LT-331 created here. It does not gate the current batch,
+because none of LT-104–LT-108's composed children takes a `children` arg.
 
 - [ ] LT-319: One `truc:pass` spelling for several same-discriminator compose sites (NOTES LT-098).
   **Skill:** architect → le-truc-dev
@@ -1458,6 +1464,37 @@ credit.
   `truc:pass` objects on compose sites sharing a discriminator lower to one
   `pass(all(selector), …)`, regaining the compile-time check? Decide before a second component
   needs it. It is low priority while colorinfo is the only case.
+
+- [ ] LT-331: Compose-site JSX children must type-check against the child's `children` server arg (LT-303 review).
+  **Skill:** le-truc-dev
+  **Context:** To make `<truc:try>`'s `children: JSX.Element` a `tsc` fact, LT-303 declared
+  `JSX.ElementChildrenAttribute` in `server/compiler/frontend/tsx/host-profile.d.ts`. That
+  declaration is global, so `tsc` now also checks a compose site's JSX children against the
+  child's args. But a content-substituting child declares `children?: string`: the server
+  renders the markup to a string and forwards it (ADR 0023 s10, `validateComposedChildren`).
+  The result, verified 2026-09-25: `<ModuleScrollarea><p>…</p></ModuleScrollarea>` in a `.tsx`
+  parent now fails with TS2322 "Type 'Element' is not assignable to type 'string'", although it
+  type-checked under the old profile. module-dialog and module-codeblock have the same shape.
+  No `.tsx` parent composes one yet. The declaration also fixed a bug that was there before
+  LT-303: a child with a *required* `children` arg could not be composed with JSX children at
+  all, because `tsc` reported the prop as missing.
+  **Design (Architect):** keep `ElementChildrenAttribute`, and have `LibraryManagedAttributes`
+  map the child's string `children` arg to JSX content:
+  `Omit<P, 'i18n' | 'children'> & ComposeChildren<P> & ComposeSiteAttrs`. `ComposeChildren<P>`
+  is `{}` when `P` has no `children`, `{ children?: JSX.Element }` when it is optional, and
+  `{ children: JSX.Element }` when it is required. That makes JSX content the authored
+  spelling and keeps the markup string out of it. It also keeps the new `tsc` error for JSX
+  children passed to a child that declares no `children` arg. That error is correct: the
+  compiler has no `{children}` site to substitute them into. Rejected alternative: dropping
+  `ElementChildrenAttribute` and making `TrucTryAttrs.children` optional. That brings back
+  the required-children bug and gains nothing, because the compiler already enforces the
+  async boundary's single-root rule.
+  **Channel/tier:** TypeScript, tier 1 Prevented. No runtime or compiler check changes.
+  **Check:** a positive fixture composing `ModuleScrollarea` with JSX children and a negative
+  one (JSX children passed to a child with no `children` arg), both in
+  `server/tests/compiler/fixtures/tsx/` and asserted in `tsx/typecheck.test.ts`. The fixtures,
+  negative-fixtures and examples `tsc` programs stay clean apart from the expected new
+  negative errors.
 
 ## P6 — Cleanup round (after the corpus port)
 

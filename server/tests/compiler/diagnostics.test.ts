@@ -384,6 +384,77 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 	})
 })
 
+describe('<truc:try> arm shapes (LT-303, ADR 0041)', () => {
+	const trySource = (boundary: string): string =>
+		`import { deriveCell } from '@zeix/le-truc'
+export function C({}: {}) {
+	const data = deriveCell(async () => 'x')
+	const fallback = (e: Error) => <p>{e.message}</p>
+	expose({ data: data.get })
+	return (
+		<>
+			<c-el>
+				${boundary}
+			</c-el>
+			<style>{css\`c-el { color: red }\`}</style>
+		</>
+	)
+}`
+	const compileTry = (boundary: string) =>
+		compileComponentTsx(trySource(boundary), 'c.tsx', new Set(['c-el']))
+
+	test('inline arms compile, and <truc:try> is not LTC053', () => {
+		const { component, diagnostics } = compileTry(
+			'<truc:try pending={<p class="loading">…</p>} catch={e => <p class="error">{e.message}</p>}><div class="content">{data}</div></truc:try>',
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+	})
+
+	test.each([
+		[
+			'a catch arm passed by reference',
+			'<truc:try catch={fallback}><p>ok</p></truc:try>',
+		],
+		[
+			'a block-bodied catch arrow',
+			'<truc:try catch={e => { return <p>x</p> }}><p>ok</p></truc:try>',
+		],
+		[
+			'a missing catch arm',
+			'<truc:try pending={<p>…</p>}><div>{data}</div></truc:try>',
+		],
+		[
+			'an unknown attribute',
+			'<truc:try catch={e => <p>x</p>} class="x"><p>ok</p></truc:try>',
+		],
+	])(
+		'%s is the surviving shape error (LTC005, compiler channel)',
+		(_, boundary) => {
+			const { component, diagnostics } = compileTry(boundary)
+			expect(component).toBeNull()
+			const hit = diagnostics.find(d => d.code === 'LTC005')
+			expect(hit?.severity).toBe('error')
+			expect(hit?.line).toBe(9)
+			expect(hit?.message).toContain(
+				'`<truc:try>` boundary takes its arms inline',
+			)
+		},
+	)
+
+	test('an async boundary still needs one root per arm', () => {
+		const { component, diagnostics } = compileTry(
+			'<truc:try pending={<><p>a</p><p>b</p></>} catch={e => <p>{e.message}</p>}><div>{data}</div></truc:try>',
+		)
+		expect(component).toBeNull()
+		expect(
+			diagnostics.some(d =>
+				d.message.includes('pending arm must render exactly one root element'),
+			),
+		).toBe(true)
+	})
+})
+
 describe('the loop empty arm (LT-212)', () => {
 	const eachSource = (
 		arm: string,

@@ -12,10 +12,11 @@
  *   => …)}` → `for` (server data → `each()`, a declared `createList` → the
  *   reconcile path, decided by the EXISTING analysis, not by syntax); an
  *   IIFE whose body is a `switch` returning JSX per arm → `switch`.
- * - The `@try` family gets two real-JS spellings: a try/catch IIFE for the
- *   plain error boundary, and the recognized ambient
- *   `boundary({ ok, nil, err })` call for the async boundary (which
- *   arm ships stays a compiler decision; only the authored shape changed).
+ * - The `@try` family has no honest expression spelling, so it is a
+ *   `truc:`-namespaced intrinsic element (ADR 0041): `<truc:try
+ *   catch={e => …}>` is the error boundary, and a `pending` arm makes it the
+ *   async boundary (which arm ships stays a compiler decision; only the
+ *   authored shape changed). Every other `truc:*` tag stays LTC053.
  * - Bare statements inside a branch are NOT expressible in JSX child
  *   position — an IIFE arm must return JSX — so `client-stmt` inside a
  *   branch retires with the grammar (ADR 0024 s11 already restricted it).
@@ -36,6 +37,7 @@ import {
 	asArray,
 	identifierName,
 	isNode,
+	jsxName,
 	nodeType,
 	text,
 } from '../../ast-utils'
@@ -67,7 +69,7 @@ import type { AstNode } from './to-estree'
  */
 const TSX_SURFACE_WORDING: SurfaceWording = {
 	lazyChild: 'A lazy child expression',
-	controlFlow: 'A control-flow expression (ternary/map/boundary)',
+	controlFlow: 'A control-flow expression (ternary/map/switch/truc:try)',
 	composedPosition: 'map output',
 	conditionalTag: '{level === 2 ? <h2>…</h2> : <h3>…</h3>}',
 }
@@ -84,10 +86,15 @@ const lowerJsxValue = (
 	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
-): TemplateNode[] =>
-	node.type === 'JSXFragment'
-		? lowerChildren(ctx, node, signals, fors)
-		: [lowerElement(ctx, node, signals, fors)]
+): TemplateNode[] => {
+	if (node.type === 'JSXFragment')
+		return lowerChildren(ctx, node, signals, fors)
+	if (isTrucTry(node)) {
+		const lowered = lowerTrucTry(ctx, node, signals, fors)
+		return lowered ? [lowered] : []
+	}
+	return [lowerElement(ctx, node, signals, fors)]
+}
 
 /* === @if → ConditionalExpression / LogicalExpression === */
 
@@ -258,178 +265,106 @@ const lowerSwitchIife = (
 	}
 }
 
-/* === @try family → try/catch IIFE + boundary({ ok, nil, err }) === */
+/* === @try family → <truc:try pending catch> === */
 
 /**
- * The plain error boundary: `{(() => { try { return <ok/> } catch (e) { return <fallback/> } })()}`
- * — a real try/catch IIFE. Body and handler must each be a single `return
- * <jsx/>`; no `finally` (same gate as `@finally`).
+ * Whether `node` is a `<truc:try>` element (ADR 0041) — the one `truc:*`
+ * intrinsic this front end lowers. Every other namespaced tag falls through
+ * to `lowerElement`, which rejects it with LTC053.
  */
-const lowerTryIife = (
-	ctx: ExtractContext,
-	node: AstNode,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<AstNode, ForIR>,
-): (TemplateNode & { kind: 'try' }) | null => {
-	const fn = node.callee as AstNode | undefined
-	const body = fn?.body as AstNode | undefined
-	if (!isNode(body) || body.type !== 'BlockStatement') return null
-	const stmts = asArray(body.body)
-	const tryStmt = stmts.find(s => s.type === 'TryStatement') as
-		| AstNode
-		| undefined
-	if (!tryStmt || stmts.length !== 1) return null
-	if (isNode(tryStmt.finalizer)) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				tryStmt.finalizer.start,
-				'finally arms on try boundaries',
-			),
-		)
-		return null
-	}
-	const returnedJsx = (block: AstNode | undefined): AstNode | null => {
-		if (!isNode(block) || block.type !== 'BlockStatement') return null
-		const inner = asArray(block.body)
-		const ret = inner.find(s => s.type === 'ReturnStatement') as
-			| AstNode
-			| undefined
-		const arg = ret?.argument as AstNode | undefined
-		return inner.length === 1 && isJsxNode(arg) ? arg : null
-	}
-	const okSrc = returnedJsx(tryStmt.block as AstNode | undefined)
-	const handler = tryStmt.handler as AstNode | undefined
-	const catchSrc = handler
-		? returnedJsx(handler.body as AstNode | undefined)
-		: null
-	if (!okSrc || !catchSrc || !handler) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'A try/catch IIFE boundary must be `try { return <jsx/> } catch (e) { return <jsx/> }` — exactly one return per arm, no other statements',
-			),
-		)
-		return null
-	}
-	const catchParam = isNode(handler.param)
-		? identifierName(handler.param)
-		: null
-	return lowerTryArms(
-		ctx,
-		node,
-		okSrc,
-		catchSrc,
-		catchParam,
-		null,
-		signals,
-		fors,
+const isTrucTry = (node: unknown): node is AstNode => {
+	if (!isNode(node) || node.type !== 'JSXElement') return false
+	const opening = node.openingElement
+	const name = isNode(opening) ? opening.name : null
+	return (
+		isNode(name) &&
+		name.type === 'JSXNamespacedName' &&
+		jsxName(name.namespace) === 'truc' &&
+		jsxName(name.name) === 'try'
 	)
 }
 
 /**
- * The async boundary: `{boundary({ ok, nil, err })}` — a recognized
- * ambient call. All arms render, `hidden`-toggled by which state won at
- * render time; which arm SHIPS stays the compiler decision it was under
- * `@try`/`@pending`/`@catch`. The err arm's arrow parameter is the catch
- * parameter.
+ * The `.tsx` spelling of `@try`/`@pending`/`@catch` (ADR 0041):
+ * `<truc:try catch={e => <jsx/>}>ok</truc:try>` is the error boundary, and
+ * adding `pending={<jsx/>}` makes it the async boundary — all arms render,
+ * `hidden`-toggled by which state won at render time; which arm SHIPS
+ * stays a compiler decision. The children are the success content; the
+ * `catch` arrow's parameter is the catch parameter.
  *
- * Three arms map onto the Task-state vocabulary `watch()` already speaks:
- * `nil` is the no-value-yet pending arm (the `.tsrx` `@pending` arm's exact
- * IR). There is no `stale` arm — the owner withdrew it on 2026-09-18
- * (LT-211): the client never re-renders arm content, it toggles
- * `hidden`/`disabled` on server-rendered arms, so a re-fetching state has
- * no arm to show; the reactive idiom for that is an `isPending(signal)`
- * read beside the boundary (`class={ isPending(data) ? 'dimmed' : null }`),
- * which the compiler folds server-side and watches client-side.
+ * `tsc` owns the arm types through the `IntrinsicElements['truc:try']`
+ * entry (`catch` required, both arms `JSX.Element`, a repeated arm is
+ * TS17001). What it cannot see is the SHAPE: the arms are compile-consumed,
+ * never evaluated, so each must be written inline — a JSX element for
+ * `pending`, an arrow with a JSX expression body for `catch`.
+ *
+ * There is no `stale` arm (LT-211): the client never re-renders arm
+ * content, it toggles `hidden`/`disabled` on server-rendered arms, so a
+ * re-fetching state has no arm to show; the reactive idiom for that is an
+ * `isPending(signal)` read beside the boundary
+ * (`class={() => (isPending(data) ? 'dimmed' : null)}`), which the
+ * compiler folds server-side and watches client-side.
  */
-const lowerBoundaryCall = (
+const lowerTrucTry = (
 	ctx: ExtractContext,
 	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'try' }) | null => {
-	const arg = asArray(node.arguments)[0]
-	if (!isNode(arg) || arg.type !== 'ObjectExpression') return null
-	const armOf = (key: string): AstNode | null => {
-		for (const prop of asArray(arg.properties)) {
-			if (prop.type === 'Property' && identifierName(prop.key) === key)
-				return (prop.value as AstNode | undefined) ?? null
-		}
-		return null
+	const opening = node.openingElement as AstNode
+	let pendingSrc: AstNode | null = null
+	let catchFn: AstNode | null = null
+	let malformed = false
+	for (const attr of asArray(opening.attributes)) {
+		const name = attr.type === 'JSXAttribute' ? jsxName(attr.name) : null
+		const value = isNode(attr.value) ? attr.value : null
+		const expr =
+			value?.type === 'JSXExpressionContainer' && isNode(value.expression)
+				? value.expression
+				: null
+		if (name === 'pending' && isJsxNode(expr)) pendingSrc = expr
+		else if (
+			name === 'catch' &&
+			isNode(expr) &&
+			nodeType(expr) === 'ArrowFunctionExpression' &&
+			isJsxNode(expr.body)
+		)
+			catchFn = expr
+		else malformed = true
 	}
-	const ok = armOf('ok')
-	const nil = armOf('nil')
-	const errFn = armOf('err')
-	if (!isJsxNode(ok) || !isJsxNode(nil) || !isNode(errFn)) {
+	if (malformed || !catchFn) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				'boundary({ … }) expects ok and nil as JSX elements and err as an arrow: boundary({ ok: <div/>, nil: <p/>, err: (e) => <p/> })',
+				'A `<truc:try>` boundary takes its arms inline — `catch={e => <jsx/>}` (an arrow whose body is the arm) and optionally `pending={<jsx/>}`, no other attributes — because the compiler consumes them and never evaluates them',
 			),
 		)
 		return null
 	}
-	if (nodeType(errFn) !== 'ArrowFunctionExpression') {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				errFn.start,
-				"boundary's err arm must be an arrow function — its parameter is the catch parameter",
-			),
-		)
-		return null
-	}
-	const catchParam = identifierName(asArray(errFn.params)[0]) ?? null
-	const errArm = (errFn.body as AstNode | undefined) ?? null
-	if (!isJsxNode(errArm)) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				errFn.start,
-				"boundary's err arm must return JSX",
-			),
-		)
-		return null
-	}
-	return lowerTryArms(ctx, node, ok, errArm, catchParam, nil, signals, fors)
-}
-
-/** Shared arm lowering for both async/plain spellings. */
-const lowerTryArms = (
-	ctx: ExtractContext,
-	node: AstNode,
-	okSrc: AstNode,
-	catchSrc: AstNode,
-	catchParam: string | null,
-	nilSrc: AstNode | null,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<AstNode, ForIR>,
-): (TemplateNode & { kind: 'try' }) | null => {
-	const lowerValue = (src: AstNode | null): TemplateNode[] =>
-		src !== null && isJsxNode(src) ? lowerJsxValue(ctx, src, signals, fors) : []
-	const children = lowerValue(okSrc)
-	const catchChildren = lowerValue(catchSrc)
-	const pendingChildren = nilSrc === null ? null : lowerValue(nilSrc)
+	const catchParam = identifierName(asArray(catchFn.params)[0]) ?? null
+	const catchSrc = catchFn.body as AstNode
+	const children = lowerChildren(ctx, node, signals, fors)
+	const catchChildren = lowerJsxValue(ctx, catchSrc, signals, fors)
+	const pendingChildren =
+		pendingSrc === null ? null : lowerJsxValue(ctx, pendingSrc, signals, fors)
 	if (pendingChildren !== null) {
 		if (!singleRootOf(children)) {
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
-					(okSrc.start ?? node.start) as number,
-					"An async boundary's ok arm must render exactly one root element (its own `hidden` toggle and client addressing need a single target)",
+					node.start,
+					"An async boundary's content (the `<truc:try>` children) must render exactly one root element (its own `hidden` toggle and client addressing need a single target)",
 				),
 			)
 			return null
 		}
-		if (!singleRootOf(pendingChildren as TemplateNode[])) {
+		if (!singleRootOf(pendingChildren)) {
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
-					(nilSrc?.start ?? node.start) as number,
-					'nil arm must render exactly one root element',
+					pendingSrc?.start ?? node.start,
+					'pending arm must render exactly one root element',
 				),
 			)
 			return null
@@ -438,8 +373,8 @@ const lowerTryArms = (
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
-					(catchSrc.start ?? node.start) as number,
-					'err arm of an async boundary must render exactly one root element',
+					catchSrc.start ?? node.start,
+					'catch arm of an async boundary must render exactly one root element',
 				),
 			)
 			return null
@@ -903,6 +838,12 @@ export const lowerChildren = (
 		TSX_LOWERING,
 		TSX_SURFACE_WORDING,
 		{
+			dispatchChild: (ctx, child, out, signals, fors) => {
+				if (!isTrucTry(child)) return false
+				const lowered = lowerTrucTry(ctx, child, signals, fors)
+				if (lowered) out.push(lowered)
+				return true
+			},
 			dispatchControlFlow: (ctx, expr, out, _container, signals, fors) => {
 				// Control-flow shapes in child position:
 				const idiom = emptyStateIdiomOf(expr)
@@ -925,30 +866,15 @@ export const lowerChildren = (
 					if (lowered) out.push(lowered)
 					return true
 				}
-				if (expr.type === 'CallExpression') {
-					const calleeName = identifierName(expr.callee)
-					if (calleeName === 'boundary') {
-						const lowered = lowerBoundaryCall(ctx, expr, signals, fors)
+				if (asIife(expr)) {
+					const body = (expr.callee as AstNode).body as AstNode
+					if (asArray(body.body).some(s => s.type === 'SwitchStatement')) {
+						const lowered = lowerSwitchIife(ctx, expr, signals, fors)
 						if (lowered) out.push(lowered)
 						return true
 					}
-					if (asIife(expr)) {
-						const fn = expr.callee as AstNode
-						const body = fn.body as AstNode
-						const inner = asArray(body.body)
-						if (inner.some(s => s.type === 'SwitchStatement')) {
-							const lowered = lowerSwitchIife(ctx, expr, signals, fors)
-							if (lowered) out.push(lowered)
-							return true
-						}
-						if (inner.some(s => s.type === 'TryStatement')) {
-							const lowered = lowerTryIife(ctx, expr, signals, fors)
-							if (lowered) out.push(lowered)
-							return true
-						}
-						// A non-recognized IIFE is an ordinary expression child —
-						// usually a string-producing block, legal and static.
-					}
+					// A non-recognized IIFE is an ordinary expression child —
+					// usually a string-producing block, legal and static.
 				}
 				return false
 			},
