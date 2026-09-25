@@ -1,4 +1,8 @@
 {
+	"basic-blogmeta.avatarOf": "头像：",
+	"basic-blogmeta.minRead": "分钟阅读",
+	"basic-blogmeta.unknownDate": "未知日期",
+	"basic-blogmeta.updatedOn": "更新于",
 	"basic-pluralize.done": "全部完成！",
 	"basic-pluralize.remaining": "剩余",
 	"basic-pluralize.task.other": "个任务",

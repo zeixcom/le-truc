@@ -237,39 +237,11 @@ export const generateBlogExcerpts = (
 
 			return html`<card-blogpost itemscope itemtype="https://schema.org/BlogPosting">
 				<h2 itemprop="headline"><a href="${url}" itemprop="url">${title}</a></h2>
-				<basic-blogmeta>
-					<span
-						class="author"
-						itemprop="author"
-						itemscope
-						itemtype="https://schema.org/Person"
-						>${
-							avatar
-								? raw(
-										html`<img class="avatar" src="${avatar}" alt="Avatar of ${author}" />`,
-									)
-								: ''
-						} <span itemprop="name">${author}</span></span
-					>
-					<span
-						><time class="published" itemprop="datePublished" datetime="${publishedDate}"
-							>${publishedDate}</time
-						>${
-							modifiedDate
-								? raw(
-										html`<span class="modified">
-										· updated on
-										<time itemprop="dateModified" datetime="${modifiedDate}">${modifiedDate}</time>
-									</span>`,
-									)
-								: ''
-						}
-					</span>
-					<span
-						><meta itemprop="timeRequired" content="PT${readingTime}M" />${readingTime}
-						min read</span
-					>
-				</basic-blogmeta>
+				<basic-blogmeta
+					author="${author}"${avatar ? raw(html` avatar="${avatar}"`) : ''}
+					published="${publishedDate}"${modifiedDate ? raw(html` modified="${modifiedDate}"`) : ''}
+					reading-time="${readingTime}"
+				></basic-blogmeta>
 				${description ? raw(html`<p itemprop="description">${description}</p>`) : ''}
 			</card-blogpost>`
 		})
@@ -310,9 +282,7 @@ export const generateBlogArchive = (
 					const date = post.metadata.date ?? ''
 					return html`<li>
 						<a href="${url}">${post.title}</a>
-						<basic-blogmeta>
-							<time class="published" datetime="${date}">${date}</time>
-						</basic-blogmeta>
+						<basic-blogmeta published="${date}"></basic-blogmeta>
 					</li>`
 				})
 				.join('\n')
@@ -459,17 +429,15 @@ const applyTemplate = async (
 			processedFile.htmlContent,
 			{ pageLocale: locale },
 		)
-		if (occurrenceResult.rendered.length > 0)
-			console.log(
-				`🌐 Server-rendered ${occurrenceResult.rendered.length} component occurrence(s) in ${locale}/${processedFile.relativePath.replace('.md', '.html')}`,
-			)
 
 		// Generate performance hints
 		const additionalPreloads = analyzePageForPreloads(processedFile.htmlContent)
 		const performanceHintsHtml = performanceHints(additionalPreloads)
 
-		// Replace content
-		layout = layout.replace('{{ content }}', occurrenceResult.html)
+		// The content goes in after the layout's own variables and occurrences
+		// (below), behind a marker no template variable can produce.
+		const CONTENT_MARKER = '\u0000le-truc-content\u0000'
+		layout = layout.replace('{{ content }}', CONTENT_MARKER)
 
 		// Render the sidebar menu for this page, marking the current page
 		// active. Sectioned pages (blog posts, API symbols) mark their parent
@@ -518,9 +486,29 @@ const applyTemplate = async (
 			...extraReplacements,
 		}
 
-		const rendered = layout.replace(/{{\s*(.*?)\s*}}/g, (_, key) => {
-			return replacements[key.trim()] || ''
+		const substitute = (text: string) =>
+			text.replace(/{{\s*(.*?)\s*}}/g, (_, key) => {
+				return replacements[key.trim()] || ''
+			})
+
+		// The layout's own occurrences render once its variables are in
+		// place: the blog layout's hero byline is `<basic-blogmeta
+		// published="{{ published-date }}" …>` (LT-095). Rendering the
+		// content first and the layout separately keeps an already rendered
+		// occurrence out of a second pass, which would re-read it from its
+		// rendered root's attributes alone.
+		const layoutResult = await renderPageOccurrences(substitute(layout), {
+			pageLocale: locale,
 		})
+		const renderedCount =
+			occurrenceResult.rendered.length + layoutResult.rendered.length
+		if (renderedCount > 0)
+			console.log(
+				`🌐 Server-rendered ${renderedCount} component occurrence(s) in ${locale}/${processedFile.relativePath.replace('.md', '.html')}`,
+			)
+		const rendered = layoutResult.html.replace(CONTENT_MARKER, () =>
+			substitute(occurrenceResult.html),
+		)
 
 		// Point fragment references at the single root copy. Runs on the FULLY
 		// rendered page so it covers both authored content (`./api/...` links)

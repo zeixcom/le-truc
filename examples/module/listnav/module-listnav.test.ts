@@ -1,63 +1,13 @@
 /**
  * Unit tests for module-listnav hash handling
  *
- * Tests the hash-to-value and value-to-hash conversions with relative paths
+ * Tests the hash-to-value and value-to-hash conversions with relative paths,
+ * against `listnav-hash.ts` — the module the compiled component's client
+ * imports (LT-107), not a copy of it.
  */
 
 import { describe, expect, test } from 'bun:test'
-
-/**
- * Mock getBasePath helper (extracted from module-listnav.ts)
- */
-const getBasePath = (
-	firstOptionValue: string,
-): { base: string; ext: string } | null => {
-	if (!firstOptionValue) return null
-
-	const value = firstOptionValue
-	// Handle relative paths starting with "./"
-	if (!value.startsWith('./')) return null
-
-	// Find the second slash to get the first path segment: "./examples/"
-	const secondSlash = value.indexOf('/', 2)
-	if (secondSlash === -1) return null
-
-	return {
-		base: value.slice(0, secondSlash + 1),
-		ext: value.slice(value.lastIndexOf('.')),
-	}
-}
-
-/**
- * Mock hashToValue helper (extracted from module-listnav.ts)
- */
-const hashToValue = (hash: string, firstOptionValue: string): string | null => {
-	if (!hash) return null
-	const fragment = hash.slice(1)
-	if (!fragment) return null
-
-	const paths = getBasePath(firstOptionValue)
-	if (!paths) return null
-
-	return `${paths.base}${fragment}${paths.ext}`
-}
-
-/**
- * Mock valueToHash helper (extracted from module-listnav.ts)
- */
-const valueToHash = (value: string, firstOptionValue: string): string => {
-	if (!value) return ''
-
-	const paths = getBasePath(firstOptionValue)
-	if (!paths) return ''
-
-	let hash = value
-	if (hash.startsWith(paths.base)) hash = hash.slice(paths.base.length)
-	const dotIndex = hash.lastIndexOf('.')
-	if (dotIndex > 0) hash = hash.slice(0, dotIndex)
-
-	return hash
-}
+import { getBasePath, hashToValue, valueToHash } from './listnav-hash'
 
 describe('module-listnav hash handling', () => {
 	describe('getBasePath', () => {

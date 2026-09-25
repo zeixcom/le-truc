@@ -1,42 +1,27 @@
-<basic-blogmeta>
-	<span
-		class="author"
-		itemprop="author"
-		itemscope
-		itemtype="https://schema.org/Person"
-	>
-		<img
-			class="avatar"
-			src="./assets/img/avatar/esther-brunner.jpg"
-			alt="Avatar of Esther Brunner"
-		>
-		<span itemprop="name">Esther Brunner</span>
-	</span>
-	<time class="published" itemprop="datePublished" datetime="2026-03-09">2026-03-09</time>
-	<span><meta itemprop="timeRequired" content="PT5M">5 min read</span>
-</basic-blogmeta>
+<!-- Typed byline props (LT-095): the page renderer expands each occurrence
+     with the component's server render at build time. `lang` is the
+     occurrence's own locale: the single-copy examples tree has no page
+     locale, and an occurrence without one stays unrendered. -->
+<basic-blogmeta
+	lang="en"
+	author="Esther Brunner"
+	avatar="./assets/img/avatar/esther-brunner.jpg"
+	published="2026-03-09"
+	reading-time="5"
+></basic-blogmeta>
 
 <br>
 
-<basic-blogmeta>
-	<span
-		class="author"
-		itemprop="author"
-		itemscope
-		itemtype="https://schema.org/Person"
-	>
-		<img
-			class="avatar"
-			src="./assets/img/avatar/esther-brunner.jpg"
-			alt="Avatar of Esther Brunner"
-		>
-		<span itemprop="name">Esther Brunner</span>
-	</span>
-	<span>
-		<time class="published" itemprop="datePublished" datetime="2026-04-04">2026-04-04</time>
-		<span class="modified">
-			· updated on <time itemprop="dateModified" datetime="2026-04-08">2026-04-08</time>
-		</span>
-	</span>
-	<span><meta itemprop="timeRequired" content="PT7M">7 min read</span>
-</basic-blogmeta>
+<basic-blogmeta
+	lang="en"
+	author="Esther Brunner"
+	avatar="./assets/img/avatar/esther-brunner.jpg"
+	published="2026-04-04"
+	modified="2026-04-08"
+	reading-time="7"
+></basic-blogmeta>
+
+<br>
+
+<!-- Without an avatar: the placeholder avatar renders instead. -->
+<basic-blogmeta lang="en" author="Anonymous" published="2026-05-01"></basic-blogmeta>

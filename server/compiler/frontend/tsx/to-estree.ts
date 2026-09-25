@@ -435,30 +435,42 @@ const convertJsxChild = (
 	return null
 }
 
+/**
+ * A declaration list → estree `VariableDeclaration`. Shared by variable
+ * statements and the `for`/`for…of`/`for…in` initializer, which carries the
+ * bare list: without this, a `.tsx` loop variable lost its declaration and
+ * its reads counted as free names (LT-108, `for (const slide of …)`).
+ */
+const convertDeclarationList = (
+	list: ts.VariableDeclarationList,
+	sf: ts.SourceFile,
+): AstNode => ({
+	type: 'VariableDeclaration',
+	...span(list, sf),
+	kind:
+		list.flags & ts.NodeFlags.Const
+			? 'const'
+			: list.flags & ts.NodeFlags.Let
+				? 'let'
+				: 'var',
+	declarations: list.declarations.map(d => ({
+		type: 'VariableDeclarator',
+		...span(d, sf),
+		id: convertPattern(d.name, sf),
+		init: d.initializer === undefined ? null : convert(d.initializer, sf),
+	})),
+})
+
 /** One statement → estree statement node. */
 const convertStatement = (
 	node: ts.Statement,
 	sf: ts.SourceFile,
 ): AstNode | null => {
-	if (ts.isVariableStatement(node)) {
-		const list = node.declarationList
+	if (ts.isVariableStatement(node))
 		return {
-			type: 'VariableDeclaration',
+			...convertDeclarationList(node.declarationList, sf),
 			...span(node, sf),
-			kind:
-				list.flags & ts.NodeFlags.Const
-					? 'const'
-					: list.flags & ts.NodeFlags.Let
-						? 'let'
-						: 'var',
-			declarations: list.declarations.map(d => ({
-				type: 'VariableDeclarator',
-				...span(d, sf),
-				id: convertPattern(d.name, sf),
-				init: d.initializer === undefined ? null : convert(d.initializer, sf),
-			})),
 		}
-	}
 	if (ts.isExpressionStatement(node))
 		return {
 			type: 'ExpressionStatement',
@@ -607,6 +619,8 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): AstNode | null => {
 	/* --- Statements --- */
 	if (ts.isStatement(node) && !ts.isBlock(node))
 		return convertStatement(node, sf)
+	if (ts.isVariableDeclarationList(node))
+		return convertDeclarationList(node, sf)
 	if (ts.isBlock(node))
 		return {
 			type: 'BlockStatement',

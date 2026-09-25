@@ -395,4 +395,52 @@ describe('the real corpus (integration)', () => {
 		expect(result.html).toBe(markup)
 		expect(result.rendered).toEqual([])
 	})
+
+	test('LT-095: a basic-blogmeta byline renders from its typed attributes', async () => {
+		await compiled
+		const render = (markup: string, pageLocale: string | null = 'en') =>
+			renderPageOccurrences(markup, {
+				generatedDir: generated.path,
+				pageLocale,
+			})
+		const full = await render(
+			'<basic-blogmeta author="Ada" avatar="./ada.jpg" published="2026-04-04" modified="2026-04-08" reading-time="7"></basic-blogmeta>',
+		)
+		expect(full.rendered).toEqual([{ tag: 'basic-blogmeta', locale: 'en' }])
+		expect(full.html).toContain(
+			'itemprop="author" itemscope itemtype="https://schema.org/Person"',
+		)
+		expect(full.html).toContain('<img src="./ada.jpg" alt="Avatar of Ada"')
+		expect(full.html).toContain(
+			'<time itemprop="datePublished" datetime="2026-04-04" class="published">April 4, 2026</time>',
+		)
+		expect(full.html).toContain(
+			'<time itemprop="dateModified" datetime="2026-04-08">April 8, 2026</time>',
+		)
+		expect(full.html).toContain(
+			'<meta itemprop="timeRequired" content="PT7M">7 min read',
+		)
+
+		// The page locale formats the date; no build-machine zone shifts it.
+		const de = await render(
+			'<basic-blogmeta published="2026-01-01"></basic-blogmeta>',
+			'de',
+		)
+		expect(de.html).toContain('>1. Januar 2026</time>')
+
+		// No author: no author span. An impossible modified date: no span.
+		const sparse = await render(
+			'<basic-blogmeta published="2026-02-28" modified="2026-02-30"></basic-blogmeta>',
+		)
+		expect(sparse.html).not.toContain('class="author"')
+		expect(sparse.html).not.toContain('class="modified"')
+
+		// A non-numeric reading time leaves the occurrence authored.
+		const bad = await render(
+			'<basic-blogmeta published="2026-01-01" reading-time="soon"></basic-blogmeta>',
+		)
+		expect(bad.skipped).toEqual([
+			{ tag: 'basic-blogmeta', reason: 'unrenderable-args' },
+		])
+	})
 })

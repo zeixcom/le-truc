@@ -131,17 +131,50 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 		collapsed: true,
 		children: '<span class="line">const a = 1</span>',
 	},
+	'basic-blogmeta': {
+		author: 'Esther Brunner',
+		avatar: './assets/img/avatar/esther-brunner.jpg',
+		published: '2026-04-04',
+		modified: '2026-04-08',
+		readingTime: 7,
+		i18n: inlineI18n({
+			avatarOf: 'Avatar of',
+			updatedOn: 'updated on',
+			minRead: 'min read',
+			unknownDate: 'unknown date',
+		}),
+	},
+	'module-carousel': {
+		carouselId: 'demo',
+		slides: [
+			{ title: 'Slide 1', content: '<p>First</p>' },
+			{ title: 'Slide 2' },
+			{ title: 'Slide 3' },
+		],
+	},
 	'module-catalog': {
 		products: [
 			{ id: 'product-1', name: 'Product 1', max: 10 },
 			{ id: 'product-2', name: 'Product 2', note: '(reduced stock)', max: 5 },
 		],
 	},
+	'module-coloreditor': { value: 'oklch(.48 .23 263)', label: 'Blue' },
 	'module-colorinfo': { label: 'Blue', value: 'oklch(.48 .23 263)' },
 	'module-dialog': {
 		dialogId: 'dialog-demo',
 		title: 'Dialog Title',
 		children: '<p>Dialog content.</p>',
+	},
+	'module-lazyload': {
+		src: './test/module-lazyload/mocks/simple-text.html',
+		loading: 'Loading...',
+	},
+	'module-listnav': {
+		title: 'Pages',
+		options: [
+			{ value: './test/module-listnav/mocks/page1.html', label: 'Page 1' },
+			{ value: './test/module-listnav/mocks/page2.html', label: 'Page 2' },
+		],
 	},
 	'module-pagination': { max: 10, value: 1 },
 	'module-scrollarea': { children: '<p>Scrollable content</p>' },

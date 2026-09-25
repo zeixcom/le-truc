@@ -94,6 +94,7 @@ describe('tier assignment over the migrated corpus', () => {
 		for (const tags of Object.values(byTier)) tags.sort()
 		expect(byTier).toEqual({
 			folded: [
+				'basic-blogmeta',
 				'basic-button',
 				'basic-counter',
 				'basic-gauge',
@@ -105,6 +106,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'card-collapsible',
 				'card-colorscale',
 				'card-mediaqueries',
+				'context-media',
 				'form-checkbox',
 				'form-colorgraph',
 				'form-inplace-edit',
@@ -114,6 +116,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'form-tokenbox',
 				'module-catalog',
 				'module-codeblock',
+				'module-coloreditor',
 				'module-colorinfo',
 				'module-dialog',
 				'module-list',
@@ -122,7 +125,13 @@ describe('tier assignment over the migrated corpus', () => {
 				'module-splitview',
 				'module-tabgroup',
 			],
-			simulated: ['form-combobox', 'form-listbox'],
+			simulated: [
+				'form-combobox',
+				'form-listbox',
+				'module-carousel',
+				'module-lazyload',
+				'module-listnav',
+			],
 			static: [],
 		})
 	})

@@ -1,4 +1,8 @@
 {
+	"basic-blogmeta.avatarOf": "Awatar:",
+	"basic-blogmeta.minRead": "min czytania",
+	"basic-blogmeta.unknownDate": "nieznana data",
+	"basic-blogmeta.updatedOn": "zaktualizowano",
 	"basic-pluralize.done": "Wszystko gotowe!",
 	"basic-pluralize.remaining": "pozostało",
 	"basic-pluralize.task.few": "zadania",

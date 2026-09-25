@@ -145,6 +145,7 @@ const paramPropsOf = (
 			optional: isOptionalBinding(paramsNode, name),
 			hasDefault: value.type === 'AssignmentPattern',
 			isString: annotation ? typeOfAnnotation(annotation) === 'string' : false,
+			isNumber: annotation ? typeOfAnnotation(annotation) === 'number' : false,
 		})
 	}
 	return props
@@ -222,6 +223,16 @@ export const assembleComponentIR = (
 			serverKnown,
 		},
 		plainImports,
+		{
+			server: [
+				...decls.typeDecls,
+				paramsNode ? text(ctx.source, paramsNode) : '',
+			],
+			client: [
+				...decls.typeDecls,
+				...(decls.globalDecl ? [decls.globalDecl] : []),
+			],
+		},
 	)
 	const leTrucPlacement = placeLeTrucImports(
 		ctx,

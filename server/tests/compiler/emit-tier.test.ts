@@ -367,7 +367,14 @@ describe('every corpus component, emitted at every tier', () => {
 			// covers loop scaffolding and retained statements' own bodies too.
 			const undeclared: string[] = []
 			for (const { component, code } of emitCorpus(tier)) {
-				const identifiers = new Set(code.match(/[A-Za-z_$][\w$]*/g) ?? [])
+				// Comments are not references: a JSDoc word that equals a setup
+				// name (module-coloreditor's "color") would read as a use.
+				const uncommented = code
+					.replace(/\/\*[\s\S]*?\*\//g, '')
+					.replace(/^\s*\/\/.*$/gm, '')
+				const identifiers = new Set(
+					uncommented.match(/[A-Za-z_$][\w$]*/g) ?? [],
+				)
 				for (const stmt of component.setup)
 					if (
 						stmt.name !== null &&

@@ -1,9 +1,21 @@
-import { createContext, createSensor, defineComponent } from '@zeix/le-truc'
+import { createSensor, defineComponent } from '@zeix/le-truc'
+import type {
+	ContextMediaMotion,
+	ContextMediaOrientation,
+	ContextMediaTheme,
+	ContextMediaViewport,
+} from './media-contexts'
 
-export type ContextMediaMotion = 'no-preference' | 'reduce'
-export type ContextMediaTheme = 'light' | 'dark'
-export type ContextMediaViewport = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
-export type ContextMediaOrientation = 'portrait' | 'landscape'
+export {
+	type ContextMediaMotion,
+	type ContextMediaOrientation,
+	type ContextMediaTheme,
+	type ContextMediaViewport,
+	MEDIA_MOTION,
+	MEDIA_ORIENTATION,
+	MEDIA_THEME,
+	MEDIA_VIEWPORT,
+} from './media-contexts'
 
 export type ContextMediaProps = {
 	readonly motion: ContextMediaMotion
@@ -17,15 +29,6 @@ declare global {
 		'context-media': HTMLElement & ContextMediaProps
 	}
 }
-
-/* === Exported Contexts === */
-
-export const MEDIA_MOTION = createContext<() => ContextMediaMotion>('motion')
-export const MEDIA_THEME = createContext<() => ContextMediaTheme>('theme')
-export const MEDIA_VIEWPORT =
-	createContext<() => ContextMediaViewport>('viewport')
-export const MEDIA_ORIENTATION =
-	createContext<() => ContextMediaOrientation>('orientation')
 
 /* === Component === */
 

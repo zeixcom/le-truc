@@ -542,6 +542,17 @@ Tech Writer copy round, scope widened).
      (sandbox), and a CHANGELOG `[Unreleased]` line via changelog-keeper. The ~90 other
      `unsupported` call sites pass no `fix` yet; moving their inline "— explanation" fixes
      into the `fix` argument is in scope for this batch's one-voice pass.
+  13. **LTC046's position wording** (LT-108 review, 2026-09-25): the message says a const's
+     value "is rendered into this component's markup". The position that tripped it in
+     module-carousel was an `expose()` initializer, which the server module evaluates. Name
+     the position, or say "evaluated by the server render", so the author looks in the right
+     place.
+  14. **The context-key module pattern** (LT-106 review, 2026-09-25): `docs-src/pages/context.md`'s
+     consumer snippet imports `MEDIA_MOTION`/`MEDIA_THEME` from `context-media`. The keys now
+     live in `examples/context/media/media-contexts.ts`. Point the snippet there and state the
+     rule (ruling below, LT-106): a provider's context keys live in a module with no side
+     effects, never in the component module, because importing a component module defines the
+     element.
 
 - [ ] LT-250: ICU MessageFormat — the build half: parser dependency, AST, shared evaluator, server fold, argument diagnostic (ADR 0030 s4). **Gated by LT-233 (SurfaceAdapter); gates LT-218, LT-251, LT-252.**
   **Skill:** le-truc-dev
@@ -1462,17 +1473,8 @@ credit.
 (wave 4, second batch). LT-319 stays here.
 **[2026-09-25, LT-303 review]** LT-331 created here. It does not gate the current batch,
 because none of LT-104–LT-108's composed children takes a `children` arg.
-
-- [ ] LT-319: One `truc:pass` spelling for several same-discriminator compose sites (NOTES LT-098).
-  **Skill:** architect → le-truc-dev
-  **Context:** module-colorinfo renders each channel's `basic-number` twice with one class.
-  `truc:pass` needs a unique `first()` ref per site (LTC012), so the migration kept the twin's
-  imperative `pass(all('basic-number.<channel>'), …)`. **Ruling (2026-09-25):** that imperative
-  form is sanctioned — it compiles as a client-only setup statement, with the runtime backstop
-  as its only legality check (ADR 0028 tier 2). **Design question:** should identical
-  `truc:pass` objects on compose sites sharing a discriminator lower to one
-  `pass(all(selector), …)`, regaining the compile-time check? Decide before a second component
-  needs it. It is low priority while colorinfo is the only case.
+**[2026-09-25, owner]** LT-319 moved to `TODO.md` with its design, behind the new LT-338
+(auto-addressing composed `truc:pass` sites).
 
 - [ ] LT-331: Compose-site JSX children must type-check against the child's `children` server arg (LT-303 review).
   **Skill:** le-truc-dev
@@ -1504,6 +1506,96 @@ because none of LT-104–LT-108's composed children takes a `children` arg.
   `server/tests/compiler/fixtures/tsx/` and asserted in `tsx/typecheck.test.ts`. The fixtures,
   negative-fixtures and examples `tsc` programs stay clean apart from the expected new
   negative errors.
+
+### LT-095, LT-104–LT-108 review follow-ups (Architect, 2026-09-25)
+
+The six wave-4 second-batch migrations landed: three Folded (blogmeta, coloreditor,
+context-media) and three Simulated (lazyload, listnav, carousel), none reshaped to dodge a tier.
+Their NOTES resolve into the tasks below. One finding outranks the batch: the docs examples
+navigation has been broken since form-listbox began serving compiled (LT-332). The review also
+makes `bun run build:docs` part of every migration's check. It was never run for LT-104–LT-108,
+and it was the only thing that caught LT-104's demo regression.
+**[2026-09-25, LT-095/LT-104–LT-108 review]** LT-332–LT-337 created here. LT-332 moved straight
+to `TODO.md`.
+
+- [ ] LT-333: Extend LT-323's client-only credit to plain setup consts (LTC013/LTC043 over-routing).
+  **Skill:** le-truc-dev
+  **Context:** LT-323 stopped a *signal* whose consumers are all client-only from routing
+  Simulated. A *plain setup const* gets no such credit. `const panels = all(…)` routes on
+  LTC013, and `const setHTML = dangerouslyBindInnerHTML(contentEl, …).ok` routes on LTC043, even
+  when the only readers are `on`/`watch`/`each` statements and no value reaches markup. That
+  lands module-carousel (three LTC013) and module-lazyload (one LTC043) Simulated with no
+  reactive render site. **Rule:** the same credit as LT-323, "at least one client-only read,
+  none a render read". It must be transitive through consts (LT-327) and through `expose()`
+  initializers, which the server module evaluates. A const read by `expose()` is a render read
+  for this purpose. The Folded-tier emitter already drops an unreferenced unevaluable const
+  (`dropUnreferencedUnevaluable`), so this is a routing change only.
+  **Channel/tier:** none (routing).
+  **Check:** lazyload and carousel route Folded, or the entry records the residual reason.
+  Their sim-driver and equivalence snapshots stay append-only. The census moves from 30/5/0 to
+  32/3/0 if both fold. carousel's inline `all()` in its `index` initializer stays, since that
+  is an `expose()` read.
+
+- [ ] LT-334: An async boundary lazyload can be spelled in (LT-104 review). **Gated by LT-276 (ADR 0037's template-cloned arms).**
+  **Skill:** architect → le-truc-dev
+  **Context:** The owner kept lazyload's hand-written `watch(content, { ok, nil, stale, err })`
+  (2026-09-25), because the compiled `<truc:try>` misses its contract four ways:
+  1. an escaped `textContent` ok arm where lazyload needs sanitized HTML with `allow-scripts`;
+  2. fieldset-wrapped arm roots that page-authored instances do not carry;
+  3. three sibling roots where loading and error share one `card-callout` (`.danger` on error);
+  4. no ok-arm side effect (the scroll to the first heading on a later load).
+  ADR 0037's template-cloned arms retire (2) outright, and change what (3) means. So the design
+  waits for LT-276. **Design questions:** a `truc:html` ok arm (the value is the task's result,
+  routed through the same sanitizer and `allowScripts` config `dangerouslyBindInnerHTML` takes);
+  arms that share a wrapper element (named arm keys inside one parent, which ADR 0037's keyed
+  arms may already allow); and whether an ok-arm side effect belongs in the boundary at all or
+  stays a `watch` beside it (the `isPending` idiom's precedent says beside). Decide, then write
+  the implementation task. The exit clause "lazyload's boundary is spelled `<truc:try>`"
+  moves here.
+
+- [ ] LT-335: The simulation realm attributes a composed child's late work to the next component (LT-105 review).
+  **Skill:** le-truc-dev
+  **Context:** In the sim-driver's shared realm, module-coloreditor's composed form-colorgraph
+  draws after its render window closes. The `getContext` notice then lands on
+  **module-colorinfo**, which has no canvas. `realm.ts` § Attribution documents late reports
+  going to the most recent window, but that case is a late *rejection* after the last render.
+  This one blames an innocent component whenever a composite renders before a leaf. The
+  `module-colorinfo` entry in `sim/classifications.ts` is a workaround that masks this.
+  **Fix direction:** drain the composed closure's scheduled work (rAF, `schedule()`) before a
+  window closes, so it attributes to its own render. Falling back to tagging each diagnostic
+  with its originating element's host tag is acceptable if draining is not possible.
+  **Channel/tier:** none.
+  **Check:** the `module-colorinfo` canvas classification is retired, and the baseline test
+  stays green with it gone.
+
+- [ ] LT-336: `argsFromAttrs` attribute lookup — the kebab-case convention's fallback and its documentation (LT-095 review).
+  **Skill:** le-truc-dev → tech-writer
+  **Context:** **Ruling (Architect, 2026-09-25):** a server arg's page-occurrence attribute is
+  its **kebab-case** name (`readingTime` ← `reading-time`), the HTML convention every Parser
+  attribute already follows (`allow-scripts`). A `number` arg gets a numeric channel, where a
+  blank value is absent and a non-numeric one leaves the occurrence unrenderable. LT-095 landed
+  both. **Residue:** form-spinbutton's markup writes `bigStep`, which parse5 lowercases to
+  `bigstep`, so the occurrence matches neither the old camelCase lookup nor the new kebab one.
+  Either fall back to the lowercased name when the kebab name is absent (HTML's own
+  case-insensitive matching), or port spinbutton's markup to `big-step`. The developer decides
+  from how many authored occurrences exist.
+  **Tech Writer:** state the convention in HOST_PROFILE (the i18n/page-render section) and
+  LE_TRUC_COMPILER.md § page occurrences.
+  **Channel/tier:** none.
+  **Check:** a page-render test for the chosen spinbutton spelling; corpus output
+  byte-identical.
+
+- [ ] LT-337: A destructuring setup const is diagnosed at its reader, not at itself (LT-104 review).
+  **Skill:** le-truc-dev
+  **Context:** `const { ok: setHTML } = dangerouslyBindInnerHTML(…)` compiled without a
+  diagnostic at the declaration. The generic LTC005 "other than const declarations" message
+  then fired at the *next* statement reading `setHTML`, the `watch`, which sends the author to
+  the wrong line. Either accept object- and array-pattern consts in the setup subset (bind every
+  pattern name as a setup init, which `collectBoundNames` already supports), or diagnose the
+  declaration itself with a fix-it (`const x = expr.ok`). Prefer accepting them: the rewrite
+  is mechanical and authors write destructuring by habit. **Channel/tier:** compiler, tier 1,
+  if diagnosed; none if accepted. Tech Writer reviews any new copy.
+  **Check:** lazyload's original destructuring spelling compiles, or fails at its own line.
 
 ## P6 — Cleanup round (after the corpus port)
 

@@ -1,4 +1,8 @@
 {
+	"basic-blogmeta.avatarOf": "Afatar",
+	"basic-blogmeta.minRead": "munud o ddarllen",
+	"basic-blogmeta.unknownDate": "dyddiad anhysbys",
+	"basic-blogmeta.updatedOn": "diweddarwyd ar",
 	"basic-pluralize.done": "Wedi cwblhau pob tasg!",
 	"basic-pluralize.remaining": "ar ôl",
 	"basic-pluralize.task.few": "tasg",

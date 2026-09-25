@@ -202,20 +202,21 @@ describe('generateBlogExcerpts', () => {
 		expect(result).toContain('href="./blog/2026-03-09-hello.html"')
 	})
 
-	test('includes basic-blogmeta with time and author span', () => {
+	test('emits basic-blogmeta as typed byline attributes (LT-095)', () => {
+		// The page renderer expands the occurrence per locale; the card
+		// itself carries only the props.
 		const post = makePost({
 			slug: 'meta-test',
 			date: '2026-03-09',
 			author: 'Alice',
 		})
 		const result = generateBlogExcerpts([post])
-		expect(result).toContain(
-			'class="published" itemprop="datePublished" datetime="2026-03-09"',
-		)
-		expect(result).toContain('<span itemprop="name">Alice</span>')
+		expect(result).toContain('published="2026-03-09"')
+		expect(result).toContain('author="Alice"')
+		expect(result).toMatch(/reading-time="\d+"/)
 	})
 
-	test('includes avatar img with docs-root path when author-avatar not set', () => {
+	test('derives the avatar attribute from the docs root when author-avatar is not set', () => {
 		const post = makePost({
 			slug: 'with-avatar',
 			date: '2026-03-09',
@@ -224,10 +225,10 @@ describe('generateBlogExcerpts', () => {
 		const result = generateBlogExcerpts([post])
 		// Cards render on the blog overview (depth 0); assets are single-copy
 		// at the docs root (LT-174), one level up from the locale tree.
-		expect(result).toContain('src="../assets/img/avatar/alice-brunner.jpg"')
+		expect(result).toContain('avatar="../assets/img/avatar/alice-brunner.jpg"')
 	})
 
-	test('includes avatar img with explicit path when author-avatar is set', () => {
+	test('passes an explicit author-avatar through as the avatar attribute', () => {
 		const post = makePost({
 			slug: 'explicit-avatar',
 			date: '2026-03-09',
@@ -235,17 +236,19 @@ describe('generateBlogExcerpts', () => {
 			'author-avatar': '/img/bob.jpg',
 		})
 		const result = generateBlogExcerpts([post])
-		expect(result).toContain('src="/img/bob.jpg"')
+		expect(result).toContain('avatar="/img/bob.jpg"')
 	})
 
-	test('omits avatar attribute when not set', () => {
+	test('omits the avatar and modified attributes when there is nothing to pass', () => {
+		// No author, so no derived avatar; no modified-date.
 		const post = makePost({
 			slug: 'no-avatar',
 			date: '2026-03-09',
-			author: 'Eve',
+			author: '',
 		})
 		const result = generateBlogExcerpts([post])
 		expect(result).not.toContain('avatar=')
+		expect(result).not.toContain('modified=')
 	})
 
 	test('includes description paragraph when present', () => {
@@ -336,9 +339,8 @@ describe('generateBlogArchive', () => {
 		const result = generateBlogArchive(posts)
 		expect(result).toContain('<a href="./blog/p4.html">An Older Post</a>')
 		expect(result).toContain(
-			'<time class="published" datetime="2026-01-01">2026-01-01</time>',
+			'<basic-blogmeta published="2026-01-01"></basic-blogmeta>',
 		)
-		expect(result).toContain('<basic-blogmeta>')
 	})
 
 	test('wraps groups in a labelled module-blogarchive element', () => {

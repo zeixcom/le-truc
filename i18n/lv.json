@@ -1,4 +1,8 @@
 {
+	"basic-blogmeta.avatarOf": "Avatārs:",
+	"basic-blogmeta.minRead": "min lasīšanai",
+	"basic-blogmeta.unknownDate": "nezināms datums",
+	"basic-blogmeta.updatedOn": "atjaunināts",
 	"basic-pluralize.done": "Viss pabeigts!",
 	"basic-pluralize.remaining": "atlicis",
 	"basic-pluralize.task.one": "uzdevums",

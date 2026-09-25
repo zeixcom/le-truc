@@ -529,6 +529,17 @@ export const placePlainImports = (
 	ctx: ExtractContext,
 	component: SetupLikeComponent,
 	plainImports: PlainImportIR[],
+	/**
+	 * Declaration texts each generated module carries verbatim (type
+	 * aliases, `declare global`, the server's parameter types). A name they
+	 * reference is a use in that module — but only an `import type`
+	 * statement is credited from them, since it is erased at build time and
+	 * can carry no side effect into a module that would not otherwise load it.
+	 */
+	typeTexts: { server: readonly string[]; client: readonly string[] } = {
+		server: [],
+		client: [],
+	},
 ): {
 	server: string[]
 	client: string[]
@@ -539,6 +550,18 @@ export const placePlainImports = (
 
 	const serverNames = serverUsageNames(component)
 	const clientNames = computeClientNeededNames(component)
+	const typeNamesIn = (texts: readonly string[]): ReadonlySet<string> =>
+		new Set(
+			texts.flatMap(
+				t =>
+					t
+						.replace(/\/\*[\s\S]*?\*\//g, '')
+						.replace(/\/\/.*$/gm, '')
+						.match(/[A-Za-z_$][\w$]*/g) ?? [],
+			),
+		)
+	const serverTypeNames = typeNamesIn(typeTexts.server)
+	const clientTypeNames = typeNamesIn(typeTexts.client)
 
 	const server: string[] = []
 	const client: string[] = []
@@ -552,8 +575,13 @@ export const placePlainImports = (
 			client.push(imp.text)
 			continue
 		}
-		const usedServer = imp.localNames.some(n => serverNames.has(n))
-		const usedClient = imp.localNames.some(n => clientNames.has(n))
+		const typeOnly = /^import\s+type\b/.test(imp.text)
+		const usedServer = imp.localNames.some(
+			n => serverNames.has(n) || (typeOnly && serverTypeNames.has(n)),
+		)
+		const usedClient = imp.localNames.some(
+			n => clientNames.has(n) || (typeOnly && clientTypeNames.has(n)),
+		)
 		if (usedServer) {
 			server.push(imp.text)
 			for (const n of imp.localNames) serverLocalNames.add(n)

@@ -1,4 +1,8 @@
 {
+	"basic-blogmeta.avatarOf": "الصورة الرمزية لـ",
+	"basic-blogmeta.minRead": "دقائق قراءة",
+	"basic-blogmeta.unknownDate": "تاريخ غير معروف",
+	"basic-blogmeta.updatedOn": "حُدّث في",
 	"basic-pluralize.done": "أحسنت، اكتمل كل شيء!",
 	"basic-pluralize.remaining": "متبقية",
 	"basic-pluralize.task.few": "مهام",

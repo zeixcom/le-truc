@@ -213,6 +213,7 @@ declare namespace JSX {
 		method?: 'get' | 'post' | 'dialog' | undefined
 	}
 	interface h2 extends CommonLightDom {}
+	interface h3 extends CommonLightDom {}
 	interface header extends CommonLightDom {}
 	interface input extends CommonLightDom {
 		type?: string | undefined
@@ -238,9 +239,35 @@ declare namespace JSX {
 	interface strong extends CommonLightDom {}
 	interface summary extends CommonLightDom {}
 	interface li extends CommonLightDom {}
+	/** schema.org microdata, the attributes basic-blogmeta's byline carries. */
+	interface Microdata {
+		itemprop?: string | undefined
+		itemscope?: boolean | undefined
+		itemtype?: string | undefined
+	}
+	interface img extends CommonLightDom, Microdata {
+		src?: Attr<string>
+		alt?: Attr<string>
+	}
+	interface meta extends CommonLightDom, Microdata {
+		content?: Attr<string>
+	}
+	interface time extends CommonLightDom, Microdata {
+		datetime?: Attr<string>
+	}
+	interface svg extends CommonLightDom {
+		viewBox?: string | undefined
+		fill?: string | undefined
+		focusable?: 'true' | 'false' | undefined
+	}
+	interface path extends CommonLightDom {
+		d?: string | undefined
+		'fill-rule'?: 'nonzero' | 'evenodd' | undefined
+	}
+	interface nav extends CommonLightDom {}
 	interface p extends CommonLightDom {}
 	interface pre extends CommonLightDom {}
-	interface span extends CommonLightDom {}
+	interface span extends CommonLightDom, Microdata {}
 	interface ul extends CommonLightDom {}
 	/** A component's stylesheet: content only, no attributes. */
 	interface style {
@@ -286,13 +313,28 @@ declare namespace JSX {
 		collapsed?: Reactive<boolean>
 		language?: string
 	}
+	type BasicBlogmetaAttrs = CommonLightDom
+	type ModuleCarouselAttrs = CommonLightDom
 	type ModuleCatalogAttrs = CommonLightDom
+	type ModuleColoreditorAttrs = CommonLightDom & {
+		/** Parser-backed: read once at connect; the `value` property owns it after. */
+		value?: string
+		/** Parser-backed: read once at connect; the `label` property owns it after. */
+		label?: string
+	}
 	type ModuleColorinfoAttrs = CommonLightDom & {
 		value?: Reactive<string>
 		/** Server-rendered swatch properties; `bindStyle` owns them after connect. */
 		style?: string
 	}
 	type ModuleDialogAttrs = CommonLightDom
+	type ModuleListnavAttrs = CommonLightDom
+	type ModuleLazyloadAttrs = CommonLightDom & {
+		/** Parser-backed: read once at connect; the `src` property owns it after. */
+		src?: string | undefined
+		/** Config-only, presence-read once at connect: not a reactive property. */
+		'allow-scripts'?: boolean | undefined
+	}
 	type ModuleSplitviewAttrs = CommonLightDom & {
 		split?: Reactive<number>
 		/** Server-rendered initial ratio; the `split` watcher owns it after connect. */
@@ -308,6 +350,15 @@ declare namespace JSX {
 	type ModuleScrollareaAttrs = CommonLightDom & {
 		orientation?: 'horizontal' | 'vertical' | undefined
 	}
+	/** Breakpoint config attributes, each read once at connect. */
+	type ContextMediaAttrs = CommonLightDom & {
+		sm?: string | undefined
+		md?: string | undefined
+		lg?: string | undefined
+		xl?: string | undefined
+	}
+	/** A `.tsrx` leaf authored raw: its `kind` class is the only contract. */
+	type CardCalloutAttrs = CommonLightDom
 	type SyncElAttrs = CommonLightDom & {
 		mode?: string
 		items?: unknown
@@ -349,28 +400,42 @@ declare namespace JSX {
 		div: div
 		form: form
 		h2: h2
+		h3: h3
 		header: header
 		input: input
 		code: code
 		label: label
+		img: img
 		li: li
+		meta: meta
+		path: path
+		nav: nav
 		p: p
 		pre: pre
 		small: small
 		span: span
+		svg: svg
+		time: time
 		strong: strong
 		summary: summary
 		ul: ul
 		style: style
+		'basic-blogmeta': BasicBlogmetaAttrs
 		'basic-counter': BasicCounterAttrs
+		'card-callout': CardCalloutAttrs
+		'context-media': ContextMediaAttrs
 		'basic-pluralize': BasicPluralizeAttrs
 		'basic-number': BasicNumberAttrs
 		'form-combobox': FormComboboxAttrs
 		'form-listbox': FormListboxAttrs
 		'module-codeblock': ModuleCodeblockAttrs
+		'module-carousel': ModuleCarouselAttrs
 		'module-catalog': ModuleCatalogAttrs
+		'module-coloreditor': ModuleColoreditorAttrs
 		'module-colorinfo': ModuleColorinfoAttrs
 		'module-dialog': ModuleDialogAttrs
+		'module-lazyload': ModuleLazyloadAttrs
+		'module-listnav': ModuleListnavAttrs
 		'module-pagination': ModulePaginationAttrs
 		'module-scrollarea': ModuleScrollareaAttrs
 		'module-splitview': ModuleSplitviewAttrs

@@ -44,6 +44,22 @@ LT-283–LT-286, LT-293, LT-294, LT-298, LT-315), 2026-09-21 ×2. Full entry tex
 - **Scrollarea's wall-time at demo scale is noise** (474/341/330 ms Simulated vs 432 ms Folded).
   The ~2.3 s ADR 0029 cites returns only once page occurrences are simulated (LT-103).
 
+- [x] LT-095: Migrate `basic-blogmeta` by reshaping it into a template owner with typed byline props (LT-033 decision) — reviewed ✓
+  **Changed:** `basic-blogmeta.tsx` serves; the `.ts` twin stays. Props `author?`, `avatar?`,
+  `published?`, `modified?`, `readingTime?` (the `reading-time` attribute), all schema.org
+  microdata re-emitted. The page renderer (LT-194) expands attribute-only occurrences: the
+  examples fragments (own `lang`), `card-blogpost.html`, `pages.ts` cards and archive, and
+  `blog.html`. `applyTemplate` now renders the layout's own occurrences after variable
+  substitution. Four `i18n` keys, with first-draft translations in all six catalogs. **Folded:
+  LT-173's deferred fold verification is done** (`Date.UTC` + `timeZone: 'UTC'` in the page
+  locale, plus a days-in-month guard because `Date.UTC` rolls over).
+  **Rulings (Architect, 2026-09-25; recorded nowhere else):** a server arg's page-occurrence
+  attribute is its **kebab-case** name, and a `number` arg has a numeric channel (blank =
+  absent, non-numeric = unrenderable). An optional `author` is accepted (archive entries are
+  date-only). **`bun run build:docs` is part of every migration's check**: it caught LT-104's
+  demo regression, which nothing else ran. The translations stand until the owner's translator
+  pass. **Live handoffs:** LT-336 (spinbutton `bigStep` residue, convention docs).
+
 - [x] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** a loop whose output is a direct root of an `if`/`switch` branch is LTC005 on

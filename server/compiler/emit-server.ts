@@ -1444,7 +1444,7 @@ export const emitServerModule = (
 			const parser = component.parserExposeProps.get(param.name)
 			if (parser && !resolvesInHelper(parser.fallbackNode))
 				return param.optional || param.hasDefault
-			if (parser || param.isString) return true
+			if (parser || param.isString || param.isNumber) return true
 			return param.optional || param.hasDefault
 		})
 			? (() => {
@@ -1453,15 +1453,22 @@ export const emitServerModule = (
 						if (param.name === 'i18n' || param.name === 'lang') continue
 						const optionalish = param.optional || param.hasDefault
 						const key = JSON.stringify(param.name)
+						// The occurrence's attribute is the arg's kebab-case name
+						// (`readingTime` ← `reading-time`, LT-095): parse5 reports
+						// attribute names lowercased, so a camelCase lookup could
+						// never match. A one-word arg is its own attribute name.
+						const attrKey = JSON.stringify(
+							param.name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`),
+						)
 						const attrVar = `${param.name}Attr`
 						const parser = component.parserExposeProps.get(param.name)
 						if (parser && !resolvesInHelper(parser.fallbackNode)) {
 							// LT-290: no attribute channel — the gate above proved
 							// the arg optional/defaulted, so an absent attribute
 							// omits the key and a present one is unrenderable.
-							stmts.push(`\tif (attrs[${key}] != null) return null`)
+							stmts.push(`\tif (attrs[${attrKey}] != null) return null`)
 						} else if (parser) {
-							stmts.push(`\tconst ${attrVar} = attrs[${key}] ?? null`)
+							stmts.push(`\tconst ${attrVar} = attrs[${attrKey}] ?? null`)
 							stmts.push(
 								`\tif (${attrVar} !== null) args[${key}] = ${parser.parser}(${parser.fallbackText ?? ''})(${attrVar})`,
 							)
@@ -1474,8 +1481,22 @@ export const emitServerModule = (
 						} else if (param.isString) {
 							// A plain string arg: the raw attribute is the only
 							// channel an authored occurrence has.
-							stmts.push(`\tconst ${attrVar} = attrs[${key}] ?? null`)
+							stmts.push(`\tconst ${attrVar} = attrs[${attrKey}] ?? null`)
 							stmts.push(`\tif (${attrVar} !== null) args[${key}] = ${attrVar}`)
+							if (!optionalish) stmts.push('\telse return null')
+						} else if (param.isNumber) {
+							// A number arg: a blank attribute is absent, a
+							// non-numeric one makes the occurrence unrenderable
+							// rather than rendering `NaN`.
+							stmts.push(
+								`\tconst ${attrVar} = attrs[${attrKey}]?.trim() || null`,
+							)
+							stmts.push(`\tif (${attrVar} !== null) {`)
+							stmts.push(
+								`\t\tif (!Number.isFinite(Number(${attrVar}))) return null`,
+							)
+							stmts.push(`\t\targs[${key}] = Number(${attrVar})`)
+							stmts.push('\t}')
 							if (!optionalish) stmts.push('\telse return null')
 						} else {
 							// Non-string, non-Parser: no attribute channel

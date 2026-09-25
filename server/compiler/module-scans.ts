@@ -117,6 +117,27 @@ export const reportDeferredCollectorCalls = (
 					diagnostic.deferredCollectorCall(ctx.source, node.start, helper),
 				)
 		}
+		// `each(collection, item => …)` runs its callback inside a collector
+		// of its own (`withCollector`, src/helpers/reactive.ts), so a helper
+		// called directly in that callback is registered, not deferred
+		// (LT-108, module-carousel's per-slide `watch`). Its body keeps the
+		// caller's depth; a function nested inside it is still deferred.
+		if (
+			node.type === 'CallExpression' &&
+			identifierName(node.callee) === 'each'
+		) {
+			const [collection, callback, ...rest] = Array.isArray(node.arguments)
+				? node.arguments
+				: []
+			visit(node.callee, depth)
+			visit(collection, depth)
+			if (isNode(callback) && FUNCTION_TYPES.has(String(callback.type))) {
+				visit(callback.params, depth + 1)
+				visit(callback.body, depth)
+			} else visit(callback, depth)
+			visit(rest, depth)
+			return
+		}
 		const nextDepth = FUNCTION_TYPES.has(String(node.type)) ? depth + 1 : depth
 		for (const [key, value] of Object.entries(node)) {
 			if (key === 'loc' || key === 'range' || key === 'parent') continue

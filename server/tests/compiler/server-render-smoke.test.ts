@@ -104,6 +104,21 @@ const ARGS: Record<string, Record<string, unknown>> = {
 	'module-catalog': {
 		products: [{ id: 'product-1', name: 'Product 1', max: 10 }],
 	},
+	'basic-blogmeta': {
+		published: '2026-03-09',
+		i18n: inlineI18n({
+			avatarOf: 'Avatar of',
+			updatedOn: 'updated on',
+			minRead: 'min read',
+			unknownDate: 'unknown date',
+		}),
+	},
+	'module-carousel': { slides: [{ title: 'Slide 1' }] },
+	'module-listnav': {
+		options: [
+			{ value: './test/module-listnav/mocks/page1.html', label: 'Page 1' },
+		],
+	},
 }
 
 // The CONFIGURED corpus scan (LT-273) — the same source set the build

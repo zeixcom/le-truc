@@ -25,7 +25,7 @@ import {
 	MEDIA_ORIENTATION,
 	MEDIA_THEME,
 	MEDIA_VIEWPORT,
-} from '../../context/media/context-media.ts'
+} from '../../context/media/media-contexts.ts'
 
 export type CardMediaqueriesProps = {
 	/** Heading text above the preference list. */

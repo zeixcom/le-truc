@@ -30,4 +30,33 @@ export const CLASSIFIED_DIAGNOSTICS: readonly ClassifiedDiagnostic[] = [
 			'context (`if (!ctx) return`). Canvas pixels do not serialize, so the ' +
 			'notice cannot affect the serialized markup.',
 	},
+	{
+		kind: 'jsdom-error',
+		component: 'module-coloreditor',
+		message: /Not implemented: HTMLCanvasElement's getContext/,
+		reason:
+			'The same notice from the composed form-colorgraph, attributed to ' +
+			'the rendering parent (LT-188). Same guard, same unserialized pixels.',
+	},
+	{
+		kind: 'jsdom-error',
+		component: 'module-colorinfo',
+		message: /Not implemented: HTMLCanvasElement's getContext/,
+		reason:
+			"module-colorinfo has no canvas. The notice is module-coloreditor's " +
+			'composed form-colorgraph drawing after its window closed, which ' +
+			'attributes to the next render (realm.ts § Attribution). Same guard, ' +
+			'same unserialized pixels (LT-105; the attribution leak is in NOTES).',
+	},
+	{
+		kind: 'console',
+		component: 'module-lazyload',
+		message:
+			/<module-lazyload#missing-elements-test> did not enhance .*MissingElementError/,
+		reason:
+			'The demo page authors this instance without its required ' +
+			'`card-callout` on purpose, to exercise the broken state the spec ' +
+			'asserts. It keeps its served markup, which is what the spec expects ' +
+			'(LT-104: page occurrences simulate now that lazyload is Simulated).',
+	},
 ]

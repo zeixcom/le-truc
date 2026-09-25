@@ -65,7 +65,21 @@ declare global {
  * @demo {https://zeixcom.github.io/le-truc/examples.html#module-colorinfo} Interactive preview and usage examples
  **/
 export function ModuleColorinfo(
-	{ label, value }: { label: string; value: string },
+	{
+		label,
+		value,
+		open = true,
+	}: {
+		label: string
+		value: string
+		/** Whether the details start expanded (module-coloreditor opens only its base step). */
+		open?: boolean
+		/**
+		 * Compiler-consumed compose surface (truc:pass), never a render arg:
+		 * module-coloreditor passes each step's color and label.
+		 */
+		'truc:pass'?: { value?: () => Oklch; label?: () => string }
+	},
 	{
 		all,
 		expose,
@@ -116,7 +130,7 @@ export function ModuleColorinfo(
 				value={value}
 				style={`--module-colorinfo-color-swatch: ${formatCss(color)}; --module-colorinfo-color-fallback: ${formatHex(color)};`}
 			>
-				<details open>
+				<details open={open}>
 					<summary>
 						<div class="summary">
 							<span class="swatch" />

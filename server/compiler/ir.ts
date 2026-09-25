@@ -443,6 +443,11 @@ export type ComponentParam = {
 	hasDefault: boolean
 	/** The annotation is `string` — a raw attribute value may pass for it. */
 	isString: boolean
+	/**
+	 * The annotation is `number` — a finite numeric attribute value is
+	 * converted for it (LT-095, basic-blogmeta's `reading-time`).
+	 */
+	isNumber: boolean
 }
 
 /** A complete component extracted from one `.tsrx` source. */

@@ -75,31 +75,13 @@
 						<h1 itemprop="headline">{{ title }}</h1>
 						<div class="hero-layout">
 							<div class="lead">
-								<basic-blogmeta>
-									<span
-										class="author"
-										itemprop="author"
-										itemscope
-										itemtype="https://schema.org/Person"
-									>
-										<img class="avatar" src="{{ author-avatar }}" alt="Avatar of {{ author }}">
-										<span itemprop="name">{{ author }}</span>
-									</span>
-									<span>
-										<time class="published" itemprop="datePublished" datetime="{{ published-date }}">
-											{{ published-date }}
-										</time>
-										<span class="modified">
-											· updated on
-											<time itemprop="dateModified" datetime="{{ modified-date }}">
-												{{ modified-date }}
-											</time>
-										</span>
-									</span>
-									<span>
-										<meta itemprop="timeRequired" content="PT{{ reading-time }}M">{{ reading-time }} min read
-									</span>
-								</basic-blogmeta>
+								<basic-blogmeta
+									author="{{ author }}"
+									avatar="{{ author-avatar }}"
+									published="{{ published-date }}"
+									modified="{{ modified-date }}"
+									reading-time="{{ reading-time }}"
+								></basic-blogmeta>
 								<p itemprop="description">{{ description }}</p>
 							</div>
 						</div>

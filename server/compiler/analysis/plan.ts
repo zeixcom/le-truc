@@ -20,7 +20,7 @@ import {
 import type { CompileDiagnostic } from '../diagnostics'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
-import { serverUsageNames } from '../imports'
+import { computeClientNeededNames, serverUsageNames } from '../imports'
 import type {
 	ComponentIR,
 	EachForIR,
@@ -462,6 +462,14 @@ export const analyzeClient = (
 	const effects: TopEffectPlan[] = []
 	const childTags = new Set<string>()
 	const ambient = new Set<string>(component.contextRefs)
+	// A context member read only from a setup declaration the client module
+	// emits (`host` inside a `createTask` callback, LT-104; `all()` in a
+	// plain const's initializer, LT-108) reaches no effect position
+	// `collectAmbient` walks, so it is collected here from the client
+	// module's own needed names.
+	for (const name of computeClientNeededNames(component))
+		if (CONTEXT_NAMES.has(name) || CLIENT_ONLY_PRIMITIVES.has(name))
+			ambient.add(name)
 	const collectAmbient = (node: AstNode | null | undefined): void => {
 		if (!node) return
 		for (const name of freeIdentifiers(node))

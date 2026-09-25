@@ -153,6 +153,25 @@ describe('stage-1 server-simulation driver — corpus fixtures (LT-154)', () => 
 			expect(html).toMatchSnapshot()
 		})
 	}
+
+	test('module-lazyload: the demo broken-state instance keeps its served markup', async () => {
+		// The page occurrence the docs build simulates since LT-104 made
+		// lazyload Simulated. The instance omits its required `card-callout`
+		// on purpose, so connect logs MissingElementError and enhances
+		// nothing; the classification in `sim/classifications.ts` names it.
+		const info = compiled.find(entry => entry.tag === 'module-lazyload')
+		if (!info) throw new Error('module-lazyload is not in the corpus')
+		const page = await Bun.file(
+			'examples/module/lazyload/module-lazyload.html',
+		).text()
+		const instance = page.match(
+			/<module-lazyload\s+id="missing-elements-test"[\s\S]*?<\/module-lazyload>/,
+		)?.[0]
+		if (!instance) throw new Error('the demo instance is gone')
+		const html = await simulateConnect(realm, info, instance)
+		expect(html).toContain('id="missing-elements-test"')
+		expect(html).toContain('<div class="content" hidden="">')
+	})
 })
 
 describe('quiescence is hermetic (sub-design 9) — no build warning on the standing corpus', () => {
