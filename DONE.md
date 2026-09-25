@@ -30,6 +30,49 @@ entry text: `git log -p -- DONE.md`.
 
 ---
 
+- [x] LT-291: A compiled parent registers a variant set's SERVED surface, not its retained twin — reviewed ✓
+  **Changed:** `compileCorpus` sets `childImports[tag] = ./<tag>.client` for every compiled tag,
+  overriding the sibling twin's module; only an uncompiled tag keeps its hand-written module.
+  LT-285's tripwire pin is retired for a real fixture in `dual-corpus.test.ts` (one
+  `defineComponent('basic-counter')` per bundle, from the generated client; a mistyped child
+  prop still fails tsc). Internal build fix, no changelog entry.
+  **For the migrations (recorded nowhere else):** a raw dashed tag seeds a child import only
+  when a query addresses it (`first()` ref or `truc:pass` target, `addQuery`); a bare
+  `<module-scrollarea>` with no binding imports nothing and is registered by `main.ts`. Type
+  visibility rides the same import (ADR 0039 s4). Clears the gate on LT-103.
+
+- [x] LT-292: A `variantOverrides` entry that names no variant set is a configuration error — reviewed ✓
+  **Changed:** `validateVariantOverrides()` (`server/compiler/corpus-config.ts`), called by
+  `compileCorpus` after the LTC048 pre-check, throws `le-truc.config.json:
+  "variantOverrides["<tag>"]" names no variant set — …` for a tag no source declares, or one only
+  a single surface authors. A multi-source non-set is left to LTC048. Documented in
+  LE_TRUC_COMPILER.md § 7.1. Consumer-visible: a stale override now fails the build.
+  **Ruling (recorded nowhere else):** a corpus-wide `variantSurface` with no variant set present
+  is NOT an error — a policy default, not a pointer (pinned by a test). The copy is config-error
+  text outside `errors.ts`/`TSRX`, so the Tech Writer handoff is optional, as for LT-273.
+
+- [x] LT-312: Generate the `.tsx` → `.tsrx` compose-import typings — reviewed ✓
+  **Changed:** `server/compiler/tsrx-imports.ts` (new); `compileCorpus` writes
+  `<outDir>/tsrx-imports.d.ts` after `registry.json`, one ambient `declare module` per compiled
+  `.tsrx` source typed through its tag's served `render<Name>` args. The hand-written
+  `server/compiler/frontend/tsx/tsrx-imports.d.ts` is deleted; `examples/tsconfig.json` includes
+  the generated file. Documented in LE_TRUC_COMPILER.md § 7.
+  **Rulings (recorded nowhere else):** keys are the shortest path suffix no other listed source
+  shares (`*/basic-button.tsrx`, lengthening only on a shared file name), so a collision is a loud
+  "cannot find module", never a silent mistype. A variant set's unserved `.tsrx` member is listed
+  too, typed through the served module (one contract per tag). The file is always written, even
+  empty, so the tsconfig include never dangles. It needs a corpus build first, like every
+  generated-module import: `typecheck.test.ts`'s examples leg relies on CI's `typecheck` step
+  building the corpus before `test:server`. A consumer project's authored-`.tsx` tsconfig
+  includes `<outDir>/tsrx-imports.d.ts` beside `host-profile.d.ts`. Clears the gates on LT-098
+  and LT-100 — neither migration touches the typings.
+
+- [x] LT-307: Derive the simulation pass's demo-markup path from the component folder — reviewed ✓
+  **Changed:** `simulationSubjects()` (`server/effects/simulate.ts`) resolves `markupPath` as
+  `<dir of entry.source>/<tag>.html`, independent of extension. LT-096 had already widened the
+  regex to `.tsx`; `.ts` twins and sources whose file name is not the tag now resolve too.
+  SERVER.md updated. Internal fix, no changelog entry. Clears the gate on LT-103.
+
 - [x] LT-296: Surface-route hardening: stale `variants/` clients and vacuous surface tests — reviewed ✓
   **Changed:** `compileCorpus` owns `variants/`: each run deletes every client there it did
   not write (a dissolved set, a flipped `variantOverrides`, an LTC051-dropped set, a member
