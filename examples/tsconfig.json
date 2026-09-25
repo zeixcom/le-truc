@@ -32,6 +32,6 @@
 		"module/codeblock/module-codeblock.ts",
 		"module/codeblock/module-codeblock.tsx",
 		"../server/compiler/frontend/tsx/host-profile.d.ts",
-		"../server/compiler/frontend/tsx/tsrx-imports.d.ts"
+		"../server/generated/components/tsrx-imports.d.ts"
 	]
 }

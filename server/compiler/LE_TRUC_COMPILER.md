@@ -950,9 +950,14 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   unserved member's client lands in `variants/<tag>.<surface>.client.ts` for
   the per-surface spec matrix on the component test route; no canonical
   consumer reads it. Artifacts land in the configured output root plus
-  `registry.json` — in this repo the gitignored
+  `registry.json` and `tsrx-imports.d.ts` — in this repo the gitignored
   `server/generated/components/`. Errors fail the run; warnings skip the
-  file with a notice.
+  file with a notice. `tsrx-imports.d.ts` (LT-312, `tsrx-imports.ts`) types
+  every compiled `.tsrx` source for compose imports from authored `.tsx`:
+  one ambient `declare module '*/<suffix>.tsrx'` per source, through its
+  tag's served server module's args, keyed by the shortest path suffix no
+  other source shares. `examples/tsconfig.json` includes it, so a `.tsx`
+  parent composing a still-`.tsrx` child needs no hand-written typing.
 - **Consumers**: `server/build.ts` (via the `index.ts` facade plus direct
   `registry`/`spans` imports), `check:corpus` (§ 6), and the CEM build
   (`scripts/build-corpus.ts` feeds `cem analyze`, which reads the generated
@@ -999,7 +1004,7 @@ resolves against it.
 | --- | --- | --- |
 | `sources` | `["examples/**/*.tsrx", "examples/**/*.tsx"]` | The authored component sources. The front end is chosen per file by extension, so one list covers both surfaces; overlapping globs compile each file once. Glob grammar: `*`, `?`, `**/` (zero or more directories), a trailing `**`, and literals — scans are sorted, and dotfiles only match a pattern segment starting with a dot. Deliberately one grammar on every runtime (LT-267): braces and character classes are not part of it |
 | `siblingModules` | `["examples/**/*.ts"]` | Hand-written custom-element modules the corpus may address. Matched to tags by filename — a stem that is not a valid dashed tag (`main.ts`) is skipped |
-| `outDir` | `"server/generated/components"` | Where the generated `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json` and `i18n.ts` land. Must sit inside the project root (see below) |
+| `outDir` | `"server/generated/components"` | Where the generated `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json`, `tsrx-imports.d.ts` and `i18n.ts` land. Must sit inside the project root (see below) |
 | `i18nDir` | `"i18n"` | The committed per-locale translation catalogs (ADR 0030 s5). A project with no such directory censuses zero locales and zero gaps |
 | `runtimeImport` | `"../../compiler/runtime"` | The specifier the generated SERVER modules import the render harness from. The default is this repo's relative path; a consumer sets their own until LT-254 publishes the compiler and it becomes a package specifier |
 | `variantSurface` | `"tsx"` | The surface a variant set serves when no per-tag override applies (ADR 0039): `"tsx"` or `"tsrx"` |

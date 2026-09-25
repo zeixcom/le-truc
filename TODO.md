@@ -130,7 +130,7 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   LE_TRUC_COMPILER.md § 7.1. The message copy is new config-error text; it is not in
   `errors.ts` or a TSRX code, but Tech Writer may want to review it.
 
-- [ ] LT-312: Generate the `.tsx` → `.tsrx` compose-import typings
+- [x] LT-312: Generate the `.tsx` → `.tsrx` compose-import typings — done
   **Skill:** le-truc-dev
   **Context:** `server/compiler/frontend/tsx/tsrx-imports.d.ts` (LT-096) hand-lists one
   `declare module '*/<tag>.tsrx'` per `.tsrx` child that a `.tsx` parent composes, typed through
@@ -143,6 +143,21 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   **Iteration note (2026-09-25):** gates **LT-098** (composes `basic-number`) and **LT-100**
   (composes `form-spinbutton` and `basic-button`) in this iteration: both are `.tsx` parents
   over `.tsrx`-only children. Land it before either, so neither migration hand-edits the file.
+  **Done (2026-09-25):** new module `server/compiler/tsrx-imports.ts`, which `compileCorpus`
+  calls to write `<outDir>/tsrx-imports.d.ts` after `registry.json`. The file has one ambient
+  `declare module` per compiled `.tsrx` source, typed through the tag's SERVED server
+  module's `render<Name>` args. A variant set's unserved `.tsrx` member is listed as well,
+  with one contract per tag. Each key is the shortest path suffix that no other source
+  shares: `*/basic-button.tsrx` today, lengthening only when two sources share a file name.
+  So a collision now surfaces as a loud "cannot find module" instead of a silent mistype.
+  Entries are sorted, so the file is stable across compile orders. It is always written,
+  even with no entries, so the tsconfig include never dangles. The hand-written file is
+  deleted and `examples/tsconfig.json` now includes
+  `../server/generated/components/tsrx-imports.d.ts`. Acceptance holds:
+  `bunx tsc -p examples/tsconfig.json` is green. A probe with a bogus `BasicButton` arg
+  in module-codeblock fails with TS2322. `typecheck` and `check:corpus` are green. Tests
+  are in the new `tsrx-imports.test.ts`: generator unit tests, plus a corpus compile over
+  basic-button and the counter variant set. Documented in LE_TRUC_COMPILER.md § 7.
 
 - [ ] LT-307: Derive the simulation pass's demo-markup path from the component folder, not by rewriting `.tsrx` (LT-188 review finding). **Land before any Simulated-tier component's served surface becomes `.tsx`.**
   **Skill:** docs-server-dev

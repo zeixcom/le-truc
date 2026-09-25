@@ -41,6 +41,11 @@ import { compileComponentTsx } from './compiler/frontend/tsx'
 import { type RegistryEntry, registryJson } from './compiler/registry'
 import type { SourceSpan } from './compiler/spans'
 import { contaminateComposeReads } from './compiler/tier'
+import {
+	TSRX_IMPORTS_FILE,
+	type TsrxImportSource,
+	tsrxImportTypings,
+} from './compiler/tsrx-imports'
 import { collectSiblingModules, REPO_ROOT } from './corpus-sources'
 import { collectI18n, writeI18nModule, writeI18nReport } from './effects/i18n'
 import type { FileInfo } from './file-signals'
@@ -323,6 +328,10 @@ export const compileCorpus = async (
 	// Every variants/ client THIS run writes (LT-296): the directory is
 	// owned by the compile, so anything else in it is pruned below.
 	const variantClients = new Set<string>()
+	// Every compiled `.tsrx` source, by tag (LT-312): `tsrx-imports.d.ts`
+	// types each through its tag's SERVED server module, so a variant set's
+	// unserved `.tsrx` member is listed too — one contract per tag.
+	const tsrxSources = new Map<string, string[]>()
 	// Group the compilable sources by tag — pass 1's visit order preserved —
 	// so a variant set's members compile together (ADR 0039): every member
 	// compiles clean or fails as today, the set's CSS must agree
@@ -347,6 +356,8 @@ export const compileCorpus = async (
 				composeRegistry,
 			)
 			report(rel, diagnostics)
+			if (component && rel.endsWith('.tsrx'))
+				tsrxSources.set(tag, [...(tsrxSources.get(tag) ?? []), rel])
 			return { rel, component }
 		})
 		// CSS byte-identity across a set's compiled members (ADR 0039): the
@@ -461,6 +472,19 @@ export const compileCorpus = async (
 	await writeFileSafe(
 		getFilePath(outDir, 'registry.json'),
 		registryJson(entries),
+	)
+	// Only a tag whose served artifacts were written has a server module to
+	// type through; a set dropped by LTC051 lists nothing.
+	const typings: TsrxImportSource[] = entries.flatMap(entry =>
+		(tsrxSources.get(entry.tag) ?? []).map(source => ({
+			source,
+			name: entry.name,
+			serverModule: entry.serverModule,
+		})),
+	)
+	await writeFileSafe(
+		getFilePath(outDir, TSRX_IMPORTS_FILE),
+		tsrxImportTypings(typings),
 	)
 	// ADR 0030 sub-designs 4+5 (LT-173): the catalog pipeline's corpus half.
 	// The generated i18n module folds every component's inline sources and
