@@ -60,7 +60,7 @@ both surfaces (LT-302). The census is 27/2/0 before the batch; each migration ad
 
 ### Gates (run first)
 
-- [ ] LT-325: Generate `.tsrx` tag-map typings instead of hand-listing generated clients in `examples/tsconfig.json`.
+- [x] LT-325: Generate `.tsrx` tag-map typings instead of hand-listing generated clients in `examples/tsconfig.json` — done
   **Skill:** le-truc-dev
   **Context:** A `.tsx` parent that queries a `.tsrx` child through `first`/`all('<tag>…')`
   needs the child's `HTMLElementTagNameMap` entry. LT-098/LT-100 got it by adding

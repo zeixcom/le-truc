@@ -44,6 +44,7 @@ import { contaminateComposeReads } from './compiler/tier'
 import {
 	TSRX_IMPORTS_FILE,
 	type TsrxImportSource,
+	type TsrxTagMapEntry,
 	tsrxImportTypings,
 } from './compiler/tsrx-imports'
 import { collectSiblingModules, REPO_ROOT } from './corpus-sources'
@@ -332,6 +333,9 @@ export const compileCorpus = async (
 	// types each through its tag's SERVED server module, so a variant set's
 	// unserved `.tsrx` member is listed too — one contract per tag.
 	const tsrxSources = new Map<string, string[]>()
+	// Served tags whose host is form-associated (LT-325): the tag-map entry's
+	// host type, which the registry does not record.
+	const formAssociatedTags = new Set<string>()
 	// Group the compilable sources by tag — pass 1's visit order preserved —
 	// so a variant set's members compile together (ADR 0039): every member
 	// compiles clean or fails as today, the set's CSS must agree
@@ -430,6 +434,7 @@ export const compileCorpus = async (
 			await writeFileSafe(clientModulePath, component.clientCode)
 			await writeFileSafe(getFilePath(outDir, entry.css), component.css)
 			entries.push(entry)
+			if (component.formAssociated) formAssociatedTags.add(entry.tag)
 			spanInfos.push({
 				tag: entry.tag,
 				source: rel,
@@ -485,9 +490,19 @@ export const compileCorpus = async (
 				.map(([prop]) => prop),
 		})),
 	)
+	// Tag-map entries only for a tag SERVED from `.tsrx` (LT-325): a served
+	// `.tsx` source is visible to tsc and carries its own entry.
+	const tagMap: TsrxTagMapEntry[] = entries
+		.filter(entry => entry.source.endsWith('.tsrx'))
+		.map(entry => ({
+			tag: entry.tag,
+			clientModule: entry.clientModule,
+			propsType: entry.propsType,
+			formAssociated: formAssociatedTags.has(entry.tag),
+		}))
 	await writeFileSafe(
 		getFilePath(outDir, TSRX_IMPORTS_FILE),
-		tsrxImportTypings(typings),
+		tsrxImportTypings(typings, tagMap),
 	)
 	// ADR 0030 sub-designs 4+5 (LT-173): the catalog pipeline's corpus half.
 	// The generated i18n module folds every component's inline sources and

@@ -109,6 +109,40 @@ describe('tsrxImportTypings (LT-312)', () => {
 		const text = tsrxImportTypings([])
 		expect(patterns(text)).toEqual([])
 		expect(text).not.toMatch(/^(import|export)\b/m)
+		expect(text).not.toContain('HTMLElementTagNameMap')
+	})
+
+	test('served .tsrx tags get tag-map entries typed through the client (LT-325)', () => {
+		const text = tsrxImportTypings(
+			[],
+			[
+				{
+					tag: 'form-spinbutton',
+					clientModule: 'form-spinbutton.client.ts',
+					propsType: 'FormSpinbuttonProps',
+					formAssociated: true,
+				},
+				{
+					tag: 'card-callout',
+					clientModule: 'card-callout.client.ts',
+					propsType: null,
+					formAssociated: false,
+				},
+				{
+					tag: 'basic-button',
+					clientModule: 'basic-button.client.ts',
+					propsType: 'BasicButtonProps',
+					formAssociated: false,
+				},
+			],
+		)
+		expect(text).toContain(`interface HTMLElementTagNameMap {
+	"basic-button": HTMLElement & import('./basic-button.client').BasicButtonProps
+	"card-callout": HTMLElement
+	"form-spinbutton": import('@zeix/le-truc').FormAssociatedElement & import('./form-spinbutton.client').FormSpinbuttonProps
+}`)
+		// Still a script, so the interface augments the global map.
+		expect(text).not.toMatch(/^(import|export|declare global)\b/m)
 	})
 })
 
@@ -132,6 +166,24 @@ describe('the corpus compile writes the typings (LT-312)', () => {
 		// served server module — one contract per tag.
 		expect(text).toContain(
 			"typeof import('./basic-counter.server').renderBasicCounter",
+		)
+		// Tag-map entries only for the `.tsrx`-served tag (LT-325): the
+		// served `.tsx` carries basic-counter's own entry.
+		expect(text).toContain(
+			`"basic-button": HTMLElement & import('./basic-button.client').BasicButtonProps`,
+		)
+		expect(text).not.toContain('"basic-counter":')
+	})
+
+	test('a form-associated .tsrx tag types its host as FormAssociatedElement (LT-325)', async () => {
+		const outDir = path.join(scratch.path, 'form')
+		await compileCorpus(
+			[fileInfo('examples/form/spinbutton/form-spinbutton.tsrx')],
+			outDir,
+		)
+		const text = fs.readFileSync(path.join(outDir, TSRX_IMPORTS_FILE), 'utf8')
+		expect(text).toContain(
+			`"form-spinbutton": import('@zeix/le-truc').FormAssociatedElement & import('./form-spinbutton.client').FormSpinbuttonProps`,
 		)
 	})
 })

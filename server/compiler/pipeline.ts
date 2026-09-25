@@ -33,6 +33,12 @@ export type CompiledComponent = {
 	/** Dedented verbatim CSS artifact. */
 	css: string
 	/**
+	 * Whether a form-association extension leads `config` — the host type
+	 * (`FormAssociatedElement` vs `HTMLElement`) of the tag-map entry
+	 * `tsrx-imports.d.ts` writes for a served `.tsrx` source (LT-325).
+	 */
+	formAssociated: boolean
+	/**
 	 * Client-module span table (LT-011, `check:corpus`): maps tsc diagnostics
 	 * over `clientCode` back onto the authored source.
 	 */
@@ -179,6 +185,7 @@ export const compileFromIR = (
 			serverCode: server.code,
 			clientCode: client.code,
 			css: component.css,
+			formAssociated: !!component.config?.form,
 			clientSpans: client.spans,
 			serverSpans: server.spans,
 		},

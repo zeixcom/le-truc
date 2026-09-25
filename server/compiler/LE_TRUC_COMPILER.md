@@ -959,9 +959,15 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   tag's served server module's args, keyed by the shortest path suffix no
   other source shares. A child with Slot-backed exposed props also gets a
   `'truc:pass'` key over exactly those props (LT-100), so an excess pass key
-  is a tsc error at the parent's compose site. `examples/tsconfig.json`
-  includes it, so a `.tsx` parent composing a still-`.tsrx` child needs no
-  hand-written typing.
+  is a tsc error at the parent's compose site. Every tag SERVED from
+  `.tsrx` also gets its `HTMLElementTagNameMap` entry (LT-325) — host
+  `HTMLElement` or `FormAssociatedElement` (from the compile's
+  `formAssociated`) intersected with the generated client's `<Name>Props` —
+  so a `.tsx` parent's `first`/`all('<tag>…')` types a `.tsrx` child;
+  the entry is identical to the client's own and merges with it in the root
+  program. `examples/tsconfig.json` includes the file, so a `.tsx` parent
+  composing or querying a still-`.tsrx` child needs no hand-written typing
+  and no hand-listed client.
 - **Consumers**: `server/build.ts` (via the `index.ts` facade plus direct
   `registry`/`spans` imports), `check:corpus` (§ 6), and the CEM build
   (`scripts/build-corpus.ts` feeds `cem analyze`, which reads the generated

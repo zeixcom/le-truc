@@ -44,9 +44,6 @@
 		"module/splitview/module-splitview.ts",
 		"module/splitview/module-splitview.tsx",
 		"../server/compiler/frontend/tsx/host-profile.d.ts",
-		"../server/generated/components/basic-button.client.ts",
-		"../server/generated/components/basic-number.client.ts",
-		"../server/generated/components/form-spinbutton.client.ts",
 		"../server/generated/components/tsrx-imports.d.ts"
 	]
 }
