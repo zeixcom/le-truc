@@ -20,7 +20,11 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { formatSimDiagnostic } from '../server/compiler/build-report.ts'
+import {
+	formatSimDiagnostic,
+	reportDiagnostics,
+} from '../server/compiler/build-report.ts'
+import { CLASSIFIED_DIAGNOSTICS } from '../server/compiler/sim/classifications.ts'
 import type { SimDiagnostic } from '../server/compiler/simulation/contract.ts'
 
 /* === Types === */
@@ -205,10 +209,19 @@ try {
 		)
 		for (const [label, value] of Object.entries(result.values))
 			console.log(`  ${label.padEnd(18)}= ${JSON.stringify(value)}`)
-		// Via the report formatter (LT-167): the raw message is subject-less
-		// for the kinds whose copy assumes an attribution prefix.
-		for (const diagnostic of result.diagnostics)
+		// Partitioned as the build partitions them (LT-341), then via the
+		// report formatter (LT-167): the raw message is subject-less for the
+		// kinds whose copy assumes an attribution prefix. Report-only — the
+		// exit code stays the runtimes' agreement, never the notices.
+		const report = reportDiagnostics(result.diagnostics, CLASSIFIED_DIAGNOSTICS)
+		for (const diagnostic of report.unclassified)
 			console.log(`  ! ${formatSimDiagnostic(diagnostic)}`)
+		// Classified notices are standing; the build lists their reasons.
+		const standing = new Set(report.classified.map(c => c.classification)).size
+		if (standing)
+			console.log(
+				`  ${standing} classified notice${standing === 1 ? '' : 's'} (×${report.classified.length})`,
+			)
 	}
 
 	const [first, ...rest] = names
