@@ -129,7 +129,11 @@ export const lowerSwitch = (
 		)
 		return null
 	}
-	const cases: Array<{ testText: string | null; children: TemplateNode[] }> = []
+	const cases: Array<{
+		testText: string | null
+		test: AstNode | null
+		children: TemplateNode[]
+	}> = []
 	for (const raw of rawCases as AstNode[]) {
 		const children = lowerBodyStatements(ctx, raw.consequent, signals, fors)
 		if (children.length === 0) {
@@ -144,6 +148,7 @@ export const lowerSwitch = (
 		}
 		cases.push({
 			testText: isNode(raw.test) ? text(ctx.source, raw.test) : null,
+			test: isNode(raw.test) ? raw.test : null,
 			children,
 		})
 	}

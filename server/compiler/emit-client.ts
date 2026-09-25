@@ -53,6 +53,37 @@ export type EmittedClientModule = {
 
 /* === Internal Functions === */
 
+/**
+ * The module's `@zeix/le-truc` names — imports and factory-context members
+ * alike — with the local name each synthesized call site must use (LT-302).
+ * An authored setup const, signal, query or loop variable named like a
+ * name the emitter writes a call to (`const bindText = …`) would shadow it
+ * inside the factory, so a colliding name is bound under a `__` alias
+ * (`bindText as __bindText`, `{ first: __first }`) instead. Authored text
+ * keeps its own spelling: inside the factory, the author's name already
+ * refers to the author's binding. No collision, no alias — byte-identical.
+ */
+class ClientImports extends Set<string> {
+	#scope: ReadonlySet<string> = new Set()
+	/** Record the factory-scope names; call once, before any `use()`. */
+	bindScope(scope: ReadonlySet<string>): void {
+		this.#scope = scope
+	}
+	/** The local name for `name`: itself, or `__name` on a collision. */
+	local(name: string): string {
+		return this.#scope.has(name) ? `__${name}` : name
+	}
+	/** Add `name` and return its local name, for a synthesized call site. */
+	use(name: string): string {
+		this.add(name)
+		return this.local(name)
+	}
+}
+
+/** `name`, or `name as local` / `name: local` when aliased. */
+const aliased = (name: string, local: string, separator: string): string =>
+	local === name ? name : `${name}${separator}${local}`
+
 /** `aria-selected` → `ariaSelected` (ARIA reflection property name). */
 const ariaProperty = (attr: string): string | null =>
 	attr.startsWith('aria-') ? sanitizeVarName(attr) : null
@@ -83,16 +114,16 @@ const memberAccess = (object: string, key: string): string =>
 
 const harvestInitializer = (
 	plan: ClientPlan['harvests'][number],
-	imports: Set<string>,
+	imports: ClientImports,
 ): string | null => {
 	if (plan.kind === 'substitute') return plan.expr
 	if (plan.kind === 'text') {
-		imports.add(plan.parser)
+		const parser = imports.use(plan.parser)
 		const read = `${plan.query}.textContent`
-		return `${plan.parser}()(${read})`
+		return `${parser}()(${read})`
 	}
 	if (plan.kind === 'attr') {
-		imports.add(plan.parser)
+		const parser = imports.use(plan.parser)
 		// CHECKLIST §6 (BUG): `value`/`checked`/`selected` are dirty-flag
 		// attributes — between server render and upgrade, the user can type,
 		// or the browser can refill via session restore/password-manager
@@ -104,10 +135,10 @@ const harvestInitializer = (
 		// `getAttribute` stays correct there.
 		if (DIRTY_FLAG_ATTRS.has(plan.attr)) {
 			const live = `${plan.query}.${plan.attr}`
-			return `${plan.parser}()(String(${live}))`
+			return `${parser}()(String(${live}))`
 		}
 		const raw = `${plan.query}.getAttribute(${jsString(plan.attr)})`
-		return `${plan.parser}()(${raw})`
+		return `${parser}()(${raw})`
 	}
 	// The list kind is emitted directly from its declaration (verbatim or
 	// substituted seed) and never reaches this initializer path.
@@ -148,7 +179,7 @@ const sliceOf = (text: string, start: number | undefined): SourceSlice[] =>
 
 const emitEachBlock = (
 	plan: ForClientPlan,
-	imports: Set<string>,
+	imports: ClientImports,
 	lines: string[],
 	spans: SourceSpan[],
 	cursor: SpanCursor,
@@ -157,7 +188,10 @@ const emitEachBlock = (
 	imports.add('each')
 	const append = (text: string, at: number, slices: SourceSlice[] = []): void =>
 		appendWithSpans(lines, text, at, slices, spans, cursor)
-	append(`each(${plan.collection}, ${plan.itemParam} => {`, depth)
+	append(
+		`${imports.use('each')}(${plan.collection}, ${plan.itemParam} => {`,
+		depth,
+	)
 	for (const rebinding of plan.rebindings)
 		append(`const ${rebinding.name} = ${rebinding.expr}`, depth + 1)
 	// LT-037: constructs on descendants of the loop's output root (rather
@@ -210,14 +244,14 @@ const emitEachBlock = (
 				// counterpart of the top-level property dispatch.
 				imports.add('bindProperty')
 				append(
-					`watch(${source}, bindProperty(${targetOf(effect.target)}, ${jsString(effect.attr)}))`,
+					`${imports.local('watch')}(${source}, ${imports.local('bindProperty')}(${targetOf(effect.target)}, ${jsString(effect.attr)}))`,
 					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
 			} else {
 				imports.add('bindAttribute')
 				append(
-					`watch(${source}, bindAttribute(${targetOf(effect.target)}, ${jsString(effect.attr)}))`,
+					`${imports.local('watch')}(${source}, ${imports.local('bindAttribute')}(${targetOf(effect.target)}, ${jsString(effect.attr)}))`,
 					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
@@ -227,7 +261,7 @@ const emitEachBlock = (
 			imports.add('bindClass')
 			for (const key of effect.keys) {
 				append(
-					`watch(() => Boolean(${memberAccess(`((${effect.thunkText})())`, key)}), bindClass(${targetOf(effect.target)}, ${jsString(key)}))`,
+					`${imports.local('watch')}(() => Boolean(${memberAccess(`((${effect.thunkText})())`, key)}), ${imports.local('bindClass')}(${targetOf(effect.target)}, ${jsString(key)}))`,
 					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
@@ -235,7 +269,7 @@ const emitEachBlock = (
 		} else {
 			imports.add('on')
 			append(
-				`on(${targetOf(effect.target)}, ${jsString(effect.event)}, ${effect.handlerText})`,
+				`${imports.local('on')}(${targetOf(effect.target)}, ${jsString(effect.event)}, ${effect.handlerText})`,
 				depth + 1,
 				sliceOf(effect.handlerText, effect.sourceStart),
 			)
@@ -258,7 +292,7 @@ const emitEachBlock = (
  */
 const emitReconcileBlock = (
 	plan: ReconcilePlan,
-	imports: Set<string>,
+	imports: ClientImports,
 	lines: string[],
 	spans: SourceSpan[],
 	cursor: SpanCursor,
@@ -271,11 +305,11 @@ const emitReconcileBlock = (
 		appendWithSpans(lines, text, at, slices, spans, cursor)
 	const keyParam = plan.keyParam ?? '_key'
 	append(
-		`reconcile(${plan.container}, ${plan.template}, ${plan.signal}, (_element, ${plan.itemParam}, ${keyParam}, first) => {`,
+		`${imports.local('reconcile')}(${plan.container}, ${plan.template}, ${plan.signal}, (_element, ${plan.itemParam}, ${keyParam}, first) => {`,
 		depth,
 	)
 	append(
-		`watch(${plan.itemParam}, bindText(first(${jsString(plan.holeSelector)}, ${jsString(`${plan.tag}: ${plan.holeSelector} missing`)})))`,
+		`${imports.local('watch')}(${plan.itemParam}, ${imports.local('bindText')}(first(${jsString(plan.holeSelector)}, ${jsString(`${plan.tag}: ${plan.holeSelector} missing`)})))`,
 		depth + 1,
 	)
 	for (const target of plan.itemEvents) {
@@ -287,7 +321,7 @@ const emitReconcileBlock = (
 		for (const event of target.events) {
 			imports.add('on')
 			append(
-				`on(${target.name}, ${jsString(event.event)}, ${event.handlerText})`,
+				`${imports.local('on')}(${target.name}, ${jsString(event.event)}, ${event.handlerText})`,
 				depth + 1,
 				sliceOf(event.handlerText, event.sourceStart),
 			)
@@ -301,10 +335,37 @@ const emitReconcileBlock = (
 	for (const query of plan.emptyQueries) {
 		imports.add('bindVisible')
 		append(
-			`watch(() => ${plan.signal}.length === 0, bindVisible(${query}))`,
+			`${imports.local('watch')}(() => ${plan.signal}.length === 0, ${imports.local('bindVisible')}(${query}))`,
 			depth,
 		)
 	}
+}
+
+/**
+ * Every name the author binds in the factory scope, for the alias check in
+ * {@link ClientImports}. `host`/`internals` are left out: the plan
+ * addresses the root through the literal `host`, so an authored `host`
+ * const is the author's own shadow, not a synthesized-site collision.
+ */
+const factoryScopeNames = (
+	component: ComponentIR,
+	plan: ClientPlan,
+): Set<string> => {
+	const names = new Set<string>()
+	for (const stmt of [...component.setup, ...component.clientSetup])
+		if (stmt.name) names.add(stmt.name)
+	for (const signal of component.signals) names.add(signal.name)
+	for (const query of plan.queries) names.add(query.name)
+	for (const loop of component.fors.values()) {
+		names.add(loop.itemName)
+		if (loop.kind === 'each') {
+			if (loop.indexName) names.add(loop.indexName)
+			for (const hoisted of loop.hoisted) names.add(hoisted.name)
+		}
+	}
+	names.delete('host')
+	names.delete('internals')
+	return names
 }
 
 /* === Exported Functions === */
@@ -328,7 +389,8 @@ export const emitClientModule = (
 		childImports?: ReadonlyMap<string, string> | undefined
 	},
 ): EmittedClientModule => {
-	const imports = new Set<string>(['defineComponent'])
+	const imports = new ClientImports(['defineComponent'])
+	imports.bindScope(factoryScopeNames(component, plan))
 	for (const ambient of component.exposeAmbients) imports.add(ambient)
 	const lines: string[] = []
 	const spans: SourceSpan[] = []
@@ -351,16 +413,18 @@ export const emitClientModule = (
 			// `required` message returns `Element | undefined` instead of
 			// throwing — the element only exists when that branch rendered.
 			imports.add('first')
-			push(`const ${query.name} = first(${jsString(query.selector)})`)
+			push(
+				`const ${query.name} = ${imports.local('first')}(${jsString(query.selector)})`,
+			)
 		} else if (query.cardinality === 'one') {
 			imports.add('first')
 			push(
-				`const ${query.name} = first(${jsString(query.selector)}, ${jsString(query.message)})`,
+				`const ${query.name} = ${imports.local('first')}(${jsString(query.selector)}, ${jsString(query.message)})`,
 			)
 		} else {
 			imports.add('all')
 			push(
-				`const ${query.name} = all(${jsString(query.selector)}, ${jsString(query.message)})`,
+				`const ${query.name} = ${imports.local('all')}(${jsString(query.selector)}, ${jsString(query.message)})`,
 			)
 		}
 	}
@@ -418,7 +482,9 @@ export const emitClientModule = (
 		}
 		const initializer = harvestInitializer(harvest, imports)
 		if (initializer)
-			push(`const ${signal.name} = ${signal.constructor}(${initializer})`)
+			push(
+				`const ${signal.name} = ${imports.local(signal.constructor)}(${initializer})`,
+			)
 	}
 
 	// requestContext-backed signals (LT-035, ADR 0024 sub-design 15): no DOM
@@ -466,7 +532,9 @@ export const emitClientModule = (
 		if (effect.kind === 'watch-text') {
 			imports.add('watch')
 			imports.add('bindText')
-			at(`watch(${effect.source}, bindText(${effect.query}))`)
+			at(
+				`${imports.local('watch')}(${effect.source}, ${imports.local('bindText')}(${effect.query}))`,
+			)
 			return
 		}
 		if (effect.kind === 'watch-attr') {
@@ -485,7 +553,7 @@ export const emitClientModule = (
 					? `() => String((${effect.thunkText})())`
 					: effect.thunkText
 				at(
-					`watch(${source}, bindProperty(${effect.query}, ${jsString(effect.attr)}))`,
+					`${imports.local('watch')}(${source}, ${imports.local('bindProperty')}(${effect.query}, ${jsString(effect.attr)}))`,
 					slices,
 				)
 			} else {
@@ -494,7 +562,7 @@ export const emitClientModule = (
 					? `() => String((${effect.thunkText})())`
 					: effect.thunkText
 				at(
-					`watch(${source}, bindAttribute(${effect.query}, ${jsString(effect.attr)}))`,
+					`${imports.local('watch')}(${source}, ${imports.local('bindAttribute')}(${effect.query}, ${jsString(effect.attr)}))`,
 					slices,
 				)
 			}
@@ -509,7 +577,7 @@ export const emitClientModule = (
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
 			const keys = effect.keys.map(jsString).join(', ')
 			at(
-				`watch(${effect.thunkText}, bindStyle(${effect.query}, [${keys}]))`,
+				`${imports.local('watch')}(${effect.thunkText}, ${imports.local('bindStyle')}(${effect.query}, [${keys}]))`,
 				slices,
 			)
 			return
@@ -523,7 +591,7 @@ export const emitClientModule = (
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
 			const keys = effect.keys.map(jsString).join(', ')
 			at(
-				`watch(${effect.thunkText}, bindClass(${effect.query}, [${keys}]))`,
+				`${imports.local('watch')}(${effect.thunkText}, ${imports.local('bindClass')}(${effect.query}, [${keys}]))`,
 				slices,
 			)
 			return
@@ -535,7 +603,7 @@ export const emitClientModule = (
 			imports.add('dangerouslyBindInnerHTML')
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
 			at(
-				`watch(${effect.thunkText}, dangerouslyBindInnerHTML(${effect.query}))`,
+				`${imports.local('watch')}(${effect.thunkText}, ${imports.local('dangerouslyBindInnerHTML')}(${effect.query}))`,
 				slices,
 			)
 			return
@@ -545,12 +613,15 @@ export const emitClientModule = (
 			const accessors = effect.setThunkText
 				? `{ get: ${effect.thunkText}, set: ${effect.setThunkText} }`
 				: `{ get: ${effect.thunkText} }`
-			at(`pass(${effect.query}, { ${effect.prop}: ${accessors} })`, [
-				...sliceOf(effect.thunkText, effect.sourceStart),
-				...(effect.setThunkText
-					? sliceOf(effect.setThunkText, effect.setSourceStart)
-					: []),
-			])
+			at(
+				`${imports.local('pass')}(${effect.query}, { ${effect.prop}: ${accessors} })`,
+				[
+					...sliceOf(effect.thunkText, effect.sourceStart),
+					...(effect.setThunkText
+						? sliceOf(effect.setThunkText, effect.setSourceStart)
+						: []),
+				],
+			)
 			return
 		}
 		if (effect.kind === 'raw') {
@@ -589,7 +660,7 @@ export const emitClientModule = (
 				`const ${effect.errFieldsetQuery} = ${effect.errQuery}.parentElement as HTMLFieldSetElement`,
 				depth,
 			)
-			append(`watch(${effect.signal}, {`, depth)
+			append(`${imports.local('watch')}(${effect.signal}, {`, depth)
 			append('ok: value => {', depth + 1)
 			append(`${effect.pendingQuery}.hidden = true`, depth + 2)
 			append(`${effect.pendingFieldsetQuery}.disabled = true`, depth + 2)
@@ -638,7 +709,7 @@ export const emitClientModule = (
 		}
 		imports.add('on')
 		at(
-			`on(${effect.query}, '${effect.event}', ${effect.handlerText})`,
+			`${imports.local('on')}(${effect.query}, '${effect.event}', ${effect.handlerText})`,
 			sliceOf(effect.handlerText, effect.sourceStart),
 		)
 	}
@@ -656,7 +727,7 @@ export const emitClientModule = (
 		]),
 	].sort()
 	const context = contextMembers.length
-		? `{ ${contextMembers.join(', ')} }`
+		? `{ ${contextMembers.map(name => aliased(name, imports.local(name), ': ')).join(', ')} }`
 		: '{}'
 	const typeArg = component.propsTypeName ? `<${component.propsTypeName}>` : ''
 
@@ -666,16 +737,13 @@ export const emitClientModule = (
 	// structurally by construction).
 	const extensions: string[] = []
 	if (component.config?.form === 'value') {
-		imports.add('formAssociated')
-		extensions.push('formAssociated()')
+		extensions.push(`${imports.use('formAssociated')}()`)
 	} else if (component.config?.form === 'checked') {
-		imports.add('formAssociatedCheckbox')
-		extensions.push('formAssociatedCheckbox()')
+		extensions.push(`${imports.use('formAssociatedCheckbox')}()`)
 	}
 	if (component.config && component.config.observedAttributes.length > 0) {
-		imports.add('observedAttributes')
 		extensions.push(
-			`observedAttributes([${component.config.observedAttributes.map(n => jsString(n)).join(', ')}])`,
+			`${imports.use('observedAttributes')}([${component.config.observedAttributes.map(n => jsString(n)).join(', ')}])`,
 		)
 	}
 	// The widened host typing (FormAssociatedElement & P) is authored via
@@ -706,8 +774,15 @@ export const emitClientModule = (
 
 	const importList = [...imports]
 		.filter(name => !FACTORY_CONTEXT_MEMBERS.has(name))
-		.filter(name => !component.imports.clientLeTrucNames.has(name))
+		// An aliased name is always imported here: the authored import binds
+		// the bare name, which the author's own binding shadows (LT-302).
+		.filter(
+			name =>
+				!component.imports.clientLeTrucNames.has(name) ||
+				imports.local(name) !== name,
+		)
 		.sort()
+		.map(name => aliased(name, imports.local(name), ' as '))
 	if (importList.length > 0)
 		body.push(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
 	if (needsFormType)
@@ -724,7 +799,7 @@ export const emitClientModule = (
 	// identical comment text ⇒ identical CEM extraction (LT-006), and the
 	// generated client documents itself.
 	if (component.componentDoc) body.push(component.componentDoc, '')
-	body.push(`export default defineComponent${typeArg}(`)
+	body.push(`export default ${imports.local('defineComponent')}${typeArg}(`)
 	body.push(`\t'${component.tag}',`)
 	body.push(`\t(${context}) => {`)
 	// `spans` were recorded relative to `lines.join('\n')` — offset by the

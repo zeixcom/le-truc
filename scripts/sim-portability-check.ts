@@ -130,7 +130,15 @@ try {
 	const renderFn = serverModule[FIXTURE.render]
 	if (!renderFn)
 		throw new Error(`${FIXTURE.server} exports no ${FIXTURE.render}()`)
-	const markup = renderFn(FIXTURE.args)
+	// The compiler-supplied locale record, as the build's page renderer
+	// passes it: an i18n-declaring render destructures `i18n` (LT-329).
+	const { i18nRecord } = (await import(join(generated, 'i18n.ts'))) as {
+		i18nRecord: (tag: string) => unknown
+	}
+	const markup = renderFn({
+		...FIXTURE.args,
+		i18n: i18nRecord(FIXTURE.component),
+	})
 
 	// 2. Portable client bundle. The generated modules use Bun-style
 	//    extensionless imports and a self-referencing '@zeix/le-truc'; bundling

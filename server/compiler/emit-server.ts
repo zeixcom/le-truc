@@ -50,6 +50,7 @@ import {
 	type SpanCursor,
 } from './spans'
 import type { EvaluationTier } from './tier'
+import { walkTemplate } from './walk'
 
 /* === Types === */
 
@@ -72,6 +73,54 @@ type ElementNode = Extract<TemplateNode, { kind: 'element' }>
 type TryNode = Extract<TemplateNode, { kind: 'try' }>
 type ComposeNode = Extract<TemplateNode, { kind: 'compose' }>
 type Part = { static: string } | { expr: string }
+
+/**
+ * The harness names the emitter itself writes calls to (LT-302) — as
+ * opposed to the authored vocabulary (`createCell`, `expose`, the parsers)
+ * that reaches the module inside verbatim setup text. An arg, setup const,
+ * loop variable or catch parameter of the same name would shadow the
+ * import inside the render function (`for (const item of items(items))`),
+ * so a colliding name is imported under a `__` alias instead. The alias
+ * applies only on a collision: every other module stays byte-identical.
+ */
+const EMITTED_HARNESS_NAMES = [
+	'attr',
+	'cls',
+	'composeHostAttrs',
+	'entries',
+	'esc',
+	'i18nRecord',
+	'isPending',
+	'items',
+	'pluralCategories',
+	'refStub',
+	'sanitizeHtml',
+	'styleAttr',
+] as const
+type EmittedHarnessName = (typeof EMITTED_HARNESS_NAMES)[number]
+
+/** Every name the render function binds, for the harness-alias check. */
+const renderScopeNames = (component: ComponentIR): Set<string> => {
+	// Bindings only — not `serverKnown`, which also holds module imports: an
+	// authored `isPending` import IS the harness name, not a shadow of it.
+	const names = new Set<string>(component.paramNames)
+	for (const stmt of component.setup) if (stmt.name) names.add(stmt.name)
+	for (const loop of component.fors.values()) {
+		names.add(loop.itemName)
+		if (loop.kind === 'each') {
+			if (loop.indexName) names.add(loop.indexName)
+			for (const hoisted of loop.hoisted) names.add(hoisted.name)
+		}
+	}
+	walkTemplate(component.root, node => {
+		if (node.kind === 'try' && node.catchParam) names.add(node.catchParam)
+	})
+	return names
+}
+
+/** The import specifier for `name`, aliased when the emitter aliased it. */
+const importSpecifier = (name: string, local: string): string =>
+	local === name ? name : `${name} as ${local}`
 
 /**
  * The template emitters' shared state (LT-225): what `emit`/`emitElement`/
@@ -141,6 +190,12 @@ type EmitContext = {
 	emptyArmNodes: ReadonlySet<TemplateNode>
 	/** Unique suffix counter for the loops' `__emptyN` flags. */
 	emptyCounter: number
+	/**
+	 * The local name of a harness import the emitter synthesizes a call to
+	 * (LT-302): the bare name, or `__<name>` when a render-scope name
+	 * shadows it. See {@link EMITTED_HARNESS_NAMES}.
+	 */
+	h: (name: EmittedHarnessName) => string
 }
 
 /* === Internal Functions === */
@@ -399,7 +454,7 @@ const listTemplateLines = (
 			else if (!node.lazy) {
 				ctx.used.add('esc')
 				out.push(
-					`${tab(atDepth)}${ctx.buffer}.push(esc(String(${node.exprText})))`,
+					`${tab(atDepth)}${ctx.buffer}.push(${ctx.h('esc')}(String(${node.exprText})))`,
 				)
 			}
 			return
@@ -421,7 +476,7 @@ const listTemplateLines = (
 				// double-quoted attribute the static parts open and close.
 				ctx.used.add('esc')
 				parts.push({ static: ` ${attr.name}="` })
-				parts.push({ expr: `esc(String(${attr.exprText}))` })
+				parts.push({ expr: `${ctx.h('esc')}(String(${attr.exprText}))` })
 				parts.push({ static: '"' })
 			}
 		}
@@ -545,8 +600,8 @@ const emitFor = (
 	if (loop.indexName) loopScope.add(loop.indexName)
 	for (const hoisted of loop.hoisted) loopScope.add(hoisted.name)
 	const binding = usesIndex
-		? `const [${loop.indexName}, ${loop.itemName}] of entries(${loop.iterableText})`
-		: `const ${loop.itemName} of items(${loop.iterableText})`
+		? `const [${loop.indexName}, ${loop.itemName}] of ${ctx.h('entries')}(${loop.iterableText})`
+		: `const ${loop.itemName} of ${ctx.h('items')}(${loop.iterableText})`
 	const emptyFlag = openEmptyFlag(ctx, loop, depth)
 	ctx.lines.push(`${tab(depth)}for (${binding}) {`)
 	if (emptyFlag) ctx.lines.push(`${tab(depth + 1)}${emptyFlag} = false`)
@@ -591,7 +646,9 @@ const emitElement = (
 				break
 			case 'server':
 				ctx.used.add('attr')
-				parts.push({ expr: `attr('${attr.name}', ${attr.exprText})` })
+				parts.push({
+					expr: `${ctx.h('attr')}('${attr.name}', ${attr.exprText})`,
+				})
 				break
 			case 'reactive': {
 				const mirror = hostPropMirrorExpr(ctx.component, attr.thunk)
@@ -606,20 +663,22 @@ const emitElement = (
 						: null
 				if (mirror !== null) {
 					ctx.used.add('attr')
-					parts.push({ expr: `attr('${attr.name}', ${mirror})` })
+					parts.push({ expr: `${ctx.h('attr')}('${attr.name}', ${mirror})` })
 				} else if (derived !== null) {
 					ctx.used.add('attr')
-					parts.push({ expr: `attr('${attr.name}', ${derived})` })
+					parts.push({ expr: `${ctx.h('attr')}('${attr.name}', ${derived})` })
 				} else if (isServerEvaluable(attr.thunk, scope)) {
 					ctx.used.add('attr')
-					parts.push({ expr: `attr('${attr.name}', (${attr.thunkText})())` })
+					parts.push({
+						expr: `${ctx.h('attr')}('${attr.name}', (${attr.thunkText})())`,
+					})
 				}
 				break
 			}
 			case 'class-map':
 				if (isServerEvaluable(attr.object, scope)) {
 					ctx.used.add('cls')
-					classExpr = `cls((${attr.thunkText})())`
+					classExpr = `${ctx.h('cls')}((${attr.thunkText})())`
 				}
 				break
 			case 'style-map':
@@ -627,7 +686,7 @@ const emitElement = (
 					ctx.used.add('attr')
 					ctx.used.add('styleAttr')
 					parts.push({
-						expr: `attr('style', styleAttr((${attr.thunkText})()) || null)`,
+						expr: `${ctx.h('attr')}('style', ${ctx.h('styleAttr')}((${attr.thunkText})()) || null)`,
 					})
 				}
 				break
@@ -729,8 +788,8 @@ const emitCompose = (
 						: null
 		args.push(
 			langExpr !== null
-				? `i18n: i18nRecord(${JSON.stringify(entry.tag)}, ${langExpr})`
-				: `i18n: i18nRecord(${JSON.stringify(entry.tag)})`,
+				? `i18n: ${ctx.h('i18nRecord')}(${JSON.stringify(entry.tag)}, ${langExpr})`
+				: `i18n: ${ctx.h('i18nRecord')}(${JSON.stringify(entry.tag)})`,
 		)
 	}
 	// LT-090: materialize compose-site class/id/data-* on the child root
@@ -752,7 +811,7 @@ const emitCompose = (
 			.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
 			.join(', ')
 		ctx.lines.push(
-			`${tab(depth)}${ctx.buffer}.push(composeHostAttrs(${renderCall}, ${JSON.stringify(entry.tag)}, { ${attrsArg} }))`,
+			`${tab(depth)}${ctx.buffer}.push(${ctx.h('composeHostAttrs')}(${renderCall}, ${JSON.stringify(entry.tag)}, { ${attrsArg} }))`,
 		)
 	} else {
 		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(${renderCall})`)
@@ -809,7 +868,7 @@ const emitAsyncBoundary = (
 		`${tab(depth)}let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`,
 	)
 	ctx.lines.push(`${tab(depth)}let ${errVar}: unknown = undefined`)
-	ctx.lines.push(`${tab(depth)}if (!isPending(${signalName})) {`)
+	ctx.lines.push(`${tab(depth)}if (!${ctx.h('isPending')}(${signalName})) {`)
 	ctx.lines.push(`${tab(depth + 1)}try {`)
 	ctx.lines.push(`${tab(depth + 2)}${signalName}.get()`)
 	ctx.lines.push(`${tab(depth + 2)}${stateVar} = 'ok'`)
@@ -840,7 +899,7 @@ const emitAsyncBoundary = (
 		if (guardedExpr !== null && child.kind === 'expr' && child.lazy) {
 			ctx.used.add('esc')
 			ctx.lines.push(
-				`${tab(depth)}${ctx.buffer}.push(esc(String(${guardedExpr})))`,
+				`${tab(depth)}${ctx.buffer}.push(${ctx.h('esc')}(String(${guardedExpr})))`,
 			)
 			return
 		}
@@ -868,7 +927,7 @@ const emitAsyncBoundary = (
 				{
 					static: '<fieldset style="border:0;padding:0;margin:0;min-width:0"',
 				},
-				{ expr: `attr('disabled', ${hiddenCond})` },
+				{ expr: `${ctx.h('attr')}('disabled', ${hiddenCond})` },
 				{ static: '>' },
 			])})`,
 		)
@@ -951,7 +1010,9 @@ const emit = (
 					ctx.foldScope,
 				)
 			: node.exprText
-		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(esc(String(${value})))`)
+		ctx.lines.push(
+			`${tab(depth)}${ctx.buffer}.push(${ctx.h('esc')}(String(${value})))`,
+		)
 		return
 	}
 	if (node.kind === 'if') {
@@ -1048,7 +1109,7 @@ const emit = (
 		if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
 			ctx.used.add('sanitizeHtml')
 			ctx.lines.push(
-				`${tab(depth)}${ctx.buffer}.push(sanitizeHtml(String(${htmlAttr.exprText})))`,
+				`${tab(depth)}${ctx.buffer}.push(${ctx.h('sanitizeHtml')}(String(${htmlAttr.exprText})))`,
 			)
 		}
 		for (const child of node.children) emit(ctx, child, scope, depth)
@@ -1071,7 +1132,7 @@ const emit = (
 	if (caseAttr) {
 		ctx.used.add('pluralCategories')
 		ctx.lines.push(
-			`${tab(depth)}if (pluralCategories(${ctx.component.langBinding}${ctx.pluralTypeExpr ? `, ${ctx.pluralTypeExpr}` : ''}).has('${caseAttr.category}')) {`,
+			`${tab(depth)}if (${ctx.h('pluralCategories')}(${ctx.component.langBinding}${ctx.pluralTypeExpr ? `, ${ctx.pluralTypeExpr}` : ''}).has('${caseAttr.category}')) {`,
 		)
 		emitPlainElement()
 		ctx.lines.push(`${tab(depth)}}`)
@@ -1123,6 +1184,7 @@ export const emitServerModule = (
 		tier?: EvaluationTier | undefined
 	},
 ): EmittedServerModule => {
+	const renderScope = renderScopeNames(component)
 	const ctx: EmitContext = {
 		component,
 		composeRegistry: options.composeRegistry,
@@ -1140,6 +1202,7 @@ export const emitServerModule = (
 		pluralTypeExpr: null,
 		templateQueue: [],
 		foldScope: foldableRenderScope(component),
+		h: name => (renderScope.has(name) ? `__${name}` : name),
 	}
 	// The emitters mutate these in place and never rebind them, so the
 	// assembly tail binds the identities directly; the mutable scalars
@@ -1165,7 +1228,9 @@ export const emitServerModule = (
 		else if (attr.kind === 'static') rootParts.push({ static: ` ${attr.name}` })
 		else if (attr.kind === 'server') {
 			used.add('attr')
-			rootParts.push({ expr: `attr('${attr.name}', ${attr.exprText})` })
+			rootParts.push({
+				expr: `${ctx.h('attr')}('${attr.name}', ${attr.exprText})`,
+			})
 		} else if (attr.kind === 'style-map') {
 			// LT-028: the root's reactive style is the one construct the client
 			// analyzer accepts (targeting `host`) — render its initial value here
@@ -1174,7 +1239,7 @@ export const emitServerModule = (
 				used.add('attr')
 				used.add('styleAttr')
 				rootParts.push({
-					expr: `attr('style', styleAttr((${attr.thunkText})()) || null)`,
+					expr: `${ctx.h('attr')}('style', ${ctx.h('styleAttr')}((${attr.thunkText})()) || null)`,
 				})
 			}
 		} else if (attr.kind === 'class-map') {
@@ -1184,7 +1249,7 @@ export const emitServerModule = (
 				used.add('attr')
 				used.add('cls')
 				rootParts.push({
-					expr: `attr('class', cls((${attr.thunkText})()) || null)`,
+					expr: `${ctx.h('attr')}('class', ${ctx.h('cls')}((${attr.thunkText})()) || null)`,
 				})
 			}
 		}
@@ -1203,7 +1268,9 @@ export const emitServerModule = (
 		!component.root.attrs.some(a => 'name' in a && a.name === 'lang')
 	) {
 		used.add('attr')
-		rootParts.push({ expr: `attr('lang', ${component.langBinding})` })
+		rootParts.push({
+			expr: `${ctx.h('attr')}('lang', ${component.langBinding})`,
+		})
 	}
 	rootParts.push({ static: '>' })
 
@@ -1527,7 +1594,16 @@ export const emitServerModule = (
 		' */',
 	]
 	if (used.size > 0) {
-		const imports = [...used].sort()
+		const imports = [...used]
+			.sort()
+			.map(name =>
+				importSpecifier(
+					name,
+					(EMITTED_HARNESS_NAMES as readonly string[]).includes(name)
+						? ctx.h(name as EmittedHarnessName)
+						: name,
+				),
+			)
 		body.push(
 			`import { ${imports.join(', ')} } from '${options.runtimeImport}'`,
 		)
@@ -1539,7 +1615,10 @@ export const emitServerModule = (
 	// artifacts. Type import when this component declares the parameter;
 	// value import when this module composes a child that declares it.
 	if (component.declaresI18n) body.push(`import type { I18n } from './i18n'`)
-	if (ctx.usedI18nRecord) body.push(`import { i18nRecord } from './i18n'`)
+	if (ctx.usedI18nRecord)
+		body.push(
+			`import { ${importSpecifier('i18nRecord', ctx.h('i18nRecord'))} } from './i18n'`,
+		)
 	for (const importText of component.imports.server) body.push(importText)
 	body.push('')
 	for (const decl of component.typeDecls) body.push(decl, '')
@@ -1563,7 +1642,8 @@ export const emitServerModule = (
 	// still needs it to TYPE-CHECK (LT-019). `expose()`'s own argument
 	// object, unlike those bodies, IS evaluated, so the stub has to
 	// survive being read and called, not just resolve (LT-121).
-	for (const name of stubNamesAll) body.push(`\tconst ${name}: any = refStub`)
+	for (const name of stubNamesAll)
+		body.push(`\tconst ${name}: any = ${ctx.h('refStub')}`)
 	// Setup statements keep their relative shape: the shallowest continuation
 	// line lands at one tab (statement depth), deeper lines keep their
 	// relative indent, template-literal interiors stay byte-identical (LT-010).

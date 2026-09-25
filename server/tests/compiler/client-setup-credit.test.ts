@@ -11,6 +11,7 @@
  */
 import { describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../compiler/frontend/tsrx'
+import { compileComponentTsx } from '../../compiler/frontend/tsx'
 
 const compile = (source: string) =>
 	compileComponent(source, 'c.tsrx', new Set())
@@ -117,6 +118,75 @@ import { createState } from '@zeix/le-truc'`)
 	</>
 }
 import { bindText, createMemo } from '@zeix/le-truc'`)
+		expect(
+			component?.entry.routingSignals.some(s => s.origin === 'LTC004'),
+		).toBe(true)
+		expect(component?.entry.tier).toBe('simulated')
+	})
+
+	test('a @case test is a render position (LT-330)', () => {
+		// The case test \`label()\` reaches \`count\` through a carrier, the
+		// same shape as LT-327 — but in a switch arm, not an \`@if\` test.
+		const { component } = compile(`export function C({ mode }: { mode: string })
+@{
+	const count = createMemo(() => all('li').get().length)
+	const label = () => String(count.get())
+	const out = first('output', 'the log')
+	expose({})
+	watch(label, bindText(out))
+	<>
+		<c-el>
+			<ul><li>a</li></ul>
+			<output></output>
+			@switch (mode) {
+				@case label(): {
+					<p>one</p>
+				}
+				@default: {
+					<p>other</p>
+				}
+			}
+		</c-el>
+		<style>c-el { display: block }</style>
+	</>
+}
+import { bindText, createMemo } from '@zeix/le-truc'`)
+		expect(
+			component?.entry.routingSignals.some(s => s.origin === 'LTC004'),
+		).toBe(true)
+		expect(component?.entry.tier).toBe('simulated')
+	})
+
+	test('a switch case test is a render position on .tsx (LT-330)', () => {
+		const { component } = compileComponentTsx(
+			`export function C({ mode }: { mode: string }) {
+	const count = createMemo(() => all('li').get().length)
+	const label = () => String(count.get())
+	const out = first('output', 'the log')
+	expose({})
+	watch(label, bindText(out))
+	return (
+		<>
+			<c-el>
+				<ul><li>a</li></ul>
+				<output></output>
+				{(() => {
+					switch (mode) {
+						case label():
+							return <p>one</p>
+						default:
+							return <p>other</p>
+					}
+				})()}
+			</c-el>
+			<style>{'c-el { display: block }'}</style>
+		</>
+	)
+}
+import { bindText, createMemo } from '@zeix/le-truc'`,
+			'c.tsx',
+			new Set(),
+		)
 		expect(
 			component?.entry.routingSignals.some(s => s.origin === 'LTC004'),
 		).toBe(true)

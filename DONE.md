@@ -44,6 +44,45 @@ LT-283–LT-286, LT-293, LT-294, LT-298, LT-315), 2026-09-21 ×2. Full entry tex
 - **Scrollarea's wall-time at demo scale is noise** (474/341/330 ms Simulated vs 432 ms Folded).
   The ~2.3 s ADR 0029 cites returns only once page occurrences are simulated (LT-103).
 
+- [x] LT-326: A server-data loop's iterable is unchecked for impure ambients — reviewed ✓
+  **Changed:** a server-data loop whose items read `Date`/`Intl`, an RNG (`Math.random()`,
+  `crypto.randomUUID()`/`getRandomValues()`) or a locale method fails **LTC033** on both
+  surfaces (new `impureLoopItems` builder; copy reviewed by Tech Writer). The check sits in
+  `fold-inputs.ts`, the one walk that holds the loop's outer scope, so a resolvable-locale
+  `Intl` iterable still folds. All LTC033 copy now names the RNG generically.
+  **Review:** approved 2026-09-25. LTC033 is still syntactic at the site on every position,
+  so a setup const, a helper or a hoisted loop const that carries the impure read compiles
+  clean. **Live handoff:** LT-340.
+
+- [x] LT-302: Arg and setup names shadow the render-harness imports — done ✓
+  **Changed:** generated modules alias a colliding name instead of failing (Architect ruling
+  2026-09-24: alias, don't forbid). Server: an emitter-synthesized harness import
+  (`items`, `esc`, `attr`, …) is imported as `__<name>` when a param, setup, loop or catch
+  binding shares its name. Client: the same for `@zeix/le-truc` imports (`as __x`) and
+  factory-context members (`x: __x`), after the audit found a setup `const bindText`
+  shadowing the synthesized `bindText(span)`.
+  **Ruling (recorded nowhere else):** only emitter-synthesized sites are aliased. Authored
+  text keeps its spelling, because inside the factory the author's name already means the
+  author's binding. `host`/`internals` are never aliased: an authored `host` const is the
+  author's own shadow. No diagnostic was needed.
+
+- [x] LT-330: `@case` tests are render positions — done ✓
+  **Changed:** switch cases carry their test node in the IR (`test: AstNode | null`), and
+  the test is credited as a render position, collected for server imports and checked for
+  page context (LTC054) beside the discriminant. A `@case` test over a
+  context-member-seeded signal now routes Simulated (LTC004) on both surfaces.
+
+- [x] LT-329: `check:sim` fails on a clean tree — done ✓
+  **Changed:** `scripts/sim-portability-check.ts` passes `i18nRecord(component)` to the
+  render function, as the build does. Bun and Node serialize identically.
+  **Open caveat:** Deno was not verified: the agent sandbox blocks its npm cache. The
+  exit-0 criterion stands once the owner runs `bun run check:sim` locally.
+
+- [x] LT-328: HOST_PROFILE and compiler doc hygiene after LT-316/LT-320 — done ✓
+  **Changed:** HOST_PROFILE § element references names `data-*` in the compose-site
+  invariant (a host attribute, never forwarded; literals only), and says the authored
+  `first()` selector is emitted when verifiable, with synthesis as the fallback.
+
 - [x] LT-107: Migrate `module-listnav` to `.tsx` with same-commit cutover — reviewed ✓
   **Changed:** serves as compiled `.tsx`, twin retained. **Tier: Simulated** (`compose-read` of
   the Simulated `form-listbox`, as predicted). Composes `FormListbox` and `ModuleLazyload`; the

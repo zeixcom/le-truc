@@ -368,8 +368,10 @@ const serverExprNodes = (root: TemplateNode): AstNode[] => {
 	walkTemplate(root, node => {
 		if (node.kind === 'expr' && !node.lazy) out.push(node.expr)
 		else if (node.kind === 'if') out.push(node.test)
-		else if (node.kind === 'switch') out.push(node.discriminant)
-		else if (node.kind === 'compose')
+		else if (node.kind === 'switch') {
+			out.push(node.discriminant)
+			for (const arm of node.cases) if (arm.test) out.push(arm.test)
+		} else if (node.kind === 'compose')
 			for (const attr of node.attrs)
 				if (attr.kind === 'arg' && attr.node) out.push(attr.node)
 	})

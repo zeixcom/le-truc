@@ -1090,6 +1090,30 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
+- [ ] LT-340: LTC033 sees only the expression written at the site, so an impure read through a setup const, helper or loop const folds (LT-326 review).
+  **Skill:** le-truc-dev
+  **Context:** confirmed at review on `.tsx` (`.tsrx` is the same code path). All of these
+  compile clean and bake one build-time reading into the page:
+  `const shuffled = [...items].sort(() => Math.random() - 0.5)` then a loop over `shuffled`;
+  `const shuffle = (xs) => [...xs].sort(() => Math.random() - 0.5)` then `shuffle(items)`;
+  a `const id = crypto.randomUUID()` hoisted inside an `@for` body; `{id}` or `{rid()}` as a
+  static text child over such a const or helper. Only the inline spelling fails LTC033,
+  because `containsImpureAmbient` checks the site's own node. The setup-const and helper forms
+  are how a shuffle is usually written, so LT-326 closes only the least common spelling.
+  **Rule:** report LTC033 at the server-evaluated position that *reads* the impurity, not at
+  the declaration. A setup const whose value never reaches markup is harmless. Reuse LTC054's
+  mechanism in `fold-inputs.ts`: the `tainted` fixpoint over setup helpers, extended to
+  non-function setup consts and hoisted loop consts, with impure-ambient causes in place of
+  page-context reads. Keep the `Intl` scope rule: a helper's locale argument resolves in the
+  caller's scope. Static positions only. A reactive thunk reading a tainted const keeps
+  today's omit-and-correct behaviour (LT-165 step 5).
+  **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033). **Copy reviewer:** Tech
+  Writer, if the builders need a "through `name`" clause naming the carrier. LTC054 reports
+  reads through helpers without one, so decide by consistency with it.
+  **Check:** the five probes above fail LTC033 on both surfaces. A resolvable-locale `Intl`
+  helper still folds. A setup const holding `Math.random()` that is read only in client code
+  compiles. Corpus output byte-identical; census unchanged.
+
 - [ ] LT-297: `argsFromAttrs` keys attributes by the arg's camelCase name (LT-290 close-out; latent).
   **Skill:** le-truc-dev
   **Context:** the page-occurrence helper reads `attrs["bigStep"]`, but HTML attribute

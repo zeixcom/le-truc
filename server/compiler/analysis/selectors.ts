@@ -153,6 +153,14 @@ const discriminatorCandidates = (element: ElementNode): string[] => {
 }
 
 /**
+ * The one-clause grammar selectors are synthesized in, and the only grammar
+ * `matchesSelector`/`mayMatchShape` parse: an optional tag, then at most one
+ * `[attr="value"]`, `.token` or `#id` clause.
+ */
+const SELECTOR_GRAMMAR =
+	/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\]|\.([A-Za-z_-][\w-]*)|#([A-Za-z_-][\w-]*))?$/
+
+/**
  * Does `candidate` structurally match a synthesized selector string?
  * Exported for LT-118's per-branch addressing collision check: a branch
  * root's query is only sound if it cannot match the OTHER branch's markup,
@@ -168,14 +176,6 @@ const discriminatorCandidates = (element: ElementNode): string[] => {
  * onto the wrong branch's element. An unrecognized selector is a false, not
  * a throw, which is why this pairing is the load-bearing half of LT-124.
  */
-/**
- * The one-clause grammar selectors are synthesized in, and the only grammar
- * `matchesSelector`/`mayMatchShape` parse: an optional tag, then at most one
- * `[attr="value"]`, `.token` or `#id` clause.
- */
-const SELECTOR_GRAMMAR =
-	/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\]|\.([A-Za-z_-][\w-]*)|#([A-Za-z_-][\w-]*))?$/
-
 export const matchesSelector = (
 	candidate: ElementNode,
 	selector: string,
@@ -528,8 +528,9 @@ const mayMatchShape = (shape: RenderedShape, selector: string): boolean => {
  * selector comes first (LT-316): page-authored occurrences are addressed by
  * the author's contract, so a synthesized selector would silently narrow or
  * widen it. It still has to prove itself like any candidate — unique over
- * the tree, and exclusion-wrapped when a composed child could match. Uniqueness is counted over the component's
- * OWN template (`base`), but the runtime query also descends into every
+ * the tree, and exclusion-wrapped when a composed child could match.
+ * Uniqueness is counted over the component's OWN template (`base`), but the
+ * runtime query also descends into every
  * composed child's rendered markup (LT-096: module-codeblock's overlay
  * resolved to a bare `button`, which found the composed basic-button's own
  * `<button>` first). With `composed` known — the registry-aware pass — a

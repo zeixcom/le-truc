@@ -57,7 +57,7 @@ export type DiagnosticCode =
 	| 'LTC030' // <textarea value={…}> — textarea has no value content attribute
 	| 'LTC031' // RETIRED — per-branch addressing replaced it; no builder emits this code; the member stays so every spent number is visible in the union (ADR 0028 lifecycle)
 	| 'LTC032' // destructured prop has a default value but its type isn't marked optional
-	| 'LTC033' // a static child or server-rendered attribute reads an impure ambient (Date/Intl/Math.random/toLocaleString) — reactive thunks are omitted silently instead (LT-165 step 5)
+	| 'LTC033' // a static child or server-rendered attribute reads an impure ambient (Date/Intl/Math.random/crypto RNG/toLocaleString), and so do a server-data loop's items (LT-326) — reactive thunks are omitted silently instead (LT-165 step 5)
 	| 'LTC034' // severe only (LT-165 step 5): disabled/checked unresolvable on a submittable control of a Static-tier component; non-severe sites are routing signals
 	| 'LTC035' // duplicate static id across @try/@catch/@pending arms
 	| 'LTC036' // real `@zeix/le-truc` export used without an explicit import (sub-design 16)
@@ -881,7 +881,7 @@ export const diagnostic = {
 	impureStaticChild: (source: string, offset: number | undefined) =>
 		error(
 			'LTC033',
-			"This child reads an ambient value (`Date`/`Intl`, `Math.random()`, or a locale/timezone method) with no signal dependency, so it renders exactly once, server-side, at build time, forever — the build machine's clock/locale/timezone/RNG reading gets baked into the page permanently, with no client-side correction. Wrap it in a signal (e.g. `createCell(...)` set from a client-only effect) so it can be a reactive child instead, or move the computation out of the template entirely.",
+			"This child reads an ambient value (`Date`/`Intl`, a random-number generator such as `Math.random()` or `crypto.randomUUID()`, or a locale/timezone method) with no signal dependency, so it renders exactly once, server-side, at build time, forever — the build machine's clock/locale/timezone/RNG reading gets baked into the page permanently, with no client-side correction. Wrap it in a signal (e.g. `createCell(...)` set from a client-only effect) so it can be a reactive child instead, or move the computation out of the template entirely.",
 			lineOf(source, offset),
 		),
 
@@ -902,7 +902,25 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC033',
-			`Attribute \`${attrName}\` reads an ambient value (\`Date\`/\`Intl\`, \`Math.random()\`, or a locale/timezone method) with no signal dependency, so it is rendered exactly once, server-side, at build time, forever — the build machine's clock/locale/timezone/RNG reading gets baked into the page permanently, with no client-side correction. Make it a reactive thunk (\`${attrName}={() => …}\`, which the client's first binding pass sets) or take the value as a server arg so the caller owns it.`,
+			`Attribute \`${attrName}\` reads an ambient value (\`Date\`/\`Intl\`, a random-number generator such as \`Math.random()\` or \`crypto.randomUUID()\`, or a locale/timezone method) with no signal dependency, so it is rendered exactly once, server-side, at build time, forever — the build machine's clock/locale/timezone/RNG reading gets baked into the page permanently, with no client-side correction. Make it a reactive thunk (\`${attrName}={() => …}\`, which the client's first binding pass sets) or take the value as a server arg so the caller owns it.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * The loop counterpart of {@link impureStaticChild} (LT-326). A
+	 * server-data loop's iterable is evaluated once, server-side, at build
+	 * time, and the rendered items are never re-derived on the client — so
+	 * `[...items].sort(() => Math.random() - 0.5)` bakes one build-time
+	 * shuffle into the page for good. Always the error form: unlike a
+	 * reactive child, there is no omit-and-correct path for a loop's items.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-09-25).
+	 */
+	impureLoopItems: (source: string, offset: number | undefined) =>
+		error(
+			'LTC033',
+			"This loop's items read an ambient value (`Date`/`Intl`, a random-number generator such as `Math.random()` or `crypto.randomUUID()`, or a locale/timezone method), so the server computes them exactly once, at build time — a shuffle or a generated id is baked into the page permanently, with no client-side correction. Pass the items in as an arg, already in their final order, or hold them in a `createList` and reorder it in the factory, where it runs in the browser.",
 			lineOf(source, offset),
 		),
 

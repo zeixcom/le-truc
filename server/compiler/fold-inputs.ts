@@ -54,6 +54,7 @@ import {
 } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import {
+	containsImpureAmbient,
 	foldableHostProps,
 	foldableRefGuards,
 	foldableRenderScope,
@@ -343,8 +344,19 @@ export const checkFoldInputs = (
 			case 'element': {
 				const loop = [...component.fors.values()].find(f => f.output === node)
 				if (loop) {
-					if (loop.kind === 'each')
+					if (loop.kind === 'each') {
 						checkEvaluated(loop.iterable, 'the items of a loop')
+						// CHECKLIST §4 / LTC033 (error form), LT-326: the iterable
+						// is always evaluated, once, at build time — a shuffle or a
+						// random id bakes into the page for good. Checked here, not
+						// in the front ends, because only this walk holds the
+						// loop's OUTER scope, which a resolvable-locale `Intl`
+						// needs to fold.
+						if (containsImpureAmbient(loop.iterable, scope))
+							diagnostics.push(
+								diagnostic.impureLoopItems(source, loop.iterable.start),
+							)
+					}
 					const loopScope = new Set(scope)
 					loopScope.add(loop.itemName)
 					if (loop.kind === 'each') {
@@ -368,6 +380,8 @@ export const checkFoldInputs = (
 				break
 			case 'switch':
 				checkEvaluated(node.discriminant, 'a switch discriminant')
+				for (const arm of node.cases)
+					if (arm.test) checkEvaluated(arm.test, 'a switch case')
 				break
 			case 'compose':
 				for (const attr of node.attrs)

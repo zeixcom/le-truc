@@ -150,7 +150,12 @@ export type TemplateNode =
 			kind: 'switch'
 			discriminantText: string
 			discriminant: AstNode
-			cases: Array<{ testText: string | null; children: TemplateNode[] }>
+			cases: Array<{
+				testText: string | null
+				/** The `@case` test expression; `null` for `@default` (LT-330). */
+				test: AstNode | null
+				children: TemplateNode[]
+			}>
 			node: AstNode
 	  }
 	| {

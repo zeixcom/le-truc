@@ -431,8 +431,11 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			}
 		} else if (node.kind === 'expr') creditRender(node.expr)
 		else if (node.kind === 'if') creditRender(node.test)
-		else if (node.kind === 'switch') creditRender(node.discriminant)
-		else if (node.kind === 'compose') {
+		else if (node.kind === 'switch') {
+			creditRender(node.discriminant)
+			// `@case` tests are render positions too (LT-330).
+			for (const arm of node.cases) if (arm.test) creditRender(arm.test)
+		} else if (node.kind === 'compose') {
 			for (const attr of node.attrs)
 				if (attr.kind === 'arg') creditRender(attr.node)
 		}

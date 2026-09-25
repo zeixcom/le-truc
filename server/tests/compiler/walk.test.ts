@@ -67,6 +67,7 @@ const tree: TemplateNode & { kind: 'element' } = {
 			cases: [
 				{
 					testText: "'on'",
+					test: n('Literal'),
 					children: [
 						{
 							kind: 'element',
@@ -77,7 +78,11 @@ const tree: TemplateNode & { kind: 'element' } = {
 						},
 					],
 				},
-				{ testText: null, children: [{ kind: 'text', value: 'off' }] },
+				{
+					testText: null,
+					test: null,
+					children: [{ kind: 'text', value: 'off' }],
+				},
 			],
 			node: n('Switch'),
 		},

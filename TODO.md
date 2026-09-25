@@ -62,7 +62,7 @@ coloreditor/listnav carry none they do not read (LT-338). colorinfo passes to it
 sites through `truc:pass`, with no imperative `pass(all(…))` (LT-319). No shared-query group
 compiles a site silently (LT-339). The census is 27/2/0 before the batch; each migration adds its own entry.
 
-**Next free task ID: LT-340.**
+**Next free task ID: LT-341.**
 
 ---
 
@@ -80,79 +80,6 @@ LT-332 landed and was reviewed on 2026-09-25 (see `DONE.md`).
 
 ### Follow-ups and riders (parallel slot)
 
-- [ ] LT-330: `@case` tests are render positions — credit them, so a context-member seed cannot fold (LT-327 review).
-  **Skill:** le-truc-dev
-  **Context:** LT-327 routes render credit through `carriedBy`, but `@switch` arms carry only
-  `testText: string | null` in the IR (`ir.ts`, the `switch` variant), with no AST node, so
-  `harvest.ts` cannot credit them. Reproduction (a `.tsrx`, confirmed at review):
-  `const count = createMemo(() => all('li').get().length)`, `const label = () =>
-  String(count.get())`, `watch(label, bindText(out))`, and `@switch (mode) { @case label(): {…}
-  @default: {…} }`. That compiles **Folded** with zero routing signals, and the server module
-  reads `all` undeclared (`case label():`), the same false Folded as LT-327. The `@if (label()
-  === '1')` spelling already routes Simulated. **Rule:** add `test: AstNode | null` beside
-  `testText` on `switch` cases, populated in both front ends (`frontend/tsrx/lower-template.ts`,
-  `frontend/tsx/lower-tsx.ts`; both already hold `raw.test`), and credit it in `harvest.ts`'s
-  render-credit walk next to `node.discriminant`. No new diagnostic: it is a routing change, not
-  a check (ADR 0028 channel: none).
-  **Accept:** the reproduction routes Simulated (LTC004) and gets a test in
-  `client-setup-credit.test.ts`, on both surfaces if the `.tsx` front end can express a case test
-  over a setup const. Census unchanged (27/2/0).
-
-- [ ] LT-329: `check:sim` fails on a clean tree (`renderFormColorgraph` without `i18n`).
-  **Skill:** le-truc-dev
-  **Context:** `scripts/sim-portability-check.ts` calls the generated render functions without
-  the compiler-supplied `i18n` record, so form-colorgraph (which composes an i18n-declaring
-  spinbutton) throws "Cannot destructure property 't' from null or undefined value". Found
-  during LT-323 and reproduced on a clean tree. Pass `i18nRecord(tag)` (or whatever the corpus
-  runner supplies) the way the build does. **Accept:** `bun run check:sim` exits 0.
-
-- [ ] LT-328: HOST_PROFILE and compiler doc hygiene after LT-316/LT-320 (follow-up review).
-  **Skill:** tech-writer
-  **Context:** HOST_PROFILE § element references (the "`class`/`id` on a compose site reach
-  the served DOM" invariant) must name `data-*` too, since LT-320 made it a host attribute that
-  is never forwarded. It should also say that a `first()` ref's authored selector is emitted
-  when verifiable (LT-316), with synthesis as the fallback. In
-  `server/compiler/analysis/selectors.ts`, the `SELECTOR_GRAMMAR` constant's doc block sits
-  between `matchesSelector`'s JSDoc and the function, which orphans the latter. Move the
-  constant above it. The `selectorCandidates` doc also has an unwrapped over-long line.
-  Docs-only; no behaviour change.
-
-- [ ] LT-326: A server-data loop's iterable is unchecked for impure ambients — LTC033 misses a build-time shuffle (LT-313/LT-314 review).
-  **Skill:** le-truc-dev
-  **Context:** LTC033 runs in `lower-shared.ts` over static children and `server` attributes
-  only. A server-data loop's iterable was never a node until LT-313, so it was never checked.
-  Verified at review: `{[...items].sort(() => Math.random() - 0.5).map(a => <li>{a}</li>)}` and
-  `{[crypto.randomUUID()].map(…)}` compile clean. That bakes one build-time shuffle into the
-  page for good, which is the hazard CHECKLIST §4 names as the worst outcome. A shuffle is a
-  common idiom, not a contrived probe. The iterable is always evaluated, so it takes the
-  **static** (error) form, never the omit-the-reactive-form one. Check `EachForIR.iterable`
-  with `containsImpureAmbient` (in the loop's outer scope, so a resolvable-locale `Intl` still
-  folds). Add a loop-items builder beside `impureStaticChild`/`impureStaticAttribute`. Both
-  surfaces.
-  **Copy (same task):** both LTC033 builders list "`Date`/`Intl`, `Math.random()`, or a
-  locale/timezone method". Since LT-314 that is incomplete: an author who writes
-  `id={crypto.randomUUID()}` is told about `Math.random()`. Name the RNG generically, or list
-  the `crypto` generators. Update the `diagnostics.ts` union comment and the
-  `.agents/skills/le-truc/references/errors.md` row to match. In the same pass, Tech Writer
-  reviews LT-313's LTC054 `where` phrase "the items of a loop" (`fold-inputs.ts`).
-  **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033, one new builder). **Copy
-  reviewer:** Tech Writer.
-  **Check:** both probes fail LTC033 on `.tsx` and `.tsrx`; a loop over an own arg and a
-  resolvable-locale `Intl` iterable still compile; the corpus is unchanged.
-
-- [ ] LT-302: Arg and setup names shadow the render-harness imports in generated server modules (LT-212 review; NOTES 2026-09-24).
-  **Skill:** le-truc-dev
-  **Context:** with an arg named `items`, the server module emits
-  `for (const item of items(items))`, which throws `items is not a function` at render. Every
-  `RUNTIME_HARNESS_EXPORTS` name is exposed the same way (`entries`, `esc`, `attr`, `cls`, …).
-  The corpus avoids them by luck. **Ruling (Architect, 2026-09-24): alias, don't forbid**,
-  because `items` is an ordinary arg name. Alias a harness import only when a render-scope
-  name collides with it (`import { items as __items }`, and the emitter uses the alias), so every
-  module without a collision stays byte-identical. Also audit the generated CLIENT module: an
-  arg or setup name equal to a destructured factory-context name or an imported `@zeix/le-truc`
-  export (`first`, `each`, `watch`, …) is the same hazard. If the client side can collide,
-  alias there too, or diagnose if aliasing is impossible because the name is authored
-  vocabulary. **Channel:** none for the aliased cases (the collision stops being an error). Any
-  collision that can't be aliased is compiler, tier 1 Prevented, with Tech Writer on the copy.
-  **Check:** a fixture with args `items`/`esc` renders on both surfaces; corpus output
-  byte-identical; typecheck 0; warning baseline 0.
+All five landed on 2026-09-25 (LT-326 reviewed; LT-302, LT-328, LT-329, LT-330 done). See
+`DONE.md`. LT-329's Deno leg still needs one local `bun run check:sim` run (outside the agent
+sandbox). LT-326's review filed LT-340 in `BACKLOG.md` P3.

@@ -1846,6 +1846,64 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 		).toHaveLength(1)
 	})
 
+	describe("a server-data loop's items (LT-326)", () => {
+		const PROPS = '{ items, lang }: { items: string[]; lang: string }'
+		const tsx = (iterable: string) =>
+			compileComponentTsx(
+				`export function C(${PROPS}) {
+	return (
+		<>
+			<c-el><ul>{${iterable}.map(a => <li>{a}</li>)}</ul></c-el>
+			<style>{'c-el { color: red }'}</style>
+		</>
+	)
+}`,
+				'c.tsx',
+				new Set(),
+			)
+		const tsrx = (iterable: string) =>
+			compileComponent(
+				`export function C(${PROPS})
+	@{
+		expose({})
+		<>
+			<c-el>
+				<ul>
+					@for (const a of ${iterable}) {
+						<li>{a}</li>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`,
+				'c.tsrx',
+				new Set(),
+			)
+		const errors033 = (r: ReturnType<typeof tsx>) =>
+			r.diagnostics.filter(d => d.code === 'LTC033' && d.severity === 'error')
+
+		test.each([
+			['[...items].sort(() => Math.random() - 0.5)'],
+			['[crypto.randomUUID()]'],
+		])('%s is LTC033 on both surfaces', iterable => {
+			for (const result of [tsx(iterable), tsrx(iterable)]) {
+				expect(result.component).toBeNull()
+				expect(errors033(result)).toHaveLength(1)
+			}
+		})
+
+		test.each([
+			['items'],
+			['items.map(i => new Intl.NumberFormat(lang).format(i.length))'],
+		])('%s still compiles on both surfaces', iterable => {
+			for (const result of [tsx(iterable), tsrx(iterable)]) {
+				expect(errors033(result)).toHaveLength(0)
+				expect(result.component).not.toBeNull()
+			}
+		})
+	})
+
 	test('crypto.randomUUID() in a reactive position is omitted, not folded (LT-314)', () => {
 		const source = `export function C({}: {}) {
 	return (
