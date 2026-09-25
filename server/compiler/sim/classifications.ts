@@ -30,4 +30,26 @@ export const CLASSIFIED_DIAGNOSTICS: readonly ClassifiedDiagnostic[] = [
 			'context (`if (!ctx) return`). Canvas pixels do not serialize, so the ' +
 			'notice cannot affect the serialized markup.',
 	},
+	{
+		kind: 'jsdom-error',
+		component: 'module-dialog',
+		message: /Not implemented: Window's scrollTo\(\) method/,
+		reason:
+			"jsdom has no layout, so no scrolling. module-dialog's `open` watcher " +
+			'runs its close branch at connect (`open` starts false) and restores ' +
+			'the window scroll position. Scroll position does not serialize, so the ' +
+			'notice cannot affect the serialized markup.',
+	},
+	{
+		kind: 'console',
+		component: 'module-dialog',
+		message: /TypeError: dialog\.close is not a function/,
+		reason:
+			'jsdom does not implement HTMLDialogElement. The same connect-time ' +
+			'close branch calls `dialog.close()`, which throws after the body ' +
+			'scroll-lock cleanup and aborts the rest of the effect. The dialog ' +
+			'renders without `open` either way, and the skipped statements touch ' +
+			'only `document.body` and focus, which are outside the serialized ' +
+			'markup.',
+	},
 ]

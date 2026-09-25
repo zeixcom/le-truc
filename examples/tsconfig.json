@@ -31,7 +31,22 @@
 		"form/combobox/form-combobox.tsx",
 		"module/codeblock/module-codeblock.ts",
 		"module/codeblock/module-codeblock.tsx",
+		"module/catalog/module-catalog.ts",
+		"module/catalog/module-catalog.tsx",
+		"module/colorinfo/module-colorinfo.ts",
+		"module/colorinfo/module-colorinfo.tsx",
+		"module/dialog/module-dialog.ts",
+		"module/dialog/module-dialog.tsx",
+		"module/pagination/module-pagination.ts",
+		"module/pagination/module-pagination.tsx",
+		"module/scrollarea/module-scrollarea.ts",
+		"module/scrollarea/module-scrollarea.tsx",
+		"module/splitview/module-splitview.ts",
+		"module/splitview/module-splitview.tsx",
 		"../server/compiler/frontend/tsx/host-profile.d.ts",
+		"../server/generated/components/basic-button.client.ts",
+		"../server/generated/components/basic-number.client.ts",
+		"../server/generated/components/form-spinbutton.client.ts",
 		"../server/generated/components/tsrx-imports.d.ts"
 	]
 }

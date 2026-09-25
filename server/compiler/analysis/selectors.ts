@@ -82,7 +82,8 @@ const PLAIN_SELECTOR_TOKEN = /^[A-Za-z_-][\w-]*$/
 /**
  * All discriminator candidates in priority order (`type`, each `class`
  * token, `id`, every `data-*` — the `class`-then-`id`-then-`data-*` tail
- * mirroring `composeDiscriminatorClause`'s) — plural, because two sibling
+ * mirroring `composeDiscriminatorClause`'s — then every `aria-*` as a last
+ * resort) — plural, because two sibling
  * `<button type="button">`s that only differ by `class` (decrement /
  * increment) share the same `type` clause: `resolveSelectorIn` needs every
  * candidate to fall through to, not just the first present one.
@@ -133,6 +134,20 @@ const discriminatorCandidates = (element: ElementNode): string[] => {
 		)
 	for (const [name, value] of attrs)
 		if (name.startsWith('data-') && typeof value === 'string')
+			candidates.add(exact(name, value))
+	// Last resort (LT-101): a static `aria-*` value, for an element whose
+	// authored contract addresses it by ARIA semantics alone —
+	// module-dialog's opener is `button[aria-haspopup="dialog"]`, and
+	// page markup carries no class for it. Tail position means it is only
+	// reached when no earlier candidate is unique, so no element that
+	// resolved before changes its selector. A value holding `"` or `\`
+	// would need escaping, which the matchers above do not parse.
+	for (const [name, value] of attrs)
+		if (
+			name.startsWith('aria-') &&
+			typeof value === 'string' &&
+			!/["\\]/.test(value)
+		)
 			candidates.add(exact(name, value))
 	return [...candidates]
 }

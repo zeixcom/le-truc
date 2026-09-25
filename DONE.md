@@ -30,6 +30,28 @@ entry text: `git log -p -- DONE.md`.
 
 ---
 
+- [x] LT-102: Migrate `module-splitview` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** `examples/module/splitview/module-splitview.tsx` (served; the `.ts` twin retained),
+  `examples/main.ts` → generated client, host profile gains `truc:html` (common set),
+  `aria-orientation`/`aria-value*` and `module-splitview`. Tier **Folded**, no routing signals.
+  **Ruling (recorded nowhere else):** the server render writes the root's
+  `--module-splitview-ratio` and the divider's ARIA state in the exact form the `split` watcher
+  writes, so the connect diff is empty. That is the model for migrations whose client writes a
+  style or ARIA value at connect. **Live handoffs:** LT-316 (divider selector),
+  LT-324 (no spec yet), LT-138 (its gate tripped by the `truc:html` panes).
+
+- [x] LT-098: Migrate `module-colorinfo` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** `examples/module/colorinfo/module-colorinfo.tsx` (served; the `.ts` twin retained),
+  `examples/main.ts` → generated client, `examples/tsconfig.json` includes the generated
+  `basic-number.client.ts`. Tier **Folded**, no routing signals. The server half parses `value`
+  once and renders the swatch style, hex/RGB/HSL and the six `basic-number` values; the twin's
+  HTML left them empty.
+  **Ruling (recorded nowhere else):** a `.tsx` component may keep an imperative
+  `pass(all(selector), …)` over several same-discriminator compose sites. It compiles as a
+  client-only setup statement, and its only legality check is the runtime backstop (ADR 0028
+  tier 2). **Live handoffs:** LT-319 (a compile-time spelling), LT-316 (`.hex` → `small`),
+  LT-324 (no spec yet), LT-325 (hand-listed tsconfig clients).
+
 - [x] LT-291: A compiled parent registers a variant set's SERVED surface, not its retained twin — reviewed ✓
   **Changed:** `compileCorpus` sets `childImports[tag] = ./<tag>.client` for every compiled tag,
   overriding the sibling twin's module; only an uncompiled tag keeps its hand-written module.

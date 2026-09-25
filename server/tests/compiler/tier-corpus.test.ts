@@ -113,10 +113,19 @@ describe('tier assignment over the migrated corpus', () => {
 				'form-textbox',
 				'form-tokenbox',
 				'module-codeblock',
+				'module-colorinfo',
+				'module-dialog',
 				'module-list',
+				'module-pagination',
+				'module-splitview',
 				'module-tabgroup',
 			],
-			simulated: ['form-combobox', 'form-listbox'],
+			simulated: [
+				'form-combobox',
+				'form-listbox',
+				'module-catalog',
+				'module-scrollarea',
+			],
 			static: [],
 		})
 	})

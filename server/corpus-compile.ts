@@ -480,6 +480,9 @@ export const compileCorpus = async (
 			source,
 			name: entry.name,
 			serverModule: entry.serverModule,
+			passProps: Object.entries(entry.exposedProps)
+				.filter(([, kind]) => kind === 'slot')
+				.map(([prop]) => prop),
 		})),
 	)
 	await writeFileSafe(

@@ -381,6 +381,7 @@ export const JS_GLOBALS: ReadonlySet<string> = new Set<string>([
 	'NaN',
 	'Number',
 	'Object',
+	'Promise',
 	'RegExp',
 	'String',
 	'Symbol',

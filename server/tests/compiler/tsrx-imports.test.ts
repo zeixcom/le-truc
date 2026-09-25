@@ -55,6 +55,30 @@ describe('tsrxImportTypings (LT-312)', () => {
 }`)
 	})
 
+	test("Slot-backed props become the child's truc:pass surface (LT-100)", () => {
+		const text = tsrxImportTypings([
+			{
+				source: 'examples/basic/button/basic-button.tsrx',
+				name: 'BasicButton',
+				serverModule: 'basic-button.server.ts',
+				passProps: ['label', 'badge', 'disabled'],
+			},
+		])
+		expect(text).toContain(`declare module '*/basic-button.tsrx' {
+	export const BasicButton: (
+		args: Parameters<
+			typeof import('./basic-button.server').renderBasicButton
+		>[0] & {
+			'truc:pass'?: {
+				"badge"?: JSX.PassEntry
+				"disabled"?: JSX.PassEntry
+				"label"?: JSX.PassEntry
+			}
+		},
+	) => JSX.Element
+}`)
+	})
+
 	test('a shared file name lengthens both keys until they differ', () => {
 		const text = tsrxImportTypings([
 			{

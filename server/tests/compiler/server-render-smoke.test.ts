@@ -101,6 +101,9 @@ const ARGS: Record<string, Record<string, unknown>> = {
 	'card-collapsible': { title: 'Details' },
 	'basic-button': { label: 'Add' },
 	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
+	'module-catalog': {
+		products: [{ id: 'product-1', name: 'Product 1', max: 10 }],
+	},
 }
 
 // The CONFIGURED corpus scan (LT-273) — the same source set the build

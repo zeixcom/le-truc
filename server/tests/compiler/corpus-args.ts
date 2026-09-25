@@ -131,6 +131,25 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 		collapsed: true,
 		children: '<span class="line">const a = 1</span>',
 	},
+	'module-catalog': {
+		products: [
+			{ id: 'product-1', name: 'Product 1', max: 10 },
+			{ id: 'product-2', name: 'Product 2', note: '(reduced stock)', max: 5 },
+		],
+	},
+	'module-colorinfo': { label: 'Blue', value: 'oklch(.48 .23 263)' },
+	'module-dialog': {
+		dialogId: 'dialog-demo',
+		title: 'Dialog Title',
+		children: '<p>Dialog content.</p>',
+	},
+	'module-pagination': { max: 10, value: 1 },
+	'module-scrollarea': { children: '<p>Scrollable content</p>' },
+	'module-splitview': {
+		split: 0.3,
+		start: 'Narrow panel (30%)',
+		end: 'Wide panel (70%)',
+	},
 	'basic-button': { label: 'Add' },
 	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
 }

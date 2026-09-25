@@ -191,6 +191,13 @@ declare namespace JSX {
 		'aria-selected'?: Attr<string | boolean>
 		'aria-describedby'?: string | null | undefined
 		'aria-controls'?: Attr<string>
+		'aria-current'?: Attr<string>
+		'aria-haspopup'?: string | undefined
+		'aria-labelledby'?: Attr<string>
+		'aria-orientation'?: Attr<'horizontal' | 'vertical'>
+		'aria-valuenow'?: Attr<string>
+		'aria-valuemin'?: Attr<string>
+		'aria-valuemax'?: Attr<string>
 		onClick?: (event: MouseEvent) => unknown
 		onInput?: (event: Event) => unknown
 		onChange?: (event: Event) => unknown
@@ -199,6 +206,8 @@ declare namespace JSX {
 		[key: `data-${string}`]: Attr<string>
 		'truc:case'?: string | undefined
 		'truc:case-type'?: 'cardinal' | 'ordinal' | undefined
+		/** Sanitized raw markup, rendered before any authored children (LT-137). */
+		'truc:html'?: Attr<string>
 		children?: unknown
 	}
 
@@ -209,20 +218,39 @@ declare namespace JSX {
 		type?: 'button' | 'submit' | 'reset' | undefined
 		disabled?: Attr<boolean>
 	}
+	interface details extends CommonLightDom {
+		open?: Attr<boolean>
+	}
+	interface dialog extends CommonLightDom {}
 	interface div extends CommonLightDom {}
-	interface form extends CommonLightDom {}
+	interface form extends CommonLightDom {
+		method?: 'get' | 'post' | 'dialog' | undefined
+	}
+	interface h2 extends CommonLightDom {}
+	interface header extends CommonLightDom {}
 	interface input extends CommonLightDom {
 		type?: string | undefined
 		name?: string | undefined
 		value?: Attr<string>
 		placeholder?: Attr<string>
 		autocomplete?: string | undefined
+		min?: Attr<string>
+		max?: Attr<string>
 	}
 	interface label extends CommonLightDom {
 		/** The native attribute is `for` — there is no `htmlFor` here. */
 		for?: string | undefined
 	}
 	interface code extends CommonLightDom {}
+	interface dd extends CommonLightDom {
+		/** A fixed-language island (module-colorinfo's `oklch(…)` line). */
+		lang?: string | undefined
+	}
+	interface dl extends CommonLightDom {}
+	interface dt extends CommonLightDom {}
+	interface small extends CommonLightDom {}
+	interface strong extends CommonLightDom {}
+	interface summary extends CommonLightDom {}
 	interface li extends CommonLightDom {}
 	interface p extends CommonLightDom {}
 	interface pre extends CommonLightDom {}
@@ -272,7 +300,25 @@ declare namespace JSX {
 		collapsed?: Reactive<boolean>
 		language?: string
 	}
-	/** Hand-written (not yet migrated): its light-DOM config attribute only. */
+	type ModuleCatalogAttrs = CommonLightDom
+	type ModuleColorinfoAttrs = CommonLightDom & {
+		value?: Reactive<string>
+		/** Server-rendered swatch properties; `bindStyle` owns them after connect. */
+		style?: string
+	}
+	type ModuleDialogAttrs = CommonLightDom
+	type ModuleSplitviewAttrs = CommonLightDom & {
+		split?: Reactive<number>
+		/** Server-rendered initial ratio; the `split` watcher owns it after connect. */
+		style?: string
+		/** Config-only: read once at connect, not a reactive property. */
+		orientation?: 'horizontal' | 'vertical' | undefined
+	}
+	type ModulePaginationAttrs = CommonLightDom & {
+		max?: Reactive<number>
+		value?: Reactive<number>
+	}
+	/** Its light-DOM config attribute: read once at connect, not a reactive property. */
 	type ModuleScrollareaAttrs = CommonLightDom & {
 		orientation?: 'horizontal' | 'vertical' | undefined
 	}
@@ -284,15 +330,25 @@ declare namespace JSX {
 
 	interface IntrinsicElements {
 		button: button
+		dd: dd
+		details: details
+		dialog: dialog
+		dl: dl
+		dt: dt
 		div: div
 		form: form
+		h2: h2
+		header: header
 		input: input
 		code: code
 		label: label
 		li: li
 		p: p
 		pre: pre
+		small: small
 		span: span
+		strong: strong
+		summary: summary
 		ul: ul
 		style: style
 		'basic-counter': BasicCounterAttrs
@@ -301,7 +357,12 @@ declare namespace JSX {
 		'form-combobox': FormComboboxAttrs
 		'form-listbox': FormListboxAttrs
 		'module-codeblock': ModuleCodeblockAttrs
+		'module-catalog': ModuleCatalogAttrs
+		'module-colorinfo': ModuleColorinfoAttrs
+		'module-dialog': ModuleDialogAttrs
+		'module-pagination': ModulePaginationAttrs
 		'module-scrollarea': ModuleScrollareaAttrs
+		'module-splitview': ModuleSplitviewAttrs
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs
 	}

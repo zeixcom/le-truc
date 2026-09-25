@@ -956,8 +956,11 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   every compiled `.tsrx` source for compose imports from authored `.tsx`:
   one ambient `declare module '*/<suffix>.tsrx'` per source, through its
   tag's served server module's args, keyed by the shortest path suffix no
-  other source shares. `examples/tsconfig.json` includes it, so a `.tsx`
-  parent composing a still-`.tsrx` child needs no hand-written typing.
+  other source shares. A child with Slot-backed exposed props also gets a
+  `'truc:pass'` key over exactly those props (LT-100), so an excess pass key
+  is a tsc error at the parent's compose site. `examples/tsconfig.json`
+  includes it, so a `.tsx` parent composing a still-`.tsrx` child needs no
+  hand-written typing.
 - **Consumers**: `server/build.ts` (via the `index.ts` facade plus direct
   `registry`/`spans` imports), `check:corpus` (§ 6), and the CEM build
   (`scripts/build-corpus.ts` feeds `cem analyze`, which reads the generated
@@ -1083,7 +1086,9 @@ member.
   compiler itself renders (`analysis/selectors.ts`; role → bare tag →
   discriminator, exclusivity-aware counting for branches). Discriminators use
   canonical CSS spellings — classes match by token membership, ids and
-  `type`/`data-*` exactly. `matchesSelector` must parse exactly the grammar
+  `type`/`data-*` exactly. A static `aria-*` value is the last-resort
+  candidate (LT-101), for an element addressed by ARIA semantics alone.
+  `matchesSelector` must parse exactly the grammar
   the synthesizer emits: an unparsed selector reads as "no collision" and
   would quietly disarm per-branch addressing. The count covers the OWN
   template, but the runtime query also descends into composed children's

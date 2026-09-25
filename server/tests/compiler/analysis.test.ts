@@ -258,6 +258,49 @@ describe('id discriminators use the hash form (LT-124)', () => {
 	})
 })
 
+describe('aria-* discriminators are the last resort (LT-101)', () => {
+	/** module-dialog's shape: an opener told apart by ARIA alone. */
+	const twoButtons = (openerAttrs: string): ComponentIR => {
+		const { component } = compileSource(
+			`export function C({}: {})
+@{
+	const opener = first('button[aria-haspopup="dialog"]')
+	expose({})
+	<>
+		<c-el>
+			<button type="button" ${openerAttrs}>Open</button>
+			<button type="button" class="close" aria-label="Close">x</button>
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`,
+			'c.tsrx',
+		)
+		return component as ComponentIR
+	}
+
+	const firstButton = (component: ComponentIR) =>
+		(component.root.children as ReadonlyArray<{ kind: string }>).find(
+			n => n.kind === 'element',
+		) as Extract<ComponentIR['root'], { kind: 'element' }>
+
+	test('a button with no other discriminator resolves to its aria clause', () => {
+		const component = twoButtons('aria-haspopup="dialog"')
+		expect(resolveSelector(component, firstButton(component))).toEqual({
+			selector: 'button[aria-haspopup="dialog"]',
+			unique: true,
+		})
+	})
+
+	test('any earlier discriminator still wins', () => {
+		const component = twoButtons('class="open" aria-haspopup="dialog"')
+		expect(resolveSelector(component, firstButton(component))).toEqual({
+			selector: 'button.open',
+			unique: true,
+		})
+	})
+})
+
 /**
  * LT-096: a synthesized selector's uniqueness is counted over the OWN
  * template, but the runtime query descends into every composed child's

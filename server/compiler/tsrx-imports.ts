@@ -17,6 +17,13 @@
  * longer `*\/basic/button/basic-button.tsrx` once two sources share it. Two
  * same-named files never collide on one pattern — the specifier that stops
  * matching is a loud "cannot find module", not a silent mistype.
+ *
+ * A child with Slot-backed exposed props also gets a `'truc:pass'` key over
+ * exactly those props (LT-100) — the `.tsx` host profile's rule that only a
+ * pass target declares one, derived from the registry's `exposedProps`
+ * instead of hand-declared on the `.tsrx` args. A key the child cannot take
+ * (a computed or method prop, a typo) is an excess-property tsc error at
+ * the parent's compose site.
  */
 
 /* === Types === */
@@ -28,6 +35,8 @@ export type TsrxImportSource = {
 	name: string
 	/** Generated server module, relative to the output root. */
 	serverModule: string
+	/** Slot-backed exposed props — the keys a `truc:pass` may replace. */
+	passProps?: readonly string[]
 }
 
 /* === Exported Constants === */
@@ -82,13 +91,26 @@ export const tsrxImportTypings = (
 	]
 	for (const { entry, pattern } of entries) {
 		const module = `./${entry.serverModule.replace(/\.ts$/, '')}`
+		const pass = [...(entry.passProps ?? [])].sort()
+		const passLines =
+			pass.length === 0
+				? []
+				: [
+						"\t\t\t'truc:pass'?: {",
+						...pass.map(
+							prop => `\t\t\t\t${JSON.stringify(prop)}?: JSX.PassEntry`,
+						),
+						'\t\t\t}',
+					]
 		lines.push(
 			'',
 			`declare module '${pattern}' {`,
 			`\texport const ${entry.name}: (`,
 			'\t\targs: Parameters<',
 			`\t\t\ttypeof import('${module}').render${entry.name}`,
-			'\t\t>[0],',
+			pass.length === 0 ? '\t\t>[0],' : '\t\t>[0] & {',
+			...passLines,
+			...(pass.length === 0 ? [] : ['\t\t},']),
 			'\t) => JSX.Element',
 			'}',
 		)
