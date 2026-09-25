@@ -26,7 +26,7 @@ export type DiagnosticCode =
 	// ('LTC004' is spent: retired as an emitted code at LT-165 step 5, it
 	// survives ONLY as a routing-signal origin — see tier.ts's
 	// `RoutingSignalOrigin`, which owns the spelling now)
-	| 'LTC005' // construct outside the sanctioned milestone-2 subset
+	| 'LTC005' // construct outside the supported subset
 	| 'LTC006' // malformed or unsupported attribute shape
 	| 'LTC007' // template structure the compiler cannot address
 	| 'LTC008' // source shape violation (root tag, exports, style placement)
@@ -290,11 +290,40 @@ export const diagnostic = {
 		),
 
 	// --- subset, attribute shapes, addressing, source structure ---
-	/** Anything outside the sanctioned milestone-2 construct set. */
-	unsupported: (source: string, offset: number | undefined, what: string) =>
+	/**
+	 * A construct outside the supported subset of ADR 0023. `what` names the
+	 * construct as the subject of the sentence; `fix`, when the site knows
+	 * it, is the imperative the author acts on (LT-300).
+	 */
+	unsupported: (
+		source: string,
+		offset: number | undefined,
+		what: string,
+		fix?: string,
+	) =>
 		error(
 			'LTC005',
-			`${what} is outside the sanctioned milestone-2 subset of ADR 0023. Supported: text/attribute/class reactive bindings, event attributes, refs, @for over server data, hoisted-const rebinding, harvest rules.`,
+			`${what} is outside the supported subset (ADR 0023).${fix ? ` ${fix}` : ''}`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A loop whose nearest control-flow ancestor is an `if`/`switch` branch
+	 * (LT-301). The client addresses a branch's content by its roots, so a
+	 * loop there binds only its first item. Diagnosed, not supported: a
+	 * branch-scoped `each()` waits for a migration that needs it.
+	 */
+	loopInBranch: (
+		source: string,
+		offset: number | undefined,
+		surface: 'tsrx' | 'tsx',
+		branch: 'if' | 'switch',
+	) =>
+		error(
+			'LTC005',
+			surface === 'tsrx'
+				? `A \`@for\` loop inside an \`@${branch}\` branch is outside the supported subset: the client addresses a branch's content by its roots, so only the loop's first item would get its bindings. Render the empty case with the loop's own \`@empty\` arm, or move the loop out of the branch.`
+				: `A \`.map()\` loop inside a ${branch === 'if' ? 'conditional arm' : '`switch` case'} is outside the supported subset: the client addresses a branch's content by its roots, so only the loop's first item would get its bindings. Render the empty case with the empty-state idiom (\`{items.length === 0 ? <empty/> : items.map(…)}\`), or move the loop out of the ${branch === 'if' ? 'conditional' : 'switch'}.`,
 			lineOf(source, offset),
 		),
 

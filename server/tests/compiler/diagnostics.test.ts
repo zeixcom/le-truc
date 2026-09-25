@@ -494,7 +494,7 @@ describe('the loop empty arm (LT-212)', () => {
 		)
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC005')
-		expect(hit?.message).toContain('@empty arm')
+		expect(hit?.message).toContain('`@empty` arm')
 	})
 
 	test('an arm root the item selector cannot be told apart from is LTC007', () => {
@@ -561,6 +561,109 @@ export function C({}: {})
 			expect(component).toBeNull()
 			const hit = diagnostics.find(d => d.code === 'LTC005')
 			expect(hit?.message).toContain('conditional arm')
+		}
+	})
+})
+
+describe('loops inside conditional branches (LT-301)', () => {
+	const tsrx = (body: string): string =>
+		`export function C({ rows, ready, mode }: { rows: string[]; ready: boolean; mode: string })
+	@{
+		<>
+			<c-el>
+				<ul>
+					${body}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`
+	const item = '<li class="item" onClick={() => console.log(1)}>{row}</li>'
+
+	test('.tsrx: a loop in an @if/@else or @switch branch is LTC005', () => {
+		for (const [body, branch] of [
+			[
+				`@if (ready) { <li class="none">x</li> } @else { @for (const row of rows) { ${item} } }`,
+				'@if',
+			],
+			[
+				`@switch (mode) { @case 'a': { @for (const row of rows) { ${item} } } @default: { <li>x</li> } }`,
+				'@switch',
+			],
+		] as const) {
+			const { component, diagnostics } = compileComponent(
+				tsrx(body),
+				'c.tsrx',
+				new Set(),
+			)
+			expect(component).toBeNull()
+			const hit = diagnostics.find(
+				d => d.code === 'LTC005' && d.message.includes('`@for` loop'),
+			)
+			expect(hit?.message).toContain(`\`${branch}\` branch`)
+			expect(hit?.message).toContain('`@empty`')
+		}
+	})
+
+	test('.tsrx: an @empty loop, or a loop under an element in a branch, stays legal', () => {
+		for (const body of [
+			`@for (const row of rows) { ${item} } @empty { <li class="none">x</li> }`,
+			`@if (ready) { <li class="wrap"><ol>@for (const row of rows) { <li>{row}</li> }</ol></li> }`,
+		]) {
+			const { diagnostics } = compileComponent(tsrx(body), 'c.tsrx', new Set())
+			expect(diagnostics).toEqual([])
+		}
+	})
+
+	test('.tsx: a loop in a fragment arm is LTC005', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			`export function C({ rows, ready }: { rows: string[]; ready: boolean }) {
+	return (
+		<>
+			<c-el>
+				<ul>{ready ? <li class="none">x</li> : <>{rows.map(row => <li class="item" onClick={() => console.log(1)}>{row}</li>)}</>}</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	)
+}`,
+			'c.tsx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(
+			d => d.code === 'LTC005' && d.message.includes('`.map()` loop'),
+		)
+		expect(hit?.message).toContain('conditional arm')
+		expect(hit?.message).toContain('empty-state idiom')
+	})
+
+	test('an authored `hidden` or `data-unreconciled` on a reactive-list @empty root is LTC005', () => {
+		for (const attr of ['hidden', 'data-unreconciled']) {
+			const { component, diagnostics } = compileComponent(
+				`import { createList } from '@zeix/le-truc'
+export function C({}: {})
+	@{
+		const items = createList<string>([], { keyConfig: 'item' })
+		<>
+			<c-el>
+				<ul data-container>
+					@for (const item of items) {
+						<li><span>{item}</span></li>
+					} @empty {
+						<li class="none" ${attr}>Nothing yet</li>
+					}
+				</ul>
+			</c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`,
+				'c.tsrx',
+				new Set(),
+			)
+			expect(component).toBeNull()
+			const hit = diagnostics.find(d => d.code === 'LTC005')
+			expect(hit?.message).toContain(`\`${attr}\``)
 		}
 	})
 })

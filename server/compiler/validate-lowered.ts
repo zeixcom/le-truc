@@ -7,6 +7,7 @@
  * type.
  */
 
+import type { AstNode } from './ast-node'
 import {
 	asArray,
 	identifierName,
@@ -15,7 +16,7 @@ import {
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import { reportDuplicatedChannels } from './first-refs'
-import type { ConfigIR, ExtractContext, TemplateNode } from './ir'
+import type { ConfigIR, ExtractContext, ForIR, TemplateNode } from './ir'
 import type { SetupExtraction } from './setup-extraction'
 import { walkTemplate } from './walk'
 
@@ -93,6 +94,41 @@ const reportNamedFormControls = (
 }
 
 /**
+ * Report a loop whose output is a direct root of an `if`/`switch` branch
+ * (LT-301) — `.tsrx` `@if (…) { … } @else { @for … }`, `.tsx`
+ * `{c ? <>{xs.map(…)}</> : …}` (fragments flatten, so the loop's items land
+ * as the arm's roots). The server renders it correctly, but the client
+ * addresses a branch by its roots: it binds the loop output with `first()`,
+ * so only the first item gets its handlers. A loop wrapped in an element
+ * inside the branch is not this shape: the wrapper is the branch root, and
+ * a client construct inside it is already LTC005 (analysis/effects.ts,
+ * "must sit on the branch root elements"). A loop's `@empty` arm is not a
+ * branch, so the empty-state spellings stay legal.
+ */
+const reportLoopsInBranches = (
+	ctx: ExtractContext,
+	root: TemplateNode,
+	fors: ReadonlyMap<AstNode, ForIR>,
+	surface: 'tsrx' | 'tsx',
+): void => {
+	const outputs = new Set<TemplateNode>([...fors.values()].map(f => f.output))
+	walkTemplate(root, (node, parent) => {
+		if (
+			outputs.has(node) &&
+			(parent?.kind === 'if' || parent?.kind === 'switch')
+		)
+			ctx.diagnostics.push(
+				diagnostic.loopInBranch(
+					ctx.source,
+					node.node?.start,
+					surface,
+					parent.kind,
+				),
+			)
+	})
+}
+
+/**
  * The post-lowering validation tail, shared by both front ends. Runs after
  * `resolveTemplateOutput` and `readModuleDecls` because every check below
  * needs `root`, `config`, or `exposeArgNode`:
@@ -127,6 +163,7 @@ const reportNamedFormControls = (
  *   reserved too.
  * - LT-059: a form-associated component's inner native control must have
  *   no `name`.
+ * - LT-301: a loop inside an `if`/`switch` branch is LTC005.
  *
  * Returns the caseType configuration the IR carries.
  */
@@ -137,11 +174,15 @@ export const validateLoweredComponent = (
 		config,
 		i18nMessages,
 		extraction,
+		fors,
+		surface,
 	}: {
 		root: TemplateNode & { kind: 'element' }
 		config: ConfigIR | null
 		i18nMessages: Record<string, string> | null
 		extraction: SetupExtraction
+		fors: ReadonlyMap<AstNode, ForIR>
+		surface: 'tsrx' | 'tsx'
 	},
 ): 'cardinal' | 'ordinal' | 'union' => {
 	const source = ctx.source
@@ -247,6 +288,8 @@ export const validateLoweredComponent = (
 	}
 
 	if (config?.form) reportNamedFormControls(ctx, root)
+
+	reportLoopsInBranches(ctx, root, fors, surface)
 
 	return caseType
 }

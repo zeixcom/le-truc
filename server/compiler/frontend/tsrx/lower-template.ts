@@ -520,7 +520,7 @@ const lowerEmptyArm = (
 	const arm = lowerBodyStatements(ctx, asArray(node.empty.body), signals, fors)
 	if (arm.length === 0) return null
 	return (
-		validateEmptyArm(ctx, arm, kind, fors, node.empty.start, '@empty arm') ??
+		validateEmptyArm(ctx, arm, kind, fors, node.empty.start, '`@empty` arm') ??
 		false
 	)
 }

@@ -309,7 +309,7 @@ front-end modules, then the two front ends:
 | `params.ts` | The params contract (`extractParams`): the destructured args object (LTC008) plus the LT-209 factory-context parameter |
 | `setup-extraction.ts` | The setup-statement loop (`extractSetup`) and context seeding (`seedExtractionContext`) |
 | `template-output.ts` | Template-output resolution (`resolveTemplateOutput`): root, `<style>` block, CSS, `first()`/`all()` reference resolution (LT-055) |
-| `validate-lowered.ts` | The post-lowering validation tail (`validateLoweredComponent`): LTC039/047/028/010, `config.observedAttributes`, LT-059 |
+| `validate-lowered.ts` | The post-lowering validation tail (`validateLoweredComponent`): LTC039/047/028/010, `config.observedAttributes`, LT-059, loops as branch roots (LT-301) |
 | `assemble-ir.ts` | IR assembly (`assembleComponentIR`), import placement, module-level declarations (`readModuleDecls`) |
 | `lower-shared.ts` | Surface-independent lowering core: condition validation, element/compose lowering, the expression-child lift rule, positional reactivity, and `lowerChildrenSkeleton` — the `Lowering` hooks carry each surface's child-node dispatch |
 | `ast-utils.ts` | Shared AST predicates and the recognized-name vocabulary constants both front ends' walks run on |
@@ -422,7 +422,12 @@ content only; LTC005 otherwise). Over server data the server renders it when
 the loop renders no item. Over a reactive List it stays on the toggle path
 (ADR 0037 s5): every root is an element, always rendered in the container
 with `data-unreconciled`, and the client toggles its `hidden` from the
-List's `length`. A `key` clause on a server-data loop is a compile error
+List's `length`. The compiler owns both attributes there, so an
+authored `hidden` or `data-unreconciled` on such a root is LTC005 (LT-301).
+A loop whose output is a direct root of an `if`/`switch` branch is LTC005
+too (LT-301): the client addresses a branch by its roots, so only the first
+item would bind. `@empty` or the empty-state idiom is the supported
+spelling; branch-scoped `each()` is deferred. A `key` clause on a server-data loop is a compile error
 (LTC052, tier 1 Prevented): only `reconcile()` reads a key.
 
 **`AttributeIR`** — per-attribute: `static`, `server` (render-time expression),

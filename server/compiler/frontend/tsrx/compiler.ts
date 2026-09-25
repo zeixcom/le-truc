@@ -391,6 +391,8 @@ export const compileSource = (
 			config: decls.config,
 			i18nMessages: decls.i18nMessages,
 			extraction,
+			fors,
+			surface: 'tsrx',
 		})
 		const component = assembleComponentIR(ctx, {
 			componentName: name,

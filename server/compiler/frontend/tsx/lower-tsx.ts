@@ -131,7 +131,8 @@ const lowerIfExpr = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				'A `.map()` loop as a conditional arm (the only conditional-plus-loop shape is the empty state, `{xs.length === 0 ? <empty/> : xs.map(…)}`)',
+				'A `.map()` loop as a conditional arm',
+				"Only the empty state combines a condition with a loop — write `{xs.length === 0 ? <empty/> : xs.map(…)}`, testing the mapped array's own `length`, or move the loop out of the conditional.",
 			),
 		)
 		return null

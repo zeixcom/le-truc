@@ -674,7 +674,8 @@ export const validateEmptyArm = (
 			diagnostic.unsupported(
 				ctx.source,
 				offending?.start ?? at,
-				`Client constructs (events, reactive bindings, refs, composed elements, loops, boundaries) inside an ${what} (the arm renders static and server-known content only)`,
+				`A client construct (an event, a reactive binding, a ref, a composed element, a loop or a boundary) inside an ${what}`,
+				'The arm renders static and server-known content only — move the construct out of the arm, beside the loop.',
 			),
 		)
 		return null
@@ -686,10 +687,32 @@ export const validateEmptyArm = (
 				diagnostic.unsupported(
 					ctx.source,
 					loose.node?.start ?? at,
-					`A non-element root in the ${what} of a reactive-list loop (the client toggles each root's \`hidden\` as the list empties and fills, so every root must be an element)`,
+					`A non-element root in the ${what} of a reactive-list loop`,
+					"The client toggles each root's `hidden` as the list empties and fills — wrap that content in an element.",
 				),
 			)
 			return null
+		}
+		// The compiler owns `hidden` and `data-unreconciled` on these roots
+		// (LT-301): an authored copy would be emitted twice beside its own.
+		for (const root of arm) {
+			if (root.kind !== 'element') continue
+			const owned = root.attrs.find(
+				a =>
+					(a.kind === 'static' || a.kind === 'server') &&
+					(a.name === 'hidden' || a.name === 'data-unreconciled'),
+			)
+			if (owned && 'name' in owned) {
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						root.node.start,
+						`An authored \`${owned.name}\` on a root of the ${what} of a reactive-list loop`,
+						'The compiler sets that attribute itself as the list empties and fills — remove it.',
+					),
+				)
+				return null
+			}
 		}
 	}
 	return arm

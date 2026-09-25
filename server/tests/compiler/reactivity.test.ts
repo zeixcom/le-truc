@@ -208,6 +208,6 @@ describe('lazy destructuring in binding position (LT-052, retired at the 0.2 pin
 	test('a plain destructuring const is LTC005, not silently tolerated', () => {
 		const d = compile('const obj = { a: 1 }\n\t\t\t\tconst { a } = obj')
 		expect(d.map(x => x.code)).toEqual(['LTC005'])
-		expect(d[0]?.message).toContain('milestone-2 subset')
+		expect(d[0]?.message).toContain('outside the supported subset')
 	})
 })

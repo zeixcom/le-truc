@@ -60,46 +60,7 @@ both surfaces (LT-302). The census is 27/2/0 before the batch; each migration ad
 
 ### Gates (run first)
 
-- [x] LT-325: Generate `.tsrx` tag-map typings instead of hand-listing generated clients in `examples/tsconfig.json` — done
-  **Skill:** le-truc-dev
-  **Context:** A `.tsx` parent that queries a `.tsrx` child through `first`/`all('<tag>…')`
-  needs the child's `HTMLElementTagNameMap` entry. LT-098/LT-100 got it by adding
-  `basic-button`/`basic-number`/`form-spinbutton.client.ts` to the tsconfig's `files`, which is
-  hand-listing again (the thing LT-312 removed for compose imports). Have `tsrx-imports.d.ts`
-  (or a sibling generated file) carry each compiled `.tsrx` tag's map entry, typed through its
-  props type, and drop the three hand-listed clients.
-
-- [ ] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them (LT-212 review; NOTES 2026-09-24). **Gate: before any wave-4 migration whose component nests a loop inside a branch.**
-  **Skill:** le-truc-dev
-  **Context:** `.tsrx` `@if (…) { … } @else { @for (…) { <li class="item" onClick={…}/> } }` renders
-  correctly on the server. The client, though, treats the loop output as a branch root: it binds
-  `first('li.item')`, so only the FIRST item gets its handler, and it registers an unused `all()`
-  collection instead of an `each()`. `.tsx` reaches the same path through a fragment arm,
-  `{c ? <>{xs.map(…)}</> : …}`. **Ruling (Architect, 2026-09-24): diagnose, don't support.**
-  A loop output whose nearest control-flow ancestor is an `if`/`switch` branch, on either
-  surface, becomes an error. **Channel:** compiler. **Tier:** 1 Prevented (statically
-  decidable from the tree). Reuse LTC005: the construct is outside the supported subset, not a
-  new rule family. The message must name the fix: `@empty` in `.tsrx`, the empty-state idiom
-  in `.tsx`, or move the loop out of the branch. Supporting branch-scoped `each()` is deferred
-  until a migration needs it, at which point this becomes a design task. **Tech Writer**
-  reviews the copy. Rider from the LT-212 review: an authored `hidden` or `data-unreconciled`
-  on a reactive-List `@empty` root is emitted twice beside the compiler's own. Reject both as
-  LTC005 in `validateEmptyArm`, because the compiler owns them on that path.
-  **Check:** both surface spellings fail the build with LTC005; `@empty` and the idiom still
-  compile; corpus output byte-identical; typecheck 0; warning baseline 0, census 27/2/0 (plus whatever this batch has migrated by then).
-
-- [ ] LT-300: Review the three LTC005 phrases LT-212 added (LT-212 review).
-  **Skill:** tech-writer
-  **Context:** new `what` strings passed to the existing `diagnostic.unsupported` builder:
-  two in `server/compiler/lower-shared.ts` `validateEmptyArm` (a client construct in an empty
-  arm, and a non-element reactive-List arm root) and one in `server/compiler/frontend/tsx/lower-tsx.ts`
-  `lowerIfExpr` (a `.map()` as a conditional arm). They read inside the builder's template
-  "`<what>` is outside the sanctioned milestone-2 subset of ADR 0023. Supported: …". Review
-  them in that assembled form. That template's "Supported:" list itself predates reactive
-  lists, `@empty` and the `.tsx` surface; review it in the same pass.
-  **Check:** assembled messages meet the error-message lifecycle's criteria;
-  `bun test server/tests/compiler/diagnostics.test.ts` green (the LT-212 pins assert on
-  `'@empty arm'`, `'non-element root'` and `'conditional arm'`).
+All three gates landed and were reviewed on 2026-09-25 (LT-325, LT-301, LT-300; see `DONE.md`).
 
 ### Migrations (LT-104 before LT-107; LT-095, LT-106, LT-108 ungated)
 

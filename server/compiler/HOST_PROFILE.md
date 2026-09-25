@@ -42,7 +42,7 @@ One exported component function per file:
 | --- | --- |
 | `{cond ? <a/> : <b/>}`, `{cond && <a/>}` | `if` |
 | `{items.map((item, i) => …)}` | `for` — `each()` over server data, the `reconcile()` path over a declared `createList`; decided by the iterable's type, not the spelling |
-| `{items.length === 0 ? <empty/> : items.map(…)}` | `for` with an empty arm — the spelling of `.tsrx`'s `@for … @empty`. It is recognized by shape: the test compares the map receiver's own `length` to `0`. A `.map()` in any other conditional arm is an error (LTC005) |
+| `{items.length === 0 ? <empty/> : items.map(…)}` | `for` with an empty arm — the spelling of `.tsrx`'s `@for … @empty`. It is recognized by shape: the test compares the map receiver's own `length` to `0`. A `.map()` in any other conditional arm is an error (LTC005), including one wrapped in a fragment arm (`{c ? <>{xs.map(…)}</> : …}`, LT-301) |
 | An IIFE whose body is a `switch` returning JSX per arm | `switch` |
 | `<truc:try catch={e => …}>…</truc:try>` | the error boundary |
 | `<truc:try pending={…} catch={e => …}>…</truc:try>` | the async boundary |

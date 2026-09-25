@@ -533,6 +533,15 @@ Tech Writer copy round, scope widened).
      `InvalidPassPropertyError` row — its "unresolvable to a signal" condition now also
      means "retired form" (property-key and bare-signal forms, including bare read-only
      `Memo`/`Task`), and the fix-it column may name the accepted forms.
+  12. **The LTC005 builder rewording** (LT-300 handoff, 2026-09-25): `diagnostic.unsupported`
+     now ends "… is outside the supported subset (ADR 0023)." plus an optional `fix`
+     sentence; the stale "sanctioned milestone-2 … Supported:" list is gone from every
+     LTC005 message. Owed: the `errors.md` LTC005 row ("sanctioned subset" → "supported
+     subset (ADR 0023)"; fix column "Apply the fix the message names; where it names none,
+     rewrite with a supported construct"), which the LT-300 session could not write
+     (sandbox), and a CHANGELOG `[Unreleased]` line via changelog-keeper. The ~90 other
+     `unsupported` call sites pass no `fix` yet; moving their inline "— explanation" fixes
+     into the `fix` argument is in scope for this batch's one-voice pass.
 
 - [ ] LT-250: ICU MessageFormat — the build half: parser dependency, AST, shared evaluator, server fold, argument diagnostic (ADR 0030 s4). **Gated by LT-233 (SurfaceAdapter); gates LT-218, LT-251, LT-252.**
   **Skill:** le-truc-dev

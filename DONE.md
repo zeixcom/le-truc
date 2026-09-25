@@ -44,6 +44,38 @@ LT-283–LT-286, LT-293, LT-294, LT-298, LT-315), 2026-09-21 ×2. Full entry tex
 - **Scrollarea's wall-time at demo scale is noise** (474/341/330 ms Simulated vs 432 ms Folded).
   The ~2.3 s ADR 0029 cites returns only once page occurrences are simulated (LT-103).
 
+- [x] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** a loop whose output is a direct root of an `if`/`switch` branch is LTC005 on
+  both surfaces (`reportLoopsInBranches`, `validate-lowered.ts`; new builder
+  `diagnostic.loopInBranch`, per-surface fix). An authored `hidden`/`data-unreconciled` on a
+  reactive-List `@empty` root is LTC005 (`validateEmptyArm`). Corpus output byte-identical.
+  **Ruling (Architect, 2026-09-25; recorded nowhere else):** the developer's narrowing is
+  confirmed. The 2026-09-24 ruling's "nearest control-flow ancestor" means the loop output IS a
+  branch root (fragments flatten, so the `.tsx` fragment arm is the same shape). A loop wrapped
+  in an element inside a branch stays legal: the wrapper is the branch root, and a client
+  construct inside it is already LTC005 from `analysis/effects.ts`. The `sync` parity fixture
+  pins the legal wrapped shape. Branch-scoped `each()` stays deferred until a migration needs
+  it, and then it is a design task.
+
+- [x] LT-300: Review the three LTC005 phrases LT-212 added — reviewed ✓
+  **Skill:** tech-writer
+  **Changed:** `diagnostic.unsupported` ends "… is outside the supported subset (ADR 0023)."
+  plus an optional `fix` sentence, replacing the stale "sanctioned milestone-2 … Supported:"
+  list on every LTC005 message (user-visible). The three LT-212 sites and LT-301's rider pass
+  a fix; `@empty` is backticked. **Live handoff:** LT-189 item 12 (the `errors.md` row, the
+  CHANGELOG line, and moving other call sites' inline fixes into `fix`).
+
+- [x] LT-325: Generate `.tsrx` tag-map typings instead of hand-listing generated clients in `examples/tsconfig.json` — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `tsrx-imports.d.ts` also carries an `HTMLElementTagNameMap` entry for every
+  tag SERVED from `.tsrx` (host `HTMLElement` or `FormAssociatedElement`, intersected with
+  the client's `<Name>Props`); `examples/tsconfig.json` hand-lists no generated client.
+  **Ruling (recorded nowhere else):** a `.tsx`-served tag gets no generated entry — its
+  authored source carries one under a different props symbol, so a second copy would be a
+  TS 2717 mismatch. The generated entry is identical to the client's own and merges with it
+  in the root program.
+
 - [x] LT-303: `<truc:try pending catch>` replaces `boundary()` and the try/catch IIFE in `.tsx` (ADR 0041) — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** `.tsx` authors both boundaries as `<truc:try catch={e => …}>content</truc:try>`,
