@@ -92,6 +92,14 @@ entry text: `git log -p -- DONE.md`.
   rendered from the arg. The arg spelling duplicates the channel (LTC039). Since LT-317 the
   thunk folds server-side, so the spans ship filled.
 
+- [x] LT-327: A context-member initializer read by a render position must not classify Folded (LT-323 review) — reviewed ✓
+  **Changed:** `analysis/harvest.ts` computes `renderCredited` through the same `carriedBy`
+  closure as the client-only credit. Every template render position contributes: reactive,
+  class-map, style-map and `truc:html` thunks and values, server attributes, `truc:case-type`,
+  expression children, `@if` tests, `@switch` discriminants, compose-site args, and `each()`
+  iterables and hoisted consts. Census unchanged (27/2/0). **Live handoff:** LT-330 (`@case`
+  tests carry no AST node in the IR, so they are still not credited).
+
 - [x] LT-323: A signal whose consumers are all client-only does not route Simulated — ADR 0029 conformance — reviewed ✓
   **Changed:** `analysis/harvest.ts` widens the LT-119 client-only credit through carriers: bare
   signal references, reads through setup consts and derived signals, and template event
@@ -101,8 +109,8 @@ entry text: `git log -p -- DONE.md`.
   module-scrollarea and module-catalog are now **Folded** (census 27/2/0). **Ruling (recorded
   nowhere else):** the credit is "at least one client-only read, none a render read", not "every
   consumer client-only". A literal-initializer signal is sound either way, because the client
-  reuses the initializer the server rendered from. **Live handoffs:** LT-327 (the render-read
-  test is not transitive, so it admits a false Folded).
+  reuses the initializer the server rendered from. **Live handoffs:** LT-327 made the render-read
+  test transitive; LT-330 covers the one position it could not reach (`@case` tests).
 
 - [x] LT-322: A loop whose body has no client constructs emits no `each()` — reviewed ✓
   **Changed:** `analysis/loops.ts` plans no `each()` and registers no collection query for a

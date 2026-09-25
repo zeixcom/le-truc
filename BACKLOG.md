@@ -1594,6 +1594,8 @@ every migration trips it.
 current iteration migrated. LT-319 and LT-325 stay here.
 **[2026-09-25, follow-up review]** LT-327 (the LT-323 false-Folded regression) was created here
 and moved straight to `TODO.md`. LT-328 and LT-329 stay here.
+**[2026-09-25, LT-327 review]** LT-330 created here: the one render position LT-327 could not
+credit.
 
 - [ ] LT-319: One `truc:pass` spelling for several same-discriminator compose sites (NOTES LT-098).
   **Skill:** architect → le-truc-dev
@@ -1625,6 +1627,24 @@ and moved straight to `TODO.md`. LT-328 and LT-329 stay here.
   between `matchesSelector`'s JSDoc and the function, which orphans the latter. Move the
   constant above it. The `selectorCandidates` doc also has an unwrapped over-long line.
   Docs-only; no behaviour change.
+
+- [ ] LT-330: `@case` tests are render positions — credit them, so a context-member seed cannot fold (LT-327 review).
+  **Skill:** le-truc-dev
+  **Context:** LT-327 routes render credit through `carriedBy`, but `@switch` arms carry only
+  `testText: string | null` in the IR (`ir.ts`, the `switch` variant), with no AST node, so
+  `harvest.ts` cannot credit them. Reproduction (a `.tsrx`, confirmed at review):
+  `const count = createMemo(() => all('li').get().length)`, `const label = () =>
+  String(count.get())`, `watch(label, bindText(out))`, and `@switch (mode) { @case label(): {…}
+  @default: {…} }`. That compiles **Folded** with zero routing signals, and the server module
+  reads `all` undeclared (`case label():`), the same false Folded as LT-327. The `@if (label()
+  === '1')` spelling already routes Simulated. **Rule:** add `test: AstNode | null` beside
+  `testText` on `switch` cases, populated in both front ends (`frontend/tsrx/lower-template.ts`,
+  `frontend/tsx/lower-tsx.ts`; both already hold `raw.test`), and credit it in `harvest.ts`'s
+  render-credit walk next to `node.discriminant`. No new diagnostic: it is a routing change, not
+  a check (ADR 0028 channel: none).
+  **Accept:** the reproduction routes Simulated (LTC004) and gets a test in
+  `client-setup-credit.test.ts`, on both surfaces if the `.tsx` front end can express a case test
+  over a setup const. Census unchanged (27/2/0).
 
 - [ ] LT-329: `check:sim` fails on a clean tree (`renderFormColorgraph` without `i18n`).
   **Skill:** le-truc-dev

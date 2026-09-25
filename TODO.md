@@ -72,7 +72,7 @@ empty `each()` (LT-322), scrollarea not Simulated (LT-323) without a false Folde
 elsewhere (LT-327), and splitview and colorinfo green on
 both surfaces through their new specs (LT-324).
 
-**Next free task ID: LT-330.**
+**Next free task ID: LT-331.**
 
 ---
 
@@ -82,24 +82,3 @@ All six landed and are green on every surface; see `DONE.md` (LT-098–LT-103).
 
 ### Migration follow-ups — defects in this iteration's migrated components
 
-- [ ] LT-327: A context-member initializer read by a render position must not classify Folded (LT-323 review). **Gate: before the next migration batch.**
-  **Skill:** le-truc-dev
-  **Context:** LT-323 lets a signal credited only by client-only reads seed from an initializer
-  over FactoryContext members (`allowContextMembers`). The "only" test is
-  `!renderCredited.has(signal)`, and `renderCredited` is the pre-LT-323 `thunkRendered`, which
-  records only direct `sig.get()` calls in template thunks. It is not transitive through the
-  new carriers. Reproduction (a `.tsrx`): `const count = createMemo(() => all('li').get().length)`,
-  `const label = () => String(count.get())`, `watch(label, …)`, and `<p>{() => label()}</p>`.
-  That compiles **Folded** with zero routing signals. Its server module then declares
-  `count = createMemo(() => all(…))` with `all` undeclared, which is TS2304 at `check:corpus`
-  and a ReferenceError at render. Before LT-323 the same shape routed Simulated. ADR 0029 makes
-  a false Folded the forbidden direction ("any doubt routes downward"). This one fails loudly
-  instead of shipping wrong HTML, but it is still a misclassification.
-  **Rule:** compute render credit through the same `carriedBy` closure. Every template render
-  position — reactive/class-map/style-map/`truc:html` thunks, lazy and non-lazy expression
-  children, server attributes, `@if`/`@switch` tests — contributes `carriedBy(node)` to
-  `renderCredited`. `allowContextMembers` holds only for a signal outside that set. Leave the
-  literal-initializer credit (the LT-119 route) untouched; it is sound either way.
-  **Accept:** the reproduction routes Simulated (LTC004) and gets a test in
-  `client-setup-credit.test.ts`. The corpus census is unchanged (27/2/0), with scrollarea and
-  catalog still Folded.

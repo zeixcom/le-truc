@@ -95,6 +95,34 @@ import { createState } from '@zeix/le-truc'`)
 		expect(component?.entry.tier).toBe('folded')
 	})
 
+	test('a render position through a carrier blocks the context-member seed (LT-327)', () => {
+		// `count` reaches the template only through `label`, so the direct
+		// `sig.get()` scan misses it. Its initializer reads `all()`, which the
+		// server cannot evaluate — folding it would emit `all` undeclared in
+		// the server module (ADR 0029: any doubt routes downward).
+		const { component } = compile(`export function C({}: {})
+@{
+	const count = createMemo(() => all('li').get().length)
+	const label = () => String(count.get())
+	const out = first('output', 'the log')
+	expose({})
+	watch(label, bindText(out))
+	<>
+		<c-el>
+			<ul><li>a</li></ul>
+			<output></output>
+			<p>{() => label()}</p>
+		</c-el>
+		<style>c-el { display: block }</style>
+	</>
+}
+import { bindText, createMemo } from '@zeix/le-truc'`)
+		expect(
+			component?.entry.routingSignals.some(s => s.origin === 'LTC004'),
+		).toBe(true)
+		expect(component?.entry.tier).toBe('simulated')
+	})
+
 	test('a signal nothing reads still routes (LTC004)', () => {
 		const { component } = compile(
 			source.replace(

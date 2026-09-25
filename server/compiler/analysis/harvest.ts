@@ -405,7 +405,43 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	// Credited by a client-only read, as against a template render thunk:
 	// only these may seed from an initializer over FactoryContext members
 	// (`all()` in catalog's `total`), which the server cannot evaluate.
+	// Render credit runs through the same `carriedBy` closure (LT-327): a
+	// signal reaching a render position via a setup const (`<p>{() =>
+	// label()}</p>`) is as render-bound as a direct `sig.get()`, and folding
+	// its context-member initializer would leave the server module reading
+	// an undeclared `all` (ADR 0029: any doubt routes downward).
 	const renderCredited = new Set(thunkRendered)
+	const creditRender = (node: AstNode | null | undefined): void => {
+		if (node) for (const signal of carriedBy(node)) renderCredited.add(signal)
+	}
+	walkTemplate(component.root, node => {
+		if (node.kind === 'element') {
+			for (const attr of node.attrs) {
+				if (
+					attr.kind === 'reactive' ||
+					attr.kind === 'class-map' ||
+					attr.kind === 'style-map'
+				)
+					creditRender(attr.thunk)
+				else if (attr.kind === 'html') {
+					creditRender(attr.node)
+					if (attr.reactive) creditRender(attr.thunk)
+				} else if (attr.kind === 'server' || attr.kind === 'plural-case-type')
+					creditRender(attr.node)
+			}
+		} else if (node.kind === 'expr') creditRender(node.expr)
+		else if (node.kind === 'if') creditRender(node.test)
+		else if (node.kind === 'switch') creditRender(node.discriminant)
+		else if (node.kind === 'compose') {
+			for (const attr of node.attrs)
+				if (attr.kind === 'arg') creditRender(attr.node)
+		}
+	})
+	for (const loop of component.fors.values()) {
+		if (loop.kind !== 'each') continue
+		creditRender(loop.iterable)
+		for (const hoisted of loop.hoisted) creditRender(hoisted.node)
+	}
 	const clientCredited = new Set<string>()
 	const creditClientRead = (node: AstNode): void => {
 		for (const signal of carriedBy(node)) {
