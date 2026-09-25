@@ -22,6 +22,10 @@
 - **Host-profile typings for `truc:html`, `aria-orientation` and `aria-value*`**: `.tsx` elements accept them without a cast.
 - **`ElementFromSelectorList` and `StripPseudoArguments` types**: exported alongside `ElementFromSelector`, which now composes them.
 - **`.tsx` compose sites accept `class`, `id` and `data-*`**: they are spliced onto the composed child's rendered root, `data-*` with a static or dynamic value and never as a child arg, so `first('child-tag.discriminator')` can tell two compose sites apart.
+- **`<truc:try>` in `.tsx`**: `<truc:try catch={e => …}>…</truc:try>` is the error boundary, and adding `pending={…}` makes it the async boundary — the `.tsx` spelling of `@try`/`@pending`/`@catch`. A missing `catch` or a repeated arm is a `tsc` error.
+- **One `truc:pass` for same-class compose sites**: sites sharing a class with textually identical `truc:pass` objects compile to one `pass(all(…))`. Sites whose objects differ fail `LTC007`, which names both fixes.
+- **Tag-map typings for `.tsrx`-served tags**: `tsrx-imports.d.ts` now also declares an `HTMLElementTagNameMap` entry for every tag served from `.tsrx`, so a `.tsx` parent queries a `.tsrx` child fully typed without listing generated clients in its tsconfig.
+- **`form-listbox` `options`**: a read-only `options` property lists every option's value and label, unfiltered. `visibleOptions` is now `options` with the filter applied.
 
 ### Changed
 
@@ -59,6 +63,10 @@
 - **`le-truc` skill `errors.md` covers the new codes**: rows for `LTC051`–`LTC054`, and the `LTC048` row restates the variant-set rule and its fix.
 - **A stale `variantOverrides` entry fails the build**: an override naming a tag that no variant set declares is now a configuration error, instead of being silently ignored.
 - **Signals read only by client-only code keep their component Folded**: a signal consumed only through `watch()`, event handlers or `truc:pass`, directly or through setup consts, no longer routes Simulated. `module-scrollarea` and `module-catalog` are now Folded.
+- **Composed `truc:pass` sites need no `first()` reference**: the compiler addresses a site by the child tag plus its unique static `class`/`id`/`data-*`, and `LTC012` no longer asks for a reference. An authored `first()` still works and still names the query.
+- **Six further corpus components are served from `.tsx`**: `basic-blogmeta`, `module-lazyload`, `context-media`, `module-carousel`, `module-coloreditor` and `module-listnav`, twins kept as variants.
+- **`basic-blogmeta` renders its byline from attributes**: `author`, `avatar`, `published`, `modified` and `reading-time`, with the schema.org microdata rendered for you. The build expands attribute-only occurrences into the full byline.
+- **`LTC005` messages name their fix**: they now end "… is outside the supported subset (ADR 0023)" plus the fix where one exists, instead of a stale list of supported constructs.
 
 ### Removed
 
@@ -81,6 +89,14 @@
 - **`module-dialog` scrolled the page at connect**: previously a closed dialog restored scroll and focus it had never saved. Now it restores them only after an actual open.
 - **`basic-button`'s badge was missing when server-composed**: previously a badge value passed from a parent had no element to land in. Now the badge always renders, hidden while empty.
 - **Server modules referencing an out-of-scope ref**: previously a Parser prop whose fallback read a `first()` ref re-emitted that fallback where the ref did not exist (`form-spinbutton`). Now such a prop keeps no attribute channel, and an occurrence setting it stays authored.
+- **A loop as a branch root bound only its first item**: previously a loop directly inside an `@if`/`@switch` branch, or a `.tsx` conditional arm, compiled and wired the client handler to the first item only. Now it fails `LTC005`; wrap the loop in an element.
+- **Shuffled server-data loops folded silently**: previously a loop over items that read `Math.random()`, `crypto`, `Date`, `Intl` or a locale method baked one build-time result into the page. Now it fails `LTC033`.
+- **Names that shadow generated imports**: previously an arg or setup name such as `items`, `esc` or `bindText` broke the generated module. Now the compiler aliases its own imports and leaves your names as written.
+- **`import type` used only by carried declarations**: previously it was dropped with `LTC014`, so the generated module failed to typecheck. Now it is placed in the module that needs it.
+- **Context members read only by setup declarations**: previously the generated client did not destructure them (for example `host` inside a task callback), so the component failed at connect. Now they are destructured.
+- **`.tsx` `for` loop variables read as free names**: previously the `.tsx` front end dropped the declaration in `for (let i = 0; …)`, so the compiler treated `i` as an unresolved name. Now the declaration is kept.
+- **Helpers called in an `each()` callback**: previously they failed `LTC045` as a deferred collector call. Now they are accepted, because `each()` runs its callback in its own collector.
+- **`@case` tests are render positions**: previously a component whose `@case` test read a context-seeded signal could be classified Folded and serve the wrong branch. Now it routes Simulated, like the discriminant.
 
 ## 2.6.0
 
