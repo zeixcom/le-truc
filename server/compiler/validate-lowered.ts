@@ -18,6 +18,7 @@ import { diagnostic } from './diagnostics'
 import { reportDuplicatedChannels } from './first-refs'
 import type { ConfigIR, ExtractContext, ForIR, TemplateNode } from './ir'
 import type { SetupExtraction } from './setup-extraction'
+import { wordingOf } from './surface'
 import { walkTemplate } from './walk'
 
 /** Native form-control tags whose own `name` would double-submit (LT-059). */
@@ -109,7 +110,6 @@ const reportLoopsInBranches = (
 	ctx: ExtractContext,
 	root: TemplateNode,
 	fors: ReadonlyMap<AstNode, ForIR>,
-	surface: 'tsrx' | 'tsx',
 ): void => {
 	const outputs = new Set<TemplateNode>([...fors.values()].map(f => f.output))
 	walkTemplate(root, (node, parent) => {
@@ -121,7 +121,7 @@ const reportLoopsInBranches = (
 				diagnostic.loopInBranch(
 					ctx.source,
 					node.node?.start,
-					surface,
+					wordingOf(ctx),
 					parent.kind,
 				),
 			)
@@ -175,14 +175,12 @@ export const validateLoweredComponent = (
 		i18nMessages,
 		extraction,
 		fors,
-		surface,
 	}: {
 		root: TemplateNode & { kind: 'element' }
 		config: ConfigIR | null
 		i18nMessages: Record<string, string> | null
 		extraction: SetupExtraction
 		fors: ReadonlyMap<AstNode, ForIR>
-		surface: 'tsrx' | 'tsx'
 	},
 ): 'cardinal' | 'ordinal' | 'union' => {
 	const source = ctx.source
@@ -289,7 +287,7 @@ export const validateLoweredComponent = (
 
 	if (config?.form) reportNamedFormControls(ctx, root)
 
-	reportLoopsInBranches(ctx, root, fors, surface)
+	reportLoopsInBranches(ctx, root, fors)
 
 	return caseType
 }

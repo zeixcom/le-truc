@@ -18,45 +18,28 @@
  *   `newerGrammarHint`) are absent — the lazy sigil doesn't exist in TS, and
  *   the React idioms are this surface's CORRECT spellings.
  *
- * Everything else — the malformed-selector and import-mismatch scans, the
- * params contract, the setup-extraction loop, context seeding,
- * template-output resolution, the post-lowering validation tail, and the
- * final IR assembly — is SHARED with the `.tsrx` front end through the
- * front-end stage modules (`module-scans.ts`, `params.ts`,
- * `setup-extraction.ts`, `template-output.ts`, `validate-lowered.ts`,
- * `assemble-ir.ts`; LT-202, ADR 0032 sub-design 6's anti-drift contract).
+ * Everything else — the module scans, the params contract, setup
+ * extraction, output resolution, the post-lowering validation tail and IR
+ * assembly — is the one shared script in `front-end.ts` (LT-233), which
+ * this file drives through a `SurfaceAdapter`; diagnostic wording comes
+ * from `surface.ts` (ADR 0032 sub-design 6's anti-drift contract).
  */
 
-import { assembleComponentIR, readModuleDecls } from '../../assemble-ir'
 import { asArray, identifierName, isNode } from '../../ast-utils'
-import { type CompileDiagnostic, diagnostic } from '../../diagnostics'
+import { diagnostic } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import {
-	parseComposeImports,
-	parseLeTrucImports,
-	parsePlainImports,
-} from '../../imports'
-import type { ComponentIR, ExtractContext, ForIR, TemplateNode } from '../../ir'
-import {
-	reportDeferredCollectorCalls,
-	reportLeTrucImportMismatch,
-	reportMalformedSelectors,
-} from '../../module-scans'
-import { extractParams } from '../../params'
-import { extractSetup, seedExtractionContext } from '../../setup-extraction'
-import { resolveTemplateOutput } from '../../template-output'
-import type { RoutingSignal } from '../../tier'
-import { validateLoweredComponent } from '../../validate-lowered'
+	type CompileResult,
+	createExtractContext,
+	runFrontEnd,
+	type SurfaceAdapter,
+} from '../../front-end'
 import { lowerChildren, lowerElement } from './lower-tsx'
 import { type AstNode, parseTsxModule } from './to-estree'
 
 /* === Types === */
 
-export type CompileResult = {
-	component: ComponentIR | null
-	diagnostics: CompileDiagnostic[]
-	routingSignals: RoutingSignal[]
-}
+export type { CompileResult } from '../../front-end'
 
 /* === Spike-local helpers === */
 
@@ -96,212 +79,54 @@ const styleElementStylesheet = (
 	return source.slice(start, end)
 }
 
+/** The `.tsx` grammar's half of the shared driver (`front-end.ts`). */
+const tsxAdapter = (source: string): SurfaceAdapter => ({
+	surface: 'tsx',
+	componentBodyType: 'BlockStatement',
+	// Setup = statements before the single return; template = the returned JSX.
+	splitSetupAndOutput: (ctx, fn, filename) => {
+		const bodyStmts = asArray((fn.body as AstNode).body)
+		const returnStmt = bodyStmts.find(s => s.type === 'ReturnStatement')
+		if (
+			!returnStmt ||
+			bodyStmts[bodyStmts.length - 1] !== returnStmt ||
+			!isNode(returnStmt.argument)
+		) {
+			ctx.diagnostics.push(
+				diagnostic.invalidSource(
+					ctx.source,
+					fn.start,
+					`${filename}: the component function must end in a single \`return <jsx/>\` (setup statements before it).`,
+				),
+			)
+			return null
+		}
+		return {
+			setup: bodyStmts.slice(0, -1),
+			output: returnStmt.argument as AstNode,
+		}
+	},
+	stylesheetOf: node => styleElementStylesheet(source, node) ?? '',
+	lowerChildren,
+	lowerElement,
+})
+
 /* === Exported Functions === */
 
 /**
- * Parse and extract the single exported component from a `.tsx` source.
- * Mirrors `compiler.ts`'s `compileSource` over the TS parser + estree
- * converter; see the module header for the adaptation ledger.
+ * Parse and extract the single exported component from a `.tsx` source:
+ * the TS parser + estree converter, then the shared driver over the `.tsx`
+ * adapter.
  */
 export const compileSourceTsx = (
 	source: string,
 	filename: string,
 	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
-): CompileResult => {
-	const ctx: ExtractContext = {
-		source,
-		diagnostics: [],
-		routingSignals: [],
-		exposedProps: new Set<string>(),
-		serverKnown: new Set<string>(),
-		argNames: new Set<string>(),
-		parserProps: new Set<string>(),
-		parserFactoryOf: () => '',
-		parserFallbackRefsOf: () => new Set<string>(),
-		composeImports: new Map<string, string>(),
-		setupInits: new Map<string, AstNode>(),
-	}
-
-	const ast = parseTsxModule(source, filename)
-
-	reportMalformedSelectors(ctx, ast)
-	ctx.composeImports = parseComposeImports(ast, filename)
-	const plainImports = parsePlainImports(
-		ctx,
-		ast,
+): CompileResult =>
+	runFrontEnd(
+		createExtractContext(source, 'tsx'),
+		parseTsxModule(source, filename),
 		filename,
-		emitPaths.outDirPrefix,
+		emitPaths,
+		tsxAdapter(source),
 	)
-	const leTrucImports = parseLeTrucImports(ast)
-	reportLeTrucImportMismatch(ctx, ast, leTrucImports)
-	const importedNames = new Set<string>([
-		...plainImports.flatMap(i => i.localNames),
-		...leTrucImports.flatMap(i => i.names),
-	])
-
-	// Locate the exported component function: exported, takes the single
-	// destructured args object, its body ends in `return <jsx/>`.
-	let fn: AstNode | null = null
-	let fnStmtStart = 0
-	for (const stmt of asArray(ast.body)) {
-		const decl =
-			stmt.type === 'ExportNamedDeclaration' && isNode(stmt.declaration)
-				? stmt.declaration
-				: stmt
-		if (
-			decl.type === 'FunctionDeclaration' &&
-			isNode(decl.body) &&
-			decl.body.type === 'BlockStatement'
-		) {
-			if (fn) {
-				ctx.diagnostics.push(
-					diagnostic.invalidSource(
-						ctx.source,
-						stmt.start,
-						`${filename}: multiple component functions per file are outside the sanctioned subset.`,
-					),
-				)
-			} else {
-				fn = decl
-				fnStmtStart = typeof stmt.start === 'number' ? stmt.start : 0
-			}
-		}
-	}
-	if (!fn) {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				ctx.source,
-				undefined,
-				`${filename}: no exported component function found (one per file, setup statements then a single \`return <jsx/>\`).`,
-			),
-		)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-	}
-	if (fn.async === true) {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				ctx.source,
-				fn.start,
-				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
-			),
-		)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-	}
-	reportDeferredCollectorCalls(ctx, fn)
-
-	const params = extractParams(ctx, filename, fn)
-	if (!params)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-
-	// Setup = statements before the single return; template = the returned JSX.
-	const name = identifierName(fn.id) ?? 'Component'
-	const bodyStmts = asArray((fn.body as AstNode).body)
-	const returnStmt = bodyStmts.find(s => s.type === 'ReturnStatement') as
-		| AstNode
-		| undefined
-	if (
-		!returnStmt ||
-		bodyStmts[bodyStmts.length - 1] !== returnStmt ||
-		!isNode(returnStmt.argument)
-	) {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				ctx.source,
-				fn.start,
-				`${filename}: the component function must end in a single \`return <jsx/>\` (setup statements before it).`,
-			),
-		)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-	}
-	const render = returnStmt.argument as AstNode
-	const setupStmts = bodyStmts.slice(0, -1)
-
-	const extraction = extractSetup(
-		ctx,
-		setupStmts,
-		params.paramsNode,
-		params.paramNames,
-		importedNames,
-	)
-
-	// Output: a single root element, or a fragment of [root element, <style>?].
-	const bareRoot = render.type === 'JSXElement' ? render : null
-	if (!bareRoot && render.type !== 'JSXFragment') {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				ctx.source,
-				render.start,
-				`${filename}: the return value must be a single root element, or a fragment (element + <style>).`,
-			),
-		)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-	}
-	seedExtractionContext(ctx, { paramNames: params.paramNames, extraction })
-
-	const fors = new Map<AstNode, ForIR>()
-	const lowered: TemplateNode[] = bareRoot
-		? [lowerElement(ctx, bareRoot, extraction.signalByName, fors)]
-		: lowerChildren(ctx, render, extraction.signalByName, fors)
-	const resolved = resolveTemplateOutput(
-		ctx,
-		filename,
-		extraction,
-		lowered,
-		node => styleElementStylesheet(source, node) ?? '',
-		'the template return',
-	)
-	if (!resolved)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-
-	const decls = readModuleDecls(ctx, ast, name)
-	const caseType = validateLoweredComponent(ctx, {
-		root: resolved.root,
-		config: decls.config,
-		i18nMessages: decls.i18nMessages,
-		extraction,
-		fors,
-		surface: 'tsx',
-	})
-	const component = assembleComponentIR(ctx, {
-		componentName: name,
-		fnStmtStart,
-		paramsNode: params.paramsNode,
-		paramNames: params.paramNames,
-		contextParam: params.contextParam,
-		extraction,
-		resolved: { ...resolved, fors },
-		decls,
-		caseType,
-		plainImports,
-		leTrucImports,
-	})
-	return {
-		component,
-		diagnostics: ctx.diagnostics,
-		routingSignals: ctx.routingSignals,
-	}
-}

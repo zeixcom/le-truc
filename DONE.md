@@ -11,6 +11,48 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-242: Extend the parity suite to diagnostics — the equivalence contract covers failed compiles too (ADR 0032 amendment). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new `server/tests/compiler/tsx/diagnostic-parity.test.ts`; ADR 0032 s6 and
+  `ARCHITECTURE.md` § Authoring Surfaces now read "render byte-identically **and diagnose
+  identically**" (s6's stale suite path fixed too).
+  **Ruling (Architect, 2026-09-25):** parity alone cannot see shared machinery that speaks one
+  surface's vocabulary to both — identical, and wrong for one. The contract therefore has TWO
+  checks, both standing: equal code + severity + message after translating `.tsx` through an
+  allowlist, AND a leak scan that rejects `.tsrx` directive vocabulary in any `.tsx` message.
+  The §2.3 per-item `ref` drift had already converged in practice (`classify-attributes.ts`
+  retires `ref={}` on both surfaces first).
+  **Review:** Approved. The pins were mutation-checked (reintroducing the §1.1 bug fails the
+  suite); every allowlist entry must be exercised, so the table cannot rot.
+
+- [x] LT-233: `SurfaceAdapter` + shared `runFrontEnd` — collapse the copied front-end drivers. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new `server/compiler/front-end.ts` (`SurfaceAdapter`, `runFrontEnd`,
+  `createExtractContext`, `CompileResult`) and `server/compiler/surface.ts` (one
+  `SurfaceWording` table per surface, `wordingOf`); `lower-shared.ts` owns the programs after
+  header parsing (`lowerLoop` over a `LoopSource`, `finishIf`, `finishTry`,
+  `reportEmptySwitch`); ~40 `.tsrx`-worded messages in `analysis/effects.ts`,
+  `analysis/loops.ts` and five `diagnostics.ts` builders now compose from the vocabulary.
+  Generated corpus artifacts byte-identical. User-visible (CHANGELOG `[Unreleased]` Fixed,
+  landed): `.tsx` diagnostics no longer name `.tsrx` directives or the retired `&{}` sigil, and a
+  `.tsx` list `.map()` body with statements besides its `return` is rejected instead of
+  silently dropping them.
+  **Rulings (Architect, 2026-09-25):**
+  - **Shared compiler code never spells a surface's construct itself** — it reads
+    `wordingOf(ctx | component)`. A message only one grammar can reach may stay a literal; two
+    such (the `.tsrx` key clause, the `.tsx` `.map()` arity) sit in the shared `lowerLoop`
+    because the check ORDER is shared — accepted, and each is commented as single-surface.
+  - **`ComponentIR.surface` is OPTIONAL; absent ⇒ `.tsx` wording.** It is contract IR
+    (`contract.ts`: a required field would be a tightened shape, i.e. major), and a third-party
+    front end has neither vocabulary — `.tsx`'s JavaScript-expression spelling is the nearer
+    fit. `ExtractContext.surface` is internal and required. No neutral third table unless a
+    real third-party front end reads wrong under the `.tsx` words.
+  - **The `.tsx` reactive-list key binding is a capability gap, not wording** → LT-342.
+  **Handoffs:** LT-189 item 15 (the vocabulary's copy); LT-275 rider (ADR 0037 codes join
+  `surface.ts`, the parity `CONDITIONS` cases flip with them); LT-342.
+  **Review:** Approved. Diff re-read for order drift: the one reordering (the `.map()`
+  callback-body check now precedes the item-name check) is unreachable for arrow callbacks.
+
 Pruned 2026-09-25, third pass (Architect, after the "wave 4, second batch" iteration closed;
 Changelog Keeper merged it into `CHANGELOG.md [Unreleased]` the same day). **No task entries
 remain.** Every one was either consumed with nothing left to carry, or reduced to a ruling in

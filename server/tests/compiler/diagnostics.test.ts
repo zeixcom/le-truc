@@ -449,7 +449,9 @@ export function C({}: {}) {
 		expect(component).toBeNull()
 		expect(
 			diagnostics.some(d =>
-				d.message.includes('pending arm must render exactly one root element'),
+				d.message.includes(
+					'`pending` arm must render exactly one root element',
+				),
 			),
 		).toBe(true)
 	})

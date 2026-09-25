@@ -19,6 +19,7 @@ import {
 } from './first-refs'
 import type { ExtractContext, TemplateNode } from './ir'
 import type { SetupExtraction } from './setup-extraction'
+import { wordingOf } from './surface'
 
 /** Template-output resolution: the root, the style block, and the CSS. */
 export type ResolvedTemplate = {
@@ -176,6 +177,7 @@ export const resolveTemplateOutput = (
 					refName,
 					selectorText,
 					elements.length,
+					wordingOf(ctx),
 				),
 			)
 			continue

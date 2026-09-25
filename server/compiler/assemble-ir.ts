@@ -265,6 +265,7 @@ export const assembleComponentIR = (
 	return {
 		name: componentName,
 		source: ctx.source,
+		surface: ctx.surface,
 		tag: resolved.root.tag,
 		paramsText: paramsNode ? text(ctx.source, paramsNode) : '',
 		paramNames: [...paramNames],

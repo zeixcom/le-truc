@@ -33,16 +33,23 @@ import {
 	classifyComposeAttribute,
 } from './classify-attributes'
 import { diagnostic } from './diagnostics'
-import { containsImpureAmbient } from './evaluability'
+import {
+	containsImpureAmbient,
+	dependenciesOf,
+	isServerEvaluable,
+} from './evaluability'
 import type {
 	AttributeIR,
 	ComposeAttrIR,
+	EachForIR,
 	ExtractContext,
 	ForIR,
+	ReconcileForIR,
 	SignalIR,
 	TemplateNode,
 } from './ir'
 import { bindsExposedArg, classifyChild } from './reactivity'
+import { wordingOf } from './surface'
 
 /** The recursion seam: each front end's own children dispatcher. */
 export type Lowering = {
@@ -54,33 +61,22 @@ export type Lowering = {
 	) => TemplateNode[]
 }
 
-/** Surface vocabulary for the diagnostics that name authored shapes. */
-export type SurfaceWording = {
-	/** A lazy child inside a composed element's content. */
-	lazyChild: string
-	/** Control flow inside a composed element's content. */
-	controlFlow: string
-	/** Where a composed element is illegal (the non-child-list context). */
-	composedPosition: string
-	/** The conditional spelling that picks between two static tags (LTC053). */
-	conditionalTag: string
-}
-
 /* === Condition validation === */
 
 /**
  * Validate a control-flow condition (`@if` test / ternary test, `@switch`
  * discriminant): server-known at render time (args, setup consts, globals)
  * and never a signal read — the DOM keeps the initially rendered branch.
- * `what` carries the surface's spelling (`'@if condition'` / `'if
- * condition'`).
+ * The message names the surface's spelling of the construct.
  */
 export const validateCondition = (
 	ctx: ExtractContext,
 	signals: ReadonlyMap<string, SignalIR>,
 	test: AstNode,
-	what: string,
+	kind: 'if' | 'switch',
 ): boolean => {
+	const wording = wordingOf(ctx)
+	const what = kind === 'if' ? wording.ifCondition : wording.switchDiscriminant
 	const free = freeIdentifiers(test)
 	for (const global of JS_GLOBALS) free.delete(global)
 	const signalReads = [...free].filter(name => signals.has(name))
@@ -263,14 +259,13 @@ export const lowerExpressionChild = (
  * composition — has no meaning at a content-substitution site, so it is
  * diagnosed instead of silently dropped or silently inert. The two message
  * fragments naming the offending shapes are surface vocabulary (the `.tsrx`
- * sigil spelling vs. the `.tsx` expression spelling) and arrive through
- * `wording`.
+ * sigil spelling vs. the `.tsx` expression spelling).
  */
 export const validateComposedChildren = (
 	ctx: ExtractContext,
 	children: TemplateNode[],
-	wording: SurfaceWording,
 ): void => {
+	const wording = wordingOf(ctx)
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'text') return
 		if (node.kind === 'expr') {
@@ -327,7 +322,6 @@ export const lowerComposeElement = (
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
 	lowering: Lowering,
-	wording: SurfaceWording,
 ): (TemplateNode & { kind: 'compose' }) | null => {
 	const source = ctx.composeImports.get(tag)
 	if (!source) {
@@ -365,7 +359,7 @@ export const lowerComposeElement = (
 		}
 	}
 	const children = lowering.lowerChildren(ctx, element, signals, fors)
-	validateComposedChildren(ctx, children, wording)
+	validateComposedChildren(ctx, children)
 	return {
 		kind: 'compose',
 		component: tag,
@@ -392,8 +386,8 @@ export const lowerElement = (
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
 	lowering: Lowering,
-	wording: SurfaceWording,
 ): TemplateNode & { kind: 'element' } => {
+	const wording = wordingOf(ctx)
 	const opening = element.openingElement
 	const tagNode = isNode(opening) ? opening.name : null
 	const tag = jsxName(tagNode) ?? ''
@@ -516,7 +510,6 @@ export const lowerChildrenSkeleton = (
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
 	lowering: Lowering,
-	wording: SurfaceWording,
 	hooks: {
 		/** Pre-scan beside a JSXText child (the `.tsrx` retired-`&{}`-sigil
 		 * check needs the NEXT sibling — a diagnose-only hook). */
@@ -594,16 +587,8 @@ export const lowerChildrenSkeleton = (
 			}
 			const lowered =
 				tag && /^[A-Z]/.test(tag)
-					? lowerComposeElement(
-							ctx,
-							child,
-							tag,
-							signals,
-							fors,
-							lowering,
-							wording,
-						)
-					: lowerElement(ctx, child, signals, fors, lowering, wording)
+					? lowerComposeElement(ctx, child, tag, signals, fors, lowering)
+					: lowerElement(ctx, child, signals, fors, lowering)
 			if (lowered) out.push(lowered)
 			continue
 		}
@@ -628,8 +613,7 @@ export const lowerChildrenSkeleton = (
  * toggle path) every root must be an element, because the client toggles
  * each root's `hidden` as the list empties and fills.
  *
- * `what` carries the surface's spelling (`'@empty arm'` / `'empty-state
- * arm'`).
+ * The message names the surface's spelling of the arm.
  */
 export const validateEmptyArm = (
 	ctx: ExtractContext,
@@ -637,8 +621,8 @@ export const validateEmptyArm = (
 	kind: ForIR['kind'],
 	fors: ReadonlyMap<AstNode, ForIR>,
 	at: number | undefined,
-	what: string,
 ): TemplateNode[] | null => {
+	const what = wordingOf(ctx).emptyArm
 	const outputs = new Set([...fors.values()].map(f => f.output))
 	let offending: AstNode | undefined
 	const inert = (node: TemplateNode): boolean => {
@@ -716,4 +700,511 @@ export const validateEmptyArm = (
 		}
 	}
 	return arm
+}
+
+/* === Loops (LT-233: one program after the header) === */
+
+/**
+ * A loop as its header parsed it. The two spellings — `.tsrx`'s `@for (const
+ * item of items; index i; key k) { … }` and `.tsx`'s `{items.map((item, i)
+ * => …)}` — genuinely differ only up to here: binding names, the iterable,
+ * the body's statements and which of them is the output. Everything after
+ * is `lowerLoop`, so a rule added to one surface's loops cannot miss the
+ * other's (the COMPILER_REVIEW §1.1 and §2.3 drifts both lived in the
+ * copied tail this replaced).
+ */
+export type LoopSource = {
+	/** The loop node — the `ForIR` key (the directive / the `.map()` call). */
+	node: AstNode
+	/** The loop variable, or null when the header destructures. */
+	itemName: string | null
+	/** An index binding and where it was written. */
+	index: { name: string; at: number | undefined } | null
+	iterable: AstNode
+	/** `.tsrx`'s `key` clause; `.tsx` has none (the List's keyConfig keys it). */
+	key: AstNode | null
+	/**
+	 * `.tsx` only: the `.map()` callback declares more than `(item, index)`.
+	 * Checked on the server-data path — over a List the index check fires
+	 * first, as it always did.
+	 */
+	extraParams: boolean
+	/** Body statements, in order. Empty for an expression-bodied callback. */
+	statements: AstNode[]
+	/** The output element a statement carries, or null for any other statement. */
+	outputOf: (stmt: AstNode) => AstNode | null
+	/** An expression-bodied callback's output (`item => <li/>`). */
+	expressionOutput: AstNode | null
+	/** Lower the empty arm (`null`: none; `false`: diagnosed, drop the loop). */
+	lowerEmptyArm: (kind: ForIR['kind']) => TemplateNode[] | null | false
+}
+
+/**
+ * Validate the reactive-list body shape (ADR 0024 sub-design 5, extended by
+ * LT-215): statics and event attributes anywhere, exactly one lazy `{item}`
+ * hole (the slot fill), and — since LT-215 — expressions that classify
+ * SERVER-STATIC (`isServerEvaluable` against `ctx.serverKnown`: server args,
+ * the reserved record's `t`/`lang`, no impure ambient state). A server-static
+ * value folds identically into every item at every render call and needs no
+ * per-item client binding, so `listTemplateLines` bakes it into the extracted
+ * `<template>` at render time — the client clones the SERVED template, so the
+ * folded bytes ride along to cloned items. Item-derived expressions (they
+ * read names outside `serverKnown`) and control flow stay rejected: the
+ * slot-fill contract has no channel for a per-item value. (`ref={}` never
+ * reaches here — `classify-attributes.ts` retires it on every element.)
+ */
+const validateListBody = (
+	ctx: ExtractContext,
+	output: TemplateNode & { kind: 'element' },
+	itemName: string,
+): void => {
+	const { loop, listControlFlow } = wordingOf(ctx)
+	// Join FIRST, then test the string: an empty array is truthy, which
+	// once made the impure-ambient arm unreachable and printed `reads , …`
+	// (COMPILER_REVIEW §1.1, LT-221).
+	const notBuildTime = (node: AstNode): string => {
+		const offenders = [...dependenciesOf(node)]
+			.filter(name => !ctx.serverKnown.has(name))
+			.join(', ')
+		return offenders
+			? `reads ${offenders}, which derive per item or client-side`
+			: 'reads impure ambient state'
+	}
+	let holes = 0
+	const walk = (node: TemplateNode): void => {
+		if (node.kind === 'expr') {
+			const isItemHole =
+				node.lazy &&
+				node.expr.type === 'Identifier' &&
+				node.exprText === itemName
+			if (isItemHole) holes++
+			else if (node.lazy)
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						`Lazy children inside a reactive-list ${loop} body must be the bare item ({${itemName}}) — the slot fill; {${node.exprText}} derives per item, and the extracted <template> has no per-item binding channel (ADR 0024 sub-design 5).`,
+					),
+				)
+			else if (!isServerEvaluable(node.expr, ctx.serverKnown))
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						`{${node.exprText}} inside a reactive-list ${loop} body ${notBuildTime(node.expr)} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5).`,
+					),
+				)
+			return
+		}
+		if (node.kind !== 'element') {
+			if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						node.node.start,
+						`${listControlFlow} inside a reactive-list ${loop} body — the extracted template is static markup`,
+					),
+				)
+			return
+		}
+		for (const attr of node.attrs) {
+			if (attr.kind === 'event' || attr.kind === 'static') continue
+			if (
+				attr.kind === 'server' &&
+				isServerEvaluable(attr.node, ctx.serverKnown)
+			)
+				continue
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					node.node.start,
+					`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list ${loop} body${attr.kind === 'server' ? ` ${notBuildTime(attr.node)}` : ''} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5, LT-215).`,
+				),
+			)
+		}
+		for (const child of node.children) walk(child)
+	}
+	walk(output)
+	if (holes !== 1) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				output.node.start,
+				`A reactive-list ${loop} body must render the item exactly once via {${itemName}} — that hole is the template slot the client fills (found ${holes}).`,
+			),
+		)
+	}
+}
+
+/**
+ * The reactive-list loop over a declared `createList` (milestone 3): the
+ * reconcile plan. Index bindings stay gated (keyed reconciliation); the
+ * body is exactly the output element — a hoisted const has no per-item
+ * rebinding channel here.
+ */
+const lowerListLoop = (
+	ctx: ExtractContext,
+	loop: LoopSource,
+	itemName: string,
+	listSignal: string,
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<AstNode, ForIR>,
+	lowering: Lowering,
+): (TemplateNode & { kind: 'element' }) | null => {
+	const wording = wordingOf(ctx)
+	if (loop.index) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				loop.index.at,
+				`Index bindings in a reactive-list ${wording.loop} — index identity does not survive keyed reconciliation`,
+			),
+		)
+		return null
+	}
+	let keyName: string | null = null
+	if (loop.key) {
+		// Reachable from `.tsrx` only — `.tsx` has no key clause.
+		keyName = identifierName(loop.key)
+		if (!keyName) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					loop.key.start,
+					'The key clause of a reactive-list @for must name the key binding (a bare identifier, e.g. `key k`) — it becomes reconcile() bindItem’s key parameter',
+				),
+			)
+			return null
+		}
+	}
+	if (itemName === 'first' || keyName === 'first' || itemName === 'element') {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				loop.node.start,
+				`${wording.loopBindings} named \`first\`/\`element\` — reserved parameters of reconcile() bindItem`,
+			),
+		)
+		return null
+	}
+	let outputNode = loop.expressionOutput
+	for (const stmt of loop.statements) {
+		const candidate = outputNode ? null : loop.outputOf(stmt)
+		if (candidate) {
+			outputNode = candidate
+			continue
+		}
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				stmt.start,
+				stmt.type === 'VariableDeclaration'
+					? `Hoisted consts inside a reactive-list ${wording.loop} body (derive at use sites; per-item const rebinding is outside the milestone-3 subset)`
+					: `Statements other than the output element inside a reactive-list ${wording.loop} body`,
+			),
+		)
+	}
+	if (!outputNode) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				loop.node.start,
+				`${wording.loop} bodies must contain an output element`,
+			),
+		)
+		return null
+	}
+	const output = lowerElement(ctx, outputNode, signals, fors, lowering)
+	// The item binding is the slot fill — reactive by position, not a
+	// declared signal, so the lift rule alone would leave it static and
+	// `validateListBody` would then see zero holes.
+	markPositionallyReactive([output], new Set([itemName]))
+	validateListBody(ctx, output, itemName)
+	const emptyArm = loop.lowerEmptyArm('reconcile')
+	if (emptyArm === false) return null
+	const forIR: ReconcileForIR = {
+		kind: 'reconcile',
+		itemName,
+		listSignal,
+		keyText: loop.key ? text(ctx.source, loop.key) : null,
+		keyName,
+		output,
+		node: loop.node,
+		emptyArm,
+	}
+	fors.set(loop.node, forIR)
+	return output
+}
+
+/**
+ * Lower a loop from its parsed header. Server-data iterables lower to
+ * `each()`; a declared reactive `createList` to the reconcile plan; any
+ * other reactive source stays gated (LTC001). The iterable's TYPE routes
+ * the loop, never its spelling.
+ */
+export const lowerLoop = (
+	ctx: ExtractContext,
+	loop: LoopSource,
+	signals: ReadonlyMap<string, SignalIR>,
+	fors: Map<AstNode, ForIR>,
+	lowering: Lowering,
+): (TemplateNode & { kind: 'element' }) | null => {
+	const wording = wordingOf(ctx)
+	const { itemName } = loop
+	if (!itemName) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				loop.node.start,
+				`${wording.loop} over a destructuring loop variable`,
+			),
+		)
+		return null
+	}
+	const iterableName = identifierName(loop.iterable)
+	const iterableSignal = iterableName ? signals.get(iterableName) : undefined
+	if (iterableSignal) {
+		if (iterableSignal.constructor !== 'createList') {
+			ctx.diagnostics.push(
+				diagnostic.reactiveForNotSupported(
+					ctx.source,
+					loop.node.start,
+					iterableSignal.name,
+					wording,
+				),
+			)
+			return null
+		}
+		return lowerListLoop(
+			ctx,
+			loop,
+			itemName,
+			iterableSignal.name,
+			signals,
+			fors,
+			lowering,
+		)
+	}
+	if (loop.key) {
+		ctx.diagnostics.push(
+			diagnostic.keyOnServerDataFor(ctx.source, loop.key.start),
+		)
+		return null
+	}
+	if (loop.extraParams) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				loop.node.start,
+				'map callbacks take at most (item, index) — the key clause is a reactive-List concern',
+			),
+		)
+		return null
+	}
+	const hoisted: EachForIR['hoisted'] = []
+	let outputNode = loop.expressionOutput
+	for (const stmt of loop.statements) {
+		if (stmt.type === 'VariableDeclaration') {
+			if (stmt.kind !== 'const') {
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						stmt.start,
+						`Non-const declarations inside ${wording.loop} bodies`,
+					),
+				)
+				continue
+			}
+			for (const decl of asArray(stmt.declarations)) {
+				const declName = identifierName(decl.id)
+				if (!declName || !isNode(decl.init)) {
+					ctx.diagnostics.push(
+						diagnostic.unsupported(
+							ctx.source,
+							stmt.start,
+							`Destructuring declarations inside ${wording.loop} bodies`,
+						),
+					)
+					continue
+				}
+				hoisted.push({
+					name: declName,
+					initText: text(ctx.source, decl.init),
+					node: decl,
+				})
+			}
+			continue
+		}
+		const candidate = outputNode ? null : loop.outputOf(stmt)
+		if (candidate) {
+			outputNode = candidate
+			continue
+		}
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				stmt.start,
+				wording.loopBodyStatements,
+			),
+		)
+	}
+	if (!outputNode) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				loop.node.start,
+				`${wording.loop} bodies must contain an output element`,
+			),
+		)
+		return null
+	}
+	const output = lowerElement(ctx, outputNode, signals, fors, lowering)
+	if (!output.tag) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				loop.node.start,
+				`${wording.loop} output must be a single element`,
+			),
+		)
+		return null
+	}
+	const emptyArm = loop.lowerEmptyArm('each')
+	if (emptyArm === false) return null
+	const forIR: EachForIR = {
+		kind: 'each',
+		itemName,
+		indexName: loop.index?.name ?? null,
+		iterableText: text(ctx.source, loop.iterable),
+		iterable: loop.iterable,
+		iterableName,
+		hoisted,
+		output,
+		node: loop.node,
+		emptyArm,
+	}
+	fors.set(loop.node, forIR)
+	return output
+}
+
+/* === Conditionals and boundaries (the shared tails) === */
+
+/** The `if` IR, once a surface has lowered the test and both branches. */
+export const finishIf = (
+	ctx: ExtractContext,
+	node: AstNode,
+	test: AstNode,
+	then: TemplateNode[],
+	alternate: TemplateNode[],
+): (TemplateNode & { kind: 'if' }) | null => {
+	if (then.length === 0 && alternate.length === 0) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.start,
+				`${wordingOf(ctx).ifBranches} must contain output elements`,
+			),
+		)
+		return null
+	}
+	return {
+		kind: 'if',
+		testText: text(ctx.source, test),
+		test,
+		then,
+		alternate,
+		node,
+	}
+}
+
+/** Report a switch with no arms, or an arm with no output (the switch tail). */
+export const reportEmptySwitch = (
+	ctx: ExtractContext,
+	at: number | undefined,
+	which: 'switch' | 'arm',
+): void => {
+	const wording = wordingOf(ctx)
+	ctx.diagnostics.push(
+		diagnostic.unsupported(
+			ctx.source,
+			at,
+			which === 'switch'
+				? wording.switchNoArms
+				: `${wording.caseArms} must contain output elements`,
+		),
+	)
+}
+
+/**
+ * The boundary tail both spellings share (`@try`/`@pending`/`@catch`, `<truc:try
+ * pending catch>`): with a pending arm it is an ASYNC boundary (ADR 0023
+ * sub-design 13) whose three arms each need exactly one root element — all
+ * render, `hidden`-toggled by which state won — and the catch parameter is
+ * reactive by position in its arm.
+ */
+export const finishTry = (
+	ctx: ExtractContext,
+	node: AstNode,
+	arms: {
+		children: TemplateNode[]
+		catchParam: string | null
+		catchChildren: TemplateNode[]
+		pendingChildren: TemplateNode[] | null
+		/** Where each arm was written, for the single-root diagnostics. */
+		at: {
+			body: number | undefined
+			pending: number | undefined
+			catch: number | undefined
+		}
+	},
+): (TemplateNode & { kind: 'try' }) | null => {
+	const wording = wordingOf(ctx)
+	const { children, catchParam, catchChildren, pendingChildren, at } = arms
+	if (pendingChildren !== null) {
+		const multiRoot: Array<[TemplateNode[], number | undefined, string]> = [
+			[
+				children,
+				at.body,
+				`An async boundary's ${wording.tryBody} must render exactly one root element (its own \`hidden\` toggle and client addressing need a single target)`,
+			],
+			[
+				pendingChildren,
+				at.pending,
+				`${wording.pendingArm} must render exactly one root element`,
+			],
+			[
+				catchChildren,
+				at.catch,
+				`${wording.catchArm} of an async boundary must render exactly one root element`,
+			],
+		]
+		for (const [arm, offset, what] of multiRoot) {
+			if (singleRootOf(arm)) continue
+			ctx.diagnostics.push(diagnostic.unsupported(ctx.source, offset, what))
+			return null
+		}
+	}
+	if (children.length === 0 && catchChildren.length === 0) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				node.start,
+				`${wording.boundaries} must contain output elements`,
+			),
+		)
+		return null
+	}
+	// The catch arm's error child reads the catch parameter, which is
+	// reactive by position — the async boundary re-renders the arm when the
+	// task rejects — but is not a declared signal.
+	if (catchParam !== null)
+		markPositionallyReactive(catchChildren, new Set([catchParam]))
+	return {
+		kind: 'try',
+		children,
+		catchParam,
+		catchChildren,
+		pendingChildren,
+		node,
+	}
 }

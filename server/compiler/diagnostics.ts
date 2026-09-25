@@ -17,6 +17,8 @@
  * `VOCABULARY_LEDGER.md` beside this file.
  */
 
+import type { SurfaceWording } from './surface'
+
 /* === Types === */
 
 export type DiagnosticCode =
@@ -159,12 +161,13 @@ export const diagnostic = {
 	 */
 	reactiveForNotSupported: (
 		source: string,
-		offset?: number,
-		iterable?: string,
+		offset: number | undefined,
+		iterable: string,
+		wording: SurfaceWording,
 	) =>
 		warning(
 			'LTC001',
-			`@for over reactive source \`${iterable ?? '?'}\` — only declared createList(…) signals lower (reconcile(), ADR 0017); derived or non-List reactive sources are not supported. File skipped.`,
+			`${wording.loop} over reactive source \`${iterable}\` — only declared createList(…) signals lower (reconcile(), ADR 0017); derived or non-List reactive sources are not supported. File skipped.`,
 			lineOf(source, offset),
 		),
 
@@ -264,7 +267,11 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
-	/** Loop variable used inside a reactive thunk — the hoist-first rule. */
+	/**
+	 * Loop variable used inside a reactive thunk — the hoist-first rule.
+	 * Worded surface-neutrally ("loop variables"): the rule is the same for
+	 * a `@for` and a `.map()` callback (LT-233).
+	 */
 	loopVariableInReactiveThunk: (
 		source: string,
 		offset: number | undefined,
@@ -272,7 +279,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC002',
-			`Reactive expressions must not reference @for variables directly (${names.map(n => `\`${n}\``).join(', ')}). Hoist the derived value into a const first (e.g. \`const pid = panelId(tab.id)\`) so the client can rebind it to a server-rendered attribute.`,
+			`Reactive expressions must not reference loop variables directly (${names.map(n => `\`${n}\``).join(', ')}). Hoist the derived value into a const first (e.g. \`const pid = panelId(tab.id)\`) so the client can rebind it to a server-rendered attribute.`,
 			lineOf(source, offset),
 		),
 
@@ -316,16 +323,16 @@ export const diagnostic = {
 	loopInBranch: (
 		source: string,
 		offset: number | undefined,
-		surface: 'tsrx' | 'tsx',
+		wording: SurfaceWording,
 		branch: 'if' | 'switch',
-	) =>
-		error(
+	) => {
+		const { inside, outOf } = wording.loopInBranch(branch)
+		return error(
 			'LTC005',
-			surface === 'tsrx'
-				? `A \`@for\` loop inside an \`@${branch}\` branch is outside the supported subset: the client addresses a branch's content by its roots, so only the loop's first item would get its bindings. Render the empty case with the loop's own \`@empty\` arm, or move the loop out of the branch.`
-				: `A \`.map()\` loop inside a ${branch === 'if' ? 'conditional arm' : '`switch` case'} is outside the supported subset: the client addresses a branch's content by its roots, so only the loop's first item would get its bindings. Render the empty case with the empty-state idiom (\`{items.length === 0 ? <empty/> : items.map(…)}\`), or move the loop out of the ${branch === 'if' ? 'conditional' : 'switch'}.`,
+			`${wording.aLoop} inside ${inside} is outside the supported subset: the client addresses a branch's content by its roots, so only the loop's first item would get its bindings. Render the empty case with ${wording.emptyArmFix}, or move the loop out of ${outOf}.`,
 			lineOf(source, offset),
-		),
+		)
+	},
 
 	/** Attribute shape the classifier does not accept. */
 	invalidAttribute: (
@@ -756,10 +763,11 @@ export const diagnostic = {
 		name: string,
 		selector: string,
 		count: number,
+		wording: SurfaceWording,
 	) =>
 		error(
 			'LTC027',
-			`\`first('${selector}', …)\` (bound to \`${name}\`) matches ${count} elements in this component's template, and they are not all mutually-exclusive branches of the same @if — give the target a distinguishing \`class\`/\`id\`/\`data-*\` and name it in the selector. On a COMPOSED (PascalCase) element the attribute goes on the COMPOSE SITE, not inside the child (LT-127): \`<FormSpinbutton class="lightness" />\` → \`first('form-spinbutton.lightness', …)\`.`,
+			`\`first('${selector}', …)\` (bound to \`${name}\`) matches ${count} elements in this component's template, and they are not all mutually-exclusive branches of the same ${wording.if} — give the target a distinguishing \`class\`/\`id\`/\`data-*\` and name it in the selector. On a COMPOSED (PascalCase) element the attribute goes on the COMPOSE SITE, not inside the child (LT-127): \`<FormSpinbutton class="lightness" />\` → \`first('form-spinbutton.lightness', …)\`.`,
 			lineOf(source, offset),
 		),
 
@@ -988,10 +996,11 @@ export const diagnostic = {
 		id: string,
 		firstArm: string,
 		secondArm: string,
+		wording: SurfaceWording,
 	) =>
 		error(
 			'LTC035',
-			`id="${id}" appears in both ${firstArm} and ${secondArm} — all arms of a \`@try\`/\`@catch\`/\`@pending\` boundary render into the initial HTML at once (non-active arms are hidden, not removed), so this is two elements sharing an id in the same document simultaneously. Give each arm's element a distinct id.`,
+			`id="${id}" appears in both ${firstArm} and ${secondArm} — all arms of a ${wording.boundary} render into the initial HTML at once (non-active arms are hidden, not removed), so this is two elements sharing an id in the same document simultaneously. Give each arm's element a distinct id.`,
 			lineOf(source, offset),
 		),
 

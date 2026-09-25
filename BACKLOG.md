@@ -656,6 +656,28 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   **Check:** the gate is green at HEAD with Baseline 2023; a fixture using a 2024-only API
   unguarded fails it; bumping the year without a major version fails it.
 
+- [ ] LT-342: A `.tsx` spelling for the reactive-list key binding — capability parity (ADR 0032 s6), found by the LT-233 review.
+  **Skill:** architect (design), then le-truc-dev
+  **Context:** `.tsrx` binds the item key in the loop header (`@for (const item of items; key k)`)
+  and a per-item handler acts through it (`items.remove(k)`) — form-tokenbox and module-list do.
+  `.tsx`'s `.map()` has no spelling: an index parameter over a List is LTC005 (keyed
+  reconciliation), a handler reading `item` is LTC005 (bindItem hands it a Signal), and
+  `surface.ts` `listItemHandlerFix` is therefore empty on `.tsx`. So a `.tsx` reactive list
+  cannot carry an item-scoped action at all. ADR 0032 s6 requires every capability to be
+  expressed in both surfaces; this one predates the rule and was never paid for. Latent today
+  (no `.tsx` corpus component declares a `createList`), live the moment either list component
+  gets a `.tsx` variant.
+  **Design first — options to weigh:** (a) the `.map()` callback's second parameter is the KEY
+  over a declared List (host-profile typing must make `(item, key)` honest where Array's is
+  `(item, index)` — check what `items.map` currently types as under `host-profile.d.ts`);
+  (b) a key read inside the handler from the item signal (`item.key`?) — a cause-effect
+  question first; (c) a `truc:` intrinsic only if (a) and (b) both misstate the meaning (ADR
+  0041's bar). Whichever wins: the reserved-name check (`loopBindings`) and
+  `listItemHandlerFix`/`listHandlerNames` in `surface.ts` gain the `.tsx` spelling, and a
+  diagnostic-parity case pins the handler fix-it on both surfaces.
+  **Channel/tier:** compiler, tier 1 (the shapes stay statically decidable).
+  **Gates:** the first `.tsx` variant of form-tokenbox or module-list.
+
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
 - [ ] LT-340: LTC033 sees only the expression written at the site, so an impure read through a setup const, helper or loop const folds (LT-326 review).
@@ -850,7 +872,7 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
 
 - [ ] LT-275: Diagnostics lifecycle for reactive conditions — retire LTC005's signal-condition face; Tech Writer copy.
   **Skill:** tech-writer (drafting: le-truc-dev)
-  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) reverses "`@if` conditions cannot read signals" (`validateCondition`, `server/compiler/lower-shared.ts`). Only the **condition face** of LTC005 retires — the `t`-in-reactive-position face stays. The error-message lifecycle applies to every face touched: the LTC005 message, the arrow-thunk section's sentence in `server/compiler/HOST_PROFILE.md`, and the teaching in ARCHITECTURE.md, AGENTS.md and the le-truc/cause-effect skills; the new ADR 0037 codes' final wording lands here. Batch with the LT-220/LT-189 copy rounds.
+  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) reverses "`@if` conditions cannot read signals" (`validateCondition`, `server/compiler/lower-shared.ts`). Only the **condition face** of LTC005 retires — the `t`-in-reactive-position face stays. The error-message lifecycle applies to every face touched: the LTC005 message, the arrow-thunk section's sentence in `server/compiler/HOST_PROFILE.md`, and the teaching in ARCHITECTURE.md, AGENTS.md and the le-truc/cause-effect skills; the new ADR 0037 codes' final wording lands here. Batch with the LT-220/LT-189 copy rounds. **LT-233 rider (2026-09-25):** shared code words diagnostics only through `server/compiler/surface.ts` — each new ADR 0037 code's surface-specific fragments become `SurfaceWording` keys (both tables), and the `CONDITIONS` cases in `server/tests/compiler/tsx/diagnostic-parity.test.ts` flip to the new codes on both surfaces in the same change.
   **Check:** catalog rows added/retired match the diagnostics union; `check:links`; compile-warning baseline 0.
   **Depends on** LT-274.
 

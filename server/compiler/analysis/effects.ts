@@ -41,6 +41,7 @@ import {
 	SUPPRESSED_HOST_SELECTOR,
 	type SuppressedSite,
 } from '../simulation/contract.ts'
+import { wordingOf } from '../surface'
 import { lineFields, type RoutingSignal, resolutionOf } from '../tier'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
@@ -966,7 +967,12 @@ const handleOptionalBranch = (
 
 /** A single-branch `@if` (no `@else`) — see `handleOptionalBranch`. */
 const handleOptionalIfEffects = (fx: EffectsContext, node: IfNode): void =>
-	handleOptionalBranch(fx, node.then, node, 'a single-branch @if')
+	handleOptionalBranch(
+		fx,
+		node.then,
+		node,
+		wordingOf(fx.component).singleBranchIf,
+	)
 
 /**
  * An `@if`/`@else` whose branch roots carry DIFFERING client constructs
@@ -988,11 +994,12 @@ const handleOptionalIfEffects = (fx: EffectsContext, node: IfNode): void =>
  */
 const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	const { component, source, diagnostics } = fx
+	const wording = wordingOf(component)
 	const branches: Array<
 		[string, readonly TemplateNode[], readonly TemplateNode[]]
 	> = [
-		['@if', node.then, node.alternate],
-		['@else', node.alternate, node.then],
+		[wording.thenBranch, node.then, node.alternate],
+		[wording.elseBranch, node.alternate, node.then],
 	]
 	// Validate every branch needing addressing BEFORE any effects are
 	// planned — a collision diagnostic must not leave a half-planned @if.
@@ -1009,18 +1016,19 @@ const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
 		if (resolved.unique) continue
 		const plain = resolveSelector(fx, root)
 		if (!plain.unique) continue // no unique selector at all — reported below
-		const otherLabel = label === '@if' ? '@else' : '@if'
+		const otherLabel =
+			label === wording.thenBranch ? wording.elseBranch : wording.thenBranch
 		diagnostics.push(
 			diagnostic.unaddressableElement(
 				source,
 				root.node.start,
-				`Per-branch addressing of this @if needs a selector for the ${label} branch root <${root.tag}> that cannot match the ${otherLabel} branch — \`${plain.selector}\` is unique in the template but matches the ${otherLabel} branch too, so both branches' effects would bind whichever root rendered. Add distinguishing static attributes to the branch roots, or make the constructs identical across branches (union addressing).`,
+				`Per-branch addressing of this ${wording.if} needs a selector for the ${label} root <${root.tag}> that cannot match the ${otherLabel} — \`${plain.selector}\` is unique in the template but matches the ${otherLabel} too, so both branches' effects would bind whichever root rendered. Add distinguishing static attributes to the branch roots, or make the constructs identical across branches (union addressing).`,
 			),
 		)
 		return
 	}
 	for (const [label, body, other] of branches)
-		handleOptionalBranch(fx, body, node, `the ${label} branch`, el =>
+		handleOptionalBranch(fx, body, node, `the ${label}`, el =>
 			resolveExclusiveSelectorIn(
 				component.root,
 				el,
@@ -1042,6 +1050,7 @@ const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
  */
 const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	const { source, diagnostics, addQuery } = fx
+	const wording = wordingOf(fx.component)
 	if (node.alternate.length === 0) {
 		handleOptionalIfEffects(fx, node)
 		return
@@ -1053,7 +1062,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 				diagnostic.unsupported(
 					source,
 					root.node.start,
-					'Client constructs inside @if branches must sit on the branch root elements — deeper elements exist only when their branch rendered',
+					`Client constructs inside ${wording.ifBranches} must sit on the branch root elements — deeper elements exist only when their branch rendered`,
 				),
 			)
 	const clientStmts = [...node.then, ...node.alternate].filter(
@@ -1076,7 +1085,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 				diagnostic.unsupported(
 					source,
 					node.node.start,
-					'Multiple addressable elements with client constructs inside one @if branch — union addressing addresses a single root per branch; split into separate @if blocks, or address the extra element through a hoisted const referenced from the first',
+					`Multiple addressable elements with client constructs inside one ${wording.ifBranch} — union addressing addresses a single root per branch; split into ${wording.separateIfs}, or address the extra element through a hoisted const referenced from the first`,
 				),
 			)
 			return
@@ -1089,7 +1098,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 				diagnostic.unsupported(
 					source,
 					stmt.node.start,
-					'A bare client-only statement inside an @if with @else needs an addressed branch root to guard it — add a client construct to one branch root (per-branch addressing), or use a single-branch @if (no @else) instead',
+					`A bare client-only statement inside ${wording.ifWithElse} needs an addressed branch root to guard it — add a client construct to one branch root (per-branch addressing), or use ${wording.singleBranchIfFix} instead`,
 				),
 			)
 		return
@@ -1134,7 +1143,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 			diagnostic.unsupported(
 				source,
 				stmt.node.start,
-				'A bare client-only statement inside an @if with @else — union addressing cannot tell which branch rendered; make the branch constructs differ (per-branch addressing) or use a single-branch @if (no @else) instead',
+				`A bare client-only statement inside ${wording.ifWithElse} — union addressing cannot tell which branch rendered; make the branch constructs differ (per-branch addressing) or use ${wording.singleBranchIfFix} instead`,
 			),
 		)
 	// truc:html={dataRef} is server-rendered only — not a client construct.
@@ -1146,7 +1155,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 			diagnostic.unaddressableElement(
 				source,
 				primary.node.start,
-				`No unique selector for the @if branch root <${primary.tag}> — add a distinguishing static attribute`,
+				`No unique selector for the ${wording.ifBranch} root <${primary.tag}> — add a distinguishing static attribute`,
 			),
 		)
 		return
@@ -1170,6 +1179,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
  */
 const handleSwitchEffects = (fx: EffectsContext, node: SwitchNode): void => {
 	const { source, diagnostics } = fx
+	const wording = wordingOf(fx.component)
 	for (const arm of node.cases)
 		for (const child of arm.children)
 			if (hasClientConstructs(child))
@@ -1177,7 +1187,7 @@ const handleSwitchEffects = (fx: EffectsContext, node: SwitchNode): void => {
 					diagnostic.unsupported(
 						source,
 						(child as ElementNode).node?.start ?? node.node.start,
-						'Client constructs inside @switch arms — arms render exclusively, so the element is not guaranteed to exist. Keep arms to static/server markup, or use @if branches with identical constructs (union addressing).',
+						`Client constructs inside ${wording.switchArms} — arms render exclusively, so the element is not guaranteed to exist. Keep arms to static/server markup, or use ${wording.ifBranches} with identical constructs (union addressing).`,
 					),
 				)
 }
@@ -1192,6 +1202,7 @@ const handleSwitchEffects = (fx: EffectsContext, node: SwitchNode): void => {
  */
 const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 	const { component, source, diagnostics, effects, addQuery, usedNames } = fx
+	const wording = wordingOf(component)
 	const okRoot = node.children.find(isElement) as ElementNode
 	const pendingRoot = (node.pendingChildren as TemplateNode[]).find(
 		isElement,
@@ -1218,7 +1229,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				pendingRoot.node.start,
-				'@pending arm of an async boundary must be static/server markup — nothing watches it once resolved',
+				`${wording.pendingArm} of an async boundary must be static/server markup — nothing watches it once resolved`,
 			),
 		)
 		return
@@ -1233,7 +1244,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				okRoot.node.start,
-				"An async boundary's @try body must render the async signal it guards as a direct lazy child (e.g. `&{data}`), where `data` is a `deriveCell(async …)` signal — the compiler discovers which signal drives isPending() routing from that reference.",
+				`An async boundary's ${wording.tryBody} must render the async signal it guards as a direct lazy child (e.g. \`{data}\`), where \`data\` is a \`deriveCell(async …)\` signal — the compiler discovers which signal drives isPending() routing from that reference.`,
 			),
 		)
 		return
@@ -1245,7 +1256,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				okRoot.node.start,
-				"An async boundary's @try body root may only carry static/server attributes and its one lazy signal child — other reactive constructs have no addressing here yet",
+				`An async boundary's ${wording.tryBody} root may only carry static/server attributes and its one lazy signal child — other reactive constructs have no addressing here yet`,
 			),
 		)
 		return
@@ -1255,7 +1266,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				errRoot.node.start,
-				'@catch arm of an async boundary may only carry static/server attributes and its one lazy error child',
+				`${wording.catchArm} of an async boundary may only carry static/server attributes and its one lazy error child`,
 			),
 		)
 		return
@@ -1265,9 +1276,9 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 	const pendingSelector = resolveSelector(fx, pendingRoot)
 	const errSelector = resolveSelector(fx, errRoot)
 	for (const [label, resolved, el] of [
-		['@try body', okSelector, okRoot],
-		['@pending arm', pendingSelector, pendingRoot],
-		['@catch arm', errSelector, errRoot],
+		[wording.tryBody, okSelector, okRoot],
+		[wording.pendingArm, pendingSelector, pendingRoot],
+		[wording.catchArm, errSelector, errRoot],
 	] as const) {
 		if (!resolved.unique)
 			diagnostics.push(
@@ -1327,7 +1338,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				errRoot.node.start,
-				`@catch arm's lazy child must reference the catch param \`${catchParam ?? 'e'}\` (bare, or a member read like \`${catchParam ?? 'e'}.message\`)`,
+				`${wording.catchArm}'s lazy child must reference the catch param \`${catchParam ?? 'e'}\` (bare, or a member read like \`${catchParam ?? 'e'}.message\`)`,
 			),
 		)
 		return
@@ -1362,16 +1373,17 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
  */
 const handleTryEffects = (fx: EffectsContext, node: TryNode): void => {
 	const { source, diagnostics } = fx
+	const wording = wordingOf(fx.component)
 	// CHECKLIST §8: all three arms render into the initial HTML at once
 	// (two hidden, not removed) — a literal `id` duplicated across arms
 	// is two elements sharing an id in the SAME document simultaneously,
 	// same failure whether or not `@pending` is present.
 	const branches: Array<[string, readonly TemplateNode[]]> = [
-		['@try body', node.children],
-		['@catch arm', node.catchChildren],
+		[wording.tryBody, node.children],
+		[wording.catchArm, node.catchChildren],
 	]
 	if (node.pendingChildren !== null)
-		branches.push(['@pending arm', node.pendingChildren])
+		branches.push([wording.pendingArm, node.pendingChildren])
 	const seenIn = new Map<string, string>()
 	for (const [label, branch] of branches)
 		for (const id of staticIdsUnder(branch)) {
@@ -1384,6 +1396,7 @@ const handleTryEffects = (fx: EffectsContext, node: TryNode): void => {
 						id,
 						firstLabel,
 						label,
+						wording,
 					),
 				)
 			else if (!firstLabel) seenIn.set(id, label)
@@ -1392,8 +1405,8 @@ const handleTryEffects = (fx: EffectsContext, node: TryNode): void => {
 		handleAsyncBoundary(fx, node)
 		return
 	}
-	handleOptionalBranch(fx, node.children, node, 'a @try body')
-	handleOptionalBranch(fx, node.catchChildren, node, 'a @catch arm')
+	handleOptionalBranch(fx, node.children, node, `the ${wording.tryBody}`)
+	handleOptionalBranch(fx, node.catchChildren, node, `the ${wording.catchArm}`)
 }
 
 /**

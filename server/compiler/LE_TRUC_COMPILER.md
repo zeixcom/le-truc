@@ -60,8 +60,9 @@ compiles both and serves one; any other tag that two sources declare fails
 the compile naming both files (LTC048). The parity suite
 (`server/tests/compiler/tsx/parity.test.ts`) is the standing equivalence
 contract: the same component authored in both surfaces must render
-byte-identically, which is what keeps the surfaces from drifting apart
-(ADR 0032 sub-design 6).
+byte-identically and diagnose identically (its sibling
+`diagnostic-parity.test.ts`, LT-242), which is what keeps the surfaces from
+drifting apart (ADR 0032 sub-design 6).
 
 The server module re-declares the source's setup **verbatim** against the
 runtime harness in `runtime.ts`, where a signal is its initial value in a
@@ -139,14 +140,16 @@ strict ambient profile (`frontend/tsx/host-profile.d.ts`,
 └──────────────┬────────────────┘  └─────────────┬───────────────┘
                │                                 │
 ┌──────────────┴─────────────────────────────────┴───────────────┐
-│ SHARED FRONT-END STAGES                                        │
+│ SHARED FRONT-END DRIVER — front-end.ts (runFrontEnd over each  │
+│ surface's SurfaceAdapter) · diagnostic wording — surface.ts    │
 │ module scans — module-scans.ts · params contract — params.ts   │
 │ setup extraction + context seeding — setup-extraction.ts       │
 │ template-output resolution — template-output.ts                │
 │ post-lowering validation — validate-lowered.ts                 │
 │ IR assembly — assemble-ir.ts                                   │
 │ condition validation, element/compose lowering,                │
-│ expression-child lift rule, positional reactivity —            │
+│ expression-child lift rule, positional reactivity, the loop/   │
+│ if/switch/try tails after header parsing —                     │
 │ lower-shared.ts (each surface passes its dispatch hooks)       │
 │ attribute classification — classify-attributes.ts              │
 │ signal type inference — infer-type.ts · config — config.ts     │
@@ -302,6 +305,8 @@ front-end modules, then the two front ends:
 | --- | --- |
 | `contract.ts` | The designated export surface ("The front-end contract", § 2): the exact set published as `@zeix/le-truc-compiler`, with the stability policy in its module doc |
 | `pipeline.ts` | Shared post-front-end pipeline (`compileFromIR`): compose validation, `analyzeClient`, tier classification, both emitters, the registry entry — `CompiledComponent`/`CompileFileResult` live here |
+| `front-end.ts` | The shared front-end driver (LT-233): `runFrontEnd` takes a parsed module to a `ComponentIR` through ONE script — module scans, locating the component function, the `async` rejection, params, setup extraction, the output-shape check, lowering, output resolution, the validation tail, IR assembly. A surface contributes a `SurfaceAdapter` (body node type, setup/output split, `<style>` CSS, children/element lowering, grammar pre-scans); `CompileResult` and `createExtractContext` live here |
+| `surface.ts` | The authored-surface vocabulary (LT-233): one `SurfaceWording` table per surface, side by side, for every diagnostic fragment shared machinery emits that names an authored spelling. Read through `wordingOf(ctx)` / `wordingOf(component)` — shared code never spells a directive itself |
 | `frontend/tsrx/index.ts` | `.tsrx` public API: `compileComponent` = `compileSource` + the shared pipeline |
 | `frontend/tsx/index.ts` | `.tsx` public API: `compileComponentTsx` = `compileSourceTsx` + the shared pipeline |
 | `ir.ts` | Pure type leaf: the whole IR vocabulary (`ComponentIR`, `TemplateNode`, `AttributeIR`, `SignalIR`, `ForIR`, `ConfigIR`, …) |
@@ -311,13 +316,13 @@ front-end modules, then the two front ends:
 | `template-output.ts` | Template-output resolution (`resolveTemplateOutput`): root, `<style>` block, CSS, `first()`/`all()` reference resolution (LT-055) |
 | `validate-lowered.ts` | The post-lowering validation tail (`validateLoweredComponent`): LTC039/047/028/010, `config.observedAttributes`, LT-059, loops as branch roots (LT-301) |
 | `assemble-ir.ts` | IR assembly (`assembleComponentIR`), import placement, module-level declarations (`readModuleDecls`) |
-| `lower-shared.ts` | Surface-independent lowering core: condition validation, element/compose lowering, the expression-child lift rule, positional reactivity, and `lowerChildrenSkeleton` — the `Lowering` hooks carry each surface's child-node dispatch |
+| `lower-shared.ts` | Surface-independent lowering core: condition validation, element/compose lowering, the expression-child lift rule, positional reactivity, `lowerChildrenSkeleton` — the `Lowering` hooks carry each surface's child-node dispatch — and the programs after header parsing: `lowerLoop` over a `LoopSource` (routing, list-body validation, `each()`/reconcile IR), `finishIf`, `finishTry`, `reportEmptySwitch` |
 | `ast-utils.ts` | Shared AST predicates and the recognized-name vocabulary constants both front ends' walks run on |
 | `walk.ts` | Generic structural `TemplateNode` visitor (`walkTemplate`, `collectAttrs`, `collectComposeElements`) |
-| `frontend/tsrx/compiler.ts` | `.tsrx` front end: `compileSource` (locate the `@{ }` component, slice setup + output verbatim) plus the grammar's own scans (React JSX near-misses, `newerGrammarHint`; the lazy-pattern scan retired at the 0.2 pin — the grammar now rejects the construct itself) |
-| `frontend/tsrx/lower-template.ts` | `.tsrx` directives (`@if`/`@switch`/`@try`/`@for`) → `TemplateNode` IR; list-body validation |
+| `frontend/tsrx/compiler.ts` | `.tsrx` front end: the `@tsrx/core` parse (`newerGrammarHint` on failure) and the `.tsrx` `SurfaceAdapter` (the `@{ }` body splits into setup + output; the React JSX near-miss pre-scan; the lazy-pattern scan retired at the 0.2 pin — the grammar now rejects the construct itself) |
+| `frontend/tsrx/lower-template.ts` | `.tsrx` directives (`@if`/`@switch`/`@try`/`@for`) → `TemplateNode` IR; parses each directive's header and hands the rest to `lower-shared.ts` |
 | `frontend/tsrx/globals.d.ts` | Ambient FactoryContext vocabulary for the raw `.tsrx` view; parity-tested against `ast-utils` |
-| `frontend/tsx/compiler-tsx.ts` | `.tsx` front end: `compileSourceTsx` (locate the exported component function, statements + single `return` shape, `css` recognition) |
+| `frontend/tsx/compiler-tsx.ts` | `.tsx` front end: the TS parse and the `.tsx` `SurfaceAdapter` (statements + single `return` split, `css` recognition) |
 | `frontend/tsx/lower-tsx.ts` | `.tsx` expression shapes → `TemplateNode` IR; shape-based switch-IIFE recognition (`asIife`, `lowerSwitchIife`); `<truc:try>` recognition (ADR 0041) |
 | `frontend/tsx/to-estree.ts` | `typescript`-AST → estree-shaped `AstNode` converter — the only `typescript`-API leaf |
 | `frontend/tsx/host-profile.d.ts` | The strict authored-`.tsx` ambient profile: FactoryContext vocabulary plus the strict per-element `JSX.IntrinsicElements` light-DOM contract (migrations extend it in the same commit). Never in one `tsc` program with `globals.d.ts` |
@@ -360,7 +365,8 @@ front-end modules, then the two front ends:
 the shared leaves — `ast-utils.ts`, `walk.ts`, `evaluability.ts`,
 `reactivity.ts`, `first-refs.ts`, and the front-end-neutral stage modules
 `module-scans.ts`, `params.ts`, `setup-extraction.ts`, `template-output.ts`,
-`validate-lowered.ts`, `assemble-ir.ts`, and `lower-shared.ts` (which import
+`validate-lowered.ts`, `assemble-ir.ts`, `front-end.ts`, `surface.ts`, and
+`lower-shared.ts` (which import
 no parser values by design, only the loose
 `AstNode` type) — with no runtime value cycles; the machinery does not
 depend on either front end. Within `analysis/`, `plan.ts` orchestrates
@@ -995,6 +1001,12 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   `boundary` render and the `isPending` class binding (LT-211). It is the mechanical
   form of "the door stays open": a front-end change that makes the surfaces
   diverge fails here before it can ship.
+- **Diagnostic parity** (`server/tests/compiler/tsx/diagnostic-parity.test.ts`,
+  LT-242): the failure-path half of the same contract. Each case is one
+  invalid component in both surfaces; codes, severities and messages must
+  match once the `.tsx` messages are translated through an allowlist built
+  from `surface.ts` (a stale entry fails), and no `.tsx` message may name a
+  `.tsrx` directive.
 
 See `server/SERVER.md` for the effect wiring, `check:sim` (portability probe
 across runtimes) and `eval:substrate` (substrate evaluation scripts).
@@ -1124,13 +1136,16 @@ member.
   carries an identical construct signature, per-branch guarded otherwise; a
   `first()`-addressed element is exempt — it has its own query and presence
   guard); composed children accept statics and server expressions only.
-- **One machinery, two front ends**: after lowering, both surfaces consume
-  identical stages through `pipeline.ts`, and the shared front-end stage
-  modules (`setup-extraction.ts` … `assemble-ir.ts`) and `lower-shared.ts`
-  import no parser values — a pipeline change
-  cannot drift between surfaces. The parity suite is the render-level pin
-  (§ 7). The seam the front ends share is the designated export surface
-  (`contract.ts`, § 2).
+- **One machinery, two front ends**: both surfaces run one driver
+  (`front-end.ts`'s `runFrontEnd`, LT-233) and, after lowering, identical
+  stages through `pipeline.ts`; the shared front-end stage modules
+  (`setup-extraction.ts` … `assemble-ir.ts`) and `lower-shared.ts` import no
+  parser values — a pipeline change cannot drift between surfaces. Shared
+  code words its diagnostics through `surface.ts`, so the same invalid
+  component gets the same message in each surface's spelling. The parity
+  suite is the render-level pin and its diagnostic sibling the
+  message-level one (§ 7). The seam the front ends share is the designated
+  export surface (`contract.ts`, § 2).
 - **A control-flow arm is statement context on `.tsrx` only**: `@if`/`@else`
   bodies parse as JS statements, not JSX children — a grammar fact of the
   pinned parser. The `.tsx` front end's branches are expressions that must

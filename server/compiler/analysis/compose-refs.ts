@@ -22,6 +22,7 @@ import { type CompileDiagnostic, diagnostic } from '../diagnostics'
 import { matchesAuthoredSelectorOn } from '../first-refs'
 import type { ComponentIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
+import { wordingOf } from '../surface'
 import { allComposeNodes, composeStaticAttrs } from './selectors'
 
 /* === Exported Functions === */
@@ -94,6 +95,7 @@ export const resolveComposeRefs = (
 					ref.name,
 					ref.selector,
 					matches.length,
+					wordingOf(component),
 				),
 			)
 			continue

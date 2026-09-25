@@ -19,6 +19,7 @@ import {
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import type { AttributeIR, ForIR, TemplateNode } from '../ir'
+import { wordingOf } from '../surface'
 import { returnsNumber } from './harvest'
 import type {
 	AnalysisContext,
@@ -50,6 +51,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 		forPlans,
 		reconcilePlans,
 	} = ctx
+	const wording = wordingOf(component)
 	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
 
 	// --- Pass 1: @for loops → each() plans ---------------------------------
@@ -99,7 +101,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 					diagnostic.unsupported(
 						source,
 						node.start,
-						`${what} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')} inside an @for body; the client only knows signals, refs, and rebound consts`,
+						`${what} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')} inside the ${wording.loop} body; the client only knows signals, refs, and rebound consts`,
 					),
 				)
 			}
@@ -185,7 +187,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 							diagnostic.unaddressableElement(
 								source,
 								child.node.start,
-								`No unique selector for <${child.tag}> inside the @for output <${output.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
+								`No unique selector for <${child.tag}> inside the ${wording.loop} output <${output.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
 							),
 						)
 					}
@@ -201,7 +203,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 					diagnostic.unsupported(
 						source,
 						node.node.start,
-						'Lazy &{ } children inside server-data @for bodies have no lowering (each() scopes own no template slots)',
+						`Reactive children inside server-data ${wording.loop} bodies have no lowering (each() scopes own no template slots)`,
 					),
 				)
 			}
@@ -220,7 +222,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 				diagnostic.unaddressableElement(
 					source,
 					output.node.start,
-					`No unique selector for the @for output <${output.tag}> in the rendered template; add a distinguishing static attribute (role, class, or data-*).`,
+					`No unique selector for the ${wording.loop} output <${output.tag}> in the rendered template; add a distinguishing static attribute (role, class, or data-*).`,
 				),
 			)
 		}
@@ -298,7 +300,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 				diagnostic.unsupported(
 					source,
 					loop.output.node.start,
-					'Only one reactive-list @for per component is supported — a second list would share the extracted <template> selector. Split into components or use server-data lists.',
+					`Only one reactive-list ${wording.loop} per component is supported — a second list would share the extracted <template> selector. Split into components or use server-data lists.`,
 				),
 			)
 			continue
@@ -313,7 +315,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 				diagnostic.unsupported(
 					source,
 					output.node.start,
-					'A reactive-list @for directly under the component root — reconcile() needs a container element distinct from the host (wrap the loop in one).',
+					`A reactive-list ${wording.loop} directly under the component root — reconcile() needs a container element distinct from the host (wrap the loop in one).`,
 				),
 			)
 			continue
@@ -324,7 +326,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 				diagnostic.unaddressableElement(
 					source,
 					container.node.start,
-					`No unique selector for the @for container <${container.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
+					`No unique selector for the ${wording.loop} container <${container.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
 				),
 			)
 		}
@@ -341,7 +343,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 				diagnostic.unaddressableElement(
 					source,
 					output.node.start,
-					'An authored <template> collides with the compiler-extracted item template of the reactive-list @for.',
+					`An authored <template> collides with the compiler-extracted item template of the reactive-list ${wording.loop}.`,
 				),
 			)
 		}
@@ -358,7 +360,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 					diagnostic.unaddressableElement(
 						source,
 						root.node.start,
-						`No unique selector for the @empty arm root <${root.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
+						`No unique selector for the ${wording.emptyArm} root <${root.tag}>; add a distinguishing static attribute (role, class, or data-*).`,
 					),
 				)
 				continue
@@ -404,7 +406,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 					diagnostic.unsupported(
 						source,
 						handler.start,
-						`${what} references the loop item \`${loop.itemName}\` — inside reconcile()'s bindItem it is a Signal, not the value; render it via &{${loop.itemName}} instead.`,
+						`${what} references the loop item \`${loop.itemName}\` — inside reconcile()'s bindItem it is a Signal, not the value, so a handler cannot read it.${wording.listItemHandlerFix}`,
 					),
 				)
 			}
@@ -422,7 +424,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 					diagnostic.unsupported(
 						source,
 						handler.start,
-						`${what} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')} inside a reactive-list @for body; the client only knows signals, refs, the key binding, and globals`,
+						`${what} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')} inside a reactive-list ${wording.loop} body; the client only knows ${wording.listHandlerNames}`,
 					),
 				)
 			}
@@ -459,7 +461,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 							diagnostic.unaddressableElement(
 								source,
 								node.node.start,
-								`No unique selector for <${node.tag}> inside the @for item template; add a distinguishing static attribute.`,
+								`No unique selector for <${node.tag}> inside the ${wording.loop} item template; add a distinguishing static attribute.`,
 							),
 						)
 					}

@@ -11,6 +11,7 @@
 
 import type { AstNode } from './ast-node'
 import type { CompileDiagnostic } from './diagnostics'
+import type { Surface } from './surface'
 import type { RoutingSignal } from './tier'
 
 /* === Types === */
@@ -461,6 +462,15 @@ export type ComponentIR = {
 	name: string
 	/** Original source text (diagnostics compute line numbers from it). */
 	source: string
+	/**
+	 * The authored surface (LT-233): the analysis passes word their
+	 * diagnostics in its vocabulary (`surface.ts`). Nothing else may branch
+	 * on it — the IR is otherwise surface-neutral (ADR 0032 s2). Optional
+	 * because it is contract IR (`contract.ts`: a new field is additive
+	 * only when optional): a third-party front end that omits it gets the
+	 * `.tsx` wording, the JavaScript-expression spelling.
+	 */
+	surface?: Surface
 	/** Custom element tag from the template root, e.g. `basic-counter`. */
 	tag: string
 	/** Verbatim function parameter (pattern + type annotation). */
@@ -731,6 +741,8 @@ export type RenderedShape =
  */
 export type ExtractContext = {
 	source: string
+	/** The authored surface — selects the diagnostic vocabulary (LT-233). */
+	surface: Surface
 	diagnostics: CompileDiagnostic[]
 	/**
 	 * Why this component cannot be answered by phase 1 alone (ADR 0029,

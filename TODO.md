@@ -75,61 +75,11 @@ default (LT-138). Across all of it: warning baseline 0, tier census unchanged fr
 iteration's opening measurement (record it before the first change), and `bun run build:docs`
 and `check:links` pass.
 
-**Next free task ID: LT-342.**
+**Next free task ID: LT-343.**
 
 ---
 
 ### Gates (run first)
-
-- [ ] LT-242: Extend the parity suite to diagnostics — the equivalence contract covers failed compiles too (ADR 0032 amendment).
-  **Skill:** le-truc-dev
-  **Context:** Reflection §2 (rank #2 of its list; cheap). The parity suite — the same component
-  authored in both surfaces must render byte-identically — tests successful renders. **All three
-  live drifts COMPILER_REVIEW §2.3 documented live in the diagnostic path**, where the parity
-  suite could not have caught any of them (the `offenders` truthiness bug — fixed LT-221; the
-  `keyName` arm — ruled grammar asymmetry, LT-221; the per-item `ref` message — closes in
-  LT-233). Under the framework premise the equivalence contract is a **product promise to users
-  of either surface**: the same invalid component must produce the same code and the same
-  message text, or one surface teaches its users lies the other never hears. This is cheaper
-  than the `SurfaceAdapter` refactor and catches the class the refactor is meant to prevent —
-  it also then verifies LT-233's message consolidation, which is why it runs first.
-  **How:** extend `server/tests/compiler/tsx/parity.test.ts` (or a sibling) to compile a set of
-  invalid fixtures through both front ends asserting equal `DiagnosticCode` + equal message
-  text. Surfaces legitimately differ in vocabulary fragments (surface-register words and the
-  like) — define that allowlist explicitly as a table in the test; LT-233's `SurfaceWording`
-  fold then shrinks it toward zero where the review's item 14 says it should. Seed with
-  negative pins for the three §2.3 shapes plus a sample of each diagnostic family.
-  **ADR:** this amends the ADR 0032 equivalence contract (the s6 anti-drift statement) —
-  adr-keeper pass in the same change; the contract sentence in `ARCHITECTURE.md`
-  § Authoring Surfaces gains "and diagnose identically."
-  **Verification:** the three §2.3 shapes are pinned (two already fixed — the pins prove they
-  stay fixed); `bun test server/tests` green; `check:links` after the doc touches.
-  **ADR 0037 rider (2026-09-21):** seed coverage includes the LTC005 condition-face
-  retirement and [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md)'s new
-  codes — both surfaces must diagnose reactive-condition shapes identically from day one.
-
-- [ ] LT-233: `SurfaceAdapter` + shared `runFrontEnd` — collapse the copied front-end drivers. **GATES LT-218 (P2, with S0's LT-240): land before it.**
-  **Skill:** le-truc-dev
-  **Context:** Review §2.3/§3 item 14. `compileSource` (`frontend/tsrx/compiler.ts:199`)
-  and `compileSourceTsx` (`frontend/tsx/compiler-tsx.ts:106`) are the same eight-step
-  script — the setup slice, `decl.body.type`, three message strings, and a
-  verbatim-duplicated ~200-character async-rejection message are the only differences;
-  the early-exit literal repeated 6× per driver collapses into the shared driver. Same
-  for the `lowerFor`/`lowerListFor`/`validateListBody` triples: header parsing genuinely
-  differs, the program after `itemName`/`iterableName` is one — this copied seam is
-  where the §1.1 and §1-(5) drifts happened. Shape: a `SurfaceAdapter`
-  (`componentBodyType`, `splitSetupAndOutput`, `stylesheetOf`, `outputShapeLabel`,
-  `lowerChildren`, `lowerElement`, `preScans`) + `runFrontEnd(ctx, ast, adapter)`; each
-  `compileSource*` becomes parse + adapter + call. Fold `SurfaceWording`
-  (`lower-shared.ts:56` — three strings while ~30 surface-specific fragments sit inline
-  at call sites) into one complete surface vocabulary; the current version is worse than
-  nothing (anti-drift theatre). The per-item `ref` message drift (.tsx generic vs .tsrx
-  explicit rejection) closes here; final wording batches with the LT-189 compiler
-  families. Runs after LT-242 so the diagnostic-parity net catches any message drift
-  this consolidation could introduce.
-  **Verification:** goldens + parity byte-identical (the parity suite is the standing
-  cross-surface contract); the LT-242 diagnostic-parity pins stay green; warning
-  baseline 0; census unchanged from the iteration baseline; full gates green.
 
 ### Build half (LT-250 → LT-308 → LT-252 → LT-251; LT-253 after LT-252)
 
@@ -559,6 +509,17 @@ and `check:links` pass.
      rule (Architect ruling, LT-106, recorded in DONE.md): a provider's context keys live in a module with no side
      effects, never in the component module, because importing a component module defines the
      element.
+  15. **The surface vocabulary** (LT-233 handoff, 2026-09-25): `server/compiler/surface.ts` is
+     now the one place shared compiler code takes surface-specific wording from — review it as a
+     vocabulary, both tables side by side. Every `.tsx` value is first-draft copy (it replaced
+     `.tsrx` spellings `.tsx` authors used to be shown), and ~40 messages in
+     `analysis/effects.ts`, `analysis/loops.ts`, `lower-shared.ts` and five `diagnostics.ts`
+     builders (LTC001, LTC002, LTC027, LTC035, `loopInBranch`) compose from it. Settle the
+     noun set for conditionals (`thenBranch`/`elseBranch` read "first/second conditional arm"
+     on `.tsx`) before the phrasing; LTC002 is now surface-neutral ("loop variables").
+     `server/tests/compiler/tsx/diagnostic-parity.test.ts` pins parity, so rewording a key needs
+     no test edit unless a sentence frame changes. `errors.md` rows for LTC001/LTC002/LTC027/
+     LTC035 follow the reworded text.
 
 ### Parallel slot
 

@@ -42,37 +42,19 @@ import {
 	text,
 } from '../../ast-utils'
 import { diagnostic } from '../../diagnostics'
-import { dependenciesOf, isServerEvaluable } from '../../evaluability'
-import type {
-	EachForIR,
-	ExtractContext,
-	ForIR,
-	ReconcileForIR,
-	SignalIR,
-	TemplateNode,
-} from '../../ir'
+import type { ExtractContext, ForIR, SignalIR, TemplateNode } from '../../ir'
 import {
+	finishIf,
+	finishTry,
 	type Lowering,
 	lowerChildrenSkeleton,
 	lowerElement as lowerElementShared,
-	markPositionallyReactive,
-	type SurfaceWording,
-	singleRootOf,
+	lowerLoop,
+	reportEmptySwitch,
 	validateCondition,
 	validateEmptyArm,
 } from '../../lower-shared'
 import type { AstNode } from './to-estree'
-
-/**
- * The `.tsx` surface vocabulary for diagnostics that name authored shapes —
- * the expression spellings. (`.tsrx`'s set lives in `lower-template.ts`.)
- */
-const TSX_SURFACE_WORDING: SurfaceWording = {
-	lazyChild: 'A lazy child expression',
-	controlFlow: 'A control-flow expression (ternary/map/switch/truc:try)',
-	composedPosition: 'map output',
-	conditionalTag: '{level === 2 ? <h2>…</h2> : <h3>…</h3>}',
-}
 
 /** Whether `node` is a JSX value (`<x/>` or `<>…</>`). */
 const isJsxNode = (node: unknown): node is AstNode => {
@@ -137,7 +119,7 @@ const lowerIfExpr = (
 		)
 		return null
 	}
-	if (!validateCondition(ctx, signals, test, 'if condition')) return null
+	if (!validateCondition(ctx, signals, test, 'if')) return null
 	const then = isJsxNode(thenSrc)
 		? lowerJsxValue(ctx, thenSrc, signals, fors)
 		: []
@@ -154,24 +136,7 @@ const lowerIfExpr = (
 		)
 		return null
 	}
-	if (then.length === 0 && alternate.length === 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'if arms must contain output elements',
-			),
-		)
-		return null
-	}
-	return {
-		kind: 'if',
-		testText: text(ctx.source, test),
-		test,
-		then,
-		alternate,
-		node,
-	}
+	return finishIf(ctx, node, test, then, alternate)
 }
 
 /* === @switch → IIFE over a statement switch === */
@@ -211,17 +176,10 @@ const lowerSwitchIife = (
 	}
 	const discriminant = switchStmt.discriminant as AstNode | undefined
 	if (!isNode(discriminant)) return null
-	if (!validateCondition(ctx, signals, discriminant, 'switch discriminant'))
-		return null
+	if (!validateCondition(ctx, signals, discriminant, 'switch')) return null
 	const rawCases = asArray(switchStmt.cases)
 	if (rawCases.length === 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'switch must contain at least one case or default arm',
-			),
-		)
+		reportEmptySwitch(ctx, node.start, 'switch')
 		return null
 	}
 	const cases: Array<{
@@ -240,20 +198,14 @@ const lowerSwitchIife = (
 				diagnostic.unsupported(
 					ctx.source,
 					raw.start ?? node.start,
-					'switch arms must be exactly `case <expr>: return <jsx/>` — statement-context arms are a grammar construct that retired with @switch',
+					'switch arms must be exactly `case <expr>: return <jsx/>` — statement-context arms are `.tsrx` grammar, not a `.tsx` spelling',
 				),
 			)
 			return null
 		}
 		const children = lowerJsxValue(ctx, arm, signals, fors)
 		if (children.length === 0) {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					raw.start ?? node.start,
-					'switch arms must contain output elements',
-				),
-			)
+			reportEmptySwitch(ctx, raw.start ?? node.start, 'arm')
 			return null
 		}
 		cases.push({
@@ -354,58 +306,17 @@ const lowerTrucTry = (
 	const catchChildren = lowerJsxValue(ctx, catchSrc, signals, fors)
 	const pendingChildren =
 		pendingSrc === null ? null : lowerJsxValue(ctx, pendingSrc, signals, fors)
-	if (pendingChildren !== null) {
-		if (!singleRootOf(children)) {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					node.start,
-					"An async boundary's content (the `<truc:try>` children) must render exactly one root element (its own `hidden` toggle and client addressing need a single target)",
-				),
-			)
-			return null
-		}
-		if (!singleRootOf(pendingChildren)) {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					pendingSrc?.start ?? node.start,
-					'pending arm must render exactly one root element',
-				),
-			)
-			return null
-		}
-		if (!singleRootOf(catchChildren)) {
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					catchSrc.start ?? node.start,
-					'catch arm of an async boundary must render exactly one root element',
-				),
-			)
-			return null
-		}
-	}
-	if (children.length === 0 && catchChildren.length === 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'try arms must contain output elements',
-			),
-		)
-		return null
-	}
-	if (catchParam !== null)
-		markPositionallyReactive(catchChildren, new Set([catchParam]))
-	return {
-		kind: 'try',
+	return finishTry(ctx, node, {
 		children,
 		catchParam,
 		catchChildren,
 		pendingChildren,
-		node,
-	}
+		at: {
+			body: node.start,
+			pending: pendingSrc?.start ?? node.start,
+			catch: catchSrc.start ?? node.start,
+		},
+	})
 }
 
 /* === @for → `.map()` === */
@@ -460,10 +371,7 @@ const lowerEmptyArm = (
 	if (!emptySrc) return null
 	const arm = lowerJsxValue(ctx, emptySrc, signals, fors)
 	if (arm.length === 0) return null
-	return (
-		validateEmptyArm(ctx, arm, kind, fors, emptySrc.start, 'empty-state arm') ??
-		false
-	)
+	return validateEmptyArm(ctx, arm, kind, fors, emptySrc.start) ?? false
 }
 
 /**
@@ -500,10 +408,12 @@ const isMapCall = (node: AstNode): boolean => {
 }
 
 /**
- * Lower `{xs.map((x, i) => …)}` into the `for` IR. Over server data this is
- * the `each()` plan; over a declared reactive `createList` the reconcile
- * plan — the EXISTING analysis decides (dual lowering is not syntax-visible,
- * which is the point: the loop's iterable type, not its spelling, routes it).
+ * Lower `{xs.map((x, i) => …)}` into the `for` IR: parse the callback — its
+ * parameters, and a block body's statements (the output is the one
+ * `return <jsx/>`) or an expression body's JSX — into a `LoopSource`;
+ * `lowerLoop` (shared) routes and validates the rest. Over server data this
+ * is the `each()` plan; over a declared reactive `createList` the reconcile
+ * plan — the loop's iterable type, not its spelling, routes it.
  *
  * `@for`'s `key k` clause has no `.map()` spelling; the reactive-list form
  * keys by the declared `createList`'s own `keyConfig`.
@@ -517,310 +427,35 @@ export const lowerFor = (
 	emptySrc: AstNode | null = null,
 ): TemplateNode | null => {
 	const callee = node.callee as AstNode
-	const iterable = callee.object as AstNode
 	const callback = asArray(node.arguments)[0]
 	if (!isNode(callback) || !/Function(Expression)?$/.test(callback.type))
 		return null
 	const params = asArray(callback.params)
-	const itemName = identifierName(params[0])
-	if (!itemName) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'map over a destructuring loop variable',
-			),
-		)
-		return null
-	}
-	const iterableName = identifierName(iterable)
-	const iterableSignal = iterableName ? signals.get(iterableName) : undefined
-	if (iterableSignal) {
-		if (iterableSignal.constructor !== 'createList') {
-			ctx.diagnostics.push(
-				diagnostic.reactiveForNotSupported(
-					ctx.source,
-					node.start,
-					iterableSignal.name,
-				),
-			)
-			return null
-		}
-		return lowerListFor(
-			ctx,
-			node,
-			itemName,
-			iterableSignal.name,
-			signals,
-			fors,
-			emptySrc,
-		)
-	}
 	const indexName = identifierName(params[1])
-	if (params.length > 2) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'map callbacks take at most (item, index) — the key clause is a reactive-List concern',
-			),
-		)
-		return null
-	}
 	const body = callback.body as AstNode | undefined
 	if (!isNode(body)) return null
-	const hoisted: EachForIR['hoisted'] = []
-	let outputNode: AstNode | null = null
-	if (body.type === 'BlockStatement') {
-		for (const stmt of asArray(body.body)) {
-			if (stmt.type === 'VariableDeclaration') {
-				if (stmt.kind !== 'const') {
-					ctx.diagnostics.push(
-						diagnostic.unsupported(
-							ctx.source,
-							stmt.start,
-							'Non-const declarations inside map bodies',
-						),
-					)
-					continue
-				}
-				for (const decl of asArray(stmt.declarations)) {
-					const declName = identifierName(decl.id)
-					if (!declName || !isNode(decl.init)) {
-						ctx.diagnostics.push(
-							diagnostic.unsupported(
-								ctx.source,
-								stmt.start,
-								'Destructuring declarations inside map bodies',
-							),
-						)
-						continue
-					}
-					hoisted.push({
-						name: declName,
-						initText: text(ctx.source, decl.init),
-						node: decl,
-					})
-				}
-				continue
-			}
-			if (stmt.type === 'ReturnStatement' && !outputNode) {
-				const arg = stmt.argument as AstNode | undefined
-				if (isJsxNode(arg)) {
-					outputNode = arg
-					continue
-				}
-			}
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					stmt.start,
-					'Statements other than const declarations inside map bodies (statements belong in setup; branches render via ternaries)',
-				),
-			)
-		}
-	} else if (isJsxNode(body)) {
-		outputNode = body
-	}
-	if (!outputNode) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'map bodies must produce an output element',
-			),
-		)
-		return null
-	}
-	const output = lowerElement(ctx, outputNode, signals, fors)
-	const emptyArm = lowerEmptyArm(ctx, emptySrc, 'each', signals, fors)
-	if (emptyArm === false) return null
-	const forIR: EachForIR = {
-		kind: 'each',
-		itemName,
-		indexName,
-		iterableText: text(ctx.source, iterable),
-		iterable,
-		iterableName,
-		hoisted,
-		output,
-		node,
-		emptyArm,
-	}
-	fors.set(node, forIR)
-	return output
-}
-
-/**
- * Validate the reactive-list body shape (ported; ADR 0024 sub-design 5,
- * extended by LT-215): statics and event attributes anywhere, exactly one
- * lazy `{item}` hole, and — since LT-215 — expressions that classify
- * SERVER-STATIC (`isServerEvaluable` against `ctx.serverKnown`): they fold
- * identically into every item per render call, so the extracted template
- * bakes them at render time. Item-derived expressions and refs stay
- * rejected — the slot-fill contract has no channel for a per-item value.
- */
-const validateListBody = (
-	ctx: ExtractContext,
-	output: TemplateNode & { kind: 'element' },
-	itemName: string,
-): void => {
-	const notBuildTime = (node: AstNode): string => {
-		// Join FIRST, then test the string: the offender list is an array,
-		// and an empty array is truthy — testing it directly made the
-		// impure-ambient arm unreachable and printed `reads , …` (LT-221
-		// §1.1, the .tsrx twin's join-first shape).
-		const offenders = [...dependenciesOf(node)]
-			.filter(name => !ctx.serverKnown.has(name))
-			.join(', ')
-		return offenders
-			? `reads ${offenders}, which derive per item or client-side`
-			: 'reads impure ambient state'
-	}
-	let holes = 0
-	const walk = (node: TemplateNode): void => {
-		if (node.kind === 'expr') {
-			const isItemHole =
-				node.lazy &&
-				node.expr.type === 'Identifier' &&
-				node.exprText === itemName
-			if (isItemHole) holes++
-			else if (node.lazy)
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node.start,
-						`Lazy children inside a reactive-list map body must be the bare item ({${itemName}}) — the slot fill; {${node.exprText}} derives per item, and the extracted <template> has no per-item binding channel (ADR 0024 sub-design 5).`,
-					),
-				)
-			else if (!isServerEvaluable(node.expr, ctx.serverKnown))
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node.start,
-						`{${node.exprText}} inside a reactive-list map body ${notBuildTime(node.expr)} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5).`,
-					),
-				)
-			return
-		}
-		if (node.kind !== 'element') {
-			if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node.start,
-						'Control-flow expressions inside a reactive-list map body — the extracted template is static markup',
-					),
-				)
-			return
-		}
-		for (const attr of node.attrs) {
-			if (attr.kind === 'event' || attr.kind === 'static') continue
-			if (
-				attr.kind === 'server' &&
-				isServerEvaluable(attr.node, ctx.serverKnown)
-			)
-				continue
-			ctx.diagnostics.push(
-				diagnostic.unsupported(
-					ctx.source,
-					node.node.start,
-					`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list map body${attr.kind === 'server' ? ` ${notBuildTime(attr.node)}` : ''} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5, LT-215).`,
-				),
-			)
-		}
-		for (const child of node.children) walk(child)
-	}
-	walk(output)
-	if (holes !== 1) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				output.node.start,
-				`A reactive-list map body must render the item exactly once via {${itemName}} — that hole is the template slot the client fills (found ${holes}).`,
-			),
-		)
-	}
-}
-
-/**
- * The reactive-list loop: `{list.map(item => <li>{item}</li>)}` where `list`
- * is a declared `createList` signal. Index bindings stay gated (keyed
- * reconciliation); the key comes from the list's own `keyConfig`, so `.map()`
- * needs no key clause (the `@for … ; key k` spelling retired with the grammar).
- */
-export const lowerListFor = (
-	ctx: ExtractContext,
-	node: AstNode,
-	itemName: string,
-	listSignal: string,
-	signals: ReadonlyMap<string, SignalIR>,
-	fors: Map<AstNode, ForIR>,
-	emptySrc: AstNode | null = null,
-): (TemplateNode & { kind: 'element' }) | null => {
-	const callback = asArray(node.arguments)[0] as AstNode | undefined
-	const params = callback ? asArray(callback.params) : []
-	const indexName = identifierName(params[1])
-	if (indexName) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				callback?.start,
-				'Index bindings in a reactive-list map — index identity does not survive keyed reconciliation',
-			),
-		)
-		return null
-	}
-	if (itemName === 'first' || itemName === 'element') {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'Loop variable named `first`/`element` — reserved parameters of reconcile() bindItem',
-			),
-		)
-		return null
-	}
-	const body = (callback?.body ?? null) as AstNode | null
-	const blockBody = body
-	let outputNode: AstNode | null = null
-	if (body && isJsxNode(body)) outputNode = body
-	if (!outputNode && blockBody && blockBody.type === 'BlockStatement') {
-		for (const stmt of asArray(blockBody.body)) {
-			if (stmt.type === 'ReturnStatement' && !outputNode) {
-				const arg = stmt.argument as AstNode | undefined
-				if (isJsxNode(arg)) outputNode = arg
-			}
-		}
-	}
-	if (!outputNode) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				node.start,
-				'map bodies must produce an output element',
-			),
-		)
-		return null
-	}
-	const output = lowerElement(ctx, outputNode, signals, fors)
-	// The item binding is the slot fill — reactive by position.
-	markPositionallyReactive([output], new Set([itemName]))
-	validateListBody(ctx, output, itemName)
-	const emptyArm = lowerEmptyArm(ctx, emptySrc, 'reconcile', signals, fors)
-	if (emptyArm === false) return null
-	const forIR: ReconcileForIR = {
-		kind: 'reconcile',
-		itemName,
-		listSignal,
-		keyText: null,
-		keyName: null,
-		output,
-		node,
-		emptyArm,
-	}
-	fors.set(node, forIR)
-	return output
+	const block = body.type === 'BlockStatement'
+	return lowerLoop(
+		ctx,
+		{
+			node,
+			itemName: identifierName(params[0]),
+			index: indexName ? { name: indexName, at: callback.start } : null,
+			iterable: callee.object as AstNode,
+			key: null,
+			extraParams: params.length > 2,
+			statements: block ? asArray(body.body) : [],
+			outputOf: stmt =>
+				stmt.type === 'ReturnStatement' && isJsxNode(stmt.argument)
+					? (stmt.argument as AstNode)
+					: null,
+			expressionOutput: !block && isJsxNode(body) ? body : null,
+			lowerEmptyArm: kind => lowerEmptyArm(ctx, emptySrc, kind, signals, fors),
+		},
+		signals,
+		fors,
+		TSX_LOWERING,
+	)
 }
 
 /* === Children / element lowering (shared skeleton, .tsx dispatch) === */
@@ -836,56 +471,48 @@ export const lowerChildren = (
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
 ): TemplateNode[] =>
-	lowerChildrenSkeleton(
-		ctx,
-		parent,
-		signals,
-		fors,
-		TSX_LOWERING,
-		TSX_SURFACE_WORDING,
-		{
-			dispatchChild: (ctx, child, out, signals, fors) => {
-				if (!isTrucTry(child)) return false
-				const lowered = lowerTrucTry(ctx, child, signals, fors)
+	lowerChildrenSkeleton(ctx, parent, signals, fors, TSX_LOWERING, {
+		dispatchChild: (ctx, child, out, signals, fors) => {
+			if (!isTrucTry(child)) return false
+			const lowered = lowerTrucTry(ctx, child, signals, fors)
+			if (lowered) out.push(lowered)
+			return true
+		},
+		dispatchControlFlow: (ctx, expr, out, _container, signals, fors) => {
+			// Control-flow shapes in child position:
+			const idiom = emptyStateIdiomOf(expr)
+			if (idiom) {
+				const lowered = lowerFor(ctx, idiom.loop, signals, fors, idiom.empty)
+				if (lowered)
+					out.push(lowered, ...(fors.get(idiom.loop)?.emptyArm ?? []))
+				return true
+			}
+			if (
+				expr.type === 'ConditionalExpression' ||
+				(expr.type === 'LogicalExpression' && String(expr.operator) === '&&')
+			) {
+				const lowered = lowerIfExpr(ctx, expr, signals, fors)
 				if (lowered) out.push(lowered)
 				return true
-			},
-			dispatchControlFlow: (ctx, expr, out, _container, signals, fors) => {
-				// Control-flow shapes in child position:
-				const idiom = emptyStateIdiomOf(expr)
-				if (idiom) {
-					const lowered = lowerFor(ctx, idiom.loop, signals, fors, idiom.empty)
-					if (lowered)
-						out.push(lowered, ...(fors.get(idiom.loop)?.emptyArm ?? []))
-					return true
-				}
-				if (
-					expr.type === 'ConditionalExpression' ||
-					(expr.type === 'LogicalExpression' && String(expr.operator) === '&&')
-				) {
-					const lowered = lowerIfExpr(ctx, expr, signals, fors)
+			}
+			if (isMapCall(expr)) {
+				const lowered = lowerFor(ctx, expr, signals, fors)
+				if (lowered) out.push(lowered)
+				return true
+			}
+			if (asIife(expr)) {
+				const body = (expr.callee as AstNode).body as AstNode
+				if (asArray(body.body).some(s => s.type === 'SwitchStatement')) {
+					const lowered = lowerSwitchIife(ctx, expr, signals, fors)
 					if (lowered) out.push(lowered)
 					return true
 				}
-				if (isMapCall(expr)) {
-					const lowered = lowerFor(ctx, expr, signals, fors)
-					if (lowered) out.push(lowered)
-					return true
-				}
-				if (asIife(expr)) {
-					const body = (expr.callee as AstNode).body as AstNode
-					if (asArray(body.body).some(s => s.type === 'SwitchStatement')) {
-						const lowered = lowerSwitchIife(ctx, expr, signals, fors)
-						if (lowered) out.push(lowered)
-						return true
-					}
-					// A non-recognized IIFE is an ordinary expression child —
-					// usually a string-producing block, legal and static.
-				}
-				return false
-			},
+				// A non-recognized IIFE is an ordinary expression child —
+				// usually a string-producing block, legal and static.
+			}
+			return false
 		},
-	)
+	})
 
 export const lowerElement = (
 	ctx: ExtractContext,
@@ -893,13 +520,6 @@ export const lowerElement = (
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
 ): TemplateNode & { kind: 'element' } =>
-	lowerElementShared(
-		ctx,
-		element,
-		signals,
-		fors,
-		TSX_LOWERING,
-		TSX_SURFACE_WORDING,
-	)
+	lowerElementShared(ctx, element, signals, fors, TSX_LOWERING)
 
 const TSX_LOWERING: Lowering = { lowerChildren }

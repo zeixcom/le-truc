@@ -6,59 +6,37 @@
  * file and core-shim.d.ts — and the IR type vocabulary shared by the rest
  * of the compiler lives in `ir.ts` (LT-039).
  *
- * Owns the `.tsrx`-specific stages only (`compileSource`: locate the
- * exported component function whose body is an `@{ }` statement container,
- * slice its setup statements and trailing output verbatim, plus the
- * grammar's own scans). The setup-extraction loop, context seeding,
- * template-output resolution, and the post-lowering validation tail are
- * SHARED with the `.tsx` front end through the front-end stage modules
- * (`setup-extraction.ts`, `template-output.ts`, `validate-lowered.ts`, …;
- * LT-202, ADR 0032 sub-design 6's anti-drift contract); template lowering
- * shares `lower-shared.ts` under `lower-template.ts`'s directive dispatch.
- * Attribute classification lives in `classify-attributes.ts`, signal type
- * inference in `infer-type.ts`, `export const config` extraction and
- * compose-import resolution in `config.ts`/`imports.ts`, and shared AST
- * predicates/vocabulary constants in `ast-utils.ts`.
+ * Owns the `.tsrx`-specific decisions only, as the `SurfaceAdapter` the
+ * shared driver (`front-end.ts`, LT-233) runs: the component function's
+ * body is an `@{ }` statement container whose statements are the setup and
+ * whose trailing output is the template, `<style>` blocks arrive as
+ * `JSXStyleElement` nodes, and the grammar's own scans (the React near-miss
+ * family) run first. Parsing stays here because `@tsrx/core`'s failure
+ * carries the position `newerGrammarHint` reads. Everything else — the
+ * module scans, the params contract, setup extraction, output resolution,
+ * the post-lowering tail and IR assembly — is the one shared script (ADR
+ * 0032 sub-design 6's anti-drift contract); template lowering shares
+ * `lower-shared.ts` under `lower-template.ts`'s directive dispatch, and
+ * diagnostic wording comes from `surface.ts`.
  */
 
-import { assembleComponentIR, readModuleDecls } from '../../assemble-ir'
 import type { AstNode } from '../../ast-node'
 import { asArray, identifierName, isNode, text } from '../../ast-utils'
 import { getStyleElementStylesheet, parseModule } from '../../core'
-import { type CompileDiagnostic, diagnostic } from '../../diagnostics'
+import { diagnostic } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import {
-	parseComposeImports,
-	parseLeTrucImports,
-	parsePlainImports,
-} from '../../imports'
-import type { ComponentIR, ExtractContext, ForIR, TemplateNode } from '../../ir'
-import {
-	reportDeferredCollectorCalls,
-	reportLeTrucImportMismatch,
-	reportMalformedSelectors,
-} from '../../module-scans'
-import { extractParams } from '../../params'
-import { extractSetup, seedExtractionContext } from '../../setup-extraction'
-import { resolveTemplateOutput } from '../../template-output'
-import type { RoutingSignal } from '../../tier'
-import { validateLoweredComponent } from '../../validate-lowered'
+	type CompileResult,
+	createExtractContext,
+	runFrontEnd,
+	type SurfaceAdapter,
+} from '../../front-end'
+import type { ExtractContext } from '../../ir'
 import { lowerChildren, lowerElement } from './lower-template'
 
 /* === Types === */
 
-export type CompileResult = {
-	component: ComponentIR | null
-	diagnostics: CompileDiagnostic[]
-	/**
-	 * Setup-extraction routing signals (ADR 0029, LT-165). Merged with the
-	 * analysis pass's own in `index.ts`, where the tier is classified.
-	 */
-	routingSignals: RoutingSignal[]
-}
-
-/** Shared empty result for the `parserFallbackRefsOf` context hook. */
-const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
+export type { CompileResult } from '../../front-end'
 
 /* === Internal Functions === */
 
@@ -193,31 +171,37 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: AstNode): void => {
 	visit(ast)
 }
 
+/** The `.tsrx` grammar's half of the shared driver (`front-end.ts`). */
+const TSRX_ADAPTER: SurfaceAdapter = {
+	surface: 'tsrx',
+	componentBodyType: 'JSXCodeBlock',
+	preScans: reportReactJsxNearMisses,
+	// The `@{ }` container's statements are the setup; its `render` slot is
+	// the trailing output expression.
+	splitSetupAndOutput: (_ctx, fn) => {
+		const codeBlock = fn.body as AstNode
+		return {
+			setup: asArray(codeBlock.body),
+			output: codeBlock.render as AstNode | undefined,
+		}
+	},
+	stylesheetOf: node => String(getStyleElementStylesheet(node)?.source ?? ''),
+	lowerChildren,
+	lowerElement,
+}
+
 /* === Exported Functions === */
 
 /**
- * Parse and extract the single exported component from a `.tsrx` source.
- * Returns `{ component: null }` with diagnostics when the source does not
- * lower cleanly; milestone gates (e.g. LTC001) surface as warnings.
+ * Parse and extract the single exported component from a `.tsrx` source:
+ * the `@tsrx/core` parse (whose failure carries the grammar hint), then the
+ * shared driver over the `.tsrx` adapter.
  */
 export const compileSource = (
 	source: string,
 	filename: string,
 	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
 ): CompileResult => {
-	const ctx: ExtractContext = {
-		source,
-		diagnostics: [],
-		routingSignals: [],
-		exposedProps: new Set<string>(),
-		serverKnown: new Set<string>(),
-		argNames: new Set<string>(),
-		parserProps: new Set<string>(),
-		parserFactoryOf: () => '',
-		parserFallbackRefsOf: () => EMPTY_NAMES,
-		composeImports: new Map<string, string>(),
-		setupInits: new Map<string, AstNode>(),
-	}
 	let ast: AstNode
 	try {
 		ast = parseModule(source, filename)
@@ -234,183 +218,11 @@ export const compileSource = (
 			],
 		}
 	}
-	reportReactJsxNearMisses(ctx, ast)
-	reportMalformedSelectors(ctx, ast)
-	ctx.composeImports = parseComposeImports(ast, filename)
-	const plainImports = parsePlainImports(
-		ctx,
+	return runFrontEnd(
+		createExtractContext(source, 'tsrx'),
 		ast,
 		filename,
-		emitPaths.outDirPrefix,
+		emitPaths,
+		TSRX_ADAPTER,
 	)
-	const leTrucImports = parseLeTrucImports(ast)
-	reportLeTrucImportMismatch(ctx, ast, leTrucImports)
-	const importedNames = new Set<string>([
-		...plainImports.flatMap(i => i.localNames),
-		...leTrucImports.flatMap(i => i.names),
-	])
-
-	// Locate the exported component function (body = JSXCodeBlock).
-	let fn: AstNode | null = null
-	let fnStmtStart = 0
-	for (const stmt of asArray(ast.body)) {
-		const decl =
-			stmt.type === 'ExportNamedDeclaration' && isNode(stmt.declaration)
-				? stmt.declaration
-				: stmt
-		if (
-			decl.type === 'FunctionDeclaration' &&
-			isNode(decl.body) &&
-			decl.body.type === 'JSXCodeBlock'
-		) {
-			if (fn) {
-				ctx.diagnostics.push(
-					diagnostic.invalidSource(
-						ctx.source,
-						stmt.start,
-						`${filename}: multiple component functions per file are outside the sanctioned subset.`,
-					),
-				)
-			} else {
-				fn = decl
-				fnStmtStart = typeof stmt.start === 'number' ? stmt.start : 0
-			}
-		}
-	}
-	if (!fn) {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				ctx.source,
-				undefined,
-				`${filename}: no exported component function with an @{ } container found.`,
-			),
-		)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-	}
-
-	// An `async` component function (LTC008, LT-157d): every statement
-	// after the first `await` runs in a later microtask, when the ambient
-	// effect collector is gone (ADR 0018) — so `expose()`/`watch()`/`on()`
-	// there throw `NoActiveCollectorError`, contained and silent since
-	// LT-155. The server half is worse: `emit-server.ts` calls the render
-	// function synchronously and would stringify a Promise. Rejected
-	// outright rather than diagnosed per call site, since neither half of
-	// the isomorphic pair can honour it.
-	if (fn.async === true) {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				ctx.source,
-				fn.start,
-				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
-			),
-		)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-	}
-	reportDeferredCollectorCalls(ctx, fn)
-
-	const params = extractParams(ctx, filename, fn)
-	if (!params)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-
-	// Setup statements: the `@{ }` container's statements minus the trailing
-	// output expression, classified by the shared extraction loop.
-	const codeBlock = fn.body as AstNode
-	const name = identifierName(fn.id) ?? 'Component'
-	const extraction = extractSetup(
-		ctx,
-		asArray(codeBlock.body),
-		params.paramsNode,
-		params.paramNames,
-		importedNames,
-	)
-
-	// Output: a single root element, or a fragment of
-	// [root element, <style>?].
-	const render = codeBlock.render as AstNode | undefined
-	// A bare single root element is a legal output (LT-123): the
-	// fragment exists to carry a SECOND node beside the root (the
-	// `<style>` block), so a component with no styles of its own has
-	// nothing to wrap and should not have to write `<>…</>` anyway.
-	const bareRoot = render?.type === 'JSXElement' ? render : null
-	if (!bareRoot && (!render || render.type !== 'JSXFragment')) {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				ctx.source,
-				render?.start,
-				`${filename}: the @{ } container's output must be a single root element, or a fragment (element + <style>).`,
-			),
-		)
-		return {
-			component: null,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-	}
-	seedExtractionContext(ctx, { paramNames: params.paramNames, extraction })
-
-	const fors = new Map<AstNode, ForIR>()
-	{
-		// A bare root element has no fragment to walk children of
-		// — lower it as the single-node list the fragment path
-		// would have produced.
-		const lowered: TemplateNode[] = bareRoot
-			? [lowerElement(ctx, bareRoot, extraction.signalByName, fors)]
-			: lowerChildren(ctx, render as AstNode, extraction.signalByName, fors)
-		const resolved = resolveTemplateOutput(
-			ctx,
-			filename,
-			extraction,
-			lowered,
-			node => {
-				const stylesheet = getStyleElementStylesheet(node)
-				return String(stylesheet?.source ?? '')
-			},
-			'the @{ } output',
-		)
-		if (!resolved)
-			return {
-				component: null,
-				diagnostics: ctx.diagnostics,
-				routingSignals: ctx.routingSignals,
-			}
-		const decls = readModuleDecls(ctx, ast, name)
-		const caseType = validateLoweredComponent(ctx, {
-			root: resolved.root,
-			config: decls.config,
-			i18nMessages: decls.i18nMessages,
-			extraction,
-			fors,
-			surface: 'tsrx',
-		})
-		const component = assembleComponentIR(ctx, {
-			componentName: name,
-			fnStmtStart,
-			paramsNode: params.paramsNode,
-			paramNames: params.paramNames,
-			contextParam: params.contextParam,
-			extraction,
-			resolved: { ...resolved, fors },
-			decls,
-			caseType,
-			plainImports,
-			leTrucImports,
-		})
-		return {
-			component,
-			diagnostics: ctx.diagnostics,
-			routingSignals: ctx.routingSignals,
-		}
-	}
 }
