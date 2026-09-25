@@ -69,6 +69,7 @@ export type StubShape =
 	| 'animation-frame'
 	| 'cancel'
 	| 'noop'
+	| 'history'
 
 /**
  * A global the realm does not implement, stubbed inert so a runs-once-at-connect
@@ -212,6 +213,13 @@ export const STUB_GLOBALS: readonly StubGlobalPatch[] = [
 	{ kind: 'stub', name: 'requestIdleCallback', shape: 'animation-frame' },
 	{ kind: 'stub', name: 'cancelIdleCallback', shape: 'cancel' },
 	{ kind: 'stub', name: 'scrollTo', shape: 'noop', force: true },
+	{
+		kind: 'stub',
+		name: 'history',
+		shape: 'history',
+		force: true,
+		note: "forced: jsdom's replaceState throws on the realm's opaque about:blank URL; module-listnav syncs its hash at connect (LT-332)",
+	},
 ]
 
 /**

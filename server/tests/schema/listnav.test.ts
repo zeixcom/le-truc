@@ -76,8 +76,13 @@ describe('listnav schema - rendered output', () => {
 {% /listnav %}`)
 
 		expect(html).toContain('role="option"')
-		expect(html).toContain('value="/index.html"')
-		expect(html).toContain('value="/about.html"')
+		expect(html).toContain('data-value="/index.html"')
+		expect(html).toContain('data-value="/about.html"')
+		expect(html).toContain('data-label="Home"')
+		expect(html).toContain('data-label="About"')
+		// form-listbox's contract is `data-value`/`data-label` (LT-332);
+		// a bare `value` on an option button is not part of it
+		expect(html).not.toMatch(/<button[^>]*\svalue=/)
 		expect(html).toContain('>Home</button>')
 		expect(html).toContain('>About</button>')
 	})
@@ -90,7 +95,7 @@ describe('listnav schema - rendered output', () => {
 
 		// First option should be selected
 		const firstOptionMatch = html.match(
-			/<button[^>]*value="\/first\.html"[^>]*>/,
+			/<button[^>]*data-value="\/first\.html"[^>]*>/,
 		)
 		expect(firstOptionMatch).not.toBeNull()
 		expect(firstOptionMatch![0]).toContain('aria-selected="true"')
@@ -103,7 +108,7 @@ describe('listnav schema - rendered output', () => {
 {% /listnav %}`)
 
 		const secondOptionMatch = html.match(
-			/<button[^>]*value="\/second\.html"[^>]*>/,
+			/<button[^>]*data-value="\/second\.html"[^>]*>/,
 		)
 		expect(secondOptionMatch).not.toBeNull()
 		expect(secondOptionMatch![0]).toContain('tabindex="-1"')
@@ -237,7 +242,7 @@ describe('listnav schema - rendered output', () => {
 
 		// Second option should be selected (has 'selected' attribute)
 		const secondOptionMatch = html.match(
-			/<button[^>]*value="\/second\.html"[^>]*>/,
+			/<button[^>]*data-value="\/second\.html"[^>]*>/,
 		)
 		expect(secondOptionMatch).not.toBeNull()
 		expect(secondOptionMatch![0]).toContain('aria-selected="true"')
@@ -245,7 +250,7 @@ describe('listnav schema - rendered output', () => {
 
 		// First option should NOT be selected
 		const firstOptionMatch = html.match(
-			/<button[^>]*value="\/first\.html"[^>]*>/,
+			/<button[^>]*data-value="\/first\.html"[^>]*>/,
 		)
 		expect(firstOptionMatch).not.toBeNull()
 		expect(firstOptionMatch![0]).toContain('aria-selected="false"')
@@ -267,7 +272,7 @@ describe('listnav schema - rendered output', () => {
 
 		// The selected button should still have aria-selected="true"
 		const counterMatch = html.match(
-			/<button[^>]*value="\.\/examples\/basic-counter\.html"[^>]*>/,
+			/<button[^>]*data-value="\.\/examples\/basic-counter\.html"[^>]*>/,
 		)
 		expect(counterMatch).not.toBeNull()
 		expect(counterMatch![0]).toContain('aria-selected="true"')

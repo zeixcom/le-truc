@@ -44,6 +44,33 @@ LT-283–LT-286, LT-293, LT-294, LT-298, LT-315), 2026-09-21 ×2. Full entry tex
 - **Scrollarea's wall-time at demo scale is noise** (474/341/330 ms Simulated vs 432 ms Folded).
   The ~2.3 s ADR 0029 cites returns only once page occurrences are simulated (LT-103).
 
+- [x] LT-107: Migrate `module-listnav` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** serves as compiled `.tsx`, twin retained. **Tier: Simulated** (`compose-read` of
+  the Simulated `form-listbox`, as predicted). Composes `FormListbox` and `ModuleLazyload`; the
+  twin's `pass()` is `truc:pass` on the lazyload site, so `module-lazyload.tsx`'s args declare
+  `'truc:pass'?: { src?: () => string }`. Initial hash sync stays in effect activation (LT-200).
+  Hash helpers live in `listnav-hash.ts` as pure functions of the first option's value, shared by
+  both members and `module-listnav.test.ts`. Compiler: `JS_GLOBALS` gains `location`/`history`
+  (already `PAGE_CONTEXT_GLOBALS`, so a server fold over them still fails LTC054).
+  **Review:** code approved 2026-09-25; accepted once LT-332 landed its spec.
+
+- [x] LT-332: The docs' Markdoc `listnav` options no longer match the compiled form-listbox contract — reviewed ✓
+  **Changed:** `listnav.markdoc.ts` emits `data-value`/`data-label` (no `value`) on option
+  buttons. **Public API:** form-listbox exposes read-only `options: FormListboxOption[]`, the
+  unfiltered projection of its option buttons; `visibleOptions` is now `options` filtered. Both
+  module-listnav members read `listbox.options` instead of querying its markup. `getBasePath`
+  accepts `../` values (the locale-tree docs rewrite), which had silently disabled hash sync on
+  `docs/en/examples.html`. New `module-listnav.spec.ts`; `test:variants form-listbox
+  module-listnav` passes (owner, 2026-09-25).
+  **Ruling (Architect, 2026-09-25):** the sim realm stubs `history` inert and forced
+  (`patch-table.ts` shape `history`, mirrored in `capabilities.ts`), not a standing
+  `CLASSIFIED_DIAGNOSTICS` entry. A build has no session history, which is the same reason
+  `requestAnimationFrame` is stubbed; a classification would record a throw on every simulated
+  listnav render forever. The classifier mirror adds no new routing: `history` is already in
+  `PAGE_CONTEXT_GLOBALS`, so a served read of it is LTC054 before tiering sees it.
+  Reusable rule: a connect-time page-context API the realm lacks gets an inert stub, not a
+  classification.
+
 - [x] LT-104: Migrate `module-lazyload` to `.tsx` with same-commit cutover — reviewed ✓
   **Changed:** serves as compiled `.tsx`, twin retained. **Tier: Simulated** (LTC043: `setHTML`
   reads the `contentEl` ref in setup, consumed only by a `watch`). The client factory now

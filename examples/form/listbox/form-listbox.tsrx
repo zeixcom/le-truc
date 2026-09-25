@@ -65,6 +65,13 @@ export type FormListboxProps = {
 	/** Filter string used to narrow displayed options. */
 	filter: string
 	/**
+	 * Every option, in document order, regardless of the filter (read-only,
+	 * derived). The unfiltered projection of the option buttons this
+	 * component owns — module-listnav maps the URL hash onto it instead of
+	 * querying inside this component's markup (LT-332).
+	 */
+	readonly options: FormListboxOption[]
+	/**
 	 * The options currently passing the filter, in document order (read-only,
 	 * derived). Composing parents gate their own UI on this — form-combobox
 	 * hides its popup when the list is empty — instead of reaching into the
@@ -127,20 +134,21 @@ export function FormListbox(
 		// option list, so the public projection is read back off them
 		// (`data-value`/`data-label`, the same pair `@for` writes) rather
 		// than off the server `options` arg, which the client half never
-		// receives. Filtering repeats the per-option `hidden` predicate
-		// below; both read `host.filter`, so both stay live.
-		visibleOptions: () =>
+		// receives. The arg renders the buttons, the prop reads them back:
+		// one site in three roles (LT-332). `visibleOptions` repeats the
+		// per-option `hidden` predicate below; both read `host.filter`, so
+		// both stay live.
+		options: () =>
 			all('button[role="option"]')
 				.get()
 				.map((el: HTMLElement) => ({
 					value: el.getAttribute('data-value') ?? '',
 					label: el.getAttribute('data-label') ?? '',
-				}))
-				.filter((option: FormListboxOption) =>
-					option.label
-						.toLowerCase()
-						.includes(host.filter.toLowerCase()),
-				),
+				})),
+		visibleOptions: () =>
+			host.options.filter((option: FormListboxOption) =>
+				option.label.toLowerCase().includes(host.filter.toLowerCase()),
+			),
 		focusFirstOption: defineMethod(() => {
 			all('button[role="option"]:not([hidden])').get()[0]?.focus();
 		}),

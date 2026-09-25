@@ -103,6 +103,11 @@ export const UNANSWERABLE_GLOBALS: readonly UnanswerableGlobal[] = [
 	{ name: 'requestIdleCallback', kind: 'stub' },
 	{ name: 'cancelIdleCallback', kind: 'stub' },
 	{ name: 'scrollTo', kind: 'stub' },
+	{
+		name: 'history',
+		kind: 'stub',
+		note: 'the build has no session history; navigation calls are inert',
+	},
 
 	// --- Present but closed (ADR 0027 sub-design 2d) -----------------------
 	{

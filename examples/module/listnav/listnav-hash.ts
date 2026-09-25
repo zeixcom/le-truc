@@ -9,6 +9,7 @@
  * Extract the base path (first path segment) and extension from an option value.
  * "./examples/form-combobox.html" → { base: "./examples/", ext: ".html" }
  * "./api/functions/defineComponent.html" → { base: "./api/", ext: ".html" }
+ * "../examples/form-combobox.html" → { base: "../examples/", ext: ".html" }
  */
 export const getBasePath = (
 	firstOptionValue: string,
@@ -16,15 +17,17 @@ export const getBasePath = (
 	if (!firstOptionValue) return null
 
 	const value = firstOptionValue
-	// Handle relative paths starting with "./"
-	if (!value.startsWith('./')) return null
+	// Handle relative paths starting with "./" or "../" — the docs build
+	// rewrites "./" to "../" for pages inside a locale tree (LT-332)
+	const prefix = value.match(/^(?:\.\.?\/)+/)?.[0]
+	if (!prefix) return null
 
-	// Find the second slash to get the first path segment: "./examples/"
-	const secondSlash = value.indexOf('/', 2)
-	if (secondSlash === -1) return null
+	// Find the slash closing the first path segment: "./examples/"
+	const segmentEnd = value.indexOf('/', prefix.length)
+	if (segmentEnd === -1) return null
 
 	return {
-		base: value.slice(0, secondSlash + 1),
+		base: value.slice(0, segmentEnd + 1),
 		ext: value.slice(value.lastIndexOf('.')),
 	}
 }

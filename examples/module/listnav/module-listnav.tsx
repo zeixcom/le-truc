@@ -20,7 +20,7 @@
  * The initial hash sync stays deferred to effect activation (LT-200).
  */
 
-import { batch, createEffect, type FactoryContext, query } from '@zeix/le-truc'
+import { batch, createEffect, type FactoryContext } from '@zeix/le-truc'
 import { FormListbox } from '../../form/listbox/form-listbox.tsx'
 import { ModuleLazyload } from '../lazyload/module-lazyload.tsx'
 import { hashToValue, valueToHash } from './listnav-hash'
@@ -62,11 +62,12 @@ export function ModuleListnav(
 ) {
 	const listbox = first('form-listbox', 'Required to select a partial to load')
 
-	const firstOptionValue = () =>
-		query(listbox, 'button[role="option"]')?.value ?? ''
+	// Read the listbox through its public surface, never its owned markup
+	// (HOST_PROFILE § data account, bullet 3; LT-332).
+	const firstOptionValue = () => listbox.options[0]?.value ?? ''
 
 	const hasOption = (value: string): boolean =>
-		!!query(listbox, `button[role="option"][value="${CSS.escape(value)}"]`)
+		listbox.options.some(option => option.value === value)
 
 	// Track whether we're updating the hash ourselves to avoid loops
 	const hashState = { updating: false }

@@ -32,6 +32,11 @@ A full-featured listbox with client-side filtering, optional remote option loadi
 - `''`
 - Filter text used to hide/show options
 ---
+- `options`
+- `FormListboxOption[]`
+- All options
+- **Read-only.** Every option's `{ value, label }` pair in document order, regardless of `filter`, read back off the option buttons' `data-value`/`data-label`. Composing parents map external state (a URL hash, say) onto this rather than querying the option buttons.
+---
 - `visibleOptions`
 - `FormListboxOption[]`
 - All options

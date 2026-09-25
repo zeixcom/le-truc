@@ -68,7 +68,8 @@ const renderNavigationItems = (
 					type="button"
 					role="option"
 					tabindex="${item.selected ? '0' : '-1'}"
-					value="${item.src}"
+					data-value="${item.src}"
+					data-label="${item.label}"
 					aria-selected="${String(!!item.selected)}"
 				>
 					${item.label}
@@ -87,7 +88,8 @@ const renderNavigationItems = (
 				type="button"
 				role="option"
 				tabindex="${item.selected ? '0' : '-1'}"
-				value="${item.src}"
+				data-value="${item.src}"
+				data-label="${item.label}"
 				aria-selected="${String(!!item.selected)}"
 			>
 				${item.label}

@@ -1,64 +1,5 @@
-import { batch, createEffect, defineComponent, query } from '@zeix/le-truc'
-
-/**
- * Extract the base path (first path segment) from an option value.
- * "./examples/form-combobox.html" → "./examples/"
- * "./api/functions/defineComponent.html" → "./api/"
- */
-const getBasePath = (
-	listbox: HTMLElement,
-): { base: string; ext: string } | null => {
-	const firstOption = query(listbox, 'button[role="option"]')
-	if (!firstOption?.value) return null
-
-	const value = firstOption.value
-	// Handle relative paths starting with "./"
-	if (!value.startsWith('./')) return null
-
-	// Find the second slash to get the first path segment: "./examples/"
-	const secondSlash = value.indexOf('/', 2)
-	if (secondSlash === -1) return null
-
-	return {
-		base: value.slice(0, secondSlash + 1),
-		ext: value.slice(value.lastIndexOf('.')),
-	}
-}
-
-/**
- * Derive the option value from a location hash.
- * "#functions/defineComponent" → "./api/functions/defineComponent.html"
- * "#form-combobox" → "./examples/form-combobox.html"
- */
-const hashToValue = (hash: string, listbox: HTMLElement): string | null => {
-	if (!hash) return null
-	const fragment = hash.slice(1)
-	if (!fragment) return null
-
-	const paths = getBasePath(listbox)
-	if (!paths) return null
-
-	return `${paths.base}${fragment}${paths.ext}`
-}
-
-/**
- * Derive a hash fragment from an option value.
- * "./api/functions/defineComponent.html" → "functions/defineComponent"
- * "./examples/form-combobox.html" → "form-combobox"
- */
-const valueToHash = (value: string, listbox: HTMLElement): string => {
-	if (!value) return ''
-
-	const paths = getBasePath(listbox)
-	if (!paths) return ''
-
-	let hash = value
-	if (hash.startsWith(paths.base)) hash = hash.slice(paths.base.length)
-	const dotIndex = hash.lastIndexOf('.')
-	if (dotIndex > 0) hash = hash.slice(0, dotIndex)
-
-	return hash
-}
+import { batch, createEffect, defineComponent } from '@zeix/le-truc'
+import { hashToValue, valueToHash } from './listnav-hash'
 
 /**
  * Connects a listbox and a lazyload panel, syncing the selection with the URL hash for shareable navigation.
@@ -72,8 +13,12 @@ export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 	const listbox = first('form-listbox', 'Required to select a partial to load')
 	const lazyload = first('module-lazyload', 'Required to load a partial into')
 
+	// Read the listbox through its public surface, never its owned markup
+	// (HOST_PROFILE § data account, bullet 3; LT-332).
+	const firstOptionValue = () => listbox.options[0]?.value ?? ''
+
 	const hasOption = (value: string): boolean =>
-		!!query(listbox, `button[role="option"][value="${CSS.escape(value)}"]`)
+		listbox.options.some(option => option.value === value)
 
 	// Track whether we're updating the hash ourselves to avoid loops
 	let updatingHash = false
@@ -82,7 +27,7 @@ export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 	const onHashChange = () => {
 		if (updatingHash) return
 
-		const value = hashToValue(location.hash, listbox)
+		const value = hashToValue(location.hash, firstOptionValue())
 		if (value && value !== listbox.value && hasOption(value)) {
 			batch(() => {
 				listbox.filter = ''
@@ -105,7 +50,7 @@ export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 			// inserted subtrees), and a synchronous write would land before
 			// its signal exists.
 			if (location.hash) {
-				const value = hashToValue(location.hash, listbox)
+				const value = hashToValue(location.hash, firstOptionValue())
 				if (value && hasOption(value)) listbox.value = value
 			}
 
@@ -114,7 +59,7 @@ export default defineComponent('module-listnav', ({ first, pass, watch }) => {
 				const value = listbox.value
 				if (!value) return
 
-				const hash = valueToHash(value, listbox)
+				const hash = valueToHash(value, firstOptionValue())
 				if (hash && location.hash !== `#${hash}`) {
 					updatingHash = true
 					history.replaceState(null, '', `#${hash}`)

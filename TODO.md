@@ -72,65 +72,11 @@ All three gates landed and were reviewed on 2026-09-25 (LT-325, LT-301, LT-300; 
 
 ### Migrations (LT-104 before LT-107; LT-095, LT-106, LT-108 ungated)
 
-- [x] LT-107: Migrate `module-listnav` to `.tsx` with same-commit cutover — reviewed ✓ (code); awaiting LT-332
-  **Skill:** le-truc-dev
-  **Context:** ~129 lines, navigation list. Also ports
-  `examples/module/listnav/module-listnav.test.ts` — a unit test file — to run against the
-  compiled artifact (or the served page, matching the corpus's spec conventions); mocks served
-  under `/test/module-listnav/mocks/...` stay working. Note: LT-200 (merged with `next`)
-  moved this component's initial hash sync into effect activation — the ported template must
-  keep that shape.
-  **Planning note (2026-09-25):** composes `module-lazyload` and `form-listbox`, so it runs
-  after LT-104 and needs LT-325's generated tag-map entries (form-listbox is a `.tsrx` child).
-  form-listbox is Simulated (LTC034), so expect listnav to land **Simulated on `compose-read`**,
-  like form-combobox. Record that as its tier and reason; do not reshape the component to dodge it.
-  **Handoff (2026-09-25):** serves as compiled `.tsx`, twin retained. **Tier: Simulated**, one
-  routing signal: `compose-read` of the Simulated `form-listbox`, as predicted. Census 27/4/0. It
-  composes `FormListbox` and `ModuleLazyload` (both `.tsx` members). The twin's `pass()` is now
-  `truc:pass` on the lazyload compose site, so `module-lazyload.tsx`'s args declare
-  `'truc:pass'?: { src?: () => string }`. The initial hash sync stays in effect activation
-  (LT-200). The hash helpers moved to `listnav-hash.ts` as pure functions of the first option's
-  value. The client imports that module, and `module-listnav.test.ts` now tests it rather than
-  a copy. Run it with `bun test examples/module/listnav`: no package script runs it. Compiler:
-  `JS_GLOBALS` gains `location` and `history`, which are already in `PAGE_CONTEXT_GLOBALS`, so
-  a server fold over them still fails LTC054. Host profile: `nav`, `module-listnav`. Not run in
-  a browser, because the sandbox cannot bind a port. A contract mismatch, inherited and not
-  fixed, is in NOTES.
-  **Review (Architect, 2026-09-25):** code approved as a faithful migration. The `value`/`data-value`
-  mismatch is a live docs bug, now LT-332 (in this iteration). listnav is not accepted until
-  LT-332 lands its spec.
+All six landed and were reviewed on 2026-09-25 (LT-107 accepted with LT-332; see `DONE.md`).
 
 ### Review follow-up (in iteration, 2026-09-25)
 
-- [ ] LT-332: The docs' Markdoc `listnav` options no longer match the compiled form-listbox contract — examples navigation is broken (LT-107 review).
-  **Skill:** le-truc-dev
-  **Context:** Verified 2026-09-25 against a fresh `build:docs`: `server/schema/listnav.markdoc.ts`
-  renders option buttons with `value="…"` and no `data-value`/`data-label`. The served
-  form-listbox client (compiled from `form-listbox.tsx`; the `.tsrx` member's client reads the
-  same attributes) reads
-  `option.getAttribute('data-value')!` and `…('data-label')!`. So on `docs/en/examples.html`
-  every `optValue` is `null`, a click writes `null` into `host.value`, and the filter predicate
-  throws on `null.toLowerCase()`. module-listnav's hash sync has the mirror bug: it reads
-  `.value`, which only the schema markup has, and it queries inside form-listbox's owned
-  markup (HOST_PROFILE § data account, bullet 3).
-  **Design (Architect):** one contract, the compiled component's, read through its public
-  surface.
-  1. `listnav.markdoc.ts` (and any other schema emitting form-listbox options:
-     `cem-list.markdoc.ts`, check) emits `data-value`/`data-label` on each `role="option"`
-     button. A `value` attribute is not part of the contract; drop it.
-  2. form-listbox exposes a read-only **`options: FormListboxOption[]`**, the unfiltered
-     projection of its own option buttons in document order. It is `visibleOptions` without
-     the filter, and the same children-are-data read (LT-119). The same-named server arg is
-     the render channel for the same value, so this is one site in three roles, not LTC039's
-     duplication. Both `.tsx` and `.tsrx` members change; keep their CSS byte-identical.
-  3. module-listnav (`.tsx` and the `.ts` twin) reads `listbox.options[0]?.value` and
-     `listbox.options.some(o => o.value === v)`. It drops both `query(listbox, …)` reach-ins.
-     `listnav-hash.ts` keeps its pure signatures.
-  **Channel/tier:** none. No check changes.
-  **Check:** a Playwright spec for module-listnav (the component has none): selecting an
-  option loads its partial, a hash on load selects the matching option, and filtering does not
-  throw. Plus a browser check of `docs/en/examples.html`'s navigation. `blog-pages`/schema tests
-  updated to the attribute form. Public API change on form-listbox, so it goes to review.
+LT-332 landed and was reviewed on 2026-09-25 (see `DONE.md`).
 
 ### Follow-ups and riders (parallel slot)
 

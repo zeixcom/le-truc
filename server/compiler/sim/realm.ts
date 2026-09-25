@@ -201,6 +201,19 @@ const stubFor = (shape: StubShape): unknown => {
 		case 'cancel':
 		case 'noop':
 			return () => {}
+		case 'history':
+			// The build has no session history: navigation calls are inert and
+			// the stack is the one entry being rendered.
+			return {
+				length: 1,
+				scrollRestoration: 'auto',
+				state: null,
+				back() {},
+				forward() {},
+				go() {},
+				pushState() {},
+				replaceState() {},
+			}
 	}
 }
 

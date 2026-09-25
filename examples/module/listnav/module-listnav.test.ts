@@ -27,6 +27,14 @@ describe('module-listnav hash handling', () => {
 			expect(result?.ext).toBe('.html')
 		})
 
+		test('extracts base path from parent-relative URLs (locale tree)', () => {
+			const result = getBasePath('../examples/form-combobox.html')
+
+			expect(result).not.toBeNull()
+			expect(result?.base).toBe('../examples/')
+			expect(result?.ext).toBe('.html')
+		})
+
 		test('returns null for absolute paths (old format)', () => {
 			const result = getBasePath('/api/functions/defineComponent.html')
 			expect(result).toBeNull()
@@ -155,6 +163,13 @@ describe('module-listnav hash handling', () => {
 			const roundTripHash = valueToHash(value!, firstOption)
 
 			expect(roundTripHash).toBe('form-combobox')
+		})
+
+		test('Locale tree: value ↔ hash round-trips "../" values', () => {
+			const originalValue = '../examples/form-listbox.html'
+			const hash = valueToHash(originalValue, originalValue)
+			expect(hash).toBe('form-listbox')
+			expect(hashToValue(`#${hash}`, originalValue)).toBe(originalValue)
 		})
 
 		test('Examples: value → hash → value preserves original', () => {
