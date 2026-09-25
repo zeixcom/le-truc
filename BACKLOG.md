@@ -1592,6 +1592,8 @@ hand-authoring contract (splitview `button.divider` → `button[role="separator"
 every migration trips it.
 **[2026-09-25]** LT-316–LT-318 and LT-320–LT-324 moved to `TODO.md`: they sit on components the
 current iteration migrated. LT-319 and LT-325 stay here.
+**[2026-09-25, follow-up review]** LT-327 (the LT-323 false-Folded regression) was created here
+and moved straight to `TODO.md`. LT-328 and LT-329 stay here.
 
 - [ ] LT-319: One `truc:pass` spelling for several same-discriminator compose sites (NOTES LT-098).
   **Skill:** architect → le-truc-dev
@@ -1612,6 +1614,25 @@ current iteration migrated. LT-319 and LT-325 stay here.
   hand-listing again (the thing LT-312 removed for compose imports). Have `tsrx-imports.d.ts`
   (or a sibling generated file) carry each compiled `.tsrx` tag's map entry, typed through its
   props type, and drop the three hand-listed clients.
+
+- [ ] LT-328: HOST_PROFILE and compiler doc hygiene after LT-316/LT-320 (follow-up review).
+  **Skill:** tech-writer
+  **Context:** HOST_PROFILE § element references (the "`class`/`id` on a compose site reach
+  the served DOM" invariant) must name `data-*` too, since LT-320 made it a host attribute that
+  is never forwarded. It should also say that a `first()` ref's authored selector is emitted
+  when verifiable (LT-316), with synthesis as the fallback. In
+  `server/compiler/analysis/selectors.ts`, the `SELECTOR_GRAMMAR` constant's doc block sits
+  between `matchesSelector`'s JSDoc and the function, which orphans the latter. Move the
+  constant above it. The `selectorCandidates` doc also has an unwrapped over-long line.
+  Docs-only; no behaviour change.
+
+- [ ] LT-329: `check:sim` fails on a clean tree (`renderFormColorgraph` without `i18n`).
+  **Skill:** le-truc-dev
+  **Context:** `scripts/sim-portability-check.ts` calls the generated render functions without
+  the compiler-supplied `i18n` record, so form-colorgraph (which composes an i18n-declaring
+  spinbutton) throws "Cannot destructure property 't' from null or undefined value". Found
+  during LT-323 and reproduced on a clean tree. Pass `i18nRecord(tag)` (or whatever the corpus
+  runner supplies) the way the build does. **Accept:** `bun run check:sim` exits 0.
 
 ## P6 — Cleanup round (after the corpus port)
 

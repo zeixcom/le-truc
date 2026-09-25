@@ -61,7 +61,7 @@ describe('runLoops — Pass 1 (server-data @for → each())', () => {
 					<c-el>
 						<ul>
 							@for (const tab of tabs) {
-								<li data-tab>{tab}</li>
+								<li data-tab onClick={() => console.log(1)}>{tab}</li>
 							}
 						</ul>
 					</c-el>
@@ -81,7 +81,7 @@ describe('runLoops — Pass 1 (server-data @for → each())', () => {
 		expect(plan?.itemParam).toBe('tab')
 		// The iterable's own free name (`tabs`) is reused as the collection name.
 		expect(plan?.collection).toBe('tabs')
-		expect(plan?.effects).toEqual([])
+		expect(plan?.effects.map(e => e.kind)).toEqual(['on'])
 		// The loop output got a query registered so the client can find it.
 		expect(ctx.queries).toEqual([
 			{
@@ -91,6 +91,35 @@ describe('runLoops — Pass 1 (server-data @for → each())', () => {
 				message: 'c-el: li missing',
 			},
 		])
+	})
+})
+
+describe('runLoops — Pass 1 (construct-free body, LT-322)', () => {
+	test('plans no each() and registers no collection query', () => {
+		const { component } = compileSource(
+			`export function C({ tabs }: { tabs: string[] })
+			@{
+				expose({})
+				<>
+					<c-el>
+						<ul>
+							@for (const tab of tabs) {
+								<li>{tab}</li>
+							}
+						</ul>
+					</c-el>
+					<style>c-el { color: red }</style>
+				</>
+			}`,
+			'c.tsrx',
+		)
+		if (!component) throw new Error('component must compile')
+		const ctx = contextFor(component)
+		runLoops(ctx)
+
+		expect(ctx.diagnostics).toEqual([])
+		expect(ctx.forPlans.size).toBe(0)
+		expect(ctx.queries).toEqual([])
 	})
 })
 

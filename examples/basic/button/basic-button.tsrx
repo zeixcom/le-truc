@@ -14,9 +14,11 @@
  *   button's own text when the page authored no span
  *   (`text-fallback-test` in basic-button.html);
  * - `badge` tolerates absence entirely — `first('span.badge')` is
- *   the OPTIONAL form (LT-123), and the `@if (badge)` branch means
- *   the client already addresses it non-throwing, under a presence
- *   guard;
+ *   the OPTIONAL form (LT-123). The template renders the span
+ *   unconditionally, empty when there is no badge (`.badge:empty`
+ *   hides it), so a parent that drives `badge` by `truc:pass` has a
+ *   site to land on (LT-321); the ref stays optional because a page
+ *   may author a button with no badge span at all;
  * - `label`'s ref is optional for the same reason even though the
  *   template renders the span unconditionally: a page may enhance a
  *   bare `<button>` this component never rendered
@@ -88,9 +90,7 @@ export function BasicButton(
 			<basic-button>
 				<button type="button" class={`${variant} ${size}`} {disabled}>
 					<span class="label">{label}</span>
-					@if (badge) {
-						<span class="badge">{badge}</span>
-					}
+					<span class="badge">{badge}</span>
 				</button>
 			</basic-button>
 

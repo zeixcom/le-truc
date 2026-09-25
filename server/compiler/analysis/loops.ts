@@ -57,29 +57,6 @@ export const runLoops = (ctx: AnalysisContext): void => {
 	for (const loop of component.fors.values()) {
 		if (loop.kind !== 'each') continue // reactive loops → pass 1b (reconcile)
 		const output = loop.output
-		const { selector, unique } = resolveSelector(output)
-		if (!unique) {
-			diagnostics.push(
-				diagnostic.unaddressableElement(
-					source,
-					output.node.start,
-					`No unique selector for the @for output <${output.tag}> in the rendered template; add a distinguishing static attribute (role, class, or data-*).`,
-				),
-			)
-		}
-		// Collection naming: the iterable's name when still free, else the
-		// plural of the output's role (last segment), else tag + 's'.
-		const roleValue = staticAttrs(output).get('role')
-		const fallbackBase =
-			roleValue !== undefined && roleValue !== null
-				? `${roleValue.split('-').pop() ?? roleValue}s`
-				: `${output.tag}s`
-		const base =
-			loop.iterableName && !usedNames.has(loop.iterableName)
-				? loop.iterableName
-				: fallbackBase
-		const collection = addQuery(base, selector, 'many')
-
 		const loopBound = new Set<string>([loop.itemName])
 		if (loop.indexName) loopBound.add(loop.indexName)
 		// Map hoisted const → attribute it was rendered into as a bare value.
@@ -233,6 +210,32 @@ export const runLoops = (ctx: AnalysisContext): void => {
 			return undefined
 		}
 		gatedLazyChild(loop.output)
+
+		// LT-322: a body with no client constructs needs no `each()` — and no
+		// collection query, whose required form would throw on an empty list.
+		if (effectsPlan.length === 0) continue
+		const { selector, unique } = resolveSelector(output)
+		if (!unique) {
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					output.node.start,
+					`No unique selector for the @for output <${output.tag}> in the rendered template; add a distinguishing static attribute (role, class, or data-*).`,
+				),
+			)
+		}
+		// Collection naming: the iterable's name when still free, else the
+		// plural of the output's role (last segment), else tag + 's'.
+		const roleValue = staticAttrs(output).get('role')
+		const fallbackBase =
+			roleValue !== undefined && roleValue !== null
+				? `${roleValue.split('-').pop() ?? roleValue}s`
+				: `${output.tag}s`
+		const base =
+			loop.iterableName && !usedNames.has(loop.iterableName)
+				? loop.iterableName
+				: fallbackBase
+		const collection = addQuery(base, selector, 'many')
 
 		const itemParam =
 			loop.itemName === collection ? `${loop.itemName}El` : loop.itemName

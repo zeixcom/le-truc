@@ -182,11 +182,11 @@ declare global {
 export default defineComponent<FormComboboxProps>(
 	'form-combobox',
 	({ expose, first, host, on, pass, watch }) => {
-		const textbox = first('input[role="combobox"]', 'combobox input')
+		const textbox = first('input:not(form-listbox *)', 'combobox input')
 		const button = first('button:not(form-listbox *)')
 		const popup = first('.popup', 'listbox popup wrapper')
 		const listbox = first('form-listbox', 'combobox listbox')
-		const descriptionEl = first('p.description')
+		const descriptionEl = first('.description')
 		const p = first('p[role="alert"]', 'form-combobox: p[role="alert"] missing')
 		const showPopup = createState(false)
 		expose({

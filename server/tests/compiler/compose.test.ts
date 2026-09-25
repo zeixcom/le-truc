@@ -129,8 +129,37 @@ export function BasicParent({}: {})
 		)
 		if (!component)
 			throw new Error(`parent must compile: ${JSON.stringify(diagnostics)}`)
+		// Spliced onto the child's root, not forwarded as an arg (LT-320).
 		expect(component.serverCode).toContain(
-			'renderBasicChild({ "data-testid": "hello" })',
+			'composeHostAttrs(renderBasicChild({  }), "basic-child", { "data-testid": "hello" })',
+		)
+	})
+
+	test('a dynamic data-* renders on the child root with its server expression (LT-320)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ rowId }: { rowId: string })
+	@{
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild data-row={rowId} />
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		if (!component)
+			throw new Error(`parent must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.serverCode).toContain(
+			'composeHostAttrs(renderBasicChild({  }), "basic-child", { "data-row": rowId })',
 		)
 	})
 

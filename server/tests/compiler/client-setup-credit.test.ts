@@ -50,23 +50,60 @@ import { bindAttribute, createState } from '@zeix/le-truc'`
 		expect(component?.serverCode).not.toContain('bindAttribute')
 	})
 
-	test('the credit is per statement and does not follow a const', () => {
-		// `open.get()` sits one level of indirection away inside `isOpen`, so
-		// the statement's own node carries no signal read. Pinned because the
-		// corpus depends on the inlined spelling (form-combobox.tsrx). Under
-		// tiering (LT-165 step 5) the consequence is a routing signal, not a
-		// diagnostic — the signal is still unharvestable, the component still
-		// routes Simulated, and the client still declares it verbatim.
+	test('the credit follows a const (LT-323)', () => {
+		// `open.get()` sits one level of indirection away inside `isOpen`.
+		// Until LT-323 the credit read only the statement's own node, so this
+		// spelling routed Simulated on LTC004; ADR 0029 folds it, because
+		// every consumer is still client-only.
 		const { component } = compile(
 			source.replace(
 				"\twatch(() => !open.get(), bindAttribute(panel, 'hidden'))",
 				"\tconst isOpen = () => open.get()\n\twatch(() => !isOpen(), bindAttribute(panel, 'hidden'))",
 			),
 		)
+		expect(component?.entry.routingSignals).toEqual([])
+		expect(component?.entry.tier).toBe('folded')
+		expect(component?.clientCode).toContain('createState(false)')
+	})
+
+	test('a bare signal reference is a read (LT-323)', () => {
+		// module-scrollarea's `watch(overflowStart, bindState(…))` shape.
+		const { component } = compile(
+			source.replace(
+				"\twatch(() => !open.get(), bindAttribute(panel, 'hidden'))",
+				"\twatch(open, bindAttribute(panel, 'hidden'))",
+			),
+		)
+		expect(component?.entry.routingSignals).toEqual([])
+		expect(component?.entry.tier).toBe('folded')
+	})
+
+	test('an event handler is a client-only read position (LT-323)', () => {
+		const { component } = compile(`export function C({}: {})
+@{
+	const count = createState(0)
+	expose({})
+	<>
+		<c-el>
+			<button type="button" onClick={() => console.log(count.get())}>log</button>
+		</c-el>
+		<style>c-el { display: block }</style>
+	</>
+}
+import { createState } from '@zeix/le-truc'`)
+		expect(component?.entry.routingSignals).toEqual([])
+		expect(component?.entry.tier).toBe('folded')
+	})
+
+	test('a signal nothing reads still routes (LTC004)', () => {
+		const { component } = compile(
+			source.replace(
+				"\twatch(() => !open.get(), bindAttribute(panel, 'hidden'))",
+				'',
+			),
+		)
 		expect(
 			component?.entry.routingSignals.some(s => s.origin === 'LTC004'),
 		).toBe(true)
-		expect(component?.entry.tier).toBe('simulated')
-		expect(component?.clientCode).toContain('createState(false)')
 	})
 })

@@ -262,7 +262,9 @@ import { createCell } from '@zeix/le-truc'`,
 		)
 		expect(diagnostics).toEqual([])
 		const input = firstElementChild(component?.root)
-		expect(input?.attrs).toEqual([{ kind: 'ref', name: 'box' }])
+		expect(input?.attrs).toEqual([
+			{ kind: 'ref', name: 'box', selector: 'input' },
+		])
 	})
 
 	test('lazy child detected via & sigil', () => {

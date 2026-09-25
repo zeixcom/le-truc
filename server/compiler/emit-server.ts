@@ -209,6 +209,44 @@ const retainReferenced = (
 	return setup.filter(stmt => retained.has(stmt))
 }
 
+/**
+ * The Folded tier's setup: every statement verbatim, except a
+ * server-unevaluable one (it reads a client-only primitive or ref) that
+ * neither the markup nor another kept statement references (LT-323). Such a
+ * statement feeds only client-only positions — module-catalog's
+ * `total = createMemo(() => all(…)…)`, read by a `truc:pass` thunk alone —
+ * so the harness has nothing to evaluate it for, and declaring it would
+ * reference a name the render function does not have. A referenced one is
+ * kept: that shape is unsound and surfaces as a tsc failure, as before.
+ */
+const dropUnreferencedUnevaluable = (
+	setup: readonly SetupStmt[],
+	unevaluable: (stmt: SetupStmt) => boolean,
+	markup: readonly string[],
+): SetupStmt[] => {
+	const identifiersIn = (text: string): string[] =>
+		text.match(/[A-Za-z_$][\w$]*/g) ?? []
+	let kept = [...setup]
+	for (let changed = true; changed; ) {
+		changed = false
+		const referenced = new Set([
+			...markup.flatMap(identifiersIn),
+			...kept.flatMap(stmt =>
+				identifiersIn(stmt.text).filter(name => name !== stmt.name),
+			),
+		])
+		const next = kept.filter(
+			stmt =>
+				!unevaluable(stmt) || stmt.name === null || referenced.has(stmt.name),
+		)
+		if (next.length !== kept.length) {
+			kept = next
+			changed = true
+		}
+	}
+	return kept
+}
+
 const escapeAttrValue = (value: string): string =>
 	value
 		.replace(/&/g, '&amp;')
@@ -228,6 +266,7 @@ const lazyValueExpression = (
 	exprText: string,
 	expr: AstNode,
 	scope: ReadonlySet<string>,
+	foldScope: ReadonlySet<string>,
 ): string => {
 	if (expr.type === 'Identifier') {
 		const name = String(expr.name)
@@ -246,6 +285,17 @@ const lazyValueExpression = (
 	// attribute. Found and fixed alongside LT-034 (`card-colorscale.tsrx`'s
 	// hex-value lazy child called `formatHex(host.value)`, which used to
 	// render verbatim server-side where `host` doesn't exist).
+	// LT-317: a `host.<prop>` thunk folds through the same two routes the
+	// `reactive` attribute case takes (the bare mirror, then the
+	// host-derived splice) before falling back to empty — so a
+	// Parser-exposed prop's text site ships its value before JS, exactly
+	// like its attribute sites.
+	if (expr.type === 'ArrowFunctionExpression') {
+		const mirror = hostPropMirrorExpr(component, expr)
+		if (mirror !== null) return mirror
+		const derived = hostDerivedExpr(component, expr, exprText, foldScope)
+		if (derived !== null) return derived
+	}
 	if (!isServerEvaluable(expr, scope)) return "''"
 	if (expr.type === 'ArrowFunctionExpression') return `(${exprText})()`
 	return exprText
@@ -602,6 +652,10 @@ const emitElement = (
 	ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(${pushArgument(parts)})`)
 }
 
+/** Compose-site attributes that land on the child's root, not in its args. */
+const isComposeHostAttr = (name: string): boolean =>
+	name === 'class' || name === 'id' || name.startsWith('data-')
+
 /**
  * A composed element (ADR 0023 sub-design 10): splice the child's
  * generated `render<Name>()` call inline. Composed elements never had
@@ -622,17 +676,15 @@ const emitCompose = (
 		.filter(
 			(a): a is Extract<typeof a, { kind: 'arg' }> =>
 				a.kind === 'arg' &&
-				// `class`/`id` on a composed element address the COMPOSE
-				// SITE (the child's host element), not typed props —
+				// `class`/`id`/`data-*` on a composed element address the
+				// COMPOSE SITE (the child's host element), not typed props —
 				// filtered out of the forwarded args and spliced onto
 				// the child's rendered root via `composeHostAttrs` below
 				// (LT-089's discriminator vocabulary, materialized by
-				// LT-090). `data-*` stays forwarded (a pre-existing,
-				// tested convention, LT-015/016) — it can double as BOTH
-				// a real server arg and a discriminator; no conflict,
-				// `composeStaticAttrs` only reads it, never removes it.
-				a.name !== 'class' &&
-				a.name !== 'id',
+				// LT-090; `data-*` since LT-320, when a per-item
+				// `data-product={product.id}` was forwarded as an unknown
+				// arg and dropped).
+				!isComposeHostAttr(a.name),
 		)
 		.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
 	// A composed element's children (LT-018) render into their own
@@ -681,15 +733,17 @@ const emitCompose = (
 				: `i18n: i18nRecord(${JSON.stringify(entry.tag)})`,
 		)
 	}
-	// LT-090: materialize compose-site class/id on the child root so
-	// the discriminator the client selector relies on (e.g.
+	// LT-090: materialize compose-site class/id/data-* on the child root
+	// so the discriminator the client selector relies on (e.g.
 	// `first('form-spinbutton.lightness')`) exists in the served DOM.
 	// Values pass through as the authored expressions — static string
 	// literals AND server-evaluable dynamic ones — evaluated at render
-	// time in this module's scope, exactly like any other arg.
+	// time in this module's scope, exactly like any other arg. Only a
+	// static value is ever a discriminator candidate (`composeStaticAttrs`
+	// reads literals only); a dynamic one is render-only (LT-320).
 	const hostAttrs = node.attrs.filter(
 		(a): a is Extract<typeof a, { kind: 'arg' }> =>
-			a.kind === 'arg' && (a.name === 'class' || a.name === 'id'),
+			a.kind === 'arg' && isComposeHostAttr(a.name),
 	)
 	const renderCall = `render${entry.name}({ ${args.join(', ')} })`
 	if (hostAttrs.length > 0) {
@@ -889,7 +943,13 @@ const emit = (
 		}
 		ctx.used.add('esc')
 		const value = node.lazy
-			? lazyValueExpression(ctx.component, node.exprText, node.expr, scope)
+			? lazyValueExpression(
+					ctx.component,
+					node.exprText,
+					node.expr,
+					scope,
+					ctx.foldScope,
+				)
 			: node.exprText
 		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(esc(String(${value})))`)
 		return
@@ -1220,7 +1280,10 @@ export const emitServerModule = (
 				component.setup.filter(stmt => !serverUnevaluable(stmt)),
 				[pushArgument(rootParts), ...lines],
 			)
-		: component.setup
+		: dropUnreferencedUnevaluable(component.setup, serverUnevaluable, [
+				pushArgument(rootParts),
+				...lines,
+			])
 	const emittedNames = new Set(
 		emittedSetup.map(stmt => stmt.name).filter(name => name !== null),
 	)
@@ -1235,7 +1298,7 @@ export const emitServerModule = (
 		// suppressed tiers do). What is NOT survivable is the reverse — a
 		// dropped declaration whose name survives in the markup, which is the
 		// `TS2304` this rule exists to prevent.
-		if (harnessSuppressed && !emittedNames.has(signal.name)) continue
+		if (!emittedNames.has(signal.name)) continue
 		// requestContext-declared signals (LT-035): `requestContext` doesn't
 		// exist server-side (no `host` to dispatch a context-request against)
 		// — the setup-statement loop below substitutes `createCell(fallback)`

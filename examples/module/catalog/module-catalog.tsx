@@ -11,10 +11,11 @@
  * - the mocked `checkAvailability` moves from module scope into setup (a
  *   module-scope name is not client-known, LTC005);
  * - `all('form-spinbutton')` is read inline rather than bound to a const;
- * - the cart `pass()` becomes the compose site's `truc:pass`;
- * - the product id falls back from `data-product` to the spinbutton's `name`:
- *   a compose-site `data-*` must be static, so a looped site cannot carry a
- *   per-item one (NOTES.md, LT-100). Page markup's `data-product` still wins.
+ * - the cart `pass()` becomes the compose site's `truc:pass`.
+ *
+ * Each looped `<FormSpinbutton>` carries a per-item `data-product`: a
+ * compose-site `data-*` lands on the child's root, dynamic values included
+ * (LT-320).
  */
 
 import { createMemo, type FactoryContext } from '@zeix/le-truc'
@@ -122,7 +123,7 @@ export function ModuleCatalog(
 		await Promise.all(
 			items.map(async item => {
 				const { max, message } = await checkAvailability(
-					item.getAttribute('data-product') ?? item.getAttribute('name'),
+					item.getAttribute('data-product'),
 					item.max,
 				)
 				item.max = max
@@ -157,6 +158,7 @@ export function ModuleCatalog(
 								<small>{product.note ?? ''}</small>
 							</p>
 							<FormSpinbutton
+								data-product={product.id}
 								name={product.id}
 								value={0}
 								min={0}

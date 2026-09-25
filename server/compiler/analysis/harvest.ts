@@ -12,6 +12,7 @@
 import type { AstNode } from '../ast-node'
 import {
 	CONTEXT_NAMES,
+	FACTORY_CONTEXT_MEMBERS,
 	hostPropOf,
 	identifierName,
 	JS_GLOBALS,
@@ -22,6 +23,7 @@ import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import type { AttributeIR, SignalIR, TemplateNode } from '../ir'
 import { lineFields, resolutionOf } from '../tier'
+import { walkTemplate } from '../walk'
 import type { AnalysisContext, HarvestPlan, ParserKind } from './plan'
 import {
 	type ElementNode,
@@ -372,10 +374,60 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	// route open to a predicate over a COMPOSED CHILD's public prop, which
 	// no server fold can resolve (LTC034) — see the popup gate in
 	// form-combobox.tsrx.
-	for (const stmt of component.clientSetup)
-		for (const signal of component.signals)
-			if (containsSignalGet(stmt.node, signal.name))
-				thunkRendered.add(signal.name)
+	//
+	// LT-323 (ADR 0029 conformance) widens what counts as a read: a bare
+	// signal reference (`watch(overflowStart, bindState(…))`), a read through
+	// setup consts or derived signals (`const hasOverflow = () =>
+	// overflowStart.get() || …`, consumed by `watch(hasOverflow, …)`), and
+	// the template's other client-only positions — event handlers and
+	// `truc:pass` entries (module-catalog's `total`). None of them reaches
+	// served HTML, so none makes the signal an LTC004 routing signal.
+	const carriers = new Map<string, Set<string>>(
+		component.signals.map(signal => [signal.name, new Set([signal.name])]),
+	)
+	const carriedBy = (node: AstNode): Set<string> => {
+		const carried = new Set<string>()
+		for (const name of dependenciesOf(node))
+			for (const signal of carriers.get(name) ?? []) carried.add(signal)
+		return carried
+	}
+	for (let changed = true; changed; ) {
+		changed = false
+		for (const stmt of component.setup) {
+			if (stmt.name === null) continue
+			const own = carriers.get(stmt.name) ?? new Set<string>()
+			const before = own.size
+			for (const signal of carriedBy(stmt.node)) own.add(signal)
+			carriers.set(stmt.name, own)
+			if (own.size !== before) changed = true
+		}
+	}
+	// Credited by a client-only read, as against a template render thunk:
+	// only these may seed from an initializer over FactoryContext members
+	// (`all()` in catalog's `total`), which the server cannot evaluate.
+	const renderCredited = new Set(thunkRendered)
+	const clientCredited = new Set<string>()
+	const creditClientRead = (node: AstNode): void => {
+		for (const signal of carriedBy(node)) {
+			thunkRendered.add(signal)
+			clientCredited.add(signal)
+		}
+	}
+	for (const stmt of component.clientSetup) creditClientRead(stmt.node)
+	walkTemplate(component.root, node => {
+		if (node.kind === 'element') {
+			for (const attr of node.attrs)
+				if (attr.kind === 'event') creditClientRead(attr.handler)
+		} else if (node.kind === 'compose') {
+			for (const attr of node.attrs) {
+				if (attr.kind !== 'pass') continue
+				for (const entry of attr.entries) {
+					creditClientRead(entry.thunk)
+					if (entry.setThunk) creditClientRead(entry.setThunk)
+				}
+			}
+		}
+	})
 
 	// --- Pass 3: harvest plans ------------------------------------------------
 
@@ -573,6 +625,13 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		 * `expose()` — where a `host.<prop>` read would be `undefined`.
 		 */
 		allowTrackedRead: boolean,
+		/**
+		 * Admit FactoryContext members (`all`, `first`, …) as client-known
+		 * (LT-323). Only for a signal read exclusively in client-only
+		 * positions: the client destructures them, and no served HTML
+		 * depends on the value the server could not compute.
+		 */
+		allowContextMembers = false,
 	): string | null => {
 		const free = dependenciesOf(init)
 		const signalNames = new Set(component.signals.map(s => s.name))
@@ -583,6 +642,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 					!component.paramNames.includes(n) &&
 					!signalNames.has(n) &&
 					!CONTEXT_NAMES.has(n) &&
+					!(allowContextMembers && FACTORY_CONTEXT_MEMBERS.has(n)) &&
 					!refNames.has(n),
 			)
 		)
@@ -714,6 +774,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 						signal.init,
 						isDerivedCallback || thunkRendered.has(signal.name),
 						isDerivedCallback,
+						clientCredited.has(signal.name) && !renderCredited.has(signal.name),
 					)
 				: null
 			if (substituted) {

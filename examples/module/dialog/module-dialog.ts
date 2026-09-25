@@ -46,15 +46,21 @@ export default defineComponent<ModuleDialogProps>(
 
 		let scrollTop = 0
 		let activeElement: HTMLElement | null = null
+		// Restore only after an actual open: the initial `open = false` run
+		// (and a disconnect while closed) must not scroll the page or close a
+		// dialog that never opened.
+		let opened = false
 		watch('open', open => {
 			if (open) {
+				opened = true
 				scrollTop = document.documentElement.scrollTop
 				activeElement = document.activeElement as HTMLElement | null
 				dialog.showModal()
 				document.body.classList.add(SCROLL_LOCK_CLASS)
 				document.body.style.setProperty('top', `-${scrollTop}px`)
 				closeButton.focus()
-			} else {
+			} else if (opened) {
+				opened = false
 				document.body.classList.remove(SCROLL_LOCK_CLASS)
 				window.scrollTo({
 					top: scrollTop,
@@ -66,6 +72,7 @@ export default defineComponent<ModuleDialogProps>(
 				if (activeElement) activeElement.focus()
 			}
 			return () => {
+				if (!opened) return
 				document.body.classList.remove(SCROLL_LOCK_CLASS)
 				document.body.style.removeProperty('top')
 				dialog.close()

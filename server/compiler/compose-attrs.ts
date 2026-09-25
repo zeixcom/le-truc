@@ -1,7 +1,7 @@
 /**
  * Compose-site addressing attributes on a composed element's rendered root
- * (LT-090). `class`/`id` authored on a compose site address the COMPOSE
- * SITE — the child's host element — not typed props (LT-089's discriminator
+ * (LT-090). `class`/`id`/`data-*` authored on a compose site address the
+ * COMPOSE SITE — the child's host element — not typed props (LT-089's discriminator
  * vocabulary): the compose emission filters them out of the forwarded
  * server args and applies them here instead, so the served DOM actually
  * carries the discriminator the client's `first('form-spinbutton.lightness')`
@@ -41,7 +41,7 @@ export const composeHostAttrs = (
 		(followsTag === '' || ' \t\n\r/>'.includes(followsTag))
 	if (!atRoot)
 		throw new Error(
-			`composeHostAttrs: child markup for ${tag} does not start with its root open tag — compose-site class/id cannot be applied.`,
+			`composeHostAttrs: child markup for ${tag} does not start with its root open tag — compose-site class/id/data-* cannot be applied.`,
 		)
 	const tagClose = markup.indexOf('>')
 	if (tagClose < 0)

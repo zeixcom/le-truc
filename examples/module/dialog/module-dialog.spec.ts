@@ -201,6 +201,37 @@ test.describe('module-dialog component', () => {
 			const finalBodyStyle = await page.locator('body').getAttribute('style')
 			expect(finalBodyStyle || '').not.toContain('top:')
 		})
+
+		test('connecting a closed dialog leaves the scroll position alone', async ({
+			page,
+		}) => {
+			// LT-318: the initial `open = false` run must not restore a scroll
+			// position (or close a dialog) that no open ever saved.
+			const scrollY = await page.evaluate(async () => {
+				// Scroll anchoring would shift scrollY by the inserted markup's
+				// height; the bug under test jumps to the top instead.
+				document.documentElement.style.overflowAnchor = 'none'
+				const spacer = document.createElement('div')
+				spacer.style.height = '300vh'
+				document.body.append(spacer)
+				window.scrollTo({ top: 500, left: 0, behavior: 'instant' })
+				const source = document.querySelector('module-dialog')!
+				const template = document.createElement('template')
+				template.innerHTML = source.outerHTML.replaceAll(
+					'example-dialog',
+					'late-dialog',
+				)
+				const late = template.content.firstElementChild as HTMLElement
+				// Below the viewport, so it cannot move the content in view.
+				spacer.after(late)
+				// Let the component connect and its effects run.
+				await new Promise(resolve => requestAnimationFrame(resolve))
+				await new Promise(resolve => setTimeout(resolve, 50))
+				return window.scrollY
+			})
+			expect(scrollY).toBe(500)
+			await expect(page.locator('body.scroll-lock')).toHaveCount(0)
+		})
 	})
 
 	test.describe('Dialog Content', () => {

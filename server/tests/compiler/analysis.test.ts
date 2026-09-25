@@ -259,12 +259,15 @@ describe('id discriminators use the hash form (LT-124)', () => {
 })
 
 describe('aria-* discriminators are the last resort (LT-101)', () => {
-	/** module-dialog's shape: an opener told apart by ARIA alone. */
+	/**
+	 * module-dialog's shape: an opener told apart by ARIA alone. No `first()`
+	 * ref — an authored selector would lead the candidates (LT-316), and this
+	 * block pins the synthesizer's own order.
+	 */
 	const twoButtons = (openerAttrs: string): ComponentIR => {
 		const { component } = compileSource(
 			`export function C({}: {})
 @{
-	const opener = first('button[aria-haspopup="dialog"]')
 	expose({})
 	<>
 		<c-el>
@@ -322,13 +325,14 @@ describe('selectors account for composed children (LT-096)', () => {
 			'child.tsrx',
 		).component as ComponentIR
 
-	const parent = (): ComponentIR =>
+	// No `first()` refs: this block pins synthesis; the authored-selector
+	// route has its own block below (LT-316).
+	const parent = (withRefs = false): ComponentIR =>
 		compileSource(
 			`import { Child } from './child.tsrx'
 export function P({}: {})
 @{
-	const overlay = first('button.overlay')
-	const code = first('code')
+	${withRefs ? "const overlay = first('button.overlay')" : ''}
 	expose({})
 	<>
 		<p-el>
@@ -350,8 +354,11 @@ export function P({}: {})
 			{ kind: 'element' }
 		>
 
-	const withChild = (childIR: ComponentIR | null): ComponentIR => {
-		const component = parent()
+	const withChild = (
+		childIR: ComponentIR | null,
+		withRefs = false,
+	): ComponentIR => {
+		const component = parent(withRefs)
 		const composeSource = (
 			component.root.children.find(n => n.kind === 'compose') as {
 				source: string
@@ -435,5 +442,80 @@ export function P({}: {})
 		expect(
 			resolveSelector(component, elementByTag(component, 'button')),
 		).toEqual({ selector: 'button', unique: true })
+	})
+
+	test('an authored selector a child could match keeps its contract, exclusion-wrapped (LT-316)', () => {
+		const component = withChild(
+			child('<button type="button" class={size}>in</button>'),
+			true,
+		)
+		expect(
+			resolveSelector(component, elementByTag(component, 'button')),
+		).toEqual({ selector: 'button.overlay:not(child-el *)', unique: true })
+	})
+
+	test('an authored selector an unregistered child may match falls back to synthesis (LT-316)', () => {
+		const component = withChild(null, true)
+		expect(
+			resolveSelector(component, elementByTag(component, 'button')).unique,
+		).toBe(false)
+	})
+})
+
+/**
+ * LT-316: a `first()` ref's authored selector is the contract page-authored
+ * occurrences are addressed by, so it is emitted whenever it is
+ * structurally verifiable — in the synthesized grammar and unique over the
+ * own template — and synthesis is only the fallback.
+ */
+describe('authored first() selectors are emitted when verifiable (LT-316)', () => {
+	const resolveRef = (template: string, selector: string, tag: string) => {
+		const component = compileSource(
+			`export function C({}: {})
+@{
+	const el = first('${selector}')
+	expose({})
+	<>
+		<c-el>
+			${template}
+		</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`,
+			'c.tsrx',
+		).component as ComponentIR
+		const element = (
+			component.root.children as ReadonlyArray<{ kind: string; tag?: string }>
+		).find(n => n.kind === 'element' && n.tag === tag) as Extract<
+			ComponentIR['root'],
+			{ kind: 'element' }
+		>
+		return resolveSelector(component, element)
+	}
+
+	test('a class selector wins over the role synthesis would pick (splitview)', () => {
+		expect(
+			resolveRef(
+				'<button type="button" role="separator" class="divider">|</button>',
+				'button.divider',
+				'button',
+			),
+		).toEqual({ selector: 'button.divider', unique: true })
+	})
+
+	test('a class-only selector is not widened to the bare tag (colorinfo)', () => {
+		expect(
+			resolveRef('<small class="hex">#fff</small>', '.hex', 'small'),
+		).toEqual({ selector: '.hex', unique: true })
+	})
+
+	test('a selector outside the synthesized grammar falls back to synthesis', () => {
+		expect(
+			resolveRef(
+				'<span class="a b">x</span><span class="a">y</span>',
+				'span.a.b',
+				'span',
+			),
+		).toEqual({ selector: 'span.b', unique: true })
 	})
 })

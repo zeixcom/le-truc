@@ -342,6 +342,13 @@ export type AttributeIR =
 			 */
 			kind: 'ref'
 			name: string
+			/**
+			 * The author's `first()` selector (LT-316). Selector resolution
+			 * emits it in place of a synthesized one whenever it is
+			 * structurally verifiable (`selectorCandidates`), because
+			 * page-authored occurrences are addressed by its contract.
+			 */
+			selector?: string
 	  }
 
 /**
@@ -578,9 +585,9 @@ export type ComponentIR = {
 	 * populate the emitted `MissingElementError` message instead of its
 	 * usual auto-generated one, when the query's name matches a `first()`
 	 * declaration — the reason string is the one part of the author's call
-	 * that DOES flow into the generated code verbatim; the selector itself
-	 * is compile-time-only (the emitted selector is always the compiler's
-	 * own structurally-proven one, exactly as for `ref={}` before it).
+	 * that DOES flow into the generated code verbatim. The selector flows
+	 * too when it is structurally verifiable (LT-316, the ref attr's
+	 * `selector`); otherwise the compiler synthesizes one.
 	 */
 	refReasons: ReadonlyMap<string, string>
 	/**

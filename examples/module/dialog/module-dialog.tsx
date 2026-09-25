@@ -78,20 +78,29 @@ export function ModuleDialog(
 	})
 
 	// Restore state across open/close — one const record, because a `let`
-	// is outside the setup subset (LTC005).
-	const restore: { scrollTop: number; activeElement: HTMLElement | null } = {
+	// is outside the setup subset (LTC005). `opened` gates the close branch
+	// and the cleanup: the initial `open = false` run (and a disconnect while
+	// closed) must not scroll the page or close a dialog that never opened.
+	const restore: {
+		opened: boolean
+		scrollTop: number
+		activeElement: HTMLElement | null
+	} = {
+		opened: false,
 		scrollTop: 0,
 		activeElement: null,
 	}
 	watch('open', open => {
 		if (open) {
+			restore.opened = true
 			restore.scrollTop = document.documentElement.scrollTop
 			restore.activeElement = document.activeElement as HTMLElement | null
 			dialog.showModal()
 			document.body.classList.add(SCROLL_LOCK_CLASS)
 			document.body.style.setProperty('top', `-${restore.scrollTop}px`)
 			closeButton.focus()
-		} else {
+		} else if (restore.opened) {
+			restore.opened = false
 			document.body.classList.remove(SCROLL_LOCK_CLASS)
 			window.scrollTo({
 				top: restore.scrollTop,
@@ -103,6 +112,7 @@ export function ModuleDialog(
 			if (restore.activeElement) restore.activeElement.focus()
 		}
 		return () => {
+			if (!restore.opened) return
 			document.body.classList.remove(SCROLL_LOCK_CLASS)
 			document.body.style.removeProperty('top')
 			dialog.close()

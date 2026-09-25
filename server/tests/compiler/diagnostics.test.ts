@@ -427,8 +427,13 @@ describe('the loop empty arm (LT-212)', () => {
 	})
 
 	test('an arm root the item selector cannot be told apart from is LTC007', () => {
+		// The body needs a client construct: a construct-free loop emits no
+		// `each()` and so queries no items to tell apart (LT-322).
 		const { diagnostics } = compileComponent(
-			eachSource('<li class="row">Nothing yet</li>'),
+			eachSource('<li class="row">Nothing yet</li>').replace(
+				'<li class="row">{row}</li>',
+				'<li class="row" onClick={() => console.log(1)}>{row}</li>',
+			),
 			'c.tsrx',
 			new Set(),
 		)

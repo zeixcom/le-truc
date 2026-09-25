@@ -30,6 +30,102 @@ entry text: `git log -p -- DONE.md`.
 
 ---
 
+- [x] LT-316: Emit the authored `first()` selector when it is structurally verifiable — reviewed ✓
+  **Changed:** the `ref` IR attr carries the authored `selector`. `selectorCandidates`
+  (`analysis/selectors.ts`) puts it first when it parses in `SELECTOR_GRAMMAR`, is unique over
+  the tree, and passes the LT-096 composed-shapes check. **Ruling (recorded nowhere else):**
+  where a composed child could match, the authored selector gets the `:not(<child> *)` exclusion
+  instead of losing to a clean synthesized candidate. The exclusion only narrows the contract to
+  the component's own markup. Moved queries: splitview `button.divider`; colorinfo
+  `.hex`/`.rgb`/`.hsl`; codeblock `button.overlay:not(basic-button *)`; colorgraph
+  `.knob`/`.slider`; combobox `input:not(form-listbox *)`/`.description`; tokenbox
+  `.description`/`.status`. LT-101's `aria-*` tail stays as the fallback for unauthored sites.
+  **Live handoffs:** LT-328 (HOST_PROFILE wording; the orphaned `matchesSelector` JSDoc).
+
+- [x] LT-318: module-dialog restores scroll and focus only after an actual open, on both surfaces — reviewed ✓
+  **Changed:** the `.ts` twin (`let opened`) and the `.tsx` (`restore.opened`) gate both the
+  close branch and the watcher's cleanup. The two `module-dialog` jsdom classifications are
+  retired. The spec gains a connect-while-scrolled leg (anchoring disabled, the late dialog
+  inserted below the viewport).
+
+- [x] LT-321: basic-button always renders its badge site — reviewed ✓
+  **Changed:** `basic-button.tsrx` renders `span.badge` unconditionally, hidden by the existing
+  `.badge:empty` rule. The ref stays optional. A server-composed catalog now shows the passed
+  cart count.
+
+- [x] LT-324: Write the missing specs for module-splitview and module-colorinfo — reviewed ✓
+  **Changed:** `module-splitview.spec.ts` (keyboard, Home/End, clamping, preset, vertical,
+  property write, pointer drag) and `module-colorinfo.spec.ts` (connect state, a `value` write
+  across all six `basic-number`s, the `label` harvest). Both are green on both surfaces under
+  `test:variants`.
+
+- [x] LT-103: Migrate `module-scrollarea` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** `examples/module/scrollarea/module-scrollarea.tsx` (served; the `.ts` twin
+  retained), `examples/main.ts` → generated client. Args are `orientation` and `children`. It
+  landed Simulated on LTC004 and was surfaced rather than reshaped. **Tier since LT-323:
+  Folded.** **Ruling (recorded nowhere else):** do not contort a component to dodge a classifier
+  gap (the holder-object reshape was rejected); file the gap. Wall-time at demo scale: 474 / 341
+  / 330 ms Simulated vs 432 ms Folded, which is noise. The ~2.3 s ADR 0029 cites returns only
+  once page occurrences are simulated.
+
+- [x] LT-100: Migrate `module-catalog` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** `examples/module/catalog/module-catalog.tsx` (served; the `.ts` twin retained),
+  `examples/main.ts` → generated client. Args are `title`, `cartLabel` and `products`. The cart
+  pass is the `<BasicButton>` site's `truc:pass`. `tsrx-imports.d.ts` now gives each `.tsrx`
+  child with Slot-backed props a `'truc:pass'` key; `'Promise'` joins `JS_GLOBALS`. **Tier
+  since LT-323: Folded.** The interim `data-product` → `name` fallback was removed by LT-320,
+  the empty `each()` by LT-322, and the missing badge site was fixed by LT-321. **Live
+  handoffs:** LT-325 (hand-listed tsconfig clients).
+
+- [x] LT-101: Migrate `module-dialog` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** `examples/module/dialog/module-dialog.tsx` (served; the `.ts` twin retained),
+  `examples/main.ts` → generated client. Args are `dialogId`, `title`, `label` and `children`.
+  Tier **Folded**, empty connect diff. `discriminatorCandidates` gained a last-resort `aria-*`
+  tail. **Ruling (recorded nowhere else):** the opener renders as a raw `<button>`, not a
+  composed `basic-button`, because a compose site cannot put `aria-haspopup` on the child's
+  button. `body.scroll-lock` waits for LT-306's `:global()`.
+
+- [x] LT-099: Migrate `module-pagination` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** `examples/module/pagination/module-pagination.tsx` (served; the `.ts` twin
+  retained), `examples/main.ts` → generated client. Tier **Folded**. **Ruling (recorded nowhere
+  else):** a Parser-exposed prop's text site is spelled as a `{() => host.<prop>}` thunk, not
+  rendered from the arg. The arg spelling duplicates the channel (LTC039). Since LT-317 the
+  thunk folds server-side, so the spans ship filled.
+
+- [x] LT-323: A signal whose consumers are all client-only does not route Simulated — ADR 0029 conformance — reviewed ✓
+  **Changed:** `analysis/harvest.ts` widens the LT-119 client-only credit through carriers: bare
+  signal references, reads through setup consts and derived signals, and template event
+  handlers and `truc:pass` entries. A client-only-credited signal may seed from an initializer
+  over FactoryContext members. `emit-server.ts` Folded emit drops server-unevaluable setup
+  statements nothing in the module references (`dropUnreferencedUnevaluable`). **Tiers:**
+  module-scrollarea and module-catalog are now **Folded** (census 27/2/0). **Ruling (recorded
+  nowhere else):** the credit is "at least one client-only read, none a render read", not "every
+  consumer client-only". A literal-initializer signal is sound either way, because the client
+  reuses the initializer the server rendered from. **Live handoffs:** LT-327 (the render-read
+  test is not transitive, so it admits a false Folded).
+
+- [x] LT-322: A loop whose body has no client constructs emits no `each()` — reviewed ✓
+  **Changed:** `analysis/loops.ts` plans no `each()` and registers no collection query for a
+  construct-free body. The output's LTC007 uniqueness check moves with it: nothing queries those
+  items. module-catalog lost its `li` query, the only corpus change.
+
+- [x] LT-320: Render-only `data-*` on compose sites may be dynamic; restore module-catalog's `data-product` — reviewed ✓
+  **Changed:** `emit-server.ts` splices every compose-site `data-*` (static or dynamic) onto the
+  child's root through `composeHostAttrs`, like `class`/`id`, and no longer forwards it as an
+  arg. module-catalog's looped `<FormSpinbutton data-product={product.id}>` is restored and the
+  `name` fallback is gone. **Ruling (recorded nowhere else):** compose-site `data-*` is a host
+  attribute, never a server arg. This retires the LT-015/016 forwarding convention, which never
+  reached the DOM, so a static `data-*` discriminator can now be addressed in practice. Only
+  literals are discriminator candidates. A child wanting a `data-*` server arg would need a new
+  design, not a carve-out. **Live handoffs:** LT-328 (HOST_PROFILE still names only
+  `class`/`id`).
+
+- [x] LT-317: Fold text-child `host.<prop>` thunks server-side, as attribute thunks already are — reviewed ✓
+  **Changed:** `emit-server.ts` `lazyValueExpression` tries the host-prop mirror, then the
+  host-derived fold, before the empty fallback. module-pagination's `.value`/`.max` spans and
+  form-inplace-edit's `.text`/button glyph now render before JS. Both audit diffs narrowed and
+  none widened.
+
 - [x] LT-313: Check a server-data `@for`'s iterable against the partial-readiness invariant — reviewed ✓
   **Changed:** `EachForIR` gains `iterable: AstNode` (both front ends populate it);
   `checkFoldInputs` checks it as an always-evaluated position under LTC054, `where` = "the items
@@ -52,8 +148,7 @@ entry text: `git log -p -- DONE.md`.
   **Ruling (recorded nowhere else):** the server render writes the root's
   `--module-splitview-ratio` and the divider's ARIA state in the exact form the `split` watcher
   writes, so the connect diff is empty. That is the model for migrations whose client writes a
-  style or ARIA value at connect. **Live handoffs:** LT-316 (divider selector),
-  LT-324 (no spec yet), LT-138 (its gate tripped by the `truc:html` panes).
+  style or ARIA value at connect. **Live handoffs:** LT-138 (its gate tripped by the `truc:html` panes).
 
 - [x] LT-098: Migrate `module-colorinfo` to `.tsx` with same-commit cutover — reviewed ✓
   **Changed:** `examples/module/colorinfo/module-colorinfo.tsx` (served; the `.ts` twin retained),
@@ -64,8 +159,7 @@ entry text: `git log -p -- DONE.md`.
   **Ruling (recorded nowhere else):** a `.tsx` component may keep an imperative
   `pass(all(selector), …)` over several same-discriminator compose sites. It compiles as a
   client-only setup statement, and its only legality check is the runtime backstop (ADR 0028
-  tier 2). **Live handoffs:** LT-319 (a compile-time spelling), LT-316 (`.hex` → `small`),
-  LT-324 (no spec yet), LT-325 (hand-listed tsconfig clients).
+  tier 2). **Live handoffs:** LT-319 (a compile-time spelling), LT-325 (hand-listed tsconfig clients).
 
 - [x] LT-291: A compiled parent registers a variant set's SERVED surface, not its retained twin — reviewed ✓
   **Changed:** `compileCorpus` sets `childImports[tag] = ./<tag>.client` for every compiled tag,

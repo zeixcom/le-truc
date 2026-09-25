@@ -198,7 +198,11 @@ export const resolveTemplateOutput = (
 			continue
 		}
 		for (const element of elements)
-			element.attrs.push({ kind: 'ref', name: refName })
+			element.attrs.push({
+				kind: 'ref',
+				name: refName,
+				selector: selectorText,
+			})
 		refReasons.set(refName, reasonText as string)
 	}
 

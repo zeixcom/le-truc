@@ -168,13 +168,19 @@ const discriminatorCandidates = (element: ElementNode): string[] => {
  * onto the wrong branch's element. An unrecognized selector is a false, not
  * a throw, which is why this pairing is the load-bearing half of LT-124.
  */
+/**
+ * The one-clause grammar selectors are synthesized in, and the only grammar
+ * `matchesSelector`/`mayMatchShape` parse: an optional tag, then at most one
+ * `[attr="value"]`, `.token` or `#id` clause.
+ */
+const SELECTOR_GRAMMAR =
+	/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\]|\.([A-Za-z_-][\w-]*)|#([A-Za-z_-][\w-]*))?$/
+
 export const matchesSelector = (
 	candidate: ElementNode,
 	selector: string,
 ): boolean => {
-	const match = selector.match(
-		/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\]|\.([A-Za-z_-][\w-]*)|#([A-Za-z_-][\w-]*))?$/,
-	)
+	const match = selector.match(SELECTOR_GRAMMAR)
 	if (!match) return false
 	const [, tag, attr, value, classToken, id] = match
 	if (tag && candidate.tag !== tag) return false
@@ -372,8 +378,9 @@ export const composeNodesBySource = (
  * (LT-090). That pass-through is now load-bearing rather than incidental —
  * addressing a compose site by `.class` is the only way to address it at
  * all — so it is an invariant, pinned by test, not an implementation
- * detail. `data-*` is forwarded as a real server arg and reaches the DOM
- * only if the child renders it; matching on one is the author's call.
+ * detail. `data-*` is spliced the same way (LT-320). A dynamic value of any
+ * of the three renders but is never read here: only a literal can be
+ * proven to discriminate.
  */
 export const composeStaticAttrs = (node: ComposeNode): Map<string, string> => {
 	const map = new Map<string, string>()
@@ -464,9 +471,7 @@ export const composeDiscriminatorClause = (
  */
 const mayMatchShape = (shape: RenderedShape, selector: string): boolean => {
 	if (shape.kind !== 'element') return true
-	const match = selector.match(
-		/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\]|\.([A-Za-z_-][\w-]*)|#([A-Za-z_-][\w-]*))?$/,
-	)
+	const match = selector.match(SELECTOR_GRAMMAR)
 	if (!match) return true
 	const [, tag, attr, value, classToken, id] = match
 	if (tag && shape.tag !== tag) return false
@@ -482,7 +487,11 @@ const mayMatchShape = (shape: RenderedShape, selector: string): boolean => {
 
 /**
  * Resolution candidates for `element`, in priority order, each paired with
- * the selector to EMIT for it. Uniqueness is counted over the component's
+ * the selector to EMIT for it. A `first()`-referenced element's authored
+ * selector comes first (LT-316): page-authored occurrences are addressed by
+ * the author's contract, so a synthesized selector would silently narrow or
+ * widen it. It still has to prove itself like any candidate — unique over
+ * the tree, and exclusion-wrapped when a composed child could match. Uniqueness is counted over the component's
  * OWN template (`base`), but the runtime query also descends into every
  * composed child's rendered markup (LT-096: module-codeblock's overlay
  * resolved to a bare `button`, which found the composed basic-button's own
@@ -507,27 +516,59 @@ const selectorCandidates = (
 		buildSelector(element, 'bare'),
 		...discriminatorCandidates(element),
 	].filter((s): s is string => s !== null)
-	if (!composed) return bases.map(base => ({ base, emit: base }))
+	const authored = authoredSelectorOf(element)
+	if (!composed) {
+		const synthesized = bases.map(base => ({ base, emit: base }))
+		return authored
+			? [{ base: authored, emit: authored }, ...synthesized]
+			: synthesized
+	}
 	const children = allComposeNodes(tree).map(
 		node => composed.get(node.source) ?? { tag: null, shapes: [] },
 	)
-	const clean: Array<{ base: string; emit: string }> = []
-	const excluded: Array<{ base: string; emit: string }> = []
-	for (const base of bases) {
+	/** The emitted form of `base`, or null when an unknown child may match. */
+	const emitFor = (base: string): { clean: boolean; emit: string } | null => {
 		const clashing = children.filter(
 			child =>
 				child.tag === null ||
 				child.shapes.some(shape => mayMatchShape(shape, base)),
 		)
-		if (clashing.length === 0) {
-			clean.push({ base, emit: base })
-			continue
-		}
-		if (clashing.some(child => child.tag === null)) continue
+		if (clashing.length === 0) return { clean: true, emit: base }
+		if (clashing.some(child => child.tag === null)) return null
 		const tags = [...new Set(clashing.map(child => `${child.tag} *`))]
-		excluded.push({ base, emit: `${base}:not(${tags.join(', ')})` })
+		return { clean: false, emit: `${base}:not(${tags.join(', ')})` }
 	}
-	return [...clean, ...excluded]
+	const clean: Array<{ base: string; emit: string }> = []
+	const excluded: Array<{ base: string; emit: string }> = []
+	for (const base of bases) {
+		const resolved = emitFor(base)
+		if (!resolved) continue
+		;(resolved.clean ? clean : excluded).push({ base, emit: resolved.emit })
+	}
+	// The authored selector leads even when it needs the exclusion: it is
+	// the contract, and the exclusion only narrows it to this component's
+	// own markup.
+	const own = authored ? emitFor(authored) : null
+	return [
+		...(authored && own ? [{ base: authored, emit: own.emit }] : []),
+		...clean,
+		...excluded,
+	]
+}
+
+/**
+ * The element's authored `first()` selector, when it parses in the
+ * synthesized grammar (LT-316) — the only selectors the structural counting
+ * and the composed-shapes check can verify. Anything wider (a descendant
+ * combinator, a selector list) falls back to synthesis.
+ */
+const authoredSelectorOf = (element: ElementNode): string | null => {
+	const ref = element.attrs.find(
+		(a): a is Extract<ElementNode['attrs'][number], { kind: 'ref' }> =>
+			a.kind === 'ref',
+	)
+	const selector = ref?.selector?.trim()
+	return selector && SELECTOR_GRAMMAR.test(selector) ? selector : null
 }
 
 /**
