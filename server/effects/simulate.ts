@@ -84,7 +84,7 @@
  * substrate from masquerading as this benign configuration.
  */
 
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { type DefaultTreeAdapterMap, parseFragment } from 'parse5'
 import {
@@ -248,9 +248,11 @@ const simulationSubjects = (
 		subjects.push({
 			tag: entry.tag,
 			clientModulePath: join(generatedDir, entry.clientModule),
-			// Either authored surface (LT-096: a `.tsx` source used to be read
-			// as its own markup).
-			markupPath: join(root, entry.source.replace(/\.tsr?x$/, '.html')),
+			// The demo file's own naming rule — `<dir>/<tag>.html` beside the
+			// source — independent of the source's extension (LT-307): a
+			// `.tsx`, `.tsrx` or `.ts` source all resolve to the same sibling,
+			// never to the source itself.
+			markupPath: join(root, dirname(entry.source), `${entry.tag}.html`),
 		})
 	}
 	return { subjects, skipped }

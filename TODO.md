@@ -159,7 +159,7 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   are in the new `tsrx-imports.test.ts`: generator unit tests, plus a corpus compile over
   basic-button and the counter variant set. Documented in LE_TRUC_COMPILER.md § 7.
 
-- [ ] LT-307: Derive the simulation pass's demo-markup path from the component folder, not by rewriting `.tsrx` (LT-188 review finding). **Land before any Simulated-tier component's served surface becomes `.tsx`.**
+- [x] LT-307: Derive the simulation pass's demo-markup path from the component folder, not by rewriting `.tsrx` (LT-188 review finding). **Land before any Simulated-tier component's served surface becomes `.tsx`.** — done ✓
   **Skill:** docs-server-dev
   **Context:** `simulationSubjects()` in `server/effects/simulate.ts` builds `markupPath` as
   `entry.source.replace(/\.tsrx$/, '.html')`. For a `.tsx`-sourced entry (the default served
@@ -175,6 +175,12 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   green.
   **Iteration note (2026-09-25):** gates **LT-103** in this iteration — Simulated is the tier
   that migration must investigate, and it would be the first `.tsx`-served Simulated entry.
+  **Changed:** `simulationSubjects()` in `server/effects/simulate.ts` now builds `markupPath` as
+  `<dir of entry.source>/<tag>.html` (`join(root, dirname(entry.source), tag + '.html')`). LT-096 had already widened the old
+  regex to `\.tsr?x$`, so `.tsx` resolved correctly; `.ts` twins and sources whose file name
+  is not the tag did not, and now do. The new test in `simulate.test.ts` pins both cases
+  through the `readMarkup` seam; the existing `.tsx`/`.tsrx` pin still passes. Updated the
+  rule in SERVER.md.
 
 ### Migrations (leaf components first, then the two composites, then scrollarea)
 

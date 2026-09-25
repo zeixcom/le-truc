@@ -500,7 +500,7 @@ describe('captured diagnostics survive an early throw (LT-188)', () => {
 	})
 })
 
-describe('the demo markup path covers both authored surfaces (LT-096)', () => {
+describe('the demo markup path is <dir>/<tag>.html, whatever the source (LT-096, LT-307)', () => {
 	test('a .tsx source reads its sibling .html, not itself', async () => {
 		const { realm } = fakeRealm()
 		const read: string[] = []
@@ -521,6 +521,33 @@ describe('the demo markup path covers both authored surfaces (LT-096)', () => {
 		expect(read).toEqual([
 			'/repo/examples/fake/x-tsx/x-tsx.html',
 			'/repo/examples/fake/x-tsrx/x-tsrx.html',
+		])
+	})
+
+	test('a .ts source, or one whose file name is not the tag, reads <dir>/<tag>.html', async () => {
+		const { realm } = fakeRealm()
+		const read: string[] = []
+		const twin = {
+			...entry('x-twin', 'simulated'),
+			source: 'examples/fake/x-twin/x-twin.ts',
+		} as RegistryEntry
+		const renamed = {
+			...entry('x-renamed', 'simulated'),
+			source: 'examples/fake/x-renamed/component.tsx',
+		} as RegistryEntry
+		await simulateCorpus({
+			registry: registryOf(twin, renamed),
+			root: '/repo',
+			createRealm: () => realm,
+			readMarkup: async subject => {
+				read.push(subject.markupPath)
+				return `<${subject.tag}></${subject.tag}>`
+			},
+			log: () => {},
+		})
+		expect(read).toEqual([
+			'/repo/examples/fake/x-twin/x-twin.html',
+			'/repo/examples/fake/x-renamed/x-renamed.html',
 		])
 	})
 })
