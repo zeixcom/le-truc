@@ -1066,78 +1066,6 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
-- [ ] LT-326: A server-data loop's iterable is unchecked for impure ambients — LTC033 misses a build-time shuffle (LT-313/LT-314 review).
-  **Skill:** le-truc-dev
-  **Context:** LTC033 runs in `lower-shared.ts` over static children and `server` attributes
-  only. A server-data loop's iterable was never a node until LT-313, so it was never checked.
-  Verified at review: `{[...items].sort(() => Math.random() - 0.5).map(a => <li>{a}</li>)}` and
-  `{[crypto.randomUUID()].map(…)}` compile clean. That bakes one build-time shuffle into the
-  page for good, which is the hazard CHECKLIST §4 names as the worst outcome. A shuffle is a
-  common idiom, not a contrived probe. The iterable is always evaluated, so it takes the
-  **static** (error) form, never the omit-the-reactive-form one. Check `EachForIR.iterable`
-  with `containsImpureAmbient` (in the loop's outer scope, so a resolvable-locale `Intl` still
-  folds). Add a loop-items builder beside `impureStaticChild`/`impureStaticAttribute`. Both
-  surfaces.
-  **Copy (same task):** both LTC033 builders list "`Date`/`Intl`, `Math.random()`, or a
-  locale/timezone method". Since LT-314 that is incomplete: an author who writes
-  `id={crypto.randomUUID()}` is told about `Math.random()`. Name the RNG generically, or list
-  the `crypto` generators. Update the `diagnostics.ts` union comment and the
-  `.agents/skills/le-truc/references/errors.md` row to match. In the same pass, Tech Writer
-  reviews LT-313's LTC054 `where` phrase "the items of a loop" (`fold-inputs.ts`).
-  **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033, one new builder). **Copy
-  reviewer:** Tech Writer.
-  **Check:** both probes fail LTC033 on `.tsx` and `.tsrx`; a loop over an own arg and a
-  resolvable-locale `Intl` iterable still compile; the corpus is unchanged.
-
-- [ ] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them (LT-212 review; NOTES 2026-09-24). **Gate: before any wave-4 migration whose component nests a loop inside a branch.**
-  **Skill:** le-truc-dev
-  **Context:** `.tsrx` `@if (…) { … } @else { @for (…) { <li class="item" onClick={…}/> } }` renders
-  correctly on the server. The client, though, treats the loop output as a branch root: it binds
-  `first('li.item')`, so only the FIRST item gets its handler, and it registers an unused `all()`
-  collection instead of an `each()`. `.tsx` reaches the same path through a fragment arm,
-  `{c ? <>{xs.map(…)}</> : …}`. **Ruling (Architect, 2026-09-24): diagnose, don't support.**
-  A loop output whose nearest control-flow ancestor is an `if`/`switch` branch, on either
-  surface, becomes an error. **Channel:** compiler. **Tier:** 1 Prevented (statically
-  decidable from the tree). Reuse LTC005: the construct is outside the supported subset, not a
-  new rule family. The message must name the fix: `@empty` in `.tsrx`, the empty-state idiom
-  in `.tsx`, or move the loop out of the branch. Supporting branch-scoped `each()` is deferred
-  until a migration needs it, at which point this becomes a design task. **Tech Writer**
-  reviews the copy. Rider from the LT-212 review: an authored `hidden` or `data-unreconciled`
-  on a reactive-List `@empty` root is emitted twice beside the compiler's own. Reject both as
-  LTC005 in `validateEmptyArm`, because the compiler owns them on that path.
-  **Check:** both surface spellings fail the build with LTC005; `@empty` and the idiom still
-  compile; corpus output byte-identical; typecheck 0; warning baseline 0, census 20/2/0.
-
-- [ ] LT-302: Arg and setup names shadow the render-harness imports in generated server modules (LT-212 review; NOTES 2026-09-24).
-  **Skill:** le-truc-dev
-  **Context:** with an arg named `items`, the server module emits
-  `for (const item of items(items))`, which throws `items is not a function` at render. Every
-  `RUNTIME_HARNESS_EXPORTS` name is exposed the same way (`entries`, `esc`, `attr`, `cls`, …).
-  The corpus avoids them by luck. **Ruling (Architect, 2026-09-24): alias, don't forbid**,
-  because `items` is an ordinary arg name. Alias a harness import only when a render-scope
-  name collides with it (`import { items as __items }`, and the emitter uses the alias), so every
-  module without a collision stays byte-identical. Also audit the generated CLIENT module: an
-  arg or setup name equal to a destructured factory-context name or an imported `@zeix/le-truc`
-  export (`first`, `each`, `watch`, …) is the same hazard. If the client side can collide,
-  alias there too, or diagnose if aliasing is impossible because the name is authored
-  vocabulary. **Channel:** none for the aliased cases (the collision stops being an error). Any
-  collision that can't be aliased is compiler, tier 1 Prevented, with Tech Writer on the copy.
-  **Check:** a fixture with args `items`/`esc` renders on both surfaces; corpus output
-  byte-identical; typecheck 0; warning baseline 0.
-
-- [ ] LT-300: Review the three LTC005 phrases LT-212 added (LT-212 review).
-  **Skill:** tech-writer
-  **Context:** new `what` strings passed to the existing `diagnostic.unsupported` builder:
-  two in `server/compiler/lower-shared.ts` `validateEmptyArm` (a client construct in an empty
-  arm, and a non-element reactive-List arm root) and one in `server/compiler/frontend/tsx/lower-tsx.ts`
-  `lowerIfExpr` (a `.map()` as a conditional arm). They read inside the builder's template
-  "`<what>` is outside the sanctioned milestone-2 subset of ADR 0023. Supported: …". Review
-  them in that assembled form. That template's "Supported:" list itself predates reactive
-  lists, `@empty` and the `.tsx` surface; review it in the same pass.
-  **Check:** assembled messages meet the error-message lifecycle's criteria;
-  `bun test server/tests/compiler/diagnostics.test.ts` green (the LT-212 pins assert on
-  `'@empty arm'`, `'non-element root'` and `'conditional arm'`).
-
 - [ ] LT-297: `argsFromAttrs` keys attributes by the arg's camelCase name (LT-290 close-out; latent).
   **Skill:** le-truc-dev
   **Context:** the page-occurrence helper reads `attrs["bigStep"]`, but HTML attribute
@@ -1289,36 +1217,6 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   **Verification:** `check:links` green; styling.md and HOST_PROFILE.md say the same thing in
   the same words (one is user-facing, one is the authoring profile).
 
-- [ ] LT-303: `<truc:try pending catch>` replaces `boundary()` and the try/catch IIFE in `.tsx` ([ADR 0041](adr/0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md)). **Gate: before the first wave-4 migration that authors a boundary.**
-  **Skill:** le-truc-dev; Tech Writer reviews the diagnostic copy (retirement counts)
-  **Context:** Owner ruling 2026-09-24. `.tsx` spells both boundaries as one namespaced
-  intrinsic: `<truc:try catch={e => <jsx/>}>ok</truc:try>` is the error boundary, and
-  adding `pending={<jsx/>}` makes it the async boundary. Both lower to the existing `try`
-  IR node (`pendingChildren` set iff `pending` is present), so nothing past the front end
-  changes and `.tsrx` is untouched. (1) `host-profile.d.ts`: delete the `boundary`
-  ambient; add `IntrinsicElements['truc:try']` with `pending?: JSX.Element`,
-  `catch: (error: Error) => JSX.Element` and `children: JSX.Element`, keeping LT-208's
-  branded arm typing (verified 2026-09-24: namespaced intrinsics give `tsc` arm types,
-  contextual `Error`, and TS17001 on a repeated arm). (2) `lower-tsx.ts`: delete
-  `lowerTryIife` and the `boundary` call dispatch, and lower `truc:try` elements instead.
-  The switch IIFE and `asIife` stay. The single-root-per-arm rules carry over. The
-  arrow-shape and missing-arm errors retire where `tsc` now covers them; a surviving
-  shape error keeps channel compiler, tier 1 Prevented. (3) Rewrite `fixtures/tsx/async/`,
-  `fixtures/tsx/sync/` and `fixtures/tsx/async-bad-arms.tsx` (under `server/tests/compiler/`) (the negative type test becomes a
-  bad `pending`/`catch` attribute) and the parity tests. Byte-identical server output
-  against the `.tsrx` twins is the acceptance proof. (4) Sweep JSDoc and comments
-  (`lower-tsx.ts` header, `lower-shared.ts:8`/`:487`) so no `boundary()` or try/catch
-  IIFE reference survives in code. The authoritative docs were already swept on
-  2026-09-24. BACKLOG P1's Tech Writer batch item 5 (the boundary diagnostic wordings)
-  now covers the `truc:try` copy instead. Independent of LT-276 (arm mechanism) but
-  touches the same goldens — land either first and refresh.
-  **Handoff from LT-213 (2026-09-24):** LTC053 in `lower-shared.ts`'s `lowerElement`
-  currently rejects every tag `jsxName` cannot flatten, namespaced ones included. Lower
-  `truc:try` in `lower-tsx.ts`'s dispatch before it reaches `lowerElement`, or exempt it
-  there, so that any other `truc:*` name stays LTC053.
-  **Check:** `grep -rn "boundary(" server spike` is empty outside history; parity suite
-  green; compile-warning baseline 0.
-
 ## P4 — v3.0 deprecated-surface removal (separate branch; gates wave 4)
 
 **Owner sequencing, 2026-09-04:** both removals run on a **separate branch**, and land **before
@@ -1395,6 +1293,11 @@ migration, record the tier and the reason** alongside the zero-warning check; on
 Simulated tier opens a realm, so Folded and Static both mean near-zero added build cost
 regardless of occurrence count.
 
+**[2026-09-25, iteration planning]** LT-095 and LT-104–LT-108 moved to `TODO.md` as wave 4's
+second batch, with their gates LT-303, LT-325 and LT-301 (+ LT-300), and the P3 riders LT-326
+and LT-302. What remains in this band is LT-280 and the three composites it gates
+(LT-109–LT-111), plus LT-309–LT-311 and LT-319.
+
 **Two LT-165 obligations land on wave 4's first Static-tier component.** (a) `check:tsrx`
 type-checks each module at its OWN classified tier and the Static census is empty, so the build
 type-checks the Static emit path nowhere today; `emit-tier.test.ts`'s "dropped ⇒ name absent"
@@ -1457,60 +1360,6 @@ and this note is redundant; if it has not, do the manual diff.
   than one change); module-todo (or the design's chosen flagship probe) compiles on the
   sanctioned subset with per-item wiring surviving hydration; parity suite extended;
   `bun test server/tests`, typecheck, warning baseline 0.
-
-- [ ] LT-095: Migrate `basic-blogmeta` by reshaping it into a template owner with typed byline props (LT-033 decision). **Carries LT-173's deferred blogmeta fold verification.**
-  **Skill:** le-truc-dev
-  **Context:** Design decided 2026-08-29: fully-typed props, NO arbitrary pass-through
-  (mediaqueries precedent) — `author` (string), `avatar` (optional URL string), `published`
-  (datetime string), `modified` (optional datetime string), `reading-time` (optional number,
-  minutes). The template re-emits ALL the schema.org microdata the old light DOM carried —
-  `itemprop="author"`/`itemscope`/`itemtype="https://schema.org/Person"`, `datePublished`,
-  `dateModified`, and `<meta itemprop="timeRequired" content="PT{n}M">` derived from the
-  reading-time prop — with the avatar `<img>` behind an `@if` on the avatar prop and the
-  modified span a conditional branch on prop presence. Author-supplied arbitrary siblings inside
-  `<basic-blogmeta>` are dropped; consumers port to props. Locale formatting and invalid-date
-  handling expressed via setup consts (server-safe, the `fn2Digits` precedent). Consumers to
-  port: `examples/basic/blogmeta/basic-blogmeta.html`, `server/effects/pages.ts`
-  (`emitBlogCards`), `docs-src/layouts/blog.html`, the examples.md demo markup.
-  **Date handling is prescribed** (ADR 0030 s2, and it is what makes the fold possible): use
-  `Date.UTC(y, m - 1, d)` with `timeZone: 'UTC'` in the formatter — never shifts the day, reads
-  no ambient state. The current `new Date(year, month - 1, day)` + zone-less
-  `Intl.DateTimeFormat` reads the build machine's timezone and must not survive the migration.
-  Verify the component classifies Folded once migrated; LT-173 step 6 deferred its fold
-  verification here.
-
-- [ ] LT-104: Migrate `module-lazyload` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~114 lines, `createTask` async loading. Has a spec + mocks (served under
-  `/test/module-lazyload/mocks/...`, resolved from the component dir's `mocks/`). Watch for:
-  async boundary shape — this is one of the few real `@try`/`@pending`/`@catch` consumers
-  alongside `form-listbox` (fieldset auto-wrap, LT-077/086); tree-shaking interplay with LT-078.
-
-- [ ] LT-105: Migrate `module-coloreditor` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~120 lines, color editing UI. culori usage follows the `_common` setup point. If
-  it composes other form components multiple times, use the static-attr discriminator addressing
-  (LT-087/089/090).
-
-- [ ] LT-106: Migrate `context-media` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~142 lines, the context-protocol example (`provideContexts` + `requestContext`,
-  LT-035's compiled precedents exist in the corpus). Watch for: context effects' server-side
-  rendering semantics; no spec exists — verify on `/test/context-media` in a real browser.
-
-- [ ] LT-107: Migrate `module-listnav` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~129 lines, navigation list. Also ports
-  `examples/module/listnav/module-listnav.test.ts` — a unit test file — to run against the
-  compiled artifact (or the served page, matching the corpus's spec conventions); mocks served
-  under `/test/module-listnav/mocks/...` stay working. Note: LT-200 (merged with `next`)
-  moved this component's initial hash sync into effect activation — the ported template must
-  keep that shape.
-
-- [ ] LT-108: Migrate `module-carousel` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
-  **Context:** ~161 lines, `each()` items + `IntersectionObserver` autoplay gating. Has a spec.
-  Combines the LT-097 loop concerns with the LT-103 cleanup idiom.
 
 - [ ] LT-109: Migrate `module-calctable` to `.tsx` with same-commit cutover.
   **Skill:** le-truc-dev
@@ -1596,6 +1445,8 @@ current iteration migrated. LT-319 and LT-325 stay here.
 and moved straight to `TODO.md`. LT-328 and LT-329 stay here.
 **[2026-09-25, LT-327 review]** LT-330 created here: the one render position LT-327 could not
 credit.
+**[2026-09-25, iteration planning]** LT-325, LT-328, LT-329 and LT-330 moved to `TODO.md`
+(wave 4, second batch). LT-319 stays here.
 
 - [ ] LT-319: One `truc:pass` spelling for several same-discriminator compose sites (NOTES LT-098).
   **Skill:** architect → le-truc-dev
@@ -1607,52 +1458,6 @@ credit.
   `truc:pass` objects on compose sites sharing a discriminator lower to one
   `pass(all(selector), …)`, regaining the compile-time check? Decide before a second component
   needs it. It is low priority while colorinfo is the only case.
-
-- [ ] LT-325: Generate `.tsrx` tag-map typings instead of hand-listing generated clients in `examples/tsconfig.json`.
-  **Skill:** le-truc-dev
-  **Context:** A `.tsx` parent that queries a `.tsrx` child through `first`/`all('<tag>…')`
-  needs the child's `HTMLElementTagNameMap` entry. LT-098/LT-100 got it by adding
-  `basic-button`/`basic-number`/`form-spinbutton.client.ts` to the tsconfig's `files`, which is
-  hand-listing again (the thing LT-312 removed for compose imports). Have `tsrx-imports.d.ts`
-  (or a sibling generated file) carry each compiled `.tsrx` tag's map entry, typed through its
-  props type, and drop the three hand-listed clients.
-
-- [ ] LT-328: HOST_PROFILE and compiler doc hygiene after LT-316/LT-320 (follow-up review).
-  **Skill:** tech-writer
-  **Context:** HOST_PROFILE § element references (the "`class`/`id` on a compose site reach
-  the served DOM" invariant) must name `data-*` too, since LT-320 made it a host attribute that
-  is never forwarded. It should also say that a `first()` ref's authored selector is emitted
-  when verifiable (LT-316), with synthesis as the fallback. In
-  `server/compiler/analysis/selectors.ts`, the `SELECTOR_GRAMMAR` constant's doc block sits
-  between `matchesSelector`'s JSDoc and the function, which orphans the latter. Move the
-  constant above it. The `selectorCandidates` doc also has an unwrapped over-long line.
-  Docs-only; no behaviour change.
-
-- [ ] LT-330: `@case` tests are render positions — credit them, so a context-member seed cannot fold (LT-327 review).
-  **Skill:** le-truc-dev
-  **Context:** LT-327 routes render credit through `carriedBy`, but `@switch` arms carry only
-  `testText: string | null` in the IR (`ir.ts`, the `switch` variant), with no AST node, so
-  `harvest.ts` cannot credit them. Reproduction (a `.tsrx`, confirmed at review):
-  `const count = createMemo(() => all('li').get().length)`, `const label = () =>
-  String(count.get())`, `watch(label, bindText(out))`, and `@switch (mode) { @case label(): {…}
-  @default: {…} }`. That compiles **Folded** with zero routing signals, and the server module
-  reads `all` undeclared (`case label():`), the same false Folded as LT-327. The `@if (label()
-  === '1')` spelling already routes Simulated. **Rule:** add `test: AstNode | null` beside
-  `testText` on `switch` cases, populated in both front ends (`frontend/tsrx/lower-template.ts`,
-  `frontend/tsx/lower-tsx.ts`; both already hold `raw.test`), and credit it in `harvest.ts`'s
-  render-credit walk next to `node.discriminant`. No new diagnostic: it is a routing change, not
-  a check (ADR 0028 channel: none).
-  **Accept:** the reproduction routes Simulated (LTC004) and gets a test in
-  `client-setup-credit.test.ts`, on both surfaces if the `.tsx` front end can express a case test
-  over a setup const. Census unchanged (27/2/0).
-
-- [ ] LT-329: `check:sim` fails on a clean tree (`renderFormColorgraph` without `i18n`).
-  **Skill:** le-truc-dev
-  **Context:** `scripts/sim-portability-check.ts` calls the generated render functions without
-  the compiler-supplied `i18n` record, so form-colorgraph (which composes an i18n-declaring
-  spinbutton) throws "Cannot destructure property 't' from null or undefined value". Found
-  during LT-323 and reproduced on a clean tree. Pass `i18nRecord(tag)` (or whatever the corpus
-  runner supplies) the way the build does. **Accept:** `bun run check:sim` exits 0.
 
 ## P6 — Cleanup round (after the corpus port)
 

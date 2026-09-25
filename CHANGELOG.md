@@ -17,9 +17,11 @@
 - **`@for … @empty`, and the `.tsx` empty-state idiom** (`{xs.length === 0 ? <empty/> : xs.map(…)}`): an empty arm renders when the loop has no items — over server data at render time, over a reactive `createList` by toggling `hidden` from its `length`.
 - **`LTC052`**: a `key` clause on a `@for` over server data fails the build. Only a `@for` over a `createList(…)` signal reconciles by key, so the clause used to be silently dropped.
 - **`LTC053`**: an element tag that is not a static name — `.tsrx` `<{expr}>`, or a `.tsx` namespaced or member tag (`<a.b>`) — fails the compile. Previously it compiled silently to an element with an empty tag name.
-- **`LTC054`**: a position the server folds at build time that reads page context (`document`, `window`, `navigator`, …), or an `i18n` destructure naming an undeclared member or using a rest element, fails the compile. Server-rendered HTML may depend only on args and the `i18n` record.
+- **`LTC054`**: a build-time-folded position that reads page context (`document`, `window`, `navigator`, …), a loop's items included, or an `i18n` destructure naming an undeclared member or using a rest element, fails the compile. Server HTML may depend only on args and the `i18n` record.
+- **Generated `tsrx-imports.d.ts`**: the corpus build writes `<outDir>/tsrx-imports.d.ts`, typing each `.tsx` import of a `.tsrx` component through its served args, `truc:pass` included. Include it in your `.tsx` tsconfig beside `host-profile.d.ts`.
+- **Host-profile typings for `truc:html`, `aria-orientation` and `aria-value*`**: `.tsx` elements accept them without a cast.
 - **`ElementFromSelectorList` and `StripPseudoArguments` types**: exported alongside `ElementFromSelector`, which now composes them.
-- **`.tsx` compose sites accept `class`, `id` and `data-*`**: they are spliced onto the composed child's rendered root, so `first('child-tag.discriminator')` can tell two compose sites apart.
+- **`.tsx` compose sites accept `class`, `id` and `data-*`**: they are spliced onto the composed child's rendered root, `data-*` with a static or dynamic value and never as a child arg, so `first('child-tag.discriminator')` can tell two compose sites apart.
 
 ### Changed
 
@@ -53,7 +55,10 @@
 - **`LTC048` fires only outside a variant set**: two spellings of one tag in one folder under one base name are a variant set, not a conflict. `LTC048` now fires for two sources of the same surface, or spellings split across folders or base names.
 - **`ElementFromSelector` ignores pseudo-class arguments**: the comma and spaces inside `:not(…)`/`:is(…)` no longer read as a selector list or combinator, so `first('button:not(x *)')` infers `HTMLButtonElement` instead of `Element`.
 - **Five corpus components are served from `.tsx`**: `module-codeblock`, `basic-pluralize`, `form-listbox`, `form-combobox` and `basic-counter` now serve their `.tsx` spelling, with the `.tsrx`/`.ts` twins kept as variants. Served HTML is unchanged.
+- **Six more corpus components are served from `.tsx`**: `module-colorinfo`, `module-pagination`, `module-catalog`, `module-dialog`, `module-splitview` and `module-scrollarea`, twins kept as variants. Colorinfo and pagination now render their values before JavaScript runs.
 - **`le-truc` skill `errors.md` covers the new codes**: rows for `LTC051`–`LTC054`, and the `LTC048` row restates the variant-set rule and its fix.
+- **A stale `variantOverrides` entry fails the build**: an override naming a tag that no variant set declares is now a configuration error, instead of being silently ignored.
+- **Signals read only by client-only code keep their component Folded**: a signal consumed only through `watch()`, event handlers or `truc:pass`, directly or through setup consts, no longer routes Simulated. `module-scrollarea` and `module-catalog` are now Folded.
 
 ### Removed
 
@@ -70,6 +75,11 @@
 - **A `.tsx` loop inside a ternary was silently dropped**: previously `{cond ? <a/> : xs.map(…)}` compiled with no loop and no diagnostic. Now the empty-state shape compiles as `@empty`, and a `.map()` in any other conditional arm is `LTC005`.
 - **Synthesized selectors no longer match inside composed children**: previously a binding could land on a composed child's element — `form-combobox`'s clear-button `hidden` toggled the listbox's first option. Now such selectors exclude the child's subtree.
 - **`module-codeblock`'s copy button never attached**: its handler was a bare effect descriptor that never registered. The button now copies.
+- **Authored `first()` selectors are kept**: previously the compiler replaced a `first()` selector with a synthesized one, narrowing or widening which page-authored markup it bound. Now it emits the authored selector whenever it verifies against the template.
+- **`crypto.randomUUID()` and `crypto.getRandomValues()` folded silently**: previously they baked one build-time value into the page. Now they are impure ambients like `Math.random()`: `LTC033` in a static position, omitted in a reactive one.
+- **`{() => host.<prop>}` text children shipped empty**: previously they filled only at connect. Now the server folds them, as it already did for the same thunk in an attribute.
+- **`module-dialog` scrolled the page at connect**: previously a closed dialog restored scroll and focus it had never saved. Now it restores them only after an actual open.
+- **`basic-button`'s badge was missing when server-composed**: previously a badge value passed from a parent had no element to land in. Now the badge always renders, hidden while empty.
 - **Server modules referencing an out-of-scope ref**: previously a Parser prop whose fallback read a `first()` ref re-emitted that fallback where the ref did not exist (`form-spinbutton`). Now such a prop keeps no attribute channel, and an occurrence setting it stays authored.
 
 ## 2.6.0

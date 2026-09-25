@@ -11,16 +11,16 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
-Pruned 2026-09-25 (Architect, after the "opening wave 4" iteration closed; Changelog Keeper had
-already merged it into `CHANGELOG.md [Unreleased]`). Consumed with nothing left to carry:
-**LT-238, LT-283, LT-284, LT-285, LT-286, LT-293, LT-294, LT-298, LT-235, LT-237,
-LT-315**. Their rulings live in [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md)
-(s4 as amended 2026-09-24), [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md),
-`server/SERVER.md` § Component test surfaces (LT-284's surface selection), and
-`LE_TRUC_COMPILER.md` §§ 4, 5.3, 7. Every live handoff is restated in its own open entry:
-LT-287/LT-289 (§ 4 present-tense flips), LT-291 (with LT-285's tripwire pin), LT-292, LT-295,
-LT-296, LT-297, LT-299, LT-308. Earlier prunes: 2026-09-21 ×2 (LT-239–LT-279 era, LT-178). Full
-entry text: `git log -p -- DONE.md`.
+Pruned 2026-09-25, second pass (Architect, after the "wave 4 at cadence" iteration closed;
+Changelog Keeper had already merged it into `CHANGELOG.md [Unreleased]`). Consumed with nothing
+left to carry: **LT-098, LT-100, LT-292, LT-299, LT-307, LT-313, LT-317, LT-318, LT-321, LT-322,
+LT-324, LT-327**. Every live handoff they carried is restated in its own open entry: LT-319
+(LT-098's sanctioned imperative `pass(all(…))`), LT-325, LT-326, LT-328, LT-330. LT-292's
+"`variantSurface` with no set present is not an error" ruling is pinned by a test. The
+migration rulings of LT-099, LT-101–LT-103 and LT-291 are condensed into the standing notes
+below. Earlier prunes: 2026-09-25 (the "opening wave 4" iteration: LT-235, LT-237, LT-238,
+LT-283–LT-286, LT-293, LT-294, LT-298, LT-315), 2026-09-21 ×2. Full entry text:
+`git log -p -- DONE.md`.
 
 **Standing notes for compiler-adjacent tasks:**
 - A compiler crash during a corpus build makes `typecheck`'s `&&`-chained `tsc` silently skip.
@@ -28,216 +28,61 @@ entry text: `git log -p -- DONE.md`.
 - A handoff's `check:corpus` claim is its **exit code**, not the warning baseline (LT-283
   review, after a "green" gate turned out to be exit 2).
 
----
-
-- [x] LT-316: Emit the authored `first()` selector when it is structurally verifiable — reviewed ✓
-  **Changed:** the `ref` IR attr carries the authored `selector`. `selectorCandidates`
-  (`analysis/selectors.ts`) puts it first when it parses in `SELECTOR_GRAMMAR`, is unique over
-  the tree, and passes the LT-096 composed-shapes check. **Ruling (recorded nowhere else):**
-  where a composed child could match, the authored selector gets the `:not(<child> *)` exclusion
-  instead of losing to a clean synthesized candidate. The exclusion only narrows the contract to
-  the component's own markup. Moved queries: splitview `button.divider`; colorinfo
-  `.hex`/`.rgb`/`.hsl`; codeblock `button.overlay:not(basic-button *)`; colorgraph
-  `.knob`/`.slider`; combobox `input:not(form-listbox *)`/`.description`; tokenbox
-  `.description`/`.status`. LT-101's `aria-*` tail stays as the fallback for unauthored sites.
-  **Live handoffs:** LT-328 (HOST_PROFILE wording; the orphaned `matchesSelector` JSDoc).
-
-- [x] LT-318: module-dialog restores scroll and focus only after an actual open, on both surfaces — reviewed ✓
-  **Changed:** the `.ts` twin (`let opened`) and the `.tsx` (`restore.opened`) gate both the
-  close branch and the watcher's cleanup. The two `module-dialog` jsdom classifications are
-  retired. The spec gains a connect-while-scrolled leg (anchoring disabled, the late dialog
-  inserted below the viewport).
-
-- [x] LT-321: basic-button always renders its badge site — reviewed ✓
-  **Changed:** `basic-button.tsrx` renders `span.badge` unconditionally, hidden by the existing
-  `.badge:empty` rule. The ref stays optional. A server-composed catalog now shows the passed
-  cart count.
-
-- [x] LT-324: Write the missing specs for module-splitview and module-colorinfo — reviewed ✓
-  **Changed:** `module-splitview.spec.ts` (keyboard, Home/End, clamping, preset, vertical,
-  property write, pointer drag) and `module-colorinfo.spec.ts` (connect state, a `value` write
-  across all six `basic-number`s, the `label` harvest). Both are green on both surfaces under
-  `test:variants`.
-
-- [x] LT-103: Migrate `module-scrollarea` to `.tsx` with same-commit cutover — reviewed ✓
-  **Changed:** `examples/module/scrollarea/module-scrollarea.tsx` (served; the `.ts` twin
-  retained), `examples/main.ts` → generated client. Args are `orientation` and `children`. It
-  landed Simulated on LTC004 and was surfaced rather than reshaped. **Tier since LT-323:
-  Folded.** **Ruling (recorded nowhere else):** do not contort a component to dodge a classifier
-  gap (the holder-object reshape was rejected); file the gap. Wall-time at demo scale: 474 / 341
-  / 330 ms Simulated vs 432 ms Folded, which is noise. The ~2.3 s ADR 0029 cites returns only
-  once page occurrences are simulated.
-
-- [x] LT-100: Migrate `module-catalog` to `.tsx` with same-commit cutover — reviewed ✓
-  **Changed:** `examples/module/catalog/module-catalog.tsx` (served; the `.ts` twin retained),
-  `examples/main.ts` → generated client. Args are `title`, `cartLabel` and `products`. The cart
-  pass is the `<BasicButton>` site's `truc:pass`. `tsrx-imports.d.ts` now gives each `.tsrx`
-  child with Slot-backed props a `'truc:pass'` key; `'Promise'` joins `JS_GLOBALS`. **Tier
-  since LT-323: Folded.** The interim `data-product` → `name` fallback was removed by LT-320,
-  the empty `each()` by LT-322, and the missing badge site was fixed by LT-321. **Live
-  handoffs:** LT-325 (hand-listed tsconfig clients).
-
-- [x] LT-101: Migrate `module-dialog` to `.tsx` with same-commit cutover — reviewed ✓
-  **Changed:** `examples/module/dialog/module-dialog.tsx` (served; the `.ts` twin retained),
-  `examples/main.ts` → generated client. Args are `dialogId`, `title`, `label` and `children`.
-  Tier **Folded**, empty connect diff. `discriminatorCandidates` gained a last-resort `aria-*`
-  tail. **Ruling (recorded nowhere else):** the opener renders as a raw `<button>`, not a
-  composed `basic-button`, because a compose site cannot put `aria-haspopup` on the child's
-  button. `body.scroll-lock` waits for LT-306's `:global()`.
-
-- [x] LT-099: Migrate `module-pagination` to `.tsx` with same-commit cutover — reviewed ✓
-  **Changed:** `examples/module/pagination/module-pagination.tsx` (served; the `.ts` twin
-  retained), `examples/main.ts` → generated client. Tier **Folded**. **Ruling (recorded nowhere
-  else):** a Parser-exposed prop's text site is spelled as a `{() => host.<prop>}` thunk, not
-  rendered from the arg. The arg spelling duplicates the channel (LTC039). Since LT-317 the
-  thunk folds server-side, so the spans ship filled.
-
-- [x] LT-327: A context-member initializer read by a render position must not classify Folded (LT-323 review) — reviewed ✓
-  **Changed:** `analysis/harvest.ts` computes `renderCredited` through the same `carriedBy`
-  closure as the client-only credit. Every template render position contributes: reactive,
-  class-map, style-map and `truc:html` thunks and values, server attributes, `truc:case-type`,
-  expression children, `@if` tests, `@switch` discriminants, compose-site args, and `each()`
-  iterables and hoisted consts. Census unchanged (27/2/0). **Live handoff:** LT-330 (`@case`
-  tests carry no AST node in the IR, so they are still not credited).
+**Standing notes for wave-4 migrations** (rulings recorded nowhere else):
+- **Don't contort a component to dodge a classifier gap; file the gap** (LT-103: the
+  holder-object reshape was rejected). Record the tier and reason as they land.
+- **A Parser-exposed prop's text site is a `{() => host.<prop>}` thunk**, not the arg. The arg
+  spelling duplicates the channel (LTC039), and the thunk folds server-side since LT-317 (LT-099).
+- **A client that writes a style or ARIA value at connect gets a server render in the exact form
+  the watcher writes**, so the connect diff is empty (LT-102, splitview's ratio and divider ARIA).
+- **A compose site cannot put attributes on the child's inner element**, so an opener needing
+  `aria-haspopup` renders as a raw `<button>`, not a composed `basic-button` (LT-101). The
+  dialog's `body.scroll-lock` waits for LT-306's `:global()`.
+- **A raw dashed tag seeds a child import only when a query addresses it** (a `first()` ref or
+  a `truc:pass` target). A bare `<module-scrollarea>` with no binding imports nothing and is
+  registered by `main.ts`. Type visibility rides the same import, ADR 0039 s4 (LT-291).
+- **Scrollarea's wall-time at demo scale is noise** (474/341/330 ms Simulated vs 432 ms Folded).
+  The ~2.3 s ADR 0029 cites returns only once page occurrences are simulated (LT-103).
 
 - [x] LT-323: A signal whose consumers are all client-only does not route Simulated — ADR 0029 conformance — reviewed ✓
-  **Changed:** `analysis/harvest.ts` widens the LT-119 client-only credit through carriers: bare
-  signal references, reads through setup consts and derived signals, and template event
-  handlers and `truc:pass` entries. A client-only-credited signal may seed from an initializer
-  over FactoryContext members. `emit-server.ts` Folded emit drops server-unevaluable setup
-  statements nothing in the module references (`dropUnreferencedUnevaluable`). **Tiers:**
-  module-scrollarea and module-catalog are now **Folded** (census 27/2/0). **Ruling (recorded
-  nowhere else):** the credit is "at least one client-only read, none a render read", not "every
-  consumer client-only". A literal-initializer signal is sound either way, because the client
-  reuses the initializer the server rendered from. **Live handoffs:** LT-327 made the render-read
-  test transitive; LT-330 covers the one position it could not reach (`@case` tests).
+  **Ruling (recorded nowhere else):** the credit is "at least one client-only read, none a
+  render read", not "every consumer client-only". A literal-initializer signal is sound either
+  way, because the client reuses the initializer the server rendered from. Since LT-327 the
+  render read is transitive through setup consts. **Live handoff:** LT-330 (`@case` tests).
 
-- [x] LT-322: A loop whose body has no client constructs emits no `each()` — reviewed ✓
-  **Changed:** `analysis/loops.ts` plans no `each()` and registers no collection query for a
-  construct-free body. The output's LTC007 uniqueness check moves with it: nothing queries those
-  items. module-catalog lost its `li` query, the only corpus change.
+- [x] LT-316: Emit the authored `first()` selector when it is structurally verifiable — reviewed ✓
+  **Ruling (recorded nowhere else):** where a composed child could match, the authored selector
+  gets the `:not(<child> *)` exclusion instead of losing to a clean synthesized candidate. The
+  exclusion only narrows the contract to the component's own markup. **Live handoff:** LT-328.
 
-- [x] LT-320: Render-only `data-*` on compose sites may be dynamic; restore module-catalog's `data-product` — reviewed ✓
-  **Changed:** `emit-server.ts` splices every compose-site `data-*` (static or dynamic) onto the
-  child's root through `composeHostAttrs`, like `class`/`id`, and no longer forwards it as an
-  arg. module-catalog's looped `<FormSpinbutton data-product={product.id}>` is restored and the
-  `name` fallback is gone. **Ruling (recorded nowhere else):** compose-site `data-*` is a host
-  attribute, never a server arg. This retires the LT-015/016 forwarding convention, which never
-  reached the DOM, so a static `data-*` discriminator can now be addressed in practice. Only
-  literals are discriminator candidates. A child wanting a `data-*` server arg would need a new
-  design, not a carve-out. **Live handoffs:** LT-328 (HOST_PROFILE still names only
-  `class`/`id`).
+- [x] LT-320: Render-only `data-*` on compose sites may be dynamic — reviewed ✓
+  **Ruling (recorded nowhere else):** compose-site `data-*` is a host attribute, never a server
+  arg. Only literals are discriminator candidates. A child wanting a `data-*` server arg needs a
+  new design, not a carve-out. **Live handoff:** LT-328.
 
-- [x] LT-317: Fold text-child `host.<prop>` thunks server-side, as attribute thunks already are — reviewed ✓
-  **Changed:** `emit-server.ts` `lazyValueExpression` tries the host-prop mirror, then the
-  host-derived fold, before the empty fallback. module-pagination's `.value`/`.max` spans and
-  form-inplace-edit's `.text`/button glyph now render before JS. Both audit diffs narrowed and
-  none widened.
-
-- [x] LT-313: Check a server-data `@for`'s iterable against the partial-readiness invariant — reviewed ✓
-  **Changed:** `EachForIR` gains `iterable: AstNode` (both front ends populate it);
-  `checkFoldInputs` checks it as an always-evaluated position under LTC054, `where` = "the items
-  of a loop". The LT-257 gate is cleared. **Live handoffs:** LT-326 (the same iterable is
-  unchecked for LTC033, plus Tech Writer's pass on the `where` phrase).
-
-- [x] LT-314: `crypto.randomUUID()`/`getRandomValues()` fold silently — close the impure-ambient gap — reviewed ✓
-  **Changed:** `evaluability.ts` `RNG_METHODS` (receiver → methods) replaces the one-off
-  `Math.random` match; both `crypto` generators flag `rng`, so static positions get LTC033 and
-  reactive ones are omitted. The LT-258 split holds: RNG stays on the impure-ambient side, not
-  `PAGE_CONTEXT_GLOBALS`. **Accepted residue (recorded nowhere else):** computed or aliased
-  receivers (`crypto['randomUUID']()`, `const { randomUUID } = crypto`) still fold. That gap
-  already existed for `Math.random`, and it takes deliberate authoring to reach. Revisit only on
-  a real case. **Live handoffs:** LT-326 (LTC033 copy still names only `Math.random()`).
-
-- [x] LT-102: Migrate `module-splitview` to `.tsx` with same-commit cutover — reviewed ✓
-  **Changed:** `examples/module/splitview/module-splitview.tsx` (served; the `.ts` twin retained),
-  `examples/main.ts` → generated client, host profile gains `truc:html` (common set),
-  `aria-orientation`/`aria-value*` and `module-splitview`. Tier **Folded**, no routing signals.
-  **Ruling (recorded nowhere else):** the server render writes the root's
-  `--module-splitview-ratio` and the divider's ARIA state in the exact form the `split` watcher
-  writes, so the connect diff is empty. That is the model for migrations whose client writes a
-  style or ARIA value at connect. **Live handoffs:** LT-138 (its gate tripped by the `truc:html` panes).
-
-- [x] LT-098: Migrate `module-colorinfo` to `.tsx` with same-commit cutover — reviewed ✓
-  **Changed:** `examples/module/colorinfo/module-colorinfo.tsx` (served; the `.ts` twin retained),
-  `examples/main.ts` → generated client, `examples/tsconfig.json` includes the generated
-  `basic-number.client.ts`. Tier **Folded**, no routing signals. The server half parses `value`
-  once and renders the swatch style, hex/RGB/HSL and the six `basic-number` values; the twin's
-  HTML left them empty.
-  **Ruling (recorded nowhere else):** a `.tsx` component may keep an imperative
-  `pass(all(selector), …)` over several same-discriminator compose sites. It compiles as a
-  client-only setup statement, and its only legality check is the runtime backstop (ADR 0028
-  tier 2). **Live handoffs:** LT-319 (a compile-time spelling), LT-325 (hand-listed tsconfig clients).
-
-- [x] LT-291: A compiled parent registers a variant set's SERVED surface, not its retained twin — reviewed ✓
-  **Changed:** `compileCorpus` sets `childImports[tag] = ./<tag>.client` for every compiled tag,
-  overriding the sibling twin's module; only an uncompiled tag keeps its hand-written module.
-  LT-285's tripwire pin is retired for a real fixture in `dual-corpus.test.ts` (one
-  `defineComponent('basic-counter')` per bundle, from the generated client; a mistyped child
-  prop still fails tsc). Internal build fix, no changelog entry.
-  **For the migrations (recorded nowhere else):** a raw dashed tag seeds a child import only
-  when a query addresses it (`first()` ref or `truc:pass` target, `addQuery`); a bare
-  `<module-scrollarea>` with no binding imports nothing and is registered by `main.ts`. Type
-  visibility rides the same import (ADR 0039 s4). Clears the gate on LT-103.
-
-- [x] LT-292: A `variantOverrides` entry that names no variant set is a configuration error — reviewed ✓
-  **Changed:** `validateVariantOverrides()` (`server/compiler/corpus-config.ts`), called by
-  `compileCorpus` after the LTC048 pre-check, throws `le-truc.config.json:
-  "variantOverrides["<tag>"]" names no variant set — …` for a tag no source declares, or one only
-  a single surface authors. A multi-source non-set is left to LTC048. Documented in
-  LE_TRUC_COMPILER.md § 7.1. Consumer-visible: a stale override now fails the build.
-  **Ruling (recorded nowhere else):** a corpus-wide `variantSurface` with no variant set present
-  is NOT an error — a policy default, not a pointer (pinned by a test). The copy is config-error
-  text outside `errors.ts`/`TSRX`, so the Tech Writer handoff is optional, as for LT-273.
+- [x] LT-314: `crypto.randomUUID()`/`getRandomValues()` are impure ambients — reviewed ✓
+  **Accepted residue (recorded nowhere else):** computed or aliased receivers
+  (`crypto['randomUUID']()`, `const { randomUUID } = crypto`) still fold, as they already did
+  for `Math.random`. Revisit only on a real case. RNG stays on the impure-ambient side of the
+  LT-258 split, not `PAGE_CONTEXT_GLOBALS`.
 
 - [x] LT-312: Generate the `.tsx` → `.tsrx` compose-import typings — reviewed ✓
-  **Changed:** `server/compiler/tsrx-imports.ts` (new); `compileCorpus` writes
-  `<outDir>/tsrx-imports.d.ts` after `registry.json`, one ambient `declare module` per compiled
-  `.tsrx` source typed through its tag's served `render<Name>` args. The hand-written
-  `server/compiler/frontend/tsx/tsrx-imports.d.ts` is deleted; `examples/tsconfig.json` includes
-  the generated file. Documented in LE_TRUC_COMPILER.md § 7.
-  **Rulings (recorded nowhere else):** keys are the shortest path suffix no other listed source
-  shares (`*/basic-button.tsrx`, lengthening only on a shared file name), so a collision is a loud
-  "cannot find module", never a silent mistype. A variant set's unserved `.tsrx` member is listed
-  too, typed through the served module (one contract per tag). The file is always written, even
-  empty, so the tsconfig include never dangles. It needs a corpus build first, like every
-  generated-module import: `typecheck.test.ts`'s examples leg relies on CI's `typecheck` step
-  building the corpus before `test:server`. A consumer project's authored-`.tsx` tsconfig
-  includes `<outDir>/tsrx-imports.d.ts` beside `host-profile.d.ts`. Clears the gates on LT-098
-  and LT-100 — neither migration touches the typings.
+  **Rulings (recorded nowhere else), for LT-325:** keys are the shortest path suffix no other
+  listed source shares, so a collision is a loud "cannot find module", never a silent mistype. A
+  variant set's unserved `.tsrx` member is listed too, typed through the served module. The file
+  is always written, even empty, so the tsconfig include never dangles. It needs a corpus build
+  first: `typecheck.test.ts`'s examples leg relies on CI building the corpus before `test:server`.
 
-- [x] LT-307: Derive the simulation pass's demo-markup path from the component folder — reviewed ✓
-  **Changed:** `simulationSubjects()` (`server/effects/simulate.ts`) resolves `markupPath` as
-  `<dir of entry.source>/<tag>.html`, independent of extension. LT-096 had already widened the
-  regex to `.tsx`; `.ts` twins and sources whose file name is not the tag now resolve too.
-  SERVER.md updated. Internal fix, no changelog entry. Clears the gate on LT-103.
-
-- [x] LT-296: Surface-route hardening: stale `variants/` clients and vacuous surface tests — reviewed ✓
-  **Changed:** `compileCorpus` owns `variants/`: each run deletes every client there it did
-  not write (a dissolved set, a flipped `variantOverrides`, an LTC051-dropped set, a member
-  that stopped compiling). The runtime seam gains `removeFile` (Bun + Node).
-  `serve.test.ts`'s surface legs now throw without a corpus build and pin `?surface=X` → 200
-  iff `basic-counter.X` is authored. Internal tooling, no changelog entry.
-  **Ruling (recorded nowhere else):** the canonical directory is deliberately NOT pruned — the
-  route serves a canonical client only when `registry.json` selects that surface, so a
-  stale canonical file cannot 200. Verified by the owner (2026-09-25): `serve.test.ts` passes
-  with a corpus build and fails without.
+- [x] LT-296: Surface-route hardening — reviewed ✓
+  **Ruling (recorded nowhere else):** the canonical output directory is deliberately NOT pruned.
+  The route serves a canonical client only when `registry.json` selects that surface, so a stale
+  canonical file cannot 200. Only `variants/` is owned and pruned by `compileCorpus`.
 
 - [x] LT-295: Run the variant spec matrix in CI (ADR 0039 s2) — reviewed ✓
-  **Changed:** `ci-cd.yml` `test` job gains a "Run variant spec matrix" step
-  (`bun run test:variants --no-build`) after "Run tests"; `scripts/test-variants.ts` gains
-  `--no-build` (runner-owned, not forwarded to Playwright). Internal tooling, no changelog entry.
-  **Open verification (recorded nowhere else):** not run locally, because the agent sandbox cannot bind
-  a port. CI triggers only on pushes and PRs to `main`/`next`, not on `v3`, so the first proof
-  is the next PR's run. It must list all five sets (basic-counter, basic-pluralize,
-  form-combobox, form-listbox, module-codeblock), and a throwaway broken `.ts` twin must fail
-  the job on surface "ts". Every migration in this iteration (LT-098–LT-103) adds a set, so
-  its handoff's `test:variants` claim also stands as a local proof of the runner.
-
-- [x] LT-299: Hygiene sweep from the 2026-09-24 review — reviewed ✓
-  **Changed:** `emitTopEffects` drops the last `as ForIR` cast; `ForIRBase.emptyArm` doc now
-  states both front ends and ADR 0040 s1's shared-roots placement; two demo comments point to
-  `server/generated/components/`. Item (a) needed no change (`biome check ./server` already 0).
+  **Open verification (recorded nowhere else):** CI triggers only on pushes and PRs to
+  `main`/`next`, not on `v3`, so the first CI proof is the next PR's run. It must list every
+  variant set (eleven since LT-098–LT-103), and a throwaway broken `.ts` twin must fail the job on
+  surface "ts".
 
 - [x] LT-207: Stop the simulation realm's dependency-wait timers from leaking past teardown — reviewed ✓
   **Ruling (recorded nowhere else):** timer ownership is process-wide, not realm-scoped — ANY
@@ -292,7 +137,6 @@ entry text: `git log -p -- DONE.md`.
   **Ruling (recorded nowhere else):** a Folded/Static child in the closure now runs its connect
   inside the realm, so its diagnostics land in the build report attributed to the rendering
   parent. That is intended (it is what the browser runs) and gated like any other entry.
-  Live handoff: LT-307 (in the current iteration).
 
 - [x] LT-266: Measure the size bet — reviewed ✓
   **Ruling (recorded nowhere else):** the bet holds, and the margin is the **runtime, not the
