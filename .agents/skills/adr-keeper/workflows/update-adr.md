@@ -47,6 +47,8 @@ If a change touches both — e.g., an additive option plus one unrelated behavio
 3. **Make the changes**
    - Edit the relevant sections directly so the ADR reads as a single coherent decision; no need to preserve a trace of the earlier text, published or not
    - For a non-breaking published edit, still keep the diff proportional to the change — don't rewrite sections the amendment doesn't touch
+   - An amendment replaces obsolete text; it does not add to it. Move implementation detail, ticket numbers, drifting tables, and interface examples out per SKILL.md `<essential_principles>`
+   - Run `wc -lw adr/000X-title.md` — the result must stay within 1500 words and 100 lines; if the amendment pushes it over, move detail out or split the decision
    - Do not change the ADR number or filename
 
 4. **Update the index if status changes**

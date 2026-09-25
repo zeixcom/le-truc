@@ -26,7 +26,20 @@ This skill manages the **Architectural Decision Record (ADR) process** for @zeix
 
 **Status is explicit.** Each ADR must have a clear status: Proposed, Accepted, Rejected, Superseded.
 
-**Concise over comprehensive.** Focus on the decision, context, and consequences. Avoid unnecessary detail.
+**ADRs record timeless reasoning, not implementation.** An ADR states the problem, the commitment, the rejected alternatives and why, and the lasting tradeoffs. It must stay true after the code is refactored. Content that tracks the code lives elsewhere, and the ADR links to it:
+
+| Content | Where it lives |
+|---|---|
+| Ticket numbers (`LT-NNN`), iteration plans, shape-exploration rounds | `BACKLOG.md` / `TODO.md` / `DONE.md` and commit messages — never in an ADR |
+| Reference tables that drift (diagnostic codes, option lists, per-surface or per-file matrices) | A living document — `ARCHITECTURE.md`, `server/compiler/HOST_PROFILE.md`, JSDoc — or the source constant itself |
+| Code examples for public interfaces | JSDoc and examples in source; the ADR names the key file (for example `src/component.ts`) |
+| Implementation mechanics (internals, file layout, step-by-step algorithms) | Source code and `ARCHITECTURE.md` |
+
+Keep a snippet only when the decision itself is a syntax or a shape that prose cannot state, and keep it to a few lines.
+
+**Hard budget: 1500 words and 100 lines per ADR.** Check with `wc -lw adr/NNNN-*.md` before you finish a create or an update. Over budget means detail that belongs elsewhere: move it out per the table above; do not compress the reasoning. If the reasoning alone exceeds the budget, the ADR holds more than one decision — split it.
+
+**Amendments replace, they do not accumulate.** Each round of shape exploration folds into the existing sections and removes the text it makes obsolete. The ADR records where the design landed, not the route there.
 
 **Length lives in the rationales — cut there first.** Context: a few tight sentences stating the problem, plus links to REQUIREMENTS.md / ARCHITECTURE.md — links, not history. Decision: the commitment and its mechanism, no design narrative; numbered sub-designs only when the decision has multiple genuine moving parts. Consequences: compact Good/Bad lists. No appended war-story postscripts — a hard-won lesson that matters long-term is promoted to `ARCHITECTURE.md` or its own ADR, not indented into an old one.
 </essential_principles>

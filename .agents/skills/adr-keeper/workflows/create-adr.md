@@ -27,13 +27,18 @@
    - Set status to "🔄 Proposed" initially
    - Fill in all sections
    - Keep sections tight per SKILL.md `<essential_principles>`: Context a few problem-first sentences, Decision commitment + mechanism, Consequences compact Good/Bad lists. No postscripts.
+   - No ticket numbers, no drifting reference tables, no public-interface code examples — link the living document or key source file instead
 
-5. **Update the index**
+5. **Check the budget**
+   - Run `wc -lw adr/000X-title.md` — at most 1500 words and 100 lines
+   - Over budget: move implementation detail out (SKILL.md table), or split the ADR if the reasoning alone is too long
+
+6. **Update the index**
    - Add entry to `/adr/adr-index.md`
    - Format: `| [000X](000X-title-in-kebab-case.md) | Title | 🔄 Proposed | M1, S3 |`
    - Update "Last updated" date
 
-6. **Verify**
+7. **Verify**
    - Read back the created ADR
    - Confirm all required sections are filled
    - Confirm references to REQUIREMENTS.md are correct
@@ -60,5 +65,6 @@ User: "We need to document our choice of Cause & Effect as the reactive primitiv
    - Alternatives: SolidJS signals, Vue reactivity, custom implementation
    - Consequences: Tight coupling but provides Slot, Memo, Sensor types
 4. Create: `/adr/0001-use-cause-effect-for-reactive-primitives.md`
-5. Update: `/adr/adr-index.md`
-6. Verify: Read back and confirm
+5. Check budget: `wc -lw` — well under 1500 words / 100 lines
+6. Update: `/adr/adr-index.md`
+7. Verify: Read back and confirm
