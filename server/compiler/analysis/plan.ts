@@ -428,8 +428,8 @@ export type AnalysisContext = {
 	/**
 	 * Compose sites an ambiguous `first()` selector matched (LT-127) —
 	 * already reported as LTC027 by `resolveComposeRefs`, so
-	 * `emitComposeEffects` must not report them a second time as
-	 * unaddressed `pass={{ }}` sites.
+	 * `emitComposeEffects` must not address them by tag or report them
+	 * a second time.
 	 */
 	ambiguousComposeNodes: ReadonlySet<TemplateNode>
 	/** Pass 1 output: server-data `@for` → `each()` plans. */

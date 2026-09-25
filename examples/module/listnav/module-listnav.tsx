@@ -61,8 +61,6 @@ export function ModuleListnav(
 	{ first, watch }: FactoryContext<Record<never, never>>,
 ) {
 	const listbox = first('form-listbox', 'Required to select a partial to load')
-	// The compose site's `truc:pass` target (LTC012 needs the reference).
-	const lazyload = first('module-lazyload', 'Required to load a partial into')
 
 	const firstOptionValue = () =>
 		query(listbox, 'button[role="option"]')?.value ?? ''

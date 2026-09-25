@@ -56,6 +56,7 @@ import {
 	type ComposeNode,
 	composeDiscriminatorClause,
 	composeNodesBySource as composeNodesBySourceIn,
+	composeSharedPassClause,
 	composeStaticAttrs,
 	countComposeBySource as countComposeBySourceIn,
 	type ElementNode,
@@ -1396,20 +1397,37 @@ const handleTryEffects = (fx: EffectsContext, node: TryNode): void => {
 }
 
 /**
+ * A compose site's `truc:pass` object as comparable text (LT-319): the
+ * prop set in sorted order, each get/set thunk's source with whitespace
+ * collapsed. Textual identity only — no semantic equivalence.
+ */
+const passObjectKey = (node: ComposeNode): string =>
+	node.attrs
+		.flatMap(a => (a.kind === 'pass' ? a.entries : []))
+		.map(e =>
+			[e.prop, e.thunkText, e.setThunkText ?? '']
+				.map(t => t.replace(/\s+/g, ' ').trim())
+				.join('\u0000'),
+		)
+		.sort()
+		.join('\u0001')
+
+/**
  * A `first()` reference and/or `pass={{ }}` on a composed element (ADR
- * 0023 sub-design 10). Composed elements aren't otherwise addressed at
- * all (server args aren't guaranteed to render as DOM attributes,
- * LT-018's children are the only other construct they'll carry): the
- * synthetic `ref` attr `analysis/compose-refs.ts` attaches for a
- * matching `first()` (LT-127, replacing the authored `ref={}`) is
- * required for BOTH — a bare reference (no `pass`) still needs the
- * query so the name resolves in the factory (e.g. reading `textbox.value`
- * from an event handler elsewhere in the template) — and the target must
- * be the sole composed instance of that child in the template
- * (`countComposeBySource`), UNLESS a static `class`/`id`/`data-*` on the
- * compose site uniquely tells it apart from same-source siblings
- * (`composeDiscriminatorClause`, LT-089) — three same-source
- * `<FormSpinbutton class="lightness"|"chroma"|"hue">` instances, say.
+ * 0023 sub-design 10). The query's selector is always the compiler's own:
+ * the child's tag from the registry, plus — when this template composes
+ * the same child more than once — a static `class`/`id`/`data-*` that
+ * uniquely tells the site apart (`composeDiscriminatorClause`, LT-089;
+ * three `<FormSpinbutton class="lightness"|"chroma"|"hue">` instances,
+ * say). Those attributes reach the served DOM by invariant (LT-090,
+ * LT-320), which is what makes the site addressable at all.
+ *
+ * An author `first()` matching the site (the synthetic `ref` attr
+ * `analysis/compose-refs.ts` attaches, LT-127) names the query and
+ * carries its required-reason text; a bare reference with no `pass` still
+ * needs the query so the name resolves in the factory. A `pass` site with
+ * no matching `first()` is named after the child tag, the same fallback
+ * raw custom elements get (LT-338).
  */
 const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 	const {
@@ -1421,11 +1439,8 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 	} = fx
 	// `composeRegistry` is `undefined` during the corpus-wide registry-
 	// discovery pass (compileComponent's own tolerance, LT-015). Nothing
-	// below it can run then — the child's tag isn't resolvable, and since
-	// LT-127 the `ref` attr itself is attached by that same registry-aware
-	// pass (`analysis/compose-refs.ts`), so demanding one here would
-	// reject every composed `pass={{ }}` site before pass 2 ever compiles
-	// the file. That pass needs only this component's OWN registry entry.
+	// below it can run then — the child's tag isn't resolvable. That pass
+	// needs only this component's OWN registry entry.
 	if (!composeRegistry) return
 	const passAttrs = node.attrs.filter(
 		(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
@@ -1436,36 +1451,10 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 			a.kind === 'ref',
 	)
 	if (passAttrs.length === 0 && !refAttr) return
-	if (!refAttr) {
-		// An ambiguous `first()` already explained itself (LTC027,
-		// `analysis/compose-refs.ts`) — don't pile a second error on
-		// the same mistake.
-		if (ambiguousComposeNodes.has(node)) return
-		diagnostics.push(
-			diagnostic.composedPassRequiresRef(
-				source,
-				node.node.start,
-				node.component,
-			),
-		)
-		return
-	}
-	let discriminator = ''
-	if (countComposeBySource(fx, node.source) !== 1) {
-		const siblings = composeNodesBySource(fx, node.source)
-		const clause = composeDiscriminatorClause(node, siblings)
-		if (!clause) {
-			diagnostics.push(
-				diagnostic.unaddressableElement(
-					source,
-					node.node.start,
-					`Multiple <${node.component}> instances compose the same child — first()/pass={{ }} need a target this milestone can uniquely identify (a distinguishing static class/id/data-* attribute on the compose site).`,
-				),
-			)
-			return
-		}
-		discriminator = clause
-	}
+	// An ambiguous `first()` already explained itself (LTC027,
+	// `analysis/compose-refs.ts`) — don't pile a second error on the same
+	// mistake.
+	if (!refAttr && ambiguousComposeNodes.has(node)) return
 	const childTag = composeRegistry.get(node.source)?.tag ?? null
 	if (!childTag) {
 		diagnostics.push(
@@ -1478,7 +1467,45 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 		)
 		return
 	}
-	const query = addQuery(refAttr.name, `${childTag}${discriminator}`, 'one')
+	let discriminator = ''
+	if (countComposeBySource(fx, node.source) !== 1) {
+		const siblings = composeNodesBySource(fx, node.source)
+		const clause = composeDiscriminatorClause(node, siblings)
+		if (!clause) {
+			// LT-319: sites that share a clause and carry textually identical
+			// `truc:pass` objects lower to ONE `pass(all(selector), …)`,
+			// emitted at the group's first site; the other members add
+			// nothing. An author `first()` is never part of this: a selector
+			// matching several sites is already LTC027.
+			const shared = refAttr ? null : composeSharedPassClause(node, siblings)
+			if (shared && new Set(shared.members.map(passObjectKey)).size === 1) {
+				if (shared.members[0] !== node) return
+				const query = addQuery(
+					`${sanitizeVarName(childTag)}s`,
+					`${childTag}${shared.clause}`,
+					'many',
+				)
+				const entries = passAttrs.flatMap(a => a.entries)
+				checkPassEntries(fx, entries, childTag, node.node)
+				emitPassEntries(fx, entries, query)
+				return
+			}
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					node.node.start,
+					`Multiple <${node.component}> sites compose the same child, and no static class/id/data-* attribute tells this one apart — first() and truc:pass need a unique target. Give each site a distinct class. Sites that share a class can share one query only if every one of them carries a textually identical \`truc:pass\` object.`,
+				),
+			)
+			return
+		}
+		discriminator = clause
+	}
+	const query = addQuery(
+		refAttr?.name ?? sanitizeVarName(childTag),
+		`${childTag}${discriminator}`,
+		'one',
+	)
 	if (passAttrs.length > 0) {
 		const entries = passAttrs.flatMap(a => a.entries)
 		checkPassEntries(fx, entries, childTag, node.node)

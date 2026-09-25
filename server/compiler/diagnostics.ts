@@ -500,23 +500,6 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
-	/**
-	 * `pass={{ }}` on a composed element without an explicit `ref` — selector
-	 * synthesis for a composed target isn't attempted from server args (they
-	 * aren't guaranteed to render as DOM attributes), so addressing needs the
-	 * author's own `ref`.
-	 */
-	composedPassRequiresRef: (
-		source: string,
-		offset: number | undefined,
-		component: string,
-	) =>
-		error(
-			'LTC012',
-			`pass={{ … }} on <${component}> needs a \`first()\` reference addressing it — a composed element's server args aren't guaranteed to render as DOM attributes, so it can't be auto-addressed the way native/raw custom elements are. Give the compose site a static class and address it by the tag it renders, e.g. \`const el = first('child-tag.discriminator', 'required')\` (LT-127).`,
-			lineOf(source, offset),
-		),
-
 	// --- imports, requestContext, children, ref spellings ---
 	/**
 	 * A plain (non-`.tsrx`) import whose local bindings never appear as a

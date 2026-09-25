@@ -115,25 +115,6 @@ export function ModuleColoreditor(
 		bindProperty(textbox, 'description'),
 	)
 
-	// The compose sites' `truc:pass` targets (LTC012 needs each reference).
-	const colorgraph = first(
-		'form-colorgraph',
-		'Needed to pick a color in lightness-chroma graph and hue slider.',
-	)
-	const colorscale = first(
-		'card-colorscale',
-		'Needed to preview the color scale.',
-	)
-	const colorinfoLighten80 = first('module-colorinfo.lighten80')
-	const colorinfoLighten60 = first('module-colorinfo.lighten60')
-	const colorinfoLighten40 = first('module-colorinfo.lighten40')
-	const colorinfoLighten20 = first('module-colorinfo.lighten20')
-	const colorinfoBase = first('module-colorinfo.base')
-	const colorinfoDarken20 = first('module-colorinfo.darken20')
-	const colorinfoDarken40 = first('module-colorinfo.darken40')
-	const colorinfoDarken60 = first('module-colorinfo.darken60')
-	const colorinfoDarken80 = first('module-colorinfo.darken80')
-
 	return (
 		<>
 			<module-coloreditor value={value} label={label}>

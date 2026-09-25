@@ -10,6 +10,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { analyzeClient } from '../../compiler/analysis/plan'
 import type { CompileDiagnostic } from '../../compiler/diagnostics'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
+import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../compiler/registry'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
@@ -380,29 +381,234 @@ export function BasicParent({ title }: { title: string })
 		expect(diagnostics.some(d => d.code === 'LTC011')).toBe(true)
 	})
 
-	test('`truc:pass={{ }}` on a composed element without a `ref` is diagnosed', () => {
-		const childComponent = compileChild('examples/child/basic-child.tsrx')
-		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+	describe('`truc:pass={{ }}` needs no `first()` declaration (LT-338)', () => {
+		const tsrxParent = (
+			declare: string,
+		) => `import { BasicChild } from '../child/basic-child.tsrx'
 
 export function BasicParent({ title }: { title: string })
 	@{
+		${declare}
 		expose({})
 		<>
 			<basic-parent>
-				<BasicChild label={title} truc:pass={{ value: () => title }} />
+				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
+				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
 			</basic-parent>
 			<style>basic-parent { display: block }</style>
 		</>
 	}`
-		const { component, diagnostics } = compileComponent(
-			parent,
-			'examples/parent/basic-parent.tsrx',
-			new Set(['basic-child']),
-			undefined,
-			composeRegistryOf(childComponent.entry),
-		)
-		expect(component).toBeNull()
-		expect(diagnostics.some(d => d.code === 'LTC012')).toBe(true)
+		const tsxParent = (
+			declare: string,
+		) => `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string }) {
+	${declare}
+	expose({})
+	return (
+		<>
+			<basic-parent>
+				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
+				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
+			</basic-parent>
+			<style>{css\`basic-parent { display: block }\`}</style>
+		</>
+	)
+}`
+		const declared = [
+			// A required reference whose reason is the default message: the
+			// auto-addressed query is required, with that same message.
+			"const basicChild = first('basic-child.a', 'basic-parent: basic-child.a missing')",
+			"const basicChild2 = first('basic-child.b', 'basic-parent: basic-child.b missing')",
+		].join('\n')
+		const surfaces = [
+			{
+				name: '.tsrx',
+				source: tsrxParent,
+				compile: (source: string) =>
+					compileComponent(
+						source,
+						'examples/parent/basic-parent.tsrx',
+						new Set(['basic-child']),
+						undefined,
+						composeRegistryOf(
+							compileChild('examples/child/basic-child.tsrx').entry,
+						),
+					),
+			},
+			{
+				name: '.tsx',
+				source: tsxParent,
+				compile: (source: string) =>
+					compileComponentTsx(
+						source,
+						'examples/parent/basic-parent.tsx',
+						new Set(['basic-child']),
+						undefined,
+						composeRegistryOf(
+							compileChild('examples/child/basic-child.tsrx').entry,
+						),
+					),
+			},
+		]
+		for (const surface of surfaces)
+			test(`${surface.name}: a reference-less site compiles to the same client as a declared one`, () => {
+				const bare = surface.compile(surface.source(''))
+				const withRefs = surface.compile(surface.source(declared))
+				expect(bare.diagnostics.filter(d => d.severity === 'error')).toEqual([])
+				expect(
+					withRefs.diagnostics.filter(d => d.severity === 'error'),
+				).toEqual([])
+				if (!bare.component || !withRefs.component)
+					throw new Error('both must compile')
+				expect(bare.component.clientCode).toContain(
+					"const basicChild = first('basic-child.a'",
+				)
+				expect(bare.component.clientCode).toContain(
+					"pass(basicChild, { value: { get: () => 'x' } })",
+				)
+				expect(bare.component.clientCode).toContain(
+					"pass(basicChild2, { value: { get: () => 'y' } })",
+				)
+				expect(bare.component.clientCode).toBe(withRefs.component.clientCode)
+			})
+	})
+
+	describe('same-class sites share one query when their `truc:pass` objects are identical (LT-319)', () => {
+		// A site's own `label="…"` literal replaces the shared `label={title}`.
+		const site = (extra: string) =>
+			`<BasicChild class="x"${extra.includes('label=') ? '' : ' label={title}'}${extra} />`
+		const sites = (a: string, b: string) =>
+			[site(a), site(b)].join('\n\t\t\t\t')
+		const tsrxParent = (
+			a: string,
+			b: string,
+			declare = '',
+		) => `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		${declare}
+		expose({})
+		<>
+			<basic-parent>
+				${sites(a, b)}
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+		const tsxParent = (
+			a: string,
+			b: string,
+			declare = '',
+		) => `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string }) {
+	${declare}
+	expose({})
+	return (
+		<>
+			<basic-parent>
+				${sites(a, b)}
+			</basic-parent>
+			<style>{css\`basic-parent { display: block }\`}</style>
+		</>
+	)
+}`
+		const registry = () =>
+			composeRegistryOf(compileChild('examples/child/basic-child.tsrx').entry)
+		const surfaces = [
+			{
+				name: '.tsrx',
+				compile: (a: string, b: string, declare?: string) =>
+					compileComponent(
+						tsrxParent(a, b, declare),
+						'examples/parent/basic-parent.tsrx',
+						new Set(['basic-child']),
+						undefined,
+						registry(),
+					),
+			},
+			{
+				name: '.tsx',
+				compile: (a: string, b: string, declare?: string) =>
+					compileComponentTsx(
+						tsxParent(a, b, declare),
+						'examples/parent/basic-parent.tsx',
+						new Set(['basic-child']),
+						undefined,
+						registry(),
+					),
+			},
+		]
+		for (const surface of surfaces) {
+			test(`${surface.name}: identical objects lower to one pass() over an all() query`, () => {
+				const { component, diagnostics } = surface.compile(
+					" truc:pass={{ value: () => 'v' }}",
+					" truc:pass={{  value:  () =>  'v'  }}",
+				)
+				expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+				if (!component) throw new Error('must compile')
+				expect(component.clientCode).toContain(
+					"const basicChilds = all('basic-child.x', 'basic-parent: basic-child.x missing')",
+				)
+				expect(
+					component.clientCode.match(/pass\(basicChilds, /g) ?? [],
+				).toHaveLength(1)
+			})
+			test(`${surface.name}: differing objects stay unaddressable`, () => {
+				const { component, diagnostics } = surface.compile(
+					" truc:pass={{ value: () => 'v' }}",
+					" truc:pass={{ value: () => 'w' }}",
+				)
+				expect(component).toBeNull()
+				const hit = diagnostics.find(d =>
+					d.message.includes('textually identical'),
+				)
+				expect(hit?.severity).toBe('error')
+			})
+			for (const [label, a, b] of [
+				['first', ' id="one"', ''],
+				['second', '', ' id="one"'],
+			])
+				test(`${surface.name}: a member with its own unique clause (${label}) keeps the other site unaddressable (LT-339)`, () => {
+					const { component, diagnostics } = surface.compile(
+						`${a} truc:pass={{ value: () => 'v' }}`,
+						`${b} truc:pass={{ value: () => 'v' }}`,
+					)
+					expect(component).toBeNull()
+					expect(
+						diagnostics.filter(
+							d =>
+								d.code === 'LTC007' &&
+								d.message.includes('textually identical'),
+						),
+					).toHaveLength(1)
+				})
+			test(`${surface.name}: a group member with its own first() never compiles silently (LT-339)`, () => {
+				// `[label="a"]` is unique, but `label` is not a discriminator
+				// attribute, so neither site has a unique clause of its own.
+				const { component, diagnostics } = surface.compile(
+					` label="a" truc:pass={{ value: () => 'v' }}`,
+					" truc:pass={{ value: () => 'v' }}",
+					`const own = first('basic-child[label="a"]', 'the a child')`,
+				)
+				expect(component).toBeNull()
+				expect(
+					diagnostics.some(d => d.code === 'LTC007' || d.code === 'LTC027'),
+				).toBe(true)
+			})
+			test(`${surface.name}: a group member without truc:pass stays unaddressable`, () => {
+				const { component, diagnostics } = surface.compile(
+					" truc:pass={{ value: () => 'v' }}",
+					'',
+				)
+				expect(component).toBeNull()
+				expect(
+					diagnostics.some(d => d.message.includes('textually identical')),
+				).toBe(true)
+			})
+		}
 	})
 
 	test('`truc:pass={{ }}` on a composed element addressed by first() lowers to pass() on the child tag', () => {

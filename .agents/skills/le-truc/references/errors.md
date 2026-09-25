@@ -85,7 +85,7 @@ The selector rules are deliberately **one-sided**: `LTC026` reports only what no
 |---|---|---|---|
 | `LTC010` | `{host.validationMessage}` (or another managed form prop) without `formAssociated`. | Declare `export const config = { formAssociated: true }`, or expose a prop of that name. | error |
 | `LTC011` | A composed (PascalCase) tag has no resolvable component import (`….tsrx` or `….tsx`), or the imported file did not compile. | Import the component, or fix the child's own diagnostics first. | error |
-| `LTC012` | `pass={{ … }}` on a native or unregistered tag; a prop the target does not `expose()`; a prop the target exposes **read-only** or as a `defineMethod()`; a reactive attribute on a custom element; a compose-site `pass` with no `ref`. | Target a registry-known component and pass a prop it exposes from a *mutable* initializer. | error |
+| `LTC012` | `pass={{ … }}` on a native or unregistered tag; a prop the target does not `expose()`; a prop the target exposes **read-only** or as a `defineMethod()`. | Target a registry-known component and pass a prop it exposes from a *mutable* initializer. | error |
 | `LTC028` | An `expose()` key is a reserved word / `Object` builtin, or shadows a member `formAssociated()` installs. | Rename the prop. | error |
 | `LTC029` | A form-associated component's inner control carries a `name`, so the field submits twice. | Remove `name`; the host is the sole form participant. | error |
 | `LTC032` | A destructured prop has a default but its type is not marked optional, so the default is unreachable. | Mark it `prop?:` in the props type. | error |

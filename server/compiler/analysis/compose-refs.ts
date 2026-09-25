@@ -35,9 +35,9 @@ import { allComposeNodes, composeStaticAttrs } from './selectors'
  * legitimate, and queried from the authored selector verbatim, the same
  * treatment `component.unmatchedOptionalRefs` gets (LT-123). `ambiguous` are
  * the compose nodes an ambiguous selector matched — already reported here,
- * so `emitComposeEffects` must not ALSO report them as unaddressed `pass`
- * sites (LTC012): one authoring mistake, one diagnostic, and LTC027 is
- * the one that names the fix.
+ * so `emitComposeEffects` must not ALSO address them by tag or report them
+ * again: one authoring mistake, one diagnostic, and LTC027 is the one that
+ * names the fix.
  */
 export const resolveComposeRefs = (
 	component: ComponentIR,

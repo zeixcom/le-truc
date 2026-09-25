@@ -36,7 +36,7 @@ loop iterables) and **LT-302** (harness-import aliasing).
 listnav one, none of them read, only to satisfy it. LT-338 retires the rule; LT-319 then gives
 colorinfo's shared-class `basic-number` sites a `truc:pass` spelling.
 
-**Order.** LT-338 → LT-319. LT-303 → LT-104 → LT-107 (listnav composes lazyload). LT-325 before LT-105 and LT-107.
+**Order.** LT-338 → LT-319 → LT-339. LT-303 → LT-104 → LT-107 (listnav composes lazyload). LT-325 before LT-105 and LT-107.
 LT-301 and LT-300 before any migration that meets a loop inside a branch; none is expected.
 LT-095, LT-106 and LT-108 are ungated and can start at once. LT-105 and LT-106 write their spec
 against the `.ts` twin before migrating (LT-324 precedent).
@@ -59,9 +59,10 @@ context-member-seeded signal routes Simulated (LT-330). `bun run check:sim` exit
 build-time shuffle in a loop iterable fails LTC033 (LT-326). Args named `items`/`esc` render on
 both surfaces (LT-302). A composed `truc:pass` site needs no `first()` declaration, and
 coloreditor/listnav carry none they do not read (LT-338). colorinfo passes to its `basic-number`
-sites through `truc:pass`, with no imperative `pass(all(…))` (LT-319). The census is 27/2/0 before the batch; each migration adds its own entry.
+sites through `truc:pass`, with no imperative `pass(all(…))` (LT-319). No shared-query group
+compiles a site silently (LT-339). The census is 27/2/0 before the batch; each migration adds its own entry.
 
-**Next free task ID: LT-339.**
+**Next free task ID: LT-340.**
 
 ---
 
@@ -70,25 +71,6 @@ sites through `truc:pass`, with no imperative `pass(all(…))` (LT-319). The cen
 All three gates landed and were reviewed on 2026-09-25 (LT-325, LT-301, LT-300; see `DONE.md`).
 
 ### Migrations (LT-104 before LT-107; LT-095, LT-106, LT-108 ungated)
-
-- [x] LT-104: Migrate `module-lazyload` to `.tsx` with same-commit cutover — reviewed ✓
-  **Skill:** le-truc-dev
-  **Context:** ~114 lines, `createTask` async loading. Has a spec + mocks (served under
-  `/test/module-lazyload/mocks/...`, resolved from the component dir's `mocks/`). Watch for:
-  async boundary shape — this is one of the few real `@try`/`@pending`/`@catch` consumers
-  alongside `form-listbox` (fieldset auto-wrap, LT-077/086); tree-shaking interplay with LT-078.
-  **Handoff (2026-09-25):** serves as compiled `.tsx`, twin retained. **Tier: Simulated**, one
-  routing signal: LTC043, `setHTML` reads the `contentEl` ref in setup, but only a `watch`
-  consumes it (NOTES). Census 27/3/0. **The exit criterion's `<truc:try>` clause is not met.**
-  The owner ruled on 2026-09-25 to keep the twin's hand-written `watch(content, { ok, nil, stale,
-  err })`, because the compiled boundary cannot express this contract (NOTES; the header of
-  `module-lazyload.tsx`). No `boundary(` survives. Compiler fix: the client factory now
-  destructures a context member that only setup declarations read (`host` in the task callback),
-  in `analysis/plan.ts`, with a test in `client-context-members.test.ts`. The spec was not run:
-  the sandbox cannot bind port 3000, so `test:component module-lazyload` and `test:variants`
-  are owed.
-  **Review (Architect, 2026-09-25):** code approved. The `<truc:try>` exit clause moves to LT-334
-  (owner ruling). The over-routing becomes LT-333, and the destructuring diagnostic LT-337.
 
 - [x] LT-107: Migrate `module-listnav` to `.tsx` with same-commit cutover — reviewed ✓ (code); awaiting LT-332
   **Skill:** le-truc-dev
@@ -117,163 +99,6 @@ All three gates landed and were reviewed on 2026-09-25 (LT-325, LT-301, LT-300; 
   **Review (Architect, 2026-09-25):** code approved as a faithful migration. The `value`/`data-value`
   mismatch is a live docs bug, now LT-332 (in this iteration). listnav is not accepted until
   LT-332 lands its spec.
-
-- [x] LT-105: Migrate `module-coloreditor` to `.tsx` with same-commit cutover — reviewed ✓
-  **Skill:** le-truc-dev
-  **Context:** ~120 lines, color editing UI. culori usage follows the `_common` setup point. If
-  it composes other form components multiple times, use the static-attr discriminator addressing
-  (LT-087/089/090).
-  **Planning note (2026-09-25):** composes `form-textbox`, `form-colorgraph` and the colorscale
-  child (`.tsrx`) plus nine `module-colorinfo` sites. Each colorinfo site carries a distinct class
-  (`.base`, `.lighten80` … `.darken80`), so every site gets its own `truc:pass` and LT-319 is not
-  tripped. The `.tsrx` children need LT-325's generated tag-map entries: do not hand-list more
-  clients in `examples/tsconfig.json`. **No spec exists:** write one against the `.ts` twin first
-  (LT-324 precedent), so `test:variants` verifies both surfaces.
-  **Handoff (2026-09-25):** serves as compiled `.tsx`, twin retained. **Tier: Folded**, no
-  routing signals. Census 28/4/0. It composes `CardColorscale`, `FormColorgraph`, `FormTextbox`
-  (typed through LT-325's generated `.tsrx` entries, nothing hand-listed) and nine
-  `ModuleColorinfo` sites. Every site gets its own `truc:pass`, and the twin's two `for` loops
-  are unrolled. Server renders beyond the twin: the textbox value and description, and every
-  step's label and color. `module-colorinfo.tsx` gains an additive `open = true` arg (the twin
-  opens only the base step) and a `'truc:pass'?: { value?, label? }` args key. **Spec:**
-  `module-coloreditor.spec.ts` was written against the twin (12 tests) with expected hex strings
-  computed via culori. It is **not run**: the sandbox cannot bind port 3000, so
-  `test:component module-coloreditor` and `test:variants` are owed. Also: two canvas
-  classifications in `sim/classifications.ts` (NOTES: attribution leak), and `emit-tier.test.ts`
-  strips comments before its undeclared-name scan (a JSDoc "color" read as a use).
-  **Review (Architect, 2026-09-25):** approved. colorinfo's `open` arg is accepted as additive. The
-  attribution leak becomes LT-335, whose fix retires the colorinfo classification.
-
-- [x] LT-106: Migrate `context-media` to `.tsx` with same-commit cutover — reviewed ✓
-  **Skill:** le-truc-dev
-  **Context:** ~142 lines, the context-protocol example (`provideContexts` + `requestContext`,
-  LT-035's compiled precedents exist in the corpus). Watch for: context effects' server-side
-  rendering semantics; no spec exists — verify on `/test/context-media` in a real browser.
-  **Planning note (2026-09-25):** write the spec against the `.ts` twin first (LT-324 precedent).
-  A browser check alone leaves `test:variants` with nothing to verify on either surface.
-  **Handoff (2026-09-25):** serves as compiled `.tsx`, twin retained, setup verbatim. **Tier:
-  Folded**, no routing signals: nothing reactive reaches markup, and a consumer renders its
-  fallback before JS, as with the twin. Census 29/4/0. The template is the root, its four
-  breakpoint attributes, and `children`. **Cutover blocker, fixed:** `card-mediaqueries` imported
-  the context keys from `context-media.ts`, whose module body defines the twin. Its generated
-  client would have registered the twin ahead of the compiled one. The keys and types now live
-  in the side-effect-free `media-contexts.ts`. The twin re-exports them, so its public exports
-  are unchanged, and `card-mediaqueries.tsrx` imports from there. The bundle now defines
-  `context-media` once. **Compiler:** an `import type` named only by carried declarations (type
-  aliases, `declare global`, the server's parameter types) is now placed in those modules, not
-  flagged LTC014 and dropped (`imports.ts`, `assemble-ir.ts`, test
-  `type-import-placement.test.ts`). `JS_GLOBALS` gains `Map`/`Set`/`WeakMap`/`WeakSet`: the
-  server module stubbed `Map` as `refStub` and threw on `new Map`. **Spec:**
-  `context-media.spec.ts` was written against the twin (10 tests: seeded media, provision to a
-  consumer, live updates, breakpoint attributes). It is **not run**: the sandbox cannot bind port
-  3000, so the browser check, `test:component context-media` and `test:variants` are owed.
-  **Review (Architect, 2026-09-25):** approved. **Ruling:** a provider's context keys live in a
-  module with no side effects, never in the component module, because importing a component
-  module defines the element. The docs snippet and the rule go to LT-189 item 14.
-
-- [x] LT-108: Migrate `module-carousel` to `.tsx` with same-commit cutover — reviewed ✓
-  **Skill:** le-truc-dev
-  **Context:** ~161 lines, `each()` items + `IntersectionObserver` autoplay gating. Has a spec.
-  Combines the LT-097 loop concerns with the LT-103 cleanup idiom.
-  **Handoff (2026-09-25):** serves as compiled `.tsx`, twin retained. **Tier: Simulated**, three
-  LTC013 routing signals: the `all()`-bound `panels`/`dots`/`buttons` consts. Their consumers
-  are all client-only (`on`/`watch`/`each`), the same over-routing class as LT-104's LTC043
-  (NOTES). Census 29/5/0. The template mirrors the `carousel` Markdoc schema: a hidden heading,
-  per-slide tabpanel (`h3` + `.slide-content` via `truc:html`), and nav with prev/next and one
-  dot per slide. Both loops render **static seeds only** (first slide current, first dot
-  selected). Setup keeps the twin's two `each()` blocks, the observer effect with cleanup, the
-  `index` watcher and the handlers. Per-item thunks could not replace the blocks. The slide
-  predicate reads the tabpanel collection, which LTC005 rejects in a loop body. A dot thunk over
-  `host.index` would fold `index`'s DOM-harvest initializer (LTC046). Slide ids come from a
-  `carouselId` arg (LTC042). Setup deviations: a const record for the two `let`s, `clamp` in
-  setup, the collection named `panels` (`slides` is the arg), and `index`'s initializer calls
-  `all()` inline. **Four compiler fixes**, all hit by the twin's verbatim setup: (1)
-  `to-estree.ts` had no `VariableDeclarationList` case, so a `.tsx` `for…of`/`for`
-  loop variable lost its declaration and read as a free name (LTC005). (2) LTC045 flagged
-  `watch()` inside an `each()` callback, which runs in its own collector
-  (`module-scans.ts`). (3) The client destructure now also collects `all`/`first`/… read only
-  by plain consts (LT-104's `plan.ts` fix widened, test added). (4) `JS_GLOBALS` gains
-  `IntersectionObserver`, beside `ResizeObserver`. The spec is unchanged and **not run**: the
-  sandbox cannot bind port 3000, so `test:component module-carousel` and `test:variants` are
-  owed.
-  **Review (Architect, 2026-09-25):** approved. **Ruling:** the LTC045 exemption for a helper
-  called directly in an `each()` callback is correct, because `each()` runs the callback in its
-  own collector. A function nested inside that callback is still deferred. The over-routing is
-  LT-333, and the LTC046 wording is LT-189 item 13.
-
-### Compose addressing (pulled in 2026-09-25; LT-338 before LT-319)
-
-- [ ] LT-338: Auto-address composed `truc:pass` sites — retire LTC012's "needs a `first()` reference" rule.
-  **Skill:** le-truc-dev (copy: tech-writer)
-  **Context:** `emitComposeEffects` (`analysis/effects.ts`) rejects a compose site that has `pass`
-  but no `ref` attr, with `composedPassRequiresRef`. That `ref` attr exists only when an author
-  `first()` resolves to the site (`analysis/compose-refs.ts`). The rule is a leftover from
-  `ref={}`, which LT-127 replaced one-for-one. The stated reason, "server args aren't guaranteed
-  to render as DOM attributes", stopped being true when LT-090/LT-320 pinned `class`/`id`/`data-*`
-  pass-through as an invariant. The function already builds the selector itself
-  (`${childTag}${discriminator}` from the registry and `composeDiscriminatorClause`), so the ref
-  supplies only a variable name. HOST_PROFILE says as much ("It supplied only the query
-  variable's name").
-  **Design (Architect):**
-  1. With no `ref` attr, a compose site that carries `pass` calls
-     `addQuery(sanitizeVarName(childTag), selector, 'one')`. This is the raw-custom-element
-     fallback (`effects.ts`, the `refAttr?.name ?? sanitizeVarName(node.tag)` site). The
-     `ref`-attr path is unchanged: an author `first()` still names the query and carries its
-     reason text. A bare `first()` with no `pass` is unchanged too.
-  2. The order inside the function becomes: resolve `childTag` (LTC011 if missing), then the
-     discriminator (`unaddressableElement` if same-source siblings have none), then the query.
-     The `ambiguousComposeNodes` suppression stays.
-  3. Compose sites inside `@if`/`@try`/loop arms go through whatever addressing the
-     `ref`-attr path gets there today. Do not invent new cardinality handling. If a branch path
-     turns out to depend on the author ref, write it up in NOTES rather than widening scope.
-  4. Delete `diagnostic.composedPassRequiresRef` and its tests. Add a test showing that a
-     reference-less `truc:pass` compiles to the same client as the one with a `first()`
-     declaration, on both surfaces.
-  5. Delete the unread declarations and their "LTC012 needs …" comments: coloreditor's nine
-     `colorinfo*`, plus `colorgraph`/`colorscale` if unread; listnav's `lazyload` if unread.
-     Keep any reference the factory actually reads.
-  **Channel/tier:** retirement. One LTC012 message row goes away. LTC012 stays as a code for
-  the other four rows. Nothing moves to runtime: the site is now always addressed, and the
-  unaddressable case keeps its compiler diagnostic (tier 1). **Tech Writer** reviews the
-  retirement: the `diagnostics.ts` row, the `effects.ts`/`compose-refs.ts` doc comments, the
-  HOST_PROFILE addressing section (l. 123, 183), VOCABULARY_LEDGER if the row is listed, and the
-  error-code docs page.
-  **Check:** `bun test server/tests/compiler`, `check:corpus`, `test:variants` for coloreditor
-  and listnav. Generated clients are byte-identical apart from query variable names.
-
-- [ ] LT-319: One `truc:pass` spelling for several same-discriminator compose sites (NOTES LT-098).
-  **Skill:** le-truc-dev (copy: tech-writer)
-  **Context:** module-colorinfo renders each channel's `basic-number` twice with one class
-  (`.lightness`, `.chroma`, `.hue`), so `composeDiscriminatorClause` finds no unique clause and
-  a per-site `truc:pass` is unaddressable. The migration kept the twin's imperative
-  `pass(all('basic-number.<channel>'), …)`. That form stays sanctioned, as a client-only setup
-  statement with only the runtime backstop (ADR 0028 tier 2). **Ruling (owner, 2026-09-25):**
-  identical `truc:pass` objects on sites that share a discriminator lower to one
-  `pass(all(selector), …)`, which regains the compile-time check. Needs LT-338.
-  **Design (Architect):**
-  1. When `composeDiscriminatorClause` returns null, look for a clause shared by a group of
-     same-source sites: the first class token (or `id`/`data-*`, same priority order) whose
-     matching siblings ALL carry `pass`. Every site in that group must carry a
-     **textually identical** `truc:pass` object: the same prop set, and the same `exprText` for
-     each get/set thunk after whitespace normalization. No semantic equivalence.
-  2. If so, emit once per group: `addQuery(name, selector, 'many')` and one `pass` effect over the
-     collection, with `checkPassEntries` run once against the child tag. Emit nothing more for
-     the other members. Dedup is by selector, so `addQuery` already returns the shared name.
-  3. If the objects differ, or a site in the group has no `pass`, keep the `unaddressableElement`
-     error. Extend its text to say that identical `truc:pass` objects share one query, and that
-     differing ones need a distinct class per site.
-  4. Confirm that the `pass` effect plan and emitter accept a `'many'` query. The runtime does
-     (`pass(all(…))`). If the IR only types `'one'`, widen it there, not with a cast.
-  5. colorinfo (`.tsx` and `.tsrx` members) replaces its three imperative `pass(all(…))` calls
-     with `truc:pass={{ value: () => host.<channel> }}` on each `BasicNumber` site. The `.ts` twin
-     keeps its imperative form.
-  **Channel/tier:** compiler, tier 1. The group gets the same LTC012 legality checks
-  (`passPropNotExposed`/`passPropNotSlotBacked`) a single site gets, where the imperative form had
-  only the tier-2 runtime backstop. **Tech Writer** reviews the extended `unaddressableElement`
-  text and the HOST_PROFILE addressing paragraph.
-  **Check:** compiler tests for the identical group (one `'many'` query), a differing group
-  (error), and a mixed pass/no-pass group (error), on both surfaces. `test:variants` for
-  module-colorinfo and module-coloreditor (which composes colorinfo).
 
 ### Review follow-up (in iteration, 2026-09-25)
 

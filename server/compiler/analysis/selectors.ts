@@ -413,16 +413,54 @@ export const composeStaticAttrs = (node: ComposeNode): Map<string, string> => {
  * `discriminatorCandidates`'s own priority order for raw elements. `class`
  * matches by token membership (a multi-class `class="a b"` site can be
  * discriminated by either token); `id`/`data-*` match by exact value. `null`
- * if no candidate is unique to `node` — the caller must treat that as
- * genuinely unaddressable, not fall back to anything looser.
+ * if no candidate is unique to `node`. The caller's one fallback is
+ * `composeSharedPassClause` (LT-319), a query shared by sites with
+ * identical `truc:pass` objects — never anything looser.
  */
 export const composeDiscriminatorClause = (
 	node: ComposeNode,
 	siblings: readonly ComposeNode[],
-): string | null => {
+): string | null =>
+	composeClauseCandidates(node).find(
+		candidate => composeClauseMatches(siblings, candidate).length === 1,
+	)?.clause ?? null
+
+/**
+ * The same-source sites one clause of `node` picks out, for LT-319's
+ * shared-query fallback: the first candidate (same priority order as
+ * `composeDiscriminatorClause`) whose matching siblings ALL carry
+ * `truc:pass` and would ALL reach this fallback themselves — no author
+ * `first()` (`ref` attr) and no unique clause of their own (LT-339).
+ * Otherwise a member addressed on its own path would either swallow the
+ * group's one emission or be passed twice. `null` if no candidate
+ * qualifies — the site stays unaddressable.
+ */
+export const composeSharedPassClause = (
+	node: ComposeNode,
+	siblings: readonly ComposeNode[],
+): { clause: string; members: ComposeNode[] } | null => {
+	for (const candidate of composeClauseCandidates(node)) {
+		const members = composeClauseMatches(siblings, candidate)
+		if (
+			members.every(
+				sib =>
+					sib.attrs.some(a => a.kind === 'pass') &&
+					!sib.attrs.some(a => a.kind === 'ref') &&
+					composeDiscriminatorClause(sib, siblings) === null,
+			)
+		)
+			return { clause: candidate.clause, members }
+	}
+	return null
+}
+
+type ClauseCandidate = { name: string; value: string; clause: string }
+
+/** `class` tokens, then `id`, then every `data-*`: the discriminator priority. */
+const composeClauseCandidates = (node: ComposeNode): ClauseCandidate[] => {
 	const attrs = composeStaticAttrs(node)
 	const classTokens = (attrs.get('class') ?? '').split(/\s+/).filter(Boolean)
-	const candidates: Array<{ name: string; value: string; clause: string }> = [
+	return [
 		...classTokens.map(value => ({
 			name: 'class',
 			value,
@@ -445,7 +483,14 @@ export const composeDiscriminatorClause = (
 				clause: `[${name}="${attrs.get(name)}"]`,
 			})),
 	]
-	const matches = (sib: ComposeNode, name: string, value: string): boolean => {
+}
+
+/** The siblings `candidate` matches: `class` by token membership, the rest by exact value. */
+const composeClauseMatches = (
+	siblings: readonly ComposeNode[],
+	{ name, value }: ClauseCandidate,
+): ComposeNode[] =>
+	siblings.filter(sib => {
 		const sibAttrs = composeStaticAttrs(sib)
 		if (name === 'class')
 			return (sibAttrs.get('class') ?? '')
@@ -453,15 +498,7 @@ export const composeDiscriminatorClause = (
 				.filter(Boolean)
 				.includes(value)
 		return sibAttrs.get(name) === value
-	}
-	for (const candidate of candidates) {
-		const matchCount = siblings.filter(sib =>
-			matches(sib, candidate.name, candidate.value),
-		).length
-		if (matchCount === 1) return candidate.clause
-	}
-	return null
-}
+	})
 
 /**
  * Could `selector` (the synthesized grammar `matchesSelector` parses) match

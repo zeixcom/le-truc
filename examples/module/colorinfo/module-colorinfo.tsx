@@ -9,10 +9,11 @@
  * served markup is complete before JavaScript. The client half is the twin's:
  * `asOklch()` re-parses the root attribute, and the watches rebind every site.
  *
- * The twin's `pass()` per `all('basic-number.<channel>')` stays imperative:
- * per-site `truc:pass` cannot address two same-class compose sites (see the
- * setup comment). culori modes register through the
- * `asOklch` import, the corpus's one culori setup point (LT-091 finding 3).
+ * The twin's `pass()` per `all('basic-number.<channel>')` is spelled
+ * `truc:pass` on each `BasicNumber` site: the two same-class sites of a
+ * channel carry identical objects, so they share one `all()` query (LT-319).
+ * culori modes register through the `asOklch` import, the corpus's one
+ * culori setup point (LT-091 finding 3).
  */
 
 import { bindStyle, bindText, type FactoryContext } from '@zeix/le-truc'
@@ -80,14 +81,7 @@ export function ModuleColorinfo(
 		 */
 		'truc:pass'?: { value?: () => Oklch; label?: () => string }
 	},
-	{
-		all,
-		expose,
-		first,
-		host,
-		pass,
-		watch,
-	}: FactoryContext<ModuleColorinfoProps>,
+	{ expose, first, host, watch }: FactoryContext<ModuleColorinfoProps>,
 ) {
 	const color = asOklch()(value)
 	const labelStrong = first('strong', 'Add a <strong> element inside .label.')
@@ -105,24 +99,17 @@ export function ModuleColorinfo(
 		lightness: () => host.value.l,
 		chroma: () => host.value.c,
 		hue: () => host.value.h ?? 0,
-	})
-
-	// One pass per channel over BOTH of its compose sites, as in the twin.
-	// Per-site `truc:pass` needs a unique `first()` ref per site (LTC012),
-	// and each channel renders twice with the same class (NOTES.md, LT-098).
-	pass(all('basic-number.lightness'), { value: () => host.lightness })
-	pass(all('basic-number.chroma'), { value: () => host.chroma })
-	pass(all('basic-number.hue'), { value: () => host.hue })
+	});
 
 	// `label` needs no watch here: the arg renders the <strong> that seeds the
 	// prop, and the compiler binds that one site (the arg-and-prop coincidence).
-	watch('css', bindStyle(host, '--module-colorinfo-color-swatch'))
-	watch('hex', bindStyle(host, '--module-colorinfo-color-fallback'))
+	watch('css', bindStyle(host, '--module-colorinfo-color-swatch'));
+	watch('hex', bindStyle(host, '--module-colorinfo-color-fallback'));
 	// The text sites are optional (a page may omit them), and an `if` is
 	// outside the setup subset (LTC005), so the guard sits in the handler.
-	watch('hex', hexEl ? bindText(hexEl) : () => {})
-	watch('rgb', rgbEl ? bindText(rgbEl) : () => {})
-	watch('hsl', hslEl ? bindText(hslEl) : () => {})
+	watch('hex', hexEl ? bindText(hexEl) : () => { });
+	watch('rgb', rgbEl ? bindText(rgbEl) : () => { });
+	watch('hsl', hslEl ? bindText(hslEl) : () => { });
 
 	return (
 		<>
@@ -147,6 +134,7 @@ export function ModuleColorinfo(
 								<BasicNumber
 									class="lightness"
 									value={color.l}
+									truc:pass={{ value: () => host.lightness }}
 									options='{"style":"percent","maximumFractionDigits":2}'
 								/>
 							</dd>
@@ -155,6 +143,7 @@ export function ModuleColorinfo(
 								<BasicNumber
 									class="chroma"
 									value={color.c}
+									truc:pass={{ value: () => host.chroma }}
 									options='{"maximumFractionDigits":4}'
 								/>
 							</dd>
@@ -163,6 +152,7 @@ export function ModuleColorinfo(
 								<BasicNumber
 									class="hue"
 									value={color.h ?? 0}
+									truc:pass={{ value: () => host.hue }}
 									options='{"maximumFractionDigits":2}'
 								/>
 							</dd>
@@ -174,16 +164,19 @@ export function ModuleColorinfo(
 								<BasicNumber
 									class="lightness"
 									value={color.l}
+									truc:pass={{ value: () => host.lightness }}
 									options='{"maximumFractionDigits":4}'
 								/>{' '}
 								<BasicNumber
 									class="chroma"
 									value={color.c}
+									truc:pass={{ value: () => host.chroma }}
 									options='{"maximumFractionDigits":4}'
 								/>{' '}
 								<BasicNumber
 									class="hue"
 									value={color.h ?? 0}
+									truc:pass={{ value: () => host.hue }}
 									options='{"maximumFractionDigits":2}'
 								/>
 								)

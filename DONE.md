@@ -44,6 +44,85 @@ LT-283–LT-286, LT-293, LT-294, LT-298, LT-315), 2026-09-21 ×2. Full entry tex
 - **Scrollarea's wall-time at demo scale is noise** (474/341/330 ms Simulated vs 432 ms Folded).
   The ~2.3 s ADR 0029 cites returns only once page occurrences are simulated (LT-103).
 
+- [x] LT-104: Migrate `module-lazyload` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** serves as compiled `.tsx`, twin retained. **Tier: Simulated** (LTC043: `setHTML`
+  reads the `contentEl` ref in setup, consumed only by a `watch`). The client factory now
+  destructures a context member that only setup declarations read (`host` in the task callback;
+  `analysis/plan.ts`, `client-context-members.test.ts`). A sim classification records the demo's
+  intentional missing-`card-callout` instance.
+  **Rulings (owner/Architect, 2026-09-25):** lazyload keeps the twin's hand-written
+  `watch(content, { ok, nil, stale, err })`. The compiled boundary cannot express this contract.
+  **Live handoffs:** the `<truc:try>` spelling is LT-334, the over-routing LT-333, and the
+  destructuring diagnostic LT-337.
+
+- [x] LT-105: Migrate `module-coloreditor` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** serves as compiled `.tsx`, twin retained. **Tier: Folded.** Composes
+  `CardColorscale`, `FormColorgraph`, `FormTextbox` (typed through LT-325's generated `.tsrx`
+  entries) and nine `ModuleColorinfo` sites, each with its own class and `truc:pass`. The twin's
+  loops are unrolled. It server-renders the textbox value and description and every step's label
+  and color. `module-colorinfo.tsx` gains an additive `open = true` arg. New spec
+  `module-coloreditor.spec.ts` (12 tests, written against the twin). `test:variants` passes.
+  **Live handoffs:** the canvas-notice attribution leak is LT-335, whose fix retires the colorinfo
+  classification in `sim/classifications.ts`.
+
+- [x] LT-106: Migrate `context-media` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** serves as compiled `.tsx`, twin retained, setup verbatim. **Tier: Folded.** The
+  context keys and types move to the side-effect-free `media-contexts.ts`. The twin re-exports
+  them, so its public exports are unchanged, and `card-mediaqueries.tsrx` imports from there, so
+  the bundle defines `context-media` once. Compiler: an `import type` named only by carried
+  declarations is placed in those modules instead of being dropped with LTC014 (`imports.ts`,
+  `type-import-placement.test.ts`). `JS_GLOBALS` gains `Map`/`Set`/`WeakMap`/`WeakSet`. New spec
+  `context-media.spec.ts` (10 tests).
+  **Ruling (Architect, 2026-09-25):** a provider's context keys live in a module with no side
+  effects, never in the component module, because importing a component module defines the
+  element. **Live handoff:** the docs snippet and the rule are LT-189 item 14.
+
+- [x] LT-108: Migrate `module-carousel` to `.tsx` with same-commit cutover — reviewed ✓
+  **Changed:** serves as compiled `.tsx`, twin retained. **Tier: Simulated** (three LTC013
+  signals on the `all()`-bound consts, whose consumers are client-only). Both loops render static
+  seeds only. Setup keeps the twin's two `each()` blocks and the observer effect. Compiler fixes:
+  `.tsx` `for` initializers keep their declaration (`to-estree.ts`); the client destructure
+  collects `all`/`first` read only by plain consts; `JS_GLOBALS` gains `IntersectionObserver`.
+  **Ruling (Architect, 2026-09-25):** a helper called directly in an `each()` callback is exempt
+  from LTC045, because `each()` runs the callback in its own collector. A function nested inside
+  that callback is still deferred. **Live handoffs:** the over-routing is LT-333, and the LTC046
+  wording LT-189 item 13.
+
+- [x] LT-319: One `truc:pass` spelling for several same-discriminator compose sites (NOTES LT-098) — reviewed ✓
+  **Changed:** sites that share a class, have no unique `class`/`id`/`data-*` of their own and no
+  author `first()`, and carry textually identical `truc:pass` objects (same prop set,
+  whitespace-collapsed thunk text) lower to **one** `pass(all('<tag>.<class>'), …)`. The query is
+  named `${tag}s`, the loop convention, and the LTC012 legality checks run once. A differing or
+  mixed group is LTC007, whose compose text is rewritten to name both fixes. colorinfo's six
+  `BasicNumber` sites use `truc:pass`, and its imperative `pass(all(…))` block is gone; the `.ts`
+  twin keeps it. HOST_PROFILE describes the shared query. `test:variants` passes for colorinfo
+  and coloreditor.
+  **Rulings (owner/Architect, 2026-09-25):** textual identity only, never semantic equivalence.
+  The shared `all()` queries are required, as LT-338 ruled for auto-addressed sites. The
+  imperative `pass(all(…))` stays sanctioned as a client-only setup statement (tier 2).
+  **Changelog:** new capability; LTC007 message change.
+
+- [x] LT-339: A shared `truc:pass` group must not include a site that has its own unique discriminator (LT-319 review) — reviewed ✓
+  **Changed:** `composeSharedPassClause` admits a group only when every member would reach the
+  fallback itself: no `ref` attr and no unique clause of its own. Before the fix, a member with a
+  unique `id` swallowed the group's one emission, so another site compiled with no `pass` and no
+  diagnostic, or the member was passed twice. That case is now LTC007. Folded into LT-319 for the
+  changelog: it never shipped.
+
+- [x] LT-338: Auto-address composed `truc:pass` sites — retire LTC012's "needs a `first()` reference" rule — reviewed ✓
+  **Changed:** a composed `truc:pass` site needs no `first()`. The compiler addresses it by the
+  child tag plus its unique static `class`/`id`/`data-*` and names the query after the tag
+  (`moduleColorinfo`, `moduleColorinfo2`, …). An author `first()` still names the query and
+  carries its reason text. The LTC012 message `composedPassRequiresRef` is **retired**; LTC012
+  keeps its other four rows. coloreditor drops eleven unread references and listnav one.
+  HOST_PROFILE, `errors.md` and the compiler comments are updated.
+  **Rulings (Architect, 2026-09-25; recorded nowhere else):** an auto-addressed site is a
+  **required** query (`'one'`, default `<tag>: <selector> missing` message), the same as a raw
+  custom element. coloreditor's nine formerly reason-less, and so optional, `colorinfo`
+  references lose their `if (el)` guards on purpose: the template renders those sites. The
+  rule dates from `ref={}` and outlived its reason once LT-090/LT-320 made the attribute
+  pass-through an invariant. **Changelog:** a user-visible diagnostic removal.
+
 - [x] LT-095: Migrate `basic-blogmeta` by reshaping it into a template owner with typed byline props (LT-033 decision) — reviewed ✓
   **Changed:** `basic-blogmeta.tsx` serves; the `.ts` twin stays. Props `author?`, `avatar?`,
   `published?`, `modified?`, `readingTime?` (the `reading-time` attribute), all schema.org
