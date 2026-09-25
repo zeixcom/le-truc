@@ -63,6 +63,18 @@ const isLocaleResolvable = (
 	return false
 }
 
+/**
+ * The random-number sources, by receiver (LT-314): `Math.random()` and the
+ * Web Crypto generators on `crypto`. Each call reads the RNG, which has no
+ * server answer, so a fold would bake one build-time value into the page.
+ * The rest of `Math` stays pure (`Math.max`/`Math.min`/etc. are functions
+ * of their arguments).
+ */
+const RNG_METHODS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+	['Math', new Set(['random'])],
+	['crypto', new Set(['randomUUID', 'getRandomValues'])],
+])
+
 /** Method names whose ambient inputs (not their receiver) make them impure. */
 const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
 	'toLocaleString',
@@ -74,9 +86,9 @@ const IMPURE_AMBIENT_METHODS: ReadonlySet<string> = new Set([
 /**
  * Whether `node` contains a call/read against an impure ambient (CHECKLIST
  * §4): `Date` (and its members — `Date.now()`, `new Date()`; `Date.UTC(...)`
- * excepted — a pure function of its arguments), `Math.random()`
- * specifically (not `Math` at large — `Math.max`/`Math.min`/etc. are pure
- * functions of their arguments, safe to fold), the locale/timezone-reading
+ * excepted — a pure function of its arguments), the RNG calls in
+ * `RNG_METHODS` (`Math.random()`, `crypto.randomUUID()`,
+ * `crypto.getRandomValues()` — not `Math` at large), the locale/timezone-reading
  * instance methods (`x.toLocaleString()`, `x.getTimezoneOffset()`) regardless
  * of receiver, since the ambient input is in the method, not the object it's
  * called on, and `Intl.<Ctor>(...)` calls/constructions whose locale argument
@@ -188,10 +200,9 @@ export const impureAmbientCauses = (
 			if (
 				isNode(obj) &&
 				obj.type === 'Identifier' &&
-				String(obj.name) === 'Math' &&
 				isNode(prop) &&
 				prop.type === 'Identifier' &&
-				String(prop.name) === 'random'
+				RNG_METHODS.get(String(obj.name))?.has(String(prop.name))
 			) {
 				flag('rng')
 				return

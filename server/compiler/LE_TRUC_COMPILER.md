@@ -406,8 +406,9 @@ member.
 
 **`ForIR`** — one `@for` loop, a two-member union on a `kind` discriminant
 (ADR 0040 s1). `EachForIR` (`kind: 'each'`) is a loop over server data and
-lowers to `each()`; it carries `indexName`, `iterableText`, `iterableName` and
-`hoisted`. `ReconcileForIR` (`kind: 'reconcile'`) is a loop over a declared
+lowers to `each()`; it carries `indexName`, `iterableText`, `iterable` (the
+node, which `checkFoldInputs` reads — LT-313), `iterableName` and `hoisted`.
+`ReconcileForIR` (`kind: 'reconcile'`) is a loop over a declared
 `createList` and lowers to `reconcile()` (ADR 0017); it carries `listSignal`,
 `keyName` and `keyText`. The plan maps are typed per member —
 `Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR, ReconcilePlan>` — so
@@ -574,8 +575,8 @@ produce its value. Two limbs —
   stay unanswerable.
 - **(b) not a server-side fact** — the value is a function of the moment the
   page is VIEWED, or of the build machine's own ambient state: the wall clock
-  (`Date.now()`, `new Date()`), the RNG (`Math.random()`), a locale falling
-  back to the runtime default. This is `evaluability.ts`'s existing
+  (`Date.now()`, `new Date()`), the RNG (`Math.random()`, `crypto.randomUUID()`,
+  `crypto.getRandomValues()`), a locale falling back to the runtime default. This is `evaluability.ts`'s existing
   `containsImpureAmbient` set.
 
 **An unresolvable expression is omitted in EVERY tier, the Simulated tier included.** The

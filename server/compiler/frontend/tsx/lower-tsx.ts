@@ -699,6 +699,7 @@ export const lowerFor = (
 		itemName,
 		indexName,
 		iterableText: text(ctx.source, iterable),
+		iterable,
 		iterableName,
 		hoisted,
 		output,

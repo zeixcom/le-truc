@@ -1644,6 +1644,48 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(true)
 	})
 
+	test.each([
+		['crypto.randomUUID()'],
+		['crypto.getRandomValues(new Uint8Array(4)).join()'],
+	])('%s in a static position is LTC033 (LT-314)', expr => {
+		const source = `export function C({}: {}) {
+	return (
+		<>
+			<c-el><span id={${expr}}>x</span></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	)
+}`
+		const { component, diagnostics } = compileComponentTsx(
+			source,
+			'c.tsx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		expect(
+			diagnostics.filter(d => d.code === 'LTC033' && d.severity === 'error'),
+		).toHaveLength(1)
+	})
+
+	test('crypto.randomUUID() in a reactive position is omitted, not folded (LT-314)', () => {
+		const source = `export function C({}: {}) {
+	return (
+		<>
+			<c-el><span id={() => crypto.randomUUID()}>x</span></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	)
+}`
+		const { component, diagnostics } = compileComponentTsx(
+			source,
+			'c.tsx',
+			new Set(),
+		)
+		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(false)
+		expect(component).not.toBeNull()
+		expect(component?.serverCode).not.toContain('randomUUID')
+	})
+
 	test('Math.max (not Math.random) in a static child is not flagged — pure function of its args', () => {
 		const source = `export function C({ a, b }: { a: number; b: number })
 	@{
@@ -3017,6 +3059,47 @@ ${setup}	return (
 		expect(component).toBeNull()
 		expect(hits).toHaveLength(1)
 		expect(hits[0]?.message).toContain('`document`')
+	})
+
+	test('a server-data loop iterable reading page context fails the build (LT-313)', () => {
+		const { component, hits } = ltc054(
+			tsx(
+				"<c-el><ul>{[...document.querySelectorAll('a')].map(a => <li>{a.href}</li>)}</ul></c-el>",
+			),
+		)
+		expect(component).toBeNull()
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('the items of a loop')
+		expect(hits[0]?.message).toContain('`document`')
+	})
+
+	test('.tsrx twin: a server-data loop iterable reading page context fails the build (LT-313)', () => {
+		const { component, hits } = ltc054(
+			`export function C({ label }: { label: string })
+	@{
+		<>
+			<c-el><ul>
+				@for (const a of [...document.querySelectorAll('a')]) {
+					<li>{a.href}</li>
+				}
+			</ul></c-el>
+			<style>c-el { color: red }</style>
+		</>
+	}`,
+			'c.tsrx',
+		)
+		expect(component).toBeNull()
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('the items of a loop')
+	})
+
+	test('a loop over an own arg is not a page-context read', () => {
+		const { hits } = ltc054(
+			tsx('<c-el><ul>{items.map(item => <li>{item}</li>)}</ul></c-el>', {
+				params: '{ items }: { items: string[] }',
+			}),
+		)
+		expect(hits).toHaveLength(0)
 	})
 
 	test('the render scope admits only own names and declared harness names', () => {

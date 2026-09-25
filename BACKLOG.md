@@ -1066,6 +1066,29 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
+- [ ] LT-326: A server-data loop's iterable is unchecked for impure ambients — LTC033 misses a build-time shuffle (LT-313/LT-314 review).
+  **Skill:** le-truc-dev
+  **Context:** LTC033 runs in `lower-shared.ts` over static children and `server` attributes
+  only. A server-data loop's iterable was never a node until LT-313, so it was never checked.
+  Verified at review: `{[...items].sort(() => Math.random() - 0.5).map(a => <li>{a}</li>)}` and
+  `{[crypto.randomUUID()].map(…)}` compile clean. That bakes one build-time shuffle into the
+  page for good, which is the hazard CHECKLIST §4 names as the worst outcome. A shuffle is a
+  common idiom, not a contrived probe. The iterable is always evaluated, so it takes the
+  **static** (error) form, never the omit-the-reactive-form one. Check `EachForIR.iterable`
+  with `containsImpureAmbient` (in the loop's outer scope, so a resolvable-locale `Intl` still
+  folds). Add a loop-items builder beside `impureStaticChild`/`impureStaticAttribute`. Both
+  surfaces.
+  **Copy (same task):** both LTC033 builders list "`Date`/`Intl`, `Math.random()`, or a
+  locale/timezone method". Since LT-314 that is incomplete: an author who writes
+  `id={crypto.randomUUID()}` is told about `Math.random()`. Name the RNG generically, or list
+  the `crypto` generators. Update the `diagnostics.ts` union comment and the
+  `.agents/skills/le-truc/references/errors.md` row to match. In the same pass, Tech Writer
+  reviews LT-313's LTC054 `where` phrase "the items of a loop" (`fold-inputs.ts`).
+  **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033, one new builder). **Copy
+  reviewer:** Tech Writer.
+  **Check:** both probes fail LTC033 on `.tsx` and `.tsrx`; a loop over an own arg and a
+  resolvable-locale `Intl` iterable still compile; the corpus is unchanged.
+
 - [ ] LT-301: Loops in conditional contexts are mis-addressed on the client — diagnose them (LT-212 review; NOTES 2026-09-24). **Gate: before any wave-4 migration whose component nests a loop inside a branch.**
   **Skill:** le-truc-dev
   **Context:** `.tsrx` `@if (…) { … } @else { @for (…) { <li class="item" onClick={…}/> } }` renders

@@ -66,7 +66,7 @@ LT-321), no connect-time dialog scroll (LT-318), pagination's spans filled pre-J
 empty `each()` (LT-322), scrollarea not Simulated (LT-323), and splitview and colorinfo green on
 both surfaces through their new specs (LT-324).
 
-**Next free task ID: LT-326.**
+**Next free task ID: LT-327.**
 
 ---
 
@@ -330,31 +330,3 @@ both surfaces through their new specs (LT-324).
     drag (which jsdom cannot test).
   - colorinfo: the connect state from `value`, a `value` write updating all six `basic-number`s,
     and the label harvest.
-
-### Parallel slot — the LT-258 riders
-
-- [x] LT-313: Check a server-data `@for`'s iterable against the partial-readiness invariant (LT-258 review). **Gate: before LT-257.** — done, pending review ⏳ (Tech Writer: review the LTC054 `where` phrase "the items of a loop", `fold-inputs.ts`)
-  **Skill:** le-truc-dev
-  **Context:** LT-258's `checkFoldInputs` covers every server-evaluated position except one:
-  the iterable of a server-data loop, because `EachForIR` carries only `iterableText`, not a
-  node. Verified at review: `{[...document.querySelectorAll('a')].map(a => <li>{a.href}</li>)}`
-  compiles clean and classifies Folded, so the loop's item set is the build page's DOM. Add the
-  iterable's `AstNode` to `EachForIR`, populated by both front ends. Adding an IR field before
-  first publish is free under ADR 0034 s8 and ADR 0040, and the task has to land before LT-254
-  anyway. Then check it in `checkFoldInputs` as an always-evaluated position. **Channel:**
-  compiler. **Tier:** 1 Prevented. It reuses LTC054, so no new copy is needed beyond the
-  `where` phrase (e.g. "the items of a loop"). Tech Writer reviews that phrase.
-  **Check:** the probe above fails with LTC054 on both surfaces; the corpus is unchanged.
-
-- [x] LT-314: `crypto.randomUUID()`/`getRandomValues()` fold silently — close the impure-ambient gap (LT-258 review). — done, pending review ⏳
-  **Skill:** le-truc-dev
-  **Context:** `impureAmbientCauses` (`evaluability.ts`) flags `Math.random()` as `rng` but
-  not `crypto`, which sits in `JS_GLOBALS`. Verified at review: `<span id={crypto.randomUUID()}>`
-  compiles clean and classifies Folded, which bakes one build-time random id into the page. That
-  is exactly the hazard LTC033 exists for. Add `crypto.randomUUID`/`crypto.getRandomValues` to
-  the `rng` cause, so static positions get LTC033 and reactive ones are omitted, following the
-  existing precedent. This is not the partial-readiness invariant: the RNG is unresolvable, not
-  page context. **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033, whose copy
-  already names "a random id").
-  **Check:** the probe errors LTC033 in a static position and omits in a reactive one; the
-  corpus is unchanged.

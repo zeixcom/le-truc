@@ -30,6 +30,21 @@ entry text: `git log -p -- DONE.md`.
 
 ---
 
+- [x] LT-313: Check a server-data `@for`'s iterable against the partial-readiness invariant — reviewed ✓
+  **Changed:** `EachForIR` gains `iterable: AstNode` (both front ends populate it);
+  `checkFoldInputs` checks it as an always-evaluated position under LTC054, `where` = "the items
+  of a loop". The LT-257 gate is cleared. **Live handoffs:** LT-326 (the same iterable is
+  unchecked for LTC033, plus Tech Writer's pass on the `where` phrase).
+
+- [x] LT-314: `crypto.randomUUID()`/`getRandomValues()` fold silently — close the impure-ambient gap — reviewed ✓
+  **Changed:** `evaluability.ts` `RNG_METHODS` (receiver → methods) replaces the one-off
+  `Math.random` match; both `crypto` generators flag `rng`, so static positions get LTC033 and
+  reactive ones are omitted. The LT-258 split holds: RNG stays on the impure-ambient side, not
+  `PAGE_CONTEXT_GLOBALS`. **Accepted residue (recorded nowhere else):** computed or aliased
+  receivers (`crypto['randomUUID']()`, `const { randomUUID } = crypto`) still fold. That gap
+  already existed for `Math.random`, and it takes deliberate authoring to reach. Revisit only on
+  a real case. **Live handoffs:** LT-326 (LTC033 copy still names only `Math.random()`).
+
 - [x] LT-102: Migrate `module-splitview` to `.tsx` with same-commit cutover — reviewed ✓
   **Changed:** `examples/module/splitview/module-splitview.tsx` (served; the `.ts` twin retained),
   `examples/main.ts` → generated client, host profile gains `truc:html` (common set),

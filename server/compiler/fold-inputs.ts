@@ -343,6 +343,8 @@ export const checkFoldInputs = (
 			case 'element': {
 				const loop = [...component.fors.values()].find(f => f.output === node)
 				if (loop) {
+					if (loop.kind === 'each')
+						checkEvaluated(loop.iterable, 'the items of a loop')
 					const loopScope = new Set(scope)
 					loopScope.add(loop.itemName)
 					if (loop.kind === 'each') {

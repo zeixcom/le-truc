@@ -383,6 +383,11 @@ export type EachForIR = ForIRBase & {
 	kind: 'each'
 	indexName: string | null
 	iterableText: string
+	/**
+	 * The iterable expression node — a server-evaluated position the
+	 * partial-readiness check reads (LT-313; `fold-inputs.ts`).
+	 */
+	iterable: AstNode
 	/** The iterable when it is a bare identifier, else null. */
 	iterableName: string | null
 	/** const declarations before the output element, in order. */
