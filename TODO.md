@@ -14,7 +14,7 @@ composition across tiers, the spike fixtures rehomed, module-codeblock served as
 LTC054 and suite determinism. Compacted records are in `DONE.md`; the public summary is in
 `CHANGELOG.md [Unreleased]`.
 
-**Why these fifteen.** Module-codeblock proved one migration end to end. This iteration moves
+**Why these fifteen** (twenty-three with the addendum below). Module-codeblock proved one migration end to end. This iteration moves
 the wave from proof to cadence with the six components that need nothing undesigned:
 four leaves (**LT-099** pagination, **LT-101** dialog, **LT-102** splitview, **LT-103**
 scrollarea) and two composites over `.tsrx` children (**LT-098** colorinfo, **LT-100** catalog).
@@ -29,6 +29,18 @@ variant matrix in CI and make its surface tests fail loudly instead of passing v
 green, so the gates the migrations cite read true. **LT-313/LT-314** are the LT-258 riders, run in
 a parallel slot. LT-313 is the last gate in front of LT-257 (template emission, pioneer 2's
 critical path) that does not wait on publishing.
+
+**Addendum (2026-09-25): the migration follow-ups.** The six migrations' reviews filed defects
+that sit on the components this iteration migrated, so the iteration closes them before it
+exits. **LT-316** is the systemic one: the compiler swaps authored `first()` selectors for
+synthesized ones, which narrows splitview's contract and widens colorinfo's. It is also the gate
+for the next batch. **LT-318** (dialog's connect-time scroll jump), **LT-320**/**LT-321**/**LT-322**
+(catalog: interim `data-product` fallback, missing badge site, empty `each()`) and **LT-317**
+(pagination's empty pre-JS spans) fix the served components. **LT-323** brings scrollarea back
+in line with ADR 0029. **LT-324** gives splitview and colorinfo the specs `test:variants` needs
+to verify them at all. Left in the backlog: LT-319 (the imperative `pass(all(…))` form is
+sanctioned, so the design question is low priority) and LT-325 (typings hygiene, no component
+behaviour).
 
 **Deliberately not here.** LT-104 lazyload waits on LT-303 (`truc:try`). LT-105 coloreditor and
 LT-107 listnav compose the tags this iteration migrates, so they follow once LT-291 holds. LT-095
@@ -47,7 +59,12 @@ exactly once, from the generated client, even where a compiled parent references
 `tsrx-imports.d.ts` is generated, not hand-written (LT-312); CI runs `test:variants`, and a
 broken twin fails it (LT-295, LT-296); a stale `variantOverrides` entry is a config error
 (LT-292); `bunx biome check ./server` exits 0 (LT-299); a server-data loop over `document` and a
-folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
+folded `crypto.randomUUID()` both fail the build (LT-313, LT-314). The migrated components
+preserve their authored contracts and match their twins' served behaviour: authored selectors
+emitted (LT-316), `data-product` restored and the catalog badge server-rendered (LT-320,
+LT-321), no connect-time dialog scroll (LT-318), pagination's spans filled pre-JS (LT-317), no
+empty `each()` (LT-322), scrollarea not Simulated (LT-323), and splitview and colorinfo green on
+both surfaces through their new specs (LT-324).
 
 **Next free task ID: LT-326.**
 
@@ -209,9 +226,114 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   cleanup). Scroll geometry is unverifiable in jsdom. Run the spec on both surfaces.
   **Review (2026-09-25):** Approved, including the choice to surface rather than reshape: the holder-object trick would have contorted the component around a classifier gap. The Simulated tier is an implementation gap against ADR 0029, not a component defect, and becomes LT-323. The wall-time figures stand as recorded. Moves to `DONE.md` once `test:variants module-scrollarea` is green.
 
+### Migration follow-ups — defects in this iteration's migrated components
+
+- [ ] LT-316: Emit the authored `first()` selector when it is structurally verifiable (LT-098–LT-103 review). **Gate: before the next migration batch.**
+  **Skill:** le-truc-dev
+  **Context:** A ref's query is always `resolveSelectorIn`'s synthesized selector
+  (`analysis/effects.ts`, the `addQuery(refAttr.name, selector, …)` in `emitTopEffects`). The
+  authored selector is only used to find the template element. Page-authored occurrences are
+  addressed by the authored selector's contract, so the rewrite changes behaviour:
+  - splitview: `button.divider` → `button[role="separator"]`. A divider without the role now
+    throws, and the message still names `button.divider`.
+  - colorinfo: `.hex` → `small`. This is wider and can bind the wrong `<small>`.
+  - dialog: only LT-101's `aria-*` tail saved the contract.
+  **Rule:** emit the authored selector when it (a) parses in `matchesSelector`'s grammar,
+  (b) is structurally unique over the own template, and (c) survives the LT-096 composed-shapes
+  check (else append the `:not(<child-tag> *)` exclusion, as for synthesized candidates). Fall
+  back to synthesis only when it fails. LT-101's `aria-*` tail stays as the fallback for
+  unauthored construct sites.
+  **Accept:** the corpus's generated clients change only where the two differed. List each
+  changed query in the handoff, and move snapshots only for those.
+
+- [ ] LT-318: module-dialog restores scroll and focus only after an actual open, on both surfaces (NOTES LT-101).
+  **Skill:** le-truc-dev
+  **Context:** The `open` watcher's close branch also runs on the initial `open = false`. It
+  calls `window.scrollTo({ top: 0 })`, so a dialog connected after load (lazy content, a DOM
+  move) jumps the page to the top, and it calls `dialog.close()` on a dialog that was never
+  opened. Fix both the `.ts` twin and the `.tsx` source identically: a `restore.opened` flag set
+  in the open branch gates the close branch's restore.
+  **Retire** the two `module-dialog` entries in `server/compiler/sim/classifications.ts`
+  (`scrollTo`, `dialog.close`), because the connect-time branch no longer runs. The baseline test
+  then proves the fix.
+  **Accept:** the module-dialog spec gains a leg: scroll the page, connect a dialog, assert the
+  scroll position is unchanged.
+
+- [ ] LT-320: Render-only `data-*` on compose sites may be dynamic; restore module-catalog's `data-product` (NOTES LT-100).
+  **Skill:** le-truc-dev
+  **Context:** A compose site's `class`/`id`/`data-*` splice onto the child's root only when
+  static (LT-090), because they double as addressing discriminators. A per-item
+  `data-product={product.id}` inside `products.map` is instead passed to the child's render as
+  an unknown arg and dropped. **Rule:** a dynamic `data-*` on a compose site renders through
+  `composeHostAttrs` with its server expression but is never a discriminator candidate (the
+  synthesizer already skips non-static values). Then restore module-catalog's `data-product` on
+  its looped `<FormSpinbutton>`. Drop the `?? item.getAttribute('name')` fallback, which extended
+  the contract and was accepted only as an interim (HOST_PROFILE: migrations preserve the
+  contract).
+  **Accept:** the catalog's server render carries `data-product` per item. The `.tsx`
+  `ComposeSiteAttrs` type already admits it.
+
+- [ ] LT-321: basic-button always renders its badge site, so a passed badge has somewhere to land (NOTES LT-100).
+  **Skill:** le-truc-dev
+  **Context:** `basic-button.tsrx` renders `span.badge` only under `@if (badge)`, and its client
+  binds the optional ref under a presence guard. A parent that composes the button with an empty
+  badge and drives it by `truc:pass` (module-catalog's cart count) never shows the count on a
+  server-rendered page. Render the span unconditionally and hide it when empty (CSS
+  `.badge:empty { display: none }`, or `hidden` bound to emptiness), in the same shape as the
+  twin's demo markup.
+  **Accept:** the basic-button spec still passes; a catalog server render shows the badge after
+  an increment.
+
+- [ ] LT-322: A loop whose body has no client constructs emits no `each()` (NOTES LT-100).
+  **Skill:** le-truc-dev
+  **Context:** module-catalog's `products.map(…)` compiles to an empty
+  `each(all('li', 'module-catalog: li missing'), product => {})`. The required `all()` makes a
+  zero-product catalog throw `MissingElementError` for nothing. Skip both the query and the
+  `each()` when the planned body is empty.
+  **Accept:** module-catalog's generated client has no `li` query. Corpus snapshots move only
+  where an empty `each()` was emitted.
+
+- [ ] LT-317: Fold text-child `host.<prop>` thunks server-side, as attribute thunks already are (NOTES LT-099).
+  **Skill:** le-truc-dev
+  **Context:** `emit-server.ts`'s `lazyValueExpression` renders `''` for any lazy child reading
+  `host`, while the `reactive` attribute case tries `hostPropMirrorExpr`, then
+  `hostDerivedExpr`. So a Parser-exposed prop has no clean text-site spelling: rendering it from
+  the arg warns (LTC039), and the thunk renders empty. module-pagination's `.value`/`.max` spans
+  ship empty before JS.
+  **Change:** route arrow-thunk lazy children through the same two folds before the `''`
+  fallback. Tier classification is unaffected (a fold only fills a site that already folds
+  Folded).
+  **Accept:** pagination's equivalence-audit connect diff for the two spans becomes empty. The
+  snapshot moves are listed and none widens a diff.
+
+- [ ] LT-323: A signal whose consumers are all client-only does not route Simulated — ADR 0029 conformance (NOTES LT-103). **Gate: before any pass simulates page occurrences.**
+  **Skill:** le-truc-dev
+  **Context:** ADR 0029 names module-scrollarea as the component that must never be simulated,
+  and says components whose reads sit in client-only positions fold. The migrated scrollarea
+  routes Simulated anyway. Its `createState(false)` flags have no render site, and
+  `harvest.ts`'s `substituteArgExpr` rule treats every never-rendered eager signal as LTC004
+  drift. module-catalog's `total` memo routes for the same reason (its only consumer is a
+  `truc:pass`). This is an implementation gap against an accepted ADR, not new design.
+  **Rule:** a signal none of whose consumers can reach served HTML — every read inside
+  `watch()`/`on()` callbacks, `bindState(internals, …)`, a `truc:pass`/`pass()` thunk, or host
+  writes of stubbed-API values — is not an LTC004 routing signal.
+  **Accept:** scrollarea classifies Folded or Static (either is fine; record which), and the
+  tier-corpus map moves it. LT-103's throwaway holder-object reshape showed that the classifier
+  is the only obstacle. Today's cost is noise (demo markup only: 474 / 341 / 330 ms Simulated vs
+  432 ms folded). The ~2.3 s returns the moment page occurrences are simulated, hence the gate.
+
+- [ ] LT-324: Write the missing specs for module-splitview and module-colorinfo.
+  **Skill:** le-truc-dev
+  **Context:** Both migrated with no `<tag>.spec.ts`, so `test:variants` never runs them on
+  either surface. Their only verification is a jsdom smoke. Cover:
+  - splitview: keyboard steps, Home/End, the preset `split`, vertical orientation, and pointer
+    drag (which jsdom cannot test).
+  - colorinfo: the connect state from `value`, a `value` write updating all six `basic-number`s,
+    and the label harvest.
+
 ### Parallel slot — the LT-258 riders
 
-- [ ] LT-313: Check a server-data `@for`'s iterable against the partial-readiness invariant (LT-258 review). **Gate: before LT-257.**
+- [x] LT-313: Check a server-data `@for`'s iterable against the partial-readiness invariant (LT-258 review). **Gate: before LT-257.** — done, pending review ⏳ (Tech Writer: review the LTC054 `where` phrase "the items of a loop", `fold-inputs.ts`)
   **Skill:** le-truc-dev
   **Context:** LT-258's `checkFoldInputs` covers every server-evaluated position except one:
   the iterable of a server-data loop, because `EachForIR` carries only `iterableText`, not a
@@ -224,7 +346,7 @@ folded `crypto.randomUUID()` both fail the build (LT-313, LT-314).
   `where` phrase (e.g. "the items of a loop"). Tech Writer reviews that phrase.
   **Check:** the probe above fails with LTC054 on both surfaces; the corpus is unchanged.
 
-- [ ] LT-314: `crypto.randomUUID()`/`getRandomValues()` fold silently — close the impure-ambient gap (LT-258 review).
+- [x] LT-314: `crypto.randomUUID()`/`getRandomValues()` fold silently — close the impure-ambient gap (LT-258 review). — done, pending review ⏳
   **Skill:** le-truc-dev
   **Context:** `impureAmbientCauses` (`evaluability.ts`) flags `Math.random()` as `rng` but
   not `crypto`, which sits in `JS_GLOBALS`. Verified at review: `<span id={crypto.randomUUID()}>`
