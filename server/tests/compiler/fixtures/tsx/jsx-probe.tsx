@@ -24,7 +24,7 @@ declare global {
 				class?: string | (() => string)
 				'data-value'?: string
 				'truc:pass'?: { [prop: string]: () => unknown }
-				'truc:case'?: string
+				'truc:html'?: string
 				onClick?: (event: MouseEvent) => void
 				children?: unknown
 			}
@@ -54,5 +54,5 @@ export const ProbeElement = () => (
 )
 
 export const ProbePass = () => (
-	<probe-el truc:pass={{ value: () => signalValue() }} truc:case="one" />
+	<probe-el truc:pass={{ value: () => signalValue() }} truc:html="<b>x</b>" />
 )

@@ -332,9 +332,6 @@ export const checkFoldInputs = (
 			case 'html':
 				checkReactive(attr.node, scope, `the HTML content of <${tag}>`)
 				return
-			case 'plural-case-type':
-				checkEvaluated(attr.node, `\`truc:case-type\` on <${tag}>`)
-				return
 			default:
 				return
 		}

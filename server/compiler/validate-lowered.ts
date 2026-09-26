@@ -148,8 +148,6 @@ const reportLoopsInBranches = (
  *   Two or more adjacent letters is the prose test: a single-letter fragment
  *   (basic-pluralize's `s` suffix spans) is per-instance page data, not
  *   catalog material.
- * - The static `truc:case-type` configuration (LT-190) for the translation
- *   census's reachability filter (effects/i18n.ts).
  * - LTC055 (LT-250, ADR 0030 s4): every `t.<key>` site against the key's
  *   parsed ICU pattern — called with exactly its arguments, or read bare
  *   when it takes none (`reportMessageCallSites`, i18n.ts).
@@ -169,8 +167,6 @@ const reportLoopsInBranches = (
  * - LT-059: a form-associated component's inner native control must have
  *   no `name`.
  * - LT-301: a loop inside an `if`/`switch` branch is LTC005.
- *
- * Returns the caseType configuration the IR carries.
  */
 export const validateLoweredComponent = (
 	ctx: ExtractContext,
@@ -191,7 +187,7 @@ export const validateLoweredComponent = (
 		extraction: SetupExtraction
 		fors: ReadonlyMap<AstNode, ForIR>
 	},
-): 'cardinal' | 'ordinal' | 'union' => {
+): void => {
 	const source = ctx.source
 	const exposeArgNode = extraction.exposeArgNode
 
@@ -219,36 +215,6 @@ export const validateLoweredComponent = (
 		})
 
 	if (i18nArgs) reportMessageCallSites(ctx, componentFn, i18nArgs)
-
-	// LT-190: a literal `'ordinal'`/`'cardinal'` — or an explicit
-	// `undefined`, which is cardinal by Intl's own default — proves the
-	// pruning type; a dynamic expression (basic-pluralize's
-	// `ordinal ? 'ordinal' : undefined`) or no declaration at all stays
-	// `'union'`, the runtime's own fallback, so the census only skips
-	// categories NEITHER configuration reaches in a locale.
-	let caseType: 'cardinal' | 'ordinal' | 'union' = 'union'
-	{
-		let sawType = false
-		let proven: 'cardinal' | 'ordinal' | null = null
-		let conflicted = false
-		walkTemplate(root, node => {
-			if (node.kind !== 'element') return
-			for (const attr of node.attrs) {
-				if (attr.kind !== 'plural-case-type') continue
-				sawType = true
-				const thisType: 'cardinal' | 'ordinal' | null =
-					attr.exprText === '"ordinal"'
-						? 'ordinal'
-						: attr.exprText === '"cardinal"' || attr.exprText === 'undefined'
-							? 'cardinal'
-							: null
-				if (thisType === null) conflicted = true
-				else if (proven === null) proven = thisType
-				else if (proven !== thisType) conflicted = true
-			}
-		})
-		if (sawType && !conflicted && proven !== null) caseType = proven
-	}
 
 	if (config)
 		for (const attr of config.observedAttributes) {
@@ -299,6 +265,4 @@ export const validateLoweredComponent = (
 	if (config?.form) reportNamedFormControls(ctx, root)
 
 	reportLoopsInBranches(ctx, root, fors)
-
-	return caseType
 }

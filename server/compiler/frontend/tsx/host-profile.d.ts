@@ -23,8 +23,7 @@
  *   `class`/`for` — `className`/`htmlFor` simply have no entry, so the
  *   React prior produces a plain tsc error (the TSRX021–024 family stays
  *   in force for `.tsrx` sources only). `data-*` is open through a
- *   pattern index signature; `truc:case`/`truc:case-type` are compiler-
- *   consumed on every element. `truc:pass` is deliberately NOT in the
+ *   pattern index signature. `truc:pass` is deliberately NOT in the
  *   common set — a pass replaces a child's Slot, so only pass TARGETS
  *   declare one, mirroring the `'truc:pass'` key on their args types.
  * - Wave-4 rule: every migrated tag gains its entry here in the same
@@ -184,8 +183,8 @@ declare namespace JSX {
 	 * The light-DOM attribute surface every element shares: global
 	 * attributes, the ARIA names the corpus templates use, the corpus's
 	 * event vocabulary (an `on()` handler may return a partial host update),
-	 * and the compiler-consumed `truc:case` pruning directives. `truc:pass`
-	 * is deliberately absent — see the module header.
+	 * and `truc:html`. `truc:pass` is deliberately absent — see the module
+	 * header.
 	 */
 	interface CommonLightDom {
 		class?: Reactive<string | null>
@@ -213,8 +212,6 @@ declare namespace JSX {
 		onKeydown?: (event: KeyboardEvent) => unknown
 		onKeyup?: (event: KeyboardEvent) => unknown
 		[key: `data-${string}`]: Reactive<string>
-		'truc:case'?: string
-		'truc:case-type'?: 'cardinal' | 'ordinal' | undefined
 		/** Sanitized raw markup, rendered before any authored children (LT-137). */
 		'truc:html'?: Reactive<string>
 		children?: unknown

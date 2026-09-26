@@ -206,7 +206,6 @@ export const assembleComponentIR = (
 		extraction,
 		resolved,
 		decls,
-		caseType,
 		plainImports,
 		leTrucImports,
 	}: {
@@ -218,7 +217,6 @@ export const assembleComponentIR = (
 		extraction: SetupExtraction
 		resolved: ResolvedTemplate & { fors: Map<AstNode, ForIR> }
 		decls: ModuleDecls
-		caseType: 'cardinal' | 'ordinal' | 'union'
 		plainImports: PlainImportIR[]
 		leTrucImports: LeTrucImport[]
 	},
@@ -314,7 +312,6 @@ export const assembleComponentIR = (
 		declaresI18n: declaresI18nOf(paramsNode),
 		langBinding: langBindingOf(paramsNode),
 		langArgDefault: langArgDefaultOf(paramsNode),
-		caseType,
 		setup: extraction.setup,
 		clientSetup: extraction.clientSetup,
 		plainSetup: extraction.plainSetup,

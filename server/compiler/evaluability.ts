@@ -406,7 +406,7 @@ export type HostPropRead = {
  * server args, signals (`.get()` is the harness's initial value), and the
  * transitive-pure setup consts `foldableRenderScope` admits. The spliced
  * thunk is IIFE-invoked inside the generated render function, so a call to
- * a setup const (`pluralCategory(host.lang, host.ordinal, host.count)`)
+ * a setup const (`formatCount(host.lang, host.count)`)
  * evaluates there exactly as the author wrote it; the same set doubles as
  * the impure-ambient WALK's scope, so an `Intl` constructor whose locale
  * is a server-known name (or a such-scoped call's parameter) counts as

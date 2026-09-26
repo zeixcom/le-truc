@@ -426,8 +426,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 				else if (attr.kind === 'html') {
 					creditRender(attr.node)
 					if (attr.reactive) creditRender(attr.thunk)
-				} else if (attr.kind === 'server' || attr.kind === 'plural-case-type')
-					creditRender(attr.node)
+				} else if (attr.kind === 'server') creditRender(attr.node)
 			}
 		} else if (node.kind === 'expr') creditRender(node.expr)
 		else if (node.kind === 'if') creditRender(node.test)

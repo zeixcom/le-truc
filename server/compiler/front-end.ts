@@ -271,7 +271,7 @@ export const runFrontEnd = (
 	)
 	if (!resolved) return done()
 
-	const caseType = validateLoweredComponent(ctx, {
+	validateLoweredComponent(ctx, {
 		root: resolved.root,
 		config: decls.config,
 		i18nMessages: decls.i18nMessages,
@@ -290,7 +290,6 @@ export const runFrontEnd = (
 			extraction,
 			resolved: { ...resolved, fors },
 			decls,
-			caseType,
 			plainImports,
 			leTrucImports,
 		}),

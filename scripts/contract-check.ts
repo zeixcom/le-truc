@@ -100,7 +100,6 @@ export const compileToy = (source, filename) => {
 		declaresI18n: false,
 		langBinding: null,
 		langArgDefault: null,
-		caseType: 'union',
 		setup: [],
 		clientSetup: [],
 		plainSetup: [],

@@ -94,7 +94,6 @@ const EMITTED_HARNESS_NAMES = [
 	'i18nRecord',
 	'isPending',
 	'items',
-	'pluralCategories',
 	'refStub',
 	'sanitizeHtml',
 	'styleAttr',
@@ -129,7 +128,7 @@ const importSpecifier = (name: string, local: string): string =>
  * `emitFor`/`emitListFor` used to close over inside `emitServerModule`,
  * threaded explicitly so the emitters can live at module scope. The scalar
  * fields are reassigned in place by the emitters — the save/restore
- * discipline around `buffer` and `pluralTypeExpr` and the unique-buffer
+ * discipline around `buffer` and the unique-buffer
  * counter sequences are unchanged from the closure era (the golden suite
  * is the proof).
  */
@@ -164,13 +163,6 @@ type EmitContext = {
 	 * (ADR 0030 sub-design 2): pulls the `i18nRecord` import into the module.
 	 */
 	usedI18nRecord: boolean
-	/**
-	 * The innermost enclosing `truc:case-type` expression (LT-173 step 7) —
-	 * declared on a case element itself or any ancestor, evaluated per
-	 * render call so a dynamic plural configuration prunes tightly in both
-	 * states. Null ⇒ the union fallback inside `pluralCategories`.
-	 */
-	pluralTypeExpr: string | null
 	/**
 	 * Extracted reactive-list templates, one pending queue per open element:
 	 * `<template>` is emitted after its container's close tag (outside the
@@ -964,8 +956,7 @@ const emitAsyncBoundary = (
  * The template emitter dispatcher (LT-225): one arm per `TemplateNode`
  * kind, with the two standalone branches (`emitAsyncBoundary`,
  * `emitCompose`) split out. The element tail resolves reactive-`@for`
- * output nodes to their loop, applies the `truc:case-type` scope, and
- * dispatches plain elements and `truc:case` alternatives.
+ * output nodes to their loop and dispatches plain elements.
  */
 const emit = (
 	ctx: EmitContext,
@@ -1086,63 +1077,30 @@ const emit = (
 		return
 	}
 	const loop = [...ctx.component.fors.values()].find(f => f.output === node)
-	const typeAttr = node.attrs.find(
-		(a): a is Extract<AttributeIR, { kind: 'plural-case-type' }> =>
-			a.kind === 'plural-case-type',
-	)
-	const previousTypeExpr = ctx.pluralTypeExpr
-	if (typeAttr) ctx.pluralTypeExpr = `(${typeAttr.exprText})`
 	if (loop) {
 		emitFor(ctx, loop, scope, depth)
-		ctx.pluralTypeExpr = previousTypeExpr
 		return
 	}
-	const emitPlainElement = (): void => {
-		// Reactive-for templates flush after this element's close tag — the
-		// spec shape (adopted items, </container>, then <template>) keeps the
-		// template out of the reconciled container's children.
-		ctx.templateQueue.push([])
-		emitElement(ctx, node, scope, depth)
-		// truc:html={dataRef} renders as sanitized raw children before authored
-		// children (dependency-provable, else omitted for the client pass).
-		const htmlAttr = node.attrs.find(a => a.kind === 'html') as
-			| Extract<AttributeIR, { kind: 'html' }>
-			| undefined
-		if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
-			ctx.used.add('sanitizeHtml')
-			ctx.lines.push(
-				`${tab(depth)}${ctx.buffer}.push(${ctx.h('sanitizeHtml')}(String(${htmlAttr.exprText})))`,
-			)
-		}
-		for (const child of node.children) emit(ctx, child, scope, depth)
-		if (!isVoidElement(node.tag))
-			ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</${node.tag}>')`)
-		ctx.lines.push(...(ctx.templateQueue.pop() ?? []))
-	}
-	// A `truc:case` element (ADR 0030 sub-design 6, LT-173 step 7) is one
-	// plural alternative: pruned to the locale's actual category set, read
-	// from the platform at render time — never a hand-maintained table.
-	// The union of cardinal and ordinal is the sanctioned fallback (the
-	// compiler cannot prove which `type` the component's own plural logic
-	// configures), and a superset prunes only categories NEITHER type
-	// uses. The locale expression is the component's own bound `lang` —
-	// its presence the analyzer enforces when the marker is authored.
-	const caseAttr = node.attrs.find(
-		(a): a is Extract<AttributeIR, { kind: 'plural-case' }> =>
-			a.kind === 'plural-case',
-	)
-	if (caseAttr) {
-		ctx.used.add('pluralCategories')
+	// Reactive-for templates flush after this element's close tag — the
+	// spec shape (adopted items, </container>, then <template>) keeps the
+	// template out of the reconciled container's children.
+	ctx.templateQueue.push([])
+	emitElement(ctx, node, scope, depth)
+	// truc:html={dataRef} renders as sanitized raw children before authored
+	// children (dependency-provable, else omitted for the client pass).
+	const htmlAttr = node.attrs.find(a => a.kind === 'html') as
+		| Extract<AttributeIR, { kind: 'html' }>
+		| undefined
+	if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
+		ctx.used.add('sanitizeHtml')
 		ctx.lines.push(
-			`${tab(depth)}if (${ctx.h('pluralCategories')}(${ctx.component.langBinding}${ctx.pluralTypeExpr ? `, ${ctx.pluralTypeExpr}` : ''}).has('${caseAttr.category}')) {`,
+			`${tab(depth)}${ctx.buffer}.push(${ctx.h('sanitizeHtml')}(String(${htmlAttr.exprText})))`,
 		)
-		emitPlainElement()
-		ctx.lines.push(`${tab(depth)}}`)
-		ctx.pluralTypeExpr = previousTypeExpr
-		return
 	}
-	emitPlainElement()
-	ctx.pluralTypeExpr = previousTypeExpr
+	for (const child of node.children) emit(ctx, child, scope, depth)
+	if (!isVoidElement(node.tag))
+		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</${node.tag}>')`)
+	ctx.lines.push(...(ctx.templateQueue.pop() ?? []))
 }
 
 /* === Exported Functions === */
@@ -1206,14 +1164,13 @@ export const emitServerModule = (
 		armCounter: 0,
 		childrenCounter: 0,
 		usedI18nRecord: false,
-		pluralTypeExpr: null,
 		templateQueue: [],
 		foldScope: foldableRenderScope(component),
 		h: name => (renderScope.has(name) ? `__${name}` : name),
 	}
 	// The emitters mutate these in place and never rebind them, so the
 	// assembly tail binds the identities directly; the mutable scalars
-	// (`buffer`, the counters, `usedI18nRecord`, `pluralTypeExpr`) stay
+	// (`buffer`, the counters, `usedI18nRecord`) stay
 	// ctx-only.
 	const { lines, used, composeImports, templateQueue } = ctx
 
@@ -1515,8 +1472,8 @@ export const emitServerModule = (
 		)
 	const argsHelperLines: string[] | null =
 		// Only components whose SERVER bytes the locale actually determines
-		// (the reserved record: folded catalog words, `truc:case` pruning,
-		// the materialized root `lang`) qualify. A `lang`-arg component
+		// (the reserved record: folded catalog words and the materialized
+		// root `lang`) qualify. A `lang`-arg component
 		// without `i18n` (basic-number) renders its locale-dependent value
 		// CLIENT-side, so replacing its authored bytes would only empty them.
 		component.declaresI18n &&

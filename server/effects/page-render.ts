@@ -7,16 +7,15 @@
  * client upgraded them. That left the ambient-`lang` walk a client-only
  * mechanism — `<section lang="cy">` wrapping arbitrary occurrences resolved
  * per occurrence at connect, so the SERVED bytes could never answer "what
- * locale does this occurrence render in" (no `Intl` fold, no `truc:case`
- * pruning, no catalog words, no materialized root `lang` for a positional
- * occurrence).
+ * locale does this occurrence render in" (no `Intl` fold, no catalog words,
+ * no materialized root `lang` for a positional occurrence).
  *
  * This pass runs over assembled page HTML and replaces an occurrence with
  * the component's own server render when ALL of these hold:
  *
  * - the component is **Folded-tier and declares the reserved `i18n`
  *   parameter** — its server bytes actually depend on the locale (folded
- *   catalog words, `truc:case` pruning, the materialized root `lang`).
+ *   catalog words, the materialized root `lang`).
  *   Simulated-tier occurrences stay authored: the simulation realm cannot
  *   run per watch rebuild (ADR 0027 sub-design 10). A `lang`-arg component
  *   WITHOUT `i18n` (basic-number) computes its locale-dependent value
@@ -143,8 +142,8 @@ const qualifyingEntries = (
 	const entries = new Map<string, RegistryEntry>()
 	for (const entry of Object.values(registry) as RegistryEntry[]) {
 		// Only components whose SERVER bytes the locale determines — the
-		// reserved-record declarers (folded catalog words, `truc:case`
-		// pruning, the materialized root `lang`). A `lang`-arg component
+		// reserved-record declarers (folded catalog words, the
+		// materialized root `lang`). A `lang`-arg component
 		// without `i18n` (basic-number) computes its locale-dependent value
 		// CLIENT-side, so a server render would only EMPTY its authored
 		// text; and Simulated-tier occurrences stay authored regardless —

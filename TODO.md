@@ -78,41 +78,13 @@ default (LT-138). Across all of it: warning baseline 0, tier census unchanged fr
 iteration's opening measurement (record it before the first change), and `bun run build:docs`
 and `check:links` pass.
 
-**Next free task ID: LT-353.**
+**Next free task ID: LT-354.**
 
 ---
 
 ### Gates (run first)
 
 ### Build half (LT-250 → LT-308 → LT-218 → LT-252 → LT-251; LT-253 after LT-252)
-
-- [ ] LT-251: Delete the per-category machinery — `truc:case`, pruning, `pluralCategories`, the dotted-key rule, the census reachability carve-outs. **Depends on LT-250 and LT-252 (nothing may still author the retired vocabulary when this lands).**
-  **Skill:** le-truc-dev
-  **Context:** The deletion half of the LT-240 ruling (ADR 0030 s5/s6 amended). Survey at
-  ruling time: **86 references across 25 non-generated files.** Not all are deletions — count
-  it as the touch set, not the win.
-  - **Vocabulary:** `truc:case` / `truc:case-type` out of `classify-attributes.ts`, `ir.ts`,
-    `validate-lowered.ts`, `registry.ts`, `runtime.ts`, `assemble-ir.ts`, both front-end
-    lowerings, and both surface profiles (`frontend/tsx/host-profile.d.ts`,
-    `frontend/tsrx/globals.d.ts`).
-  - **Pruning:** ADR 0030 s6's per-locale alternative pruning in `emit-server.ts` and its
-    `pluralCategories` plumbing — including the cardinal∪ordinal union fallback, which has no
-    successor because the pattern states which type is in play.
-  - **Census:** the reachability carve-outs in BOTH walks (the LT-190 missing/stale direction
-    and the LT-217 orphan direction), and the registry's case-type input to them. Every locale
-    now carries the same key set; an orphan is unconditional.
-  - **Shape rule:** the `<key>.<category>` convention and its CLDR-category validation;
-    **LTC008 retires** (LT-189 item 2 withdrawn accordingly). Retirement runs
-    `tech-writer`'s `workflows/error-message-lifecycle.md` in full — keep-member treatment in
-    the `DiagnosticCode` union per LT-223, and sweep
-    `.agents/skills/le-truc/references/errors.md`, HOST_PROFILE.md and LE_TRUC_COMPILER.md.
-  **Docs:** the authoritative documents were swept on 2026-09-24 (HOST_PROFILE.md,
-  LE_TRUC_COMPILER.md, SERVER.md, ADR 0032/0041). Still owed here: `CHANGELOG.md`
-  [Unreleased] drops its `truc:case` and per-category-key Added entries (the feature
-  never ships), via `changelog-keeper`.
-  **Check:** `grep -r "truc:case\|pluralCategor\|caseType"` over non-generated sources returns
-  nothing outside the retirement notes; no fixture still pins per-locale pruned markup; gates
-  green; warning baseline 0.
 
 - [ ] LT-253: MF2 migration insurance — round-trip fixtures and the documented rebaseline procedure. **Depends on LT-252.**
   **Skill:** le-truc-dev
@@ -247,7 +219,12 @@ and `check:links` pass.
      wording if split from the generic message. Batch with LT-189 items 2–8.
   5. CHANGELOG `[Unreleased]` Added bullets (client-string channel, patterns, census
      check); an AGENTS.md "Surprising Behaviors" i18n bullet if the changed `t`-in-thunk
-     rule warrants one.
+     rule warrants one. Also two stale clauses LT-251's review found in existing bullets.
+     The LT-195 bullet teaches spinbutton's hidden `.increment-label` span as "the
+     rendered-alternatives idiom, ADR 0030 sub-design 6", but LT-219 removed that span and
+     s6 now says the opposite. The "Host-derived folds" bullet's "lets an i18n component's
+     plural category fold" names basic-pluralize's deleted `pluralCategory` helper, so keep
+     the colorgraph example as the reason.
   **ADR 0037 rider (2026-09-21):** this round also carries the branch-DOM-lifetime copy —
   the HOST_PROFILE control-flow table row and the arrow-thunk section's reversal, the
   ARCHITECTURE/AGENTS "`@if` cannot read signals" sentences, and the new construct's
@@ -261,9 +238,10 @@ and `check:links` pass.
   **Context:** Three copy items queued from landed work; batch them so the messages read as
   one voice. All follow `workflows/error-message-lifecycle.md`.
   **S0 hold — RESOLVED 2026-09-19 (LT-240 ruled: ICU MF1).** Consequences for the held items:
-  **item 2 is WITHDRAWN** — the dotted-key CLDR shape rule is deleted by LT-251, so LTC008's
-  message is retired rather than reworded; the retirement still runs the error-message
-  lifecycle sweep (that is LT-251's obligation, verified here). **Item 8 proceeds**, with one
+  **item 2 is WITHDRAWN** — the dotted-key CLDR shape rule is deleted by LT-251, so its
+  message under LTC008 is gone rather than reworded. **LTC008 itself survives** (LT-251
+  review, 2026-09-26): it is the general source-shape code, and the dotted-key rule was one
+  of its messages, so there is no retired code and no sweep to verify. **Item 8 proceeds**, with one
   amendment: the orphan census/sync copy must no longer reference reachability or plural
   categories — every locale now carries the same key set, so an orphan is unconditional.
   LT-219's census wording is no longer "placeholder preservation" but the three cases in that
@@ -288,8 +266,8 @@ and `check:links` pass.
      provider checks `event.context`, never `instanceof`.
   2. ~~**LTC008's dotted-key message** (LT-190 handoff)~~ — **withdrawn 2026-09-19.** The
      rule the message documents (a dot-suffix must name one of the six CLDR categories) is
-     deleted by the LT-240 ruling; the code is retired in LT-251, which owns the lifecycle
-     sweep. Nothing to word here.
+     deleted by the LT-240 ruling, and LT-251 deleted that message. LTC008 stays for its
+     other source-shape messages. Nothing to word here.
   3. **LTC047's literal-prose warning** (LT-173 handoff): final copy; the single-letter
      exemption (page data, not prose) must survive the rewording, and the missing-
      *translation*-rides-the-census distinction is the point of the message.

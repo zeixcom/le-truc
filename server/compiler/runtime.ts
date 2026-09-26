@@ -184,43 +184,6 @@ export const deriveStore = <T>(compute: () => T): ServerCell<T> =>
 export const expose = (_props: Record<string, unknown>): void => {}
 
 /**
- * The CLDR plural categories `locale` actually uses, read from the
- * platform at render time — never a hand-maintained table (same posture as
- * ADR 0024 s4's ARIA mapping). Called WITH a type (a `truc:case-type`
- * expression, evaluated per render call — `undefined` means the `Intl`
- * default, cardinal, exactly as `Intl.PluralRules(lang, undefined)` does),
- * the set is that configuration's alone (ADR 0030 sub-design 6: "prune by
- * the configured type"). Called WITHOUT one — a `truc:case` group whose
- * configuration the author did not declare — it is the UNION of cardinal
- * and ordinal, a superset that prunes only the categories NEITHER type
- * uses, so the element renders exactly when its alternative can ever
- * match. The precise per-count selection stays the client's `hidden`
- * toggles either way. The rest parameter is the arity check: an explicit
- * `undefined` second argument is cardinal, a MISSING one is the union.
- * (The element type includes `undefined` for exactly the authored shape
- * `truc:case-type={ordinal ? 'ordinal' : undefined}` — the value the
- * pruning splice receives before this widening was 6 tsc errors against
- * the generated server module, LT-202.)
- */
-export const pluralCategories = (
-	locale: string,
-	...type: readonly ('cardinal' | 'ordinal' | undefined)[]
-): ReadonlySet<string> => {
-	const options: Intl.PluralRulesOptions[] =
-		type.length === 0
-			? [{}, { type: 'ordinal' }]
-			: [type[0] === 'ordinal' ? { type: 'ordinal' } : {}]
-	const categories = new Set<string>()
-	for (const option of options)
-		for (const category of new Intl.PluralRules(
-			locale,
-			option,
-		).resolvedOptions().pluralCategories)
-			categories.add(category)
-	return categories
-}
-
-/**
  * Stand-in for a client-only ambient the server render function still
  * has to DECLARE — a `first()`-bound element reference, `host`,
  * `internals` (LT-121). Those name connect-time DOM the server never

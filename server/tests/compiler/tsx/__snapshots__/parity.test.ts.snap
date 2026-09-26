@@ -71,7 +71,7 @@ declare global {
  * Shows locale-aware plural forms of content based on a count.
  * Use it for internationalised prose where the correct plural form must be shown —
  * accessibility tools and screen readers benefit from grammatically correct output.
- * Reveal children by class: \`.none\` (0), \`.some\` (>0), and \`.zero/.one/.two/.few/.many/.other\` per CLDR plural rules.
+ * Reveal children by class: \`.none\` (0), \`.some\` (>0); \`.tasks\` carries the noun, one ICU plural pattern per locale.
  *
  * @attribute {string} [lang] - Config attribute only (not a reactive property). BCP 47 locale tag; the element's own attribute wins, else the nearest ancestor's, else \`en\`. The server renders the effective locale onto it; the client materializes the walked locale at connect.
  * @attribute {boolean} [ordinal=false] - Use ordinal plural rules (1st, 2nd, 3rd, ...) instead of cardinal. Presence-only; read once at connect time.

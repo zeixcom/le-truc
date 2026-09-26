@@ -1,6 +1,6 @@
 /**
  * The reserved `i18n` parameter's compiler-side vocabulary (ADR 0030,
- * LT-173). Three concerns live here, all pure:
+ * LT-173). Two concerns live here, both pure:
  *
  * - `readI18nDecl` — extraction of `export const i18n = { key: 'Source', … }`,
  *   the component's own message keys with their source-locale strings inline
@@ -13,11 +13,6 @@
  *   locale is bound and what its authored `lang` default is (ADR 0030
  *   sub-design 3's precedence: an authored `lang` arg, or one supplied at a
  *   compose site, wins over the record's locale).
- * - `PLURAL_CATEGORIES` — the six CLDR cardinal category names, for
- *   validating `truc:case` (the per-locale pruning marker, ADR 0030
- *   sub-design 6). The CATEGORY SET a locale uses is never read from this
- *   table — that comes from the platform at render time
- *   (`runtime.ts`'s `pluralCategories`); this is only the spelling check.
  */
 
 import type { AstNode } from './ast-node'
@@ -26,21 +21,10 @@ import { diagnostic } from './diagnostics'
 import { type MessageArg, type MessageArgKind, parseMessage } from './icu/parse'
 import type { ExtractContext } from './ir'
 
-/** The CLDR cardinal plural categories a `truc:case` value may name. */
-export const PLURAL_CATEGORIES: ReadonlySet<string> = new Set([
-	'zero',
-	'one',
-	'two',
-	'few',
-	'many',
-	'other',
-])
-
 const messagesKey = (node: unknown): string | null => {
 	if (!isNode(node)) return null
 	if (node.type === 'Identifier') return String(node.name)
-	// LT-190: quoted keys — the `<key>.<category>` convention spells its dot
-	// in a string literal (`'task.other'`), which no bare identifier can be.
+	// A quoted key (`'task-count'`) names what no bare identifier can.
 	if (node.type === 'Literal' && typeof node.value === 'string')
 		return node.value
 	return null
@@ -139,25 +123,6 @@ export const readI18nDecl = (
 			)
 		}
 	}
-	// LT-190: a dotted key's suffix must be a CLDR plural category — the
-	// `<key>.<category>` convention is how per-category word forms (Welsh
-	// tasg/tasgiau, Arabic's six forms, English's irregular person/people)
-	// ride the flat catalog. A typo'd suffix (`task.onee`) would otherwise
-	// silently never resolve; the census treats the suffix as reachability
-	// input, so non-category suffixes would corrupt that too.
-	for (const key of Object.keys(messages)) {
-		const dot = key.lastIndexOf('.')
-		if (dot === -1) continue
-		const suffix = key.slice(dot + 1)
-		if (!PLURAL_CATEGORIES.has(suffix))
-			ctx.diagnostics.push(
-				diagnostic.invalidSource(
-					ctx.source,
-					init.start,
-					`\`export const i18n\` key \`${key}\` — a dotted key must end in a CLDR plural category (zero, one, two, few, many, other), e.g. \`task.one\` / \`task.other\` (ADR 0030 sub-design 4, LT-190). Rename the key with a category suffix, or drop the dot.`,
-				),
-			)
-	}
 	return { messages, args }
 }
 
@@ -166,7 +131,7 @@ export const readI18nDecl = (
  * null. Searched at the top level of the pattern and inside a nested
  * `i18n` destructuring (`i18n: { lang }` — ADR 0030's example shape), so
  * either spelling gives the emitter a render-scope name for the effective
- * locale (the root `lang` attribute and `truc:case` pruning both need it).
+ * locale (the root `lang` attribute needs it).
  * A component binding `lang` in BOTH places cannot compile (duplicate
  * binding), so first match wins is unambiguous.
  */

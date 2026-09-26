@@ -297,36 +297,6 @@ export type AttributeIR =
 	  }
 	| {
 			/**
-			 * `truc:case="one"` — a plural-alternative marker (ADR 0030
-			 * sub-design 6, LT-173 step 7): the element is one alternative
-			 * per CLDR plural category, and the server prunes it to the
-			 * locale's actual category set, read from the platform
-			 * (`runtime.ts`'s `pluralCategories`) at render time. Consumed
-			 * by the compiler; renders no attribute. The client keeps the
-			 * element's `hidden` toggle over the pruned set, addressed with
-			 * `'maybe'` cardinality (the element may not render at all).
-			 */
-			kind: 'plural-case'
-			category: string
-	  }
-	| {
-			/**
-			 * `truc:case-type={expr}` — the `Intl.PluralRules` type the
-			 * truc:case group prunes by, evaluated per render call so a
-			 * dynamic configuration (`ordinal ? 'ordinal' : undefined`)
-			 * prunes tightly in both states. Declared on the case element
-			 * itself or any ancestor (the emitter threads it down the tree);
-			 * `undefined` means the union fallback (ADR 0030 sub-design 6's
-			 * "prune by the configured type" — the configured type here is
-			 * the component's own, per call). Consumed by the compiler;
-			 * renders no attribute.
-			 */
-			kind: 'plural-case-type'
-			exprText: string
-			node: AstNode
-	  }
-	| {
-			/**
 			 * An element bound to a name usable as a client-side reference. On
 			 * a RAW (dashed-tag) element this is never authored as a JSX
 			 * attribute — `classifyAttribute` hard-errors a bare `ref={}`
@@ -532,8 +502,8 @@ export type ComponentIR = {
 	/**
 	 * The parameter-bound identifier for the component's locale (`lang`, or
 	 * the nested `i18n: { lang }` spelling), or null. The emitter uses it
-	 * for the root `lang` attribute and `truc:case` pruning; null means the
-	 * component binds no locale it could render.
+	 * for the root `lang` attribute; null means the component binds no
+	 * locale it could render.
 	 */
 	langBinding: string | null
 	/**
@@ -541,16 +511,6 @@ export type ComponentIR = {
 	 * sub-design 3's precedence anchor for the record compose sites build.
 	 */
 	langArgDefault: string | null
-	/**
-	 * The component's `truc:case-type` configuration, summarized statically
-	 * for the translation census (LT-190): the plural type its `truc:case`
-	 * groups prune by. `'ordinal'`/`'cardinal'` when every declared type
-	 * expression is that provable constant (an explicit `undefined` is
-	 * cardinal — Intl's own default); `'union'` when the component declares
-	 * no type or a dynamic expression — the runtime's own fallback, so the
-	 * census only skips categories NEITHER configuration reaches in a locale.
-	 */
-	caseType: 'cardinal' | 'ordinal' | 'union'
 	/**
 	 * All setup statements verbatim, in source order — helper consts, signal
 	 * declarations, and `expose()`. The generated server render function

@@ -38,7 +38,6 @@ import {
 } from '../compiler/census'
 import { DEFAULT_RUNTIME_IMPORT } from '../compiler/emit-paths'
 import { PAGE_AMBIENT_TYPES } from '../compiler/fold-inputs'
-import { PLURAL_CATEGORIES } from '../compiler/i18n'
 import {
 	carriedKinds,
 	clientFallsBack,
@@ -46,7 +45,6 @@ import {
 } from '../compiler/icu/evaluate'
 import { literalOf, parseMessage } from '../compiler/icu/parse'
 import type { RegistryEntry } from '../compiler/registry'
-import { pluralCategories } from '../compiler/runtime'
 import { DEFAULT_LOCALE, LOCALES } from '../config'
 import { getFilePath, writeFileSafe } from '../io'
 
@@ -213,9 +211,8 @@ export const collectI18n = async (
 	const { locales, overrides, manifest } =
 		catalogs ?? (await readCatalogs(i18nDir))
 	const sources = new Map<string, Record<string, string>>()
-	// Every registry entry by tag — the orphan walk needs each component's
-	// `caseType` for the reachability carve-out, including components that
-	// declare no keys at all.
+	// Every registry entry by tag — the orphan walk resolves each catalog
+	// key's component, including components that declare no keys at all.
 	const byTag = new Map<string, RegistryEntry>()
 	const gaps: TranslationGap[] = []
 	for (const entry of entries) {
@@ -235,27 +232,8 @@ export const collectI18n = async (
 		for (const locale of locales) {
 			const localeOverrides = overrides.get(locale) ?? {}
 			const localeManifest = manifest.get(locale) ?? {}
-			// LT-190: the locale's reachable category set for this component's
-			// configured `truc:case-type` — the platform's own answer (never a
-			// table), union of cardinal and ordinal when the compiler could not
-			// prove the type. A `<key>.<category>` message whose category sits
-			// outside this set lives in a pruned span that cannot render in
-			// this locale, so its absence is the translator's nothing-to-do,
-			// not a gap.
-			const reachableCategories =
-				entry.caseType === 'union'
-					? pluralCategories(locale)
-					: pluralCategories(locale, entry.caseType)
 			for (const [key, source] of Object.entries(entry.i18nMessages)) {
 				const compound = `${entry.tag}.${key}`
-				const dot = key.lastIndexOf('.')
-				const category = dot === -1 ? null : key.slice(dot + 1)
-				if (
-					category !== null &&
-					PLURAL_CATEGORIES.has(category) &&
-					!reachableCategories.has(category)
-				)
-					continue
 				if (localeOverrides[compound] === undefined) {
 					gaps.push({ key: compound, locale, status: 'missing' })
 					continue
@@ -274,37 +252,18 @@ export const collectI18n = async (
 			}
 		}
 	}
-	// The orphan walk (LT-196): catalog keys nothing declares. DECLARATION
-	// is checked BEFORE reachability (LT-217): the LT-190 carve-out exists
-	// to protect a wholesale translation of a key the component DECLARES —
-	// `task.one` in an `{other}`-only locale is a real translation of a
-	// span this locale prunes. An UNDECLARED key (a translator's typo, a
-	// renamed key, a deleted component) is sheltered by no category set:
-	// nothing prunes a span that was never authored, so it reports in
-	// every locale — de/lv/zh's missing `few` no longer hides rename
-	// residue there.
+	// The orphan walk (LT-196): catalog keys nothing declares — a
+	// translator's typo, a renamed key, a deleted component. Every locale
+	// carries the same key set (one ICU pattern per key, LT-251), so an
+	// undeclared key is an orphan in every locale, unconditionally.
 	for (const locale of locales) {
 		const localeOverrides = overrides.get(locale) ?? {}
 		for (const compound of Object.keys(localeOverrides).sort()) {
 			const dot = compound.indexOf('.')
 			const tag = dot === -1 ? compound : compound.slice(0, dot)
 			const key = dot === -1 ? '' : compound.slice(dot + 1)
-			const entry = byTag.get(tag)
-			if (entry === undefined || entry.i18nMessages?.[key] === undefined) {
+			if (byTag.get(tag)?.i18nMessages?.[key] === undefined)
 				gaps.push({ key: compound, locale, status: 'orphaned' })
-				continue
-			}
-			// Declared: the carve-out applies, and only a category-suffixed
-			// key can ever be unreachable — anything else falls out with no
-			// `pluralCategories` call at all.
-			const keyDot = key.lastIndexOf('.')
-			const category = keyDot === -1 ? null : key.slice(keyDot + 1)
-			if (category === null || !PLURAL_CATEGORIES.has(category)) continue
-			const reachableCategories =
-				entry.caseType === 'union'
-					? pluralCategories(locale)
-					: pluralCategories(locale, entry.caseType)
-			if (!reachableCategories.has(category)) continue
 		}
 	}
 	return { locales, sources, overrides, gaps }

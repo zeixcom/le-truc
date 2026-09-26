@@ -291,6 +291,23 @@ iteration's review files follow-ups.
   `#latvian-test`). **Channel:** none (a test). **Check:** editing `form-tokenbox.added` in de.json
   without touching the page fails the test.
 
+- [ ] LT-353: Reject unrecognized `truc:`-namespaced attributes at classification, on both surfaces (LT-251 review).
+  **Skill:** le-truc-dev
+  **Context:** `truc:` is the host-owned attribute namespace (LT-128), but
+  `classify-attributes.ts` recognizes names one by one (`truc:pass`, `truc:html`) and lets
+  anything else fall through to the ordinary static/server arms. So a retired `truc:case`, or
+  a typo like `truc:htm`, renders as a literal attribute the browser ignores: silently wrong.
+  That is the same failure LT-222 closed for `class:`. In `.tsx` a tsc error covers authored
+  names, but the compiler itself still accepts them, so the two surfaces diagnose differently
+  (the LT-242 parity bar). After the recognized names, reject any other `truc:*` name as
+  LTC006 (malformed or unsupported attribute shape). Name the known vocabulary in the message,
+  and give a retired name (`truc:case`/`truc:case-type`) a pointer to the ICU pattern
+  replacement (ADR 0030 s4). **Channel:** compiler. **Tier:** 1 Prevented (statically
+  decidable, no runtime half). **Copy:** the developer drafts it and Tech Writer owns the
+  final wording (error-message lifecycle). Batch it into LT-189 if that round is still open.
+  **Check:** add a `diagnostic-parity.test.ts` row for a `truc:bogus` attribute on both
+  surfaces; the corpus stays warning-free.
+
 ---
 
 ## P2b — Compiler product-readiness: equivalence contract, consolidation, library substitutions (external review + reflection, 2026-09-18)

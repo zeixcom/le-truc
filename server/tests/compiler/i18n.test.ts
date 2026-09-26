@@ -2,7 +2,7 @@
  * The reserved `i18n` parameter and the catalog pipeline (ADR 0030,
  * LT-173): compiler-side units — the inline declaration, the reserved-name
  * guard, the record supply at compose sites, the lang precedence, the
- * root-lang render, `truc:case` pruning — plus the build-side census and
+ * root-lang render — plus the build-side census and
  * the generated record runtime.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
@@ -89,34 +89,21 @@ describe('LTC047 — untranslated literal prose (LT-173 step 5)', () => {
 	})
 })
 
-/* === The `<key>.<category>` convention (LT-190) === */
+/* === Quoted and dotted keys are ordinary keys (LT-251) === */
 
-describe('dotted message keys (LT-190)', () => {
-	test('a category-suffixed key compiles clean', () => {
+describe('quoted message keys', () => {
+	test('a dotted key is an ordinary key — no category-suffix rule (LT-251)', () => {
+		// The `<key>.<category>` convention retired with the one-ICU-pattern
+		// model: any suffix, or none, compiles clean.
 		const { component, diagnostics } = compile(
 			catalogSource(
-				`{t['task.other']}`,
-				`export const i18n = { 'task.other': 'tasks' }`,
+				`{t['task.onee']}`,
+				`export const i18n = { 'task.onee': 'tasks' }`,
 			),
 		)
 		expect(diagnostics).toEqual([])
 		if (!component) throw new Error('must compile')
-		expect(component.serverCode).toContain(`t['task.other']`)
-	})
-
-	test('a dotted key whose suffix is not a CLDR category is a shape error', () => {
-		const { diagnostics } = compile(
-			catalogSource(`x`, `export const i18n = { 'task.onee': 'tasks' }`),
-		)
-		const hit = diagnostics.find(d => d.code === 'LTC008')
-		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('CLDR plural category')
-		expect(hit?.message).toContain('task.onee')
-	})
-
-	test('a bare (undotted) key is unaffected by the suffix rule', () => {
-		const { diagnostics } = compile(catalogSource(`{t.task}`))
-		expect(diagnostics).toEqual([])
+		expect(component.serverCode).toContain(`t['task.onee']`)
 	})
 })
 
@@ -291,62 +278,6 @@ export function C({ lang = 'en', i18n: { t } }: { lang?: string; i18n: I18n })
 	})
 })
 
-/* === truc:case — per-locale pruning (ADR 0030 sub-design 6) === */
-
-const caseSource = (paramPattern: string, paramType: string) => `
-export function C({ count, ${paramPattern} }: { count: number; ${paramType} })
-@{
-	const cat = (locale: string, n: number) => new Intl.PluralRules(locale).select(n)
-	expose({})
-	<>
-		<c-el {count}>
-			<span class="one" truc:case="one" hidden={() => cat(host.lang, host.count) !== 'one'}>x</span>
-			<span class="other" truc:case="other" hidden={() => cat(host.lang, host.count) !== 'other'}></span>
-		</c-el>
-		<style>c-el { color: red }</style>
-	</>
-}`
-
-describe('truc:case pruning (LT-173 step 7)', () => {
-	test("each case element is pruned by the locale's platform category set", () => {
-		const { component, diagnostics } = compile(
-			caseSource(`lang = 'en', i18n: { t }`, `lang?: string; i18n: I18n`),
-		)
-		if (!component) throw new Error(JSON.stringify(diagnostics))
-		expect(component.serverCode).toContain(
-			`if (pluralCategories(lang).has('one')) {`,
-		)
-		expect(component.serverCode).toContain(
-			`if (pluralCategories(lang).has('other')) {`,
-		)
-	})
-
-	test('a case element without a bound locale is an error', () => {
-		const { diagnostics } = compile(caseSource(``, ``))
-		const hit = diagnostics.find(d => d.code === 'LTC005')
-		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('needs a locale')
-	})
-
-	test('a non-category literal is rejected at classification', () => {
-		const source = `
-export function C({ lang = 'en' }: { lang?: string })
-@{
-	expose({})
-	<>
-		<c-el {lang}>
-			<span class="one" truc:case="several" hidden={() => host.lang !== 'one'}>x</span>
-		</c-el>
-		<style>c-el { color: red }</style>
-	</>
-}`
-		const { diagnostics } = compile(source)
-		const hit = diagnostics.find(d => d.code === 'LTC006')
-		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('CLDR plural category literal')
-	})
-})
-
 /* === The translation census (ADR 0030 sub-design 5, LT-173 step 4) === */
 
 describe('the translation census', () => {
@@ -376,45 +307,36 @@ describe('the translation census', () => {
 	})
 })
 
-/* === Census reachability for `<key>.<category>` keys (LT-190) === */
+/* === Every locale carries the same key set (LT-251) === */
 
-describe('the census skips pruned categories (LT-190)', () => {
-	// A synthetic corpus entry — collectI18n reads only tag/i18nMessages/
-	// caseType off an entry. The catalogs are INJECTED (empty: the probe
-	// declares keys no catalog carries yet), so the synthetic corpus is the
-	// walk's whole world; the locale facts are still the platform's own:
-	// de's cardinal set is {one, other}, cy's is all six.
+describe('the census has no reachability carve-out (LT-251)', () => {
+	// A synthetic corpus entry — collectI18n reads only tag/i18nMessages
+	// off an entry. The catalogs are INJECTED (empty: the probe declares
+	// keys no catalog carries yet), so the synthetic corpus is the walk's
+	// whole world.
 	const probe = {
 		tag: 'census-probe',
 		i18nMessages: { 'label.one': 'one', 'label.two': 'two' },
-		caseType: 'cardinal',
 	} as unknown as RegistryEntry
 
-	test("a category outside the locale's platform set is not a gap", async () => {
+	test('every declared key is missing in every locale that lacks it', async () => {
+		// de's cardinal rules never select `two`; under the retired
+		// per-category model `label.two` was pruned there. One ICU pattern
+		// per key means every locale owes every key.
 		const { gaps } = await collectI18n(
 			[probe],
 			injectedCatalogs({ de: {}, cy: {} }),
 		)
-		// label.one is reachable everywhere and in no catalog -> one gap per
-		// locale. label.two is pruned in de (cardinal de never selects two)
-		// -> no de gap for it — the phantom-gap case the filter exists for.
 		expect(gaps.filter(gap => gap.locale === 'de')).toEqual([
 			{ key: 'census-probe.label.one', locale: 'de', status: 'missing' },
+			{ key: 'census-probe.label.two', locale: 'de', status: 'missing' },
 		])
-		// cy's cardinal rules use all six categories, so label.two IS
-		// reachable there and still reported.
-		expect(gaps).toContainEqual({
-			key: 'census-probe.label.two',
-			locale: 'cy',
-			status: 'missing',
-		})
 	})
 
-	test('the committed corpus is gap-free at its own case types', async () => {
-		// basic-pluralize's dynamic case type summarizes to 'union', so the
-		// census asks each locale for its full cardinal∪ordinal set — the
-		// committed catalogs carry exactly those keys, and i18n:sync keeps
-		// the manifest hashes fresh. Any entry here is a real regression.
+	test('the committed corpus is gap-free', async () => {
+		// The committed catalogs carry every declared key, and i18n:sync
+		// keeps the manifest hashes fresh. Any entry here is a real
+		// regression.
 		const registry = JSON.parse(
 			readFileSync(`${generated.path}/registry.json`, 'utf8'),
 		) as ComponentRegistry
@@ -426,15 +348,12 @@ describe('the census skips pruned categories (LT-190)', () => {
 /* === Orphaned catalog keys — the census's inverse walk (LT-196) === */
 
 describe('orphaned catalog keys (LT-196)', () => {
-	// The same synthetic probe the LT-190 reachability tests use, with
-	// INJECTED catalogs — collectI18n takes the catalog facts as a second
-	// argument so the inverse walk is testable without touching the
-	// committed files. Locale facts are the platform's own: de's cardinal
-	// set is {one, other}, zh's is {other}, cy's is all six.
+	// A synthetic probe with INJECTED catalogs — collectI18n takes the
+	// catalog facts as a second argument so the inverse walk is testable
+	// without touching the committed files.
 	const probe = {
 		tag: 'census-probe',
 		i18nMessages: { 'label.one': 'one', 'label.two': 'two' },
-		caseType: 'cardinal',
 	} as unknown as RegistryEntry
 
 	test('a catalog key whose component is gone is orphaned', async () => {
@@ -457,12 +376,7 @@ describe('orphaned catalog keys (LT-196)', () => {
 		])
 	})
 
-	test('a declared key outside the locale’s platform set is legitimate, not orphaned', async () => {
-		// The wholesale-translation shape the inversion must not report: a
-		// translator carries every DECLARED key over, including categories
-		// this locale prunes — `task.one` in an {other}-only locale. The key
-		// is unreachable there (no missing record either, LT-190's rule) and
-		// declared, so the orphan walk has nothing to say.
+	test('a declared key is never orphaned', async () => {
 		const { gaps } = await collectI18n(
 			[probe],
 			injectedCatalogs({
@@ -470,41 +384,20 @@ describe('orphaned catalog keys (LT-196)', () => {
 			}),
 		)
 		expect(gaps.filter(gap => gap.status === 'orphaned')).toEqual([])
-		expect(gaps.filter(gap => gap.key === 'census-probe.label.one')).toEqual([])
 	})
 
-	test('the carve-out protects only DECLARED keys — undeclared residue reports everywhere (LT-217)', async () => {
-		// The wholesale case keeps its protection: `label.two` in de
-		// (cardinal {one, other}) is a DECLARED category form whose span de
-		// prunes — a real translation, unreported (and no missing record
-		// either, LT-190's declared-walk rule). The UNDECLARED `stray.few`
-		// is rename/typo residue no span can ever reference, so no category
-		// set shelters it: de lacks `few` even in its union set, and the key
-		// reports there anyway — the locale set that hid it before LT-217.
-		const de = await collectI18n(
-			[probe],
-			injectedCatalogs({
-				de: {
-					'census-probe.stray.few': 'wenige',
-					'census-probe.label.two': 'zwei',
-				},
-			}),
-		)
-		expect(de.gaps.filter(gap => gap.status === 'orphaned')).toEqual([
-			{ key: 'census-probe.stray.few', locale: 'de', status: 'orphaned' },
-		])
-		expect(de.gaps.filter(gap => gap.key === 'census-probe.label.two')).toEqual(
-			[],
-		)
-		// "Every locale" is the point: cy selects `few`, de does not — both
-		// report the undeclared key.
-		const cy = await collectI18n(
-			[probe],
-			injectedCatalogs({ cy: { 'census-probe.stray.few': 'dau' } }),
-		)
-		expect(cy.gaps.filter(gap => gap.status === 'orphaned')).toEqual([
-			{ key: 'census-probe.stray.few', locale: 'cy', status: 'orphaned' },
-		])
+	test('an undeclared key is orphaned in every locale, unconditionally (LT-251)', async () => {
+		// No plural-category set shelters a key any more: `stray.few` reports
+		// in de (whose rules never select `few`) and in cy (whose do) alike.
+		for (const locale of ['de', 'cy']) {
+			const { gaps } = await collectI18n(
+				[probe],
+				injectedCatalogs({ [locale]: { 'census-probe.stray.few': 'x' } }),
+			)
+			expect(gaps.filter(gap => gap.status === 'orphaned')).toEqual([
+				{ key: 'census-probe.stray.few', locale, status: 'orphaned' },
+			])
+		}
 	})
 })
 
@@ -768,7 +661,6 @@ describe('the census pattern-integrity walks (LT-219)', () => {
 			flat: '{n} items',
 		},
 		clientMessageKeys: ['flat'],
-		caseType: 'cardinal',
 	} as unknown as RegistryEntry
 	const gapsFor = async (overrides: Record<string, Record<string, string>>) =>
 		(await collectI18n([probe], injectedCatalogs(overrides))).gaps.filter(

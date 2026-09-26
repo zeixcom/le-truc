@@ -118,11 +118,7 @@ const isClientConstructAttr = (a: AttributeIR): boolean =>
 	// A server attribute is normally render-only — except LT-122's
 	// arg-and-prop coincidence, which renders server-side AND binds.
 	(a.kind === 'server' ? a.bindsProp != null : a.kind !== 'static') &&
-	!(a.kind === 'html' && !a.reactive) &&
-	// `truc:case`/`truc:case-type` are compiler-consumed pruning markers,
-	// never client constructs of their own (ADR 0030 sub-design 6).
-	a.kind !== 'plural-case' &&
-	a.kind !== 'plural-case-type'
+	!(a.kind === 'html' && !a.reactive)
 
 /**
  * Pass 4's shared state (LT-226): what `runEffects`'s nested closures used
@@ -1648,38 +1644,6 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 		const hasClientConstruct =
 			node.attrs.some(isClientConstructAttr) ||
 			node.children.some(c => c.kind === 'expr' && c.lazy)
-		// ADR 0030 sub-design 6 (LT-173 step 7): a `truc:case` element is
-		// pruned at render time to the locale's actual plural-category set,
-		// so it MAY not render — its client effects need existence-guarded
-		// addressing ('maybe' cardinality + a guarded block), exactly the
-		// shape a single-branch @if root gets. Deeper constructs have no
-		// such shape here (their elements don't exist unless the branch
-		// rendered, and there is no branch) — rejected, same posture as the
-		// @if depth guard.
-		const caseAttr = node.attrs.find(
-			(a): a is Extract<AttributeIR, { kind: 'plural-case' }> =>
-				a.kind === 'plural-case',
-		)
-		if (caseAttr && component.langBinding === null) {
-			diagnostics.push(
-				diagnostic.unsupported(
-					source,
-					node.node.start,
-					"A truc:case element needs a locale to prune against — bind `lang` (as a server arg, or nested in the reserved `i18n` record) so the compiler can read the locale's plural-category set at render time (ADR 0030 sub-design 6)",
-				),
-			)
-			return
-		}
-		if (caseAttr && hasDeepConstruct(node, 0)) {
-			diagnostics.push(
-				diagnostic.unsupported(
-					source,
-					node.node.start,
-					"Client constructs inside a truc:case element must sit on the element itself — the locale's plural-category set is decided at render time, so deeper elements have no addressing when this alternative is pruned",
-				),
-			)
-			return
-		}
 		if (hasClientConstruct) {
 			const { selector, unique } = resolveSelector(fx, node)
 			if (!unique) {
@@ -1697,13 +1661,9 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 			const query = addQuery(
 				refAttr?.name ?? sanitizeVarName(node.tag),
 				selector,
-				caseAttr ? 'maybe' : 'one',
+				'one',
 			)
-			if (caseAttr) {
-				const guarded: TopEffectPlan[] = []
-				emitConstructEffects(fx, node, query, guarded)
-				effects.push({ kind: 'guarded', query, effects: guarded })
-			} else emitConstructEffects(fx, node, query)
+			emitConstructEffects(fx, node, query)
 		}
 	}
 	for (const child of node.children) emitTopEffects(fx, child)

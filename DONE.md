@@ -11,6 +11,22 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-251: Delete the per-category machinery — `truc:case`, pruning, `pluralCategories`, the dotted-key rule, the census reachability carve-outs. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `truc:case`/`truc:case-type` are gone from the compiler (IR kinds,
+  classification, conditional addressing, the emitter's per-locale pruning) and from the
+  `.tsx` host profile's `CommonLightDom`. `runtime.ts`'s `pluralCategories`,
+  `PLURAL_CATEGORIES`, the `<key>.<category>` suffix rule, and `caseType` on the
+  IR/registry are removed, along with both census carve-outs. An undeclared catalog key is
+  now orphaned in every locale, and a dotted key is an ordinary key. The CHANGELOG
+  `[Unreleased]` `truc:case` and per-category-key Added bullets are dropped, and the LT-196
+  bullet no longer mentions the carve-out. The census is 0 gaps and the warning baseline is 0.
+  **Review:** Approved. **Ruling:** LTC008 does not retire: it is the general source-shape
+  code, and only the dotted-key message under it was deleted (LT-189's item 2 wording is
+  corrected). A stray `truc:*` name still renders literally in `.tsrx` → LT-353. Two stale
+  CHANGELOG clauses (LT-195's "rendered-alternatives idiom", the "plural category fold"
+  example) → LT-220 item 5.
+
 - [x] LT-252: Corpus and catalog migration to ICU patterns — `basic-pluralize` (both surfaces), six locale catalogs, manifest rebaseline. — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** basic-pluralize (`.tsrx` and `.tsx`, parity green) declares one `tasks` pattern,
