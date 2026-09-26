@@ -479,6 +479,23 @@ export type ComponentIR = {
 	/** Names bound by the parameter pattern (server args). */
 	paramNames: string[]
 	/**
+	 * Value names declared at module level beside the component function
+	 * (`const`, `function`, `class`, exported or not). Neither generated
+	 * module carries them verbatim (`i18n` and `config` are read, not
+	 * copied), so a client position reading one is LTC005's server-only
+	 * face (LT-348). Optional: contract IR; a front end that omits it only
+	 * loses that one diagnostic.
+	 */
+	moduleBindings?: string[]
+	/**
+	 * The names the parameter pattern binds for the reserved record's `t`
+	 * (`i18n: { t }`, `i18n: { t: tr }`). A static `t.<key>` read of a
+	 * declared key is admitted in client positions (ADR 0030 s9, LT-218);
+	 * the whole-record spelling (`i18n.t.<key>`) is not. Optional: contract
+	 * IR; omitted, every `t` read in a client position stays LTC005.
+	 */
+	messageTBindings?: string[]
+	/**
 	 * Per-parameter pattern facts the page-occurrence renderer needs
 	 * (LT-194): one entry per top-level property, in source order. `typeText`
 	 * is the verbatim type annotation; `optional`/`hasDefault` decide whether

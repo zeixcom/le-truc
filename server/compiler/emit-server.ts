@@ -86,6 +86,7 @@ type Part = { static: string } | { expr: string }
  */
 const EMITTED_HARNESS_NAMES = [
 	'attr',
+	'clientMessages',
 	'cls',
 	'composeHostAttrs',
 	'entries',
@@ -1183,6 +1184,11 @@ export const emitServerModule = (
 		 * tier requires, and the realm re-renders it regardless.
 		 */
 		tier?: EvaluationTier | undefined
+		/**
+		 * The message keys client positions read (`ClientPlan.clientMessageKeys`,
+		 * LT-218). Non-empty renders the root `i18n` attribute.
+		 */
+		clientMessageKeys?: readonly string[] | undefined
 	},
 ): EmittedServerModule => {
 	const renderScope = renderScopeNames(component)
@@ -1271,6 +1277,19 @@ export const emitServerModule = (
 		used.add('attr')
 		rootParts.push({
 			expr: `${ctx.h('attr')}('lang', ${component.langBinding})`,
+		})
+	}
+	// ADR 0030 s9 (LT-218): the client message channel. The render call's
+	// own `t` serializes the client-referenced keys, so each locale bakes
+	// its own messages and a composed child inherits the parent's record
+	// unchanged. No keys, no attribute: every other component renders
+	// byte-identical.
+	const tBinding = component.messageTBindings?.[0]
+	if (options.clientMessageKeys?.length && tBinding) {
+		used.add('attr')
+		used.add('clientMessages')
+		rootParts.push({
+			expr: `${ctx.h('attr')}('i18n', ${ctx.h('clientMessages')}(${tBinding}, ${JSON.stringify(options.clientMessageKeys)}))`,
 		})
 	}
 	rootParts.push({ static: '>' })

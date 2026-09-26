@@ -11,6 +11,61 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-218: The client-message `i18n` attribute — compiler analysis, server emission, client evaluator preamble (ADR 0030 sub-design 9). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** A static `t.<key>` read of a declared key compiles in client positions
+  (`badFreeNames`), and its key lands in `ClientPlan.clientMessageKeys`. When keys exist, the
+  server renders a root `i18n` attribute through `runtime.ts`'s new `clientMessages`. The
+  generated `i18n` module tags argument-message closures with their AST under
+  `CLIENT_MESSAGE`. The generated factory gains a preamble: the source record, a guarded parse,
+  an inlined evaluator narrowed to the source constructs with one formatter per node, and a
+  local `t`. `icu/evaluate.ts` gains `bakeMessageEnv` and an optional per-node locale `l`. New
+  optional IR field `ComponentIR.messageTBindings`. Computed keys, a bare `t`, `i18n.t.<key>`
+  and `lang` (with a `host.lang` pointer) stay LTC005. Pins: `i18n-client.test.ts`.
+  **Rulings (owner, 2026-09-26):** (1) A translation using a construct its source lacks falls
+  back per key to the source message, and the census reports it → **LT-350**, LT-219 census
+  case (c). (2) A server-rendered instance formats in the render locale baked into each
+  serialized message ("a component with known lang folds the chosen lang in"). What a
+  client-created instance speaks is open → **LT-351** (Architect design, with the ADR 0030
+  s6/s9 amendment). (3) `t.<key>` in client-only setup statements and list-body handlers is
+  admitted in **LT-349**, which now gates LT-219.
+  **Review:** Approved. Copy → LT-189 item 17.
+
+- [x] LT-348: LTC005's server-only check rejects valid browser code — define "server-only" positively (LT-347 review). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `badFreeNames` is positive. A name is server-only iff the server render binds it
+  (component parameters, module-level declarations, server-data loop bindings) and the client
+  does not rebind it. One rule covers every client position. Harvest-less signal initializers
+  are checked. New optional contract field `ComponentIR.moduleBindings?: string[]` (additive).
+  `emit-tier.test.ts`'s Simulated fixture seeds `createCell(0)`. First-draft tail: "those
+  exist only during the server render — read the value through an exposed prop or from the
+  DOM".
+  **Rulings:** (1) Owner, 2026-09-26: the flipped `compiler.test.ts` pin is intended. An
+  undeclared name (`mysteryHelper`) has no binding class, so it is tsc's to report, not
+  LTC005's. (2) Architect, 2026-09-26: a tier never licenses an unbound client name, so a
+  harvest-less initializer reading a parameter is LTC005 in every tier. (3) Architect,
+  2026-09-26: only author-declared client bindings rebind a server name. Compiler-generated
+  query locals do not.
+  **Review:** Approved with one follow-up. The `clientRebinds` query clause follows the task
+  text but violates ruling 3 → **LT-349**, which also moves the `loops.ts` list-body checks
+  off the allowlist. Copy → **LT-189 item 17**.
+
+- [x] LT-347: A server-only name in a reactive text-child thunk compiles clean and throws on the client (LT-252 finding). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** LTC005's server-only check now covers every position the client emits authored
+  code into: lazy text children, class/style maps, template `on*` handlers, `expose()` entries,
+  and plain setup consts a client position pulls in. Previously only reactive attributes, pass
+  entries and `truc:html` were checked. One helper (`reportServerOnlyNames`) writes the
+  sentence. `badFreeNames` admits FactoryContext primitives. A `.tsx` converter fix: array
+  binding elements were emitted as shorthand `Property` nodes, so `([x]) => …` left `x` free
+  in every `.tsx` free-name walk. Pinned by the parity suite's `SERVER_ONLY` group (both
+  surfaces, one fixture per position) and a clean-case test.
+  **Review:** Approved with one follow-up. Widening the audit into fixes was right. But the
+  handler and map positions inherited `badFreeNames`' allowlist and now reject valid browser
+  code (`clearTimeout`, `fetch`, `getComputedStyle`, `matchMedia`) as "server-only" →
+  **LT-348**, which also carries the harvest-less-signal ruling (tier never licenses an
+  unbound client name). Copy → **LT-189 item 17**.
+
 - [x] LT-343: module-codeblock — `id` required whenever the overlay renders `aria-controls` (LT-308 review). — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** `module-codeblock.tsx` args are a union on `collapsed`

@@ -147,6 +147,7 @@ export const compileFromIR = (
 		// re-declares the `@{ }` value harness. Pre-contamination by
 		// construction — see the option's own doc for why that is sound.
 		tier,
+		clientMessageKeys: plan.clientMessageKeys,
 	})
 	const client = emitClientModule(component, plan, {
 		sourcePath: filename,

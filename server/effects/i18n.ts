@@ -367,7 +367,7 @@ const i18nModuleText = (
 ${
 	withArguments
 		? `
-import { formatMessage, type Message } from '${runtimeImport}'
+import { CLIENT_MESSAGE, formatMessage, type Message } from '${runtimeImport}'
 `
 		: `
 /** A parsed ICU pattern (LT-250) — none in this corpus takes arguments. */
@@ -443,15 +443,17 @@ export function i18nRecord<T = Record<string, string>>(
 		const message = localeOverrides[\`\${tag}.\${key}\`] ?? source${
 			withArguments
 				? `
-		t[key] =
-			typeof message === 'string'
-				? message
-				: ((args: Record<string, unknown>) =>
-						formatMessage(message, args, {
-							lang: locale,
-							timeZone: I18N_TIME_ZONE,
-							currency: I18N_CURRENCY,
-						}))`
+		if (typeof message === 'string') {
+			t[key] = message
+			continue
+		}
+		const env = { lang: locale, timeZone: I18N_TIME_ZONE, currency: I18N_CURRENCY }
+		// The AST rides the closure for the client channel (LT-218): a
+		// client-referenced key serializes it into the root \`i18n\` attribute.
+		t[key] = Object.assign(
+			(args: Record<string, unknown>) => formatMessage(message, args, env),
+			{ [CLIENT_MESSAGE]: { message, env } },
+		)`
 				: `
 		t[key] = message`
 		}

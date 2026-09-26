@@ -240,7 +240,7 @@ export const declaresI18nOf = (paramsNode: AstNode | null): boolean => {
  * (`i18n: { t }`, `i18n: { t: tr }`) and for the whole record (`{ i18n }`,
  * read as `i18n.t.<key>`) — the two spellings a message site can take.
  */
-const messageBindingsOf = (
+export const messageBindingsOf = (
 	paramsNode: AstNode | null,
 ): { tNames: Set<string>; recordNames: Set<string> } => {
 	const tNames = new Set<string>()

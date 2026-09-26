@@ -79,9 +79,28 @@ const convertPattern = (node: ts.Node, sf: ts.SourceFile): AstNode | null => {
 		return {
 			type: 'ArrayPattern',
 			...span(node, sf),
-			elements: node.elements.map(el =>
-				el === undefined ? null : convertPattern(el, sf),
-			),
+			// An array element has no key: `[a, b = 1, ...rest]` is a bare
+			// pattern, not the shorthand `Property` an object element becomes
+			// (LT-347: `([entry]) => …` left `entry` free, so the binding
+			// walk reported it as a server-only name).
+			elements: node.elements.map(el => {
+				if (ts.isOmittedExpression(el)) return null
+				if (el.dotDotDotToken)
+					return {
+						type: 'RestElement',
+						...span(el, sf),
+						argument: convertPattern(el.name, sf),
+					}
+				const target = convertPattern(el.name, sf)
+				return el.initializer
+					? {
+							type: 'AssignmentPattern',
+							...span(el, sf),
+							left: target,
+							right: conv(el.initializer, sf),
+						}
+					: target
+			}),
 		}
 	if (ts.isBindingElement(node)) {
 		if (node.dotDotDotToken)

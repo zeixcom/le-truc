@@ -35,12 +35,18 @@ export type MessageNode =
 	 * formats `25` as `25%`, `Intl` wants `0.25`). A `currency` style with no
 	 * explicit code takes the record's `currency`.
 	 */
-	| { t: 'num'; a: string; o?: Intl.NumberFormatOptions; s?: number }
+	| {
+			t: 'num'
+			a: string
+			o?: Intl.NumberFormatOptions
+			s?: number
+			l?: string
+	  }
 	/**
 	 * `{d, date|time[, style]}` — `o` is the resolved `Intl.DateTimeFormat`
 	 * options; the record's `timeZone` applies unless `o` names one.
 	 */
-	| { t: 'date'; a: string; o: Intl.DateTimeFormatOptions }
+	| { t: 'date'; a: string; o: Intl.DateTimeFormatOptions; l?: string }
 	/**
 	 * `{n, plural|selectordinal, …}` — `c` maps each case key (`=0`, `one`,
 	 * `other`, …) to its body; `o` marks ordinal rules, `off` the offset.
@@ -51,6 +57,7 @@ export type MessageNode =
 			c: Record<string, Message>
 			o?: 1
 			off?: number
+			l?: string
 	  }
 	/** `{x, select, …}` — `c` maps each case key to its body. */
 	| { t: 'select'; a: string; c: Record<string, Message> }
@@ -59,7 +66,13 @@ export type MessageNode =
 	 * offset, locale-formatted. The parser resolves which plural it belongs
 	 * to, so the node carries the argument name and offset itself.
 	 */
-	| { t: '#'; a: string; off?: number }
+	| { t: '#'; a: string; off?: number; l?: string }
+
+/*
+ * `l` on a formatting node (`num`, `date`, `plural`, `#`) is the locale it
+ * formats in, overriding `env.lang`. The parser never writes it;
+ * `bakeMessageEnv` does, for the client channel (LT-218).
+ */
 
 /** A parsed message: a sequence of nodes. */
 export type Message = MessageNode[]
@@ -116,14 +129,14 @@ export const formatMessage = (
 					node.o?.style === 'currency' && !node.o.currency
 						? { ...node.o, currency: env.currency }
 						: node.o
-				out += new Intl.NumberFormat(env.lang, options).format(
+				out += new Intl.NumberFormat(node.l ?? env.lang, options).format(
 					Number(value) * (node.s ?? 1),
 				)
 				break
 			}
 			case 'date':
 				out += new Intl.DateTimeFormat(
-					env.lang,
+					node.l ?? env.lang,
 					node.o.timeZone || !env.timeZone
 						? node.o
 						: { ...node.o, timeZone: env.timeZone },
@@ -135,7 +148,7 @@ export const formatMessage = (
 					caseOf(node.c, `=${n}`) ??
 					caseOf(
 						node.c,
-						new Intl.PluralRules(env.lang, {
+						new Intl.PluralRules(node.l ?? env.lang, {
 							type: node.o ? 'ordinal' : 'cardinal',
 						}).select(n - (node.off ?? 0)),
 					) ??
@@ -149,7 +162,7 @@ export const formatMessage = (
 				break
 			}
 			case '#':
-				out += new Intl.NumberFormat(env.lang).format(
+				out += new Intl.NumberFormat(node.l ?? env.lang).format(
 					Number(value) - (node.off ?? 0),
 				)
 				break
@@ -157,3 +170,50 @@ export const formatMessage = (
 	}
 	return out
 }
+
+/**
+ * `message` with its record folded in (LT-218): the locale onto every
+ * formatting node (`l`), and `timeZone`/`currency` into the nodes that read
+ * them. The client channel serializes messages per render call, but the
+ * client never sees the record, and the host's `lang` is only there when
+ * the component renders it — so the facts travel inside the AST, and a
+ * translated message always formats in the locale it was translated for.
+ * The result formats identically under {@link formatMessage} whatever
+ * `env` it is later given.
+ */
+export const bakeMessageEnv = (message: Message, env: MessageEnv): Message =>
+	message.map(node => {
+		if (typeof node === 'string') return node
+		switch (node.t) {
+			case 'num':
+				return {
+					...node,
+					l: env.lang,
+					...(node.o?.style === 'currency' && !node.o.currency && env.currency
+						? { o: { ...node.o, currency: env.currency } }
+						: {}),
+				}
+			case 'date':
+				return {
+					...node,
+					l: env.lang,
+					o:
+						node.o.timeZone || !env.timeZone
+							? node.o
+							: { ...node.o, timeZone: env.timeZone },
+				}
+			case '#':
+				return { ...node, l: env.lang }
+			case 'plural':
+			case 'select': {
+				const c: Record<string, Message> = {}
+				for (const [key, body] of Object.entries(node.c))
+					c[key] = bakeMessageEnv(body, env)
+				return node.t === 'plural'
+					? { ...node, c, l: env.lang }
+					: { ...node, c }
+			}
+			default:
+				return node
+		}
+	})

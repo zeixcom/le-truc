@@ -9,13 +9,20 @@
  */
 
 import type { AstNode } from './ast-node'
-import { asArray, identifierName, isNode, text } from './ast-utils'
+import {
+	asArray,
+	collectBoundNames,
+	identifierName,
+	isNode,
+	text,
+} from './ast-utils'
 import { readConfig } from './config'
 import { diagnostic } from './diagnostics'
 import {
 	declaresI18nOf,
 	langArgDefaultOf,
 	langBindingOf,
+	messageBindingsOf,
 	readI18nDecl,
 } from './i18n'
 import type { MessageArg } from './icu/parse'
@@ -50,6 +57,8 @@ export type ModuleDecls = {
 	i18nMessages: Record<string, string> | null
 	/** Per key, the arguments its source pattern takes (`I18nDecl.args`). */
 	i18nArgs: Record<string, readonly MessageArg[]> | null
+	/** Module-level value names (`ComponentIR.moduleBindings`). */
+	moduleBindings: string[]
 }
 
 /**
@@ -68,7 +77,22 @@ export const readModuleDecls = (
 	let config: ConfigIR | null = null
 	let i18nMessages: Record<string, string> | null = null
 	let i18nArgs: Record<string, readonly MessageArg[]> | null = null
+	const moduleBindings = new Set<string>()
 	for (const stmt of asArray(ast.body)) {
+		const valueDecl =
+			stmt.type === 'ExportNamedDeclaration' && isNode(stmt.declaration)
+				? stmt.declaration
+				: stmt
+		if (valueDecl.type === 'VariableDeclaration')
+			for (const d of asArray(valueDecl.declarations))
+				collectBoundNames(d.id, moduleBindings)
+		else if (
+			valueDecl.type === 'FunctionDeclaration' ||
+			valueDecl.type === 'ClassDeclaration'
+		) {
+			const declName = identifierName(valueDecl.id)
+			if (declName && declName !== componentName) moduleBindings.add(declName)
+		}
 		const declaredConfig = readConfig(ctx, stmt)
 		if (declaredConfig) {
 			config = declaredConfig
@@ -100,6 +124,7 @@ export const readModuleDecls = (
 		config,
 		i18nMessages,
 		i18nArgs,
+		moduleBindings: [...moduleBindings],
 	}
 }
 
@@ -281,6 +306,8 @@ export const assembleComponentIR = (
 		tag: resolved.root.tag,
 		paramsText: paramsNode ? text(ctx.source, paramsNode) : '',
 		paramNames: [...paramNames],
+		moduleBindings: decls.moduleBindings,
+		messageTBindings: [...messageBindingsOf(paramsNode).tNames],
 		paramProps: paramPropsOf(ctx, paramsNode),
 		i18nMessages: decls.i18nMessages,
 		i18nArgs: decls.i18nArgs,

@@ -42,17 +42,18 @@ and LT-220 item 0 are amended to match. The loose union never ships.
   carrier span, and adds the census pattern walks. **LT-249** lands with LT-219 as one
   `malformed` census family.
 - **Copy.** **LT-220** covers the message-model docs. **LT-189** is the standing one-voice
-  Tech Writer round (fifteen items). The two run as one round, last, so the new ICU codes
+  Tech Writer round (seventeen items, one withdrawn). The two run as one round, last, so the new ICU codes
   join it.
 - **Parallel slot.** **LT-138** was promoted by the LT-102 review. module-splitview authors
   `truc:html`, so the inverted sanitizer defaults are now live in the corpus. Its first step
   is the fixture that confirms the flip.
 
-**Order (re-ruled 2026-09-26).** LT-242 → LT-233 → LT-250 → LT-308 → LT-347 → LT-218 →
-LT-252 → LT-251. LT-253 after LT-252. LT-218 → LT-219 (with LT-249). basic-pluralize's single
+**Order (re-ruled 2026-09-26).** LT-242 → LT-233 → LT-250 → LT-308 → LT-347 → LT-348 → LT-218 →
+LT-252 → LT-251. LT-253 after LT-252. LT-218 → LT-349 → LT-219 (with LT-249); LT-350 before
+LT-219 where possible. basic-pluralize's single
 pattern re-evaluates when `count` changes client-side, and only LT-218's channel can do that,
-so LT-252 now waits for it. LT-347 closes the compiler gap LT-218 would otherwise build on. LT-220 and LT-189 run as one Tech Writer round after
-LT-219, as LT-220's header asks. LT-138 and LT-346 are ungated.
+so LT-252 now waits for it. LT-347 closed the compiler gap LT-218 would otherwise build on. LT-348 removes the false positives it introduced. LT-220 and LT-189 run as one Tech Writer round after
+LT-219, as LT-220's header asks. LT-138, LT-346 and LT-351 (Architect design) are ungated.
 
 **Deliberately not here.** The ADR 0037 implementation (LT-274–LT-276) and the ADR 0033 CSS
 track (LT-268 → LT-304/LT-306) are the next compiler-heavy candidates. They contend with LT-233
@@ -77,7 +78,7 @@ default (LT-138). Across all of it: warning baseline 0, tier census unchanged fr
 iteration's opening measurement (record it before the first change), and `bun run build:docs`
 and `check:links` pass.
 
-**Next free task ID: LT-348.**
+**Next free task ID: LT-352.**
 
 ---
 
@@ -157,30 +158,6 @@ and `check:links` pass.
 
 ### Client channel (after LT-250; LT-249 lands with LT-219)
 
-- [ ] LT-347: A server-only name in a reactive text-child thunk compiles clean and throws on the client (LT-252 finding). **Gates LT-218.**
-  **Skill:** le-truc-dev
-  **Context:** `{() => label.toUpperCase()}` over a server arg `label`, or
-  `{() => t.tasks({ count: host.count })}`, compiles with no diagnostic on `.tsrx`. The
-  generated client emits `watch(() => label…, bindText(span))` with the name unbound, which is
-  a ReferenceError at connect. `analysis/effects.ts` runs `badFreeNames` over reactive
-  attributes, `pass` entries and `truc:html` thunks (LTC005 via `diagnostic.unsupported`), but
-  not over a reactive text child. HOST_PROFILE already promises that a server-only name is
-  diagnosed "in any reactive position". Close the gap:
-  1. Run the same free-name check on reactive text-child thunks, with the same wording
-     pattern ("Reactive text … references server-only name(s) …").
-  2. Audit every other position the client emits a thunk or body for. List bodies are
-     covered in `loops.ts`; confirm expose get/set, `defineMethod` bodies and `on()`
-     handlers. Pin each covered position with one fixture, so the next gap is visible.
-  3. Both surfaces, through the shared analysis. Add the case to the diagnostic-parity suite.
-  LT-218 then narrows this for `t` only: literal-key `t.<key>` reads become admitted client
-  reads. Every other server-only name stays rejected.
-  **Channel:** compiler, **LTC005**, tier 1 Prevented, error (no runtime half: the client
-  never sees the name). No new code. Tech Writer reviews the new message variant in the LT-189
-  round.
-  **Check:** both probes above report LTC005 on both surfaces; the corpus compiles clean
-  (nothing authors this today; if something does, record it in NOTES.md, do not work around
-  it); the warning baseline stays 0; parity green.
-
 - [ ] LT-346: Pin the discriminated compose-site check (LT-343 review).
   **Skill:** le-truc-dev
   **Context:** LT-343 made `JSX.LibraryManagedAttributes` distribute over a union of arg
@@ -194,62 +171,96 @@ and `check:links` pass.
   **Channel:** TypeScript, tier 1 Prevented (a test pin only).
   **Check:** the new assertion passes; temporarily reverting to `Omit<P, 'i18n'>` fails it.
 
-- [ ] LT-218: The client-message `i18n` attribute — compiler analysis, server emission, client evaluator preamble (ADR 0030 sub-design 9). **Depends on LT-250 and LT-347; gates LT-252 (re-sequenced 2026-09-26).**
+- [ ] LT-349: Finish LTC005's positive server-only rule — reactive-list bodies, compiler-generated query names, and `t.<key>` in the two positions LT-218 left out (LT-348 and LT-218 reviews). **Gates LT-219.**
   **Skill:** le-truc-dev
-  **Sequencing (re-ruled 2026-09-19):** two gates, one now discharged. Land the P2b
-  SurfaceAdapter consolidation (**LT-233**) first — it collapses the two copied front ends this
-  task must edit in lockstep. The **LT-240** message-model gate is **resolved** (owner ruling
-  2026-09-19, ADR 0030 amended): the grammar is ICU MessageFormat 1, and the serialization
-  shape is **the build-parsed AST**, not the raw pattern and not a compiled function. Land
-  **LT-250** (the parser, the shared evaluator, the server fold) before this task — it supplies
-  the AST shape this task serializes and the evaluator this task inlines.
-  **Context:** Implements the LT-197 ruling. Three pieces; both authored surfaces stay in
-  lockstep (ADR 0032 anti-drift) — the classification lives in the shared analysis, the
-  per-front-end diagnostics as today.
-  1. **Analysis:** admit `t.<key>` reads in client positions — event handlers, reactive
-     thunks, `truc:html` thunks, expose get/set, `defineMethod` bodies, pass get/set — the
-     positions the server-only name diagnostic rejects today. Literal/static keys only; a
-     computed `t[dynamicKey]` stays rejected (tier Prevented). `lang` stays server-only, its
-     message pointing at `host.lang`. The `t` face of the server-only rejection retires for
-     these reads — a false-negative removal from an existing check, no new error class
-     (retirement sweep is LT-220's).
-  2. **Emission:** when the component's client-referenced key set is non-empty,
-     `emit-server.ts` appends `attr('i18n', JSON.stringify({ …picked… }))` to `rootParts` —
-     the materialized-`lang` precedent — evaluated per render call, so each locale bakes its
-     own **parsed patterns** and compose-graph inheritance applies unchanged. An
-     argument-less message serializes as a plain string (unchanged); a message with
-     arguments serializes as LT-250's compact AST. Only client-referenced keys (owner
-     ruling): a server-folded key never rides the attribute. The root-attribute exclusion
-     covers LTC039; authored `i18n` attributes are already rejected in classify-attributes.
-  3. **Client preamble:** the generated client factory gains an inlined, guarded
-     `JSON.parse(host.getAttribute('i18n'))` merged over the declared source-locale record,
-     which the compiler emits already parsed for the same keys — NO new `@zeix/le-truc`
-     export (ADR 0030 s8). Alongside it the compiler inlines **LT-250's evaluator, narrowed
-     to the constructs this component's patterns actually use** — an interpolation-only
-     component gets a concatenation; `Intl.PluralRules(host.lang)` does category selection;
-     nobody pays for `select` or date formatting unless used. No ICU parser on the client,
-     no `eval` (CSP-clean). Client-position `t.key` reads rewrite to the local; a call site
-     is validated by LT-250's diagnostic. Parsed once at connect, fixed for the connection;
-     malformed JSON warns in DEV_MODE and falls back to the source record in production.
-  **Handoff from the LT-250 review:** `formatMessage` constructs a fresh
-  `Intl.NumberFormat` / `PluralRules` / `DateTimeFormat` per node per call. That is fine at
-  build time, but it runs on every argument change on the client. The narrowed inline copy
-  should hoist one formatter per node per connection (the locale is fixed at connect). Keep
-  the server evaluator as is: the differential test pins it.
-  **Pins:** the attribute carries only client-referenced keys (a folded-only key stays off
-  it); absent when the set is empty (a component without client-evaluated messages renders
-  byte-identical — pin one); a de render bakes translated **parsed** patterns into the
-  attribute; the inlined evaluator is narrowed (a component with no plural message emits no
-  `Intl.PluralRules` call — pin by fixture);
-  parity green with identical attribute bytes across both surfaces; a client-created
-  instance (attribute stripped) falls back to the source record (jsdom pin); the DEV_MODE
-  malformed-attribute warning pins.
-  **Acceptance:** tier census unchanged from the iteration baseline and compile-warning baseline 0 unchanged (client keys
-  are not a routing signal); gates green (typecheck, `bun test server/tests`, check:tsrx,
-  build:docs, check:links). Corpus snapshots should not move yet — no corpus component has
-  client-position `t` reads until LT-219; pin via fixtures.
+  **Context:** LT-348 made `badFreeNames` (`analysis/plan.ts`) positive: a name is server-only
+  iff the server render binds it (parameters, module-level declarations, server-data loop
+  bindings) and nothing the *author* declared rebinds it on the client. Two places still
+  disagree with that rule:
+  1. **Compiler-generated query locals are not rebindings.** `clientRebinds` exempts every
+     `queries` name. So args `{ button }` plus `<button onClick={() => console.log(button)}>`
+     compiles clean, and the client logs the queried element instead of the string arg. That
+     is a silent change of meaning, and the pre-LT-348 allowlist caught it. (LT-348's task text
+     said to exempt "query locals (the LT-136 shadow)"; that wording was the error.) Remove the
+     `queries` clause. Only author-declared client bindings count: signals, `first()` refs,
+     setup consts, imports, context members. Pin the `{ button }` case as LTC005 on both
+     surfaces. If the corpus trips, record it in NOTES.md. LT-136 keeps the naming side of the
+     shadow.
+  2. **`loops.ts` still runs the allowlist.** The reactive-list body checks (the attribute or
+     thunk check and the item-handler check, both "references server-only name(s) … inside …
+     body") filter by `JS_GLOBALS`. A list-item handler calling `clearTimeout` is rejected as
+     server-only. Replace the allowlist half with `badFreeNames`' positive rule. The
+     list-specific rejections stay exactly as they are: the loop item in a reactive thunk
+     (LTC002), the item or key read in a handler, and hoisted-const tracking. Setup consts:
+     admit them in a list body only if `computeClientNeededNames` already walks list-body
+     positions, so an admitted const is really emitted. Pin that with one fixture. Otherwise
+     keep rejecting them and say why in the code.
+  3. **`t.<key>` in client-only setup statements and list-body handlers** (LT-218 review, owner
+     ruling 2026-09-26). LT-219 needs both: colorgraph's three "out of gamut" writes sit in
+     `on(...)` setup statements, and tokenbox's "Removed token" write sits in a handler inside
+     the reactive-list body. Setup statements go through `setup-extraction.ts`'s own
+     `clientKnownName` gate. List-body handlers go through item 2's check. Both reject `t` today.
+     Admit a static read of a declared key in both, with the one `staticMessageReads` rule
+     (move it out of `analysis/plan.ts` so extraction can share it). Record the keys into
+     `ClientPlan.clientMessageKeys`, so the attribute and the preamble cover them; the preamble
+     already precedes client-only setup statements and list blocks. The allowlist semantics of
+     the setup gate itself stay: an unknown name there still means "this may be server code".
+     Only `t.<key>` is added. Pin both shapes (a colorgraph-like `on(el, 'change', () =>
+     host.setCustomValidity(t.outOfGamut))` and a tokenbox-like list-item handler) on both
+     surfaces: they compile, and the server renders their keys into the attribute.
+  **Channel:** compiler, **LTC005**, tier 1 Prevented, error. No new code. The two `loops.ts`
+  messages keep their subjects. Their tails move to the LT-348 tail in one step, through
+  `reportServerOnlyNames` if the "inside the … body" clause fits a subject. Tech Writer reviews
+  in LT-189 item 17.
+  **Check:** the `{ button }` probe reports LTC005; `onClick={() => clearTimeout(t)}` in a list
+  item compiles clean; both `t.<key>` shapes compile and ride the attribute; every `LIST_BODY` and `SERVER_ONLY` parity case passes; the corpus compiles
+  clean; the warning baseline stays 0.
 
-- [ ] LT-219: Corpus adoption — tokenbox + colorgraph event-time strings; retire the carrier-span idiom; census placeholder check. **Depends on LT-218.**
+- [ ] LT-350: Client message fallback — a node kind the narrowed evaluator does not carry renders that key's source message (LT-218 review, owner ruling 2026-09-26).
+  **Skill:** le-truc-dev
+  **Context:** `emit-client.ts`'s `messagePreambleLines` narrows the inlined evaluator to the node
+  kinds of the SOURCE patterns; it never sees the catalogs. A translation that uses a construct
+  its source does not (a `plural` where the English interpolates `{count}`, a `{n, number}`
+  where it has `{n}`) currently renders that node empty in the browser. The server fold is
+  unaffected. Ruling (option d): keep the narrowing, and make an unhandled node kind abort the
+  walk for that key, so the key renders its source-locale message instead. Wrong language
+  until the catalog is fixed, but never blank. LT-219's census adds the report half (case (c)
+  there). Implementation shape: the walk's `default` arm stops treating unknown kinds as
+  `select`. An unknown kind throws a private sentinel, and the key's accessor catches it and
+  formats `__i18nSource[key]`. The source always parses with the carried constructs, so the
+  fallback cannot loop.
+  **Channel:** none at runtime (a graceful fallback, no error surfaced; the census is the
+  report channel). No copy.
+  **Check:** a fixture with a source `'{count} tasks'` and a de override `'{count, plural, one
+  {# Aufgabe} other {# Aufgaben}}'`, connected in the realm with the de attribute, renders the
+  English source text, not an empty span. The existing `i18n-client.test.ts` pins stay green.
+
+- [ ] LT-351: Decide what locale a client-created instance speaks, and amend ADR 0030 s6/s9 (LT-218 review; owner, 2026-09-26).
+  **Skill:** architect
+  **Context:** LT-218's channel covers server-rendered instances. The render call knows its
+  locale, bakes it into every formatting node of the messages it serializes (`l`, with
+  `timeZone`/`currency`), and puts those messages in the root `i18n` attribute. The owner
+  ratified that for server-rendered instances ("a component with known lang folds the chosen
+  lang in"). An instance with no server render (no attribute) currently formats in
+  `host.closest('[lang]')` but speaks source-locale strings, per ADR s9's "a client-created
+  instance speaks the source locale". Owner's steer: such instances are created by parents that
+  have a known `lang` (or one of their ancestors does), and that is the locale to use unless the
+  instance has its own `lang` attribute.
+  1. **Inventory first.** When does a client-created instance occur at all? Children cloned
+     from a reactive list's server-rendered `<template>` should already carry the parent
+     render's `i18n` attribute. Verify that. Then look for real `createElement`/`innerHTML`
+     creation of an i18n component in the corpus and the docs examples.
+  2. **Options for the strings,** measured in bytes: (i) source locale, as today; (ii) a
+     per-locale, client-referenced subset module written by the i18n pipeline beside the server
+     `i18n` module (single-file compile stays catalog-free; bytes are keys × locales; also
+     settles LT-350's case at the root); (iv) the attribute for server-rendered instances plus
+     (ii) as the fallback.
+  3. **Amend ADR 0030 s6/s9** (adr-keeper) in one pass: the locale travels inside serialized
+     messages (LT-218's `l`), the client-created rule chosen in item 2, and `formatMessage`'s
+     optional per-node locale (still one evaluator).
+  **Check:** a ruling recorded in the ADR; a le-truc-dev task if the ruling is (ii) or (iv).
+
+- [ ] LT-219: Corpus adoption — tokenbox + colorgraph event-time strings; retire the carrier-span idiom; census placeholder check. **Depends on LT-218 and LT-349.**
   **Skill:** le-truc-dev
   **Context:** The corpus's event-time strings (LT-195's survey; ADR 0030 s9):
   - **form-tokenbox**: declare `added`/`removed`/`duplicate` message patterns
@@ -272,10 +283,13 @@ and `check:links` pass.
     same reasoning as missing/stale/orphaned; Tech Writer owns wording, batch with LT-189
     item 8. (a) **argument preservation** — a translation whose argument set differs from the
     source pattern's; (b) **plural-arm coverage** — a translation whose `plural` arms do not
-    cover `Intl.PluralRules(lang).resolvedOptions().pluralCategories`. A third case,
+    cover `Intl.PluralRules(lang).resolvedOptions().pluralCategories`; (c) **construct
+    coverage** (LT-218 review) — a translation of a client-referenced key that uses a node kind
+    its source pattern does not, so the narrowed client evaluator falls back to the source
+    message for it (LT-350). A fourth case,
     **unparseable pattern**, falls back to the source pattern and reports — it must NOT fail
     the build (a translator typo cannot make a locale unbuildable; same ruling as a missing
-    key). `i18n:sync` flags all three and can auto-fix none. Follow the LT-196 pattern for the
+    key). `i18n:sync` flags all four and can auto-fix none. Follow the LT-196 pattern for the
     inverse-walk tests: falsification probes over the real catalogs, injectable for units.
     **Note this replaces, not extends, the deleted reachability carve-outs** (LT-251) — the
     census gets simpler in shape, not smaller in line count.
@@ -489,6 +503,23 @@ and `check:links` pass.
      argument-less message called — the clauses live in `i18n.ts`'s `reportMessageCallSites`).
      New code, so `errors.md` gains an LTC055 row. Pinned by `i18n.test.ts` and three
      `diagnostic-parity.test.ts` cases (sentence fragments, not whole messages).
+  17. **LTC005's server-only face** (LT-347/LT-348 handoff, 2026-09-26): one helper,
+     `reportServerOnlyNames` in `analysis/effects.ts`, now writes the sentence for every client
+     position: "<subject> references server-only name(s) … ; <tail>". The first-draft subjects
+     are `Reactive text on <tag>` / `on the component root`, `Reactive class map`, `Reactive
+     style map`, `Event handler \`onX\``, `expose() entry \`p\`` and `Setup const \`x\`, emitted
+     client-side because a client position reads it,`. Attribute, `truc:html` and pass entry
+     keep their wording. `Signal \`c\`` joined with LT-348. LT-348's first-draft tail: "those
+     exist only during the server render — read the value through an exposed prop or from the
+     DOM". That advice is wrong for a module-level declaration (`function helper()` read in
+     a handler). There the fix is to move it into setup or import it from a module, so the
+     tail may need to branch on the binding class. LT-349 moves the two `loops.ts` list-body
+     tails onto the same frame. Settle the subject set and the tail together.
+     LT-218 adds two first drafts: the `lang` fix-it sentence ("The locale is `host.lang` on the
+     client, not `lang`.") and the generated client's DEV_MODE warning ("<tag>: the i18n
+     attribute is not valid JSON — using the source-locale messages"). The
+     parity suite pins sentence fragments (`SERVER_ONLY` pins), so a reworded subject means
+     editing the pins. `errors.md`'s LTC005 row gains the server-only face.
 
 ### Parallel slot
 

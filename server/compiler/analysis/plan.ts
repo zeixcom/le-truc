@@ -12,9 +12,12 @@
 
 import type { AstNode } from '../ast-node'
 import {
+	asArray,
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
 	freeIdentifiers,
+	identifierName,
+	isNode,
 	JS_GLOBALS,
 } from '../ast-utils'
 import type { CompileDiagnostic } from '../diagnostics'
@@ -32,7 +35,7 @@ import type { SuppressedSite } from '../simulation/contract.ts'
 import type { RoutingSignal } from '../tier'
 import { walkTemplate } from '../walk'
 import { resolveComposeRefs } from './compose-refs'
-import { runEffects } from './effects'
+import { reportServerOnlyNames, runEffects } from './effects'
 import { runHarvest } from './harvest'
 import { runLoops } from './loops'
 import { addQuery } from './naming'
@@ -380,6 +383,12 @@ export type ClientPlan = {
 	 * still binds them, and the realm replays that module.
 	 */
 	suppressedSites: SuppressedSite[]
+	/**
+	 * The message keys client positions read through `t.<key>` (ADR 0030 s9,
+	 * LT-218), sorted. Non-empty means the server renders the root `i18n`
+	 * attribute and the generated factory carries the message preamble.
+	 */
+	clientMessageKeys: string[]
 }
 
 /**
@@ -543,43 +552,112 @@ export const analyzeClient = (
 		})
 	}
 
-	// `component.imports.plainLocalNames` (LT-091) completes the same
-	// widening for AUTHORED IMPORTS: a pass set-thunk (two-way `truc:pass`)
-	// referencing e.g. `formatCss` from `culori/fn` is client-traced, so the
-	// placement fixpoint pulls the import into the client module — the same
-	// trust the client-only statement gate (`importedNames`, compiler.ts)
-	// already extends.
+	/**
+	 * Names the server render binds and the client module does not carry
+	 * (LT-348): the component's parameters (nested `{ i18n: { t } }`
+	 * included), module-level declarations (neither generated module copies
+	 * them), and the bindings of a server-data loop (item, index, hoisted
+	 * consts — `each()` rebinds none of them client-side). Defined
+	 * positively: an unknown name that is none of these (`clearTimeout`, a
+	 * typo) is not a server name, and tsc on the generated module reports
+	 * it with the right message.
+	 */
+	const serverBindings = new Set<string>([
+		...component.paramNames,
+		...(component.moduleBindings ?? []),
+	])
+	for (const loop of component.fors.values()) {
+		if (loop.kind !== 'each') continue
+		serverBindings.add(loop.itemName)
+		if (loop.indexName) serverBindings.add(loop.indexName)
+		for (const h of loop.hoisted) serverBindings.add(h.name)
+	}
 
-	// Plain setup const names (LT-088) — `component.setup` covers signals AND
-	// expose() too (redundant with the signals/CONTEXT_NAMES checks below for
-	// those, harmless), but it is the only place a plain helper const like
-	// `card-colorscale.tsrx`'s `step`/`isLight` or a Parser instance
-	// (`parseOklch = asOklch()`) is named. Those already work unchecked
-	// inside `style-map`/`class-map` thunks (`emitConstructEffects` never
-	// calls `badFreeNames` for those two kinds at all) — found needing the
-	// same allowance for an ORDINARY reactive attribute (`aria-valuenow`)
-	// migrating `form-colorgraph.tsrx`, which had no reason to differ.
+	// Client rebindings shadow a server binding of the same name. Plain setup
+	// consts (LT-088) are one: a const pulled client-side is emitted there,
+	// and one that itself reads a server name is caught at its declaration
+	// (the setup half below). Authored imports (LT-091) and the query locals
+	// a loop's collection lowers to (the LT-136 shadow) are the others.
 	const setupNames = new Set(
 		component.setup.map(s => s.name).filter((n): n is string => !!n),
 	)
+	const clientRebinds = (name: string): boolean =>
+		component.signals.some(s => s.name === name) ||
+		refNames.has(name) ||
+		CONTEXT_NAMES.has(name) ||
+		setupNames.has(name) ||
+		queries.some(q => q.name === name) ||
+		component.imports.clientLeTrucNames.has(name) ||
+		component.imports.plainLocalNames.has(name)
 
-	/** Free names in a reactive/pass thunk the client cannot resolve. */
+	// The client message channel (ADR 0030 s9, LT-218): `t` is a server
+	// binding, but a static read of a declared key (`t.hi`, `t['a.b']`)
+	// compiles against the preamble's local `t`. The key is recorded, so
+	// the server serializes exactly those messages into the root `i18n`
+	// attribute. A computed key, a bare `t` or an undeclared key keeps `t`
+	// server-only.
+	const tNames = new Set(component.messageTBindings ?? [])
+	const declaredKeys = component.i18nMessages ?? {}
+	const clientMessageKeys = new Set<string>()
+	/** The declared keys `node` reads through `tName`, or null if any read is not one. */
+	const staticMessageReads = (
+		node: AstNode,
+		tName: string,
+	): string[] | null => {
+		const keys: string[] = []
+		let admitted = true
+		const visit = (current: unknown, parent: AstNode | null): void => {
+			if (!admitted) return
+			if (Array.isArray(current)) {
+				for (const child of current) visit(child, parent)
+				return
+			}
+			if (!isNode(current)) return
+			if (current.type === 'Identifier' && current.name === tName) {
+				// Not a reference: a member's property name or an object key.
+				if (
+					(parent?.type === 'MemberExpression' &&
+						parent.property === current &&
+						!parent.computed) ||
+					(parent?.type === 'Property' &&
+						parent.key === current &&
+						!parent.computed)
+				)
+					return
+				const property =
+					parent?.type === 'MemberExpression' && parent.object === current
+						? parent.property
+						: null
+				const key = !isNode(property)
+					? null
+					: !parent?.computed
+						? identifierName(property)
+						: property.type === 'Literal' && typeof property.value === 'string'
+							? property.value
+							: null
+				if (key !== null && Object.hasOwn(declaredKeys, key)) keys.push(key)
+				else admitted = false
+				return
+			}
+			for (const [field, value] of Object.entries(current)) {
+				if (field === 'loc' || field === 'range' || field === 'parent') continue
+				if (value && typeof value === 'object') visit(value, current)
+			}
+		}
+		visit(node, null)
+		return admitted ? keys : null
+	}
+
+	/** Free names in a client-emitted position that only the server binds. */
 	const badFreeNames = (node: AstNode): string[] =>
-		[...dependenciesOf(node)].filter(
-			name =>
-				!component.signals.some(s => s.name === name) &&
-				!refNames.has(name) &&
-				!JS_GLOBALS.has(name) &&
-				!CONTEXT_NAMES.has(name) &&
-				// The `isPending` idiom beside an async boundary (LT-211): the
-				// generated client imports it from '@zeix/le-truc' whenever an
-				// emitted position references it — an authored import works too
-				// (isPending is a real package export).
-				name !== 'isPending' &&
-				!setupNames.has(name) &&
-				!component.imports.clientLeTrucNames.has(name) &&
-				!component.imports.plainLocalNames.has(name),
-		)
+		[...dependenciesOf(node)].filter(name => {
+			if (!serverBindings.has(name) || clientRebinds(name)) return false
+			if (!tNames.has(name)) return true
+			const keys = staticMessageReads(node, name)
+			if (keys === null) return true
+			for (const key of keys) clientMessageKeys.add(key)
+			return false
+		})
 
 	const routingSignals: RoutingSignal[] = []
 	const suppressedSites: SuppressedSite[] = []
@@ -619,6 +697,40 @@ export const analyzeClient = (
 	runLoops(ctx)
 	runHarvest(ctx)
 	runEffects(ctx)
+
+	// LT-347: the setup half of the server-only check. `expose()` and every
+	// plain const a client position pulls in are emitted into the client
+	// verbatim, so a server arg they read is unbound there — the same
+	// ReferenceError a reactive thunk would hit, caught here rather than
+	// left to tsc on the generated module.
+	for (const prop of asArray(component.exposeArgNode?.properties))
+		if (prop.type === 'Property' && isNode(prop.value))
+			reportServerOnlyNames(
+				ctx,
+				prop.value,
+				`expose() entry \`${identifierName(prop.key) ?? '…'}\``,
+			)
+	// A signal with no harvest site (or a verbatim-seeded list) keeps its
+	// authored initializer client-side (`emit-client.ts`). Tier-independent
+	// (Architect ruling, LT-348): a `realm` resolution means the server can
+	// render the value, not that the browser can run the initializer. The
+	// setup entry holds the whole constructor call, options included.
+	for (const signal of component.signals) {
+		if (signal.constructor === 'requestContext') continue
+		const harvest = harvests.find(h => h.signal === signal.name)
+		if (harvest && !(harvest.kind === 'list' && harvest.seed === 'verbatim'))
+			continue
+		const call = component.setup.find(s => s.name === signal.name)?.node
+		if (call) reportServerOnlyNames(ctx, call, `Signal \`${signal.name}\``)
+	}
+	const clientNeeded = computeClientNeededNames(component)
+	for (const stmt of component.plainSetup)
+		if (stmt.name && clientNeeded.has(stmt.name))
+			reportServerOnlyNames(
+				ctx,
+				stmt.node,
+				`Setup const \`${stmt.name}\`, emitted client-side because a client position reads it,`,
+			)
 
 	// LT-165 step 5: the narrow residue of the retired LTC013/LTC043
 	// refusals. An UNrendered setup const the value harness cannot evaluate
@@ -688,10 +800,14 @@ export const analyzeClient = (
 			})
 	}
 
+	// The preamble reads the `i18n` attribute off the host.
+	if (clientMessageKeys.size > 0) ambient.add('host')
+
 	return {
 		queries,
 		harvests,
 		effects: guardedEffects,
+		clientMessageKeys: [...clientMessageKeys].sort(),
 		ambientContext: [...ambient].sort(),
 		childTags: [...childTags].sort(),
 		routingSignals,

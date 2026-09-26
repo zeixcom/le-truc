@@ -513,6 +513,138 @@ const CONDITIONS: Case[] = [
 	},
 ]
 
+/**
+ * LTC005's server-only face (LT-347): one fixture per position the client
+ * emits authored code into. The generated client binds no server arg and no
+ * `t`, so each would be a ReferenceError at connect. List bodies are pinned
+ * in LIST_BODY above; a new client-emitted position belongs here.
+ */
+const LABEL = '{ label }: { label: string }'
+const ICU = {
+	pre: `${imports('createCell')}\nexport const i18n = { tasks: '{count, plural, other {# tasks}}' }`,
+	params: '{ i18n: { t } }: { i18n: I18n }',
+}
+const SERVER_ONLY: Case[] = [
+	{
+		name: 'a reactive text child',
+		code: 'LTC005',
+		spec: { params: LABEL, body: '<span>{() => label.toUpperCase()}</span>' },
+		pins: ['Reactive text on <span> references server-only name(s) `label`'],
+	},
+	{
+		// LT-218 admits a static `t.<key>` read (the client message channel);
+		// a computed key stays server-only.
+		name: 'a reactive text child reading `t` through a computed key',
+		code: 'LTC005',
+		spec: {
+			...ICU,
+			setup: 'const c = createCell(0)\n\t\texpose({ count: c.get })',
+			body: "<span>{() => t[host.count > 0 ? 'tasks' : 'tasks']({ count: host.count })}</span>",
+		},
+		pins: ['Reactive text on <span> references server-only name(s) `t`'],
+	},
+	{
+		name: 'a reactive text child of the component root',
+		code: 'LTC005',
+		spec: { params: LABEL, body: '{() => label.toUpperCase()}' },
+		pins: ['Reactive text on the component root references'],
+	},
+	{
+		name: 'a reactive attribute',
+		code: 'LTC005',
+		spec: { params: LABEL, body: '<span title={() => label}>x</span>' },
+		pins: ['Reactive attribute `title` references'],
+	},
+	{
+		name: 'a class map',
+		code: 'LTC005',
+		spec: {
+			params: LABEL,
+			body: "<span class={() => ({ a: label === 'x' })}>x</span>",
+		},
+		pins: ['Reactive class map references'],
+	},
+	{
+		name: 'a style map',
+		code: 'LTC005',
+		spec: {
+			params: LABEL,
+			body: '<span style={() => ({ color: label })}>x</span>',
+		},
+		pins: ['Reactive style map references'],
+	},
+	{
+		name: 'an event handler',
+		code: 'LTC005',
+		spec: {
+			params: LABEL,
+			body: '<button onClick={() => console.log(label)}>x</button>',
+		},
+		pins: ['Event handler `onClick` references'],
+	},
+	{
+		name: 'a reactive truc:html',
+		code: 'LTC005',
+		spec: { params: LABEL, body: '<span truc:html={() => label}></span>' },
+		pins: ['Reactive truc:html={…} references'],
+	},
+	{
+		name: 'an expose() get/set descriptor',
+		code: 'LTC005',
+		spec: {
+			pre: imports('createCell'),
+			params: LABEL,
+			setup:
+				"const c = createCell('')\n\t\texpose({ v: { get: () => label + c.get(), set: (x: string) => c.set(x) } })",
+			body: '<span>x</span>',
+		},
+		pins: ['expose() entry `v` references'],
+	},
+	{
+		name: 'a defineMethod body',
+		code: 'LTC005',
+		spec: {
+			pre: imports('defineMethod'),
+			params: LABEL,
+			setup: 'expose({ go: defineMethod(() => { console.log(label) }) })',
+			body: '<span>x</span>',
+		},
+		pins: ['expose() entry `go` references'],
+	},
+	{
+		name: 'a signal with no harvest site',
+		code: 'LTC005',
+		spec: {
+			pre: imports('createCell'),
+			params: LABEL,
+			setup: 'const c = createCell(label)\n\t\texpose({ v: c.get })',
+			body: '<span>x</span>',
+		},
+		pins: ['Signal `c` references'],
+	},
+	{
+		name: 'a module-level const',
+		code: 'LTC005',
+		spec: {
+			pre: 'const MAX = 5',
+			body: '<button onClick={() => console.log(MAX)}>x</button>',
+		},
+		pins: ['Event handler `onClick` references server-only name(s) `MAX`'],
+	},
+	{
+		name: 'a setup const a client position pulls in',
+		code: 'LTC005',
+		spec: {
+			pre: imports('createCell'),
+			params: LABEL,
+			setup:
+				'const c = createCell(0)\n\t\texpose({ n: c.get })\n\t\tconst x = label.length',
+			body: '<span title={() => String(x + c.get())}>x</span>',
+		},
+		pins: ['Setup const `x`, emitted client-side'],
+	},
+]
+
 /** A sample of each remaining diagnostic family. */
 const FAMILIES: Case[] = [
 	{
@@ -825,6 +957,40 @@ describe('diagnostic parity — reactive-list bodies', () => {
 
 describe('diagnostic parity — conditions (LTC005 condition face, ADR 0037 rider)', () => {
 	runCases(CONDITIONS)
+})
+
+describe('diagnostic parity — server-only names in client positions (LT-347, LT-348)', () => {
+	runCases(SERVER_ONLY)
+	// The false positives LT-347's allowlist produced (LT-348): browser
+	// globals outside `JS_GLOBALS` in handlers and maps, FactoryContext
+	// primitives, and an array-destructured callback parameter (the `.tsx`
+	// converter emitted its element as a shorthand Property, leaving the
+	// name free).
+	test.each([
+		["<button onClick={() => { clearTimeout(1); fetch('/x') }}>x</button>"],
+		['<button onClick={() => getComputedStyle(host)}>x</button>'],
+		["<span class={() => ({ a: matchMedia('(x)').matches })}>x</span>"],
+	])('browser globals stay clean: %s', body => {
+		const { tsrx, tsx } = compileBoth({
+			name: 'clean',
+			code: 'LTC005',
+			spec: { body },
+		})
+		expect([...tsrx, ...tsx].filter(d => d.code === 'LTC005')).toEqual([])
+	})
+	test('client names in those positions stay clean', () => {
+		const { tsrx, tsx } = compileBoth({
+			name: 'clean',
+			code: 'LTC005',
+			spec: {
+				params: LABEL,
+				setup:
+					"const narrow = (el: Element) => matchMedia('(x)').matches && el",
+				body: "<button onClick={() => [[host]].forEach(([label]) => { all('button'); narrow(label) })}>{label}</button>",
+			},
+		})
+		expect([...tsrx, ...tsx].filter(d => d.code === 'LTC005')).toEqual([])
+	})
 })
 
 describe('diagnostic parity — one sample per family', () => {

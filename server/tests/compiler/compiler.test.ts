@@ -177,7 +177,11 @@ describe('reactive attribute thunks may reference a plain setup const (LT-088)',
 		expect(component?.clientCode).toContain('fmt(1)')
 	})
 
-	test('a reactive attribute referencing a genuinely undeclared name is still diagnosed', () => {
+	// LT-348: LTC005 names server bindings only. An undeclared name is no
+	// binding at all — a typo or a missing import that tsc reports on the
+	// authored `.tsx` and on the generated module, with the right message.
+	// Before LT-348 the allowlist called it "server-only".
+	test('a reactive attribute referencing a genuinely undeclared name is left to tsc', () => {
 		const { diagnostics } = compileComponent(
 			`export function C({}: {})
 			@{
@@ -192,7 +196,7 @@ describe('reactive attribute thunks may reference a plain setup const (LT-088)',
 		)
 		expect(
 			diagnostics.some(d => d.message.includes('references server-only name')),
-		).toBe(true)
+		).toBe(false)
 	})
 })
 

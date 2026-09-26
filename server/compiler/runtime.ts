@@ -12,6 +12,8 @@
  * never by the compiler itself.
  */
 
+import { bakeMessageEnv, type Message, type MessageEnv } from './icu/evaluate'
+
 /* === Re-exports === */
 
 /**
@@ -25,6 +27,20 @@ export {
 	type MessageArgs,
 	type MessageEnv,
 } from './icu/evaluate'
+
+/**
+ * Where the generated `i18n` module keeps an argument message's parsed AST
+ * on the closure `t.<key>` resolves to (LT-218). The server fold only ever
+ * calls the closure; `clientMessages` reads the AST back to serialize it
+ * into the client channel. A symbol, so it never shows up in `t`'s type or
+ * in a spread.
+ */
+export const CLIENT_MESSAGE: unique symbol = Symbol.for(
+	'le-truc.client-message',
+)
+
+/** What {@link CLIENT_MESSAGE} holds: the AST and the record it formats against. */
+export type ClientMessageSource = { message: Message; env: MessageEnv }
 
 /* === Types === */
 
@@ -415,3 +431,31 @@ export const entries = <T>(
  * re-exported here so generated modules keep a single runtime import.
  */
 export { composeHostAttrs } from './compose-attrs'
+
+/**
+ * The per-instance `i18n` attribute's value (ADR 0030 s9, LT-218): the
+ * client-referenced keys of this render's `t`, argument-less messages as
+ * their string and the rest as their parsed AST with the record's
+ * `timeZone`/`currency` baked in. Called per render call, so each locale
+ * serializes its own messages. A key whose closure carries no AST (a
+ * hand-built record in a test) is left out, and the client falls back to
+ * the source record for it. Null when nothing is left, which omits the
+ * attribute.
+ */
+export const clientMessages = (
+	t: Readonly<Record<string, unknown>>,
+	keys: readonly string[],
+): string | null => {
+	const picked: Record<string, string | Message> = {}
+	for (const key of keys) {
+		const value = t[key]
+		if (typeof value === 'string') picked[key] = value
+		else if (typeof value === 'function') {
+			const source = (value as { [CLIENT_MESSAGE]?: ClientMessageSource })[
+				CLIENT_MESSAGE
+			]
+			if (source) picked[key] = bakeMessageEnv(source.message, source.env)
+		}
+	}
+	return Object.keys(picked).length > 0 ? JSON.stringify(picked) : null
+}

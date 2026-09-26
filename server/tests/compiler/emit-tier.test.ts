@@ -76,7 +76,9 @@ export function C({ name }: { name: string })
  * whether the value has a server answer: a plain initializer is
  * realm-answerable (the realm connects the component for real and serializes
  * whatever the signal settles to). Resolution flips from `none` to `realm`,
- * and the conjunction lands one tier up.
+ * and the conjunction lands one tier up. The initializer is a literal, not a
+ * server arg: the client emits a harvest-less initializer verbatim, so an arg
+ * there is LTC005 in every tier (LT-348).
  *
  * This is the control that makes the Static assertion mean something. A plain
  * Folded control would only prove the fixture has a routing signal at all;
@@ -84,7 +86,7 @@ export function C({ name }: { name: string })
  */
 const simulatedFixture = staticFixture.replace(
 	'createCell(Date.now())',
-	'createCell(name)',
+	'createCell(0)',
 )
 
 /** The same component with no routing signal at all — the Folded control. */

@@ -27,6 +27,8 @@ import {
 	FACTORY_CONTEXT_MEMBERS,
 	sanitizeVarName,
 } from './ast-utils'
+import type { Message } from './icu/evaluate'
+import { literalOf, parseMessage } from './icu/parse'
 import { computeClientNeededNames } from './imports'
 import type { ComponentIR, SignalIR } from './ir'
 import {
@@ -368,6 +370,161 @@ const factoryScopeNames = (
 	return names
 }
 
+/**
+ * The client message preamble (ADR 0030 s9, LT-218): the factory's own `t`
+ * for the keys client positions read. It is the source-locale record the
+ * build parsed, merged under the per-instance `i18n` attribute the server
+ * rendered, parsed once at connect. A client-created instance has no
+ * attribute and speaks the source locale; a malformed one warns in
+ * DEV_MODE and falls back the same way. No `@zeix/le-truc` export (ADR 0030
+ * s8): the evaluator is `icu/evaluate.ts`'s walk, inlined and narrowed to
+ * the node kinds these keys' source patterns use, with one `Intl`
+ * formatter per node per connection (the locale is fixed at connect).
+ *
+ * Narrowing reads the SOURCE patterns: the compiler sees no translation.
+ * A translation that uses a construct its source does not (a `plural`
+ * where the source interpolates) renders that node empty on the client.
+ */
+const messagePreambleLines = (
+	component: ComponentIR,
+	keys: readonly string[],
+): string[] => {
+	const tName = component.messageTBindings?.[0]
+	if (!tName || keys.length === 0) return []
+	const source: Record<string, string | Message> = {}
+	const withArgs = new Set<string>()
+	for (const key of keys) {
+		const pattern = component.i18nMessages?.[key] ?? ''
+		const parsed = parseMessage(pattern)
+		if (!parsed.ok) {
+			source[key] = pattern
+			continue
+		}
+		source[key] = literalOf(parsed.message) ?? parsed.message
+		if (parsed.args.length > 0) withArgs.add(key)
+	}
+	const kinds = new Set<string>()
+	const collect = (message: Message): void => {
+		for (const node of message) {
+			if (typeof node === 'string') continue
+			kinds.add(node.t)
+			if (node.t === 'plural' || node.t === 'select')
+				for (const body of Object.values(node.c)) collect(body)
+		}
+	}
+	for (const key of withArgs) collect(source[key] as Message)
+	const lines = [
+		'// Client messages (ADR 0030 s9): the source-locale record, merged under',
+		'// the server-rendered `i18n` attribute and fixed for the connection.',
+		`const __i18nSource: Record<string, unknown> = ${JSON.stringify(source)}`,
+		'let __i18nMessages = __i18nSource',
+		"const __i18nAttribute = host.getAttribute('i18n')",
+		'if (__i18nAttribute) {',
+		'\ttry {',
+		'\t\tconst parsed: unknown = JSON.parse(__i18nAttribute)',
+		"\t\tif (parsed && typeof parsed === 'object')",
+		'\t\t\t__i18nMessages = { ...__i18nSource, ...(parsed as Record<string, unknown>) }',
+		'\t} catch (error) {',
+		"\t\tif (process.env.DEV_MODE === 'true')",
+		`\t\t\tconsole.warn(${JSON.stringify(`<${component.tag}>: the i18n attribute is not valid JSON — using the source-locale messages`)}, error)`,
+		'\t}',
+		'}',
+	]
+	if (withArgs.size > 0) {
+		const usesFormatter = ['num', 'date', 'plural', '#'].some(k => kinds.has(k))
+		lines.push(
+			'type __I18nNode = string | { t: string; a: string; o?: unknown; s?: number; off?: number; l?: string; c?: Record<string, __I18nNode[]> }',
+		)
+		if (usesFormatter)
+			lines.push(
+				"const __i18nLang = (host.closest('[lang]') as HTMLElement | null)?.lang || undefined",
+				'const __i18nFormatters = new WeakMap<object, unknown>()',
+				'const __i18nFormatter = <F>(node: object, make: () => F): F => {',
+				'\tlet formatter = __i18nFormatters.get(node) as F | undefined',
+				'\tif (!formatter) __i18nFormatters.set(node, (formatter = make()))',
+				'\treturn formatter',
+				'}',
+			)
+		const cases: string[] = []
+		if (kinds.has('arg'))
+			cases.push(
+				"\t\t\tcase 'arg':",
+				'\t\t\t\tout += String(value)',
+				'\t\t\t\tbreak',
+			)
+		if (kinds.has('num'))
+			cases.push(
+				"\t\t\tcase 'num':",
+				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.NumberFormat(node.l ?? __i18nLang, node.o as Intl.NumberFormatOptions)).format(Number(value) * (node.s ?? 1))',
+				'\t\t\t\tbreak',
+			)
+		if (kinds.has('date'))
+			cases.push(
+				"\t\t\tcase 'date':",
+				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.DateTimeFormat(node.l ?? __i18nLang, node.o as Intl.DateTimeFormatOptions)).format(new Date(value as number | Date))',
+				'\t\t\t\tbreak',
+			)
+		if (kinds.has('#'))
+			cases.push(
+				"\t\t\tcase '#':",
+				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.NumberFormat(node.l ?? __i18nLang)).format(Number(value) - (node.off ?? 0))',
+				'\t\t\t\tbreak',
+			)
+		if (kinds.has('plural') || kinds.has('select'))
+			cases.push(
+				'\t\t\tdefault: {',
+				'\t\t\t\tconst c = node.c ?? {}',
+				'\t\t\t\tconst own = (key: string) => (Object.hasOwn(c, key) ? c[key] : undefined)',
+				...(kinds.has('plural')
+					? [
+							"\t\t\t\tconst body = node.t === 'plural'",
+							'\t\t\t\t\t? (own(`=${Number(value)}`) ??',
+							"\t\t\t\t\t\town(__i18nFormatter(node, () => new Intl.PluralRules(node.l ?? __i18nLang, { type: node.o ? 'ordinal' : 'cardinal' })).select(Number(value) - (node.off ?? 0))) ??",
+							'\t\t\t\t\t\tc.other)',
+							'\t\t\t\t\t: (own(String(value)) ?? c.other)',
+						]
+					: ['\t\t\t\tconst body = own(String(value)) ?? c.other']),
+				'\t\t\t\tif (body) out += __i18nFormat(body, args)',
+				'\t\t\t\tbreak',
+				'\t\t\t}',
+			)
+		lines.push(
+			'const __i18nFormat = (message: __I18nNode[], args: Record<string, unknown>): string => {',
+			"\tlet out = ''",
+			'\tfor (const node of message) {',
+			"\t\tif (typeof node === 'string') {",
+			'\t\t\tout += node',
+			'\t\t\tcontinue',
+			'\t\t}',
+			'\t\tconst value = args[node.a]',
+			'\t\tswitch (node.t) {',
+			...cases,
+			'\t\t}',
+			'\t}',
+			'\treturn out',
+			'}',
+		)
+	}
+	lines.push(`const ${tName} = {`)
+	for (const key of keys) {
+		const at = `__i18nMessages[${JSON.stringify(key)}]`
+		const member = /^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key)
+		if (withArgs.has(key))
+			lines.push(
+				`\t${member}: (args: Record<string, unknown>): string => {`,
+				`\t\tconst message = ${at}`,
+				"\t\treturn typeof message === 'string' ? message : __i18nFormat(message as __I18nNode[], args)",
+				'\t},',
+			)
+		else
+			lines.push(
+				`\t${member}: typeof ${at} === 'string' ? (${at} as string) : ${JSON.stringify(source[key])},`,
+			)
+	}
+	lines.push('}')
+	return lines
+}
+
 /* === Exported Functions === */
 
 /**
@@ -397,6 +554,9 @@ export const emitClientModule = (
 	const cursor: SpanCursor = { offset: 0 }
 	const push = (text: string, slices: SourceSlice[] = []): void =>
 		appendWithSpans(lines, text, 2, slices, spans, cursor)
+
+	for (const line of messagePreambleLines(component, plan.clientMessageKeys))
+		push(line)
 
 	// Queries
 	for (const query of plan.queries) {
@@ -454,9 +614,9 @@ export const emitClientModule = (
 			// corrects at connect"). So the declaration MUST exist here: seeded
 			// from its own initializer, exactly as a hand-written factory would
 			// declare it. An initializer naming a server param has no client
-			// representation — that surfaces as a tsc failure on this generated
-			// module (`check:corpus`), mapped back through the span table to the
-			// declaration's own line (the LT-136 posture: loud, not silent).
+			// representation, so the analysis rejects it (LTC005, LT-348) before
+			// this runs — in every tier, since the realm answering the value
+			// does not make the initializer runnable in the browser.
 			// `requestContext` signals never get a harvest and are declared by
 			// the dedicated verbatim path below.
 			if (signal.constructor === 'requestContext') continue

@@ -209,6 +209,42 @@ const selectorOf = (fx: EffectsContext, query: string): string =>
 	fx.queries.find(q => q.name === query)?.selector ?? query
 
 /**
+ * LTC005's server-only face: the generated client binds no server name — a
+ * parameter (`t` included), a module-level declaration, a server-data loop
+ * binding (`badFreeNames`, LT-348) — so any client-emitted position reading
+ * one is a ReferenceError at connect. One check and one wording for every
+ * such position (LT-347 audited them: reactive attributes, lazy text
+ * children, class/style maps, event handlers, `truc:html`, pass entries,
+ * `expose()` entries, client-needed setup consts and harvest-less signal
+ * initializers; list bodies run their own in `loops.ts`). `subject` opens
+ * the sentence.
+ */
+export const reportServerOnlyNames = (
+	ctx: Pick<
+		EffectsContext,
+		'component' | 'source' | 'diagnostics' | 'badFreeNames'
+	>,
+	node: AstNode,
+	subject: string,
+	bad: string[] = ctx.badFreeNames(node),
+): void => {
+	if (bad.length === 0) return
+	// `lang` stays server-only under the client message channel (ADR 0030
+	// s9): the locale reaches the client through the root attribute.
+	const lang = ctx.component.langBinding
+	ctx.diagnostics.push(
+		diagnostic.unsupported(
+			ctx.source,
+			node.start,
+			`${subject} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; those exist only during the server render — read the value through an exposed prop or from the DOM`,
+			lang !== null && bad.includes(lang)
+				? `The locale is \`host.lang\` on the client, not \`${lang}\`.`
+				: undefined,
+		),
+	)
+}
+
+/**
  * The lazy-text emission gate (LT-114's root branch, mirrored onto the
  * nested path by LT-115, deduplicated by LT-226): `bindText()` replaces the
  * element's ENTIRE textContent, so the one sanctioned shape is a lazy child
@@ -260,6 +296,10 @@ const emitLazyTextChildren = (
 				diagnostic.managedPropWithoutForm(fx.source, child.node.start, managed),
 			)
 		fx.collectAmbient(child.expr)
+		// The LT-122 form's source is synthesized (`() => host.<prop>`);
+		// its `exprText` is the server arg by design.
+		if (!child.bindsProp)
+			reportServerOnlyNames(fx, child.expr, `Reactive text on ${targetLabel}`)
 	}
 	// The gate itself: one lazy child, alone.
 	const contentSiblings = el.children.filter(
@@ -495,31 +535,17 @@ const emitPassEntries = (
 	query: string,
 	sink: TopEffectPlan[] = fx.effects,
 ): void => {
-	const { source, diagnostics, collectAmbient, badFreeNames } = fx
+	const { collectAmbient } = fx
 	for (const entry of entries) {
 		collectAmbient(entry.thunk)
-		const bad = badFreeNames(entry.thunk)
-		if (bad.length > 0) {
-			diagnostics.push(
-				diagnostic.unsupported(
-					source,
-					entry.thunk.start,
-					`pass entry \`${entry.prop}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
-				),
-			)
-		}
+		reportServerOnlyNames(fx, entry.thunk, `pass entry \`${entry.prop}\``)
 		if (entry.setThunk) {
 			collectAmbient(entry.setThunk)
-			const badSet = badFreeNames(entry.setThunk)
-			if (badSet.length > 0) {
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						entry.setThunk.start,
-						`pass entry \`${entry.prop}\` (set) references server-only name(s) ${badSet.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
-					),
-				)
-			}
+			reportServerOnlyNames(
+				fx,
+				entry.setThunk,
+				`pass entry \`${entry.prop}\` (set)`,
+			)
 		}
 		sink.push({
 			kind: 'pass',
@@ -554,7 +580,6 @@ const emitConstructEffects = (
 		suppressedSites,
 		registry,
 		collectAmbient,
-		badFreeNames,
 		derivableHostProps,
 		derivableRefGuards,
 		foldScope,
@@ -614,16 +639,11 @@ const emitConstructEffects = (
 		}
 		if (attr.kind === 'reactive') {
 			collectAmbient(attr.thunk)
-			const bad = badFreeNames(attr.thunk)
-			if (bad.length > 0) {
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						attr.thunk.start,
-						`Reactive attribute \`${attr.name}\` references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
-					),
-				)
-			}
+			reportServerOnlyNames(
+				fx,
+				attr.thunk,
+				`Reactive attribute \`${attr.name}\``,
+			)
 			// CHECKLIST §5 / LTC034: omission is not neutral for these
 			// attribute names — `hidden` omitted means visible, `disabled`
 			// omitted means enabled AND submittable, same for `checked`/
@@ -754,6 +774,7 @@ const emitConstructEffects = (
 			emitPassEntries(fx, attr.entries, query, sink)
 		} else if (attr.kind === 'class-map') {
 			collectAmbient(attr.object)
+			reportServerOnlyNames(fx, attr.thunk, 'Reactive class map')
 			sink.push({
 				kind: 'watch-class',
 				query,
@@ -764,6 +785,7 @@ const emitConstructEffects = (
 			})
 		} else if (attr.kind === 'style-map') {
 			collectAmbient(attr.object)
+			reportServerOnlyNames(fx, attr.thunk, 'Reactive style map')
 			sink.push({
 				kind: 'watch-style',
 				query,
@@ -774,6 +796,7 @@ const emitConstructEffects = (
 			})
 		} else if (attr.kind === 'event') {
 			collectAmbient(attr.handler)
+			reportServerOnlyNames(fx, attr.handler, `Event handler \`${attr.name}\``)
 			sink.push({
 				kind: 'on',
 				query,
@@ -787,16 +810,7 @@ const emitConstructEffects = (
 			// dangerouslyBindInnerHTML watch, the sanctioned XSS-aware sink
 			// (ADR 0010) — never a raw innerHTML property binding.
 			collectAmbient(attr.thunk)
-			const bad = badFreeNames(attr.thunk)
-			if (bad.length > 0) {
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						attr.thunk.start,
-						`Reactive truc:html={…} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; the client only knows signals, refs, context members, and globals`,
-					),
-				)
-			}
+			reportServerOnlyNames(fx, attr.thunk, 'Reactive truc:html={…}')
 			sink.push({
 				kind: 'watch-html',
 				query,
