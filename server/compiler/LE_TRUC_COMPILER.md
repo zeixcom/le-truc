@@ -314,7 +314,7 @@ front-end modules, then the two front ends:
 | `params.ts` | The params contract (`extractParams`): the destructured args object (LTC008) plus the LT-209 factory-context parameter |
 | `setup-extraction.ts` | The setup-statement loop (`extractSetup`) and context seeding (`seedExtractionContext`) |
 | `template-output.ts` | Template-output resolution (`resolveTemplateOutput`): root, `<style>` block, CSS, `first()`/`all()` reference resolution (LT-055) |
-| `validate-lowered.ts` | The post-lowering validation tail (`validateLoweredComponent`): LTC039/047/028/010, `config.observedAttributes`, LT-059, loops as branch roots (LT-301) |
+| `validate-lowered.ts` | The post-lowering validation tail (`validateLoweredComponent`): LTC039/047/028/010, `config.observedAttributes`, LT-059, loops as branch roots (LT-301), LTC055 message call sites (LT-250) |
 | `assemble-ir.ts` | IR assembly (`assembleComponentIR`), import placement, module-level declarations (`readModuleDecls`) |
 | `lower-shared.ts` | Surface-independent lowering core: condition validation, element/compose lowering, the expression-child lift rule, positional reactivity, `lowerChildrenSkeleton` — the `Lowering` hooks carry each surface's child-node dispatch — and the programs after header parsing: `lowerLoop` over a `LoopSource` (routing, list-body validation, `each()`/reconcile IR), `finishIf`, `finishTry`, `reportEmptySwitch` |
 | `ast-utils.ts` | Shared AST predicates and the recognized-name vocabulary constants both front ends' walks run on |
@@ -332,7 +332,9 @@ front-end modules, then the two front ends:
 | `reactivity.ts` | `classifyChild` — the reactive-lift rule: is a template child reactive, static, or untraceable? |
 | `evaluability.ts` | `dependenciesOf` + `isServerEvaluable` — the server-known dependency-closure rule; host-derived fold helpers. Under ADR 0029 this is also the first conjunct of the **tier classifier** (§ 5) |
 | `fold-inputs.ts` | The partial-readiness invariant (ADR 0034 s4, LT-258): the ONE declaration of the closed page-ambient set (`PAGE_AMBIENT_TYPES`, which also writes the generated `I18n` interface) and the page-context globals; `checkFoldInputs` (LTC054 over every server-evaluated position, run by `pipeline.ts`; also LTC033 on a server-data loop's items, the one LTC033 site that needs the loop's outer scope — LT-326), `ambientRecordViolations` (LTC054 at the params pattern), `assertFoldScopeClosed` (throws if `serverKnown` gains a non-own, undeclared name) |
-| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary: `export const i18n` extraction (quoted keys included), the `lang` binding/default lookup |
+| `i18n.ts` | The reserved `i18n` parameter's compiler vocabulary: `export const i18n` extraction (quoted keys included; each value parsed as an ICU pattern, its argument signature on the extraction result as `i18nArgs`), the `lang` binding/default lookup, and `reportMessageCallSites` (LTC055: every `t.<key>` site against its pattern's arguments, LT-250) |
+| `icu/parse.ts` | ICU MessageFormat 1 at build time (ADR 0030 s4, LT-250): `@messageformat/parser` → the evaluator's JSON AST, `::` skeletons resolved to plain `Intl` options, the argument signature (`MessageArg`); an unsupported construct is a reasoned parse failure. `@messageformat/core` is never imported under `server/compiler/` — it is the test oracle (`icu.test.ts`) |
+| `icu/evaluate.ts` | `formatMessage` — the ONE evaluator, dependency-free so LT-218 can inline it: the server fold reaches it through the generated `i18n` module's `t`, the client through LT-218's preamble |
 | `infer-type.ts` | Signal value-type inference |
 | `config.ts` | `export const config` extraction |
 | `imports.ts` | Compose-import resolution (accepts `.tsrx` AND `.tsx` specifiers — cross-surface composition falls out of the path-keyed registry) + plain import collection and placement |
@@ -354,7 +356,7 @@ front-end modules, then the two front ends:
 | `tier.ts` | The tier classifier (§ 5): routing signals in, the component's tier + recorded reasons out |
 | `indent.ts` / `css.ts` | Template-literal-safe reindentation / `<style>` dedent |
 | `diagnostics.ts` | Diagnostic codes (`LTC###` plus the six `.tsrx`-grammar `TSRX###` codes), message factories |
-| `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup) |
+| `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup, and `icu/evaluate.ts`'s `formatMessage`, which the generated `i18n` module wraps around each argument message) |
 | `smoke.ts` | Dev script: compile corpus, execute renders, print |
 | `census.ts` | The census channel (§ 5.2): `Census` records, `tierCensus`, `translationCensus`, `formatCensus` |
 | `build-report.ts` | The build-report channel (§ 5): partitioning, matching, and the tier-2 warning copy |

@@ -16,6 +16,8 @@ import {
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import { reportDuplicatedChannels } from './first-refs'
+import { reportMessageCallSites } from './i18n'
+import type { MessageArg } from './icu/parse'
 import type { ConfigIR, ExtractContext, ForIR, TemplateNode } from './ir'
 import type { SetupExtraction } from './setup-extraction'
 import { wordingOf } from './surface'
@@ -148,6 +150,9 @@ const reportLoopsInBranches = (
  *   catalog material.
  * - The static `truc:case-type` configuration (LT-190) for the translation
  *   census's reachability filter (effects/i18n.ts).
+ * - LTC055 (LT-250, ADR 0030 s4): every `t.<key>` site against the key's
+ *   parsed ICU pattern — called with exactly its arguments, or read bare
+ *   when it takes none (`reportMessageCallSites`, i18n.ts).
  * - `config.observedAttributes` must name Parser-exposed props only — a
  *   name that is not Parser-exposed would make the extension silently
  *   inert.
@@ -173,12 +178,16 @@ export const validateLoweredComponent = (
 		root,
 		config,
 		i18nMessages,
+		i18nArgs,
+		componentFn,
 		extraction,
 		fors,
 	}: {
 		root: TemplateNode & { kind: 'element' }
 		config: ConfigIR | null
 		i18nMessages: Record<string, string> | null
+		i18nArgs: Record<string, readonly MessageArg[]> | null
+		componentFn: AstNode
 		extraction: SetupExtraction
 		fors: ReadonlyMap<AstNode, ForIR>
 	},
@@ -208,6 +217,8 @@ export const validateLoweredComponent = (
 				diagnostic.untranslatedLiteral(source, node.node?.start, node.value),
 			)
 		})
+
+	if (i18nArgs) reportMessageCallSites(ctx, componentFn, i18nArgs)
 
 	// LT-190: a literal `'ordinal'`/`'cardinal'` — or an explicit
 	// `undefined`, which is cardinal by Intl's own default — proves the

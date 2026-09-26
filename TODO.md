@@ -42,7 +42,7 @@ and LT-220 item 0 are amended to match. The loose union never ships.
   carrier span, and adds the census pattern walks. **LT-249** lands with LT-219 as one
   `malformed` census family.
 - **Copy.** **LT-220** covers the message-model docs. **LT-189** is the standing one-voice
-  Tech Writer round (fourteen items). The two run as one round, last, so the new ICU codes
+  Tech Writer round (fifteen items). The two run as one round, last, so the new ICU codes
   join it.
 - **Parallel slot.** **LT-138** was promoted by the LT-102 review. module-splitview authors
   `truc:html`, so the inverted sanitizer defaults are now live in the corpus. Its first step
@@ -83,7 +83,7 @@ and `check:links` pass.
 
 ### Build half (LT-250 → LT-308 → LT-252 → LT-251; LT-253 after LT-252)
 
-- [ ] LT-250: ICU MessageFormat — the build half: parser dependency, AST, shared evaluator, server fold, argument diagnostic (ADR 0030 s4). **Gated by LT-233 (SurfaceAdapter); gates LT-308, LT-218, LT-251, LT-252.**
+- [x] LT-250: ICU MessageFormat — the build half: parser dependency, AST, shared evaluator, server fold, argument diagnostic (ADR 0030 s4). **Gated by LT-233 (SurfaceAdapter); gates LT-308, LT-218, LT-251, LT-252.** — done, pending review ⏳ (Tech Writer: LTC055 copy, LT-189 item 16; handoff notes in NOTES.md)
   **Skill:** le-truc-dev
   **Context:** The LT-240 ruling (owner, 2026-09-19; ADR 0030 s4 amended) in code. A message
   value becomes an ICU MF1 pattern; `t.<key>` resolves to a string when the pattern takes no
@@ -520,6 +520,13 @@ and `check:links` pass.
      `server/tests/compiler/tsx/diagnostic-parity.test.ts` pins parity, so rewording a key needs
      no test edit unless a sentence frame changes. `errors.md` rows for LTC001/LTC002/LTC027/
      LTC035 follow the reworded text.
+  16. **LTC055's copy** (LT-250 handoff, 2026-09-26): two first-draft builders in
+     `diagnostics.ts` — `unparseableMessage` (a source pattern that is not a supported ICU MF1
+     pattern; the parser's own reason is spliced in) and `messageArgumentMismatch` (a `t.<key>`
+     site: missing/extra arguments, a non-literal record, an argument message read bare, an
+     argument-less message called — the clauses live in `i18n.ts`'s `reportMessageCallSites`).
+     New code, so `errors.md` gains an LTC055 row. Pinned by `i18n.test.ts` and three
+     `diagnostic-parity.test.ts` cases (sentence fragments, not whole messages).
 
 ### Parallel slot
 

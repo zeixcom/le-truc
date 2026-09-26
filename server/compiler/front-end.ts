@@ -268,6 +268,8 @@ export const runFrontEnd = (
 		root: resolved.root,
 		config: decls.config,
 		i18nMessages: decls.i18nMessages,
+		i18nArgs: decls.i18nArgs,
+		componentFn: fn,
 		extraction,
 		fors,
 	})

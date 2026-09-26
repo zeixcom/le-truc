@@ -12,6 +12,20 @@
  * never by the compiler itself.
  */
 
+/* === Re-exports === */
+
+/**
+ * The shared ICU evaluator (LT-250, ADR 0030 s4): the generated `i18n`
+ * module wraps each argument message's parsed AST in a call to it, so the
+ * server fold runs the same walk LT-218 inlines into the client.
+ */
+export {
+	formatMessage,
+	type Message,
+	type MessageArgs,
+	type MessageEnv,
+} from './icu/evaluate'
+
 /* === Types === */
 
 /** Server-side stand-in for a Cause & Effect cell: read-once box, inert set. */

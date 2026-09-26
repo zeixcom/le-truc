@@ -1,0 +1,159 @@
+/**
+ * The ICU MessageFormat 1 evaluator (ADR 0030 s4, LT-250) — ONE
+ * implementation, ours, for both sides of a message.
+ *
+ * The server fold calls it through the generated `i18n` module's `t`, and
+ * LT-218 inlines a narrowed copy of it into the client preamble. Owning it
+ * is the point: a server-rendered string and the client's recomputation run
+ * the same walk over the same AST, so they cannot disagree.
+ * `@messageformat/core` is a test oracle only (`icu.test.ts` differentially
+ * checks this walk against it).
+ *
+ * Constraints, so LT-218 can inline it:
+ * - **No imports.** Not from the compiler, not from a package. The locale
+ *   work is `Intl.PluralRules` / `NumberFormat` / `DateTimeFormat`.
+ * - **Emitter-agnostic.** A pure function of `(message, args, env)`; no
+ *   caches keyed on module state, no DOM.
+ * - **Data, not code.** The AST (`Message`) is JSON: build-time resolution
+ *   in `parse.ts` has already turned every skeleton and named style into
+ *   plain `Intl` options, so nothing here parses anything.
+ */
+
+/* === Types === */
+
+/**
+ * One node of a parsed message. A bare string is literal text, already
+ * unescaped (the parser consumed MF1's apostrophe quoting).
+ */
+export type MessageNode =
+	| string
+	/** `{name}` — the argument's value, stringified. */
+	| { t: 'arg'; a: string }
+	/**
+	 * `{n, number[, style]}` — `o` is the resolved `Intl.NumberFormat`
+	 * options, `s` a multiplier (`::percent`/`::scale/…` skeletons: ICU
+	 * formats `25` as `25%`, `Intl` wants `0.25`). A `currency` style with no
+	 * explicit code takes the record's `currency`.
+	 */
+	| { t: 'num'; a: string; o?: Intl.NumberFormatOptions; s?: number }
+	/**
+	 * `{d, date|time[, style]}` — `o` is the resolved `Intl.DateTimeFormat`
+	 * options; the record's `timeZone` applies unless `o` names one.
+	 */
+	| { t: 'date'; a: string; o: Intl.DateTimeFormatOptions }
+	/**
+	 * `{n, plural|selectordinal, …}` — `c` maps each case key (`=0`, `one`,
+	 * `other`, …) to its body; `o` marks ordinal rules, `off` the offset.
+	 */
+	| {
+			t: 'plural'
+			a: string
+			c: Record<string, Message>
+			o?: 1
+			off?: number
+	  }
+	/** `{x, select, …}` — `c` maps each case key to its body. */
+	| { t: 'select'; a: string; c: Record<string, Message> }
+	/**
+	 * `#` inside a plural — the enclosing plural's argument minus its
+	 * offset, locale-formatted. The parser resolves which plural it belongs
+	 * to, so the node carries the argument name and offset itself.
+	 */
+	| { t: '#'; a: string; off?: number }
+
+/** A parsed message: a sequence of nodes. */
+export type Message = MessageNode[]
+
+/** The argument record a message with arguments is called with. */
+export type MessageArgs = Readonly<Record<string, unknown>>
+
+/** The locale facts a message formats against — the `i18n` record's. */
+export type MessageEnv = {
+	lang: string
+	timeZone?: string
+	currency?: string
+}
+
+/* === Internal Functions === */
+
+/**
+ * The case body for `key`, own keys only — a select value of
+ * `'constructor'` must fall to `other`, not reach `Object.prototype`.
+ */
+const caseOf = (
+	cases: Record<string, Message>,
+	key: string,
+): Message | undefined => (Object.hasOwn(cases, key) ? cases[key] : undefined)
+
+/* === Exported Functions === */
+
+/**
+ * Format `message` with `args` under `env`.
+ *
+ * Plural selection follows ICU: an exact `=N` case wins over the category,
+ * the category is chosen after subtracting the offset, and a category the
+ * message does not spell falls to `other` (the parser guarantees `other`
+ * exists).
+ */
+export const formatMessage = (
+	message: Message,
+	args: MessageArgs,
+	env: MessageEnv,
+): string => {
+	let out = ''
+	for (const node of message) {
+		if (typeof node === 'string') {
+			out += node
+			continue
+		}
+		const value = args[node.a]
+		switch (node.t) {
+			case 'arg':
+				out += String(value)
+				break
+			case 'num': {
+				const options =
+					node.o?.style === 'currency' && !node.o.currency
+						? { ...node.o, currency: env.currency }
+						: node.o
+				out += new Intl.NumberFormat(env.lang, options).format(
+					Number(value) * (node.s ?? 1),
+				)
+				break
+			}
+			case 'date':
+				out += new Intl.DateTimeFormat(
+					env.lang,
+					node.o.timeZone || !env.timeZone
+						? node.o
+						: { ...node.o, timeZone: env.timeZone },
+				).format(new Date(value as number | Date))
+				break
+			case 'plural': {
+				const n = Number(value)
+				const body =
+					caseOf(node.c, `=${n}`) ??
+					caseOf(
+						node.c,
+						new Intl.PluralRules(env.lang, {
+							type: node.o ? 'ordinal' : 'cardinal',
+						}).select(n - (node.off ?? 0)),
+					) ??
+					node.c.other
+				if (body) out += formatMessage(body, args, env)
+				break
+			}
+			case 'select': {
+				const body = caseOf(node.c, String(value)) ?? node.c.other
+				if (body) out += formatMessage(body, args, env)
+				break
+			}
+			case '#':
+				out += new Intl.NumberFormat(env.lang).format(
+					Number(value) - (node.off ?? 0),
+				)
+				break
+		}
+	}
+	return out
+}

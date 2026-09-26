@@ -18,6 +18,7 @@ import {
 	langBindingOf,
 	readI18nDecl,
 } from './i18n'
+import type { MessageArg } from './icu/parse'
 import {
 	type LeTrucImport,
 	type PlainImportIR,
@@ -47,6 +48,8 @@ export type ModuleDecls = {
 	propsTypeName: string | null
 	config: ConfigIR | null
 	i18nMessages: Record<string, string> | null
+	/** Per key, the arguments its source pattern takes (`I18nDecl.args`). */
+	i18nArgs: Record<string, readonly MessageArg[]> | null
 }
 
 /**
@@ -64,6 +67,7 @@ export const readModuleDecls = (
 	let propsTypeName: string | null = null
 	let config: ConfigIR | null = null
 	let i18nMessages: Record<string, string> | null = null
+	let i18nArgs: Record<string, readonly MessageArg[]> | null = null
 	for (const stmt of asArray(ast.body)) {
 		const declaredConfig = readConfig(ctx, stmt)
 		if (declaredConfig) {
@@ -72,7 +76,8 @@ export const readModuleDecls = (
 		}
 		const declaredI18n = readI18nDecl(ctx, stmt)
 		if (declaredI18n) {
-			i18nMessages = declaredI18n
+			i18nMessages = declaredI18n.messages
+			i18nArgs = declaredI18n.args
 			continue
 		}
 		if (
@@ -88,7 +93,14 @@ export const readModuleDecls = (
 		if (stmt.type === 'TSModuleDeclaration' && String(stmt.kind) === 'global')
 			globalDecl = text(ctx.source, stmt)
 	}
-	return { typeDecls, globalDecl, propsTypeName, config, i18nMessages }
+	return {
+		typeDecls,
+		globalDecl,
+		propsTypeName,
+		config,
+		i18nMessages,
+		i18nArgs,
+	}
 }
 
 /**
@@ -271,6 +283,7 @@ export const assembleComponentIR = (
 		paramNames: [...paramNames],
 		paramProps: paramPropsOf(ctx, paramsNode),
 		i18nMessages: decls.i18nMessages,
+		i18nArgs: decls.i18nArgs,
 		declaresI18n: declaresI18nOf(paramsNode),
 		langBinding: langBindingOf(paramsNode),
 		langArgDefault: langArgDefaultOf(paramsNode),

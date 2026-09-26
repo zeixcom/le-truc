@@ -11,6 +11,7 @@
 
 import type { AstNode } from './ast-node'
 import type { CompileDiagnostic } from './diagnostics'
+import type { MessageArg } from './icu/parse'
 import type { Surface } from './surface'
 import type { RoutingSignal } from './tier'
 
@@ -492,6 +493,17 @@ export type ComponentIR = {
 	 * `t` obligation, and the untranslated-literal warning never fires.
 	 */
 	i18nMessages: Record<string, string> | null
+	/**
+	 * Per declared key, the arguments its source pattern takes (LT-250,
+	 * ADR 0030 s4): `[]` for an argument-less message — `t.<key>` is a
+	 * string — else each argument's name and kind (`plural`/`selectordinal`/
+	 * `number` → number, `date`/`time` → date, otherwise string), which is
+	 * what LT-308 types `t.<key>({ … })` from. A key whose source pattern
+	 * failed to parse (LTC055) is absent. Null exactly when `i18nMessages`
+	 * is. Optional because it is contract IR (a new field is additive only
+	 * when optional).
+	 */
+	i18nArgs?: Record<string, readonly MessageArg[]> | null
 	/**
 	 * Whether the parameter pattern declares the reserved `i18n` parameter
 	 * (ADR 0030 sub-design 2). The compiler — never a caller — supplies the

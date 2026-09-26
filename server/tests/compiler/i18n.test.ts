@@ -11,9 +11,10 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { formatCensus, translationCensus } from '../../compiler/census'
 import { compileComponent } from '../../compiler/frontend/tsrx'
+import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
 import { compileCorpus } from '../../corpus-compile'
-import { collectI18n } from '../../effects/i18n'
+import { collectI18n, writeI18nModule } from '../../effects/i18n'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { loadCorpus } from './corpus-fixture'
 
@@ -695,5 +696,185 @@ describe('orphaned keys over the real corpus (LT-196)', () => {
 			},
 			{ key: 'basic-pluralize.typo-key', locale: 'de', status: 'orphaned' },
 		])
+	})
+})
+
+/* === ICU MessageFormat patterns (LT-250, ADR 0030 s4) === */
+
+const ICU_DECL = `export const i18n = {
+	tasks: '{count, plural, one {# task} other {# tasks}}',
+	greeting: 'Hello, {name}!',
+	done: 'All done',
+}`
+
+describe('LTC055 — ICU patterns and their call sites (LT-250)', () => {
+	const codes = (template: string, decl = ICU_DECL) =>
+		compile(catalogSource(template, decl)).diagnostics.filter(
+			d => d.code === 'LTC055',
+		)
+
+	test('the extraction result carries every key’s argument signature', () => {
+		// The front end's own result — the ComponentIR LT-308 reads.
+		const { component, diagnostics } = compileSource(
+			catalogSource(`{t.done}`, ICU_DECL),
+			'examples/x/c-i18n.tsrx',
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.i18nArgs).toEqual({
+			tasks: [{ name: 'count', kind: 'number' }],
+			greeting: [{ name: 'name', kind: 'string' }],
+			done: [],
+		})
+	})
+
+	test('a correct call and a bare argument-less read compile clean', () => {
+		expect(
+			codes(
+				`{t.tasks({ count: 2 })} {t.greeting({ name: 'Ada' })} {t['done']}`,
+			),
+		).toEqual([])
+	})
+
+	test('an unparseable source pattern is an error at its line', () => {
+		const [hit, ...rest] = codes(
+			`{t.done}`,
+			`export const i18n = {\n\tdone: 'All done',\n\tbroken: '{count, plural, one {x}}',\n}`,
+		)
+		expect(rest).toEqual([])
+		expect(hit?.severity).toBe('error')
+		expect(hit?.line).toBe(4)
+		expect(hit?.message).toContain('`broken`')
+		expect(hit?.message).toContain('other')
+	})
+
+	test('an unsupported formatter is an error, not a different rendering', () => {
+		const [hit] = codes(
+			`{t.done}`,
+			`export const i18n = { done: '{n, spellout}' }`,
+		)
+		expect(hit?.message).toContain('spellout')
+	})
+
+	test('a missing argument and an extra one are named', () => {
+		const [hit, ...rest] = codes(`{t.tasks({ total: 2 })}`)
+		expect(rest).toEqual([])
+		expect(hit?.severity).toBe('error')
+		expect(hit?.line).toBe(11)
+		expect(hit?.message).toContain('`t.tasks` is missing `count`')
+		expect(hit?.message).toContain('passes `total`')
+	})
+
+	test('an argument message read without a call is an error', () => {
+		const [hit] = codes(`{t.greeting}`)
+		expect(hit?.message).toContain('read without a call')
+		expect(hit?.message).toContain('t.greeting({ name })')
+	})
+
+	test('calling an argument-less message is an error', () => {
+		const [hit] = codes(`{t.done()}`)
+		expect(hit?.message).toContain('takes no arguments')
+	})
+
+	test('an argument record the build cannot read is an error', () => {
+		expect(codes(`{t.tasks(3)}`)[0]?.message).toContain('one object literal')
+		expect(codes(`{t.tasks({ ...rest })}`)[0]?.message).toContain('spread')
+	})
+
+	test('the whole-record spelling is checked too', () => {
+		const { diagnostics } = compile(`
+${ICU_DECL}
+export function C({ i18n }: { i18n: I18n })
+@{
+	expose({})
+	<>
+		<c-el>{i18n.t.tasks({})}</c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`)
+		const hit = diagnostics.find(d => d.code === 'LTC055')
+		expect(hit?.message).toContain('is missing `count`')
+	})
+
+	test('an undeclared key is left to the TypeScript channel (LT-308)', () => {
+		expect(codes(`{t.fliter}`)).toEqual([])
+	})
+})
+
+describe('the server fold of an ICU message (LT-250)', async () => {
+	const tag = 'c-icu-fold'
+	const source = `
+${ICU_DECL}
+export function CIcuFold({ count, i18n: { t } }: { count: number; i18n: I18n })
+@{
+	expose({})
+	<>
+		<c-icu-fold>
+			<span class="literal">{t.tasks({ count: 1 })}</span>
+			<span class="arg" title={t.tasks({ count })}>{t.tasks({ count })}</span>
+			<span class="done">{t.done}</span>
+		</c-icu-fold>
+		<style>c-icu-fold { display: block }</style>
+	</>
+}`
+	const { component, diagnostics } = compileComponent(
+		source,
+		`examples/x/${tag}.tsrx`,
+		new Set(),
+	)
+	if (!component) throw new Error(JSON.stringify(diagnostics))
+	const dir = createGeneratedDir('icu-fold')
+	afterAll(() => dir.cleanup())
+	dir.emit(`${tag}.server.ts`, component.serverCode)
+	await writeI18nModule(
+		dir.path,
+		await collectI18n(
+			[component.entry],
+			injectedCatalogs({
+				de: {
+					[`${tag}.tasks`]:
+						'{count, plural, one {# Aufgabe} other {# Aufgaben}}',
+					[`${tag}.done`]: 'Erledigt',
+				},
+				// A translator's typo: falls back to the source pattern, never
+				// fails the build (ADR 0030 s5).
+				cy: { [`${tag}.tasks`]: '{count, plural, one {# tasg}' },
+			}),
+		),
+	)
+	const mod = await dir.importModule<Record<string, (args: unknown) => string>>(
+		`${tag}.server.ts`,
+	)
+	const { i18nRecord } = (await import(
+		pathToFileURL(`${dir.path}/i18n.ts`).href
+	)) as { i18nRecord: (tag: string, lang?: string) => unknown }
+	const render = (count: number, lang: string) => {
+		const fn = mod.renderCIcuFold
+		if (!fn) throw new Error('renderCIcuFold missing')
+		return fn({ count, i18n: i18nRecord(tag, lang) })
+	}
+
+	test('compiles without diagnostics', () => {
+		expect(diagnostics).toEqual([])
+	})
+
+	test('server-known arguments fold into text and attributes', () => {
+		const html = render(3, 'en')
+		expect(html).toContain('<span class="literal">1 task</span>')
+		expect(html).toContain('<span title="3 tasks" class="arg">3 tasks</span>')
+		expect(html).toContain('<span class="done">All done</span>')
+	})
+
+	test('a translation folds through the same evaluator', () => {
+		const html = render(1, 'de')
+		expect(html).toContain(
+			'<span title="1 Aufgabe" class="arg">1 Aufgabe</span>',
+		)
+		expect(html).toContain('<span class="done">Erledigt</span>')
+	})
+
+	test('an unparseable translation falls back to the source pattern', () => {
+		expect(render(2, 'cy')).toContain(
+			'<span title="2 tasks" class="arg">2 tasks</span>',
+		)
 	})
 })

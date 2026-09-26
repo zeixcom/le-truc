@@ -755,6 +755,35 @@ const FAMILIES: Case[] = [
 		code: 'LTC054',
 		spec: { body: '<p>{location.href}</p>' },
 	},
+	{
+		name: 'LTC055 unparseable ICU source pattern',
+		code: 'LTC055',
+		spec: {
+			pre: "export const i18n = { n: '{n, plural, one {x}}' }",
+			params: '{ i18n: { t } }: { i18n: I18n }',
+			body: '<p>{t.n}</p>',
+		},
+	},
+	{
+		name: 'LTC055 ICU call site missing an argument',
+		code: 'LTC055',
+		spec: {
+			pre: "export const i18n = { n: '{count, plural, other {# items}}' }",
+			params: '{ i18n: { t } }: { i18n: I18n }',
+			body: '<p>{t.n({ total: 1 })}</p>',
+		},
+		pins: ['is missing `count`', 'passes `total`'],
+	},
+	{
+		name: 'LTC055 ICU argument message read without a call',
+		code: 'LTC055',
+		spec: {
+			pre: "export const i18n = { hi: 'Hello, {name}!' }",
+			params: '{ i18n: { t } }: { i18n: I18n }',
+			body: '<p title={t.hi}>x</p>',
+		},
+		pins: ['read without a call'],
+	},
 ]
 
 /* === Tests === */

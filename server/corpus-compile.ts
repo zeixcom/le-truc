@@ -511,7 +511,7 @@ export const compileCorpus = async (
 	// summary. The build writes NO tracked file — missing keys land in the
 	// census, and `i18n:sync` is the person-run writer for the catalogs.
 	const i18nCollection = await collectI18n(entries, undefined, config.i18nDir)
-	await writeI18nModule(outDir, i18nCollection)
+	await writeI18nModule(outDir, i18nCollection, config.runtimeImport)
 	await writeI18nReport(outDir, i18nCollection)
 	const i18nCensus = translationCensus(
 		i18nCollection.gaps,

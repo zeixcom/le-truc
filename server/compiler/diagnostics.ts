@@ -83,6 +83,7 @@ export type DiagnosticCode =
 	| 'LTC052' // a server-data @for carries a `key` clause, which only a reactive List's reconcile() reads (ADR 0040 s1, LT-286) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC053' // an element tag that is not a static name: a `.tsrx` dynamic `<{expr}>` tag, or a `.tsx` namespaced/member tag the front end does not recognize (LT-213, scope A0) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC054' // a position the server render evaluates reads page context outside the declared ambient set, or the reserved `i18n` record is destructured for a member outside it (ADR 0034 s4, LT-258) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC055' // an `export const i18n` source pattern is not a supported ICU MessageFormat 1 pattern, or a `t.<key>` site disagrees with its pattern's arguments: missing/extra/non-literal arguments, an argument message read without a call, an argument-less message called (ADR 0030 s4, LT-250) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -1292,6 +1293,52 @@ export const diagnostic = {
 		warning(
 			'LTC047',
 			`Literal prose \`${sample}\` is not routed through the catalog — this component declares \`export const i18n\`, so a reader-facing string written directly in the template can never be translated. Declare a key with this string as its source-locale value in \`export const i18n\` and render \`{t.<key>}\` here.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * An `export const i18n` value that is not a supported ICU MessageFormat
+	 * 1 pattern (LT-250, ADR 0030 s4). The source locale is the fallback
+	 * every other locale resolves against, so it has nothing to fall back
+	 * to — unlike a translation, whose parse failure falls back to this
+	 * pattern and is a census record. `reason` is the parser's own account
+	 * (a syntax error with line/column, or an unsupported formatter).
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
+	 * draft is the LT-250 handoff (batched with LT-189).
+	 */
+	unparseableMessage: (
+		source: string,
+		offset: number | undefined,
+		key: string,
+		reason: string,
+	) =>
+		error(
+			'LTC055',
+			`\`export const i18n\` value for \`${key}\` is not a valid ICU MessageFormat pattern: ${reason}. Fix the pattern — a literal \`{\`, \`}\` or \`#\` is quoted with apostrophes (\`'{'\`), and a literal apostrophe is doubled (\`''\`).`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A `t.<key>` site that disagrees with the key's parsed source pattern
+	 * (LT-250, ADR 0030 s4): the call's argument record is missing an
+	 * argument the pattern reads, passes one it never reads, is not an
+	 * object literal the build can check, or the site calls an
+	 * argument-less message / reads an argument message without calling
+	 * it. `problem` is the clause naming which.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
+	 * draft is the LT-250 handoff (batched with LT-189).
+	 */
+	messageArgumentMismatch: (
+		source: string,
+		offset: number | undefined,
+		key: string,
+		problem: string,
+	) =>
+		error(
+			'LTC055',
+			`\`t.${key}\` ${problem}. A message's arguments are the ones its ICU pattern in \`export const i18n\` reads — pass exactly those, as an object literal.`,
 			lineOf(source, offset),
 		),
 
