@@ -48,9 +48,11 @@ and LT-220 item 0 are amended to match. The loose union never ships.
   `truc:html`, so the inverted sanitizer defaults are now live in the corpus. Its first step
   is the fixture that confirms the flip.
 
-**Order.** LT-242 → LT-233 → LT-250 → LT-308 → LT-252 → LT-251. LT-253 after LT-252.
-LT-250 → LT-218 → LT-219 (with LT-249). LT-220 and LT-189 run as one Tech Writer round after
-LT-219, as LT-220's header asks. LT-138 is ungated.
+**Order (re-ruled 2026-09-26).** LT-242 → LT-233 → LT-250 → LT-308 → LT-347 → LT-218 →
+LT-252 → LT-251. LT-253 after LT-252. LT-218 → LT-219 (with LT-249). basic-pluralize's single
+pattern re-evaluates when `count` changes client-side, and only LT-218's channel can do that,
+so LT-252 now waits for it. LT-347 closes the compiler gap LT-218 would otherwise build on. LT-220 and LT-189 run as one Tech Writer round after
+LT-219, as LT-220's header asks. LT-138 and LT-346 are ungated.
 
 **Deliberately not here.** The ADR 0037 implementation (LT-274–LT-276) and the ADR 0033 CSS
 track (LT-268 → LT-304/LT-306) are the next compiler-heavy candidates. They contend with LT-233
@@ -75,97 +77,15 @@ default (LT-138). Across all of it: warning baseline 0, tier census unchanged fr
 iteration's opening measurement (record it before the first change), and `bun run build:docs`
 and `check:links` pass.
 
-**Next free task ID: LT-343.**
+**Next free task ID: LT-348.**
 
 ---
 
 ### Gates (run first)
 
-### Build half (LT-250 → LT-308 → LT-252 → LT-251; LT-253 after LT-252)
+### Build half (LT-250 → LT-308 → LT-218 → LT-252 → LT-251; LT-253 after LT-252)
 
-- [x] LT-250: ICU MessageFormat — the build half: parser dependency, AST, shared evaluator, server fold, argument diagnostic (ADR 0030 s4). **Gated by LT-233 (SurfaceAdapter); gates LT-308, LT-218, LT-251, LT-252.** — done, pending review ⏳ (Tech Writer: LTC055 copy, LT-189 item 16; handoff notes in NOTES.md)
-  **Skill:** le-truc-dev
-  **Context:** The LT-240 ruling (owner, 2026-09-19; ADR 0030 s4 amended) in code. A message
-  value becomes an ICU MF1 pattern; `t.<key>` resolves to a string when the pattern takes no
-  arguments and to a function of its arguments when it does.
-  1. **Parse, don't compile.** Add `@messageformat/parser` as a **devDependency** (build-time
-     only), plus `@messageformat/number-skeleton` / `@messageformat/date-skeleton` where
-     skeletons appear — they resolve to plain `Intl` options at build time, so nothing
-     skeleton-shaped survives into the AST. `@messageformat/core` goes in as a **test oracle
-     only** and must not be imported from `server/compiler/` production paths (pin that with
-     a dependency test).
-  2. **One evaluator, ours, used by both sides.** A compact AST walk over the parsed pattern.
-     `Intl.PluralRules` / `NumberFormat` / `DateTimeFormat` do the locale work. The SAME
-     evaluator runs the server fold and is inlined into the client preamble by LT-218 — the
-     point of owning it is that a server-rendered string and the client's recomputation
-     cannot disagree. Keep it emitter-agnostic and free of compiler imports so LT-218 can
-     inline a narrowed form of it.
-  3. **Fold at render.** `t.key({ … })` with server-known arguments folds in the value
-     harness like any other call (`evaluability.ts` — new node shape, existing rule). A
-     message with client-reactive arguments is left to LT-218's channel.
-  4. **Argument validation** — the compiler checks a call site's arguments against the parsed
-     pattern's argument set: **new TSRX code, tier 1 Prevented, error** (statically decidable,
-     author-fixable; Tech Writer owns copy, batch with LT-189). Lives in the shared
-     post-lowering pass so it cannot drift between the two authored surfaces. A computed
-     `t[dynamicKey]` stays rejected, unchanged.
-  5. **Types: per key, in LT-308** (owner ruling 2026-09-25, ADR 0030 s4 amended; supersedes
-     the 2026-09-19 "types stay loose" ruling). This task exposes what LT-308 needs: for each
-     declared key, whether the parsed pattern takes arguments, and each argument's name and
-     kind (`plural`/`selectordinal`/`number` → number, `date`/`time` → date, otherwise string).
-     Surface it on the extraction result, not in a side table. Do not ship the loose
-     `string | ((args) => string)` union in the meantime. Until LT-308 lands, keep the
-     `.tsx` host profile's `t` at `Record<string, string>`: no corpus component calls
-     `t.key({ … })` before LT-252, and LT-252 lands after LT-308.
-  **Check:** the evaluator's server output is differentially tested against
-  `@messageformat/core` over the corpus patterns plus a negatives set (this is what the oracle
-  is for); folded markup for an argument-less message is byte-identical to today's; gates green
-  (typecheck, `bun test server/tests`, check:tsrx, build:docs, check:links); warning baseline 0;
-  tier census unchanged (a folded message is not a routing signal).
-
-- [ ] LT-308: Per-key types for the reserved `i18n` record, then revert the intrinsic-attribute `undefined` widening (LT-237 review follow-up; re-scoped 2026-09-25). **Depends on LT-250; gates LT-252.**
-  **Skill:** le-truc-dev
-  **Context:** `I18n.t` is `Record<string, string>` in the `.tsx` host profile
-  (`server/compiler/frontend/tsx/host-profile.d.ts`), the `.tsrx` `globals.d.ts` and the
-  generated `i18n.ts`. So under `noUncheckedIndexedAccess` every `t.<key>` read is
-  `string | undefined`, and any key typechecks: `t.fliter` passes tsc and renders `undefined`.
-  LT-237 unblocked `placeholder={t.filter}` by widening every intrinsic attribute to
-  `Attr<T> = Reactive<T> | undefined`. That also silently admits a possibly-undefined
-  `aria-label={maybeLabel}`, an accessibility regression tsc no longer reports. ICU patterns
-  (LT-250) add a second problem: a message with arguments is a function, and a loose
-  `string | fn` type breaks every attribute that reads a message. The owner ruled
-  (2026-09-25, ADR 0030 s4 amended) that `t` is typed **per key**, now rather than later.
-  1. **Authored side:** `interface I18n<M extends Record<string, string> = Record<string, string>>`
-     with `t: { readonly [K in keyof M]: MessageOf<M[K]> }`. `MessageOf<V>` is `string` for a literal
-     without `{`, `(args: MessageArgs) => string` for a literal containing `{`, and the `string | ((args: MessageArgs) => string)` union when
-     `V` is plain `string` (the `as const` was forgotten: the first attribute read then fails tsc
-     instead of passing silently). `MessageArgs` is `Record<string, string | number | Date>`.
-     Identical in the host profile and `globals.d.ts`. An ICU-escaped literal brace (`'{'`)
-     misclassifies an argument-less message as a function on the authored side. Accept this:
-     the compiler diagnostic (LT-250 item 4) and the generated-module types are exact, and the
-     corpus has no such pattern. Record it in HOST_PROFILE's i18n paragraph.
-  2. **Authored spelling:** `export const i18n = { … } as const` and
-     `i18n: I18n<typeof i18n>`. Annotate every component that declares `export const i18n`, on
-     both surfaces (eight today).
-  3. **Generated modules:** the server module does not carry the `i18n` const (it imports only
-     the `I18n` type), so the compiler rewrites the annotation to an exact inline record from
-     LT-250's per-key shape: `{ filter: string; tasks: (args: { count: number }) => string }`.
-     Generated modules stay self-contained. Rejected alternative: emitting the const into the
-     server module, which duplicates the fallback bytes the staleness manifest hashes.
-  4. Revert `Attr<T>` to `Reactive<T>` and drop the `| undefined` on the plain attributes.
-     Re-add `?? ''`-style fallbacks only where a value really is optional (form-listbox's
-     `aria-label={ariaLabel ?? ''}` already is).
-  **Channel:** TypeScript, tier 1 Prevented, for an undeclared key, a missing call on an
-  argument message, or a call on an argument-less one: on `.tsx` in the examples program, and
-  in `check:corpus`'s generated program on both surfaces (with exact argument names there).
-  No new LTC rule; LT-250's argument diagnostic stays the channel for authored `.tsrx`.
-  **Check:** `placeholder={t.filter}` typechecks with `Reactive<string>` attributes; `t.fliter`
-  fails tsc in the examples program and in `check:corpus`; a fixture with an argument pattern
-  shows `t.tasks({ count: 1 })` typechecking and bare `{t.tasks}` in an attribute failing; a
-  fixture without `as const` fails at the first attribute read; a temporary
-  `aria-label={maybeUndefined}` fails again; parity and goldens show only the annotation
-  change; HOST_PROFILE.md's i18n paragraph shows the annotated spelling.
-
-- [ ] LT-252: Corpus and catalog migration to ICU patterns — `basic-pluralize` (both surfaces), six locale catalogs, manifest rebaseline. **Depends on LT-250 and LT-308; gates LT-251.**
+- [ ] LT-252: Corpus and catalog migration to ICU patterns — `basic-pluralize` (both surfaces), six locale catalogs, manifest rebaseline. **Depends on LT-250, LT-308 and LT-218 (re-sequenced 2026-09-26: the one-pattern span is a client-reactive `t` read); gates LT-251.**
   **Skill:** le-truc-dev
   **Context:** The ruling's own check: *every component authored against `truc:case` is a
   component rewritten.* At ruling time that is exactly one — `basic-pluralize`, in
@@ -237,7 +157,44 @@ and `check:links` pass.
 
 ### Client channel (after LT-250; LT-249 lands with LT-219)
 
-- [ ] LT-218: The client-message `i18n` attribute — compiler analysis, server emission, client evaluator preamble (ADR 0030 sub-design 9). **Depends on LT-250.**
+- [ ] LT-347: A server-only name in a reactive text-child thunk compiles clean and throws on the client (LT-252 finding). **Gates LT-218.**
+  **Skill:** le-truc-dev
+  **Context:** `{() => label.toUpperCase()}` over a server arg `label`, or
+  `{() => t.tasks({ count: host.count })}`, compiles with no diagnostic on `.tsrx`. The
+  generated client emits `watch(() => label…, bindText(span))` with the name unbound, which is
+  a ReferenceError at connect. `analysis/effects.ts` runs `badFreeNames` over reactive
+  attributes, `pass` entries and `truc:html` thunks (LTC005 via `diagnostic.unsupported`), but
+  not over a reactive text child. HOST_PROFILE already promises that a server-only name is
+  diagnosed "in any reactive position". Close the gap:
+  1. Run the same free-name check on reactive text-child thunks, with the same wording
+     pattern ("Reactive text … references server-only name(s) …").
+  2. Audit every other position the client emits a thunk or body for. List bodies are
+     covered in `loops.ts`; confirm expose get/set, `defineMethod` bodies and `on()`
+     handlers. Pin each covered position with one fixture, so the next gap is visible.
+  3. Both surfaces, through the shared analysis. Add the case to the diagnostic-parity suite.
+  LT-218 then narrows this for `t` only: literal-key `t.<key>` reads become admitted client
+  reads. Every other server-only name stays rejected.
+  **Channel:** compiler, **LTC005**, tier 1 Prevented, error (no runtime half: the client
+  never sees the name). No new code. Tech Writer reviews the new message variant in the LT-189
+  round.
+  **Check:** both probes above report LTC005 on both surfaces; the corpus compiles clean
+  (nothing authors this today; if something does, record it in NOTES.md, do not work around
+  it); the warning baseline stays 0; parity green.
+
+- [ ] LT-346: Pin the discriminated compose-site check (LT-343 review).
+  **Skill:** le-truc-dev
+  **Context:** LT-343 made `JSX.LibraryManagedAttributes` distribute over a union of arg
+  shapes. Without that, a plain `Omit` flattens a discriminated args type, and
+  `<ModuleCodeblock collapsed={true} />` passes tsc silently. The fix was verified with a
+  temporary probe only, so reverting it to `Omit<P, 'i18n'>` would go unnoticed. Add a
+  self-contained negative probe to `fixtures/tsx/` with a local component whose args are a
+  union (no example import, which needs the generated `tsrx-imports.d.ts`). It composes the
+  child once correctly and once missing the discriminated-required key. Wire it into
+  `tsconfig.neg.json` and assert the TS2322 in `typecheck.test.ts`.
+  **Channel:** TypeScript, tier 1 Prevented (a test pin only).
+  **Check:** the new assertion passes; temporarily reverting to `Omit<P, 'i18n'>` fails it.
+
+- [ ] LT-218: The client-message `i18n` attribute — compiler analysis, server emission, client evaluator preamble (ADR 0030 sub-design 9). **Depends on LT-250 and LT-347; gates LT-252 (re-sequenced 2026-09-26).**
   **Skill:** le-truc-dev
   **Sequencing (re-ruled 2026-09-19):** two gates, one now discharged. Land the P2b
   SurfaceAdapter consolidation (**LT-233**) first — it collapses the two copied front ends this
@@ -274,6 +231,11 @@ and `check:links` pass.
      no `eval` (CSP-clean). Client-position `t.key` reads rewrite to the local; a call site
      is validated by LT-250's diagnostic. Parsed once at connect, fixed for the connection;
      malformed JSON warns in DEV_MODE and falls back to the source record in production.
+  **Handoff from the LT-250 review:** `formatMessage` constructs a fresh
+  `Intl.NumberFormat` / `PluralRules` / `DateTimeFormat` per node per call. That is fine at
+  build time, but it runs on every argument change on the client. The narrowed inline copy
+  should hoist one formatter per node per connection (the locale is fixed at connect). Keep
+  the server evaluator as is: the differential test pins it.
   **Pins:** the attribute carries only client-referenced keys (a folded-only key stays off
   it); absent when the set is empty (a component without client-evaluated messages renders
   byte-identical — pin one); a de render bakes translated **parsed** patterns into the

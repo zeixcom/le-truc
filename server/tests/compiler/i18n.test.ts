@@ -12,6 +12,8 @@ import { pathToFileURL } from 'node:url'
 import { formatCensus, translationCensus } from '../../compiler/census'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
+import { messagesRecordType } from '../../compiler/i18n'
+import { parseMessage } from '../../compiler/icu/parse'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
 import { compileCorpus } from '../../corpus-compile'
 import { collectI18n, writeI18nModule } from '../../effects/i18n'
@@ -722,7 +724,7 @@ describe('LTC055 — ICU patterns and their call sites (LT-250)', () => {
 		expect(diagnostics).toEqual([])
 		expect(component?.i18nArgs).toEqual({
 			tasks: [{ name: 'count', kind: 'number' }],
-			greeting: [{ name: 'name', kind: 'string' }],
+			greeting: [{ name: 'name', kind: 'plain' }],
 			done: [],
 		})
 	})
@@ -877,4 +879,109 @@ export function CIcuFold({ count, i18n: { t } }: { count: number; i18n: I18n })
 			'<span title="2 tasks" class="arg">2 tasks</span>',
 		)
 	})
+})
+
+describe('the generated modules type `t` per key (LT-308)', async () => {
+	const typedSource = (name: string, template: string) => `
+${ICU_DECL} as const
+export function ${name}({ count, i18n: { t } }: { count: number; i18n: I18n<typeof i18n> })
+@{
+	expose({})
+	<>
+		<c-el>${template}</c-el>
+		<style>c-el { display: block }</style>
+	</>
+}`
+	const build = (name: string, tag: string, template: string) => {
+		const { component, diagnostics } = compileComponent(
+			typedSource(name, template),
+			`examples/x/${tag}.tsrx`,
+			new Set(),
+		)
+		if (!component) throw new Error(JSON.stringify(diagnostics))
+		return component
+	}
+	const good = build(
+		'CTyped',
+		'c-typed',
+		`<span title={t.done}>{t.tasks({ count })}</span>`,
+	)
+	const typo = build('CTypo', 'c-typo', `<span title={t.fliter}>x</span>`)
+	// LT-344: a plain `{x}` takes a string or a number; a select selector
+	// stays a string.
+	const plain = build(
+		'CPlain',
+		'c-plain',
+		`<span title={t.greeting({ name: 3 })}>{t.greeting({ name: '3' })}</span>`,
+	)
+	const dir = createGeneratedDir('i18n-typed')
+	afterAll(() => dir.cleanup())
+	dir.emit('c-typed.server.ts', good.serverCode)
+	dir.emit('c-typo.server.ts', typo.serverCode)
+	dir.emit('c-plain.server.ts', plain.serverCode)
+	await writeI18nModule(
+		dir.path,
+		await collectI18n(
+			[good.entry, typo.entry, plain.entry],
+			injectedCatalogs({}),
+		),
+	)
+	const typecheck = (file: string) => {
+		const proc = Bun.spawnSync(
+			[
+				'bunx',
+				'tsc',
+				'--ignoreConfig',
+				'--noEmit',
+				'--pretty',
+				'false',
+				'--strict',
+				'--noUncheckedIndexedAccess',
+				'--target',
+				'esnext',
+				'--module',
+				'esnext',
+				'--moduleResolution',
+				'bundler',
+				'--allowImportingTsExtensions',
+				'--lib',
+				'esnext,dom',
+				'--skipLibCheck',
+				'--types',
+				'node',
+				join(dir.relativePath, file),
+			],
+			{ cwd: join(import.meta.dir, '../../..') },
+		)
+		return `${proc.stdout.toString()}${proc.stderr.toString()}`
+	}
+
+	test('the authored annotation becomes the exact inline record', () => {
+		expect(good.serverCode).toContain(
+			'i18n: I18n<{ tasks: (args: { count: number }) => string; greeting: (args: { name: string | number }) => string; done: string }>',
+		)
+		expect(good.serverCode).not.toContain('typeof i18n')
+	})
+
+	test('a declared key with its exact arguments typechecks', () => {
+		expect(typecheck('c-typed.server.ts')).toBe('')
+	}, 60_000)
+
+	test('a select selector stays a string, a plain argument widens (LT-344)', () => {
+		const parsed = parseMessage('{g, select, a {A} other {O}} {n}')
+		if (!parsed.ok) throw new Error(parsed.error)
+		expect(messagesRecordType({ k: parsed.args })).toBe(
+			'{ k: (args: { g: string; n: string | number }) => string }',
+		)
+	})
+
+	test('a plain argument takes a number or a string (LT-344)', () => {
+		expect(typecheck('c-plain.server.ts')).toBe('')
+	}, 60_000)
+
+	test('an undeclared key fails tsc in the generated program', () => {
+		expect(typecheck('c-typo.server.ts')).toContain(
+			"error TS2339: Property 'fliter' does not exist",
+		)
+	}, 60_000)
 })

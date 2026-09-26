@@ -239,7 +239,7 @@ describe('argument signatures', () => {
 		)
 		if (!result.ok) throw new Error(result.error)
 		expect(result.args).toEqual([
-			{ name: 'who', kind: 'string' },
+			{ name: 'who', kind: 'plain' },
 			{ name: 'g', kind: 'string' },
 			{ name: 'n', kind: 'number' },
 			{ name: 'r', kind: 'number' },
@@ -248,6 +248,18 @@ describe('argument signatures', () => {
 			{ name: 'h', kind: 'date' },
 		])
 		expect(literalOf(result.message)).toBeNull()
+	})
+
+	test('the narrowest use of an argument wins (LT-344)', () => {
+		const result = parseMessage(
+			'{a} {a, select, x {X} other {O}} · {b} {b, number} · {c, select, x {X} other {O}} {c}',
+		)
+		if (!result.ok) throw new Error(result.error)
+		expect(result.args).toEqual([
+			{ name: 'a', kind: 'string' },
+			{ name: 'b', kind: 'number' },
+			{ name: 'c', kind: 'string' },
+		])
 	})
 
 	test('the AST is JSON — it survives a round trip unchanged (LT-218 serializes it)', () => {

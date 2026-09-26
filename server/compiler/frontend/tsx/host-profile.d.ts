@@ -67,10 +67,35 @@ declare const provideContexts: LeTrucFactoryContext['provideContexts']
  */
 declare const host: FormAssociatedElement & Record<string, any>
 
-/** The reserved `i18n` parameter's record (ADR 0030 sub-design 2). */
-interface I18n {
+/**
+ * A message's argument record (LT-308): an ICU argument is formatted as a
+ * number, a date, or a plain string.
+ */
+type MessageArgs = Record<string, string | number | Date>
+
+/**
+ * One `t.<key>` read, typed from its source pattern's literal type (LT-308,
+ * ADR 0030 s4): a pattern without `{` is a string, one with `{` takes
+ * arguments and is a function of its argument record. A widened `string`
+ * (the `as const` was forgotten) is the union, so its first attribute read
+ * fails tsc instead of passing silently. An ICU-escaped literal brace
+ * (`'{'`) misclassifies an argument-less message as a function here — the
+ * compiler's argument diagnostic and the generated modules' types are exact.
+ */
+type MessageOf<V> = string extends V
+	? string | ((args: MessageArgs) => string)
+	: V extends `${string}{${string}`
+		? (args: MessageArgs) => string
+		: string
+
+/**
+ * The reserved `i18n` parameter's record (ADR 0030 sub-design 2), typed per
+ * key from the component's `export const i18n = { … } as const`: annotate
+ * `i18n: I18n<typeof i18n>` (LT-308).
+ */
+interface I18n<M extends Record<string, string> = Record<string, string>> {
 	lang: string
-	t: Record<string, string>
+	t: { readonly [K in keyof M]: MessageOf<M[K]> }
 	timeZone: string
 	currency: string
 	dir: 'ltr' | 'rtl'
@@ -126,9 +151,15 @@ declare namespace JSX {
 	 * Every compose site also admits the static discriminators the
 	 * compiler splices onto the child's rendered root — `class`, `id`,
 	 * `data-*` — the only way to address one of two same-source sites
-	 * (HOST_PROFILE § element references; LT-096).
+	 * (HOST_PROFILE § element references; LT-096). The omission distributes
+	 * over a union of arg shapes, so a discriminated args type keeps its
+	 * discrimination at the compose site (module-codeblock: collapsed ⇒ `id`,
+	 * LT-343) — a plain `Omit` would flatten it to the members' common keys.
 	 */
-	type LibraryManagedAttributes<_C, P> = Omit<P, 'i18n'> & ComposeSiteAttrs
+	type LibraryManagedAttributes<_C, P> = (P extends unknown
+		? Omit<P, 'i18n'>
+		: never) &
+		ComposeSiteAttrs
 	interface ComposeSiteAttrs {
 		class?: string
 		id?: string
@@ -138,14 +169,6 @@ declare namespace JSX {
 	/** A reactive value: static, or a thunk re-evaluated client-side. */
 	type Thunk<T> = () => T
 	type Reactive<T> = T | Thunk<T>
-	/**
-	 * A light-DOM attribute value. `undefined` renders the attribute absent
-	 * (`attr()` in the server runtime), so it is admitted explicitly — under
-	 * `exactOptionalPropertyTypes` an optional key alone would reject it, and
-	 * an `i18n` read (`placeholder={t.filter}`) is `string | undefined` under
-	 * `noUncheckedIndexedAccess` (LT-237).
-	 */
-	type Attr<T> = Reactive<T> | undefined
 
 	/**
 	 * One `truc:pass` entry: a read-only thunk, or a mediated descriptor —
@@ -165,35 +188,35 @@ declare namespace JSX {
 	 * is deliberately absent — see the module header.
 	 */
 	interface CommonLightDom {
-		class?: Attr<string | null>
-		hidden?: Attr<boolean>
-		id?: Attr<string>
-		role?: string | undefined
-		tabindex?: Attr<number>
-		title?: string | undefined
-		'aria-label'?: Attr<string>
-		'aria-live'?: 'polite' | 'assertive' | 'off' | undefined
-		'aria-expanded'?: Attr<string | boolean>
-		'aria-selected'?: Attr<string | boolean>
-		'aria-describedby'?: string | null | undefined
-		'aria-controls'?: Attr<string>
-		'aria-current'?: Attr<string>
-		'aria-haspopup'?: string | undefined
-		'aria-labelledby'?: Attr<string>
-		'aria-orientation'?: Attr<'horizontal' | 'vertical'>
-		'aria-valuenow'?: Attr<string>
-		'aria-valuemin'?: Attr<string>
-		'aria-valuemax'?: Attr<string>
+		class?: Reactive<string | null>
+		hidden?: Reactive<boolean>
+		id?: Reactive<string>
+		role?: string
+		tabindex?: Reactive<number>
+		title?: string
+		'aria-label'?: Reactive<string>
+		'aria-live'?: 'polite' | 'assertive' | 'off'
+		'aria-expanded'?: Reactive<string | boolean>
+		'aria-selected'?: Reactive<string | boolean>
+		'aria-describedby'?: string | null
+		'aria-controls'?: Reactive<string>
+		'aria-current'?: Reactive<string>
+		'aria-haspopup'?: string
+		'aria-labelledby'?: Reactive<string>
+		'aria-orientation'?: Reactive<'horizontal' | 'vertical'>
+		'aria-valuenow'?: Reactive<string>
+		'aria-valuemin'?: Reactive<string>
+		'aria-valuemax'?: Reactive<string>
 		onClick?: (event: MouseEvent) => unknown
 		onInput?: (event: Event) => unknown
 		onChange?: (event: Event) => unknown
 		onKeydown?: (event: KeyboardEvent) => unknown
 		onKeyup?: (event: KeyboardEvent) => unknown
-		[key: `data-${string}`]: Attr<string>
-		'truc:case'?: string | undefined
+		[key: `data-${string}`]: Reactive<string>
+		'truc:case'?: string
 		'truc:case-type'?: 'cardinal' | 'ordinal' | undefined
 		/** Sanitized raw markup, rendered before any authored children (LT-137). */
-		'truc:html'?: Attr<string>
+		'truc:html'?: Reactive<string>
 		children?: unknown
 	}
 
@@ -201,37 +224,37 @@ declare namespace JSX {
 	 * an element with NO entry here is a tsc error, which is the point:
 	 * the strict table is what makes the React prior fail loudly. */
 	interface button extends CommonLightDom {
-		type?: 'button' | 'submit' | 'reset' | undefined
-		disabled?: Attr<boolean>
+		type?: 'button' | 'submit' | 'reset'
+		disabled?: Reactive<boolean>
 	}
 	interface details extends CommonLightDom {
-		open?: Attr<boolean>
+		open?: Reactive<boolean>
 	}
 	interface dialog extends CommonLightDom {}
 	interface div extends CommonLightDom {}
 	interface form extends CommonLightDom {
-		method?: 'get' | 'post' | 'dialog' | undefined
+		method?: 'get' | 'post' | 'dialog'
 	}
 	interface h2 extends CommonLightDom {}
 	interface h3 extends CommonLightDom {}
 	interface header extends CommonLightDom {}
 	interface input extends CommonLightDom {
-		type?: string | undefined
-		name?: string | undefined
-		value?: Attr<string>
-		placeholder?: Attr<string>
-		autocomplete?: string | undefined
-		min?: Attr<string>
-		max?: Attr<string>
+		type?: string
+		name?: string
+		value?: Reactive<string>
+		placeholder?: Reactive<string>
+		autocomplete?: string
+		min?: Reactive<string>
+		max?: Reactive<string>
 	}
 	interface label extends CommonLightDom {
 		/** The native attribute is `for` — there is no `htmlFor` here. */
-		for?: string | undefined
+		for?: string
 	}
 	interface code extends CommonLightDom {}
 	interface dd extends CommonLightDom {
 		/** A fixed-language island (module-colorinfo's `oklch(…)` line). */
-		lang?: string | undefined
+		lang?: string
 	}
 	interface dl extends CommonLightDom {}
 	interface dt extends CommonLightDom {}
@@ -241,28 +264,28 @@ declare namespace JSX {
 	interface li extends CommonLightDom {}
 	/** schema.org microdata, the attributes basic-blogmeta's byline carries. */
 	interface Microdata {
-		itemprop?: string | undefined
-		itemscope?: boolean | undefined
-		itemtype?: string | undefined
+		itemprop?: string
+		itemscope?: boolean
+		itemtype?: string
 	}
 	interface img extends CommonLightDom, Microdata {
-		src?: Attr<string>
-		alt?: Attr<string>
+		src?: Reactive<string>
+		alt?: Reactive<string>
 	}
 	interface meta extends CommonLightDom, Microdata {
-		content?: Attr<string>
+		content?: Reactive<string>
 	}
 	interface time extends CommonLightDom, Microdata {
-		datetime?: Attr<string>
+		datetime?: Reactive<string>
 	}
 	interface svg extends CommonLightDom {
-		viewBox?: string | undefined
-		fill?: string | undefined
-		focusable?: 'true' | 'false' | undefined
+		viewBox?: string
+		fill?: string
+		focusable?: 'true' | 'false'
 	}
 	interface path extends CommonLightDom {
-		d?: string | undefined
-		'fill-rule'?: 'nonzero' | 'evenodd' | undefined
+		d?: string
+		'fill-rule'?: 'nonzero' | 'evenodd'
 	}
 	interface nav extends CommonLightDom {}
 	interface p extends CommonLightDom {}
@@ -309,7 +332,9 @@ declare namespace JSX {
 		filterable?: Reactive<boolean>
 		'truc:pass'?: { filter?: PassEntry }
 	}
-	type ModuleCodeblockAttrs = CommonLightDom & {
+	/** Its own `id` mirrors an optional arg: absent when the caller passes none. */
+	type ModuleCodeblockAttrs = Omit<CommonLightDom, 'id'> & {
+		id?: string | undefined
 		collapsed?: Reactive<boolean>
 		language?: string
 	}

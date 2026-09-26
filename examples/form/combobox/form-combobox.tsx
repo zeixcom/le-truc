@@ -31,7 +31,7 @@ import { FormListbox } from '../listbox/form-listbox.tsx'
  */
 export const i18n = {
 	clearInput: 'Clear input',
-}
+} as const
 
 export type FormComboboxOption = {
 	value: string
@@ -81,7 +81,7 @@ export function FormCombobox(
 		value?: string
 		description?: string
 		clearable?: boolean
-		i18n: I18n
+		i18n: I18n<typeof i18n>
 	},
 	{ host, first, expose, watch }: FormFactoryContext<FormComboboxProps>,
 ) {

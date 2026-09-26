@@ -34,6 +34,10 @@ declare global {
  * Use it for displaying code samples — provides a keyboard-accessible expand/copy
  * button and should be used when long code listings need graceful truncation.
  * The `collapsed` attribute should be set to avoid overwhelming the page with long code.
+ * A collapsed block requires an `id`: the expand overlay's `aria-controls` points at it
+ * (LT-343). The args are a union on `collapsed` so tsc enforces that at every compose
+ * site; `collapsed` carries no destructuring default, because a default would stop tsc
+ * from narrowing `id` inside the `{collapsed && …}` arm.
  * @demo {https://zeixcom.github.io/le-truc/examples.html#module-codeblock} Interactive preview and usage examples
  **/
 export function ModuleCodeblock(
@@ -41,15 +45,23 @@ export function ModuleCodeblock(
 		id,
 		language = 'text',
 		file,
-		collapsed = false,
+		collapsed,
 		children = '',
-	}: {
-		id?: string
-		language?: string
-		file?: string
-		collapsed?: boolean
-		children?: string
-	},
+	}:
+		| {
+				id: string
+				language?: string
+				file?: string
+				collapsed: true
+				children?: string
+		  }
+		| {
+				id?: string
+				language?: string
+				file?: string
+				collapsed?: false
+				children?: string
+		  },
 	{ host, first, expose, on, watch }: FactoryContext<ModuleCodeblockProps>,
 ) {
 	const code = first('code', 'Needed as source container to copy from.')
@@ -84,7 +96,11 @@ export function ModuleCodeblock(
 
 	return (
 		<>
-			<module-codeblock id={id} collapsed={collapsed} language={language}>
+			<module-codeblock
+				id={id}
+				collapsed={collapsed ?? false}
+				language={language}
+			>
 				<p class="meta">
 					{file && <span class="file">{file}</span>}
 					<span class="language">{language}</span>

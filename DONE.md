@@ -11,6 +11,80 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-343: module-codeblock — `id` required whenever the overlay renders `aria-controls` (LT-308 review). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `module-codeblock.tsx` args are a union on `collapsed`
+  (`{ collapsed: true; id: string } | { collapsed?: false; id?: string }`), and the overlay
+  reads `aria-controls={id}` with no fallback. `collapsed` lost its destructuring default and
+  the tag reads `collapsed={collapsed ?? false}`, because a default blocks tsc's narrowing of
+  `id`. `JSX.LibraryManagedAttributes` in `host-profile.d.ts` now distributes over unions.
+  Rendered bytes and the generated client are unchanged.
+  **Rulings (Architect, 2026-09-26):** (1) The distributive `LibraryManagedAttributes` is the
+  profile's rule for every child: a plain `Omit` over a discriminated args type flattens it to
+  the common keys and silently drops the requirement. (2) `id` is *not* required
+  unconditionally: a page occurrence without an `id` would then stop rendering from its
+  attributes (`argsFromAttrs`). (3) A union parameter type opts out of the compiler's
+  inline-literal type reading (`infer-type.ts`: LTC032, inferred arg types). That is
+  acceptable here because the output is byte-identical. It is not a pattern to spread
+  without checking the generated modules.
+  **Live handoffs:** the compose-site check is unpinned → **LT-346**. A generated fallback id →
+  LT-345 (backlog).
+  **Review:** Approved.
+
+- [x] LT-344: Type a plain `{x}` ICU argument as `string | number` in the generated record (LT-250 review). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `MessageArgKind` gains `plain`, generated as `string | number`. When one
+  argument is used several ways, the narrowest use wins: number/date over string (a `select`
+  selector) over plain. Pins are in `icu.test.ts` and `i18n.test.ts` (generated-program tsc).
+  **Review:** Approved. It removes a false positive between the authored and generated channels.
+
+- [x] LT-250: ICU MessageFormat — the build half: parser, shared evaluator, server fold, argument diagnostic (ADR 0030 s4). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new `server/compiler/icu/parse.ts` (`@messageformat/parser` → compact JSON AST;
+  skeletons resolved to `Intl` options at build time; `MessageArg` kinds) and
+  `icu/evaluate.ts` (`formatMessage`: no imports, re-exported from `runtime.ts`; LT-218
+  inlines a narrowed copy). `ComponentIR.i18nArgs` (optional, contract-additive). The generated
+  `i18n.ts` closes argument messages over `formatMessage` and drops `''` placeholders and
+  unparseable translations at generation, so they fall back to the source. New
+  devDependencies: `@messageformat/parser`, `number-skeleton`, `date-skeleton`.
+  `@messageformat/core` is a test oracle only, and a test fails if `server/compiler/` imports it.
+  **Rulings (Architect, 2026-09-26):** (1) the code is **LTC055**, not `TSRX`: the shared
+  machinery emits it on both surfaces (ADR 0028 amendment, VOCABULARY_LEDGER §4). (2) One code
+  covers two faces: an unparseable *source* pattern (the source has nothing to fall back to)
+  and a call-site argument mismatch. Both are the statically decidable ICU-message family. (3)
+  The supported MF1 surface is what `Intl` can run. The refusals (custom formatters, ICU
+  number/date *patterns*, `precision-increment`, one argument as both number and date) are
+  reasoned, not disagreements with core. (4) `date`/`time` apply the record's `timeZone` (ADR
+  0030 s2). This is a deliberate divergence from core, pinned under `TZ=UTC`. (5) The call-site
+  check does not track shadowing and leaves undeclared keys to TypeScript (LT-308).
+  **Live handoffs:** LTC055 final copy → LT-189 item 16. A plain `{x}` typed `string` is too
+  strict → **LT-344**. Per-call `Intl` construction on the client → LT-218's handoff note.
+  **Review:** Approved. Tier census 30/5/0 unchanged; warning baseline 0; the argument-less
+  output is byte-identical.
+
+- [x] LT-308: Per-key types for the reserved `i18n` record; revert the intrinsic-attribute `undefined` widening (LT-237 follow-up). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `I18n<M>` with `MessageOf`/`MessageArgs`, identical in
+  `frontend/tsx/host-profile.d.ts` and `frontend/tsrx/globals.d.ts`. All eleven `export const
+  i18n` files (eight tags) now spell `{ … } as const` and `i18n: I18n<typeof i18n>`.
+  `readI18nDecl` unwraps a const assertion, and `to-estree.ts` keeps the annotation for
+  `as const` only. `emit-server.ts` rewrites `I18n<typeof i18n>` to the exact inline record
+  (`i18nAnnotated`/`messagesRecordType` in `compiler/i18n.ts`). The generated `i18n.ts`
+  exports `I18n<T>` and `i18nRecord<T>()`. `Attr<T>` is gone, and plain attributes are
+  `Reactive<T>` without `| undefined`.
+  **Rulings (owner + Architect, 2026-09-26):** dropping `| undefined` is honest. It stays only
+  where it is the literal meaning, "absent when omitted": `truc:case-type`, which it had before
+  LT-237 and which LT-251 retires, and component-tag config attributes that mirror an optional
+  arg (context-media `sm`…`xl`, lazyload `src`/`allow-scripts`, scrollarea/splitview
+  `orientation`). These are that component's own root attributes, not ARIA or global
+  attributes, so the accessibility argument does not reach them. A bare `I18n` stays loose (the
+  default `M`). The escaped-brace misclassification on the authored side is accepted and
+  recorded in HOST_PROFILE.
+  **Live handoffs:** codeblock's `aria-controls={id ?? ''}` → **LT-343**. A generated
+  fallback id → **LT-345**.
+  **Review:** Approved. The negative probes (`fixtures/tsx/i18n-bad-reads.tsx`) cover every
+  exit clause, and the generated-program test pins the exact record.
+
 - [x] LT-242: Extend the parity suite to diagnostics — the equivalence contract covers failed compiles too (ADR 0032 amendment). — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** new `server/tests/compiler/tsx/diagnostic-parity.test.ts`; ADR 0032 s6 and

@@ -28,7 +28,7 @@ export const i18n = {
 	'task.two': 'tasks',
 	'task.few': 'tasks',
 	'task.many': 'tasks',
-}
+} as const
 
 export type BasicPluralizeProps = {
 	/** The count to pluralize. Clamped to a non-negative integer. */
@@ -65,7 +65,7 @@ export function BasicPluralize(
 		count: number
 		lang?: string
 		ordinal?: boolean
-		i18n: I18n
+		i18n: I18n<typeof i18n>
 	},
 	{ host, expose }: FactoryContext<BasicPluralizeProps>,
 ) {

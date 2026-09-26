@@ -23,7 +23,7 @@
 import type { AstNode } from './ast-node'
 import { asArray, collectBoundNames, identifierName, isNode } from './ast-utils'
 import { diagnostic } from './diagnostics'
-import { type MessageArg, parseMessage } from './icu/parse'
+import { type MessageArg, type MessageArgKind, parseMessage } from './icu/parse'
 import type { ExtractContext } from './ir'
 
 /** The CLDR cardinal plural categories a `truc:case` value may name. */
@@ -44,6 +44,22 @@ const messagesKey = (node: unknown): string | null => {
 	if (node.type === 'Literal' && typeof node.value === 'string')
 		return node.value
 	return null
+}
+
+/**
+ * Unwrap the `as const` the authored spelling carries (LT-308): the literal
+ * types are what `I18n<typeof i18n>` reads per key, so the assertion is part
+ * of the declaration's shape, not a computed value. Any other assertion is
+ * returned as-is and fails the object-literal check.
+ */
+const constAssertedObject = (init: AstNode): AstNode => {
+	if (init.type !== 'TSAsExpression' || !isNode(init.expression)) return init
+	const annotation = init.typeAnnotation
+	return isNode(annotation) &&
+		annotation.type === 'TSTypeReference' &&
+		identifierName(annotation.typeName) === 'const'
+		? init.expression
+		: init
 }
 
 /** A component's `export const i18n` declaration, as extracted. */
@@ -82,7 +98,7 @@ export const readI18nDecl = (
 	const declarator = asArray(decl.declarations)[0] ?? null
 	if (identifierName(declarator?.id) !== 'i18n' || !isNode(declarator?.init))
 		return null
-	const init = declarator.init
+	const init = constAssertedObject(declarator.init)
 	if (init.type !== 'ObjectExpression') {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
@@ -391,3 +407,53 @@ export const reportMessageCallSites = (
 	}
 	visit(componentFn.body, componentFn)
 }
+
+/** The TypeScript type a message argument of each kind accepts (LT-308). */
+const ARG_KIND_TYPES: Record<MessageArgKind, string> = {
+	number: 'number',
+	date: 'Date',
+	string: 'string',
+	plain: 'string | number',
+}
+
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/
+
+/**
+ * The exact per-key `t` record a component's messages resolve to (LT-308):
+ * an argument-less message is `string`, one with arguments a function of
+ * exactly its argument names — `{ filter: string; tasks: (args: { count:
+ * number }) => string }`.
+ */
+export const messagesRecordType = (
+	args: Record<string, readonly MessageArg[]>,
+): string => {
+	const member = (name: string) =>
+		IDENTIFIER.test(name) ? name : JSON.stringify(name)
+	const members = Object.entries(args).map(([key, list]) => {
+		if (!list.length) return `${member(key)}: string`
+		const record = list
+			.map(arg => `${member(arg.name)}: ${ARG_KIND_TYPES[arg.kind]}`)
+			.join('; ')
+		return `${member(key)}: (args: { ${record} }) => string`
+	})
+	return members.length ? `{ ${members.join('; ')} }` : '{}'
+}
+
+/**
+ * The server module's parameter text with the authored
+ * `I18n<typeof i18n>` annotation rewritten to the exact inline record
+ * (LT-308): the server module imports only the `I18n` type, never the
+ * component's `i18n` const, so `typeof i18n` would not resolve there — and
+ * the inline record keeps generated modules self-contained. Unchanged when
+ * the component declares no messages or spells no such annotation.
+ */
+export const i18nAnnotated = (
+	paramsText: string,
+	args: Record<string, readonly MessageArg[]> | null | undefined,
+): string =>
+	args
+		? paramsText.replace(
+				/\bI18n<\s*typeof\s+i18n\s*>/g,
+				() => `I18n<${messagesRecordType(args)}>`,
+			)
+		: paramsText

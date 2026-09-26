@@ -374,7 +374,11 @@ import { formatMessage, type Message } from '${runtimeImport}'
 type Message = never
 `
 }
-export interface I18n {
+/**
+ * The reserved record, generic over its \`t\` shape (LT-308): each generated
+ * server module instantiates it with the component's exact per-key record.
+ */
+export interface I18n<T = Record<string, string>> {
 ${Object.entries(PAGE_AMBIENT_TYPES)
 	.map(([member, type]) => `\t${member}: ${type}`)
 	.join('\n')}
@@ -427,16 +431,18 @@ ${overrideEntries}
  * evaluator (sub-design 4). The catalog never reaches the client: \`t\`
  * resolves here, at build time.
  */
-export function i18nRecord(tag: string, lang?: string): I18n {
+export function i18nRecord<T = Record<string, string>>(
+	tag: string,
+	lang?: string,
+): I18n<T> {
 	const locale = lang || I18N_PAGE_LOCALE
 	const primary = locale.split(/[-_]/)[0]?.toLowerCase() ?? ''
-	const t: Record<string, string> = {}
+	const t: Record<string, string | ((args: Record<string, unknown>) => string)> = {}
 	const localeOverrides = OVERRIDES[locale] ?? {}
 	for (const [key, source] of Object.entries(SOURCES[tag] ?? {})) {
 		const message = localeOverrides[\`\${tag}.\${key}\`] ?? source${
 			withArguments
 				? `
-		// t stays typed Record<string, string> until LT-308 types it per key.
 		t[key] =
 			typeof message === 'string'
 				? message
@@ -445,14 +451,16 @@ export function i18nRecord(tag: string, lang?: string): I18n {
 							lang: locale,
 							timeZone: I18N_TIME_ZONE,
 							currency: I18N_CURRENCY,
-						})) as unknown as string`
+						}))`
 				: `
 		t[key] = message`
 		}
 	}
 	return {
 		lang: locale,
-		t,
+		// The catalog is keyed by tag at runtime; the caller's render
+		// signature states the tag's exact per-key record (LT-308).
+		t: t as unknown as T,
 		timeZone: I18N_TIME_ZONE,
 		currency: I18N_CURRENCY,
 		dir: RTL_LANGUAGES.has(primary) ? 'rtl' : 'ltr',

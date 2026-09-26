@@ -142,7 +142,7 @@ The client is the wrong layer to answer "what language is this page in" — by t
 
 ```
 export function BasicPluralize(
-  { count, i18n: { t, lang } }: { count: number; i18n: I18n },
+  { count, i18n: { t, lang } }: { count: number; i18n: I18n<typeof i18n> },
 )
 ```
 
@@ -158,13 +158,15 @@ The record carries `lang` (BCP 47), `t` (this component's resolved messages), `t
 export const i18n = {
 	done: 'Well done, all done!',
 	tasks: '{count, plural, one {# task} other {# tasks}} remaining',
-}                                                                     // keys + source patterns
+} as const                                                            // keys + source patterns
 …
 <p class="none" hidden={() => host.count !== 0}>{t.done}</p>         // route prose through t
 <p class="some">{t.tasks({ count })}</p>                             // arguments are checked against the pattern
 ```
 
-The declaration must be an object literal of string literals (they are the fallback every locale resolves against, and the bytes the staleness manifest hashes). The untranslated-literal warning fires on template text containing two or more adjacent letters — a single-letter fragment is page data, not prose. Every locale carries the same key set, and the census checks each translation's argument set and its `plural` arm coverage against the locale's CLDR categories (ADR 0030 s5). The census also walks the other way (LT-196): a catalog entry nothing declares — a translator's typo, a renamed key, a deleted component — reports as `orphaned`, and `i18n:sync` prunes it, so catalog residue never outlives the declaration it was written against.
+The declaration must be an object literal of string literals (they are the fallback every locale resolves against, and the bytes the staleness manifest hashes).
+
+**`t` is typed per key** (LT-308): declare the catalog `as const` and annotate `i18n: I18n<typeof i18n>`. Each `t.<key>` is then `string` for a pattern without `{` and `(args: MessageArgs) => string` for one with `{`, so an undeclared key (`t.fliter`), a bare argument message in an attribute, and a call on an argument-less message are all `tsc` errors — and attributes are plain `Reactive<T>`, so a possibly-undefined `aria-label` is one too. Forget the `as const` and every value widens to the `string | function` union: the first attribute read fails instead of passing silently. The authored-side classification is by brace only, so an ICU-escaped literal brace (`'{'`) in an argument-less message misreads as a function — accepted, since the corpus has no such pattern and the compiler's argument check (LTC055) and the generated modules are exact: the server module rewrites the annotation to the inline record (`I18n<{ done: string; tasks: (args: { count: number }) => string }>`), which `check:corpus` typechecks with the real argument names. The untranslated-literal warning fires on template text containing two or more adjacent letters — a single-letter fragment is page data, not prose. Every locale carries the same key set, and the census checks each translation's argument set and its `plural` arm coverage against the locale's CLDR categories (ADR 0030 s5). The census also walks the other way (LT-196): a catalog entry nothing declares — a translator's typo, a renamed key, a deleted component — reports as `orphaned`, and `i18n:sync` prunes it, so catalog residue never outlives the declaration it was written against.
 
 **Source strings stay in your component; translations are separate files.** You declare each key together with its source-locale string in the component source itself, either surface — the component remains the single source of truth for the source language, and there is deliberately **no sibling catalog file** for it, because that would reintroduce the three-file drift the isomorphic format exists to cure. Translations are additive override files, one per locale, component-namespaced (`i18n/de.json`, keys like `basic-pluralize.remaining`). There is **no catalog tiering** — no global/page/component override stack — so a key resolves in exactly one place; page prose is translated by having a per-locale page source, not by a catalog override.
 

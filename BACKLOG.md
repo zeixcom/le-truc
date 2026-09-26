@@ -1340,6 +1340,21 @@ composition (ADR 0042 s3, ROADMAP), the declarative shadow-root spelling (ADR 00
 the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishing the
 `.tsrx` front end (ADR 0034 s1, gated on `@tsrx/core` 1.0).
 
+- [ ] LT-345: A generated fallback `id` for an element whose ARIA relation needs one (LT-308 review; owner, 2026-09-26).
+  **Skill:** architect
+  **Context:** LT-343 makes module-codeblock's `id` required when collapsed, so the overlay's
+  `aria-controls` always points at something. The ergonomic alternative the owner named is the
+  one several JS frameworks ship: derive a stable id when the author omits one. The
+  hand-authored Markdoc fence (`server/schema/fence.markdoc.ts`) and the tab-panel fragment
+  (`server/templates/fragments.ts`) would benefit most, because they render collapsed blocks
+  with no id and no `aria-controls` at all. Design questions first. Where is the id minted:
+  compiler, server runtime, or page renderer? What makes it stable across builds: a content
+  hash of the tag, source path and occurrence index? How do we guarantee uniqueness per page
+  when the same component composes twice? Does it serialize into the client, or is it
+  DOM-is-truth once rendered? Is it opt-in per argument or a general facility? Not before a
+  second consumer beyond codeblock appears, or the docs fence wants `aria-controls`.
+  **Channel:** none until designed. The design names its own.
+
 - [ ] LT-262: AEM/HTL integration spike — ahead of pioneer 3, not during it.
   **Skill:** architect
   **Context:** ADR 0034 s3 and its Bad consequence: AEM is a build-**integration** problem, not

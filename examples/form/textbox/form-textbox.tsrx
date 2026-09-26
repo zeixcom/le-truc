@@ -58,7 +58,7 @@ import { createCell, deriveCell, asString, defineMethod } from '@zeix/le-truc'
  */
 export const i18n = {
 	clearInput: 'Clear input',
-}
+} as const
 
 export const config = {
 	formAssociated: true,
@@ -129,7 +129,7 @@ export function FormTextbox(
 			multiline?: boolean
 			clearable?: boolean
 			description?: string
-			i18n: I18n
+			i18n: I18n<typeof i18n>
 		}
 )
 @{

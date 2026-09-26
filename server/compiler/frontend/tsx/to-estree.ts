@@ -846,6 +846,20 @@ export const convert = (node: ts.Node, sf: ts.SourceFile): AstNode | null => {
 			quasi: convert(node.template, sf),
 		}
 	if (ts.isParenthesizedExpression(node)) return conv(node.expression, sf)
+	// A const assertion keeps its annotation (LT-308): `export const i18n =
+	// { … } as const` is the declaration's authored shape, and the i18n
+	// extraction reads it the way the `.tsrx` parser presents it.
+	if (ts.isAsExpression(node) && ts.isConstTypeReference(node.type))
+		return {
+			type: 'TSAsExpression',
+			...span(node, sf),
+			expression: conv(node.expression, sf),
+			typeAnnotation: {
+				type: 'TSTypeReference',
+				...span(node.type, sf),
+				typeName: { type: 'Identifier', ...span(node.type, sf), name: 'const' },
+			},
+		}
 	if (
 		ts.isAsExpression(node) ||
 		ts.isSatisfiesExpression(node) ||

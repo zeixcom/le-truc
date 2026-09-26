@@ -68,7 +68,7 @@ export const config = { formAssociated: true }
  */
 export const i18n = {
 	drag: 'Drag',
-}
+} as const
 
 export type FormColorgraphAxis = 'l' | 'c' | 'h'
 
@@ -107,7 +107,7 @@ export function FormColorgraph(
 		{
 			name: string
 			value?: string
-			i18n: I18n
+			i18n: I18n<typeof i18n>
 		},
 )
 @{

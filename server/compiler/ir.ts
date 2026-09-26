@@ -497,7 +497,8 @@ export type ComponentIR = {
 	 * Per declared key, the arguments its source pattern takes (LT-250,
 	 * ADR 0030 s4): `[]` for an argument-less message — `t.<key>` is a
 	 * string — else each argument's name and kind (`plural`/`selectordinal`/
-	 * `number` → number, `date`/`time` → date, otherwise string), which is
+	 * `number` → number, `date`/`time` → date, `select` → string, a plain
+	 * `{x}` → string or number — LT-344), which is
 	 * what LT-308 types `t.<key>({ … })` from. A key whose source pattern
 	 * failed to parse (LTC055) is absent. Null exactly when `i18nMessages`
 	 * is. Optional because it is contract IR (a new field is additive only

@@ -50,7 +50,7 @@ import { asString, defineMethod } from '@zeix/le-truc'
 export const i18n = {
 	filter: 'Filter',
 	clearFilter: 'Clear filter',
-}
+} as const
 
 export const config = { formAssociated: true }
 
@@ -123,7 +123,7 @@ export function FormListbox(
 			options: FormListboxOption[]
 			value?: string
 			filterable?: boolean
-			i18n: I18n
+			i18n: I18n<typeof i18n>
 		},
 )
 @{

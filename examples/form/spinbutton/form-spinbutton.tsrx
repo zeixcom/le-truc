@@ -84,7 +84,7 @@ import { asNumber, defineMethod, relayValidity } from '@zeix/le-truc'
 export const i18n = {
 	decrement: 'Decrement',
 	increment: 'Increment',
-}
+} as const
 
 export const config = { formAssociated: true }
 
@@ -146,7 +146,7 @@ export function FormSpinbutton(
 			bigStep?: number
 			unit?: string
 			zero?: string
-			i18n: I18n
+			i18n: I18n<typeof i18n>
 		},
 )
 @{

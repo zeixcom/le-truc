@@ -33,6 +33,7 @@ import {
 	isServerEvaluable,
 	spliceHostDerivedFold,
 } from './evaluability'
+import { i18nAnnotated } from './i18n'
 import { RUNTIME_HARNESS_EXPORTS } from './imports'
 import type {
 	AttributeIR,
@@ -1624,7 +1625,10 @@ export const emitServerModule = (
 	for (const decl of component.typeDecls) body.push(decl, '')
 	// Verbatim param slice, re-indented: first line inline in the signature,
 	// continuation lines keep their relative shape.
-	const paramLines = reindent(component.paramsText, 2).split('\n')
+	const paramLines = reindent(
+		i18nAnnotated(component.paramsText, component.i18nArgs),
+		2,
+	).split('\n')
 	const paramFirst = paramLines[0]?.replace(/^\t\t/, '') ?? ''
 	if (paramLines.length === 1) {
 		body.push(

@@ -39,7 +39,7 @@ import { DuplicateKeyError } from '@zeix/le-truc'
  */
 export const i18n = {
 	remove: 'Remove',
-}
+} as const
 
 export const config = { formAssociated: true }
 
@@ -82,7 +82,7 @@ export function FormTokenbox(
 			value?: string
 			type?: string
 			description?: string
-			i18n: I18n
+			i18n: I18n<typeof i18n>
 		},
 )
 @{

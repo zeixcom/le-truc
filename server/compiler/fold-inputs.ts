@@ -78,7 +78,9 @@ export const AMBIENT_RECORD_PARAM = 'i18n'
  */
 export const PAGE_AMBIENT_TYPES: Readonly<Record<string, string>> = {
 	lang: 'string',
-	t: 'Record<string, string>',
+	// The interface's type parameter: each server module instantiates it
+	// with the component's exact per-key record (LT-308).
+	t: 'T',
 	timeZone: 'string',
 	currency: 'string',
 	dir: "'ltr' | 'rtl'",

@@ -1,5 +1,5 @@
 {
 	"extends": "./tsconfig.json",
-	"include": ["./combobox-bad-args.tsx", "./async-bad-arms.tsx", "./bad-host-typo.tsx", "../../../../../examples/form/listbox/form-listbox.tsx", "../../../../compiler/frontend/tsx/host-profile.d.ts"],
+	"include": ["./combobox-bad-args.tsx", "./async-bad-arms.tsx", "./bad-host-typo.tsx", "./i18n-bad-reads.tsx", "../../../../../examples/form/listbox/form-listbox.tsx", "../../../../compiler/frontend/tsx/host-profile.d.ts"],
 	"exclude": [],
 }

@@ -31,7 +31,7 @@ export const i18n = {
 	updatedOn: 'updated on',
 	minRead: 'min read',
 	unknownDate: 'unknown date',
-}
+} as const
 
 declare global {
 	interface HTMLElementTagNameMap {
@@ -66,7 +66,7 @@ export function BasicBlogmeta({
 	modified?: string
 	/** Reading time in minutes (the `reading-time` attribute). */
 	readingTime?: number
-	i18n: I18n
+	i18n: I18n<typeof i18n>
 }) {
 	const formatDate = (isoDate: string | undefined): string | null => {
 		const [year, month, day] = (isoDate ?? '').split('-').map(Number)

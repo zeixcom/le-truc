@@ -38,9 +38,14 @@ import type { Message, MessageNode } from './evaluate'
 /**
  * The value type an argument takes, from how the pattern uses it (LT-308
  * types each key from this): `plural`/`selectordinal`/`number` → number,
- * `date`/`time` → date, `{x}`/`select` → string.
+ * `date`/`time` → date, a `select` selector → string (its cases are keyed
+ * by string), and a plain `{x}` → `plain`, a string or a number (LT-344):
+ * the evaluator renders it with `String(value)`. A date is not plain —
+ * `String(date)` is the engine's locale-free `toString`; it belongs in
+ * `{d, date}`. When one argument is used several ways, the narrowest use
+ * wins: number/date over string over plain.
  */
-export type MessageArgKind = 'number' | 'date' | 'string'
+export type MessageArgKind = 'number' | 'date' | 'string' | 'plain'
 
 /** One argument a message takes. */
 export type MessageArg = { name: string; kind: MessageArgKind }
@@ -171,6 +176,14 @@ const dateNode = (token: FunctionArg, key: 'date' | 'time'): MessageNode => {
 	return { t: 'date', a, o }
 }
 
+/** How narrow each kind is: a narrower use of the same argument wins. */
+const KIND_RANK: Record<MessageArgKind, number> = {
+	plain: 0,
+	string: 1,
+	number: 2,
+	date: 2,
+}
+
 /** Record `name` used as `kind`; a number/date clash cannot be typed. */
 const noteArg = (
 	args: Map<string, MessageArgKind>,
@@ -178,11 +191,11 @@ const noteArg = (
 	kind: MessageArgKind,
 ): void => {
 	const prior = args.get(name)
-	if (prior === undefined || prior === 'string') {
+	if (prior === undefined || KIND_RANK[kind] > KIND_RANK[prior]) {
 		args.set(name, kind)
 		return
 	}
-	if (kind !== 'string' && kind !== prior)
+	if (KIND_RANK[kind] === 2 && kind !== prior)
 		throw new UnsupportedPattern(
 			`\`{${name}}\` is used both as a ${prior} and as a ${kind}`,
 		)
@@ -211,7 +224,7 @@ const convert = (
 					: '#'
 				break
 			case 'argument':
-				noteArg(args, token.arg, 'string')
+				noteArg(args, token.arg, 'plain')
 				node = { t: 'arg', a: token.arg }
 				break
 			case 'function':

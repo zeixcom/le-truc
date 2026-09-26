@@ -64,22 +64,43 @@ declare const provideContexts: LeTrucFactoryContext['provideContexts']
 type FormAssociatedElement = import('@zeix/le-truc').FormAssociatedElement
 
 /**
+ * A message's argument record (LT-308): an ICU argument is formatted as a
+ * number, a date, or a plain string.
+ */
+type MessageArgs = Record<string, string | number | Date>
+
+/**
+ * One `t.<key>` read, typed from its source pattern's literal type (LT-308,
+ * ADR 0030 s4): a pattern without `{` is a string, one with `{` takes
+ * arguments and is a function of its argument record. A widened `string`
+ * (the `as const` was forgotten) is the union, so its first attribute read
+ * fails tsc instead of passing silently. An ICU-escaped literal brace
+ * (`'{'`) misclassifies an argument-less message as a function here — the
+ * compiler's argument diagnostic and the generated modules' types are exact.
+ */
+type MessageOf<V> = string extends V
+	? string | ((args: MessageArgs) => string)
+	: V extends `${string}{${string}`
+		? (args: MessageArgs) => string
+		: string
+
+/**
  * The reserved `i18n` parameter's record (ADR 0030 sub-design 2, LT-173).
  * Ambient in raw `.tsrx` sources — the compiler supplies the value at
  * every render call boundary and the generated server modules import the
  * concrete declaration from the generated `i18n` module — so a component
- * annotating `{ …, i18n: I18n }` type-checks without an authored import
+ * annotating `{ …, i18n: I18n<typeof i18n> }` type-checks without an authored import
  * (the library gains no i18n surface: ADR 0030 sub-design 8).
  *
- * `t` is the component's own resolved messages (`export const i18n`'s
- * keys); `lang` is the effective BCP 47 tag after precedence; `timeZone`/
+ * `t` is the component's own resolved messages, typed per key from
+ * `export const i18n = { … } as const` (LT-308); `lang` is the effective BCP 47 tag after precedence; `timeZone`/
  * `currency` are the formatting configuration for `Intl` consumers;
  * `dir` is the text direction derived from `lang` (never rendered per
  * component — direction belongs on the page's `<html>`).
  */
-interface I18n {
+interface I18n<M extends Record<string, string> = Record<string, string>> {
 	lang: string
-	t: Record<string, string>
+	t: { readonly [K in keyof M]: MessageOf<M[K]> }
 	timeZone: string
 	currency: string
 	dir: 'ltr' | 'rtl'

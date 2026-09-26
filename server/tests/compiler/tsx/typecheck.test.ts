@@ -80,6 +80,24 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 		expect(output).toContain(
 			"bad-host-typo.tsx(33,29): error TS2339: Property 'cout' does not exist on type 'FormAssociatedValueElement & BadHostProps'",
 		)
+		// Per-key `t` (LT-308): an undeclared key, a bare argument message
+		// in an attribute, a call on an argument-less one, a catalog without
+		// `as const`, and a possibly-undefined attribute are all errors.
+		expect(output).toContain(
+			"i18n-bad-reads.tsx(32,26): error TS2551: Property 'fliter' does not exist on type",
+		)
+		expect(output).toContain(
+			`i18n-bad-reads.tsx(33,5): error TS2322: Type '{ children: any; "aria-label": (args: MessageArgs) => string; }' is not assignable to type 'span'`,
+		)
+		expect(output).toContain(
+			'i18n-bad-reads.tsx(33,34): error TS2349: This expression is not callable',
+		)
+		expect(output).toContain(
+			"i18n-bad-reads.tsx(34,11): error TS2322: Type 'string | ((args: MessageArgs) => string)' is not assignable to type 'Reactive<string>'",
+		)
+		expect(output).toContain(
+			`i18n-bad-reads.tsx(35,5): error TS2375: Type '{ children: string; type: "button"; "aria-label": string | undefined; }' is not assignable to type 'button'`,
+		)
 		expect(status).not.toBe(0)
 	})
 
