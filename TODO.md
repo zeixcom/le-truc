@@ -86,25 +86,6 @@ and `check:links` pass.
 
 ### Build half (LT-250 → LT-308 → LT-218 → LT-252 → LT-251; LT-253 after LT-252)
 
-- [ ] LT-253: MF2 migration insurance — round-trip fixtures and the documented rebaseline procedure. **Depends on LT-252.**
-  **Skill:** le-truc-dev
-  **Context:** ADR 0030's Alternatives records MF1 as a deliberate bet with a kept-open exit:
-  `@messageformat/icu-messageformat-1` parses MF1 into the MF2 data model and `messageformat@4`
-  serializes it, both from the same maintainers. The bet is only cheap if the exit is *tested*
-  rather than asserted. Cost grows with pattern and locale count, so build the harness while
-  the corpus is one component.
-  - A test that walks every corpus pattern MF1 → MF2 → renders both → asserts identical output
-    for a matrix of argument values across all six locales. This is the claim "the migration is
-    mechanical," turned into a gate.
-  - Pin the two known-lossy spots explicitly: **nested-to-flat arm expansion** (MF1 nests
-    plural-inside-select; MF2 uses one flat multi-selector, so arms multiply out — semantically
-    identical, textually larger) and **escaping** (MF1 `'{'` quoting vs MF2 `|literal|` /
-    backslash — where codemods go subtly wrong). At least one fixture per spot.
-  - Write the rebaseline procedure down beside the fixtures, citing LT-252's commit as the
-    precedent: one commit, sources + translations + manifest together.
-  **Check:** the round-trip suite is green and is wired into `bun test server/tests`, so an MF1
-  pattern the exit cannot carry fails at authoring time rather than at migration time.
-
 ### Client channel (after LT-250; LT-249 lands with LT-219)
 
 - [ ] LT-346: Pin the discriminated compose-site check (LT-343 review).
@@ -225,6 +206,14 @@ and `check:links` pass.
      s6 now says the opposite. The "Host-derived folds" bullet's "lets an i18n component's
      plural category fold" names basic-pluralize's deleted `pluralCategory` helper, so keep
      the colorgraph example as the reason.
+  6. **LT-253 review riders (2026-09-26).** (a) `i18n/README.md` still teaches the retired
+     per-category dotted keys (`basic-pluralize.task.one`) and the census reachability rule.
+     Re-teach it as one ICU pattern per key, where each locale spells only its own arms. (b)
+     `server/tests/compiler/MF2_EXIT.md` rebaseline step 4 overclaims: "only the serialized
+     `i18n` attribute changes" holds for the *data*, but the migration also replaces the MF1
+     parser adapter, the evaluator, the per-key arg-kind types (LT-308) and the pattern
+     diagnostics. Scope the procedure to the data rebaseline and name the compiler swap as its
+     own precondition, outside the one commit.
   **ADR 0037 rider (2026-09-21):** this round also carries the branch-DOM-lifetime copy —
   the HOST_PROFILE control-flow table row and the arrow-thunk section's reversal, the
   ARCHITECTURE/AGENTS "`@if` cannot read signals" sentences, and the new construct's

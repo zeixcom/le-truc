@@ -11,7 +11,7 @@ import * as path from 'node:path'
 import MessageFormat from '@messageformat/core'
 import { formatMessage, type Message } from '../../compiler/icu/evaluate'
 import { literalOf, parseMessage } from '../../compiler/icu/parse'
-import { compileCorpusSource, loadCorpus } from './corpus-fixture'
+import { corpusPatterns } from './corpus-fixture'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -55,25 +55,6 @@ const oracle = (
 	)
 
 /* === The corpus patterns === */
-
-/** Every source pattern the corpus declares, and every catalog translation, with its locale. */
-const corpusPatterns = async (): Promise<[string, string][]> => {
-	const out: [string, string][] = []
-	for (const file of await loadCorpus()) {
-		const { component } = compileCorpusSource(file.content, file.path)
-		for (const pattern of Object.values(component?.i18nMessages ?? {}))
-			out.push(['en', pattern])
-	}
-	const dir = path.join(ROOT, 'i18n')
-	for (const file of readdirSync(dir)) {
-		if (!file.endsWith('.json') || file === 'manifest.json') continue
-		const locale = file.replace(/\.json$/, '')
-		const catalog = JSON.parse(readFileSync(path.join(dir, file), 'utf8'))
-		for (const value of Object.values(catalog as Record<string, unknown>))
-			if (typeof value === 'string' && value !== '') out.push([locale, value])
-	}
-	return out
-}
 
 describe('the corpus patterns, against the oracle', async () => {
 	const patterns = await corpusPatterns()

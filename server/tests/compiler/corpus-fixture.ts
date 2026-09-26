@@ -3,6 +3,7 @@
  * (`compileCorpus`) the way the build does.
  */
 
+import { readdirSync, readFileSync } from 'node:fs'
 import * as path from 'node:path'
 import { resolveCorpusConfig } from '../../compiler/corpus-config'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
@@ -30,3 +31,27 @@ export const compileCorpusSource = (content: string, filename: string) =>
 	filename.endsWith('.tsx')
 		? compileSourceTsx(content, filename)
 		: compileSource(content, filename)
+
+/**
+ * Every ICU pattern the corpus declares, with its render locale: each
+ * component's inline source string (`en`) and every non-empty catalog
+ * translation under `i18n/`. The oracle test (icu.test.ts) and the MF2
+ * exit (mf2-exit.test.ts) walk the same list.
+ */
+export const corpusPatterns = async (): Promise<[string, string][]> => {
+	const out: [string, string][] = []
+	for (const file of await loadCorpus()) {
+		const { component } = compileCorpusSource(file.content, file.path)
+		for (const pattern of Object.values(component?.i18nMessages ?? {}))
+			out.push(['en', pattern])
+	}
+	const dir = path.join(ROOT, 'i18n')
+	for (const file of readdirSync(dir)) {
+		if (!file.endsWith('.json') || file === 'manifest.json') continue
+		const locale = file.replace(/\.json$/, '')
+		const catalog = JSON.parse(readFileSync(path.join(dir, file), 'utf8'))
+		for (const value of Object.values(catalog as Record<string, unknown>))
+			if (typeof value === 'string' && value !== '') out.push([locale, value])
+	}
+	return out
+}

@@ -13,6 +13,7 @@
         "@markdoc/markdoc": "^0.5.9",
         "@messageformat/core": "^3.4.0",
         "@messageformat/date-skeleton": "^1.1.0",
+        "@messageformat/icu-messageformat-1": "^0.12.0",
         "@messageformat/number-skeleton": "^1.2.0",
         "@messageformat/parser": "^5.1.1",
         "@playwright/test": "^1.62.1",
@@ -30,6 +31,7 @@
         "dompurify": "^3.4.14",
         "jsdom": "^30.0.1",
         "lightningcss-cli": "^1.33.0",
+        "messageformat": "^4",
         "parse5": "^7.0.0",
         "react": "^19",
         "react-dom": "^19",
@@ -112,6 +114,8 @@
     "@messageformat/core": ["@messageformat/core@3.4.0", "", { "dependencies": { "@messageformat/date-skeleton": "^1.0.0", "@messageformat/number-skeleton": "^1.0.0", "@messageformat/parser": "^5.1.0", "@messageformat/runtime": "^3.0.1", "make-plural": "^7.0.0", "safe-identifier": "^0.4.1" } }, "sha512-NgCFubFFIdMWJGN5WuQhHCNmzk7QgiVfrViFxcS99j7F5dDS5EP6raR54I+2ydhe4+5/XTn/YIEppFaqqVWHsw=="],
 
     "@messageformat/date-skeleton": ["@messageformat/date-skeleton@1.1.0", "", {}, "sha512-rmGAfB1tIPER+gh3p/RgA+PVeRE/gxuQ2w4snFWPF5xtb5mbWR7Cbw7wCOftcUypbD6HVoxrVdyyghPm3WzP5A=="],
+
+    "@messageformat/icu-messageformat-1": ["@messageformat/icu-messageformat-1@0.12.0", "", { "dependencies": { "@messageformat/date-skeleton": "2.0.0-0", "@messageformat/number-skeleton": "2.0.0-0", "@messageformat/parser": "^5.0.0", "messageformat": "^4.0.0" } }, "sha512-vCpR24LBD6cSwaQ2lUJLXeJ0Ls+qT9PTh+z8RHrtazLLOJj0Y5IaVflLCWPm5NBM3IYKwklQsge25MCmMWppAg=="],
 
     "@messageformat/number-skeleton": ["@messageformat/number-skeleton@1.2.0", "", {}, "sha512-xsgwcL7J7WhlHJ3RNbaVgssaIwcEyFkBqxHdcdaiJzwTZAWEOD8BuUFxnxV9k5S0qHN3v/KzUpq0IUpjH1seRg=="],
 
@@ -425,6 +429,8 @@
 
     "merge2": ["merge2@1.4.1", "", {}, "sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg=="],
 
+    "messageformat": ["messageformat@4.0.0", "", {}, "sha512-XKmJ/ffTWToWOlHJzt85ZChQgVGC0LHzNWuNK8zuYpNySsB0nIEmytOdSAOW9ETKtkajAUJf520m5gFHHnrTYg=="],
+
     "micromark-util-character": ["micromark-util-character@2.1.1", "", { "dependencies": { "micromark-util-symbol": "^2.0.0", "micromark-util-types": "^2.0.0" } }, "sha512-wv8tdUTJ3thSFFFJKtpYKOYiGP2+v96Hvk4Tu8KpCAsTMs6yi+nVmGh1syvSCsaxz45J6Jbw+9DD6g97+NV67Q=="],
 
     "micromark-util-encode": ["micromark-util-encode@2.0.1", "", {}, "sha512-c3cVx2y4KqUnwopcO9b/SCdo2O67LwJJ/UyqGfbigahfegL9myoEFoDYZgkT7f36T0bLrM9hZTAaAyH+PCAXjw=="],
@@ -588,6 +594,10 @@
     "@gerrit0/mini-shiki/@shikijs/themes": ["@shikijs/themes@3.23.0", "", { "dependencies": { "@shikijs/types": "3.23.0" } }, "sha512-5qySYa1ZgAT18HR/ypENL9cUSGOeI2x+4IvYJu4JgVJdizn6kG4ia5Q1jDEOi7gTbN4RbuYtmHh0W3eccOrjMA=="],
 
     "@gerrit0/mini-shiki/@shikijs/types": ["@shikijs/types@3.23.0", "", { "dependencies": { "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4" } }, "sha512-3JZ5HXOZfYjsYSk0yPwBrkupyYSLpAE26Qc0HLghhZNGTZg/SKxXIIgoxOpmmeQP0RRSDJTk1/vPfw9tbw+jSQ=="],
+
+    "@messageformat/icu-messageformat-1/@messageformat/date-skeleton": ["@messageformat/date-skeleton@2.0.0-0", "", {}, "sha512-gkCatAK4MYlhjKYWxkfRM6Ql0M1VmA1DK6A9rszUBprZpQox/XqX987AI2w7YoEz0p5DgkPOpI6PK1mW08yNqQ=="],
+
+    "@messageformat/icu-messageformat-1/@messageformat/number-skeleton": ["@messageformat/number-skeleton@2.0.0-0", "", {}, "sha512-bDrIrVSKwn0sNrbU+N6tjwljV+Zl9pRCR/D9Xim6Q7lLzZ20nFYtuuKOZ3QKisN+vPxa9sTqu3ufJ+uwKNpHbQ=="],
 
     "@types/jsdom/parse5": ["parse5@8.0.1", "", { "dependencies": { "entities": "^8.0.0" } }, "sha512-z1e/HMG90obSGeidlli3hj7cbocou0/wa5HacvI3ASx34PecNjNQeaHNo5WIZpWofN9kgkqV1q5YvXe3F0FoPw=="],
 

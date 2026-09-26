@@ -45,7 +45,7 @@ The client is the wrong layer to answer "what language is this page in": by the 
 - **Locale via the context protocol**: a fallback channel is the wrong language permanently without JavaScript.
 - **Caller-passed literals**: parents would know children's internal keys; duplicated per call site.
 - **Per-category keys and rendered alternatives**: no interpolation or `select`; a cross product of spans per sentence.
-- **MessageFormat 2**: tooling speaks MF1 natively, MF2 partially; `{$token}` breaks the ruled channel — migration stays open.
+- **MessageFormat 2**: tooling speaks MF1 natively, MF2 partially; `{$token}` breaks the ruled channel — migration stays open, and tested: every corpus pattern must round-trip MF1 → MF2 byte-identically (LT-253, `server/tests/compiler/MF2_EXIT.md`). The exit is upstream conversion plus two tested normalizations, not upstream alone.
 - **Fluent, i18next suffix keys, gettext `.po`, hand-rolled ICU subsets**: runtime interpreters, dialects, or strictly weaker formats.
 - **`@messageformat/core` in production**: third-party bytes, two implementations of one equivalence; own the evaluator, reuse the parser.
 - **Per-locale functions or raw patterns**: per-locale bundles or a client ICU parser; the parsed AST rides the universal attribute.
@@ -70,6 +70,7 @@ The client is the wrong layer to answer "what language is this page in": by the 
 - "Never client-renders" narrows to "never renders structure" — the largest moved premise. "Catalog never ships" becomes "only client-referenced patterns ship".
 - Two build-time parser dependencies (the first on a format contract).
 - Per-category rewrites are owed; malformed patterns fall back and report; MF1 defers an MF2 migration.
+- The corpus may author only the MF1 the exit carries: seven supported constructs are gated out, the record's default `currency` (s2) among them. The gate binds the corpus, not downstream authors.
 
 ## Related
 

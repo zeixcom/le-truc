@@ -11,6 +11,27 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-253: MF2 migration insurance — round-trip fixtures and the documented rebaseline procedure. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `server/tests/compiler/mf2-exit.test.ts` (in `bun test server/tests`) walks every
+  corpus pattern MF1 → MF2 text → MF2 parser. Both sides render a category-complete argument
+  matrix: `en` sources in en and all six locales, catalogs in their own. They must agree byte
+  for byte, and an MF2 formatter warning fails. `mf2-exit.ts` is the conversion;
+  `MF2_EXIT.md` holds the lossy spots, the not-carried map and the rebaseline procedure (cites
+  4e755e28). Test-only dev deps: `messageformat@4`, `@messageformat/icu-messageformat-1`; a
+  boundary test keeps them out of `server/compiler/`. `corpusPatterns` is now shared from
+  `corpus-fixture.ts`.
+  **Rulings:** (1) The exit is **upstream + two tested normalizations**, not upstream alone.
+  `dedupeInputs` fixes the `tasks` pattern's duplicate `.input {$count}` (one argument driving
+  `selectordinal` and `plural`); `stringifyLiterals` fixes numeric skeleton options that
+  `stringifyMessage` throws on. A pinned test flags an upstream fix. ADR 0030 Alternatives
+  amended in place (non-breaking). (2) The gate is a deliberate **authoring constraint on the
+  corpus only**. The seven `NOT_CARRIED` constructs, including s2's record-default `currency`
+  (`{n, number, currency}`), may not be authored in `examples/`. Downstream authors are
+  unaffected. Recorded in ADR 0030 Consequences. (3) An upstream issue for the converter is the
+  owner's call; drafts are in `ICU_MESSAGEFORMAT_ISSUES.md`, none filed yet. Riders → LT-220 item 6 (stale `i18n/README.md`; scope
+  `MF2_EXIT.md` step 4 to the data rebaseline).
+
 - [x] LT-251: Delete the per-category machinery — `truc:case`, pruning, `pluralCategories`, the dotted-key rule, the census reachability carve-outs. — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** `truc:case`/`truc:case-type` are gone from the compiler (IR kinds,
