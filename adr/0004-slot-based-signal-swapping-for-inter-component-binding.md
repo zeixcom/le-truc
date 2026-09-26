@@ -14,8 +14,8 @@ Use `createSlot` from `@zeix/cause-effect` wrapping mutable signals to enable `p
 
 ## Alternatives Considered
 
-- **Direct property assignment** — Cannot swap signals without redefining property descriptor; no indirection layer
-- **Proxy-based signal swapping** — Adds overhead; more complex to implement and reason about
+- **Direct property assignment**: Cannot swap signals without redefining property descriptor; no indirection layer.
+- **Proxy-based signal swapping**: Adds overhead; more complex to implement and reason about.
 
 ## Consequences
 
@@ -25,7 +25,7 @@ Use `createSlot` from `@zeix/cause-effect` wrapping mutable signals to enable `p
 - Parent and child share exact same underlying signal node
 - Cleanup restores original signal when parent disconnects
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - Adds indirection layer (Slot) between property and signal
 - Scope is Le Truc components only; for non-Le Truc custom elements, must use `setProperty()` instead
 

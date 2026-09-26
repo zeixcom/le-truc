@@ -2,153 +2,56 @@
 
 ## Status
 
-✅ Accepted — owner acceptance 2026-09-24, after LT-286 landed sub-design 1 byte-identical and the remaining sub-designs were checked against the code (owner rulings 2026-09-21, LT-235 grilling; implementation tasks LT-286–LT-289).
+✅ Accepted
 
 ## Context
 
-[COMPILER_REVIEW §2.6–2.7](../COMPILER_REVIEW.md) finds three IR types discriminating
-their variants on nullability instead of a tag: `ForIR.listSignal: string | null` splits
-two entirely different lowerings (server-data `each()` vs reactive `reconcile()`),
-`try.pendingChildren: TemplateNode[] | null` splits error- from async-boundary, and
-`SignalIR.init` means different things per `constructor` — forcing casts and truthiness
-dispatch across the analysis passes and both emitters. Four parallel `first()` collections
-and seven parallel `expose()` fields on `ComponentIR` describe single constructs as
-scattered shapes. The analysis passes' contracts — loops-before-harvest, byte-stable query
-order, `composeRegistry === undefined` silently disabling compose resolution — are prose,
-and their failure mode is a silent wrong *tier*, not an error. LT-212's `@empty` arm adds
-`ForIR` surface, so the shape must be settled before that work lands; [ADR
-0037](0037-reactive-conditions-via-template-cloned-arms.md)'s rider adds its two node
-shapes to the inventory this ADR records.
+The compiler review finds three IR types discriminating their variants on nullability instead of a tag: `ForIR.listSignal: string | null` splits two entirely different lowerings (server-data `each()` vs reactive `reconcile()`), the try node's nullable children split error- from async-boundary, and `SignalIR.init` means different things per `constructor` — forcing casts and truthiness dispatch across the analysis passes and both emitters. Four parallel `first()` collections and seven parallel `expose()` fields on `ComponentIR` describe single constructs as scattered shapes. The analysis passes' contracts — loops-before-harvest, byte-stable query order, a silently-absent compose registry disabling compose resolution — are prose, and their failure mode is a silently wrong Evaluation Tier, not an error. The empty arm adds `ForIR` surface, so the shape must be settled before it lands. [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) adds its two node shapes to the inventory this ADR records.
 
 ## Decision
 
-The IR discriminates variants by tags, not nullability, and each analysis pass's contract
-is its signature. Every task under this ADR lands byte-identical on goldens and parity —
-wave-4 type work changes types, not behavior (COMPILER_REVIEW §3 items 17–20).
+The IR discriminates variants by tags, not nullability, and each analysis pass's contract is its signature. Every reshape lands byte-identical on goldens and parity — type work, not behavior.
 
-**Every IR reshape lands before the first publish of `@zeix/le-truc-compiler` (LT-254).**
-`ComponentIR`, `SignalIR`, `ForIR` and `TemplateNode` are exported from `contract.ts`, whose
-stability policy makes renames, removals and tightened shapes a major change after the first
-publish. Sub-designs 2 and 4 (LT-287, LT-288) and the two deferred shapes of sub-designs 3
-and 6 (LT-276, LT-274) therefore gate LT-254; otherwise each becomes a 4.0 change. Sub-design
-5 (LT-289) changes internal signatures only and has no publish constraint.
+**Every IR reshape lands before the first publish of `@zeix/le-truc-compiler`.** The four core types are exported from `contract.ts`, whose stability policy makes renames, removals and tightened shapes a major change after the first publish. Sub-designs 2 and 4, and the two deferred shapes of sub-designs 3 and 6, therefore gate that publish — otherwise each becomes a 4.0 change. Sub-design 5 changes internal signatures only and has no publish constraint.
 
-### 1. `ForIR` → `EachForIR | ReconcileForIR`
+1. **`ForIR` → `EachForIR | ReconcileForIR`.** A `kind` discriminant; fields live on the member that uses them. The plans map to per-member types, so a pass reading the wrong map is a type error. `emptyArm` rides the union base, produced by both front ends (the `.tsrx` `@empty`, and the `.tsx` length-check idiom per [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6); [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) s5 keeps `@empty` on the toggle path, out of the keyed arm space. **The arm's roots are shared, not moved:** they sit both in `emptyArm` and in the template tree as the loop output's following siblings, so selector resolution, id checks and prose checks cover them with no extra code, and the server emitter skips them in its plain walk through an identity set and renders them from the loop — the existing sharing convention, and the one implicit contract this ADR accepts rather than removes. A server-data `@for` carrying a `key` clause is a compile diagnostic — otherwise the key would be silently dropped.
 
-A `kind: 'each' | 'reconcile'` discriminant; fields live on the member that uses them
-(`hoisted`/`indexName`/`iterableText` each-only; `keyName`/`keyText` reconcile-only). The
-plan maps tighten to `Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR,
-ReconcilePlan>`, so a pass reading the wrong map is a type error. `emptyArm: TemplateNode[]
-| null` rides the union base, produced by both front ends (LT-212: `.tsrx` `@empty`, and the
-`.tsx` `{xs.length === 0 ? <empty/> : xs.map(…)}` idiom, per
-[ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6); ADR 0037 s5 keeps
-`@empty` on the toggle path, out of the keyed arm space. **As landed, the arm's roots are
-shared, not moved:** they sit both in `emptyArm` and in the template tree as the loop
-output's following siblings, so selector resolution, id checks and prose checks cover them
-with no extra code, and the server emitter skips them in its plain walk through an identity
-set (`emptyArmNodes`) and renders them from the loop. This follows the existing convention
-(`ForIR.output` is shared the same way). It is an identity side table, the one implicit
-contract this ADR accepts rather than removes. A server-data `@for` carrying a
-`key` clause — silently collected and dropped today — becomes a compile diagnostic
-(channel: compiler; tier 1 Prevented; next free LTC code; Tech Writer reviews the copy,
-mirroring the `.tsx` surface's existing "the key clause is a reactive-List concern"
-message).
+2. **`SignalIR` → three members by family.** Declared (`createCell`/`createState`/`createList`/`createStore` — init is the initializer), Derived (`deriveCell`/`deriveList`/`deriveStore`/`createMemo` — init is the derive expression), Context (`requestContext` — carries the fallback node and its verbatim text; the null-everywhere-else fallback field dies). `constructor` stays as a field narrowed within each member, so exact-constructor dispatch (reactive `@for`'s `createList` requirement, for one) keeps working. The hand-rolled special-case sites become narrowings.
 
-### 2. `SignalIR` → three members by family
+3. **The try node is not reshaped here.** Its target shape is recorded, not landed: [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) sub-design 4's keyed-arm boundary replaces the toggle machinery when the boundary migrates — IR reshape and emission flip together. Splitting `try` now would rewrite the ~20 walk sites that touch its children twice; the one surviving cast is documented as the scheduled survivor. The `<truc:try>` spelling ([ADR 0041](0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md)) changes only the `.tsx` surface and lowers to today's node, landing before the boundary migration, which then reshapes the node under both front ends in one change.
 
-`DeclaredSignalIR` (`createCell`/`createState`/`createList`/`createStore` — init is the
-initializer), `DerivedSignalIR` (`deriveCell`/`deriveList`/`deriveStore`/`createMemo` —
-init is the derive expression), `ContextSignalIR` (`requestContext` — carries the fallback
-node and its verbatim text; the `null`-everywhere-else `fallbackText` field dies).
-`constructor` stays as a field narrowed within each member, so exact-constructor dispatch
-(reactive `@for`'s `createList` requirement, for one) keeps working. The six hand-rolled
-special-case sites become narrowings.
+4. **One `first()` record, two `expose()` shapes.** The four scattered reference collections consolidate into one `FirstRefDecl` (name, selector, required, reason, resolution stage, offset) in a name-keyed Map — the resolution stage is data, not a different shape. The expose fields consolidate into one optional statement record plus one per-prop ReadonlyMap; `RegistryEntry.exposedProps` is a projection and unchanged. The four setup arrays stay as they are: behavior-bearing emission contracts, not redundancy.
 
-### 3. `try` is not reshaped here
+5. **Pass signatures carry the contracts.** The order-carrying accumulators (queries, used names, ambients, child tags, ref names, diagnostics — byte-stable query order is their documented invariant) become an explicitly typed `PassShared` environment. Each pass's productions become return values the next pass receives as required parameters — loops → plans, harvest(shared, loopPlans) → harvest plans, effects(shared, loopPlans, harvests) → effect plans — so harvest-before-loops is a compile error, and "harvest read an empty plans map" is unrepresentable. Compose resolution returns a typed resolved-or-skipped result so a missing compose registry must be acknowledged by the caller.
 
-Its target shape is recorded, not landed: [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md)
-sub-design 4's keyed-arm boundary (arms `ok`/`nil`/`err` as `ArmTemplate`s, sub-design 6
-below) replaces the toggle machinery with LT-276 — IR reshape and emission flip together.
-Splitting `try` now would rewrite the ~20 walk sites that touch `pendingChildren` twice;
-the cast at `analysis/effects.ts` survives until LT-276, documented as the scheduled
-survivor. LT-303 ([ADR 0041](0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md)'s
-`<truc:try>`) changes only the `.tsx` spelling and lowers to today's `try` node, so it lands
-before LT-276, which then reshapes the node under both front ends in one change.
-
-### 4. One `first()` record, two `expose()` shapes
-
-`refReasons`/`unmatchedOptionalRefs`/`deferredComposeRefs`/`optionalRefs` consolidate into
-one `FirstRefDecl` (name, selector, required, reason, resolution stage, offset) in a
-name-keyed Map — the resolution stage is data, not a different shape. `exposeText`/
-`exposeRange`/`exposeArgNode`/`exposeAmbients` consolidate into `expose: ExposeStmt |
-null`; `exposeProps`/`exposeKinds`/`parserExposeProps` consolidate into one per-prop
-ReadonlyMap. `RegistryEntry.exposedProps` is a projection and unchanged. The
-`setup`/`plainSetup`/`clientSetup`/`signals` arrays stay as they are: behavior-bearing
-emission contracts, not redundancy.
-
-### 5. Pass signatures carry the contracts
-
-The order-carrying accumulators (queries, usedNames, ambient, childTags, refNames,
-diagnostics — byte-stable query order is their documented invariant) become an explicitly
-typed `PassShared` environment. Each pass's productions become return values the next pass
-receives as required parameters — `runLoops(shared) → LoopPlans`,
-`runHarvest(shared, loopPlans) → HarvestPlans`, `runEffects(shared, loopPlans, harvests) →
-EffectPlans` — so harvest-before-loops is a compile error in `analyzeClient`, and "harvest
-read an empty `forPlans` map" is unrepresentable. `resolveComposeRefs` returns a typed
-`{ mode: 'resolved' | 'skipped' }` so a missing `composeRegistry` must be acknowledged by
-the caller; `ambiguousComposeNodes` stays the already-reported channel, carried on the
-resolved result.
-
-### 6. The ADR 0037 inventory
-
-`ArmTemplate = { key: ArmKey, children: TemplateNode[] }` with
-`ArmKey = 'then' | 'else' | 'ok' | 'nil' | 'err' | 'case:<literal>'` — the named keys of
-ADR 0037 s2. LT-274's conditional-over-signal node is a `kind: 'conditional'`
-`TemplateNode` variant (test + two arms). Both land as types with their consumers — LT-274
-and LT-276 — never as unproduced variants ahead of their machinery.
+6. **The reactive-conditions inventory.** `ArmTemplate` (key + children) with the named arm keys of [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) s2; the conditional-over-signal node is a `conditional` `TemplateNode` variant (test + two arms). Both land as types with their consumers, never as unproduced variants ahead of their machinery.
 
 ## Alternatives Considered
 
-- **Nullability plus type guards** (all three types): keeps the casts and truthiness
-  dispatch the review flagged — a guard is the same special-casing with a better name.
-- **Nine-member per-constructor `SignalIR` union**: more precise than any dispatch site
-  found; three families cover every consumer, and per-constructor differences stay inside
-  a member's `constructor` field.
-- **Landing the keyed-arm `try` shape (or the conditional node) now, emission unchanged**:
-  writes ~20 walk sites against a shape no front end produces and no emitter consumes yet —
-  the dead-surface critique COMPILER_REVIEW §2.10 makes, one iteration early.
-- **Phased context views or DEV_MODE assertions for the pass contracts**: views keep the
-  empty-map case representable at a mistyped call site; assertions catch violations in
-  tests only, while the production failure mode (wrong tier) stays silent.
-- **Consolidating the four setup arrays**: rejected — they are behavior-bearing emission
-  contracts; the redundancy note in their own doc is a naming problem, not a shape one.
+- **Nullability plus type guards** (all three types): keeps the casts and truthiness dispatch the review flagged — a guard is the same special-casing with a better name.
+- **Nine-member per-constructor `SignalIR` union**: more precise than any dispatch site found; three families cover every consumer, and per-constructor differences stay inside the member's `constructor` field.
+- **Landing the keyed-arm try shape (or the conditional node) now, emission unchanged**: writes ~20 walk sites against a shape no front end produces and no emitter consumes yet — dead surface.
+- **Phased context views or dev-mode assertions for the pass contracts**: views keep the empty-map case representable at a mistyped call site; assertions catch violations in tests only, while the production failure mode (wrong tier) stays silent.
+- **Consolidating the four setup arrays**: they are behavior-bearing emission contracts; the redundancy note in their own doc is a naming problem, not a shape one.
 
 ## Consequences
 
 **Good:**
 
-- The casts and truthiness dispatch §2.6 lists are removed, not relocated; the wrong-tier
-  silent failure for loops-before-harvest becomes unrepresentable.
-- LT-212 gets its reserved `emptyArm` surface before implementation, so the arm lands
-  without reshaping `ForIR` twice.
-- The ADR 0037 chain (LT-274/LT-276) consumes recorded shapes instead of designing
-  mid-flight; the boundary reshape stays single-churn.
-- One new diagnostic (the stray `key` clause), channel and tier ruled at design time per
-  [ADR 0028](0028-tiered-error-surfacing.md).
+- The casts and truthiness dispatch are removed, not relocated; the wrong-tier silent failure for loops-before-harvest becomes unrepresentable.
+- The empty arm gets its reserved surface before implementation, so it lands without reshaping `ForIR` twice; the reactive-conditions chain consumes recorded shapes instead of designing mid-flight, keeping the boundary reshape single-churn.
+- One new diagnostic (the stray key clause), its channel and Surfacing Tier ruled at design time per [ADR 0028](0028-tiered-error-surfacing.md).
 
 **Bad / accepted tradeoffs:**
 
-- Every `ForIR`/`SignalIR`/`first()`/`expose()` consumer changes — a wide, mechanical diff
-  across the analysis passes and both emitters, verified byte-identical on goldens.
-- `try`'s nullability and the `pendingChildren` cast survive one more iteration by design.
-- §2.7's diagnostics threading (198 push sites) is deliberately untouched: the mutable
-  array is the source-order carrier, and restructuring it has no live failure mode to fix.
+- Every `ForIR`/`SignalIR`/`first()`/`expose()` consumer changes — a wide, mechanical diff across the analysis passes and both emitters, verified byte-identical on goldens.
+- The try node's nullability and its cast survive until the boundary migration, by design.
+- The diagnostics threading (nearly two hundred push sites) is deliberately untouched: the mutable array is the source-order carrier, and restructuring it has no live failure mode to fix.
 
 ## Related
 
 - Requirements: [Type safety & Reliability](../REQUIREMENTS.md#4-non-functional-requirements), §1
 - Architecture: [Server Evaluation Tiers](../ARCHITECTURE.md#server-evaluation-tiers)
 - Compiler contract: [LE_TRUC_COMPILER.md §4](../server/compiler/LE_TRUC_COMPILER.md) (amended by this ADR; renumbering §4 is forbidden — ADRs cite it)
-- Review: [COMPILER_REVIEW §2.6–2.7, §3.17–20](../COMPILER_REVIEW.md)
-- Related ADRs: [ADR 0017](0017-keyed-template-clone-reconciliation-for-lists.md) (the reconcile lowering), [ADR 0028](0028-tiered-error-surfacing.md) (the key-clause rule's lifecycle), [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) (dual surfaces), [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) (arm keys; the rider)
-- Tasks: LT-286 (ForIR union + key-clause diagnostic; gates LT-212), LT-287 (SignalIR union), LT-288 (first()/expose() consolidation), LT-289 (typed pass contracts); consumers: LT-212, LT-274, LT-276
+- Review: [COMPILER_REVIEW](../COMPILER_REVIEW.md) §2.6–2.7, §3.17–20
+- Related: [ADR 0017](0017-keyed-template-clone-reconciliation-for-lists.md) (the reconcile lowering), [ADR 0028](0028-tiered-error-surfacing.md) (the key-clause rule's lifecycle), [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) (dual surfaces), [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) (arm keys; the reactive-conditions shapes)

@@ -10,6 +10,9 @@ import { elementName, isCustomElement } from '../util'
  * `DEV_MODE`-only visual and console instrumentation; see ADR 0022.
  * `defineComponent()` auto-appends `debug()` when `DEV_MODE` is true; callers never pass it explicitly.
  * Every call site is also gated on `DEV_MODE`, as a second guard against shipping this in production.
+ * Every module-scope allocation here needs a `#__PURE__` annotation comment; without it the bundler keeps it
+ * in production even after the `DEV_MODE` guards fold (`test/regression-bundle.test.ts` catches this).
+ * Any per-element scheduling for diagnostics uses its own private key, never the element (see `PulseState`).
  */
 
 /* === Visual Marking === */

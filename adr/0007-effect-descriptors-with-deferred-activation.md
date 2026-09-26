@@ -2,7 +2,7 @@
 
 ## Status
 
-🗑️ Superseded by [ADR-0018](0018-implicit-effect-collection-via-ambient-context.md)
+🗑️ Superseded by [ADR 0018](0018-implicit-effect-collection-via-ambient-context.md)
 
 ## Context
 
@@ -16,8 +16,8 @@ The factory function returns a flat `FactoryResult` array of these effect descri
 
 ## Alternatives Considered
 
-- **Immediate activation** — Would break `pass()` and any effect depending on child components
-- **`pass`-specific deferral** — Would require dual-behavior helpers, adding complexity
+- **Immediate activation**: Would break `pass()` and any effect depending on child components.
+- **`pass`-specific deferral**: Would require dual-behavior helpers, adding complexity.
 
 ## Consequences
 
@@ -27,7 +27,7 @@ The factory function returns a flat `FactoryResult` array of these effect descri
 - From user's perspective, this is transparent — they call `watch(...)`, get back an opaque value, put it in the return array
 - Engine handles activation timing automatically
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - More complex internal implementation (thunks + deferred activation)
 - Slight delay in effect activation (waits for dependency resolution)
 
@@ -36,4 +36,4 @@ The factory function returns a flat `FactoryResult` array of these effect descri
 - Requirements: [M8](../REQUIREMENTS.md#m8-dependency-resolution-for-nested-custom-elements)
 - Architecture: [Lifecycle](../ARCHITECTURE.md#lifecycle), [Effect Descriptors](../ARCHITECTURE.md#effect-descriptors)
 - Supersedes: None
-- Superseded by: [ADR-0018](0018-implicit-effect-collection-via-ambient-context.md)
+- Superseded by: [ADR 0018](0018-implicit-effect-collection-via-ambient-context.md)

@@ -14,8 +14,8 @@ Attributes drive state only at connect time via parsers; `static observedAttribu
 
 ## Alternatives Considered
 
-- **Always-reactive attributes** — Would require `observedAttributes` and `attributeChangedCallback`, complicating the API
-- **Observed attributes with attributeChangedCallback** — Confuses initial config with reactive state; was the primary obstacle to simplifying the signature
+- **Always-reactive attributes**: Would require `observedAttributes` and `attributeChangedCallback`, complicating the API.
+- **Observed attributes with attributeChangedCallback**: Confuses initial config with reactive state; was the primary obstacle to simplifying the signature.
 
 ## Consequences
 
@@ -24,7 +24,7 @@ Attributes drive state only at connect time via parsers; `static observedAttribu
 - Clearer mental model (attributes = initial config, properties = reactive state)
 - Type-safe reactivity through properties instead of stringly-typed attributes
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - Cannot react to attribute changes from external sources (e.g., CMS tooling) without opt-in
 - If live attribute sync is needed for specific use cases, it can be added as an optional third parameter to `defineComponent` in a future release
 

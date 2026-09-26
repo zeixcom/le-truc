@@ -49,7 +49,7 @@ defineComponent<MyProps>('my-element', ({ expose, first, on, watch }) => {
 
 - **`expose()` on a built-in IDL property name is silently skipped**: `'lang' in this` (also `dir`, `title`, `hidden`, every global-attribute reflection) is always true, so `#initSignals`'s `prop in this` guard skips the initializer before any accessor is installed — no error, no reactivity, and reads hit the native accessor (the live attribute). The attribute is the only channel for these names: seed it, don't expose it (`basic-pluralize` materializes its walked locale onto the `lang` attribute at connect; LT-191). A parser-applied seed doesn't help — the guard runs first.
 
-- **Dev mode needs the *string* `"true"`**: build with `--define process.env.DEV_MODE='"true"'`; guards compare `=== 'true'` inline, so a bare boolean disables them. Production defines `"false"`, constant-folding dev branches out. No per-instance debug flag exists.
+- **Dev mode needs the *string* `"true"`**: build with `--define process.env.DEV_MODE='"true"'`; guards compare `=== 'true'` inline, so a bare boolean disables them. Production defines `"false"`, constant-folding dev branches out. `DEV_MODE` has no per-instance override; the per-instance `debug` property (ADR 0022) only toggles instrumentation.
 
 - **`bindVisible` is the inverse of `hidden`**: `bindVisible(el)` sets `el.hidden = !value`.
 

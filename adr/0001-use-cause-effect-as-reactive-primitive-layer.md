@@ -14,9 +14,9 @@ Use `@zeix/cause-effect` as the sole reactive primitive layer. The dependency is
 
 ## Alternatives Considered
 
-- **SolidJS signals** — Lacks Slot, Sensor, Task types; different lifecycle model
-- **Vue reactivity** — Not designed for fine-grained reactivity; different API surface
-- **Custom implementation** — Would duplicate effort and maintenance burden
+- **SolidJS signals**: Lacks Slot, Sensor, Task types; different lifecycle model.
+- **Vue reactivity**: Not designed for fine-grained reactivity; different API surface.
+- **Custom implementation**: Would duplicate effort and maintenance burden.
 
 ## Consequences
 
@@ -25,7 +25,7 @@ Use `@zeix/cause-effect` as the sole reactive primitive layer. The dependency is
 - Co-developed at Zeix AG, ensuring alignment
 - Released 1.0 together with Le Truc
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - Tight coupling to `@zeix/cause-effect` (intentional, not a bug)
 - Cannot easily swap reactive engines
 

@@ -35,7 +35,7 @@ For `Memo<Element[]>` targets, the same per-target throw applies with no special
 - Closes a real interop gap: passing to a Lit/FAST/vanilla custom element, or to a read-only Le Truc prop, now fails loudly and immediately instead of silently doing nothing
 - Atomic per target: a multi-prop `pass()` call either fully binds or doesn't bind at all, never partial state
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - Breaking change for any existing consumer whose code relied on (or merely tolerated) the previous silent failure
 - One more public error class to document (`InvalidPassPropertyError`)
 

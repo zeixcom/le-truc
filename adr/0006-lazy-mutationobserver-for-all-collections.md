@@ -16,8 +16,8 @@ Need to watch for DOM changes to matched elements from `all(selector)`, but avoi
 
 ## Alternatives Considered
 
-- **Always-on observer** — Adds overhead even for collections never read in effects
-- **Polling** — Inefficient; misses mutations between polls; adds CPU overhead
+- **Always-on observer**: Adds overhead even for collections never read in effects.
+- **Polling**: Inefficient; misses mutations between polls; adds CPU overhead.
 
 ## Consequences
 
@@ -28,7 +28,7 @@ Need to watch for DOM changes to matched elements from `all(selector)`, but avoi
 - Custom `equals` function `(a, b) => a.length === b.length && a.every((el, i) => el === b[i])` compares arrays by element identity, preventing spurious invalidations
 - Mutation filtering via `couldMatch` helper prevents invalidations from mutations _inside_ matched elements
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - Slight delay on first read (observer setup is deferred)
 - More complex implementation than always-on observer
 

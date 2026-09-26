@@ -18,6 +18,7 @@ This is the one judgment call the workflow asks of you — make it explicit, don
 **Non-breaking (edit in place):**
 - Adds a new option, export, or capability alongside the original decision, without changing any existing default or behavior
 - Clarifies or corrects wording without changing what was decided
+- At a major-version milestone: rewords the ADR to the current style, moves implementation detail out, and folds dated amendment notes into the sections they amend — the decision and its defaults unchanged
 - Fixes a factual error (a wrong function name, a stale version number, a broken link) that doesn't change the decision itself
 - Adds a cross-reference to a related or later ADR
 - Records an additive extension explicitly designed to preserve backward compatibility — verified, e.g., by a test pinning the old behavior unchanged

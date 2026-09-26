@@ -22,10 +22,10 @@ Implement the [Community Protocol for Context](https://github.com/webcomponents-
 
 ## Alternatives Considered
 
-- **Custom context protocol** — Would not interoperate with other Web Components libraries
-- **Prop drilling** — Verbose; requires explicit passing through all intermediate components
-- **Direct component coupling** — Tight coupling; breaks component reusability
-- **Global state** — Not scoped to component hierarchy; harder to reason about
+- **Custom context protocol**: Would not interoperate with other Web Components libraries.
+- **Prop drilling**: Verbose; requires explicit passing through all intermediate components.
+- **Direct component coupling**: Tight coupling; breaks component reusability.
+- **Global state**: Not scoped to component hierarchy; harder to reason about.
 
 ## Consequences
 
@@ -36,7 +36,7 @@ Implement the [Community Protocol for Context](https://github.com/webcomponents-
 - Works with any Web Components library implementing the protocol
 - Reactive: context changes propagate automatically
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - Requires browser support for `ContextRequestEvent` (evergreen browsers only)
 - Slight overhead for event dispatch and listener setup
 

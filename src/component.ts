@@ -203,7 +203,9 @@ let unusableInternalsWarned = false
 /**
  * Page-global registry for the ElementInternals declaration community protocol.
  *
- * Not exposed as a host property. See ADR 0026 §3.
+ * Not exposed as a host property. One entry per instance, with no disconnect-time
+ * cleanup: `attachInternals()` runs in the constructor, which the upgrade
+ * algorithm runs exactly once per instance. See ADR 0026 §3.
  */
 const elementInternalsRegistry = (): WeakMap<Element, ElementInternals> => {
 	const g = globalThis as {

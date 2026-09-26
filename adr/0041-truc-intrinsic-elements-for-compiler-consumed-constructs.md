@@ -2,11 +2,11 @@
 
 ## Status
 
-✅ Accepted — owner ruling 2026-09-24 (LT-213 deliberation). Implementation: LT-303 (`truc:try`); `truc:element` is recorded here and built when a migration needs it (LT-213).
+✅ Accepted — owner ruling; amends ADR 0032 s2 and s6.
 
 ## Context
 
-`.tsx` spells `.tsrx`'s directive grammar as standard expressions ([ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s2), and the capability rule (s6) obliges every front-end capability to be expressible in both surfaces. Some constructs have no honest expression spelling. A compiler-consumed ambient that looks like a runtime call, or an IIFE whose JavaScript meaning is not what the compiler does with it, misstates the construct to readers, to tools, and to agents porting between surfaces. LT-213's dynamic tags added a case with no expression spelling at all. A rule is needed for when `.tsx` gains host vocabulary and when it keeps plain JavaScript.
+`.tsx` spells `.tsrx`'s directive grammar as standard expressions ([ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s2), and the capability rule (s6) obliges every front-end capability to be expressible in both surfaces. Some constructs have no honest expression spelling. A compiler-consumed ambient that looks like a runtime call, or an IIFE whose JavaScript meaning is not what the compiler does with it, misstates the construct to readers, to tools, and to agents porting between surfaces. Dynamic tags add a case with no expression spelling at all. A rule is needed for when `.tsx` gains host vocabulary and when it keeps plain JavaScript.
 
 ## Decision
 
@@ -24,38 +24,32 @@ Namespaced tag names are standard JSX grammar. TypeScript resolves `<truc:x>` ag
 
 ### Members
 
-- **`<truc:try>`**, the error boundary and the async boundary in one element, the spelling of `@try`/`@pending`/`@catch`:
-
-  ```tsx
-  <truc:try pending={<p>Loading…</p>} catch={e => <p>{e.message}</p>}>
-    <div>{data}</div>
-  </truc:try>
-  ```
-
-  With `catch` only, it is the error boundary. With `pending` as well, it is the async boundary: all arms render and are `hidden`-toggled by which state won. `pending` renders while the task has no value yet, which is the narrow case of `isPending()` (also true while re-fetching with a retained value). Both are typed `JSX.Element`, and `catch`'s parameter is `Error` because cause-effect wraps non-Errors before dispatch (LT-208). There is no stale arm (LT-211): the in-flight state stays the reactive `isPending(signal)` idiom beside the boundary.
-- **`<truc:element tag={…}>`**, the spelling of `.tsrx`'s `<{expr}>` (LT-213). It admits only a server-known tag expression naming an HTML element (no custom elements), folded in the Folded tier. It is recorded here and not yet built. Until it is, both surfaces reject it with LTC053, and in `.tsx` it is also a `tsc` error because it has no `IntrinsicElements` entry.
+- **`<truc:try>`**, the error boundary and the async boundary in one element, the spelling of `@try`/`@pending`/`@catch`: the primary children are the main arm, a `pending` attribute takes the loading arm's JSX, and `catch` takes a function of the error to the error arm's JSX. With `catch` only, it is the error boundary; with `pending` as well, the async boundary — the winning arm renders live, the others as inert templates cloned in when the state changes ([ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) s4). `pending` renders while the task has no value yet, the narrow case of `isPending()` (also true while re-fetching with a retained value). Both arms are typed `JSX.Element`, and `catch`'s parameter is `Error` because cause-effect wraps non-Errors before dispatch. There is no stale arm — the in-flight state stays the reactive `isPending(signal)` idiom beside the boundary.
+- **`<truc:element tag={…}>`**, the spelling of `.tsrx`'s dynamic-tag expression. It admits only a server-known tag expression naming an HTML element (no custom elements), folded in the Folded tier. It is recorded here and built when a migration needs it. Until then, both surfaces reject it with LTC053, and in `.tsx` it is also a `tsc` error because it has no `IntrinsicElements` entry.
 
 ## Alternatives Considered
 
 - **Expression spellings for the boundaries** (a compiler-consumed ambient call, an IIFE): rejected by condition 1. One reads as a runtime call, the other as synchronous JavaScript error handling, and neither is what the compiler does.
 - **Cause-effect naming (`ok`/`nil`/`err`)**: rejected. It names signal states, so a synchronous error boundary has no name in it. The attribute form would also need a container name (`truc:match`), which puts a fourth word into one construct.
 - **Arms as child elements (`<truc:pending>`, `<truc:catch>`)**: rejected. Arm uniqueness and order would move from `tsc` into new compiler diagnostics.
-- **`<truc:empty>` beside a `.map()`**: rejected. It is attached to its loop only by position, which undoes the explicit empty-arm link LT-212 established.
+- **`<truc:empty>` beside a `.map()`**: rejected. It is attached to its loop only by position, which undoes the explicit empty-arm link the loop work established.
 - **`<truc:for each={…}>`**: rejected by condition 2. The item parameter would be `unknown`, a regression from `.map()`'s precise typing.
 - **React's `const Tag = …; <Tag>` for dynamic tags**: rejected. It collides with PascalCase compose dispatch and would need scope analysis to tell a local string from an imported component.
 
 ## Consequences
 
 **Good:**
+
 - Every compiler-consumed `.tsx` construct reads as what it is, and it is type-checked by `tsc` with no new diagnostics.
 - `.tsx` and `.tsrx` share the boundary vocabulary (`try`/`pending`/`catch`).
 - One element spells both boundaries.
 - The rule is decidable, so new constructs get a ruling instead of a debate.
 
-**Bad:**
+**Bad / accepted tradeoffs:**
+
 - `.tsx` authors learn a small closed host vocabulary beyond standard JSX.
 - The `.tsx` front end recognizes namespaced elements in addition to expression shapes.
-- The spike fixtures and parity tests written against the retired spelling are rewritten (LT-303). No corpus component uses the boundary yet.
+- The spike fixtures and parity tests written against the retired spelling are rewritten. No corpus component uses the boundary yet.
 
 ## Related
 

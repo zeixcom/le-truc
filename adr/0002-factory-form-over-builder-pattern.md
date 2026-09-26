@@ -14,8 +14,8 @@ Use single factory form `(name, factory)` for `defineComponent` instead of 4-par
 
 ## Alternatives Considered
 
-- **4-param form** — More explicit but verbose; requires UI object indirection
-- **Builder pattern** — More flexible but adds complexity and indirection
+- **4-param form**: More explicit but verbose; requires UI object indirection.
+- **Builder pattern**: More flexible but adds complexity and indirection.
 
 ## Consequences
 
@@ -24,7 +24,7 @@ Use single factory form `(name, factory)` for `defineComponent` instead of 4-par
 - Simpler mental model (no UI object indirection layer)
 - Attributes as initial config only (not reactive), clarifying the data flow
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - Less explicit than 4-param form for simple cases
 - Builder pattern might be more familiar to some developers
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted (partially superseded — the `dangerouslyBindInnerHTML` / `innerHTML`-sink guidance is refined by [ADR-0010](0010-trusted-types-support-via-sanitize-hook.md); the `bindAttribute` / `safeSetAttribute` URL-protocol and `on*`-attribute validation below stands unchanged)
+✅ Accepted — partially superseded by [ADR 0010](0010-trusted-types-support-via-sanitize-hook.md): the `dangerouslyBindInnerHTML` / `innerHTML`-sink guidance is refined there; the `bindAttribute` / `safeSetAttribute` URL-protocol and `on*`-attribute validation below stands unchanged
 
 ## Context
 
@@ -37,10 +37,10 @@ These are opt-in imports. Authors who use native DOM methods directly accept res
 
 ## Alternatives Considered
 
-- **No validation** — Trust the developer to handle security; risks XSS vulnerabilities in untrusted contexts
-- **Validation at framework level** — Would miss direct DOM manipulation; less comprehensive
-- **Different allowlist** — Could be more or less restrictive; current list balances security and utility
-- **Sanitize rather than block** — More complex; could have edge cases; blocking is simpler and safer
+- **No validation**: Trust the developer to handle security; risks XSS vulnerabilities in untrusted contexts.
+- **Validation at framework level**: Would miss direct DOM manipulation; less comprehensive.
+- **Different allowlist**: Could be more or less restrictive; current list balances security and utility.
+- **Sanitize rather than block**: More complex; could have edge cases; blocking is simpler and safer.
 
 ## Consequences
 
@@ -50,7 +50,7 @@ These are opt-in imports. Authors who use native DOM methods directly accept res
 - Safety utilities available for direct DOM manipulation
 - Opt-in for advanced use cases (developers accept responsibility)
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - May block legitimate use cases (e.g., custom protocols)
 - Developers must use safety utilities when bypassing built-in helpers
 - Slight performance overhead for validation
@@ -60,4 +60,4 @@ These are opt-in imports. Authors who use native DOM methods directly accept res
 - Requirements: [M16](../REQUIREMENTS.md#m16-security-validation-in-setattribute)
 - Architecture: [Security](../ARCHITECTURE.md#security), [DOM Binding Helpers](../ARCHITECTURE.md#dom-binding-helpers)
 - Supersedes: None
-- Partially superseded by: [ADR-0010](0010-trusted-types-support-via-sanitize-hook.md) (`dangerouslyBindInnerHTML` / `innerHTML`-sink guidance only)
+- Partially superseded by: [ADR 0010](0010-trusted-types-support-via-sanitize-hook.md) (`dangerouslyBindInnerHTML` / `innerHTML`-sink guidance only)

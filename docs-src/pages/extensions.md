@@ -73,7 +73,7 @@ With `[formAssociated()]`, Le Truc manages for you:
 - State restore
 - A `<fieldset disabled>`-aware `disabled` property
 
-The host gains a native-parity contract delegating to `internals`: `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()`. It also gains a managed `defaultValue` property — the reset baseline, mirroring `<input>.defaultValue`. When the prop is Parser-backed, `defaultValue` reflects the live `value` content attribute through that Parser. Setting it moves the baseline for the next form reset; it never changes the live `value`. External consumers read them as on a native input. The convention requires a reactive `value` property. Expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension — `defaultValue` is one of them.
+The host gains a native-parity contract delegating to `internals`: `form`, `name`, `labels`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`, `reportValidity()`, `setCustomValidity()`. As on a native `<input>`, `setCustomValidity(message)` sets only `customError` and keeps every other validity flag already set; with a flag still true and no message, the current `validationMessage` stays, falling back to `'Invalid value'`. It also gains a managed `defaultValue` property — the reset baseline, mirroring `<input>.defaultValue`. When the prop is Parser-backed, `defaultValue` reflects the live `value` content attribute through that Parser. Setting it moves the baseline for the next form reset; it never changes the live `value`. External consumers read them as on a native input. The convention requires a reactive `value` property. Expose it and sync it to the underlying native control as usual. `expose()` throws `InvalidPropertyNameError` for any reserved member name managed by the extension — `defaultValue` is one of them.
 
 The `internals` object on the context (`null` only if `attachInternals()` failed) is the escape hatch for typed validity flags, custom `:state()` pseudo-classes, and [ARIA reflection](accessibility.html). Follow this rule: use `internals?.setFormValue()` indirectly through the managed convention. Set `value`, and it syncs automatically. Call `internals?.setValidity()` directly when you need flags beyond a simple custom-error message.
 
@@ -109,12 +109,16 @@ Both `formAssociated()` and `formAssociatedCheckbox()` declare the same `staticP
 On a form-associated component, the `value` attribute is the reset baseline, not a live-value channel. Passing `value` to `observedAttributes()` re-parses the baseline attribute into the live prop on every mutation, so baseline updates apply live and the two channels stop being distinct. The same applies to `checked` with `formAssociatedCheckbox()`. Use the property as the sole live edit path.
 {% /callout %}
 
+{% callout .caution title="Do not reflect form-managed state onto its own attribute" %}
+The `value` or `checked` attribute is the reset baseline. Reflecting the live state onto it — `host.toggleAttribute('checked', checked)` as a CSS hook — makes a form reset restore the current state instead of the default. Style a checkbox-shaped component from the wrapped native input (`:has(input:checked)`), or, with no native descendant, from a custom state (`bindState(internals, 'checked')` and `:state(checked)`).
+{% /callout %}
+
 {% /section %}
 
 {% section %}
 ## Relaying Native Control Validity
 
-A component that wraps a native control (`<input>`, `<select>`, `<textarea>`) — a spinbutton around `<input type="number">`, a masked field around `<input type="text">` — can relay the control's own `ValidityState` onto `host.validity` with `relayValidity(internals, control, anchor?)`. This surfaces every constraint the browser already checks (`rangeOverflow`, `stepMismatch`, `badInput`, `valueMissing`, …), instead of collapsing them into a single `customError`. It fully replaces `host.validity`, including the control's own `customError` — the control's live state is the whole truth about itself. It is not reactive. Call it from an event handler on the wrapped control:
+A component that wraps a native control (`<input>`, `<select>`, `<textarea>`) — a spinbutton around `<input type="number">`, a masked field around `<input type="text">` — can relay the control's own `ValidityState` onto `host.validity` with `relayValidity(internals, control, anchor?)`. This surfaces every constraint the browser already checks (`rangeOverflow`, `stepMismatch`, `badInput`, `valueMissing`, …), instead of collapsing them into a single `customError`. It fully replaces `host.validity`, including the control's own `customError` — the control's live state is the whole truth about itself. It is not reactive. Because it also clears a `customError` the parent set, a cross-field check relays the child's state first and then re-asserts its own `customError` in the same synchronous handler. Call it from an event handler on the wrapped control:
 
 ```js#form-enhanced-input.js
 import { defineComponent, formAssociated, relayValidity } from '@zeix/le-truc'

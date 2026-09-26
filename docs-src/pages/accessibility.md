@@ -50,6 +50,8 @@ watch(
 )
 ```
 
+Use the platform's camel-cased `ARIAMixin` names: a mis-cased name (`ariaValuenow` for `ariaValueNow`) is a silent no-op. Element references have two platform quirks. `ariaErrorMessageElements` has no effect until `aria-invalid` is also set. Assigning any `aria*Elements` property leaves the mirrored content attribute as an empty string instead of removing it, so test with `getAttribute() === ''`, not `hasAttribute()`.
+
 Set static ARIA directly in the factory. `internals.role = 'slider'` is shorter than any helper call.
 
 {% callout .note title="The server-rendered attribute is the initial value" %}
@@ -73,5 +75,9 @@ A host content attribute **overrides** the reflection value in the accessibility
 axe-core 4.13 and later can see `internals.role` on every Le Truc component. Le Truc registers each component's internals in the [ElementInternals declaration](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/element-internals-declaration.md) registry for you. The tooling reach is partial: only the attribute-validity rules (`aria-allowed-attr`, `aria-prohibited-attr`) act on an internals-only role. The nesting rules (`aria-required-parent`, `aria-required-children`) inspect only elements with a `role` attribute. Keep structural roles (`list`, `table`, `menu`, and their required children) on the attribute channel, or keep the native element.
 
 Do not use `ariaOwnsElements`. Chromium does not implement it, and its `aria-owns` semantics are problematic on their own. Le Truc components own their internal structure and never need it.
+
+**Browser support.** `internals.role` and the string `aria*` properties need Chrome 103, Firefox 119 or Safari 16.4. The element-reference properties (`ariaActiveDescendantElement`, `ariaDescribedByElements`, …) are Baseline 2025: Chrome 135, Firefox 136, Safari 16.4.
+
+**Testing.** Playwright's `getByRole()` and `ariaSnapshot()` see only attribute-carrying elements, on every engine. Assert internals-only semantics through Chromium's CDP accessibility tree (see `examples/test/aria/`); unit tests with a stubbed `ElementInternals` check wiring, not browser behavior.
 
 {% /section %}

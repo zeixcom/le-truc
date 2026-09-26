@@ -19,9 +19,9 @@ Use symbol-based branding (`PARSER_BRAND`, `METHOD_BRAND`) to reliably identify 
 
 ## Alternatives Considered
 
-- **Structural typing** — Cannot distinguish at runtime; type-only, no runtime check possible
-- **Class instances** — Would require parsers to be class instances, adding overhead
-- **Function length property** — Unreliable with default params (`(x=1) => {}` has length 0), rest params (`(...args) => {}` has length 0), destructuring (`({a}) => {}` has length 0)
+- **Structural typing**: Cannot distinguish at runtime; type-only, no runtime check possible.
+- **Class instances**: Would require parsers to be class instances, adding overhead.
+- **Function length property**: Unreliable with default params (`(x=1) => {}` has length 0), rest params (`(...args) => {}` has length 0), destructuring (`({a}) => {}` has length 0).
 
 ## Consequences
 
@@ -30,7 +30,7 @@ Use symbol-based branding (`PARSER_BRAND`, `METHOD_BRAND`) to reliably identify 
 - Zero runtime overhead for branded functions
 - Clear distinction between branded and regular functions
 
-**Bad:**
+**Bad / accepted tradeoffs:**
 - Requires explicit branding via `asParser()` and `defineMethod()`
 - Slightly more verbose than implicit detection
 

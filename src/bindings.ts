@@ -53,9 +53,11 @@ let defaultSanitize: Sanitizer | undefined
  * falls back to when a call site omits its own `sanitize` option. Purely
  * opt-in — call once, e.g. at app startup; every `dangerouslyBindInnerHTML()`
  * call site keeps working exactly as before unless it left `sanitize` unset.
- * A call site's own `sanitize` option still takes precedence.
+ * A call site's own `sanitize` option still takes precedence. The default is
+ * read on every update, not captured at bind time, so configuring it after
+ * elements are bound still applies to them.
  *
- * Le Truc ships no sanitizer implementation of its own (ADR-0010) — this
+ * Le Truc ships no sanitizer implementation of its own (ADR 0010) — this
  * only registers a hook. DOMPurify is the recommended choice; configure it
  * with `RETURN_TRUSTED_TYPE: true` for Trusted-Types-enforcing pages (see the
  * Trusted Types note on `dangerouslyBindInnerHTML` below).
