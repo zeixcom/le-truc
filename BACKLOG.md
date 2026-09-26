@@ -286,7 +286,9 @@ iteration's review files follow-ups.
   against wording the build no longer serves. Add one server test that renders the instance's
   args at its `lang` and compares the attribute bytes with the page's. Prefer a small table of
   (page, instance id, tag, args) over a per-component test, so the next hand-copied instance
-  is one row. **Channel:** none (a test). **Check:** editing `form-tokenbox.added` in de.json
+  is one row. Since LT-252 the table also needs `basic-pluralize.html`'s six locale instances
+  (`#welsh-test`, `#german-test`, `#chinese-test`, `#arabic-test`, `#polish-test`,
+  `#latvian-test`). **Channel:** none (a test). **Check:** editing `form-tokenbox.added` in de.json
   without touching the page fails the test.
 
 ---

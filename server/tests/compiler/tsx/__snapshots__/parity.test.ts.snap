@@ -81,24 +81,73 @@ declare global {
 export default defineComponent<BasicPluralizeProps>(
 	'basic-pluralize',
 	({ expose, first, host, watch }) => {
+		// Client messages (ADR 0030 s9): the source-locale record, merged under
+		// the server-rendered \`i18n\` attribute and fixed for the connection.
+		const __i18nSource: Record<string, unknown> = {"tasks":[{"t":"select","a":"type","c":{"ordinal":[{"t":"plural","a":"count","c":{"one":["task"],"other":["tasks"]},"o":1}],"other":[{"t":"plural","a":"count","c":{"one":["task"],"other":["tasks"]}}]}}]}
+		let __i18nMessages = __i18nSource
+		const __i18nAttribute = host.getAttribute('i18n')
+		if (__i18nAttribute) {
+			try {
+				const parsed: unknown = JSON.parse(__i18nAttribute)
+				if (parsed && typeof parsed === 'object')
+					__i18nMessages = { ...__i18nSource, ...(parsed as Record<string, unknown>) }
+			} catch (error) {
+				if (process.env.DEV_MODE === 'true')
+					console.warn("<basic-pluralize>: the i18n attribute is not valid JSON — using the source-locale messages", error)
+			}
+		}
+		type __I18nNode = string | { t: string; a: string; o?: unknown; s?: number; off?: number; l?: string; c?: Record<string, __I18nNode[]> }
+		const __i18nLang = (host.closest('[lang]') as HTMLElement | null)?.lang || undefined
+		const __i18nFormatters = new WeakMap<object, unknown>()
+		const __i18nFormatter = <F>(node: object, make: () => F): F => {
+			let formatter = __i18nFormatters.get(node) as F | undefined
+			if (!formatter) __i18nFormatters.set(node, (formatter = make()))
+			return formatter
+		}
+		const __i18nUncarried = Symbol()
+		const __i18nFormat = (message: __I18nNode[], args: Record<string, unknown>): string => {
+			let out = ''
+			for (const node of message) {
+				if (typeof node === 'string') {
+					out += node
+					continue
+				}
+				const value = args[node.a]
+				switch (node.t) {
+					case 'plural':
+					case 'select': {
+						const c = node.c ?? {}
+						const own = (key: string) => (Object.hasOwn(c, key) ? c[key] : undefined)
+						const body = node.t === 'plural'
+							? (own(\`=\${Number(value)}\`) ??
+								own(__i18nFormatter(node, () => new Intl.PluralRules(node.l ?? __i18nLang, { type: node.o ? 'ordinal' : 'cardinal' })).select(Number(value) - (node.off ?? 0))) ??
+								c.other)
+							: (own(String(value)) ?? c.other)
+						if (body) out += __i18nFormat(body, args)
+						break
+					}
+					default:
+						throw __i18nUncarried
+				}
+			}
+			return out
+		}
+		const t = {
+			tasks: (args: Record<string, unknown>): string => {
+				const message = __i18nMessages["tasks"]
+				if (typeof message === 'string') return message
+				try {
+					return __i18nFormat(message as __I18nNode[], args)
+				} catch (error) {
+					if (error !== __i18nUncarried) throw error
+					return __i18nFormat(__i18nSource["tasks"] as __I18nNode[], args)
+				}
+			},
+		}
 		const p = first('p.none', 'basic-pluralize: p.none missing')
 		const p2 = first('p.some', 'basic-pluralize: p.some missing')
 		const span = first('span.count', 'basic-pluralize: span.count missing')
-		const span2 = first('span.zero')
-		const span3 = first('span.one')
-		const span4 = first('span.two')
-		const span5 = first('span.few')
-		const span6 = first('span.many')
-		const span7 = first('span.other')
-		const pluralCategory = (
-			locale: string,
-			isOrdinal: boolean | undefined,
-			n: number,
-		) =>
-			new Intl.PluralRules(
-				locale,
-				isOrdinal ? { type: 'ordinal' } : undefined,
-			).select(n)
+		const span2 = first('span.tasks', 'basic-pluralize: span.tasks missing')
 		const materializeLocale = (): void => {
 			if (!host.getAttribute('lang')) host.setAttribute('lang', getLocale(host))
 		}
@@ -110,30 +159,11 @@ export default defineComponent<BasicPluralizeProps>(
 		watch(() => host.count !== 0, bindAttribute(p, 'hidden'))
 		watch(() => host.count === 0, bindAttribute(p2, 'hidden'))
 		watch(() => host.count, bindText(span))
-		if (span2) {
-			watch(() =>
-			pluralCategory(host.lang, host.ordinal, host.count) !== 'zero', bindAttribute(span2, 'hidden'))
-		}
-		if (span3) {
-			watch(() =>
-			pluralCategory(host.lang, host.ordinal, host.count) !== 'one', bindAttribute(span3, 'hidden'))
-		}
-		if (span4) {
-			watch(() =>
-			pluralCategory(host.lang, host.ordinal, host.count) !== 'two', bindAttribute(span4, 'hidden'))
-		}
-		if (span5) {
-			watch(() =>
-			pluralCategory(host.lang, host.ordinal, host.count) !== 'few', bindAttribute(span5, 'hidden'))
-		}
-		if (span6) {
-			watch(() =>
-			pluralCategory(host.lang, host.ordinal, host.count) !== 'many', bindAttribute(span6, 'hidden'))
-		}
-		if (span7) {
-			watch(() =>
-			pluralCategory(host.lang, host.ordinal, host.count) !== 'other', bindAttribute(span7, 'hidden'))
-		}
+		watch(() =>
+		t.tasks({
+			count: host.count,
+			type: host.ordinal ? 'ordinal' : 'cardinal',
+		}), bindText(span2))
 	},
 )
 "

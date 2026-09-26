@@ -17,17 +17,12 @@ import { getLocale } from '../../_common/getLocale'
 export const i18n = {
 	done: 'Well done, all done!',
 	remaining: 'remaining',
-	'task.one': 'task',
-	'task.other': 'tasks',
-	// The source locale's best form per category, declared for every key the
-	// template references (LT-190's no-implicit-fallback rule): English never
-	// renders zero/two/few/many cardinally — 0 → other — but its ORDINAL
-	// rules use two and few, and a locale whose catalog misses a suffixed
-	// key falls back to THIS string, never to nothing.
-	'task.zero': 'tasks',
-	'task.two': 'tasks',
-	'task.few': 'tasks',
-	'task.many': 'tasks',
+	// LT-252: one ICU pattern replaces the six `task.<category>` keys — the
+	// plural morphology lives inside the value, so each locale spells exactly
+	// its own arms. `type` selects the rule set (the `ordinal` prop):
+	// `selectordinal` for 1st/2nd/3rd, `plural` otherwise.
+	tasks:
+		'{type, select, ordinal {{count, selectordinal, one {task} other {tasks}}} other {{count, plural, one {task} other {tasks}}}}',
 } as const
 
 export type BasicPluralizeProps = {
@@ -49,7 +44,7 @@ declare global {
  * Shows locale-aware plural forms of content based on a count.
  * Use it for internationalised prose where the correct plural form must be shown —
  * accessibility tools and screen readers benefit from grammatically correct output.
- * Reveal children by class: `.none` (0), `.some` (>0), and `.zero/.one/.two/.few/.many/.other` per CLDR plural rules.
+ * Reveal children by class: `.none` (0), `.some` (>0); `.tasks` carries the noun, one ICU plural pattern per locale.
  *
  * @attribute {string} [lang] - Config attribute only (not a reactive property). BCP 47 locale tag; the element's own attribute wins, else the nearest ancestor's, else `en`. The server renders the effective locale onto it; the client materializes the walked locale at connect.
  * @attribute {boolean} [ordinal=false] - Use ordinal plural rules (1st, 2nd, 3rd, ...) instead of cardinal. Presence-only; read once at connect time.
@@ -69,21 +64,11 @@ export function BasicPluralize(
 	},
 	{ host, expose }: FactoryContext<BasicPluralizeProps>,
 ) {
-	const pluralCategory = (
-		locale: string,
-		isOrdinal: boolean | undefined,
-		n: number,
-	) =>
-		new Intl.PluralRules(
-			locale,
-			isOrdinal ? { type: 'ordinal' } : undefined,
-		).select(n)
-
 	// LT-191: the locale INHERITS. `lang` is a CONFIG attribute only, not
 	// a reactive property — it is a built-in IDL property, so expose()
 	// could never install an accessor over it anyway (`prop in this`),
-	// and the thunks' `host.lang` reads the native accessor: the
-	// element's OWN attribute, live. The walked effective locale
+	// and `host.lang` reads the native accessor: the element's OWN
+	// attribute, live. The walked effective locale
 	// MATERIALIZES onto the attribute before the first evaluation —
 	// exactly what the server render does for SSR'd instances (root attr
 	// = effective locale), so both paths converge on one DOM shape: own
@@ -106,65 +91,15 @@ export function BasicPluralize(
 				<p class="none" hidden={() => host.count !== 0}>
 					{t.done}
 				</p>
-				<p
-					class="some"
-					truc:case-type={ordinal ? 'ordinal' : undefined}
-					hidden={() => host.count === 0}
-				>
+				<p class="some" hidden={() => host.count === 0}>
 					<span class="count">{host.count}</span>
-					<span
-						class="zero"
-						truc:case="zero"
-						hidden={() =>
-							pluralCategory(host.lang, host.ordinal, host.count) !== 'zero'
+					<span class="tasks">
+						{() =>
+							t.tasks({
+								count: host.count,
+								type: host.ordinal ? 'ordinal' : 'cardinal',
+							})
 						}
-					>
-						{t['task.zero']}
-					</span>
-					<span
-						class="one"
-						truc:case="one"
-						hidden={() =>
-							pluralCategory(host.lang, host.ordinal, host.count) !== 'one'
-						}
-					>
-						{t['task.one']}
-					</span>
-					<span
-						class="two"
-						truc:case="two"
-						hidden={() =>
-							pluralCategory(host.lang, host.ordinal, host.count) !== 'two'
-						}
-					>
-						{t['task.two']}
-					</span>
-					<span
-						class="few"
-						truc:case="few"
-						hidden={() =>
-							pluralCategory(host.lang, host.ordinal, host.count) !== 'few'
-						}
-					>
-						{t['task.few']}
-					</span>
-					<span
-						class="many"
-						truc:case="many"
-						hidden={() =>
-							pluralCategory(host.lang, host.ordinal, host.count) !== 'many'
-						}
-					>
-						{t['task.many']}
-					</span>
-					<span
-						class="other"
-						truc:case="other"
-						hidden={() =>
-							pluralCategory(host.lang, host.ordinal, host.count) !== 'other'
-						}
-					>
-						{t['task.other']}
 					</span>
 					{t.remaining}
 				</p>

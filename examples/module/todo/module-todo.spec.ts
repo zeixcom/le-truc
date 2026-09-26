@@ -211,8 +211,7 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.none')).not.toBeVisible()
 			await expect(count.locator('.some')).toBeVisible()
 			await expect(count.locator('.count')).toHaveText('1')
-			await expect(count.locator('.one')).toBeVisible()
-			await expect(count.locator('.other')).not.toBeVisible()
+			await expect(count.locator('.tasks')).toHaveText('task')
 
 			// Add second todo
 			await textboxInput.fill('Task 2')
@@ -220,8 +219,7 @@ test.describe('module-todo component', () => {
 
 			// Should show count with plural "tasks"
 			await expect(count.locator('.count')).toHaveText('2')
-			await expect(count.locator('.one')).not.toBeVisible()
-			await expect(count.locator('.other')).toBeVisible()
+			await expect(count.locator('.tasks')).toHaveText('tasks')
 		})
 
 		test('count updates when todos are completed', async ({ page }) => {
@@ -239,7 +237,7 @@ test.describe('module-todo component', () => {
 
 			// Initially should show 2 tasks
 			await expect(count.locator('.count')).toHaveText('2')
-			await expect(count.locator('.other')).toBeVisible()
+			await expect(count.locator('.tasks')).toHaveText('tasks')
 
 			// Complete first task
 			const firstCheckboxLabel = list
@@ -250,8 +248,7 @@ test.describe('module-todo component', () => {
 
 			// Should show 1 task remaining
 			await expect(count.locator('.count')).toHaveText('1')
-			await expect(count.locator('.one')).toBeVisible()
-			await expect(count.locator('.other')).not.toBeVisible()
+			await expect(count.locator('.tasks')).toHaveText('task')
 
 			// Complete second task
 			const secondCheckboxLabel = list

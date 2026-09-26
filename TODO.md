@@ -86,29 +86,6 @@ and `check:links` pass.
 
 ### Build half (LT-250 → LT-308 → LT-218 → LT-252 → LT-251; LT-253 after LT-252)
 
-- [ ] LT-252: Corpus and catalog migration to ICU patterns — `basic-pluralize` (both surfaces), six locale catalogs, manifest rebaseline. **Depends on LT-250, LT-308 and LT-218 (re-sequenced 2026-09-26: the one-pattern span is a client-reactive `t` read); gates LT-251.**
-  **Skill:** le-truc-dev
-  **Context:** The ruling's own check: *every component authored against `truc:case` is a
-  component rewritten.* At ruling time that is exactly one — `basic-pluralize`, in
-  `examples/basic/pluralize/basic-pluralize.tsrx` and its `.tsx` twin — which is why the
-  ruling landed on 2026-09-19 rather than after the next authoring.
-  - **Component:** the six `truc:case` spans plus their six `hidden` thunks collapse to one
-    element and one thunk: `{() => t.tasks({ count: host.count })}`. The `.none` / `.some`
-    split and the `ordinal` prop survive (ordinal selection moves inside the pattern via
-    `selectordinal`). Both surfaces stay byte-identical per the ADR 0032 parity contract.
-  - **Catalogs:** rewrite `i18n/{ar,cy,de,lv,pl,zh}.json` — `basic-pluralize.task.{zero,one,
-    two,few,many,other}` collapse into one `basic-pluralize.tasks` pattern per locale.
-    **The six-category locales (ar, cy) are the real test**: their arms move inside the value,
-    which is the whole point. de's four category keys become one.
-  - **Manifest:** this is the ADR 0030 s5 **sanctioned rebaseline** — sources, translations and
-    `i18n/manifest.json` change in ONE commit, so no translation is marked stale for a change
-    that altered no meaning. Say so in the commit message; it is the precedent the MF2
-    migration will cite.
-  **Check:** translation census 0 gaps across all six locales with the new pattern walks live;
-  rendered markup for an en page shrinks from six spans to one (pin the byte delta — it is the
-  ADR's headline consequence); `basic-pluralize.spec.ts` green in en and de; tier census unchanged from the iteration baseline
-  (the component must stay Folded); parity green across both surfaces.
-
 - [ ] LT-251: Delete the per-category machinery — `truc:case`, pruning, `pluralCategories`, the dotted-key rule, the census reachability carve-outs. **Depends on LT-250 and LT-252 (nothing may still author the retired vocabulary when this lands).**
   **Skill:** le-truc-dev
   **Context:** The deletion half of the LT-240 ruling (ADR 0030 s5/s6 amended). Survey at
@@ -194,7 +171,25 @@ and `check:links` pass.
   3. **Amend ADR 0030 s6/s9** (adr-keeper) in one pass: the locale travels inside serialized
      messages (LT-218's `l`), the client-created rule chosen in item 2, and `formatMessage`'s
      optional per-node locale (still one evaluator).
-  **Check:** a ruling recorded in the ADR; a le-truc-dev task if the ruling is (ii) or (iv).
+  4. **The attribute's bytes (LT-252 review, 2026-09-26).** LT-252 pinned basic-pluralize at en,
+     count=1: the body shrinks by 37 bytes, but the `i18n` attribute adds 539, so the total goes
+     from 226 to 728 (cy: 373 → 1015). Weigh these levers inside the item 2 ruling, not after it:
+     (a) **escaping**: the raw JSON is 221 bytes; 62 quotes × `&quot;` add 310 of the 531. A
+     single-quoted attribute removes most of that. But the realm and the equivalence audit
+     serialize through jsdom `outerHTML`, which re-emits double quotes, so phase 1 and phase 2
+     would differ in bytes. Normalize there or decline. (b) **the source locale**: at en the
+     attribute equals the inlined `__i18nSource` plus `l`. Omitting a key whose baked form
+     equals the source form is sound only when no date/number node carries a baked
+     `timeZone`/`currency` the client lacks. (c) **`l` per node**: it always equals the root
+     `lang` a server render writes, so it is redundant for the client's `closest('[lang]')`.
+     It was ratified with the channel, so drop it only if the ruling says so. Arm pruning for
+     `ordinal` is **declined**: `ordinal` is a writable exposed prop, so a later
+     `el.ordinal = true` must still find the `selectordinal` arm.
+  5. **ADR 0030 Consequences** (same adr-keeper pass as item 3): "Markup shrinks" is falsified in
+     bytes for a client-reactive message. Restate it as fewer elements and a11y nodes, and move the
+     byte cost of client-reactive messages to the tradeoffs, with LT-252's numbers.
+  **Check:** a ruling recorded in the ADR; a le-truc-dev task if the ruling is (ii) or (iv), or
+  if item 4 adopts a lever.
 
 - [ ] LT-249: Report non-string catalog values — a malformed `i18n/<locale>.json` entry is silent in both the census and sync (LT-217 review falsification). **Survives the LT-240 ruling, and grows a sibling:** ICU adds a second malformed-value class (a string that is not a parseable pattern), handled in LT-219 — land them as one `malformed` family with consistent copy, and drop the "LT-219 placeholder precedent" phrasing below for LT-219's argument-preservation case.
   **Skill:** docs-server-dev
@@ -233,7 +228,10 @@ and `check:links` pass.
      variance (a ternary, or `@if`/`@switch`). Teach the per-key typing (LT-308, ADR 0030 s4
      amended 2026-09-25): `as const` on the declaration, `I18n<typeof i18n>` on the parameter,
      and the escaped-brace caveat. The earlier "do not rely on the wider type" caveat is
-     withdrawn; it must not appear.
+     withdrawn; it must not appear. basic-pluralize's JSDoc lead still says "plural forms of
+     content". Since LT-252 it renders its own noun (`tasks`) from the catalog, with no
+     page-supplied word forms, so re-word the lead and its docs page (`basic-pluralize.md` was
+     updated in LT-252; check it against the one-voice rules).
   1. HOST_PROFILE.md: the i18n section re-taught — client-position `t` reads, the root
      `i18n` attribute carrying parsed patterns, and the `t.key({ … })` call syntax; the
      carrier-span idiom's teaching REPLACED (superseded, not deprecated — remove the LT-195

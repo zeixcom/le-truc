@@ -525,8 +525,8 @@ describe('the generated i18n module', () => {
 		// source-locale string (ADR 0030 sub-design 5's fallback).
 		const record = i18nModule.i18nRecord('basic-pluralize')
 		expect(record.lang).toBe('en')
-		expect(record.t['task.one']).toBe('task')
-		expect(record.t['task.other']).toBe('tasks')
+		expect(record.t.tasks({ count: 1, type: 'cardinal' })).toBe('task')
+		expect(record.t.tasks({ count: 2, type: 'cardinal' })).toBe('tasks')
 		expect(record.t.remaining).toBe('remaining')
 		expect(record.timeZone).toBe('UTC')
 		expect(record.dir).toBe('ltr')
@@ -548,15 +548,19 @@ describe('the generated i18n module', () => {
 		// OVERRIDES embedded in the generated module → i18nRecord. Dropping
 		// the override pipeline (or the de.json catalog) fails here.
 		const de = i18nModule.i18nRecord('basic-pluralize', 'de')
-		expect(de.t['task.one']).toBe('Aufgabe')
-		expect(de.t['task.other']).toBe('Aufgaben')
-		// zh carries only its reachable category ({other}); the rest falls
-		// back to the SOURCE string — no implicit chain, and the fallback
-		// bytes exist because the source locale declares every referenced
-		// key (LT-190's no-implicit-fallback rule).
+		expect(de.t.tasks({ count: 1, type: 'cardinal' })).toBe('Aufgabe')
+		expect(de.t.tasks({ count: 3, type: 'cardinal' })).toBe('Aufgaben')
+		// LT-252: the plural arms live inside each locale's ONE pattern, and
+		// the record formats under that locale's own rules — Welsh's dual
+		// mutation and Arabic's dual come from the catalog value itself.
+		const cy = i18nModule.i18nRecord('basic-pluralize', 'cy')
+		expect(cy.t.tasks({ count: 2, type: 'cardinal' })).toBe('dasg')
+		expect(cy.t.tasks({ count: 4, type: 'cardinal' })).toBe('tasgiau')
+		const ar = i18nModule.i18nRecord('basic-pluralize', 'ar')
+		expect(ar.t.tasks({ count: 2, type: 'cardinal' })).toBe('مهمتان')
 		const zh = i18nModule.i18nRecord('basic-pluralize', 'zh')
-		expect(zh.t['task.other']).toBe('个任务')
-		expect(zh.t['task.one']).toBe('task')
+		expect(zh.t.tasks({ count: 1, type: 'cardinal' })).toBe('个任务')
+		expect(zh.t.tasks({ count: 1, type: 'ordinal' })).toBe('个任务')
 	})
 
 	test("the corpus's accessibility strings resolve at de (LT-195 fixture)", () => {

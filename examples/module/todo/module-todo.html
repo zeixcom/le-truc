@@ -57,17 +57,13 @@
 		</li>
 	</template>
 	<footer>
-		<!-- Regenerated for the LT-115 basic-pluralize cutover: the compiled
-		     component requires all six CLDR category spans in hydrated
-		     markup; English never matches zero/two/few/many, so they stay
-		     empty and permanently hidden. -->
+		<!-- LT-252: one ICU pattern — the compiled component fills the single
+		     .tasks span from `t.tasks`, so the page carries no word forms. -->
 		<basic-pluralize>
 			<p class="none">Well done, all done!</p>
 			<p class="some">
 				<span class="count"></span>
-				<span class="zero"></span><span class="one"> task</span
-				><span class="two"></span><span class="few"></span
-				><span class="many"></span><span class="other"> tasks</span>
+				<span class="tasks"></span>
 				remaining
 			</p>
 		</basic-pluralize>

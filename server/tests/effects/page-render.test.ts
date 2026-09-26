@@ -337,14 +337,16 @@ describe('the real corpus (integration)', () => {
 
 		// The ancestor-inheritance instance materializes its walked locale
 		// onto the served root — the completion signal LT-191's fixture had
-		// no home for — and the count=2 Welsh render shows the `two` form
-		// from the committed cy catalog (dasg), every other category hidden.
+		// no home for — and the count=2 Welsh render shows the `two` arm of
+		// the committed cy pattern (dasg) in the one plural span (LT-252),
+		// with the pattern riding the root `i18n` attribute.
 		const at = result.html.indexOf('welsh-ancestor-test')
 		expect(at).toBeGreaterThan(-1)
-		const instance = result.html.slice(at - 120, at + 500)
-		expect(instance).toContain('<basic-pluralize count="2" lang="cy"')
-		expect(instance).toContain('<span class="two">dasg</span>')
-		expect(instance).toContain('<span hidden class="other">tasgiau</span>')
+		const start = result.html.lastIndexOf('<basic-pluralize', at)
+		const instance = result.html.slice(start, at + 500)
+		expect(instance).toStartWith('<basic-pluralize count="2" lang="cy" i18n="')
+		expect(instance).toContain('<span class="tasks">dasg</span>')
+		expect(instance).not.toMatch(/class="(zero|one|two|few|many|other)"/)
 		expect(instance).toContain('Wedi cwblhau pob tasg!')
 	})
 

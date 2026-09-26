@@ -5,7 +5,7 @@
 	"basic-blogmeta.updatedOn": "更新于",
 	"basic-pluralize.done": "全部完成！",
 	"basic-pluralize.remaining": "剩余",
-	"basic-pluralize.task.other": "个任务",
+	"basic-pluralize.tasks": "{type, select, ordinal {{count, selectordinal, other {个任务}}} other {{count, plural, other {个任务}}}}",
 	"form-colorgraph.drag": "",
 	"form-colorgraph.outOfGamut": "",
 	"form-combobox.clearInput": "",

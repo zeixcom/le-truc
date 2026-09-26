@@ -23,45 +23,45 @@ export const renderName = (tag: string): string =>
 		.join('')}`
 
 /**
- * An inline reserved-`i18n` record for the fixture args (ADR 0030, LT-173).
- * The compiler supplies the real record at every render boundary; a fixture
- * builds its own so the args tables stay dependency-free (they are shared
- * by tests that compile into per-run temp directories). Values mirror what
- * `i18nRecord('basic-pluralize', 'en')` resolves at the current corpus —
- * per-category word forms per LT-190's `<key>.<category>` convention.
- */
-export const PLURALIZE_I18N = {
-	lang: 'en',
-	t: {
-		done: 'Well done, all done!',
-		remaining: 'remaining',
-		'task.one': 'task',
-		'task.other': 'tasks',
-		'task.zero': 'tasks',
-		'task.two': 'tasks',
-		'task.few': 'tasks',
-		'task.many': 'tasks',
-	},
-	timeZone: 'UTC',
-	currency: 'USD',
-	dir: 'ltr',
-} as const
-
-/**
  * An argument message as `i18nRecord` builds it (LT-250, LT-218): a closure
  * over the shared evaluator, tagged with its AST and env so a
- * client-referenced key serializes into the root `i18n` attribute.
+ * client-referenced key serializes into the root `i18n` attribute. `lang`
+ * is the render locale the env bakes in (its plural rules).
  */
-export const argMessage = (pattern: string) => {
+export const argMessage = (pattern: string, lang = 'en') => {
 	const parsed = parseMessage(pattern)
 	if (!parsed.ok) throw new Error(`fixture pattern: ${parsed.error}`)
 	const message = parsed.message
-	const env = { lang: 'en', timeZone: 'UTC', currency: 'USD' }
+	const env = { lang, timeZone: 'UTC', currency: 'USD' }
 	return Object.assign(
 		(args: Record<string, unknown>) => formatMessage(message, args, env),
 		{ [CLIENT_MESSAGE]: { message, env } },
 	)
 }
+
+/**
+ * An inline reserved-`i18n` record for the fixture args (ADR 0030, LT-173).
+ * The compiler supplies the real record at every render boundary; a fixture
+ * builds its own so the args tables stay dependency-free (they are shared
+ * by tests that compile into per-run temp directories). Values mirror what
+ * `i18nRecord('basic-pluralize', 'en')` resolves at the current corpus —
+ * since LT-252 the plural morphology is one ICU pattern (`tasks`), a
+ * client-referenced message, so it is an {@link argMessage}.
+ */
+export const PLURALIZE_TASKS =
+	'{type, select, ordinal {{count, selectordinal, one {task} other {tasks}}} other {{count, plural, one {task} other {tasks}}}}'
+
+export const PLURALIZE_I18N = {
+	lang: 'en',
+	t: {
+		done: 'Well done, all done!',
+		remaining: 'remaining',
+		tasks: argMessage(PLURALIZE_TASKS),
+	},
+	timeZone: 'UTC',
+	currency: 'USD',
+	dir: 'ltr',
+} as const
 
 /**
  * An inline record for one component's declared keys (same posture as

@@ -11,6 +11,31 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-252: Corpus and catalog migration to ICU patterns — `basic-pluralize` (both surfaces), six locale catalogs, manifest rebaseline. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** basic-pluralize (`.tsrx` and `.tsx`, parity green) declares one `tasks` pattern,
+  `{type, select, ordinal {{count, selectordinal, …}} other {{count, plural, …}}}`, and
+  renders it in one `.tasks` span through `t.tasks({ count: host.count, type: host.ordinal ?
+  'ordinal' : 'cardinal' })`. The six `truc:case` spans, `truc:case-type` and the
+  `pluralCategory` helper are gone, and `.zero`…`.other` leave the DOM contract. The six
+  catalogs carry one `basic-pluralize.tasks` each; the ordinal arms keep the old per-category
+  forms. The manifest is rebaselined, with the `task.*` hashes pruned by hand (`i18n:sync`
+  prunes orphaned catalog keys but not their manifest entries). module-todo and the test page
+  carry no word forms. The test page's six locale instances carry hand-copied `i18n` attributes
+  (→ LT-352). The census is 0 gaps, the tier census and warning baseline are unchanged, and the
+  component stays Folded.
+  **Rulings:** (1) This is the ADR 0030 s5 **sanctioned rebaseline**: no translation's meaning
+  changed, so no key is marked stale. The owner's single commit must say so; it is the
+  precedent LT-253's MF2 migration cites. (2) The en byte delta is **+502** (226 → 728): the
+  body shrinks by 37 bytes and the `i18n` attribute adds 539. It is pinned in
+  `gate-wave-verification.test.ts`. The levers and the ADR consequence amendment → **LT-351**
+  items 4–5. (3) Pruning arms for a connect-time `ordinal` is declined, because the prop is
+  writable.
+  **Review:** Approved. `basic-pluralize.spec.ts` and `module-todo.spec.ts` were rewritten but
+  could not run under the agent sandbox. The owner runs them (en and de) before the commit. A
+  jsdom test connects the whole raw test page and is green in the meantime. JSDoc lead copy →
+  LT-220 item 0.
+
 - [x] LT-350: Client message fallback — a node kind the narrowed evaluator does not carry renders that key's source message (LT-218 review, owner ruling 2026-09-26). — done ✓
   **Skill:** le-truc-dev
   **Changed:** The generated preamble's evaluator gives `plural`/`select` explicit cases and

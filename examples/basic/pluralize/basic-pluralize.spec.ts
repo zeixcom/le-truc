@@ -1,4 +1,21 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
+
+/**
+ * LT-252: the plural morphology lives inside one ICU pattern (`t.tasks`),
+ * so every instance renders ONE `.tasks` span whose text the client
+ * re-evaluates when `count` changes — there are no per-category spans to
+ * toggle. The locale instances carry the `i18n` attribute the server
+ * renders at their locale (see basic-pluralize.html).
+ */
+
+const setCount = (page: Page, selector: string, count: number) =>
+	page.evaluate(
+		([sel, n]) => {
+			const element = document.querySelector(sel as string) as any
+			element.count = n
+		},
+		[selector, count] as const,
+	)
 
 test.describe('basic-pluralize component', () => {
 	test.beforeEach(async ({ page }) => {
@@ -10,197 +27,163 @@ test.describe('basic-pluralize component', () => {
 		await page.waitForSelector('basic-pluralize')
 	})
 
+	test('renders one .tasks span per instance', async ({ page }) => {
+		const element = page.locator('basic-pluralize').first()
+		await expect(element.locator('.some span')).toHaveCount(2)
+		await expect(element.locator('.tasks')).toHaveCount(1)
+	})
+
 	test('renders correctly with count=0 (shows none, hides some)', async ({
 		page,
 	}) => {
-		// Set count to 0 on the default element
-		await page.evaluate(() => {
-			const element = document.querySelector('basic-pluralize') as any
-			element.count = 0
-		})
+		await setCount(page, 'basic-pluralize', 0)
 
-		// Should show .none and hide .some when count is 0
 		const defaultElement = page.locator('basic-pluralize').first()
-		const noneElement = defaultElement.locator('.none')
-		const someElement = defaultElement.locator('.some')
-
-		await expect(noneElement).toBeVisible()
-		await expect(someElement).toBeHidden()
+		await expect(defaultElement.locator('.none')).toBeVisible()
+		await expect(defaultElement.locator('.some')).toBeHidden()
 	})
 
 	test('renders correctly with count>0 (hides none, shows some)', async ({
 		page,
 	}) => {
-		// Set count to 5 on the default element
-		await page.evaluate(() => {
-			const element = document.querySelector('basic-pluralize') as any
-			element.count = 5
-		})
+		await setCount(page, 'basic-pluralize', 5)
 
 		const defaultElement = page.locator('basic-pluralize').first()
-		const noneElement = defaultElement.locator('.none')
-		const someElement = defaultElement.locator('.some')
-		const countSpan = defaultElement.locator('.count')
-
-		await expect(noneElement).toBeHidden()
-		await expect(someElement).toBeVisible()
-		await expect(countSpan).toHaveText('5')
+		await expect(defaultElement.locator('.none')).toBeHidden()
+		await expect(defaultElement.locator('.some')).toBeVisible()
+		await expect(defaultElement.locator('.count')).toHaveText('5')
+		await expect(defaultElement.locator('.tasks')).toHaveText('tasks')
 	})
 
 	test('updates count display when property changes', async ({ page }) => {
-		await page.evaluate(() => {
-			const element = document.querySelector('basic-pluralize') as any
-			element.count = 1
-		})
+		await setCount(page, 'basic-pluralize', 1)
 
 		const defaultElement = page.locator('basic-pluralize').first()
 		const countSpan = defaultElement.locator('.count')
 		await expect(countSpan).toHaveText('1')
 
-		// Change to different count
-		await page.evaluate(() => {
-			const element = document.querySelector('basic-pluralize') as any
-			element.count = 42
-		})
-
+		await setCount(page, 'basic-pluralize', 42)
 		await expect(countSpan).toHaveText('42')
 	})
 
-	test('handles plural categories correctly (English)', async ({ page }) => {
-		// Use the existing #plural-test element from HTML
-		const testElement = page.locator('#plural-test')
-		const oneElement = testElement.locator('.one')
-		const otherElement = testElement.locator('.other')
-
-		// Should start with count=1, showing 'one' category
-		await expect(oneElement).toBeVisible()
-		await expect(otherElement).toBeHidden()
-
-		// Test count = 2 (should show 'other' category)
-		await page.evaluate(() => {
-			const element = document.querySelector('#plural-test') as any
-			element.count = 2
-		})
-
-		await expect(oneElement).toBeHidden()
-		await expect(otherElement).toBeVisible()
-	})
-
-	test('handles Welsh pluralization with all 6 categories (zero, one, two, few, many, other)', async ({
+	test('re-evaluates the pattern on count change (English)', async ({
 		page,
 	}) => {
-		// Use the existing Welsh example from HTML
-		const welshElement = page.locator('#welsh-test')
-		const countSpan = welshElement.locator('.count')
+		const tasks = page.locator('#plural-test .tasks')
+		await expect(tasks).toHaveText('task')
 
-		// Should start with count=0, showing zero form "cŵn"
-		await expect(countSpan).toHaveText('0')
-		await expect(welshElement.locator('.none')).toBeVisible()
-		await expect(welshElement.locator('.some')).toBeHidden()
+		await setCount(page, '#plural-test', 2)
+		await expect(tasks).toHaveText('tasks')
 
-		// Test count=1 (should show "ci" - one form)
-		await page.evaluate(() => {
-			const element = document.querySelector('#welsh-test') as any
-			element.count = 1
-		})
-		await expect(welshElement.locator('.none')).toBeHidden()
-		await expect(welshElement.locator('.some')).toBeVisible()
-		await expect(welshElement.locator('.one')).toBeVisible()
-		await expect(welshElement.locator('.other')).toBeHidden()
+		await setCount(page, '#plural-test', 1)
+		await expect(tasks).toHaveText('task')
+	})
 
-		// Test count=2 (should show "gi" - two form)
-		await page.evaluate(() => {
-			const element = document.querySelector('#welsh-test') as any
-			element.count = 2
-		})
-		await expect(welshElement.locator('.one')).toBeHidden()
-		await expect(welshElement.locator('.two')).toBeVisible()
-		await expect(welshElement.locator('.other')).toBeHidden()
+	test('German: {one, other} with a non-"s" plural', async ({ page }) => {
+		const element = page.locator('#german-test')
+		const tasks = element.locator('.tasks')
+		await expect(element.locator('.count')).toHaveText('3')
+		await expect(tasks).toHaveText('Aufgaben')
 
-		// Test count=3 (should show "chi" - few form)
-		await page.evaluate(() => {
-			const element = document.querySelector('#welsh-test') as any
-			element.count = 3
-		})
-		await expect(welshElement.locator('.two')).toBeHidden()
-		await expect(welshElement.locator('.few')).toBeVisible()
-		await expect(welshElement.locator('.other')).toBeHidden()
+		await setCount(page, '#german-test', 1)
+		await expect(tasks).toHaveText('Aufgabe')
 
-		// Test count=6 (should show "chi" - many form)
-		await page.evaluate(() => {
-			const element = document.querySelector('#welsh-test') as any
-			element.count = 6
-		})
-		await expect(welshElement.locator('.few')).toBeHidden()
-		await expect(welshElement.locator('.many')).toBeVisible()
-		await expect(welshElement.locator('.other')).toBeHidden()
+		await setCount(page, '#german-test', 0)
+		await expect(element.locator('.none')).toHaveText('Alles erledigt!')
+		await expect(element.locator('.none')).toBeVisible()
+		await expect(element.locator('.some')).toBeHidden()
+	})
 
-		// Test count=4 (should show "ci" - other form)
-		await page.evaluate(() => {
-			const element = document.querySelector('#welsh-test') as any
-			element.count = 4
-		})
-		await expect(welshElement.locator('.many')).toBeHidden()
-		await expect(welshElement.locator('.other')).toBeVisible()
-		await expect(welshElement.locator('.few')).toBeHidden()
+	test('Welsh: all six cardinal categories inside one pattern', async ({
+		page,
+	}) => {
+		const element = page.locator('#welsh-test')
+		const tasks = element.locator('.tasks')
+
+		await expect(element.locator('.count')).toHaveText('0')
+		await expect(element.locator('.none')).toBeVisible()
+		await expect(element.locator('.some')).toBeHidden()
+
+		// count → CLDR category → the cy pattern's arm
+		const expected: Array<[number, string]> = [
+			[1, 'tasg'], // one
+			[2, 'dasg'], // two (soft mutation)
+			[3, 'tasg'], // few
+			[6, 'tasg'], // many
+			[4, 'tasgiau'], // other
+		]
+		for (const [count, text] of expected) {
+			await setCount(page, '#welsh-test', count)
+			await expect(element.locator('.some')).toBeVisible()
+			await expect(tasks).toHaveText(text)
+		}
+	})
+
+	test('Arabic: the dual form for exactly two', async ({ page }) => {
+		const tasks = page.locator('#arabic-test .tasks')
+		await expect(tasks).toHaveText('مهمتان')
+
+		await setCount(page, '#arabic-test', 3)
+		await expect(tasks).toHaveText('مهام')
+	})
+
+	test('Polish and Latvian select their own arms', async ({ page }) => {
+		const polish = page.locator('#polish-test .tasks')
+		await expect(polish).toHaveText('zadań') // 5 → many
+		await setCount(page, '#polish-test', 2)
+		await expect(polish).toHaveText('zadania') // few
+
+		const latvian = page.locator('#latvian-test .tasks')
+		await expect(latvian).toHaveText('uzdevumu') // 10 → zero
+		await setCount(page, '#latvian-test', 21)
+		await expect(latvian).toHaveText('uzdevums') // one
+	})
+
+	test('Chinese: a single {other} arm', async ({ page }) => {
+		const tasks = page.locator('#chinese-test .tasks')
+		await expect(tasks).toHaveText('个任务')
+		await setCount(page, '#chinese-test', 1)
+		await expect(tasks).toHaveText('个任务')
+	})
+
+	test('materializes the inherited locale onto the root (LT-191)', async ({
+		page,
+	}) => {
+		await expect(page.locator('#welsh-ancestor-test')).toHaveAttribute(
+			'lang',
+			'cy',
+		)
 	})
 
 	test('handles ordinal attribute correctly', async ({ page }) => {
-		// Use the existing #ordinal-test element from HTML
-		const ordinalElement = page.locator('#ordinal-test')
-		const countSpan = ordinalElement.locator('.count')
+		const element = page.locator('#ordinal-test')
+		const tasks = element.locator('.tasks')
 
-		// Should start with count=1, showing "st" (first)
-		await expect(countSpan).toHaveText('1')
-		await expect(ordinalElement.locator('.some')).toBeVisible()
-		await expect(ordinalElement.locator('.none')).toBeHidden()
-		await expect(ordinalElement.locator('.one')).toBeVisible()
-		await expect(ordinalElement.locator('.other')).toBeHidden()
+		// en ordinal: 1 → one, 2 → two, 3 → few, 4 → other
+		await expect(element.locator('.count')).toHaveText('1')
+		await expect(tasks).toHaveText('task')
 
-		// Test count=2 (should show "nd" - second)
-		await page.evaluate(() => {
-			const element = document.querySelector('#ordinal-test') as any
-			element.count = 2
-		})
-		await expect(countSpan).toHaveText('2')
-		await expect(ordinalElement.locator('.one')).toBeHidden()
-		await expect(ordinalElement.locator('.two')).toBeVisible()
-		await expect(ordinalElement.locator('.other')).toBeHidden()
+		await setCount(page, '#ordinal-test', 2)
+		await expect(element.locator('.count')).toHaveText('2')
+		await expect(tasks).toHaveText('tasks')
 
-		// Test count=3 (should show "rd" - third)
-		await page.evaluate(() => {
-			const element = document.querySelector('#ordinal-test') as any
-			element.count = 3
-		})
-		await expect(countSpan).toHaveText('3')
-		await expect(ordinalElement.locator('.two')).toBeHidden()
-		await expect(ordinalElement.locator('.few')).toBeVisible()
-		await expect(ordinalElement.locator('.other')).toBeHidden()
+		await setCount(page, '#ordinal-test', 11)
+		await expect(tasks).toHaveText('tasks')
 
-		// Test count=4 (should show "th" - other)
-		await page.evaluate(() => {
-			const element = document.querySelector('#ordinal-test') as any
-			element.count = 4
-		})
-		await expect(countSpan).toHaveText('4')
-		await expect(ordinalElement.locator('.few')).toBeHidden()
-		await expect(ordinalElement.locator('.other')).toBeVisible()
+		await setCount(page, '#ordinal-test', 21)
+		await expect(tasks).toHaveText('task')
 	})
 
 	test('handles multiple instances with different counts', async ({ page }) => {
-		// Use the existing elements from HTML
 		const firstElement = page.locator('#pluralize-1')
 		const secondElement = page.locator('#pluralize-2')
 
-		// First element (count=0) - should show "No items"
 		await expect(firstElement.locator('.none')).toBeVisible()
 		await expect(firstElement.locator('.some')).toBeHidden()
 
-		// Second element (count=5) - should show "5 filter criteria" (other form)
 		await expect(secondElement.locator('.none')).toBeHidden()
 		await expect(secondElement.locator('.some')).toBeVisible()
 		await expect(secondElement.locator('.count')).toHaveText('5')
-		await expect(secondElement.locator('.other')).toBeVisible()
-		await expect(secondElement.locator('.one')).toBeHidden()
+		await expect(secondElement.locator('.tasks')).toHaveText('tasks')
 	})
 })
