@@ -22,6 +22,7 @@ import {
 	text,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
+import { staticMessageReads } from './i18n'
 import { inferType, type TypeContext } from './infer-type'
 import type {
 	ExposeKind,
@@ -160,6 +161,15 @@ export const extractSetup = (
 	paramsNode: AstNode | null,
 	paramNames: ReadonlySet<string>,
 	importedNames: ReadonlySet<string>,
+	/**
+	 * The client message channel (ADR 0030 s9, LT-349): the component's `t`
+	 * bindings and declared keys. A client-only statement reading a declared
+	 * key statically (`t.outOfGamut`) passes the gate below.
+	 */
+	messages: {
+		tNames: ReadonlySet<string>
+		declaredKeys: Readonly<Record<string, string>>
+	} = { tNames: new Set(), declaredKeys: {} },
 ): SetupExtraction => {
 	const source = ctx.source
 	const setup: SetupStmt[] = []
@@ -581,8 +591,18 @@ export const extractSetup = (
 			// A plain-const reference is picked up client-side automatically:
 			// `imports.ts`'s `computeClientNeededNames` already walks
 			// `clientSetup` nodes' free names into its plain-setup fixpoint.
+			// A static `t.<key>` read of a declared key is the one server
+			// binding admitted (LT-349): the message preamble precedes these
+			// statements, and `analysis/plan.ts` records the key into the
+			// root `i18n` attribute. Any other unknown name still means the
+			// statement may be server code.
 			const bad = [...freeIdentifiers(expression)].filter(
-				n => !clientKnownName(n),
+				n =>
+					!clientKnownName(n) &&
+					!(
+						messages.tNames.has(n) &&
+						staticMessageReads(expression, n, messages.declaredKeys) !== null
+					),
 			)
 			if (bad.length === 0) {
 				clientSetup.push({

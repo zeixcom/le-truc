@@ -84,12 +84,12 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 		'loopBindings',
 		'the names a list loop binds (`.tsx` has no key binding)',
 	),
-	term('listHandlerNames', 'what a list item handler may read'),
 	term('listItemHandlerFix', 'acting on an item (`.tsx` has no key binding)'),
 	term('loopBodyStatements', 'statements in a server-data loop body'),
 	framed('loop', l => `reactive-list ${l}`, 'the list loop'),
 	framed('loop', l => `${l} over`, 'a loop over its iterable'),
 	framed('loop', l => `${l} bodies`, 'loop bodies'),
+	framed('loop', l => `the ${l} body`, 'a server-data loop body'),
 	term('aLoop', 'a loop, sentence-initial'),
 	term('emptyArmFix', 'the empty arm as a fix-it'),
 	term('emptyArm', 'the empty arm'),
@@ -320,6 +320,43 @@ const LIST_BODY: Case[] = [
 		name: 'a handler reading the loop item',
 		code: 'LTC005',
 		spec: list(...same('<li onClick={() => items.remove(item)}>{item}</li>')),
+	},
+	{
+		// LT-349: the positive server-only rule, with the LT-348 tail.
+		name: 'a handler reading a server arg',
+		code: 'LTC005',
+		spec: list(
+			...same('<li onClick={() => console.log(label)}>{item}</li>'),
+			'{ label }: { label: string }',
+		),
+		pins: [
+			'Event attribute `onClick` inside a reactive-list',
+			'references server-only name(s) `label`; those exist only during the server render',
+		],
+	},
+	{
+		// No client-need walk reaches a list body, so a setup const read only
+		// there would never be emitted client-side (LT-349).
+		name: 'a handler reading a setup const',
+		code: 'LTC005',
+		spec: {
+			...list(...same('<li onClick={() => console.log(gap)}>{item}</li>')),
+			setup: `${LIST}\n\t\tconst gap = 1`,
+		},
+		pins: ['references server-only name(s) `gap`'],
+	},
+	{
+		name: 'a server-data loop attribute reading a server arg',
+		code: 'LTC005',
+		spec: {
+			params: '{ label, names }: { label: string; names: string[] }',
+			body: '<ul>@for (const n of names) { <li title={() => label}>{n}</li> }</ul>',
+			tsx: '<ul>{names.map(n => <li title={() => label}>{n}</li>)}</ul>',
+		},
+		pins: [
+			'Reactive attribute `title` inside the',
+			'references server-only name(s) `label`; those exist only during the server render',
+		],
 	},
 	{
 		name: 'an index binding',
@@ -621,6 +658,17 @@ const SERVER_ONLY: Case[] = [
 			body: '<span>x</span>',
 		},
 		pins: ['Signal `c` references'],
+	},
+	{
+		// LT-349: a compiler-generated query local is not a client rebinding
+		// — the handler would log the queried <button>, not the arg.
+		name: 'a server arg named like a queried element',
+		code: 'LTC005',
+		spec: {
+			params: '{ button }: { button: string }',
+			body: '<button onClick={() => console.log(button)}>x</button>',
+		},
+		pins: ['Event handler `onClick` references server-only name(s) `button`'],
 	},
 	{
 		name: 'a module-level const',
@@ -953,6 +1001,20 @@ describe('diagnostic parity — the §2.3 drift shapes (negative pins)', () => {
 
 describe('diagnostic parity — reactive-list bodies', () => {
 	runCases(LIST_BODY)
+})
+
+describe('reactive-list bodies: the positive rule admits client names (LT-349)', () => {
+	test.each([
+		['<li onClick={() => clearTimeout(0)}>{item}</li>'],
+		['<li onClick={() => { items.remove(0); host.focus() }}>{item}</li>'],
+	])('%s compiles clean', body => {
+		const { tsrx, tsx } = compileBoth({
+			name: 'clean',
+			code: 'LTC005',
+			spec: list(...same(body)),
+		})
+		expect([...tsrx, ...tsx].filter(d => d.severity === 'error')).toEqual([])
+	})
 })
 
 describe('diagnostic parity — conditions (LTC005 condition face, ADR 0037 rider)', () => {

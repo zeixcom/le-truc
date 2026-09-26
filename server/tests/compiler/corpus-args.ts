@@ -11,6 +11,10 @@
  * copies that can drift.
  */
 
+import { formatMessage } from '../../compiler/icu/evaluate'
+import { parseMessage } from '../../compiler/icu/parse'
+import { CLIENT_MESSAGE } from '../../compiler/runtime'
+
 /** `form-spinbutton` → `renderFormSpinbutton`. */
 export const renderName = (tag: string): string =>
 	`render${tag
@@ -44,13 +48,29 @@ export const PLURALIZE_I18N = {
 } as const
 
 /**
+ * An argument message as `i18nRecord` builds it (LT-250, LT-218): a closure
+ * over the shared evaluator, tagged with its AST and env so a
+ * client-referenced key serializes into the root `i18n` attribute.
+ */
+export const argMessage = (pattern: string) => {
+	const parsed = parseMessage(pattern)
+	if (!parsed.ok) throw new Error(`fixture pattern: ${parsed.error}`)
+	const message = parsed.message
+	const env = { lang: 'en', timeZone: 'UTC', currency: 'USD' }
+	return Object.assign(
+		(args: Record<string, unknown>) => formatMessage(message, args, env),
+		{ [CLIENT_MESSAGE]: { message, env } },
+	)
+}
+
+/**
  * An inline record for one component's declared keys (same posture as
  * `PLURALIZE_I18N`): mirrors what `i18nRecord(tag, 'en')` resolves at the
  * current corpus — every key at its source-locale string, since the source
  * locale has no override file. Kept explicit per component so a key or
  * source-string edit fails the render fixtures that need updating.
  */
-export const inlineI18n = (t: Record<string, string>) => ({
+export const inlineI18n = (t: Record<string, unknown>) => ({
 	lang: 'en',
 	t,
 	timeZone: 'UTC',
@@ -99,7 +119,12 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	'form-tokenbox': {
 		name: 'tags',
 		label: 'Tags',
-		i18n: inlineI18n({ remove: 'Remove' }),
+		i18n: inlineI18n({
+			remove: 'Remove',
+			added: argMessage('Added token: {token}'),
+			removed: argMessage('Removed token: {token}'),
+			duplicate: argMessage('{token} is already in the list'),
+		}),
 	},
 	'form-listbox': {
 		name: 'fruit',
@@ -113,7 +138,7 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	// declaration existed — keep its phase-1 output unchanged except for the
 	// record the render signature now requires.
 	'form-colorgraph': {
-		i18n: inlineI18n({ drag: 'Drag' }),
+		i18n: inlineI18n({ drag: 'Drag', outOfGamut: 'Color out of gamut' }),
 	},
 	'module-tabgroup': {
 		tabs: [

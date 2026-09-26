@@ -32,13 +32,18 @@ import { DuplicateKeyError } from '@zeix/le-truc'
  * @for body — the corpus's first server-static interpolation there
  * (LT-215): it folds per render call and is baked into the extracted
  * `<template>`, so client-cloned pills carry the translated label too.
- * Deliberately NOT here: the status-region messages (`Added token: …` /
- * `Removed token: …`) are built at event time in the browser, where no
- * catalog exists (ADR 0030 sub-design 6 — no catalog ships to the client)
- * — see LT-197.
+ * The status-region messages and the duplicate-token validity message are
+ * built at event time in the browser: they reach it through the client
+ * message channel (ADR 0030 s9) — the server renders exactly these keys
+ * into the root `i18n` attribute. Deliberately NOT here: the platform's own
+ * `validationMessage` (relayed from the native input), which the browser
+ * localizes itself.
  */
 export const i18n = {
 	remove: 'Remove',
+	added: 'Added token: {token}',
+	removed: 'Removed token: {token}',
+	duplicate: '{token} is already in the list',
 } as const
 
 export const config = { formAssociated: true }
@@ -141,7 +146,7 @@ export function FormTokenbox(
 							onClick={() => {
 								const removedValue = tokens.byKey(k)?.get()
 								tokens.remove(k)
-								if (removedValue) statusEl.textContent = `Removed token: ${removedValue}`
+								if (removedValue) statusEl.textContent = t.removed({ token: removedValue })
 								textbox.focus()
 							}}
 						>✕</button>
@@ -167,19 +172,19 @@ export function FormTokenbox(
 								host.setCustomValidity('')
 							} catch (err) {
 								if (err instanceof DuplicateKeyError) {
-									host.setCustomValidity(`${trimmed} is already in the list`)
+									host.setCustomValidity(t.duplicate({ token: trimmed }))
 									return
 								}
 								throw err
 							}
 							textbox.value = ''
-							statusEl.textContent = `Added token: ${trimmed}`
+							statusEl.textContent = t.added({ token: trimmed })
 						} else if (e.key === 'Backspace' && textbox.value === '') {
 							const lastKey = tokens.keyAt(tokens.length - 1)
 							if (lastKey) {
 								const removedValue = tokens.byKey(lastKey)?.get()
 								tokens.remove(lastKey)
-								if (removedValue) statusEl.textContent = `Removed token: ${removedValue}`
+								if (removedValue) statusEl.textContent = t.removed({ token: removedValue })
 							}
 						}
 					}}
@@ -196,13 +201,13 @@ export function FormTokenbox(
 							host.setCustomValidity('')
 						} catch (err) {
 							if (err instanceof DuplicateKeyError) {
-								host.setCustomValidity(`${trimmed} is already in the list`)
+								host.setCustomValidity(t.duplicate({ token: trimmed }))
 								return
 							}
 							throw err
 						}
 						textbox.value = ''
-						statusEl.textContent = `Added token: ${trimmed}`
+						statusEl.textContent = t.added({ token: trimmed })
 					}}
 				/>
 			</div>

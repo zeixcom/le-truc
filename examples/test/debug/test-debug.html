@@ -5,10 +5,11 @@
 	<basic-number id="child" value="0">0</basic-number>
 	<!--
 		A click target buried inside a structural-only custom element
-		(`card-callout` is a plain HTMLElement subclass with no `debug`
-		property — see examples/main.ts). The metaKey+click walk must climb
-		*past* it to reach the real host instead of stopping at the first
-		dashed tag it meets.
+		(`module-demo` is a plain HTMLElement subclass with no `debug`
+		property — see examples/main.ts; `card-callout` served here until
+		LT-033 compiled it into a real component). The metaKey+click walk
+		must climb *past* it to reach the real host instead of stopping at
+		the first dashed tag it meets.
 	-->
-	<card-callout><span id="wrapped">Wrapped</span></card-callout>
+	<module-demo><span id="wrapped">Wrapped</span></module-demo>
 </test-debug>

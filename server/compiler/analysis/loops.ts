@@ -8,10 +8,8 @@
 
 import type { AstNode } from '../ast-node'
 import {
-	CONTEXT_NAMES,
 	hostPropOf,
 	isDirtyFlagControlAttr,
-	JS_GLOBALS,
 	nodeType,
 	objectKeys,
 	sanitizeVarName,
@@ -20,6 +18,7 @@ import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import type { AttributeIR, ForIR, TemplateNode } from '../ir'
 import { wordingOf } from '../surface'
+import { reportServerOnlyNames } from './effects'
 import { returnsNumber } from './harvest'
 import type {
 	AnalysisContext,
@@ -46,8 +45,8 @@ export const runLoops = (ctx: AnalysisContext): void => {
 		diagnostics,
 		addQuery,
 		usedNames,
-		refNames,
 		collectAmbient,
+		badListBodyNames,
 		forPlans,
 		reconcilePlans,
 	} = ctx
@@ -70,9 +69,10 @@ export const runLoops = (ctx: AnalysisContext): void => {
 
 		const referencedConsts = new Set<string>()
 		/**
-		 * Validate free names of a client construct inside the loop: signals
-		 * and (rebuilt) hoisted consts are fine; loop variables are the
-		 * hoist-first error; anything else is server-only.
+		 * Validate free names of a client construct inside the loop: loop
+		 * variables are the hoist-first error; referenced hoisted consts are
+		 * rebuilt per item; anything else follows the positive server-only
+		 * rule (`badListBodyNames`, LT-349).
 		 */
 		const checkClientNames = (node: AstNode, what: string): void => {
 			collectAmbient(node)
@@ -84,27 +84,14 @@ export const runLoops = (ctx: AnalysisContext): void => {
 				)
 				return
 			}
-			const bad: string[] = []
-			for (const name of free) {
-				if (component.signals.some(s => s.name === name)) continue
-				if (loop.hoisted.some(h => h.name === name)) {
-					referencedConsts.add(name)
-					continue
-				}
-				if (refNames.has(name)) continue
-				if (JS_GLOBALS.has(name)) continue
-				if (CONTEXT_NAMES.has(name)) continue
-				bad.push(name)
-			}
-			if (bad.length > 0) {
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						node.start,
-						`${what} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')} inside the ${wording.loop} body; the client only knows signals, refs, and rebound consts`,
-					),
-				)
-			}
+			for (const name of free)
+				if (loop.hoisted.some(h => h.name === name)) referencedConsts.add(name)
+			reportServerOnlyNames(
+				ctx,
+				node,
+				`${what} inside the ${wording.loop} body`,
+				badListBodyNames(node).filter(name => !referencedConsts.has(name)),
+			)
 		}
 
 		const effectsPlan: LoopEffectPlan[] = []
@@ -410,24 +397,14 @@ export const runLoops = (ctx: AnalysisContext): void => {
 					),
 				)
 			}
-			const bad = [...free].filter(
-				name =>
-					name !== loop.itemName &&
-					name !== loop.keyName &&
-					!component.signals.some(s => s.name === name) &&
-					!refNames.has(name) &&
-					!JS_GLOBALS.has(name) &&
-					!CONTEXT_NAMES.has(name),
+			reportServerOnlyNames(
+				ctx,
+				handler,
+				`${what} inside a reactive-list ${wording.loop} body`,
+				badListBodyNames(handler).filter(
+					name => name !== loop.itemName && name !== loop.keyName,
+				),
 			)
-			if (bad.length > 0) {
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						handler.start,
-						`${what} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')} inside a reactive-list ${wording.loop} body; the client only knows ${wording.listHandlerNames}`,
-					),
-				)
-			}
 		}
 		const collectItemEvents = (
 			node: TemplateNode,

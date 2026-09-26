@@ -90,8 +90,48 @@ export type TranslationGap = {
 	 * moved after the translation was recorded, so it may no longer match;
 	 * `orphaned` — an entry exists in the locale's catalog but nothing in
 	 * the corpus declares it (LT-196), so it can never render.
+	 *
+	 * The pattern-integrity walks (ADR 0030 s5, LT-219) read the entry
+	 * itself: `malformed` — it does not parse as an ICU pattern, so the
+	 * source renders; `argument-mismatch` — its arguments differ from the
+	 * source pattern's; `missing-arms` — a `plural` in it does not cover the
+	 * locale's plural categories, so those counts render `other`;
+	 * `client-fallback` — a client-referenced key uses a construct its
+	 * source does not, so the browser renders the source (LT-350).
 	 */
-	status: 'missing' | 'stale' | 'orphaned'
+	status: TranslationGapStatus
+	/** What the pattern-integrity walks found (the arguments, the categories). */
+	detail?: string
+}
+
+/** Every {@link TranslationGap} status, in report order. */
+export const TRANSLATION_GAP_STATUSES = [
+	'missing',
+	'stale',
+	'orphaned',
+	'malformed',
+	'argument-mismatch',
+	'missing-arms',
+	'client-fallback',
+] as const
+
+export type TranslationGapStatus = (typeof TRANSLATION_GAP_STATUSES)[number]
+
+/** First-draft census reasons per status (Tech Writer owns the copy, LT-189 item 8). */
+const TRANSLATION_GAP_REASONS: Record<TranslationGapStatus, string> = {
+	missing:
+		'missing — no entry in this locale’s catalog; the source-locale string renders',
+	stale: 'stale — the source string moved after this translation was recorded',
+	orphaned:
+		'orphaned — nothing in the corpus declares this key; the entry can never render',
+	malformed:
+		'malformed — the entry is not a valid ICU pattern; the source-locale string renders',
+	'argument-mismatch':
+		'argument mismatch — the translation’s arguments differ from the source pattern’s',
+	'missing-arms':
+		'missing plural arms — a plural does not cover this locale’s categories; those counts render `other`',
+	'client-fallback':
+		'client fallback — the translation uses a construct its source does not, so the browser renders the source-locale string',
 }
 
 /* === Exported Functions === */
@@ -142,18 +182,11 @@ export const translationCensus = (
 		.map(gap => ({
 			subject: gap.key,
 			value: gap.locale,
-			reasons:
-				gap.status === 'missing'
-					? [
-							'missing — no entry in this locale’s catalog; the source-locale string renders',
-						]
-					: gap.status === 'stale'
-						? [
-								'stale — the source string moved after this translation was recorded',
-							]
-						: [
-								'orphaned — nothing in the corpus declares this key; the entry can never render',
-							],
+			reasons: [
+				gap.detail
+					? `${TRANSLATION_GAP_REASONS[gap.status]} (${gap.detail})`
+					: TRANSLATION_GAP_REASONS[gap.status],
+			],
 		}))
 		.sort((a, b) =>
 			a.subject < b.subject

@@ -62,12 +62,16 @@ export const config = { formAssociated: true }
  * tech announces, so it routes through the reserved `i18n` parameter
  * (ADR 0030): the compiler resolves `t` per locale at render time; this
  * inline record is the source-locale fallback every catalog resolves
- * against. Deliberately NOT here: the `first()` guidance messages below
- * address the PAGE AUTHOR in their console — developer-facing English, a
- * different audience than the end user the catalog serves.
+ * against. The out-of-gamut validity message is set at event time in the
+ * browser, so it reaches it through the client message channel (ADR 0030
+ * s9, the root `i18n` attribute). Deliberately NOT here: the `first()`
+ * guidance messages below address the PAGE AUTHOR in their console —
+ * developer-facing English, a different audience than the end user the
+ * catalog serves.
  */
 export const i18n = {
 	drag: 'Drag',
+	outOfGamut: 'Color out of gamut',
 } as const
 
 export type FormColorgraphAxis = 'l' | 'c' | 'h'
@@ -373,7 +377,7 @@ export function FormColorgraph(
 			host.value = formatCss(c);
 			host.setCustomValidity('');
 		});
-		else host.setCustomValidity('Color out of gamut');
+		else host.setCustomValidity(t.outOfGamut);
 	});
 	on(chromaEl, 'change', () => {
 		if (!chromaEl.validity.valid) return;
@@ -382,7 +386,7 @@ export function FormColorgraph(
 			host.value = formatCss(c);
 			host.setCustomValidity('');
 		});
-		else host.setCustomValidity('Color out of gamut');
+		else host.setCustomValidity(t.outOfGamut);
 	});
 	on(hueEl, 'change', () => {
 		if (!hueEl.validity.valid) return;
@@ -391,7 +395,7 @@ export function FormColorgraph(
 			host.value = formatCss(c);
 			host.setCustomValidity('');
 		});
-		else host.setCustomValidity('Color out of gamut');
+		else host.setCustomValidity(t.outOfGamut);
 	});
 
 	<>

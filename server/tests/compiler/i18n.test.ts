@@ -585,6 +585,17 @@ describe('the generated i18n module', () => {
 		expect(i18nModule.i18nRecord('form-tokenbox', 'de').t.remove).toBe(
 			'Entfernen',
 		)
+		// LT-219's event-time messages: argument messages format through the
+		// shared evaluator, placeholders preserved in the translation.
+		const tokenbox = i18nModule.i18nRecord('form-tokenbox', 'de').t
+		expect(tokenbox.added({ token: 'rot' })).toBe('Token hinzugefügt: rot')
+		expect(tokenbox.removed({ token: 'rot' })).toBe('Token entfernt: rot')
+		expect(tokenbox.duplicate({ token: 'rot' })).toBe(
+			'rot ist bereits in der Liste',
+		)
+		expect(i18nModule.i18nRecord('form-colorgraph', 'de').t.outOfGamut).toBe(
+			'Farbe außerhalb des Farbraums',
+		)
 	})
 
 	test("an i18n:sync placeholder ('' override) resolves the source string (LT-195)", () => {
@@ -645,6 +656,44 @@ describe('the generated i18n module', () => {
 		expect(template).toContain('aria-label="Entfernen"')
 		expect(template).toContain('<slot></slot>')
 	})
+
+	test('the de catalog rides the client-message attribute as parsed patterns (LT-219 fixture)', async () => {
+		// Event-time strings cannot fold: the browser formats them. The de
+		// render serializes exactly the client-referenced keys, translated
+		// and PARSED — the placeholder survives as an `arg` node, never as
+		// pattern text the client would need a parser for.
+		const attributeOf = async (tag: string, args: Record<string, unknown>) => {
+			const mod = (await import(
+				pathToFileURL(`${generated.path}/${tag}.server.ts`).href
+			)) as Record<string, (args: unknown) => string>
+			const name = `render${tag
+				.split('-')
+				.map(part => part.charAt(0).toUpperCase() + part.slice(1))
+				.join('')}`
+			const html = mod[name]?.({
+				...args,
+				i18n: i18nModule.i18nRecord(tag, 'de'),
+			})
+			const raw = html?.match(new RegExp(`<${tag}[^>]* i18n="([^"]*)"`))?.[1]
+			if (!raw) throw new Error(`${tag} rendered no i18n attribute`)
+			return JSON.parse(raw.replace(/&quot;/g, '"').replace(/&amp;/g, '&'))
+		}
+		expect(
+			await attributeOf('form-tokenbox', { name: 'tags', label: 'Tags' }),
+		).toEqual({
+			added: ['Token hinzugefügt: ', { t: 'arg', a: 'token' }],
+			duplicate: [{ t: 'arg', a: 'token' }, ' ist bereits in der Liste'],
+			removed: ['Token entfernt: ', { t: 'arg', a: 'token' }],
+		})
+		expect(await attributeOf('form-colorgraph', {})).toEqual({
+			outOfGamut: 'Farbe außerhalb des Farbraums',
+		})
+		// The retired carrier span (LT-195's interim idiom): the increment
+		// label now rides the attribute, and no hidden span carries it.
+		expect(await attributeOf('form-spinbutton', { name: 'q' })).toEqual({
+			increment: 'Erhöhen',
+		})
+	})
 })
 
 /* === The committed catalogs against the inverse walk (LT-196) === */
@@ -697,6 +746,163 @@ describe('orphaned keys over the real corpus (LT-196)', () => {
 				status: 'orphaned',
 			},
 			{ key: 'basic-pluralize.typo-key', locale: 'de', status: 'orphaned' },
+		])
+	})
+})
+
+/* === Pattern-integrity walks (ADR 0030 s5, LT-219) === */
+
+describe('the census pattern-integrity walks (LT-219)', () => {
+	// A synthetic entry with injected catalogs (LT-196's pattern). `flat` is
+	// client-referenced, so its translations answer to the narrowed client
+	// evaluator, which carries only `arg` for this component.
+	const probe = {
+		tag: 'census-probe',
+		i18nMessages: {
+			greet: 'Hello, {name}!',
+			count: '{n, plural, one {# item} other {# items}}',
+			flat: '{n} items',
+		},
+		clientMessageKeys: ['flat'],
+		caseType: 'cardinal',
+	} as unknown as RegistryEntry
+	const gapsFor = async (overrides: Record<string, Record<string, string>>) =>
+		(await collectI18n([probe], injectedCatalogs(overrides))).gaps.filter(
+			gap => gap.status !== 'missing' && gap.status !== 'stale',
+		)
+
+	test('an unparseable translation is malformed — reported, and the build goes on', async () => {
+		const gaps = await gapsFor({ de: { 'census-probe.greet': 'Hallo, {name' } })
+		expect(gaps.map(gap => [gap.key, gap.status])).toEqual([
+			['census-probe.greet', 'malformed'],
+		])
+		expect(gaps[0]?.detail).toBeTruthy()
+	})
+
+	test('a translation whose arguments differ from the source is an argument mismatch', async () => {
+		const gaps = await gapsFor({
+			de: { 'census-probe.greet': 'Hallo, {nom}!' },
+		})
+		expect(gaps).toEqual([
+			{
+				key: 'census-probe.greet',
+				locale: 'de',
+				status: 'argument-mismatch',
+				detail: 'expected {name}, found {nom}',
+			},
+		])
+	})
+
+	test("a plural that does not cover the locale's categories is missing arms", async () => {
+		// pl's cardinal set is {one, few, many, other}; de's is {one, other}.
+		const pattern = '{n, plural, one {# x} other {# y}}'
+		expect(
+			await gapsFor({
+				pl: { 'census-probe.count': pattern },
+				de: { 'census-probe.count': pattern },
+			}),
+		).toEqual([
+			{
+				key: 'census-probe.count',
+				locale: 'pl',
+				status: 'missing-arms',
+				detail: 'no few, many',
+			},
+		])
+	})
+
+	test('a client-referenced translation using an uncarried construct falls back (LT-350)', async () => {
+		const plural = '{n, plural, one {# Ding} other {# Dinge}}'
+		expect(
+			await gapsFor({
+				de: { 'census-probe.flat': plural, 'census-probe.count': plural },
+			}),
+		).toEqual([
+			{ key: 'census-probe.flat', locale: 'de', status: 'client-fallback' },
+		])
+	})
+
+	test('clean translations and i18n:sync placeholders report nothing', async () => {
+		expect(
+			await gapsFor({
+				de: {
+					'census-probe.greet': 'Hallo, {name}!',
+					'census-probe.count': '{n, plural, one {# Ding} other {# Dinge}}',
+					'census-probe.flat': '{n} Dinge',
+				},
+				pl: { 'census-probe.greet': '', 'census-probe.flat': '' },
+			}),
+		).toEqual([])
+	})
+
+	test('the census names each finding', () => {
+		const formatted = formatCensus(
+			translationCensus(
+				[
+					{ key: 'a.b', locale: 'de', status: 'malformed', detail: 'x' },
+					{ key: 'a.c', locale: 'de', status: 'argument-mismatch' },
+					{ key: 'a.d', locale: 'de', status: 'missing-arms' },
+					{ key: 'a.e', locale: 'de', status: 'client-fallback' },
+				],
+				['de'],
+			),
+		)
+		expect(formatted).toContain('malformed — ')
+		expect(formatted).toContain('(x)')
+		expect(formatted).toContain('argument mismatch — ')
+		expect(formatted).toContain('missing plural arms — ')
+		expect(formatted).toContain('client fallback — ')
+		expect(formatted).not.toContain('⚠️')
+	})
+
+	test('falsification over the real catalogs: planted findings report, the committed catalogs report none', async () => {
+		const registry = JSON.parse(
+			readFileSync(`${generated.path}/registry.json`, 'utf8'),
+		) as ComponentRegistry
+		const i18nDir = join(import.meta.dir, '../../../i18n')
+		const locales: string[] = []
+		const overrides = new Map<string, Record<string, string>>()
+		for (const file of readdirSync(i18nDir)) {
+			if (!file.endsWith('.json') || file === 'manifest.json') continue
+			const locale = file.replace(/\.json$/, '')
+			locales.push(locale)
+			overrides.set(
+				locale,
+				JSON.parse(readFileSync(join(i18nDir, file), 'utf8')),
+			)
+		}
+		const integrity = <G extends { status: string }>(gaps: G[]) =>
+			gaps.filter(gap => !['missing', 'stale', 'orphaned'].includes(gap.status))
+		const clean = await collectI18n(Object.values(registry), {
+			locales,
+			overrides,
+			manifest: new Map(),
+		})
+		expect(integrity(clean.gaps)).toEqual([])
+		const de = { ...overrides.get('de') }
+		de['form-tokenbox.added'] = 'Token hinzugefügt: {tok}'
+		de['form-tokenbox.removed'] = 'Token entfernt: {token'
+		de['form-tokenbox.duplicate'] =
+			'{token, select, rot {Rot ist schon da} other {{token} ist schon da}}'
+		de['form-colorgraph.outOfGamut'] =
+			'{n, plural, other {Farbe außerhalb des Farbraums}}'
+		overrides.set('de', de)
+		const planted = await collectI18n(Object.values(registry), {
+			locales,
+			overrides,
+			manifest: new Map(),
+		})
+		expect(
+			integrity(planted.gaps)
+				.map(gap => `${gap.key} ${gap.status}`)
+				.sort(),
+		).toEqual([
+			'form-colorgraph.outOfGamut argument-mismatch',
+			'form-colorgraph.outOfGamut client-fallback',
+			'form-colorgraph.outOfGamut missing-arms',
+			'form-tokenbox.added argument-mismatch',
+			'form-tokenbox.duplicate client-fallback',
+			'form-tokenbox.removed malformed',
 		])
 	})
 })

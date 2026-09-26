@@ -264,6 +264,63 @@ export const messageBindingsOf = (
 	return { tNames, recordNames }
 }
 
+/**
+ * The client message channel's one admission rule (ADR 0030 s9, LT-218,
+ * LT-349): the declared keys `node` reads through the `t` binding `tName`
+ * — a static read (`t.hi`, `t['a.b']`) of a key `declaredKeys` carries —
+ * or null if any read is not one (a computed key, a bare `t`, an
+ * undeclared key). Shared by the client-position check (`analysis/plan.ts`)
+ * and the client-only setup-statement gate (`setup-extraction.ts`).
+ */
+export const staticMessageReads = (
+	node: AstNode,
+	tName: string,
+	declaredKeys: Readonly<Record<string, string>>,
+): string[] | null => {
+	const keys: string[] = []
+	let admitted = true
+	const visit = (current: unknown, parent: AstNode | null): void => {
+		if (!admitted) return
+		if (Array.isArray(current)) {
+			for (const child of current) visit(child, parent)
+			return
+		}
+		if (!isNode(current)) return
+		if (current.type === 'Identifier' && current.name === tName) {
+			// Not a reference: a member's property name or an object key.
+			if (
+				(parent?.type === 'MemberExpression' &&
+					parent.property === current &&
+					!parent.computed) ||
+				(parent?.type === 'Property' &&
+					parent.key === current &&
+					!parent.computed)
+			)
+				return
+			const property =
+				parent?.type === 'MemberExpression' && parent.object === current
+					? parent.property
+					: null
+			const key = !isNode(property)
+				? null
+				: !parent?.computed
+					? identifierName(property)
+					: property.type === 'Literal' && typeof property.value === 'string'
+						? property.value
+						: null
+			if (key !== null && Object.hasOwn(declaredKeys, key)) keys.push(key)
+			else admitted = false
+			return
+		}
+		for (const [field, value] of Object.entries(current)) {
+			if (field === 'loc' || field === 'range' || field === 'parent') continue
+			if (value && typeof value === 'object') visit(value, current)
+		}
+	}
+	visit(node, null)
+	return admitted ? keys : null
+}
+
 /** `{ a, b }` → `a` and `b`, for a closed list in copy. */
 const argList = (names: readonly string[]): string =>
 	names.map(name => `\`${name}\``).join(', ')

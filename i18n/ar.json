@@ -12,11 +12,15 @@
 	"basic-pluralize.task.two": "مهمتان",
 	"basic-pluralize.task.zero": "مهام",
 	"form-colorgraph.drag": "",
+	"form-colorgraph.outOfGamut": "",
 	"form-combobox.clearInput": "",
 	"form-listbox.clearFilter": "",
 	"form-listbox.filter": "",
 	"form-spinbutton.decrement": "",
 	"form-spinbutton.increment": "",
 	"form-textbox.clearInput": "",
-	"form-tokenbox.remove": ""
+	"form-tokenbox.added": "",
+	"form-tokenbox.duplicate": "",
+	"form-tokenbox.remove": "",
+	"form-tokenbox.removed": ""
 }

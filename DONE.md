@@ -11,6 +11,53 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-350: Client message fallback — a node kind the narrowed evaluator does not carry renders that key's source message (LT-218 review, owner ruling 2026-09-26). — done ✓
+  **Skill:** le-truc-dev
+  **Changed:** The generated preamble's evaluator gives `plural`/`select` explicit cases and
+  throws a private sentinel for any other uncarried kind; an argument key's accessor catches it
+  and formats the source message (wrong language until the catalog is fixed, never blank). The
+  census reports such translations as `client-fallback` (LT-219).
+
+- [x] LT-219: Corpus adoption — tokenbox + colorgraph event-time strings; retire the carrier-span idiom; census placeholder check. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** form-tokenbox declares `added`/`removed`/`duplicate` (`{token}` patterns); its
+  status writes and duplicate `setCustomValidity` go through `t.<key>({ token })`.
+  form-colorgraph declares `outOfGamut` for its three `on(...)` sites. form-spinbutton's hidden
+  `.increment-label` carrier span is retired; the thunk reads `t.increment`. de translated, the
+  other five locales carry `""` placeholders. New `RegistryEntry.clientMessageKeys` (additive).
+  `icu/evaluate.ts` gains `carriedKinds`/`clientFallsBack`, shared by `emit-client.ts` and the
+  census. Translation census: four new `TranslationGap` statuses — `malformed`,
+  `argument-mismatch`, `missing-arms`, `client-fallback` — plus an optional `detail`; the
+  i18n report buckets every status; `i18n:sync` lists them and fixes none. New Playwright spec
+  `form-tokenbox.spec.ts` (en and de announcements, de duplicate validity) over a pre-rendered
+  de instance on the test page.
+  **Rulings:** (1) The LT-190 reachability carve-outs stay until LT-251 deletes them; the new
+  walks run beside them. (2) `malformed` is the one status for a bad catalog value — LT-249
+  adds the non-string half to it, no sibling status. (3) Hand-copied test-page attributes get
+  a drift pin → **LT-352**.
+  **Review:** Approved. Census reasons and the `i18n:sync` FLAGGED line → LT-189 item 8.
+  Rider: `test-debug.spec.ts`'s structural-wrapper fixture swapped `card-callout` (a compiled
+  component since LT-033, so it owns `debug`) for `module-demo`.
+
+- [x] LT-349: Finish LTC005's positive server-only rule — reactive-list bodies, compiler-generated query names, and `t.<key>` in the two positions LT-218 left out (LT-348 and LT-218 reviews). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** Compiler-generated query locals no longer shadow a server binding: args
+  `{ button }` read in a queried `<button>`'s handler is LTC005. Both `loops.ts` list-body checks
+  (server-data attribute/thunk, reactive-list item handler) drop the `JS_GLOBALS` allowlist for
+  the positive rule (`badListBodyNames`) and report through `reportServerOnlyNames`, so they
+  carry the LT-348 tail; the `listHandlerNames` wording key is gone. `staticMessageReads` moved
+  to `i18n.ts`; the client-only setup gate (`setup-extraction.ts`) and list-item handlers admit
+  a static `t.<key>` read of a declared key, recorded into `clientMessageKeys`.
+  `readModuleDecls` now runs before `extractSetup` (the gate needs the declared keys). Pins:
+  `diagnostic-parity.test.ts` (LIST_BODY, SERVER_ONLY, clean list cases),
+  `i18n-client.test.ts` (colorgraph- and tokenbox-shaped fixtures ride the attribute).
+  **Ruling:** Setup consts and authored imports stay rejected in list bodies, even when a
+  client position elsewhere already emits them — `computeClientNeededNames` walks no list-body
+  position, so admission would depend on unrelated usage. Widening that walk is the fix if a
+  component ever needs it; no current or LT-219 consumer does (tokenbox's handler reads refs,
+  the list and `t`).
+  **Review:** Approved. Copy (the two list-body subjects) → LT-189 item 17.
+
 - [x] LT-218: The client-message `i18n` attribute — compiler analysis, server emission, client evaluator preamble (ADR 0030 sub-design 9). — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** A static `t.<key>` read of a declared key compiles in client positions

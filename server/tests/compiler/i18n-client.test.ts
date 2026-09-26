@@ -51,7 +51,8 @@ const tsrxSource = (
 	b: string,
 	s = setup,
 	p = params,
-) => `import { createCell } from '@zeix/le-truc'
+	names = 'createCell',
+) => `import { ${names} } from '@zeix/le-truc'
 ${decl}
 export function C(${p})
 	@{
@@ -66,7 +67,8 @@ const tsxSource = (
 	b: string,
 	s = setup,
 	p = params,
-) => `import { createCell } from '@zeix/le-truc'
+	names = 'createCell',
+) => `import { ${names} } from '@zeix/le-truc'
 ${decl}
 export function C(${p}) {
 	${s}
@@ -225,6 +227,68 @@ describe('server: the root `i18n` attribute', () => {
 	})
 })
 
+describe('client-only setup statements and list-item handlers (LT-349)', async () => {
+	// colorgraph's `on(...)` setup statement and tokenbox's list-item
+	// handler: both admit a static read of a declared key, and both keys
+	// ride the attribute. The list body's handler reads a key no other
+	// position reads, so the attribute proves the list check recorded it.
+	const s = `${setup}\n\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\ton(host, 'change', () => { host.title = t.hi })`
+	const names = 'createCell, createList'
+	const shapes = {
+		tsrx: compileComponent(
+			tsrxSource(
+				'<ul data-container>@for (const item of items) { <li><button onClick={() => console.log(t.folded)}>x</button>{item}</li> }</ul>',
+				s,
+				params,
+				names,
+			),
+			'c.tsrx',
+			new Set(),
+		),
+		tsx: compileComponentTsx(
+			tsxSource(
+				'<ul data-container>{items.map(item => <li><button onClick={() => console.log(t.folded)}>x</button>{item}</li>)}</ul>',
+				s,
+				params,
+				names,
+			),
+			'c.tsx',
+			new Set(),
+		),
+	}
+
+	test('both shapes compile on both surfaces', () => {
+		expect(errors(shapes.tsrx.diagnostics)).toEqual([])
+		expect(errors(shapes.tsx.diagnostics)).toEqual([])
+	})
+
+	test('the server renders both keys into the attribute', async () => {
+		for (const [surface, { component }] of Object.entries(shapes)) {
+			if (!component) throw new Error(`${surface} did not compile`)
+			generated.emit(`c-el.lt349.${surface}.server.ts`, component.serverCode)
+			const { renderC } = await generated.importModule<Render>(
+				`c-el.lt349.${surface}.server.ts`,
+			)
+			const attribute = i18nAttribute(renderC({ i18n: record('en') }))
+			expect(Object.keys(attribute ?? {}).sort()).toEqual(['folded', 'hi'])
+		}
+	})
+
+	test('the preamble precedes the setup statement and the list block', () => {
+		const code = shapes.tsrx.component?.clientCode ?? ''
+		const preamble = code.indexOf("getAttribute('i18n')")
+		expect(preamble).toBeGreaterThan(-1)
+		expect(code.indexOf('t.hi')).toBeGreaterThan(preamble)
+		expect(code.indexOf('t.folded')).toBeGreaterThan(preamble)
+	})
+
+	test('a computed key in a setup statement is still rejected', () => {
+		const bad = `${setup}\n\t\ton(host, 'change', () => { host.title = t[host.id as 'hi'] })`
+		const { diagnostics } = compileTsrx('<p>x</p>', bad)
+		expect(errors(diagnostics).map(d => d.code)).toContain('LTC005')
+	})
+})
+
 describe('baking the record into a serialized message', () => {
 	// The client formats a baked message without the record; the server
 	// evaluator must give the same string either way.
@@ -333,5 +397,55 @@ describe('client: connect in the simulation realm', async () => {
 		} finally {
 			process.env.DEV_MODE = previous
 		}
+	})
+})
+
+describe('client: a translated construct the source does not carry (LT-350)', async () => {
+	// The evaluator is narrowed to the SOURCE's node kinds (`arg` here), so
+	// the de `plural` is uncarried: that key renders its source message
+	// rather than an empty node. `hi` proves the attribute is still read.
+	const src = `import { createCell } from '@zeix/le-truc'
+export const i18n = { hi: 'Hi', tasks: '{count} tasks' } as const
+export function C(${params})
+	@{
+		${setup}
+		<>
+			<c-fb><button title={() => t.hi}>x</button><span>{() => t.tasks({ count: host.count })}</span></c-fb>
+			<style>c-fb { color: red }</style>
+		</>
+	}`
+	const { component, diagnostics } = compileComponent(
+		src,
+		'c-fb.tsrx',
+		new Set(),
+	)
+	if (!component) throw new Error(diagnostics.map(d => d.message).join('; '))
+	const path = generated.emit('c-fb.client.ts', component.clientCode)
+	const realm = createSimulationRealm()
+	afterAll(() => realm.dispose())
+	await realm.load(() => import(pathToFileURL(path).href))
+
+	const de = (pattern: string) => {
+		const parsed = parseMessage(pattern)
+		if (!parsed.ok) throw new Error('fixture pattern')
+		return parsed.message
+	}
+	const attribute = JSON.stringify({
+		hi: 'Hallo',
+		tasks: de('{count, plural, one {# Aufgabe} other {# Aufgaben}}'),
+	})
+		.replace(/&/g, '&amp;')
+		.replace(/"/g, '&quot;')
+	const markup = `<c-fb i18n="${attribute}"><button title="Hallo">x</button><span>stale</span></c-fb>`
+
+	test('the uncarried key renders the source text, not an empty span', async () => {
+		const { html } = await realm.render({ markup, component: 'c-fb' })
+		expect(html).toContain('<button title="Hallo">')
+		expect(html.match(/<span>([^<]*)<\/span>/)?.[1]).toBe('3 tasks')
+	})
+
+	test('the walk throws a sentinel for kinds it does not carry', () => {
+		expect(component.clientCode).toContain('throw __i18nUncarried')
+		expect(component.clientCode).not.toContain('Intl.PluralRules')
 	})
 })

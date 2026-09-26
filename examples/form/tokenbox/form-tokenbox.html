@@ -41,3 +41,26 @@
   </p>
   <p class="status visually-hidden" role="status" aria-live="polite"></p>
 </form-tokenbox>
+
+<hr>
+
+<!-- The client message channel (ADR 0030 s9, LT-219): the status and
+     duplicate messages are built at event time in the browser, so the server
+     render serializes those keys, translated and parsed, into the root
+     `i18n` attribute. This instance is `renderFormTokenbox()`'s output at
+     `de`; the instances above carry no attribute and speak the source
+     locale, exactly as a client-created instance would. -->
+<form-tokenbox id="german-test" name="farben" lang="de" i18n="{&quot;added&quot;:[&quot;Token hinzugefügt: &quot;,{&quot;t&quot;:&quot;arg&quot;,&quot;a&quot;:&quot;token&quot;}],&quot;duplicate&quot;:[{&quot;t&quot;:&quot;arg&quot;,&quot;a&quot;:&quot;token&quot;},&quot; ist bereits in der Liste&quot;],&quot;removed&quot;:[&quot;Token entfernt: &quot;,{&quot;t&quot;:&quot;arg&quot;,&quot;a&quot;:&quot;token&quot;}]}">
+  <label for="farben-input">Farben</label>
+  <div class="input" data-container>
+    <input type="text" id="farben-input" data-unreconciled>
+  </div>
+  <template>
+    <span class="token" data-key>
+      <span class="token-label"><slot></slot></span>
+      <button type="button" class="remove" aria-label="Entfernen">✕</button>
+    </span>
+  </template>
+  <p class="error" role="alert" aria-live="assertive"></p>
+  <p class="status visually-hidden" role="status" aria-live="polite"></p>
+</form-tokenbox>

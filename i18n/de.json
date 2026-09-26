@@ -8,11 +8,15 @@
 	"basic-pluralize.task.one": "Aufgabe",
 	"basic-pluralize.task.other": "Aufgaben",
 	"form-colorgraph.drag": "Ziehen",
+	"form-colorgraph.outOfGamut": "Farbe außerhalb des Farbraums",
 	"form-combobox.clearInput": "Eingabe leeren",
 	"form-listbox.clearFilter": "Filter leeren",
 	"form-listbox.filter": "Filtern",
 	"form-spinbutton.decrement": "Verringern",
 	"form-spinbutton.increment": "Erhöhen",
 	"form-textbox.clearInput": "Eingabe leeren",
-	"form-tokenbox.remove": "Entfernen"
+	"form-tokenbox.added": "Token hinzugefügt: {token}",
+	"form-tokenbox.duplicate": "{token} ist bereits in der Liste",
+	"form-tokenbox.remove": "Entfernen",
+	"form-tokenbox.removed": "Token entfernt: {token}"
 }

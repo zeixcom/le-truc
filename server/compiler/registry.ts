@@ -145,6 +145,13 @@ export type RegistryEntry = {
 	 */
 	i18nMessages: Record<string, string> | null
 	/**
+	 * The message keys the component reads in client positions (ADR 0030
+	 * s9, LT-218), sorted — the keys the server renders into the root
+	 * `i18n` attribute. The translation census checks their translations
+	 * against the narrowed client evaluator (LT-219).
+	 */
+	clientMessageKeys: string[]
+	/**
 	 * The component's static `truc:case-type` configuration (LT-190): the
 	 * plural type its `truc:case` groups prune by — `'cardinal'`/`'ordinal'`
 	 * when provable, `'union'` otherwise (the runtime's own fallback). The

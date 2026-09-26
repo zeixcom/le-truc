@@ -23,6 +23,7 @@ import {
 import type { CompileDiagnostic } from '../diagnostics'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
+import { staticMessageReads } from '../i18n'
 import { computeClientNeededNames, serverUsageNames } from '../imports'
 import type {
 	ComponentIR,
@@ -455,6 +456,12 @@ export type AnalysisContext = {
 	collectAmbient: (node: AstNode | null | undefined) => void
 	/** Free names in a reactive/pass thunk the client cannot resolve. */
 	badFreeNames: (node: AstNode) => string[]
+	/**
+	 * Free names in a list-body position the client cannot resolve:
+	 * `badFreeNames` plus setup consts and authored imports, which no
+	 * client-need walk reaches there.
+	 */
+	badListBodyNames: (node: AstNode) => string[]
 }
 
 /* === Exported Functions === */
@@ -573,11 +580,15 @@ export const analyzeClient = (
 		for (const h of loop.hoisted) serverBindings.add(h.name)
 	}
 
-	// Client rebindings shadow a server binding of the same name. Plain setup
-	// consts (LT-088) are one: a const pulled client-side is emitted there,
-	// and one that itself reads a server name is caught at its declaration
-	// (the setup half below). Authored imports (LT-091) and the query locals
-	// a loop's collection lowers to (the LT-136 shadow) are the others.
+	// Client rebindings shadow a server binding of the same name — only the
+	// ones the AUTHOR declared: signals, `first()` refs, context members,
+	// plain setup consts (LT-088: a const pulled client-side is emitted
+	// there, and one that itself reads a server name is caught at its
+	// declaration, the setup half below) and authored imports (LT-091).
+	// Compiler-generated query locals are not (LT-349): args `{ button }`
+	// beside a queried `<button>` would otherwise compile a handler reading
+	// `button` against the element, silently changing its meaning. LT-136
+	// keeps the naming side of that shadow.
 	const setupNames = new Set(
 		component.setup.map(s => s.name).filter((n): n is string => !!n),
 	)
@@ -586,7 +597,6 @@ export const analyzeClient = (
 		refNames.has(name) ||
 		CONTEXT_NAMES.has(name) ||
 		setupNames.has(name) ||
-		queries.some(q => q.name === name) ||
 		component.imports.clientLeTrucNames.has(name) ||
 		component.imports.plainLocalNames.has(name)
 
@@ -599,65 +609,47 @@ export const analyzeClient = (
 	const tNames = new Set(component.messageTBindings ?? [])
 	const declaredKeys = component.i18nMessages ?? {}
 	const clientMessageKeys = new Set<string>()
-	/** The declared keys `node` reads through `tName`, or null if any read is not one. */
-	const staticMessageReads = (
-		node: AstNode,
-		tName: string,
-	): string[] | null => {
-		const keys: string[] = []
-		let admitted = true
-		const visit = (current: unknown, parent: AstNode | null): void => {
-			if (!admitted) return
-			if (Array.isArray(current)) {
-				for (const child of current) visit(child, parent)
-				return
-			}
-			if (!isNode(current)) return
-			if (current.type === 'Identifier' && current.name === tName) {
-				// Not a reference: a member's property name or an object key.
-				if (
-					(parent?.type === 'MemberExpression' &&
-						parent.property === current &&
-						!parent.computed) ||
-					(parent?.type === 'Property' &&
-						parent.key === current &&
-						!parent.computed)
-				)
-					return
-				const property =
-					parent?.type === 'MemberExpression' && parent.object === current
-						? parent.property
-						: null
-				const key = !isNode(property)
-					? null
-					: !parent?.computed
-						? identifierName(property)
-						: property.type === 'Literal' && typeof property.value === 'string'
-							? property.value
-							: null
-				if (key !== null && Object.hasOwn(declaredKeys, key)) keys.push(key)
-				else admitted = false
-				return
-			}
-			for (const [field, value] of Object.entries(current)) {
-				if (field === 'loc' || field === 'range' || field === 'parent') continue
-				if (value && typeof value === 'object') visit(value, current)
-			}
-		}
-		visit(node, null)
-		return admitted ? keys : null
-	}
-
 	/** Free names in a client-emitted position that only the server binds. */
 	const badFreeNames = (node: AstNode): string[] =>
 		[...dependenciesOf(node)].filter(name => {
 			if (!serverBindings.has(name) || clientRebinds(name)) return false
 			if (!tNames.has(name)) return true
-			const keys = staticMessageReads(node, name)
+			const keys = staticMessageReads(node, name, declaredKeys)
 			if (keys === null) return true
 			for (const key of keys) clientMessageKeys.add(key)
 			return false
 		})
+
+	/**
+	 * `badFreeNames` for a list body (`each()`/`reconcile()` scopes, LT-349),
+	 * plus the setup consts and authored imports the body reads. Those are
+	 * client bindings, but `computeClientNeededNames` walks no list-body
+	 * position, so a const or import read only there is never emitted
+	 * client-side — admitting it would compile a ReferenceError.
+	 */
+	const badListBodyNames = (node: AstNode): string[] => {
+		const bad = new Set(badFreeNames(node))
+		return [...dependenciesOf(node)].filter(
+			name =>
+				bad.has(name) ||
+				(!component.signals.some(s => s.name === name) &&
+					!refNames.has(name) &&
+					!CONTEXT_NAMES.has(name) &&
+					(setupNames.has(name) ||
+						component.imports.clientLeTrucNames.has(name) ||
+						component.imports.plainLocalNames.has(name))),
+		)
+	}
+
+	// Client-only setup statements admitted for their `t.<key>` reads
+	// (`setup-extraction.ts`'s gate, LT-349) carry their keys into the
+	// attribute; the preamble precedes those statements.
+	for (const stmt of component.clientSetup)
+		for (const name of dependenciesOf(stmt.node)) {
+			if (!tNames.has(name)) continue
+			for (const key of staticMessageReads(stmt.node, name, declaredKeys) ?? [])
+				clientMessageKeys.add(key)
+		}
 
 	const routingSignals: RoutingSignal[] = []
 	const suppressedSites: SuppressedSite[] = []
@@ -692,6 +684,7 @@ export const analyzeClient = (
 			),
 		collectAmbient,
 		badFreeNames,
+		badListBodyNames,
 	}
 
 	runLoops(ctx)

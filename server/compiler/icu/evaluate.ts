@@ -172,6 +172,44 @@ export const formatMessage = (
 }
 
 /**
+ * The node kinds (`arg`, `num`, `plural`, …) `messages` use, case bodies
+ * included — what the client channel's inlined evaluator carries (LT-218):
+ * `emit-client.ts` narrows it to the union over a component's
+ * client-referenced source messages.
+ */
+export const carriedKinds = (messages: Iterable<Message>): Set<string> => {
+	const kinds = new Set<string>()
+	const collect = (message: Message): void => {
+		for (const node of message) {
+			if (typeof node === 'string') continue
+			kinds.add(node.t)
+			if (node.t === 'plural' || node.t === 'select')
+				for (const body of Object.values(node.c)) collect(body)
+		}
+	}
+	for (const message of messages) collect(message)
+	return kinds
+}
+
+/**
+ * Whether the client channel renders `source` instead of `translation`
+ * (LT-350): a translation with arguments where the source has none (the
+ * argument-less accessor serves the source), or one using a node kind the
+ * narrowed evaluator does not carry. An argument-less translation always
+ * renders. Both arguments are compiled catalog entries: literal text or a
+ * parsed message.
+ */
+export const clientFallsBack = (
+	source: string | Message,
+	translation: string | Message,
+	carried: ReadonlySet<string>,
+): boolean => {
+	if (typeof translation === 'string') return false
+	if (typeof source === 'string') return true
+	return [...carriedKinds([translation])].some(kind => !carried.has(kind))
+}
+
+/**
  * `message` with its record folded in (LT-218): the locale onto every
  * formatting node (`l`), and `timeZone`/`currency` into the nodes that read
  * them. The client channel serializes messages per render call, but the

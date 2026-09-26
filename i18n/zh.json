@@ -7,11 +7,15 @@
 	"basic-pluralize.remaining": "剩余",
 	"basic-pluralize.task.other": "个任务",
 	"form-colorgraph.drag": "",
+	"form-colorgraph.outOfGamut": "",
 	"form-combobox.clearInput": "",
 	"form-listbox.clearFilter": "",
 	"form-listbox.filter": "",
 	"form-spinbutton.decrement": "",
 	"form-spinbutton.increment": "",
 	"form-textbox.clearInput": "",
-	"form-tokenbox.remove": ""
+	"form-tokenbox.added": "",
+	"form-tokenbox.duplicate": "",
+	"form-tokenbox.remove": "",
+	"form-tokenbox.removed": ""
 }

@@ -216,7 +216,8 @@ const selectorOf = (fx: EffectsContext, query: string): string =>
  * such position (LT-347 audited them: reactive attributes, lazy text
  * children, class/style maps, event handlers, `truc:html`, pass entries,
  * `expose()` entries, client-needed setup consts and harvest-less signal
- * initializers; list bodies run their own in `loops.ts`). `subject` opens
+ * initializers; `loops.ts` routes list bodies here through
+ * `badListBodyNames`, LT-349). `subject` opens
  * the sentence.
  */
 export const reportServerOnlyNames = (

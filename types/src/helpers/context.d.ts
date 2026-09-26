@@ -98,7 +98,9 @@ declare const makeProvideContexts: <P extends ComponentProps>(host: HTMLElement 
  * later. The request is re-dispatched once on a microtask and once after
  * {@link CONTEXT_RETRY_DELAY} to cover both cases. If no provider ever
  * answers, `fallback` stays permanent and a `DEV_MODE` warning names the
- * context and host. See ADR 0007.
+ * context and host. Retries are skipped once a provider has answered or
+ * the host has disconnected; they are not cancellable, because
+ * `requestContext` runs outside any reactive scope. See ADR 0015.
  *
  * Resolved once per component lifetime, at first connect.
  *

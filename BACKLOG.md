@@ -277,6 +277,18 @@ Tech Writer copy round, scope widened).
 LT-242 and LT-233, and LT-249 and LT-138 from P6. The band is empty until that
 iteration's review files follow-ups.
 
+- [ ] LT-352: Pin the hand-copied `i18n` attributes on the examples test pages against the real render (LT-219 review).
+  **Skill:** le-truc-dev
+  **Context:** `/test/:component` serves each example's `.html` raw — the page renderer never
+  runs there — so `form-tokenbox.html`'s `#german-test` instance carries an `i18n` attribute
+  copied by hand from `renderFormTokenbox()` at `de` (LT-219). A later edit to a tokenbox
+  pattern or to the de catalog leaves that copy stale, and the Playwright spec then passes
+  against wording the build no longer serves. Add one server test that renders the instance's
+  args at its `lang` and compares the attribute bytes with the page's. Prefer a small table of
+  (page, instance id, tag, args) over a per-component test, so the next hand-copied instance
+  is one row. **Channel:** none (a test). **Check:** editing `form-tokenbox.added` in de.json
+  without touching the page fails the test.
+
 ---
 
 ## P2b — Compiler product-readiness: equivalence contract, consolidation, library substitutions (external review + reflection, 2026-09-18)

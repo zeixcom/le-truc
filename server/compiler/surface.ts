@@ -94,8 +94,6 @@ export type SurfaceWording = {
 	emptyArmFix: string
 	/** Control flow inside a reactive-list body. */
 	listControlFlow: string
-	/** What a reactive-list item handler may read. */
-	listHandlerNames: string
 	/**
 	 * How a handler acts on its item, appended after a sentence — empty on
 	 * `.tsx`, which has no key binding.
@@ -147,7 +145,6 @@ const TSRX: SurfaceWording = {
 	emptyArm: '`@empty` arm',
 	emptyArmFix: "the loop's own `@empty` arm",
 	listControlFlow: 'Control-flow directives (@if/@switch/@try)',
-	listHandlerNames: 'signals, refs, the key binding, and globals',
 	listItemHandlerFix:
 		' Act on the item through the key binding instead (`@for (const item of items; key k)`, then `items.remove(k)`).',
 	loopInBranch: branch => ({
@@ -200,7 +197,6 @@ const TSX: SurfaceWording = {
 	emptyArmFix:
 		'the empty-state idiom (`{items.length === 0 ? <empty/> : items.map(…)}`)',
 	listControlFlow: 'Control-flow expressions',
-	listHandlerNames: 'signals, refs, and globals',
 	listItemHandlerFix: '',
 	loopInBranch: branch =>
 		branch === 'if'

@@ -154,6 +154,26 @@ describe('stage-1 server-simulation driver — corpus fixtures (LT-154)', () => 
 		})
 	}
 
+	test('form-tokenbox: the client-message attribute stays in the low hundreds of bytes (LT-219)', async () => {
+		// ADR 0030 s9's payload measure: only client-referenced keys ride the
+		// attribute, as parsed ASTs. Tokenbox carries three event-time
+		// messages; the served attribute (entity-escaped, as the page ships
+		// it) must stay small enough that per-instance duplication is noise.
+		const info = compiled.find(entry => entry.tag === 'form-tokenbox')
+		if (!info) throw new Error('form-tokenbox is not in the corpus')
+		const html = await simulateConnect(realm, info, await serverMarkupOf(info))
+		const served = html.match(/<form-tokenbox[^>]* i18n="([^"]*)"/)?.[1]
+		if (!served) throw new Error('form-tokenbox rendered no i18n attribute')
+		const decoded = JSON.parse(served.replace(/&quot;/g, '"')) as object
+		expect(Object.keys(decoded).sort()).toEqual([
+			'added',
+			'duplicate',
+			'removed',
+		])
+		expect(served.length).toBeGreaterThan(100)
+		expect(served.length).toBeLessThan(500)
+	})
+
 	test('module-lazyload: the demo broken-state instance keeps its served markup', async () => {
 		// The page occurrence the docs build simulates since LT-104 made
 		// lazyload Simulated. The instance omits its required `card-callout`

@@ -216,7 +216,7 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 	test('metaKey+click climbs past structural-only custom elements to reach the real host', async ({
 		page,
 	}) => {
-		// #wrapped sits inside <card-callout>, a plain HTMLElement subclass
+		// #wrapped sits inside <module-demo>, a plain HTMLElement subclass
 		// with no `debug` property. Stopping the ancestor walk at the first
 		// dashed localName set a meaningless expando on it and the gesture
 		// silently did nothing — the common case in real pages, where
@@ -230,7 +230,7 @@ test.describe('debug instrumentation (ADR 0022)', () => {
 		).toBe(true)
 		expect(
 			await page.evaluate(() =>
-				Object.hasOwn(document.querySelector('card-callout')!, 'debug'),
+				Object.hasOwn(document.querySelector('module-demo')!, 'debug'),
 			),
 		).toBe(false)
 	})

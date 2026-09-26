@@ -21,6 +21,7 @@ import type { AstNode } from './ast-node'
 import { asArray, identifierName, isNode } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import type { EmitPaths } from './emit-paths'
+import { messageBindingsOf } from './i18n'
 import {
 	parseComposeImports,
 	parseLeTrucImports,
@@ -216,12 +217,19 @@ export const runFrontEnd = (
 	const split = adapter.splitSetupAndOutput(ctx, fn, filename)
 	if (!split) return done()
 	const name = identifierName(fn.id) ?? 'Component'
+	// Read before setup extraction: its client-only gate admits a static
+	// `t.<key>` read of a declared key (LT-349).
+	const decls = readModuleDecls(ctx, ast, name)
 	const extraction = extractSetup(
 		ctx,
 		split.setup,
 		params.paramsNode,
 		params.paramNames,
 		importedNames,
+		{
+			tNames: messageBindingsOf(params.paramsNode).tNames,
+			declaredKeys: decls.i18nMessages ?? {},
+		},
 	)
 
 	// Output: a single root element, or a fragment of [root element,
@@ -263,7 +271,6 @@ export const runFrontEnd = (
 	)
 	if (!resolved) return done()
 
-	const decls = readModuleDecls(ctx, ast, name)
 	const caseType = validateLoweredComponent(ctx, {
 		root: resolved.root,
 		config: decls.config,

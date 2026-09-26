@@ -31,11 +31,19 @@ import { createHash } from 'node:crypto'
 import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { TranslationGap } from '../compiler/census'
+import {
+	TRANSLATION_GAP_STATUSES,
+	type TranslationGap,
+	type TranslationGapStatus,
+} from '../compiler/census'
 import { DEFAULT_RUNTIME_IMPORT } from '../compiler/emit-paths'
 import { PAGE_AMBIENT_TYPES } from '../compiler/fold-inputs'
 import { PLURAL_CATEGORIES } from '../compiler/i18n'
-import type { Message } from '../compiler/icu/evaluate'
+import {
+	carriedKinds,
+	clientFallsBack,
+	type Message,
+} from '../compiler/icu/evaluate'
 import { literalOf, parseMessage } from '../compiler/icu/parse'
 import type { RegistryEntry } from '../compiler/registry'
 import { pluralCategories } from '../compiler/runtime'
@@ -214,6 +222,16 @@ export const collectI18n = async (
 		byTag.set(entry.tag, entry)
 		if (!entry.i18nMessages) continue
 		sources.set(entry.tag, entry.i18nMessages)
+		// The client channel's narrowed evaluator (LT-218) carries the node
+		// kinds of the component's client-referenced SOURCE messages; the
+		// construct-coverage walk asks the same question of each translation.
+		const clientKeys = new Set(entry.clientMessageKeys ?? [])
+		const carried = carriedKinds(
+			[...clientKeys].flatMap(key => {
+				const entryOf = compiledEntry(entry.i18nMessages?.[key] ?? '')
+				return entryOf === null || typeof entryOf === 'string' ? [] : [entryOf]
+			}),
+		)
 		for (const locale of locales) {
 			const localeOverrides = overrides.get(locale) ?? {}
 			const localeManifest = manifest.get(locale) ?? {}
@@ -244,6 +262,15 @@ export const collectI18n = async (
 				}
 				if (localeManifest[compound] !== sourceHash(source))
 					gaps.push({ key: compound, locale, status: 'stale' })
+				gaps.push(
+					...patternGaps(
+						compound,
+						locale,
+						source,
+						localeOverrides[compound],
+						clientKeys.has(key) ? carried : null,
+					),
+				)
 			}
 		}
 	}
@@ -282,6 +309,72 @@ export const collectI18n = async (
 	}
 	return { locales, sources, overrides, gaps }
 }
+
+/**
+ * The pattern-integrity walks over one translation (ADR 0030 s5, LT-219) —
+ * report records, never build errors: a catalog is translator-paced data,
+ * and every finding here still renders something (the source, or `other`).
+ * An empty entry is `i18n:sync`'s placeholder, not a translation. `carried`
+ * is the client evaluator's node kinds when the key is client-referenced,
+ * else null.
+ */
+const patternGaps = (
+	key: string,
+	locale: string,
+	source: string,
+	translation: string,
+	carried: ReadonlySet<string> | null,
+): TranslationGap[] => {
+	if (translation === '') return []
+	const parsed = parseMessage(translation)
+	if (!parsed.ok)
+		return [{ key, locale, status: 'malformed', detail: parsed.error }]
+	const gaps: TranslationGap[] = []
+	const sourceParsed = parseMessage(source)
+	if (sourceParsed.ok) {
+		const expected = sourceParsed.args.map(arg => arg.name).sort()
+		const actual = parsed.args.map(arg => arg.name).sort()
+		if (expected.join() !== actual.join())
+			gaps.push({
+				key,
+				locale,
+				status: 'argument-mismatch',
+				detail: `expected ${argNames(expected)}, found ${argNames(actual)}`,
+			})
+	}
+	const uncovered = new Set<string>()
+	const walk = (message: Message): void => {
+		for (const node of message) {
+			if (typeof node === 'string') continue
+			if (node.t === 'plural') {
+				for (const category of new Intl.PluralRules(locale, {
+					type: node.o ? 'ordinal' : 'cardinal',
+				}).resolvedOptions().pluralCategories)
+					if (!Object.hasOwn(node.c, category)) uncovered.add(category)
+			}
+			if (node.t === 'plural' || node.t === 'select')
+				for (const body of Object.values(node.c)) walk(body)
+		}
+	}
+	walk(parsed.message)
+	if (uncovered.size > 0)
+		gaps.push({
+			key,
+			locale,
+			status: 'missing-arms',
+			detail: `no ${[...uncovered].sort().join(', ')}`,
+		})
+	if (carried !== null && sourceParsed.ok) {
+		const sourceEntry = literalOf(sourceParsed.message) ?? sourceParsed.message
+		const translationEntry = literalOf(parsed.message) ?? parsed.message
+		if (clientFallsBack(sourceEntry, translationEntry, carried))
+			gaps.push({ key, locale, status: 'client-fallback' })
+	}
+	return gaps
+}
+
+const argNames = (names: readonly string[]): string =>
+	names.length === 0 ? 'none' : names.map(name => `{${name}}`).join(', ')
 
 const byKey = (a: [string, unknown], b: [string, unknown]): number =>
 	a[0] < b[0] ? -1 : 1
@@ -494,31 +587,28 @@ export const writeI18nReport = async (
 	outDir: string,
 	collection: I18nCollection,
 ): Promise<void> => {
-	const perLocale: Record<
-		string,
-		{ missing: string[]; stale: string[]; orphaned: string[] }
-	> = {}
-	for (const locale of collection.locales)
-		perLocale[locale] = { missing: [], stale: [], orphaned: [] }
+	const emptyBuckets = () =>
+		Object.fromEntries(
+			TRANSLATION_GAP_STATUSES.map(status => [status, [] as string[]]),
+		) as Record<TranslationGapStatus, string[]>
+	const perLocale: Record<string, Record<TranslationGapStatus, string[]>> = {}
+	for (const locale of collection.locales) perLocale[locale] = emptyBuckets()
 	for (const gap of [...collection.gaps].sort((a, b) =>
 		a.key < b.key ? -1 : a.key > b.key ? 1 : a.locale < b.locale ? -1 : 1,
 	)) {
-		const bucket = (perLocale[gap.locale] ??= {
-			missing: [],
-			stale: [],
-			orphaned: [],
-		})
+		const bucket = (perLocale[gap.locale] ??= emptyBuckets())
 		bucket[gap.status].push(gap.key)
 	}
 	const report = {
 		sourceLocale: SOURCE_LOCALE,
 		pageLocale: BUILD_I18N.pageLocale,
 		locales: perLocale,
-		counts: {
-			missing: collection.gaps.filter(g => g.status === 'missing').length,
-			stale: collection.gaps.filter(g => g.status === 'stale').length,
-			orphaned: collection.gaps.filter(g => g.status === 'orphaned').length,
-		},
+		counts: Object.fromEntries(
+			TRANSLATION_GAP_STATUSES.map(status => [
+				status,
+				collection.gaps.filter(g => g.status === status).length,
+			]),
+		),
 	}
 	await mkdir(outDir, { recursive: true })
 	await writeFileSafe(

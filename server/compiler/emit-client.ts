@@ -27,7 +27,7 @@ import {
 	FACTORY_CONTEXT_MEMBERS,
 	sanitizeVarName,
 } from './ast-utils'
-import type { Message } from './icu/evaluate'
+import { carriedKinds, type Message } from './icu/evaluate'
 import { literalOf, parseMessage } from './icu/parse'
 import { computeClientNeededNames } from './imports'
 import type { ComponentIR, SignalIR } from './ir'
@@ -383,7 +383,11 @@ const factoryScopeNames = (
  *
  * Narrowing reads the SOURCE patterns: the compiler sees no translation.
  * A translation that uses a construct its source does not (a `plural`
- * where the source interpolates) renders that node empty on the client.
+ * where the source interpolates) throws a private sentinel from the walk,
+ * and that key's accessor formats its source message instead (LT-350,
+ * owner ruling): the wrong language until the catalog is fixed, never
+ * blank. The source parses with exactly the carried kinds, so the
+ * fallback cannot throw again. LT-219's census reports such translations.
  */
 const messagePreambleLines = (
 	component: ComponentIR,
@@ -403,16 +407,7 @@ const messagePreambleLines = (
 		source[key] = literalOf(parsed.message) ?? parsed.message
 		if (parsed.args.length > 0) withArgs.add(key)
 	}
-	const kinds = new Set<string>()
-	const collect = (message: Message): void => {
-		for (const node of message) {
-			if (typeof node === 'string') continue
-			kinds.add(node.t)
-			if (node.t === 'plural' || node.t === 'select')
-				for (const body of Object.values(node.c)) collect(body)
-		}
-	}
-	for (const key of withArgs) collect(source[key] as Message)
+	const kinds = carriedKinds([...withArgs].map(key => source[key] as Message))
 	const lines = [
 		'// Client messages (ADR 0030 s9): the source-locale record, merged under',
 		'// the server-rendered `i18n` attribute and fixed for the connection.',
@@ -472,7 +467,9 @@ const messagePreambleLines = (
 			)
 		if (kinds.has('plural') || kinds.has('select'))
 			cases.push(
-				'\t\t\tdefault: {',
+				...(kinds.has('plural') && kinds.has('select')
+					? ["\t\t\tcase 'plural':", "\t\t\tcase 'select': {"]
+					: [`\t\t\tcase '${kinds.has('plural') ? 'plural' : 'select'}': {`]),
 				'\t\t\t\tconst c = node.c ?? {}',
 				'\t\t\t\tconst own = (key: string) => (Object.hasOwn(c, key) ? c[key] : undefined)',
 				...(kinds.has('plural')
@@ -488,7 +485,10 @@ const messagePreambleLines = (
 				'\t\t\t\tbreak',
 				'\t\t\t}',
 			)
+		// A kind the source does not carry: the accessor falls back (LT-350).
+		cases.push('\t\t\tdefault:', '\t\t\t\tthrow __i18nUncarried')
 		lines.push(
+			'const __i18nUncarried = Symbol()',
 			'const __i18nFormat = (message: __I18nNode[], args: Record<string, unknown>): string => {',
 			"\tlet out = ''",
 			'\tfor (const node of message) {',
@@ -513,7 +513,13 @@ const messagePreambleLines = (
 			lines.push(
 				`\t${member}: (args: Record<string, unknown>): string => {`,
 				`\t\tconst message = ${at}`,
-				"\t\treturn typeof message === 'string' ? message : __i18nFormat(message as __I18nNode[], args)",
+				"\t\tif (typeof message === 'string') return message",
+				'\t\ttry {',
+				'\t\t\treturn __i18nFormat(message as __I18nNode[], args)',
+				'\t\t} catch (error) {',
+				'\t\t\tif (error !== __i18nUncarried) throw error',
+				`\t\t\treturn __i18nFormat(__i18nSource[${JSON.stringify(key)}] as __I18nNode[], args)`,
+				'\t\t}',
 				'\t},',
 			)
 		else

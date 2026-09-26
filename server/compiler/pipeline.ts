@@ -171,6 +171,7 @@ export const compileFromIR = (
 				declaresI18n: component.declaresI18n,
 				langArgDefault: component.langArgDefault,
 				i18nMessages: component.i18nMessages,
+				clientMessageKeys: plan.clientMessageKeys,
 				caseType: component.caseType,
 				renderedShapes: renderedShapesOf(component),
 				composesTags: composeRegistry

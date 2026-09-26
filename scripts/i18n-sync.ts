@@ -23,7 +23,10 @@
  *    orphan (the census's carve-out, LT-217), so a wholesale translation
  *    of a pruned category survives the pass untouched; an undeclared key
  *    is sheltered by no category set and reports — and prunes — in every
- *    locale.
+ *    locale,
+ * 4. every pattern-integrity finding (LT-219: a `malformed` entry, an
+ *    `argument-mismatch`, `missing-arms`, a `client-fallback`) is LISTED and
+ *    left alone — each is a translation only a translator can correct.
  *
  * The corpus scan is the CONFIGURED one (LT-273): `le-truc.config.json`
  * selects the sources, the output root and the catalog directory, exactly
@@ -85,6 +88,7 @@ let confirmedKeys = 0
 let prunedKeys = 0
 const staleKeys: string[] = []
 const orphanKeys: string[] = []
+const flaggedKeys: string[] = []
 
 for (const locale of collection.locales) {
 	const catalogPath = join(config.i18nDir, `${locale}.json`)
@@ -104,6 +108,13 @@ for (const locale of collection.locales) {
 			// every carried key — the translator decides whether the wording
 			// needs rework; the census stops counting it either way.
 			staleKeys.push(`${gap.key} (${locale})`)
+		} else if (gap.status !== 'orphaned') {
+			// A pattern-integrity finding (LT-219): listed, never fixed — the
+			// entry is a translation, and only a translator can say what it
+			// should have been.
+			flaggedKeys.push(
+				`${gap.key} (${locale}): ${gap.status}${gap.detail ? ` — ${gap.detail}` : ''}`,
+			)
 		} else {
 			// Orphaned: pruned. The entry can never render — no component
 			// declares it — so keeping it would be residue the census counts
@@ -155,5 +166,11 @@ if (orphanKeys.length > 0) {
 	console.log(
 		`${prunedKeys} orphaned key(s) PRUNED — nothing in the corpus declares them, so they could never render:\n` +
 			orphanKeys.map(key => `  • ${key}`).join('\n'),
+	)
+}
+if (flaggedKeys.length > 0) {
+	console.log(
+		`${flaggedKeys.length} translation(s) FLAGGED — malformed, argument mismatch, missing plural arms or client fallback; fix them by hand, nothing was changed:\n` +
+			flaggedKeys.map(key => `  • ${key}`).join('\n'),
 	)
 }

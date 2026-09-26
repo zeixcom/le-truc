@@ -48,6 +48,7 @@ const contextFor = (component: ComponentIR): AnalysisContext => {
 		},
 		collectAmbient: () => {},
 		badFreeNames: () => [],
+		badListBodyNames: () => [],
 	}
 }
 
