@@ -16,8 +16,14 @@ import { pathToFileURL } from 'node:url'
 import type { CompileDiagnostic } from '../../compiler/diagnostics'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
-import { bakeMessageEnv, formatMessage } from '../../compiler/icu/evaluate'
+import {
+	bakeMessageEnv,
+	formatMessage,
+	type Message,
+	type MessageEnv,
+} from '../../compiler/icu/evaluate'
 import { parseMessage } from '../../compiler/icu/parse'
+import { CLIENT_MESSAGE, clientMessages } from '../../compiler/runtime'
 import { createSimulationRealm } from '../../compiler/sim/realm'
 import { writeI18nModule } from '../../effects/i18n'
 import { createGeneratedDir } from '../helpers/generated-corpus'
@@ -95,10 +101,21 @@ afterAll(() => generated.cleanup())
 
 await writeI18nModule(generated.path, {
 	locales: ['en', 'de'],
-	sources: new Map([['c-el', MESSAGES]]),
+	sources: new Map([
+		['c-el', MESSAGES],
+		['c-lm', MESSAGES],
+	]),
 	overrides: new Map<string, Record<string, string>>([
 		['en', {}],
-		['de', DE],
+		[
+			'de',
+			{
+				...DE,
+				...Object.fromEntries(
+					Object.entries(DE).map(([k, v]) => [k.replace('c-el', 'c-lm'), v]),
+				),
+			},
+		],
 	]),
 	gaps: [],
 })
@@ -118,12 +135,35 @@ generated.emit('c-el.tsrx.server.ts', tsrx.component.serverCode)
 generated.emit('c-el.tsx.server.ts', tsx.component.serverCode)
 const clientPath = generated.emit('c-el.client.ts', tsrx.component.clientCode)
 
+// The same component under `c-lm`, materializing `de` onto its own root in
+// a client-only setup statement (basic-pluralize's shape).
+const materializing = compileComponent(
+	tsrxSource(
+		body,
+		`${setup}\n\t\tconst pin = (): void => {\n\t\t\tif (!host.getAttribute('lang')) host.setAttribute('lang', 'de')\n\t\t}\n\t\tpin()`,
+	).replace(/c-el/g, 'c-lm'),
+	'c-lm.tsrx',
+	new Set(),
+)
+if (!materializing.component)
+	throw new Error(
+		`c-lm fixture failed to compile: ${materializing.diagnostics.map(d => d.message).join('; ')}`,
+	)
+generated.emit('c-lm.server.ts', materializing.component.serverCode)
+const materializingClientPath = generated.emit(
+	'c-lm.client.ts',
+	materializing.component.clientCode,
+)
+
 type Render = { renderC: (args: unknown) => string }
 const renderTsrx = (await generated.importModule<Render>('c-el.tsrx.server.ts'))
 	.renderC
 const renderTsx = (await generated.importModule<Render>('c-el.tsx.server.ts'))
 	.renderC
 const record = (lang: string) => i18nModule.i18nRecord('c-el', lang)
+const renderMaterializing = (
+	await generated.importModule<Render>('c-lm.server.ts')
+).renderC
 
 /** The decoded value of the rendered root `i18n` attribute, or null. */
 const i18nAttribute = (markup: string): Record<string, unknown> | null => {
@@ -198,8 +238,24 @@ describe('analysis: `t.<key>` in client positions', () => {
 
 describe('server: the root `i18n` attribute', () => {
 	test('carries only client-referenced keys — a folded key stays off it', () => {
-		const attribute = i18nAttribute(renderTsrx({ i18n: record('en') }))
+		const attribute = i18nAttribute(renderTsrx({ i18n: record('de') }))
 		expect(Object.keys(attribute ?? {}).sort()).toEqual(['hi', 'tasks'])
+	})
+
+	test('a source-locale render writes no attribute — every key equals the source', () => {
+		for (const render of [renderTsrx, renderTsx])
+			expect(render({ i18n: record('en') })).not.toContain(' i18n=')
+	})
+
+	test('no serialized message carries a locale (ADR 0030 s6)', () => {
+		const markup = renderTsrx({ i18n: record('de') })
+		expect(markup).toMatch(/ i18n="/)
+		expect(markup).not.toContain('&quot;l&quot;')
+	})
+
+	test('a formatting component with no `lang` of its own renders the locale on its root', () => {
+		expect(renderTsrx({ i18n: record('de') })).toMatch(/^<c-el lang="de"/)
+		expect(renderTsx({ i18n: record('en') })).toMatch(/^<c-el lang="en"/)
 	})
 
 	test('a de render bakes translated, PARSED patterns', () => {
@@ -211,10 +267,10 @@ describe('server: the root `i18n` attribute', () => {
 		expect(JSON.stringify(attribute)).not.toContain('{count, plural')
 	})
 
-	test('both surfaces render identical attribute bytes', () => {
+	test('both surfaces render identical root bytes', () => {
 		for (const lang of ['en', 'de']) {
-			const a = renderTsrx({ i18n: record(lang) }).match(/ i18n="[^"]*"/)?.[0]
-			const b = renderTsx({ i18n: record(lang) }).match(/ i18n="[^"]*"/)?.[0]
+			const a = renderTsrx({ i18n: record(lang) }).match(/^<c-el[^>]*>/)?.[0]
+			const b = renderTsx({ i18n: record(lang) }).match(/^<c-el[^>]*>/)?.[0]
 			expect(a).toBeDefined()
 			expect(b).toBe(a)
 		}
@@ -269,7 +325,7 @@ describe('client-only setup statements and list-item handlers (LT-349)', async (
 			const { renderC } = await generated.importModule<Render>(
 				`c-el.lt349.${surface}.server.ts`,
 			)
-			const attribute = i18nAttribute(renderC({ i18n: record('en') }))
+			const attribute = i18nAttribute(renderC({ i18n: record('de') }))
 			expect(Object.keys(attribute ?? {}).sort()).toEqual(['folded', 'hi'])
 		}
 	})
@@ -309,9 +365,50 @@ describe('baking the record into a serialized message', () => {
 			when: Date.UTC(2026, 0, 2),
 			n: 2,
 		}
-		expect(
-			formatMessage(bakeMessageEnv(parsed.message, env), args, { lang: 'en' }),
-		).toBe(formatMessage(parsed.message, args, env))
+		const baked = bakeMessageEnv(parsed.message, env)
+		expect(JSON.stringify(baked)).not.toContain('"l"')
+		expect(formatMessage(baked, args, { lang: env.lang })).toBe(
+			formatMessage(parsed.message, args, env),
+		)
+	})
+})
+
+describe('leaving out what the source already says', () => {
+	const parsed = (pattern: string) => {
+		const result = parseMessage(pattern)
+		if (!result.ok) throw new Error(result.error)
+		return result.message
+	}
+	const tagged = (message: Message, env: MessageEnv) =>
+		Object.assign(() => '', { [CLIENT_MESSAGE]: { message, env } })
+	const when = parsed('on {when, date, long}')
+
+	test('a message equal to the source form is left out, in any key order', () => {
+		const source = { hi: 'Hi', tasks: parsed(MESSAGES.tasks) }
+		const reversed = (value: unknown): unknown =>
+			Array.isArray(value)
+				? value.map(reversed)
+				: value && typeof value === 'object'
+					? Object.fromEntries(
+							Object.entries(value)
+								.reverse()
+								.map(([k, v]) => [k, reversed(v)]),
+						)
+					: value
+		const reordered = reversed(source.tasks) as Message
+		expect(JSON.stringify(reordered)).not.toBe(JSON.stringify(source.tasks))
+		const t = { hi: 'Hi', tasks: tagged(reordered, { lang: 'en' }) }
+		expect(clientMessages(t, ['hi', 'tasks'], source)).toBeNull()
+		expect(clientMessages({ ...t, hi: 'Hallo' }, ['hi', 'tasks'], source)).toBe(
+			'{"hi":"Hallo"}',
+		)
+	})
+
+	test('a baked `timeZone` keeps a source-locale date message', () => {
+		const t = { when: tagged(when, { lang: 'en', timeZone: 'Europe/Zurich' }) }
+		expect(clientMessages(t, ['when'], { when })).toContain('Europe/Zurich')
+		const bare = { when: tagged(when, { lang: 'en' }) }
+		expect(clientMessages(bare, ['when'], { when })).toBeNull()
 	})
 })
 
@@ -343,6 +440,11 @@ describe('client: connect in the simulation realm', async () => {
 	const realm = createSimulationRealm()
 	afterAll(() => realm.dispose())
 	await realm.load(() => import(pathToFileURL(clientPath).href))
+	const materializingRealm = createSimulationRealm()
+	afterAll(() => materializingRealm.dispose())
+	await materializingRealm.load(
+		() => import(pathToFileURL(materializingClientPath).href),
+	)
 
 	const connect = async (markup: string) => {
 		const result = await realm.render({ markup, component: 'c-el' })
@@ -376,6 +478,24 @@ describe('client: connect in the simulation realm', async () => {
 		)
 		const { html } = await connect(markup)
 		expect(titleOf(html)).toBe('Hi')
+		expect(spanText(html)).toContain('more tasks')
+	})
+
+	test('with no `[lang]` above it, the client formats in the locale the component materializes', async () => {
+		// Stripped of both root attributes and connected with no `[lang]`
+		// ancestor: the source strings, formatted in the `de` the fixture
+		// materializes during setup — read at the first format, not at
+		// connect. A German percent carries a no-break space.
+		const markup = renderMaterializing({ i18n: record('de') }).replace(
+			/ (lang|i18n)="[^"]*"/g,
+			'',
+		)
+		const { html } = await materializingRealm.render({
+			markup,
+			component: 'c-lm',
+		})
+		expect(html).toContain('<c-lm lang="de">')
+		expect(spanText(html)).toContain('(25\u00a0%)')
 		expect(spanText(html)).toContain('more tasks')
 	})
 

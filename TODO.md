@@ -53,7 +53,7 @@ LT-252 → LT-251. LT-253 after LT-252. LT-218 → LT-349 ✓ → LT-219 ✓ (LT
 LT-219 where possible. basic-pluralize's single
 pattern re-evaluates when `count` changes client-side, and only LT-218's channel can do that,
 so LT-252 now waits for it. LT-347 closed the compiler gap LT-218 would otherwise build on. LT-348 removes the false positives it introduced. LT-220 and LT-189 run as one Tech Writer round after
-LT-219, as LT-220's header asks. LT-138, LT-346 and LT-351 (Architect design) are ungated.
+LT-219, as LT-220's header asks. LT-138 is ungated (LT-346 ✓). LT-351 (Architect) ruled 2026-09-30 → LT-354 ✓ (LT-352 follows it) and LT-355 (backlog).
 
 **Deliberately not here.** The ADR 0037 implementation (LT-274–LT-276) and the ADR 0033 CSS
 track (LT-268 → LT-304/LT-306) are the next compiler-heavy candidates. They contend with LT-233
@@ -78,7 +78,7 @@ default (LT-138). Across all of it: warning baseline 0, tier census unchanged fr
 iteration's opening measurement (record it before the first change), and `bun run build:docs`
 and `check:links` pass.
 
-**Next free task ID: LT-354.**
+**Next free task ID: LT-356.**
 
 ---
 
@@ -87,62 +87,6 @@ and `check:links` pass.
 ### Build half (LT-250 → LT-308 → LT-218 → LT-252 → LT-251; LT-253 after LT-252)
 
 ### Client channel (after LT-250; LT-249 lands with LT-219)
-
-- [x] LT-346: Pin the discriminated compose-site check (LT-343 review). — done
-  **Skill:** le-truc-dev
-  **Context:** LT-343 made `JSX.LibraryManagedAttributes` distribute over a union of arg
-  shapes. Without that, a plain `Omit` flattens a discriminated args type, and
-  `<ModuleCodeblock collapsed={true} />` passes tsc silently. The fix was verified with a
-  temporary probe only, so reverting it to `Omit<P, 'i18n'>` would go unnoticed. Add a
-  self-contained negative probe to `fixtures/tsx/` with a local component whose args are a
-  union (no example import, which needs the generated `tsrx-imports.d.ts`). It composes the
-  child once correctly and once missing the discriminated-required key. Wire it into
-  `tsconfig.neg.json` and assert the TS2322 in `typecheck.test.ts`.
-  **Channel:** TypeScript, tier 1 Prevented (a test pin only).
-  **Check:** the new assertion passes; temporarily reverting to `Omit<P, 'i18n'>` fails it.
-
-- [ ] LT-351: Decide what locale a client-created instance speaks, and amend ADR 0030 s6/s9 (LT-218 review; owner, 2026-09-26).
-  **Skill:** architect
-  **Context:** LT-218's channel covers server-rendered instances. The render call knows its
-  locale, bakes it into every formatting node of the messages it serializes (`l`, with
-  `timeZone`/`currency`), and puts those messages in the root `i18n` attribute. The owner
-  ratified that for server-rendered instances ("a component with known lang folds the chosen
-  lang in"). An instance with no server render (no attribute) currently formats in
-  `host.closest('[lang]')` but speaks source-locale strings, per ADR s9's "a client-created
-  instance speaks the source locale". Owner's steer: such instances are created by parents that
-  have a known `lang` (or one of their ancestors does), and that is the locale to use unless the
-  instance has its own `lang` attribute.
-  1. **Inventory first.** When does a client-created instance occur at all? Children cloned
-     from a reactive list's server-rendered `<template>` should already carry the parent
-     render's `i18n` attribute. Verify that. Then look for real `createElement`/`innerHTML`
-     creation of an i18n component in the corpus and the docs examples.
-  2. **Options for the strings,** measured in bytes: (i) source locale, as today; (ii) a
-     per-locale, client-referenced subset module written by the i18n pipeline beside the server
-     `i18n` module (single-file compile stays catalog-free; bytes are keys × locales; also
-     settles LT-350's case at the root); (iv) the attribute for server-rendered instances plus
-     (ii) as the fallback.
-  3. **Amend ADR 0030 s6/s9** (adr-keeper) in one pass: the locale travels inside serialized
-     messages (LT-218's `l`), the client-created rule chosen in item 2, and `formatMessage`'s
-     optional per-node locale (still one evaluator).
-  4. **The attribute's bytes (LT-252 review, 2026-09-26).** LT-252 pinned basic-pluralize at en,
-     count=1: the body shrinks by 37 bytes, but the `i18n` attribute adds 539, so the total goes
-     from 226 to 728 (cy: 373 → 1015). Weigh these levers inside the item 2 ruling, not after it:
-     (a) **escaping**: the raw JSON is 221 bytes; 62 quotes × `&quot;` add 310 of the 531. A
-     single-quoted attribute removes most of that. But the realm and the equivalence audit
-     serialize through jsdom `outerHTML`, which re-emits double quotes, so phase 1 and phase 2
-     would differ in bytes. Normalize there or decline. (b) **the source locale**: at en the
-     attribute equals the inlined `__i18nSource` plus `l`. Omitting a key whose baked form
-     equals the source form is sound only when no date/number node carries a baked
-     `timeZone`/`currency` the client lacks. (c) **`l` per node**: it always equals the root
-     `lang` a server render writes, so it is redundant for the client's `closest('[lang]')`.
-     It was ratified with the channel, so drop it only if the ruling says so. Arm pruning for
-     `ordinal` is **declined**: `ordinal` is a writable exposed prop, so a later
-     `el.ordinal = true` must still find the `selectordinal` arm.
-  5. **ADR 0030 Consequences** (same adr-keeper pass as item 3): "Markup shrinks" is falsified in
-     bytes for a client-reactive message. Restate it as fewer elements and a11y nodes, and move the
-     byte cost of client-reactive messages to the tradeoffs, with LT-252's numbers.
-  **Check:** a ruling recorded in the ADR; a le-truc-dev task if the ruling is (ii) or (iv), or
-  if item 4 adopts a lever.
 
 - [ ] LT-249: Report non-string catalog values — a malformed `i18n/<locale>.json` entry is silent in both the census and sync (LT-217 review falsification). **Survives the LT-240 ruling, and grows a sibling:** ICU adds a second malformed-value class (a string that is not a parseable pattern), handled in LT-219 — land them as one `malformed` family with consistent copy, and drop the "LT-219 placeholder precedent" phrasing below for LT-219's argument-preservation case.
   **Skill:** docs-server-dev
@@ -214,6 +158,12 @@ and `check:links` pass.
      parser adapter, the evaluator, the per-key arg-kind types (LT-308) and the pattern
      diagnostics. Scope the procedure to the data rebaseline and name the compiler swap as its
      own precondition, outside the one commit.
+  7. **LT-354 riders (2026-10-01).** HOST_PROFILE's client-channel paragraph and CHANGELOG
+     `[Unreleased]`: the attribute carries only keys the render locale changes, so a
+     source-locale render usually writes none; serialized messages carry no locale; the root
+     `lang` is the client's only locale source, and the compiler writes it on a component whose
+     client messages format (number, date, plural) but that binds no `lang`. HOST_PROFILE's
+     "a client-created instance speaks the source locale" stays until LT-355 lands.
   **ADR 0037 rider (2026-09-21):** this round also carries the branch-DOM-lifetime copy —
   the HOST_PROFILE control-flow table row and the arrow-thunk section's reversal, the
   ARCHITECTURE/AGENTS "`@if` cannot read signals" sentences, and the new construct's

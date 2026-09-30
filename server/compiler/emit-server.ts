@@ -34,6 +34,8 @@ import {
 	spliceHostDerivedFold,
 } from './evaluability'
 import { i18nAnnotated } from './i18n'
+import { carriedKinds, FORMATTING_KINDS, type Message } from './icu/evaluate'
+import { clientSourceRecord } from './icu/parse'
 import { RUNTIME_HARNESS_EXPORTS } from './imports'
 import type {
 	AttributeIR,
@@ -86,6 +88,7 @@ type Part = { static: string } | { expr: string }
  */
 const EMITTED_HARNESS_NAMES = [
 	'attr',
+	'clientLocale',
 	'clientMessages',
 	'cls',
 	'composeHostAttrs',
@@ -1237,16 +1240,37 @@ export const emitServerModule = (
 		})
 	}
 	// ADR 0030 s9 (LT-218): the client message channel. The render call's
-	// own `t` serializes the client-referenced keys, so each locale bakes
-	// its own messages and a composed child inherits the parent's record
+	// own `t` serializes the client-referenced keys the locale changes
+	// against the preamble's source record, so each locale bakes its own
+	// messages and a composed child inherits the parent's record
 	// unchanged. No keys, no attribute: every other component renders
-	// byte-identical.
+	// byte-identical. The locale is not in the messages (ADR 0030 s6):
+	// a component whose client messages format, and that renders no `lang`
+	// of its own, gets the render locale on its root.
 	const tBinding = component.messageTBindings?.[0]
-	if (options.clientMessageKeys?.length && tBinding) {
+	const clientKeys = options.clientMessageKeys ?? []
+	if (clientKeys.length > 0 && tBinding) {
+		const { source, withArgs } = clientSourceRecord(
+			component.i18nMessages,
+			clientKeys,
+		)
+		const keysText = JSON.stringify(clientKeys)
+		const formats = [
+			...carriedKinds([...withArgs].map(key => source[key] as Message)),
+		].some(kind => FORMATTING_KINDS.has(kind))
+		const rendersLang =
+			(component.declaresI18n && component.langBinding !== null) ||
+			component.root.attrs.some(a => 'name' in a && a.name === 'lang')
 		used.add('attr')
+		if (formats && !rendersLang) {
+			used.add('clientLocale')
+			rootParts.push({
+				expr: `${ctx.h('attr')}('lang', ${ctx.h('clientLocale')}(${tBinding}, ${keysText}))`,
+			})
+		}
 		used.add('clientMessages')
 		rootParts.push({
-			expr: `${ctx.h('attr')}('i18n', ${ctx.h('clientMessages')}(${tBinding}, ${JSON.stringify(options.clientMessageKeys)}))`,
+			expr: `${ctx.h('attr')}('i18n', ${ctx.h('clientMessages')}(${tBinding}, ${keysText}, ${JSON.stringify(source)}))`,
 		})
 	}
 	rootParts.push({ static: '>' })

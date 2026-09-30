@@ -27,8 +27,8 @@ import {
 	FACTORY_CONTEXT_MEMBERS,
 	sanitizeVarName,
 } from './ast-utils'
-import { carriedKinds, type Message } from './icu/evaluate'
-import { literalOf, parseMessage } from './icu/parse'
+import { carriedKinds, FORMATTING_KINDS, type Message } from './icu/evaluate'
+import { clientSourceRecord } from './icu/parse'
 import { computeClientNeededNames } from './imports'
 import type { ComponentIR, SignalIR } from './ir'
 import {
@@ -374,12 +374,17 @@ const factoryScopeNames = (
  * The client message preamble (ADR 0030 s9, LT-218): the factory's own `t`
  * for the keys client positions read. It is the source-locale record the
  * build parsed, merged under the per-instance `i18n` attribute the server
- * rendered, parsed once at connect. A client-created instance has no
- * attribute and speaks the source locale; a malformed one warns in
- * DEV_MODE and falls back the same way. No `@zeix/le-truc` export (ADR 0030
- * s8): the evaluator is `icu/evaluate.ts`'s walk, inlined and narrowed to
- * the node kinds these keys' source patterns use, with one `Intl`
- * formatter per node per connection (the locale is fixed at connect).
+ * rendered, parsed once at connect. The server leaves out every key whose
+ * form equals the source's, so a source-locale render and an instance
+ * created outside a compiled parent carry no attribute and speak the
+ * source record; a malformed one warns in DEV_MODE and falls back the
+ * same way. No `@zeix/le-truc` export (ADR 0030 s8): the evaluator is
+ * `icu/evaluate.ts`'s walk, inlined and narrowed to the node kinds these
+ * keys' source patterns use, with one `Intl` formatter per node per
+ * connection. The locale is the DOM's (ADR 0030 s6): the nearest `[lang]`,
+ * read at the first format rather than at connect, so a locale the
+ * component materializes onto its own root first counts, and fixed for
+ * the connection.
  *
  * Narrowing reads the SOURCE patterns: the compiler sees no translation.
  * A translation that uses a construct its source does not (a `plural`
@@ -395,18 +400,7 @@ const messagePreambleLines = (
 ): string[] => {
 	const tName = component.messageTBindings?.[0]
 	if (!tName || keys.length === 0) return []
-	const source: Record<string, string | Message> = {}
-	const withArgs = new Set<string>()
-	for (const key of keys) {
-		const pattern = component.i18nMessages?.[key] ?? ''
-		const parsed = parseMessage(pattern)
-		if (!parsed.ok) {
-			source[key] = pattern
-			continue
-		}
-		source[key] = literalOf(parsed.message) ?? parsed.message
-		if (parsed.args.length > 0) withArgs.add(key)
-	}
+	const { source, withArgs } = clientSourceRecord(component.i18nMessages, keys)
 	const kinds = carriedKinds([...withArgs].map(key => source[key] as Message))
 	const lines = [
 		'// Client messages (ADR 0030 s9): the source-locale record, merged under',
@@ -426,13 +420,14 @@ const messagePreambleLines = (
 		'}',
 	]
 	if (withArgs.size > 0) {
-		const usesFormatter = ['num', 'date', 'plural', '#'].some(k => kinds.has(k))
+		const usesFormatter = [...kinds].some(k => FORMATTING_KINDS.has(k))
 		lines.push(
-			'type __I18nNode = string | { t: string; a: string; o?: unknown; s?: number; off?: number; l?: string; c?: Record<string, __I18nNode[]> }',
+			'type __I18nNode = string | { t: string; a: string; o?: unknown; s?: number; off?: number; c?: Record<string, __I18nNode[]> }',
 		)
 		if (usesFormatter)
 			lines.push(
-				"const __i18nLang = (host.closest('[lang]') as HTMLElement | null)?.lang || undefined",
+				'let __i18nLocale: string | undefined',
+				"const __i18nLang = (): string | undefined => (__i18nLocale ??= (host.closest('[lang]') as HTMLElement | null)?.lang ?? '') || undefined",
 				'const __i18nFormatters = new WeakMap<object, unknown>()',
 				'const __i18nFormatter = <F>(node: object, make: () => F): F => {',
 				'\tlet formatter = __i18nFormatters.get(node) as F | undefined',
@@ -450,19 +445,19 @@ const messagePreambleLines = (
 		if (kinds.has('num'))
 			cases.push(
 				"\t\t\tcase 'num':",
-				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.NumberFormat(node.l ?? __i18nLang, node.o as Intl.NumberFormatOptions)).format(Number(value) * (node.s ?? 1))',
+				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.NumberFormat(__i18nLang(), node.o as Intl.NumberFormatOptions)).format(Number(value) * (node.s ?? 1))',
 				'\t\t\t\tbreak',
 			)
 		if (kinds.has('date'))
 			cases.push(
 				"\t\t\tcase 'date':",
-				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.DateTimeFormat(node.l ?? __i18nLang, node.o as Intl.DateTimeFormatOptions)).format(new Date(value as number | Date))',
+				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.DateTimeFormat(__i18nLang(), node.o as Intl.DateTimeFormatOptions)).format(new Date(value as number | Date))',
 				'\t\t\t\tbreak',
 			)
 		if (kinds.has('#'))
 			cases.push(
 				"\t\t\tcase '#':",
-				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.NumberFormat(node.l ?? __i18nLang)).format(Number(value) - (node.off ?? 0))',
+				'\t\t\t\tout += __i18nFormatter(node, () => new Intl.NumberFormat(__i18nLang())).format(Number(value) - (node.off ?? 0))',
 				'\t\t\t\tbreak',
 			)
 		if (kinds.has('plural') || kinds.has('select'))
@@ -476,7 +471,7 @@ const messagePreambleLines = (
 					? [
 							"\t\t\t\tconst body = node.t === 'plural'",
 							'\t\t\t\t\t? (own(`=${Number(value)}`) ??',
-							"\t\t\t\t\t\town(__i18nFormatter(node, () => new Intl.PluralRules(node.l ?? __i18nLang, { type: node.o ? 'ordinal' : 'cardinal' })).select(Number(value) - (node.off ?? 0))) ??",
+							"\t\t\t\t\t\town(__i18nFormatter(node, () => new Intl.PluralRules(__i18nLang(), { type: node.o ? 'ordinal' : 'cardinal' })).select(Number(value) - (node.off ?? 0))) ??",
 							'\t\t\t\t\t\tc.other)',
 							'\t\t\t\t\t: (own(String(value)) ?? c.other)',
 						]

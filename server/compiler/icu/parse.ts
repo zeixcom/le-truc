@@ -306,3 +306,31 @@ export const literalOf = (message: Message): string | null => {
 	const [only] = message
 	return message.length === 1 && typeof only === 'string' ? only : null
 }
+
+/**
+ * The client channel's source record for `keys` (ADR 0030 s9): each key's
+ * source pattern as the client reads it — its literal text when
+ * argument-less, else its parsed AST, else (unparseable) the raw pattern.
+ * `emit-client.ts` inlines it as the preamble's `__i18nSource`;
+ * `emit-server.ts` hands the same record to `clientMessages`, which leaves
+ * out every key the attribute would only repeat. `withArgs` names the keys
+ * that take arguments.
+ */
+export const clientSourceRecord = (
+	messages: Readonly<Record<string, string>> | null | undefined,
+	keys: readonly string[],
+): { source: Record<string, string | Message>; withArgs: Set<string> } => {
+	const source: Record<string, string | Message> = {}
+	const withArgs = new Set<string>()
+	for (const key of keys) {
+		const pattern = messages?.[key] ?? ''
+		const parsed = parseMessage(pattern)
+		if (!parsed.ok) {
+			source[key] = pattern
+			continue
+		}
+		source[key] = literalOf(parsed.message) ?? parsed.message
+		if (parsed.args.length > 0) withArgs.add(key)
+	}
+	return { source, withArgs }
+}

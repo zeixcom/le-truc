@@ -96,8 +96,9 @@ export default defineComponent<BasicPluralizeProps>(
 					console.warn("<basic-pluralize>: the i18n attribute is not valid JSON — using the source-locale messages", error)
 			}
 		}
-		type __I18nNode = string | { t: string; a: string; o?: unknown; s?: number; off?: number; l?: string; c?: Record<string, __I18nNode[]> }
-		const __i18nLang = (host.closest('[lang]') as HTMLElement | null)?.lang || undefined
+		type __I18nNode = string | { t: string; a: string; o?: unknown; s?: number; off?: number; c?: Record<string, __I18nNode[]> }
+		let __i18nLocale: string | undefined
+		const __i18nLang = (): string | undefined => (__i18nLocale ??= (host.closest('[lang]') as HTMLElement | null)?.lang ?? '') || undefined
 		const __i18nFormatters = new WeakMap<object, unknown>()
 		const __i18nFormatter = <F>(node: object, make: () => F): F => {
 			let formatter = __i18nFormatters.get(node) as F | undefined
@@ -120,7 +121,7 @@ export default defineComponent<BasicPluralizeProps>(
 						const own = (key: string) => (Object.hasOwn(c, key) ? c[key] : undefined)
 						const body = node.t === 'plural'
 							? (own(\`=\${Number(value)}\`) ??
-								own(__i18nFormatter(node, () => new Intl.PluralRules(node.l ?? __i18nLang, { type: node.o ? 'ordinal' : 'cardinal' })).select(Number(value) - (node.off ?? 0))) ??
+								own(__i18nFormatter(node, () => new Intl.PluralRules(__i18nLang(), { type: node.o ? 'ordinal' : 'cardinal' })).select(Number(value) - (node.off ?? 0))) ??
 								c.other)
 							: (own(String(value)) ?? c.other)
 						if (body) out += __i18nFormat(body, args)

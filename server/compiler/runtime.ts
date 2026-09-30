@@ -395,30 +395,83 @@ export const entries = <T>(
  */
 export { composeHostAttrs } from './compose-attrs'
 
+/** JSON with object keys sorted, so two equal values serialize equal. */
+const canonicalJson = (value: unknown): string =>
+	JSON.stringify(value, (_key, v: unknown) =>
+		v && typeof v === 'object' && !Array.isArray(v)
+			? Object.fromEntries(
+					Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+				)
+			: v,
+	)
+
+/**
+ * The client-referenced messages of this render's `t`: argument-less ones
+ * as their string, the rest as their parsed AST with the record's
+ * `timeZone`/`currency` baked in. A key whose closure carries no AST (a
+ * hand-built record in a test) is left out, as is every key whose form
+ * equals `source`'s — the preamble's inlined record, which the client
+ * falls back to anyway.
+ */
+const pickClientMessages = (
+	t: Readonly<Record<string, unknown>>,
+	keys: readonly string[],
+	source: Readonly<Record<string, unknown>>,
+): Record<string, string | Message> => {
+	const picked: Record<string, string | Message> = {}
+	for (const key of keys) {
+		const value = t[key]
+		let form: string | Message | undefined
+		if (typeof value === 'string') form = value
+		else if (typeof value === 'function') {
+			const tagged = (value as { [CLIENT_MESSAGE]?: ClientMessageSource })[
+				CLIENT_MESSAGE
+			]
+			if (tagged) form = bakeMessageEnv(tagged.message, tagged.env)
+		}
+		if (
+			form !== undefined &&
+			canonicalJson(form) !== canonicalJson(source[key])
+		)
+			picked[key] = form
+	}
+	return picked
+}
+
 /**
  * The per-instance `i18n` attribute's value (ADR 0030 s9, LT-218): the
- * client-referenced keys of this render's `t`, argument-less messages as
- * their string and the rest as their parsed AST with the record's
- * `timeZone`/`currency` baked in. Called per render call, so each locale
- * serializes its own messages. A key whose closure carries no AST (a
- * hand-built record in a test) is left out, and the client falls back to
- * the source record for it. Null when nothing is left, which omits the
+ * client-referenced keys this render's locale changes. Called per render
+ * call, so each locale serializes its own messages; a source-locale render
+ * usually changes none. Null when nothing is left, which omits the
  * attribute.
  */
 export const clientMessages = (
 	t: Readonly<Record<string, unknown>>,
 	keys: readonly string[],
+	source: Readonly<Record<string, unknown>>,
 ): string | null => {
-	const picked: Record<string, string | Message> = {}
+	const picked = pickClientMessages(t, keys, source)
+	return Object.keys(picked).length > 0 ? JSON.stringify(picked) : null
+}
+
+/**
+ * The render locale, for a root `lang` the component does not render
+ * itself (ADR 0030 s6): read off the first client-referenced argument
+ * message's record. Emitted only for a component whose client messages
+ * format (number, date, plural), so the client's `closest('[lang]')` finds
+ * the locale the server folded in even when no ancestor carries it.
+ */
+export const clientLocale = (
+	t: Readonly<Record<string, unknown>>,
+	keys: readonly string[],
+): string | null => {
 	for (const key of keys) {
 		const value = t[key]
-		if (typeof value === 'string') picked[key] = value
-		else if (typeof value === 'function') {
-			const source = (value as { [CLIENT_MESSAGE]?: ClientMessageSource })[
-				CLIENT_MESSAGE
-			]
-			if (source) picked[key] = bakeMessageEnv(source.message, source.env)
-		}
+		if (typeof value !== 'function') continue
+		const tagged = (value as { [CLIENT_MESSAGE]?: ClientMessageSource })[
+			CLIENT_MESSAGE
+		]
+		if (tagged) return tagged.env.lang
 	}
-	return Object.keys(picked).length > 0 ? JSON.stringify(picked) : null
+	return null
 }

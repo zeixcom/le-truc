@@ -11,6 +11,48 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-346: Pin the discriminated compose-site check (LT-343 review). — done ✓
+  **Skill:** le-truc-dev
+  **Changed:** A self-contained negative probe, `fixtures/tsx/discriminated-compose.tsx`, uses a
+  local component with union-typed args. It is wired into `tsconfig.neg.json`, and
+  `typecheck.test.ts` asserts its TS2322. Reverting `JSX.LibraryManagedAttributes` to
+  `Omit<P, 'i18n'>` fails the pin. Test-only; no public surface.
+
+- [x] LT-354: The `i18n` attribute drops the per-node locale and omits source-equal keys (LT-351 ruling, ADR 0030 s6/s9). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** Serialized client messages no longer carry `l`; `bakeMessageEnv` bakes only
+  `timeZone`/`currency`. `clientMessages(t, keys, source)` leaves out keys whose canonical
+  JSON equals the preamble's source record (shared builder `clientSourceRecord`,
+  `icu/parse.ts`), and writes no attribute when none remain. The client preamble reads the
+  locale lazily at first format (`__i18nLang()`), so a locale materialized during setup
+  counts. New runtime helper `clientLocale`. Bytes: basic-pluralize en 728 → 189 (no
+  attribute), cy 1015 → 957. `basic-pluralize.html`'s six locale attributes rebaselined.
+  **Ruling (Architect, 2026-10-01):** the developer's deviation is approved. A component whose
+  client messages format (number, date, plural) and that renders no `lang` of its own gets
+  `lang` from the render locale on its root, written by the compiler. This keeps ADR 0030 s6's
+  "root `lang` is the only carrier" true. It also marks rendered content in its language
+  (WCAG 3.1.2), which an LTC rule forcing authors to bind `lang` for plumbing would not add.
+  `clientLocale` returning null (every formatting key is a plain string in that locale) is
+  correct, because then nothing formats on the client.
+  **Review:** Approved. The render re-allocates and re-canonicalizes the source literal per
+  call. This is build-time only, so it was declined as a nit (hoist it if SSG profiling ever
+  shows it). Docs → LT-220 item 7. The owner still runs the basic-pluralize and form-tokenbox
+  Playwright specs in en and de before the commit.
+
+- [x] LT-351: What locale a client-created instance speaks; ADR 0030 s6/s9 revised (LT-218 review). — reviewed ✓
+  **Skill:** architect
+  **Rulings (owner, 2026-09-30):** (1) A client-created instance speaks its creating parent's
+  locale: the parent's server render bakes the composed child's root `lang` and `i18n` into
+  its template → **LT-355** (today the child is silently dropped from list templates). Created
+  outside any compiled parent: walked locale for formatting, source strings. (2) Per-locale
+  client subset modules declined (async `t`, lookup layer). (3) Byte levers: the per-node `l`
+  is dropped (root `lang` is the only locale carrier) and source-equal keys are omitted →
+  **LT-354**; single-quoting declined (six attributes: 3,591 raw bytes but 309 gzipped;
+  single quotes save 48 gzipped and make bytes serializer-dependent). The `i18n` attribute is
+  an internal format. ADR 0030 Consequences: "Markup shrinks" became "Fewer elements", and the
+  byte cost moved to the tradeoffs. `module-coloreditor.html`'s attribute-less pre-rendered
+  instances → LT-352 rows.
+
 - [x] LT-253: MF2 migration insurance — round-trip fixtures and the documented rebaseline procedure. — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** `server/tests/compiler/mf2-exit.test.ts` (in `bun test server/tests`) walks every

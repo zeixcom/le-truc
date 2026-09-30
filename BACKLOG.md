@@ -288,8 +288,36 @@ iteration's review files follow-ups.
   (page, instance id, tag, args) over a per-component test, so the next hand-copied instance
   is one row. Since LT-252 the table also needs `basic-pluralize.html`'s six locale instances
   (`#welsh-test`, `#german-test`, `#chinese-test`, `#arabic-test`, `#polish-test`,
-  `#latvian-test`). **Channel:** none (a test). **Check:** editing `form-tokenbox.added` in de.json
+  `#latvian-test`). **Runs after LT-354**, which rebaselines these bytes. Add
+  `module-coloreditor.html`'s pre-rendered form-colorgraph and form-spinbutton (`:22`) as rows:
+  they carry no attribute, which is correct at en once LT-354 omits source-equal keys, and the
+  pin keeps it so. **Channel:** none (a test). **Check:** editing `form-tokenbox.added` in de.json
   without touching the page fails the test.
+
+- [ ] LT-355: A composed child inside a reactive-list template is silently dropped — render it, with its root `lang` and `i18n` (LT-351 ruling, ADR 0030 s9).
+  **Skill:** le-truc-dev
+  **Context:** ADR 0030 s9 (revised 2026-09-30) says a client-created instance speaks its
+  creating parent's locale: the parent's server render bakes each composed child's root `lang`
+  and `i18n` into the template it clones from. Today it does not. `validateListBody`
+  (`lower-shared.ts:742-837`) admits a `compose` node nested inside the list output element,
+  and `listTemplateLines` (`emit-server.ts:422-486`) then drops it at `:459` (`kind !== 'element'`).
+  The child vanishes from the served `<template>` with no diagnostic. No corpus component hits
+  this yet (the LT-351 inventory), so a fixture drives it.
+  1. **Render a nested compose in the template** exactly as a rendered occurrence: call the
+     child's `render*()` with its static args at the parent's effective locale (ADR 0030 s3
+     precedence, so a child's own `lang` wins) and emit its full markup, root `lang` and `i18n`
+     included. `cloneNode(true)` (`src/helpers/reactive.ts:831`) keeps both.
+  2. **Reject what cannot be rendered once:** a compose whose args or children read the item
+     hole or any per-item value. That is a new LTC code, tier 1 Prevented, statically decidable,
+     no runtime half, identical on both surfaces (`diagnostic-parity.test.ts`). Tech Writer
+     reviews the copy (developer drafts; add to LT-189's round or its successor).
+  **Pins:** a fixture parent whose list item nests a client-keyed child renders the child's
+  `lang` and `i18n` inside `<template>` at de and none at en (after LT-354); a jsdom pin
+  clones an item and the child formats in de; the item-hole case is the new LTC on both surfaces.
+  **Check:** gates green; server goldens for module-list and tokenbox templates byte-identical
+  (neither nests a compose).
+  **Docs on landing:** `server/compiler/HOST_PROFILE.md` ("A client-created instance speaks the
+  source locale") gets the revised rule; Tech Writer reviews.
 
 - [ ] LT-353: Reject unrecognized `truc:`-namespaced attributes at classification, on both surfaces (LT-251 review).
   **Skill:** le-truc-dev

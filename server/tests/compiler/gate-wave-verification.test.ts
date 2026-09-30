@@ -153,17 +153,22 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		// pruned category spans — `<span class="one">task</span><span hidden
 		// class="other">tasks</span>`, 68 bytes — and no attribute. The pattern
 		// render's body carries ONE span, `<span class="tasks">task</span>`
-		// (31 bytes): the body shrinks by 37. But the client-reactive argument
-		// (`count`) puts the pattern's parsed AST — both the selectordinal and
-		// the plural arm, render locale baked in — on the root `i18n`
-		// attribute (ADR 0030 s9), and that outweighs the spans it retires:
-		// the served total grows by 502 bytes.
+		// (31 bytes): the body shrinks by 37. The client-reactive argument
+		// (`count`) would put the pattern's parsed AST on the root `i18n`
+		// attribute (ADR 0030 s9), but at the source locale it equals the
+		// preamble's inlined source record, so the attribute is left out
+		// (LT-354; LT-252 measured 539 bytes of it, 728 in total).
 		const html = await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(1))
-		const attribute = / i18n="[^"]*"/.exec(html)?.[0] ?? ''
-		expect(Buffer.byteLength(html.replace(attribute, ''))).toBe(226 - 37)
-		expect(Buffer.byteLength(attribute)).toBe(539)
-		expect(Buffer.byteLength(html)).toBe(728)
-		expect(Buffer.byteLength(html) - 226).toBe(502)
+		expect(html).not.toContain(' i18n=')
+		expect(Buffer.byteLength(html)).toBe(226 - 37)
+		// A translated locale still pays for it: cy carries both arms' six
+		// categories. Without a locale per node (ADR 0030 s6) the total is
+		// 957 bytes, down from LT-252's 1015.
+		const welsh = await serverMarkupOf(pluralizeInfo, localeArgs('cy'))
+		const attribute = / i18n="[^"]*"/.exec(welsh)?.[0] ?? ''
+		expect(attribute).not.toContain('&quot;l&quot;')
+		expect(Buffer.byteLength(attribute)).toBe(769)
+		expect(Buffer.byteLength(welsh)).toBe(957)
 	})
 
 	test('LT-252: ordinal selection lives inside the pattern (selectordinal)', async () => {

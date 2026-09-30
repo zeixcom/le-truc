@@ -63,7 +63,12 @@ import { createGeneratedDir } from '../helpers/generated-corpus'
 // `corpus-args.ts` so the equivalence audit (equivalence-audit.test.ts)
 // drives BOTH mechanisms from the identical fixture inputs this file uses —
 // one copy, no drift. Data is unchanged.
-import { CORPUS_ARGS as ARGS, renderName } from './corpus-args'
+import {
+	CORPUS_ARGS as ARGS,
+	argMessage,
+	inlineI18n,
+	renderName,
+} from './corpus-args'
 import { loadCorpus } from './corpus-fixture'
 
 const generated = createGeneratedDir('sim-driver')
@@ -101,13 +106,16 @@ for (const info of compiled) {
 /** One compiled corpus entry, as `compileCorpus` reported it. */
 type CompiledInfo = (typeof compiled)[number]
 
-/** Run the component's server render fn over this file's shared ARGS. */
-const serverMarkupOf = async (info: CompiledInfo): Promise<string> => {
+/** Run the component's server render fn over this file's shared ARGS, or `args`. */
+const serverMarkupOf = async (
+	info: CompiledInfo,
+	args?: Record<string, unknown>,
+): Promise<string> => {
 	const mod = (await import(
 		pathToFileURL(info.serverModulePath).href
 	)) as Record<string, unknown>
 	const renderFn = mod[renderName(info.tag)] as (args: unknown) => string
-	return renderFn(ARGS[info.tag] ?? {})
+	return renderFn(args ?? ARGS[info.tag] ?? {})
 }
 
 /** Parse `markup` into the realm and simulate one connect pass over it. */
@@ -155,13 +163,32 @@ describe('stage-1 server-simulation driver — corpus fixtures (LT-154)', () => 
 	}
 
 	test('form-tokenbox: the client-message attribute stays in the low hundreds of bytes (LT-219)', async () => {
-		// ADR 0030 s9's payload measure: only client-referenced keys ride the
-		// attribute, as parsed ASTs. Tokenbox carries three event-time
-		// messages; the served attribute (entity-escaped, as the page ships
-		// it) must stay small enough that per-instance duplication is noise.
+		// ADR 0030 s9's payload measure: only client-referenced keys the
+		// locale changes ride the attribute, as parsed ASTs. At en every key
+		// equals the source, so there is none (LT-354); at de tokenbox
+		// carries three event-time messages, and the served attribute
+		// (entity-escaped, as the page ships it) must stay small enough that
+		// per-instance duplication is noise.
 		const info = compiled.find(entry => entry.tag === 'form-tokenbox')
 		if (!info) throw new Error('form-tokenbox is not in the corpus')
-		const html = await simulateConnect(realm, info, await serverMarkupOf(info))
+		expect(await serverMarkupOf(info)).not.toContain(' i18n=')
+		const de = {
+			...ARGS['form-tokenbox'],
+			i18n: {
+				...inlineI18n({
+					remove: 'Entfernen',
+					added: argMessage('Token hinzugefügt: {token}', 'de'),
+					removed: argMessage('Token entfernt: {token}', 'de'),
+					duplicate: argMessage('{token} ist bereits in der Liste', 'de'),
+				}),
+				lang: 'de',
+			},
+		}
+		const html = await simulateConnect(
+			realm,
+			info,
+			await serverMarkupOf(info, de),
+		)
 		const served = html.match(/<form-tokenbox[^>]* i18n="([^"]*)"/)?.[1]
 		if (!served) throw new Error('form-tokenbox rendered no i18n attribute')
 		const decoded = JSON.parse(served.replace(/&quot;/g, '"')) as object
