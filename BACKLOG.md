@@ -92,7 +92,8 @@ and the pioneers being Zeix-owned does not change that. Consequently **LT-254, L
 LT-261 all sit behind P6**, and the P1 work that can proceed now is the part that has nothing to
 do with distribution: the seams, the interfaces, and the de-TSRX-ification of a compiler still
 shaped like this repo's internal tool. That part is **LT-271** (carved out of LT-254(c)),
-**LT-263**, **LT-255 + LT-267**, **LT-256** and **LT-265** — the iteration opened in `TODO.md`.
+**LT-263**, **LT-255 + LT-267**, **LT-256** and **LT-265**. All of them have landed and been reviewed
+(history: `CHANGELOG.md [Unreleased]`, `git log`).
 **LT-262 and LT-264 are non-goals for 3.0 and have moved to P7.**
 
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-287, LT-288, LT-274 and LT-276** (ADR 0040, accepted 2026-09-24: every reshape of a published IR type lands before the first publish, or it becomes a 4.0 change).
@@ -139,6 +140,10 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
 
 - [ ] LT-257: Template emission — **the target-emitter interface, with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
   **Skill:** le-truc-dev
+  **Interface carved out (Architect, 2026-10-01):** the interface design is **LT-360**, in
+  `TODO.md`. It runs before LT-274, so that the `conditional` node is built against a decided
+  representation. This entry becomes the build half once LT-360's ADR is accepted. LT-360
+  rewrites it then; until that happens, read the ADR before this text.
   **Context:** ADR 0034 s3. For a CMS, a folded HTML partial and a template are the same
   artifact: a Craft page's props are *content* — arbitrary title text, an entry list — so
   pre-folding per prop signature is combinatorially dead. What folding can do is resolve
@@ -272,10 +277,20 @@ History: `git log -p`, ADR 0030, `CHANGELOG.md` `[Unreleased]`, and the compacte
 handoffs became tasks: **LT-201** (the ADR amendment; done — DONE.md) and **LT-189** (the
 Tech Writer copy round, scope widened).
 
-**Moved to TODO.md 2026-09-25** as the "ICU MessageFormat switch" iteration: the whole chain
-(LT-250, LT-308, LT-252, LT-251, LT-253, LT-218, LT-219, LT-220, LT-189), its P2b gates
-LT-242 and LT-233, and LT-249 and LT-138 from P6. The band is empty until that
-iteration's review files follow-ups.
+**The ICU MessageFormat switch landed 2026-10-01** (iteration opened 2026-09-25: LT-250, LT-308,
+LT-252, LT-251, LT-253, LT-218, LT-219, LT-220, LT-189, with LT-242, LT-233, LT-249 and LT-138).
+The entries below are that iteration's review follow-ups. LT-358 and LT-359 moved to `TODO.md`
+2026-10-01.
+
+**LT-351's byte cost, re-ruled at planning (Architect, 2026-10-01).** The planning input
+quoted basic-pluralize at 226 → 728 bytes (cy 373 → 1015). Those are the LT-252 figures from
+before **LT-354**. After LT-354 a source-locale render writes no attribute (en 728 → 189), and
+cy is 957. ADR 0030's "Markup shrinks" consequence was already corrected to "Fewer elements",
+with the byte cost moved to the tradeoffs (LT-351). The ruling stands: the residual cost is per
+instance, per non-source locale, per adopting component. No lever applies to a single instance
+(single-quoting was declined at 48 bytes gzipped). The one lever left is **deduplicating across
+instances**, and it only pays when a tag repeats on a page. So growth is measured, not argued:
+**LT-362**.
 
 - [ ] LT-352: Pin the hand-copied `i18n` attributes on the examples test pages against the real render (LT-219 review).
   **Skill:** le-truc-dev
@@ -293,6 +308,22 @@ iteration's review files follow-ups.
   they carry no attribute, which is correct at en once LT-354 omits source-equal keys, and the
   pin keeps it so. **Channel:** none (a test). **Check:** editing `form-tokenbox.added` in de.json
   without touching the page fails the test.
+
+- [ ] LT-362: Report client-message bytes per page in the build report, with the dedupe trigger (LT-351 follow-up, re-ruled 2026-10-01).
+  **Skill:** docs-server-dev
+  **Context:** ADR 0030 s9's per-instance `i18n` attribute costs bytes per instance, per
+  non-source locale, per adopting component (basic-pluralize cy: 957 bytes after LT-354). Today
+  the only measurement is one pinned component in `gate-wave-verification.test.ts`, so growth
+  as components adopt the channel is invisible. Add to the build report, per served page: the
+  total raw and gzipped bytes of `i18n` attributes, and the largest repeat (the same tag with
+  byte-identical attributes, N instances). **Trigger, recorded here so nobody has to argue it
+  later:** when any served page carries the same tag's identical attribute on 3 or more
+  instances, or the page's `i18n` attributes exceed 2 kB gzipped, the Architect opens the
+  cross-instance dedupe design (one per-page, per-tag carrier that the instances reference). Per-locale client modules stay
+  declined (LT-351 ruling 2). **Channel:** build report (not a warning, no code); the warning
+  baseline is untouched.
+  **Check:** the report lists basic-pluralize's test page at cy with the LT-354 byte figure. A
+  fixture page with three identical instances shows the repeat.
 
 - [ ] LT-355: A composed child inside a reactive-list template is silently dropped — render it, with its root `lang` and `i18n` (LT-351 ruling, ADR 0030 s9).
   **Skill:** le-truc-dev
@@ -356,39 +387,13 @@ iteration's review files follow-ups.
   leaves the file byte-identical and exits non-zero naming it; committed catalogs are
   unaffected. **Copy:** Tech Writer (batch with LT-189 item 8 if still open).
 
-- [ ] LT-358: LT-189 review follow-ups — coverage and signature gaps behind the reworded diagnostics.
-  **Skill:** le-truc-dev
-  **Context:** Three gaps in the LT-189 diff, none a copy question. (a) The `.tsx`
-  `boundaryAsLoopRoot` guard in `frontend/tsx/lower-tsx.ts` (`lowerFor`) has no test. Pin it
-  (block and expression bodies), and decide `.tsrx` parity: `@try` as an `@for` body root
-  must get the same LTC053 rule, with a `diagnostic-parity.test.ts` case, or be recorded as
-  intentionally surface-specific. (b) `formContextMismatch` (LTC050) receives no source offset,
-  so the report has no line. Thread the annotation's offset in, as LTC049 now does. (c)
-  `reportServerOnlyNames` routes a non-literal `i18n.t.<key>` read (the record spelling) to
-  the generic "read the value through an exposed prop" fix, because the bad name is the
-  record binding, not a `messageTBindings` entry. Route record-spelled `t` reads to the
-  literal-key sentence too. Tier 1 throughout, compiler channel; copy stays Tech Writer's.
-
-- [ ] LT-359: LT-189/LT-220 review follow-ups — copy corrections.
-  **Skill:** tech-writer
-  **Context:** (a) `serverOnlyNames` says the read "would throw at connect". A handler throws
-  when it runs, not at connect, so word the mechanism position-neutrally (e.g. "throws when the
-  client runs it"), and update the parity pins. (b) CHANGELOG `[Unreleased]`'s ICU bullet
-  says per-category keys and `truc:case` removal is a **Breaking change**. Neither shipped in
-  a release (2.6.0 has no i18n), so drop the breaking-change clause. (c) Compiler copy cites
-  "ADR 0023" for the supported subset, composition (s10), config (s8) and async boundaries
-  (s13), but `adr/0023` is the bind-helper map-form ADR. The compiler ADR was renumbered or
-  purged in `9ccb22e1` ("ADR purge & alignment pass"). Ask the Architect which ADR now carries
-  those sub-designs, then sweep `diagnostics.ts`, the call sites, `errors.md` and the CHANGELOG
-  line. (d) ADR 0028's inventory table: add LTC055 and the LTC053 loop-root case, via
-  `adr-keeper`. (e) Carry LT-356's copy rider here.
-
 ---
 
 ## P2b — Compiler product-readiness: equivalence contract, consolidation, library substitutions (external review + reflection, 2026-09-18)
 
 **Provenance:** [COMPILER_REVIEW.md](https://github.com/zeixcom/le-truc/blob/6d0544a6/COMPILER_REVIEW.md) — an external review of all of
-`server/compiler/` (46 modules, ~21.9k lines) by Claude Opus, evaluated by the Architect
+`server/compiler/` (46 modules, ~21.9k lines **at the 2026-09-18 snapshot**; 69 / ~27.0k when
+re-measured 2026-10-01 — re-measure, never cite either as current) by Claude Opus, evaluated by the Architect
 2026-09-18. **The review held up:** all four correctness findings (§1) were independently
 verified against the source (two by direct read — the `offenders`-array truthiness bug at
 `frontend/tsx/lower-tsx.ts:641`, the `resolveComposeRefs` IR mutation at
@@ -423,180 +428,11 @@ redundant traversals (not a measured problem; a second implicit-consistency cont
 disease being treated) and restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into
 LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
 
-- [ ] LT-227: Split `runLoops` and `runHarvest` at their existing pass banners.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.1. `runLoops` (433 lines) is two unrelated algorithms separated
-  by a `// --- Pass 1b` banner → `runEachLoops`/`runReconcileLoops`. `runHarvest` (628)
-  Pass 2 (~240–378) already produces the `Site[]` + `thunkRendered` that Pass 3 consumes
-  — make it a return type: `collectRenderSites`/`planHarvests`.
-  **Verification:** goldens + parity byte-identical; full gates green.
-
-- [ ] LT-228: Split `ast-utils.ts` into `vocabulary.ts` + `ast-utils.ts`.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.2 tail. A ~420-line name-table module (~17–438) and an
-  AST-helper module (~442–765) share one file, and DOM knowledge
-  (`DIRTY_FLAG_CONTROL_TAGS`) that is emitter business sits in the shared layer — move it
-  emitter-side. Primes LT-232 (derive the subsets) and gives LT-229/LT-231 homes named
-  for what they hold.
-  **Verification:** goldens + parity byte-identical; typecheck (import paths move); full
-  gates green.
-
-- [ ] LT-229: One shared estree walk on `eslint-visitor-keys` — retire the twelve hand-rolled skip-lists (reflection §5 supersedes the review's author-it-yourself item 10).
-  **Skill:** le-truc-dev
-  **Context:** Review §2.4/§3 item 10, re-pointed by reflection §5: where a maintained library
-  already IS the shared thing, adopt it instead of writing version twelve. Twelve
-  `Object.entries` walks (`module-scans.ts`
-  ×3 — ex-`front-end.ts`, LT-224,
-  `analysis/reactivity.ts`, `evaluability.ts` ×3 — compiler root, not `analysis/`,
-  `analysis/tier.ts`, `ast-utils.ts`, `frontend/tsrx/compiler.ts`, `analysis/harvest.ts`
-  ×2) carry five different skip-lists; only `ast-utils.ts:676` skips type positions
-  today. **Re-frame under the framework premise: external users author TSX constructs the
-  corpus never saw — the skip policy is exactly where hand-rolled answers break, and
-  `eslint-visitor-keys` is that answer, maintained against every estree node type.** The
-  shared walk takes its key set from `eslint-visitor-keys` (walker body may still be
-  `estree-walker`/`zimmerframe` or ~30 lines in-house — the KEYS are the borrowed part);
-  EACH site migrates
-  preserving its current behavior, and converging divergent answers (notably: do we
-  descend into type positions?) is an explicit per-site decision with a test or a stated
-  no-op rationale — silently converging could change analyses. Migrating
-  `reportLeTrucImportMismatch`'s inner visit (`module-scans.ts`) onto the shared walk fixes
-  a latent bug for free: the copy lacks the `ForStatement`/`ForOfStatement`/`CatchClause`
-  cases `freeIdentifiers` later grew — pin the corrected behavior. Browser purity (M25):
-  `eslint-visitor-keys` is pure data — confirm no node-only import path before adopting.
-  **Verification:** goldens + parity byte-identical; the import-mismatch pin; full gates.
-
-- [ ] LT-243: Adopt `@typescript-eslint/typescript-estree` for `to-estree.ts` (reflection §5 — the highest-leverage single swap).
-  **Skill:** le-truc-dev
-  **Context:** Reflection §5 table, rank 1: `frontend/tsx/to-estree.ts` (848 lines) re-implements
-  exactly what `@typescript-eslint/typescript-estree` maintains — converting the `typescript`
-  AST to ESTree, against every `typescript` major. This retires ADR 0032's stated "Bad"
-  consequence ("the converter must track `typescript`-major AST drift"). **The framework premise
-  is what makes it urgent rather than tidy:** the corpus is 22 components the converter was
-  written against; thousands of users authoring arbitrary TSX is precisely the input surface
-  where a hand-written converter's coverage gaps become the support burden — and its bugs miscompile
-  silently, the class COMPILER_REVIEW §1 exists to police. Both parser upgrades are reviewed
-  changes per REQUIREMENTS §5; treat this as one (a devDependency swap, build-time only,
-  browser-pure — typescript-estree is pure JS, confirm no node-only path).
-  **How:** map the lowerings' consumed node shapes first (the converter's output feeds the
-  shared lowerers; the swap must preserve those shapes or adapt them behind `to-estree.ts`'s
-  existing interface so no caller changes). Keep the module boundary — callers consume
-  `to-estree.ts`, not the library.
-  **Verification:** goldens + parity byte-identical for the corpus; the estree fixtures in
-  `server/tests/compiler/` green unchanged; the four `.tsx` tsc gates keep their exit codes;
-  full gates green; `scripts/build-tsrx-browser.ts` smoke (browser purity) green.
-  **Check:** the pinned `typescript` version ↔ typescript-estree compatibility matrix — record
-  the supported range in the module doc so the next `typescript` bump knows what to verify.
-
-- [ ] LT-231: Collapse the hand-maintained compiler vocabularies (review §2.5).
-  **Skill:** le-truc-dev
-  **Context:** Five divergent "names the client can resolve" lists (`analysis/plan.ts:546`;
-  `analysis/loops.ts:98` — missing `plainLocalNames`/`clientLeTrucNames`/`isPending`;
-  `loops.ts:384`; `analysis/harvest.ts:579`; the inverse at `plan.ts:614`) plus six
-  copies of the user-facing message string; four subtly different "is this a signal read"
-  answers (`harvest.ts:38`, `analysis/reactivity.ts:160`, `harvest.ts:163`,
-  `ast-utils.ts:461`); `refOf` defined at `effects.ts:633` then hand-inlined at
-  `:983`/`:1603`; three "element has its own client construct" versions, one
-  (`loops.ts:194`) a hand-written kind list missing `style-map`/`pass`/reactive
-  `html`/`server`+`bindsProp`. One function per question. Where convergence changes an
-  answer (the `loops.ts` lists look like false-rejection bugs), the corpus must stay
-  byte-identical and warning-0 — pin each converged answer on synthetic fixtures so the
-  fix is visible. **Reflection §5 addition:** the `freeIdentifiers` fork (a scope-analysis
-  fork that never received a known bug fix — it lacks the `ForStatement`/`ForOfStatement`/
-  `CatchClause` cases the original grew; LT-229's walk migration fixes the *import-mismatch
-  copy*, not this one) evaluates `@typescript-eslint/scope-manager`/`eslint-scope` (~−300
-  lines, and a maintained scope manager cannot have that class of gap) against collapsing
-  in-house — pick one in the handoff with the reasoning stated; a library adoption here is
-  a reviewed dependency change per REQUIREMENTS §5, same as LT-243.
-  **Verification:** goldens + parity byte-identical; warning baseline 0; census unchanged from the iteration baseline;
-  synthetic pins for each converged answer.
-
-- [ ] LT-245: Spike `css-select` + `parse5` for the structural-uniqueness proof; a real selector parser for `selector-syntax.ts` if the pattern holds.
-  **Skill:** le-truc-dev
-  **Context:** Reflection §5 table, rank 4 — and the one wave-3 substitution that needs a spike
-  before commitment. The structural-uniqueness proof (the moat: `first()` selector synthesis,
-  exclusivity, cardinality) currently walks the IR/template by hand in five near-identical
-  copies in `analysis/selectors.ts` (590 lines) that disagree on max-vs-sum and pending-arm
-  handling (COMPILER_REVIEW §2.4; the soil LT-221's probe grew in). **Alternative shape: parse
-  the markup the emitter itself produces** and query it with a real CSS engine (`css-select`;
-  parse5 is already a dep) — the same question answered with far less machinery, dissolving the
-  per-callsite re-litigation the hand walks cause. **Needs care, stated up front:** the proof is
-  over the template INCLUDING unrendered branches, so branch arms must be materialized for the
-  probe; and the proof reasons about constructs (compose sites, `@for` items) that have no
-  DOM-bytes existence until render — the spike must show the materialized-probe model covers
-  those before any GO. If the pattern holds, the same substitution covers
-  `selector-syntax.ts` + `parseSimpleSelector`'s subset via `postcss-selector-parser`/`css-what`
-  (~−250 lines) — the subset is currently the limiting factor on what `first()` can verify
-  (descendant combinators, `:not()` are "cannot verify"); a real parser widens verification and
-  shrinks code at once. Browser purity (M25): css-select/css-what/postcss-selector-parser are
-  pure JS — confirm before adopting.
-  **Deliverable:** spike findings + a GO/NO-GO ruling recorded here; if GO, implementation
-  tasks with the per-site behavior-preservation discipline the other swaps carry.
-  **Verification (spike):** the corpus's structural-uniqueness answers are reproduced
-  identically for all 22 components (a differential harness: old walks vs materialized probe);
-  goldens byte-identical; full gates.
-
-- [ ] LT-230: Route the sixteen `TemplateNode` walks through `walk.ts`; settle the `pendingChildren` policy once.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.4/§3 item 11. Sixteen hand-rolled template walks against a
-  `walk.ts` whose authorized-exception list (`walk.ts:11`) is shorter than the actual
-  list; five exclusivity-aware cascades in `analysis/selectors.ts` alone disagree on
-  max-vs-sum and pending-arm handling — the soil the §1.4 adjacent gap grew in. Route
-  them through `walk.ts` (keeping per-site aggregation semantics), narrow the
-  authorized-exception list to what genuinely remains (walks whose recursion IS the
-  semantics), and record ONE policy for `pendingChildren` arms, informed by LT-221's
-  probe. **The five `analysis/selectors.ts` cascades ride LT-245's outcome**: a css-select
-  GO replaces them wholesale (the library owns the traversal); a NO-GO keeps them here on
-  the shared walk. Sequence after LT-245's ruling either way.
-  **Verification:** goldens + parity byte-identical; the LT-221 probe still pins; full
-  gates.
-
-- [ ] LT-232: Derive the name-set subsets; extend the parity test.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.5/§3 item 13. `REAL_EXPORT_NAMES` duplicates
-  `SIGNAL_CONSTRUCTORS` and `PARSER_FACTORIES` entry-for-entry (its own comment admits
-  "hand-maintained against the barrel"); `MUTABLE_SIGNAL_CONSTRUCTORS` is a hand-copied
-  subset living in `setup-extraction.ts` (ex-`front-end.ts:427`, LT-224). Derive subsets from supersets; relocate the
-  mutable set beside `SIGNAL_CONSTRUCTORS` (post-LT-228: into `vocabulary.ts`); extend
-  `globals.test.ts`'s parity test (only `FACTORY_CONTEXT_MEMBER_NAMES` has one) to pin
-  every set against the `@tsrx/core` barrel.
-  **Verification:** typecheck; the extended parity test; goldens + parity
-  byte-identical.
-
-- [ ] LT-234: Shared code-generation kit — `CodeBuilder`, `jsString()`/`jsTemplate()`, `HtmlWriter`, `commonIndent()`.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.8/§3 items 15–16. `emit-server.ts` interpolates `${tab(depth)}`
-  ~60 times with every call site hand-managing depth; `emit-client.ts` runs 33
-  consecutive `append` calls with trailing commas written as string suffixes; escaping is
-  three functions plus bare `JSON.stringify` plus raw interpolation — the inconsistency
-  behind §1.2/§1.3, which LT-221 point-fixed and this task closes structurally (migrate
-  those point-fixes onto `jsString()`). Extract: a `CodeBuilder` owning
-  lines/depth/open/close (making the three copied `cursor.offset` bookkeeping sites —
-  `emit-client.ts:227/279/611` — an invariant); the `jsString`/`jsTemplate` pair as THE
-  sanctioned way to put an author string into generated source; an `HtmlWriter`
-  generalising the existing private `Part[]`/`pushArgument` model
-  (`emit-server.ts:70/79`); and `commonIndent()` shared by `spans.ts`'s twin
-  computations (differing only in whether line 0 participates — make it a parameter).
-  Give the server emitter the client's reserved-name policy: it mints
-  `__html`/`__arm${n}`/`__async${n}`/`__children${n}`/`__key` with no collision check
-  against author names (an author `const __html` shadows the buffer and confuses
-  `retainReferenced`'s token match). Channel/tier note (ADR 0028): compiler-internal
-  naming policy — it renames, it does not error; no new runtime check, no new TSRX code.
-  **Verification:** goldens byte-identical for the corpus (escaping output must not
-  change for legal inputs); a pin that an author `__html` no longer collides; full gates
-  green.
-
-- [ ] LT-247: Adopt `magic-string` under `spans.ts` (reflection §5).
-  **Skill:** le-truc-dev
-  **Context:** Reflection §5 table: replaces `spans.ts`'s hand bookkeeping (~−150 lines) and
-  buys **real source maps free** — which M25's span-table remapping and the playground
-  (ADR 0025, Proposed) both want eventually. Runs after LT-234 (which settles `CodeBuilder`
-  and `commonIndent()` so this swap touches one settled surface, not two in-flight ones).
-  **Demand note, stated so this doesn't jump the queue:** the payoff is contingent — source
-  maps matter when editor/playground tooling consumes them, and ADR 0025 is Proposed. Do it
-  when that demand arrives OR as a small output-neutral swap if it retires code without
-  changing bytes; goldens byte-identical is the gate either way.
-  **Verification:** goldens + parity byte-identical; the span table's remapped positions
-  unchanged on a diagnostic-sample fixture; full gates.
+**Moved to TODO.md 2026-10-01** (owner input: consolidation kept losing to feature work):
+LT-227–LT-232, LT-234, LT-243–LT-245, LT-247, LT-287–LT-289, and from the CSS track LT-268,
+LT-304, LT-306 and LT-248. LT-246 stays here until the census format settles after LT-274. The
+reflection's line-count claims ("2.5–4k lines") are 2026-09-18 estimates. The iteration
+records the actual net delta.
 
 - [ ] LT-246: Make tier contamination legible at the compose edge — the census names the re-routing edge.
   **Skill:** le-truc-dev
@@ -614,134 +450,7 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   census reason; the corpus census stays 20/2/0 with reasons extended, not changed; goldens
   byte-identical (census text is not emitted code); full gates.
 
-- [ ] LT-244: Relocate `ExtractContext` out of `ir.ts` (LT-235 item (e); review §2.6/§3 item 19 — carved out of the design session).
-  **Skill:** le-truc-dev
-  **Context:** Reflection §6's "cheap way to keep the option," worth doing on its own merits and
-  ahead of LT-235's full session. `ir.ts` is documented as a pure-type leaf — "a serializable
-  `ComponentIR`" — and `ExtractContext` (front-end mutable state WITH function members) is the
-  one violation. Evicting it (to `setup-extraction.ts` or its own module, beside its only
-  consumers) restores the leaf property: the IR becomes a serializable data structure again,
-  which preserves the native-rewrite option for free (reflection §6) and is a precondition for
-  wave-4's type-level contracts treating the IR as data.
-  **Verification:** typecheck (import moves); goldens + parity byte-identical; `ir.ts` imports
-  no function-bearing front-end state (grep pin); full gates green.
-
-- [ ] LT-287: SignalIR → three members by constructor family (LT-235 item (c); ADR 0040 s2). **Gates LT-254** (ADR 0040, accepted 2026-09-24: a published IR type).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
-  (owner rulings, LT-235 grilling 2026-09-21). `SignalIR` splits into `DeclaredSignalIR`
-  (`createCell`/`createState`/`createList`/`createStore` — init is the initializer),
-  `DerivedSignalIR` (`deriveCell`/`deriveList`/`deriveStore`/`createMemo` — init is the derive
-  expression) and `ContextSignalIR` (`requestContext` — carries the fallback node and its
-  verbatim text; the `null`-everywhere-else `fallbackText` field dies). `constructor` stays as
-  a field narrowed within each member, so exact-constructor dispatch (reactive `@for`'s
-  `createList` requirement) keeps working. The hand-rolled special-case sites become
-  narrowings: the two `emit-client.ts` requestContext skips, the three `emit-server.ts`
-  substitution sites, `harvest.ts`'s no-seed skip and derive grouping, and `effects.ts`'s
-  deriveCell case.
-  **Check:** goldens + parity byte-identical (type-level only); `bun test server/tests`,
-  typecheck, warning baseline 0.
-  **Doc handoff (LT-235 review):** flip the LE_TRUC_COMPILER.md §4 `SignalIR` passage from *target
-  shape* to present tense in the same commit.
-
-- [ ] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (LT-235 item (d); ADR 0040 s4). **Gates LT-254** (ADR 0040, accepted 2026-09-24: a published IR type).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
-  s4. The four parallel `first()` collections (`refReasons`, `unmatchedOptionalRefs`,
-  `deferredComposeRefs`, `optionalRefs` — a Map, two differently-shaped arrays, a Set)
-  consolidate into one `FirstRefDecl` (name, selector, required, reason, resolution stage,
-  offset) in a name-keyed Map — the resolution stage is data, not a different shape. The seven
-  `expose()` fields split into `expose: ExposeStmt | null` (text, range, argNode, ambients —
-  four views of the one call) and one per-prop `ReadonlyMap<string, ExposePropDecl>` (kind,
-  signalName?, parser?) — `exposeProps`/`exposeKinds`/`parserExposeProps` merge.
-  `RegistryEntry.exposedProps` is a projection and unchanged. The
-  `setup`/`plainSetup`/`clientSetup`/`signals` arrays stay as-is — ADR 0040's explicit
-  exclusion (behavior-bearing emission contracts, not redundancy). Hottest consumer is
-  `template-output.ts`; keep its lookups O(1) via the Map.
-  **Check:** goldens + parity byte-identical; `bun test server/tests`, typecheck, warning
-  baseline 0, census unchanged from the iteration baseline.
-
-- [ ] LT-289: Typed pass contracts — functional passes over `PassShared` (LT-235 item (f); ADR 0040 s5).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
-  s5 — the review's "one item that is design work rather than refactoring"; the design is now
-  recorded, this task lands it. The order-carrying accumulators (queries, usedNames, ambient,
-  childTags, refNames, diagnostics — byte-stable query order is their documented invariant)
-  become an explicitly typed `PassShared` environment; each pass's productions become return
-  values the next pass receives as REQUIRED parameters (`runLoops(shared) → LoopPlans`;
-  `runHarvest(shared, loopPlans) → HarvestPlans`; `runEffects(shared, loopPlans, harvests) →
-  EffectPlans`), so harvest-before-loops is a compile error in `analyzeClient` and "harvest
-  read an empty `forPlans` map" is unrepresentable. `resolveComposeRefs` returns a typed
-  `{ mode: 'resolved' | 'skipped' }` so a missing `composeRegistry` must be acknowledged;
-  `ambiguousComposeNodes` stays the already-reported channel, carried on the resolved result.
-  The `diagnostics` threading is deliberately untouched (ADR 0040's accepted tradeoff).
-  LT-226's EffectsContext extraction is the structural pattern.
-  **Check:** goldens + parity byte-identical; a harness calling `runHarvest` without
-  `loopPlans` fails typecheck; `bun test server/tests`, typecheck, warning baseline 0.
-  **Doc handoff (LT-235 review):** flip the LE_TRUC_COMPILER.md §4 pass-order passage from *target
-  shape* to present tense in the same commit.
-
 ---
-
-- [ ] LT-268: Parse the authored stylesheet in the compiler — the `lightningcss` swap for `css.ts` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s9). **Ships in 3.0.** Prerequisite of LT-304, LT-214, LT-269, LT-270.
-  **Skill:** le-truc-dev (Tech Writer owns the message copy)
-  **Context:** `server/compiler/css.ts` dedents and emits verbatim; the compiler holds **no
-  model of the CSS at all**. `lightningcss` is **already a devDependency and already the
-  build's CSS effect** (`server/effects/css.ts`). Parse the component's sheet and make its
-  rules, selectors and at-rules reachable from the IR. **Spec-grammar validation of authored
-  CSS (unknown property, invalid unit, malformed value) rides this swap**: channel compiler,
-  **tier 1 Prevented** (ADR 0028 s1), since a malformed sheet has no correct emission.
-  Evaluate `css-tree`'s `lexer.matchProperty` only where per-declaration diagnostics are
-  wanted rather than a whole-sheet parse failure. This task adds the model and changes no
-  output; the scoped emission and the `cssTargets` key are LT-304's.
-  **Check:** emitted CSS stays **byte-identical** for every corpus component; a fixture with
-  an invalid unit fails the build with the ruled copy; M25 browser-purity review of the
-  dependency, as LT-245 does for its candidates.
-
-- [ ] LT-304: Scoped emission of shadow-root-form CSS — native `@scope` or the `:where(:not(…))` lowering, per `cssTargets` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s1–s7). **Ships in 3.0. Depends on LT-268; lands together with LT-306** (the corpus migration), since the old tag-led form becomes an error.
-  **Skill:** le-truc-dev (Tech Writer owns the new LTC copy; LT-248 is the docs half)
-  **Context:** Owner ruling 2026-09-24. A compiled sheet is authored as shadow-root CSS
-  (`:host` plus bare selectors) and the compiler gives it shadow-root scoping in light DOM.
-  (1) **`cssTargets`**: a browserslist-style key in `le-truc.config.json` (ADR 0036
-  validation rules apply), default Baseline widely available, also fed to `lightningcss`'s
-  own lowering. (2) **Boundary**: every custom-element tag the lowered template renders,
-  composed and raw dashed tags alike. (3) **Native**: wrap the sheet in
-  `@scope (my-element) to (<tag> > *, …)`, or `@scope (my-element)` for a leaf; emit
-  `:host` as `:where(:scope)` and `:host(<sel>)` as `:where(:scope:is(<sel>))`; hoist
-  `@keyframes`/`@font-face`/`@property` out unchanged. (4) **Lowered**: flat selectors led
-  by the tag with a zero-specificity guard per boundary tag, e.g.
-  `my-element .input:where(:not(my-element form-listbox > *, my-element form-listbox > * *))`,
-  and `:host` as `:where(my-element)`. (5) **New tier 1 errors** (channel compiler, tier 1
-  Prevented; next free LTC codes after LTC053): a rule led by the component's own tag
-  (fix-it: `:host`), `::slotted()` in a light-DOM component, `:host-context()` anywhere
-  (removed from the spec), and every `:global` form except the two whole-rule forms. (5a)
-  **`:global`** (s6a): top-level `:global(<whole selector>) { … }` and `:global { … }`
-  blocks are hoisted out of the scope verbatim; nested blocks, prefixed,
-  trailing (fix-it: plain compound), leading-ancestor and mid-selector forms are the tier 1
-  errors above, each with its own reason in the copy. (6)
-  **Served CSS**: where a folder serves a compiled surface, the page imports the compiler's
-  emitted CSS; the `.ts` twin's hand-written `.css` is served only with the twin (s10).
-  **Check:** a fixture per contract point in s1/s3 compares the compiled light-DOM output
-  with the same sheet inside a real shadow root: the host rule loses to a page type
-  selector in both, and a parent rule never reaches a composed child's internals in
-  either; a `:global` rule is emitted outside the scope in both modes; fixtures pin the s7 differences (inward reach, page-authored children, and the
-  three lowering differences); the corpus Playwright specs pass once per mode (override
-  `cssTargets`); each new error fires on its fixture; LTC051 still compares authored
-  sheets; corpus warning baseline 0.
-
-- [ ] LT-306: Migrate every compiled corpus stylesheet to the shadow-root form (ADR 0033 s2) and split the twins' CSS (s10). **Ships in 3.0. Lands together with LT-304.**
-  **Skill:** le-truc-dev
-  **Context:** Every compiled sheet (`.tsx` and `.tsrx`, both members of a variant set
-  identically) moves from tag-led nesting (`my-element { … & .x { … } }`) to `:host { … }`
-  plus bare rules, and drops the defensive `>` chains that only guarded against downward
-  leakage, keeping a `>` where it expresses real intent (direct children only). Write it as
-  a codemod over the parsed sheet (LT-268) rather than by hand, and keep it for pioneer
-  projects. `module-dialog`'s `body.scroll-lock` becomes `:global(body.scroll-lock)`.
-  The `.ts` twins' hand-written `.css` files stay tag-led and verbatim; point
-  `examples/main.css` at the emitted CSS for every folder whose served surface is compiled.
-  **Check:** the served pages render pixel-identically before and after where no leak was
-  present (Playwright screenshot comparison per example, both CSS modes); LTC051 green
-  across every variant set; no compiled sheet contains a rule led by its own tag.
 
 - [ ] LT-305: Baseline guard — fail the build when shipped code needs a feature newer than the pinned baseline (REQUIREMENTS § Browser support). **Ships in 3.0.**
   **Skill:** le-truc-dev
@@ -942,52 +651,13 @@ LT-222). The review's "LT-222+" numbering assumed LT-221 was taken; it wasn't.
   selector warns; the three child selectors stay silent; the simulation serialization pin holds;
   the zero-warning gate holds.
 
-- [ ] LT-248: Document compiled-component style scoping (ADR 0033, accepted 2026-09-24) where users read.
-  **Skill:** tech-writer
-  **Context:** Re-scoped by the ADR 0033 ruling: the doc obligation is no longer "scoped by
-  tag name, a known limit" but the ruled model. `docs-src/pages/styling.md`'s compiled-component
-  callout and `server/compiler/HOST_PROFILE.md` § Styles (including its selector-enforcement
-  open question, now answered) state: a compiled sheet is shadow-root CSS (`:host` plus bare
-  selectors), scoped in light DOM so rules stop at every custom element the template renders,
-  emitted as native `@scope` or a `:where(:not(…))` lowering per `cssTargets`; host rules lose
-  to page styles, as in a shadow root; defensive `>` chains are no longer needed; hand-written
-  CSS for runtime-only components stays verbatim and tag-led. **Be plain that only a real
-  shadow root gives inward encapsulation**: page CSS can still reach a light-DOM component's
-  internals. Name every ADR 0033 s7 difference where an author would otherwise hit it, and
-  list what switching to a shadow root changes beyond the stylesheet (s8). Also state the runtime
-  baseline (Baseline 2023, REQUIREMENTS § Browser support) in the getting-started or
-  installation page. **Lands with LT-304**, not before: until then the docs describe verbatim
-  emission.
-  **Verification:** `check:links` green; styling.md and HOST_PROFILE.md say the same thing in
-  the same words (one is user-facing, one is the authoring profile).
+## P4 — Migration guards for 2.x authors
 
-## P4 — v3.0 deprecated-surface removal (separate branch; gates wave 4)
-
-**Owner sequencing, 2026-09-04:** both removals run on a **separate branch**, and land **before
-any wave-4 migration** (LT-095–LT-111) so migrated twins and newly generated clients never
-target the removed forms. ROADMAP § "Dead ends: deprecated in 2.x, removed in 3.0" already
-declares both; these tasks implement it. The Cause & Effect 2.0 re-export surface rewrite is a
-separate track, blocked on CE 2.0 shipping — out of scope here.
-
-- [ ] LT-274: Lower reactive conditions to template-cloned arms on both surfaces (ADR 0037 sub-designs 1–3 and 5). **Gates LT-254** (ADR 0040: the `conditional` `TemplateNode` variant must exist before the first publish).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) (✅ Accepted 2026-09-26; ADR 0017's amendment already recorded). A condition that reads a signal — `@if`/`@else`, `.tsx` ternary/`&&`, IIFE switch, `@switch`/`@case` with literal cases — lowers to inert arm `<template>`s plus the server-folded initial winner rendered live, and client-side to `reconcile()` over the new **current-arm-key source** (`Signal<string | null>`; ADR 0017 amendment). Arm keys are the named compile-time constants (`then`/`else`, `case:<literal>`; sub-design 2). Arm effects mount under keyedScopes with collector parity. Static conditions are unchanged — the Folded tier still renders the single winner and omits the rest, so byte-identity across tiers holds. Reactive conditions inside reconcile containers stay banned (LT-186's rule).
-  **Deliverable:** shared lowering in both front ends; arm extraction + initial-winner fold rules; the arm-key source form on `reconcile()`; diagnostics with channel/tier fields (dynamic `@case` value: compiler, tier 1 Prevented; reactive-if-in-reconcile-container: compiler, tier 1); goldens and parity extension.
-  **Check:** byte-identical skeletons across all three tiers for reactive-if components; both-surface parity for renders *and* diagnostics; equivalence-audit pins refreshed (initial arm adoption is a new designed connect-diff class); M14 bundle budget re-measured; compile-warning baseline 0.
-  **Coordinate:** the IR node rides LT-235's discriminated-union session; the boundary switch is LT-276, sequenced after this; diagnostic copy is LT-275.
-
-- [ ] LT-275: Diagnostics lifecycle for reactive conditions — retire LTC005's signal-condition face; Tech Writer copy.
-  **Skill:** tech-writer (drafting: le-truc-dev)
-  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) reverses "`@if` conditions cannot read signals" (`validateCondition`, `server/compiler/lower-shared.ts`). Only the **condition face** of LTC005 retires — the `t`-in-reactive-position face stays. The error-message lifecycle applies to every face touched: the LTC005 message, the arrow-thunk section's sentence in `server/compiler/HOST_PROFILE.md` and its "Open questions" reactivity paragraph ("creates no DOM outside declared lists", "Branch DOM lifetime … toggled via `hidden` (this host)"), and the teaching in ARCHITECTURE.md, AGENTS.md and the le-truc/cause-effect skills; the new ADR 0037 codes' final wording lands here. Batch with the LT-220/LT-189 copy rounds. **LT-233 rider (2026-09-25):** shared code words diagnostics only through `server/compiler/surface.ts` — each new ADR 0037 code's surface-specific fragments become `SurfaceWording` keys (both tables), and the `CONDITIONS` cases in `server/tests/compiler/tsx/diagnostic-parity.test.ts` flip to the new codes on both surfaces in the same change.
-  **Check:** catalog rows added/retired match the diagnostics union; `check:links`; compile-warning baseline 0.
-  **Depends on** LT-274.
-  **Rider (LT-220/LT-189 review, 2026-10-01):** the ADR 0037 copy those rounds carried moves here — the HOST_PROFILE control-flow row, the arrow-thunk section's reversal, the ARCHITECTURE/AGENTS "`@if` cannot read signals" sentences, and the condition-face fix LT-189 now words as "show and hide the element with `hidden={() => …}`" (`lower-shared.ts` `validateCondition`).
-
-- [ ] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4). **Sequenced after LT-303** (ADR 0040 s3: LT-303 changes only the `.tsx` spelling of today's `try` node; this task then reshapes it under both front ends). **Gates LT-254** (ADR 0040).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md), owner ruling 2026-09-21: `@try`/`@pending`/`@catch` arms become templates plus the adopted winner, keyed `ok`/`nil`/`err`. Retires the fieldset wrappers `emit-server.ts` places at every arm root, the client's `hidden`+`disabled` sweep, and the LT-086 `.parentElement` addressing — all of it existed only because both arms were live simultaneously. The ok arm's resolved-value text and the err arm's bound catch-param text move into the per-arm mount. LT-211's no-stale-arm ruling and the `isPending` idiom are untouched; LT-078's tree-shaking question is re-pinned against templates. ADRs 0024 s13, 0032 s2 and 0041 already state the target mechanism; the teaching that still describes toggled arms (AGENTS.md's boundary bullet, `HOST_PROFILE.md`, the le-truc skill) flips with this task — Tech Writer rider.
-  **Depends on** LT-274 (the mechanism).
-  **Check:** every boundary-using corpus component's goldens refreshed; a form-submission negative test (named controls in non-active arms cannot submit — structural now, pinned anyway); audit pins; baseline 0.
+**Retitled 2026-10-01.** This band held the v3.0 deprecated-surface removals (LT-178, LT-179;
+both landed, see `CHANGELOG.md [Unreleased]` Removed). It then collected the ADR 0037 work
+(LT-274–LT-276), which moved to `TODO.md` 2026-10-01. What remains is the residue that protects
+early adopters migrating hand-written 2.x components. The Cause & Effect 2.0 re-export rewrite
+is a separate track, blocked on CE 2.0 shipping.
 
 - [ ] LT-281: Flag a non-void factory return — authored-surface rule + DEV_MODE warning (LT-179 residue).
   **Skill:** le-truc-dev (compiler half); Tech Writer owns both messages
