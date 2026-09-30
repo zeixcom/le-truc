@@ -98,6 +98,15 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 		expect(output).toContain(
 			`i18n-bad-reads.tsx(35,5): error TS2375: Type '{ children: string; type: "button"; "aria-label": string | undefined; }' is not assignable to type 'button'`,
 		)
+		// The discriminated compose site (LT-343, LT-346): the distributive
+		// `LibraryManagedAttributes` keeps `collapsed: true ⇒ id` required —
+		// a plain `Omit<P, 'i18n'>` would flatten the union and pass this.
+		// Only the missing-key compose (line 27) fails; the correct one on
+		// line 26 must not.
+		expect(output).toContain(
+			"discriminated-compose.tsx(27,4): error TS2322: Type '{ collapsed: true; }' is not assignable to type 'LibraryManagedAttributes<",
+		)
+		expect(output).not.toContain('discriminated-compose.tsx(26,')
 		expect(status).not.toBe(0)
 	})
 

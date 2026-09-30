@@ -88,7 +88,7 @@ and `check:links` pass.
 
 ### Client channel (after LT-250; LT-249 lands with LT-219)
 
-- [ ] LT-346: Pin the discriminated compose-site check (LT-343 review).
+- [x] LT-346: Pin the discriminated compose-site check (LT-343 review). — done
   **Skill:** le-truc-dev
   **Context:** LT-343 made `JSX.LibraryManagedAttributes` distribute over a union of arg
   shapes. Without that, a plain `Omit` flattens a discriminated args type, and
