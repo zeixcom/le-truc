@@ -53,5 +53,5 @@ The IR discriminates variants by tags, not nullability, and each analysis pass's
 - Requirements: [Type safety & Reliability](../REQUIREMENTS.md#4-non-functional-requirements), §1
 - Architecture: [Server Evaluation Tiers](../ARCHITECTURE.md#server-evaluation-tiers)
 - Compiler contract: [LE_TRUC_COMPILER.md §4](../server/compiler/LE_TRUC_COMPILER.md) (amended by this ADR; renumbering §4 is forbidden — ADRs cite it)
-- Review: [COMPILER_REVIEW](../COMPILER_REVIEW.md) §2.6–2.7, §3.17–20
+- Review: [COMPILER_REVIEW](https://github.com/zeixcom/le-truc/blob/6d0544a6/COMPILER_REVIEW.md) §2.6–2.7, §3.17–20
 - Related: [ADR 0017](0017-keyed-template-clone-reconciliation-for-lists.md) (the reconcile lowering), [ADR 0028](0028-tiered-error-surfacing.md) (the key-clause rule's lifecycle), [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) (dual surfaces), [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) (arm keys; the reactive-conditions shapes)

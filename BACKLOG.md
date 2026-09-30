@@ -25,7 +25,7 @@ from a task entry — read the ADR.
 
 **Strategic framing (2026-09-18).** The owner has stated the governing premise: this repo is the
 playground — the goal is a general-purpose framework employed in thousands of projects by users of
-the open-source library. [COMPILER_REFLECTION.md](COMPILER_REFLECTION.md) (the six-question
+the open-source library. [COMPILER_REFLECTION.md](https://github.com/zeixcom/le-truc/blob/6d0544a6/COMPILER_REFLECTION.md) (the six-question
 compiler reflection, written the same day) evaluates the compiler against the repo alone; its
 recommendations were re-derived under the framework premise when this queue was re-prioritized.
 Consequences structured as tasks: the three S0 rulings (moved into TODO.md as the current
@@ -312,7 +312,7 @@ iteration's review files follow-ups.
 
 ## P2b — Compiler product-readiness: equivalence contract, consolidation, library substitutions (external review + reflection, 2026-09-18)
 
-**Provenance:** [COMPILER_REVIEW.md](COMPILER_REVIEW.md) — an external review of all of
+**Provenance:** [COMPILER_REVIEW.md](https://github.com/zeixcom/le-truc/blob/6d0544a6/COMPILER_REVIEW.md) — an external review of all of
 `server/compiler/` (46 modules, ~21.9k lines) by Claude Opus, evaluated by the Architect
 2026-09-18. **The review held up:** all four correctness findings (§1) were independently
 verified against the source (two by direct read — the `offenders`-array truthiness bug at
@@ -325,7 +325,7 @@ section numbers; its file:line citations were accurate at capture except where n
 `front-end.ts` has since been split (LT-224, done — see DONE.md) and `emit-server.ts` has
 been refactored (LT-225), so re-grep before trusting line numbers in those files.
 
-**Re-scoped 2026-09-18 by [COMPILER_REFLECTION.md](COMPILER_REFLECTION.md) under the framework
+**Re-scoped 2026-09-18 by [COMPILER_REFLECTION.md](https://github.com/zeixcom/le-truc/blob/6d0544a6/COMPILER_REFLECTION.md) under the framework
 premise (S0):** the equivalence contract is a product promise to users of both surfaces, so the
 parity suite's diagnostic blind spot closes first (LT-242); and where a maintained library
 already IS the shared thing the review proposed authoring, **adopt the library instead of
