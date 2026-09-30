@@ -19,7 +19,9 @@
  *   gitignored machine-readable report (`writeI18nReport`). The census
  *   walks BOTH directions (LT-196): declared keys missing from a catalog
  *   (`missing`/`stale`) and catalog keys nothing declares (`orphaned` —
- *   a translator's typo, a renamed key, a deleted component).
+ *   a translator's typo, a renamed key, a deleted component). A catalog
+ *   value that is not a string reports `malformed` in either direction
+ *   (LT-249) — never silently dropped.
  *
  * The build stays READ-ONLY over tracked files (ADR 0030 sub-design 5):
  * writing missing keys into `i18n/<locale>.json` is the separate,
@@ -125,8 +127,13 @@ export const sourceHash = (source: string): string =>
 export type Catalogs = {
 	/** Every locale an override file exists for (never the source locale). */
 	locales: string[]
-	/** Per locale: the override map keyed by `<tag>.<key>`. */
-	overrides: Map<string, Record<string, string>>
+	/**
+	 * Per locale: the override map keyed by `<tag>.<key>`, values as the
+	 * catalog file carries them. A value that is not a string (a nested
+	 * group, a number) is data the census reports `malformed` (LT-249);
+	 * only the string entries reach {@link I18nCollection}.
+	 */
+	overrides: Map<string, Record<string, unknown>>
 	/**
 	 * The staleness manifest (`i18n/manifest.json`): per locale, per key,
 	 * the source hash the translation was recorded against. Absent entries
@@ -144,6 +151,11 @@ const readJson = async (path: string): Promise<unknown> => {
 	}
 }
 
+const asRecord = (value: unknown): Record<string, unknown> =>
+	typeof value === 'object' && value !== null && !Array.isArray(value)
+		? { ...(value as Record<string, unknown>) }
+		: {}
+
 const asStringRecord = (value: unknown): Record<string, string> =>
 	typeof value === 'object' && value !== null
 		? Object.fromEntries(
@@ -154,7 +166,7 @@ const asStringRecord = (value: unknown): Record<string, string> =>
 		: {}
 
 const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
-	const overrides = new Map<string, Record<string, string>>()
+	const overrides = new Map<string, Record<string, unknown>>()
 	const locales: string[] = []
 	try {
 		// Sorted: readdir order is the runtime's, and the locale order flows
@@ -164,7 +176,7 @@ const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
 			if (!file.endsWith('.json') || file === 'manifest.json') continue
 			const locale = file.replace(/\.json$/, '')
 			locales.push(locale)
-			overrides.set(locale, asStringRecord(await readJson(join(i18nDir, file))))
+			overrides.set(locale, asRecord(await readJson(join(i18nDir, file))))
 		}
 	} catch {
 		// No i18n directory yet: zero locales, zero gaps.
@@ -208,9 +220,36 @@ export const collectI18n = async (
 	catalogs?: Catalogs,
 	i18nDir: string = I18N_DIR,
 ): Promise<I18nCollection> => {
-	const { locales, overrides, manifest } =
-		catalogs ?? (await readCatalogs(i18nDir))
+	const {
+		locales,
+		overrides: rawOverrides,
+		manifest,
+	} = catalogs ?? (await readCatalogs(i18nDir))
 	const sources = new Map<string, Record<string, string>>()
+	// Split each catalog into its string entries and the rest (LT-249): a
+	// non-string value — most naturally a group nested "under the
+	// component" instead of the flat `<tag>.<key>` compound — is
+	// `malformed` in its locale, declared or not, and never `missing` or
+	// `orphaned`: `i18n:sync` fills the one and prunes the other, and must
+	// do neither to an entry whose intended shape it cannot know.
+	const overrides = new Map<string, Record<string, string>>()
+	const malformed: TranslationGap[] = []
+	for (const locale of locales) {
+		const strings: Record<string, string> = {}
+		for (const [compound, value] of Object.entries(
+			rawOverrides.get(locale) ?? {},
+		)) {
+			if (typeof value === 'string') strings[compound] = value
+			else
+				malformed.push({
+					key: compound,
+					locale,
+					status: 'malformed',
+					detail: `not a string — found ${valueKind(value)}; catalog keys are flat \`<tag>.<key>\` compounds`,
+				})
+		}
+		overrides.set(locale, strings)
+	}
 	// Every registry entry by tag — the orphan walk resolves each catalog
 	// key's component, including components that declare no keys at all.
 	const byTag = new Map<string, RegistryEntry>()
@@ -234,6 +273,11 @@ export const collectI18n = async (
 			const localeManifest = manifest.get(locale) ?? {}
 			for (const [key, source] of Object.entries(entry.i18nMessages)) {
 				const compound = `${entry.tag}.${key}`
+				if (
+					Object.hasOwn(rawOverrides.get(locale) ?? {}, compound) &&
+					localeOverrides[compound] === undefined
+				)
+					continue // non-string: reported malformed above
 				if (localeOverrides[compound] === undefined) {
 					gaps.push({ key: compound, locale, status: 'missing' })
 					continue
@@ -266,7 +310,98 @@ export const collectI18n = async (
 				gaps.push({ key: compound, locale, status: 'orphaned' })
 		}
 	}
+	gaps.push(...malformed)
 	return { locales, sources, overrides, gaps }
+}
+
+/** How a malformed catalog value reads in its census detail (LT-249). */
+const valueKind = (value: unknown): string =>
+	value === null
+		? 'null'
+		: Array.isArray(value)
+			? 'an array'
+			: typeof value === 'object'
+				? 'a nested group'
+				: `a ${typeof value}`
+
+/** What {@link syncLocale} did to one locale's catalog. */
+export type LocaleSync = {
+	/** The next catalog, key-sorted. */
+	catalog: Record<string, unknown>
+	/** The next staleness-manifest entries for the locale, key-sorted. */
+	manifest: Record<string, string>
+	/** Missing keys written as empty placeholders. */
+	written: number
+	/** Carried keys confirmed against their current source hash. */
+	confirmed: number
+	/** Stale keys — listed for review, confirmed like every carried key. */
+	stale: string[]
+	/** Orphaned keys — pruned from the catalog and the manifest. */
+	pruned: string[]
+	/** Findings listed and left alone: pattern integrity and `malformed`. */
+	flagged: TranslationGap[]
+}
+
+/**
+ * The `i18n:sync` pass over one locale's catalog (scripts/i18n-sync.ts),
+ * pure so the census-to-sync routing is testable. `gaps` are the locale's
+ * census records. A `missing` key lands as an empty placeholder; an
+ * `orphaned` key is pruned with its manifest entry; everything else
+ * `collectI18n` reports about an entry itself — `malformed` included,
+ * whether unparseable (LT-219) or not a string at all (LT-249) — is
+ * flagged and left alone: only a translator knows what it should have
+ * been, so sync must not guess a shape. Every carried STRING entry with a
+ * declared source is confirmed against the current source hash.
+ */
+export const syncLocale = (
+	catalog: Record<string, unknown>,
+	gaps: readonly TranslationGap[],
+	sources: ReadonlyMap<string, Record<string, string>>,
+	manifest: Record<string, string>,
+): LocaleSync => {
+	const next = { ...catalog }
+	const nextManifest = { ...manifest }
+	const result: Omit<LocaleSync, 'catalog' | 'manifest'> = {
+		written: 0,
+		confirmed: 0,
+		stale: [],
+		pruned: [],
+		flagged: [],
+	}
+	for (const gap of gaps) {
+		if (gap.status === 'missing') {
+			next[gap.key] = next[gap.key] ?? ''
+			result.written++
+		} else if (gap.status === 'stale') {
+			// Listed for review; the manifest entry is refreshed below like
+			// every carried key — the translator decides whether the wording
+			// needs rework, and the census stops counting it either way.
+			result.stale.push(gap.key)
+		} else if (gap.status === 'orphaned') {
+			// The entry can never render — no component declares it — so
+			// keeping it would be residue the census counts forever.
+			delete next[gap.key]
+			delete nextManifest[gap.key]
+			result.pruned.push(gap.key)
+		} else result.flagged.push(gap)
+	}
+	for (const [compound, value] of Object.entries(next)) {
+		// A non-string entry is not a translation of anything yet (LT-249).
+		if (typeof value !== 'string') continue
+		const dot = compound.indexOf('.')
+		const source =
+			dot === -1
+				? undefined
+				: sources.get(compound.slice(0, dot))?.[compound.slice(dot + 1)]
+		if (source === undefined) continue
+		nextManifest[compound] = sourceHash(source)
+		result.confirmed++
+	}
+	const sorted = <T>(record: Record<string, T>): Record<string, T> =>
+		Object.fromEntries(
+			Object.entries(record).sort(([a], [b]) => (a < b ? -1 : 1)),
+		)
+	return { catalog: sorted(next), manifest: sorted(nextManifest), ...result }
 }
 
 /**

@@ -92,8 +92,8 @@ export type TranslationGap = {
 	 * the corpus declares it (LT-196), so it can never render.
 	 *
 	 * The pattern-integrity walks (ADR 0030 s5, LT-219) read the entry
-	 * itself: `malformed` — it does not parse as an ICU pattern, so the
-	 * source renders; `argument-mismatch` — its arguments differ from the
+	 * itself: `malformed` — it is not a string (LT-249) or does not parse
+	 * as an ICU pattern, so the source renders; `argument-mismatch` — its arguments differ from the
 	 * source pattern's; `missing-arms` — a `plural` in it does not cover the
 	 * locale's plural categories, so those counts render `other`;
 	 * `client-fallback` — a client-referenced key uses a construct its
@@ -125,7 +125,7 @@ const TRANSLATION_GAP_REASONS: Record<TranslationGapStatus, string> = {
 	orphaned:
 		'orphaned — nothing in the corpus declares this key; the entry can never render',
 	malformed:
-		'malformed — the entry is not a valid ICU pattern; the source-locale string renders',
+		'malformed — the entry is not a valid ICU pattern and never renders; a declared key falls back to its source-locale string',
 	'argument-mismatch':
 		'argument mismatch — the translation’s arguments differ from the source pattern’s',
 	'missing-arms':

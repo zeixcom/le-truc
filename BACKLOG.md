@@ -336,6 +336,26 @@ iteration's review files follow-ups.
   **Check:** add a `diagnostic-parity.test.ts` row for a `truc:bogus` attribute on both
   surfaces; the corpus stays warning-free.
 
+- [ ] LT-356: An unparseable or non-object catalog FILE is silent in the census and destroyed by `i18n:sync` (LT-249 review).
+  **Skill:** docs-server-dev
+  **Context:** LT-249 made non-string catalog VALUES loud. The file-level sibling is worse.
+  If `i18n/<locale>.json` fails `JSON.parse` (a trailing comma, a merge-conflict marker) or
+  its top level is not an object, `readCatalogs` (`readJson` → `undefined` → `asRecord` →
+  `{}`) treats the locale as empty. The census then reports every declared key `missing`,
+  which is loud but wrongly attributed. `scripts/i18n-sync.ts` does the same (`catch {
+  catalog = {} }`) and then **overwrites the file** with empty placeholders, so a
+  translator's whole catalog is destroyed by one syntax error. **Channel and tier (ADR 0028
+  s1):** the census stays a report (the build never fails on catalog data). Sync, the one
+  writer, must refuse: an unreadable catalog aborts the sync for that locale, names the file
+  and the parse error, and writes nothing to it or to its manifest entries. **How:** make
+  `readCatalogs` distinguish "absent" from "unreadable" (for example a per-locale
+  `unreadable: string` error), and have the census record it once per locale instead of N
+  `missing` records (new status or a `malformed` record on the file; decide at pickup).
+  Sync reads through the same path instead of its own `JSON.parse`. **Acceptance:** a
+  scratch catalog with a trailing comma yields one census record, not N `missing`; sync
+  leaves the file byte-identical and exits non-zero naming it; committed catalogs are
+  unaffected. **Copy:** Tech Writer (batch with LT-189 item 8 if still open).
+
 ---
 
 ## P2b — Compiler product-readiness: equivalence contract, consolidation, library substitutions (external review + reflection, 2026-09-18)

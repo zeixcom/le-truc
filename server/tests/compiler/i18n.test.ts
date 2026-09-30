@@ -16,7 +16,12 @@ import { messagesRecordType } from '../../compiler/i18n'
 import { parseMessage } from '../../compiler/icu/parse'
 import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
 import { compileCorpus } from '../../corpus-compile'
-import { collectI18n, writeI18nModule } from '../../effects/i18n'
+import {
+	collectI18n,
+	sourceHash,
+	syncLocale,
+	writeI18nModule,
+} from '../../effects/i18n'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { loadCorpus } from './corpus-fixture'
 
@@ -800,6 +805,150 @@ describe('the census pattern-integrity walks (LT-219)', () => {
 			'form-tokenbox.duplicate client-fallback',
 			'form-tokenbox.removed malformed',
 		])
+	})
+})
+
+/* === Non-string catalog values (LT-249) === */
+
+describe('non-string catalog values are malformed (LT-249)', () => {
+	// The LT-217 review falsification: a group nested "under the component"
+	// instead of the flat `<tag>.<key>` compound was silently dropped — 0
+	// census gaps, nothing listed by sync, residue in the catalog forever.
+	const probe = {
+		tag: 'census-probe',
+		i18nMessages: { greet: 'Hello, {name}!' },
+	} as unknown as RegistryEntry
+	const nested = { 'census-probe': { 'stray.few': 'wenige' } }
+
+	test('a nested group reports malformed — never orphaned — and its flat twin behaves as today', async () => {
+		const { gaps, overrides } = await collectI18n([probe], {
+			locales: ['de'],
+			overrides: new Map([
+				['de', { ...nested, 'census-probe.stray.few': 'wenige' }],
+			]),
+			manifest: new Map(),
+		})
+		expect(gaps.filter(gap => gap.status !== 'missing')).toEqual([
+			{ key: 'census-probe.stray.few', locale: 'de', status: 'orphaned' },
+			{
+				key: 'census-probe',
+				locale: 'de',
+				status: 'malformed',
+				detail:
+					'not a string — found a nested group; catalog keys are flat `<tag>.<key>` compounds',
+			},
+		])
+		// Only string entries reach the generated module.
+		expect(overrides.get('de')).toEqual({ 'census-probe.stray.few': 'wenige' })
+	})
+
+	test('a declared key with a non-string value is malformed, not missing', async () => {
+		const { gaps } = await collectI18n([probe], {
+			locales: ['de'],
+			overrides: new Map([['de', { 'census-probe.greet': 42 }]]),
+			manifest: new Map(),
+		})
+		expect(gaps.map(gap => [gap.key, gap.status, gap.detail])).toEqual([
+			[
+				'census-probe.greet',
+				'malformed',
+				'not a string — found a number; catalog keys are flat `<tag>.<key>` compounds',
+			],
+		])
+	})
+
+	test('i18n:sync lists a malformed entry and changes nothing about it', async () => {
+		const catalog = {
+			...nested,
+			'census-probe.greet': 42,
+			'census-probe.stray.few': 'wenige',
+		}
+		const { gaps, sources } = await collectI18n([probe], {
+			locales: ['de'],
+			overrides: new Map([['de', catalog]]),
+			manifest: new Map(),
+		})
+		const result = syncLocale(catalog, gaps, sources, {})
+		expect(result.flagged.map(gap => [gap.key, gap.status])).toEqual([
+			['census-probe', 'malformed'],
+			['census-probe.greet', 'malformed'],
+		])
+		// Neither malformed entry is pruned, filled, or confirmed; the flat
+		// orphan twin is pruned as before.
+		expect(result.pruned).toEqual(['census-probe.stray.few'])
+		expect(result.written).toBe(0)
+		expect(result.catalog).toEqual({
+			'census-probe': { 'stray.few': 'wenige' },
+			'census-probe.greet': 42,
+		})
+		expect(result.manifest).toEqual({})
+	})
+
+	test('i18n:sync over string values: fill, prune, confirm as before', async () => {
+		const catalog = { 'census-probe.gone': 'weg' }
+		const { gaps, sources } = await collectI18n([probe], {
+			locales: ['de'],
+			overrides: new Map([['de', catalog]]),
+			manifest: new Map(),
+		})
+		const result = syncLocale(catalog, gaps, sources, {
+			'census-probe.gone': 'x',
+		})
+		expect(result).toEqual({
+			catalog: { 'census-probe.greet': '' },
+			manifest: { 'census-probe.greet': sourceHash('Hello, {name}!') },
+			written: 1,
+			confirmed: 1,
+			stale: [],
+			pruned: ['census-probe.gone'],
+			flagged: [],
+		})
+	})
+
+	test('falsification over the real catalogs: the planted nested group reports, the committed catalogs report none', async () => {
+		const registry = JSON.parse(
+			readFileSync(`${generated.path}/registry.json`, 'utf8'),
+		) as ComponentRegistry
+		const i18nDir = join(import.meta.dir, '../../../i18n')
+		const locales: string[] = []
+		const overrides = new Map<string, Record<string, unknown>>()
+		for (const file of readdirSync(i18nDir).sort()) {
+			if (!file.endsWith('.json') || file === 'manifest.json') continue
+			const locale = file.replace(/\.json$/, '')
+			locales.push(locale)
+			overrides.set(
+				locale,
+				JSON.parse(readFileSync(join(i18nDir, file), 'utf8')),
+			)
+		}
+		const collect = () =>
+			collectI18n(Object.values(registry), {
+				locales,
+				overrides,
+				manifest: new Map(),
+			})
+		const clean = await collect()
+		const nonString = <G extends { status: string; detail?: string }>(
+			gaps: G[],
+		) =>
+			gaps.filter(
+				gap =>
+					gap.status === 'malformed' && gap.detail?.startsWith('not a string'),
+			)
+		expect(nonString(clean.gaps)).toEqual([])
+		for (const locale of locales)
+			overrides.set(locale, {
+				...overrides.get(locale),
+				'basic-pluralize': { 'stray.few': 'wenige' },
+			})
+		const planted = await collect()
+		expect(
+			nonString(planted.gaps).map(gap => `${gap.key} ${gap.locale}`),
+		).toEqual(locales.map(locale => `basic-pluralize ${locale}`))
+		// Everything else the census reports is unchanged by the plant.
+		const rest = (gaps: { status: string; detail?: string }[]) =>
+			gaps.filter(gap => !nonString([gap]).length)
+		expect(rest(planted.gaps)).toEqual(rest(clean.gaps))
 	})
 })
 

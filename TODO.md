@@ -78,7 +78,7 @@ default (LT-138). Across all of it: warning baseline 0, tier census unchanged fr
 iteration's opening measurement (record it before the first change), and `bun run build:docs`
 and `check:links` pass.
 
-**Next free task ID: LT-356.**
+**Next free task ID: LT-357.**
 
 ---
 
@@ -87,30 +87,6 @@ and `check:links` pass.
 ### Build half (LT-250 → LT-308 → LT-218 → LT-252 → LT-251; LT-253 after LT-252)
 
 ### Client channel (after LT-250; LT-249 lands with LT-219)
-
-- [ ] LT-249: Report non-string catalog values — a malformed `i18n/<locale>.json` entry is silent in both the census and sync (LT-217 review falsification). **Survives the LT-240 ruling, and grows a sibling:** ICU adds a second malformed-value class (a string that is not a parseable pattern), handled in LT-219 — land them as one `malformed` family with consistent copy, and drop the "LT-219 placeholder precedent" phrasing below for LT-219's argument-preservation case.
-  **Skill:** docs-server-dev
-  **Context:** Found by accident during the LT-217 review (2026-09-18): a catalog entry whose
-  value is not a string — probed as a nested group, `{"basic-pluralize": {"stray.few":
-  "wenige"}}` instead of the flat compound `"basic-pluralize.stray.few"` — is silently ignored
-  everywhere: the translation census reports **0 gaps**, `i18n:sync` reports nothing and prunes
-  nothing, and the entry sits in six catalogs forever. This is the silent-wrong-answer class in
-  the exact channel (LT-196's) built to make catalog data problems loud, and the shape is
-  realistic: a hand-editor nesting "under the component" is the most natural mistake there is.
-  **Channel and tier (ADR 0028 s1):** the **build report / translation census**, tier **not
-  applicable — a report, not an error**, same posture as missing/stale/orphaned: a catalog is
-  DATA, the build never fails on it, and the compiler has no jurisdiction. Tech Writer owns the
-  census wording (batch with LT-189 item 8's family).
-  **How:** in `collectI18n`'s orphan walk (and the declared walk where values are read), a key
-  whose value fails `typeof === 'string'` pushes a census record (new `TranslationGap['status']`
-  case or reuse `orphaned` with a distinct reason — Architect's call at pickup; a distinct
-  `malformed` case reads better). `i18n:sync` lists malformed entries in its summary and
-  **cannot auto-fix** (it must not guess a shape — follow the LT-219 placeholder precedent).
-  **Falsification probe to pin:** plant a nested-group value in a scratch catalog; census
-  reports it; sync lists it unpruned; the flat twin behaves as today.
-  **Acceptance:** the probe above pinned over the real catalogs with injection (LT-196 test
-  pattern); committed catalogs stay gap-free; census/sync summaries unchanged when all values
-  are strings.
 
 ### Copy (after LT-219)
 
@@ -254,6 +230,15 @@ and `check:links` pass.
      narrows the carve-out to declared keys and rewords the sync header step 3 and
      the ADR 0030 s5 orphan-direction sentence itself — run item 8 after it (or
      accept a second pass over those two spots).
+     **LT-249 rider (review, 2026-10-01):** the same family grew a non-string class.
+     `malformed`'s census reason in `server/compiler/census.ts` was reworded to cover
+     undeclared keys (first draft: `malformed — the entry is not a valid ICU pattern and
+     never renders; a declared key falls back to its source-locale string`). Its new
+     detail in `collectI18n` (`not a string — found a nested group; catalog keys are flat
+     \`<tag>.<key>\` compounds`) ends in a fix-it, which is against this item's "census
+     records never carry fix-its" posture. Decide whether the clause stays as a
+     detail-only hint or goes. The sync FLAGGED summary line (`malformed (unparseable or
+     not a string)`) is in scope too.
   9. **The `class:`-prefix rejection copy** (LT-222 handoff, 2026-09-18): the new
      LTC006 reason in `server/compiler/classify-attributes.ts` (first draft:
      "`class:token={…}` is not a TSRX spelling — a per-class reactive binding is a

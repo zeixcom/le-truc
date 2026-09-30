@@ -24,7 +24,9 @@
  *    of a pruned category survives the pass untouched; an undeclared key
  *    is sheltered by no category set and reports — and prunes — in every
  *    locale,
- * 4. every pattern-integrity finding (LT-219: a `malformed` entry, an
+ * 4. every pattern-integrity finding (LT-219: a `malformed` entry — an
+ *    unparseable pattern, or a value that is not a string at all, such as
+ *    a group nested under the component (LT-249) — an
  *    `argument-mismatch`, `missing-arms`, a `client-fallback`) is LISTED and
  *    left alone — each is a translation only a translator can correct.
  *
@@ -46,7 +48,7 @@ import {
 	loadCorpusConfig,
 	REPO_ROOT,
 } from '../server/corpus-sources'
-import { collectI18n, SOURCE_LOCALE, sourceHash } from '../server/effects/i18n'
+import { collectI18n, SOURCE_LOCALE, syncLocale } from '../server/effects/i18n'
 import { io } from '../server/runtimes'
 
 const config = loadCorpusConfig(REPO_ROOT)
@@ -92,60 +94,34 @@ const flaggedKeys: string[] = []
 
 for (const locale of collection.locales) {
 	const catalogPath = join(config.i18nDir, `${locale}.json`)
-	let catalog: Record<string, string> = {}
+	let catalog: Record<string, unknown> = {}
 	try {
 		catalog = JSON.parse(readFileSync(catalogPath, 'utf8'))
 	} catch {
 		catalog = {}
 	}
-	const next = { ...catalog }
-	for (const gap of collection.gaps.filter(g => g.locale === locale)) {
-		if (gap.status === 'missing') {
-			next[gap.key] = next[gap.key] ?? ''
-			writtenKeys++
-		} else if (gap.status === 'stale') {
-			// Stale: listed for review. The manifest entry is refreshed like
-			// every carried key — the translator decides whether the wording
-			// needs rework; the census stops counting it either way.
-			staleKeys.push(`${gap.key} (${locale})`)
-		} else if (gap.status !== 'orphaned') {
-			// A pattern-integrity finding (LT-219): listed, never fixed — the
-			// entry is a translation, and only a translator can say what it
-			// should have been.
-			flaggedKeys.push(
+	const result = syncLocale(
+		catalog,
+		collection.gaps.filter(g => g.locale === locale),
+		collection.sources,
+		manifest[locale] ?? {},
+	)
+	manifest[locale] = result.manifest
+	writtenKeys += result.written
+	confirmedKeys += result.confirmed
+	prunedKeys += result.pruned.length
+	staleKeys.push(...result.stale.map(key => `${key} (${locale})`))
+	orphanKeys.push(...result.pruned.map(key => `${key} (${locale})`))
+	flaggedKeys.push(
+		...result.flagged.map(
+			gap =>
 				`${gap.key} (${locale}): ${gap.status}${gap.detail ? ` — ${gap.detail}` : ''}`,
-			)
-		} else {
-			// Orphaned: pruned. The entry can never render — no component
-			// declares it — so keeping it would be residue the census counts
-			// forever. The manifest entry goes with it.
-			delete next[gap.key]
-			delete manifest[locale]?.[gap.key]
-			prunedKeys++
-			orphanKeys.push(`${gap.key} (${locale})`)
-		}
-	}
-	// Confirm every carried key against the CURRENT source strings.
-	const localeManifest = { ...(manifest[locale] ?? {}) }
-	const sourcesFor = (compound: string): string | undefined => {
-		const dot = compound.indexOf('.')
-		const tag = compound.slice(0, dot)
-		const key = compound.slice(dot + 1)
-		return collection.sources.get(tag)?.[key]
-	}
-	for (const key of Object.keys(next)) {
-		const source = sourcesFor(key)
-		if (source === undefined) continue
-		localeManifest[key] = sourceHash(source)
-		confirmedKeys++
-	}
-	manifest[locale] = Object.fromEntries(
-		Object.entries(localeManifest).sort(([a], [b]) => (a < b ? -1 : 1)),
+		),
 	)
-	const sorted = Object.fromEntries(
-		Object.entries(next).sort(([a], [b]) => (a < b ? -1 : 1)),
+	await io.writeTextFile(
+		catalogPath,
+		`${JSON.stringify(result.catalog, null, '\t')}\n`,
 	)
-	await io.writeTextFile(catalogPath, `${JSON.stringify(sorted, null, '\t')}\n`)
 }
 
 await io.writeTextFile(
@@ -170,7 +146,7 @@ if (orphanKeys.length > 0) {
 }
 if (flaggedKeys.length > 0) {
 	console.log(
-		`${flaggedKeys.length} translation(s) FLAGGED — malformed, argument mismatch, missing plural arms or client fallback; fix them by hand, nothing was changed:\n` +
+		`${flaggedKeys.length} translation(s) FLAGGED — malformed (unparseable or not a string), argument mismatch, missing plural arms or client fallback; fix them by hand, nothing was changed:\n` +
 			flaggedKeys.map(key => `  • ${key}`).join('\n'),
 	)
 }

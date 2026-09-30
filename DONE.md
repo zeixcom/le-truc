@@ -11,6 +11,20 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-249: Report non-string catalog values (LT-217 review falsification). — reviewed ✓
+  **Skill:** docs-server-dev
+  **Changed:** A catalog value in `i18n/<locale>.json` that is not a string (a group nested
+  under the component, a number, an array, `null`) is now a `malformed` census record in its
+  locale, declared or not, and never `missing` or `orphaned`. Before, it was silently dropped:
+  0 gaps, nothing listed by sync. `Catalogs.overrides` carries raw values; only string
+  entries reach `I18nCollection.overrides` and the generated module. The per-locale
+  `i18n:sync` pass is extracted as the pure `syncLocale` (`server/effects/i18n.ts`); sync
+  lists malformed entries and never fills, prunes or manifest-confirms them.
+  **Review:** Approved. **Ruling:** one `malformed` status for both classes (unparseable
+  pattern, LT-219; non-string value, LT-249); the detail distinguishes them, and the
+  report's `counts.malformed` buckets both. Copy handed to LT-189 item 8 (rider). The
+  neighbouring unparseable-FILE hazard became LT-356.
+
 - [x] LT-346: Pin the discriminated compose-site check (LT-343 review). — done ✓
   **Skill:** le-truc-dev
   **Changed:** A self-contained negative probe, `fixtures/tsx/discriminated-compose.tsx`, uses a
