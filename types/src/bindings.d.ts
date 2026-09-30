@@ -45,6 +45,24 @@ type DangerouslyBindInnerHTMLOptions = {
  */
 declare const configureHtmlSanitizer: (sanitize: Sanitizer | undefined) => void;
 /**
+ * Sanitize HTML through the default registered with
+ * `configureHtmlSanitizer()`, or escape it entirely (`escapeHTML`) when none
+ * is configured — fail closed, safe but inert.
+ *
+ * This is the sanitizer behind the compiler's `truc:html` attribute on both
+ * halves (LT-138): the generated server module and the generated client pass
+ * every value through it, so an unconfigured app renders the same escaped
+ * text server-side and after hydration, and configuring once through
+ * `configureHtmlSanitizer()` switches both. Hand-written
+ * `dangerouslyBindInnerHTML()` call sites keep their raw-passthrough
+ * fallback unless they pass `{ sanitize: sanitizeHtml }` themselves.
+ *
+ * @since 3.0
+ * @param html - Raw HTML
+ * @returns The configured sanitizer's result, or the escaped input
+ */
+declare const sanitizeHtml: (html: string) => string | TrustedHTML;
+/**
  * Values `bindAria()`'s `ok()` handler accepts. See ADR 0026 §2 for the
  * mapping table and for why `null | undefined` are excluded from the type
  * but still guarded at runtime.
@@ -312,4 +330,4 @@ declare function bindStyle<P extends string>(element: HTMLElement | SVGElement |
  * @returns Match handlers that schedule the innerHTML mutation
  */
 declare const dangerouslyBindInnerHTML: (element: Element, options?: DangerouslyBindInnerHTMLOptions) => SingleMatchHandlers<string>;
-export { type AriaValue, bindAria, bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, configureHtmlSanitizer, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, type Sanitizer, safeSetAttribute, setTextPreservingComments, };
+export { type AriaValue, bindAria, bindAttribute, bindClass, bindProperty, bindState, bindStyle, bindText, bindVisible, configureHtmlSanitizer, type DangerouslyBindInnerHTMLOptions, dangerouslyBindInnerHTML, escapeHTML, getDebugBindingTarget, type Sanitizer, safeSetAttribute, sanitizeHtml, setTextPreservingComments, };

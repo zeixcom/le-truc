@@ -344,26 +344,30 @@ export const reportMessageCallSites = (
 	const check = (member: AstNode, key: string, call: AstNode | null): void => {
 		const expected = args[key]
 		if (expected === undefined) return
-		const report = (problem: string) =>
+		const names = expected.map(arg => arg.name)
+		const example = `\`t.${key}({ ${names.join(', ')} })\``
+		const report = (problem: string, fix: string) =>
 			ctx.diagnostics.push(
 				diagnostic.messageArgumentMismatch(
 					ctx.source,
 					(call ?? member).start,
 					key,
 					problem,
+					fix,
 				),
 			)
-		const names = expected.map(arg => arg.name)
 		if (expected.length === 0) {
 			if (call)
 				report(
-					'is called, but its pattern takes no arguments — it is a plain string. Drop the call',
+					'is called, but its pattern takes no arguments, so the message is a plain string',
+					`Read it without a call: \`t.${key}\`.`,
 				)
 			return
 		}
 		if (!call) {
 			report(
-				`is read without a call, but its pattern takes ${argList(names)} — it is a function, and would render as one. Call it: \`t.${key}({ ${names.join(', ')} })\``,
+				`is read without a call, but its pattern takes ${argList(names)} — the message is a function, and would render as one`,
+				`Call it: ${example}.`,
 			)
 			return
 		}
@@ -371,7 +375,8 @@ export const reportMessageCallSites = (
 		const record = callArgs[0]
 		if (callArgs.length !== 1 || record?.type !== 'ObjectExpression') {
 			report(
-				`must be called with one object literal naming its arguments (${argList(names)})`,
+				'is not called with one object literal',
+				`Pass its arguments as one object literal: ${example}.`,
 			)
 			return
 		}
@@ -388,7 +393,8 @@ export const reportMessageCallSites = (
 					: null
 			if (name === null) {
 				report(
-					'is called with a spread or computed key — the build can only check an argument record whose keys it can read',
+					'is called with a spread or a computed key — the build checks only an argument record whose keys it can read',
+					`Name every argument as a plain key: ${example}.`,
 				)
 				return
 			}
@@ -406,6 +412,7 @@ export const reportMessageCallSites = (
 			]
 				.filter(Boolean)
 				.join(' and '),
+			`Pass exactly the arguments its pattern reads: ${example}.`,
 		)
 	}
 	const visit = (node: unknown, parent: AstNode | null): void => {

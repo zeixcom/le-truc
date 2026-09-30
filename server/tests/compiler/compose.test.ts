@@ -983,7 +983,7 @@ export function BasicParent({}: {})
 			diagnostics.some(
 				d =>
 					d.severity === 'error' &&
-					d.message.includes('must render exactly one root element'),
+					d.message.includes('that does not render exactly one root element'),
 			),
 		).toBe(true)
 	})

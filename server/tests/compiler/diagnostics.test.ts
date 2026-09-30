@@ -160,7 +160,7 @@ import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(
-				d => d.code === 'LTC005' && d.message.includes('side effects'),
+				d => d.code === 'LTC005' && d.message.includes('client-only side effect'),
 			),
 		).toBe(true)
 	})
@@ -212,7 +212,7 @@ import { createCell } from '@zeix/le-truc'`
 				d =>
 					d.code === 'LTC005' &&
 					d.message.includes('signal(s)') &&
-					d.message.includes('initially rendered branch'),
+					d.message.includes('the branch the server rendered'),
 			),
 		).toBe(true)
 	})
@@ -437,7 +437,7 @@ export function C({}: {}) {
 			expect(hit?.severity).toBe('error')
 			expect(hit?.line).toBe(9)
 			expect(hit?.message).toContain(
-				'`<truc:try>` boundary takes its arms inline',
+				'`<truc:try>` boundary with arms that are not inline',
 			)
 		},
 	)
@@ -450,7 +450,7 @@ export function C({}: {}) {
 		expect(
 			diagnostics.some(d =>
 				d.message.includes(
-					'`pending` arm must render exactly one root element',
+					'`pending` arm that does not render exactly one root element',
 				),
 			),
 		).toBe(true)
@@ -562,7 +562,7 @@ export function C({}: {})
 			)
 			expect(component).toBeNull()
 			const hit = diagnostics.find(d => d.code === 'LTC005')
-			expect(hit?.message).toContain('conditional arm')
+			expect(hit?.message).toContain('conditional branch')
 		}
 	})
 })
@@ -636,7 +636,7 @@ describe('loops inside conditional branches (LT-301)', () => {
 		const hit = diagnostics.find(
 			d => d.code === 'LTC005' && d.message.includes('`.map()` loop'),
 		)
-		expect(hit?.message).toContain('conditional arm')
+		expect(hit?.message).toContain('conditional branch')
 		expect(hit?.message).toContain('empty-state idiom')
 	})
 
@@ -708,7 +708,7 @@ export function C({}: {})
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'LTC005' && d.message.includes('Dynamic attribute'),
+				d => d.code === 'LTC005' && d.message.includes('dynamic attribute'),
 			),
 		).toBe(true)
 	})
@@ -736,7 +736,7 @@ export function C({}: {})
 		)
 		expect(
 			diagnostics.some(d =>
-				d.message.includes('only server-known build-time values'),
+				d.message.includes('only values the server render knows'),
 			),
 		).toBe(true)
 	})
@@ -785,7 +785,7 @@ export function C({ label }: { label: string })
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'LTC005' && d.message.includes('Signal, not the value'),
+				d => d.code === 'LTC005' && d.message.includes('a signal, not the value'),
 			),
 		).toBe(true)
 	})
@@ -807,7 +807,7 @@ export function C({ label }: { label: string })
 	}
 import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.message.includes('Index bindings'))).toBe(
+		expect(diagnostics.some(d => d.message.includes('An index binding'))).toBe(
 			true,
 		)
 	})
@@ -829,7 +829,7 @@ import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(d =>
-				d.message.includes('container element distinct from the host'),
+				d.message.includes('container element other than the host'),
 			),
 		).toBe(true)
 	})
@@ -938,7 +938,7 @@ import { createCell } from '@zeix/le-truc'`
 			}`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.message.includes('template slots'))).toBe(
+		expect(diagnostics.some(d => d.message.includes('owns no template slot'))).toBe(
 			true,
 		)
 	})
@@ -988,9 +988,9 @@ export function C({ initial }: { initial?: string[] })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const hit = diagnostics.find(d => d.message.includes('Dynamic attribute'))
+		const hit = diagnostics.find(d => d.message.includes('dynamic attribute'))
 		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('reads item')
+		expect(hit?.message).toContain('reads `item`')
 	})
 
 	test('client constructs on the root element are outside the subset', () => {
@@ -2330,8 +2330,8 @@ describe('duplicate id across @try/@catch arms (CHECKLIST §8, LTC035)', () => {
 		const hit = diagnostics.find(d => d.code === 'LTC035')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('id="msg"')
-		expect(hit?.message).toContain('@try body')
-		expect(hit?.message).toContain('@catch arm')
+		expect(hit?.message).toContain('`@try` body')
+		expect(hit?.message).toContain('`@catch` arm')
 	})
 
 	test('a duplicate id on a NESTED element (not just the arm root) is still LTC035', () => {

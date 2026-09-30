@@ -11,6 +11,44 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-220: Docs round for the ICU message model and the client-message channel. — reviewed ✓
+  **Skill:** tech-writer
+  **Changed:** HOST_PROFILE.md (messages and client-channel paragraphs re-taught; carrier-span
+  guidance removed), LE_TRUC_COMPILER.md (client-message classification and both emission
+  points, census walks), AGENTS.md (two i18n Surprising Behaviors bullets), `i18n/README.md`
+  (one pattern per key), `MF2_EXIT.md` (rebaseline scoped to data; compiler swap is its own
+  precondition), basic-pluralize JSDoc lead and docs page. CHANGELOG `[Unreleased]`: five Added
+  bullets (ICU patterns, client channel, root `lang`, census checks, LTC055), and the two stale
+  clauses fixed.
+  **Rulings (Architect, 2026-10-01):** (1) HOST_PROFILE keeps "a client-created instance speaks
+  the source locale" until LT-355 lands; ADR 0030 s9 already states the target rule. (2) The
+  ADR 0037 rider stays open, attached to LT-274–LT-276: there is no construct to teach yet.
+  **Review:** Approved; claims spot-checked against `MessageOf`, the preamble's
+  `closest('[lang]')` walk, `clientMessages`/`clientLocale` and `i18n/de.json`. Follow-ups →
+  **LT-359** (CHANGELOG "Breaking change" misstatement).
+
+- [x] LT-189: Tech Writer round — `ContextRequestEvent` cross-realm docs plus the standing i18n copy handoffs. — reviewed ✓
+  **Skill:** tech-writer
+  **Changed:** One-voice pass over the compiler diagnostics: LTC005 messages are a subject
+  plus a separate `fix` sentence at ~60 sites; LTC046/047/048/049/050/053/055 and TSRX018
+  reworded; `surface.ts` vocabulary settled (`.tsx` conditionals are truthy/falsy
+  *branches*, directives backticked, `caseArms` → `caseWithoutOutput`); the LTC007 selector
+  family unified. New builders `serverOnlyNames` (LTC005's server-only face; the fix branches
+  per binding class — parameter/loop binding, module-level declaration, list-body setup
+  const/import — plus `lang` → `host.lang` and a non-literal `t` → the literal-key rule) and
+  `boundaryAsLoopRoot` (LTC053, `.tsx` `<truc:try>` as a `.map()` root). `InvalidPassPropertyError`:
+  each failing prop carries its own fix. Context: `ContextRequestEvent`/`requestContext()`
+  JSDoc, `context.md` and `coordination.md` teach `event.context`, never `instanceof`, and
+  keys in a side-effect-free module. `errors.md` gains the LTC055 row and the server-only face.
+  CHANGELOG `[Unreleased]` Changed: "Compiler and `pass()` messages read as one voice".
+  **Rulings (Architect, 2026-10-01):** (1) Item 2 stays withdrawn; LTC008 keeps its other
+  messages. (2) The ADR 0037 condition-face copy moves with LT-274–LT-276. (3) The skill
+  reference's `Symbol.for('theme')` context key was a real bug — `provideContexts()` answers
+  string keys only — and `createContext()` is now the one taught spelling.
+  **Review:** Approved. Follow-ups → **LT-358** (code: coverage and signature gaps),
+  **LT-359** (copy corrections and the compiler's stale "ADR 0023" citations). LT-356's copy
+  rider no longer batches here; it goes to LT-359.
+
 - [x] LT-138: The `truc:html={}` sanitizer default was inverted between server and client. — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** Confirmed the flip, then fixed it: the server escaped an unconfigured

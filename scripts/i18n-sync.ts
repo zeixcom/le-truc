@@ -19,11 +19,9 @@
  * 3. every ORPHANED key — a catalog entry nothing in the corpus declares
  *    (a translator's typo, a renamed key, a deleted component; the
  *    census's `orphaned` status, LT-196) — is pruned from the catalog and
- *    from the staleness manifest. An unreachable DECLARED key is not an
- *    orphan (the census's carve-out, LT-217), so a wholesale translation
- *    of a pruned category survives the pass untouched; an undeclared key
- *    is sheltered by no category set and reports — and prunes — in every
- *    locale,
+ *    from the staleness manifest. Every locale carries the same key set
+ *    (one ICU pattern per key, ADR 0030 s4), so an orphan is unconditional:
+ *    it reports, and prunes, in every locale that carries it,
  * 4. every pattern-integrity finding (LT-219: a `malformed` entry — an
  *    unparseable pattern, or a value that is not a string at all, such as
  *    a group nested under the component (LT-249) — an
@@ -134,13 +132,13 @@ console.log(
 )
 if (staleKeys.length > 0) {
 	console.log(
-		`${staleKeys.length} STALE key(s) — the source string moved after the translation was recorded; review the wording before committing:\n` +
+		`${staleKeys.length} STALE key(s) — the source string changed after the translation was recorded; review the wording before committing:\n` +
 			staleKeys.map(key => `  • ${key}`).join('\n'),
 	)
 }
 if (orphanKeys.length > 0) {
 	console.log(
-		`${prunedKeys} orphaned key(s) PRUNED — nothing in the corpus declares them, so they could never render:\n` +
+		`${prunedKeys} orphaned key(s) PRUNED — nothing in the corpus declares them, so they never rendered:\n` +
 			orphanKeys.map(key => `  • ${key}`).join('\n'),
 	)
 }

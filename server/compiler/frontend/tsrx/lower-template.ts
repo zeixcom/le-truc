@@ -178,7 +178,8 @@ const lowerBodyStatements = (
 				diagnostic.unsupported(
 					ctx.source,
 					stmt.start,
-					'<style> blocks inside control-flow branches (styles are component-scoped)',
+					'A `<style>` block inside a control-flow branch',
+					'Styles are component-scoped — move the block beside the root element.',
 				),
 			)
 			continue
@@ -209,7 +210,8 @@ const lowerBodyStatements = (
 			diagnostic.unsupported(
 				ctx.source,
 				stmt.start,
-				'Statements inside control-flow branches other than output elements and nested directives',
+				'A statement other than an output element or a nested directive inside a control-flow branch',
+				'Move the statement into setup.',
 			),
 		)
 	}
@@ -256,7 +258,8 @@ export const lowerTry = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.finalizer.start,
-				'@finally arms on template @try blocks',
+				'A `@finally` arm on a template `@try` block',
+				'Remove the arm — a template boundary has `@pending` and `@catch` arms only.',
 			),
 		)
 		return null
@@ -275,7 +278,8 @@ export const lowerTry = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				'@pending requires a @catch (e) arm — an async boundary routes pending/ok/err together (ADR 0023 sub-design 13)',
+				'A `@pending` arm without a `@catch (e)` arm',
+				'An async boundary routes the pending, resolved and error states together (ADR 0023 sub-design 13) — add a `@catch (e)` arm.',
 			),
 		)
 		return null
@@ -358,7 +362,8 @@ export const lowerChildren = (
 					diagnostic.unsupported(
 						ctx.source,
 						child.start,
-						'@for-in loops (iterating object keys) — use @for-of over an array',
+						'A `@for-in` loop over object keys',
+						'Loop with `@for-of` over an array, for example `Object.keys(record)`.',
 					),
 				)
 				return true

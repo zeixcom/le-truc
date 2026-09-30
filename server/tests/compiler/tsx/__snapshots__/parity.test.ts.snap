@@ -68,9 +68,9 @@ declare global {
 }
 
 /**
- * Shows locale-aware plural forms of content based on a count.
- * Use it for internationalised prose where the correct plural form must be shown —
- * accessibility tools and screen readers benefit from grammatically correct output.
+ * Shows a count with its noun in the correct plural form for the locale.
+ * The noun comes from the component's own catalog; the page supplies no word forms.
+ * Use it for internationalised prose — screen readers benefit from grammatically correct output too.
  * Reveal children by class: \`.none\` (0), \`.some\` (>0); \`.tasks\` carries the noun, one ICU plural pattern per locale.
  *
  * @attribute {string} [lang] - Config attribute only (not a reactive property). BCP 47 locale tag; the element's own attribute wins, else the nearest ancestor's, else \`en\`. The server renders the effective locale onto it; the client materializes the walked locale at connect.
@@ -93,7 +93,7 @@ export default defineComponent<BasicPluralizeProps>(
 					__i18nMessages = { ...__i18nSource, ...(parsed as Record<string, unknown>) }
 			} catch (error) {
 				if (process.env.DEV_MODE === 'true')
-					console.warn("<basic-pluralize>: the i18n attribute is not valid JSON — using the source-locale messages", error)
+					console.warn("<basic-pluralize>: the i18n attribute is not valid JSON, so the component shows its source-locale messages. Check the server render that wrote the attribute.", error)
 			}
 		}
 		type __I18nNode = string | { t: string; a: string; o?: unknown; s?: number; off?: number; c?: Record<string, __I18nNode[]> }

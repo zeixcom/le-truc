@@ -701,7 +701,7 @@ export const analyzeClient = (
 			reportServerOnlyNames(
 				ctx,
 				prop.value,
-				`expose() entry \`${identifierName(prop.key) ?? '…'}\``,
+				`\`expose()\` entry \`${identifierName(prop.key) ?? '…'}\``,
 			)
 	// A signal with no harvest site (or a verbatim-seeded list) keeps its
 	// authored initializer client-side (`emit-client.ts`). Tier-independent
@@ -714,7 +714,7 @@ export const analyzeClient = (
 		if (harvest && !(harvest.kind === 'list' && harvest.seed === 'verbatim'))
 			continue
 		const call = component.setup.find(s => s.name === signal.name)?.node
-		if (call) reportServerOnlyNames(ctx, call, `Signal \`${signal.name}\``)
+		if (call) reportServerOnlyNames(ctx, call, `The initializer of signal \`${signal.name}\``)
 	}
 	const clientNeeded = computeClientNeededNames(component)
 	for (const stmt of component.plainSetup)
@@ -722,7 +722,7 @@ export const analyzeClient = (
 			reportServerOnlyNames(
 				ctx,
 				stmt.node,
-				`Setup const \`${stmt.name}\`, emitted client-side because a client position reads it,`,
+				`Setup const \`${stmt.name}\`, which a client position reads,`,
 			)
 
 	// LT-165 step 5: the narrow residue of the retired LTC013/LTC043

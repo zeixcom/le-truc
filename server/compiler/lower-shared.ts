@@ -85,7 +85,8 @@ export const validateCondition = (
 			diagnostic.unsupported(
 				ctx.source,
 				test.start,
-				`${what} reads signal(s) ${signalReads.map(n => `\`${n}\``).join(', ')} — the DOM keeps the initially rendered branch, so a signal condition would silently stop matching. Conditions must derive from args or setup consts evaluated once at render time`,
+				`${what} that reads signal(s) ${signalReads.map(n => `\`${n}\``).join(', ')}`,
+				'The DOM keeps the branch the server rendered, so a signal condition would silently stop matching. Derive the condition from args or setup consts, or show and hide the element on the client with `hidden={() => …}`.',
 			),
 		)
 		return false
@@ -96,7 +97,8 @@ export const validateCondition = (
 			diagnostic.unsupported(
 				ctx.source,
 				test.start,
-				`${what} references non-server-known name(s) ${unknown.map(n => `\`${n}\``).join(', ')} — conditions must evaluate at render time (args and setup); client-side conditional rendering is outside the model`,
+				`${what} that reads ${unknown.map(n => `\`${n}\``).join(', ')}, which the server render does not know`,
+				'A condition is evaluated once, during the server render — derive it from args or setup consts.',
 			),
 		)
 		return false
@@ -274,7 +276,7 @@ export const validateComposedChildren = (
 					diagnostic.composedElementUnsupported(
 						ctx.source,
 						node.node.start,
-						wording.lazyChild,
+						`${wording.lazyChild} in a composed element's content`,
 					),
 				)
 			return
@@ -284,9 +286,7 @@ export const validateComposedChildren = (
 				diagnostic.composedElementUnsupported(
 					ctx.source,
 					node.node.start,
-					node.kind === 'compose'
-						? 'A nested composed element'
-						: wording.controlFlow,
+					`${node.kind === 'compose' ? 'A nested composed element' : wording.controlFlow} in a composed element's content`,
 				),
 			)
 			return
@@ -297,7 +297,7 @@ export const validateComposedChildren = (
 				diagnostic.composedElementUnsupported(
 					ctx.source,
 					node.node.start,
-					`A \`${attr.kind}\` attribute`,
+					`A \`${attr.kind}\` attribute in a composed element's content`,
 				),
 			)
 		}
@@ -410,7 +410,7 @@ export const lowerElement = (
 			diagnostic.composedElementUnsupported(
 				ctx.source,
 				element.start,
-				`Composed element \`<${tag}>\` in this position (${wording.composedPosition}, or another non-child-list context)`,
+				`A composed element \`<${tag}>\` in ${wording.composedPosition}, or in any other position that is not an element's child list`,
 			),
 		)
 	const attrs: AttributeIR[] = []
@@ -765,10 +765,11 @@ const validateListBody = (
 	const notBuildTime = (node: AstNode): string => {
 		const offenders = [...dependenciesOf(node)]
 			.filter(name => !ctx.serverKnown.has(name))
+			.map(name => `\`${name}\``)
 			.join(', ')
 		return offenders
-			? `reads ${offenders}, which derive per item or client-side`
-			: 'reads impure ambient state'
+			? `that reads ${offenders}`
+			: 'that reads impure ambient state'
 	}
 	let holes = 0
 	const walk = (node: TemplateNode): void => {
@@ -783,7 +784,8 @@ const validateListBody = (
 					diagnostic.unsupported(
 						ctx.source,
 						node.node.start,
-						`Lazy children inside a reactive-list ${loop} body must be the bare item ({${itemName}}) — the slot fill; {${node.exprText}} derives per item, and the extracted <template> has no per-item binding channel (ADR 0024 sub-design 5).`,
+						`The lazy child \`{${node.exprText}}\` in a reactive-list ${loop} body`,
+						`The extracted \`<template>\` has one per-item slot, the bare item \`{${itemName}}\`, and no channel for other per-item values (ADR 0024 sub-design 5). Render \`{${itemName}}\` as the only lazy child.`,
 					),
 				)
 			else if (!isServerEvaluable(node.expr, ctx.serverKnown))
@@ -791,7 +793,8 @@ const validateListBody = (
 					diagnostic.unsupported(
 						ctx.source,
 						node.node.start,
-						`{${node.exprText}} inside a reactive-list ${loop} body ${notBuildTime(node.expr)} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5).`,
+						`The expression \`{${node.exprText}}\` in a reactive-list ${loop} body ${notBuildTime(node.expr)}`,
+						`The extracted \`<template>\` is the same for every item, so it takes only values the server render knows: server args and the \`i18n\` record's \`t\` (ADR 0024 sub-design 5). Read only those here.`,
 					),
 				)
 			return
@@ -802,7 +805,8 @@ const validateListBody = (
 					diagnostic.unsupported(
 						ctx.source,
 						node.node.start,
-						`${listControlFlow} inside a reactive-list ${loop} body — the extracted template is static markup`,
+						`${listControlFlow} in a reactive-list ${loop} body`,
+						'The extracted `<template>` is static markup — move the condition outside the loop, or render both states and toggle `hidden` from the item.',
 					),
 				)
 			return
@@ -818,7 +822,8 @@ const validateListBody = (
 				diagnostic.unsupported(
 					ctx.source,
 					node.node.start,
-					`Dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` inside a reactive-list ${loop} body${attr.kind === 'server' ? ` ${notBuildTime(attr.node)}` : ''} — only server-known build-time values (server args, the i18n record's \`t\`) can be interpolated here (ADR 0024 sub-design 5, LT-215).`,
+					`The dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` in a reactive-list ${loop} body${attr.kind === 'server' ? ` ${notBuildTime(attr.node)}` : ''}`,
+					`The extracted \`<template>\` is the same for every item, so it takes only values the server render knows: server args and the \`i18n\` record's \`t\` (ADR 0024 sub-design 5). Read only those here.`,
 				),
 			)
 		}
@@ -830,7 +835,8 @@ const validateListBody = (
 			diagnostic.unsupported(
 				ctx.source,
 				output.node.start,
-				`A reactive-list ${loop} body must render the item exactly once via {${itemName}} — that hole is the template slot the client fills (found ${holes}).`,
+				`A reactive-list ${loop} body that renders the item ${holes === 0 ? 'nowhere' : `${holes} times`} (found ${holes})`,
+				`The bare item \`{${itemName}}\` is the template slot the client fills — render it exactly once.`,
 			),
 		)
 	}
@@ -857,7 +863,8 @@ const lowerListLoop = (
 			diagnostic.unsupported(
 				ctx.source,
 				loop.index.at,
-				`Index bindings in a reactive-list ${wording.loop} — index identity does not survive keyed reconciliation`,
+				`An index binding in a reactive-list ${wording.loop}`,
+				'An index does not survive keyed reconciliation — remove the index binding.',
 			),
 		)
 		return null
@@ -871,7 +878,8 @@ const lowerListLoop = (
 				diagnostic.unsupported(
 					ctx.source,
 					loop.key.start,
-					'The key clause of a reactive-list @for must name the key binding (a bare identifier, e.g. `key k`) — it becomes reconcile() bindItem’s key parameter',
+					'A reactive-list `@for` key clause that is not a bare identifier',
+					'The key clause names the key binding, which becomes the key parameter of `reconcile()`’s `bindItem` — write a bare identifier, for example `key k`.',
 				),
 			)
 			return null
@@ -882,7 +890,8 @@ const lowerListLoop = (
 			diagnostic.unsupported(
 				ctx.source,
 				loop.node.start,
-				`${wording.loopBindings} named \`first\`/\`element\` — reserved parameters of reconcile() bindItem`,
+				`${wording.loopBindings} named \`first\` or \`element\``,
+				'Both names are reserved parameters of `reconcile()`’s `bindItem` — rename the binding.',
 			),
 		)
 		return null
@@ -899,8 +908,11 @@ const lowerListLoop = (
 				ctx.source,
 				stmt.start,
 				stmt.type === 'VariableDeclaration'
-					? `Hoisted consts inside a reactive-list ${wording.loop} body (derive at use sites; per-item const rebinding is outside the milestone-3 subset)`
-					: `Statements other than the output element inside a reactive-list ${wording.loop} body`,
+					? `A hoisted const in a reactive-list ${wording.loop} body`
+					: `A statement other than the output element in a reactive-list ${wording.loop} body`,
+				stmt.type === 'VariableDeclaration'
+					? 'The client does not rebind per-item consts — write the expression where it is used.'
+					: 'Move the statement into setup.',
 			),
 		)
 	}
@@ -909,7 +921,8 @@ const lowerListLoop = (
 			diagnostic.unsupported(
 				ctx.source,
 				loop.node.start,
-				`${wording.loop} bodies must contain an output element`,
+				`A ${wording.loop} body with no output element`,
+				'Render one element per item.',
 			),
 		)
 		return null
@@ -956,7 +969,8 @@ export const lowerLoop = (
 			diagnostic.unsupported(
 				ctx.source,
 				loop.node.start,
-				`${wording.loop} over a destructuring loop variable`,
+				`${wording.aLoop} over a destructuring loop variable`,
+				'Bind the item to one name and read its fields in the body (`item.id`).',
 			),
 		)
 		return null
@@ -996,7 +1010,8 @@ export const lowerLoop = (
 			diagnostic.unsupported(
 				ctx.source,
 				loop.node.start,
-				'map callbacks take at most (item, index) — the key clause is a reactive-List concern',
+				'A `.map()` callback with more than two parameters',
+				'A `.map()` callback takes `(item, index)` at most — a key belongs to the `createList(…)` that the loop reads, not to the callback.',
 			),
 		)
 		return null
@@ -1010,7 +1025,8 @@ export const lowerLoop = (
 					diagnostic.unsupported(
 						ctx.source,
 						stmt.start,
-						`Non-const declarations inside ${wording.loop} bodies`,
+						`A \`let\` or \`var\` declaration in a ${wording.loop} body`,
+						'Declare it with `const`.',
 					),
 				)
 				continue
@@ -1022,7 +1038,8 @@ export const lowerLoop = (
 						diagnostic.unsupported(
 							ctx.source,
 							stmt.start,
-							`Destructuring declarations inside ${wording.loop} bodies`,
+							`A destructuring declaration in a ${wording.loop} body`,
+							'Declare one `const` per value (`const id = item.id`).',
 						),
 					)
 					continue
@@ -1045,6 +1062,7 @@ export const lowerLoop = (
 				ctx.source,
 				stmt.start,
 				wording.loopBodyStatements,
+				'Move the statement into setup; render a branch with a conditional.',
 			),
 		)
 	}
@@ -1053,7 +1071,8 @@ export const lowerLoop = (
 			diagnostic.unsupported(
 				ctx.source,
 				loop.node.start,
-				`${wording.loop} bodies must contain an output element`,
+				`A ${wording.loop} body with no output element`,
+				'Render one element per item.',
 			),
 		)
 		return null
@@ -1064,7 +1083,8 @@ export const lowerLoop = (
 			diagnostic.unsupported(
 				ctx.source,
 				loop.node.start,
-				`${wording.loop} output must be a single element`,
+				`A ${wording.loop} body whose output is not a single element`,
+				"Wrap each item's content in one element.",
 			),
 		)
 		return null
@@ -1102,7 +1122,8 @@ export const finishIf = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				`${wordingOf(ctx).ifBranches} must contain output elements`,
+				`A ${wordingOf(ctx).if} with no output element in any branch`,
+				'Render an element in at least one branch, or remove the conditional.',
 			),
 		)
 		return null
@@ -1128,9 +1149,10 @@ export const reportEmptySwitch = (
 		diagnostic.unsupported(
 			ctx.source,
 			at,
+			which === 'switch' ? wording.switchNoArms : wording.caseWithoutOutput,
 			which === 'switch'
-				? wording.switchNoArms
-				: `${wording.caseArms} must contain output elements`,
+				? 'Add at least one arm, or remove the switch.'
+				: 'Render an element in every arm, or remove the empty arm.',
 		),
 	)
 }
@@ -1162,25 +1184,20 @@ export const finishTry = (
 	const { children, catchParam, catchChildren, pendingChildren, at } = arms
 	if (pendingChildren !== null) {
 		const multiRoot: Array<[TemplateNode[], number | undefined, string]> = [
-			[
-				children,
-				at.body,
-				`An async boundary's ${wording.tryBody} must render exactly one root element (its own \`hidden\` toggle and client addressing need a single target)`,
-			],
-			[
-				pendingChildren,
-				at.pending,
-				`${wording.pendingArm} must render exactly one root element`,
-			],
-			[
-				catchChildren,
-				at.catch,
-				`${wording.catchArm} of an async boundary must render exactly one root element`,
-			],
+			[children, at.body, wording.tryBody],
+			[pendingChildren, at.pending, wording.pendingArm],
+			[catchChildren, at.catch, wording.catchArm],
 		]
-		for (const [arm, offset, what] of multiRoot) {
+		for (const [arm, offset, which] of multiRoot) {
 			if (singleRootOf(arm)) continue
-			ctx.diagnostics.push(diagnostic.unsupported(ctx.source, offset, what))
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					offset,
+					`An async boundary's ${which} that does not render exactly one root element`,
+					"The client toggles each arm's `hidden` and addresses its bindings through one root — wrap the arm's content in a single element.",
+				),
+			)
 			return null
 		}
 	}
@@ -1189,7 +1206,8 @@ export const finishTry = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				`${wording.boundaries} must contain output elements`,
+				`A ${wording.boundary} with no output element`,
+				`Render an element in the ${wording.tryBody} or the ${wording.catchArm}.`,
 			),
 		)
 		return null

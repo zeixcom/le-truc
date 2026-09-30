@@ -226,17 +226,36 @@ export const reportServerOnlyNames = (
 	bad: string[] = ctx.badFreeNames(node),
 ): void => {
 	if (bad.length === 0) return
+	const { component } = ctx
+	// Split by binding class — each has its own fix. A name the server
+	// binds takes precedence: a list body's setup-const class is only the
+	// residue `badListBodyNames` adds (LT-349).
+	const moduleNames = new Set(component.moduleBindings ?? [])
+	const serverNames = new Set<string>(component.paramNames)
+	for (const loop of component.fors.values()) {
+		if (loop.kind !== 'each') continue
+		serverNames.add(loop.itemName)
+		if (loop.indexName) serverNames.add(loop.indexName)
+		for (const h of loop.hoisted) serverNames.add(h.name)
+	}
+	const module = bad.filter(name => moduleNames.has(name))
+	const server = bad.filter(
+		name => !moduleNames.has(name) && serverNames.has(name),
+	)
+	const listBody = bad.filter(
+		name => !moduleNames.has(name) && !serverNames.has(name),
+	)
 	// `lang` stays server-only under the client message channel (ADR 0030
 	// s9): the locale reaches the client through the root attribute.
-	const lang = ctx.component.langBinding
+	const lang = component.langBinding
 	ctx.diagnostics.push(
-		diagnostic.unsupported(
+		diagnostic.serverOnlyNames(
 			ctx.source,
 			node.start,
-			`${subject} references server-only name(s) ${bad.map(b => `\`${b}\``).join(', ')}; those exist only during the server render — read the value through an exposed prop or from the DOM`,
-			lang !== null && bad.includes(lang)
-				? `The locale is \`host.lang\` on the client, not \`${lang}\`.`
-				: undefined,
+			subject,
+			{ server, module, listBody },
+			lang !== null && server.includes(lang) ? lang : null,
+			server.find(name => component.messageTBindings?.includes(name)) ?? null,
 		),
 	)
 }
@@ -307,7 +326,8 @@ const emitLazyTextChildren = (
 			diagnostic.unsupported(
 				fx.source,
 				lazyChildren[1]?.node.start,
-				`Multiple lazy text children on ${targetLabel} — bindText() replaces the element's entire textContent, so a second lazy child's writes would silently overwrite the first's. Combine them into one expression.`,
+				`More than one lazy text child on ${targetLabel}`,
+				"`bindText()` replaces the element's whole `textContent`, so each lazy child would overwrite the others — combine them into one expression.",
 			),
 		)
 		return
@@ -317,7 +337,8 @@ const emitLazyTextChildren = (
 			diagnostic.unsupported(
 				fx.source,
 				(lazyChildren[0] as ExprNode).node.start,
-				`A lazy text child must be ${targetLabel}'s only content — bindText() replaces the element's entire textContent, wiping static text and removing element children on the first write. Move mixed content into a dedicated child element.`,
+				`A lazy text child beside other content on ${targetLabel}`,
+				"`bindText()` replaces the element's whole `textContent`, so the first write would erase the static text and remove the child elements — move the lazy child into an element of its own.",
 			),
 		)
 		return
@@ -535,13 +556,13 @@ const emitPassEntries = (
 	const { collectAmbient } = fx
 	for (const entry of entries) {
 		collectAmbient(entry.thunk)
-		reportServerOnlyNames(fx, entry.thunk, `pass entry \`${entry.prop}\``)
+		reportServerOnlyNames(fx, entry.thunk, `Pass entry \`${entry.prop}\``)
 		if (entry.setThunk) {
 			collectAmbient(entry.setThunk)
 			reportServerOnlyNames(
 				fx,
 				entry.setThunk,
-				`pass entry \`${entry.prop}\` (set)`,
+				`The setter of pass entry \`${entry.prop}\``,
 			)
 		}
 		sink.push({
@@ -807,7 +828,7 @@ const emitConstructEffects = (
 			// dangerouslyBindInnerHTML watch, the sanctioned XSS-aware sink
 			// (ADR 0010) — never a raw innerHTML property binding.
 			collectAmbient(attr.thunk)
-			reportServerOnlyNames(fx, attr.thunk, 'Reactive truc:html={…}')
+			reportServerOnlyNames(fx, attr.thunk, 'Reactive `truc:html`')
 			sink.push({
 				kind: 'watch-html',
 				query,
@@ -870,7 +891,8 @@ const handleOptionalBranch = (
 				diagnostic.unsupported(
 					source,
 					root.node.start,
-					`Client constructs inside ${label} must sit on its root element — deeper elements exist only when it rendered`,
+					`A client construct below the root element of ${label}`,
+					'The deeper element exists only when the arm rendered — move the construct onto the root element.',
 				),
 			)
 	const clientStmts = body.filter(
@@ -892,7 +914,8 @@ const handleOptionalBranch = (
 			diagnostic.unsupported(
 				source,
 				atNode.node.start,
-				`Multiple addressable elements with client constructs inside one ${label} — only one root can be addressed; give the extra element its own \`first()\` reference, or address it through a hoisted const referenced from the first`,
+				`More than one element with client constructs in ${label}`,
+				'The client addresses one root per arm — give the extra element its own `first()` reference, or address it through a hoisted const that the first element references.',
 			),
 		)
 		return
@@ -909,7 +932,8 @@ const handleOptionalBranch = (
 			diagnostic.unsupported(
 				source,
 				atNode.node.start,
-				`A bare client-only statement inside ${label} needs an element sibling to test whether it rendered`,
+				`A bare client-only statement in ${label} with no element beside it`,
+				'The client tests an element to learn whether the arm rendered — render an element beside the statement.',
 			),
 		)
 		return
@@ -920,7 +944,7 @@ const handleOptionalBranch = (
 			diagnostic.unaddressableElement(
 				source,
 				primary.node.start,
-				`No unique selector for ${label}'s root <${primary.tag}> — add a distinguishing static attribute`,
+				`No unique selector for ${label}'s root <${primary.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 			),
 		)
 		return
@@ -958,7 +982,7 @@ const handleOptionalBranch = (
 				diagnostic.unaddressableElement(
 					source,
 					extra.node.start,
-					`No unique selector for the \`first()\`-addressed <${extra.tag}> inside ${label} — add a distinguishing static attribute`,
+					`No unique selector for the \`first()\`-addressed <${extra.tag}> inside ${label} — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 				),
 			)
 			continue
@@ -1033,7 +1057,7 @@ const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
 			diagnostic.unaddressableElement(
 				source,
 				root.node.start,
-				`Per-branch addressing of this ${wording.if} needs a selector for the ${label} root <${root.tag}> that cannot match the ${otherLabel} — \`${plain.selector}\` is unique in the template but matches the ${otherLabel} too, so both branches' effects would bind whichever root rendered. Add distinguishing static attributes to the branch roots, or make the constructs identical across branches (union addressing).`,
+				`The ${label} root <${root.tag}> of this ${wording.if} has no selector that excludes the ${otherLabel} — \`${plain.selector}\` is unique in the template but matches the ${otherLabel} root too, so the effects of both branches would bind whichever root rendered. Add distinguishing static attributes to the branch roots, or make the client constructs identical across branches (union addressing).`,
 			),
 		)
 		return
@@ -1073,7 +1097,8 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 				diagnostic.unsupported(
 					source,
 					root.node.start,
-					`Client constructs inside ${wording.ifBranches} must sit on the branch root elements — deeper elements exist only when their branch rendered`,
+					`A client construct below a branch root of this ${wording.if}`,
+					'The deeper element exists only when its branch rendered — move the construct onto the branch root.',
 				),
 			)
 	const clientStmts = [...node.then, ...node.alternate].filter(
@@ -1096,7 +1121,8 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 				diagnostic.unsupported(
 					source,
 					node.node.start,
-					`Multiple addressable elements with client constructs inside one ${wording.ifBranch} — union addressing addresses a single root per branch; split into ${wording.separateIfs}, or address the extra element through a hoisted const referenced from the first`,
+					`More than one element with client constructs in one ${wording.ifBranch}`,
+					`Union addressing binds one root per branch — split the markup into ${wording.separateIfs}, or address the extra element through a hoisted const that the first element references.`,
 				),
 			)
 			return
@@ -1109,7 +1135,8 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 				diagnostic.unsupported(
 					source,
 					stmt.node.start,
-					`A bare client-only statement inside ${wording.ifWithElse} needs an addressed branch root to guard it — add a client construct to one branch root (per-branch addressing), or use ${wording.singleBranchIfFix} instead`,
+					`A bare client-only statement in ${wording.ifWithElse} with no addressed branch root`,
+					`The client needs an addressed root to tell which branch rendered — add a client construct to one branch root (per-branch addressing), or use ${wording.singleBranchIfFix} instead.`,
 				),
 			)
 		return
@@ -1154,7 +1181,8 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 			diagnostic.unsupported(
 				source,
 				stmt.node.start,
-				`A bare client-only statement inside ${wording.ifWithElse} — union addressing cannot tell which branch rendered; make the branch constructs differ (per-branch addressing) or use ${wording.singleBranchIfFix} instead`,
+				`A bare client-only statement in ${wording.ifWithElse} with identical branch constructs`,
+				`Union addressing cannot tell which branch rendered — make the branch constructs differ (per-branch addressing), or use ${wording.singleBranchIfFix} instead.`,
 			),
 		)
 	// truc:html={dataRef} is server-rendered only — not a client construct.
@@ -1166,7 +1194,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 			diagnostic.unaddressableElement(
 				source,
 				primary.node.start,
-				`No unique selector for the ${wording.ifBranch} root <${primary.tag}> — add a distinguishing static attribute`,
+				`No unique selector for the ${wording.ifBranch} root <${primary.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 			),
 		)
 		return
@@ -1198,7 +1226,8 @@ const handleSwitchEffects = (fx: EffectsContext, node: SwitchNode): void => {
 					diagnostic.unsupported(
 						source,
 						(child as ElementNode).node?.start ?? node.node.start,
-						`Client constructs inside ${wording.switchArms} — arms render exclusively, so the element is not guaranteed to exist. Keep arms to static/server markup, or use ${wording.ifBranches} with identical constructs (union addressing).`,
+						`A client construct in ${wording.switchArms}`,
+						`Only one arm renders, so the element may not exist — keep the arms to static and server markup, or use ${wording.ifBranches} with identical constructs (union addressing).`,
 					),
 				)
 }
@@ -1230,7 +1259,8 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				node.node.start,
-				"Client constructs inside an async boundary must sit on each arm's own root element — deeper elements have no addressing (ADR 0023 sub-design 13)",
+				'A client construct below the root element of an async-boundary arm',
+				"Deeper elements have no addressing (ADR 0023 sub-design 13) — move the construct onto the arm's root element.",
 			),
 		)
 		return
@@ -1240,7 +1270,8 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				pendingRoot.node.start,
-				`${wording.pendingArm} of an async boundary must be static/server markup — nothing watches it once resolved`,
+				`A client construct in the ${wording.pendingArm} of an async boundary`,
+				'Nothing watches the pending arm once the signal resolves — keep it to static and server markup.',
 			),
 		)
 		return
@@ -1255,7 +1286,8 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				okRoot.node.start,
-				`An async boundary's ${wording.tryBody} must render the async signal it guards as a direct lazy child (e.g. \`{data}\`), where \`data\` is a \`deriveCell(async …)\` signal — the compiler discovers which signal drives isPending() routing from that reference.`,
+				`An async boundary whose ${wording.tryBody} does not render its async signal as a direct lazy child`,
+				'The compiler learns which signal drives the `isPending()` routing from that child — render the `deriveCell(async …)` signal directly, for example `{data}`.',
 			),
 		)
 		return
@@ -1267,7 +1299,8 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				okRoot.node.start,
-				`An async boundary's ${wording.tryBody} root may only carry static/server attributes and its one lazy signal child — other reactive constructs have no addressing here yet`,
+				`A reactive construct on the ${wording.tryBody} root of an async boundary`,
+				'That root takes static and server attributes and its one lazy signal child only; other constructs have no addressing there yet — move the construct onto a child element.',
 			),
 		)
 		return
@@ -1277,7 +1310,8 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				errRoot.node.start,
-				`${wording.catchArm} of an async boundary may only carry static/server attributes and its one lazy error child`,
+				`A reactive construct in the ${wording.catchArm} of an async boundary`,
+				'The arm takes static and server attributes and its one lazy error child only — remove the construct.',
 			),
 		)
 		return
@@ -1296,7 +1330,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 				diagnostic.unaddressableElement(
 					source,
 					el.node.start,
-					`No unique selector for the ${label}'s root <${el.tag}> of an async boundary; add a distinguishing static attribute (role, class, or data-*).`,
+					`No unique selector for the ${label}'s root <${el.tag}> of an async boundary — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 				),
 			)
 	}
@@ -1349,7 +1383,8 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			diagnostic.unsupported(
 				source,
 				errRoot.node.start,
-				`${wording.catchArm}'s lazy child must reference the catch param \`${catchParam ?? 'e'}\` (bare, or a member read like \`${catchParam ?? 'e'}.message\`)`,
+				`A lazy child in the ${wording.catchArm} that does not read the catch parameter \`${catchParam ?? 'e'}\``,
+				`Render the parameter itself or a member of it, for example \`{${catchParam ?? 'e'}.message}\`.`,
 			),
 		)
 		return
@@ -1621,7 +1656,8 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 					diagnostic.unsupported(
 						source,
 						component.root.node.start,
-						'Reactive constructs on the component root element',
+						'A reactive construct on the component root element',
+						'The root takes reactive class and style maps and lazy text only — move the construct onto a child element.',
 					),
 				)
 				break
@@ -1651,7 +1687,7 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 					diagnostic.unaddressableElement(
 						source,
 						node.node.start,
-						`No unique selector for <${node.tag}> in the rendered template; add a distinguishing static attribute (role, class, or data-*).`,
+						`No unique selector for <${node.tag}> in the rendered template — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 					),
 				)
 			}

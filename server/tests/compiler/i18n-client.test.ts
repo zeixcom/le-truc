@@ -199,7 +199,7 @@ describe('analysis: `t.<key>` in client positions', () => {
 				diagnostics.some(
 					d =>
 						d.code === 'LTC005' &&
-						d.message.includes('server-only name(s) `t`'),
+						d.message.includes('server-only name `t`'),
 				),
 			).toBe(true)
 	})

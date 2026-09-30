@@ -356,6 +356,33 @@ iteration's review files follow-ups.
   leaves the file byte-identical and exits non-zero naming it; committed catalogs are
   unaffected. **Copy:** Tech Writer (batch with LT-189 item 8 if still open).
 
+- [ ] LT-358: LT-189 review follow-ups — coverage and signature gaps behind the reworded diagnostics.
+  **Skill:** le-truc-dev
+  **Context:** Three gaps in the LT-189 diff, none a copy question. (a) The `.tsx`
+  `boundaryAsLoopRoot` guard in `frontend/tsx/lower-tsx.ts` (`lowerFor`) has no test. Pin it
+  (block and expression bodies), and decide `.tsrx` parity: `@try` as an `@for` body root
+  must get the same LTC053 rule, with a `diagnostic-parity.test.ts` case, or be recorded as
+  intentionally surface-specific. (b) `formContextMismatch` (LTC050) receives no source offset,
+  so the report has no line. Thread the annotation's offset in, as LTC049 now does. (c)
+  `reportServerOnlyNames` routes a non-literal `i18n.t.<key>` read (the record spelling) to
+  the generic "read the value through an exposed prop" fix, because the bad name is the
+  record binding, not a `messageTBindings` entry. Route record-spelled `t` reads to the
+  literal-key sentence too. Tier 1 throughout, compiler channel; copy stays Tech Writer's.
+
+- [ ] LT-359: LT-189/LT-220 review follow-ups — copy corrections.
+  **Skill:** tech-writer
+  **Context:** (a) `serverOnlyNames` says the read "would throw at connect". A handler throws
+  when it runs, not at connect, so word the mechanism position-neutrally (e.g. "throws when the
+  client runs it"), and update the parity pins. (b) CHANGELOG `[Unreleased]`'s ICU bullet
+  says per-category keys and `truc:case` removal is a **Breaking change**. Neither shipped in
+  a release (2.6.0 has no i18n), so drop the breaking-change clause. (c) Compiler copy cites
+  "ADR 0023" for the supported subset, composition (s10), config (s8) and async boundaries
+  (s13), but `adr/0023` is the bind-helper map-form ADR. The compiler ADR was renumbered or
+  purged in `9ccb22e1` ("ADR purge & alignment pass"). Ask the Architect which ADR now carries
+  those sub-designs, then sweep `diagnostics.ts`, the call sites, `errors.md` and the CHANGELOG
+  line. (d) ADR 0028's inventory table: add LTC055 and the LTC053 loop-root case, via
+  `adr-keeper`. (e) Carry LT-356's copy rider here.
+
 ---
 
 ## P2b — Compiler product-readiness: equivalence contract, consolidation, library substitutions (external review + reflection, 2026-09-18)
@@ -954,6 +981,7 @@ separate track, blocked on CE 2.0 shipping — out of scope here.
   **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) reverses "`@if` conditions cannot read signals" (`validateCondition`, `server/compiler/lower-shared.ts`). Only the **condition face** of LTC005 retires — the `t`-in-reactive-position face stays. The error-message lifecycle applies to every face touched: the LTC005 message, the arrow-thunk section's sentence in `server/compiler/HOST_PROFILE.md` and its "Open questions" reactivity paragraph ("creates no DOM outside declared lists", "Branch DOM lifetime … toggled via `hidden` (this host)"), and the teaching in ARCHITECTURE.md, AGENTS.md and the le-truc/cause-effect skills; the new ADR 0037 codes' final wording lands here. Batch with the LT-220/LT-189 copy rounds. **LT-233 rider (2026-09-25):** shared code words diagnostics only through `server/compiler/surface.ts` — each new ADR 0037 code's surface-specific fragments become `SurfaceWording` keys (both tables), and the `CONDITIONS` cases in `server/tests/compiler/tsx/diagnostic-parity.test.ts` flip to the new codes on both surfaces in the same change.
   **Check:** catalog rows added/retired match the diagnostics union; `check:links`; compile-warning baseline 0.
   **Depends on** LT-274.
+  **Rider (LT-220/LT-189 review, 2026-10-01):** the ADR 0037 copy those rounds carried moves here — the HOST_PROFILE control-flow row, the arrow-thunk section's reversal, the ARCHITECTURE/AGENTS "`@if` cannot read signals" sentences, and the condition-face fix LT-189 now words as "show and hide the element with `hidden={() => …}`" (`lower-shared.ts` `validateCondition`).
 
 - [ ] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4). **Sequenced after LT-303** (ADR 0040 s3: LT-303 changes only the `.tsx` spelling of today's `try` node; this task then reshapes it under both front ends). **Gates LT-254** (ADR 0040).
   **Skill:** le-truc-dev

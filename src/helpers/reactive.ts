@@ -506,7 +506,10 @@ const makePass = <P extends ComponentProps>(
 			for (const [prop, reactive] of Object.entries(props)) {
 				if (reactive == null) continue
 				if (!(prop in target)) {
-					failures.set(prop, `is not a property of ${targetName}`)
+					failures.set(
+						prop,
+						`is not a property of ${targetName} — expose it there, or remove it from this pass() call`,
+					)
 					continue
 				}
 
@@ -514,7 +517,7 @@ const makePass = <P extends ComponentProps>(
 				if (!signal) {
 					failures.set(
 						prop,
-						'could not be resolved to a signal — pass() accepts a thunk () => … for read-only access or a { get, set } descriptor to mediate writes (ADR 0012)',
+						'could not be resolved to a signal — pass a thunk (`() => host.value`) for read-only access or a `{ get, set }` descriptor to mediate writes; the property-key and bare-signal forms were removed in v3.0 (ADR 0012)',
 					)
 					continue
 				}
@@ -523,7 +526,7 @@ const makePass = <P extends ComponentProps>(
 				if (!isSlot(slot)) {
 					failures.set(
 						prop,
-						`is not Slot-backed on ${targetName} (exposed read-only, or it is not a Le Truc component)`,
+						`is not Slot-backed on ${targetName}, because it is exposed read-only or ${targetName} is not a Le Truc component — expose it from a mutable initializer (a value, a Parser or a \`{ get, set }\` descriptor), or bind it with \`watch(source, bindProperty(el, key))\``,
 					)
 					continue
 				}

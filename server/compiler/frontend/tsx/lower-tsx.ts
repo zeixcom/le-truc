@@ -113,7 +113,7 @@ const lowerIfExpr = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				'A `.map()` loop as a conditional arm',
+				'A `.map()` loop as a conditional branch',
 				"Only the empty state combines a condition with a loop — write `{xs.length === 0 ? <empty/> : xs.map(…)}`, testing the mapped array's own `length`, or move the loop out of the conditional.",
 			),
 		)
@@ -131,7 +131,8 @@ const lowerIfExpr = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				'if arms must be JSX elements ({cond ? <el/> : <el/>} / {cond && <el/>})',
+				'A conditional branch that is not a JSX element',
+				'Write each branch as an element: `{cond ? <a/> : <b/>}` or `{cond && <a/>}`.',
 			),
 		)
 		return null
@@ -169,7 +170,8 @@ const lowerSwitchIife = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				'A switch IIFE must contain exactly the switch statement (set up consts in the component setup, not inside the arm)',
+				'A `switch` IIFE that contains more than the `switch` statement',
+				'Move the other statements into the component setup.',
 			),
 		)
 		return null
@@ -198,7 +200,8 @@ const lowerSwitchIife = (
 				diagnostic.unsupported(
 					ctx.source,
 					raw.start ?? node.start,
-					'switch arms must be exactly `case <expr>: return <jsx/>` — statement-context arms are `.tsrx` grammar, not a `.tsx` spelling',
+					'A `switch` case other than `case <expr>: return <jsx/>`',
+					'Statement-context arms are `.tsrx` grammar — write each case as a single `return` of JSX.',
 				),
 			)
 			return null
@@ -295,7 +298,8 @@ const lowerTrucTry = (
 			diagnostic.unsupported(
 				ctx.source,
 				node.start,
-				'A `<truc:try>` boundary takes its arms inline — `catch={e => <jsx/>}` (an arrow whose body is the arm) and optionally `pending={<jsx/>}`, no other attributes — because the compiler consumes them and never evaluates them',
+				'A `<truc:try>` boundary with arms that are not inline, or with other attributes',
+				'The compiler reads the arms and never evaluates them — write `catch={e => <jsx/>}` (an arrow whose body is the arm) and, optionally, `pending={<jsx/>}`, and no other attributes.',
 			),
 		)
 		return null
@@ -435,6 +439,17 @@ export const lowerFor = (
 	const body = callback.body as AstNode | undefined
 	if (!isNode(body)) return null
 	const block = body.type === 'BlockStatement'
+	// A `<truc:try>` root is a boundary, not an element: name the loop rule
+	// rather than let `lowerElement` report a tag it does not recognize.
+	const root = block
+		? asArray(body.body).find(s => s.type === 'ReturnStatement')?.argument
+		: body
+	if (isNode(root) && isTrucTry(root)) {
+		ctx.diagnostics.push(
+			diagnostic.boundaryAsLoopRoot(ctx.source, root.start),
+		)
+		return null
+	}
 	return lowerLoop(
 		ctx,
 		{

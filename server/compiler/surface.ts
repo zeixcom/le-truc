@@ -65,9 +65,9 @@ export type SurfaceWording = {
 
 	/* --- switch --- */
 	switchArms: string
-	/** The arms of a switch, sentence-initial. */
-	caseArms: string
-	/** A switch with no arms. */
+	/** One arm that renders nothing, as a sentence subject. */
+	caseWithoutOutput: string
+	/** A switch with no arms, as a sentence subject. */
 	switchNoArms: string
 
 	/* --- error and async boundaries --- */
@@ -84,7 +84,7 @@ export type SurfaceWording = {
 	loop: string
 	/** A loop as a sentence subject. */
 	aLoop: string
-	/** Statements other than consts inside a server-data loop body. */
+	/** A statement other than a const inside a server-data loop body. */
 	loopBodyStatements: string
 	/** The names a reactive-list loop can bind (the reserved-name check). */
 	loopBindings: string
@@ -109,42 +109,42 @@ const TSRX: SurfaceWording = {
 		"the @{ } container's output must be a single root element, or a fragment (element + <style>).",
 	outputLabel: 'the @{ } output',
 
-	lazyChild: 'A lazy child (&{expr})',
-	controlFlow: 'A control-flow directive (@if/@switch/@try)',
-	composedPosition: '@for output',
+	lazyChild: 'A lazy child (`{expr}`)',
+	controlFlow: 'A control-flow directive (`@if`, `@switch` or `@try`)',
+	composedPosition: '`@for` output',
 	conditionalTag: '@if (level === 2) { <h2>…</h2> } @else { <h3>…</h3> }',
 
-	ifCondition: '@if condition',
-	switchDiscriminant: '@switch discriminant',
+	ifCondition: 'An `@if` condition',
+	switchDiscriminant: 'A `@switch` discriminant',
 
-	if: '@if',
-	separateIfs: 'separate @if blocks',
-	thenBranch: '@if branch',
-	elseBranch: '@else branch',
-	ifBranch: '@if branch',
-	ifBranches: '@if branches',
-	singleBranchIf: 'a single-branch @if',
-	singleBranchIfFix: 'a single-branch @if (no @else)',
-	ifWithElse: 'an @if with @else',
+	if: '`@if`',
+	separateIfs: 'separate `@if` blocks',
+	thenBranch: '`@if` branch',
+	elseBranch: '`@else` branch',
+	ifBranch: '`@if` branch',
+	ifBranches: '`@if` branches',
+	singleBranchIf: 'a single-branch `@if`',
+	singleBranchIfFix: 'a single-branch `@if` (no `@else`)',
+	ifWithElse: 'an `@if` with `@else`',
 
-	switchArms: '@switch arms',
-	caseArms: '@case/@default arms',
-	switchNoArms: '@switch must contain at least one @case or @default arm',
+	switchArms: '`@switch` arms',
+	caseWithoutOutput: 'A `@case` or `@default` arm with no output element',
+	switchNoArms: 'A `@switch` with no `@case` or `@default` arm',
 
-	tryBody: '@try body',
-	pendingArm: '@pending arm',
-	catchArm: '@catch arm',
+	tryBody: '`@try` body',
+	pendingArm: '`@pending` arm',
+	catchArm: '`@catch` arm',
 	boundary: '`@try`/`@catch`/`@pending` boundary',
-	boundaries: '@try blocks',
+	boundaries: '`@try` blocks',
 
-	loop: '@for',
+	loop: '`@for`',
 	aLoop: 'A `@for` loop',
 	loopBodyStatements:
-		'Statements other than const declarations inside @for bodies',
-	loopBindings: 'Loop variable or key binding',
+		'A statement other than a `const` declaration in a `@for` body',
+	loopBindings: 'A loop variable or key binding',
 	emptyArm: '`@empty` arm',
 	emptyArmFix: "the loop's own `@empty` arm",
-	listControlFlow: 'Control-flow directives (@if/@switch/@try)',
+	listControlFlow: 'A control-flow directive (`@if`, `@switch` or `@try`)',
 	listItemHandlerFix:
 		' Act on the item through the key binding instead (`@for (const item of items; key k)`, then `items.remove(k)`).',
 	loopInBranch: branch => ({
@@ -161,26 +161,27 @@ const TSX: SurfaceWording = {
 	outputLabel: 'the template return',
 
 	lazyChild: 'A lazy child expression',
-	controlFlow: 'A control-flow expression (ternary/map/switch/truc:try)',
-	composedPosition: 'map output',
+	controlFlow:
+		'A control-flow expression (a ternary, `.map()`, `switch` or `<truc:try>`)',
+	composedPosition: '`.map()` output',
 	conditionalTag: '{level === 2 ? <h2>…</h2> : <h3>…</h3>}',
 
-	ifCondition: 'if condition',
-	switchDiscriminant: 'switch discriminant',
+	ifCondition: 'A conditional test',
+	switchDiscriminant: 'A `switch` discriminant',
 
 	if: 'conditional',
 	separateIfs: 'separate conditionals',
-	thenBranch: 'first conditional arm',
-	elseBranch: 'second conditional arm',
-	ifBranch: 'conditional arm',
-	ifBranches: 'conditional arms',
-	singleBranchIf: 'a single-arm conditional',
-	singleBranchIfFix: 'a single-arm `{cond && <el/>}`',
-	ifWithElse: 'a two-arm conditional',
+	thenBranch: 'truthy branch',
+	elseBranch: 'falsy branch',
+	ifBranch: 'conditional branch',
+	ifBranches: 'conditional branches',
+	singleBranchIf: 'a single-branch conditional',
+	singleBranchIfFix: 'a single-branch `{cond && <el/>}`',
+	ifWithElse: 'a ternary',
 
-	switchArms: 'switch arms',
-	caseArms: 'switch arms',
-	switchNoArms: 'switch must contain at least one case or default arm',
+	switchArms: '`switch` cases',
+	caseWithoutOutput: 'A `switch` case with no output element',
+	switchNoArms: 'A `switch` with no `case` or `default` clause',
 
 	tryBody: '`<truc:try>` content',
 	pendingArm: '`pending` arm',
@@ -188,19 +189,19 @@ const TSX: SurfaceWording = {
 	boundary: '`<truc:try>` boundary',
 	boundaries: '`<truc:try>` boundaries',
 
-	loop: 'map',
+	loop: '`.map()`',
 	aLoop: 'A `.map()` loop',
 	loopBodyStatements:
-		'Statements other than const declarations inside map bodies (statements belong in setup; branches render via ternaries)',
-	loopBindings: 'Loop variable',
+		'A statement other than a `const` declaration in a `.map()` body',
+	loopBindings: 'A loop variable',
 	emptyArm: 'empty-state arm',
 	emptyArmFix:
 		'the empty-state idiom (`{items.length === 0 ? <empty/> : items.map(…)}`)',
-	listControlFlow: 'Control-flow expressions',
+	listControlFlow: 'A control-flow expression',
 	listItemHandlerFix: '',
 	loopInBranch: branch =>
 		branch === 'if'
-			? { inside: 'a conditional arm', outOf: 'the conditional' }
+			? { inside: 'a conditional branch', outOf: 'the conditional' }
 			: { inside: 'a `switch` case', outOf: 'the switch' },
 }
 

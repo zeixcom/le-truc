@@ -80,6 +80,12 @@ const CONTEXT_REQUEST = 'context-request'
  * the provider may call `callback` again on later changes, passing an
  * `unsubscribe` function the requester can call to stop receiving updates.
  *
+ * `requestContext()` dispatches an instance of this class only when the host
+ * is in the same realm as this module. A host in another realm (an iframe, a
+ * simulation realm) dispatches a plain `Event` from its own realm that
+ * carries the same three fields. A provider checks `event.context`, never
+ * `instanceof ContextRequestEvent`.
+ *
  * @property context - Context key
  * @property callback - Called with the value, and an unsubscribe function if subscribed
  * @property subscribe - Whether to subscribe to context changes
@@ -210,6 +216,11 @@ const makeProvideContexts =
  * and returns a `Slot<T>` that tracks the provider's value, falling back to
  * `fallback` until a provider answers. For use inside `expose()` as a
  * property initializer.
+ *
+ * The event is a `ContextRequestEvent` when `host` is in the same realm as
+ * this module. Otherwise it is a plain `Event` from the host's realm with
+ * the same `context`, `callback`, and `subscribe` fields. A provider checks
+ * `event.context`, never `instanceof`.
  *
  * A provider may miss the initial dispatch if it defines or activates
  * later. The request is re-dispatched once on a microtask and once after

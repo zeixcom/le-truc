@@ -262,7 +262,7 @@ export const classifyAttribute = (
 		return {
 			kind: 'invalid',
 			reason:
-				'`class:token={…}` is not a TSRX spelling — a per-class reactive binding is a class map: `class={() => ({ token: value })}`. A `class:token` attribute renders into the markup verbatim and the browser ignores it.',
+				'`class:token={…}` is not a Le Truc spelling — the attribute would render into the markup as written, and the browser ignores it. Bind a class reactively with a class map: `class={() => ({ token: value })}`.',
 		}
 	if (!isNode(value)) return { kind: 'static', name, value: null }
 	if (value.type === 'Literal')

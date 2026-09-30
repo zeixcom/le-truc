@@ -359,7 +359,7 @@ import { asString } from '@zeix/le-truc'`
 			diagnostics.some(
 				d =>
 					d.severity === 'error' &&
-					d.message.includes('Multiple addressable elements'),
+					d.message.includes('More than one element with client constructs'),
 			),
 		).toBe(true)
 	})

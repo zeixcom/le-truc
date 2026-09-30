@@ -21,7 +21,9 @@ Use context for application-wide settings like user preferences, theme data, or 
 
 First, define typed context keys for the values you want to share:
 
-```ts#context-media.ts
+```ts#media-contexts.ts
+import { createContext } from '@zeix/le-truc'
+
 // Define context keys with types, via createContext()
 export const MEDIA_MOTION = createContext<() => 'no-preference' | 'reduce'>(
   'motion',
@@ -29,12 +31,14 @@ export const MEDIA_MOTION = createContext<() => 'no-preference' | 'reduce'>(
 export const MEDIA_THEME = createContext<() => 'light' | 'dark'>('theme')
 ```
 
+Put a provider's context keys in a module with no side effects, never in the component module. Importing a component module defines the element, so a consumer that imports its keys from there defines the provider as a side effect.
+
 ### Provider Component
 
 The **provider component** creates the shared state inside `expose()`. It calls `provideContexts()` in the returned effect array. The example below is a simplified excerpt. It shows two of the four media contexts. See the full source for the complete implementation:
 
 ```ts#context-media.ts
-import { createContext, createSensor, defineComponent } from '@zeix/le-truc'
+import { createSensor, defineComponent } from '@zeix/le-truc'
 
 export type ContextMediaProps = {
   readonly motion: 'no-preference' | 'reduce'
@@ -78,6 +82,10 @@ export default defineComponent<ContextMediaProps>(
 
 A provider is a stable single source of truth: it updates the *values* it provides. Adding and removing providers at runtime is an anti-pattern — update the value instead.
 
+{% callout .tip title="Match requests on event.context, never instanceof" %}
+A provider you write by hand listens for `context-request` and checks `event.context`. Do not test `e instanceof ContextRequestEvent`: a consumer in another realm, such as an iframe, dispatches a plain `Event` that carries the same `context`, `callback`, and `subscribe` fields. The protocol defines the fields, not the class, and `provideContexts()` reads only the fields.
+{% /callout %}
+
 ### Usage in HTML
 
 The provider component wraps your entire application or a section that needs shared state:
@@ -115,7 +123,7 @@ Here is a simple card that displays the current motion and theme preferences:
 
 ```js#card-mediaqueries.js
 import { bindText, defineComponent } from '@zeix/le-truc'
-import { MEDIA_MOTION, MEDIA_THEME } from '../../context/media/context-media'
+import { MEDIA_MOTION, MEDIA_THEME } from '../../context/media/media-contexts'
 
 export default defineComponent(
   'card-mediaqueries',

@@ -523,7 +523,7 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 		)
 		expect(component).toBeNull()
 		expect(
-			diagnostics.some(d => d.message.includes('if arms must be JSX elements')),
+			diagnostics.some(d => d.message.includes('A conditional branch that is not a JSX element')),
 		).toBe(true)
 	})
 })
@@ -586,7 +586,7 @@ export function BadHost(
 		)
 		const hit = diagnostics.find(d => d.code === 'LTC050')
 		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('not form-associated')
+		expect(hit?.message).toContain('does not set `config.formAssociated`')
 	})
 
 	test('a matching FormFactoryContext annotation compiles clean', () => {

@@ -92,7 +92,15 @@ changes, and rebaseline the snapshots for that as a separate decision.
 
 Precedent: **4e755e28** (LT-252), the sanctioned rebaseline under
 ADR 0030 s5, where basic-pluralize and six catalogs moved to one ICU
-pattern. The migration follows the same shape:
+pattern. This procedure covers the data rebaseline only.
+
+**Precondition: the compiler swap lands first, in its own commits.** The
+migration also replaces the MF1 parser adapter (`server/compiler/icu/parse.ts`),
+the evaluator (`icu/evaluate.ts` and its inlined client copy), the per-key
+argument types (`MessageOf` in both host profiles) and the pattern
+diagnostics. None of that is data, and none of it belongs in the rebaseline
+commit. When the compiler accepts MF2, the data rebaseline follows the same
+shape as the precedent:
 
 1. **One commit.** Component sources, all `i18n/<locale>.json` catalogs and
    `i18n/manifest.json` change together. No intermediate commit leaves a
@@ -108,9 +116,9 @@ pattern. The migration follows the same shape:
    keys, not their manifest entries).
 4. **Re-approve snapshots.** Rendered output is byte-identical by
    construction (that is what this suite proves), so the page, parity and
-   equivalence snapshots should not change. Only the serialized `i18n`
-   attribute (the client-side AST) does. Any other diff is a bug in the
-   migration.
+   equivalence snapshots should not change. In this commit, only the
+   serialized `i18n` attribute (the client-side AST) does. Any other diff
+   is a bug in the data migration.
 5. **Commit message.** Mark it `SANCTIONED REBASELINE (ADR 0030 s5)`, cite
    4e755e28 and LT-253, and state the manifest refresh and any hand-pruning,
    as LT-252 did.

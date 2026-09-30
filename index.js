@@ -2075,7 +2075,7 @@ class InvalidCustomElementError extends TypeError {
 class InvalidPassPropertyError extends TypeError {
   constructor(host, target, reasons) {
     const detail = Array.from(reasons, ([prop, reason]) => `'${prop}' ${reason}`).join("; ");
-    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}. Nothing was swapped. Expose each of the target properties from a mutable initializer on ${elementName(target)} (a value, a Parser, or a \`{ get, set }\` descriptor).`);
+    super(`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}. Nothing was swapped.`);
     this.name = "InvalidPassPropertyError";
   }
 }
@@ -2230,6 +2230,7 @@ var defaultSanitize;
 var configureHtmlSanitizer = (sanitize) => {
   defaultSanitize = sanitize;
 };
+var sanitizeHtml = (html) => defaultSanitize ? defaultSanitize(html) : escapeHTML(html);
 var debugBindingTargets = new WeakMap;
 var registerDebugBindingTarget = (target, element) => {
   if (false)
@@ -2924,17 +2925,17 @@ var makePass = (host) => {
       if (reactive == null)
         continue;
       if (!(prop in target)) {
-        failures.set(prop, `is not a property of ${targetName}`);
+        failures.set(prop, `is not a property of ${targetName} — expose it there, or remove it from this pass() call`);
         continue;
       }
       const signal = toPassedSignal(reactive);
       if (!signal) {
-        failures.set(prop, "could not be resolved to a signal — pass() accepts a thunk () => … for read-only access or a { get, set } descriptor to mediate writes (ADR 0012)");
+        failures.set(prop, "could not be resolved to a signal — pass a thunk (`() => host.value`) for read-only access or a `{ get, set }` descriptor to mediate writes; the property-key and bare-signal forms were removed in v3.0 (ADR 0012)");
         continue;
       }
       const slot = signals[prop];
       if (!isSlot(slot)) {
-        failures.set(prop, `is not Slot-backed on ${targetName} (exposed read-only, or it is not a Le Truc component)`);
+        failures.set(prop, `is not Slot-backed on ${targetName}, because it is exposed read-only or ${targetName} is not a Le Truc component — expose it from a mutable initializer (a value, a Parser or a \`{ get, set }\` descriptor), or bind it with \`watch(source, bindProperty(el, key))\``);
         continue;
       }
       bindings.push({ slot, signal });
@@ -3895,6 +3896,7 @@ export {
   reconcile,
   relayValidity,
   safeSetAttribute,
+  sanitizeHtml,
   schedule,
   setTextPreservingComments,
   throttle,

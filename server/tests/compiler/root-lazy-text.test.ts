@@ -90,7 +90,7 @@ describe('multiple lazy root children (LT-114)', () => {
 		const hit = diagnostics.find(
 			d =>
 				d.code === 'LTC005' &&
-				d.message.includes('Multiple lazy text children'),
+				d.message.includes('More than one lazy text child'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
@@ -124,7 +124,7 @@ export function C({}: {})
 		const hit = diagnostics.find(
 			d =>
 				d.code === 'LTC005' &&
-				d.message.includes('Multiple lazy text children on <span>'),
+				d.message.includes('More than one lazy text child on <span>'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
@@ -136,7 +136,7 @@ export function C({}: {})
 		const hit = diagnostics.find(
 			d =>
 				d.code === 'LTC005' &&
-				d.message.includes("must be <span>'s only content"),
+				d.message.includes('beside other content on <span>'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
@@ -148,7 +148,7 @@ export function C({}: {})
 		const hit = diagnostics.find(
 			d =>
 				d.code === 'LTC005' &&
-				d.message.includes("must be <span>'s only content"),
+				d.message.includes('beside other content on <span>'),
 		)
 		expect(hit).toBeDefined()
 		expect(component?.clientCode ?? '').not.toContain('bindText')
@@ -167,7 +167,7 @@ describe('a static+lazy text mix on the component root (LT-114)', () => {
 	test('is rejected — the first bindText write would wipe the static text', () => {
 		const { component, diagnostics } = compile('Total: {host.value}')
 		const hit = diagnostics.find(
-			d => d.code === 'LTC005' && d.message.includes('only content'),
+			d => d.code === 'LTC005' && d.message.includes('beside other content'),
 		)
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('error')
@@ -177,7 +177,7 @@ describe('a static+lazy text mix on the component root (LT-114)', () => {
 	test('an element sibling beside the lazy child is rejected too — textContent writes remove element children', () => {
 		const { component, diagnostics } = compile('<span>fixed</span>{host.value}')
 		const hit = diagnostics.find(
-			d => d.code === 'LTC005' && d.message.includes('only content'),
+			d => d.code === 'LTC005' && d.message.includes('beside other content'),
 		)
 		expect(hit).toBeDefined()
 		expect(component?.clientCode ?? '').not.toContain('bindText')

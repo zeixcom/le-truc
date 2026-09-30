@@ -215,7 +215,24 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC053',
-			`The tag \`<${spelled}>\` is not a static element name — the compiler supports only static tag names, so it cannot make an element from this tag. Choose between static tags with a conditional, for example \`${conditional}\`.`,
+			`The tag \`<${spelled}>\` is not a static element name — the compiler makes elements from static tag names only. To choose a tag at render time, choose between static tags with a conditional, for example \`${conditional}\`.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A `<truc:try>` boundary as the root of a `.map()` body (LT-213
+	 * follow-up). The root of a loop body is the element the client
+	 * addresses each item through, so it must be an element — `.tsrx`
+	 * rejects `@try` in the same position. `.tsx` only: the check runs
+	 * before `lowerElement` would report the tag as not a static name.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-01).
+	 */
+	boundaryAsLoopRoot: (source: string, offset: number | undefined) =>
+		error(
+			'LTC053',
+			'A `<truc:try>` boundary is the root of this `.map()` body — the root of a loop body must be an element, because the client addresses each item through it. Make an element the root of the `.map()` body.',
 			lineOf(source, offset),
 		),
 
@@ -316,6 +333,70 @@ export const diagnostic = {
 		),
 
 	/**
+	 * LTC005's server-only face (LT-347–LT-349): a position the generated
+	 * client emits authored code into reads a name that module does not
+	 * bind, so the read throws a ReferenceError at connect. `subject` names
+	 * the position and opens the sentence (`Reactive text on <span>`,
+	 * `` Event handler `onClick` ``). The names arrive split by binding
+	 * class, because each class has its own fix: `server` — a component
+	 * parameter (`t` and `lang` included) or a server-data loop binding;
+	 * `module` — a module-level declaration, which neither generated module
+	 * copies; `listBody` — a setup const or authored import read in a list
+	 * body, which the client emits only for positions outside list bodies
+	 * (LT-349 ruling). `lang` is the component's `lang` binding when the
+	 * site reads it, for the `host.lang` pointer; `t` is the message
+	 * binding when the site reads it other than by a literal declared key
+	 * (a computed key, a bare `t`, an undeclared key), for the client
+	 * message channel's rule (ADR 0030 s9).
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-01).
+	 */
+	serverOnlyNames: (
+		source: string,
+		offset: number | undefined,
+		subject: string,
+		names: {
+			server: readonly string[]
+			module: readonly string[]
+			listBody: readonly string[]
+		},
+		lang: string | null,
+		t: string | null = null,
+	) => {
+		const { server, module, listBody } = names
+		const bound = [...server, ...module]
+		const them = (list: readonly string[]) =>
+			list.length === 1 ? 'it' : 'them'
+		const sentences: string[] = []
+		if (bound.length > 0)
+			sentences.push(
+				`${subject} references server-only ${bound.length === 1 ? 'name' : 'names'} ${codeList(bound)} — the generated client does not bind ${them(bound)}, so the read would throw at connect.`,
+			)
+		if (listBody.length > 0)
+			sentences.push(
+				`${bound.length > 0 ? 'It also references' : `${subject} references`} ${codeList(listBody)}, which a list body cannot read — the client emits setup consts and imports only for positions outside list bodies.`,
+			)
+		if (lang !== null)
+			sentences.push(
+				`The locale is \`host.lang\` on the client, not \`${lang}\`.`,
+			)
+		if (t !== null)
+			sentences.push(
+				`The client receives a message only when the site reads a declared key literally — write \`${t}.<key>\` or \`${t}['<key>']\`.`,
+			)
+		if (server.some(name => name !== lang && name !== t))
+			sentences.push('Read the value through an exposed prop or from the DOM.')
+		if (module.length > 0)
+			sentences.push(
+				`Import ${codeList(module)} from a module, or declare ${them(module)} as a const in setup.`,
+			)
+		if (listBody.length > 0)
+			sentences.push('Read the value through an exposed prop instead.')
+		return error('LTC005', sentences.join(' '), lineOf(source, offset))
+	},
+
+	/**
 	 * A loop whose nearest control-flow ancestor is an `if`/`switch` branch
 	 * (LT-301). The client addresses a branch's content by its roots, so a
 	 * loop there binds only its first item. Diagnosed, not supported: a
@@ -412,7 +493,11 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
-	/** A construct on a composed element that composition does not support yet. */
+	/**
+	 * A construct in a composed element's content, or a composed element in a
+	 * position, that composition does not support yet. `what` names the
+	 * construct and its position as the subject of the sentence.
+	 */
 	composedElementUnsupported: (
 		source: string,
 		offset: number | undefined,
@@ -420,7 +505,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC011',
-			`${what} on a composed element is not supported yet (queued: ADR 0023 sub-design 10 follow-up tasks).`,
+			`${what} is not supported yet (ADR 0023 sub-design 10). Move the construct into the composed component's own template, or out of this position.`,
 			lineOf(source, offset),
 		),
 
@@ -595,7 +680,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'TSRX018',
-			`\`&{…}\` is not a TSRX template child — the \`&\` sigil carries no meaning here (lazy destructuring left the TSRX 0.2 grammar). Reactivity is decided by analysis, so drop the sigil: \`{${exprText}}\`.`,
+			`The \`&\` sigil in \`&{${exprText}}\` has no meaning in a template child — the compiler decides reactivity itself, and TSRX 0.2 removed the lazy destructuring the sigil once introduced. Drop the sigil: \`{${exprText}}\`.`,
 			lineOf(source, offset),
 		),
 
@@ -1263,7 +1348,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC046',
-			`\`${name}\`'s value is rendered into this component's markup, but its initializer reads ${badNames.map(n => `\`${n}\``).join(', ')} — client-only name(s) the server cannot evaluate in ANY tier, so the site would render broken or stay permanently empty (no client binding ever corrects a static splice). Render the site from a server arg or signal instead, or make the site reactive (wrap the read in a thunk, e.g. \`title={() => …}\`) so the client's first binding pass supplies the value.`,
+			`The server render evaluates \`${name}\` — in the markup or in an \`expose()\` initializer — but its initializer reads ${codeList(badNames)}, which ${badNames.length === 1 ? 'exists' : 'exist'} only on the client. No tier can produce that value, so the site renders wrong or stays empty, and no client binding corrects a static value. Compute \`${name}\` from a server arg or a signal instead, or make each site that reads it reactive (a thunk, for example \`title={() => …}\`), so the client's first binding pass supplies the value.`,
 			lineOf(source, offset),
 		),
 
@@ -1277,13 +1362,13 @@ export const diagnostic = {
 	 * untranslated literal is author-fixable, so it belongs in the
 	 * compile-warning channel and must converge to zero (ADR 0029
 	 * sub-design 6's baseline). Fires on template text nodes containing two
-	 * or more adjacent letters — a single-letter fragment (pluralize's `s`
-	 * suffix spans) is page data, not prose. Per ADR 0028 this is Tier 1
+	 * or more adjacent letters — a single-letter fragment (a unit symbol, a
+	 * separator) is page data, not prose. Per ADR 0028 this is Tier 1
 	 * (Prevented): the string ships untranslatable unless the author routes
 	 * it through the catalog.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
-	 * draft is the LT-173 handoff.
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-01).
 	 */
 	untranslatedLiteral: (
 		source: string,
@@ -1292,7 +1377,7 @@ export const diagnostic = {
 	) =>
 		warning(
 			'LTC047',
-			`Literal prose \`${sample}\` is not routed through the catalog — this component declares \`export const i18n\`, so a reader-facing string written directly in the template can never be translated. Declare a key with this string as its source-locale value in \`export const i18n\` and render \`{t.<key>}\` here.`,
+			`Literal prose \`${sample}\` is written directly in the template of a component that declares \`export const i18n\` — no locale can translate it. Add a message key with this text as its source-locale value to \`export const i18n\`, and render \`{t.<key>}\` here; the translation census then reports each locale that lacks the key.`,
 			lineOf(source, offset),
 		),
 
@@ -1304,8 +1389,8 @@ export const diagnostic = {
 	 * pattern and is a census record. `reason` is the parser's own account
 	 * (a syntax error with line/column, or an unsupported formatter).
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
-	 * draft is the LT-250 handoff (batched with LT-189).
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-01).
 	 */
 	unparseableMessage: (
 		source: string,
@@ -1315,7 +1400,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC055',
-			`\`export const i18n\` value for \`${key}\` is not a valid ICU MessageFormat pattern: ${reason}. Fix the pattern — a literal \`{\`, \`}\` or \`#\` is quoted with apostrophes (\`'{'\`), and a literal apostrophe is doubled (\`''\`).`,
+			`The source message \`${key}\` in \`export const i18n\` is not a supported ICU MessageFormat 1 pattern: ${reason}. The source locale has no fallback, so the build cannot render it. Correct the pattern: quote a literal \`{\`, \`}\` or \`#\` with apostrophes (\`'{'\`), and double a literal apostrophe (\`''\`).`,
 			lineOf(source, offset),
 		),
 
@@ -1325,22 +1410,21 @@ export const diagnostic = {
 	 * argument the pattern reads, passes one it never reads, is not an
 	 * object literal the build can check, or the site calls an
 	 * argument-less message / reads an argument message without calling
-	 * it. `problem` is the clause naming which.
+	 * it. `problem` is the clause naming which, after `t.<key>`; `fix` is
+	 * the imperative sentence, with a call spelled from the pattern's own
+	 * arguments (`i18n.ts`'s `reportMessageCallSites`).
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
-	 * draft is the LT-250 handoff (batched with LT-189).
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-01).
 	 */
 	messageArgumentMismatch: (
 		source: string,
 		offset: number | undefined,
 		key: string,
 		problem: string,
+		fix: string,
 	) =>
-		error(
-			'LTC055',
-			`\`t.${key}\` ${problem}. A message's arguments are the ones its ICU pattern in \`export const i18n\` reads — pass exactly those, as an object literal.`,
-			lineOf(source, offset),
-		),
+		error('LTC055', `\`t.${key}\` ${problem}. ${fix}`, lineOf(source, offset)),
 
 	/**
 	 * One component tag declared by MULTIPLE corpus sources that are not a
@@ -1357,13 +1441,14 @@ export const diagnostic = {
 	 * half exists. Error severity: the build fails naming every declaring
 	 * file, and all files are dropped from the generated output.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle.
-	 * Corpus-level: fires once per involved file, no source offset.
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-01). Corpus-level: fires once per involved file,
+	 * no source offset.
 	 */
 	duplicateTag: (tag: string, sources: ReadonlyArray<string>) =>
 		error(
 			'LTC048',
-			`Component tag \`${tag}\` is declared by more than one corpus source, and the sources are not one variant set: ${sources.join(', ')} — a variant set is at most one source per surface (\`.tsrx\`, \`.tsx\`) with one base name in one directory. Delete the extra same-surface source, move the spellings into one folder under one base name, or rename the tag of one source.`,
+			`Component tag \`${tag}\` is declared by more than one corpus source: ${sources.join(', ')}. A tag has one owner, whatever surface it is written in — only a variant set shares a tag, and a variant set is at most one source per surface (\`.tsrx\`, \`.tsx\`) with one base name in one folder. Delete the extra same-surface source, move the spellings into one folder under one base name, or rename the tag of one source.`,
 		),
 
 	/**
@@ -1397,8 +1482,8 @@ export const diagnostic = {
 	 * list alone, no runtime half exists. Error severity: the shape cannot
 	 * be lowered honestly.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
-	 * draft is the LT-209 handoff.
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-01).
 	 */
 	badFactoryContextParam: (
 		source: string,
@@ -1407,7 +1492,8 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC049',
-			`The factory context parameter destructures ${bad.map(b => `\`${b}\``).join(', ')}, which ${bad.length === 1 ? 'is' : 'are'} not FactoryContext vocabulary — destructure only \`host\`, \`first\`, \`all\`, \`expose\`, \`watch\`, \`on\`, \`pass\`, \`internals\`, \`requestContext\`, and \`provideContexts\`, e.g. \`, { host, expose }: FactoryContext<MyProps>\`.`,
+			`The factory-context parameter destructures ${codeList(bad)}, which ${bad.length === 1 ? 'is' : 'are'} not FactoryContext vocabulary — the generated client destructures the same names from its own factory context, where ${bad.length === 1 ? 'it does' : 'they do'} not exist. Destructure only ${codeList(['host', 'first', 'all', 'expose', 'watch', 'on', 'pass', 'internals', 'requestContext', 'provideContexts'])}, for example \`, { host, expose }: FactoryContext<Props>\`.`,
+			lineOf(source, offset),
 		),
 
 	/**
@@ -1419,14 +1505,15 @@ export const diagnostic = {
 	 * claims members the element does not carry. ADR 0028 tier 1
 	 * (Prevented): both facts are AST-visible, no runtime half exists.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; this
-	 * draft is the LT-209 handoff.
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-01). The builder receives no source offset, so the
+	 * report carries no line — the annotation is one per file.
 	 */
 	formContextMismatch: (annotated: 'FactoryContext' | 'FormFactoryContext') =>
 		error(
 			'LTC050',
 			annotated === 'FactoryContext'
-				? `This component sets \`config.formAssociated\` but annotates its factory context as plain \`FactoryContext\` — \`host\` is missing the managed form members the element really carries. Annotate \`FormFactoryContext<MyProps>\` instead (its \`host\` is \`FormAssociatedElement & MyProps\`).`
-				: `This component annotates its factory context as \`FormFactoryContext\` but is not form-associated (no \`config.formAssociated\`) — \`host\` would claim form members the element does not have. Annotate \`FactoryContext<MyProps>\` instead, or configure \`config.formAssociated\` if the component really participates in forms.`,
+				? `This component sets \`config.formAssociated\` but annotates its factory context as \`FactoryContext\`, so \`host\` lacks the managed form members the element carries. Annotate \`FormFactoryContext<Props>\` instead — its \`host\` is \`FormAssociatedElement & Props\`.`
+				: `This component annotates its factory context as \`FormFactoryContext\` but does not set \`config.formAssociated\`, so \`host\` claims form members the element does not carry. Annotate \`FactoryContext<Props>\` instead, or set \`config.formAssociated\` if the component takes part in forms.`,
 		),
 }

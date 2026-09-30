@@ -304,7 +304,7 @@ describe('the translation census', () => {
 		const formatted = formatCensus(census)
 		expect(formatted).toContain('Translation census — 3 entries: 2 de, 1 cy')
 		expect(formatted).toContain('missing — no entry')
-		expect(formatted).toContain('stale — the source string moved')
+		expect(formatted).toContain('stale — the source string changed')
 		expect(formatted).toContain('orphaned — nothing in the corpus declares')
 		// Census records never ride the warning channel (census.test.ts's pin,
 		// restated for the second kind).

@@ -65,8 +65,11 @@ defineComponent<ThemeProps>('theme-provider', ({ expose, provideContexts }) => {
 **Consumer (descendant):**
 
 ```typescript
-// Define context symbol (shared between provider and consumer)
-const THEME_CONTEXT = Symbol.for('theme')
+// theme-contexts.ts — keys module, no side effects (never the provider's component module)
+export const THEME_CONTEXT = createContext<() => string>('theme')
+
+// my-consumer.ts
+import { THEME_CONTEXT } from './theme-contexts'
 
 defineComponent<MyProps>('my-consumer', ({ expose, requestContext, watch }) => {
   expose({
@@ -77,6 +80,10 @@ defineComponent<MyProps>('my-consumer', ({ expose, requestContext, watch }) => {
 ```
 
 The returned `Signal<T>` is backed by a `Slot`: it serves `fallback` until a provider answers, and a provider that upgrades late (bundle ordering, code-splitting) is still caught by automatic re-dispatches — the consumer switches from fallback to the provided value reactively, no consumer code needed. Providers are stable single sources of truth: update the *values* they provide, don't remove or swap the provider at runtime.
+
+**Context keys live in a side-effect-free module**, never in the provider's component module: importing a component module defines the element, so a consumer importing keys from it defines the provider as a side effect. Keys are `createContext()` strings — `provideContexts()` answers string keys only.
+
+**A hand-written provider checks `event.context`, never `instanceof ContextRequestEvent`.** A host in another realm (iframe, build simulation realm) dispatches a plain `Event` from its own realm carrying `context`/`callback`/`subscribe`. Protocol specifies fields, not class; `provideContexts()` reads fields only.
 
 Use for: data-fetch scopes, auth state, locale, theme, any value shared across unknown subtree depth.
 

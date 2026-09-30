@@ -117,13 +117,13 @@ export const TRANSLATION_GAP_STATUSES = [
 
 export type TranslationGapStatus = (typeof TRANSLATION_GAP_STATUSES)[number]
 
-/** First-draft census reasons per status (Tech Writer owns the copy, LT-189 item 8). */
+/** Census reasons per status — a record, not a fix-it (Tech Writer copy, reviewed 2026-10-01). */
 const TRANSLATION_GAP_REASONS: Record<TranslationGapStatus, string> = {
 	missing:
 		'missing — no entry in this locale’s catalog; the source-locale string renders',
-	stale: 'stale — the source string moved after this translation was recorded',
+	stale: 'stale — the source string changed after this translation was recorded',
 	orphaned:
-		'orphaned — nothing in the corpus declares this key; the entry can never render',
+		'orphaned — nothing in the corpus declares this key, so the entry never renders',
 	malformed:
 		'malformed — the entry is not a valid ICU pattern and never renders; a declared key falls back to its source-locale string',
 	'argument-mismatch':

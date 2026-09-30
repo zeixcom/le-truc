@@ -17,10 +17,9 @@ import { getLocale } from '../../_common/getLocale'
 export const i18n = {
 	done: 'Well done, all done!',
 	remaining: 'remaining',
-	// LT-252: one ICU pattern replaces the six `task.<category>` keys — the
-	// plural morphology lives inside the value, so each locale spells exactly
-	// its own arms. `type` selects the rule set (the `ordinal` prop):
-	// `selectordinal` for 1st/2nd/3rd, `plural` otherwise.
+	// One ICU pattern: the plural morphology lives inside the value, so each
+	// locale spells exactly its own arms. `type` selects the rule set (the
+	// `ordinal` prop): `selectordinal` for 1st/2nd/3rd, `plural` otherwise.
 	tasks:
 		'{type, select, ordinal {{count, selectordinal, one {task} other {tasks}}} other {{count, plural, one {task} other {tasks}}}}',
 } as const
@@ -41,9 +40,9 @@ declare global {
 }
 
 /**
- * Shows locale-aware plural forms of content based on a count.
- * Use it for internationalised prose where the correct plural form must be shown —
- * accessibility tools and screen readers benefit from grammatically correct output.
+ * Shows a count with its noun in the correct plural form for the locale.
+ * The noun comes from the component's own catalog; the page supplies no word forms.
+ * Use it for internationalised prose — screen readers benefit from grammatically correct output too.
  * Reveal children by class: `.none` (0), `.some` (>0); `.tasks` carries the noun, one ICU plural pattern per locale.
  *
  * @attribute {string} [lang] - Config attribute only (not a reactive property). BCP 47 locale tag; the element's own attribute wins, else the nearest ancestor's, else `en`. The server renders the effective locale onto it; the client materializes the walked locale at connect.

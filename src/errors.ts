@@ -200,7 +200,7 @@ class InvalidPassPropertyError extends TypeError {
 	/**
 	 * @param host - Host component passing the properties
 	 * @param target - Target component the properties were passed to
-	 * @param reasons - Map of failing property name to the reason it could not be bound
+	 * @param reasons - Map of failing property name to the reason it could not be bound; each reason ends with its own fix
 	 */
 	constructor(
 		host: HTMLElement,
@@ -212,7 +212,7 @@ class InvalidPassPropertyError extends TypeError {
 			([prop, reason]) => `'${prop}' ${reason}`,
 		).join('; ')
 		super(
-			`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}. Nothing was swapped. Expose each of the target properties from a mutable initializer on ${elementName(target)} (a value, a Parser, or a \`{ get, set }\` descriptor).`,
+			`Cannot pass from ${elementName(host)} to ${elementName(target)}: ${detail}. Nothing was swapped.`,
 		)
 		this.name = 'InvalidPassPropertyError'
 	}

@@ -120,7 +120,7 @@ declare class InvalidPassPropertyError extends TypeError {
     /**
      * @param host - Host component passing the properties
      * @param target - Target component the properties were passed to
-     * @param reasons - Map of failing property name to the reason it could not be bound
+     * @param reasons - Map of failing property name to the reason it could not be bound; each reason ends with its own fix
      */
     constructor(host: HTMLElement, target: HTMLElement, reasons: Map<string, string>);
 }

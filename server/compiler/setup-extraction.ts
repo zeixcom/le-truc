@@ -221,7 +221,8 @@ export const extractSetup = (
 					diagnostic.unsupported(
 						source,
 						stmt.start,
-						'Setup statements other than single-const declarations',
+						'A setup declaration other than a single initialized `const`',
+						'Declare one initialized `const` per statement.',
 					),
 				)
 				continue
@@ -621,7 +622,8 @@ export const extractSetup = (
 			diagnostic.unsupported(
 				source,
 				stmt.start,
-				'Setup statements other than const declarations, expose(), and client-only side effects (over host/internals/signals)',
+				'A setup statement other than a `const` declaration, `expose()` or a client-only side effect over `host`, `internals` or signals',
+				'Move the logic into a `const` initializer, or into a `watch()` or `on()` handler.',
 			),
 		)
 	}

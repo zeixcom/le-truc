@@ -88,7 +88,7 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 	term('loopBodyStatements', 'statements in a server-data loop body'),
 	framed('loop', l => `reactive-list ${l}`, 'the list loop'),
 	framed('loop', l => `${l} over`, 'a loop over its iterable'),
-	framed('loop', l => `${l} bodies`, 'loop bodies'),
+	framed('loop', l => `${l} body`, 'a loop body'),
 	framed('loop', l => `the ${l} body`, 'a server-data loop body'),
 	term('aLoop', 'a loop, sentence-initial'),
 	term('emptyArmFix', 'the empty arm as a fix-it'),
@@ -96,6 +96,7 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 	term('ifCondition', 'a conditional test'),
 	term('switchDiscriminant', 'a switch discriminant'),
 	framed('if', i => `the same ${i}`, 'one conditional'),
+	framed('if', i => `this ${i}`, 'this conditional'),
 	term('ifBranches', 'conditional branches'),
 	term('switchArms', 'switch arms'),
 	term('tryBody', 'the boundary body'),
@@ -272,7 +273,7 @@ const REVIEW_SHAPES: Case[] = [
 		name: '§1.1 offenders: a named offender in a list-body attribute',
 		code: 'LTC005',
 		spec: list(...same('<li title={label}>{item}</li>')),
-		pins: ['reads label, which derive per item or client-side'],
+		pins: ['that reads `label`'],
 	},
 	{
 		name: '§2.3 keyName: a loop variable named `first`',
@@ -283,7 +284,7 @@ const REVIEW_SHAPES: Case[] = [
 			body: '<ul data-container>@for (const first of items) { <li>{first}</li> }</ul>',
 			tsx: '<ul data-container>{items.map(first => <li>{first}</li>)}</ul>',
 		},
-		pins: ['reserved parameters of reconcile() bindItem'],
+		pins: ['reserved parameters of `reconcile()`’s `bindItem`'],
 	},
 	{
 		name: '§2.3 per-item ref: `ref={}` inside a reactive-list body',
@@ -330,8 +331,8 @@ const LIST_BODY: Case[] = [
 			'{ label }: { label: string }',
 		),
 		pins: [
-			'Event attribute `onClick` inside a reactive-list',
-			'references server-only name(s) `label`; those exist only during the server render',
+			'Event handler `onClick` inside a reactive-list',
+			'references server-only name `label` — the generated client does not bind it',
 		],
 	},
 	{
@@ -343,7 +344,7 @@ const LIST_BODY: Case[] = [
 			...list(...same('<li onClick={() => console.log(gap)}>{item}</li>')),
 			setup: `${LIST}\n\t\tconst gap = 1`,
 		},
-		pins: ['references server-only name(s) `gap`'],
+		pins: ['references `gap`, which a list body cannot read'],
 	},
 	{
 		name: 'a server-data loop attribute reading a server arg',
@@ -355,7 +356,7 @@ const LIST_BODY: Case[] = [
 		},
 		pins: [
 			'Reactive attribute `title` inside the',
-			'references server-only name(s) `label`; those exist only during the server render',
+			'references server-only name `label` — the generated client does not bind it',
 		],
 	},
 	{
@@ -429,7 +430,7 @@ const LIST_BODY: Case[] = [
 			body: "<ul data-container>@for (const item of items) { const label = 'x'\n<li>{item}</li> }</ul>",
 			tsx: "<ul data-container>{items.map(item => { const label = 'x'; return <li>{item}</li> })}</ul>",
 		},
-		pins: ['Hoisted consts inside a reactive-list'],
+		pins: ['A hoisted const in a reactive-list'],
 	},
 	{
 		name: 'a list handler reading a server-only name',
@@ -476,7 +477,7 @@ const CONDITIONS: Case[] = [
 			body: '@if (open.get()) { <p>x</p> }',
 			tsx: '{open.get() ? <p>x</p> : null}',
 		},
-		pins: ['the DOM keeps the initially rendered branch'],
+		pins: ['The DOM keeps the branch the server rendered'],
 	},
 	{
 		name: 'a bare signal as an if condition',
@@ -546,7 +547,7 @@ const CONDITIONS: Case[] = [
 			body: '@try { <div class="ok">{data}</div> } @pending { <><p class="a">a</p><p class="b">b</p></> } @catch (e) { <p class="err">{e.message}</p> }',
 			tsx: '<truc:try pending={<><p class="a">a</p><p class="b">b</p></>} catch={e => <p class="err">{e.message}</p>}><div class="ok">{data}</div></truc:try>',
 		},
-		pins: ['must render exactly one root element'],
+		pins: ['that does not render exactly one root element'],
 	},
 ]
 
@@ -566,7 +567,7 @@ const SERVER_ONLY: Case[] = [
 		name: 'a reactive text child',
 		code: 'LTC005',
 		spec: { params: LABEL, body: '<span>{() => label.toUpperCase()}</span>' },
-		pins: ['Reactive text on <span> references server-only name(s) `label`'],
+		pins: ['Reactive text on <span> references server-only name `label`'],
 	},
 	{
 		// LT-218 admits a static `t.<key>` read (the client message channel);
@@ -578,7 +579,7 @@ const SERVER_ONLY: Case[] = [
 			setup: 'const c = createCell(0)\n\t\texpose({ count: c.get })',
 			body: "<span>{() => t[host.count > 0 ? 'tasks' : 'tasks']({ count: host.count })}</span>",
 		},
-		pins: ['Reactive text on <span> references server-only name(s) `t`'],
+		pins: ['Reactive text on <span> references server-only name `t`'],
 	},
 	{
 		name: 'a reactive text child of the component root',
@@ -623,7 +624,7 @@ const SERVER_ONLY: Case[] = [
 		name: 'a reactive truc:html',
 		code: 'LTC005',
 		spec: { params: LABEL, body: '<span truc:html={() => label}></span>' },
-		pins: ['Reactive truc:html={…} references'],
+		pins: ['Reactive `truc:html` references'],
 	},
 	{
 		name: 'an expose() get/set descriptor',
@@ -635,7 +636,7 @@ const SERVER_ONLY: Case[] = [
 				"const c = createCell('')\n\t\texpose({ v: { get: () => label + c.get(), set: (x: string) => c.set(x) } })",
 			body: '<span>x</span>',
 		},
-		pins: ['expose() entry `v` references'],
+		pins: ['`expose()` entry `v` references'],
 	},
 	{
 		name: 'a defineMethod body',
@@ -646,7 +647,7 @@ const SERVER_ONLY: Case[] = [
 			setup: 'expose({ go: defineMethod(() => { console.log(label) }) })',
 			body: '<span>x</span>',
 		},
-		pins: ['expose() entry `go` references'],
+		pins: ['`expose()` entry `go` references'],
 	},
 	{
 		name: 'a signal with no harvest site',
@@ -657,7 +658,7 @@ const SERVER_ONLY: Case[] = [
 			setup: 'const c = createCell(label)\n\t\texpose({ v: c.get })',
 			body: '<span>x</span>',
 		},
-		pins: ['Signal `c` references'],
+		pins: ['The initializer of signal `c` references'],
 	},
 	{
 		// LT-349: a compiler-generated query local is not a client rebinding
@@ -668,7 +669,7 @@ const SERVER_ONLY: Case[] = [
 			params: '{ button }: { button: string }',
 			body: '<button onClick={() => console.log(button)}>x</button>',
 		},
-		pins: ['Event handler `onClick` references server-only name(s) `button`'],
+		pins: ['Event handler `onClick` references server-only name `button`'],
 	},
 	{
 		name: 'a module-level const',
@@ -677,7 +678,10 @@ const SERVER_ONLY: Case[] = [
 			pre: 'const MAX = 5',
 			body: '<button onClick={() => console.log(MAX)}>x</button>',
 		},
-		pins: ['Event handler `onClick` references server-only name(s) `MAX`'],
+		pins: [
+			'Event handler `onClick` references server-only name `MAX`',
+			'Import `MAX` from a module, or declare it as a const in setup.',
+		],
 	},
 	{
 		name: 'a setup const a client position pulls in',
@@ -689,7 +693,7 @@ const SERVER_ONLY: Case[] = [
 				'const c = createCell(0)\n\t\texpose({ n: c.get })\n\t\tconst x = label.length',
 			body: '<span title={() => String(x + c.get())}>x</span>',
 		},
-		pins: ['Setup const `x`, emitted client-side'],
+		pins: ['Setup const `x`, which a client position reads'],
 	},
 ]
 
@@ -1074,7 +1078,7 @@ describe('grammar asymmetry — shapes with no counterpart', () => {
 			diagnostics.some(
 				d =>
 					d.code === 'LTC005' &&
-					d.message.includes('reserved parameters of reconcile() bindItem'),
+					d.message.includes('reserved parameters of `reconcile()`’s `bindItem`'),
 			),
 		).toBe(true)
 	})

@@ -509,10 +509,11 @@ ADR 0024 cures. Values must be string literals: they are the fallback every
 locale resolves against and the bytes the staleness manifest hashes, so the
 source locale declares EVERY key its template references — the fallback
 bytes always exist. **A value is an ICU MessageFormat 1 pattern** (ADR 0030
-s4; lands with LT-250): `t.<key>` is a string for an argument-less pattern
-and a function of its arguments otherwise, plural morphology lives inside
-the pattern, and dotted keys are plain namespacing. Patterns are parsed at
-build time, and one evaluator serves the server fold and the client.
+s4): `t.<key>` is a string for an argument-less pattern and a call,
+`t.key({ … })`, otherwise; plurals, `select` and inline formatting live
+inside the pattern, and dotted keys are plain namespacing. Patterns are
+parsed at build time, and one evaluator serves the server fold and the
+client.
 Translations are additive per-locale
 override files, component-namespaced (`i18n/de.json`, keys `<tag>.<key>`),
 with **no tiering and no override stack**: a key resolves in exactly one
@@ -527,12 +528,14 @@ compile warning, since it is not author-fixable. The census walks BOTH
 directions between declarations and catalogs (LT-196): every declared key
 must be translated, and every catalog key must be declared — an entry
 nothing declares (a translator's typo, a renamed key, a deleted
-component) reports `orphaned`, since it can never render. Every locale
-carries the same key set, so neither walk needs reachability rules; the
-census also checks each translation's argument set and its `plural` arm
-coverage against the locale's CLDR categories (ADR 0030 s5). Staleness rides a committed
+component) reports `orphaned` in every locale that carries it, and never renders.
+Every locale carries the same key set. Two pattern-integrity walks read
+each translation against its source pattern (ADR 0030 s5): argument
+preservation (`argument-mismatch`) and `plural` arm coverage against the
+locale's CLDR categories (`missing-arms`). An entry that is not a string,
+or does not parse, reports `malformed` and renders the source. Staleness rides a committed
 manifest (`i18n/manifest.json`, per locale per key the source hash the
-translation was recorded against): a source-string edit is a `.tsrx` edit
+translation was recorded against): a source-string edit is a source edit
 that silently invalidates that key's translations, so an override without a
 matching manifest hash reports `stale`. Literal prose inside a
 catalog-using component IS author-fixable and warns (LTC047 — template
@@ -541,6 +544,25 @@ data). The build stays read-only: an explicit `i18n:sync` script — never
 the build — writes missing keys into the committed catalogs, prunes
 orphaned keys out of them, and refreshes
 the manifest.
+
+**Client messages** (ADR 0030 s9): `t` is a server binding, but
+`analysis/plan.ts` classifies a static read of a declared key — `t.hi`, or
+a string-literal key `t['a.b']` — in a client-emitted position (a thunk, a
+handler, an `expose()` entry, a client-only setup statement, a list-item
+handler) as a client message and records its key in
+`ClientPlan.clientMessageKeys`. A computed key, a bare `t` or an undeclared
+key keeps `t` server-only (LTC005). Two emission points consume the keys.
+`emit-server.ts` writes the root `i18n` attribute through `runtime.ts`'s
+`clientMessages`, per render call: the parsed ASTs of the keys whose
+locale form differs from the source record, so a source-locale render
+usually writes no attribute. For a component whose client messages format
+(number, date, plural) and that renders no `lang`, it also writes the root
+`lang` through `clientLocale`, since the root `lang` is the client's only
+locale source. `emit-client.ts` emits the message preamble at the top of the
+factory body: the source record, the guarded `JSON.parse` merge of the
+attribute at connect, and the evaluator narrowed to the constructs those
+patterns use, which reads its locale from `closest('[lang]')` at the first
+format.
 
 **Context protocol** (ADR 0024 sub-design 15): `requestContext(Context,
 fallback)` is a recognized signal-constructor form — its fallback must be

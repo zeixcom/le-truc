@@ -546,7 +546,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 					diagnostic.unaddressableElement(
 						source,
 						mirror.el.node.start,
-						`No unique selector for the DOM site of server arg \`${param}\` (<${mirror.el.tag}>); add a distinguishing static attribute.`,
+						`No unique selector for the DOM site of server arg \`${param}\` (<${mirror.el.tag}>) — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 					),
 				)
 				return null
@@ -591,7 +591,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 					diagnostic.unaddressableElement(
 						source,
 						site.el.node.start,
-						`No unique selector for the DOM site of server arg \`${param}\` (<${site.el.tag}>); add a distinguishing static attribute.`,
+						`No unique selector for the DOM site of server arg \`${param}\` (<${site.el.tag}>) — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 					),
 				)
 				return null
@@ -779,7 +779,8 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 					diagnostic.unsupported(
 						source,
 						signal.init?.start,
-						`List seed of \`${signal.name}\` must be a pure literal or derive from server args — the client either reuses the literal (the server rendered from it) or harvests the container's adopted children.`,
+						`The list seed of \`${signal.name}\`, which is neither a pure literal nor derived from server args,`,
+						"The client either reuses a literal seed (the server rendered from it) or harvests the container's server-rendered children — seed the list with a literal, or derive it from server args.",
 					),
 				)
 			}
@@ -870,7 +871,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 					diagnostic.unaddressableElement(
 						source,
 						direct.element.node.start,
-						`No unique selector for the harvest site of signal \`${signal.name}\`; add a distinguishing static attribute (role, class, or data-*).`,
+						`No unique selector for the harvest site of signal \`${signal.name}\` — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 					),
 				)
 			}
