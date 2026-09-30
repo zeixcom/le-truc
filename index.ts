@@ -128,6 +128,7 @@ export {
 	escapeHTML,
 	type Sanitizer,
 	safeSetAttribute,
+	sanitizeHtml,
 	setTextPreservingComments,
 } from './src/bindings'
 export {

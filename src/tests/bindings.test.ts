@@ -23,6 +23,7 @@ import {
 	dangerouslyBindInnerHTML,
 	escapeHTML,
 	safeSetAttribute,
+	sanitizeHtml,
 	setTextPreservingComments,
 } from '../bindings'
 import { internalsHosts } from '../internal'
@@ -916,6 +917,35 @@ describe('dangerouslyBindInnerHTML', () => {
 			dangerouslyBindInnerHTML(el as unknown as Element).ok('<p>raw</p>')
 			flushRAF()
 			expect(el.innerHTML).toBe('<p>raw</p>')
+		})
+	})
+
+	describe('sanitizeHtml (the truc:html sanitizer, LT-138)', () => {
+		afterEach(() => {
+			configureHtmlSanitizer(undefined)
+		})
+
+		test('unconfigured, it fails closed: every markup character is escaped', () => {
+			expect(sanitizeHtml('<img src=x onerror="a&b">')).toBe(
+				'&lt;img src=x onerror=&quot;a&amp;b&quot;&gt;',
+			)
+		})
+
+		test('configured, it delegates to the default and reads it per call', () => {
+			const html = '<img src=x onerror="alert(1)"><p>safe</p>'
+			configureHtmlSanitizer(h => h.replace(/<img[^>]*>/gi, ''))
+			expect(sanitizeHtml(html)).toBe('<p>safe</p>')
+			configureHtmlSanitizer(undefined)
+			expect(sanitizeHtml(html)).toBe(escapeHTML(html))
+		})
+
+		test('as a call-site sanitize, an unconfigured sink renders inert text, not markup', () => {
+			const el = new FakeElement('div')
+			dangerouslyBindInnerHTML(el as unknown as Element, {
+				sanitize: sanitizeHtml,
+			}).ok('<b>x</b>')
+			flushRAF()
+			expect(el.innerHTML).toBe('&lt;b&gt;x&lt;/b&gt;')
 		})
 	})
 })

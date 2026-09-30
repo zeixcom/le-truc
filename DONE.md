@@ -11,6 +11,34 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 ---
 
+- [x] LT-138: The `truc:html={}` sanitizer default was inverted between server and client. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** Confirmed the flip, then fixed it: the server escaped an unconfigured
+  `truc:html` while the compiled client's `dangerouslyBindInnerHTML(el)` assigned raw, so a
+  reactive value went from escaped text to live markup at hydration. New public
+  **`sanitizeHtml(html)`** (`src/bindings.ts`, `@since 3.0`): the `configureHtmlSanitizer()`
+  default, else `escapeHTML`. The server runtime's `sanitizeHtml` delegates to it, and its
+  `configureHtmlSanitizer` is now a re-export of the library's. The compiled client emits
+  `dangerouslyBindInnerHTML(el, { sanitize: sanitizeHtml })`. The unconfigured server escape
+  now covers `& " '` as well, so `&amp;` no longer decodes. `sanitize-html` and
+  `@types/sanitize-html` are gone (devDeps); `features.test.ts` uses DOMPurify on jsdom and
+  pins server/client agreement both unconfigured and configured.
+  **Review:** Approved. **Ruling:** fail closed on both halves. Raw-by-default was rejected
+  because the server would write unsanitized markup into served bytes. Hand-written
+  `dangerouslyBindInnerHTML` keeps raw passthrough (ADR 0010 s6, amended in place). "Configure
+  once" holds per realm: the build and the browser are separate module instances, so an app
+  calls the same `configureHtmlSanitizer` once in each. Under a Trusted-Types CSP an
+  unconfigured client still throws at the sink. That was true before and is correct per
+  ADR 0010 s4. The docs site configures no sanitizer; no build path renders `truc:html` today.
+  The Trusted Types target state is blocked on TypeScript's DOM lib (TS 7.0.2 and
+  7.1.0-dev.20260930 declare no `TrustedHTML`) and became **LT-357**.
+  **Handoff (Tech Writer, direct, no task):** a `sanitizeHtml` entry in `docs-src/pages/api.md`
+  and the API JSDoc pass; `truc:html` and security guidance to state the fail-closed default
+  and recommend DOMPurify on both halves (`createDOMPurify(new JSDOM('').window)` at build, plain
+  DOMPurify in the browser); `.agents/skills/le-truc` references and `HOST_PROFILE.md`'s
+  `truc:html` bullet to match; a CHANGELOG `[Unreleased]` line (new export, retired devDep,
+  wider server escape).
+
 - [x] LT-249: Report non-string catalog values (LT-217 review falsification). — reviewed ✓
   **Skill:** docs-server-dev
   **Changed:** A catalog value in `i18n/<locale>.json` that is not a string (a group nested

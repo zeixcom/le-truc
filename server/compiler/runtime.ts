@@ -12,6 +12,7 @@
  * never by the compiler itself.
  */
 
+import { sanitizeHtml as librarySanitizeHtml } from '../../src/bindings'
 import { bakeMessageEnv, type Message, type MessageEnv } from './icu/evaluate'
 
 /* === Re-exports === */
@@ -354,31 +355,26 @@ export const styleAttr = (
 		.join('; ')
 
 /**
- * The sanitizer applied to every `truc:html={expr}` dynamic-rendering attribute
- * across the whole compiled site. Defaults to escaping all markup (safe but
- * inert — `<` and `>` become entities, so no element ever renders) until a
- * host configures a real sanitizer via `configureHtmlSanitizer`, mirroring
- * the client's `dangerouslyBindInnerHTML` `sanitize` hook (ADR 0010):
- * the library — here, the generated server module — owns no sanitizer,
- * the consumer supplies one appropriate to their trust level (e.g. DOMPurify).
+ * The `truc:html={expr}` sanitizer is the library's own `sanitizeHtml`
+ * (LT-138): the configured default from `configureHtmlSanitizer`, else escape
+ * everything — safe but inert. The generated client passes every reactive
+ * `truc:html` value through the same function, so both halves share one
+ * configuration and one fail-closed default: an unconfigured app renders
+ * escaped text on the server AND after hydration, never escaped-then-live.
+ * The library still owns no sanitizer (ADR 0010); the consumer configures
+ * one — DOMPurify on jsdom here (`createDOMPurify(new JSDOM('').window)`),
+ * plain DOMPurify in the browser.
  */
-let htmlSanitizer: (html: string) => string = html =>
-	html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+export { configureHtmlSanitizer } from '../../src/bindings'
 
 /**
- * Configure the sanitizer used by `sanitizeHtml` for every `truc:html={expr}`
- * dynamic-rendering attribute in the compiled site. Call once at server
- * startup, before any generated module renders.
+ * Sanitize HTML for the `truc:html={expr}` dynamic-rendering attribute
+ * through the library's `sanitizeHtml`. A `TrustedHTML` result (a sanitizer
+ * configured with `RETURN_TRUSTED_TYPE: true` where Trusted Types exist)
+ * stringifies to its markup.
  */
-export const configureHtmlSanitizer = (sanitizer: (html: string) => string) => {
-	htmlSanitizer = sanitizer
-}
-
-/**
- * Sanitize HTML for the `truc:html={expr}` dynamic-rendering attribute by
- * delegating to the configured sanitizer (see `configureHtmlSanitizer`).
- */
-export const sanitizeHtml = (html: string): string => htmlSanitizer(html)
+export const sanitizeHtml = (html: string): string =>
+	String(librarySanitizeHtml(html))
 
 /** `@for` iteration helper over the items themselves (index unused). */
 export const items = <T>(iterable: Iterable<T>): T[] => Array.from(iterable)

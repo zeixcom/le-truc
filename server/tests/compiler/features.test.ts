@@ -7,28 +7,24 @@
  * (statement-form switch, {html}/{text}/{ref} keywords, await).
  */
 import { afterAll, afterEach, describe, expect, test } from 'bun:test'
-import sanitizeHtml from 'sanitize-html'
+import createDOMPurify, { type WindowLike } from 'dompurify'
+import { JSDOM } from 'jsdom'
+import { sanitizeHtml as librarySanitizeHtml } from '../../../src/bindings'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { configureHtmlSanitizer } from '../../compiler/runtime'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
-// The runtime's default sanitizer (unconfigured state): escape everything,
-// safe but inert. Tests that configure a permissive/stripping sanitizer to
-// exercise `truc:html={expr}` must restore this afterward — `configureHtmlSanitizer`
-// is process-wide, shared across every generated module.
-const escapeAll = (html: string): string =>
-	html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+// `configureHtmlSanitizer` is process-wide and shared with the library's
+// client half (LT-138): tests that configure one must restore the
+// unconfigured, fail-closed default (escape everything) afterward.
+const unconfigure = (): void => configureHtmlSanitizer(undefined)
 
-// A stand-in "consumer-supplied" sanitizer (what a host would wire up via
-// `configureHtmlSanitizer`) — a real sanitize-html instance, since the
-// runtime itself ships no sanitizer (ADR 0010's posture, mirrored
-// server-side). Unlike DOMPurify, sanitize-html works on plain strings, no
-// DOM required — a better fit for server-side use.
-const stripDangerousMarkup = (html: string): string =>
-	sanitizeHtml(html, {
-		allowedTags: sanitizeHtml.defaults.allowedTags.concat('img'),
-		allowedAttributes: sanitizeHtml.defaults.allowedAttributes,
-	})
+// A stand-in "consumer-supplied" sanitizer (what a host wires up via
+// `configureHtmlSanitizer`) — DOMPurify on a jsdom window, its documented
+// Node path, since the library ships no sanitizer (ADR 0010). The same
+// DOMPurify serves the browser half, so the two cannot disagree (LT-152).
+const purify = createDOMPurify(new JSDOM('').window as unknown as WindowLike)
+const stripDangerousMarkup = (html: string): string => purify.sanitize(html)
 
 const wrap = (
 	template: string,
@@ -107,7 +103,7 @@ describe('@switch — multi-branch conditional rendering', () => {
 				<p>other</p>
 			}
 		}`)
-		expect(d.some(diag => diag.message.includes('inside @switch arms'))).toBe(
+		expect(d.some(diag => diag.message.includes('in `@switch` arms'))).toBe(
 			true,
 		)
 	})
@@ -132,7 +128,7 @@ import { createCell } from '@zeix/le-truc'`
 		const { diagnostics: d } = compileComponent(source2, 'c.tsrx', new Set())
 		expect(
 			d.some(diag =>
-				diag.message.includes('@switch discriminant reads signal'),
+				diag.message.includes('`@switch` discriminant that reads signal'),
 			),
 		).toBe(true)
 	})
@@ -202,7 +198,7 @@ describe('@try — error boundaries', () => {
 			<p>Failed</p>
 		}`)
 		expect(
-			d.some(diag => diag.message.includes('must sit on its root element')),
+			d.some(diag => diag.message.includes('below the root element of')),
 		).toBe(true)
 	})
 })
@@ -249,9 +245,9 @@ import { deriveCell } from '@zeix/le-truc'`,
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.message.includes('requires a @catch'))).toBe(
-			true,
-		)
+		expect(
+			diagnostics.some(d => d.message.includes('without a `@catch (e)` arm')),
+		).toBe(true)
 	})
 
 	test('a @try body with no lazy reference to a deriveCell signal is diagnosed', () => {
@@ -278,7 +274,9 @@ import { deriveCell } from '@zeix/le-truc'`,
 			new Set(),
 		)
 		expect(
-			diagnostics.some(d => d.message.includes('drives isPending() routing')),
+			diagnostics.some(d =>
+				d.message.includes('drives the `isPending()` routing'),
+			),
 		).toBe(true)
 	})
 
@@ -451,15 +449,12 @@ describe('bare html={} is rejected, not silently reclassified (LT-137)', () => {
 describe('truc:html={expr} — dynamic rendering', () => {
 	const { component, diagnostics } = compiled('<article truc:html={markup} />')
 
-	afterEach(() => {
-		configureHtmlSanitizer(escapeAll)
-	})
+	afterEach(unconfigure)
 
 	test('escapes markup by default when no sanitizer is configured', async () => {
 		expect(diagnostics).toEqual([])
 		if (!component) throw new Error('html fixture must compile')
 		ensureEmitted('feat-html', component.serverCode)
-		configureHtmlSanitizer(escapeAll)
 		expect(
 			await render('feat-html', { markup: '<p>Rich <em>content</em></p>' }),
 		).toBe(
@@ -498,13 +493,45 @@ import { createState } from '@zeix/le-truc'`
 		expect(d).toEqual([])
 		if (!component) throw new Error('reactive html fixture must compile')
 		expect(component.clientCode).toContain(
-			'watch(() => body.get(), dangerouslyBindInnerHTML(article))',
+			'watch(() => body.get(), dangerouslyBindInnerHTML(article, { sanitize: sanitizeHtml }))',
 		)
-		configureHtmlSanitizer(escapeAll)
 		ensureEmitted('feat-html-reactive', component.serverCode)
 		expect(await render('feat-html-reactive', {})).toBe(
 			'<c-el><article class="target">&lt;b&gt;seed&lt;/b&gt;</article></c-el>',
 		)
+	})
+
+	// LT-138: the server render and the client's first `watch` run must land
+	// on the same DOM. Before, the server escaped while the client's
+	// `dangerouslyBindInnerHTML(article)` assigned raw — escaped text flipping
+	// to live markup at hydration. Both now go through one `sanitizeHtml`.
+	const hydrate = (serverHtml: string, seed: string) => {
+		const { document } = new JSDOM(serverHtml).window
+		const article = document.querySelector('article')
+		if (!article) throw new Error('server render must contain the article')
+		const served = article.innerHTML
+		article.innerHTML = String(librarySanitizeHtml(seed))
+		return { served, hydrated: article.innerHTML }
+	}
+
+	test('reactive form: server render and client bind agree when unconfigured', async () => {
+		const seed = '<b>seed</b>'
+		const { served, hydrated } = hydrate(
+			await render('feat-html-reactive', {}),
+			seed,
+		)
+		expect(hydrated).toBe(served)
+		expect(served).toBe('&lt;b&gt;seed&lt;/b&gt;')
+	})
+
+	test('reactive form: one configureHtmlSanitizer call switches both halves', async () => {
+		configureHtmlSanitizer(stripDangerousMarkup)
+		const { served, hydrated } = hydrate(
+			await render('feat-html-reactive', {}),
+			'<b>seed</b>',
+		)
+		expect(hydrated).toBe(served)
+		expect(served).toBe('<b>seed</b>')
 	})
 })
 
@@ -659,9 +686,9 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 				await render('feat-html', {
 					markup: '<img src=x onerror=alert(1)>',
 				}),
-			).toBe('<c-el><article><img src="x" /></article></c-el>')
+			).toBe('<c-el><article><img src="x"></article></c-el>')
 		} finally {
-			configureHtmlSanitizer(escapeAll)
+			unconfigure()
 		}
 	})
 
@@ -731,7 +758,7 @@ import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(d =>
-				d.message.includes('one reactive-list @for per component'),
+				d.message.includes('second reactive-list `@for` in one component'),
 			),
 		).toBe(true)
 	})

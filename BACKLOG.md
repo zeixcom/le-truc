@@ -1419,6 +1419,19 @@ composition (ADR 0042 s3, ROADMAP), the declarative shadow-root spelling (ADR 00
 the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishing the
 `.tsrx` front end (ADR 0034 s1, gated on `@tsrx/core` 1.0).
 
+- [ ] LT-357: Trusted Types target state for `truc:html` (LT-138 review; gated).
+  **Skill:** le-truc-dev
+  **Context:** **Gated on TypeScript's DOM lib declaring `TrustedHTML`.** As of 2026-10-01 it
+  does not: TS 6.0.3, 7.0.2 and 7.1.0-dev.20260930.4 (whose `lib.dom.d.ts` ships in the
+  `@typescript/typescript-<platform>` packages) mention it only in `Document.write` doc
+  comments. When the gate lifts: (1) drop the `type TrustedHTML = object` placeholders in
+  `src/bindings.ts` and `examples/test/audit/test-audit.ts` for the real type; (2) decide
+  whether the server's `configureHtmlSanitizer` should accept a Trusted-Types-shaped policy
+  config, so one config module serves both realms. The server already stringifies a
+  `TrustedHTML` result (`server/compiler/runtime.ts` `sanitizeHtml`). LT-138 already settled the
+  shared entry point and the fail-closed default; this task covers only typing and the
+  policy shape. No new runtime check; channel: TypeScript.
+
 - [ ] LT-345: A generated fallback `id` for an element whose ARIA relation needs one (LT-308 review; owner, 2026-09-26).
   **Skill:** architect
   **Context:** LT-343 makes module-codeblock's `id` required when collapsed, so the overlay's

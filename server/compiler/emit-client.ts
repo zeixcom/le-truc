@@ -415,7 +415,7 @@ const messagePreambleLines = (
 		'\t\t\t__i18nMessages = { ...__i18nSource, ...(parsed as Record<string, unknown>) }',
 		'\t} catch (error) {',
 		"\t\tif (process.env.DEV_MODE === 'true')",
-		`\t\t\tconsole.warn(${JSON.stringify(`<${component.tag}>: the i18n attribute is not valid JSON — using the source-locale messages`)}, error)`,
+		`\t\t\tconsole.warn(${JSON.stringify(`<${component.tag}>: the i18n attribute is not valid JSON, so the component shows its source-locale messages. Check the server render that wrote the attribute.`)}, error)`,
 		'\t}',
 		'}',
 	]
@@ -759,12 +759,16 @@ export const emitClientModule = (
 		}
 		if (effect.kind === 'watch-html') {
 			// LT-025: dangerouslyBindInnerHTML is the sanctioned XSS-aware sink
-			// (ADR 0010) — never a raw innerHTML property binding.
+			// (ADR 0010) — never a raw innerHTML property binding. LT-138: the
+			// explicit `sanitizeHtml` makes the client fail closed exactly like
+			// the server render (configured default, else escape) instead of
+			// falling back to the sink's raw passthrough.
 			imports.add('watch')
 			imports.add('dangerouslyBindInnerHTML')
+			imports.add('sanitizeHtml')
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
 			at(
-				`${imports.local('watch')}(${effect.thunkText}, ${imports.local('dangerouslyBindInnerHTML')}(${effect.query}))`,
+				`${imports.local('watch')}(${effect.thunkText}, ${imports.local('dangerouslyBindInnerHTML')}(${effect.query}, { sanitize: ${imports.local('sanitizeHtml')} }))`,
 				slices,
 			)
 			return

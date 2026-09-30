@@ -232,6 +232,7 @@ export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
 	'dangerouslyBindInnerHTML',
 	'escapeHTML',
 	'safeSetAttribute',
+	'sanitizeHtml',
 	'setTextPreservingComments',
 	// src/component, src/errors
 	'defineComponent',
