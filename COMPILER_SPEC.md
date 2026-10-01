@@ -720,7 +720,7 @@ As of 2026-09-29, for orientation only; it ages quickly. The current architectur
 | 3.1 Module shape | Partial | Typed factory context | Partial: 16 of 17 `.tsx` components still wrap root and `<style>` in a fragment |
 | 3.2 Shadow mode | Missing |  | Missing: unbuilt, unscheduled |
 | 3.3 Bindings | Done | All |  |
-| 3.4 Vocabulary | Partial | `truc:try` (all arms rendered and hidden-toggled until ADR 0037 s4), `truc:pass`, `truc:html` | Missing: `truc:element` |
+| 3.4 Vocabulary | Partial | `truc:try` (template-cloned arms, ADR 0037 s4), `truc:pass`, `truc:html` | Missing: `truc:element` |
 | 3.5 Control flow | Partial | Server-known conditions, loops, empty arm | Missing: reactive conditions (LT-274) |
 | 3.7 Trust | Partial |  | Partial: server sanitizer configurable; one shared policy blocked on TypeScript's DOM lib |
 | 3.8 Fold inputs / portable subset | Partial | LTC054 | Missing: portable subset |

@@ -6,16 +6,17 @@
  * per node.
  *
  * `@pending` policy (LT-230, one ruling for every walk): an async boundary's
- * pending arm is RENDERED markup — the server writes all three arms and the
- * client toggles `hidden` (ADR 0023 sub-design 13) — so every walk enters it.
- * The arm admits only static and server markup (`handleAsyncBoundary`
- * rejects client constructs there), so a walk looking for client constructs
- * finds nothing and pays nothing; a walk collecting what the DOM contains
- * (compose sites, ids, rendered props) must see it. A composed element
- * nested below the pending root is valid authoring — the LT-221 probe only
- * covered a compose site AS the root. Exclusivity arithmetic follows the
- * same fact: with a pending arm present the arms coexist (sum); without
- * one, body XOR catch renders (max).
+ * pending arm is RENDERED markup — the live winner while the task has no
+ * value, and template content otherwise (ADR 0037 s4) — so every walk
+ * enters it, as it enters every conditional arm. The arm admits only static
+ * and server markup (`handleAsyncBoundary` rejects client constructs
+ * there), so a walk looking for client constructs finds nothing and pays
+ * nothing; a walk collecting what the DOM contains (compose sites, ids,
+ * rendered props) must see it. A composed element nested below the pending
+ * root is valid authoring — the LT-221 probe only covered a compose site AS
+ * the root. Exclusivity arithmetic follows the same fact: one arm of a
+ * boundary is in the document at a time, with or without a pending arm
+ * (max).
  *
  * Authorized exceptions — walks whose recursion IS the semantics, so they
  * keep their own descent (structural steps still go through `childNodes`
@@ -43,10 +44,59 @@
 
 import type { AttributeIR, ComponentIR, TemplateNode } from './ir'
 
+/* === Conditionals === */
+
+/** A conditional node (ADR 0043 s4), either construct, either mode. */
+export type ConditionalNode = Extract<TemplateNode, { kind: 'conditional' }>
+/** An `@if`/`@else` (or `.tsx` ternary/`&&`): arms `then` and `else`. */
+export type IfNode = ConditionalNode & { construct: 'if' }
+/** An `@switch`/`@case` (or `.tsx` switch IIFE): one arm per case. */
+export type SwitchNode = ConditionalNode & { construct: 'switch' }
+
+export const isIf = (node: TemplateNode | null | undefined): node is IfNode =>
+	node?.kind === 'conditional' && node.construct === 'if'
+
+export const isSwitch = (
+	node: TemplateNode | null | undefined,
+): node is SwitchNode =>
+	node?.kind === 'conditional' && node.construct === 'switch'
+
+/** An `@if`'s `then` branch. */
+export const thenOf = (node: IfNode): TemplateNode[] =>
+	node.arms[0]?.children ?? []
+
+/** An `@if`'s `else` branch — empty when the conditional has none. */
+export const elseOf = (node: IfNode): TemplateNode[] =>
+	node.arms[1]?.children ?? []
+
+/**
+ * Does `node` switch its arms on the client through `reconcile()` (ADR
+ * 0037) — a reactive conditional, or an async boundary (s4)?
+ */
+export const hasArmSet = (node: TemplateNode): boolean =>
+	(node.kind === 'conditional' && node.mode === 'reactive') ||
+	(node.kind === 'try' && node.pendingChildren !== null)
+
+/**
+ * An arm set's index: its position among the component's reactive
+ * conditionals and async boundaries in document order. The server stamps it
+ * on the arm templates (`data-arms`) and the client queries by it, so both
+ * emitters derive it from the IR, never from emitter state.
+ */
+export const armSetOf = (root: TemplateNode, target: TemplateNode): number => {
+	let index = -1
+	let found = -1
+	walkTemplate(root, node => {
+		if (found >= 0 || !hasArmSet(node)) return
+		index++
+		if (node === target) found = index
+	})
+	return found
+}
+
 /**
  * Immediate children of a node under the standard traversal, document order
- * preserved: element and compose children, both `@if` branches, every
- * `@switch` arm, and all present `@try` arms (pending last, entered by
+ * preserved: element and compose children, every conditional arm, and all present `@try` arms (pending last, entered by
  * policy — see the module doc).
  */
 export const childNodes = (node: TemplateNode): readonly TemplateNode[] => {
@@ -54,10 +104,8 @@ export const childNodes = (node: TemplateNode): readonly TemplateNode[] => {
 		case 'element':
 		case 'compose':
 			return node.children
-		case 'if':
-			return [...node.then, ...node.alternate]
-		case 'switch':
-			return node.cases.flatMap(arm => arm.children)
+		case 'conditional':
+			return node.arms.flatMap(arm => arm.children)
 		case 'try':
 			return [
 				...node.children,

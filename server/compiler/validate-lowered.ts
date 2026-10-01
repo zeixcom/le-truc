@@ -89,16 +89,13 @@ const reportLoopsInBranches = (
 ): void => {
 	const outputs = new Set<TemplateNode>([...fors.values()].map(f => f.output))
 	walkTemplate(root, (node, parent) => {
-		if (
-			outputs.has(node) &&
-			(parent?.kind === 'if' || parent?.kind === 'switch')
-		)
+		if (outputs.has(node) && parent?.kind === 'conditional')
 			ctx.diagnostics.push(
 				diagnostic.loopInBranch(
 					ctx.source,
 					node.node?.start,
 					wordingOf(ctx),
-					parent.kind,
+					parent.construct,
 				),
 			)
 	})

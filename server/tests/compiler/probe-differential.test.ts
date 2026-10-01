@@ -59,7 +59,14 @@ import type {
 	TemplateNode,
 } from '../../compiler/ir'
 import type { RegistryEntry } from '../../compiler/registry'
-import { someNode, walkTemplate } from '../../compiler/walk'
+import {
+	elseOf,
+	isIf,
+	isSwitch,
+	someNode,
+	thenOf,
+	walkTemplate,
+} from '../../compiler/walk'
 import { compileCorpusSource, loadCorpus } from './corpus-fixture'
 
 /* === The reference: the hand cascades as they stood before LT-379 === */
@@ -86,51 +93,27 @@ const refMatchesSelector = (
 }
 
 const refCountForSelector = (node: TemplateNode, selector: string): number => {
-	if (node.kind === 'if')
+	if (node.kind === 'conditional')
 		return Math.max(
-			...[node.then, node.alternate].map(branch =>
-				branch.reduce(
-					(sum, child) => sum + refCountForSelector(child, selector),
-					0,
-				),
-			),
-		)
-	if (node.kind === 'switch')
-		return Math.max(
-			...node.cases.map(arm =>
+			...node.arms.map(arm =>
 				arm.children.reduce(
 					(sum, child) => sum + refCountForSelector(child, selector),
 					0,
 				),
 			),
 		)
-	if (node.kind === 'try') {
-		if (node.pendingChildren !== null)
-			return (
-				node.children.reduce(
-					(sum, c) => sum + refCountForSelector(c, selector),
-					0,
-				) +
-				node.pendingChildren.reduce(
-					(sum, c) => sum + refCountForSelector(c, selector),
-					0,
-				) +
-				node.catchChildren.reduce(
-					(sum, c) => sum + refCountForSelector(c, selector),
-					0,
-				)
-			)
+	if (node.kind === 'try')
+		// One arm in the document at a time (ADR 0037 s4, LT-276): an async
+		// boundary's other arms are template content.
 		return Math.max(
-			node.children.reduce(
-				(sum, c) => sum + refCountForSelector(c, selector),
-				0,
-			),
-			node.catchChildren.reduce(
-				(sum, c) => sum + refCountForSelector(c, selector),
-				0,
+			...[
+				node.children,
+				node.catchChildren,
+				...(node.pendingChildren ? [node.pendingChildren] : []),
+			].map(arm =>
+				arm.reduce((sum, c) => sum + refCountForSelector(c, selector), 0),
 			),
 		)
-	}
 	if (!isElement(node)) return 0
 	let count = refMatchesSelector(node, selector) ? 1 : 0
 	for (const child of node.children)
@@ -142,18 +125,9 @@ const refCountComposeBySource = (
 	node: TemplateNode,
 	source: string,
 ): number => {
-	if (node.kind === 'if')
+	if (node.kind === 'conditional')
 		return Math.max(
-			...[node.then, node.alternate].map(branch =>
-				branch.reduce(
-					(sum, child) => sum + refCountComposeBySource(child, source),
-					0,
-				),
-			),
-		)
-	if (node.kind === 'switch')
-		return Math.max(
-			...node.cases.map(arm =>
+			...node.arms.map(arm =>
 				arm.children.reduce(
 					(sum, child) => sum + refCountComposeBySource(child, source),
 					0,
@@ -163,11 +137,11 @@ const refCountComposeBySource = (
 	if (node.kind === 'try') {
 		const count = (arm: readonly TemplateNode[]): number =>
 			arm.reduce((sum, c) => sum + refCountComposeBySource(c, source), 0)
-		return node.pendingChildren !== null
-			? count(node.children) +
-					count(node.catchChildren) +
-					count(node.pendingChildren)
-			: Math.max(count(node.children), count(node.catchChildren))
+		return Math.max(
+			count(node.children),
+			count(node.catchChildren),
+			count(node.pendingChildren ?? []),
+		)
 	}
 	if (node.kind === 'compose') return node.source === source ? 1 : 0
 	if (!isElement(node)) return 0
@@ -357,9 +331,10 @@ const refEnclosingIfOf = (
 	target: ElementNode,
 ): IfNode | null => {
 	const walk = (node: TemplateNode): IfNode | null => {
-		if (node.kind === 'if') {
-			if ([...node.then, ...node.alternate].includes(target)) return node
-			for (const child of [...node.then, ...node.alternate]) {
+		if (isIf(node) && node.mode === 'server') {
+			const branches = [...thenOf(node), ...elseOf(node)]
+			if (branches.includes(target)) return node
+			for (const child of branches) {
 				const found = walk(child)
 				if (found) return found
 			}
@@ -382,7 +357,7 @@ const refSelectorFor = (
 ): { selector: string; unique: boolean } => {
 	const enclosing = refEnclosingIfOf(root, el)
 	if (!enclosing) return refResolveSelectorIn(root, el, composed)
-	const roots = [...enclosing.then, ...enclosing.alternate].filter(isElement)
+	const roots = [...thenOf(enclosing), ...elseOf(enclosing)].filter(isElement)
 	const clauses: string[] = []
 	for (const rootEl of roots) {
 		const self = refResolveSelectorIn(root, rootEl, composed)
@@ -461,8 +436,8 @@ const runDifferential = (components: ComponentIR[]): void => {
 		const trys: TryNode[] = []
 		walkTemplate(root, node => {
 			if (node.kind === 'element') elements.push(node)
-			else if (node.kind === 'if') ifs.push(node)
-			else if (node.kind === 'switch') switches.push(node)
+			else if (isIf(node)) ifs.push(node)
+			else if (isSwitch(node)) switches.push(node)
 			else if (node.kind === 'try') trys.push(node)
 		})
 		elementCount += elements.length
@@ -511,11 +486,11 @@ const runDifferential = (components: ComponentIR[]): void => {
 		const arms: Array<[string, readonly TemplateNode[]]> = []
 		for (const node of ifs)
 			arms.push(
-				[`if.then@${pos(node)}`, node.then],
-				[`if.alt@${pos(node)}`, node.alternate],
+				[`if.then@${pos(node)}`, thenOf(node)],
+				[`if.alt@${pos(node)}`, elseOf(node)],
 			)
 		for (const node of switches)
-			node.cases.forEach((arm, i) =>
+			node.arms.forEach((arm, i) =>
 				arms.push([`switch[${i}]@${pos(node)}`, arm.children]),
 			)
 		for (const node of trys) {
@@ -554,8 +529,8 @@ const runDifferential = (components: ComponentIR[]): void => {
 		// 4. resolveExclusiveSelectorIn, per control-node branch root.
 		for (const node of ifs)
 			for (const [body, other] of [
-				[node.then, node.alternate],
-				[node.alternate, node.then],
+				[thenOf(node), elseOf(node)],
+				[elseOf(node), thenOf(node)],
 			] as Array<[readonly TemplateNode[], readonly TemplateNode[]]>)
 				for (const el of body.filter(n => n.kind === 'element'))
 					compareResolved(
@@ -570,10 +545,10 @@ const runDifferential = (components: ComponentIR[]): void => {
 						resolveExclusiveSelectorIn(root, el as ElementNode, other, shapes),
 					)
 		for (const node of switches)
-			for (let i = 0; i < node.cases.length; i++) {
-				const arm = node.cases[i]
+			for (let i = 0; i < node.arms.length; i++) {
+				const arm = node.arms[i]
 				if (!arm) continue
-				const other = node.cases
+				const other = node.arms
 					.filter((_, j) => j !== i)
 					.flatMap(a => a.children)
 				for (const el of arm.children.filter(n => n.kind === 'element'))
@@ -1008,7 +983,10 @@ test("a parser-implied element inherits its ancestor's arm path", () => {
 	// One <table> of bare rows per arm: each implies a <tbody>, and only one
 	// arm renders at a time.
 	const root = el('div', [
-		{ kind: 'if', then: [table()], alternate: [table()] },
+		{
+			kind: 'conditional',
+			arms: [{ children: [table()] }, { children: [table()] }],
+		},
 	]) as unknown as TemplateNode
 	expect(countForSelector(root, 'tbody')).toBe(1)
 	expect(countForSelector(root, 'tr')).toBe(1)

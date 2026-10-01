@@ -22,12 +22,19 @@ import type { AstNode } from './ast-node'
 import { isNode } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import type { FirstRefDecl, TemplateNode } from './ir'
-import { childNodes, someNode, walkTemplate } from './walk'
+import {
+	childNodes,
+	elseOf,
+	type IfNode,
+	isIf,
+	someNode,
+	thenOf,
+	walkTemplate,
+} from './walk'
 
 /* === Types === */
 
 export type ElementNode = Extract<TemplateNode, { kind: 'element' }>
-type IfNode = Extract<TemplateNode, { kind: 'if' }>
 
 /** One `.class`/`#id`/`[attr]`/`[attr="value"]` clause, or a bare tag name. */
 type SimpleSelector = {
@@ -255,9 +262,10 @@ const enclosingIfIn = (
 	target: ElementNode,
 ): IfNode | null => {
 	const walk = (node: TemplateNode): IfNode | null => {
-		if (node.kind === 'if') {
-			if ([...node.then, ...node.alternate].includes(target)) return node
-			for (const child of [...node.then, ...node.alternate]) {
+		if (isIf(node) && node.mode === 'server') {
+			const branches = [...thenOf(node), ...elseOf(node)]
+			if (branches.includes(target)) return node
+			for (const child of branches) {
 				const found = walk(child)
 				if (found) return found
 			}
@@ -289,8 +297,8 @@ export const shareExclusiveIf = (
 	if (elements.length < 2) return true
 	const [first, ...rest] = elements.map(el => enclosingIfIn(root, el))
 	if (!first || rest.some(e => e !== first)) return false
-	const inThen = elements.filter(el => first.then.includes(el))
-	const inAlternate = elements.filter(el => first.alternate.includes(el))
+	const inThen = elements.filter(el => thenOf(first).includes(el))
+	const inAlternate = elements.filter(el => elseOf(first).includes(el))
 	return (
 		inThen.length <= 1 &&
 		inAlternate.length <= 1 &&
@@ -483,7 +491,7 @@ export const reportStaticIds = (
  *
  * `null` — meaning "do not fold, omit the attribute instead" — for the two
  * cases the server cannot settle with a plain condition: a ref inside a
- * `@switch`/`@try` arm (arm selection is not a single boolean), and a ref
+ * `@switch`/`@try` arm or a reactive conditional's arm (arm selection is not a single boolean), and a ref
  * matched more than once (the union of several conditions is not what a
  * presence read means). Refusing to fold is always safe; folding wrongly
  * bakes a wrong initial state into the HTML.
@@ -500,14 +508,14 @@ export const refBranchGuard = (
 	const walk = (node: TemplateNode, guards: readonly string[]): void => {
 		if (bailed) return
 		if (carriesRef(node)) found.push([...guards])
-		if (node.kind === 'if') {
-			for (const child of node.then)
+		if (isIf(node) && node.mode === 'server') {
+			for (const child of thenOf(node))
 				walk(child, [...guards, `(${node.testText})`])
-			for (const child of node.alternate)
+			for (const child of elseOf(node))
 				walk(child, [...guards, `!(${node.testText})`])
 			return
 		}
-		if (node.kind === 'switch' || node.kind === 'try') {
+		if (node.kind === 'conditional' || node.kind === 'try') {
 			// Arm selection is not a plain condition — if the ref lives in
 			// one, refuse rather than guess.
 			if (someNode(node, carriesRef)) bailed = true
@@ -541,15 +549,34 @@ export const inOptionalBranch = (
 			found = optional
 			return
 		}
-		if (node.kind === 'if') {
-			const single = node.alternate.length === 0
-			for (const child of node.then) walk(child, optional || single)
-			for (const child of node.alternate) walk(child, optional)
+		if (isIf(node) && node.mode === 'server') {
+			const single = elseOf(node).length === 0
+			for (const child of thenOf(node)) walk(child, optional || single)
+			for (const child of elseOf(node)) walk(child, optional)
 			return
 		}
 		for (const child of childNodes(node)) walk(child, optional)
 	}
 	walk(root, false)
+	return found
+}
+
+/**
+ * Does `target` sit inside a reactive conditional's arm (ADR 0037)? Such an
+ * element is recreated from its arm template whenever the arm switches, so
+ * no connect-time reference to it stays valid.
+ */
+export const inReactiveArm = (
+	root: TemplateNode,
+	target: TemplateNode,
+): boolean => {
+	let found = false
+	walkTemplate(root, node => {
+		if (found || node.kind !== 'conditional' || node.mode !== 'reactive') return
+		found = node.arms.some(arm =>
+			arm.children.some(child => someNode(child, n => n === target)),
+		)
+	})
 	return found
 }
 

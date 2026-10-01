@@ -112,6 +112,11 @@ class FakeElement {
 		const index = this.parent.childElements.indexOf(this)
 		return this.parent.childElements[index + 1] ?? null
 	}
+	get previousElementSibling(): FakeElement | null {
+		if (!this.parent) return null
+		const index = this.parent.childElements.indexOf(this)
+		return this.parent.childElements[index - 1] ?? null
+	}
 
 	getAttribute(name: string): string | null {
 		return this.#attrs.get(name) ?? null
@@ -1047,5 +1052,415 @@ describe('reconcile — bridge-name source types (CE 1.5)', () => {
 		)
 		expect(childKeys(collectionContainer)).toEqual([])
 		disposeCollection()
+	})
+})
+
+/* === Arm form (ADR 0037) === */
+
+/**
+ * An arm template: a `<template data-key>` child of the container whose
+ * `content` holds `rootCount` root elements of tag `root`.
+ */
+const armTemplate = (
+	container: FakeElement,
+	key: string,
+	root = 'p',
+	rootCount = 1,
+): FakeElement => {
+	const roots = Array.from({ length: rootCount }, () => new FakeElement(root))
+	const template = Object.assign(new FakeElement('template'), {
+		content: {
+			get childElementCount() {
+				return roots.length
+			},
+			get firstElementChild() {
+				return roots[0] ?? null
+			},
+		},
+	})
+	template.setAttribute('data-key', key)
+	container.appendChild(template)
+	return template
+}
+
+const asTemplates = (templates: FakeElement[]) =>
+	templates as unknown as HTMLTemplateElement[]
+
+const makeArmRecorder = () => {
+	const mounted: Array<{ key: string; element: FakeElement }> = []
+	const disposed: string[] = []
+	const bindArm = (element: HTMLElement, key: string) => {
+		mounted.push({ key, element: element as unknown as FakeElement })
+		return () => {
+			disposed.push(key)
+		}
+	}
+	return { mounted, disposed, bindArm }
+}
+
+const tags = (container: FakeElement): string[] =>
+	container.children.map(el =>
+		el.localName === 'template'
+			? `template:${el.getAttribute('data-key')}`
+			: `${el.localName}${el.hasAttribute('data-key') ? `[${el.getAttribute('data-key')}]` : ''}`,
+	)
+
+describe('reconcile — arm form (ADR 0037)', () => {
+	test('clones the current arm right before the first template', () => {
+		const container = new FakeElement('div')
+		container.appendChild(new FakeElement('h2'))
+		const templates = [
+			armTemplate(container, 'then', 'p'),
+			armTemplate(container, 'else', 'span'),
+		]
+		container.appendChild(new FakeElement('footer'))
+		const { mounted, bindArm } = makeArmRecorder()
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => 'else',
+					bindArm,
+				),
+			),
+		)
+
+		expect(tags(container)).toEqual([
+			'h2',
+			'span[else]',
+			'template:then',
+			'template:else',
+			'footer',
+		])
+		expect(mounted.map(m => m.key)).toEqual(['else'])
+		expect(mounted[0]?.element).toBe(container.children[1] as FakeElement)
+		dispose()
+	})
+
+	test('adopts the server-rendered winner and mounts bindArm on it', () => {
+		const container = new FakeElement('div')
+		const winner = keyedChild('then', 'p')
+		container.appendChild(winner)
+		const templates = [
+			armTemplate(container, 'then', 'p'),
+			armTemplate(container, 'else', 'span'),
+		]
+		const { mounted, bindArm } = makeArmRecorder()
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => 'then',
+					bindArm,
+				),
+			),
+		)
+
+		expect(container.children[0]).toBe(winner)
+		expect(tags(container)).toEqual([
+			'p[then]',
+			'template:then',
+			'template:else',
+		])
+		expect(mounted).toEqual([{ key: 'then', element: winner }])
+		dispose()
+	})
+
+	test('replaces a server-rendered arm the client disagrees with', () => {
+		const container = new FakeElement('div')
+		const winner = keyedChild('then', 'p')
+		container.appendChild(winner)
+		const templates = [
+			armTemplate(container, 'then', 'p'),
+			armTemplate(container, 'else', 'span'),
+		]
+		const { mounted, bindArm } = makeArmRecorder()
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => 'else',
+					bindArm,
+				),
+			),
+		)
+
+		expect(winner.parent).toBeNull()
+		expect(tags(container)).toEqual([
+			'span[else]',
+			'template:then',
+			'template:else',
+		])
+		expect(mounted.map(m => m.key)).toEqual(['else'])
+		dispose()
+	})
+
+	test('never claims a preceding sibling that names no arm', () => {
+		const container = new FakeElement('div')
+		const sibling = keyedChild('other', 'p')
+		container.appendChild(sibling)
+		const templates = [armTemplate(container, 'then', 'p')]
+		const { bindArm } = makeArmRecorder()
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => 'then',
+					bindArm,
+				),
+			),
+		)
+
+		expect(tags(container)).toEqual(['p[other]', 'p[then]', 'template:then'])
+		dispose()
+	})
+
+	test('a key change disposes the old arm before mounting the new one', async () => {
+		const container = new FakeElement('div')
+		const templates = [
+			armTemplate(container, 'then', 'p'),
+			armTemplate(container, 'else', 'span'),
+		]
+		const open = createState(true)
+		const order: string[] = []
+		const bindArm = (_element: HTMLElement, key: string) => {
+			order.push(`mount:${key}`)
+			return () => {
+				order.push(`dispose:${key}`)
+			}
+		}
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => (open.get() ? 'then' : 'else'),
+					bindArm,
+				),
+			),
+		)
+		expect(tags(container)).toEqual([
+			'p[then]',
+			'template:then',
+			'template:else',
+		])
+
+		open.set(false)
+		await tick()
+		expect(tags(container)).toEqual([
+			'span[else]',
+			'template:then',
+			'template:else',
+		])
+
+		open.set(true)
+		await tick()
+		expect(tags(container)).toEqual([
+			'p[then]',
+			'template:then',
+			'template:else',
+		])
+		expect(order).toEqual([
+			'mount:then',
+			'dispose:then',
+			'mount:else',
+			'dispose:else',
+			'mount:then',
+		])
+		dispose()
+	})
+
+	test('re-entry clones the template again rather than reusing the old element', async () => {
+		const container = new FakeElement('div')
+		const templates = [armTemplate(container, 'then', 'p')]
+		const open = createState(true)
+		const { mounted, bindArm } = makeArmRecorder()
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => (open.get() ? 'then' : null),
+					bindArm,
+				),
+			),
+		)
+		const firstElement = container.children[0]
+
+		open.set(false)
+		await tick()
+		expect(tags(container)).toEqual(['template:then'])
+
+		open.set(true)
+		await tick()
+		expect(container.children[0]).not.toBe(firstElement as FakeElement)
+		expect(mounted.map(m => m.key)).toEqual(['then', 'then'])
+		dispose()
+	})
+
+	test('a key with no template renders nothing', () => {
+		const container = new FakeElement('div')
+		const winner = keyedChild('then', 'p')
+		container.appendChild(winner)
+		const templates = [armTemplate(container, 'then', 'p')]
+		const { mounted, bindArm } = makeArmRecorder()
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => 'else',
+					bindArm,
+				),
+			),
+		)
+
+		expect(tags(container)).toEqual(['template:then'])
+		expect(mounted).toEqual([])
+		dispose()
+	})
+
+	test('a dependency change that keeps the key re-mounts nothing', async () => {
+		const container = new FakeElement('div')
+		const templates = [armTemplate(container, 'then', 'p')]
+		const count = createState(1)
+		const { mounted, disposed, bindArm } = makeArmRecorder()
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => (count.get() > 0 ? 'then' : null),
+					bindArm,
+				),
+			),
+		)
+
+		count.set(2)
+		await tick()
+		expect(mounted.map(m => m.key)).toEqual(['then'])
+		expect(disposed).toEqual([])
+		dispose()
+	})
+
+	test('disposing the enclosing scope disposes the arm scope and keeps its DOM', () => {
+		const container = new FakeElement('div')
+		const templates = [armTemplate(container, 'then', 'p')]
+		const { disposed, bindArm } = makeArmRecorder()
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => 'then',
+					bindArm,
+				),
+			),
+		)
+
+		dispose()
+		expect(disposed).toEqual(['then'])
+		expect(tags(container)).toEqual(['p[then]', 'template:then'])
+	})
+
+	test('a reconnect re-adopts the arm the last connection left in place', () => {
+		const container = new FakeElement('div')
+		const templates = [armTemplate(container, 'then', 'p')]
+		const { mounted, bindArm } = makeArmRecorder()
+		const connect = () =>
+			createScope(() =>
+				activate(() =>
+					reconcile(
+						container as unknown as Element,
+						asTemplates(templates),
+						() => 'then',
+						bindArm,
+					),
+				),
+			)
+
+		connect()()
+		const element = container.children[0]
+		connect()()
+		expect(container.children[0]).toBe(element as FakeElement)
+		expect(mounted.map(m => m.element)).toEqual([
+			element as FakeElement,
+			element as FakeElement,
+		])
+	})
+
+	test('a bare watch() inside bindArm activates against the arm scope', async () => {
+		const container = new FakeElement('div')
+		const templates = [armTemplate(container, 'then', 'p')]
+		const label = createState('a')
+		const open = createState(true)
+		const watch = makeWatch({} as unknown as HTMLElement & ComponentProps)
+		const seen: string[] = []
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => (open.get() ? 'then' : null),
+					() => {
+						watch(label, value => {
+							seen.push(value)
+						})
+					},
+				),
+			),
+		)
+
+		label.set('b')
+		await tick()
+		open.set(false)
+		await tick()
+		label.set('c')
+		await tick()
+		expect(seen).toEqual(['a', 'b'])
+		dispose()
+	})
+
+	test('throws InvalidTemplateError for an arm template with two roots', () => {
+		const container = new FakeElement('div')
+		const templates = [armTemplate(container, 'then', 'p', 2)]
+		expect(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => 'then',
+					() => {},
+				),
+			),
+		).toThrow(InvalidTemplateError)
+	})
+
+	test('throws InvalidTemplateError when given no template', () => {
+		const container = new FakeElement('div')
+		expect(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					[],
+					() => 'then',
+					() => {},
+				),
+			),
+		).toThrow(InvalidTemplateError)
 	})
 })

@@ -85,6 +85,8 @@ export type DiagnosticCode =
 	| 'LTC054' // a position the server render evaluates reads page context outside the declared ambient set, or the reserved `i18n` record is destructured for a member outside it (ADR 0034 s4, LT-258) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC055' // an `export const i18n` source pattern is not a supported ICU MessageFormat 1 pattern, or a `t.<key>` site disagrees with its pattern's arguments: missing/extra/non-literal arguments, an argument message read without a call, an argument-less message called (ADR 0030 s4, LT-250) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC056' // an authored `<script>` element in a component template, whatever its `type` — the page owns script loading (LT-358 rider) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC062' // a reactive switch (one whose discriminant reads a signal) has a `@case`/`case` value that is not a literal, or two cases share an arm key (ADR 0037 s2, LT-274) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC063' // a reactive condition inside a reactive list's reconcile() container (ADR 0037 s5, LT-274) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC061' // an authored `<template>` element in a component template — the compiler owns template extraction, and the selector proof cannot see inside one (LT-383) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
@@ -290,6 +292,53 @@ export const diagnostic = {
 		error(
 			'LTC061',
 			"A `<template>` element in a component template — the compiler emits the `<template>`s a component needs (a reactive list's item template, its conditional arms), and an authored one would collide with them. Render the markup directly, or let a reactive list or condition produce the repeated or switched content.",
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A reactive switch keys its arms by their case values (ADR 0037 s2:
+	 * `case:<literal>`), so a case value must be a literal the server emit
+	 * and the generated client can name identically at compile time, and no
+	 * two cases may share a key (`'1'` and `1`). A dynamic value has no
+	 * fallback. ADR 0028 tier 1 (Prevented): statically decidable, no
+	 * runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; the
+	 * first draft rides the LT-275 copy round.
+	 */
+	dynamicCaseValue: (
+		source: string,
+		offset: number | undefined,
+		caseText: string,
+		wording: SurfaceWording,
+		duplicate = false,
+	) =>
+		error(
+			'LTC062',
+			duplicate
+				? `The ${wording.caseLabel} value \`${caseText}\` names the same arm as an earlier one in a switch that reads a signal. Its arms switch on the client by a key derived from each value, so every value must name a distinct arm — remove or merge the duplicate.`
+				: `The ${wording.caseLabel} value \`${caseText}\` is not a literal, in a switch that reads a signal. Its arms switch on the client by a key derived from each value at compile time — write each value as a string, number, boolean or \`null\` literal.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A reactive condition inside a reactive list's `reconcile()` container
+	 * (ADR 0037 s5): the container is self-cleaning — its first run removes
+	 * every unkeyed child — so the arm templates and the live arm would be
+	 * swept until the unkeyed-sibling rule exists (LT-185's follow-up). ADR
+	 * 0028 tier 1 (Prevented): statically decidable, no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; the
+	 * first draft rides the LT-275 copy round.
+	 */
+	reactiveConditionInReconcileContainer: (
+		source: string,
+		offset: number | undefined,
+		wording: SurfaceWording,
+	) =>
+		error(
+			'LTC063',
+			`${wording.reactiveConditional} inside the container of a reactive-list ${wording.loop}. The list owns that container's children and removes everything it did not place, the arm and its templates included — move the condition out of the container, or wrap the loop in an element of its own.`,
 			lineOf(source, offset),
 		),
 
@@ -1138,11 +1187,10 @@ export const diagnostic = {
 	// --- duplicate ids, import hygiene, duplicated channels ---
 	/**
 	 * A literal `id` is duplicated across `@try`/`@catch`/`@pending` arms
-	 * (CHECKLIST §8). All three arms render into the initial HTML
-	 * simultaneously — two `hidden`, not removed — so a shared `id` is two
-	 * elements sharing an id in the SAME document at once, real regardless
-	 * of whether `@pending` is present (a plain `@try`/`@catch` render-time
-	 * boundary has exactly the same two-arms-present-at-once shape).
+	 * (CHECKLIST §8). The rule dates from the toggled async boundary, whose
+	 * three arms were all in the document at once; since ADR 0037 s4
+	 * (LT-276) only the winning arm is live and the rest are inert template
+	 * content, so whether the rule stays is open (NOTES.md, LT-275).
 	 */
 	duplicateIdAcrossArms: (
 		source: string,

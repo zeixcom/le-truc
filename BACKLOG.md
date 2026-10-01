@@ -530,6 +530,33 @@ LT-247 came back 2026-10-01, parked and demand-gated (see its entry). The
 reflection's line-count claims ("2.5–4k lines") are 2026-09-18 estimates. The iteration
 records the actual net delta.
 
+- [ ] LT-387: Reactive-condition mode classification follows scope (LT-274 review).
+  **Skill:** le-truc-dev
+  **Context:** `validateCondition` (`lower-shared.ts`) goes reactive only when a free name is a
+  signal or `host`. An alias — `const isOpen = () => open.get(); @if (isOpen())`,
+  `const o = open; @if (o.get())` — compiles silently as `mode: 'server'` and never updates,
+  against the documented contract; conversely a `@for` binding that shadows a signal name
+  (`@for (const open of items) { @if (open) … }`) is classified reactive and refused.
+  Resolve setup aliases to their signal (or refuse the read, tier 1 Prevented) and make
+  `freeIdentifiers` scope-aware. Ride-along: `check:contract`'s scratch front end crashes in
+  `analyzeClient` on an undefined `component.firstRefs` (fails on HEAD before LT-274 too).
+
+- [ ] LT-390: A corpus consumer for reactive conditions and the boundary, with audit coverage.
+  **Skill:** le-truc-dev
+  **Context:** LT-274/LT-276 landed with no corpus component using either, so their golden
+  and equivalence-audit acceptance items pass vacuously; adoption's designed connect diff is
+  pinned only by `reactive-conditions.test.ts`. Migrate one example that wants a reactive
+  `@if` (a disclosure or a tab-like switch) and pair the boundary with LT-334 (lazyload),
+  extend `equivalence-audit.test.ts` to the arm-adoption class.
+  **Depends on** LT-385.
+
+- [ ] LT-391: An arm kind for `SuppressedSite` (ADR 0037 s5 under the Simulated tier).
+  **Skill:** le-truc-dev
+  **Context:** LT-274 review. A reactive test over the wall clock or RNG (ADR 0029 limb b)
+  correctly renders no live arm, but when the component is Simulated for another reason the
+  realm's connect clones an arm into the served HTML. Record suppressed arm sets and strip
+  the realm-cloned arm before serialization, as other limb-(b) sites are.
+
 - [ ] LT-246: Make tier contamination legible at the compose edge — the census names the re-routing edge.
   **Skill:** le-truc-dev
   **Context:** Reflection §3's recommendation, promoted under the framework premise: the
@@ -1419,6 +1446,11 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   client task) only when the resolved value is read nowhere outside its own arm AND the guarding
   promise depends solely on server-definitive args. `form-listbox.tsrx` is the one real consumer
   of the async boundary — build fixtures around it, same caution as LT-077.
+  **Re-pinned (LT-276 review, 2026-10-02):** with template-cloned arms every arm ships as a
+  template and the client clones on demand; the question is now only whether to omit an arm
+  template (and its mount) the client can never select. The form-listbox premise is stale —
+  no corpus component uses the boundary (it is named in a comment only); a consumer comes
+  with LT-390.
 
 - [ ] LT-076: Establish a dev-mode signal for generated `.tsrx` client code, then implement the hydration assertion (CHECKLIST §6).
   **Skill:** le-truc-dev

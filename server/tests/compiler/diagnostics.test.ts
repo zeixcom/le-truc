@@ -192,7 +192,7 @@ describe('@if conditional markup (LT-008)', () => {
 		expect(component).not.toBeNull()
 	})
 
-	test('@if over a reactive signal is LTC005', () => {
+	test('@if over a reactive signal compiles to template-cloned arms (ADR 0037)', () => {
 		const source = `export function C({}: {})
 	@{
 		const open = createCell(false)
@@ -207,15 +207,15 @@ describe('@if conditional markup (LT-008)', () => {
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(
-			diagnostics.some(
-				d =>
-					d.code === 'LTC005' &&
-					d.message.includes('signal(s)') &&
-					d.message.includes('the branch the server rendered'),
-			),
-		).toBe(true)
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.clientCode).toContain(
+			"() => (open.get() ? 'then' : null)",
+		)
 	})
 
 	test('@if construct differing between distinguishable branches compiles (per-branch addressing, LT-118)', () => {

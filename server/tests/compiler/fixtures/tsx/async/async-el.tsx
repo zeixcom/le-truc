@@ -1,7 +1,8 @@
 /**
  * TSX §4.4 synthetic fixture (LT-183; three-arm boundary per LT-211,
- * spelled `<truc:try pending catch>` per ADR 0041 / LT-303): all arms
- * render, `hidden`-toggled by which state won at render time. `pending` is
+ * spelled `<truc:try pending catch>` per ADR 0041 / LT-303): the arm that
+ * won at render time renders live beside the inert arm templates, and the
+ * client switches arms as the task settles (ADR 0037 s4). `pending` is
  * the no-value-yet arm (the `.tsrx` `@pending` arm's exact IR). There
  * is no stale arm: the reactive idiom for the re-fetching state is the
  * `isPending(data)` class binding beside the boundary — as an ARROW thunk,

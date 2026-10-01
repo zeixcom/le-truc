@@ -34,7 +34,7 @@ import {
 	FACTORY_CONTEXT_MEMBERS,
 	JS_GLOBALS,
 } from '../vocabulary'
-import { walkTemplate } from '../walk'
+import { elseOf, isIf, thenOf, walkTemplate } from '../walk'
 import type {
 	HarvestPlan,
 	HarvestPlans,
@@ -332,6 +332,42 @@ const collectRenderSites = (component: ComponentIR): RenderSites => {
 	}
 	recordSites(component.root, false)
 
+	// A reactive conditional (ADR 0037) renders its test's signals and its
+	// arms' reactive sites without a harvest site: the arms may not exist at
+	// connect, and the winner's own sites are not the signal's only render.
+	// Same credit as a computed thunk — rendered, seeded by initializer
+	// reuse, which is sound because the server picked and rendered the
+	// winner from that same initializer.
+	const creditSignalReads = (node: AstNode): void => {
+		for (const signal of component.signals)
+			if (
+				containsSignalGet(node, signal.name) ||
+				(nodeType(node) === 'Identifier' &&
+					String((node as AstNode).name) === signal.name)
+			)
+				thunkRendered.add(signal.name)
+	}
+	walkTemplate(component.root, node => {
+		if (node.kind !== 'conditional' || node.mode !== 'reactive') return
+		creditSignalReads(node.test)
+		for (const arm of node.arms)
+			for (const child of arm.children)
+				walkTemplate(child, inner => {
+					if (inner.kind === 'expr' && inner.lazy) creditSignalReads(inner.expr)
+					if (inner.kind !== 'element') return
+					for (const attr of inner.attrs) {
+						if (
+							attr.kind === 'reactive' ||
+							attr.kind === 'class-map' ||
+							attr.kind === 'style-map'
+						)
+							creditSignalReads(attr.thunk)
+						else if (attr.kind === 'html' && attr.reactive)
+							creditSignalReads(attr.thunk)
+					}
+				})
+	})
+
 	// A signal consumed only by a CLIENT-ONLY setup statement (LT-119:
 	// `watch(() => showPopup.get() && listbox.visibleOptions.length > 0,
 	// bindAttribute(popup, 'hidden'))`) reaches the DOM without a template
@@ -399,11 +435,10 @@ const collectRenderSites = (component: ComponentIR): RenderSites => {
 				} else if (attr.kind === 'server') creditRender(attr.node)
 			}
 		} else if (node.kind === 'expr') creditRender(node.expr)
-		else if (node.kind === 'if') creditRender(node.test)
-		else if (node.kind === 'switch') {
-			creditRender(node.discriminant)
+		else if (node.kind === 'conditional') {
+			creditRender(node.test)
 			// `@case` tests are render positions too (LT-330).
-			for (const arm of node.cases) if (arm.test) creditRender(arm.test)
+			for (const arm of node.arms) if (arm.test) creditRender(arm.test)
 		} else if (node.kind === 'compose') {
 			for (const attr of node.attrs)
 				if (attr.kind === 'arg') creditRender(attr.node)
@@ -525,9 +560,11 @@ const planHarvests = (
 				return `host.${exposedRootAttr.name}`
 			}
 		}
+		// Server-known `@if` branches only: a reactive conditional's arms may
+		// not exist at connect, so nothing inside one is an arg's DOM site.
 		const childrenOf = (node: TemplateNode): TemplateNode[] =>
-			node.kind === 'if'
-				? [...node.then, ...node.alternate]
+			isIf(node) && node.mode === 'server'
+				? [...thenOf(node), ...elseOf(node)]
 				: isElement(node)
 					? node.children
 					: []
@@ -617,7 +654,7 @@ const planHarvests = (
 			// a throwing `first()` the substituted expression could crash on
 			// (ADR 0023 sub-design 12).
 			const enclosing = enclosingIfOf(site.el)
-			const optional = !!enclosing && enclosing.alternate.length === 0
+			const optional = !!enclosing && elseOf(enclosing).length === 0
 			const query = addQuery(
 				refAttr?.name ?? sanitizeVarName(site.el.tag),
 				resolved.selector,

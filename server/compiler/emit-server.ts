@@ -35,6 +35,7 @@ import { carriedKinds, FORMATTING_KINDS, type Message } from './icu/evaluate'
 import { clientSourceRecord } from './icu/parse'
 import { RUNTIME_HARNESS_EXPORTS } from './imports'
 import type {
+	ArmTemplate,
 	AttributeIR,
 	ComponentIR,
 	ContextSignalIR,
@@ -47,7 +48,14 @@ import type { RegistryEntry } from './registry'
 import { reindent, type SourceSpan } from './spans'
 import type { EvaluationTier } from './tier'
 import { CLIENT_ONLY_PRIMITIVES, JS_GLOBALS } from './vocabulary'
-import { walkTemplate } from './walk'
+import {
+	armSetOf,
+	type ConditionalNode,
+	elseOf,
+	isIf,
+	thenOf,
+	walkTemplate,
+} from './walk'
 
 /* === Types === */
 
@@ -770,17 +778,18 @@ const emitCompose = (
 }
 
 /**
- * The async boundary form of `@try` (ADR 0023 sub-design 13, LT-012): all
- * arms render UNCONDITIONALLY (analyzeClient already proved each is a
- * single root element and found the guarded signal — errors would have
- * failed the build before emitServerModule runs), each `hidden` unless
- * it's the arm that won at render time. The client's later
- * `watch(signal, { ok, err, nil })` flips the same `hidden` property
- * going forward — no separate client rendering path, no divergent markup.
- * There is no `stale` arm — the owner withdrew the four-arm spelling
- * (LT-211); a re-fetching task keeps its `ok` arm visible, and the
- * reactive idiom for the in-flight state is an `isPending(signal)` read
- * beside the boundary, which folds right here (the harness answers it).
+ * The async boundary form of `@try` (ADR 0023 sub-design 13, LT-012; ADR
+ * 0037 s4, LT-276): the arm that won at render time renders live, keyed
+ * `ok`/`nil`/`err` by its root's `data-key`, followed by one inert
+ * `<template data-arms data-key>` per arm. The client's `reconcile()` adopts
+ * the winner and clones the other arms as the task settles — only one arm is
+ * ever in the document, so no named control in another arm can submit and
+ * no fieldset or `hidden` sweep is needed. The analysis already proved each
+ * arm is a single root element and found the guarded signal. There is no
+ * `stale` arm — the owner withdrew the four-arm spelling (LT-211); a
+ * re-fetching task keeps its `ok` arm, and the reactive idiom for the
+ * in-flight state is an `isPending(signal)` read beside the boundary, which
+ * folds right here (the harness answers it).
  */
 const emitAsyncBoundary = (
 	ctx: EmitContext,
@@ -795,15 +804,11 @@ const emitAsyncBoundary = (
 	const asyncId = ++ctx.armCounter
 	const stateVar = ctx.mint(`__async${asyncId}`)
 	const errVar = ctx.mint(`__async${asyncId}Err`)
-	const okRoot = node.children.find(
-		(c): c is ElementNode => c.kind === 'element',
-	) as ElementNode
-	const pendingRoot = pendingChildren.find(
-		(c): c is ElementNode => c.kind === 'element',
-	) as ElementNode
-	const errRoot = node.catchChildren.find(
-		(c): c is ElementNode => c.kind === 'element',
-	) as ElementNode
+	const rootOf = (children: TemplateNode[]): ElementNode =>
+		children.find((c): c is ElementNode => c.kind === 'element') as ElementNode
+	const okRoot = rootOf(node.children)
+	const pendingRoot = rootOf(pendingChildren)
+	const errRoot = rootOf(node.catchChildren)
 	const signalChild = okRoot.children.find(
 		(c): c is TemplateNode & { kind: 'expr' } =>
 			c.kind === 'expr' && c.lazy && c.expr.type === 'Identifier',
@@ -811,9 +816,6 @@ const emitAsyncBoundary = (
 	const signalName = signalChild
 		? String((signalChild.expr as AstNode).name)
 		: ''
-	const errChild = errRoot.children.find(
-		(c): c is TemplateNode & { kind: 'expr' } => c.kind === 'expr' && c.lazy,
-	)
 	ctx.out
 		.line(`let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`)
 		.line(`let ${errVar}: unknown = undefined`)
@@ -826,80 +828,165 @@ const emitAsyncBoundary = (
 		.line(`${stateVar} = 'err'`)
 		.close()
 		.close()
-	const hiddenAttr = (cond: string): AttributeIR => ({
-		kind: 'server',
-		name: 'hidden',
-		exprText: cond,
-		node: node.node,
-	})
-	// The ok/err arms' own recognized lazy child (the guarded signal;
-	// the catch param or a member read over it) must NOT evaluate its
-	// real expression except in the arm that actually won: `data.get()`
-	// throws while pending, and the catch param is `undefined` outside
-	// the err arm. Emitting it unconditionally (the generic `emit()`
-	// walker's usual behavior) would crash rendering the OTHER two
-	// arms' hidden copies — guard each with the same tri-state var, and
-	// let the ternary's short-circuiting keep the unsafe branch unread.
-	const emitGuardedChild = (
-		child: TemplateNode,
-		armScope: ReadonlySet<string>,
-		guardedExpr: string | null,
-	): void => {
-		if (guardedExpr !== null && child.kind === 'expr' && child.lazy) {
-			ctx.used.add('esc')
-			push(ctx, `${ctx.h('esc')}(String(${guardedExpr}))`)
-			return
-		}
-		emit(ctx, child, armScope)
-	}
-	// `hidden`/`display:none` exclude nothing from form submission,
-	// only `disabled` does (CHECKLIST §8, LT-077) — a named control in
-	// a non-active arm would otherwise submit alongside `@pending`'s.
-	// Every arm root is unconditionally wrapped in a synthetic
-	// `<fieldset disabled>`, toggled by the SAME condition as the root's
-	// own `hidden` (nested form-associated custom elements inherit the
-	// disabled state natively); the inline style resets the box model
-	// (border/padding/margin/min-width — the `min-content` quirk breaks
-	// flex/grid children) so the always-present wrapper stays invisible
-	// chrome around whichever arm is actually hidden.
+	const errScope = new Set(scope)
+	if (node.catchParam) errScope.add(node.catchParam)
+	// An arm root, with its recognized lazy child (the guarded signal; the
+	// catch param or a member read over it) written as `value`: the live
+	// winner's resolved value or error text, and nothing in a template —
+	// the client's arm mount writes it.
 	const emitArmRoot = (
 		root: ElementNode,
 		armScope: ReadonlySet<string>,
-		hiddenCond: string,
-		guardedExpr: string | null,
+		value: string | null,
+		extraAttrs: AttributeIR[] = [],
 	): void => {
-		ctx.used.add('attr')
-		push(
-			ctx,
-			`${new HtmlWriter()
-				.static('<fieldset style="border:0;padding:0;margin:0;min-width:0"')
-				.expr(`${ctx.h('attr')}('disabled', ${hiddenCond})`)
-				.static('>')}`,
-		)
-		emitElement(ctx, root, armScope, [hiddenAttr(hiddenCond)])
-		for (const child of root.children)
-			emitGuardedChild(child, armScope, guardedExpr)
+		emitElement(ctx, root, armScope, extraAttrs)
+		for (const child of root.children) {
+			if (child.kind === 'expr' && child.lazy) {
+				if (value === null) continue
+				ctx.used.add('esc')
+				push(ctx, `${ctx.h('esc')}(String(${value}))`)
+				continue
+			}
+			emit(ctx, child, armScope)
+		}
 		pushClose(ctx, root.tag)
-		push(ctx, "'</fieldset>'")
 	}
-	emitArmRoot(pendingRoot, scope, `${stateVar} !== 'pending'`, null)
-	emitArmRoot(
-		okRoot,
-		scope,
-		`${stateVar} !== 'ok'`,
-		`${stateVar} === 'ok' ? ${signalName}.get() : ''`,
+	const keyed = (key: string): AttributeIR[] => [
+		{ kind: 'static', name: 'data-key', value: key },
+	]
+	const errChild = errRoot.children.find(
+		(c): c is TemplateNode & { kind: 'expr' } => c.kind === 'expr' && c.lazy,
 	)
-	const errScope = new Set(scope)
-	if (node.catchParam) {
-		ctx.out.line(`const ${node.catchParam} = ${errVar}`)
-		errScope.add(node.catchParam)
-	}
+	ctx.out.open(`if (${stateVar} === 'ok') {`)
+	emitArmRoot(okRoot, scope, `${signalName}.get()`, keyed('ok'))
+	ctx.out.between(`} else if (${stateVar} === 'err') {`)
+	if (node.catchParam) ctx.out.line(`const ${node.catchParam} = ${errVar}`)
 	emitArmRoot(
 		errRoot,
 		errScope,
-		`${stateVar} !== 'err'`,
-		errChild ? `${stateVar} === 'err' ? (${errChild.exprText}) : ''` : null,
+		errChild ? errChild.exprText : null,
+		keyed('err'),
 	)
+	ctx.out.between('} else {')
+	emitArmRoot(pendingRoot, scope, null, keyed('nil'))
+	ctx.out.close()
+	const armSet = String(armSetOf(ctx.component.root, node))
+	for (const [key, root, armScope] of [
+		['ok', okRoot, scope],
+		['nil', pendingRoot, scope],
+		['err', errRoot, errScope],
+	] as const) {
+		push(
+			ctx,
+			`${new HtmlWriter()
+				.static('<template')
+				.attr('data-arms', armSet)
+				.attr('data-key', key)
+				.static('>')}`,
+		)
+		emitArmRoot(root, armScope, null)
+		push(ctx, "'</template>'")
+	}
+}
+
+/**
+ * The server expression a reactive conditional's test folds to, or null
+ * when no server phase can evaluate it (`initialFold`): the test itself
+ * when the value harness can evaluate it, else the test with each
+ * `host.<prop>` read spliced for the server expression seeding the prop.
+ */
+const serverTestExpr = (
+	ctx: EmitContext,
+	node: ConditionalNode,
+	scope: ReadonlySet<string>,
+): string | null => {
+	if (isServerEvaluable(node.test, scope)) return node.testText
+	const reads = hostDerivedFold(
+		node.test,
+		foldableHostProps(ctx.component),
+		foldableRefGuards(ctx.component),
+		new Set([...ctx.foldScope, ...scope]),
+	)
+	if (reads === null) return null
+	return spliceHostDerivedFold(
+		node.testText,
+		typeof node.test.start === 'number' ? node.test.start : 0,
+		reads,
+		(prop, kind) => {
+			if (kind === 'ref')
+				return foldableRefGuards(ctx.component).get(prop) ?? ''
+			const rootAttr = ctx.component.root.attrs.find(
+				(a): a is Extract<AttributeIR, { kind: 'server' }> =>
+					a.kind === 'server' && a.name === prop,
+			)
+			return rootAttr ? rootAttr.exprText : prop
+		},
+	)
+}
+
+/**
+ * A reactive conditional (ADR 0037 s1): the initial winner renders live,
+ * its root keyed by the arm's `data-key`, followed by one inert
+ * `<template data-arms data-key>` per arm that renders anything — the
+ * client's `reconcile()` adopts the winner by key and clones the rest.
+ * The winner folds through the value harness, as every reactive site does;
+ * a compile-time constant renders unconditionally, and an unresolvable
+ * test renders no live arm (ADR 0037 s5). The analysis proved each
+ * rendering arm has one root element, beside client-only statements.
+ */
+const emitReactiveConditional = (
+	ctx: EmitContext,
+	node: ConditionalNode,
+	scope: ReadonlySet<string>,
+): void => {
+	const rootOf = (arm: ArmTemplate): ElementNode | undefined =>
+		arm.children.find((c): c is ElementNode => c.kind === 'element')
+	const renderLive = (arm: ArmTemplate | undefined): void => {
+		const root = arm && rootOf(arm)
+		if (!arm || !root) return
+		emitPlainElement(ctx, root, scope, [
+			{ kind: 'static', name: 'data-key', value: arm.key },
+		])
+	}
+	const initial = node.initial
+	const test = 'constant' in initial ? null : serverTestExpr(ctx, node, scope)
+	if ('constant' in initial)
+		renderLive(node.arms.find(arm => arm.key === initial.constant))
+	else if (test !== null && isIf(node)) {
+		ctx.out.open(`if (${test}) {`)
+		renderLive(node.arms[0])
+		if (elseOf(node).length > 0) {
+			ctx.out.between('} else {')
+			renderLive(node.arms[1])
+		}
+		ctx.out.close()
+	} else if (test !== null) {
+		ctx.out.open(`switch (${test}) {`)
+		for (const arm of node.arms) {
+			ctx.out.open(
+				`${arm.testText === null ? 'default' : `case ${arm.testText}`}: {`,
+			)
+			renderLive(arm)
+			ctx.out.line('break').close()
+		}
+		ctx.out.close()
+	}
+	const armSet = String(armSetOf(ctx.component.root, node))
+	for (const arm of node.arms) {
+		const root = rootOf(arm)
+		if (!root) continue
+		push(
+			ctx,
+			`${new HtmlWriter()
+				.static('<template')
+				.attr('data-arms', armSet)
+				.attr('data-key', arm.key)
+				.static('>')}`,
+		)
+		emitPlainElement(ctx, root, scope)
+		push(ctx, "'</template>'")
+	}
 }
 
 /**
@@ -955,23 +1042,27 @@ const emit = (
 		push(ctx, `${ctx.h('esc')}(String(${value}))`)
 		return
 	}
-	if (node.kind === 'if') {
+	if (node.kind === 'conditional' && node.mode === 'reactive') {
+		emitReactiveConditional(ctx, node, scope)
+		return
+	}
+	if (isIf(node)) {
 		// The condition is server-known (validated at lowering) — the
 		// render function evaluates it against the real args.
 		ctx.out.open(`if (${node.testText}) {`)
-		for (const child of node.then) emit(ctx, child, scope)
-		if (node.alternate.length > 0) {
+		for (const child of thenOf(node)) emit(ctx, child, scope)
+		if (elseOf(node).length > 0) {
 			ctx.out.between('} else {')
-			for (const child of node.alternate) emit(ctx, child, scope)
+			for (const child of elseOf(node)) emit(ctx, child, scope)
 		}
 		ctx.out.close()
 		return
 	}
-	if (node.kind === 'switch') {
+	if (node.kind === 'conditional') {
 		// Arms are mutually exclusive — each case block breaks so JS
 		// fall-through cannot blend arms.
-		ctx.out.open(`switch (${node.discriminantText}) {`)
-		for (const arm of node.cases) {
+		ctx.out.open(`switch (${node.testText}) {`)
+		for (const arm of node.arms) {
 			ctx.out.open(
 				`${arm.testText === null ? 'default' : `case ${arm.testText}`}: {`,
 			)
@@ -1023,11 +1114,24 @@ const emit = (
 		emitFor(ctx, loop, scope)
 		return
 	}
+	emitPlainElement(ctx, node, scope)
+}
+
+/**
+ * A plain element and its subtree, with `extraAttrs` ahead of its own (a
+ * reactive arm's `data-key`).
+ */
+const emitPlainElement = (
+	ctx: EmitContext,
+	node: ElementNode,
+	scope: ReadonlySet<string>,
+	extraAttrs: AttributeIR[] = [],
+): void => {
 	// Reactive-for templates flush after this element's close tag — the
 	// spec shape (adopted items, </container>, then <template>) keeps the
 	// template out of the reconciled container's children.
 	ctx.templateQueue.push([])
-	emitElement(ctx, node, scope)
+	emitElement(ctx, node, scope, extraAttrs)
 	// truc:html={dataRef} renders as sanitized raw children before authored
 	// children (dependency-provable, else omitted for the client pass).
 	const htmlAttr = node.attrs.find(a => a.kind === 'html') as

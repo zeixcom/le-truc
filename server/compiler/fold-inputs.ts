@@ -372,12 +372,17 @@ export const checkFoldInputs = (
 				if (node.lazy) checkReactive(node.expr, scope, 'a text child')
 				else checkEvaluated(node.expr, 'a text child')
 				break
-			case 'if':
-				checkEvaluated(node.test, 'a condition')
-				break
-			case 'switch':
-				checkEvaluated(node.discriminant, 'a switch discriminant')
-				for (const arm of node.cases)
+			case 'conditional':
+				if (node.mode === 'reactive') {
+					// The initial winner folds like any reactive site (ADR 0037).
+					checkReactive(node.test, scope, 'a condition')
+					break
+				}
+				checkEvaluated(
+					node.test,
+					node.construct === 'if' ? 'a condition' : 'a switch discriminant',
+				)
+				for (const arm of node.arms)
 					if (arm.test) checkEvaluated(arm.test, 'a switch case')
 				break
 			case 'compose':

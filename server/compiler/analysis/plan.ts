@@ -216,6 +216,50 @@ export type ReconcilePlan = {
 	emptyQueries: string[]
 }
 
+/** One arm of a reactive conditional, mounted inside `bindArm`. */
+export type ArmPlan = {
+	/** The arm key (ADR 0037 s2): `then`/`else`, `case:<value>`, `default`. */
+	key: string
+	/** A `@case` test's source text, null for `then`/`else`/`default`. */
+	caseText: string | null
+	/** False for an arm that renders nothing: no template, no mount. */
+	renders: boolean
+	/** The arm root's local (the bound element, typed by its tag). */
+	root: { name: string; tag: string } | null
+	/** Descendants the arm's effects address, queried within the arm root. */
+	locals: Array<{ name: string; selector: string; message: string }>
+	effects: TopEffectPlan[]
+}
+
+/**
+ * A reactive conditional or an async boundary (ADR 0037) lowered to
+ * `reconcile()`'s arm form: the arm templates the server stamped
+ * `data-arms="<armSet>"` beside the live winner, a key thunk over the test
+ * (or the boundary's task state), and one mount per arm.
+ */
+export type ArmsPlan = {
+	/** Container query variable, or `'host'` at the component root. */
+	container: string
+	/** The arm set's index in document order (`data-arms`). */
+	armSet: number
+	construct: 'if' | 'switch' | 'try'
+	/** The `@if` test or `@switch` discriminant verbatim; the boundary's signal. */
+	testText: string
+	sourceStart: number | undefined
+	/** `bindArm`'s parameter names. */
+	elementParam: string
+	keyParam: string
+	arms: ArmPlan[]
+	/**
+	 * An async boundary's routing (ADR 0037 s4): the arm key follows the
+	 * guarded task's state (`ok`/`nil`/`err`, `match()`'s precedence), the
+	 * `ok` arm's mount writes the resolved value as its root's text and the
+	 * `err` arm's mount writes `errText` — the err arm's own lazy child over
+	 * `error` (bare or a member read), null when it has none.
+	 */
+	boundary?: { signal: string; errText: string | null }
+}
+
 export type TopEffectPlan =
 	| { kind: 'watch-text'; query: string; source: string }
 	| {
@@ -295,6 +339,7 @@ export type TopEffectPlan =
 	  }
 	| { kind: 'each'; for: ForClientPlan }
 	| { kind: 'reconcile'; for: ReconcilePlan }
+	| { kind: 'arms'; arms: ArmsPlan }
 	| {
 			/**
 			 * A verbatim client-only statement (`internals?.states.add(…)`)
@@ -316,41 +361,6 @@ export type TopEffectPlan =
 			kind: 'guarded'
 			query: string
 			effects: TopEffectPlan[]
-	  }
-	| {
-			/**
-			 * An async boundary (`@try`/`@pending`/`@catch`, ADR 0023 sub-design
-			 * 13, LT-012): one `watch(signal, { ok, err, nil })` call toggles the
-			 * three server-rendered roots' `hidden` property — pure enhance, no
-			 * client DOM creation, mirroring `module-lazyload.ts`'s hand-written
-			 * shape. `errText`, when present, is the err arm's own lazy text
-			 * child — the error (or a member expression over it, e.g.
-			 * `error.message`); the ok arm's text is always the resolved
-			 * value itself.
-			 *
-			 * The `*FieldsetQuery` trio (LT-077, CHECKLIST §8) names the
-			 * synthetic `<fieldset disabled>` `emit-server.ts` wraps around each
-			 * arm root: `hidden`/`display:none` exclude nothing from form
-			 * submission, only `disabled` does, and named form controls in a
-			 * non-active arm would otherwise submit alongside `@pending`'s own
-			 * controls. The wrapper toggles in lockstep with its arm's own
-			 * `hidden` — same condition, one extra property write per handler.
-			 * These are reserved variable names only (`analysis/naming.ts`'s
-			 * `uniqueName`), not entries in `queries` — the fieldset is always
-			 * its arm root's immediate parent, so `emit-client.ts` declares it
-			 * via `<armRootQuery>.parentElement` rather than a second `first()`
-			 * query (LT-086: a `fieldset:has(...)` selector would need `:has()`,
-			 * which predates REQUIREMENTS.md's 2020 browser baseline).
-			 */
-			kind: 'async'
-			signal: string
-			pendingQuery: string
-			okQuery: string
-			errQuery: string
-			pendingFieldsetQuery: string
-			okFieldsetQuery: string
-			errFieldsetQuery: string
-			errText: string | null
 	  }
 
 export type ClientPlan = {

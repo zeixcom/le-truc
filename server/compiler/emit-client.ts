@@ -16,6 +16,8 @@
  */
 
 import type {
+	ArmPlan,
+	ArmsPlan,
 	ClientPlan,
 	ForClientPlan,
 	ReconcilePlan,
@@ -651,6 +653,105 @@ export const emitClientModule = (
 	for (const stmt of component.clientSetup)
 		push(stmt.text, sliceOf(stmt.text, stmt.range.start))
 
+	// A reactive conditional (ADR 0037): `reconcile()`'s arm form over the
+	// templates the server stamped `data-arms`, a key thunk over the test,
+	// and one branch of `bindArm` per arm with effects.
+	let needsElementType = false
+	const emitArms = (plan: ArmsPlan): void => {
+		imports.add('reconcile')
+		if (plan.boundary) {
+			emitBoundary(plan, plan.boundary)
+			return
+		}
+		const key = (arm: ArmPlan): string =>
+			arm.renders ? jsString(arm.key) : 'null'
+		const test = sliceOf(plan.testText, plan.sourceStart)
+		let thunk: string
+		if (plan.construct === 'if') {
+			const [then, otherwise] = plan.arms
+			thunk = `() => (${plan.testText} ? ${then ? key(then) : 'null'} : ${otherwise ? key(otherwise) : 'null'})`
+		} else {
+			const cases = plan.arms.map(arm =>
+				arm.caseText === null
+					? `default: return ${key(arm)}`
+					: `case ${arm.caseText}: return ${key(arm)}`,
+			)
+			const fallback = plan.arms.some(arm => arm.caseText === null)
+				? ''
+				: ' return null'
+			thunk = `() => { switch (${plan.testText}) { ${cases.join('; ')} }${fallback} }`
+		}
+		const templates = `${plan.container}.querySelectorAll<HTMLTemplateElement>(${jsString(`:scope > template[data-arms="${plan.armSet}"]`)})`
+		const mounted = plan.arms.filter(arm => arm.effects.length > 0)
+		if (mounted.length === 0) {
+			out.line(
+				`${imports.local('reconcile')}(${plan.container}, ${templates}, ${thunk}, () => {})`,
+				test,
+			)
+			return
+		}
+		const usesFirst = mounted.some(arm => arm.locals.length > 0)
+		out.open(
+			`${imports.local('reconcile')}(${plan.container}, ${templates}, ${thunk}, (${plan.elementParam}, ${plan.keyParam}${usesFirst ? ', first' : ''}) => {`,
+			test,
+		)
+		mounted.forEach((arm, index) => {
+			const condition = `${plan.keyParam} === ${jsString(arm.key)}`
+			if (index === 0) out.open(`if (${condition}) {`)
+			else out.between(`} else if (${condition}) {`)
+			if (arm.root) {
+				needsElementType = true
+				out.line(
+					`const ${arm.root.name} = ${plan.elementParam} as ElementFromSelector<${jsString(arm.root.tag)}>`,
+				)
+			}
+			for (const local of arm.locals)
+				out.line(
+					`const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
+				)
+			for (const inner of arm.effects) emitTopEffect(inner)
+		})
+		out.close()
+		out.close('})')
+	}
+
+	// An async boundary (ADR 0037 s4): the arm key follows the task's
+	// state with `match()`'s precedence — no value yet is `nil`, a
+	// rejection `err`, anything else (a re-fetch keeping its value
+	// included) `ok`. The `ok` and `err` mounts write the resolved value
+	// and the error text into their arm root; each handles the other state
+	// as a no-op, because the arm is disposed on that transition anyway.
+	const emitBoundary = (
+		plan: ArmsPlan,
+		boundary: NonNullable<ArmsPlan['boundary']>,
+	): void => {
+		const watch = imports.use('watch')
+		const unset = imports.use('UnsetSignalValueError')
+		const templates = `${plan.container}.querySelectorAll<HTMLTemplateElement>(${jsString(`:scope > template[data-arms="${plan.armSet}"]`)})`
+		out.open(
+			`${imports.local('reconcile')}(${plan.container}, ${templates}, () => {`,
+		)
+		out.open('try {')
+		out.line(`${boundary.signal}.get()`)
+		out.between('} catch (error) {')
+		out.line(`return error instanceof ${unset} ? 'nil' : 'err'`)
+		out.close()
+		out.line("return 'ok'")
+		out.between(`}, (${plan.elementParam}, ${plan.keyParam}) => {`)
+		out.open(`if (${plan.keyParam} === 'ok') {`)
+		out.line(
+			`${watch}(${boundary.signal}, { ok: value => { ${plan.elementParam}.textContent = String(value) }, err: () => {} })`,
+		)
+		if (boundary.errText !== null) {
+			out.between(`} else if (${plan.keyParam} === 'err') {`)
+			out.line(
+				`${watch}(${boundary.signal}, { ok: () => {}, err: error => { ${plan.elementParam}.textContent = String(${boundary.errText}) } })`,
+			)
+		}
+		out.close()
+		out.close('})')
+	}
+
 	// Effects in document order
 	const emitTopEffect = (effect: TopEffectPlan): void => {
 		const at = push
@@ -765,64 +866,8 @@ export const emitClientModule = (
 			at(effect.text, sliceOf(effect.text, effect.sourceStart))
 			return
 		}
-		if (effect.kind === 'async') {
-			// Async boundary (ADR 0023 sub-design 13, LT-012): one watch() call
-			// mirrors the server's own state routing — all three roots already
-			// exist server-rendered, `hidden` toggled here going forward. `ok`'s
-			// `value` is the resolved signal value (the arm's own lazy text
-			// child); `err`'s `error` is the SingleMatchHandlers Error (bound to
-			// the authored catch param — bare or a member read, e.g. `.message`).
-			imports.add('watch')
-			// The fieldset wrappers (LT-077, CHECKLIST §8) toggle `disabled` in
-			// lockstep with their arm's own `hidden` — `hidden`/`display:none`
-			// exclude nothing from form submission, only `disabled` does, so a
-			// named control in a non-active arm must be disabled, not just
-			// hidden, or it submits alongside whichever arm the user sees.
-			// Addressed via `.parentElement` (LT-086), not a `fieldset:has(...)`
-			// query — `emit-server.ts` always makes the fieldset the arm root's
-			// immediate parent, and `:has()` predates REQUIREMENTS.md's 2020
-			// browser baseline; a live `querySelector()` using it would throw
-			// `InvalidSelectorError` on an unsupporting engine.
-			out.line(
-				`const ${effect.pendingFieldsetQuery} = ${effect.pendingQuery}.parentElement as HTMLFieldSetElement`,
-			)
-			out.line(
-				`const ${effect.okFieldsetQuery} = ${effect.okQuery}.parentElement as HTMLFieldSetElement`,
-			)
-			out.line(
-				`const ${effect.errFieldsetQuery} = ${effect.errQuery}.parentElement as HTMLFieldSetElement`,
-			)
-			out.open(`${imports.local('watch')}(${effect.signal}, {`)
-			out.open('ok: value => {')
-			out.line(`${effect.pendingQuery}.hidden = true`)
-			out.line(`${effect.pendingFieldsetQuery}.disabled = true`)
-			out.line(`${effect.errQuery}.hidden = true`)
-			out.line(`${effect.errFieldsetQuery}.disabled = true`)
-			out.line(`${effect.okQuery}.hidden = false`)
-			out.line(`${effect.okFieldsetQuery}.disabled = false`)
-			// The ok arm always carries the resolved value as its text —
-			// `okText` was an always-true plan field (LT-222).
-			out.line(`${effect.okQuery}.textContent = String(value)`)
-			out.close('},')
-			out.open('nil: () => {')
-			out.line(`${effect.okQuery}.hidden = true`)
-			out.line(`${effect.okFieldsetQuery}.disabled = true`)
-			out.line(`${effect.errQuery}.hidden = true`)
-			out.line(`${effect.errFieldsetQuery}.disabled = true`)
-			out.line(`${effect.pendingQuery}.hidden = false`)
-			out.line(`${effect.pendingFieldsetQuery}.disabled = false`)
-			out.close('},')
-			out.open('err: error => {')
-			out.line(`${effect.pendingQuery}.hidden = true`)
-			out.line(`${effect.pendingFieldsetQuery}.disabled = true`)
-			out.line(`${effect.okQuery}.hidden = true`)
-			out.line(`${effect.okFieldsetQuery}.disabled = true`)
-			out.line(`${effect.errQuery}.hidden = false`)
-			out.line(`${effect.errFieldsetQuery}.disabled = false`)
-			if (effect.errText)
-				out.line(`${effect.errQuery}.textContent = String(${effect.errText})`)
-			out.close('},')
-			out.close('})')
+		if (effect.kind === 'arms') {
+			emitArms(effect.arms)
 			return
 		}
 		if (effect.kind === 'guarded') {
@@ -918,6 +963,8 @@ export const emitClientModule = (
 		body.line(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
 	if (needsFormType)
 		body.line("import type { FormAssociatedElement } from '@zeix/le-truc'")
+	if (needsElementType)
+		body.line("import type { ElementFromSelector } from '@zeix/le-truc'")
 	for (const tag of plan.childTags) {
 		const specifier = options.childImports?.get(tag)
 		if (specifier) body.line(`import ${jsString(specifier)}`)

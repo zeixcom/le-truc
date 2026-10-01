@@ -258,33 +258,33 @@ export type TemplateNode =
 	  }
 	| {
 			/**
-			 * `@if (cond) { … } else { … }` — server-known conditional markup.
-			 * The server renders the taken branch; the client addresses BOTH
-			 * branch roots through a union selector (DOM-is-truth: whichever
-			 * branch rendered is the element the factory finds).
+			 * A conditional (ADR 0043 s4: one node for server-known and reactive
+			 * conditions) — `@if`/`@else` and the `.tsx` ternary/`&&`
+			 * (`construct: 'if'`, arms `then` then `else`, an absent `else`
+			 * branch an empty arm), `@switch`/`@case` and the `.tsx` switch IIFE
+			 * (`construct: 'switch'`, one arm per case in source order).
+			 *
+			 * - `server` mode: the test is server-known. The server renders the
+			 *   taken arm; the client addresses `@if` branch roots through a
+			 *   union selector (DOM-is-truth: whichever branch rendered is the
+			 *   element the factory finds).
+			 * - `reactive` mode (ADR 0037): the test reads a signal. Each
+			 *   non-empty arm is extracted to an inert `<template>`, the server
+			 *   renders the initial winner live beside them, and the client
+			 *   switches arms through `reconcile()`'s arm form.
+			 *
+			 * `initial` is the winner at render time, kept apart from the client
+			 * thunk (`testText`, which only `emit-client` reads in reactive
+			 * mode) so a template target can emit it as a backend conditional.
 			 */
-			kind: 'if'
-			testText: string
+			kind: 'conditional'
+			construct: 'if' | 'switch'
+			mode: 'server' | 'reactive'
+			/** The `@if` test, or the `@switch` discriminant. */
 			test: AstNode
-			then: TemplateNode[]
-			alternate: TemplateNode[]
-			node: AstNode
-	  }
-	| {
-			/**
-			 * `@switch (disc) { @case expr: { … } @default: { … } }` — the
-			 * multi-branch sibling of `@if`: server-known discriminant, the
-			 * server renders the matching arm, arms are mutually exclusive.
-			 */
-			kind: 'switch'
-			discriminantText: string
-			discriminant: AstNode
-			cases: Array<{
-				testText: string | null
-				/** The `@case` test expression; `null` for `@default` (LT-330). */
-				test: AstNode | null
-				children: TemplateNode[]
-			}>
+			testText: string
+			arms: ArmTemplate[]
+			initial: InitialWinner
 			node: AstNode
 	  }
 	| {
@@ -295,9 +295,10 @@ export type TemplateNode =
 			 * renders instead. `@pending` arms are gated (async boundaries).
 			 *
 			 * `pendingChildren` is the no-value-yet pending arm (`nil` in
-			 * Task-state vocabulary). All three roots render unconditionally,
-			 * `hidden`-toggled by which state won; the client's single
-			 * `watch()` flips them going forward. (The four-arm `stale`
+			 * Task-state vocabulary). The arm that won at render time renders
+			 * live and every arm ships as an inert template, keyed
+			 * `ok`/`nil`/`err`; the client's `reconcile()` switches them as the
+			 * task settles (ADR 0037 s4). (The four-arm `stale`
 			 * spelling the `.tsx` front end briefly carried was withdrawn by
 			 * the owner — LT-211; a re-fetching state has no arm, only the
 			 * reactive `isPending` idiom beside the boundary.)
@@ -338,6 +339,41 @@ export type TemplateNode =
 			text: string
 			node: AstNode
 	  }
+
+/**
+ * One arm of a conditional, keyed by its compile-time name (ADR 0037 s2):
+ * `then`/`else` for an `@if`, `case:<literal>` for an `@case` (the literal's
+ * source text, so `case:'a'` and `case:1` stay distinct), `default` for
+ * `@default`. The server emit and the generated client derive the same key,
+ * which is what lets the first `reconcile()` run adopt the server-rendered
+ * winner.
+ */
+export type ArmTemplate = {
+	key: string
+	/** The `@case` test expression; null for `then`/`else`/`default`. */
+	test: AstNode | null
+	testText: string | null
+	children: TemplateNode[]
+}
+
+/**
+ * The arm a conditional renders at render time (ADR 0043 s4), one of:
+ *
+ * - `constant` — known at compile time: the arm key, or null for none (an
+ *   unresolvable reactive condition renders no live arm, ADR 0037 s5);
+ * - `select` — the first case whose `when` holds, else `otherwise`. Each
+ *   `when` is a portable expression over server args (ADR 0043 s1), as
+ *   source text;
+ * - `fold` — only the value harness can decide it: SSG folds it as before,
+ *   and a template target routes the component Static.
+ */
+export type InitialWinner =
+	| { constant: string | null }
+	| {
+			select: Array<{ when: string; key: string }>
+			otherwise: string | null
+	  }
+	| { fold: true }
 
 /**
  * One `pass={{ prop: thunk }}` entry (ADR 0023 sub-design 10). `thunk`/

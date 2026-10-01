@@ -346,18 +346,25 @@ describe('§4.4 synthetic shapes through the unmodified analysis', () => {
 		const render = renderOf('async-el', 'AsyncEl')
 		const html = await render(component.serverCode, {})
 		// Fresh task in the value harness: pending WITHOUT a retained value —
-		// the pending arm shows; content/catch render hidden alongside it.
-		expect(html).toContain('<p class="loading">Loading</p>')
-		expect(html).toContain('hidden class="content"')
-		expect(html).toContain('hidden class="error"')
+		// the pending arm is the live winner; every arm is an inert template
+		// (ADR 0037 s4, LT-276).
+		expect(html).toContain('<p data-key="nil" class="loading">Loading</p>')
+		expect(html).toContain(
+			'<template data-arms="0" data-key="ok"><div class="content"></div></template>',
+		)
+		expect(html).toContain(
+			'<template data-arms="0" data-key="err"><p class="error"></p></template>',
+		)
+		expect(html).not.toContain('hidden')
 		// The stale arm is gone (LT-211): no fourth root anywhere.
 		expect(html).not.toContain('stale')
 		// The `isPending(data)` class binding folds server-side — the fresh
 		// task is pending at build time, so the class renders on (LT-211).
 		expect(html).toContain('<p role="status" class="pending">')
-		// One watch() toggles the three roots; the client-side class binding
-		// reads isPending(data) so it re-fires when the task settles.
-		expect(component.clientCode).toContain('watch(')
+		// reconcile() switches the arms by the task state; the client-side
+		// class binding reads isPending(data) so it re-fires when the task
+		// settles.
+		expect(component.clientCode).toContain('reconcile(host,')
 		expect(component.clientCode).toContain('isPending(data)')
 		expect(component.clientCode).not.toContain('stale')
 		expect(component.clientCode).not.toContain('document.createElement')

@@ -371,10 +371,9 @@ const serverExprNodes = (root: TemplateNode): AstNode[] => {
 	const out: AstNode[] = []
 	walkTemplate(root, node => {
 		if (node.kind === 'expr' && !node.lazy) out.push(node.expr)
-		else if (node.kind === 'if') out.push(node.test)
-		else if (node.kind === 'switch') {
-			out.push(node.discriminant)
-			for (const arm of node.cases) if (arm.test) out.push(arm.test)
+		else if (node.kind === 'conditional' && node.mode === 'server') {
+			out.push(node.test)
+			for (const arm of node.arms) if (arm.test) out.push(arm.test)
 		} else if (node.kind === 'compose')
 			for (const attr of node.attrs)
 				if (attr.kind === 'arg' && attr.node) out.push(attr.node)
@@ -390,6 +389,9 @@ const clientExprNodes = (root: TemplateNode): AstNode[] => {
 	walkTemplate(root, node => {
 		if (node.kind === 'expr' && node.lazy) out.push(node.expr)
 		else if (node.kind === 'client-stmt') out.push(node.node)
+		// A reactive conditional's test is its client arm-key thunk (ADR 0037).
+		else if (node.kind === 'conditional' && node.mode === 'reactive')
+			out.push(node.test)
 		// `pass={{ }}` on a composed element (LT-088): `collectAttrs` only
 		// covers `kind: 'element'` attrs (`ComposeAttrIR` is a different
 		// vocabulary, walk.ts's own doc comment on `collectAttrs` used to
@@ -431,6 +433,15 @@ const serverRenderedThunkNodes = (
 	serverKnown: ReadonlySet<string>,
 ): AstNode[] => {
 	const out: AstNode[] = []
+	// A reactive conditional's test folds its initial winner server-side.
+	walkTemplate(root, node => {
+		if (
+			node.kind === 'conditional' &&
+			node.mode === 'reactive' &&
+			isServerEvaluable(node.test, serverKnown)
+		)
+			out.push(node.test)
+	})
 	for (const attr of collectAttrs(root)) {
 		if (attr.kind === 'reactive' && isServerEvaluable(attr.thunk, serverKnown))
 			out.push(attr.thunk)

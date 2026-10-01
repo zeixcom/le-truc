@@ -684,12 +684,22 @@ function each<E extends Element>(
  * See ADR 0017 for SSR adoption, unreconciled pinning, and keyed-relative
  * positioning.
  *
+ * **Arm form** (ADR 0037): pass several templates and a key thunk instead of
+ * one template and a list, and the container holds at most one element — the
+ * current arm of a conditional. Each template names its arm in `data-key`;
+ * the thunk returns the current arm's key, or `null` for none. The arm
+ * element sits immediately before the first template. On the first run an
+ * element already there whose `data-key` names one of the arms is adopted
+ * when it is the current arm, and replaced when it is not. A key change
+ * disposes the old arm's scope, removes its element, and clones the new arm's
+ * template. Siblings outside the arm are never touched.
+ *
  * @since 2.3
  * @param container - Container element whose children are reconciled
- * @param template - Template whose single root element is cloned for entering keys
- * @param source - Keyed reactive data source
+ * @param template - Template whose single root element is cloned for entering keys; in the arm form, the arm templates, each naming its arm in `data-key`
+ * @param source - Keyed reactive data source; in the arm form, a thunk returning the current arm's key or `null`
  * @param bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
- * @throws {InvalidTemplateError} if the template content does not contain exactly one root element
+ * @throws {InvalidTemplateError} if the template content does not contain exactly one root element, or the arm form gets no template
  */
 function reconcile<T extends {}, S extends MutableSignal<T>>(
 	container: Element,
@@ -713,7 +723,140 @@ function reconcile<T extends {}, S extends Signal<T>>(
 		first: FirstElement,
 	) => MaybeCleanup,
 ): void
+function reconcile(
+	container: Element,
+	templates: Iterable<HTMLTemplateElement>,
+	source: () => string | null,
+	bindArm: (
+		element: HTMLElement,
+		key: string,
+		first: FirstElement,
+	) => MaybeCleanup,
+): void
 function reconcile<T extends {}>(
+	container: Element,
+	template: HTMLTemplateElement | Iterable<HTMLTemplateElement>,
+	source: MutableList<T> | DerivedList<T> | (() => string | null),
+	bindItem: (element: HTMLElement, ...args: never[]) => MaybeCleanup,
+): void {
+	if (isFunction(source)) {
+		reconcileArms(
+			container,
+			template as Iterable<HTMLTemplateElement>,
+			source,
+			bindItem as unknown as (
+				element: HTMLElement,
+				key: string,
+				first: FirstElement,
+			) => MaybeCleanup,
+		)
+		return
+	}
+	reconcileList(
+		container,
+		template as HTMLTemplateElement,
+		source,
+		bindItem as unknown as (
+			element: HTMLElement,
+			item: Signal<T>,
+			key: string,
+			first: FirstElement,
+		) => MaybeCleanup,
+	)
+}
+
+/**
+ * Mount `bindItem`/`bindArm` for one element in a root scope (ADR 0014's
+ * ownership: effect re-runs never dispose it wholesale), with the ambient
+ * collector `each()` grants (ADR 0017's collector parity).
+ */
+const mountScope = (bind: () => MaybeCleanup): Cleanup =>
+	createScope(
+		() => {
+			const collected: EffectDescriptor[] = []
+			const cleanup = withCollector(collected, bind)
+			activateDescriptors(collected)
+			return cleanup
+		},
+		{ root: true },
+	)
+
+/** The arm form of `reconcile()` (ADR 0037) — see its JSDoc. */
+const reconcileArms = (
+	container: Element,
+	templates: Iterable<HTMLTemplateElement>,
+	source: () => string | null,
+	bindArm: (
+		element: HTMLElement,
+		key: string,
+		first: FirstElement,
+	) => MaybeCleanup,
+): void => {
+	const descriptor: EffectDescriptor = () => {
+		const arms = new Map<string, HTMLTemplateElement>()
+		let anchor: HTMLTemplateElement | undefined
+		for (const template of templates) {
+			if (template.content.childElementCount !== 1)
+				throw new InvalidTemplateError(
+					container,
+					template.content.childElementCount,
+				)
+			anchor ??= template
+			const key = template.getAttribute('data-key')
+			if (key !== null) arms.set(key, template)
+		}
+		if (!anchor) throw new InvalidTemplateError(container, 0)
+		const at = anchor
+
+		// The server-rendered winner, if any: the element right before the
+		// first template, claimed only when it names one of these arms.
+		const previous = at.previousElementSibling as HTMLElement | null
+		const previousKey = previous?.getAttribute('data-key') ?? null
+		let current =
+			previousKey !== null && arms.has(previousKey) ? previous : null
+		let currentKey = current ? previousKey : null
+		let dispose: Cleanup | undefined
+
+		createScope(() => {
+			createEffect(() => {
+				const key = source() ?? null
+				untrack(() => {
+					if (dispose && key === currentKey) return
+					dispose?.()
+					dispose = undefined
+					if (key !== currentKey) {
+						current?.remove()
+						current = null
+						currentKey = null
+						const template = key === null ? undefined : arms.get(key)
+						if (template) {
+							current = (
+								template.content.firstElementChild as HTMLElement
+							).cloneNode(true) as HTMLElement
+							current.setAttribute('data-key', key as string)
+							currentKey = key
+							container.insertBefore(current, at)
+						}
+					}
+					const element = current
+					const armKey = currentKey
+					if (element && armKey !== null)
+						dispose = mountScope(() =>
+							bindArm(element, armKey, bindFirst(element)),
+						)
+				})
+			})
+			return () => {
+				dispose?.()
+				dispose = undefined
+			}
+		})
+	}
+	pushDescriptor(undefined, 'reconcile', descriptor)
+}
+
+/** The list form of `reconcile()` (ADR 0017) — see its JSDoc. */
+const reconcileList = <T extends {}>(
 	container: Element,
 	template: HTMLTemplateElement,
 	source: MutableList<T> | DerivedList<T>,
@@ -723,7 +866,7 @@ function reconcile<T extends {}>(
 		key: string,
 		first: FirstElement,
 	) => MaybeCleanup,
-): void {
+): void => {
 	const descriptor: EffectDescriptor = () => {
 		if (template.content.childElementCount !== 1)
 			throw new InvalidTemplateError(
@@ -845,18 +988,8 @@ function reconcile<T extends {}>(
 						const element = el
 						disposers.set(
 							key,
-							createScope(
-								() => {
-									const collected: EffectDescriptor[] = []
-									const cleanup = withCollector(collected, () =>
-										bindItem(element, item, key, bindFirst(element)),
-									)
-									activateDescriptors(collected)
-									return cleanup
-								},
-								{
-									root: true,
-								},
+							mountScope(() =>
+								bindItem(element, item, key, bindFirst(element)),
 							),
 						)
 					}

@@ -14,6 +14,7 @@ import type { ExtractContext } from './extract-context'
 import {
 	collectMatchingElements,
 	inOptionalBranch,
+	inReactiveArm,
 	namesCustomElementTag,
 	reportStaticIds,
 	shareExclusiveIf,
@@ -148,6 +149,21 @@ export const resolveTemplateOutput = (
 		// markup, so a required-reason only ever earns its keep
 		// on a selector that may match markup this component
 		// did not itself render.
+		// An element in a reactive conditional's arm is recreated on every
+		// arm switch (ADR 0037 s3): a reference taken at connect goes stale.
+		const inArm = elements.find(el => inReactiveArm(root, el))
+		if (inArm) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					node.start,
+					`A \`first()\` reference to <${inArm.tag}> inside a reactive conditional's arm`,
+					"The arm's elements are cloned anew each time the arm renders, so a reference taken at connect goes stale — bind the element from inside the arm instead (an event handler or a reactive attribute on it).",
+				),
+			)
+			resolve('rejected')
+			continue
+		}
 		if (!maybe && elements.every(el => inOptionalBranch(root, el)))
 			ctx.diagnostics.push(
 				diagnostic.deadRequiredReason(

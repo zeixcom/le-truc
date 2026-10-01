@@ -46,6 +46,7 @@ import type { ExtractContext } from '../../extract-context'
 import type { ForIR, SignalIR, TemplateNode } from '../../ir'
 import {
 	finishIf,
+	finishSwitch,
 	finishTry,
 	type Lowering,
 	lowerChildrenSkeleton,
@@ -56,6 +57,7 @@ import {
 	validateEmptyArm,
 } from '../../lower-shared'
 import { wordingOf } from '../../surface'
+import type { IfNode, SwitchNode } from '../../walk'
 import type { AstNode } from './to-estree'
 
 /** Whether `node` is a JSX value (`<x/>` or `<>…</>`). */
@@ -84,14 +86,14 @@ const lowerJsxValue = (
 
 /**
  * Lower `{c ? <a/> : <b/>}` (both arms) or `{c && <a/>}` (single branch)
- * into the `if` IR — the same construct `@if` lowered in `.tsrx`.
+ * into the `if` conditional — the same construct `@if` lowered in `.tsrx`.
  */
 const lowerIfExpr = (
 	ctx: ExtractContext,
 	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
-): (TemplateNode & { kind: 'if' }) | null => {
+): IfNode | null => {
 	let test: AstNode | null = null
 	let thenSrc: AstNode | null = null
 	let alternateSrc: AstNode | null = null
@@ -121,7 +123,8 @@ const lowerIfExpr = (
 		)
 		return null
 	}
-	if (!validateCondition(ctx, signals, test, 'if')) return null
+	const mode = validateCondition(ctx, signals, test, 'if')
+	if (mode === null) return null
 	const then = isJsxNode(thenSrc)
 		? lowerJsxValue(ctx, thenSrc, signals, fors)
 		: []
@@ -139,14 +142,14 @@ const lowerIfExpr = (
 		)
 		return null
 	}
-	return finishIf(ctx, node, test, then, alternate)
+	return finishIf(ctx, node, test, then, alternate, mode)
 }
 
 /* === @switch → IIFE over a statement switch === */
 
 /**
  * Lower `(() => { switch (d) { case 'a': return <x/>; default: return <y/>; } })()`
- * into the `switch` IR. The IIFE must contain exactly the switch statement;
+ * into the `switch` conditional. The IIFE must contain exactly the switch statement;
  * every arm's body must be a single `return <jsx/>`.
  *
  * IIFE recognition is SHAPE-based (0-arg call of a 0-param arrow with a
@@ -160,7 +163,7 @@ const lowerSwitchIife = (
 	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
-): (TemplateNode & { kind: 'switch' }) | null => {
+): SwitchNode | null => {
 	const fn = node.callee as AstNode | undefined
 	const body = fn?.body as AstNode | undefined
 	if (!isNode(body) || body.type !== 'BlockStatement') return null
@@ -180,17 +183,14 @@ const lowerSwitchIife = (
 	}
 	const discriminant = switchStmt.discriminant as AstNode | undefined
 	if (!isNode(discriminant)) return null
-	if (!validateCondition(ctx, signals, discriminant, 'switch')) return null
+	const mode = validateCondition(ctx, signals, discriminant, 'switch')
+	if (mode === null) return null
 	const rawCases = asArray(switchStmt.cases)
 	if (rawCases.length === 0) {
 		reportEmptySwitch(ctx, node.start, 'switch')
 		return null
 	}
-	const cases: Array<{
-		testText: string | null
-		test: AstNode | null
-		children: TemplateNode[]
-	}> = []
+	const cases: Array<{ test: AstNode | null; children: TemplateNode[] }> = []
 	for (const raw of rawCases) {
 		const armStmts = asArray(raw.consequent)
 		const ret = armStmts.find(s => s.type === 'ReturnStatement') as
@@ -213,19 +213,9 @@ const lowerSwitchIife = (
 			reportEmptySwitch(ctx, raw.start ?? node.start, 'arm')
 			return null
 		}
-		cases.push({
-			testText: isNode(raw.test) ? text(ctx.source, raw.test) : null,
-			test: isNode(raw.test) ? raw.test : null,
-			children,
-		})
+		cases.push({ test: isNode(raw.test) ? raw.test : null, children })
 	}
-	return {
-		kind: 'switch',
-		discriminantText: text(ctx.source, discriminant),
-		discriminant,
-		cases,
-		node,
-	}
+	return finishSwitch(ctx, node, discriminant, cases, mode)
 }
 
 /* === @try family → <truc:try pending catch> === */
@@ -250,9 +240,9 @@ const isTrucTry = (node: unknown): node is AstNode => {
 /**
  * The `.tsx` spelling of `@try`/`@pending`/`@catch` (ADR 0041):
  * `<truc:try catch={e => <jsx/>}>ok</truc:try>` is the error boundary, and
- * adding `pending={<jsx/>}` makes it the async boundary — all arms render,
- * `hidden`-toggled by which state won at render time; which arm SHIPS
- * stays a compiler decision. The children are the success content; the
+ * adding `pending={<jsx/>}` makes it the async boundary — the winning arm
+ * renders live beside the inert arm templates (ADR 0037 s4); which arm
+ * SHIPS stays a compiler decision. The children are the success content; the
  * `catch` arrow's parameter is the catch parameter.
  *
  * `tsc` owns the arm types through the `IntrinsicElements['truc:try']`
@@ -261,9 +251,9 @@ const isTrucTry = (node: unknown): node is AstNode => {
  * never evaluated, so each must be written inline — a JSX element for
  * `pending`, an arrow with a JSX expression body for `catch`.
  *
- * There is no `stale` arm (LT-211): the client never re-renders arm
- * content, it toggles `hidden`/`disabled` on server-rendered arms, so a
- * re-fetching state has no arm to show; the reactive idiom for that is an
+ * There is no `stale` arm (LT-211): a re-fetching task keeps its `ok`
+ * arm, whose content the client never re-renders; the reactive idiom for
+ * the in-flight state is an
  * `isPending(signal)` read beside the boundary
  * (`class={() => (isPending(data) ? 'dimmed' : null)}`), which the
  * compiler folds server-side and watches client-side.

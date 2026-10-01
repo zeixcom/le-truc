@@ -136,6 +136,14 @@ _Avoid_: warning, diagnostic, error, report (too generic)
 A position in an emitted template partial where the CMS renders a value at request time, because the value reads a **Server Arg** ([ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md)). Its expression lies in the portable subset, and the shared walk assigns it an **Escaping Context**.
 _Avoid_: placeholder, slot (a different construct), variable (that is the target's spelling of a hole)
 
+**Arm**:
+One alternative of a conditional (`@if`/`@switch`, a `.tsx` ternary, `&&` or switch IIFE) or of the async boundary, keyed by a compile-time **Arm Key** (`then`/`else`, `case:<literal>`, `default`; `ok`/`nil`/`err` for the boundary). When the condition is reactive, each arm ships as an inert `<template data-arms data-key>` and at most one arm, the **Live Arm**, is in the document ([ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md)). An **Arm Set** is one conditional's or boundary's templates plus its live arm.
+_Avoid_: branch (for the reactive case, which suggests both alternatives exist in the document), toggled arm (the retired mechanism)
+
+**Initial Winner**:
+The arm a conditional renders live at render time, kept on the IR apart from the client's key thunk: a constant key, a portable select over **Server Args**, or a fold through the **Value Harness** ([ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md) s4). An **Unresolvable** test has none: no arm renders live.
+_Avoid_: default arm (that is the `@default` case)
+
 **Target Emitter**:
 A backend of the shared template walk that spells its emission operations in one template language (Twig first). It owns syntax, file naming and its escaping functions, never a decision: which positions are holes, which are refused, and which tier a partial takes are all decided before a target sees them.
 _Avoid_: template engine (that runs the output), renderer, target (alone, ambiguous with `cssTargets`)
@@ -196,4 +204,5 @@ _Avoid_: ICU message, template literal (that names the authored `` `…${x}…` 
 
 - **"Tier", unqualified.** Two distinct concepts carry the word: **Evaluation Tier** (Folded/Simulated/Static, ADR 0029) and **Surfacing Tier** (Prevented/Contained/Escalated, ADR 0028), and their numberings overlap — "tier 2" once meant Contained and now also means Simulated. **Resolution (owner, 2026-09-04): lead with the NAME in both, everywhere; the number survives only as an ordering inside each ADR's own defining list.** Write "the Simulated tier" or "Contained", never a bare "tier 2".
 - **"Phase" against "tier".** Both carry small numbers, and they answer different questions. A **Phase** is a render step (phase 1 folds, phase 2 pre-plays). An **Evaluation Tier** decides which steps a **Component** runs. Keep the numbers on phases and the names on tiers.
+- **"Arm".** Three constructs carry it: the template-cloned **Arm** of a reactive conditional or boundary; `@for`'s `@empty` arm, which stays on the `hidden` toggle path (ADR 0037 s5); and an ICU `plural`/`select` arm in a **Message Pattern** (the census's `missing-arms`). Qualify the latter two ("the `@empty` arm", "a plural arm"); a bare "arm" means the first.
 - **"Fold" as verb and noun.** Both are in use: to fold an expression, and the host-derived fold. Both are correct. Do not introduce "folding" as a third form.

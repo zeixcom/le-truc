@@ -24,6 +24,7 @@ import {
 	foldableRenderScope,
 	hostDerivedFold,
 } from '../evaluability'
+import { initialFold } from '../initial-winner'
 import type {
 	AttributeIR,
 	ComponentIR,
@@ -43,11 +44,24 @@ import {
 	MANAGED_TEXT_PROPS,
 	SEMANTICALLY_LOADED_ATTRS,
 } from '../vocabulary'
-import { isClientConstructAttr } from '../walk'
+import {
+	armSetOf,
+	type ConditionalNode,
+	childNodes,
+	elseOf,
+	hasArmSet,
+	isClientConstructAttr,
+	isIf,
+	isSwitch,
+	someNode,
+	thenOf,
+	walkTemplate,
+} from '../walk'
 import type { ComposeRefs } from './compose-refs'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { renderOnlyBindings, uniqueName } from './naming'
 import type {
+	ArmPlan,
 	EffectPlans,
 	HarvestPlans,
 	LoopPlans,
@@ -71,6 +85,7 @@ import {
 	refOf,
 	resolveExclusiveSelectorIn,
 	resolveSelector as resolveSelectorIn,
+	resolveSelectorIn as resolveSelectorScoped,
 	type SwitchNode,
 	selectorFor as selectorForIn,
 	type TryNode,
@@ -151,6 +166,12 @@ type EffectsContext = {
 	 * the two indexes are the same set of components.
 	 */
 	entryByTag: Map<string, RegistryEntry>
+	/**
+	 * A reactive conditional's arm locals (ADR 0037) are `bindArm`-scoped
+	 * variables, not factory queries: each one's selector over the whole
+	 * template, for the suppressed-site records `selectorOf` writes.
+	 */
+	armSelectors: Map<string, string>
 	// LT-085/LT-118: the two substitutable sets for `hostDerivedFold`
 	// below — host props with a known server truth, and refs whose
 	// presence the server decides — computed once per component rather
@@ -194,7 +215,9 @@ const suppresses = (fx: EffectsContext, node: AstNode): boolean => {
 
 /** The selector a plan query addresses; `'host'` stays the sentinel. */
 const selectorOf = (fx: EffectsContext, query: string): string =>
-	fx.queries.find(q => q.name === query)?.selector ?? query
+	fx.queries.find(q => q.name === query)?.selector ??
+	fx.armSelectors.get(query) ??
+	query
 
 /**
  * LTC005's server-only face: the generated client binds no server name — a
@@ -412,8 +435,7 @@ const constructSignatureOf = (root: ElementNode): string => {
 const hasClientConstructs = (node: TemplateNode): boolean => {
 	if (node.kind === 'client-stmt') return true
 	if (node.kind === 'expr') return node.lazy
-	if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
-		return false
+	if (node.kind === 'conditional' || node.kind === 'try') return false
 	if (!isElement(node)) return false
 	if (node.attrs.some(isClientConstructAttr)) return true
 	return node.children.some(hasClientConstructs)
@@ -999,7 +1021,7 @@ const handleOptionalBranch = (
 const handleOptionalIfEffects = (fx: EffectsContext, node: IfNode): void =>
 	handleOptionalBranch(
 		fx,
-		node.then,
+		thenOf(node),
 		node,
 		wordingOf(fx.component).singleBranchIf,
 	)
@@ -1028,8 +1050,8 @@ const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	const branches: Array<
 		[string, readonly TemplateNode[], readonly TemplateNode[]]
 	> = [
-		[wording.thenBranch, node.then, node.alternate],
-		[wording.elseBranch, node.alternate, node.then],
+		[wording.thenBranch, thenOf(node), elseOf(node)],
+		[wording.elseBranch, elseOf(node), thenOf(node)],
 	]
 	// Validate every branch needing addressing BEFORE any effects are
 	// planned — a collision diagnostic must not leave a half-planned @if.
@@ -1081,11 +1103,11 @@ const handlePerBranchIfEffects = (fx: EffectsContext, node: IfNode): void => {
 const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	const { source, diagnostics, addQuery } = fx
 	const wording = wordingOf(fx.component)
-	if (node.alternate.length === 0) {
+	if (elseOf(node).length === 0) {
 		handleOptionalIfEffects(fx, node)
 		return
 	}
-	const roots = [...node.then, ...node.alternate].filter(isElement)
+	const roots = [...thenOf(node), ...elseOf(node)].filter(isElement)
 	for (const root of roots)
 		if (hasDeepConstruct(root))
 			diagnostics.push(
@@ -1096,7 +1118,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 					'The deeper element exists only when its branch rendered — move the construct onto the branch root.',
 				),
 			)
-	const clientStmts = [...node.then, ...node.alternate].filter(
+	const clientStmts = [...thenOf(node), ...elseOf(node)].filter(
 		(n): n is TemplateNode & { kind: 'client-stmt' } =>
 			n.kind === 'client-stmt',
 	)
@@ -1106,7 +1128,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	// author addressed with `first()` has its own query and its own
 	// guard and is exempt (LT-130); a branch carrying one routes to
 	// per-branch addressing below, which is where those are emitted.
-	for (const branch of [node.then, node.alternate]) {
+	for (const branch of [thenOf(node), elseOf(node)]) {
 		const constructedInBranch = branch
 			.filter(isElement)
 			.filter(hasOwnConstruct)
@@ -1148,7 +1170,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	// the union query is cardinality 'one' (an @else guarantees SOME
 	// branch rendered), which would throw on the branch-less side.
 	const signatures = roots.map(constructSignatureOf)
-	const everyBranchHasElementRoot = [node.then, node.alternate].every(branch =>
+	const everyBranchHasElementRoot = [thenOf(node), elseOf(node)].every(branch =>
 		branch.some(isElement),
 	)
 	// A branch carrying MORE than one element root cannot be union-
@@ -1156,7 +1178,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 	// resolves to a single element per branch, so the siblings would go
 	// unbound. Route those to per-branch addressing, which gives each
 	// `first()`-addressed element its own query.
-	const everyBranchHasOneElementRoot = [node.then, node.alternate].every(
+	const everyBranchHasOneElementRoot = [thenOf(node), elseOf(node)].every(
 		branch => branch.filter(isElement).length === 1,
 	)
 	const unionCompatible =
@@ -1212,7 +1234,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 const handleSwitchEffects = (fx: EffectsContext, node: SwitchNode): void => {
 	const { source, diagnostics } = fx
 	const wording = wordingOf(fx.component)
-	for (const arm of node.cases)
+	for (const arm of node.arms)
 		for (const child of arm.children)
 			if (hasClientConstructs(child))
 				diagnostics.push(
@@ -1227,14 +1249,14 @@ const handleSwitchEffects = (fx: EffectsContext, node: SwitchNode): void => {
 
 /**
  * An async boundary (`@try`/`@pending`/`@catch`, ADR 0023 sub-design 13,
- * LT-012): `lowerTry` already proved each arm has exactly one root
- * element. All three render server-side (`emit-server.ts`), toggled
- * `hidden` by which state won at render time; the client wires a single
- * `watch(signal, { ok, err, nil })` call that flips the same `hidden`
- * property going forward — pure enhance, no client DOM creation.
+ * LT-012; ADR 0037 s4, LT-276): `lowerTry` already proved each arm has
+ * exactly one root element. The server renders the winner live beside the
+ * three arm templates (`emit-server.ts`); the client switches them through
+ * `reconcile()`'s arm form, keyed by the guarded task's state, and the
+ * `ok`/`err` mounts write the resolved value and the error text.
  */
 const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
-	const { component, source, diagnostics, effects, addQuery, usedNames } = fx
+	const { component, source, diagnostics, effects, usedNames } = fx
 	const wording = wordingOf(component)
 	const okRoot = node.children.find(isElement) as ElementNode
 	const pendingRoot = (node.pendingChildren as TemplateNode[]).find(
@@ -1310,63 +1332,6 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 		return
 	}
 
-	const okSelector = resolveSelector(fx, okRoot)
-	const pendingSelector = resolveSelector(fx, pendingRoot)
-	const errSelector = resolveSelector(fx, errRoot)
-	for (const [label, resolved, el] of [
-		[wording.tryBody, okSelector, okRoot],
-		[wording.pendingArm, pendingSelector, pendingRoot],
-		[wording.catchArm, errSelector, errRoot],
-	] as const) {
-		if (!resolved.unique)
-			diagnostics.push(
-				diagnostic.unaddressableElement(
-					source,
-					el.node.start,
-					`No unique selector for the ${label}'s root <${el.tag}> of an async boundary — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
-				),
-			)
-	}
-	const okQuery = addQuery(
-		sanitizeVarName(okRoot.tag),
-		okSelector.selector,
-		'one',
-	)
-	const pendingQuery = addQuery(
-		sanitizeVarName(pendingRoot.tag),
-		pendingSelector.selector,
-		'one',
-	)
-	const errQuery = addQuery(
-		sanitizeVarName(errRoot.tag),
-		errSelector.selector,
-		'one',
-	)
-	// The synthetic `<fieldset disabled>` `emit-server.ts` wraps around
-	// each arm root (LT-077, CHECKLIST §8) is addressed structurally, not
-	// via a CSS query (LT-086): `emit-server.ts` always makes it the arm
-	// root's IMMEDIATE parent, so the client reads `<armRoot>.parentElement`
-	// instead of re-querying — no selector to keep in sync with the
-	// emitter, and no dependency on `:has()`, which is outside
-	// REQUIREMENTS.md's 2020 Web Platform browser baseline and would throw
-	// `InvalidSelectorError` on an unsupporting engine (a live
-	// `querySelector()` call, unlike this codebase's existing CSS-only
-	// `:has()` use in `form-tokenbox.css`, which degrades gracefully
-	// instead of throwing). Only the variable name is reserved here;
-	// `emit-client.ts` emits the `.parentElement` declaration itself.
-	const okFieldsetQuery = uniqueName(
-		usedNames,
-		`${sanitizeVarName(okRoot.tag)}Fieldset`,
-	)
-	const pendingFieldsetQuery = uniqueName(
-		usedNames,
-		`${sanitizeVarName(pendingRoot.tag)}Fieldset`,
-	)
-	const errFieldsetQuery = uniqueName(
-		usedNames,
-		`${sanitizeVarName(errRoot.tag)}Fieldset`,
-	)
-
 	const errText = catchParam ? directLazyCatchRef(errRoot, catchParam) : null
 	if (
 		errRoot.children.some(c => c.kind === 'expr' && c.lazy) &&
@@ -1383,16 +1348,29 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 		return
 	}
 
+	const container = armContainer(fx, node, `a ${wording.boundary}`)
+	if (container === null) return
+	const arm = (key: string): ArmPlan => ({
+		key,
+		caseText: null,
+		renders: true,
+		root: null,
+		locals: [],
+		effects: [],
+	})
 	effects.push({
-		kind: 'async',
-		signal,
-		pendingQuery,
-		okQuery,
-		errQuery,
-		pendingFieldsetQuery,
-		okFieldsetQuery,
-		errFieldsetQuery,
-		errText,
+		kind: 'arms',
+		arms: {
+			container,
+			armSet: armSetOf(component.root, node),
+			construct: 'try',
+			testText: signal,
+			sourceStart: undefined,
+			elementParam: uniqueName(usedNames, 'armElement'),
+			keyParam: uniqueName(usedNames, 'armKey'),
+			arms: [arm('ok'), arm('nil'), arm('err')],
+			boundary: { signal, errText },
+		},
 	})
 }
 
@@ -1406,17 +1384,16 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
  * construct duplicated).
  *
  * A `@pending` arm present routes to `handleAsyncBoundary` instead (ADR
- * 0023 sub-design 13, LT-012) — a fundamentally different shape (all
- * three arms render unconditionally, toggled `hidden`) from this plain
- * mutually-exclusive error boundary.
+ * 0023 sub-design 13, LT-012) — its arms switch on the client through
+ * `reconcile()` (ADR 0037 s4), where this plain boundary's arms are
+ * decided once, at render time.
  */
 const handleTryEffects = (fx: EffectsContext, node: TryNode): void => {
 	const { source, diagnostics } = fx
 	const wording = wordingOf(fx.component)
-	// CHECKLIST §8: all three arms render into the initial HTML at once
-	// (two hidden, not removed) — a literal `id` duplicated across arms
-	// is two elements sharing an id in the SAME document simultaneously,
-	// same failure whether or not `@pending` is present.
+	// CHECKLIST §8 (LTC035), from the toggled boundary whose arms were all
+	// in the document at once; see `duplicateIdAcrossArms` for its status
+	// since template-cloned arms.
 	const branches: Array<[string, readonly TemplateNode[]]> = [
 		[wording.tryBody, node.children],
 		[wording.catchArm, node.catchChildren],
@@ -1558,6 +1535,313 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 	}
 }
 
+/**
+ * Why a node inside a reactive conditional's arm has no lowering in the
+ * arm's mount (ADR 0037 s3), or null when it has one. The mount binds the
+ * arm root and its descendants; nested control flow, loops and composed
+ * references keep their host-level addressing, which an arm cloned after
+ * connect would escape.
+ */
+const unmountableInArm = (
+	fx: EffectsContext,
+	node: TemplateNode,
+): string | null => {
+	const carriesConstruct = (n: TemplateNode): boolean =>
+		n.kind === 'client-stmt' ||
+		(n.kind === 'expr' && n.lazy) ||
+		(n.kind === 'element' && n.attrs.some(isClientConstructAttr))
+	// A nested arm set is `validateArmSetPlacement`'s.
+	if (hasArmSet(node)) return null
+	if (
+		(node.kind === 'conditional' || node.kind === 'try') &&
+		someNode(node, carriesConstruct)
+	)
+		return 'A client construct in a nested control-flow branch'
+	if (
+		node.kind === 'compose' &&
+		node.attrs.some(a => a.kind === 'pass' || a.kind === 'ref')
+	)
+		return 'A composed element read through `first()` or `truc:pass`'
+	if (node.kind === 'element' && loopFor(fx, node)) return 'A loop'
+	return null
+}
+
+/**
+ * The container a node's arms switch in (ADR 0037): the element that holds
+ * it, as a query variable, or `'host'` at the component root. Null, after
+ * the diagnostic, when that element is a reactive list's container, which
+ * removes every child it did not place (LTC063), or has no unique selector.
+ * Placement elsewhere is `validateArmSetPlacement`'s; `noun` names the
+ * construct mid-sentence.
+ */
+const armContainer = (
+	fx: EffectsContext,
+	node: TemplateNode & { node: AstNode },
+	noun: string,
+): string | null => {
+	const { component, source, diagnostics, addQuery } = fx
+	const wording = wordingOf(component)
+	let container: TemplateNode | null = null
+	walkTemplate(component.root, (current, parent) => {
+		if (current === node) container = parent
+	})
+	const holder = container as TemplateNode | null
+	if (holder === null || holder.kind !== 'element') return null
+	const inReconcileContainer = [...component.fors.values()].some(loop => {
+		if (loop.kind !== 'reconcile') return false
+		let found: TemplateNode | null = null
+		walkTemplate(component.root, (current, parent) => {
+			if (current === loop.output) found = parent
+		})
+		return found === holder
+	})
+	if (inReconcileContainer) {
+		diagnostics.push(
+			diagnostic.reactiveConditionInReconcileContainer(
+				source,
+				node.node.start,
+				wording,
+			),
+		)
+		return null
+	}
+	if (holder === component.root) {
+		fx.ambient.add('host')
+		return 'host'
+	}
+	const resolved = resolveSelector(fx, holder)
+	if (!resolved.unique) {
+		diagnostics.push(
+			diagnostic.unaddressableElement(
+				source,
+				holder.node.start,
+				`No unique selector for <${holder.tag}>, which holds ${noun} — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
+			),
+		)
+		return null
+	}
+	return addQuery(
+		refOf(holder)?.name ?? sanitizeVarName(holder.tag),
+		resolved.selector,
+		'one',
+	)
+}
+
+/**
+ * Every arm set (ADR 0037: a reactive conditional, an async boundary) must
+ * sit outside other control-flow arms, composed content and loop bodies —
+ * the effect walk reaches it only there, and the element holding it is the
+ * container the client finds at connect. One check over the whole template,
+ * because a misplaced arm set is exactly one the walk would never visit.
+ */
+const validateArmSetPlacement = (fx: EffectsContext): void => {
+	const { component, source, diagnostics } = fx
+	const wording = wordingOf(component)
+	const loopOutputs = new Map<TemplateNode, ForIR>(
+		[...component.fors.values()].map(loop => [loop.output, loop] as const),
+	)
+	const visit = (
+		node: TemplateNode,
+		enclosed: boolean,
+		loop: ForIR | null,
+	): void => {
+		if (hasArmSet(node)) {
+			const subject =
+				node.kind === 'try'
+					? `A ${wording.boundary}`
+					: wording.reactiveConditional
+			if (loop?.kind === 'each')
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						node.node?.start,
+						`${subject} inside a server-data ${wording.loop} body`,
+						'`each()` binds each item through its own element, and an arm cloned after connect escapes it — move it out of the loop, or bind a reactive attribute on the item instead.',
+					),
+				)
+			// A reactive-list body already refuses all control flow
+			// (`validateListBody`).
+			else if (enclosed && !loop)
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						node.node?.start,
+						`${subject} inside another control-flow branch or a composed element's content`,
+						'Its arms switch inside the element that holds it, which the client must find at connect — move it out of the enclosing branch, or onto an element of its own.',
+					),
+				)
+		}
+		const innerLoop = loop ?? loopOutputs.get(node) ?? null
+		const innerEnclosed =
+			enclosed ||
+			node.kind === 'conditional' ||
+			node.kind === 'try' ||
+			node.kind === 'compose'
+		for (const child of childNodes(node)) visit(child, innerEnclosed, innerLoop)
+	}
+	visit(component.root, false, null)
+}
+
+/**
+ * A reactive conditional (ADR 0037): its arms lower to `reconcile()`'s arm
+ * form — templates the server stamps beside the live winner, a key thunk
+ * over the test, and one mount per arm whose effects address the arm root
+ * and its descendants inside the arm (collector parity, ADR 0017). The
+ * conditional must sit directly in an element outside every other
+ * control-flow arm and loop: that element is the container the arm
+ * switches in, and the client finds it at connect.
+ */
+const handleReactiveConditional = (
+	fx: EffectsContext,
+	node: ConditionalNode,
+): void => {
+	const { component, source, diagnostics, effects, usedNames } = fx
+	const wording = wordingOf(component)
+	const unsupported = (at: number | undefined, what: string, fix: string) => {
+		diagnostics.push(diagnostic.unsupported(source, at, what, fix))
+	}
+
+	const containerQuery = armContainer(
+		fx,
+		node,
+		'a condition that reads a signal',
+	)
+	if (containerQuery === null) return
+
+	// Arm shape: one root element per arm that renders anything.
+	const label = isIf(node) ? wording.ifBranch : `${wording.caseLabel} arm`
+	for (const arm of node.arms) {
+		if (arm.children.length === 0) continue
+		const elements = arm.children.filter(isElement)
+		const loose = arm.children.find(
+			c => c.kind !== 'element' && c.kind !== 'client-stmt',
+		)
+		if (elements.length !== 1 || loose) {
+			unsupported(
+				(loose ?? elements[1] ?? arm.children[0])?.node?.start ??
+					node.node.start,
+				`A ${label} that does not render exactly one root element, in a condition that reads a signal`,
+				"The client clones each arm from a template with one root element — wrap the arm's content in a single element.",
+			)
+			return
+		}
+		let blocked: { at: TemplateNode; what: string } | null = null
+		for (const child of arm.children)
+			walkTemplate(child, inner => {
+				if (blocked || inner === child) return
+				const what = unmountableInArm(fx, inner)
+				if (what) blocked = { at: inner, what }
+			})
+		const rootLoop = loopFor(fx, elements[0] as ElementNode)
+		if (rootLoop) blocked = { at: elements[0] as ElementNode, what: 'A loop' }
+		if (blocked) {
+			const { at, what } = blocked as { at: TemplateNode; what: string }
+			unsupported(
+				at.node?.start ?? node.node.start,
+				`${what} inside a ${label} of a condition that reads a signal`,
+				"The arm's mount binds its root element and the elements inside it; this construct keeps addressing the host and would miss an arm cloned after connect — move it out of the arm.",
+			)
+			return
+		}
+	}
+
+	// The client half: the key thunk reads what the test reads.
+	fx.collectAmbient(node.test)
+	reportServerOnlyNames(
+		fx,
+		node.test,
+		isIf(node) ? wording.ifCondition : wording.switchDiscriminant,
+	)
+	// No server phase can pick the winner: no live arm renders (ADR 0037
+	// s5), and the component leaves the Folded tier — the realm, when it
+	// can answer, renders the arm the client would.
+	if (!initialFold(component, node))
+		fx.routingSignals.push({
+			origin: 'LTC034',
+			detail: `the initial arm of a ${isIf(node) ? 'conditional' : 'switch'} that reads a signal has no server-renderable value`,
+			...lineFields(source, node.test.start),
+			resolution: resolutionOf(node.test, component.serverKnown),
+		})
+
+	const elementParam = uniqueName(usedNames, 'armElement')
+	const keyParam = uniqueName(usedNames, 'armKey')
+	const arms: ArmPlan[] = node.arms.map(arm => {
+		const root = arm.children.find(isElement) ?? null
+		const plan: ArmPlan = {
+			key: arm.key,
+			caseText: arm.testText,
+			renders: root !== null,
+			root: null,
+			locals: [],
+			effects: [],
+		}
+		if (root === null) return plan
+		const rootName = uniqueName(usedNames, sanitizeVarName(root.tag))
+		plan.root = { name: rootName, tag: root.tag }
+		fx.armSelectors.set(rootName, resolveSelector(fx, root).selector)
+		for (const child of arm.children)
+			if (child.kind === 'client-stmt') {
+				fx.collectAmbient(child.node)
+				plan.effects.push({
+					kind: 'raw',
+					text: child.text,
+					sourceStart: child.node.start,
+					sourceEnd: child.node.end,
+				})
+			}
+		emitConstructEffects(fx, root, rootName, plan.effects)
+		const visitDescendants = (el: ElementNode): void => {
+			for (const child of el.children) {
+				if (!isElement(child)) continue
+				if (hasOwnConstruct(child)) {
+					const scoped = resolveSelectorScoped(
+						root,
+						child,
+						component.composedShapes,
+					)
+					if (!scoped.unique)
+						diagnostics.push(
+							diagnostic.unaddressableElement(
+								source,
+								child.node.start,
+								`No unique selector for <${child.tag}> inside the arm root <${root.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
+							),
+						)
+					const name = uniqueName(usedNames, sanitizeVarName(child.tag))
+					plan.locals.push({
+						name,
+						selector: scoped.selector,
+						message: `${component.tag}: ${scoped.selector} missing`,
+					})
+					fx.armSelectors.set(name, resolveSelector(fx, child).selector)
+					emitConstructEffects(fx, child, name, plan.effects)
+				}
+				visitDescendants(child)
+			}
+		}
+		visitDescendants(root)
+		return plan
+	})
+	// The root local is only declared when an effect reads it.
+	for (const arm of arms)
+		if (!arm.effects.some(e => 'query' in e && e.query === arm.root?.name))
+			arm.root = null
+
+	effects.push({
+		kind: 'arms',
+		arms: {
+			container: containerQuery,
+			armSet: armSetOf(component.root, node),
+			construct: node.construct,
+			testText: node.testText,
+			sourceStart: node.test.start,
+			elementParam,
+			keyParam,
+			arms,
+		},
+	})
+}
+
 const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 	const {
 		component,
@@ -1570,11 +1854,15 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 		forPlans,
 		reconcilePlans,
 	} = fx
-	if (node.kind === 'if') {
+	if (node.kind === 'conditional' && node.mode === 'reactive') {
+		handleReactiveConditional(fx, node)
+		return
+	}
+	if (isIf(node)) {
 		handleIfEffects(fx, node)
 		return
 	}
-	if (node.kind === 'switch') {
+	if (isSwitch(node)) {
 		handleSwitchEffects(fx, node)
 		return
 	}
@@ -1787,10 +2075,12 @@ export const runEffects = (
 		collectAmbient,
 		badFreeNames,
 		entryByTag,
+		armSelectors: new Map(),
 		derivableHostProps: foldableHostProps(component),
 		derivableRefGuards: foldableRefGuards(component),
 		foldScope: foldableRenderScope(component),
 	}
+	validateArmSetPlacement(fx)
 	emitTopEffects(fx, component.root)
 	validateComposeIds(fx)
 	return effects

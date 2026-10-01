@@ -31,7 +31,7 @@ import type {
 	TemplateNode,
 } from '../ir'
 import type { RegistryEntry } from '../registry'
-import { walkTemplate } from '../walk'
+import { elseOf, type IfNode, isIf, thenOf, walkTemplate } from '../walk'
 import {
 	probeComposeNodes,
 	probeCount,
@@ -43,8 +43,7 @@ import {
 
 export type ElementNode = Extract<TemplateNode, { kind: 'element' }>
 export type ExprNode = Extract<TemplateNode, { kind: 'expr' }>
-export type IfNode = Extract<TemplateNode, { kind: 'if' }>
-export type SwitchNode = Extract<TemplateNode, { kind: 'switch' }>
+export type { IfNode, SwitchNode } from '../walk'
 export type TryNode = Extract<TemplateNode, { kind: 'try' }>
 export type ComposeNode = Extract<TemplateNode, { kind: 'compose' }>
 
@@ -634,9 +633,12 @@ export const enclosingIfOf = (
 	target: ElementNode,
 ): IfNode | null => {
 	const walk = (node: TemplateNode): IfNode | null => {
-		if (node.kind === 'if') {
-			if ([...node.then, ...node.alternate].includes(target)) return node
-			for (const child of [...node.then, ...node.alternate]) {
+		// Server-known `@if`s only: a reactive conditional's arms address
+		// their content per arm, inside `reconcile()`'s mount (ADR 0037 s3).
+		if (isIf(node) && node.mode === 'server') {
+			const branches = [...thenOf(node), ...elseOf(node)]
+			if (branches.includes(target)) return node
+			for (const child of branches) {
 				const found = walk(child)
 				if (found) return found
 			}
@@ -659,7 +661,7 @@ export const selectorFor = (
 ): { selector: string; unique: boolean } => {
 	const enclosing = enclosingIfOf(component, el)
 	if (!enclosing) return resolveSelector(component, el)
-	const roots = [...enclosing.then, ...enclosing.alternate].filter(isElement)
+	const roots = [...thenOf(enclosing), ...elseOf(enclosing)].filter(isElement)
 	const clauses: string[] = []
 	for (const root of roots) {
 		// Global tree (not `root` itself) — `resolveSelectorIn` tries

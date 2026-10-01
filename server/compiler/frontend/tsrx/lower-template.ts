@@ -26,6 +26,7 @@ import type { ExtractContext } from '../../extract-context'
 import type { ForIR, SignalIR, TemplateNode } from '../../ir'
 import {
 	finishIf,
+	finishSwitch,
 	finishTry,
 	type Lowering,
 	lowerChildrenSkeleton,
@@ -38,25 +39,27 @@ import {
 } from '../../lower-shared'
 import { wordingOf } from '../../surface'
 import { CONTEXT_NAMES, JS_GLOBALS } from '../../vocabulary'
+import type { IfNode, SwitchNode } from '../../walk'
 
 /* === Condition validation === */
 
 /**
- * Lower an `@if` directive: the condition must be server-known at render
- * time (args, setup names, globals) — client-side conditional rendering is
- * outside the enhance-don't-render model. Branch bodies lower like any
- * children; client constructs must sit on the branch ROOT elements (the
- * analyzer union-addresses them).
+ * Lower an `@if` directive: a server-known condition (args, setup names,
+ * globals) picks its branch at render time; one that reads a signal or
+ * `host` switches template-cloned branches on the client (ADR 0037).
+ * Branch bodies lower like any children; the analysis decides how the
+ * client addresses them.
  */
 export const lowerIf = (
 	ctx: ExtractContext,
 	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
-): (TemplateNode & { kind: 'if' }) | null => {
+): IfNode | null => {
 	const test = node.test
 	if (!isNode(test)) return null
-	if (!validateCondition(ctx, signals, test, 'if')) return null
+	const mode = validateCondition(ctx, signals, test, 'if')
+	if (mode === null) return null
 	const lowerBranch = (block: unknown): TemplateNode[] =>
 		lowerBodyStatements(
 			ctx,
@@ -70,6 +73,7 @@ export const lowerIf = (
 		test,
 		lowerBranch(node.consequent),
 		lowerBranch(node.alternate),
+		mode,
 	)
 }
 
@@ -82,39 +86,26 @@ export const lowerSwitch = (
 	node: AstNode,
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
-): (TemplateNode & { kind: 'switch' }) | null => {
+): SwitchNode | null => {
 	const discriminant = node.discriminant
 	if (!isNode(discriminant)) return null
-	if (!validateCondition(ctx, signals, discriminant, 'switch')) return null
+	const mode = validateCondition(ctx, signals, discriminant, 'switch')
+	if (mode === null) return null
 	const rawCases = Array.isArray(node.cases) ? node.cases : []
 	if (rawCases.length === 0) {
 		reportEmptySwitch(ctx, node.start, 'switch')
 		return null
 	}
-	const cases: Array<{
-		testText: string | null
-		test: AstNode | null
-		children: TemplateNode[]
-	}> = []
+	const cases: Array<{ test: AstNode | null; children: TemplateNode[] }> = []
 	for (const raw of rawCases as AstNode[]) {
 		const children = lowerBodyStatements(ctx, raw.consequent, signals, fors)
 		if (children.length === 0) {
 			reportEmptySwitch(ctx, raw.start ?? node.start, 'arm')
 			return null
 		}
-		cases.push({
-			testText: isNode(raw.test) ? text(ctx.source, raw.test) : null,
-			test: isNode(raw.test) ? raw.test : null,
-			children,
-		})
+		cases.push({ test: isNode(raw.test) ? raw.test : null, children })
 	}
-	return {
-		kind: 'switch',
-		discriminantText: text(ctx.source, discriminant),
-		discriminant,
-		cases,
-		node,
-	}
+	return finishSwitch(ctx, node, discriminant, cases, mode)
 }
 
 /**
@@ -229,11 +220,9 @@ const lowerBodyStatements = (
  * - A `@pending` arm present: an ASYNC BOUNDARY (ADR 0023 sub-design 13,
  *   LT-012) — `@try`/`@pending`/`@catch` route on `isPending(signal)` against
  *   the ONE async-derived signal (`deriveCell(async …)`) the body renders.
- *   Unlike the plain error boundary, all three arms render UNCONDITIONALLY
- *   (each needs exactly one root element, toggled `hidden` server-side by
- *   which state won at render time, then reactively by the client's single
- *   `watch(signal, { ok, err, nil })` call — no client DOM creation, pure
- *   enhance, mirroring `module-lazyload.ts`'s hand-written shape).
+ *   The arm that won at render time renders live and every arm ships as an
+ *   inert template (each needs exactly one root element); the client
+ *   switches arms as the task settles (ADR 0037 s4, LT-276).
  *
  * `@finally` is gated outright in both modes. The grammar has no stale arm
  * and never will — the four-arm `.tsx` spelling that briefly added one was

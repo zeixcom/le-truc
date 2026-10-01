@@ -38,6 +38,7 @@ import {
 	typeAnnotationForBinding,
 	typeOfAnnotation,
 } from './infer-type'
+import { resolveInitialWinners } from './initial-winner'
 import type { ComponentIR, ComponentParam, ConfigIR, ForIR } from './ir'
 import type { ComponentParams } from './params'
 import type { SetupExtraction } from './setup-extraction'
@@ -306,7 +307,7 @@ export const assembleComponentIR = (
 	const gated = ctx.diagnostics.some(d => d.code === 'LTC001')
 	if (gated) return null
 
-	return {
+	const component: ComponentIR = {
 		name: componentName,
 		source: ctx.source,
 		surface: ctx.surface,
@@ -341,4 +342,8 @@ export const assembleComponentIR = (
 		serverKnown,
 		imports,
 	}
+	// The one IR fact that needs the whole component: each conditional's
+	// initial winner reads the root's attributes and every signal.
+	resolveInitialWinners(component)
+	return component
 }

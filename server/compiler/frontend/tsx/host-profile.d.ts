@@ -391,8 +391,9 @@ declare namespace JSX {
 	 * `<truc:try>` (ADR 0041), the `.tsx` spelling of
 	 * `@try`/`@pending`/`@catch`. The children are the success content.
 	 * With `catch` only it is the error boundary; adding `pending` makes it
-	 * the async boundary — all arms render, `hidden`-toggled by which state
-	 * won at render time, and `pending` is the no-value-yet arm. There is no
+	 * the async boundary — the winning arm renders live, the others ship as
+	 * inert templates the client clones in as the task settles (ADR 0037
+	 * s4), and `pending` is the no-value-yet arm. There is no
 	 * `stale` arm (LT-211): a re-fetching task keeps its content, and the
 	 * in-flight state is the reactive `isPending` idiom beside the boundary
 	 * (`isPending` is a real package export — import it; the compiler folds

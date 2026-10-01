@@ -99,6 +99,9 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 	framed('if', i => `this ${i}`, 'this conditional'),
 	term('ifBranches', 'conditional branches'),
 	term('switchArms', 'switch arms'),
+	term('ifBranch', 'one conditional branch'),
+	term('caseLabel', 'a switch arm test (LTC062)'),
+	term('reactiveConditional', 'a condition over a signal (ADR 0037)'),
 	term('tryBody', 'the boundary body'),
 	term('pendingArm', 'the pending arm'),
 	term('catchArm', 'the catch arm'),
@@ -482,46 +485,141 @@ const LIST_BODY: Case[] = [
  * codes that replace it inherit parity from day one: when they land, these
  * cases flip to the new codes on both sides at once or fail here.
  */
+/**
+ * Conditions over signals are legal since ADR 0037 (LT-274): the four
+ * shapes that pinned LTC005's retired condition face now compile on both
+ * surfaces (`REACTIVE_CONDITIONS` below), and the cases here pin the new
+ * refusals — LTC062, LTC063 and the placement and arm-shape faces of
+ * LTC005.
+ */
+const REACTIVE_CONDITIONS: Spec[] = [
+	{
+		pre: imports('createCell'),
+		setup: cell('open', 'false'),
+		body: '@if (open.get()) { <p>x</p> }',
+		tsx: '{open.get() ? <p>x</p> : null}',
+	},
+	{
+		pre: imports('createCell'),
+		setup: cell('open', 'false'),
+		body: '@if (open.get()) { <p class="a">x</p> } @else { <b>y</b> }',
+		tsx: '{open.get() ? <p class="a">x</p> : <b>y</b>}',
+	},
+	{
+		pre: imports('asBoolean'),
+		params: '{ open }: { open?: boolean }',
+		setup: 'expose({ open: asBoolean() })',
+		body: '@if (host.open) { <p>x</p> }',
+		tsx: '{host.open ? <p>x</p> : null}',
+	},
+	{
+		pre: imports('createCell'),
+		setup: cell('m', "'a'"),
+		body: "@switch (m.get()) { @case 'a': { <p>a</p> } @default: { <p>b</p> } }",
+		tsx: "{(() => { switch (m.get()) { case 'a': return <p>a</p>; default: return <p>b</p> } })()}",
+	},
+]
+
 const CONDITIONS: Case[] = [
 	{
-		name: 'a signal read in an if condition',
+		name: 'LTC062 a dynamic case value in a reactive switch',
+		code: 'LTC062',
+		spec: {
+			pre: imports('createCell'),
+			setup: `const other = 'b'
+		${cell('m', "'a'")}`,
+			body: "@switch (m.get()) { @case 'a': { <p>a</p> } @case other: { <p>b</p> } }",
+			tsx: "{(() => { switch (m.get()) { case 'a': return <p>a</p>; case other: return <p>b</p> } })()}",
+		},
+		pins: ['is not a literal'],
+	},
+	{
+		name: 'LTC062 two case values naming one arm',
+		code: 'LTC062',
+		spec: {
+			pre: imports('createCell'),
+			setup: cell('m', '1'),
+			body: "@switch (m.get()) { @case 1: { <p>a</p> } @case '1': { <p>b</p> } }",
+			tsx: "{(() => { switch (m.get()) { case 1: return <p>a</p>; case '1': return <p>b</p> } })()}",
+		},
+		pins: ['names the same arm'],
+	},
+	{
+		name: 'LTC063 a reactive condition in a reactive list container',
+		code: 'LTC063',
+		spec: {
+			pre: imports('createCell', 'createList'),
+			setup: `${LIST}
+		${cell('open', 'false')}`,
+			body: '<ul data-container>@if (open.get()) { <li class="head">x</li> }@for (const item of items) { <li>{item}</li> }</ul>',
+			tsx: '<ul data-container>{open.get() ? <li class="head">x</li> : null}{items.map(item => <li>{item}</li>)}</ul>',
+		},
+	},
+	{
+		name: 'a reactive condition inside a server-known branch',
+		code: 'LTC005',
+		spec: {
+			pre: imports('createCell'),
+			params: '{ ok }: { ok: boolean }',
+			setup: cell('open', 'false'),
+			body: '@if (ok) { <div class="a">@if (open.get()) { <p>x</p> }</div> }',
+			tsx: '{ok ? <div class="a">{open.get() ? <p>x</p> : null}</div> : null}',
+		},
+		pins: ['inside another control-flow branch'],
+	},
+	{
+		name: 'a reactive conditional branch with two roots',
 		code: 'LTC005',
 		spec: {
 			pre: imports('createCell'),
 			setup: cell('open', 'false'),
-			body: '@if (open.get()) { <p>x</p> }',
-			tsx: '{open.get() ? <p>x</p> : null}',
+			body: '@if (open.get()) { <><p class="a">x</p><p class="b">y</p></> }',
+			tsx: '{open.get() ? <><p class="a">x</p><p class="b">y</p></> : null}',
 		},
-		pins: ['The DOM keeps the branch the server rendered'],
+		pins: ['does not render exactly one root element'],
 	},
 	{
-		name: 'a bare signal as an if condition',
+		name: 'a reactive switch reading a server arg',
 		code: 'LTC005',
 		spec: {
 			pre: imports('createCell'),
-			setup: cell('open', 'false'),
-			body: '@if (open) { <p>x</p> }',
-			tsx: '{open ? <p>x</p> : null}',
-		},
-	},
-	{
-		name: 'a host read in an if condition',
-		code: 'LTC005',
-		spec: {
-			pre: imports('asBoolean'),
-			setup: 'expose({ open: asBoolean() })',
-			body: '@if (host.open) { <p>x</p> }',
-			tsx: '{host.open ? <p>x</p> : null}',
-		},
-	},
-	{
-		name: 'a signal read in a switch discriminant',
-		code: 'LTC005',
-		spec: {
-			pre: imports('createCell'),
+			params: '{ mode }: { mode: string }',
 			setup: cell('m', "'a'"),
-			body: "@switch (m.get()) { @case 'a': { <p>a</p> } @default: { <p>b</p> } }",
-			tsx: "{(() => { switch (m.get()) { case 'a': return <p>a</p>; default: return <p>b</p> } })()}",
+			body: "@switch (m.get() + mode) { @case 'a': { <p>a</p> } }",
+			tsx: "{(() => { switch (m.get() + mode) { case 'a': return <p>a</p> } })()}",
+		},
+	},
+	{
+		name: 'an async boundary whose body does not render its signal',
+		code: 'LTC005',
+		spec: {
+			pre: imports('deriveCell'),
+			setup:
+				"const data = deriveCell(async () => 'x')\n\t\texpose({ data: data.get })",
+			body: '@try { <div class="ok">static</div> } @pending { <p class="wait">…</p> } @catch (e) { <p class="err">{e.message}</p> }',
+			tsx: '<truc:try pending={<p class="wait">…</p>} catch={e => <p class="err">{e.message}</p>}><div class="ok">static</div></truc:try>',
+		},
+	},
+	{
+		name: 'an async boundary whose catch arm renders a lazy child over something else',
+		code: 'LTC005',
+		spec: {
+			pre: imports('deriveCell'),
+			setup:
+				"const data = deriveCell(async () => 'x')\n\t\texpose({ data: data.get })",
+			body: '@try { <div class="ok">{data}</div> } @pending { <p class="wait">…</p> } @catch (e) { <p class="err">{data}</p> }',
+			tsx: '<truc:try pending={<p class="wait">…</p>} catch={e => <p class="err">{data}</p>}><div class="ok">{data}</div></truc:try>',
+		},
+	},
+	{
+		name: 'a reactive condition reading a server arg',
+		code: 'LTC005',
+		spec: {
+			pre: imports('createCell'),
+			params: '{ ok }: { ok: boolean }',
+			setup: cell('open', 'false'),
+			body: '@if (open.get() && ok) { <p>x</p> }',
+			tsx: '{open.get() && ok ? <p>x</p> : null}',
 		},
 	},
 	{
@@ -743,15 +841,15 @@ const FAMILIES: Case[] = [
 		spec: { body: '<p onClick="x()">x</p>' },
 	},
 	{
-		name: 'LTC007 unaddressable async-boundary root',
+		name: 'LTC007 unaddressable async-boundary container',
 		code: 'LTC007',
 		spec: {
 			pre: imports('deriveCell'),
-			params: "{ aId = 'a' }: { aId?: string }",
 			setup: "const d = deriveCell(async () => 'x')\n\t\texpose({ d: d.get })",
-			body: '@try { <p id={aId}>{d}</p> } @pending { <p id={aId}>…</p> } @catch (e) { <p>{e.message}</p> }',
-			tsx: '<truc:try pending={<p id={aId}>…</p>} catch={e => <p>{e.message}</p>}><p id={aId}>{d}</p></truc:try>',
+			body: '<div>@try { <p>{d}</p> } @pending { <p>…</p> } @catch (e) { <p>{e.message}</p> }</div><div>x</div>',
+			tsx: '<div><truc:try pending={<p>…</p>} catch={e => <p>{e.message}</p>}><p>{d}</p></truc:try></div><div>x</div>',
 		},
+		pins: ['which holds a'],
 	},
 	{
 		name: 'LTC008 async component function',
@@ -1101,6 +1199,14 @@ describe('reactive-list bodies: the positive rule admits client names (LT-349)',
 
 describe('diagnostic parity — conditions (LTC005 condition face, ADR 0037 rider)', () => {
 	runCases(CONDITIONS)
+	test.each(REACTIVE_CONDITIONS.map(spec => [spec.body, spec] as const))(
+		'compiles on both surfaces (ADR 0037): %s',
+		(_, spec) => {
+			const { tsrx, tsx } = compileBoth({ name: 'clean', code: 'LTC005', spec })
+			for (const diagnostics of [tsrx, tsx])
+				expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		},
+	)
 })
 
 describe('diagnostic parity — server-only names in client positions (LT-347, LT-348)', () => {

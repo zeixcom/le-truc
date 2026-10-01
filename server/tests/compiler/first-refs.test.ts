@@ -10,6 +10,7 @@ import {
 	matchesAuthoredSelectorOn,
 	shareExclusiveIf,
 } from '../../compiler/first-refs'
+import type { TemplateNode } from '../../compiler/ir'
 
 /** A minimal element IR node — only the fields `first-refs.ts` reads. */
 const el = (
@@ -137,12 +138,17 @@ describe('shareExclusiveIf', () => {
 	test('two direct branch roots of the same @if, one per branch: exclusive', () => {
 		const input = el('input')
 		const textarea = el('textarea')
-		const ifNode = {
-			kind: 'if' as const,
+		const ifNode: TemplateNode = {
+			kind: 'conditional',
+			construct: 'if',
+			mode: 'server',
 			testText: 'multiline',
 			test: {} as ElementNode['node'],
-			then: [textarea],
-			alternate: [input],
+			arms: [
+				{ key: 'then', test: null, testText: null, children: [textarea] },
+				{ key: 'else', test: null, testText: null, children: [input] },
+			],
+			initial: { fold: true },
 			node: {} as ElementNode['node'],
 		}
 		const root: ElementNode = {
@@ -165,12 +171,17 @@ describe('shareExclusiveIf', () => {
 	test('two matches in the SAME branch of an @if: not exclusive', () => {
 		const a = el('input')
 		const b = el('input')
-		const ifNode = {
-			kind: 'if' as const,
+		const ifNode: TemplateNode = {
+			kind: 'conditional',
+			construct: 'if',
+			mode: 'server',
 			testText: 'cond',
 			test: {} as ElementNode['node'],
-			then: [a, b],
-			alternate: [],
+			arms: [
+				{ key: 'then', test: null, testText: null, children: [a, b] },
+				{ key: 'else', test: null, testText: null, children: [] },
+			],
+			initial: { fold: true },
 			node: {} as ElementNode['node'],
 		}
 		const root: ElementNode = {

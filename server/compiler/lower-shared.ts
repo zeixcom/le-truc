@@ -39,10 +39,12 @@ import {
 } from './evaluability'
 import type { ExtractContext } from './extract-context'
 import type {
+	ArmTemplate,
 	AttributeIR,
 	ComposeAttrIR,
 	EachForIR,
 	ForIR,
+	InitialWinner,
 	ReconcileForIR,
 	SignalIR,
 	TemplateNode,
@@ -50,7 +52,12 @@ import type {
 import { bindsExposedArg, classifyChild } from './reactivity'
 import { wordingOf } from './surface'
 import { JS_GLOBALS } from './vocabulary'
-import { isClientConstructAttr, someNode } from './walk'
+import {
+	type IfNode,
+	isClientConstructAttr,
+	type SwitchNode,
+	someNode,
+} from './walk'
 
 /** The recursion seam: each front end's own children dispatcher. */
 export type Lowering = {
@@ -65,33 +72,32 @@ export type Lowering = {
 /* === Condition validation === */
 
 /**
- * Validate a control-flow condition (`@if` test / ternary test, `@switch`
- * discriminant): server-known at render time (args, setup consts, globals)
- * and never a signal read — the DOM keeps the initially rendered branch.
- * The message names the surface's spelling of the construct.
+ * How a conditional lowers (ADR 0037): `server` when its test is server-known,
+ * `reactive` when it reads a signal or `host`.
+ */
+export type ConditionMode = 'server' | 'reactive'
+
+/**
+ * Classify a control-flow condition (`@if` test / ternary test, `@switch`
+ * discriminant). A test that reads a signal or `host` is reactive (ADR
+ * 0037: its arms become template-cloned branches) — which names its client
+ * thunk may read is the analysis's check, as for every client position.
+ * Any other test must be server-known at render time (args, setup consts,
+ * globals); null when it is not, after reporting why. The message names the
+ * surface's spelling of the construct.
  */
 export const validateCondition = (
 	ctx: ExtractContext,
 	signals: ReadonlyMap<string, SignalIR>,
 	test: AstNode,
 	kind: 'if' | 'switch',
-): boolean => {
+): ConditionMode | null => {
 	const wording = wordingOf(ctx)
 	const what = kind === 'if' ? wording.ifCondition : wording.switchDiscriminant
 	const free = freeIdentifiers(test)
 	for (const global of JS_GLOBALS) free.delete(global)
-	const signalReads = [...free].filter(name => signals.has(name))
-	if (signalReads.length > 0) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				test.start,
-				`${what} that reads signal(s) ${signalReads.map(n => `\`${n}\``).join(', ')}`,
-				'The DOM keeps the branch the server rendered, so a signal condition would silently stop matching. Derive the condition from args or setup consts, or show and hide the element on the client with `hidden={() => …}`.',
-			),
-		)
-		return false
-	}
+	if ([...free].some(name => signals.has(name) || name === 'host'))
+		return 'reactive'
 	const unknown = [...free].filter(name => !ctx.serverKnown.has(name))
 	if (unknown.length > 0) {
 		ctx.diagnostics.push(
@@ -99,12 +105,12 @@ export const validateCondition = (
 				ctx.source,
 				test.start,
 				`${what} that reads ${unknown.map(n => `\`${n}\``).join(', ')}, which the server render does not know`,
-				'A condition is evaluated once, during the server render — derive it from args or setup consts.',
+				'A condition is evaluated during the server render, or on the client when it reads a signal or `host` — derive it from args, setup consts or signals.',
 			),
 		)
-		return false
+		return null
 	}
-	return true
+	return 'server'
 }
 
 /* === Shared arm/child helpers === */
@@ -649,9 +655,11 @@ export const validateEmptyArm = (
 	const offends = (node: TemplateNode): boolean => {
 		switch (node.kind) {
 			case 'text':
-			case 'if':
-			case 'switch':
 				return false
+			case 'conditional':
+				// A reactive conditional is a client construct like any other.
+				if (node.mode === 'reactive') offending = node.node
+				return node.mode === 'reactive'
 			case 'expr':
 				if (node.lazy) offending = node.node
 				return node.lazy
@@ -818,7 +826,7 @@ const validateListBody = (
 			return
 		}
 		if (node.kind !== 'element') {
-			if (node.kind === 'if' || node.kind === 'switch' || node.kind === 'try')
+			if (node.kind === 'conditional' || node.kind === 'try')
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						ctx.source,
@@ -1127,14 +1135,21 @@ export const lowerLoop = (
 
 /* === Conditionals and boundaries (the shared tails) === */
 
-/** The `if` IR, once a surface has lowered the test and both branches. */
+/**
+ * The initial winner a front end leaves on a fresh conditional: assembly
+ * resolves it once the whole component is known (`resolveInitialWinners`).
+ */
+const UNRESOLVED_INITIAL: InitialWinner = { fold: true }
+
+/** The `if` conditional, once a surface has lowered the test and both branches. */
 export const finishIf = (
 	ctx: ExtractContext,
 	node: AstNode,
 	test: AstNode,
 	then: TemplateNode[],
 	alternate: TemplateNode[],
-): (TemplateNode & { kind: 'if' }) | null => {
+	mode: ConditionMode,
+): IfNode | null => {
 	if (then.length === 0 && alternate.length === 0) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
@@ -1147,11 +1162,108 @@ export const finishIf = (
 		return null
 	}
 	return {
-		kind: 'if',
-		testText: text(ctx.source, test),
+		kind: 'conditional',
+		construct: 'if',
+		mode,
 		test,
-		then,
-		alternate,
+		testText: text(ctx.source, test),
+		arms: [
+			{ key: 'then', test: null, testText: null, children: then },
+			{ key: 'else', test: null, testText: null, children: alternate },
+		],
+		initial: UNRESOLVED_INITIAL,
+		node,
+	}
+}
+
+/**
+ * A `@case` value a reactive switch can key an arm by: a string, number,
+ * boolean or `null` literal, or a negated number. Null for anything else.
+ */
+const caseLiteral = (
+	test: AstNode,
+): { value: string | number | boolean | null } | null => {
+	if (test.type === 'Literal') {
+		const value = test.value
+		return value === null ||
+			typeof value === 'string' ||
+			typeof value === 'number' ||
+			typeof value === 'boolean'
+			? { value }
+			: null
+	}
+	if (
+		test.type === 'UnaryExpression' &&
+		test.operator === '-' &&
+		isNode(test.argument) &&
+		test.argument.type === 'Literal' &&
+		typeof test.argument.value === 'number'
+	)
+		return { value: -test.argument.value }
+	return null
+}
+
+/**
+ * The `switch` conditional, once a surface has lowered the discriminant and
+ * every arm. Arm keys are `case:<value>` and `default` (ADR 0037 s2). A
+ * reactive switch keys its arms by literal case values only — a dynamic one
+ * has no compile-time name for the server emit and the client to agree on,
+ * so it is LTC062, with no fallback.
+ */
+export const finishSwitch = (
+	ctx: ExtractContext,
+	node: AstNode,
+	discriminant: AstNode,
+	cases: Array<{ test: AstNode | null; children: TemplateNode[] }>,
+	mode: ConditionMode,
+): SwitchNode | null => {
+	const arms: ArmTemplate[] = []
+	const seen = new Set<string>()
+	for (const arm of cases) {
+		let key = 'default'
+		if (arm.test) {
+			const literal = caseLiteral(arm.test)
+			if (literal === null && mode === 'reactive') {
+				ctx.diagnostics.push(
+					diagnostic.dynamicCaseValue(
+						ctx.source,
+						arm.test.start,
+						text(ctx.source, arm.test),
+						wordingOf(ctx),
+					),
+				)
+				return null
+			}
+			key = `case:${literal === null ? text(ctx.source, arm.test) : String(literal.value)}`
+		}
+		if (seen.has(key) && mode === 'reactive') {
+			ctx.diagnostics.push(
+				diagnostic.dynamicCaseValue(
+					ctx.source,
+					arm.test?.start ?? node.start,
+					arm.test ? text(ctx.source, arm.test) : 'default',
+					wordingOf(ctx),
+					true,
+				),
+			)
+			return null
+		}
+		seen.add(key)
+		arms.push({
+			key,
+			test: arm.test,
+			testText: arm.test ? text(ctx.source, arm.test) : null,
+			children: arm.children,
+		})
+	}
+	return {
+		kind: 'conditional',
+		construct: 'switch',
+		mode,
+		test: discriminant,
+		testText: text(ctx.source, discriminant),
+		arms,
+		initial: UNRESOLVED_INITIAL,
 		node,
 	}
 }
@@ -1178,9 +1290,9 @@ export const reportEmptySwitch = (
 /**
  * The boundary tail both spellings share (`@try`/`@pending`/`@catch`, `<truc:try
  * pending catch>`): with a pending arm it is an ASYNC boundary (ADR 0023
- * sub-design 13) whose three arms each need exactly one root element — all
- * render, `hidden`-toggled by which state won — and the catch parameter is
- * reactive by position in its arm.
+ * sub-design 13) whose three arms each need exactly one root element — each
+ * is cloned from its template as the task settles (ADR 0037 s4) — and the
+ * catch parameter is reactive by position in its arm.
  */
 export const finishTry = (
 	ctx: ExtractContext,
@@ -1213,7 +1325,7 @@ export const finishTry = (
 					ctx.source,
 					offset,
 					`An async boundary's ${which} that does not render exactly one root element`,
-					"The client toggles each arm's `hidden` and addresses its bindings through one root — wrap the arm's content in a single element.",
+					"The client clones each arm from a template with one root element — wrap the arm's content in a single element.",
 				),
 			)
 			return null

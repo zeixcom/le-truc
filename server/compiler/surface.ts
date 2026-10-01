@@ -69,6 +69,12 @@ export type SurfaceWording = {
 	caseWithoutOutput: string
 	/** A switch with no arms, as a sentence subject. */
 	switchNoArms: string
+	/** One switch arm's test keyword, as in "a … value". */
+	caseLabel: string
+
+	/* --- reactive conditions (ADR 0037) --- */
+	/** A condition that reads a signal, as a sentence subject. */
+	reactiveConditional: string
 
 	/* --- error and async boundaries --- */
 	tryBody: string
@@ -130,6 +136,9 @@ const TSRX: SurfaceWording = {
 	switchArms: '`@switch` arms',
 	caseWithoutOutput: 'A `@case` or `@default` arm with no output element',
 	switchNoArms: 'A `@switch` with no `@case` or `@default` arm',
+	caseLabel: '`@case`',
+
+	reactiveConditional: 'An `@if` or `@switch` that reads a signal',
 
 	tryBody: '`@try` body',
 	pendingArm: '`@pending` arm',
@@ -182,6 +191,9 @@ const TSX: SurfaceWording = {
 	switchArms: '`switch` cases',
 	caseWithoutOutput: 'A `switch` case with no output element',
 	switchNoArms: 'A `switch` with no `case` or `default` clause',
+	caseLabel: '`case`',
+
+	reactiveConditional: 'A conditional or `switch` that reads a signal',
 
 	tryBody: '`<truc:try>` content',
 	pendingArm: '`pending` arm',

@@ -45,33 +45,52 @@ const tree: TemplateNode & { kind: 'element' } = {
 			node: n('Expr'),
 		},
 		{
-			kind: 'if',
+			kind: 'conditional',
+			construct: 'if',
+			mode: 'server',
 			testText: 'ok',
 			test: n('Identifier'),
-			then: [
+			arms: [
 				{
-					kind: 'element',
-					tag: 'a',
-					attrs: [{ kind: 'static', name: 'id', value: 'one' }],
-					children: [],
-					node: n('JSXElement'),
+					key: 'then',
+					test: null,
+					testText: null,
+					children: [
+						{
+							kind: 'element',
+							tag: 'a',
+							attrs: [{ kind: 'static', name: 'id', value: 'one' }],
+							children: [],
+							node: n('JSXElement'),
+						},
+					],
+				},
+				{
+					key: 'else',
+					test: null,
+					testText: null,
+					children: [
+						{
+							kind: 'client-stmt',
+							text: 'host.foo()',
+							node: n('ExpressionStatement'),
+						},
+					],
 				},
 			],
-			alternate: [
-				{
-					kind: 'client-stmt',
-					text: 'host.foo()',
-					node: n('ExpressionStatement'),
-				},
-			],
+			initial: { fold: true },
 			node: n('If'),
 		},
 		{
-			kind: 'switch',
-			discriminantText: 'state',
-			discriminant: n('Identifier'),
-			cases: [
+			kind: 'conditional',
+			construct: 'switch',
+			mode: 'server',
+			testText: 'state',
+			test: n('Identifier'),
+			initial: { fold: true },
+			arms: [
 				{
+					key: 'case:on',
 					testText: "'on'",
 					test: n('Literal'),
 					children: [
@@ -85,6 +104,7 @@ const tree: TemplateNode & { kind: 'element' } = {
 					],
 				},
 				{
+					key: 'default',
 					testText: null,
 					test: null,
 					children: [{ kind: 'text', value: 'off' }],
@@ -140,7 +160,10 @@ const tree: TemplateNode & { kind: 'element' } = {
 describe('childNodes', () => {
 	test('element/compose children, if branches, switch arms, try arms (pending last)', () => {
 		expect(childNodes(tree).length).toBe(5)
-		const ifNode = tree.children[2] as Extract<TemplateNode, { kind: 'if' }>
+		const ifNode = tree.children[2] as Extract<
+			TemplateNode,
+			{ kind: 'conditional' }
+		>
 		expect(childNodes(ifNode).length).toBe(2)
 		const tryNode = tree.children[4] as Extract<TemplateNode, { kind: 'try' }>
 		expect(
@@ -174,10 +197,10 @@ describe('walkTemplate', () => {
 			'el:x-root',
 			'text',
 			'expr',
-			'if',
+			'conditional',
 			'el:a',
 			'client-stmt',
-			'switch',
+			'conditional',
 			'el:b',
 			'text',
 			'try',
@@ -204,10 +227,10 @@ describe('walkTemplate', () => {
 			'el:x-root',
 			'text',
 			'expr',
-			'if',
+			'conditional',
 			'el:a',
 			'client-stmt',
-			'switch',
+			'conditional',
 			'el:b',
 			'text',
 			'try',

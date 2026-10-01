@@ -108,7 +108,7 @@ describe('@switch — multi-branch conditional rendering', () => {
 		)
 	})
 
-	test('signal discriminant is LTC005 (DOM keeps the rendered arm)', () => {
+	test('a signal discriminant compiles to template-cloned arms (ADR 0037)', () => {
 		const source2 = `export function C({}: {})
 	@{
 		const mode = createCell('a')
@@ -125,12 +125,15 @@ describe('@switch — multi-branch conditional rendering', () => {
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
-		const { diagnostics: d } = compileComponent(source2, 'c.tsrx', new Set())
-		expect(
-			d.some(diag =>
-				diag.message.includes('`@switch` discriminant that reads signal'),
-			),
-		).toBe(true)
+		const { component, diagnostics: d } = compileComponent(
+			source2,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(d).toEqual([])
+		expect(component?.serverCode).toContain(
+			'<template data-arms=\\"0\\" data-key=\\"case:a\\">',
+		)
 	})
 })
 
@@ -280,7 +283,7 @@ import { deriveCell } from '@zeix/le-truc'`,
 		).toBe(true)
 	})
 
-	test('pending arm renders when the async signal has no { initial } seed (isPending at render time)', async () => {
+	test('pending arm renders live when the async signal has no { initial } seed (isPending at render time)', async () => {
 		const { component, diagnostics } = compileComponent(
 			asyncComponent("async () => 'loaded'"),
 			'c.tsrx',
@@ -290,12 +293,19 @@ import { deriveCell } from '@zeix/le-truc'`,
 		if (!component) throw new Error('async fixture must compile')
 		ensureEmitted('feat-async', component.serverCode)
 		const html = await render('feat-async', {})
-		expect(html).toContain('<p class="loading">Loading</p>')
-		expect(html).toContain('hidden class="content"')
-		expect(html).toContain('hidden class="error"')
+		// ADR 0037 s4: only the winner is live; every arm is an inert
+		// template keyed `ok`/`nil`/`err`, after the winner.
+		expect(html).toBe(
+			'<c-el><p data-key="nil" class="loading">Loading</p>' +
+				'<template data-arms="0" data-key="ok"><div class="content"></div></template>' +
+				'<template data-arms="0" data-key="nil"><p class="loading">Loading</p></template>' +
+				'<template data-arms="0" data-key="err"><p class="error"></p></template></c-el>',
+		)
+		expect(html).not.toContain('hidden')
+		expect(html).not.toContain('fieldset')
 	})
 
-	test('the try body renders (ok) when { initial } seeds a retained value', async () => {
+	test('the try body renders live (ok) when { initial } seeds a retained value', async () => {
 		const { component, diagnostics } = compileComponent(
 			asyncComponent("async () => 'loaded', { initial: 'seed' }"),
 			'c.tsrx',
@@ -305,12 +315,14 @@ import { deriveCell } from '@zeix/le-truc'`,
 		if (!component) throw new Error('async fixture must compile')
 		ensureEmitted('feat-async-ok', component.serverCode)
 		const html = await render('feat-async-ok', {})
-		expect(html).toContain('<div class="content">seed</div>')
-		expect(html).toContain('hidden class="loading"')
-		expect(html).toContain('hidden class="error"')
+		expect(html).toStartWith(
+			'<c-el><div data-key="ok" class="content">seed</div><template',
+		)
+		expect(html).not.toContain('data-key="nil" class')
+		expect(html).not.toContain('data-key="err" class')
 	})
 
-	test('client codegen: one watch() call toggles all three roots, no client DOM creation', () => {
+	test('client codegen: reconcile() switches the arms by the task state, and the ok/err mounts write their text', () => {
 		const { component, diagnostics } = compileComponent(
 			asyncComponent("async () => 'loaded', { initial: 'seed' }"),
 			'c.tsrx',
@@ -318,26 +330,32 @@ import { deriveCell } from '@zeix/le-truc'`,
 		)
 		expect(diagnostics).toEqual([])
 		const code = component?.clientCode ?? ''
-		// watch/first are FactoryContext members (destructured), not module
-		// imports — only deriveCell/defineComponent come from '@zeix/le-truc'.
-		expect(code).toContain('({ expose, first, watch }) => {')
-		expect(code).toContain('watch(data, {')
-		expect(code).toContain('ok: value => {')
-		expect(code).toContain('.hidden = true')
-		expect(code).toContain('.hidden = false')
-		expect(code).toContain('.textContent = String(value)')
-		expect(code).toContain('nil: () => {')
-		expect(code).toContain('err: error => {')
-		expect(code).toContain('.textContent = String(error.message)')
+		expect(code).toContain('({ expose, host, watch }) => {')
+		expect(code).toContain(
+			`reconcile(host, host.querySelectorAll<HTMLTemplateElement>(':scope > template[data-arms="0"]'), () => {`,
+		)
+		expect(code).toContain(
+			"return error instanceof UnsetSignalValueError ? 'nil' : 'err'",
+		)
+		expect(code).toContain("return 'ok'")
+		expect(code).toContain(
+			'watch(data, { ok: value => { armElement.textContent = String(value) }, err: () => {} })',
+		)
+		expect(code).toContain(
+			'watch(data, { ok: () => {}, err: error => { armElement.textContent = String(error.message) } })',
+		)
+		// The toggled-arm machinery is gone (LT-276).
+		expect(code).not.toContain('.hidden')
+		expect(code).not.toContain('parentElement')
+		expect(code).not.toContain('HTMLFieldSetElement')
 	})
 
-	// LT-077 (CHECKLIST §8): `hidden`/`display:none` exclude nothing from form
-	// submission, only `disabled` does. A named control living in a non-active
-	// arm would otherwise submit alongside `@pending`'s own controls. Every arm
-	// root is wrapped in a synthetic `<fieldset disabled>`, toggled by the same
-	// condition as the arm's own `hidden` — these fixtures put a named `<input>`
-	// inside each arm and check the fieldset wrapper, not just the input's own
-	// attributes, carries the submission-exclusion.
+	// LT-077 (CHECKLIST §8), structural since LT-276: `hidden` excludes
+	// nothing from form submission, which is why the toggled arms needed a
+	// `<fieldset disabled>` per arm. Template-cloned arms put exactly one
+	// arm in the document — the others are template content, which is not
+	// form-associated — so a named control in a non-active arm cannot
+	// submit. Pinned anyway, against the browser's own FormData.
 	const namedControlComponent = (deriveExpr: string): string =>
 		`import { deriveCell } from '@zeix/le-truc'
 export function C({}: {})
@@ -358,7 +376,13 @@ export function C({}: {})
 		</>
 	}`
 
-	test('server render (pending step): only the pending arm fieldset is enabled, ok/error are disabled', async () => {
+	const submitted = (html: string): string[] => {
+		const { document, FormData } = new JSDOM(`<form>${html}</form>`).window
+		const form = document.querySelector('form') as HTMLFormElement
+		return new FormData(form).getAll('x').map(String)
+	}
+
+	test("only the live arm's named control submits (pending step)", async () => {
 		const { component, diagnostics } = compileComponent(
 			namedControlComponent("async () => 'loaded'"),
 			'c.tsrx',
@@ -368,20 +392,10 @@ export function C({}: {})
 		if (!component) throw new Error('named-control fixture must compile')
 		ensureEmitted('feat-async-named-pending', component.serverCode)
 		const html = await render('feat-async-named-pending', {})
-		// pending arm's fieldset: not disabled (attr() omits `false`/omitted attrs)
-		expect(html).toContain(
-			'<fieldset style="border:0;padding:0;margin:0;min-width:0"><p class="loading"',
-		)
-		// ok/error arms' fieldsets: disabled
-		expect(html).toContain(
-			'<fieldset style="border:0;padding:0;margin:0;min-width:0" disabled><div hidden class="content"',
-		)
-		expect(html).toContain(
-			'<fieldset style="border:0;padding:0;margin:0;min-width:0" disabled><p hidden class="error"',
-		)
+		expect(submitted(html)).toEqual(['pending'])
 	})
 
-	test('server render (ok step): only the ok arm fieldset is enabled, pending/error are disabled', async () => {
+	test("only the live arm's named control submits (ok step)", async () => {
 		const { component, diagnostics } = compileComponent(
 			namedControlComponent("async () => 'loaded', { initial: 'seed' }"),
 			'c.tsrx',
@@ -391,45 +405,8 @@ export function C({}: {})
 		if (!component) throw new Error('named-control fixture must compile')
 		ensureEmitted('feat-async-named-ok', component.serverCode)
 		const html = await render('feat-async-named-ok', {})
-		expect(html).toContain(
-			'<fieldset style="border:0;padding:0;margin:0;min-width:0"><div class="content"',
-		)
-		expect(html).toContain(
-			'<fieldset style="border:0;padding:0;margin:0;min-width:0" disabled><p hidden class="loading"',
-		)
-		expect(html).toContain(
-			'<fieldset style="border:0;padding:0;margin:0;min-width:0" disabled><p hidden class="error"',
-		)
-	})
-
-	test("client codegen (error step, by construction): watch()'s err handler disables the ok/pending fieldsets and enables its own", () => {
-		const { component, diagnostics } = compileComponent(
-			namedControlComponent("async () => 'loaded', { initial: 'seed' }"),
-			'c.tsrx',
-			new Set(),
-		)
-		expect(diagnostics).toEqual([])
-		const code = component?.clientCode ?? ''
-		// LT-086: addressed via `.parentElement`, not a `fieldset:has(...)`
-		// query — `:has()` predates REQUIREMENTS.md's 2020 browser baseline.
-		expect(code).toContain('div.parentElement as HTMLFieldSetElement')
-		expect(
-			(code.match(/p\d*\.parentElement as HTMLFieldSetElement/g) ?? []).length,
-		).toBe(2)
-		// err handler: pending/ok fieldsets disabled, error's own enabled —
-		// this is the state a pending→error transition lands in; verified here
-		// as generated code since the compiler's own test harness has no real
-		// DOM/FormData to submit against (that's the corpus's Playwright specs).
-		const errHandler = code.slice(
-			code.indexOf('err: error => {'),
-			code.indexOf('})', code.indexOf('err: error => {')),
-		)
-		expect(
-			(errHandler.match(/Fieldset\d*\.disabled = true/g) ?? []).length,
-		).toBe(2)
-		expect(
-			(errHandler.match(/Fieldset\d*\.disabled = false/g) ?? []).length,
-		).toBe(1)
+		expect(submitted(html)).toEqual(['ok'])
+		expect(html).not.toContain('fieldset')
 	})
 })
 

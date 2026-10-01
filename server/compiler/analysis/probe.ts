@@ -231,23 +231,19 @@ const serializeNodes = (
 				// No DOM existence until render: recorded, never emitted.
 				ser.composes.push({ node, path })
 				break
-			case 'if':
-				exclusive([node.then, node.alternate])
-				break
-			case 'switch':
-				exclusive(node.cases.map(arm => arm.children))
+			case 'conditional':
+				// One arm renders, in either mode: a reactive conditional's
+				// other arms are inert template content (ADR 0037).
+				exclusive(node.arms.map(arm => arm.children))
 				break
 			case 'try':
-				if (node.pendingChildren !== null) {
-					// Async boundary: all three arms coexist (hidden-toggled) —
-					// no group, the arms sum (LT-230's `@pending` policy).
-					serializeNodes(node.children, path, ser)
-					serializeNodes(node.catchChildren, path, ser)
-					serializeNodes(node.pendingChildren, path, ser)
-				} else {
-					// Plain error boundary: body XOR catch.
-					exclusive([node.children, node.catchChildren])
-				}
+				// One arm renders: body XOR catch, and an async boundary's
+				// other arms are inert template content (ADR 0037 s4).
+				exclusive([
+					node.children,
+					node.catchChildren,
+					...(node.pendingChildren ? [node.pendingChildren] : []),
+				])
 				break
 			default:
 				// text, expr, client-stmt — no element, nothing to match.

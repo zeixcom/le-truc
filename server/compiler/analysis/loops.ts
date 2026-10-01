@@ -18,7 +18,7 @@ import type {
 } from '../ir'
 import { wordingOf } from '../surface'
 import { isDirtyFlagControlAttr } from '../vocabulary'
-import { isClientConstructAttr } from '../walk'
+import { hasArmSet, isClientConstructAttr, someNode } from '../walk'
 import { reportServerOnlyNames } from './effects'
 import { returnsNumber } from './harvest'
 import type {
@@ -388,7 +388,15 @@ const runReconcileLoops = (
 			'one',
 		)
 
-		const templateName = addQuery('template', 'template', 'one')
+		// Arm templates (ADR 0037) are `<template>`s too: beside an arm set
+		// the item template is the one without `data-arms`.
+		const templateName = addQuery(
+			'template',
+			someNode(component.root, hasArmSet)
+				? 'template:not([data-arms])'
+				: 'template',
+			'one',
+		)
 
 		// The @empty arm's roots (LT-212): server-rendered in the container,
 		// `hidden` toggled by the client — each root needs its own query.
