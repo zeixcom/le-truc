@@ -189,6 +189,35 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   `createCell(start > 2)`, which a full compile refuses with LTC005.
   **Check:** each case pinned by a failing-first test; corpus artifacts byte-identical;
   baseline 0.
+  **Done 2026-10-02 (pending review ⏳).** All seven items landed, each pinned failing-first
+  (verified by re-running the new tests against the pre-fix sources). (a) `reconcileArms`
+  refuses `<template>`/`[data-arms]` in adoption; FakeElement's `insertBefore` throws
+  `NotFoundError` on a missing reference; adjacent-sets unit test + realm test
+  (`c-el-adjacent.client.ts`, the boundary describe owns `c-el.client.ts` in the module
+  cache). (b) `((${testText}))` in the `@if` key thunk. (c) an `inArmTemplate` flag on
+  `EmitContext` makes both conditional and boundary templates bake lazy text, reactive
+  attributes and class/style maps empty — the live winner keeps its values; the boundary
+  face turned out already structural (no legal client-written site beyond the recognized
+  value child — see NOTES.md), so its pin is a render test of the already-true emptiness.
+  (d) `finishSwitch` keys `case:` + the literal's JSON; `ir.ts`'s doc and COMPILER_SPEC.md
+  §3.5's arm-key row updated; the parity duplicate pin moved to `@case 1`/`@case 1.0` (the
+  real one-key pair now). (e) the template snapshot is taken once outside the descriptor
+  (a one-shot generator survives a reconnect — unit test models the factory-once
+  lifecycle); the DEV_MODE hydration-disagreement warn fires once, on the first flip that
+  replaces an adopted winner. (f) `mountScope` swallows the bind/activation throw only to
+  hand the scope's real dispose back, disposes the partial scope, rethrows — the leak shape
+  is a descriptor that throws during ACTIVATION after an earlier one registered (the test
+  uses a `pass()` to a foreign element); queued-but-unactivated descriptors were never
+  leaky. (g) both `createCell(start > 2)` fixtures re-pinned as
+  `createCell(mode === 'wide')` over a `data-mode` DOM site — clean through the full
+  pipeline (the string comparison keeps the generated client typecheckable; the number
+  spelling seeded `('') > 2`, a tsc refusal). Gates: corpus artifacts byte-identical
+  (regenerated before/after and diffed); census and warning baselines unchanged; src 506
+  pass (was 501), server 2747 pass, 0 fail; `tsc -p tsconfig.build.json` and the full
+  `typecheck` clean; biome clean on src and server. The DEV_MODE warn is a
+  `console.warn`, not an error class — no Tech Writer handoff owed; COMPILER_SPEC.md's
+  key row and the `reconcile()` JSDoc ride with this task, the rest of the teaching is
+  LT-389's.
 
 - [ ] LT-386: The initial winner agrees with the client's first key.
   **Skill:** le-truc-dev

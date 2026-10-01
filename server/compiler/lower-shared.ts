@@ -1234,7 +1234,11 @@ export const finishSwitch = (
 				)
 				return null
 			}
-			key = `case:${literal === null ? text(ctx.source, arm.test) : String(literal.value)}`
+			// The literal's JSON (LT-385d), not `String(value)`: the key must
+			// be value-typed so `@case 1` and `@case '1'` stay distinct, while
+			// `1` and `1.0` — the same literal value, as `===` says — share
+			// one key.
+			key = `case:${literal === null ? text(ctx.source, arm.test) : JSON.stringify(literal.value)}`
 		}
 		if (seen.has(key) && mode === 'reactive') {
 			ctx.diagnostics.push(

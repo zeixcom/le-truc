@@ -539,8 +539,12 @@ const CONDITIONS: Case[] = [
 		spec: {
 			pre: imports('createCell'),
 			setup: cell('m', '1'),
-			body: "@switch (m.get()) { @case 1: { <p>a</p> } @case '1': { <p>b</p> } }",
-			tsx: "{(() => { switch (m.get()) { case 1: return <p>a</p>; case '1': return <p>b</p> } })()}",
+			// LT-385d made case keys value-typed (`case:` + the literal's
+			// JSON), so `1` and `'1'` name DISTINCT arms now; the duplicate
+			// pair is two spellings of one literal value — `1.0` parses to
+			// `1`, as `===` says.
+			body: '@switch (m.get()) { @case 1: { <p>a</p> } @case 1.0: { <p>b</p> } }',
+			tsx: '{(() => { switch (m.get()) { case 1: return <p>a</p>; case 1.0: return <p>b</p> } })()}',
 		},
 		pins: ['names the same arm'],
 	},

@@ -214,7 +214,7 @@ import { createCell } from '@zeix/le-truc'`
 		)
 		expect(diagnostics).toEqual([])
 		expect(component?.clientCode).toContain(
-			"() => (open.get() ? 'then' : null)",
+			"() => ((open.get()) ? 'then' : null)",
 		)
 	})
 

@@ -24,8 +24,18 @@ import {
 	type Store,
 } from '@zeix/cause-effect'
 import { InvalidTemplateError } from '../errors'
-import { makeWatch, reconcile } from '../helpers/reactive'
-import { installActiveCollector, restoreActiveCollector } from '../internal'
+import {
+	activateDescriptors,
+	makePass,
+	makeWatch,
+	type PassedProps,
+	reconcile,
+} from '../helpers/reactive'
+import {
+	installActiveCollector,
+	restoreActiveCollector,
+	withCollector,
+} from '../internal'
 import type { ComponentProps, EffectDescriptor } from '../types'
 import { activate } from './activate'
 
@@ -132,6 +142,14 @@ class FakeElement {
 	}
 
 	insertBefore(el: FakeElement, ref: FakeElement | null): FakeElement {
+		// LT-385a: the real DOM throws NotFoundError when the reference node
+		// is not a child of this container. Appending instead masked the
+		// sibling-arm-set adoption bug the unit tests were meant to catch.
+		if (ref && ref.parent !== this)
+			throw new DOMException(
+				'The node before which the node is to be inserted is not a child of this node',
+				'NotFoundError',
+			)
 		el.remove()
 		const index = ref ? this.childElements.indexOf(ref) : -1
 		if (index === -1) this.childElements.push(el)
@@ -1462,5 +1480,261 @@ describe('reconcile — arm form (ADR 0037)', () => {
 				),
 			),
 		).toThrow(InvalidTemplateError)
+	})
+})
+
+// LT-385: arm-set correctness from the LT-274/LT-276 review.
+describe('reconcile arm form — adjacent arm sets (LT-385a)', () => {
+	// Two arm sets sharing one container: the second set's anchor's
+	// previousElementSibling is the first set's LAST TEMPLATE, whose
+	// `data-key` names an arm too. Adopting it would let set 1 remove set
+	// 0's template when its own key is null, and set 0's next flip would
+	// throw NotFoundError from insertBefore.
+	const buildAdjacentSets = (): FakeElement => {
+		const container = new FakeElement('div')
+		const winner = keyedChild('then', 'p') // set 0 renders a live arm
+		container.appendChild(winner)
+		armTemplate(container, 'then', 'p') // set 0's only template
+		armTemplate(container, 'then', 'p') // set 1's only template
+		return container
+	}
+
+	test('never adopts a sibling set’s template as its server winner', async () => {
+		const container = buildAdjacentSets()
+		const t0 = container.children[1] as FakeElement
+		const t1 = container.children[2] as FakeElement
+		const a = createState(true)
+		const b = createState(false)
+		const { mounted, bindArm } = makeArmRecorder()
+
+		const dispose0 = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					[container.children[1]] as unknown as HTMLTemplateElement[],
+					() => (a.get() ? 'then' : null),
+					bindArm,
+				),
+			),
+		)
+		const dispose1 = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					[container.children[2]] as unknown as HTMLTemplateElement[],
+					() => (b.get() ? 'then' : null),
+					bindArm,
+				),
+			),
+		)
+
+		// Set 1 renders no live arm: it must not have removed set 0's
+		// template in the adoption pass.
+		expect(container.children).toContain(t0)
+		expect(container.children).toContain(t1)
+		expect(tags(container)).toEqual([
+			'p[then]',
+			'template:then',
+			'template:then',
+		])
+
+		// Both sets flip freely afterwards.
+		b.set(true)
+		await tick()
+		expect(container.children).toContain(t0)
+		expect(tags(container)).toEqual([
+			'p[then]',
+			'template:then',
+			'p[then]',
+			'template:then',
+		])
+
+		a.set(false)
+		await tick()
+		b.set(false)
+		await tick()
+		expect(container.children).toContain(t0)
+		a.set(true)
+		await tick()
+		expect(container.children).toContain(t0)
+		expect(container.children[0]?.hasAttribute('data-key')).toBe(true)
+		expect(mounted.map(m => m.key)).toEqual(['then', 'then', 'then'])
+		dispose0()
+		dispose1()
+	})
+})
+
+describe('reconcile arm form — template iterable snapshot (LT-385e)', () => {
+	test('a generator of templates survives a reconnect', () => {
+		const container = new FakeElement('div')
+		const templates = [armTemplate(container, 'then', 'p')]
+		const { bindArm } = makeArmRecorder()
+		// One generator, one reconcile() call (the factory runs once), the
+		// SAME descriptor re-activated per reconnect: a snapshot taken inside
+		// the descriptor exhausts the generator on the second pass and
+		// throws InvalidTemplateError.
+		const generator = (function* () {
+			yield* (templates as unknown as HTMLTemplateElement[]).values()
+		})() as Iterable<HTMLTemplateElement>
+		const collected: EffectDescriptor[] = []
+		let primed = false
+		const connect = () =>
+			createScope(() => {
+				if (!primed) {
+					primed = true
+					withCollector(collected, () =>
+						reconcile(
+							container as unknown as Element,
+							generator,
+							() => 'then',
+							bindArm,
+						),
+					)
+				}
+				activateDescriptors(collected)
+			})
+
+		connect()()
+		connect()()
+		expect(tags(container)).toEqual(['p[then]', 'template:then'])
+	})
+
+	test('a DEV_MODE adoption that the first flip replaces warns as a hydration disagreement', async () => {
+		const container = new FakeElement('div')
+		const winner = keyedChild('then', 'p')
+		container.appendChild(winner)
+		const templates = [
+			armTemplate(container, 'then', 'p'),
+			armTemplate(container, 'else', 'span'),
+		]
+		const elseKey = createState(false)
+		const { bindArm } = makeArmRecorder()
+
+		const original = console.warn
+		const calls: unknown[][] = []
+		console.warn = (...args: unknown[]) => calls.push(args)
+		const prevDev = process.env.DEV_MODE
+		process.env.DEV_MODE = 'true'
+		try {
+			const dispose = createScope(() =>
+				activate(() =>
+					reconcile(
+						container as unknown as Element,
+						asTemplates(templates),
+						() => (elseKey.get() ? 'else' : 'then'),
+						bindArm,
+					),
+				),
+			)
+			// Connect adopted the agreeing winner: no warning yet.
+			expect(calls).toHaveLength(0)
+			elseKey.set(true)
+			await tick()
+			// The adopted server winner was replaced: one warning.
+			expect(calls).toHaveLength(1)
+			expect(String(calls[0]?.[0])).toContain('data-key="then"')
+			expect(String(calls[0]?.[0])).toContain('"else"')
+			// Later flips are client-owned state, not hydration: silent.
+			elseKey.set(false)
+			await tick()
+			expect(calls).toHaveLength(1)
+			dispose()
+		} finally {
+			if (prevDev === undefined) delete process.env.DEV_MODE
+			else process.env.DEV_MODE = prevDev
+			console.warn = original
+		}
+	})
+
+	test('an agreeing adoption stays silent in DEV_MODE', async () => {
+		const container = new FakeElement('div')
+		const winner = keyedChild('then', 'p')
+		container.appendChild(winner)
+		const templates = [
+			armTemplate(container, 'then', 'p'),
+			armTemplate(container, 'else', 'span'),
+		]
+		const { bindArm } = makeArmRecorder()
+
+		const { calls } = captureWarns(() =>
+			withDevMode(() => {
+				const dispose = createScope(() =>
+					activate(() =>
+						reconcile(
+							container as unknown as Element,
+							asTemplates(templates),
+							() => 'then',
+							bindArm,
+						),
+					),
+				)
+				dispose()
+			}),
+		)
+		expect(calls).toHaveLength(0)
+	})
+})
+
+describe('reconcile arm form — mountScope disposal on bind throw (LT-385f)', () => {
+	test('effects activated before a sibling descriptor throws die with the arm', async () => {
+		// The leak shape: descriptor 1 (a watch) activates and registers its
+		// cleanup on the arm's scope, descriptor 2 (a pass() to a foreign
+		// element) throws during activation — before the fix, the scope's
+		// dispose was lost with the throw, so the watch ran on after the arm
+		// left.
+		const container = new FakeElement('div')
+		const templates = [armTemplate(container, 'then', 'p')]
+		const open = createState(false)
+		const label = createState('a')
+		const stubHost = {} as unknown as HTMLElement & ComponentProps
+		const watch = makeWatch(stubHost)
+		const pass = makePass(stubHost)
+		const seen: string[] = []
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					asTemplates(templates),
+					() => (open.get() ? 'then' : null),
+					element => {
+						watch(label, value => {
+							seen.push(value)
+						})
+						// Not a custom element: pass()'s eager validation throws
+						// when the descriptor activates. The bogus props are the
+						// point — they never pass the typecheck a real call site
+						// would face.
+						const badProps = {
+							value: () => 1,
+						} as unknown as PassedProps<HTMLElement>
+						pass(element as HTMLElement, badProps)
+					},
+				),
+			),
+		)
+
+		// The arm mounts, the watch fires once, then the throw disposes the
+		// partial scope — the watch is dead even though the arm stays. The
+		// throw surfaces through the synchronous effect run in this bare
+		// frame; the host's descriptor containment absorbs it live (ADR 0028).
+		try {
+			open.set(true)
+		} catch {
+			// Expected: the pass() descriptor's validation error.
+		}
+		await tick()
+		expect(seen).toEqual(['a'])
+
+		label.set('b')
+		await tick()
+		expect(seen).toEqual(['a'])
+
+		// A later flip still replaces the arm cleanly (the scope is gone, not
+		// double-disposed).
+		open.set(false)
+		await tick()
+		expect(tags(container)).toEqual(['template:then'])
+		dispose()
 	})
 })

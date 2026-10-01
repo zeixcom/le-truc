@@ -690,7 +690,9 @@ function each<E extends Element>(
  * the thunk returns the current arm's key, or `null` for none. The arm
  * element sits immediately before the first template. On the first run an
  * element already there whose `data-key` names one of the arms is adopted
- * when it is the current arm, and replaced when it is not. A key change
+ * when it is the current arm, and replaced when it is not — a `<template>`
+ * or any `[data-arms]` carrier is never adopted (two adjacent arm sets
+ * share a container, and their templates name arm keys too). A key change
  * disposes the old arm's scope, removes its element, and clones the new arm's
  * template. Siblings outside the arm are never touched.
  *
@@ -770,16 +772,33 @@ function reconcile<T extends {}>(
  * ownership: effect re-runs never dispose it wholesale), with the ambient
  * collector `each()` grants (ADR 0017's collector parity).
  */
-const mountScope = (bind: () => MaybeCleanup): Cleanup =>
-	createScope(
+const mountScope = (bind: () => MaybeCleanup): Cleanup => {
+	const collected: EffectDescriptor[] = []
+	let dispose: Cleanup
+	let failure: { error: unknown } | undefined
+	dispose = createScope(
 		() => {
-			const collected: EffectDescriptor[] = []
-			const cleanup = withCollector(collected, bind)
-			activateDescriptors(collected)
-			return cleanup
+			try {
+				const cleanup = withCollector(collected, bind)
+				activateDescriptors(collected)
+				return cleanup
+			} catch (error) {
+				// Swallowed here so `createScope` returns its dispose — the caller
+				// gets it below, disposes the partial scope, and rethrows. Without
+				// this, effects created before the throw would run on after the
+				// arm/item leaves (LT-385f).
+				failure = { error }
+				return undefined
+			}
 		},
 		{ root: true },
 	)
+	if (failure) {
+		dispose()
+		throw failure.error
+	}
+	return dispose
+}
 
 /** The arm form of `reconcile()` (ADR 0037) — see its JSDoc. */
 const reconcileArms = (
@@ -792,10 +811,14 @@ const reconcileArms = (
 		first: FirstElement,
 	) => MaybeCleanup,
 ): void => {
+	// Snapshot once, outside the descriptor: the descriptor re-runs on every
+	// reconnect, and a one-shot iterable (a generator) would be exhausted by
+	// the first pass (LT-385e).
+	const snapshot = Array.from(templates)
 	const descriptor: EffectDescriptor = () => {
 		const arms = new Map<string, HTMLTemplateElement>()
 		let anchor: HTMLTemplateElement | undefined
-		for (const template of templates) {
+		for (const template of snapshot) {
 			if (template.content.childElementCount !== 1)
 				throw new InvalidTemplateError(
 					container,
@@ -809,12 +832,28 @@ const reconcileArms = (
 		const at = anchor
 
 		// The server-rendered winner, if any: the element right before the
-		// first template, claimed only when it names one of these arms.
+		// first template, claimed only when it names one of these arms. Never
+		// a `<template>` or a `[data-arms]` carrier (LT-385a): two adjacent
+		// arm sets share a container, and a sibling set's templates carry
+		// `data-key` too — adopting one would let this set remove the
+		// sibling's template on its first run, and the sibling's next flip
+		// would throw `NotFoundError` from `insertBefore`.
 		const previous = at.previousElementSibling as HTMLElement | null
 		const previousKey = previous?.getAttribute('data-key') ?? null
 		let current =
-			previousKey !== null && arms.has(previousKey) ? previous : null
+			previous !== null &&
+			previousKey !== null &&
+			arms.has(previousKey) &&
+			previous.localName !== 'template' &&
+			!previous.hasAttribute('data-arms')
+				? previous
+				: null
 		let currentKey = current ? previousKey : null
+		// An adoption that survives the first flip is the designed connect;
+		// the first flip that replaces the adopted element is a hydration
+		// disagreement the author should hear about (LT-385e), like the list
+		// form's adoption-pass warnings.
+		let adoptedServerWinner = current !== null
 		let dispose: Cleanup | undefined
 
 		createScope(() => {
@@ -825,6 +864,15 @@ const reconcileArms = (
 					dispose?.()
 					dispose = undefined
 					if (key !== currentKey) {
+						if (
+							adoptedServerWinner &&
+							current !== null &&
+							process.env.DEV_MODE === 'true'
+						)
+							console.warn(
+								`reconcile() replaced the server-rendered arm with data-key="${String(currentKey)}" in ${elementName(container)} — the client resolved "${String(key)}".`,
+							)
+						adoptedServerWinner = false
 						current?.remove()
 						current = null
 						currentKey = null

@@ -154,7 +154,7 @@ describe('both surfaces lower one reactive conditional identically', () => {
 	test("the client switches through reconcile()'s arm form", () => {
 		const code = fromTsrx.component?.clientCode ?? ''
 		expect(code).toContain(
-			`reconcile(div, div.querySelectorAll<HTMLTemplateElement>(':scope > template[data-arms="0"]'), () => (open.get() ? 'then' : 'else'), (armElement, armKey, first) => {`,
+			`reconcile(div, div.querySelectorAll<HTMLTemplateElement>(':scope > template[data-arms="0"]'), () => ((open.get()) ? 'then' : 'else'), (armElement, armKey, first) => {`,
 		)
 		expect(code).toContain("if (armKey === 'then') {")
 		expect(code).toContain("} else if (armKey === 'else') {")
@@ -169,7 +169,7 @@ describe('both surfaces lower one reactive conditional identically', () => {
 		)
 		// The same calls on the `.tsx` side (its factory parameter differs).
 		expect(fromTsx.component?.clientCode).toContain(
-			`() => (open.get() ? 'then' : 'else')`,
+			`() => ((open.get()) ? 'then' : 'else')`,
 		)
 	})
 })
@@ -203,17 +203,22 @@ describe('the initial winner', () => {
 	})
 
 	test('an initializer over server args selects with a portable `when`', () => {
+		// LT-385g: pinned on a fixture the FULL pipeline accepts — a cell
+		// seeded from a server arg needs the arg's DOM site (`data-mode`),
+		// and a string comparison keeps the generated client typecheckable
+		// (the number-spelled `start > 2` seeded `(getAttribute() ?? '') > 2`,
+		// a string/number relation tsc refuses).
 		const [node] = conditionals(
 			irOf(
 				tsrx('@if (open.get()) { <p>a</p> } @else { <b>b</b> }', {
-					params: '{ start }: { start: number }',
+					params: '{ mode }: { mode: string }',
 					setup:
-						'const open = createCell(start > 2)\n\t\texpose({ open: open.get })',
-				}),
+						"const open = createCell(mode === 'wide')\n\t\texpose({ open: open.get })",
+				}).replace('<c-el>', '<c-el data-mode={mode}>'),
 			).root,
 		)
 		expect(node?.initial).toEqual({
-			select: [{ when: '((start > 2))', key: 'then' }],
+			select: [{ when: "((mode === 'wide'))", key: 'then' }],
 			otherwise: 'else',
 		})
 	})
@@ -247,12 +252,14 @@ export function C({ open }: { open?: boolean })
 				),
 			).root,
 		)
+		// Case keys are value-typed (LT-385d): `case:` + the literal's JSON,
+		// so `@case 1` and `@case '1'` stay distinct keys.
 		expect(node?.arms.map(arm => arm.key)).toEqual([
-			'case:a',
-			'case:b',
+			'case:"a"',
+			'case:"b"',
 			'default',
 		])
-		expect(node?.initial).toEqual({ constant: 'case:b' })
+		expect(node?.initial).toEqual({ constant: 'case:"b"' })
 	})
 
 	test('a derived signal folds through the value harness', () => {
@@ -353,26 +360,107 @@ describe('the server renders the winner beside the inert arms', () => {
 		)
 		expect(diagnostics).toEqual([])
 		const html = await render(component?.serverCode ?? '', 'C', {})
+		// String literals JSON-quote their key (LT-385d); the attribute
+		// escapes the quotes.
 		expect(html).toBe(
 			'<c-el><p data-key="case:2">two</p>' +
-				'<template data-arms="0" data-key="case:a"><p>a</p></template>' +
+				'<template data-arms="0" data-key="case:&quot;a&quot;"><p>a</p></template>' +
 				'<template data-arms="0" data-key="case:2"><p>two</p></template>' +
 				'<template data-arms="0" data-key="default"><p>other</p></template></c-el>',
 		)
 		expect(component?.clientCode).toContain(
-			"() => { switch (m.get()) { case 'a': return 'case:a'; case 2: return 'case:2'; default: return 'default' } }",
+			"() => { switch (m.get()) { case 'a': return 'case:\"a\"'; case 2: return 'case:2'; default: return 'default' } }",
+		)
+	})
+
+	test('a number case and its string spelling stay distinct keys (LT-385d)', () => {
+		const [node] = conditionals(
+			irOf(
+				tsrx(
+					"@switch (m.get()) { @case 1: { <p>n</p> } @case '1': { <p>s</p> } }",
+					{
+						setup: 'const m = createCell<string | number>(1)\n\t\texpose({})',
+					},
+				),
+			).root,
+		)
+		expect(node?.arms.map(arm => arm.key)).toEqual(['case:1', 'case:"1"'])
+	})
+
+	test('a ternary test keeps its own parens in the key thunk (LT-385b)', () => {
+		// `() => (${test} ? 'then' : 'else')` let a ternary, comma or
+		// assignment test bind into the branches and return a non-key; the
+		// emitted test is parenthesized now.
+		const { component } = compile(
+			tsrx("@if (open.get() ? 'x' : 'y') { <p>a</p> } @else { <b>b</b> }", {
+				setup: 'const open = createCell(true)\n\t\texpose({ open: open.get })',
+			}),
+		)
+		expect(component?.clientCode).toContain(
+			"() => ((open.get() ? 'x' : 'y') ? 'then' : 'else')",
+		)
+	})
+
+	test('a losing arm bakes lazy text empty; the live winner keeps its values (LT-385c)', async () => {
+		// The null-guard idiom: the `then` arm's lazy child reads
+		// `user.get()!.name`, and `user` is null at render — the template
+		// must bake the site empty, not evaluate it under the wrong
+		// condition.
+		const { component, diagnostics } = compile(
+			tsrx('@if (user.get()) { <p>{() => user.get()!.name}</p> }', {
+				setup:
+					'const user = deriveCell(() => null as { name: string } | null)\n\t\texpose({})',
+			}),
+		)
+		expect(diagnostics).toEqual([])
+		const html = await render(component?.serverCode ?? '', 'C', {})
+		expect(html).toBe(
+			'<c-el><template data-arms="0" data-key="then"><p></p></template></c-el>',
+		)
+		// The live winner evaluates as before.
+		const resolved = compile(
+			tsrx('@if (user.get()) { <p>{() => user.get()!.name}</p> }', {
+				setup:
+					"const user = deriveCell(() => ({ name: 'Ada' }))\n\t\texpose({})",
+			}),
+		)
+		const liveHtml = await render(resolved.component?.serverCode ?? '', 'C', {})
+		expect(liveHtml).toBe(
+			'<c-el><p data-key="then">Ada</p>' +
+				'<template data-arms="0" data-key="then"><p></p></template></c-el>',
+		)
+	})
+
+	test('a losing arm bakes reactive attributes and class maps empty (LT-385c)', async () => {
+		const { component, diagnostics } = compile(
+			tsrx(
+				'@if (user.get()) { <p data-name={() => user.get()!.name} class={() => ({ big: user.get() !== null })}>x</p> }',
+				{
+					setup:
+						'const user = deriveCell(() => null as { name: string } | null)\n\t\texpose({})',
+				},
+			),
+		)
+		expect(diagnostics).toEqual([])
+		const html = await render(component?.serverCode ?? '', 'C', {})
+		expect(html).toBe(
+			'<c-el><template data-arms="0" data-key="then"><p>x</p></template></c-el>',
 		)
 	})
 
 	test('the skeleton is byte-identical across the three tiers (ADR 0029 s4)', async () => {
+		// LT-385g: the same compiling fixture the `select` test pins — the
+		// retired `createCell(start > 2)` spelling is refused by a full
+		// compile (LTC005's server-only face: the initializer reads a server
+		// arg with no DOM site to seed from).
 		const source = tsrx(
 			'@if (open.get()) { <p class="a">a</p> } @else { <b>b</b> }',
 			{
-				params: '{ start }: { start: number }',
+				params: '{ mode }: { mode: string }',
 				setup:
-					'const open = createCell(start > 2)\n\t\texpose({ open: open.get })',
+					"const open = createCell(mode === 'wide')\n\t\texpose({ open: open.get })",
 			},
-		)
+		).replace('<c-el>', '<c-el data-mode={mode}>')
 		const component = irOf(source)
 		const renders: string[] = []
 		for (const tier of ['folded', 'simulated', 'static'] as EvaluationTier[]) {
@@ -381,7 +469,7 @@ describe('the server renders the winner beside the inert arms', () => {
 				sourcePath: 'c.tsrx',
 				tier,
 			})
-			renders.push(await render(code, 'C', { start: 5 }))
+			renders.push(await render(code, 'C', { mode: 'wide' }))
 		}
 		expect(renders[1]).toBe(renders[0] as string)
 		expect(renders[2]).toBe(renders[0] as string)
@@ -518,6 +606,100 @@ describe('the async boundary switches arms as its task settles (LT-276)', async 
 		expect([...live()].map(el => el.outerHTML)).toEqual([
 			'<p class="error" data-key="err">boom</p>',
 		])
+	})
+})
+
+test('boundary templates bake their value sites empty while pending (LT-385c)', async () => {
+	// The boundary's grammar admits exactly one client-written site per arm
+	// — the recognized value child on the arm root (`emitArmRoot`); deeper
+	// constructs are LTC005. LT-276 already bakes that one site empty in the
+	// templates (the live winner writes it); this pins the emptiness — the
+	// pending task's `get()` must never be evaluated for a template.
+	const { component, diagnostics } = compile(
+		tsrx(
+			'<div class="frame">@try { <div class="content">{data}</div> } @pending { <p class="loading">Loading</p> } @catch (e) { <p class="error">{e.message}</p> }</div>',
+			{
+				setup: `const data = deriveCell(async () => new Promise<string>(() => {}))
+		expose({})`,
+			},
+		),
+	)
+	expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+	const html = await render(component?.serverCode ?? '', 'C', {})
+	expect(html).toBe(
+		'<c-el><div class="frame">' +
+			'<p data-key="nil" class="loading">Loading</p>' +
+			'<template data-arms="0" data-key="ok"><div class="content"></div></template>' +
+			'<template data-arms="0" data-key="nil"><p class="loading">Loading</p></template>' +
+			'<template data-arms="0" data-key="err"><p class="error"></p></template>' +
+			'</div></c-el>',
+	)
+})
+
+describe('two adjacent arm sets keep their templates to themselves (LT-385a)', async () => {
+	// The review's miscompile: the second set renders no live arm (b false),
+	// so its anchor's previousElementSibling is the FIRST set's template —
+	// adopted for its `data-key`, then removed when the key stayed null, and
+	// set 0's next flip threw NotFoundError from insertBefore.
+	const { component, diagnostics } = compile(
+		tsrx(
+			'<div class="frame">@if (a.get()) { <p class="one">A</p> }@if (b.get()) { <p class="two">B</p> }</div>',
+			{
+				setup:
+					'const a = createCell(true)\n\t\tconst b = createCell(false)\n\t\texpose({ a, b })',
+			},
+		),
+	)
+	if (!component) throw new Error(JSON.stringify(diagnostics))
+	// Not 'c-el.client.ts': the boundary describe above already imported a
+	// module of that name, and the process module cache would serve ITS
+	// client for this realm's markup.
+	const clientPath = generated.emit(
+		'c-el-adjacent.client.ts',
+		component.clientCode,
+	)
+	const markup = await render(component.serverCode, 'C', {})
+	const realm = createSimulationRealm()
+	afterAll(() => realm.dispose())
+	await realm.load(() => import(pathToFileURL(clientPath).href))
+	const settle = async () => {
+		for (let i = 0; i < 20; i++) await Promise.resolve()
+	}
+	const frame = () => realm.document.querySelector('c-el .frame') as HTMLElement
+	const host = () =>
+		realm.document.querySelector('c-el') as HTMLElement & {
+			a: boolean
+			b: boolean
+		}
+
+	test('connect leaves both sets and all templates in place', async () => {
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		const { html } = await realm.render({ markup, component: 'c-el' })
+		expect(html).toBe(markup)
+		expect(frame().querySelectorAll('template').length).toBe(2)
+	})
+
+	test('both sets keep flipping independently afterwards', async () => {
+		host().b = true
+		await settle()
+		expect(frame().querySelector('p.two')).not.toBeNull()
+		expect(frame().querySelectorAll('template').length).toBe(2)
+
+		host().a = false
+		await settle()
+		expect(frame().querySelector('p.one')).toBeNull()
+
+		host().a = true
+		await settle()
+		// The flip that threw NotFoundError before the fix: set 0's arm must
+		// come back, with its template intact.
+		expect(frame().querySelector('p.one')).not.toBeNull()
+		expect(frame().querySelectorAll('template').length).toBe(2)
+
+		host().b = false
+		await settle()
+		expect(frame().querySelector('p.two')).toBeNull()
+		expect(frame().querySelector('p.one')).not.toBeNull()
 	})
 })
 

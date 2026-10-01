@@ -342,8 +342,9 @@ export type TemplateNode =
 
 /**
  * One arm of a conditional, keyed by its compile-time name (ADR 0037 s2):
- * `then`/`else` for an `@if`, `case:<literal>` for an `@case` (the literal's
- * source text, so `case:'a'` and `case:1` stay distinct), `default` for
+ * `then`/`else` for an `@if`, `case:<literal JSON>` for an `@case` (value
+ * typed, so `case:1` and `case:"1"` stay distinct while `1` and `1.0` — the
+ * same literal value, as `===` says — share one key), `default` for
  * `@default`. The server emit and the generated client derive the same key,
  * which is what lets the first `reconcile()` run adopt the server-rendered
  * winner.

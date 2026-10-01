@@ -131,8 +131,10 @@ import { createCell } from '@zeix/le-truc'`
 			new Set(),
 		)
 		expect(d).toEqual([])
+		// LT-385d: string case keys are the literal's JSON, escaped in the
+		// attribute.
 		expect(component?.serverCode).toContain(
-			'<template data-arms=\\"0\\" data-key=\\"case:a\\">',
+			'<template data-arms=\\"0\\" data-key=\\"case:&quot;a&quot;\\">',
 		)
 	})
 })

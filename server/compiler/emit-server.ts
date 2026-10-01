@@ -180,6 +180,18 @@ type EmitContext = {
 	 */
 	foldScope: ReadonlySet<string>
 	/**
+	 * LT-385c: set while an arm `<template>` renders (ADR 0037). A
+	 * client-written site inside it — a lazy text child, a reactive
+	 * attribute, a class/style map — has no initial value: the condition
+	 * picked another arm, so evaluating the site would read the world under
+	 * the wrong condition (the null-guard idiom throws on a Folded
+	 * component). Such a site bakes EMPTY (text dropped, attribute omitted);
+	 * server-known content (args, `t.`, static markup) still bakes, and the
+	 * arm's mount writes the rest on enter. The live winner renders outside
+	 * this flag and keeps its values.
+	 */
+	inArmTemplate: boolean
+	/**
 	 * Every loop's `emptyArm` roots (LT-212). They sit in the template tree
 	 * as the loop output's following siblings, so selector resolution and
 	 * the id/prose checks see them, but they render from inside the loop
@@ -612,6 +624,9 @@ const emitElement = (
 				html.expr(attrCall(attr.name, attr.exprText))
 				break
 			case 'reactive': {
+				// LT-385c: a reactive attribute bakes nothing inside an arm
+				// template — the mount writes it on enter.
+				if (ctx.inArmTemplate) break
 				const mirror = hostPropMirrorExpr(ctx.component, attr.thunk)
 				const derived =
 					mirror === null
@@ -635,13 +650,15 @@ const emitElement = (
 				break
 			}
 			case 'class-map':
-				if (isServerEvaluable(attr.object, scope)) {
+				// LT-385c: map entries bake nothing inside an arm template.
+				if (!ctx.inArmTemplate && isServerEvaluable(attr.object, scope)) {
 					ctx.used.add('cls')
 					classExpr = `${ctx.h('cls')}((${attr.thunkText})())`
 				}
 				break
 			case 'style-map':
-				if (isServerEvaluable(attr.object, scope)) {
+				// LT-385c: same as class-map.
+				if (!ctx.inArmTemplate && isServerEvaluable(attr.object, scope)) {
 					ctx.used.add('attr')
 					ctx.used.add('styleAttr')
 					html.expr(
@@ -885,7 +902,13 @@ const emitAsyncBoundary = (
 				.attr('data-key', key)
 				.static('>')}`,
 		)
+		// LT-385c: same rule as the conditional's templates — client-written
+		// sites bake empty in the boundary's arms too (a pending task's
+		// `get()` would throw); the mounts write them on enter.
+		const wasInTemplate = ctx.inArmTemplate
+		ctx.inArmTemplate = true
 		emitArmRoot(root, armScope, null)
+		ctx.inArmTemplate = wasInTemplate
 		push(ctx, "'</template>'")
 	}
 }
@@ -984,7 +1007,13 @@ const emitReactiveConditional = (
 				.attr('data-key', arm.key)
 				.static('>')}`,
 		)
+		// LT-385c: the losing arms bake client-written sites empty — their
+		// condition did not hold at render time. The live winner above keeps
+		// its values.
+		const wasInTemplate = ctx.inArmTemplate
+		ctx.inArmTemplate = true
 		emitPlainElement(ctx, root, scope)
+		ctx.inArmTemplate = wasInTemplate
 		push(ctx, "'</template>'")
 	}
 }
@@ -1029,6 +1058,10 @@ const emit = (
 			push(ctx, 'String(children)')
 			return
 		}
+		// LT-385c: inside an arm template a lazy (client-written) site bakes
+		// empty — the server has no initial value for it under the arm's
+		// condition; the mount writes it on enter.
+		if (node.lazy && ctx.inArmTemplate) return
 		ctx.used.add('esc')
 		const value = node.lazy
 			? lazyValueExpression(
@@ -1216,6 +1249,7 @@ export const emitServerModule = (
 		usedI18nRecord: false,
 		templateQueue: [],
 		foldScope: foldableRenderScope(component),
+		inArmTemplate: false,
 		h: name => (renderScope.has(name) ? mint(`__${name}`) : name),
 		mint,
 	}

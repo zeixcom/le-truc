@@ -669,7 +669,10 @@ export const emitClientModule = (
 		let thunk: string
 		if (plan.construct === 'if') {
 			const [then, otherwise] = plan.arms
-			thunk = `() => (${plan.testText} ? ${then ? key(then) : 'null'} : ${otherwise ? key(otherwise) : 'null'})`
+			// The test's own parens (LT-385b): a ternary, comma or assignment
+			// test would bind into the conditional's branches and return a
+			// non-key.
+			thunk = `() => ((${plan.testText}) ? ${then ? key(then) : 'null'} : ${otherwise ? key(otherwise) : 'null'})`
 		} else {
 			const cases = plan.arms.map(arm =>
 				arm.caseText === null

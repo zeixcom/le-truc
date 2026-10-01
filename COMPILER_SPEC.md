@@ -252,7 +252,7 @@ Whatever JSX expresses stays JSX. There are no `truc:if` / `truc:for` tags.
 | `{xs.length === 0 ? <empty/> : xs.map(…)}` | Loop with an empty arm |
 
 - **Server-known conditions** render only the winning arm; no client construct.
-- **Reactive conditions** (reading a signal) render the initial winner live beside inert arm templates keyed by compile-time names (`then`/`else`, `case:<literal>`) and switch through `reconcile()` over the current arm key (ADR 0037). Arms own their effects; re-entry re-clones.
+- **Reactive conditions** (reading a signal) render the initial winner live beside inert arm templates keyed by compile-time names (`then`/`else`, `case:` + the literal's JSON — value-typed, so `case:1` and `case:"1"` are distinct while `1` and `1.0` share a key — plus `default`) and switch through `reconcile()` over the current arm key (ADR 0037). Arms own their effects; re-entry re-clones. A losing arm's template bakes client-written sites (lazy text, reactive attributes, class/style maps) empty — the arm's mount writes them on enter; the live winner keeps its values.
 - A reactive loop MUST iterate a `createList` (LTC001). A `key` on a server-data loop is an error (LTC052).
 - Every branch arm MUST return JSX. Statements live in setup.
 
