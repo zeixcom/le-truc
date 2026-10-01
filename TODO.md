@@ -33,7 +33,7 @@ parallel.
 - **Design gate.** **LT-360** designs the target-emitter interface (LT-257's interface half)
   and records it as an ADR. It is architect work, so it runs alongside track A from day one.
   It gates LT-274.
-- **A — consolidation (P2b).** **LT-364 first** (owner, 2026-10-01: the sandbox-proof `serve.test.ts` lands before the rest of track A, so every later handoff runs the full server suite). ~~LT-228 → LT-229~~ (reviewed 2026-10-01) → LT-232. LT-243. LT-230. LT-227 → LT-289.
+- **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229~~ (reviewed 2026-10-01) → LT-232. LT-243. LT-230. LT-227 → LT-289.
   LT-234 → LT-247. LT-231 and LT-244 unordered.
 - **B — published IR (ADR 0040).** LT-287 and LT-288. Either may start at once; LT-287 lands
   before LT-274.
@@ -64,7 +64,7 @@ and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, em
 both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names as gating LT-254
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-365.** Next free diagnostic code: LTC059 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's).
+**Next free task ID: LT-366.** Next free diagnostic code: LTC059 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's).
 
 ---
 
@@ -117,36 +117,7 @@ has landed. `bun run build:docs` and `check:links` pass.
   **Check:** the ADR is accepted by the owner. LT-257 and LT-274 are amended. No question above
   is left "decide at implementation".
 
-### A — Consolidation (P2b; LT-364 first, then LT-232 — LT-228/LT-229 reviewed, in DONE.md; LT-227 → LT-289; LT-234 → LT-247)
-
-- [ ] LT-364: Serve the docs server through one pure request handler; test it without a socket.
-  **Skill:** docs-server-dev
-  **Context:** `server/tests/serve.test.ts` fails 14 times (two hooks × 7 `describe` blocks)
-  anywhere local port binding is off, e.g. the agent sandbox. Each block's `beforeAll` calls
-  `Bun.serve({ port: 0 })`. Worse, the server under test is not `serve.ts`: `startTestServer`
-  is a hand-maintained mirror of its routes table. Its own comments say "kept in lockstep by
-  hand", and `isLocale`/`parseSurface` are copies. The suite pins a copy that can drift from the
-  real server. Fix both at once:
-  (1) Extract `serve.ts`'s routes into a pure `createRequestHandler({ development })`
-  (`server/routes.ts`) returning `(req: Request) => Promise<Response>`. Match routes by explicit
-  precedence, reproducing Bun's static > param > wildcard order (assert it with the existing
-  route cases). `/ws` stays in `serve.ts`, because the upgrade needs the `Server`.
-  `Bun.serve({ fetch: (req, srv) => isWs(req) ? upgrade : handler(req), websocket })`.
-  (2) Tests call `handler(new Request('http://le-truc.test/en'))` directly. Delete
-  `startTestServer` and its mirrored helpers, which also covers the HMR and surface-selection
-  blocks via `development: true` and `?surface=`. Traversal: `new Request` normalizes `..` the
-  same way `fetch` does, so the case keeps its meaning. Add an encoded `%2e%2e` variant that
-  exercises the guard itself.
-  (3) Keep **one** socket smoke test, so `Bun.serve` wiring is still proven. Gate it with
-  `describe.skipIf(!canListen && !process.env.CI)`, where `canListen` probes
-  `Bun.serve({ port: 0 })` once. Locally without binding it skips with a printed reason; in CI
-  a failed bind fails loudly instead of skipping.
-  Out of scope: `test:variants` (Playwright against `serve.ts` on :3000) and `check:sim` (Deno
-  fetches npm deps from dl.deno.land). They genuinely need a port and the network. Run them
-  outside the sandbox, or allow `sandbox.network.allowLocalBinding` and that host in settings
-  (the owner's call).
-  **Verification:** every current assertion passes against the real handler with port binding
-  off; `bun run serve` and `test:variants` green on the owner's machine (one manual pass).
+### A — Consolidation (P2b; LT-232 next — LT-364, LT-228/LT-229 reviewed, in DONE.md; LT-227 → LT-289; LT-234 → LT-247)
 
 - [ ] LT-232: Derive the name-set subsets; extend the parity test.
   **Skill:** le-truc-dev

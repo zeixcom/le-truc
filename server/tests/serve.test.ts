@@ -3,31 +3,29 @@
  *
  * Covers:
  * - getLayoutForPath pure unit function
- * - Route responses via isolated Bun.serve instance
+ * - Route responses through the real request handler (routes.ts), no socket
+ * - Route precedence (static > param > wildcard)
  * - HMR injection behaviour (dev vs production)
  * - Bare section roots (/blog, /examples): 301 redirect or 404, never sendfile on a directory
+ * - One Bun.serve smoke test for serve.ts's wiring (skipped without port binding, outside CI)
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {
-	ASSETS_DIR,
 	DEFAULT_LOCALE,
 	EXAMPLES_DIR,
 	GENERATED_CLIENTS_DIR,
-	LOCALES,
-	OUTPUT_DIR,
 	ROOT,
-	SOURCES_DIR,
 } from '../config'
-import { fileExists, getFilePath, isDirectory } from '../io'
 import {
+	createRequestHandler,
 	getLayoutForPath,
-	handleComponentTest,
-	handleSurfaceModule,
-} from '../serve'
-import { hmrScriptTag } from '../templates/hmr'
+	type RequestHandler,
+	type SurfaceSpelling,
+} from '../routes'
+import { listen } from '../serve'
 
 /* === §14.4 getLayoutForPath — unit tests (no server needed) === */
 
@@ -81,245 +79,133 @@ describe('getLayoutForPath', () => {
 	})
 })
 
-/* === Isolated test server === */
+/* === Request helpers === */
 
-// Create a minimal Bun server that mirrors key routes from serve.ts.
-// Uses real docs/ output files — requires a prior build.
-// NODE_ENV is not set to 'development' so HMR injection is inactive.
+// Every leg drives the REAL handler serve.ts binds (LT-364) — no socket, no
+// mirrored routes table. Uses real docs/ output files — requires a prior
+// build. `development: false` keeps HMR injection inactive.
 
-type TestServer = {
-	url: string
-	close: () => void
+const BASE = 'http://le-truc.test'
+
+const prodHandler = createRequestHandler({ development: false })
+const devHandler = createRequestHandler({ development: true })
+
+/**
+ * Request a path the way `fetch` would: redirects are followed unless
+ * `redirect: 'manual'`, since the handler itself never follows one.
+ */
+const request = async (
+	path: string,
+	init: { redirect?: 'manual'; headers?: HeadersInit } = {},
+	handler: RequestHandler = prodHandler,
+): Promise<Response> => {
+	let res = await handler(new Request(`${BASE}${path}`, init))
+	for (let hops = 0; init.redirect !== 'manual' && hops < 5; hops++) {
+		const location = res.headers.get('location')
+		if (res.status < 300 || res.status >= 400 || !location) break
+		res = await handler(new Request(new URL(location, BASE), init))
+	}
+	return res
 }
 
-/** Mirrors serve.ts's locale-prefix guard (LT-174). */
-const isLocale = (segment: string): boolean =>
-	(LOCALES as readonly string[]).includes(segment)
+/* === Route precedence (Bun's static > param > wildcard order) === */
 
-// Mirrors serve.ts's `effectiveSurface` (kept in lockstep by hand): an
-// explicit ?surface= query wins over the TEST_SURFACE env override.
-const SURFACES = ['ts', 'tsrx', 'tsx'] as const
-
-const parseSurface = (
-	query: string | null,
-): (typeof SURFACES)[number] | 'invalid' | undefined => {
-	if (query) {
-		return (SURFACES as readonly string[]).includes(query)
-			? (query as (typeof SURFACES)[number])
-			: 'invalid'
-	}
-	const env = process.env.TEST_SURFACE
-	return (SURFACES as readonly string[]).includes(env || '')
-		? (env as (typeof SURFACES)[number])
-		: undefined
-}
-
-function startTestServer(opts: { development?: boolean } = {}): TestServer {
-	const isDev = opts.development ?? false
-
-	const injectHMR = (html: string): string => {
-		if (!isDev) return html
-		const script = hmrScriptTag({
-			enableLogging: true,
-			maxReconnectAttempts: 10,
-			reconnectInterval: 1000,
-			pingInterval: 30000,
-		})
-		if (html.includes('</head>'))
-			return html.replace('</head>', `${script}\n</head>`)
-		if (html.includes('</body>'))
-			return html.replace('</body>', `${script}\n</body>`)
-		return html + script
-	}
-
-	const serveFile = async (filePath: string): Promise<Response> => {
-		// Directories pass existsSync but fail in sendfile — treat as not found
-		if (!fileExists(filePath) || isDirectory(filePath))
-			return new Response('Not Found', { status: 404 })
-		if (isDev && filePath.endsWith('.html')) {
-			const content = await Bun.file(filePath).text()
-			return new Response(injectHMR(content), {
-				headers: { 'Content-Type': 'text/html; charset=utf-8' },
-			})
-		}
-		return new Response(Bun.file(filePath))
-	}
-
-	const server = Bun.serve({
-		port: 0, // random free port
-		routes: {
-			'/api/status': new Response('OK'),
-
-			'/ws': () => new Response('Not available in production', { status: 404 }),
-
-			'/assets/*': req => {
-				const assetPath = new URL(req.url).pathname.slice('/assets/'.length)
-				const filePath = getFilePath(ASSETS_DIR, assetPath)
-				return serveFile(filePath)
-			},
-
-			'/examples/:component': req => {
-				const filePath = getFilePath(EXAMPLES_DIR, req.params.component)
-				return serveFile(filePath)
-			},
-
-			'/sources/:file': req => {
-				const filePath = getFilePath(SOURCES_DIR, req.params.file)
-				return serveFile(filePath)
-			},
-
-			// Component test routes (LT-284) — wired to the REAL handlers, the
-			// way serve.ts routes them.
-			'/test/:component/surface.js': req =>
-				handleSurfaceModule(
-					req.params.component,
-					parseSurface(new URL(req.url).searchParams.get('surface')),
-				),
-
-			'/test/:component': req =>
-				handleComponentTest(
-					req.params.component,
-					parseSurface(new URL(req.url).searchParams.get('surface')),
-				),
-
-			// Pages live under a locale prefix since LT-174; these mirror
-			// serve.ts's locale-prefixed routes.
-			'/:locale/blog/:slug': req => {
-				const { locale, slug } = req.params
-				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
-				const blogDir = getFilePath(OUTPUT_DIR, locale, 'blog')
-				// `.md` serves the markdown mirror next to the page (LT-198)
-				const name = slug.endsWith('.md')
-					? slug
-					: `${slug.replace(/\.html$/, '')}.html`
-				const filePath = getFilePath(blogDir, name)
-				const rel = filePath.startsWith(blogDir) ? filePath : null
-				return rel ? serveFile(rel) : new Response('Not Found', { status: 404 })
-			},
-
-			'/:locale/:page': req => {
-				const { locale, page } = req.params
-				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
-				const localeDir = getFilePath(OUTPUT_DIR, locale)
-				const filePath = getFilePath(localeDir, page)
-				// Extensionless page URLs redirect to the page (LT-174)
-				if (!page.includes('.') || isDirectory(filePath)) {
-					const name = page.replace(/\.html$/, '')
-					if (fileExists(getFilePath(localeDir, `${name}.html`)))
-						return new Response(null, {
-							status: 301,
-							headers: { Location: `/${locale}/${name}.html` },
-						})
-					return new Response('Not Found', { status: 404 })
-				}
-				return serveFile(filePath)
-			},
-
-			'/:locale': req => {
-				const { locale } = req.params
-				if (!isLocale(locale)) return new Response('Not Found', { status: 404 })
-				return serveFile(getFilePath(OUTPUT_DIR, locale, 'index.html'))
-			},
-
-			'/index.html': () => serveFile(getFilePath(OUTPUT_DIR, 'index.html')),
-
-			'/': () =>
-				new Response(null, {
-					status: 302,
-					headers: { Location: `/${DEFAULT_LOCALE}/index.html` },
-				}),
-		},
-
-		fetch() {
-			return new Response('Not Found', { status: 404 })
-		},
+describe('route precedence', () => {
+	test('a static route beats a param route on the same segment', async () => {
+		// `/api/status` vs `/:locale/:page`, `/index.html` vs `/:locale`
+		expect(await (await request('/api/status')).text()).toBe('OK')
+		const res = await request('/index.html', { redirect: 'manual' })
+		expect(res.status).toBe(200)
 	})
 
-	return {
-		url: server.url.toString().replace(/\/$/, ''),
-		close: () => server.stop(),
-	}
-}
+	test('a param route beats a wildcard route on the same segment', async () => {
+		// `/test/:component` vs `/test/*`
+		const res = await request('/test/basic-counter')
+		expect(res.status).toBe(200)
+	})
+
+	test('a static segment after a param beats a deeper param', async () => {
+		// `/test/:component/surface.js` vs `/test/*`: 400, not the catch-all 404
+		const res = await request('/test/basic-counter/surface.js')
+		expect(res.status).toBe(400)
+	})
+
+	test('an unmatched depth falls through to the wildcard', async () => {
+		const res = await request('/test/basic-counter/a/b')
+		expect(res.status).toBe(404)
+		expect(await res.text()).toBe('Not Found')
+	})
+})
 
 /* === §14.1 Route responses (production mode) === */
 
 describe('route responses', () => {
-	let server: TestServer
-
-	beforeAll(() => {
-		server = startTestServer()
-	})
-
-	afterAll(() => {
-		server.close()
-	})
-
 	test('GET /api/status → 200 "OK"', async () => {
-		const res = await fetch(`${server.url}/api/status`)
+		const res = await request(`/api/status`)
 		expect(res.status).toBe(200)
 		expect(await res.text()).toBe('OK')
 	})
 
 	test('GET /ws → 404 in production', async () => {
-		const res = await fetch(`${server.url}/ws`)
+		const res = await request(`/ws`)
 		expect(res.status).toBe(404)
 		expect(await res.text()).toBe('Not available in production')
 	})
 
 	test('GET / → 302 to the default locale', async () => {
-		const res = await fetch(`${server.url}/`, { redirect: 'manual' })
+		const res = await request(`/`, { redirect: 'manual' })
 		expect(res.status).toBe(302)
 		expect(res.headers.get('location')).toBe(`/${DEFAULT_LOCALE}/index.html`)
 	})
 
 	test('GET /en → 200 with HTML (bare locale root)', async () => {
-		const res = await fetch(`${server.url}/en`)
+		const res = await request(`/en`)
 		expect(res.status).toBe(200)
 		const body = await res.text()
 		expect(body.toLowerCase()).toContain('<!doctype html')
 	})
 
 	test('GET /index.html → 200 with HTML', async () => {
-		const res = await fetch(`${server.url}/index.html`)
+		const res = await request(`/index.html`)
 		expect(res.status).toBe(200)
 		const body = await res.text()
 		expect(body.toLowerCase()).toContain('<!doctype html')
 	})
 
 	test('GET /en/getting-started.html → 200 (existing page)', async () => {
-		const res = await fetch(`${server.url}/en/getting-started.html`)
+		const res = await request(`/en/getting-started.html`)
 		expect(res.status).toBe(200)
 	})
 
 	test('GET /de/getting-started.html → 200 (the second locale tree)', async () => {
-		const res = await fetch(`${server.url}/de/getting-started.html`)
+		const res = await request(`/de/getting-started.html`)
 		expect(res.status).toBe(200)
 	})
 
 	test('GET /fr/getting-started.html → 404 (locale not built)', async () => {
-		const res = await fetch(`${server.url}/fr/getting-started.html`)
+		const res = await request(`/fr/getting-started.html`)
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /nonexistent.html → 404', async () => {
-		const res = await fetch(`${server.url}/nonexistent.html`)
+		const res = await request(`/nonexistent.html`)
 		expect(res.status).toBe(404)
 		expect(await res.text()).toBe('Not Found')
 	})
 
 	test('GET /assets/main.css → 200 (existing asset)', async () => {
-		const res = await fetch(`${server.url}/assets/main.css`)
+		const res = await request(`/assets/main.css`)
 		expect(res.status).toBe(200)
 		expect(res.headers.get('content-type')).toContain('text/css')
 	})
 
 	test('GET /assets/nope.css → 404 (missing asset)', async () => {
-		const res = await fetch(`${server.url}/assets/nope.css`)
+		const res = await request(`/assets/nope.css`)
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /a/b/c/d → 404 (unknown route)', async () => {
-		const res = await fetch(`${server.url}/a/b/c/d`)
+		const res = await request(`/a/b/c/d`)
 		expect(res.status).toBe(404)
 	})
 })
@@ -327,34 +213,21 @@ describe('route responses', () => {
 /* === §14.3 HMR injection === */
 
 describe('HMR injection', () => {
-	let prodServer: TestServer
-	let devServer: TestServer
-
-	beforeAll(() => {
-		prodServer = startTestServer({ development: false })
-		devServer = startTestServer({ development: true })
-	})
-
-	afterAll(() => {
-		prodServer.close()
-		devServer.close()
-	})
-
 	test('production: HTML response has no HMR script', async () => {
-		const res = await fetch(`${prodServer.url}/`)
+		const res = await request(`/`)
 		const body = await res.text()
 		expect(body).not.toContain('__HMR__')
 		expect(body).not.toContain('/ws')
 	})
 
 	test('development: HTML response contains HMR script', async () => {
-		const res = await fetch(`${devServer.url}/`)
+		const res = await request('/', {}, devHandler)
 		const body = await res.text()
 		expect(body).toContain('/ws')
 	})
 
 	test('development: CSS response is not modified with <script>', async () => {
-		const res = await fetch(`${devServer.url}/assets/main.css`)
+		const res = await request('/assets/main.css', {}, devHandler)
 		const body = await res.text()
 		expect(body).not.toContain('<script>')
 	})
@@ -363,18 +236,8 @@ describe('HMR injection', () => {
 /* === §14.5 Path traversal guard === */
 
 describe('path traversal', () => {
-	let server: TestServer
-
-	beforeAll(() => {
-		server = startTestServer()
-	})
-
-	afterAll(() => {
-		server.close()
-	})
-
 	test('GET /assets/../../server/config.ts → 404', async () => {
-		const res = await fetch(`${server.url}/assets/../../server/config.ts`)
+		const res = await request(`/assets/../../server/config.ts`)
 		// Either the request resolves to 404 or the URL gets normalized
 		// Either way the response must not be 200 with file content
 		if (res.status === 200) {
@@ -385,6 +248,38 @@ describe('path traversal', () => {
 			expect(res.status).toBe(404)
 		}
 	})
+
+	// `new Request` normalizes `..` and `%2e%2e` segments the way `fetch`
+	// does, so the case above never reaches a handler. An encoded SLASH
+	// survives URL parsing and is decoded into the param, so these legs hit
+	// the guards themselves: each target file exists, so only a guard
+	// stands between the request and a 200.
+	test('GET /examples/..%2f..%2fserver%2fconfig.ts → 404 (guard, not normalization)', async () => {
+		expect(
+			fs.existsSync(path.join(EXAMPLES_DIR, '../../server/config.ts')),
+		).toBe(true)
+		const res = await request('/examples/..%2f..%2fserver%2fconfig.ts')
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /sources/..%2f..%2fserver%2fconfig.ts → 404', async () => {
+		const res = await request('/sources/..%2f..%2fserver%2fconfig.ts')
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /en/blog/..%2f..%2f..%2fREADME.md → 404', async () => {
+		const res = await request('/en/blog/..%2f..%2f..%2fREADME.md')
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /api/..%2f../package.json → 404', async () => {
+		const res = await request('/api/..%2f../package.json')
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /en/<malformed escape> → 404, not a throw', async () => {
+		expect((await request('/en/%E0%A4%A')).status).toBe(404)
+	})
 })
 
 /* === §14.6 Blog posts under a locale tree (/:locale/blog/:slug) === */
@@ -394,18 +289,8 @@ describe('path traversal', () => {
 const BLOG_SLUG = '2026-03-09-introducing-le-truc'
 
 describe('/:locale/blog/:slug route', () => {
-	let server: TestServer
-
-	beforeAll(() => {
-		server = startTestServer()
-	})
-
-	afterAll(() => {
-		server.close()
-	})
-
 	test('GET /en/blog/<slug>.md → 200 text/markdown (LT-198: the mirror)', async () => {
-		const res = await fetch(`${server.url}/en/blog/${BLOG_SLUG}.md`)
+		const res = await request(`/en/blog/${BLOG_SLUG}.md`)
 		expect(res.status).toBe(200)
 		expect(res.headers.get('content-type')).toContain('text/markdown')
 		const body = await res.text()
@@ -414,35 +299,35 @@ describe('/:locale/blog/:slug route', () => {
 	})
 
 	test('GET /de/blog/<slug>.md → 200 (the second locale tree)', async () => {
-		const res = await fetch(`${server.url}/de/blog/${BLOG_SLUG}.md`)
+		const res = await request(`/de/blog/${BLOG_SLUG}.md`)
 		expect(res.status).toBe(200)
 		expect(res.headers.get('content-type')).toContain('text/markdown')
 	})
 
 	test('GET /en/blog/<slug>.html → 200 with HTML', async () => {
-		const res = await fetch(`${server.url}/en/blog/${BLOG_SLUG}.html`)
+		const res = await request(`/en/blog/${BLOG_SLUG}.html`)
 		expect(res.status).toBe(200)
 		const body = await res.text()
 		expect(body.toLowerCase()).toContain('<!doctype html')
 	})
 
 	test('GET /en/blog/<slug> → 200 (extensionless serves the page)', async () => {
-		const res = await fetch(`${server.url}/en/blog/${BLOG_SLUG}`)
+		const res = await request(`/en/blog/${BLOG_SLUG}`)
 		expect(res.status).toBe(200)
 	})
 
 	test('GET /en/blog/unknown-post.md → 404', async () => {
-		const res = await fetch(`${server.url}/en/blog/unknown-post.md`)
+		const res = await request(`/en/blog/unknown-post.md`)
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /fr/blog/<slug>.md → 404 (locale not built)', async () => {
-		const res = await fetch(`${server.url}/fr/blog/${BLOG_SLUG}.md`)
+		const res = await request(`/fr/blog/${BLOG_SLUG}.md`)
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /en/blog/../../server/config.md → no source leak (traversal)', async () => {
-		const res = await fetch(`${server.url}/en/blog/../../server/config.md`)
+		const res = await request(`/en/blog/../../server/config.md`)
 		if (res.status === 200) {
 			const body = await res.text()
 			expect(body).not.toContain('SERVER_CONFIG')
@@ -459,38 +344,28 @@ describe('/:locale/blog/:slug route', () => {
 // not shipped, so there is no population of broken external links yet.
 
 describe('legacy root URLs', () => {
-	let server: TestServer
-
-	beforeAll(() => {
-		server = startTestServer()
-	})
-
-	afterAll(() => {
-		server.close()
-	})
-
 	test('GET /guide.html → 404 (root-level pages are gone)', async () => {
-		const res = await fetch(`${server.url}/guide.html`)
+		const res = await request(`/guide.html`)
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /blog/<existing-slug>.html → 404 (even for real posts)', async () => {
-		const res = await fetch(`${server.url}/blog/${BLOG_SLUG}.html`)
+		const res = await request(`/blog/${BLOG_SLUG}.html`)
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /blog/unknown-post → 404', async () => {
-		const res = await fetch(`${server.url}/blog/unknown-post`)
+		const res = await request(`/blog/unknown-post`)
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /blog/unknown-post.html → 404', async () => {
-		const res = await fetch(`${server.url}/blog/unknown-post.html`)
+		const res = await request(`/blog/unknown-post.html`)
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /blog/../config → 404 (path traversal rejected)', async () => {
-		const res = await fetch(`${server.url}/blog/../config`)
+		const res = await request(`/blog/../config`)
 		// Bun normalises the URL before routing, so this hits /config (404)
 		// rather than the blog route. Either way, server/config.ts must not leak.
 		if (res.status === 200) {
@@ -505,48 +380,38 @@ describe('legacy root URLs', () => {
 /* === Bare section roots (directories under docs/) === */
 
 describe('bare section roots', () => {
-	let server: TestServer
-
-	beforeAll(() => {
-		server = startTestServer()
-	})
-
-	afterAll(() => {
-		server.close()
-	})
-
 	test('GET /en/blog → 301 to /en/blog.html', async () => {
-		const res = await fetch(`${server.url}/en/blog`, { redirect: 'manual' })
+		const res = await request(`/en/blog`, { redirect: 'manual' })
 		expect(res.status).toBe(301)
 		expect(res.headers.get('location')).toBe('/en/blog.html')
 	})
 
 	test('GET /en/examples → 301 to /en/examples.html', async () => {
-		const res = await fetch(`${server.url}/en/examples`, { redirect: 'manual' })
+		const res = await request(`/en/examples`, { redirect: 'manual' })
 		expect(res.status).toBe(301)
 		expect(res.headers.get('location')).toBe('/en/examples.html')
 	})
 
 	test('GET /en/api → 301 to /en/api.html', async () => {
-		const res = await fetch(`${server.url}/en/api`, { redirect: 'manual' })
+		const res = await request(`/en/api`, { redirect: 'manual' })
 		expect(res.status).toBe(301)
 		expect(res.headers.get('location')).toBe('/en/api.html')
 	})
 
 	test('GET /en/blog follows the redirect to the blog index page', async () => {
-		const res = await fetch(`${server.url}/en/blog`)
+		const res = await request(`/en/blog`)
 		expect(res.status).toBe(200)
 		const body = await res.text()
 		expect(body.toLowerCase()).toContain('<!doctype html')
 	})
 
 	test('GET /assets → 404 (directory without a matching page)', async () => {
-		const res = await fetch(`${server.url}/assets`, { redirect: 'manual' })
+		const res = await request(`/assets`, { redirect: 'manual' })
 		expect(res.status).toBe(404)
 	})
 
 	test('GET /examples/basic → 404 (example group directory)', async () => {
-		const res = await fetch(`${server.url}/examples/basic`)
+		const res = await request(`/examples/basic`)
 		expect(res.status).toBe(404)
 	})
 })
@@ -566,7 +431,7 @@ describe('bare section roots', () => {
 
 const COMPONENT_TAG = 'basic-counter'
 const COMPONENT_DIR = path.resolve(ROOT, 'examples/basic/counter')
-type Surface = (typeof SURFACES)[number]
+type Surface = SurfaceSpelling
 
 const twinExists = (): boolean =>
 	fs.existsSync(path.join(COMPONENT_DIR, `${COMPONENT_TAG}.ts`))
@@ -615,18 +480,8 @@ const requireCorpusBuild = (): Surface => {
 }
 
 describe('component test surface selection', () => {
-	let server: TestServer
-
-	beforeAll(() => {
-		server = startTestServer()
-	})
-
-	afterAll(() => {
-		server.close()
-	})
-
 	test('GET /test/basic-counter → 200 with the default layout bundle, unchanged', async () => {
-		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}`)
+		const res = await request(`/test/${COMPONENT_TAG}`)
 		expect(res.status).toBe(200)
 		const body = await res.text()
 		expect(body).toContain('src="/assets/main.js"')
@@ -637,13 +492,13 @@ describe('component test surface selection', () => {
 	})
 
 	test('GET /test/basic-counter?surface=bogus → 400 (unknown spelling)', async () => {
-		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}?surface=bogus`)
+		const res = await request(`/test/${COMPONENT_TAG}?surface=bogus`)
 		expect(res.status).toBe(400)
 	})
 
 	test('the twin surface is served iff the twin exists', async () => {
 		requireCorpusBuild()
-		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}?surface=ts`)
+		const res = await request(`/test/${COMPONENT_TAG}?surface=ts`)
 		expect(res.status).toBe(twinExists() ? 200 : 404)
 		if (twinExists()) {
 			const body = await res.text()
@@ -663,9 +518,7 @@ describe('component test surface selection', () => {
 			// stale one left by a dissolved set would 200 here (LT-296).
 			if (surface !== selected)
 				expect(variantClientExists(surface)).toBe(sourceExists(surface))
-			const res = await fetch(
-				`${server.url}/test/${COMPONENT_TAG}?surface=${surface}`,
-			)
+			const res = await request(`/test/${COMPONENT_TAG}?surface=${surface}`)
 			expect(res.status).toBe(sourceExists(surface) ? 200 : 404)
 			if (res.status === 200) {
 				const body = await res.text()
@@ -681,7 +534,7 @@ describe('component test surface selection', () => {
 		const surface = requireCorpusBuild()
 		process.env.TEST_SURFACE = surface
 		try {
-			const res = await fetch(`${server.url}/test/${COMPONENT_TAG}`)
+			const res = await request(`/test/${COMPONENT_TAG}`)
 			expect(res.status).toBe(200)
 			const body = await res.text()
 			expect(body).toContain(
@@ -693,8 +546,8 @@ describe('component test surface selection', () => {
 				s => s !== surface && !variantClientExists(s),
 			)
 			if (other) {
-				const explicit = await fetch(
-					`${server.url}/test/${COMPONENT_TAG}?surface=${other}`,
+				const explicit = await request(
+					`/test/${COMPONENT_TAG}?surface=${other}`,
 				)
 				expect(explicit.status).toBe(404)
 			}
@@ -705,8 +558,8 @@ describe('component test surface selection', () => {
 
 	test('the surface module registers the tag exactly once (selected surface)', async () => {
 		const surface = requireCorpusBuild()
-		const res = await fetch(
-			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=${surface}`,
+		const res = await request(
+			`/test/${COMPONENT_TAG}/surface.js?surface=${surface}`,
 		)
 		expect(res.status).toBe(200)
 		expect(res.headers.get('content-type')).toContain('text/javascript')
@@ -727,9 +580,7 @@ describe('component test surface selection', () => {
 	test('the twin surface module also registers the tag exactly once', async () => {
 		requireCorpusBuild()
 		if (!twinExists()) return // no twin authored: the leg above pins the 404
-		const res = await fetch(
-			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=ts`,
-		)
+		const res = await request(`/test/${COMPONENT_TAG}/surface.js?surface=ts`)
 		expect(res.status).toBe(200)
 		const js = await res.text()
 		const callSites = [
@@ -747,8 +598,8 @@ describe('component test surface selection', () => {
 		// pins that nothing stale is served in its place.
 		if (!kept) return
 		expect(variantClientExists(kept)).toBe(true)
-		const res = await fetch(
-			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=${kept}`,
+		const res = await request(
+			`/test/${COMPONENT_TAG}/surface.js?surface=${kept}`,
 		)
 		expect(res.status).toBe(200)
 		const js = await res.text()
@@ -759,21 +610,66 @@ describe('component test surface selection', () => {
 	})
 
 	test('GET /test/basic-counter/surface.js?surface=bogus → 400', async () => {
-		const res = await fetch(
-			`${server.url}/test/${COMPONENT_TAG}/surface.js?surface=bogus`,
-		)
+		const res = await request(`/test/${COMPONENT_TAG}/surface.js?surface=bogus`)
 		expect(res.status).toBe(400)
 	})
 
 	test('GET /test/basic-counter/surface.js (no surface) → 400', async () => {
-		const res = await fetch(`${server.url}/test/${COMPONENT_TAG}/surface.js`)
+		const res = await request(`/test/${COMPONENT_TAG}/surface.js`)
 		expect(res.status).toBe(400)
 	})
 
 	test('GET /test/unknown-component/surface.js?surface=tsrx → 404', async () => {
-		const res = await fetch(
-			`${server.url}/test/unknown-component/surface.js?surface=tsrx`,
-		)
+		const res = await request(`/test/unknown-component/surface.js?surface=tsrx`)
 		expect(res.status).toBe(404)
+	})
+})
+
+/* === Bun.serve wiring — the one socket smoke test (LT-364) === */
+
+// Everything above runs without a socket. This leg proves serve.ts's
+// `listen()` actually routes through the handler. Where local port binding
+// is off (an agent sandbox) it skips with a printed reason; in CI a failed
+// bind is a failure, never a skip.
+const canListen = (() => {
+	try {
+		Bun.serve({ port: 0, fetch: () => new Response() }).stop(true)
+		return true
+	} catch {
+		return false
+	}
+})()
+
+if (!canListen && !process.env.CI)
+	console.warn(
+		'⏭️  Skipping the Bun.serve smoke test: local port binding is unavailable',
+	)
+
+describe.skipIf(!canListen && !process.env.CI)('Bun.serve wiring', () => {
+	let server: ReturnType<typeof listen>
+
+	beforeAll(() => {
+		server = listen(0)
+	})
+
+	afterAll(() => {
+		server.stop(true)
+	})
+
+	test('GET /api/status over a socket → 200 "OK"', async () => {
+		const res = await fetch(new URL('/api/status', server.url))
+		expect(res.status).toBe(200)
+		expect(await res.text()).toBe('OK')
+	})
+
+	test('GET /ws over a socket → 404 outside development', async () => {
+		const res = await fetch(new URL('/ws', server.url))
+		expect(res.status).toBe(404)
+	})
+
+	test('GET /en over a socket → 200 with HTML', async () => {
+		const res = await fetch(new URL('/en', server.url))
+		expect(res.status).toBe(200)
+		expect((await res.text()).toLowerCase()).toContain('<!doctype html')
 	})
 })

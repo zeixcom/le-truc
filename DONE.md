@@ -23,6 +23,22 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
 
 ---
 
+- [x] LT-364: Serve the docs server through one pure request handler; test it without a socket. — reviewed ✓
+  **Skill:** docs-server-dev
+  **Changed:** new `server/routes.ts` — `createRequestHandler({ development })`, the whole routes
+  table and its handlers, `development` passed in rather than read from env at module load.
+  `server/serve.ts` keeps HMR state, the `TEST_SURFACE` exit and an exported `listen(port)`
+  (`Bun.serve({ fetch, websocket })`, `/ws` upgraded in `fetch` in development only).
+  `serve.test.ts` drives the real handler; `startTestServer` and its mirrored helpers are gone;
+  one `Bun.serve wiring` smoke test skips without port binding, except in CI.
+  **Rulings:** routing is now ours, not Bun's: patterns match by first-differing segment kind
+  (static > `:param` > `*`), and params are `decodeURIComponent`-ed (a malformed escape → 404).
+  The traversal legs use an encoded slash (`..%2f`), not `%2e%2e`: WHATWG URL parsing normalizes
+  `%2e%2e` like `..`, so only an encoded slash reaches `guardPath`. Those legs fail with the guard
+  stubbed out. `/examples/` and `/sources/` are now tested with their guards; the old mirror
+  served them unguarded.
+  **Review:** Approved. Owner's manual pass (`bun run serve`, `test:variants`) green, 2026-10-01.
+
 - [x] LT-228: Split `ast-utils.ts` into `vocabulary.ts` + `ast-utils.ts`. — reviewed ✓
   **Skill:** le-truc-dev
   **Changed:** new import-free leaf `server/compiler/vocabulary.ts` holds every recognized-name

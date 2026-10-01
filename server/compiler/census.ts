@@ -121,7 +121,8 @@ export type TranslationGapStatus = (typeof TRANSLATION_GAP_STATUSES)[number]
 const TRANSLATION_GAP_REASONS: Record<TranslationGapStatus, string> = {
 	missing:
 		'missing — no entry in this locale’s catalog; the source-locale string renders',
-	stale: 'stale — the source string changed after this translation was recorded',
+	stale:
+		'stale — the source string changed after this translation was recorded',
 	orphaned:
 		'orphaned — nothing in the corpus declares this key, so the entry never renders',
 	malformed:

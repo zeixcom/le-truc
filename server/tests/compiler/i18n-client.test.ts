@@ -198,8 +198,7 @@ describe('analysis: `t.<key>` in client positions', () => {
 			expect(
 				diagnostics.some(
 					d =>
-						d.code === 'LTC005' &&
-						d.message.includes('server-only name `t`'),
+						d.code === 'LTC005' && d.message.includes('server-only name `t`'),
 				),
 			).toBe(true)
 	})

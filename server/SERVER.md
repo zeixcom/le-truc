@@ -363,7 +363,9 @@ The `fence` schema override provides:
 - Auto-collapse for blocks exceeding 10 lines
 - Code stored in `data-code` attribute for async highlighting
 
-## HTTP Server (`serve.ts`)
+## HTTP Server (`serve.ts`, `routes.ts`)
+
+Every route but `/ws` lives in `routes.ts` as a pure `createRequestHandler({ development })`, a `(req: Request) => Promise<Response>` (LT-364). Its table is matched by explicit precedence, which reproduces Bun's router order: at the first segment where two patterns differ, static beats `:param` beats `*`. Params are percent-decoded as Bun decodes `req.params`, so an encoded `..%2f` reaches the handlers' `guardPath` checks. `serve.ts` keeps only what needs the `Server`. Its `listen(port)` binds `Bun.serve({ fetch, websocket })`, and `fetch` upgrades `/ws` in development before handing every other request to the handler. Tests drive the handler with `new Request(…)` and need no socket; one smoke test binds `listen(0)`.
 
 ### Route Handling
 
@@ -408,7 +410,7 @@ Templates use `{{ variable }}` substitution and `{{ include 'file' }}` directive
 
 All six layouts share a persistent left sidebar + main two-column shell: a slimmed `<header>` top bar (title, `#sidebar-toggle` button, the error `card-callout`) followed by a `.docs-body` wrapper containing the `{{ menu }}` placeholder and the layout's existing `<main class="content-grid">` (each layout's own secondary navigation — `api.html`'s `.api-breadcrumb`/`.api-nav`, `overview.html`'s `.overview-pagination`, content-level `{% listnav %}` — is unchanged, nested inside `.docs-main`/`<main>` alongside the sidebar). `{{ menu }}` is populated per page by `pagesEffect` (see below), not by an include. The toggle button (`id="sidebar-toggle"`, `aria-controls="sidebar"`) and the sidebar root (`<section-menu id="sidebar">`, rendered by `menu()`) are the markup contract for `section-menu`'s mobile drawer behavior — interactivity itself lives in `examples/section/menu/`.
 
-Layout files are cached in a `Map<string, string>` in `serve.ts` for performance. In development mode the cache is bypassed so layout changes take effect immediately without a server restart.
+Layout files are cached in a `Map<string, string>` in `routes.ts` for performance. In development mode the cache is bypassed so layout changes take effect immediately without a server restart.
 
 ### Static File Handling
 

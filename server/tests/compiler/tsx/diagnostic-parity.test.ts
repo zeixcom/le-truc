@@ -1078,7 +1078,9 @@ describe('grammar asymmetry — shapes with no counterpart', () => {
 			diagnostics.some(
 				d =>
 					d.code === 'LTC005' &&
-					d.message.includes('reserved parameters of `reconcile()`’s `bindItem`'),
+					d.message.includes(
+						'reserved parameters of `reconcile()`’s `bindItem`',
+					),
 			),
 		).toBe(true)
 	})

@@ -523,7 +523,9 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 		)
 		expect(component).toBeNull()
 		expect(
-			diagnostics.some(d => d.message.includes('A conditional branch that is not a JSX element')),
+			diagnostics.some(d =>
+				d.message.includes('A conditional branch that is not a JSX element'),
+			),
 		).toBe(true)
 	})
 })

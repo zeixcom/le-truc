@@ -445,9 +445,7 @@ export const lowerFor = (
 		? asArray(body.body).find(s => s.type === 'ReturnStatement')?.argument
 		: body
 	if (isNode(root) && isTrucTry(root)) {
-		ctx.diagnostics.push(
-			diagnostic.boundaryAsLoopRoot(ctx.source, root.start),
-		)
+		ctx.diagnostics.push(diagnostic.boundaryAsLoopRoot(ctx.source, root.start))
 		return null
 	}
 	return lowerLoop(

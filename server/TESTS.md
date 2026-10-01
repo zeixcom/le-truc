@@ -60,7 +60,7 @@ server/tests/
 ├── markdoc-helpers.test.ts     # Markdoc helper utilities
 ├── runtimes.test.ts            # The runtime seam (LT-267): glob grammar, the Node
 │                               #   implementation, Bun↔Node parity on the real trees
-└── serve.test.ts               # HTTP server routes
+└── serve.test.ts               # HTTP server routes (routes.ts handler, no socket; one Bun.serve smoke test)
 ```
 
 The tree names directories and the naming convention — it is deliberately NOT a file

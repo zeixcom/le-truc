@@ -512,7 +512,9 @@ import { Widget } from './widget.tsrx'`,
 		)
 		expect(
 			diagnostics.some(d =>
-				d.message.includes('A setup statement other than a `const` declaration'),
+				d.message.includes(
+					'A setup statement other than a `const` declaration',
+				),
 			),
 		).toBe(true)
 	})
@@ -532,7 +534,9 @@ import { Widget } from './widget.tsrx'`,
 		)
 		expect(
 			diagnostics.some(d =>
-				d.message.includes('A setup statement other than a `const` declaration'),
+				d.message.includes(
+					'A setup statement other than a `const` declaration',
+				),
 			),
 		).toBe(true)
 	})
