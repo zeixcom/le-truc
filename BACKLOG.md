@@ -138,47 +138,45 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   which is the single most visible "this is not published yet" seam in the config surface, and
   a reason the first pre-release should not be demoed without it.
 
-- [ ] LT-257: Template emission — **the target-emitter interface, with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
+- [ ] LT-257: Template emission — **build the target-emitter interface ([ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md)) with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
   **Skill:** le-truc-dev
-  **Interface carved out (Architect, 2026-10-01):** the interface design is **LT-360**, in
-  `TODO.md`. It runs before LT-274, so that the `conditional` node is built against a decided
-  representation. This entry becomes the build half once LT-360's ADR is accepted. LT-360
-  rewrites it then; until that happens, read the ADR before this text.
+  **Re-scoped (Architect, 2026-10-01):** the interface was designed in LT-360 and is ADR 0043.
+  This entry is the build half. Read the ADR first; this text only names the deliverables.
   **Context:** ADR 0034 s3. For a CMS, a folded HTML partial and a template are the same
-  artifact: a Craft page's props are *content* — arbitrary title text, an entry list — so
-  pre-folding per prop signature is combinatorially dead. What folding can do is resolve
-  everything prop-independent and leave the props as **holes**, which is what a template is.
-  **Scope change (owner, 2026-09-19, LT-239 follow-up; ADR 0034 s3 amendment, [ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) amendment):
-  the deliverable is **a target-emitter interface with Twig as its first implementation**, not a
-  Twig emitter. Only the interface is a 3.0 commitment; the set of targets is not. This is a
-  scope sentence now and a rewrite later — HTL is already known to be coming, and a second target
-  hard-coded against a shape never designed to have two is the expensive outcome. **Decide the
-  interface before writing the first emitter**, not by extracting it from Twig afterwards.
-  **Deliverable:** a third emission target beside the client module and the CSS — the
-  component's markup with every prop-independent expression folded and every server arg emitted
-  as a variable in the target's language. The interface carries at minimum: hole emission, the
-  per-target escaping contract, and the unescapable-position refusal. Locale dimensionality is locale × component (ADR 0030 commits 3.0 to
-  per-locale pages), so the emitter emits one partial per component per locale **or** one
-  partial with a locale hole — the choice is the emitter's and must be recorded in the ADR
-  either way.
-  **The escaping contract is a security boundary, not a formatting detail.** The compiler
-  becomes responsible for output encoding in a language it does not execute; a mis-encoded hole
-  is an XSS in a consumer's page. The emitter places Twig's escaping at every hole, and a hole
-  in a position Twig cannot escape safely is a **compile-time diagnostic** (channel: compiler;
-  tier 1 Prevented per [ADR 0028](adr/0028-tiered-error-surfacing.md) s1) — never a silently
-  unsafe emit. A per-target escaping test corpus is part of this task, not a follow-up. New
-  diagnostic code: Tech Writer owns the final copy.
+  artifact: page props are *content*, so pre-folding per prop signature is combinatorially dead.
+  The fold resolves everything prop-independent and leaves each server arg as a **hole**.
+  **Deliverable:**
+  - The shared template walk over the settled IR, writing through `HtmlWriter` (LT-234): the
+    emission-operation vocabulary, portable-subset classification (ADR 0043 s1), escaping-context
+    assignment and the shared refusals (s3), emittability per component (s2), and the
+    `conditional` node's initial winner as a backend conditional beside inert arm templates (s4,
+    built by LT-274).
+  - The Twig target: syntax table, exhaustive escaping map, `{% include … only %}` composition
+    (s5), one partial per component × locale (s6), the declared host helpers — URL allowlist
+    check, `le_truc_sanitize_html`, `le_truc_format` over `MessageFormatter` — listed in the
+    manifest for the integrator.
+  - Census: per-component tier per target, with the routing reasons (`non-portable initial`,
+    Simulated → Static).
+  - The trivial second target in `server/tests/compiler/targets/` only: an operation dump plus an
+    in-process interpreter, compared byte-for-byte with SSG (s8).
+  - CI: a PHP job (`twig/twig`, `intl`) running Twig equivalence, the adversarial escaping
+    corpus and the ICU equivalence corpus; local runs skip without `php`.
+  - Spec sweep (`COMPILER_SPEC.md`): §3.8 drops "calls to functions marked pure"; §9.2's mapping
+    table follows ADR 0043 (message calls as pattern-literal formatter calls, `Compose` with the
+    closed-scope include); D-23 and O-6 close; §3.7's "the library ships no sanitizer" is
+    corrected for the fail-closed escaping default.
+  **New diagnostics (compiler channel, Prevented; only when a template target is configured):**
+  LTC057 — a non-portable expression in a hole position (one face for `Intl` formatting over a
+  hole, naming the ICU-pattern fix); LTC058 — a hole in a refused position (faces:
+  `<script>`/`<style>` content or comment, `on*`/`srcdoc`, attribute or tag name, whole-string
+  `style`). LTC056 is taken by the authored-`<script>` refusal (LT-358 rider). Tech Writer owns
+  the copy; batch it with the next copy round.
   **Depends on** LT-254 (where it ships), LT-258 (the invariant it relies on), LT-313 (the
-  invariant's one unchecked fold position).
-  **Check:** every corpus component emits a Twig partial; the escaping corpus passes, including
-  the negative cases; **the interface is exercised by a second, deliberately trivial target**
-  (even a debug/JSON dump) so "a second target needs no reshaping of the first" is tested rather
-  than asserted; a Twig render of the partial with the same args produces output equivalent
-  to the SSG fold (the same equivalence discipline [ADR 0029](adr/0029-tiered-server-evaluation.md) s7 applies to the two evaluation mechanisms).
-  **ADR 0037 rider (2026-09-21):** the target-emitter interface must represent a reactive
-  condition's prop-dependent initial state — a backend conditional or hidden-by-expression
-  ([ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md), Related). Decide the
-  representation with the interface, not retrofitted onto it.
+  invariant's one unchecked fold position), LT-274 (the `conditional` node), LT-234 (`HtmlWriter`).
+  **Check:** every corpus component emits a Twig partial in its tier; the escaping corpus passes,
+  negative cases included; the test-only second target passes the same equivalence with no
+  change to the Twig target or the shared walk; Twig renders are byte-identical to SSG for every
+  fixture × locale; zero-warning baseline unchanged for builds with no template target.
 
 - [ ] LT-259: The 2.x → 3.0 codemod, and the drift-cost measurement it instruments.
   **Skill:** le-truc-dev

@@ -64,13 +64,13 @@ and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, em
 both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names as gating LT-254
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-363.**
+**Next free task ID: LT-363.** Next free diagnostic code: LTC059 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's).
 
 ---
 
 ### Design gate
 
-- [ ] LT-360: Design the target-emitter interface for template emission — LT-257's interface half, decided before LT-274 builds the `conditional` node.
+- [x] LT-360: Design the target-emitter interface for template emission — LT-257's interface half, decided before LT-274 builds the `conditional` node. — done, pending review ⏳ (2026-10-01: [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md) accepted by the owner; `CONTEXT.md` gains Hole, Target Emitter, Escaping Context, Emittability; ADR 0034 s3 and ADR 0037 Related amended in place, both unpublished; LT-257 rewritten as the build half; LT-274 amended; the authored-`<script>` gap the session surfaced is a rider on LT-358.)
   **Skill:** architect (ADR via adr-keeper)
   **Context:** ADR 0034 s3/s4, M27. LT-257 says "decide the interface before writing the first
   emitter", and its ADR 0037 rider says the interface must represent a reactive condition's
@@ -345,6 +345,7 @@ has landed. `bun run build:docs` and `check:links` pass.
   **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) (✅ Accepted 2026-09-26; ADR 0017's amendment already recorded). A condition that reads a signal — `@if`/`@else`, `.tsx` ternary/`&&`, IIFE switch, `@switch`/`@case` with literal cases — lowers to inert arm `<template>`s plus the server-folded initial winner rendered live, and client-side to `reconcile()` over the new **current-arm-key source** (`Signal<string | null>`; ADR 0017 amendment). Arm keys are the named compile-time constants (`then`/`else`, `case:<literal>`; sub-design 2). Arm effects mount under keyedScopes with collector parity. Static conditions are unchanged — the Folded tier still renders the single winner and omits the rest, so byte-identity across tiers holds. Reactive conditions inside reconcile containers stay banned (LT-186's rule).
   **Deliverable:** shared lowering in both front ends; arm extraction + initial-winner fold rules; the arm-key source form on `reconcile()`; diagnostics with channel/tier fields (dynamic `@case` value: compiler, tier 1 Prevented; reactive-if-in-reconcile-container: compiler, tier 1); goldens and parity extension.
   **Check:** byte-identical skeletons across all three tiers for reactive-if components; both-surface parity for renders *and* diagnostics; equivalence-audit pins refreshed (initial arm adoption is a new designed connect-diff class); M14 bundle budget re-measured; compile-warning baseline 0.
+  **IR requirement (LT-360, [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md) s4):** one `conditional` node serves server-known and reactive conditions. It carries `mode: 'server' | 'reactive'`, the keyed arms, and an **initial winner** kept separate from the client thunk (the thunk stays a span only `emit-client` reads). The initial winner is one of three forms: `{ constant: key | null }`; `{ select: { when, key }[], otherwise: key | null }`, where `when` is a portable expression over server args (ADR 0043 s1); or a `fold` marker, meaning SSG folds through the value harness as today and a template target routes Static. Derive the initial expression by substituting signal initializers back to server args, sharing `fold-inputs`' analysis. A literal initializer, a `requestContext` fallback, or a Parser-backed `host.<prop>` read fed by a compose-site literal folds to `constant`. An unresolvable one gives no live arm (ADR 0037 s5). A non-portable one gives `fold`. SSG output is unchanged by this shape: goldens move only where ADR 0037 itself moves them. No template target consumes the node yet; LT-257 does.
   **Coordinate:** the IR node rides LT-235's discriminated-union session; the boundary switch is LT-276, sequenced after this; diagnostic copy is LT-275.
 
 - [ ] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4). (LT-303, its former sequencing gate, landed 2026-09-25.) **Gates LT-254** (ADR 0040).
@@ -495,6 +496,12 @@ has landed. `bun run build:docs` and `check:links` pass.
   the generic "read the value through an exposed prop" fix, because the bad name is the
   record binding, not a `messageTBindings` entry. Route record-spelled `t` reads to the
   literal-key sentence too. Tier 1 throughout, compiler channel; copy stays Tech Writer's.
+  **Rider (LT-360 session, owner, 2026-10-01):** (d) nothing refuses an authored `<script>`
+  element today: it passes verbatim into served HTML, and no check in `server/compiler/` names
+  it. Add a refusal on both surfaces, independent of template targets: **LTC056**, compiler
+  channel, Prevented. It refuses every `<script>`, whatever its `type`, inside a component
+  template; the page owns script loading. Add a `diagnostic-parity.test.ts` case. LTC057/LTC058
+  are reserved for LT-257, so take LTC056 here. Copy goes to Tech Writer through LT-359's round.
 
 - [ ] LT-361: Teach `sanitizeHtml` and the fail-closed `truc:html` default where users read (LT-138 handoff).
   **Skill:** tech-writer

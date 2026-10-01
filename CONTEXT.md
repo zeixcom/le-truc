@@ -128,6 +128,22 @@ _Avoid_: bare "tier 1/2/3" (ambiguous with **Evaluation Tier**), severity, level
 A build-report record of what the build found. A census entry asserts no fault, so it is neither a diagnostic nor a warning. Two exist: the tier census, per **Component**, and the translation census, per locale.
 _Avoid_: warning, diagnostic, error, report (too generic)
 
+**Hole**:
+A position in an emitted template partial where the CMS renders a value at request time, because the value reads a **Server Arg** ([ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md)). Its expression lies in the portable subset, and the shared walk assigns it an **Escaping Context**.
+_Avoid_: placeholder, slot (a different construct), variable (that is the target's spelling of a hole)
+
+**Target Emitter**:
+A backend of the shared template walk that spells its emission operations in one template language (Twig first). It owns syntax, file naming and its escaping functions, never a decision: which positions are holes, which are refused, and which tier a partial takes are all decided before a target sees them.
+_Avoid_: template engine (that runs the output), renderer, target (alone, ambiguous with `cssTargets`)
+
+**Escaping Context**:
+One member of the closed union that tells a **Target Emitter** how to escape a **Hole**: text, quoted attribute, URL attribute, boolean attribute, class token, style value, HTML. A position outside every context is refused by the shared walk.
+_Avoid_: escaping mode, sink, filter (the target's mechanism, not the context)
+
+**Emittability**:
+Whether a **Component** can be emitted as a template partial in its **Evaluation Tier**. It is classified per expression and decided per **Component**, like the tier. A non-portable server-class expression makes the component non-emittable (a Prevented diagnostic). A non-portable reactive initial value only routes its partial Static.
+_Avoid_: portability (that names the expression-level property), template-safe
+
 **Message Catalog**:
 The per-locale translation overrides for a build ([ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)). A **Component** declares each message key with its source-locale string, and the catalog supplies the other locales. The catalog never reaches a browser.
 _Avoid_: dictionary, translations file, i18n bundle. "Locale data" is not a synonym — it names the whole `i18n` record, of which the catalog is one field.
@@ -159,6 +175,7 @@ _Avoid_: ICU message, template literal (that names the authored `` `…${x}…` 
 - An expression is **Unresolvable** or not, independently of its **Component**'s **Evaluation Tier**
 - A **Routing Signal** selects an **Evaluation Tier**; a **Surfacing Tier** carries a failure; a **Census** record carries neither
 - The client **Harvests** initial state from the rendered DOM in every **Evaluation Tier**
+- A **Target Emitter** spells each **Hole** in its **Escaping Context**; **Emittability** decides whether a **Component** reaches a target at all, and a Static partial is still emittable
 
 ## Example Dialogue
 
