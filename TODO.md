@@ -30,10 +30,10 @@ LT-227 splits the passes that LT-289 retypes. Moves that touch nothing a feature
 parallel.
 
 **The chain.**
-- **Design gate.** **LT-360** designs the target-emitter interface (LT-257's interface half)
+- **Design gate.** ~~**LT-360**~~ (reviewed 2026-10-01, [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md)) designs the target-emitter interface (LT-257's interface half)
   and records it as an ADR. It is architect work, so it runs alongside track A from day one.
   It gates LT-274.
-- **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229~~ (reviewed 2026-10-01) → LT-232. LT-366 → ~~LT-243~~ (reviewed 2026-10-01) → LT-367. LT-230. LT-227 → LT-289.
+- **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229 → LT-232~~ (reviewed 2026-10-01). ~~LT-366 → LT-243 → LT-367~~ (reviewed 2026-10-01). ~~LT-230~~ (reviewed 2026-10-01; its `analysis/selectors.ts` remainder rides LT-245). LT-227 → LT-289.
   LT-234 → LT-247. LT-231 and LT-244 unordered.
 - **B — published IR (ADR 0040).** ~~LT-287~~ (reviewed 2026-10-01) and LT-288. Either may start at once; LT-287 lands
   before LT-274.
@@ -70,129 +70,9 @@ has landed. `bun run build:docs` and `check:links` pass.
 
 ### Design gate
 
-- [x] LT-360: Design the target-emitter interface for template emission — LT-257's interface half, decided before LT-274 builds the `conditional` node. — done, pending review ⏳ (2026-10-01: [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md) accepted by the owner; `CONTEXT.md` gains Hole, Target Emitter, Escaping Context, Emittability; ADR 0034 s3 and ADR 0037 Related amended in place, both unpublished; LT-257 rewritten as the build half; LT-274 amended; the authored-`<script>` gap the session surfaced is a rider on LT-358.)
-  **Skill:** architect (ADR via adr-keeper)
-  **Context:** ADR 0034 s3/s4, M27. LT-257 says "decide the interface before writing the first
-  emitter", and its ADR 0037 rider says the interface must represent a reactive condition's
-  prop-dependent initial state. LT-274 is the first task that adds IR the emitter will read,
-  so the interface is decided now and only the Twig build stays late. This is a grilling session
-  with the owner, not an implementation task. It produces: an ADR (next free number); `CONTEXT.md`
-  terms (hole, target emitter, escaping context, emittability); LT-257 re-scoped as the build
-  half; and LT-274's IR requirement written into its entry.
-  **Questions the session must close:**
-  (1) **Hole grammar.** Is a hole only a bare server-arg read, or a closed expression subset
-  (member access, `!`, literal equality, `&&`/`||`, ternary) that every target must translate?
-  Is an arg expression outside the subset a tier 1 diagnostic, or does it make the component
-  non-emittable with a census reason, parallel to the tiers? This decides whether emittability
-  is per component (like tiers) or per expression (like unresolvability).
-  (2) **Escaping contexts.** Settle the closed taxonomy the interface types, so a target cannot
-  leave one unhandled: text, quoted attribute, URL attribute (does the `setAttribute`
-  safe-protocol allowlist travel into the target?), boolean attribute, `class`/`style` maps,
-  `truc:html` (refuse, or require a target-side sanitizer filter, given LT-138's fail-closed
-  rule), and the always-refused positions (`<script>`, `<style>`, `on*`). Where does the
-  refusal live: shared or per target?
-  (3) **Conditions.** A static condition over args folds per render today; in a template it
-  becomes a backend conditional. For a reactive condition (ADR 0037) the initial winner is
-  prop-dependent: every arm is still emitted as an inert `<template>`, and the live winner is
-  chosen by a backend conditional. What must LT-274's `conditional` node carry for that — the
-  initial-condition expression in hole grammar, separate from the client thunk? What happens to a
-  condition whose initial value reads a signal initializer that is not an arg?
-  (4) **Loops and composition.** `@for` over server data becomes a target loop (with `@empty`).
-  Does a composed child become a target include with an arg mapping, or is it inlined at compile
-  time? That choice also decides the partial's file granularity.
-  (5) **Locale.** One partial per locale, or one partial with a locale hole? Both are allowed
-  by ADR 0034 s4. The blocker is an ICU message or `Intl` format over a server arg
-  (`t.tasks({ count })` with `count` a prop): a template language cannot run it. Is that a
-  refusal, a target-side formatter contract, or a hole that ships the preformatted value from
-  the CMS?
-  (6) **Harvest equivalence.** Holes must render exactly where the client harvests (ADR 0024
-  s3). The check is: a target render with the same args is equivalent to the SSG fold (ADR 0029
-  s7 discipline). Which reference renderer does CI run for Twig — `twig.js`, or PHP in CI?
-  (7) **Which tiers emit.** Folded, yes. Simulated, no (ADR 0035). Static: a skeleton partial
-  or nothing?
-  (8) **The second trivial target** (a JSON/debug dump) that proves "a second target needs no
-  reshaping of the first". Where does it live: tests only, or shipped?
-  **Channel/tier:** the ADR assigns every refusal a channel and tier (an unescapable position is
-  compiler, tier 1, per LT-257). New LTC codes are named; Tech Writer owns their copy in LT-257.
-  **Check:** the ADR is accepted by the owner. LT-257 and LT-274 are amended. No question above
-  is left "decide at implementation".
+LT-360 reviewed 2026-10-01, in DONE.md.
 
-### A — Consolidation (P2b; LT-232 next — LT-364, LT-228/LT-229 reviewed, in DONE.md; LT-227 → LT-289; LT-234 → LT-247)
-
-- [ ] LT-232: Derive the name-set subsets; extend the parity test.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.5/§3 item 13. `REAL_EXPORT_NAMES` duplicates
-  `SIGNAL_CONSTRUCTORS` and `PARSER_FACTORIES` entry-for-entry (its own comment admits
-  "hand-maintained against the barrel"); `MUTABLE_SIGNAL_CONSTRUCTORS` is a hand-copied
-  subset living in `setup-extraction.ts` (ex-`front-end.ts:427`, LT-224). Derive subsets from supersets; relocate the
-  mutable set beside `SIGNAL_CONSTRUCTORS` (post-LT-228: into `vocabulary.ts`); extend
-  `globals.test.ts`'s parity test (only `FACTORY_CONTEXT_MEMBER_NAMES` has one) to pin
-  every set against the `@tsrx/core` barrel.
-  **Verification:** typecheck; the extended parity test; goldens + parity
-  byte-identical.
-
-- [ ] LT-366: Replace the browser-bundle smoke with a source-level runtime-neutrality check over both front ends.
-  **Skill:** le-truc-dev
-  **Context:** Owner ruling 2026-10-01 (LT-243 design session): browser purity was only ever
-  needed by the proposed playground. It belongs to [ADR 0025](adr/0025-client-side-component-playground.md)
-  s6, which builds its own bundle gate if accepted. The compiler's standing rule is
-  [ADR 0038](adr/0038-runtime-neutral-build-path.md) s2: `server/compiler/`'s own sources touch
-  no `RuntimeIO`, no `Bun.*`, no `import.meta`-anchored path and no IO module. Portable
-  `node:path` is allowed, and third-party dependencies are out of scope. The bundle smoke
-  enforced a different, stronger property, and it had two holes: it bundled only the `.tsrx`
-  entry, and `assertNodeFree` misses Bun's emitted `__require("node:…")`.
-  **Do:** a test that scans every non-test `.ts` under `server/compiler/` (both front ends and
-  the shared machinery) and fails on:
-  - a `Bun` global read;
-  - `import.meta` used for a path;
-  - any `node:` (or bare built-in) specifier outside the allowlist `node:path` — static
-    import, `require(…)` and dynamic `import(…)` alike.
-
-  Use the existing estree walk rather than a regex, so `require`/`import()` in any form are
-  seen. Move `server/compiler/smoke.ts` (a dev script using `node:fs`; its `ROOT` resolves
-  above the repo) to `scripts/`, or delete it if `server-render-smoke.test.ts` covers it.
-
-  Retire `scripts/build-tsrx-browser.ts`, `server/tests/compiler/browser-bundle.test.ts`, the
-  `build:tsrx:browser` package script and `server/generated/tsrx-browser/`. Their
-  Node/browser artifact-parity half goes with them; ADR 0025 s6 re-creates it.
-
-  Sweep the comments that cite browser purity: `imports.ts` (header and the POSIX helpers —
-  keep the helpers, restate the reason), `emit-paths.ts`, `ast-utils.ts`, `params.ts`,
-  `corpus-config.ts`, `to-estree.ts`. In docs: `LE_TRUC_COMPILER.md` §7's purity gate and its
-  "Browser purity is CI-pinned" line, and the `VOCABULARY_LEDGER.md` rows for
-  `build:tsrx:browser` and `server/generated/tsrx-browser/`. Introduces no diagnostic code
-  and no runtime check.
-  **Check:** the check fails on a planted `Bun.file`, `import 'node:fs'`, `require('node:os')`
-  and `import('node:child_process')` (fixture-level unit cases), and passes on the tree;
-  `check:portability` green; server suite green; `check:links` green.
-
-- [ ] LT-367: Move `to-estree.ts` onto typescript-estree's public `parse()` (LT-243 review follow-up).
-  **Skill:** le-truc-dev
-  **Context:** LT-243 imports `astConverter` from `@typescript-eslint/typescript-estree/use-at-your-own-risk`,
-  with a cast over a partial `ParseSettings`. That entry was chosen only to dodge the package's
-  load-time `node:` requires, and it didn't (both entries pull them). Under the 2026-10-01
-  ruling (ADR 0038 s2) those requires don't matter, so the unstable entry and its cast buy
-  nothing. Switch to `parse(source, { filePath, jsx: true, range: true, loc: false, comment:
-  false, tokens: false })` — the API typescript-estree versions under semver. Keep the
-  normalization pass and the LTC008 catch unchanged. The halted session's differential harness
-  already ran on `parse()` with the same results. Update the module doc's API sentence.
-  **Check:** `server/generated/components/` byte-identical; server suite green;
-  `check:portability` green.
-
-- [ ] LT-230: Route the sixteen `TemplateNode` walks through `walk.ts`; settle the `pendingChildren` policy once.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.4/§3 item 11. Sixteen hand-rolled template walks against a
-  `walk.ts` whose authorized-exception list (`walk.ts:11`) is shorter than the actual
-  list; five exclusivity-aware cascades in `analysis/selectors.ts` alone disagree on
-  max-vs-sum and pending-arm handling — the soil the §1.4 adjacent gap grew in. Route
-  them through `walk.ts` (keeping per-site aggregation semantics), narrow the
-  authorized-exception list to what genuinely remains (walks whose recursion IS the
-  semantics), and record ONE policy for `pendingChildren` arms, informed by LT-221's
-  probe. **The five `analysis/selectors.ts` cascades ride LT-245's outcome**: a css-select
-  GO replaces them wholesale (the library owns the traversal); a NO-GO keeps them here on
-  the shared walk. Sequence after LT-245's ruling either way.
-  **Verification:** goldens + parity byte-identical; the LT-221 probe still pins; full
-  gates.
+### A — Consolidation (P2b; LT-227 → LT-289 next; LT-234 → LT-247 — LT-364, LT-228–LT-230, LT-232, LT-366, LT-367 reviewed, in DONE.md)
 
 - [ ] LT-227: Split `runLoops` and `runHarvest` at their existing pass banners.
   **Skill:** le-truc-dev
@@ -312,7 +192,7 @@ has landed. `bun run build:docs` and `check:links` pass.
   **Check:** goldens + parity byte-identical; `bun test server/tests`, typecheck, warning
   baseline 0, census unchanged from the iteration baseline.
 
-### C — Reactive conditions (ADR 0037; LT-274 after LT-360, LT-230, LT-243, LT-287)
+### C — Reactive conditions (ADR 0037; LT-274 unblocked — LT-360, LT-230, LT-243, LT-287 reviewed)
 
 - [ ] LT-274: Lower reactive conditions to template-cloned arms on both surfaces (ADR 0037 sub-designs 1–3 and 5). **Gates LT-254** (ADR 0040: the `conditional` `TemplateNode` variant must exist before the first publish). **Gated on LT-360** (the template-emission interface fixes how the node carries a prop-dependent initial condition) **and on LT-230, LT-243, LT-287** (consolidation first, so the new node lands in one walk and on the settled IR).
   **Skill:** le-truc-dev
@@ -453,6 +333,12 @@ has landed. `bun run build:docs` and `check:links` pass.
   (descendant combinators, `:not()` are "cannot verify"); a real parser widens verification and
   shrinks code at once. Runtime neutrality (ADR 0038): the candidates must run under every
   supported JS runtime (`check:portability`); browser loadability is not required.
+  **Handoff (LT-230 review, 2026-10-01):** LT-230 settled the `@pending` policy (every walk enters
+  the arm; with a pending arm the `@try` arms sum, without one body XOR catch is max) and routed the
+  flat collections (`allComposeNodes`, `composeNodesBySource`, `matchesUnder`). What remains for this
+  spike is the exclusivity arithmetic: `countForSelector`, `countComposeBySource`, and the
+  element-chain searches `enclosingIfOf`/`enclosingIfIn`. On NO-GO, keep them on `childNodes`;
+  either way they must follow the recorded pending policy.
   **Deliverable:** spike findings + a GO/NO-GO ruling recorded here; if GO, implementation
   tasks with the per-site behavior-preservation discipline the other swaps carry.
   **Verification (spike):** the corpus's structural-uniqueness answers are reproduced

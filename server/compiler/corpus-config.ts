@@ -10,11 +10,11 @@
  *
  * This module is pure — types, defaults, validation, and path math. It reads
  * no files and calls no runtime-specific API (no `Bun.*`, no
- * `import.meta.dir`), so `server/compiler/` stays runtime-neutral for LT-267.
- * Config LOADING and source globbing live in `server/corpus-sources.ts`, the
- * file-IO layer LT-267 replaces. The emitter-facing subset lives one level
- * down in `emit-paths.ts`, which carries no `node:` import because the
- * browser bundle reaches it.
+ * `import.meta.dir`), so `server/compiler/` stays runtime-neutral (ADR 0038
+ * s2; `node:path` is the one built-in allowed). Config LOADING and source
+ * globbing live in `server/corpus-sources.ts`, the file-IO layer LT-267
+ * replaces. The emitter-facing subset lives one level down in
+ * `emit-paths.ts`.
  */
 
 import { isAbsolute, relative, resolve, sep } from 'node:path'

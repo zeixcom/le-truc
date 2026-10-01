@@ -10,20 +10,37 @@
  * (`globals.test.ts`, `diagnostics.test.ts`) pin them.
  */
 
-/** Signal constructor names recognized in setup declarations. */
-export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>([
+/**
+ * Signal constructors whose result is MUTABLE, hence Slot-backed — the
+ * declared family (`setup-extraction.ts`). A subset of `SIGNAL_CONSTRUCTORS`
+ * by construction: the superset spreads this tuple.
+ */
+export const MUTABLE_SIGNAL_CONSTRUCTOR_NAMES = [
 	'createCell',
 	'createState',
 	'createList',
 	'createStore',
+] as const
+
+export const MUTABLE_SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>(
+	MUTABLE_SIGNAL_CONSTRUCTOR_NAMES,
+)
+
+/** Signal constructor names recognized in setup declarations. */
+export const SIGNAL_CONSTRUCTOR_NAMES = [
+	...MUTABLE_SIGNAL_CONSTRUCTOR_NAMES,
 	'deriveCell',
 	'deriveList',
 	'deriveStore',
 	'createMemo',
-])
+] as const
+
+export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>(
+	SIGNAL_CONSTRUCTOR_NAMES,
+)
 
 /** Parser factory names recognized as ambients in `expose()` initializers. */
-export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
+export const PARSER_FACTORY_NAMES = [
 	'asString',
 	'asInteger',
 	'asNumber',
@@ -31,7 +48,11 @@ export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
 	'asEnum',
 	'asClampedInteger',
 	'asJSON',
-])
+] as const
+
+export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>(
+	PARSER_FACTORY_NAMES,
+)
 
 /**
  * Attribute names whose ABSENCE carries meaning (CHECKLIST §5): `hidden`
@@ -154,37 +175,31 @@ export const FACTORY_CONTEXT_MEMBERS: ReadonlySet<string> = new Set<string>(
  * names an authored `.tsrx` source may legitimately `import { … } from
  * '@zeix/le-truc'` (ADR 0024 sub-design 16: real exports are imported
  * explicitly; the FactoryContext vocabulary is ambient and disjoint from
- * this set). Hand-maintained against the barrel — the duplication
- * precedent is `MANAGED_FORM_MEMBERS`; a barrel change that forgets this
- * list fails the corpus check, since a newly exported name used in
- * authored code would fire LTC036 until listed here.
+ * this set). Composed from the signal-constructor and parser-factory
+ * tuples, so those stay subsets by construction; the remainder is
+ * hand-listed, and `globals.test.ts` pins the whole set equal to the
+ * barrel's runtime exports.
  */
 export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
+	...SIGNAL_CONSTRUCTOR_NAMES,
+	...PARSER_FACTORY_NAMES,
 	// @zeix/cause-effect bridge (index.ts re-exports)
 	'abort',
 	'batch',
 	'CircularDependencyError',
-	'createCell',
 	'createCollection',
 	'createComputed',
 	'createEffect',
-	'createList',
-	'createMemo',
 	'createMutableSignal',
 	'createScope',
 	'createSensor',
 	'createSignal',
 	'createSlot',
-	'createState',
-	'createStore',
 	'createTask',
 	'DEEP_EQUALITY',
 	'DEFAULT_EQUALITY',
 	'DuplicateKeyError',
-	'deriveCell',
-	'deriveList',
 	'deriveSignal',
-	'deriveStore',
 	'EffectConvergenceError',
 	'InvalidCallbackError',
 	'InvalidSignalValueError',
@@ -248,6 +263,7 @@ export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
 	'InvalidTemplateError',
 	'MissingElementError',
 	'NoActiveCollectorError',
+	'UnsafeAttributeError',
 	// src/extensions, src/helpers, src/scheduler
 	'observedAttributes',
 	'formAssociated',
@@ -264,13 +280,6 @@ export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
 	'schedule',
 	'throttle',
 	// src/parsers, src/types
-	'asBoolean',
-	'asJSON',
-	'asClampedInteger',
-	'asInteger',
-	'asNumber',
-	'asEnum',
-	'asString',
 	'asParser',
 	'defineMethod',
 	'isMethodProducer',

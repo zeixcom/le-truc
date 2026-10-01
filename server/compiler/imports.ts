@@ -19,9 +19,10 @@
  *    its bindings, inferred from usage — the same free-identifier analysis
  *    the compiler already runs for setup consts — no new annotation syntax.
  *
- * Browser-pure by construction (ADR 0025 sub-design 6): specifier
- * resolution uses the small pure-string POSIX helpers below, NOT
- * `node:path` — the compiler must stay loadable in a browser bundle.
+ * Specifier resolution uses the small pure-string POSIX helpers below:
+ * module specifiers are `/`-separated on every host, so path math over them
+ * must not follow the platform separator the way `node:path`'s default
+ * export does on Windows.
  */
 
 import type { AstNode } from './ast-node'
@@ -43,7 +44,7 @@ import {
 } from './vocabulary'
 import { collectAttrs, walkTemplate } from './walk'
 
-/* === Pure-string POSIX path helpers (no node:path — browser purity) === */
+/* === Pure-string POSIX path helpers (specifiers are `/`-separated on every host) === */
 
 /** `dir/file.tsrx` → `dir`; `file.tsrx` → `.`; `/file.tsrx` → `/`. */
 const dirname = (p: string): string => {

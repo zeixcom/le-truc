@@ -13,7 +13,7 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 Pruned 2026-10-01, fourth pass (Architect, after the "ICU MessageFormat switch" iteration
 closed; Changelog Keeper merged it into `CHANGELOG.md [Unreleased]` the same day). **No task
-entries remained** at that prune; LT-228/LT-229 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
+entries remained** at that prune; LT-228–LT-230, LT-232, LT-243, LT-287, LT-360, LT-364, LT-366 and LT-367 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
 LT-308, LT-343, LT-344, LT-346–LT-351, LT-354. Where their rulings live: ADR 0030 (s4 ICU, s6/s9
 locale and the client channel, the corpus-only MF2 authoring constraint), ADR 0032 s6 (diagnostic
 parity), ADR 0010 s6 (hand-written `dangerouslyBindInnerHTML` stays raw), AGENTS.md, and the
@@ -22,6 +22,32 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
 ×3, 2026-09-21 ×2. Full entry text: `git log -p -- DONE.md`.
 
 ---
+
+- [x] LT-360: Design the target-emitter interface for template emission (LT-257's interface half). — reviewed ✓
+  **Skill:** architect (ADR via adr-keeper)
+  **Changed:** [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md), accepted by the owner 2026-10-01. `CONTEXT.md` gains Hole, Target Emitter, Escaping Context and Emittability. ADR 0034 s3 and ADR 0037 Related are amended in place (both unpublished).
+  **Review:** Approved. All eight questions are closed in the ADR. Handoffs: LT-257 is now the build half; LT-274 carries the `conditional` node's IR requirement (ADR 0043 s4); the authored-`<script>` gap is a rider on LT-358.
+
+- [x] LT-232: Derive the name-set subsets; extend the parity test. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `vocabulary.ts` builds `MUTABLE_SIGNAL_CONSTRUCTOR_NAMES` ⊂ `SIGNAL_CONSTRUCTOR_NAMES` ⊂ `REAL_EXPORT_NAMES` by spread, plus `PARSER_FACTORY_NAMES`. The mutable set moved there from `setup-extraction.ts`. `globals.test.ts` pins the subsets type-level and at runtime, pins `REAL_EXPORT_NAMES` exactly equal to the `@zeix/le-truc` barrel's runtime exports, and checks that the ambients are disjoint from it. **Behavior change:** `UnsafeAttributeError` was missing from `REAL_EXPORT_NAMES`, so an authored import of it fired LTC036. It is now listed.
+  **Review:** Approved. The exact-equality test replaces the "hand-maintained against the barrel" caveat.
+
+- [x] LT-366: Replace the browser-bundle smoke with a source-level runtime-neutrality check. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new `server/tests/compiler/runtime-neutrality.test.ts` (ADR 0038 s2). It parses every non-test `.ts` under `server/compiler/` and walks it with `walkNodes`. It flags a `Bun` global, any `import.meta`, and any built-in specifier other than `node:path`, in every import form. A non-static specifier fails unless it names a module-level `const` string (`simulation/resolve.ts`, ADR 0035 s4). Retired: `scripts/build-tsrx-browser.ts`, `browser-bundle.test.ts`, the `build:tsrx:browser` script, `server/generated/tsrx-browser/`, and `server/compiler/smoke.ts` (the gate flagged it; `server-render-smoke.test.ts` covers it). Purity comments and docs were swept.
+  **Review:** Approved. Owner to rerun `check:portability`'s bun leg outside the sandbox (the sandbox blocked the tempdir).
+
+- [x] LT-367: Move `to-estree.ts` onto typescript-estree's public `parse()`. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `parse()` replaces `use-at-your-own-risk`'s `astConverter`. The direct `typescript` import and the `ParseSettings` cast are gone. ScriptKind follows the file extension, which is always `.tsx` here. `suppressDeprecatedPropertyWarnings: true` is set explicitly because its default flips under `NODE_ENV=test`. Generated components are byte-identical.
+  **Review:** Approved.
+
+- [x] LT-230: Route the `TemplateNode` walks through `walk.ts`; settle the `pendingChildren` policy. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Ruling (recorded in `walk.ts`'s module doc):** every walk enters `@pending` arms, because they are rendered, hidden-toggled markup. The `intoPending` option is deleted. Exclusivity follows the same fact: an async boundary's arms sum, and a plain error boundary is body XOR catch (max).
+  **Changed:** new `someNode` (the short-circuiting sibling of `walkTemplate`). Eight hand walks are routed through it; `refBranchGuard`/`inOptionalBranch` keep their context threading but step via `childNodes`. The authorized-exception list is rewritten by category. **Bug fix:** a compose site nested below a `@pending` root (`@pending { <div><Child id="x"/></div> }`) used to compile clean and escape LTC038, LTC011 and `countComposeBySource`. It is now caught and pinned in `compose.test.ts`. Goldens and parity are byte-identical.
+  **Review:** Approved. Handoff: the exclusivity cascades (`countForSelector`, `countComposeBySource`, `enclosingIfOf`/`enclosingIfIn`) ride LT-245; this is recorded in its entry. Owner to rerun `check:portability` and `check:sim` outside the sandbox.
 
 - [x] LT-287: SignalIR → three members by constructor family (ADR 0040 s2). — reviewed ✓
   **Skill:** le-truc-dev

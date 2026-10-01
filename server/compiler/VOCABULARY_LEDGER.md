@@ -20,7 +20,7 @@ would have been as wrong as none.
 | `check:tsrx` → **`check:corpus`** | renamed | `scripts/check-tsrx.ts` already globbed `examples/**/*.tsrx` **and** `examples/**/*.tsx` (LT-202). It type-checks the whole corpus through emit-then-check, whichever front end produced each module. The name was wrong before the publish question arose. File renamed to `scripts/check-corpus.ts`. |
 | `scripts/build-tsrx.ts` → **`scripts/build-corpus.ts`** | renamed | The standalone corpus emit that `typecheck`, `build:cem`, `build:examples:js` and `check:nosubstrate` all run. It emits for whatever the corpus contains; nothing about it is `.tsrx`-specific except today's corpus. |
 | **`build:corpus`** | added | `build:tsrx` was named in the LT-206 deferral list but never existed as a `package.json` script — only as a file four other scripts invoked inline. Added so the renamed script is addressable, and so the deferral list is discharged honestly rather than by a technicality. |
-| `build:tsrx:browser` / `scripts/build-tsrx-browser.ts` | **kept** | Bundles `server/compiler/frontend/tsrx/index.ts` specifically — the `.tsrx` front end — for the [ADR 0025](../../adr/0025-client-side-component-playground.md) playground compile worker. The `.tsx` front end has no browser bundle and is not in this artifact. The name is accurate; renaming it would make it less so. Output stays at `server/generated/tsrx-browser/`. |
+| `build:tsrx:browser` / `scripts/build-tsrx-browser.ts` | **retired** (LT-366) | Browser purity is not a compiler requirement ([ADR 0038](../../adr/0038-runtime-neutral-build-path.md) s2); `server/tests/compiler/runtime-neutrality.test.ts` replaces the bundle smoke with a source-level check. A playground bundle is [ADR 0025](../../adr/0025-client-side-component-playground.md) s6's own work. |
 
 **Known gap, not fixed here (deliberate).** `scripts/build-corpus.ts` globs
 `examples/**/*.tsrx` only, while `scripts/check-corpus.ts` and the build effect
@@ -46,7 +46,7 @@ place to widen, so the three cannot drift apart again.
 | `simulateTsrxCorpus` (`server/effects/simulate.ts`) → **`simulateCorpus`** | renamed | Simulation is machinery, surface-independent ([ADR 0027](../../adr/0027-server-simulation.md)). |
 | `server/generated/tsrx/` → **`server/generated/components/`** | renamed | Holds both surfaces' output — `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json`, `i18n.ts`. Gitignored; nothing downstream pins the path except in-repo callers, all updated. |
 | `server/tests/helpers/generated-tsrx.ts` → **`server/tests/helpers/generated-corpus.ts`** | renamed | Its scratch-directory prefix moved with it: `tsrx-test-<label>-` → `corpus-test-<label>-`. |
-| `server/generated/tsrx-browser/` | **kept** | See `build:tsrx:browser` above — it really is the `.tsrx` front end's bundle. |
+| `server/generated/tsrx-browser/` | **retired** (LT-366) | Went with `build:tsrx:browser` above. |
 
 ## 3. `@tsrx/core` in internal APIs
 

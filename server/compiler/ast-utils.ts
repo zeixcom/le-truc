@@ -9,8 +9,7 @@
  * This module holds no `@tsrx/core` VALUE import (only the `AstNode` type,
  * erased at compile time) — `compiler.ts` remains the ONE module importing
  * `@tsrx/core` for parsing (ADR 0023 sub-design 2). Its one value import,
- * `eslint-visitor-keys`, is pure data with no Node-only path, so the
- * browser bundle (M25) stays clean.
+ * `eslint-visitor-keys`, is pure data.
  */
 
 import { KEYS } from 'eslint-visitor-keys'

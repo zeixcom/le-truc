@@ -362,7 +362,6 @@ front-end modules, then the two front ends:
 | `indent.ts` / `css.ts` | Template-literal-safe reindentation / `<style>` dedent |
 | `diagnostics.ts` | Diagnostic codes (`LTC###` plus the six `.tsrx`-grammar `TSRX###` codes), message factories |
 | `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup, and `icu/evaluate.ts`'s `formatMessage`, which the generated `i18n` module wraps around each argument message) |
-| `smoke.ts` | Dev script: compile corpus, execute renders, print |
 | `census.ts` | The census channel (§ 5.2): `Census` records, `tierCensus`, `translationCensus`, `formatCensus` |
 | `build-report.ts` | The build-report channel (§ 5): partitioning, matching, and the tier-2 warning copy |
 | `simulation/` | The simulation **seam** (ADR 0035 s3–s4): `contract.ts` (DOM-free interface + version), `capabilities.ts` (classifier-facing unanswerable table), `resolve.ts` (the resolver) |
@@ -1009,12 +1008,14 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   `registry`/`spans` imports), `check:corpus` (§ 6), and the CEM build
   (`scripts/build-corpus.ts` feeds `cem analyze`, which reads the generated
   clients; ADR 0024 sub-design 9).
-- **Browser purity gate**: `scripts/build-tsrx-browser.ts` bundles
-  `server/compiler/frontend/tsrx/index.ts` for the browser target with `node:*` externals left
-  unshimmed, and `server/tests/compiler/browser-bundle.test.ts` asserts no
-  `node:` import survived and that a fixture compiled through the bundle is
-  byte-identical to the Node build — the seed of the in-browser playground
-  compiler.
+- **Runtime-neutrality gate** (ADR 0038 s2):
+  `server/tests/compiler/runtime-neutrality.test.ts` parses every non-test
+  `.ts` under `server/compiler/` — both front ends and the shared machinery
+  — and fails on a `Bun` global, any `import.meta`, or a built-in module
+  specifier other than `node:path`, whether static import, `require(…)` or
+  dynamic `import(…)`. Third-party dependencies are out of scope. Browser
+  loadability is not a compiler requirement; ADR 0025 s6 owns any bundle
+  gate.
 - **Golden tests** (`server/tests/compiler/*.golden.test.ts`) pin server renders,
   CSS bytes, client snapshots, and diagnostics for the corpus; regenerate
   with `bun server/tests/compiler/update-snapshots.ts`. The fixture-pinned
@@ -1184,7 +1185,7 @@ member.
   client-only free names for type-checking, but never a `first()` ref — a ref
   stub whose value reached the markup would render an empty string where the
   author asked for a DOM read.
-- **Browser purity is CI-pinned** (§ 7).
+- **Runtime neutrality is CI-pinned** (§ 7) — at the source level, not by bundling.
 
 ---
 

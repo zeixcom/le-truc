@@ -21,7 +21,7 @@ import type { AstNode } from './ast-node'
 import { isNode } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import type { TemplateNode } from './ir'
-import { walkTemplate } from './walk'
+import { childNodes, someNode, walkTemplate } from './walk'
 
 /* === Types === */
 
@@ -141,37 +141,19 @@ export const collectMatchingElements = (
 ): { elements: ElementNode[]; unsupported: boolean } => {
 	const elements: ElementNode[] = []
 	let unsupported = false
-	const visit = (node: TemplateNode): void => {
-		if (node.kind === 'element') {
+	walkTemplate(
+		root,
+		node => {
+			if (node.kind !== 'element') return
 			const result = matchesAuthoredSelectorOn(
 				{ tag: node.tag, attrs: staticAttrs(node) },
 				selectorList,
 			)
 			if (result === null) unsupported = true
 			else if (result) elements.push(node)
-			for (const child of node.children) visit(child)
-			return
-		}
-		if (node.kind === 'if') {
-			for (const child of node.then) visit(child)
-			for (const child of node.alternate) visit(child)
-			return
-		}
-		if (node.kind === 'switch') {
-			for (const arm of node.cases)
-				for (const child of arm.children) visit(child)
-			return
-		}
-		if (node.kind === 'try') {
-			for (const child of node.children) visit(child)
-			for (const child of node.catchChildren) visit(child)
-			if (node.pendingChildren)
-				for (const child of node.pendingChildren) visit(child)
-			return
-		}
-		// 'compose', 'text', 'expr', 'client-stmt' — nothing to match/recurse.
-	}
-	visit(root)
+		},
+		{ intoCompose: false },
+	)
 	return { elements, unsupported }
 }
 
@@ -454,37 +436,10 @@ export const refBranchGuard = (
 		if (node.kind === 'switch' || node.kind === 'try') {
 			// Arm selection is not a plain condition — if the ref lives in
 			// one, refuse rather than guess.
-			const arms =
-				node.kind === 'switch'
-					? node.cases.flatMap(arm => arm.children)
-					: [
-							...node.children,
-							...node.catchChildren,
-							...(node.pendingChildren ?? []),
-						]
-			for (const child of arms) if (containsRef(child, refName)) bailed = true
+			if (someNode(node, carriesRef)) bailed = true
 			return
 		}
-		if (node.kind === 'element' || node.kind === 'compose')
-			for (const child of node.children) walk(child, guards)
-	}
-	const containsRef = (node: TemplateNode, name: string): boolean => {
-		if (carriesRef(node)) return true
-		if (node.kind === 'if')
-			return [...node.then, ...node.alternate].some(c => containsRef(c, name))
-		if (node.kind === 'switch')
-			return node.cases.some(arm =>
-				arm.children.some(c => containsRef(c, name)),
-			)
-		if (node.kind === 'try')
-			return [
-				...node.children,
-				...node.catchChildren,
-				...(node.pendingChildren ?? []),
-			].some(c => containsRef(c, name))
-		if (node.kind === 'element' || node.kind === 'compose')
-			return node.children.some(c => containsRef(c, name))
-		return false
+		for (const child of childNodes(node)) walk(child, guards)
 	}
 	walk(root, [])
 	if (bailed || found.length > 1) return null
@@ -518,18 +473,7 @@ export const inOptionalBranch = (
 			for (const child of node.alternate) walk(child, optional)
 			return
 		}
-		if (node.kind === 'element' || node.kind === 'compose')
-			for (const child of node.children) walk(child, optional)
-		else if (node.kind === 'try')
-			for (const child of [
-				...node.children,
-				...node.catchChildren,
-				...(node.pendingChildren ?? []),
-			])
-				walk(child, optional)
-		else if (node.kind === 'switch')
-			for (const arm of node.cases)
-				for (const child of arm.children) walk(child, optional)
+		for (const child of childNodes(node)) walk(child, optional)
 	}
 	walk(root, false)
 	return found

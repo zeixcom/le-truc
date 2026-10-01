@@ -48,48 +48,25 @@ const reportNamedFormControls = (
 	ctx: ExtractContext,
 	root: TemplateNode,
 ): void => {
-	const visit = (node: TemplateNode): void => {
-		if (node.kind === 'element') {
-			if (NAMED_FORM_CONTROL_TAGS.has(node.tag)) {
-				const nameAttr = node.attrs.find(
-					a =>
-						(a.kind === 'static' ||
-							a.kind === 'server' ||
-							a.kind === 'reactive') &&
-						a.name === 'name',
+	walkTemplate(
+		root,
+		node => {
+			if (node.kind !== 'element' || !NAMED_FORM_CONTROL_TAGS.has(node.tag))
+				return
+			const nameAttr = node.attrs.find(
+				a =>
+					(a.kind === 'static' ||
+						a.kind === 'server' ||
+						a.kind === 'reactive') &&
+					a.name === 'name',
+			)
+			if (nameAttr)
+				ctx.diagnostics.push(
+					diagnostic.formControlHasName(ctx.source, node.node.start, node.tag),
 				)
-				if (nameAttr)
-					ctx.diagnostics.push(
-						diagnostic.formControlHasName(
-							ctx.source,
-							node.node.start,
-							node.tag,
-						),
-					)
-			}
-			for (const child of node.children) visit(child)
-			return
-		}
-		if (node.kind === 'if') {
-			for (const child of node.then) visit(child)
-			for (const child of node.alternate) visit(child)
-			return
-		}
-		if (node.kind === 'switch') {
-			for (const arm of node.cases)
-				for (const child of arm.children) visit(child)
-			return
-		}
-		if (node.kind === 'try') {
-			for (const child of node.children) visit(child)
-			for (const child of node.catchChildren) visit(child)
-			if (node.pendingChildren)
-				for (const child of node.pendingChildren) visit(child)
-			return
-		}
-		// 'compose', 'text', 'expr', 'client-stmt' — nothing to check/recurse.
-	}
-	visit(root)
+		},
+		{ intoCompose: false },
+	)
 }
 
 /**

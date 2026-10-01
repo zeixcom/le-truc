@@ -22,6 +22,7 @@ import {
 import { refBranchGuard } from './first-refs'
 import type { ComponentIR, TemplateNode } from './ir'
 import { JS_GLOBALS } from './vocabulary'
+import { walkTemplate } from './walk'
 
 /**
  * Ambient globals whose *inputs* are the build machine's own state (wall
@@ -279,19 +280,19 @@ export const isServerEvaluable = (
  * (`<span class="zero">{zero}</span>`) or an attribute. Collected
  * for {@link foldableHostProps}; see the rationale there.
  */
-const argRenderedProps = (node: TemplateNode): string[] => {
-	if (node.kind === 'if')
-		return [...node.then, ...node.alternate].flatMap(argRenderedProps)
-	if (node.kind === 'switch')
-		return node.cases.flatMap(arm => arm.children.flatMap(argRenderedProps))
-	if (node.kind === 'try')
-		return [...node.children, ...node.catchChildren].flatMap(argRenderedProps)
-	if (node.kind === 'expr') return node.bindsProp ? [node.bindsProp] : []
-	if (node.kind !== 'element') return []
-	const own = node.attrs.flatMap(attr =>
-		attr.kind === 'server' && attr.bindsProp ? [attr.bindsProp] : [],
+const argRenderedProps = (root: TemplateNode): string[] => {
+	const out: string[] = []
+	walkTemplate(
+		root,
+		node => {
+			if (node.kind === 'expr' && node.bindsProp) out.push(node.bindsProp)
+			if (node.kind === 'element')
+				for (const attr of node.attrs)
+					if (attr.kind === 'server' && attr.bindsProp) out.push(attr.bindsProp)
+		},
+		{ intoCompose: false },
 	)
-	return [...own, ...node.children.flatMap(argRenderedProps)]
+	return out
 }
 
 /**

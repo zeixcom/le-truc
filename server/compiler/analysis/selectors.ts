@@ -15,7 +15,7 @@ import type {
 	TemplateNode,
 } from '../ir'
 import type { RegistryEntry } from '../registry'
-import { walkTemplate } from '../walk'
+import { someNode, walkTemplate } from '../walk'
 
 /* === Types === */
 
@@ -289,17 +289,18 @@ export const countComposeBySource = (
 				),
 			),
 		)
-	if (node.kind === 'try')
-		return Math.max(
-			node.children.reduce(
-				(sum, c) => sum + countComposeBySource(c, source),
-				0,
-			),
-			node.catchChildren.reduce(
-				(sum, c) => sum + countComposeBySource(c, source),
-				0,
-			),
-		)
+	if (node.kind === 'try') {
+		const count = (arm: readonly TemplateNode[]): number =>
+			arm.reduce((sum, c) => sum + countComposeBySource(c, source), 0)
+		// Async boundary: all three arms coexist in the DOM (LT-230's
+		// `@pending` policy, walk.ts) — sum, as `countForSelector` does.
+		// Plain error boundary: body XOR catch renders.
+		return node.pendingChildren !== null
+			? count(node.children) +
+					count(node.catchChildren) +
+					count(node.pendingChildren)
+			: Math.max(count(node.children), count(node.catchChildren))
+	}
 	if (node.kind === 'compose') return node.source === source ? 1 : 0
 	if (!isElement(node)) return 0
 	let count = 0
@@ -317,16 +318,16 @@ export const countComposeBySource = (
  * id across the component's lifetime, so over-collecting here is the
  * conservative direction for a validity check.
  */
-export const allComposeNodes = (node: TemplateNode): ComposeNode[] => {
-	if (node.kind === 'if')
-		return [...node.then, ...node.alternate].flatMap(allComposeNodes)
-	if (node.kind === 'switch')
-		return node.cases.flatMap(arm => arm.children.flatMap(allComposeNodes))
-	if (node.kind === 'try')
-		return [...node.children, ...node.catchChildren].flatMap(allComposeNodes)
-	if (node.kind === 'compose') return [node]
-	if (!isElement(node)) return []
-	return node.children.flatMap(allComposeNodes)
+export const allComposeNodes = (root: TemplateNode): ComposeNode[] => {
+	const out: ComposeNode[] = []
+	walkTemplate(
+		root,
+		node => {
+			if (node.kind === 'compose') out.push(node)
+		},
+		{ intoCompose: false },
+	)
+	return out
 }
 
 /**
@@ -344,25 +345,9 @@ export const allComposeNodes = (node: TemplateNode): ComposeNode[] => {
  * over a more complete but heavier one.
  */
 export const composeNodesBySource = (
-	node: TemplateNode,
+	root: TemplateNode,
 	source: string,
-): ComposeNode[] => {
-	if (node.kind === 'if')
-		return [...node.then, ...node.alternate].flatMap(child =>
-			composeNodesBySource(child, source),
-		)
-	if (node.kind === 'switch')
-		return node.cases.flatMap(arm =>
-			arm.children.flatMap(child => composeNodesBySource(child, source)),
-		)
-	if (node.kind === 'try')
-		return [...node.children, ...node.catchChildren].flatMap(child =>
-			composeNodesBySource(child, source),
-		)
-	if (node.kind === 'compose') return node.source === source ? [node] : []
-	if (!isElement(node)) return []
-	return node.children.flatMap(child => composeNodesBySource(child, source))
-}
+): ComposeNode[] => allComposeNodes(root).filter(node => node.source === source)
 
 /**
  * Static (`Literal`-valued) `arg` attrs of a composed element, keyed by name
@@ -645,34 +630,12 @@ export const resolveSelector = (
 export const matchesUnder = (
 	nodes: readonly TemplateNode[],
 	selector: string,
-): boolean => {
-	for (const node of nodes) {
-		if (node.kind === 'if') {
-			if (matchesUnder([...node.then, ...node.alternate], selector)) return true
-			continue
-		}
-		if (node.kind === 'switch') {
-			for (const arm of node.cases)
-				if (matchesUnder(arm.children, selector)) return true
-			continue
-		}
-		if (node.kind === 'try') {
-			if (
-				matchesUnder([...node.children, ...node.catchChildren], selector) ||
-				(node.pendingChildren !== null &&
-					matchesUnder(node.pendingChildren, selector))
-			)
-				return true
-			continue
-		}
-		if (isElement(node)) {
-			if (matchesSelector(node, selector)) return true
-			if (matchesUnder(node.children, selector)) return true
-		}
-		// 'compose', 'text', 'expr', 'client-stmt' — nothing to match.
-	}
-	return false
-}
+): boolean =>
+	nodes.some(root =>
+		someNode(root, node => isElement(node) && matchesSelector(node, selector), {
+			intoCompose: false,
+		}),
+	)
 
 /**
  * Resolve the selector for an element addressed PER-BRANCH (LT-118): like

@@ -33,6 +33,7 @@ import {
 	CONTEXT_NAMES,
 	JS_GLOBALS,
 	MANAGED_TEXT_PROPS,
+	MUTABLE_SIGNAL_CONSTRUCTORS,
 	PARSER_FACTORIES,
 	SIGNAL_CONSTRUCTORS,
 } from './vocabulary'
@@ -78,14 +79,6 @@ export type SetupExtraction = {
 
 /** Shared empty result for the `parserFallbackRefsOf` context hook. */
 const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
-
-/** Signal constructors whose result is MUTABLE, hence Slot-backed — the declared family. */
-const MUTABLE_SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>([
-	'createCell',
-	'createState',
-	'createList',
-	'createStore',
-])
 
 /**
  * Which of `#setAccessor`'s three landings an `expose()` initializer takes

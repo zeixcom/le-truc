@@ -974,11 +974,10 @@ export function BasicParent({}: {})
 		// `kind === 'element'` — so a compose site can never reach a
 		// @pending arm through valid authoring. The compose walks omitting
 		// the pending arm (`allComposeNodes`/`composeNodesBySource`/
-		// `countComposeBySource`) is therefore consistent garbage-in
-		// protection, not a live duplicate-`id`/resolution gap; the
-		// review's §1.4-adjacent concern is ruled unreachable. Revisit the
-		// walks in the same commit if compose-in-pending ever becomes a
-		// supported shape (LT-230 settles the walk policy).
+		// `countComposeBySource`) was ruled consistent garbage-in
+		// protection. LT-230 found that ruling covered the arm ROOT only: a
+		// compose site nested below the pending root is valid authoring —
+		// see the next describe, which pins the settled walk policy.
 		expect(
 			diagnostics.some(
 				d =>
@@ -986,5 +985,58 @@ export function BasicParent({}: {})
 					d.message.includes('that does not render exactly one root element'),
 			),
 		).toBe(true)
+	})
+})
+
+describe('compose site nested below a @pending root (LT-230 walk policy)', () => {
+	// Every walk enters `@pending` arms (walk.ts): the arm is rendered,
+	// hidden-toggled markup, so a compose site nested below its root
+	// coexists in the DOM with the body's.
+	const parentWith = (
+		pendingChild: string,
+	) => `import { BasicChild } from '../child/basic-child.tsrx'
+import { deriveCell } from '@zeix/le-truc'
+
+export function BasicParent({}: {})
+	@{
+		const data = deriveCell(async () => 'x')
+		expose({})
+		<>
+			<basic-parent>
+				<BasicChild label={'a'} id="dup" />
+				@try {
+					<div class="content">{data}</div>
+				} @pending {
+					<div class="pending">${pendingChild}</div>
+				} @catch (e) {
+					<p class="error">{e.message}</p>
+				}
+			</basic-parent>
+			<style>basic-parent { display: block }</style>
+		</>
+	}`
+
+	test('a duplicate compose id across the body and a nested pending site is reported', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const { diagnostics } = compileComponent(
+			parentWith(`<BasicChild label={'loading'} id="dup" />`),
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(diagnostics.filter(d => d.code === 'LTC038')).toHaveLength(1)
+	})
+
+	test('an unresolved composed child nested in a pending arm is reported', () => {
+		const { diagnostics } = compileComponent(
+			parentWith(`<BasicChild label={'loading'} />`),
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			new Map(),
+		)
+		// Both sites — the body's and the nested pending one.
+		expect(diagnostics.filter(d => d.code === 'LTC011')).toHaveLength(2)
 	})
 })

@@ -1,18 +1,41 @@
 /**
  * The one structural `TemplateNode` visitor (LT-042, regrouping move M3 of
  * LE_TRUC_COMPILER.md §7). Traversal — element/compose children, `@if`
- * branches, `@switch` arms, `@try` arms, and the two cross-cutting rules
- * (whether `@pending` arms and composed children are entered) — is encoded
- * HERE, once; consumers express only what they collect per node.
+ * branches, `@switch` arms, `@try` arms, and whether composed children are
+ * entered — is encoded HERE, once; consumers express only what they collect
+ * per node.
  *
- * Scope note: walks whose recursion is itself the SEMANTICS stay with their
- * passes and are deliberately not expressed through this visitor — the
- * selector engine's branch-exclusivity counting (`countForSelector`'s
- * max-vs-sum arithmetic), the element-chain-only searches (`parentOf`,
- * `findHoleParent`, `findMirror`), depth-guarded (`hasDeepConstruct`) and
- * pass-interleaved walks (`recordSites`), and loop-output-scoped validation
- * in the front end. A new `TemplateNode` variant needs one `childNodes`
- * case here plus edits only in the modules that care about it.
+ * `@pending` policy (LT-230, one ruling for every walk): an async boundary's
+ * pending arm is RENDERED markup — the server writes all three arms and the
+ * client toggles `hidden` (ADR 0023 sub-design 13) — so every walk enters it.
+ * The arm admits only static and server markup (`handleAsyncBoundary`
+ * rejects client constructs there), so a walk looking for client constructs
+ * finds nothing and pays nothing; a walk collecting what the DOM contains
+ * (compose sites, ids, rendered props) must see it. A composed element
+ * nested below the pending root is valid authoring — the LT-221 probe only
+ * covered a compose site AS the root. Exclusivity arithmetic follows the
+ * same fact: with a pending arm present the arms coexist (sum); without
+ * one, body XOR catch renders (max).
+ *
+ * Authorized exceptions — walks whose recursion IS the semantics, so they
+ * keep their own descent (structural steps still go through `childNodes`
+ * where they apply):
+ * - exclusivity counting: `countForSelector`, `countComposeBySource`
+ *   (max-vs-sum per construct; `analysis/selectors.ts`, riding LT-245);
+ * - path-context threading: `refBranchGuard` (guard conjunction),
+ *   `inOptionalBranch` (optional-`@if` flag), `checkFoldInputs` (lexical
+ *   scope per arm);
+ * - element-chain-only searches that deliberately stop at control flow
+ *   other than `@if`: `enclosingIfOf`/`enclosingIfIn`, `findMirror`,
+ *   `parentOf`, `findHoleParent`, `hasClientConstructs`,
+ *   `markPositionallyReactive`, and the depth-guarded `hasDeepConstruct`;
+ * - pass-interleaved walks: `recordSites` (harvest), `emitTopEffects`
+ *   (effect planning) and the server emitter (`emit`, `shape`);
+ * - front-end validation scoped to one construct: a reactive-list body
+ *   and a composed element's content (`lower-shared.ts`).
+ *
+ * A new `TemplateNode` variant needs one `childNodes` case here plus edits
+ * only in the modules that care about it.
  */
 
 import type { AttributeIR, ComponentIR, TemplateNode } from './ir'
@@ -20,7 +43,8 @@ import type { AttributeIR, ComponentIR, TemplateNode } from './ir'
 /**
  * Immediate children of a node under the standard traversal, document order
  * preserved: element and compose children, both `@if` branches, every
- * `@switch` arm, and all present `@try` arms (pending last).
+ * `@switch` arm, and all present `@try` arms (pending last, entered by
+ * policy — see the module doc).
  */
 export const childNodes = (node: TemplateNode): readonly TemplateNode[] => {
 	switch (node.kind) {
@@ -44,12 +68,6 @@ export const childNodes = (node: TemplateNode): readonly TemplateNode[] => {
 
 export type WalkOptions = {
 	/**
-	 * Enter a `@try`'s `@pending` async-boundary arm. Default true.
-	 * Consumers whose constructs cannot exist there (composed elements,
-	 * ref declarations) pass false — preserving their pre-visitor reach.
-	 */
-	intoPending?: boolean
-	/**
 	 * Recurse into composed children. Default true; the compose node itself
 	 * is always visited. Consumers that treat composition as a boundary
 	 * (element collection, compose-element collection) pass false.
@@ -68,18 +86,31 @@ export const walkTemplate = (
 	visit: TemplateVisitor,
 	options: WalkOptions = {},
 ): void => {
-	const { intoPending = true, intoCompose = true } = options
+	const { intoCompose = true } = options
 	const walk = (current: TemplateNode, parent: TemplateNode | null): void => {
 		visit(current, parent)
 		if (current.kind === 'compose' && !intoCompose) return
-		if (current.kind === 'try' && !intoPending) {
-			for (const child of [...current.children, ...current.catchChildren])
-				walk(child, current)
-			return
-		}
 		for (const child of childNodes(current)) walk(child, current)
 	}
 	walk(node, null)
+}
+
+/**
+ * Does `predicate` hold for any node under the standard traversal? Pre-order,
+ * stopping at the first hit — the short-circuiting sibling of
+ * {@link walkTemplate} for presence searches and first-offender validation.
+ */
+export const someNode = (
+	node: TemplateNode,
+	predicate: (node: TemplateNode) => boolean,
+	options: WalkOptions = {},
+): boolean => {
+	const { intoCompose = true } = options
+	const search = (current: TemplateNode): boolean =>
+		predicate(current) ||
+		(!(current.kind === 'compose' && !intoCompose) &&
+			childNodes(current).some(search))
+	return search(node)
 }
 
 /**
@@ -107,9 +138,9 @@ export const collectAttrs = (
  * Every composed (PascalCase) element in a component's template, for
  * cross-file resolution against the corpus-wide registry (ADR 0023
  * sub-design 10). Traversal via `walkTemplate` (LT-042): composition is a
- * boundary (composed children are the child component's own template) and
- * `@pending` arms are not entered — composed elements never carry children
- * yet, so there is nothing to recurse into below one.
+ * boundary (composed children are the child component's own template);
+ * `@pending` arms are entered like every arm (LT-230) — a compose site
+ * nested below the pending root renders and must resolve.
  *
  * Lives at the machinery level (LT-206): a pure `ComponentIR` walk the
  * shared pipeline consumes, so the machinery does not depend on a front
@@ -122,14 +153,8 @@ export const collectComposeElements = (
 	const visit = (node: TemplateNode): void => {
 		if (node.kind === 'compose') out.push(node)
 	}
-	walkTemplate(component.root, visit, {
-		intoCompose: false,
-		intoPending: false,
-	})
+	walkTemplate(component.root, visit, { intoCompose: false })
 	for (const loop of component.fors.values())
-		walkTemplate(loop.output, visit, {
-			intoCompose: false,
-			intoPending: false,
-		})
+		walkTemplate(loop.output, visit, { intoCompose: false })
 	return out
 }

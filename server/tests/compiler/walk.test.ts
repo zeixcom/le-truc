@@ -1,14 +1,20 @@
 /**
  * Unit tests for the one structural `TemplateNode` visitor (LT-042,
- * walk.ts): visit order over every node kind, parent pairing, and the two
- * traversal rules that vary by consumer (`intoPending`, `intoCompose`).
+ * walk.ts): visit order over every node kind, parent pairing, the one
+ * traversal rule that varies by consumer (`intoCompose`), and the
+ * always-enter `@pending` policy (LT-230).
  * The tree is hand-built IR — no compiler front end needed, which is the
  * point of extracting the visitor.
  */
 import { describe, expect, test } from 'bun:test'
 import type { AstNode } from '../../compiler/ast-node'
 import type { TemplateNode } from '../../compiler/ir'
-import { childNodes, collectAttrs, walkTemplate } from '../../compiler/walk'
+import {
+	childNodes,
+	collectAttrs,
+	someNode,
+	walkTemplate,
+} from '../../compiler/walk'
 
 const n = (type: string): AstNode => ({ type }) as AstNode
 
@@ -185,18 +191,6 @@ describe('walkTemplate', () => {
 		expect(pending?.[1]).toBe('try')
 	})
 
-	test('intoPending: false skips @pending arms but keeps body and catch', () => {
-		const tags: string[] = []
-		walkTemplate(
-			tree,
-			node => {
-				if (node.kind === 'element') tags.push(node.tag)
-			},
-			{ intoPending: false },
-		)
-		expect(tags).toEqual(['x-root', 'a', 'b', 'c', 'd'])
-	})
-
 	test('intoCompose: false visits the compose node but not its children', () => {
 		const labels: string[] = []
 		walkTemplate(
@@ -238,15 +232,6 @@ describe('collectAttrs', () => {
 		])
 	})
 
-	test('intoPending: false drops pending-arm attrs', () => {
-		expect(collectAttrs(tree, { intoPending: false }).map(nameOf)).toEqual([
-			'role',
-			'@click',
-			'id',
-			'id',
-		])
-	})
-
 	test('intoCompose: false keeps compose attrs out of reach below the boundary', () => {
 		expect(collectAttrs(tree, { intoCompose: false }).map(nameOf)).toEqual([
 			'role',
@@ -254,5 +239,31 @@ describe('collectAttrs', () => {
 			'id',
 			'data-pending',
 		])
+	})
+})
+
+describe('someNode', () => {
+	test('enters @pending arms (LT-230 policy) and stops at the first hit', () => {
+		const seen: string[] = []
+		const hit = someNode(tree, node => {
+			if (node.kind === 'element') seen.push(node.tag)
+			return node.kind === 'element' && node.tag === 'e'
+		})
+		expect(hit).toBe(true)
+		expect(seen.at(-1)).toBe('e')
+	})
+
+	test('intoCompose: false tests the compose node but not its children', () => {
+		const seen: string[] = []
+		someNode(
+			tree,
+			node => {
+				seen.push(node.kind === 'element' ? `el:${node.tag}` : node.kind)
+				return false
+			},
+			{ intoCompose: false },
+		)
+		expect(seen).toContain('compose')
+		expect(seen).not.toContain('el:d')
 	})
 })

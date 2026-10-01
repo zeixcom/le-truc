@@ -2,10 +2,9 @@
  * The two path facts the emitters need from the corpus configuration
  * (LT-255).
  *
- * A leaf on purpose: `imports.ts` and `pipeline.ts` are in the browser bundle
- * (`build:tsrx:browser`, whose purity is CI-pinned), so what they import must
- * carry no `node:` specifier. Config RESOLUTION — which needs real path math
- * — lives in `corpus-config.ts`, which the browser graph never reaches.
+ * A leaf on purpose: the emitters (`imports.ts`, `pipeline.ts`) need only
+ * these two defaults, not config resolution. RESOLUTION — which needs real
+ * path math — lives in `corpus-config.ts`.
  */
 
 /* === Constants === */

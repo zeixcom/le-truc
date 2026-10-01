@@ -50,6 +50,7 @@ import type {
 import { bindsExposedArg, classifyChild } from './reactivity'
 import { wordingOf } from './surface'
 import { JS_GLOBALS } from './vocabulary'
+import { someNode } from './walk'
 
 /** The recursion seam: each front end's own children dispatcher. */
 export type Lowering = {
@@ -625,35 +626,31 @@ export const validateEmptyArm = (
 	const what = wordingOf(ctx).emptyArm
 	const outputs = new Set([...fors.values()].map(f => f.output))
 	let offending: AstNode | undefined
-	const inert = (node: TemplateNode): boolean => {
+	// Pre-order, first offender wins — an offending node is not descended.
+	const offends = (node: TemplateNode): boolean => {
 		switch (node.kind) {
 			case 'text':
-				return true
+			case 'if':
+			case 'switch':
+				return false
 			case 'expr':
 				if (node.lazy) offending = node.node
-				return !node.lazy
+				return node.lazy
 			case 'element':
-				if (outputs.has(node)) {
+				if (
+					outputs.has(node) ||
+					node.attrs.some(a => a.kind !== 'static' && a.kind !== 'server')
+				) {
 					offending = node.node
-					return false
+					return true
 				}
-				for (const attr of node.attrs) {
-					if (attr.kind !== 'static' && attr.kind !== 'server') {
-						offending = node.node
-						return false
-					}
-				}
-				return node.children.every(inert)
-			case 'if':
-				return [...node.then, ...node.alternate].every(inert)
-			case 'switch':
-				return node.cases.every(c => c.children.every(inert))
+				return false
 			default:
 				offending = node.node
-				return false
+				return true
 		}
 	}
-	if (!arm.every(inert)) {
+	if (arm.some(node => someNode(node, offends))) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,

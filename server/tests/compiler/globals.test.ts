@@ -5,7 +5,10 @@
  *    constructors, context names, parser factories, `expose`, `defineMethod`,
  *    `FormAssociatedElement`) is declared in server/compiler/frontend/tsrx/globals.d.ts, and
  *    the file declares nothing outside that vocabulary.
- * 2. Typecheck — a probe using the full ambient vocabulary (including
+ * 2. Barrel parity — every recognized-name set that names `@zeix/le-truc`
+ *    value exports is pinned against the package barrel (LT-232): subsets
+ *    type-level and at runtime, `REAL_EXPORT_NAMES` exactly.
+ * 3. Typecheck — a probe using the full ambient vocabulary (including
  *    `FormAssociatedElement` referenced without import in a `declare global`)
  *    compiles against the globals file alone.
  */
@@ -13,11 +16,17 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { ComponentProps, FactoryContext } from '@zeix/le-truc'
+import * as barrel from '@zeix/le-truc'
 import {
 	CONTEXT_NAMES,
 	FACTORY_CONTEXT_MEMBER_NAMES,
 	FACTORY_CONTEXT_MEMBERS,
+	MUTABLE_SIGNAL_CONSTRUCTOR_NAMES,
+	MUTABLE_SIGNAL_CONSTRUCTORS,
 	PARSER_FACTORIES,
+	PARSER_FACTORY_NAMES,
+	REAL_EXPORT_NAMES,
+	SIGNAL_CONSTRUCTOR_NAMES,
 	SIGNAL_CONSTRUCTORS,
 } from '../../compiler/vocabulary'
 import { createGeneratedDir } from '../helpers/generated-corpus'
@@ -83,6 +92,48 @@ describe('globals.d.ts — ambient vocabulary parity with the compiler', () => {
 		// destructured context member in the generated client.
 		expect(FACTORY_CONTEXT_MEMBERS.has('expose')).toBe(true)
 		expect(declaredConsts).toContain('expose')
+	})
+})
+
+describe('vocabulary — name-set parity with the @zeix/le-truc barrel (LT-232)', () => {
+	const barrelExports = Object.keys(barrel).sort()
+
+	test('signal constructors and parser factories are real barrel exports', () => {
+		// Type-level: a rename/removal in the barrel fails the tsc gate.
+		type Exported = keyof typeof barrel
+		type IsSubset = [
+			| (typeof SIGNAL_CONSTRUCTOR_NAMES)[number]
+			| (typeof PARSER_FACTORY_NAMES)[number],
+		] extends [Exported]
+			? true
+			: false
+		const assertSubset: IsSubset = true
+		expect(assertSubset).toBe(true)
+		for (const name of [...SIGNAL_CONSTRUCTORS, ...PARSER_FACTORIES])
+			expect(barrelExports).toContain(name)
+	})
+
+	test('mutable signal constructors are a subset of the signal constructors', () => {
+		const stray = [...MUTABLE_SIGNAL_CONSTRUCTORS].filter(
+			name => !SIGNAL_CONSTRUCTORS.has(name),
+		)
+		expect(stray).toEqual([])
+		expect(MUTABLE_SIGNAL_CONSTRUCTORS.size).toBe(
+			MUTABLE_SIGNAL_CONSTRUCTOR_NAMES.length,
+		)
+	})
+
+	test('REAL_EXPORT_NAMES equals the barrel value exports', () => {
+		expect([...REAL_EXPORT_NAMES].sort()).toEqual(barrelExports)
+	})
+
+	test('the ambient vocabulary is disjoint from the real exports', () => {
+		// Sub-design 16: FactoryContext members and context names are never
+		// module imports, so no barrel export may share a name with them.
+		const overlap = [...FACTORY_CONTEXT_MEMBERS, ...CONTEXT_NAMES].filter(
+			name => REAL_EXPORT_NAMES.has(name),
+		)
+		expect(overlap).toEqual([])
 	})
 })
 

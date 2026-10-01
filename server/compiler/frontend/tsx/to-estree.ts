@@ -9,7 +9,8 @@
  * (`ast-utils.ts`'s `text()`).
  *
  * The TypeScript → ESTree conversion itself is
- * `@typescript-eslint/typescript-estree`'s (LT-243), maintained against
+ * `@typescript-eslint/typescript-estree`'s public `parse()` (LT-243,
+ * LT-367) — the API it versions under semver — maintained against
  * every `typescript` major — the hand-written converter this module used to
  * be had to track that drift itself (ADR 0032's stated cost). What remains
  * here is a thin normalization pass onto the shape the shared stages were
@@ -42,8 +43,7 @@
  * fact, outside the compiler's own neutrality rule (ADR 0038 s2).
  */
 
-import { astConverter } from '@typescript-eslint/typescript-estree/use-at-your-own-risk'
-import * as ts from 'typescript'
+import { parse } from '@typescript-eslint/typescript-estree'
 import type { AstNode } from '../../ast-node'
 
 export type { AstNode }
@@ -121,28 +121,17 @@ const normalize = (node: RawNode): AstNode | null => {
  * verbatim text and read only names/kinds from the inner).
  */
 export const parseTsxModule = (source: string, filename: string): AstNode => {
-	const sourceFile = ts.createSourceFile(
-		filename,
-		source,
-		ts.ScriptTarget.ESNext,
-		true,
-		ts.ScriptKind.TSX,
-	)
 	// Throws on the first TypeScript parse diagnostic (`compileSourceTsx`
 	// reports it as LTC008).
-	const { estree } = astConverter(
-		sourceFile,
-		{
-			allowInvalidAST: false,
-			errorOnUnknownASTType: false,
-			suppressDeprecatedPropertyWarnings: true,
-			range: true,
-			loc: false,
-			tokens: false,
-			comment: false,
-		} as unknown as Parameters<typeof astConverter>[1],
-		false,
-	)
+	const estree = parse(source, {
+		filePath: filename,
+		jsx: true,
+		range: true,
+		loc: false,
+		comment: false,
+		tokens: false,
+		suppressDeprecatedPropertyWarnings: true,
+	})
 	return {
 		...(normalize(estree as unknown as RawNode) as AstNode),
 		start: 0,
