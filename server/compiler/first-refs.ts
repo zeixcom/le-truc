@@ -17,6 +17,7 @@
  * so every existing dedup/union-addressing guarantee carries over unchanged.
  */
 
+import * as cssWhat from 'css-what'
 import type { AstNode } from './ast-node'
 import { isNode } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
@@ -36,6 +37,9 @@ type SimpleSelector = {
 	attrs: Array<{ name: string; value: string | null }>
 }
 
+/** A `.token`/`#id` spelling safe to verify as a bare identifier. */
+const PLAIN_SELECTOR_TOKEN = /^[A-Za-z_-][\w-]*$/
+
 /* === Internal Functions === */
 
 /** Static attributes of an element as a map (mirrors `analysis/selectors.ts`). */
@@ -50,36 +54,106 @@ const staticAttrs = (element: ElementNode): Map<string, string | null> => {
  * Parse ONE simple selector (no combinators, no pseudo-classes) into its
  * structural parts. Supports an optional tag followed by any combination of
  * `.class`, `#id`, and `[attr]`/`[attr="value"]` clauses, in any order.
- * Returns `null` for anything richer (descendant/child combinators,
- * pseudo-classes, attribute operators other than `=`) — the caller must
- * treat `null` as "cannot verify structurally," never as "matches nothing."
+ * Since LT-380 (ADR 0045 Decision 5) the parse itself runs on css-what;
+ * the post-checks keep the VERIFIED SUBSET exactly what it was — the swap
+ * changed how the selector parses, not what it verifies (widening is
+ * LT-381): pseudo-classes, combinators, selector lists, namespaced or
+ * uppercase tags, attribute operators beyond `=`/presence, the `i` flag,
+ * single-quoted or unquoted attribute values, and any whitespace outside a
+ * quoted value (css-what is lenient there in ways the subset predates)
+ * all return `null`. The caller must treat `null` as "cannot verify
+ * structurally," never as "matches nothing."
  */
 const parseSimpleSelector = (selector: string): SimpleSelector | null => {
 	const trimmed = selector.trim()
 	if (trimmed === '') return null
-	const tagMatch = trimmed.match(/^[a-z][a-z0-9-]*/)
-	const tag = tagMatch ? tagMatch[0] : null
-	const rest = tag ? trimmed.slice(tag.length) : trimmed
-	if (rest === '') return tag ? { tag, id: null, classes: [], attrs: [] } : null
-	const clausePattern =
-		/\.[a-zA-Z_-][\w-]*|#[a-zA-Z_-][\w-]*|\[[a-zA-Z_-][\w-]*(?:="[^"]*")?\]/g
-	const clauses = rest.match(clausePattern) ?? []
-	// The pattern must fully consume `rest` — a leftover fragment means a
-	// combinator, a pseudo-class, or an operator this subset doesn't cover.
-	if (clauses.join('') !== rest) return null
-	const classes: string[] = []
+	let branches
+	try {
+		branches = cssWhat.parse(trimmed)
+	} catch {
+		return null
+	}
+	// ONE simple selector: a single compound — no selector list, no
+	// combinator, no empty parse.
+	const compound = branches[0]
+	if (branches.length !== 1 || !compound || compound.length === 0) return null
+	let tag: string | null = null
 	let id: string | null = null
+	const classes: string[] = []
 	const attrs: Array<{ name: string; value: string | null }> = []
-	for (const clause of clauses) {
-		if (clause.startsWith('.')) classes.push(clause.slice(1))
-		else if (clause.startsWith('#')) id = clause.slice(1)
-		else {
-			const m = clause.match(/^\[([a-zA-Z_-][\w-]*)(?:="([^"]*)")?\]$/)
-			if (!m) return null
-			attrs.push({ name: m[1] as string, value: m[2] ?? null })
+	for (const [index, simple] of compound.entries()) {
+		if (simple.type === 'tag') {
+			// The tag leads the compound, is lowercase HTML, and is not
+			// namespaced — css-what accepts far more (`1a`, `a b` as one
+			// escaped name, `a|b`) than the subset verified before it.
+			if (index !== 0 || simple.namespace !== null) return null
+			if (!/^[a-z][a-z0-9-]*$/.test(simple.name)) return null
+			tag = simple.name
+		} else if (simple.type === 'attribute') {
+			if (simple.namespace !== null || simple.ignoreCase === true) return null
+			if (simple.action === 'element') {
+				// The `.token` spelling (css-what encodes class membership as
+				// a `class`/`element` attribute predicate).
+				if (simple.name !== 'class' || !PLAIN_SELECTOR_TOKEN.test(simple.value))
+					return null
+				classes.push(simple.value)
+			} else if (
+				simple.action === 'equals' &&
+				simple.name === 'id' &&
+				// Only the `#id` spelling takes the id path — an explicit
+				// `[id="…"]` clause is an attribute like any other, exactly
+				// as the clause loop before the swap treated it.
+				simple.ignoreCase === 'quirks'
+			) {
+				if (!PLAIN_SELECTOR_TOKEN.test(simple.value)) return null
+				// Last wins, exactly as the old clause loop overwrote `id`.
+				id = simple.value
+			} else if (simple.action === 'equals' || simple.action === 'exists') {
+				if (!/^[a-zA-Z_-][\w-]*$/.test(simple.name)) return null
+				if (simple.action === 'equals' && simple.value.includes('"'))
+					return null
+				attrs.push({
+					name: simple.name,
+					value: simple.action === 'equals' ? simple.value : null,
+				})
+			} else {
+				// `^=`/`$=`/… — operators the subset never verified.
+				return null
+			}
+		} else {
+			// Pseudo-classes, pseudo-elements, the universal selector,
+			// traversal entries — richer than the subset.
+			return null
 		}
 	}
+	if (leavesSimpleSubset(trimmed)) return null
 	return { tag, id, classes, attrs }
+}
+
+/**
+ * The subset's only whitespace is inside a quoted attribute value, and its
+ * only attribute spelling is `[name="value"]`: css-what additionally
+ * tolerates `[ a = "b" ]` (browser-valid, but the subset predates it and
+ * LT-381 owns widening), single-quoted values, and unquoted values — all
+ * refused here so the verified subset stays what it was.
+ */
+const leavesSimpleSubset = (trimmed: string): boolean => {
+	let quote: string | null = null
+	for (let i = 0; i < trimmed.length; i++) {
+		const char = trimmed[i] as string
+		if (quote) {
+			if (char === '\\') i++
+			else if (char === quote) quote = null
+			continue
+		}
+		if (char === '"') {
+			quote = char
+			continue
+		}
+		if (/\s/.test(char) || char === "'") return true
+		if (char === '=' && trimmed[i + 1] !== '"') return true
+	}
+	return false
 }
 
 const matchesSimpleSelector = (

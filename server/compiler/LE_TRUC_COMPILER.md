@@ -345,7 +345,7 @@ front-end modules, then the two front ends:
 | `config.ts` | `export const config` extraction |
 | `imports.ts` | Compose-import resolution (accepts `.tsrx` AND `.tsx` specifiers — cross-surface composition falls out of the path-keyed registry) + plain import collection and placement |
 | `first-refs.ts` | Structural matcher for `first(selector, reason?)`: which template element(s) an author's selector refers to; compose-deferral test; ref-presence guards |
-| `selector-syntax.ts` | Conservative CSS selector *parse* validation for `first()`/`all()` — reports only what no CSS parser accepts |
+| `selector-syntax.ts` | Conservative CSS selector *parse* validation for `first()`/`all()` — a css-what parse plus a small post-check; reports only what no CSS parser accepts (ADR 0045 Decision 5) |
 | `corpus-config.ts` | The corpus configuration surface (§ 7.1): `CorpusConfig`, the defaults, `resolveCorpusConfig`, `outDirPrefix`, `emitPathsFor` — pure path math, no file IO |
 | `emit-paths.ts` | `EmitPaths` + `DEFAULT_EMIT_PATHS`: the two facts the emitters take from the configuration. A leaf with no `node:` import, because the browser bundle reaches it |
 | `registry.ts` | `RegistryEntry` type (incl. per-prop `ExposeKind`) + `registryJson` |

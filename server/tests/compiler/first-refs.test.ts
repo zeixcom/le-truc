@@ -7,6 +7,7 @@ import { describe, expect, test } from 'bun:test'
 import {
 	collectMatchingElements,
 	type ElementNode,
+	matchesAuthoredSelectorOn,
 	shareExclusiveIf,
 } from '../../compiler/first-refs'
 
@@ -180,5 +181,72 @@ describe('shareExclusiveIf', () => {
 			node: {} as ElementNode['node'],
 		}
 		expect(shareExclusiveIf(root, [a, b])).toBe(false)
+	})
+})
+
+/**
+ * LT-380: `parseSimpleSelector` parses through css-what now, but the
+ * VERIFIED SUBSET is frozen — the swap changed how it parses, not what it
+ * verifies (widening is LT-381). These pins hold the subset's boundary
+ * against css-what's leniency, through the exported matcher
+ * (`null` = cannot verify, never "matches nothing").
+ */
+describe('the verified subset is unchanged under the css-what parse (LT-380)', () => {
+	const attrs = (entries: Array<[string, string | null]>) => new Map(entries)
+	const verify = (
+		selector: string,
+		candidate: { tag: string; attrs: Map<string, string | null> },
+	) => matchesAuthoredSelectorOn(candidate, selector)
+
+	test('the supported forms still verify exactly', () => {
+		const el = {
+			tag: 'input',
+			attrs: attrs([
+				['type', 'checkbox'],
+				['class', 'a b'],
+				['id', 'x'],
+			]),
+		}
+		expect(verify('input[type="checkbox"]', el)).toBe(true)
+		expect(verify('.b', el)).toBe(true)
+		expect(verify('#x', el)).toBe(true)
+		expect(verify('[type]', el)).toBe(true)
+		expect(verify('input.b#x[type="checkbox"]', el)).toBe(true)
+		expect(verify('input[type="radio"]', el)).toBe(false)
+		expect(verify('#y', el)).toBe(false)
+	})
+
+	test('whitespace outside quoted values stays unverified (css-what is lenient there)', () => {
+		const el = { tag: 'input', attrs: attrs([['type', 'checkbox']]) }
+		// Browser-valid, but the subset predates the bracket forms — LT-381's widening.
+		expect(verify('[ type = "checkbox" ]', el)).toBeNull()
+		// Browser-invalid (a class token cannot start with a space); css-what
+		// keeps the space in the value, the token check refuses it.
+		expect(verify('a. b', el)).toBeNull()
+	})
+
+	test('single-quoted, unquoted, and flagged attribute values stay unverified', () => {
+		const el = { tag: 'input', attrs: attrs([['type', 'checkbox']]) }
+		expect(verify("[type='checkbox']", el)).toBeNull()
+		expect(verify('[type=checkbox]', el)).toBeNull()
+		expect(verify('[type="checkbox" i]', el)).toBeNull()
+	})
+
+	test('an explicit [id="…"] clause is an attribute, not the id path', () => {
+		// `#a[id="b"]` can never match (one id, two values) — today's shape
+		// of that answer is preserved by routing the explicit clause through
+		// the attrs path while only the hash spelling takes the id path.
+		const el = { tag: 'input', attrs: attrs([['id', 'b']]) }
+		expect(verify('#b', el)).toBe(true)
+		expect(verify('[id="b"]', el)).toBe(true)
+		expect(verify('#a[id="b"]', el)).toBe(false)
+	})
+
+	test('css-what-only tag shapes stay unverified', () => {
+		const el = { tag: 'input', attrs: attrs([]) }
+		expect(verify('1a', el)).toBeNull() // css-what parses a tag `1a`; browsers throw
+		expect(verify('a|b', el)).toBeNull() // namespaced
+		expect(verify('input:first-child', el)).toBeNull()
+		expect(verify('div > input', el)).toBeNull()
 	})
 })
