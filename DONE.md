@@ -157,9 +157,13 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
   names, as free reads, with the two surfaces disagreeing. Both → LT-363.
 
 **Open obligations** (not yet discharged; check before closing the named work):
-- **Upstream issues for the MF1 → MF2 converter are the owner's call.** Drafts are in the
-  untracked `ICU_MESSAGEFORMAT_ISSUES.md`, and none are filed. The pinned test in
-  `mf2-exit.test.ts` flags an upstream fix; delete the matching normalization then (LT-253).
+- ~~**Upstream issues for the MF1 → MF2 converter are the owner's call.**~~ Discharged
+  2026-10-01: tracker searched (no prior or similar reports), both filed by the owner as
+  [messageformat#472](https://github.com/messageformat/messageformat/issues/472) (duplicate
+  `.input` → `dedupeInputs`) and [#473](https://github.com/messageformat/messageformat/issues/473)
+  (non-string skeleton literals → `stringifyLiterals`); still unfixed at 0.12.0. Compacted
+  references live in `MF2_EXIT.md`; the pinned test flags an upstream fix — delete the matching
+  normalization then (LT-253).
 - **Browser specs the agent sandbox could not run:** `basic-pluralize.spec.ts`,
   `module-todo.spec.ts` and `form-tokenbox.spec.ts`, in en and de. The owner confirms they are
   green before the next PR (LT-252, LT-354).

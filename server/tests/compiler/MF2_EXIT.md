@@ -41,8 +41,17 @@ applies two normalizations, both in `mf2-exit.ts`:
 - **`stringifyLiterals`**: number skeletons produce numeric option values
   (`::.00` → `minimumFractionDigits=2`). `stringifyMessage` throws on those.
 
+Both converter defects are reported upstream (filed 2026-10-01, still
+unfixed at `@messageformat/icu-messageformat-1@0.12.0`, the latest release):
+
+- [messageformat#472](https://github.com/messageformat/messageformat/issues/472) —
+  duplicate `.input` declaration → `dedupeInputs`
+- [messageformat#473](https://github.com/messageformat/messageformat/issues/473) —
+  non-string skeleton option literals → `stringifyLiterals`
+
 A test pins that the raw converter still fails on `tasks`. If upstream
-fixes it, that test fails: drop the normalization and update this file.
+fixes it, that test fails: drop the matching normalization and update this
+file (the issue threads carry the full analysis and suggested fixes).
 
 ## The known-lossy spots
 
