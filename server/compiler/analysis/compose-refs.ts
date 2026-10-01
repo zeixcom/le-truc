@@ -23,7 +23,7 @@ import { matchesAuthoredSelectorOn } from '../first-refs'
 import type { ComponentIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
 import { wordingOf } from '../surface'
-import { allComposeNodes, composeStaticAttrs } from './selectors'
+import { allComposeNodes, composeStaticAttrs, refOf } from './selectors'
 
 /* === Types === */
 
@@ -130,9 +130,7 @@ export const resolveComposeRefs = (
 		// The compose-site half of LT-132: same IR limitation, same
 		// silence. `ref={}` made this shape unwritable; `first()` does
 		// not, so it needs the same check the raw path got.
-		const claimed = target.attrs.find(a => a.kind === 'ref') as
-			| { kind: 'ref'; name: string }
-			| undefined
+		const claimed = refOf(target)
 		if (claimed && claimed.name !== ref.name) {
 			diagnostics.push(
 				diagnostic.firstSelectorDuplicate(

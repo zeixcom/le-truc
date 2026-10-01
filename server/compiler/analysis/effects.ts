@@ -43,9 +43,10 @@ import {
 	MANAGED_TEXT_PROPS,
 	SEMANTICALLY_LOADED_ATTRS,
 } from '../vocabulary'
+import { isClientConstructAttr } from '../walk'
 import type { ComposeRefs } from './compose-refs'
 import { lazyWatchSource, returnsNumber } from './harvest'
-import { uniqueName } from './naming'
+import { renderOnlyBindings, uniqueName } from './naming'
 import type {
 	EffectPlans,
 	HarvestPlans,
@@ -67,6 +68,7 @@ import {
 	type IfNode,
 	isElement,
 	loopFor as loopForIn,
+	refOf,
 	resolveExclusiveSelectorIn,
 	resolveSelector as resolveSelectorIn,
 	type SwitchNode,
@@ -110,17 +112,6 @@ const managedPropRead = (expr: AstNode): string | null => {
 	const name = String(prop.name)
 	return MANAGED_TEXT_PROPS.has(name) ? name : null
 }
-
-/**
- * Does this attribute carry a client construct? A non-reactive `truc:html={ref}`
- * is server-rendered only (LT-025); a reactive `truc:html={() => …}` lowers to a
- * `dangerouslyBindInnerHTML` watch, same as any other reactive attribute.
- */
-const isClientConstructAttr = (a: AttributeIR): boolean =>
-	// A server attribute is normally render-only — except LT-122's
-	// arg-and-prop coincidence, which renders server-side AND binds.
-	(a.kind === 'server' ? a.bindsProp != null : a.kind !== 'static') &&
-	!(a.kind === 'html' && !a.reactive)
 
 /**
  * Pass 4's shared state (LT-226): what `runEffects`'s nested closures used
@@ -232,13 +223,7 @@ export const reportServerOnlyNames = (
 	// binds takes precedence: a list body's setup-const class is only the
 	// residue `badListBodyNames` adds (LT-349).
 	const moduleNames = new Set(component.moduleBindings ?? [])
-	const serverNames = new Set<string>(component.paramNames)
-	for (const loop of component.fors.values()) {
-		if (loop.kind !== 'each') continue
-		serverNames.add(loop.itemName)
-		if (loop.indexName) serverNames.add(loop.indexName)
-		for (const h of loop.hoisted) serverNames.add(h.name)
-	}
+	const serverNames = renderOnlyBindings(component)
 	const module = bad.filter(name => moduleNames.has(name))
 	const server = bad.filter(
 		name => !moduleNames.has(name) && serverNames.has(name),
@@ -377,17 +362,6 @@ const hasDeepConstruct = (el: ElementNode, depth = 0): boolean =>
 	)
 
 /**
- * An element's author-declared `first()` reference, if it has one. Since
- * LT-055 (raw) and LT-127 (composed) every `{kind:'ref'}` attr in the IR
- * is one — the compiler attaches them from `first()` calls and nothing
- * else does.
- */
-const refOf = (el: ElementNode): { kind: 'ref'; name: string } | undefined =>
-	el.attrs.find(a => a.kind === 'ref') as
-		| { kind: 'ref'; name: string }
-		| undefined
-
-/**
  * One branch root's client-construct signature (LT-118): its construct
  * attributes' `key=text` pairs, sorted. Two roots with equal signatures
  * are interchangeable for union addressing (one query, one effect set,
@@ -399,7 +373,7 @@ const refOf = (el: ElementNode): { kind: 'ref'; name: string } | undefined =>
 const constructSignatureOf = (root: ElementNode): string => {
 	const parts: string[] = []
 	for (const attr of root.attrs) {
-		if (attr.kind === 'static' || attr.kind === 'server') continue
+		if (!isClientConstructAttr(attr)) continue
 		const key = `${attr.kind === 'event' ? 'on' : 'bind'}:${'name' in attr ? attr.name : attr.kind}`
 		const attrText =
 			attr.kind === 'event'
@@ -1200,9 +1174,7 @@ const handleIfEffects = (fx: EffectsContext, node: IfNode): void => {
 		)
 		return
 	}
-	const refAttr = primary.attrs.find(a => a.kind === 'ref') as
-		| { kind: 'ref'; name: string }
-		| undefined
+	const refAttr = refOf(primary)
 	const query = addQuery(
 		refAttr?.name ?? sanitizeVarName(primary.tag),
 		resolved.selector,
@@ -1502,10 +1474,7 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 		(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
 			a.kind === 'pass',
 	)
-	const refAttr = node.attrs.find(
-		(a): a is Extract<(typeof node.attrs)[number], { kind: 'ref' }> =>
-			a.kind === 'ref',
-	)
+	const refAttr = refOf(node)
 	if (passAttrs.length === 0 && !refAttr) return
 	// An ambiguous `first()` already explained itself (LTC027,
 	// `analysis/compose-refs.ts`) — don't pile a second error on the same
@@ -1688,9 +1657,7 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 					),
 				)
 			}
-			const refAttr = node.attrs.find(a => a.kind === 'ref') as
-				| { kind: 'ref'; name: string }
-				| undefined
+			const refAttr = refOf(node)
 			const query = addQuery(
 				refAttr?.name ?? sanitizeVarName(node.tag),
 				selector,

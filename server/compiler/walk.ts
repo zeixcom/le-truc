@@ -158,3 +158,16 @@ export const collectComposeElements = (
 		walkTemplate(loop.output, visit, { intoCompose: false })
 	return out
 }
+
+/**
+ * Does this attribute carry a client construct — something the client
+ * module binds or addresses (LT-231: the one answer; every "has its own
+ * client construct" check derives from it)? Every kind but `static`, with
+ * two exceptions: a `server` attribute is render-only unless LT-122's
+ * arg-and-prop coincidence (`bindsProp`) makes it bind too, and a
+ * non-reactive `truc:html={ref}` is server-rendered only (LT-025) — the
+ * reactive form lowers to a `dangerouslyBindInnerHTML` watch.
+ */
+export const isClientConstructAttr = (a: AttributeIR): boolean =>
+	(a.kind === 'server' ? a.bindsProp != null : a.kind !== 'static') &&
+	!(a.kind === 'html' && !a.reactive)

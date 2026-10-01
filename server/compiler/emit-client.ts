@@ -22,16 +22,12 @@ import type {
 	TopEffectPlan,
 } from './analysis/plan'
 import { sanitizeVarName } from './ast-utils'
+import { CodeBuilder, isJsIdentifier, jsData, jsString } from './codegen'
 import { carriedKinds, FORMATTING_KINDS, type Message } from './icu/evaluate'
 import { clientSourceRecord } from './icu/parse'
 import { computeClientNeededNames } from './imports'
 import type { ComponentIR, InitSignalIR } from './ir'
-import {
-	appendWithSpans,
-	type SourceSlice,
-	type SourceSpan,
-	type SpanCursor,
-} from './spans'
+import type { SourceSlice, SourceSpan } from './spans'
 import {
 	DIRTY_FLAG_ATTRS,
 	type DirtyFlagControlTag,
@@ -109,28 +105,13 @@ const ariaProperty = (attr: string): string | null =>
 	attr.startsWith('aria-') ? sanitizeVarName(attr) : null
 
 /**
- * The only sanctioned way to put an author string into generated source
- * (LT-221 §1.2 point-fix; the shared `jsString()`/`CodeBuilder` kit is
- * LT-234). Plain printable ASCII keeps today's single-quoted bytes (the
- * corpus goldens stay put); anything else — apostrophes, backslashes,
- * quotes, non-ASCII — goes out JSON-quoted, and a JSON string literal IS a
- * JS string literal. Raw `'${author}'` interpolation was a syntax error on
- * generated code at best and a source-injection channel at worst.
- */
-const JS_PLAIN_STRING = /^[\x20-\x26\x28-\x5b\x5d-\x7e]*$/
-const jsString = (value: string): string =>
-	JS_PLAIN_STRING.test(value) ? `'${value}'` : JSON.stringify(value)
-
-/**
  * Member access on a runtime object by a class/style map key (LT-221
  * §1.3). Identifier-safe keys keep today's dot bytes; everything else
  * (hyphenated class tokens can ONLY be written quoted) goes through
  * bracket access — `(thunk)()).has-error` parses as subtraction.
  */
 const memberAccess = (object: string, key: string): string =>
-	/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)
-		? `${object}.${key}`
-		: `${object}[${jsString(key)}]`
+	isJsIdentifier(key) ? `${object}.${key}` : `${object}[${jsString(key)}]`
 
 const harvestInitializer = (
 	plan: ClientPlan['harvests'][number],
@@ -190,7 +171,7 @@ const listDeclaration = (
 	// @for output must not become phantom list items.
 	const harvested =
 		`[...${seed.container}.children].filter(el => el.hasAttribute('data-key')).map(el => ` +
-		`el.querySelector('${seed.valueSelector}')?.textContent ?? '')`
+		`el.querySelector(${jsString(seed.valueSelector)})?.textContent ?? '')`
 	return signal.text.slice(0, relStart) + harvested + signal.text.slice(relEnd)
 }
 
@@ -200,20 +181,12 @@ const sliceOf = (text: string, start: number | undefined): SourceSlice[] =>
 const emitEachBlock = (
 	plan: ForClientPlan,
 	imports: ClientImports,
-	lines: string[],
-	spans: SourceSpan[],
-	cursor: SpanCursor,
-	depth: number,
+	out: CodeBuilder,
 ): void => {
 	imports.add('each')
-	const append = (text: string, at: number, slices: SourceSlice[] = []): void =>
-		appendWithSpans(lines, text, at, slices, spans, cursor)
-	append(
-		`${imports.use('each')}(${plan.collection}, ${plan.itemParam} => {`,
-		depth,
-	)
+	out.open(`${imports.use('each')}(${plan.collection}, ${plan.itemParam} => {`)
 	for (const rebinding of plan.rebindings)
-		append(`const ${rebinding.name} = ${rebinding.expr}`, depth + 1)
+		out.line(`const ${rebinding.name} = ${rebinding.expr}`)
 	// LT-037: constructs on descendants of the loop's output root (rather
 	// than the root itself) carry a `target` selector, resolved within the
 	// item's own subtree. Query each distinct descendant once per item and
@@ -243,9 +216,8 @@ const emitEachBlock = (
 		targetVars.set(effect.target, name)
 		const tag = tagMatch?.[0] ?? ''
 		const typeArg = DIRTY_FLAG_CONTROL_INTERFACES.get(tag)
-		append(
+		out.line(
 			`const ${name} = ${plan.itemParam}.querySelector${typeArg ? `<${typeArg}>` : ''}(${jsString(effect.target)})!`,
-			depth + 1,
 		)
 	}
 	const targetOf = (target: string | null): string =>
@@ -263,16 +235,14 @@ const emitEachBlock = (
 				// the live property, not the attribute — the loop-body
 				// counterpart of the top-level property dispatch.
 				imports.add('bindProperty')
-				append(
+				out.line(
 					`${imports.local('watch')}(${source}, ${imports.local('bindProperty')}(${targetOf(effect.target)}, ${jsString(effect.attr)}))`,
-					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
 			} else {
 				imports.add('bindAttribute')
-				append(
+				out.line(
 					`${imports.local('watch')}(${source}, ${imports.local('bindAttribute')}(${targetOf(effect.target)}, ${jsString(effect.attr)}))`,
-					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
 			}
@@ -280,24 +250,20 @@ const emitEachBlock = (
 			imports.add('watch')
 			imports.add('bindClass')
 			for (const key of effect.keys) {
-				append(
+				out.line(
 					`${imports.local('watch')}(() => Boolean(${memberAccess(`((${effect.thunkText})())`, key)}), ${imports.local('bindClass')}(${targetOf(effect.target)}, ${jsString(key)}))`,
-					depth + 1,
 					sliceOf(effect.thunkText, effect.sourceStart),
 				)
 			}
 		} else {
 			imports.add('on')
-			append(
+			out.line(
 				`${imports.local('on')}(${targetOf(effect.target)}, ${jsString(effect.event)}, ${effect.handlerText})`,
-				depth + 1,
 				sliceOf(effect.handlerText, effect.sourceStart),
 			)
 		}
 	}
-	const closing = `${'\t'.repeat(depth)}})`
-	lines.push(closing)
-	cursor.offset += closing.length + 1
+	out.close('})')
 }
 
 /**
@@ -313,50 +279,38 @@ const emitEachBlock = (
 const emitReconcileBlock = (
 	plan: ReconcilePlan,
 	imports: ClientImports,
-	lines: string[],
-	spans: SourceSpan[],
-	cursor: SpanCursor,
-	depth: number,
+	out: CodeBuilder,
 ): void => {
 	imports.add('reconcile')
 	imports.add('watch')
 	imports.add('bindText')
-	const append = (text: string, at: number, slices: SourceSlice[] = []): void =>
-		appendWithSpans(lines, text, at, slices, spans, cursor)
 	const keyParam = plan.keyParam ?? '_key'
-	append(
+	out.open(
 		`${imports.local('reconcile')}(${plan.container}, ${plan.template}, ${plan.signal}, (_element, ${plan.itemParam}, ${keyParam}, first) => {`,
-		depth,
 	)
-	append(
+	out.line(
 		`${imports.local('watch')}(${plan.itemParam}, ${imports.local('bindText')}(first(${jsString(plan.holeSelector)}, ${jsString(`${plan.tag}: ${plan.holeSelector} missing`)})))`,
-		depth + 1,
 	)
 	for (const target of plan.itemEvents) {
 		if (target.selector !== null)
-			append(
+			out.line(
 				`const ${target.name} = first(${jsString(target.selector)}, ${jsString(target.message)})`,
-				depth + 1,
 			)
 		for (const event of target.events) {
 			imports.add('on')
-			append(
+			out.line(
 				`${imports.local('on')}(${target.name}, ${jsString(event.event)}, ${event.handlerText})`,
-				depth + 1,
 				sliceOf(event.handlerText, event.sourceStart),
 			)
 		}
 	}
-	const closing = `${'\t'.repeat(depth)}})`
-	lines.push(closing)
-	cursor.offset += closing.length + 1
+	out.close('})')
 	// The @empty arm on the toggle path (LT-212, ADR 0037 s5): the List's
 	// `length` read subscribes, so each root shows exactly while it is empty.
 	for (const query of plan.emptyQueries) {
 		imports.add('bindVisible')
-		append(
+		out.line(
 			`${imports.local('watch')}(() => ${plan.signal}.length === 0, ${imports.local('bindVisible')}(${query}))`,
-			depth,
 		)
 	}
 }
@@ -423,7 +377,7 @@ const messagePreambleLines = (
 	const lines = [
 		'// Client messages (ADR 0030 s9): the source-locale record, merged under',
 		'// the server-rendered `i18n` attribute and fixed for the connection.',
-		`const __i18nSource: Record<string, unknown> = ${JSON.stringify(source)}`,
+		`const __i18nSource: Record<string, unknown> = ${jsData(source)}`,
 		'let __i18nMessages = __i18nSource',
 		"const __i18nAttribute = host.getAttribute('i18n')",
 		'if (__i18nAttribute) {',
@@ -433,7 +387,7 @@ const messagePreambleLines = (
 		'\t\t\t__i18nMessages = { ...__i18nSource, ...(parsed as Record<string, unknown>) }',
 		'\t} catch (error) {',
 		"\t\tif (process.env.DEV_MODE === 'true')",
-		`\t\t\tconsole.warn(${JSON.stringify(`<${component.tag}>: the i18n attribute is not valid JSON, so the component shows its source-locale messages. Check the server render that wrote the attribute.`)}, error)`,
+		`\t\t\tconsole.warn(${jsString(`<${component.tag}>: the i18n attribute is not valid JSON, so the component shows its source-locale messages. Check the server render that wrote the attribute.`, 'double')}, error)`,
 		'\t}',
 		'}',
 	]
@@ -520,8 +474,9 @@ const messagePreambleLines = (
 	}
 	lines.push(`const ${tName} = {`)
 	for (const key of keys) {
-		const at = `__i18nMessages[${JSON.stringify(key)}]`
-		const member = /^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key)
+		const quoted = jsString(key, 'double')
+		const at = `__i18nMessages[${quoted}]`
+		const member = isJsIdentifier(key) ? key : quoted
 		if (withArgs.has(key))
 			lines.push(
 				`\t${member}: (args: Record<string, unknown>): string => {`,
@@ -531,13 +486,13 @@ const messagePreambleLines = (
 				'\t\t\treturn __i18nFormat(message as __I18nNode[], args)',
 				'\t\t} catch (error) {',
 				'\t\t\tif (error !== __i18nUncarried) throw error',
-				`\t\t\treturn __i18nFormat(__i18nSource[${JSON.stringify(key)}] as __I18nNode[], args)`,
+				`\t\t\treturn __i18nFormat(__i18nSource[${quoted}] as __I18nNode[], args)`,
 				'\t\t}',
 				'\t},',
 			)
 		else
 			lines.push(
-				`\t${member}: typeof ${at} === 'string' ? (${at} as string) : ${JSON.stringify(source[key])},`,
+				`\t${member}: typeof ${at} === 'string' ? (${at} as string) : ${jsData(source[key])},`,
 			)
 	}
 	lines.push('}')
@@ -568,11 +523,11 @@ export const emitClientModule = (
 	const imports = new ClientImports(['defineComponent'])
 	imports.bindScope(factoryScopeNames(component, plan))
 	for (const ambient of component.exposeAmbients) imports.add(ambient)
-	const lines: string[] = []
-	const spans: SourceSpan[] = []
-	const cursor: SpanCursor = { offset: 0 }
-	const push = (text: string, slices: SourceSlice[] = []): void =>
-		appendWithSpans(lines, text, 2, slices, spans, cursor)
+	// The factory body, at the arrow's body depth.
+	const out = new CodeBuilder({ depth: 2, reindent: true })
+	const push = (text: string, slices: SourceSlice[] = []): void => {
+		out.line(text, slices)
+	}
 
 	for (const line of messagePreambleLines(component, plan.clientMessageKeys))
 		push(line)
@@ -697,15 +652,14 @@ export const emitClientModule = (
 		push(stmt.text, sliceOf(stmt.text, stmt.range.start))
 
 	// Effects in document order
-	const emitTopEffect = (effect: TopEffectPlan, depth: number): void => {
-		const at = (text: string, slices: SourceSlice[] = []): void =>
-			appendWithSpans(lines, text, depth, slices, spans, cursor)
+	const emitTopEffect = (effect: TopEffectPlan): void => {
+		const at = push
 		if (effect.kind === 'each') {
-			emitEachBlock(effect.for, imports, lines, spans, cursor, depth)
+			emitEachBlock(effect.for, imports, out)
 			return
 		}
 		if (effect.kind === 'reconcile') {
-			emitReconcileBlock(effect.for, imports, lines, spans, cursor, depth)
+			emitReconcileBlock(effect.for, imports, out)
 			return
 		}
 		if (effect.kind === 'watch-text') {
@@ -754,7 +708,7 @@ export const emitClientModule = (
 			imports.add('watch')
 			imports.add('bindStyle')
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
-			const keys = effect.keys.map(jsString).join(', ')
+			const keys = effect.keys.map(key => jsString(key)).join(', ')
 			at(
 				`${imports.local('watch')}(${effect.thunkText}, ${imports.local('bindStyle')}(${effect.query}, [${keys}]))`,
 				slices,
@@ -768,7 +722,7 @@ export const emitClientModule = (
 			imports.add('watch')
 			imports.add('bindClass')
 			const slices = sliceOf(effect.thunkText, effect.sourceStart)
-			const keys = effect.keys.map(jsString).join(', ')
+			const keys = effect.keys.map(key => jsString(key)).join(', ')
 			at(
 				`${imports.local('watch')}(${effect.thunkText}, ${imports.local('bindClass')}(${effect.query}, [${keys}]))`,
 				slices,
@@ -819,8 +773,6 @@ export const emitClientModule = (
 			// child); `err`'s `error` is the SingleMatchHandlers Error (bound to
 			// the authored catch param — bare or a member read, e.g. `.message`).
 			imports.add('watch')
-			const append = (text: string, atDepth: number): void =>
-				appendWithSpans(lines, text, atDepth, [], spans, cursor)
 			// The fieldset wrappers (LT-077, CHECKLIST §8) toggle `disabled` in
 			// lockstep with their arm's own `hidden` — `hidden`/`display:none`
 			// exclude nothing from form submission, only `disabled` does, so a
@@ -831,72 +783,64 @@ export const emitClientModule = (
 			// immediate parent, and `:has()` predates REQUIREMENTS.md's 2020
 			// browser baseline; a live `querySelector()` using it would throw
 			// `InvalidSelectorError` on an unsupporting engine.
-			append(
+			out.line(
 				`const ${effect.pendingFieldsetQuery} = ${effect.pendingQuery}.parentElement as HTMLFieldSetElement`,
-				depth,
 			)
-			append(
+			out.line(
 				`const ${effect.okFieldsetQuery} = ${effect.okQuery}.parentElement as HTMLFieldSetElement`,
-				depth,
 			)
-			append(
+			out.line(
 				`const ${effect.errFieldsetQuery} = ${effect.errQuery}.parentElement as HTMLFieldSetElement`,
-				depth,
 			)
-			append(`${imports.local('watch')}(${effect.signal}, {`, depth)
-			append('ok: value => {', depth + 1)
-			append(`${effect.pendingQuery}.hidden = true`, depth + 2)
-			append(`${effect.pendingFieldsetQuery}.disabled = true`, depth + 2)
-			append(`${effect.errQuery}.hidden = true`, depth + 2)
-			append(`${effect.errFieldsetQuery}.disabled = true`, depth + 2)
-			append(`${effect.okQuery}.hidden = false`, depth + 2)
-			append(`${effect.okFieldsetQuery}.disabled = false`, depth + 2)
+			out.open(`${imports.local('watch')}(${effect.signal}, {`)
+			out.open('ok: value => {')
+			out.line(`${effect.pendingQuery}.hidden = true`)
+			out.line(`${effect.pendingFieldsetQuery}.disabled = true`)
+			out.line(`${effect.errQuery}.hidden = true`)
+			out.line(`${effect.errFieldsetQuery}.disabled = true`)
+			out.line(`${effect.okQuery}.hidden = false`)
+			out.line(`${effect.okFieldsetQuery}.disabled = false`)
 			// The ok arm always carries the resolved value as its text —
 			// `okText` was an always-true plan field (LT-222).
-			append(`${effect.okQuery}.textContent = String(value)`, depth + 2)
-			append('},', depth + 1)
-			append('nil: () => {', depth + 1)
-			append(`${effect.okQuery}.hidden = true`, depth + 2)
-			append(`${effect.okFieldsetQuery}.disabled = true`, depth + 2)
-			append(`${effect.errQuery}.hidden = true`, depth + 2)
-			append(`${effect.errFieldsetQuery}.disabled = true`, depth + 2)
-			append(`${effect.pendingQuery}.hidden = false`, depth + 2)
-			append(`${effect.pendingFieldsetQuery}.disabled = false`, depth + 2)
-			append('},', depth + 1)
-			append('err: error => {', depth + 1)
-			append(`${effect.pendingQuery}.hidden = true`, depth + 2)
-			append(`${effect.pendingFieldsetQuery}.disabled = true`, depth + 2)
-			append(`${effect.okQuery}.hidden = true`, depth + 2)
-			append(`${effect.okFieldsetQuery}.disabled = true`, depth + 2)
-			append(`${effect.errQuery}.hidden = false`, depth + 2)
-			append(`${effect.errFieldsetQuery}.disabled = false`, depth + 2)
+			out.line(`${effect.okQuery}.textContent = String(value)`)
+			out.close('},')
+			out.open('nil: () => {')
+			out.line(`${effect.okQuery}.hidden = true`)
+			out.line(`${effect.okFieldsetQuery}.disabled = true`)
+			out.line(`${effect.errQuery}.hidden = true`)
+			out.line(`${effect.errFieldsetQuery}.disabled = true`)
+			out.line(`${effect.pendingQuery}.hidden = false`)
+			out.line(`${effect.pendingFieldsetQuery}.disabled = false`)
+			out.close('},')
+			out.open('err: error => {')
+			out.line(`${effect.pendingQuery}.hidden = true`)
+			out.line(`${effect.pendingFieldsetQuery}.disabled = true`)
+			out.line(`${effect.okQuery}.hidden = true`)
+			out.line(`${effect.okFieldsetQuery}.disabled = true`)
+			out.line(`${effect.errQuery}.hidden = false`)
+			out.line(`${effect.errFieldsetQuery}.disabled = false`)
 			if (effect.errText)
-				append(
-					`${effect.errQuery}.textContent = String(${effect.errText})`,
-					depth + 2,
-				)
-			append('},', depth + 1)
-			append('})', depth)
+				out.line(`${effect.errQuery}.textContent = String(${effect.errText})`)
+			out.close('},')
+			out.close('})')
 			return
 		}
 		if (effect.kind === 'guarded') {
 			// A single-branch @if (no @else) root, addressed with a
 			// non-throwing query — every effect it owns only applies when
 			// that branch actually rendered.
-			at(`if (${effect.query}) {`)
-			for (const inner of effect.effects) emitTopEffect(inner, depth + 1)
-			const closing = `${'\t'.repeat(depth)}}`
-			lines.push(closing)
-			cursor.offset += closing.length + 1
+			out.open(`if (${effect.query}) {`)
+			for (const inner of effect.effects) emitTopEffect(inner)
+			out.close('}')
 			return
 		}
 		imports.add('on')
 		at(
-			`${imports.local('on')}(${effect.query}, '${effect.event}', ${effect.handlerText})`,
+			`${imports.local('on')}(${effect.query}, ${jsString(effect.event)}, ${effect.handlerText})`,
 			sliceOf(effect.handlerText, effect.sourceStart),
 		)
 	}
-	for (const effect of plan.effects) emitTopEffect(effect, 2)
+	for (const effect of plan.effects) emitTopEffect(effect)
 
 	// Factory context vs module imports: expose/watch/on/pass/first/all are
 	// context members; each/defineComponent/bind*/parsers/signal
@@ -938,12 +882,15 @@ export const emitClientModule = (
 			(t ?? '').includes('FormAssociatedElement'),
 		)
 
-	const body: string[] = [
-		'/**',
-		' * Generated by the Le Truc TSRX compiler (ADR 0023, milestone 2) from',
-		` * ${options.sourcePath} — DO NOT EDIT. The server half lives in ${component.tag}.server.ts.`,
-		' */',
-	]
+	const body = new CodeBuilder()
+		.line('/**')
+		.line(
+			' * Generated by the Le Truc TSRX compiler (ADR 0023, milestone 2) from',
+		)
+		.line(
+			` * ${options.sourcePath} — DO NOT EDIT. The server half lives in ${component.tag}.server.ts.`,
+		)
+		.line(' */')
 	// Real-export names an authored `import { … } from '@zeix/le-truc'` line
 	// already provides to this module (sub-design 16) — synthesized names
 	// are subtracted so no name is bound by two import statements.
@@ -953,7 +900,8 @@ export const emitClientModule = (
 	// ambient). Tokenized over the emitted text like the server emitter's
 	// scan — it cannot under-match, and an authored import is deduplicated
 	// by the `clientLeTrucNames` filter below.
-	if (lines.some(line => /\bisPending\b/.test(line))) imports.add('isPending')
+	if (out.lines.some(line => /\bisPending\b/.test(line)))
+		imports.add('isPending')
 
 	const importList = [...imports]
 		.filter(name => !FACTORY_CONTEXT_MEMBERS.has(name))
@@ -967,38 +915,34 @@ export const emitClientModule = (
 		.sort()
 		.map(name => aliased(name, imports.local(name), ' as '))
 	if (importList.length > 0)
-		body.push(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
+		body.line(`import { ${importList.join(', ')} } from '@zeix/le-truc'`)
 	if (needsFormType)
-		body.push("import type { FormAssociatedElement } from '@zeix/le-truc'")
+		body.line("import type { FormAssociatedElement } from '@zeix/le-truc'")
 	for (const tag of plan.childTags) {
 		const specifier = options.childImports?.get(tag)
-		if (specifier) body.push(`import '${specifier}'`)
+		if (specifier) body.line(`import ${jsString(specifier)}`)
 	}
-	for (const importText of component.imports.client) body.push(importText)
-	body.push('')
-	for (const decl of component.typeDecls) body.push(decl, '')
-	if (component.globalDecl) body.push(component.globalDecl, '')
+	// Authored text and declarations are pre-formatted: appended as written.
+	body.append([...component.imports.client, ''])
+	for (const decl of component.typeDecls) body.append([decl, ''])
+	if (component.globalDecl) body.append([component.globalDecl, ''])
 	// The authored component JSDoc rides above the generated default export:
 	// identical comment text ⇒ identical CEM extraction (LT-006), and the
 	// generated client documents itself.
-	if (component.componentDoc) body.push(component.componentDoc, '')
-	body.push(`export default ${imports.local('defineComponent')}${typeArg}(`)
-	body.push(`\t'${component.tag}',`)
-	body.push(`\t(${context}) => {`)
-	// `spans` were recorded relative to `lines.join('\n')` — offset by the
-	// header/import/declaration text that precedes it in the final module.
-	const bodyBaseOffset = body.join('\n').length + 1
-	for (const line of lines) body.push(line)
-	body.push('\t},')
-	if (extensions.length > 0) body.push(`\t[${extensions.join(', ')}],`)
-	body.push(')')
+	if (component.componentDoc) body.append([component.componentDoc, ''])
+	body.open(`export default ${imports.local('defineComponent')}${typeArg}(`)
+	body.line(`${jsString(component.tag)},`)
+	body.open(`(${context}) => {`)
+	// The factory body's spans rebase onto the header/import/declaration
+	// text that precedes it in the final module.
+	body.append(out)
+	body.close('},')
+	if (extensions.length > 0) body.line(`[${extensions.join(', ')}],`)
+	body.close(')')
 
 	return {
-		code: `${body.join('\n')}\n`,
+		code: `${body}\n`,
 		imports,
-		spans: spans.map(s => ({
-			...s,
-			generatedStart: s.generatedStart + bodyBaseOffset,
-		})),
+		spans: body.spans,
 	}
 }

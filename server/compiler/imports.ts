@@ -36,7 +36,8 @@ import {
 import { diagnostic } from './diagnostics'
 import { DEFAULT_EMIT_PATHS } from './emit-paths'
 import { dependenciesOf, isServerEvaluable } from './evaluability'
-import type { ComponentIR, ExtractContext, TemplateNode } from './ir'
+import type { ExtractContext } from './extract-context'
+import type { ComponentIR, TemplateNode } from './ir'
 import {
 	CONTEXT_NAMES,
 	FACTORY_CONTEXT_MEMBERS,

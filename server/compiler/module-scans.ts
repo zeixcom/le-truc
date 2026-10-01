@@ -19,8 +19,8 @@ import {
 	walkNodes,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
+import type { ExtractContext } from './extract-context'
 import type { LeTrucImport } from './imports'
-import type { ExtractContext } from './ir'
 import { malformedSelectorReason } from './selector-syntax'
 import {
 	COLLECTOR_HELPERS,

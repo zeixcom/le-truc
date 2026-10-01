@@ -16,12 +16,8 @@ import {
 	text,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
-import type {
-	AttributeIR,
-	ComposeAttrIR,
-	ExtractContext,
-	PassEntryIR,
-} from './ir'
+import type { ExtractContext } from './extract-context'
+import type { AttributeIR, ComposeAttrIR, PassEntryIR } from './ir'
 import { bindsExposedArg } from './reactivity'
 
 /**

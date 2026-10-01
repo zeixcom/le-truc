@@ -29,6 +29,18 @@ export type ComposeNode = Extract<TemplateNode, { kind: 'compose' }>
 export const isElement = (n: TemplateNode): n is ElementNode =>
 	n.kind === 'element'
 
+/**
+ * A node's `ref` attribute — its author-declared `first()` binding, on a
+ * plain or composed element (LT-231: the one spelling of this lookup).
+ * Since LT-055 (raw) and LT-127 (composed) every `{kind:'ref'}` attr in the
+ * IR is one: the compiler attaches them from `first()` calls and nothing
+ * else does.
+ */
+export const refOf = <A extends { kind: string }>(node: {
+	attrs: readonly A[]
+}): Extract<A, { kind: 'ref' }> | undefined =>
+	node.attrs.find((a): a is Extract<A, { kind: 'ref' }> => a.kind === 'ref')
+
 /* === Internal Functions === */
 
 /** Static attributes of an element as a map (for selector synthesis). */
@@ -430,7 +442,7 @@ export const composeSharedPassClause = (
 			members.every(
 				sib =>
 					sib.attrs.some(a => a.kind === 'pass') &&
-					!sib.attrs.some(a => a.kind === 'ref') &&
+					!refOf(sib) &&
 					composeDiscriminatorClause(sib, siblings) === null,
 			)
 		)
@@ -586,11 +598,7 @@ const selectorCandidates = (
  * combinator, a selector list) falls back to synthesis.
  */
 const authoredSelectorOf = (element: ElementNode): string | null => {
-	const ref = element.attrs.find(
-		(a): a is Extract<ElementNode['attrs'][number], { kind: 'ref' }> =>
-			a.kind === 'ref',
-	)
-	const selector = ref?.selector?.trim()
+	const selector = refOf(element)?.selector?.trim()
 	return selector && SELECTOR_GRAMMAR.test(selector) ? selector : null
 }
 

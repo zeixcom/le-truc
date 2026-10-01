@@ -31,13 +31,13 @@ import {
 import { getStyleElementStylesheet, parseModule } from '../../core'
 import { diagnostic } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
+import type { ExtractContext } from '../../extract-context'
+import { createExtractContext } from '../../extract-context'
 import {
 	type CompileResult,
-	createExtractContext,
 	runFrontEnd,
 	type SurfaceAdapter,
 } from '../../front-end'
-import type { ExtractContext } from '../../ir'
 import { lowerChildren, lowerElement } from './lower-template'
 
 /* === Types === */

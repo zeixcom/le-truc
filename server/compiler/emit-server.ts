@@ -19,6 +19,7 @@
 
 import type { AstNode } from './ast-node'
 import { freeIdentifiers, hostPropOf } from './ast-utils'
+import { CodeBuilder, HtmlWriter, jsData, jsString } from './codegen'
 import { isVoidElement } from './core'
 import {
 	foldableHostProps,
@@ -42,12 +43,7 @@ import type {
 	TemplateNode,
 } from './ir'
 import type { RegistryEntry } from './registry'
-import {
-	appendWithSpans,
-	reindent,
-	type SourceSpan,
-	type SpanCursor,
-} from './spans'
+import { reindent, type SourceSpan } from './spans'
 import type { EvaluationTier } from './tier'
 import { CLIENT_ONLY_PRIMITIVES, JS_GLOBALS } from './vocabulary'
 import { walkTemplate } from './walk'
@@ -72,7 +68,6 @@ export type EmittedServerModule = {
 type ElementNode = Extract<TemplateNode, { kind: 'element' }>
 type TryNode = Extract<TemplateNode, { kind: 'try' }>
 type ComposeNode = Extract<TemplateNode, { kind: 'compose' }>
-type Part = { static: string } | { expr: string }
 
 /**
  * The harness names the emitter itself writes calls to (LT-302) — as
@@ -141,8 +136,8 @@ type EmitContext = {
 	 * (`index.ts`), so `emitCompose` never needs to handle a missing entry.
 	 */
 	composeRegistry: ReadonlyMap<string, RegistryEntry> | undefined
-	/** The render function's statement lines, in emission order. */
-	lines: string[]
+	/** The render function's markup statements, in emission order. */
+	out: CodeBuilder
 	/** Runtime harness names referenced by the emitted code → import line. */
 	used: Set<string>
 	/** Composed component name → generated server module specifier. */
@@ -168,7 +163,7 @@ type EmitContext = {
 	 * `<template>` is emitted after its container's close tag (outside the
 	 * reconciled container's children — ADR 0017 removes unkeyed children).
 	 */
-	templateQueue: string[][]
+	templateQueue: CodeBuilder[][]
 	/**
 	 * LT-173 step 6: the render-scope names a host-derived fold may leave in
 	 * a spliced thunk — computed once per module, the same set the analyzer's
@@ -190,27 +185,25 @@ type EmitContext = {
 	 * shadows it. See {@link EMITTED_HARNESS_NAMES}.
 	 */
 	h: (name: EmittedHarnessName) => string
+	/**
+	 * A name the emitter mints for its own locals (`__html`, `__arm1`,
+	 * `__async1`, `__children1`, `__key`, `__empty0`), renamed with a
+	 * leading `_` while a render-scope name already binds it (LT-234: the
+	 * client's reserved-name policy). Renames, never errors.
+	 */
+	mint: (name: string) => string
 }
 
 /* === Internal Functions === */
 
-/** Escape a static segment for use inside a generated template literal. */
-const tplEscape = (s: string): string =>
-	s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${')
+/** One `<buffer>.push(<expr>)` statement into the current buffer. */
+const push = (ctx: EmitContext, expr: string): void => {
+	ctx.out.line(`${ctx.buffer}.push(${expr})`)
+}
 
-/** Generated statement indentation at `depth` (one tab per level). */
-const tab = (depth: number) => '\t'.repeat(depth)
-
-/** Render push parts as one `__html.push(...)` argument. */
-const pushArgument = (parts: Part[]): string => {
-	if (parts.every(p => 'static' in p)) {
-		const joined = parts.map(p => (p as { static: string }).static).join('')
-		return JSON.stringify(joined)
-	}
-	const body = parts
-		.map(p => ('static' in p ? tplEscape(p.static) : `\${${p.expr}}`))
-		.join('')
-	return `\`${body}\``
+/** Push a closing tag, unless the element is void. */
+const pushClose = (ctx: EmitContext, tag: string): void => {
+	if (!isVoidElement(tag)) push(ctx, jsString(`</${tag}>`))
 }
 
 /**
@@ -295,13 +288,6 @@ const dropUnreferencedUnevaluable = (
 	}
 	return kept
 }
-
-const escapeAttrValue = (value: string): string =>
-	value
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
 
 /**
  * A lazy child's initial server value: a signal identifier reads `.get()`,
@@ -424,18 +410,18 @@ const hostDerivedExpr = (
  * and server-static expressions (LT-215 — admitted by validateListBody)
  * are baked in at render time: the template is emitted per render call,
  * so each locale's folded strings ride along to every cloned item.
+ * Written into a fork of the markup builder: the caller queues it for the
+ * innermost open element's close tag.
  */
-const listTemplateLines = (
-	ctx: EmitContext,
-	loop: ReconcileForIR,
-	depth: number,
-): string[] => {
-	const out: string[] = [`${tab(depth)}${ctx.buffer}.push('<template>')`]
-	const shape = (node: TemplateNode, atDepth: number): void => {
+const listTemplate = (ctx: EmitContext, loop: ReconcileForIR): CodeBuilder => {
+	const out = ctx.out.fork()
+	const pushTo = (expr: string): void => {
+		out.line(`${ctx.buffer}.push(${expr})`)
+	}
+	pushTo("'<template>'")
+	const shape = (node: TemplateNode): void => {
 		if (node.kind === 'text') {
-			out.push(
-				`${tab(atDepth)}${ctx.buffer}.push(${JSON.stringify(node.value)})`,
-			)
+			pushTo(jsString(node.value, 'double'))
 			return
 		}
 		if (node.kind === 'expr') {
@@ -444,12 +430,10 @@ const listTemplateLines = (
 				node.expr.type === 'Identifier' &&
 				node.exprText === loop.itemName
 			)
-				out.push(`${tab(atDepth)}${ctx.buffer}.push('<slot></slot>')`)
+				pushTo("'<slot></slot>'")
 			else if (!node.lazy) {
 				ctx.used.add('esc')
-				out.push(
-					`${tab(atDepth)}${ctx.buffer}.push(${ctx.h('esc')}(String(${node.exprText})))`,
-				)
+				pushTo(`${ctx.h('esc')}(String(${node.exprText}))`)
 			}
 			return
 		}
@@ -457,31 +441,27 @@ const listTemplateLines = (
 		// rejected everything else, and events/refs never render
 		// server-side.
 		if (node.kind !== 'element') return
-		const parts: Part[] = [{ static: `<${node.tag}` }]
+		const html = new HtmlWriter().static(`<${node.tag}`)
 		for (const attr of node.attrs) {
-			if (attr.kind === 'static') {
-				if (attr.value === null) parts.push({ static: ` ${attr.name}` })
-				else
-					parts.push({
-						static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
-					})
-			} else if (attr.kind === 'server') {
+			if (attr.kind === 'static') html.attr(attr.name, attr.value)
+			else if (attr.kind === 'server') {
 				// esc() escapes quotes too, so the value is safe inside the
 				// double-quoted attribute the static parts open and close.
 				ctx.used.add('esc')
-				parts.push({ static: ` ${attr.name}="` })
-				parts.push({ expr: `${ctx.h('esc')}(String(${attr.exprText}))` })
-				parts.push({ static: '"' })
+				html
+					.static(` ${attr.name}="`)
+					.expr(`${ctx.h('esc')}(String(${attr.exprText}))`)
+					.static('"')
 			}
 		}
-		parts.push({ static: '>' })
-		out.push(`${tab(atDepth)}${ctx.buffer}.push(${pushArgument(parts)})`)
-		for (const child of node.children) shape(child, atDepth)
-		if (!isVoidElement(node.tag))
-			out.push(`${tab(atDepth)}${ctx.buffer}.push('</${node.tag}>')`)
+		pushTo(`${html.static('>')}`)
+		for (const child of node.children) shape(child)
+		if (!isVoidElement(node.tag)) pushTo(jsString(`</${node.tag}>`))
 	}
-	shape(loop.output, depth + 1)
-	out.push(`${tab(depth)}${ctx.buffer}.push('</template>')`)
+	out.depth++
+	shape(loop.output)
+	out.depth--
+	pushTo("'</template>'")
 	return out
 }
 
@@ -497,31 +477,26 @@ const emitListFor = (
 	ctx: EmitContext,
 	loop: ReconcileForIR,
 	scope: ReadonlySet<string>,
-	depth: number,
 ): void => {
-	const keyVar = loop.keyName ?? '__key'
+	const keyVar = loop.keyName ?? ctx.mint('__key')
 	const loopScope = new Set(scope)
 	loopScope.add(loop.itemName)
 	if (loop.keyName) loopScope.add(keyVar)
-	const emptyFlag = openEmptyFlag(ctx, loop, depth)
-	ctx.lines.push(
-		`${tab(depth)}for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
+	const emptyFlag = openEmptyFlag(ctx, loop)
+	ctx.out.open(
+		`for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
 	)
-	if (emptyFlag) ctx.lines.push(`${tab(depth + 1)}${emptyFlag} = false`)
+	if (emptyFlag) ctx.out.line(`${emptyFlag} = false`)
 	const dataKey: AttributeIR = {
 		kind: 'server',
 		name: 'data-key',
 		exprText: keyVar,
 		node: loop.node,
 	}
-	emitElement(ctx, loop.output, loopScope, depth + 1, [dataKey])
-	for (const child of loop.output.children)
-		emit(ctx, child, loopScope, depth + 1)
-	if (!isVoidElement(loop.output.tag))
-		ctx.lines.push(
-			`${tab(depth + 1)}${ctx.buffer}.push('</${loop.output.tag}>')`,
-		)
-	ctx.lines.push(`${tab(depth)}}`)
+	emitElement(ctx, loop.output, loopScope, [dataKey])
+	for (const child of loop.output.children) emit(ctx, child, loopScope)
+	pushClose(ctx, loop.output.tag)
+	ctx.out.close()
 
 	// The empty arm stays in the container on the toggle path (ADR 0037
 	// s5): always rendered, exempt from reconciliation, hidden while the
@@ -530,7 +505,7 @@ const emitListFor = (
 		ctx.used.add('attr')
 		for (const root of loop.emptyArm) {
 			if (root.kind !== 'element') continue
-			emitElement(ctx, root, scope, depth, [
+			emitElement(ctx, root, scope, [
 				{ kind: 'static', name: 'data-unreconciled', value: null },
 				{
 					kind: 'server',
@@ -539,16 +514,15 @@ const emitListFor = (
 					node: loop.node,
 				},
 			])
-			for (const child of root.children) emit(ctx, child, scope, depth)
-			if (!isVoidElement(root.tag))
-				ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</${root.tag}>')`)
+			for (const child of root.children) emit(ctx, child, scope)
+			pushClose(ctx, root.tag)
 		}
 	}
 
 	// Extracted template → the innermost open element's pending queue
 	// (flushed after that element's close tag).
 	const queue = ctx.templateQueue.at(-1)
-	if (queue) queue.push(...listTemplateLines(ctx, loop, depth))
+	if (queue) queue.push(listTemplate(ctx, loop))
 }
 
 /**
@@ -557,14 +531,10 @@ const emitListFor = (
  * only over values with a `length`. Returns the flag name, or null (and
  * emits nothing) for a loop without an arm.
  */
-const openEmptyFlag = (
-	ctx: EmitContext,
-	loop: ForIR,
-	depth: number,
-): string | null => {
+const openEmptyFlag = (ctx: EmitContext, loop: ForIR): string | null => {
 	if (!loop.emptyArm) return null
-	const flag = `__empty${ctx.emptyCounter++}`
-	ctx.lines.push(`${tab(depth)}let ${flag} = true`)
+	const flag = ctx.mint(`__empty${ctx.emptyCounter++}`)
+	ctx.out.line(`let ${flag} = true`)
 	return flag
 }
 
@@ -572,10 +542,9 @@ const emitFor = (
 	ctx: EmitContext,
 	loop: ForIR,
 	scope: ReadonlySet<string>,
-	depth: number,
 ): void => {
 	if (loop.kind === 'reconcile') {
-		emitListFor(ctx, loop, scope, depth)
+		emitListFor(ctx, loop, scope)
 		return
 	}
 	const bodyText = [
@@ -596,25 +565,19 @@ const emitFor = (
 	const binding = usesIndex
 		? `const [${loop.indexName}, ${loop.itemName}] of ${ctx.h('entries')}(${loop.iterableText})`
 		: `const ${loop.itemName} of ${ctx.h('items')}(${loop.iterableText})`
-	const emptyFlag = openEmptyFlag(ctx, loop, depth)
-	ctx.lines.push(`${tab(depth)}for (${binding}) {`)
-	if (emptyFlag) ctx.lines.push(`${tab(depth + 1)}${emptyFlag} = false`)
+	const emptyFlag = openEmptyFlag(ctx, loop)
+	ctx.out.open(`for (${binding}) {`)
+	if (emptyFlag) ctx.out.line(`${emptyFlag} = false`)
 	for (const hoisted of loop.hoisted)
-		ctx.lines.push(
-			`${tab(depth + 1)}const ${hoisted.name} = ${hoisted.initText}`,
-		)
-	emitElement(ctx, loop.output, loopScope, depth + 1)
-	for (const child of loop.output.children)
-		emit(ctx, child, loopScope, depth + 1)
-	if (!isVoidElement(loop.output.tag))
-		ctx.lines.push(
-			`${tab(depth + 1)}${ctx.buffer}.push('</${loop.output.tag}>')`,
-		)
-	ctx.lines.push(`${tab(depth)}}`)
+		ctx.out.line(`const ${hoisted.name} = ${hoisted.initText}`)
+	emitElement(ctx, loop.output, loopScope)
+	for (const child of loop.output.children) emit(ctx, child, loopScope)
+	pushClose(ctx, loop.output.tag)
+	ctx.out.close()
 	if (emptyFlag && loop.emptyArm) {
-		ctx.lines.push(`${tab(depth)}if (${emptyFlag}) {`)
-		for (const node of loop.emptyArm) emit(ctx, node, scope, depth + 1, true)
-		ctx.lines.push(`${tab(depth)}}`)
+		ctx.out.open(`if (${emptyFlag}) {`)
+		for (const node of loop.emptyArm) emit(ctx, node, scope, true)
+		ctx.out.close()
 	}
 }
 
@@ -622,27 +585,22 @@ const emitElement = (
 	ctx: EmitContext,
 	element: ElementNode,
 	scope: ReadonlySet<string>,
-	depth: number,
 	extraAttrs: AttributeIR[] = [],
 ): void => {
-	const parts: Part[] = [{ static: `<${element.tag}` }]
+	const html = new HtmlWriter().static(`<${element.tag}`)
+	const attrCall = (name: string, value: string): string =>
+		`${ctx.h('attr')}(${jsString(name)}, ${value})`
 	let staticClass: string | null = null
 	let classExpr: string | null = null
 	for (const attr of [...extraAttrs, ...element.attrs]) {
 		switch (attr.kind) {
 			case 'static':
 				if (attr.name === 'class') staticClass = attr.value ?? ''
-				else if (attr.value === null) parts.push({ static: ` ${attr.name}` })
-				else
-					parts.push({
-						static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
-					})
+				else html.attr(attr.name, attr.value)
 				break
 			case 'server':
 				ctx.used.add('attr')
-				parts.push({
-					expr: `${ctx.h('attr')}('${attr.name}', ${attr.exprText})`,
-				})
+				html.expr(attrCall(attr.name, attr.exprText))
 				break
 			case 'reactive': {
 				const mirror = hostPropMirrorExpr(ctx.component, attr.thunk)
@@ -657,15 +615,13 @@ const emitElement = (
 						: null
 				if (mirror !== null) {
 					ctx.used.add('attr')
-					parts.push({ expr: `${ctx.h('attr')}('${attr.name}', ${mirror})` })
+					html.expr(attrCall(attr.name, mirror))
 				} else if (derived !== null) {
 					ctx.used.add('attr')
-					parts.push({ expr: `${ctx.h('attr')}('${attr.name}', ${derived})` })
+					html.expr(attrCall(attr.name, derived))
 				} else if (isServerEvaluable(attr.thunk, scope)) {
 					ctx.used.add('attr')
-					parts.push({
-						expr: `${ctx.h('attr')}('${attr.name}', (${attr.thunkText})())`,
-					})
+					html.expr(attrCall(attr.name, `(${attr.thunkText})()`))
 				}
 				break
 			}
@@ -679,9 +635,12 @@ const emitElement = (
 				if (isServerEvaluable(attr.object, scope)) {
 					ctx.used.add('attr')
 					ctx.used.add('styleAttr')
-					parts.push({
-						expr: `${ctx.h('attr')}('style', ${ctx.h('styleAttr')}((${attr.thunkText})()) || null)`,
-					})
+					html.expr(
+						attrCall(
+							'style',
+							`${ctx.h('styleAttr')}((${attr.thunkText})()) || null`,
+						),
+					)
 				}
 				break
 			case 'event':
@@ -690,19 +649,15 @@ const emitElement = (
 		}
 	}
 	if (classExpr || staticClass !== null) {
-		const prefix = staticClass
-			? `${escapeAttrValue(staticClass)}${classExpr ? ' ' : ''}`
-			: ''
+		html.static(' class="')
+		if (staticClass) html.text(staticClass)
 		if (classExpr) {
-			parts.push({ static: ` class="${prefix}` })
-			parts.push({ expr: classExpr })
-			parts.push({ static: '"' })
-		} else {
-			parts.push({ static: ` class="${prefix}"` })
+			if (staticClass) html.static(' ')
+			html.expr(classExpr)
 		}
+		html.static('"')
 	}
-	parts.push({ static: '>' })
-	ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(${pushArgument(parts)})`)
+	push(ctx, `${html.static('>')}`)
 }
 
 /** Compose-site attributes that land on the child's root, not in its args. */
@@ -720,7 +675,6 @@ const emitCompose = (
 	ctx: EmitContext,
 	node: ComposeNode,
 	scope: ReadonlySet<string>,
-	depth: number,
 ): void => {
 	const entry = ctx.composeRegistry?.get(node.source)
 	if (!entry) return
@@ -739,17 +693,17 @@ const emitCompose = (
 				// arg and dropped).
 				!isComposeHostAttr(a.name),
 		)
-		.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
+		.map(a => `${jsString(a.name, 'double')}: ${a.exprText}`)
 	// A composed element's children (LT-018) render into their own
 	// buffer, once, server-side — the joined string is forwarded as
 	// the child's `children` server arg (self-closing tags pass none,
 	// matching "no children supplied" at the type level).
 	if (node.children.length > 0) {
-		const childrenVar = `__children${++ctx.childrenCounter}`
-		ctx.lines.push(`${tab(depth)}const ${childrenVar}: string[] = []`)
+		const childrenVar = ctx.mint(`__children${++ctx.childrenCounter}`)
+		ctx.out.line(`const ${childrenVar}: string[] = []`)
 		const outerBuffer = ctx.buffer
 		ctx.buffer = childrenVar
-		for (const child of node.children) emit(ctx, child, scope, depth)
+		for (const child of node.children) emit(ctx, child, scope)
 		ctx.buffer = outerBuffer
 		args.push(`children: ${childrenVar}.join('')`)
 	}
@@ -778,12 +732,13 @@ const emitCompose = (
 				: parentLang !== null
 					? parentLang
 					: entry.langArgDefault !== null
-						? JSON.stringify(entry.langArgDefault)
+						? jsString(entry.langArgDefault, 'double')
 						: null
+		const tag = jsString(entry.tag, 'double')
 		args.push(
 			langExpr !== null
-				? `i18n: ${ctx.h('i18nRecord')}(${JSON.stringify(entry.tag)}, ${langExpr})`
-				: `i18n: ${ctx.h('i18nRecord')}(${JSON.stringify(entry.tag)})`,
+				? `i18n: ${ctx.h('i18nRecord')}(${tag}, ${langExpr})`
+				: `i18n: ${ctx.h('i18nRecord')}(${tag})`,
 		)
 	}
 	// LT-090: materialize compose-site class/id/data-* on the child root
@@ -802,13 +757,14 @@ const emitCompose = (
 	if (hostAttrs.length > 0) {
 		ctx.used.add('composeHostAttrs')
 		const attrsArg = hostAttrs
-			.map(a => `${JSON.stringify(a.name)}: ${a.exprText}`)
+			.map(a => `${jsString(a.name, 'double')}: ${a.exprText}`)
 			.join(', ')
-		ctx.lines.push(
-			`${tab(depth)}${ctx.buffer}.push(${ctx.h('composeHostAttrs')}(${renderCall}, ${JSON.stringify(entry.tag)}, { ${attrsArg} }))`,
+		push(
+			ctx,
+			`${ctx.h('composeHostAttrs')}(${renderCall}, ${jsString(entry.tag, 'double')}, { ${attrsArg} })`,
 		)
 	} else {
-		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(${renderCall})`)
+		push(ctx, renderCall)
 	}
 }
 
@@ -829,7 +785,6 @@ const emitAsyncBoundary = (
 	ctx: EmitContext,
 	node: TryNode,
 	scope: ReadonlySet<string>,
-	depth: number,
 ): void => {
 	// The dispatcher routes here only for the async form (a `@pending`
 	// arm exists).
@@ -837,8 +792,8 @@ const emitAsyncBoundary = (
 	if (pendingChildren === null) return
 	ctx.used.add('isPending')
 	const asyncId = ++ctx.armCounter
-	const stateVar = `__async${asyncId}`
-	const errVar = `__async${asyncId}Err`
+	const stateVar = ctx.mint(`__async${asyncId}`)
+	const errVar = ctx.mint(`__async${asyncId}Err`)
 	const okRoot = node.children.find(
 		(c): c is ElementNode => c.kind === 'element',
 	) as ElementNode
@@ -858,19 +813,18 @@ const emitAsyncBoundary = (
 	const errChild = errRoot.children.find(
 		(c): c is TemplateNode & { kind: 'expr' } => c.kind === 'expr' && c.lazy,
 	)
-	ctx.lines.push(
-		`${tab(depth)}let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`,
-	)
-	ctx.lines.push(`${tab(depth)}let ${errVar}: unknown = undefined`)
-	ctx.lines.push(`${tab(depth)}if (!${ctx.h('isPending')}(${signalName})) {`)
-	ctx.lines.push(`${tab(depth + 1)}try {`)
-	ctx.lines.push(`${tab(depth + 2)}${signalName}.get()`)
-	ctx.lines.push(`${tab(depth + 2)}${stateVar} = 'ok'`)
-	ctx.lines.push(`${tab(depth + 1)}} catch (e) {`)
-	ctx.lines.push(`${tab(depth + 2)}${errVar} = e`)
-	ctx.lines.push(`${tab(depth + 2)}${stateVar} = 'err'`)
-	ctx.lines.push(`${tab(depth + 1)}}`)
-	ctx.lines.push(`${tab(depth)}}`)
+	ctx.out
+		.line(`let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`)
+		.line(`let ${errVar}: unknown = undefined`)
+		.open(`if (!${ctx.h('isPending')}(${signalName})) {`)
+		.open('try {')
+		.line(`${signalName}.get()`)
+		.line(`${stateVar} = 'ok'`)
+		.between('} catch (e) {')
+		.line(`${errVar} = e`)
+		.line(`${stateVar} = 'err'`)
+		.close()
+		.close()
 	const hiddenAttr = (cond: string): AttributeIR => ({
 		kind: 'server',
 		name: 'hidden',
@@ -892,12 +846,10 @@ const emitAsyncBoundary = (
 	): void => {
 		if (guardedExpr !== null && child.kind === 'expr' && child.lazy) {
 			ctx.used.add('esc')
-			ctx.lines.push(
-				`${tab(depth)}${ctx.buffer}.push(${ctx.h('esc')}(String(${guardedExpr})))`,
-			)
+			push(ctx, `${ctx.h('esc')}(String(${guardedExpr}))`)
 			return
 		}
-		emit(ctx, child, armScope, depth)
+		emit(ctx, child, armScope)
 	}
 	// `hidden`/`display:none` exclude nothing from form submission,
 	// only `disabled` does (CHECKLIST §8, LT-077) — a named control in
@@ -916,21 +868,18 @@ const emitAsyncBoundary = (
 		guardedExpr: string | null,
 	): void => {
 		ctx.used.add('attr')
-		ctx.lines.push(
-			`${tab(depth)}${ctx.buffer}.push(${pushArgument([
-				{
-					static: '<fieldset style="border:0;padding:0;margin:0;min-width:0"',
-				},
-				{ expr: `${ctx.h('attr')}('disabled', ${hiddenCond})` },
-				{ static: '>' },
-			])})`,
+		push(
+			ctx,
+			`${new HtmlWriter()
+				.static('<fieldset style="border:0;padding:0;margin:0;min-width:0"')
+				.expr(`${ctx.h('attr')}('disabled', ${hiddenCond})`)
+				.static('>')}`,
 		)
-		emitElement(ctx, root, armScope, depth, [hiddenAttr(hiddenCond)])
+		emitElement(ctx, root, armScope, [hiddenAttr(hiddenCond)])
 		for (const child of root.children)
 			emitGuardedChild(child, armScope, guardedExpr)
-		if (!isVoidElement(root.tag))
-			ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</${root.tag}>')`)
-		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</fieldset>')`)
+		pushClose(ctx, root.tag)
+		push(ctx, "'</fieldset>'")
 	}
 	emitArmRoot(pendingRoot, scope, `${stateVar} !== 'pending'`, null)
 	emitArmRoot(
@@ -941,7 +890,7 @@ const emitAsyncBoundary = (
 	)
 	const errScope = new Set(scope)
 	if (node.catchParam) {
-		ctx.lines.push(`${tab(depth)}const ${node.catchParam} = ${errVar}`)
+		ctx.out.line(`const ${node.catchParam} = ${errVar}`)
 		errScope.add(node.catchParam)
 	}
 	emitArmRoot(
@@ -956,13 +905,14 @@ const emitAsyncBoundary = (
  * The template emitter dispatcher (LT-225): one arm per `TemplateNode`
  * kind, with the two standalone branches (`emitAsyncBoundary`,
  * `emitCompose`) split out. The element tail resolves reactive-`@for`
- * output nodes to their loop and dispatches plain elements.
+ * output nodes to their loop and dispatches plain elements. Depth is the
+ * markup builder's: a block's children are emitted between its `open()`
+ * and `close()`.
  */
 const emit = (
 	ctx: EmitContext,
 	node: TemplateNode,
 	scope: ReadonlySet<string>,
-	depth: number,
 	/** Set by the loop emitters, which render their own empty arm. */
 	emptyArm = false,
 ): void => {
@@ -974,9 +924,7 @@ const emit = (
 		return
 	}
 	if (node.kind === 'text') {
-		ctx.lines.push(
-			`${tab(depth)}${ctx.buffer}.push(${JSON.stringify(node.value)})`,
-		)
+		push(ctx, jsString(node.value, 'double'))
 		return
 	}
 	if (node.kind === 'expr') {
@@ -990,7 +938,7 @@ const emit = (
 			node.expr.type === 'Identifier' &&
 			node.exprText === 'children'
 		) {
-			ctx.lines.push(`${tab(depth)}${ctx.buffer}.push(String(children))`)
+			push(ctx, 'String(children)')
 			return
 		}
 		ctx.used.add('esc')
@@ -1003,40 +951,37 @@ const emit = (
 					ctx.foldScope,
 				)
 			: node.exprText
-		ctx.lines.push(
-			`${tab(depth)}${ctx.buffer}.push(${ctx.h('esc')}(String(${value})))`,
-		)
+		push(ctx, `${ctx.h('esc')}(String(${value}))`)
 		return
 	}
 	if (node.kind === 'if') {
 		// The condition is server-known (validated at lowering) — the
 		// render function evaluates it against the real args.
-		ctx.lines.push(`${tab(depth)}if (${node.testText}) {`)
-		for (const child of node.then) emit(ctx, child, scope, depth + 1)
+		ctx.out.open(`if (${node.testText}) {`)
+		for (const child of node.then) emit(ctx, child, scope)
 		if (node.alternate.length > 0) {
-			ctx.lines.push(`${tab(depth)}} else {`)
-			for (const child of node.alternate) emit(ctx, child, scope, depth + 1)
+			ctx.out.between('} else {')
+			for (const child of node.alternate) emit(ctx, child, scope)
 		}
-		ctx.lines.push(`${tab(depth)}}`)
+		ctx.out.close()
 		return
 	}
 	if (node.kind === 'switch') {
 		// Arms are mutually exclusive — each case block breaks so JS
 		// fall-through cannot blend arms.
-		ctx.lines.push(`${tab(depth)}switch (${node.discriminantText}) {`)
+		ctx.out.open(`switch (${node.discriminantText}) {`)
 		for (const arm of node.cases) {
-			ctx.lines.push(
-				`${tab(depth + 1)}${arm.testText === null ? 'default' : `case ${arm.testText}`}: {`,
+			ctx.out.open(
+				`${arm.testText === null ? 'default' : `case ${arm.testText}`}: {`,
 			)
-			for (const child of arm.children) emit(ctx, child, scope, depth + 2)
-			ctx.lines.push(`${tab(depth + 2)}break`)
-			ctx.lines.push(`${tab(depth + 1)}}`)
+			for (const child of arm.children) emit(ctx, child, scope)
+			ctx.out.line('break').close()
 		}
-		ctx.lines.push(`${tab(depth)}}`)
+		ctx.out.close()
 		return
 	}
 	if (node.kind === 'try' && node.pendingChildren !== null) {
-		emitAsyncBoundary(ctx, node, scope, depth)
+		emitAsyncBoundary(ctx, node, scope)
 		return
 	}
 	if (node.kind === 'try') {
@@ -1045,47 +990,43 @@ const emit = (
 		// markup into the output — the catch arm starts fresh. The join
 		// targets the OUTER buffer; arm names are unique so a nested @try
 		// contributes through its own buffer, never shadowing.
-		const armName = `__arm${++ctx.armCounter}`
-		ctx.lines.push(`${tab(depth)}try {`)
-		ctx.lines.push(`${tab(depth + 1)}const ${armName}: string[] = []`)
+		const armName = ctx.mint(`__arm${++ctx.armCounter}`)
+		ctx.out.open('try {').line(`const ${armName}: string[] = []`)
 		const outerBuffer = ctx.buffer
 		ctx.buffer = armName
-		for (const child of node.children) emit(ctx, child, scope, depth + 1)
+		for (const child of node.children) emit(ctx, child, scope)
 		ctx.buffer = outerBuffer
-		ctx.lines.push(`${tab(depth + 1)}${outerBuffer}.push(${armName}.join(''))`)
+		ctx.out.line(`${outerBuffer}.push(${armName}.join(''))`)
 		if (node.catchChildren.length > 0) {
-			ctx.lines.push(
-				`${tab(depth)}} catch${node.catchParam ? ` (${node.catchParam})` : ''} {`,
+			ctx.out.between(
+				`} catch${node.catchParam ? ` (${node.catchParam})` : ''} {`,
 			)
-			const catchName = `__arm${++ctx.armCounter}`
-			ctx.lines.push(`${tab(depth + 1)}const ${catchName}: string[] = []`)
+			const catchName = ctx.mint(`__arm${++ctx.armCounter}`)
+			ctx.out.line(`const ${catchName}: string[] = []`)
 			ctx.buffer = catchName
 			const catchScope = new Set(scope)
 			if (node.catchParam) catchScope.add(node.catchParam)
-			for (const child of node.catchChildren)
-				emit(ctx, child, catchScope, depth + 1)
+			for (const child of node.catchChildren) emit(ctx, child, catchScope)
 			ctx.buffer = outerBuffer
-			ctx.lines.push(
-				`${tab(depth + 1)}${outerBuffer}.push(${catchName}.join(''))`,
-			)
+			ctx.out.line(`${outerBuffer}.push(${catchName}.join(''))`)
 		}
-		ctx.lines.push(`${tab(depth)}}`)
+		ctx.out.close()
 		return
 	}
 	if (node.kind === 'compose') {
-		emitCompose(ctx, node, scope, depth)
+		emitCompose(ctx, node, scope)
 		return
 	}
 	const loop = [...ctx.component.fors.values()].find(f => f.output === node)
 	if (loop) {
-		emitFor(ctx, loop, scope, depth)
+		emitFor(ctx, loop, scope)
 		return
 	}
 	// Reactive-for templates flush after this element's close tag — the
 	// spec shape (adopted items, </container>, then <template>) keeps the
 	// template out of the reconciled container's children.
 	ctx.templateQueue.push([])
-	emitElement(ctx, node, scope, depth)
+	emitElement(ctx, node, scope)
 	// truc:html={dataRef} renders as sanitized raw children before authored
 	// children (dependency-provable, else omitted for the client pass).
 	const htmlAttr = node.attrs.find(a => a.kind === 'html') as
@@ -1093,14 +1034,11 @@ const emit = (
 		| undefined
 	if (htmlAttr && isServerEvaluable(htmlAttr.node, scope)) {
 		ctx.used.add('sanitizeHtml')
-		ctx.lines.push(
-			`${tab(depth)}${ctx.buffer}.push(${ctx.h('sanitizeHtml')}(String(${htmlAttr.exprText})))`,
-		)
+		push(ctx, `${ctx.h('sanitizeHtml')}(String(${htmlAttr.exprText}))`)
 	}
-	for (const child of node.children) emit(ctx, child, scope, depth)
-	if (!isVoidElement(node.tag))
-		ctx.lines.push(`${tab(depth)}${ctx.buffer}.push('</${node.tag}>')`)
-	ctx.lines.push(...(ctx.templateQueue.pop() ?? []))
+	for (const child of node.children) emit(ctx, child, scope)
+	pushClose(ctx, node.tag)
+	for (const template of ctx.templateQueue.pop() ?? []) ctx.out.append(template)
 }
 
 /* === Exported Functions === */
@@ -1150,13 +1088,20 @@ export const emitServerModule = (
 	},
 ): EmittedServerModule => {
 	const renderScope = renderScopeNames(component)
+	const mint = (name: string): string => {
+		let local = name
+		while (renderScope.has(local)) local = `_${local}`
+		return local
+	}
+	const htmlBuffer = mint('__html')
 	const ctx: EmitContext = {
 		component,
 		composeRegistry: options.composeRegistry,
-		lines: [],
+		// The markup statements sit at the render function body's depth.
+		out: new CodeBuilder({ depth: 1 }),
 		used: new Set<string>(),
 		composeImports: new Map<string, string>(),
-		buffer: '__html',
+		buffer: htmlBuffer,
 		emptyArmNodes: new Set(
 			[...component.fors.values()].flatMap(loop => loop.emptyArm ?? []),
 		),
@@ -1166,35 +1111,33 @@ export const emitServerModule = (
 		usedI18nRecord: false,
 		templateQueue: [],
 		foldScope: foldableRenderScope(component),
-		h: name => (renderScope.has(name) ? `__${name}` : name),
+		h: name => (renderScope.has(name) ? mint(`__${name}`) : name),
+		mint,
 	}
 	// The emitters mutate these in place and never rebind them, so the
 	// assembly tail binds the identities directly; the mutable scalars
 	// (`buffer`, the counters, `usedI18nRecord`) stay
 	// ctx-only.
-	const { lines, used, composeImports, templateQueue } = ctx
+	const { out, used, composeImports, templateQueue } = ctx
+	const { lines } = out
 
 	// Root-level reactive lists flush their template before the root close.
 	templateQueue.push([])
 	for (const child of component.root.children)
-		emit(ctx, child, component.serverKnown, 1)
-	lines.push(...(templateQueue.pop() ?? []))
+		emit(ctx, child, component.serverKnown)
+	for (const template of templateQueue.pop() ?? []) out.append(template)
 
 	// Root element opening: only static and server-definitive attributes
 	// render; reactive/event/ref constructs on the root are the client
 	// analyzer's to diagnose.
-	const rootParts: Part[] = [{ static: `<${component.tag}` }]
+	const rootHtml = new HtmlWriter().static(`<${component.tag}`)
+	const attrCall = (name: string, value: string): string =>
+		`${ctx.h('attr')}(${jsString(name)}, ${value})`
 	for (const attr of component.root.attrs) {
-		if (attr.kind === 'static' && attr.value !== null)
-			rootParts.push({
-				static: ` ${attr.name}="${escapeAttrValue(attr.value)}"`,
-			})
-		else if (attr.kind === 'static') rootParts.push({ static: ` ${attr.name}` })
+		if (attr.kind === 'static') rootHtml.attr(attr.name, attr.value)
 		else if (attr.kind === 'server') {
 			used.add('attr')
-			rootParts.push({
-				expr: `${ctx.h('attr')}('${attr.name}', ${attr.exprText})`,
-			})
+			rootHtml.expr(attrCall(attr.name, attr.exprText))
 		} else if (attr.kind === 'style-map') {
 			// LT-028: the root's reactive style is the one construct the client
 			// analyzer accepts (targeting `host`) — render its initial value here
@@ -1202,9 +1145,12 @@ export const emitServerModule = (
 			if (isServerEvaluable(attr.object, component.serverKnown)) {
 				used.add('attr')
 				used.add('styleAttr')
-				rootParts.push({
-					expr: `${ctx.h('attr')}('style', ${ctx.h('styleAttr')}((${attr.thunkText})()) || null)`,
-				})
+				rootHtml.expr(
+					attrCall(
+						'style',
+						`${ctx.h('styleAttr')}((${attr.thunkText})()) || null`,
+					),
+				)
 			}
 		} else if (attr.kind === 'class-map') {
 			// LT-032: same root exemption as style-map — render the initial
@@ -1212,9 +1158,9 @@ export const emitServerModule = (
 			if (isServerEvaluable(attr.object, component.serverKnown)) {
 				used.add('attr')
 				used.add('cls')
-				rootParts.push({
-					expr: `${ctx.h('attr')}('class', ${ctx.h('cls')}((${attr.thunkText})()) || null)`,
-				})
+				rootHtml.expr(
+					attrCall('class', `${ctx.h('cls')}((${attr.thunkText})()) || null`),
+				)
 			}
 		}
 	}
@@ -1232,9 +1178,7 @@ export const emitServerModule = (
 		!component.root.attrs.some(a => 'name' in a && a.name === 'lang')
 	) {
 		used.add('attr')
-		rootParts.push({
-			expr: `${ctx.h('attr')}('lang', ${component.langBinding})`,
-		})
+		rootHtml.expr(attrCall('lang', component.langBinding))
 	}
 	// ADR 0030 s9 (LT-218): the client message channel. The render call's
 	// own `t` serializes the client-referenced keys the locale changes
@@ -1251,7 +1195,7 @@ export const emitServerModule = (
 			component.i18nMessages,
 			clientKeys,
 		)
-		const keysText = JSON.stringify(clientKeys)
+		const keysText = jsData(clientKeys)
 		const formats = [
 			...carriedKinds([...withArgs].map(key => source[key] as Message)),
 		].some(kind => FORMATTING_KINDS.has(kind))
@@ -1261,16 +1205,20 @@ export const emitServerModule = (
 		used.add('attr')
 		if (formats && !rendersLang) {
 			used.add('clientLocale')
-			rootParts.push({
-				expr: `${ctx.h('attr')}('lang', ${ctx.h('clientLocale')}(${tBinding}, ${keysText}))`,
-			})
+			rootHtml.expr(
+				attrCall('lang', `${ctx.h('clientLocale')}(${tBinding}, ${keysText})`),
+			)
 		}
 		used.add('clientMessages')
-		rootParts.push({
-			expr: `${ctx.h('attr')}('i18n', ${ctx.h('clientMessages')}(${tBinding}, ${keysText}, ${JSON.stringify(source)}))`,
-		})
+		rootHtml.expr(
+			attrCall(
+				'i18n',
+				`${ctx.h('clientMessages')}(${tBinding}, ${keysText}, ${jsData(source)})`,
+			),
+		)
 	}
-	rootParts.push({ static: '>' })
+	rootHtml.static('>')
+	const rootMarkup = `${rootHtml}`
 
 	/**
 	 * ADR 0029 sub-design 4: only the Folded tier re-declares the `@{ }`
@@ -1343,10 +1291,10 @@ export const emitServerModule = (
 	const emittedSetup = harnessSuppressed
 		? retainReferenced(
 				component.setup.filter(stmt => !serverUnevaluable(stmt)),
-				[pushArgument(rootParts), ...lines],
+				[rootMarkup, ...lines],
 			)
 		: dropUnreferencedUnevaluable(component.setup, serverUnevaluable, [
-				pushArgument(rootParts),
+				rootMarkup,
 				...lines,
 			])
 	const emittedNames = new Set(
@@ -1447,7 +1395,7 @@ export const emitServerModule = (
 		emittedSetup.some(stmt => referencesIsPending(stmt.text)) ||
 		(component.exposeText !== null &&
 			referencesIsPending(component.exposeText)) ||
-		rootParts.some(part => 'expr' in part && referencesIsPending(part.expr))
+		rootHtml.exprs.some(expr => referencesIsPending(expr))
 	)
 		used.add('isPending')
 
@@ -1517,13 +1465,14 @@ export const emitServerModule = (
 					for (const param of component.paramProps) {
 						if (param.name === 'i18n' || param.name === 'lang') continue
 						const optionalish = param.optional || param.hasDefault
-						const key = JSON.stringify(param.name)
+						const key = jsString(param.name, 'double')
 						// The occurrence's attribute is the arg's kebab-case name
 						// (`readingTime` ← `reading-time`, LT-095): parse5 reports
 						// attribute names lowercased, so a camelCase lookup could
 						// never match. A one-word arg is its own attribute name.
-						const attrKey = JSON.stringify(
+						const attrKey = jsString(
 							param.name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`),
+							'double',
 						)
 						const attrVar = `${param.name}Attr`
 						const parser = component.parserExposeProps.get(param.name)
@@ -1585,12 +1534,13 @@ export const emitServerModule = (
 				})()
 			: null
 
-	const body: string[] = [
-		'/**',
-		' * Generated by the Le Truc TSRX compiler (ADR 0023, milestone 1) from',
-		` * ${options.sourcePath} — DO NOT EDIT.`,
-		' */',
-	]
+	const body = new CodeBuilder()
+		.line('/**')
+		.line(
+			' * Generated by the Le Truc TSRX compiler (ADR 0023, milestone 1) from',
+		)
+		.line(` * ${options.sourcePath} — DO NOT EDIT.`)
+		.line(' */')
 	if (used.size > 0) {
 		const imports = [...used]
 			.sort()
@@ -1602,24 +1552,24 @@ export const emitServerModule = (
 						: name,
 				),
 			)
-		body.push(
-			`import { ${imports.join(', ')} } from '${options.runtimeImport}'`,
+		body.line(
+			`import { ${imports.join(', ')} } from ${jsString(options.runtimeImport)}`,
 		)
 	}
 	for (const [name, specifier] of [...composeImports].sort())
-		body.push(`import { render${name} } from '${specifier}'`)
+		body.line(`import { render${name} } from ${jsString(specifier)}`)
 	// ADR 0030 (LT-173): the reserved record's type and constructor live in
 	// the generated `i18n` module the corpus effect writes beside these
 	// artifacts. Type import when this component declares the parameter;
 	// value import when this module composes a child that declares it.
-	if (component.declaresI18n) body.push(`import type { I18n } from './i18n'`)
+	if (component.declaresI18n) body.line(`import type { I18n } from './i18n'`)
 	if (ctx.usedI18nRecord)
-		body.push(
+		body.line(
 			`import { ${importSpecifier('i18nRecord', ctx.h('i18nRecord'))} } from './i18n'`,
 		)
-	for (const importText of component.imports.server) body.push(importText)
-	body.push('')
-	for (const decl of component.typeDecls) body.push(decl, '')
+	// Authored text and declarations are pre-formatted: appended as written.
+	body.append([...component.imports.server, ''])
+	for (const decl of component.typeDecls) body.append([decl, ''])
 	// Verbatim param slice, re-indented: first line inline in the signature,
 	// continuation lines keep their relative shape.
 	const paramLines = reindent(
@@ -1628,12 +1578,12 @@ export const emitServerModule = (
 	).split('\n')
 	const paramFirst = paramLines[0]?.replace(/^\t\t/, '') ?? ''
 	if (paramLines.length === 1) {
-		body.push(
+		body.open(
 			`export function render${component.name}(${paramFirst}): string {`,
 		)
 	} else {
-		body.push(`export function render${component.name}(${paramFirst}`)
-		body.push(...paramLines.slice(1), '): string {')
+		body.line(`export function render${component.name}(${paramFirst}`)
+		body.append(paramLines.slice(1)).open('): string {')
 	}
 	// The client-only ambients computed above: a method-producer body
 	// inside expose() (`defineMethod(() => { host.value = ''; input.value
@@ -1644,16 +1594,13 @@ export const emitServerModule = (
 	// object, unlike those bodies, IS evaluated, so the stub has to
 	// survive being read and called, not just resolve (LT-121).
 	for (const name of stubNamesAll)
-		body.push(`\tconst ${name}: any = ${ctx.h('refStub')}`)
+		body.line(`const ${name}: any = ${ctx.h('refStub')}`)
 	// Setup statements keep their relative shape: the shallowest continuation
 	// line lands at one tab (statement depth), deeper lines keep their
 	// relative indent, template-literal interiors stay byte-identical (LT-010).
 	// Each statement is also verbatim source, so its span is recorded
-	// (LT-011) relative to `spanLines`, offset once by `setupBaseOffset`.
-	const spans: SourceSpan[] = []
-	const spanCursor: SpanCursor = { offset: 0 }
-	const spanLines: string[] = []
-	const setupBaseOffset = body.join('\n').length + 1
+	// (LT-011); `append` rebases the spans onto the module.
+	const setup = new CodeBuilder({ depth: 1, reindent: true })
 	for (const stmt of emittedSetup) {
 		// requestContext-declared signals (LT-035): `stmt.text` is the verbatim
 		// `requestContext(Context, fallback)` call, which doesn't exist
@@ -1671,30 +1618,21 @@ export const emitServerModule = (
 		const stmtText = ctxSignal
 			? `const ${ctxSignal.name} = createCell(${ctxSignal.fallbackText})`
 			: stmt.text
-		appendWithSpans(
-			spanLines,
-			stmtText,
-			1,
-			[{ text: stmtText, start: stmt.range.start }],
-			spans,
-			spanCursor,
-		)
+		setup.line(stmtText, [{ text: stmtText, start: stmt.range.start }])
 	}
-	for (const line of spanLines) body.push(line)
-	body.push('\tconst __html: string[] = []')
-	body.push(`\t__html.push(${pushArgument(rootParts)})`)
-	body.push(...lines)
-	body.push(`\t__html.push('</${component.tag}>')`)
-	body.push("\treturn __html.join('')")
-	body.push('}')
-	if (argsHelperLines !== null) body.push('', ...argsHelperLines)
+	body
+		.append(setup)
+		.line(`const ${htmlBuffer}: string[] = []`)
+		.line(`${htmlBuffer}.push(${rootMarkup})`)
+		.append(out)
+		.line(`${htmlBuffer}.push(${jsString(`</${component.tag}>`)})`)
+		.line(`return ${htmlBuffer}.join('')`)
+		.close()
+	if (argsHelperLines !== null) body.append(['', ...argsHelperLines])
 
 	return {
-		code: `${body.join('\n')}\n`,
+		code: `${body}\n`,
 		runtimeImports: used,
-		spans: spans.map(s => ({
-			...s,
-			generatedStart: s.generatedStart + setupBaseOffset,
-		})),
+		spans: body.spans,
 	}
 }

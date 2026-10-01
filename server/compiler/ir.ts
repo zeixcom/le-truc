@@ -4,16 +4,16 @@
  * front end (`compiler.ts`) produces a `ComponentIR` of `TemplateNode`s,
  * `analyze.ts` consumes it into a `ClientPlan`, and the two emitters
  * consume both. A pure leaf: type-only imports (`AstNode` erases at
- * compile time and carries no pin footprint, `CompileDiagnostic` from the
- * diagnostics leaf), no runtime values, no imports of any pipeline stage —
- * so every stage can depend on this file without depending on each other.
+ * compile time and carries no pin footprint), no runtime values, no
+ * imports of any pipeline stage — so every stage can depend on this file
+ * without depending on each other. Every type here is DATA: no function
+ * members, no front-end mutable state (LT-244 evicted `ExtractContext` to
+ * `extract-context.ts`), so a `ComponentIR` stays serializable.
  */
 
 import type { AstNode } from './ast-node'
-import type { CompileDiagnostic } from './diagnostics'
 import type { MessageArg } from './icu/parse'
 import type { Surface } from './surface'
-import type { RoutingSignal } from './tier'
 
 /* === Types === */
 
@@ -754,67 +754,3 @@ export type RenderedShape =
 	  }
 	| { kind: 'compose'; source: string }
 	| { kind: 'any' }
-
-/**
- * Shared lowering/classification context, threaded through `compileSource`,
- * `lower-template.ts`, `classify-attributes.ts`, and `config.ts`.
- */
-export type ExtractContext = {
-	source: string
-	/** The authored surface — selects the diagnostic vocabulary (LT-233). */
-	surface: Surface
-	diagnostics: CompileDiagnostic[]
-	/**
-	 * Why this component cannot be answered by phase 1 alone (ADR 0029,
-	 * LT-165). Collected at the same setup-extraction sites that raise
-	 * `LTC013`/`LTC043`, and merged in `index.ts` with the analysis pass's
-	 * own signals before the tier is classified.
-	 */
-	routingSignals: RoutingSignal[]
-	/**
-	 * Prop names `expose()` declares, plus the managed form props. Populated
-	 * before template lowering so a string-literal child naming a prop can be
-	 * diagnosed (LTC019) — that spelling meant "watch this prop by name"
-	 * only while the `&` sigil disambiguated it from ordinary text.
-	 */
-	exposedProps: Set<string>
-	/** Names server-known at template evaluation time (args, setup). */
-	serverKnown: Set<string>
-	/**
-	 * Prop names exposed through a Parser factory — the subset of
-	 * `exposedProps` seeded from the HOST ATTRIBUTE rather than
-	 * from the component's own markup. LT-122 excludes them; see
-	 * `bindsExposedArg`.
-	 */
-	parserProps: Set<string>
-	/** The Parser factory name backing a `parserProps` entry (LTC039). */
-	parserFactoryOf: (prop: string) => string
-	/**
-	 * The `first()`-bound ref names a Parser-exposed prop's FALLBACK
-	 * expression reads (LT-129). `asNumber(asNumber(1)(input.step))` returns
-	 * `{'input'}` — the fallback re-reads the very element the arg renders
-	 * into, which is the data account's sanctioned OVERRIDE precedence rather
-	 * than a second copy, so LTC039 must not fire on it.
-	 */
-	parserFallbackRefsOf: (prop: string) => ReadonlySet<string>
-	/**
-	 * The component function's own parameter names — the strict
-	 * subset of `serverKnown` that arrives from the CALLER. LT-122's
-	 * arg-and-prop coincidence is about those only: a setup const or
-	 * signal sharing a prop's name is a different relationship.
-	 */
-	argNames: Set<string>
-	/**
-	 * Local name → import specifier resolved to a repo-relative `.tsrx` path,
-	 * for composed (PascalCase) elements (ADR 0023 sub-design 10).
-	 */
-	composeImports: ReadonlyMap<string, string>
-	/**
-	 * Setup-level `const name = init` initializers, by name — lets an event
-	 * attribute reference a hoisted handler by identifier (`{onInput}`)
-	 * instead of only accepting an inline function expression; the resolved
-	 * initializer is treated exactly like an inline one (same handler text,
-	 * so `@if` branches that share the identifier automatically agree).
-	 */
-	setupInits: ReadonlyMap<string, AstNode>
-}

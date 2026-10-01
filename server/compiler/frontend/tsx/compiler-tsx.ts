@@ -30,9 +30,9 @@
 import { asArray, identifierName, isNode } from '../../ast-utils'
 import { diagnostic } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
+import { createExtractContext } from '../../extract-context'
 import {
 	type CompileResult,
-	createExtractContext,
 	runFrontEnd,
 	type SurfaceAdapter,
 } from '../../front-end'

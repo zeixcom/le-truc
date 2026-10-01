@@ -10,6 +10,7 @@
  * value (a validity message carrying `Min length is ${n}\nPlease enter…`
  * loses the second line's indentation). Both consult `lineStartsInTemplate`
  * and leave interior lines byte-identical, including their indentation.
+ * `commonIndent` (LT-234) is their one shared common-indentation answer.
  *
  * The scanner is a conservative single-pass lexer over the slice: strings,
  * template literals with `${ … }` interpolation (nested templates included),
@@ -132,4 +133,28 @@ export const lineStartsInTemplate = (lines: string[]): boolean[] => {
 	}
 
 	return mask
+}
+
+/**
+ * The common leading indentation of `lines`' significant lines (LT-234,
+ * shared by `spans.ts`'s two reindent computations). A line is skipped
+ * when blank, when it starts inside a template literal (`mask`, LT-010),
+ * when `skipFirst` excludes line 0 (a caller-positioned first line), or
+ * when `skipDocContinuations` excludes a `*`-led JSDoc continuation.
+ */
+export const commonIndent = (
+	lines: readonly string[],
+	mask: readonly boolean[],
+	options: { skipFirst?: boolean; skipDocContinuations?: boolean } = {},
+): string => {
+	let common: string | null = null
+	for (let i = options.skipFirst ? 1 : 0; i < lines.length; i++) {
+		const line = lines[i] as string
+		if (line.trim().length === 0 || mask[i]) continue
+		if (options.skipDocContinuations && line.trimStart().startsWith('*'))
+			continue
+		const indent = line.match(/^[ \t]*/)?.[0] ?? ''
+		if (common === null || indent.length < common.length) common = indent
+	}
+	return common ?? ''
 }

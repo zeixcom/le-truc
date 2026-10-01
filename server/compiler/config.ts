@@ -8,7 +8,8 @@
 import type { AstNode } from './ast-node'
 import { asArray, identifierName, isNode } from './ast-utils'
 import { diagnostic } from './diagnostics'
-import type { ConfigIR, ExtractContext } from './ir'
+import type { ExtractContext } from './extract-context'
+import type { ConfigIR } from './ir'
 
 /**
  * Extract and validate `export const config = { … }` — extension activation

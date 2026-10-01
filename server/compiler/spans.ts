@@ -12,7 +12,7 @@
  * produces a TS diagnostic, so it needs no coverage here.
  */
 
-import { lineStartsInTemplate } from './indent'
+import { commonIndent, lineStartsInTemplate } from './indent'
 
 /* === Types === */
 
@@ -70,16 +70,7 @@ const offsetToLineCol = (
 export const reindent = (slice: string, level: number): string => {
 	const lines = slice.split('\n')
 	const mask = lineStartsInTemplate(lines)
-	const indents = lines
-		.filter(
-			(line, i) =>
-				line.trim().length > 0 && !mask[i] && !line.trimStart().startsWith('*'),
-		)
-		.map(line => line.match(/^[ \t]*/)?.[0] ?? '')
-	const common = indents.length
-		? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ??
-			'')
-		: ''
+	const common = commonIndent(lines, mask, { skipDocContinuations: true })
 	const prefix = '\t'.repeat(level)
 	return lines
 		.map((line, i) => {
@@ -118,14 +109,7 @@ export const appendWithSpans = (
 ): void => {
 	const statementLines = text.split('\n')
 	const mask = lineStartsInTemplate(statementLines)
-	const rest = statementLines.slice(1)
-	const indents = rest
-		.filter((l, i) => l.trim().length > 0 && !mask[i + 1])
-		.map(l => l.match(/^[ \t]*/)?.[0] ?? '')
-	const common = indents.length
-		? (indents.reduce((min, ind) => (ind.length < min.length ? ind : min)) ??
-			'')
-		: ''
+	const common = commonIndent(statementLines, mask, { skipFirst: true })
 	const prefix = '\t'.repeat(depth)
 
 	const strippedOf: number[] = []

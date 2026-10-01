@@ -24,8 +24,8 @@ import {
 	isNode,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
+import type { ExtractContext } from './extract-context'
 import { type MessageArg, type MessageArgKind, parseMessage } from './icu/parse'
-import type { ExtractContext } from './ir'
 
 const messagesKey = (node: unknown): string | null => {
 	if (!isNode(node)) return null

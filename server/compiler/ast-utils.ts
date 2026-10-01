@@ -180,12 +180,39 @@ export const jsxName = (node: unknown): string | null =>
 		: null
 
 /**
+ * `<object>.get` — a non-computed member read of `get` (LT-231: the one
+ * spelling of the getter shape; `x[get]` is a computed read, not it).
+ */
+export const isGetterMember = (node: unknown): boolean =>
+	isNode(node) &&
+	node.type === 'MemberExpression' &&
+	!node.computed &&
+	identifierName(node.property) === 'get'
+
+/** `sig.get` on a bare identifier: the identifier's name, else null. */
+export const getterObjectName = (node: unknown): string | null =>
+	isGetterMember(node) ? identifierName((node as AstNode).object) : null
+
+/**
+ * `sig.get()` — the signal read the analysis tracks: a call of `.get` on a
+ * bare identifier. Returns the identifier's name, else null. Whether that
+ * name IS a signal is the caller's question (it holds the signal list).
+ */
+export const signalGetCallName = (node: unknown): string | null =>
+	isNode(node) && node.type === 'CallExpression'
+		? getterObjectName(node.callee)
+		: null
+
+/**
  * Call `onFree` on every `Identifier` node a node reads that is NOT bound
- * within it — its free variable reads, in walk order. Scope-aware enough
- * for the sanctioned shapes: function params, local declarators, loop and
- * catch bindings, property keys, and non-computed member properties never
- * count as reads; statements in a block (or a `.tsrx` `@{ }` code block)
- * bind their declarations for the statements that follow. Import
+ * within it — its free variable reads, in walk order. Scope-aware for
+ * the bindings JS has: function params (their defaults and computed keys
+ * ARE reads), a named function expression's own name, local declarators,
+ * loop and catch bindings, class names; property, method and class-member
+ * keys, labels and non-computed member properties never count as reads;
+ * statements in a block (or a `.tsrx` `@{ }` code block) bind their
+ * declarations for the statements that follow, and function declarations
+ * hoist to the whole block (LT-231). Import
  * declarations introduce names rather than read them, so they are skipped
  * — and bind nothing, which is what lets the authored-import check see an
  * unimported read.
@@ -224,13 +251,39 @@ export const forEachFreeIdentifier = (
 			case 'FunctionExpression':
 			case 'FunctionDeclaration': {
 				const inner = new Set(bound)
+				// A named function expression binds its own name inside itself.
+				const ownName = identifierName(current.id)
+				if (ownName) inner.add(ownName)
 				const paramNames = new Set<string>()
 				for (const param of asArray(current.params))
 					collectBoundNames(param, paramNames)
 				for (const n of paramNames) inner.add(n)
+				// Re-visiting the patterns with their names bound reaches what
+				// they READ — default values, computed keys — and nothing else.
+				for (const param of asArray(current.params)) visit(param, inner)
 				visit(current.body, inner)
 				return
 			}
+			case 'ClassDeclaration':
+			case 'ClassExpression': {
+				visit(current.superClass, bound)
+				const ownName = identifierName(current.id)
+				visit(current.body, ownName ? new Set([...bound, ownName]) : bound)
+				return
+			}
+			case 'MethodDefinition':
+			case 'PropertyDefinition':
+			case 'AccessorProperty':
+				// A member key names, it does not read — unless computed.
+				if (current.computed) visit(current.key, bound)
+				visit(current.value, bound)
+				return
+			case 'LabeledStatement':
+				visit(current.body, bound)
+				return
+			case 'BreakStatement':
+			case 'ContinueStatement':
+				return
 			case 'VariableDeclarator': {
 				visit(current.init, bound)
 				const declared = new Set<string>()
@@ -302,6 +355,19 @@ export const forEachFreeIdentifier = (
 				// container is a JSXCodeBlock holding plain statements plus a
 				// `render` slot (the template) that sees all of them.
 				const inner = new Set(bound)
+				// Function declarations hoist: their names are in scope for
+				// the whole block, including the statements before them.
+				for (const stmt of asArray(current.body)) {
+					const hoisted =
+						stmt.type === 'FunctionDeclaration'
+							? identifierName(stmt.id)
+							: stmt.type === 'ExportNamedDeclaration' &&
+									isNode(stmt.declaration) &&
+									stmt.declaration.type === 'FunctionDeclaration'
+								? identifierName(stmt.declaration.id)
+								: null
+					if (hoisted) inner.add(hoisted)
+				}
 				for (const stmt of asArray(current.body)) {
 					if (stmt.type === 'VariableDeclaration') {
 						// `const handleUp = () => { ...; el.removeEventListener(
@@ -337,11 +403,11 @@ export const forEachFreeIdentifier = (
 							collectBoundNames(decl.id, declared)
 						for (const name of declared) inner.add(name)
 					} else if (
-						stmt.type === 'FunctionDeclaration' &&
+						stmt.type === 'ClassDeclaration' &&
 						identifierName(stmt.id)
 					) {
-						inner.add(identifierName(stmt.id) as string)
 						visit(stmt, inner)
+						inner.add(identifierName(stmt.id) as string)
 					} else {
 						visit(stmt, inner)
 					}

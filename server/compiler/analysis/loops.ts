@@ -18,6 +18,7 @@ import type {
 } from '../ir'
 import { wordingOf } from '../surface'
 import { isDirtyFlagControlAttr } from '../vocabulary'
+import { isClientConstructAttr } from '../walk'
 import { reportServerOnlyNames } from './effects'
 import { returnsNumber } from './harvest'
 import type {
@@ -39,6 +40,35 @@ import {
 } from './selectors'
 
 /* === Internal Functions === */
+
+/**
+ * A client construct a server-data loop body addresses (LT-231: derived
+ * from the one `isClientConstructAttr` answer). A `ref` is not one: its
+ * `first()` query addresses the element itself, never per item.
+ */
+const isLoopConstruct = (a: AttributeIR): boolean =>
+	isClientConstructAttr(a) && a.kind !== 'ref'
+
+/** A loop construct `each()` has no lowering for — reported, not dropped. */
+const isLoopUnloweredConstruct = (a: AttributeIR): boolean =>
+	isLoopConstruct(a) &&
+	a.kind !== 'reactive' &&
+	a.kind !== 'class-map' &&
+	a.kind !== 'event'
+
+/** How a loop-body diagnostic names an unlowered construct. */
+const loopConstructLabel = (a: AttributeIR): string => {
+	switch (a.kind) {
+		case 'style-map':
+			return 'A reactive style map'
+		case 'html':
+			return 'A reactive `html` binding'
+		case 'pass':
+			return 'A `pass` binding'
+		default:
+			return `The prop-bound attribute \`${'name' in a ? a.name : a.kind}\``
+	}
+}
 
 /**
  * Pass 1: server-data `@for` → `each()` plans (output selector, collection
@@ -145,6 +175,17 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 						sourceEnd: attr.handler.end,
 						target,
 					})
+				} else if (isLoopUnloweredConstruct(attr)) {
+					// LT-231: any other client construct used to be dropped
+					// without a word — compiled clean, never bound.
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							el.node.start,
+							`${loopConstructLabel(attr)} on an element in a server-data ${wording.loop} body`,
+							'`each()` binds reactive attributes, class maps and event handlers only — bind it outside the loop, or render the value from server data.',
+						),
+					)
 				}
 			}
 		}
@@ -160,12 +201,7 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 		const collectDescendants = (el: ElementNode): void => {
 			for (const child of el.children) {
 				if (child.kind !== 'element') continue
-				const hasConstruct = child.attrs.some(
-					a =>
-						a.kind === 'reactive' ||
-						a.kind === 'class-map' ||
-						a.kind === 'event',
-				)
+				const hasConstruct = child.attrs.some(isLoopConstruct)
 				if (hasConstruct) {
 					const resolved = resolveSelectorScoped(
 						output,

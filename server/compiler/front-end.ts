@@ -21,19 +21,14 @@ import type { AstNode } from './ast-node'
 import { asArray, identifierName, isNode } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import type { EmitPaths } from './emit-paths'
+import type { ExtractContext } from './extract-context'
 import { messageBindingsOf } from './i18n'
 import {
 	parseComposeImports,
 	parseLeTrucImports,
 	parsePlainImports,
 } from './imports'
-import type {
-	ComponentIR,
-	ExtractContext,
-	ForIR,
-	SignalIR,
-	TemplateNode,
-} from './ir'
+import type { ComponentIR, ForIR, SignalIR, TemplateNode } from './ir'
 import {
 	reportDeferredCollectorCalls,
 	reportLeTrucImportMismatch,
@@ -92,31 +87,7 @@ export type SurfaceAdapter = {
 	) => TemplateNode & { kind: 'element' }
 }
 
-/* === Internal Functions === */
-
-/** Shared empty result for the `parserFallbackRefsOf` context hook. */
-const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
-
 /* === Exported Functions === */
-
-/** A fresh extraction context for one source on one surface. */
-export const createExtractContext = (
-	source: string,
-	surface: Surface,
-): ExtractContext => ({
-	source,
-	surface,
-	diagnostics: [],
-	routingSignals: [],
-	exposedProps: new Set<string>(),
-	serverKnown: new Set<string>(),
-	argNames: new Set<string>(),
-	parserProps: new Set<string>(),
-	parserFactoryOf: () => '',
-	parserFallbackRefsOf: () => EMPTY_NAMES,
-	composeImports: new Map<string, string>(),
-	setupInits: new Map<string, AstNode>(),
-})
 
 /**
  * Drive a parsed module through the shared front-end script. Returns

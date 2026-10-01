@@ -11,18 +11,20 @@ import type { AstNode } from './ast-node'
 import {
 	asArray,
 	freeIdentifiers,
+	getterObjectName,
 	identifierName,
+	isGetterMember,
 	isNode,
 	text,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
+import type { ExtractContext } from './extract-context'
 import { staticMessageReads } from './i18n'
 import { inferType, type TypeContext } from './infer-type'
 import type {
 	DeclaredSignalIR,
 	DerivedSignalIR,
 	ExposeKind,
-	ExtractContext,
 	SetupStmt,
 	SignalIR,
 	SourceRange,
@@ -102,11 +104,7 @@ const classifyExposeInit = (
 	// `sig.get` — a bare function, so `deriveCell` wraps it read-only
 	// however mutable `sig` is. The single most common expose shape in the
 	// corpus, and the one ADR 0011's motivating example is built on.
-	if (
-		value.type === 'MemberExpression' &&
-		identifierName(value.property) === 'get'
-	)
-		return 'computed'
+	if (isGetterMember(value)) return 'computed'
 	if (
 		value.type === 'ArrowFunctionExpression' ||
 		value.type === 'FunctionExpression'
@@ -554,15 +552,8 @@ export const extractSetup = (
 				// than failing a build on a guess.
 				if (propName)
 					exposeKinds.set(propName, classifyExposeInit(value, signalByName))
-				if (
-					propName &&
-					isNode(value) &&
-					value.type === 'MemberExpression' &&
-					identifierName(value.property) === 'get'
-				) {
-					const sigName = identifierName(value.object)
-					if (sigName) exposeProps.set(propName, sigName)
-				}
+				const getterOf = getterObjectName(value)
+				if (propName && getterOf) exposeProps.set(propName, getterOf)
 				// Parser-backed attribute-driven props and method producers:
 				// the initializer is an ambient factory call, verbatim in the
 				// generated client (imports) and shimmed on the server.

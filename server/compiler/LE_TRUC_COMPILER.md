@@ -309,11 +309,12 @@ front-end modules, then the two front ends:
 | --- | --- |
 | `contract.ts` | The designated export surface ("The front-end contract", § 2): the exact set published as `@zeix/le-truc-compiler`, with the stability policy in its module doc |
 | `pipeline.ts` | Shared post-front-end pipeline (`compileFromIR`): compose validation, `analyzeClient`, tier classification, both emitters, the registry entry — `CompiledComponent`/`CompileFileResult` live here |
-| `front-end.ts` | The shared front-end driver (LT-233): `runFrontEnd` takes a parsed module to a `ComponentIR` through ONE script — module scans, locating the component function, the `async` rejection, params, setup extraction, the output-shape check, lowering, output resolution, the validation tail, IR assembly. A surface contributes a `SurfaceAdapter` (body node type, setup/output split, `<style>` CSS, children/element lowering, grammar pre-scans); `CompileResult` and `createExtractContext` live here |
+| `front-end.ts` | The shared front-end driver (LT-233): `runFrontEnd` takes a parsed module to a `ComponentIR` through ONE script — module scans, locating the component function, the `async` rejection, params, setup extraction, the output-shape check, lowering, output resolution, the validation tail, IR assembly. A surface contributes a `SurfaceAdapter` (body node type, setup/output split, `<style>` CSS, children/element lowering, grammar pre-scans); `CompileResult` lives here |
 | `surface.ts` | The authored-surface vocabulary (LT-233): one `SurfaceWording` table per surface, side by side, for every diagnostic fragment shared machinery emits that names an authored spelling. Read through `wordingOf(ctx)` / `wordingOf(component)` — shared code never spells a directive itself |
 | `frontend/tsrx/index.ts` | `.tsrx` public API: `compileComponent` = `compileSource` + the shared pipeline |
 | `frontend/tsx/index.ts` | `.tsx` public API: `compileComponentTsx` = `compileSourceTsx` + the shared pipeline |
-| `ir.ts` | Pure type leaf: the whole IR vocabulary (`ComponentIR`, `TemplateNode`, `AttributeIR`, `SignalIR`, `ForIR`, `ConfigIR`, …) |
+| `ir.ts` | Pure-data type leaf: the whole IR vocabulary (`ComponentIR`, `TemplateNode`, `AttributeIR`, `SignalIR`, `ForIR`, `ConfigIR`, …) — no function-bearing types, so a `ComponentIR` is serializable (LT-244, pinned by `ir-leaf.test.ts`) |
+| `extract-context.ts` | The front end's mutable per-source state: `ExtractContext` and `createExtractContext` (LT-244, evicted from `ir.ts`) |
 | `module-scans.ts` | Front-end-neutral whole-module scans: malformed selectors (LTC026), deferred collector calls (LTC045), `'@zeix/le-truc'` import mismatches (LTC036/037) |
 | `params.ts` | The params contract (`extractParams`): the destructured args object (LTC008) plus the LT-209 factory-context parameter |
 | `setup-extraction.ts` | The setup-statement loop (`extractSetup`) and context seeding (`seedExtractionContext`) |
@@ -357,9 +358,10 @@ front-end modules, then the two front ends:
 | `analysis/effects.ts` | Pass 4: document-ordered per-construct effect planning |
 | `emit-server.ts` | `ComponentIR` → server render module |
 | `emit-client.ts` | `ComponentIR` + `ClientPlan` → client factory module |
+| `codegen.ts` | The shared code-generation kit (LT-234): `jsString`/`jsTemplate` (the only sanctioned way to put an author string into generated source), `HtmlWriter` (one push argument's markup), `CodeBuilder` (lines, depth and span offset of a generated block) |
 | `spans.ts` | Generated↔source span recording + lookup |
 | `tier.ts` | The tier classifier (§ 5): routing signals in, the component's tier + recorded reasons out |
-| `indent.ts` / `css.ts` | Template-literal-safe reindentation / `<style>` dedent |
+| `indent.ts` / `css.ts` | Template-literal-safe line classification and `commonIndent` / `<style>` dedent |
 | `diagnostics.ts` | Diagnostic codes (`LTC###` plus the six `.tsrx`-grammar `TSRX###` codes), message factories |
 | `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup, and `icu/evaluate.ts`'s `formatMessage`, which the generated `i18n` module wraps around each argument message) |
 | `census.ts` | The census channel (§ 5.2): `Census` records, `tierCensus`, `translationCensus`, `formatCensus` |

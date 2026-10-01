@@ -1,7 +1,8 @@
 /**
  * Query-table naming (LT-022, regrouping move M5): variable-name allocation
  * for the generated factory and the deduplicating query table. One home for
- * "what is this element called client-side".
+ * "what is this element called client-side" — and for its inverse, the
+ * names only the server render binds (`renderOnlyBindings`, LT-231).
  */
 
 import type { ComponentIR } from '../ir'
@@ -70,4 +71,23 @@ export const addQuery = (
 		component.refReasons.get(base) ?? `${component.tag}: ${selector} missing`
 	queries.push({ name, selector, cardinality: effective, message })
 	return name
+}
+
+/**
+ * The names the server render function binds and the client module never
+ * does (LT-348; LT-231: the one copy): the component's parameters (nested
+ * `{ i18n: { t } }` included) and the bindings of a server-data loop
+ * (item, index, hoisted consts — `each()` rebinds none of them
+ * client-side). Module-level declarations are the other server-only class;
+ * callers that need them add `component.moduleBindings`.
+ */
+export const renderOnlyBindings = (component: ComponentIR): Set<string> => {
+	const names = new Set<string>(component.paramNames)
+	for (const loop of component.fors.values()) {
+		if (loop.kind !== 'each') continue
+		names.add(loop.itemName)
+		if (loop.indexName) names.add(loop.indexName)
+		for (const h of loop.hoisted) names.add(h.name)
+	}
+	return names
 }

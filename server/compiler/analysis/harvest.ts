@@ -17,6 +17,7 @@ import {
 	isNode,
 	nodeType,
 	sanitizeVarName,
+	signalGetCallName,
 	walkNodes,
 } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
@@ -48,6 +49,7 @@ import {
 	enclosingIfOf as enclosingIfOfIn,
 	isElement,
 	loopFor as loopForIn,
+	refOf,
 	resolveSelector as resolveSelectorIn,
 	selectorFor as selectorForIn,
 } from './selectors'
@@ -55,18 +57,8 @@ import {
 /* === Shared signal-read predicates === */
 
 /** `sig.get()` call check for direct/membership matching. */
-export const isSignalGetCall = (node: unknown, signal: string): boolean => {
-	if (nodeType(node) !== 'CallExpression') return false
-	const callee = (node as AstNode).callee
-	if (nodeType(callee) !== 'MemberExpression') return false
-	const member = callee as AstNode
-	return (
-		nodeType(member.object) === 'Identifier' &&
-		String((member.object as AstNode).name) === signal &&
-		nodeType(member.property) === 'Identifier' &&
-		String((member.property as AstNode).name) === 'get'
-	)
-}
+export const isSignalGetCall = (node: unknown, signal: string): boolean =>
+	signalGetCallName(node) === signal
 
 /**
  * `sig.get()` read anywhere inside a node (LT-036): a style-map/class-map
@@ -173,18 +165,11 @@ export const returnsNumber = (
 	// `<signal>.get()` — the identifier form only. A `.get()` on anything
 	// else (a member chain, a call result) is not a signal read this
 	// compiler tracks, so it stays undetected rather than guessed at.
-	if (nodeType(body) === 'CallExpression') {
-		const callee = (body as AstNode).callee
-		if (
-			nodeType(callee) === 'MemberExpression' &&
-			identifierName((callee as AstNode).property) === 'get'
-		) {
-			const name = identifierName((callee as AstNode).object)
-			if (name)
-				return signals.some(s => s.name === name && s.inferredType === 'number')
-		}
-	}
-	return false
+	const name = signalGetCallName(body)
+	return (
+		name !== null &&
+		signals.some(s => s.name === name && s.inferredType === 'number')
+	)
 }
 
 export const lazyWatchSource = (child: ExprNode): string => {
@@ -583,9 +568,7 @@ const planHarvests = (
 				)
 				return null
 			}
-			const refAttr = mirror.el.attrs.find(a => a.kind === 'ref') as
-				| { kind: 'ref'; name: string }
-				| undefined
+			const refAttr = refOf(mirror.el)
 			const query = addQuery(
 				refAttr?.name ?? sanitizeVarName(mirror.el.tag),
 				resolved.selector,
@@ -628,9 +611,7 @@ const planHarvests = (
 				)
 				return null
 			}
-			const refAttr = site.el.attrs.find(a => a.kind === 'ref') as
-				| { kind: 'ref'; name: string }
-				| undefined
+			const refAttr = refOf(site.el)
 			// A DOM-read site inside a single-branch @if (no @else) may not
 			// exist at all — address it the same way its own branch-root query
 			// would (non-throwing 'maybe'), and null-guard the read, instead of

@@ -10,6 +10,7 @@
 import type { AstNode } from './ast-node'
 import { dedentCss } from './css'
 import { diagnostic } from './diagnostics'
+import type { ExtractContext } from './extract-context'
 import {
 	collectMatchingElements,
 	inOptionalBranch,
@@ -17,7 +18,7 @@ import {
 	reportStaticIds,
 	shareExclusiveIf,
 } from './first-refs'
-import type { ExtractContext, TemplateNode } from './ir'
+import type { TemplateNode } from './ir'
 import type { SetupExtraction } from './setup-extraction'
 import { wordingOf } from './surface'
 

@@ -22,7 +22,8 @@ import {
 } from '../../ast-utils'
 import { isTemplateForOfNode } from '../../core'
 import { diagnostic } from '../../diagnostics'
-import type { ExtractContext, ForIR, SignalIR, TemplateNode } from '../../ir'
+import type { ExtractContext } from '../../extract-context'
+import type { ForIR, SignalIR, TemplateNode } from '../../ir'
 import {
 	finishIf,
 	finishTry,

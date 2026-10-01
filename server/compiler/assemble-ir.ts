@@ -18,6 +18,7 @@ import {
 } from './ast-utils'
 import { readConfig } from './config'
 import { diagnostic } from './diagnostics'
+import type { ExtractContext } from './extract-context'
 import {
 	declaresI18nOf,
 	langArgDefaultOf,
@@ -37,13 +38,7 @@ import {
 	typeAnnotationForBinding,
 	typeOfAnnotation,
 } from './infer-type'
-import type {
-	ComponentIR,
-	ComponentParam,
-	ConfigIR,
-	ExtractContext,
-	ForIR,
-} from './ir'
+import type { ComponentIR, ComponentParam, ConfigIR, ForIR } from './ir'
 import type { ComponentParams } from './params'
 import type { SetupExtraction } from './setup-extraction'
 import type { ResolvedTemplate } from './template-output'

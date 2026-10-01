@@ -38,7 +38,7 @@ import { type ComposeRefs, resolveComposeRefs } from './compose-refs'
 import { reportServerOnlyNames, runEffects } from './effects'
 import { runHarvest } from './harvest'
 import { runLoops } from './loops'
-import { addQuery } from './naming'
+import { addQuery, renderOnlyBindings } from './naming'
 import { composedShapesFor } from './selectors'
 
 /* === Types === */
@@ -567,15 +567,9 @@ export const analyzeClient = (
 	 * it with the right message.
 	 */
 	const serverBindings = new Set<string>([
-		...component.paramNames,
+		...renderOnlyBindings(component),
 		...(component.moduleBindings ?? []),
 	])
-	for (const loop of component.fors.values()) {
-		if (loop.kind !== 'each') continue
-		serverBindings.add(loop.itemName)
-		if (loop.indexName) serverBindings.add(loop.indexName)
-		for (const h of loop.hoisted) serverBindings.add(h.name)
-	}
 
 	// Client rebindings shadow a server binding of the same name — only the
 	// ones the AUTHOR declared: signals, `first()` refs, context members,
@@ -589,13 +583,18 @@ export const analyzeClient = (
 	const setupNames = new Set(
 		component.setup.map(s => s.name).filter((n): n is string => !!n),
 	)
-	const clientRebinds = (name: string): boolean =>
+	/** Factory-scope bindings every client position sees. */
+	const factoryBinds = (name: string): boolean =>
 		component.signals.some(s => s.name === name) ||
 		refNames.has(name) ||
-		CONTEXT_NAMES.has(name) ||
+		CONTEXT_NAMES.has(name)
+	/** Bindings the client module emits only where a client-need walk reaches. */
+	const emittedOnDemand = (name: string): boolean =>
 		setupNames.has(name) ||
 		component.imports.clientLeTrucNames.has(name) ||
 		component.imports.plainLocalNames.has(name)
+	const clientRebinds = (name: string): boolean =>
+		factoryBinds(name) || emittedOnDemand(name)
 
 	// The client message channel (ADR 0030 s9, LT-218): `t` is a server
 	// binding, but a static read of a declared key (`t.hi`, `t['a.b']`)
@@ -627,14 +626,7 @@ export const analyzeClient = (
 	const badListBodyNames = (node: AstNode): string[] => {
 		const bad = new Set(badFreeNames(node))
 		return [...dependenciesOf(node)].filter(
-			name =>
-				bad.has(name) ||
-				(!component.signals.some(s => s.name === name) &&
-					!refNames.has(name) &&
-					!CONTEXT_NAMES.has(name) &&
-					(setupNames.has(name) ||
-						component.imports.clientLeTrucNames.has(name) ||
-						component.imports.plainLocalNames.has(name))),
+			name => bad.has(name) || (!factoryBinds(name) && emittedOnDemand(name)),
 		)
 	}
 
@@ -737,8 +729,7 @@ export const analyzeClient = (
 	const harnessUnevaluableNames = new Set([
 		...CLIENT_ONLY_PRIMITIVES,
 		...refNames,
-		'host',
-		'internals',
+		...CONTEXT_NAMES,
 	])
 	for (const stmt of component.plainSetup) {
 		if (stmt.name === null) continue

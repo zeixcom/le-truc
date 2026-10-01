@@ -37,11 +37,11 @@ import {
 	dependenciesOf,
 	isServerEvaluable,
 } from './evaluability'
+import type { ExtractContext } from './extract-context'
 import type {
 	AttributeIR,
 	ComposeAttrIR,
 	EachForIR,
-	ExtractContext,
 	ForIR,
 	ReconcileForIR,
 	SignalIR,
@@ -50,7 +50,7 @@ import type {
 import { bindsExposedArg, classifyChild } from './reactivity'
 import { wordingOf } from './surface'
 import { JS_GLOBALS } from './vocabulary'
-import { someNode } from './walk'
+import { isClientConstructAttr, someNode } from './walk'
 
 /** The recursion seam: each front end's own children dispatcher. */
 export type Lowering = {
@@ -637,9 +637,11 @@ export const validateEmptyArm = (
 				if (node.lazy) offending = node.node
 				return node.lazy
 			case 'element':
+				// A client construct, or any `truc:html` — the arm root renders
+				// through `emitElement`, which writes no inner HTML.
 				if (
 					outputs.has(node) ||
-					node.attrs.some(a => a.kind !== 'static' && a.kind !== 'server')
+					node.attrs.some(a => isClientConstructAttr(a) || a.kind === 'html')
 				) {
 					offending = node.node
 					return true
