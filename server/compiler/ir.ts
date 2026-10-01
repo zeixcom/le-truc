@@ -593,6 +593,16 @@ export type ComponentIR = {
 	 */
 	messageTBindings?: string[]
 	/**
+	 * The names the parameter pattern binds for the reserved record ITSELF
+	 * (`{ i18n }`, aliased or not) — read as `i18n.t.<key>` or
+	 * `<alias>.t.<key>`. The record spelling stays server-only (ADR 0030
+	 * s9), so a client position reading it is LTC005; the field routes that
+	 * diagnostic to the literal-key fix rather than the generic exposed-prop
+	 * one (LT-358c). Optional: contract IR; omitted, a flagged record name
+	 * keeps the generic fix.
+	 */
+	messageRecordBindings?: string[]
+	/**
 	 * Per-parameter pattern facts the page-occurrence renderer needs
 	 * (LT-194): one entry per top-level property, in source order. `typeText`
 	 * is the verbatim type annotation; `optional`/`hasDefault` decide whether

@@ -575,6 +575,9 @@ export function BadHost(
 		const hit = diagnostics.find(d => d.code === 'LTC050')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('FormFactoryContext')
+		// LT-358b: the report carries the annotation's line (line 10 — the
+		// written type sits on the context parameter's second line).
+		expect(hit?.line).toBe(10)
 	})
 
 	test('a plain component annotating FormFactoryContext is LTC050 too', () => {
@@ -589,6 +592,7 @@ export function BadHost(
 		const hit = diagnostics.find(d => d.code === 'LTC050')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('does not set `config.formAssociated`')
+		expect(hit?.line).toBeDefined()
 	})
 
 	test('a matching FormFactoryContext annotation compiles clean', () => {
@@ -599,6 +603,61 @@ export function BadHost(
 		)
 		expect(diagnostics).toEqual([])
 		expect(component).not.toBeNull()
+	})
+})
+
+describe('a boundary as a .map() body root is LTC053 (LT-358a)', () => {
+	const mapBody = (body: string): string =>
+		`export function Bad({ rows }: { rows: string[] }) {
+	expose({})
+	return (
+		<bad-el>
+			<ul>{rows.map(row => ${body})}</ul>
+		</bad-el>
+	)
+}`
+
+	test('an expression-bodied callback', () => {
+		const { diagnostics } = compileComponentTsx(
+			mapBody(
+				'<truc:try catch={e => <li class="b">{e.message}</li>}><li class="a">{row}</li></truc:try>',
+			),
+			'bad.tsx',
+			new Set(['bad-el']),
+		)
+		const hit = diagnostics.find(d => d.code === 'LTC053')
+		expect(hit).toBeDefined()
+		// The loop rule, not the generic unrecognized-tag rule `lowerElement`
+		// would raise for a truc:* name.
+		expect(hit?.message).toContain('is the root of this')
+		expect(hit?.line).toBeDefined()
+	})
+
+	test('a block-bodied callback whose return is the boundary', () => {
+		const { diagnostics } = compileComponentTsx(
+			mapBody(
+				'{ return <truc:try catch={e => <li class="b">{e.message}</li>}><li class="a">{row}</li></truc:try> }',
+			),
+			'bad.tsx',
+			new Set(['bad-el']),
+		)
+		const hit = diagnostics.find(d => d.code === 'LTC053')
+		expect(hit).toBeDefined()
+		expect(hit?.message).toContain('is the root of this')
+		expect(hit?.line).toBeDefined()
+	})
+
+	test('an element root still compiles (negative pin)', () => {
+		const { diagnostics } = compileComponentTsx(
+			mapBody('<li class="a">{row}</li>'),
+			'bad.tsx',
+			new Set(['bad-el']),
+		)
+		expect(
+			diagnostics.filter(
+				d => d.code === 'LTC053' && d.message.includes('is the root of this'),
+			),
+		).toEqual([])
 	})
 })
 

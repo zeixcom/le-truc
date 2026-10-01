@@ -84,6 +84,7 @@ export type DiagnosticCode =
 	| 'LTC053' // an element tag that is not a static name: a `.tsrx` dynamic `<{expr}>` tag, or a `.tsx` namespaced/member tag the front end does not recognize (LT-213, scope A0) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC054' // a position the server render evaluates reads page context outside the declared ambient set, or the reserved `i18n` record is destructured for a member outside it (ADR 0034 s4, LT-258) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC055' // an `export const i18n` source pattern is not a supported ICU MessageFormat 1 pattern, or a `t.<key>` site disagrees with its pattern's arguments: missing/extra/non-literal arguments, an argument message read without a call, an argument-less message called (ADR 0030 s4, LT-250) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC056' // an authored `<script>` element in a component template, whatever its `type` — the page owns script loading (LT-358 rider) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -220,19 +221,52 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A `<truc:try>` boundary as the root of a `.map()` body (LT-213
-	 * follow-up). The root of a loop body is the element the client
-	 * addresses each item through, so it must be an element — `.tsrx`
-	 * rejects `@try` in the same position. `.tsx` only: the check runs
-	 * before `lowerElement` would report the tag as not a static name.
+	 * A boundary as the root of a loop body (LT-213 follow-up; `.tsrx`
+	 * parity LT-358a). The root of a loop body is the element the client
+	 * addresses each item through, so it must be an element. `.tsx`: the
+	 * check runs in `lowerFor` before `lowerElement` would report the
+	 * `<truc:try>` tag as not a static name. `.tsrx`: an `@try` statement
+	 * where the `@for` body's output belongs — without the rule it fell to
+	 * the generic "statement other than the output element" LTC005, whose
+	 * fix ("move the statement into setup") is wrong for a boundary. Same
+	 * code both surfaces: the rule and its rationale are surface-
+	 * independent; only the spelled constructs differ (`wording.boundary`,
+	 * `wording.loop`).
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (reviewed 2026-10-01).
+	 * (reviewed 2026-10-01; `.tsrx` spelling rides the LT-359 copy round).
 	 */
-	boundaryAsLoopRoot: (source: string, offset: number | undefined) =>
+	boundaryAsLoopRoot: (
+		source: string,
+		offset: number | undefined,
+		wording: SurfaceWording,
+	) =>
 		error(
 			'LTC053',
-			'A `<truc:try>` boundary is the root of this `.map()` body — the root of a loop body must be an element, because the client addresses each item through it. Make an element the root of the `.map()` body.',
+			`A ${wording.boundary} is the root of this ${wording.loop} body — the root of a loop body must be an element, because the client addresses each item through it. Make an element the root of the ${wording.loop} body.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * An authored `<script>` element in a component template (LT-358 rider,
+	 * owner ruling 2026-10-01). Today such an element passes verbatim into
+	 * served HTML and no compiler check names it — but a component template
+	 * renders static markup plus component behavior, and script loading
+	 * belongs to the page that places the component. Every `<script>` is
+	 * refused, whatever its `type` (`module`, `importmap`, a data type, an
+	 * empty classic script): the hazard is the same and the fix — move the
+	 * loading to the page, the work to the factory — does not depend on it.
+	 * ADR 0028 tier 1 (Prevented): statically decidable from the tag name
+	 * alone, no runtime half. Raised in `lowerElement` (shared), so both
+	 * surfaces refuse it identically.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; the
+	 * first draft rides the LT-359 copy round.
+	 */
+	scriptElementInTemplate: (source: string, offset: number | undefined) =>
+		error(
+			'LTC056',
+			"A `<script>` element in a component template — scripts are refused, whatever their `type`: the page owns script loading, and a component template is static markup plus component behavior. Move the script to the page that places this component, or do its work in the component's setup (in `watch()` or an `on()` handler).",
 			lineOf(source, offset),
 		),
 
@@ -345,9 +379,15 @@ export const diagnostic = {
 	 * body, which the client emits only for positions outside list bodies
 	 * (LT-349 ruling). `lang` is the component's `lang` binding when the
 	 * site reads it, for the `host.lang` pointer; `t` is the message
-	 * binding when the site reads it other than by a literal declared key
-	 * (a computed key, a bare `t`, an undeclared key), for the client
-	 * message channel's rule (ADR 0030 s9).
+	 * spelling when the site reads a message other than by a literal
+	 * declared key — the `t` binding itself (a computed key, a bare `t`, an
+	 * undeclared key) or, for a record-spelled read (`i18n.t.<key>`,
+	 * LT-358c), the component's own `t` binding, or the canonical `t` when
+	 * none is declared — for the client message channel's rule (ADR 0030
+	 * s9). `channel` is the subset of `server` that IS the message channel
+	 * (the `t` bindings and the reserved record's bindings): a flagged
+	 * channel name earns the literal-key sentence, not the generic
+	 * exposed-prop fix, which would contradict it.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
 	 * (reviewed 2026-10-01).
@@ -363,6 +403,7 @@ export const diagnostic = {
 		},
 		lang: string | null,
 		t: string | null = null,
+		channel: readonly string[] = [],
 	) => {
 		const { server, module, listBody } = names
 		const bound = [...server, ...module]
@@ -385,7 +426,11 @@ export const diagnostic = {
 			sentences.push(
 				`The client receives a message only when the site reads a declared key literally — write \`${t}.<key>\` or \`${t}['<key>']\`.`,
 			)
-		if (server.some(name => name !== lang && name !== t))
+		if (
+			server.some(
+				name => name !== lang && name !== t && !channel.includes(name),
+			)
+		)
 			sentences.push('Read the value through an exposed prop or from the DOM.')
 		if (module.length > 0)
 			sentences.push(
@@ -1506,14 +1551,20 @@ export const diagnostic = {
 	 * (Prevented): both facts are AST-visible, no runtime half exists.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (reviewed 2026-10-01). The builder receives no source offset, so the
-	 * report carries no line — the annotation is one per file.
+	 * (reviewed 2026-10-01). The offset is the annotation's own start (the
+	 * written type, not the whole parameter — LT-358b), so the report
+	 * carries the line the annotation sits on.
 	 */
-	formContextMismatch: (annotated: 'FactoryContext' | 'FormFactoryContext') =>
+	formContextMismatch: (
+		source: string,
+		offset: number | undefined,
+		annotated: 'FactoryContext' | 'FormFactoryContext',
+	) =>
 		error(
 			'LTC050',
 			annotated === 'FactoryContext'
 				? `This component sets \`config.formAssociated\` but annotates its factory context as \`FactoryContext\`, so \`host\` lacks the managed form members the element carries. Annotate \`FormFactoryContext<Props>\` instead — its \`host\` is \`FormAssociatedElement & Props\`.`
 				: `This component annotates its factory context as \`FormFactoryContext\` but does not set \`config.formAssociated\`, so \`host\` claims form members the element does not carry. Annotate \`FactoryContext<Props>\` instead, or set \`config.formAssociated\` if the component takes part in forms.`,
+			lineOf(source, offset),
 		),
 }

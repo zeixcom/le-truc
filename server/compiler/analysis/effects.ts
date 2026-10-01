@@ -234,6 +234,25 @@ export const reportServerOnlyNames = (
 	// `lang` stays server-only under the client message channel (ADR 0030
 	// s9): the locale reaches the client through the root attribute.
 	const lang = component.langBinding
+	// LT-358c: a record-spelled read (`i18n.t.<key>`) flags the RECORD
+	// binding, not a `messageTBindings` entry, so the plain find misses it
+	// and the report got the generic exposed-prop fix. The record spelling
+	// stays server-only (ADR 0030 s9), so the fix is the same literal-key
+	// sentence — spelled with the component's own `t` binding when it
+	// declares one, else the canonical `t` the destructure binds. The
+	// channel set keeps every message-channel name (t bindings + record
+	// bindings) out of that generic fix, which would contradict the
+	// literal-key sentence.
+	const tNames = component.messageTBindings ?? []
+	const recordNames = component.messageRecordBindings ?? []
+	const t =
+		server.find(name => tNames.includes(name)) ??
+		(recordNames.some(name => server.includes(name))
+			? (tNames[0] ?? 't')
+			: null)
+	const channel = [...tNames, ...recordNames].filter(name =>
+		server.includes(name),
+	)
 	ctx.diagnostics.push(
 		diagnostic.serverOnlyNames(
 			ctx.source,
@@ -241,7 +260,8 @@ export const reportServerOnlyNames = (
 			subject,
 			{ server, module, listBody },
 			lang !== null && server.includes(lang) ? lang : null,
-			server.find(name => component.messageTBindings?.includes(name)) ?? null,
+			t,
+			channel,
 		),
 	)
 }

@@ -406,6 +406,16 @@ export const lowerElement = (
 				wording.conditionalTag,
 			),
 		)
+	// LTC056 (LT-358 rider): an authored `<script>` element is refused on
+	// both surfaces, whatever its `type` — it would pass verbatim into
+	// served HTML, and the page owns script loading. Raised here, the one
+	// plain-element funnel both front ends share, so a template target
+	// inherits the refusal for free. Like LTC053, the error fails the
+	// compile, so the lowered element below never reaches emitted output.
+	if (tag === 'script')
+		ctx.diagnostics.push(
+			diagnostic.scriptElementInTemplate(ctx.source, element.start),
+		)
 	if (/^[A-Z]/.test(tag))
 		ctx.diagnostics.push(
 			diagnostic.composedElementUnsupported(

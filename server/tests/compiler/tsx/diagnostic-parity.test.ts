@@ -102,6 +102,8 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 	term('tryBody', 'the boundary body'),
 	term('pendingArm', 'the pending arm'),
 	term('catchArm', 'the catch arm'),
+	term('boundary', 'the boundary construct (the loop-body-root rule, LT-358a)'),
+	framed('loop', l => `this ${l} body`, 'a boundary as a loop body root'),
 	term('conditionalTag', 'choosing between static tags (LTC053 fix-it)'),
 	...(['if', 'switch'] as const).flatMap(branch => [
 		{
@@ -459,6 +461,19 @@ const LIST_BODY: Case[] = [
 			tsx: '<ul>{rows.map(r => { console.log(r); return <li>{r}</li> })}</ul>',
 		},
 	},
+	{
+		// LT-358a: the .tsx map-body guard gains its .tsrx twin — an @try
+		// where a @for body's output belongs is LTC053 on both surfaces,
+		// not the generic non-output-statement rule.
+		name: 'a boundary as a loop body root (LTC053, LT-358a)',
+		code: 'LTC053',
+		spec: {
+			params: '{ rows }: { rows: string[] }',
+			body: '@for (const r of rows) { @try { <li class="a">{r}</li> } @catch (e) { <li class="b">{e.message}</li> } }',
+			tsx: '{rows.map(r => <truc:try catch={e => <li class="b">{e.message}</li>}><li class="a">{r}</li></truc:try>)}',
+		},
+		pins: ['is the root of this', 'the root of a loop body must be an element'],
+	},
 ]
 
 /**
@@ -670,6 +685,24 @@ const SERVER_ONLY: Case[] = [
 			body: '<button onClick={() => console.log(button)}>x</button>',
 		},
 		pins: ['Event handler `onClick` references server-only name `button`'],
+	},
+	{
+		// LT-358c: the record spelling (`messages.t.<key>`) flags the record
+		// binding, so the report must route to the literal-key sentence —
+		// the generic exposed-prop fix would contradict it.
+		name: 'a record-spelled message read',
+		code: 'LTC005',
+		spec: {
+			pre: `${imports('createCell')}\nexport const i18n = { tasks: '{count, plural, other {# tasks}}' }`,
+			params: '{ i18n: messages }: { i18n: I18n }',
+			setup: 'const c = createCell(0)\n\t\texpose({ count: c.get })',
+			body: '<span>{() => messages.t.tasks({ count: c.get() })}</span>',
+		},
+		pins: [
+			'Reactive text on <span> references server-only name `messages`',
+			'reads a declared key literally',
+		],
+		forbid: ['Read the value through an exposed prop or from the DOM.'],
 	},
 	{
 		name: 'a module-level const',
@@ -967,6 +1000,24 @@ const FAMILIES: Case[] = [
 			body: '<p title={t.hi}>x</p>',
 		},
 		pins: ['read without a call'],
+	},
+	{
+		// LT-358 rider: an authored <script> element is refused on both
+		// surfaces, whatever its type — the page owns script loading.
+		name: 'LTC056 authored <script> element',
+		code: 'LTC056',
+		spec: {
+			body: '<script src="https://example.com/x.js"></script>',
+		},
+		pins: ['scripts are refused'],
+	},
+	{
+		name: 'LTC056 module-type <script> is refused too',
+		code: 'LTC056',
+		spec: {
+			body: '<script type="module">document.title = "x"</script>',
+		},
+		pins: ['whatever their `type`'],
 	},
 ]
 

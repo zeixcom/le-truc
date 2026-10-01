@@ -120,6 +120,10 @@ member — the partial-readiness invariant, ADR 0034 s4, LT-258), then
 MessageFormat 1 pattern, or a `t.<key>` site that disagrees with its
 pattern's arguments — ADR 0030 s4, LT-250). It is `LTC`, not `TSRX`: the
 check runs in the shared post-lowering pass, on both surfaces.
+`LTC056` (an authored `<script>` element in a component template, whatever
+its `type` — the page owns script loading; LT-358 rider) follows. It is
+`LTC`, not `TSRX`: the refusal is raised in `lowerElement` (shared), on
+both surfaces.
 
 ## 5. Kept, with the surface named correctly
 

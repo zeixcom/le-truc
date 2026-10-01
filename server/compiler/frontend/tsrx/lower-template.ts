@@ -36,6 +36,7 @@ import {
 	validateCondition,
 	validateEmptyArm,
 } from '../../lower-shared'
+import { wordingOf } from '../../surface'
 import { CONTEXT_NAMES, JS_GLOBALS } from '../../vocabulary'
 
 /* === Condition validation === */
@@ -423,6 +424,14 @@ const lowerEmptyArm = (
  * Lower a `@for` loop: parse the directive's header — the `const` binding,
  * `index`, `key`, and the body's statements, whose output is its element —
  * into a `LoopSource`; `lowerLoop` (shared) routes and validates the rest.
+ *
+ * An `@try` statement in the body is the `.tsrx` twin of `.tsx`'s
+ * `<truc:try>` map-body guard (LTC053, LT-358a): the loop body's root is
+ * what the client addresses each item through, so a boundary there is
+ * refused by name rather than left to the generic "statement other than
+ * the output element" rule, whose fix is wrong for a boundary. An `@try`
+ * can never be a `@for` body's output (`outputOf` accepts JSXElement
+ * only), so every body-level `@try` takes this rule.
  */
 export const lowerFor = (
 	ctx: ExtractContext,
@@ -430,6 +439,14 @@ export const lowerFor = (
 	signals: ReadonlyMap<string, SignalIR>,
 	fors: Map<AstNode, ForIR>,
 ): (TemplateNode & { kind: 'element' }) | null => {
+	const statements = isNode(node.body) ? asArray(node.body.body) : []
+	const tryStmt = statements.find(s => s.type === 'JSXTryExpression')
+	if (isNode(tryStmt)) {
+		ctx.diagnostics.push(
+			diagnostic.boundaryAsLoopRoot(ctx.source, tryStmt.start, wordingOf(ctx)),
+		)
+		return null
+	}
 	const declarations = isNode(node.left) ? asArray(node.left.declarations) : []
 	const indexNode = isNode(node.index) ? node.index : null
 	const indexName = identifierName(indexNode)

@@ -32,6 +32,12 @@ export type ComponentParams = {
 	contextParam: {
 		names: ReadonlySet<string>
 		annotationName: 'FactoryContext' | 'FormFactoryContext' | null
+		/**
+		 * The annotation's own start offset, when `annotationName` names one
+		 * of the two checked types (LT-358b) — LTC050 reports the line the
+		 * written type sits on.
+		 */
+		annotationAt: number | null
 	} | null
 }
 
@@ -109,7 +115,7 @@ export const extractParams = (
 		}
 		contextParam = {
 			names,
-			annotationName: contextAnnotationName(contextNode),
+			...contextAnnotationName(contextNode),
 		}
 	}
 	return { paramsNode, paramNames, contextParam }
@@ -121,13 +127,17 @@ export const extractParams = (
  * (bare or generic), null for anything else (an inline type literal, an
  * alias the compiler cannot see through — nothing to check against, the
  * same don't-flag-what-you-can't-see posture as `isOptionalBinding`).
+ * `at` is the annotation's own start, for LTC050's line (LT-358b).
  *
  * Both parsers keep an estree-shaped `typeAnnotation` on the parameter
  * pattern.
  */
 const contextAnnotationName = (
 	contextNode: AstNode,
-): 'FactoryContext' | 'FormFactoryContext' | null => {
+): {
+	annotationName: 'FactoryContext' | 'FormFactoryContext' | null
+	annotationAt: number | null
+} => {
 	if (isNode(contextNode.typeAnnotation)) {
 		const wrapped = contextNode.typeAnnotation as AstNode
 		const literal =
@@ -137,8 +147,11 @@ const contextAnnotationName = (
 		if (literal.type === 'TSTypeReference') {
 			const name = identifierName(literal.typeName)
 			if (name === 'FactoryContext' || name === 'FormFactoryContext')
-				return name
+				return {
+					annotationName: name,
+					annotationAt: literal.start ?? null,
+				}
 		}
 	}
-	return null
+	return { annotationName: null, annotationAt: null }
 }

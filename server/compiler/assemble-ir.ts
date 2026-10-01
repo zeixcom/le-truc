@@ -218,16 +218,30 @@ export const assembleComponentIR = (
 ): ComponentIR | null => {
 	// The annotation-surface check (LTC050, LT-209) — `config` is what the
 	// extract-time vocabulary check could not see. Runs before the gate so
-	// the diagnostic lands even on gated files (the LTC014 posture).
+	// the diagnostic lands even on gated files (the LTC014 posture). The
+	// offset is the annotation's own start, so the report carries its line
+	// (LT-358b).
 	if (contextParam?.annotationName) {
 		const formAssociated = !!decls.config?.form
 		if (formAssociated && contextParam.annotationName === 'FactoryContext')
-			ctx.diagnostics.push(diagnostic.formContextMismatch('FactoryContext'))
+			ctx.diagnostics.push(
+				diagnostic.formContextMismatch(
+					ctx.source,
+					contextParam.annotationAt ?? undefined,
+					'FactoryContext',
+				),
+			)
 		else if (
 			!formAssociated &&
 			contextParam.annotationName === 'FormFactoryContext'
 		)
-			ctx.diagnostics.push(diagnostic.formContextMismatch('FormFactoryContext'))
+			ctx.diagnostics.push(
+				diagnostic.formContextMismatch(
+					ctx.source,
+					contextParam.annotationAt ?? undefined,
+					'FormFactoryContext',
+				),
+			)
 	}
 	// The same set `seedExtractionContext` built into `ctx.serverKnown`
 	// (args + `isPending` + signals + setup consts) — reused, not recomputed:
@@ -301,6 +315,7 @@ export const assembleComponentIR = (
 		paramNames: [...paramNames],
 		moduleBindings: decls.moduleBindings,
 		messageTBindings: [...messageBindingsOf(paramsNode).tNames],
+		messageRecordBindings: [...messageBindingsOf(paramsNode).recordNames],
 		paramProps: paramPropsOf(ctx, paramsNode),
 		i18nMessages: decls.i18nMessages,
 		i18nArgs: decls.i18nArgs,

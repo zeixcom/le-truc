@@ -55,6 +55,7 @@ import {
 	validateCondition,
 	validateEmptyArm,
 } from '../../lower-shared'
+import { wordingOf } from '../../surface'
 import type { AstNode } from './to-estree'
 
 /** Whether `node` is a JSX value (`<x/>` or `<>…</>`). */
@@ -446,7 +447,9 @@ export const lowerFor = (
 		? asArray(body.body).find(s => s.type === 'ReturnStatement')?.argument
 		: body
 	if (isNode(root) && isTrucTry(root)) {
-		ctx.diagnostics.push(diagnostic.boundaryAsLoopRoot(ctx.source, root.start))
+		ctx.diagnostics.push(
+			diagnostic.boundaryAsLoopRoot(ctx.source, root.start, wordingOf(ctx)),
+		)
 		return null
 	}
 	return lowerLoop(
