@@ -10,15 +10,9 @@
 import type { AstNode } from './ast-node'
 import {
 	asArray,
-	CLIENT_ONLY_PRIMITIVES,
-	CONTEXT_NAMES,
 	freeIdentifiers,
 	identifierName,
 	isNode,
-	JS_GLOBALS,
-	MANAGED_TEXT_PROPS,
-	PARSER_FACTORIES,
-	SIGNAL_CONSTRUCTORS,
 	text,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
@@ -33,6 +27,14 @@ import type {
 	SourceRange,
 } from './ir'
 import { lineFields, resolutionOf } from './tier'
+import {
+	CLIENT_ONLY_PRIMITIVES,
+	CONTEXT_NAMES,
+	JS_GLOBALS,
+	MANAGED_TEXT_PROPS,
+	PARSER_FACTORIES,
+	SIGNAL_CONSTRUCTORS,
+} from './vocabulary'
 
 /** One `const name = first(selector, required?)` element reference (LT-055). */
 export type ElementRefEntry = {
@@ -177,7 +179,7 @@ export const extractSetup = (
 	// Plain (non-signal) setup consts (LT-034 follow-up fix): `component.setup`
 	// is emitted verbatim into the SERVER module only (`emit-server.ts`) —
 	// this subset also needs emitting into the CLIENT factory, since a plain
-	// const is documented (ast-utils.ts, diagnostics.ts) as available in
+	// const is documented (vocabulary.ts, diagnostics.ts) as available in
 	// both, but nothing previously emitted it client-side. Signals are
 	// excluded (already client-emitted via harvest); `expose()` is excluded
 	// (already client-emitted separately).

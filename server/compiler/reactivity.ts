@@ -23,7 +23,7 @@
  */
 
 import type { AstNode } from './ast-node'
-import { isNode, nodeType } from './ast-utils'
+import { forEachChild, isNode, nodeType } from './ast-utils'
 
 /**
  * The client-only ambient whose property reads are reactive by definition.
@@ -170,11 +170,9 @@ export const classifyChild = (expr: AstNode, signals: NameSet): LiftVerdict => {
 				return
 			}
 			default:
-				for (const [key, value] of Object.entries(current)) {
-					if (key === 'loc' || key === 'range' || key === 'parent') continue
-					if (key === 'type' || key === 'start' || key === 'end') continue
-					visit(value, bound)
-				}
+				// Type positions are skipped: types are erased, so a signal named
+				// in one (`x as typeof count`) neither reads nor escapes.
+				forEachChild(current, child => visit(child, bound))
 				return
 		}
 	}

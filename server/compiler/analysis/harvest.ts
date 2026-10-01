@@ -11,18 +11,23 @@
 
 import type { AstNode } from '../ast-node'
 import {
-	CONTEXT_NAMES,
-	FACTORY_CONTEXT_MEMBERS,
+	forEachChild,
 	hostPropOf,
 	identifierName,
-	JS_GLOBALS,
+	isNode,
 	nodeType,
 	sanitizeVarName,
+	walkNodes,
 } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import type { AttributeIR, SignalIR, TemplateNode } from '../ir'
 import { lineFields, resolutionOf } from '../tier'
+import {
+	CONTEXT_NAMES,
+	FACTORY_CONTEXT_MEMBERS,
+	JS_GLOBALS,
+} from '../vocabulary'
 import { walkTemplate } from '../walk'
 import type { AnalysisContext, HarvestPlan, ParserKind } from './plan'
 import {
@@ -56,20 +61,13 @@ export const isSignalGetCall = (node: unknown, signal: string): boolean => {
  * the DOM, even though no part of it can serve as a splice-harvest site.
  */
 export const containsSignalGet = (node: unknown, signal: string): boolean => {
-	if (Array.isArray(node)) {
-		return node.some(child => containsSignalGet(child, signal))
-	}
-	if (
-		!node ||
-		typeof node !== 'object' ||
-		typeof (node as AstNode).type !== 'string'
-	)
-		return false
-	for (const [key, value] of Object.entries(node)) {
-		if (key === 'loc' || key === 'range' || key === 'parent') continue
-		if (containsSignalGet(value, signal)) return true
-	}
-	return isSignalGetCall(node, signal)
+	// Type positions are skipped: they hold no `.get()` calls.
+	let found = false
+	walkNodes(node, current => {
+		if (found) return false
+		if (isSignalGetCall(current, signal)) found = true
+	})
+	return found
 }
 
 /**
@@ -702,18 +700,10 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			reads.set(param, read)
 		}
 		const ranges: Array<[number, number, string]> = []
-		const collect = (node: unknown): void => {
-			if (Array.isArray(node)) {
-				for (const child of node) collect(child)
-				return
-			}
-			if (
-				!node ||
-				typeof node !== 'object' ||
-				typeof (node as AstNode).type !== 'string'
-			)
-				return
-			const current = node as AstNode & Record<string, unknown>
+		// Type positions are skipped: rewriting a name inside one
+		// (`typeof label`) into a DOM read would emit invalid TypeScript, and
+		// `dependenciesOf` above never counted it as a read anyway.
+		const collect = (current: AstNode): void => {
 			if (current.type === 'Identifier') {
 				const name = String(current.name)
 				if (
@@ -724,20 +714,17 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 					ranges.push([current.start, current.end, reads.get(name) as string])
 				return
 			}
-			for (const [key, value] of Object.entries(current)) {
-				if (key === 'loc' || key === 'range' || key === 'parent') continue
-				// Non-computed member properties and object keys are positions,
-				// not reads — same scoping as freeIdentifiers.
-				if (
-					key === 'property' &&
-					current.type === 'MemberExpression' &&
-					!current.computed
-				)
-					continue
-				if (key === 'key' && current.type === 'Property' && !current.computed)
-					continue
-				if (value && typeof value === 'object') collect(value)
+			// Non-computed member properties and object keys are positions,
+			// not reads — same scoping as freeIdentifiers.
+			if (current.type === 'MemberExpression' && !current.computed) {
+				if (isNode(current.object)) collect(current.object)
+				return
 			}
+			if (current.type === 'Property' && !current.computed) {
+				if (isNode(current.value)) collect(current.value)
+				return
+			}
+			forEachChild(current, collect)
 		}
 		collect(init)
 		let expr = source.slice(init.start, init.end)

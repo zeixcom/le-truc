@@ -14,12 +14,14 @@
 import type { AstNode } from './ast-node'
 import {
 	collectBoundNames,
+	forEachChild,
 	freeIdentifiers,
 	isNode,
-	JS_GLOBALS,
+	walkNodes,
 } from './ast-utils'
 import { refBranchGuard } from './first-refs'
 import type { ComponentIR, TemplateNode } from './ir'
+import { JS_GLOBALS } from './vocabulary'
 
 /**
  * Ambient globals whose *inputs* are the build machine's own state (wall
@@ -238,10 +240,9 @@ export const impureAmbientCauses = (
 				return
 			}
 		}
-		for (const [key, value] of Object.entries(current)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			if (value && typeof value === 'object') visit(value)
-		}
+		// Type positions are skipped: a `Date`/`Intl` type annotation
+		// (`(d: Date) => …`) names no ambient the code ever reads.
+		forEachChild(current, visit)
 	}
 	visit(node)
 	return causes
@@ -512,11 +513,9 @@ export const hostDerivedFold = (
 				return
 			}
 			default:
-				for (const [key, value] of Object.entries(current)) {
-					if (key === 'loc' || key === 'range' || key === 'parent') continue
-					if (key === 'type' || key === 'start' || key === 'end') continue
-					visit(value, bound)
-				}
+				// Type positions are skipped: `host.<prop>` and a ref are value
+				// reads, and a type query names neither as a MemberExpression.
+				forEachChild(current, child => visit(child, bound))
 		}
 	}
 	visit(node, new Set())
@@ -566,35 +565,21 @@ export const foldableRenderScope = (
 		[...component.serverKnown].filter(name => !constInits.has(name)),
 	)
 	/** Names bound by function parameters / catch clauses within `node`. */
-	const boundWithin = (node: unknown, into: Set<string>): void => {
-		if (Array.isArray(node)) {
-			for (const child of node) boundWithin(child, into)
-			return
-		}
-		if (!isNode(node)) return
-		if (
-			node.type === 'ArrowFunctionExpression' ||
-			node.type === 'FunctionExpression' ||
-			node.type === 'FunctionDeclaration'
-		) {
-			for (const param of Array.isArray(node.params) ? node.params : [])
-				collectBoundNames(param, into)
-		}
-		if (node.type === 'CatchClause' && isNode(node.param))
-			collectBoundNames(node.param, into)
-		for (const [key, value] of Object.entries(node)) {
+	// Type positions are skipped: a function TYPE's parameters
+	// (`TSFunctionType`) bind nothing at runtime.
+	const boundWithin = (node: unknown, into: Set<string>): void =>
+		walkNodes(node, current => {
 			if (
-				key === 'loc' ||
-				key === 'range' ||
-				key === 'parent' ||
-				key === 'type' ||
-				key === 'start' ||
-				key === 'end'
-			)
-				continue
-			if (value && typeof value === 'object') boundWithin(value, into)
-		}
-	}
+				current.type === 'ArrowFunctionExpression' ||
+				current.type === 'FunctionExpression' ||
+				current.type === 'FunctionDeclaration'
+			) {
+				for (const param of Array.isArray(current.params) ? current.params : [])
+					collectBoundNames(param, into)
+			}
+			if (current.type === 'CatchClause' && isNode(current.param))
+				collectBoundNames(current.param, into)
+		})
 	let changed = true
 	while (changed) {
 		changed = false

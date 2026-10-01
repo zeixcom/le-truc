@@ -21,7 +21,13 @@
  */
 
 import type { AstNode } from '../../ast-node'
-import { asArray, identifierName, isNode, text } from '../../ast-utils'
+import {
+	asArray,
+	identifierName,
+	isNode,
+	text,
+	walkNodes,
+} from '../../ast-utils'
 import { getStyleElementStylesheet, parseModule } from '../../core'
 import { diagnostic } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
@@ -109,12 +115,8 @@ const producesJsx = (body: unknown): boolean => {
  * family stays in force for `.tsrx` sources only.
  */
 const reportReactJsxNearMisses = (ctx: ExtractContext, ast: AstNode): void => {
-	const visit = (node: unknown): void => {
-		if (Array.isArray(node)) {
-			for (const child of node) visit(child)
-			return
-		}
-		if (!isNode(node)) return
+	// Type positions are skipped: they hold no JSX, conditionals or calls.
+	walkNodes(ast, node => {
 		if (
 			node.type === 'LogicalExpression' &&
 			node.operator === '&&' &&
@@ -163,12 +165,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: AstNode): void => {
 					),
 				)
 		}
-		for (const [key, value] of Object.entries(node)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			visit(value)
-		}
-	}
-	visit(ast)
+	})
 }
 
 /** The `.tsrx` grammar's half of the shared driver (`front-end.ts`). */

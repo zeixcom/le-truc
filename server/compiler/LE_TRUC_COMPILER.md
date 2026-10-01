@@ -317,11 +317,12 @@ front-end modules, then the two front ends:
 | `validate-lowered.ts` | The post-lowering validation tail (`validateLoweredComponent`): LTC039/047/028/010, `config.observedAttributes`, LT-059, loops as branch roots (LT-301), LTC055 message call sites (LT-250) |
 | `assemble-ir.ts` | IR assembly (`assembleComponentIR`), import placement, module-level declarations (`readModuleDecls`) |
 | `lower-shared.ts` | Surface-independent lowering core: condition validation, element/compose lowering, the expression-child lift rule, positional reactivity, `lowerChildrenSkeleton` — the `Lowering` hooks carry each surface's child-node dispatch — and the programs after header parsing: `lowerLoop` over a `LoopSource` (routing, list-body validation, `each()`/reconcile IR), `finishIf`, `finishTry`, `reportEmptySwitch` |
-| `ast-utils.ts` | Shared AST predicates and the recognized-name vocabulary constants both front ends' walks run on |
+| `ast-utils.ts` | Shared AST predicates, text-extraction helpers, and the one estree child enumeration every walk runs on (`forEachChild`/`walkNodes`: child keys from `eslint-visitor-keys`, type positions skipped unless a site opts into `'descend'`) plus the scope-aware free-identifier walk (`forEachFreeIdentifier`) |
+| `vocabulary.ts` | The recognized-name tables (signal constructors, context members, parser factories, real exports, reserved/managed prop names, JS/DOM globals) those walks consult |
 | `walk.ts` | Generic structural `TemplateNode` visitor (`walkTemplate`, `collectAttrs`, `collectComposeElements`) |
 | `frontend/tsrx/compiler.ts` | `.tsrx` front end: the `@tsrx/core` parse (`newerGrammarHint` on failure) and the `.tsrx` `SurfaceAdapter` (the `@{ }` body splits into setup + output; the React JSX near-miss pre-scan; the lazy-pattern scan retired at the 0.2 pin — the grammar now rejects the construct itself) |
 | `frontend/tsrx/lower-template.ts` | `.tsrx` directives (`@if`/`@switch`/`@try`/`@for`) → `TemplateNode` IR; parses each directive's header and hands the rest to `lower-shared.ts` |
-| `frontend/tsrx/globals.d.ts` | Ambient FactoryContext vocabulary for the raw `.tsrx` view; parity-tested against `ast-utils` |
+| `frontend/tsrx/globals.d.ts` | Ambient FactoryContext vocabulary for the raw `.tsrx` view; parity-tested against `vocabulary` |
 | `frontend/tsx/compiler-tsx.ts` | `.tsx` front end: the TS parse and the `.tsx` `SurfaceAdapter` (statements + single `return` split, `css` recognition) |
 | `frontend/tsx/lower-tsx.ts` | `.tsx` expression shapes → `TemplateNode` IR; shape-based switch-IIFE recognition (`asIife`, `lowerSwitchIife`); `<truc:try>` recognition (ADR 0041) |
 | `frontend/tsx/to-estree.ts` | `typescript`-AST → estree-shaped `AstNode` converter — the only `typescript`-API leaf |
@@ -364,7 +365,7 @@ front-end modules, then the two front ends:
 | `sim/` | Server Simulation driver behind the seam (§ 5): `patch-table.ts`, `realm.ts`, `boundary.ts`, `classifications.ts`, `index.ts` |
 
 **Dependency shape**: every module points strictly at `ir.ts` (types) and
-the shared leaves — `ast-utils.ts`, `walk.ts`, `evaluability.ts`,
+the shared leaves — `vocabulary.ts`, `ast-utils.ts`, `walk.ts`, `evaluability.ts`,
 `reactivity.ts`, `first-refs.ts`, and the front-end-neutral stage modules
 `module-scans.ts`, `params.ts`, `setup-extraction.ts`, `template-output.ts`,
 `validate-lowered.ts`, `assemble-ir.ts`, `front-end.ts`, `surface.ts`, and
@@ -954,7 +955,7 @@ as its own section after the compile-warning baseline.
 Message copy is owned by the Tech Writer per ADR 0028's lifecycle; severity
 follows the tiering decision recorded with each rule.
 
-**Vocabulary parity.** `ast-utils.ts`'s recognized-name sets are mirrored in
+**Vocabulary parity.** `vocabulary.ts`'s recognized-name sets are mirrored in
 `globals.d.ts` and pinned by `server/tests/compiler/globals.test.ts`, so the
 compiler's ambient contract and the editor surface cannot drift. The `.tsx`
 profile needs no such pin: `host-profile.d.ts` derives its ambients from the

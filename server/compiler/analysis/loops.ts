@@ -7,17 +7,12 @@
  */
 
 import type { AstNode } from '../ast-node'
-import {
-	hostPropOf,
-	isDirtyFlagControlAttr,
-	nodeType,
-	objectKeys,
-	sanitizeVarName,
-} from '../ast-utils'
+import { hostPropOf, nodeType, objectKeys, sanitizeVarName } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import type { AttributeIR, ForIR, TemplateNode } from '../ir'
 import { wordingOf } from '../surface'
+import { isDirtyFlagControlAttr } from '../vocabulary'
 import { reportServerOnlyNames } from './effects'
 import { returnsNumber } from './harvest'
 import type {

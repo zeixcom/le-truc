@@ -8,18 +8,12 @@
  */
 
 import type { AstNode } from './ast-node'
-import {
-	asArray,
-	CONTEXT_NAMES,
-	collectBoundNames,
-	FACTORY_CONTEXT_MEMBERS,
-	identifierName,
-	isNode,
-} from './ast-utils'
+import { asArray, collectBoundNames, identifierName, isNode } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import { ambientRecordViolations } from './fold-inputs'
 import { isOptionalBinding } from './infer-type'
 import type { ExtractContext } from './ir'
+import { CONTEXT_NAMES, FACTORY_CONTEXT_MEMBERS } from './vocabulary'
 
 /** The component function's destructured args parameter, extracted. */
 export type ComponentParams = {

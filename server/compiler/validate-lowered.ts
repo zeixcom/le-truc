@@ -8,12 +8,7 @@
  */
 
 import type { AstNode } from './ast-node'
-import {
-	asArray,
-	identifierName,
-	MANAGED_FORM_MEMBERS,
-	RESERVED_PROP_NAMES,
-} from './ast-utils'
+import { asArray, identifierName } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import { reportDuplicatedChannels } from './first-refs'
 import { reportMessageCallSites } from './i18n'
@@ -21,6 +16,7 @@ import type { MessageArg } from './icu/parse'
 import type { ConfigIR, ExtractContext, ForIR, TemplateNode } from './ir'
 import type { SetupExtraction } from './setup-extraction'
 import { wordingOf } from './surface'
+import { MANAGED_FORM_MEMBERS, RESERVED_PROP_NAMES } from './vocabulary'
 import { walkTemplate } from './walk'
 
 /** Native form-control tags whose own `name` would double-submit (LT-059). */

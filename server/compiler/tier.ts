@@ -58,7 +58,7 @@
  */
 
 import type { AstNode } from './ast-node'
-import { isNode } from './ast-utils'
+import { forEachChild, isNode } from './ast-utils'
 import { lineOf } from './diagnostics'
 import { type ImpureAmbientCause, impureAmbientCauses } from './evaluability'
 import {
@@ -234,10 +234,9 @@ export const stubbedApiRead = (node: AstNode): string | null => {
 				}
 			}
 		}
-		for (const [key, value] of Object.entries(current)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			if (value && typeof value === 'object') visit(value)
-		}
+		// Type positions are skipped: a `ResizeObserver` annotation or a
+		// `typeof window` query reads nothing the realm would have to answer.
+		forEachChild(current, visit)
 	}
 	visit(node)
 	return reason

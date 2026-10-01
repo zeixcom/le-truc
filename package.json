@@ -110,6 +110,7 @@
 		"axe-core": "^4.13.0",
 		"culori": "^4.0.2",
 		"dompurify": "^3.4.14",
+		"eslint-visitor-keys": "5.0.1",
 		"jsdom": "^30.0.1",
 		"lightningcss-cli": "^1.33.0",
 		"messageformat": "^4",

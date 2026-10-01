@@ -19,7 +19,7 @@ import {
 	FACTORY_CONTEXT_MEMBERS,
 	PARSER_FACTORIES,
 	SIGNAL_CONSTRUCTORS,
-} from '../../compiler/ast-utils'
+} from '../../compiler/vocabulary'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')

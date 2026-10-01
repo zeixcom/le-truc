@@ -27,18 +27,20 @@
 import type { AstNode } from './ast-node'
 import {
 	asArray,
-	CONTEXT_NAMES,
-	FACTORY_CONTEXT_MEMBERS,
 	freeIdentifiers,
 	identifierName,
 	isNode,
-	JS_GLOBALS,
 	text,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import { DEFAULT_EMIT_PATHS } from './emit-paths'
 import { dependenciesOf, isServerEvaluable } from './evaluability'
 import type { ComponentIR, ExtractContext, TemplateNode } from './ir'
+import {
+	CONTEXT_NAMES,
+	FACTORY_CONTEXT_MEMBERS,
+	JS_GLOBALS,
+} from './vocabulary'
 import { collectAttrs, walkTemplate } from './walk'
 
 /* === Pure-string POSIX path helpers (no node:path — browser purity) === */

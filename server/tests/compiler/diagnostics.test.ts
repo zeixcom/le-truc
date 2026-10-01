@@ -160,7 +160,8 @@ import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(
-				d => d.code === 'LTC005' && d.message.includes('client-only side effect'),
+				d =>
+					d.code === 'LTC005' && d.message.includes('client-only side effect'),
 			),
 		).toBe(true)
 	})
@@ -785,7 +786,8 @@ export function C({ label }: { label: string })
 		)
 		expect(
 			diagnostics.some(
-				d => d.code === 'LTC005' && d.message.includes('a signal, not the value'),
+				d =>
+					d.code === 'LTC005' && d.message.includes('a signal, not the value'),
 			),
 		).toBe(true)
 	})
@@ -938,9 +940,9 @@ import { createCell } from '@zeix/le-truc'`
 			}`,
 		)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.message.includes('owns no template slot'))).toBe(
-			true,
-		)
+		expect(
+			diagnostics.some(d => d.message.includes('owns no template slot')),
+		).toBe(true)
 	})
 
 	test('a server-static attribute inside a reactive-list body compiles clean (LT-215)', () => {
@@ -2871,7 +2873,7 @@ describe('reserved expose() key (LTC028, LT-157a)', () => {
 	})
 
 	test('every RESERVED_WORDS_LIST entry is covered, not just the obvious ones', () => {
-		// The list is duplicated in `ast-utils.ts` (the compiler does not
+		// The list is duplicated in `vocabulary.ts` (the compiler does not
 		// import the runtime library), so a drift between the two is exactly
 		// the failure this rule exists to prevent.
 		for (const word of [

@@ -10,7 +10,7 @@
  * compiler-generated, so there is no authored binding site an import or
  * destructure could honestly occupy — they stay ambient. This file declares
  * exactly that ambient vocabulary (`FACTORY_CONTEXT_MEMBERS` ∪
- * `CONTEXT_NAMES`, `ast-utils.ts`) so `.tsrx`-shaped code type-checks in
+ * `CONTEXT_NAMES`, `vocabulary.ts`) so `.tsrx`-shaped code type-checks in
  * editor surfaces that consume it (the raw-source caveat: `@{ }` blocks and
  * `@for`/`@if` directives are not TS syntax — the Volar projection over
  * the generated client is the authoritative view; these globals are the

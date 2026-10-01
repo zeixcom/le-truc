@@ -1,450 +1,20 @@
 /**
- * Shared AST predicates/text-extraction helpers and the recognized-name
- * vocabulary (signal constructors, context members, parser factories, JS/DOM
- * globals, managed text props) for the TSRX compiler front end
- * (`compiler.ts`) and its lowering/classification/type-inference siblings.
+ * Shared AST predicates, the one child-enumeration every estree walk runs
+ * on (`forEachChild`), the scope-aware free-identifier walk, and
+ * text-extraction helpers for the TSRX compiler front ends
+ * (`frontend/tsrx/compiler.ts`, `frontend/tsx/compiler-tsx.ts`) and their
+ * lowering/classification/type-inference siblings. The recognized-name
+ * tables these walks consult live in `vocabulary.ts`.
  *
- * This module is a pure leaf: it holds no `@tsrx/core` VALUE import (only
- * the `AstNode` type, erased at compile time) — `compiler.ts` remains the
- * ONE module importing `@tsrx/core` for parsing (ADR 0023 sub-design 2).
+ * This module holds no `@tsrx/core` VALUE import (only the `AstNode` type,
+ * erased at compile time) — `compiler.ts` remains the ONE module importing
+ * `@tsrx/core` for parsing (ADR 0023 sub-design 2). Its one value import,
+ * `eslint-visitor-keys`, is pure data with no Node-only path, so the
+ * browser bundle (M25) stays clean.
  */
 
+import { KEYS } from 'eslint-visitor-keys'
 import type { AstNode } from './ast-node'
-
-/* === Vocabulary constants === */
-
-/** Signal constructor names recognized in setup declarations. */
-export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>([
-	'createCell',
-	'createState',
-	'createList',
-	'createStore',
-	'deriveCell',
-	'deriveList',
-	'deriveStore',
-	'createMemo',
-])
-
-/** Parser factory names recognized as ambients in `expose()` initializers. */
-export const PARSER_FACTORIES: ReadonlySet<string> = new Set<string>([
-	'asString',
-	'asInteger',
-	'asNumber',
-	'asBoolean',
-	'asEnum',
-	'asClampedInteger',
-	'asJSON',
-])
-
-/**
- * Attribute names whose ABSENCE carries meaning (CHECKLIST §5): `hidden`
- * omitted means visible, `disabled` omitted means enabled AND submittable,
- * likewise `checked`/`selected`/`aria-expanded`. A reactive binding on one of
- * these that the server can't render an initial value for (LTC034) doesn't
- * degrade neutrally like an ordinary omitted attribute (`title`, `class`) —
- * it renders the more dangerous of the two states regardless of what the
- * author intended.
- */
-export const SEMANTICALLY_LOADED_ATTRS: ReadonlySet<string> = new Set<string>([
-	'hidden',
-	'disabled',
-	'checked',
-	'selected',
-	'aria-expanded',
-])
-
-/**
- * Attributes with a native "dirty flag" (CHECKLIST §6): the content
- * attribute and the live IDL property diverge once the user (or the
- * browser, via session restore/autofill/bfcache) has interacted with the
- * control, and only the live property reflects that interaction. Harvesting
- * one of these via `getAttribute` at connect time reads the SERVER-rendered
- * value and silently discards whatever the user already typed/toggled in
- * the pre-upgrade window — exactly the window people are most likely to be
- * interacting in. Harvesting the live property instead is always correct:
- * on a clean (never-interacted) control the property already equals the
- * attribute-derived initial value; on a dirty one, the property is the only
- * source that still has it.
- */
-export const DIRTY_FLAG_ATTRS: ReadonlySet<string> = new Set<string>([
-	'value',
-	'checked',
-	'selected',
-])
-
-/**
- * Native tags whose `value`/`checked`/`selected` IDL properties carry the
- * DOM dirty flag (LT-116) — mapped to the lib.dom interface the generated
- * client needs so `bindProperty`'s keyed setter typechecks. The WRITE-side
- * counterpart of `DIRTY_FLAG_ATTRS`: a reactive thunk targeting one of
- * these attr×tag combinations must lower to a property write, because
- * rewriting/removing the content attribute no longer moves the live
- * property once the control is dirty (user interaction, autofill, or any
- * prior JS property write) — the form-radiogroup mutual-exclusion break
- * (NOTES LT-092). The hand-written corpus precedent is a property write in
- * the `each()` callback (`radio.checked = isChecked`), not `setAttribute`.
- *
- * `button` is deliberately absent: its `value` attribute/property pair has
- * no dirty flag (the property always reflects the attribute). `option` is
- * present for `selected` (dirtiness applies); `select`/`textarea` for
- * `value`. Compiler-side literal, same duplication precedent as
- * `DIRTY_FLAG_ATTRS` itself — the TSRX compiler never imports lib.dom
- * types, it only emits names the generated client resolves.
- */
-export const DIRTY_FLAG_CONTROL_TAGS: ReadonlyMap<string, string> = new Map([
-	['input', 'HTMLInputElement'],
-	['select', 'HTMLSelectElement'],
-	['textarea', 'HTMLTextAreaElement'],
-	['option', 'HTMLOptionElement'],
-])
-
-/**
- * Does this attr×tag combination hit a native dirty-flag IDL property
- * (LT-116)? The reactive-attr dispatch uses this to lower thunks to
- * `bindProperty` — regardless of the thunk's own value type, since the
- * attribute/property divergence is a property of the TARGET, not of the
- * thunk: a string `value` thunk over an `<input>` desyncs from the
- * attribute exactly as a boolean `checked` thunk does once the control is
- * dirty.
- */
-export const isDirtyFlagControlAttr = (tag: string, attr: string): boolean =>
-	DIRTY_FLAG_ATTRS.has(attr) && DIRTY_FLAG_CONTROL_TAGS.has(tag)
-
-/**
- * Context members usable as free names in any client code position —
- * `host`/`internals` plus the Web Components Community Protocol helpers
- * (LT-035, ADR 0024 sub-design 15): `requestContext(Context, fallback)` in a
- * setup const declaration and `provideContexts([...])` as a bare setup
- * statement. Both are `FactoryContext` members, never module imports.
- */
-export const CONTEXT_NAMES: ReadonlySet<string> = new Set<string>([
-	'host',
-	'internals',
-	'requestContext',
-	'provideContexts',
-])
-
-/**
- * FactoryContext members the generated client DESTRUCTURES rather than
- * imports from '@zeix/le-truc' (emit-client's context-vs-module split).
- * Kept as a literal array alongside the Set so the parity test can assert,
- * type-level, that every member is a key of the real `FactoryContext`
- * (globals.test.ts) — a `@zeix/le-truc` rename/removal then fails tsc.
- * `host`/`internals`/`requestContext`/`provideContexts` also live on the
- * context but arrive through the analyzer's ambient collection
- * (`CONTEXT_NAMES`), not this list; `each`/`reconcile`/`defineComponent`/
- * `bind*`/parsers/signal constructors are module exports.
- */
-export const FACTORY_CONTEXT_MEMBER_NAMES = [
-	'all',
-	'expose',
-	'first',
-	'on',
-	'pass',
-	'watch',
-] as const
-
-export const FACTORY_CONTEXT_MEMBERS: ReadonlySet<string> = new Set<string>(
-	FACTORY_CONTEXT_MEMBER_NAMES,
-)
-
-/**
- * Value exports of the `@zeix/le-truc` package barrel (`index.ts`) — the
- * names an authored `.tsrx` source may legitimately `import { … } from
- * '@zeix/le-truc'` (ADR 0024 sub-design 16: real exports are imported
- * explicitly; the FactoryContext vocabulary is ambient and disjoint from
- * this set). Hand-maintained against the barrel — the duplication
- * precedent is `MANAGED_FORM_MEMBERS`; a barrel change that forgets this
- * list fails the corpus check, since a newly exported name used in
- * authored code would fire LTC036 until listed here.
- */
-export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
-	// @zeix/cause-effect bridge (index.ts re-exports)
-	'abort',
-	'batch',
-	'CircularDependencyError',
-	'createCell',
-	'createCollection',
-	'createComputed',
-	'createEffect',
-	'createList',
-	'createMemo',
-	'createMutableSignal',
-	'createScope',
-	'createSensor',
-	'createSignal',
-	'createSlot',
-	'createState',
-	'createStore',
-	'createTask',
-	'DEEP_EQUALITY',
-	'DEFAULT_EQUALITY',
-	'DuplicateKeyError',
-	'deriveCell',
-	'deriveList',
-	'deriveSignal',
-	'deriveStore',
-	'EffectConvergenceError',
-	'InvalidCallbackError',
-	'InvalidSignalValueError',
-	'InvalidStoreMutationError',
-	'isAsyncFunction',
-	'isCell',
-	'isCollection',
-	'isComputed',
-	'isDerivedList',
-	'isFunction',
-	'isList',
-	'isMemo',
-	'isMutableCell',
-	'isMutableList',
-	'isMutableSignal',
-	'isMutableStore',
-	'isPending',
-	'isRecord',
-	'isSensor',
-	'isSignal',
-	'isSignalOfType',
-	'isSlot',
-	'isState',
-	'isStore',
-	'isTask',
-	'match',
-	'NullishSignalValueError',
-	'PromiseValueError',
-	'ReadonlySignalError',
-	'RequiredOwnerError',
-	'SKIP_EQUALITY',
-	'UnresolvableKeyError',
-	'UnsetSignalValueError',
-	'unown',
-	'untrack',
-	// src/bindings
-	'bindAria',
-	'bindAttribute',
-	'bindClass',
-	'bindProperty',
-	'bindState',
-	'bindStyle',
-	'bindText',
-	'bindVisible',
-	'configureHtmlSanitizer',
-	'dangerouslyBindInnerHTML',
-	'escapeHTML',
-	'safeSetAttribute',
-	'sanitizeHtml',
-	'setTextPreservingComments',
-	// src/component, src/errors
-	'defineComponent',
-	'DependencyTimeoutError',
-	'ExtensionCollisionError',
-	'InvalidComponentNameError',
-	'InvalidCustomElementError',
-	'InvalidPassPropertyError',
-	'InvalidPropertyNameError',
-	'InvalidReactivesError',
-	'InvalidSelectorError',
-	'InvalidTemplateError',
-	'MissingElementError',
-	'NoActiveCollectorError',
-	// src/extensions, src/helpers, src/scheduler
-	'observedAttributes',
-	'formAssociated',
-	'formAssociatedCheckbox',
-	'relayValidity',
-	'CONTEXT_REQUEST',
-	'ContextRequestEvent',
-	'createContext',
-	'createElementsMemo',
-	'query',
-	'queryAll',
-	'each',
-	'reconcile',
-	'schedule',
-	'throttle',
-	// src/parsers, src/types
-	'asBoolean',
-	'asJSON',
-	'asClampedInteger',
-	'asInteger',
-	'asNumber',
-	'asEnum',
-	'asString',
-	'asParser',
-	'defineMethod',
-	'isMethodProducer',
-	'isParser',
-	'RESERVED_WORDS_LIST',
-])
-
-/**
- * Property names that must never be a reactive component property
- * (`src/types.ts`'s `RESERVED_WORDS_LIST`, duplicated here since the TSRX
- * compiler doesn't import the runtime library). Every one is an inherited
- * own-property of `Object`, so `component.ts`'s `#initSignals` checks them
- * BEFORE its `prop in this` guard — that ordering, not the throw escaping,
- * is what protects the prototype chain (ADR 0028 sub-design 5). Since the
- * throw is contained (LT-155) the compiler carries the loud half: LTC028
- * (LT-157a).
- */
-export const RESERVED_PROP_NAMES: ReadonlySet<string> = new Set<string>([
-	'constructor',
-	'prototype',
-	'__proto__',
-	'toString',
-	'valueOf',
-	'hasOwnProperty',
-	'isPrototypeOf',
-	'propertyIsEnumerable',
-	'toLocaleString',
-])
-
-/**
- * FactoryContext helpers that push an effect descriptor into the ambient
- * collector (`src/internal.ts`'s `pushDescriptor`). Calling one after the
- * factory has returned throws `NoActiveCollectorError`; LTC013 (LT-157d)
- * decides the statically visible half of that.
- */
-export const COLLECTOR_HELPERS: ReadonlySet<string> = new Set<string>([
-	'watch',
-	'on',
-	'pass',
-	'provideContexts',
-	'each',
-	'reconcile',
-])
-
-/** Managed form props usable as string-literal lazy children (text-bindable). */
-export const MANAGED_TEXT_PROPS: ReadonlySet<string> = new Set<string>([
-	'validationMessage',
-])
-
-/**
- * Member names `formAssociated()`/`formAssociatedCheckbox()` install on the
- * prototype (`src/extensions/form.ts`'s `MANAGED_FORM_MEMBERS`, duplicated
- * here since the TSRX compiler doesn't import the runtime library). Exposing
- * any of these shadows the managed member — `expose()` already throws
- * `InvalidPropertyNameError` for it at RUNTIME (component.ts's
- * `reservedMembers` check), but only once the component actually connects;
- * LTC010's family (LT-058) catches it at compile time instead, naming the
- * exact source line and the extension it collides with. `value`/`checked`
- * are the deliberate exceptions the component MUST expose — never included
- * here; the variant-specific reset-baseline prop (`defaultValue`/
- * `defaultChecked`, LT-057) is added by the caller, since which one applies
- * depends on `config.form`.
- */
-export const MANAGED_FORM_MEMBERS: ReadonlySet<string> = new Set<string>([
-	'form',
-	'name',
-	'labels',
-	'validity',
-	'validationMessage',
-	'willValidate',
-	'checkValidity',
-	'reportValidity',
-	'setCustomValidity',
-	'disabled',
-])
-
-/**
- * Client-only context helpers (query/effect primitives) that exist only in
- * the generated client factory's context object — never in the server render
- * function's scope, even though `component.setup`'s plain `const` statements
- * are emitted verbatim into both (ADR 0023 sub-design 12). A setup const that
- * calls one of these directly used to be the `LTC013` error; under tiering
- * (LT-165 step 5, ADR 0029 s5) it is a routing signal, and the tier-aware
- * server emit drops the statement from the render function rather than
- * emitting a call that cannot resolve.
- */
-export const CLIENT_ONLY_PRIMITIVES: ReadonlySet<string> = new Set<string>([
-	'first',
-	'all',
-	'watch',
-	'on',
-	'pass',
-	'requestContext',
-	'provideContexts',
-])
-
-/**
- * JS standard globals never count against dependency provability — reading
- * `String(...)` does not make a thunk unprovable.
- */
-export const JS_GLOBALS: ReadonlySet<string> = new Set<string>([
-	'Array',
-	'BigInt',
-	'Boolean',
-	'Date',
-	'Error',
-	'Infinity',
-	'JSON',
-	'Map',
-	'Math',
-	'NaN',
-	'Number',
-	'Object',
-	'Promise',
-	'RegExp',
-	'Set',
-	'String',
-	'Symbol',
-	'WeakMap',
-	'WeakSet',
-	'decodeURIComponent',
-	'decodeURI',
-	'encodeURI',
-	'encodeURIComponent',
-	'globalThis',
-	'isFinite',
-	'isNaN',
-	'parseFloat',
-	'parseInt',
-	'undefined',
-	// DOM globals (generated handlers reference element/event types)
-	'console',
-	'crypto',
-	'document',
-	'window',
-	'navigator',
-	'location',
-	'history',
-	'performance',
-	'CustomEvent',
-	'DOMTokenList',
-	'Document',
-	'Element',
-	'Event',
-	'EventTarget',
-	'FocusEvent',
-	'FormData',
-	'HTMLButtonElement',
-	'HTMLCanvasElement',
-	'HTMLDivElement',
-	'HTMLElement',
-	'HTMLFormElement',
-	'HTMLInputElement',
-	'HTMLSelectElement',
-	'HTMLSpanElement',
-	'HTMLTemplateElement',
-	'HTMLTextAreaElement',
-	'InputEvent',
-	'Intl',
-	'KeyboardEvent',
-	'MouseEvent',
-	'Node',
-	'NodeList',
-	'PointerEvent',
-	'IntersectionObserver',
-	'ResizeObserver',
-	'SubmitEvent',
-	'URL',
-	'URLSearchParams',
-	'queueMicrotask',
-	'requestAnimationFrame',
-	'setInterval',
-	'setTimeout',
-	'structuredClone',
-])
 
 /* === AST predicates === */
 
@@ -459,6 +29,97 @@ export const asArray = (value: unknown): AstNode[] =>
 /** The `.type` discriminator of an AST node, or null for non-nodes. */
 export const nodeType = (node: unknown): string | null =>
 	isNode(node) ? String(node.type) : null
+
+/* === Child enumeration === */
+
+/**
+ * Whether a walk descends into TypeScript type positions. `'skip'` is the
+ * default: types are erased, so a name in one is never a runtime read.
+ * `'descend'` is for the one site where a type use still matters — an
+ * authored import check, where `typeof createState` needs the import as
+ * much as a value read does.
+ */
+export type TypePositions = 'skip' | 'descend'
+
+/**
+ * The keys a TS-aware parser hangs type positions on (a declaration's
+ * annotation, a function's return type and generics, a call's or a class
+ * heritage's type arguments). `eslint-visitor-keys` lists none of them on
+ * the estree node types it knows; on the TS node types it does not know
+ * (`TSAsExpression`, …) the fallback enumeration below drops them under
+ * `'skip'`.
+ */
+const TYPE_POSITION_KEYS: ReadonlySet<string> = new Set([
+	'typeAnnotation',
+	'returnType',
+	'typeParameters',
+	'typeArguments',
+	'superTypeParameters',
+	'superTypeArguments',
+])
+
+/** Bookkeeping keys of a node of a type `eslint-visitor-keys` doesn't know. */
+const NON_CHILD_KEYS: ReadonlySet<string> = new Set([
+	'type',
+	'start',
+	'end',
+	'loc',
+	'range',
+	'parent',
+	'leadingComments',
+	'trailingComments',
+	'innerComments',
+])
+
+/**
+ * Call `visit` on each direct child node of `node`, in the node's own key
+ * order (the parser's, so "first found" results stay stable). Which keys
+ * hold children is borrowed from `eslint-visitor-keys`, maintained against
+ * every estree and JSX node type — the skip policy hand-rolled walks used to
+ * re-answer, one list each (LT-229). Node types it doesn't know — TS nodes,
+ * the TSRX directives (`JSXCodeBlock`, `JSXIfExpression`, …), the scoped
+ * stylesheet's CSS nodes — fall back to every key that isn't bookkeeping.
+ * Type-position keys follow `types` on both paths.
+ */
+export const forEachChild = (
+	node: AstNode,
+	visit: (child: AstNode) => void,
+	types: TypePositions = 'skip',
+): void => {
+	const known = Object.hasOwn(KEYS, node.type) ? KEYS[node.type] : undefined
+	for (const key of Object.keys(node)) {
+		if (
+			TYPE_POSITION_KEYS.has(key)
+				? types === 'skip'
+				: known
+					? !known.includes(key)
+					: NON_CHILD_KEYS.has(key)
+		)
+			continue
+		const value = node[key]
+		if (Array.isArray(value)) {
+			for (const child of value) if (isNode(child)) visit(child)
+		} else if (isNode(value)) visit(value)
+	}
+}
+
+/**
+ * Call `visit` on `node` and every node below it, parent before children.
+ * Returning `false` from `visit` skips that node's subtree.
+ */
+export const walkNodes = (
+	node: unknown,
+	visit: (node: AstNode) => boolean | undefined | void,
+	types: TypePositions = 'skip',
+): void => {
+	const step = (current: AstNode): void => {
+		if (visit(current) === false) return
+		forEachChild(current, step, types)
+	}
+	if (Array.isArray(node)) {
+		for (const child of node) if (isNode(child)) step(child)
+	} else if (isNode(node)) step(node)
+}
 
 /**
  * `() => host.<prop>` — the host-prop mirror pattern. Returns the property
@@ -520,13 +181,26 @@ export const jsxName = (node: unknown): string | null =>
 		: null
 
 /**
- * Collect the identifiers a node reads that are NOT bound within it — its
- * free variables. Scope-aware enough for the sanctioned shapes: function
- * params, local declarators, property keys, and non-computed member
- * properties never count as reads.
+ * Call `onFree` on every `Identifier` node a node reads that is NOT bound
+ * within it — its free variable reads, in walk order. Scope-aware enough
+ * for the sanctioned shapes: function params, local declarators, loop and
+ * catch bindings, property keys, and non-computed member properties never
+ * count as reads; statements in a block (or a `.tsrx` `@{ }` code block)
+ * bind their declarations for the statements that follow. Import
+ * declarations introduce names rather than read them, so they are skipped
+ * — and bind nothing, which is what lets the authored-import check see an
+ * unimported read.
+ *
+ * The one scope walk both `freeIdentifiers` and the authored-import check
+ * (`reportLeTrucImportMismatch`) run on — the latter used to carry its own
+ * copy, which never grew the loop/catch cases or the `@{ }` render slot
+ * (LT-229).
  */
-export const freeIdentifiers = (node: AstNode): Set<string> => {
-	const free = new Set<string>()
+export const forEachFreeIdentifier = (
+	node: unknown,
+	onFree: (identifier: AstNode) => void,
+	types: TypePositions = 'skip',
+): void => {
 	const visit = (current: unknown, bound: ReadonlySet<string>) => {
 		if (Array.isArray(current)) {
 			for (const child of current) visit(child, bound)
@@ -534,8 +208,10 @@ export const freeIdentifiers = (node: AstNode): Set<string> => {
 		}
 		if (!isNode(current)) return
 		switch (current.type) {
+			case 'ImportDeclaration':
+				return
 			case 'Identifier':
-				if (!bound.has(String(current.name))) free.add(String(current.name))
+				if (!bound.has(String(current.name))) onFree(current)
 				return
 			case 'MemberExpression':
 				visit(current.object, bound)
@@ -620,9 +296,12 @@ export const freeIdentifiers = (node: AstNode): Set<string> => {
 				return
 			}
 			case 'BlockStatement':
-			case 'Program': {
+			case 'Program':
+			case 'JSXCodeBlock': {
 				// Statements execute in order: a declaration adds its names to
-				// scope for every statement that follows it.
+				// scope for every statement that follows it. The `.tsrx` `@{ }`
+				// container is a JSXCodeBlock holding plain statements plus a
+				// `render` slot (the template) that sees all of them.
 				const inner = new Set(bound)
 				for (const stmt of asArray(current.body)) {
 					if (stmt.type === 'VariableDeclaration') {
@@ -668,31 +347,26 @@ export const freeIdentifiers = (node: AstNode): Set<string> => {
 						visit(stmt, inner)
 					}
 				}
+				if (current.type === 'JSXCodeBlock') visit(current.render, inner)
 				return
 			}
 			default:
-				for (const [key, value] of Object.entries(current)) {
-					if (key === 'loc' || key === 'range' || key === 'parent') continue
-					// TS type positions name TYPES, not values — a cast's operand
-					// type (`x as Foo[]`), a declaration's annotation, a function's
-					// return type/generics, etc. Walking these generically would
-					// count a type name (`Foo`) as a free VALUE identifier, wrongly
-					// failing the harvest/thunk free-name gates for any initializer
-					// that happens to use a type annotation or cast (LT-027).
-					if (
-						key === 'typeAnnotation' ||
-						key === 'returnType' ||
-						key === 'typeParameters' ||
-						key === 'typeArguments' ||
-						key === 'superTypeParameters' ||
-						key === 'superTypeArguments'
-					)
-						continue
-					if (isNode(value) || Array.isArray(value)) visit(value, bound)
-				}
+				forEachChild(current, child => visit(child, bound), types)
 		}
 	}
 	visit(node, new Set())
+}
+
+/**
+ * The names a node reads that are NOT bound within it — its free
+ * variables (`forEachFreeIdentifier`, type positions skipped). A type name
+ * (`x as Foo[]`, an annotation, a return type) is never a VALUE read;
+ * counting one would wrongly fail the harvest/thunk free-name gates for any
+ * initializer that happens to carry a type annotation or cast (LT-027).
+ */
+export const freeIdentifiers = (node: AstNode): Set<string> => {
+	const free = new Set<string>()
+	forEachFreeIdentifier(node, id => free.add(String(id.name)))
 	return free
 }
 

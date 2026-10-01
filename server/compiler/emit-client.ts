@@ -21,12 +21,7 @@ import type {
 	ReconcilePlan,
 	TopEffectPlan,
 } from './analysis/plan'
-import {
-	DIRTY_FLAG_ATTRS,
-	DIRTY_FLAG_CONTROL_TAGS,
-	FACTORY_CONTEXT_MEMBERS,
-	sanitizeVarName,
-} from './ast-utils'
+import { sanitizeVarName } from './ast-utils'
 import { carriedKinds, FORMATTING_KINDS, type Message } from './icu/evaluate'
 import { clientSourceRecord } from './icu/parse'
 import { computeClientNeededNames } from './imports'
@@ -37,6 +32,11 @@ import {
 	type SourceSpan,
 	type SpanCursor,
 } from './spans'
+import {
+	DIRTY_FLAG_ATTRS,
+	type DirtyFlagControlTag,
+	FACTORY_CONTEXT_MEMBERS,
+} from './vocabulary'
 
 /* === Types === */
 
@@ -54,6 +54,24 @@ export type EmittedClientModule = {
 }
 
 /* === Internal Functions === */
+
+/**
+ * The lib.dom interface of each dirty-flag control tag (LT-116), so an
+ * `each()` item's `querySelector<…>()` lets `bindProperty`'s keyed setter
+ * typecheck. DOM knowledge is emitter business: the analysis only needs to
+ * know WHICH tags carry the flag (`vocabulary.ts`), and the `Record` type
+ * keeps this table exhaustive against that list. Compiler-side literal —
+ * the compiler never imports lib.dom types, it only emits names the
+ * generated client resolves.
+ */
+const DIRTY_FLAG_CONTROL_INTERFACES: ReadonlyMap<string, string> = new Map(
+	Object.entries({
+		input: 'HTMLInputElement',
+		select: 'HTMLSelectElement',
+		textarea: 'HTMLTextAreaElement',
+		option: 'HTMLOptionElement',
+	} satisfies Record<DirtyFlagControlTag, string>),
+)
 
 /**
  * The module's `@zeix/le-truc` names — imports and factory-context members
@@ -224,7 +242,7 @@ const emitEachBlock = (
 		taken.add(name)
 		targetVars.set(effect.target, name)
 		const tag = tagMatch?.[0] ?? ''
-		const typeArg = DIRTY_FLAG_CONTROL_TAGS.get(tag)
+		const typeArg = DIRTY_FLAG_CONTROL_INTERFACES.get(tag)
 		append(
 			`const ${name} = ${plan.itemParam}.querySelector${typeArg ? `<${typeArg}>` : ''}(${jsString(effect.target)})!`,
 			depth + 1,
@@ -591,7 +609,7 @@ export const emitClientModule = (
 	}
 
 	// Plain (non-signal) setup consts — documented as available in both
-	// generated modules (ast-utils.ts, diagnostics.ts), but only the SERVER
+	// generated modules (vocabulary.ts, diagnostics.ts), but only the SERVER
 	// module (emit-server.ts) actually emitted them until now; found and
 	// fixed alongside LT-034 (`card-colorscale.tsrx` needed a pure helper
 	// function usable from a `style-map` thunk). Only the subset actually

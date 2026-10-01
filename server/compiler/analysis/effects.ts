@@ -10,12 +10,9 @@
 import type { AstNode } from '../ast-node'
 import {
 	hostPropOf,
-	isDirtyFlagControlAttr,
 	isNode,
-	MANAGED_TEXT_PROPS,
 	nodeType,
 	objectKeys,
-	SEMANTICALLY_LOADED_ATTRS,
 	sanitizeVarName,
 } from '../ast-utils'
 import { type CompileDiagnostic, diagnostic } from '../diagnostics'
@@ -43,6 +40,11 @@ import {
 } from '../simulation/contract.ts'
 import { wordingOf } from '../surface'
 import { lineFields, type RoutingSignal, resolutionOf } from '../tier'
+import {
+	isDirtyFlagControlAttr,
+	MANAGED_TEXT_PROPS,
+	SEMANTICALLY_LOADED_ATTRS,
+} from '../vocabulary'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
 import type {
@@ -78,7 +80,7 @@ import {
  * a real submittable control, not the host itself. Compiler-side duplicate
  * of `validate-lowered.ts`'s `NAMED_FORM_CONTROL_TAGS` (LT-059) — front-end/
  * analysis-layer duplication is the established pattern here (same
- * precedent as `MANAGED_FORM_MEMBERS`, ast-utils.ts) rather than an import
+ * precedent as `MANAGED_FORM_MEMBERS`, vocabulary.ts) rather than an import
  * against the documented front-end → analysis direction.
  */
 const SUBMITTABLE_FORM_CONTROL_TAGS: ReadonlySet<string> = new Set([

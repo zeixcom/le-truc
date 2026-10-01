@@ -18,12 +18,7 @@
  */
 
 import type { AstNode } from './ast-node'
-import {
-	CLIENT_ONLY_PRIMITIVES,
-	freeIdentifiers,
-	hostPropOf,
-	JS_GLOBALS,
-} from './ast-utils'
+import { freeIdentifiers, hostPropOf } from './ast-utils'
 import { isVoidElement } from './core'
 import {
 	foldableHostProps,
@@ -53,6 +48,7 @@ import {
 	type SpanCursor,
 } from './spans'
 import type { EvaluationTier } from './tier'
+import { CLIENT_ONLY_PRIMITIVES, JS_GLOBALS } from './vocabulary'
 import { walkTemplate } from './walk'
 
 /* === Types === */

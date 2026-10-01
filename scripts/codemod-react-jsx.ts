@@ -29,6 +29,7 @@
 import type { TsrxNode } from '@tsrx/core'
 import {
 	asArray,
+	forEachChild,
 	identifierName,
 	isNode,
 	text,
@@ -169,10 +170,7 @@ const collectEdits = (source: string, ast: TsrxNode): Edit[] => {
 			return
 		}
 
-		for (const [key, value] of Object.entries(node)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			visit(value)
-		}
+		forEachChild(node, visit)
 	}
 
 	visit(ast)

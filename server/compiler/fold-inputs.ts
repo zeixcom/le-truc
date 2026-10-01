@@ -46,11 +46,10 @@
 import type { AstNode } from './ast-node'
 import {
 	asArray,
-	CLIENT_ONLY_PRIMITIVES,
-	CONTEXT_NAMES,
 	freeIdentifiers,
 	identifierName,
 	isNode,
+	walkNodes,
 } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import {
@@ -62,6 +61,7 @@ import {
 	isServerEvaluable,
 } from './evaluability'
 import type { AttributeIR, ComponentIR, TemplateNode } from './ir'
+import { CLIENT_ONLY_PRIMITIVES, CONTEXT_NAMES } from './vocabulary'
 import { childNodes } from './walk'
 
 /* === The declared vocabulary === */
@@ -437,12 +437,8 @@ const readsOf = (
  */
 const recordMemberReads = (node: AstNode): string[] => {
 	const out: string[] = []
-	const visit = (current: unknown): void => {
-		if (Array.isArray(current)) {
-			for (const child of current) visit(child)
-			return
-		}
-		if (!isNode(current)) return
+	// Type positions are skipped: a member read never occurs in one.
+	walkNodes(node, current => {
 		if (
 			current.type === 'MemberExpression' &&
 			isNode(current.object) &&
@@ -454,11 +450,6 @@ const recordMemberReads = (node: AstNode): string[] => {
 			else if (!PAGE_AMBIENTS.has(member))
 				out.push(`${AMBIENT_RECORD_PARAM}.${member}`)
 		}
-		for (const [key, value] of Object.entries(current)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			if (value && typeof value === 'object') visit(value)
-		}
-	}
-	visit(node)
+	})
 	return out
 }

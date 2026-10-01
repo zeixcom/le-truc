@@ -491,6 +491,38 @@ records the actual net delta.
   **Channel/tier:** compiler, tier 1 (the shapes stay statically decidable).
   **Gates:** the first `.tsx` variant of form-tokenbox or module-list.
 
+- [ ] LT-363: Harden the shared estree walk for constructs the corpus never saw (LT-229 review).
+  **Skill:** le-truc-dev
+  **Context:** LT-229's guarantee that the borrowed keys reach everything the old walks reached
+  rests on a one-off audit of 51 corpus files. Nothing pins it, and the corpus is exactly the
+  input the framework premise says to distrust. Three parts:
+  (1) **Pin the key-coverage invariant.** Add a construct-zoo fixture for both parsers (classes
+  with `implements`/decorators/parameter properties, enums, namespaces, `satisfies`, generics,
+  overloads, `declare`, abstract members, accessors, labeled loops) plus the corpus. Assert that
+  every node-valued key on a type `eslint-visitor-keys` knows is in KEYS, `TYPE_POSITION_KEYS`,
+  or a comment key. An exception needs an explicit allowlist entry with a decision. A
+  `@tsrx/core` bump that adds a key then fails a test instead of silently dropping a subtree.
+  (2) **Make `'skip'` mean "erased".** Today it only drops type-position *keys*, so TS type-only
+  declarations nested in code still leak. `freeIdentifiers` over
+  `() => { type Row = {…}; interface Box { width: number } … }` returns `Row`, `Box`, `width` on
+  `.tsrx`, and only `Row`, `Box` on `.tsx`. Under `'skip'`, skip `TSTypeAliasDeclaration`,
+  `TSInterfaceDeclaration`, `TSDeclareFunction` and `declare`-flagged nodes wholesale. Keep the
+  runtime-bearing TS nodes walked: `TSEnumDeclaration`, non-`declare` `TSModuleDeclaration`,
+  `TSParameterProperty`, and the expression wrappers `as`/`satisfies`/`!`/`<T>x`/instantiation.
+  (3) **Complete the scope walk.** `ClassDeclaration`/`ClassExpression`/`TSEnumDeclaration`
+  bind their id. Non-computed `MethodDefinition`/`PropertyDefinition`/accessor keys are not
+  reads (today `class K { m() {} }` reports `K` and `m`).
+  Then add a surface-parity assertion: `freeIdentifiers` agrees on every zoo construct across
+  `.tsrx` and `.tsx`.
+  **Sequencing:** after LT-243. typescript-estree replaces `to-estree.ts`, which today drops or
+  flattens several zoo constructs on `.tsx`. Weigh `@typescript-eslint/visitor-keys` (a
+  superset of eslint-visitor-keys with TS node keys) for the fallback path then. It is the same
+  maintainer and the same pure-data shape, and would turn the TS fallback into borrowed keys too.
+  **Channel/tier:** none. No diagnostic is added; each changed answer is a correctness fix to an
+  existing analysis, pinned per site as LT-229 did.
+  **Verification:** goldens + parity byte-identical (the corpus has no nested type-only
+  declarations; prove it); the invariant and parity tests; full gates.
+
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
 - [ ] LT-340: LTC033 sees only the expression written at the site, so an impure read through a setup const, helper or loop const folds (LT-326 review).

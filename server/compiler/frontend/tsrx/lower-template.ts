@@ -13,12 +13,10 @@
 import type { AstNode } from '../../ast-node'
 import {
 	asArray,
-	CONTEXT_NAMES,
 	collapseJsxText,
 	freeIdentifiers,
 	identifierName,
 	isNode,
-	JS_GLOBALS,
 	jsxName,
 	text,
 } from '../../ast-utils'
@@ -37,6 +35,7 @@ import {
 	validateCondition,
 	validateEmptyArm,
 } from '../../lower-shared'
+import { CONTEXT_NAMES, JS_GLOBALS } from '../../vocabulary'
 
 /* === Condition validation === */
 

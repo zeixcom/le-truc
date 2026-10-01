@@ -13,13 +13,49 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 Pruned 2026-10-01, fourth pass (Architect, after the "ICU MessageFormat switch" iteration
 closed; Changelog Keeper merged it into `CHANGELOG.md [Unreleased]` the same day). **No task
-entries remain.** Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
+entries remained** at that prune; LT-228/LT-229 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
 LT-308, LT-343, LT-344, LT-346–LT-351, LT-354. Where their rulings live: ADR 0030 (s4 ICU, s6/s9
 locale and the client channel, the corpus-only MF2 authoring constraint), ADR 0032 s6 (diagnostic
 parity), ADR 0010 s6 (hand-written `dangerouslyBindInnerHTML` stays raw), AGENTS.md, and the
 notes below. Open handoffs are restated in their own entries: LT-342, LT-345, LT-352, LT-353,
 LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier prunes: 2026-09-25
 ×3, 2026-09-21 ×2. Full entry text: `git log -p -- DONE.md`.
+
+---
+
+- [x] LT-228: Split `ast-utils.ts` into `vocabulary.ts` + `ast-utils.ts`. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new import-free leaf `server/compiler/vocabulary.ts` holds every recognized-name
+  table; `ast-utils.ts` keeps AST helpers only. The tag → lib.dom interface map moved into
+  `emit-client.ts` (`DIRTY_FLAG_CONTROL_INTERFACES`); `vocabulary.ts` keeps the tag list as a
+  literal tuple (`DIRTY_FLAG_CONTROL_TAG_NAMES`) because analysis still calls
+  `isDirtyFlagControlAttr`. The emitter table is `satisfies Record<DirtyFlagControlTag, string>`,
+  so the two can't drift. Internal only; no changelog entry.
+  **Review:** Approved. Handoff → LT-232: `vocabulary.ts`'s header says the parity tests pin
+  the duplicated tables, but today only `FACTORY_CONTEXT_MEMBER_NAMES` (globals.test.ts) and
+  `RESERVED_PROP_NAMES` (diagnostics.test.ts) are pinned. LT-232 makes the claim true or
+  rewords it.
+
+- [x] LT-229: One shared estree walk on `eslint-visitor-keys` — retire the hand-rolled skip-lists. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `eslint-visitor-keys@5.0.1` pinned as a devDependency, pinned the same way as
+  `@tsrx/core` (pure ESM data; the browser bundle builds). `ast-utils.ts` gains `forEachChild` /
+  `walkNodes` (membership from KEYS, the node's own key order, unknown types fall back to
+  non-bookkeeping keys) and `forEachFreeIdentifier`, the one scope walk under both
+  `freeIdentifiers` and the authored-import check. All 15 estree walks migrated, plus
+  `scripts/codemod-react-jsx.ts`.
+  **Ruling (type positions):** `TypePositions` defaults to `'skip'`. Only
+  `reportLeTrucImportMismatch` keeps `'descend'`, because an unimported `typeof createState`
+  needs the import. `classifyChild`, `impureAmbientCauses` and `stubbedApiRead` converged to
+  skip, with tests: an annotation such as `(d: Date) => …` or `ro: ResizeObserver` is no longer
+  a read. The remaining sites converged as stated no-ops.
+  **Changelog fact (user-visible):** LTC036 now fires in `.tsrx` for a real export read only in
+  the template (e.g. `isPending` in a class thunk). The old private walk never visited
+  `JSXCodeBlock.render`, while `.tsx` always fired. Loop, catch and self-referencing const
+  bindings named like an export no longer fire it falsely.
+  **Review:** Approved. The corpus key audit was a one-off script, so its guarantee isn't
+  pinned. `'skip'` still leaks names out of TS type-only declarations, and class and method
+  names, as free reads, with the two surfaces disagreeing. Both → LT-363.
 
 **Open obligations** (not yet discharged; check before closing the named work):
 - **Upstream issues for the MF1 → MF2 converter are the owner's call.** Drafts are in the

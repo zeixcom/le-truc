@@ -16,7 +16,13 @@
  */
 
 import type { AstNode } from './ast-node'
-import { asArray, collectBoundNames, identifierName, isNode } from './ast-utils'
+import {
+	asArray,
+	collectBoundNames,
+	forEachChild,
+	identifierName,
+	isNode,
+} from './ast-utils'
 import { diagnostic } from './diagnostics'
 import { type MessageArg, type MessageArgKind, parseMessage } from './icu/parse'
 import type { ExtractContext } from './ir'
@@ -277,10 +283,8 @@ export const staticMessageReads = (
 			else admitted = false
 			return
 		}
-		for (const [field, value] of Object.entries(current)) {
-			if (field === 'loc' || field === 'range' || field === 'parent') continue
-			if (value && typeof value === 'object') visit(value, current)
-		}
+		// Type positions are skipped: `typeof t` reads no message.
+		forEachChild(current, child => visit(child, current))
 	}
 	visit(node, null)
 	return admitted ? keys : null
@@ -429,10 +433,9 @@ export const reportMessageCallSites = (
 					: null
 			check(node, key, call)
 		}
-		for (const [field, value] of Object.entries(node)) {
-			if (field === 'loc' || field === 'range' || field === 'parent') continue
-			if (value && typeof value === 'object') visit(value, node)
-		}
+		// Type positions are skipped: a message read is a member expression,
+		// which never occurs in one.
+		forEachChild(node, child => visit(child, node))
 	}
 	visit(componentFn.body, componentFn)
 }

@@ -117,6 +117,74 @@ describe('sub-design 16 — real-export imports', () => {
 	})
 })
 
+describe('LTC036 on the shared scope walk (LT-229)', () => {
+	const IMPORT = "import { createCell } from '@zeix/le-truc'"
+	const ltc036 = (setup: string, imports = IMPORT) =>
+		compile(fixture(imports, `\tconst count = createCell(0)\n${setup}`))
+			.diagnostics.filter(d => d.code === 'LTC036')
+			.map(d => d.message)
+
+	// The old private copy of the scope walk lacked these binding cases, so
+	// each local below was reported as an unimported real export.
+	test('a for-of binding shadowing an export does not fire', () => {
+		expect(
+			ltc036(
+				'\tconst f = () => { for (const batch of [1]) console.log(batch) }',
+			),
+		).toEqual([])
+	})
+
+	test('a for-loop binding shadowing an export does not fire', () => {
+		expect(
+			ltc036(
+				'\tconst f = () => { for (let untrack = 0; untrack < 2; untrack++) console.log(untrack) }',
+			),
+		).toEqual([])
+	})
+
+	test('a catch binding shadowing an export does not fire', () => {
+		expect(
+			ltc036(
+				'\tconst f = () => { try { JSON.parse("") } catch (match) { console.log(match) } }',
+			),
+		).toEqual([])
+	})
+
+	test('a const arrow referencing its own export-named binding does not fire', () => {
+		expect(
+			ltc036(
+				'\tconst schedule = (n: number): number => (n > 0 ? schedule(n - 1) : 0)',
+			),
+		).toEqual([])
+	})
+
+	test('a real export read only in the .tsrx template fires', () => {
+		const source = `import { createTask } from '@zeix/le-truc'
+export function C({}: {})
+@{
+	const data = createTask(async () => 1)
+	expose({})
+	<>
+		<c-el><span class={() => (isPending(data) ? 'pending' : null)}>ok</span></c-el>
+		<style>c-el { color: red }</style>
+	</>
+}`
+		const messages = compile(source)
+			.diagnostics.filter(d => d.code === 'LTC036')
+			.map(d => d.message)
+		expect(messages).toHaveLength(1)
+		expect(messages[0]).toContain('isPending')
+	})
+
+	test('an unimported export named in a type position still fires', () => {
+		const messages = ltc036(
+			'\tconst other = count as unknown as ReturnType<typeof createState>',
+		)
+		expect(messages).toHaveLength(1)
+		expect(messages[0]).toContain('createState')
+	})
+})
+
 describe('sub-design 16 — generated-module placement', () => {
 	test('the client re-emits the authored line and the synthesized line drops its names', () => {
 		const { component } = compile(

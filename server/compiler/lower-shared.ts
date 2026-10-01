@@ -23,7 +23,6 @@ import {
 	freeIdentifiers,
 	identifierName,
 	isNode,
-	JS_GLOBALS,
 	jsxName,
 	nodeType,
 	text,
@@ -50,6 +49,7 @@ import type {
 } from './ir'
 import { bindsExposedArg, classifyChild } from './reactivity'
 import { wordingOf } from './surface'
+import { JS_GLOBALS } from './vocabulary'
 
 /** The recursion seam: each front end's own children dispatcher. */
 export type Lowering = {

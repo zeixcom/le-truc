@@ -12,18 +12,22 @@
 import type { AstNode } from './ast-node'
 import {
 	asArray,
-	COLLECTOR_HELPERS,
-	CONTEXT_NAMES,
-	collectBoundNames,
-	FACTORY_CONTEXT_MEMBERS,
+	forEachChild,
+	forEachFreeIdentifier,
 	identifierName,
 	isNode,
-	REAL_EXPORT_NAMES,
+	walkNodes,
 } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import type { LeTrucImport } from './imports'
 import type { ExtractContext } from './ir'
 import { malformedSelectorReason } from './selector-syntax'
+import {
+	COLLECTOR_HELPERS,
+	CONTEXT_NAMES,
+	FACTORY_CONTEXT_MEMBERS,
+	REAL_EXPORT_NAMES,
+} from './vocabulary'
 
 /**
  * Report every malformed `first()`/`all()` selector in the module (LTC026,
@@ -41,12 +45,8 @@ export const reportMalformedSelectors = (
 	ctx: ExtractContext,
 	ast: AstNode,
 ): void => {
-	const visit = (node: unknown): void => {
-		if (Array.isArray(node)) {
-			for (const child of node) visit(child)
-			return
-		}
-		if (!isNode(node)) return
+	// Type positions are skipped: they hold no call expressions.
+	walkNodes(ast, node => {
 		if (node.type === 'CallExpression') {
 			const helper = identifierName(node.callee)
 			if (helper === 'first' || helper === 'all') {
@@ -70,12 +70,7 @@ export const reportMalformedSelectors = (
 				}
 			}
 		}
-		for (const [key, value] of Object.entries(node)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			visit(value)
-		}
-	}
-	visit(ast)
+	})
 }
 
 /**
@@ -138,21 +133,20 @@ export const reportDeferredCollectorCalls = (
 			visit(rest, depth)
 			return
 		}
+		// Type positions are skipped: they hold no call expressions.
 		const nextDepth = FUNCTION_TYPES.has(String(node.type)) ? depth + 1 : depth
-		for (const [key, value] of Object.entries(node)) {
-			if (key === 'loc' || key === 'range' || key === 'parent') continue
-			visit(value, nextDepth)
-		}
+		forEachChild(node, child => visit(child, nextDepth))
 	}
 	visit(fn.body, 0)
 }
 
 /**
  * Validate authored `'@zeix/le-truc'` imports against real usage (ADR 0024
- * sub-design 16, LT-082), scope-aware the same way `freeIdentifiers` is:
- * params, declarator bindings, function-declaration names, non-computed
- * property keys and member properties never count as reads — a local
- * `const createCell = …` shadowing the export must not fire. Two checks:
+ * sub-design 16, LT-082), on the same scope walk as `freeIdentifiers`
+ * (`forEachFreeIdentifier`): params, declarator, loop and catch bindings,
+ * function-declaration names, non-computed property keys and member
+ * properties never count as reads — a local `const createCell = …`
+ * shadowing the export must not fire. Two checks:
  *
  * - LTC036: a `REAL_EXPORT_NAMES` identifier is read somewhere in the
  *   module but not imported from `'@zeix/le-truc'` — the first read
@@ -163,8 +157,8 @@ export const reportDeferredCollectorCalls = (
  *
  * `ImportDeclaration` nodes are skipped entirely — an import specifier
  * introduces a name, it is not a read of it. Shared by both front ends: the
- * `.tsrx` profile's `JSXCodeBlock` scope case is inert for `.tsx` sources
- * (no such node is ever produced), so the superset walk serves both.
+ * walk's `JSXCodeBlock` case (setup statements, then the template in its
+ * `render` slot) is inert for `.tsx` sources, which never produce one.
  */
 export const reportLeTrucImportMismatch = (
 	ctx: ExtractContext,
@@ -172,93 +166,18 @@ export const reportLeTrucImportMismatch = (
 	leTrucImports: LeTrucImport[],
 ): void => {
 	const usage = new Map<string, number>()
-	const visit = (node: unknown, bound: ReadonlySet<string>): void => {
-		if (Array.isArray(node)) {
-			for (const child of node) visit(child, bound)
-			return
-		}
-		if (!isNode(node)) return
-		switch (node.type) {
-			case 'ImportDeclaration':
-				return
-			case 'Identifier': {
-				const name = String(node.name)
-				if (!bound.has(name) && REAL_EXPORT_NAMES.has(name) && !usage.has(name))
-					usage.set(name, typeof node.start === 'number' ? node.start : 0)
-				return
-			}
-			case 'MemberExpression':
-				visit(node.object, bound)
-				if (node.computed) visit(node.property, bound)
-				return
-			case 'Property':
-				if (node.computed) visit(node.key, bound)
-				visit(node.value, bound)
-				return
-			case 'ArrowFunctionExpression':
-			case 'FunctionExpression': {
-				const inner = new Set(bound)
-				const paramNames = new Set<string>()
-				for (const param of asArray(node.params))
-					collectBoundNames(param, paramNames)
-				for (const n of paramNames) inner.add(n)
-				visit(node.body, inner)
-				return
-			}
-			case 'FunctionDeclaration': {
-				const inner = new Set(bound)
-				const paramNames = new Set<string>()
-				for (const param of asArray(node.params))
-					collectBoundNames(param, paramNames)
-				for (const n of paramNames) inner.add(n)
-				const id = identifierName(node.id)
-				if (id) inner.add(id)
-				visit(node.body, inner)
-				return
-			}
-			case 'VariableDeclarator': {
-				visit(node.init, bound)
-				const declared = new Set<string>()
-				collectBoundNames(node.id, declared)
-				visit(node.id, new Set([...bound, ...declared]))
-				return
-			}
-			case 'BlockStatement':
-			case 'Program':
-			case 'JSXCodeBlock': {
-				// Statements execute in order: a declaration adds its names to
-				// scope for every statement that follows it (same sequential
-				// rule as `freeIdentifiers`). The `@{ }` setup container is a
-				// JSXCodeBlock node holding plain statements — without it in
-				// this group, a top-level `const match = …` inside `@{ }`
-				// would not bind `match` for later statements.
-				const inner = new Set(bound)
-				for (const stmt of asArray(node.body)) {
-					if (stmt.type === 'VariableDeclaration') {
-						for (const decl of asArray(stmt.declarations))
-							visit(decl.init, inner)
-						const declared = new Set<string>()
-						for (const decl of asArray(stmt.declarations))
-							collectBoundNames(decl.id, declared)
-						for (const name of declared) inner.add(name)
-					} else {
-						visit(stmt, inner)
-						if (stmt.type === 'FunctionDeclaration') {
-							const id = identifierName(stmt.id)
-							if (id) inner.add(id)
-						}
-					}
-				}
-				return
-			}
-			default:
-				for (const [key, value] of Object.entries(node)) {
-					if (key === 'loc' || key === 'range' || key === 'parent') continue
-					visit(value, bound)
-				}
-		}
-	}
-	visit(ast, new Set())
+	// Type positions are walked: an unimported name in one (`typeof
+	// createState`, an error class as an annotation) is missing its import
+	// exactly as a value read is.
+	forEachFreeIdentifier(
+		ast,
+		node => {
+			const name = String(node.name)
+			if (REAL_EXPORT_NAMES.has(name) && !usage.has(name))
+				usage.set(name, typeof node.start === 'number' ? node.start : 0)
+		},
+		'descend',
+	)
 
 	const imported = new Map<string, number>()
 	for (const imp of leTrucImports)

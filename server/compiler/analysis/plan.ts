@@ -11,15 +11,7 @@
  */
 
 import type { AstNode } from '../ast-node'
-import {
-	asArray,
-	CLIENT_ONLY_PRIMITIVES,
-	CONTEXT_NAMES,
-	freeIdentifiers,
-	identifierName,
-	isNode,
-	JS_GLOBALS,
-} from '../ast-utils'
+import { asArray, freeIdentifiers, identifierName, isNode } from '../ast-utils'
 import type { CompileDiagnostic } from '../diagnostics'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
@@ -34,6 +26,11 @@ import type {
 import type { RegistryEntry } from '../registry'
 import type { SuppressedSite } from '../simulation/contract.ts'
 import type { RoutingSignal } from '../tier'
+import {
+	CLIENT_ONLY_PRIMITIVES,
+	CONTEXT_NAMES,
+	JS_GLOBALS,
+} from '../vocabulary'
 import { walkTemplate } from '../walk'
 import { resolveComposeRefs } from './compose-refs'
 import { reportServerOnlyNames, runEffects } from './effects'
@@ -714,7 +711,12 @@ export const analyzeClient = (
 		if (harvest && !(harvest.kind === 'list' && harvest.seed === 'verbatim'))
 			continue
 		const call = component.setup.find(s => s.name === signal.name)?.node
-		if (call) reportServerOnlyNames(ctx, call, `The initializer of signal \`${signal.name}\``)
+		if (call)
+			reportServerOnlyNames(
+				ctx,
+				call,
+				`The initializer of signal \`${signal.name}\``,
+			)
 	}
 	const clientNeeded = computeClientNeededNames(component)
 	for (const stmt of component.plainSetup)

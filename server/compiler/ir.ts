@@ -36,7 +36,7 @@ export type SetupStmt = {
  * usable in reactive attrs/lazy text exactly like `createCell`/`deriveCell`)
  * but is not a real reactive primitive — it's a client-only `FactoryContext`
  * member bound to `host`, with no server behavior at all. It is recognized
- * separately from `SIGNAL_CONSTRUCTORS` (ast-utils.ts) precisely because its
+ * separately from `SIGNAL_CONSTRUCTORS` (vocabulary.ts) precisely because its
  * emission differs in both generated modules; see `fallbackText` below.
  */
 export type SignalConstructor =

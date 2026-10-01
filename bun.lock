@@ -28,6 +28,7 @@
         "axe-core": "^4.13.0",
         "culori": "^4.0.2",
         "dompurify": "^3.4.14",
+        "eslint-visitor-keys": "^5.0.1",
         "jsdom": "^30.0.1",
         "lightningcss-cli": "^1.33.0",
         "messageformat": "^4",
@@ -318,6 +319,8 @@
     "dompurify": ["dompurify@3.4.14", "", { "optionalDependencies": { "@types/trusted-types": "^2.0.7" } }, "sha512-dVoH9z+MY+C9IilgGCk3YfFqjLi3fChm2OiKJMzh6axrJ5qwxqWaZamgmHrpv22CN/KdbZJuGEGgfQoL00LTdg=="],
 
     "entities": ["entities@6.0.1", "", {}, "sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g=="],
+
+    "eslint-visitor-keys": ["eslint-visitor-keys@5.0.1", "", {}, "sha512-tD40eHxA35h0PEIZNeIjkHoDR4YjjJp34biM0mDvplBe//mB+IHCqHDGV7pxF+7MklTvighcCPPZC7ynWyjdTA=="],
 
     "esrap": ["esrap@2.3.6", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.4.15" }, "peerDependencies": { "@typescript-eslint/types": "^8.2.0" }, "optionalPeers": ["@typescript-eslint/types"] }, "sha512-yc0OC12UjPqLoc+fe+v5GNs4TOjAigUw3sTikfC+xeBPGUw7gDRz3DtYaqEhxyMVJojcSWJw7jT0QWR+CbuE/A=="],
 
