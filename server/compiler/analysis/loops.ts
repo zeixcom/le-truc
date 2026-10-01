@@ -10,16 +10,24 @@ import type { AstNode } from '../ast-node'
 import { hostPropOf, nodeType, objectKeys, sanitizeVarName } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
-import type { AttributeIR, ForIR, TemplateNode } from '../ir'
+import type {
+	AttributeIR,
+	EachForIR,
+	ReconcileForIR,
+	TemplateNode,
+} from '../ir'
 import { wordingOf } from '../surface'
 import { isDirtyFlagControlAttr } from '../vocabulary'
 import { reportServerOnlyNames } from './effects'
 import { returnsNumber } from './harvest'
 import type {
-	AnalysisContext,
+	ForClientPlan,
 	LoopEffectPlan,
+	LoopPlans,
+	PassShared,
 	RebindingPlan,
 	ReconcileItemEvents,
+	ReconcilePlan,
 } from './plan'
 import {
 	countForSelector,
@@ -30,10 +38,13 @@ import {
 	staticAttrs,
 } from './selectors'
 
-/* === Exported Functions === */
+/* === Internal Functions === */
 
-/** Passes 1+1b: every `@for` in the template gets its client plan. */
-export const runLoops = (ctx: AnalysisContext): void => {
+/**
+ * Pass 1: server-data `@for` → `each()` plans (output selector, collection
+ * naming, hoisted-const rebinding, loop-scoped effects).
+ */
+const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 	const {
 		component,
 		source,
@@ -42,16 +53,13 @@ export const runLoops = (ctx: AnalysisContext): void => {
 		usedNames,
 		collectAmbient,
 		badListBodyNames,
-		forPlans,
-		reconcilePlans,
-	} = ctx
+	} = shared
 	const wording = wordingOf(component)
 	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
-
-	// --- Pass 1: @for loops → each() plans ---------------------------------
+	const forPlans = new Map<EachForIR, ForClientPlan>()
 
 	for (const loop of component.fors.values()) {
-		if (loop.kind !== 'each') continue // reactive loops → pass 1b (reconcile)
+		if (loop.kind !== 'each') continue // reactive loops → runReconcileLoops
 		const output = loop.output
 		const loopBound = new Set<string>([loop.itemName])
 		if (loop.indexName) loopBound.add(loop.indexName)
@@ -82,7 +90,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 			for (const name of free)
 				if (loop.hoisted.some(h => h.name === name)) referencedConsts.add(name)
 			reportServerOnlyNames(
-				ctx,
+				shared,
 				node,
 				`${what} inside the ${wording.loop} body`,
 				badListBodyNames(node).filter(name => !referencedConsts.has(name)),
@@ -255,8 +263,28 @@ export const runLoops = (ctx: AnalysisContext): void => {
 			effects: effectsPlan,
 		})
 	}
+	return forPlans
+}
 
-	// --- Pass 1b: reactive-list @for → reconcile() plans (milestone 3) -------
+/**
+ * Pass 1b: reactive-list `@for` over a declared `createList` →
+ * `reconcile()` plans (container/template addressing, item hole,
+ * bindItem-scoped events).
+ */
+const runReconcileLoops = (
+	shared: PassShared,
+): Map<ReconcileForIR, ReconcilePlan> => {
+	const {
+		component,
+		source,
+		diagnostics,
+		addQuery,
+		collectAmbient,
+		badListBodyNames,
+	} = shared
+	const wording = wordingOf(component)
+	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
+	const reconcilePlans = new Map<ReconcileForIR, ReconcilePlan>()
 
 	const parentOf = (target: TemplateNode): ElementNode | null => {
 		const walk = (node: TemplateNode): ElementNode | null => {
@@ -397,7 +425,7 @@ export const runLoops = (ctx: AnalysisContext): void => {
 				)
 			}
 			reportServerOnlyNames(
-				ctx,
+				shared,
 				handler,
 				`${what} inside a reactive-list ${wording.loop} body`,
 				badListBodyNames(handler).filter(
@@ -481,4 +509,17 @@ export const runLoops = (ctx: AnalysisContext): void => {
 			emptyQueries,
 		})
 	}
+	return reconcilePlans
+}
+
+/* === Exported Functions === */
+
+/**
+ * Passes 1+1b: every `@for` in the template gets its client plan. Each
+ * loops before reconcile — the query-registration order the goldens pin.
+ */
+export const runLoops = (shared: PassShared): LoopPlans => {
+	const forPlans = runEachLoops(shared)
+	const reconcilePlans = runReconcileLoops(shared)
+	return { forPlans, reconcilePlans }
 }

@@ -1,13 +1,15 @@
 /**
  * Client analysis orchestration and plan vocabulary (LT-022, regrouping
- * move M5 of LE_TRUC_COMPILER.md §7). `analyzeClient` builds an explicit
- * `AnalysisContext` — the shared state and helpers the old ~2,500-line
- * closure web threaded implicitly — and runs the passes in their original
- * order: loops (each/reconcile planning), harvest (render sites + seeding
- * plans), effects (per-construct client lowering), each in its own module
- * and independently testable against a constructed context. Every rewrite
- * rule that cannot be applied reports a diagnostic — these rules are the
- * product (ADR 0024 consequences): a wrong rewrite is a wrong component.
+ * move M5 of LE_TRUC_COMPILER.md §7). `analyzeClient` builds the typed
+ * `PassShared` environment — the order-carrying accumulators the old
+ * ~2,500-line closure web threaded implicitly — and runs the passes as
+ * functions over it: loops (each/reconcile planning), harvest (render sites
+ * + seeding plans), effects (per-construct client lowering), each in its own
+ * module, each taking its producers' output as a required parameter (ADR
+ * 0040 s5), and independently testable against a constructed environment.
+ * Every rewrite rule that cannot be applied reports a diagnostic — these
+ * rules are the product (ADR 0024 consequences): a wrong rewrite is a wrong
+ * component.
  */
 
 import type { AstNode } from '../ast-node'
@@ -32,7 +34,7 @@ import {
 	JS_GLOBALS,
 } from '../vocabulary'
 import { walkTemplate } from '../walk'
-import { resolveComposeRefs } from './compose-refs'
+import { type ComposeRefs, resolveComposeRefs } from './compose-refs'
 import { reportServerOnlyNames, runEffects } from './effects'
 import { runHarvest } from './harvest'
 import { runLoops } from './loops'
@@ -390,16 +392,18 @@ export type ClientPlan = {
 }
 
 /**
- * The explicit shared state and helpers the analysis passes thread between
- * them — the old `analyzeClient` closure web made concrete. Construct one
- * (via `analyzeClient`, or by hand in tests) and any single pass is
- * independently runnable: `runLoops` populates `forPlans`/`reconcilePlans`,
- * `runHarvest` reads them and fills `harvests`, `runEffects` reads
- * everything and fills `effects`. Queries, diagnostics, ambient context,
- * and name allocation are appended in pass order — the original execution
- * order — so query/diagnostic sequences are byte-stable.
+ * The order-carrying environment every analysis pass shares (ADR 0040 s5,
+ * LT-289) — the accumulators whose APPEND ORDER is the contract: queries,
+ * used names, ambient context, child tags, ref names, and the diagnostic /
+ * routing / suppression sinks, all appended in pass order so query and
+ * diagnostic sequences are byte-stable. A pass's own PRODUCTIONS are not
+ * here: they are return values the next pass takes as a required parameter
+ * (`runLoops(shared) → LoopPlans`, `runHarvest(shared, loopPlans) →
+ * HarvestPlans`, `runEffects(shared, loopPlans, harvests) → EffectPlans`),
+ * so running a pass before its producer is a type error rather than a read
+ * of an empty map. Construct one via `analyzeClient`, or by hand in tests.
  */
-export type AnalysisContext = {
+export type PassShared = {
 	component: ComponentIR
 	source: string
 	diagnostics: CompileDiagnostic[]
@@ -412,18 +416,16 @@ export type AnalysisContext = {
 	suppressedSites: SuppressedSite[]
 	registry: ReadonlySet<string>
 	/**
-	 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
-	 * source path (ADR 0023 sub-design 10) — needed only to resolve the
-	 * underlying custom-element tag for a `pass={{ }}`-addressed composed
-	 * target's query selector text.
+	 * The compose-reference resolution (LT-127): `skipped` in the
+	 * registry-discovery pass, else `resolved` — carrying the composed
+	 * (PascalCase) elements' targets keyed by resolved source path (ADR 0023
+	 * sub-design 10), and the compose sites an ambiguous `first()` matched,
+	 * already reported as LTC027, so `emitComposeEffects` must not address
+	 * them by tag or report them a second time.
 	 */
-	composeRegistry?: ReadonlyMap<string, RegistryEntry> | undefined
+	composeRefs: ComposeRefs
 	/** The generated factory's element queries, in registration order. */
 	queries: QueryPlan[]
-	/** The signals' seeding plans, in component signal order. */
-	harvests: HarvestPlan[]
-	/** The document-ordered client effect list. */
-	effects: TopEffectPlan[]
 	/** Registry-child tags addressed (type-flow imports). */
 	childTags: Set<string>
 	/** Context members the factory must destructure. */
@@ -432,17 +434,6 @@ export type AnalysisContext = {
 	usedNames: Set<string>
 	/** Every ref name in the template, pre-collected. */
 	refNames: Set<string>
-	/**
-	 * Compose sites an ambiguous `first()` selector matched (LT-127) —
-	 * already reported as LTC027 by `resolveComposeRefs`, so
-	 * `emitComposeEffects` must not address them by tag or report them
-	 * a second time.
-	 */
-	ambiguousComposeNodes: ReadonlySet<TemplateNode>
-	/** Pass 1 output: server-data `@for` → `each()` plans. */
-	forPlans: Map<EachForIR, ForClientPlan>
-	/** Pass 1b output: reactive-list `@for` → `reconcile()` plans. */
-	reconcilePlans: Map<ReconcileForIR, ReconcilePlan>
 	/** Register (or reuse) a query; returns its variable name. */
 	addQuery: (
 		base: string,
@@ -461,6 +452,20 @@ export type AnalysisContext = {
 	badListBodyNames: (node: AstNode) => string[]
 }
 
+/** `runLoops`'s production: every `@for`'s client plan, by loop kind. */
+export type LoopPlans = {
+	/** Server-data `@for` → `each()` plans. */
+	forPlans: ReadonlyMap<EachForIR, ForClientPlan>
+	/** Reactive-list `@for` → `reconcile()` plans. */
+	reconcilePlans: ReadonlyMap<ReconcileForIR, ReconcilePlan>
+}
+
+/** `runHarvest`'s production: the signals' seeding plans, in signal order. */
+export type HarvestPlans = readonly HarvestPlan[]
+
+/** `runEffects`'s production: the document-ordered client effect list. */
+export type EffectPlans = TopEffectPlan[]
+
 /* === Exported Functions === */
 
 export const analyzeClient = (
@@ -471,8 +476,6 @@ export const analyzeClient = (
 ): ClientPlan => {
 	const source = component.source
 	const queries: QueryPlan[] = []
-	const harvests: HarvestPlan[] = []
-	const effects: TopEffectPlan[] = []
 	const childTags = new Set<string>()
 	const ambient = new Set<string>(component.contextRefs)
 	// A context member read only from a setup declaration the client module
@@ -497,17 +500,18 @@ export const analyzeClient = (
 	// here, not in `compileSource` — the child's tag needs the registry.
 	// Runs before the `refNames` walk below, which is what finds the
 	// synthetic `{kind: 'ref'}` attrs this attaches.
-	const {
-		unmatchedOptional: unmatchedComposeRefs,
-		ambiguous: ambiguousComposeNodes,
-	} = resolveComposeRefs(component, diagnostics, composeRegistry)
+	const composeRefs = resolveComposeRefs(
+		component,
+		diagnostics,
+		composeRegistry,
+	)
 	// LT-096: what each composed child renders, so every selector resolved
 	// below is unique over the DOM the query actually searches — the
 	// children's markup included — not just over this template.
-	if (composeRegistry)
+	if (composeRefs.mode === 'resolved')
 		component.composedShapes = composedShapesFor(
 			component.root,
-			composeRegistry,
+			composeRefs.registry,
 		)
 
 	// Pre-collect ref names — thunks may reference any ref in the template.
@@ -540,7 +544,7 @@ export const analyzeClient = (
 	// under the authored NAME, which is what setup references.
 	for (const ref of [
 		...component.unmatchedOptionalRefs,
-		...unmatchedComposeRefs,
+		...(composeRefs.mode === 'resolved' ? composeRefs.unmatchedOptional : []),
 	]) {
 		refNames.add(ref.name)
 		usedNames.add(ref.name)
@@ -646,24 +650,19 @@ export const analyzeClient = (
 
 	const routingSignals: RoutingSignal[] = []
 	const suppressedSites: SuppressedSite[] = []
-	const ctx: AnalysisContext = {
+	const shared: PassShared = {
 		component,
 		source,
 		diagnostics,
 		routingSignals,
 		suppressedSites,
 		registry,
-		composeRegistry,
+		composeRefs,
 		queries,
-		harvests,
-		effects,
 		childTags,
 		ambient,
 		usedNames,
 		refNames,
-		ambiguousComposeNodes,
-		forPlans: new Map(),
-		reconcilePlans: new Map(),
 		addQuery: (base, selector, cardinality) =>
 			addQuery(
 				usedNames,
@@ -680,9 +679,11 @@ export const analyzeClient = (
 		badListBodyNames,
 	}
 
-	runLoops(ctx)
-	runHarvest(ctx)
-	runEffects(ctx)
+	// The pass order is carried by the signatures (ADR 0040 s5): each pass
+	// takes its producers' output as a required parameter.
+	const loopPlans = runLoops(shared)
+	const harvests = runHarvest(shared, loopPlans)
+	const effects = runEffects(shared, loopPlans, harvests)
 
 	// LT-347: the setup half of the server-only check. `expose()` and every
 	// plain const a client position pulls in are emitted into the client
@@ -692,7 +693,7 @@ export const analyzeClient = (
 	for (const prop of asArray(component.exposeArgNode?.properties))
 		if (prop.type === 'Property' && isNode(prop.value))
 			reportServerOnlyNames(
-				ctx,
+				shared,
 				prop.value,
 				`\`expose()\` entry \`${identifierName(prop.key) ?? '…'}\``,
 			)
@@ -709,7 +710,7 @@ export const analyzeClient = (
 		const call = component.setup.find(s => s.name === signal.name)?.node
 		if (call)
 			reportServerOnlyNames(
-				ctx,
+				shared,
 				call,
 				`The initializer of signal \`${signal.name}\``,
 			)
@@ -718,7 +719,7 @@ export const analyzeClient = (
 	for (const stmt of component.plainSetup)
 		if (stmt.name && clientNeeded.has(stmt.name))
 			reportServerOnlyNames(
-				ctx,
+				shared,
 				stmt.node,
 				`Setup const \`${stmt.name}\`, which a client position reads,`,
 			)
@@ -796,7 +797,7 @@ export const analyzeClient = (
 
 	return {
 		queries,
-		harvests,
+		harvests: [...harvests],
 		effects: guardedEffects,
 		clientMessageKeys: [...clientMessageKeys].sort(),
 		ambientContext: [...ambient].sort(),

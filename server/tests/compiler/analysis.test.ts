@@ -1,16 +1,18 @@
 /**
  * Independent-pass tests for the analysis split (LT-022, M5): each pass in
  * `server/compiler/analysis/` is a function over an explicitly constructed
- * `AnalysisContext` — no `analyzeClient` orchestration needed. These tests
+ * `PassShared` — no `analyzeClient` orchestration needed. These tests
  * exercise one pass at a time against a hand-built context, the
  * unit-testability the old 2,500-line closure monolith made impossible.
  */
 import { describe, expect, test } from 'bun:test'
 import { runEffects } from '../../compiler/analysis/effects'
 import { runHarvest } from '../../compiler/analysis/harvest'
+import { runLoops } from '../../compiler/analysis/loops'
 import {
-	type AnalysisContext,
 	analyzeClient,
+	type LoopPlans,
+	type PassShared,
 } from '../../compiler/analysis/plan'
 import {
 	composedShapesFor,
@@ -43,8 +45,8 @@ const realComponent = (): ComponentIR => {
 }
 
 /** A context assembled by hand — the orchestration-free entry point. */
-const contextFor = (component: ComponentIR): AnalysisContext => {
-	const queries: AnalysisContext['queries'] = []
+const contextFor = (component: ComponentIR): PassShared => {
+	const queries: PassShared['queries'] = []
 	return {
 		component,
 		source: component.source,
@@ -52,16 +54,12 @@ const contextFor = (component: ComponentIR): AnalysisContext => {
 		routingSignals: [],
 		suppressedSites: [],
 		registry: new Set(),
+		composeRefs: { mode: 'skipped' },
 		queries,
-		harvests: [],
-		effects: [],
 		childTags: new Set(),
 		ambient: new Set(component.contextRefs),
 		usedNames: new Set(['cEl', ...component.signals.map(s => s.name), 'host']),
 		refNames: new Set(),
-		ambiguousComposeNodes: new Set(),
-		forPlans: new Map(),
-		reconcilePlans: new Map(),
 		addQuery: (base, selector, cardinality) => {
 			const existing = queries.find(
 				q => q.selector === selector && q.cardinality === cardinality,
@@ -81,13 +79,15 @@ const contextFor = (component: ComponentIR): AnalysisContext => {
 	}
 }
 
+/** No loops in the fixture: the empty production `runLoops` would return. */
+const noLoops: LoopPlans = { forPlans: new Map(), reconcilePlans: new Map() }
+
 describe('analysis passes over a constructed context (LT-022)', () => {
 	test('runHarvest alone seeds a map-thunk/computed-thunk signal (LT-036 route)', () => {
 		const component = realComponent()
-		const ctx = contextFor(component)
-		runHarvest(ctx)
-		expect(ctx.harvests).toHaveLength(1)
-		expect(ctx.harvests[0]).toEqual({
+		const harvests = runHarvest(contextFor(component), noLoops)
+		expect(harvests).toHaveLength(1)
+		expect(harvests[0]).toEqual({
 			kind: 'substitute',
 			signal: 'color',
 			expr: "'red'",
@@ -97,18 +97,36 @@ describe('analysis passes over a constructed context (LT-022)', () => {
 	test('runEffects alone registers the reactive attribute effect and query', () => {
 		const component = realComponent()
 		const ctx = contextFor(component)
-		runEffects(ctx)
+		const effects = runEffects(ctx, noLoops, [])
 		expect(ctx.queries.map(q => q.selector)).toEqual(['span'])
-		expect(ctx.effects).toHaveLength(1)
-		expect(ctx.effects[0]?.kind).toBe('watch-attr')
+		expect(effects).toHaveLength(1)
+		expect(effects[0]?.kind).toBe('watch-attr')
 	})
 
 	test('full orchestration agrees with the composed passes', () => {
 		const component = realComponent()
 		const plan = analyzeClient(component, new Set(), [])
 		const ctx = contextFor(component)
-		runHarvest(ctx)
-		expect(ctx.harvests).toEqual(plan.harvests)
+		const loopPlans = runLoops(ctx)
+		const harvests = runHarvest(ctx, loopPlans)
+		expect(harvests).toEqual(plan.harvests)
+		expect(runEffects(ctx, loopPlans, harvests)).toEqual(plan.effects)
+	})
+
+	test('pass order is a type contract, not a convention (ADR 0040 s5)', () => {
+		const ctx = contextFor(realComponent())
+		// Never executed — the assertions are the `@ts-expect-error`s, which
+		// fail typecheck the day a pass stops requiring its producer's output.
+		const harvestBeforeLoops = () => {
+			// @ts-expect-error — runHarvest requires runLoops' LoopPlans
+			runHarvest(ctx)
+		}
+		const effectsBeforeHarvest = () => {
+			// @ts-expect-error — runEffects requires runHarvest's HarvestPlans
+			runEffects(ctx, noLoops)
+		}
+		expect(typeof harvestBeforeLoops).toBe('function')
+		expect(typeof effectsBeforeHarvest).toBe('function')
 	})
 
 	test('selector engine counts are independently computable', () => {

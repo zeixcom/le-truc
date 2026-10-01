@@ -23,6 +23,16 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
 
 ---
 
+- [x] LT-289: Typed pass contracts — functional passes over `PassShared` (LT-235 item (f); ADR 0040 s5). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `analysis/plan.ts`: `AnalysisContext` → `PassShared`, which holds only the order-carrying accumulators; `LoopPlans`/`HarvestPlans`/`EffectPlans` are return types. `analyzeClient` runs `runLoops(shared)` → `runHarvest(shared, loopPlans)` → `runEffects(shared, loopPlans, harvests)`. `resolveComposeRefs` returns `ComposeRefs` (`skipped` | `resolved`, the resolved member carrying `registry`, `unmatchedOptional`, `ambiguous`), which replaces `composeRegistry` and `ambiguousComposeNodes` on the environment. `analysis.test.ts` pins the order with two `@ts-expect-error`s. LE_TRUC_COMPILER.md §4 is in present tense. Corpus output is byte-identical.
+  **Review:** Approved; matches ADR 0040 s5. **Rulings:** (1) The pass types are structural, not branded. The contract stops a reorder inside `analyzeClient`; a test may still hand-build an empty `LoopPlans`, and that is the intended testability, not a hole. (2) `runEffects`'s `_harvests` is unread and only witnesses order (harvest registers its queries first, and query order is the byte-stable contract). If effects ever reads harvests, drop the underscore; do not remove the parameter. Owner to rerun `check:sim`'s Deno leg outside the sandbox.
+
+- [x] LT-227: Split `runLoops` and `runHarvest` at their existing pass banners. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `analysis/loops.ts`: `runLoops` composes the module-internal `runEachLoops` and `runReconcileLoops`, each before reconcile as before. `analysis/harvest.ts`: `collectRenderSites(component) → RenderSites` (sites plus the thunk/render/client credit sets) and `planHarvests(shared, loopPlans, sites)`; `runHarvest` composes them. Landed in one change with LT-289. Corpus output is byte-identical.
+  **Review:** Approved.
+
 - [x] LT-360: Design the target-emitter interface for template emission (LT-257's interface half). — reviewed ✓
   **Skill:** architect (ADR via adr-keeper)
   **Changed:** [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md), accepted by the owner 2026-10-01. `CONTEXT.md` gains Hole, Target Emitter, Escaping Context and Emittability. ADR 0034 s3 and ADR 0037 Related are amended in place (both unpublished).

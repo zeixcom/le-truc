@@ -1,6 +1,6 @@
 /**
  * Standalone unit tests for `analysis/loops.ts` (`runLoops`, LT-022 M5) and
- * `analysis/naming.ts` (LT-048): the same "hand-build an `AnalysisContext`,
+ * `analysis/naming.ts` (LT-048): the same "hand-build a `PassShared`,
  * call one pass" granularity `analysis.test.ts` already gives
  * `runHarvest`/`runEffects`/the selector engine, extended to loop planning
  * and name allocation so a regression there fails locally instead of only
@@ -9,13 +9,13 @@
 import { describe, expect, test } from 'bun:test'
 import { runLoops } from '../../compiler/analysis/loops'
 import { addQuery, uniqueName } from '../../compiler/analysis/naming'
-import type { AnalysisContext, QueryPlan } from '../../compiler/analysis/plan'
+import type { PassShared, QueryPlan } from '../../compiler/analysis/plan'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import type { ComponentIR } from '../../compiler/ir'
 
 /** A context assembled by hand — the orchestration-free entry point. */
-const contextFor = (component: ComponentIR): AnalysisContext => {
-	const queries: AnalysisContext['queries'] = []
+const contextFor = (component: ComponentIR): PassShared => {
+	const queries: PassShared['queries'] = []
 	return {
 		component,
 		source: component.source,
@@ -23,16 +23,12 @@ const contextFor = (component: ComponentIR): AnalysisContext => {
 		routingSignals: [],
 		suppressedSites: [],
 		registry: new Set(),
+		composeRefs: { mode: 'skipped' },
 		queries,
-		harvests: [],
-		effects: [],
 		childTags: new Set(),
 		ambient: new Set(component.contextRefs),
 		usedNames: new Set(['cEl', ...component.signals.map(s => s.name), 'host']),
 		refNames: new Set(),
-		ambiguousComposeNodes: new Set(),
-		forPlans: new Map(),
-		reconcilePlans: new Map(),
 		addQuery: (base, selector, cardinality) => {
 			const existing = queries.find(
 				q => q.selector === selector && q.cardinality === cardinality,
@@ -73,12 +69,12 @@ describe('runLoops — Pass 1 (server-data @for → each())', () => {
 		)
 		if (!component) throw new Error('component must compile')
 		const ctx = contextFor(component)
-		runLoops(ctx)
+		const { forPlans, reconcilePlans } = runLoops(ctx)
 
 		expect(ctx.diagnostics).toEqual([])
-		expect(ctx.reconcilePlans.size).toBe(0)
-		expect(ctx.forPlans.size).toBe(1)
-		const plan = [...ctx.forPlans.values()][0]
+		expect(reconcilePlans.size).toBe(0)
+		expect(forPlans.size).toBe(1)
+		const plan = [...forPlans.values()][0]
 		expect(plan?.itemParam).toBe('tab')
 		// The iterable's own free name (`tabs`) is reused as the collection name.
 		expect(plan?.collection).toBe('tabs')
@@ -116,10 +112,10 @@ describe('runLoops — Pass 1 (construct-free body, LT-322)', () => {
 		)
 		if (!component) throw new Error('component must compile')
 		const ctx = contextFor(component)
-		runLoops(ctx)
+		const { forPlans } = runLoops(ctx)
 
 		expect(ctx.diagnostics).toEqual([])
-		expect(ctx.forPlans.size).toBe(0)
+		expect(forPlans.size).toBe(0)
 		expect(ctx.queries).toEqual([])
 	})
 })
@@ -147,13 +143,13 @@ import { createList } from '@zeix/le-truc'`,
 		)
 		if (!component) throw new Error('component must compile')
 		const ctx = contextFor(component)
-		runLoops(ctx)
+		const { forPlans, reconcilePlans } = runLoops(ctx)
 
 		expect(ctx.diagnostics).toEqual([])
 		// The reactive list is excluded from Pass 1 (`continue` on `listSignal`).
-		expect(ctx.forPlans.size).toBe(0)
-		expect(ctx.reconcilePlans.size).toBe(1)
-		const plan = [...ctx.reconcilePlans.values()][0]
+		expect(forPlans.size).toBe(0)
+		expect(reconcilePlans.size).toBe(1)
+		const plan = [...reconcilePlans.values()][0]
 		expect(plan?.signal).toBe('items')
 		expect(plan?.itemParam).toBe('item')
 		expect(plan?.keyParam).toBe('k')

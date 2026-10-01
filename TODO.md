@@ -33,7 +33,7 @@ parallel.
 - **Design gate.** ~~**LT-360**~~ (reviewed 2026-10-01, [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md)) designs the target-emitter interface (LT-257's interface half)
   and records it as an ADR. It is architect work, so it runs alongside track A from day one.
   It gates LT-274.
-- **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229 → LT-232~~ (reviewed 2026-10-01). ~~LT-366 → LT-243 → LT-367~~ (reviewed 2026-10-01). ~~LT-230~~ (reviewed 2026-10-01; its `analysis/selectors.ts` remainder rides LT-245). LT-227 → LT-289.
+- **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229 → LT-232~~ (reviewed 2026-10-01). ~~LT-366 → LT-243 → LT-367~~ (reviewed 2026-10-01). ~~LT-230~~ (reviewed 2026-10-01; its `analysis/selectors.ts` remainder rides LT-245). ~~LT-227 → LT-289~~ (reviewed 2026-10-01).
   LT-234 → LT-247. LT-231 and LT-244 unordered.
 - **B — published IR (ADR 0040).** ~~LT-287~~ (reviewed 2026-10-01) and LT-288. Either may start at once; LT-287 lands
   before LT-274.
@@ -72,35 +72,7 @@ has landed. `bun run build:docs` and `check:links` pass.
 
 LT-360 reviewed 2026-10-01, in DONE.md.
 
-### A — Consolidation (P2b; LT-227 → LT-289 next; LT-234 → LT-247 — LT-364, LT-228–LT-230, LT-232, LT-366, LT-367 reviewed, in DONE.md)
-
-- [ ] LT-227: Split `runLoops` and `runHarvest` at their existing pass banners.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.1. `runLoops` (433 lines) is two unrelated algorithms separated
-  by a `// --- Pass 1b` banner → `runEachLoops`/`runReconcileLoops`. `runHarvest` (628)
-  Pass 2 (~240–378) already produces the `Site[]` + `thunkRendered` that Pass 3 consumes
-  — make it a return type: `collectRenderSites`/`planHarvests`.
-  **Verification:** goldens + parity byte-identical; full gates green.
-
-- [ ] LT-289: Typed pass contracts — functional passes over `PassShared` (LT-235 item (f); ADR 0040 s5).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
-  s5 — the review's "one item that is design work rather than refactoring"; the design is now
-  recorded, this task lands it. The order-carrying accumulators (queries, usedNames, ambient,
-  childTags, refNames, diagnostics — byte-stable query order is their documented invariant)
-  become an explicitly typed `PassShared` environment; each pass's productions become return
-  values the next pass receives as REQUIRED parameters (`runLoops(shared) → LoopPlans`;
-  `runHarvest(shared, loopPlans) → HarvestPlans`; `runEffects(shared, loopPlans, harvests) →
-  EffectPlans`), so harvest-before-loops is a compile error in `analyzeClient` and "harvest
-  read an empty `forPlans` map" is unrepresentable. `resolveComposeRefs` returns a typed
-  `{ mode: 'resolved' | 'skipped' }` so a missing `composeRegistry` must be acknowledged;
-  `ambiguousComposeNodes` stays the already-reported channel, carried on the resolved result.
-  The `diagnostics` threading is deliberately untouched (ADR 0040's accepted tradeoff).
-  LT-226's EffectsContext extraction is the structural pattern.
-  **Check:** goldens + parity byte-identical; a harness calling `runHarvest` without
-  `loopPlans` fails typecheck; `bun test server/tests`, typecheck, warning baseline 0.
-  **Doc handoff (LT-235 review):** flip the LE_TRUC_COMPILER.md §4 pass-order passage from *target
-  shape* to present tense in the same commit.
+### A — Consolidation (P2b; LT-234 → LT-247 next — LT-364, LT-227–LT-230, LT-232, LT-289, LT-366, LT-367 reviewed, in DONE.md)
 
 - [ ] LT-234: Shared code-generation kit — `CodeBuilder`, `jsString()`/`jsTemplate()`, `HtmlWriter`, `commonIndent()`.
   **Skill:** le-truc-dev

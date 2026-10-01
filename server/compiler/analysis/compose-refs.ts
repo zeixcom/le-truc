@@ -25,12 +25,36 @@ import type { RegistryEntry } from '../registry'
 import { wordingOf } from '../surface'
 import { allComposeNodes, composeStaticAttrs } from './selectors'
 
+/* === Types === */
+
+/**
+ * The compose-reference resolution (ADR 0040 s5): `skipped` when no
+ * `composeRegistry` was threaded (the registry-discovery pass), `resolved`
+ * otherwise. `ambiguous` stays the already-reported channel — compose nodes
+ * an ambiguous selector matched, reported here as LTC027, so
+ * `emitComposeEffects` must not address them by tag or report them again.
+ */
+export type ComposeRefs =
+	| { mode: 'skipped' }
+	| {
+			mode: 'resolved'
+			registry: ReadonlyMap<string, RegistryEntry>
+			unmatchedOptional: ReadonlyArray<{ name: string; selector: string }>
+			ambiguous: ReadonlySet<TemplateNode>
+	  }
+
 /* === Exported Functions === */
 
 /**
  * Resolve every deferred `first()` reference against the template's composed
  * elements, mutating the matched node's `attrs` exactly as `compiler.ts`
  * does for raw elements.
+ *
+ * Typed resolved-or-skipped (ADR 0040 s5, LT-289): with no
+ * `composeRegistry` (the discovery pass) nothing is resolved and the result
+ * says so, so a caller cannot read an empty `ambiguous` set as "checked, none
+ * found" — it has to acknowledge the skip. The resolved result carries the
+ * registry it resolved against.
  *
  * `unmatchedOptional` are the OPTIONAL refs that matched nothing:
  * legitimate, and queried from the authored selector verbatim, the same
@@ -44,17 +68,19 @@ export const resolveComposeRefs = (
 	component: ComponentIR,
 	diagnostics: CompileDiagnostic[],
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
-): {
-	unmatchedOptional: Array<{ name: string; selector: string }>
-	ambiguous: Set<TemplateNode>
-} => {
-	const unmatchedOptional: Array<{ name: string; selector: string }> = []
-	const ambiguous = new Set<TemplateNode>()
-	const result = { unmatchedOptional, ambiguous }
-	if (component.deferredComposeRefs.length === 0) return result
+): ComposeRefs => {
 	// No registry: this is the discovery pass. Resolving is impossible and
 	// not needed — say nothing rather than reporting a false LTC026.
-	if (!composeRegistry) return result
+	if (!composeRegistry) return { mode: 'skipped' }
+	const unmatchedOptional: Array<{ name: string; selector: string }> = []
+	const ambiguous = new Set<TemplateNode>()
+	const result: ComposeRefs = {
+		mode: 'resolved',
+		registry: composeRegistry,
+		unmatchedOptional,
+		ambiguous,
+	}
+	if (component.deferredComposeRefs.length === 0) return result
 	const nodes = allComposeNodes(component.root)
 	for (const ref of component.deferredComposeRefs) {
 		const matches = nodes.filter(node => {

@@ -348,12 +348,12 @@ front-end modules, then the two front ends:
 | `corpus-config.ts` | The corpus configuration surface (§ 7.1): `CorpusConfig`, the defaults, `resolveCorpusConfig`, `outDirPrefix`, `emitPathsFor` — pure path math, no file IO |
 | `emit-paths.ts` | `EmitPaths` + `DEFAULT_EMIT_PATHS`: the two facts the emitters take from the configuration. A leaf with no `node:` import, because the browser bundle reaches it |
 | `registry.ts` | `RegistryEntry` type (incl. per-prop `ExposeKind`) + `registryJson` |
-| `analysis/plan.ts` | `ClientPlan` types, `AnalysisContext` assembly, `analyzeClient` orchestration |
+| `analysis/plan.ts` | `ClientPlan` types, `PassShared` assembly, `analyzeClient` orchestration |
 | `analysis/selectors.ts` | Pure selector engine: synthesis, structural uniqueness, union/compose addressing |
 | `analysis/compose-refs.ts` | Registry-aware resolution of `first()` references addressing composed children |
 | `analysis/naming.ts` | `uniqueName`, `addQuery` (query table + name allocation) |
-| `analysis/harvest.ts` | Passes 2+3: render sites, harvest-plan selection, arg→DOM-site substitution |
-| `analysis/loops.ts` | Passes 1+1b: `each()` and `reconcile()` planning |
+| `analysis/harvest.ts` | Passes 2+3: render sites (`collectRenderSites`), harvest-plan selection and arg→DOM-site substitution (`planHarvests`) |
+| `analysis/loops.ts` | Passes 1+1b: `each()` (`runEachLoops`) and `reconcile()` (`runReconcileLoops`) planning |
 | `analysis/effects.ts` | Pass 4: document-ordered per-construct effect planning |
 | `emit-server.ts` | `ComponentIR` → server render module |
 | `emit-client.ts` | `ComponentIR` + `ClientPlan` → client factory module |
@@ -452,12 +452,16 @@ adoption; a `requestContext` signal never appears: it has no DOM seed), and
 `effects` (the document-ordered effect list: `watch`-bindings, `pass`, `on`,
 `each`/`reconcile` blocks, guarded optional-branch effects, async tri-state
 toggles). Every plan node carries source spans for the remapping tables.
-Pass order (loops before harvest before effects) and byte-stable query
-registration are conventions of `analyzeClient` today. *Target shape (ADR
-0040 s5, lands with LT-289):* the passes run as functions over a typed shared
-environment (`PassShared` — the order-carrying accumulators), each taking the
-previous pass's output as a required parameter, so loops-before-harvest
-becomes a type error rather than a convention.
+The passes run as functions over a typed shared environment (`PassShared` —
+the order-carrying accumulators: queries, used names, ambients, child tags,
+ref names, and the diagnostic sinks), each taking its producers' output as a
+required parameter (ADR 0040 s5): `runLoops(shared) → LoopPlans`,
+`runHarvest(shared, loopPlans) → HarvestPlans`, `runEffects(shared,
+loopPlans, harvests) → EffectPlans`. Loops-before-harvest is a type error,
+not a convention, and byte-stable query registration follows from that
+order. Compose resolution returns `{ mode: 'resolved' | 'skipped' }`, so the
+registry-discovery pass's missing `composeRegistry` is acknowledged at every
+use.
 
 Two rules worth naming because they shape both halves:
 

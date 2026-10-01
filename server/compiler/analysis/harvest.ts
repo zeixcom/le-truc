@@ -21,7 +21,13 @@ import {
 } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
-import type { AttributeIR, InitSignalIR, SignalIR, TemplateNode } from '../ir'
+import type {
+	AttributeIR,
+	ComponentIR,
+	InitSignalIR,
+	SignalIR,
+	TemplateNode,
+} from '../ir'
 import { lineFields, resolutionOf } from '../tier'
 import {
 	CONTEXT_NAMES,
@@ -29,12 +35,19 @@ import {
 	JS_GLOBALS,
 } from '../vocabulary'
 import { walkTemplate } from '../walk'
-import type { AnalysisContext, HarvestPlan, ParserKind } from './plan'
+import type {
+	HarvestPlan,
+	HarvestPlans,
+	LoopPlans,
+	ParserKind,
+	PassShared,
+} from './plan'
 import {
 	type ElementNode,
 	type ExprNode,
 	enclosingIfOf as enclosingIfOfIn,
 	isElement,
+	loopFor as loopForIn,
 	resolveSelector as resolveSelectorIn,
 	selectorFor as selectorForIn,
 } from './selectors'
@@ -196,77 +209,52 @@ export const lazyWatchSource = (child: ExprNode): string => {
 	return `() => ${child.exprText}`
 }
 
-/* === Exported Functions === */
+/* === Render Sites (Pass 2) === */
 
-/** Passes 2+3: render sites, then one harvest plan per signal. */
-export const runHarvest = (ctx: AnalysisContext): void => {
-	const {
-		component,
-		source,
-		diagnostics,
-		routingSignals,
-		harvests,
-		reconcilePlans,
-		addQuery,
-		ambient,
-		refNames,
-	} = ctx
-	/**
-	 * A signal the client cannot seed from server-rendered DOM. Under ADR
-	 * 0029 sub-design 5 (LT-165 step 5) this is a ROUTING SIGNAL, not an
-	 * author error — the realm connects the component for real and serializes
-	 * whatever the signal actually settles to, which is exactly the initial
-	 * value the harvest could not find a site for. The generated client
-	 * declares the signal from its own initializer (`emit-client.ts`), so the
-	 * shape compiles and works in every tier; what changed is only who
-	 * produces the served HTML.
-	 */
-	const reportUnharvestable = (signal: InitSignalIR): void => {
-		routingSignals.push({
-			origin: 'LTC004',
-			detail: `signal \`${signal.name}\` has no harvestable initial-DOM site`,
-			...lineFields(source, signal.init?.start),
-			resolution:
-				signal.init == null
-					? { by: 'realm' }
-					: resolutionOf(signal.init, component.serverKnown),
-		})
-	}
-	const enclosingIfOf = (target: ElementNode) =>
-		enclosingIfOfIn(component, target)
-	const selectorFor = (el: ElementNode) => selectorForIn(component, el)
-	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
+/**
+ * A signal's render site. Direct sites (text child, direct attribute) and
+ * membership marks; the canonical harvest site is the first direct site by
+ * document order, else the first membership mark.
+ */
+type Site =
+	| {
+			kind: 'text' | 'attr'
+			signal: string
+			element: ElementNode
+			attr?: string
+			order: number
+	  }
+	| {
+			kind: 'membership'
+			signal: string
+			element: ElementNode
+			attr: string
+			constName: string
+			order: number
+	  }
 
-	// --- Pass 2: signal render sites (document order) ------------------------
-	// Direct sites (text child, direct attribute) and membership marks; the
-	// canonical harvest site is the first direct site by document order,
-	// else the first membership mark. Signals whose values reach the DOM
-	// only through thunks none of these can splice into — style-map/class-map
-	// objects, computed (non-`sig.get()`) reactive thunks — are credited in
-	// `thunkRendered` instead (LT-036): rendered, so not LTC004-dead, but
-	// never a harvest site; Pass 3 seeds them by initializer reuse.
-	type Site =
-		| {
-				kind: 'text' | 'attr'
-				signal: string
-				element: ElementNode
-				attr?: string
-				order: number
-		  }
-		| {
-				kind: 'membership'
-				signal: string
-				element: ElementNode
-				attr: string
-				constName: string
-				order: number
-		  }
+/**
+ * Pass 2's production, Pass 3's input (LT-227). `thunkRendered`: signals
+ * whose values reach the DOM only through thunks no site can splice into —
+ * style-map/class-map objects, computed (non-`sig.get()`) reactive thunks
+ * (LT-036) — or through a client-only read (LT-119/LT-323): rendered, so not
+ * LTC004-dead, but never a harvest site; Pass 3 seeds them by initializer
+ * reuse. `renderCredited`/`clientCredited` split that credit by position
+ * (LT-323/LT-327).
+ */
+type RenderSites = {
+	sites: Site[]
+	thunkRendered: Set<string>
+	renderCredited: Set<string>
+	clientCredited: Set<string>
+}
+
+/** Pass 2: signal render sites, in document order, plus thunk/client credit. */
+const collectRenderSites = (component: ComponentIR): RenderSites => {
 	const sites: Site[] = []
 	const thunkRendered = new Set<string>()
 	let documentOrder = 0
-
-	const loopFor = (node: TemplateNode) =>
-		[...component.fors.values()].find(f => f.output === node) ?? null
+	const loopFor = (node: TemplateNode) => loopForIn(component, node)
 
 	const recordSites = (node: TemplateNode, insideLoopOutput: boolean): void => {
 		if (!isElement(node)) return
@@ -465,7 +453,53 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		}
 	})
 
-	// --- Pass 3: harvest plans ------------------------------------------------
+	return { sites, thunkRendered, renderCredited, clientCredited }
+}
+
+/* === Harvest Plans (Pass 3) === */
+
+/** Pass 3: one harvest plan per signal, from Pass 2's render sites. */
+const planHarvests = (
+	shared: PassShared,
+	{ forPlans, reconcilePlans }: LoopPlans,
+	{ sites, thunkRendered, renderCredited, clientCredited }: RenderSites,
+): HarvestPlan[] => {
+	const {
+		component,
+		source,
+		diagnostics,
+		routingSignals,
+		addQuery,
+		ambient,
+		refNames,
+	} = shared
+	const harvests: HarvestPlan[] = []
+	/**
+	 * A signal the client cannot seed from server-rendered DOM. Under ADR
+	 * 0029 sub-design 5 (LT-165 step 5) this is a ROUTING SIGNAL, not an
+	 * author error — the realm connects the component for real and serializes
+	 * whatever the signal actually settles to, which is exactly the initial
+	 * value the harvest could not find a site for. The generated client
+	 * declares the signal from its own initializer (`emit-client.ts`), so the
+	 * shape compiles and works in every tier; what changed is only who
+	 * produces the served HTML.
+	 */
+	const reportUnharvestable = (signal: InitSignalIR): void => {
+		routingSignals.push({
+			origin: 'LTC004',
+			detail: `signal \`${signal.name}\` has no harvestable initial-DOM site`,
+			...lineFields(source, signal.init?.start),
+			resolution:
+				signal.init == null
+					? { by: 'realm' }
+					: resolutionOf(signal.init, component.serverKnown),
+		})
+	}
+	const enclosingIfOf = (target: ElementNode) =>
+		enclosingIfOfIn(component, target)
+	const selectorFor = (el: ElementNode) => selectorForIn(component, el)
+	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
+	const loopFor = (node: TemplateNode) => loopForIn(component, node)
 
 	/**
 	 * DOM read expression for a server arg, traced to its rendered site.
@@ -894,7 +928,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			constName: string
 		}
 		const loop = loopFor(mark.element)
-		const plan = loop?.kind === 'each' ? ctx.forPlans.get(loop) : undefined
+		const plan = loop?.kind === 'each' ? forPlans.get(loop) : undefined
 		const valueAttr = loop
 			? [...loop.output.attrs].find(
 					(attr): attr is Extract<AttributeIR, { kind: 'server' }> =>
@@ -914,4 +948,18 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 			default: defaultForType(signal.inferredType),
 		})
 	}
+	return harvests
 }
+
+/* === Exported Functions === */
+
+/**
+ * Passes 2+3: render sites, then one harvest plan per signal. Requires the
+ * loop plans (ADR 0040 s5): a membership harvest addresses its `each()`
+ * collection, a reconciled List seeds from its container.
+ */
+export const runHarvest = (
+	shared: PassShared,
+	loopPlans: LoopPlans,
+): HarvestPlans =>
+	planHarvests(shared, loopPlans, collectRenderSites(shared.component))

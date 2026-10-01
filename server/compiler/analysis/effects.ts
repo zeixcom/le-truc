@@ -27,10 +27,8 @@ import {
 import type {
 	AttributeIR,
 	ComponentIR,
-	EachForIR,
 	ForIR,
 	PassEntryIR,
-	ReconcileForIR,
 	TemplateNode,
 } from '../ir'
 import type { RegistryEntry } from '../registry'
@@ -45,13 +43,15 @@ import {
 	MANAGED_TEXT_PROPS,
 	SEMANTICALLY_LOADED_ATTRS,
 } from '../vocabulary'
+import type { ComposeRefs } from './compose-refs'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { uniqueName } from './naming'
 import type {
-	AnalysisContext,
-	ForClientPlan,
+	EffectPlans,
+	HarvestPlans,
+	LoopPlans,
+	PassShared,
 	QueryPlan,
-	ReconcilePlan,
 	TopEffectPlan,
 } from './plan'
 import {
@@ -137,14 +137,13 @@ type EffectsContext = {
 	routingSignals: RoutingSignal[]
 	suppressedSites: SuppressedSite[]
 	registry: ReadonlySet<string>
-	composeRegistry: ReadonlyMap<string, RegistryEntry> | undefined
+	composeRefs: ComposeRefs
 	queries: QueryPlan[]
 	effects: TopEffectPlan[]
 	ambient: Set<string>
 	usedNames: Set<string>
-	ambiguousComposeNodes: ReadonlySet<TemplateNode>
-	forPlans: Map<EachForIR, ForClientPlan>
-	reconcilePlans: Map<ReconcileForIR, ReconcilePlan>
+	forPlans: LoopPlans['forPlans']
+	reconcilePlans: LoopPlans['reconcilePlans']
 	addQuery: (
 		base: string,
 		selector: string,
@@ -153,7 +152,7 @@ type EffectsContext = {
 	collectAmbient: (node: AstNode | null | undefined) => void
 	badFreeNames: (node: AstNode) => string[]
 	/**
-	 * Registry entries by TAG (LT-158). `composeRegistry` is keyed by source
+	 * Registry entries by TAG (LT-158). The compose registry is keyed by source
 	 * path because composition resolves through import specifiers; a
 	 * `pass={{ }}` on a raw dashed tag has only the tag, so it needs the
 	 * other index. Built from the same map rather than threading a second
@@ -1491,18 +1490,14 @@ const passObjectKey = (node: ComposeNode): string =>
  * raw custom elements get (LT-338).
  */
 const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
-	const {
-		source,
-		diagnostics,
-		addQuery,
-		composeRegistry,
-		ambiguousComposeNodes,
-	} = fx
-	// `composeRegistry` is `undefined` during the corpus-wide registry-
+	const { source, diagnostics, addQuery, composeRefs } = fx
+	// Compose resolution is `skipped` during the corpus-wide registry-
 	// discovery pass (compileComponent's own tolerance, LT-015). Nothing
 	// below it can run then — the child's tag isn't resolvable. That pass
 	// needs only this component's OWN registry entry.
-	if (!composeRegistry) return
+	if (composeRefs.mode === 'skipped') return
+	const { registry: composeRegistry, ambiguous: ambiguousComposeNodes } =
+		composeRefs
 	const passAttrs = node.attrs.filter(
 		(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
 			a.kind === 'pass',
@@ -1749,7 +1744,16 @@ const validateComposeIds = (fx: EffectsContext): void => {
  * `emitTopEffects`, then runs the standalone compose-`id` validation —
  * the band units live at module scope (LT-226).
  */
-export const runEffects = (ctx: AnalysisContext): void => {
+export const runEffects = (
+	shared: PassShared,
+	{ forPlans, reconcilePlans }: LoopPlans,
+	/**
+	 * Unread here: the parameter carries the ORDER (ADR 0040 s5). Harvest
+	 * registers its queries first, and query registration order is the
+	 * byte-stable contract — so effects cannot be planned without it.
+	 */
+	_harvests: HarvestPlans,
+): EffectPlans => {
 	const {
 		component,
 		source,
@@ -1757,30 +1761,27 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		routingSignals,
 		suppressedSites,
 		registry,
-		composeRegistry,
-		effects,
+		composeRefs,
 		ambient,
 		addQuery,
 		collectAmbient,
 		badFreeNames,
-		forPlans,
-		reconcilePlans,
 		usedNames,
-		ambiguousComposeNodes,
 		queries,
-	} = ctx
+	} = shared
 	/**
-	 * Registry entries by TAG (LT-158). `composeRegistry` is keyed by source
-	 * path because composition resolves through import specifiers; a
+	 * Registry entries by TAG (LT-158). The compose registry is keyed by
+	 * source path because composition resolves through import specifiers; a
 	 * `pass={{ }}` on a raw dashed tag has only the tag, so it needs the
 	 * other index. Built from the same map rather than threading a second
 	 * one through: pass 1 puts every compilable file's entry in there, so
 	 * the two indexes are the same set of components.
 	 */
 	const entryByTag = new Map<string, RegistryEntry>()
-	if (composeRegistry)
-		for (const entry of composeRegistry.values())
+	if (composeRefs.mode === 'resolved')
+		for (const entry of composeRefs.registry.values())
 			entryByTag.set(entry.tag, entry)
+	const effects: EffectPlans = []
 	const fx: EffectsContext = {
 		component,
 		source,
@@ -1788,12 +1789,11 @@ export const runEffects = (ctx: AnalysisContext): void => {
 		routingSignals,
 		suppressedSites,
 		registry,
-		composeRegistry,
+		composeRefs,
 		queries,
 		effects,
 		ambient,
 		usedNames,
-		ambiguousComposeNodes,
 		forPlans,
 		reconcilePlans,
 		addQuery,
@@ -1806,4 +1806,5 @@ export const runEffects = (ctx: AnalysisContext): void => {
 	}
 	emitTopEffects(fx, component.root)
 	validateComposeIds(fx)
+	return effects
 }
