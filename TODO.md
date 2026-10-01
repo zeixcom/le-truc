@@ -33,9 +33,9 @@ parallel.
 - **Design gate.** **LT-360** designs the target-emitter interface (LT-257's interface half)
   and records it as an ADR. It is architect work, so it runs alongside track A from day one.
   It gates LT-274.
-- **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229~~ (reviewed 2026-10-01) → LT-232. LT-243. LT-230. LT-227 → LT-289.
+- **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229~~ (reviewed 2026-10-01) → LT-232. LT-366 → ~~LT-243~~ (reviewed 2026-10-01) → LT-367. LT-230. LT-227 → LT-289.
   LT-234 → LT-247. LT-231 and LT-244 unordered.
-- **B — published IR (ADR 0040).** LT-287 and LT-288. Either may start at once; LT-287 lands
+- **B — published IR (ADR 0040).** ~~LT-287~~ (reviewed 2026-10-01) and LT-288. Either may start at once; LT-287 lands
   before LT-274.
 - **C — conditions (ADR 0037).** LT-274 after LT-360, LT-230, LT-243 and LT-287. Then LT-276,
   and LT-275 as the copy round. LT-275 also takes LT-359's copy, so there is one Tech Writer round.
@@ -64,7 +64,7 @@ and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, em
 both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names as gating LT-254
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-366.** Next free diagnostic code: LTC059 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's).
+**Next free task ID: LT-368.** Next free diagnostic code: LTC059 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's).
 
 ---
 
@@ -131,27 +131,53 @@ has landed. `bun run build:docs` and `check:links` pass.
   **Verification:** typecheck; the extended parity test; goldens + parity
   byte-identical.
 
-- [ ] LT-243: Adopt `@typescript-eslint/typescript-estree` for `to-estree.ts` (reflection §5 — the highest-leverage single swap).
+- [ ] LT-366: Replace the browser-bundle smoke with a source-level runtime-neutrality check over both front ends.
   **Skill:** le-truc-dev
-  **Context:** Reflection §5 table, rank 1: `frontend/tsx/to-estree.ts` (848 lines) re-implements
-  exactly what `@typescript-eslint/typescript-estree` maintains — converting the `typescript`
-  AST to ESTree, against every `typescript` major. This retires ADR 0032's stated "Bad"
-  consequence ("the converter must track `typescript`-major AST drift"). **The framework premise
-  is what makes it urgent rather than tidy:** the corpus is 22 components the converter was
-  written against; thousands of users authoring arbitrary TSX is precisely the input surface
-  where a hand-written converter's coverage gaps become the support burden — and its bugs miscompile
-  silently, the class COMPILER_REVIEW §1 exists to police. Both parser upgrades are reviewed
-  changes per REQUIREMENTS §5; treat this as one (a devDependency swap, build-time only,
-  browser-pure — typescript-estree is pure JS, confirm no node-only path).
-  **How:** map the lowerings' consumed node shapes first (the converter's output feeds the
-  shared lowerers; the swap must preserve those shapes or adapt them behind `to-estree.ts`'s
-  existing interface so no caller changes). Keep the module boundary — callers consume
-  `to-estree.ts`, not the library.
-  **Verification:** goldens + parity byte-identical for the corpus; the estree fixtures in
-  `server/tests/compiler/` green unchanged; the four `.tsx` tsc gates keep their exit codes;
-  full gates green; `scripts/build-tsrx-browser.ts` smoke (browser purity) green.
-  **Check:** the pinned `typescript` version ↔ typescript-estree compatibility matrix — record
-  the supported range in the module doc so the next `typescript` bump knows what to verify.
+  **Context:** Owner ruling 2026-10-01 (LT-243 design session): browser purity was only ever
+  needed by the proposed playground. It belongs to [ADR 0025](adr/0025-client-side-component-playground.md)
+  s6, which builds its own bundle gate if accepted. The compiler's standing rule is
+  [ADR 0038](adr/0038-runtime-neutral-build-path.md) s2: `server/compiler/`'s own sources touch
+  no `RuntimeIO`, no `Bun.*`, no `import.meta`-anchored path and no IO module. Portable
+  `node:path` is allowed, and third-party dependencies are out of scope. The bundle smoke
+  enforced a different, stronger property, and it had two holes: it bundled only the `.tsrx`
+  entry, and `assertNodeFree` misses Bun's emitted `__require("node:…")`.
+  **Do:** a test that scans every non-test `.ts` under `server/compiler/` (both front ends and
+  the shared machinery) and fails on:
+  - a `Bun` global read;
+  - `import.meta` used for a path;
+  - any `node:` (or bare built-in) specifier outside the allowlist `node:path` — static
+    import, `require(…)` and dynamic `import(…)` alike.
+
+  Use the existing estree walk rather than a regex, so `require`/`import()` in any form are
+  seen. Move `server/compiler/smoke.ts` (a dev script using `node:fs`; its `ROOT` resolves
+  above the repo) to `scripts/`, or delete it if `server-render-smoke.test.ts` covers it.
+
+  Retire `scripts/build-tsrx-browser.ts`, `server/tests/compiler/browser-bundle.test.ts`, the
+  `build:tsrx:browser` package script and `server/generated/tsrx-browser/`. Their
+  Node/browser artifact-parity half goes with them; ADR 0025 s6 re-creates it.
+
+  Sweep the comments that cite browser purity: `imports.ts` (header and the POSIX helpers —
+  keep the helpers, restate the reason), `emit-paths.ts`, `ast-utils.ts`, `params.ts`,
+  `corpus-config.ts`, `to-estree.ts`. In docs: `LE_TRUC_COMPILER.md` §7's purity gate and its
+  "Browser purity is CI-pinned" line, and the `VOCABULARY_LEDGER.md` rows for
+  `build:tsrx:browser` and `server/generated/tsrx-browser/`. Introduces no diagnostic code
+  and no runtime check.
+  **Check:** the check fails on a planted `Bun.file`, `import 'node:fs'`, `require('node:os')`
+  and `import('node:child_process')` (fixture-level unit cases), and passes on the tree;
+  `check:portability` green; server suite green; `check:links` green.
+
+- [ ] LT-367: Move `to-estree.ts` onto typescript-estree's public `parse()` (LT-243 review follow-up).
+  **Skill:** le-truc-dev
+  **Context:** LT-243 imports `astConverter` from `@typescript-eslint/typescript-estree/use-at-your-own-risk`,
+  with a cast over a partial `ParseSettings`. That entry was chosen only to dodge the package's
+  load-time `node:` requires, and it didn't (both entries pull them). Under the 2026-10-01
+  ruling (ADR 0038 s2) those requires don't matter, so the unstable entry and its cast buy
+  nothing. Switch to `parse(source, { filePath, jsx: true, range: true, loc: false, comment:
+  false, tokens: false })` — the API typescript-estree versions under semver. Keep the
+  normalization pass and the LTC008 catch unchanged. The halted session's differential harness
+  already ran on `parse()` with the same results. Update the module doc's API sentence.
+  **Check:** `server/generated/components/` byte-identical; server suite green;
+  `check:portability` green.
 
 - [ ] LT-230: Route the sixteen `TemplateNode` walks through `walk.ts`; settle the `pendingChildren` policy once.
   **Skill:** le-truc-dev
@@ -269,24 +295,6 @@ has landed. `bun run build:docs` and `check:links` pass.
 
 ### B — Published IR (ADR 0040; LT-287 before LT-274)
 
-- [ ] LT-287: SignalIR → three members by constructor family (LT-235 item (c); ADR 0040 s2). **Gates LT-254** (ADR 0040, accepted 2026-09-24: a published IR type).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
-  (owner rulings, LT-235 grilling 2026-09-21). `SignalIR` splits into `DeclaredSignalIR`
-  (`createCell`/`createState`/`createList`/`createStore` — init is the initializer),
-  `DerivedSignalIR` (`deriveCell`/`deriveList`/`deriveStore`/`createMemo` — init is the derive
-  expression) and `ContextSignalIR` (`requestContext` — carries the fallback node and its
-  verbatim text; the `null`-everywhere-else `fallbackText` field dies). `constructor` stays as
-  a field narrowed within each member, so exact-constructor dispatch (reactive `@for`'s
-  `createList` requirement) keeps working. The hand-rolled special-case sites become
-  narrowings: the two `emit-client.ts` requestContext skips, the three `emit-server.ts`
-  substitution sites, `harvest.ts`'s no-seed skip and derive grouping, and `effects.ts`'s
-  deriveCell case.
-  **Check:** goldens + parity byte-identical (type-level only); `bun test server/tests`,
-  typecheck, warning baseline 0.
-  **Doc handoff (LT-235 review):** flip the LE_TRUC_COMPILER.md §4 `SignalIR` passage from *target
-  shape* to present tense in the same commit.
-
 - [ ] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (LT-235 item (d); ADR 0040 s4). **Gates LT-254** (ADR 0040, accepted 2026-09-24: a published IR type).
   **Skill:** le-truc-dev
   **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
@@ -356,8 +364,9 @@ has landed. `bun run build:docs` and `check:links` pass.
   wanted rather than a whole-sheet parse failure. This task adds the model and changes no
   output; the scoped emission and the `cssTargets` key are LT-304's.
   **Check:** emitted CSS stays **byte-identical** for every corpus component; a fixture with
-  an invalid unit fails the build with the ruled copy; M25 browser-purity review of the
-  dependency, as LT-245 does for its candidates.
+  an invalid unit fails the build with the ruled copy; `check:portability` green with the
+  dependency (ADR 0038 — it must run under every supported JS runtime; browser loadability is
+  not required).
 
 - [ ] LT-304: Scoped emission of shadow-root-form CSS — native `@scope` or the `:where(:not(…))` lowering, per `cssTargets` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s1–s7). **Ships in 3.0. Depends on LT-268; lands together with LT-306** (the corpus migration), since the old tag-led form becomes an error.
   **Skill:** le-truc-dev (Tech Writer owns the new LTC copy; LT-248 is the docs half)
@@ -442,8 +451,8 @@ has landed. `bun run build:docs` and `check:links` pass.
   `selector-syntax.ts` + `parseSimpleSelector`'s subset via `postcss-selector-parser`/`css-what`
   (~−250 lines) — the subset is currently the limiting factor on what `first()` can verify
   (descendant combinators, `:not()` are "cannot verify"); a real parser widens verification and
-  shrinks code at once. Browser purity (M25): css-select/css-what/postcss-selector-parser are
-  pure JS — confirm before adopting.
+  shrinks code at once. Runtime neutrality (ADR 0038): the candidates must run under every
+  supported JS runtime (`check:portability`); browser loadability is not required.
   **Deliverable:** spike findings + a GO/NO-GO ruling recorded here; if GO, implementation
   tasks with the per-site behavior-preservation discipline the other swaps carry.
   **Verification (spike):** the corpus's structural-uniqueness answers are reproduced

@@ -31,7 +31,8 @@ Two authored surfaces feed one shared machinery layer and compile to the
 same artifacts (ADR 0032):
 
 - **`.tsx` — the default.** Parsed by the repo's `typescript` dependency
-  (`ts.createSourceFile`, `ScriptKind.TSX`). One exported component function
+  (`ts.createSourceFile`, `ScriptKind.TSX`), converted to estree by
+  `@typescript-eslint/typescript-estree`. One exported component function
   per file: its first destructured parameter is the server args (its type
   is what compose sites check against), an optional second destructured
   parameter is the author-annotated factory context (`, { host, expose }:
@@ -96,9 +97,12 @@ churn:
   describe fails to parse, `frontend/tsrx/compiler.ts`'s `newerGrammarHint`
   names the gap.
 - **`.tsx` parses with the repo's `typescript` package** through
-  `frontend/tsx/to-estree.ts`, the one `typescript`-API leaf: a
-  `typescript` major's AST drift touches that converter only and cannot
-  reach the `.tsrx` front end, whose pinned parser's churn cannot reach
+  `frontend/tsx/to-estree.ts`, the one `typescript`-API leaf. The
+  TS→estree conversion is `@typescript-eslint/typescript-estree`'s (which
+  tracks `typescript`-major AST drift); the module only normalizes its
+  output onto the shape the shared stages read. A `typescript` bump waits
+  for a typescript-estree release whose peer range covers it, and neither
+  parser's churn can reach the `.tsrx` front end, whose pinned parser's churn cannot reach
   `.tsx`.
 
 ### Grounding an agent
@@ -130,7 +134,7 @@ strict ambient profile (`frontend/tsx/host-profile.d.ts`,
 │ TSX FRONT END                 │  │ TSRX FRONT END              │
 │ compiler-tsx.ts               │  │ compiler.ts                 │
 │ parse: typescript package     │  │ parse: @tsrx/core (pinned,  │
-│   (to-estree.ts converts)     │  │   via core.ts)              │
+│   (+ typescript-estree)       │  │   via core.ts)              │
 │ control-flow dispatch         │  │ control-flow dispatch       │
 │   (lower-tsx.ts)              │  │   (lower-template.ts)       │
 │ ternary/&& → if               │  │ @if @switch @try @for       │
@@ -325,7 +329,7 @@ front-end modules, then the two front ends:
 | `frontend/tsrx/globals.d.ts` | Ambient FactoryContext vocabulary for the raw `.tsrx` view; parity-tested against `vocabulary` |
 | `frontend/tsx/compiler-tsx.ts` | `.tsx` front end: the TS parse and the `.tsx` `SurfaceAdapter` (statements + single `return` split, `css` recognition) |
 | `frontend/tsx/lower-tsx.ts` | `.tsx` expression shapes → `TemplateNode` IR; shape-based switch-IIFE recognition (`asIife`, `lowerSwitchIife`); `<truc:try>` recognition (ADR 0041) |
-| `frontend/tsx/to-estree.ts` | `typescript`-AST → estree-shaped `AstNode` converter — the only `typescript`-API leaf |
+| `frontend/tsx/to-estree.ts` | `typescript` parse → `@typescript-eslint/typescript-estree` conversion → normalization onto the shared `AstNode` shape — the only `typescript`-API leaf |
 | `frontend/tsx/host-profile.d.ts` | The strict authored-`.tsx` ambient profile: FactoryContext vocabulary plus the strict per-element `JSX.IntrinsicElements` light-DOM contract (migrations extend it in the same commit). Never in one `tsc` program with `globals.d.ts` |
 | `core.ts` | The only `@tsrx/core` value-import leaf (`.tsrx` front end only) |
 | `core-shim.d.ts` | Type shim for the pinned `@tsrx/core` |
@@ -387,18 +391,15 @@ classifications (Slot-backed, computed, method, Parser-backed), the lowered
 template root, `@for` IR, dedented CSS, extension `config`, type declarations,
 leading JSDoc, and the placed plain imports (`server` / `client`).
 
-**`SignalIR`** — one declared signal: name, verbatim text/span, recognized
-constructor (`createCell`/`createState`/`createList`/`createStore`/
-`deriveCell`/`deriveList`/`deriveStore`/`createMemo`/`requestContext`),
-initializer, inferred type. `requestContext` additionally carries its
-verbatim fallback text (`fallbackText`, `null` for every other constructor).
-*Target shape (ADR 0040 s2, lands with LT-287):* a three-member union by
-constructor family — `DeclaredSignalIR` (`createCell`/`createState`/
-`createList`/`createStore` — init is the initializer), `DerivedSignalIR`
-(`deriveCell`/`deriveList`/`deriveStore`/`createMemo` — init is the derive
-expression), and `ContextSignalIR` (`requestContext` — the fallback node and
-its verbatim text, no initializer), with `constructor` narrowed within each
-member.
+**`SignalIR`** — one declared signal, a three-member union by constructor
+family (ADR 0040 s2) tagged `family`: `DeclaredSignalIR` (`createCell`/
+`createState`/`createList`/`createStore` — `init` is the initializer),
+`DerivedSignalIR` (`deriveCell`/`deriveList`/`deriveStore`/`createMemo` —
+`init` is the derive expression), and `ContextSignalIR` (`requestContext` —
+the `fallback` node and its verbatim `fallbackText`, no initializer). Every
+member carries name, verbatim text/span and inferred type; `constructor` is
+narrowed within each member, so exact-constructor dispatch still works.
+`InitSignalIR` names the two members with an initializer.
 
 **`TemplateNode`** — the template IR union:
 

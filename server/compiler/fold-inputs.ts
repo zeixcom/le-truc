@@ -276,8 +276,8 @@ export const checkFoldInputs = (
 	for (const stmt of component.setup) {
 		if (!stmt.name || isFunction(stmt.node)) continue
 		const signal = component.signals.find(s => s.name === stmt.name)
-		if (signal?.constructor === 'requestContext') {
-			checkEvaluated(signal.init, `the \`${stmt.name}\` context fallback`)
+		if (signal?.family === 'context') {
+			checkEvaluated(signal.fallback, `the \`${stmt.name}\` context fallback`)
 			continue
 		}
 		if (realmOwned(stmt.node)) continue

@@ -35,6 +35,7 @@ import { RUNTIME_HARNESS_EXPORTS } from './imports'
 import type {
 	AttributeIR,
 	ComponentIR,
+	ContextSignalIR,
 	ForIR,
 	ReconcileForIR,
 	SetupStmt,
@@ -1330,7 +1331,7 @@ export const emitServerModule = (
 	// it fine (card-mediaqueries folds all four context signals into markup).
 	const requestContextNames = new Set(
 		component.signals
-			.filter(signal => signal.constructor === 'requestContext')
+			.filter(signal => signal.family === 'context')
 			.map(signal => signal.name),
 	)
 	const serverUnevaluable = (stmt: SetupStmt): boolean =>
@@ -1369,7 +1370,7 @@ export const emitServerModule = (
 		// for the whole call, so the runtime import needed is `createCell`,
 		// not `requestContext` (which isn't even a `@zeix/le-truc` top-level
 		// export — it's a `FactoryContext` member bound per-host).
-		if (signal.constructor === 'requestContext') {
+		if (signal.family === 'context') {
 			used.add('createCell')
 			continue
 		}
@@ -1664,7 +1665,8 @@ export const emitServerModule = (
 		// character-for-character), same trade-off as the exposeArgNode
 		// any-stubs above, which aren't span-tracked at all.
 		const ctxSignal = component.signals.find(
-			s => s.constructor === 'requestContext' && s.name === stmt.name,
+			(s): s is ContextSignalIR =>
+				s.family === 'context' && s.name === stmt.name,
 		)
 		const stmtText = ctxSignal
 			? `const ${ctxSignal.name} = createCell(${ctxSignal.fallbackText})`

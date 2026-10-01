@@ -19,10 +19,11 @@ import { diagnostic } from './diagnostics'
 import { staticMessageReads } from './i18n'
 import { inferType, type TypeContext } from './infer-type'
 import type {
+	DeclaredSignalIR,
+	DerivedSignalIR,
 	ExposeKind,
 	ExtractContext,
 	SetupStmt,
-	SignalConstructor,
 	SignalIR,
 	SourceRange,
 } from './ir'
@@ -78,7 +79,7 @@ export type SetupExtraction = {
 /** Shared empty result for the `parserFallbackRefsOf` context hook. */
 const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
 
-/** Signal constructors whose result is MUTABLE, hence Slot-backed. */
+/** Signal constructors whose result is MUTABLE, hence Slot-backed — the declared family. */
 const MUTABLE_SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>([
 	'createCell',
 	'createState',
@@ -132,10 +133,7 @@ const classifyExposeInit = (
 	// ones do not.
 	if (value.type === 'Identifier') {
 		const signal = signalByName.get(identifierName(value) ?? '')
-		if (signal)
-			return MUTABLE_SIGNAL_CONSTRUCTORS.has(String(signal.constructor))
-				? 'slot'
-				: 'computed'
+		if (signal) return signal.family === 'declared' ? 'slot' : 'computed'
 	}
 	return 'slot'
 }
@@ -352,8 +350,9 @@ export const extractSetup = (
 							name: declName,
 							text: text(ctx.source, init),
 							textStart: typeof init.start === 'number' ? init.start : 0,
+							family: 'context',
 							constructor: 'requestContext',
-							init: fallbackNode,
+							fallback: fallbackNode,
 							inferredType: inferType(fallbackNode, typeCtx),
 							fallbackText: text(ctx.source, fallbackNode),
 						}
@@ -399,15 +398,24 @@ export const extractSetup = (
 						resolution: resolutionOf(init, ctx.serverKnown),
 					})
 				} else {
-					const signal: SignalIR = {
+					const base = {
 						name: declName,
 						text: text(ctx.source, init),
 						textStart: typeof init.start === 'number' ? init.start : 0,
-						constructor: calleeName as SignalConstructor,
 						init: computeArg,
 						inferredType: inferType(computeArg, typeCtx),
-						fallbackText: null,
 					}
+					const signal: SignalIR = MUTABLE_SIGNAL_CONSTRUCTORS.has(calleeName)
+						? {
+								...base,
+								family: 'declared',
+								constructor: calleeName as DeclaredSignalIR['constructor'],
+							}
+						: {
+								...base,
+								family: 'derived',
+								constructor: calleeName as DerivedSignalIR['constructor'],
+							}
 					signals.push(signal)
 					signalByName.set(declName, signal)
 				}

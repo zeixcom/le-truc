@@ -445,7 +445,7 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 					))}
 				</ul>
 			</c-el2>
-			<style>c-el2 { color: red }</style>
+			<style>{css\`c-el2 { color: red }\`}</style>
 		</>
 	)
 }`
@@ -717,7 +717,7 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 					)}
 				</ul>
 			</empty-each>
-			<style>empty-each { color: red }</style>
+			<style>{css\`empty-each { color: red }\`}</style>
 		</>
 	)
 }`,
@@ -758,7 +758,7 @@ export function EmptyList({ initial }: { initial?: string[] }) {
 					)}
 				</ul>
 			</empty-list>
-			<style>empty-list { color: red }</style>
+			<style>{css\`empty-list { color: red }\`}</style>
 		</>
 	)
 }`,

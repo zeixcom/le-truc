@@ -38,7 +38,7 @@ An `outDir` **outside** the project root (or equal to it) is therefore refused: 
 
 ### 5. Configuration is pure; discovery is IO
 
-Config resolution and path math live in `server/compiler/corpus-config.ts` and touch no disk and no runtime-specific API. Config reading and globbing live in `server/corpus-sources.ts`. Two standing constraints require this split and pull against each other: `server/compiler/` must stay free of `Bun.*` and `import.meta.dir` ([ADR 0038](0038-runtime-neutral-build-path.md)), and `imports.ts`/`pipeline.ts` are in the CI-pinned browser bundle and may carry no `node:` specifier at all. The emitter-facing subset is therefore a third leaf, `server/compiler/emit-paths.ts`, which the browser graph may reach.
+Config resolution and path math live in `server/compiler/corpus-config.ts` and touch no disk and no runtime-specific API. Config reading and globbing live in `server/corpus-sources.ts`. The split exists because `server/compiler/` touches no IO and no runtime-specific API ([ADR 0038](0038-runtime-neutral-build-path.md) s2). The emitter-facing subset is a third leaf, `server/compiler/emit-paths.ts`, so the emitters depend on two path facts rather than on config resolution.
 
 The configuration reaches the emitters as one trailing optional argument threaded through both front ends, defaulting to this repo's layout. It is not module-scoped mutable state: that would put a hidden global under a compiler whose soundness claim is that it is a pure function of its inputs.
 
@@ -57,7 +57,7 @@ The configuration reaches the emitters as one trailing optional argument threade
 - The compiler compiles a project's components from a project's configuration. The docs build is one consumer of the mechanism rather than the mechanism itself.
 - Byte-identity of this repo's output is a standing, falsifiable check on the generalization — not a claim.
 - The single configured glob list is the one place to widen: `build:corpus`, `check:corpus` and the build effect can no longer glob different extension sets.
-- The pure/IO split gives the runtime-neutrality work one seam for the corpus scan instead of four call sites, and keeps the browser-purity pin intact.
+- The pure/IO split gives the runtime-neutrality work one seam for the corpus scan instead of four call sites, and keeps IO out of the compiler.
 - An outside-the-repo compile is a runnable check, and it surfaces a class of defect an in-repo check cannot see. For example, an `import.meta.dir`-anchored catalog path made a consumer's build census this repo's translation keys as their orphans.
 
 **Bad / accepted tradeoffs:**

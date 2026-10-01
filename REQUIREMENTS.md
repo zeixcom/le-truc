@@ -218,7 +218,7 @@ Locale and translations are build-time server data ([ADR 0030](adr/0030-internat
 
 #### M25. Tooling continuity
 
-Custom Elements Manifest generation continues through the migration (analyzer + plugin now; compiler-emitted fragments once the last hand-written component is gone) ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s9, [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The compiler is browser-pure (CI smoke test) so it can run in a browser bundle. Type flow is emit-then-check over the compiler's span table — remapping `tsc` diagnostics to source positions — for generated modules and `.tsrx` sources; authored `.tsx` sources are type-checked directly, with no remapping step ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s3).
+Custom Elements Manifest generation continues through the migration (analyzer + plugin now; compiler-emitted fragments once the last hand-written component is gone) ([ADR 0024](adr/0024-adopt-tsrx-as-isomorphic-component-format.md) s9, [ADR 0013](adr/0013-cem-plugin-for-le-truc-factory-pattern.md)). The compiler's own sources are runtime-neutral: no IO and no runtime-specific API, checked at the source level across both front ends ([ADR 0038](adr/0038-runtime-neutral-build-path.md) s2). Its dependencies need only a JS runtime; loading in a browser is not a compiler requirement. Type flow is emit-then-check over the compiler's span table — remapping `tsc` diagnostics to source positions — for generated modules and `.tsrx` sources; authored `.tsx` sources are type-checked directly, with no remapping step ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s3).
 
 #### M26. v3 API cleanup — removal of the deprecated surfaces
 
@@ -280,7 +280,7 @@ Do not use `observedAttributes` to drive reactive property updates by default. A
 
 #### N3. Client-side TSRX playground
 
-_Conditional._ A docs-site playground compiling components entirely in the visitor's browser ([ADR 0025](adr/0025-client-side-component-playground.md) — **Proposed**, not accepted). In scope only if the ADR is accepted; it rides M25's browser-purity invariant, but commits nothing until decided.
+_Conditional._ A docs-site playground compiling components entirely in the visitor's browser ([ADR 0025](adr/0025-client-side-component-playground.md) — **Proposed**, not accepted). In scope only if the ADR is accepted. Browser loadability of the compiler and its dependencies is this item's own work (ADR 0025 s6), not a constraint the compiler carries in the meantime.
 
 ---
 

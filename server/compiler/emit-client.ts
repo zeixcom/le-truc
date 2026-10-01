@@ -25,7 +25,7 @@ import { sanitizeVarName } from './ast-utils'
 import { carriedKinds, FORMATTING_KINDS, type Message } from './icu/evaluate'
 import { clientSourceRecord } from './icu/parse'
 import { computeClientNeededNames } from './imports'
-import type { ComponentIR, SignalIR } from './ir'
+import type { ComponentIR, InitSignalIR } from './ir'
 import {
 	appendWithSpans,
 	type SourceSlice,
@@ -178,7 +178,7 @@ const harvestInitializer = (
  * client's key generation provably matches the server's data-key values.
  */
 const listDeclaration = (
-	signal: SignalIR,
+	signal: InitSignalIR,
 	seed: { container: string; valueSelector: string },
 ): string | null => {
 	const init = signal.init
@@ -624,6 +624,9 @@ export const emitClientModule = (
 
 	// Signals seeded by DOM harvest
 	for (const signal of component.signals) {
+		// `requestContext` signals never get a harvest and are declared by
+		// the dedicated verbatim path below.
+		if (signal.family === 'context') continue
 		const harvest = plan.harvests.find(h => h.signal === signal.name)
 		if (!harvest) {
 			// No harvest site — under tiering (LT-165 step 5, ADR 0029 s5) this
@@ -636,9 +639,6 @@ export const emitClientModule = (
 			// representation, so the analysis rejects it (LTC005, LT-348) before
 			// this runs — in every tier, since the realm answering the value
 			// does not make the initializer runnable in the browser.
-			// `requestContext` signals never get a harvest and are declared by
-			// the dedicated verbatim path below.
-			if (signal.constructor === 'requestContext') continue
 			imports.add(signal.constructor)
 			push(
 				`const ${signal.name} = ${signal.text}`,
@@ -675,7 +675,7 @@ export const emitClientModule = (
 	// them), so this is a fully separate emission, verbatim, same posture as
 	// `expose()`/`clientSetup` just below.
 	for (const signal of component.signals) {
-		if (signal.constructor !== 'requestContext') continue
+		if (signal.family !== 'context') continue
 		push(
 			`const ${signal.name} = ${signal.text}`,
 			sliceOf(signal.text, signal.textStart),

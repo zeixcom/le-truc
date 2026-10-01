@@ -706,7 +706,7 @@ export const analyzeClient = (
 	// render the value, not that the browser can run the initializer. The
 	// setup entry holds the whole constructor call, options included.
 	for (const signal of component.signals) {
-		if (signal.constructor === 'requestContext') continue
+		if (signal.family === 'context') continue
 		const harvest = harvests.find(h => h.signal === signal.name)
 		if (harvest && !(harvest.kind === 'list' && harvest.seed === 'verbatim'))
 			continue

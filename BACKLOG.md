@@ -98,6 +98,7 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
 
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-287, LT-288, LT-274 and LT-276** (ADR 0040, accepted 2026-09-24: every reshape of a published IR type lands before the first publish, or it becomes a 4.0 change).
   **Skill:** le-truc-dev
+  **Rider (LT-243 review, 2026-10-01):** `@typescript-eslint/typescript-estree` becomes a runtime dependency of the package. Weigh it under M28 with its closure: semver, debug, minimatch, ts-api-utils and the `@typescript-eslint/{types,visitor-keys,tsconfig-utils,project-service}` siblings. Record the `typescript` peer range the package inherits (`<6.1.0` at 8.71.0).
   **Context:** ADR 0034 s1–s2. The compiler ships separate from the browser-only
   `@zeix/le-truc`, named for its function rather than its input format. **v3.0 publishes the
   `.tsx` front end only** — `.tsrx` stays a first-class repo-internal surface under ADR 0032's

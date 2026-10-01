@@ -37,7 +37,7 @@ export type SetupStmt = {
  * but is not a real reactive primitive — it's a client-only `FactoryContext`
  * member bound to `host`, with no server behavior at all. It is recognized
  * separately from `SIGNAL_CONSTRUCTORS` (vocabulary.ts) precisely because its
- * emission differs in both generated modules; see `fallbackText` below.
+ * emission differs in both generated modules; see `ContextSignalIR` below.
  */
 export type SignalConstructor =
 	| 'createCell'
@@ -68,31 +68,61 @@ export type SignalConstructor =
  */
 export type ExposeKind = 'slot' | 'computed' | 'method'
 
-/** A signal declared in the component's setup. */
-export type SignalIR = {
+/** Fields every signal declaration carries, whatever its family. */
+type SignalIRBase = {
 	name: string
 	/** Declaring expression text, e.g. `createCell(start)`. */
 	text: string
 	/** Start offset of `text` in the source (relative spans for arg surgery). */
 	textStart: number
-	constructor: SignalConstructor
-	/**
-	 * Initializer expression node: the first call argument for a real signal
-	 * constructor; the FALLBACK argument (second call argument) for
-	 * `requestContext` — the value the server substitutes for the whole call.
-	 */
-	init: AstNode | null
 	inferredType: 'string' | 'number' | 'boolean' | 'unknown'
-	/**
-	 * `requestContext`-only (LT-035): the fallback argument's verbatim source
-	 * text. `requestContext` itself doesn't exist server-side (no `host`, no
-	 * DOM to dispatch a context-request against) — `emit-server.ts` substitutes
-	 * `createCell(${fallbackText})` for the whole setup statement instead of
-	 * emitting it verbatim, the one signal constructor whose server text
-	 * diverges from its client text. `null` for every other signal.
-	 */
-	fallbackText: string | null
 }
+
+/**
+ * A mutable signal (`createCell`/`createState`/`createList`/`createStore`):
+ * `init` is the initializer, the first call argument (ADR 0040 s2).
+ */
+export type DeclaredSignalIR = SignalIRBase & {
+	family: 'declared'
+	constructor: 'createCell' | 'createState' | 'createList' | 'createStore'
+	/** The initializer expression node; `null` for an argument-less call. */
+	init: AstNode | null
+}
+
+/**
+ * A derived signal (`deriveCell`/`deriveList`/`deriveStore`/`createMemo`):
+ * `init` is the derive expression — the compute callback, or the source
+ * signal a `deriveList`/`deriveStore` maps over (ADR 0040 s2).
+ */
+export type DerivedSignalIR = SignalIRBase & {
+	family: 'derived'
+	constructor: 'deriveCell' | 'deriveList' | 'deriveStore' | 'createMemo'
+	/** The derive expression node; `null` for an argument-less call. */
+	init: AstNode | null
+}
+
+/**
+ * A `requestContext` declaration (LT-035, ADR 0040 s2). It has no
+ * initializer: `requestContext` itself doesn't exist server-side (no `host`,
+ * no DOM to dispatch a context-request against), so `emit-server.ts`
+ * substitutes `createCell(${fallbackText})` for the whole setup statement
+ * instead of emitting it verbatim — the one signal whose server text
+ * diverges from its client text.
+ */
+export type ContextSignalIR = SignalIRBase & {
+	family: 'context'
+	constructor: 'requestContext'
+	/** The fallback argument (second call argument) — the server's value. */
+	fallback: AstNode
+	/** The fallback argument's verbatim source text. */
+	fallbackText: string
+}
+
+/** A signal declared in the component's setup, by constructor family. */
+export type SignalIR = DeclaredSignalIR | DerivedSignalIR | ContextSignalIR
+
+/** A signal with an initializer — every family but `requestContext`. */
+export type InitSignalIR = DeclaredSignalIR | DerivedSignalIR
 
 /** Template IR — the shared input of both emitters. */
 export type TemplateNode =

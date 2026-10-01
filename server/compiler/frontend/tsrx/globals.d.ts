@@ -51,7 +51,7 @@ declare const internals: ElementInternals | null
  * Web Components Community Protocol helpers (LT-035, ADR 0024 sub-design 15)
  * — `FactoryContext` members, never module imports. `requestContext` is
  * signal-SHAPED downstream (`.get()`) but has no server behavior at all; see
- * `compiler.ts`'s `SignalIR.fallbackText` for the server-side substitution.
+ * `ContextSignalIR.fallbackText` (`ir.ts`) for the server-side substitution.
  */
 declare const requestContext: LeTrucFactoryContext['requestContext']
 declare const provideContexts: LeTrucFactoryContext['provideContexts']

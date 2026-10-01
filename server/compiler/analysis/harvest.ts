@@ -21,7 +21,7 @@ import {
 } from '../ast-utils'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
-import type { AttributeIR, SignalIR, TemplateNode } from '../ir'
+import type { AttributeIR, InitSignalIR, SignalIR, TemplateNode } from '../ir'
 import { lineFields, resolutionOf } from '../tier'
 import {
 	CONTEXT_NAMES,
@@ -221,7 +221,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 	 * shape compiles and works in every tier; what changed is only who
 	 * produces the served HTML.
 	 */
-	const reportUnharvestable = (signal: SignalIR): void => {
+	const reportUnharvestable = (signal: InitSignalIR): void => {
 		routingSignals.push({
 			origin: 'LTC004',
 			detail: `signal \`${signal.name}\` has no harvestable initial-DOM site`,
@@ -743,7 +743,7 @@ export const runHarvest = (ctx: AnalysisContext): void => {
 		// reading it back from server-rendered DOM. LTC004 ("signal never
 		// rendered") does not apply: emit-client.ts emits them through a
 		// dedicated verbatim path, never this harvest machinery.
-		if (signal.constructor === 'requestContext') continue
+		if (signal.family === 'context') continue
 		// A reconciled List seeds from the adopted DOM, not a text/attr site.
 		const listPlan = [...reconcilePlans.values()].find(
 			p => p.signal === signal.name,

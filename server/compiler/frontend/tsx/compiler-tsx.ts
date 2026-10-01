@@ -7,9 +7,11 @@
  * What is surface-specific here:
  *
  * - Parsing goes through the repo's `typescript` package
- *   (`ts.createSourceFile`, `ScriptKind.TSX`) via `to-estree.ts` — the
+ *   (`ts.createSourceFile`, `ScriptKind.TSX`), converted to estree by
+ *   `@typescript-eslint/typescript-estree` behind `to-estree.ts` — the
  *   `@tsrx/core` pin, `core.ts`, `core-shim.d.ts`, and `newerGrammarHint`
- *   have no role on this surface.
+ *   have no role on this surface. A TypeScript parse error is LTC008, as a
+ *   `@tsrx/core` parse error is on `.tsrx`.
  * - Module shape: one exported component function per file whose body is
  *   statements + a single `return <jsx/>`. Statements before the return are
  *   the setup (the `@{ }` block's replacement); the returned JSX (bare root
@@ -122,11 +124,28 @@ export const compileSourceTsx = (
 	source: string,
 	filename: string,
 	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
-): CompileResult =>
-	runFrontEnd(
+): CompileResult => {
+	let ast: AstNode
+	try {
+		ast = parseTsxModule(source, filename)
+	} catch (e) {
+		return {
+			component: null,
+			routingSignals: [],
+			diagnostics: [
+				diagnostic.invalidSource(
+					source,
+					undefined,
+					`Failed to parse ${filename}: ${e instanceof Error ? e.message : String(e)}`,
+				),
+			],
+		}
+	}
+	return runFrontEnd(
 		createExtractContext(source, 'tsx'),
-		parseTsxModule(source, filename),
+		ast,
 		filename,
 		emitPaths,
 		tsxAdapter(source),
 	)
+}

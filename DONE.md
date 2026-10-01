@@ -23,6 +23,17 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
 
 ---
 
+- [x] LT-287: SignalIR → three members by constructor family (ADR 0040 s2). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `ir.ts`: `SignalIR` = `DeclaredSignalIR | DerivedSignalIR | ContextSignalIR`, tagged `family`, with `constructor` narrowed per member. `ContextSignalIR` carries `fallback` + `fallbackText` and has no `init`; the null-elsewhere `fallbackText` field is gone. `InitSignalIR` (ir.ts only) names the two initializer members. The three members are new `contract.ts` type exports (published surface). The requestContext special cases narrow on `family`. Exact-constructor checks stay constructor-narrowed (the `deriveCell`/`deriveStore`/`createMemo` grouping excludes `deriveList` by design). Type-only, so goldens and parity are byte-identical. LE_TRUC_COMPILER.md §4 is in present tense.
+  **Review:** Approved. Matches ADR 0040 s2. `family` is the tag the ADR asks for, and `fallback` typed non-null holds because the member is only built from a two-argument call.
+
+- [x] LT-243: Adopt `@typescript-eslint/typescript-estree` for `to-estree.ts`. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** devDependency `@typescript-eslint/typescript-estree` pinned `8.71.0` (peer `typescript >=4.8.4 <6.1.0`, recorded in the module doc). `frontend/tsx/to-estree.ts` goes from 964 to 151 lines: typescript-estree's conversion plus a normalization pass onto the shared `AstNode` shape. **Behavior change:** a `.tsx` TypeScript parse error is LTC008 "Failed to parse …", the same as `.tsrx`. The old converter silently compiled TS's error-recovery tree, and eight test sources with invalid `<style>{…}</style>` JSX had compiled with empty CSS. The `params.ts` `tsNode` path is gone; LTC050 reads `typeAnnotation` on both surfaces. ADR 0032 s0/s4 and its drift consequence are amended. Corpus output is byte-identical, and `check:portability` passes on bun/node/deno.
+  **Ruling (owner, 2026-10-01, from this task's halt):** browser purity is not a compiler requirement. The compiler's rule is source-level runtime neutrality (ADR 0038 s2), and browser loadability is ADR 0025 s6's own work. REQUIREMENTS M25/N3 and ADRs 0025/0036/0038 are amended. The bundle smoke retires in LT-366.
+  **Review:** Approved; LTC008 reuse is consistent with `.tsrx`. Handoffs: LT-367 (public `parse()` instead of `use-at-your-own-risk`), LT-366 (run the neutrality check on this tree), LT-254 (dependency weight, M28).
+
 - [x] LT-364: Serve the docs server through one pure request handler; test it without a socket. — reviewed ✓
   **Skill:** docs-server-dev
   **Changed:** new `server/routes.ts` — `createRequestHandler({ development })`, the whole routes

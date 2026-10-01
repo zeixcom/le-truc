@@ -109,7 +109,7 @@ export const extractParams = (
 		}
 		contextParam = {
 			names,
-			annotationName: contextAnnotationName(fn, contextNode),
+			annotationName: contextAnnotationName(contextNode),
 		}
 	}
 	return { paramsNode, paramNames, contextParam }
@@ -122,30 +122,12 @@ export const extractParams = (
  * alias the compiler cannot see through — nothing to check against, the
  * same don't-flag-what-you-can't-see posture as `isOptionalBinding`).
  *
- * Two AST shapes carry it: the `.tsx` converter strips type annotations
- * but attaches the original TypeScript function node (`tsNode`), whose
- * parameter's type reads back as text — duck-typed, so this shared module
- * never imports `typescript` (browser purity, ADR 0025 sub-design 6). The
- * `.tsrx` parser keeps an estree-shaped `typeAnnotation` on the node.
+ * Both parsers keep an estree-shaped `typeAnnotation` on the parameter
+ * pattern.
  */
 const contextAnnotationName = (
-	fn: AstNode,
 	contextNode: AstNode,
 ): 'FactoryContext' | 'FormFactoryContext' | null => {
-	const written = (
-		fn as {
-			tsNode?: {
-				parameters?: ReadonlyArray<{
-					type?: { getText?: () => string }
-				}>
-			}
-		}
-	).tsNode?.parameters?.[1]?.type?.getText?.()
-	if (typeof written === 'string') {
-		const name = /^([A-Za-z_$][\w$]*)/.exec(written)?.[1]
-		if (name === 'FactoryContext' || name === 'FormFactoryContext') return name
-		return null
-	}
 	if (isNode(contextNode.typeAnnotation)) {
 		const wrapped = contextNode.typeAnnotation as AstNode
 		const literal =

@@ -554,7 +554,7 @@ export function C({}: {})
 			<c-el>
 				<ul>{${expr}}</ul>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>{css\`c-el { color: red }\`}</style>
 		</>
 	)
 }`,
@@ -626,7 +626,7 @@ describe('loops inside conditional branches (LT-301)', () => {
 			<c-el>
 				<ul>{ready ? <li class="none">x</li> : <>{rows.map(row => <li class="item" onClick={() => console.log(1)}>{row}</li>)}</>}</ul>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>{css\`c-el { color: red }\`}</style>
 		</>
 	)
 }`,
@@ -1835,7 +1835,7 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 	return (
 		<>
 			<c-el><span id={${expr}}>x</span></c-el>
-			<style>c-el { color: red }</style>
+			<style>{css\`c-el { color: red }\`}</style>
 		</>
 	)
 }`
@@ -1913,7 +1913,7 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 	return (
 		<>
 			<c-el><span id={() => crypto.randomUUID()}>x</span></c-el>
-			<style>c-el { color: red }</style>
+			<style>{css\`c-el { color: red }\`}</style>
 		</>
 	)
 }`
@@ -3143,7 +3143,7 @@ describe('partial-readiness invariant (LTC054, ADR 0034 s4, LT-258)', () => {
 ${setup}	return (
 		<>
 			${template}
-			<style>c-el { color: red }</style>
+			<style>{css\`c-el { color: red }\`}</style>
 		</>
 	)
 }`
