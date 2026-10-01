@@ -22,10 +22,12 @@
  *   (compose nodes compared by identity).
  *
  * The ONE designed divergence class — HTML5 tree correction — is pinned
- * separately at the bottom: the probe is browser-faithful (ADR 0045
+ * separately at the bottom (the `<p><div>` reparse, and since LT-382 the
+ * `<tbody>` a `<table>` of bare `<tr>` rows implies): the probe is browser-faithful (ADR 0045
  * Decision 2), so content-model-violating nesting counts what the browser
  * builds, not what the authored nesting says. The reference walks the IR
- * and believes the authored nesting. Valid authoring never diverges.
+ * and believes the authored nesting. Valid authoring diverges only by an
+ * element the parser implies, which the browser's DOM really holds.
  */
 import { expect, test } from 'bun:test'
 import type {
@@ -782,6 +784,83 @@ export function ProbePending({}: {})
 	}
 import { expose } from '@zeix/le-truc'`,
 	],
+	// LT-382: exclusive arms inside table and select context. HTML tree
+	// correction foster-parents an unknown element out of a <table> and
+	// drops it inside a <select>, which defeated LT-379's wrapper elements
+	// (the arms summed). The arm path rides each element as an attribute,
+	// so the max rule survives. `<li>` in a `<ul>` is the control.
+	[
+		'examples/spike/probe-table.tsrx',
+		`import { BasicChild } from '../child/basic-child.tsrx'
+import { expose } from '@zeix/le-truc'
+
+export function ProbeTable({ a, mode, data }: { a: boolean; mode: string; data: string })
+	@{
+		expose({})
+		<>
+			<probe-table>
+				<table>
+					<tbody>
+						@if (a) {
+							<tr class="row"><td class="cell">one</td></tr>
+						} @else {
+							<tr class="row"><td class="cell"><BasicChild label={'x'} /></td></tr>
+						}
+						@switch (mode) {
+							@case 'a': {
+								<tr class="body-row"><td>a</td></tr>
+							}
+							@default: {
+								<tr class="body-row"><td>b</td></tr>
+							}
+						}
+						@try {
+							<tr class="try-row"><td>{data}</td></tr>
+						} @catch (e) {
+							<tr class="try-row"><td>{e.message}</td></tr>
+						}
+					</tbody>
+				</table>
+				<select>
+					@if (a) {
+						<option class="opt">one</option>
+					} @else {
+						<option class="opt">two</option>
+					}
+				</select>
+				<ul>
+					@if (a) {
+						<li class="item">one</li>
+					} @else {
+						<li class="item">two</li>
+					}
+				</ul>
+			</probe-table>
+		</>
+	}`,
+	],
+	// LT-382: `<tr>` arms directly in a `<table>` — the parser implies a
+	// `<tbody>`, so this is pinned SEPARATELY below (the implied element is
+	// browser reality the IR reference cannot see).
+	[
+		'examples/spike/probe-table-implied.tsrx',
+		`export function ProbeTableImplied({ a }: { a: boolean })
+	@{
+		expose({})
+		<>
+			<probe-table-implied>
+				<table>
+					@if (a) {
+						<tr class="row"><td class="cell">one</td></tr>
+					} @else {
+						<tr class="row"><td class="cell">two</td></tr>
+					}
+				</table>
+			</probe-table-implied>
+		</>
+	}
+import { expose } from '@zeix/le-truc'`,
+	],
 	// Void elements and HTML tree correction (`<p>` auto-closing before a
 	// `<div>`): pinned SEPARATELY below as the one designed divergence.
 	[
@@ -827,12 +906,17 @@ test('differential pin: synthetic switch/try/pending/nested/compose', () => {
 	if (!child.component) throw new Error('child must compile')
 	const components: ComponentIR[] = [child.component as ComponentIR]
 	let htmlCorrected: ComponentIR | null = null
+	let tableImplied: ComponentIR | null = null
 	for (const [path, content] of SYNTHETICS) {
 		const { component, diagnostics } = compileCorpusSource(content, path)
 		if (!component)
 			throw new Error(`${path} must compile: ${JSON.stringify(diagnostics)}`)
 		if (path.endsWith('probe-html.tsrx')) {
 			htmlCorrected = component as ComponentIR
+			continue
+		}
+		if (path.endsWith('probe-table-implied.tsrx')) {
+			tableImplied = component as ComponentIR
 			continue
 		}
 		components.push(component as ComponentIR)
@@ -849,7 +933,83 @@ test('differential pin: synthetic switch/try/pending/nested/compose', () => {
 	// the browser builds; the reference walks the IR. The corpus never
 	// authors content-model-violating nesting, so this is a
 	// latent-unsoundness note, not a corpus divergence.
+	// LT-382: the table/select arms count by the max rule, explicitly.
+	const table = components.find(c =>
+		someNode(c.root, n => isElement(n) && n.tag === 'probe-table'),
+	)
+	if (!table) throw new Error('probe-table must compile')
+	for (const selector of [
+		'tr.row',
+		'td.cell',
+		'tr.body-row',
+		'tr.try-row',
+		'option.opt',
+		'li.item',
+	])
+		expect([selector, countForSelector(table.root, selector)]).toEqual([
+			selector,
+			1,
+		])
+	// The compose site in a table cell inside an arm: counted, and mapped
+	// back to its IR node.
+	expect(
+		countComposeBySource(table.root, 'examples/child/basic-child.tsrx'),
+	).toBe(1)
+	expect(allComposeNodes(table.root)).toHaveLength(1)
+
+	// The implied `<tbody>`: the arms keep the max rule (one row, one cell),
+	// and the parser-implied element counts once — it exists in every arm
+	// combination, and `querySelector('tbody')` finds it in the real DOM.
+	if (!tableImplied) throw new Error('probe-table-implied must compile')
+	expect(countForSelector(tableImplied.root, 'tr.row')).toBe(1)
+	expect(countForSelector(tableImplied.root, 'td.cell')).toBe(1)
+	expect(refCountForSelector(tableImplied.root, 'tbody')).toBe(0)
+	expect(countForSelector(tableImplied.root, 'tbody')).toBe(1)
+
 	if (!htmlCorrected) throw new Error('probe-html must compile')
 	expect(refCountForSelector(htmlCorrected.root, 'p')).toBe(2)
 	expect(countForSelector(htmlCorrected.root, 'p')).toBe(3)
+})
+
+/* === 3. Compose source strings are matched verbatim (LT-382) === */
+
+test('a compose source with HTML-special characters counts as itself', () => {
+	const compose = (source: string) =>
+		({
+			kind: 'compose',
+			source,
+			attrs: [],
+			children: [],
+		}) as unknown as TemplateNode
+	const root = {
+		kind: 'element',
+		tag: 'div',
+		attrs: [],
+		children: [
+			compose('./a&b<c>.tsrx'),
+			compose('./a"q.tsrx'),
+			compose('./plain.tsrx'),
+		],
+	} as unknown as TemplateNode
+	expect(countComposeBySource(root, './a&b<c>.tsrx')).toBe(1)
+	expect(countComposeBySource(root, './a"q.tsrx')).toBe(1)
+	expect(countComposeBySource(root, './plain.tsrx')).toBe(1)
+	expect(allComposeNodes(root)).toHaveLength(3)
+})
+
+test("a parser-implied element inherits its ancestor's arm path", () => {
+	const el = (tag: string, children: unknown[] = []) => ({
+		kind: 'element',
+		tag,
+		attrs: [],
+		children,
+	})
+	const table = () => el('table', [el('tr', [el('td')])])
+	// One <table> of bare rows per arm: each implies a <tbody>, and only one
+	// arm renders at a time.
+	const root = el('div', [
+		{ kind: 'if', then: [table()], alternate: [table()] },
+	]) as unknown as TemplateNode
+	expect(countForSelector(root, 'tbody')).toBe(1)
+	expect(countForSelector(root, 'tr')).toBe(1)
 })

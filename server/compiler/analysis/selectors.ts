@@ -205,7 +205,7 @@ const SELECTOR_GRAMMAR =
  * Structural match count for a selector over the whole template — the
  * materialized probe's aggregation walk (`analysis/probe.ts`): mutually
  * exclusive arms take the max over branches, coexisting arms (a `@try`
- * with `@pending`) sum, compose placeholders contribute zero, and a
+ * with `@pending`) sum, compose sites contribute zero, and a
  * selector css-what cannot parse counts zero (a `querySelector` would
  * throw on it — it matches nothing in any valid DOM). Browser-faithful
  * counting per ADR 0045 Decision 2: what is counted is what the browser's
@@ -225,7 +225,7 @@ export const countForSelector = (
  * outright (LT-089) — `composeNodesBySource`/`composeDiscriminatorClause`
  * below can still tell same-source instances apart by a static `class`/`id`/
  * `data-*` on the compose site; this count only decides whether that search
- * is needed. Compose placeholders are matched on their marker attribute;
+ * is needed. Compose sites are matched on their source string verbatim;
  * the exclusivity arithmetic is the probe walk's.
  */
 export const countComposeBySource = (

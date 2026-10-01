@@ -21,10 +21,10 @@
  * keep their own descent (structural steps still go through `childNodes`
  * where they apply):
  * - probe materialization: `serializeNodes`
- *   (`analysis/probe.ts`, LT-379) — the selector proof's serializer, whose
- *   recursion turns branch structure into the wrapper elements the
- *   aggregation walk reads (max over exclusive arms, sum over coexisting
- *   ones);
+ *   (`analysis/probe.ts`, LT-379/LT-382) — the selector proof's
+ *   serializer, whose recursion threads each element's exclusive-arm path
+ *   (stamped as an attribute the aggregation reads: max over exclusive
+ *   arms, sum over coexisting ones);
  * - path-context threading: `refBranchGuard` (guard conjunction),
  *   `inOptionalBranch` (optional-`@if` flag), `checkFoldInputs` (lexical
  *   scope per arm);

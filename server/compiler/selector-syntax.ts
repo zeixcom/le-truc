@@ -30,11 +30,79 @@
  * that these reasons never covered) stay undecidable — `null` — for the
  * same false-positive asymmetry; widening them is a copy decision, not an
  * engine one.
+ *
+ * css-what is also STRICTER than browsers in three places, each a false
+ * positive LT-384 closed: it raises `Empty sub-selector` at any paren
+ * depth (but `:is()`/`:where()` take forgiving lists — only a TOP-LEVEL
+ * empty group is decided; a nested one, including the genuinely invalid
+ * `:not()`/`:has()`, stays undecided rather than misnamed), it rejects
+ * the nesting selector `&`, and it does not skip CSS comments. A
+ * selector carrying `&` or `/*` outside a quoted string is therefore
+ * undecidable, and `Attribute selector didn't terminate` names an
+ * unclosed `[` only when no `]` follows it (`[x="y" z]` is junk inside a
+ * closed bracket, not an unclosed one).
  */
 
 import * as cssWhat from 'css-what'
 
 /* === Internal Functions === */
+
+/**
+ * The characters of `selector` outside quoted strings, each with its paren
+ * depth; an escaped character is skipped with its backslash.
+ */
+const unquotedChars = (
+	selector: string,
+): Array<{ char: string; index: number; depth: number }> => {
+	const chars: Array<{ char: string; index: number; depth: number }> = []
+	let quote: string | null = null
+	let depth = 0
+	for (let i = 0; i < selector.length; i++) {
+		const char = selector[i] as string
+		if (char === '\\') {
+			i++
+			continue
+		}
+		if (quote) {
+			if (char === quote) quote = null
+			continue
+		}
+		if (char === '"' || char === "'") {
+			quote = char
+			continue
+		}
+		if (char === ')') depth = Math.max(0, depth - 1)
+		chars.push({ char, index: i, depth })
+		if (char === '(') depth++
+	}
+	return chars
+}
+
+/** Whether a comma-separated group at paren depth 0 is empty. */
+const hasEmptyTopLevelGroup = (selector: string): boolean => {
+	let groupHasContent = false
+	for (const { char, depth } of unquotedChars(selector)) {
+		if (depth > 0) {
+			groupHasContent = true
+			continue
+		}
+		if (char === ',') {
+			if (!groupHasContent) return true
+			groupHasContent = false
+		} else if (!/\s/.test(char)) groupHasContent = true
+	}
+	return !groupHasContent
+}
+
+/** Whether the last unquoted `[` has no unquoted `]` after it. */
+const leavesBracketOpen = (selector: string): boolean => {
+	let open = false
+	for (const { char } of unquotedChars(selector)) {
+		if (char === '[') open = true
+		else if (char === ']') open = false
+	}
+	return open
+}
 
 /** The traversal entries a css-what branch spells combinators with. */
 const TRAVERSALS = new Set([
@@ -91,9 +159,11 @@ const successiveCombinatorChar = (selector: string): string => {
 const throwReason = (selector: string, error: unknown): string | null => {
 	const message = error instanceof Error ? error.message : String(error)
 	if (message.startsWith('Empty sub-selector'))
-		return 'it has an empty selector between commas'
+		return hasEmptyTopLevelGroup(selector)
+			? 'it has an empty selector between commas'
+			: null
 	if (message.startsWith('Attribute selector didn'))
-		return 'it leaves a `[` unclosed'
+		return leavesBracketOpen(selector) ? 'it leaves a `[` unclosed' : null
 	if (message.startsWith('Attribute value didn'))
 		return 'it has an unterminated quoted string'
 	if (message.startsWith('Missing closing parenthesis'))
@@ -129,6 +199,15 @@ const throwReason = (selector: string, error: unknown): string | null => {
  */
 export const malformedSelectorReason = (selector: string): string | null => {
 	if (selector.trim() === '') return 'it is empty'
+	// The nesting selector and comments: browser-valid, css-what-invalid.
+	const unquoted = unquotedChars(selector)
+	if (
+		unquoted.some(
+			({ char, index }) =>
+				char === '&' || (char === '/' && selector[index + 1] === '*'),
+		)
+	)
+		return null
 
 	let branches
 	try {

@@ -18,7 +18,7 @@ import type {
 } from '../ir'
 import { wordingOf } from '../surface'
 import { isDirtyFlagControlAttr } from '../vocabulary'
-import { isClientConstructAttr, someNode } from '../walk'
+import { isClientConstructAttr } from '../walk'
 import { reportServerOnlyNames } from './effects'
 import { returnsNumber } from './harvest'
 import type {
@@ -354,21 +354,9 @@ const runReconcileLoops = (
 		}
 		const output = loop.output
 
-		// The extracted <template> is compiler-emitted; an authored one would
-		// collide with the emitted selector. A structural tag scan, checked
-		// BEFORE any selector resolution: since LT-379 the probe refuses to
-		// materialize a `<template>` (css-select's HTML-mode traversal would
-		// silently skip its content), so this diagnostic must fire first.
-		if (someNode(component.root, n => isElement(n) && n.tag === 'template')) {
-			diagnostics.push(
-				diagnostic.unaddressableElement(
-					source,
-					output.node.start,
-					`An authored <template> collides with the compiler-extracted item template of the reactive-list ${wording.loop}.`,
-				),
-			)
-			continue
-		}
+		// An authored <template> would collide with the compiler-extracted
+		// item template; LTC061 refuses it in lowering (LT-383), on every
+		// component, so the loop analysis no longer checks for one.
 
 		// Container: the parent element holding the loop output. The host
 		// itself cannot be the container (no self-query).

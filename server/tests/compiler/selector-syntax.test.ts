@@ -9,6 +9,7 @@
  * string is pinned to the shape that produces it.
  */
 import { describe, expect, test } from 'bun:test'
+import * as cssWhat from 'css-what'
 import { malformedSelectorReason } from '../../compiler/selector-syntax'
 
 const reasonOf = (selector: string): string | null =>
@@ -98,5 +99,73 @@ describe('css-what throws this module never decided stay undecidable', () => {
 		// accepted contract: passing it leaves the Tier 2 backstop on duty.
 		expect(reasonOf('. b')).toBeNull()
 		expect(reasonOf('a. b')).toBeNull()
+	})
+})
+
+describe('where css-what is stricter than browsers (LT-384)', () => {
+	test('forgiving lists: an empty group inside :is()/:where() is valid', () => {
+		expect(reasonOf(':is()')).toBeNull()
+		expect(reasonOf('a:where()')).toBeNull()
+		expect(reasonOf(':is(a,,b)')).toBeNull()
+		expect(reasonOf(':where(a, )')).toBeNull()
+		expect(reasonOf('a:is(,b)')).toBeNull()
+	})
+
+	test('a top-level empty group is still decided beside a nested one', () => {
+		expect(reasonOf(':is(a),')).toBe('it has an empty selector between commas')
+		expect(reasonOf(', :where()')).toBe(
+			'it has an empty selector between commas',
+		)
+	})
+
+	test('the nesting selector is undecidable, not malformed', () => {
+		expect(reasonOf('&')).toBeNull()
+		expect(reasonOf('& > a')).toBeNull()
+	})
+
+	test('comments are undecidable, not successive combinators', () => {
+		expect(reasonOf('a /* c */ b')).toBeNull()
+		expect(reasonOf('a > /* c */ b')).toBeNull()
+		// Inside a quoted value neither `&` nor `/*` is syntax.
+		expect(reasonOf('[a="&/*"],')).toBe(
+			'it has an empty selector between commas',
+		)
+	})
+
+	test('invalid shapes the old mapping misnamed stay undecided', () => {
+		// Browser-invalid (`:not`/`:has` are not forgiving; `z` is junk inside
+		// a CLOSED bracket) — null leaves the Tier 2 backstop on duty rather
+		// than ship a reason that names the wrong fault.
+		expect(reasonOf('a:not()')).toBeNull()
+		expect(reasonOf('a:has()')).toBeNull()
+		expect(reasonOf('[x="y" z]')).toBeNull()
+	})
+})
+
+describe('css-what message prefixes the reason map matches', () => {
+	// `throwReason` keys on css-what's error text (`css-what` ^8.0.0). A
+	// release that rewords one silently degrades its reason to null — the
+	// safe direction, but a lost decision — so each mapped prefix is pinned
+	// against the raw throw here.
+	const thrown = (selector: string): string => {
+		try {
+			cssWhat.parse(selector)
+		} catch (error) {
+			return (error as Error).message
+		}
+		return '(no throw)'
+	}
+
+	test.each([
+		['a,', 'Empty sub-selector'],
+		['a[b', "Attribute selector didn't terminate"],
+		['[a="b', "Attribute value didn't end"],
+		['a:not(b', 'Missing closing parenthesis'],
+		['a:nth-child(2n', 'Parenthesis not matched'],
+		['a~~b', 'Did not expect successive traversals'],
+		['a]', 'Unmatched selector: ]'],
+		['button[', 'Expected name, found '],
+	])('%p throws %p', (selector, prefix) => {
+		expect(thrown(selector).startsWith(prefix)).toBe(true)
 	})
 })

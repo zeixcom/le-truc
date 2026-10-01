@@ -416,6 +416,15 @@ export const lowerElement = (
 		ctx.diagnostics.push(
 			diagnostic.scriptElementInTemplate(ctx.source, element.start),
 		)
+	// LTC061 (LT-383): an authored `<template>` is refused on both surfaces —
+	// the compiler owns template extraction (reactive-list item templates,
+	// template-cloned arms), and the selector probe cannot see inside one
+	// (css-select's HTML mode skips `<template>` content). Raised in the same
+	// funnel as LTC056; the probe's own throw stays as the backstop.
+	if (tag === 'template')
+		ctx.diagnostics.push(
+			diagnostic.templateElementInTemplate(ctx.source, element.start),
+		)
 	if (/^[A-Z]/.test(tag))
 		ctx.diagnostics.push(
 			diagnostic.composedElementUnsupported(

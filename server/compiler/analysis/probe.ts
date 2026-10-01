@@ -14,19 +14,30 @@
  * pinned as documentation in `server/tests/compiler/
  * probe-differential.test.ts`.
  *
- * The serialization encodes the branch-exclusivity arithmetic in WRAPPER
- * elements instead of per-callsite recursion — the one place the max-vs-sum
- * rule lives:
+ * The serialization encodes the branch-exclusivity arithmetic in an
+ * ATTRIBUTE on every element, not in wrapper elements (LT-382, ADR 0045
+ * rider). Each element carries `data-lt-probe-arm`, the path of the
+ * mutually exclusive arms it sits in (`<group>:<arm>` segments joined by
+ * `/`, outermost first; absent at top level). An `@if`, an `@switch` and a
+ * `@try` without `@pending` open a group; a `@try` WITH `@pending` opens
+ * none — its arms coexist and sum, as the DOM does (LT-230's recorded
+ * `@pending` policy). A count aggregates the matched elements' paths: sum
+ * within an arm, MAX over the arms of a group. Wrapper elements were the
+ * first design (LT-379) and HTML tree correction defeated them: parse5
+ * foster-parents an unknown element out of table context and drops it
+ * inside `<select>`, so the arms lost their group and summed. An attribute
+ * travels with its element through every tree-correction move, so the
+ * arithmetic survives whatever the browser builds. An element the parser
+ * implies carries no path of its own and takes its nearest ancestor's (an
+ * implied `<tbody>` exists exactly when its `<table>` does); one implied
+ * outside any annotated ancestor (the trailing `<p>` of an invalid
+ * `<p><div>`) counts at top level.
  *
- * - `<lt-group>` = mutually exclusive arms (an `@if`, an `@switch`, a
- *   `@try` without `@pending`): count = MAX over `<lt-arm>` children;
- * - coexisting content (a `@try` WITH `@pending`, an arm's interior) sums,
- *   as the DOM itself does — LT-230's recorded `@pending` policy: every
- *   walk enters the arm, there is no skipped-arm divergence;
- * - a compose site becomes an empty `<lt-compose
- *   data-lt-compose-source="…">` placeholder: it has no DOM existence
- *   until render, contributes 0 to raw-element counts, and is
- *   matched/addressed only through its marker attribute.
+ * Compose sites never enter the parse: a compose site has no DOM existence
+ * until render, so it contributes 0 to raw-element counts, and its
+ * source-keyed count runs the same path aggregation over the arm paths the
+ * serializer recorded for it — matched by plain string equality, no
+ * selector escaping involved.
  *
  * Matching itself — the drift-prone half of the hand cascades
  * (COMPILER_REVIEW §2.4) — is delegated to css-select entirely. The
@@ -40,9 +51,11 @@
  * `getAttributeValue` returns `undefined`, not `null`; `isTag` must be a
  * TS type predicate; traversal skips non-tag roots (queries run against the
  * fragment's element children) and — in HTML mode — ignores the CONTENTS
- * of `<template>` elements. No component may author a `<template>` (or an
- * element named like a wrapper): the materializer fails loud rather than
- * answer from a tree the engine would silently mis-traverse.
+ * of `<template>` elements. An authored `<template>` is LTC061 (LT-383),
+ * raised in lowering on both surfaces, so a component carrying one never
+ * compiles; the analysis still runs to collect further diagnostics, so the
+ * materializer serializes the template's CONTENT in place (no `<template>`
+ * element for css-select to skip) rather than throw.
  *
  * Pure functions only; no analysis state beyond the fragment caches.
  */
@@ -50,7 +63,6 @@
 import * as cssSelect from 'css-select'
 import { parseFragment } from 'parse5'
 import type { TemplateNode } from '../ir'
-import { walkTemplate } from '../walk'
 import type { ComposeNode } from './selectors'
 
 /* === Types === */
@@ -143,16 +155,8 @@ const VOID_TAGS = new Set([
 	'wbr',
 ])
 
-const LT_GROUP = 'lt-group'
-const LT_ARM = 'lt-arm'
-const LT_SUM = 'lt-sum'
-const LT_COMPOSE = 'lt-compose'
-const SOURCE_ATTR = 'data-lt-compose-source'
-
-/** Tags the serializer owns; an authored element with one of these names
- * would collide with the wrapper semantics (or, for `<template>`, with
- * css-select's HTML-mode content skipping). */
-const REFUSED_TAGS = new Set([LT_GROUP, LT_ARM, LT_SUM, LT_COMPOSE])
+/** The probe-owned attribute carrying an element's exclusive-arm path. */
+const ARM_ATTR = 'data-lt-probe-arm'
 
 const escapeAttr = (value: string): string =>
 	value
@@ -163,97 +167,101 @@ const escapeAttr = (value: string): string =>
 
 type Frag = {
 	root: P5Node
-	/** Compose placeholder element → the IR compose node it stands for. */
-	composeByEl: Map<P5Node, ComposeNode>
+	/** Every compose site, document order, with its exclusive-arm path. */
+	composes: Array<{ node: ComposeNode; path: string }>
 }
+
+type Serializer = {
+	out: string[]
+	composes: Array<{ node: ComposeNode; path: string }>
+	/** Next group id; ids are unique per serialization. */
+	nextGroup: number
+}
+
+const armPath = (path: string, group: number, arm: number): string =>
+	`${path ? `${path}/` : ''}${group}:${arm}`
 
 /**
  * Materialize `nodes` into an HTML fragment string. Static attrs only —
  * a synthesized/authored selector the proof counts is static, and a
- * dynamic attribute never matches one. Wrappers encode the branch
- * semantics; see the module doc.
+ * dynamic attribute never matches one. `path` is the exclusive-arm path of
+ * the enclosing position; see the module doc.
  */
 const serializeNodes = (
 	nodes: readonly TemplateNode[],
-	out: string[],
+	path: string,
+	ser: Serializer,
 ): void => {
+	const { out } = ser
+	const exclusive = (arms: ReadonlyArray<readonly TemplateNode[]>) => {
+		const group = ser.nextGroup++
+		arms.forEach((arm, index) => {
+			serializeNodes(arm, armPath(path, group, index), ser)
+		})
+	}
 	for (const node of nodes) {
 		switch (node.kind) {
 			case 'element': {
-				if (node.tag === 'template')
-					throw new Error(
-						`LT-379 probe: the template authors a <template> element, whose content css-select's HTML-mode traversal silently skips — the proof refuses to answer from a mis-traversed tree. (Reactive-list loops diagnose this case structurally; for other components this invariant tripwire awaits a proper authored-<template> diagnostic.)`,
-					)
-				if (REFUSED_TAGS.has(node.tag))
-					throw new Error(
-						`LT-379 probe: the template authors an <${node.tag}> element, whose name the probe reserves for its own branch wrappers.`,
-					)
+				// An authored <template> is LTC061 (the compile fails); its
+				// content is serialized in place so the analysis that still
+				// runs answers from a tree css-select fully traverses.
+				if (node.tag === 'template') {
+					serializeNodes(node.children, path, ser)
+					break
+				}
 				const attrs: string[] = []
+				// The probe owns its arm attribute; an authored one would
+				// corrupt the path arithmetic.
 				for (const attr of node.attrs)
-					if (attr.kind === 'static')
+					if (attr.kind === 'static' && attr.name !== ARM_ATTR)
 						attrs.push(
 							attr.value === null
 								? attr.name
 								: `${attr.name}="${escapeAttr(attr.value)}"`,
 						)
+				if (path) attrs.push(`${ARM_ATTR}="${path}"`)
 				out.push(`<${node.tag}${attrs.length ? ' ' : ''}${attrs.join(' ')}>`)
 				// A browser reparents a void tag's children to following
 				// siblings; the probe matches browser reality either way.
-				serializeNodes(node.children, out)
+				serializeNodes(node.children, path, ser)
 				if (!VOID_TAGS.has(node.tag)) out.push(`</${node.tag}>`)
 				break
 			}
 			case 'compose':
-				out.push(
-					`<${LT_COMPOSE} ${SOURCE_ATTR}="${escapeAttr(node.source)}"></${LT_COMPOSE}>`,
-				)
+				// No DOM existence until render: recorded, never emitted.
+				ser.composes.push({ node, path })
 				break
-			case 'if': {
-				out.push(`<${LT_GROUP}>`)
-				for (const branch of [node.then, node.alternate]) {
-					out.push(`<${LT_ARM}>`)
-					serializeNodes(branch, out)
-					out.push(`</${LT_ARM}>`)
-				}
-				out.push(`</${LT_GROUP}>`)
+			case 'if':
+				exclusive([node.then, node.alternate])
 				break
-			}
-			case 'switch': {
-				out.push(`<${LT_GROUP}>`)
-				for (const arm of node.cases) {
-					out.push(`<${LT_ARM}>`)
-					serializeNodes(arm.children, out)
-					out.push(`</${LT_ARM}>`)
-				}
-				out.push(`</${LT_GROUP}>`)
+			case 'switch':
+				exclusive(node.cases.map(arm => arm.children))
 				break
-			}
-			case 'try': {
+			case 'try':
 				if (node.pendingChildren !== null) {
 					// Async boundary: all three arms coexist (hidden-toggled) —
-					// sum (LT-230's `@pending` policy: every walk enters the
-					// arm; there is no skipped pending arm to wrap).
-					out.push(`<${LT_SUM}>`)
-					serializeNodes(node.children, out)
-					serializeNodes(node.catchChildren, out)
-					serializeNodes(node.pendingChildren, out)
-					out.push(`</${LT_SUM}>`)
+					// no group, the arms sum (LT-230's `@pending` policy).
+					serializeNodes(node.children, path, ser)
+					serializeNodes(node.catchChildren, path, ser)
+					serializeNodes(node.pendingChildren, path, ser)
 				} else {
 					// Plain error boundary: body XOR catch.
-					out.push(`<${LT_GROUP}>`)
-					for (const branch of [node.children, node.catchChildren]) {
-						out.push(`<${LT_ARM}>`)
-						serializeNodes(branch, out)
-						out.push(`</${LT_ARM}>`)
-					}
-					out.push(`</${LT_GROUP}>`)
+					exclusive([node.children, node.catchChildren])
 				}
 				break
-			}
 			default:
 				// text, expr, client-stmt — no element, nothing to match.
 				break
 		}
+	}
+}
+
+const materialize = (nodes: readonly TemplateNode[]): Frag => {
+	const ser: Serializer = { out: [], composes: [], nextGroup: 0 }
+	serializeNodes(nodes, '', ser)
+	return {
+		root: parseFragment(ser.out.join('')) as unknown as P5Node,
+		composes: ser.composes,
 	}
 }
 
@@ -269,49 +277,62 @@ const fragByArray = new WeakMap<readonly TemplateNode[], Frag>()
 const fragOfRoot = (root: TemplateNode): Frag => {
 	let frag = fragByNode.get(root)
 	if (!frag) {
-		const out: string[] = []
-		serializeNodes([root], out)
-		const p5Root = parseFragment(out.join('')) as unknown as P5Node
-		// Map placeholders back to IR compose nodes by document order — the
-		// serializer emits them pre-order, the parser preserves it, and
-		// `walkTemplate` (composition a boundary) walks the same pre-order.
-		const composeNodes: ComposeNode[] = []
-		walkTemplate(
-			root,
-			node => {
-				if (node.kind === 'compose') composeNodes.push(node)
-			},
-			{ intoCompose: false },
-		)
-		const composeByEl = new Map<P5Node, ComposeNode>()
-		cssSelect
-			.selectAll(`[${SOURCE_ATTR}]`, elementChildren(p5Root), { adapter })
-			.forEach((el, index) =>
-				composeByEl.set(el, composeNodes[index] as ComposeNode),
-			)
-		frag = { root: p5Root, composeByEl }
+		frag = materialize([root])
 		fragByNode.set(root, frag)
 	}
 	return frag
 }
 
-/** Arm/branch node lists materialize without the compose mapping — the
- * existence query never addresses placeholders. */
 const fragOfNodes = (nodes: readonly TemplateNode[]): Frag => {
 	let frag = fragByArray.get(nodes)
 	if (!frag) {
-		const out: string[] = []
-		serializeNodes(nodes, out)
-		frag = {
-			root: parseFragment(out.join('')) as unknown as P5Node,
-			composeByEl: new Map(),
-		}
+		frag = materialize(nodes)
 		fragByArray.set(nodes, frag)
 	}
 	return frag
 }
 
-/* === The one aggregation walk === */
+/* === The one aggregation === */
+
+/** An arm-path trie node: direct hits, plus each group's arms. */
+type ArmTrie = { hits: number; groups: Map<string, Map<string, ArmTrie>> }
+
+const trieNode = (): ArmTrie => ({ hits: 0, groups: new Map() })
+
+/**
+ * Aggregate hit paths into a count: sum within an arm, max over the arms of
+ * a group — the exclusivity arithmetic, independent of where tree
+ * correction put each element.
+ */
+const aggregate = (paths: readonly string[]): number => {
+	const root = trieNode()
+	for (const path of paths) {
+		let node = root
+		if (path)
+			for (const segment of path.split('/')) {
+				const [group, arm] = segment.split(':') as [string, string]
+				let arms = node.groups.get(group)
+				if (!arms) {
+					arms = new Map()
+					node.groups.set(group, arms)
+				}
+				let next = arms.get(arm)
+				if (!next) {
+					next = trieNode()
+					arms.set(arm, next)
+				}
+				node = next
+			}
+		node.hits++
+	}
+	const value = (node: ArmTrie): number => {
+		let total = node.hits
+		for (const arms of node.groups.values())
+			total += Math.max(0, ...[...arms.values()].map(value))
+		return total
+	}
+	return value(root)
+}
 
 /** Compile with the adapter baked in; ReturnType names the query type. */
 const compileQuery = (selector: string) =>
@@ -337,30 +358,23 @@ const queryOf = (selector: string): CompiledQuery | null => {
 	return queryCache.get(selector) ?? null
 }
 
-const sumChildren = (node: P5Node, query: CompiledQuery): number =>
-	elementChildren(node)
-		.map(child => countIn(child, query))
-		.reduce((a, b) => a + b, 0)
-
-const countIn = (node: P5Node, query: CompiledQuery): number => {
-	if (node.nodeName === '#document-fragment') return sumChildren(node, query)
-	if (!isTag(node)) return 0
-	switch (node.tagName) {
-		case LT_GROUP:
-			// Mutually exclusive arms: max, never sum.
-			return Math.max(
-				0,
-				...elementChildren(node).map(arm => countIn(arm, query)),
-			)
-		case LT_ARM:
-		case LT_SUM:
-			return sumChildren(node, query)
-		case LT_COMPOSE:
-			// A placeholder has no DOM existence until render.
-			return 0
-		default:
-			return (cssSelect.is(node, query) ? 1 : 0) + sumChildren(node, query)
+/**
+ * The arm paths of every element in `frag` the query matches. An element
+ * without its own path — one the parser implied, like the `<tbody>` of a
+ * `<table>` of bare rows — takes its nearest ancestor's: it exists exactly
+ * when that ancestor does.
+ */
+const matchedPaths = (frag: Frag, query: CompiledQuery): string[] => {
+	const paths: string[] = []
+	const visit = (node: P5Node, inherited: string): void => {
+		for (const child of elementChildren(node)) {
+			const path = adapter.getAttributeValue(child, ARM_ATTR) ?? inherited
+			if (cssSelect.is(child, query)) paths.push(path)
+			visit(child, path)
+		}
 	}
+	visit(frag.root, '')
+	return paths
 }
 
 /* === Exported Functions === */
@@ -369,7 +383,7 @@ const countIn = (node: P5Node, query: CompiledQuery): number => {
 export const probeCount = (root: TemplateNode, selector: string): number => {
 	const query = queryOf(selector)
 	if (!query) return 0
-	return countIn(fragOfRoot(root).root, query)
+	return aggregate(matchedPaths(fragOfRoot(root), query))
 }
 
 /** `matchesUnder` — pure existence; exclusivity can never flip it. */
@@ -379,61 +393,27 @@ export const probeExists = (
 ): boolean => {
 	const query = queryOf(selector)
 	if (!query) return false
-	return countIn(fragOfNodes(nodes).root, query) > 0
+	return matchedPaths(fragOfNodes(nodes), query).length > 0
 }
 
 /**
- * `countComposeBySource` — compose placeholders are addressed by their
- * marker attribute, which no real element carries. Same aggregation walk,
- * but the walk only ever MATCHES at `lt-compose` nodes (real elements just
- * sum their children through), so a source string can never collide with
- * raw markup.
+ * `countComposeBySource` — the same path aggregation over the compose
+ * sites whose source equals `source` (plain string equality: a compose
+ * site is never a parsed element, so no selector escaping is involved and
+ * a source can never collide with raw markup).
  */
-const countComposeIn = (node: P5Node, query: CompiledQuery): number => {
-	if (node.nodeName === '#document-fragment')
-		return elementChildren(node)
-			.map(child => countComposeIn(child, query))
-			.reduce((a, b) => a + b, 0)
-	if (!isTag(node)) return 0
-	switch (node.tagName) {
-		case LT_GROUP:
-			return Math.max(
-				0,
-				...elementChildren(node).map(arm => countComposeIn(arm, query)),
-			)
-		case LT_ARM:
-		case LT_SUM:
-			return elementChildren(node)
-				.map(child => countComposeIn(child, query))
-				.reduce((a, b) => a + b, 0)
-		case LT_COMPOSE:
-			return cssSelect.is(node, query) ? 1 : 0
-		default:
-			return elementChildren(node)
-				.map(child => countComposeIn(child, query))
-				.reduce((a, b) => a + b, 0)
-	}
-}
-
-export const probeCountCompose = (
-	root: TemplateNode,
-	source: string,
-): number => {
-	const query = queryOf(`[${SOURCE_ATTR}="${escapeAttr(source)}"]`)
-	if (!query) return 0
-	return countComposeIn(fragOfRoot(root).root, query)
-}
+export const probeCountCompose = (root: TemplateNode, source: string): number =>
+	aggregate(
+		fragOfRoot(root)
+			.composes.filter(entry => entry.node.source === source)
+			.map(entry => entry.path),
+	)
 
 /**
  * `allComposeNodes` — the IR compose nodes in document order, compose-site
  * children not entered (composition is a boundary), every `@try` arm
- * entered per the `@pending` policy. The probe returns them by mapping the
- * serialized placeholders back through document order, which is what makes
- * `composeNodesBySource`'s identity answers exact.
+ * entered per the `@pending` policy — the serializer's own record, so
+ * `composeNodesBySource`'s identity answers are exact.
  */
-export const probeComposeNodes = (root: TemplateNode): ComposeNode[] => {
-	const { root: fragRoot, composeByEl } = fragOfRoot(root)
-	return cssSelect
-		.selectAll(`[${SOURCE_ATTR}]`, elementChildren(fragRoot), { adapter })
-		.map(el => composeByEl.get(el) as ComposeNode)
-}
+export const probeComposeNodes = (root: TemplateNode): ComposeNode[] =>
+	fragOfRoot(root).composes.map(entry => entry.node)

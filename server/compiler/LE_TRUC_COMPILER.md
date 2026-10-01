@@ -351,7 +351,7 @@ front-end modules, then the two front ends:
 | `registry.ts` | `RegistryEntry` type (incl. per-prop `ExposeKind`) + `registryJson` |
 | `analysis/plan.ts` | `ClientPlan` types, `PassShared` assembly, `analyzeClient` orchestration |
 | `analysis/selectors.ts` | Pure selector POLICY: synthesis, candidate order, union/compose addressing; the ENGINE (matching, counting, existence) runs on the materialized probe |
-| `analysis/probe.ts` | The materialized-probe selector engine (ADR 0045): template IR → HTML → parse5 → css-select over one exclusivity-aware aggregation walk |
+| `analysis/probe.ts` | The materialized-probe selector engine (ADR 0045): template IR → HTML (each element stamped with its exclusive-arm path) → parse5 → css-select, aggregated max-over-arms |
 | `analysis/compose-refs.ts` | Registry-aware resolution of `first()` references addressing composed children |
 | `analysis/naming.ts` | `uniqueName`, `addQuery` (query table + name allocation) |
 | `analysis/harvest.ts` | Passes 2+3: render sites (`collectRenderSites`), harvest-plan selection and arg→DOM-site substitution (`planHarvests`) |
@@ -1146,12 +1146,15 @@ member.
   ([ADR 0045](../../../adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md))
   the engine half runs on the **materialized probe** (`analysis/probe.ts`):
   the template is serialized to HTML — static attrs only, all branches
-  materialized, mutually exclusive arms wrapped so counting takes the max
-  over them and coexisting ones sum — parsed with parse5, and answered with
-  css-select over one aggregation walk, replacing five hand cascades and
+  materialized, every element stamped with the path of mutually exclusive
+  arms it sits in so counting takes the max over them and coexisting ones
+  sum (an attribute survives HTML tree correction, where LT-379's wrapper
+  elements did not — LT-382) — parsed with parse5, and answered with
+  css-select over one aggregation, replacing five hand cascades and
   their hand matcher. The probe is browser-faithful: it counts what a
   browser's parse of the emitted markup builds, not what the authored
-  nesting says (valid authoring never diverges; the differential harness in
+  nesting says (valid authoring diverges only by a parser-implied element
+  such as a `<table>`'s `<tbody>`, which the DOM really holds; the differential harness in
   `server/tests/compiler/probe-differential.test.ts` permanently pins the
   answers against the hand cascades' record). Discriminators use
   canonical CSS spellings — classes match by token membership, ids and

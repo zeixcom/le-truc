@@ -1019,6 +1019,15 @@ const FAMILIES: Case[] = [
 		},
 		pins: ['whatever their `type`'],
 	},
+	{
+		// LT-383: an authored <template> is refused on both surfaces — the
+		// compiler owns template extraction, and the selector probe cannot
+		// see inside one.
+		name: 'LTC061 authored <template> element',
+		code: 'LTC061',
+		spec: { body: '<div><template><p>x</p></template></div>' },
+		pins: ['A `<template>` element in a component template'],
+	},
 ]
 
 /* === Tests === */
@@ -1056,6 +1065,24 @@ describe('diagnostic parity — the §2.3 drift shapes (negative pins)', () => {
 
 describe('diagnostic parity — reactive-list bodies', () => {
 	runCases(LIST_BODY)
+})
+
+describe('an authored <template> beside a reactive list (LT-383)', () => {
+	test('reports LTC061 once, not LTC061 plus the old LTC007 collision', () => {
+		const { tsrx, tsx } = compileBoth({
+			name: 'template beside list',
+			code: 'LTC061',
+			spec: {
+				...list(...same('<li>{item}</li>')),
+				body: '<div><template><p>x</p></template><ul data-container>@for (const item of items) { <li>{item}</li> }</ul></div>',
+				tsx: '<div><template><p>x</p></template><ul data-container>{items.map(item => <li>{item}</li>)}</ul></div>',
+			},
+		})
+		for (const diagnostics of [tsrx, tsx]) {
+			const errors = diagnostics.filter(d => d.severity === 'error')
+			expect(errors.map(d => d.code)).toEqual(['LTC061'])
+		}
+	})
 })
 
 describe('reactive-list bodies: the positive rule admits client names (LT-349)', () => {

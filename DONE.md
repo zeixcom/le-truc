@@ -13,7 +13,7 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 Pruned 2026-10-01, fourth pass (Architect, after the "ICU MessageFormat switch" iteration
 closed; Changelog Keeper merged it into `CHANGELOG.md [Unreleased]` the same day). **No task
-entries remained** at that prune; LT-227–LT-232, LT-234, LT-243, LT-244, LT-287, LT-288, LT-289, LT-360, LT-364, LT-366, LT-367 and LT-368 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
+entries remained** at that prune; LT-227–LT-232, LT-234, LT-243, LT-244, LT-287, LT-288, LT-289, LT-358, LT-360, LT-364, LT-366, LT-367, LT-368, LT-379, LT-380 and LT-382–LT-384 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
 LT-308, LT-343, LT-344, LT-346–LT-351, LT-354. Where their rulings live: ADR 0030 (s4 ICU, s6/s9
 locale and the client channel, the corpus-only MF2 authoring constraint), ADR 0032 s6 (diagnostic
 parity), ADR 0010 s6 (hand-written `dangerouslyBindInnerHTML` stays raw), AGENTS.md, and the
@@ -22,6 +22,40 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
 ×3, 2026-09-21 ×2. Full entry text: `git log -p -- DONE.md`.
 
 ---
+
+- [x] LT-382: The probe keeps branch exclusivity through HTML tree correction (LT-379 review follow-up). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `server/compiler/analysis/probe.ts`. The `<lt-group>`/`<lt-arm>`/`<lt-sum>` wrappers are replaced by a per-element `data-lt-probe-arm` path attribute, and counts aggregate max-over-arms from the matched elements' paths. Compose sites no longer enter the parse; they are counted from the serializer's own record by plain source equality, which fixes the `&<>"` escaping bug. [ADR 0045](adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md) is amended in place (unpublished): Decision 1 mechanism, Decision 2 divergence wording, and Consequences, where the combinator cap is lifted. Compiler-internal; no author-visible change except that valid `<table>`/`<select>` branches no longer get false non-uniqueness.
+  **Rulings:** a parser-implied element is browser reality. It takes its nearest annotated ancestor's arm path (review fix: an implied `<tbody>` per arm had summed), or counts at top level when there is none. The `<table>` of bare rows (implied `<tbody>`) is pinned beside `<p><div>` as a designed divergence from the IR reference.
+  **Review:** Approved. Tech Writer one-voice pass pending on LE_TRUC_COMPILER.md §7, the `probe.ts` module row and walk.ts's authorized-exceptions entry (together with LT-379's).
+
+- [x] LT-383: Refuse an authored `<template>` element on both surfaces (LT-379 NOTES follow-up). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** **new LTC061** `templateElementInTemplate`, raised in shared `lowerElement`, refuses every authored `<template>` on both surfaces. This is new author-facing behavior (Changelog Keeper). `loops.ts`'s LTC007 authored-`<template>` pre-scan is retired. The probe serializes an authored template's content in place instead of throwing.
+  **Rulings:** the probe's throw could not become an unreachable backstop. `compileFromIR` runs the analysis after lowering errors so it can collect further diagnostics; LTC061 guarantees the compile fails, so no answer from that tree is emitted. Handoffs: the LTC061 copy goes through LT-359 (f). LT-274 has a rider: template-cloned arms must be emitter output, never `template` IR elements.
+  **Review:** Approved.
+
+- [x] LT-384: `malformedSelectorReason` false positives introduced by the css-what swap (LT-380 review follow-up). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `server/compiler/selector-syntax.ts`. An empty comma group is decided only at top level, so forgiving `:is()`/`:where()` lists pass and `:not()`/`:has()` are undecided. An unquoted `&` or `/*` is undecidable. "Unclosed `[`" fires only when no `]` follows. No reason strings changed. css-what's raw message prefix is pinned for each of the 8 mapped throw classes.
+  **Review:** Approved. LTC026 is back to zero known false positives.
+
+- [x] LT-379: Promote the materialized-probe selector engine; retire the hand cascades (ADR 0045, LT-245 follow-up). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new `server/compiler/analysis/probe.ts` (materializer, aggregation walk, parse5 adapter for css-select v7). `analysis/selectors.ts` keeps the policy: `countForSelector`, `countComposeBySource`, `matchesUnder` and `allComposeNodes` delegate to the probe; `matchesSelector` is deleted; `SELECTOR_GRAMMAR` survives only as `authoredSelectorOf`'s subset gate; `mayMatchShape` parses with css-what. `css-select` ^7 and `css-what` ^8 are now production **dependencies** (Changelog Keeper: new runtime-of-the-build deps, pure-JS closure per ADR 0045 Decision 3). The spike harness became the permanent pin `server/tests/compiler/probe-differential.test.ts`. Commit 58f40885.
+  **Rulings (developer, accepted at review):** a query css-what cannot parse counts 0 and matches nothing (the old "unparsed" answer). The probe fails loud on an authored `<template>`, so `loops.ts`'s LTC007 collision check became a structural tag scan that runs before any selector resolution.
+  **Review:** Approved with follow-ups. **LT-382:** inside `<table>`/`<select>` context, HTML tree correction foster-parents or drops the arm wrappers, so exclusive arms are summed. That falsifies ADR 0045 Decision 2's "valid authoring never diverges", and the fix needs an ADR rider. The same task fixes the compose-source escaping (HTML entities inside a CSS selector). **LT-383:** an author-facing LTC061 replaces the `<template>` tripwire. Tech Writer one-voice pass pending on LE_TRUC_COMPILER.md §7, the `selectors.ts`/`probe.ts` module-table rows and walk.ts's authorized-exceptions list.
+
+- [x] LT-380: Swap `selector-syntax.ts` and `parseSimpleSelector` onto css-what (ADR 0045 Decision 5; after LT-379). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `server/compiler/selector-syntax.ts` (~170 hand rules → a css-what parse, a throw-class → reason map, and post-checks for a trailing or lone leading combinator; the empty string is special-cased), `first-refs.ts` `parseSimpleSelector` (css-what parse plus subset post-checks). LTC026 wording unchanged. Commit 35799718.
+  **Rulings:** unknown pseudo-class names stay undecided. The task text's "list-based unknown-pseudo rule" never existed, and the module doc now says so. css-what throws outside the mapped classes stay `null`. `parseSimpleSelector`'s verified subset is unchanged; review confirmed old and new agree on a 42-selector probe set.
+  **Review:** Approved with follow-up **LT-384**. The swap introduced LTC026 false positives on browser-valid selectors: forgiving `:is()`/`:where()` lists with empty groups, `&`, and CSS comments. It also introduced misleading reasons for `:not()`, `:has()` and `[x="y" z]`.
+
+- [x] LT-358: LT-189 review follow-ups — coverage and signature gaps behind the reworded diagnostics. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** (a) LTC053 boundary-as-loop-root ruled **parity**: `.tsrx` `lowerFor` refuses a body-level `@try` (previously the generic LTC005); the builder takes `SurfaceWording`; `.tsx` guard pinned. (b) LTC050 carries the annotation's line (`params.ts` `annotationAt`). (c) IR gains optional `messageRecordBindings` (additive); a record-spelled `i18n.t.<key>` read in a client position gets the literal-key sentence, never the generic exposed-prop fix. (d) **New LTC056** `scriptElementInTemplate`: every authored `<script>`, whatever its `type`, is refused on both surfaces in shared `lowerElement`. This is new author-facing behavior (Changelog Keeper). Commit c16ef0f0.
+  **Review:** Approved. The copy rider is in LT-359 (f), and so is the `.tsrx` LTC053 wording when the `@try` sits beside an element output.
 
 - [x] LT-361: Teach `sanitizeHtml` and the fail-closed `truc:html` default where users read (LT-138 handoff). — done ✓
   **Skill:** tech-writer

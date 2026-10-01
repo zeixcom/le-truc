@@ -85,6 +85,7 @@ export type DiagnosticCode =
 	| 'LTC054' // a position the server render evaluates reads page context outside the declared ambient set, or the reserved `i18n` record is destructured for a member outside it (ADR 0034 s4, LT-258) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC055' // an `export const i18n` source pattern is not a supported ICU MessageFormat 1 pattern, or a `t.<key>` site disagrees with its pattern's arguments: missing/extra/non-literal arguments, an argument message read without a call, an argument-less message called (ADR 0030 s4, LT-250) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC056' // an authored `<script>` element in a component template, whatever its `type` — the page owns script loading (LT-358 rider) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC061' // an authored `<template>` element in a component template — the compiler owns template extraction, and the selector proof cannot see inside one (LT-383) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -267,6 +268,28 @@ export const diagnostic = {
 		error(
 			'LTC056',
 			"A `<script>` element in a component template — scripts are refused, whatever their `type`: the page owns script loading, and a component template is static markup plus component behavior. Move the script to the page that places this component, or do its work in the component's setup (in `watch()` or an `on()` handler).",
+			lineOf(source, offset),
+		),
+
+	/**
+	 * An authored `<template>` element in a component template (LT-383,
+	 * LT-379 follow-up). The compiler owns template extraction: a reactive
+	 * list's item template and template-cloned arms (ADR 0043) are emitted
+	 * `<template>`s, and an authored one collides with them. The selector
+	 * proof also cannot see inside one — css-select's HTML-mode traversal
+	 * skips `<template>` content (ADR 0045) — so a uniqueness answer over a
+	 * template carrying one would be silently wrong. Every authored
+	 * `<template>` is refused. ADR 0028 tier 1 (Prevented): statically
+	 * decidable from the tag name alone, no runtime half. Raised in
+	 * `lowerElement` (shared), so both surfaces refuse it identically.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; the
+	 * first draft rides the LT-359 copy round.
+	 */
+	templateElementInTemplate: (source: string, offset: number | undefined) =>
+		error(
+			'LTC061',
+			"A `<template>` element in a component template — the compiler emits the `<template>`s a component needs (a reactive list's item template, its conditional arms), and an authored one would collide with them. Render the markup directly, or let a reactive list or condition produce the repeated or switched content.",
 			lineOf(source, offset),
 		),
 
