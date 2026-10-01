@@ -201,7 +201,9 @@ Returns `SingleMatchHandlers<string>`. Pass directly to `watch`. Only use on tru
 watch('highlightedHtml', dangerouslyBindInnerHTML(codeBlock))
 ```
 
-Options: `{ shadowRootMode?: ShadowRootMode, allowScripts?: boolean }`.
+Options: `{ shadowRootMode?: ShadowRootMode, allowScripts?: boolean, sanitize?: (html: string) => string | TrustedHTML }`.
+
+Without a `sanitize` option the assignment falls back to the module-level default from `configureHtmlSanitizer()` — and with neither, the value is assigned raw. The compiled `truc:html` attribute is different: it routes through the exported `sanitizeHtml`, which fails closed — the configured default, else `escapeHTML`, so an unconfigured app renders escaped text instead of live markup (LT-138). Configure the default once per realm: the build and the browser are separate module instances, so each needs its own — `createDOMPurify(new JSDOM('').window).sanitize` at build, plain DOMPurify in the browser. Under a `require-trusted-types-for 'script'` CSP an unconfigured client throws at the sink; that is correct (ADR 0010) — pass a sanitizer returning `TrustedHTML` (DOMPurify with `RETURN_TRUSTED_TYPE: true`).
 
 ### `on(target, type, handler, options?)`
 

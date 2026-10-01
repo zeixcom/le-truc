@@ -139,12 +139,14 @@ defineComponent<MyComponentProps>('my-component', …)
 ### `dangerouslyBindInnerHTML` on Untrusted Content
 
 ```typescript
-// ❌ XSS risk
+// ❌ XSS risk — no sanitize option and no configured default means raw assignment
 content: dangerouslyBindInnerHTML('userGeneratedHtml')
 
-// ✅ Only on server-rendered or pre-sanitized HTML
-content: dangerouslyBindInnerHTML('highlightedCode')
+// ✅ Pass a sanitizer, or configure a default with configureHtmlSanitizer()
+content: dangerouslyBindInnerHTML('userGeneratedHtml', { sanitize: sanitizeHtml })
 ```
+
+`configureHtmlSanitizer()` is once per realm — DOMPurify over jsdom at build, plain DOMPurify in the browser. Hand-written call sites keep raw passthrough without it; the compiled `truc:html` attribute does not — it routes through the exported `sanitizeHtml` and fails closed to `escapeHTML` (LT-138).
 
 ---
 

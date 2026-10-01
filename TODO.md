@@ -257,17 +257,7 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   template; the page owns script loading. Add a `diagnostic-parity.test.ts` case. LTC057/LTC058
   are reserved for LT-257, so take LTC056 here. Copy goes to Tech Writer through LT-359's round.
 
-- [ ] LT-361: Teach `sanitizeHtml` and the fail-closed `truc:html` default where users read (LT-138 handoff).
+- [x] LT-361: Teach `sanitizeHtml` and the fail-closed `truc:html` default where users read (LT-138 handoff). — done ✓
   **Skill:** tech-writer
-  **Context:** LT-138 (reviewed 2026-10-01) added the public `sanitizeHtml(html)` export and made
-  `truc:html` fail closed on both halves. Its docs handoff went to Tech Writer directly, with no
-  task, and has not landed. Only `HOST_PROFILE.md` names `sanitizeHtml`. The CHANGELOG lines are
-  done. Scope: a `sanitizeHtml` entry in `docs-src/pages/api.md` and its JSDoc in the API pass;
-  the `truc:html` and security guidance states the fail-closed default and recommends DOMPurify
-  on both halves (`createDOMPurify(new JSDOM('').window)` at build, plain DOMPurify in the
-  browser); "configure once" means once per realm, because the build and the browser are
-  separate module instances; hand-written `dangerouslyBindInnerHTML` keeps raw passthrough (ADR
-  0010 s6). Align the `.agents/skills/le-truc` references and `HOST_PROFILE.md`'s `truc:html`
-  bullet. Under a Trusted-Types CSP an unconfigured client throws at the sink, which is correct
-  (ADR 0010 s4); say so where CSP is discussed.
-  **Check:** `bun run build:docs`, `check:links`.
+  **Changed:** `src/bindings.ts` JSDoc (`configureHtmlSanitizer` — once per realm, DOMPurify-over-jsdom at build / plain in the browser, raw-passthrough-vs-fail-closed split; `sanitizeHtml` — Trusted-Types-CSP throw-at-sink note); `server/compiler/HOST_PROFILE.md` `truc:html` bullet (fail-closed wrapper, once per realm); `.agents/skills/le-truc/references/effects.md` (full `sanitize` option, `truc:html` routing, CSP note), `anti-patterns.md` (`sanitize: sanitizeHtml` fix pattern), `errors.md` (Trusted Types row — unconfigured `truc:html` throws correctly); `.agents/skills/le-truc-dev/references/source-map.md` (bindings.ts export list). The `api.md` nav entry is generated and appeared on rebuild; the JSDoc was already in place from the API pass.
+  **Check:** `bun run build:docs` ✓, `check:links` ✓ (682 links resolve); generated `docs-src/api/functions/sanitizeHtml.md` exists.

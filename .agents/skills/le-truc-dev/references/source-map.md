@@ -24,7 +24,7 @@ Core files in `src/`:
 | `types.ts` | `Parser`, `MethodProducer`, `asParser`, `defineMethod`, `isParser`, `isMethodProducer`, parser/method branding (`PARSER_BRAND`/`METHOD_BRAND`), `ComponentProps`, `EffectDescriptor`, `Falsy`, `ReservedWords` |
 | `helpers/reactive.ts` | `makeWatch`, `makePass`, `each`, `reconcile`, `activateDescriptors`, `keyedScopes`, `EffectDescriptor`, `Reactive`, `WatchHelper`, `PassHelper` |
 | `helpers/events.ts` | `makeOn`, `OnHelper`, event delegation, passive event throttling |
-| `bindings.ts` | `bindText`, `bindProperty`, `bindClass`, `bindState`, `bindVisible`, `bindAttribute`, `bindStyle`, `bindAria`, `dangerouslyBindInnerHTML`, `safeSetAttribute`, `escapeHTML`, `setTextPreservingComments` |
+| `bindings.ts` | `bindText`, `bindProperty`, `bindClass`, `bindState`, `bindVisible`, `bindAttribute`, `bindStyle`, `bindAria`, `dangerouslyBindInnerHTML`, `configureHtmlSanitizer`, `sanitizeHtml`, `safeSetAttribute`, `escapeHTML`, `setTextPreservingComments` |
 | `helpers/dom.ts` | `first`, `all`, `makeElementQueries`, `createElementsMemo`, selector type inference |
 | `helpers/context.ts` | `makeProvideContexts`, `makeRequestContext`, `ContextRequestEvent` |
 | `scheduler.ts` | `schedule`, `throttle` — rAF-based task deduplication |

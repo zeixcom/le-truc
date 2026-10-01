@@ -49,18 +49,23 @@ type DangerouslyBindInnerHTMLOptions = {
 let defaultSanitize: Sanitizer | undefined
 
 /**
- * Configure the module-level default sanitizer that `dangerouslyBindInnerHTML()`
- * falls back to when a call site omits its own `sanitize` option. Purely
- * opt-in — call once, e.g. at app startup; every `dangerouslyBindInnerHTML()`
- * call site keeps working exactly as before unless it left `sanitize` unset.
- * A call site's own `sanitize` option still takes precedence. The default is
- * read on every update, not captured at bind time, so configuring it after
- * elements are bound still applies to them.
+ * Configure the module-level default sanitizer. `dangerouslyBindInnerHTML()`
+ * falls back to it when a call site omits its own `sanitize` option, and the
+ * compiled `truc:html` attribute reaches it through the exported
+ * `sanitizeHtml()` wrapper. A call site's own `sanitize` option still takes
+ * precedence. The default is read on every update, not captured at bind
+ * time, so configuring it after elements are bound still applies to them.
  *
- * Le Truc ships no sanitizer implementation of its own (ADR 0010) — this
- * only registers a hook. DOMPurify is the recommended choice; configure it
- * with `RETURN_TRUSTED_TYPE: true` for Trusted-Types-enforcing pages (see the
- * Trusted Types note on `dangerouslyBindInnerHTML` below).
+ * Call once per realm: the build that renders server-side HTML and the
+ * browser that enhances it are separate module instances, so each needs its
+ * own configuration — DOMPurify over jsdom at build
+ * (`createDOMPurify(new JSDOM('').window)`), plain DOMPurify in the browser.
+ * Unconfigured, `dangerouslyBindInnerHTML()` keeps its raw passthrough
+ * (ADR 0010) while `truc:html` fails closed through `sanitizeHtml()`. Le
+ * Truc ships no sanitizer implementation of its own — this only registers a
+ * hook. Configure DOMPurify with `RETURN_TRUSTED_TYPE: true` for
+ * Trusted-Types-enforcing pages (see the Trusted Types note on
+ * `dangerouslyBindInnerHTML` below).
  *
  * @since 2.6
  * @param sanitize - Default sanitizer, or `undefined` to clear it
@@ -81,6 +86,11 @@ const configureHtmlSanitizer = (sanitize: Sanitizer | undefined): void => {
  * `configureHtmlSanitizer()` switches both. Hand-written
  * `dangerouslyBindInnerHTML()` call sites keep their raw-passthrough
  * fallback unless they pass `{ sanitize: sanitizeHtml }` themselves.
+ *
+ * Under a `require-trusted-types-for 'script'` CSP an unconfigured client
+ * throws at the `innerHTML` sink: the escaped string is not a `TrustedHTML`.
+ * That is correct (ADR 0010) — configure a sanitizer returning `TrustedHTML`
+ * (DOMPurify with `RETURN_TRUSTED_TYPE: true`) to pass enforcement.
  *
  * @since 3.0
  * @param html - Raw HTML
