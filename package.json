@@ -108,6 +108,7 @@
 		"@typescript-eslint/typescript-estree": "8.71.0",
 		"@zeix/cem-plugin-le-truc": "^0.3.3",
 		"axe-core": "^4.13.0",
+		"css-select": "^7.0.0",
 		"culori": "^4.0.2",
 		"dompurify": "^3.4.14",
 		"eslint-visitor-keys": "5.0.1",
