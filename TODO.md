@@ -38,8 +38,11 @@ parallel.
   ~~LT-234, LT-231, LT-244~~ (reviewed 2026-10-01). ~~LT-368~~ (their review follow-ups; reviewed 2026-10-01, follow-up LT-378 in BACKLOG). LT-247 parked to BACKLOG (ruling 2026-10-01: demand-gated, see its entry). The LT-245 spike (reviewed 2026-10-01, [ADR 0045](adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md)) closes the track: ~~LT-379 → LT-380~~ (reviewed 2026-10-01, in DONE.md) replaced the hand selector cascades and the hand parse validation, per ADR 0045. Their review follow-ups ~~LT-382~~ (probe exclusivity through HTML tree correction) and ~~LT-384~~ (LTC026 false positives) are reviewed 2026-10-01, in DONE.md.
 - **B — typed IR (ADR 0040).** ~~LT-287, LT-288~~ (reviewed 2026-10-01). LT-287 lands
   before LT-274.
-- **C — conditions (ADR 0037).** LT-274 after LT-360, LT-230, LT-243 and LT-287. Then LT-276,
-  and LT-275 as the copy round. LT-275 also takes LT-359's copy, so there is one Tech Writer round.
+- **C — conditions (ADR 0037).** ~~LT-274 → LT-276~~ (reviewed 2026-10-02, in DONE.md) and
+  ~~LT-385~~ (reviewed 2026-10-02, in DONE.md — the three review miscompiles). Remaining:
+  LT-275 as the copy round (it also takes LT-359's copy, so there is one Tech Writer round),
+  LT-386 (the initial winner agrees with the client's first key), LT-388 (ADR 0037
+  amendments) and LT-389 (teaching).
 - **D — scoped CSS (ADR 0033).** LT-268 → LT-304 + LT-306 (one landing) → LT-248. It touches
   `css.ts`, the config and the example sheets, not the front ends, so it runs in parallel from
   day one.
@@ -68,7 +71,7 @@ and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, em
 both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-392.** Next free diagnostic code: LTC064 (LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-393.** Next free diagnostic code: LTC064 (LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -82,142 +85,7 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### B — Typed IR (ADR 0040; LT-287 before LT-274)
 
-### C — Reactive conditions (ADR 0037; LT-274 unblocked — LT-360, LT-230, LT-243, LT-287 reviewed)
-
-- [x] LT-274: Lower reactive conditions to template-cloned arms on both surfaces (ADR 0037 sub-designs 1–3 and 5) — reviewed ✓ **Gated on LT-360** (the template-emission interface fixes how the node carries a prop-dependent initial condition) **and on LT-230, LT-243, LT-287** (consolidation first, so the new node lands in one walk and on the settled IR).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) (✅ Accepted 2026-09-26; ADR 0017's amendment already recorded). A condition that reads a signal — `@if`/`@else`, `.tsx` ternary/`&&`, IIFE switch, `@switch`/`@case` with literal cases — lowers to inert arm `<template>`s plus the server-folded initial winner rendered live, and client-side to `reconcile()` over the new **current-arm-key source** (`Signal<string | null>`; ADR 0017 amendment). Arm keys are the named compile-time constants (`then`/`else`, `case:<literal>`; sub-design 2). Arm effects mount under keyedScopes with collector parity. Static conditions are unchanged — the Folded tier still renders the single winner and omits the rest, so byte-identity across tiers holds. Reactive conditions inside reconcile containers stay banned (LT-186's rule).
-  **Deliverable:** shared lowering in both front ends; arm extraction + initial-winner fold rules; the arm-key source form on `reconcile()`; diagnostics with channel/tier fields (dynamic `@case` value: compiler, tier 1 Prevented; reactive-if-in-reconcile-container: compiler, tier 1); goldens and parity extension.
-  **Check:** byte-identical skeletons across all three tiers for reactive-if components; both-surface parity for renders *and* diagnostics; equivalence-audit pins refreshed (initial arm adoption is a new designed connect-diff class); M14 bundle budget re-measured; compile-warning baseline 0.
-  **IR requirement (LT-360, [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md) s4):** one `conditional` node serves server-known and reactive conditions. It carries `mode: 'server' | 'reactive'`, the keyed arms, and an **initial winner** kept separate from the client thunk (the thunk stays a span only `emit-client` reads). The initial winner is one of three forms: `{ constant: key | null }`; `{ select: { when, key }[], otherwise: key | null }`, where `when` is a portable expression over server args (ADR 0043 s1); or a `fold` marker, meaning SSG folds through the value harness as today and a template target routes Static. Derive the initial expression by substituting signal initializers back to server args, sharing `fold-inputs`' analysis. A literal initializer, a `requestContext` fallback, or a Parser-backed `host.<prop>` read fed by a compose-site literal folds to `constant`. An unresolvable one gives no live arm (ADR 0037 s5). A non-portable one gives `fold`. SSG output is unchanged by this shape: goldens move only where ADR 0037 itself moves them. No template target consumes the node yet; LT-257 does.
-  **Coordinate:** the IR node rides LT-235's discriminated-union session; the boundary switch is LT-276, sequenced after this; diagnostic copy is LT-275.
-  **Rider (LT-383 review, 2026-10-01):** LTC061 refuses every `<template>` that reaches shared `lowerElement`, so the template-cloned arms must be emitter output (ADR 0043), never `element` IR nodes tagged `template`. The selector probe likewise never sees them: it materializes authored markup only.
-  **Done 2026-10-02 (pending review ⏳ — public API: `reconcile()` arm form).** Runtime:
-  `reconcile(container, templates, keyThunk, bindArm)` in `src/helpers/reactive.ts`, dispatched
-  by `isFunction(source)`; the arm sits right before the first template, the first run adopts
-  a preceding element whose `data-key` names an arm (replaces it when it is not current),
-  re-entry clones afresh, `bindArm` mounts with collector parity (shared `mountScope` with the
-  list form). IR: `if`/`switch` became one `conditional` node (`construct`, `mode`, keyed
-  `arms`, `initial`); `initial-winner.ts` resolves `initial` at assembly (constant / portable
-  `select` / `fold`, `constant: null` when no phase can evaluate the test). Lowering: shared
-  `validateCondition` returns the mode, `finishIf`/`finishSwitch` key the arms (LTC062 for a
-  dynamic or duplicate reactive `@case`). Analysis: `handleReactiveConditional` plans an
-  `arms` effect (container query, arm-set index, per-arm locals/effects via
-  `emitConstructEffects`), `validateArmSetPlacement` refuses arm sets inside other branches,
-  composed content or server-data loop bodies, LTC063 in a reactive list's container; a
-  `first()` into an arm is refused; an unfoldable test is an LTC034-origin routing signal.
-  Emitters: the winner live with `data-key`, then `<template data-arms data-key>` per
-  rendering arm; the client's key thunk and `bindArm` branches. **Gates:** corpus artifacts
-  byte-identical (110/110), census 30/5/0 and warning baseline 0 unchanged (no corpus
-  component uses a reactive condition, so the equivalence-audit pins are unchanged; the
-  designed connect diff of adoption — empty — is pinned in
-  `reactive-conditions.test.ts` through the realm, with live switching, re-entry and
-  listener disposal); tier skeletons byte-identical across the three tiers; both-surface
-  parity for renders and diagnostics (`diagnostic-parity.test.ts`'s CONDITIONS flipped to
-  the new codes; the four retired LTC005 shapes now pinned as clean compiles). M14: minimal
-  9038 → 9031 B, core unchanged, full bundle 17893 → 18131 B gz. Server 2737 pass, src 501
-  pass. Deviations and follow-ups: resolved in the review below.
-  **Review (Architect, 2026-10-02, adversarial):** approved with follow-ups; stays in TODO until
-  LT-385 is reviewed, then both entries compact to DONE together. Rulings: the arm-key source
-  is a thunk `() => string | null` (cause-effect signals hold no `null`), the templates an
-  iterable; the arm key set gains `default`; the first-landing placement and shape limits
-  (direct child of an element, one root element per arm, no `first()` into an arm, a boundary
-  outside other branches) stand as scope, recorded in ADR 0037 by LT-388; an unfoldable test
-  reusing the LTC034 routing origin stands. Three verified miscompiles block release: sibling
-  arm sets steal each other's templates, the `@if` key thunk drops the test's parentheses,
-  losing-arm templates evaluate reactive sites under the wrong condition (LT-385). Initial
-  winner/client disagreement: LT-386. Teaching and API docs: LT-389. Others: LT-387,
-  LT-390, LT-391.
-
-- [x] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4) — reviewed ✓ (LT-303, its former sequencing gate, landed 2026-09-25.)
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md), owner ruling 2026-09-21: `@try`/`@pending`/`@catch` arms become templates plus the adopted winner, keyed `ok`/`nil`/`err`. Retires the fieldset wrappers `emit-server.ts` places at every arm root, the client's `hidden`+`disabled` sweep, and the LT-086 `.parentElement` addressing — all of it existed only because both arms were live simultaneously. The ok arm's resolved-value text and the err arm's bound catch-param text move into the per-arm mount. LT-211's no-stale-arm ruling and the `isPending` idiom are untouched; LT-078's tree-shaking question is re-pinned against templates. ADRs 0024 s13, 0032 s2 and 0041 already state the target mechanism; the teaching that still describes toggled arms (AGENTS.md's boundary bullet, `HOST_PROFILE.md`, the le-truc skill) flips with this task — Tech Writer rider.
-  **Depends on** LT-274 (the mechanism).
-  **Check:** every boundary-using corpus component's goldens refreshed; a form-submission negative test (named controls in non-active arms cannot submit — structural now, pinned anyway); audit pins; baseline 0.
-  **Done 2026-10-02 (pending review ⏳).** The boundary renders its winner live keyed
-  `ok`/`nil`/`err` beside three `<template data-arms data-key>` arms (one arm-set numbering
-  with reactive conditionals, `hasArmSet`/`armSetOf` in `walk.ts`); the client is
-  `reconcile()`'s arm form with a key thunk over the task state (`UnsetSignalValueError` →
-  `nil`, other throw → `err`, else `ok` — `match()`'s precedence) and `ok`/`err` mounts that
-  write the value and the error text. Retired: the fieldset wrappers, the `hidden`+`disabled`
-  sweep, `.parentElement` addressing, the `async` plan kind and its three root queries; the
-  probe and `walk.ts`'s `@pending` policy count boundary arms as exclusive. The boundary now
-  needs an addressable containing element outside other branches (LTC007/LTC005 — it
-  previously compiled there with no client half at all). **No corpus component uses the
-  boundary** (form-listbox mentions it in a comment only; lazyload is hand-written), so no
-  corpus golden or audit pin moved; the feature, parity and §4.4 fixtures were refreshed, the
-  form-submission pin runs `FormData` over the served markup in jsdom (only the live arm's
-  control submits), and the realm test drives pending → ok → err. Teaching flipped:
-  AGENTS.md (boundary bullet + a reactive-conditions bullet), `HOST_PROFILE.md`,
-  ARCHITECTURE.md (arm form), COMPILER_SPEC.md §3.4 row. **Not flipped: the le-truc skill**
-  — `.agents/skills/` is write-denied in this sandbox (Tech Writer rider, LT-275). LT-078's
-  re-pin: see the review.
-  **Review (Architect, 2026-10-02):** approved; compacts to DONE with LT-274. LTC035 retires
-  (LT-275). LT-078 re-pinned in BACKLOG. The boundary's construct rules stay as landed;
-  widening them is LT-334's design question.
-
-- [ ] LT-385: Arm-set correctness from the LT-274/LT-276 review (blocks release).
-  **Skill:** le-truc-dev
-  **Context:** Three miscompiles, each reproduced by the review. (a) **Adoption steals a
-  sibling set's template:** `reconcileArms` (`src/helpers/reactive.ts`) adopts the anchor's
-  `previousElementSibling` whenever its `data-key` names an arm, and arm templates carry
-  `data-key` too. Two adjacent arm sets where the second renders no live arm
-  (`@if (a.get()) {…}@if (b.get()) {…}`, b false; two `{x && <a/>}` in `.tsx`) — set 1
-  adopts set 0's template, removes it, and set 0's next flip throws `NotFoundError` from
-  `insertBefore`. Never adopt a `<template>` or any `[data-arms]` element. The unit tests
-  missed it because FakeElement's `insertBefore` appends on a missing reference node — make
-  it throw as the DOM does, and add a two-adjacent-sets test plus a realm test. (b) **The
-  `@if` key thunk drops the test's parentheses:** `emitArms` (`emit-client.ts`) emits
-  `() => (${testText} ? 'then' : 'else')`; a ternary, comma or assignment test returns a
-  non-key. Emit `(${testText})`. (c) **Losing-arm templates render reactive sites under the
-  wrong condition:** `emitReactiveConditional` (`emit-server.ts`) renders every arm's
-  content with initial values, so the null-guard idiom
-  (`@if (user.get()) { <p>{() => user.get()!.name}</p> }`, user null) throws at render on a
-  Folded component. **Ruling:** inside an arm `<template>`, a client-written site (thunk
-  text, reactive attribute, class/style map entry) renders as it would with no value — empty
-  text, attribute omitted; server-known content (args, `t.`, static markup) bakes. The arm's
-  mount writes the rest on enter. The live winner keeps its values. Same rule for boundary
-  templates. Also: (d) **case keys are value-typed:** `case:${JSON.stringify(value)}`, so
-  `@case 1` and `@case '1'` are distinct (today both are `case:1` and LTC062 refuses them,
-  against `ir.ts`'s `ArmTemplate` doc); `1.0` and `1` stay one key, as `===` says. (e)
-  `reconcileArms` snapshots the templates once (`Array.from`) — a generator is exhausted on
-  reconnect today; and warns under DEV_MODE when adoption replaces a server winner whose
-  key is not current (a hydration disagreement, as the list form warns). (f) `mountScope`
-  disposes the partial scope when `bind` throws (shared with the list form; effects created
-  before the throw run on after the arm leaves). (g) Re-pin the tier byte-identity and
-  `select` tests in `reactive-conditions.test.ts` on a component that compiles: they use
-  `createCell(start > 2)`, which a full compile refuses with LTC005.
-  **Check:** each case pinned by a failing-first test; corpus artifacts byte-identical;
-  baseline 0.
-  **Done 2026-10-02 (pending review ⏳).** All seven items landed, each pinned failing-first
-  (verified by re-running the new tests against the pre-fix sources). (a) `reconcileArms`
-  refuses `<template>`/`[data-arms]` in adoption; FakeElement's `insertBefore` throws
-  `NotFoundError` on a missing reference; adjacent-sets unit test + realm test
-  (`c-el-adjacent.client.ts`, the boundary describe owns `c-el.client.ts` in the module
-  cache). (b) `((${testText}))` in the `@if` key thunk. (c) an `inArmTemplate` flag on
-  `EmitContext` makes both conditional and boundary templates bake lazy text, reactive
-  attributes and class/style maps empty — the live winner keeps its values; the boundary
-  face turned out already structural (no legal client-written site beyond the recognized
-  value child — see NOTES.md), so its pin is a render test of the already-true emptiness.
-  (d) `finishSwitch` keys `case:` + the literal's JSON; `ir.ts`'s doc and COMPILER_SPEC.md
-  §3.5's arm-key row updated; the parity duplicate pin moved to `@case 1`/`@case 1.0` (the
-  real one-key pair now). (e) the template snapshot is taken once outside the descriptor
-  (a one-shot generator survives a reconnect — unit test models the factory-once
-  lifecycle); the DEV_MODE hydration-disagreement warn fires once, on the first flip that
-  replaces an adopted winner. (f) `mountScope` swallows the bind/activation throw only to
-  hand the scope's real dispose back, disposes the partial scope, rethrows — the leak shape
-  is a descriptor that throws during ACTIVATION after an earlier one registered (the test
-  uses a `pass()` to a foreign element); queued-but-unactivated descriptors were never
-  leaky. (g) both `createCell(start > 2)` fixtures re-pinned as
-  `createCell(mode === 'wide')` over a `data-mode` DOM site — clean through the full
-  pipeline (the string comparison keeps the generated client typecheckable; the number
-  spelling seeded `('') > 2`, a tsc refusal). Gates: corpus artifacts byte-identical
-  (regenerated before/after and diffed); census and warning baselines unchanged; src 506
-  pass (was 501), server 2747 pass, 0 fail; `tsc -p tsconfig.build.json` and the full
-  `typecheck` clean; biome clean on src and server. The DEV_MODE warn is a
-  `console.warn`, not an error class — no Tech Writer handoff owed; COMPILER_SPEC.md's
-  key row and the `reconcile()` JSDoc ride with this task, the rest of the teaching is
-  LT-389's.
+### C — Reactive conditions (ADR 0037; LT-274, LT-276 and LT-385 reviewed 2026-10-02, in DONE.md; remaining: LT-275, LT-386, LT-388, LT-389)
 
 - [ ] LT-386: The initial winner agrees with the client's first key.
   **Skill:** le-truc-dev

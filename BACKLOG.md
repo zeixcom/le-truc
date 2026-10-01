@@ -557,6 +557,24 @@ records the actual net delta.
   realm's connect clones an arm into the served HTML. Record suppressed arm sets and strip
   the realm-cloned arm before serialization, as other limb-(b) sites are.
 
+- [ ] LT-392: Regenerate the declared types and gate an arm-set client against them (LT-385 review finding).
+  **Skill:** le-truc-dev
+  **Context:** `types/` (the published `types/index.d.ts` graph) is a build artifact last
+  regenerated at LT-361 — it declares only `reconcile()`'s two list-form overloads, so
+  LT-274's arm form is absent from the declared surface. No corpus component emits an
+  arm-set client, so `client.golden.test.ts`'s emit-then-check never exercised one; the
+  first ever (LT-385's (g) fixture, `createCell(mode === 'wide')` over a `data-mode` DOM
+  site) fails the golden tsc invocation with "Overload 1 of 2" — the arm-form overload does
+  not resolve against the declared types. LT-389 already owns regenerating
+  `types/src/helpers/reactive.d.ts` as a docs deliverable; this task adds the missing GATE
+  so the declared surface cannot drift from the emitted clients again: regenerate `types/`
+  from the current sources, then pin an emit-then-check of an arm-set client (the (g)
+  fixture is the candidate) in the same shape as `client.golden`'s, so it runs on every
+  suite pass rather than only when a docs build happens to refresh the artifact.
+  **Check:** the arm-set client typechecks against the regenerated declared types under
+  the golden invocation; `check:contract` stays green; run the full `build` to regenerate
+  `types/` and diff for any other stale-surface drift landing in the same pass.
+
 - [ ] LT-246: Make tier contamination legible at the compose edge — the census names the re-routing edge.
   **Skill:** le-truc-dev
   **Context:** Reflection §3's recommendation, promoted under the framework premise: the
