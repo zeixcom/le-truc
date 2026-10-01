@@ -14,10 +14,8 @@
  * - `<lt-group>` = mutually exclusive arms (an `@if`, an `@switch`, a
  *   `@try` without `@pending`): count = MAX over `<lt-arm>` children;
  * - coexisting content (a `@try` WITH `@pending`, an arm's interior)
- *   sums, as the DOM itself does;
- * - `<lt-pending>` marks the `@pending` arm: transparent for counting
- *   and match-existence (which include it), SKIPPED by the compose
- *   queries (which — per the current cascades — never enter it);
+ *   sums, as the DOM itself does — LT-230's recorded `@pending` policy:
+ *   every walk enters the arm, there is no skipped-arm divergence;
  * - a compose site becomes an empty `<lt-compose
  *   data-lt-compose-source="…">` placeholder: it has no DOM existence
  *   until render, it contributes 0 to raw-element counts, and it is
@@ -136,7 +134,6 @@ const VOID_TAGS = new Set([
 const LT_GROUP = 'lt-group'
 const LT_ARM = 'lt-arm'
 const LT_SUM = 'lt-sum'
-const LT_PENDING = 'lt-pending'
 const LT_COMPOSE = 'lt-compose'
 const SOURCE_ATTR = 'data-lt-compose-source'
 
@@ -216,13 +213,12 @@ const serializeNodes = (
 			case 'try': {
 				if (node.pendingChildren !== null) {
 					// Async boundary: all three arms coexist (hidden-toggled) —
-					// sum, pending wrapped so compose queries can skip it.
+					// sum (LT-230's `@pending` policy: every walk enters the
+					// arm; there is no skipped pending arm to wrap).
 					out.push(`<${LT_SUM}>`)
 					serializeNodes(node.children, out)
 					serializeNodes(node.catchChildren, out)
-					out.push(`<${LT_PENDING}>`)
 					serializeNodes(node.pendingChildren, out)
-					out.push(`</${LT_PENDING}>`)
 					out.push(`</${LT_SUM}>`)
 				} else {
 					// Plain error boundary: body XOR catch.
@@ -283,7 +279,15 @@ const collectCompose = (nodes: readonly TemplateNode[], out: ComposeNode[]) => {
 				out,
 			)
 		else if (node.kind === 'try')
-			collectCompose([...node.children, ...node.catchChildren], out)
+			// LT-230's `@pending` policy: every walk enters the arm.
+			collectCompose(
+				[
+					...node.children,
+					...node.catchChildren,
+					...(node.pendingChildren ?? []),
+				],
+				out,
+			)
 	}
 }
 
@@ -306,7 +310,7 @@ const countIn = (node: P5Node, query: CompiledQuery): number => {
 	const name = node.tagName as string
 	if (name === LT_GROUP)
 		return Math.max(0, ...elementChildren(node).map(arm => countIn(arm, query)))
-	if (name === LT_ARM || name === LT_SUM || name === LT_PENDING)
+	if (name === LT_ARM || name === LT_SUM)
 		return elementChildren(node)
 			.map(child => countIn(child, query))
 			.reduce((a, b) => a + b, 0)
@@ -357,7 +361,6 @@ const countComposeIn = (node: P5Node, query: CompiledQuery): number => {
 			.reduce((a, b) => a + b, 0)
 	if (!isTag(node)) return 0
 	const name = node.tagName as string
-	if (name === LT_PENDING) return 0
 	if (name === LT_GROUP)
 		return Math.max(
 			0,
@@ -389,17 +392,7 @@ export const probeAllComposeNodes = (root: TemplateNode): ComposeNode[] => {
 	const { root: fragRoot, composeByEl } = fragForRoot(root)
 	return cssSelect
 		.selectAll(`[${SOURCE_ATTR}]`, elementChildren(fragRoot), { adapter })
-		.filter(n => !isInsidePending(n))
 		.map(n => composeByEl.get(n) as ComposeNode)
-}
-
-const isInsidePending = (node: P5Node): boolean => {
-	let current: P5Node | null | undefined = node.parentNode
-	while (current) {
-		if (current.tagName === LT_PENDING) return true
-		current = current.parentNode
-	}
-	return false
 }
 
 export const probeComposeNodesBySource = (
