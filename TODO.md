@@ -35,7 +35,7 @@ parallel.
   and records it as an ADR. It is architect work, so it runs alongside track A from day one.
   It gates LT-274.
 - **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229 → LT-232~~ (reviewed 2026-10-01). ~~LT-366 → LT-243 → LT-367~~ (reviewed 2026-10-01). ~~LT-230~~ (reviewed 2026-10-01; its `analysis/selectors.ts` remainder rides LT-245). ~~LT-227 → LT-289~~ (reviewed 2026-10-01).
-  ~~LT-234, LT-231, LT-244~~ (reviewed 2026-10-01). ~~LT-368~~ (their review follow-ups; reviewed 2026-10-01, follow-up LT-378 in BACKLOG). LT-247 parked to BACKLOG (ruling 2026-10-01: demand-gated, see its entry).
+  ~~LT-234, LT-231, LT-244~~ (reviewed 2026-10-01). ~~LT-368~~ (their review follow-ups; reviewed 2026-10-01, follow-up LT-378 in BACKLOG). LT-247 parked to BACKLOG (ruling 2026-10-01: demand-gated, see its entry). The LT-245 spike (reviewed 2026-10-01, [ADR 0045](adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md)) closes the track: **LT-379 → LT-380** replace the hand selector cascades and the hand parse validation, per ADR 0045.
 - **B — typed IR (ADR 0040).** ~~LT-287, LT-288~~ (reviewed 2026-10-01). LT-287 lands
   before LT-274.
 - **C — conditions (ADR 0037).** LT-274 after LT-360, LT-230, LT-243 and LT-287. Then LT-276,
@@ -43,7 +43,7 @@ parallel.
 - **D — scoped CSS (ADR 0033).** LT-268 → LT-304 + LT-306 (one landing) → LT-248. It touches
   `css.ts`, the config and the example sheets, not the front ends, so it runs in parallel from
   day one.
-- **Parallel slot.** LT-245 (spike), LT-358, LT-361.
+- **Parallel slot.** LT-358. ~~LT-245~~ (spike — reviewed 2026-10-01, ADR 0045, in DONE.md; its promotion is track A's LT-379 → LT-380) and ~~LT-361~~ (done ✓, in DONE.md).
 
 **Deliberately not here.** LT-257's build half, LT-254 and the rest of P1 stay behind P6, as
 ruled 2026-09-19. LT-246 waits for the census format to settle after LT-274. LT-355 (a composed
@@ -57,7 +57,9 @@ measurement (record it before the first change), except where LT-274, LT-276 or 
 change them by design, as those tasks state. The mechanical tasks (track A, LT-287, LT-288)
 leave goldens and parity byte-identical. The reflection's library swaps have landed
 (`@typescript-eslint/typescript-estree`, `eslint-visitor-keys`; `magic-string` was struck
-2026-10-01 — LT-247 parked, demand-gated), and the net
+2026-10-01 — LT-247 parked, demand-gated), css-select joins them through the materialized-probe
+selector engine (LT-379, [ADR 0045](adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md)),
+and the net
 line count of `server/compiler/` is recorded against the 27.0k baseline. An ADR fixes the
 target-emitter interface, including how a reactive condition's prop-dependent initial state is
 represented, and LT-274's `conditional` node carries that representation (LT-360). Reactive
@@ -66,7 +68,7 @@ and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, em
 both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-379.** Next free diagnostic code: LTC061 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-382.** Next free diagnostic code: LTC061 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -207,115 +209,17 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### Parallel slot
 
-- [x] LT-245: Spike `css-select` + `parse5` for the structural-uniqueness proof; a real selector parser for `selector-syntax.ts` if the pattern holds. **SPIKE DONE 2026-10-01 — GO ruled (qualified; two items below are owner rulings).**
+- [ ] LT-379: Promote the materialized-probe selector engine; retire the hand cascades (ADR 0045, LT-245 follow-up).
   **Skill:** le-truc-dev
-  **Context:** Reflection §5 table, rank 4 — and the one wave-3 substitution that needs a spike
-  before commitment. The structural-uniqueness proof (the moat: `first()` selector synthesis,
-  exclusivity, cardinality) currently walks the IR/template by hand in five near-identical
-  copies in `analysis/selectors.ts` (590 lines) that disagree on max-vs-sum and pending-arm
-  handling (COMPILER_REVIEW §2.4; the soil LT-221's probe grew in). **Alternative shape: parse
-  the markup the emitter itself produces** and query it with a real CSS engine (`css-select`;
-  parse5 is already a dep) — the same question answered with far less machinery, dissolving the
-  per-callsite re-litigation the hand walks cause. **Needs care, stated up front:** the proof is
-  over the template INCLUDING unrendered branches, so branch arms must be materialized for the
-  probe; and the proof reasons about constructs (compose sites, `@for` items) that have no
-  DOM-bytes existence until render — the spike must show the materialized-probe model covers
-  those before any GO. If the pattern holds, the same substitution covers
-  `selector-syntax.ts` + `parseSimpleSelector`'s subset via `postcss-selector-parser`/`css-what`
-  (~−250 lines) — the subset is currently the limiting factor on what `first()` can verify
-  (descendant combinators, `:not()` are "cannot verify"); a real parser widens verification and
-  shrinks code at once. Runtime neutrality (ADR 0038): the candidates must run under every
-  supported JS runtime (`check:portability`); browser loadability is not required.
-  **Handoff (LT-230 review, 2026-10-01):** LT-230 settled the `@pending` policy (every walk enters
-  the arm; with a pending arm the `@try` arms sum, without one body XOR catch is max) and routed the
-  flat collections (`allComposeNodes`, `composeNodesBySource`, `matchesUnder`). What remains for this
-  spike is the exclusivity arithmetic: `countForSelector`, `countComposeBySource`, and the
-  element-chain searches `enclosingIfOf`/`enclosingIfIn`. On NO-GO, keep them on `childNodes`;
-  either way they must follow the recorded pending policy.
-  **Deliverable:** spike findings + a GO/NO-GO ruling recorded here; if GO, implementation
-  tasks with the per-site behavior-preservation discipline the other swaps carry.
-  **Verification (spike):** the corpus's structural-uniqueness answers are reproduced
-  identically for all 22 components (a differential harness: old walks vs materialized probe);
-  goldens byte-identical; full gates.
-  **SPIKE RECORD (2026-10-01, le-truc-dev; run against yesterday's `selectors.ts` in commit
-  27f63224, re-verified at merge against the post-LT-230 tree):**
-  - **Harness:** `server/tests/compiler/spike/differential.test.ts` + `selector-probe.ts`
-    (spike code, not production). Probe = serialize the IR structurally to HTML (static attrs
-    only, all branches materialized, exclusivity encoded in wrapper elements), parse with
-    parse5, query with css-select@7 (devDependency; production if promoted). Wrappers:
-    `lt-group`/`lt-arm` = max over mutually exclusive arms (@if, @switch, @try without
-    @pending); coexisting content sums (@try WITH @pending — the async arms render
-    hidden-toggled), following LT-230's recorded `@pending` policy exactly (no skipped arm;
-    the pre-LT-230 compose-cascades-skip-pending divergence the first run mirrored is gone
-    with the wrapper that encoded it); a compose site is an empty
-    `<lt-compose data-lt-compose-source>` placeholder (no DOM existence until render; it
-    contributes 0 to raw-element counts and is addressed only through the marker). @for
-    outputs sit IN the root tree (verified for all 10 corpus loops), so items need no
-    materialization of their own — loop-scoped counting works by materializing the output
-    subtree alone, exactly as `resolveSelectorIn(output, …)` scopes today.
-  - **Result: zero mismatches**, twice: 39 corpus components (both surfaces), 265 elements,
-    23 control nodes, 10 loops, 31 compose sites, 392 count queries, every
-    `resolveSelector`/`selectorFor`/`resolveExclusiveSelectorIn` answer (incl. per-branch
-    and loop-scoped) identical. Synthetic pins cover what the corpus never exercises:
-    @switch arms, @try with and without @pending (the max-vs-sum crux: three same-tag arms
-    sum to 3), nested exclusivity, compose-in-branch, void elements, same-tag branch roots.
-    Negative check: turning the pending arm into an exclusive arm produces 7 loud
-    mismatches (`countForSelector(p) old=3 probe=1`) — the harness discriminates. Gates:
-    typecheck 0 errors, biome clean, full suite unchanged, goldens untouched (no production
-    code edited). Scope per the LT-230 handoff: the probe replaces exactly the remaining
-    exclusivity arithmetic (`countForSelector`, `countComposeBySource`) plus `matchesUnder`
-    and the two hand matchers; `enclosingIfOf`/`enclosingIfIn` are structural element-chain
-    searches with no matching inside — they stay hand-written (walk.ts routing) even on GO.
-  - **Engine findings:** the hand matchers DISSOLVE — `matchesSelector`'s one-clause
-    grammar, its load-bearing pairing with `discriminatorCandidates` (LT-124), and the
-    exclusivity recursions collapse into one materializer + one ~25-line aggregation walk
-    with wrapper cases; css-select matches synthesized selectors (tag, `.token` membership,
-    `#id`, `[attr="value"]`) identically to the hand matcher. `matchesUnder` is exactly
-    `probeCount > 0` (existence is exclusivity-invariant) — one css-select query. The
-    policy half (role → bare → discriminator order, authored-first, clean-before-excluded
-    emission, `mayMatchShape`'s composed-shapes guard) is unchanged policy, deliberately
-    copied verbatim into the spike; a GO promotes it in place. Compose
-    discriminator/shared-pass clause algebra (`composeDiscriminatorClause`,
-    `composeSharedPassClause`) is attr-map matching, not template walking — untouched by
-    the substitution. **Gotchas pinned:** css-select v7 needs a small parse5 adapter
-    (~60 lines; v7 dropped `findAll`/`findOne`/`existsOne`/`getParents`/`nextElementSibling`
-    from the Adapter interface) and its traversal SKIPS non-tag roots (query the
-    fragment's element children, not the fragment) and IGNORES `<template>` contents in
-    HTML mode (no corpus component authors one; a GO must neutralize or document this).
-    Runtime neutrality (ADR 0038): the probe is plain string + tree code over parse5 and
-    css-select, no realm/DOM globals — `check:portability` applies unchanged; css-select's
-    dependency closure (boolbase, css-what, domhandler, domutils, nth-check) is pure JS.
-  - **The one divergence class — HTML5 tree correction (owner ruling item 1):** parse5
-    parses like a browser, so content-model-violating authoring (`<p><div>…</div></p>`)
-    diverges: a real DOM has an implied empty third `<p>` (probe count 3) where the IR has
-    2 — pinned in `differential.test.ts`. The IR walk believes the authored nesting; the
-    probe believes the browser. The corpus never authors such nesting (zero mismatches),
-    so today this is latent-unsoundness documentation, not a behavior change; a GO must
-    rule browser-faithful (recommended: the proof's premise is "counting matches in the
-    probe is counting matches in the DOM") or neutralize correction at materialization
-    (hard in parse5; trivial with htmlparser2, which is NOT content-model-aware — but that
-    adds a parser).
-  - **Selector widening (owner ruling item 2):** css-what (a css-select dep, pure JS)
-    parses every shape `parseSimpleSelector`/`selector-syntax.ts` decide by hand. Probed:
-    it THROWS on the genuinely malformed (empty comma groups, unclosed brackets/parens,
-    successive combinators) but tolerates shapes a browser rejects (trailing combinator,
-    lone `>`, empty string) and does not validate pseudo-class names — so it replaces
-    `selector-syntax.ts`'s ~170 hand rules with parse + a small post-check, and subsumes
-    `parseSimpleSelector` entirely: authored `first()` selectors could be verified by
-    querying the SAME probe (descendant combinators, `:not()`, attribute operators —
-    today "cannot verify"). CAVEAT: child/sibling combinators (`>`, `+`, `~`) break across
-    the arm wrappers — descendant matching is wrapper-transparent, sibling/child is not;
-    widening verification should land in steps (one-clause now, descendants next,
-    sibling/child last, if ever).
-  - **RULING: GO.** Promotion shape (per-site behavior-preservation like the other
-    swaps): (a) move the materializer + aggregation walk + adapter into
-    `server/compiler/analysis/`, promote css-select to a production dependency, and
-    replace `countForSelector`/`countComposeBySource`/`matchesUnder` +
-    `matchesSelector`/`mayMatchShape`'s grammar with the probe while keeping the policy
-    code — the differential harness becomes the pin, goldens + parity byte-identical;
-    (b) the css-what swap of `selector-syntax.ts` + `parseSimpleSelector` is its own task
-    AFTER (a), gated on ruling item 2. Task splitting and IDs are the Architect's call.
+  **Context:** [ADR 0045](adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md) (Accepted): the structural-uniqueness proof runs on a materialized probe — serialize the template IR to HTML (static attrs only; mutually exclusive arms wrapped, max over arms; coexisting arms sum per LT-230's `@pending` policy; compose sites as `<lt-compose data-lt-compose-source>` placeholders; @for outputs already sit in the tree), parse with parse5, and answer matching/counting/existence with css-select. The spike proved the answers identical and left a runnable differential harness in `server/tests/compiler/spike/` (39 components, 265 elements, 392 count queries, zero mismatches; synthetic pins for `@switch`, `@try`±`@pending` max-vs-sum, nested exclusivity, compose-in-branch, void elements, HTML5 tree correction; negative check discriminates). Move the materializer + aggregation walk + parse5 adapter into `server/compiler/analysis/` (beside or absorbed into `selectors.ts`), promote css-select to a production dependency (M28 justification in ADR 0045 Decision 3), and REPLACE `countForSelector`, `countComposeBySource`, `matchesUnder`, `matchesSelector`, and `mayMatchShape`'s grammar parse with the probe. KEEP the policy code in house: `buildSelector`/`discriminatorCandidates`/`authoredSelectorOf`/`selectorCandidates` ordering, the compose clause algebra (`composeStaticAttrs`/`composeDiscriminatorClause`/`composeSharedPassClause`), and the `enclosingIfOf`/`enclosingIfIn` element-chain searches (structural, no matching inside). The harness moves with the engine and becomes the permanent pin.
+  **Gotchas pinned by the spike:** css-select v7 needs the small parse5 adapter (~60 lines — v7 dropped `findAll`/`findOne`/`existsOne`/`getParents`/`nextElementSibling` from the Adapter interface; `getAttributeValue` returns `undefined`, not `null`; `isTag` must be a TS type predicate). Its traversal SKIPS non-tag roots (query the fragment's element children, not the fragment) and IGNORES `<template>` element contents in HTML mode — no corpus component authors one, so the probe asserts their absence and fails loud if one appears. Browser-faithful counting (ADR 0045 Decision 2) is behavior-identical on valid authoring; the `<p><div>…</div></p>` divergence stays pinned as documentation of the one divergence class.
+  **Channel/tier:** no new runtime check, no diagnostic change — compiler-internal (ADR 0028 n/a).
+  **Check:** differential harness green as a permanent pin; goldens + render/diagnostic parity byte-identical; warning baseline 0; tier census unchanged; typecheck; `check:portability` 3/3 (pure-JS closure per ADR 0045); full server suite. Update `selectors.ts`'s module doc and the LE_TRUC_COMPILER.md §7 sentence that cites the engine; flag both for the next one-voice Tech Writer pass if the wording moved.
 
+- [ ] LT-380: Swap `selector-syntax.ts` and `parseSimpleSelector` onto css-what (ADR 0045 Decision 5; after LT-379).
+  **Skill:** le-truc-dev
+  **Context:** css-what (already in the dependency closure once LT-379 promotes css-select) parses every shape the ~170 hand rules in `selector-syntax.ts` and `parseSimpleSelector`'s regex subset decide today. Behavior contract, per `selector-syntax.ts`'s own asymmetry: a false positive — rejecting a string a browser accepts — fails a build over working markup and is unacceptable; a false negative — passing a browser-invalid string — merely leaves the Tier 2 backstop (the runtime `InvalidSelectorError`) doing its job. Probed (LT-245): css-what THROWS on empty comma groups, unclosed brackets/parens and successive combinators; TOLERATES a trailing combinator, a lone `>` and the empty string (the empty string must be special-cased — it parses to zero selectors, not a throw); it does not validate pseudo-class names, so today's unknown-pseudo rule keeps its list-based form. `parseSimpleSelector` keeps its current VERIFIABLE subset — the swap changes how it parses, not what it verifies (widening is LT-381 in BACKLOG, gated). Delete the hand rules the swap subsumes; keep the "cannot verify ≠ malformed" distinction intact.
+  **Check:** existing `selector-syntax`/first-refs tests pass unchanged; new pins for the tolerated shapes matching today's decisions; goldens + parity byte-identical; warning baseline 0; typecheck; full server suite. No diagnostic copy changes (LTC026's wording stands).
 - [ ] LT-358: LT-189 review follow-ups — coverage and signature gaps behind the reworded diagnostics.
   **Skill:** le-truc-dev
   **Context:** Three gaps in the LT-189 diff, none a copy question. (a) The `.tsx`
@@ -335,7 +239,3 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   template; the page owns script loading. Add a `diagnostic-parity.test.ts` case. LTC057/LTC058
   are reserved for LT-257, so take LTC056 here. Copy goes to Tech Writer through LT-359's round.
 
-- [x] LT-361: Teach `sanitizeHtml` and the fail-closed `truc:html` default where users read (LT-138 handoff). — done ✓
-  **Skill:** tech-writer
-  **Changed:** `src/bindings.ts` JSDoc (`configureHtmlSanitizer` — once per realm, DOMPurify-over-jsdom at build / plain in the browser, raw-passthrough-vs-fail-closed split; `sanitizeHtml` — Trusted-Types-CSP throw-at-sink note); `server/compiler/HOST_PROFILE.md` `truc:html` bullet (fail-closed wrapper, once per realm); `.agents/skills/le-truc/references/effects.md` (full `sanitize` option, `truc:html` routing, CSP note), `anti-patterns.md` (`sanitize: sanitizeHtml` fix pattern), `errors.md` (Trusted Types row — unconfigured `truc:html` throws correctly); `.agents/skills/le-truc-dev/references/source-map.md` (bindings.ts export list). The `api.md` nav entry is generated and appeared on rebuild; the JSDoc was already in place from the API pass.
-  **Check:** `bun run build:docs` ✓, `check:links` ✓ (682 links resolve); generated `docs-src/api/functions/sanitizeHtml.md` exists.
