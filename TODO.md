@@ -123,7 +123,14 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   s10 composition, s13 async boundaries, and the supported subset is ADR 0024 as a whole (s1). The
   section numbers already match; only the number is wrong. Sweep `diagnostics.ts`, the call sites, `errors.md` and the CHANGELOG
   line. (d) ADR 0028's inventory table: add LTC055 and the LTC053 loop-root case, via
-  `adr-keeper`. (e) Carry LT-356's copy rider here.
+  `adr-keeper`. (e) Carry LT-356's copy rider here. (f) **LT-358's rider (2026-10-01):**
+  finalize LTC056's `<script>` refusal message (first draft in `scriptElementInTemplate` —
+  condition: every `<script>`, whatever its `type`, inside a component template on both
+  surfaces; compiler channel, tier 1 Prevented), the boundary-as-loop-root rule's new
+  `.tsrx` spelling in the same LTC053 message (`wording.boundary`/`wording.loop` now
+  parameterize it), and the LTC050/record-spelled-`t` rewordings' propagation —
+  `errors.md`, the skills, ADR 0028's inventory rows for all of it, and AGENTS.md's
+  serverOnlyNames-adjacent sentences if the mechanism wording moves.
 
 ### D — Scoped CSS (ADR 0033; LT-268 → LT-304 + LT-306 → LT-248)
 
@@ -209,19 +216,73 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### Parallel slot
 
-- [ ] LT-379: Promote the materialized-probe selector engine; retire the hand cascades (ADR 0045, LT-245 follow-up).
+- [x] LT-379: Promote the materialized-probe selector engine; retire the hand cascades (ADR 0045, LT-245 follow-up).
   **Skill:** le-truc-dev
+  **Done 2026-10-01 (pending review ⏳; 58f40885).** The engine is
+  `server/compiler/analysis/probe.ts` (materializer + aggregation walk + the ~60-line parse5
+  adapter); `selectors.ts` keeps the policy — `countForSelector`, `countComposeBySource`,
+  `matchesUnder`, `allComposeNodes` delegate to the probe and `matchesSelector` is deleted
+  (matching is css-select's; `SELECTOR_GRAMMAR` survives only as `authoredSelectorOf`'s
+  verifiable-subset gate). `mayMatchShape` parses with css-what, same conservative shape
+  rule. Two decisions for the reviewer: (1) an unparseable query counts 0 / matches nothing
+  (the old grammar's "unparsed" answer), so a synthesized candidate with a `"` in an attr
+  value falls through instead of crashing the build; (2) the probe **fails loud** on an
+  authored `<template>` (css-select's HTML mode silently skips its content), so loops.ts's
+  collision check became a structural tag scan moved BEFORE any selector resolution to keep
+  the diagnostic reachable — a non-loop component authoring `<template>` now hits the
+  internal tripwire instead of the old silent miscount (NOTES.md, diagnostic follow-up).
+  css-what also joined the dependencies directly (LT-379's `mayMatchShape` imports it, so
+  LT-380's "already in the closure" arrived one task early; both ^8.0.0, matching
+  css-select's own). The harness is the permanent pin `probe-differential.test.ts` (corpus
+  39/265/392 + synthetics, zero mismatches; `<p><div>` divergence pinned as the one
+  designed class). Gates: goldens/parity/census byte-identical, warning baseline 0,
+  typecheck, `check:portability` 3/3, full server suite (2688 pass). Wording moved in
+  LE_TRUC_COMPILER.md §7 (the selector-uniqueness invariant paragraph), the
+  `analysis/selectors.ts` + `analysis/probe.ts` module-table rows, and walk.ts's
+  authorized-exceptions list — flag all three for the next one-voice Tech Writer pass.
   **Context:** [ADR 0045](adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md) (Accepted): the structural-uniqueness proof runs on a materialized probe — serialize the template IR to HTML (static attrs only; mutually exclusive arms wrapped, max over arms; coexisting arms sum per LT-230's `@pending` policy; compose sites as `<lt-compose data-lt-compose-source>` placeholders; @for outputs already sit in the tree), parse with parse5, and answer matching/counting/existence with css-select. The spike proved the answers identical and left a runnable differential harness in `server/tests/compiler/spike/` (39 components, 265 elements, 392 count queries, zero mismatches; synthetic pins for `@switch`, `@try`±`@pending` max-vs-sum, nested exclusivity, compose-in-branch, void elements, HTML5 tree correction; negative check discriminates). Move the materializer + aggregation walk + parse5 adapter into `server/compiler/analysis/` (beside or absorbed into `selectors.ts`), promote css-select to a production dependency (M28 justification in ADR 0045 Decision 3), and REPLACE `countForSelector`, `countComposeBySource`, `matchesUnder`, `matchesSelector`, and `mayMatchShape`'s grammar parse with the probe. KEEP the policy code in house: `buildSelector`/`discriminatorCandidates`/`authoredSelectorOf`/`selectorCandidates` ordering, the compose clause algebra (`composeStaticAttrs`/`composeDiscriminatorClause`/`composeSharedPassClause`), and the `enclosingIfOf`/`enclosingIfIn` element-chain searches (structural, no matching inside). The harness moves with the engine and becomes the permanent pin.
   **Gotchas pinned by the spike:** css-select v7 needs the small parse5 adapter (~60 lines — v7 dropped `findAll`/`findOne`/`existsOne`/`getParents`/`nextElementSibling` from the Adapter interface; `getAttributeValue` returns `undefined`, not `null`; `isTag` must be a TS type predicate). Its traversal SKIPS non-tag roots (query the fragment's element children, not the fragment) and IGNORES `<template>` element contents in HTML mode — no corpus component authors one, so the probe asserts their absence and fails loud if one appears. Browser-faithful counting (ADR 0045 Decision 2) is behavior-identical on valid authoring; the `<p><div>…</div></p>` divergence stays pinned as documentation of the one divergence class.
   **Channel/tier:** no new runtime check, no diagnostic change — compiler-internal (ADR 0028 n/a).
   **Check:** differential harness green as a permanent pin; goldens + render/diagnostic parity byte-identical; warning baseline 0; tier census unchanged; typecheck; `check:portability` 3/3 (pure-JS closure per ADR 0045); full server suite. Update `selectors.ts`'s module doc and the LE_TRUC_COMPILER.md §7 sentence that cites the engine; flag both for the next one-voice Tech Writer pass if the wording moved.
 
-- [ ] LT-380: Swap `selector-syntax.ts` and `parseSimpleSelector` onto css-what (ADR 0045 Decision 5; after LT-379).
+- [x] LT-380: Swap `selector-syntax.ts` and `parseSimpleSelector` onto css-what (ADR 0045 Decision 5; after LT-379).
   **Skill:** le-truc-dev
+  **Done 2026-10-01 (pending review ⏳; 35799718).** `malformedSelectorReason` maps
+  css-what's throw classes onto the reason strings LTC026 has always produced and keeps
+  post-checks for the two shapes css-what tolerates but CSS forbids (trailing combinator,
+  lone leading one); the empty string is special-cased before the parse. Throws outside the
+  mapped classes stay `null` — undecidable, not malformed — and unknown pseudo names stay
+  undecided (the task text's "unknown-pseudo rule" never existed as a list; the module kept
+  NOT deciding them, now stated in its doc). `parseSimpleSelector` keeps its VERIFIED SUBSET
+  exactly: token/tag regex post-checks, hash-vs-explicit-`[id]` split (css-what marks the
+  hash spelling `ignoreCase: 'quirks'`), single-quoted/unquoted/`i`-flagged values refused,
+  and no whitespace outside a quoted value (css-what keeps such spaces in the token or
+  value, so the check is small). Existing selector-syntax/first-refs tests pass unchanged;
+  new pins in `selector-syntax.test.ts` and `first-refs.test.ts`. LTC026's wording stands.
   **Context:** css-what (already in the dependency closure once LT-379 promotes css-select) parses every shape the ~170 hand rules in `selector-syntax.ts` and `parseSimpleSelector`'s regex subset decide today. Behavior contract, per `selector-syntax.ts`'s own asymmetry: a false positive — rejecting a string a browser accepts — fails a build over working markup and is unacceptable; a false negative — passing a browser-invalid string — merely leaves the Tier 2 backstop (the runtime `InvalidSelectorError`) doing its job. Probed (LT-245): css-what THROWS on empty comma groups, unclosed brackets/parens and successive combinators; TOLERATES a trailing combinator, a lone `>` and the empty string (the empty string must be special-cased — it parses to zero selectors, not a throw); it does not validate pseudo-class names, so today's unknown-pseudo rule keeps its list-based form. `parseSimpleSelector` keeps its current VERIFIABLE subset — the swap changes how it parses, not what it verifies (widening is LT-381 in BACKLOG, gated). Delete the hand rules the swap subsumes; keep the "cannot verify ≠ malformed" distinction intact.
   **Check:** existing `selector-syntax`/first-refs tests pass unchanged; new pins for the tolerated shapes matching today's decisions; goldens + parity byte-identical; warning baseline 0; typecheck; full server suite. No diagnostic copy changes (LTC026's wording stands).
+
 - [ ] LT-358: LT-189 review follow-ups — coverage and signature gaps behind the reworded diagnostics.
   **Skill:** le-truc-dev
+  **Done 2026-10-01 (pending review ⏳).** All four landed. (a) Pinned on `.tsx`
+  (block + expression bodies, `tsx/parity.test.ts`) and ruled **parity**: `.tsrx`'s
+  `lowerFor` now raises the same LTC053 for an `@try` statement where the `@for`
+  body's output belongs (it fell to the generic non-output-statement LTC005, whose
+  fix is wrong for a boundary); `diagnostic-parity.test.ts` case; the builder takes
+  `SurfaceWording` (existing `boundary`/`loop` keys — no new vocabulary beyond the
+  two allowlist rows the case exercises). (b) LTC050 threads the annotation's own
+  offset (`params.ts` `annotationAt`; LT-371 extends it, no special case); line
+  pinned. (c) IR gains optional `messageRecordBindings` (contract-additive);
+  `reportServerOnlyNames` routes record-spelled reads to the literal-key sentence —
+  spelled with the component's `t` binding, else canonical `t` — and the generic
+  exposed-prop fix is suppressed for message-channel names; SERVER_ONLY case.
+  (d) **LTC056** `scriptElementInTemplate`, raised in shared `lowerElement` (both
+  surfaces, every `type`); parity cases bare + `type="module"`. Gates in a pinned
+  worktree at e117a9fb (a parallel LT-379 session owns the live tree): full server
+  suite +7 tests, failure set identical to HEAD's 26 environment failures; goldens,
+  census and tier census byte-identical; tsc clean; biome clean. **Copy rider →
+  LT-359:** LTC056's message (first draft in `scriptElementInTemplate`), the
+  boundary rule's new `.tsrx` spelling, the errors.md/catalog/ADR 0028 rows.
   **Context:** Three gaps in the LT-189 diff, none a copy question. (a) The `.tsx`
   `boundaryAsLoopRoot` guard in `frontend/tsx/lower-tsx.ts` (`lowerFor`) has no test. Pin it
   (block and expression bodies), and decide `.tsrx` parity: `@try` as an `@for` body root
@@ -238,4 +299,3 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   channel, Prevented. It refuses every `<script>`, whatever its `type`, inside a component
   template; the page owns script loading. Add a `diagnostic-parity.test.ts` case. LTC057/LTC058
   are reserved for LT-257, so take LTC056 here. Copy goes to Tech Writer through LT-359's round.
-
