@@ -20,8 +20,11 @@
  * Authorized exceptions — walks whose recursion IS the semantics, so they
  * keep their own descent (structural steps still go through `childNodes`
  * where they apply):
- * - exclusivity counting: `countForSelector`, `countComposeBySource`
- *   (max-vs-sum per construct; `analysis/selectors.ts`, riding LT-245);
+ * - probe materialization: `serializeNodes`
+ *   (`analysis/probe.ts`, LT-379) — the selector proof's serializer, whose
+ *   recursion turns branch structure into the wrapper elements the
+ *   aggregation walk reads (max over exclusive arms, sum over coexisting
+ *   ones);
  * - path-context threading: `refBranchGuard` (guard conjunction),
  *   `inOptionalBranch` (optional-`@if` flag), `checkFoldInputs` (lexical
  *   scope per arm);

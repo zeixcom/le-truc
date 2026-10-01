@@ -350,7 +350,8 @@ front-end modules, then the two front ends:
 | `emit-paths.ts` | `EmitPaths` + `DEFAULT_EMIT_PATHS`: the two facts the emitters take from the configuration. A leaf with no `node:` import, because the browser bundle reaches it |
 | `registry.ts` | `RegistryEntry` type (incl. per-prop `ExposeKind`) + `registryJson` |
 | `analysis/plan.ts` | `ClientPlan` types, `PassShared` assembly, `analyzeClient` orchestration |
-| `analysis/selectors.ts` | Pure selector engine: synthesis, structural uniqueness, union/compose addressing |
+| `analysis/selectors.ts` | Pure selector POLICY: synthesis, candidate order, union/compose addressing; the ENGINE (matching, counting, existence) runs on the materialized probe |
+| `analysis/probe.ts` | The materialized-probe selector engine (ADR 0045): template IR → HTML → parse5 → css-select over one exclusivity-aware aggregation walk |
 | `analysis/compose-refs.ts` | Registry-aware resolution of `first()` references addressing composed children |
 | `analysis/naming.ts` | `uniqueName`, `addQuery` (query table + name allocation) |
 | `analysis/harvest.ts` | Passes 2+3: render sites (`collectRenderSites`), harvest-plan selection and arg→DOM-site substitution (`planHarvests`) |
@@ -1141,13 +1142,22 @@ member.
   reindented — which is what makes the span tables sound (§ 6).
 - **Selector uniqueness is proven structurally** against the template the
   compiler itself renders (`analysis/selectors.ts`; role → bare tag →
-  discriminator, exclusivity-aware counting for branches). Discriminators use
+  discriminator, exclusivity-aware counting for branches). Since LT-379
+  ([ADR 0045](../../../adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md))
+  the engine half runs on the **materialized probe** (`analysis/probe.ts`):
+  the template is serialized to HTML — static attrs only, all branches
+  materialized, mutually exclusive arms wrapped so counting takes the max
+  over them and coexisting ones sum — parsed with parse5, and answered with
+  css-select over one aggregation walk, replacing five hand cascades and
+  their hand matcher. The probe is browser-faithful: it counts what a
+  browser's parse of the emitted markup builds, not what the authored
+  nesting says (valid authoring never diverges; the differential harness in
+  `server/tests/compiler/probe-differential.test.ts` permanently pins the
+  answers against the hand cascades' record). Discriminators use
   canonical CSS spellings — classes match by token membership, ids and
   `type`/`data-*` exactly. A static `aria-*` value is the last-resort
   candidate (LT-101), for an element addressed by ARIA semantics alone.
-  `matchesSelector` must parse exactly the grammar
-  the synthesizer emits: an unparsed selector reads as "no collision" and
-  would quietly disarm per-branch addressing. The count covers the OWN
+  The count covers the OWN
   template, but the runtime query also descends into composed children's
   markup, so in the registry-aware pass each candidate is also checked
   against the `renderedShapes` every composed child records on its registry

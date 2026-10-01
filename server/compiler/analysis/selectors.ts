@@ -3,10 +3,26 @@
  * synthesis, structural uniqueness counting, and union addressing for the
  * element queries the generated client factory issues. Uniqueness is proven
  * structurally against the template the compiler itself renders — the
- * compiler wrote this HTML, so counting matches in the IR is counting
+ * compiler wrote this HTML, so counting matches in the proof is counting
  * matches in the DOM. Pure functions only; no analysis state.
+ *
+ * Since LT-379 ([ADR
+ * 0045](../../../adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md))
+ * the ENGINE half of this module — matching, counting, match-existence —
+ * runs on the materialized probe (`analysis/probe.ts`): the template is
+ * serialized to HTML and queried with css-select over one aggregation walk,
+ * replacing five hand cascades that each re-encoded the branch-exclusivity
+ * arithmetic and carried a hand matcher that had to track the synthesizer
+ * exactly or fail silently. What remains HERE is the POLICY the ADR keeps
+ * in house: candidate order (role → bare tag → discriminator), the
+ * authored-selector gate and its one-clause grammar, clean-before-excluded
+ * emission, the compose clause algebra, and the element-chain searches.
+ * The differential harness in `server/tests/compiler/
+ * probe-differential.test.ts` permanently pins the probe's answers to the
+ * hand cascades' record.
  */
 
+import * as cssWhat from 'css-what'
 import type {
 	ComponentIR,
 	ComposedMarkup,
@@ -15,7 +31,13 @@ import type {
 	TemplateNode,
 } from '../ir'
 import type { RegistryEntry } from '../registry'
-import { someNode, walkTemplate } from '../walk'
+import { walkTemplate } from '../walk'
+import {
+	probeComposeNodes,
+	probeCount,
+	probeCountCompose,
+	probeExists,
+} from './probe'
 
 /* === Types === */
 
@@ -165,108 +187,34 @@ const discriminatorCandidates = (element: ElementNode): string[] => {
 }
 
 /**
- * The one-clause grammar selectors are synthesized in, and the only grammar
- * `matchesSelector`/`mayMatchShape` parse: an optional tag, then at most one
- * `[attr="value"]`, `.token` or `#id` clause.
+ * The one-clause grammar the synthesizer emits, and — via
+ * `authoredSelectorOf` — the gate deciding which AUTHORED `first()`
+ * selectors the compiler can still verify (LT-316): an optional tag, then
+ * at most one `[attr="value"]`, `.token` or `#id` clause. This is a
+ * capability boundary, not a matcher: since LT-379 matching itself is
+ * css-select's job (ADR 0045 Decision 1), nothing pairs against this
+ * grammar any more, and widening the verifiable subset is LT-381's
+ * authoring-visible change to make.
  */
 const SELECTOR_GRAMMAR =
 	/^([a-z][a-z0-9-]*)?(?:\[([^\]="]+)="([^"]*)"\]|\.([A-Za-z_-][\w-]*)|#([A-Za-z_-][\w-]*))?$/
 
-/**
- * Does `candidate` structurally match a synthesized selector string?
- * Exported for LT-118's per-branch addressing collision check: a branch
- * root's query is only sound if it cannot match the OTHER branch's markup,
- * and the synthesized-selector grammar here is exactly the shape a query
- * selector can take.
- *
- * It must therefore track `discriminatorCandidates` exactly. When that
- * started emitting `.token` clauses (LT-124) this matcher's grammar had to
- * learn them in the same commit: an unparsed selector returns `false`, which
- * reads as "no collision" — so a stale matcher would not fail loudly, it
- * would quietly stop rejecting the branch-root collisions
- * `resolveExclusiveSelectorIn` calls it to catch, and effects would bind
- * onto the wrong branch's element. An unrecognized selector is a false, not
- * a throw, which is why this pairing is the load-bearing half of LT-124.
- */
-export const matchesSelector = (
-	candidate: ElementNode,
-	selector: string,
-): boolean => {
-	const match = selector.match(SELECTOR_GRAMMAR)
-	if (!match) return false
-	const [, tag, attr, value, classToken, id] = match
-	if (tag && candidate.tag !== tag) return false
-	if (classToken !== undefined)
-		return (staticAttrs(candidate).get('class') ?? '')
-			.split(/\s+/)
-			.includes(classToken)
-	if (id !== undefined) return staticAttrs(candidate).get('id') === id
-	if (attr) return staticAttrs(candidate).get(attr) === value
-	return true
-}
-
 /* === Exported Functions === */
 
-/** Structural match count for a selector over the whole template. */
+/**
+ * Structural match count for a selector over the whole template — the
+ * materialized probe's aggregation walk (`analysis/probe.ts`): mutually
+ * exclusive arms take the max over branches, coexisting arms (a `@try`
+ * with `@pending`) sum, compose placeholders contribute zero, and a
+ * selector css-what cannot parse counts zero (a `querySelector` would
+ * throw on it — it matches nothing in any valid DOM). Browser-faithful
+ * counting per ADR 0045 Decision 2: what is counted is what the browser's
+ * parse of the emitted markup builds.
+ */
 export const countForSelector = (
 	node: TemplateNode,
 	selector: string,
-): number => {
-	if (node.kind === 'if')
-		// Branches are mutually exclusive at runtime: an @if contributes the
-		// max of its branch counts, never the sum (same-tag branch roots
-		// would otherwise always look ambiguous).
-		return Math.max(
-			...[node.then, node.alternate].map(branch =>
-				branch.reduce(
-					(sum, child) => sum + countForSelector(child, selector),
-					0,
-				),
-			),
-		)
-	if (node.kind === 'switch')
-		// Same exclusivity rule, N arms.
-		return Math.max(
-			...node.cases.map(arm =>
-				arm.children.reduce(
-					(sum, child) => sum + countForSelector(child, selector),
-					0,
-				),
-			),
-		)
-	if (node.kind === 'try') {
-		// An async boundary (@pending present, ADR 0023 sub-design 13): all
-		// arms coexist in the DOM simultaneously (hidden-toggled, not
-		// mutually exclusive) — sum, don't max, and include the pending arm.
-		if (node.pendingChildren !== null)
-			return (
-				node.children.reduce(
-					(sum, c) => sum + countForSelector(c, selector),
-					0,
-				) +
-				node.pendingChildren.reduce(
-					(sum, c) => sum + countForSelector(c, selector),
-					0,
-				) +
-				node.catchChildren.reduce(
-					(sum, c) => sum + countForSelector(c, selector),
-					0,
-				)
-			)
-		// Plain error boundary: body XOR catch renders.
-		return Math.max(
-			node.children.reduce((sum, c) => sum + countForSelector(c, selector), 0),
-			node.catchChildren.reduce(
-				(sum, c) => sum + countForSelector(c, selector),
-				0,
-			),
-		)
-	}
-	if (!isElement(node)) return 0
-	let count = matchesSelector(node, selector) ? 1 : 0
-	for (const child of node.children) count += countForSelector(child, selector)
-	return count
-}
+): number => probeCount(node, selector)
 
 /**
  * Structural match count for composed elements over the whole template,
@@ -277,70 +225,26 @@ export const countForSelector = (
  * outright (LT-089) — `composeNodesBySource`/`composeDiscriminatorClause`
  * below can still tell same-source instances apart by a static `class`/`id`/
  * `data-*` on the compose site; this count only decides whether that search
- * is needed.
+ * is needed. Compose placeholders are matched on their marker attribute;
+ * the exclusivity arithmetic is the probe walk's.
  */
 export const countComposeBySource = (
 	node: TemplateNode,
 	source: string,
-): number => {
-	if (node.kind === 'if')
-		return Math.max(
-			...[node.then, node.alternate].map(branch =>
-				branch.reduce(
-					(sum, child) => sum + countComposeBySource(child, source),
-					0,
-				),
-			),
-		)
-	if (node.kind === 'switch')
-		return Math.max(
-			...node.cases.map(arm =>
-				arm.children.reduce(
-					(sum, child) => sum + countComposeBySource(child, source),
-					0,
-				),
-			),
-		)
-	if (node.kind === 'try') {
-		const count = (arm: readonly TemplateNode[]): number =>
-			arm.reduce((sum, c) => sum + countComposeBySource(c, source), 0)
-		// Async boundary: all three arms coexist in the DOM (LT-230's
-		// `@pending` policy, walk.ts) — sum, as `countForSelector` does.
-		// Plain error boundary: body XOR catch renders.
-		return node.pendingChildren !== null
-			? count(node.children) +
-					count(node.catchChildren) +
-					count(node.pendingChildren)
-			: Math.max(count(node.children), count(node.catchChildren))
-	}
-	if (node.kind === 'compose') return node.source === source ? 1 : 0
-	if (!isElement(node)) return 0
-	let count = 0
-	for (const child of node.children)
-		count += countComposeBySource(child, source)
-	return count
-}
+): number => probeCountCompose(node, source)
 
 /**
  * Every composed element over the whole template, regardless of source
  * (LT-090) — the source-agnostic sibling of `composeNodesBySource`, used
  * for template-wide invariants on compose sites (today: duplicate static
- * `id`). Same flat, non-exclusivity-aware collection: an `id` shared by
- * two mutually-exclusive-branch sites still renders two elements with that
- * id across the component's lifetime, so over-collecting here is the
- * conservative direction for a validity check.
+ * `id`). A flat collection that does NOT take `@if`/`@switch` mutual
+ * exclusivity into account: an `id` shared by two mutually-exclusive-branch
+ * sites still renders two elements with that id across the component's
+ * lifetime, so over-collecting here is the conservative direction for a
+ * validity check. Document order, `@pending` arms entered (LT-230).
  */
-export const allComposeNodes = (root: TemplateNode): ComposeNode[] => {
-	const out: ComposeNode[] = []
-	walkTemplate(
-		root,
-		node => {
-			if (node.kind === 'compose') out.push(node)
-		},
-		{ intoCompose: false },
-	)
-	return out
-}
+export const allComposeNodes = (root: TemplateNode): ComposeNode[] =>
+	probeComposeNodes(root)
 
 /**
  * Every composed element over the whole template sharing one `.tsrx` source
@@ -498,25 +402,70 @@ const composeClauseMatches = (
 	})
 
 /**
- * Could `selector` (the synthesized grammar `matchesSelector` parses) match
- * an element of `shape`? A dynamic attribute may hold any value, and a
- * selector outside the grammar is assumed to match — the conservative
- * direction, since a false "no" binds an effect onto a child's element.
+ * Could `selector` match an element of `shape`? The composed-shapes guard
+ * of `selectorCandidates` — policy, per ADR 0045 Decision 4, but since
+ * LT-379 the selector is PARSED by css-what instead of the hand grammar the
+ * engine used to pair with (the parse was the drift-prone half). The
+ * conservative rule is unchanged: a dynamic attribute may hold any value,
+ * and anything the parse cannot settle — a combinator across the shape's
+ * unknown ancestry, an attribute operator beyond equals/token-membership/
+ * existence, a pseudo-class, an unparseable selector — is assumed to
+ * match, since a false "no" binds an effect onto a child's element.
  */
 const mayMatchShape = (shape: RenderedShape, selector: string): boolean => {
 	if (shape.kind !== 'element') return true
-	const match = selector.match(SELECTOR_GRAMMAR)
-	if (!match) return true
-	const [, tag, attr, value, classToken, id] = match
-	if (tag && shape.tag !== tag) return false
-	const name =
-		classToken !== undefined ? 'class' : id !== undefined ? 'id' : attr
-	if (!name) return true
-	if (shape.dynamic.includes(name)) return true
-	const actual = shape.attrs[name]
-	if (actual === undefined || actual === null) return false
-	if (classToken !== undefined) return actual.split(/\s+/).includes(classToken)
-	return actual === (id ?? value)
+	let branches
+	try {
+		branches = cssWhat.parse(selector)
+	} catch {
+		// Assumed to match — the conservative direction, as before LT-379.
+		return true
+	}
+	return branches.some(branch => branchMayMatchShape(shape, branch))
+}
+
+/**
+ * One complex selector against one shape: a predicate that DEFINITELY
+ * fails makes the answer false; anything undecidable is skipped. Shapes
+ * are flat single elements with no ancestry, so combinator entries never
+ * disprove a match.
+ */
+const branchMayMatchShape = (
+	shape: RenderedShape & { kind: 'element' },
+	branch: cssWhat.Selector[],
+): boolean => {
+	for (const simple of branch) {
+		if (simple.type === 'tag') {
+			if (simple.namespace !== null) return true
+			// HTML parsing lowercases tag names; shapes carry the authored
+			// (lowercase) tag.
+			if (simple.name.toLowerCase() !== shape.tag.toLowerCase()) return false
+		} else if (simple.type === 'attribute') {
+			if (simple.namespace !== null) return true
+			if (simple.ignoreCase === true) return true
+			const name = simple.name
+			if (shape.dynamic.includes(name))
+				// May hold any value.
+				continue
+			const actual = shape.attrs[name]
+			if (actual === undefined || actual === null)
+				// Not rendered at all — the child's element cannot carry it.
+				return false
+			if (
+				simple.action === 'equals'
+					? actual !== simple.value
+					: simple.action === 'element'
+						? !actual.split(/\s+/).includes(simple.value)
+						: simple.action === 'exists'
+							? false
+							: true
+			)
+				return false
+		}
+		// universal matches anything; pseudo-classes/pseudo-elements and
+		// combinators are undecidable against one flat shape — skipped.
+	}
+	return true
 }
 
 /**
@@ -634,16 +583,13 @@ export const resolveSelector = (
  * a branch root's query is only sound when it cannot match the OTHER
  * branch's markup, or the branch that didn't render would have its effects
  * bound onto the sibling branch's element by its own existence guard.
+ * Existence over the materialized probe; exclusivity (max-vs-sum) can
+ * never flip it.
  */
 export const matchesUnder = (
 	nodes: readonly TemplateNode[],
 	selector: string,
-): boolean =>
-	nodes.some(root =>
-		someNode(root, node => isElement(node) && matchesSelector(node, selector), {
-			intoCompose: false,
-		}),
-	)
+): boolean => probeExists(nodes, selector)
 
 /**
  * Resolve the selector for an element addressed PER-BRANCH (LT-118): like

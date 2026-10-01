@@ -17,7 +17,6 @@ import {
 import {
 	composedShapesFor,
 	countForSelector,
-	matchesSelector,
 	renderedShapesOf,
 	resolveSelector,
 } from '../../compiler/analysis/selectors'
@@ -143,11 +142,12 @@ describe('analysis passes over a constructed context (LT-022)', () => {
 })
 
 /**
- * LT-124: class discriminators are TOKEN clauses, and `matchesSelector` — the
- * structural matcher `countForSelector` and per-branch collision rejection
- * both run on — has to recognize the same grammar the synthesizer emits. An
- * unparsed selector returns `false`, which reads as "no match" everywhere, so
- * a drift between the two would be silent in both directions.
+ * LT-124: class discriminators are TOKEN clauses. Before LT-379 the pin
+ * ran on `matchesSelector`, the hand matcher that had to track the
+ * synthesizer's grammar exactly; since then matching is css-select's on
+ * the materialized probe (ADR 0045), so the same questions are asked
+ * through the engine's public count — `countForSelector` over the
+ * element's own subtree, which includes the element itself.
  */
 describe('class discriminators are token clauses (LT-124)', () => {
 	/** The element a `first()`-addressed span lowers to, given a class value. */
@@ -197,13 +197,13 @@ describe('class discriminators are token clauses (LT-124)', () => {
 	test('a token clause matches page markup carrying extra classes', () => {
 		// The acceptance case: the template renders `class="label"`, the PAGE
 		// renders `class="label icon"`. Structurally the same question asked
-		// of the matcher — a token clause matches by membership.
+		// of the engine — a token clause matches by membership.
 		const pageSpan = firstSpan(spanWithClass('label icon'))
-		expect(matchesSelector(pageSpan, 'span.label')).toBe(true)
-		expect(matchesSelector(pageSpan, 'span.icon')).toBe(true)
-		expect(matchesSelector(pageSpan, 'span[class="label"]')).toBe(false)
-		expect(matchesSelector(pageSpan, 'span.missing')).toBe(false)
-		expect(matchesSelector(pageSpan, 'div.label')).toBe(false)
+		expect(countForSelector(pageSpan, 'span.label')).toBe(1)
+		expect(countForSelector(pageSpan, 'span.icon')).toBe(1)
+		expect(countForSelector(pageSpan, 'span[class="label"]')).toBe(0)
+		expect(countForSelector(pageSpan, 'span.missing')).toBe(0)
+		expect(countForSelector(pageSpan, 'div.label')).toBe(0)
 	})
 
 	test('a token that is not a plain identifier falls back to exact match', () => {
@@ -259,13 +259,13 @@ describe('id discriminators use the hash form (LT-124)', () => {
 		})
 	})
 
-	test('the matcher recognizes the hash form and stays exact', () => {
+	test('the engine recognizes the hash form and stays exact', () => {
 		const input = firstInput(twoInputs('name-input'))
-		expect(matchesSelector(input, 'input#name-input')).toBe(true)
-		expect(matchesSelector(input, '#name-input')).toBe(true)
+		expect(countForSelector(input, 'input#name-input')).toBe(1)
+		expect(countForSelector(input, '#name-input')).toBe(1)
 		// Exact, unlike a class token: no membership, no prefix matching.
-		expect(matchesSelector(input, 'input#name')).toBe(false)
-		expect(matchesSelector(input, 'span#name-input')).toBe(false)
+		expect(countForSelector(input, 'input#name')).toBe(0)
+		expect(countForSelector(input, 'span#name-input')).toBe(0)
 	})
 
 	test('an id that is not a plain identifier falls back to exact match', () => {

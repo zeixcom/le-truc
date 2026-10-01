@@ -18,7 +18,7 @@ import type {
 } from '../ir'
 import { wordingOf } from '../surface'
 import { isDirtyFlagControlAttr } from '../vocabulary'
-import { isClientConstructAttr } from '../walk'
+import { isClientConstructAttr, someNode } from '../walk'
 import { reportServerOnlyNames } from './effects'
 import { returnsNumber } from './harvest'
 import type {
@@ -31,7 +31,6 @@ import type {
 	ReconcilePlan,
 } from './plan'
 import {
-	countForSelector,
 	type ElementNode,
 	isElement,
 	resolveSelector as resolveSelectorIn,
@@ -355,6 +354,22 @@ const runReconcileLoops = (
 		}
 		const output = loop.output
 
+		// The extracted <template> is compiler-emitted; an authored one would
+		// collide with the emitted selector. A structural tag scan, checked
+		// BEFORE any selector resolution: since LT-379 the probe refuses to
+		// materialize a `<template>` (css-select's HTML-mode traversal would
+		// silently skip its content), so this diagnostic must fire first.
+		if (someNode(component.root, n => isElement(n) && n.tag === 'template')) {
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					output.node.start,
+					`An authored <template> collides with the compiler-extracted item template of the reactive-list ${wording.loop}.`,
+				),
+			)
+			continue
+		}
+
 		// Container: the parent element holding the loop output. The host
 		// itself cannot be the container (no self-query).
 		const container = parentOf(output)
@@ -385,17 +400,6 @@ const runReconcileLoops = (
 			'one',
 		)
 
-		// The extracted <template> is compiler-emitted; an authored one would
-		// collide with the emitted selector.
-		if (countForSelector(component.root, 'template') > 0) {
-			diagnostics.push(
-				diagnostic.unaddressableElement(
-					source,
-					output.node.start,
-					`An authored <template> collides with the compiler-extracted item template of the reactive-list ${wording.loop}.`,
-				),
-			)
-		}
 		const templateName = addQuery('template', 'template', 'one')
 
 		// The @empty arm's roots (LT-212): server-rendered in the container,
