@@ -48,6 +48,7 @@ Maintained by the `adr-keeper` workflows — update whenever an ADR is created, 
 | [0041](0041-truc-intrinsic-elements-for-compiler-consumed-constructs.md) | `truc:` Intrinsic Elements for Compiler-Consumed Constructs in `.tsx` | ✅ Accepted | M17, M18, M21 |
 | [0042](0042-the-component-stylesheet-as-a-compiler-artifact.md) | The Component Stylesheet as a Compiler Artifact — Checks over the Parsed Sheet | 🔄 Proposed | M18 |
 | [0043](0043-the-target-emitter-interface-for-template-emission.md) | The Target-Emitter Interface — Shared Decisions, Per-Target Syntax | ✅ Accepted | M27, M28 |
+| [0044](0044-structured-source-mapped-diagnostics.md) | Structured, Source-Mapped Diagnostics — One Record, Machine-Readable Reports | ✅ Accepted | M18, M22, M25 |
 
 ---
 

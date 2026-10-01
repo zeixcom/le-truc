@@ -14,7 +14,10 @@ This is the envisioned end state of `@zeix/le-truc-compiler`, a draft for the te
 | Status | Meaning | In this round |
 | --- | --- | --- |
 | Ratified | An accepted ADR or owner ruling | Not up for discussion |
+| Endorsed | Team endorsed (2026-10-01); not yet recorded in an ADR or authoritative document | Record, then plan |
 | Proposed | Put forward for the team to endorse | Discuss and endorse or amend |
+| Parked | Not adopted; needs a cost-benefit analysis before it returns | Not planned |
+| Deferred | Undecided; goes to a dedicated design session | Decide there |
 | Open | No answer yet (section 15) | Decide |
 
 Sections 2–12 use MUST / SHOULD / MAY normatively.
@@ -132,7 +135,7 @@ Incremental builds therefore MUST invalidate per module **and** along compose ed
 
 **Dev loop.** The compiler SHOULD expose a per-module incremental API that watch mode and HMR build on. Whether Bun and Vite plugins are first-party is open (O-8).
 
-**Engine.** v1 builds on the TypeScript 6 compiler API. TypeScript 7 shipped without a stable programmatic API (expected in 7.1). Supporting it, and native parsers after that, is a stated goal. So `ts.Node` and all TypeScript types MUST stay out of every public contract. How far parser access is confined inside the compiler is open (O-2).
+**Engine.** v1 builds on the TypeScript 6 compiler API. TypeScript 7 shipped without a stable programmatic API (expected in 7.1). Supporting it, and native parsers after that, is a stated goal. So `ts.Node` and all TypeScript types MUST stay out of every public contract. Parser access is confined to one converter leaf (ADR 0032 s4; O-2, answered).
 
 ## 3. Authoring: the TSX host profile
 
@@ -174,7 +177,7 @@ export function MyCounter(
 **Signature**
 
 - A module exports **one component function**. Its first parameter is the destructured **server args**; their TypeScript type is what compose sites check against.
-- The optional second parameter is the **typed factory context**: `FactoryContext<Props>`, or `FormFactoryContext<Props>` for form-associated components. Every factory name used MUST be destructured from it. `Props` is the element's public reactive surface and MUST be declared explicitly; internal signals infer their type from their initializer.
+- The optional second parameter is the **typed factory context**: `FactoryContext<Props>`, or `FormFactoryContext<Props>` for form-associated components. When it is present, every factory name used SHOULD be destructured from it; the wide ambients remain legal for the migration period, their fate deferred (owner, 2026-09-18). `Props` is the element's public reactive surface and MUST be declared explicitly; internal signals infer their type from their initializer.
 - Reserved server args the compiler supplies and callers never pass: `children` (composed content) and `i18n` (the locale record).
 
 **Template**
@@ -198,31 +201,31 @@ export function MyCounter(
 ```tsx
 <my-card>
   <template shadowrootmode="open">
-    <header><slot name="title" /></header>
-    <slot />
+    <header>{title}</header>
+    {children}
     <style>{css`:host { display: block }`}</style>
   </template>
 </my-card>
 ```
 
-The stylesheet is authored identically in both modes. In shadow mode, authors design for page content that renders only through slots, harvest that stops at the boundary, and ID references that do not cross it. Declarative Shadow DOM is Baseline 2024: the component either ships a connect-time fallback or documents that minimum.
+The stylesheet is authored identically in both modes. Composed content is inserted at `{children}`, as in light DOM mode — not at `<slot>` (ADR 0024 s10); named slots would need their own ADR. In shadow mode, authors design for harvest that stops at the boundary, and ID references that do not cross it. Declarative Shadow DOM is Baseline 2024: the component either ships a connect-time fallback or documents that minimum.
 
 ### 3.3 Bindings: what runs where
 
-The spelling decides the evaluation phase, and only the spelling:
+Reactivity is author-declared, never marked (ADR 0024 s4). For an attribute the spelling decides: only a function-valued attribute is reactive. For a text child, what the expression reads decides:
 
 | Spelling | Class | Meaning |
 | --- | --- | --- |
 | `attr="literal"`, literal text | `static` | Known at build |
-| `attr={expr}`, `{expr}` over server args | `server` | Rendered once; never updates |
+| `attr={expr}` (whatever it reads), `{expr}` child over server args only | `server` | Rendered once; never updates |
 | `attr={() => expr}` | `reactive` | Rendered at its initial value, then `watch()`-bound |
-| `{signal}` or `{() => expr}` child | `reactive` | Text binding; initial value rendered |
+| `{expr}` child that reads a signal or `host.<prop>` (`{count}`, `{host.label}`), or `{() => expr}` | `reactive` | Text binding; initial value rendered |
 | `on<Event>={handler}` | — | `on()` listener; never serialized to HTML |
 
 - **Reactive attributes MUST be arrow thunks.** A bare expression is a `server` value, even if it reads a signal. The rule is a little more verbose, but it is the only spelling that expresses a derived binding (`class={() => (isPending(d) ? 'pending' : null)}`), and it keeps what is evaluated on the server versus the client readable at a glance.
 - `null` / `false` removes an attribute; a boolean toggles it.
 - The compiler picks the DOM channel: a `host.<prop>` mirror or a dirty-flag IDL attribute (`value`, `checked`, `selected`) binds as a property, everything else as an attribute. There is no `prop:` prefix.
-- **Reactive text MUST own its whole text node.** A reactive child sharing an element with other content (`Total: {count}`) is an error; wrap the reactive part in an element of the author's choice.
+- **Reactive text MUST own its element's whole text content.** The text binding writes the element's `textContent`, and a hole inside mixed content (`<span>Total: {count}</span>`) is not addressable on its own: the first write would erase the static text and any child elements. A reactive child sharing an element with other content is therefore an error (LTC005); wrap the reactive part in an element of the author's choice. The alternative — the generated binding recomputing the whole text (`span.textContent = 'Total: ' + count.get()`) — is not built.
 - A per-document `id` in a template belongs to whoever instantiates it: it MUST come from a server arg (LTC042).
 
 ### 3.4 The closed `truc:` vocabulary
@@ -268,7 +271,7 @@ Whatever JSX expresses stays JSX. There are no `truc:if` / `truc:for` tags.
 - template targets, through the backend's implementation of the same policy;
 - the client (`dangerouslyBindInnerHTML`, Trusted Types-shaped, ADR 0010).
 
-Two sanitizers with different allowlists would be a hydration diff in the one place where a diff is a security question. A `truc:html` without a configured policy is a diagnostic.
+Two sanitizers with different allowlists would be a hydration diff in the one place where a diff is a security question. Without a configured policy, `truc:html` fails closed: the client's `sanitizeHtml` falls back to `escapeHTML` (ADR 0010 s6), and a template target's unregistered sanitizer hook fails at render (ADR 0043 s3).
 
 ### 3.8 The portable subset and closed fold inputs
 
@@ -277,7 +280,7 @@ Two independent restrictions make template emission possible:
 | Restriction | Rule |
 | --- | --- |
 | **Closed inputs** (the partial-readiness invariant, ADR 0034 s4) | Anything the server evaluates may read only the component's own server args and the reserved `i18n` record's declared members (`lang`, `t`, `timeZone`, `currency`, `dir`). A page-context read (`document`, `window`, `navigator`, …) in a server-evaluated position is an error (LTC054). Widening the set is a reviewed act. |
-| **Portable expressions** | `server`-class expressions that must survive into a template target (they read server args, so they become holes) MUST lie in a subset every target can evaluate: property access, literals, comparisons, logical operators, message calls, and calls to functions marked pure. Anything else is allowed for SSG and is a per-target diagnostic for template targets. |
+| **Portable expressions** | `server`-class expressions that must survive into a template target (they read server args, so they become holes) MUST lie in the closed hole grammar every target must translate (ADR 0043 s1): static member paths over args and loop items, literals, `!`, strict equality, numeric comparison, `&&` / `\|\|` / `??`, the ternary, and message calls; a template literal lowers to a segment list. Calls to arbitrary functions are outside the subset, so emittability is target-independent. Anything else is allowed for SSG; when a template target is configured, a non-portable `server` expression is an error and a non-portable reactive initial value routes the partial Static (ADR 0043 s2). |
 
 ## 4. Input adapters
 
@@ -301,7 +304,7 @@ Adapters let other component formats author for Le Truc. The seam is **source-to
 
 Refusals happen in two layers: adapter-side in the adapter's own channel, before any TSX exists; compiler-side through the closed `LTC` vocabulary. Adapters never mint compiler codes and never produce routing signals — tier routing is the compiler's, on the emitted TSX.
 
-**Reference adapter.** `.tsrx` is the first-party reference adapter and the conformance baseline: it translates the TSRX directive grammar into host-profile TSX. The conformance run is a toy adapter that emits TSX plus a source map, compiles through every tier, and proves that errors remap to the toy source.
+**Reference adapter.** *(D-04 is parked, 2026-10-01: until its cost-benefit analysis, `.tsrx` stays a first-class authored surface under ADR 0032, and which adapter becomes the reference is open.)* In the proposal, `.tsrx` is the first-party reference adapter and the conformance baseline: it translates the TSRX directive grammar into host-profile TSX. The conformance run is a toy adapter that emits TSX plus a source map, compiles through every tier, and proves that errors remap to the toy source.
 
 **Timing.** The seam ships **experimental** at 3.0 and becomes stable once template emission has landed and one real adapter exists.
 
@@ -334,7 +337,7 @@ What a reactive expression renders before JavaScript loads is resolved by the ch
 - **Unresolvability is per expression; tier is per component.** An expression is unresolvable when it reads a stubbed API (layout, `internals.states`, sensors) or is not a server fact at all (wall clock, RNG, runtime-default locale). It is **omitted in every tier**: a build-time timestamp is a stale value served for the life of the page, not a flash the client corrects.
 - A shape the fold cannot follow is **not an author error**; it routes. The tier census records it.
 - **Composition contaminates on reads, not containment.** Embedding a Simulated child keeps the parent's tier; addressing it with `first()` or `truc:pass` does not.
-- In every tier the client is ground truth, and **no state payload ever ships**.
+- In every tier the client is ground truth, and **no framework-synthesized hydration payload ever ships**. Serialized data is a matter of scope and authorship, not a ban (REQUIREMENTS M19): where serialization is genuinely unavoidable, a component-local payload on one of the component's own attributes, parsed by `asJSON`, stays legal.
 - **The emitted markup is byte-identical across tiers**, and CI renders every Folded component through the realm as well and requires identical output.
 - The simulation substrate (jsdom) is an **optional peer**; without it Simulated components route Static and record it in the census. The simulation seam is DOM-free and designed as a package boundary.
 
@@ -395,7 +398,7 @@ The effective locale renders onto the root `lang` attribute; the client material
 - The locale is a build-time constant, so `Intl` calls fold: i18n makes a component cheaper to render, not more expensive.
 - SSG pages are per locale: template dimensionality is locale × component.
 - **The catalog never reaches the browser.** A message with a client-reactive argument is recomputed, not selected: the server renders the keys the client needs into a per-instance `i18n` attribute (per locale, as parsed patterns), and the generated client inlines an evaluator narrowed to the constructs those patterns use. There are no per-language client builds.
-- **Template targets** SHOULD emit translation calls through the backend's native ICU support (Twig: Symfony Translation), preserving patterns — subject to an equivalence test between our evaluator and the backend's (O-6).
+- **Template targets** emit one partial per locale, with no locale hole (ADR 0043 s6). Everything argument-independent folds at build; a message whose arguments read server args emits a formatter call over the already-localized pattern literal (PHP `MessageFormatter`, ICU4J), so no catalog reaches the CMS. `Intl` formatting over a hole is refused in favour of the equivalent ICU pattern. An ICU equivalence corpus checks our evaluator against the backend's (ADR 0043 s8).
 - The MF2 exit stays pinned by a round-trip suite, so a later move to MessageFormat 2 is mechanical.
 
 ## 7. Styling
@@ -427,7 +430,7 @@ A compiled stylesheet is **shadow-root CSS** (ADR 0033): `:host` for the host, b
 - `:host-context()`;
 - `:global` other than a whole rule (`:global(body.lock) { … }` or a top-level `:global { … }` block).
 
-**Checks over the parsed sheet** (ADR 0042): dead-rule detection (warning); typed custom-property registration where a signal drives `bindStyle`; the typed class handle (`const theme = <style>…</style>`, `class={theme.dark}`).
+**Checks over the parsed sheet** (ADR 0042, still Proposed): dead-rule detection (warning); typed custom-property registration where a signal drives `bindStyle`; the typed class handle (`const theme = <style>…</style>`, `class={theme.dark}`).
 
 **Documented differences from a real shadow root**, fixture-pinned:
 
@@ -484,14 +487,14 @@ All HTML targets serialize the same template walk; they differ in when `server`-
 | Target | `server` expressions | Emits | Scope |
 | --- | --- | --- | --- |
 | SSG | At build, per page × locale | `.html` pages, via `render<Name>(args)` modules | 3.0 |
-| Template | By the CMS at request time | A partial with holes per component (per locale, or with a locale hole) | Twig at 3.0; HTL next |
+| Template | By the CMS at request time | A partial with holes per component and locale (ADR 0043 s6) | Twig at 3.0; HTL next |
 | SSR | Per request, by a third-party stack | — (the render module is the building block) | Not ours; kept reachable (9.3) |
 
 ### 9.2 Template emitter contract
 
-- A target emitter is **a backend of the same IR walk** as the SSG render, never a sibling interpretation. It MUST handle every node in 8.1 or report it unsupported.
+- A target emitter is **a backend of the same IR walk** as the SSG render, never a sibling interpretation. The shared walk owns every decision — hole classification, escaping contexts, refused positions, tier — and a target owns only syntax: it maps a closed set of emission operations to its language and never sees IR nodes (ADR 0043). A backend that cannot translate the whole operation set does not qualify as a target.
 - The fold resolves everything independent of server args; **every server arg becomes a hole**. Simulated-tier components emit their Static skeleton in template targets (the Simulated tier is SSG-only).
-- **The escaping contract is a security boundary.** Each target owns its escaping; every hole gets it. A hole in a position the target cannot escape safely is a compile-time error, never a silent unsafe emit. Per-target escaping corpora, including negative cases, are part of each target.
+- **The escaping contract is a security boundary.** Escaping contexts are a closed union assigned by the shared walk; each target implements every context, and every hole gets one. Refused positions are decided in the shared walk and are compile-time errors, never a silent unsafe emit (ADR 0043 s3). Per-target escaping corpora, including negative cases, are part of each target.
 - Initial reactive values are never serialized separately: the client harvests them from the nodes they were rendered into.
 - Equivalence: rendering a partial with given args MUST match the SSG fold for the same args.
 
@@ -505,7 +508,7 @@ All HTML targets serialize the same template walk; they differ in when `server`-
 | `Compose` | Include or macro call with args |
 | Message calls | Translation calls (6.3) |
 | `RawHtml` | The backend's implementation of the application's policy |
-| `Try` | Rendered from an **error shape the CMS supplies** (`{ error: { code, message } }`), `catch` arm on error |
+| `Try` | Rendered from an **error shape the CMS supplies** (`{ error: { code, message } }`), `catch` arm on error — deferred (D-28): ADR 0043 has no boundary operation yet |
 
 ### 9.3 Keeping SSR reachable
 
@@ -514,7 +517,7 @@ Per-request SSR is out of scope for 3.x, but these invariants keep it one integr
 | Invariant | Guaranteed by |
 | --- | --- |
 | `render<Name>(args, locale)` is a **pure function** of args and locale | Closed fold inputs (3.8) |
-| Render modules run on Node, Deno, Bun and edge workers | **Web-standard APIs only**, no runtime-specific imports (ADR 0038's runtime-neutral build path) |
+| Render modules run on Node, Deno, Bun and edge workers | **Web-standard APIs only**, no runtime-specific imports (ADR 0038 s1: emitted files are runtime-neutral standard output) |
 | A streaming server can flush in order without our help | Boundaries render in document order; a `pending` arm is a complete answer the client resolves |
 | Any server links exactly the modules and styles a page uses | The manifest (11.1) |
 
@@ -585,43 +588,43 @@ Emitted bytes are not contract. Everything else under the compiler is internal.
 
 ## 13. Decision log
 
-33 decisions: 18 Ratified (context, not reopened here) and 15 Proposed (for the team to endorse). Open questions are in section 15.
+33 decisions, after the team review of 2026-10-01: 29 Ratified (D-16 and D-23 superseded by ADR 0043 while Proposed; nine more endorsed and recorded the same day), 1 Endorsed (D-01, whose REQUIREMENTS wording waits for O-9), 1 Parked (D-04) and 2 Deferred to design sessions (D-28, D-32). Open questions are in section 15.
 
 | # | Decision | Status | Source | § |
 | --- | --- | --- | --- | --- |
-| D-01 | Hold the minimal-client-state, request/response coordinate | Proposed | PROPOSAL §1 | 1.2 |
+| D-01 | Hold the minimal-client-state, request/response coordinate | Endorsed — amended: authored component-local payloads stay legal (REQUIREMENTS M19 as written) | PROPOSAL §1; team 2026-10-01 | 1.2, 5.2 |
 | D-02 | Per-request SSR not a 3.x target; never blocked | Ratified | ADR 0034 s7; owner 2026-09-29 | 1.5, 9.3 |
 | D-03 | Bundling, data loading, routing delegated | Ratified | ADR 0034; draft Q-1, Q-24 | 1.5 |
-| D-04 | One authored surface, `.tsx`; `.tsrx` becomes a reference adapter | Proposed | PROPOSAL D1 | 3, 4 |
+| D-04 | One authored surface, `.tsx`; `.tsrx` becomes a reference adapter | Parked — needs a cost-benefit analysis; `.tsrx` stays a first-class surface (ADR 0032) | PROPOSAL D1; team 2026-10-01 | 3, 4 |
 | D-05 | Standard TSX, `truc:` closed vocabulary, ADR 0041 gate | Ratified | ADR 0032, 0041 | 3.4 |
 | D-06 | Function component: server args + typed factory context | Ratified | LT-209 | 3.1 |
-| D-07 | Template root is the host element; no fragment; `<style>` nests inside | Ratified | owner 2026-09-29 | 3.1 |
-| D-08 | Light DOM default; Shadow DOM via a declarative shadow template as the root's first child | Proposed | ADR 0033 s8 (spelling new) | 3.2 |
-| D-09 | Reactive bindings are arrow thunks; spelling decides the phase | Ratified | owner 2026-09-29 | 3.3 |
-| D-10 | Reactive text owns its whole text node | Ratified | LT-114/115 | 3.3 |
+| D-07 | Template root is the host element; no fragment; `<style>` nests inside | Ratified | owner 2026-09-29; ADR 0032 s1 | 3.1 |
+| D-08 | Light DOM default; Shadow DOM via a declarative shadow template as the root's first child | Ratified — endorsed 2026-10-01 and recorded; composed content stays `{children}`, named slots need their own ADR | ADR 0033 s8 | 3.2 |
+| D-09 | Reactive attributes are arrow thunks; a text child is reactive by what it reads | Ratified | ADR 0024 s4 | 3.3 |
+| D-10 | Reactive text owns its element's whole text content | Ratified | LTC005 | 3.3 |
 | D-11 | Control flow as JSX expressions; reactive conditions as template-cloned arms | Ratified | ADR 0037 | 3.5 |
 | D-12 | Reactive loops over `createList`, keyed by the list | Ratified | ADR 0017; LTC001/052 | 3.5 |
 | D-13 | `first()`/`all()` references, structural selectors, no `ref` | Ratified | ADR 0024 s11; LT-127 | 3.6 |
-| D-14 | One application-provided sanitize policy for every target | Proposed | ADR 0010; draft Q-8 | 3.7 |
+| D-14 | One application-provided sanitize policy for every target | Ratified — endorsed 2026-10-01 as amended: an unconfigured policy fails closed, not a diagnostic | ADR 0010 s6, ADR 0043 s3 | 3.7 |
 | D-15 | Closed fold inputs (partial-readiness invariant) | Ratified | ADR 0034 s4 | 3.8 |
-| D-16 | Portable expression subset for template targets | Proposed | draft 4.4 | 3.8 |
-| D-17 | Source-to-source adapter seam; translate and refuse | Proposed | PROPOSAL D4, D5 | 4 |
-| D-18 | Only error-free adapted components mix with native ones | Proposed | draft Q-5 | 4 |
+| D-16 | Portable expression subset for template targets | Ratified — superseded by ADR 0043 s1–s2 (no pure calls; emittability target-independent) | ADR 0043 | 3.8 |
+| D-17 | Source-to-source adapter seam; translate and refuse | Ratified — endorsed 2026-10-01 and recorded; experimental until a first-class reference adapter ships | ADR 0032 s6 | 4 |
+| D-18 | Only error-free adapted components mix with native ones | Ratified — endorsed 2026-10-01 and recorded with D-17 | ADR 0032 s6 | 4 |
 | D-19 | The data account | Ratified | LT-112/113 | 5.1 |
-| D-20 | Formatted reactive values keep a raw value source | Proposed | draft Q-21 | 5.1 |
-| D-21 | Tiered evaluation; unresolvable omitted everywhere; no state payload | Ratified | ADR 0027, 0029, 0035 | 5.2 |
+| D-20 | Formatted reactive values keep a raw value source | Ratified — endorsed 2026-10-01 and recorded in the data account | HOST_PROFILE bullet 6 | 5.1 |
+| D-21 | Tiered evaluation; unresolvable omitted everywhere; no synthesized hydration payload | Ratified | ADR 0027, 0029, 0035; REQUIREMENTS M19 | 5.2 |
 | D-22 | i18n as build-time server data; ICU MF1; catalog never shipped | Ratified | ADR 0030 | 6 |
-| D-23 | Template targets translate through native backend ICU | Proposed | draft Q-14 | 6.3 |
+| D-23 | Template targets format messages through backend ICU | Ratified — superseded by ADR 0043 s6 (`MessageFormatter` over the localized pattern; one partial per locale, no locale hole) | ADR 0043 | 6.3 |
 | D-24 | Shadow-root CSS, `@scope` / `:where()` lowering, no hash classes | Ratified | ADR 0033; owner 2026-09-29 | 7 |
-| D-25 | IR is the lowering, internal, one walk with many emitters | Proposed | PROPOSAL D2, D3 | 8 |
-| D-26 | Reactivity class annotation on every expression | Proposed | draft 7.2 | 8.2 |
-| D-27 | Template emission: holes, per-target escaping as a security boundary | Ratified | ADR 0034 s3 | 9.2 |
-| D-28 | Template `Try` renders from a CMS-supplied error shape | Proposed | draft Q-23 | 9.2 |
+| D-25 | IR is the lowering, internal, one walk with many emitters | Ratified — endorsed 2026-10-01 and recorded | ADR 0034 s8, ADR 0040 | 8 |
+| D-26 | Reactivity class annotation on every expression | Ratified — endorsed 2026-10-01 and recorded | ADR 0040 s7 | 8.2 |
+| D-27 | Template emission: holes, escaping as a security boundary | Ratified | ADR 0034 s3, ADR 0043 | 9.2 |
+| D-28 | Template `Try` renders from a CMS-supplied error shape | Deferred — design session to amend ADR 0043; without `Try` a whole class of use cases is unsupported | draft Q-23; team 2026-10-01 | 9.2 |
 | D-29 | Readable, ejectable client; harvested state; connect is a fixed point | Ratified | ADR 0024, 0027 | 10 |
-| D-30 | Structured, source-mapped diagnostics; JSON and SARIF | Proposed | draft 10.2 | 11.2 |
+| D-30 | Structured, source-mapped diagnostics; JSON and SARIF | Ratified — endorsed 2026-10-01 and recorded | ADR 0044 | 11.2 |
 | D-31 | Compiler first, runtime backstop (tiered surfacing) | Ratified | ADR 0028 | 11.2 |
-| D-32 | Public contract = dialect + one entry point + consumer half | Proposed | PROPOSAL D4 | 12 |
-| D-33 | TS 6 API for v1; TS types never public; TS 7.1 / native parsers a goal | Proposed | draft Q-33 | 2 |
+| D-32 | Public contract = dialect + one entry point + consumer half | Deferred — design session; one entry point vs. the corpus pass and incremental API (§2) | PROPOSAL D4; team 2026-10-01 | 12 |
+| D-33 | TS 6 API for v1; TS types never public; TS 7.1 / native parsers a goal | Ratified — endorsed 2026-10-01 and recorded | ADR 0034 s8, ADR 0032 s4 | 2 |
 
 ## 14. Design review
 
@@ -637,7 +640,7 @@ The stance is consistent — server HTML is the source of truth, the platform do
 | Markup holes (named slots, CMS fragments) versus per-hole escaping | D-27, D-08 | A ratified trusted-fragment hole class, decided as a security question (O-4); slots-less v1 meanwhile |
 | Two ICU evaluators (ours, the backend's) must agree | D-22, D-23 | Equivalence corpus, like the fold-versus-realm audit |
 | One authored surface versus statement-context control flow | D-04 | The five `@for`/`@switch` corpus components are the test of the cost |
-| Native `ts.Node` internally versus a cheap TS 7 swap | D-25, D-33 | O-2 |
+| Native `ts.Node` internally versus a cheap TS 7 swap | D-25, D-33 | The converter leaf (ADR 0032 s4; O-2, answered) |
 
 Smaller frictions: eager registration of one module per component means many requests unless the consumer bundles; the Simulated tier is unavailable to CMS consumers by construction.
 
@@ -645,7 +648,7 @@ Smaller frictions: eager registration of one module per component means many req
 
 | Rank | Decision | Why costly | Mitigation |
 | --- | --- | --- | --- |
-| 1 | TS 6 API as the only engine (D-33) | External and time-bound; TS 7 supersedes the JS API | TS types stay internal; parser confinement (O-2) |
+| 1 | TS 6 API as the only engine (D-33) | External and time-bound; TS 7 supersedes the JS API | TS types stay internal; parser confinement behind the converter (ADR 0032 s4) |
 | 2 | Template targets (D-27) | Escaping in languages we do not execute; the portable subset; error shapes; backend ICU | Twig as the first-class reference; per-target escaping corpora; equivalence to SSG |
 | 3 | The Simulated tier (D-21) | A second evaluation mechanism with an optional heavyweight substrate | DOM-free seam; CI equivalence audit; SSG-only scope |
 | 4 | Lowered CSS for non-`@scope` targets (D-24) | Two emission strategies must behave identically; ours to maintain | Explicit `cssTargets`; drop the lowering when the baseline moves |
@@ -670,11 +673,11 @@ Cheap to reverse because delegated or internal: bundling, eager registration, in
 | # | Question | Considerations |
 | --- | --- | --- |
 | O-1 | **Demand for adapters.** Is there a named persona or pioneer for third-party adapters? | If not, the seam shrinks to "document the dialect as a target and add the `sourceMap` option", with no conformance suite until someone asks. |
-| O-2 | **Parser confinement.** Should the machinery hold native `ts.Node`, or keep parser access behind one converter leaf? | Native `ts.Node` means a smaller compiler; a converter leaf means a cheap TS 7 / native-parser swap. The TS 7 risk argues for the leaf. |
+| O-2 | **Parser confinement.** Should the machinery hold native `ts.Node`, or keep parser access behind one converter leaf? | **Answered — the converter leaf** (ADR 0032 s4): `typescript` API use is confined to the TS → estree converter, which a maintained library implements (`@typescript-eslint/typescript-estree`), and the machinery walks estree, not `ts.Node`. The remaining TS 7 risk is the converter's `typescript` peer range following TypeScript (LT-254 rider; LT-377 pins that no TypeScript type is published). |
 | O-3 | **Emitter-facing IR.** Are template targets first-party only (Twig, HTL), or does the emitter interface publish a serialized, versioned shape? | Publishing would let backends be written in other languages. |
 | O-4 | **Trusted-fragment holes.** Named slots and CMS-supplied markup need an unescaped hole class. Accept a slots-less v1 until then? | A security ADR beside ADR 0010, with its channel and tier. Shadow mode's native `<slot>` is unaffected. |
 | O-5 | **Portals.** Demand-prioritized, no shape recorded yet? |  |
-| O-6 | **Backend ICU.** Twig through Symfony's ICU, or one partial per locale with folded text? | The first preserves patterns; the second needs no equivalence corpus. |
+| O-6 | **Backend ICU.** Twig through Symfony's ICU, or one partial per locale with folded text? | **Answered — one partial per locale, no locale hole** (ADR 0043 s6). Argument-independent text folds at build; a message whose arguments read server args emits a formatter call over the already-localized pattern literal (PHP `MessageFormatter`, ICU4J), so no catalog reaches the CMS. Patterns are preserved where arguments are dynamic, so the ICU equivalence corpus stays (ADR 0043 s8). |
 | O-7 | **Adapter diagnostics wording.** Host-dialect wording behind source-mapped positions, or a re-wording hook for adapters? |  |
 | O-8 | **Dev loop.** First-party Bun and Vite plugins for watch and HMR, or only the incremental API? |  |
 | O-9 | **Positioning.** Adopt section 1.2 as a stated position in REQUIREMENTS, including the bounded client-read rule and server-wins-on-swap? | Does a Solid adapter strengthen or blur the pitch? |

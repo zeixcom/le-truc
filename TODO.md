@@ -12,8 +12,9 @@ Changelog Keeper merged it into `CHANGELOG.md [Unreleased]` the same day and `DO
 
 **Why now (owner, 2026-10-01).** Three things converge. (1) LT-233 has landed, so the ADR 0037
 work (LT-274–LT-276) and the ADR 0033 CSS track (LT-268 → LT-304/LT-306) no longer contend with
-it for the front ends. With LT-287/LT-288 they are every remaining reshape that must land before
-the first publish (ADR 0040). (2) The P2b consolidation keeps losing to feature work. The
+it for the front ends. With LT-287/LT-288 they are the remaining IR reshapes (ADR 0040). Since
+2026-10-01 the IR is internal (ADR 0034 s8, `COMPILER_SPEC.md` D-25), so none gates the first publish;
+they still land before the features that build on them. (2) The P2b consolidation keeps losing to feature work. The
 compiler has grown from 46 modules / ~21.9k lines at the 2026-09-18 review to 69 / ~27.0k
 (measured 2026-10-01, non-test `.ts` under `server/compiler/`). The suites (goldens, render and
 diagnostic parity, tier census) now cover mechanical moves, and every month of growth makes
@@ -34,8 +35,8 @@ parallel.
   and records it as an ADR. It is architect work, so it runs alongside track A from day one.
   It gates LT-274.
 - **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229 → LT-232~~ (reviewed 2026-10-01). ~~LT-366 → LT-243 → LT-367~~ (reviewed 2026-10-01). ~~LT-230~~ (reviewed 2026-10-01; its `analysis/selectors.ts` remainder rides LT-245). ~~LT-227 → LT-289~~ (reviewed 2026-10-01).
-  LT-234 → LT-247. LT-231 and LT-244 unordered.
-- **B — published IR (ADR 0040).** ~~LT-287~~ (reviewed 2026-10-01) and LT-288. Either may start at once; LT-287 lands
+  ~~LT-234, LT-231, LT-244~~ (reviewed 2026-10-01). ~~LT-368~~ (their review follow-ups; reviewed 2026-10-01, follow-up LT-378 in BACKLOG). LT-247 parked to BACKLOG (ruling 2026-10-01: demand-gated, see its entry).
+- **B — typed IR (ADR 0040).** ~~LT-287~~ (reviewed 2026-10-01) and LT-288. Either may start at once; LT-287 lands
   before LT-274.
 - **C — conditions (ADR 0037).** LT-274 after LT-360, LT-230, LT-243 and LT-287. Then LT-276,
   and LT-275 as the copy round. LT-275 also takes LT-359's copy, so there is one Tech Writer round.
@@ -55,16 +56,17 @@ LT-280 (per-item effect channels) is still architect work.
 measurement (record it before the first change), except where LT-274, LT-276 or LT-304/LT-306
 change them by design, as those tasks state. The mechanical tasks (track A, LT-287, LT-288)
 leave goldens and parity byte-identical. The reflection's library swaps have landed
-(`@typescript-eslint/typescript-estree`, `eslint-visitor-keys`, `magic-string`), and the net
+(`@typescript-eslint/typescript-estree`, `eslint-visitor-keys`; `magic-string` was struck
+2026-10-01 — LT-247 parked, demand-gated), and the net
 line count of `server/compiler/` is recorded against the 27.0k baseline. An ADR fixes the
 target-emitter interface, including how a reactive condition's prop-dependent initial state is
 represented, and LT-274's `conditional` node carries that representation (LT-360). Reactive
 conditions and the async boundary lower to template-cloned arms on both surfaces, with render
 and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, emitted scoped in
-both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names as gating LT-254
+both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-368.** Next free diagnostic code: LTC059 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's).
+**Next free task ID: LT-379.** Next free diagnostic code: LTC061 (LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -72,82 +74,13 @@ has landed. `bun run build:docs` and `check:links` pass.
 
 LT-360 reviewed 2026-10-01, in DONE.md.
 
-### A — Consolidation (P2b; LT-234 → LT-247 next — LT-364, LT-227–LT-230, LT-232, LT-289, LT-366, LT-367 reviewed, in DONE.md)
+### A — Consolidation (P2b; LT-364, LT-227–LT-232, LT-234, LT-244, LT-368, LT-289, LT-366, LT-367 reviewed, in DONE.md; LT-247 parked to BACKLOG)
 
-- [ ] LT-234: Shared code-generation kit — `CodeBuilder`, `jsString()`/`jsTemplate()`, `HtmlWriter`, `commonIndent()`.
-  **Skill:** le-truc-dev
-  **Context:** Review §2.8/§3 items 15–16. `emit-server.ts` interpolates `${tab(depth)}`
-  ~60 times with every call site hand-managing depth; `emit-client.ts` runs 33
-  consecutive `append` calls with trailing commas written as string suffixes; escaping is
-  three functions plus bare `JSON.stringify` plus raw interpolation — the inconsistency
-  behind §1.2/§1.3, which LT-221 point-fixed and this task closes structurally (migrate
-  those point-fixes onto `jsString()`). Extract: a `CodeBuilder` owning
-  lines/depth/open/close (making the three copied `cursor.offset` bookkeeping sites —
-  `emit-client.ts:227/279/611` — an invariant); the `jsString`/`jsTemplate` pair as THE
-  sanctioned way to put an author string into generated source; an `HtmlWriter`
-  generalising the existing private `Part[]`/`pushArgument` model
-  (`emit-server.ts:70/79`); and `commonIndent()` shared by `spans.ts`'s twin
-  computations (differing only in whether line 0 participates — make it a parameter).
-  Give the server emitter the client's reserved-name policy: it mints
-  `__html`/`__arm${n}`/`__async${n}`/`__children${n}`/`__key` with no collision check
-  against author names (an author `const __html` shadows the buffer and confuses
-  `retainReferenced`'s token match). Channel/tier note (ADR 0028): compiler-internal
-  naming policy — it renames, it does not error; no new runtime check, no new TSRX code.
-  **Verification:** goldens byte-identical for the corpus (escaping output must not
-  change for legal inputs); a pin that an author `__html` no longer collides; full gates
-  green.
 
-- [ ] LT-247: Adopt `magic-string` under `spans.ts` (reflection §5).
-  **Skill:** le-truc-dev
-  **Context:** Reflection §5 table: replaces `spans.ts`'s hand bookkeeping (~−150 lines) and
-  buys **real source maps free** — which M25's span-table remapping and the playground
-  (ADR 0025, Proposed) both want eventually. Runs after LT-234 (which settles `CodeBuilder`
-  and `commonIndent()` so this swap touches one settled surface, not two in-flight ones).
-  **Demand note, stated so this doesn't jump the queue:** the payoff is contingent — source
-  maps matter when editor/playground tooling consumes them, and ADR 0025 is Proposed. Do it
-  when that demand arrives OR as a small output-neutral swap if it retires code without
-  changing bytes; goldens byte-identical is the gate either way.
-  **Verification:** goldens + parity byte-identical; the span table's remapped positions
-  unchanged on a diagnostic-sample fixture; full gates.
 
-- [ ] LT-231: Collapse the hand-maintained compiler vocabularies (review §2.5).
-  **Skill:** le-truc-dev
-  **Context:** Five divergent "names the client can resolve" lists (`analysis/plan.ts:546`;
-  `analysis/loops.ts:98` — missing `plainLocalNames`/`clientLeTrucNames`/`isPending`;
-  `loops.ts:384`; `analysis/harvest.ts:579`; the inverse at `plan.ts:614`) plus six
-  copies of the user-facing message string; four subtly different "is this a signal read"
-  answers (`harvest.ts:38`, `analysis/reactivity.ts:160`, `harvest.ts:163`,
-  `ast-utils.ts:461`); `refOf` defined at `effects.ts:633` then hand-inlined at
-  `:983`/`:1603`; three "element has its own client construct" versions, one
-  (`loops.ts:194`) a hand-written kind list missing `style-map`/`pass`/reactive
-  `html`/`server`+`bindsProp`. One function per question. Where convergence changes an
-  answer (the `loops.ts` lists look like false-rejection bugs), the corpus must stay
-  byte-identical and warning-0 — pin each converged answer on synthetic fixtures so the
-  fix is visible. **Reflection §5 addition:** the `freeIdentifiers` fork (a scope-analysis
-  fork that never received a known bug fix — it lacks the `ForStatement`/`ForOfStatement`/
-  `CatchClause` cases the original grew; LT-229's walk migration fixes the *import-mismatch
-  copy*, not this one) evaluates `@typescript-eslint/scope-manager`/`eslint-scope` (~−300
-  lines, and a maintained scope manager cannot have that class of gap) against collapsing
-  in-house — pick one in the handoff with the reasoning stated; a library adoption here is
-  a reviewed dependency change per REQUIREMENTS §5, same as LT-243.
-  **Verification:** goldens + parity byte-identical; warning baseline 0; census unchanged from the iteration baseline;
-  synthetic pins for each converged answer.
+### B — Typed IR (ADR 0040; LT-287 before LT-274)
 
-- [ ] LT-244: Relocate `ExtractContext` out of `ir.ts` (LT-235 item (e); review §2.6/§3 item 19 — carved out of the design session).
-  **Skill:** le-truc-dev
-  **Context:** Reflection §6's "cheap way to keep the option," worth doing on its own merits and
-  ahead of LT-235's full session. `ir.ts` is documented as a pure-type leaf — "a serializable
-  `ComponentIR`" — and `ExtractContext` (front-end mutable state WITH function members) is the
-  one violation. Evicting it (to `setup-extraction.ts` or its own module, beside its only
-  consumers) restores the leaf property: the IR becomes a serializable data structure again,
-  which preserves the native-rewrite option for free (reflection §6) and is a precondition for
-  wave-4's type-level contracts treating the IR as data.
-  **Verification:** typecheck (import moves); goldens + parity byte-identical; `ir.ts` imports
-  no function-bearing front-end state (grep pin); full gates green.
-
-### B — Published IR (ADR 0040; LT-287 before LT-274)
-
-- [ ] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (LT-235 item (d); ADR 0040 s4). **Gates LT-254** (ADR 0040, accepted 2026-09-24: a published IR type).
+- [ ] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (LT-235 item (d); ADR 0040 s4).
   **Skill:** le-truc-dev
   **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
   s4. The four parallel `first()` collections (`refReasons`, `unmatchedOptionalRefs`,
@@ -166,7 +99,7 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### C — Reactive conditions (ADR 0037; LT-274 unblocked — LT-360, LT-230, LT-243, LT-287 reviewed)
 
-- [ ] LT-274: Lower reactive conditions to template-cloned arms on both surfaces (ADR 0037 sub-designs 1–3 and 5). **Gates LT-254** (ADR 0040: the `conditional` `TemplateNode` variant must exist before the first publish). **Gated on LT-360** (the template-emission interface fixes how the node carries a prop-dependent initial condition) **and on LT-230, LT-243, LT-287** (consolidation first, so the new node lands in one walk and on the settled IR).
+- [ ] LT-274: Lower reactive conditions to template-cloned arms on both surfaces (ADR 0037 sub-designs 1–3 and 5). **Gated on LT-360** (the template-emission interface fixes how the node carries a prop-dependent initial condition) **and on LT-230, LT-243, LT-287** (consolidation first, so the new node lands in one walk and on the settled IR).
   **Skill:** le-truc-dev
   **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) (✅ Accepted 2026-09-26; ADR 0017's amendment already recorded). A condition that reads a signal — `@if`/`@else`, `.tsx` ternary/`&&`, IIFE switch, `@switch`/`@case` with literal cases — lowers to inert arm `<template>`s plus the server-folded initial winner rendered live, and client-side to `reconcile()` over the new **current-arm-key source** (`Signal<string | null>`; ADR 0017 amendment). Arm keys are the named compile-time constants (`then`/`else`, `case:<literal>`; sub-design 2). Arm effects mount under keyedScopes with collector parity. Static conditions are unchanged — the Folded tier still renders the single winner and omits the rest, so byte-identity across tiers holds. Reactive conditions inside reconcile containers stay banned (LT-186's rule).
   **Deliverable:** shared lowering in both front ends; arm extraction + initial-winner fold rules; the arm-key source form on `reconcile()`; diagnostics with channel/tier fields (dynamic `@case` value: compiler, tier 1 Prevented; reactive-if-in-reconcile-container: compiler, tier 1); goldens and parity extension.
@@ -174,7 +107,7 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   **IR requirement (LT-360, [ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md) s4):** one `conditional` node serves server-known and reactive conditions. It carries `mode: 'server' | 'reactive'`, the keyed arms, and an **initial winner** kept separate from the client thunk (the thunk stays a span only `emit-client` reads). The initial winner is one of three forms: `{ constant: key | null }`; `{ select: { when, key }[], otherwise: key | null }`, where `when` is a portable expression over server args (ADR 0043 s1); or a `fold` marker, meaning SSG folds through the value harness as today and a template target routes Static. Derive the initial expression by substituting signal initializers back to server args, sharing `fold-inputs`' analysis. A literal initializer, a `requestContext` fallback, or a Parser-backed `host.<prop>` read fed by a compose-site literal folds to `constant`. An unresolvable one gives no live arm (ADR 0037 s5). A non-portable one gives `fold`. SSG output is unchanged by this shape: goldens move only where ADR 0037 itself moves them. No template target consumes the node yet; LT-257 does.
   **Coordinate:** the IR node rides LT-235's discriminated-union session; the boundary switch is LT-276, sequenced after this; diagnostic copy is LT-275.
 
-- [ ] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4). (LT-303, its former sequencing gate, landed 2026-09-25.) **Gates LT-254** (ADR 0040).
+- [ ] LT-276: Switch the async boundary to template-cloned arms (ADR 0037 sub-design 4). (LT-303, its former sequencing gate, landed 2026-09-25.)
   **Skill:** le-truc-dev
   **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md), owner ruling 2026-09-21: `@try`/`@pending`/`@catch` arms become templates plus the adopted winner, keyed `ok`/`nil`/`err`. Retires the fieldset wrappers `emit-server.ts` places at every arm root, the client's `hidden`+`disabled` sweep, and the LT-086 `.parentElement` addressing — all of it existed only because both arms were live simultaneously. The ok arm's resolved-value text and the err arm's bound catch-param text move into the per-arm mount. LT-211's no-stale-arm ruling and the `isPending` idiom are untouched; LT-078's tree-shaking question is re-pinned against templates. ADRs 0024 s13, 0032 s2 and 0041 already state the target mechanism; the teaching that still describes toggled arms (AGENTS.md's boundary bullet, `HOST_PROFILE.md`, the le-truc skill) flips with this task — Tech Writer rider.
   **Depends on** LT-274 (the mechanism).
@@ -185,6 +118,11 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   **Context:** [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) reverses "`@if` conditions cannot read signals" (`validateCondition`, `server/compiler/lower-shared.ts`). Only the **condition face** of LTC005 retires — the `t`-in-reactive-position face stays. The error-message lifecycle applies to every face touched: the LTC005 message, the arrow-thunk section's sentence in `server/compiler/HOST_PROFILE.md` and its "Open questions" reactivity paragraph ("creates no DOM outside declared lists", "Branch DOM lifetime … toggled via `hidden` (this host)"), and the teaching in ARCHITECTURE.md, AGENTS.md and the le-truc/cause-effect skills; the new ADR 0037 codes' final wording lands here. Batch with the LT-220/LT-189 copy rounds. **LT-233 rider (2026-09-25):** shared code words diagnostics only through `server/compiler/surface.ts` — each new ADR 0037 code's surface-specific fragments become `SurfaceWording` keys (both tables), and the `CONDITIONS` cases in `server/tests/compiler/tsx/diagnostic-parity.test.ts` flip to the new codes on both surfaces in the same change.
   **Check:** catalog rows added/retired match the diagnostics union; `check:links`; compile-warning baseline 0.
   **Depends on** LT-274.
+  **Rider (LT-231 review, 2026-10-01):** LT-231 added one new sentence on an existing builder —
+  `diagnostic.unsupported` from `analysis/loops.ts` (`… on an element in a server-data <loop>
+  body`, fix "`each()` binds reactive attributes, class maps and event handlers only — …"). It
+  is Tier 1 Prevented, compiler channel; its final wording, and whether its surface-specific
+  fragment needs a `SurfaceWording` key, land in this round.
   **Rider (LT-220/LT-189 review, 2026-10-01):** the ADR 0037 copy those rounds carried moves here — the HOST_PROFILE control-flow row, the arrow-thunk section's reversal, the ARCHITECTURE/AGENTS "`@if` cannot read signals" sentences, and the condition-face fix LT-189 now words as "show and hide the element with `hidden={() => …}`" (`lower-shared.ts` `validateCondition`).
 
 - [ ] LT-359: LT-189/LT-220 review follow-ups — copy corrections.

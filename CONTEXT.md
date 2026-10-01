@@ -72,6 +72,10 @@ _Avoid_: front end (that names the compiler half), format, dialect
 The compiler's per-surface half: parsing, setup-extraction dispatch, and template lowering for one **Authored Surface**. Two exist, sharing front-end-neutral extraction modules so a shared change cannot drift between surfaces ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s6).
 _Avoid_: parser (too narrow — a front end lowers, not only parses), compiler (that includes the **Machinery**)
 
+**Adapter**:
+A tool outside the compiler that translates another component format into host-profile `.tsx`, together with a source map back to its input; the compiler remaps its diagnostics through that map ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s6). An adapter translates or refuses, never emulates. Experimental until a first-class reference adapter ships.
+_Avoid_: front end (that is in-repo and produces IR, not source), plugin (there is no plugin machinery), converter (the internal TS → estree step)
+
 **Machinery**:
 The surface-independent compiler stages every **Authored Surface** shares: client analysis, both emitters, tier classification, and the simulation driver ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md) s5).
 _Avoid_: backend, core (that names `@tsrx/core`, the `.tsrx` parser pin)

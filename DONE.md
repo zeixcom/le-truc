@@ -13,7 +13,7 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 Pruned 2026-10-01, fourth pass (Architect, after the "ICU MessageFormat switch" iteration
 closed; Changelog Keeper merged it into `CHANGELOG.md [Unreleased]` the same day). **No task
-entries remained** at that prune; LT-228–LT-230, LT-232, LT-243, LT-287, LT-360, LT-364, LT-366 and LT-367 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
+entries remained** at that prune; LT-227–LT-232, LT-234, LT-243, LT-244, LT-287, LT-289, LT-360, LT-364, LT-366, LT-367 and LT-368 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
 LT-308, LT-343, LT-344, LT-346–LT-351, LT-354. Where their rulings live: ADR 0030 (s4 ICU, s6/s9
 locale and the client channel, the corpus-only MF2 authoring constraint), ADR 0032 s6 (diagnostic
 parity), ADR 0010 s6 (hand-written `dangerouslyBindInnerHTML` stays raw), AGENTS.md, and the
@@ -22,6 +22,26 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
 ×3, 2026-09-21 ×2. Full entry text: `git log -p -- DONE.md`.
 
 ---
+
+- [x] LT-368: LT-234/LT-231 review follow-ups — rename `HtmlWriter.hole()`, two pins, one stray comment. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `HtmlWriter.hole()`/`.holes` → `expr()`/`.exprs` (`codegen.ts`), documented as generated JS, not the glossary **Hole**. Four pins in `converged-answers.test.ts` for LT-231's changed answers: a prop-bound attribute and a `truc:pass` in a server-data loop body are LTC005; identical `@if` roots differing only by a prop-bound attribute are now LTC007 (previously union-addressed, binding the attribute on the `@else` root too — a behaviour change for authors, Changelog Keeper note); a prop-bound attribute in `@empty` is LTC005. The orphaned `refOf` JSDoc moved onto `refOf` in `analysis/selectors.ts`.
+  **Review:** Approved. One gap found beyond the task's scope: the branch signature still drops the text of `server` (prop-bound), `pass` and reactive `html` attributes, so two roots binding *different* props to the same attribute stay union-addressed and the second binding is lost — LT-378.
+
+- [x] LT-234: Shared code-generation kit — `CodeBuilder`, `jsString()`/`jsTemplate()`, `HtmlWriter`, `commonIndent()`. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new `server/compiler/codegen.ts`: `jsString(value, 'single' | 'double')`, `jsTemplate`, `jsData`, `isJsIdentifier`, `HtmlWriter`, and `CodeBuilder` (`line`/`open`/`close`/`between`/`fork`/`append`; depth and span offset are invariants, and `append` rebases spans). `commonIndent()` lives in `indent.ts`. Both emitters are migrated: no hand tab depth, no hand `cursor.offset`, no bare `JSON.stringify` or `'${…}'` for an author string. The server emitter mints its locals (`__html`, `__arm`n, `__async`n, `__children`n, `__key`, `__empty`n) and the harness aliases through `ctx.mint`, which prefixes `_` while a render-scope name binds the name. Corpus is byte-identical; `codegen.test.ts` pins the kit and the `__html` rename.
+  **Review:** Approved. **Rulings:** (1) `commonIndent`'s second option, `skipDocContinuations`, stays: the twins also differed in the `*`-line filter, and unifying it would move bytes for no benefit. (2) `CodeBuilder` absorbed the span bookkeeping LT-247 was meant to replace (LT-247 parked on that basis). (3) `HtmlWriter.hole()` collides with the glossary **Hole** (ADR 0043), so the rename to `expr()` is LT-368, and it lands before LT-274 or LT-257 write through the class.
+
+- [x] LT-231: Collapse the hand-maintained compiler vocabularies. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** one answer per question. `.get` reads: `isGetterMember`/`getterObjectName`/`signalGetCallName` (`ast-utils.ts`); a computed `sig[get]()` no longer counts. One `refOf` (`analysis/selectors.ts`), retiring 7 inline copies. One `isClientConstructAttr` (`walk.ts`) under the loop-body, branch-signature and empty-arm checks. One `renderOnlyBindings` (`analysis/naming.ts`) under `badFreeNames` and `reportServerOnlyNames`. LTC046's set uses `CONTEXT_NAMES`. The scope walk now covers function hoisting, class names and member keys, labels, a named function expression's own name, and parameter defaults and computed pattern keys. **Behavior change:** a reactive style map or reactive `truc:html` in a server-data loop body is now an `unsupported` error; it used to compile clean and was never bound. Pins: `converged-answers.test.ts`. Corpus byte-identical, warning baseline 0, census output identical.
+  **Review:** Approved. **Rulings:** (1) The scope analysis stays in-house, and `@typescript-eslint/scope-manager` is declined: the `.tsrx` AST carries non-ESTree nodes (`JSXCodeBlock` and its `render` slot) the manager cannot scope, and LT-229 had already folded the fork into one walk. Do not re-propose it without a `.tsrx` story. (2) Three predicates stay apart deliberately: `reactivity.ts`'s classifier (reactive vs static), `harvest.ts`'s portable-seed allowlist (can the browser re-run the initializer), and the `.tsrx` in-template client-stmt allowlist. Widening the last to `clientKnownName` needs its own client-need check, so it is LT-369 and not a merge. (3) LT-363 part (3) is mostly discharged here; its entry records what remains. (4) Copy for the new loop-body sentence rides LT-275; the unpinned answer changes are LT-368 (b).
+
+- [x] LT-244: Relocate `ExtractContext` out of `ir.ts`. — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `ExtractContext` and `createExtractContext` are now in `server/compiler/extract-context.ts`. `ir.ts` imports only `ast-node`, `icu/parse` and `surface`, as types. `ir-leaf.test.ts` parses `ir.ts` and fails on a value import or on any function-bearing type node.
+  **Review:** Approved. The IR is pure data again, the precondition reflection §6 and ADR 0040's data contracts want. The leaf test is the guard: a future IR field holding a callback fails there, not in review.
 
 - [x] LT-289: Typed pass contracts — functional passes over `PassShared` (LT-235 item (f); ADR 0040 s5). — reviewed ✓
   **Skill:** le-truc-dev
