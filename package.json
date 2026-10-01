@@ -109,6 +109,7 @@
 		"@types/sanitize-html": "^2.16.1",
 		"@zeix/cem-plugin-le-truc": "^0.3.3",
 		"axe-core": "^4.13.0",
+		"css-select": "^7.0.0",
 		"culori": "^4.0.2",
 		"dompurify": "^3.4.14",
 		"jsdom": "^30.0.1",
