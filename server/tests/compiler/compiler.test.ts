@@ -390,16 +390,16 @@ import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
 		)
 		// `fallbackNode` (LT-129) carries the fallback's AST beside its text, so
 		// match on the recorded fields rather than the whole entry.
-		expect(component?.parserExposeProps.get('value')).toMatchObject({
+		expect(component?.exposeProps.get('value')?.parser).toMatchObject({
 			parser: 'asString',
 			fallbackText: "'x'",
 		})
-		expect(component?.parserExposeProps.get('count')).toMatchObject({
+		expect(component?.exposeProps.get('count')?.parser).toMatchObject({
 			parser: 'asInteger',
 			fallbackText: '0',
 		})
-		expect(component?.parserExposeProps.has('clear')).toBe(false)
-		expect(component?.exposeAmbients).toEqual([
+		expect(component?.exposeProps.get('clear')?.parser).toBeUndefined()
+		expect(component?.expose?.ambients).toEqual([
 			'asInteger',
 			'asString',
 			'defineMethod',

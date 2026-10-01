@@ -13,7 +13,6 @@ import type { AstNode } from '../ast-node'
 import {
 	forEachChild,
 	hostPropOf,
-	identifierName,
 	isNode,
 	nodeType,
 	sanitizeVarName,
@@ -316,7 +315,7 @@ const collectRenderSites = (component: ComponentIR): RenderSites => {
 				) {
 					const signal = component.exposeProps.get(
 						String((expr as AstNode).value),
-					)
+					)?.signalName
 					if (signal) sites.push({ kind: 'text', signal, element: node, order })
 				} else if (nodeType(expr) === 'ArrowFunctionExpression') {
 					const body = (expr as AstNode).body
@@ -519,7 +518,7 @@ const planHarvests = (
 					a.kind === 'server' &&
 					a.name !== null &&
 					a.exprText === param &&
-					component.parserExposeProps.has(a.name),
+					component.exposeProps.get(a.name)?.parser !== undefined,
 			) as Extract<AttributeIR, { kind: 'server' }> | undefined
 			if (exposedRootAttr) {
 				ambient.add('host')
@@ -542,7 +541,7 @@ const planHarvests = (
 				for (const attr of node.attrs) {
 					if (attr.kind !== 'reactive') continue
 					const prop = hostPropOf(attr.thunk)
-					if (!prop || !component.parserExposeProps.has(prop)) continue
+					if (!prop || !component.exposeProps.get(prop)?.parser) continue
 					const rootAttr = component.root.attrs.find(
 						a => a.kind === 'server' && a.name === prop,
 					) as Extract<AttributeIR, { kind: 'server' }> | undefined

@@ -128,8 +128,8 @@ export function C({ label }: { label?: string })
 import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileSource(source, 'c.tsrx')
 		expect(diagnostics).toEqual([])
-		expect(component?.parserExposeProps.has('count')).toBe(true)
-		expect(component?.parserExposeProps.has('data')).toBe(true)
+		expect(component?.exposeProps.get('count')?.parser).toBeDefined()
+		expect(component?.exposeProps.get('data')?.parser).toBeDefined()
 	})
 
 	test('managed lazy child without formAssociated is LTC010', () => {

@@ -18,7 +18,7 @@ import {
 	reportStaticIds,
 	shareExclusiveIf,
 } from './first-refs'
-import type { TemplateNode } from './ir'
+import type { FirstRefDecl, FirstRefStage, TemplateNode } from './ir'
 import type { SetupExtraction } from './setup-extraction'
 import { wordingOf } from './surface'
 
@@ -27,15 +27,7 @@ export type ResolvedTemplate = {
 	root: TemplateNode & { kind: 'element' }
 	styleChild: (TemplateNode & { kind: 'element' }) | null
 	css: string
-	refReasons: Map<string, string>
-	unmatchedOptionalRefs: Array<{ name: string; selector: string }>
-	deferredComposeRefs: Array<{
-		name: string
-		selector: string
-		maybe: boolean
-		offset: number | undefined
-	}>
-	optionalRefs: Set<string>
+	firstRefs: Map<string, FirstRefDecl>
 }
 
 /**
@@ -96,18 +88,21 @@ export const resolveTemplateOutput = (
 
 	// Resolve `first(selector, required)` element references (LT-055) now
 	// that `root` exists.
-	const refReasons = new Map<string, string>()
-	const unmatchedOptionalRefs: Array<{ name: string; selector: string }> = []
-	const deferredComposeRefs: Array<{
-		name: string
-		selector: string
-		maybe: boolean
-		offset: number | undefined
-	}> = []
+	const firstRefs = new Map<string, FirstRefDecl>()
 	for (const [
 		refName,
 		{ selectorText, reasonText, maybe, node },
 	] of extraction.elementRefs) {
+		const resolve = (stage: FirstRefStage): void => {
+			firstRefs.set(refName, {
+				name: refName,
+				selector: selectorText,
+				required: !maybe,
+				reason: reasonText,
+				stage,
+				offset: node.start,
+			})
+		}
 		const { elements } = collectMatchingElements(root, selectorText)
 		if (elements.length === 0 && namesCustomElementTag(selectorText)) {
 			// A selector naming a custom-element tag that matched no raw
@@ -116,13 +111,7 @@ export const resolveTemplateOutput = (
 			// decision — match, no match, ambiguity — to the pass that
 			// has the compose registry; deciding here would mean
 			// rejecting a selector that is about to resolve.
-			deferredComposeRefs.push({
-				name: refName,
-				selector: selectorText,
-				maybe,
-				offset: node.start,
-			})
-			refReasons.set(refName, reasonText as string)
+			resolve('deferred')
 			continue
 		}
 		if (elements.length === 0) {
@@ -135,10 +124,7 @@ export const resolveTemplateOutput = (
 			// markup the component didn't render, so the client
 			// queries the authored selector as-is.
 			if (maybe) {
-				unmatchedOptionalRefs.push({
-					name: refName,
-					selector: selectorText,
-				})
+				resolve('unmatched')
 				continue
 			}
 			ctx.diagnostics.push(
@@ -149,6 +135,7 @@ export const resolveTemplateOutput = (
 					selectorText,
 				),
 			)
+			resolve('rejected')
 			continue
 		}
 		// A REQUIRED ref (two literals) whose only match sits in
@@ -181,6 +168,7 @@ export const resolveTemplateOutput = (
 					wordingOf(ctx),
 				),
 			)
+			resolve('rejected')
 			continue
 		}
 		// Two `first()` names resolving to the same element is a
@@ -198,6 +186,7 @@ export const resolveTemplateOutput = (
 					claimed.name,
 				),
 			)
+			resolve('rejected')
 			continue
 		}
 		for (const element of elements)
@@ -206,7 +195,7 @@ export const resolveTemplateOutput = (
 				name: refName,
 				selector: selectorText,
 			})
-		refReasons.set(refName, reasonText as string)
+		resolve('matched')
 	}
 
 	// LTC042 (LT-131): a constant `id` in a template duplicates as
@@ -221,13 +210,6 @@ export const resolveTemplateOutput = (
 		root,
 		styleChild,
 		css,
-		refReasons,
-		unmatchedOptionalRefs,
-		deferredComposeRefs,
-		optionalRefs: new Set(
-			[...extraction.elementRefs]
-				.filter(([, entry]) => entry.maybe)
-				.map(([name]) => name),
-		),
+		firstRefs,
 	}
 }

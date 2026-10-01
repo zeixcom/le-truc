@@ -13,7 +13,7 @@ future iteration. At release planning Changelog Keeper consumes this file alongs
 
 Pruned 2026-10-01, fourth pass (Architect, after the "ICU MessageFormat switch" iteration
 closed; Changelog Keeper merged it into `CHANGELOG.md [Unreleased]` the same day). **No task
-entries remained** at that prune; LT-227–LT-232, LT-234, LT-243, LT-244, LT-287, LT-289, LT-360, LT-364, LT-366, LT-367 and LT-368 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
+entries remained** at that prune; LT-227–LT-232, LT-234, LT-243, LT-244, LT-287, LT-288, LT-289, LT-360, LT-364, LT-366, LT-367 and LT-368 were added since. Consumed: LT-138, LT-189, LT-218–LT-220, LT-233, LT-242, LT-249–LT-253,
 LT-308, LT-343, LT-344, LT-346–LT-351, LT-354. Where their rulings live: ADR 0030 (s4 ICU, s6/s9
 locale and the client channel, the corpus-only MF2 authoring constraint), ADR 0032 s6 (diagnostic
 parity), ADR 0010 s6 (hand-written `dangerouslyBindInnerHTML` stays raw), AGENTS.md, and the
@@ -78,6 +78,11 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
   **Ruling (recorded in `walk.ts`'s module doc):** every walk enters `@pending` arms, because they are rendered, hidden-toggled markup. The `intoPending` option is deleted. Exclusivity follows the same fact: an async boundary's arms sum, and a plain error boundary is body XOR catch (max).
   **Changed:** new `someNode` (the short-circuiting sibling of `walkTemplate`). Eight hand walks are routed through it; `refBranchGuard`/`inOptionalBranch` keep their context threading but step via `childNodes`. The authorized-exception list is rewritten by category. **Bug fix:** a compose site nested below a `@pending` root (`@pending { <div><Child id="x"/></div> }`) used to compile clean and escape LTC038, LTC011 and `countComposeBySource`. It is now caught and pinned in `compose.test.ts`. Goldens and parity are byte-identical.
   **Review:** Approved. Handoff: the exclusivity cascades (`countForSelector`, `countComposeBySource`, `enclosingIfOf`/`enclosingIfIn`) ride LT-245; this is recorded in its entry. Owner to rerun `check:portability` and `check:sim` outside the sandbox.
+
+- [x] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (ADR 0040 s4). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `ir.ts`: `firstRefs: ReadonlyMap<string, FirstRefDecl>` replaces `refReasons`/`unmatchedOptionalRefs`/`deferredComposeRefs`/`optionalRefs`; `FirstRefStage` is `matched | deferred | unmatched | rejected`. `expose: ExposeStmt | null` (text, range, argNode, ambients) plus `exposeProps: ReadonlyMap<string, ExposePropDecl>` (kind, signalName?, parser?: `ParserExposeDecl`) replace the seven expose fields. `SetupExtraction` carries the same two expose shapes (`exposedPropNames` retired). `declaredRefNames()` (`first-refs.ts`) is the one "names a query may address" answer. `RegistryEntry.exposedProps` is the `kind` projection, unchanged. Goldens, parity and census byte-identical.
+  **Review:** Approved. Matches ADR 0040 s4. Rulings: (1) the `rejected` stage is in scope — without it an optional ref that raised a diagnostic would drop out of the declared set `optionalRefs` used to carry; (2) the new IR types stay out of `contract.ts` — the IR leaves the contract under LT-370, so widening it now would be churn; (3) one `ExposePropDecl` per key means a duplicated `expose()` key is last-wins, as at runtime (the old per-map accumulation could mix both initializers; unreachable under tsc's TS1117).
 
 - [x] LT-287: SignalIR → three members by constructor family (ADR 0040 s2). — reviewed ✓
   **Skill:** le-truc-dev

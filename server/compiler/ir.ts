@@ -68,6 +68,103 @@ export type SignalConstructor =
  */
 export type ExposeKind = 'slot' | 'computed' | 'method'
 
+/** The one `expose({...})` call — four views of the same statement. */
+export type ExposeStmt = {
+	/** The call expression's text, verbatim. */
+	text: string
+	/** Source range of `text` (LT-011). */
+	range: SourceRange
+	/**
+	 * The argument object node (LT-019): method-producer bodies inside it
+	 * (`defineMethod(() => { host.value = ''; input.value = '' })`) may close
+	 * over client-only ambients — context members, refs — that the server
+	 * render function never declares (the closure itself is dead code
+	 * server-side, `defineMethod` is identity there and never invokes it, but
+	 * the generated module still needs it to TYPE-CHECK). `emit-server.ts`
+	 * uses this node to find those free names and stub them.
+	 */
+	argNode: AstNode | null
+	/** Ambient names the call uses (parser factories, `defineMethod`), sorted. */
+	ambients: string[]
+}
+
+/**
+ * A Parser-backed `expose()` initializer, `prop: asString('')` —
+ * attribute-driven state (ADR 0003): the host attribute seeds the prop at
+ * connect; `observedAttributes` re-parses it on mutation.
+ */
+export type ParserExposeDecl = {
+	parser: string
+	fallbackText: string | null
+	/**
+	 * The fallback argument's AST, when it has one. Kept beside the text
+	 * because LTC039 has to ask what the fallback READS, not just how it
+	 * prints: a fallback whose expression reads the very site the arg renders
+	 * into is bullet 2's sanctioned override, not a duplicated channel
+	 * (LT-129).
+	 */
+	fallbackNode: AstNode | null
+}
+
+/** One prop `expose()` declares. */
+export type ExposePropDecl = {
+	/**
+	 * How the initializer lands on the host (LT-158). Flows into the
+	 * component's `RegistryEntry`, where a `pass={{ }}` site in ANOTHER file
+	 * reads it to decide the binding's legality at compile time — the
+	 * residual ADR 0028 sub-design 6 asked the registry to close.
+	 */
+	kind: ExposeKind
+	/** The signal a `prop: signal.get` initializer reads. */
+	signalName?: string
+	/** The Parser factory call, for `prop: asString('')`. */
+	parser?: ParserExposeDecl
+}
+
+/**
+ * How a `first()` reference resolved against the component's own template:
+ *
+ * - `matched` — a raw element matched; it carries the synthetic `{kind:
+ *   'ref'}` attr every query-naming consumer reads.
+ * - `deferred` — the selector matched no raw element but names a
+ *   custom-element tag (LT-127): resolution waits for the registry-aware
+ *   second pass (`analysis/compose-refs.ts`), which raises LTC026/LTC027. A
+ *   composed child's eventual DOM tag lives in another file's registry
+ *   entry, so `compileSource` cannot decide it.
+ * - `unmatched` — an OPTIONAL ref matched nothing (LT-123) — legitimate:
+ *   the page may author that markup beside the component's own children,
+ *   so the client queries the authored selector verbatim.
+ * - `rejected` — the resolution raised a diagnostic (LTC026 not found,
+ *   ambiguous, LT-132 duplicate).
+ */
+export type FirstRefStage = 'matched' | 'deferred' | 'unmatched' | 'rejected'
+
+/** One `const name = first(selector, reason?)` element reference (LT-055). */
+export type FirstRefDecl = {
+	name: string
+	selector: string
+	/**
+	 * Whether the author declared it required (two literals). An OPTIONAL
+	 * ref (`first('sel')`, LT-123) stays optional even when the template
+	 * renders its element unconditionally: the markup can be page-authored
+	 * instead of server-rendered, and a page is free to leave a child out
+	 * (`basic-button.html`'s `missing-elements-test` authors a bare
+	 * `<button>` with no `span.label`). So cardinality is the WEAKER of what
+	 * the author declared and what the site proves — never the stronger.
+	 */
+	required: boolean
+	/**
+	 * The author's required-reason text, null for an optional ref.
+	 * `analysis/naming.ts`'s `addQuery` puts it into the emitted
+	 * `MissingElementError` message instead of the auto-generated one — the
+	 * one part of the author's call that flows into generated code verbatim.
+	 */
+	reason: string | null
+	stage: FirstRefStage
+	/** Source offset of the `first()` call. */
+	offset: number | undefined
+}
+
 /** Fields every signal declaration carries, whatever its family. */
 type SignalIRBase = {
 	name: string
@@ -564,51 +661,14 @@ export type ComponentIR = {
 	 */
 	plainSetup: SetupStmt[]
 	signals: SignalIR[]
-	/** `expose({...})` statement text, verbatim. */
-	exposeText: string | null
-	/** Source range of `exposeText` (LT-011). */
-	exposeRange: SourceRange | null
+	/** The `expose({...})` call, or null when the component declares none. */
+	expose: ExposeStmt | null
 	/**
-	 * `expose({...})`'s argument object node (LT-019): method-producer bodies
-	 * inside it (`defineMethod(() => { host.value = ''; input.value = '' })`)
-	 * may close over client-only ambients — context members, refs — that the
-	 * server render function never declares (the closure itself is dead code
-	 * server-side, `defineMethod` is identity there and never invokes it, but
-	 * the generated module still needs it to TYPE-CHECK). `emit-server.ts`
-	 * uses this node to find those free names and stub them.
+	 * Every prop `expose()` declares, whatever its initializer shape, in
+	 * source order (LT-288, ADR 0040 s4). `RegistryEntry.exposedProps` is
+	 * the `kind` projection of this map.
 	 */
-	exposeArgNode: AstNode | null
-	/** Prop name → signal name, from `expose({ prop: signal.get })`. */
-	exposeProps: Map<string, string>
-	/**
-	 * Prop name → how its initializer lands on the host (LT-158). Flows into
-	 * the component's `RegistryEntry`, where a `pass={{ }}` site in ANOTHER
-	 * file reads it to decide the binding's legality at compile time — the
-	 * residual ADR 0028 sub-design 6 asked the registry to close.
-	 */
-	exposeKinds: Map<string, ExposeKind>
-	/**
-	 * Prop name → Parser factory, from `expose({ prop: asString('') })` —
-	 * attribute-driven state (ADR 0003): the host attribute seeds the prop at
-	 * connect; `observedAttributes` re-parses it on mutation.
-	 */
-	parserExposeProps: Map<
-		string,
-		{
-			parser: string
-			fallbackText: string | null
-			/**
-			 * The fallback argument's AST, when it has one. Kept beside the
-			 * text because LTC039 has to ask what the fallback READS, not
-			 * just how it prints: a fallback whose expression reads the very
-			 * site the arg renders into is bullet 2's sanctioned override,
-			 * not a duplicated channel (LT-129).
-			 */
-			fallbackNode: AstNode | null
-		}
-	>
-	/** Ambient names `expose()` uses (parser factories, `defineMethod`). */
-	exposeAmbients: string[]
+	exposeProps: ReadonlyMap<string, ExposePropDecl>
 	/**
 	 * Context members referenced from setup/expose code (`host`, `internals`,
 	 * and — LT-035 — `requestContext`/`provideContexts`) — flows into the
@@ -620,54 +680,11 @@ export type ComponentIR = {
 	/** Template root element IR (style block removed). */
 	root: TemplateNode & { kind: 'element' }
 	/**
-	 * `first(selector, required)`-declared name → the author's own required-
-	 * reason text (LT-055). `analysis/naming.ts`'s `addQuery` uses this to
-	 * populate the emitted `MissingElementError` message instead of its
-	 * usual auto-generated one, when the query's name matches a `first()`
-	 * declaration — the reason string is the one part of the author's call
-	 * that DOES flow into the generated code verbatim. The selector flows
-	 * too when it is structurally verifiable (LT-316, the ref attr's
-	 * `selector`); otherwise the compiler synthesizes one.
+	 * Every well-formed `first()` declaration, by bound name, in source
+	 * order (LT-288, ADR 0040 s4) — how each resolved against the template
+	 * is `stage`, not a different collection.
 	 */
-	refReasons: ReadonlyMap<string, string>
-	/**
-	 * Optional (`first('sel')`, one-literal) references whose
-	 * selector matches NOTHING in this component's own template
-	 * (LT-123) — legitimate: an optional ref may address markup
-	 * the PAGE authored beside the component's own children. The
-	 * structural check that rejects an unmatched REQUIRED ref
-	 * (LTC026) cannot say anything about those, so the client
-	 * queries them from the authored selector verbatim.
-	 */
-	unmatchedOptionalRefs: ReadonlyArray<{ name: string; selector: string }>
-	/**
-	 * `first()` references whose selector matched no RAW element but names
-	 * a custom-element tag (LT-127) — deferred to the registry-aware second
-	 * pass, which resolves them against COMPOSED (PascalCase) children and
-	 * attaches the same synthetic `{kind: 'ref', name}` (`analysis/
-	 * compose-refs.ts`). A composed child's eventual DOM tag lives in
-	 * another file's registry entry, so `compileSource` cannot decide
-	 * whether such a selector matches something or nothing — deferring is
-	 * the only sound answer, and LTC026/LTC027 are raised there instead.
-	 */
-	deferredComposeRefs: ReadonlyArray<{
-		name: string
-		selector: string
-		maybe: boolean
-		offset: number | undefined
-	}>
-	/**
-	 * Refs the author declared OPTIONAL (`first('sel')`, one
-	 * literal), matched or not (LT-123). The template having
-	 * rendered the element unconditionally does not make such a
-	 * ref required: the component's markup can be page-authored
-	 * instead of server-rendered, and a page is free to leave a
-	 * child out (`basic-button.html`'s `missing-elements-test`
-	 * authors a bare `<button>` with no `span.label`). So
-	 * cardinality is the WEAKER of what the author declared and
-	 * what the site proves — never the stronger.
-	 */
-	optionalRefs: ReadonlySet<string>
+	firstRefs: ReadonlyMap<string, FirstRefDecl>
 	/** `@for` loops, keyed by their template node. */
 	fors: Map<AstNode, ForIR>
 	/** Dedented verbatim CSS ("" when no style block). */
@@ -692,7 +709,7 @@ export type ComponentIR = {
 	 * statement text, ready to splice into the generated module(s) that need
 	 * it. An import used in both is present in both arrays. `serverLocalNames`
 	 * is every locally-bound name a server import resolves — `emit-server.ts`
-	 * uses it to skip the `exposeArgNode` `any`-stub for a name that already
+	 * uses it to skip the `expose.argNode` `any`-stub for a name that already
 	 * has a real import (LT-019's stub predates plain-import support, when a
 	 * custom Parser's factory name could never resolve server-side at all).
 	 */

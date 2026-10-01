@@ -534,7 +534,8 @@ export const analyzeClient = (
 	// the walk above to find, and a pass thunk reading the name there must
 	// not be rejected as server-only (LTC005) for a name that resolves in
 	// pass 2.
-	for (const ref of component.deferredComposeRefs) refNames.add(ref.name)
+	for (const ref of component.firstRefs.values())
+		if (ref.stage === 'deferred') refNames.add(ref.name)
 
 	// Optional refs matching nothing structural (LT-123): the
 	// template never carried a `ref` attr for them, so the walk
@@ -543,7 +544,9 @@ export const analyzeClient = (
 	// selector under `maybe` cardinality (non-throwing `first()`),
 	// under the authored NAME, which is what setup references.
 	for (const ref of [
-		...component.unmatchedOptionalRefs,
+		...[...component.firstRefs.values()].filter(
+			ref => ref.stage === 'unmatched',
+		),
 		...(composeRefs.mode === 'resolved' ? composeRefs.unmatchedOptional : []),
 	]) {
 		refNames.add(ref.name)
@@ -682,7 +685,7 @@ export const analyzeClient = (
 	// verbatim, so a server arg they read is unbound there — the same
 	// ReferenceError a reactive thunk would hit, caught here rather than
 	// left to tsc on the generated module.
-	for (const prop of asArray(component.exposeArgNode?.properties))
+	for (const prop of asArray(component.expose?.argNode?.properties))
 		if (prop.type === 'Property' && isNode(prop.value))
 			reportServerOnlyNames(
 				shared,

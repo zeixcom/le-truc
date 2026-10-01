@@ -25,6 +25,8 @@ import type {
 	DeclaredSignalIR,
 	DerivedSignalIR,
 	ExposeKind,
+	ExposePropDecl,
+	ExposeStmt,
 	SetupStmt,
 	SignalIR,
 	SourceRange,
@@ -48,17 +50,11 @@ export type ElementRefEntry = {
 	node: AstNode
 }
 
-/** One Parser-backed expose() initializer (`prop: asString(…)`). */
-export type ParserExposeEntry = {
-	parser: string
-	fallbackText: string | null
-	fallbackNode: AstNode | null
-}
-
 /**
  * Everything the setup-statement loop extracts. `signalByName` is the
  * lowered-template lookup map (not an IR field — the IR carries `signals`
- * and `exposeProps` etc.); the rest map 1:1 onto `ComponentIR` fields.
+ * and `exposeProps`); the rest map 1:1 onto `ComponentIR` fields, except
+ * `elementRefs`, which template-output resolution turns into `firstRefs`.
  */
 export type SetupExtraction = {
 	setup: SetupStmt[]
@@ -68,14 +64,8 @@ export type SetupExtraction = {
 	signalByName: Map<string, SignalIR>
 	setupInits: Map<string, AstNode>
 	elementRefs: Map<string, ElementRefEntry>
-	exposeText: string | null
-	exposeRange: SourceRange | null
-	exposeArgNode: AstNode | null
-	exposeProps: Map<string, string>
-	exposeKinds: Map<string, ExposeKind>
-	exposedPropNames: Set<string>
-	parserExposeProps: Map<string, ParserExposeEntry>
-	exposeAmbients: Set<string>
+	expose: ExposeStmt | null
+	exposeProps: Map<string, ExposePropDecl>
 	contextRefs: Set<string>
 }
 
@@ -186,14 +176,8 @@ export const extractSetup = (
 	 * is verified only where the template can speak to it.
 	 */
 	const elementRefs = new Map<string, ElementRefEntry>()
-	let exposeText: string | null = null
-	let exposeRange: SourceRange | null = null
-	let exposeArgNode: AstNode | null = null
-	const exposeProps = new Map<string, string>()
-	const exposeKinds = new Map<string, ExposeKind>()
-	/** Every name `expose()` declares — see the loop below. */
-	const exposedPropNames = new Set<string>()
-	const parserExposeProps = new Map<string, ParserExposeEntry>()
+	let expose: ExposeStmt | null = null
+	const exposeProps = new Map<string, ExposePropDecl>()
 	const exposeAmbients = new Set<string>()
 	const contextRefs = new Set<string>()
 	const typeCtx: TypeContext = { paramsNode, setupInits }
@@ -224,7 +208,7 @@ export const extractSetup = (
 			// substitution the way `requestContext` does, so it must never
 			// reach `setup`/`setupInits`/`serverKnown` at all — a name known
 			// there but never actually declared server-side would suppress the
-			// `exposeArgNode` `any`-stub below for a name that genuinely needs
+			// `expose.argNode` `any`-stub below for a name that genuinely needs
 			// it (same as `ref={}` names, which never entered these either).
 			// Handled entirely separately, before the generic push/set below.
 			if (identifierName(init.callee) === 'first') {
@@ -504,8 +488,8 @@ export const extractSetup = (
 			stmt.type === 'ExpressionStatement' &&
 			identifierName(expression?.callee) === 'expose'
 		) {
-			exposeText = text(ctx.source, expression as AstNode)
-			exposeRange = {
+			const exposeText = text(ctx.source, expression as AstNode)
+			const exposeRange: SourceRange = {
 				start:
 					typeof (expression as AstNode).start === 'number'
 						? ((expression as AstNode).start as number)
@@ -517,7 +501,12 @@ export const extractSetup = (
 			}
 			// prop → signal from expose({ prop: signal.get })
 			const arg = asArray(expression?.arguments)[0] ?? null
-			exposeArgNode = arg
+			expose = {
+				text: exposeText,
+				range: exposeRange,
+				argNode: arg,
+				ambients: [],
+			}
 			setup.push({
 				text: exposeText,
 				range: exposeRange,
@@ -534,43 +523,40 @@ export const extractSetup = (
 				if (prop.type !== 'Property') continue
 				const propName = identifierName(prop.key)
 				const value = prop.value
-				// EVERY declared prop name, whatever its initializer
-				// shape. The two maps below only record the initializer
-				// KINDS they each lower (signal getters, Parser
-				// factories) — a prop harvested straight from the DOM
-				// (`label: labelSpan.textContent ?? ''`) is neither, so
-				// before LT-122 it was exposed at runtime but invisible
-				// to the compiler, which `ExtractContext.exposedProps`
-				// already claimed to list ("prop names `expose()`
-				// declares").
-				if (propName) exposedPropNames.add(propName)
-				// LT-158: which of `#setAccessor`'s three landings this
-				// initializer takes, so another file's `pass={{ }}` can be
-				// decided against it. Default `slot` — the shape that makes
-				// no diagnostic — so an initializer this classifier does not
-				// recognize falls back to the Tier 2 runtime check rather
-				// than failing a build on a guess.
-				if (propName)
-					exposeKinds.set(propName, classifyExposeInit(value, signalByName))
+				if (!propName) continue
+				// EVERY declared prop name, whatever its initializer shape
+				// (LT-122): a prop harvested straight from the DOM (`label:
+				// labelSpan.textContent ?? ''`) is neither a signal getter
+				// nor a Parser factory, but it is still exposed at runtime.
+				// LT-158: `kind` is which of `#setAccessor`'s three landings
+				// this initializer takes, so another file's `pass={{ }}` can
+				// be decided against it. Default `slot` — the shape that
+				// makes no diagnostic — so an initializer this classifier
+				// does not recognize falls back to the Tier 2 runtime check
+				// rather than failing a build on a guess.
+				const decl: ExposePropDecl = {
+					kind: classifyExposeInit(value, signalByName),
+				}
 				const getterOf = getterObjectName(value)
-				if (propName && getterOf) exposeProps.set(propName, getterOf)
+				if (getterOf) decl.signalName = getterOf
 				// Parser-backed attribute-driven props and method producers:
 				// the initializer is an ambient factory call, verbatim in the
 				// generated client (imports) and shimmed on the server.
-				if (propName && isNode(value) && value.type === 'CallExpression') {
+				if (isNode(value) && value.type === 'CallExpression') {
 					const callee = identifierName(value.callee)
 					if (callee && PARSER_FACTORIES.has(callee)) {
 						const fallback = asArray(value.arguments)[0] ?? null
-						parserExposeProps.set(propName, {
+						decl.parser = {
 							parser: callee,
 							fallbackText: fallback ? text(ctx.source, fallback) : null,
 							fallbackNode: fallback,
-						})
+						}
 						exposeAmbients.add(callee)
 					} else if (callee === 'defineMethod') {
 						exposeAmbients.add(callee)
 					}
 				}
+				exposeProps.set(propName, decl)
 			}
 			continue
 		}
@@ -629,14 +615,8 @@ export const extractSetup = (
 		signalByName,
 		setupInits,
 		elementRefs,
-		exposeText,
-		exposeRange,
-		exposeArgNode,
+		expose: expose && { ...expose, ambients: [...exposeAmbients].sort() },
 		exposeProps,
-		exposeKinds,
-		exposedPropNames,
-		parserExposeProps,
-		exposeAmbients,
 		contextRefs,
 	}
 }
@@ -677,16 +657,14 @@ export const seedExtractionContext = (
 	for (const s of extraction.signals) ctx.serverKnown.add(s.name)
 	for (const n of extraction.setupInits.keys()) ctx.serverKnown.add(n)
 	ctx.setupInits = extraction.setupInits
-	for (const prop of extraction.exposedPropNames) ctx.exposedProps.add(prop)
-	for (const prop of extraction.exposeProps.keys()) ctx.exposedProps.add(prop)
-	for (const prop of extraction.parserExposeProps.keys()) {
+	for (const [prop, decl] of extraction.exposeProps) {
 		ctx.exposedProps.add(prop)
-		ctx.parserProps.add(prop)
+		if (decl.parser) ctx.parserProps.add(prop)
 	}
 	ctx.parserFactoryOf = (prop: string): string =>
-		extraction.parserExposeProps.get(prop)?.parser ?? ''
+		extraction.exposeProps.get(prop)?.parser?.parser ?? ''
 	ctx.parserFallbackRefsOf = (prop: string): ReadonlySet<string> => {
-		const fallback = extraction.parserExposeProps.get(prop)?.fallbackNode
+		const fallback = extraction.exposeProps.get(prop)?.parser?.fallbackNode
 		if (!fallback) return EMPTY_NAMES
 		return new Set(
 			[...freeIdentifiers(fallback)].filter(n => extraction.elementRefs.has(n)),

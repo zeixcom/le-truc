@@ -163,7 +163,9 @@ export const compileFromIR = (
 				clientModule: `${component.tag}.client.ts`,
 				css: `${component.tag}.css`,
 				propsType: component.propsTypeName,
-				exposedProps: Object.fromEntries(component.exposeKinds),
+				exposedProps: Object.fromEntries(
+					[...component.exposeProps].map(([prop, decl]) => [prop, decl.kind]),
+				),
 				tier,
 				routingSignals,
 				suppressedSites: plan.suppressedSites,

@@ -44,7 +44,7 @@ export const addQuery = (
 	// markup may be page-authored, and a page may omit a child
 	// this template would have rendered.
 	const effective: 'one' | 'many' | 'maybe' =
-		cardinality === 'one' && component.optionalRefs.has(base)
+		cardinality === 'one' && component.firstRefs.get(base)?.required === false
 			? 'maybe'
 			: cardinality
 	const existing = queries.find(
@@ -68,7 +68,8 @@ export const addQuery = (
 	// one part of the author's call the compiler doesn't resynthesize (the
 	// selector itself stays compiler-proven, same as `ref={}` before it).
 	const message =
-		component.refReasons.get(base) ?? `${component.tag}: ${selector} missing`
+		component.firstRefs.get(base)?.reason ??
+		`${component.tag}: ${selector} missing`
 	queries.push({ name, selector, cardinality: effective, message })
 	return name
 }

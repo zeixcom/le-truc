@@ -107,7 +107,7 @@ const reportLoopsInBranches = (
 /**
  * The post-lowering validation tail, shared by both front ends. Runs after
  * `resolveTemplateOutput` and `readModuleDecls` because every check below
- * needs `root`, `config`, or `exposeArgNode`:
+ * needs `root`, `config`, or `expose.argNode`:
  *
  * - LTC039 (LT-122): one value, two channels. Skips the ROOT element (the
  *   root is the host, so a Parser prop rendered as its attribute is the
@@ -163,7 +163,7 @@ export const validateLoweredComponent = (
 	},
 ): void => {
 	const source = ctx.source
-	const exposeArgNode = extraction.exposeArgNode
+	const exposeArgNode = extraction.expose?.argNode ?? null
 
 	reportDuplicatedChannels({
 		root,
@@ -192,7 +192,7 @@ export const validateLoweredComponent = (
 
 	if (config)
 		for (const attr of config.observedAttributes) {
-			if (!extraction.parserExposeProps.has(attr))
+			if (!extraction.exposeProps.get(attr)?.parser)
 				ctx.diagnostics.push(
 					diagnostic.invalidConfig(
 						source,

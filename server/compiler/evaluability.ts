@@ -19,7 +19,7 @@ import {
 	isNode,
 	walkNodes,
 } from './ast-utils'
-import { refBranchGuard } from './first-refs'
+import { declaredRefNames, refBranchGuard } from './first-refs'
 import type { ComponentIR, TemplateNode } from './ir'
 import { JS_GLOBALS } from './vocabulary'
 import { walkTemplate } from './walk'
@@ -306,10 +306,7 @@ export const foldableRefGuards = (
 	component: ComponentIR,
 ): ReadonlyMap<string, string> => {
 	const guards = new Map<string, string>()
-	const declared = new Set([
-		...component.refReasons.keys(),
-		...component.optionalRefs,
-	])
+	const declared = declaredRefNames(component.firstRefs)
 	for (const name of declared) {
 		const guard = refBranchGuard(component.root, name)
 		if (guard !== null) guards.set(name, guard)
@@ -363,7 +360,7 @@ export const foldableHostProps = (
 	for (const attr of component.root.attrs)
 		if (
 			attr.kind === 'server' &&
-			(component.parserExposeProps.has(attr.name) ||
+			(component.exposeProps.get(attr.name)?.parser ||
 				PLATFORM_CONFIG_ATTRS.has(attr.name))
 		)
 			names.add(attr.name)

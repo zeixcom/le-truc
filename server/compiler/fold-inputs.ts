@@ -60,6 +60,7 @@ import {
 	hostDerivedFold,
 	isServerEvaluable,
 } from './evaluability'
+import { declaredRefNames } from './first-refs'
 import type { AttributeIR, ComponentIR, TemplateNode } from './ir'
 import { CLIENT_ONLY_PRIMITIVES, CONTEXT_NAMES } from './vocabulary'
 import { childNodes } from './walk'
@@ -215,10 +216,7 @@ export const checkFoldInputs = (
 ): void => {
 	assertFoldScopeClosed(component)
 	const { source } = component
-	const refNames = new Set([
-		...component.refReasons.keys(),
-		...component.optionalRefs,
-	])
+	const refNames = declaredRefNames(component.firstRefs)
 
 	/**
 	 * Setup statements the realm owns (routed by setup extraction), which

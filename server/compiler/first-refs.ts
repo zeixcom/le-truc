@@ -20,7 +20,7 @@
 import type { AstNode } from './ast-node'
 import { isNode } from './ast-utils'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
-import type { TemplateNode } from './ir'
+import type { FirstRefDecl, TemplateNode } from './ir'
 import { childNodes, someNode, walkTemplate } from './walk'
 
 /* === Types === */
@@ -478,3 +478,17 @@ export const inOptionalBranch = (
 	walk(root, false)
 	return found
 }
+
+/**
+ * Every `first()` name a query may address, in source order — all but a
+ * REQUIRED ref whose resolution was rejected. An optional ref stays
+ * declared whatever its stage: setup code may read it.
+ */
+export const declaredRefNames = (
+	firstRefs: ReadonlyMap<string, FirstRefDecl>,
+): Set<string> =>
+	new Set(
+		[...firstRefs.values()]
+			.filter(ref => ref.stage !== 'rejected' || !ref.required)
+			.map(ref => ref.name),
+	)

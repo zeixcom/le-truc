@@ -522,7 +522,7 @@ export const emitClientModule = (
 ): EmittedClientModule => {
 	const imports = new ClientImports(['defineComponent'])
 	imports.bindScope(factoryScopeNames(component, plan))
-	for (const ambient of component.exposeAmbients) imports.add(ambient)
+	for (const ambient of component.expose?.ambients ?? []) imports.add(ambient)
 	// The factory body, at the arrow's body depth.
 	const out = new CodeBuilder({ depth: 2, reindent: true })
 	const push = (text: string, slices: SourceSlice[] = []): void => {
@@ -638,11 +638,11 @@ export const emitClientModule = (
 	}
 
 	// expose() verbatim
-	if (component.exposeText) {
+	if (component.expose) {
 		imports.add('expose')
 		push(
-			component.exposeText,
-			sliceOf(component.exposeText, component.exposeRange?.start),
+			component.expose.text,
+			sliceOf(component.expose.text, component.expose.range.start),
 		)
 	}
 

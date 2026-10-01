@@ -36,7 +36,7 @@ parallel.
   It gates LT-274.
 - **A — consolidation (P2b).** ~~LT-364~~ (reviewed 2026-10-01; the sandbox-proof `serve.test.ts` landed first, so every later handoff runs the full server suite). ~~LT-228 → LT-229 → LT-232~~ (reviewed 2026-10-01). ~~LT-366 → LT-243 → LT-367~~ (reviewed 2026-10-01). ~~LT-230~~ (reviewed 2026-10-01; its `analysis/selectors.ts` remainder rides LT-245). ~~LT-227 → LT-289~~ (reviewed 2026-10-01).
   ~~LT-234, LT-231, LT-244~~ (reviewed 2026-10-01). ~~LT-368~~ (their review follow-ups; reviewed 2026-10-01, follow-up LT-378 in BACKLOG). LT-247 parked to BACKLOG (ruling 2026-10-01: demand-gated, see its entry).
-- **B — typed IR (ADR 0040).** ~~LT-287~~ (reviewed 2026-10-01) and LT-288. Either may start at once; LT-287 lands
+- **B — typed IR (ADR 0040).** ~~LT-287, LT-288~~ (reviewed 2026-10-01). LT-287 lands
   before LT-274.
 - **C — conditions (ADR 0037).** LT-274 after LT-360, LT-230, LT-243 and LT-287. Then LT-276,
   and LT-275 as the copy round. LT-275 also takes LT-359's copy, so there is one Tech Writer round.
@@ -79,23 +79,6 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 
 ### B — Typed IR (ADR 0040; LT-287 before LT-274)
-
-- [ ] LT-288: One `first()` record, two `expose()` shapes on `ComponentIR` (LT-235 item (d); ADR 0040 s4).
-  **Skill:** le-truc-dev
-  **Context:** [ADR 0040](adr/0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
-  s4. The four parallel `first()` collections (`refReasons`, `unmatchedOptionalRefs`,
-  `deferredComposeRefs`, `optionalRefs` — a Map, two differently-shaped arrays, a Set)
-  consolidate into one `FirstRefDecl` (name, selector, required, reason, resolution stage,
-  offset) in a name-keyed Map — the resolution stage is data, not a different shape. The seven
-  `expose()` fields split into `expose: ExposeStmt | null` (text, range, argNode, ambients —
-  four views of the one call) and one per-prop `ReadonlyMap<string, ExposePropDecl>` (kind,
-  signalName?, parser?) — `exposeProps`/`exposeKinds`/`parserExposeProps` merge.
-  `RegistryEntry.exposedProps` is a projection and unchanged. The
-  `setup`/`plainSetup`/`clientSetup`/`signals` arrays stay as-is — ADR 0040's explicit
-  exclusion (behavior-bearing emission contracts, not redundancy). Hottest consumer is
-  `template-output.ts`; keep its lookups O(1) via the Map.
-  **Check:** goldens + parity byte-identical; `bun test server/tests`, typecheck, warning
-  baseline 0, census unchanged from the iteration baseline.
 
 ### C — Reactive conditions (ADR 0037; LT-274 unblocked — LT-360, LT-230, LT-243, LT-287 reviewed)
 

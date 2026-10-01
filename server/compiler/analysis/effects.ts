@@ -291,7 +291,7 @@ const emitLazyTextChildren = (
 		const managed = managedPropRead(child.expr)
 		if (
 			managed !== null &&
-			!fx.component.exposeProps.has(managed) &&
+			!fx.component.exposeProps.get(managed)?.signalName &&
 			!fx.component.config?.form
 		)
 			fx.diagnostics.push(

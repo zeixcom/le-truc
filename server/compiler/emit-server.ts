@@ -29,6 +29,7 @@ import {
 	isServerEvaluable,
 	spliceHostDerivedFold,
 } from './evaluability'
+import { declaredRefNames } from './first-refs'
 import { i18nAnnotated } from './i18n'
 import { carriedKinds, FORMATTING_KINDS, type Message } from './icu/evaluate'
 import { clientSourceRecord } from './icu/parse'
@@ -349,7 +350,7 @@ const hostPropMirrorExpr = (
 	thunk: AstNode,
 ): string | null => {
 	const propName = hostPropOf(thunk)
-	if (propName === null || !component.parserExposeProps.has(propName))
+	if (propName === null || !component.exposeProps.get(propName)?.parser)
 		return null
 	const rootAttr = component.root.attrs.find(
 		(a): a is Extract<AttributeIR, { kind: 'server' }> =>
@@ -1268,10 +1269,7 @@ export const emitServerModule = (
 	 * derived from such a name is an unsound shape that surfaces as a
 	 * source-mapped tsc failure on the generated module instead.
 	 */
-	const refNames = new Set([
-		...component.refReasons.keys(),
-		...component.optionalRefs,
-	])
+	const refNames = declaredRefNames(component.firstRefs)
 	// A `requestContext` statement is NOT excluded by the primitive check
 	// below: the primitive's name appears in its free identifiers, but the
 	// emitted form substitutes `createCell(fallback)` for the whole call and
@@ -1326,9 +1324,9 @@ export const emitServerModule = (
 	}
 	// `expose()` declares no name, so the retention rule never keeps it; its
 	// runtime import and its ambients go with it.
-	if (component.exposeText && !harnessSuppressed) used.add('expose')
+	if (component.expose && !harnessSuppressed) used.add('expose')
 	if (!harnessSuppressed)
-		for (const ambient of component.exposeAmbients) used.add(ambient)
+		for (const ambient of component.expose?.ambients ?? []) used.add(ambient)
 
 	// Client-only ambients `expose()`'s argument names that the server
 	// render function must still declare — see the `refStub` doc in
@@ -1337,15 +1335,16 @@ export const emitServerModule = (
 	// signature order.
 	// Suppressing `expose()` suppresses its stubs with it: the `any`-stubs
 	// exist only so the dropped call's own free names resolve.
+	const { expose } = component
 	const stubNames =
-		component.exposeArgNode && !harnessSuppressed
-			? [...freeIdentifiers(component.exposeArgNode)]
+		expose?.argNode && !harnessSuppressed
+			? [...freeIdentifiers(expose.argNode)]
 					.filter(
 						name =>
 							!JS_GLOBALS.has(name) &&
 							name !== 'expose' &&
 							!component.serverKnown.has(name) &&
-							!component.exposeAmbients.includes(name) &&
+							!expose.ambients.includes(name) &&
 							// LT-034: a custom Parser factory (e.g. `asOklch`) may now
 							// resolve to a real plain import instead — stubbing it as
 							// `any` would shadow that import with a broken local const.
@@ -1393,8 +1392,7 @@ export const emitServerModule = (
 	if (
 		lines.some(line => referencesIsPending(line)) ||
 		emittedSetup.some(stmt => referencesIsPending(stmt.text)) ||
-		(component.exposeText !== null &&
-			referencesIsPending(component.exposeText)) ||
+		(component.expose !== null && referencesIsPending(component.expose.text)) ||
 		rootHtml.exprs.some(expr => referencesIsPending(expr))
 	)
 		used.add('isPending')
@@ -1454,7 +1452,7 @@ export const emitServerModule = (
 		// no export is emitted and the renderer never qualifies it.
 		component.paramProps.every(param => {
 			if (param.name === 'i18n' || param.name === 'lang') return true
-			const parser = component.parserExposeProps.get(param.name)
+			const parser = component.exposeProps.get(param.name)?.parser
 			if (parser && !resolvesInHelper(parser.fallbackNode))
 				return param.optional || param.hasDefault
 			if (parser || param.isString || param.isNumber) return true
@@ -1475,7 +1473,7 @@ export const emitServerModule = (
 							'double',
 						)
 						const attrVar = `${param.name}Attr`
-						const parser = component.parserExposeProps.get(param.name)
+						const parser = component.exposeProps.get(param.name)?.parser
 						if (parser && !resolvesInHelper(parser.fallbackNode)) {
 							// LT-290: no attribute channel — the gate above proved
 							// the arg optional/defaulted, so an absent attribute
@@ -1609,7 +1607,7 @@ export const emitServerModule = (
 		// does for the rest of the server-rendering pipeline (lazy children,
 		// reactive attrs). The span still points at the original statement's
 		// source range — coarse (the generated text no longer matches
-		// character-for-character), same trade-off as the exposeArgNode
+		// character-for-character), same trade-off as the expose.argNode
 		// any-stubs above, which aren't span-tracked at all.
 		const ctxSignal = component.signals.find(
 			(s): s is ContextSignalIR =>

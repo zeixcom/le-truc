@@ -6,7 +6,7 @@
  * RAW template elements inside `compileSource`, which is single-file: a
  * composed child's eventual DOM tag lives in another file's registry entry,
  * so a selector like `first('form-spinbutton.lightness')` cannot be decided
- * there. `compileSource` defers those (`component.deferredComposeRefs`) and
+ * there. `compileSource` defers those (`firstRefs` stage `deferred`) and
  * this pass — the first point where `composeRegistry` is threaded — finishes
  * the job, attaching the same synthetic `{kind: 'ref', name}` the raw path
  * attaches. Everything downstream (`emitComposeEffects`'s `addQuery`, the
@@ -58,7 +58,7 @@ export type ComposeRefs =
  *
  * `unmatchedOptional` are the OPTIONAL refs that matched nothing:
  * legitimate, and queried from the authored selector verbatim, the same
- * treatment `component.unmatchedOptionalRefs` gets (LT-123). `ambiguous` are
+ * treatment a `firstRefs` `unmatched` stage gets (LT-123). `ambiguous` are
  * the compose nodes an ambiguous selector matched — already reported here,
  * so `emitComposeEffects` must not ALSO address them by tag or report them
  * again: one authoring mistake, one diagnostic, and LTC027 is the one that
@@ -80,9 +80,12 @@ export const resolveComposeRefs = (
 		unmatchedOptional,
 		ambiguous,
 	}
-	if (component.deferredComposeRefs.length === 0) return result
+	const deferred = [...component.firstRefs.values()].filter(
+		ref => ref.stage === 'deferred',
+	)
+	if (deferred.length === 0) return result
 	const nodes = allComposeNodes(component.root)
-	for (const ref of component.deferredComposeRefs) {
+	for (const ref of deferred) {
 		const matches = nodes.filter(node => {
 			const tag = composeRegistry.get(node.source)?.tag
 			if (!tag) return false
@@ -94,7 +97,7 @@ export const resolveComposeRefs = (
 			)
 		})
 		if (matches.length === 0) {
-			if (ref.maybe) {
+			if (!ref.required) {
 				unmatchedOptional.push({ name: ref.name, selector: ref.selector })
 				continue
 			}
