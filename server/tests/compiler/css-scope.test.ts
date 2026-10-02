@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { parseComponentSheet } from '../../compiler/css'
 import {
+	checkSheetBoundaries,
 	checkSheetContract,
 	collectScopeBoundaries,
 	emitScopedSheet,
@@ -69,6 +70,19 @@ describe('checkSheetContract', () => {
 		expect(findings).toHaveLength(1)
 		expect(findings[0]?.face).toBe('own-tag-led')
 		expect(findings[0]?.offset).toBe(21)
+	})
+
+	test('a rule inside a top-level conditional group is still top-level for own-tag-led (LT-398 d)', () => {
+		const findings = findingsOf(
+			'@media (width > 30em) { my-box .x { top: 0 } }\n@supports (display: grid) { @container (width > 1px) { my-box { top: 0 } } }',
+		)
+		expect(findings.map(f => f.face)).toEqual(['own-tag-led', 'own-tag-led'])
+		// The nested-:global face still counts every enclosing block.
+		expect(
+			findingsOf('@media (width > 1px) { :global(body) { top: 0 } }').map(
+				f => f.globalFace,
+			),
+		).toEqual(['nested'])
 	})
 
 	test('a nested rule is not own-tag-led (the nesting semantics lead with &)', () => {
@@ -243,6 +257,143 @@ describe('emitScopedSheet — native (@scope-capable targets)', () => {
 		)
 		expect(css).not.toContain('@scope')
 		expect(css).toContain('@keyframes')
+	})
+})
+
+/* === LT-398: the review defects, once per mode === */
+
+describe('emitScopedSheet — LT-398 review defects, both modes', () => {
+	const modes = [
+		['lowered', DEFAULT_CSS_TARGETS],
+		['native', NATIVE],
+	] as const
+	const GUARD =
+		':where(:not(my-box form-listbox > *, my-box form-listbox > * *))'
+
+	for (const [mode, cssTargets] of modes) {
+		test(`(a) a blockless statement does not swallow the next rule — ${mode}`, () => {
+			const css = emit('@layer base, theme;\n.x { color: red }', {
+				boundaries: ['form-listbox'],
+				cssTargets,
+			})
+			expect(css).toContain('@layer base, theme;')
+			expect(css).toContain(
+				mode === 'lowered' ? `:where(my-box) .x${GUARD} {` : '\n.x {',
+			)
+			if (mode === 'lowered') expect(css).not.toMatch(/^\.x \{/m)
+		})
+
+		test(`(b) every member of a whole-rule :global list unwraps — ${mode}`, () => {
+			const css = emit(
+				':global(body.a), :global(html.b) { overflow: hidden }\n.x { top: 0 }',
+				{ cssTargets },
+			)
+			expect(css).toContain('body.a, html.b { overflow: hidden }')
+		})
+
+		test(`(c) the guard lands before the subject's first pseudo-element — ${mode}`, () => {
+			const css = emit(
+				'.x::-webkit-scrollbar-thumb:hover { color: red }\n.a::part(x):hover { color: red }\n.b:hover::before { content: "" }',
+				{ boundaries: ['form-listbox'], cssTargets },
+			)
+			if (mode === 'lowered') {
+				expect(css).toContain(
+					`:where(my-box) .x${GUARD}::-webkit-scrollbar-thumb:hover {`,
+				)
+				expect(css).toContain(`:where(my-box) .a${GUARD}::part(x):hover {`)
+				expect(css).toContain(`:where(my-box) .b:hover${GUARD}:before {`)
+			} else {
+				expect(css).toContain('.x::-webkit-scrollbar-thumb:hover {')
+				expect(css).not.toContain(':where(:not(')
+			}
+		})
+
+		test(`(e) flattening lowers nesting and nothing the targets do not demand — ${mode}`, () => {
+			const css = emit(
+				':host { & .x { color: light-dark(red, blue); backdrop-filter: blur(2px) } }',
+				{ cssTargets },
+			)
+			expect(css).not.toContain('&')
+			expect(css).toContain('light-dark(')
+			// Safari 17.4 (both fixtures) needs the prefix…
+			expect(css).toContain('-webkit-backdrop-filter')
+		})
+
+		test(`(e) …and a target past the prefix needs none — ${mode}`, () => {
+			const css = emit(':host { & .x { backdrop-filter: blur(2px) } }', {
+				cssTargets: { ...cssTargets, safari: 18 << 16 },
+			})
+			expect(css).not.toContain('-webkit-backdrop-filter')
+		})
+
+		test(`(f) a :host hidden in a flattened :is() list is rewritten — ${mode}`, () => {
+			const css = emit(
+				':host .a, :host .b { &:empty { display: none } }\n:host input, .t { &::placeholder { color: red } }',
+				{ cssTargets },
+			)
+			expect(css).not.toContain(':host')
+			expect(css).toContain(
+				mode === 'lowered'
+					? ':where(my-box) .a:empty, :where(my-box) .b:empty {'
+					: ':where(:scope) .a:empty, :where(:scope) .b:empty {',
+			)
+			expect(css).toContain(
+				mode === 'lowered'
+					? ':where(my-box) input::placeholder, :where(my-box) .t::placeholder {'
+					: ':where(:scope) input::placeholder, .t::placeholder {',
+			)
+		})
+	}
+})
+
+/* === LT-399: descending past a boundary (LTC071) === */
+
+describe('checkSheetBoundaries', () => {
+	const findingsOf = (sheetText: string, boundaries = ['b-child']) => {
+		const { sheet } = parseComponentSheet(sheetText)
+		expect(sheet).not.toBeNull()
+		return checkSheetBoundaries(sheet, sheetText, boundaries)
+	}
+
+	test('a descendant or child combinator after a boundary tag is dead', () => {
+		const findings = findingsOf(
+			'b-child .x { top: 0 }\n.a > b-child > p { top: 0 }',
+		)
+		expect(findings.map(f => f.boundary)).toEqual(['b-child', 'b-child'])
+		expect(findings[1]?.offset).toBe(22)
+	})
+
+	test('the child tag itself, its pseudo-elements and its siblings stay legal', () => {
+		expect(
+			findingsOf(
+				'b-child { top: 0 }\n:host > b-child::before { top: 0 }\nb-child + .x, b-child ~ p { top: 0 }\n.x:has(b-child) { top: 0 }',
+			),
+		).toEqual([])
+	})
+
+	test('nesting resolves through &, implicit and explicit (the listnav shape)', () => {
+		const findings = findingsOf(
+			'@container (width > 1px) { :host { & b-child { & h1, & h2 { top: 0 } } } }\nb-child { p { top: 0 } &:hover { top: 0 } & + .x { top: 0 } }',
+		)
+		// One finding per rule, every dead list member named.
+		expect(findings.map(f => f.selector)).toEqual(['& h1, & h2', '& p'])
+	})
+
+	test('a nested rule is dead only when dead under every parent alternative', () => {
+		expect(findingsOf('b-child, .live { .x { top: 0 } }')).toEqual([])
+		expect(findingsOf('b-child, .a b-child { .x { top: 0 } }')).toHaveLength(1)
+	})
+
+	test('the whole-rule :global forms ship outside the scope and are exempt', () => {
+		expect(
+			findingsOf(
+				':global(b-child .x) { top: 0 }\n:global { @media (width > 1px) { b-child p { top: 0 } } }',
+			),
+		).toEqual([])
+	})
+
+	test('a leaf has no boundary to descend past', () => {
+		expect(findingsOf('b-child .x { top: 0 }', [])).toEqual([])
 	})
 })
 

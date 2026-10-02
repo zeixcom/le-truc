@@ -67,7 +67,7 @@ const DIR = 'examples/dual-corpus-tmp'
 const VAR_TSX = `${DIR}/var-el.tsx`
 const VAR_TSRX = `${DIR}/var-el.tsrx`
 
-const varTsx = (cssBody: string): string =>
+const varTsx = (cssBody: string, extra = ''): string =>
 	`export function VarEl({ label = 'x' }: { label?: string })
 {
 	expose({})
@@ -75,7 +75,7 @@ const varTsx = (cssBody: string): string =>
 	return (
 		<>
 			<var-el>
-				<p class="label">{label}</p>
+				<p class="label">{label}</p>${extra}
 			</var-el>
 			<style>{css\`
 			:host { ${cssBody} }
@@ -84,14 +84,14 @@ const varTsx = (cssBody: string): string =>
 	)
 }`
 
-const varTsrx = (cssBody: string): string =>
+const varTsrx = (cssBody: string, extra = ''): string =>
 	`export function VarEl({ label = 'x' }: { label?: string })
 	@{
 		expose({})
 
 		<>
 			<var-el>
-				<p class="label">{label}</p>
+				<p class="label">{label}</p>${extra}
 			</var-el>
 			<style>
 			:host { ${cssBody} }
@@ -330,6 +330,31 @@ describe('dual corpus (ADR 0032 sub-design 6, narrowed by ADR 0039)', () => {
 		expect(message).toContain(VAR_TSX)
 		expect(message).toContain(VAR_TSRX)
 		expect(message).toContain('`var-el`')
+		expect(message).toContain('copy the styles')
+		expect(message).not.toContain('stops at')
+	})
+
+	test("a boundary-only drift fails with LTC051 naming each member's boundary set (LT-403)", async () => {
+		const outDir = path.join(scratch.path, 'variant-boundary-drift')
+		const settled = await settle(
+			compileCorpus(
+				// Identical sheets, but only the .tsx member renders a custom
+				// element — the scope stops at a boundary the .tsrx lacks.
+				[
+					memoryFile(VAR_TSRX, varTsrx('display: block')),
+					memoryFile(VAR_TSX, varTsx('display: block', '<x-extra></x-extra>')),
+				],
+				outDir,
+			),
+		)
+		if (settled.status !== 'rejected')
+			throw new Error('the run should have failed with LTC051')
+		const message = String(settled.reason)
+		expect(message).toContain('LTC051')
+		expect(message).toContain(`${VAR_TSX} stops at <x-extra>`)
+		expect(message).toContain(`${VAR_TSRX} stops at no custom element`)
+		expect(message).toContain('render the same custom elements')
+		expect(message).not.toContain('copy the styles')
 	})
 
 	test('a tag declared by two SAME-SURFACE sources fails naming both files (LTC048)', async () => {

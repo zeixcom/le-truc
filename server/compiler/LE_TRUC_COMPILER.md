@@ -927,12 +927,19 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and
   rides the translation census instead.
+- *Stylesheet* (ADR 0033): a sheet that does not parse (LTC064), the
+  unknown-property-or-value warning (LTC065), and the forms with no meaning
+  under the shadow-root contract — a rule led by the component's own tag
+  (LTC066), `::slotted()` (LTC067), `:host-context()` (LTC068), `:global`
+  outside the two top-level whole-rule forms (LTC069), a qualifier on bare
+  `:host` (LTC070), and a selector that descends past a boundary tag
+  (LTC071).
 - *Corpus-level*: one component tag declared by more than one corpus source
   outside a folder-local variant set (LTC048) — fires before pass 2, names
   every declaring file whatever surface each is written in, and drops them
-  all; and a variant set whose compiled members disagree on CSS (LTC051) —
-  names every member and writes no artifact of the set, because the set
-  serves one stylesheet (ADR 0039).
+  all; and a variant set whose compiled members disagree on CSS or on scope
+  boundaries (LTC051) — names every member and writes no artifact of the
+  set, because the set serves one stylesheet (ADR 0039, ADR 0033 s10).
 
 **Reclassification under ADR 0029.** The impure-ambient refusal is not in the
 table below because it does not become a routing signal at all: it becomes

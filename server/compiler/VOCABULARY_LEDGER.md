@@ -129,9 +129,9 @@ compiler owns template extraction, and the selector proof cannot see
 inside one; LT-383), then `LTC062`/`LTC063` (the ADR 0037 reactive-arm
 rules — a non-literal or duplicated switch `@case` value, and a reactive
 condition inside a reactive list's reconcile() container; LT-274), then
-`LTC064` (the component's stylesheet violates the CSS grammar — it does
-not parse, or a declaration names an unknown property or a value outside
-the property's grammar; ADR 0033 s9, LT-268). All `LTC`, not `TSRX`: each
+`LTC064` (the component's stylesheet does not parse; ADR 0033 s9, LT-268)
+and `LTC065` (a warning: a declaration names an unknown property or a value
+outside the property's grammar; LT-394). All `LTC`, not `TSRX`: each
 is raised in shared machinery, on both surfaces.
 
 ## 5. Kept, with the surface named correctly

@@ -4,25 +4,32 @@
  * Every compiled corpus stylesheet moved from tag-led nesting
  * (`my-element { … & .x { … } }`) to the shadow-root authored form
  * (`:host { … }` plus bare rules). The transform is mechanical, so it is
- * a codemod over lightningcss's parse rather than a hand edit — and it
- * stays committed for pioneer projects migrating a 2.x corpus.
+ * a codemod — a comment- and string-aware scan of the selector text —
+ * rather than a hand edit, and it stays committed for pioneer projects
+ * migrating a 2.x corpus.
  *
  * 	bun scripts/migrate-shadow-css.ts
  *
  * Per compiled source (`.tsx`/`.tsrx`; the `.ts` twins are not compiled
- * and keep their tag-led hand-written `.css` verbatim):
+ * and keep their tag-led hand-written `.css` verbatim), rewriting SELECTOR
+ * TEXT ONLY — values, comments and the nesting itself never move:
  *
- * 1. flatten the sheet's nesting (plain lightningcss `transform`, targets
- *    capped just below native nesting support — the same pass the scoped
- *    emission uses, so what the codemod writes is what the compiler sees);
- * 2. a rule led by the component's own tag becomes `:host` (its exact-tag
- *    selector), `:host > …` (a direct-child `>` — kept where it expresses
- *    real intent: direct children only), or the bare remainder (a
- *    descendant — the defensive prefix drops);
- * 3. every other top-level rule is a page-level rule (e.g.
+ * 1. a sheet-level rule led by the component's own tag becomes `:host`
+ *    (its exact-tag selector), `:host > …` (a direct-child `>` — kept
+ *    where it expresses real intent), or the bare remainder (a descendant
+ *    — the defensive prefix drops). Nested rules keep their text: `&`
+ *    then means the migrated parent;
+ * 2. every other sheet-level rule is a page-level rule (e.g.
  *    module-dialog's `body.scroll-lock`) and wraps in `:global(…)`;
- * 4. rules inside `@media`/`@supports`/`@container`/`@layer` migrate the
- *    same way, minus the `:global` wrap (they are not sheet-top-level).
+ * 3. at every nesting level, a selector that descends past a custom
+ *    element (`child-el .x`, `child-el > .x` — LTC071's shape, LT-399)
+ *    leaves the scope as a page-level rule under its resolved tag-led
+ *    selector (LT-400). A composed child's own tag as the subject, and
+ *    its siblings, stay scoped;
+ * 4. a page-level rule that cannot stay in place — nested, or under
+ *    `@media`/`@supports`/`@container`/`@layer` — hoists with its
+ *    conditions into one trailing bare `:global { … }` block (a nested
+ *    `:global` is LTC069); a rule left empty by the hoist drops.
  *
  * Idempotent: a shadow-root sheet passes through unchanged (`:host` is
  * not tag-led; `:global`-wrapped rules stay wrapped — the codemod never
@@ -31,13 +38,12 @@
 
 import {
 	existsSync,
-	readFileSync,
 	readdirSync,
+	readFileSync,
 	statSync,
 	writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
-import { Features, transform } from 'lightningcss-wasm'
 import { dedentCss } from '../server/compiler/css'
 
 const EXAMPLES_DIR = new URL('../examples', import.meta.url).pathname
@@ -114,7 +120,6 @@ const atRuleName = (text: string, rule: TextRule): string | null => {
 	return match?.[1] ?? null
 }
 
-
 const collectTextRules = (
 	text: string,
 	from: number,
@@ -124,6 +129,18 @@ const collectTextRules = (
 	let i = skipSpaceAndComments(text, from)
 	while (i < to && i < text.length) {
 		const brace = indexOfUnquoted(text, '{', i)
+		// A declaration or blockless statement ends at its `;` — inside a
+		// rule body the walk meets declarations before nested rules (LT-400,
+		// the emission's LT-398 fix).
+		const semicolon = indexOfUnquoted(text, ';', i)
+		if (
+			semicolon !== -1 &&
+			semicolon < to &&
+			(brace === -1 || semicolon < brace)
+		) {
+			i = skipSpaceAndComments(text, semicolon + 1)
+			continue
+		}
 		if (brace === -1 || brace >= to) break
 		const close = matchingBrace(text, brace)
 		if (close === -1 || close >= to) break
@@ -137,23 +154,6 @@ const collectTextRules = (
 
 /* --- the transform --- */
 
-/** Flatten nesting with the emission's own capping (plain path, no visitor). */
-const flatten = (sheetText: string): string => {
-	// `include: Nesting`, not a nesting-less target: the migration must not
-	// lower anything the authored sheet means to ship as authored (the
-	// compiler's own emission lowers per cssTargets) — and a nesting-less
-	// target cap would also lower strictly-younger features like
-	// light-dark(), whose lowering emits var() usages without their
-	// companion definitions.
-	const lowered = transform({
-		code: Buffer.from(sheetText) as Buffer,
-		filename: 'migrate.css',
-		targets: {},
-		include: Features.Nesting,
-	})
-	return new TextDecoder().decode(lowered.code)
-}
-
 /**
  * Normalize a bare `:host` compound that carries qualifiers (R3, owner
  * 2026-10-02): `:host:hover`, `:host.x` and `:host[attr]` match nothing in
@@ -162,37 +162,43 @@ const flatten = (sheetText: string): string => {
  * compound stays outside (`:host(.x)::before`).
  */
 const hostQualifierArgs = (text: string): string =>
-	text.replace(/:host(?=[.[:\w])((?:\.[\w-]+|::[a-zA-Z][\w-]*|:[a-zA-Z][\w-]*(?:\([^()]*\))?)+)/g, (whole, qualifiers: string) => {
-		const qualRe = /^(\.[\w-]+|\[[^\]]*\]|::[a-zA-Z][\w-]*|:[a-zA-Z][\w-]*(?:\([^()]*\))?)/
-		let rest = qualifiers
-		let args = ''
-		let trailing = ''
-		for (;;) {
-			const m = qualRe.exec(rest)
-			if (!m) break
-			const q = m[0] as string
-			const isPseudoElement =
-				q.startsWith('::') ||
-				/^:(before|after|first-line|first-letter)(?![\w-])/.test(q)
-			if (isPseudoElement || args !== '') trailing += q
-			else args += q
-			rest = rest.slice(q.length)
-		}
-		void whole
-		return args ? `:host(${args})${trailing}${rest}` : `:host${trailing}${rest}`
-	})
+	text.replace(
+		/:host(?=[.[:\w])((?:\.[\w-]+|::[a-zA-Z][\w-]*|:[a-zA-Z][\w-]*(?:\([^()]*\))?)+)/g,
+		(whole, qualifiers: string) => {
+			const qualRe =
+				/^(\.[\w-]+|\[[^\]]*\]|::[a-zA-Z][\w-]*|:[a-zA-Z][\w-]*(?:\([^()]*\))?)/
+			let rest = qualifiers
+			let args = ''
+			let trailing = ''
+			for (;;) {
+				const m = qualRe.exec(rest)
+				if (!m) break
+				const q = m[0] as string
+				const isPseudoElement =
+					q.startsWith('::') ||
+					/^:(before|after|first-line|first-letter)(?![\w-])/.test(q)
+				if (isPseudoElement || args !== '') trailing += q
+				else args += q
+				rest = rest.slice(q.length)
+			}
+			void whole
+			return args
+				? `:host(${args})${trailing}${rest}`
+				: `:host${trailing}${rest}`
+		},
+	)
 
 /**
  * Migrate one selector part under a nesting context (selector-text-only —
  * values, nesting and comments never move):
  *
  * - top level (context undefined): a rule led by the component's own tag
- *   loses the tag (`:host`; `:host >` keeps a real direct-child `>`); a
- *   part naming another custom element keeps its tag-led selector under a
- *   whole-rule `:global(…)` when `crossBoundaryAsGlobal` (content the
- *   component authored through a compose hole — the scoped boundary stops
- *   at the child); any other sheet-top-level part is a page rule and wraps
- *   in `:global(…)`.
+ *   loses the tag (`:host`; `:host >` keeps a real direct-child `>`), or
+ *   keeps the bare remainder (a descendant — the defensive prefix drops;
+ *   a composed child's own tag stays stylable, ADR 0033 s2); any other
+ *   sheet-top-level part is a page rule and wraps in `:global(…)`. Parts
+ *   that descend past a custom element never reach here — the walk hoists
+ *   them first (`descendsPastCustomElement`, LT-400).
  * - nested under the tag-led root (context ''): `&` is the host — `& x`
  *   becomes the bare `x`, `& > x` the kept-intent `:host > x`, `&:hover`
  *   the R3 form `:host(:hover)`.
@@ -203,7 +209,6 @@ const migratePart = (
 	part: string,
 	tag: string,
 	context: string | undefined,
-	crossBoundaryAsGlobal: boolean,
 ): string => {
 	const selector = part.trim()
 	if (context === undefined) {
@@ -212,18 +217,15 @@ const migratePart = (
 		if (selector.startsWith(childPrefix))
 			return `:host > ${selector.slice(childPrefix.length)}`
 		const descendantPrefix = `${tag} `
-		if (selector.startsWith(descendantPrefix)) {
-			const bare = selector.slice(descendantPrefix.length)
-			if (crossBoundaryAsGlobal && /\b[a-z][a-z0-9]*-[a-z0-9-]+\b/.test(bare))
-				return `:global(${selector})`
-			return bare
-		}
+		if (selector.startsWith(descendantPrefix))
+			return selector.slice(descendantPrefix.length)
 		const childNoSpace = `${tag}>`
 		if (selector.startsWith(childNoSpace))
 			return `:host >${selector.slice(childNoSpace.length)}`
 		// An already-shadow `:host` compound with qualifiers normalizes per R3.
 		if (selector.startsWith(':host')) return hostQualifierArgs(selector)
-		if (selector.startsWith('&')) return hostQualifierArgs(migratePartWithRootAmpersand(selector, tag))
+		if (selector.startsWith('&'))
+			return hostQualifierArgs(migratePartWithRootAmpersand(selector, tag))
 		if (selector.includes(':global')) return selector
 		return `:global(${selector})`
 	}
@@ -232,16 +234,14 @@ const migratePart = (
 		const rootChildPrefix = '& > '
 		if (selector.startsWith(rootChildPrefix))
 			return `:host > ${selector.slice(rootChildPrefix.length)}`
-		if (selector.startsWith('>'))
-			return `:host ${selector}`
+		if (selector.startsWith('>')) return `:host ${selector}`
 		if (selector.startsWith('&')) {
 			const rest = selector.slice(1)
 			// `&:hover` — the host, qualified (R3 form).
 			if (/^[.[:]/.test(rest) || /^:[a-zA-Z]/.test(rest))
 				return hostQualifierArgs(`:host${rest}`)
 			// `&::before` — pseudo-elements trail the host compound.
-			if (rest.startsWith(':'))
-				return `:host${rest}`
+			if (rest.startsWith(':')) return `:host${rest}`
 			// `& button` — the bare descendant idiom.
 			return rest.trimStart()
 		}
@@ -256,7 +256,10 @@ const migratePart = (
 }
 
 /** `&…` at the root: the `&` is the host itself. */
-const migratePartWithRootAmpersand = (selector: string, tag: string): string => {
+const migratePartWithRootAmpersand = (
+	selector: string,
+	tag: string,
+): string => {
 	void tag
 	const rest = selector.slice(1)
 	if (rest.startsWith(' > ')) return `:host > ${rest.slice(3)}`
@@ -292,129 +295,249 @@ const splitTopLevelCommas = (selectorText: string): string[] => {
 	return parts
 }
 
-/** One rule rewrite: the new selector text, or null to keep the rule. */
-const migrateSelectorText = (
-	selectorText: string,
-	tag: string,
-	context: string | undefined,
-	crossBoundaryAsGlobal: boolean,
-): string | null => {
-	const parts = splitTopLevelCommas(selectorText)
-	const migrated = parts.map(part =>
-		migratePart(part, tag, context, crossBoundaryAsGlobal),
-	)
-	if (migrated.every((m, index) => m === parts[index]?.trim()))
-		return null
-	return `${migrated.join(',')} `
+/**
+ * A custom element's type selector leading a compound — a dashed name in
+ * type position, never a class (`.foo-bar`), id or attribute value.
+ */
+const CUSTOM_ELEMENT_TYPE = /^[a-z][a-z0-9]*-[a-z0-9-]*/
+
+/**
+ * Whether a resolved (nesting-free, tag-led) complex selector descends past
+ * a custom element other than the component's own tag: a compound led by
+ * one, followed by a descendant or child combinator (LT-400 — the shape
+ * LTC071 rejects, LT-399). The subject is the child's content, which the
+ * scope stops at; such a rule ships only as a page-level `:global` rule.
+ * Sibling combinators and the child's own tag as the subject stay scoped.
+ * Approximates the compiler's boundary set, which only the template knows:
+ * every custom element counts.
+ */
+const descendsPastCustomElement = (selector: string, tag: string): boolean => {
+	let depth = 0
+	let compoundStart = true
+	let customCompound = false
+	for (let i = 0; i < selector.length; i++) {
+		const c = selector[i] as string
+		if (c === '"' || c === "'") {
+			const quote = c
+			i++
+			while (i < selector.length && selector[i] !== quote) {
+				if (selector[i] === '\\') i++
+				i++
+			}
+			continue
+		}
+		if (c === '(' || c === '[') depth++
+		else if (c === ')' || c === ']') depth--
+		if (depth > 0 || c === ')' || c === ']') {
+			compoundStart = false
+			continue
+		}
+		if (/[\s>+~]/.test(c)) {
+			// A combinator run: whitespace around a `>`/`+`/`~` is one combinator.
+			let j = i
+			let kind = ' '
+			while (j < selector.length && /[\s>+~]/.test(selector[j] as string)) {
+				if (selector[j] !== ' ' && !/\s/.test(selector[j] as string))
+					kind = selector[j] as string
+				j++
+			}
+			if (
+				j < selector.length &&
+				customCompound &&
+				(kind === ' ' || kind === '>')
+			)
+				return true
+			customCompound = false
+			compoundStart = true
+			i = j - 1
+			continue
+		}
+		if (compoundStart) {
+			const match = CUSTOM_ELEMENT_TYPE.exec(selector.slice(i))
+			if (match && match[0] !== tag) customCompound = true
+			compoundStart = false
+		}
+	}
+	return false
 }
 
-type Hoisted = { atRule: string; rule: string }
+/** Resolve a nested part against every parent alternative (`&` or implicit). */
+const resolveAgainst = (part: string, parents: readonly string[]): string[] =>
+	parents.map(parent =>
+		part.includes('&') ? part.replace(/&/g, parent) : `${parent} ${part}`,
+	)
 
-const RECURSABLE = ['media', 'supports', 'container', 'layer', 'starting-style', 'scope']
+type Hoisted = { atRules: string[]; rule: string }
+
+const RECURSABLE = [
+	'media',
+	'supports',
+	'container',
+	'layer',
+	'starting-style',
+	'scope',
+]
 
 /**
  * Walk the authored sheet, rewriting every style rule's SELECTOR TEXT in
  * place — declarations, values, comments and the nesting itself never
- * move. `context` is the parent rule's migrated selector ('' = children of
- * the tag-led root, undefined = sheet top level).
+ * move — nested selectors keep their text, since `&` then means the
+ * migrated parent. `originals` holds the parent's resolved tag-led
+ * alternatives (undefined = sheet level), `atRules` the enclosing
+ * conditions.
+ *
+ * At every level, a part that descends past a custom element (LT-400) —
+ * or a page-level rule under a condition — cannot stay in the scope and
+ * cannot be a nested `:global` (LTC069): it leaves as a page-level rule,
+ * in place as `:global(…)` when the rule is sheet-top-level and
+ * unconditioned, else hoisted with its conditions into the trailing bare
+ * `:global { … }` block, under its resolved tag-led selector and with its
+ * body verbatim (a nested `&` then resolves against that selector).
  */
 const migrateRulesInPlace = (
 	text: string,
 	from: number,
 	to: number,
 	tag: string,
-	context: string | undefined,
-	crossBoundaryAsGlobal: boolean,
+	originals: readonly string[] | undefined,
+	atRules: readonly string[],
 	replacements: Array<{ start: number; end: number; text: string }>,
 	hoisted: Hoisted[],
 ): void => {
 	const rules: TextRule[] = []
 	collectTextRules(text, from, to, rules)
-	// collectTextRules already recurses into recursable at-rules, so the
-	// flat list holds inner rules too — skip anything inside an at-rule
-	// span this loop has processed (the recursion owns those).
-	const atRuleRanges: Array<[number, number]> = []
-	const insideProcessed = (rule: TextRule): boolean =>
-		atRuleRanges.some(([start, end]) => rule.start > start && rule.end < end)
+	// collectTextRules recurses into recursable at-rules, and style rules'
+	// bodies are walked below, so skip anything inside a span this loop
+	// has already handed to a recursion.
+	const owned: Array<[number, number]> = []
+	const insideOwned = (rule: TextRule): boolean =>
+		owned.some(([start, end]) => rule.start > start && rule.end < end)
 	for (const rule of rules) {
-		if (insideProcessed(rule)) continue
+		if (insideOwned(rule)) continue
+		owned.push([rule.start, rule.end])
 		const name = atRuleName(text, rule)
 		if (name !== null) {
-			if (RECURSABLE.includes(name))
-				atRuleRanges.push([rule.start, rule.end])
-			// A cross-boundary rule inside a recursable at-rule cannot become
-			// an in-place `:global` (the nested form, LTC069): the original
-			// rule hoists into a top-level bare `:global` block that carries
-			// the at-rule, preserving the condition.
-			if (crossBoundaryAsGlobal && hoisted && RECURSABLE.includes(name)) {
-				const inner: TextRule[] = []
-				collectTextRules(text, rule.brace + 1, rule.end - 1, inner)
-				for (const child of inner) {
-					if (atRuleName(text, child) !== null) continue
-					const childSelector = text.slice(child.start, child.brace)
-					const migratedChild = migrateSelectorText(
-						childSelector,
-						tag,
-						undefined,
-						crossBoundaryAsGlobal,
-					)
-					if (
-						migratedChild !== null &&
-						migratedChild.includes(':global(') &&
-						!childSelector.includes(':global')
-					) {
-						hoisted.push({
-							atRule: text.slice(rule.start, rule.brace + 1).trim(),
-							rule: text.slice(child.start, child.end).trim(),
-						})
-						replacements.push({
-							start: child.start,
-							end: child.end,
-							text: '',
-						})
-					}
-				}
-			}
 			if (RECURSABLE.includes(name))
 				migrateRulesInPlace(
 					text,
 					rule.brace + 1,
 					rule.end - 1,
 					tag,
-					context,
-					crossBoundaryAsGlobal,
+					originals,
+					[...atRules, text.slice(rule.start, rule.brace).trim()],
 					replacements,
 					hoisted,
 				)
 			continue
 		}
 		const selectorText = text.slice(rule.start, rule.brace)
-		const migrated = migrateSelectorText(
-			selectorText,
-			tag,
-			context,
-			crossBoundaryAsGlobal,
-		)
-		if (migrated !== null)
+		if (selectorText.includes(':global')) continue
+		const parts = splitTopLevelCommas(selectorText).map(part => part.trim())
+		const live: Array<{ part: string; resolved: string[] }> = []
+		const leaving: string[] = []
+		for (const part of parts) {
+			const resolved = originals ? resolveAgainst(part, originals) : [part]
+			if (resolved.every(r => descendsPastCustomElement(r, tag))) {
+				leaving.push(...resolved)
+				continue
+			}
+			if (
+				originals === undefined &&
+				migratePart(part, tag, undefined).startsWith(':global(')
+			) {
+				leaving.push(part)
+				continue
+			}
+			live.push({ part, resolved })
+		}
+		const body = text.slice(rule.brace + 1, rule.end - 1)
+		const topLevel = originals === undefined && atRules.length === 0
+		if (leaving.length > 0 && live.length === 0 && topLevel) {
+			// The whole rule is page-level: it stays put as `:global(…)`.
 			replacements.push({
 				start: rule.start,
 				end: rule.brace,
-				text: migrated,
+				text: `:global(${leaving.join(', ')}) `,
 			})
+			continue
+		}
+		if (leaving.length > 0)
+			hoisted.push({
+				atRules: [...atRules],
+				rule: `${leaving.join(',\n')} {\n${indent(dedentCss(body).trimEnd(), '\t')}\n}`,
+			})
+		if (live.length === 0) {
+			replacements.push({ start: rule.start, end: rule.end, text: '' })
+			continue
+		}
+		// Nested selectors keep their text: `&` already means the migrated
+		// parent. Only sheet-level selectors (inside conditions or not) migrate.
+		const migratedParts = live.map(({ part }) =>
+			originals === undefined ? migratePart(part, tag, undefined) : part,
+		)
+		if (
+			leaving.length > 0 ||
+			migratedParts.some((m, index) => m !== live[index]?.part)
+		)
+			replacements.push({
+				start: rule.start,
+				end: rule.brace,
+				text: `${migratedParts.join(',')} `,
+			})
+		migrateRulesInPlace(
+			text,
+			rule.brace + 1,
+			rule.end - 1,
+			tag,
+			live.flatMap(({ resolved }) => resolved),
+			atRules,
+			replacements,
+			hoisted,
+		)
 	}
 }
 
+/**
+ * Drop style and conditional rules whose block holds nothing but
+ * whitespace and comments — what a parent rule is left with once every
+ * child hoisted out (LT-400). Repeats until stable: an emptied parent can
+ * empty its own parent.
+ */
+const dropEmptyRules = (sheetText: string): string => {
+	let out = sheetText
+	// Every rule, style-rule bodies included (collectTextRules alone
+	// recurses only into conditional groups).
+	const allRules = (text: string, from: number, to: number): TextRule[] => {
+		const found: TextRule[] = []
+		collectTextRules(text, from, to, found)
+		for (const rule of [...found])
+			if (atRuleName(text, rule) === null)
+				found.push(...allRules(text, rule.brace + 1, rule.end - 1))
+		return found
+	}
+	for (;;) {
+		const rules = allRules(out, 0, out.length)
+		const empty = rules.find(rule => {
+			const name = atRuleName(out, rule)
+			if (name !== null && !RECURSABLE.includes(name)) return false
+			const inner = out.slice(rule.brace + 1, rule.end - 1)
+			return skipSpaceAndComments(inner, 0) >= inner.length
+		})
+		if (!empty) return out
+		// Remove the rule with the whitespace that led up to it, so what
+		// followed it (a closing brace, the next rule) keeps its own indent.
+		let before = empty.start
+		while (before > 0 && /\s/.test(out[before - 1] as string)) before--
+		out = out.slice(0, before) + out.slice(empty.end)
+	}
+}
 
 /**
  * Migrate one authored sheet's selectors to the shadow-root form
  * (idempotent — a sheet already carrying a `:host`-led rule passes
  * through; a 2.x tag-led sheet never carries one).
  */
-export const migrateShadowCss = (
-	sheetText: string,
-	tag: string,
-	crossBoundaryAsGlobal = false,
-): string => {
+export const migrateShadowCss = (sheetText: string, tag: string): string => {
 	const topRules: TextRule[] = []
 	collectTextRules(sheetText, 0, sheetText.length, topRules)
 	const alreadyMigrated = topRules.some(
@@ -431,7 +554,7 @@ export const migrateShadowCss = (
 		sheetText.length,
 		tag,
 		undefined,
-		crossBoundaryAsGlobal,
+		[],
 		replacements,
 		hoisted,
 	)
@@ -440,19 +563,25 @@ export const migrateShadowCss = (
 		(a, b) => b.start - a.start,
 	))
 		out = out.slice(0, start) + text + out.slice(end)
-	// The hoisted cross-boundary rules land in one bare `:global` block at
-	// the sheet's end, grouped per at-rule prelude.
+	out = dropEmptyRules(out)
+	// The hoisted rules land in one bare `:global` block at the sheet's
+	// end, each wrapped in its enclosing conditions, grouped per chain.
 	if (hoisted.length > 0) {
-		const byAtRule = new Map<string, string[]>()
-		for (const { atRule, rule } of hoisted) {
-			const rules = byAtRule.get(atRule) ?? []
-			rules.push(rule)
-			byAtRule.set(atRule, rules)
+		const byChain = new Map<string, Hoisted[]>()
+		for (const entry of hoisted) {
+			const key = entry.atRules.join('\u0000')
+			byChain.set(key, [...(byChain.get(key) ?? []), entry])
 		}
-		const block = [...byAtRule]
-			.map(([atRule, rules]) => `${atRule}\n${rules.join('\n')}\n}`)
+		const block = [...byChain.values()]
+			.map(entries => {
+				const rules = entries.map(entry => entry.rule).join('\n\n')
+				return (entries[0]?.atRules ?? []).reduceRight(
+					(inner, atRule) => `${atRule} {\n${indent(inner, '\t')}\n}`,
+					rules,
+				)
+			})
 			.join('\n\n')
-		out = `${out.trimEnd()}\n\n:global {\n${block}\n}`
+		out = `${out.trimEnd()}\n\n:global {\n${indent(block, '\t')}\n}`
 	}
 	return out
 }
@@ -501,7 +630,7 @@ const run = async (): Promise<void> => {
 		const match = isTsx ? STYLE_TSX.exec(source) : STYLE_TSRX.exec(source)
 		if (!match) continue
 		const tag = tagOf(path)
-		const sheetText = match[1]
+		const sheetText = match[1] ?? ''
 		// Migrate the DEDENTED sheet: lightningcss's printer carries a
 		// multi-line value's authored line breaks and indentation through,
 		// and a variant set's members may sit at different base depths —
@@ -530,8 +659,8 @@ const run = async (): Promise<void> => {
 }
 
 // A guard, not decoration: the transform below is imported by the tests,
-// and an import must never rewrite the corpus. `--tests`, `--sync-twins`
-// and `--from-twins` run their own passes instead.
+// and an import must never rewrite the corpus. `--tests` and
+// `--from-twins` run their own passes instead.
 if (
 	import.meta.main &&
 	!process.argv.includes('--tests') &&
@@ -619,7 +748,6 @@ if (import.meta.main && process.argv.includes('--tests')) {
 	console.log(`\n${count} test fixture file(s) migrated.`)
 }
 
-
 /**
  * `bun scripts/migrate-shadow-css.ts --from-twins` — the decisive LT-306
  * parity pass. Before this landing the pages served the HAND-WRITTEN twin
@@ -644,11 +772,10 @@ const fromTwins = async (): Promise<void> => {
 		const match = isTsx ? STYLE_TSX.exec(source) : STYLE_TSRX.exec(source)
 		if (!match) continue
 		const tag = tagOf(path)
-		const sheetText = match[1]
+		const sheetText = match[1] ?? ''
 		const migrated = migrateShadowCss(
 			dedentCss(readFileSync(twin, 'utf8')),
 			tag,
-			true,
 		)
 		if (dedentCss(sheetText) === migrated) continue
 		const pad = baseIndentOf(sheetText)

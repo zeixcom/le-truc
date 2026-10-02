@@ -48,16 +48,74 @@ my-component {
 **Avoid if** you expect style clashes from third-party styles.
 {% /callout %}
 
-{% callout .note title="Authoring in the isomorphic format" %}
-A compiled component's stylesheet is emitted verbatim, unscoped — whichever surface authored it (`.tsx` via the `css` template tag, `.tsrx` as a raw `<style>` block). The same tag-name convention above applies, just written once and compiled through unchanged. See `server/compiler/HOST_PROFILE.md`.
+{% callout .note title="Compiled components are scoped for you" %}
+A component compiled with the Le Truc compiler scopes its stylesheet automatically. You author shadow-root CSS (`:host` plus bare selectors), not the tag-led nesting above. See [Compiled Component Styles](#compiled-component-styles) below. Hand-written CSS for a runtime-only component keeps the tag-led convention here and ships verbatim.
 {% /callout %}
+
+{% /section %}
+
+{% section %}
+## Compiled Component Styles
+
+A component compiled with the Le Truc compiler ships its stylesheet **scoped**. You author the sheet as **shadow-root CSS**: `:host` rules style the host element, and bare selectors style the component's internals.
+
+```css
+:host {
+  display: block;
+  padding: var(--spacing);
+}
+
+.input {
+  /* Styles for the component's own internals */
+}
+```
+
+The compiler scopes this sheet in light DOM. Its rules stop at every custom element the template renders, so they cannot reach a composed child's internals. You need no defensive `>` chains. Page styles still win over `:host` rules, as they do over a component in a real shadow root.
+
+How the sheet ships depends on the build's `cssTargets` configuration (default: the Baseline widely available browsers):
+
+- Targets that support native `@scope` get the sheet wrapped in `@scope (my-element) to (…)`.
+- Older targets get a flat lowering: every selector leads with a zero-specificity `:where(my-element)`, plus a guard per boundary tag.
+
+The default target set predates wide `@scope` support, so the default build compiles the lowered form. The two forms behave the same except as listed under [Differences from a Real Shadow Root](#differences-from-a-real-shadow-root) below.
+
+A page-level rule that ships with the component — a scroll lock on `body`, for example — opts out with `:global`. A top-level `:global(body.scroll-lock) { … }` rule or a bare `:global { … }` block ships outside the scope, unwrapped. A global rule under a condition, such as `@media`, rides in the bare block: `:global { @media … }`. Every other `:global` spelling is a compile error: it would reach past the boundary into composed children.
+
+Forms that have no meaning under the contract are compile errors too: a rule led by the component's own tag (style the host through `:host`), `::slotted()` in light mode, `:host-context()`, and `:host` directly followed by a qualifier (`:host.x` — move the qualifier into the arguments, `:host(.x)`). So is a selector that descends past a composed child (`child-tag .x`): the scope stops at the child's tag, so the rule matches nothing. Style that content from the child's own stylesheet, or as a page-level rule in a top-level `:global { … }` block. The child's own tag and its siblings stay stylable.
+
+{% callout .caution title="Only a real shadow root keeps page styles out" %}
+The compiled scope stops the component's styles from leaking **out**. It does not stop page styles from reaching **in**: page CSS can still reach the component's internals. That is the permanent light-DOM limit — only a real shadow root provides inward encapsulation.
+{% /callout %}
+
+### Differences from a Real Shadow Root
+
+The compiled contract behaves like the same sheet in a shadow root, except where the light-DOM emission cannot match it:
+
+- **Page CSS can still reach the component's internals.** Only a real shadow root prevents that.
+- **Page-authored children are styled by the component's rules.** This is intended where nothing is slotted.
+- **Content the component's own template places inside a composed child is outside its scope.** A real shadow root would style it; the light-DOM scope stops at the child's tag. Style such content from a top-level `:global { … }` block.
+- **A custom element inserted at runtime is no boundary.** The rules are live CSS, so a plain element inserted at runtime is styled like any other. But the boundary set is fixed at compile time, so a custom element added after the fact is not one — the component's rules reach its internals, in both emission forms.
+- **Without native `@scope` there is no scope-proximity step.** In the lowered form, a component whose template renders a child that renders the component again loses more than native scoping would take: the outer instance's boundary guard also strips the inner instance's internals and its non-bare `:host` rules. Native `@scope`, which always uses the nearest scope, styles them.
+
+### Switching to a Shadow Root
+
+Shadow mode is the per-component opt-in for inward isolation, and it changes more than the wrapper:
+
+- The same sheet emits verbatim into the shadow root's `<style>`. `::slotted()` becomes legal, and `:global` rules move to the document stylesheet — a global rule cannot live in a shadow root.
+- Page-authored content renders only through slots.
+- The component's children-are-data harvest stops at the shadow boundary.
+- `id` references — `<label for>`, `aria-labelledby`, `aria-describedby` — no longer cross the boundary.
+- Page-global styles no longer reach the internals.
+- Declarative Shadow DOM is Baseline 2024: plan a connect-time fallback or a documented 2024 minimum.
+
+You author shadow mode as a declarative shadow template — `<template shadowrootmode="open">` — as the root's first child, holding the internals and the `<style>`. Composed content still inserts where the template declares it.
 
 {% /section %}
 
 {% section %}
 ## Encapsulate Styles with Shadow DOM
 
-Use **Shadow DOM** to encapsulate styles when you do not control the page styles where the component appears. Page styles do not leak in. Component styles do not leak out.
+Use **Shadow DOM** to encapsulate styles when you do not control the page styles where the component appears. Page styles do not leak in. Component styles do not leak out. For a compiled component, see [Switching to a Shadow Root](#switching-to-a-shadow-root) above: shadow mode changes more than the wrapper.
 
 ```html
 <my-component>

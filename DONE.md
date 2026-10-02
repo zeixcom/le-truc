@@ -23,6 +23,117 @@ LT-355–LT-359, LT-361 (the LT-138 docs handoff, now a task), LT-362. Earlier p
 
 ---
 
+- [x] LT-398: Scoped-emission defects found at the LT-304 review (`css-scope.ts`). — done ✓ (reviewed 2026-10-02)
+  **Skill:** le-truc-dev
+  **Changed:** `css-scope.ts`. Blockless statements (`@layer a, b;`) no longer swallow the next
+  rule. Every member of a whole-rule `:global(…)` list unwraps. The guard goes before the
+  subject's first pseudo-element. LTC066 fires inside top-level conditional at-rules
+  (`styleDepth`). Flattening uses the real targets with `include: Features.Nesting` (`NESTING_CAP`
+  is gone). `distributeLeadingHostIs` splits a flattened `:is(:host …)` list back into its
+  members, which fixed the form-textbox/combobox/tokenbox `:empty`, `::placeholder` and
+  `:user-invalid` rules. Corpus emission changed in selector text only.
+  **Ruling (review):** distributing `:is(:host …)` gives each member its own specificity instead
+  of the list maximum. Accepted, because the members come from one authored list. The nested
+  `:host` qualifier residue → LT-405 (rolled back 2026-10-02, now in BACKLOG.md P2b).
+
+- [x] LT-399: A selector that descends past a boundary is dead — make it an error, fix module-listnav (ADR 0033 s6). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** new **LTC071** (`descendsPastBoundary`; compiler, tier 1 Prevented):
+  `checkSheetBoundaries` in `css-scope.ts`, run from `pipeline.ts` before the error gate,
+  because it needs the compose registry. A nested rule is dead only when it is dead under
+  every parent alternative. module-listnav: `module-lazyload { contain: inline-size }` stays in
+  scope, and the heading rule moved into `:global { @container … { module-listnav
+  module-lazyload :is(h1, …, h6) {…} } }`. ADR 0033 s6 lists the form.
+  **Review:** approved. The owner kept the s3 boundary (LT-397 cause 3, 2026-10-02), so the
+  rule is never correct and needs no exemption for parent-authored subjects. Live handoff:
+  LT-404 (the new face broke `typecheck`).
+
+- [x] LT-400: Correct the migration codemod's cross-boundary heuristic (`scripts/migrate-shadow-css.ts`, LT-306 review). — done ✓ (reviewed 2026-10-02)
+  **Skill:** le-truc-dev
+  **Changed:** the regex heuristic and the `crossBoundaryAsGlobal` flag are gone. A structural scan
+  (`descendsPastCustomElement`, LT-399's rule; every dashed type counts, since the codemod has
+  no template) runs at every nesting level and in every mode. A crossing part leaves as
+  `:global(…)` in place, or is hoisted with its at-rule chain into a trailing bare
+  `:global { … }` block. New `migrate-shadow-css.test.ts`: each output must pass
+  `checkSheetContract` + `checkSheetBoundaries`. A dry run over the twins reproduces 35 of the
+  36 corpus sheets, and listnav differs only in spelling.
+
+- [x] LT-401: Pin the remaining ADR 0033 s7 differences in the css-probe fixture (LT-304 Check, review). — done ✓ (reviewed 2026-10-02)
+  **Skill:** le-truc-dev
+  **Changed:** `css-probe.spec.ts` pins page-authored children, a runtime-inserted custom
+  element (no boundary), and lowered self-nesting against the shadow twin. The runtime
+  plain-element test is renamed s1 (live matching). The fixture's TS2353 is fixed, so
+  `check:corpus` exits 0. ADR 0033 s7 states the self-nesting difference.
+  **Handoff:** the real `bunx playwright test examples/test/scoping` run (both modes, Chromium and
+  WebKit) is still owed. It rides LT-397's corpus Playwright run, outside the sandbox. The
+  runtime-insertion wording → LT-406.
+
+- [x] LT-402: Copy round for LTC066–LTC071 and LTC051's boundary face (LT-304 handoff). — reviewed ✓
+  **Skill:** tech-writer
+  **Changed:** `diagnostics.ts`: LTC066–LTC071 final copy. LTC051 gains a boundary face (an
+  optional `boundaries` map names each member's set). `LE_TRUC_COMPILER.md` gains a *Stylesheet*
+  family. styling.md/HOST_PROFILE.md state that `:global` unwraps and that a conditioned
+  global goes in `:global { @media … }`.
+  **Handoffs:** LT-403 passes the map, because the boundary face cannot fire until it does. The
+  owner's `.agents/` pass over `errors.md` (Stylesheet band, plus the LTC071 row and the
+  widened LTC051 row drafted in the LT-402 handoff, `git log -p -- TODO.md`) rides LT-397's
+  commit.
+
+- [x] LT-248: Document compiled-component style scoping (ADR 0033) where users read. — reviewed ✓
+  **Skill:** tech-writer
+  **Changed:** `styling.md` gains a "Compiled Component Styles" section: authoring form,
+  `@scope` or lowered emission per `cssTargets`, `:global`, the refusals, the inward-encapsulation
+  caution, the s7 differences, and the s8 shadow-switch list. `HOST_PROFILE.md` § Styles uses the
+  same words. `getting-started.md` states the Baseline 2023 runtime baseline.
+  `document-map.md` gains the styling.md parity check.
+  **Review:** approved. Three gaps (LTC071 missing, "uncovered" runtime wording, the "behave the
+  same" overclaim) → LT-406.
+
+- [x] LT-404: Restore `typecheck` — the `past-boundary` face broke `contractDiagnostic`'s exhaustive switch (LT-399 review). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `css-scope.ts` exports `BoundaryFinding` (`selector`, `offset`, required `boundary`),
+  which `checkSheetBoundaries` returns. `ContractFace` keeps only the authored-form faces, and
+  `pipeline.ts` drops its `?? ''` fallback. `bun run typecheck` is green again.
+
+- [x] LT-403: Wire LTC051's boundary face — pass the boundary sets to `variantCssDrift` (LT-402 handoff). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `corpus-compile.ts` splits the parity check into a sheet drift and a boundary
+  drift. A sheet drift keeps the "copy the styles" face. A boundary-only drift names each
+  member's boundary set. Covered in `dual-corpus.test.ts`.
+  **Ruling (review):** when the sheets drift, members that differ only in their boundaries are
+  not named in the same report. The author sees the boundary face once the sheets match.
+  Accepted, since one fix at a time is the clearer message.
+
+- [x] LT-406: Docs follow-ups from the LT-248 review — LTC071, runtime insertion, the "behave the same" overclaim. — reviewed ✓
+  **Skill:** tech-writer
+  **Changed:** `styling.md` § Compiled Component Styles, `HOST_PROFILE.md` § Styles and ADR 0033 s7
+  (in place, unpublished): LTC071 is in the refusal list, "a custom element inserted at runtime
+  is no boundary", "behave the same except as listed under Differences", and the
+  template-authored-content difference.
+  **Review:** approved. Parity holds. ADR 0033 s7's "guarded `:host…` rules" moves to the docs'
+  "non-bare `:host` rules" in LT-408.
+
+- [x] LT-394: Split LTC064 by tier — declaration-grammar findings warn, parse failures error (LT-268 review). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** LTC064 now covers only a sheet that does not parse (tier 1, error). New **LTC065** (tier 2 Contained, warning): an unknown property, or a value outside its property's grammar, and the sheet ships as authored. `css.ts` exempts only descriptor at-rules (`DESCRIPTOR_ATRULES`), so a conditional group nested in a rule (`.a { @media … { … } }`) is now checked. ADR 0033 s9 gains the Contained sentence. Uncommitted at review; lands with LT-304's commit.
+  **Ruling (review):** LTC065 stays one code for both faces: the same tier, the same arbiter, the same decision for the author; the message names the face. `@position-try` is deliberately absent from `DESCRIPTOR_ATRULES` because its block holds properties.
+
+- [x] LT-395: LTC064/LTC065 copy round and error-lifecycle propagation (LT-268 handoff). — done ✓
+  **Skill:** tech-writer
+  **Changed:** final copy in `diagnostics.ts`. Both LTC065 faces tell the author to fix a typo, or to ignore the warning when the CSS is newer than the compiler's dictionary, because the declaration ships as written. `errors.md` rows for LTC064/LTC065 (added by the owner; the sandbox denies `.agents/` writes). ADR 0028 has no per-code inventory, so nothing changed there.
+  **Handoff (Changelog Keeper, at release):** LTC064 (sheet does not parse) and LTC065 (declaration-grammar warning) are new codes in 3.0.
+
+- [x] LT-396: Drop the stale LTC035 assertion from `diagnostics.test.ts` (LT-268 residue). — done ✓
+  **Skill:** le-truc-dev
+  **Changed:** the cross-arm literal-id test now asserts no error and LTC042 as the only code; TS2367 is gone.
+
+- [x] LT-268: Parse the authored stylesheet in the compiler (ADR 0033 s9). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Changed:** `css.ts` gains `parseComponentSheet`: a read-only `lightningcss-wasm` 1.33.0 pass puts the parsed sheet on `ComponentIR.sheet` (optional, type `ComponentSheet`); a `css-tree` ^3.2.1 lexer pass checks each declaration. New diagnostic **LTC064**, three faces: the sheet does not parse, an unknown property, a value outside the property's grammar. Exempt: custom properties, `var()`/`env()` values, at-rule descriptors. Emission unchanged (`dedentCss` stays; full corpus rebuild byte-identical). New runtime `dependencies`: `lightningcss-wasm`, `css-tree` (dist ESM bundle + ambient `css-tree.d.ts`). `check:portability` copies the `.wasm` beside its bundle. Commit c31be13f.
+  **Ruling (wasm distribution):** `lightningcss-wasm`, not the native napi binding — the native one cannot load from the self-contained portability bundle under node/deno (ADR 0038). Recorded in ADR 0033 s9 at LT-304's ADR touch.
+  **Ruling (owner, 2026-10-02 review):** the declaration faces are **demoted to Contained** — css-tree 3.2.1 / mdn-data 2.27.1 rejects valid, shipping CSS (`container-type: scroll-state`, `calc-size()`, `display: grid-lanes`), so a lagging dictionary is evidence, not proof. "Does not parse" stays tier 1. Carried by LT-394; copy by LT-395.
+  **Handoffs:** LT-394 (tier split, nested-at-rule gap), LT-395 (Tech Writer copy round), LT-396 (stale LTC035 test), LT-370 (the `check:contract` toy staleness), LT-304 (write-path crash hazard, version lockstep).
+
 - [x] LT-389: Teaching and API docs for the template-cloned arms (LT-274/LT-276 review). — done ✓
   **Skill:** tech-writer
   **Changed:** `LE_TRUC_COMPILER.md`'s TemplateNode table states the `conditional` node and the template-cloned `try`; the `ClientPlan` effects list and § 5.3's emit dispatch describe the live winner beside inert keyed templates (LT-385c's empty bake included). The census teaching lines in both compiler docs re-pinned to the by-design 27-of-35 map (LT-386's delta had left "21 of 23"). `module-lazyload.tsx`'s boundary rationale drops the retired fieldset clause. `reconcile()`'s JSDoc names the arm form — the `templates` overload, `bindArm(element, key, first)`, re-entry re-clones, since 3.0 — and `types/src/helpers/reactive.d.ts` regenerated. `docs-src/pages/lists.md` gains "Switch Conditional Arms". The le-truc skill: `references/effects.md` gains the arm-form row, the arm-form paragraph and a "Reactive Conditions and the Async Boundary" section; `le-truc-dev/references/non-obvious.md` documents the snapshot/adoption-guard/re-clone/teardown facts. COMPILER_SPEC § 3.5, ARCHITECTURE.md, AGENTS.md and HOST_PROFILE's condition teaching were already current (LT-274/LT-276/LT-388 landed them). Commit f556a512.

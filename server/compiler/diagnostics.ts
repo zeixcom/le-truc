@@ -99,6 +99,7 @@ export type DiagnosticCode =
 	| 'LTC068' // `:host-context()` in a component stylesheet — removed from the CSS spec, matched by no browser (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC069' // `:global` in a form other than the two whole-rule forms — nested, prefixed, trailing, leading-ancestor, mid-selector, or declarations directly in a bare block (ADR 0033 s6a, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC070' // `:host` directly followed by a qualifier (`:host.x`, `:host:hover`, `:host[attr]`) — matches nothing in a shadow root; the qualifier belongs in the arguments (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC071' // a stylesheet selector descends past a boundary tag (`child-tag .x`, `child-tag > .x`) — its subject is a composed child's content, which the scope always excludes (ADR 0033 s6, LT-399) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -1574,14 +1575,32 @@ export const diagnostic = {
 	 * the build fails naming every member, and none of the set's artifacts
 	 * are written (mirroring LTC048's both-dropped semantics).
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle.
-	 * Corpus-level: fires once per involved
+	 * Two faces (ADR 0033 s10, LT-304): the authored sheets differ, or the
+	 * sheets agree but the members stop the scope at different boundary
+	 * sets — each member's boundaries are the custom elements its own
+	 * lowered template renders, so the same sheet emits different CSS. The
+	 * caller passes `boundaries` (source → boundary tags) only for the
+	 * second face; copying styles cannot fix it, so it names the sets.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-02, LT-402). Corpus-level: fires once per involved
 	 * file, no source offset.
 	 */
-	variantCssDrift: (tag: string, sources: ReadonlyArray<string>) =>
+	variantCssDrift: (
+		tag: string,
+		sources: ReadonlyArray<string>,
+		boundaries?: ReadonlyMap<string, readonly string[]>,
+	) =>
 		error(
 			'LTC051',
-			`Variant set \`${tag}\` compiles to different CSS across its members: ${sources.join(', ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make the styles of every member byte-identical: copy the styles of the served member into the others.`,
+			boundaries
+				? `Variant set \`${tag}\` has the same styles in every member, but its members render different custom elements, so the scope stops at different boundaries: ${sources
+						.map(source => {
+							const tags = boundaries.get(source) ?? []
+							return `${source} stops at ${tags.length ? tags.map(t => `<${t}>`).join(', ') : 'no custom element'}`
+						})
+						.join('; ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make every member render the same custom elements.`
+				: `Variant set \`${tag}\` compiles to different CSS across its members: ${sources.join(', ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make the styles of every member byte-identical: copy the styles of the served member into the others.`,
 		),
 
 	/**
@@ -1720,7 +1739,7 @@ export const diagnostic = {
 	 * statically decidable, no runtime half.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (first draft 2026-10-02, LT-304).
+	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	ownTagLedRule: (source: string, offset: number | undefined, tag: string) =>
 		error(
@@ -1738,7 +1757,7 @@ export const diagnostic = {
 	 * (Prevented): statically decidable, no runtime half.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (first draft 2026-10-02, LT-304).
+	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	slottedInLightDom: (source: string, offset: number | undefined) =>
 		error(
@@ -1756,31 +1775,15 @@ export const diagnostic = {
 	 * half.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (first draft 2026-10-02, LT-304).
+	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	hostContextSelector: (source: string, offset: number | undefined) =>
 		error(
 			'LTC068',
-			'`:host-context()` is removed from the CSS spec and matched by no browser, so the rule could never apply. Theme variation by ancestor reaches a light-DOM component through inheritance and custom properties instead — custom properties cross every boundary.',
+			'`:host-context()` is removed from the CSS spec and matched by no browser, so the rule could never apply. Theme the component by ancestor through inheritance and custom properties instead — custom properties cross every boundary.',
 			lineOf(source, offset),
 		),
 
-	/**
-	 * `:global` in a form other than the two whole-rule forms (ADR 0033
-	 * s6a, LT-304). The admitted forms are a top-level
-	 * `:global(<whole selector>) { … }` rule and a top-level bare `:global
-	 * { … }` block, both hoisted out of the scope; every other spelling
-	 * would either reach past the boundary into composed children's markup
-	 * (nested, prefixed, leading-ancestor — the data account forbids it),
-	 * do nothing (trailing — classes are never rewritten, so the wrapper is
-	 * a no-op), be an error in TSRX too (mid-selector), or style nothing
-	 * (declarations directly in a bare block). `face` names which; each
-	 * carries its own reason in the copy. ADR 0028 tier 1 (Prevented):
-	 * statically decidable, no runtime half.
-	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (first draft 2026-10-02, LT-304).
-	 */
 	/**
 	 * `:host` directly followed by a qualifier (ADR 0033 s6, LT-304; R3,
 	 * owner 2026-10-02). `:host.x`, `:host:hover` and `:host[attr]` match
@@ -1791,7 +1794,7 @@ export const diagnostic = {
 	 * no runtime half.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (first draft 2026-10-02, LT-304).
+	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	hostQualifier: (source: string, offset: number | undefined) =>
 		error(
@@ -1800,6 +1803,47 @@ export const diagnostic = {
 			lineOf(source, offset),
 		),
 
+	/**
+	 * A selector that descends past a boundary tag (ADR 0033 s6, LT-399):
+	 * a compound naming a custom element the template renders, followed by
+	 * a descendant or child combinator. The subject is that child's content;
+	 * the scope limit (native) and the guard (lowered) always exclude it, so
+	 * the rule matches nothing — as a shadow root's sheet cannot reach into
+	 * a child's shadow root. Sibling combinators stay legal, and so does
+	 * styling the child's own tag. ADR 0028 tier 1 (Prevented): statically
+	 * decidable, no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-02, LT-402 — the LT-399 first draft, finalized).
+	 */
+	descendsPastBoundary: (
+		source: string,
+		offset: number | undefined,
+		selector: string,
+		boundary: string,
+	) =>
+		error(
+			'LTC071',
+			`The selector \`${selector}\` reaches inside \`<${boundary}>\`, a custom element this component renders — the scope stops at it, so the rule matches nothing. Style that content from \`<${boundary}>\`'s own stylesheet, or, for a page-level rule, move it into a top-level \`:global { … }\` block.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `:global` in a form other than the two whole-rule forms (ADR 0033
+	 * s6a, LT-304). The admitted forms are a top-level
+	 * `:global(<whole selector>) { … }` rule and a top-level bare `:global
+	 * { … }` block, both hoisted out of the scope and emitted unwrapped;
+	 * every other spelling would either reach past the boundary into
+	 * composed children's markup (nested, prefixed, leading-ancestor — the
+	 * data account forbids it), do nothing (trailing — classes are never
+	 * rewritten, so the wrapper is a no-op), be an error in TSRX too
+	 * (mid-selector), or style nothing (declarations directly in a bare
+	 * block). `face` names which; each carries its own reason in the copy.
+	 * ADR 0028 tier 1 (Prevented): statically decidable, no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
+	 */
 	globalMisuse: (
 		source: string,
 		offset: number | undefined,
@@ -1814,7 +1858,7 @@ export const diagnostic = {
 		error(
 			'LTC069',
 			face === 'nested'
-				? 'This `:global` sits inside another rule or block. A global rule escapes the component scope, so from inside a rule it would reach past the boundary into composed children — hoist it to the top level of the stylesheet instead: a whole `:global(<selector>) { … }` rule or a bare `:global { … }` block.'
+				? 'This `:global` sits inside another rule or block. A global rule escapes the component scope, so from inside a rule it would reach past the boundary into composed children — hoist it to the top level of the stylesheet instead: a whole `:global(<selector>) { … }` rule or a bare `:global { … }` block (an at-rule-conditioned global rides in the bare block: `:global { @media … }`).'
 				: face === 'prefixed'
 					? "This `:global(<selector>)` is followed by more selector. A global escape owns the whole rule; extending it would address markup past the boundary into composed children. Hoist the rule to the top level as `:global(<whole selector>) { … }`, or drop the wrapper if the selector means this component's own internals."
 					: face === 'trailing'
@@ -1823,7 +1867,7 @@ export const diagnostic = {
 							? 'This selector starts at `:global(…)` and then descends into the component. A leading global ancestor has no shadow-root equivalent — the page cannot reach into the component from outside, and inside the scope the descendant needs no escape. Style internals with bare selectors; a genuinely page-level rule hoists as `:global(<whole selector>) { … }`.'
 							: face === 'mid-selector'
 								? "This `:global(…)` sits in the middle of a selector, which is an error in TSRX too. Split the rule: the component's own compounds style internals with bare selectors, and a genuinely page-level rule hoists as `:global(<whole selector>) { … }` at the top level."
-								: 'These declarations sit directly in a bare `:global { … }` block, where no selector styles anything. Wrap them in a selector: `:global(<selector>) { … }` for a page-level rule.',
+								: 'These declarations sit directly in a bare `:global { … }` block, which carries no selector — they style nothing. Put them under a selector: a `:global(<selector>) { … }` rule, or a rule inside the block.',
 			lineOf(source, offset),
 		),
 }

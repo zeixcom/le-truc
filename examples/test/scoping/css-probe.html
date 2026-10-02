@@ -4,7 +4,9 @@
      class rule that must reach the light-DOM component's internals (the
      permanent inward-reach difference from a real shadow root, ADR 0033
      s7). The `<p class="probe-global">` inside the component is
-     page-authored children — styled by the component's `:global` rule. -->
+     page-authored children — styled by the component's `:global` rule —
+     and `#page-child`, absent from the template, is the s7 page-authored
+     child the component's own rules style. -->
 <style>
 	css-probe {
 		border-top-color: rgb(0, 128, 0);
@@ -26,4 +28,5 @@
 		<span>Page content</span>
 	</basic-button>
 	<button type="button" class="own">Own</button>
+	<p class="label" id="page-child">Page child</p>
 </css-probe>

@@ -275,24 +275,28 @@ export function ModuleColorinfo(
 					&:last-of-type dt {
 						display: none;
 					}
-				}
 
-				& dt {
-					grid-column: 1;
-					color: var(--color-text-soft);
-					display: inline-block;
-					text-align: right;
-					font-size: var(--font-size-s);
-					font-weight: 400;
-					line-height: var(--line-height-s);
-				}
+					/* Nested under the dl rule so the emitted selector ties the
+					   page's dl dt / dl dd rules (specificity 0,0,2) — the scoped
+					   emission leads with zero-specificity :where(module-colorinfo)
+					   (ADR 0033 s7). */
+					& dt {
+						grid-column: 1;
+						color: var(--color-text-soft);
+						display: inline-block;
+						text-align: right;
+						font-size: var(--font-size-s);
+						font-weight: 400;
+						line-height: var(--line-height-s);
+					}
 
-				& dd {
-					grid-column: 2;
-					display: inline-block;
-					margin: 0;
-					font-size: var(--font-size-s);
-					line-height: var(--line-height-s);
+					& dd {
+						grid-column: 2;
+						display: inline-block;
+						margin: 0;
+						font-size: var(--font-size-s);
+						line-height: var(--line-height-s);
+					}
 				}
 			}`}</style>
 		</>

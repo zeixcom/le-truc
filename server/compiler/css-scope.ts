@@ -23,11 +23,11 @@
  * path with `var()` in nested rules before any visitor-based emission is
  * considered.
  *
- * The flattening pass runs with the configured targets CAPPED just below
- * native nesting support (ADR 0033 s4: the lowered emission is flat
- * selectors). Everything else lowers only as far as the real targets
- * demand — the default (Baseline widely available) keeps every
- * Baseline-2023 feature authored. `:where()` and complex `:not()` — the
+ * The flattening pass runs with the configured targets and nesting forced
+ * into the lowering (`include: Features.Nesting` — ADR 0033 s4: the
+ * lowered emission is flat selectors). Everything else lowers only as far
+ * as the real targets demand — the default (Baseline widely available)
+ * keeps every Baseline-2023 feature authored. `:where()` and complex `:not()` — the
  * lowering's own vocabulary — are Baseline 2021, within the runtime's
  * baseline, so the guard never needs lowering.
  *
@@ -37,7 +37,7 @@
  */
 
 import { Features, transform } from 'lightningcss-wasm'
-import { CSS_BROWSERS, type CssBrowser, type CssTargets } from './emit-paths'
+import type { CssBrowser, CssTargets } from './emit-paths'
 import type { TemplateNode } from './ir'
 import type { RegistryEntry } from './registry'
 import { walkTemplate } from './walk'
@@ -77,7 +77,23 @@ export type ContractFinding = {
 	/** The offending selector, summarized, for the message body. */
 	selector: string
 	/** 0-based offset within the sheet text, when known. */
-	offset?: number
+	offset?: number | undefined
+}
+
+/**
+ * A selector descending past a boundary tag (`child-tag .x`,
+ * `child-tag > .x`) — its subject lies inside a composed child, which the
+ * scope always excludes (ADR 0033 s6, LT-399, LTC071). Kept apart from
+ * `ContractFinding`: it needs the boundary set, so the pipeline checks
+ * and maps it, not the authored-form pass (LT-404).
+ */
+export type BoundaryFinding = {
+	/** Every dead member of the rule's selector list, summarized. */
+	selector: string
+	/** 0-based offset within the sheet text, when known. */
+	offset: number | undefined
+	/** The boundary tag the first dead member descends past. */
+	boundary: string
 }
 
 /* === Deserialized lightningcss shapes (read structurally, never written) === */
@@ -126,39 +142,23 @@ export const scopeModeOf = (targets: CssTargets): ScopeMode => {
 }
 
 /**
- * Packed targets just below native nesting support (Chrome/Edge 112,
- * Firefox 117, Safari 16.5). The flattening pass caps every configured
- * browser here and FILLS every missing one from the same cap — nesting
- * always lowers (ADR 0033 s4: the emitted sheet is flat), whatever the
- * target names.
- */
-const NESTING_CAP: Record<CssBrowser, number> = {
-	chrome: (112 << 16) - 1,
-	edge: (112 << 16) - 1,
-	firefox: (117 << 16) - 1,
-	safari: ((16 << 16) | (5 << 8)) - 1,
-}
-
-/**
- * The flattening pass's transform options: the capped targets, with
- * `light-dark()` EXCLUDED from lowering. Nesting is strictly older than
- * `light-dark()`, so the caps would lower both — and the `light-dark()`
- * lowering rewrites a declaration into `var(--lightningcss-light, …)
+ * The flattening pass's transform options: the REAL targets, with nesting
+ * forced on (`include`) — nesting always lowers (ADR 0033 s4: the emitted
+ * sheet is flat), whatever the target names, and nothing else lowers
+ * beyond what the targets demand (LT-398). `light-dark()` is EXCLUDED
+ * from lowering: the default's Safari 17.4 predates it, and its lowering
+ * rewrites a declaration into `var(--lightningcss-light, …)
  * var(--lightningcss-dark, …)`, a two-value background that is invalid at
  * computed-value time. Authored `light-dark()` ships and the page bundle's
  * own lowering (with its companion definitions) handles it.
  */
 const flatteningTargets = (
 	targets: CssTargets,
-): { targets: Record<string, number>; exclude: number } => {
-	const capped: Record<string, number> = {}
-	for (const browser of CSS_BROWSERS)
-		capped[browser] = Math.min(
-			targets[browser] ?? NESTING_CAP[browser],
-			NESTING_CAP[browser],
-		)
-	return { targets: capped, exclude: Features.LightDark }
-}
+): { targets: CssTargets; include: number; exclude: number } => ({
+	targets,
+	include: Features.Nesting,
+	exclude: Features.LightDark,
+})
 
 /* === The authored-form checks (ADR 0033 s6) === */
 
@@ -272,10 +272,17 @@ const shiftedLocToOffset = (
 	(lineStarts[loc.line] ?? 0) +
 	Math.max(0, loc.column - 1 - (strip[loc.line] ?? 0))
 
+/**
+ * `depth` counts every enclosing block (a `:global` anywhere but the sheet's
+ * top level is the nested face); `styleDepth` counts only enclosing STYLE
+ * rules — a rule inside a top-level `@media` is still a top-level rule for
+ * the own-tag-led face (LT-398), the shape a tag-led legacy sheet has.
+ */
 const checkRules = (
 	rules: readonly LcRule[],
 	tag: string,
 	depth: number,
+	styleDepth: number,
 	lineStarts: readonly number[],
 	findings: ContractFinding[],
 ): void => {
@@ -287,7 +294,7 @@ const checkRules = (
 			for (const selector of selectors) {
 				const first = selector[0] as LcComponent | undefined
 				if (
-					depth === 0 &&
+					styleDepth === 0 &&
 					first?.type === 'type' &&
 					first.name?.toLowerCase() === tag
 				)
@@ -375,11 +382,25 @@ const checkRules = (
 						})
 				}
 			}
-			checkRules(value?.rules ?? [], tag, depth + 1, lineStarts, findings)
+			checkRules(
+				value?.rules ?? [],
+				tag,
+				depth + 1,
+				styleDepth + 1,
+				lineStarts,
+				findings,
+			)
 			continue
 		}
 		if (RECURSABLE_AT_RULES.has(rule.type))
-			checkRules(rule.value?.rules ?? [], tag, depth + 1, lineStarts, findings)
+			checkRules(
+				rule.value?.rules ?? [],
+				tag,
+				depth + 1,
+				styleDepth,
+				lineStarts,
+				findings,
+			)
 	}
 }
 
@@ -403,7 +424,153 @@ export const checkSheetContract = (
 		(sheet as { rules?: LcRule[] })?.rules ?? [],
 		tag.toLowerCase(),
 		0,
+		0,
 		lineStarts,
+		findings,
+	)
+	return findings
+}
+
+/* === Descending past a boundary (ADR 0033 s6, LT-399) === */
+
+/**
+ * One resolved alternative of a selector, as far as the boundary check
+ * needs it: whether it already descended past a boundary tag (and which),
+ * and whether its subject compound names one — the state a nested `&`
+ * inherits.
+ */
+type BoundaryState = { dead: string | null; subjectBoundary: string | null }
+
+/**
+ * Resolve one selector against one parent alternative. A compound naming
+ * a boundary tag followed by a descendant or child combinator has a
+ * subject strictly inside that child, which the scope limit (native) and
+ * the guard (lowered) always exclude. Sibling combinators stay in scope.
+ * A nested selector without `&` is relative: an implicit `& ` leads it.
+ */
+const resolveBoundaryState = (
+	selector: LcSelector,
+	parent: BoundaryState | null,
+	boundaries: ReadonlySet<string>,
+): BoundaryState => {
+	const components =
+		parent && !selector.some(component => component.type === 'nesting')
+			? [
+					{ type: 'nesting' } as LcComponent,
+					{ type: 'combinator', value: 'descendant' } as LcComponent,
+					...selector,
+				]
+			: selector
+	let dead: string | null = null
+	let compound: string | null = null
+	for (const component of components) {
+		if (component.type === 'nesting' && parent) {
+			dead ??= parent.dead
+			compound ??= parent.subjectBoundary
+		} else if (
+			component.type === 'type' &&
+			component.name &&
+			boundaries.has(component.name.toLowerCase())
+		)
+			compound = component.name.toLowerCase()
+		else if (component.type === 'combinator') {
+			if (component.value === 'pseudo-element') continue
+			if (
+				compound &&
+				(component.value === 'descendant' || component.value === 'child')
+			)
+				dead ??= compound
+			compound = null
+		}
+	}
+	return { dead, subjectBoundary: compound }
+}
+
+const checkBoundaryRules = (
+	rules: readonly LcRule[],
+	parents: readonly BoundaryState[] | null,
+	boundaries: ReadonlySet<string>,
+	lineStarts: readonly number[],
+	findings: BoundaryFinding[],
+): void => {
+	for (const rule of rules) {
+		if (rule.type === 'style') {
+			const value = rule.value
+			const selectors = value?.selectors ?? []
+			// The whole-rule `:global` forms ship outside the scope: no
+			// boundary applies to them or to what they hold.
+			if (
+				parents === null &&
+				selectors.length > 0 &&
+				selectors.every(isWholeGlobalSelector)
+			)
+				continue
+			const offset = value?.loc ? locToOffset(lineStarts, value.loc) : undefined
+			const states: BoundaryState[] = []
+			const dead: string[] = []
+			let deadBoundary: string | null = null
+			for (const selector of selectors) {
+				const resolved = (parents ?? [null]).map(parent =>
+					resolveBoundaryState(selector, parent, boundaries),
+				)
+				// Dead only when dead under EVERY parent alternative.
+				const boundary = resolved.every(state => state.dead !== null)
+					? (resolved[0]?.dead ?? null)
+					: null
+				if (boundary) {
+					dead.push(selectorTextOf(selector))
+					deadBoundary ??= boundary
+				}
+				states.push(...resolved)
+			}
+			// One finding per rule, naming every dead member of its list.
+			if (deadBoundary)
+				findings.push({
+					selector: dead.join(', '),
+					offset,
+					boundary: deadBoundary,
+				})
+			checkBoundaryRules(
+				value?.rules ?? [],
+				states,
+				boundaries,
+				lineStarts,
+				findings,
+			)
+			continue
+		}
+		if (RECURSABLE_AT_RULES.has(rule.type))
+			checkBoundaryRules(
+				rule.value?.rules ?? [],
+				parents,
+				boundaries,
+				lineStarts,
+				findings,
+			)
+	}
+}
+
+/**
+ * Check a parsed component stylesheet for selectors that descend past a
+ * boundary tag (ADR 0033 s6, LT-399): `module-lazyload h1` in a sheet
+ * whose template renders `<module-lazyload>` matches nothing in either
+ * emission mode — the subject is the child's content, not the
+ * component's. Needs the boundary set, so it runs where the compose
+ * registry is known (the pipeline), after the authored-form checks.
+ * Offsets resolve against the sheet text lightningcss parsed.
+ */
+export const checkSheetBoundaries = (
+	sheet: unknown,
+	sheetText: string,
+	boundaries: readonly string[],
+): BoundaryFinding[] => {
+	const findings: BoundaryFinding[] = []
+	if (boundaries.length === 0) return findings
+	checkBoundaryRules(
+		(sheet as { rules?: LcRule[] })?.rules ?? [],
+		null,
+		new Set(boundaries.map(tag => tag.toLowerCase())),
+		lineStartsOf(sheetText),
 		findings,
 	)
 	return findings
@@ -557,6 +724,17 @@ const collectTextRules = (
 	while (i < to) {
 		if (i >= text.length || text[i] === '}') break
 		const brace = indexOfUnquoted(text, '{', i)
+		// A blockless statement (`@layer a, b;`) ends at its `;` — it is no
+		// rule, and it must not swallow the selector of the next one (LT-398).
+		const semicolon = indexOfUnquoted(text, ';', i)
+		if (
+			semicolon !== -1 &&
+			semicolon < to &&
+			(brace === -1 || semicolon < brace)
+		) {
+			i = skipSpaceAndComments(text, semicolon + 1)
+			continue
+		}
 		if (brace === -1 || brace >= to) break
 		const close = matchingBrace(text, brace)
 		if (close === -1 || close >= to) break
@@ -673,12 +851,19 @@ const fragmentText = (fragment: Fragment, sheetText: string): string => {
 		}
 		return text
 	}
-	// `:global(<selector>) { … }` → `<selector> { … }`
-	const paren = indexOfUnquoted(text, '(', 0)
-	const closeParen = matchingParen(text, paren)
-	const brace = indexOfUnquoted(text, '{', closeParen + 1)
-	if (paren === -1 || closeParen === -1 || brace === -1) return text
-	return `${text.slice(paren + 1, closeParen).trim()} ${text.slice(brace).trim()}`
+	// `:global(<a>), :global(<b>) { … }` → `<a>, <b> { … }` — every list
+	// member unwraps, not just the first (LT-398).
+	const brace = indexOfUnquoted(text, '{', 0)
+	if (brace === -1) return text
+	const members = splitTopLevelCommas(text.slice(0, brace)).map(member => {
+		const trimmed = member.trim()
+		const paren = trimmed.indexOf('(')
+		const closeParen = paren === -1 ? -1 : matchingParen(trimmed, paren)
+		return closeParen === -1
+			? trimmed
+			: trimmed.slice(paren + 1, closeParen).trim()
+	})
+	return `${members.join(', ')} ${text.slice(brace).trim()}`
 }
 
 /**
@@ -700,15 +885,52 @@ const leadingHost = (
 	return { wrapper: [0, close + 1], args: [paren + 1, close] }
 }
 
+/** The four CSS2.1 pseudo-elements, which also have a single-colon spelling. */
+const LEGACY_PSEUDO_ELEMENT =
+	/^:(?:before|after|first-line|first-letter)(?![\w-])/
+
 /**
- * A trailing pseudo — element (`::before`, legacy `:before`, `::part(x)`)
- * or class (`:hover`) — closing the complex selector. The guard inserts
- * BEFORE the run: `:where()` cannot attach after a pseudo-element, and the
- * flattening pass may emit the legacy single-colon spelling for the four
- * CSS2.1 pseudo-elements. Anchoring the guard one compound earlier is
- * semantically identical — it constrains the same element.
+ * Where the guard goes in a flat complex selector: before the first
+ * pseudo-element of the SUBJECT compound (`::before`, legacy `:before`,
+ * `::part(x)`, `::-webkit-scrollbar-thumb`), else at the end. `:where()`
+ * cannot follow a pseudo-element — only user-action pseudo-classes may
+ * (`::part(x):hover`) — so the guard anchors on the originating element,
+ * which constrains the same element (LT-398).
  */
-const TRAILING_PSEUDO = /(?:::?[a-zA-Z][\w-]*(?:\([^()]*\))?)\s*$/
+const guardOffset = (selector: string): number => {
+	let depth = 0
+	let subject = 0
+	for (let i = 0; i < selector.length; i++) {
+		const c = selector[i] as string
+		if (c === '"' || c === "'") {
+			const quote = c
+			i++
+			while (i < selector.length && selector[i] !== quote) {
+				if (selector[i] === '\\') i++
+				i++
+			}
+		} else if (c === '(' || c === '[') depth++
+		else if (c === ')' || c === ']') depth--
+		else if (depth === 0 && /[\s>+~]/.test(c)) subject = i + 1
+	}
+	depth = 0
+	for (let i = subject; i < selector.length; i++) {
+		const c = selector[i] as string
+		if (c === '(' || c === '[') depth++
+		else if (c === ')' || c === ']') depth--
+		else if (depth === 0 && c === ':') {
+			if (selector[i + 1] === ':') return i
+			if (LEGACY_PSEUDO_ELEMENT.test(selector.slice(i))) return i
+		}
+	}
+	return selector.trimEnd().length
+}
+
+/** Splice the guard into a flat complex selector at `guardOffset`. */
+const withGuard = (selector: string, guard: string): string => {
+	const at = guardOffset(selector)
+	return `${selector.slice(0, at)}${guard}${selector.slice(at)}`
+}
 
 /** Commas outside parens/brackets/strings — a selector list's separators. */
 const splitTopLevelCommas = (selectorText: string): string[] => {
@@ -758,8 +980,30 @@ const rewriteSelector = (
 	boundaries: readonly string[],
 ): string =>
 	splitTopLevelCommas(selectorText)
+		.flatMap(distributeLeadingHostIs)
 		.map(part => rewriteComplexSelector(part, tag, mode, boundaries))
 		.join(', ')
+
+/**
+ * Flattening a rule nested under a selector LIST yields a leading `:is()`
+ * (`:host .a, :host .b { &:empty {} }` → `:is(:host .a, :host .b):empty`),
+ * which hides `:host` from the leading-compound rewrite and leaves a rule
+ * that matches nothing (LT-398). When that `:is()` holds a `:host`, the
+ * list distributes back out — `:host .a:empty, :host .b:empty` — each
+ * member then rewritten on its own. Each member keeps its own specificity
+ * instead of the list's maximum; the members came from one authored list.
+ */
+const distributeLeadingHostIs = (part: string): string[] => {
+	const selector = part.trim()
+	if (!selector.startsWith(':is(')) return [part]
+	const close = matchingParen(selector, 3)
+	if (close === -1) return [part]
+	const members = splitTopLevelCommas(selector.slice(4, close))
+	if (!members.some(member => leadingHost(member.trim()) !== null))
+		return [part]
+	const rest = selector.slice(close + 1)
+	return members.map(member => `${member.trim()}${rest}`)
+}
 
 const rewriteComplexSelector = (
 	selectorText: string,
@@ -790,22 +1034,14 @@ const rewriteComplexSelector = (
 		const rest = selector.slice(host.wrapper[1])
 		if (rest.trim() === '') return hostText
 		const rewritten = `${hostText}${rest}`
-		if (mode === 'lowered' && guard) {
-			const trailing = TRAILING_PSEUDO.exec(rewritten)
-			const at = trailing ? (trailing.index as number) : rewritten.length
-			return `${rewritten.slice(0, at)}${guard}${rewritten.slice(at)}`
-		}
-		return rewritten
+		return mode === 'lowered' && guard ? withGuard(rewritten, guard) : rewritten
 	}
 	if (mode === 'native') return selector
 	// R1 (owner, 2026-10-02): the scope root leads as `:where(tag)` — zero
 	// specificity, so a lowered rule carries the same specificity as its
 	// native form (`:where(my-el) .x` ≙ `.x` under `@scope`).
 	const prefixed = `:where(${tag}) ${selector}`
-	if (!guard) return prefixed
-	const trailing = TRAILING_PSEUDO.exec(prefixed)
-	const at = trailing ? (trailing.index as number) : prefixed.length
-	return `${prefixed.slice(0, at)}${guard}${prefixed.slice(at)}`
+	return guard ? withGuard(prefixed, guard) : prefixed
 }
 
 /** Apply `{offset, from, to}` splices in one reverse pass. */

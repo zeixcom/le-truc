@@ -15,6 +15,8 @@ description: 'Installation, setup, and first steps'
 
 Le Truc works without build tools. It also supports package managers and bundlers for projects that use TypeScript and tree-shaking.
 
+Le Truc targets **Baseline 2023** browsers: every feature the library relies on is interoperable in Chrome, Edge, Firefox and Safari by the end of 2023. Newer sub-features, such as `:state()` custom states, degrade gracefully where absent. No polyfills are included or required.
+
 ### Use a CDN
 
 Include Le Truc from a CDN. No build tools are required:

@@ -202,6 +202,9 @@ those has a task yet.
   **Docs:** `LE_TRUC_COMPILER.md` §2's published set and stability policy (the IR-union
   clauses) follow; Tech Writer reviews.
   **Channel/tier:** none — no check is added or retired.
+  **Note (LT-268 review, 2026-10-02):** the toy IR literal in `scripts/contract-check.ts`
+  predates LT-287/LT-288 (`exposeText`/`exposeKinds`/`refReasons`) and `check:contract` is red
+  at HEAD. Retiring or moving the toy here discharges it; don't refresh it separately.
   **Verification:** `check:contract` and the full gates; goldens byte-identical.
 
 - [ ] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2).
@@ -614,6 +617,66 @@ records the actual net delta.
   (a CI failure; no runtime half).
   **Check:** the gate is green at HEAD with Baseline 2023; a fixture using a 2024-only API
   unguarded fails it; bumping the year without a major version fails it.
+
+**[2026-10-02, owner: LT-405 rolled back; LT-407 and LT-408 deferred from the current iteration's track D.]** All three explain or police a way compiled CSS departs from a real shadow root. The owner wants those departures re-evaluated in a design session (architect) before more of them are documented or given diagnostics: "the differences to real Shadow DOM become a burden that is increasingly hard to explain." The session reviews ADR 0033 s7's list as a whole (zero-specificity `:host(…)`, template-authored content inside a composed child, the LTC070/LTC071 refusals) and decides, for each, whether to keep it, close the gap in the emission, or reshape it. Re-scope all three from the session's outcome before picking any up.
+
+**Known state after the rollback (2026-10-02, measured by le-truc-dev).** These are the input facts for the session.
+- `:host { &:hover/&.x/&[open] { … } }` (and `:host(.a) { &:hover }`) gets no diagnostic. It emits exactly what the flat `:host:hover` would, `:where(my-box):hover` lowered and `:where(:scope):hover` native. That styles the host, where a shadow root matches nothing (`:host` is featureless; spec reasoning, not browser-checked).
+- The qualifier carries (0,1,0), so a page `my-box { … }` rule loses to it. That makes `styling.md:74` / `HOST_PROFILE.md:76` ("Page styles still win over `:host` rules") and § Differences' "behaves like the same sheet in a shadow root, except where …" overclaim for this form.
+- In lowered mode with boundaries, the nested form picks up the self-nesting guard, which `:host(X)` does not.
+- The corpus relies on the nested form at about 37 sites in 14 sources.
+- `:host(X)` still emits at (0,0,0), arguments included (LT-408's difference, undocumented).
+
+- [ ] LT-405: A nested qualifier on `:host` evades LTC070 (LT-398 residue). — rolled back 2026-10-02, deferred to the design session
+  **Skill:** le-truc-dev
+  **Rolled back (owner, 2026-10-02):** the working tree is back to HEAD's behaviour for this case. `hostParent`, the codemod's
+  `hoistNestedHostQualifiers` and their tests are removed, and the ~37 corpus sites are restored to the nested authored form
+  (module-codeblock's `:global { pre/code }` block now follows `:host`). What follows records what
+  the reverted change did, for the design session.
+  **Was:** `checkRules` (`css-scope.ts`) carries `hostParent`, so `:host { &<qualifier> }` is
+  LTC070 too (no new code). The codemod's `hoistNestedHostQualifiers` moves such rules to a
+  sibling `:host(<qualifier>)` rule and keeps the flattened order. That migrated about 37 sites
+  in 14 corpus sources. The emitted CSS changed in selector text only.
+  **Ruling (owner, 2026-10-02 — the NOTES question; still describes the emission, documentation deferred to LT-408):** `:host(X)` keeps its all-zero emission
+  (`:where(tag:is(X))` / `:where(:scope:is(X))`), arguments included, so page styles always win on
+  the host. It is recorded as an s7 difference: a `:host(…)` argument carries no specificity, so a
+  variant rule must follow the base rule it overrides. Documented by LT-408. The migrated
+  corpus's specificity loss changes no computed value (static pass), and pixel confirmation
+  rides LT-397. The nested face's copy and fix-it go to LT-407.
+
+- [ ] LT-407: LTC070's nested face — `&<qualifier>` inside `:host { }` gets its own message and fix-it (LT-405 review).
+  **Skill:** le-truc-dev (Tech Writer owns the copy)
+  **Context:** (Written against LT-405, now rolled back: re-scope it from the design session. If LT-405's check returns, this follows it.) Since LT-405, `checkRules` reports `:host { &:hover { … } }` as LTC070. The message
+  says "`:host` followed directly by a qualifier" and offers `:host(:hover)` as the fix. The author
+  never wrote `:host:hover`, though, and following the fix-it in place nests `:host(:hover)` under
+  `:host`, a descendant selector that matches nothing. Give `ContractFinding` a `nested` flag (set
+  when the qualified component is a `&` standing for `:host`). Route it through
+  `contractDiagnostic` to a second face of `diagnostic.hostQualifier`, saying that a qualifier
+  after `&` in a `:host` rule qualifies `:host` itself, and that the fix is a sibling top-level rule
+  `:host(<qualifier>) { … }` (the shape the codemod's `hoistNestedHostQualifiers` writes). The flat
+  face's copy stays as it is. Update the diagnostic-parity fixtures if the face is surface-visible.
+  **Channel/tier:** compiler, tier 1 Prevented (unchanged; LTC070 gains a face, no new code).
+  Tech Writer reviews the copy and the `errors.md` row (owner's `.agents/` pass).
+  **Verification:** a `css-scope.test.ts` case asserts the nested flag. A diagnostic test asserts
+  each face's message (the nested one has no in-place `:host(…)` fix-it). `tsc` 0, server suite
+  green.
+
+- [ ] LT-408: Document the zero-specificity `:host(…)` arguments as an s7 difference (owner ruling 2026-10-02, LT-405 NOTES question).
+  **Skill:** tech-writer (ADR 0033 s7 through adr-keeper)
+  **Context:** Owner ruling (b): `:host(X)` keeps its all-zero emission, `:where(tag:is(X))` lowered
+  and `:where(:scope:is(X))` native, arguments included, so page styles always win on the host
+  (R1). In a real shadow root, `:host(X)` carries a pseudo-class's specificity plus X's, so
+  `:host(.tiny) .label` beats `.label` in the same sheet whatever the order. Compiled, only
+  source order decides. Add the difference to ADR 0033 s7 (in place, unpublished), to
+  `styling.md` § Differences from a Real Shadow Root and to `HOST_PROFILE.md` § Styles, in the
+  same words. The rule for authors: write variant rules (`:host(.x) …`) after the base rules they
+  override. In the same pass, change s7's "its guarded `:host…` rules" to the docs' "non-bare
+  `:host` rules" (LT-406 check).
+  **Channel/tier:** none — copy only. (No check is added: an order-sensitive conflict needs
+  cascade analysis across rules, which the compiler does not do. This is a recorded
+  limitation, not a deferred check.)
+  **Verification:** `check:links` green, and the three files state the difference in the same
+  words.
 
 - [ ] LT-342: A `.tsx` spelling for the reactive-list key binding — capability parity (ADR 0032 s6), found by the LT-233 review.
   **Skill:** architect (design), then le-truc-dev

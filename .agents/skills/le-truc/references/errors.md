@@ -107,6 +107,20 @@ The selector rules are deliberately **one-sided**: `LTC026` reports only what no
 | `LTC062` | A reactive switch — one whose discriminant reads a signal — has a `@case`/`case` value that is not a literal, or two values name the same arm: the client keys arms by the value at compile time (`1` and `1.0` share one key; `'1'` and `1` do not). | Write each value as a string, number, boolean or `null` literal, one arm per value. | error |
 | `LTC063` | A reactive condition sits in the container of a reactive-list loop — the list owns that container's children and removes everything it did not place, the arm and its templates included. | Move the condition out of the container, or wrap the loop in an element of its own. | error |
 
+### Stylesheet
+
+[ADR 0033](../../../../adr/0033-scope-component-styles-by-custom-element-name.md) rules the compiled contract: the sheet is authored as shadow-root CSS (`:host` plus bare selectors) and scoped in light DOM. Forms with no meaning under that contract are tier 1 (Prevented).
+
+| Code | What fired | How to fix | Severity |
+|---|---|---|---|
+| `LTC064` | The component's stylesheet does not parse (the message quotes the parser's reason). The compiler scopes and emits the parsed sheet, so it has nothing to emit. | Correct the CSS syntax at the reported line. | error |
+| `LTC065` | A stylesheet declaration names a property the compiler's CSS dictionary does not know, or a value outside that property's grammar. Browsers drop such a declaration. The dictionary lags the platform, so a newer property or value warns too. Custom properties, `var()`/`env()` values and at-rule descriptors are never checked. | Correct a typo. If the property or value is newer than the dictionary, leave it: the declaration ships as written. The examples corpus keeps a warning baseline of 0. | warning |
+| `LTC066` | A rule in the component's stylesheet is led by the component's own tag. A compiled stylesheet is shadow-root CSS — `:host` styles the host element, and the tag compound inside the scope would address a nested element and never the host, so the rule silently stops applying. | Style the host through `:host`, and drop the tag from selectors that mean the component's own internals. | error |
+| `LTC067` | `::slotted()` in the component's stylesheet. Slotted content exists only in a shadow root; a compiled component renders light DOM, where composed children are real children, not slotted nodes. | Style a composed child's host element by its tag; the child styles its own internals. | error |
+| `LTC068` | `:host-context()` in the component's stylesheet — removed from the CSS spec and matched by no browser. | Theme by ancestor through inheritance and custom properties, which cross every boundary. | error |
+| `LTC069` | `:global` in a form other than the two whole-rule forms: nested, prefixed, trailing, leading-ancestor, mid-selector, or declarations directly in a bare block. Only a top-level `:global(<whole selector>) { … }` rule and a top-level bare `:global { … }` block escape the scope. | Hoist page-level rules to the top level in one of the two admitted forms; style the component's internals with bare selectors. | error |
+| `LTC070` | `:host` directly followed by a qualifier (`:host.x`, `:host:hover`, `:host[attr]`) — a compound on the bare `:host` pseudo-class matches nothing in a shadow root. | Move the qualifier into the arguments: `:host(.x)`, `:host(:hover)`, `:host([attr])`. | error |
+
 ### Source shape and imports
 
 | Code | What fired | How to fix | Severity |

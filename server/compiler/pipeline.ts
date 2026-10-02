@@ -10,7 +10,11 @@
 
 import { analyzeClient } from './analysis/plan'
 import { renderedShapesOf } from './analysis/selectors'
-import { collectScopeBoundaries, emitScopedSheet } from './css-scope'
+import {
+	checkSheetBoundaries,
+	collectScopeBoundaries,
+	emitScopedSheet,
+} from './css-scope'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from './emit-paths'
@@ -115,6 +119,33 @@ export const compileFromIR = (
 	// LT-258: the partial-readiness invariant (ADR 0034 s4) — nothing but
 	// own args and the declared ambient set may reach the fold.
 	checkFoldInputs(component, diagnostics)
+	// The boundary set — every custom element the lowered template renders
+	// (ADR 0033 s3). It needs the compose registry, so the one sheet check
+	// that depends on it runs here rather than with the authored-form checks
+	// in template-output.ts: a selector descending past a boundary tag
+	// matches nothing in either emission mode (LTC071, LT-399).
+	const scopeBoundaries = collectScopeBoundaries(
+		component.root,
+		composeRegistry,
+	)
+	if (component.sheet && component.sheetText) {
+		const sheetStart = component.source.lastIndexOf(component.sheetText)
+		for (const finding of checkSheetBoundaries(
+			component.sheet,
+			component.sheetText,
+			scopeBoundaries,
+		))
+			diagnostics.push(
+				diagnostic.descendsPastBoundary(
+					component.source,
+					sheetStart >= 0 && finding.offset !== undefined
+						? sheetStart + finding.offset
+						: undefined,
+					finding.selector,
+					finding.boundary,
+				),
+			)
+	}
 	if (diagnostics.some(d => d.severity === 'error'))
 		return { component: null, diagnostics }
 	/**
@@ -158,10 +189,6 @@ export const compileFromIR = (
 				),
 			]
 		: []
-	const scopeBoundaries = collectScopeBoundaries(
-		component.root,
-		composeRegistry,
-	)
 	const server = emitServerModule(component, {
 		runtimeImport: emitPaths.runtimeImport,
 		sourcePath: filename,

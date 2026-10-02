@@ -44,7 +44,7 @@ parallel.
   (done ✓ 2026-10-02, in DONE.md — the ADR 0037 amendments). ~~LT-275 + LT-359~~ (one Tech
   Writer copy round — reviewed 2026-10-02, in DONE.md) and ~~LT-389~~ (done ✓ 2026-10-02,
   in DONE.md) — track C is closed.
-- **D — scoped CSS (ADR 0033).** ~~LT-268~~ (reviewed 2026-10-02, in DONE.md) → LT-304 + LT-306 (one landing) → LT-248. ~~LT-394 → LT-395~~ and ~~LT-396~~ (its review follow-ups; reviewed 2026-10-02, in DONE.md — uncommitted, they land with LT-304's commit). It touches
+- **D — scoped CSS (ADR 0033).** ~~LT-268~~ (reviewed 2026-10-02, in DONE.md) → LT-304 + LT-306 (one landing; reviewed 2026-10-02, changes required) → ~~LT-397~~ (done 2026-10-02, pending review ⏳ — serves the emission; owner ruling 2026-10-02 in its entry; the whole track D batch lands in its commit). ~~LT-398–LT-402~~ and ~~LT-248~~ (reviewed 2026-10-02, in DONE.md — uncommitted, they land with LT-397's commit). Their review follow-ups ~~LT-403, LT-404, LT-406~~ (reviewed 2026-10-02, in DONE.md; `typecheck` green again). LT-405 was rolled back on 2026-10-02 (owner) and moved to BACKLOG.md P2b. Their own follow-ups LT-407 (LTC070's nested face) and LT-408 (the zero-specificity `:host(…)` s7 difference) are deferred to BACKLOG.md P2b (owner, 2026-10-02): the departures from a real shadow root need a design session first. ~~LT-394 → LT-395~~ and ~~LT-396~~ (its review follow-ups; reviewed 2026-10-02, in DONE.md — uncommitted, they land with LT-304's commit). It touches
   `css.ts`, the config and the example sheets, not the front ends, so it runs in parallel from
   day one.
 - **Parallel slot.** ~~LT-382, LT-384, LT-383~~ (reviewed 2026-10-01, in DONE.md). ~~LT-358~~ (reviewed 2026-10-01, in DONE.md). ~~LT-245~~ (spike — reviewed 2026-10-01, ADR 0045, in DONE.md; its promotion is track A's LT-379 → LT-380) and ~~LT-361~~ (done ✓, in DONE.md).
@@ -72,7 +72,7 @@ and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, em
 both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-397.** Next free diagnostic code: LTC071 (LTC070 is LT-304's, per the pre-handoff review; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-409.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's, per the pre-handoff review; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -88,9 +88,9 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### C — Reactive conditions (ADR 0037; LT-274, LT-276, LT-385, LT-386, LT-388, LT-275 + LT-359 and LT-389 done 2026-10-02, in DONE.md — track C closed)
 
-### D — Scoped CSS (ADR 0033; LT-268, LT-394–LT-396 reviewed 2026-10-02, in DONE.md; LT-304 + LT-306 done 2026-10-02, pending review ⏳ → LT-248)
+### D — Scoped CSS (ADR 0033; LT-268, LT-394–LT-396 reviewed 2026-10-02, in DONE.md; LT-304 + LT-306 reviewed 2026-10-02, changes required → LT-397–LT-402; LT-398–LT-406 and LT-248 reviewed 2026-10-02, in DONE.md; LT-397 done 2026-10-02, pending review ⏳; LT-407/LT-408 deferred to BACKLOG.md 2026-10-02)
 
-- [x] LT-304: Scoped emission of shadow-root-form CSS — native `@scope` or the `:where(:not(…))` lowering, per `cssTargets` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s1–s7). **Ships in 3.0. Depends on LT-268; lands together with LT-306** (the corpus migration), since the old tag-led form becomes an error.
+- [x] LT-304: Scoped emission of shadow-root-form CSS — native `@scope` or the `:where(:not(…))` lowering, per `cssTargets` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s1–s7). **Ships in 3.0. Depends on LT-268; lands together with LT-306** (the corpus migration), since the old tag-led form becomes an error. — reviewed, changes required (LT-397–LT-402)
   **Skill:** le-truc-dev (Tech Writer owns the new LTC copy; LT-248 is the docs half)
   (done 2026-10-02, pending review ⏳ — landed with LT-306. Emission is string-level over the
   read-only parse (upstream #1065/#1081 tracked; pins aligned, ADR 0033 s9 amended with the
@@ -140,6 +140,14 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   three lowering differences); the corpus Playwright specs pass once per mode (override
   `cssTargets`); each new error fires on its fixture; LTC051 still compares authored
   sheets; corpus warning baseline 0.
+  **Review (Architect, 2026-10-02):** the design is right and the pre-handoff rulings landed:
+  string-level surgery over the read-only parse avoids the upstream crash, R1 (`:where(<tag>)`
+  lead), R2 (per-browser object, pinned default, 255 cap) and R3 (LTC070) are in, the
+  `@starting-style` leak and empty-target flattening are fixed, LTC051 compares boundaries, the
+  build ordering is fixed. Not approved as done: the emission is not served (LT-397), and probing
+  found four emitter defects and one check gap (LT-398), an unpinned set of s7 differences
+  (LT-401) and copy owed (LT-402). Entry stays here until LT-397 lands; then both move to
+  DONE.md with the follow-ups' outcomes.
   **Pre-handoff review (Architect, 2026-10-02 — fix these before handing off; LT-304 + LT-306):**
   *Rulings (owner):* (R1) lowered rules lead with `:where(<tag>)`, not the bare tag, so a rule
   has the same specificity in both modes (`:where(my-el) .x` ≙ native `.x`). (R2) `cssTargets` stays
@@ -175,7 +183,7 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   ADR 0036). Codemod: remove the dead `stripTagCompound`; `tag>x` with no space must not
   widen to a descendant selector.
 
-- [x] LT-306: Migrate every compiled corpus stylesheet to the shadow-root form (ADR 0033 s2) and split the twins' CSS (s10). **Ships in 3.0. Lands together with LT-304.**
+- [x] LT-306: Migrate every compiled corpus stylesheet to the shadow-root form (ADR 0033 s2) and split the twins' CSS (s10). **Ships in 3.0. Lands together with LT-304.** — reviewed, changes required (LT-397, LT-399, LT-400)
   (done 2026-10-02, pending review ⏳ — the committed codemod `scripts/migrate-shadow-css.ts`
   rewrites SELECTOR TEXT ONLY in place (values, nesting, comments and authored `light-dark()`
   never move; `--from-twins` brings each twin-carrying sheet to the previously-served content,
@@ -195,24 +203,57 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   **Check:** the served pages render pixel-identically before and after where no leak was
   present (Playwright screenshot comparison per example, both CSS modes); LTC051 green
   across every variant set; no compiled sheet contains a rule led by its own tag.
+  **Review (Architect, 2026-10-02):** s10 is not in the commit: `examples/main.css` still
+  `@import`s the twins' hand-written `.css`, and the served `docs/assets/main.css` holds no
+  scoped rule. The pixel-parity run compared the twins' CSS with itself, and the corpus Playwright
+  runs exercised the emission only on css-probe. The real comparison is LT-397's. The
+  codemod has a wrong cross-boundary heuristic (LT-400), and it left one dead rule in
+  module-listnav (LT-399).
 
-- [ ] LT-248: Document compiled-component style scoping (ADR 0033, accepted 2026-09-24) where users read.
-  **Skill:** tech-writer
-  **Context:** Re-scoped by the ADR 0033 ruling: the doc obligation is no longer "scoped by
-  tag name, a known limit" but the ruled model. `docs-src/pages/styling.md`'s compiled-component
-  callout and `server/compiler/HOST_PROFILE.md` § Styles (including its selector-enforcement
-  open question, now answered) state: a compiled sheet is shadow-root CSS (`:host` plus bare
-  selectors), scoped in light DOM so rules stop at every custom element the template renders,
-  emitted as native `@scope` or a `:where(:not(…))` lowering per `cssTargets`; host rules lose
-  to page styles, as in a shadow root; defensive `>` chains are no longer needed; hand-written
-  CSS for runtime-only components stays verbatim and tag-led. **Be plain that only a real
-  shadow root gives inward encapsulation**: page CSS can still reach a light-DOM component's
-  internals. Name every ADR 0033 s7 difference where an author would otherwise hit it, and
-  list what switching to a shadow root changes beyond the stylesheet (s8). Also state the runtime
-  baseline (Baseline 2023, REQUIREMENTS § Browser support) in the getting-started or
-  installation page. **Lands with LT-304**, not before: until then the docs describe verbatim
-  emission.
-  **Verification:** `check:links` green; styling.md and HOST_PROFILE.md say the same thing in
-  the same words (one is user-facing, one is the authoring profile).
+- [x] LT-397: Serve the scoped emission — repoint `examples/main.css` (ADR 0033 s10; LT-306 review, **blocking**). — done 2026-10-02, pending review ⏳
+  **Skill:** le-truc-dev
+  (done 2026-10-02, pending review ⏳ — repoint landed with the whole uncommitted track D batch
+  and the owner-ruled corpus fixes. Cause 3: module-codeblock's `pre`/`code` rules hoisted into
+  a top-level `:global { … }` block (the listnav pattern); the s3 boundary kept, LTC071
+  untouched. Cause 4: colorinfo's `dt`/`dd` rules nested under its `dl` rule so the emitted
+  `:where(module-colorinfo) dl dt` ties the page's `dl dt` and wins by order; the lazyload
+  nested-components mock drops its `.counter` margin, which the callout's
+  `:where(card-callout) > :last-child` (0,1,0) no longer out-specifies against the
+  runtime-injected mock style. Verification RE-RUN after the LT-405 rollback (owner, same day):
+  full-page screenshots of all 35 compiled test pages, HEAD worktree vs this tree — 33/35
+  pixel-identical in BOTH modes (the 2 differences, card-mediaqueries and context-media, are
+  card-mediaqueries' sheet being served for the first time — twin-less, no import at HEAD —
+  not a regression; one module-pagination byte-noise false positive visually checked
+  identical). Corpus Playwright suite 990 passed / 10 skipped / 0 failed once per mode,
+  Chromium + WebKit (LT-401's owed scoping run included). Server suite 2831/0, typecheck,
+  check:corpus, check:links green. `docs/assets/main.css` contains the `:where(<tag>)` rules
+  after `build:docs`; `build:docs` itself still fails the simulation gate on 2 unclassified
+  canvas notices attributed to module-lazyload — pre-existing at HEAD (LT-306 session,
+  worktree-proven), LT-335's family, and the baseline test correctly rejects a workaround
+  classification; see NOTES.md.)
+  **Context:** `examples/main.css` still imports `./<group>/<name>/<tag>.css` (the twins) for every
+  folder. For each folder whose served surface is compiled, import the emitted
+  `server/generated/components/<tag>.css` instead; runtime-only folders keep their hand-written
+  file. LT-304's build wiring (css effect after the compiler, watching the emitted sheets)
+  already expects this. Commit the uncommitted LT-394/LT-395 rows, `HOST_PROFILE.md`,
+  `VOCABULARY_LEDGER.md`, `css-tree.d.ts` and `errors.md` edits with it. They were meant to ride
+  bffd14ca and did not.
+  **Ruling (owner, 2026-10-02 — the NOTES question):** (cause 2) fixed by LT-398 (f); the
+  nested-`:host`-qualifier half was LT-405 (rolled back 2026-10-02, BACKLOG.md P2b). (cause 3) **Keep the s3 boundary.** Content that a
+  parent's own template places inside a composed child is outside the parent's scope. This
+  is a recorded s7 difference (LT-406 documents it, ADR 0033 s7 through adr-keeper). In the
+  corpus, module-codeblock's `pre`/`code` rules hoist into a top-level `:global { … }` block,
+  the listnav pattern, and the downward leak into nested instances is accepted. LTC071 stays
+  as is. (cause 4) The R1 specificity fixes (colorinfo/coloreditor `dt`, card-callout
+  `:last-child`) belong in this task, corpus-side, so every difference ends explained or
+  fixed. **Commit** the repoint, and the whole uncommitted track D batch with it, only after
+  LT-404 is green (it is, as of 2026-10-02) and cause 3's corpus fix is in, so the site never serves the codeblock
+  regression. **LT-405 was rolled back on 2026-10-02** (owner), so the corpus is back to its authored nested `&<qualifier>`-in-`:host` rules. The known shadow-DOM departure is recorded in BACKLOG.md P2b for the design session; this commit ships it as HEAD already did. The rollback changed the emission in two ways beyond selector text: module-codeblock's and module-splitview's host-qualified rules (`[collapsed]`, `[orientation="vertical"]`) carry the boundary guard again, and codeblock's `:global` `pre`/`code` rules now follow `:host`. **Rerun the screenshot comparison on the current tree** before committing. The owner's `.agents/` pass over `errors.md` (LT-402's rows) rides the same commit.
+  **Channel/tier:** none — no check is added or retired.
+  **Verification:** `docs/assets/main.css` contains `:where(<tag>)` rules after `build:docs`. Rerun
+  LT-306's check for real: full-page screenshots of every compiled component's test page, HEAD
+  worktree vs this change, in BOTH modes (the native run through a throwaway `cssTargets`). Every
+  difference is explained or fixed. module-listnav will differ until LT-399 lands. Corpus
+  Playwright suite once per mode.
 
 ### Parallel slot

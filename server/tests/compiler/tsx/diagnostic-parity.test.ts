@@ -1154,6 +1154,21 @@ const FAMILIES: Case[] = [
 		},
 		pins: ['`width`', '10pxx'],
 	},
+	{
+		// LT-399: the boundary set comes from the template on either
+		// surface — a raw dashed tag is a boundary like a composed child.
+		name: 'LTC071 stylesheet: a selector descending past a boundary',
+		code: 'LTC071',
+		sources: {
+			tsrx: tsrxSource({
+				body: '<p>x</p><other-el><span>y</span></other-el>',
+			}).replace(':host {', 'other-el span {'),
+			tsx: tsxSource({
+				body: '<p>x</p><other-el><span>y</span></other-el>',
+			}).replace(':host {', 'other-el span {'),
+		},
+		pins: ['`<other-el>`', '`:global { … }`'],
+	},
 ]
 
 /* === Tests === */

@@ -158,14 +158,15 @@ Every document this skill maintains, with its audience, scope, what triggers an 
 ### `docs-src/pages/styling.md`
 **Audience:** Frontend developers and designers adding styles to Le Truc components
 **Register:** Practical — presents two approaches with explicit trade-offs; assumes CSS competence
-**Scope:** Scoping styles to the custom element name, Shadow DOM encapsulation, CSS custom properties for design tokens
+**Scope:** Scoping hand-written styles to the custom element name, compiled components' shadow-root CSS scoped in light DOM (ADR 0033), Shadow DOM encapsulation, CSS custom properties for design tokens
 
 **Update triggers:**
 - Le Truc's approach to styling changes (e.g., if Shadow DOM support is added to `defineComponent`)
 - A recommended practice changes
 
 **Consistency checks:**
-- Describes only techniques that work with current Le Truc (no Shadow DOM in `defineComponent` unless added)
+- Describes only techniques that work with current Le Truc
+- The compiled-component section says the same thing in the same words as `server/compiler/HOST_PROFILE.md` § Styles
 
 ### `docs-src/pages/accessibility.md`
 **Audience:** Developers reflecting ARIA semantics from component state

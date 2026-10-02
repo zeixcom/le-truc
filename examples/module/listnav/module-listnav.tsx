@@ -141,7 +141,7 @@ export function ModuleListnav(
 				/>
 			</module-listnav>
 			<style>{css`
-:global(module-listnav module-lazyload) {
+module-lazyload {
 	contain: inline-size;
 }
 
@@ -150,16 +150,15 @@ export function ModuleListnav(
 		display: grid;
 		grid-template-columns: 1fr 3fr;
 		gap: var(--space-xl);
+	}
+}
 
-		& module-lazyload {
-			& h1,
-			& h2,
-			& h3,
-			& h4,
-			& h5,
-			& h6 {
-				margin-top: 0;
-			}
+/* The loaded page content is module-lazyload's, past the scope boundary:
+   a page-level rule (ADR 0033 s6a). */
+:global {
+	@container (width > 45em) {
+		module-listnav module-lazyload :is(h1, h2, h3, h4, h5, h6) {
+			margin-top: 0;
 		}
 	}
 }`}</style>

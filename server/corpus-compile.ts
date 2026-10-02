@@ -378,16 +378,31 @@ export const compileCorpus = async (
 			if (head?.component && compiled.length > 1) {
 				const headCss = head.component.authoredCss
 				const headBoundaries = JSON.stringify(head.component.scopeBoundaries)
-				const drifted = compiled.filter(
+				const cssDrifted = compiled.filter(
+					r => r.component && r.component.authoredCss !== headCss,
+				)
+				const boundaryDrifted = compiled.filter(
 					r =>
 						r.component &&
-						(r.component.authoredCss !== headCss ||
-							JSON.stringify(r.component.scopeBoundaries) !== headBoundaries),
+						JSON.stringify(r.component.scopeBoundaries) !== headBoundaries,
 				)
+				// A sheet drift takes the CSS face whether or not the boundaries
+				// also drift; only a boundary-only drift names the boundary sets
+				// (LT-403) — copying styles cannot fix it.
+				const drifted = cssDrifted.length > 0 ? cssDrifted : boundaryDrifted
 				if (drifted.length > 0) {
 					const sources = [head.rel, ...drifted.map(r => r.rel)]
+					const boundaries =
+						cssDrifted.length > 0
+							? undefined
+							: new Map(
+									[head, ...drifted].map(r => [
+										r.rel,
+										r.component?.scopeBoundaries ?? [],
+									]),
+								)
 					for (const rel of sources)
-						report(rel, [diagnostic.variantCssDrift(tag, sources)])
+						report(rel, [diagnostic.variantCssDrift(tag, sources, boundaries)])
 					// The set serves nothing — LTC048's all-dropped semantics.
 					continue
 				}

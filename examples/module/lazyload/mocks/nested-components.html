@@ -23,7 +23,10 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		margin: 0.5rem 0;
+		/* No margin here: the counter is the callout's last child, and the
+		   component's zero trailing-margin rule no longer out-specifies a
+		   page class rule under the scoped emission's :where() lead
+		   (ADR 0033 s7, LT-397). */
 	}
 
 	.counter button {

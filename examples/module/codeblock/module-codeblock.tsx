@@ -148,18 +148,6 @@ export function ModuleCodeblock(
 					text-transform: uppercase;
 				}
 
-				& pre {
-					font-size: var(--font-size-s);
-					padding-block: var(--space-s);
-					border-radius: var(--space-s);
-				}
-
-				& code {
-					padding-inline: var(--space-s);
-					display: block;
-					line-height: var(--line-height-l);
-				}
-
 				.copy {
 					position: absolute;
 					right: var(--space-s);
@@ -223,6 +211,22 @@ export function ModuleCodeblock(
 							text-shadow: var(--color-text-inverted) var(--space-xs) 0 var(--space-s);
 						}
 					}
+				}
+			}
+
+			/* The <pre>/<code> are rendered inside the composed module-scrollarea,
+			   past the scope boundary (ADR 0033 s3): a page-level rule (s6a). */
+			:global {
+				module-codeblock pre {
+					font-size: var(--font-size-s);
+					padding-block: var(--space-s);
+					border-radius: var(--space-s);
+				}
+
+				module-codeblock code {
+					padding-inline: var(--space-s);
+					display: block;
+					line-height: var(--line-height-l);
 				}
 			}`}</style>
 		</>
