@@ -2998,6 +2998,92 @@ function each(memo, callback) {
   pushDescriptor(undefined, "each", descriptor);
 }
 function reconcile(container, template, source, bindItem) {
+  if (isFunction(source)) {
+    reconcileArms(container, template, source, bindItem);
+    return;
+  }
+  reconcileList(container, template, source, bindItem);
+}
+var mountScope = (bind) => {
+  const collected = [];
+  let dispose;
+  let failure;
+  dispose = createScope(() => {
+    try {
+      const cleanup = withCollector(collected, bind);
+      activateDescriptors(collected);
+      return cleanup;
+    } catch (error) {
+      failure = { error };
+      return;
+    }
+  }, { root: true });
+  if (failure) {
+    dispose();
+    throw failure.error;
+  }
+  return dispose;
+};
+var reconcileArms = (container, templates, source, bindArm) => {
+  const snapshot = Array.from(templates);
+  const descriptor = () => {
+    const arms = new Map;
+    let anchor;
+    for (const template of snapshot) {
+      if (template.content.childElementCount !== 1)
+        throw new InvalidTemplateError(container, template.content.childElementCount);
+      anchor ??= template;
+      const key = template.getAttribute("data-key");
+      if (key !== null)
+        arms.set(key, template);
+    }
+    if (!anchor)
+      throw new InvalidTemplateError(container, 0);
+    const at = anchor;
+    const previous = at.previousElementSibling;
+    const previousKey = previous?.getAttribute("data-key") ?? null;
+    let current = previous !== null && previousKey !== null && arms.has(previousKey) && previous.localName !== "template" && !previous.hasAttribute("data-arms") ? previous : null;
+    let currentKey = current ? previousKey : null;
+    let adoptedServerWinner = current !== null;
+    let dispose;
+    createScope(() => {
+      createEffect(() => {
+        const key = source() ?? null;
+        untrack(() => {
+          if (dispose && key === currentKey)
+            return;
+          dispose?.();
+          dispose = undefined;
+          if (key !== currentKey) {
+            if (adoptedServerWinner && current !== null && false)
+              ;
+            adoptedServerWinner = false;
+            current?.remove();
+            current = null;
+            currentKey = null;
+            const template = key === null ? undefined : arms.get(key);
+            if (template) {
+              current = template.content.firstElementChild.cloneNode(true);
+              current.setAttribute("data-key", key);
+              currentKey = key;
+              container.insertBefore(current, at);
+            }
+          }
+          const element = current;
+          const armKey = currentKey;
+          if (element && armKey !== null)
+            dispose = mountScope(() => bindArm(element, armKey, bindFirst(element)));
+        });
+      });
+      return () => {
+        dispose?.();
+        dispose = undefined;
+      };
+    });
+  };
+  pushDescriptor(undefined, "reconcile", descriptor);
+};
+var reconcileList = (container, template, source, bindItem) => {
   const descriptor = () => {
     if (template.content.childElementCount !== 1)
       throw new InvalidTemplateError(container, template.content.childElementCount);
@@ -3072,14 +3158,7 @@ function reconcile(container, template, source, bindItem) {
           const item = source.byKey(key);
           if (item) {
             const element = el;
-            disposers.set(key, createScope(() => {
-              const collected = [];
-              const cleanup = withCollector(collected, () => bindItem(element, item, key, bindFirst(element)));
-              activateDescriptors(collected);
-              return cleanup;
-            }, {
-              root: true
-            }));
+            disposers.set(key, mountScope(() => bindItem(element, item, key, bindFirst(element))));
           }
         }
         if (pinned.has(key))
@@ -3108,7 +3187,7 @@ function reconcile(container, template, source, bindItem) {
     });
   };
   pushDescriptor(undefined, "reconcile", descriptor);
-}
+};
 
 // src/helpers/events.ts
 var PASSIVE_EVENTS = new Set([
