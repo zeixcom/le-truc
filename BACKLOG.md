@@ -1350,18 +1350,12 @@ to `TODO.md`.
   draws the existing one, and both are pinned (the existing message has no test today — add one
   while there); `test:src` green.
 
-- [ ] LT-134: LTC035 and LTC042 give opposite advice on the same construct (LT-131 review finding).
-  **Skill:** le-truc-dev
-  **Context:** LTC035 (`duplicateIdAcrossArms`) tells the author "Give each arm's element a
-  distinct id" — a static id per arm. LTC042 then warns on each of those static ids. Both are
-  individually true (LTC035 is about two ids colliding within ONE instance, LTC042 about one
-  id colliding across TWO instances) and the server-arg fix satisfies both at once, but neither
-  message says so, and an author fixing LTC035 as instructed walks straight into LTC042. No
-  corpus component hits it today. **Fix:** make LTC035's fix-it name the server-arg shape too —
-  "give each arm's element a distinct id, taken as server args so they stay unique per instance
-  (LTC042)" — and check whether LTC038 (`duplicateComposeId`) needs the same. Cheap,
-  message-only; the point is that the diagnostic set should not contain a loop. **Tech Writer
-  reviews the copy.**
+- [x] LT-134: LTC035 and LTC042 give opposite advice on the same construct (LT-131 review finding). — closed as moot (Architect, 2026-10-02)
+  **Ruling:** LTC035 retired at LT-275 — template-cloned arms keep every non-winning arm
+  out of the document, so the diagnostic loop this task described cannot arise. LTC038
+  (duplicate compose-site ids) never had the loop: its fix ("distinct ids, or address the
+  instances by class") names no per-arm shape. Nothing to do; the residual LTC042 advice
+  stands on its own row in `errors.md`.
 
 - [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
   **Skill:** le-truc-dev
@@ -1558,3 +1552,22 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Channel/tier:** none until designed; adapter-side refusals stay in the adapter's own channel
   (adapters never mint `LTC` codes).
   **Verification:** the toy adapter's conformance run; full gates.
+
+- [ ] LT-393: Sweep the stale ADR 0023 citations in compiler module docs to ADR 0024 (LT-359 residue).
+  **Skill:** le-truc-dev
+  **Context:** The 2026-10-01 ruling fixed the compiler ADR's number: the isomorphic-format
+  ADR is 0024, and its sub-design numbers already match — only the number is wrong.
+  LT-359(c) swept the ruled scope (diagnostic copy in `diagnostics.ts`, message-bearing
+  call sites, `errors.md`, the CHANGELOG line), but ~20 pipeline module docs still cite
+  "ADR 0023" for compiler decisions: `config.ts`, `ir.ts`, `compose-attrs.ts`,
+  `classify-attributes.ts`, `imports.ts`, `extract-context.ts`, `runtime.ts` JSDoc,
+  `spans.ts`, `emit-server.ts`, `emit-client.ts`, `registry.ts`, `assemble-ir.ts`,
+  `walk.ts`, `core.ts`, `core-shim.d.ts`, `css.ts`, `vocabulary.ts`,
+  `setup-extraction.ts`, `ast-utils.ts`, `analysis/harvest.ts`, `analysis/plan.ts`,
+  `analysis/selectors.ts`, `analysis/effects.ts` comments, `lower-shared.ts` JSDoc and
+  `frontend/tsrx/*`. Comment-only sweep, zero behavior: comment citations move to
+  "ADR 0024" (keep the sub-design number); a citation that genuinely means the
+  bind-helper map-form ADR 0023 stays. Byte-identity gates protect the sweep (goldens
+  unchanged proves comment-only).
+  **Check:** `grep -rn "ADR 0023" server/compiler/` returns only genuine bind-helper
+  citations; corpus goldens and parity byte-identical; tsc clean.

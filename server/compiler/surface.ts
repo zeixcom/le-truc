@@ -82,8 +82,6 @@ export type SurfaceWording = {
 	catchArm: string
 	/** The boundary construct, as a noun phrase. */
 	boundary: string
-	/** Boundaries in general, sentence-initial. */
-	boundaries: string
 
 	/* --- loops --- */
 	/** The loop spelling in "reactive-list …", "… body", "… over". */
@@ -144,7 +142,6 @@ const TSRX: SurfaceWording = {
 	pendingArm: '`@pending` arm',
 	catchArm: '`@catch` arm',
 	boundary: '`@try`/`@catch`/`@pending` boundary',
-	boundaries: '`@try` blocks',
 
 	loop: '`@for`',
 	aLoop: 'A `@for` loop',
@@ -199,7 +196,6 @@ const TSX: SurfaceWording = {
 	pendingArm: '`pending` arm',
 	catchArm: '`catch` arm',
 	boundary: '`<truc:try>` boundary',
-	boundaries: '`<truc:try>` boundaries',
 
 	loop: '`.map()`',
 	aLoop: 'A `.map()` loop',

@@ -42,8 +42,8 @@ parallel.
   ~~LT-385~~ (reviewed 2026-10-02, in DONE.md — the three review miscompiles). ~~LT-386~~
   (reviewed 2026-10-02, in DONE.md — the census exception joins the exit criterion). ~~LT-388~~
   (done ✓ 2026-10-02, in DONE.md — the ADR 0037 amendments). ~~LT-275 + LT-359~~ (one Tech
-  Writer copy round, done 2026-10-02; LT-275 pending review — it removes the LTC035 emitter)
-  and ~~LT-389~~ (done ✓ 2026-10-02) — track C is landed.
+  Writer copy round — reviewed 2026-10-02, in DONE.md) and ~~LT-389~~ (done ✓ 2026-10-02,
+  in DONE.md) — track C is closed.
 - **D — scoped CSS (ADR 0033).** LT-268 → LT-304 + LT-306 (one landing) → LT-248. It touches
   `css.ts`, the config and the example sheets, not the front ends, so it runs in parallel from
   day one.
@@ -72,7 +72,7 @@ and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, em
 both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-393.** Next free diagnostic code: LTC064 (LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-394.** Next free diagnostic code: LTC064 (LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -86,85 +86,7 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### B — Typed IR (ADR 0040; LT-287 before LT-274)
 
-### C — Reactive conditions (ADR 0037; LT-274, LT-276, LT-385, LT-386 and LT-388 done 2026-10-02, in DONE.md; LT-275 + LT-359 and LT-389 done 2026-10-02 — track C landed; LT-275 pending review)
-
-- [x] LT-389: Teaching and API docs for the template-cloned arms (LT-274/LT-276 review). — done ✓
-  **Skill:** tech-writer
-  **Changed:** `LE_TRUC_COMPILER.md` — the TemplateNode table's `if`/`switch` rows are one
-  `conditional` row (`construct`/`mode`/`arms`/`initial`) and the `try` row states the
-  template-cloned boundary; the `ClientPlan` effects list names the arm blocks
-  (`reconcile()`'s arm form) instead of "async tri-state toggles"; § 5.3's emit dispatch
-  describes the live winner beside inert keyed templates (LT-385c's empty bake included).
-  Rider: the census teaching lines updated to the pinned 27-of-35 map (LT-386's by-design
-  delta had left both stale) — `LE_TRUC_COMPILER.md` § 5.3 and `HOST_PROFILE.md`'s
-  Folded-tier bullet (with the ref-reading-fallback nuance). `module-lazyload.tsx`'s
-  header comment drops the retired fieldset-wrapper clause. `reconcile()`'s JSDoc names
-  the arm-form overload's `templates`, `bindArm(element, key, first)`, re-entry semantics
-  and "since 3.0"; `types/src/helpers/reactive.d.ts` regenerated. `docs-src/pages/lists.md`
-  gains "Switch Conditional Arms". The le-truc skill's `references/effects.md` gains the
-  arm-form row, the arm-form paragraph and a "Reactive Conditions and the Async Boundary"
-  section; `le-truc-dev/references/non-obvious.md` documents the arm form's snapshot,
-  adoption guard, re-clone and teardown-before-setup facts. COMPILER_SPEC § 3.5, ARCHITECTURE.md,
-  AGENTS.md and HOST_PROFILE's control-flow/arrow-thunk/open-questions teaching were
-  already current (LT-274/LT-276/LT-388 landed them). CHANGELOG `[Unreleased]` left to the
-  Changelog Keeper.
-  **Check:** `check:links` green (691 links); repo-wide sweep finds no "toggled arm"/
-  fieldset/`hidden`-toggled boundary teaching outside `adr/`, DONE and the CONTEXT.md
-  avoid-list; Markdoc sections balanced.
-
-- [x] LT-275: Diagnostics lifecycle for reactive conditions — retire LTC005's signal-condition face; Tech Writer copy. — done, pending review ⏳
-  **Skill:** tech-writer (drafting: le-truc-dev)
-  **Changed:** `server/compiler/diagnostics.ts` — LTC062/LTC063 copy finalized (comma
-  splice fixed; "compiler" channel stated in both JSDocs; both marked reviewed 2026-10-02)
-  and moved after LTC061 in the `DiagnosticCode` union; **LTC035 retired in full** — the
-  `duplicateIdAcrossArms` builder deleted, the union member marked spent (ADR 0028
-  lifecycle), `analysis/effects.ts`'s across-arms walk and `staticIdsUnder` removed, the
-  compose-id validation's stale "same rationale as LTC035" comment reworded;
-  `serverOnlyNames`' mechanism clause is position-neutral ("the read throws when the
-  client runs it", LT-359a). The LTC053 boundary message now covers both trigger
-  positions ("cannot sit directly in a loop body", LT-359f). ADR 0023→0024 sweep in
-  diagnostics copy and message-bearing call sites (`runtime.ts`'s deriveCell-pending
-  throw, the `.tsrx` pending-without-catch fix-it). Catalog (`errors.md`): LTC062/LTC063/
-  LTC056/LTC061 rows added, LTC035 row removed with a retirement note, the LTC005 row
-  names the arm faces and the record-spelled `t` face, the LTC053 row covers both
-  surfaces' loop-body trigger, `InvalidTemplateError` covers the arm form.
-  **How:** the LTC005 condition face was already gone from `validateCondition` (LT-274);
-  this round finalized copy, retired LTC035's emitter, and flipped the pins that quoted
-  the old messages (parity test's LTC053 fragments + its `this <loop> body` vocabulary
-  frame, `parity.test.ts`'s three pins, `diagnostics.test.ts`'s LTC035 block now asserts
-  no LTC035 fires).
-  **Check:** the LTC035 emitter removal is the developer-owned part — reviewer confirms
-  no other `staticIdsUnder` consumer and that the compose-id validation still covers
-  duplicate compose-site ids; suite 2748/0 server + 506/0 src, tsc clean, `check:links`
-  green, warning baseline 0 (tier-corpus pins unchanged census). Reviewer rulings
-  requested in NOTES.md: LT-134's fate (mooted by the retirement) and the now-consumerless
-  `SurfaceWording.boundaries` key.
-  **Rider (LT-231 review):** the loops.ts `unsupported` wording read as final — it already
-  parameterizes through `wording.loop`; no new `SurfaceWording` key needed.
-  **Rider (LT-220/LT-189 review):** HOST_PROFILE control-flow row, arrow-thunk reversal,
-  ARCHITECTURE/AGENTS sentences — all already current (landed with LT-274/LT-276/LT-388);
-  nothing left to move.
-
-- [x] LT-359: LT-189/LT-220 review follow-ups — copy corrections. — done ✓
-  **Skill:** tech-writer
-  **Changed:** (a) `serverOnlyNames`' mechanism clause is position-neutral — "so the read
-  throws when the client runs it" (the parity pins quoted only the "references server-only
-  name" head, which is unchanged, so no pin moved for this). (b) was already done by the
-  Changelog Keeper 2026-10-01. (c) **ADR 0023→0024 sweep, ruled scope**: every citation in
-  `diagnostics.ts` (module doc, the `unsupported` message and JSDoc, config/composition/
-  pass/conditional-constructor builders) and the message-bearing call sites
-  (`runtime.ts`'s deriveCell-pending throw, the `.tsrx` pending-without-catch fix-it in
-  `lower-template.ts`), plus the CHANGELOG `[Unreleased]` line; a second Unreleased bullet
-  that described the superseded `.map()`-root-only LTC053 wording was corrected to the
-  both-positions wording. (d) ADR 0028's Decision ¶5 inventory names the compile-only
-  rule families (i18n message contracts, the boundary-in-loop-body and non-static-tag
-  template shapes) in prose — per adr-keeper's drift rule the ADR carries no `LTC###`
-  codes and no `LT-NNN` numbers (1319 words / 68 lines, under budget). (e) LT-356 is
-  still open in BACKLOG (docs-server-dev) — no copy exists to finalize; its rider rides
-  its landing round. (f) LTC056's and LTC061's first drafts finalized in place and their
-  catalog rows added; LTC053 reworded to cover `.tsrx`'s any-body-level-`@try` trigger;
-  LTC050/record-spelled-`t` propagation verified — AGENTS.md already carried both, and
-  the errors.md LTC005 row now names the record-spelled face.
+### C — Reactive conditions (ADR 0037; LT-274, LT-276, LT-385, LT-386, LT-388, LT-275 + LT-359 and LT-389 done 2026-10-02, in DONE.md — track C closed)
 
 ### D — Scoped CSS (ADR 0033; LT-268 → LT-304 + LT-306 → LT-248)
 
