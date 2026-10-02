@@ -40,10 +40,10 @@ parallel.
   before LT-274.
 - **C — conditions (ADR 0037).** ~~LT-274 → LT-276~~ (reviewed 2026-10-02, in DONE.md) and
   ~~LT-385~~ (reviewed 2026-10-02, in DONE.md — the three review miscompiles). ~~LT-386~~
-  (done ✓ pending review 2026-10-02). Remaining:
-  LT-275 as the copy round (it also takes LT-359's copy, so there is one Tech Writer round),
-  LT-388 (ADR 0037
-  amendments) and LT-389 (teaching).
+  (reviewed 2026-10-02, in DONE.md — the census exception joins the exit criterion). ~~LT-388~~
+  (done ✓ 2026-10-02, in DONE.md — the ADR 0037 amendments). Remaining:
+  LT-275 as the copy round (it also takes LT-359's copy, so there is one Tech Writer round)
+  and LT-389 (teaching).
 - **D — scoped CSS (ADR 0033).** LT-268 → LT-304 + LT-306 (one landing) → LT-248. It touches
   `css.ts`, the config and the example sheets, not the front ends, so it runs in parallel from
   day one.
@@ -57,8 +57,8 @@ stay in the backlog, and so does LT-305 (the baseline guard ships in 3.0 but is 
 LT-280 (per-item effect channels) is still architect work.
 
 **Exit criterion.** Tier census and warning baseline unchanged from the iteration's opening
-measurement (record it before the first change), except where LT-274, LT-276 or LT-304/LT-306
-change them by design, as those tasks state. The mechanical tasks (track A, LT-287, LT-288)
+measurement (record it before the first change), except where LT-274, LT-276, LT-386 or
+LT-304/LT-306 change them by design, as those tasks state. The mechanical tasks (track A, LT-287, LT-288)
 leave goldens and parity byte-identical. The reflection's library swaps have landed
 (`@typescript-eslint/typescript-estree`, `eslint-visitor-keys`; `magic-string` was struck
 2026-10-01 — LT-247 parked, demand-gated), css-select joins them through the materialized-probe
@@ -86,47 +86,7 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### B — Typed IR (ADR 0040; LT-287 before LT-274)
 
-### C — Reactive conditions (ADR 0037; LT-274, LT-276 and LT-385 reviewed 2026-10-02, in DONE.md; LT-386 done ✓ pending review 2026-10-02; remaining: LT-275, LT-388, LT-389)
-
-- [x] LT-386: The initial winner agrees with the client's first key.
-  **done ✓ pending review (2026-10-02).** The Parser seed folds through the parser's server
-  fold (`hostSeedExpr`, evaluability.ts — one account for the emitted splice and the portable
-  rewrite; the rewrite refuses the call, so a Parser-backed conditional answers `fold`, never
-  the raw attribute's winner) and the seed sees the SERIALIZED attribute (`attrValue`, new
-  runtime-harness export — `ordinal={false}` renders no attribute and parses null). A
-  plain-value `expose()` initializer is route 4 of `foldableHostProps` and folds to `constant`;
-  parser membership demands the fallback be render-scope-resolvable (a ref-reading fallback
-  routes off — the LTC034-origin signal). `select` names `keyOf(arm)`; module doc fixed. Realm
-  tests per case assert the empty connect diff. **The census is NOT unchanged, by design**:
-  form-spinbutton leaves the Folded tier (its fallbacks read refs) and form-colorgraph +
-  module-coloreditor follow through compose reads — see NOTES.md; the exit criterion's
-  exception list grows LT-386.
-  **Skill:** le-truc-dev
-  **Context:** LT-274 review. `serverTestExpr` (`emit-server.ts`) and `hostSeed`
-  (`initial-winner.ts`) substitute a root attribute's raw server expression and ignore the
-  prop's Parser: `expose({ count: asInteger() })`, `<c-el count={String(n)}>`,
-  `@if (host.count === 3)` folds `'3' === 3` and renders `else` while the client picks
-  `then` — a replacement at connect on a component the census calls Folded. Run the
-  Parser-backed seed through the parser's server fold (or route the conditional off the
-  host-derived fold when the parser is not foldable — an LTC034-origin routing signal,
-  never a wrong winner). Also: a static `expose()` initializer (`count: 5`) folds to
-  `constant`, not to no-live-arm + Simulated; `select` names `keyOf(arm)` (null for an empty
-  `then`), as the constant path does; `initial-winner.ts`'s module doc stops saying SSG never
-  reads it (`emitReactiveConditional` renders `initial.constant`).
-  **Check:** a realm test per case asserting an empty connect diff; census unchanged on the
-  corpus.
-
-- [ ] LT-388: Amend ADR 0037 with the LT-274/LT-276 review rulings.
-  **Skill:** architect (adr-keeper)
-  **Context:** Record as amendments: s1 — the arm-key source is a thunk
-  `() => string | null` plus an iterable of `<template data-key>`, told from the list form by
-  `isFunction`; s2 — the key set adds `default`, case keys are `case:` + the literal's JSON
-  (LT-385 d), both part of the stable HTML contract (`COMPILER_SPEC.md` §3.x arm-key rows);
-  s3 — the first-landing scope (arm set directly in an element outside other arms, composed
-  content and server-data loop bodies; one root element per arm; no `first()` into an arm;
-  no nested client-construct control flow inside an arm), each widenable on demand; arm
-  templates bake client-written sites empty (LT-385 c); s5 — an unfoldable reactive test is
-  an LTC034-origin routing signal (and ADR 0029's routing-origin list says so).
+### C — Reactive conditions (ADR 0037; LT-274, LT-276, LT-385, LT-386 and LT-388 done 2026-10-02, in DONE.md; remaining: LT-275, LT-389)
 
 - [ ] LT-389: Teaching and API docs for the template-cloned arms (LT-274/LT-276 review).
   **Skill:** tech-writer

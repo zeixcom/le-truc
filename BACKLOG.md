@@ -559,7 +559,10 @@ records the actual net delta.
 
 - [ ] LT-392: Regenerate the declared types and gate an arm-set client against them (LT-385 review finding).
   **Skill:** le-truc-dev
-  **Context:** `types/` (the published `types/index.d.ts` graph) is a build artifact last
+  **Context (updated 2026-10-02, LT-386):** the REGENERATION half already landed — commit
+  3ed0814b refreshed `index.js` (the committed bundle predated LT-274's `reconcile` arm form)
+  and `types/src/helpers/reactive.d.ts` (the arm-form JSDoc). What remains is the GATE half:
+  `types/` (the published `types/index.d.ts` graph) is a build artifact last
   regenerated at LT-361 — it declares only `reconcile()`'s two list-form overloads, so
   LT-274's arm form is absent from the declared surface. No corpus component emits an
   arm-set client, so `client.golden.test.ts`'s emit-then-check never exercised one; the

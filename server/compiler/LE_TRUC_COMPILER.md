@@ -1143,7 +1143,7 @@ member.
 - **Selector uniqueness is proven structurally** against the template the
   compiler itself renders (`analysis/selectors.ts`; role → bare tag →
   discriminator, exclusivity-aware counting for branches). Since LT-379
-  ([ADR 0045](../../../adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md))
+  ([ADR 0045](../../adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md))
   the engine half runs on the **materialized probe** (`analysis/probe.ts`):
   the template is serialized to HTML — static attrs only, all branches
   materialized, every element stamped with the path of mutually exclusive
