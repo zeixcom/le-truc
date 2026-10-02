@@ -92,6 +92,7 @@ export type DiagnosticCode =
 	| 'LTC061' // an authored `<template>` element in a component template — the compiler owns template extraction, and the selector proof cannot see inside one (LT-383) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC062' // a reactive switch (one whose discriminant reads a signal) has a `@case`/`case` value that is not a literal, or two cases share an arm key (ADR 0037 s2, LT-274) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC063' // a reactive condition inside a reactive list's reconcile() container (ADR 0037 s5, LT-274) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC064' // the component's stylesheet violates the CSS grammar: it does not parse, or a declaration names an unknown property or a value outside the property's grammar (ADR 0033 s9, LT-268) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -1625,6 +1626,75 @@ export const diagnostic = {
 			annotated === 'FactoryContext'
 				? `This component sets \`config.formAssociated\` but annotates its factory context as \`FactoryContext\`, so \`host\` lacks the managed form members the element carries. Annotate \`FormFactoryContext<Props>\` instead — its \`host\` is \`FormAssociatedElement & Props\`.`
 				: `This component annotates its factory context as \`FormFactoryContext\` but does not set \`config.formAssociated\`, so \`host\` claims form members the element does not carry. Annotate \`FactoryContext<Props>\` instead, or set \`config.formAssociated\` if the component takes part in forms.`,
+			lineOf(source, offset),
+		),
+
+	// --- Stylesheet grammar (ADR 0033 s9, LT-268) ---
+
+	/**
+	 * The component's stylesheet does not parse (ADR 0033 s9, LT-268). The
+	 * sheet is emitted as authored, so a malformed sheet would ship its
+	 * own breakage; there is no compiled form to fall back to. ADR 0028
+	 * tier 1 (Prevented): the parser's refusal is the decision, no runtime
+	 * half exists.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (first draft 2026-10-02, LT-268).
+	 */
+	malformedStyleSheet: (
+		source: string,
+		offset: number | undefined,
+		detail: string,
+	) =>
+		error(
+			'LTC064',
+			`The component's stylesheet does not parse: ${detail}. A malformed sheet has no compiled form — fix the CSS so it parses.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A declaration in the component's stylesheet names a property the CSS
+	 * grammar does not define (ADR 0033 s9, LT-268). Browsers drop unknown
+	 * declarations, so the authored rule would silently do nothing —
+	 * usually a typo'd name. css-tree's dictionary arbitrates; vendor and
+	 * hack prefixes resolve inside it. ADR 0028 tier 1 (Prevented):
+	 * statically decidable, no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (first draft 2026-10-02, LT-268).
+	 */
+	unknownCssProperty: (
+		source: string,
+		offset: number | undefined,
+		property: string,
+	) =>
+		error(
+			'LTC064',
+			`\`${property}\` is not a CSS property — the browser would drop the declaration and the rule would do nothing. Correct the property's name.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * A declaration in the component's stylesheet carries a value outside
+	 * its property's grammar (ADR 0033 s9, LT-268) — an unknown unit, a
+	 * malformed value. The sheet ships as authored, so the dead declaration
+	 * would ship too. Custom properties and `var()`/`env()` references are
+	 * exempt (any value is valid for them); at-rule descriptors are not
+	 * properties and are never matched. ADR 0028 tier 1 (Prevented):
+	 * statically decidable, no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (first draft 2026-10-02, LT-268).
+	 */
+	invalidCssValue: (
+		source: string,
+		offset: number | undefined,
+		property: string,
+		value: string,
+	) =>
+		error(
+			'LTC064',
+			`The value \`${value}\` is not valid for \`${property}\` — the declaration is outside the property's grammar, and the browser would drop it. Correct the value.`,
 			lineOf(source, offset),
 		),
 }

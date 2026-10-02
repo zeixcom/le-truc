@@ -18,6 +18,10 @@ const ALLOWED_IMPORTS: ReadonlySet<string> = new Set([
 	'./ast-node',
 	'./icu/parse',
 	'./surface',
+	// The parsed stylesheet's vendor type (LT-268) — type-only, erased at
+	// runtime; the alias lives in ir.ts because `css.ts` is
+	// function-bearing and LT-244's leaves stay data.
+	'lightningcss-wasm',
 ])
 
 const FUNCTION_TYPE_NODES: ReadonlySet<string> = new Set([

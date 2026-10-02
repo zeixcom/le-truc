@@ -126,6 +126,9 @@ export const compileToy = (source, filename) => {
 		optionalRefs: new Set(),
 		fors: new Map(),
 		css: '',
+		// LT-288 made the first-ref map required IR; the toy declares no
+		// element references, so the empty map is its whole truth.
+		firstRefs: new Map(),
 		typeDecls: [],
 		globalDecl: null,
 		propsTypeName: null,

@@ -24,7 +24,7 @@ remapping tables:
 | --- | --- | --- |
 | Server render module (`render<Name>(args): string`) | `<tag>.server.ts` | `emit-server.ts` |
 | Client factory module (`export default defineComponent(...)`) | `<tag>.client.ts` | `emit-client.ts` |
-| Verbatim tag-scoped CSS | `<tag>.css` | `css.ts` (`dedentCss`) |
+| Stylesheet: parsed model + verbatim emission | `<tag>.css` | `css.ts` (`parseComponentSheet`, `dedentCss`) |
 | Client + server span tables | in-memory | `spans.ts` machinery |
 
 Two authored surfaces feed one shared machinery layer and compile to the
@@ -157,7 +157,7 @@ strict ambient profile (`frontend/tsx/host-profile.d.ts`,
 │ lower-shared.ts (each surface passes its dispatch hooks)       │
 │ attribute classification — classify-attributes.ts              │
 │ signal type inference — infer-type.ts · config — config.ts     │
-│ CSS dedent — css.ts · import placement — imports.ts            │
+│ CSS parse — css.ts · import placement — imports.ts             │
 └───────────────────────────────┬────────────────────────────────┘
                                 │  ComponentIR (ir.ts)
 ┌───────────────────────────────┴────────────────────────────────┐
@@ -362,7 +362,7 @@ front-end modules, then the two front ends:
 | `codegen.ts` | The shared code-generation kit (LT-234): `jsString`/`jsTemplate` (the only sanctioned way to put an author string into generated source), `HtmlWriter` (one push argument's markup), `CodeBuilder` (lines, depth and span offset of a generated block) |
 | `spans.ts` | Generated↔source span recording + lookup |
 | `tier.ts` | The tier classifier (§ 5): routing signals in, the component's tier + recorded reasons out |
-| `indent.ts` / `css.ts` | Template-literal-safe line classification and `commonIndent` / `<style>` dedent |
+| `indent.ts` / `css.ts` | Template-literal-safe line classification and `commonIndent` / the `<style>` parse (lightningcss + the css-tree grammar check, LTC064) and dedent |
 | `diagnostics.ts` | Diagnostic codes (`LTC###` plus the six `.tsrx`-grammar `TSRX###` codes), message factories |
 | `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup, and `icu/evaluate.ts`'s `formatMessage`, which the generated `i18n` module wraps around each argument message) |
 | `census.ts` | The census channel (§ 5.2): `Census` records, `tierCensus`, `translationCensus`, `formatCensus` |
@@ -390,7 +390,7 @@ emitters: name/tag/source, the verbatim destructured server args, all setup
 statements (split into signal declarations, plain consts, connect-time
 client-only statements), the verbatim `expose()` call with per-key
 classifications (Slot-backed, computed, method, Parser-backed), the lowered
-template root, `@for` IR, dedented CSS, extension `config`, type declarations,
+template root, `@for` IR, dedented CSS plus the parsed stylesheet, extension `config`, type declarations,
 leading JSDoc, and the placed plain imports (`server` / `client`).
 
 **`SignalIR`** — one declared signal, a three-member union by constructor

@@ -63,6 +63,7 @@ export type {
 	AttributeIR,
 	ComponentIR,
 	ComponentParam,
+	ComponentSheet,
 	ComposeAttrIR,
 	ConfigIR,
 	ContextSignalIR,

@@ -8,7 +8,7 @@
  */
 
 import type { AstNode } from './ast-node'
-import { dedentCss } from './css'
+import { dedentCss, parseComponentSheet } from './css'
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import {
@@ -19,15 +19,22 @@ import {
 	reportStaticIds,
 	shareExclusiveIf,
 } from './first-refs'
-import type { FirstRefDecl, FirstRefStage, TemplateNode } from './ir'
+import type {
+	ComponentSheet,
+	FirstRefDecl,
+	FirstRefStage,
+	TemplateNode,
+} from './ir'
 import type { SetupExtraction } from './setup-extraction'
 import { wordingOf } from './surface'
 
-/** Template-output resolution: the root, the style block, and the CSS. */
+/** Template-output resolution: the root, the style block, the CSS and the parsed sheet. */
 export type ResolvedTemplate = {
 	root: TemplateNode & { kind: 'element' }
 	styleChild: (TemplateNode & { kind: 'element' }) | null
 	css: string
+	/** The parsed stylesheet (ADR 0033 s9), null when absent or unparseable. */
+	sheet: ComponentSheet | null
 	firstRefs: Map<string, FirstRefDecl>
 }
 
@@ -41,7 +48,9 @@ export type ResolvedTemplate = {
  * (addQuery's naming in `analysis/effects.ts` and `analysis/harvest.ts`,
  * refNames collection in `analysis/plan.ts`) is unchanged: only how that IR
  * gets populated moved. Also runs LTC042 (LT-131, static ids duplicate per
- * instance) and extracts the CSS verbatim via `stylesheetOf`.
+ * instance) and resolves the stylesheet: the dedented verbatim text for
+ * emission, and its `lightningcss` parse (`ComponentIR.sheet`, ADR 0033
+ * s9) with the LTC064 grammar faces reported against the authored source.
  *
  * `outputShapeLabel` names the surface's output shape in the no-root
  * message: `the @{ } output` (.tsrx) / `the template return` (.tsx).
@@ -219,13 +228,65 @@ export const resolveTemplateOutput = (
 	// LTC039, for the same reason — the walk needs `root`.
 	reportStaticIds(root, source, ctx.diagnostics)
 
-	// CSS: verbatim, dedented (see css.ts).
+	// CSS: verbatim, dedented for emission (LT-268 changes no output), and
+	// parsed into the sheet the IR carries (ADR 0033 s9) — with the
+	// spec-grammar faces of LTC064 reported against the authored source.
+	let sheet: ComponentSheet | null = null
+	if (styleChild) {
+		const sheetText = stylesheetOf(styleChild.node)
+		if (sheetText.trim()) {
+			const parsed = parseComponentSheet(sheetText)
+			// The sheet text is a verbatim slice of the source (the template
+			// literal's raw slice on `.tsx`, the tag's inner text on
+			// `.tsrx`), so the sheet offset maps onto the authored offset —
+			// undefined only if the slice cannot be relocated.
+			const sheetStart = source.indexOf(sheetText, styleChild.node.start)
+			for (const sheetError of parsed.errors) {
+				const authoredOffset =
+					sheetStart >= 0 && sheetError.offset !== undefined
+						? sheetStart + sheetError.offset
+						: undefined
+				switch (sheetError.face) {
+					case 'syntax':
+						ctx.diagnostics.push(
+							diagnostic.malformedStyleSheet(
+								source,
+								authoredOffset,
+								sheetError.detail,
+							),
+						)
+						break
+					case 'unknown-property':
+						ctx.diagnostics.push(
+							diagnostic.unknownCssProperty(
+								source,
+								authoredOffset,
+								sheetError.property ?? '',
+							),
+						)
+						break
+					case 'invalid-value':
+						ctx.diagnostics.push(
+							diagnostic.invalidCssValue(
+								source,
+								authoredOffset,
+								sheetError.property ?? '',
+								sheetError.value ?? '',
+							),
+						)
+						break
+				}
+			}
+			sheet = parsed.sheet
+		}
+	}
 	const css = styleChild ? dedentCss(stylesheetOf(styleChild.node)) : ''
 
 	return {
 		root,
 		styleChild,
 		css,
+		sheet,
 		firstRefs,
 	}
 }

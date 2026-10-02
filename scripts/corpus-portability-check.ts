@@ -22,6 +22,7 @@
 
 import { createHash } from 'node:crypto'
 import {
+	copyFileSync,
 	mkdtempSync,
 	readdirSync,
 	readFileSync,
@@ -132,9 +133,11 @@ try {
 	//    (typescript, @tsrx/core, culori, the self-referencing library) is
 	//    inlined at bundle time from this repo's node_modules, because Node
 	//    and Deno resolve a bundle's imports from the BUNDLE's location, not
-	//    the working directory. The runtime-specific part that the check
-	//    exists to exercise — the seam — stays dynamic: `index.ts` picks the
-	//    implementation at runtime via `typeof Bun`.
+	//    the working directory; the stylesheet parser's .wasm binary (the
+	//    one asset that cannot inline) is copied beside it. The
+	//    runtime-specific part that the check exists to exercise — the seam —
+	//    stays dynamic: `index.ts` picks the implementation at runtime via
+	//    `typeof Bun`.
 	const entryPath = join(workDir, 'entry.ts')
 	writeFileSync(entryPath, ENTRY)
 	const built = await Bun.build({
@@ -150,6 +153,25 @@ try {
 		)
 	const bundle = built.outputs[0]?.path
 	if (!bundle) throw new Error('bundle produced no output file')
+
+	// The stylesheet parser (LT-268) is lightningcss-wasm: its JS glue
+	// inlines like every other bare specifier, but the .wasm binary loads
+	// at runtime via `new URL(…, import.meta.url)` + fs, so it rides beside
+	// the bundle as a static asset. (The native napi `lightningcss` cannot
+	// ride a self-contained bundle at all — node and deno resolve its
+	// platform require from the bundle's location, and deno refuses to
+	// consult a carried node_modules — which is why the wasm distribution
+	// is the compiler's.)
+	const wasmAsset = join(
+		ROOT,
+		'node_modules',
+		'lightningcss-wasm',
+		'lightningcss_node.wasm',
+	)
+	copyFileSync(
+		wasmAsset,
+		join(dirname(bundle), 'lightningcss_node.wasm'),
+	)
 
 	// 2. Run the identical bundle under every runtime on PATH.
 	const results = new Map<string, string>()

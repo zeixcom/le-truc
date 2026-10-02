@@ -88,7 +88,9 @@
 	"dependencies": {
 		"@zeix/cause-effect": "^1.5.2",
 		"css-select": "^7.0.0",
-		"css-what": "^8.0.0"
+		"css-tree": "^3.2.1",
+		"css-what": "^8.0.0",
+		"lightningcss-wasm": "1.33.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.9",

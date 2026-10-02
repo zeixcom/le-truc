@@ -90,7 +90,8 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### D — Scoped CSS (ADR 0033; LT-268 → LT-304 + LT-306 → LT-248)
 
-- [ ] LT-268: Parse the authored stylesheet in the compiler — the `lightningcss` swap for `css.ts` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s9). **Ships in 3.0.** Prerequisite of LT-304, LT-214, LT-269, LT-270.
+- [x] LT-268: Parse the authored stylesheet in the compiler — the `lightningcss` swap for `css.ts` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s9). **Ships in 3.0.** Prerequisite of LT-304, LT-214, LT-269, LT-270.
+  (done 2026-10-02, pending review ⏳ — `lightningcss-wasm` + `css-tree` as dependencies, LTC064 first drafts in place; handoff in NOTES.md. Tech Writer owns the LTC064 message copy.)
   **Skill:** le-truc-dev (Tech Writer owns the message copy)
   **Context:** `server/compiler/css.ts` dedents and emits verbatim; the compiler holds **no
   model of the CSS at all**. `lightningcss` is **already a devDependency and already the

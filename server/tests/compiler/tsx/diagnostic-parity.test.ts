@@ -1132,6 +1132,24 @@ const FAMILIES: Case[] = [
 		spec: { body: '<div><template><p>x</p></template></div>' },
 		pins: ['A `<template>` element in a component template'],
 	},
+	{
+		// LT-268: the sheet is parsed (ADR 0033 s9), and spec-grammar
+		// failures report identically on both surfaces — the CSS text is
+		// the same string on either side of the seam.
+		name: 'LTC064 stylesheet: an invalid unit',
+		code: 'LTC064',
+		sources: {
+			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(
+				'c-el { color: red }',
+				'c-el {\n\t\t\t\twidth: 10pxx\n\t\t\t}',
+			),
+			tsx: tsxSource({ body: '<p>x</p>' }).replace(
+				'c-el { color: red }',
+				'c-el {\n\t\t\t\twidth: 10pxx\n\t\t\t}',
+			),
+		},
+		pins: ['`width`', '10pxx'],
+	},
 ]
 
 /* === Tests === */

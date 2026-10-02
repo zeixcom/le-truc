@@ -11,11 +11,20 @@
  * `extract-context.ts`), so a `ComponentIR` stays serializable.
  */
 
+import type { StyleSheet } from 'lightningcss-wasm'
 import type { AstNode } from './ast-node'
 import type { MessageArg } from './icu/parse'
 import type { Surface } from './surface'
 
 /* === Types === */
+
+/**
+ * The parsed component stylesheet carried on `ComponentIR.sheet` (ADR 0033
+ * s9, LT-268): lightningcss's parsed sheet — rules, selectors and at-rules
+ * — collected READ-ONLY (returning nodes into the parser crashes on
+ * `var()` inside nested rules at 1.33; the write path is LT-304's).
+ */
+export type ComponentSheet = StyleSheet
 
 /** A character range in the `.tsrx` source (LT-011 span table). */
 export type SourceRange = { start: number; end: number }
@@ -748,6 +757,19 @@ export type ComponentIR = {
 	fors: Map<AstNode, ForIR>
 	/** Dedented verbatim CSS ("" when no style block). */
 	css: string
+	/**
+	 * The parsed stylesheet (ADR 0033 s9, LT-268): the rules, selectors and
+	 * at-rules of the `<style>` block, reachable for the scoped emission
+	 * (LT-304) and the checks over the parsed sheet (ADR 0042). Null when
+	 * the component has no style block, the block is empty, or the sheet
+	 * does not parse (LTC064 reports). READ-ONLY: the lightningcss visitor
+	 * collects the parse and returns nothing — returning parsed nodes into
+	 * the parser crashes on `var()` inside nested rules at 1.33, and the
+	 * write path is LT-304's to solve.
+	 * Optional: contract IR; a front end that omits it only loses the
+	 * sheet and its checks.
+	 */
+	sheet?: ComponentSheet | null
 	/** Exported `type`/`interface` declarations, verbatim. */
 	typeDecls: string[]
 	/** `declare global { … }` block text, verbatim (client module only). */

@@ -29,6 +29,7 @@ const DESIGNATED_TYPES = [
 	'CompileFileResult',
 	'ComponentIR',
 	'ComponentParam',
+	'ComponentSheet',
 	'ComposeAttrIR',
 	'ConfigIR',
 	'DiagnosticCode',
