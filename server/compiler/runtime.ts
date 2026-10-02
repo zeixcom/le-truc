@@ -331,6 +331,20 @@ export const attr = (name: string, value: unknown): string => {
 }
 
 /**
+ * The VALUE one rendered attribute carries, `attr()`'s own dispatch seen
+ * from the parser side (LT-386): a connect-time parser never reads the raw
+ * expression — it reads the SERIALIZED attribute — so a spliced Parser
+ * seed must apply the parser to this, not to the expression's value.
+ * `true` → the bare-presence empty string, `false`/`null`/`undefined` →
+ * the attribute is absent (null), everything else → its string form.
+ */
+export const attrValue = (value: unknown): string | null => {
+	if (value === true) return ''
+	if (value === false || value === null || value === undefined) return null
+	return String(value)
+}
+
+/**
  * Render a class map's truthy keys as a class list (`{ a: true, b: x }` → `"a"`).
  */
 export const cls = (map: Record<string, unknown>): string =>

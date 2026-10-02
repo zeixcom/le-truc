@@ -2042,8 +2042,10 @@ import { asInteger } from '@zeix/le-truc'`
 			new Set(),
 		)
 		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
+		// The seed is the parser applied to the attribute's serialized value
+		// (LT-386) — the same evaluation the client's connect-time parse is.
 		expect(component?.serverCode).toContain(
-			"attr('hidden', (() => (count) !== 0)())",
+			"attr('hidden', (() => (asInteger()(attrValue(count))) !== 0)())",
 		)
 	})
 

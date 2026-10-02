@@ -26,6 +26,7 @@ import {
 	foldableRefGuards,
 	foldableRenderScope,
 	hostDerivedFold,
+	hostSeedExpr,
 	isServerEvaluable,
 	spliceHostDerivedFold,
 } from './evaluability'
@@ -323,6 +324,7 @@ const lazyValueExpression = (
 	expr: AstNode,
 	scope: ReadonlySet<string>,
 	foldScope: ReadonlySet<string>,
+	onSeed?: (seed: string) => void,
 ): string => {
 	if (expr.type === 'Identifier') {
 		const name = String(expr.name)
@@ -349,7 +351,13 @@ const lazyValueExpression = (
 	if (expr.type === 'ArrowFunctionExpression') {
 		const mirror = hostPropMirrorExpr(component, expr)
 		if (mirror !== null) return mirror
-		const derived = hostDerivedExpr(component, expr, exprText, foldScope)
+		const derived = hostDerivedExpr(
+			component,
+			expr,
+			exprText,
+			foldScope,
+			onSeed,
+		)
 		if (derived !== null) return derived
 	}
 	if (!isServerEvaluable(expr, scope)) return "''"
@@ -380,20 +388,39 @@ const hostPropMirrorExpr = (
 }
 
 /**
+ * Register every runtime-harness name a spliced seed names (LT-386): a
+ * Parser-backed seed calls its factory (`asInteger()(attrValue(count))`),
+ * and the module's import line must provide both it and `attrValue` — in
+ * the Folded tier the verbatim setup already provides the factory, in the
+ * suppressed tiers only this registration does.
+ * Plain-import and setup-const names need nothing here: their placement
+ * counts the `expose()` statement's free names and the emitted markup's
+ * references respectively, in every tier.
+ */
+const useSeedNames = (ctx: EmitContext, seed: string): void => {
+	for (const id of seed.match(/[A-Za-z_$][\w$]*/g) ?? [])
+		if (RUNTIME_HARNESS_EXPORTS.has(id)) ctx.used.add(id)
+}
+
+/**
  * The server expression for a thunk that reads ONLY `host.<prop>` members
  * (LT-085, CHECKLIST §5 widening of the fold rule beyond the bare mirror
- * above): each `host.<prop>` range is spliced for that prop's own root
- * attribute expression (`hostDerivedFold`/`spliceHostDerivedFold`,
- * evaluability.ts), then the whole rewritten thunk is IIFE-invoked, same
+ * above): each `host.<prop>` range is spliced for that prop's server seed
+ * (`hostSeedExpr`, evaluability.ts — the parser applied to the root
+ * attribute, a plain-value initializer, the attribute expression, or the
+ * harvesting arg), then the whole rewritten thunk is IIFE-invoked, same
  * posture as the plain-`isServerEvaluable` case below. Null when the thunk
  * reads anything other than foldable `host.<prop>` members (a signal, a
- * bare `host` escape, an unexposed prop).
+ * bare `host` escape, an unexposed prop). `onSeed` receives every spliced
+ * seed so the caller can import the harness names one names (a Parser
+ * factory).
  */
 const hostDerivedExpr = (
 	component: ComponentIR,
 	thunk: AstNode,
 	thunkText: string,
 	allow: ReadonlySet<string>,
+	onSeed?: (seed: string) => void,
 ): string | null => {
 	const reads = hostDerivedFold(
 		thunk,
@@ -410,17 +437,13 @@ const hostDerivedExpr = (
 			// A ref read folds to whatever decides its presence in the
 			// server's OWN output (LT-118) — `refBranchGuard`'s condition.
 			if (kind === 'ref') return foldableRefGuards(component).get(prop) ?? ''
-			const rootAttr = component.root.attrs.find(
-				(a): a is Extract<AttributeIR, { kind: 'server' }> =>
-					a.kind === 'server' && a.name === prop,
-			)
-			// Two membership routes into foldableHostProps, two truths to
-			// splice (see its doc): a Parser-exposed prop's is its root
-			// attribute's expression; a HARVESTED prop's is the server arg
-			// that renders its site, which shares the prop's name and is in
-			// scope in this render function. Root attribute first — a prop
-			// can be both, and the root attribute is the narrower statement.
-			return rootAttr ? rootAttr.exprText : prop
+			// Membership in foldableHostProps and the seed are one account
+			// (evaluability.ts, LT-386): the parser applied to the root
+			// attribute, the plain-value initializer, the attribute
+			// expression, or the harvesting arg — never a guess.
+			const seed = hostSeedExpr(component, prop)
+			if (seed !== null) onSeed?.(seed)
+			return seed ?? ''
 		},
 	)
 	return `(${spliced})()`
@@ -635,6 +658,7 @@ const emitElement = (
 								attr.thunk,
 								attr.thunkText,
 								ctx.foldScope,
+								seed => useSeedNames(ctx, seed),
 							)
 						: null
 				if (mirror !== null) {
@@ -917,7 +941,9 @@ const emitAsyncBoundary = (
  * The server expression a reactive conditional's test folds to, or null
  * when no server phase can evaluate it (`initialFold`): the test itself
  * when the value harness can evaluate it, else the test with each
- * `host.<prop>` read spliced for the server expression seeding the prop.
+ * `host.<prop>` read spliced for the prop's server seed (`hostSeedExpr` —
+ * the parser applied to the root attribute for a Parser-backed prop,
+ * LT-386).
  */
 const serverTestExpr = (
 	ctx: EmitContext,
@@ -939,11 +965,9 @@ const serverTestExpr = (
 		(prop, kind) => {
 			if (kind === 'ref')
 				return foldableRefGuards(ctx.component).get(prop) ?? ''
-			const rootAttr = ctx.component.root.attrs.find(
-				(a): a is Extract<AttributeIR, { kind: 'server' }> =>
-					a.kind === 'server' && a.name === prop,
-			)
-			return rootAttr ? rootAttr.exprText : prop
+			const seed = hostSeedExpr(ctx.component, prop)
+			if (seed !== null) useSeedNames(ctx, seed)
+			return seed ?? ''
 		},
 	)
 }
@@ -1070,6 +1094,7 @@ const emit = (
 					node.expr,
 					scope,
 					ctx.foldScope,
+					seed => useSeedNames(ctx, seed),
 				)
 			: node.exprText
 		push(ctx, `${ctx.h('esc')}(String(${value}))`)

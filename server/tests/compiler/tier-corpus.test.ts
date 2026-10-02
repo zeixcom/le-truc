@@ -92,6 +92,13 @@ describe('tier assignment over the migrated corpus', () => {
 		for (const [tag, entry] of Object.entries(registry))
 			byTier[entry.tier]?.push(tag)
 		for (const tags of Object.values(byTier)) tags.sort()
+		// LT-386 (2026-10-02): form-spinbutton's Parser fallbacks read
+		// `first()` refs (`asNumber(asNumber(0)(input.value))`) — no server
+		// truth to splice, so its host-prop thunks route off the fold
+		// (LTC034-origin signals, the realm answers) and it leaves the Folded
+		// tier. form-colorgraph and module-coloreditor follow through compose
+		// reads of it (sub-design 3), as form-combobox already did for
+		// form-listbox.
 		expect(byTier).toEqual({
 			folded: [
 				'basic-blogmeta',
@@ -108,15 +115,12 @@ describe('tier assignment over the migrated corpus', () => {
 				'card-mediaqueries',
 				'context-media',
 				'form-checkbox',
-				'form-colorgraph',
 				'form-inplace-edit',
 				'form-radiogroup',
-				'form-spinbutton',
 				'form-textbox',
 				'form-tokenbox',
 				'module-catalog',
 				'module-codeblock',
-				'module-coloreditor',
 				'module-colorinfo',
 				'module-dialog',
 				'module-list',
@@ -126,9 +130,12 @@ describe('tier assignment over the migrated corpus', () => {
 				'module-tabgroup',
 			],
 			simulated: [
+				'form-colorgraph',
 				'form-combobox',
 				'form-listbox',
+				'form-spinbutton',
 				'module-carousel',
+				'module-coloreditor',
 				'module-lazyload',
 				'module-listnav',
 			],

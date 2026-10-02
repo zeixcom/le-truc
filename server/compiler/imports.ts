@@ -189,6 +189,7 @@ const RUNTIME_HARNESS_EXPORTS: ReadonlySet<string> = new Set<string>([
 	'asEnum',
 	'asClampedInteger',
 	'asJSON',
+	'attrValue',
 	'esc',
 	'attr',
 	'cls',

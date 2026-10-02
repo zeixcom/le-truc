@@ -17,11 +17,12 @@ import {
 	forEachChild,
 	freeIdentifiers,
 	isNode,
+	text,
 	walkNodes,
 } from './ast-utils'
 import { declaredRefNames, refBranchGuard } from './first-refs'
-import type { ComponentIR, TemplateNode } from './ir'
-import { JS_GLOBALS } from './vocabulary'
+import type { AttributeIR, ComponentIR, TemplateNode } from './ir'
+import { JS_GLOBALS, PARSER_FACTORIES } from './vocabulary'
 import { walkTemplate } from './walk'
 
 /**
@@ -329,23 +330,42 @@ const PLATFORM_CONFIG_ATTRS: ReadonlySet<string> = new Set(['lang', 'dir'])
 /**
  * Host props whose SERVER-SIDE truth the compiler knows — the
  * substitutable set for {@link hostDerivedFold} (CHECKLIST §5, LT-085).
- * Three ways a prop earns membership, and they are the same fact reached
- * from opposite directions:
+ * Four ways a prop earns membership, and they are the same fact reached
+ * from opposite directions — in every case the member's server truth is
+ * what {@link hostSeedExpr} splices, so the two must stay in step:
  *
  * 1. **Parser-exposed with a server-rendered root attribute** — the host
- *    attribute is the prop's seed (ADR 0003), so the root attribute's own
- *    `exprText` IS the value. This is what `emit-server.ts`'s bare-mirror
- *    case (`hostPropOf`, ast-utils.ts) already relies on.
+ *    attribute is the prop's seed (ADR 0003), so the prop's value at
+ *    render time is the PARSER applied to the attribute's SERIALIZED value
+ *    (LT-386): `hostSeedExpr` splices `asInteger(fallback)(attrValue(exprText))`,
+ *    the same evaluation the client's connect-time parse performs, and the
+ *    generated module re-declares the parser factory and `attrValue` from
+ *    the harness.
+ *    Membership demands the parser INSTANCE be re-declarable there — the
+ *    fallback argument's free names must resolve in the render function's
+ *    scope ({@link seedResolvable}; `asNumber(asNumber(0)(input.value))`'s
+ *    fallback reads a ref, so that prop does not fold and a conditional
+ *    reading it routes off the host-derived fold instead — an LTC034-origin
+ *    signal, never a wrong winner). Without a root attribute there is no
+ *    seed to apply the parser to (the client parses null), so the prop
+ *    stays unfoldable — including when a same-named arg renders some site:
+ *    the arg is NOT the prop's truth (the attribute channel is).
  * 2. **Harvested from a site a same-named server arg renders** (LT-118,
  *    the server half of LT-122's coincidence) — the arg renders the site,
  *    the site seeds the prop at connect, so the ARG is the value. The
  *    substituted expression is the arg name itself, in scope in the
- *    generated render function.
+ *    generated render function. Parser-exposed props are excluded (route 1
+ *    or nothing: their attribute is the only seed channel).
  * 3. **A platform config attribute rendered onto the root** (LT-191) —
  *    `lang`/`dir` are not reactive properties at all (the native accessor
  *    shadows any expose() accessor, `prop in this`), and the native
  *    accessor reads the attribute verbatim, so the root attribute's
  *    `exprText` is the value exactly as in (1), no parser required.
+ * 4. **A plain-value `expose()` initializer** (LT-386) — `count: 5` seeds
+ *    the prop once at connect (`#initSignals` evaluates the initializer;
+ *    the attribute is never a channel for a plain-value prop), so the
+ *    initializer expression IS the prop's server truth, foldable when the
+ *    render function can evaluate it ({@link seedResolvable} again).
  *
  * Without (2), following the data account costs you the fold: a component
  * that harvests `zero` from its own `.zero` span instead of duplicating it
@@ -357,16 +377,96 @@ export const foldableHostProps = (
 	component: ComponentIR,
 ): ReadonlySet<string> => {
 	const names = new Set<string>()
-	for (const attr of component.root.attrs)
-		if (
-			attr.kind === 'server' &&
-			(component.exposeProps.get(attr.name)?.parser ||
-				PLATFORM_CONFIG_ATTRS.has(attr.name))
-		)
-			names.add(attr.name)
-	for (const prop of argRenderedProps(component.root)) names.add(prop)
+	for (const attr of component.root.attrs) {
+		if (attr.kind !== 'server') continue
+		const parser = component.exposeProps.get(attr.name)?.parser
+		if (parser) {
+			if (seedResolvable(component, parser.fallbackNode)) names.add(attr.name)
+		} else if (PLATFORM_CONFIG_ATTRS.has(attr.name)) names.add(attr.name)
+	}
+	for (const [prop, decl] of component.exposeProps) {
+		if (decl.parser || !decl.initNode) continue
+		if (seedResolvable(component, decl.initNode)) names.add(prop)
+	}
+	for (const prop of argRenderedProps(component.root))
+		if (!component.exposeProps.get(prop)?.parser) names.add(prop)
 	return names
 }
+
+/**
+ * Whether `node`'s free names resolve in the generated render function's
+ * scope, for a value spliced INTO a folded expression (LT-386): the render
+ * scope's own names ({@link foldableRenderScope} — args, signals,
+ * `isPending`, the transitive-pure setup consts), the parser factories the
+ * runtime harness re-declares (`asNumber(asNumber(0)(…))`'s fallback names
+ * `asNumber`), and the module's server-placed import bindings (a custom
+ * helper; `placePlainImports` counts the `expose()` statement's free names
+ * as server usage, so the import is placed in every tier). A ref read, a
+ * `host`/`internals` member or an impure const resolves only through the
+ * connect-time stubs — garbage values the fold must never bake — so such a
+ * seed is refused and the reading site routes off the fold instead.
+ */
+const seedResolvable = (
+	component: ComponentIR,
+	node: AstNode | null,
+): boolean => {
+	if (node === null) return true
+	const allowed = new Set<string>([
+		...foldableRenderScope(component),
+		...PARSER_FACTORIES,
+		...component.imports.serverLocalNames,
+	])
+	return dependenciesOf(node).isSubsetOf(allowed)
+}
+
+/**
+ * The server expression seeding `host.<prop>` — the ONE account of the
+ * prop's render-time truth, spliced by `emit-server.ts`'s host-derived
+ * folds (attributes and reactive conditionals alike) and mirrored by
+ * `initial-winner.ts`'s portable rewrite (LT-386). Null when the prop has
+ * no server truth to splice — which membership in
+ * {@link foldableHostProps} never admits, so a non-null fold's reads are
+ * always splicable:
+ *
+ * 1. Parser-exposed with a root attribute: `parser(fallback)(attrValue(attrText))`
+ *    — the parser applied to the attribute's SERIALIZED value (what
+ *    `attr()` renders, what the client's connect-time parse reads — a
+ *    `false` expression renders no attribute and parses null, LT-386);
+ * 2. a plain-value initializer the render function can evaluate: the
+ *    initializer's own text (route 4). A HARVESTED prop's initializer
+ *    (reading its `first()` ref) does not qualify — the arg below is the
+ *    same truth, stated in the render function's vocabulary;
+ * 3. a root attribute without a parser (platform `lang`/`dir`, or a
+ *    harvested prop whose attribute states it directly): the attribute's
+ *    expression;
+ * 4. otherwise the same-named server arg (route 2's harvest coincidence).
+ */
+export const hostSeedExpr = (
+	component: ComponentIR,
+	prop: string,
+): string | null => {
+	const decl = component.exposeProps.get(prop)
+	if (decl?.parser) {
+		const rootAttr = findRootAttr(component, prop)
+		if (!rootAttr) return null
+		return `${decl.parser.parser}(${decl.parser.fallbackText ?? ''})(attrValue(${rootAttr.exprText}))`
+	}
+	if (decl?.initNode && seedResolvable(component, decl.initNode))
+		return text(component.source, decl.initNode)
+	const rootAttr = findRootAttr(component, prop)
+	if (rootAttr) return rootAttr.exprText
+	return component.paramNames.includes(prop) ? prop : null
+}
+
+/** The root's server attribute named `prop`, if it renders one. */
+const findRootAttr = (
+	component: ComponentIR,
+	prop: string,
+): Extract<AttributeIR, { kind: 'server' }> | undefined =>
+	component.root.attrs.find(
+		(a): a is Extract<AttributeIR, { kind: 'server' }> =>
+			a.kind === 'server' && a.name === prop,
+	)
 
 /**
  * One read replaced during {@link hostDerivedFold} — either a

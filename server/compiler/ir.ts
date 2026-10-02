@@ -119,6 +119,17 @@ export type ExposePropDecl = {
 	signalName?: string
 	/** The Parser factory call, for `prop: asString('')`. */
 	parser?: ParserExposeDecl
+	/**
+	 * A plain-value initializer's AST (`count: 5`, `y: n * 2`), recorded for
+	 * the host-seed fold (LT-386): `#initSignals` evaluates this expression
+	 * once as the prop's client seed, so it is the prop's server truth.
+	 * Recorded only for the shapes whose seed IS a plain expression — never
+	 * a call (a Parser factory, or anything whose purity the fold cannot
+	 * vouch for), a function or `sig.get` (computed), a `{ get }` object
+	 * (a descriptor evaluates to its getter, not a value), or a bare
+	 * identifier (a signal object or an aliasing const).
+	 */
+	initNode?: AstNode
 }
 
 /**
@@ -364,14 +375,15 @@ export type ArmTemplate = {
  *   unresolvable reactive condition renders no live arm, ADR 0037 s5);
  * - `select` — the first case whose `when` holds, else `otherwise`. Each
  *   `when` is a portable expression over server args (ADR 0043 s1), as
- *   source text;
+ *   source text; every key names its arm's `keyOf` — null when that arm
+ *   renders nothing, exactly as the `constant` path answers (LT-386);
  * - `fold` — only the value harness can decide it: SSG folds it as before,
  *   and a template target routes the component Static.
  */
 export type InitialWinner =
 	| { constant: string | null }
 	| {
-			select: Array<{ when: string; key: string }>
+			select: Array<{ when: string; key: string | null }>
 			otherwise: string | null
 	  }
 	| { fold: true }

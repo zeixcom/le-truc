@@ -223,7 +223,14 @@ describe('the initial winner', () => {
 		})
 	})
 
-	test('a Parser-backed host read selects through the root attribute', () => {
+	test('a Parser-backed host read folds — the portable grammar admits no parser call (LT-386)', () => {
+		// The prop's server truth is the parser applied to the attribute's
+		// rendered value (`asBoolean()(open)`) — a call, so the portable
+		// rewrite refuses and the conditional folds through the value
+		// harness, whose spliced seed applies the parser. The pre-LT-386
+		// `select: [{ when: '(open)' }]` answer substituted the RAW
+		// attribute expression — for `asInteger()` a string/number relation
+		// the server answers differently from the client's parsed prop.
 		const [node] = conditionals(
 			irOf(
 				`import { asBoolean } from '@zeix/le-truc'
@@ -237,10 +244,7 @@ export function C({ open }: { open?: boolean })
 	}`,
 			).root,
 		)
-		expect(node?.initial).toEqual({
-			select: [{ when: '(open)', key: 'then' }],
-			otherwise: null,
-		})
+		expect(node?.initial).toEqual({ fold: true })
 	})
 
 	test('a literal switch picks its case at compile time', () => {
@@ -336,14 +340,23 @@ describe('the server renders the winner beside the inert arms', () => {
 	})
 
 	test('a test no server phase can evaluate renders no live arm and routes the component', async () => {
+		// The parser's fallback reads a `first()` ref (the HOST_PROFILE
+		// children-are-data idiom) — no server truth to splice, so the
+		// conditional routes off the host-derived fold (LT-386): an
+		// LTC034-origin signal, never a wrong winner.
 		const { component, diagnostics } = compile(
-			tsrx('@if (host.width > 10) { <p class="a">a</p> }', {
-				setup: 'expose({ width: 0 })',
-			}),
+			tsrx(
+				'<input type="number" />@if (host.width > 10) { <p class="a">a</p> }',
+				{
+					pre: "import { asInteger } from '@zeix/le-truc'",
+					setup:
+						"const input = first('input')\n\t\texpose({ width: asInteger(input.value) })",
+				},
+			),
 		)
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
 		expect(await render(component?.serverCode ?? '', 'C', {})).toBe(
-			'<c-el><template data-arms="0" data-key="then"><p class="a">a</p></template></c-el>',
+			'<c-el><input type="number"><template data-arms="0" data-key="then"><p class="a">a</p></template></c-el>',
 		)
 		expect(component?.entry.tier).not.toBe('folded')
 		expect(component?.entry.routingSignals.map(s => s.detail)).toContain(
@@ -473,6 +486,142 @@ describe('the server renders the winner beside the inert arms', () => {
 		}
 		expect(renders[1]).toBe(renders[0] as string)
 		expect(renders[2]).toBe(renders[0] as string)
+	})
+})
+
+/* === The initial winner agrees with the client's first key (LT-386) === */
+
+describe('a Parser-backed seed folds through the parser (LT-386)', async () => {
+	// The LT-274 review's miscompile: the fold substituted the RAW attribute
+	// expression, folding `'3' === 3` to `else` while the client's parsed
+	// prop (`asInteger('3') === 3`) picks `then` — a replacement at connect
+	// on a component the census calls Folded. The spliced seed now applies
+	// the parser, so both sides answer the same truth.
+	const { component, diagnostics } = compile(
+		tsrx(
+			'@if (host.count === 3) { <p class="a">three</p> } @else { <b class="b">other</b> }',
+			{
+				params: '{ n }: { n: number }',
+				pre: "import { asInteger } from '@zeix/le-truc'",
+				setup: 'expose({ count: asInteger() })',
+			},
+		).replace('<c-el>', '<c-el count={String(n)}>'),
+	)
+	if (!component) throw new Error(JSON.stringify(diagnostics))
+	const code = component.serverCode
+
+	test('the server folds the test through the parser factory', async () => {
+		expect(diagnostics).toEqual([])
+		// `attrValue` serializes the attribute the way `attr()` renders it —
+		// the string a connect-time parse would read.
+		expect(code).toContain('if ((asInteger()(attrValue(String(n)))) === 3)')
+		expect(await render(code, 'C', { n: 3 })).toContain(
+			'<p data-key="then" class="a">three</p>',
+		)
+		expect(await render(code, 'C', { n: 4 })).toContain(
+			'<b data-key="else" class="b">other</b>',
+		)
+	})
+
+	test("the client's first key agrees: the connect diff is empty", async () => {
+		const clientPath = generated.emit(
+			'c-el-parser.client.ts',
+			component.clientCode,
+		)
+		const markup = await render(code, 'C', { n: 3 })
+		const realm = createSimulationRealm()
+		afterAll(() => realm.dispose())
+		await realm.load(() => import(pathToFileURL(clientPath).href))
+		const { html, diagnostics: realmDiags } = await realm.render({
+			markup,
+			component: 'c-el',
+		})
+		expect(realmDiags).toEqual([])
+		expect(html).toBe(markup)
+	})
+})
+
+describe('a static expose() initializer folds to a constant (LT-386)', async () => {
+	// `#initSignals` evaluates the initializer once as the prop's client
+	// seed — the attribute never seeds a plain-value prop — so the
+	// initializer expression IS the prop's server truth. Pre-LT-386 the
+	// conditional rendered no live arm AND routed the component Simulated.
+	test('the initial winner is the constant arm, on a Folded component', async () => {
+		const [node] = conditionals(
+			irOf(
+				tsrx(
+					'@if (host.count === 3) { <p class="a">three</p> } @else { <b class="b">other</b> }',
+					{ setup: 'expose({ count: 5 })' },
+				),
+			).root,
+		)
+		expect(node?.initial).toEqual({ constant: 'else' })
+
+		const { component, diagnostics } = compile(
+			tsrx(
+				'@if (host.count === 3) { <p class="a">three</p> } @else { <b class="b">other</b> }',
+				{ setup: 'expose({ count: 5 })' },
+			),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(component?.entry.tier).toBe('folded')
+		expect(component?.entry.routingSignals).toEqual([])
+		expect(await render(component?.serverCode ?? '', 'C', {})).toContain(
+			'<b data-key="else" class="b">other</b>',
+		)
+	})
+
+	test('an unsatisfiable static test renders no live arm, still Folded', async () => {
+		const { component, diagnostics } = compile(
+			tsrx('@if (host.width > 10) { <p class="a">a</p> }', {
+				setup: 'expose({ width: 0 })',
+			}),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		expect(await render(component?.serverCode ?? '', 'C', {})).toBe(
+			'<c-el><template data-arms="0" data-key="then"><p class="a">a</p></template></c-el>',
+		)
+		expect(component?.entry.tier).toBe('folded')
+		expect(component?.entry.routingSignals).toEqual([])
+	})
+
+	test('a select names keyOf(arm) — null for an arm that renders nothing', () => {
+		const [node] = conditionals(
+			irOf(
+				tsrx('@if (host.big) { } @else { <b class="b">other</b> }', {
+					params: '{ n }: { n: number }',
+					setup: 'expose({ big: n > 2 })',
+				}),
+			).root,
+		)
+		expect(node?.initial).toEqual({
+			select: [{ when: '((n > 2))', key: null }],
+			otherwise: 'else',
+		})
+	})
+
+	test("the client's first key agrees: the connect diff is empty", async () => {
+		const { component, diagnostics } = compile(
+			tsrx(
+				'@if (host.count === 3) { <p class="a">three</p> } @else { <b class="b">other</b> }',
+				{ setup: 'expose({ count: 5 })' },
+			),
+		)
+		if (!component) throw new Error(JSON.stringify(diagnostics))
+		const clientPath = generated.emit(
+			'c-el-static.client.ts',
+			component.clientCode,
+		)
+		const markup = await render(component.serverCode, 'C', {})
+		const realm = createSimulationRealm()
+		afterAll(() => realm.dispose())
+		await realm.load(() => import(pathToFileURL(clientPath).href))
+		const { html, diagnostics: realmDiags } = await realm.render({
+			markup,
+			component: 'c-el',
+		})
+		expect(realmDiags).toEqual([])
+		expect(html).toBe(markup)
 	})
 })
 

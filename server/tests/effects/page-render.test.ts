@@ -380,9 +380,14 @@ describe('the real corpus (integration)', () => {
 		})
 		expect(result.html).toBe(markup)
 		expect(result.rendered).toEqual([])
-		expect(result.skipped).toEqual([
-			{ tag: 'form-spinbutton', reason: 'unrenderable-args' },
-		])
+		// LT-386 routed spinbutton's ref-reading Parser fallbacks off the
+		// host-prop fold, so the component left the Folded tier — and
+		// Simulated-tier occurrences stay authored regardless (the realm
+		// cannot run per watch rebuild), so the occurrence no longer even
+		// qualifies: no render, no skip record, no throw. Before LT-386 the
+		// Folded helper existed and refused the ref-reading fallback
+		// ('unrenderable-args').
+		expect(result.skipped).toEqual([])
 	})
 
 	test('a lang-arg component without i18n stays authored (basic-number)', async () => {

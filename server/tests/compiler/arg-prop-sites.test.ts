@@ -203,15 +203,19 @@ describe('host-derived folds over a harvested prop (LT-118)', () => {
 	})
 
 	test('a prop that is NOT arg-rendered routes instead of warning (LT-165 step 5)', () => {
-		// `other` is exposed but no site renders it from a same-named arg,
-		// so the server has no truth to splice — omission, not a guess. The
-		// omission is a routing signal (the realm reads `host.other` for
-		// real), not a diagnostic.
+		// `other` is exposed as a signal getter but no site renders it from a
+		// same-named arg and no plain-value initializer states it, so the
+		// server has no truth to splice — omission, not a guess. (A
+		// plain-value initializer WOULD state it — LT-386's route 4 — which
+		// is why `other: ''` folds.) The omission is a routing signal (the
+		// realm reads `host.other` for real), not a diagnostic.
 		const { component, diagnostics } = compileComponent(
-			`export function C({ zero = '' }: { zero?: string })
+			`import { createCell } from '@zeix/le-truc'
+export function C({ zero = '' }: { zero?: string })
 @{
 	const zeroSpan = first('span.zero')
-	expose({ zero: zeroSpan?.textContent ?? '', other: '' })
+	const otherCell = createCell(false)
+	expose({ zero: zeroSpan?.textContent ?? '', other: otherCell.get })
 	<>
 		<c-el>
 			<span class="zero">{zero}</span>
@@ -283,7 +287,9 @@ import { asNumber } from '@zeix/le-truc'`,
 		// The two substitutable sets are consulted together — mixing them is
 		// the shape the real corpus uses (form-spinbutton's `hidden={() =>
 		// Boolean(zeroSpan) && host.value === 0}`). `value` needs its root
-		// attribute here to be a foldable host prop in the first place.
+		// attribute here to be a foldable host prop in the first place, and
+		// its seed is the parser applied to the attribute's serialized value
+		// (LT-386) — the same evaluation the client's connect-time parse is.
 		const { component, diagnostics } = compileComponent(
 			`export function C({ zero = '', value = 0 }: { zero?: string; value?: number })
 @{
@@ -303,7 +309,7 @@ import { asNumber } from '@zeix/le-truc'`,
 		)
 		expect(diagnostics.some(d => d.code === 'LTC034')).toBe(false)
 		expect(component?.serverCode).toContain(
-			'Boolean(((zero))) && (value) === 0',
+			'Boolean(((zero))) && (asNumber(0)(attrValue(value))) === 0',
 		)
 	})
 

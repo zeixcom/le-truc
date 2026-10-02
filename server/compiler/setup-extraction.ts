@@ -555,6 +555,20 @@ export const extractSetup = (
 					} else if (callee === 'defineMethod') {
 						exposeAmbients.add(callee)
 					}
+				} else if (
+					isNode(value) &&
+					!isGetterMember(value) &&
+					value.type !== 'ObjectExpression' &&
+					value.type !== 'ArrowFunctionExpression' &&
+					value.type !== 'FunctionExpression' &&
+					value.type !== 'Identifier'
+				) {
+					// LT-386: a plain-value initializer IS the prop's client seed
+					// (`#initSignals` evaluates it once), so its expression is the
+					// prop's server truth. Only plain value shapes are recorded —
+					// a call's purity, a getter's body and a bare identifier's
+					// referent are seeds the fold cannot vouch for.
+					decl.initNode = value
 				}
 				exposeProps.set(propName, decl)
 			}

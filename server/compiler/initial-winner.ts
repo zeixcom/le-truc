@@ -18,9 +18,16 @@
  *   → `constant: null`: no live arm renders, and the client renders the
  *   arm at connect (ADR 0037 s5 — the compiler does not guess).
  *
- * SSG emission does not read this: the server module folds a reactive
- * condition through the value harness as before, and renders no live arm
- * exactly when this module says `constant: null` (`initialFold`).
+ * SSG emission reads the same truths through `emit-server.ts`'s
+ * `serverTestExpr`: `emitReactiveConditional` renders `initial.constant`'s
+ * arm live and folds a `fold` winner per render — so this module and the
+ * server module must agree on what is foldable, and do: both ask
+ * `evaluability.ts` (`foldableHostProps` membership, `hostSeedExpr`'s
+ * seeds). The one deliberate divergence is representability, not truth:
+ * the portable hole grammar (ADR 0043 s1) admits no calls, so a
+ * Parser-backed prop's seed — `asInteger()(attrValue(count))` — leaves the
+ * rewrite (`winnerOf` answers `fold`) while the server module folds it, the
+ * parser factory resolving through the harness import.
  */
 
 import type { AstNode } from './ast-node'
@@ -67,12 +74,26 @@ const TYPE_WRAPPERS = new Set([
 const union = (...sets: ReadonlySet<string>[]): ReadonlySet<string> =>
 	new Set(sets.flatMap(set => [...set]))
 
-/** The server expression seeding `host.<prop>`, as an AST or an arg name. */
+/**
+ * The server expression seeding `host.<prop>`, as an AST or an arg name —
+ * the portable-rewrite twin of `evaluability.ts`'s `hostSeedExpr` (LT-386),
+ * which owns the same account for the emitted module. A Parser-backed prop
+ * refuses: its truth is the parser applied to the attribute's rendered
+ * value, a call the portable grammar cannot represent — the conditional
+ * folds through the value harness instead, whose spliced seed applies the
+ * parser, so the winner is never the raw attribute's.
+ */
 const hostSeed = (
 	scope: PortableScope,
 	prop: string,
 ): AstNode | string | null => {
 	if (!scope.hostProps.has(prop)) return null
+	const decl = scope.component.exposeProps.get(prop)
+	if (decl?.parser) return null
+	// A plain-value initializer IS the prop's seed (`#initSignals` evaluates
+	// it once; the attribute never seeds a plain-value prop), so it outranks
+	// the same-named root attribute.
+	if (decl?.initNode) return decl.initNode
 	const rootAttr = scope.component.root.attrs.find(
 		(a): a is Extract<AttributeIR, { kind: 'server' }> =>
 			a.kind === 'server' && a.name === prop,
@@ -236,13 +257,13 @@ const winnerOf = (
 		}
 		if (node.construct === 'if')
 			return {
-				select: [{ when: test.text, key: node.arms[0]?.key ?? 'then' }],
+				select: [{ when: test.text, key: keyOf(node.arms[0]) }],
 				otherwise,
 			}
 		return {
 			select: caseArms.map((arm, index) => ({
 				when: `${test.text} === ${portableCases[index]?.text}`,
-				key: arm.key,
+				key: keyOf(arm),
 			})),
 			otherwise,
 		}

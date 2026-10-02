@@ -39,9 +39,10 @@ parallel.
 - **B — typed IR (ADR 0040).** ~~LT-287, LT-288~~ (reviewed 2026-10-01). LT-287 lands
   before LT-274.
 - **C — conditions (ADR 0037).** ~~LT-274 → LT-276~~ (reviewed 2026-10-02, in DONE.md) and
-  ~~LT-385~~ (reviewed 2026-10-02, in DONE.md — the three review miscompiles). Remaining:
+  ~~LT-385~~ (reviewed 2026-10-02, in DONE.md — the three review miscompiles). ~~LT-386~~
+  (done ✓ pending review 2026-10-02). Remaining:
   LT-275 as the copy round (it also takes LT-359's copy, so there is one Tech Writer round),
-  LT-386 (the initial winner agrees with the client's first key), LT-388 (ADR 0037
+  LT-388 (ADR 0037
   amendments) and LT-389 (teaching).
 - **D — scoped CSS (ADR 0033).** LT-268 → LT-304 + LT-306 (one landing) → LT-248. It touches
   `css.ts`, the config and the example sheets, not the front ends, so it runs in parallel from
@@ -85,9 +86,21 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### B — Typed IR (ADR 0040; LT-287 before LT-274)
 
-### C — Reactive conditions (ADR 0037; LT-274, LT-276 and LT-385 reviewed 2026-10-02, in DONE.md; remaining: LT-275, LT-386, LT-388, LT-389)
+### C — Reactive conditions (ADR 0037; LT-274, LT-276 and LT-385 reviewed 2026-10-02, in DONE.md; LT-386 done ✓ pending review 2026-10-02; remaining: LT-275, LT-388, LT-389)
 
-- [ ] LT-386: The initial winner agrees with the client's first key.
+- [x] LT-386: The initial winner agrees with the client's first key.
+  **done ✓ pending review (2026-10-02).** The Parser seed folds through the parser's server
+  fold (`hostSeedExpr`, evaluability.ts — one account for the emitted splice and the portable
+  rewrite; the rewrite refuses the call, so a Parser-backed conditional answers `fold`, never
+  the raw attribute's winner) and the seed sees the SERIALIZED attribute (`attrValue`, new
+  runtime-harness export — `ordinal={false}` renders no attribute and parses null). A
+  plain-value `expose()` initializer is route 4 of `foldableHostProps` and folds to `constant`;
+  parser membership demands the fallback be render-scope-resolvable (a ref-reading fallback
+  routes off — the LTC034-origin signal). `select` names `keyOf(arm)`; module doc fixed. Realm
+  tests per case assert the empty connect diff. **The census is NOT unchanged, by design**:
+  form-spinbutton leaves the Folded tier (its fallbacks read refs) and form-colorgraph +
+  module-coloreditor follow through compose reads — see NOTES.md; the exit criterion's
+  exception list grows LT-386.
   **Skill:** le-truc-dev
   **Context:** LT-274 review. `serverTestExpr` (`emit-server.ts`) and `hostSeed`
   (`initial-winner.ts`) substitute a root attribute's raw server expression and ignore the
