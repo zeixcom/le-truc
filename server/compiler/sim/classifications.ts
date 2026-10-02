@@ -39,16 +39,6 @@ export const CLASSIFIED_DIAGNOSTICS: readonly ClassifiedDiagnostic[] = [
 			'the rendering parent (LT-188). Same guard, same unserialized pixels.',
 	},
 	{
-		kind: 'jsdom-error',
-		component: 'module-colorinfo',
-		message: /Not implemented: HTMLCanvasElement's getContext/,
-		reason:
-			"module-colorinfo has no canvas. The notice is module-coloreditor's " +
-			'composed form-colorgraph drawing after its window closed, which ' +
-			'attributes to the next render (realm.ts § Attribution). Same guard, ' +
-			'same unserialized pixels (LT-105; the attribution leak is in NOTES).',
-	},
-	{
 		kind: 'console',
 		component: 'module-lazyload',
 		message:

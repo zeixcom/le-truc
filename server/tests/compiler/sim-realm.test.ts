@@ -907,6 +907,44 @@ describe('repeat renders (LT-193 removed the render cache)', () => {
 	})
 })
 
+describe('teardown attributes to the render that built the tree (LT-335)', () => {
+	test("a render's disconnect work never lands on the next component", async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			// Disconnect runs component code — the corpus case is a `pass()`
+			// restore re-firing a composed child's canvas effect. Both the
+			// synchronous report and one queued from the teardown must stay
+			// with the component whose tree is being torn down.
+			customElements.define(
+				'probe-noisy-teardown',
+				class extends HTMLElement {
+					disconnectedCallback() {
+						console.error('sync teardown notice')
+						queueMicrotask(() => console.error('queued teardown notice'))
+					}
+				},
+			)
+			customElements.define('probe-innocent', class extends HTMLElement {})
+		})
+		await realm.render({
+			markup: '<probe-noisy-teardown></probe-noisy-teardown>',
+			component: 'probe-noisy-teardown',
+		})
+		const { diagnostics } = await realm.render({
+			markup: '<probe-innocent></probe-innocent>',
+			component: 'probe-innocent',
+		})
+		expect(diagnostics).toEqual([])
+		const notices = realm.diagnostics.filter(entry =>
+			entry.message.includes('teardown notice'),
+		)
+		expect(notices.map(entry => [entry.component, entry.message])).toEqual([
+			['probe-noisy-teardown', 'sync teardown notice'],
+			['probe-noisy-teardown', 'queued teardown notice'],
+		])
+	})
+})
+
 describe('build report (LT-163)', () => {
 	const diagnostic = (overrides: Partial<SimDiagnostic>): SimDiagnostic => ({
 		kind: 'jsdom-error',
