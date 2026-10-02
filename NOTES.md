@@ -38,6 +38,11 @@ serves lazy TEXT sites, where `String(raw)` and `String(parsed)` agree for
 the string/number parsers; only asJSON object values would render
 differently pre-connect. Widening it belongs to a follow-up if a case shows
 up.
+4. **The regenerated artifacts rode a separate commit (3ed0814b):** the
+corpus build refreshed `index.js` (the committed bundle predated LT-274's
+`reconcile` arm form) and `types/src/helpers/reactive.d.ts` (the arm-form
+JSDoc). That is the regeneration HALF of LT-392 — its gate half (an
+arm-set client against the declared types) stays open in BACKLOG.
 
 ---
 
