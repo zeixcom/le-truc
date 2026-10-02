@@ -410,9 +410,8 @@ narrowed within each member, so exact-constructor dispatch still works.
 | `element` | `tag, attrs, children` | Lowered JSX element; `<style>` becomes a placeholder. `tag` is always a static name: a `.tsrx` dynamic `<{expr}>` tag or an unrecognized `.tsx` namespaced/member tag is a compile error (LTC053, tier 1 Prevented) |
 | `text` | `value` | JSX text after whitespace collapse |
 | `expr` | `expr, lazy` | A child expression; `lazy` marks it reactive (decided by `reactivity.ts`: a lexically visible signal or `host.<prop>` read lifts; an expression over server args stays static; a signal escaping into an opaque call is LTC017) |
-| `if` | `test, then, alternate` | Server-known condition; server renders the taken branch, client addresses both roots |
-| `switch` | `discriminant, cases[]` | Mutually exclusive arms |
-| `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ async boundary: all arms render, `hidden`-toggled. Three arms on both surfaces — `.tsx` spells them `<truc:try pending catch>` (ADR 0041), and there is no `stale` arm (LT-211); the in-flight state is the reactive `isPending` idiom beside the boundary, folded server-side |
+| `conditional` | `construct ('if' \| 'switch'), mode ('server' \| 'reactive'), test, testText, arms[], initial` | One node for both constructs (ADR 0043 s4): `@if`/`@else` and the ternary/`&&` are `construct: 'if'` (arms `then` then `else`, an absent else branch an empty arm); `@switch`/`@case` and the switch IIFE are `construct: 'switch'` (one arm per case, source order). `mode: 'server'` — the test is server-known, the server renders the taken arm and the client addresses the branch roots through a union selector. `mode: 'reactive'` (ADR 0037) — the test reads a signal or `host`: every non-empty arm is extracted to an inert `<template data-arms data-key>` keyed by its compile-time name (`then`/`else`, `case:` + the literal's JSON, `default`), the server renders the initial winner live beside them, and the client switches arms through `reconcile()`'s arm form over the key thunk |
+| `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ async boundary: the arm that won at render time renders live, its root keyed `ok`/`nil`/`err`, and every arm ships as an inert `<template data-arms data-key>`; the client's `reconcile()` switches them as the task settles (ADR 0037 s4). Three arms on both surfaces — `.tsx` spells them `<truc:try pending catch>` (ADR 0041), and there is no `stale` arm (LT-211); the in-flight state is the reactive `isPending` idiom beside the boundary, folded server-side |
 | `compose` | `component, source, attrs, children` | PascalCase tag bound to an authored-source import (either surface); server splices the child's render |
 | `client-stmt` | `text` | Bare client-only side effect inside a branch (`.tsrx` only — a `.tsx` branch must return JSX) |
 
@@ -453,8 +452,10 @@ server-side), `ref`.
 attribute, list membership, initializer substitution, or List container
 adoption; a `requestContext` signal never appears: it has no DOM seed), and
 `effects` (the document-ordered effect list: `watch`-bindings, `pass`, `on`,
-`each`/`reconcile` blocks, guarded optional-branch effects, async tri-state
-toggles). Every plan node carries source spans for the remapping tables.
+`each`/`reconcile` blocks, guarded optional-branch effects for server-known
+conditionals, and the arm blocks of reactive conditionals and the async
+boundary — `reconcile()`'s arm form over the stamped templates with a key
+thunk and one mount per arm, ADR 0037). Every plan node carries source spans for the remapping tables.
 The passes run as functions over a typed shared environment (`PassShared` —
 the order-carrying accumulators: queries, used names, ambients, child tags,
 ref names, and the diagnostic sinks), each taking its producers' output as a
@@ -690,8 +691,12 @@ pass alongside `analysis/compose-refs.ts`.
 
 `emit-server.ts` walks the IR and emits a `render<Name>(args): string`
 function: per-kind dispatch over the template (escaped text, server
-expressions, real JS conditionals for `if`/`switch` nodes, isolated arm
-buffers for async boundaries, composition calls for `compose` nodes), and
+expressions, real JS conditionals for server-known `conditional` nodes, the
+live initial winner beside inert arm templates for reactive conditionals and
+the async boundary — the winner's root keyed `then`/`else`/`case:<json>`/
+`default` or `ok`/`nil`/`err`, one `<template data-arms data-key>` per arm,
+client-written dynamic sites inside a losing arm's template baked empty,
+LT-385c — composition calls for `compose` nodes), and
 setup re-declared verbatim against the `runtime.ts` harness, where a signal
 is its initial value
 in a box (`.get()` reads once, `.set()` is a no-op) — "signals as plain
@@ -731,8 +736,11 @@ arg, a required Parser arg whose fallback does not resolve at module scope,
 or a suppressed harness emits no helper and is never page-rendered.
 
 Measured against the corpus, the Folded tier is the **majority** path: the
-classifier folds 21 of 23 components (Simulated: `form-combobox` via
-compose-read, `form-listbox`; Static: none yet). `first()` in
+classifier folds 27 of 35 components (Simulated: the other eight — compose
+reads through `form-combobox`/`form-listbox` and `form-colorgraph`/
+`module-coloreditor`, `form-spinbutton`'s ref-reading Parser fallbacks, and
+derived-task components such as `module-lazyload`; Static: none yet).
+`first()` in
 `watch()`/`on()` positions is a client concern that reaches no served byte
 and was never a refusal site — what routes a component is a site whose
 *server render* phase 1 cannot complete.

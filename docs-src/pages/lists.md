@@ -147,6 +147,32 @@ The sync is strictly one-way, data → DOM. To change the list's structure, muta
 {% /section %}
 
 {% section %}
+## Switch Conditional Arms
+
+`reconcile()` has a second form that switches instead of syncing. Pass the arm templates and a key thunk, and the container holds at most one element — the current arm of a conditional:
+
+```js
+reconcile(
+  container,
+  container.querySelectorAll(':scope > template[data-key]'),
+  () => (host.ready ? 'content' : 'placeholder'),
+  (element, key) => {
+    on(element, 'click', () => { /* arm-local behavior */ })
+  },
+)
+```
+
+Each `<template>` names its arm in `data-key`; the thunk returns the current arm's key, or `null` when no arm shows. A key change disposes the old arm's scope, removes its element, and clones the new arm's template. Siblings outside the arm are never touched.
+
+On the first run, an element already in the arm position is adopted when its `data-key` names one of the arms — that is how server-rendered markup survives connect — and replaced when it does not. A `<template>` or a `[data-arms]` carrier is never adopted. Every arm template must hold exactly one root element, or `reconcile()` throws `InvalidTemplateError`.
+
+`bindArm(element, key, first)` runs once per arm entry with the same collector parity as `bindItem`: call `watch()`, `on()`, `pass()`, and `each()` inside it, and a returned cleanup runs when the arm leaves. Arms are cloned anew on every re-entry, so uncommitted input inside an arm is lost — keep state in signals, not in the arm's DOM.
+
+You rarely call this form by hand. The compiler lowers every reactive condition — a ternary or `@if`/`@switch` whose test reads a signal — and the async boundary to it: the server renders the initial winner beside inert arm templates, and the generated client switches them through this call. When you want an arm's DOM to persist across toggles instead of being rebuilt, spell it with `hidden={() => …}`.
+
+{% /section %}
+
+{% section %}
 ## Add and Remove Items
 
 Mutations go through the list. Never touch the DOM directly. The reconciler reacts to changes in the keys and updates the container for you.

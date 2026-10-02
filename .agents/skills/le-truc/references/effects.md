@@ -55,6 +55,7 @@ Without thunks, these require custom handlers. Thunks keep intent declarative.
 | Bind Le Truc child prop | `pass(target, props)` | registers an `EffectDescriptor` |
 | Per-element effects on Signal | `each(memo, callback)` | registers an `EffectDescriptor` |
 | Sync keyed data to container children | `reconcile(container, template, source, bindItem)` | registers an `EffectDescriptor` |
+| Switch a conditional's arms (compiled conditions, async boundary) | `reconcile(container, templates, keyThunk, bindArm)` | registers an `EffectDescriptor` |
 | Register a hand-authored descriptor | `watch(() => true, descriptor)` | runs `descriptor` once on connect, registers its returned cleanup for disconnect |
 
 ---
@@ -277,6 +278,17 @@ on(form, 'submit', e => { e.preventDefault(); list.add(textbox.value.trim()) })
 ```
 
 One-way sync, data → DOM: mutate the list in event handlers, never the container's children directly. Throws `InvalidTemplateError` if the template content doesn't have exactly one root element.
+
+**Arm form** (`reconcile(container, templates, keyThunk, bindArm)`, since 3.0): switches a conditional's arms instead of syncing a list. Each `<template>` names its arm in `data-key`; the thunk returns the current arm's key, or `null` for none. The container holds at most one element — the current arm — and an element already there is adopted when its `data-key` names one of the arms (the server-rendered winner). `bindArm(element, key, first)` runs once per arm entry with `bindItem`'s collector parity; a returned cleanup runs when the arm leaves. Every arm template needs exactly one root element, and the arm's elements are cloned anew on every re-entry — uncommitted input inside an arm is lost.
+
+### Reactive Conditions and the Async Boundary (compiled components)
+
+You rarely call the arm form by hand — the compiler lowers two constructs to it:
+
+- **A condition that reads a signal or `host`** — an `@if`/`@switch` on either surface, a `.tsx` ternary or `&&` or switch IIFE. The server renders the initial winner beside inert arm templates keyed `then`/`else`, `case:<literal JSON>` + `default`; the client switches arms through `reconcile()`'s arm form. Scope rules: the condition sits directly in an element (not inside another branch, a loop body, or composed content), each arm renders exactly one root element, a reactive `@case` value must be a literal (`LTC062`), and a reactive list's container cannot hold a condition (`LTC063`).
+- **The async boundary** — `@try`/`@pending`/`@catch` in `.tsrx`, `<truc:try pending catch>` in `.tsx`. Its arms key `ok`/`nil`/`err` and switch as the task settles. The in-flight state is the reactive `isPending(signal)` idiom beside the boundary — the binding must be the arrow thunk (`class={() => (isPending(data) ? 'pending' : null)}`); a bare expression is a render-time attribute and never updates.
+
+Both constructs clone arm DOM on entry and dispose it on exit. When you want an element's DOM to persist across a toggle instead, spell it with `hidden={() => …}` — the state-preserving channel.
 
 ### `query(root, selector, required?)` and `queryAll(root, selector, required?)`
 

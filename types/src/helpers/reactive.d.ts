@@ -216,24 +216,28 @@ declare function each<E extends Element>(memo: Signal<E[]>, callback: (element: 
  * See ADR 0017 for SSR adoption, unreconciled pinning, and keyed-relative
  * positioning.
  *
- * **Arm form** (ADR 0037): pass several templates and a key thunk instead of
- * one template and a list, and the container holds at most one element — the
- * current arm of a conditional. Each template names its arm in `data-key`;
- * the thunk returns the current arm's key, or `null` for none. The arm
- * element sits immediately before the first template. On the first run an
- * element already there whose `data-key` names one of the arms is adopted
- * when it is the current arm, and replaced when it is not — a `<template>`
- * or any `[data-arms]` carrier is never adopted (two adjacent arm sets
- * share a container, and their templates name arm keys too). A key change
- * disposes the old arm's scope, removes its element, and clones the new arm's
- * template. Siblings outside the arm are never touched.
+ * **Arm form** (ADR 0037, since 3.0): pass several templates and a key thunk
+ * instead of one template and a list, and the container holds at most one
+ * element — the current arm of a conditional. Each template names its arm in
+ * `data-key`; the thunk returns the current arm's key, or `null` for none.
+ * The arm element sits immediately before the first template. On the first
+ * run an element already there whose `data-key` names one of the arms is
+ * adopted when it is the current arm, and replaced when it is not — a
+ * `<template>` or any `[data-arms]` carrier is never adopted (two adjacent
+ * arm sets share a container, and their templates name arm keys too). A key
+ * change disposes the old arm's scope, removes its element, and clones the
+ * new arm's template. Siblings outside the arm are never touched. Re-entry
+ * always clones afresh: uncommitted input in an arm is lost. The arm form's
+ * callback is `bindArm(element, key, first)` — no item signal, the key is
+ * the arm's name, and `first` scopes to the arm element exactly as
+ * `bindItem`'s does.
  *
  * @since 2.3
  * @param container - Container element whose children are reconciled
- * @param template - Template whose single root element is cloned for entering keys; in the arm form, the arm templates, each naming its arm in `data-key`
- * @param source - Keyed reactive data source; in the arm form, a thunk returning the current arm's key or `null`
- * @param bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown
- * @throws {InvalidTemplateError} if the template content does not contain exactly one root element, or the arm form gets no template
+ * @param template - Template whose single root element is cloned for entering keys; the arm-form overload takes `templates` instead — the arm templates, each naming its arm in `data-key`
+ * @param source - Keyed reactive data source; the arm form takes a thunk returning the current arm's key or `null`
+ * @param bindItem - Mounted once per entering element inside an ambient collector; collected descriptors activate against the per-item scope, and any returned cleanup is that scope's teardown. The arm form's `bindArm(element, key, first)` mounts the same way, once per arm
+ * @throws {InvalidTemplateError} if a template's content does not contain exactly one root element, or the arm form receives no template at all
  */
 declare function reconcile<T extends {}, S extends MutableSignal<T>>(container: Element, template: HTMLTemplateElement, source: MutableList<T, S>, bindItem: (element: HTMLElement, item: S, key: string, first: FirstElement) => MaybeCleanup): void;
 declare function reconcile<T extends {}, S extends Signal<T>>(container: Element, template: HTMLTemplateElement, source: DerivedList<T, S>, bindItem: (element: HTMLElement, item: S, key: string, first: FirstElement) => MaybeCleanup): void;

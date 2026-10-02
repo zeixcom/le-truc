@@ -11,11 +11,9 @@
  * stale, err })`, not a `<truc:try>` boundary (owner, 2026-09-25). The
  * compiled async boundary cannot express this contract: its ok arm writes
  * escaped `textContent` where this component injects sanitized HTML
- * (`allow-scripts`), it wraps each arm root in a `<fieldset>` that the
- * page-authored instances (the demo, module-listnav, docs) do not carry, its
- * arms are three sibling roots where loading and error share one callout
- * (`.danger` on error), and it has no ok-arm hook for the scroll to the
- * first heading on a later `src` change.
+ * (`allow-scripts`), its arms are three sibling roots where loading and
+ * error share one callout (`.danger` on error), and it has no ok-arm hook
+ * for the scroll to the first heading on a later `src` change.
  *
  * Setup is the twin's verbatim, except that `hasLoaded` becomes a field of a
  * const record, because a `let` is outside the setup subset (LTC005).

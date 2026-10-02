@@ -56,6 +56,14 @@ The observer watches only mutations implied by the CSS selector (class, ID, `[at
 - Ownership follows `keyedScopes`: per-item scopes are `{ root: true }`, an outer `createScope` registers teardown-all on the component scope, and leavers are disposed before their elements are removed and before enterers mount.
 - `bindItem`'s 4th parameter (and `each()`'s callback's 2nd) is `first`, from `bindFirst()` in `src/helpers/dom.ts` — `query()` pre-bound to `element`, allocated once per mount, not per structural re-run (see ADR 0021). It never participates in M8 dependency resolution: items added later can never block the host's own effects, since the host's one-time dependency wait happens once at connect, before `reconcile()`'s effect ever runs.
 
+**The arm form** (`reconcile(container, templates, keyThunk, bindArm)`, ADR 0037) dispatches on the source being a function — not on the templates' shape:
+
+- The templates iterable is **snapshotted once, outside the effect descriptor** (`Array.from`, LT-385e) — a one-shot iterable (a generator) would be exhausted by the first pass, and a re-entering callback re-runs the descriptor against the stale snapshot.
+- Adoption is **position- and key-guarded**: the candidate is the element immediately before the first template, claimed only when its `data-key` names one of the arms. A `<template>` or any `[data-arms]` carrier is never adopted (LT-385a) — two adjacent arm sets share a container, and a sibling set's templates carry `data-key` too; adopting one would let this set remove the sibling's template, and the sibling's next flip would throw `NotFoundError` from `insertBefore`.
+- An adoption that survives the first flip is the designed connect; the first flip that replaces the adopted element warns in DEV_MODE — a hydration disagreement, like the list form's adoption-pass warnings.
+- Every arm template must hold exactly one root element (`InvalidTemplateError` otherwise — count 0 means the arm form received no template at all), and re-entry always **clones afresh**: `bindArm` mounts in a fresh per-arm scope and uncommitted input in the arm is lost.
+- Mount/dispose is teardown-before-setup per flip (LT-385f): a throwing `bindArm` still disposes its partial scope before the error rethrows, so no effect outlives its arm.
+
 ## `pass()` Scope is Le Truc Components Only
 
 `pass()` (`makePass` in `src/helpers/reactive.ts`) replaces the backing `Slot` signal of a child's property using `getSignals(target)` from `src/internal.ts`. It only works for Le Truc components whose properties are Slot-backed. For any other custom element or plain HTML element, use `bindProperty()` instead.
