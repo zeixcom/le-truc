@@ -989,9 +989,9 @@ export function BasicParent({}: {})
 })
 
 describe('compose site nested below a @pending root (LT-230 walk policy)', () => {
-	// Every walk enters `@pending` arms (walk.ts): the arm is rendered,
-	// hidden-toggled markup, so a compose site nested below its root
-	// coexists in the DOM with the body's.
+	// Every walk enters `@pending` arms (walk.ts): the arm's markup renders —
+	// the winner live, the other arms as inert templates (ADR 0037 s4) — so a
+	// compose site nested below its root coexists in the DOM with the body's.
 	const parentWith = (
 		pendingChild: string,
 	) => `import { BasicChild } from '../child/basic-child.tsrx'

@@ -486,33 +486,6 @@ const directLazyCatchRef = (
 }
 
 /**
- * Static `id` attribute values under a subtree (CHECKLIST §8's duplicate-
- * id rule) — walks every element, not just roots, since an id collision
- * anywhere under an arm is just as real a document-validity/ARIA-
- * relationship bug as one on the arm root itself.
- */
-const staticIdsUnder = (nodes: readonly TemplateNode[]): string[] => {
-	const ids: string[] = []
-	// Only recurses into ELEMENT children — a nested `@if`/`@try`/`@for`
-	// inside an arm isn't walked (each has its own distinct nesting
-	// shape). Acceptable scoping gap: catches the common case (a literal
-	// `id` on a plain element in the arm) without a full generic
-	// template-node visitor.
-	const visit = (n: TemplateNode): void => {
-		if (isElement(n)) {
-			const idAttr = n.attrs.find(
-				(a): a is Extract<AttributeIR, { kind: 'static' }> =>
-					a.kind === 'static' && a.name === 'id' && a.value !== null,
-			)
-			if (idAttr) ids.push(idAttr.value as string)
-			for (const child of n.children) visit(child)
-		}
-	}
-	for (const n of nodes) visit(n)
-	return ids
-}
-
-/**
  * Decide each `pass={{ prop }}` against the TARGET component's own
  * `expose()` (LT-158, ADR 0028 sub-design 6) — the residual TypeScript
  * cannot carry, because a read-only prop is structurally identical to a
@@ -1384,39 +1357,12 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
  * construct duplicated).
  *
  * A `@pending` arm present routes to `handleAsyncBoundary` instead (ADR
- * 0023 sub-design 13, LT-012) — its arms switch on the client through
+ * 0024 sub-design 13, LT-012) — its arms switch on the client through
  * `reconcile()` (ADR 0037 s4), where this plain boundary's arms are
  * decided once, at render time.
  */
 const handleTryEffects = (fx: EffectsContext, node: TryNode): void => {
-	const { source, diagnostics } = fx
 	const wording = wordingOf(fx.component)
-	// CHECKLIST §8 (LTC035), from the toggled boundary whose arms were all
-	// in the document at once; see `duplicateIdAcrossArms` for its status
-	// since template-cloned arms.
-	const branches: Array<[string, readonly TemplateNode[]]> = [
-		[wording.tryBody, node.children],
-		[wording.catchArm, node.catchChildren],
-	]
-	if (node.pendingChildren !== null)
-		branches.push([wording.pendingArm, node.pendingChildren])
-	const seenIn = new Map<string, string>()
-	for (const [label, branch] of branches)
-		for (const id of staticIdsUnder(branch)) {
-			const firstLabel = seenIn.get(id)
-			if (firstLabel && firstLabel !== label)
-				diagnostics.push(
-					diagnostic.duplicateIdAcrossArms(
-						source,
-						node.node.start,
-						id,
-						firstLabel,
-						label,
-						wording,
-					),
-				)
-			else if (!firstLabel) seenIn.set(id, label)
-		}
 	if (node.pendingChildren !== null) {
 		handleAsyncBoundary(fx, node)
 		return
@@ -1982,10 +1928,11 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
  * instance's host element (`composeHostAttrs`) — duplicated across
  * sites it is two elements sharing an id in the same rendered
  * document, invalid HTML, and id-based addressing resolves to at most
- * one of them. Same rationale as LTC035's across-arms rule,
- * generalized to compose sites. Shares nothing with effect planning —
- * a standalone validation (LT-226), like the front end's post-lowering
- * tail.
+ * one of them. Template-cloned arms keep the same property by
+ * structure: only the winning arm is ever in the document (ADR 0037
+ * s4), so only compose sites can collide. Shares nothing with effect
+ * planning — a standalone validation (LT-226), like the front end's
+ * post-lowering tail.
  */
 const validateComposeIds = (fx: EffectsContext): void => {
 	const { component, source, diagnostics } = fx

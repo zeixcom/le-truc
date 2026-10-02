@@ -137,7 +137,7 @@ export const deriveCell = <T>(
 	return {
 		get: () => {
 			throw new Error(
-				'deriveCell(...) is pending (no { initial } seed) — read it only inside an isPending()-guarded branch (ADR 0023 async boundaries).',
+				'deriveCell(...) is pending (no { initial } seed) — read it only inside an isPending()-guarded branch (ADR 0024 async boundaries).',
 			)
 		},
 		set: () => {},

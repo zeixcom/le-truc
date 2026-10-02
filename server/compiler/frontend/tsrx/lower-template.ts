@@ -269,7 +269,7 @@ export const lowerTry = (
 				ctx.source,
 				node.start,
 				'A `@pending` arm without a `@catch (e)` arm',
-				'An async boundary routes the pending, resolved and error states together (ADR 0023 sub-design 13) — add a `@catch (e)` arm.',
+				'An async boundary routes the pending, resolved and error states together (ADR 0024 sub-design 13) — add a `@catch (e)` arm.',
 			),
 		)
 		return null

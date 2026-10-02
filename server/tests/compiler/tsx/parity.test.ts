@@ -636,7 +636,7 @@ describe('a boundary as a .map() body root is LTC053 (LT-358a)', () => {
 		expect(hit).toBeDefined()
 		// The loop rule, not the generic unrecognized-tag rule `lowerElement`
 		// would raise for a truc:* name.
-		expect(hit?.message).toContain('is the root of this')
+		expect(hit?.message).toContain('cannot sit directly in')
 		expect(hit?.line).toBeDefined()
 	})
 
@@ -650,7 +650,7 @@ describe('a boundary as a .map() body root is LTC053 (LT-358a)', () => {
 		)
 		const hit = diagnostics.find(d => d.code === 'LTC053')
 		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('is the root of this')
+		expect(hit?.message).toContain('cannot sit directly in')
 		expect(hit?.line).toBeDefined()
 	})
 
@@ -662,7 +662,8 @@ describe('a boundary as a .map() body root is LTC053 (LT-358a)', () => {
 		)
 		expect(
 			diagnostics.filter(
-				d => d.code === 'LTC053' && d.message.includes('is the root of this'),
+				d =>
+					d.code === 'LTC053' && d.message.includes('cannot sit directly in'),
 			),
 		).toEqual([])
 	})

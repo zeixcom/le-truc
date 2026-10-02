@@ -105,8 +105,10 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 	term('tryBody', 'the boundary body'),
 	term('pendingArm', 'the pending arm'),
 	term('catchArm', 'the catch arm'),
-	term('boundary', 'the boundary construct (the loop-body-root rule, LT-358a)'),
-	framed('loop', l => `this ${l} body`, 'a boundary as a loop body root'),
+	term(
+		'boundary',
+		'the boundary construct (the loop-body rule, LT-358a/LT-359)',
+	),
 	term('conditionalTag', 'choosing between static tags (LTC053 fix-it)'),
 	...(['if', 'switch'] as const).flatMap(branch => [
 		{
@@ -475,7 +477,7 @@ const LIST_BODY: Case[] = [
 			body: '@for (const r of rows) { @try { <li class="a">{r}</li> } @catch (e) { <li class="b">{e.message}</li> } }',
 			tsx: '{rows.map(r => <truc:try catch={e => <li class="b">{e.message}</li>}><li class="a">{r}</li></truc:try>)}',
 		},
-		pins: ['is the root of this', 'the root of a loop body must be an element'],
+		pins: ['cannot sit directly in', "the body's root must be an element"],
 	},
 ]
 

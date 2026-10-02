@@ -2311,7 +2311,7 @@ import { asInteger } from '@zeix/le-truc'`
 	})
 })
 
-describe('duplicate id across @try/@catch arms (CHECKLIST §8, LTC035)', () => {
+describe('duplicate id across @try/@catch arms (LTC035 retired, LT-275)', () => {
 	const wrapTry = (template: string): string =>
 		`export function C({ status }: { status?: string })
 	@{
@@ -2324,35 +2324,15 @@ describe('duplicate id across @try/@catch arms (CHECKLIST §8, LTC035)', () => {
 		</>
 	}`
 
-	test('the same literal id on the @try body and @catch arm is LTC035', () => {
+	// Template-cloned arms (ADR 0037 s4) keep every non-winning arm out of
+	// the document, so a literal id repeated across arms no longer collides.
+	// The rule retired with the toggled boundary that needed it; the spent
+	// number stays visible in the DiagnosticCode union.
+	test('the same literal id across arms compiles with no LTC035', () => {
 		const source = wrapTry(`@try {
 			<p id="msg">{status.length}</p>
 		} @catch (error) {
 			<p id="msg">Failed</p>
-		}`)
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.code === 'LTC035')
-		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('id="msg"')
-		expect(hit?.message).toContain('`@try` body')
-		expect(hit?.message).toContain('`@catch` arm')
-	})
-
-	test('a duplicate id on a NESTED element (not just the arm root) is still LTC035', () => {
-		const source = wrapTry(`@try {
-			<div><span id="inner">{status.length}</span></div>
-		} @catch (error) {
-			<div><span id="inner">Failed</span></div>
-		}`)
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(diagnostics.some(d => d.code === 'LTC035')).toBe(true)
-	})
-
-	test('distinct ids across arms are not flagged', () => {
-		const source = wrapTry(`@try {
-			<p id="msg-ok">{status.length}</p>
-		} @catch (error) {
-			<p id="msg-error">Failed</p>
 		}`)
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC035')).toBe(false)

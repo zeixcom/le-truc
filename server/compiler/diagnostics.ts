@@ -1,5 +1,5 @@
 /**
- * Compile diagnostics for the Le Truc component compiler (ADR 0023).
+ * Compile diagnostics for the Le Truc component compiler (ADR 0024).
  *
  * Diagnostics are the compiler's product surface: a wrong rewrite is a wrong
  * component, so every rule that cannot be applied reports a code, a message,
@@ -61,7 +61,11 @@ export type DiagnosticCode =
 	| 'LTC032' // destructured prop has a default value but its type isn't marked optional
 	| 'LTC033' // a static child or server-rendered attribute reads an impure ambient (Date/Intl/Math.random/crypto RNG/toLocaleString), and so do a server-data loop's items (LT-326) — reactive thunks are omitted silently instead (LT-165 step 5)
 	| 'LTC034' // severe only (LT-165 step 5): disabled/checked unresolvable on a submittable control of a Static-tier component; non-severe sites are routing signals
-	| 'LTC035' // duplicate static id across @try/@catch/@pending arms
+	// ('LTC035' is spent: retired at LT-275 — template-cloned arms keep every
+	// non-winning arm out of the document (ADR 0037 s4), so a literal id
+	// repeated across arms no longer collides. No builder emits this code;
+	// the member stays so every spent number is visible in the union (ADR
+	// 0028 lifecycle))
 	| 'LTC036' // real `@zeix/le-truc` export used without an explicit import (sub-design 16)
 	| 'LTC037' // FactoryContext name inside an authored `@zeix/le-truc` import (sub-design 16)
 	| 'LTC038' // duplicate static id across compose sites (LT-090)
@@ -85,9 +89,9 @@ export type DiagnosticCode =
 	| 'LTC054' // a position the server render evaluates reads page context outside the declared ambient set, or the reserved `i18n` record is destructured for a member outside it (ADR 0034 s4, LT-258) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC055' // an `export const i18n` source pattern is not a supported ICU MessageFormat 1 pattern, or a `t.<key>` site disagrees with its pattern's arguments: missing/extra/non-literal arguments, an argument message read without a call, an argument-less message called (ADR 0030 s4, LT-250) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC056' // an authored `<script>` element in a component template, whatever its `type` — the page owns script loading (LT-358 rider) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC061' // an authored `<template>` element in a component template — the compiler owns template extraction, and the selector proof cannot see inside one (LT-383) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC062' // a reactive switch (one whose discriminant reads a signal) has a `@case`/`case` value that is not a literal, or two cases share an arm key (ADR 0037 s2, LT-274) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC063' // a reactive condition inside a reactive list's reconcile() container (ADR 0037 s5, LT-274) — tier 1 Prevented, statically decidable, no runtime half
-	| 'LTC061' // an authored `<template>` element in a component template — the compiler owns template extraction, and the selector proof cannot see inside one (LT-383) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -224,20 +228,24 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A boundary as the root of a loop body (LT-213 follow-up; `.tsrx`
-	 * parity LT-358a). The root of a loop body is the element the client
-	 * addresses each item through, so it must be an element. `.tsx`: the
+	 * A boundary in a loop body (LT-213 follow-up; `.tsrx` parity LT-358a).
+	 * The root of a loop body is the element the client addresses each item
+	 * through, so it must be an element — and a boundary in the body's
+	 * statement position has no element to attach to either. `.tsx`: the
 	 * check runs in `lowerFor` before `lowerElement` would report the
-	 * `<truc:try>` tag as not a static name. `.tsrx`: an `@try` statement
-	 * where the `@for` body's output belongs — without the rule it fell to
-	 * the generic "statement other than the output element" LTC005, whose
-	 * fix ("move the statement into setup") is wrong for a boundary. Same
-	 * code both surfaces: the rule and its rationale are surface-
-	 * independent; only the spelled constructs differ (`wording.boundary`,
+	 * `<truc:try>` tag as not a static name, so it fires for the root case.
+	 * `.tsrx`: an `@try` statement anywhere at the body's statement level —
+	 * `outputOf` accepts an element only, so every body-level `@try` takes
+	 * this rule, root-boundary and beside-an-element-output alike (the
+	 * reviewed wording covers both). Without it the `.tsrx` case fell to the
+	 * generic "statement other than the output element" LTC005, whose fix
+	 * ("move the statement into setup") is wrong for a boundary. Same code
+	 * both surfaces: the rule and its rationale are surface-independent;
+	 * only the spelled constructs differ (`wording.boundary`,
 	 * `wording.loop`).
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (reviewed 2026-10-01; `.tsrx` spelling rides the LT-359 copy round).
+	 * (reviewed 2026-10-02, LT-359 — worded for both trigger positions).
 	 */
 	boundaryAsLoopRoot: (
 		source: string,
@@ -246,7 +254,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC053',
-			`A ${wording.boundary} is the root of this ${wording.loop} body — the root of a loop body must be an element, because the client addresses each item through it. Make an element the root of the ${wording.loop} body.`,
+			`A ${wording.boundary} cannot sit directly in a ${wording.loop} body — the body's root must be an element, because the client addresses each item through it. Wrap the boundary in an element inside the ${wording.loop} body, or move it out of the ${wording.loop} body.`,
 			lineOf(source, offset),
 		),
 
@@ -263,8 +271,8 @@ export const diagnostic = {
 	 * alone, no runtime half. Raised in `lowerElement` (shared), so both
 	 * surfaces refuse it identically.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; the
-	 * first draft rides the LT-359 copy round.
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-02, LT-359 — the LT-358 first draft, finalized).
 	 */
 	scriptElementInTemplate: (source: string, offset: number | undefined) =>
 		error(
@@ -276,7 +284,7 @@ export const diagnostic = {
 	/**
 	 * An authored `<template>` element in a component template (LT-383,
 	 * LT-379 follow-up). The compiler owns template extraction: a reactive
-	 * list's item template and template-cloned arms (ADR 0043) are emitted
+	 * list's item template and template-cloned arms (ADR 0037) are emitted
 	 * `<template>`s, and an authored one collides with them. The selector
 	 * proof also cannot see inside one — css-select's HTML-mode traversal
 	 * skips `<template>` content (ADR 0045) — so a uniqueness answer over a
@@ -285,8 +293,8 @@ export const diagnostic = {
 	 * decidable from the tag name alone, no runtime half. Raised in
 	 * `lowerElement` (shared), so both surfaces refuse it identically.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; the
-	 * first draft rides the LT-359 copy round.
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-02, LT-359 — the LT-383 first draft, finalized).
 	 */
 	templateElementInTemplate: (source: string, offset: number | undefined) =>
 		error(
@@ -297,14 +305,15 @@ export const diagnostic = {
 
 	/**
 	 * A reactive switch keys its arms by their case values (ADR 0037 s2:
-	 * `case:<literal>`), so a case value must be a literal the server emit
-	 * and the generated client can name identically at compile time, and no
-	 * two cases may share a key (`'1'` and `1`). A dynamic value has no
-	 * fallback. ADR 0028 tier 1 (Prevented): statically decidable, no
-	 * runtime half.
+	 * `case:` + the literal's JSON), so a case value must be a literal the
+	 * server emit and the generated client can name identically at compile
+	 * time, and no two cases may share a key (`1` and `1.0` do; `'1'` and
+	 * `1` do not). A dynamic value has no fallback. Channel: compiler
+	 * (shared lowering, both surfaces). ADR 0028 tier 1 (Prevented):
+	 * statically decidable, no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; the
-	 * first draft rides the LT-275 copy round.
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-02, LT-275 — the LT-274 first draft, finalized).
 	 */
 	dynamicCaseValue: (
 		source: string,
@@ -317,7 +326,7 @@ export const diagnostic = {
 			'LTC062',
 			duplicate
 				? `The ${wording.caseLabel} value \`${caseText}\` names the same arm as an earlier one in a switch that reads a signal. Its arms switch on the client by a key derived from each value, so every value must name a distinct arm — remove or merge the duplicate.`
-				: `The ${wording.caseLabel} value \`${caseText}\` is not a literal, in a switch that reads a signal. Its arms switch on the client by a key derived from each value at compile time — write each value as a string, number, boolean or \`null\` literal.`,
+				: `The ${wording.caseLabel} value \`${caseText}\` is not a literal in a switch that reads a signal. Its arms switch on the client by a key derived from each value at compile time — write each value as a string, number, boolean or \`null\` literal.`,
 			lineOf(source, offset),
 		),
 
@@ -325,11 +334,12 @@ export const diagnostic = {
 	 * A reactive condition inside a reactive list's `reconcile()` container
 	 * (ADR 0037 s5): the container is self-cleaning — its first run removes
 	 * every unkeyed child — so the arm templates and the live arm would be
-	 * swept until the unkeyed-sibling rule exists (LT-185's follow-up). ADR
-	 * 0028 tier 1 (Prevented): statically decidable, no runtime half.
+	 * swept until the unkeyed-sibling rule exists (LT-185's follow-up).
+	 * Channel: compiler (shared lowering, both surfaces). ADR 0028 tier 1
+	 * (Prevented): statically decidable, no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle; the
-	 * first draft rides the LT-275 copy round.
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (reviewed 2026-10-02, LT-275 — the LT-274 first draft, finalized).
 	 */
 	reactiveConditionInReconcileContainer: (
 		source: string,
@@ -422,7 +432,7 @@ export const diagnostic = {
 
 	// --- subset, attribute shapes, addressing, source structure ---
 	/**
-	 * A construct outside the supported subset of ADR 0023. `what` names the
+	 * A construct outside the supported subset of ADR 0024. `what` names the
 	 * construct as the subject of the sentence; `fix`, when the site knows
 	 * it, is the imperative the author acts on (LT-300).
 	 */
@@ -434,7 +444,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC005',
-			`${what} is outside the supported subset (ADR 0023).${fix ? ` ${fix}` : ''}`,
+			`${what} is outside the supported subset (ADR 0024).${fix ? ` ${fix}` : ''}`,
 			lineOf(source, offset),
 		),
 
@@ -484,7 +494,7 @@ export const diagnostic = {
 		const sentences: string[] = []
 		if (bound.length > 0)
 			sentences.push(
-				`${subject} references server-only ${bound.length === 1 ? 'name' : 'names'} ${codeList(bound)} — the generated client does not bind ${them(bound)}, so the read would throw at connect.`,
+				`${subject} references server-only ${bound.length === 1 ? 'name' : 'names'} ${codeList(bound)} — the generated client does not bind ${them(bound)}, so the read throws when the client runs it.`,
 			)
 		if (listBody.length > 0)
 			sentences.push(
@@ -558,7 +568,7 @@ export const diagnostic = {
 		error('LTC008', what, lineOf(source, offset)),
 
 	// --- config, managed form props, composition, pass legality ---
-	/** Invalid `export const config` declaration (ADR 0023 sub-design 8). */
+	/** Invalid `export const config` declaration (ADR 0024 sub-design 8). */
 	invalidConfig: (source: string, offset: number | undefined, what: string) =>
 		error('LTC009', what, lineOf(source, offset)),
 
@@ -579,7 +589,7 @@ export const diagnostic = {
 
 	/**
 	 * A capitalized JSX tag with no matching component import (`'….tsrx'` or
-	 * `'….tsx'`; ADR 0023 sub-design 10) — composition resolves by import,
+	 * `'….tsx'`; ADR 0024 sub-design 10) — composition resolves by import,
 	 * never falls back to raw custom-element treatment.
 	 */
 	unresolvedComposedComponent: (
@@ -589,7 +599,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC011',
-			`\`<${name}>\` has no matching \`import { ${name} }\` of a \`.tsrx\` or \`.tsx\` module — composed (capitalized) tags must import the component they compose (ADR 0023 sub-design 10). A lowercase dashed tag addresses a raw custom element instead.`,
+			`\`<${name}>\` has no matching \`import { ${name} }\` of a \`.tsrx\` or \`.tsx\` module — composed (capitalized) tags must import the component they compose (ADR 0024 sub-design 10). A lowercase dashed tag addresses a raw custom element instead.`,
 			lineOf(source, offset),
 		),
 
@@ -622,12 +632,12 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC011',
-			`${what} is not supported yet (ADR 0023 sub-design 10). Move the construct into the composed component's own template, or out of this position.`,
+			`${what} is not supported yet (ADR 0024 sub-design 10). Move the construct into the composed component's own template, or out of this position.`,
 			lineOf(source, offset),
 		),
 
 	/**
-	 * A function-valued attribute on a custom-element target (ADR 0023
+	 * A function-valued attribute on a custom-element target (ADR 0024
 	 * sub-design 4, amended by sub-design 10) — reactive-shape inference on
 	 * custom elements is gone; `pass={{ }}` is the sole client-prop channel.
 	 */
@@ -639,7 +649,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC012',
-			`Reactive attribute \`${attr}={…}\` on custom element <${tag}> is no longer bound to anything (ADR 0023 sub-design 10) — use \`pass={{ ${attr}: ${attr} }}\` for client-side signal interop, or a plain value for a static attribute.`,
+			`Reactive attribute \`${attr}={…}\` on custom element <${tag}> is no longer bound to anything (ADR 0024 sub-design 10) — use \`pass={{ ${attr}: ${attr} }}\` for client-side signal interop, or a plain value for a static attribute.`,
 			lineOf(source, offset),
 		),
 
@@ -651,7 +661,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC012',
-			`pass={{ … }} on <${tag}> — its target must be a registry-known custom element (ADR 0023 sub-design 10); native elements use reactive attribute bindings instead. At connect this is \`InvalidCustomElementError\`.`,
+			`pass={{ … }} on <${tag}> — its target must be a registry-known custom element (ADR 0024 sub-design 10); native elements use reactive attribute bindings instead. At connect this is \`InvalidCustomElementError\`.`,
 			lineOf(source, offset),
 		),
 
@@ -1186,27 +1196,6 @@ export const diagnostic = {
 
 	// --- duplicate ids, import hygiene, duplicated channels ---
 	/**
-	 * A literal `id` is duplicated across `@try`/`@catch`/`@pending` arms
-	 * (CHECKLIST §8). The rule dates from the toggled async boundary, whose
-	 * three arms were all in the document at once; since ADR 0037 s4
-	 * (LT-276) only the winning arm is live and the rest are inert template
-	 * content, so whether the rule stays is open (NOTES.md, LT-275).
-	 */
-	duplicateIdAcrossArms: (
-		source: string,
-		offset: number | undefined,
-		id: string,
-		firstArm: string,
-		secondArm: string,
-		wording: SurfaceWording,
-	) =>
-		error(
-			'LTC035',
-			`id="${id}" appears in both ${firstArm} and ${secondArm} — all arms of a ${wording.boundary} render into the initial HTML at once (non-active arms are hidden, not removed), so this is two elements sharing an id in the same document simultaneously. Give each arm's element a distinct id.`,
-			lineOf(source, offset),
-		),
-
-	/**
 	 * A real `@zeix/le-truc` export (`createCell`, `deriveCell`, a parser,
 	 * `defineMethod`, …) is used in authored code without a matching
 	 * `import { … } from '@zeix/le-truc'` (ADR 0024 sub-design 16). Real
@@ -1381,7 +1370,7 @@ export const diagnostic = {
 	 * constructor calls (`cond ? deriveCell(...) : createCell(...)`) — the
 	 * initializer must be a SINGLE, unconditional call to a recognized
 	 * constructor; conditional logic belongs inside the callback, not as a
-	 * choice between constructors (ADR 0023 sub-design 12).
+	 * choice between constructors (ADR 0024 sub-design 12).
 	 *
 	 * Own code since LT-165 (was `LTC013`). It is a FORMAT rule, not a
 	 * server-evaluation guard: harvest planning needs one shape to plan for,
