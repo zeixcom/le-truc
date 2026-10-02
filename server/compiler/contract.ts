@@ -2,9 +2,10 @@
  * The compiler's designated public API (LT-265, ADR 0032 amended
  * 2026-09-19; the IR left it at LT-370, ADR 0034 s8, D-25).
  *
- * A consumer hands an authored source to a bundled front end and gets back
- * a `CompileFileResult`: the three artifacts, the registry entry, the span
- * tables, and the diagnostics. This module names the symbols of that
+ * A consumer hands an authored `.tsx` source to the bundled front end and
+ * gets back a `CompileFileResult`: the diagnostics and, unless an error
+ * refused the component, the three artifacts, the registry entry and the
+ * span tables. This module names the symbols of that
  * exchange; the narrative contract document lives with the compiler docs
  * (LE_TRUC_COMPILER.md § 2).
  *
@@ -13,7 +14,8 @@
  * entry both in-repo front ends call: it is the anti-drift seam of ADR 0032
  * sub-design 6, not an extension point. The external extension point is
  * source-to-source — an adapter that translates another component format
- * into host-profile `.tsx` (ADR 0032 s6, LT-376).
+ * into host-profile `.tsx` (ADR 0032 s6); that seam is not built yet
+ * (LT-376).
  *
  * The re-exports below are EXACTLY the set published as
  * `@zeix/le-truc-compiler` — the `exports` map entry and the version stamp
@@ -29,10 +31,9 @@
  * nothing else — everything else under `server/compiler/` is internal and
  * may change in any release, including a patch release.
  *
- * - `CompileFileResult`/`CompiledComponent`/`RegistryEntry` and the refusal
- *   vocabularies: new `DiagnosticCode` members and new `RoutingSignalOrigin`
- *   members are additive (minor); renames, removals, and tightened required
- *   shapes are major.
+ * - Every member of the set: new `DiagnosticCode` members and new
+ *   `RoutingSignalOrigin` members are additive (minor); renames, removals,
+ *   and tightened required shapes are major.
  * - Emitted artifact BYTES are not part of the contract. The
  *   `*.server.ts`/`*.client.ts`/`*.css` bytes are pinned by in-repo goldens
  *   only; stability covers the typed contract and behavior, never byte

@@ -17,7 +17,7 @@ and the materialized probe; the library swaps retired less than they added.
 **Why now (Architect, 2026-10-02).** The first publish sits behind the P6 cleanup round, and P6
 sits behind the corpus port (ruled 2026-09-19). The corpus port is three migrations
 (LT-109–LT-111) gated on one design, LT-280, which has waited since 2026-09-21. So LT-280 is the
-critical path, and it opens from day one. Around it go the reshapes that must land before the
+critical path, and it opens as soon as gate zero is green. Around it go the reshapes that must land before the
 publish and are cheaper before the migrations add call sites: the IR leaves the contract
 (LT-370, which also turns `check:contract` green again), diagnostics take their published
 record (LT-371), root-is-host is enforced (LT-375), and each template expression carries its
@@ -40,23 +40,38 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
    ADR 0039, which keeps each `.ts` twin as a variant. The sweep's check is now: every example
    folder is served from a compiled surface, the twins remain as variants, and LT-014's
    trigger is discharged on that reading.
-6. **`build:docs` is red at opening** (the module-lazyload canvas notices, NOTES.md LT-397
-   session). LT-335 is the fix, not a classification entry, and it runs from day one, since the
-   exit criterion needs `build:docs` green.
+6. **Gate zero: green before anything else** (owner, 2026-10-02). Two gates are red at
+   opening. `check:contract` fails because the toy IR literal in `scripts/contract-check.ts`
+   predates LT-287/LT-288. `build:docs` fails the simulation gate on module-lazyload's canvas
+   notices (NOTES.md, LT-397 session). LT-370 and LT-335 fix them, and they run first and in
+   parallel, ahead of the design gates and every other task. Neither waits on a design: LT-370
+   leaves everything in `contract.ts` except the IR as it is, and LT-335 already names its
+   fallback. If draining the composed closure's work does not land quickly, take the
+   origin-tag fallback the task allows rather than hold the iteration. A classification entry
+   is not a fix (the baseline test rejects it). Gate zero closes when `typecheck`, the server
+   suite, `check:contract`, `check:corpus`, `build:docs` and `check:links` are all green on one
+   commit. Record the census and warning baseline on that commit: it is the iteration's opening
+   measurement. **Closed 2026-10-02 on b795ff3e** (Architect re-ran every gate on the merge):
+   `typecheck` clean; server suite 2830 pass / 5 skip / 0 fail; `check:contract` green;
+   `check:corpus` exit 0; `build:docs` and `check:links` (693 links) green. **Opening
+   measurement:** tier census 36 entries, 28 Folded / 8 Simulated / 0 Static; compile-warning
+   baseline 0; translation census 0 gaps across 6 locales. `check:sim` green on all three
+   runtimes (owner, Deno leg outside the sandbox).
 
 **The chain.**
-- **Design gates (architect, day one).** LT-280 (per-item effect channels; owner grilling →
+- **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓). Everything below is open.
+- **Design gates (architect, after gate zero).** LT-280 (per-item effect channels; owner grilling →
   ADR 0024 s5 / ADR 0032 amendments → implementation tasks written into this file; LT-342
   ruled with it). LT-334 (lazyload's boundary; its implementation task pairs with LT-390).
   LT-409 (the shadow-root departures session; re-scopes LT-405/LT-407/LT-408).
-- **A — pre-publish reshapes.** LT-370 → LT-371 → LT-375 and LT-373 (in parallel) → LT-387.
-- **B — correctness.** Day one: LT-378, LT-391, LT-392, LT-335, LT-356. After LT-371: LT-353,
+- **A — pre-publish reshapes.** (LT-370 →) LT-371 → LT-375 and LT-373 (in parallel) → LT-387.
+- **B — correctness.** After gate zero: LT-378, LT-391, LT-392, LT-356. After LT-371: LT-353,
   LT-355.
 - **C — corpus port.** LT-280 → its implementation tasks → LT-109, LT-110, LT-111 (after LT-375,
   LT-374 and LT-186; LT-374 and LT-186 after LT-371). LT-110 is LT-165 step 7's corpus pin.
   LT-390 after LT-375 and LT-334's ruling.
 - **D — CSS departures.** LT-409 → LT-405, LT-407, LT-408 as re-scoped (or struck).
-- **Parallel slot (day one).** LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
+- **Parallel slot (after gate zero).** LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
   (docs-server-dev), LT-393 (comment-only sweep), LT-410 (the owner's `errors.md` rows).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
@@ -67,7 +82,7 @@ LT-372 (after LT-371, post-publish-safe) and the P3/P4/P6 items stay in the back
 LT-311 are design work and wait for P6.
 
 **Exit criterion.** Tier census and warning baseline unchanged from the iteration's opening
-measurement (record it before the first change), except where LT-109–LT-111, LT-390 or an
+measurement (recorded on the gate-zero commit, ruling 6), except where LT-109–LT-111, LT-390 or an
 LT-280/LT-409 ruling change them by design, as those tasks state; the warning baseline stays 0.
 The mechanical tasks (LT-370, LT-371, LT-373, LT-375's migration half, LT-393) leave goldens
 and parity byte-identical. Every example folder is served compiled, per ruling 5. ADRs record
@@ -77,9 +92,82 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-411.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-412.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
+
+### Gate zero (closed 2026-10-02, b795ff3e)
+
+- [x] LT-370: Take the IR out of the public contract (D-25). — reviewed ✓
+  **Skill:** le-truc-dev
+  **Context:** ADR 0034 s8 now says the IR is the lowering, internal, and may change in any
+  release; ADR 0040's reshapes no longer gate the publish. `contract.ts` still exports
+  `compileFromIR`, the IR types, `AstNode` and `SourceSpan`, and `contract.test.ts` plus the
+  `check:contract` toy front end exercise that IR-level seam (ADR 0032 s6 replaced it with the
+  source-to-source adapter seam, LT-376). Remove the IR types and `compileFromIR` from the
+  contract; move the toy front end's coverage to an internal test or retire it. **Leave
+  everything else in `contract.ts` as it is** — which entry points and result types are public
+  is the D-32 design session's call, not this task's.
+  **Docs:** `LE_TRUC_COMPILER.md` §2's published set and stability policy (the IR-union
+  clauses) follow; Tech Writer reviews.
+  **Channel/tier:** none — no check is added or retired.
+  **Note (LT-268 review, 2026-10-02):** the toy IR literal in `scripts/contract-check.ts`
+  predates LT-287/LT-288 (`exposeText`/`exposeKinds`/`refReasons`) and `check:contract` is red
+  at HEAD. Retiring or moving the toy here discharges it; don't refresh it separately.
+  **Verification:** `check:contract` and the full gates; goldens byte-identical.
+  **Changed (8b574f38):** `contract.ts` drops `compileFromIR`, `AstNode`, `SourceRange` and the
+  `ir.ts` IR types; its module doc says the IR is internal (ADR 0034 s8) and names the adapter seam
+  (ADR 0032 s6, LT-376) as the external extension point; the stability policy loses its IR
+  clauses. `SourceSpan` stays (`CompiledComponent.clientSpans`/`serverSpans`), and so does
+  `ExposeKind` (`RegistryEntry.exposedProps`). `contract.test.ts` pins the smaller set.
+  `scripts/contract-check.ts` retires the toy IR front end: `check:contract` now compiles one
+  `.tsx` source through `compileComponentTsx`, imported from `contract.ts` only, across Folded,
+  Simulated, Static and an LTC008 refusal (12 checks). The toy's IR-level coverage is retired, not
+  moved, since both front ends call `compileFromIR` across the suite. `LE_TRUC_COMPILER.md` §1, §2
+  ("The front-end seam and the public contract") and the §3 `contract.ts` row follow.
+  **Review (Architect, 2026-10-02):** API approved. The cut is the one D-25 asks for, and everything
+  else in `contract.ts` stays for D-32. Keeping `ExposeKind` is right: a public type names it.
+  `check:contract` over the public entry point is the proof LT-254 needs against the published
+  package. LT-387's `firstRefs` crash is gone with the toy. **Tech Writer (2026-10-02): approved with
+  edits.** `LE_TRUC_COMPILER.md` §2's result paragraph now gives the real shape
+  (`CompileFileResult` is `{ component, diagnostics }`; the artifacts, `entry` and spans are on
+  `CompiledComponent`, which is `null` after an error). The adapter sentence says the seam is not
+  built yet (LT-376). The stability rule covers every member of the set, restoring the coverage
+  the IR bullet gave (ADR 0034 s8). `contract.ts`'s module doc matches. `COMPILER_SPEC.md`
+  Appendix B's §4 and §8 cells are corrected. **For D-32:** `RegistryEntry` names `RenderedShape` (`ir.ts`) and
+  `SuppressedSite` (`simulation/contract.ts`), and neither is exported, before or after this task.
+
+- [x] LT-335: The simulation realm attributes a composed child's late work to the next component (LT-105 review). — done ✓
+  **Skill:** le-truc-dev
+  **Context:** In the sim-driver's shared realm, module-coloreditor's composed form-colorgraph
+  draws after its render window closes. The `getContext` notice then lands on
+  **module-colorinfo**, which has no canvas. `realm.ts` § Attribution documents late reports
+  going to the most recent window, but that case is a late *rejection* after the last render.
+  This one blames an innocent component whenever a composite renders before a leaf. The
+  `module-colorinfo` entry in `sim/classifications.ts` is a workaround that masks this.
+  **Fix direction:** drain the composed closure's scheduled work (rAF, `schedule()`) before a
+  window closes, so it attributes to its own render. Falling back to tagging each diagnostic
+  with its originating element's host tag is acceptable if draining is not possible.
+  **Channel/tier:** none.
+  **Check:** the `module-colorinfo` canvas classification is retired, and the baseline test
+  stays green with it gone.
+  **Changed (3e831bd1):** `sim/realm.ts` gains `settlePreviousRender()`, which `render()` calls before
+  `renderWindow()`: it empties `document.body` while `currentComponent` still names the previous
+  render, then drains microtasks until a turn records no new diagnostic, all before the next call's
+  diagnostics slice starts. § Attribution documents it. The `module-colorinfo` canvas
+  classification is retired; `module-coloreditor`'s stays (LT-188's correct attribution to the
+  rendering parent, which now also covers its own teardown).
+  **How:** the task's hypothesis (rAF/`schedule()` work after the window) was wrong. rAF is stubbed
+  never to fire and no timer ran. The leak was disconnect-time work: the next window's `innerHTML`
+  assignment detached the previous tree, module-coloreditor's `pass()` restored form-colorgraph's
+  own `value` Slot, and the child's still-live canvas `watch` re-fired. So the notice blamed
+  whatever the page order rendered next (module-colorinfo in the suite, module-lazyload in
+  `build:docs`). Drain chosen; the origin-tag fallback was not needed.
+  **Check:** two pins fail at the old realm and pass now: `sim-realm.test.ts` (an inline fixture
+  reporting synchronously and from a queued microtask on disconnect) and `sim-driver.test.ts`
+  (build:docs' coloreditor → lazyload order). The LT-163 baseline is green without the retired entry.
+  **Residue → LT-411 (BACKLOG P5):** at `dispose()`, `window.close()` tears down the last render's tree
+  and module-listnav logs `window is not defined` after the report is computed.
 
 ### Design gates
 
@@ -179,25 +267,7 @@ recorded against the 30.4k opening measurement.
   say so in the rewritten task and require LT-397's pixel-parity procedure.
   **Channel/tier:** decided per difference by the session.
 
-### A — Pre-publish reshapes (LT-370 → LT-371 → LT-375 ∥ LT-373 → LT-387)
-
-- [ ] LT-370: Take the IR out of the public contract (D-25).
-  **Skill:** le-truc-dev
-  **Context:** ADR 0034 s8 now says the IR is the lowering, internal, and may change in any
-  release; ADR 0040's reshapes no longer gate the publish. `contract.ts` still exports
-  `compileFromIR`, the IR types, `AstNode` and `SourceSpan`, and `contract.test.ts` plus the
-  `check:contract` toy front end exercise that IR-level seam (ADR 0032 s6 replaced it with the
-  source-to-source adapter seam, LT-376). Remove the IR types and `compileFromIR` from the
-  contract; move the toy front end's coverage to an internal test or retire it. **Leave
-  everything else in `contract.ts` as it is** — which entry points and result types are public
-  is the D-32 design session's call, not this task's.
-  **Docs:** `LE_TRUC_COMPILER.md` §2's published set and stability policy (the IR-union
-  clauses) follow; Tech Writer reviews.
-  **Channel/tier:** none — no check is added or retired.
-  **Note (LT-268 review, 2026-10-02):** the toy IR literal in `scripts/contract-check.ts`
-  predates LT-287/LT-288 (`exposeText`/`exposeKinds`/`refReasons`) and `check:contract` is red
-  at HEAD. Retiring or moving the toy here discharges it; don't refresh it separately.
-  **Verification:** `check:contract` and the full gates; goldens byte-identical.
+### A — Pre-publish reshapes ((LT-370 →) LT-371 → LT-375 ∥ LT-373 → LT-387)
 
 - [ ] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2).
   **Skill:** le-truc-dev
@@ -252,6 +322,8 @@ recorded against the 30.4k opening measurement.
   Resolve setup aliases to their signal (or refuse the read, tier 1 Prevented) and make
   `freeIdentifiers` scope-aware. Ride-along: `check:contract`'s scratch front end crashes in
   `analyzeClient` on an undefined `component.firstRefs` (fails on HEAD before LT-274 too).
+  *(Planning, 2026-10-02: discharged by LT-370 in gate zero — same stale toy IR; drop the
+  ride-along if `check:contract` is green when this is picked up.)*
 
 ### B — Correctness
 
@@ -300,21 +372,6 @@ recorded against the 30.4k opening measurement.
   **Check:** the arm-set client typechecks against the regenerated declared types under
   the golden invocation; `check:contract` stays green; run the full `build` to regenerate
   `types/` and diff for any other stale-surface drift landing in the same pass.
-
-- [ ] LT-335: The simulation realm attributes a composed child's late work to the next component (LT-105 review).
-  **Skill:** le-truc-dev
-  **Context:** In the sim-driver's shared realm, module-coloreditor's composed form-colorgraph
-  draws after its render window closes. The `getContext` notice then lands on
-  **module-colorinfo**, which has no canvas. `realm.ts` § Attribution documents late reports
-  going to the most recent window, but that case is a late *rejection* after the last render.
-  This one blames an innocent component whenever a composite renders before a leaf. The
-  `module-colorinfo` entry in `sim/classifications.ts` is a workaround that masks this.
-  **Fix direction:** drain the composed closure's scheduled work (rAF, `schedule()`) before a
-  window closes, so it attributes to its own render. Falling back to tagging each diagnostic
-  with its originating element's host tag is acceptable if draining is not possible.
-  **Channel/tier:** none.
-  **Check:** the `module-colorinfo` canvas classification is retired, and the baseline test
-  stays green with it gone.
 
 - [ ] LT-356: An unparseable or non-object catalog FILE is silent in the census and destroyed by `i18n:sync` (LT-249 review).
   **Skill:** docs-server-dev

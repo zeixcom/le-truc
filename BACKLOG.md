@@ -100,6 +100,13 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
 
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-370, LT-371 and LT-375** (the pre-publish reshapes of what stays public: the IR leaves the contract, the diagnostic record takes its published shape, the root-is-host dialect is enforced) **and on the D-32 design session** (which compiler entry points and result types are public, `COMPILER_SPEC.md` §12). *Re-gated 2026-10-01:* the IR is internal (ADR 0034 s8, D-25), so the ADR 0040 reshapes (LT-288, LT-274, LT-276) no longer gate the publish.
   **Skill:** le-truc-dev
+  **Rider for the D-32 session (LT-370 copy review, 2026-10-02):** ADR 0034 s8 counts the
+  generated-module API as public (a change is a major), but `contract.ts` and
+  `LE_TRUC_COMPILER.md` §2 say semver applies to the designated set "and to nothing else", and the
+  generated-module API is not in it. D-32 rules which way it goes: add it to the policy, or amend
+  the ADR. Also there: `RegistryEntry` names `RenderedShape` and `SuppressedSite`, and neither is
+  exported. `COMPILER_SPEC.md` Appendix B ("as of 2026-09-29") is stale beyond the two cells
+  LT-370 fixed; refresh it in the same session.
   **Rider (LT-243 review, 2026-10-01):** `@typescript-eslint/typescript-estree` becomes a runtime dependency of the package. Weigh it under M28 with its closure: semver, debug, minimatch, ts-api-utils and the `@typescript-eslint/{types,visitor-keys,tsconfig-utils,project-service}` siblings. Record the `typescript` peer range the package inherits (`<6.1.0` at 8.71.0). Weigh it against D-33's stated goal (TypeScript 7.1 or a native parser behind the converter, ADR 0032 s4): the peer range must be able to follow TypeScript, and LT-377 pins that no TypeScript type reaches the published declarations.
   **Context:** ADR 0034 s1–s2. The compiler ships separate from the browser-only
   `@zeix/le-truc`, named for its function rather than its input format. **v3.0 publishes the
@@ -648,6 +655,20 @@ is a separate track, blocked on CE 2.0 shipping.
 ## P5 — Wave 4: example migrations
 
 **Moved to TODO.md 2026-10-02:** LT-280 → LT-109–LT-111 (the corpus port), LT-334, LT-335.
+
+- [ ] LT-411: Teardown at `dispose()` runs after the realm's report is computed (LT-335 residue).
+  **Skill:** le-truc-dev
+  **Context:** LT-335 settles each render's tree before the next window opens, but the last render's
+  tree is torn down by `window.close()` in `dispose()`. That is after the report exists, so whatever
+  its disconnect does goes nowhere. In the corpus run module-listnav logs `window is not defined`
+  at that point. It is harmless today, because nothing reads it, but it is the shape LT-335 fixed:
+  disconnect runs component code. Call `settlePreviousRender()` (or its equivalent) at the start of
+  `dispose()`, before the report is final and before `window.close()`, so the last render's
+  teardown is attributed and classified like every other one. Then decide whether listnav's notice
+  is a real defect (a disconnect path reading `window` after close) or a classification.
+  **Channel/tier:** none.
+  **Check:** a realm pin whose last-rendered fixture reports on disconnect shows that report in the
+  final diagnostics under its own tag; the LT-163 baseline stays green.
 
 **Framework framing (S0, 2026-09-18):** the corpus is no longer only a playground — it is the
 **public showcase of the authoring surfaces** for the library's users, which is also the

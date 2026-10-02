@@ -1,8 +1,8 @@
 # The Le Truc Component Compiler
 
 > High-level overview of the inlined component compiler for Le Truc
-> (`server/compiler/`): how the pipeline works, what the public contract
-> designates as its published surface (§ 2), how the two front ends relate
+> (`server/compiler/`): how the pipeline works, which symbols the public
+> contract publishes (§ 2), how the two front ends relate
 > to their parsers, how the server half is evaluated (tiered — value harness,
 > Server Simulation, or neither), how type checking and diagnostics flow back
 > to the author, and how it is embedded in the server build infrastructure.
@@ -80,9 +80,8 @@ and `frontend/tsx/index.ts` exports `compileComponentTsx` with the same
 signature. Both are thin shells over the shared `compileFromIR`
 (`pipeline.ts`), differing only in which front end parses the source, so a
 pipeline change cannot drift between surfaces. That shared seam is
-internal; the published surface is the `.tsx` entry point and its result
-types (§ 2). Severity policy: **errors
-fail the file**; **warnings skip it** (the build effect logs and moves on).
+internal; the published surface is `compileComponentTsx` and the types it
+takes and returns (§ 2). Severity policy: **errors fail the file**; **warnings skip it** (the build effect logs and moves on).
 
 ### The parser boundaries
 
@@ -203,7 +202,7 @@ vocabulary, `ir.ts`) is the lowering, and it may change in any release
 (ADR 0034 s8, D-25). Neither the IR nor `compileFromIR` is published. The
 external extension point is source-to-source instead: an adapter translates
 another component format into host-profile `.tsx`, with a source map back to
-its input (ADR 0032 s6, LT-376).
+its input (ADR 0032 s6). That seam is not built yet (LT-376).
 
 `contract.ts` names the public contract. It is the compiler's designated
 export surface: the exact set published as `@zeix/le-truc-compiler`
@@ -226,10 +225,11 @@ test until the lists move with it. `compileComponentTsx` is the only front
 end published at 3.0 (ADR 0034 s2); the `.tsrx` shell's `compileComponent`
 stays repo-internal until `@tsrx/core` reaches 1.0.
 
-**The result.** `compileComponentTsx` returns a `CompileFileResult`: the
-three artifacts (`serverCode`, `clientCode`, `css`), the registry entry, and
-the two span tables (`clientSpans`, `serverSpans`; § 6) — or `component:
-null` with the diagnostics that refused it.
+**The result.** `compileComponentTsx` returns a `CompileFileResult`:
+`diagnostics`, and `component` — a `CompiledComponent` that carries the three
+artifacts (`serverCode`, `clientCode`, `css`), the registry entry (`entry`),
+and the two span tables (`clientSpans`, `serverSpans`; § 6). An error
+diagnostic sets `component` to `null`.
 
 **The refusal channel is part of the contract.** ADR 0028 names three
 surfacing tiers, and the compiler's refusals land in the first:
@@ -240,8 +240,8 @@ surfacing tiers, and the compiler's refusals land in the first:
 - **Escalated** — the failure escapes containment: definition-time failures
   and security-boundary violations only.
 
-The runtime tiers stay the backstop for what no compile can decide
-statically. A compile refuses through two shapes:
+The runtime tiers stay the backstop for what the compiler cannot decide
+statically. The compiler refuses through two shapes:
 
 - An **error diagnostic** (`severity: 'error'`) refuses the component: the
   result's `component` is `null`, and the diagnostics carry through. The
@@ -281,12 +281,12 @@ text. Its points:
   contract and behavior, never byte identity.
 - New `DiagnosticCode` members and new `RoutingSignalOrigin` members are
   additive — a minor release. Renames, removals, and tightened required
-  shapes of the result types are major.
+  shapes in the designated set are major.
 - Diagnostic codes are public API at first publish, and a number is never
   reused. `VOCABULARY_LEDGER.md` is the spent-number ledger.
 
-**Connectors are third-party.** A component-model connector — a compiler
-for React, Vue, or Solid semantics — is third-party by name (ADR 0032,
+**Connectors are third-party.** A connector for React, Vue, or Solid
+component semantics is third-party by name (ADR 0032,
 amended 2026-09-19). The engineering risk of tracking a target framework's
 minor versions transfers with ownership; the reputational risk does not.
 This contract is documentation and naming, not a plugin API: no registry, no

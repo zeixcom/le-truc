@@ -4,23 +4,16 @@ Deviation notes and unexpected challenges from agent sessions, newest first. Ent
 
 ---
 
-**LT-397 session (2026-10-02).** `bun run build:docs` still fails the simulation gate: 2
-unclassified canvas notices (`Not implemented: HTMLCanvasElement.getContext`) attributed to
-module-lazyload — pre-existing at HEAD (the LT-306 session proved the same signature in a
-worktree). A standing `CLASSIFIED_DIAGNOSTICS` entry mirroring module-colorinfo's was tried
-and correctly REJECTED by the baseline test (LT-163 in `sim-driver.test.ts`): in the suite's
-corpus run the notice never reaches module-lazyload — the leak is page-render-order-dependent,
-a build:docs-only phenomenon — so the classification is dead there. The honest fix is
-LT-335's (drain composed closures before a window closes, or origin-tag the diagnostics),
-which also retires the module-colorinfo/module-coloreditor workarounds. LT-397's content
-check (`docs/assets/main.css` holds the `:where(<tag>)` rules) is satisfiable anyway: the CSS
-bundle is written before the gate fires. Second pre-existing: `build:examples:css` warns
-`Invalid selector … 'state'` — the twins' hand-written CSS carries `:state()`, which
-lightningcss's bundle target does not know; cosmetic, both trees. All of LT-397's verification
-was re-run after the owner's LT-405 rollback (same day): 33/35 pages pixel-identical per mode,
-corpus Playwright 990/0 per mode. One flake class learned the hard way: full-page PNG
-byte-comparison can produce encoder-level false positives (module-pagination differed in bytes
-while every pixel band was identical) — pixel-band-check before chasing a diff.
+**Agent worktrees and the sandbox (LT-370/LT-335 sessions, 2026-10-02).** Four blockers, all
+the sandbox's and not the code's. (1) `git commit` fails because the 1Password signing socket is
+unreachable, so the owner commits. Never turn signing off. (2) An agent worktree comes up on
+`main`'s head, not the current branch. `git reset --hard` then aborts halfway, because
+`.agents/skills/**` (and `.vscode/`) are write-denied, and those paths keep `main`'s content in
+the worktree. Never stage them. (3) `bun install` in a fresh worktree can hit a tempdir EPERM;
+symlinking the main checkout's `node_modules` works, and the symlink must not be staged.
+(4) `check:sim`'s Deno leg cannot create its npm cache. A fresh worktree also has no built
+`docs/`, so `serve.test.ts` fails there with 404s until `build:docs` runs. For gate-touching work,
+prefer the main checkout, or expect the owner to commit and re-run the gates.
 
 ---
 

@@ -724,11 +724,11 @@ As of 2026-09-29, for orientation only; it ages quickly. The current architectur
 | 3.5 Control flow | Partial | Server-known conditions, loops, empty arm | Missing: reactive conditions (LT-274) |
 | 3.7 Trust | Partial |  | Partial: server sanitizer configurable; one shared policy blocked on TypeScript's DOM lib |
 | 3.8 Fold inputs / portable subset | Partial | LTC054 | Missing: portable subset |
-| 4 Adapters | Missing |  | Missing: today's seam is IR-level (`contract.ts`); `.tsrx` is a second first-party front end with variant sets and parity suites |
+| 4 Adapters | Missing |  | Missing: no adapter seam (LT-376); the IR-level seam left `contract.ts` at LT-370; `.tsrx` is a second first-party front end with variant sets and parity suites |
 | 5 Evaluation | Partial | Three tiers, simulation seam, census | Partial: jsdom still a hard dependency |
 | 6 i18n | Partial | MF1, per-key types, client message channel, censuses, MF2 exit pin | Missing: template-target translation |
 | 7 Styling | Missing |  | Missing: verbatim, tag-led CSS until LT-268 / LT-304 / LT-306; ADR 0042 checks unbuilt |
-| 8 IR | Partial |  | Partial: Estree `AstNode`, published; typed unions pending (LT-287, LT-289); no reactivity-class annotation as such |
+| 8 IR | Partial |  | Partial: Estree `AstNode`, internal since LT-370; typed unions pending (LT-287, LT-289); no reactivity-class annotation as such |
 | 9 HTML | Partial | SSG | Missing: template emission (LT-257, release-gating) |
 | 10 Client | Done | All |  |
 | 11 Diagnostics | Partial |  | Partial: \~118 codes; record is `{ code, severity, message, line? }`; terminal only |
