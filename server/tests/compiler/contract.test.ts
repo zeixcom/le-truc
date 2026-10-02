@@ -15,44 +15,27 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import * as designated from '../../compiler/contract'
 
-const DESIGNATED_VALUES = [
-	'DEFAULT_EMIT_PATHS',
-	'compileComponentTsx',
-	'compileFromIR',
-].sort()
+const DESIGNATED_VALUES = ['DEFAULT_EMIT_PATHS', 'compileComponentTsx'].sort()
 
+/**
+ * No IR type and no `compileFromIR` (LT-370, ADR 0034 s8): the IR is the
+ * lowering and internal. `SourceSpan` and `ExposeKind` stay because public
+ * result types name them (`CompiledComponent`'s span tables,
+ * `RegistryEntry.exposedProps`).
+ */
 const DESIGNATED_TYPES = [
-	'AstNode',
-	'AttributeIR',
 	'CompileDiagnostic',
 	'CompiledComponent',
 	'CompileFileResult',
-	'ComponentIR',
-	'ComponentParam',
-	'ComponentSheet',
-	'ComposeAttrIR',
-	'ConfigIR',
 	'DiagnosticCode',
-	'EachForIR',
 	'EmitPaths',
 	'EvaluationTier',
 	'ExposeKind',
-	'ForIR',
-	'PassEntryIR',
-	'ReconcileForIR',
 	'RegistryEntry',
 	'Resolution',
 	'RoutingSignal',
 	'RoutingSignalOrigin',
-	'SetupStmt',
-	'SignalConstructor',
-	'ContextSignalIR',
-	'DeclaredSignalIR',
-	'DerivedSignalIR',
-	'SignalIR',
-	'SourceRange',
 	'SourceSpan',
-	'TemplateNode',
 	'UnresolvableLimb',
 ].sort()
 
