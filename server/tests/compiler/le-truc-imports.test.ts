@@ -26,7 +26,9 @@ ${setup}
 	expose({})
 	<>
 		<c-el><span data-count={() => String(count.get())}>ok</span></c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 
@@ -166,7 +168,9 @@ export function C({}: {})
 	expose({})
 	<>
 		<c-el><span class={() => (isPending(data) ? 'pending' : null)}>ok</span></c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 		const messages = compile(source)

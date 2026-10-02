@@ -22,7 +22,7 @@ Every field is optional. The field table and worked example are documented for a
 
 ### 2. This repo's paths are the defaults, so the docs build is a consumer
 
-Every default is this repo's own path. `sources` defaults to **both** authored extensions (`examples/**/*.tsrx` and `examples/**/*.tsx`, per [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6), and `outDir` to `server/generated/components`. The docs build therefore carries **no config file at all** and reaches the generalized path through the same defaults a consumer overrides.
+Every default is this repo's own path. `sources` defaults to **both** authored extensions (`examples/**/*.tsrx` and `examples/**/*.tsx`, per [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6), and `outDir` to `server/generated/components`. The one non-path field, `cssTargets` ([ADR 0033](0033-scope-component-styles-by-custom-element-name.md) s5), defaults to a fixed version set pinned at 3.0 — a build the same checkout compiles twice emits byte-identical CSS, whatever the platform shipped since. The docs build therefore carries **no config file at all** and reaches the generalized path through the same defaults a consumer overrides.
 
 This is the load-bearing half. Defaults that reproduce the repo make the generalization *falsifiable*: the repo's own output must stay byte-identical through the configured path. Two consumers exercise the mechanism from the first commit, rather than one consumer that does not exist yet.
 

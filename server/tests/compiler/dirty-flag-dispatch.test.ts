@@ -48,7 +48,9 @@ export function C({ options }: { options: { value: string }[] })
 				</label>
 			}
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])
@@ -81,7 +83,9 @@ export function C({ options }: { options: { value: string }[] })
 				</label>
 			}
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])
@@ -105,7 +109,9 @@ export function C({ options }: { options: { value: string }[] })
 				<option value={optValue} selected={() => host.value === optValue}>{optValue}</option>
 			}
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])
@@ -129,7 +135,9 @@ export function C({}: {})
 		<c-el>
 			<input type="checkbox" checked={() => on.get()} />
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])
@@ -148,7 +156,9 @@ export function C({}: {})
 		<c-el>
 			<input type="number" value={() => String(host.value)} />
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])
@@ -167,7 +177,9 @@ export function C({}: {})
 		<c-el>
 			<meter min="0" max="100" value={() => String(host.value)} />
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])
@@ -189,7 +201,9 @@ export function C({}: {})
 		<c-el>
 			<input type="number" value={() => (host.value === '' ? 1 : 2)} />
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])
@@ -214,7 +228,9 @@ export function C({}: {})
 		<c-el>
 			<input type="number" value={() => count.get()} />
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])
@@ -236,7 +252,9 @@ export function C({}: {})
 		<c-el>
 			<input type="text" value={() => label.get()} />
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		expect(diagnostics).toEqual([])

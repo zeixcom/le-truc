@@ -452,7 +452,9 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 					))}
 				</ul>
 			</c-el2>
-			<style>{css\`c-el2 { color: red }\`}</style>
+			<style>{css\`:host {
+  color: red;
+}\`}</style>
 		</>
 	)
 }`
@@ -494,7 +496,9 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 					}
 				</ul>
 			</c-el2>
-			<style>c-el2 { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const tsrx = compileComponent(tsrxSource, 'seeded.tsrx', new Set(['c-el2']))
@@ -675,7 +679,9 @@ describe('the args type annotation reaches the shared stages (LT-298)', () => {
 	return (
 		<>
 			<c-el>{label}</c-el>
-			<style>{css\`c-el { color: red }\`}</style>
+			<style>{css\`:host {
+  color: red;
+}\`}</style>
 		</>
 	)
 }`
@@ -769,7 +775,9 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 					}
 				</ul>
 			</empty-each>
-			<style>empty-each { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`,
 			tsxx: `export function EmptyEach({ rows }: { rows: string[] }) {
@@ -784,7 +792,9 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 					)}
 				</ul>
 			</empty-each>
-			<style>{css\`empty-each { color: red }\`}</style>
+			<style>{css\`:host {
+  color: red;
+}\`}</style>
 		</>
 	)
 }`,
@@ -808,7 +818,9 @@ export function EmptyList({ initial }: { initial?: string[] })
 					}
 				</ul>
 			</empty-list>
-			<style>empty-list { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`,
 			tsxx: `import { createList } from '@zeix/le-truc'
@@ -825,7 +837,9 @@ export function EmptyList({ initial }: { initial?: string[] }) {
 					)}
 				</ul>
 			</empty-list>
-			<style>{css\`empty-list { color: red }\`}</style>
+			<style>{css\`:host {
+  color: red;
+}\`}</style>
 		</>
 	)
 }`,

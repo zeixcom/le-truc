@@ -151,7 +151,9 @@ describe('integration — emitClientModule spans locate the authored thunk', () 
 					{count}
 				</button>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`

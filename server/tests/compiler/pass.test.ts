@@ -15,7 +15,9 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 			<c-el>
 				<basic-child truc:pass={{ label: () => 'x' }}></basic-child>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -37,7 +39,9 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 			<c-el>
 				<span truc:pass={{ label: () => 'x' }}>ok</span>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -56,7 +60,9 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 			<c-el>
 				<basic-child truc:pass={{ label: () => 'x' }}></basic-child>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -75,7 +81,9 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 			<c-el>
 				<basic-child label={() => 'x'}></basic-child>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -94,7 +102,9 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 			<c-el>
 				<span aria-label={() => 'x'}>ok</span>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -119,7 +129,9 @@ export function C({}: {})
 				<span>{value}</span>
 				<basic-child truc:pass={{ value: { get: () => value.get(), set: v => value.set(v) } }}></basic-child>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 			</>
 		}`
 		const { component, diagnostics } = compileComponent(
@@ -141,7 +153,9 @@ export function C({}: {})
 			<c-el>
 				<basic-child truc:pass={{ label: () => 'x' }}></basic-child>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -163,7 +177,9 @@ export function C({}: {})
 			<c-el>
 				<basic-child pass="nope"></basic-child>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -189,7 +205,9 @@ import { Child } from './child.tsrx'
 				<child-el ${attr}={{ value: () => n.get() }}></child-el>
 				<p>{n}</p>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -245,7 +263,9 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 		expose({ ${exposeBody} })
 		<>
 			<basic-child>{label}${markup}</basic-child>
-			<style>basic-child { display: block }</style>
+			<style>:host {
+  display: block;
+}</style>
 		</>
 	}`
 
@@ -262,7 +282,9 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 			<basic-parent>
 				<basic-child truc:pass={{ value: () => 'x' }}></basic-child>
 			</basic-parent>
-			<style>basic-parent { display: block }</style>
+			<style>:host {
+  display: block;
+}</style>
 		</>
 	}`
 

@@ -110,7 +110,7 @@ export function CardColorscale({ label }: { label: string })
 			</card-colorscale>
 
 			<style>
-			card-colorscale {
+			:host {
 				--card-colorscale-max-size: 18rem;
 				--card-colorscale-padding: 0.5em;
 				--card-colorscale-color-text: white;
@@ -234,16 +234,15 @@ export function CardColorscale({ label }: { label: string })
 			}
 
 			@container (width < 5rem) or (height < 7.5rem) {
-				card-colorscale .label {
+				.label {
 					display: none;
 				}
 			}
 
 			@container (width < 8rem) or (height < 12rem) {
-				card-colorscale .label small {
+				.label small {
 					display: none;
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

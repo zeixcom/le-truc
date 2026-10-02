@@ -20,6 +20,7 @@
 import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { dedentCss } from '../../compiler/css'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { collectI18n, writeI18nModule } from '../../effects/i18n'
 import { createGeneratedDir } from '../helpers/generated-corpus'
@@ -84,7 +85,9 @@ export function Seeded({ initial }: { initial?: string[] })
 					}
 				</ul>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 const seeded = compileComponent(seededSource, 'seeded.tsrx', new Set<string>())
@@ -531,162 +534,66 @@ describe('server golden — form-checkbox (formAssociatedCheckbox)', () => {
 	})
 })
 
-describe('CSS golden — verbatim tag-scoped extraction', () => {
-	test('basic-counter.css equals the hand-written artifact byte for byte', () => {
-		expect(counter.component?.css).toBe(
-			read('examples/basic/counter/basic-counter.css'),
-		)
-	})
-	test('module-tabgroup.css equals the hand-written artifact byte for byte', () => {
-		expect(tabgroup.component?.css).toBe(
-			read('examples/module/tabgroup/module-tabgroup.css'),
-		)
-	})
-	// The form fixture's style is authored in the .tsrx — now the fuller
-	// migration (LT-020 follow-up): dimmed/focus-within opacity on
-	// label/p/button, textarea alongside input, a `:state(clearable)`
-	// custom-state hook instead of an author-set class, and `.description`
-	// alongside `.error`. Extraction must still be verbatim, byte for byte.
-	test('form-textbox.css equals the fixture style byte for byte', () => {
-		expect(formTextbox.component?.css).toBe(`form-textbox {
-	display: block;
-	width: 100%;
-
-	& label,
-	& p,
-	& button {
-		opacity: var(--opacity-dimmed);
-		transition: opacity var(--transition-short) var(--easing-inout);
-	}
-
-	& label {
-		display: block;
-		font-size: var(--font-size-s);
-		color: var(--color-text);
-		margin-bottom: var(--space-xxs);
-	}
-
-	& input,
-	& textarea {
-		display: inline-block;
-		box-sizing: border-box;
-		background: var(--color-input);
-		color: var(--color-text);
-		border: none;
-		border-bottom: 1px solid var(--color-border);
-		padding: var(--space-xs) var(--space-xxs);
-		font-size: var(--font-size-m);
-		width: 100%;
-
-		&::placeholder {
-			color: var(--color-text);
-			opacity: var(--opacity-translucent);
-		}
-	}
-
-	/* Native validity styling — replaces the old aria-invalid attribute hook.
-	   :user-invalid matches after user interaction (the right UX for required
-	   fields); :invalid would match immediately on page load. */
-	&:user-invalid input,
-	&:user-invalid textarea {
-		box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
-	}
-
-	& input {
-		height: var(--input-height);
-	}
-
-	/* Derived from markup, so it cannot drift from whether the button exists. */
-	&:has(.clear) .input {
-		position: relative;
-
-		& input {
-			padding-right: var(--input-height);
-		}
-
-		.clear {
-			position: absolute;
-			bottom: 0;
-			right: 0;
-			border: 0;
-			border-radius: 50%;
-			font-size: var(--font-size-xs);
-			line-height: var(--line-height-xs);
-			color: var(--color-input);
-			background-color: var(--color-text-soft);
-			width: calc(0.6 * var(--input-height));
-			height: calc(0.6 * var(--input-height));
-			margin: calc(0.2 * var(--input-height));
-			padding: 0;
-
-			&:hover {
-				background-color: var(--color-text);
-			}
-		}
-	}
-
-	.error,
-	.description {
-		margin: var(--space-xs) 0 0;
-		font-size: var(--font-size-xs);
-		line-height: var(--line-height-s);
-
-		&:empty {
-			display: none;
-		}
-	}
-
-	.error {
-		color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
-	}
-
-	.description {
-		color: var(--color-text-soft);
-	}
-
-	&:focus-within {
-		& label,
-		& p,
-		& button {
-			opacity: var(--opacity-solid);
-		}
-	}
+// The stylesheet a compiled source carries: the `<style>` block's content,
+// under either surface's wrapper spelling.
+const sheetOfSource = (source: string): string => {
+	const tsx = /<style>\s*\{css`([\s\S]*?)`\}<\/style>/.exec(source)
+	const tsrx = /<style>([\s\S]*?)<\/style>/.exec(source)
+	return (tsx ?? tsrx)?.[1] ?? ''
 }
-`)
+
+describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-304/LT-306)', () => {
+	// A compiled component's authored sheet is shadow-root CSS (LT-306's
+	// migration): the IR's `authoredCss` is its dedent, and the emitted
+	// artifact (`css`) is the scoped emission — at the default targets the
+	// LOWERED form, `:where(tag)` for the host and a zero-specificity guard
+	// per boundary tag. The hand-written `.css` files are the `.ts` twins'
+	// 2.x artifacts (ADR 0033 s10), no longer the compiled contract.
+	test('basic-counter: authored sheet carried verbatim, emission scoped', () => {
+		expect(counter.component?.authoredCss).toBe(
+			dedentCss(
+				sheetOfSource(read('examples/basic/counter/basic-counter.tsx')),
+			),
+		)
+		const css = counter.component?.css ?? ''
+		expect(css).toContain(':where(basic-counter) {')
+		expect(css).toContain(':where(basic-counter) button {')
+		expect(css).not.toContain('@scope')
 	})
-
-	// The module-list fixture's style is the Phase-0 spike's own stylesheet —
-	// deliberately not the current hand-written module-list.css (different
-	// spacing tokens, no @container block). Sync it when module-list migrates
-	// for the docs; until then the golden pins verbatim extraction.
-	test('module-list.css equals the fixture style byte for byte', () => {
-		expect(moduleList.component?.css).toBe(`module-list {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-s);
-
-	> form {
-		display: flex;
-		gap: var(--space-s);
-		align-items: flex-start;
-	}
-
-	> [data-container] {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-xs);
-		margin: 0;
-		padding: 0;
-		list-style: none;
-
-		> li {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			gap: var(--space-s);
-		}
-	}
-}
-`)
+	test('module-tabgroup: authored sheet carried verbatim, emission scoped', () => {
+		expect(tabgroup.component?.authoredCss).toBe(
+			dedentCss(
+				sheetOfSource(read('examples/module/tabgroup/module-tabgroup.tsrx')),
+			),
+		)
+		const css = tabgroup.component?.css ?? ''
+		expect(css).toContain(':where(module-tabgroup) {')
+		expect(css).not.toContain('module-tabgroup {')
+	})
+	// The form fixture's sheet is the fuller migration (LT-020 follow-up):
+	// dimmed/focus-within opacity, textarea alongside input, `:state(clearable)`,
+	// `.description` alongside `.error`. The authored form reaches the IR
+	// verbatim; the emission lowers it flat — a leaf, so no guard applies.
+	test('form-textbox: authored sheet carried verbatim, emission scoped', () => {
+		expect(formTextbox.component?.authoredCss).toBe(
+			dedentCss(sheetOfSource(read('examples/form/textbox/form-textbox.tsrx'))),
+		)
+		const css = formTextbox.component?.css ?? ''
+		expect(css).toContain(':where(form-textbox) {')
+		expect(css).toContain(
+			':where(form-textbox) input, :where(form-textbox) textarea',
+		)
+		expect(css).not.toContain(':where(:not(')
+	})
+	// module-list composes form-textbox (ADR 0023 sub-design 10): the
+	// boundary stops at the composed child — the guard names form-textbox,
+	// and the composed child's internals stay unreachable.
+	test('module-list: authored sheet carried verbatim, boundary at the composed child', () => {
+		expect(moduleList.component?.authoredCss).toBe(
+			dedentCss(sheetOfSource(read('examples/module/list/module-list.tsrx'))),
+		)
+		const css = moduleList.component?.css ?? ''
+		expect(css).toContain(':where(module-list) {')
+		expect(css).toContain('form-textbox > *')
 	})
 })

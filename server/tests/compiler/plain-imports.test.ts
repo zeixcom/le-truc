@@ -22,7 +22,9 @@ describe('plain import used only server-side', () => {
 					<p>shown</p>
 				}
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -54,7 +56,9 @@ describe('plain import used only client-side', () => {
 			<c-el style={() => ({ '--x': clientOnlyHelper(host.value) })}>
 				<p>{host.value}</p>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -92,7 +96,9 @@ describe('plain import used both server- and client-side', () => {
 			<c-el>
 				<p>{formatted}</p>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -120,7 +126,9 @@ describe('plain import used only inside a bare (non-arrow) attribute expression'
 		expose({})
 		<>
 			<c-el data-x={helper(count)}>ok</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -150,7 +158,9 @@ describe('relative specifier rewriting', () => {
 					<p>shown</p>
 				}
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -174,7 +184,9 @@ describe('an unused plain import', () => {
 		expose({})
 		<>
 			<c-el>ok</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -196,7 +208,9 @@ describe('a side-effect-only plain import', () => {
 		expose({})
 		<>
 			<c-el>ok</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 

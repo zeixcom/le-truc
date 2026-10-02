@@ -92,7 +92,13 @@ export type DiagnosticCode =
 	| 'LTC061' // an authored `<template>` element in a component template — the compiler owns template extraction, and the selector proof cannot see inside one (LT-383) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC062' // a reactive switch (one whose discriminant reads a signal) has a `@case`/`case` value that is not a literal, or two cases share an arm key (ADR 0037 s2, LT-274) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC063' // a reactive condition inside a reactive list's reconcile() container (ADR 0037 s5, LT-274) — tier 1 Prevented, statically decidable, no runtime half
-	| 'LTC064' // the component's stylesheet violates the CSS grammar: it does not parse, or a declaration names an unknown property or a value outside the property's grammar (ADR 0033 s9, LT-268) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC064' // the component's stylesheet does not parse (ADR 0033 s9, LT-268) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC065' // a stylesheet declaration names a property the CSS dictionary does not know, or a value outside the property's grammar (ADR 0033 s9, LT-394) — tier 2 Contained: the dictionary (mdn-data, via css-tree) lags the platform, so a finding is evidence, not proof; the sheet ships as authored
+	| 'LTC066' // a rule in the component's stylesheet is led by the component's own tag — shadow-root form styles the host through `:host` (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC067' // `::slotted()` in a component stylesheet — slotted content is a shadow-DOM construct, and compiled components are light DOM (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC068' // `:host-context()` in a component stylesheet — removed from the CSS spec, matched by no browser (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC069' // `:global` in a form other than the two whole-rule forms — nested, prefixed, trailing, leading-ancestor, mid-selector, or declarations directly in a bare block (ADR 0033 s6a, LT-304) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC070' // `:host` directly followed by a qualifier (`:host.x`, `:host:hover`, `:host[attr]`) — matches nothing in a shadow root; the qualifier belongs in the arguments (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 
 export type CompileDiagnostic = {
 	code: DiagnosticCode
@@ -1639,7 +1645,7 @@ export const diagnostic = {
 	 * half exists.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (first draft 2026-10-02, LT-268).
+	 * (final copy 2026-10-02, LT-395).
 	 */
 	malformedStyleSheet: (
 		source: string,
@@ -1648,7 +1654,7 @@ export const diagnostic = {
 	) =>
 		error(
 			'LTC064',
-			`The component's stylesheet does not parse: ${detail}. A malformed sheet has no compiled form — fix the CSS so it parses.`,
+			`The component's stylesheet does not parse (${detail}) — the compiler cannot scope or emit a sheet it cannot read. Correct the CSS syntax.`,
 			lineOf(source, offset),
 		),
 
@@ -1657,20 +1663,21 @@ export const diagnostic = {
 	 * grammar does not define (ADR 0033 s9, LT-268). Browsers drop unknown
 	 * declarations, so the authored rule would silently do nothing —
 	 * usually a typo'd name. css-tree's dictionary arbitrates; vendor and
-	 * hack prefixes resolve inside it. ADR 0028 tier 1 (Prevented):
-	 * statically decidable, no runtime half.
+	 * hack prefixes resolve inside it. ADR 0028 tier 2 (Contained, LT-394):
+	 * the dictionary lags the platform, so a property newer than it reports
+	 * too — a warning, and the declaration ships as authored.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (first draft 2026-10-02, LT-268).
+	 * (final copy 2026-10-02, LT-395).
 	 */
 	unknownCssProperty: (
 		source: string,
 		offset: number | undefined,
 		property: string,
 	) =>
-		error(
-			'LTC064',
-			`\`${property}\` is not a CSS property — the browser would drop the declaration and the rule would do nothing. Correct the property's name.`,
+		warning(
+			'LTC065',
+			`\`${property}\` is not a CSS property the compiler knows — a browser drops a declaration it does not recognize. Correct the name if it is a typo. If the property is newer than the compiler's CSS dictionary, ignore this warning: the declaration ships as written.`,
 			lineOf(source, offset),
 		),
 
@@ -1680,11 +1687,13 @@ export const diagnostic = {
 	 * malformed value. The sheet ships as authored, so the dead declaration
 	 * would ship too. Custom properties and `var()`/`env()` references are
 	 * exempt (any value is valid for them); at-rule descriptors are not
-	 * properties and are never matched. ADR 0028 tier 1 (Prevented):
-	 * statically decidable, no runtime half.
+	 * properties and are never matched. ADR 0028 tier 2 (Contained,
+	 * LT-394): the dictionary lags the platform (`container-type:
+	 * scroll-state`, `calc-size()`), so a newer value reports too — a
+	 * warning, and the declaration ships as authored.
 	 *
 	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
-	 * (first draft 2026-10-02, LT-268).
+	 * (final copy 2026-10-02, LT-395).
 	 */
 	invalidCssValue: (
 		source: string,
@@ -1692,9 +1701,129 @@ export const diagnostic = {
 		property: string,
 		value: string,
 	) =>
+		warning(
+			'LTC065',
+			`The value \`${value}\` does not match the grammar of \`${property}\` that the compiler knows — a browser drops a declaration whose value it does not accept. Correct the value if it is a mistake. If the value is newer than the compiler's CSS dictionary, ignore this warning: the declaration ships as written.`,
+			lineOf(source, offset),
+		),
+
+	// --- Shadow-root stylesheet contract (ADR 0033 s6/s6a, LT-304) ---
+
+	/**
+	 * A rule in the component's stylesheet is led by the component's own tag
+	 * (ADR 0033 s6, LT-304). A compiled sheet is shadow-root CSS: bare
+	 * selectors style the component's internals, and the host is styled
+	 * through `:host`. Tag-led authoring was the 2.x form; under the scoped
+	 * emission a tag-led rule would silently stop styling the host — the tag
+	 * compound addresses the element INSIDE the scope, and the scope root
+	 * itself is never its own descendant. ADR 0028 tier 1 (Prevented):
+	 * statically decidable, no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (first draft 2026-10-02, LT-304).
+	 */
+	ownTagLedRule: (source: string, offset: number | undefined, tag: string) =>
 		error(
-			'LTC064',
-			`The value \`${value}\` is not valid for \`${property}\` — the declaration is outside the property's grammar, and the browser would drop it. Correct the value.`,
+			'LTC066',
+			`This rule is led by the component's own tag \`${tag}\`. A compiled stylesheet is shadow-root CSS: bare selectors style the component's internals, and the host element is styled through \`:host { … }\`. A \`${tag} { … }\` rule would silently stop applying — the selector addresses a nested \`<${tag}>\` inside the scope, not the host. Style the host through \`:host\`, and drop the tag from selectors that mean the component's own internals.`,
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `::slotted()` in a component stylesheet (ADR 0033 s6, LT-304). Slotted
+	 * content exists only in a shadow root; a compiled component renders
+	 * light DOM, where the composed child's markup is real children, not
+	 * slotted nodes — the rule could never match. Shadow-mode emission
+	 * (ADR 0033 s8) is not the compiled contract. ADR 0028 tier 1
+	 * (Prevented): statically decidable, no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (first draft 2026-10-02, LT-304).
+	 */
+	slottedInLightDom: (source: string, offset: number | undefined) =>
+		error(
+			'LTC067',
+			"`::slotted()` cannot match in a compiled component: it addresses slotted content, which exists only inside a shadow root, and a compiled component renders light DOM — composed children are real children, not slotted nodes. Style a composed child's host element by its tag, and let the child style its own internals.",
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `:host-context()` in a component stylesheet (ADR 0033 s6, LT-304).
+	 * Removed from the CSS spec and matched by no browser — in a shadow root
+	 * it would style the host by its ancestors, and the light-DOM scoping
+	 * has no equivalent that keeps the page's own rules winning over the
+	 * host's. ADR 0028 tier 1 (Prevented): statically decidable, no runtime
+	 * half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (first draft 2026-10-02, LT-304).
+	 */
+	hostContextSelector: (source: string, offset: number | undefined) =>
+		error(
+			'LTC068',
+			'`:host-context()` is removed from the CSS spec and matched by no browser, so the rule could never apply. Theme variation by ancestor reaches a light-DOM component through inheritance and custom properties instead — custom properties cross every boundary.',
+			lineOf(source, offset),
+		),
+
+	/**
+	 * `:global` in a form other than the two whole-rule forms (ADR 0033
+	 * s6a, LT-304). The admitted forms are a top-level
+	 * `:global(<whole selector>) { … }` rule and a top-level bare `:global
+	 * { … }` block, both hoisted out of the scope; every other spelling
+	 * would either reach past the boundary into composed children's markup
+	 * (nested, prefixed, leading-ancestor — the data account forbids it),
+	 * do nothing (trailing — classes are never rewritten, so the wrapper is
+	 * a no-op), be an error in TSRX too (mid-selector), or style nothing
+	 * (declarations directly in a bare block). `face` names which; each
+	 * carries its own reason in the copy. ADR 0028 tier 1 (Prevented):
+	 * statically decidable, no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (first draft 2026-10-02, LT-304).
+	 */
+	/**
+	 * `:host` directly followed by a qualifier (ADR 0033 s6, LT-304; R3,
+	 * owner 2026-10-02). `:host.x`, `:host:hover` and `:host[attr]` match
+	 * nothing in a shadow root — the compound on the bare `:host`
+	 * pseudo-class has no matchable form; the qualifier belongs in the
+	 * pseudo-class's arguments: `:host(.x)`, `:host(:hover)`,
+	 * `:host([attr])`. ADR 0028 tier 1 (Prevented): statically decidable,
+	 * no runtime half.
+	 *
+	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * (first draft 2026-10-02, LT-304).
+	 */
+	hostQualifier: (source: string, offset: number | undefined) =>
+		error(
+			'LTC070',
+			'`:host` followed directly by a qualifier matches nothing in a shadow root — a compound on the bare `:host` pseudo-class has no matchable form. Move the qualifier into the arguments: `:host(.x)`, `:host(:hover)`, `:host([attr])`.',
+			lineOf(source, offset),
+		),
+
+	globalMisuse: (
+		source: string,
+		offset: number | undefined,
+		face:
+			| 'nested'
+			| 'prefixed'
+			| 'trailing'
+			| 'leading-ancestor'
+			| 'mid-selector'
+			| 'declarations',
+	) =>
+		error(
+			'LTC069',
+			face === 'nested'
+				? 'This `:global` sits inside another rule or block. A global rule escapes the component scope, so from inside a rule it would reach past the boundary into composed children — hoist it to the top level of the stylesheet instead: a whole `:global(<selector>) { … }` rule or a bare `:global { … }` block.'
+				: face === 'prefixed'
+					? "This `:global(<selector>)` is followed by more selector. A global escape owns the whole rule; extending it would address markup past the boundary into composed children. Hoist the rule to the top level as `:global(<whole selector>) { … }`, or drop the wrapper if the selector means this component's own internals."
+					: face === 'trailing'
+						? 'This `:global(…)` trails a selector, so it wraps nothing that needs escaping — classes are never rewritten, and the compiled selector keeps the compound as written. Drop the wrapper and write the compound plainly.'
+						: face === 'leading-ancestor'
+							? 'This selector starts at `:global(…)` and then descends into the component. A leading global ancestor has no shadow-root equivalent — the page cannot reach into the component from outside, and inside the scope the descendant needs no escape. Style internals with bare selectors; a genuinely page-level rule hoists as `:global(<whole selector>) { … }`.'
+							: face === 'mid-selector'
+								? "This `:global(…)` sits in the middle of a selector, which is an error in TSRX too. Split the rule: the component's own compounds style internals with bare selectors, and a genuinely page-level rule hoists as `:global(<whole selector>) { … }` at the top level."
+								: 'These declarations sit directly in a bare `:global { … }` block, where no selector styles anything. Wrap them in a selector: `:global(<selector>) { … }` for a page-level rule.',
 			lineOf(source, offset),
 		),
 }

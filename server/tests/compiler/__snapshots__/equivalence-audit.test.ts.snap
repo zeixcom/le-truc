@@ -147,3 +147,5 @@ exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) module-scrollarea: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
 
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) module-splitview: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
+
+exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) css-probe: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;

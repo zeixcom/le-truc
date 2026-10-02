@@ -250,7 +250,7 @@ export function ModuleColoreditor(
 				</div>
 			</module-coloreditor>
 			<style>{css`
-module-coloreditor {
+:host {
 	display: grid;
 	grid-template-areas:
 		"scale name"
@@ -296,7 +296,7 @@ module-coloreditor {
 }
 
 @container (width > 45rem) {
-	module-coloreditor {
+	:host {
 		grid-template-areas:
 			"scale name info"
 			"graph graph info"
@@ -305,8 +305,7 @@ module-coloreditor {
 			"hue hue info";
 		grid-template-columns: auto 3fr 2fr;
 	}
-}
-`}</style>
+}`}</style>
 		</>
 	)
 }

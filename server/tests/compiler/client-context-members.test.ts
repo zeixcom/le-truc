@@ -24,7 +24,9 @@ ${setup}
 		<c-el>
 			<div class="panel">ok</div>
 		</c-el>
-		<style>c-el { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }
 ${imports}`

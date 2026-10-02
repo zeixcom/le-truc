@@ -30,7 +30,9 @@ const compile = (
 	${setup}
 	<>
 		<c-el>${template}</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 		'c.tsrx',
@@ -125,7 +127,9 @@ export function C({ label }: { label: string })
 	expose({ label: asString('') })
 	<>
 		<c-el><span>{label}</span></c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
@@ -176,7 +180,9 @@ describe('host-derived folds over a harvested prop (LT-118)', () => {
 			<span class="zero">{zero}</span>
 			<b hidden={() => Boolean(host.zero)}>x</b>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
@@ -221,7 +227,9 @@ export function C({ zero = '' }: { zero?: string })
 			<span class="zero">{zero}</span>
 			<b hidden={() => Boolean(host.other)}>x</b>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
@@ -265,7 +273,9 @@ describe('ref-presence folds (LT-118)', () => {
 			<b hidden={${gate}}>x</b>
 			${template}
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }
 import { asNumber } from '@zeix/le-truc'`,
@@ -300,7 +310,9 @@ import { asNumber } from '@zeix/le-truc'`,
 			<b hidden={() => Boolean(zeroSpan) && host.value === 0}>x</b>
 			@if (zero) { <span class="zero">{zero}</span> }
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }
 import { asNumber } from '@zeix/le-truc'`,

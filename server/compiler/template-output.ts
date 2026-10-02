@@ -9,6 +9,12 @@
 
 import type { AstNode } from './ast-node'
 import { dedentCss, parseComponentSheet } from './css'
+import {
+	type ContractFinding,
+	checkSheetContract,
+	type GlobalFace,
+} from './css-scope'
+import type { CompileDiagnostic } from './diagnostics'
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import {
@@ -33,6 +39,12 @@ export type ResolvedTemplate = {
 	root: TemplateNode & { kind: 'element' }
 	styleChild: (TemplateNode & { kind: 'element' }) | null
 	css: string
+	/**
+	 * The stylesheet's raw text (undedented), when a non-empty style block
+	 * exists — the text `sheet`'s locs resolve against, and the slice the
+	 * scoped emission partitions (LT-304).
+	 */
+	sheetText: string | null
 	/** The parsed stylesheet (ADR 0033 s9), null when absent or unparseable. */
 	sheet: ComponentSheet | null
 	firstRefs: Map<string, FirstRefDecl>
@@ -50,7 +62,8 @@ export type ResolvedTemplate = {
  * gets populated moved. Also runs LTC042 (LT-131, static ids duplicate per
  * instance) and resolves the stylesheet: the dedented verbatim text for
  * emission, and its `lightningcss` parse (`ComponentIR.sheet`, ADR 0033
- * s9) with the LTC064 grammar faces reported against the authored source.
+ * s9) with LTC064 (no parse) and LTC065 (declaration grammar) reported
+ * against the authored source.
  *
  * `outputShapeLabel` names the surface's output shape in the no-root
  * message: `the @{ } output` (.tsrx) / `the template return` (.tsx).
@@ -230,7 +243,7 @@ export const resolveTemplateOutput = (
 
 	// CSS: verbatim, dedented for emission (LT-268 changes no output), and
 	// parsed into the sheet the IR carries (ADR 0033 s9) — with the
-	// spec-grammar faces of LTC064 reported against the authored source.
+	// spec-grammar faces of LTC064/LTC065 reported against the authored source.
 	let sheet: ComponentSheet | null = null
 	if (styleChild) {
 		const sheetText = stylesheetOf(styleChild.node)
@@ -278,15 +291,61 @@ export const resolveTemplateOutput = (
 				}
 			}
 			sheet = parsed.sheet
+			// The shadow-root authored form (ADR 0033 s6, LT-304): the checks
+			// run over the parsed sheet only — a sheet lightningcss refused
+			// is already LTC064's — and report against the authored source.
+			if (sheet) {
+				const findings = checkSheetContract(sheet, sheetText, root.tag)
+				for (const finding of findings)
+					ctx.diagnostics.push(
+						contractDiagnostic(source, sheetStart, finding, root.tag),
+					)
+			}
 		}
 	}
 	const css = styleChild ? dedentCss(stylesheetOf(styleChild.node)) : ''
+	const sheetText = styleChild ? stylesheetOf(styleChild.node) : ''
+	const hasSheet = sheetText.trim() !== '' && sheet !== null
 
 	return {
 		root,
 		styleChild,
 		css,
+		sheetText: hasSheet ? sheetText : null,
 		sheet,
 		firstRefs,
+	}
+}
+
+/**
+ * Map one shadow-root contract finding (ADR 0033 s6, LT-304) onto its
+ * diagnostic: the sheet offset lifts into the authored source when the
+ * slice relocated, and each face names its own builder.
+ */
+const contractDiagnostic = (
+	source: string,
+	sheetStart: number,
+	finding: ContractFinding,
+	tag: string,
+): CompileDiagnostic => {
+	const authoredOffset =
+		sheetStart >= 0 && finding.offset !== undefined
+			? sheetStart + finding.offset
+			: undefined
+	switch (finding.face) {
+		case 'own-tag-led':
+			return diagnostic.ownTagLedRule(source, authoredOffset, tag)
+		case 'slotted':
+			return diagnostic.slottedInLightDom(source, authoredOffset)
+		case 'host-context':
+			return diagnostic.hostContextSelector(source, authoredOffset)
+		case 'host-qualifier':
+			return diagnostic.hostQualifier(source, authoredOffset)
+		case 'global':
+			return diagnostic.globalMisuse(
+				source,
+				authoredOffset,
+				finding.globalFace ?? 'prefixed',
+			)
 	}
 }

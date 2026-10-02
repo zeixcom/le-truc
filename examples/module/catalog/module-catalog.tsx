@@ -170,7 +170,7 @@ export function ModuleCatalog(
 			</module-catalog>
 
 			<style>{css`
-			module-catalog {
+			:host {
 				display: flex;
 				flex-direction: column;
 				gap: var(--space-l);
@@ -191,8 +191,7 @@ export function ModuleCatalog(
 					gap: var(--space-m);
 					justify-content: space-between;
 				}
-			}
-			`}</style>
+			}`}</style>
 		</>
 	)
 }

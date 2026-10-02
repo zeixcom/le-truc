@@ -262,7 +262,7 @@ export function ModuleCarousel(
 				</nav>
 			</module-carousel>
 			<style>{css`
-module-carousel {
+:host {
 	display: flex;
 	position: relative;
 	overflow: hidden;
@@ -425,8 +425,7 @@ module-carousel {
 			}
 		}
 	}
-}
-`}</style>
+}`}</style>
 		</>
 	)
 }

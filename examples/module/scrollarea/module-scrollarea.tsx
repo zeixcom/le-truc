@@ -143,7 +143,7 @@ export function ModuleScrollarea(
 			<style>{css`
 			/* @media (prefers-reduced-motion: no-preference) { */
 
-			module-scrollarea {
+			:host {
 				display: block;
 				position: relative;
 				overflow-y: auto;
@@ -201,8 +201,7 @@ export function ModuleScrollarea(
 						background: linear-gradient(270deg, var(--color-shadow), transparent);
 					}
 				}
-			}
-			`}</style>
+			}`}</style>
 		</>
 	)
 }

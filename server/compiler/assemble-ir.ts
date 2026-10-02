@@ -335,6 +335,7 @@ export const assembleComponentIR = (
 		firstRefs: resolved.firstRefs,
 		fors: resolved.fors,
 		css: resolved.css,
+		sheetText: resolved.sheetText,
 		sheet: resolved.sheet,
 		typeDecls: decls.typeDecls,
 		globalDecl: decls.globalDecl,

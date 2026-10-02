@@ -28,7 +28,7 @@ const compile = (setup: string, template: string) =>
 	expose({ x: '' })
 	<>
 		<c-el>${template}</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host { color: red }</style>
 	</>
 }`,
 		'c.tsrx',
@@ -149,7 +149,7 @@ describe('output shape (LT-123)', () => {
 		const { component, diagnostics } = shape(
 			`<>
 		<c-el><span>{label}</span></c-el>
-		<style>c-el { color: red }</style>
+		<style>:host { color: red }</style>
 	</>`,
 		)
 		expect(diagnostics).toEqual([])
@@ -157,7 +157,9 @@ describe('output shape (LT-123)', () => {
 	})
 
 	test('output that is neither an element nor a fragment is LTC008', () => {
-		const { diagnostics } = shape(`<style>c-el { color: red }</style>`)
+		const { diagnostics } = shape(`<style>:host {
+  color: red;
+}</style>`)
 		expect(diagnostics.some(d => d.code === 'LTC008')).toBe(true)
 	})
 })

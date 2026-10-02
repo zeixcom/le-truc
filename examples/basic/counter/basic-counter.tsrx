@@ -50,7 +50,7 @@ export function BasicCounter({ start = 42 }: { start?: number })
 			</basic-counter>
 
 			<style>
-			basic-counter {
+			:host {
 				display: inline-block;
 
 				& button {
@@ -72,7 +72,6 @@ export function BasicCounter({ start = 42 }: { start?: number })
 						background-color: var(--color-secondary-active);
 					}
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

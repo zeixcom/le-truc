@@ -65,7 +65,9 @@ export function C(${p})
 		${s}
 		<>
 			<c-el>${b}</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -81,7 +83,9 @@ export function C(${p}) {
 	return (
 		<>
 			<c-el>${b}</c-el>
-			<style>{css\`c-el { color: red }\`}</style>
+			<style>{css\`:host {
+  color: red;
+}\`}</style>
 		</>
 	)
 }`
@@ -530,7 +534,9 @@ export function C(${params})
 		${setup}
 		<>
 			<c-fb><button title={() => t.hi}>x</button><span>{() => t.tasks({ count: host.count })}</span></c-fb>
-			<style>c-fb { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 	const { component, diagnostics } = compileComponent(

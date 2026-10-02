@@ -1,0 +1,29 @@
+<!-- The page context of the scoped-CSS contract probe (LT-304): the two
+     page rules below are the page side of the s1/s3 comparisons — a page
+     TYPE selector that must beat the component's host rule, and a page
+     class rule that must reach the light-DOM component's internals (the
+     permanent inward-reach difference from a real shadow root, ADR 0033
+     s7). The `<p class="probe-global">` inside the component is
+     page-authored children — styled by the component's `:global` rule. -->
+<style>
+	css-probe {
+		border-top-color: rgb(0, 128, 0);
+	}
+
+	.label {
+		letter-spacing: 3px;
+	}
+</style>
+
+<css-probe id="probe">
+	<p class="label">Label</p>
+	<p class="probe-global">Global</p>
+	<basic-button id="child">
+		<button type="button" class="secondary medium">
+			<span class="label">Child button</span>
+			<span class="badge"></span>
+		</button>
+		<span>Page content</span>
+	</basic-button>
+	<button type="button" class="own">Own</button>
+</css-probe>

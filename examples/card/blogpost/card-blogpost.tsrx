@@ -6,7 +6,7 @@ export function CardBlogpost({ children }: { children?: string })
 			</card-blogpost>
 
 			<style>
-			card-blogpost {
+			:host {
 				display: block;
 				padding: var(--space-l);
 				border: 1px solid var(--color-border-soft);
@@ -37,7 +37,6 @@ export function CardBlogpost({ children }: { children?: string })
 					color: var(--color-text);
 					margin-bottom: 0;
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

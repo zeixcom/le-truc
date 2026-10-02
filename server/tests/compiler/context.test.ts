@@ -17,7 +17,9 @@ describe('requestContext() — consumer side', () => {
 			<c-el>
 				<span class="motion">{motion}</span>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -68,7 +70,9 @@ describe('requestContext() — reactive attribute referencing the context signal
 			<c-el>
 				<span class={() => theme.get()}>{theme}</span>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -93,7 +97,9 @@ describe('requestContext() — misuse diagnostics', () => {
 			expose({})
 			<>
 				<c-el>ok</c-el>
-				<style>c-el { color: red }</style>
+				<style>:host {
+  color: red;
+}</style>
 			</>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -107,7 +113,9 @@ describe('requestContext() — misuse diagnostics', () => {
 			expose({})
 			<>
 				<c-el>ok</c-el>
-				<style>c-el { color: red }</style>
+				<style>:host {
+  color: red;
+}</style>
 			</>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -124,7 +132,9 @@ describe('requestContext() — misuse diagnostics', () => {
 			expose({})
 			<>
 				<c-el>ok</c-el>
-				<style>c-el { color: red }</style>
+				<style>:host {
+  color: red;
+}</style>
 			</>
 		}`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
@@ -143,7 +153,9 @@ describe('provideContexts() — provider side', () => {
 		provideContexts(['count'])
 		<>
 			<c-el>{count}</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -175,7 +187,9 @@ import { createCell } from '@zeix/le-truc'`
 			const p = provideContexts(['count'])
 			<>
 				<c-el>{count}</c-el>
-				<style>c-el { color: red }</style>
+				<style>:host {
+  color: red;
+}</style>
 			</>
 		}
 import { createCell } from '@zeix/le-truc'`

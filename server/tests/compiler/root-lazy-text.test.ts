@@ -31,7 +31,9 @@ export function C({}: {})
 	<>
 		<c-el>${body}</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 	return compileComponent(source, 'c.tsrx', new Set())
@@ -68,7 +70,9 @@ export function C({}: {})
 	<>
 		<c-el style={() => ({ color: host.value > 0 ? 'green' : 'red' })}>{host.value}</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 		const { component, diagnostics } = compileComponent(
@@ -112,7 +116,9 @@ export function C({}: {})
 			<span class="out">${inner}</span>
 		</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
@@ -194,7 +200,9 @@ export function C({}: {})
 	<>
 		<c-el>{length.get() + Date.now()}</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 	const pure = impure.replace('Date.now()', '1')

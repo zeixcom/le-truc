@@ -362,7 +362,7 @@ front-end modules, then the two front ends:
 | `codegen.ts` | The shared code-generation kit (LT-234): `jsString`/`jsTemplate` (the only sanctioned way to put an author string into generated source), `HtmlWriter` (one push argument's markup), `CodeBuilder` (lines, depth and span offset of a generated block) |
 | `spans.ts` | Generated↔source span recording + lookup |
 | `tier.ts` | The tier classifier (§ 5): routing signals in, the component's tier + recorded reasons out |
-| `indent.ts` / `css.ts` | Template-literal-safe line classification and `commonIndent` / the `<style>` parse (lightningcss + the css-tree grammar check, LTC064) and dedent |
+| `indent.ts` / `css.ts` | Template-literal-safe line classification and `commonIndent` / the `<style>` parse (lightningcss + the css-tree grammar check: LTC064 no parse, LTC065 declaration warnings) and dedent |
 | `diagnostics.ts` | Diagnostic codes (`LTC###` plus the six `.tsrx`-grammar `TSRX###` codes), message factories |
 | `runtime.ts` | Server-evaluation harness — imported **by generated code only**, never by the compiler (also re-exports `compose-attrs.ts`, the compose-site `class`/`id` post-processing used by generated markup, and `icu/evaluate.ts`'s `formatMessage`, which the generated `i18n` module wraps around each argument message) |
 | `census.ts` | The census channel (§ 5.2): `Census` records, `tierCensus`, `translationCensus`, `formatCensus` |
@@ -1078,6 +1078,7 @@ resolves against it.
 | `runtimeImport` | `"../../compiler/runtime"` | The specifier the generated SERVER modules import the render harness from. The default is this repo's relative path; a consumer sets their own until LT-254 publishes the compiler and it becomes a package specifier |
 | `variantSurface` | `"tsx"` | The surface a variant set serves when no per-tag override applies (ADR 0039): `"tsx"` or `"tsrx"` |
 | `variantOverrides` | `{}` | Per-tag served surface for variant sets, e.g. `{ "basic-counter": "tsrx" }`. Keys must be custom-element tags; values `"tsx"` or `"tsrx"` |
+| `cssTargets` | Baseline widely available | Minimum browser versions deciding the compiled stylesheet's emission (ADR 0033 s5): native `@scope` when every named browser supports it, the `:where(…)`-led flat lowering otherwise, and the ceiling for `lightningcss`'s own lowering of what the sheet authors. An object over `chrome`, `edge`, `firefox`, `safari` (Blink derivatives ride `chrome`); values are integer majors (`118`) or `"major.minor[.patch]"` strings (`"17.4"`), each component ≤ 255; a browser left out imposes no constraint. The default is a fixed set pinned at 3.0 (chrome/edge 124, firefox 125, safari 17.4), moved only deliberately with a major — at that pin `@scope` is not yet widely available, so the default compiles the lowered form |
 
 ```json
 {

@@ -61,7 +61,9 @@ export function C({ name }: { name: string })
 			<input class="field" value={() => host.label + Date.now()} />
 		</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 
@@ -79,7 +81,9 @@ export function C({ name }: { name: string })
 	<>
 		<r-el>{host.label.length + Math.random()}</r-el>
 
-		<style>r-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 
@@ -102,7 +106,9 @@ export function C({}: {})
 			<div title={() => length.get() + Date.now()}></div>
 		</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 

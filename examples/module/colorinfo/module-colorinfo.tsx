@@ -191,7 +191,7 @@ export function ModuleColorinfo(
 			</module-colorinfo>
 
 			<style>{css`
-			module-colorinfo {
+			:host {
 				--module-colorinfo-swatch-size: var(--input-height);
 				--module-colorinfo-color-fallback: transparent;
 
@@ -294,8 +294,7 @@ export function ModuleColorinfo(
 					font-size: var(--font-size-s);
 					line-height: var(--line-height-s);
 				}
-			}
-			`}</style>
+			}`}</style>
 		</>
 	)
 }

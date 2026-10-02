@@ -130,7 +130,7 @@ export function ModuleSplitview(
 			</module-splitview>
 
 			<style>{css`
-			module-splitview {
+			:host {
 				display: grid;
 				grid-template-columns: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
 				overflow: hidden;
@@ -184,8 +184,7 @@ export function ModuleSplitview(
 						}
 					}
 				}
-			}
-			`}</style>
+			}`}</style>
 		</>
 	)
 }

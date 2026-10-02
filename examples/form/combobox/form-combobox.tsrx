@@ -218,12 +218,13 @@ export function FormCombobox(
 		</form-combobox>
 
 		<style>
-		form-combobox {
+		:host {
 			display: block;
 			width: 100%;
 
 			> label,
-			> p {
+			> p,
+			> button {
 				opacity: var(--opacity-dimmed);
 				transition: opacity var(--transition-short) var(--easing-inout);
 			}
@@ -245,7 +246,8 @@ export function FormCombobox(
 					color: var(--color-text);
 					border: none;
 					border-bottom: 1px solid var(--color-border);
-					padding: var(--space-xs) var(--space-xxs);
+					padding: var(--space-xs) var(--input-height) var(--space-xs)
+						var(--space-xxs);
 					font-size: var(--font-size-m);
 					height: var(--input-height);
 					width: 100%;
@@ -258,21 +260,47 @@ export function FormCombobox(
 				}
 			}
 
+			&[clearable] .input {
+				> input {
+					padding-right: var(--input-height);
+				}
+
+				.clear {
+					position: absolute;
+					bottom: 0;
+					right: 0;
+					border: 0;
+					border-radius: 50%;
+					font-size: var(--font-size-xs);
+					line-height: var(--line-height-xs);
+					color: var(--color-input);
+					background-color: var(--color-text-soft);
+					width: calc(0.6 * var(--input-height));
+					height: calc(0.6 * var(--input-height));
+					margin: calc(0.2 * var(--input-height));
+					padding: 0;
+
+					&:hover {
+						background-color: var(--color-text);
+					}
+				}
+			}
+
 			/* Native validity styling — replaces the old aria-invalid attribute hook. */
 			&:user-invalid > .input > input {
 				box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 			}
 
-			> .popup {
+			form-listbox {
+				display: none;
 				position: absolute;
+				list-style: none;
+				top: 100%;
+				left: 0;
 				width: calc(100% - 2px);
 				border: 1px solid var(--color-border);
 				border-top: none;
 				z-index: 1;
-
-				form-listbox {
-					display: block;
-				}
 			}
 
 			> .error,
@@ -296,15 +324,19 @@ export function FormCombobox(
 
 			&:focus-within {
 				> label,
-				> p {
+				> p,
+				> button {
 					opacity: var(--opacity-solid);
 				}
 
 				> .input > input {
 					color: var(--color-text);
 				}
+
+				form-listbox:not([hidden]) {
+					display: block;
+				}
 			}
-		}
-		</style>
+		}</style>
 	</>
 }

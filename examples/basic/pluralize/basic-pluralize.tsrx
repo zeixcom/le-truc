@@ -111,13 +111,8 @@ export function BasicPluralize(
 				</basic-pluralize>
 
 			<style>
-			basic-pluralize {
-				display: inline;
-
-				& .count::after {
-					content: " ";
-				}
-			}
-			</style>
+			:host {
+				display: block;
+			}</style>
 		</>
 	}

@@ -134,7 +134,7 @@ export function FormRadiogroup(
 		</form-radiogroup>
 
 		<style>
-		form-radiogroup {
+		:host {
 			display: inline-block;
 
 			> fieldset {
@@ -282,7 +282,6 @@ export function FormRadiogroup(
 					border-radius: 0 var(--space-xs) var(--space-xs) 0;
 				}
 			}
-		}
-		</style>
+		}</style>
 	</>
 }

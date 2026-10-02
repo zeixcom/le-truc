@@ -7,7 +7,7 @@ export function CardCallout({ kind, children }: {
 			<card-callout class={kind}>{children}</card-callout>
 
 			<style>
-			card-callout {
+			:host {
 				display: block;
 				position: relative;
 				padding: var(--space-s) var(--space-s) var(--space-s) var(--space-xl);
@@ -24,8 +24,12 @@ export function CardCallout({ kind, children }: {
 					left: var(--space-s);
 				}
 
+				> p {
+					margin-block-end: var(--space-s);
+				}
+
 				> *:last-child {
-					margin-bottom: 0;
+					margin-block-end: 0;
 				}
 
 				&.tip {
@@ -63,7 +67,6 @@ export function CardCallout({ kind, children }: {
 						content: "🚨";
 					}
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

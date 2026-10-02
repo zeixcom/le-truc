@@ -72,7 +72,7 @@ export function CardMediaqueries({ label }: { label?: string })
 			</card-mediaqueries>
 
 			<style>
-			card-mediaqueries {
+			:host {
 				display: block;
 				margin: 0 0 var(--space-l);
 
@@ -95,7 +95,6 @@ export function CardMediaqueries({ label }: { label?: string })
 					margin: 0;
 					color: var(--color-text-soft);
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

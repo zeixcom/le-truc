@@ -137,17 +137,13 @@ export function FormInplaceEdit(
 		</form-inplace-edit>
 
 		<style>
-		form-inplace-edit {
+		:host {
 			display: flex;
 			align-items: center;
 
 			.text {
 				flex: 1;
 				line-height: var(--line-height-s);
-			}
-
-			.edit {
-				flex: 1;
 			}
 
 			> button {
@@ -173,6 +169,10 @@ export function FormInplaceEdit(
 			}
 
 			&[editing] {
+				.text {
+					display: none;
+				}
+
 				> button {
 					color: var(--color-primary-text);
 					background-color: var(--color-primary);
@@ -188,7 +188,6 @@ export function FormInplaceEdit(
 					}
 				}
 			}
-		}
-		</style>
+		}</style>
 	</>
 }

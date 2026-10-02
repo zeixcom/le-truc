@@ -109,7 +109,7 @@ export function ModuleTabgroup(
 			</module-tabgroup>
 
 			<style>
-			module-tabgroup {
+			:host {
 				display: block;
 				margin-block-end: var(--space-l);
 
@@ -163,7 +163,6 @@ export function ModuleTabgroup(
 					font-size: var(--font-size-m);
 					margin-block-start: var(--space-l);
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

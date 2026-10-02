@@ -27,7 +27,9 @@ describe('attribute shorthand `{name}`', () => {
 		expose({})
 		<>
 			<c-el ${attr}>ok</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -75,7 +77,9 @@ describe('freeIdentifiers', () => {
 				expose({ selected: selected.get })
 				<>
 					<c-el hidden={() => !open.get() && selected.get() === 'a'}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -98,7 +102,9 @@ import { createCell } from '@zeix/le-truc'`,
 						const local = e.target
 						selected.set(String(local))
 					}}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -123,7 +129,9 @@ import { createCell } from '@zeix/le-truc'`,
 							console.log(i)
 						}
 					}}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -146,7 +154,9 @@ import { createCell } from '@zeix/le-truc'`,
 						}
 						el.addEventListener('up', handleUp)
 					}}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -167,7 +177,9 @@ describe('reactive attribute thunks may reference a plain setup const (LT-088)',
 				expose({})
 				<>
 					<c-el><span aria-label={() => fmt(1)}>ok</span></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -188,7 +200,9 @@ describe('reactive attribute thunks may reference a plain setup const (LT-088)',
 				expose({})
 				<>
 					<c-el><span aria-label={() => mysteryHelper(1)}>ok</span></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -214,7 +228,9 @@ describe('template classification', () => {
 						hidden={() => state.get() > 0}
 						onClick={() => state.set(0)}
 					>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -237,7 +253,9 @@ import { createCell } from '@zeix/le-truc'`,
 				expose({})
 				<>
 					<c-el><input ref={box} /></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -259,7 +277,9 @@ import { createCell } from '@zeix/le-truc'`,
 				expose({})
 				<>
 					<c-el><input /></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -279,7 +299,9 @@ import { createCell } from '@zeix/le-truc'`,
 				expose({ n: n.get })
 				<>
 					<c-el><span>{n}</span></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -297,7 +319,9 @@ import { createCell } from '@zeix/le-truc'`,
 				expose({})
 				<>
 					<c-el><span>{label}</span></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -320,7 +344,9 @@ import { createCell } from '@zeix/le-truc'`,
 							<button aria-selected={() => String(selected.get() === pid)} onClick={() => selected.set(pid)}>{tab.id}</button>
 						}
 					</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -346,7 +372,9 @@ export function C({ value = '' }: { value?: string })
 	expose({ value: asString('') })
 	<>
 		<c-el value={value}><input value={() => host.value} /></c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 
@@ -382,7 +410,9 @@ export function C({ value = '' }: { value?: string })
 				})
 				<>
 					<c-el><span>ok</span></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
@@ -419,7 +449,9 @@ import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
 				})
 				<>
 					<c-el><span>ok</span></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { asString, defineMethod } from '@zeix/le-truc'`,
@@ -439,7 +471,9 @@ import { asString, defineMethod } from '@zeix/le-truc'`,
 				})
 				<>
 					<c-el><button>go</button></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -463,7 +497,9 @@ import { asString, defineMethod } from '@zeix/le-truc'`,
 				})
 				<>
 					<c-el><canvas></canvas></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -485,7 +521,9 @@ import { createCell } from '@zeix/le-truc'`,
 				})
 				<>
 					<c-el><Widget /></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { Widget } from './widget.tsrx'`,
@@ -505,7 +543,9 @@ import { Widget } from './widget.tsrx'`,
 				})
 				<>
 					<c-el><input /></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -527,7 +567,9 @@ import { Widget } from './widget.tsrx'`,
 				on(mysteryVariable, 'click', () => {})
 				<>
 					<c-el><button>go</button></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -550,7 +592,9 @@ import { Widget } from './widget.tsrx'`,
 				expose({})
 				<>
 					<c-el><p>{host.validationMessage}</p></c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',

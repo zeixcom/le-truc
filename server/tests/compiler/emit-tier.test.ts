@@ -67,7 +67,9 @@ export function C({ name }: { name: string })
 			<span class="label" id={labelId}>Label</span>
 		</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 
@@ -113,7 +115,9 @@ export function C({ name }: { name: string })
 			<span class="maybe" hidden={() => Math.random() > 0.5}>maybe</span>
 		</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 
@@ -280,7 +284,9 @@ export function C({ start = 0 }: { start?: number })
 			<span>{count}</span>
 		</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 

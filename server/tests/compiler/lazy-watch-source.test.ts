@@ -18,7 +18,9 @@ export function C({}: {})
 		<c-el>
 			<p>{String(host.value)}</p>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 

@@ -364,17 +364,25 @@ export const compileCorpus = async (
 				tsrxSources.set(tag, [...(tsrxSources.get(tag) ?? []), rel])
 			return { rel, component }
 		})
-		// CSS byte-identity across a set's compiled members (ADR 0039): the
-		// served stylesheet is written for the WHOLE set, so a drift would
-		// leave the unserved member's rendering unstyled. Skipped when a
+		// CSS parity across a set's compiled members (ADR 0039, ADR 0033
+		// s10): the AUTHORED sheets must be byte-identical AND the members
+		// must agree on the SCOPE BOUNDARIES — each member computes its own
+		// (every custom element its lowered template renders), and members
+		// with identical sheets can still resolve composed children
+		// differently per surface. Either drift would leave the set's one
+		// served stylesheet wrong for the unserved member. Skipped when a
 		// member failed — its own error already fails the build run.
 		if (results.length > 1) {
 			const compiled = results.filter(r => r.component)
 			const head = compiled[0]
 			if (head?.component && compiled.length > 1) {
-				const headCss = head.component.css
+				const headCss = head.component.authoredCss
+				const headBoundaries = JSON.stringify(head.component.scopeBoundaries)
 				const drifted = compiled.filter(
-					r => r.component && r.component.css !== headCss,
+					r =>
+						r.component &&
+						(r.component.authoredCss !== headCss ||
+							JSON.stringify(r.component.scopeBoundaries) !== headBoundaries),
 				)
 				if (drifted.length > 0) {
 					const sources = [head.rel, ...drifted.map(r => r.rel)]

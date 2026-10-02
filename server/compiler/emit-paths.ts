@@ -1,10 +1,10 @@
 /**
- * The two path facts the emitters need from the corpus configuration
- * (LT-255).
+ * The facts the emitters need from the corpus configuration (LT-255; the
+ * CSS target joined as the third fact in LT-304).
  *
  * A leaf on purpose: the emitters (`imports.ts`, `pipeline.ts`) need only
- * these two defaults, not config resolution. RESOLUTION — which needs real
- * path math — lives in `corpus-config.ts`.
+ * these defaults, not config resolution. RESOLUTION — which needs real
+ * path math and value validation — lives in `corpus-config.ts`.
  */
 
 /* === Constants === */
@@ -23,6 +23,56 @@ export const DEFAULT_OUT_DIR = 'server/generated/components'
  */
 export const DEFAULT_RUNTIME_IMPORT = '../../compiler/runtime'
 
+/* === The CSS target (ADR 0033 s5, LT-304) === */
+
+/**
+ * The browsers a `cssTargets` entry names. The four engines the runtime
+ * baseline (REQUIREMENTS § Browser support, Baseline 2023) is stated over;
+ * Blink derivatives (Opera, Samsung Internet) ride `chrome`.
+ */
+export type CssBrowser = 'chrome' | 'edge' | 'firefox' | 'safari'
+
+export const CSS_BROWSERS: readonly CssBrowser[] = [
+	'chrome',
+	'edge',
+	'firefox',
+	'safari',
+]
+
+/**
+ * A browser version in lightningcss's packed encoding —
+ * `major << 16 | minor << 8 | patch` — the shape `transform({ targets })`
+ * consumes, so the resolved config can be handed to lightningcss as-is.
+ */
+export const encodeCssVersion = (major: number, minor = 0, patch = 0): number =>
+	(major << 16) | (minor << 8) | patch
+
+/**
+ * Minimum browser versions, keyed by `CssBrowser` and packed per
+ * `encodeCssVersion`. A browser left out imposes no constraint — the
+ * project has declared it does not matter (browserslist semantics).
+ */
+export type CssTargets = Partial<Record<CssBrowser, number>>
+
+/**
+ * The default CSS target: **Baseline widely available**, pinned to the
+ * browser set that had every Baseline-2023-and-older feature in wide
+ * availability when 3.0 pinned it (April 2024 releases — chrome/edge 124,
+ * firefox 125, safari 17.4), per the runtime's baseline policy (owner,
+ * 2026-09-24: a pin moves only with a major).
+ *
+ * `@scope` is NOT widely available at this pin (Firefox crossed 128 only in
+ * July 2024), so the default compiles the **lowered** emission — ADR 0033
+ * s5's "with the default, `@scope` lowers until widely available". The pin
+ * moves only with a compiler/runtime major, never silently.
+ */
+export const DEFAULT_CSS_TARGETS: CssTargets = {
+	chrome: encodeCssVersion(124),
+	edge: encodeCssVersion(124),
+	firefox: encodeCssVersion(125),
+	safari: encodeCssVersion(17, 4),
+}
+
 /* === Types === */
 
 /**
@@ -38,6 +88,11 @@ export type EmitPaths = {
 	outDirPrefix: string
 	/** See `DEFAULT_RUNTIME_IMPORT`. */
 	runtimeImport: string
+	/**
+	 * The resolved CSS target (ADR 0033 s5, LT-304): decides native `@scope`
+	 * vs the flat-selector lowering, and feeds lightningcss's own lowering.
+	 */
+	cssTargets: CssTargets
 }
 
 /**
@@ -48,4 +103,5 @@ export type EmitPaths = {
 export const DEFAULT_EMIT_PATHS: EmitPaths = {
 	outDirPrefix: '../'.repeat(DEFAULT_OUT_DIR.split('/').length),
 	runtimeImport: DEFAULT_RUNTIME_IMPORT,
+	cssTargets: DEFAULT_CSS_TARGETS,
 }

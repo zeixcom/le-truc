@@ -114,6 +114,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'card-colorscale',
 				'card-mediaqueries',
 				'context-media',
+				'css-probe',
 				'form-checkbox',
 				'form-inplace-edit',
 				'form-radiogroup',

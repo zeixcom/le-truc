@@ -69,9 +69,8 @@ export function BasicNumber(
 			<basic-number {value} {lang} {options}>{() => getNumberFormatter(getLocale(host), host.getAttribute('options')).format(host.value)}</basic-number>
 
 			<style>
-			basic-number {
+			:host {
 				display: inline;
-			}
-			</style>
+			}</style>
 		</>
 	}

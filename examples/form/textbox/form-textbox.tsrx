@@ -246,7 +246,7 @@ export function FormTextbox(
 		</form-textbox>
 
 		<style>
-			form-textbox {
+			:host {
 				display: block;
 				width: 100%;
 
@@ -294,8 +294,7 @@ export function FormTextbox(
 					height: var(--input-height);
 				}
 
-				/* Derived from markup, so it cannot drift from whether the button exists. */
-				&:has(.clear) .input {
+				&:state(clearable) .input {
 					position: relative;
 
 					& input {
@@ -349,7 +348,6 @@ export function FormTextbox(
 						opacity: var(--opacity-solid);
 					}
 				}
-			}
-		</style>
+			}</style>
 	</>
 }

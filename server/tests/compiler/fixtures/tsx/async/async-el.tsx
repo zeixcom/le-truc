@@ -40,7 +40,9 @@ export function AsyncEl(
 					status
 				</p>
 			</async-el>
-			<style>{css`async-el { color: red }`}</style>
+			<style>{css`:host {
+  color: red;
+}`}</style>
 		</>
 	)
 }

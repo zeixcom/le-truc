@@ -22,21 +22,21 @@ import { compileCorpusSource, loadCorpus } from './corpus-fixture'
 
 /* === Sources === */
 
-const SHEET = `c-el {
+const SHEET = `:host {
 	display: flex;
 
-	> span {
+	& > span {
 		color: red;
 	}
 }
 
 @media (min-width: 40em) {
-	c-el {
+	:host {
 		top: 0;
 	}
 }`
 
-const SHEET_WITH_BAD_UNIT = `c-el {
+const SHEET_WITH_BAD_UNIT = `:host {
 	> span {
 		width: 10pxx;
 	}
@@ -113,7 +113,7 @@ describe('parseComponentSheet — the model', () => {
 	})
 })
 
-describe('parseComponentSheet — the LTC064 faces', () => {
+describe('parseComponentSheet — the LTC064/LTC065 faces', () => {
 	test('an unknown property reports without losing the sheet', () => {
 		const css = 'a {\n\tcolr: red\n}'
 		const { sheet, errors } = parseComponentSheet(css)
@@ -164,9 +164,21 @@ describe('parseComponentSheet — the LTC064 faces', () => {
 
 	test('at-rule descriptors are never matched as properties', () => {
 		const { errors } = parseComponentSheet(
-			'@font-face {\n\tfont-family: X;\n\tsrc: url(a.woff2) format(woff2)\n}',
+			'@font-face {\n\tfont-family: X;\n\tsrc: url(a.woff2) format(woff2)\n}\n@property --p {\n\tsyntax: "<length>";\n\tinherits: false;\n\tinitial-value: 0px\n}',
 		)
 		expect(errors).toEqual([])
+	})
+
+	// LT-394: a conditional group nested in a rule holds properties, so its
+	// declarations are checked like the rule's own.
+	test('a conditional group nested in a rule is checked', () => {
+		const css =
+			':host {\n\t@media (width > 1px) {\n\t\twidht: 1px\n\t}\n\t@supports (display: grid) {\n\t\twidth: 10pxx\n\t}\n}'
+		const { errors } = parseComponentSheet(css)
+		expect(errors.map(e => [e.face, e.property, e.offset])).toEqual([
+			['unknown-property', 'widht', css.indexOf('widht')],
+			['invalid-value', 'width', css.indexOf('width: 10pxx')],
+		])
 	})
 
 	test('a sheet that does not parse reports the syntax face and no sheet', () => {
@@ -191,7 +203,7 @@ describe('the IR carries the parsed sheet', () => {
 		const source = tsrxSource(SHEET)
 		const { component, diagnostics } = compileSource(source, 'c-el.tsrx')
 		expect(diagnostics).toEqual([])
-		expect(component?.css.startsWith('c-el {')).toBe(true)
+		expect(component?.css.startsWith(':host {')).toBe(true)
 		expect(component?.css.endsWith('}\n')).toBe(true)
 		expect(component?.sheet?.rules.map(r => r.type)).toEqual(['style', 'media'])
 	})
@@ -200,7 +212,7 @@ describe('the IR carries the parsed sheet', () => {
 		const source = tsxSource(SHEET)
 		const { component, diagnostics } = compileSourceTsx(source, 'c-el.tsx')
 		expect(diagnostics).toEqual([])
-		expect(component?.css.startsWith('c-el {')).toBe(true)
+		expect(component?.css.startsWith(':host {')).toBe(true)
 		expect(component?.sheet?.rules.map(r => r.type)).toEqual(['style', 'media'])
 	})
 
@@ -213,13 +225,13 @@ describe('the IR carries the parsed sheet', () => {
 		expect(component?.sheet).toBeNull()
 	})
 
-	test('an invalid unit reports LTC064 on the authored line, sheet intact', () => {
+	test('an invalid unit warns LTC065 on the authored line, sheet intact', () => {
 		const source = tsrxSource(SHEET_WITH_BAD_UNIT)
 		const { component, diagnostics } = compileSource(source, 'c-el.tsrx')
 		// The sheet parsed; only a syntax error leaves no sheet.
 		expect(component?.sheet?.rules).toHaveLength(1)
 		expect(diagnostics.map(d => [d.code, d.severity])).toEqual([
-			['LTC064', 'error'],
+			['LTC065', 'warning'],
 		])
 		expect(diagnostics[0]?.line).toBe(lineOf(source, 'width: 10pxx'))
 		expect(diagnostics[0]?.message).toContain('`width`')
@@ -230,17 +242,44 @@ describe('the IR carries the parsed sheet', () => {
 /* === The corpus === */
 
 describe('the corpus parses clean', () => {
-	test('no corpus component reports LTC064, and CSS-bearing ones carry the sheet', async () => {
+	test('no corpus component reports LTC064/LTC065, and CSS-bearing ones carry the sheet', async () => {
 		const failures: string[] = []
 		for (const file of await loadCorpus()) {
 			const { component, diagnostics } = compileCorpusSource(
 				file.content,
 				file.path,
 			)
-			if (diagnostics.some(d => d.code === 'LTC064')) failures.push(file.path)
+			if (diagnostics.some(d => d.code === 'LTC064' || d.code === 'LTC065'))
+				failures.push(file.path)
 			if ((component?.css.length ?? 0) > 0 !== (component?.sheet != null))
 				failures.push(`${file.path} (sheet/css mismatch)`)
 		}
 		expect(failures).toEqual([])
+	})
+})
+
+/* === The tier split (LT-394) === */
+
+describe('the tier split: a parse failure errors, grammar findings warn', () => {
+	const severities = (sheet: string) =>
+		compileSource(tsrxSource(sheet), 'c-el.tsrx').diagnostics.map(d => [
+			d.code,
+			d.severity,
+		])
+
+	test.each([
+		[':host { container-type: scroll-state }'],
+		[':host { width: calc-size(auto, size + 1rem) }'],
+		[':host { display: grid-lanes }'],
+		[':host { width: 10pz }'],
+		[':host { colr: red }'],
+	])('%s warns LTC065 and compiles', sheet => {
+		expect(severities(sheet)).toEqual([['LTC065', 'warning']])
+	})
+
+	test('an unparseable sheet still fails with LTC064', () => {
+		expect(severities(':host { color: red }\na >> .b { color: red }')).toEqual([
+			['LTC064', 'error'],
+		])
 	})
 })

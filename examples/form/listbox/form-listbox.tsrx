@@ -220,9 +220,10 @@ export function FormListbox(
 		</form-listbox>
 
 		<style>
-		form-listbox {
+		:host {
 			display: block;
 			margin: 0;
+			max-width: 16rem;
 
 			.input {
 				position: relative;
@@ -268,6 +269,15 @@ export function FormListbox(
 				}
 			}
 
+			& module-scrollarea {
+				max-height: 40rem;
+				background-color: var(--color-background);
+
+				&:has([role="group"]) {
+					scroll-padding-block-start: var(--space-xl);
+				}
+			}
+
 			[role="listbox"] {
 				display: flex;
 				flex-direction: column;
@@ -276,6 +286,26 @@ export function FormListbox(
 				padding: 0;
 				margin: 0;
 				background: var(--color-input);
+			}
+
+			[role="group"] {
+				margin-block-end: var(--space-xs);
+
+				&:not(:has(button:not([hidden]))) {
+					display: none;
+				}
+			}
+
+			[role="presentation"] {
+				position: sticky;
+				top: 0;
+				background-color: var(--color-background);
+				padding: var(--space-xs) var(--space-m);
+				font-size: var(--font-size-xs);
+				font-weight: var(--font-weight-bold);
+				text-transform: uppercase;
+				letter-spacing: 1px;
+				margin-block-end: var(--space-xxs);
 			}
 
 			[role="option"] {
@@ -291,6 +321,9 @@ export function FormListbox(
 				color: var(--color-text);
 				cursor: pointer;
 				transition: background var(--transition-short) var(--easing-inout);
+				text-overflow: ellipsis;
+				max-width: 100%;
+				overflow-x: hidden;
 
 				&[aria-selected="true"] {
 					background: var(--color-selection-selected);
@@ -305,7 +338,6 @@ export function FormListbox(
 					}
 				}
 			}
-		}
-		</style>
+		}</style>
 	</>
 }

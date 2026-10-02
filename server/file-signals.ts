@@ -302,6 +302,7 @@ const [
 	componentScriptsSources,
 	componentSources,
 	generatedClientScriptsSources,
+	generatedComponentStylesSources,
 ] = await Promise.all([
 	watchFiles(INPUT_DIR, '*.css'),
 	watchFiles(INPUT_DIR, '*.ts'),
@@ -325,6 +326,11 @@ const [
 	// bundle. Tolerates the directory not existing yet on a fresh checkout
 	// (the tsrx effect creates it in phase 1 before anything reads it).
 	watchFiles(GENERATED_CLIENTS_DIR, '*.client.ts'),
+	// LT-306: the emitted component stylesheets are PAGE-CSS bundle inputs
+	// (examples/main.css imports them) — a `<style>` edit re-runs the
+	// compiler effect, which rewrites these files, which must re-trigger the
+	// CSS bundle. Same fresh-checkout tolerance as the generated clients.
+	watchFiles(GENERATED_CLIENTS_DIR, '*.css'),
 ])
 
 /* const layoutFiles = {
@@ -347,6 +353,9 @@ const componentStyles = { sources: componentStylesSources }
 const componentScripts = { sources: componentScriptsSources }
 const componentFiles = { sources: componentSources }
 const generatedClientScripts = { sources: generatedClientScriptsSources }
+// LT-306: the emitted component stylesheets — the page CSS bundle's
+// per-component inputs (examples/main.css imports them).
+const generatedComponentStyles = { sources: generatedComponentStylesSources }
 
 export {
 	apiMarkdown,
@@ -360,6 +369,7 @@ export {
 	docsScripts,
 	docsStyles,
 	generatedClientScripts,
+	generatedComponentStyles,
 	// includeFiles,
 	// layoutFiles,
 	libraryScripts,

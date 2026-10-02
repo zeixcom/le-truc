@@ -124,7 +124,7 @@ export function ModuleCodeblock(
 			</module-codeblock>
 
 			<style>{css`
-			module-codeblock {
+			:host {
 				--module-codeblock-color-background: #272822;
 				/* Shadow with reduced transparency for dark background used in code blocks */
 				--color-shadow: rgb(0 0 0 / 0.4);
@@ -224,8 +224,7 @@ export function ModuleCodeblock(
 						}
 					}
 				}
-			}
-			`}</style>
+			}`}</style>
 		</>
 	)
 }

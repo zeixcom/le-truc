@@ -525,7 +525,7 @@ export function FormColorgraph(
 		</form-colorgraph>
 
 		<style>
-		form-colorgraph {
+		:host {
 			--color-base: transparent;
 			--step-size: 1.25rem;
 
@@ -681,7 +681,7 @@ export function FormColorgraph(
 		}
 
 		@container (width > 27rem) {
-			form-colorgraph {
+			:host {
 				display: grid;
 				grid-template-areas:
 					"graph graph graph"
@@ -707,7 +707,6 @@ export function FormColorgraph(
 					grid-area: hue;
 				}
 			}
-		}
-		</style>
+		}</style>
 	</>
 }

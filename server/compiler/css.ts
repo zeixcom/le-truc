@@ -7,10 +7,12 @@
  * portability check runs (ADR 0038; the native napi binding cannot load
  * from a self-contained bundle) — and makes its rules, selectors and
  * at-rules reachable from the IR (`ComponentIR.sheet`). A sheet that does
- * not parse has no correct emission; a declaration outside its property's
- * grammar is equally dead in a sheet that ships as authored. Both are
- * tier 1 Prevented (ADR 0028 s1) through LTC064, with css-tree's lexer
- * arbitrating declaration grammar: lightningcss deliberately keeps unknown
+ * not parse has no correct emission: tier 1 Prevented (ADR 0028 s1),
+ * LTC064. A declaration outside its property's grammar is LTC065, tier 2
+ * Contained — a warning, the sheet ships as authored — because the
+ * arbiter's dictionary (mdn-data, via css-tree) lags the platform: its
+ * "no" is evidence, not proof (LT-394). css-tree's lexer arbitrates
+ * declaration grammar because lightningcss deliberately keeps unknown
  * properties and unparseable values instead of rejecting them, so its
  * parse alone cannot police the spec grammar, and its whole-sheet failures
  * cannot name the offending declaration the way a per-declaration check
@@ -21,13 +23,14 @@
  * The lightningcss pass is READ-ONLY: the visitor collects the parsed
  * sheet and returns nothing. Returning parsed nodes into the parser (the
  * write path a modified sheet would need) crashes on `var()` inside
- * nested rules at 1.33 — a Rust-side round-trip defect for scoped
- * emission (LT-304) to solve. The collected objects stay valid after
- * `transform` returns; nothing re-enters the parser.
+ * nested rules at 1.33 — upstream parcel-bundler/lightningcss#1065. The
+ * collected objects stay valid after `transform` returns; nothing
+ * re-enters the parser.
  *
- * Emission is unchanged: the dedented verbatim text (`dedentCss`) is what
- * the build writes, byte-identical with the hand-written artifacts, until
- * LT-304 replaces it with the scoped emission.
+ * Emission is the scoped emission (`css-scope.ts`, LT-304): the dedent
+ * (`dedentCss`) yields the AUTHORED form the IR carries — what LTC051
+ * compares across a variant set — while the emitted artifact is scoped
+ * per `cssTargets`.
  */
 
 import type { CssNode, CssTreeDeclaration } from 'css-tree/dist/csstree.esm.js'
@@ -152,6 +155,22 @@ const nestedBlockRegions = (text: string): Array<[number, number]> => {
 const MAX_VALUE_ECHO = 60
 
 /**
+ * At-rules whose block holds descriptors, not properties — never matched
+ * against the property dictionary. `@page` is here too: its block mixes
+ * page descriptors with margin rules.
+ */
+const DESCRIPTOR_ATRULES = new Set([
+	'font-face',
+	'property',
+	'counter-style',
+	'font-palette-values',
+	'font-feature-values',
+	'page',
+	'view-transition',
+	'color-profile',
+])
+
+/**
  * The declaration-grammar pass. css-tree parses the sheet (positions on,
  * its pre-nesting grammar folding nested rules into positioned Raw nodes
  * that the region recursion re-enters) and `lexer.matchDeclaration` — the
@@ -159,8 +178,10 @@ const MAX_VALUE_ECHO = 60
  * each rule-block declaration against the CSS dictionary. Exempt, never
  * errors: custom properties (any value is valid by spec), values
  * referencing `var()`/`env()` (matching needs substitution), whole Raw
- * values (nothing decidable), and every declaration inside an at-rule
- * block (`@font-face`/`@property` descriptors are not properties). A
+ * values (nothing decidable), and every declaration inside a descriptor
+ * at-rule (`DESCRIPTOR_ATRULES`: descriptors are not properties). A
+ * conditional group nested in a rule (`.a { @media … { width: … } }`)
+ * holds properties and is checked like the rule it sits in (LT-394). A
  * css-tree parse failure means no declaration check — lightningcss is the
  * syntax authority and has already passed the sheet.
  */
@@ -201,7 +222,7 @@ const grammarErrors = (source: string): SheetError[] => {
 		})
 	}
 
-	const visit = (node: CssNode, base: number, inAtrule: boolean): void => {
+	const visit = (node: CssNode, base: number, inDescriptors: boolean): void => {
 		switch (node.type) {
 			case 'Rule':
 				if ((node as { block?: CssNode }).block)
@@ -209,11 +230,19 @@ const grammarErrors = (source: string): SheetError[] => {
 				return
 			case 'Atrule': {
 				const block = (node as { block?: CssNode }).block
-				if (block) visit(block, base, true)
+				// A conditional group keeps its context: at the top level it
+				// holds rules, nested in a rule it holds properties.
+				if (block)
+					visit(
+						block,
+						base,
+						inDescriptors ||
+							DESCRIPTOR_ATRULES.has(String(node.name).toLowerCase()),
+					)
 				return
 			}
 			case 'Declaration':
-				if (!inAtrule) checkDeclaration(node as CssTreeDeclaration, base)
+				if (!inDescriptors) checkDeclaration(node as CssTreeDeclaration, base)
 				return
 			case 'Raw': {
 				const raw = String((node as { value?: unknown }).value ?? '')
@@ -224,7 +253,7 @@ const grammarErrors = (source: string): SheetError[] => {
 							positions: true,
 							context: 'declarationList',
 						})
-						visit(inner, base + rawStart + from, inAtrule)
+						visit(inner, base + rawStart + from, inDescriptors)
 					} catch {
 						// A region css-tree cannot read gets no declaration check.
 					}
@@ -232,7 +261,7 @@ const grammarErrors = (source: string): SheetError[] => {
 				return
 			}
 			default:
-				for (const child of childrenOf(node)) visit(child, base, inAtrule)
+				for (const child of childrenOf(node)) visit(child, base, inDescriptors)
 		}
 	}
 	visit(ast, 0, false)
@@ -290,8 +319,10 @@ export const parseComponentSheet = (source: string): ParsedComponentSheet => {
  * strip the common leading indentation from every non-blank line, drop
  * leading/trailing blank lines, and end with exactly one newline.
  *
- * Still the emission source (LT-268 changes no output); LT-304's scoped
- * emission renders from the parsed sheet instead.
+ * The AUTHORED form the IR carries (LTC051 compares it across a variant
+ * set, ADR 0033 s10); the emitted artifact is the scoped emission
+ * (`css-scope.ts`), partitioned from the raw text `sheet`'s locs resolve
+ * against.
  */
 export const dedentCss = (source: string): string => {
 	const lines = source.split('\n')

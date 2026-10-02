@@ -32,7 +32,9 @@ const source = `export function C({}: {})
 		<c-el>
 			<span title={() => color.get() + '!'}>ok</span>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }
 import { createCell } from '@zeix/le-truc'`
@@ -162,7 +164,9 @@ describe('class discriminators are token clauses (LT-124)', () => {
 			<span class="${className}">ok</span>
 			<span class="other">x</span>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
@@ -238,7 +242,9 @@ describe('id discriminators use the hash form (LT-124)', () => {
 			<input id="${idValue}" />
 			<input id="other" />
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
@@ -293,7 +299,9 @@ describe('aria-* discriminators are the last resort (LT-101)', () => {
 			<button type="button" ${openerAttrs}>Open</button>
 			<button type="button" class="close" aria-label="Close">x</button>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
@@ -338,7 +346,9 @@ describe('selectors account for composed children (LT-096)', () => {
 @{
 	<>
 		<child-el>${body}</child-el>
-		<style>child-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'child.tsrx',
@@ -359,7 +369,9 @@ export function P({}: {})
 			<Child />
 			<button type="button" class="overlay">Go</button>
 		</p-el>
-		<style>p-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'p.tsrx',
@@ -434,7 +446,9 @@ export function P({}: {})
 @{
 	<>
 		<child-el>{children}</child-el>
-		<style>child-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'child.tsrx',
@@ -498,7 +512,9 @@ describe('authored first() selectors are emitted when verifiable (LT-316)', () =
 		<c-el>
 			${template}
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',

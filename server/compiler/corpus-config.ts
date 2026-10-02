@@ -19,9 +19,14 @@
 
 import { isAbsolute, relative, resolve, sep } from 'node:path'
 import {
+	CSS_BROWSERS,
+	type CssBrowser,
+	type CssTargets,
+	DEFAULT_CSS_TARGETS,
 	DEFAULT_OUT_DIR,
 	DEFAULT_RUNTIME_IMPORT,
 	type EmitPaths,
+	encodeCssVersion,
 } from './emit-paths'
 
 /* === Constants === */
@@ -121,6 +126,15 @@ export type CorpusConfigInput = {
 	 * tag (ADR 0039).
 	 */
 	variantOverrides?: Partial<Record<string, VariantSurface>>
+	/**
+	 * The CSS target (ADR 0033 s5, LT-304): minimum browser versions, keyed
+	 * by browser. Decides native `@scope` vs the flat-selector lowering and
+	 * feeds lightningcss's own lowering. A version is an integer major
+	 * (`118`) or a `"major.minor[.patch]"` string (`"17.4"`). A browser left
+	 * out imposes no constraint. Defaults to Baseline widely available
+	 * (`DEFAULT_CSS_TARGETS`).
+	 */
+	cssTargets?: { [browser in CssBrowser]?: number | string }
 }
 
 /** A fully resolved corpus configuration; all paths absolute. */
@@ -136,6 +150,8 @@ export type CorpusConfig = {
 	variantSurface: VariantSurface
 	/** Per-tag variant-surface overrides (ADR 0039). */
 	variantOverrides: Readonly<Record<string, VariantSurface>>
+	/** The resolved CSS target (ADR 0033 s5, LT-304). */
+	cssTargets: CssTargets
 }
 
 /* === Internal Functions === */
@@ -153,6 +169,7 @@ const ACCEPTED_KEYS: readonly string[] = [
 	'runtimeImport',
 	'variantSurface',
 	'variantOverrides',
+	'cssTargets',
 ]
 
 /** A short quote of a received JSON value for an error message. */
@@ -230,6 +247,47 @@ const validateConfigInput = (input: CorpusConfigInput): void => {
 				`${where} must be one of: ${VARIANT_SURFACES.map(s => `"${s}"`).join(', ')} — received ${received(v)}.`,
 			)
 	}
+	/**
+	 * `"17.4"` — a `major.minor` (optionally `.patch`) version string; the
+	 * shape Safari's `@scope` support needs a key for.
+	 */
+	const VERSION_PATTERN = /^\d+(\.\d+){1,2}$/
+	const cssTargetsValue = (v: unknown): void => {
+		if (typeof v !== 'object' || v === null || Array.isArray(v))
+			fail(
+				`"cssTargets" must be an object mapping browser names to minimum versions — received ${received(v)}.`,
+			)
+		for (const [browser, version] of Object.entries(v as object)) {
+			if (!CSS_BROWSERS.includes(browser as CssBrowser)) {
+				const suggestion = CSS_BROWSERS.find(
+					known => known.toLowerCase() === browser.toLowerCase(),
+				)
+				fail(
+					`"cssTargets" keys must be browsers: ${CSS_BROWSERS.join(', ')} — received "${browser}".` +
+						(suggestion && suggestion !== browser
+							? ` Did you mean "${suggestion}"?`
+							: ''),
+				)
+			}
+			// Each component caps at 255: the packed encoding is
+			// `major << 16 | minor << 8 | patch`, and a component above 255
+			// bleeds into its neighbour's bits.
+			const ok =
+				(typeof version === 'number' &&
+					Number.isInteger(version) &&
+					version >= 1 &&
+					version <= 255) ||
+				(typeof version === 'string' &&
+					VERSION_PATTERN.test(version) &&
+					version
+						.split('.')
+						.every(part => Number(part) >= 0 && Number(part) <= 255))
+			if (!ok)
+				fail(
+					`"cssTargets["${browser}"]" must be an integer major version up to 255 (118) or a "major.minor[.patch]" string with every component up to 255 ("17.4") — received ${received(version)}.`,
+				)
+		}
+	}
 	stringArray('sources')
 	stringArray('siblingModules')
 	nonEmptyString('outDir')
@@ -255,6 +313,30 @@ const validateConfigInput = (input: CorpusConfigInput): void => {
 			variantSurfaceValue(`"variantOverrides["${tag}"]"`, surface)
 		}
 	}
+	if (value('cssTargets') !== undefined) cssTargetsValue(value('cssTargets'))
+}
+
+/**
+ * Pack a validated `cssTargets` input into lightningcss's encoding —
+ * integers are majors, `"17.4"` strings split into major/minor/patch.
+ * Validation has already guaranteed the shape.
+ */
+const resolveCssTargets = (
+	input: CorpusConfigInput['cssTargets'],
+): CssTargets => {
+	const targets: CssTargets = {}
+	for (const browser of CSS_BROWSERS) {
+		const version = input?.[browser]
+		if (version === undefined) continue
+		if (typeof version === 'number') targets[browser] = version << 16
+		else {
+			const [major, minor, patch] = version
+				.split('.')
+				.map(part => Number.parseInt(part, 10))
+			targets[browser] = encodeCssVersion(major ?? 0, minor ?? 0, patch ?? 0)
+		}
+	}
+	return targets
 }
 
 /* === Exported Functions === */
@@ -320,6 +402,9 @@ export const resolveCorpusConfig = (
 		runtimeImport: input.runtimeImport ?? DEFAULT_RUNTIME_IMPORT,
 		variantSurface: input.variantSurface ?? DEFAULT_VARIANT_SURFACE,
 		variantOverrides,
+		cssTargets: input.cssTargets
+			? resolveCssTargets(input.cssTargets)
+			: DEFAULT_CSS_TARGETS,
 	}
 }
 
@@ -360,4 +445,5 @@ export const validateVariantOverrides = (
 export const emitPathsFor = (config: CorpusConfig): EmitPaths => ({
 	outDirPrefix: outDirPrefix(config.root, config.outDir),
 	runtimeImport: config.runtimeImport,
+	cssTargets: config.cssTargets,
 })

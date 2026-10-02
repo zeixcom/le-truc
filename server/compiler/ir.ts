@@ -758,14 +758,20 @@ export type ComponentIR = {
 	/** Dedented verbatim CSS ("" when no style block). */
 	css: string
 	/**
+	 * The stylesheet's raw (undedented) text — the text `sheet`'s locs
+	 * resolve against and the slice the scoped emission partitions
+	 * (LT-304). Null when there is no parsed sheet.
+	 */
+	sheetText?: string | null
+	/**
 	 * The parsed stylesheet (ADR 0033 s9, LT-268): the rules, selectors and
 	 * at-rules of the `<style>` block, reachable for the scoped emission
 	 * (LT-304) and the checks over the parsed sheet (ADR 0042). Null when
 	 * the component has no style block, the block is empty, or the sheet
 	 * does not parse (LTC064 reports). READ-ONLY: the lightningcss visitor
 	 * collects the parse and returns nothing — returning parsed nodes into
-	 * the parser crashes on `var()` inside nested rules at 1.33, and the
-	 * write path is LT-304's to solve.
+	 * the parser crashes on `var()` inside nested rules at 1.33, which is
+	 * why the scoped emission is string-level (`css-scope.ts`).
 	 * Optional: contract IR; a front end that omits it only loses the
 	 * sheet and its checks.
 	 */

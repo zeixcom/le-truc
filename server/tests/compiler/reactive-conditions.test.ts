@@ -47,7 +47,9 @@ export function Toggle({ label }: { label: string })
 					}
 				</div>
 			</c-toggle>
-			<style>c-toggle { display: block }</style>
+			<style>:host {
+  display: block;
+}</style>
 		</>
 	}
 `
@@ -75,7 +77,9 @@ export function Toggle(
 					)}
 				</div>
 			</c-toggle>
-			<style>{css\`c-toggle { display: block }\`}</style>
+			<style>{css\`:host {
+  display: block;
+}\`}</style>
 		</>
 	)
 }
@@ -95,7 +99,9 @@ export function C(${params})
 		${setup}
 		<>
 			<c-el>${body}</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -239,7 +245,9 @@ export function C({ open }: { open?: boolean })
 		expose({ open: asBoolean() })
 		<>
 			<c-el open={open}>@if (host.open) { <p>a</p> }</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`,
 			).root,

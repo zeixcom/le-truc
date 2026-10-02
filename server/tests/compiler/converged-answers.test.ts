@@ -128,7 +128,9 @@ const withPropBound = (body: string, registry = new Set<string>()) =>
 			<span>x</span>
 			${body}
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 		'c.tsrx',

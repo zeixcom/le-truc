@@ -27,7 +27,9 @@ describe('client-only setup statements credit a signal as rendered', () => {
 		<c-el>
 			<div class="panel" hidden>ok</div>
 		</c-el>
-		<style>c-el { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }
 import { bindAttribute, createState } from '@zeix/le-truc'`
@@ -88,7 +90,9 @@ import { bindAttribute, createState } from '@zeix/le-truc'`
 		<c-el>
 			<button type="button" onClick={() => console.log(count.get())}>log</button>
 		</c-el>
-		<style>c-el { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }
 import { createState } from '@zeix/le-truc'`)
@@ -114,7 +118,9 @@ import { createState } from '@zeix/le-truc'`)
 			<output></output>
 			<p>{() => label()}</p>
 		</c-el>
-		<style>c-el { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }
 import { bindText, createMemo } from '@zeix/le-truc'`)
@@ -147,7 +153,9 @@ import { bindText, createMemo } from '@zeix/le-truc'`)
 				}
 			}
 		</c-el>
-		<style>c-el { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }
 import { bindText, createMemo } from '@zeix/le-truc'`)

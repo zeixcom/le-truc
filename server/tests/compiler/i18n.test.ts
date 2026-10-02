@@ -68,7 +68,9 @@ export function C({ i18n: { t } }: { i18n: I18n })
 	expose({})
 	<>
 		<c-el>${template}</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 
@@ -121,7 +123,9 @@ export function BasicI18nChild({ lang = 'en', i18n: { t } }: { lang?: string; i1
 	expose({})
 	<>
 		<basic-i18n-child {lang}>{t.task}</basic-i18n-child>
-		<style>basic-i18n-child { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }`
 
@@ -135,7 +139,9 @@ export function BasicI18nParent({}: {})
 		<basic-i18n-parent>
 			<BasicI18nChild ${attrs} />
 		</basic-i18n-parent>
-		<style>basic-i18n-parent { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }`
 
@@ -152,7 +158,9 @@ export function BasicI18nParent({ lang = 'en', i18n: { t } }: { lang?: string; i
 		<basic-i18n-parent>
 			<BasicI18nChild ${attrs} />
 		</basic-i18n-parent>
-		<style>basic-i18n-parent { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }`
 
@@ -257,7 +265,9 @@ export function C({ i18n: { lang } }: { i18n: I18n })
 	expose({})
 	<>
 		<c-el>ok</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`
 
@@ -274,7 +284,9 @@ export function C({ lang = 'en', i18n: { t } }: { lang?: string; i18n: I18n })
 	expose({})
 	<>
 		<c-el {lang}>ok</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		if (!component) throw new Error('must compile')
@@ -1041,7 +1053,9 @@ export function C({ i18n }: { i18n: I18n })
 	expose({})
 	<>
 		<c-el>{i18n.t.tasks({})}</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`)
 		const hit = diagnostics.find(d => d.code === 'LTC055')
@@ -1066,7 +1080,9 @@ export function CIcuFold({ count, i18n: { t } }: { count: number; i18n: I18n })
 			<span class="arg" title={t.tasks({ count })}>{t.tasks({ count })}</span>
 			<span class="done">{t.done}</span>
 		</c-icu-fold>
-		<style>c-icu-fold { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }`
 	const { component, diagnostics } = compileComponent(
@@ -1140,7 +1156,9 @@ export function ${name}({ count, i18n: { t } }: { count: number; i18n: I18n<type
 	expose({})
 	<>
 		<c-el>${template}</c-el>
-		<style>c-el { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }`
 	const build = (name: string, tag: string, template: string) => {

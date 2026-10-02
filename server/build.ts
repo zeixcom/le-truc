@@ -59,7 +59,6 @@ export async function build(
 		// snapshot until phase 1 has completed; a one-shot build would otherwise
 		// finish (and clean up subscriptions) before the reactive re-runs settle.
 		const api = apiEffect(scheduleReload)
-		const css = cssEffect(scheduleReload)
 		const staticAssets = staticAssetsEffect(scheduleReload)
 		// LT-091: generated `.client.ts` modules are now BUNDLE INPUTS —
 		// examples/tsrx-test.ts imports migrated components' generated
@@ -70,7 +69,16 @@ export async function build(
 		// breaking the bundle with an unresolved import.
 		const tsrx = compileEffect(scheduleReload)
 
-		await Promise.all([api.ready, css.ready, staticAssets.ready, tsrx.ready])
+		// The page CSS bundle imports the compiler's EMITTED stylesheets
+		// (examples/main.css → server/generated/components/*.css, LT-306), so
+		// the CSS effect is created AFTER the compiler — a fresh checkout has
+		// no generated directory yet — and its sources include the emitted
+		// stylesheets' own watch signal, so a `<style>` edit re-runs the
+		// compiler, which rewrites them, which re-runs the CSS bundle.
+		await Promise.all([api.ready, staticAssets.ready, tsrx.ready])
+		const css = cssEffect(scheduleReload)
+
+		await Promise.all([css.ready])
 
 		// ADR 0027 stage 2 (LT-169): execute every Simulated-tier component's
 		// generated client against the realm and gate on the build report.

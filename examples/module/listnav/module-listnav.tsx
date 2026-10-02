@@ -141,12 +141,12 @@ export function ModuleListnav(
 				/>
 			</module-listnav>
 			<style>{css`
-module-listnav module-lazyload {
+:global(module-listnav module-lazyload) {
 	contain: inline-size;
 }
 
 @container (width > 45em) {
-	module-listnav {
+	:host {
 		display: grid;
 		grid-template-columns: 1fr 3fr;
 		gap: var(--space-xl);
@@ -162,8 +162,7 @@ module-listnav module-lazyload {
 			}
 		}
 	}
-}
-`}</style>
+}`}</style>
 		</>
 	)
 }

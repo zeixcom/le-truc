@@ -10,6 +10,7 @@
 
 import { analyzeClient } from './analysis/plan'
 import { renderedShapesOf } from './analysis/selectors'
+import { collectScopeBoundaries, emitScopedSheet } from './css-scope'
 import { type CompileDiagnostic, diagnostic } from './diagnostics'
 import { emitClientModule } from './emit-client'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from './emit-paths'
@@ -30,8 +31,26 @@ export type CompiledComponent = {
 	serverCode: string
 	/** Generated client `defineComponent` module source. */
 	clientCode: string
-	/** Dedented verbatim CSS artifact. */
+	/**
+	 * The scoped-emission CSS artifact (ADR 0033 s3–s4, LT-304): the
+	 * authored shadow-root sheet wrapped in native `@scope` or rewritten as
+	 * flat scoped selectors, per the configured `cssTargets`. Empty when the
+	 * component has no stylesheet.
+	 */
 	css: string
+	/**
+	 * The authored form — the dedented sheet text — that `css` was emitted
+	 * from; what LTC051 compares across a variant set (ADR 0033 s10).
+	 */
+	authoredCss: string
+	/**
+	 * The boundary tags the emission stopped at — every custom element the
+	 * lowered template renders. Part of LTC051's comparison: members with
+	 * identical authored sheets can still resolve composed children
+	 * differently per surface, and a boundary drift would make the set's
+	 * one served stylesheet wrong for the unserved member.
+	 */
+	scopeBoundaries: readonly string[]
 	/**
 	 * Whether a form-association extension leads `config` — the host type
 	 * (`FormAssociatedElement` vs `HTMLElement`) of the tag-map entry
@@ -139,6 +158,10 @@ export const compileFromIR = (
 				),
 			]
 		: []
+	const scopeBoundaries = collectScopeBoundaries(
+		component.root,
+		composeRegistry,
+	)
 	const server = emitServerModule(component, {
 		runtimeImport: emitPaths.runtimeImport,
 		sourcePath: filename,
@@ -187,7 +210,24 @@ export const compileFromIR = (
 			},
 			serverCode: server.code,
 			clientCode: client.code,
-			css: component.css,
+			// The scoped emission (ADR 0033 s3–s4, LT-304): reachable only
+			// with no error diagnostics — the early return above dropped any
+			// file whose sheet failed LTC064 or the authored-form checks —
+			// so the surgery inputs are known-good. `sheetText` is the raw
+			// text `sheet`'s locs resolve against; `css` (dedented) stays on
+			// the IR as the authored form LTC051 compares.
+			css:
+				component.sheet && component.sheetText
+					? emitScopedSheet(
+							component.sheet,
+							component.sheetText,
+							component.tag,
+							scopeBoundaries,
+							emitPaths.cssTargets,
+						)
+					: component.css,
+			authoredCss: component.css,
+			scopeBoundaries,
 			formAssociated: !!component.config?.form,
 			clientSpans: client.spans,
 			serverSpans: server.spans,

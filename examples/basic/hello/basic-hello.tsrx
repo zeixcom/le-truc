@@ -72,9 +72,8 @@ export function BasicHello(
 			</basic-hello>
 
 			<style>
-			basic-hello {
+			:host {
 				display: block;
-			}
-			</style>
+			}</style>
 		</>
 	}

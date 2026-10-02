@@ -78,7 +78,7 @@ const varTsx = (cssBody: string): string =>
 				<p class="label">{label}</p>
 			</var-el>
 			<style>{css\`
-			var-el { ${cssBody} }
+			:host { ${cssBody} }
 			\`}</style>
 		</>
 	)
@@ -94,7 +94,7 @@ const varTsrx = (cssBody: string): string =>
 				<p class="label">{label}</p>
 			</var-el>
 			<style>
-			var-el { ${cssBody} }
+			:host { ${cssBody} }
 			</style>
 		</>
 	}`
@@ -483,9 +483,9 @@ export function TwinParent(
 					</button>
 				</basic-counter>
 			</twin-parent>
-			<style>{css\`
-			twin-parent { display: block }
-			\`}</style>
+			<style>{css\`			:host {
+			  display: block;
+			}\`}</style>
 		</>
 	)
 }`

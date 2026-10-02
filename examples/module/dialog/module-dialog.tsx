@@ -142,12 +142,12 @@ export function ModuleDialog(
 
 			<style>{css`
 			/* Exception to scoping rule: class on body for scroll lock */
-			body.scroll-lock {
+			:global(body.scroll-lock) {
 				position: fixed;
 				overflow-y: hidden;
 			}
 
-			module-dialog {
+			:host {
 				display: inline-block;
 
 				> button {
@@ -232,15 +232,14 @@ export function ModuleDialog(
 			}
 
 			@media (min-width: 48em) {
-				module-dialog dialog[open] {
+				dialog[open] {
 					width: min(var(--content-max-width), calc(100% - 2 * var(--space-l)));
 					max-height: calc(100dvh - 2rem);
 					border-radius: var(--space-s);
 					box-shadow: 0 0 var(--space-s) var(--color-shadow);
 					margin: auto auto;
 				}
-			}
-			`}</style>
+			}`}</style>
 		</>
 	)
 }

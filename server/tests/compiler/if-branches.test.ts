@@ -41,7 +41,7 @@ const wrap = (template: string, tag = 'c-el'): string =>
 		<${tag}>
 			${template}
 		</${tag}>
-		<style>${tag} { color: red }</style>
+		<style>:host { color: red }</style>
 	</>
 }
 import { asString } from '@zeix/le-truc'`
@@ -273,7 +273,9 @@ ${setup}
 		<c-el>
 			${template}
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }
 import { asString } from '@zeix/le-truc'`

@@ -18,7 +18,9 @@ describe('style-map on a descendant native element', () => {
 				<p>{color}</p>
 				<span style={() => ({ color: color.get(), '--gap': null })}>ok</span>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -56,7 +58,9 @@ describe('style-map on the component root (targets host)', () => {
 			<c-el style={() => ({ color: color.get(), '--gap': null })}>
 				<p>{color}</p>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -94,7 +98,9 @@ describe('style-map on a descendant custom element bypasses the reactive-attribu
 			<p>{color}</p>
 			<sub-el style={() => ({ '--x': color.get() })}>ok</sub-el>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }
 import { createCell } from '@zeix/le-truc'`
@@ -124,7 +130,9 @@ describe('signal used only inside the style-map thunk (LT-036)', () => {
 		<c-el>
 			<span style={() => ({ color: color.get() })}>ok</span>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }
 import { createCell } from '@zeix/le-truc'`
@@ -136,7 +144,9 @@ import { createCell } from '@zeix/le-truc'`
 		<c-el style={() => ({ color: color.get() })}>
 			<span>ok</span>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }
 import { createCell } from '@zeix/le-truc'`

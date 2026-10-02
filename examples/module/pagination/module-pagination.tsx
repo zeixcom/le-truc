@@ -141,7 +141,7 @@ export function ModulePagination(
 			</module-pagination>
 
 			<style>{css`
-			module-pagination {
+			:host {
 				display: inline-flex;
 				align-items: center;
 				gap: var(--space-s);
@@ -223,8 +223,7 @@ export function ModulePagination(
 						border-radius: 0 var(--space-xs) var(--space-xs) 0;
 					}
 				}
-			}
-			`}</style>
+			}`}</style>
 		</>
 	)
 }

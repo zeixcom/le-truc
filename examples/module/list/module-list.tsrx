@@ -67,33 +67,49 @@ export function ModuleList({}: {})
 			</module-list>
 
 			<style>
-			module-list {
+			:host {
 				display: flex;
 				flex-direction: column;
-				gap: var(--space-s);
+				gap: var(--space-l);
 
 				> form {
 					display: flex;
-					gap: var(--space-s);
+					flex-direction: column;
 					align-items: flex-start;
+					gap: var(--space-m);
+					justify-content: space-between;
 				}
 
-				> [data-container] {
+				& ul {
 					display: flex;
 					flex-direction: column;
-					gap: var(--space-xs);
+					gap: var(--space-m);
+					list-style: none;
 					margin: 0;
 					padding: 0;
-					list-style: none;
 
-					> li {
+					&:empty {
+						display: none;
+					}
+
+					& li {
 						display: flex;
-						justify-content: space-between;
 						align-items: center;
-						gap: var(--space-s);
+						justify-content: space-between;
+						gap: var(--space-m);
+						margin: 0;
+						padding: 0;
 					}
 				}
 			}
-			</style>
+
+			@container (width > 27rem) {
+				:host {
+					& form {
+						flex-direction: row;
+						align-items: flex-end;
+					}
+				}
+			}</style>
 		</>
 	}

@@ -207,7 +207,9 @@ export function C(${params})
 		${setup}
 		<>
 			<c-el>${body}</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -224,7 +226,9 @@ export function C(${params}) {
 	return (
 		<>
 			<c-el>${tsx ?? body}</c-el>
-			<style>{css\`c-el { color: red }\`}</style>
+			<style>{css\`:host {
+  color: red;
+}\`}</style>
 		</>
 	)
 }`
@@ -1134,18 +1138,18 @@ const FAMILIES: Case[] = [
 	},
 	{
 		// LT-268: the sheet is parsed (ADR 0033 s9), and spec-grammar
-		// failures report identically on both surfaces — the CSS text is
-		// the same string on either side of the seam.
-		name: 'LTC064 stylesheet: an invalid unit',
-		code: 'LTC064',
+		// findings report identically on both surfaces — the CSS text is
+		// the same string on either side of the seam. LT-394: a warning.
+		name: 'LTC065 stylesheet: an invalid unit',
+		code: 'LTC065',
 		sources: {
 			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(
-				'c-el { color: red }',
-				'c-el {\n\t\t\t\twidth: 10pxx\n\t\t\t}',
+				'color: red;',
+				'width: 10pxx;',
 			),
 			tsx: tsxSource({ body: '<p>x</p>' }).replace(
-				'c-el { color: red }',
-				'c-el {\n\t\t\t\twidth: 10pxx\n\t\t\t}',
+				'color: red;',
+				'width: 10pxx;',
 			),
 		},
 		pins: ['`width`', '10pxx'],

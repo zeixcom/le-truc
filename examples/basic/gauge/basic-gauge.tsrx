@@ -141,15 +141,28 @@ export function BasicGauge(
 			</basic-gauge>
 
 			<style>
-			basic-gauge {
-				--basic-gauge-background: var(--color-background, light-dark(#ecebef, #242326));
-				--basic-gauge-label-color: var(--color-text-soft, light-dark(#46444a, #d8d6dd));
+			:host {
+				--basic-gauge-background: var(
+					--color-background,
+					light-dark(#ecebef, #242326)
+				);
+				--basic-gauge-label-color: var(
+					--color-text-soft,
+					light-dark(#46444a, #d8d6dd)
+				);
 				--basic-gauge-label-font-size: var(--font-size-s, 0.875rem);
 				--basic-gauge-metric-color: var(--color-text, light-dark(#242326, #ecebef));
 				--basic-gauge-metric-font-size: var(--font-size-xl, 1.3125rem);
 				--basic-gauge-ring-width: var(--space-xs, 0.382rem);
 				--basic-gauge-size: 8rem;
-				--basic-gauge-track-color: var(--color-secondary, light-dark(#d8d6dd, #46444a));
+				--basic-gauge-track-color: var(
+					--color-secondary,
+					light-dark(#d8d6dd, #46444a)
+				);
+
+				/* Computed CSS properties */
+				--basic-gauge-color: var(--color-primary, light-dark(#6e5597, #cfb5fe));
+				--basic-gauge-degree: 120deg;
 
 				width: var(--basic-gauge-size);
 				display: flex;
@@ -194,7 +207,6 @@ export function BasicGauge(
 					font-size: var(--basic-gauge-label-font-size);
 					color: var(--basic-gauge-label-color);
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

@@ -223,7 +223,7 @@ export function FormTokenbox(
 		</form-tokenbox>
 
 		<style>
-		form-tokenbox {
+		:host {
 			display: block;
 			width: 100%;
 
@@ -279,6 +279,7 @@ export function FormTokenbox(
 				box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
 			}
 
+			/* Native validity styling — matches form-textbox's :user-invalid hook. */
 			&:invalid .input:has(input:invalid) {
 				box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 			}
@@ -338,7 +339,6 @@ export function FormTokenbox(
 					opacity: var(--opacity-solid);
 				}
 			}
-		}
-		</style>
+		}</style>
 	</>
 }

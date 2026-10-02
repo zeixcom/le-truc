@@ -21,7 +21,9 @@ describe('dependenciesOf', () => {
 				expose({ color: color.get })
 				<>
 					<c-el title={() => color.get() + String(n)}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -40,7 +42,9 @@ describe('dependenciesOf', () => {
 				expose({})
 				<>
 					<c-el title={() => String(Math.max(1, 2))}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -60,7 +64,9 @@ describe('isServerEvaluable', () => {
 				expose({ color: color.get })
 				<>
 					<c-el title={() => color.get() + String(n)}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -78,7 +84,9 @@ describe('isServerEvaluable', () => {
 				expose({ color: color.get })
 				<>
 					<c-el title={() => color.get() + String(n)}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -97,7 +105,9 @@ describe('isServerEvaluable', () => {
 				expose({})
 				<>
 					<c-el title={() => String(Math.max(1, 2))}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -128,7 +138,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => new Intl.NumberFormat(lang).format(3)}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)
@@ -143,7 +155,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => new Intl.NumberFormat('en').format(3)}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)
@@ -158,7 +172,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => new Intl.NumberFormat(host.lang).format(3)}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)
@@ -173,7 +189,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => new Intl.NumberFormat().format(3)}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)
@@ -188,7 +206,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => String(Date.now())}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)
@@ -208,7 +228,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => new Date(y, m - 1, d).toLocaleDateString()}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)
@@ -226,7 +248,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => new Intl.DateTimeFormat('en', { timeZone: 'UTC' }).format(Date.UTC(y, m - 1, d))}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)
@@ -241,7 +265,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => String(Date.UTC(2026, 0, Date.now()))}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)
@@ -255,7 +281,9 @@ describe('LT-142: Intl split from Date', () => {
 				expose({})
 				<>
 					<c-el title={() => String(Intl)}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 		)

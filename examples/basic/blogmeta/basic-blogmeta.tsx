@@ -144,7 +144,7 @@ export function BasicBlogmeta({
 				) : null}
 			</basic-blogmeta>
 			<style>{css`
-basic-blogmeta {
+:host {
 	display: flex;
 	align-items: center;
 	gap: var(--space-m);
@@ -176,8 +176,7 @@ basic-blogmeta {
 	& time {
 		font-variant-numeric: tabular-nums;
 	}
-}
-`}</style>
+}`}</style>
 		</>
 	)
 }

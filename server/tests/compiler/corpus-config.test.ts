@@ -24,7 +24,10 @@ import {
 	resolveCorpusConfig,
 	validateVariantOverrides,
 } from '../../compiler/corpus-config'
-import { DEFAULT_EMIT_PATHS } from '../../compiler/emit-paths'
+import {
+	DEFAULT_CSS_TARGETS,
+	DEFAULT_EMIT_PATHS,
+} from '../../compiler/emit-paths'
 import {
 	collectCorpusSources,
 	collectSiblingModules,
@@ -114,7 +117,7 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		expect(() =>
 			resolveCorpusConfig('/p', untrusted({ outdir: 'build' })),
 		).toThrow(
-			/unknown key "outdir" — accepted keys are: sources, siblingModules, outDir, i18nDir, runtimeImport, variantSurface, variantOverrides\. Did you mean "outDir"\?/,
+			/unknown key "outdir" — accepted keys are: sources, siblingModules, outDir, i18nDir, runtimeImport, variantSurface, variantOverrides, cssTargets. Did you mean "outDir"\?/,
 		)
 		expect(() =>
 			resolveCorpusConfig('/p', untrusted({ emitting: 'build' })),
@@ -166,7 +169,7 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		for (const value of [null, 'src/**', 42, []]) {
 			expect(() => resolveCorpusConfig('/p', untrusted(value))).toThrow(
 				new RegExp(
-					`expected a JSON object with keys drawn from: sources, siblingModules, outDir, i18nDir, runtimeImport, variantSurface, variantOverrides — received ${JSON.stringify(value) ?? String(value)}`.replace(
+					`expected a JSON object with keys drawn from: sources, siblingModules, outDir, i18nDir, runtimeImport, variantSurface, variantOverrides, cssTargets — received ${JSON.stringify(value) ?? String(value)}`.replace(
 						/[.*+?^${}()|[\]\\]/g,
 						'\\$&',
 					),
@@ -217,6 +220,43 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		const defaults = resolveCorpusConfig('/p')
 		expect(defaults.variantSurface).toBe('tsx')
 		expect(defaults.variantOverrides).toEqual({})
+	})
+})
+
+describe('cssTargets (ADR 0033 s5, LT-304)', () => {
+	const untrusted = (value: unknown): CorpusConfigInput =>
+		value as CorpusConfigInput
+
+	test('an unknown browser key is rejected naming the accepted set', () => {
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ cssTargets: { chromium: 118 } })),
+		).toThrow(/keys must be browsers: chrome, edge, firefox, safari/)
+	})
+
+	test('a version above 255 overflows the packed encoding and is rejected', () => {
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ cssTargets: { chrome: 300 } })),
+		).toThrow(/must be an integer major version/)
+		expect(() =>
+			resolveCorpusConfig(
+				'/p',
+				untrusted({ cssTargets: { safari: '17.400' } }),
+			),
+		).toThrow(/must be an integer major version/)
+	})
+
+	test('an empty object is valid — no browser names a constraint', () => {
+		const config = resolveCorpusConfig('/p', untrusted({ cssTargets: {} }))
+		expect(config.cssTargets).toEqual({})
+	})
+
+	test('integers and "major.minor" strings pack per browser', () => {
+		const config = resolveCorpusConfig(
+			'/p',
+			untrusted({ cssTargets: { chrome: 118, safari: '17.4' } }),
+		)
+		expect(config.cssTargets.chrome).toBe(118 << 16)
+		expect(config.cssTargets.safari).toBe((17 << 16) | (4 << 8))
 	})
 })
 
@@ -334,9 +374,12 @@ describe('a project outside this repo', () => {
 			])
 
 			// A depth-2 output root, so two `../` — not the repo's three.
+			// No `cssTargets` in the file: the resolved target is the default
+			// (Baseline widely available, LT-304).
 			expect(emitPathsFor(config)).toEqual({
 				outDirPrefix: '../../',
 				runtimeImport: '@zeix/le-truc-compiler/runtime',
+				cssTargets: DEFAULT_CSS_TARGETS,
 			})
 			expect(collectSiblingModules(config)).toEqual(
 				new Map([['scratch-panel', '../../lib/scratch-panel']]),

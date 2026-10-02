@@ -28,7 +28,9 @@ export function C({ tone }: { tone?: Tone })
 	expose({})
 	<>
 		<c-el data-tone={tone ?? ''}>ok</c-el>
-		<style>c-el { display: block }</style>
+		<style>:host {
+  display: block;
+}</style>
 	</>
 }`
 

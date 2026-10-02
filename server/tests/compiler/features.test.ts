@@ -37,7 +37,9 @@ const wrap = (
 			<c-el>
 				${template}
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -121,7 +123,9 @@ describe('@switch — multi-branch conditional rendering', () => {
 					}
 				}
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -225,7 +229,9 @@ export function C({}: {})
 					<p class="error">{e.message}</p>
 				}
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -243,7 +249,9 @@ export function C({}: {})
 					<p class="loading">Loading</p>
 				}
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { deriveCell } from '@zeix/le-truc'`,
@@ -271,7 +279,9 @@ import { deriveCell } from '@zeix/le-truc'`,
 					<p class="error">{e.message}</p>
 				}
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { deriveCell } from '@zeix/le-truc'`,
@@ -374,7 +384,9 @@ export function C({}: {})
 					<p class="error"><input name="x" value="error" />{e.message}</p>
 				}
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`
 
@@ -460,7 +472,9 @@ describe('truc:html={expr} — dynamic rendering', () => {
 			<c-el>
 				<article class="target" truc:html={() => body.get()}></article>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createState } from '@zeix/le-truc'`
@@ -526,7 +540,9 @@ describe('createMemo — recognized signal constructor (LT-025)', () => {
 				<span class="value">{value}</span>
 				<span class="doubled">{doubled}</span>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createState, createMemo } from '@zeix/le-truc'`
@@ -559,7 +575,9 @@ import { createState, createMemo } from '@zeix/le-truc'`
 			<c-el>
 				<p>static</p>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { asString, createMemo } from '@zeix/le-truc'`
@@ -584,7 +602,9 @@ import { asString, createMemo } from '@zeix/le-truc'`
 			<c-el>
 				<span>{lowerFilter}</span>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { asString, createMemo } from '@zeix/le-truc'`
@@ -697,7 +717,9 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 					}
 				</ul>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createList } from '@zeix/le-truc'`
@@ -730,7 +752,9 @@ import { createList } from '@zeix/le-truc'`
 					}
 				</ul>
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createList } from '@zeix/le-truc'`
@@ -797,7 +821,9 @@ describe('newer-grammar constructs — parse-error hints', () => {
 		expose({})
 		<>
 			<c-el><p>{data}</p></c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(

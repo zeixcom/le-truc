@@ -25,7 +25,9 @@ export function C({}: {})
 			<c-el>
 				<input ${attr}={() => ${attr === 'checked' ? 'checked' : 'value'}.get()} />
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}`,
 		'c.tsrx',
@@ -59,7 +61,9 @@ describe('dirty-flag attribute harvest reads the live property (CHECKLIST §6)',
 			<c-el>
 				<input title={() => title.get()} />
 			</c-el>
-			<style>c-el { color: red }</style>
+			<style>:host {
+  color: red;
+}</style>
 		</>
 	}
 import { createCell } from '@zeix/le-truc'`,

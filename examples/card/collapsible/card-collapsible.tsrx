@@ -61,7 +61,7 @@ export function CardCollapsible({ open = false }: { open?: boolean })
 			</card-collapsible>
 
 			<style>
-			card-collapsible {
+			:host {
 				display: block;
 				margin: 0 0 var(--space-l);
 
@@ -123,7 +123,6 @@ export function CardCollapsible({ open = false }: { open?: boolean })
 						margin-bottom: 0;
 					}
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

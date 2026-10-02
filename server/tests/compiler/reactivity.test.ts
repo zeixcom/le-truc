@@ -23,7 +23,9 @@ const childOf = (body: string, setup = 'const count = createCell(0)') => {
 			expose({ count: count.get })
 			<>
 				<c-el><p>${body}</p></c-el>
-				<style>c-el { color: red }</style>
+				<style>:host {
+  color: red;
+}</style>
 			</>
 		}`,
 		'c.tsrx',
@@ -44,7 +46,9 @@ describe('classifyChild — the lift rule', () => {
 				expose({})
 				<>
 					<c-el title={() => ${expr}}>ok</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -173,7 +177,9 @@ describe('lazy destructuring in binding position (LT-052, retired at the 0.2 pin
 				expose({})
 				<>
 					<c-el>x</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',

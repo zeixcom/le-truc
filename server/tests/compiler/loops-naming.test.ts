@@ -62,7 +62,9 @@ describe('runLoops — Pass 1 (server-data @for → each())', () => {
 							}
 						</ul>
 					</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -105,7 +107,9 @@ describe('runLoops — Pass 1 (construct-free body, LT-322)', () => {
 							}
 						</ul>
 					</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}`,
 			'c.tsrx',
@@ -135,7 +139,9 @@ describe('runLoops — Pass 1b (reactive-list @for → reconcile())', () => {
 							}
 						</ul>
 					</c-el>
-					<style>c-el { color: red }</style>
+					<style>:host {
+  color: red;
+}</style>
 				</>
 			}
 import { createList } from '@zeix/le-truc'`,

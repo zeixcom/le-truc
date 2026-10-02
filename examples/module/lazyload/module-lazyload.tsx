@@ -159,10 +159,9 @@ export function ModuleLazyload(
 				<div class="content" hidden></div>
 			</module-lazyload>
 			<style>{css`
-module-lazyload {
+:host {
 	display: block;
-}
-`}</style>
+}`}</style>
 		</>
 	)
 }

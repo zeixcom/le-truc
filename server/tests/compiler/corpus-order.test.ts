@@ -76,7 +76,9 @@ describe('corpus error policy', () => {
 		<c-el>
 			<div truc:pass={{ disabled: () => false }}></div>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			hash: '',

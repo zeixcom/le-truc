@@ -4,48 +4,50 @@ Deviation notes and unexpected challenges from agent sessions, newest first. Ent
 
 ---
 
-**LT-268 session (2026-10-02).** The stylesheet parse landed with three decisions worth
-the Architect's eyes, two residues found, and one Tech Writer handoff.
+**LT-304 + LT-306 session (2026-10-02).** The scoped emission and the corpus migration landed
+together; the pre-handoff review's rulings and blockers are in. Handoff:
 
-- **`lightningcss-wasm`, not the native `lightningcss` napi binding.** The native package
-  cannot ride `check:portability`'s self-contained bundle: its platform require resolves
-  from the bundle's location, and Deno refuses to consult a carried `node_modules` by
-  design (its own error says NAPI npm packages need a Deno-managed install). The wasm
-  distribution is the same Rust parser (1.33.0, in lockstep with the CLI), self-contained
-  under bun/node/deno — proven green, byte-identical output on all three. ADR 0033 s9
-  names "lightningcss"; if the distribution choice deserves a line in the ADR, it rides
-  LT-304's next ADR touch.
-- **LT-304 hazard: the lightningcss write path crashes at 1.33.** Returning parsed nodes
-  from the visitor (the write path scoped emission would use) fails with
-  "failed to deserialize; expected an object-like struct named Specifier, found ()"
-  whenever a nested rule's declaration contains `var()` — plain read-only collection is
-  fine (the corpus parses clean). Upstream-issue candidate before LT-304 designs emission.
-- **css-tree rides as `css-tree/dist/csstree.esm.js`** (a designated exports path): the
-  package entry loads its dictionary patch through a runtime `createRequire`, which also
-  cannot ride the portability bundle. It ships no TypeScript declarations, so
-  `server/compiler/css-tree.d.ts` is the ambient shim, `core-shim.d.ts` pattern. Grammar
-  arbitration is `lexer.matchDeclaration` per declaration — exemptions: custom properties,
-  `var()`/`env()` values (css-tree refuses substitution), at-rule descriptors (not
-  properties), Raw values. Corpus-probed: 1250 declarations across 38 sheets, 0 false
-  positives; `^3.2.1` caret so dictionary refreshes ride minor bumps.
-- **Tech Writer handoff (LTC064).** Three faces, first drafts in `diagnostics.ts`:
-  `malformedStyleSheet` (parse refusal), `unknownCssProperty`, `invalidCssValue` (echoes
-  the value text). Message equality across surfaces is pinned by the
-  `diagnostic-parity.test.ts` case "LTC064 stylesheet: an invalid unit". Remaining
-  lifecycle: `errors.md` rows, the ADR 0028 inventory-table row (LT-359d pattern, via
-  adr-keeper), and the HOST_PROFILE sentence LT-268 already amended stays theirs to
-  re-word if the copy round touches it.
-- **Residue (pre-existing, red at HEAD b7d2f81c+5254edfc):** `check:contract` — the toy
-  IR literal in `scripts/contract-check.ts` predates LT-287/LT-288 (it still writes
-  `exposeText`/`exposeKinds`/`refReasons`; `emit-server.ts` reads `component.expose`).
-  LT-268 added only the one clearly-required `firstRefs: new Map()`; a real toy refresh
-  against the current IR is owed. Also `tsc` flags
-  `server/tests/compiler/diagnostics.test.ts:2338` (TS2367: `d.code === 'LTC035'`
-  against the union LTC035 retired in `ac0b8d83`) — bun test passes, typecheck does not.
-- **Gates:** server suite 2764 pass / 0 fail (14 new in `css.test.ts` + the parity case);
-  `tsc` clean outside the residue above; `check:portability` green (3 runtimes,
-  byte-identical); `check:links` green; `lint:server` clean; a full corpus rebuild
-  produced zero artifact diffs (emitted CSS byte-identical, the task's first Check).
+- **Tech Writer owns the copy for LTC066–LTC070** (first drafts in `diagnostics.ts`):
+  `ownTagLedRule` (LTC066), `slottedInLightDom` (LTC067), `hostContextSelector` (LTC068),
+  `globalMisuse` (LTC069, six faces: nested / prefixed / trailing / leading-ancestor /
+  mid-selector / declarations), `hostQualifier` (LTC070, fix-it `:host(<qualifier>)`).
+  Lifecycle: `errors.md` rows, the ADR 0028 inventory row (adr-keeper), HOST_PROFILE § Styles
+  (LT-248's docs half rewords it anyway). Diagnostic parity is pinned per code in
+  `tsx/diagnostic-parity.test.ts`'s family list — the new codes ride the existing sweep; add a
+  sample each if the family test requires one per family.
+- **Pixel parity evidence (LT-306's Check):** full-page Playwright screenshots of every
+  compiled component's `/test/<tag>` page, served from a HEAD worktree (before) vs this
+  landing (after), default targets: 36/36 pre-existing components identical (basic-button,
+  form-checkbox, form-listbox, form-spinbutton, module-codeblock, module-lazyload,
+  module-list, module-listnav converged only after the sheets were brought to the twins'
+  served content — the twins had drifted RICHER than the compiled sheets, and the compiled
+  sheets had their own stale variants). The throwaway harness (`examples/__pixel/`) is
+  deleted; the codeblock/listnav cross-boundary cases are pinned by the css-probe contract
+  spec instead.
+- **The codemod** (`scripts/migrate-shadow-css.ts`, kept for pioneer projects): SELECTOR
+  TEXT ONLY, in place — authored values, nesting, comments and `light-dark()` never move.
+  Modes: plain (tag-led → shadow form), `--from-twins` (sheet := migrated twin; the
+  cross-boundary rules — content the component authors through a compose hole — hoist as
+  whole-rule `:global`, at-rules carrying them into a top-level bare `:global` block),
+  `--tests` (the one-shot fixture pass, already run). `--sync-twins` is gone (superseded).
+- **The `:global` wrapper UNWRAPS on emission** — `:global(body.scroll-lock) { … }` emits
+  `body.scroll-lock { … }` outside the scope, and the bare-block form's inner rules hoist
+  unwrapped. Reading s6a's "emitted verbatim" as shipping the TSRX vocabulary itself would
+  ship an invalid selector; the fixtures pin the unwrapped form. Flag if the copy should
+  say "the wrapper unwraps".
+- **Pre-existing, red at HEAD and here:** `bun run build:docs` fails the simulation gate with
+  2 unclassified canvas entries on `<module-lazyload>` (proven in a HEAD worktree — same
+  signature). Same family as the classified form-colorgraph rows; needs a
+  `CLASSIFIED_DIAGNOSTICS` entry or a fixture fix. NOT this landing's regression.
+- **check:contract residue** (LT-394's note): untouched — still red at HEAD; LT-394's path
+  retires the toy.
+- **Gate results:** server suite 2802/0; corpus warning baseline 0; census 36 entries
+  (28 folded / 8 simulated — css-probe joins by design); check:corpus, check:portability
+  (3 runtimes byte-identical), check:links green; corpus Playwright suite green once per
+  mode (default lowered 533/533 incl. the 7 scoping-contract tests; native rebuild via a
+  throwaway config — the env override was dropped per review, 497/497 + 7/7).
+- **R2 note:** `server/effects/css.ts` keeps `--targets '>= 0.25%'` for the docs bundle —
+  the reason is stated in the file (the site's own audience, not a component author's).
 
 ---
 

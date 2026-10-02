@@ -38,7 +38,9 @@ const tsrx = compileComponent(
 				}
 			</ul>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 	'c.tsrx',
@@ -99,7 +101,9 @@ describe('harness names shadowed by args are aliased (LT-302)', () => {
 			<span>{count}</span>
 			<b>{() => bindText + count.get()}</b>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }
 import { createCell } from '@zeix/le-truc'`,

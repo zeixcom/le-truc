@@ -1,0 +1,49 @@
+/**
+ * The scoped-CSS contract probe (LT-304, ADR 0033 s1/s3): a minimal
+ * composing component whose sheet exercises every contract point the
+ * `css-probe.spec.ts` comparison pins — the host rule, a bare internals
+ * rule that must not reach a composed child, and a `:global` page rule.
+ * Deliberately not styled for looks; every declaration is an assertion.
+ */
+import { BasicButton } from '../../basic/button/basic-button.tsrx'
+
+export type CssProbeProps = {}
+
+declare global {
+	interface HTMLElementTagNameMap {
+		'css-probe': HTMLElement & CssProbeProps
+	}
+}
+
+export function CssProbe({}: CssProbeProps) {
+	return (
+		<>
+			<css-probe>
+				<p class="label">{'Label'}</p>
+				<p class="probe-global">{'Global'}</p>
+				<BasicButton>
+					<span>{'Page content'}</span>
+				</BasicButton>
+				<button type="button" class="own">
+					{'Own'}
+				</button>
+			</css-probe>
+
+			<style>{css`
+				:host {
+					display: block;
+					border-top: 3px solid rgb(255, 0, 0);
+				}
+				.label {
+					color: rgb(0, 0, 255);
+				}
+				button {
+					text-transform: uppercase;
+				}
+				:global(.probe-global) {
+					letter-spacing: 2px;
+				}
+			`}</style>
+		</>
+	)
+}

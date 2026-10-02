@@ -95,7 +95,7 @@ export function BasicButton(
 			</basic-button>
 
 			<style>
-			basic-button {
+			:host {
 				position: relative;
 				display: inline-block;
 				flex: 0;
@@ -131,13 +131,14 @@ export function BasicButton(
 						}
 					}
 
-					/* Variants — chosen with the `variant` arg. */
 					&.primary {
-						background-color: var(--color-primary);
-						border-color: var(--color-primary);
 						color: var(--color-primary-text);
+						background-color: var(--color-primary);
+						border-color: var(--color-primary-active);
 
 						&:not(:disabled) {
+							opacity: var(--opacity-solid);
+
 							&:hover {
 								background-color: var(--color-primary-hover);
 							}
@@ -148,43 +149,14 @@ export function BasicButton(
 						}
 					}
 
-					&.tertiary {
-						background-color: transparent;
-						border-color: transparent;
-
-						&:not(:disabled) {
-							&:hover {
-								background-color: var(--color-secondary-hover);
-							}
-
-							&:active {
-								background-color: var(--color-secondary-active);
-							}
-						}
-					}
-
-					&.constructive {
-						background-color: var(--color-success);
-						border-color: var(--color-success);
-						color: var(--color-success-text);
-
-						&:not(:disabled) {
-							&:hover {
-								background-color: var(--color-success-hover);
-							}
-
-							&:active {
-								background-color: var(--color-success-active);
-							}
-						}
-					}
-
 					&.destructive {
-						background-color: var(--color-error);
-						border-color: var(--color-error);
 						color: var(--color-error-text);
+						background-color: var(--color-error);
+						border-color: var(--color-error-active);
 
 						&:not(:disabled) {
+							opacity: var(--opacity-solid);
+
 							&:hover {
 								background-color: var(--color-error-hover);
 							}
@@ -195,21 +167,88 @@ export function BasicButton(
 						}
 					}
 
-					/* Sizes — chosen with the `size` arg. */
+					&.constructive {
+						color: var(--color-success-text);
+						background-color: var(--color-success);
+						border-color: var(--color-success-active);
+
+						&:not(:disabled) {
+							opacity: var(--opacity-solid);
+
+							&:hover {
+								background-color: var(--color-success-hover);
+							}
+
+							&:active {
+								background-color: var(--color-success-active);
+							}
+						}
+					}
+
+					&.tertiary {
+						background: transparent;
+						border: none;
+						padding: var(--space-xs);
+						height: auto;
+						color: var(--color-primary);
+
+						&:not(:disabled) {
+							opacity: var(--opacity-solid);
+
+							&:hover {
+								background-color: var(--color-overlay-hover);
+								color: var(--color-primary-hover);
+							}
+
+							&:active {
+								background-color: var(--color-overlay-active);
+								color: var(--color-primary-active);
+							}
+						}
+
+						&.constructive {
+							color: var(--color-success);
+
+							&:not(:disabled) {
+								opacity: var(--opacity-solid);
+
+								&:hover {
+									color: var(--color-success-hover);
+								}
+
+								&:active {
+									color: var(--color-success-active);
+								}
+							}
+						}
+
+						&.destructive {
+							color: var(--color-error);
+
+							&:not(:disabled) {
+								opacity: var(--opacity-solid);
+
+								&:hover {
+									color: var(--color-error-hover);
+								}
+
+								&:active {
+									color: var(--color-error-active);
+								}
+							}
+						}
+					}
+
 					&.small {
-						height: var(--space-l);
-						min-inline-size: var(--space-l);
-						padding: 0 var(--space-xs);
+						--input-height: var(--space-l);
 						font-size: var(--font-size-xs);
-						line-height: var(--line-height-xs);
+						padding-inline: var(--space-xs);
 					}
 
 					&.large {
-						height: var(--space-xl);
-						min-inline-size: var(--space-xl);
-						padding: 0 var(--space-m);
+						--input-height: var(--space-xl);
 						font-size: var(--font-size-m);
-						line-height: var(--line-height-m);
+						padding-inline: var(--space-m);
 					}
 				}
 
@@ -231,7 +270,6 @@ export function BasicButton(
 						display: none;
 					}
 				}
-			}
-			</style>
+			}</style>
 		</>
 	}

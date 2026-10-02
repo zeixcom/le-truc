@@ -348,7 +348,7 @@ export function FormSpinbutton(
 		</form-spinbutton>
 
 		<style>
-		form-spinbutton {
+		:host {
 			--form-spinbutton-min-width: 8rem;
 			--form-spinbutton-input-min-width: 4rem;
 			--form-spinbutton-input-max-width: 6rem;
@@ -452,6 +452,27 @@ export function FormSpinbutton(
 					&:last-of-type {
 						border-radius: 0 var(--space-xs) var(--space-xs) 0;
 					}
+
+					&:not([hidden]) + button:last-of-type {
+						border-left-width: 0;
+					}
+				}
+
+				[hidden] + button {
+					flex-grow: 1;
+					min-width: var(--form-spinbutton-min-width);
+					border-radius: var(--space-xs);
+					color: var(--color-text-inverted);
+					background-color: var(--color-primary);
+					border-color: var(--color-primary-active);
+
+					&:hover {
+						background-color: var(--color-primary-hover);
+					}
+
+					&:active {
+						background-color: var(--color-primary-active);
+					}
 				}
 
 				& *:focus {
@@ -474,6 +495,23 @@ export function FormSpinbutton(
 				}
 			}
 
+			.buttons {
+				display: inline-flex;
+				flex-direction: column-reverse;
+				margin-block-start: calc(-0.5 * var(--input-height));
+
+				& button {
+					&:first-of-type {
+						border-radius: 0 0 var(--space-xl) var(--space-xl);
+					}
+
+					&:last-of-type {
+						border-radius: var(--space-xl) var(--space-xl) 0 0;
+						border-bottom-width: 0;
+					}
+				}
+			}
+
 			> .error {
 				flex-basis: 100%;
 				margin: var(--space-xs) 0 0;
@@ -493,7 +531,6 @@ export function FormSpinbutton(
 					opacity: var(--opacity-solid);
 				}
 			}
-		}
-		</style>
+		}</style>
 	</>
 }

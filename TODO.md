@@ -44,7 +44,7 @@ parallel.
   (done ✓ 2026-10-02, in DONE.md — the ADR 0037 amendments). ~~LT-275 + LT-359~~ (one Tech
   Writer copy round — reviewed 2026-10-02, in DONE.md) and ~~LT-389~~ (done ✓ 2026-10-02,
   in DONE.md) — track C is closed.
-- **D — scoped CSS (ADR 0033).** LT-268 → LT-304 + LT-306 (one landing) → LT-248. It touches
+- **D — scoped CSS (ADR 0033).** ~~LT-268~~ (reviewed 2026-10-02, in DONE.md) → LT-304 + LT-306 (one landing) → LT-248. ~~LT-394 → LT-395~~ and ~~LT-396~~ (its review follow-ups; reviewed 2026-10-02, in DONE.md — uncommitted, they land with LT-304's commit). It touches
   `css.ts`, the config and the example sheets, not the front ends, so it runs in parallel from
   day one.
 - **Parallel slot.** ~~LT-382, LT-384, LT-383~~ (reviewed 2026-10-01, in DONE.md). ~~LT-358~~ (reviewed 2026-10-01, in DONE.md). ~~LT-245~~ (spike — reviewed 2026-10-01, ADR 0045, in DONE.md; its promotion is track A's LT-379 → LT-380) and ~~LT-361~~ (done ✓, in DONE.md).
@@ -72,7 +72,7 @@ and diagnostic parity (LT-274, LT-276). Compiled sheets are shadow-root form, em
 both `cssTargets` modes (LT-268, LT-304, LT-306). Every reshape ADR 0040 names
 has landed. `bun run build:docs` and `check:links` pass.
 
-**Next free task ID: LT-394.** Next free diagnostic code: LTC064 (LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-397.** Next free diagnostic code: LTC071 (LTC070 is LT-304's, per the pre-handoff review; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -88,27 +88,21 @@ LT-360 reviewed 2026-10-01, in DONE.md.
 
 ### C — Reactive conditions (ADR 0037; LT-274, LT-276, LT-385, LT-386, LT-388, LT-275 + LT-359 and LT-389 done 2026-10-02, in DONE.md — track C closed)
 
-### D — Scoped CSS (ADR 0033; LT-268 → LT-304 + LT-306 → LT-248)
+### D — Scoped CSS (ADR 0033; LT-268, LT-394–LT-396 reviewed 2026-10-02, in DONE.md; LT-304 + LT-306 done 2026-10-02, pending review ⏳ → LT-248)
 
-- [x] LT-268: Parse the authored stylesheet in the compiler — the `lightningcss` swap for `css.ts` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s9). **Ships in 3.0.** Prerequisite of LT-304, LT-214, LT-269, LT-270.
-  (done 2026-10-02, pending review ⏳ — `lightningcss-wasm` + `css-tree` as dependencies, LTC064 first drafts in place; handoff in NOTES.md. Tech Writer owns the LTC064 message copy.)
-  **Skill:** le-truc-dev (Tech Writer owns the message copy)
-  **Context:** `server/compiler/css.ts` dedents and emits verbatim; the compiler holds **no
-  model of the CSS at all**. `lightningcss` is **already a devDependency and already the
-  build's CSS effect** (`server/effects/css.ts`). Parse the component's sheet and make its
-  rules, selectors and at-rules reachable from the IR. **Spec-grammar validation of authored
-  CSS (unknown property, invalid unit, malformed value) rides this swap**: channel compiler,
-  **tier 1 Prevented** (ADR 0028 s1), since a malformed sheet has no correct emission.
-  Evaluate `css-tree`'s `lexer.matchProperty` only where per-declaration diagnostics are
-  wanted rather than a whole-sheet parse failure. This task adds the model and changes no
-  output; the scoped emission and the `cssTargets` key are LT-304's.
-  **Check:** emitted CSS stays **byte-identical** for every corpus component; a fixture with
-  an invalid unit fails the build with the ruled copy; `check:portability` green with the
-  dependency (ADR 0038 — it must run under every supported JS runtime; browser loadability is
-  not required).
-
-- [ ] LT-304: Scoped emission of shadow-root-form CSS — native `@scope` or the `:where(:not(…))` lowering, per `cssTargets` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s1–s7). **Ships in 3.0. Depends on LT-268; lands together with LT-306** (the corpus migration), since the old tag-led form becomes an error.
+- [x] LT-304: Scoped emission of shadow-root-form CSS — native `@scope` or the `:where(:not(…))` lowering, per `cssTargets` ([ADR 0033](adr/0033-scope-component-styles-by-custom-element-name.md) s1–s7). **Ships in 3.0. Depends on LT-268; lands together with LT-306** (the corpus migration), since the old tag-led form becomes an error.
   **Skill:** le-truc-dev (Tech Writer owns the new LTC copy; LT-248 is the docs half)
+  (done 2026-10-02, pending review ⏳ — landed with LT-306. Emission is string-level over the
+  read-only parse (upstream #1065/#1081 tracked; pins aligned, ADR 0033 s9 amended with the
+  wasm-distribution line). Owner rulings R1–R3 of 2026-10-02 implemented: lowered rules lead
+  `:where(<tag>)`; `cssTargets` is the per-browser object with a fixed pinned default (LE_TRUC_COMPILER
+  §7.1 row; the site bundle keeps its own target, stated in `server/effects/css.ts`); `:host<qualifier>`
+  is LTC070 (fix-it `:host(…)`), with the corpus migrated to the argument form. New codes LTC066–LTC069
+  (own-tag-led, `::slotted`, `:host-context`, `:global` misuses, six faces) — first drafts in
+  `diagnostics.ts`, Tech Writer owns the copy. Full handoff (pixel-parity evidence, the codemod's
+  modes, the pre-existing build:docs sim residue) in NOTES.md. Census by design: css-probe
+  (examples/test/scoping, the contract fixture) joins the registry — 36 entries, 28 folded /
+  8 simulated; the tier-corpus map test pins it.)
   **Context:** Owner ruling 2026-09-24. A compiled sheet is authored as shadow-root CSS
   (`:host` plus bare selectors) and the compiler gives it shadow-root scoping in light DOM.
   (1) **`cssTargets`**: a browserslist-style key in `le-truc.config.json` (ADR 0036
@@ -130,6 +124,15 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   errors above, each with its own reason in the copy. (6)
   **Served CSS**: where a folder serves a compiled surface, the page imports the compiler's
   emitted CSS; the `.ts` twin's hand-written `.css` is served only with the twin (s10).
+  **Hazard (LT-268 review, 2026-10-02):** `ComponentIR.sheet` is collected read-only. The
+  lightningcss 1.33 write path (returning nodes from the visitor) crashes with "failed to
+  deserialize … Specifier" whenever a nested rule's declaration holds `var()`. Settle the
+  emission strategy (a fixed upstream release, serializing from the collected AST, or
+  string-level rewriting of selectors only) before building on it. Already filed upstream
+  (parcel-bundler/lightningcss): #1081 is our exact error, #1065 the custom-properties
+  trigger — track those rather than filing a new one.
+  Keep `lightningcss-wasm` (exact pin) and `lightningcss-cli` (caret) on one version — ADR
+  0033 s9's distribution line (wasm, for ADR 0038) rides this task's ADR touch.
   **Check:** a fixture per contract point in s1/s3 compares the compiled light-DOM output
   with the same sheet inside a real shadow root: the host rule loses to a page type
   selector in both, and a parent rule never reaches a composed child's internals in
@@ -137,8 +140,49 @@ LT-360 reviewed 2026-10-01, in DONE.md.
   three lowering differences); the corpus Playwright specs pass once per mode (override
   `cssTargets`); each new error fires on its fixture; LTC051 still compares authored
   sheets; corpus warning baseline 0.
+  **Pre-handoff review (Architect, 2026-10-02 — fix these before handing off; LT-304 + LT-306):**
+  *Rulings (owner):* (R1) lowered rules lead with `:where(<tag>)`, not the bare tag, so a rule
+  has the same specificity in both modes (`:where(my-el) .x` ≙ native `.x`). (R2) `cssTargets` stays
+  the per-browser minimum-version object, with a fixed default version set bumped deliberately.
+  ADR 0033 s4/s5 and ADR 0036 are amended at final review. Align the site bundle's separate
+  `--targets '>= 0.25%'` (`server/effects/css.ts`) with it or state why not. (R3) `:host` followed
+  directly by a qualifier (`:host.x`, `:host:focus-within`, `:host[attr]`, `:host:state(…)`) matches
+  nothing in a shadow root: a new tier 1 error, **LTC070**, channel compiler, fix-it `:host(<qualifier>)`.
+  Tech Writer owns the copy.
+  *Blocking:* (1) The codemod wrote lowered CSS back into the sources. `light-dark()` became
+  undefined `--lightningcss-light/-dark` fallbacks, an invalid value, in `card-callout` (5),
+  `module-carousel` (15) and `basic-gauge` (5); it also dropped authored nesting and 5 comments.
+  Rewrite selector text only, restore the authored values, nesting and comments. (2) Migrate the
+  ~100 `:host<qualifier>` selectors in 14 sources to `:host(…)` (R3). (3) Lowered mode leaks:
+  `collectTextRules` doesn't descend into `@starting-style` (or authored `@scope`), so
+  `@starting-style { .x {} }` ships unscoped; `RECURSABLE_AT_RULES` in the checks lacks
+  `starting-style` too. (4) `cssTargets: {}`, or a browser missing from `NESTING_CAP`, skips flattening,
+  so nested rules get no boundary guard. Always flatten, filling missing browsers from the cap,
+  and add `cssTargets` validation tests (`{}`, unknown browser, versions above 255 that
+  overflow the packed encoding). (5) `examples/main.css` `@import`s the generated CSS, but
+  `cssEffect` runs parallel to `compileEffect` (`server/build.ts`), so a fresh checkout fails. Watch
+  mode also never rebuilds page CSS on a `<style>` edit (generated `.css` not watched). (6) Delete
+  `examples/__pixel/` (a throwaway; darwin PNGs would fail Linux CI); keep `css-probe.css` out of
+  the docs bundle. (7) Check items: run the scoping specs once per mode (native `@scope` is
+  never browser-tested); pin the remaining s7 differences; assert the shadow `:global` value; use a
+  page *type* selector in the host-rule test.
+  *Also fix:* `HOISTED_AT_RULES` should match `css.ts`'s `DESCRIPTOR_ATRULES`, plus
+  `@keyframes`, `@import` and `@namespace` (`@counter-style` and the others land inside `@scope`
+  today). Variant-set members compute their own boundaries, so their emitted CSS can differ while
+  LTC051 passes: compare the boundary sets, and correct the comment at `corpus-compile.ts:367`.
+  Prune the dead `--sync-twins` rules in `form-listbox` (`module-scrollarea`, `[role=group]`,
+  `[role=presentation]`). Drop the unused `LE_TRUC_CSS_TARGETS` override (or record it in
+  ADR 0036). Codemod: remove the dead `stripTagCompound`; `tag>x` with no space must not
+  widen to a descendant selector.
 
-- [ ] LT-306: Migrate every compiled corpus stylesheet to the shadow-root form (ADR 0033 s2) and split the twins' CSS (s10). **Ships in 3.0. Lands together with LT-304.**
+- [x] LT-306: Migrate every compiled corpus stylesheet to the shadow-root form (ADR 0033 s2) and split the twins' CSS (s10). **Ships in 3.0. Lands together with LT-304.**
+  (done 2026-10-02, pending review ⏳ — the committed codemod `scripts/migrate-shadow-css.ts`
+  rewrites SELECTOR TEXT ONLY in place (values, nesting, comments and authored `light-dark()`
+  never move; `--from-twins` brings each twin-carrying sheet to the previously-served content,
+  cross-boundary rules hoisting as whole-rule `:global`). `examples/main.css` imports the
+  emitted CSS for every compiled folder; the twins' hand-written `.css` stays verbatim.
+  Served pages render pixel-identical to HEAD on all 36 compiled components' test pages
+  (Playwright full-page screenshots, before-worktree at HEAD vs after, default targets).)
   **Skill:** le-truc-dev
   **Context:** Every compiled sheet (`.tsx` and `.tsrx`, both members of a variant set
   identically) moves from tag-led nesting (`my-element { … & .x { … } }`) to `:host { … }`

@@ -36,7 +36,9 @@ ${setup}
 	<>
 		<c-el ${rootAttrs}></c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 		'c.tsrx',
@@ -73,7 +75,9 @@ export function C({ max = '10' }: { max?: string })
 		<c-el>
 			<meter max={max}></meter>
 		</c-el>
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
@@ -137,7 +141,9 @@ export function C({}: {})
 	<>
 		<c-el>{greeting}</c-el>
 
-		<style>c-el { color: red }</style>
+		<style>:host {
+  color: red;
+}</style>
 	</>
 }`,
 			'c.tsrx',
