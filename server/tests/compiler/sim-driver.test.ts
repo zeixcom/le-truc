@@ -219,6 +219,42 @@ describe('stage-1 server-simulation driver — corpus fixtures (LT-154)', () => 
 		expect(html).toContain('id="missing-elements-test"')
 		expect(html).toContain('<div class="content" hidden="">')
 	})
+
+	test("module-coloreditor's teardown stays with it when a canvas-free component renders next (LT-335)", async () => {
+		// The docs build's page order: module-coloreditor's last occurrence,
+		// then module-lazyload's demo instance. Detaching coloreditor's tree
+		// restores its composed form-colorgraph's passed `value`, which
+		// re-fires the child's canvas effects — before LT-335 that ran in
+		// lazyload's window and failed the build on two unclassified
+		// `getContext` notices against a component with no canvas.
+		const tagged = (tag: string) => {
+			const info = compiled.find(entry => entry.tag === tag)
+			if (!info) throw new Error(`${tag} is not in the corpus`)
+			return info
+		}
+		const editor = tagged('module-coloreditor')
+		const lazyload = tagged('module-lazyload')
+		const instance = (
+			await Bun.file('examples/module/lazyload/module-lazyload.html').text()
+		).match(
+			/<module-lazyload\s+id="missing-elements-test"[\s\S]*?<\/module-lazyload>/,
+		)?.[0]
+		if (!instance) throw new Error('the demo instance is gone')
+		await simulateConnect(realm, editor, await serverMarkupOf(editor))
+		const before = realm.diagnostics.length
+		const { diagnostics } = await realm.render({
+			markup: instance,
+			component: lazyload.tag,
+		})
+		const canvas = /HTMLCanvasElement's getContext/
+		expect(diagnostics.filter(entry => canvas.test(entry.message))).toEqual([])
+		const teardown = realm.diagnostics
+			.slice(before)
+			.filter(entry => canvas.test(entry.message))
+		expect(teardown.length).toBeGreaterThan(0)
+		for (const entry of teardown)
+			expect(entry.component).toBe('module-coloreditor')
+	})
 })
 
 describe('quiescence is hermetic (sub-design 9) — no build warning on the standing corpus', () => {

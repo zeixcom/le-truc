@@ -1,19 +1,24 @@
 /**
- * The front-end contract check (LT-265, ADR 0032 amended 2026-09-19).
+ * The public-contract check (LT-265; re-scoped by LT-370, ADR 0034 s8).
  *
- * Writes a toy front end — a deliberately foreign one-line syntax, neither
- * `.tsrx` nor `.tsx` — into a scratch project OUTSIDE the repo and runs it
- * there. The front end imports NOTHING but `server/compiler/contract.ts`,
- * the designated contract surface, and proves the contract's two halves:
+ * Writes a consumer into a scratch project OUTSIDE the repo and runs it
+ * there. The consumer imports NOTHING but `server/compiler/contract.ts`,
+ * the designated export surface, and drives the bundled `.tsx` front end
+ * (`compileComponentTsx`) the way a published-package consumer would:
  *
- * - a toy component compiles end-to-end through `compileFromIR` in all
- *   three tiers (no signals → folded; a realm-answerable signal →
- *   simulated; an unresolvable one → static), producing the three
- *   artifacts and the registry entry;
- * - both refusal channels produce a designed outcome, never a silently
- *   wrong component: an error diagnostic (component null, the diagnostic
- *   carried through) and a routing signal (the tier degrades, the signal
- *   recorded on the entry for the census).
+ * - one small component compiles end-to-end in all three tiers (no routing
+ *   signal → folded; a realm-answerable signal → simulated; an
+ *   unresolvable one → static), producing the three artifacts and the
+ *   registry entry, with every signal recorded on the entry;
+ * - an error diagnostic refuses the component: `component` is null and the
+ *   diagnostic carries through, never a silently wrong component.
+ *
+ * The IR is not part of this check: it is the lowering, internal, and may
+ * change in any release (ADR 0034 s8, D-25). Until LT-370 this script
+ * hand-built a `ComponentIR` literal for a toy front end and handed it to
+ * `compileFromIR`; that seam left the contract with the IR, and the
+ * external extension point is the source-to-source adapter seam instead
+ * (ADR 0032 s6, LT-376).
  *
  * This run goes against the repo's OWN module paths — the published-
  * exports variant is LT-254's check and replaces the one interpolated
@@ -33,188 +38,101 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
+const SUMMARY =
+	'contract check: the bundled .tsx front end compiled end-to-end through the designated contract surface'
+
 /**
- * The toy front end. Grammar: `component <tag> [clock|frame] "<text>"` —
- * `clock` stands for a construct the front end cannot fold because it is a
- * fact about the viewing moment (routes Static), `frame` for one the
- * simulation realm CAN answer (routes Simulated), no directive for a
- * fully foldable component (Folded). Anything else is refused with a real
- * error diagnostic. Every construct maps onto contract vocabulary only.
+ * The scratch consumer. One authored `.tsx` component, varied along the
+ * single axis each case isolates: `seed`'s initializer is never rendered
+ * (no harvestable initial-DOM site), so its value decides the tier — the
+ * wall clock has no server answer (Static), a literal is realm-answerable
+ * (Simulated), and dropping `seed` leaves nothing to route on (Folded). An
+ * `async` component function is a real error diagnostic (LTC008).
  */
-const FRONT_END = `
+const CONSUMER = `
 import {
 	DEFAULT_EMIT_PATHS,
-	compileFromIR,
-	type CompileDiagnostic,
+	compileComponentTsx,
 	type CompileFileResult,
-	type ComponentIR,
-	type RoutingSignal,
 } from '${ROOT}/server/compiler/contract'
 
-const TOY_SOURCE = /^component\\s+([a-z][a-z-]*)(?:\\s+(clock|frame))?\\s+"([^"]*)"\\s*$/
+const BASE = \`import { asString, createCell } from '@zeix/le-truc'
 
-const pascal = (tag) => tag.split('-').map((part) => part[0].toUpperCase() + part.slice(1)).join('')
+export function ContractProbe({ name }: { name: string }) {
+	const labelId = \\\`\\\${name}-label\\\`
+	const seed = createCell(Date.now())
+	expose({ label: asString('') })
+	return (
+		<>
+			<contract-probe>
+				<span class="label" id={labelId}>Label</span>
+			</contract-probe>
+			<style>{css\\\`:host { color: red; }\\\`}</style>
+		</>
+	)
+}\`
 
-export const compileToy = (source, filename) => {
-	const match = TOY_SOURCE.exec(source)
-	if (!match) {
-		const diagnostic: CompileDiagnostic = {
-			code: 'LTC005',
-			severity: 'error',
-			message: 'the toy front end only understands: component <tag> [clock|frame] "<text>"',
-			line: 1,
-		}
-		return { component: null, diagnostics: [diagnostic], routingSignals: [] }
-	}
-	const tag = match[1]
-	const directive = match[2]
-	const text = match[3]
-	const routingSignals: RoutingSignal[] =
-		directive === 'clock'
-			? [{
-					origin: 'LTC004',
-					detail: 'toy clock directive reads the wall clock',
-					line: 1,
-					resolution: {
-						by: 'none',
-						limb: 'not-a-server-fact',
-						reason: 'reads the wall clock, which is a fact about the viewing moment',
-					},
-				}]
-			: directive === 'frame'
-				? [{
-						origin: 'LTC004',
-						detail: 'toy frame directive reads element layout',
-						line: 1,
-						resolution: { by: 'realm' },
-					}]
-				: []
-	const component: ComponentIR = {
-		name: pascal(tag),
+const compile = (source: string): CompileFileResult =>
+	compileComponentTsx(
 		source,
-		tag,
-		paramsText: '',
-		paramNames: [],
-		paramProps: [],
-		i18nMessages: null,
-		declaresI18n: false,
-		langBinding: null,
-		langArgDefault: null,
-		setup: [],
-		clientSetup: [],
-		plainSetup: [],
-		signals: [],
-		exposeText: null,
-		exposeRange: null,
-		exposeArgNode: null,
-		exposeProps: new Map(),
-		exposeKinds: new Map(),
-		parserExposeProps: new Map(),
-		exposeAmbients: [],
-		contextRefs: [],
-		config: null,
-		root: {
-			kind: 'element',
-			tag,
-			attrs: [{ kind: 'static', name: 'class', value: 'toy' }],
-			children: [{ kind: 'text', value: text }],
-			node: { type: 'ToyElement', start: 0, end: source.length },
-		},
-		refReasons: new Map(),
-		unmatchedOptionalRefs: [],
-		deferredComposeRefs: [],
-		optionalRefs: new Set(),
-		fors: new Map(),
-		css: '',
-		// LT-288 made the first-ref map required IR; the toy declares no
-		// element references, so the empty map is its whole truth.
-		firstRefs: new Map(),
-		typeDecls: [],
-		globalDecl: null,
-		propsTypeName: null,
-		componentDoc: null,
-		serverKnown: new Set(),
-		imports: {
-			server: [],
-			client: [],
-			serverLocalNames: new Set(),
-			clientLeTrucNames: new Set(),
-			plainLocalNames: new Set(),
-		},
-	}
-	const result: CompileFileResult = compileFromIR(
-		component,
-		[],
-		routingSignals,
-		filename,
+		'contract-probe.tsx',
 		new Set(),
 		undefined,
 		undefined,
 		DEFAULT_EMIT_PATHS,
 	)
-	return result
-}
-`
 
-/**
- * The scratch runner: compiles the toy source in all three tiers plus both
- * refusal shapes, asserts the designed outcome of each, and reports.
- */
-const RUNNER = `
-import { compileToy } from './front-end'
-
-const assert = (condition, label) => {
+const assert = (condition: boolean, label: string) => {
 	if (!condition) throw new Error('contract check failed: ' + label)
 	console.log('  ok: ' + label)
 }
 
-// 1. Folded: no signals, three artifacts, registry entry.
-const folded = compileToy(
-	'component toy-greeting "Hello from the toy front end"',
-	'toy-greeting.toy',
-)
+// 1. Folded: no routing signal, three artifacts, registry entry.
+const folded = compile(BASE.replace('\\tconst seed = createCell(Date.now())\\n', ''))
 assert(folded.component !== null, 'folded: component compiled')
 assert(folded.component?.entry.tier === 'folded', 'folded: tier is folded')
-assert(folded.component?.entry.tag === 'toy-greeting', 'folded: entry carries the tag')
+assert(folded.component?.entry.tag === 'contract-probe', 'folded: entry carries the tag')
 assert(
-	(folded.component?.serverCode.includes('toy-greeting') ?? false) &&
+	(folded.component?.serverCode.includes('contract-probe') ?? false) &&
 		(folded.component?.clientCode.includes('defineComponent') ?? false) &&
-		folded.component?.css === '',
+		(folded.component?.css.includes('contract-probe') ?? false),
 	'folded: three artifacts produced',
 )
-assert(folded.diagnostics.length === 0, 'folded: no diagnostics')
-
-// 2. Simulated: a realm-answerable refusal routes down one step.
-const simulated = compileToy(
-	'component toy-panel frame "reads element layout"',
-	'toy-panel.toy',
+assert(
+	(folded.component?.clientSpans.length ?? 0) > 0,
+	'folded: client span table produced',
 )
+assert(
+	folded.diagnostics.every(d => d.severity !== 'error'),
+	'folded: no error diagnostics',
+)
+
+// 2. Simulated: a realm-answerable routing signal routes down one step.
+const simulated = compile(BASE.replace('createCell(Date.now())', 'createCell(0)'))
 assert(simulated.component?.entry.tier === 'simulated', 'simulated: tier is simulated')
 assert(
 	simulated.component?.entry.routingSignals[0]?.resolution.by === 'realm',
-	'simulated: realm-answerable signal recorded',
+	'simulated: realm-answerable signal recorded on the entry',
 )
 
-// 3. Static: an unresolvable refusal routes past the realm entirely.
-const statik = compileToy(
-	'component toy-clock clock "reads the wall clock"',
-	'toy-clock.toy',
-)
+// 3. Static: an unresolvable routing signal routes past the realm entirely.
+const statik = compile(BASE)
 assert(statik.component?.entry.tier === 'static', 'static: tier is static')
+const limb = statik.component?.entry.routingSignals[0]?.resolution
 assert(
-	statik.component?.entry.routingSignals[0]?.resolution.limb === 'not-a-server-fact',
-	'static: unresolvable signal recorded',
+	limb?.by === 'none' && limb.limb === 'not-a-server-fact',
+	'static: unresolvable signal recorded on the entry',
 )
 
 // 4. The diagnostic refusal: component null, the diagnostic carried through.
-const refused = compileToy('component broken @@@ ""', 'broken.toy')
+const refused = compile(BASE.replace('export function', 'export async function'))
 assert(refused.component === null, 'refused: no component on refusal')
 assert(
-	refused.diagnostics[0]?.code === 'LTC005' && refused.diagnostics[0]?.severity === 'error',
+	refused.diagnostics.some(d => d.code === 'LTC008' && d.severity === 'error'),
 	'refused: real error diagnostic carried through',
 )
 
-console.log('contract check: toy front end compiled end-to-end through the designated contract surface')
+console.log('${SUMMARY}')
 `
 
 /* === Main === */
@@ -223,8 +141,7 @@ const workDir = mkdtempSync(join(tmpdir(), 'le-truc-contract-'))
 const keep = process.argv.includes('--keep')
 
 try {
-	writeFileSync(join(workDir, 'front-end.ts'), FRONT_END)
-	writeFileSync(join(workDir, 'run.ts'), RUNNER)
+	writeFileSync(join(workDir, 'run.ts'), CONSUMER)
 	const run = Bun.spawnSync(['bun', 'run.ts'], {
 		cwd: workDir,
 		env: { ...process.env, NODE_ENV: 'production' },
@@ -232,19 +149,15 @@ try {
 	const stdout = run.stdout.toString()
 	if (stdout.trim()) console.log(stdout.trimEnd())
 	if (run.exitCode !== 0) {
-		console.error(`✗ scratch front end exited ${run.exitCode}`)
+		console.error(`✗ scratch consumer exited ${run.exitCode}`)
 		console.error(run.stderr.toString().split('\n').slice(-20).join('\n'))
 		process.exitCode = 1
-	} else if (
-		!stdout.includes(
-			'contract check: toy front end compiled end-to-end through the designated contract surface',
-		)
-	) {
-		console.error('✗ scratch front end did not report the contract summary')
+	} else if (!stdout.includes(SUMMARY)) {
+		console.error('✗ scratch consumer did not report the contract summary')
 		process.exitCode = 1
 	} else {
 		console.log(
-			`\n✓ front-end contract holds: one toy syntax, three tiers, both refusal channels — imported through server/compiler/contract.ts only`,
+			`\n✓ public contract holds: one .tsx source, three tiers, both refusal channels — imported through server/compiler/contract.ts only`,
 		)
 	}
 } finally {

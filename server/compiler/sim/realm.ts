@@ -70,6 +70,13 @@
  * performs no connect, so an error during module evaluation attributes to
  * whatever component rendered last.
  *
+ * A render's live tree is torn down at the start of the NEXT `render()`,
+ * before that render's window opens and with the marker still naming the
+ * render that built it (`settlePreviousRender`, LT-335). Disconnect runs
+ * component code — a composing parent's `pass()` restore re-fires its
+ * child's effects — so a teardown left to the next window's `innerHTML`
+ * would blame an innocent component, depending only on page order.
+ *
  * Note the scope of the rejection handler: registering `process.on(
  * 'unhandledRejection')` suppresses the runtime's default crash-on-unhandled-
  * rejection for the WHOLE process, for the realm's lifetime — not just
@@ -729,6 +736,35 @@ export function createSimulationRealm(
 	}
 
 	/**
+	 * Tear down the previous render's tree under ITS attribution, before the
+	 * next window opens (LT-335).
+	 *
+	 * The live tree of a render stays in the document after `render()`
+	 * returns (callers and tests inspect it), so it used to be detached by
+	 * the next window's `innerHTML` assignment — and everything its
+	 * disconnect does ran inside that window and attributed to the next
+	 * component. Disconnect is not inert: a composing parent's `pass()`
+	 * restores its child's original signal on disconnect, and the child's
+	 * effects, still live until its own disconnect runs, re-fire — so
+	 * module-coloreditor's composed form-colorgraph redraws its canvas
+	 * synchronously during the teardown, and the `getContext` notice blamed
+	 * whichever component the page order rendered next (module-colorinfo
+	 * in the corpus, module-lazyload in the docs build).
+	 *
+	 * Detaching here, with `currentComponent` still the previous render's,
+	 * attributes the synchronous disconnect work correctly; draining the
+	 * microtask queue afterwards (until a turn reports nothing new) does the
+	 * same for anything the teardown queued. The diagnostics land in the
+	 * cumulative list before the next call's slice starts, so they are never
+	 * part of the next render's own result.
+	 */
+	const settlePreviousRender = async (): Promise<void> => {
+		if (!document.body.hasChildNodes()) return
+		document.body.replaceChildren()
+		await drainToQuiescence(() => String(diagnostics.length))
+	}
+
+	/**
 	 * The render window, with the host console captured for its duration
 	 * (LT-180) — the connect this drives is where the library's own
 	 * containment reports, and that report is the build's only signal that
@@ -745,9 +781,10 @@ export function createSimulationRealm(
 	const render = async (
 		request: SimRenderRequest,
 	): Promise<SimRenderResult> => {
-		const before = diagnostics.length
 		const releaseConsole = captureHostConsole()
 		try {
+			await settlePreviousRender()
+			const before = diagnostics.length
 			const html = await renderWindow(request)
 			return { html, diagnostics: diagnostics.slice(before) }
 		} finally {
