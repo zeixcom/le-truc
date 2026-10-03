@@ -215,14 +215,31 @@ for (let n = 0; n < MAX_TASKS; n++) {
     ].filter(Boolean)
     if (handoff.errorCopyChanged) lenses.push({ key: 'copy', prompt: `Review the added, reworded or retired error copy against .agents/skills/writer/references/error-messages.md: three-part message, Tier 2 wording, prefix, the propagation checklist (including skills/le-truc/references/errors.md) and message-substring tests.` })
 
+    // Round 0 reviews the whole change; later rounds are deltas — the gate
+    // relay re-runs only what was red (plus gates the fix's paths imply), and
+    // each reviewer judges only whether the findings it cares about were
+    // addressed and whether the fix broke something new. A fresh agent per
+    // ask re-reading the whole tree is the expensive shape.
+    const prevRed = round ? (gates?.results || []).filter(x => !x.pass && !x.unrunnable).map(x => x.cmd) : []
+    const prevBlocking = round
+      ? reviews.flatMap(x => x.findings.filter(f => f.severity === 'blocking'))
+      : []
+    const prevBlockingText = prevBlocking
+      .map((f, i) => `${i + 1}. ${f.file || ''} ${f.issue}${f.fix ? ` (expected: ${f.fix})` : ''}`)
+      .join('\n')
+
     const [g, ...r] = await parallel([
       () => agent(
-        `Re-run the gates for ${describe(setup)} independently inside the git worktree ${setup.worktree}. The gate list is deterministic — do not judge it: the area's defaults from the contributor skill's Gates table, the entry's Gates line (${setup.gates?.join(', ') || 'none'}), plus these path rules over \`git -C ${setup.worktree} diff --name-only HEAD\` and \`git -C ${setup.worktree} status --porcelain\` — src/** → check:size; any .tsrx file → test:variants; server/compiler/ or docs-src/ → build:docs + check:links; examples/ → bun run test (Playwright); and Playwright too when the area is runtime and src/ changed. ${GATE_RULES} Re-run a failing gate once to rule out a flake (NOTES.md lists known flakes). Do not edit any file. Report each command's real result.`,
+        round === 0
+          ? `Re-run the gates for ${describe(setup)} independently inside the git worktree ${setup.worktree}. The gate list is deterministic — do not judge it: the area's defaults from the contributor skill's Gates table, the entry's Gates line (${setup.gates?.join(', ') || 'none'}), plus these path rules over \`git -C ${setup.worktree} diff --name-only HEAD\` and \`git -C ${setup.worktree} status --porcelain\` — src/** → check:size; any .tsrx file → test:variants; server/compiler/ or docs-src/ → build:docs + check:links; examples/ → bun run test (Playwright); and Playwright too when the area is runtime and src/ changed. ${GATE_RULES} Re-run a failing gate once to rule out a flake (NOTES.md lists known flakes). Do not edit any file. Report each command's real result.`
+          : `Re-verify ${describe(setup)} after fix round ${round}, inside the worktree ${setup.worktree}. Run only: (a) the gates that were red last round: ${prevRed.join(', ') || 'none'}; (b) any gate whose path rules the fix's changes now trip (same path rules as before: src/** → check:size; .tsrx → test:variants; server/compiler/ or docs-src/ → build:docs + check:links; examples/ → bun run test). ${GATE_RULES} Re-run a failing gate once to rule out a flake. Do not edit any file. Report each command's real result.`,
         { label: `gates ${setup.id}`, phase: 'Verify', schema: GATES, effort: 'low' },
       ),
       ...lenses.map(l => () => agent(
-        `Review the change for ${describe(setup)}, isolated in the git worktree ${setup.worktree} (branch ${setup.branch}) — nothing else is in progress there. Read-only: do not edit any file. See it with \`git -C ${setup.worktree} diff HEAD\` plus \`git -C ${setup.worktree} status --porcelain\` for untracked files.` +
-        ` The handoff says:\n- ${changed}\nHow: ${handoff.how || '-'}\n\n${l.prompt}\n\nMark a finding blocking only if the task would be wrong to accept as is. Also judge whether the handoff's reviewClass="${handoff.reviewClass}" is right per the contributor skill's rule 3.`,
+        round === 0
+          ? `Review the change for ${describe(setup)}, isolated in the git worktree ${setup.worktree} (branch ${setup.branch}) — nothing else is in progress there. Read-only: do not edit any file. See it with \`git -C ${setup.worktree} diff HEAD\` plus \`git -C ${setup.worktree} status --porcelain\` for untracked files.` +
+          ` The handoff says:\n- ${changed}\nHow: ${handoff.how || '-'}\n\n${l.prompt}\n\nMark a finding blocking only if the task would be wrong to accept as is. Also judge whether the handoff's reviewClass="${handoff.reviewClass}" is right per the contributor skill's rule 3.`
+          : `Round-${round} re-review of ${describe(setup)} in the worktree ${setup.worktree} (branch ${setup.branch}). Your lens: ${l.key}. Last round's blocking findings were:\n${prevBlockingText || '-'}\nThe fix says: ${handoff.how || '-'}\nNow check ONLY two things, reading the touched files rather than the whole tree: (1) each finding above is actually addressed in the code; (2) the fix introduces no new defect in your lens. Do not re-derive the full round-0 review; keep its minor findings unless the fix touched them. Read-only: do not edit any file.`,
         { label: `review:${l.key} ${setup.id}`, phase: 'Verify', schema: REVIEW },
       )),
     ])
