@@ -72,7 +72,10 @@ type EffectDescriptor = () => MaybeCleanup
 /**
  * Checks whether a value is a branded parser function.
  *
- * Unbranded functions are not parsers — brand custom parsers with `asParser()`.
+ * Detection is by brand, not structure: an unbranded function is not a
+ * parser regardless of its signature — and gets no warning, even in
+ * `DEV_MODE`; it is silently wrapped as a memo callback instead. Brand
+ * custom parsers with `asParser()`.
  *
  * @since 0.14.0
  * @param value - Value to check.
@@ -112,6 +115,11 @@ const asParser = <T extends {}>(fn: Parser<T>): Parser<T> =>
 
 /**
  * Brands a custom method-producer function so `isMethodProducer()` identifies it.
+ *
+ * The function IS the method: at connect it is installed directly as
+ * `host[key] = fn`. An unbranded `() => void` initializer is treated as a
+ * `MemoCallback` (wrapped in `deriveCell`) instead — silently wrong, no
+ * error, even in `DEV_MODE`.
  *
  * @since 0.16.2
  * @param fn - Side-effect initializer to brand.

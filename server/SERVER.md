@@ -112,7 +112,7 @@ sources (List<FileInfo>)
 
 ### Effects
 
-Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild)` (`server/effects/build-effect.ts`) and returns `{ cleanup: Cleanup, ready: Promise<void> }`. `ready` resolves after the first successful run; `build()` awaits all `ready` promises to know when the initial build is done. A failure on that first run rejects `ready` instead — `run` throws to signal failure — so a one-shot `build:docs` fails loudly rather than silently shipping incomplete output; a failure on a later, file-watch-triggered run is logged and the effect just waits for the next change. See `references/effect-pattern.md` for the full contract.
+Each effect factory calls `createBuildEffect(label, [...signals], run, onRebuild)` (`server/effects/build-effect.ts`) and returns `{ cleanup: Cleanup, ready: Promise<void> }`. `ready` resolves after the first successful run; `build()` awaits all `ready` promises to know when the initial build is done. A failure on that first run rejects `ready` instead — `run` throws to signal failure — so a one-shot `build:docs` fails loudly rather than silently shipping incomplete output; a failure on a later, file-watch-triggered run is logged and the effect just waits for the next change. Effects write through `writeFileSafe()` (`server/io.ts`), which logs and returns `false` instead of throwing, so a watch-triggered run survives a write failure; the write itself creates the output's parent directory (`io.writeTextFile()` does — `Bun.write` and the Node implementation's recursive `mkdir` both do). See `references/effect-pattern.md` for the full contract.
 
 | Effect | Depends On | Output | Tool |
 |--------|-----------|--------|------|
@@ -178,6 +178,8 @@ docs-src/
     ├── type-aliases/
     └── variables/
 ```
+
+`docs/` and `docs-src/api/` are build output — never hand-edit either. Change the sources (`docs-src/pages/`, and the JSDoc in `src/` for the API) and rebuild.
 
 ## Agent-Oriented Content Discovery
 
@@ -338,6 +340,8 @@ Configured in `markdoc.config.ts`:
 
 Note: `link.markdoc.ts` is registered as a node override in `markdoc.config.ts` and handles local `.md` → `.html` link conversion during Markdoc transform.
 
+**Adding a tag** takes three steps plus two doc updates: a schema in `server/schema/`, registration in `server/markdoc.config.ts` — the config key is the `{% tag %}` name — and a test driving `parse → transform → renderers.html` plus `validate`. Then add the tag to the table above and to the `writer` skill's Markdoc-tag reference (`.agents/skills/writer/references/markdoc-tags.md`).
+
 ### Markdoc Constants
 
 `markdoc-constants.ts` provides shared constants and attribute definitions used by all Markdoc schemas. It was extracted from `markdoc-helpers.ts` to avoid circular dependencies between helpers and schema files.
@@ -365,7 +369,7 @@ The `fence` schema override provides:
 
 ## HTTP Server (`serve.ts`, `routes.ts`)
 
-Every route but `/ws` lives in `routes.ts` as a pure `createRequestHandler({ development })`, a `(req: Request) => Promise<Response>` (LT-364). Its table is matched by explicit precedence, which reproduces Bun's router order: at the first segment where two patterns differ, static beats `:param` beats `*`. Params are percent-decoded as Bun decodes `req.params`, so an encoded `..%2f` reaches the handlers' `guardPath` checks. `serve.ts` keeps only what needs the `Server`. Its `listen(port)` binds `Bun.serve({ fetch, websocket })`, and `fetch` upgrades `/ws` in development before handing every other request to the handler. Tests drive the handler with `new Request(…)` and need no socket; one smoke test binds `listen(0)`.
+Every route but `/ws` lives in `routes.ts` as a pure `createRequestHandler({ development })`, a `(req: Request) => Promise<Response>` (LT-364). Its table is matched by explicit precedence, which reproduces Bun's router order: at the first segment where two patterns differ, static beats `:param` beats `*`. Params are percent-decoded as Bun decodes `req.params`, so an encoded `..%2f` reaches the handlers' `guardPath` checks. Every request-derived path passes through `guardPath(<the route's directory>, path)` before any file read — take the directory constants from `server/config.ts` (`PAGES_DIR`, `ASSETS_DIR`, `COMPONENTS_DIR`, …), never a hardcoded path; `guardPath` returns `null` when the resolved path escapes its base directory. `serve.ts` keeps only what needs the `Server`. Its `listen(port)` binds `Bun.serve({ fetch, websocket })`, and `fetch` upgrades `/ws` in development before handing every other request to the handler. Tests drive the handler with `new Request(…)` and need no socket; one smoke test binds `listen(0)`.
 
 ### Route Handling
 
@@ -485,7 +489,9 @@ hmrScriptTag({
 | `service-worker.ts` | `serviceWorker()`, `minifiedServiceWorker()` | `serviceWorkerEffect` |
 | `sitemap.ts` | `sitemapUrl()`, `sitemap()` | `sitemapEffect` |
 
-Note: `templates/utils.ts` `html` produces **plain HTML strings**; `markdoc-helpers.ts` `html` produces **Markdoc `Tag` objects**. They are different functions imported from different paths.
+Note: `templates/utils.ts` `html` produces **plain HTML strings**; `markdoc-helpers.ts` `html` produces **Markdoc `Tag` objects**. They are different functions imported from different paths — using the string tag where a schema's `transform()` needs the Markdoc one renders `[object Object]` on the page.
+
+All template interpolation is escaped. Use `raw()` / `RawHtml` only for content that is already trusted: Shiki output, validated Markdoc output, or another template's output.
 
 ## Testing (`server/tests/`)
 
