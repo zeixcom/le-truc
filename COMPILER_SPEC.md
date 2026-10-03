@@ -717,7 +717,7 @@ As of 2026-09-29, for orientation only; it ages quickly. The current architectur
 | § | Progress | Built | Partial or missing |
 | --- | --- | --- | --- |
 | 2 Pipeline | Partial | One IR, shared pipeline, two-pass corpus | Missing: incremental API, source maps (LT-247), dev-loop plugins |
-| 3.1 Module shape | Partial | Typed factory context | Partial: 16 of 17 `.tsx` components still wrap root and `<style>` in a fragment |
+| 3.1 Module shape | Done | Typed factory context; root-is-host enforced (LTC060, LT-375) |  |
 | 3.2 Shadow mode | Missing |  | Missing: unbuilt, unscheduled |
 | 3.3 Bindings | Done | All |  |
 | 3.4 Vocabulary | Partial | `truc:try` (template-cloned arms, ADR 0037 s4), `truc:pass`, `truc:html` | Missing: `truc:element` |

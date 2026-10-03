@@ -73,12 +73,6 @@ export type SurfaceAdapter = {
 	) => { setup: AstNode[]; output: AstNode | undefined } | null
 	/** The raw CSS of a `<style>` placeholder's source node. */
 	stylesheetOf: (node: AstNode) => string
-	lowerChildren: (
-		ctx: ExtractContext,
-		parent: AstNode,
-		signals: ReadonlyMap<string, SignalIR>,
-		fors: Map<AstNode, ForIR>,
-	) => TemplateNode[]
 	lowerElement: (
 		ctx: ExtractContext,
 		element: AstNode,

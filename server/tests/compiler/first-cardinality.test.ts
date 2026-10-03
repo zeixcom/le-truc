@@ -13,9 +13,8 @@
  *   addressed it with a non-throwing query under a presence guard
  *   (LT-008/LT-025), so the reason string can never be thrown
  *   (LTC040);
- * - the `@{ }` output may be a bare root element — the fragment
- *   exists to carry a `<style>` beside it, so a component with no
- *   styles has nothing to wrap.
+ * - the `@{ }` output is the bare root element; a `<style>` block is
+ *   its child, and a fragment root is LTC060 (LT-375).
  */
 import { describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../compiler/frontend/tsrx'

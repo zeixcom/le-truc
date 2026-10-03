@@ -102,7 +102,7 @@ const GATE_TABLE = 'the area\'s default gates in the contributor skill\'s Gates 
 // The gate re-runner runs package.json commands only. The entry's Check line is
 // the conformance reviewer's to judge, so a sound, evidenced deviation from it
 // is a finding, not a red gate.
-const GATE_RULES = 'Run only package.json scripts; the entry\'s Check line is not yours to run. The lint scripts use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. Mark a gate unrunnable when it fails before any test runs because of the sandbox or environment (a port it cannot bind, signing, network, a missing tool).'
+const GATE_RULES = 'Run only package.json scripts; the entry\'s Check line is not yours to run. The lint scripts use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. Mark a gate unrunnable when it fails before any test runs because of the sandbox or environment (a port it cannot bind or that another server holds, signing, network, a missing tool). Give each gate at most 10 minutes (run it with a timeout); one that hangs waiting on a port or a server that never becomes ready is unrunnable, not something to wait out.'
 
 const describe = t => `${t.id} (${t.title}; Area: ${t.area})`
 // An unrunnable gate is not red: no code change fixes the sandbox. It goes to the

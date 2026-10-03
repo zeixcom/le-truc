@@ -14,8 +14,8 @@
  *   `@tsrx/core` parse error is on `.tsrx`.
  * - Module shape: one exported component function per file whose body is
  *   statements + a single `return <jsx/>`. Statements before the return are
- *   the setup (the `@{ }` block's replacement); the returned JSX (bare root
- *   or fragment) is the template (ADR 0032 sub-design 1).
+ *   the setup (the `@{ }` block's replacement); the returned JSX (the bare root
+ *   element, the host) is the template (ADR 0032 sub-design 1).
  * - The `.tsrx`-only scans (`reportReactJsxNearMisses` TSRX018/021–024,
  *   `newerGrammarHint`) are absent — the lazy sigil doesn't exist in TS, and
  *   the React idioms are this surface's CORRECT spellings.
@@ -36,7 +36,7 @@ import {
 	runFrontEnd,
 	type SurfaceAdapter,
 } from '../../front-end'
-import { lowerChildren, lowerElement } from './lower-tsx'
+import { lowerElement } from './lower-tsx'
 import { type AstNode, parseTsxModule } from './to-estree'
 
 /* === Types === */
@@ -109,7 +109,6 @@ const tsxAdapter = (source: string): SurfaceAdapter => ({
 		}
 	},
 	stylesheetOf: node => styleElementStylesheet(source, node) ?? '',
-	lowerChildren,
 	lowerElement,
 })
 

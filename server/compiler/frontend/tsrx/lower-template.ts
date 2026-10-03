@@ -171,7 +171,7 @@ const lowerBodyStatements = (
 					ctx.source,
 					stmt,
 					'A `<style>` block inside a control-flow branch',
-					'Styles are component-scoped — move the block beside the root element.',
+					'Styles are component-scoped — move the block inside the root element, as its direct child.',
 				),
 			)
 			continue

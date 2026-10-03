@@ -76,7 +76,7 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
   and LT-385). LT-110 is LT-165 step 7's corpus pin.
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
-- **Parallel slot** — independent work. LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
+- **Parallel slot** — independent work. LT-415 first (test servers on a free port; the do-task gates trip on a stray server on 3000), then LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
   (server), LT-393 (comment-only sweep), LT-410 (the `errors.md` rows).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
@@ -97,7 +97,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-415.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-416.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -626,6 +626,23 @@ recorded against the 30.4k opening measurement.
   words.
 
 ### Parallel slot
+
+- [ ] LT-415: Test servers take a free port; reuse a running server only when it is this checkout (owner, 2026-10-03).
+  **Area:** server
+  **Context:** `test:variants` (`scripts/test-variants.ts`, `PORT = 3000`), Playwright
+  (`playwright.config.ts` `webServer.port: 3000`, `reuseExistingServer: true`) and 48 specs under
+  `examples/` hard-code `http://localhost:3000`. A dev server left on 3000 makes `test:variants`
+  refuse and lets `bun run test` silently test another worktree's or branch's build — and agent
+  sessions cannot see or stop it. Specs use relative URLs (`page.goto('/test/<tag>')`) against
+  Playwright's `baseURL`. `test:variants` always starts its per-surface server on a free port
+  (`Bun.serve({ port: 0 })` or a probe), passes it to `serve.ts` and Playwright, and stops it after
+  each surface. `bun run test` reuses a running server only when `/api/status` identifies the
+  same checkout (repo root and default surface in a JSON body); otherwise it starts its own on a
+  free port. `serve.ts`/`dev.ts` keep 3000 as the interactive default and accept `PORT`.
+  **Channel/tier:** none — test tooling.
+  **Check:** with a foreign server on 3000, `bun run test:variants` and `bun run test` both pass;
+  with this checkout's `bun run dev` on 3000, `bun run test` reuses it; `grep -rn "localhost:3000"
+  examples/` returns nothing.
 
 - [ ] LT-305: Baseline guard — fail the build when shipped code needs a feature newer than the pinned baseline (REQUIREMENTS § Browser support). **Ships in 3.0.**
   **Area:** runtime

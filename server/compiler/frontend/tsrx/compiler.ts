@@ -38,7 +38,7 @@ import {
 	runFrontEnd,
 	type SurfaceAdapter,
 } from '../../front-end'
-import { lowerChildren, lowerElement } from './lower-template'
+import { lowerElement } from './lower-template'
 
 /* === Types === */
 
@@ -183,7 +183,6 @@ const TSRX_ADAPTER: SurfaceAdapter = {
 		}
 	},
 	stylesheetOf: node => String(getStyleElementStylesheet(node)?.source ?? ''),
-	lowerChildren,
 	lowerElement,
 }
 
