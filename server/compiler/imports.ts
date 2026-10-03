@@ -239,6 +239,28 @@ const specifierSpan = (
 }
 
 /**
+ * `imp.names` split into maximal runs of adjacent specifiers that `skip`
+ * does not hold — so an unused-import range never covers a context name
+ * LTC037 reports on its own (`{ createTask, host, createCell }` is two
+ * runs, LT-371).
+ */
+const runsWithout = (
+	imp: LeTrucImport,
+	skip: ReadonlySet<string>,
+): string[][] => {
+	const runs: string[][] = []
+	let run: string[] = []
+	for (const name of imp.names) {
+		if (skip.has(name)) {
+			if (run.length > 0) runs.push(run)
+			run = []
+		} else run.push(name)
+	}
+	if (run.length > 0) runs.push(run)
+	return runs
+}
+
+/**
  * Place each authored `'@zeix/le-truc'` import into the generated modules,
  * per name (ADR 0024 sub-design 16): a name lands in the CLIENT module when
  * a client-emitted position uses it (the real package IS the client
@@ -283,13 +305,16 @@ export const placeLeTrucImports = (
 		const usedServer = names.filter(n => serverUsage.has(n))
 		const usedClient = names.filter(n => clientUsage.has(n))
 		if (usedServer.length === 0 && usedClient.length === 0) {
-			ctx.diagnostics.push(
-				diagnostic.unusedPlainImport(
-					ctx.source,
-					specifierSpan(imp, names),
-					names,
-				),
-			)
+			// One report per run of adjacent names, so no range covers a
+			// context name between them (LT-371).
+			for (const run of runsWithout(imp, contextVocabulary))
+				ctx.diagnostics.push(
+					diagnostic.unusedPlainImport(
+						ctx.source,
+						specifierSpan(imp, run),
+						run,
+					),
+				)
 			continue
 		}
 		const serverSide = usedServer.filter(n => !RUNTIME_HARNESS_EXPORTS.has(n))

@@ -4,7 +4,10 @@
  * One pin per producer family: the reported `location` covers the
  * offending construct, in the file the caller named. Each rule both
  * surfaces share is pinned on both, and the two must cover the same
- * authored text — the parity half of the verification. A rule with no
+ * authored text — or, where the surfaces spell the construct differently
+ * (a loop, a condition), each its own spelling of it. The parity suite
+ * (`tsx/diagnostic-parity.test.ts`) compares covered text for every
+ * diagnostic it sees. A rule with no
  * construct in scope reports the whole file, never no location.
  */
 
@@ -24,6 +27,8 @@ import { textAt } from './located'
 type Shape = {
 	setup?: string
 	template: string
+	/** `.tsx` spelling of `template`, when the surfaces spell it differently. */
+	tsxTemplate?: string
 	head?: string
 	params?: string
 	css?: string
@@ -48,7 +53,8 @@ ${setup}
 
 const tsxSource = ({
 	setup = '\t\texpose({})',
-	template,
+	template: tsrxTemplate,
+	tsxTemplate: template = tsrxTemplate,
 	head = '',
 	params = '{}: {}',
 	css = DEFAULT_CSS,
@@ -83,6 +89,24 @@ const expectCovers = (shape: Shape, code: string, covered: string) => {
 		expect(textAt(source, hit)).toBe(covered)
 	}
 }
+
+/**
+ * Both surfaces report `code` over the construct as each spells it —
+ * a shape whose `.tsx` spelling differs (a loop, a condition).
+ */
+const expectCoversEach = (
+	shape: Shape,
+	code: string,
+	covered: { tsrx: string; tsx: string },
+) => {
+	for (const { surface, source, file, hit } of reportOn(shape, code)) {
+		expect(hit).toBeDefined()
+		expect(hit?.location.file).toBe(file)
+		expect(textAt(source, hit)).toBe(covered[surface])
+	}
+}
+
+const CELL_IMPORT = "import { createCell } from '@zeix/le-truc'\n"
 
 /* === Tests === */
 
@@ -282,6 +306,28 @@ describe('each producer family covers the offending construct, on both surfaces'
 			'LTC014',
 			'createTask',
 		)
+		// A context name between unused names splits the report, so no
+		// LTC014 range covers what LTC037 reports.
+		const split = reportOn(
+			{
+				head: "import { createTask, host, createCell } from '@zeix/le-truc'\n",
+				template: '<span>x</span>',
+			},
+			'LTC014',
+		)
+		for (const { surface, source } of split) {
+			const compile = surface === 'tsx' ? compileComponentTsx : compileComponent
+			const { diagnostics } = compile(source, `c.${surface}`, new Set())
+			expect(
+				diagnostics
+					.filter(d => d.code === 'LTC014' || d.code === 'LTC037')
+					.map(d => [d.code, textAt(source, d)]),
+			).toEqual([
+				['LTC037', 'host'],
+				['LTC014', 'createTask'],
+				['LTC014', 'createCell'],
+			])
+		}
 		expectCovers(
 			{
 				head: "import { foo } from 'bar'\n",
@@ -289,6 +335,77 @@ describe('each producer family covers the offending construct, on both surfaces'
 			},
 			'LTC014',
 			"import { foo } from 'bar'",
+		)
+	})
+
+	test('loops: a non-List reactive source (LTC001) covers the loop', () => {
+		expectCoversEach(
+			{
+				head: CELL_IMPORT,
+				setup:
+					'\t\tconst rows = createCell([] as string[])\n\t\texpose({ rows: rows.get })',
+				template: '<ul>@for (const r of rows) { <li>{r}</li> }</ul>',
+				tsxTemplate: '<ul>{rows.map(r => <li>{r}</li>)}</ul>',
+			},
+			'LTC001',
+			{
+				tsrx: '@for (const r of rows) { <li>{r}</li> }',
+				tsx: 'rows.map(r => <li>{r}</li>)',
+			},
+		)
+	})
+
+	test('loops: a loop variable in a thunk (LTC002), a const not rebindable (LTC003)', () => {
+		const loop = (body: string, tsxBody: string): Shape => ({
+			head: CELL_IMPORT,
+			params: '{ rows }: { rows: string[] }',
+			setup: '\t\tconst n = createCell(0)\n\t\texpose({ n: n.get })',
+			template: `<ul>@for (const r of rows) { ${body} }</ul>`,
+			tsxTemplate: `<ul>{rows.map(r => ${tsxBody})}</ul>`,
+		})
+		expectCovers(
+			loop(
+				'<li class={() => r + n.get()}>{r}</li>',
+				'<li class={() => r + n.get()}>{r}</li>',
+			),
+			'LTC002',
+			'() => r + n.get()',
+		)
+		expectCovers(
+			loop(
+				'const label = r\n<li class={() => label + n.get()}>{r}</li>',
+				'{ const label = r; return <li class={() => label + n.get()}>{r}</li> }',
+			),
+			'LTC003',
+			'label = r',
+		)
+	})
+
+	test('reactive conditions: a case value (LTC062), a condition in a list container (LTC063)', () => {
+		const reactiveSwitch = (second: string): Shape => ({
+			head: CELL_IMPORT,
+			setup:
+				"\t\tconst other = 'b'\n\t\tconst m = createCell('a')\n\t\texpose({ m: m.get })",
+			template: `@switch (m.get()) { @case 'a': { <p>a</p> } @case ${second}: { <p>b</p> } }`,
+			tsxTemplate: `{(() => { switch (m.get()) { case 'a': return <p>a</p>; case ${second}: return <p>b</p> } })()}`,
+		})
+		expectCovers(reactiveSwitch('other'), 'LTC062', 'other')
+		expectCovers(reactiveSwitch("'a'"), 'LTC062', "'a'")
+		expectCoversEach(
+			{
+				head: "import { createCell, createList } from '@zeix/le-truc'\n",
+				setup:
+					"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\tconst open = createCell(false)\n\t\texpose({ open: open.get })",
+				template:
+					'<ul data-container>@if (open.get()) { <li class="head">x</li> }@for (const item of items) { <li>{item}</li> }</ul>',
+				tsxTemplate:
+					'<ul data-container>{open.get() ? <li class="head">x</li> : null}{items.map(item => <li>{item}</li>)}</ul>',
+			},
+			'LTC063',
+			{
+				tsrx: '@if (open.get()) { <li class="head">x</li> }',
+				tsx: 'open.get() ? <li class="head">x</li> : null',
+			},
 		)
 	})
 

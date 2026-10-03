@@ -276,7 +276,7 @@ recorded against the 30.4k opening measurement.
 
 ### A — Pre-publish reshapes ((LT-370 →) LT-371 → LT-375 ∥ LT-373 → LT-387)
 
-- [x] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2). — changes requested ↩
+- [x] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2). — done, pending review ⏳
   **Area:** compiler
   **Needs:** LT-370
   **Context:** `CompileDiagnostic` is `{ code, severity, message, line? }`
@@ -307,6 +307,12 @@ recorded against the 30.4k opening measurement.
   `[code, severity, message]` only, and its header still speaks of line numbers. Make it compare
   the covered authored text on both surfaces and fix the header. Nit fixed by the reviewer:
   `placeLeTrucImports`' JSDoc, orphaned by `specifierSpan`, moved back above its function.
+  **Reworked:** (1) fixed: `runsWithout()` splits unused names at context names, one LTC014 per
+  run (pinned on both surfaces). (2) fixed: range pins for LTC001–003, LTC062/063 on both
+  surfaces. (3) fixed: parity compares covered text (`spans` pairs per surface), header
+  rewritten; it caught LTC008 async omitting `export` in `.tsrx`, fixed in `front-end.ts`.
+  Gates green except `test:variants` (sandbox port stall) — owner must run it. Nit: the
+  FAMILIES JSDoc in the parity test is orphaned above `ASYNC`.
 
 - [ ] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07).
   **Area:** compiler

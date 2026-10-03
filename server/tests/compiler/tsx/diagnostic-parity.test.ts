@@ -12,9 +12,9 @@
  * surface teaches its users something the other never hears.
  *
  * Each case authors ONE invalid component in both surfaces, compiles both
- * front ends, and asserts equal `[code, severity, message]` lists after the
- * `.tsx` messages are TRANSLATED into `.tsrx` spelling. Translation is two
- * things only:
+ * front ends, and asserts equal `[code, severity, covered text, message]`
+ * lists after the `.tsx` side is TRANSLATED into `.tsrx` spelling. Message
+ * translation is two things only:
  *
  * - the echoed file name (`c.tsrx` / `c.tsx`) — structural, not wording;
  * - `SURFACE_VOCABULARY` — the explicit allowlist of fragments that
@@ -31,9 +31,13 @@
  * every `.tsx` message. LT-242 found six such leaks; LT-233 folded them
  * into the vocabulary, and the scan now tolerates none.
  *
- * Line numbers are not compared: the two spellings lay out differently.
- * Each case also asserts its `code` is present on both sides, so a fixture
- * that stops triggering its family fails instead of passing vacuously.
+ * Each diagnostic's range is compared by the authored text it covers
+ * (ADR 0044 s1, LT-371), not by offset — the two spellings lay out
+ * differently. Where the surfaces spell the covered construct differently
+ * (`@if (…) { … }` against a ternary), the case lists the pair in `spans`;
+ * an unexercised pair fails. Each case also asserts its `code` is present
+ * on both sides, so a fixture that stops triggering its family fails
+ * instead of passing vacuously.
  */
 import { describe, expect, test } from 'bun:test'
 import type {
@@ -178,14 +182,29 @@ const leaks = (diagnostics: CompileDiagnostic[]): string[] =>
 		.filter(d => TSRX_VOCABULARY.test(d.message))
 		.map(d => `${d.code}: ${d.message}`)
 
+/**
+ * Each diagnostic as `code severity ⟨covered text⟩: message`, in `.tsrx`
+ * spelling: the message through the vocabulary, the covered text through
+ * the case's `spans`. `usedSpans` collects the pairs a `.tsx` range hit.
+ */
 const shape = (
 	diagnostics: CompileDiagnostic[],
 	surface: 'tsrx' | 'tsx',
 	file: string,
+	source: string,
+	spans: ReadonlyArray<[string, string]> = [],
+	usedSpans: Set<[string, string]> = new Set(),
 ): string[] =>
-	diagnostics.map(
-		d => `${d.code} ${d.severity}: ${normalize(d.message, surface, file)}`,
-	)
+	diagnostics.map(d => {
+		let covered = source.slice(d.location.start, d.location.end)
+		const pair =
+			surface === 'tsx' ? spans.find(([, tsx]) => tsx === covered) : undefined
+		if (pair) {
+			usedSpans.add(pair)
+			covered = pair[0]
+		}
+		return `${d.code} ${d.severity} ⟨${covered}⟩: ${normalize(d.message, surface, file)}`
+	})
 
 /* === Source builders === */
 
@@ -243,6 +262,12 @@ type Case = {
 	pins?: string[]
 	/** Substrings neither surface may produce (the drift a pin guards). */
 	forbid?: string[]
+	/**
+	 * Covered texts the two surfaces spell differently, `[tsrx, tsx]` — a
+	 * `.tsx` range covering exactly the second compares as the first. Every
+	 * pair must be exercised; any other range must cover the same text.
+	 */
+	spans?: Array<[string, string]>
 }
 
 const imports = (...names: string[]) =>
@@ -289,6 +314,12 @@ const REVIEW_SHAPES: Case[] = [
 	{
 		name: '§2.3 keyName: a loop variable named `first`',
 		code: 'LTC005',
+		spans: [
+			[
+				'@for (const first of items) { <li>{first}</li> }',
+				'items.map(first => <li>{first}</li>)',
+			],
+		],
 		spec: {
 			pre: imports('createList'),
 			setup: LIST,
@@ -322,6 +353,7 @@ const LIST_BODY: Case[] = [
 	{
 		name: 'control flow inside the body',
 		code: 'LTC005',
+		spans: [['@if (ok) { <b>x</b> }', 'ok ? <b>x</b> : null']],
 		spec: list(
 			'<li>{item}@if (ok) { <b>x</b> }</li>',
 			'<li>{item}{ok ? <b>x</b> : null}</li>',
@@ -393,6 +425,12 @@ const LIST_BODY: Case[] = [
 	{
 		name: 'a loop over a reactive source that is not a List',
 		code: 'LTC001',
+		spans: [
+			[
+				'@for (const r of rows) { <li>{r}</li> }',
+				'rows.map(r => <li>{r}</li>)',
+			],
+		],
 		spec: {
 			pre: imports('createCell'),
 			setup: cell('rows', '[] as string[]'),
@@ -435,6 +473,7 @@ const LIST_BODY: Case[] = [
 		// rejects a hoisted const on both surfaces.
 		name: 'a hoisted const in a reactive-list body',
 		code: 'LTC005',
+		spans: [["const label = 'x'", "const label = 'x';"]],
 		spec: {
 			pre: imports('createList'),
 			setup: LIST,
@@ -455,6 +494,7 @@ const LIST_BODY: Case[] = [
 	{
 		name: 'a non-const declaration in a server-data loop body',
 		code: 'LTC005',
+		spans: [['let x = r', 'let x = r;']],
 		spec: {
 			params: '{ rows }: { rows: string[] }',
 			body: '<ul>@for (const r of rows) { let x = r\n<li>{r}</li> }</ul>',
@@ -464,6 +504,7 @@ const LIST_BODY: Case[] = [
 	{
 		name: 'a statement other than a const in a server-data loop body',
 		code: 'LTC005',
+		spans: [['console.log(r)', 'console.log(r);']],
 		spec: {
 			params: '{ rows }: { rows: string[] }',
 			body: '<ul>@for (const r of rows) { console.log(r)\n<li>{r}</li> }</ul>',
@@ -476,6 +517,12 @@ const LIST_BODY: Case[] = [
 		// not the generic non-output-statement rule.
 		name: 'a boundary as a loop body root (LTC053, LT-358a)',
 		code: 'LTC053',
+		spans: [
+			[
+				'@try { <li class="a">{r}</li> } @catch (e) { <li class="b">{e.message}</li> }',
+				'<truc:try catch={e => <li class="b">{e.message}</li>}><li class="a">{r}</li></truc:try>',
+			],
+		],
 		spec: {
 			params: '{ rows }: { rows: string[] }',
 			body: '@for (const r of rows) { @try { <li class="a">{r}</li> } @catch (e) { <li class="b">{e.message}</li> } }',
@@ -557,6 +604,12 @@ const CONDITIONS: Case[] = [
 	{
 		name: 'LTC063 a reactive condition in a reactive list container',
 		code: 'LTC063',
+		spans: [
+			[
+				'@if (open.get()) { <li class="head">x</li> }',
+				'open.get() ? <li class="head">x</li> : null',
+			],
+		],
 		spec: {
 			pre: imports('createCell', 'createList'),
 			setup: `${LIST}
@@ -568,6 +621,7 @@ const CONDITIONS: Case[] = [
 	{
 		name: 'a reactive condition inside a server-known branch',
 		code: 'LTC005',
+		spans: [['@if (open.get()) { <p>x</p> }', 'open.get() ? <p>x</p> : null']],
 		spec: {
 			pre: imports('createCell'),
 			params: '{ ok }: { ok: boolean }',
@@ -663,6 +717,12 @@ const CONDITIONS: Case[] = [
 	{
 		name: 'an async boundary whose pending arm has two roots',
 		code: 'LTC005',
+		spans: [
+			[
+				'{ <><p class="a">a</p><p class="b">b</p></> }',
+				'<><p class="a">a</p><p class="b">b</p></>',
+			],
+		],
 		spec: {
 			pre: imports('deriveCell'),
 			setup:
@@ -838,6 +898,28 @@ const SERVER_ONLY: Case[] = [
 	},
 ]
 
+/** An `async` component function, per surface (LTC008). */
+const ASYNC = {
+	tsrx: tsrxSource({ body: '<p>x</p>' }).replace(
+		'export function',
+		'export async function',
+	),
+	tsx: tsxSource({ body: '<p>x</p>' }).replace(
+		'export function',
+		'export async function',
+	),
+}
+
+/** A second component function `D`, per surface (LTC008). */
+const SECOND = {
+	tsrx: tsrxSource({ body: '<p>y</p>' })
+		.replace('C(', 'D(')
+		.replaceAll('c-el', 'd-el'),
+	tsx: tsxSource({ body: '<p>y</p>' })
+		.replace('C(', 'D(')
+		.replaceAll('c-el', 'd-el'),
+}
+
 /** A sample of each remaining diagnostic family. */
 const FAMILIES: Case[] = [
 	{
@@ -853,6 +935,12 @@ const FAMILIES: Case[] = [
 	{
 		name: 'LTC007 unaddressable async-boundary container',
 		code: 'LTC007',
+		spans: [
+			[
+				'<div>@try { <p>{d}</p> } @pending { <p>…</p> } @catch (e) { <p>{e.message}</p> }</div>',
+				'<div><truc:try pending={<p>…</p>} catch={e => <p>{e.message}</p>}><p>{d}</p></truc:try></div>',
+			],
+		],
 		spec: {
 			pre: imports('deriveCell'),
 			setup: "const d = deriveCell(async () => 'x')\n\t\texpose({ d: d.get })",
@@ -864,16 +952,8 @@ const FAMILIES: Case[] = [
 	{
 		name: 'LTC008 async component function',
 		code: 'LTC008',
-		sources: {
-			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(
-				'export function',
-				'export async function',
-			),
-			tsx: tsxSource({ body: '<p>x</p>' }).replace(
-				'export function',
-				'export async function',
-			),
-		},
+		spans: [[ASYNC.tsrx.trim(), ASYNC.tsx.trim()]],
+		sources: ASYNC,
 	},
 	{
 		name: 'LTC008 root is not the custom element',
@@ -886,9 +966,10 @@ const FAMILIES: Case[] = [
 	{
 		name: 'LTC008 two component functions',
 		code: 'LTC008',
+		spans: [[SECOND.tsrx.trim(), SECOND.tsx.trim()]],
 		sources: {
-			tsrx: `${tsrxSource({ body: '<p>x</p>' })}\n${tsrxSource({ body: '<p>y</p>' }).replace('C(', 'D(').replaceAll('c-el', 'd-el')}`,
-			tsx: `${tsxSource({ body: '<p>x</p>' })}\n${tsxSource({ body: '<p>y</p>' }).replace('C(', 'D(').replaceAll('c-el', 'd-el')}`,
+			tsrx: `${tsrxSource({ body: '<p>x</p>' })}\n${SECOND.tsrx}`,
+			tsx: `${tsxSource({ body: '<p>x</p>' })}\n${SECOND.tsx}`,
 		},
 	},
 	{
@@ -1069,6 +1150,9 @@ const FAMILIES: Case[] = [
 	{
 		name: 'LTC053 dynamic tag',
 		code: 'LTC053',
+		spans: [
+			['<{level}>x</{level}>', '<truc:element tag={level}>x</truc:element>'],
+		],
 		spec: {
 			params: '{ level }: { level: string }',
 			body: '<{level}>x</{level}>',
@@ -1173,11 +1257,14 @@ const FAMILIES: Case[] = [
 
 /* === Tests === */
 
-const compileBoth = (c: Case) => {
-	const sources = c.sources ?? {
+const sourcesOf = (c: Case) =>
+	c.sources ?? {
 		tsrx: tsrxSource(c.spec as Spec),
 		tsx: tsxSource(c.spec as Spec),
 	}
+
+const compileBoth = (c: Case) => {
+	const sources = sourcesOf(c)
 	return {
 		tsrx: compileComponent(sources.tsrx, 'c.tsrx', new Set()).diagnostics,
 		tsx: compileComponentTsx(sources.tsx, 'c.tsx', new Set()).diagnostics,
@@ -1187,9 +1274,14 @@ const compileBoth = (c: Case) => {
 const runCases = (cases: Case[]) =>
 	test.each(cases.map(c => [c.name, c] as const))('%s', (_, c) => {
 		const { tsrx, tsx } = compileBoth(c)
+		const sources = sourcesOf(c)
+		const usedSpans = new Set<[string, string]>()
 		expect(tsrx.map(d => d.code)).toContain(c.code)
 		expect(tsx.map(d => d.code)).toContain(c.code)
-		expect(shape(tsx, 'tsx', 'c.tsx')).toEqual(shape(tsrx, 'tsrx', 'c.tsrx'))
+		expect(shape(tsx, 'tsx', 'c.tsx', sources.tsx, c.spans, usedSpans)).toEqual(
+			shape(tsrx, 'tsrx', 'c.tsrx', sources.tsrx),
+		)
+		expect((c.spans ?? []).filter(pair => !usedSpans.has(pair))).toEqual([])
 		expect(leaks(tsx)).toEqual([])
 		for (const d of [...tsrx, ...tsx]) {
 			for (const bad of c.forbid ?? []) expect(d.message).not.toContain(bad)

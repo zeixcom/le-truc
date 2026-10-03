@@ -126,6 +126,7 @@ export const runFrontEnd = (
 
 	// Locate the single component function (by its body's node type).
 	let fn: AstNode | null = null
+	let fnStmt: AstNode | null = null
 	let fnStmtStart = 0
 	for (const stmt of asArray(ast.body)) {
 		const decl =
@@ -148,6 +149,7 @@ export const runFrontEnd = (
 			)
 		} else {
 			fn = decl
+			fnStmt = stmt
 			fnStmtStart = typeof stmt.start === 'number' ? stmt.start : 0
 		}
 	}
@@ -171,10 +173,12 @@ export const runFrontEnd = (
 	// outright rather than diagnosed per call site, since neither half of
 	// the isomorphic pair can honour it.
 	if (fn.async === true) {
+		// The whole statement, `export` included, so both surfaces cover the
+		// same text (the parsers disagree on where the declaration starts).
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
 				ctx.source,
-				fn,
+				fnStmt ?? fn,
 				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
 			),
 		)
