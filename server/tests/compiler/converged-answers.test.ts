@@ -188,3 +188,101 @@ describe('the other client-construct answers LT-231 changed (LT-368)', () => {
 		expect(errors[0]?.message).toContain('`@empty` arm')
 	})
 })
+
+/**
+ * LT-378: a `.tsrx` component with TWO LT-122 prop-bound args — `label`
+ * and `desc` are each both a server arg and an `expose()`d prop, so
+ * `title={label}` and `title={desc}` differ only in WHICH prop they bind.
+ */
+const withTwoPropBound = (body: string, registry = new Set<string>()) =>
+	compileComponent(
+		`export function C({ label, desc, flag }: { label: string; desc: string; flag: boolean })
+@{
+	const el = first('span', 'span')
+	expose({ label: el.textContent ?? '', desc: 'd' })
+	<c-el>
+		<span>x</span>
+		${body}
+		<style>:host {
+  color: red;
+}</style>
+	</c-el>
+}`,
+		'c.tsrx',
+		registry,
+	)
+
+describe('the `@if` branch signature distinguishes binding sources (LT-378)', () => {
+	test('branch roots binding DIFFERENT props to `title` are not union-addressed', () => {
+		// Both roots carry `bind:title` — equal key and, before LT-378,
+		// equal EMPTY text for a prop-bound `server` attribute — so the
+		// branches were union-addressed onto one
+		// `watch(() => host.label, bindAttribute(p, 'title'))` and the
+		// `@else` paragraph showed `label`. Unequal signatures route to
+		// per-branch addressing, which raises LTC007 on roots this alike.
+		const errors = errorsOf(
+			withTwoPropBound(
+				'@if (flag) { <p class="msg" title={label} onClick={() => {}}>a</p> } @else { <p class="msg" title={desc} onClick={() => {}}>b</p> }',
+			),
+		)
+		expect(errors.map(d => d.code)).toEqual(['LTC007'])
+	})
+
+	test('same on the `.tsx` ternary', () => {
+		const result = compileComponentTsx(
+			`export function C({ label, desc, flag }: { label: string; desc: string; flag: boolean }) {
+	const el = first('span', 'span')
+	expose({ label: el.textContent ?? '', desc: 'd' })
+	return (
+		<c-el>
+			<span>x</span>
+			{flag
+				? <p class="msg" title={label} onClick={() => {}}>a</p>
+				: <p class="msg" title={desc} onClick={() => {}}>b</p>}
+			<style>{':host { color: red; }'}</style>
+		</c-el>
+	)
+}`,
+			'c.tsx',
+			new Set(),
+		)
+		const errors = result.diagnostics.filter(d => d.severity === 'error')
+		expect(errors.map(d => d.code)).toEqual(['LTC007'])
+	})
+
+	test('a `truc:pass` binding counts its entries in the signature', () => {
+		// Same prop name, different source — before LT-378 the empty text
+		// made the signatures equal and the `@else` child was passed
+		// `host.label`.
+		const errors = errorsOf(
+			withTwoPropBound(
+				'@if (flag) { <my-child class="msg" truc:pass={{ label: () => host.label }}></my-child> } @else { <my-child class="msg" truc:pass={{ label: () => host.desc }}></my-child> }',
+				new Set(['my-child']),
+			),
+		)
+		expect(errors.map(d => d.code)).toEqual(['LTC007'])
+	})
+
+	test('a reactive `truc:html` value counts in the signature', () => {
+		// Before LT-378 the value text was dropped and the `@else`
+		// paragraph was filled with `host.label`'s html.
+		const errors = errorsOf(
+			withTwoPropBound(
+				'@if (flag) { <p class="msg" truc:html={() => host.label} onClick={() => {}}>a</p> } @else { <p class="msg" truc:html={() => host.desc} onClick={() => {}}>b</p> }',
+			),
+		)
+		expect(errors.map(d => d.code)).toEqual(['LTC007'])
+	})
+
+	test('the SAME source on both roots still union-addresses', () => {
+		// The negative control: `title={label}` twice — signatures equal
+		// (same text now, not two empty ones), one query, one effect set,
+		// whichever branch rendered.
+		const errors = errorsOf(
+			withTwoPropBound(
+				'@if (flag) { <p class="msg" title={label} onClick={() => {}}>a</p> } @else { <p class="msg" title={label} onClick={() => {}}>b</p> }',
+			),
+		)
+		expect(errors).toEqual([])
+	})
+})
