@@ -23,14 +23,12 @@ describe('client-only setup statements credit a signal as rendered', () => {
 	const panel = first('.panel', 'the panel')
 	expose({})
 	watch(() => !open.get(), bindAttribute(panel, 'hidden'))
-	<>
 		<c-el>
 			<div class="panel" hidden>ok</div>
+			<style>:host {
+	  display: block;
+	}</style>
 		</c-el>
-		<style>:host {
-  display: block;
-}</style>
-	</>
 }
 import { bindAttribute, createState } from '@zeix/le-truc'`
 
@@ -86,14 +84,12 @@ import { bindAttribute, createState } from '@zeix/le-truc'`
 @{
 	const count = createState(0)
 	expose({})
-	<>
 		<c-el>
 			<button type="button" onClick={() => console.log(count.get())}>log</button>
+			<style>:host {
+	  display: block;
+	}</style>
 		</c-el>
-		<style>:host {
-  display: block;
-}</style>
-	</>
 }
 import { createState } from '@zeix/le-truc'`)
 		expect(component?.entry.routingSignals).toEqual([])
@@ -112,16 +108,14 @@ import { createState } from '@zeix/le-truc'`)
 	const out = first('output', 'the log')
 	expose({})
 	watch(label, bindText(out))
-	<>
 		<c-el>
 			<ul><li>a</li></ul>
 			<output></output>
 			<p>{() => label()}</p>
+			<style>:host {
+	  display: block;
+	}</style>
 		</c-el>
-		<style>:host {
-  display: block;
-}</style>
-	</>
 }
 import { bindText, createMemo } from '@zeix/le-truc'`)
 		expect(
@@ -140,7 +134,6 @@ import { bindText, createMemo } from '@zeix/le-truc'`)
 	const out = first('output', 'the log')
 	expose({})
 	watch(label, bindText(out))
-	<>
 		<c-el>
 			<ul><li>a</li></ul>
 			<output></output>
@@ -152,11 +145,10 @@ import { bindText, createMemo } from '@zeix/le-truc'`)
 					<p>other</p>
 				}
 			}
+			<style>:host {
+	  display: block;
+	}</style>
 		</c-el>
-		<style>:host {
-  display: block;
-}</style>
-	</>
 }
 import { bindText, createMemo } from '@zeix/le-truc'`)
 		expect(
@@ -174,7 +166,6 @@ import { bindText, createMemo } from '@zeix/le-truc'`)
 	expose({})
 	watch(label, bindText(out))
 	return (
-		<>
 			<c-el>
 				<ul><li>a</li></ul>
 				<output></output>
@@ -186,9 +177,8 @@ import { bindText, createMemo } from '@zeix/le-truc'`)
 							return <p>other</p>
 					}
 				})()}
+				<style>{'c-el { display: block }'}</style>
 			</c-el>
-			<style>{'c-el { display: block }'}</style>
-		</>
 	)
 }
 import { bindText, createMemo } from '@zeix/le-truc'`,

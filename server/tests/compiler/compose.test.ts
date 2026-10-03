@@ -21,12 +21,11 @@ import { createGeneratedDir } from '../helpers/generated-corpus'
 const child = `export function BasicChild({ label }: { label: string })
 	@{
 		expose({ value: '' })
-		<>
-			<basic-child>{label}</basic-child>
-			<style>:host {
-  display: block;
-}</style>
-		</>
+			<basic-child>{label}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-child>
 	}`
 
 const compileChild = (path: string, source = child) => {
@@ -57,14 +56,12 @@ describe('component composition (ADR 0023 sub-design 10)', () => {
 export function BasicParent({ title }: { title: string })
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -90,14 +87,12 @@ export function BasicParent({ title }: { title: string })
 export function BasicParent({}: {})
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label="Hello" />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -120,14 +115,12 @@ export function BasicParent({}: {})
 export function BasicParent({}: {})
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild data-testid="hello" />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -151,14 +144,12 @@ export function BasicParent({}: {})
 export function BasicParent({ rowId }: { rowId: string })
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild data-row={rowId} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -181,14 +172,12 @@ export function BasicParent({ rowId }: { rowId: string })
 export function BasicMid({ label }: { label: string })
 	@{
 		expose({})
-		<>
 			<basic-mid>
 				<BasicChild label={label} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-mid>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const midResult = compileComponent(
 			midSource,
@@ -206,14 +195,12 @@ export function BasicMid({ label }: { label: string })
 export function BasicRoot({ title }: { title: string })
 	@{
 		expose({})
-		<>
 			<basic-root>
 				<BasicMid label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-root>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const rootResult = compileComponent(
 			rootSource,
@@ -238,14 +225,12 @@ export function BasicRoot({ title }: { title: string })
 		const source = `export function BasicParent({}: {})
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label="Hello" />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -262,14 +247,12 @@ export function BasicRoot({ title }: { title: string })
 export function BasicParent({}: {})
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label="Hello" />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -285,15 +268,13 @@ export function BasicParent({}: {})
 	const childWithChildren = `export function BasicChild({ label, children }: { label: string; children?: string })
 	@{
 		expose({})
-		<>
 			<basic-child>
 				<span>{label}</span>
 				{children}
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-child>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 
 	test("children between a composed element's tags splice into the render call as the `children` server arg", () => {
@@ -306,16 +287,14 @@ export function BasicParent({}: {})
 export function BasicParent({ title }: { title: string })
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title}>
 					<span>nope</span>
 				</BasicChild>
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -342,14 +321,12 @@ export function BasicParent({ title }: { title: string })
 export function BasicParent({ title }: { title: string })
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -385,16 +362,14 @@ export function BasicParent({ title }: { title: string })
 export function BasicParent({ title }: { title: string })
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title}>
 					<button onClick={() => {}}>nope</button>
 				</BasicChild>
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -416,15 +391,13 @@ export function BasicParent({ title }: { title: string })
 	@{
 		${declare}
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const tsxParent = (
 			declare: string,
@@ -434,15 +407,13 @@ export function BasicParent({ title }: { title: string }) {
 	${declare}
 	expose({})
 	return (
-		<>
 			<basic-parent>
 				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
+				<style>{css\`:host {
+	  display: block;
+	}\`}</style>
 			</basic-parent>
-			<style>{css\`:host {
-  display: block;
-}\`}</style>
-		</>
 	)
 }`
 		const declared = [
@@ -520,14 +491,12 @@ export function BasicParent({ title }: { title: string })
 	@{
 		${declare}
 		expose({})
-		<>
 			<basic-parent>
 				${sites(a, b)}
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const tsxParent = (
 			a: string,
@@ -539,14 +508,12 @@ export function BasicParent({ title }: { title: string }) {
 	${declare}
 	expose({})
 	return (
-		<>
 			<basic-parent>
 				${sites(a, b)}
+				<style>{css\`:host {
+	  display: block;
+	}\`}</style>
 			</basic-parent>
-			<style>{css\`:host {
-  display: block;
-}\`}</style>
-		</>
 	)
 }`
 		const registry = () =>
@@ -653,14 +620,12 @@ export function BasicParent({ title }: { title: string })
 	@{
 		const child = first('basic-child', 'the composed child')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title} truc:pass={{ value: () => 'x' }} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -685,14 +650,12 @@ export function BasicParent({ title }: { title: string })
 		const shout = (s: string) => s.toUpperCase()
 		const child = first('basic-child', 'the composed child')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title} truc:pass={{ value: () => shout('x') }} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -720,15 +683,13 @@ export function BasicParent({ title }: { title: string })
 		const childA = first('basic-child.a', 'the first child')
 		const childB = first('basic-child.b', 'the second child')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -762,15 +723,13 @@ export function BasicParent({ title }: { title: string })
 		const childA = first('basic-child.a', 'the first child')
 		const childB = first('basic-child#second', 'the second child')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild class="b" id="second" label={title} truc:pass={{ value: () => 'y' }} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -806,14 +765,12 @@ export function BasicParent({ title }: { title: string })
 		const stray = first('other-child')
 		expose({})
 		on(host, 'click', () => stray?.focus())
-		<>
 			<basic-parent>
 				<BasicChild label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -837,14 +794,12 @@ export function BasicParent({ title }: { title: string })
 	@{
 		const child = first('basic-child', 'the composed child')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title} truc:pass={{ value: () => child.value }} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		// No composeRegistry: this is pass 1, which only harvests each file's
 		// own registry entry. It must not reject the file — pass 2 never gets
@@ -867,15 +822,13 @@ export function BasicParent({ title }: { title: string })
 		const childA = first('basic-child', 'the first child')
 		const childB = first('basic-child', 'the second child')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild label={title} truc:pass={{ value: () => 'y' }} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -898,15 +851,13 @@ export function BasicParent({ title }: { title: string })
 export function BasicParent({ title }: { title: string })
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild id="dup" label={title} />
 				<BasicChild id="dup" label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			parent,
@@ -923,14 +874,12 @@ export function BasicParent({ title }: { title: string })
 		const source = `export function BasicParent({}: {})
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<basic-child></basic-child>
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -955,14 +904,12 @@ export function BasicParent({ title }: { title: string })
 	@{
 		const child = first('basic-child')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 
 	test('a second analyzeClient over the same IR reports no spurious duplicate', () => {
@@ -1000,7 +947,6 @@ export function BasicParent({}: {})
 		const data = deriveCell(async () => 'x')
 		const loading = first('basic-child.pending')
 		expose({})
-		<>
 			<basic-parent>
 				@try {
 					<div class="content">{data}</div>
@@ -1009,11 +955,10 @@ export function BasicParent({}: {})
 				} @catch (e) {
 					<p class="error">{e.message}</p>
 				}
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 
 	test('a compose site in a @pending arm is rejected — the walks omit pending arms by ruling (LT-221 probe)', () => {
@@ -1057,7 +1002,6 @@ export function BasicParent({}: {})
 	@{
 		const data = deriveCell(async () => 'x')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={'a'} id="dup" />
 				@try {
@@ -1067,11 +1011,10 @@ export function BasicParent({}: {})
 				} @catch (e) {
 					<p class="error">{e.message}</p>
 				}
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 
 	test('a duplicate compose id across the body and a nested pending site is reported', () => {

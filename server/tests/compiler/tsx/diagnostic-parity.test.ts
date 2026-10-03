@@ -224,13 +224,23 @@ const tsrxSource = ({ pre = '', params = '{}: {}', setup = '', body }: Spec) =>
 export function C(${params})
 	@{
 		${setup}
-		<>
-			<c-el>${body}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>${body}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
+
+/**
+ * The text a ROOT diagnostic (LTC008's wrong root tag) covers: the root
+ * element, `<style>` child included (LT-375). Cases comparing a root
+ * diagnostic across surfaces allowlist the two spellings with it.
+ */
+const coveredRoot = (source: string): string =>
+	source.slice(
+		source.indexOf('<div>'),
+		source.lastIndexOf('</div>') + '</div>'.length,
+	)
 
 const tsxSource = ({
 	pre = '',
@@ -243,12 +253,11 @@ const tsxSource = ({
 export function C(${params}) {
 	${setup}
 	return (
-		<>
-			<c-el>${tsx ?? body}</c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
+			<c-el>${tsx ?? body}
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
+			</c-el>
 	)
 }`
 
@@ -920,8 +929,44 @@ const SECOND = {
 		.replaceAll('c-el', 'd-el'),
 }
 
+/** A fragment-root output, per surface (LTC060) — root and `<style>` still wrapped in `<>…</>`. */
+const FRAGMENT_ROOT = {
+	tsrx: `export function C({}: {})
+	@{
+		<>
+			<c-el><p>x</p></c-el>
+			<style>:host { color: red }</style>
+		</>
+	}`,
+	tsx: `export function C({}: {}) {
+	return (
+		<>
+			<c-el><p>x</p></c-el>
+			<style>{css\`:host { color: red }\`}</style>
+		</>
+	)
+}`,
+}
+
+/** The text a fragment-root diagnostic (LTC060) covers: the whole fragment. */
+const coveredFragment = (source: string): string =>
+	source.slice(source.indexOf('<>'), source.indexOf('</>') + '</>'.length)
+
 /** A sample of each remaining diagnostic family. */
 const FAMILIES: Case[] = [
+	{
+		name: 'LTC060 fragment root',
+		code: 'LTC060',
+		sources: FRAGMENT_ROOT,
+		// The covered fragment spells the `<style>` block differently by
+		// surface (the `css` tag) — allowlist that difference.
+		spans: [
+			[coveredFragment(FRAGMENT_ROOT.tsrx), coveredFragment(FRAGMENT_ROOT.tsx)],
+		],
+		pins: [
+			'Move the `<style>` block inside the root element and drop the fragment',
+		],
+	},
 	{
 		name: 'LTC006 React DOM-property name',
 		code: 'LTC006',
@@ -962,6 +1007,15 @@ const FAMILIES: Case[] = [
 			tsrx: tsrxSource({ body: '<p>x</p>' }).replaceAll('c-el', 'div'),
 			tsx: tsxSource({ body: '<p>x</p>' }).replaceAll('c-el', 'div'),
 		},
+		// The diagnostic covers the whole root element, and since LT-375 the
+		// root carries the `<style>` block — whose spelling differs by
+		// surface (the `css` tag). Allowlist that covered-text difference.
+		spans: [
+			[
+				coveredRoot(tsrxSource({ body: '<p>x</p>' }).replaceAll('c-el', 'div')),
+				coveredRoot(tsxSource({ body: '<p>x</p>' }).replaceAll('c-el', 'div')),
+			],
+		],
 	},
 	{
 		name: 'LTC008 two component functions',

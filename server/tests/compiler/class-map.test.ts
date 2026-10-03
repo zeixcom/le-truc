@@ -15,15 +15,13 @@ describe('class-map on a descendant native element', () => {
 	@{
 		const open = createCell(true)
 		expose({})
-		<>
 			<c-el>
 				<p>{open}</p>
 				<span class={() => ({ open: open.get(), disabled: false })}>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 
@@ -56,14 +54,12 @@ describe('class-map on the component root (targets host)', () => {
 	@{
 		const open = createCell(true)
 		expose({})
-		<>
 			<c-el class={() => ({ open: open.get(), disabled: false })}>
 				<p>{open}</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 
@@ -95,15 +91,13 @@ describe('class-map on a descendant custom element bypasses the reactive-attribu
 	@{
 		const open = createCell(true)
 		expose({})
-		<>
 			<c-el>
 				<p>{open}</p>
 				<sub-el class={() => ({ open: open.get() })}>ok</sub-el>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 
@@ -128,28 +122,24 @@ describe('signal used only inside the class-map thunk (LT-036)', () => {
 @{
 	const on = createCell(true)
 	expose({})
-	<>
 		<c-el>
 			<span class={() => ({ active: on.get() })}>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }
 import { createCell } from '@zeix/le-truc'`
 	const root = `export function C({}: {})
 @{
 	const on = createCell(true)
 	expose({})
-	<>
 		<c-el class={() => ({ active: on.get() })}>
 			<span>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }
 import { createCell } from '@zeix/le-truc'`
 
@@ -185,15 +175,13 @@ describe('quoted class keys (LT-221 §1.3)', () => {
 	@{
 		const open = createCell(true)
 		expose({})
-		<>
 			<c-el>
 				<p>{open}</p>
 				<span class={() => ({ 'has-error': open.get() })}>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -212,18 +200,16 @@ import { createCell } from '@zeix/le-truc'`
 	@{
 		const open = createCell(false)
 		expose({})
-		<>
 			<c-el>
 				<ul>
 					@for (const tab of tabs) {
 						<li class={() => ({ 'is-active': open.get() })}>{tab.id}</li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -249,14 +235,12 @@ describe('the class:-prefix spelling is rejected (LT-222)', () => {
 	@{
 		const open = createCell(true)
 		expose({})
-		<>
 			<c-el>
 				<span class:has-error={() => open.get()}>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -275,14 +259,12 @@ import { createCell } from '@zeix/le-truc'`
 	@{
 		const open = createCell(true)
 		expose({})
-		<>
 			<c-el>
 				<span class:has-error={open.get()}>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -296,12 +278,10 @@ import { createCell } from '@zeix/le-truc'`
 	const open = createCell(true)
 	expose({})
 	return (
-		<>
 			<c-el>
 				<span class:has-error={() => open.get()}>ok</span>
+				<style>c-el {'{ color: red }'}</style>
 			</c-el>
-			<style>c-el {'{ color: red }'}</style>
-		</>
 	)
 }
 import { createCell } from '@zeix/le-truc'`

@@ -33,13 +33,11 @@ const compile = (setup: string, params: string, rootAttrs: string) =>
 export function C(${params})
 @{
 ${setup}
-	<>
-		<c-el ${rootAttrs}></c-el>
-
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el ${rootAttrs}>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`,
 		'c.tsrx',
 		new Set(),
@@ -71,14 +69,12 @@ export function C({ max = '10' }: { max?: string })
 @{
 	const label = deriveCell(() => Number(max) * 2)
 	expose({})
-	<>
 		<c-el>
 			<meter max={max}></meter>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 			new Set(),
@@ -138,13 +134,11 @@ export function C({}: {})
 @{
 	const greeting = createCell('Hello')
 	expose({})
-	<>
-		<c-el>{greeting}</c-el>
-
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el>{greeting}
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`,
 			'c.tsrx',
 			new Set(),

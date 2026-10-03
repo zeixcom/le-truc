@@ -21,14 +21,12 @@ export function C({}: {})
 	@{
 		const ${attr === 'checked' ? 'checked' : 'value'} = ${signalInit}
 		expose({ ${attr === 'checked' ? 'checked' : 'value'}: ${attr === 'checked' ? 'checked' : 'value'}.get })
-		<>
 			<c-el>
 				<input ${attr}={() => ${attr === 'checked' ? 'checked' : 'value'}.get()} />
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`,
 		'c.tsrx',
 		new Set(),
@@ -57,14 +55,12 @@ describe('dirty-flag attribute harvest reads the live property (CHECKLIST §6)',
 	@{
 		const title = createCell('')
 		expose({ title: title.get })
-		<>
 			<c-el>
 				<input title={() => title.get()} />
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',

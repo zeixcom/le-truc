@@ -29,7 +29,6 @@ const tsrx = compileComponent(
 	`export function C(${PROPS})
 @{
 	expose({})
-	<>
 		<c-el>
 			<p title={esc}>{esc}</p>
 			<ul>
@@ -37,11 +36,10 @@ const tsrx = compileComponent(
 					<li>{item}</li>
 				}
 			</ul>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 	'c.tsrx',
 	new Set(),
@@ -50,13 +48,11 @@ const tsrx = compileComponent(
 const tsx = compileComponentTsx(
 	`export function C(${PROPS}) {
 	return (
-		<>
 			<c-el>
 				<p title={esc}>{esc}</p>
 				<ul>{items.map(item => <li>{item}</li>)}</ul>
+				<style>{'c-el { color: red }'}</style>
 			</c-el>
-			<style>{'c-el { color: red }'}</style>
-		</>
 	)
 }`,
 	'c.tsx',
@@ -96,15 +92,13 @@ describe('harness names shadowed by args are aliased (LT-302)', () => {
 	const bindText = 'x'
 	const count = createCell(0)
 	expose({ count })
-	<>
 		<c-el>
 			<span>{count}</span>
 			<b>{() => bindText + count.get()}</b>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }
 import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',

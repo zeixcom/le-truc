@@ -116,196 +116,186 @@ export function ModuleColoreditor(
 	)
 
 	return (
-		<>
-			<module-coloreditor value={value} label={label}>
-				<CardColorscale
-					class="scale tiny"
-					label={label}
+		<module-coloreditor value={value} label={label}>
+			<CardColorscale
+				class="scale tiny"
+				label={label}
+				truc:pass={{
+					value: () => host.value,
+					label: () => host.label,
+				}}
+			/>
+			<FormColorgraph
+				name="color"
+				value={formatCss(color)}
+				truc:pass={{
+					// form-colorgraph exposes `value: string` (CSS color), while
+					// module-coloreditor works in Oklch objects — bridge the gap.
+					value: {
+						get: () => formatCss(host.value),
+						set: (v: unknown) => {
+							const parsed = oklchConverter(v as string)
+							if (parsed) host.value = parsed as Oklch
+						},
+					},
+				}}
+			/>
+			<FormTextbox
+				class="name"
+				name="name"
+				label="Color name"
+				value={label}
+				required
+				description={`Nearest named CSS color: ${nearestNamedColor(color)[0] ?? ''}`}
+				truc:pass={{
+					value: {
+						get: () => host.label,
+						set: (v: unknown) => {
+							host.label = v as string
+						},
+					},
+				}}
+			/>
+			<div class="info">
+				<ModuleColorinfo
+					class="lighten80"
+					label={`${label} 100`}
+					value={step(0.9)}
+					open={false}
 					truc:pass={{
-						value: () => host.value,
-						label: () => host.label,
+						value: () => getStepColor(host.value, 0.9),
+						label: () => `${host.label} 100`,
 					}}
 				/>
-				<FormColorgraph
-					name="color"
+				<ModuleColorinfo
+					class="lighten60"
+					label={`${label} 200`}
+					value={step(0.8)}
+					open={false}
+					truc:pass={{
+						value: () => getStepColor(host.value, 0.8),
+						label: () => `${host.label} 200`,
+					}}
+				/>
+				<ModuleColorinfo
+					class="lighten40"
+					label={`${label} 300`}
+					value={step(0.7)}
+					open={false}
+					truc:pass={{
+						value: () => getStepColor(host.value, 0.7),
+						label: () => `${host.label} 300`,
+					}}
+				/>
+				<ModuleColorinfo
+					class="lighten20"
+					label={`${label} 400`}
+					value={step(0.6)}
+					open={false}
+					truc:pass={{
+						value: () => getStepColor(host.value, 0.6),
+						label: () => `${host.label} 400`,
+					}}
+				/>
+				<ModuleColorinfo
+					class="base"
+					label={`${label} 500`}
 					value={formatCss(color)}
 					truc:pass={{
-						// form-colorgraph exposes `value: string` (CSS color), while
-						// module-coloreditor works in Oklch objects — bridge the gap.
-						value: {
-							get: () => formatCss(host.value),
-							set: (v: unknown) => {
-								const parsed = oklchConverter(v as string)
-								if (parsed) host.value = parsed as Oklch
-							},
-						},
+						value: () => host.value,
+						label: () => `${host.label} 500`,
 					}}
 				/>
-				<FormTextbox
-					class="name"
-					name="name"
-					label="Color name"
-					value={label}
-					required
-					description={`Nearest named CSS color: ${nearestNamedColor(color)[0] ?? ''}`}
+				<ModuleColorinfo
+					class="darken20"
+					label={`${label} 600`}
+					value={step(0.4)}
+					open={false}
 					truc:pass={{
-						value: {
-							get: () => host.label,
-							set: (v: unknown) => {
-								host.label = v as string
-							},
-						},
+						value: () => getStepColor(host.value, 0.4),
+						label: () => `${host.label} 600`,
 					}}
 				/>
-				<div class="info">
-					<ModuleColorinfo
-						class="lighten80"
-						label={`${label} 100`}
-						value={step(0.9)}
-						open={false}
-						truc:pass={{
-							value: () => getStepColor(host.value, 0.9),
-							label: () => `${host.label} 100`,
-						}}
-					/>
-					<ModuleColorinfo
-						class="lighten60"
-						label={`${label} 200`}
-						value={step(0.8)}
-						open={false}
-						truc:pass={{
-							value: () => getStepColor(host.value, 0.8),
-							label: () => `${host.label} 200`,
-						}}
-					/>
-					<ModuleColorinfo
-						class="lighten40"
-						label={`${label} 300`}
-						value={step(0.7)}
-						open={false}
-						truc:pass={{
-							value: () => getStepColor(host.value, 0.7),
-							label: () => `${host.label} 300`,
-						}}
-					/>
-					<ModuleColorinfo
-						class="lighten20"
-						label={`${label} 400`}
-						value={step(0.6)}
-						open={false}
-						truc:pass={{
-							value: () => getStepColor(host.value, 0.6),
-							label: () => `${host.label} 400`,
-						}}
-					/>
-					<ModuleColorinfo
-						class="base"
-						label={`${label} 500`}
-						value={formatCss(color)}
-						truc:pass={{
-							value: () => host.value,
-							label: () => `${host.label} 500`,
-						}}
-					/>
-					<ModuleColorinfo
-						class="darken20"
-						label={`${label} 600`}
-						value={step(0.4)}
-						open={false}
-						truc:pass={{
-							value: () => getStepColor(host.value, 0.4),
-							label: () => `${host.label} 600`,
-						}}
-					/>
-					<ModuleColorinfo
-						class="darken40"
-						label={`${label} 700`}
-						value={step(0.3)}
-						open={false}
-						truc:pass={{
-							value: () => getStepColor(host.value, 0.3),
-							label: () => `${host.label} 700`,
-						}}
-					/>
-					<ModuleColorinfo
-						class="darken60"
-						label={`${label} 800`}
-						value={step(0.2)}
-						open={false}
-						truc:pass={{
-							value: () => getStepColor(host.value, 0.2),
-							label: () => `${host.label} 800`,
-						}}
-					/>
-					<ModuleColorinfo
-						class="darken80"
-						label={`${label} 900`}
-						value={step(0.1)}
-						open={false}
-						truc:pass={{
-							value: () => getStepColor(host.value, 0.1),
-							label: () => `${host.label} 900`,
-						}}
-					/>
-				</div>
-			</module-coloreditor>
+				<ModuleColorinfo
+					class="darken40"
+					label={`${label} 700`}
+					value={step(0.3)}
+					open={false}
+					truc:pass={{
+						value: () => getStepColor(host.value, 0.3),
+						label: () => `${host.label} 700`,
+					}}
+				/>
+				<ModuleColorinfo
+					class="darken60"
+					label={`${label} 800`}
+					value={step(0.2)}
+					open={false}
+					truc:pass={{
+						value: () => getStepColor(host.value, 0.2),
+						label: () => `${host.label} 800`,
+					}}
+				/>
+				<ModuleColorinfo
+					class="darken80"
+					label={`${label} 900`}
+					value={step(0.1)}
+					open={false}
+					truc:pass={{
+						value: () => getStepColor(host.value, 0.1),
+						label: () => `${host.label} 900`,
+					}}
+				/>
+			</div>
 			<style>{css`
-:host {
-	display: grid;
-	grid-template-areas:
-		"scale name"
-		"graph graph"
-		"lightness lightness"
-		"chroma chroma"
-		"hue hue"
-		"info info";
-	grid-template-columns: auto 1fr;
-	column-gap: var(--space-m);
-
-	> form-colorgraph {
-		grid-area: graph;
-	}
-
-	> .hue {
-		grid-area: hue;
-	}
-
-	> .lightness {
-		grid-area: lightness;
-	}
-
-	> .chroma {
-		grid-area: chroma;
-	}
-
-	> .scale {
-		grid-area: scale;
-	}
-
-	> .name {
-		grid-area: name;
-		margin: var(--space-s) 0;
-	}
-
-	> .info {
-		grid-area: info;
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-xs);
-	}
-}
-
-@container (width > 45rem) {
 	:host {
+		display: grid;
 		grid-template-areas:
-			"scale name info"
-			"graph graph info"
-			"lightness lightness info"
-			"chroma chroma info"
-			"hue hue info";
-		grid-template-columns: auto 3fr 2fr;
+			"scale name"
+			"graph graph"
+			"lightness lightness"
+			"chroma chroma"
+			"hue hue"
+			"info info";
+		grid-template-columns: auto 1fr;
+		column-gap: var(--space-m);
+		> form-colorgraph {
+			grid-area: graph;
+		}
+		> .hue {
+			grid-area: hue;
+		}
+		> .lightness {
+			grid-area: lightness;
+		}
+		> .chroma {
+			grid-area: chroma;
+		}
+		> .scale {
+			grid-area: scale;
+		}
+		> .name {
+			grid-area: name;
+			margin: var(--space-s) 0;
+		}
+		> .info {
+			grid-area: info;
+			display: flex;
+			flex-direction: column;
+			gap: var(--space-xs);
+		}
 	}
-}`}</style>
-		</>
+	@container (width > 45rem) {
+		:host {
+			grid-template-areas:
+				"scale name info"
+				"graph graph info"
+				"lightness lightness info"
+				"chroma chroma info"
+				"hue hue info";
+			grid-template-columns: auto 3fr 2fr;
+		}
+	}`}</style>
+		</module-coloreditor>
 	)
 }

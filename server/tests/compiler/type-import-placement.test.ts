@@ -26,12 +26,11 @@ declare global {
 export function C({ tone }: { tone?: Tone })
 @{
 	expose({})
-	<>
-		<c-el data-tone={tone ?? ''}>ok</c-el>
-		<style>:host {
-  display: block;
-}</style>
-	</>
+		<c-el data-tone={tone ?? ''}>ok
+			<style>:host {
+	  display: block;
+	}</style>
+		</c-el>
 }`
 
 describe('type-only imports named by carried declarations', () => {

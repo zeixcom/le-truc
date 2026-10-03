@@ -95,6 +95,7 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 | LTC053 | a tag that isn't a static name (`.tsrx` `<{expr}>`, an unknown `.tsx` namespaced or member tag), or a boundary placed directly as a loop body's root | choose between static tags with a conditional. Wrap the boundary in an element |
 | LTC055 | an `i18n` pattern that isn't valid ICU MF1, or a `t.key` site that disagrees with its pattern (missing or extra args, args not one object literal, an arg message read without a call, a plain message called) | fix the pattern (quote literal `{`, `}`, `#` with apostrophes), or pass exactly the args it reads |
 | LTC056 | a `<script>` in a template, whatever its type | move it to the page, or do the work in setup |
+| LTC060 | the template output wraps the root element and its `<style>` block in a fragment (`<>…</>`). The root is the host element; the stylesheet is a child of the root | move the `<style>` block inside the root element and drop the fragment |
 | LTC061 | an authored `<template>` in a template. The compiler emits its own. | render directly, or use a list or condition |
 | LTC062 | a reactive switch has a non-literal `case` value, or two values with the same key | string, number, boolean or `null` literals, one arm each |
 | LTC063 | a reactive condition inside a reactive list's container, which the list clears | move it out, or wrap the loop in its own element |

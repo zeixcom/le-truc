@@ -28,7 +28,6 @@ export function AsyncEl(
 	expose({ data: data.get })
 
 	return (
-		<>
 			<async-el>
 				<truc:try
 					pending={<p class="loading">Loading</p>}
@@ -39,10 +38,9 @@ export function AsyncEl(
 				<p role="status" class={() => (isPending(data) ? 'pending' : null)}>
 					status
 				</p>
+				<style>{css`:host {
+	  color: red;
+	}`}</style>
 			</async-el>
-			<style>{css`:host {
-  color: red;
-}`}</style>
-		</>
 	)
 }

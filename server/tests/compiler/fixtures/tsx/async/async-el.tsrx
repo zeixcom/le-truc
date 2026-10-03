@@ -16,7 +16,6 @@ export function AsyncEl({}: {})
 		const data = deriveCell(async () => 'loaded')
 		expose({ data: data.get })
 
-		<>
 			<async-el>
 				@try {
 					<div class="content">{data}</div>
@@ -28,9 +27,8 @@ export function AsyncEl({}: {})
 				<p role="status" class={() => (isPending(data) ? 'pending' : null)}>
 					status
 				</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</async-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}

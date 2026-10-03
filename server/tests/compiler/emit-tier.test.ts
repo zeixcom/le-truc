@@ -62,15 +62,13 @@ export function C({ name }: { name: string })
 	const labelId = \`\${name}-label\`
 	const seed = createCell(Date.now())
 	expose({ label: asString('') })
-	<>
 		<c-el>
 			<span class="label" id={labelId}>Label</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
 
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 
 /**
@@ -109,16 +107,14 @@ export function C({ name }: { name: string })
 @{
 	const labelId = \`\${name}-label\`
 	expose({ label: asString('') })
-	<>
 		<c-el>
 			<span class="label" id={labelId}>Label</span>
 			<span class="maybe" hidden={() => Math.random() > 0.5}>maybe</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
 
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 
 const emit = (source: string, tier: EvaluationTier) => {
@@ -279,15 +275,13 @@ export function C({ start = 0 }: { start?: number })
 @{
 	const count = createCell(start)
 	expose({ count: count.get })
-	<>
 		<c-el>
 			<span>{count}</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
 
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 
 describe('a folded signal the markup reads survives every tier', () => {

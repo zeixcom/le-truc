@@ -73,14 +73,12 @@ const varTsx = (cssBody: string, extra = ''): string =>
 	expose({})
 
 	return (
-		<>
 			<var-el>
 				<p class="label">{label}</p>${extra}
+				<style>{css\`
+				:host { ${cssBody} }
+				\`}</style>
 			</var-el>
-			<style>{css\`
-			:host { ${cssBody} }
-			\`}</style>
-		</>
 	)
 }`
 
@@ -89,14 +87,12 @@ const varTsrx = (cssBody: string, extra = ''): string =>
 	@{
 		expose({})
 
-		<>
 			<var-el>
 				<p class="label">{label}</p>${extra}
+				<style>
+				:host { ${cssBody} }
+				</style>
 			</var-el>
-			<style>
-			:host { ${cssBody} }
-			</style>
-		</>
 	}`
 
 const variantSet = (cssBody = 'display: block'): FileInfo[] => [
@@ -500,18 +496,16 @@ export function TwinParent(
 	expose({ total: () => counter.${prop} })
 
 	return (
-		<>
 			<twin-parent>
 				<basic-counter>
 					<button type="button">
 						💐 <span>0</span>
 					</button>
 				</basic-counter>
+				<style>{css\`			:host {
+				  display: block;
+				}\`}</style>
 			</twin-parent>
-			<style>{css\`			:host {
-			  display: block;
-			}\`}</style>
-		</>
 	)
 }`
 

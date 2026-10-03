@@ -145,16 +145,14 @@ describe('integration — emitClientModule spans locate the authored thunk', () 
 	@{
 		const count = createCell(start)
 		expose({ count: count.get })
-		<>
 			<c-el>
 				<button type="button" onClick={() => count.set(count.get() + 1)}>
 					{count}
 				</button>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())

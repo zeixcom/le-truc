@@ -19,12 +19,11 @@ const wrap = (template: string): string =>
 	@{
 		const selected = createCell('a')
 		expose({ selected: selected.get })
-		<>
-			<c-el>${template}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>${template}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 describe('extension activation (LTC009)', () => {
@@ -33,12 +32,11 @@ describe('extension activation (LTC009)', () => {
 export function C({ value = '' }: { value?: string })
 @{
 	expose({ value: asString('') })
-	<>
-		<c-el value={value}><span>ok</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el value={value}><span>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 	test('unknown config key is LTC009', () => {
@@ -96,12 +94,11 @@ export function C({ value = '' }: { value?: string })
 export function C({ label }: { label?: string })
 @{
 	expose({ label })
-	<>
-		<c-el><span>{label}</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span>{label}</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'LTC009')
@@ -127,12 +124,11 @@ export function C({ label }: { label?: string })
 		const source = `export function C({ max }: { max?: number })
 	@{
 		expose({ count: asClampedInteger(0, 10), data: asJSON({}) })
-		<>
-			<c-el count={max}><span>ok</span></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el count={max}><span>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}
 import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileSource(source, 'c.tsrx')
@@ -145,12 +141,11 @@ import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 		const source = `export function C({}: {})
 	@{
 		expose({})
-		<>
-			<c-el><p class="error">{host.validationMessage}</p></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el><p class="error">{host.validationMessage}</p>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'LTC010')
@@ -163,12 +158,11 @@ import { asClampedInteger, asJSON } from '@zeix/le-truc'`
 	@{
 		expose({})
 		console.log(note)
-		<>
-			<c-el><span>ok</span></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el><span>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
@@ -185,18 +179,16 @@ describe('@if conditional markup (LT-008)', () => {
 		const source = `export function C({ big }: { big?: boolean })
 	@{
 		expose({})
-		<>
 			<c-el>
 				@if (big) {
 					<strong>big</strong>
 				} @else {
 					<small>small</small>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -212,16 +204,14 @@ describe('@if conditional markup (LT-008)', () => {
 	@{
 		const open = createCell(false)
 		expose({ open: open.get })
-		<>
 			<c-el>
 				@if (open.get()) {
 					<strong>open</strong>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -239,18 +229,16 @@ import { createCell } from '@zeix/le-truc'`
 		const source = `export function C({ big }: { big?: boolean })
 	@{
 		expose({})
-		<>
 			<c-el>
 				@if (big) {
 					<strong class="a" onClick={() => {}}>a</strong>
 				} @else {
 					<strong class="b" onClick={() => { }}>b</strong>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -265,18 +253,16 @@ import { createCell } from '@zeix/le-truc'`
 		const indistinguishable = `export function C({ big }: { big?: boolean })
 	@{
 		expose({})
-		<>
 			<c-el>
 				@if (big) {
 					<strong onClick={() => {}}>a</strong>
 				} @else {
 					<strong onClick={() => { }}>b</strong>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 		}`
 		const clash = compileComponent(indistinguishable, 'c.tsrx', new Set())
 		const hit = clash.diagnostics.find(d => d.code === 'LTC007')
@@ -304,16 +290,14 @@ describe('milestone gates', () => {
 		const source = `export function C({}: {})
 	@{
 		const items = deriveList(() => ['a'])
-		<>
 			<c-el>
 				@for (const item of items; key k) {
 					<li>{item}</li>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { deriveList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -323,18 +307,16 @@ import { deriveList } from '@zeix/le-truc'`
 	test('key clause on a server-data @for is LTC052 (ADR 0040 s1)', () => {
 		const source = `export function C({ items }: { items: string[] })
 	@{
-		<>
 			<c-el>
 				<ul>
 					@for (const item of items; key k) {
 						<li>{item}</li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -344,7 +326,7 @@ import { deriveList } from '@zeix/le-truc'`
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC052')
 		expect(hit?.severity).toBe('error')
-		expect(lineAt(source, hit)).toBe(6)
+		expect(lineAt(source, hit)).toBe(5)
 		expect(textAt(source, hit)).toBe('k')
 	})
 })
@@ -353,14 +335,12 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 	test('.tsrx dynamic <{expr}> tag is LTC053, never a tag: "" element', () => {
 		const source = `export function C({ level }: { level: string })
 	@{
-		<>
 			<c-el>
 				<{level}>Hi</{level}>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -370,7 +350,7 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC053')
 		expect(hit?.severity).toBe('error')
-		expect(lineAt(source, hit)).toBe(5)
+		expect(lineAt(source, hit)).toBe(4)
 		expect(textAt(source, hit)).toBe('<{level}>Hi</{level}>')
 		expect(hit?.message).toContain('<{level}>')
 		expect(hit?.message).toContain('@else')
@@ -379,14 +359,12 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 	test('.tsx unrecognized namespaced tag <truc:element> is LTC053', () => {
 		const source = `export function C({ level }: { level: string }) {
 	return (
-		<>
 			<c-el>
 				<truc:element tag={level}>Hi</truc:element>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
 			</c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
 	)
 }`
 		const { component, diagnostics } = compileComponentTsx(
@@ -397,7 +375,7 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC053')
 		expect(hit?.severity).toBe('error')
-		expect(lineAt(source, hit)).toBe(5)
+		expect(lineAt(source, hit)).toBe(4)
 		expect(textAt(source, hit)).toBe(
 			'<truc:element tag={level}>Hi</truc:element>',
 		)
@@ -427,14 +405,12 @@ export function C({}: {}) {
 	const fallback = (e: Error) => <p>{e.message}</p>
 	expose({ data: data.get })
 	return (
-		<>
 			<c-el>
 				${boundary}
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
 			</c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
 	)
 }`
 	const compileTry = (boundary: string) =>
@@ -472,7 +448,7 @@ export function C({}: {}) {
 			expect(component).toBeNull()
 			const hit = diagnostics.find(d => d.code === 'LTC005')
 			expect(hit?.severity).toBe('error')
-			expect(lineAt(trySource(boundary), hit)).toBe(9)
+			expect(lineAt(trySource(boundary), hit)).toBe(8)
 			expect(textAt(trySource(boundary), hit)).toBe(boundary)
 			expect(hit?.message).toContain(
 				'`<truc:try>` boundary with arms that are not inline',
@@ -500,7 +476,6 @@ describe('the loop empty arm (LT-212)', () => {
 		arm: string,
 	): string => `export function C({ rows }: { rows: string[] })
 	@{
-		<>
 			<c-el>
 				<ul>
 					@for (const row of rows) {
@@ -509,11 +484,10 @@ describe('the loop empty arm (LT-212)', () => {
 						${arm}
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('a static arm compiles clean', () => {
@@ -559,7 +533,6 @@ describe('the loop empty arm (LT-212)', () => {
 export function C({}: {})
 	@{
 		const items = createList<string>([], { keyConfig: 'item' })
-		<>
 			<c-el>
 				<ul data-container>
 					@for (const item of items) {
@@ -568,11 +541,10 @@ export function C({}: {})
 						<>Nothing yet</>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`,
 			'c.tsrx',
 			new Set(),
@@ -591,14 +563,12 @@ export function C({}: {})
 			const { component, diagnostics } = compileComponentTsx(
 				`export function C({ rows, other, ready }: { rows: string[]; other: string[]; ready: boolean }) {
 	return (
-		<>
 			<c-el>
 				<ul>{${expr}}</ul>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
 			</c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
 	)
 }`,
 				'c.tsx',
@@ -615,16 +585,14 @@ describe('loops inside conditional branches (LT-301)', () => {
 	const tsrx = (body: string): string =>
 		`export function C({ rows, ready, mode }: { rows: string[]; ready: boolean; mode: string })
 	@{
-		<>
 			<c-el>
 				<ul>
 					${body}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 	const item = '<li class="item" onClick={() => console.log(1)}>{row}</li>'
 
@@ -667,14 +635,12 @@ describe('loops inside conditional branches (LT-301)', () => {
 		const { component, diagnostics } = compileComponentTsx(
 			`export function C({ rows, ready }: { rows: string[]; ready: boolean }) {
 	return (
-		<>
 			<c-el>
 				<ul>{ready ? <li class="none">x</li> : <>{rows.map(row => <li class="item" onClick={() => console.log(1)}>{row}</li>)}</>}</ul>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
 			</c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
 	)
 }`,
 			'c.tsx',
@@ -695,7 +661,6 @@ describe('loops inside conditional branches (LT-301)', () => {
 export function C({}: {})
 	@{
 		const items = createList<string>([], { keyConfig: 'item' })
-		<>
 			<c-el>
 				<ul data-container>
 					@for (const item of items) {
@@ -704,11 +669,10 @@ export function C({}: {})
 						<li class="none" ${attr}>Nothing yet</li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`,
 				'c.tsrx',
 				new Set(),
@@ -726,18 +690,16 @@ describe('reactive-list rewrite rules (milestone 3)', () => {
 export function C({}: {})
 	@{
 		const items = createList<string>([], { keyConfig: 'item' })
-		<>
 			<c-el>
 				<ul data-container>
 					@for (const item of items; key k) {
 						${body}
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('well-formed body compiles: hole, statics, key-bound event', () => {
@@ -799,18 +761,16 @@ export function C({}: {})
 export function C({ label }: { label: string })
 	@{
 		const items = createList<string>([], { keyConfig: 'item' })
-		<>
 			<c-el>
 				<ul data-container>
 					@for (const item of items; key k) {
 						<li>{item}{label}</li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`,
 			'c.tsrx',
 			new Set(),
@@ -849,18 +809,16 @@ export function C({ label }: { label: string })
 		const source = `export function C({}: {})
 	@{
 		const items = createList<string>(['a'], { keyConfig: 'item' })
-		<>
 			<c-el>
 				<ul>
 					@for (const item of items; index i; key k) {
 						<li>{item}</li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -873,16 +831,14 @@ import { createList } from '@zeix/le-truc'`
 		const source = `export function C({}: {})
 	@{
 		const items = createList<string>(['a'], { keyConfig: 'item' })
-		<>
 			<c-el>
 				@for (const item of items; key k) {
 					<li>{item}</li>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -934,12 +890,11 @@ describe('rewrite-rule enforcement', () => {
 		const ghost = createCell(1)
 		const seen = createCell(0)
 		expose({ seen: seen.get })
-		<>
-			<c-el><span>{seen}</span></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el><span>{seen}</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -961,12 +916,11 @@ import { createCell } from '@zeix/le-truc'`
 @{
 	const prefix = createCell('a')
 	expose({})
-	<>
-		<c-el><span title={() => prefix.get() + '!'}>ok</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span title={() => prefix.get() + '!'}>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }
 import { createCell } from '@zeix/le-truc'`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
@@ -980,12 +934,11 @@ import { createCell } from '@zeix/le-truc'`
 	@{
 		const value = createCell('x')
 		expose({ value: value.get })
-		<>
-			<c-el truc:pass={{ value: { get: () => value.get() } }}>ok</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el truc:pass={{ value: { get: () => value.get() } }}>ok
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(
@@ -1015,18 +968,16 @@ export function C({ initial, removeLabel }: { initial?: string[]; removeLabel: s
 @{
 	const items = createList<string>(initial, { keyConfig: 'item' })
 	expose({})
-	<>
 		<c-el>
 			<ul data-container>
 				@for (const item of items) {
 					<li aria-label={removeLabel}><span>{item}</span></li>
 				}
 			</ul>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 			new Set(['c-el']),
@@ -1041,18 +992,16 @@ export function C({ initial }: { initial?: string[] })
 @{
 	const items = createList<string>(initial, { keyConfig: 'item' })
 	expose({})
-	<>
 		<c-el>
 			<ul data-container>
 				@for (const item of items) {
 					<li aria-label={item}><span>{item}</span></li>
 				}
 			</ul>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 			new Set(['c-el']),
@@ -1067,12 +1016,11 @@ export function C({ initial }: { initial?: string[] })
 	@{
 		const n = createCell(1)
 		expose({ n: n.get })
-		<>
-			<c-el onClick={() => n.set(0)}><span>{n}</span></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el onClick={() => n.set(0)}><span>{n}</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -1095,12 +1043,11 @@ import { createCell } from '@zeix/le-truc'`
 	@{
 		const n = big ? deriveCell(() => 1) : createCell(0)
 		expose({ n: n.get })
-		<>
-			<c-el><span>{n}</span></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el><span>{n}</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}
 import { deriveCell, createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -1127,12 +1074,11 @@ import { deriveCell, createCell } from '@zeix/le-truc'`
 		const n = createCell(1)
 		const el = all('.foo')
 		expose({ n: n.get })
-		<>
-			<c-el><span>{n}</span></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el><span>{n}</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -1159,12 +1105,11 @@ describe('React JSX near-misses (LT-054)', () => {
 		`export function C({ cond, items }: { cond: boolean; items: string[] })
 	@{
 		expose({})
-		<>
-			<c-el>${body}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>${body}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 	test('{cond && <jsx/>} is TSRX021 with an @if fix-it', () => {
@@ -1251,12 +1196,11 @@ describe('React JSX near-misses (LT-054)', () => {
 		const childSource = `export function BasicChild({ label }: { label: string })
 	@{
 		expose({})
-		<>
-			<basic-child>{label}</basic-child>
-			<style>:host {
-  display: block;
-}</style>
-		</>
+			<basic-child>{label}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-child>
 	}`
 		const { component: child, diagnostics: childDiagnostics } =
 			compileComponent(
@@ -1271,14 +1215,12 @@ describe('React JSX near-misses (LT-054)', () => {
 export function BasicParent({ title }: { title: string })
 	@{
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild className="x" label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const composeRegistry = new Map<string, RegistryEntry>([
 			[child.entry.source, child.entry],
@@ -1305,12 +1247,11 @@ describe('first(selector, required) element references (LT-055)', () => {
 	@{
 		${setup}
 		expose({})
-		<>
-			<c-el>${template}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>${template}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 	test('resolves a bare-tag selector and lowers to a ref', () => {
@@ -1333,18 +1274,16 @@ describe('first(selector, required) element references (LT-055)', () => {
 	@{
 		const control = first('input, textarea', 'text control')
 		expose({})
-		<>
 			<c-el>
 				@if (multiline) {
 					<textarea onInput={() => control.value} />
 				} @else {
 					<input onInput={() => control.value} />
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -1411,12 +1350,11 @@ describe('first(selector, required) element references (LT-055)', () => {
 		const childSource = `export function BasicChild({ label }: { label: string })
 	@{
 		expose({})
-		<>
-			<basic-child>{label}</basic-child>
-			<style>:host {
-  display: block;
-}</style>
-		</>
+			<basic-child>{label}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-child>
 	}`
 		const { component: child, diagnostics: childDiagnostics } =
 			compileComponent(
@@ -1432,14 +1370,12 @@ export function BasicParent({ title }: { title: string })
 	@{
 		const child = first('basic-child', 'the composed child')
 		expose({})
-		<>
 			<basic-parent>
 				<BasicChild label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 		const composeRegistry = new Map([[child.entry.source, child.entry]])
 		const { component, diagnostics } = compileComponent(
@@ -1466,12 +1402,11 @@ export function BasicParent({ title }: { title: string })
 		const b = first('input', 'b')
 		expose({})
 		on(host, 'click', () => { a.focus(); b.focus() })
-		<>
-			<c-el><input /></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el><input />
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -1491,12 +1426,11 @@ export function BasicParent({ title }: { title: string })
 		const childSource = `export function BasicChild({ label }: { label: string })
 	@{
 		expose({})
-		<>
-			<basic-child>{label}</basic-child>
-			<style>:host {
-  display: block;
-}</style>
-		</>
+			<basic-child>{label}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-child>
 	}`
 		const { component: child } = compileComponent(
 			childSource,
@@ -1512,12 +1446,11 @@ export function BasicParent({ title }: { title: string })
 		const b = first('basic-child', 'b')
 		expose({})
 		on(host, 'click', () => { a.focus(); b.focus() })
-		<>
-			<basic-parent><BasicChild label={title} /></basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
+			<basic-parent><BasicChild label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
 	}`
 		const { diagnostics } = compileComponent(
 			parent,
@@ -1536,12 +1469,11 @@ export function BasicParent({ title }: { title: string })
 		const stray = first('no-such-child', 'a child this template never composes')
 		expose({})
 		on(host, 'click', () => stray.focus())
-		<>
-			<c-el><input /></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el><input />
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		// `compileSource` alone cannot decide this — the tag could belong to
 		// a composed child — so the deferral must not swallow the error.
@@ -1562,12 +1494,11 @@ describe('managed form member shadowing (LT-058)', () => {
 export function C({ name }: { name: string })
 	@{
 		expose({ ${exposeBody} })
-		<>
-			<c-el {name}><input /></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el {name}><input />
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 	test('exposing a member formAssociated() installs is LTC028', () => {
@@ -1621,12 +1552,11 @@ export function C({ name }: { name: string })
 		const source = `export function C({}: {})
 	@{
 		expose({ validationMessage: asString('') })
-		<>
-			<c-el><span>ok</span></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el><span>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}
 import { asString } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -1640,12 +1570,11 @@ describe('inner form control must have no name (LT-059)', () => {
 export function C({ name }: { name: string })
 	@{
 		expose({ value: asString('') })
-		<>
-			<c-el {name}>${template}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el {name}>${template}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 	test('a static name on a descendant input is LTC029', () => {
@@ -1697,12 +1626,11 @@ export function C({ name }: { name: string })
 		const source = `export function C({ name }: { name: string })
 	@{
 		expose({})
-		<>
-			<c-el {name}><input name="inner" /></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el {name}><input name="inner" />
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC029')).toBe(false)
@@ -1714,14 +1642,12 @@ describe('textarea value attribute (CHECKLIST §10, LTC030)', () => {
 		const source = `export function C({}: {})
 	@{
 		expose({})
-		<>
 			<c-el>
 				<textarea value="hi"></textarea>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -1738,14 +1664,12 @@ describe('textarea value attribute (CHECKLIST §10, LTC030)', () => {
 		const source = `export function C({ value }: { value: string })
 	@{
 		expose({})
-		<>
 			<c-el>
 				<textarea value={value}></textarea>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC030')).toBe(true)
@@ -1755,14 +1679,12 @@ describe('textarea value attribute (CHECKLIST §10, LTC030)', () => {
 		const source = `export function C({ value }: { value?: string })
 	@{
 		expose({ value: asString('') })
-		<>
 			<c-el {value}>
 				<textarea value={() => host.value}>{value}</textarea>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asString } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -1773,14 +1695,12 @@ import { asString } from '@zeix/le-truc'`
 		const source = `export function C({ value }: { value: string })
 	@{
 		expose({})
-		<>
 			<c-el>
 				<input value={value} />
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC030')).toBe(false)
@@ -1792,18 +1712,16 @@ describe('asymmetric @if branch client constructs (per-branch addressing since L
 		const source = `export function C({ big }: { big?: boolean })
 	@{
 		expose({})
-		<>
 			<c-el>
 				@if (big) {
 					<strong class="plain">a</strong>
 				} @else {
 					<button type="button" class="act" onClick={() => {}}>b</button>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 		}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -1827,18 +1745,16 @@ describe('asymmetric @if branch client constructs (per-branch addressing since L
 		const source = `export function C({ big }: { big?: boolean })
 	@{
 		expose({})
-		<>
 			<c-el>
 				@if (big) {
 					<strong>a</strong>
 				} @else {
 					<strong onClick={() => {}}>b</strong>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'LTC007')
@@ -1850,18 +1766,16 @@ describe('asymmetric @if branch client constructs (per-branch addressing since L
 		const source = `export function C({ big }: { big?: boolean })
 	@{
 		expose({})
-		<>
 			<c-el>
 				@if (big) {
 					<strong onClick={() => {}}>a</strong>
 				} @else {
 					<strong onClick={() => {}}>b</strong>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC007')).toBe(false)
@@ -1873,12 +1787,11 @@ describe('default value on a non-optional prop type (CHECKLIST §10, LTC032)', (
 		const source = `export function C({ label = 'x' }: { label: string })
 	@{
 		expose({})
-		<>
-			<c-el>{label}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>{label}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		const hit = diagnostics.find(d => d.code === 'LTC032')
@@ -1891,12 +1804,11 @@ describe('default value on a non-optional prop type (CHECKLIST §10, LTC032)', (
 		const source = `export function C({ label = 'x' }: { label?: string })
 	@{
 		expose({})
-		<>
-			<c-el>{label}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>{label}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC032')).toBe(false)
@@ -1906,12 +1818,11 @@ describe('default value on a non-optional prop type (CHECKLIST §10, LTC032)', (
 		const source = `export function C({ label }: { label: string })
 	@{
 		expose({})
-		<>
-			<c-el>{label}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>{label}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC032')).toBe(false)
@@ -1923,12 +1834,11 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 		const source = `export function C({ label }: { label: string })
 	@{
 		expose({})
-		<>
-			<c-el>{label + Date.now()}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>{label + Date.now()}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -1945,12 +1855,11 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 		const source = `export function C({}: {})
 	@{
 		expose({})
-		<>
-			<c-el>{Math.random()}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>{Math.random()}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(true)
@@ -1962,12 +1871,11 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 	])('%s in a static position is LTC033 (LT-314)', expr => {
 		const source = `export function C({}: {}) {
 	return (
-		<>
-			<c-el><span id={${expr}}>x</span></c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
+			<c-el><span id={${expr}}>x</span>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
+			</c-el>
 	)
 }`
 		const { component, diagnostics } = compileComponentTsx(
@@ -1987,10 +1895,9 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 			compileComponentTsx(
 				`export function C(${PROPS}) {
 	return (
-		<>
-			<c-el><ul>{${iterable}.map(a => <li>{a}</li>)}</ul></c-el>
-			<style>{'c-el { color: red }'}</style>
-		</>
+			<c-el><ul>{${iterable}.map(a => <li>{a}</li>)}</ul>
+				<style>{'c-el { color: red }'}</style>
+			</c-el>
 	)
 }`,
 				'c.tsx',
@@ -2001,18 +1908,16 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 				`export function C(${PROPS})
 	@{
 		expose({})
-		<>
 			<c-el>
 				<ul>
 					@for (const a of ${iterable}) {
 						<li>{a}</li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`,
 				'c.tsrx',
 				new Set(),
@@ -2044,12 +1949,11 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 	test('crypto.randomUUID() in a reactive position is omitted, not folded (LT-314)', () => {
 		const source = `export function C({}: {}) {
 	return (
-		<>
-			<c-el><span id={() => crypto.randomUUID()}>x</span></c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
+			<c-el><span id={() => crypto.randomUUID()}>x</span>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
+			</c-el>
 	)
 }`
 		const { component, diagnostics } = compileComponentTsx(
@@ -2066,12 +1970,11 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 		const source = `export function C({ a, b }: { a: number; b: number })
 	@{
 		expose({})
-		<>
-			<c-el>{Math.max(a, b)}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>{Math.max(a, b)}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC033')).toBe(false)
@@ -2086,15 +1989,13 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 	@{
 		const length = createCell(0)
 		expose({ length: length.get })
-		<>
 			<c-el>
 				<span>{length}</span>
 				<div title={() => length.get() + Date.now()}></div>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2117,15 +2018,13 @@ import { createCell } from '@zeix/le-truc'`
 	@{
 		const length = createCell(0)
 		expose({ length: length.get })
-		<>
 			<c-el>
 				<span>{length}</span>
 				<button onClick={() => { const x = new Date(); length.set(x.getTime()) }}>go</button>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -2145,14 +2044,12 @@ describe('semantically-loaded attribute with no server default (CHECKLIST §5, L
 		const source = `export function C({ count }: { count: number })
 	@{
 		expose({ count: asInteger() })
-		<>
 			<c-el>
 				<p hidden={() => host.count !== 0}>done</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asInteger } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2171,14 +2068,12 @@ import { asInteger } from '@zeix/le-truc'`
 		const source = `export function C({ count }: { count: number })
 	@{
 		expose({ count: asInteger() })
-		<>
 			<c-el {count}>
 				<p hidden={() => host.count !== 0}>done</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asInteger } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2203,14 +2098,12 @@ import { asInteger } from '@zeix/le-truc'`
 		const source = `export function C({ value, min, max }: { value: number; min: number; max: number })
 	@{
 		expose({ value: asInteger(), min: asInteger(), max: asInteger() })
-		<>
 			<c-el {min} {max}>
 				<button disabled={() => host.value <= host.min}>-</button>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asInteger } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2235,15 +2128,13 @@ export function C({}: {})
 	@{
 		const busy = createCell(false)
 		expose({ value: asString('') })
-		<>
 			<c-el>
 				<span>{busy}</span>
 				<input disabled={() => busy.get() && Math.random() > 0.5} />
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell, asString } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2271,15 +2162,13 @@ import { createCell, asString } from '@zeix/le-truc'`
 export function C({ busy }: { busy: boolean })
 	@{
 		expose({ value: asString(''), busy: asBoolean(false) })
-		<>
 			<c-el>
 				<p hidden={() => host.busy !== false}>waiting</p>
 				<input disabled={() => Date.now() < 1_000} />
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asString, asBoolean } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2312,14 +2201,12 @@ import { asString, asBoolean } from '@zeix/le-truc'`
 export function C({ busy }: { busy: boolean })
 	@{
 		expose({ value: asString(''), busy: asBoolean(false) })
-		<>
 			<c-el>
 				<input disabled={() => host.busy !== false} />
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asString, asBoolean } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2340,15 +2227,13 @@ import { asString, asBoolean } from '@zeix/le-truc'`
 	@{
 		const busy = createCell(false)
 		expose({})
-		<>
 			<c-el>
 				<span>{busy}</span>
 				<input disabled={() => busy.get() && Math.random() > 0.5} />
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2370,17 +2255,15 @@ export function C({}: {})
 	@{
 		const busy = createCell(false)
 		expose({ value: asString('') })
-		<>
 			<c-el>
 				<span>{busy}</span>
 				<fieldset disabled={() => busy.get() && Math.random() > 0.5}>
 					<input />
 				</fieldset>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell, asString } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2397,15 +2280,13 @@ import { createCell, asString } from '@zeix/le-truc'`
 	@{
 		const busy = createCell(false)
 		expose({})
-		<>
 			<c-el>
 				<span>{busy}</span>
 				<button disabled={() => busy.get() && Math.random() > 0.5}>go</button>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -2423,14 +2304,12 @@ import { createCell } from '@zeix/le-truc'`
 		const source = `export function C({ open }: { open?: boolean })
 	@{
 		expose({ open: asBoolean(false) })
-		<>
 			<c-el {open}>
 				<p hidden={() => host.open}>panel</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asBoolean } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -2442,15 +2321,13 @@ import { asBoolean } from '@zeix/le-truc'`
 	@{
 		const open = createCell(false)
 		expose({ open: open.get })
-		<>
 			<c-el>
 				<span>{open}</span>
 				<p hidden={() => !open.get()}>panel</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -2461,14 +2338,12 @@ import { createCell } from '@zeix/le-truc'`
 		const source = `export function C({ count }: { count: number })
 	@{
 		expose({ count: asInteger() })
-		<>
 			<c-el {count}>
 				<p title={() => host.count !== 0 ? 'yes' : 'no'}>x</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asInteger } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -2481,14 +2356,12 @@ describe('duplicate id across @try/@catch arms (LTC035 retired, LT-275)', () => 
 		`export function C({ status }: { status?: string })
 	@{
 		expose({})
-		<>
 			<c-el>
 				${template}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	// Template-cloned arms (ADR 0037 s4) keep every non-winning arm out of
@@ -2514,14 +2387,12 @@ describe('static ids in a template (LTC042, LT-131)', () => {
 		`export function C({ label, labelId = 'c-label' }: { label?: string; labelId?: string })
 	@{
 		expose({})
-		<>
 			<c-el>
 				${body}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('a constant id is a warning naming the server-arg fix', () => {
@@ -2559,12 +2430,11 @@ describe('static ids in a template (LTC042, LT-131)', () => {
 		const source = `export function C({}: {})
 	@{
 		expose({})
-		<>
-			<c-el id="the-one"><input /></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el id="the-one"><input />
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2592,15 +2462,13 @@ export function C({}: {})
 	const input = first('input', 'the control')
 	${setup}
 	expose({${extra}})
-	<>
 		<c-el>
 			<input type="text" />
 			<span class="label">${child}</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 
 	test('an unrendered ref read routes Simulated and compiles', () => {
@@ -2662,12 +2530,11 @@ export function C({}: {})
 	const input = first('input', 'the control')
 	const commit = (next: string) => { input.value = next }
 	expose({})
-	<>
-		<c-el><input type="text" /></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><input type="text" />
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2685,12 +2552,11 @@ export function C({}: {})
 	const input = first('input', 'the control')
 	const inputId = \`\${name}-input\`
 	expose({})
-	<>
-		<c-el><input type="text" id={inputId} /></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><input type="text" id={inputId} />
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2715,12 +2581,11 @@ export function C({ step = 1 }: { step?: number })
 	const input = first('input', 'number input')
 	${extra}
 	expose({ step: asNumber(asNumber(1)(input.step)) })
-	<>
-		<c-el><input type="number" ${attrs} /></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><input type="number" ${attrs} />
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 	test('fallback reads the site it renders into — no warning', () => {
@@ -2740,12 +2605,11 @@ export function C({ step = 1 }: { step?: number })
 export function C({ step = 1 }: { step?: number })
 @{
 	expose({ step: asNumber(1) })
-	<>
-		<c-el><input type="number" step={step} /></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><input type="number" step={step} />
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2764,15 +2628,13 @@ export function C({ step = 1 }: { step?: number })
 @{
 	const input = first('input', 'number input')
 	expose({ step: asNumber(asNumber(1)(input.step)) })
-	<>
 		<c-el>
 			<input type="number" step={step} />
 			<span data-step={step}></span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2794,12 +2656,11 @@ export function C({ label = '' }: { label?: string })
 @{
 	const labelSpan = first('span.label', 'label span')
 	expose({ label: asString(labelSpan.textContent ?? '') })
-	<>
-		<c-el><span class="label">{label}</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span class="label">{label}</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2817,15 +2678,13 @@ export function C({ label = '' }: { label?: string })
 @{
 	const labelSpan = first('span.label', 'label span')
 	expose({ label: asString(labelSpan.textContent ?? '') })
-	<>
 		<c-el>
 			<span class="label">{label}</span>
 			<span class="echo">{label}</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2840,12 +2699,11 @@ export function C({ label = '' }: { label?: string })
 export function C({ label = '' }: { label?: string })
 @{
 	expose({ label: asString('') })
-	<>
-		<c-el><span class="label">{label}</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span class="label">{label}</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2868,12 +2726,11 @@ export const config = { formAssociated: true }
 export function C({ value = '' }: { value?: string })
 @{
 	expose({ value: asString('') })
-	<>
-		<c-el value={value}><textarea>{value}</textarea></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el value={value}><textarea>{value}</textarea>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2889,12 +2746,11 @@ export const config = { formAssociatedCheckbox: true }
 export function C({ checked = false }: { checked?: boolean })
 @{
 	expose({ checked: asBoolean(false) })
-	<>
-		<c-el checked={checked}><input type="checkbox" checked={checked} /></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el checked={checked}><input type="checkbox" checked={checked} />
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2915,12 +2771,11 @@ export const config = { formAssociated: true }
 export function C({ value = '' }: { value?: string })
 @{
 	expose({ value: asString('') })
-	<>
-		<c-el><textarea>{value}</textarea></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><textarea>{value}</textarea>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2942,12 +2797,11 @@ export function C({ value = '' }: { value?: string })
 export function C({ value = '' }: { value?: string })
 @{
 	expose({ value: asString('') })
-	<>
-		<c-el value={value}><textarea>{value}</textarea></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el value={value}><textarea>{value}</textarea>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { diagnostics } = compileComponent(
 			source,
@@ -2964,12 +2818,11 @@ describe('LTC033 covers static/server-rendered attributes (LT-075)', () => {
 	const withAttrs = (tpl: string): string => `export function C({}: {})
 @{
 	expose({})
-	<>
-		<c-el>${tpl}</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el>${tpl}
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 	test('a server-rendered attribute reading Date is a hard error', () => {
@@ -3037,12 +2890,11 @@ describe('reserved expose() key (LTC028, LT-157a)', () => {
 		`export function C({}: {})
 @{
 	expose({ ${props} })
-	<>
-		<c-el><span>ok</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 	test('a reserved word as an expose() key is LTC028', () => {
@@ -3113,12 +2965,11 @@ describe('malformed selector (LTC026, LT-157b)', () => {
 @{
 	${setup}
 	expose({})
-	<>
-		<c-el><button role="option">ok</button></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><button role="option">ok</button>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 	test('a malformed all() selector is LTC026', () => {
@@ -3187,12 +3038,11 @@ describe('deferred collector call (LTC045, LT-157d)', () => {
 @{
 	expose({})
 	${setup}
-	<>
-		<c-el><span>ok</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 	test('watch() inside a setTimeout callback is LTC045', () => {
@@ -3249,12 +3099,11 @@ describe('deferred collector call (LTC045, LT-157d)', () => {
 		const source = `export async function C({}: {})
 @{
 	expose({})
-	<>
-		<c-el><span>ok</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -3283,14 +3132,12 @@ export function C({}, { expose }: FactoryContext<{}>) {
 	const items = createList([])
 	expose({})
 	return (
-		<>
 			<c-el>
 				<ul>${mapBody}</ul>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
 			</c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
 	)
 }`
 		const { diagnostics } = compileComponentTsx(source, 'c.tsx', new Set())
@@ -3305,18 +3152,16 @@ export function C({}, { expose }: FactoryContext<{}>) {
 	@{
 		const items = createList([])
 		expose({})
-		<>
 			<c-el>
 				<ul>
 					@for (const item of items) {
 						<li>{item} {Date.now()}</li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -3337,12 +3182,7 @@ describe('partial-readiness invariant (LTC054, ADR 0034 s4, LT-258)', () => {
 	): string =>
 		`export function C(${params}) {
 ${setup}	return (
-		<>
-			${template}
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
+		${template}
 	)
 }`
 	const ltc054 = (source: string, file = 'c.tsx') => {
@@ -3487,12 +3327,11 @@ ${setup}	return (
 		const { component, hits } = ltc054(
 			`export function C({ label }: { label: string })
 	@{
-		<>
-			<c-el title={document.title}><span>{label}</span></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el title={document.title}><span>{label}</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`,
 			'c.tsrx',
 		)
@@ -3517,16 +3356,15 @@ ${setup}	return (
 		const { component, hits } = ltc054(
 			`export function C({ label }: { label: string })
 	@{
-		<>
 			<c-el><ul>
 				@for (const a of [...document.querySelectorAll('a')]) {
 					<li>{a.href}</li>
 				}
-			</ul></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			</ul>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`,
 			'c.tsrx',
 		)

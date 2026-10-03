@@ -33,14 +33,12 @@ const wrap = (
 	`export function C(${params})
 	@{
 		expose({})
-		<>
 			<c-el>
 				${template}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 const compiled = (template: string) =>
@@ -115,18 +113,16 @@ describe('@switch — multi-branch conditional rendering', () => {
 	@{
 		const mode = createCell('a')
 		expose({})
-		<>
 			<c-el>
 				@switch (mode.get()) {
 					@case "a": {
 						<p>a</p>
 					}
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createCell } from '@zeix/le-truc'`
 		const { component, diagnostics: d } = compileComponent(
@@ -219,7 +215,6 @@ export function C({}: {})
 	@{
 		const data = deriveCell(${deriveExpr})
 		expose({ data: data.get })
-		<>
 			<c-el>
 				@try {
 					<div class="content">{data}</div>
@@ -228,11 +223,10 @@ export function C({}: {})
 				} @catch (e) {
 					<p class="error">{e.message}</p>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('no @catch is diagnosed — an async boundary needs all three arms routed together', () => {
@@ -241,18 +235,16 @@ export function C({}: {})
 	@{
 		const data = deriveCell(async () => 'x')
 		expose({ data: data.get })
-		<>
 			<c-el>
 				@try {
 					<div class="content">{data}</div>
 				} @pending {
 					<p class="loading">Loading</p>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { deriveCell } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -269,7 +261,6 @@ import { deriveCell } from '@zeix/le-truc'`,
 	@{
 		const data = deriveCell(async () => 'x')
 		expose({ data: data.get })
-		<>
 			<c-el>
 				@try {
 					<div class="content">static</div>
@@ -278,11 +269,10 @@ import { deriveCell } from '@zeix/le-truc'`,
 				} @catch (e) {
 					<p class="error">{e.message}</p>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { deriveCell } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -374,7 +364,6 @@ export function C({}: {})
 	@{
 		const data = deriveCell(${deriveExpr})
 		expose({ data: data.get })
-		<>
 			<c-el>
 				@try {
 					<div class="content"><input name="x" value="ok" />{data}</div>
@@ -383,11 +372,10 @@ export function C({}: {})
 				} @catch (e) {
 					<p class="error"><input name="x" value="error" />{e.message}</p>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	const submitted = (html: string): string[] => {
@@ -468,14 +456,12 @@ describe('truc:html={expr} — dynamic rendering', () => {
 	@{
 		expose({})
 		const body = createState('<b>seed</b>')
-		<>
 			<c-el>
 				<article class="target" truc:html={() => body.get()}></article>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createState } from '@zeix/le-truc'`
 		const { component, diagnostics: d } = compileComponent(
@@ -535,15 +521,13 @@ describe('createMemo — recognized signal constructor (LT-025)', () => {
 		expose({})
 		const value = createState(3)
 		const doubled = createMemo(() => value.get() * 2)
-		<>
 			<c-el>
 				<span class="value">{value}</span>
 				<span class="doubled">{doubled}</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createState, createMemo } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -571,14 +555,12 @@ import { createState, createMemo } from '@zeix/le-truc'`
 	@{
 		expose({ filter: asString('') })
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
-		<>
 			<c-el>
 				<p>static</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asString, createMemo } from '@zeix/le-truc'`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
@@ -598,14 +580,12 @@ import { asString, createMemo } from '@zeix/le-truc'`
 	@{
 		expose({ filter: asString('') })
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
-		<>
 			<c-el>
 				<span>{lowerFilter}</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { asString, createMemo } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -708,7 +688,6 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 		const source = `export function Seeded({ initial }: { initial?: string[] })
 	@{
 		const items = createList<string>(initial, { keyConfig: 'item' })
-		<>
 			<c-el>
 				<ul data-container>
 					<li class="header">static header</li>
@@ -716,11 +695,10 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 						<li><span>{item}</span></li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createList } from '@zeix/le-truc'`
 		const { component, diagnostics } = compileComponent(
@@ -739,7 +717,6 @@ import { createList } from '@zeix/le-truc'`
 	@{
 		const a = createList<string>(['x'], { keyConfig: 'a' })
 		const b = createList<string>(['y'], { keyConfig: 'b' })
-		<>
 			<c-el>
 				<ul data-a>
 					@for (const item of a; key k) {
@@ -751,11 +728,10 @@ import { createList } from '@zeix/le-truc'`
 						<li><span>{item}</span></li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}
 import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -819,12 +795,11 @@ describe('newer-grammar constructs — parse-error hints', () => {
 	@{
 		const data = await load(id)
 		expose({})
-		<>
-			<c-el><p>{data}</p></c-el>
+		<c-el><p>{data}</p>
 			<style>:host {
   color: red;
 }</style>
-		</}`
+		</c-el>}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
 			diagnostics.some(d => d.code === 'LTC008' && d.message.includes('await')),

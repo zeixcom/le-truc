@@ -262,7 +262,6 @@ export function FormSpinbutton(
 		},
 	)
 
-	<>
 		<form-spinbutton
 			{name}
 			{value}
@@ -345,192 +344,163 @@ export function FormSpinbutton(
 				</div>
 			</fieldset>
 			<p class="error" role="alert" aria-live="assertive">{host.validationMessage}</p>
-		</form-spinbutton>
-
-		<style>
-		:host {
-			--form-spinbutton-min-width: 8rem;
-			--form-spinbutton-input-min-width: 4rem;
-			--form-spinbutton-input-max-width: 6rem;
-
-			display: inline-flex;
-			flex-direction: column;
-			align-items: start;
-
-			& label,
-			& p,
-			& button {
-				opacity: var(--opacity-dimmed);
-				transition: opacity var(--transition-short) var(--easing-inout);
-			}
-
-			& label {
-				display: block;
-				font-size: var(--font-size-s);
-				color: var(--color-text);
-				margin-bottom: var(--space-xxs);
-			}
-
-			> fieldset {
-				all: unset;
+			<style>
+			:host {
+				--form-spinbutton-min-width: 8rem;
+				--form-spinbutton-input-min-width: 4rem;
+				--form-spinbutton-input-max-width: 6rem;
 				display: inline-flex;
-				min-width: var(--form-spinbutton-min-width);
-
-				& input {
-					box-sizing: border-box;
-					margin: 0;
-					border-width: 0;
-					border-style: solid;
-					border-color: var(--color-border);
-					height: var(--input-height);
-					min-width: var(--form-spinbutton-input-min-width);
-					text-align: center;
-					color: var(--color-text);
-					background-color: var(--color-input);
-					padding: 0 var(--space-xxs);
-					flex-grow: 1;
-					appearance: textfield;
-					-moz-appearance: textfield;
-
-					&:disabled {
-						color: var(--color-text-soft);
-						background-color: var(--color-background);
-						border-color: var(--color-border-soft);
-					}
-
-					&::-webkit-outer-spin-button,
-					&::-webkit-inner-spin-button {
-						-webkit-appearance: none;
-						margin: 0;
-					}
-				}
-
-				> input {
-					border-block-width: 1px;
-					font-size: var(--font-size-s);
-					line-height: 2;
-				}
-
-				& button {
-					flex-grow: 0;
-					box-sizing: border-box;
-					height: var(--input-height);
-					min-width: var(--input-height);
-					border: 1px solid var(--color-border);
-					background-color: var(--color-secondary);
-					color: var(--color-text);
-					padding: 0 var(--space-s);
-					font-size: var(--font-size-s);
-					line-height: var(--line-height-s);
-					white-space: nowrap;
-					cursor: pointer;
-					transition: all var(--transition-shorter) var(--easing-inout);
-
-					&:disabled {
-						opacity: var(--opacity-translucent);
-					}
-
-					&:not(:disabled) {
-						cursor: pointer;
-						opacity: var(--opacity-solid);
-
-						&:hover {
-							background-color: var(--color-secondary-hover);
-						}
-
-						&:active {
-							background-color: var(--color-secondary-active);
-						}
-					}
-				}
-
-				> button {
-					&:first-of-type {
-						border-radius: var(--space-xs) 0 0 var(--space-xs);
-					}
-
-					&:last-of-type {
-						border-radius: 0 var(--space-xs) var(--space-xs) 0;
-					}
-
-					&:not([hidden]) + button:last-of-type {
-						border-left-width: 0;
-					}
-				}
-
-				[hidden] + button {
-					flex-grow: 1;
-					min-width: var(--form-spinbutton-min-width);
-					border-radius: var(--space-xs);
-					color: var(--color-text-inverted);
-					background-color: var(--color-primary);
-					border-color: var(--color-primary-active);
-
-					&:hover {
-						background-color: var(--color-primary-hover);
-					}
-
-					&:active {
-						background-color: var(--color-primary-active);
-					}
-				}
-
-				& *:focus {
-					z-index: 1;
-				}
-			}
-
-			.input {
-				display: inline-flex;
-				max-width: var(--form-spinbutton-input-max-width);
-				align-items: baseline;
-				margin-inline-end: var(--space-s);
-
-				& input {
-					border-block-end-width: 1px;
-					text-align: end;
-					margin-inline-end: var(--space-xxs);
-					font-size: var(--font-size-m);
-					line-height: var(--line-height-s);
-				}
-			}
-
-			.buttons {
-				display: inline-flex;
-				flex-direction: column-reverse;
-				margin-block-start: calc(-0.5 * var(--input-height));
-
-				& button {
-					&:first-of-type {
-						border-radius: 0 0 var(--space-xl) var(--space-xl);
-					}
-
-					&:last-of-type {
-						border-radius: var(--space-xl) var(--space-xl) 0 0;
-						border-bottom-width: 0;
-					}
-				}
-			}
-
-			> .error {
-				flex-basis: 100%;
-				margin: var(--space-xs) 0 0;
-				font-size: var(--font-size-xs);
-				line-height: var(--line-height-s);
-				color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
-
-				&:empty {
-					display: none;
-				}
-			}
-
-			&:focus-within {
+				flex-direction: column;
+				align-items: start;
 				& label,
 				& p,
 				& button {
-					opacity: var(--opacity-solid);
+					opacity: var(--opacity-dimmed);
+					transition: opacity var(--transition-short) var(--easing-inout);
 				}
-			}
-		}</style>
-	</>
+				& label {
+					display: block;
+					font-size: var(--font-size-s);
+					color: var(--color-text);
+					margin-bottom: var(--space-xxs);
+				}
+				> fieldset {
+					all: unset;
+					display: inline-flex;
+					min-width: var(--form-spinbutton-min-width);
+					& input {
+						box-sizing: border-box;
+						margin: 0;
+						border-width: 0;
+						border-style: solid;
+						border-color: var(--color-border);
+						height: var(--input-height);
+						min-width: var(--form-spinbutton-input-min-width);
+						text-align: center;
+						color: var(--color-text);
+						background-color: var(--color-input);
+						padding: 0 var(--space-xxs);
+						flex-grow: 1;
+						appearance: textfield;
+						-moz-appearance: textfield;
+						&:disabled {
+							color: var(--color-text-soft);
+							background-color: var(--color-background);
+							border-color: var(--color-border-soft);
+						}
+						&::-webkit-outer-spin-button,
+						&::-webkit-inner-spin-button {
+							-webkit-appearance: none;
+							margin: 0;
+						}
+					}
+					> input {
+						border-block-width: 1px;
+						font-size: var(--font-size-s);
+						line-height: 2;
+					}
+					& button {
+						flex-grow: 0;
+						box-sizing: border-box;
+						height: var(--input-height);
+						min-width: var(--input-height);
+						border: 1px solid var(--color-border);
+						background-color: var(--color-secondary);
+						color: var(--color-text);
+						padding: 0 var(--space-s);
+						font-size: var(--font-size-s);
+						line-height: var(--line-height-s);
+						white-space: nowrap;
+						cursor: pointer;
+						transition: all var(--transition-shorter) var(--easing-inout);
+						&:disabled {
+							opacity: var(--opacity-translucent);
+						}
+						&:not(:disabled) {
+							cursor: pointer;
+							opacity: var(--opacity-solid);
+							&:hover {
+								background-color: var(--color-secondary-hover);
+							}
+							&:active {
+								background-color: var(--color-secondary-active);
+							}
+						}
+					}
+					> button {
+						&:first-of-type {
+							border-radius: var(--space-xs) 0 0 var(--space-xs);
+						}
+						&:last-of-type {
+							border-radius: 0 var(--space-xs) var(--space-xs) 0;
+						}
+						&:not([hidden]) + button:last-of-type {
+							border-left-width: 0;
+						}
+					}
+					[hidden] + button {
+						flex-grow: 1;
+						min-width: var(--form-spinbutton-min-width);
+						border-radius: var(--space-xs);
+						color: var(--color-text-inverted);
+						background-color: var(--color-primary);
+						border-color: var(--color-primary-active);
+						&:hover {
+							background-color: var(--color-primary-hover);
+						}
+						&:active {
+							background-color: var(--color-primary-active);
+						}
+					}
+					& *:focus {
+						z-index: 1;
+					}
+				}
+				.input {
+					display: inline-flex;
+					max-width: var(--form-spinbutton-input-max-width);
+					align-items: baseline;
+					margin-inline-end: var(--space-s);
+					& input {
+						border-block-end-width: 1px;
+						text-align: end;
+						margin-inline-end: var(--space-xxs);
+						font-size: var(--font-size-m);
+						line-height: var(--line-height-s);
+					}
+				}
+				.buttons {
+					display: inline-flex;
+					flex-direction: column-reverse;
+					margin-block-start: calc(-0.5 * var(--input-height));
+					& button {
+						&:first-of-type {
+							border-radius: 0 0 var(--space-xl) var(--space-xl);
+						}
+						&:last-of-type {
+							border-radius: var(--space-xl) var(--space-xl) 0 0;
+							border-bottom-width: 0;
+						}
+					}
+				}
+				> .error {
+					flex-basis: 100%;
+					margin: var(--space-xs) 0 0;
+					font-size: var(--font-size-xs);
+					line-height: var(--line-height-s);
+					color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+					&:empty {
+						display: none;
+					}
+				}
+				&:focus-within {
+					& label,
+					& p,
+					& button {
+						opacity: var(--opacity-solid);
+					}
+				}
+			}</style>
+		</form-spinbutton>
+
 }

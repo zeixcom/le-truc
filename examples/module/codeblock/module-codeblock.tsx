@@ -95,140 +95,125 @@ export function ModuleCodeblock(
 	watch('collapsed', bindAttribute(host, 'collapsed'))
 
 	return (
-		<>
-			<module-codeblock
-				id={id}
-				collapsed={collapsed ?? false}
-				language={language}
-			>
-				<p class="meta">
-					{file && <span class="file">{file}</span>}
-					<span class="language">{language}</span>
-				</p>
-				<module-scrollarea orientation="horizontal">
-					<pre>
-						<code class={`language-${language}`}>{children}</code>
-					</pre>
-				</module-scrollarea>
-				<BasicButton class="copy" label="Copy" size="small" />
-				{collapsed && (
-					<button
-						type="button"
-						class="overlay"
-						aria-expanded="false"
-						aria-controls={id}
-					>
-						Expand
-					</button>
-				)}
-			</module-codeblock>
-
+		<module-codeblock
+			id={id}
+			collapsed={collapsed ?? false}
+			language={language}
+		>
+			<p class="meta">
+				{file && <span class="file">{file}</span>}
+				<span class="language">{language}</span>
+			</p>
+			<module-scrollarea orientation="horizontal">
+				<pre>
+					<code class={`language-${language}`}>{children}</code>
+				</pre>
+			</module-scrollarea>
+			<BasicButton class="copy" label="Copy" size="small" />
+			{collapsed && (
+				<button
+					type="button"
+					class="overlay"
+					aria-expanded="false"
+					aria-controls={id}
+				>
+					Expand
+				</button>
+			)}
 			<style>{css`
-			:host {
-				--module-codeblock-color-background: #272822;
-				/* Shadow with reduced transparency for dark background used in code blocks */
-				--color-shadow: rgb(0 0 0 / 0.4);
-
-				position: relative;
-				display: block;
-				margin: 0 0 var(--space-l);
-				background: var(--module-codeblock-color-background);
-				border-radius: var(--space-s);
-
-				.meta {
-					display: flex;
-					margin-bottom: 0;
-					padding: var(--space-xs) var(--space-s) 0;
-					font-size: var(--font-size-s);
-					color: var(--color-neutral-20);
-				}
-
-				.language {
-					margin-left: auto;
-					text-transform: uppercase;
-				}
-
-				.copy {
-					position: absolute;
-					right: var(--space-s);
-					bottom: var(--space-s);
-				}
-
-				.overlay {
-					display: none;
-				}
-
-				&[collapsed] {
-					max-height: 12rem;
-					overflow: hidden;
-					border-radius: var(--space-s) var(--space-s) 0 0;
-
-					&::after {
-						content: "";
-						display: block;
-						position: absolute;
-						bottom: 0;
-						width: 100%;
-						height: var(--space-m);
-						background:
-							linear-gradient(-135deg, var(--color-secondary) 0.5rem, transparent 0) 0
-							0.5rem,
-							linear-gradient(
-								135deg,
-								var(--color-secondary) 0.5rem,
-								var(--color-input) 0
-							)
-							0 0.5rem;
-						background-size: var(--space-m) var(--space-m);
-						background-position: bottom;
+				:host {
+					--module-codeblock-color-background: #272822;
+					/* Shadow with reduced transparency for dark background used in code blocks */
+					--color-shadow: rgb(0 0 0 / 0.4);
+					position: relative;
+					display: block;
+					margin: 0 0 var(--space-l);
+					background: var(--module-codeblock-color-background);
+					border-radius: var(--space-s);
+					.meta {
+						display: flex;
+						margin-bottom: 0;
+						padding: var(--space-xs) var(--space-s) 0;
+						font-size: var(--font-size-s);
+						color: var(--color-neutral-20);
 					}
-
+					.language {
+						margin-left: auto;
+						text-transform: uppercase;
+					}
 					.copy {
+						position: absolute;
+						right: var(--space-s);
+						bottom: var(--space-s);
+					}
+					.overlay {
 						display: none;
 					}
-
-					.overlay {
-						display: flex;
-						flex-direction: column-reverse;
-						align-items: center;
-						position: absolute;
-						bottom: 0;
-						left: 0;
-						width: 100%;
-						height: 6rem;
-						color: var(--color-text);
-						background: linear-gradient(transparent, var(--color-secondary));
-						border: 0;
-						cursor: pointer;
-						padding: var(--space-xs) var(--space-s);
-						margin-bottom: var(--space-m);
-						font-size: var(--font-size-s);
-						transition: background-color var(--transition-short) var(--easing-inout);
-						text-shadow: var(--color-input) 1px 0 var(--space-xs);
-
-						&:hover,
-						&:active {
-							text-shadow: var(--color-text-inverted) var(--space-xs) 0 var(--space-s);
+					&[collapsed] {
+						max-height: 12rem;
+						overflow: hidden;
+						border-radius: var(--space-s) var(--space-s) 0 0;
+						&::after {
+							content: "";
+							display: block;
+							position: absolute;
+							bottom: 0;
+							width: 100%;
+							height: var(--space-m);
+							background:
+								linear-gradient(-135deg, var(--color-secondary) 0.5rem, transparent 0) 0
+								0.5rem,
+								linear-gradient(
+									135deg,
+									var(--color-secondary) 0.5rem,
+									var(--color-input) 0
+								)
+								0 0.5rem;
+							background-size: var(--space-m) var(--space-m);
+							background-position: bottom;
+						}
+						.copy {
+							display: none;
+						}
+						.overlay {
+							display: flex;
+							flex-direction: column-reverse;
+							align-items: center;
+							position: absolute;
+							bottom: 0;
+							left: 0;
+							width: 100%;
+							height: 6rem;
+							color: var(--color-text);
+							background: linear-gradient(transparent, var(--color-secondary));
+							border: 0;
+							cursor: pointer;
+							padding: var(--space-xs) var(--space-s);
+							margin-bottom: var(--space-m);
+							font-size: var(--font-size-s);
+							transition: background-color var(--transition-short) var(--easing-inout);
+							text-shadow: var(--color-input) 1px 0 var(--space-xs);
+							&:hover,
+							&:active {
+								text-shadow: var(--color-text-inverted) var(--space-xs) 0 var(--space-s);
+							}
 						}
 					}
 				}
-			}
-
-			/* The <pre>/<code> are rendered inside the composed module-scrollarea,
-			   past the scope boundary (ADR 0033 s3): a page-level rule (s6a). */
-			:global {
-				module-codeblock pre {
-					font-size: var(--font-size-s);
-					padding-block: var(--space-s);
-					border-radius: var(--space-s);
-				}
-
-				module-codeblock code {
-					padding-inline: var(--space-s);
-					display: block;
-					line-height: var(--line-height-l);
-				}
-			}`}</style>
-		</>
+				/* The <pre>/<code> are rendered inside the composed module-scrollarea,
+				   past the scope boundary (ADR 0033 s3): a page-level rule (s6a). */
+				:global {
+					module-codeblock pre {
+						font-size: var(--font-size-s);
+						padding-block: var(--space-s);
+						border-radius: var(--space-s);
+					}
+					module-codeblock code {
+						padding-inline: var(--space-s);
+						display: block;
+						line-height: var(--line-height-l);
+					}
+				}`}</style>
+		</module-codeblock>
 	)
 }

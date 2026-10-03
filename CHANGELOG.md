@@ -40,6 +40,7 @@
 - **`reconcile()` arm form**: `reconcile(container, templates, keyThunk, bindArm)` keeps one keyed arm in the container, adopting a server-rendered winner and cloning on a flip. Arm effects mount in `bindArm` and die with the arm.
 - **`LTC062` and `LTC063`**: a reactive `@case` value that is not a unique literal fails the compile, and so does a reactive condition inside a reactive list's container.
 - **`LTC056` and `LTC061`**: an authored `<script>` (any `type`) or `<template>` element in a component template fails the compile on both surfaces.
+- **Root-is-host is enforced (`LTC060`)** (ADR 0032 s1, owner ruling 2026-09-29): the template output must be the bare root element — a `<>…</>` fragment wrapping the root and its `<style>` block fails the compile on both surfaces. The stylesheet is a `<style>` child of the root; the fragment never reached the output, so every corpus source was migrated with byte-identical artifacts.
 
 ### Changed
 

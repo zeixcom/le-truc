@@ -28,13 +28,11 @@ const compile = (body: string) => {
 export function C({}: {})
 @{
 	expose({ value: asNumber() })
-	<>
-		<c-el>${body}</c-el>
-
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el>${body}
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 	return compileComponent(source, 'c.tsrx', new Set())
 }
@@ -67,13 +65,11 @@ describe('a single lazy text child on the component root (LT-114)', () => {
 export function C({}: {})
 @{
 	expose({ value: asNumber() })
-	<>
-		<c-el style={() => ({ color: host.value > 0 ? 'green' : 'red' })}>{host.value}</c-el>
-
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el style={() => ({ color: host.value > 0 ? 'green' : 'red' })}>{host.value}
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -111,15 +107,13 @@ describe('nested lazy-text mixes (LT-115, the LT-114 hazard-flag mirror)', () =>
 export function C({}: {})
 @{
 	expose({ value: asNumber() })
-	<>
 		<c-el>
 			<span class="out">${inner}</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
 
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 			new Set(),
@@ -197,13 +191,11 @@ export function C({}: {})
 @{
 	expose({})
 	const length = deriveCell(() => 42)
-	<>
-		<c-el>{length.get() + Date.now()}</c-el>
-
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el>{length.get() + Date.now()}
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 	const pure = impure.replace('Date.now()', '1')
 

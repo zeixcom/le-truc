@@ -45,18 +45,16 @@ const SHEET_WITH_BAD_UNIT = `:host {
 
 const tsrxSource = (sheet: string) => `export function C({}: {})
 	@{
-		<>
-			<c-el>text</c-el>
-			<style>${sheet}</style>
-		</>
+			<c-el>text
+				<style>${sheet}</style>
+			</c-el>
 	}`
 
 const tsxSource = (sheet: string) => `export function C({}: {}) {
 	return (
-		<>
-			<c-el>text</c-el>
-			<style>{css\`${sheet}\`}</style>
-		</>
+			<c-el>text
+				<style>{css\`${sheet}\`}</style>
+			</c-el>
 	)
 }`
 

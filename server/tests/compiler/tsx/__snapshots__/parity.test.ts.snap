@@ -396,9 +396,7 @@ export default defineComponent<FormListboxProps>(
 					? 0
 					: key === 'End'
 						? elements.length - 1
-						: (current +
-								(key === 'ArrowDown' ? 1 : -1) +
-								elements.length) %
+						: (current + (key === 'ArrowDown' ? 1 : -1) + elements.length) %
 							elements.length
 			elements[next]?.focus()
 		})

@@ -63,12 +63,11 @@ ${decl}
 export function C(${p})
 	@{
 		${s}
-		<>
-			<c-el>${b}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>${b}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 const tsxSource = (
@@ -81,12 +80,11 @@ ${decl}
 export function C(${p}) {
 	${s}
 	return (
-		<>
-			<c-el>${b}</c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
+			<c-el>${b}
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
+			</c-el>
 	)
 }`
 
@@ -532,12 +530,11 @@ export const i18n = { hi: 'Hi', tasks: '{count} tasks' } as const
 export function C(${params})
 	@{
 		${setup}
-		<>
-			<c-fb><button title={() => t.hi}>x</button><span>{() => t.tasks({ count: host.count })}</span></c-fb>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-fb><button title={() => t.hi}>x</button><span>{() => t.tasks({ count: host.count })}</span>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-fb>
 	}`
 	const { component, diagnostics } = compileComponent(
 		src,

@@ -65,6 +65,13 @@ export type ResolvedTemplate = {
  * s9) with LTC064 (no parse) and LTC065 (declaration grammar) reported
  * against the authored source.
  *
+ * Since LT-375 (ADR 0032 s1) the output is a single root element, and the
+ * `<style>` block — the stylesheet — is a direct child of that root. This
+ * pass HOISTS it out of the root's children before anything else reads the
+ * template, so no `<style>` placeholder can reach an emitter and the sheet
+ * resolution is unchanged from the days when the block rode beside the
+ * root in a fragment.
+ *
  * `outputShapeLabel` names the surface's output shape in the no-root
  * message: `the @{ } output` (.tsrx) / `the template return` (.tsx).
  * Returns null (with the diagnostic pushed) when no root element exists.
@@ -78,16 +85,9 @@ export const resolveTemplateOutput = (
 	outputShapeLabel: string,
 ): ResolvedTemplate | null => {
 	const source = ctx.source
-	const templateRoot = lowered.find(
-		(n): n is TemplateNode & { kind: 'element' } =>
-			n.kind === 'element' && n.tag !== 'style',
+	const root = lowered.find(
+		(n): n is TemplateNode & { kind: 'element' } => n.kind === 'element',
 	)
-	const styleChild =
-		lowered.find(
-			(n): n is TemplateNode & { kind: 'element' } =>
-				n.kind === 'element' && n.tag === 'style',
-		) ?? null
-	const root = templateRoot ?? null
 	if (!root) {
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
@@ -108,6 +108,20 @@ export const resolveTemplateOutput = (
 		)
 		return null
 	}
+
+	// Hoist the `<style>` block out of the root's children (LT-375, ADR 0032
+	// s1): it is the component's stylesheet, never rendered markup. First
+	// direct `style` child wins, as the fragment days' top-level find did.
+	const styleIndex = root.children.findIndex(
+		(n): n is TemplateNode & { kind: 'element' } =>
+			n.kind === 'element' && n.tag === 'style',
+	)
+	const styleChild =
+		styleIndex >= 0
+			? (root.children.splice(styleIndex, 1)[0] as TemplateNode & {
+					kind: 'element'
+				})
+			: null
 
 	// Resolve `first(selector, required)` element references (LT-055) now
 	// that `root` exists.

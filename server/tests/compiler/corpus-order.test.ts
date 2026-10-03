@@ -72,14 +72,12 @@ describe('corpus error policy', () => {
 			content: `export function C({})
 @{
 	expose({})
-	<>
 		<c-el>
 			<div truc:pass={{ disabled: () => false }}></div>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			hash: '',
 			lastModified: 0,

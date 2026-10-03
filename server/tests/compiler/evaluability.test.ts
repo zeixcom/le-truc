@@ -19,12 +19,11 @@ describe('dependenciesOf', () => {
 			@{
 				const color = createCell('red')
 				expose({ color: color.get })
-				<>
-					<c-el title={() => color.get() + String(n)}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => color.get() + String(n)}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -40,12 +39,11 @@ describe('dependenciesOf', () => {
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el title={() => String(Math.max(1, 2))}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => String(Math.max(1, 2))}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -62,12 +60,11 @@ describe('isServerEvaluable', () => {
 			@{
 				const color = createCell('red')
 				expose({ color: color.get })
-				<>
-					<c-el title={() => color.get() + String(n)}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => color.get() + String(n)}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -82,12 +79,11 @@ describe('isServerEvaluable', () => {
 			@{
 				const color = createCell('red')
 				expose({ color: color.get })
-				<>
-					<c-el title={() => color.get() + String(n)}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => color.get() + String(n)}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -103,12 +99,11 @@ describe('isServerEvaluable', () => {
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el title={() => String(Math.max(1, 2))}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => String(Math.max(1, 2))}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -136,12 +131,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({ lang }: { lang: string })
 			@{
 				expose({})
-				<>
-					<c-el title={() => new Intl.NumberFormat(lang).format(3)}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => new Intl.NumberFormat(lang).format(3)}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set(['lang']))).toBe(false)
@@ -153,12 +147,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el title={() => new Intl.NumberFormat('en').format(3)}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => new Intl.NumberFormat('en').format(3)}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set())).toBe(false)
@@ -170,12 +163,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({ host }: { host: any })
 			@{
 				expose({})
-				<>
-					<c-el title={() => new Intl.NumberFormat(host.lang).format(3)}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => new Intl.NumberFormat(host.lang).format(3)}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set(['host']))).toBe(true)
@@ -187,12 +179,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el title={() => new Intl.NumberFormat().format(3)}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => new Intl.NumberFormat().format(3)}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set())).toBe(true)
@@ -204,12 +195,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el title={() => String(Date.now())}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => String(Date.now())}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set())).toBe(true)
@@ -226,12 +216,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({ y, m, d }: { y: number; m: number; d: number })
 			@{
 				expose({})
-				<>
-					<c-el title={() => new Date(y, m - 1, d).toLocaleDateString()}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => new Date(y, m - 1, d).toLocaleDateString()}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set(['y', 'm', 'd']))).toBe(true)
@@ -246,12 +235,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({ y, m, d }: { y: number; m: number; d: number })
 			@{
 				expose({})
-				<>
-					<c-el title={() => new Intl.DateTimeFormat('en', { timeZone: 'UTC' }).format(Date.UTC(y, m - 1, d))}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => new Intl.DateTimeFormat('en', { timeZone: 'UTC' }).format(Date.UTC(y, m - 1, d))}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set(['y', 'm', 'd']))).toBe(false)
@@ -263,12 +251,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el title={() => String(Date.UTC(2026, 0, Date.now()))}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => String(Date.UTC(2026, 0, Date.now()))}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set())).toBe(true)
@@ -279,12 +266,11 @@ describe('LT-142: Intl split from Date', () => {
 			`export function C({ lang }: { lang: string })
 			@{
 				expose({})
-				<>
-					<c-el title={() => String(Intl)}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el title={() => String(Intl)}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 		)
 		expect(containsImpureAmbient(thunk, new Set(['lang']))).toBe(true)

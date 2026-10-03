@@ -24,12 +24,11 @@ export function C({}: {})
 @{
 ${setup}
 	expose({})
-	<>
-		<c-el><span data-count={() => String(count.get())}>ok</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span data-count={() => String(count.get())}>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 describe('sub-design 16 — real-export imports', () => {
@@ -166,12 +165,11 @@ export function C({}: {})
 @{
 	const data = createTask(async () => 1)
 	expose({})
-	<>
-		<c-el><span class={() => (isPending(data) ? 'pending' : null)}>ok</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span class={() => (isPending(data) ? 'pending' : null)}>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 		const messages = compile(source)
 			.diagnostics.filter(d => d.code === 'LTC036')

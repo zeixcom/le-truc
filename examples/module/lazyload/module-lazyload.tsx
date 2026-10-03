@@ -148,20 +148,18 @@ export function ModuleLazyload(
 	})
 
 	return (
-		<>
-			<module-lazyload src={src} allow-scripts={allowScripts}>
-				<card-callout>
-					<p class="loading" role="status">
-						{loading}
-					</p>
-					<p class="error" role="alert" aria-live="assertive" hidden></p>
-				</card-callout>
-				<div class="content" hidden></div>
-			</module-lazyload>
+		<module-lazyload src={src} allow-scripts={allowScripts}>
+			<card-callout>
+				<p class="loading" role="status">
+					{loading}
+				</p>
+				<p class="error" role="alert" aria-live="assertive" hidden></p>
+			</card-callout>
+			<div class="content" hidden></div>
 			<style>{css`
-:host {
-	display: block;
-}`}</style>
-		</>
+	:host {
+		display: block;
+	}`}</style>
+		</module-lazyload>
 	)
 }

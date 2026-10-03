@@ -659,9 +659,8 @@ test('differential pin: hand cascades vs the probe-backed engine over the corpus
 const CHILD = `export function BasicChild({ label }: { label: string })
 	@{
 		expose({ value: '' })
-		<>
-			<basic-child>{label}</basic-child>
-		</>
+			<basic-child>{label}
+			</basic-child>
 	}
 import { expose } from '@zeix/le-truc'`
 
@@ -673,7 +672,6 @@ const SYNTHETICS: Array<[string, string]> = [
 		`export function ProbeSwitch({ mode }: { mode: string })
 	@{
 		expose({})
-		<>
 			<probe-switch>
 				@switch (mode) {
 					@case 'a': {
@@ -687,7 +685,6 @@ const SYNTHETICS: Array<[string, string]> = [
 					}
 				}
 			</probe-switch>
-		</>
 	}
 import { expose } from '@zeix/le-truc'`,
 	],
@@ -697,7 +694,6 @@ import { expose } from '@zeix/le-truc'`,
 		`export function ProbeTry({ data }: { data: string })
 	@{
 		expose({})
-		<>
 			<probe-try>
 				@try {
 					<p class="body">{data}</p>
@@ -705,7 +701,6 @@ import { expose } from '@zeix/le-truc'`,
 					<p class="error">{e.message}</p>
 				}
 			</probe-try>
-		</>
 	}
 import { expose } from '@zeix/le-truc'`,
 	],
@@ -721,7 +716,6 @@ export function ProbePending({}: {})
 	@{
 		const data = deriveCell(async () => 'x')
 		expose({})
-		<>
 			<probe-pending>
 				@try {
 					<p class="body">{data}</p>
@@ -731,7 +725,6 @@ export function ProbePending({}: {})
 					<p class="error">{e.message}</p>
 				}
 			</probe-pending>
-		</>
 	}`,
 	],
 	// Nested exclusivity: @if inside @if branches, same-tag leaves.
@@ -740,7 +733,6 @@ export function ProbePending({}: {})
 		`export function ProbeNested({ a, b }: { a: boolean; b: boolean })
 	@{
 		expose({})
-		<>
 			<probe-nested>
 				@if (a) {
 					@if (b) {
@@ -755,7 +747,6 @@ export function ProbePending({}: {})
 					</>
 				}
 			</probe-nested>
-		</>
 	}
 import { expose } from '@zeix/le-truc'`,
 	],
@@ -772,7 +763,6 @@ import { expose } from '@zeix/le-truc'
 export function ProbeTable({ a, mode, data }: { a: boolean; mode: string; data: string })
 	@{
 		expose({})
-		<>
 			<probe-table>
 				<table>
 					<tbody>
@@ -811,7 +801,6 @@ export function ProbeTable({ a, mode, data }: { a: boolean; mode: string; data: 
 					}
 				</ul>
 			</probe-table>
-		</>
 	}`,
 	],
 	// LT-382: `<tr>` arms directly in a `<table>` — the parser implies a
@@ -822,7 +811,6 @@ export function ProbeTable({ a, mode, data }: { a: boolean; mode: string; data: 
 		`export function ProbeTableImplied({ a }: { a: boolean })
 	@{
 		expose({})
-		<>
 			<probe-table-implied>
 				<table>
 					@if (a) {
@@ -832,7 +820,6 @@ export function ProbeTable({ a, mode, data }: { a: boolean; mode: string; data: 
 					}
 				</table>
 			</probe-table-implied>
-		</>
 	}
 import { expose } from '@zeix/le-truc'`,
 	],
@@ -843,14 +830,12 @@ import { expose } from '@zeix/le-truc'`,
 		`export function ProbeHtml({ text }: { text: string })
 	@{
 		expose({})
-		<>
 			<probe-html>
 				<p>intro {text}</p>
 				<p><div class="flow">blocks</div></p>
 				<input type="text" placeholder="type here" />
 				<br/>
 			</probe-html>
-		</>
 	}
 import { expose } from '@zeix/le-truc'`,
 	],
@@ -864,14 +849,12 @@ import { expose } from '@zeix/le-truc'
 export function ProbeCompose({ alt }: { alt: boolean })
 	@{
 		expose({})
-		<>
 			<probe-compose>
 				<BasicChild label={'a'} class="first" />
 				@if (alt) {
 					<BasicChild label={'b'} class="second" />
 				}
 			</probe-compose>
-		</>
 	}`,
 	],
 ]

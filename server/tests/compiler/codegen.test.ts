@@ -105,12 +105,10 @@ describe('the server emitter renames its minted locals (LT-234)', () => {
 		const result = compileComponentTsx(
 			`export function C({ __html, __key }: { __html: string; __key: string }) {
 	return (
-		<>
 			<c-el>
 				<p title={__key}>{__html}</p>
+				<style>{'c-el { color: red }'}</style>
 			</c-el>
-			<style>{'c-el { color: red }'}</style>
-		</>
 	)
 }`,
 			'c.tsx',

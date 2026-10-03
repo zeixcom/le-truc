@@ -26,10 +26,9 @@ const compile = (setup: string, template: string) =>
 @{
 	${setup}
 	expose({ x: '' })
-	<>
-		<c-el>${template}</c-el>
-		<style>:host { color: red }</style>
-	</>
+		<c-el>${template}
+			<style>:host { color: red }</style>
+		</c-el>
 }`,
 		'c.tsrx',
 		new Set(['c-el']),
@@ -135,28 +134,44 @@ describe('output shape (LT-123)', () => {
 		expect(component?.serverCode).toContain('<c-el>')
 	})
 
-	test('a fragment carrying only the root (no <style>) compiles', () => {
-		const { component, diagnostics } = shape(
+	test('a fragment root is LTC060, whether or not it carries a <style>', () => {
+		// Owner ruling 2026-09-29 (ADR 0032 s1, LT-375): the template's root is
+		// the host element, there is no fragment root.
+		for (const output of [
 			`<>
-		<c-el><span>{label}</span></c-el>
-	</>`,
-		)
-		expect(diagnostics).toEqual([])
-		expect(component?.css).toBe('')
+			<c-el><span>{label}</span></c-el>
+		</>`,
+			`<>
+			<c-el><span>{label}</span></c-el>
+			<style>:host { color: red }</style>
+		</>`,
+		]) {
+			const { component, diagnostics } = shape(output)
+			expect(component).toBeNull()
+			expect(diagnostics).toHaveLength(1)
+			expect(diagnostics[0]?.code).toBe('LTC060')
+			expect(diagnostics[0]?.severity).toBe('error')
+			expect(diagnostics[0]?.message).toContain(
+				'Move the `<style>` block inside the root element and drop the fragment',
+			)
+		}
 	})
 
-	test('a fragment with root + <style> still compiles, styles carried through', () => {
+	test('the <style> block as a child of the root carries the CSS through', () => {
 		const { component, diagnostics } = shape(
-			`<>
-		<c-el><span>{label}</span></c-el>
-		<style>:host { color: red }</style>
-	</>`,
+			`<c-el>
+			<span>{label}</span>
+			<style>:host { color: red }</style>
+		</c-el>`,
 		)
 		expect(diagnostics).toEqual([])
 		expect(component?.css).toContain('color: red')
+		// The style placeholder is hoisted out of the root's children — it
+		// never reaches the emitted markup.
+		expect(component?.serverCode).not.toContain('<style')
 	})
 
-	test('output that is neither an element nor a fragment is LTC008', () => {
+	test('output that is not an element is LTC008', () => {
 		const { diagnostics } = shape(`<style>:host {
   color: red;
 }</style>`)

@@ -124,44 +124,40 @@ export function ModuleListnav(
 	)
 
 	return (
-		<>
-			<module-listnav>
-				<nav>
-					<FormListbox
-						name="page"
-						ariaLabel={title}
-						options={options}
-						value={value ?? options[0]?.value ?? ''}
-						filterable
-					/>
-				</nav>
-				<ModuleLazyload
-					src={value ?? options[0]?.value ?? ''}
-					truc:pass={{ src: () => listbox.value }}
+		<module-listnav>
+			<nav>
+				<FormListbox
+					name="page"
+					ariaLabel={title}
+					options={options}
+					value={value ?? options[0]?.value ?? ''}
+					filterable
 				/>
-			</module-listnav>
+			</nav>
+			<ModuleLazyload
+				src={value ?? options[0]?.value ?? ''}
+				truc:pass={{ src: () => listbox.value }}
+			/>
 			<style>{css`
-module-lazyload {
-	contain: inline-size;
-}
-
-@container (width > 45em) {
-	:host {
-		display: grid;
-		grid-template-columns: 1fr 3fr;
-		gap: var(--space-xl);
+	module-lazyload {
+		contain: inline-size;
 	}
-}
-
-/* The loaded page content is module-lazyload's, past the scope boundary:
-   a page-level rule (ADR 0033 s6a). */
-:global {
 	@container (width > 45em) {
-		module-listnav module-lazyload :is(h1, h2, h3, h4, h5, h6) {
-			margin-top: 0;
+		:host {
+			display: grid;
+			grid-template-columns: 1fr 3fr;
+			gap: var(--space-xl);
 		}
 	}
-}`}</style>
-		</>
+	/* The loaded page content is module-lazyload's, past the scope boundary:
+	   a page-level rule (ADR 0033 s6a). */
+	:global {
+		@container (width > 45em) {
+			module-listnav module-lazyload :is(h1, h2, h3, h4, h5, h6) {
+				margin-top: 0;
+			}
+		}
+	}`}</style>
+		</module-listnav>
 	)
 }

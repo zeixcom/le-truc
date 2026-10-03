@@ -11,14 +11,12 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 	test('a registry-known target lowers to pass()', () => {
 		const source = `export function C({}: {})
 	@{
-		<>
 			<c-el>
 				<basic-child truc:pass={{ label: () => 'x' }}></basic-child>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -35,14 +33,12 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 	test('a native element target is diagnosed (LTC012)', () => {
 		const source = `export function C({}: {})
 	@{
-		<>
 			<c-el>
 				<span truc:pass={{ label: () => 'x' }}>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -56,14 +52,12 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 	test('an unregistered dashed tag is diagnosed (LTC012)', () => {
 		const source = `export function C({}: {})
 	@{
-		<>
 			<c-el>
 				<basic-child truc:pass={{ label: () => 'x' }}></basic-child>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -77,14 +71,12 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 	test('a bare function-valued attribute on a custom element no longer dispatches to pass() (LTC012)', () => {
 		const source = `export function C({}: {})
 	@{
-		<>
 			<c-el>
 				<basic-child label={() => 'x'}></basic-child>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -98,14 +90,12 @@ describe('truc:pass={{ }} on raw dashed custom-element tags', () => {
 	test('a bare function-valued attribute on a native element is unaffected', () => {
 		const source = `export function C({}: {})
 	@{
-		<>
 			<c-el>
 				<span aria-label={() => 'x'}>ok</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -124,16 +114,14 @@ export function C({}: {})
 	@{
 		const value = createCell('x')
 		expose({ value: value.get })
-		<>
-			<c-el>
-				<span>{value}</span>
-				<basic-child truc:pass={{ value: { get: () => value.get(), set: v => value.set(v) } }}></basic-child>
-			</c-el>
+		<c-el>
+			<span>{value}</span>
+			<basic-child truc:pass={{ value: { get: () => value.get(), set: v => value.set(v) } }}></basic-child>
 			<style>:host {
   color: red;
 }</style>
-			</>
-		}`
+		</c-el>
+	}`
 		const { component, diagnostics } = compileComponent(
 			source,
 			'c.tsrx',
@@ -149,14 +137,12 @@ export function C({}: {})
 	test('a bare thunk entry still emits getter-only pass()', () => {
 		const source = `export function C({}: {})
 	@{
-		<>
 			<c-el>
 				<basic-child truc:pass={{ label: () => 'x' }}></basic-child>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -173,14 +159,12 @@ export function C({}: {})
 	test('truc:pass={{ }} with a non-object value is invalid (LTC006)', () => {
 		const source = `export function C({}: {})
 	@{
-		<>
 			<c-el>
 				<basic-child pass="nope"></basic-child>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -200,15 +184,13 @@ import { Child } from './child.tsrx'
 	@{
 		const n = createCell(0)
 		expose({ n: n.get })
-		<>
 			<c-el>
 				<child-el ${attr}={{ value: () => n.get() }}></child-el>
 				<p>{n}</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('truc:pass lowers to a pass() binding', () => {
@@ -261,12 +243,11 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 	@{
 		${setup}
 		expose({ ${exposeBody} })
-		<>
-			<basic-child>{label}${markup}</basic-child>
-			<style>:host {
-  display: block;
-}</style>
-		</>
+			<basic-child>{label}${markup}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-child>
 	}`
 
 	/** A `createCell` declaration plus the render site LTC004 requires. */
@@ -278,14 +259,12 @@ describe('pass={{ }} prop legality against the target registry entry', () => {
 
 	const parent = `export function BasicParent({}: {})
 	@{
-		<>
 			<basic-parent>
 				<basic-child truc:pass={{ value: () => 'x' }}></basic-child>
+				<style>:host {
+	  display: block;
+	}</style>
 			</basic-parent>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}`
 
 	const compilePair = (child: Parameters<typeof childWith>[0]) => {

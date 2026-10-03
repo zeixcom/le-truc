@@ -28,14 +28,12 @@ const source = `export function C({}: {})
 @{
 	const color = createCell('red')
 	expose({})
-	<>
 		<c-el>
 			<span title={() => color.get() + '!'}>ok</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }
 import { createCell } from '@zeix/le-truc'`
 
@@ -159,15 +157,13 @@ describe('class discriminators are token clauses (LT-124)', () => {
 @{
 	const el = first('span.label')
 	expose({})
-	<>
 		<c-el>
 			<span class="${className}">ok</span>
 			<span class="other">x</span>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 		)
@@ -237,15 +233,13 @@ describe('id discriminators use the hash form (LT-124)', () => {
 @{
 	const el = first('input#${idValue}')
 	expose({})
-	<>
 		<c-el>
 			<input id="${idValue}" />
 			<input id="other" />
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 		)
@@ -294,15 +288,13 @@ describe('aria-* discriminators are the last resort (LT-101)', () => {
 			`export function C({}: {})
 @{
 	expose({})
-	<>
 		<c-el>
 			<button type="button" ${openerAttrs}>Open</button>
 			<button type="button" class="close" aria-label="Close">x</button>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 		)
@@ -344,12 +336,11 @@ describe('selectors account for composed children (LT-096)', () => {
 		compileSource(
 			`export function Child({ size = 'small' }: { size?: string })
 @{
-	<>
-		<child-el>${body}</child-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<child-el>${body}
+			<style>:host {
+	  color: red;
+	}</style>
+		</child-el>
 }`,
 			'child.tsrx',
 		).component as ComponentIR
@@ -363,16 +354,14 @@ export function P({}: {})
 @{
 	${withRefs ? "const overlay = first('button.overlay')" : ''}
 	expose({})
-	<>
 		<p-el>
 			<code>x</code>
 			<Child />
 			<button type="button" class="overlay">Go</button>
+			<style>:host {
+	  color: red;
+	}</style>
 		</p-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'p.tsrx',
 		).component as ComponentIR
@@ -444,12 +433,11 @@ export function P({}: {})
 		const rawChild = compileSource(
 			`export function Child({ children }: { children?: string })
 @{
-	<>
-		<child-el>{children}</child-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<child-el>{children}
+			<style>:host {
+	  color: red;
+	}</style>
+		</child-el>
 }`,
 			'child.tsrx',
 		).component as ComponentIR
@@ -508,14 +496,12 @@ describe('authored first() selectors are emitted when verifiable (LT-316)', () =
 @{
 	const el = first('${selector}')
 	expose({})
-	<>
 		<c-el>
 			${template}
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 		).component as ComponentIR

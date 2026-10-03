@@ -16,16 +16,14 @@ describe('plain import used only server-side', () => {
 	@{
 		const gated = serverOnlyHelper(flag)
 		expose({})
-		<>
 			<c-el>
 				@if (gated) {
 					<p>shown</p>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('lands in the server module only', () => {
@@ -52,14 +50,12 @@ describe('plain import used only client-side', () => {
 	export function C({}: {})
 	@{
 		expose({ value: asNumber() })
-		<>
 			<c-el style={() => ({ '--x': clientOnlyHelper(host.value) })}>
 				<p>{host.value}</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('lands in the client module only', () => {
@@ -92,14 +88,12 @@ describe('plain import used both server- and client-side', () => {
 	@{
 		const formatted = createCell(bothHelper(count))
 		expose({ formatted: formatted.get })
-		<>
 			<c-el>
 				<p>{formatted}</p>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('lands in both modules', () => {
@@ -124,12 +118,11 @@ describe('plain import used only inside a bare (non-arrow) attribute expression'
 	export function C({ count }: { count: number })
 	@{
 		expose({})
-		<>
-			<c-el data-x={helper(count)}>ok</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el data-x={helper(count)}>ok
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 	test('lands in the server module only, with no LTC014', () => {
@@ -152,16 +145,14 @@ describe('relative specifier rewriting', () => {
 	@{
 		const gated = serverOnlyHelper(flag)
 		expose({})
-		<>
 			<c-el>
 				@if (gated) {
 					<p>shown</p>
 				}
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('is resolved relative to the .tsrx source, then rewritten for the flat generated-modules directory', () => {
@@ -182,12 +173,11 @@ describe('an unused plain import', () => {
 	export function C({}: {})
 	@{
 		expose({})
-		<>
-			<c-el>ok</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>ok
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 	test('is diagnosed (LTC014), not silently dropped', () => {
@@ -206,12 +196,11 @@ describe('a side-effect-only plain import', () => {
 	export function C({}: {})
 	@{
 		expose({})
-		<>
-			<c-el>ok</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>ok
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 	test('is included in both modules (no bound name to trace usage from)', () => {

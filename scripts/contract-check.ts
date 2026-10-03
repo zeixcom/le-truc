@@ -63,12 +63,10 @@ export function ContractProbe({ name }: { name: string }) {
 	const seed = createCell(Date.now())
 	expose({ label: asString('') })
 	return (
-		<>
-			<contract-probe>
-				<span class="label" id={labelId}>Label</span>
-			</contract-probe>
+		<contract-probe>
+			<span class="label" id={labelId}>Label</span>
 			<style>{css\\\`:host { color: red; }\\\`}</style>
-		</>
+		</contract-probe>
 	)
 }\`
 

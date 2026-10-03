@@ -124,6 +124,13 @@ check runs in the shared post-lowering pass, on both surfaces.
 its `type` — the page owns script loading; LT-358 rider) follows. It is
 `LTC`, not `TSRX`: the refusal is raised in `lowerElement` (shared), on
 both surfaces.
+`LTC060` (a fragment root — the template output wraps the root element and
+its `<style>` block in `<>…</>`; ADR 0032 s1, LT-375) was RESERVED at the
+same planning round as `LTC061`–`LTC065` but lands out of numeric order:
+`LTC061` was claimed first (LT-383 compiled before LT-375 ran), so
+`LTC060` follows `LTC056` in the code space while arriving last. It is
+`LTC`, not `TSRX`: the refusal is raised in the shared driver
+(`front-end.ts`), on both surfaces.
 `LTC061` (an authored `<template>` element in a component template — the
 compiler owns template extraction, and the selector proof cannot see
 inside one; LT-383), then `LTC062`/`LTC063` (the ADR 0037 reactive-arm

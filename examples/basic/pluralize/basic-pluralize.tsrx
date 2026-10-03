@@ -100,19 +100,16 @@ export function BasicPluralize(
 			ordinal: asBoolean(),
 		})
 
-			<>
-				<basic-pluralize {count} {lang} {ordinal}>
-					<p class="none" hidden={() => host.count !== 0}>{t.done}</p>
-					<p class="some" hidden={() => host.count === 0}>
-						<span class="count">{host.count}</span>
-						<span class="tasks">{() => t.tasks({ count: host.count, type: host.ordinal ? 'ordinal' : 'cardinal' })}</span>
-						{t.remaining}
-					</p>
-				</basic-pluralize>
-
+		<basic-pluralize {count} {lang} {ordinal}>
+			<p class="none" hidden={() => host.count !== 0}>{t.done}</p>
+			<p class="some" hidden={() => host.count === 0}>
+				<span class="count">{host.count}</span>
+				<span class="tasks">{() => t.tasks({ count: host.count, type: host.ordinal ? 'ordinal' : 'cardinal' })}</span>
+				{t.remaining}
+			</p>
 			<style>
 			:host {
 				display: block;
 			}</style>
-		</>
+		</basic-pluralize>
 	}

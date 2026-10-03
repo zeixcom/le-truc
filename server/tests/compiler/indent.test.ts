@@ -65,17 +65,16 @@ export function C({}: {})
 	@{
 		const seen = createCell(0)
 		expose({ seen: seen.get })
-		<>
 			<c-el><button type="button" onClick={(e: Event) => {
 				const n = 3
 				const msg = \`Min length is \${n}
 				Please enter more\`
 				seen.set(n)
-			}}>{seen}</button></c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			}}>{seen}</button>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		if (!component) throw new Error('fixture must compile')
@@ -92,12 +91,11 @@ export function C({ note }: { note?: string })
 		const banner = \`First \${note}
 		second line of banner\`
 		expose({ seen: seen.get })
-		<>
-			<c-el title={banner}>{seen}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el title={banner}>{seen}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		if (!component) throw new Error('fixture must compile')

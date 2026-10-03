@@ -120,126 +120,110 @@ export function ModuleDialog(
 	})
 
 	return (
-		<>
-			<module-dialog>
-				<button type="button" aria-haspopup="dialog" aria-controls={dialogId}>
-					{label}
-				</button>
-				<dialog id={dialogId} aria-labelledby={titleId}>
-					<header>
-						<h2 id={titleId}>{title}</h2>
-						<button type="button" class="close" aria-label="Close dialog">
-							×
-						</button>
-					</header>
-					<module-scrollarea orientation="vertical">
-						<form method="dialog">
-							<div class="content">{children}</div>
-						</form>
-					</module-scrollarea>
-				</dialog>
-			</module-dialog>
-
+		<module-dialog>
+			<button type="button" aria-haspopup="dialog" aria-controls={dialogId}>
+				{label}
+			</button>
+			<dialog id={dialogId} aria-labelledby={titleId}>
+				<header>
+					<h2 id={titleId}>{title}</h2>
+					<button type="button" class="close" aria-label="Close dialog">
+						×
+					</button>
+				</header>
+				<module-scrollarea orientation="vertical">
+					<form method="dialog">
+						<div class="content">{children}</div>
+					</form>
+				</module-scrollarea>
+			</dialog>
 			<style>{css`
-			/* Exception to scoping rule: class on body for scroll lock */
-			:global(body.scroll-lock) {
-				position: fixed;
-				overflow-y: hidden;
-			}
-
-			:host {
-				display: inline-block;
-
-				> button {
-					border: 0;
-					padding: 0;
-					background: none;
-					cursor: pointer;
-					color: var(--color-text);
+				/* Exception to scoping rule: class on body for scroll lock */
+				:global(body.scroll-lock) {
+					position: fixed;
+					overflow-y: hidden;
 				}
-
-				& dialog {
-					display: none;
-					flex-direction: column;
-					border: 0;
-					padding: 0;
-					margin: auto 0;
-					width: 100vw;
-					max-width: 100%;
-					max-height: 100dvh;
-					color: var(--color-text);
-					background: var(--color-background);
-					opacity: var(--opacity-transparent);
-					transition: opacity var(--transition-medium) var(--easing-inout);
-
-					&::backdrop {
-						backdrop-filter: blur(0);
-						transition: backdrop-filter var(--transition-medium) var(--easing-inout);
-						background-color: transparent;
+				:host {
+					display: inline-block;
+					> button {
+						border: 0;
+						padding: 0;
+						background: none;
+						cursor: pointer;
+						color: var(--color-text);
 					}
-				}
-
-				& dialog[open] {
-					display: flex;
-					opacity: var(--opacity-solid);
-
-					> header {
+					& dialog {
+						display: none;
+						flex-direction: column;
+						border: 0;
+						padding: 0;
+						margin: auto 0;
+						width: 100vw;
+						max-width: 100%;
+						max-height: 100dvh;
+						color: var(--color-text);
+						background: var(--color-background);
+						opacity: var(--opacity-transparent);
+						transition: opacity var(--transition-medium) var(--easing-inout);
+						&::backdrop {
+							backdrop-filter: blur(0);
+							transition: backdrop-filter var(--transition-medium) var(--easing-inout);
+							background-color: transparent;
+						}
+					}
+					& dialog[open] {
 						display: flex;
-						justify-content: space-between;
-						align-items: center;
-						margin: 0;
-						padding: 0 0 0 var(--space-l);
-
-						> h2 {
-							font-size: var(--font-size-l);
-							font-weight: var(--font-weight-bold);
-							margin: var(--space-s) 0;
-						}
-
-						.close {
-							border: 0;
-							background: none;
-							cursor: pointer;
-							font-size: var(--font-size-l);
-							line-height: var(--line-height-xs);
-							margin: var(--space-s) var(--space-s) var(--space-s) var(--space-m);
-							padding: 0 0 var(--space-xxs);
-							color: var(--color-primary);
-							border-radius: var(--space-xxs);
-							box-sizing: border-box;
-							height: var(--input-height);
-							width: var(--input-height);
-
-							&:hover {
-								color: var(--color-primary-hover);
+						opacity: var(--opacity-solid);
+						> header {
+							display: flex;
+							justify-content: space-between;
+							align-items: center;
+							margin: 0;
+							padding: 0 0 0 var(--space-l);
+							> h2 {
+								font-size: var(--font-size-l);
+								font-weight: var(--font-weight-bold);
+								margin: var(--space-s) 0;
 							}
-
-							&:active {
-								color: var(--color-primary-active);
+							.close {
+								border: 0;
+								background: none;
+								cursor: pointer;
+								font-size: var(--font-size-l);
+								line-height: var(--line-height-xs);
+								margin: var(--space-s) var(--space-s) var(--space-s) var(--space-m);
+								padding: 0 0 var(--space-xxs);
+								color: var(--color-primary);
+								border-radius: var(--space-xxs);
+								box-sizing: border-box;
+								height: var(--input-height);
+								width: var(--input-height);
+								&:hover {
+									color: var(--color-primary-hover);
+								}
+								&:active {
+									color: var(--color-primary-active);
+								}
 							}
 						}
-					}
-
-					.content {
-						padding: 0 var(--space-l) 0;
-					}
-
-					&::backdrop {
-						backdrop-filter: blur(1rem);
-						background-color: var(--color-shadow);
+						.content {
+							padding: 0 var(--space-l) 0;
+						}
+						&::backdrop {
+							backdrop-filter: blur(1rem);
+							background-color: var(--color-shadow);
+						}
 					}
 				}
-			}
-
-			@media (min-width: 48em) {
-				dialog[open] {
-					width: min(var(--content-max-width), calc(100% - 2 * var(--space-l)));
-					max-height: calc(100dvh - 2rem);
-					border-radius: var(--space-s);
-					box-shadow: 0 0 var(--space-s) var(--color-shadow);
-					margin: auto auto;
-				}
-			}`}</style>
-		</>
+				@media (min-width: 48em) {
+					dialog[open] {
+						width: min(var(--content-max-width), calc(100% - 2 * var(--space-l)));
+						max-height: calc(100dvh - 2rem);
+						border-radius: var(--space-s);
+						box-shadow: 0 0 var(--space-s) var(--color-shadow);
+						margin: auto auto;
+					}
+				}`}</style>
+		</module-dialog>
 	)
 }

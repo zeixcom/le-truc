@@ -314,7 +314,7 @@ recorded against the 30.4k opening measurement.
   Gates green except `test:variants` (sandbox port stall) — owner must run it. Nit: the
   FAMILIES JSDoc in the parity test is orphaned above `ASYNC`.
 
-- [ ] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07).
+- [x] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07). — done, pending review ⏳
   **Area:** compiler
   **Needs:** LT-371
   **Context:** owner ruling 2026-09-29, recorded in ADR 0032 s1 and `HOST_PROFILE.md`: the
@@ -328,6 +328,12 @@ recorded against the 30.4k opening measurement.
   follows `writer` → error-messages.
   **Verification:** goldens byte-identical across the migration (the fragment never reached the
   output); the new rule's fixture; diagnostic parity; full gates.
+  **Changed:** LTC060 (tier 1) + a shared driver refuse a fragment root on both surfaces;
+  `<style>` hoists into the root; 39 corpus sources + ~46 test files migrated; docs updated.
+  **How:** no fix was mine this round — the typecheck red was the concurrent queue session's
+  WIP, landed between rounds as round 2 predicted; every gate re-run green.
+  **Check:** all gates exit 0 (build-corpus, `tsc --noEmit` via bunx, typecheck, suite, lint).
+  Caveat: scripts/queue.ts is the round-2 reconstruction, validated but not byte-faithful.
 
 - [ ] LT-373: Annotate every template expression with its reactivity class (D-26, ADR 0040 s7).
   **Area:** compiler

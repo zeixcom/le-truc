@@ -58,7 +58,6 @@ export function BasicHello(
 		const input = first('input', 'subject input')
 		expose({ subject: asString('World') })
 
-		<>
 			<basic-hello {subject}>
 				<label for={subjectId}>Your name</label><br />
 				<input
@@ -69,11 +68,10 @@ export function BasicHello(
 					onInput={() => ({ subject: input.value || 'World' })}
 				/>
 				<p>Hello, <output for={subjectId}>{host.subject}</output>!</p>
+				<style>
+				:host {
+					display: block;
+				}</style>
 			</basic-hello>
 
-			<style>
-			:host {
-				display: block;
-			}</style>
-		</>
 	}

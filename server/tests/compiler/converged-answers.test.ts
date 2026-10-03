@@ -77,12 +77,10 @@ export function C({ items }: { items: string[] }) {
 	const c = createCell('red')
 	expose({})
 	return (
-		<>
 			<c-el>
 				<ul>{items.map(item => ${li})}</ul>
+				<style>{'c-el { color: red }'}</style>
 			</c-el>
-			<style>{'c-el { color: red }'}</style>
-		</>
 	)
 }`,
 		'c.tsx',
@@ -123,15 +121,13 @@ const withPropBound = (body: string, registry = new Set<string>()) =>
 @{
 	const el = first('span', 'span')
 	expose({ label: el.textContent ?? '' })
-	<>
 		<c-el>
 			<span>x</span>
 			${body}
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 		'c.tsrx',
 		registry,

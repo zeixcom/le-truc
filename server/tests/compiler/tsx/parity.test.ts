@@ -445,18 +445,16 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 	expose({})
 
 	return (
-		<>
 			<c-el2>
 				<ul data-container>
 					{items.map(item => (
 						<li aria-label={removeLabel}><span>{item}</span></li>
 					))}
 				</ul>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
 			</c-el2>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
 	)
 }`
 		const { component, diagnostics } = compileComponentTsx(
@@ -489,18 +487,16 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 	@{
 		const items = createList<string>(initial, { keyConfig: 'item' })
 		expose({})
-		<>
 			<c-el2>
 				<ul data-container>
 					@for (const item of items) {
 						<li aria-label={removeLabel}><span>{item}</span></li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el2>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 		const tsrx = compileComponent(tsrxSource, 'seeded.tsrx', new Set(['c-el2']))
 		if (!tsrx.component) throw new Error('tsrx twin must compile')
@@ -692,12 +688,11 @@ describe('the args type annotation reaches the shared stages (LT-298)', () => {
 	const component = (params: string): string => `export function C(${params}) {
 	expose({})
 	return (
-		<>
-			<c-el>{label}</c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
+			<c-el>{label}
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
+			</c-el>
 	)
 }`
 
@@ -780,7 +775,6 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 			name: 'EmptyEach',
 			tsrx: `export function EmptyEach({ rows }: { rows: string[] })
 	@{
-		<>
 			<empty-each>
 				<ul>
 					@for (const row of rows) {
@@ -789,15 +783,13 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 						<li class="none">Nothing yet</li>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</empty-each>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`,
 			tsxx: `export function EmptyEach({ rows }: { rows: string[] }) {
 	return (
-		<>
 			<empty-each>
 				<ul>
 					{rows.length === 0 ? (
@@ -806,11 +798,10 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 						rows.map(row => <li class="row">{row}</li>)
 					)}
 				</ul>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
 			</empty-each>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
 	)
 }`,
 			args: (rows: string[]) => ({ rows }),
@@ -823,7 +814,6 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 export function EmptyList({ initial }: { initial?: string[] })
 	@{
 		const items = createList<string>(initial, { keyConfig: 'item' })
-		<>
 			<empty-list>
 				<ul data-container>
 					@for (const item of items) {
@@ -832,17 +822,15 @@ export function EmptyList({ initial }: { initial?: string[] })
 						<p class="none">Nothing yet</p>
 					}
 				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
 			</empty-list>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`,
 			tsxx: `import { createList } from '@zeix/le-truc'
 export function EmptyList({ initial }: { initial?: string[] }) {
 	const items = createList<string>(initial, { keyConfig: 'item' })
 	return (
-		<>
 			<empty-list>
 				<ul data-container>
 					{items.length === 0 ? (
@@ -851,11 +839,10 @@ export function EmptyList({ initial }: { initial?: string[] }) {
 						items.map(item => <li><span>{item}</span></li>)
 					)}
 				</ul>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
 			</empty-list>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
 	)
 }`,
 			args: (initial: string[]) => ({ initial }),

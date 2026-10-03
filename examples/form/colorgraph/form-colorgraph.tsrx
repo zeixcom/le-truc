@@ -398,7 +398,6 @@ export function FormColorgraph(
 		else host.setCustomValidity(t.outOfGamut);
 	});
 
-	<>
 		<form-colorgraph
 			{name}
 			{value}
@@ -522,191 +521,173 @@ export function FormColorgraph(
 				step={0.01}
 				bigStep={15}
 			/>
-		</form-colorgraph>
-
-		<style>
-		:host {
-			--color-base: transparent;
-			--step-size: 1.25rem;
-
-			display: flex;
-			flex-direction: column;
-			gap: var(--space-s);
-			margin: var(--space-m) 0;
-
-			.graph {
-				--canvas-size: 400px;
-
-				position: relative;
-				width: 100%;
-				display: block;
-				user-select: none;
-				transition: opacity var(--transition-medium) var(--easing-inout);
-
-				& canvas {
-					width: var(--canvas-size);
-					height: var(--canvas-size);
-					aspect-ratio: 1;
+			<style>
+			:host {
+				--color-base: transparent;
+				--step-size: 1.25rem;
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-s);
+				margin: var(--space-m) 0;
+				.graph {
+					--canvas-size: 400px;
+					position: relative;
+					width: 100%;
+					display: block;
 					user-select: none;
+					transition: opacity var(--transition-medium) var(--easing-inout);
+					& canvas {
+						width: var(--canvas-size);
+						height: var(--canvas-size);
+						aspect-ratio: 1;
+						user-select: none;
+					}
+					.knob {
+						position: absolute;
+						top: 0;
+						left: 0;
+						width: var(--input-height);
+						height: var(--input-height);
+						border-radius: 50%;
+						background-color: var(--color-base);
+						border: 1px solid var(--color-border);
+						box-shadow: 0 0 var(--space-xxs) 2px var(--color-shadow);
+						cursor: move;
+						user-select: none;
+						touch-action: none;
+						transform: translate(
+							calc(var(--input-height) / -2),
+							calc(var(--input-height) / -2)
+						);
+						&:focus-visible {
+							box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+						}
+					}
+					& ol {
+						list-style: none;
+						margin: 0;
+						padding: 0;
+						user-select: none;
+					}
+					& li {
+						position: absolute;
+						box-sizing: border-box;
+						top: 0;
+						left: 0;
+						width: var(--step-size);
+						height: var(--step-size);
+						transform: translate(
+							calc(var(--step-size) / -2),
+							calc(var(--step-size) / -2)
+						);
+						border-radius: 100%;
+						background-color: transparent;
+						border: 1px solid black;
+						opacity: var(--opacity-dimmed);
+						user-select: none;
+					}
+					.lighten80 {
+						background: var(--color-lighten80);
+					}
+					.lighten60 {
+						background: var(--color-lighten60);
+					}
+					.lighten40 {
+						background: var(--color-lighten40);
+					}
+					.lighten20 {
+						background: var(--color-lighten20);
+					}
+					.darken20 {
+						background: var(--color-darken20);
+					}
+					.darken40 {
+						background: var(--color-darken40);
+					}
+					.darken60 {
+						background: var(--color-darken60);
+					}
+					.darken80 {
+						background: var(--color-darken80);
+					}
 				}
-
-				.knob {
+				> .error {
+					grid-area: error;
+					margin: var(--space-xs) 0 0;
+					font-size: var(--font-size-xs);
+					line-height: var(--line-height-s);
+					color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+					&:empty {
+						display: none;
+					}
+				}
+				.slider {
+					--slider-width: 400px;
+					--slider-height: 40px;
+					--track-width: 360px;
+					--track-height: 8px;
+					--track-offset: 20px;
+					position: relative;
+					display: inline-block;
+					height: var(--slider-height);
+					user-select: none;
+					transition: opacity var(--transition-medium) var(--easing-inout);
+					& canvas {
+						width: calc(100% - 2 * var(--track-offset));
+						height: var(--track-height);
+						margin: calc(var(--track-offset) - var(--track-height) / 2)
+							var(--track-offset);
+						user-select: none;
+					}
+				}
+				.thumb {
 					position: absolute;
-					top: 0;
-					left: 0;
+					top: calc(var(--slider-height) / 2);
+					left: var(--track-offset);
 					width: var(--input-height);
 					height: var(--input-height);
-					border-radius: 50%;
 					background-color: var(--color-base);
+					box-sizing: border-box;
 					border: 1px solid var(--color-border);
+					border-radius: 50%;
 					box-shadow: 0 0 var(--space-xxs) 2px var(--color-shadow);
-					cursor: move;
+					cursor: ew-resize;
 					user-select: none;
 					touch-action: none;
+					opacity: var(--opacity-dimmed);
 					transform: translate(
 						calc(var(--input-height) / -2),
 						calc(var(--input-height) / -2)
 					);
-
-					&:focus-visible {
-						box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+				}
+			}
+			@container (width > 27rem) {
+				:host {
+					display: grid;
+					grid-template-areas:
+						"graph graph graph"
+						"slider slider slider"
+						"lightness chroma hue";
+					grid-template-columns: 1fr 1fr 1fr;
+					gap: var(--space-s) var(--space-m);
+					align-items: start;
+					.graph {
+						grid-area: graph;
+					}
+					.slider {
+						grid-area: slider;
+					}
+					.lightness {
+						grid-area: lightness;
+					}
+					.chroma {
+						grid-area: chroma;
+					}
+					.hue {
+						grid-area: hue;
 					}
 				}
+			}</style>
+		</form-colorgraph>
 
-				& ol {
-					list-style: none;
-					margin: 0;
-					padding: 0;
-					user-select: none;
-				}
-
-				& li {
-					position: absolute;
-					box-sizing: border-box;
-					top: 0;
-					left: 0;
-					width: var(--step-size);
-					height: var(--step-size);
-					transform: translate(
-						calc(var(--step-size) / -2),
-						calc(var(--step-size) / -2)
-					);
-					border-radius: 100%;
-					background-color: transparent;
-					border: 1px solid black;
-					opacity: var(--opacity-dimmed);
-					user-select: none;
-				}
-
-				.lighten80 {
-					background: var(--color-lighten80);
-				}
-				.lighten60 {
-					background: var(--color-lighten60);
-				}
-				.lighten40 {
-					background: var(--color-lighten40);
-				}
-				.lighten20 {
-					background: var(--color-lighten20);
-				}
-				.darken20 {
-					background: var(--color-darken20);
-				}
-				.darken40 {
-					background: var(--color-darken40);
-				}
-				.darken60 {
-					background: var(--color-darken60);
-				}
-				.darken80 {
-					background: var(--color-darken80);
-				}
-			}
-
-			> .error {
-				grid-area: error;
-				margin: var(--space-xs) 0 0;
-				font-size: var(--font-size-xs);
-				line-height: var(--line-height-s);
-				color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
-
-				&:empty {
-					display: none;
-				}
-			}
-
-			.slider {
-				--slider-width: 400px;
-				--slider-height: 40px;
-				--track-width: 360px;
-				--track-height: 8px;
-				--track-offset: 20px;
-
-				position: relative;
-				display: inline-block;
-				height: var(--slider-height);
-				user-select: none;
-				transition: opacity var(--transition-medium) var(--easing-inout);
-
-				& canvas {
-					width: calc(100% - 2 * var(--track-offset));
-					height: var(--track-height);
-					margin: calc(var(--track-offset) - var(--track-height) / 2)
-						var(--track-offset);
-					user-select: none;
-				}
-			}
-
-			.thumb {
-				position: absolute;
-				top: calc(var(--slider-height) / 2);
-				left: var(--track-offset);
-				width: var(--input-height);
-				height: var(--input-height);
-				background-color: var(--color-base);
-				box-sizing: border-box;
-				border: 1px solid var(--color-border);
-				border-radius: 50%;
-				box-shadow: 0 0 var(--space-xxs) 2px var(--color-shadow);
-				cursor: ew-resize;
-				user-select: none;
-				touch-action: none;
-				opacity: var(--opacity-dimmed);
-				transform: translate(
-					calc(var(--input-height) / -2),
-					calc(var(--input-height) / -2)
-				);
-			}
-		}
-
-		@container (width > 27rem) {
-			:host {
-				display: grid;
-				grid-template-areas:
-					"graph graph graph"
-					"slider slider slider"
-					"lightness chroma hue";
-				grid-template-columns: 1fr 1fr 1fr;
-				gap: var(--space-s) var(--space-m);
-				align-items: start;
-
-				.graph {
-					grid-area: graph;
-				}
-				.slider {
-					grid-area: slider;
-				}
-				.lightness {
-					grid-area: lightness;
-				}
-				.chroma {
-					grid-area: chroma;
-				}
-				.hue {
-					grid-area: hue;
-				}
-			}
-		}</style>
-	</>
 }

@@ -207,35 +207,33 @@ export const runFrontEnd = (
 		},
 	)
 
-	// Output: a single root element, or a fragment of [root element,
-	// <style>?]. A bare root is legal (LT-123): the fragment exists to carry
-	// a SECOND node beside the root (the `<style>` block), so a component
-	// with no styles of its own has nothing to wrap.
+	// Output: a single root element — the host element spelled as the
+	// component's tag (ADR 0032 s1, LT-375). There is no fragment root: the
+	// `<style>` block is a child of the root, and `resolveTemplateOutput`
+	// hoists it out of the root's children before anything emits. A fragment
+	// output is LTC060; anything else is the output-shape violation (LTC008).
 	const output = split.output
 	const bareRoot = output?.type === 'JSXElement' ? output : null
-	if (!bareRoot && output?.type !== 'JSXFragment') {
-		ctx.diagnostics.push(
-			diagnostic.invalidSource(
-				ctx.source,
-				output,
-				`${filename}: ${wording.outputShape}`,
-			),
-		)
+	if (!bareRoot) {
+		if (output?.type === 'JSXFragment') {
+			ctx.diagnostics.push(diagnostic.fragmentRoot(ctx.source, output))
+		} else {
+			ctx.diagnostics.push(
+				diagnostic.invalidSource(
+					ctx.source,
+					output,
+					`${filename}: ${wording.outputShape}`,
+				),
+			)
+		}
 		return done()
 	}
 	seedExtractionContext(ctx, { paramNames: params.paramNames, extraction })
 
 	const fors = new Map<AstNode, ForIR>()
-	// A bare root element has no fragment to walk children of — lower it as
-	// the single-node list the fragment path would have produced.
-	const lowered: TemplateNode[] = bareRoot
-		? [adapter.lowerElement(ctx, bareRoot, extraction.signalByName, fors)]
-		: adapter.lowerChildren(
-				ctx,
-				output as AstNode,
-				extraction.signalByName,
-				fors,
-			)
+	const lowered: TemplateNode[] = [
+		adapter.lowerElement(ctx, bareRoot, extraction.signalByName, fors),
+	]
 	const resolved = resolveTemplateOutput(
 		ctx,
 		filename,

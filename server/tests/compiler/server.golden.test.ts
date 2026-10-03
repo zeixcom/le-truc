@@ -77,18 +77,16 @@ const seededSource = `import { createList } from '@zeix/le-truc'
 export function Seeded({ initial }: { initial?: string[] })
 	@{
 		const items = createList<string>(initial, { keyConfig: 'item' })
-		<>
-			<c-el>
-				<ul data-container>
-					@for (const item of items; key k) {
-						<li><span>{item}</span></li>
-					}
-				</ul>
-			</c-el>
+		<c-el>
+			<ul data-container>
+				@for (const item of items; key k) {
+					<li><span>{item}</span></li>
+				}
+			</ul>
 			<style>:host {
   color: red;
 }</style>
-		</>
+		</c-el>
 	}`
 const seeded = compileComponent(seededSource, 'seeded.tsrx', new Set<string>())
 

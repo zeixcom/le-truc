@@ -54,18 +54,16 @@ describe('runLoops — Pass 1 (server-data @for → each())', () => {
 			`export function C({ tabs }: { tabs: string[] })
 			@{
 				expose({})
-				<>
 					<c-el>
 						<ul>
 							@for (const tab of tabs) {
 								<li data-tab onClick={() => console.log(1)}>{tab}</li>
 							}
 						</ul>
+						<style>:host {
+	  color: red;
+	}</style>
 					</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
 			}`,
 			'c.tsrx',
 		)
@@ -99,18 +97,16 @@ describe('runLoops — Pass 1 (construct-free body, LT-322)', () => {
 			`export function C({ tabs }: { tabs: string[] })
 			@{
 				expose({})
-				<>
 					<c-el>
 						<ul>
 							@for (const tab of tabs) {
 								<li>{tab}</li>
 							}
 						</ul>
+						<style>:host {
+	  color: red;
+	}</style>
 					</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
 			}`,
 			'c.tsrx',
 		)
@@ -131,18 +127,16 @@ describe('runLoops — Pass 1b (reactive-list @for → reconcile())', () => {
 			@{
 				const items = createList<string>(initial, { keyConfig: 'item' })
 				expose({})
-				<>
 					<c-el>
 						<ul data-container>
 							@for (const item of items; key k) {
 								<li><span>{item}</span></li>
 							}
 						</ul>
+						<style>:host {
+	  color: red;
+	}</style>
 					</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
 			}
 import { createList } from '@zeix/le-truc'`,
 			'c.tsrx',

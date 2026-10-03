@@ -13,14 +13,12 @@ describe('requestContext() — consumer side', () => {
 	@{
 		const motion = requestContext(MEDIA_MOTION, 'unknown')
 		expose({})
-		<>
 			<c-el>
 				<span class="motion">{motion}</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('renders the fallback server-side, watches the real signal client-side', () => {
@@ -66,14 +64,12 @@ describe('requestContext() — reactive attribute referencing the context signal
 	@{
 		const theme = requestContext(MEDIA_THEME, 'light')
 		expose({})
-		<>
 			<c-el>
 				<span class={() => theme.get()}>{theme}</span>
+				<style>:host {
+	  color: red;
+	}</style>
 			</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
 	}`
 
 	test('the context signal is server-known, so the reactive attribute server-renders too', () => {
@@ -95,12 +91,11 @@ describe('requestContext() — misuse diagnostics', () => {
 		@{
 			const motion = requestContext('motion')
 			expose({})
-			<>
-				<c-el>ok</c-el>
-				<style>:host {
-  color: red;
-}</style>
-			</>
+				<c-el>ok
+					<style>:host {
+	  color: red;
+	}</style>
+				</c-el>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC015')).toBe(true)
@@ -111,12 +106,11 @@ describe('requestContext() — misuse diagnostics', () => {
 		@{
 			const motion = requestContext('motion', host.value)
 			expose({})
-			<>
-				<c-el>ok</c-el>
-				<style>:host {
-  color: red;
-}</style>
-			</>
+				<c-el>ok
+					<style>:host {
+	  color: red;
+	}</style>
+				</c-el>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC016')).toBe(true)
@@ -130,12 +124,11 @@ describe('requestContext() — misuse diagnostics', () => {
 		@{
 			const wrapped = [requestContext('motion', 'unknown')]
 			expose({})
-			<>
-				<c-el>ok</c-el>
-				<style>:host {
-  color: red;
-}</style>
-			</>
+				<c-el>ok
+					<style>:host {
+	  color: red;
+	}</style>
+				</c-el>
 		}`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
 		expect(
@@ -151,12 +144,11 @@ describe('provideContexts() — provider side', () => {
 		const count = createCell(0)
 		expose({ count: count.get })
 		provideContexts(['count'])
-		<>
-			<c-el>{count}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>{count}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
 
@@ -185,12 +177,11 @@ import { createCell } from '@zeix/le-truc'`
 			const count = createCell(0)
 			expose({ count: count.get })
 			const p = provideContexts(['count'])
-			<>
-				<c-el>{count}</c-el>
-				<style>:host {
-  color: red;
-}</style>
-			</>
+				<c-el>{count}
+					<style>:host {
+	  color: red;
+	}</style>
+				</c-el>
 		}
 import { createCell } from '@zeix/le-truc'`
 		const { component } = compileComponent(badSource, 'c.tsrx', new Set())

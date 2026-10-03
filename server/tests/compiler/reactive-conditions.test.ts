@@ -34,7 +34,6 @@ export function Toggle({ label }: { label: string })
 	@{
 		const open = createCell(false)
 		expose({ open: open.get })
-		<>
 			<c-toggle>
 				<h2 class="title">{label}</h2>
 				<div class="box">
@@ -46,11 +45,10 @@ export function Toggle({ label }: { label: string })
 						<button type="button" class="opener" onClick={() => { open.set(true) }}>Open</button>
 					}
 				</div>
+				<style>:host {
+	  display: block;
+	}</style>
 			</c-toggle>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}
 `
 
@@ -64,7 +62,6 @@ export function Toggle(
 	const open = createCell(false)
 	expose({ open: open.get })
 	return (
-		<>
 			<c-toggle>
 				<h2 class="title">{label}</h2>
 				<div class="box">
@@ -76,11 +73,10 @@ export function Toggle(
 						<button type="button" class="opener" onClick={() => { open.set(true) }}>Open</button>
 					)}
 				</div>
+				<style>{css\`:host {
+	  display: block;
+	}\`}</style>
 			</c-toggle>
-			<style>{css\`:host {
-  display: block;
-}\`}</style>
-		</>
 	)
 }
 `
@@ -97,12 +93,11 @@ const tsrx = (
 export function C(${params})
 	@{
 		${setup}
-		<>
-			<c-el>${body}</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el>${body}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 
 const compile = (source: string) =>
@@ -243,12 +238,11 @@ describe('the initial winner', () => {
 export function C({ open }: { open?: boolean })
 	@{
 		expose({ open: asBoolean() })
-		<>
-			<c-el open={open}>@if (host.open) { <p>a</p> }</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el open={open}>@if (host.open) { <p>a</p> }
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`,
 			).root,
 		)

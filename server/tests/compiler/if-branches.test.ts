@@ -37,12 +37,10 @@ const wrap = (template: string, tag = 'c-el'): string =>
 	`export function C({ big, text }: { big?: boolean; text?: string })
 @{
 	expose({ note: asString('') })
-	<>
-		<${tag}>
-			${template}
-		</${tag}>
+	<${tag}>
+		${template}
 		<style>:host { color: red }</style>
-	</>
+	</${tag}>
 }
 import { asString } from '@zeix/le-truc'`
 
@@ -269,14 +267,12 @@ describe('two ref-addressed elements in one @if branch (LT-130)', () => {
 @{
 ${setup}
 	expose({ note: asString('') })
-	<>
 		<c-el>
 			${template}
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }
 import { asString } from '@zeix/le-truc'`
 

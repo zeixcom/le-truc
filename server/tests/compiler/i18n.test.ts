@@ -71,12 +71,11 @@ ${decl}
 export function C({ i18n: { t } }: { i18n: I18n })
 @{
 	expose({})
-	<>
-		<c-el>${template}</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el>${template}
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 describe('LTC047 — untranslated literal prose (LT-173 step 5)', () => {
@@ -86,8 +85,10 @@ describe('LTC047 — untranslated literal prose (LT-173 step 5)', () => {
 		const hit = diagnostics.find(d => d.code === 'LTC047')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('warning')
-		expect(lineAt(source, hit)).toBe(7)
-		expect(textAt(source, hit)).toBe('Hello world')
+		expect(lineAt(source, hit)).toBe(6)
+		// The prose's JSXText now runs to the whitespace before the <style>
+		// child (LT-375 moved the style inside the root).
+		expect(textAt(source, hit)).toBe('Hello world\n\t\t\t')
 		expect(hit?.location.file).toBe('examples/x/c-i18n.tsrx')
 	})
 
@@ -129,12 +130,11 @@ export const i18n = { task: 'task' }
 export function BasicI18nChild({ lang = 'en', i18n: { t } }: { lang?: string; i18n: I18n })
 @{
 	expose({})
-	<>
-		<basic-i18n-child {lang}>{t.task}</basic-i18n-child>
-		<style>:host {
-  display: block;
-}</style>
-	</>
+		<basic-i18n-child {lang}>{t.task}
+			<style>:host {
+	  display: block;
+	}</style>
+		</basic-i18n-child>
 }`
 
 const parentOf = (attrs: string): string => `
@@ -143,14 +143,12 @@ import { BasicI18nChild } from '../child/basic-i18n-child.tsrx'
 export function BasicI18nParent({}: {})
 @{
 	expose({})
-	<>
 		<basic-i18n-parent>
 			<BasicI18nChild ${attrs} />
+			<style>:host {
+	  display: block;
+	}</style>
 		</basic-i18n-parent>
-		<style>:host {
-  display: block;
-}</style>
-	</>
 }`
 
 // An i18n-DECLARING parent: its own `lang` binding is the ambient locale at
@@ -162,14 +160,12 @@ export const i18n = { title: 'Parent' }
 export function BasicI18nParent({ lang = 'en', i18n: { t } }: { lang?: string; i18n: I18n })
 @{
 	expose({})
-	<>
 		<basic-i18n-parent>
 			<BasicI18nChild ${attrs} />
+			<style>:host {
+	  display: block;
+	}</style>
 		</basic-i18n-parent>
-		<style>:host {
-  display: block;
-}</style>
-	</>
 }`
 
 describe('the reserved `i18n` parameter (ADR 0030 sub-design 2)', () => {
@@ -271,12 +267,11 @@ describe('the root `lang` attribute (ADR 0030 sub-design 3)', () => {
 export function C({ i18n: { lang } }: { i18n: I18n })
 @{
 	expose({})
-	<>
-		<c-el>ok</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el>ok
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 	test('an i18n component that binds `lang` but does not render it gets the compiler render', () => {
@@ -290,12 +285,11 @@ export function C({ i18n: { lang } }: { i18n: I18n })
 export function C({ lang = 'en', i18n: { t } }: { lang?: string; i18n: I18n })
 @{
 	expose({})
-	<>
-		<c-el {lang}>ok</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el {lang}>ok
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`)
 		if (!component) throw new Error('must compile')
 		// Exactly ONE lang render — the authored root attribute.
@@ -1035,7 +1029,7 @@ describe('LTC055 — ICU patterns and their call sites (LT-250)', () => {
 		expect(rest).toEqual([])
 		expect(hit?.severity).toBe('error')
 		const source = sourceOf(`{t.tasks({ total: 2 })}`)
-		expect(lineAt(source, hit)).toBe(11)
+		expect(lineAt(source, hit)).toBe(10)
 		expect(textAt(source, hit)).toBe('t.tasks({ total: 2 })')
 		expect(hit?.message).toContain('`t.tasks` is missing `count`')
 		expect(hit?.message).toContain('passes `total`')
@@ -1063,12 +1057,11 @@ ${ICU_DECL}
 export function C({ i18n }: { i18n: I18n })
 @{
 	expose({})
-	<>
-		<c-el>{i18n.t.tasks({})}</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el>{i18n.t.tasks({})}
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`)
 		const hit = diagnostics.find(d => d.code === 'LTC055')
 		expect(hit?.message).toContain('is missing `count`')
@@ -1086,16 +1079,14 @@ ${ICU_DECL}
 export function CIcuFold({ count, i18n: { t } }: { count: number; i18n: I18n })
 @{
 	expose({})
-	<>
 		<c-icu-fold>
 			<span class="literal">{t.tasks({ count: 1 })}</span>
 			<span class="arg" title={t.tasks({ count })}>{t.tasks({ count })}</span>
 			<span class="done">{t.done}</span>
+			<style>:host {
+	  display: block;
+	}</style>
 		</c-icu-fold>
-		<style>:host {
-  display: block;
-}</style>
-	</>
 }`
 	const { component, diagnostics } = compileComponent(
 		source,
@@ -1166,12 +1157,11 @@ ${ICU_DECL} as const
 export function ${name}({ count, i18n: { t } }: { count: number; i18n: I18n<typeof i18n> })
 @{
 	expose({})
-	<>
-		<c-el>${template}</c-el>
-		<style>:host {
-  display: block;
-}</style>
-	</>
+		<c-el>${template}
+			<style>:host {
+	  display: block;
+	}</style>
+		</c-el>
 }`
 	const build = (name: string, tag: string, template: string) => {
 		const { component, diagnostics } = compileComponent(

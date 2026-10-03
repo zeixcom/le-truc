@@ -25,12 +25,11 @@ describe('attribute shorthand `{name}`', () => {
 		const source = `export function C({ name }: { name?: string })
 	@{
 		expose({})
-		<>
-			<c-el ${attr}>ok</c-el>
-			<style>:host {
-  color: red;
-}</style>
-		</>
+			<c-el ${attr}>ok
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
 	}`
 		const { component, diagnostics } = compileComponent(
 			source,
@@ -75,12 +74,11 @@ describe('freeIdentifiers', () => {
 				const selected = createCell('a')
 				const open = createCell(false)
 				expose({ selected: selected.get })
-				<>
-					<c-el hidden={() => !open.get() && selected.get() === 'a'}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el hidden={() => !open.get() && selected.get() === 'a'}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -97,15 +95,14 @@ import { createCell } from '@zeix/le-truc'`,
 			@{
 				const selected = createCell('x')
 				expose({ selected: selected.get })
-				<>
 					<c-el onClick={(e: Event) => {
 						const local = e.target
 						selected.set(String(local))
-					}}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					}}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -123,16 +120,15 @@ import { createCell } from '@zeix/le-truc'`,
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
 					<c-el onClick={() => {
 						for (let i = 0; i < n; i++) {
 							console.log(i)
 						}
-					}}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					}}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -147,17 +143,16 @@ import { createCell } from '@zeix/le-truc'`,
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
 					<c-el onClick={() => {
 						const handleUp = () => {
 							el.removeEventListener('up', handleUp)
 						}
 						el.addEventListener('up', handleUp)
-					}}>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					}}>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -175,12 +170,11 @@ describe('reactive attribute thunks may reference a plain setup const (LT-088)',
 			@{
 				const fmt = (n: number) => \`#\${n}\`
 				expose({})
-				<>
-					<c-el><span aria-label={() => fmt(1)}>ok</span></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><span aria-label={() => fmt(1)}>ok</span>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 			new Set(),
@@ -198,12 +192,11 @@ describe('reactive attribute thunks may reference a plain setup const (LT-088)',
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el><span aria-label={() => mysteryHelper(1)}>ok</span></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><span aria-label={() => mysteryHelper(1)}>ok</span>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 			new Set(),
@@ -221,17 +214,16 @@ describe('template classification', () => {
 			@{
 				const state = createCell(1)
 				expose({ state: state.get })
-				<>
 					<c-el
 						type="button"
 						aria-label={label}
 						hidden={() => state.get() > 0}
 						onClick={() => state.set(0)}
-					>ok</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					>ok
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -251,12 +243,11 @@ import { createCell } from '@zeix/le-truc'`,
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el><input ref={box} /></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><input ref={box} />
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 			new Set(),
@@ -275,12 +266,11 @@ import { createCell } from '@zeix/le-truc'`,
 			@{
 				const box = first('input', 'required')
 				expose({})
-				<>
-					<c-el><input /></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><input />
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -297,12 +287,11 @@ import { createCell } from '@zeix/le-truc'`,
 			@{
 				const n = createCell(1)
 				expose({ n: n.get })
-				<>
-					<c-el><span>{n}</span></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><span>{n}</span>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -317,12 +306,11 @@ import { createCell } from '@zeix/le-truc'`,
 			`export function C({ label }: { label?: string })
 			@{
 				expose({})
-				<>
-					<c-el><span>{label}</span></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><span>{label}</span>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -337,17 +325,15 @@ import { createCell } from '@zeix/le-truc'`,
 			@{
 				const selected = createCell('a')
 				expose({ selected: selected.get })
-				<>
 					<c-el>
 						@for (const tab of tabs; index i) {
 							const pid = tab.id
 							<button aria-selected={() => String(selected.get() === pid)} onClick={() => selected.set(pid)}>{tab.id}</button>
 						}
+						<style>:host {
+	  color: red;
+	}</style>
 					</c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
 			}
 import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -370,12 +356,11 @@ export const config = ${config}
 export function C({ value = '' }: { value?: string })
 @{
 	expose({ value: asString('') })
-	<>
-		<c-el value={value}><input value={() => host.value} /></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el value={value}><input value={() => host.value} />
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`
 
 	test('formAssociated + observedAttributes parse into ConfigIR', () => {
@@ -408,12 +393,11 @@ export function C({ value = '' }: { value?: string })
 					count: asInteger(0),
 					clear: defineMethod(() => {}),
 				})
-				<>
-					<c-el><span>ok</span></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><span>ok</span>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}
 import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -447,12 +431,11 @@ import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
 						internals?.states.add('on')
 					}),
 				})
-				<>
-					<c-el><span>ok</span></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><span>ok</span>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}
 import { asString, defineMethod } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -469,12 +452,11 @@ import { asString, defineMethod } from '@zeix/le-truc'`,
 				on(btn, 'keydown', (e: KeyboardEvent) => {
 					e.preventDefault()
 				})
-				<>
-					<c-el><button>go</button></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><button>go</button>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -495,12 +477,11 @@ import { asString, defineMethod } from '@zeix/le-truc'`,
 					ro.observe(canvasEl)
 					return () => ro.disconnect()
 				})
-				<>
-					<c-el><canvas></canvas></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><canvas></canvas>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -519,12 +500,11 @@ import { createCell } from '@zeix/le-truc'`,
 				on(host, 'keydown', (e: KeyboardEvent) => {
 					if (e.key === 'Enter') child.value = 'x'
 				})
-				<>
-					<c-el><Widget /></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><Widget />
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}
 import { Widget } from './widget.tsrx'`,
 			'c.tsrx',
@@ -541,12 +521,11 @@ import { Widget } from './widget.tsrx'`,
 				on(host, 'keydown', () => {
 					stray.focus()
 				})
-				<>
-					<c-el><input /></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><input />
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -565,12 +544,11 @@ import { Widget } from './widget.tsrx'`,
 			@{
 				expose({})
 				on(mysteryVariable, 'click', () => {})
-				<>
-					<c-el><button>go</button></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><button>go</button>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)
@@ -590,12 +568,11 @@ import { Widget } from './widget.tsrx'`,
 			`export function C({}: {})
 			@{
 				expose({})
-				<>
-					<c-el><p>{host.validationMessage}</p></c-el>
-					<style>:host {
-  color: red;
-}</style>
-				</>
+					<c-el><p>{host.validationMessage}</p>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
 			}`,
 			'c.tsrx',
 		)

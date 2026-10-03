@@ -17,36 +17,34 @@ declare global {
 	}
 }
 
+// biome-ignore lint/correctness/noEmptyPattern: the probe takes no server args, and the compiler's params contract requires an (empty) destructured object pattern.
 export function CssProbe({}: CssProbeProps) {
 	return (
-		<>
-			<css-probe>
-				<p class="label">{'Label'}</p>
-				<p class="probe-global">{'Global'}</p>
-				<BasicButton label={'Child button'} />
-				<button type="button" class="own">
-					{'Own'}
-				</button>
-			</css-probe>
-
+		<css-probe>
+			<p class="label">{'Label'}</p>
+			<p class="probe-global">{'Global'}</p>
+			<BasicButton label={'Child button'} />
+			<button type="button" class="own">
+				{'Own'}
+			</button>
 			<style>{css`
-				:host {
-					display: block;
-					border-top: 3px solid rgb(255, 0, 0);
-				}
-				:host::before {
-					content: '';
-				}
-				.label {
-					color: rgb(0, 0, 255);
-				}
-				button {
-					text-transform: uppercase;
-				}
-				:global(.probe-global) {
-					letter-spacing: 2px;
-				}
-			`}</style>
-		</>
+					:host {
+						display: block;
+						border-top: 3px solid rgb(255, 0, 0);
+					}
+					:host::before {
+						content: '';
+					}
+					.label {
+						color: rgb(0, 0, 255);
+					}
+					button {
+						text-transform: uppercase;
+					}
+					:global(.probe-global) {
+						letter-spacing: 2px;
+					}
+				`}</style>
+		</css-probe>
 	)
 }

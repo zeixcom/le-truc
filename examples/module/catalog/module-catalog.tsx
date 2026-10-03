@@ -137,61 +137,55 @@ export function ModuleCatalog(
 	})
 
 	return (
-		<>
-			<module-catalog>
-				<header>
-					<p>{title}</p>
-					<BasicButton
-						label={cartLabel}
-						disabled
-						truc:pass={{
-							disabled: () => !total.get(),
-							badge: () => (total.get() > 0 ? String(total.get()) : ''),
-						}}
-					/>
-				</header>
-				<ul>
-					{products.map(product => (
-						<li>
-							<p>
-								{product.name}
-								<small>{product.note ?? ''}</small>
-							</p>
-							<FormSpinbutton
-								data-product={product.id}
-								name={product.id}
-								value={0}
-								min={0}
-								max={product.max}
-							/>
-						</li>
-					))}
-				</ul>
-			</module-catalog>
-
+		<module-catalog>
+			<header>
+				<p>{title}</p>
+				<BasicButton
+					label={cartLabel}
+					disabled
+					truc:pass={{
+						disabled: () => !total.get(),
+						badge: () => (total.get() > 0 ? String(total.get()) : ''),
+					}}
+				/>
+			</header>
+			<ul>
+				{products.map(product => (
+					<li>
+						<p>
+							{product.name}
+							<small>{product.note ?? ''}</small>
+						</p>
+						<FormSpinbutton
+							data-product={product.id}
+							name={product.id}
+							value={0}
+							min={0}
+							max={product.max}
+						/>
+					</li>
+				))}
+			</ul>
 			<style>{css`
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
-
-				> header,
-				p {
-					margin: 0;
-				}
-
-				& ul {
-					padding: 0;
-					margin: 0;
-				}
-
-				& header,
-				li {
+				:host {
 					display: flex;
-					gap: var(--space-m);
-					justify-content: space-between;
-				}
-			}`}</style>
-		</>
+					flex-direction: column;
+					gap: var(--space-l);
+					> header,
+					p {
+						margin: 0;
+					}
+					& ul {
+						padding: 0;
+						margin: 0;
+					}
+					& header,
+					li {
+						display: flex;
+						gap: var(--space-m);
+						justify-content: space-between;
+					}
+				}`}</style>
+		</module-catalog>
 	)
 }

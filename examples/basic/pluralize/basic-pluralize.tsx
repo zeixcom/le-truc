@@ -85,29 +85,26 @@ export function BasicPluralize(
 	})
 
 	return (
-		<>
-			<basic-pluralize count={count} lang={lang} ordinal={ordinal}>
-				<p class="none" hidden={() => host.count !== 0}>
-					{t.done}
-				</p>
-				<p class="some" hidden={() => host.count === 0}>
-					<span class="count">{host.count}</span>
-					<span class="tasks">
-						{() =>
-							t.tasks({
-								count: host.count,
-								type: host.ordinal ? 'ordinal' : 'cardinal',
-							})
-						}
-					</span>
-					{t.remaining}
-				</p>
-			</basic-pluralize>
-
+		<basic-pluralize count={count} lang={lang} ordinal={ordinal}>
+			<p class="none" hidden={() => host.count !== 0}>
+				{t.done}
+			</p>
+			<p class="some" hidden={() => host.count === 0}>
+				<span class="count">{host.count}</span>
+				<span class="tasks">
+					{() =>
+						t.tasks({
+							count: host.count,
+							type: host.ordinal ? 'ordinal' : 'cardinal',
+						})
+					}
+				</span>
+				{t.remaining}
+			</p>
 			<style>{css`
-			:host {
-				display: block;
-			}`}</style>
-		</>
+				:host {
+					display: block;
+				}`}</style>
+		</basic-pluralize>
 	)
 }

@@ -28,7 +28,6 @@ export function ModuleList({}: {})
 			keyConfig: 'item',
 		})
 
-		<>
 			<module-list>
 				<form
 					action="#"
@@ -64,52 +63,46 @@ export function ModuleList({}: {})
 						</li>
 					}
 				</ul>
-			</module-list>
-
-			<style>
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
-
-				> form {
+				<style>
+				:host {
 					display: flex;
 					flex-direction: column;
-					align-items: flex-start;
-					gap: var(--space-m);
-					justify-content: space-between;
-				}
-
-				& ul {
-					display: flex;
-					flex-direction: column;
-					gap: var(--space-m);
-					list-style: none;
-					margin: 0;
-					padding: 0;
-
-					&:empty {
-						display: none;
-					}
-
-					& li {
+					gap: var(--space-l);
+					> form {
 						display: flex;
-						align-items: center;
-						justify-content: space-between;
+						flex-direction: column;
+						align-items: flex-start;
 						gap: var(--space-m);
+						justify-content: space-between;
+					}
+					& ul {
+						display: flex;
+						flex-direction: column;
+						gap: var(--space-m);
+						list-style: none;
 						margin: 0;
 						padding: 0;
+						&:empty {
+							display: none;
+						}
+						& li {
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							gap: var(--space-m);
+							margin: 0;
+							padding: 0;
+						}
 					}
 				}
-			}
+				@container (width > 27rem) {
+					:host {
+						& form {
+							flex-direction: row;
+							align-items: flex-end;
+						}
+					}
+				}</style>
+			</module-list>
 
-			@container (width > 27rem) {
-				:host {
-					& form {
-						flex-direction: row;
-						align-items: flex-end;
-					}
-				}
-			}</style>
-		</>
 	}

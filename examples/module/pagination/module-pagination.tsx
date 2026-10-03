@@ -102,128 +102,113 @@ export function ModulePagination(
 	watch(() => host.value >= host.max, bindProperty(next, 'disabled'))
 
 	return (
-		<>
-			<module-pagination max={max} value={value}>
-				<div>
-					<label>
-						<span class="visually-hidden">Page</span>
-						<input
-							type="number"
-							name="page"
-							min="1"
-							max={String(max)}
-							value={String(value)}
-						/>
-					</label>
-					<span class="value visually-hidden" aria-current="page">
-						{() => host.value}
-					</span>{' '}
-					of <span class="max">{() => host.max}</span>
-				</div>
-				<div class="buttons">
-					<button
-						type="button"
-						class="prev"
-						disabled={value <= 1}
-						aria-label="Previous page"
-					>
-						❮
-					</button>
-					<button
-						type="button"
-						class="next"
-						disabled={value >= max}
-						aria-label="Next page"
-					>
-						❯
-					</button>
-				</div>
-			</module-pagination>
-
+		<module-pagination max={max} value={value}>
+			<div>
+				<label>
+					<span class="visually-hidden">Page</span>
+					<input
+						type="number"
+						name="page"
+						min="1"
+						max={String(max)}
+						value={String(value)}
+					/>
+				</label>
+				<span class="value visually-hidden" aria-current="page">
+					{() => host.value}
+				</span>{' '}
+				of <span class="max">{() => host.max}</span>
+			</div>
+			<div class="buttons">
+				<button
+					type="button"
+					class="prev"
+					disabled={value <= 1}
+					aria-label="Previous page"
+				>
+					❮
+				</button>
+				<button
+					type="button"
+					class="next"
+					disabled={value >= max}
+					aria-label="Next page"
+				>
+					❯
+				</button>
+			</div>
 			<style>{css`
-			:host {
-				display: inline-flex;
-				align-items: center;
-				gap: var(--space-s);
-
-				& label {
-					display: inline-block;
-				}
-
-				& input {
-					display: inline-block;
-					box-sizing: border-box;
-					background: var(--color-input);
-					color: var(--color-text);
-					border: none;
-					border-bottom: 1px solid var(--color-border);
-					padding: var(--space-xs) var(--space-xxs);
-					font-size: var(--font-size-m);
-					width: 100%;
-					height: var(--input-height);
-					transition: color var(--transition-short) var(--easing-inout);
-					text-align: right;
-					appearance: textfield;
-					-moz-appearance: textfield;
-
-					&::-webkit-outer-spin-button,
-					&::-webkit-inner-spin-button {
-						-webkit-appearance: none;
-						margin: 0;
-					}
-				}
-
-				.buttons {
-					display: flex;
+				:host {
+					display: inline-flex;
 					align-items: center;
-				}
-
-				& button {
-					flex-grow: 0;
-					box-sizing: border-box;
-					height: var(--input-height);
-					min-width: var(--input-height);
-					border: 1px solid var(--color-border);
-					background-color: var(--color-secondary);
-					color: var(--color-text);
-					padding: 0 var(--space-s);
-					font-size: var(--font-size-s);
-					line-height: var(--line-height-s);
-					white-space: nowrap;
-					cursor: pointer;
-					transition: all var(--transition-shorter) var(--easing-inout);
-
-					&:focus {
-						z-index: 1;
+					gap: var(--space-s);
+					& label {
+						display: inline-block;
 					}
-
-					&:disabled {
-						opacity: var(--opacity-translucent);
+					& input {
+						display: inline-block;
+						box-sizing: border-box;
+						background: var(--color-input);
+						color: var(--color-text);
+						border: none;
+						border-bottom: 1px solid var(--color-border);
+						padding: var(--space-xs) var(--space-xxs);
+						font-size: var(--font-size-m);
+						width: 100%;
+						height: var(--input-height);
+						transition: color var(--transition-short) var(--easing-inout);
+						text-align: right;
+						appearance: textfield;
+						-moz-appearance: textfield;
+						&::-webkit-outer-spin-button,
+						&::-webkit-inner-spin-button {
+							-webkit-appearance: none;
+							margin: 0;
+						}
 					}
-
-					&:not(:disabled) {
+					.buttons {
+						display: flex;
+						align-items: center;
+					}
+					& button {
+						flex-grow: 0;
+						box-sizing: border-box;
+						height: var(--input-height);
+						min-width: var(--input-height);
+						border: 1px solid var(--color-border);
+						background-color: var(--color-secondary);
+						color: var(--color-text);
+						padding: 0 var(--space-s);
+						font-size: var(--font-size-s);
+						line-height: var(--line-height-s);
+						white-space: nowrap;
 						cursor: pointer;
-						opacity: var(--opacity-solid);
-
-						&:hover {
-							background-color: var(--color-secondary-hover);
+						transition: all var(--transition-shorter) var(--easing-inout);
+						&:focus {
+							z-index: 1;
 						}
-
-						&:active {
-							background-color: var(--color-secondary-active);
+						&:disabled {
+							opacity: var(--opacity-translucent);
+						}
+						&:not(:disabled) {
+							cursor: pointer;
+							opacity: var(--opacity-solid);
+							&:hover {
+								background-color: var(--color-secondary-hover);
+							}
+							&:active {
+								background-color: var(--color-secondary-active);
+							}
+						}
+						&:first-of-type {
+							border-radius: var(--space-xs) 0 0 var(--space-xs);
+							border-right-width: 0;
+						}
+						&:last-of-type {
+							border-radius: 0 var(--space-xs) var(--space-xs) 0;
 						}
 					}
-
-					&:first-of-type {
-						border-radius: var(--space-xs) 0 0 var(--space-xs);
-						border-right-width: 0;
-					}
-
-					&:last-of-type {
-						border-radius: 0 var(--space-xs) var(--space-xs) 0;
-					}
-				}
-			}`}</style>
-		</>
+				}`}</style>
+		</module-pagination>
 	)
 }

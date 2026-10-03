@@ -25,7 +25,7 @@ export type SurfaceWording = {
 	/* --- the component function (driver) --- */
 	/** No component function found — the message after `${filename}: `. */
 	noComponent: string
-	/** The output is neither a root element nor a fragment. */
+	/** The output is not a root element. */
 	outputShape: string
 	/** Where the template output sits, as a noun phrase. */
 	outputLabel: string
@@ -110,7 +110,7 @@ export type SurfaceWording = {
 const TSRX: SurfaceWording = {
 	noComponent: 'no exported component function with an @{ } container found.',
 	outputShape:
-		"the @{ } container's output must be a single root element, or a fragment (element + <style>).",
+		"the @{ } container's output must be a single root element (the component's custom-element tag).",
 	outputLabel: 'the @{ } output',
 
 	lazyChild: 'A lazy child (`{expr}`)',
@@ -163,7 +163,7 @@ const TSX: SurfaceWording = {
 	noComponent:
 		'no exported component function found (one per file, setup statements then a single `return <jsx/>`).',
 	outputShape:
-		'the return value must be a single root element, or a fragment (element + <style>).',
+		"the return value must be a single root element (the component's custom-element tag).",
 	outputLabel: 'the template return',
 
 	lazyChild: 'A lazy child expression',

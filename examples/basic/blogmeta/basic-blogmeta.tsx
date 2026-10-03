@@ -85,98 +85,88 @@ export function BasicBlogmeta({
 	const modifiedText = formatDate(modified)
 
 	return (
-		<>
-			<basic-blogmeta>
-				{author && (
-					<span
-						class="author"
-						itemprop="author"
-						itemscope
-						itemtype="https://schema.org/Person"
-					>
-						{avatar ? (
-							<img
-								class="avatar"
-								src={avatar}
-								alt={`${t.avatarOf} ${author}`}
+		<basic-blogmeta>
+			{author && (
+				<span
+					class="author"
+					itemprop="author"
+					itemscope
+					itemtype="https://schema.org/Person"
+				>
+					{avatar ? (
+						<img class="avatar" src={avatar} alt={`${t.avatarOf} ${author}`} />
+					) : (
+						// Bootstrap Icons "person-circle" (MIT licensed)
+						<svg
+							class="avatar"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							aria-hidden="true"
+							focusable="false"
+						>
+							<path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+							<path
+								fill-rule="evenodd"
+								d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"
 							/>
-						) : (
-							// Bootstrap Icons "person-circle" (MIT licensed)
-							<svg
-								class="avatar"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								aria-hidden="true"
-								focusable="false"
-							>
-								<path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-								<path
-									fill-rule="evenodd"
-									d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"
-								/>
-							</svg>
-						)}
-						<span itemprop="name">{author}</span>
+						</svg>
+					)}
+					<span itemprop="name">{author}</span>
+				</span>
+			)}
+			<span>
+				<time
+					class="published"
+					itemprop="datePublished"
+					datetime={published ?? ''}
+				>
+					{publishedText}
+				</time>
+				{modifiedText && (
+					<span class="modified">
+						· {t.updatedOn}{' '}
+						<time itemprop="dateModified" datetime={modified ?? ''}>
+							{modifiedText}
+						</time>
 					</span>
 				)}
+			</span>
+			{readingTime ? (
 				<span>
-					<time
-						class="published"
-						itemprop="datePublished"
-						datetime={published ?? ''}
-					>
-						{publishedText}
-					</time>
-					{modifiedText && (
-						<span class="modified">
-							· {t.updatedOn}{' '}
-							<time itemprop="dateModified" datetime={modified ?? ''}>
-								{modifiedText}
-							</time>
-						</span>
-					)}
+					<meta itemprop="timeRequired" content={`PT${readingTime}M`} />
+					{readingTime} {t.minRead}
 				</span>
-				{readingTime ? (
-					<span>
-						<meta itemprop="timeRequired" content={`PT${readingTime}M`} />
-						{readingTime} {t.minRead}
-					</span>
-				) : null}
-			</basic-blogmeta>
+			) : null}
 			<style>{css`
-:host {
-	display: flex;
-	align-items: center;
-	gap: var(--space-m);
-	font-size: var(--font-size-s);
-	color: var(--color-text-soft);
-	flex-wrap: wrap;
-	margin-bottom: var(--space-l);
-
-	& span {
+	:host {
 		display: flex;
 		align-items: center;
-		gap: var(--space-xs);
-	}
-
-	& img,
-	& svg.avatar {
-		width: var(--input-height);
-		height: var(--input-height);
-		border-radius: 50%;
-		object-fit: cover;
-		flex-shrink: 0;
-	}
-
-	& svg.avatar {
-		color: var(--color-border-soft);
-		background-color: var(--color-background-alt);
-	}
-
-	& time {
-		font-variant-numeric: tabular-nums;
-	}
-}`}</style>
-		</>
+		gap: var(--space-m);
+		font-size: var(--font-size-s);
+		color: var(--color-text-soft);
+		flex-wrap: wrap;
+		margin-bottom: var(--space-l);
+		& span {
+			display: flex;
+			align-items: center;
+			gap: var(--space-xs);
+		}
+		& img,
+		& svg.avatar {
+			width: var(--input-height);
+			height: var(--input-height);
+			border-radius: 50%;
+			object-fit: cover;
+			flex-shrink: 0;
+		}
+		& svg.avatar {
+			color: var(--color-border-soft);
+			background-color: var(--color-background-alt);
+		}
+		& time {
+			font-variant-numeric: tabular-nums;
+		}
+	}`}</style>
+		</basic-blogmeta>
 	)
 }

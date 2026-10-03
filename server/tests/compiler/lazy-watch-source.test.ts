@@ -14,14 +14,12 @@ export type CProps = { value: number }
 export function C({}: {})
 @{
 	expose({ value: asNumber() })
-	<>
 		<c-el>
 			<p>{String(host.value)}</p>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 
 describe('lazy child with an arbitrary (non-identifier, non-prop-name) expression', () => {

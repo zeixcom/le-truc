@@ -12,7 +12,6 @@ export function SyncEl({ mode, items }: { mode: string; items: SyncItem[] })
 	@{
 		expose({})
 
-		<>
 			<sync-el>
 				@switch (mode) {
 					@case 'list': {
@@ -40,9 +39,8 @@ export function SyncEl({ mode, items }: { mode: string; items: SyncItem[] })
 				} @else {
 					<span class="zero">0</span>
 				}
+				<style>:host {
+	  display: block;
+	}</style>
 			</sync-el>
-			<style>:host {
-  display: block;
-}</style>
-		</>
 	}

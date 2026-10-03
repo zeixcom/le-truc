@@ -45,10 +45,9 @@ const tsrxSource = ({
 }: Shape): string => `${head}export function C(${params})
 	@{
 ${setup}
-		<>
-			<c-el>${template}</c-el>
-			<style>${css}</style>
-		</>
+			<c-el>${template}
+				<style>${css}</style>
+			</c-el>
 	}`
 
 const tsxSource = ({
@@ -61,10 +60,9 @@ const tsxSource = ({
 }: Shape): string => `${head}export function C(${params}) {
 ${setup}
 	return (
-		<>
-			<c-el>${template}</c-el>
-			<style>{css\`${css}\`}</style>
-		</>
+			<c-el>${template}
+				<style>{css\`${css}\`}</style>
+			</c-el>
 	)
 }`
 
@@ -179,6 +177,56 @@ describe('each producer family covers the offending construct, on both surfaces'
 			'LTC056',
 			'<script>x</script>',
 		)
+	})
+
+	test('source shape: a fragment root (LTC060, LT-375)', () => {
+		// The fragment node itself is the offending construct — the whole
+		// `<>…</>`, `<style>` spelling and all.
+		const sources: Array<[string, string, string]> = [
+			[
+				'tsrx',
+				`export function C({}: {})
+	@{
+		expose({})
+		<>
+			<c-el><span>x</span></c-el>
+			<style>:host { color: red }</style>
+		</>
+	}`,
+				`<>
+			<c-el><span>x</span></c-el>
+			<style>:host { color: red }</style>
+		</>`,
+			],
+			[
+				'tsx',
+				`export function C({}: {}) {
+	expose({})
+	return (
+		<>
+			<c-el><span>x</span></c-el>
+			<style>{css\`:host { color: red }\`}</style>
+		</>
+	)
+}`,
+				`<>
+			<c-el><span>x</span></c-el>
+			<style>{css\`:host { color: red }\`}</style>
+		</>`,
+			],
+		]
+		for (const [surface, source, covered] of sources) {
+			const file = `examples/c/c-el.${surface}`
+			const { diagnostics } =
+				surface === 'tsx'
+					? compileComponentTsx(source, file, new Set())
+					: compileComponent(source, file, new Set())
+			const hit = diagnostics.find(d => d.code === 'LTC060')
+			expect(hit).toBeDefined()
+			expect(hit?.location.file).toBe(file)
+			expect(textAt(source, hit)).toBe(covered)
+			expect(hit?.severity).toBe('error')
+		}
 	})
 
 	test('selectors and addressing: no match (LTC026)', () => {
@@ -482,12 +530,11 @@ export function C({}: {}) {
 	const w = createCell(input.value)
 	expose({ w })
 	return (
-		<>
-			<c-el><input /><span>{w.get()}</span></c-el>
-			<style>{css\`:host {
-  color: red;
-}\`}</style>
-		</>
+			<c-el><input /><span>{w.get()}</span>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
+			</c-el>
 	)
 }`
 		const { component } = compileComponentTsx(source, 'c.tsx', new Set())

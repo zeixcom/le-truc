@@ -20,14 +20,12 @@ const component = (setup: string, imports = '') => `export function C({}: {})
 	const panel = first('.panel', 'the panel')
 ${setup}
 	expose({})
-	<>
 		<c-el>
 			<div class="panel">ok</div>
+			<style>:host {
+	  display: block;
+	}</style>
 		</c-el>
-		<style>:host {
-  display: block;
-}</style>
-	</>
 }
 ${imports}`
 

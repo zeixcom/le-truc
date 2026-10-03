@@ -54,17 +54,15 @@ export function C({ name }: { name: string })
 @{
 	const seed = createCell('seed')
 	expose({ label: asString('') })
-	<>
 		<c-el>
 			<span class="stamp" title={() => host.label + Date.now()}>stamped</span>
 			<p class="roll">{host.label.length + Math.random()}</p>
 			<input class="field" value={() => host.label + Date.now()} />
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
 
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 
 /**
@@ -78,13 +76,11 @@ export function C({ name }: { name: string })
 @{
 	const seed = createCell('seed')
 	expose({ label: asString('') })
-	<>
-		<r-el>{host.label.length + Math.random()}</r-el>
-
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<r-el>{host.label.length + Math.random()}
+			<style>:host {
+	  color: red;
+	}</style>
+		</r-el>
 }`
 
 /**
@@ -100,16 +96,14 @@ export function C({}: {})
 @{
 	const length = createCell(0)
 	expose({ length: length.get })
-	<>
 		<c-el>
 			<span>{length}</span>
 			<div title={() => length.get() + Date.now()}></div>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
 
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`
 
 const generated = createGeneratedDir('suppression')

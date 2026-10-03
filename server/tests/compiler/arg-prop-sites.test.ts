@@ -28,12 +28,11 @@ const compile = (
 @{
 	const el = first('span', 'span')
 	${setup}
-	<>
-		<c-el>${template}</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el>${template}
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`,
 		'c.tsrx',
 		new Set(['c-el']),
@@ -125,12 +124,11 @@ describe('LTC039 — one value, two channels (LT-122)', () => {
 export function C({ label }: { label: string })
 @{
 	expose({ label: asString('') })
-	<>
-		<c-el><span>{label}</span></c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
+		<c-el><span>{label}</span>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
 }`,
 			'c.tsrx',
 			new Set(['c-el']),
@@ -175,15 +173,13 @@ describe('host-derived folds over a harvested prop (LT-118)', () => {
 @{
 	const zeroSpan = first('span.zero')
 	expose({ ${exposeText} })
-	<>
 		<c-el>
 			<span class="zero">{zero}</span>
 			<b hidden={() => Boolean(host.zero)}>x</b>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 			new Set(['c-el']),
@@ -222,15 +218,13 @@ export function C({ zero = '' }: { zero?: string })
 	const zeroSpan = first('span.zero')
 	const otherCell = createCell(false)
 	expose({ zero: zeroSpan?.textContent ?? '', other: otherCell.get })
-	<>
 		<c-el>
 			<span class="zero">{zero}</span>
 			<b hidden={() => Boolean(host.other)}>x</b>
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }`,
 			'c.tsrx',
 			new Set(['c-el']),
@@ -268,15 +262,13 @@ describe('ref-presence folds (LT-118)', () => {
 @{
 	const zeroSpan = first('span.zero')
 	expose({ value: asNumber(0) })
-	<>
 		<c-el>
 			<b hidden={${gate}}>x</b>
 			${template}
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }
 import { asNumber } from '@zeix/le-truc'`,
 			'c.tsrx',
@@ -305,15 +297,13 @@ import { asNumber } from '@zeix/le-truc'`,
 @{
 	const zeroSpan = first('span.zero')
 	expose({ value: asNumber(0) })
-	<>
 		<c-el {value}>
 			<b hidden={() => Boolean(zeroSpan) && host.value === 0}>x</b>
 			@if (zero) { <span class="zero">{zero}</span> }
+			<style>:host {
+	  color: red;
+	}</style>
 		</c-el>
-		<style>:host {
-  color: red;
-}</style>
-	</>
 }
 import { asNumber } from '@zeix/le-truc'`,
 			'c.tsrx',
