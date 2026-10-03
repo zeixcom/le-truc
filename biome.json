@@ -16,7 +16,8 @@
 			"!**/test/components/main.js*",
 			"!**/server/typedoc-heading-shift.mjs",
 			"!**/docs-src/layouts/**/*",
-			"!**/server/tests/compiler/fixtures/tsx/**/*"
+			"!**/server/tests/compiler/fixtures/tsx/**/*",
+			"!.claude/workflows/**/*"
 		]
 	},
 	"formatter": {
