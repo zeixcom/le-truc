@@ -228,6 +228,11 @@ const FALLBACK_VALIDITY_MESSAGE = 'Invalid value'
  * For a Parser-backed prop (see ADR 0003), it reflects the live attribute through the Parser.
  * Otherwise it returns the retained static initializer as-is.
  * Writing it only moves the baseline that `formResetCallback` restores `value`/`checked` to; it never marks the control dirty.
+ *
+ * One deliberate deviation from native `<input>`: a native control also
+ * updates a *clean* control's live value on reset. That is unimplementable
+ * from JS — the dirty flag is write-only — so a reset only moves the
+ * baseline here and the next input applies it.
  */
 const makeDefaultPropDescriptor = (
 	prop: 'value' | 'checked',
@@ -367,6 +372,10 @@ const makeFormAssociatedExtension = <Tag extends string>(
  * No-op if no initializer was retained, or if the initializer is a `Signal`, `MemoCallback`/`TaskCallback`,
  * or `SlotDescriptor` — none of these carry a default value to restore.
  * Shared by `formAssociated()` and `formAssociatedCheckbox()`; only the target prop pair differs.
+ *
+ * The restoring write is deferred to a microtask (see the body comment for
+ * why). Test consequence: `instance.formResetCallback()` returns before
+ * `value`/`checked` change — `await Promise.resolve()` before asserting.
  */
 const makeResetCallback = (
 	prop: 'value' | 'checked',
@@ -440,6 +449,11 @@ const formDisabledCallback = function (
  * (`form`, `name`, `labels`, `validity`, ...), managed `disabled`, value sync, reset, and state restore.
  * Pass to `defineComponent`'s third parameter. See ADR 0016.
  *
+ * Never put the driving prop (`value`/`checked`) into `observedAttributes()` on a
+ * form-associated component: re-parsing the baseline attribute into the live prop
+ * conflates the reset baseline with live state — the same mistake the reset path
+ * avoids by restoring from `defaultValue`/`defaultChecked`.
+ *
  * @since 2.3
  */
 const formAssociated = (): FormAssociatedExtension =>
@@ -470,6 +484,8 @@ const formAssociated = (): FormAssociatedExtension =>
  * `formAssociated()` instead.
  *
  * Do not combine with `formAssociated()` on the same component; see ADR 0019.
+ * Like `formAssociated()`: never put `checked` into `observedAttributes()` —
+ * it would re-parse the reset baseline into the live prop.
  *
  * @since 2.3
  */

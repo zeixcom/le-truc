@@ -8,6 +8,23 @@ import { schedule } from './scheduler'
  * `bind*` function returns a setter (or `SingleMatchHandlers`) that a
  * caller wires to a signal via `watch()` or `match()`.
  *
+ * **Map-form convention (ADR 0023).** Each helper with a map form is a
+ * `function` declaration with two overload signatures plus one shared
+ * implementation that branches on `typeof arg === 'string'` — never
+ * `Array.isArray(arg)`: its negative narrowing does not exclude
+ * `readonly string[]` from a `string | readonly string[]` union, so the
+ * false branch stays unnarrowed, while `typeof` narrows cleanly both ways.
+ * Follow this pattern for any future `bind*` map-form addition. The map
+ * form's array is the complete key set that binding owns, which is what
+ * answers "clear everything vs. clear only absent": `bindStyle`/
+ * `bindAttribute`'s `nil()` and absent keys clear each declared key,
+ * `bindAria`'s assign `null`, and `bindClass`/`bindState` need no `nil` at
+ * all — an empty map already clears every declared token via the same
+ * toggle loop that handles absent keys. `bindProperty` is the one
+ * exception, a partial PATCH whose absent keys are left untouched (object
+ * properties have no "remove" operation). Don't generalize
+ * `bindProperty`'s behavior to the other five, or vice versa.
+ *
  * `dangerouslyBindInnerHTML()` is an XSS sink. Pass a `sanitize` option
  * (e.g. DOMPurify) for untrusted input, or register a module-level default
  * with `configureHtmlSanitizer()`. Le Truc ships no sanitizer.
