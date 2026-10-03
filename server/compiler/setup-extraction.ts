@@ -342,7 +342,7 @@ export const extractSetup = (
 				// deriveCell/deriveStore/createMemo invoke their compute function
 				// synchronously at server-render time too (runtime.ts) — a
 				// host/internals read inside it would crash, since every signal
-				// declaration is re-emitted verbatim into both modules (ADR 0023
+				// declaration is re-emitted verbatim into both modules (ADR 0024
 				// sub-design 12; surfaced by LT-025's createMemo support).
 				const isDerivedCallback =
 					(calleeName === 'deriveCell' ||
@@ -398,7 +398,7 @@ export const extractSetup = (
 				// A ternary between two constructor calls isn't recognized as a
 				// signal at all (no single `.callee`) — diagnose it explicitly
 				// rather than silently treating it as an ordinary setup const
-				// (ADR 0023 sub-design 12).
+				// (ADR 0024 sub-design 12).
 				const consequentName = identifierName(
 					(init.consequent as AstNode | undefined)?.callee,
 				)
@@ -424,7 +424,7 @@ export const extractSetup = (
 			} else {
 				plainSetup.push(setupStmt)
 				// A plain setup const calling a client-only primitive directly —
-				// the value harness cannot run it (ADR 0023 sub-design 12).
+				// the value harness cannot run it (ADR 0024 sub-design 12).
 				// ADR 0029 sub-design 5 (LT-165 step 5): a ROUTING SIGNAL, not
 				// a diagnostic — the const already sits in `plainSetup`, so the
 				// generated CLIENT module emits it when needed and the

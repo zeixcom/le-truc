@@ -219,7 +219,7 @@ export const countForSelector = (
  * Structural match count for composed elements over the whole template,
  * grouped by their resolved `.tsrx` source path — the proxy for "this
  * composed target is the sole possible instance" used by `pass={{ }}`
- * addressing (ADR 0023 sub-design 10). Exactly 1 is the fast path: no
+ * addressing (ADR 0024 sub-design 10). Exactly 1 is the fast path: no
  * discriminator needed at all. More than 1 no longer means unaddressable
  * outright (LT-089) — `composeNodesBySource`/`composeDiscriminatorClause`
  * below can still tell same-source instances apart by a static `class`/`id`/

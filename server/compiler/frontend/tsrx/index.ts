@@ -1,5 +1,5 @@
 /**
- * Inlined TSRX compiler — public API (ADR 0023).
+ * Inlined TSRX compiler — public API (ADR 0024).
  *
  * compileComponent runs the full pipeline for one `.tsrx` source: parse +
  * extract (compiler.ts), then the SHARED pipeline (`pipeline.ts`, LT-202 —
@@ -30,7 +30,7 @@ export const compileComponent = (
 	childImports?: ReadonlyMap<string, string>,
 	/**
 	 * Composed (PascalCase) elements' targets, keyed by resolved source
-	 * path (ADR 0023 sub-design 10) — built corpus-wide from every
+	 * path (ADR 0024 sub-design 10) — built corpus-wide from every
 	 * component's own registry entry (`server/effects/compile.ts`). Undefined
 	 * during registry-discovery passes (composition isn't validated yet, the
 	 * same tolerance an empty `registry` gets for raw-tag `pass()` dispatch).

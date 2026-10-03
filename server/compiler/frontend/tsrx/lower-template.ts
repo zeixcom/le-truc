@@ -217,7 +217,7 @@ const lowerBodyStatements = (
  * - No `@pending` arm: a render-time error boundary — the server renders the
  *   body inside a real try/catch, so a throwing server expression falls back
  *   to the catch arm; mutually exclusive, like `@switch`.
- * - A `@pending` arm present: an ASYNC BOUNDARY (ADR 0023 sub-design 13,
+ * - A `@pending` arm present: an ASYNC BOUNDARY (ADR 0024 sub-design 13,
  *   LT-012) — `@try`/`@pending`/`@catch` route on `isPending(signal)` against
  *   the ONE async-derived signal (`deriveCell(async …)`) the body renders.
  *   The arm that won at render time renders live and every arm ships as an

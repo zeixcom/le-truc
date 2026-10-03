@@ -130,7 +130,7 @@ export const readModuleDecls = (
  * module-level doc from being mistaken for the component's own when other
  * statements (type declarations, `declare global`) sit in between. Carried
  * above the generated `export default defineComponent(` so CEM extraction
- * (ADR 0023, LT-006) reads the authored description and tags.
+ * (ADR 0024, LT-006) reads the authored description and tags.
  */
 const leadingDocComment = (source: string, before: number): string | null => {
 	const head = source.slice(0, before)

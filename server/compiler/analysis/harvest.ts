@@ -652,7 +652,7 @@ const planHarvests = (
 			// exist at all — address it the same way its own branch-root query
 			// would (non-throwing 'maybe'), and null-guard the read, instead of
 			// a throwing `first()` the substituted expression could crash on
-			// (ADR 0023 sub-design 12).
+			// (ADR 0024 sub-design 12).
 			const enclosing = enclosingIfOf(site.el)
 			const optional = !!enclosing && elseOf(enclosing).length === 0
 			const query = addQuery(
@@ -680,7 +680,7 @@ const planHarvests = (
 	 * source range so surrounding text is untouched. Free names that are
 	 * already client-known by another route (another signal declared earlier
 	 * in the factory, a ref, a context member) pass through unrewritten — only
-	 * server args need a DOM substitution (ADR 0023 sub-design 12: a `deriveCell`
+	 * server args need a DOM substitution (ADR 0024 sub-design 12: a `deriveCell`
 	 * callback may read both a param, needing substitution, and a sibling
 	 * signal, needing none).
 	 */
@@ -688,7 +688,7 @@ const planHarvests = (
 		init: AstNode,
 		/**
 		 * Allow a no-params-to-substitute initializer to pass through
-		 * verbatim (ADR 0023 sub-design 13): sound for `deriveCell`/
+		 * verbatim (ADR 0024 sub-design 13): sound for `deriveCell`/
 		 * `deriveStore` signals, which are FORCED through this path
 		 * unconditionally (no direct-site harvest is even attempted for
 		 * them), and since LT-036 also for any signal credited in
@@ -740,7 +740,7 @@ const planHarvests = (
 		// Nothing to substitute: the initializer has no server-arg dependency
 		// at all (e.g. a niladic async compute), so it is already portable,
 		// identical JS on both sides — reuse it verbatim, exactly like a pure
-		// literal list seed (ADR 0023 sub-design 13). Only sound for signals
+		// literal list seed (ADR 0024 sub-design 13). Only sound for signals
 		// with no direct-site harvest route at all (see `allowVerbatim`'s doc).
 		if (params.length === 0)
 			return allowVerbatim ? source.slice(init.start, init.end) : null
@@ -826,7 +826,7 @@ const planHarvests = (
 		}
 		// `deriveCell`/`deriveStore` initializers are callbacks, not raw values
 		// — a 'text'/'attr' direct-site harvest would splice the DOM read in
-		// place of the whole function (ADR 0023 sub-design 12). A rendered
+		// place of the whole function (ADR 0024 sub-design 12). A rendered
 		// lazy child of the signal's own name still exists for the WATCH
 		// target/initial value (Pass 4 wires it independently of harvest
 		// selection here), but harvesting always goes through the arg-

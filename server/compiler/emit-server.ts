@@ -1,5 +1,5 @@
 /**
- * Server-module emitter (ADR 0023 milestone 1, LT-001).
+ * Server-module emitter (ADR 0024 milestone 1, LT-001).
  *
  * Emits one module per component exporting `render<Name>(args): string`.
  * The generated function re-declares the source's `@{ }` setup verbatim —
@@ -12,7 +12,7 @@
  *   when the dependency closure is server-known (args, setup names, loop
  *   bindings, hoisted consts); otherwise the attribute is omitted — the
  *   first client binding pass sets it (dependency-provable evaluation,
- *   ADR 0023 sub-design 3)
+ *   ADR 0024 sub-design 3)
  * - `on*` event attributes and `ref` are stripped
  * - `@for` over server data renders once per item, hoisted consts included
  */
@@ -141,7 +141,7 @@ type EmitContext = {
 	component: ComponentIR
 	/**
 	 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
-	 * source path (ADR 0023 sub-design 10). A compose node whose `source`
+	 * source path (ADR 0024 sub-design 10). A compose node whose `source`
 	 * is missing here was already diagnosed as an error upstream
 	 * (`index.ts`), so `emitCompose` never needs to handle a missing entry.
 	 */
@@ -510,7 +510,7 @@ const listTemplate = (ctx: EmitContext, loop: ReconcileForIR): CodeBuilder => {
 }
 
 /**
- * Reactive `@for` over a declared List (ADR 0023 sub-design 5): initial
+ * Reactive `@for` over a declared List (ADR 0024 sub-design 5): initial
  * keyed items render in place (adopted children are complete — values, no
  * slot markers) with `data-key` from the shim's cause-effect-parity key
  * generation, and the item shape is extracted as a sibling `<template>`
@@ -715,7 +715,7 @@ const isComposeHostAttr = (name: string): boolean =>
 	name === 'class' || name === 'id' || name.startsWith('data-')
 
 /**
- * A composed element (ADR 0023 sub-design 10): splice the child's
+ * A composed element (ADR 0024 sub-design 10): splice the child's
  * generated `render<Name>()` call inline. Composed elements never had
  * their diagnostics escalate to an error (index.ts validates every
  * `node.source` against composeRegistry before emitServerModule runs at
@@ -819,7 +819,7 @@ const emitCompose = (
 }
 
 /**
- * The async boundary form of `@try` (ADR 0023 sub-design 13, LT-012; ADR
+ * The async boundary form of `@try` (ADR 0024 sub-design 13, LT-012; ADR
  * 0037 s4, LT-276): the arm that won at render time renders live, keyed
  * `ok`/`nil`/`err` by its root's `data-key`, followed by one inert
  * `<template data-arms data-key>` per arm. The client's `reconcile()` adopts
@@ -1069,7 +1069,7 @@ const emit = (
 		return
 	}
 	if (node.kind === 'expr') {
-		// The reserved `{children}` insertion point (ADR 0023 sub-design 10,
+		// The reserved `{children}` insertion point (ADR 0024 sub-design 10,
 		// LT-018): a composed call already rendered this component's own
 		// children into an HTML string — trusted, compiler-generated markup,
 		// not user input, so it renders UNESCAPED here (analogous to the
@@ -1220,7 +1220,7 @@ export const emitServerModule = (
 		sourcePath: string
 		/**
 		 * Composed (PascalCase) elements' targets, keyed by resolved `.tsrx`
-		 * source path (ADR 0023 sub-design 10). A compose node whose `source`
+		 * source path (ADR 0024 sub-design 10). A compose node whose `source`
 		 * is missing here was already diagnosed as an error upstream
 		 * (`index.ts`), so `emitCompose` never needs to handle a missing entry.
 		 */

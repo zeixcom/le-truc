@@ -258,7 +258,7 @@ export const lowerExpressionChild = (
 /* === Composed elements === */
 
 /**
- * Composed-element children (ADR 0023 sub-design 10, LT-018): the markup
+ * Composed-element children (ADR 0024 sub-design 10, LT-018): the markup
  * between a composed element's opening/closing tags substitutes into the
  * child's own template wherever it writes a bare `{children}` expression —
  * compile-time content substitution, not a live client binding (that markup
@@ -315,7 +315,7 @@ export const validateComposedChildren = (
 
 /**
  * Lower a composed (PascalCase) element: resolve its tag against the file's
- * compose-import map (ADR 0023 sub-design 10), classify attributes as server
+ * compose-import map (ADR 0024 sub-design 10), classify attributes as server
  * args (regardless of value shape), `ref`, or `pass={{ }}` (client-prop
  * interop), and lower any children into the reserved `children`
  * substitution (LT-018) — validated to statics/server expressions only
@@ -1293,7 +1293,7 @@ export const reportEmptySwitch = (
 
 /**
  * The boundary tail both spellings share (`@try`/`@pending`/`@catch`, `<truc:try
- * pending catch>`): with a pending arm it is an ASYNC boundary (ADR 0023
+ * pending catch>`): with a pending arm it is an ASYNC boundary (ADR 0024
  * sub-design 13) whose three arms each need exactly one root element — each
  * is cloned from its template as the task settles (ADR 0037 s4) — and the
  * catch parameter is reactive by position in its arm.

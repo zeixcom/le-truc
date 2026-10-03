@@ -1,5 +1,5 @@
 /**
- * Component registry (ADR 0023 milestone 1).
+ * Component registry (ADR 0024 milestone 1).
  *
  * One entry per compiled component: where its artifacts live and which types
  * it exports. Written as `registry.json` into the configured output root, and

@@ -1,5 +1,5 @@
 /**
- * JSXAttribute → `AttributeIR`/`ComposeAttrIR` classification (ADR 0023 sub-
+ * JSXAttribute → `AttributeIR`/`ComposeAttrIR` classification (ADR 0024 sub-
  * design 10). One parser (`classifyPassEntries`) shared by both element
  * kinds — raw dashed tags (`classifyAttribute`) and composed PascalCase
  * elements (`classifyComposeAttribute`) — so `pass={{ … }}` has exactly one
@@ -22,7 +22,7 @@ import { bindsExposedArg } from './reactivity'
 
 /**
  * Parse `pass={{ prop: thunk, … }}` entries — shared by raw dashed tags and
- * composed elements (ADR 0023 sub-design 10: one dispatch path, not two). A
+ * composed elements (ADR 0024 sub-design 10: one dispatch path, not two). A
  * `{ get, set }` descriptor entry lowers to a two-way `pass()` accessor
  * (ADR 0012, LT-017); anything else is an outright invalid entry.
  */
@@ -177,7 +177,7 @@ export const classifyAttribute = (
 		// against a hoisted setup const — the handler is exactly its
 		// initializer, so two `@if` branches sharing the identifier get
 		// identical handler text automatically (union addressing requires
-		// this, ADR 0023 LT-008).
+		// this, ADR 0024 LT-008).
 		const resolvedName =
 			isNode(raw) && raw.type === 'Identifier' ? identifierName(raw) : null
 		const resolved = resolvedName ? ctx.setupInits.get(resolvedName) : undefined
@@ -328,7 +328,7 @@ export const classifyAttribute = (
 /**
  * Classify one JSXAttribute on a composed (PascalCase) element. `ref` keeps
  * its usual meaning; `pass={{ … }}` is the sole client-prop interop channel
- * (ADR 0023 sub-design 10 — same dispatch as raw dashed tags); everything
+ * (ADR 0024 sub-design 10 — same dispatch as raw dashed tags); everything
  * else is a server arg forwarded verbatim into the child's `render<Name>()`
  * call — no reactive-shape inference (amends sub-design 4's raw-element
  * dispatch).

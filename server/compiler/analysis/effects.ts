@@ -535,7 +535,7 @@ const checkPassEntries = (
 /**
  * Validate and lower one target's `pass={{ }}` entries into `pass` effect
  * plans — shared by raw dashed-tag elements and composed elements, the
- * two `pass={{ }}` addressing paths (ADR 0023 sub-design 10).
+ * two `pass={{ }}` addressing paths (ADR 0024 sub-design 10).
  */
 const emitPassEntries = (
 	fx: EffectsContext,
@@ -713,7 +713,7 @@ const emitConstructEffects = (
 					)
 			}
 			if (isCustom) {
-				// ADR 0023 sub-design 4 (amended by sub-design 10): a
+				// ADR 0024 sub-design 4 (amended by sub-design 10): a
 				// function-valued attribute is only ever a reactive binding
 				// on NATIVE elements. Custom-element interop is solely
 				// through the explicit `pass={{ }}` attribute below — one
@@ -1221,7 +1221,7 @@ const handleSwitchEffects = (fx: EffectsContext, node: SwitchNode): void => {
 }
 
 /**
- * An async boundary (`@try`/`@pending`/`@catch`, ADR 0023 sub-design 13,
+ * An async boundary (`@try`/`@pending`/`@catch`, ADR 0024 sub-design 13,
  * LT-012; ADR 0037 s4, LT-276): `lowerTry` already proved each arm has
  * exactly one root element. The server renders the winner live beside the
  * three arm templates (`emit-server.ts`); the client switches them through
@@ -1389,7 +1389,7 @@ const passObjectKey = (node: ComposeNode): string =>
 
 /**
  * A `first()` reference and/or `pass={{ }}` on a composed element (ADR
- * 0023 sub-design 10). The query's selector is always the compiler's own:
+ * 0024 sub-design 10). The query's selector is always the compiler's own:
  * the child's tag from the registry, plus — when this template composes
  * the same child more than once — a static `class`/`id`/`data-*` that
  * uniquely tells the site apart (`composeDiscriminatorClause`, LT-089;

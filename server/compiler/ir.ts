@@ -333,7 +333,7 @@ export type TemplateNode =
 	| {
 			/**
 			 * A capitalized JSX tag bound to an `import` of another `.tsrx`
-			 * module (ADR 0023 sub-design 10) — composes that component: the
+			 * module (ADR 0024 sub-design 10) — composes that component: the
 			 * server splices its `render<Name>()` output inline. `source` is
 			 * the import specifier resolved to a repo-relative path, used to
 			 * look up the child's registry entry (name, tag, generated server
@@ -398,7 +398,7 @@ export type InitialWinner =
 	| { fold: true }
 
 /**
- * One `pass={{ prop: thunk }}` entry (ADR 0023 sub-design 10). `thunk`/
+ * One `pass={{ prop: thunk }}` entry (ADR 0024 sub-design 10). `thunk`/
  * `thunkText` is always the getter; a `{ get, set }` descriptor additionally
  * carries `setThunk`/`setThunkText` for the write-back accessor (LT-017).
  */
@@ -514,7 +514,7 @@ export type AttributeIR =
 	  }
 
 /**
- * Attributes on a composed (PascalCase) element (ADR 0023 sub-design 10).
+ * Attributes on a composed (PascalCase) element (ADR 0024 sub-design 10).
  * Every non-`ref` attribute is a **server arg** — passed verbatim into the
  * child's `render<Name>()` call regardless of value shape (a callback-typed
  * param stays a callback; it is never reinterpreted as a reactive binding).
@@ -564,7 +564,7 @@ export type EachForIR = ForIRBase & {
 }
 
 /**
- * A `@for` over a declared reactive `List` (ADR 0023 sub-design 5,
+ * A `@for` over a declared reactive `List` (ADR 0024 sub-design 5,
  * milestone 3): the server renders initial keyed items in place plus an
  * extracted `<template>` whose item hole becomes a `<slot>` marker, and the
  * client lowers to `reconcile()` (ADR 0017).
@@ -583,7 +583,7 @@ export type ReconcileForIR = ForIRBase & {
 export type ForIR = EachForIR | ReconcileForIR
 
 /**
- * Extension activation declared as `export const config = { … }` (ADR 0023
+ * Extension activation declared as `export const config = { … }` (ADR 0024
  * sub-design 8). Zero-import, statically-analyzable; the compiler validates
  * the keys and lowers them to `defineComponent`'s third argument.
  */

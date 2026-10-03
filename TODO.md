@@ -97,7 +97,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-414.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-415.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -658,7 +658,7 @@ recorded against the 30.4k opening measurement.
   dot-segment scan semantics on BOTH implementations; `check:portability` stays 3/3
   byte-identical.
 
-- [ ] LT-393: Sweep the stale ADR 0023 citations in compiler module docs to ADR 0024 (LT-359 residue).
+- [x] LT-393: Sweep the stale ADR 0023 citations in compiler module docs to ADR 0024 (LT-359 residue). — done ✓
   **Area:** compiler
   **Context:** The 2026-10-01 ruling fixed the compiler ADR's number: the isomorphic-format
   ADR is 0024, and its sub-design numbers already match — only the number is wrong.
@@ -675,7 +675,10 @@ recorded against the 30.4k opening measurement.
   bind-helper map-form ADR 0023 stays. Byte-identity gates protect the sweep (goldens
   unchanged proves comment-only).
   **Check:** `grep -rn "ADR 0023" server/compiler/` returns only genuine bind-helper
-  citations; corpus goldens and parity byte-identical; tsc clean.
+  citations **in comments** (Architect, 2026-10-03: the four string citations are output and
+  moved to LT-414); corpus goldens and parity byte-identical; tsc clean.
+  **Changed:** comment and JSDoc citations in 27 `server/compiler/` modules → ADR 0024 (first
+  `do-task` run). `css.ts` had none left. Gates green.
 
 - [x] LT-410: `errors.md` rows for LTC071 and the widened LTC051 (LT-402 handoff, found by the `writer` at the 2026-10-02 changelog prune). — done ✓
   **Area:** docs

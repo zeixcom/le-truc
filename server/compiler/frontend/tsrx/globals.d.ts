@@ -1,5 +1,5 @@
 /**
- * Ambient identifiers for raw `.tsrx` sources (ADR 0023 sub-design 6;
+ * Ambient identifiers for raw `.tsrx` sources (ADR 0024 sub-design 6;
  * import policy per ADR 0024 sub-design 16).
  *
  * A `.tsrx` source imports the REAL package exports its setup code uses

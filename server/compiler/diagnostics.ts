@@ -1599,7 +1599,9 @@ export const diagnostic = {
 							const tags = boundaries.get(source) ?? []
 							return `${source} stops at ${tags.length ? tags.map(t => `<${t}>`).join(', ') : 'no custom element'}`
 						})
-						.join('; ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make every member render the same custom elements.`
+						.join(
+							'; ',
+						)} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make every member render the same custom elements.`
 				: `Variant set \`${tag}\` compiles to different CSS across its members: ${sources.join(', ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make the styles of every member byte-identical: copy the styles of the served member into the others.`,
 		),
 

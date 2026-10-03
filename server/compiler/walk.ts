@@ -187,7 +187,7 @@ export const collectAttrs = (
 
 /**
  * Every composed (PascalCase) element in a component's template, for
- * cross-file resolution against the corpus-wide registry (ADR 0023
+ * cross-file resolution against the corpus-wide registry (ADR 0024
  * sub-design 10). Traversal via `walkTemplate` (LT-042): composition is a
  * boundary (composed children are the child component's own template);
  * `@pending` arms are entered like every arm (LT-230) — a compose site

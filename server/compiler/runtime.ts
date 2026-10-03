@@ -6,7 +6,7 @@
  * constructors and `expose()` — must resolve to server-side shims. On the
  * server a signal is its initial value in a box: `.get()` reads it once and
  * `.set()` is a no-op, because the server renders once and never reacts
- * (ADR 0023 sub-design 2: "signals as plain values").
+ * (ADR 0024 sub-design 2: "signals as plain values").
  *
  * This module is imported by *generated* code (`server/generated/components/`),
  * never by the compiler itself.
@@ -72,7 +72,7 @@ export const createCell = <T>(initial: T): ServerCell<T> => ({
  * (string prefix → `prefix0…`, function → `fn(item) ?? auto`, none →
  * positional `0…`) — the server render's `data-key` values must match the
  * keys the client's real `createList` generates for the same seed, or
- * `reconcile()` adoption fails (ADR 0023 sub-design 3: one seeding story).
+ * `reconcile()` adoption fails (ADR 0024 sub-design 3: one seeding story).
  */
 export const createList = <T>(
 	seed: Iterable<T> = [],
@@ -103,7 +103,7 @@ export const createStore = <T>(initial: T): ServerCell<T> => createCell(initial)
 export const createState = <T>(initial: T): ServerCell<T> => createCell(initial)
 
 /**
- * Marks a `ServerCell` as pending (ADR 0023 sub-design 13, async boundaries,
+ * Marks a `ServerCell` as pending (ADR 0024 sub-design 13, async boundaries,
  * LT-012) — never exposed on the type; `isPending` is the only sanctioned way
  * to read it.
  */
@@ -116,7 +116,7 @@ const isAsyncFunction = (fn: (...args: never[]) => unknown): boolean =>
 
 /**
  * `deriveCell(fn, options?)` → box over `fn()` evaluated once, UNLESS `fn` is
- * an `async` function (ADR 0023 sub-design 13): the server render is
+ * an `async` function (ADR 0024 sub-design 13): the server render is
  * synchronous and never awaits, so an async compute is never invoked at
  * all — calling it would produce a dangling, uncaught Promise. Instead: an
  * `{ initial }` option seeds the retained value directly (the `ok` arm,
@@ -146,7 +146,7 @@ export const deriveCell = <T>(
 }
 
 /**
- * Whether an async-derived cell is pending at render time (ADR 0023 sub-
+ * Whether an async-derived cell is pending at render time (ADR 0024 sub-
  * design 13) — `@try`/`@pending`/`@catch` async boundaries route on this,
  * mirroring `@zeix/cause-effect`'s real `isPending()` behaviorally (a
  * different underlying representation server-side, since the server shim
@@ -248,7 +248,7 @@ export const defineMethod = <T extends (...args: any[]) => void>(fn: T): T => fn
 
 /**
  * Parser-factory shims (`asString` etc.). The verbatim setup calls them when
- * `expose()` carries Parser-backed attribute-driven props (ADR 0023
+ * `expose()` carries Parser-backed attribute-driven props (ADR 0024
  * sub-design 8); their results are metadata on the server — the real parsers
  * run in the browser at connect time against the host attribute (ADR 0003).
  */

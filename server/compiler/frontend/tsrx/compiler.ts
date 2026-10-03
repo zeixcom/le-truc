@@ -2,7 +2,7 @@
  * TSRX compiler front end for `.tsrx` sources — the surface-specific half.
  * Everything downstream consumes the component IR produced here.
  * `@tsrx/core` VALUES enter through the `core.ts` pin adapter (pinned
- * 0.1.63, ADR 0023 sub-design 2; LT-040) — a pin upgrade touches only that
+ * 0.1.63, ADR 0024 sub-design 2; LT-040) — a pin upgrade touches only that
  * file and core-shim.d.ts — and the IR type vocabulary shared by the rest
  * of the compiler lives in `ir.ts` (LT-039).
  *

@@ -360,7 +360,7 @@ export const MANAGED_FORM_MEMBERS: ReadonlySet<string> = new Set<string>([
  * Client-only context helpers (query/effect primitives) that exist only in
  * the generated client factory's context object — never in the server render
  * function's scope, even though `component.setup`'s plain `const` statements
- * are emitted verbatim into both (ADR 0023 sub-design 12). A setup const that
+ * are emitted verbatim into both (ADR 0024 sub-design 12). A setup const that
  * calls one of these directly used to be the `LTC013` error; under tiering
  * (LT-165 step 5, ADR 0029 s5) it is a routing signal, and the tier-aware
  * server emit drops the statement from the render function rather than

@@ -1,5 +1,5 @@
 /**
- * `export const config = { … }` extraction (ADR 0023 sub-design 8) —
+ * `export const config = { … }` extraction (ADR 0024 sub-design 8) —
  * extension activation, one small self-contained parse `compiler.ts`'s
  * `compileSource` calls per module-level statement. (Compose-import
  * resolution moved to `imports.ts`, LT-044.)
@@ -13,7 +13,7 @@ import type { ConfigIR } from './ir'
 
 /**
  * Extract and validate `export const config = { … }` — extension activation
- * (ADR 0023 sub-design 8). Unknown keys, wrong value shapes, and combined
+ * (ADR 0024 sub-design 8). Unknown keys, wrong value shapes, and combined
  * form variants are errors; the observedAttributes ⊆ Parser-expose check
  * happens after the setup loop (expose is parsed later in source order).
  */

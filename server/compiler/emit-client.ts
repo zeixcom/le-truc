@@ -1,5 +1,5 @@
 /**
- * Client-module emitter (ADR 0023 milestone 2, LT-002).
+ * Client-module emitter (ADR 0024 milestone 2, LT-002).
  *
  * Renders the analysis plan into a `defineComponent()` factory whose
  * imports come solely from `@zeix/le-truc` (signal constructors via the CE
@@ -512,7 +512,7 @@ const messagePreambleLines = (
  * @param options.childImports - Registry tag → module specifier (relative to
  *   the generated dir); every addressed child component is side-effect
  *   imported so its `declare global` tag-map entry is in scope (type flow
- *   by projection, ADR 0023 sub-design 6)
+ *   by projection, ADR 0024 sub-design 6)
  */
 export const emitClientModule = (
 	component: ComponentIR,
@@ -906,7 +906,7 @@ export const emitClientModule = (
 		: '{}'
 	const typeArg = component.propsTypeName ? `<${component.propsTypeName}>` : ''
 
-	// Extension activation (ADR 0023 sub-design 8): config keys lower to the
+	// Extension activation (ADR 0024 sub-design 8): config keys lower to the
 	// third argument. The form variant always leads — that is what selects
 	// the FormFactoryContext overload (ADR 0019's ordering rule, enforced
 	// structurally by construction).

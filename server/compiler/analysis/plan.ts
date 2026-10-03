@@ -93,7 +93,7 @@ export type HarvestPlan =
 			 * Arg-substituted seed (LT-008): the initializer reads server args
 			 * (e.g. `createCell(value.length)`); the client seeds from the
 			 * args' rendered DOM sites — the param identifier is replaced by
-			 * an element-derived read (DOM-is-truth, ADR 0023 sub-design 3).
+			 * an element-derived read (DOM-is-truth, ADR 0024 sub-design 3).
 			 */
 			kind: 'substitute'
 			signal: string
@@ -428,7 +428,7 @@ export type PassShared = {
 	/**
 	 * The compose-reference resolution (LT-127): `skipped` in the
 	 * registry-discovery pass, else `resolved` — carrying the composed
-	 * (PascalCase) elements' targets keyed by resolved source path (ADR 0023
+	 * (PascalCase) elements' targets keyed by resolved source path (ADR 0024
 	 * sub-design 10), and the compose sites an ambiguous `first()` matched,
 	 * already reported as LTC027, so `emitComposeEffects` must not address
 	 * them by tag or report them a second time.

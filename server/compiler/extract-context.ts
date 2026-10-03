@@ -62,7 +62,7 @@ export type ExtractContext = {
 	argNames: Set<string>
 	/**
 	 * Local name → import specifier resolved to a repo-relative `.tsrx` path,
-	 * for composed (PascalCase) elements (ADR 0023 sub-design 10).
+	 * for composed (PascalCase) elements (ADR 0024 sub-design 10).
 	 */
 	composeImports: ReadonlyMap<string, string>
 	/**

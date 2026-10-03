@@ -2,7 +2,7 @@
  * Ambient type shim for the pinned `@tsrx/core` dependency.
  *
  * The package's main entry ships no usable types for our surface (its
- * `types` field points at a `.js` file), and ADR 0023 pins `@tsrx/core` at
+ * `types` field points at a `.js` file), and ADR 0024 pins `@tsrx/core` at
  * 0.1.63 behind a single emitter module (`server/compiler/frontend/tsrx/compiler.ts`). This
  * shim is that boundary's type side: it declares exactly the functions the
  * compiler uses, over the loose `TsrxNode` structural type, so a pin
@@ -27,7 +27,7 @@ declare module '@tsrx/core' {
 	/**
 	 * Stylesheet of a `<style>` element. `.source` is the verbatim CSS text
 	 * (including original indentation); `renderStylesheets()` class-hashing is
-	 * deliberately NOT used (ADR 0023 sub-design 2).
+	 * deliberately NOT used (ADR 0024 sub-design 2).
 	 */
 	export function getStyleElementStylesheet(node: TsrxNode): {
 		source: string

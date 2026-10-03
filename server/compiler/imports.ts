@@ -6,7 +6,7 @@
  * `plain-imports.ts` (plain-import placement):
  *
  * 1. `parseComposeImports` — named imports of sibling `.tsrx` modules
- *    (ADR 0023 sub-design 10), the composable targets.
+ *    (ADR 0024 sub-design 10), the composable targets.
  * 2. `parseLeTrucImports`/`placeLeTrucImports` — authored
  *    `import { … } from '@zeix/le-truc'` statements: real package exports
  *    (ADR 0024 sub-design 16), placed per name against the runtime-harness
@@ -76,7 +76,7 @@ const normalize = (p: string): string => {
 /* === Compose imports (from config.ts) === */
 
 /**
- * Named imports of other component modules (ADR 0023 sub-design 10, dual
+ * Named imports of other component modules (ADR 0024 sub-design 10, dual
  * surface per ADR 0032 sub-design 6): local binding name → import specifier
  * resolved to a repo-relative path. `filename` is itself repo-relative, so
  * the specifier resolves against its directory. Both authored extensions
@@ -164,7 +164,7 @@ export const parseLeTrucImports = (ast: AstNode): LeTrucImport[] => {
 
 /**
  * Exports of the server runtime harness (`server/compiler/runtime.ts`,
- * ADR 0023 sub-design 2): the names a generated SERVER module binds from the
+ * ADR 0024 sub-design 2): the names a generated SERVER module binds from the
  * harness import `emit-server.ts` synthesizes. An authored
  * `'@zeix/le-truc'` import must not re-bind any of them server-side — two
  * import statements can't share a local name, and the harness's plain-value

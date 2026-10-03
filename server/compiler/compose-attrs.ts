@@ -20,7 +20,7 @@ import { attr } from './runtime'
  * child component `tag`.
  *
  * `markup` must start with the child's own root open tag — a generated
- * server module's first push is always its root element (ADR 0023
+ * server module's first push is always its root element (ADR 0024
  * sub-design 5's single-root render shape). Anything else is a compiler
  * invariant violation and throws rather than silently dropping the
  * attributes back out of the DOM.

@@ -1215,3 +1215,17 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   `contributor` skill (owner's `.agents/` pass, via `.agents-proposals/`).
   **Channel/tier:** build check, tier 1 Prevented.
   **Verification:** green at HEAD; a fixture skill file naming a retired code or a removed export fails it.
+
+- [ ] LT-414: Move the four non-comment "ADR 0023" citations in `server/compiler/` to ADR 0024 (LT-393 residue).
+  **Area:** compiler
+  **Context:** LT-393 swept the comments. Four strings remain, and all mean ADR 0024: the
+  generated-module headers in `emit-server.ts` (~L1701, "milestone 1") and `emit-client.ts`
+  (~L936, "milestone 2"), and diagnostic copy in `analysis/effects.ts` (~L1251, "ADR 0023
+  sub-design 13") and `frontend/tsrx/compiler.ts` (~L84, "see ADR 0023 sub-design 2"). The
+  headers reach every generated module and the `.snap` goldens, so re-bless them in the same
+  change and state that the only golden diff is the header. The copy follows `writer` →
+  error-messages; check message-substring tests first. Consider dropping the ADR number from
+  the generated header altogether: a published artifact should not cite an internal ADR.
+  **Channel/tier:** none — copy and generated-comment change.
+  **Check:** `grep -rn "ADR 0023" server/compiler/` returns only bind-helper citations; the
+  golden diff is header-only; server suite green.

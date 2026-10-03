@@ -1,5 +1,5 @@
 /**
- * Generated-file ↔ source-file span mapping (LT-011, ADR 0023 sub-design 6
+ * Generated-file ↔ source-file span mapping (LT-011, ADR 0024 sub-design 6
  * amendment). `createVolarMappingsResult` demands a source map that covers
  * every source-AST token — an invariant only Ripple's own esrap-shaped
  * transforms satisfy (see the LT-004 probe). Our split compiler instead
