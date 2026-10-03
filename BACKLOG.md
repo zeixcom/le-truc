@@ -981,6 +981,7 @@ to `TODO.md`.
   while there); `test:src` green.
 
 - [x] LT-134: LTC035 and LTC042 give opposite advice on the same construct (LT-131 review finding). — closed as moot (Architect, 2026-10-02)
+  **Area:** compiler
   **Ruling:** LTC035 retired at LT-275 — template-cloned arms keep every non-winning arm
   out of the document, so the diagnostic loop this task described cannot arise. LTC038
   (duplicate compose-site ids) never had the loop: its fix ("distinct ids, or address the
