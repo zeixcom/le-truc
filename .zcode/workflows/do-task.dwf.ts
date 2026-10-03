@@ -547,8 +547,9 @@ for (let n = 0; n < MAX_TASKS; n++) {
 	// The branch commits before the suffix flips, so "pending review" always
 	// means a committed branch. Only a done run commits: blocked work stays
 	// uncommitted on its worktree.
+	const changedPaths = handoff.changedPaths ?? []
 	let committed: { commit: string; subject: string; residue: string[] } | undefined
-	if (handoff.outcome === 'done' && annotation?.commitWritten && (handoff.changedPaths ?? []).length) {
+	if (handoff.outcome === 'done' && annotation?.commitWritten && changedPaths.length) {
 		phase('Commit the task branch')
 		const commitRun = await world.run('bun', [
 			'run',
@@ -558,7 +559,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
 			'--message-file',
 			commitMsgPath,
 			'--',
-			...handoff.changedPaths,
+			...changedPaths,
 		])
 		if (commitRun.exitCode !== 0) {
 			log(
@@ -566,10 +567,15 @@ for (let n = 0; n < MAX_TASKS; n++) {
 			)
 		} else {
 			try {
-				committed = JSON.parse(commitRun.stdout)
-				log(`${task.id}: committed ${committed.commit} — ${committed.subject}`)
-				if (committed.residue.length)
-					log(`${task.id}: residue left unstaged: ${committed.residue.join(', ')}`)
+				const parsed = JSON.parse(commitRun.stdout) as {
+					commit: string
+					subject: string
+					residue: string[]
+				}
+				committed = parsed
+				log(`${task.id}: committed ${parsed.commit} — ${parsed.subject}`)
+				if (parsed.residue.length)
+					log(`${task.id}: residue left unstaged: ${parsed.residue.join(', ')}`)
 			} catch {
 				log(`${task.id}: the commit JSON was unreadable: ${tail(commitRun.stdout)}`)
 			}
