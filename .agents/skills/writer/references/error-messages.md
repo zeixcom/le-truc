@@ -100,7 +100,7 @@ An error message has more downstream copies than any other string in the project
 | Caller-side `reason` strings | `src/component.ts`, `src/helpers/reactive.ts`, `src/bindings.ts` — half the sentence lives here |
 | `skills/le-truc/references/errors.md` | One row per error: what fired, why, how to fix, tier. Do not restate the message — point at the condition |
 | `skills/le-truc/SKILL.md` § When debugging | Routes named errors to `errors.md`; a new *class* of error may need a step |
-| `.agents/skills/contributor/references/runtime-internals.md` (protected — propose via `.agents-proposals/`) | Any prose describing how the error surfaces (this is where a stale "uncaught `pageerror`" claim survived the ADR that retired it) |
+| The JSDoc of the function that surfaces the error, or `AGENTS.md` for a cross-cutting surprise (never `runtime-internals.md` — it is a pointer file, not a content home) | Any prose describing how the error surfaces |
 | `docs-src/pages/` | Prose naming the error: `props.md`, `components.md`, `extensions.md`, `async.md`, `api.md` |
 | `docs-src/api/classes/*.md` | **Generated.** Never hand-edit — regenerate with `bun run build:docs` after the JSDoc change |
 | **Message-substring tests** | See below — these fail the build, so find them first |
