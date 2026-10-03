@@ -29,7 +29,7 @@ When a doc and the source disagree, the source wins. Fix the doc in the same cha
 
 ## Gates
 
-Run the area's gates before you mark a task done. Add any that the task's `**Gates:**` line lists. Report each gate's real result. A red gate is not done, and a flaky one is re-run once before you diagnose it (see `NOTES.md` for the known flakes).
+Run the area's gates before you mark a task done. Add any that the task's `**Gates:**` line lists. A red gate is not done, and a flaky one is re-run once before you diagnose it (see `NOTES.md` for the known flakes). The `do-task` workflow verifies the full gate list itself — when you work a task through it, leave your work green and report no gate results; when you work a task by hand, report each gate's real result in the handoff.
 
 | Area | Default gates |
 |---|---|

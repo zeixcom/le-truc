@@ -58,10 +58,9 @@ const HANDOFF = {
     changed: { type: 'array', items: { type: 'string' }, description: 'path plus what changed, one per entry' },
     how: { type: 'string' },
     check: { type: 'string', description: 'Where a reviewer should look' },
-    gates: { type: 'array', items: { type: 'object', properties: { cmd: { type: 'string' }, pass: { type: 'boolean' }, note: { type: 'string' } }, required: ['cmd', 'pass'] } },
     blocker: { type: 'string', description: 'When blocked: the decision the task does not contain' },
   },
-  required: ['outcome', 'reviewClass', 'errorCopyChanged', 'changed', 'gates'],
+  required: ['outcome', 'reviewClass', 'errorCopyChanged', 'changed'],
 }
 
 const GATES = {
@@ -161,7 +160,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
     (setup.rework
       ? `\nThis is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log of the main checkout). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green.`
       : '') +
-    `\nRun ${GATE_TABLE}${setup.gates?.length ? ` (${setup.gates.join(', ')})` : ''} and report each real result — from inside the worktree. Report each gate as the bare package.json script name (for example \`test:server\`), not the full command line. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file.\n` +
+    `\nLeave your work green: run the gates you judge relevant (${GATE_TABLE}${setup.gates?.length ? `, plus the entry's (${setup.gates.join(', ')})` : ''}) and fix failures before handoff — from inside the worktree. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The gates agent verifies the full list independently after your turn, so report no gate results.\n` +
     `If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. ` +
     `Boundaries: the worktree's BACKLOG.md, TODO.md, DONE.md, NOTES.md, .agents/ and .vscode/ are read-only references — the queue is managed in the main checkout, so never edit those files here, and never stage or commit anything (the owner commits). Do not write the status suffix or handoff fields.`,
     { label: `implement ${setup.id}`, phase: 'Implement', schema: HANDOFF },
@@ -190,7 +189,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
 
     const [g, ...r] = await parallel([
       () => agent(
-        `Re-run the gates for ${describe(setup)} independently inside the git worktree ${setup.worktree}: ${GATE_TABLE}${setup.gates?.length ? ` (${setup.gates.join(', ')})` : ''}. ${GATE_RULES} Re-run a failing gate once to rule out a flake (NOTES.md lists known flakes). Do not edit any file. Report each command's real result.`,
+        `Re-run the gates for ${describe(setup)} independently inside the git worktree ${setup.worktree}. The gate list is deterministic — do not judge it: the area's defaults from the contributor skill's Gates table, the entry's Gates line (${setup.gates?.join(', ') || 'none'}), plus these path rules over \`git -C ${setup.worktree} diff --name-only HEAD\` and \`git -C ${setup.worktree} status --porcelain\` — src/** → check:size; any .tsrx file → test:variants; server/compiler/ or docs-src/ → build:docs + check:links; examples/ → bun run test (Playwright); and Playwright too when the area is runtime and src/ changed. ${GATE_RULES} Re-run a failing gate once to rule out a flake (NOTES.md lists known flakes). Do not edit any file. Report each command's real result.`,
         { label: `gates ${setup.id}`, phase: 'Verify', schema: GATES, effort: 'low' },
       ),
       ...lenses.map(l => () => agent(
@@ -256,7 +255,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
     branch: setup.branch,
     worktree: setup.worktree,
     changed: handoff.changed,
-    gates: (gates?.results || handoff.gates).map(x => `${x.pass ? '✓' : x.unrunnable ? '⊘' : '✗'} ${x.cmd}`),
+    gates: (gates?.results || []).map(x => `${x.pass ? '✓' : x.unrunnable ? '⊘' : '✗'} ${x.cmd}`),
     ownerMustRun: unrunnable(gates).map(x => x.cmd),
     minorFindings: minors.map(f => `${f.file || ''} ${f.issue}`.trim()),
     blocker: handoff.blocker,

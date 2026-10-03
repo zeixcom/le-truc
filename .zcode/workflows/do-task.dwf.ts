@@ -68,7 +68,6 @@ interface Handoff {
 	how?: string
 	/** Where a reviewer should look. */
 	check?: string
-	gates: { cmd: string; pass: boolean; note?: string }[]
 	/** When blocked: the decision the task does not contain. */
 	blocker?: string
 }
@@ -354,7 +353,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
 				(task.rework
 					? `\nThis is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log of the main checkout). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green.`
 					: '') +
-				`\nRun ${GATE_TABLE}${task.gates?.length ? ` (${task.gates.join(', ')})` : ''} and report each real result — from inside the worktree. Report each gate as the bare package.json script name (for example \`test:server\`), not the full command line — the script re-runs them from those names in your worktree. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The script re-runs the gates independently after your turn, so report honestly and never a gate you did not run.\n` +
+				`\nLeave your work green: run the gates you judge relevant (${GATE_TABLE}${task.gates?.length ? `, plus the entry's (${task.gates.join(', ')})` : ''}) and fix failures before handoff — from inside the worktree. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The script verifies the full gate list independently after your turn, so report no gate results.\n` +
 				`Boundaries: the worktree's BACKLOG.md, TODO.md, DONE.md, NOTES.md, .agents/ and .vscode/ are read-only references — the queue is managed in the main checkout, so never edit those files here, and never stage or commit anything (the owner commits). If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. Do not write the handoff fields from outside — report your own result honestly.`,
 		)
 	} catch (e) {
@@ -364,17 +363,49 @@ for (let n = 0; n < MAX_TASKS; n++) {
 		break
 	}
 
-	// The gate list: area defaults, the entry's Gates line, and any extra gate
-	// the implement agent reports it ran (the conditional ones in the table) —
-	// all normalized to bare script names before deduplication. Gates that read
-	// built docs/ get build:docs first, which a fresh worktree lacks.
+	// The gate list: area defaults and the entry's Gates line, then path rules
+	// (below). Normalized to bare script names before deduplication. Gates that
+	// read built docs/ get build:docs first, which a fresh worktree lacks.
 	const gateSet = new Set<string>([
 		...(AREA_GATES[area] ?? []),
 		...(task.gates ?? []).map(normalizeGate),
 	])
-	for (const g of handoff.gates) {
-		gateSet.add(normalizeGate(g.cmd))
+	// Conditional-gate discovery is deterministic: the contributor skill's
+	// Gates table conditions applied to the worktree's changed paths. The rules
+	// are deliberately over-approximate — a wasted gate minute is cheaper than
+	// unverified work. Playwright rides only where example behavior can change:
+	// examples touched, or a runtime-area change to src/.
+	const paths: string[] = []
+	try {
+		const diff = await world.run('git', ['-C', wt.path, 'diff', '--name-only', 'HEAD'])
+		const status = await world.run('git', ['-C', wt.path, 'status', '--porcelain'])
+		for (const line of diff.stdout.split('\n')) {
+			const p = line.trim()
+			if (p) paths.push(p)
+		}
+		for (const line of status.stdout.split('\n')) {
+			if (!line.trim()) continue
+			const p = line.slice(3).split(' -> ').pop()?.trim() ?? ''
+			if (p) paths.push(p)
+		}
+	} catch {
+		// No diff readable — the area defaults and the entry's Gates line still
+		// decide.
 	}
+	const PATH_GATES: [RegExp, string][] = [
+		[/^src\//, 'check:size'],
+		[/\.tsrx$/, 'test:variants'],
+		[/^(server\/compiler|docs-src)\//, 'build:docs'],
+		[/^(server\/compiler|docs-src|src)\//, 'check:links'],
+		[/^examples\//, 'test'],
+	]
+	for (const [pattern, gate] of PATH_GATES) {
+		if (paths.some((p) => pattern.test(p))) gateSet.add(gate)
+	}
+	if (area === 'runtime' && paths.some((p) => /^src\//.test(p))) {
+		gateSet.add('test')
+	}
+
 	const dropped = [...gateSet].filter(Boolean).filter((g) => !isRunnableGate(g))
 	if (dropped.length)
 		log(
@@ -510,9 +541,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
 		branch: wt.branch,
 		worktree: wt.path,
 		changed: handoff.changed,
-		gates: gates.length
-			? gates.map((x) => `${x.pass ? '✓' : x.unrunnable ? '⊘' : '✗'} ${x.cmd}`)
-			: handoff.gates.map((x) => `${x.pass ? '✓' : '✗'} ${x.cmd}${x.note ? ` — ${x.note}` : ''}`),
+		gates: gates.map((x) => `${x.pass ? '✓' : x.unrunnable ? '⊘' : '✗'} ${x.cmd}`),
 		ownerMustRun: gates.filter((x) => !x.pass && x.unrunnable).map((x) => x.cmd),
 		minorFindings: minors.map((f) => `${f.file ?? ''} ${f.issue}`.trim()),
 		blocker: handoff.blocker,

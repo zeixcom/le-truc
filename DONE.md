@@ -326,7 +326,7 @@ Full entry text: `git log -p -- DONE.md`.
   test:variants unrun (Playwright times out in sandbox).
 
 
-- [x] LT-378: The `@if` branch signature ignores which prop a prop-bound attribute binds (LT-368 review). — done, pending review ⏳
+- [x] LT-378: The `@if` branch signature ignores which prop a prop-bound attribute binds (LT-368 review). — reviewed ✓
   **Area:** compiler
   **Context:** `constructSignatureOf` (`analysis/effects.ts`) keys each client-construct attribute
   as `bind:<name>=<text>`, but takes text only from `event`, `reactive`, `class-map` and
