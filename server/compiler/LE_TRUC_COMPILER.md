@@ -977,7 +977,7 @@ rides the build-report channel (`server/compiler/census.ts`'s generic
 `Census` records via `tierCensus`/`formatCensus`), and `check:corpus` prints it
 as its own section after the compile-warning baseline.
 
-Message copy is owned by the Tech Writer per ADR 0028's lifecycle; severity
+Message copy follows ADR 0028's lifecycle (`writer` → error-messages); severity
 follows the tiering decision recorded with each rule.
 
 **Vocabulary parity.** `vocabulary.ts`'s recognized-name sets are mirrored in

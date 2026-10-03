@@ -564,7 +564,7 @@ Every stage reports into one stream. **Errors fail the build.** Warnings are aut
 | --- | --- | --- |
 | `code` | `LTC###` | Closed vocabulary; public API from first publish; a number is never reused |
 | `severity` | `'error' \| 'warning'` | Follows the tiering decision recorded with each rule |
-| `message` | `string` | Tech Writer owns the copy |
+| `message` | `string` | Copy follows `writer` → error-messages |
 | `location` | `{ file, start, end }` | Source-mapped to the pre-adapter file |
 | `related` | `location[]` | E.g. the catalog entry for a mismatched argument |
 | `fix` | `{ description, edits }?` | Machine-applicable where safe |

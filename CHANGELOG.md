@@ -92,9 +92,8 @@
 - **`LTC051` names boundary drift**: variant-set members whose sheets match but whose composed-child boundaries differ now fail, naming each member's boundary set.
 - **New compiler dependencies**: `lightningcss-wasm` (pinned `1.33.0`), `css-tree`, `css-select` and `css-what` are now `dependencies`. All are pure JS or WASM, so the compiler stays portable across bun, node and deno.
 - **`SignalIR` splits by constructor family**: the compiler contract exports `DeclaredSignalIR`, `DerivedSignalIR` and `ContextSignalIR`, tagged by `family`. A context signal carries `fallback` and no `init`; narrow on `family`.
-- **`le-truc` skill references cover reactive conditions and the sanitizer**: `effects.md` documents the `reconcile()` arm form, reactive conditions and the async boundary, and `sanitize: sanitizeHtml`; `anti-patterns.md` gains the `sanitize: sanitizeHtml` fix. `errors.md` gains rows for `LTC056` and `LTC061`–`LTC070` and a Stylesheet band.
-- **`le-truc-dev` skill `non-obvious.md`**: documents arm adoption, re-cloning on re-entry and per-arm teardown.
-- **`tech-writer` skill `document-map.md`**: `styling.md`'s scope now covers compiled components' shadow-root CSS, and its compiled-styles section must say the same as `HOST_PROFILE.md` § Styles, in the same words.
+- **The `le-truc` and `cause-effect` skills ship in the package**: `skills/` is in `files`, so agents find them at `node_modules/@zeix/le-truc/skills/`. Both now hold only the non-obvious behaviors; signatures and JSDoc cover the rest. `le-truc` covers the `.tsx` default surface, the `LTC` codes and template-cloned arms, and its `errors.md` has a row for every emitted code (through `LTC071`) and runtime error class. `cause-effect` states the version it describes (1.5.x).
+- **In-repo agent skills consolidated**: three skills (`architect`, `contributor`, `writer`) replace six. Queue entries carry `**Area:**`, `**Needs:**` and `**Gates:**` instead of `**Skill:**`.
 - **The examples serve the compiled, scoped stylesheets**: `examples/main.css` imports each compiled component's emitted sheet instead of its hand-written file; `basic-number` and `card-mediaqueries` ship theirs for the first time. `module-codeblock`'s `pre`/`code` rules are now page-level `:global`, so they also reach nested instances.
 
 ### Removed

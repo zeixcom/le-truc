@@ -2,13 +2,13 @@
 
 Current iteration only. Part of the 3-file mini-kanban (owner, 2026-09-18) with `BACKLOG.md`
 (everything planned, out of iteration scope — new tasks are created there) and `DONE.md`
-(done-and-reviewed tasks since the last release, compacted for Changelog Keeper). Only the
-Architect moves tasks between files; developers annotate the status suffix on the entry in
+(done-and-reviewed tasks since the last release, compacted for the `writer`'s changelog pass). Only the
+Architect moves tasks between files; contributors annotate the status suffix on the entry in
 place. Task IDs are global and sequential across all three files.
 
 **Current iteration (opened 2026-10-02): the corpus port and the pre-publish reshapes.** The
 previous iteration (consolidate the compiler, then land the pre-publish reshapes: tracks A–D,
-LT-227–LT-406) is landed and reviewed. Changelog Keeper recorded it in `CHANGELOG.md
+LT-227–LT-406) is landed and reviewed. The `writer` recorded it in `CHANGELOG.md
 [Unreleased]` the same day and `DONE.md` was pruned. Its line-count record: `server/compiler/`
 measured 75 modules / ~30.4k lines on 2026-10-02 (non-test `.ts`), against the 27.0k baseline of
 2026-10-01. The net +3.4k is mostly the scoped-CSS track (`css-scope.ts`, the stylesheet parse)
@@ -60,19 +60,24 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓). Everything below is open.
-- **Design gates (architect, after gate zero).** LT-280 (per-item effect channels; owner grilling →
-  ADR 0024 s5 / ADR 0032 amendments → implementation tasks written into this file; LT-342
-  ruled with it). LT-334 (lazyload's boundary; its implementation task pairs with LT-390).
-  LT-409 (the shadow-root departures session; re-scopes LT-405/LT-407/LT-408).
-- **A — pre-publish reshapes.** (LT-370 →) LT-371 → LT-375 and LT-373 (in parallel) → LT-387.
-- **B — correctness.** After gate zero: LT-378, LT-391, LT-392, LT-356. After LT-371: LT-353,
-  LT-355.
-- **C — corpus port.** LT-280 → its implementation tasks → LT-109, LT-110, LT-111 (after LT-375,
-  LT-374 and LT-186; LT-374 and LT-186 after LT-371). LT-110 is LT-165 step 7's corpus pin.
-  LT-390 after LT-375 and LT-334's ruling.
-- **D — CSS departures.** LT-409 → LT-405, LT-407, LT-408 as re-scoped (or struck).
-- **Parallel slot (after gate zero).** LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
-  (docs-server-dev), LT-393 (comment-only sweep), LT-410 (the owner's `errors.md` rows).
+- **Design gates** — Area `design`: the Architect with the owner; `do-task` never picks them.
+  LT-280 (per-item effect channels; owner grilling → ADR 0024 s5 / ADR 0032 amendments →
+  implementation tasks written into this file; LT-342 ruled with it). LT-334 (lazyload's
+  boundary; its implementation task pairs with LT-390). LT-409 (the shadow-root departures
+  session; re-scopes LT-405/LT-407/LT-408).
+- **A — pre-publish reshapes** — the published diagnostic record, root-is-host and the
+  reactivity class, before new producers and new `.tsx` sources. LT-371 → LT-375 → LT-373 →
+  LT-387. (LT-370 is done. LT-375 and LT-373 each need only LT-371 and may run in parallel.)
+- **B — correctness** — the last iteration's silent miscompiles and drops. LT-378, LT-391,
+  LT-392, LT-356, then LT-353 and LT-355 (both need LT-371).
+- **C — corpus port** — every example folder served compiled (ruling 5). LT-374, LT-186 (both
+  need LT-371) → LT-280's implementation tasks (written in when its design rules) → LT-109,
+  LT-110, LT-111 (each needs LT-280, LT-375, LT-374 and LT-186) → LT-390 (needs LT-375, LT-334
+  and LT-385). LT-110 is LT-165 step 7's corpus pin.
+- **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
+  needs LT-409).
+- **Parallel slot** — independent work. LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
+  (server), LT-393 (comment-only sweep), LT-410 (the `errors.md` rows).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
@@ -92,14 +97,14 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-412.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-414.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
 ### Gate zero (closed 2026-10-02, b795ff3e)
 
 - [x] LT-370: Take the IR out of the public contract (D-25). — reviewed ✓
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** ADR 0034 s8 now says the IR is the lowering, internal, and may change in any
   release; ADR 0040's reshapes no longer gate the publish. `contract.ts` still exports
   `compileFromIR`, the IR types, `AstNode` and `SourceSpan`, and `contract.test.ts` plus the
@@ -138,7 +143,7 @@ recorded against the 30.4k opening measurement.
   `SuppressedSite` (`simulation/contract.ts`), and neither is exported, before or after this task.
 
 - [x] LT-335: The simulation realm attributes a composed child's late work to the next component (LT-105 review). — done ✓
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** In the sim-driver's shared realm, module-coloreditor's composed form-colorgraph
   draws after its render window closes. The `getContext` notice then lands on
   **module-colorinfo**, which has no canvas. `realm.ts` § Attribution documents late reports
@@ -172,7 +177,7 @@ recorded against the 30.4k opening measurement.
 ### Design gates
 
 - [ ] LT-280: Per-item effect channels in reactive-list loops — the lowering covers text fill + events and nothing richer (LT-266 evidence). **Design first (grilling); gates the loop-heavy composite migrations LT-109/LT-110/LT-111.**
-  **Skill:** architect (design + ADR) → le-truc-dev (implementation)
+  **Area:** design (then compiler)
   **Context:** The LT-266 size-bet conversion drafted module-todo on `.tsx` in full and drove
   it through the compiler until it hit structural walls; the evidence and full analysis are
   pinned in [spike/size-bet/FINDING.md](spike/size-bet/FINDING.md) § "The TSX conversion
@@ -199,16 +204,17 @@ recorded against the 30.4k opening measurement.
   machinery may share extraction/addressing vocabulary; both touch the reconcile container),
   LT-242 (any new diagnostic must diagnose identically on both surfaces from day one).
   **Obligations:** the rulings amend ADR 0024 sub-design 5 and likely ADR 0032 (key
-  spelling, equivalence scope) — record via `adr-keeper`, do not edit in place. Any new
-  diagnostic names **Tech Writer as copy reviewer** (developer drafts; Tech Writer owns
-  final wording) and enters the catalog per the error-message lifecycle.
+  spelling, equivalence scope) — record through the Architect (`architect/references/adr.md`), do not edit in place. Any new
+  diagnostic's copy follows `writer` → error-messages and enters the catalog per the
+  error-message lifecycle.
   **Verification:** the design ruling recorded (ADR + task split if implementation is more
   than one change); module-todo (or the design's chosen flagship probe) compiles on the
   sanctioned subset with per-item wiring surviving hydration; parity suite extended;
   `bun test server/tests`, typecheck, warning baseline 0.
 
 - [ ] LT-342: A `.tsx` spelling for the reactive-list key binding — capability parity (ADR 0032 s6), found by the LT-233 review.
-  **Skill:** architect (design), then le-truc-dev
+  **Area:** design (then compiler)
+  **Needs:** LT-280
   **Context:** `.tsrx` binds the item key in the loop header (`@for (const item of items; key k)`)
   and a per-item handler acts through it (`items.remove(k)`) — form-tokenbox and module-list do.
   `.tsx`'s `.map()` has no spelling: an index parameter over a List is LTC005 (keyed
@@ -230,7 +236,8 @@ recorded against the 30.4k opening measurement.
   **Gates:** the first `.tsx` variant of form-tokenbox or module-list.
 
 - [ ] LT-334: An async boundary lazyload can be spelled in (LT-104 review). **Gated by LT-276 (ADR 0037's template-cloned arms).**
-  **Skill:** architect → le-truc-dev
+  **Area:** design (then compiler)
+  **Needs:** LT-276
   **Context:** The owner kept lazyload's hand-written `watch(content, { ok, nil, stale, err })`
   (2026-09-25), because the compiled `<truc:try>` misses its contract four ways:
   1. an escaped `textContent` ok arm where lazyload needs sanitized HTML with `allow-scripts`;
@@ -247,12 +254,12 @@ recorded against the 30.4k opening measurement.
   moves here.
 
 - [ ] LT-409: Design session — the departures of compiled CSS from a real shadow root (ADR 0033 s7 as a whole; re-scopes LT-405, LT-407, LT-408).
-  **Skill:** architect (with the owner; ADR 0033 amendment through adr-keeper)
+  **Area:** design
   **Context:** The owner's ruling and the facts the session starts from, moved from the
   BACKLOG.md P2b preamble:
   **[2026-10-02, owner: LT-405 rolled back; LT-407 and LT-408 deferred from the current iteration's track D.]** All three explain or police a way compiled CSS departs from a real shadow root. The owner wants those departures re-evaluated in a design session (architect) before more of them are documented or given diagnostics: "the differences to real Shadow DOM become a burden that is increasingly hard to explain." The session reviews ADR 0033 s7's list as a whole (zero-specificity `:host(…)`, template-authored content inside a composed child, the LTC070/LTC071 refusals) and decides, for each, whether to keep it, close the gap in the emission, or reshape it. Re-scope all three from the session's outcome before picking any up.
 
-  **Known state after the rollback (2026-10-02, measured by le-truc-dev).** These are the input facts for the session.
+  **Known state after the rollback (2026-10-02, measured by a contributor).** These are the input facts for the session.
   - `:host { &:hover/&.x/&[open] { … } }` (and `:host(.a) { &:hover }`) gets no diagnostic. It emits exactly what the flat `:host:hover` would, `:where(my-box):hover` lowered and `:where(:scope):hover` native. That styles the host, where a shadow root matches nothing (`:host` is featureless; spec reasoning, not browser-checked).
   - The qualifier carries (0,1,0), so a page `my-box { … }` rule loses to it. That makes `styling.md:74` / `HOST_PROFILE.md:76` ("Page styles still win over `:host` rules") and § Differences' "behaves like the same sheet in a shadow root, except where …" overclaim for this form.
   - In lowered mode with boundaries, the nested form picks up the self-nesting guard, which `:host(X)` does not.
@@ -270,7 +277,8 @@ recorded against the 30.4k opening measurement.
 ### A — Pre-publish reshapes ((LT-370 →) LT-371 → LT-375 ∥ LT-373 → LT-387)
 
 - [ ] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-370
   **Context:** `CompileDiagnostic` is `{ code, severity, message, line? }`
   (`server/compiler/diagnostics.ts`). ADR 0044 fixes the published shape: `location`
   `{ file, start, end }`, `related` locations, and an optional `fix` `{ description, edits }`
@@ -280,12 +288,13 @@ recorded against the 30.4k opening measurement.
   shape. Attach `fix` only where safe — LT-134's fix-it wording is a candidate input, not a
   mandate. Must land before the first publish: replacing `line` afterwards is a major.
   **Channel/tier:** none added; every existing rule keeps its code and tier. Message copy is
-  unchanged, so no Tech Writer round unless a message is reworded.
+  unchanged; a reworded message follows `writer` → error-messages.
   **Verification:** diagnostic parity on both surfaces with ranges; a pin per producer family
   that `start`/`end` cover the offending construct; full gates.
 
 - [ ] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-371
   **Context:** owner ruling 2026-09-29, recorded in ADR 0032 s1 and `HOST_PROFILE.md`: the
   template's root is the host element, there is no fragment root, and `<style>` is a child of
   the root. 16 of 17 corpus `.tsx` sources still wrap the root and its `<style>` in a fragment.
@@ -293,13 +302,14 @@ recorded against the 30.4k opening measurement.
   fragment root a compile error naming the fix. Check what `.tsrx` accepts and give it the same
   answer (ADR 0032 s6 parity; D-04 is parked, so `.tsrx` stays first-class). LT-306 also rewrites
   every corpus sheet; land together or one right after the other, not interleaved.
-  **Channel/tier:** compiler, tier 1 Prevented (LTC060). Runtime: none (a source shape). Tech
-  Writer owns the copy.
+  **Channel/tier:** compiler, tier 1 Prevented (LTC060). Runtime: none (a source shape). Copy
+  follows `writer` → error-messages.
   **Verification:** goldens byte-identical across the migration (the fragment never reached the
   output); the new rule's fixture; diagnostic parity; full gates.
 
 - [ ] LT-373: Annotate every template expression with its reactivity class (D-26, ADR 0040 s7).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-371
   **Context:** today the class is derived in several places — `AttributeIR` carries
   `static`/`server`/`reactive`, a text child carries a boolean `lazy` decided by `reactivity.ts`,
   and the emitters re-ask. ADR 0040 s7: lowering classifies each attribute value and text child
@@ -313,7 +323,8 @@ recorded against the 30.4k opening measurement.
   unchanged; full gates.
 
 - [ ] LT-387: Reactive-condition mode classification follows scope (LT-274 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-373
   **Context:** `validateCondition` (`lower-shared.ts`) goes reactive only when a free name is a
   signal or `host`. An alias — `const isOpen = () => open.get(); @if (isOpen())`,
   `const o = open; @if (o.get())` — compiles silently as `mode: 'server'` and never updates,
@@ -328,7 +339,7 @@ recorded against the 30.4k opening measurement.
 ### B — Correctness
 
 - [ ] LT-378: The `@if` branch signature ignores which prop a prop-bound attribute binds (LT-368 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** `constructSignatureOf` (`analysis/effects.ts`) keys each client-construct attribute
   as `bind:<name>=<text>`, but takes text only from `event`, `reactive`, `class-map` and
   `style-map` attributes. A `server` attribute with `bindsProp` (LT-122), a `pass` attribute and a
@@ -346,14 +357,14 @@ recorded against the 30.4k opening measurement.
   full gates.
 
 - [ ] LT-391: An arm kind for `SuppressedSite` (ADR 0037 s5 under the Simulated tier).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** LT-274 review. A reactive test over the wall clock or RNG (ADR 0029 limb b)
   correctly renders no live arm, but when the component is Simulated for another reason the
   realm's connect clones an arm into the served HTML. Record suppressed arm sets and strip
   the realm-cloned arm before serialization, as other limb-(b) sites are.
 
 - [ ] LT-392: Regenerate the declared types and gate an arm-set client against them (LT-385 review finding).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context (updated 2026-10-02, LT-386):** the REGENERATION half already landed — commit
   3ed0814b refreshed `index.js` (the committed bundle predated LT-274's `reconcile` arm form)
   and `types/src/helpers/reactive.d.ts` (the arm-form JSDoc). What remains is the GATE half:
@@ -374,7 +385,7 @@ recorded against the 30.4k opening measurement.
   `types/` and diff for any other stale-surface drift landing in the same pass.
 
 - [ ] LT-356: An unparseable or non-object catalog FILE is silent in the census and destroyed by `i18n:sync` (LT-249 review).
-  **Skill:** docs-server-dev
+  **Area:** server
   **Context:** LT-249 made non-string catalog VALUES loud. The file-level sibling is worse.
   If `i18n/<locale>.json` fails `JSON.parse` (a trailing comma, a merge-conflict marker) or
   its top level is not an object, `readCatalogs` (`readJson` → `undefined` → `asRecord` →
@@ -391,10 +402,11 @@ recorded against the 30.4k opening measurement.
   Sync reads through the same path instead of its own `JSON.parse`. **Acceptance:** a
   scratch catalog with a trailing comma yields one census record, not N `missing`; sync
   leaves the file byte-identical and exits non-zero naming it; committed catalogs are
-  unaffected. **Copy:** Tech Writer (batch with LT-189 item 8 if still open).
+  unaffected. **Copy:** follows `writer` → error-messages.
 
 - [ ] LT-353: Reject unrecognized `truc:`-namespaced attributes at classification, on both surfaces (LT-251 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-371
   **Context:** `truc:` is the host-owned attribute namespace (LT-128), but
   `classify-attributes.ts` recognizes names one by one (`truc:pass`, `truc:html`) and lets
   anything else fall through to the ordinary static/server arms. So a retired `truc:case`, or
@@ -405,13 +417,13 @@ recorded against the 30.4k opening measurement.
   LTC006 (malformed or unsupported attribute shape). Name the known vocabulary in the message,
   and give a retired name (`truc:case`/`truc:case-type`) a pointer to the ICU pattern
   replacement (ADR 0030 s4). **Channel:** compiler. **Tier:** 1 Prevented (statically
-  decidable, no runtime half). **Copy:** the developer drafts it and Tech Writer owns the
-  final wording (error-message lifecycle). Batch it into LT-189 if that round is still open.
+  decidable, no runtime half). **Copy:** follows `writer` → error-messages (error-message lifecycle).
   **Check:** add a `diagnostic-parity.test.ts` row for a `truc:bogus` attribute on both
   surfaces; the corpus stays warning-free.
 
 - [ ] LT-355: A composed child inside a reactive-list template is silently dropped — render it, with its root `lang` and `i18n` (LT-351 ruling, ADR 0030 s9).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-371
   **Context:** ADR 0030 s9 (revised 2026-09-30) says a client-created instance speaks its
   creating parent's locale: the parent's server render bakes each composed child's root `lang`
   and `i18n` into the template it clones from. Today it does not. `validateListBody`
@@ -425,20 +437,21 @@ recorded against the 30.4k opening measurement.
      included. `cloneNode(true)` (`src/helpers/reactive.ts:831`) keeps both.
   2. **Reject what cannot be rendered once:** a compose whose args or children read the item
      hole or any per-item value. That is a new LTC code, tier 1 Prevented, statically decidable,
-     no runtime half, identical on both surfaces (`diagnostic-parity.test.ts`). Tech Writer
-     reviews the copy (developer drafts; add to LT-189's round or its successor).
+     no runtime half, identical on both surfaces (`diagnostic-parity.test.ts`). Copy
+     follows `writer` → error-messages.
   **Pins:** a fixture parent whose list item nests a client-keyed child renders the child's
   `lang` and `i18n` inside `<template>` at de and none at en (after LT-354); a jsdom pin
   clones an item and the child formats in de; the item-hole case is the new LTC on both surfaces.
   **Check:** gates green; server goldens for module-list and tokenbox templates byte-identical
   (neither nests a compose).
   **Docs on landing:** `server/compiler/HOST_PROFILE.md` ("A client-created instance speaks the
-  source locale") gets the revised rule; Tech Writer reviews.
+  source locale") gets the revised rule.
 
 ### C — Corpus port (LT-280 → LT-109–LT-111)
 
 - [ ] LT-374: Enforce the raw-value-source rule for formatted reactive values (D-20).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-371
   **Context:** `HOST_PROFILE.md` data account bullet 6 (2026-10-01): text formatted for display
   does not parse back into state, so a formatted reactive value needs a canonical raw source —
   `value`, `valuenow` or `datetime` on an owned descendant (`<data value>`, `<time datetime>`),
@@ -450,13 +463,14 @@ recorded against the 30.4k opening measurement.
   "formatted" is recognized and record it in HOST_PROFILE. LT-109/LT-110 (P5) format numbers and
   are the first corpus cases.
   **Channel/tier:** compiler, tier 1 Prevented (LTC059). Runtime: none — a harvest of formatted
-  text cannot know the text was formatted. Tech Writer owns the copy.
+  text cannot know the text was formatted. Copy follows `writer` → error-messages.
   **Verification:** a failing fixture per formatting kind; a passing `<data value>` and
   `<time datetime>` fixture whose harvest round-trips; corpus byte-identical or each change
   justified; full gates.
 
 - [ ] LT-186: A TSRX rule for an unkeyed element sibling of a `@for` in a reconcile container (LT-185's compiler half).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-371
   **Context:** LT-185 cost form-tokenbox its only text input: the `.tsrx` port dropped the
   `data-unreconciled` attribute, `reconcile()` removed the input as an unkeyed child of
   `data-container`, and nothing said so. LT-185 added the DEV_MODE warning for the runtime half.
@@ -480,7 +494,7 @@ recorded against the 30.4k opening measurement.
   tier says the runtime check "remains, behaving as Contained". Here the runtime half is LT-185's
   DEV_MODE advisory, not a Contained error — nothing fails at runtime, so do NOT convert it to a
   `console.error` or invent an error class to match the pattern.
-  **Copy:** Tech Writer owns the final wording and reviews it against LT-185's runtime message so
+  **Copy:** follows `writer` → error-messages; check it against LT-185's runtime message so
   the two agree (the ADR 0028 lifecycle applies — this introduces a code).
   Acceptance: the form-tokenbox shape at its pre-LT-185 state produces the diagnostic; a sibling
   carrying `data-unreconciled` does not, and neither does `module-list.tsrx` (whose container
@@ -492,14 +506,16 @@ recorded against the 30.4k opening measurement.
   [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) sub-design 5.
 
 - [ ] LT-109: Migrate `module-calctable` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
+  **Area:** examples
+  **Needs:** LT-280, LT-375, LT-374, LT-186
   **Context:** ~200 lines, the heaviest `reconcile()` consumer (8 call sites). Reactive lists
   lower to the compiled `each()`/reconcile path (LT-003) — check loop-body reactive attrs on
   non-root children (LT-037) carefully. Formats numbers through `Intl`; read LT-142's fold rule
   and ADR 0029's tier split rather than re-deciding whether those thunks fold.
 
 - [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
-  **Skill:** le-truc-dev
+  **Area:** examples
+  **Needs:** LT-280, LT-375, LT-374, LT-186
   **Context:** ~283 lines, the most loop-dense example (`each()` ×11, `MutationObserver` ×6,
   `IntersectionObserver`, `populate`). Expect this to stress the loop/effect analysis hardest —
   surface compiler gaps in NOTES.md rather than restructuring the component away from its
@@ -508,14 +524,16 @@ recorded against the 30.4k opening measurement.
   and everything else simulated.
 
 - [ ] LT-111: Migrate `module-todo` to `.tsx` with same-commit cutover — last hand-written example, completes the corpus port.
-  **Skill:** le-truc-dev
+  **Area:** examples
+  **Needs:** LT-280, LT-375, LT-374, LT-186
   **Context:** ~379 lines, the largest example (`reconcile()` ×10, `each()`, pointer capture).
   Has a spec. Completing this satisfies LT-014's trigger — after review, confirm the corpus
   sweep: no `.ts` component files remain in `examples/` outside `test/`, `docs/`, and `_common`
   helpers.
 
 - [ ] LT-390: A corpus consumer for reactive conditions and the boundary, with audit coverage.
-  **Skill:** le-truc-dev
+  **Area:** examples
+  **Needs:** LT-375, LT-334, LT-385
   **Context:** LT-274/LT-276 landed with no corpus component using either, so their golden
   and equivalence-audit acceptance items pass vacuously; adoption's designed connect diff is
   pinned only by `reactive-conditions.test.ts`. Migrate one example that wants a reactive
@@ -526,7 +544,8 @@ recorded against the 30.4k opening measurement.
 ### D — CSS departures (LT-409 → re-scoped)
 
 - [ ] LT-405: A nested qualifier on `:host` evades LTC070 (LT-398 residue). — rolled back 2026-10-02, deferred to the design session
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-409
   **Rolled back (owner, 2026-10-02):** the working tree is back to HEAD's behaviour for this case. `hostParent`, the codemod's
   `hoistNestedHostQualifiers` and their tests are removed, and the ~37 corpus sites are restored to the nested authored form
   (module-codeblock's `:global { pre/code }` block now follows `:host`). What follows records what
@@ -543,7 +562,8 @@ recorded against the 30.4k opening measurement.
   rides LT-397. The nested face's copy and fix-it go to LT-407.
 
 - [ ] LT-407: LTC070's nested face — `&<qualifier>` inside `:host { }` gets its own message and fix-it (LT-405 review).
-  **Skill:** le-truc-dev (Tech Writer owns the copy)
+  **Area:** compiler
+  **Needs:** LT-409
   **Context:** (Written against LT-405, now rolled back: re-scope it from the design session. If LT-405's check returns, this follows it.) Since LT-405, `checkRules` reports `:host { &:hover { … } }` as LTC070. The message
   says "`:host` followed directly by a qualifier" and offers `:host(:hover)` as the fix. The author
   never wrote `:host:hover`, though, and following the fix-it in place nests `:host(:hover)` under
@@ -554,13 +574,14 @@ recorded against the 30.4k opening measurement.
   `:host(<qualifier>) { … }` (the shape the codemod's `hoistNestedHostQualifiers` writes). The flat
   face's copy stays as it is. Update the diagnostic-parity fixtures if the face is surface-visible.
   **Channel/tier:** compiler, tier 1 Prevented (unchanged; LTC070 gains a face, no new code).
-  Tech Writer reviews the copy and the `errors.md` row (owner's `.agents/` pass).
+  Copy follows `writer` → error-messages, including the `skills/le-truc/references/errors.md` row.
   **Verification:** a `css-scope.test.ts` case asserts the nested flag. A diagnostic test asserts
   each face's message (the nested one has no in-place `:host(…)` fix-it). `tsc` 0, server suite
   green.
 
 - [ ] LT-408: Document the zero-specificity `:host(…)` arguments as an s7 difference (owner ruling 2026-10-02, LT-405 NOTES question).
-  **Skill:** tech-writer (ADR 0033 s7 through adr-keeper)
+  **Area:** docs
+  **Needs:** LT-409
   **Context:** Owner ruling (b): `:host(X)` keeps its all-zero emission, `:where(tag:is(X))` lowered
   and `:where(:scope:is(X))` native, arguments included, so page styles always win on the host
   (R1). In a real shadow root, `:host(X)` carries a pseudo-class's specificity plus X's, so
@@ -579,7 +600,7 @@ recorded against the 30.4k opening measurement.
 ### Parallel slot
 
 - [ ] LT-305: Baseline guard — fail the build when shipped code needs a feature newer than the pinned baseline (REQUIREMENTS § Browser support). **Ships in 3.0.**
-  **Skill:** le-truc-dev
+  **Area:** runtime
   **Context:** Owner ruling 2026-09-24: the runtime baseline is **Baseline 2023**, pinned per
   major release to three years before it (3.0 → 2023); **minor and patch releases never move
   it**. The stated floor drifted once already (REQUIREMENTS said 2020 while `Object.hasOwn`
@@ -598,7 +619,7 @@ recorded against the 30.4k opening measurement.
   unguarded fails it; bumping the year without a major version fails it.
 
 - [ ] LT-277: Seam hardening from the LT-267 review — glob dot-rule edges, `fileExists` contract, doc enumeration.
-  **Skill:** docs-server-dev
+  **Area:** server
   **Context:** the LT-267 review (2026-09-21) probed `server/runtimes/glob.ts` beyond the
   real-tree parity tests and found two edges where the seam's categorical claims do not
   hold, both verified live at 4097198c. Neither is reachable with any glob the repo or a
@@ -638,7 +659,7 @@ recorded against the 30.4k opening measurement.
   byte-identical.
 
 - [ ] LT-393: Sweep the stale ADR 0023 citations in compiler module docs to ADR 0024 (LT-359 residue).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** The 2026-10-01 ruling fixed the compiler ADR's number: the isomorphic-format
   ADR is 0024, and its sub-design numbers already match — only the number is wrong.
   LT-359(c) swept the ruled scope (diagnostic copy in `diagnostics.ts`, message-bearing
@@ -656,8 +677,9 @@ recorded against the 30.4k opening measurement.
   **Check:** `grep -rn "ADR 0023" server/compiler/` returns only genuine bind-helper
   citations; corpus goldens and parity byte-identical; tsc clean.
 
-- [ ] LT-410: `errors.md` rows for LTC071 and the widened LTC051 (LT-402 handoff, found by Changelog Keeper at the 2026-10-02 prune).
-  **Skill:** tech-writer (the owner's `.agents/` pass executes it)
+- [x] LT-410: `errors.md` rows for LTC071 and the widened LTC051 (LT-402 handoff, found by the `writer` at the 2026-10-02 changelog prune). — done ✓
+  **Area:** docs
+  **Changed:** `skills/le-truc/references/errors.md` (rewritten with the skill slim, 2026-10-03: one row per emitted code, 61, script-checked against `diagnostics.ts`; LTC051 has both faces); the CHANGELOG skill entry was rewritten for the shipped skills.
   **Context:** LT-402's copy round reworded LTC066–LTC071 and gave LTC051 a boundary face (LT-403
   wired it), but the `le-truc` skill's `references/errors.md` has no LTC071 row and LTC051's row
   still describes only the sheet drift. The CHANGELOG's skill entry correctly says LTC061–LTC070,

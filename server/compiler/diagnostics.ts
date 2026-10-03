@@ -198,7 +198,7 @@ export const diagnostic = {
 	 * surface's existing `map` arity rejection ("the key clause is a
 	 * reactive-List concern").
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-09-24).
 	 */
 	keyOnServerDataFor: (source: string, offset: number | undefined) =>
@@ -220,7 +220,7 @@ export const diagnostic = {
 	 * server-known-tag design (TODO LT-213) is built only when a migration
 	 * needs it.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-09-24).
 	 */
 	unsupportedElementTag: (
@@ -252,7 +252,7 @@ export const diagnostic = {
 	 * only the spelled constructs differ (`wording.boundary`,
 	 * `wording.loop`).
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-359 — worded for both trigger positions).
 	 */
 	boundaryAsLoopRoot: (
@@ -279,7 +279,7 @@ export const diagnostic = {
 	 * alone, no runtime half. Raised in `lowerElement` (shared), so both
 	 * surfaces refuse it identically.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-359 — the LT-358 first draft, finalized).
 	 */
 	scriptElementInTemplate: (source: string, offset: number | undefined) =>
@@ -301,7 +301,7 @@ export const diagnostic = {
 	 * decidable from the tag name alone, no runtime half. Raised in
 	 * `lowerElement` (shared), so both surfaces refuse it identically.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-359 — the LT-383 first draft, finalized).
 	 */
 	templateElementInTemplate: (source: string, offset: number | undefined) =>
@@ -320,7 +320,7 @@ export const diagnostic = {
 	 * (shared lowering, both surfaces). ADR 0028 tier 1 (Prevented):
 	 * statically decidable, no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-275 — the LT-274 first draft, finalized).
 	 */
 	dynamicCaseValue: (
@@ -346,7 +346,7 @@ export const diagnostic = {
 	 * Channel: compiler (shared lowering, both surfaces). ADR 0028 tier 1
 	 * (Prevented): statically decidable, no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-275 — the LT-274 first draft, finalized).
 	 */
 	reactiveConditionInReconcileContainer: (
@@ -372,7 +372,7 @@ export const diagnostic = {
 	 * names the position in lower case (`attribute \`title\` on <c-el>`);
 	 * `ambients` is `PAGE_AMBIENTS`, passed in so the copy follows the set.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-09-25).
 	 */
 	foldReadsPageContext: (
@@ -394,7 +394,7 @@ export const diagnostic = {
 	 * a rest element. `member` is null for a rest element or a computed key.
 	 * `ambients` is `PAGE_AMBIENTS`, passed in so the copy follows the set.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-09-25).
 	 */
 	undeclaredPageAmbient: (
@@ -479,7 +479,7 @@ export const diagnostic = {
 	 * channel name earns the literal-key sentence, not the generic
 	 * exposed-prop fix, which would contradict it.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01).
 	 */
 	serverOnlyNames: (
@@ -1143,7 +1143,7 @@ export const diagnostic = {
 	 * shuffle into the page for good. Always the error form: unlike a
 	 * reactive child, there is no omit-and-correct path for a loop's items.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-09-25).
 	 */
 	impureLoopItems: (source: string, offset: number | undefined) =>
@@ -1480,7 +1480,7 @@ export const diagnostic = {
 	 * (Prevented): the string ships untranslatable unless the author routes
 	 * it through the catalog.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01).
 	 */
 	untranslatedLiteral: (
@@ -1502,7 +1502,7 @@ export const diagnostic = {
 	 * pattern and is a census record. `reason` is the parser's own account
 	 * (a syntax error with line/column, or an unsupported formatter).
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01).
 	 */
 	unparseableMessage: (
@@ -1527,7 +1527,7 @@ export const diagnostic = {
 	 * the imperative sentence, with a call spelled from the pattern's own
 	 * arguments (`i18n.ts`'s `reportMessageCallSites`).
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01).
 	 */
 	messageArgumentMismatch: (
@@ -1554,7 +1554,7 @@ export const diagnostic = {
 	 * half exists. Error severity: the build fails naming every declaring
 	 * file, and all files are dropped from the generated output.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01). Corpus-level: fires once per involved file,
 	 * no source offset.
 	 */
@@ -1582,7 +1582,7 @@ export const diagnostic = {
 	 * caller passes `boundaries` (source → boundary tags) only for the
 	 * second face; copying styles cannot fix it, so it names the sets.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402). Corpus-level: fires once per involved
 	 * file, no source offset.
 	 */
@@ -1613,7 +1613,7 @@ export const diagnostic = {
 	 * list alone, no runtime half exists. Error severity: the shape cannot
 	 * be lowered honestly.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01).
 	 */
 	badFactoryContextParam: (
@@ -1636,7 +1636,7 @@ export const diagnostic = {
 	 * claims members the element does not carry. ADR 0028 tier 1
 	 * (Prevented): both facts are AST-visible, no runtime half exists.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01). The offset is the annotation's own start (the
 	 * written type, not the whole parameter — LT-358b), so the report
 	 * carries the line the annotation sits on.
@@ -1663,7 +1663,7 @@ export const diagnostic = {
 	 * tier 1 (Prevented): the parser's refusal is the decision, no runtime
 	 * half exists.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (final copy 2026-10-02, LT-395).
 	 */
 	malformedStyleSheet: (
@@ -1686,7 +1686,7 @@ export const diagnostic = {
 	 * the dictionary lags the platform, so a property newer than it reports
 	 * too — a warning, and the declaration ships as authored.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (final copy 2026-10-02, LT-395).
 	 */
 	unknownCssProperty: (
@@ -1711,7 +1711,7 @@ export const diagnostic = {
 	 * scroll-state`, `calc-size()`), so a newer value reports too — a
 	 * warning, and the declaration ships as authored.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (final copy 2026-10-02, LT-395).
 	 */
 	invalidCssValue: (
@@ -1738,7 +1738,7 @@ export const diagnostic = {
 	 * itself is never its own descendant. ADR 0028 tier 1 (Prevented):
 	 * statically decidable, no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	ownTagLedRule: (source: string, offset: number | undefined, tag: string) =>
@@ -1756,7 +1756,7 @@ export const diagnostic = {
 	 * (ADR 0033 s8) is not the compiled contract. ADR 0028 tier 1
 	 * (Prevented): statically decidable, no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	slottedInLightDom: (source: string, offset: number | undefined) =>
@@ -1774,7 +1774,7 @@ export const diagnostic = {
 	 * host's. ADR 0028 tier 1 (Prevented): statically decidable, no runtime
 	 * half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	hostContextSelector: (source: string, offset: number | undefined) =>
@@ -1793,7 +1793,7 @@ export const diagnostic = {
 	 * `:host([attr])`. ADR 0028 tier 1 (Prevented): statically decidable,
 	 * no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	hostQualifier: (source: string, offset: number | undefined) =>
@@ -1813,7 +1813,7 @@ export const diagnostic = {
 	 * styling the child's own tag. ADR 0028 tier 1 (Prevented): statically
 	 * decidable, no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-399 first draft, finalized).
 	 */
 	descendsPastBoundary: (
@@ -1841,7 +1841,7 @@ export const diagnostic = {
 	 * block). `face` names which; each carries its own reason in the copy.
 	 * ADR 0028 tier 1 (Prevented): statically decidable, no runtime half.
 	 *
-	 * Message copy is owned by Tech Writer per ADR 0028's lifecycle
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
 	globalMisuse: (

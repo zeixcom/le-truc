@@ -744,7 +744,7 @@ describe('makePass — retired short forms fail validation (ADR-0012 removal)', 
 		expect(error).toBeInstanceOf(InvalidPassPropertyError)
 		expect((error as Error).message).toContain("'value'")
 		// Pin the resolution wording, not the reason string's punctuation —
-		// that copy is the Tech Writer's (LT-178 copy rider, may land in
+		// that copy follows `writer` → error-messages (LT-178 copy rider, may land in
 		// either spelling).
 		expect((error as Error).message).toContain(
 			'could not be resolved to a signal',

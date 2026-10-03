@@ -2,17 +2,17 @@
 
 Done-and-reviewed tasks since the last release, compacted per the 3-file mini-kanban (owner,
 2026-09-18). Each entry keeps only what is still load-bearing: rulings recorded nowhere else,
-live handoffs into open tasks (referenced by LT-ID), and the changed-artifact facts Changelog
-Keeper needs at release planning. Verification transcripts, changed-file line inventories and
+live handoffs into open tasks (referenced by LT-ID), and the changed-artifact facts the `writer`
+needs for the changelog at release planning. Verification transcripts, changed-file line inventories and
 review narratives are dropped — the full record stays in `git log -p`. Entries still carrying
 `— done, pending review ⏳` are finished but not yet reviewed; their review pass happens in a
-future iteration. At release planning Changelog Keeper consumes this file alongside
+future iteration. At release planning the `writer` consumes this file alongside
 `CHANGELOG.md [Unreleased]`; the Architect then prunes entries whose context no live task needs.
 
 ---
 
 Pruned 2026-10-02, fifth pass (Architect, after the "consolidate the compiler, then land the
-pre-publish reshapes" iteration closed; Changelog Keeper recorded it in `CHANGELOG.md
+pre-publish reshapes" iteration closed; the `writer` recorded it in `CHANGELOG.md
 [Unreleased]` the same day, deliberately omitting the byte-identical internal refactors).
 Consumed: LT-227–LT-232, LT-234, LT-243–LT-245, LT-248, LT-268, LT-274–LT-276, LT-287–LT-289,
 LT-304, LT-306, LT-358–LT-361, LT-364, LT-366–LT-368, LT-379, LT-380, LT-382–LT-386, LT-388,

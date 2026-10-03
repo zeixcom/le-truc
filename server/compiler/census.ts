@@ -117,7 +117,7 @@ export const TRANSLATION_GAP_STATUSES = [
 
 export type TranslationGapStatus = (typeof TRANSLATION_GAP_STATUSES)[number]
 
-/** Census reasons per status — a record, not a fix-it (Tech Writer copy, reviewed 2026-10-01). */
+/** Census reasons per status — a record, not a fix-it (copy per `writer` → error-messages, reviewed 2026-10-01). */
 const TRANSLATION_GAP_REASONS: Record<TranslationGapStatus, string> = {
 	missing:
 		'missing — no entry in this locale’s catalog; the source-locale string renders',

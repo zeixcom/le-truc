@@ -210,8 +210,8 @@ substrate emits is a fact about that substrate — and
 the report keeps listing every occurrence with its reason. Never widen an existing pattern to
 admit a new diagnostic — that is how a real regression gets allowed through. When an entry
 stops matching anything (the condition was fixed), retire the classification; the baseline
-test says so. Tech Writer owns the report copy — see the `tech-writer` skill's
-`workflows/error-message-lifecycle.md` (the five conditions are tier 2: wording says the
+test says so. The report copy follows the `writer` skill's
+`references/error-messages.md` (the five conditions are tier 2: wording says the
 component *keeps* its server-rendered markup, never that the page broke).
 
 The **tier census** (LT-165 step 6, ADR 0029 § 6) is a third record, not a third baseline

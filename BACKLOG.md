@@ -8,10 +8,9 @@ Planned tasks out of scope for the current iteration. Part of the 3-file mini-ka
   planning; do not start a task that is still only in this file.
 - **DONE.md** — done-and-reviewed tasks since the last release, compacted to what is still
   load-bearing (rulings recorded nowhere else, live handoffs by ID, changed-artifact facts for
-  Changelog Keeper).
+  the `writer`'s changelog).
 
-Only the Architect moves tasks between files (Tech Writer may execute the mechanical move when
-delegated); developers annotate the status suffix on the entry in place. Task IDs are global and
+Only the Architect moves tasks between files; contributors annotate the status suffix on the entry in place. Task IDs are global and
 sequential across all three files; the "Next free task ID" line lives in TODO.md's header.
 Bands below are priority-ordered: they are the planned pick order for future iterations, not a
 schedule. Band preambles may narrate landed work as history — the compacted records live in
@@ -99,7 +98,8 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
 **LT-262 and LT-264 are non-goals for 3.0 and have moved to P7.**
 
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-370, LT-371 and LT-375** (the pre-publish reshapes of what stays public: the IR leaves the contract, the diagnostic record takes its published shape, the root-is-host dialect is enforced) **and on the D-32 design session** (which compiler entry points and result types are public, `COMPILER_SPEC.md` §12). *Re-gated 2026-10-01:* the IR is internal (ADR 0034 s8, D-25), so the ADR 0040 reshapes (LT-288, LT-274, LT-276) no longer gate the publish.
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-370, LT-371, LT-375
   **Rider for the D-32 session (LT-370 copy review, 2026-10-02):** ADR 0034 s8 counts the
   generated-module API as public (a change is a major), but `contract.ts` and
   `LE_TRUC_COMPILER.md` §2 say semver applies to the designated set "and to nothing else", and the
@@ -122,8 +122,8 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   package names in internal APIs, and the `TSRX###` diagnostic codes — each either renamed to
   surface-neutral vocabulary or consciously kept, with the reason recorded. **Diagnostic codes
   become public API on first publish**: a code that keeps the `TSRX` prefix while the published
-  surface is `.tsx` needs a stated rationale, and Tech Writer reviews the copy of anything
-  renamed (channel: compiler; the error-message-lifecycle sweep applies).
+  surface is `.tsx` needs a stated rationale, and the copy of anything
+  renamed follows `writer` → error-messages (channel: compiler; the error-message-lifecycle sweep applies).
   **Check:** `npm pack` on a clean checkout produces a tarball that installs into an empty
   project and compiles a single `.tsx` component, with no `@tsrx/core` in the dependency tree.
   **Added 2026-09-24 (ADR 0034 s8):** declare `@zeix/le-truc` as a peer dependency with a
@@ -149,7 +149,8 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   a reason the first pre-release should not be demoed without it.
 
 - [ ] LT-257: Template emission — **build the target-emitter interface ([ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md)) with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-254, LT-274, LT-373
   **Re-scoped (Architect, 2026-10-01):** the interface was designed in LT-360 and is ADR 0043.
   This entry is the build half. Read the ADR first; this text only names the deliverables.
   **Context:** ADR 0034 s3. For a CMS, a folded HTML partial and a template are the same
@@ -184,8 +185,8 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   LTC057 — a non-portable expression in a hole position (one face for `Intl` formatting over a
   hole, naming the ICU-pattern fix); LTC058 — a hole in a refused position (faces:
   `<script>`/`<style>` content or comment, `on*`/`srcdoc`, attribute or tag name, whole-string
-  `style`). LTC056 is taken by the authored-`<script>` refusal (LT-358 rider). Tech Writer owns
-  the copy; batch it with the next copy round.
+  `style`). LTC056 is taken by the authored-`<script>` refusal (LT-358 rider). Copy follows
+  `writer` → error-messages.
   **Depends on** LT-254 (where it ships), LT-274 (the `conditional` node), LT-373 (the reactivity
   class the hole classifier reads), and the D-28 session for `Try`. LT-258, LT-313 and LT-234 have landed.
   **Check:** every corpus component emits a Twig partial in its tier; the escaping corpus passes,
@@ -199,7 +200,7 @@ day). D-04 is parked, D-28 and D-32 are deferred to design sessions, section 15 
 those has a task yet.
 
 - [ ] LT-377: Pin that no TypeScript type reaches the published declarations (D-33).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** ADR 0034 s8 (2026-10-01): no TypeScript type appears in the public API, so the
   engine can move to TypeScript 7.1 or a native parser without a major. ADR 0032 s4 already
   confines `typescript` API use to the converter. Add a contract check that the package's
@@ -209,7 +210,7 @@ those has a task yet.
   **Verification:** the check fails on a planted `ts.Node` in a public type; full gates.
 
 - [ ] LT-259: The 2.x → 3.0 codemod, and the drift-cost measurement it instruments.
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** ADR 0034 s6. Pioneer 1 is a Zeix SSG project migrated from Le Truc 2.x, and
   nothing in the queue covered `.ts` + `.html` + `.css` → `.tsx` until now. The owner's read,
   recorded because it scopes the task: the conversion is always possible — JSX reflects the
@@ -229,7 +230,8 @@ those has a task yet.
   produces compiling sources plus an honest residue report; the baseline exists before either run.
 
 - [ ] LT-260: Pioneer 1 — take the Zeix SSG project live on the published package, through pre-releases. **Release gate.**
-  **Skill:** architect
+  **Area:** design
+  **Needs:** LT-254, LT-259
   **Context:** ADR 0034 s6; REQUIREMENTS §1 success criteria. This is the criterion that can
   actually fail: until a project outside `examples/` compiles through the published tool, every
   compiler line amortizes over 22 demo components. Verified through a **series of pre-releases**,
@@ -242,7 +244,8 @@ those has a task yet.
   version, not a workspace link.
 
 - [ ] LT-261: Pioneer 2 — verify template emission against the Zeix Craft (PHP) project. **Release gate.**
-  **Skill:** architect
+  **Area:** design
+  **Needs:** LT-257
   **Context:** ADR 0034 s3/s6. LT-257 is the mechanism; this is the proof, and the owner has
   ruled it must pass **before v3.0 releases**. What is being verified is not that Twig files are
   produced but that a CMS page carries **real content in its initial HTML with no JavaScript**.
@@ -283,7 +286,8 @@ instances**, and it only pays when a tag repeats on a page. So growth is measure
 **LT-362**.
 
 - [ ] LT-352: Pin the hand-copied `i18n` attributes on the examples test pages against the real render (LT-219 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-354
   **Context:** `/test/:component` serves each example's `.html` raw — the page renderer never
   runs there — so `form-tokenbox.html`'s `#german-test` instance carries an `i18n` attribute
   copied by hand from `renderFormTokenbox()` at `de` (LT-219). A later edit to a tokenbox
@@ -300,7 +304,7 @@ instances**, and it only pays when a tag repeats on a page. So growth is measure
   without touching the page fails the test.
 
 - [ ] LT-362: Report client-message bytes per page in the build report, with the dedupe trigger (LT-351 follow-up, re-ruled 2026-10-01).
-  **Skill:** docs-server-dev
+  **Area:** server
   **Context:** ADR 0030 s9's per-instance `i18n` attribute costs bytes per instance, per
   non-source locale, per adopting component (basic-pluralize cy: 957 bytes after LT-354). Today
   the only measurement is one pinned component in `gate-wave-verification.test.ts`, so growth
@@ -350,7 +354,7 @@ with **LT-263** where they touch `sim/report.ts`, `sim/patch-table.ts` or the re
 touch `spans.ts`); LT-246 after the wave-3 churn so the report format settles once; **LT-235 is
 a grilling session, not cleanup** (its item (e) is carved out as LT-244). **No ADR is owed for
 the mechanical band** — nothing there changes a documented decision (review §3; Architect
-concurs); **LT-242 amends the ADR 0032 equivalence contract** and carries its adr-keeper pass.
+concurs); **LT-242 amends the ADR 0032 equivalence contract** and carries its ADR pass (the Architect).
 **Declined with the review, recorded so future reviews don't re-propose:** memoising the §2.11
 redundant traversals (not a measured problem; a second implicit-consistency contract is the
 disease being treated) and restructuring `sim/` (§2.12 is doc/type-surface honesty, folded into
@@ -364,7 +368,8 @@ reflection's line-count claims ("2.5–4k lines") are 2026-09-18 estimates. The 
 records the actual net delta.
 
 - [ ] LT-246: Make tier contamination legible at the compose edge — the census names the re-routing edge.
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-109, LT-110, LT-111
   **Context:** Reflection §3's recommendation, promoted under the framework premise: the
   compose contamination fixpoint (LE_TRUC_COMPILER.md §5.2) means a parent that *reads* a
   child — `first()` addressing a compose site, or `truc:pass` into it — inherits the child's
@@ -384,7 +389,8 @@ records the actual net delta.
 **Moved to TODO.md 2026-10-02:** LT-405, LT-407 and LT-408, behind the shadow-root departures design session (LT-409), which carries the owner ruling and the measured input facts. LT-305, LT-342 (ruled inside LT-280's session), LT-378, LT-387 and LT-390–LT-392 moved the same day.
 
 - [ ] LT-247: Adopt `magic-string` under `spans.ts` (reflection §5). — **parked 2026-10-01** (Architect): demand-gated only
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-234
   **Context:** Reflection §5 table: replaces `spans.ts`'s hand bookkeeping (~−150 lines) and
   buys **real source maps free** — which M25's span-table remapping and the playground
   (ADR 0025, Proposed) both want eventually. Runs after LT-234 (which settles `CodeBuilder`
@@ -395,7 +401,7 @@ records the actual net delta.
   changing bytes; goldens byte-identical is the gate either way.
   **Verification:** goldens + parity byte-identical; the span table's remapped positions
   unchanged on a diagnostic-sample fixture; full gates.
-  **Ruling (2026-10-01, from the developer's evaluation):** the "output-neutral swap that
+  **Ruling (2026-10-01, from the contributor's evaluation):** the "output-neutral swap that
   retires code" route is closed. `magic-string` edits one original string, but a generated
   statement is emitter glue with source slices interpolated and reindented over the assembled
   text, so the swap would add a `Bundle` and a mappings → `SourceSpan` conversion (every
@@ -408,7 +414,8 @@ records the actual net delta.
   Struck from the current iteration's exit criterion.
 
 - [ ] LT-363: Harden the shared estree walk for constructs the corpus never saw (LT-229 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-243
   **Context:** LT-229's guarantee that the borrowed keys reach everything the old walks reached
   rests on a one-off audit of 51 corpus files. Nothing pins it, and the corpus is exactly the
   input the framework premise says to distrust. Three parts:
@@ -446,12 +453,13 @@ records the actual net delta.
   declarations; prove it); the invariant and parity tests; full gates.
 
 - [ ] LT-381: Widen `first()` verification — authored selectors verified against the materialized probe (LT-245/ADR 0045).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-379
   **Context:** [ADR 0045](adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md) Decision 5 stages this deliberately apart from the engine promotion (LT-379): once the probe is the engine, an authored `first('nav a.active')` — descendant combinators, `:not()`, attribute operators, all shapes `parseSimpleSelector` returns "cannot verify" for — can be structurally verified by querying the SAME materialized probe, and then used as the addressed contract verbatim (LT-316's authored-first rule) instead of falling back to synthesis. **Authoring-visible change:** selectors that previously fell back to synthesis become the addressed contract, and a verified-but-unmatched authored selector fires LTC026 where a silent miss (and synthesis fallback) happened before — the census and warning baseline change BY DESIGN, so this task enters an iteration only by iteration planning, with the owner's sign-off on the behavior. Scope the first landing to descendant combinators, `:not()` and attribute operators; child/sibling combinators (`>`, `+`, `~`) cannot cross the probe's exclusivity wrappers (ADR 0045 Consequences) — keep them "cannot verify" unless a follow-up first extends the wrapper model. Gate: LT-379 landed.
-  **Channel/tier:** no new runtime check; verification widening strengthens tier 1 (Prevented). LTC026's existing wording stands unless it must distinguish verified-miss from unverifiable — if it does, Tech Writer owns the copy (error-message lifecycle).
+  **Channel/tier:** no new runtime check; verification widening strengthens tier 1 (Prevented). LTC026's existing wording stands unless it must distinguish verified-miss from unverifiable — if it does, the copy follows `writer` → error-messages.
   **Verification:** new pins (authored selector used verbatim when verified; LTC026 on verified-miss; synthesis fallback unchanged for child/sibling and unparseable); goldens change ONLY where a corpus component's authored selector newly verifies — assert none today, or enumerate the delta in the handoff; full gates.
 - [ ] LT-369: Converge the `.tsrx` in-template client-statement name check onto the setup one (LT-231 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** A bare client-only statement beside conditionally rendered `.tsrx` markup
   (`frontend/tsrx/lower-template.ts`, the `client-stmt` lowering) accepts only `JS_GLOBALS`,
   `CONTEXT_NAMES` and signals. The same statement at top level goes through
@@ -464,11 +472,12 @@ records the actual net delta.
   generated client. Check the `.tsx` surface's equivalent (an expression statement in a branch)
   for the same answer; ADR 0032 s6 parity applies.
   **Channel/tier:** compiler. This removes false rejections; no diagnostic is added. Any reworded
-  rejection copy goes to Tech Writer.
+  rejection copy follows `writer` → error-messages.
   **Verification:** corpus byte-identical; diagnostic parity; the new pins; full gates.
 
 - [ ] LT-372: JSON and SARIF diagnostic reports (D-30, ADR 0044 s4).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-371
   **Context:** ADR 0044 makes reports views of one diagnostic stream. The terminal reporter is
   the only one today. Add a JSON report (the records as data, censuses as separate records) and a
   SARIF report for CI code scanning, both selectable from the build's CLI. Additive: neither
@@ -484,7 +493,7 @@ records the actual net delta.
 **Moved to TODO.md 2026-10-02:** LT-186 (the corpus port needs it for LT-109/LT-111).
 
 - [ ] LT-340: LTC033 sees only the expression written at the site, so an impure read through a setup const, helper or loop const folds (LT-326 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** confirmed at review on `.tsx` (`.tsrx` is the same code path). All of these
   compile clean and bake one build-time reading into the page:
   `const shuffled = [...items].sort(() => Math.random() - 0.5)` then a loop over `shuffled`;
@@ -500,15 +509,15 @@ records the actual net delta.
   page-context reads. Keep the `Intl` scope rule: a helper's locale argument resolves in the
   caller's scope. Static positions only. A reactive thunk reading a tainted const keeps
   today's omit-and-correct behaviour (LT-165 step 5).
-  **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033). **Copy reviewer:** Tech
-  Writer, if the builders need a "through `name`" clause naming the carrier. LTC054 reports
+  **Channel:** compiler. **Tier:** 1 Prevented (existing LTC033). **Copy:** follows `writer` →
+  error-messages, if the builders need a "through `name`" clause naming the carrier. LTC054 reports
   reads through helpers without one, so decide by consistency with it.
   **Check:** the five probes above fail LTC033 on both surfaces. A resolvable-locale `Intl`
   helper still folds. A setup const holding `Math.random()` that is read only in client code
   compiles. Corpus output byte-identical; census unchanged.
 
 - [ ] LT-297: `argsFromAttrs` keys attributes by the arg's camelCase name (LT-290 close-out; latent).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** the page-occurrence helper reads `attrs["bigStep"]`, but HTML attribute
   names are case-insensitive and serialize lowercase, so an authored `big-step`/`bigstep`
   occurrence never matches. A camelCase string or Parser arg would silently lose its
@@ -520,7 +529,7 @@ records the actual net delta.
   goldens unchanged.
 
 - [ ] LT-170: Strengthen two gate-wave assertions in `gate-wave-verification.test.ts` that don't test what they claim.
-  **Skill:** docs-server-dev
+  **Area:** compiler
   **Context:** Filed by the LT-144/LT-145 review (2026-09-03), re-confirmed present 2026-09-17.
   Two tests in `server/tests/compiler/gate-wave-verification.test.ts` pass today but don't verify
   the behavior their name/comment claims — a regression in the underlying compiler behavior
@@ -543,7 +552,7 @@ records the actual net delta.
   `bun test server/tests` stays green.
 
 - [ ] LT-147: Lower reactive `aria-*` on element targets to `bindAria()`, with a reverse IDL name table.
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** Owner decision, 2026-09-02. About which binding helper the compiler emits, not
   about server-execution tiering. v2.6 added `bindAria()` (ADR 0026) and the compiler does not
   know about it: all 7 reactive ARIA bindings in the corpus lower to `bindAttribute` with a
@@ -573,7 +582,8 @@ records the actual net delta.
   the gate, not a hand-maintained expected count).
 
 - [ ] LT-148: Route the component's OWN host ARIA to `internals`, and diagnose CSS that depends on host ARIA attributes. **Depends on LT-147's mapping table.**
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-147
   **Context:** Owner decision, 2026-09-02. Per ADR 0026 §1, host semantics belong on
   `internals.aria*`: invisible in markup, unclobberable by framework attribute rewriting, and
   still overridable by the consumer's own attribute. **Fix:** a reactive `aria-*` on the ROOT
@@ -604,7 +614,7 @@ records the actual net delta.
   the zero-warning gate holds.
 
 - [ ] LT-365: Move the discriminated-compose probe to the positive config as an in-place `@ts-expect-error` (LT-364 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** `server/tests/compiler/fixtures/tsx/discriminated-compose.tsx` (LT-346, pins LT-343)
   is a must-fail file in `tsconfig.neg.json`. Its point is that line 27 (`collapsed` without `id`)
   errors and line 26 doesn't. The test pins this by line number and message text in
@@ -635,7 +645,7 @@ early adopters migrating hand-written 2.x components. The Cause & Effect 2.0 re-
 is a separate track, blocked on CE 2.0 shipping.
 
 - [ ] LT-281: Flag a non-void factory return — authored-surface rule + DEV_MODE warning (LT-179 residue).
-  **Skill:** le-truc-dev (compiler half); Tech Writer owns both messages
+  **Area:** compiler
   **Context:** TypeScript's void-return assignability means a legacy 2.x `return [...]`
   factory still compiles against LT-179's `(context) => void` factory type while its value is
   silently ignored — a migration trap the types cannot catch (pinned by the "a factory return
@@ -657,7 +667,7 @@ is a separate track, blocked on CE 2.0 shipping.
 **Moved to TODO.md 2026-10-02:** LT-280 → LT-109–LT-111 (the corpus port), LT-334, LT-335.
 
 - [ ] LT-411: Teardown at `dispose()` runs after the realm's report is computed (LT-335 residue).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** LT-335 settles each render's tree before the next window opens, but the last render's
   tree is torn down by `window.close()` in `dispose()`. That is after the report exists, so whatever
   its disconnect does goes nowhere. In the corpus run module-listnav logs `window is not defined`
@@ -734,7 +744,7 @@ and this note is redundant; if it has not, do the manual diff.
 ---
 
 - [ ] LT-309: module-codeblock follow-through from the LT-096 review
-  **Skill:** le-truc-dev
+  **Area:** examples
   **Context:** Two changes, both on `module-codeblock` (both surfaces where applicable).
   (a) The overlay's `on(overlay, 'click', …)` in `.tsx` setup is a workaround that LT-096's own
   selector fix made unnecessary. Its comment is now false. Inline it as `onClick={() => ({
@@ -754,7 +764,7 @@ and this note is redundant; if it has not, do the manual diff.
   fixture carrying custom messages on the host only.
 
 - [ ] LT-310: Reactive attributes on the component root element
-  **Skill:** architect → le-truc-dev
+  **Area:** design (then compiler)
   **Context:** `collapsed={() => host.collapsed}` on a template root is LTC005 today ("reactive
   constructs on the component root"). So reflecting a Parser-exposed prop back onto the host
   stays a hand-written setup `watch('collapsed', bindAttribute(host, 'collapsed'))`, the last
@@ -763,10 +773,11 @@ and this note is redundant; if it has not, do the manual diff.
   from the arg, the Parser seeds from it at connect, and the thunk rebinds it. That is one
   channel, but LTC039's root-attribute exemption and the fold of `host.<prop>` on the root need
   checking against ADR 0024 s3 before implementation. Needs an ADR amendment or a short ADR;
-  new diagnostics owe Tech Writer copy review.
+  new diagnostics' copy follows `writer` → error-messages.
 
 - [ ] LT-311: Event handlers on compose sites
-  **Skill:** architect → le-truc-dev
+  **Area:** design (then compiler)
+  **Needs:** LT-309
   **Context:** A PascalCase compose site has no event-attribute kind (only arg/pass/ref), so a
   parent's reaction to a composed child's event must be a setup `on(childRef, …)` or a raw
   `EffectDescriptor`. module-codeblock's copy wiring is the case: a guarded
@@ -800,7 +811,7 @@ because none of LT-104–LT-108's composed children takes a `children` arg.
 (auto-addressing composed `truc:pass` sites).
 
 - [ ] LT-331: Compose-site JSX children must type-check against the child's `children` server arg (LT-303 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** To make `<truc:try>`'s `children: JSX.Element` a `tsc` fact, LT-303 declared
   `JSX.ElementChildrenAttribute` in `server/compiler/frontend/tsx/host-profile.d.ts`. That
   declaration is global, so `tsc` now also checks a compose site's JSX children against the
@@ -842,7 +853,7 @@ and it was the only thing that caught LT-104's demo regression.
 to `TODO.md`.
 
 - [ ] LT-333: Extend LT-323's client-only credit to plain setup consts (LTC013/LTC043 over-routing).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** LT-323 stopped a *signal* whose consumers are all client-only from routing
   Simulated. A *plain setup const* gets no such credit. `const panels = all(…)` routes on
   LTC013, and `const setHTML = dangerouslyBindInnerHTML(contentEl, …).ok` routes on LTC043, even
@@ -860,7 +871,7 @@ to `TODO.md`.
   is an `expose()` read.
 
 - [ ] LT-336: `argsFromAttrs` attribute lookup — the kebab-case convention's fallback and its documentation (LT-095 review).
-  **Skill:** le-truc-dev → tech-writer
+  **Area:** compiler
   **Context:** **Ruling (Architect, 2026-09-25):** a server arg's page-occurrence attribute is
   its **kebab-case** name (`readingTime` ← `reading-time`), the HTML convention every Parser
   attribute already follows (`allow-scripts`). A `number` arg gets a numeric channel, where a
@@ -868,16 +879,16 @@ to `TODO.md`.
   both. **Residue:** form-spinbutton's markup writes `bigStep`, which parse5 lowercases to
   `bigstep`, so the occurrence matches neither the old camelCase lookup nor the new kebab one.
   Either fall back to the lowercased name when the kebab name is absent (HTML's own
-  case-insensitive matching), or port spinbutton's markup to `big-step`. The developer decides
+  case-insensitive matching), or port spinbutton's markup to `big-step`. The contributor decides
   from how many authored occurrences exist.
-  **Tech Writer:** state the convention in HOST_PROFILE (the i18n/page-render section) and
+  **Docs:** state the convention in HOST_PROFILE (the i18n/page-render section) and
   LE_TRUC_COMPILER.md § page occurrences.
   **Channel/tier:** none.
   **Check:** a page-render test for the chosen spinbutton spelling; corpus output
   byte-identical.
 
 - [ ] LT-337: A destructuring setup const is diagnosed at its reader, not at itself (LT-104 review).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** `const { ok: setHTML } = dangerouslyBindInnerHTML(…)` compiled without a
   diagnostic at the declaration. The generic LTC005 "other than const declarations" message
   then fired at the *next* statement reading `setHTML`, the `watch`, which sends the author to
@@ -885,13 +896,13 @@ to `TODO.md`.
   pattern name as a setup init, which `collectBoundNames` already supports), or diagnose the
   declaration itself with a fix-it (`const x = expr.ok`). Prefer accepting them: the rewrite
   is mechanical and authors write destructuring by habit. **Channel/tier:** compiler, tier 1,
-  if diagnosed; none if accepted. Tech Writer reviews any new copy.
+  if diagnosed; none if accepted. Any new copy follows `writer` → error-messages.
   **Check:** lazyload's original destructuring spelling compiles, or fails at its own line.
 
 ## P6 — Cleanup round (after the corpus port)
 
 - [ ] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review).
-  **Skill:** docs-server-dev
+  **Area:** server
   **Context:** `_media/*.md` inside the gitignored TypeDoc output dir are hand-copied mirrors
   of repo docs (`REQUIREMENTS.md`, ADRs). No build generates or refreshes them, so they go
   stale silently and freshness depends on somebody remembering (LT-272 hand-refreshed them
@@ -900,7 +911,7 @@ to `TODO.md`.
   re-observed during the LT-179 review.
 
 - [ ] LT-093: Make LTC004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** Re-confirmed empirically 2026-08-29: `const DEFAULT = 'red'; const color =
   createCell(DEFAULT)` consumed only through a style-map still fires LTC004's "never rendered"
   message, though the signal IS credited as rendered (`thunkRendered`) —
@@ -926,7 +937,7 @@ to `TODO.md`.
   firing, and the list sizes this task's real payoff.
 
 - [ ] LT-135: Follow plain-const indirection when crediting client-only setup reads (LT-119 sharp edge).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** LT-119 credits a signal in `thunkRendered` when a `clientSetup` statement reads
   it, but the check is `containsSignalGet(stmt.node, …)` on the statement itself. Hoisting the
   predicate into a plain setup const — `const isOpen = () => open.get(); watch(() => !isOpen(),
@@ -946,7 +957,7 @@ to `TODO.md`.
   `server/tests/compiler/client-setup-credit.test.ts`; flip that test when fixing.
 
 - [ ] LT-187: `reconcile()` misreports a DUPLICATE `data-key` as "key not present in the source" (LT-185 review finding).
-  **Skill:** le-truc-dev
+  **Area:** runtime
   **Context:** Pre-existing, found reading the removal branch during the LT-185 review. In
   `classify()` (`src/helpers/reactive.ts`) a child is adopted only when
   `harvested !== null && keySet.has(harvested) && !current.has(harvested)`. A SECOND child
@@ -963,7 +974,7 @@ to `TODO.md`.
   tier, for the reason recorded in LT-185's review. Statically decidable for the `.tsrx` corpus
   in principle, but the compiler emits `data-key` on `@for` items itself and cannot produce a
   duplicate, so no `TSRX` rule is owed; hand-authored `reconcile()` markup is the only source.
-  **Copy:** Tech Writer owns the wording; batch it with LT-185's and LT-186's messages so all
+  **Copy:** follows `writer` → error-messages; word it with LT-185's and LT-186's messages so all
   three read as one family.
   Acceptance: a duplicate-key child draws the duplicate message, a genuinely absent key still
   draws the existing one, and both are pinned (the existing message has no test today — add one
@@ -977,7 +988,7 @@ to `TODO.md`.
   stands on its own row in `errors.md`.
 
 - [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** A `@for (const x of items)` loop lowers CLIENT-side to
   `const items = all('<selector>')` — the loop's collection name becomes a query variable that
   SHADOWS the server arg of the same name. Setup or `expose()` code reading the arg then means
@@ -1014,7 +1025,7 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
 `.tsrx` front end (ADR 0034 s1, gated on `@tsrx/core` 1.0).
 
 - [ ] LT-357: Trusted Types target state for `truc:html` (LT-138 review; gated).
-  **Skill:** le-truc-dev
+  **Area:** runtime
   **Context:** **Gated on TypeScript's DOM lib declaring `TrustedHTML`.** As of 2026-10-01 it
   does not: TS 6.0.3, 7.0.2 and 7.1.0-dev.20260930.4 (whose `lib.dom.d.ts` ships in the
   `@typescript/typescript-<platform>` packages) mention it only in `Document.write` doc
@@ -1027,7 +1038,7 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   policy shape. No new runtime check; channel: TypeScript.
 
 - [ ] LT-345: A generated fallback `id` for an element whose ARIA relation needs one (LT-308 review; owner, 2026-09-26).
-  **Skill:** architect
+  **Area:** design
   **Context:** LT-343 makes module-codeblock's `id` required when collapsed, so the overlay's
   `aria-controls` always points at something. The ergonomic alternative the owner named is the
   one several JS frameworks ship: derive a stable id when the author omits one. The
@@ -1045,7 +1056,7 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Channel:** none until designed. The design names its own.
 
 - [ ] LT-262: AEM/HTL integration spike — ahead of pioneer 3, not during it.
-  **Skill:** architect
+  **Area:** design
   **Context:** ADR 0034 s3 and its Bad consequence: AEM is a build-**integration** problem, not
   an emit problem. Component dialogs, the authoring model and clientlibs are undesigned, and the
   HTL emitter is the smallest part of it. Pioneer 3 is a client engagement, which is the wrong
@@ -1059,7 +1070,7 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   AEM needs something the current artifact set cannot give it.
 
 - [ ] LT-264: Split `@zeix/le-truc-simulation` out of the compiler package. **Not a v3.0 deliverable — a later 3.x, once the seam has a consumer.**
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** [ADR 0035](adr/0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) s4.
   With LT-263's seam in place the substrate can ship as its own package, so activation is
   installation: present or absent, no configuration flag, no dynamic import, no degradation path
@@ -1076,7 +1087,7 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   routed Static; adding the substrate package alone re-enables the tier with no config change.
 
 - [ ] LT-078: Implement conditional branch tree-shaking for `@try`/`@pending`/`@catch` (CHECKLIST §9).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** Performance optimization, not a bug fix (LT-065 confirmed the current
   unconditional behavior is already safe). Needs a new usage-graph analysis: shake (emit no
   client task) only when the resolved value is read nowhere outside its own arm AND the guarding
@@ -1089,7 +1100,7 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   with LT-390.
 
 - [ ] LT-076: Establish a dev-mode signal for generated `.tsrx` client code, then implement the hydration assertion (CHECKLIST §6).
-  **Skill:** le-truc-dev
+  **Area:** compiler
   **Context:** Architecture decision 2026-08-29: generation-time inlining.
   `server/build.ts`/`server/effects/tsrx.ts` gain a dev/prod mode from the build pipeline (the
   docs site's examples bundle ships dev diagnostics today — `build:examples:js` already defines
@@ -1101,7 +1112,8 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   emitted only under the generation-time dev flag and folded away entirely otherwise.
 
 - [ ] LT-214: Dead-rule detection over the parsed stylesheet (ADR 0042 s1). **GATED on a real need** (ADR 0042 is Proposed): the selector-prefix half of this task moved to LT-304 with the ADR 0033 ruling (2026-09-24).
-  **Skill:** le-truc-dev (Tech Writer owns the message copy)
+  **Area:** compiler
+  **Needs:** LT-268
   **Context:** A rule under the component's own tag that matches **zero** elements of the
   rendered template warns: a typo, a renamed class, a rule left stale by a markup refactor.
   `matchesSelector`/`countForSelector` (`server/compiler/analysis/selectors.ts`) already
@@ -1117,7 +1129,8 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **not** warn; corpus warning baseline stays 0.
 
 - [ ] LT-269: Typed custom-property seam — `@property` registration derived from the signal's type (ADR 0042 s2). **GATED on a real consumer**: `bindStyle`/`setStyle` appears **nowhere** in the corpus or the docs components today, so this must follow a use, not precede one.
-  **Skill:** le-truc-dev (Tech Writer owns the message copy)
+  **Area:** compiler
+  **Needs:** LT-268
   **Context:** `bindStyle` (`src/bindings.ts`) takes `string`, so every value crossing from
   a signal into CSS is stringly-typed at exactly the point where both sides are known at
   compile time — `infer-type.ts` has the signal's value type and the stylesheet is in the
@@ -1135,7 +1148,8 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   property warns; the emitted `@property` block round-trips through the equivalence audit.
 
 - [ ] LT-270: Typed style handle — stage 1 of style composition, unblocked from TSRX 1.0 (ADR 0042 s3).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-268
   **Context:** ADR 0033 sub-design 6 parked the whole composition package on TSRX 1.0
   because `.tsx` "has no such construct". That holds for **standalone** blocks only — a
   `<style>` in a children list with raw CSS as template syntax, which JSX cannot spell and
@@ -1156,7 +1170,8 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   fails the build; corpus output byte-identical; both front ends accept the same spelling.
 
 - [ ] LT-376: The source-to-source adapter seam, experimental (D-17, D-18; ADR 0032 s6).
-  **Skill:** le-truc-dev
+  **Area:** compiler
+  **Needs:** LT-371
   **Context:** ADR 0032 s6 (2026-10-01): the external extension point is an **adapter** that
   translates another format into host-profile `.tsx` plus a source map back to its input; the
   compiler remaps diagnostics through that map (ADR 0044 s2). Only a component translated with no
@@ -1173,3 +1188,30 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Channel/tier:** none until designed; adapter-side refusals stay in the adapter's own channel
   (adapters never mint `LTC` codes).
   **Verification:** the toy adapter's conformance run; full gates.
+
+- [ ] LT-412: `watch(prop, { stale })` never fires when a Slot fronts a Task (found 2026-10-03, cause-effect skill rewrite).
+  **Area:** design (then runtime)
+  **Context:** cause-effect's `match()` routes to `stale` only when the argument is literally a Task
+  (`isTask(s) && s.isPending()`, `nodes/effect.ts:231`). A read-only async-thunk prop is stored as
+  the bare Task, so `stale` works there. A writable prop is a Slot (`src/component.ts:566`), so
+  when a parent `pass()`es an async thunk into it, the child's `watch('prop', { stale })` falls back
+  to `ok` and the retained value shows with no in-flight signal. Decide where it is fixed: in
+  cause-effect (`match()` checks the free `isPending(s)`, which may see through a Slot; that is an
+  upstream issue) or in `watch` (resolve the Slot's current backing before `match`). Until then,
+  the `cause-effect` skill documents the edge.
+  **Channel/tier:** none — a semantics fix, no new check.
+  **Verification:** a `reactive.test.ts` case: a parent passes an async thunk into a Slot-backed
+  child prop, and the child's `stale` handler fires during a re-fetch.
+
+- [ ] LT-413: `check:skills` — fail on retired diagnostic codes and removed API names in `skills/` (SKILLS_REPORT R4).
+  **Area:** compiler
+  **Context:** `skills/le-truc/` and `skills/cause-effect/` ship in the package, so drift in them
+  is a product defect, and `check:links` does not scan `skills/`. Add `scripts/check-skills.ts`
+  and a `check:skills` script. It fails when a skill file names an `LTC`/`TSRX` code that
+  `server/compiler/diagnostics.ts` does not define or lists as retired (except in `errors.md`'s
+  retired list), when `errors.md` lacks a row for an emitted code, or when a skill names an
+  export that `index.ts` does not export (an allowlist covers prose words in backticks).
+  Also check that relative links inside `skills/` resolve. Add it to the `docs` gates in the
+  `contributor` skill (owner's `.agents/` pass, via `.agents-proposals/`).
+  **Channel/tier:** build check, tier 1 Prevented.
+  **Verification:** green at HEAD; a fixture skill file naming a retired code or a removed export fails it.

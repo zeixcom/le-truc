@@ -41,6 +41,7 @@
 		"types",
 		"!types/src/tests",
 		"custom-elements.json",
+		"skills",
 		"SECURITY.md"
 	],
 	"customElements": "custom-elements.json",

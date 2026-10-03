@@ -1,6 +1,6 @@
 # ADR Index
 
-Maintained by the `adr-keeper` workflows — update whenever an ADR is created, superseded, or changes status.
+Maintained by the Architect (`.agents/skills/architect/references/adr.md`) — update whenever an ADR is created, superseded, or changes status.
 
 | Number | Title | Status | Related Requirements |
 |--------|-------|--------|---------------------|

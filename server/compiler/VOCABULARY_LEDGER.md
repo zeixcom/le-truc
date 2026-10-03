@@ -190,10 +190,10 @@ Run at LT-271, against the pre-sweep tree:
 
 ## Outstanding
 
-- **`.agents/skills/` was not updated** — the sandbox denies writes there.
-  `.agents/skills/le-truc/references/errors.md`,
-  `.agents/skills/le-truc-dev/references/non-obvious.md` and
-  `.agents/skills/tech-writer/workflows/error-message-lifecycle.md` still spell
+- **The skill files were not updated** — the sandbox denied writes there.
+  `skills/le-truc/references/errors.md`,
+  `.agents/skills/contributor/references/runtime-internals.md` and
+  `.agents/skills/writer/references/error-messages.md` still spelled
   the renamed codes `TSRX###`. **Now tracked as LT-272**, which also picks up the
   review finding that `server/compiler/diagnostics.ts` — the file owning the
   namespace — states the two-prefix rule nowhere, and the missing catalog rows
@@ -205,5 +205,5 @@ Run at LT-271, against the pre-sweep tree:
 - **`TODO.md` and `BACKLOG.md` were swept after all** (Architect, at the LT-271
   review). The sweep had grouped them with the records above; that was wrong —
   they are the open work queue, not a log, and 30 stale code names in open
-  Tech Writer tasks (LT-189, LT-220, LT-251) would have pointed at codes that no
+  copy tasks (LT-189, LT-220, LT-251) would have pointed at codes that no
   longer exist. Both re-prefixed; the six kept codes untouched.
