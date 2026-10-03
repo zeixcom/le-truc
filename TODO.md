@@ -66,10 +66,10 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
   boundary; its implementation task pairs with LT-390). LT-409 (the shadow-root departures
   session; re-scopes LT-405/LT-407/LT-408).
 - **A — pre-publish reshapes** — the published diagnostic record, root-is-host and the
-  reactivity class, before new producers and new `.tsx` sources. LT-371 → LT-375 → LT-373 →
+  reactivity class, before new producers and new `.tsx` sources. ~~LT-371~~ (reviewed ✓, in DONE.md) → LT-375 → LT-373 →
   LT-387. (LT-370 is done. LT-375 and LT-373 each need only LT-371 and may run in parallel.)
 - **B — correctness** — the last iteration's silent miscompiles and drops. LT-378, LT-391,
-  LT-392, LT-356, then LT-353 and LT-355 (both need LT-371).
+  LT-392, LT-356, then LT-353 and LT-355 (both need LT-371), then LT-417 (after LT-375).
 - **C — corpus port** — every example folder served compiled (ruling 5). LT-374, LT-186 (both
   need LT-371) → LT-280's implementation tasks (written in when its design rules) → LT-109,
   LT-110, LT-111 (each needs LT-280, LT-375, LT-374 and LT-186) → LT-390 (needs LT-375, LT-334
@@ -97,7 +97,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-416.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-418.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -276,45 +276,7 @@ recorded against the 30.4k opening measurement.
 
 ### A — Pre-publish reshapes ((LT-370 →) LT-371 → LT-375 ∥ LT-373 → LT-387)
 
-- [x] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2). — done, pending review ⏳
-  **Area:** compiler
-  **Needs:** LT-370
-  **Context:** `CompileDiagnostic` is `{ code, severity, message, line? }`
-  (`server/compiler/diagnostics.ts`). ADR 0044 fixes the published shape: `location`
-  `{ file, start, end }`, `related` locations, and an optional `fix` `{ description, edits }`
-  where a repair needs no author judgement. Replace `line` with `location` at every producer
-  (LT-358(b) already threads an offset for LTC050; extend that, do not special-case it), and map
-  generated-module positions back through the span table. `RoutingSignal.line` follows the same
-  shape. Attach `fix` only where safe — LT-134's fix-it wording is a candidate input, not a
-  mandate. Must land before the first publish: replacing `line` afterwards is a major.
-  **Channel/tier:** none added; every existing rule keeps its code and tier. Message copy is
-  unchanged; a reworded message follows `writer` → error-messages.
-  **Verification:** diagnostic parity on both surfaces with ranges; a pin per producer family
-  that `start`/`end` cover the offending construct; full gates.
-  **Changed:** `CompileDiagnostic` is `{ code, severity, message, location, related, fix? }`
-  (`line` removed; new `DiagnosticLocation`/`DiagnosticFix`/`DiagnosticEdit` in `contract.ts`).
-  Producers pass a `Site` (node or range); `locate()` publishes against the authored file.
-  `RoutingSignal.location` optional; corpus LTC048 carries `related`. No `fix` attached yet.
-  **How:** first `do-task` run. Full gates green; `test:variants` (441 pass) run by the owner,
-  outside the sandbox.
-  **Check:** the record shape against ADR 0044 s1–s2.
-  **Review (owner + Architect, 2026-10-03):** the record shape is right. (1) LTC014's
-  `specifierSpan` takes first-to-last over the unused names, so `{ createTask, host, createCell }`
-  covers `host`, which LTC037 reports. Report one range per contiguous run of unused names, or
-  one diagnostic per name, so no range covers a context name. (2) The Verification line asks for
-  a range pin per producer family: add pins for loops (LTC001–LTC003) and reactive conditions
-  (LTC062/LTC063). (3) The LT-242 parity suite (`tsx/diagnostic-parity.test.ts`) still compares
-  `[code, severity, message]` only, and its header still speaks of line numbers. Make it compare
-  the covered authored text on both surfaces and fix the header. Nit fixed by the reviewer:
-  `placeLeTrucImports`' JSDoc, orphaned by `specifierSpan`, moved back above its function.
-  **Reworked:** (1) fixed: `runsWithout()` splits unused names at context names, one LTC014 per
-  run (pinned on both surfaces). (2) fixed: range pins for LTC001–003, LTC062/063 on both
-  surfaces. (3) fixed: parity compares covered text (`spans` pairs per surface), header
-  rewritten; it caught LTC008 async omitting `export` in `.tsrx`, fixed in `front-end.ts`.
-  Gates green except `test:variants` (sandbox port stall) — owner must run it. Nit: the
-  FAMILIES JSDoc in the parity test is orphaned above `ASYNC`.
-
-- [x] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07). — done, pending review ⏳
+- [x] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07). — changes requested ↩
   **Area:** compiler
   **Needs:** LT-371
   **Context:** owner ruling 2026-09-29, recorded in ADR 0032 s1 and `HOST_PROFILE.md`: the
@@ -334,6 +296,21 @@ recorded against the 30.4k opening measurement.
   WIP, landed between rounds as round 2 predicted; every gate re-run green.
   **Check:** all gates exit 0 (build-corpus, `tsc --noEmit` via bunx, typecheck, suite, lint).
   Caveat: scripts/queue.ts is the round-2 reconstruction, validated but not byte-faithful.
+  **Review (Architect, 2026-10-03, `review-pending`):** changes requested ↩. LTC060 sits in the
+  shared driver and both surfaces refuse a fragment root from one place. (1) The migration
+  deleted layout Biome does not force — stylesheet blank lines, the blogmeta `<img>`,
+  `module-codeblock.tsx` from 22 blank lines to 9 (`git diff -w`: +69/−571) — which changes the
+  css/authoredCss artifacts and breaks "goldens byte-identical". Restore it so the edit is only
+  the mechanical move (`<style>` inside the root, fragment and one indent level dropped); keep the
+  Biome-forced setup reformatting (colorinfo, listbox/pluralize). Confirm the css/authoredCss
+  hashes match `1acffc9e^`. (2) LTC060's copy (`diagnostics.ts` ~457) names a `<style>` block the
+  author may not have; the rule fires on any fragment root. Make it shape-neutral (drop the
+  fragment, the root is the host; a stylesheet is a `<style>` child of the root), optionally
+  leading with `wording.outputLabel` as LTC008 does. Update the pins in
+  `first-cardinality.test.ts`, `diagnostic-parity.test.ts` and `skills/le-truc/references/errors.md`.
+  Nits fixed by the reviewer (a25c362c): the CHANGELOG LTC060 bullet, the dead
+  `SurfaceAdapter.lowerChildren`, COMPILER_SPEC App. B row 3.1, the `lower-template.ts` fix text,
+  two JSDoc headers. Follow-up: LT-417.
 
 - [ ] LT-373: Annotate every template expression with its reactivity class (D-26, ADR 0040 s7).
   **Area:** compiler
@@ -474,6 +451,22 @@ recorded against the 30.4k opening measurement.
   (neither nests a compose).
   **Docs on landing:** `server/compiler/HOST_PROFILE.md` ("A client-created instance speaks the
   source locale") gets the revised rule.
+
+- [ ] LT-417: Refuse a `<style>` block that is not the root's single direct `<style>` child (LT-375 review).
+  **Area:** compiler
+  **Needs:** LT-375
+  **Context:** `resolveTemplateOutput` (`server/compiler/template-output.ts`) hoists only the
+  first direct `<style>` child of the root. A second direct `<style>`, or one nested in a
+  descendant element, compiles with no diagnostic on both surfaces: its CSS is dropped and an
+  empty `<style></style>` renders into the host markup — a silent drop, predating LT-375. Since
+  the owner ruling 2026-09-29 (ADR 0032 s1) a `<style>` child of the root is the only accepted
+  place for the sheet, so refuse every other placement, naming the fix. Extend LTC060 or add a
+  sibling code (next free: LTC072). Correct the JSDoc claim at `template-output.ts` ~70–72 ("no
+  `<style>` placeholder can reach an emitter") in the same change.
+  **Channel/tier:** compiler, tier 1 Prevented, in the shared hoist so both surfaces get it.
+  Runtime: none (a source shape). Copy follows `writer` → error-messages.
+  **Verification:** fixtures on both surfaces (a second direct `<style>`, a nested `<style>`);
+  diagnostic parity; the corpus still builds; full gates.
 
 ### C — Corpus port (LT-280 → LT-109–LT-111)
 

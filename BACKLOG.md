@@ -1230,3 +1230,18 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Channel/tier:** none — copy and generated-comment change.
   **Check:** `grep -rn "ADR 0023" server/compiler/` returns only bind-helper citations; the
   golden diff is header-only; server suite green.
+
+- [ ] LT-416: Narrow LTC008's async-component range to the `async` keyword (LT-371 review).
+  **Area:** compiler
+  **Context:** LTC008 on an `async` component function (`server/compiler/front-end.ts`
+  `runFrontEnd`) reports `fnStmt ?? fn`, the whole exported statement, so editors and CI
+  annotations underline the entire component for one keyword. When the file holds only the
+  component, the range equals the file and `corpus-compile.ts`'s `lineLabel` prints no line.
+  ADR 0044 s1 wants the location to name the offending construct. Report the `async` token:
+  search the source for `async` from the statement start, fall back to `fn`. The two parsers
+  disagree on where the declaration starts but agree on that text. Drop the `spans` pair from the
+  LTC008 async case in `tsx/diagnostic-parity.test.ts`, and pin the covered text `async` on both
+  surfaces in `diagnostic-ranges.test.ts`. Narrowing a range is not a breaking change (LT-371
+  ruling).
+  **Channel/tier:** none — no rule or copy change.
+  **Check:** the range pin covers `async` on both surfaces; parity green.

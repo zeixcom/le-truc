@@ -187,3 +187,24 @@ Full entry text: `git log -p -- DONE.md`.
   `:not(<tag> *)` exclusion is accepted; its only miss is an own element inside a same-tag
   ancestor of the host, which no composition produces.
 - **Scrollarea's wall time at demo scale is noise** (LT-103).
+
+---
+
+**Since the 2026-10-02 prune:**
+
+- [x] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2). — reviewed ✓
+  **Area:** compiler
+  **Changed:** `CompileDiagnostic` is `{ code, severity, message, location, related, fix? }`;
+  `line` is removed (a breaking change to the record, landed before the first publish).
+  `contract.ts` exports `DiagnosticLocation` `{ file, start, end }`, `DiagnosticFix` and
+  `DiagnosticEdit`. Producers pass a `Site` (node or range); `locate()` publishes it against the
+  authored file, falling back to the whole file when there is no construct.
+  `RoutingSignal.location` is optional; corpus LTC048 carries `related`. No `fix` is attached
+  yet. LTC014 reports one diagnostic per run of unused names, split at context names. The LT-242
+  parity suite compares the authored text each range covers on both surfaces; it caught `.tsrx`
+  LTC008 async leaving out `export`, fixed in `front-end.ts`.
+  **Rulings:** narrowing a range later is not a breaking change to the record. Attach `fix`
+  only where a repair needs no author judgement; LT-134's fix-it wording is input, not a mandate.
+  **Review (Architect, 2026-10-03):** reviewed ✓ after one rework round (`review-pending`).
+  Follow-up: LT-416 (narrow LTC008's async range). COMPILER_SPEC.md brought up to the record by
+  the Architect.

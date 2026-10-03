@@ -582,7 +582,7 @@ Emitted bytes are not contract. Everything else under the compiler is internal.
 | The host-profile TSX dialect, versioned | What authors write and adapters target; grows only through the ADR 0041 gate |
 | `compileComponentTsx(source, { sourceMap? })` | The one entry point |
 | `CompileFileResult`, `CompiledComponent`, `RegistryEntry` | The consumer half |
-| `CompileDiagnostic`, `DiagnosticCode` | Diagnostics |
+| `CompileDiagnostic`, `DiagnosticCode`, `DiagnosticLocation`, `DiagnosticFix`, `DiagnosticEdit` | Diagnostics (ADR 0044) |
 | `EmitPaths`, `le-truc.config.json` | Emit-path facts and the configuration surface |
 | The generated-module API | `render<Name>`, the client default export, the manifest |
 
@@ -731,5 +731,5 @@ As of 2026-09-29, for orientation only; it ages quickly. The current architectur
 | 8 IR | Partial |  | Partial: Estree `AstNode`, internal since LT-370; typed unions pending (LT-287, LT-289); no reactivity-class annotation as such |
 | 9 HTML | Partial | SSG | Missing: template emission (LT-257, release-gating) |
 | 10 Client | Done | All |  |
-| 11 Diagnostics | Partial |  | Partial: \~118 codes; record is `{ code, severity, message, line? }`; terminal only |
+| 11 Diagnostics | Partial |  | Partial: \~118 codes; record is `{ code, severity, message, location, related, fix? }` (ADR 0044 s1, LT-371); terminal only |
 | 12 Public contract | Partial |  | Partial: not yet published (LT-254) |
