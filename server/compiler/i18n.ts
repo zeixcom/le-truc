@@ -93,7 +93,7 @@ export const readI18nDecl = (
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
 				ctx.source,
-				declarator.start,
+				declarator,
 				'`export const i18n` must be an object literal mapping message keys to their source-locale strings (ADR 0030).',
 			),
 		)
@@ -112,18 +112,13 @@ export const readI18nDecl = (
 			if (parsed.ok) args[key] = parsed.args
 			else
 				ctx.diagnostics.push(
-					diagnostic.unparseableMessage(
-						ctx.source,
-						value.start,
-						key,
-						parsed.error,
-					),
+					diagnostic.unparseableMessage(ctx.source, value, key, parsed.error),
 				)
 		} else {
 			ctx.diagnostics.push(
 				diagnostic.invalidSource(
 					ctx.source,
-					value.start,
+					value,
 					`\`export const i18n\` value for \`${key}\` must be a string literal — the inline source string is the fallback every locale resolves against and the bytes the staleness manifest hashes.`,
 				),
 			)
@@ -354,7 +349,7 @@ export const reportMessageCallSites = (
 			ctx.diagnostics.push(
 				diagnostic.messageArgumentMismatch(
 					ctx.source,
-					(call ?? member).start,
+					call ?? member,
 					key,
 					problem,
 					fix,

@@ -125,6 +125,9 @@ export const parseComposeImports = (
 export type LeTrucImport = {
 	names: string[]
 	start: number
+	end: number
+	/** Each name's import specifier, for a diagnostic's range (LT-371). */
+	specifiers: Map<string, AstNode>
 }
 
 /**
@@ -148,15 +151,21 @@ export const parseLeTrucImports = (ast: AstNode): LeTrucImport[] => {
 				: null
 		if (specifier !== '@zeix/le-truc') continue
 		const names: string[] = []
+		const specifiers = new Map<string, AstNode>()
 		for (const spec of asArray(stmt.specifiers)) {
 			if (spec.type !== 'ImportSpecifier') continue
 			const name = identifierName(spec.local)
-			if (name) names.push(name)
+			if (name) {
+				names.push(name)
+				specifiers.set(name, spec)
+			}
 		}
 		if (names.length > 0)
 			result.push({
 				names,
 				start: typeof stmt.start === 'number' ? stmt.start : 0,
+				end: typeof stmt.end === 'number' ? stmt.end : 0,
+				specifiers,
 			})
 	}
 	return result
@@ -218,6 +227,27 @@ export { RUNTIME_HARNESS_EXPORTS }
  * authored line is filtered per name rather than re-emitted verbatim. A
  * statement no name uses anywhere warns via LTC014, same as plain imports.
  */
+/**
+ * The span from the first to the last of `names`' specifiers in `imp` —
+ * what an unused-import report covers (LT-371); the whole declaration when
+ * a specifier carries no position.
+ */
+const specifierSpan = (
+	imp: LeTrucImport,
+	names: readonly string[],
+): { start: number; end: number } => {
+	let start = Number.POSITIVE_INFINITY
+	let end = Number.NEGATIVE_INFINITY
+	for (const name of names) {
+		const spec = imp.specifiers.get(name)
+		if (typeof spec?.start !== 'number' || typeof spec.end !== 'number')
+			return imp
+		start = Math.min(start, spec.start)
+		end = Math.max(end, spec.end)
+	}
+	return Number.isFinite(start) ? { start, end } : imp
+}
+
 export const placeLeTrucImports = (
 	ctx: ExtractContext,
 	component: SetupLikeComponent,
@@ -254,7 +284,11 @@ export const placeLeTrucImports = (
 		const usedClient = names.filter(n => clientUsage.has(n))
 		if (usedServer.length === 0 && usedClient.length === 0) {
 			ctx.diagnostics.push(
-				diagnostic.unusedPlainImport(ctx.source, imp.start, names),
+				diagnostic.unusedPlainImport(
+					ctx.source,
+					specifierSpan(imp, names),
+					names,
+				),
 			)
 			continue
 		}
@@ -282,6 +316,7 @@ export type PlainImportIR = {
 	/** `import 'specifier'` with no bindings at all — can't be usage-traced. */
 	sideEffectOnly: boolean
 	start: number
+	end: number
 }
 
 /**
@@ -348,6 +383,7 @@ export const parsePlainImports = (
 			localNames,
 			sideEffectOnly: localNames.length === 0,
 			start: typeof stmt.start === 'number' ? stmt.start : 0,
+			end: typeof stmt.end === 'number' ? stmt.end : 0,
 		})
 	}
 	return result
@@ -607,7 +643,7 @@ export const placePlainImports = (
 		if (usedClient) client.push(imp.text)
 		if (!usedServer && !usedClient)
 			ctx.diagnostics.push(
-				diagnostic.unusedPlainImport(ctx.source, imp.start, imp.localNames),
+				diagnostic.unusedPlainImport(ctx.source, imp, imp.localNames),
 			)
 	}
 	return { server, client, serverLocalNames }

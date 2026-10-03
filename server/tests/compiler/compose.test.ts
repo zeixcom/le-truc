@@ -8,7 +8,7 @@
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { analyzeClient } from '../../compiler/analysis/plan'
-import type { CompileDiagnostic } from '../../compiler/diagnostics'
+import type { LocalDiagnostic } from '../../compiler/diagnostics'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../compiler/registry'
@@ -977,10 +977,10 @@ export function BasicParent({ title }: { title: string })
 				`parent must extract: ${JSON.stringify(extracted.diagnostics)}`,
 			)
 		const tags = new Set(['basic-child'])
-		const firstRun: CompileDiagnostic[] = []
+		const firstRun: LocalDiagnostic[] = []
 		analyzeClient(extracted.component, tags, firstRun, composeRegistry)
 		expect(firstRun.filter(d => d.code === 'LTC041')).toEqual([])
-		const secondRun: CompileDiagnostic[] = []
+		const secondRun: LocalDiagnostic[] = []
 		analyzeClient(extracted.component, tags, secondRun, composeRegistry)
 		expect(secondRun.filter(d => d.code === 'LTC041')).toEqual([])
 	})

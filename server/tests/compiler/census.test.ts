@@ -25,13 +25,17 @@ import type { RoutingSignal } from '../../compiler/tier'
 const signal = (
 	origin: RoutingSignal['origin'],
 	detail: string,
-	line?: number,
+	location?: RoutingSignal['location'],
 ): RoutingSignal => ({
 	origin,
 	detail,
 	resolution: { by: 'realm' },
-	...(line === undefined ? {} : { line }),
+	...(location === undefined ? {} : { location }),
 })
+
+/** An authored file whose line 7 starts at offset 12. */
+const AUTHORED = 'a\nb\nc\nd\ne\nf\n<child-el></child-el>\n'
+const LINE_7 = AUTHORED.indexOf('<child-el>')
 
 const subject = (
 	tag: string,
@@ -67,20 +71,43 @@ describe('tierCensus', () => {
 	})
 
 	test('a routing signal becomes a factual reason: origin, detail, and the line when known', () => {
-		const census = tierCensus([
-			subject('form-b', 'simulated', [
-				signal('LTC004', 'no harvestable render site'),
-				signal(
-					'compose-read',
-					'reads composed <basic-a> (folded-tier) at a compose site',
-					7,
-				),
-			]),
-		])
+		const census = tierCensus(
+			[
+				subject('form-b', 'simulated', [
+					signal('LTC004', 'no harvestable render site'),
+					signal(
+						'compose-read',
+						'reads composed <basic-a> (folded-tier) at a compose site',
+						{ file: 'form-b.tsx', start: LINE_7, end: LINE_7 + 10 },
+					),
+				]),
+			],
+			file => (file === 'form-b.tsx' ? AUTHORED : undefined),
+		)
 		expect(census.entries[0]?.reasons).toEqual([
 			'LTC004: no harvestable render site',
 			'compose-read: reads composed <basic-a> (folded-tier) at a compose site (line 7)',
 		])
+	})
+
+	test('a location prints no line without its source, or when it spans the whole file', () => {
+		const located = (start: number, end: number) =>
+			subject('form-b', 'simulated', [
+				signal('LTC004', 'no harvestable render site', {
+					file: 'form-b.tsx',
+					start,
+					end,
+				}),
+			])
+		const reasons = (
+			census: ReturnType<typeof tierCensus>,
+		): readonly string[] | undefined => census.entries[0]?.reasons
+		expect(reasons(tierCensus([located(LINE_7, LINE_7 + 10)]))).toEqual([
+			'LTC004: no harvestable render site',
+		])
+		expect(
+			reasons(tierCensus([located(0, AUTHORED.length)], () => AUTHORED)),
+		).toEqual(['LTC004: no harvestable render site'])
 	})
 
 	test('a Folded-tier subject carries no reasons — that is the fact', () => {

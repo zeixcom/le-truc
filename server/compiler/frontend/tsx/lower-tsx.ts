@@ -116,7 +116,7 @@ const lowerIfExpr = (
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
-				node.start,
+				node,
 				'A `.map()` loop as a conditional branch',
 				"Only the empty state combines a condition with a loop — write `{xs.length === 0 ? <empty/> : xs.map(…)}`, testing the mapped array's own `length`, or move the loop out of the conditional.",
 			),
@@ -135,7 +135,7 @@ const lowerIfExpr = (
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
-				node.start,
+				node,
 				'A conditional branch that is not a JSX element',
 				'Write each branch as an element: `{cond ? <a/> : <b/>}` or `{cond && <a/>}`.',
 			),
@@ -174,7 +174,7 @@ const lowerSwitchIife = (
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
-				node.start,
+				node,
 				'A `switch` IIFE that contains more than the `switch` statement',
 				'Move the other statements into the component setup.',
 			),
@@ -187,7 +187,7 @@ const lowerSwitchIife = (
 	if (mode === null) return null
 	const rawCases = asArray(switchStmt.cases)
 	if (rawCases.length === 0) {
-		reportEmptySwitch(ctx, node.start, 'switch')
+		reportEmptySwitch(ctx, node, 'switch')
 		return null
 	}
 	const cases: Array<{ test: AstNode | null; children: TemplateNode[] }> = []
@@ -201,7 +201,7 @@ const lowerSwitchIife = (
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
-					raw.start ?? node.start,
+					raw.start === undefined ? node : raw,
 					'A `switch` case other than `case <expr>: return <jsx/>`',
 					'Statement-context arms are `.tsrx` grammar — write each case as a single `return` of JSX.',
 				),
@@ -210,7 +210,7 @@ const lowerSwitchIife = (
 		}
 		const children = lowerJsxValue(ctx, arm, signals, fors)
 		if (children.length === 0) {
-			reportEmptySwitch(ctx, raw.start ?? node.start, 'arm')
+			reportEmptySwitch(ctx, raw.start === undefined ? node : raw, 'arm')
 			return null
 		}
 		cases.push({ test: isNode(raw.test) ? raw.test : null, children })
@@ -289,7 +289,7 @@ const lowerTrucTry = (
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
-				node.start,
+				node,
 				'A `<truc:try>` boundary with arms that are not inline, or with other attributes',
 				'The compiler reads the arms and never evaluates them — write `catch={e => <jsx/>}` (an arrow whose body is the arm) and, optionally, `pending={<jsx/>}`, and no other attributes.',
 			),
@@ -308,9 +308,9 @@ const lowerTrucTry = (
 		catchChildren,
 		pendingChildren,
 		at: {
-			body: node.start,
-			pending: pendingSrc?.start ?? node.start,
-			catch: catchSrc.start ?? node.start,
+			body: node,
+			pending: pendingSrc ?? node,
+			catch: catchSrc.start === undefined ? node : catchSrc,
 		},
 	})
 }
@@ -367,7 +367,7 @@ const lowerEmptyArm = (
 	if (!emptySrc) return null
 	const arm = lowerJsxValue(ctx, emptySrc, signals, fors)
 	if (arm.length === 0) return null
-	return validateEmptyArm(ctx, arm, kind, fors, emptySrc.start) ?? false
+	return validateEmptyArm(ctx, arm, kind, fors, emptySrc) ?? false
 }
 
 /**
@@ -438,7 +438,7 @@ export const lowerFor = (
 		: body
 	if (isNode(root) && isTrucTry(root)) {
 		ctx.diagnostics.push(
-			diagnostic.boundaryAsLoopRoot(ctx.source, root.start, wordingOf(ctx)),
+			diagnostic.boundaryAsLoopRoot(ctx.source, root, wordingOf(ctx)),
 		)
 		return null
 	}
@@ -447,7 +447,7 @@ export const lowerFor = (
 		{
 			node,
 			itemName: identifierName(params[0]),
-			index: indexName ? { name: indexName, at: callback.start } : null,
+			index: indexName ? { name: indexName, at: params[1] as AstNode } : null,
 			iterable: callee.object as AstNode,
 			key: null,
 			extraParams: params.length > 2,

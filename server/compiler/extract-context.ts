@@ -8,9 +8,9 @@
  */
 
 import type { AstNode } from './ast-node'
-import type { CompileDiagnostic } from './diagnostics'
+import type { LocalDiagnostic } from './diagnostics'
 import type { Surface } from './surface'
-import type { RoutingSignal } from './tier'
+import type { LocalRoutingSignal } from './tier'
 
 /* === Types === */
 
@@ -19,14 +19,14 @@ export type ExtractContext = {
 	source: string
 	/** The authored surface — selects the diagnostic vocabulary (LT-233). */
 	surface: Surface
-	diagnostics: CompileDiagnostic[]
+	diagnostics: LocalDiagnostic[]
 	/**
 	 * Why this component cannot be answered by phase 1 alone (ADR 0029,
 	 * LT-165). Collected at the same setup-extraction sites that raise
 	 * `LTC013`/`LTC043`, and merged in `index.ts` with the analysis pass's
 	 * own signals before the tier is classified.
 	 */
-	routingSignals: RoutingSignal[]
+	routingSignals: LocalRoutingSignal[]
 	/**
 	 * Prop names `expose()` declares, plus the managed form props. Populated
 	 * before template lowering so a string-literal child naming a prop can be

@@ -14,7 +14,7 @@
 
 import type { AstNode } from '../ast-node'
 import { asArray, freeIdentifiers, identifierName, isNode } from '../ast-utils'
-import type { CompileDiagnostic } from '../diagnostics'
+import type { LocalDiagnostic } from '../diagnostics'
 import { diagnostic } from '../diagnostics'
 import { dependenciesOf } from '../evaluability'
 import { staticMessageReads } from '../i18n'
@@ -27,7 +27,7 @@ import type {
 } from '../ir'
 import type { RegistryEntry } from '../registry'
 import type { SuppressedSite } from '../simulation/contract.ts'
-import type { RoutingSignal } from '../tier'
+import type { LocalRoutingSignal } from '../tier'
 import {
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
@@ -385,7 +385,7 @@ export type ClientPlan = {
 	 * that used to raise `LTC004`/`LTC034`. Empty means phase 1 is total,
 	 * which is the Folded tier.
 	 */
-	routingSignals: RoutingSignal[]
+	routingSignals: LocalRoutingSignal[]
 	/**
 	 * Reactive sites whose expression no server phase can answer (ADR 0029
 	 * sub-design 1 limb b, LT-165 step 7) — recorded at the same sites for
@@ -416,9 +416,9 @@ export type ClientPlan = {
 export type PassShared = {
 	component: ComponentIR
 	source: string
-	diagnostics: CompileDiagnostic[]
+	diagnostics: LocalDiagnostic[]
 	/** Tier routing signals (ADR 0029) — see {@link ClientPlan.routingSignals}. */
-	routingSignals: RoutingSignal[]
+	routingSignals: LocalRoutingSignal[]
 	/**
 	 * Suppression sites (ADR 0029 s1 limb b, LT-165 step 7) — see
 	 * {@link ClientPlan.suppressedSites}.
@@ -481,7 +481,7 @@ export type EffectPlans = TopEffectPlan[]
 export const analyzeClient = (
 	component: ComponentIR,
 	registry: ReadonlySet<string>,
-	diagnostics: CompileDiagnostic[],
+	diagnostics: LocalDiagnostic[],
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 ): ClientPlan => {
 	const source = component.source
@@ -653,7 +653,7 @@ export const analyzeClient = (
 				clientMessageKeys.add(key)
 		}
 
-	const routingSignals: RoutingSignal[] = []
+	const routingSignals: LocalRoutingSignal[] = []
 	const suppressedSites: SuppressedSite[] = []
 	const shared: PassShared = {
 		component,
@@ -754,7 +754,7 @@ export const analyzeClient = (
 				diagnostics.push(
 					diagnostic.renderedClientOnlyConst(
 						source,
-						stmt.range.start,
+						stmt.range,
 						stmt.name,
 						badNames,
 					),

@@ -112,7 +112,7 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 			const loopRefs = [...free].filter(name => loopBound.has(name))
 			if (loopRefs.length > 0) {
 				diagnostics.push(
-					diagnostic.loopVariableInReactiveThunk(source, node.start, loopRefs),
+					diagnostic.loopVariableInReactiveThunk(source, node, loopRefs),
 				)
 				return
 			}
@@ -180,7 +180,7 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 					diagnostics.push(
 						diagnostic.unsupported(
 							source,
-							el.node.start,
+							el.node,
 							`${loopConstructLabel(attr)} on an element in a server-data ${wording.loop} body`,
 							'`each()` binds reactive attributes, class maps and event handlers only — bind it outside the loop, or render the value from server data.',
 						),
@@ -211,7 +211,7 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 						diagnostics.push(
 							diagnostic.unaddressableElement(
 								source,
-								child.node.start,
+								child.node,
 								`No unique selector for <${child.tag}> inside the ${wording.loop} output <${output.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 							),
 						)
@@ -227,7 +227,7 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 				diagnostics.push(
 					diagnostic.unsupported(
 						source,
-						node.node.start,
+						node.node,
 						`A lazy child in a server-data ${wording.loop} body`,
 						'An `each()` scope owns no template slot to bind it to — render the value from server data, or bind it reactively on an attribute of the item element.',
 					),
@@ -247,7 +247,7 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 			diagnostics.push(
 				diagnostic.unaddressableElement(
 					source,
-					output.node.start,
+					output.node,
 					`No unique selector for the ${wording.loop} output <${output.tag}> in the rendered template — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 				),
 			)
@@ -275,7 +275,7 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 				diagnostics.push(
 					diagnostic.constNotRebindable(
 						source,
-						hoisted.node.start,
+						hoisted.node,
 						hoisted.name,
 						output.tag,
 					),
@@ -345,7 +345,7 @@ const runReconcileLoops = (
 			diagnostics.push(
 				diagnostic.unsupported(
 					source,
-					loop.output.node.start,
+					loop.output.node,
 					`A second reactive-list ${wording.loop} in one component`,
 					'Both lists would share the selector of the extracted `<template>` — split the component, or render one list from server data.',
 				),
@@ -365,7 +365,7 @@ const runReconcileLoops = (
 			diagnostics.push(
 				diagnostic.unsupported(
 					source,
-					output.node.start,
+					output.node,
 					`A reactive-list ${wording.loop} directly under the component root`,
 					'`reconcile()` needs a container element other than the host — wrap the loop in one.',
 				),
@@ -377,7 +377,7 @@ const runReconcileLoops = (
 			diagnostics.push(
 				diagnostic.unaddressableElement(
 					source,
-					container.node.start,
+					container.node,
 					`No unique selector for the ${wording.loop} container <${container.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 				),
 			)
@@ -408,7 +408,7 @@ const runReconcileLoops = (
 				diagnostics.push(
 					diagnostic.unaddressableElement(
 						source,
-						root.node.start,
+						root.node,
 						`No unique selector for the ${wording.emptyArm} root <${root.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 					),
 				)
@@ -454,7 +454,7 @@ const runReconcileLoops = (
 				diagnostics.push(
 					diagnostic.unsupported(
 						source,
-						handler.start,
+						handler,
 						`${what} that reads the loop item \`${loop.itemName}\` in a reactive-list ${wording.loop} body`,
 						`Inside \`reconcile()\`'s \`bindItem\` the item is a signal, not the value, so a handler cannot read it.${wording.listItemHandlerFix}`,
 					),
@@ -500,7 +500,7 @@ const runReconcileLoops = (
 						diagnostics.push(
 							diagnostic.unaddressableElement(
 								source,
-								node.node.start,
+								node.node,
 								`No unique selector for <${node.tag}> inside the ${wording.loop} item template — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 							),
 						)

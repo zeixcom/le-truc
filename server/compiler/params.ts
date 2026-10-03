@@ -33,11 +33,10 @@ export type ComponentParams = {
 		names: ReadonlySet<string>
 		annotationName: 'FactoryContext' | 'FormFactoryContext' | null
 		/**
-		 * The annotation's own start offset, when `annotationName` names one
-		 * of the two checked types (LT-358b) — LTC050 reports the line the
-		 * written type sits on.
+		 * The written type reference, when `annotationName` names one of
+		 * the two checked types (LT-358b) — LTC050 reports its range.
 		 */
-		annotationAt: number | null
+		annotation: AstNode | null
 	} | null
 }
 
@@ -61,7 +60,7 @@ export const extractParams = (
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
 				ctx.source,
-				fn.start,
+				fn,
 				`${filename}: the component function must take a single destructured args object (plus, optionally, a typed factory-context parameter: \`, { host, expose }: FactoryContext<Props>\`).`,
 			),
 		)
@@ -75,7 +74,7 @@ export const extractParams = (
 		const bindingName = identifierName(prop.value.left)
 		if (bindingName && !isOptionalBinding(paramsNode, bindingName))
 			ctx.diagnostics.push(
-				diagnostic.defaultOnRequiredProp(ctx.source, prop.start, bindingName),
+				diagnostic.defaultOnRequiredProp(ctx.source, prop, bindingName),
 			)
 	}
 	// LT-258 (ADR 0034 s4): the reserved `i18n` record yields only the
@@ -96,7 +95,7 @@ export const extractParams = (
 			ctx.diagnostics.push(
 				diagnostic.invalidSource(
 					ctx.source,
-					contextNode.start,
+					contextNode,
 					`${filename}: the factory-context parameter must be a destructured object: \`, { host, expose }: FactoryContext<Props>\`.`,
 				),
 			)
@@ -109,7 +108,7 @@ export const extractParams = (
 		)
 		if (bad.length > 0) {
 			ctx.diagnostics.push(
-				diagnostic.badFactoryContextParam(ctx.source, contextNode.start, bad),
+				diagnostic.badFactoryContextParam(ctx.source, contextNode, bad),
 			)
 			return null
 		}
@@ -127,7 +126,7 @@ export const extractParams = (
  * (bare or generic), null for anything else (an inline type literal, an
  * alias the compiler cannot see through — nothing to check against, the
  * same don't-flag-what-you-can't-see posture as `isOptionalBinding`).
- * `at` is the annotation's own start, for LTC050's line (LT-358b).
+ * `annotation` is the written type, for LTC050's range (LT-358b).
  *
  * Both parsers keep an estree-shaped `typeAnnotation` on the parameter
  * pattern.
@@ -136,7 +135,7 @@ const contextAnnotationName = (
 	contextNode: AstNode,
 ): {
 	annotationName: 'FactoryContext' | 'FormFactoryContext' | null
-	annotationAt: number | null
+	annotation: AstNode | null
 } => {
 	if (isNode(contextNode.typeAnnotation)) {
 		const wrapped = contextNode.typeAnnotation as AstNode
@@ -147,11 +146,8 @@ const contextAnnotationName = (
 		if (literal.type === 'TSTypeReference') {
 			const name = identifierName(literal.typeName)
 			if (name === 'FactoryContext' || name === 'FormFactoryContext')
-				return {
-					annotationName: name,
-					annotationAt: literal.start ?? null,
-				}
+				return { annotationName: name, annotation: literal }
 		}
 	}
-	return { annotationName: null, annotationAt: null }
+	return { annotationName: null, annotation: null }
 }

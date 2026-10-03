@@ -28,7 +28,7 @@ import type {
 	SignalIR,
 	TemplateNode,
 } from '../ir'
-import { lineFields, resolutionOf } from '../tier'
+import { rangeFields, resolutionOf } from '../tier'
 import {
 	CONTEXT_NAMES,
 	FACTORY_CONTEXT_MEMBERS,
@@ -507,7 +507,7 @@ const planHarvests = (
 		routingSignals.push({
 			origin: 'LTC004',
 			detail: `signal \`${signal.name}\` has no harvestable initial-DOM site`,
-			...lineFields(source, signal.init?.start),
+			...rangeFields(source, signal.init),
 			resolution:
 				signal.init == null
 					? { by: 'realm' }
@@ -598,7 +598,7 @@ const planHarvests = (
 				diagnostics.push(
 					diagnostic.unaddressableElement(
 						source,
-						mirror.el.node.start,
+						mirror.el.node,
 						`No unique selector for the DOM site of server arg \`${param}\` (<${mirror.el.tag}>) — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 					),
 				)
@@ -641,7 +641,7 @@ const planHarvests = (
 				diagnostics.push(
 					diagnostic.unaddressableElement(
 						source,
-						site.el.node.start,
+						site.el.node,
 						`No unique selector for the DOM site of server arg \`${param}\` (<${site.el.tag}>) — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 					),
 				)
@@ -816,7 +816,7 @@ const planHarvests = (
 				diagnostics.push(
 					diagnostic.unsupported(
 						source,
-						signal.init?.start,
+						signal.init,
 						`The list seed of \`${signal.name}\`, which is neither a pure literal nor derived from server args,`,
 						"The client either reuses a literal seed (the server rendered from it) or harvests the container's server-rendered children — seed the list with a literal, or derive it from server args.",
 					),
@@ -908,7 +908,7 @@ const planHarvests = (
 				diagnostics.push(
 					diagnostic.unaddressableElement(
 						source,
-						direct.element.node.start,
+						direct.element.node,
 						`No unique selector for the harvest site of signal \`${signal.name}\` — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 					),
 				)

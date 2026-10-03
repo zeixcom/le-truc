@@ -18,7 +18,7 @@
  * entry, and erroring there would make discovery depend on its own output.
  */
 
-import { type CompileDiagnostic, diagnostic } from '../diagnostics'
+import { diagnostic, type LocalDiagnostic } from '../diagnostics'
 import { matchesAuthoredSelectorOn } from '../first-refs'
 import type { ComponentIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
@@ -66,7 +66,7 @@ export type ComposeRefs =
  */
 export const resolveComposeRefs = (
 	component: ComponentIR,
-	diagnostics: CompileDiagnostic[],
+	diagnostics: LocalDiagnostic[],
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 ): ComposeRefs => {
 	// No registry: this is the discovery pass. Resolving is impossible and
@@ -104,7 +104,7 @@ export const resolveComposeRefs = (
 			diagnostics.push(
 				diagnostic.firstSelectorNotFound(
 					component.source,
-					ref.offset,
+					ref.at,
 					ref.name,
 					ref.selector,
 				),
@@ -120,7 +120,7 @@ export const resolveComposeRefs = (
 			diagnostics.push(
 				diagnostic.firstSelectorAmbiguous(
 					component.source,
-					ref.offset,
+					ref.at,
 					ref.name,
 					ref.selector,
 					matches.length,
@@ -138,10 +138,11 @@ export const resolveComposeRefs = (
 			diagnostics.push(
 				diagnostic.firstSelectorDuplicate(
 					component.source,
-					ref.offset,
+					ref.at,
 					ref.name,
 					ref.selector,
 					claimed.name,
+					component.firstRefs.get(claimed.name)?.at,
 				),
 			)
 			continue

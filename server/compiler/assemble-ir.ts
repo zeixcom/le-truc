@@ -220,15 +220,14 @@ export const assembleComponentIR = (
 	// The annotation-surface check (LTC050, LT-209) — `config` is what the
 	// extract-time vocabulary check could not see. Runs before the gate so
 	// the diagnostic lands even on gated files (the LTC014 posture). The
-	// offset is the annotation's own start, so the report carries its line
-	// (LT-358b).
+	// report covers the written type (LT-358b, LT-371).
 	if (contextParam?.annotationName) {
 		const formAssociated = !!decls.config?.form
 		if (formAssociated && contextParam.annotationName === 'FactoryContext')
 			ctx.diagnostics.push(
 				diagnostic.formContextMismatch(
 					ctx.source,
-					contextParam.annotationAt ?? undefined,
+					contextParam.annotation,
 					'FactoryContext',
 				),
 			)
@@ -239,7 +238,7 @@ export const assembleComponentIR = (
 			ctx.diagnostics.push(
 				diagnostic.formContextMismatch(
 					ctx.source,
-					contextParam.annotationAt ?? undefined,
+					contextParam.annotation,
 					'FormFactoryContext',
 				),
 			)

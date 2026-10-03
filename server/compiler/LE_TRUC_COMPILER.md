@@ -212,11 +212,12 @@ export surface: the exact set published as `@zeix/le-truc-compiler`
 | --- | --- |
 | Bundled front end | `compileComponentTsx` |
 | Compile result | `CompileFileResult`, `CompiledComponent`, `RegistryEntry`, `ExposeKind`, `SourceSpan` |
-| Refusal channels | `CompileDiagnostic`, `DiagnosticCode`, `RoutingSignal`, `RoutingSignalOrigin`, `Resolution`, `UnresolvableLimb`, `EvaluationTier` |
+| Refusal channels | `CompileDiagnostic`, `DiagnosticCode`, `DiagnosticLocation`, `DiagnosticFix`, `DiagnosticEdit`, `RoutingSignal`, `RoutingSignalOrigin`, `Resolution`, `UnresolvableLimb`, `EvaluationTier` |
 | Emit-path facts | `EmitPaths`, `DEFAULT_EMIT_PATHS` |
 
 `ExposeKind` and `SourceSpan` are listed because public result types name
-them (`RegistryEntry.exposedProps`, the span tables). Which entry points and
+them (`RegistryEntry.exposedProps`, the span tables), and the three
+`Diagnostic*` shapes because `CompileDiagnostic` names them. Which entry points and
 result types belong in the set is the D-32 design session's call.
 
 `contract.test.ts` pins the set against two lists. Widening it is a
@@ -245,7 +246,22 @@ statically. The compiler refuses through two shapes:
 
 - An **error diagnostic** (`severity: 'error'`) refuses the component: the
   result's `component` is `null`, and the diagnostics carry through. The
-  author never ships the failure — the Prevented tier.
+  author never ships the failure — the Prevented tier. The record (ADR 0044
+  s1, LT-371):
+  - `code`, `severity`, `message`.
+  - `location` — `{ file, start, end }`: the offending construct in the
+    file the caller named, as 0-based character offsets (UTF-16 code units,
+    `end` exclusive; the estree and `SourceSpan` convention). A producer
+    with no construct in scope reports the whole file — the nearest
+    enclosing range, never none (ADR 0044 s2).
+  - `related` — further locations the message refers to (the other
+    `first()` of an LTC041, the other declaring files of an LTC048); empty
+    when there are none.
+  - `fix` — optional `{ description, edits }`, each edit a `location` and
+    its replacement `text`. Attached only where applying it needs no
+    author judgement: a rule whose message names two repairs carries none.
+    No rule carries one yet: LTC050's rename would leave the new type
+    unimported (LT-371).
 - A **routing signal** is not a diagnostic. It reports no fault: the author
   wrote nothing wrong. It marks an expression the fold cannot resolve, and
   the tier classifier routes the component on it. Fields:
@@ -261,8 +277,9 @@ statically. The compiler refuses through two shapes:
     appends it.
   - `detail` — the name or expression the signal is about; the census
     prints it.
-  - `line` — the 1-based line in the authored source (either front end),
-    when known.
+  - `location` — the diagnostic record's `{ file, start, end }` shape, for
+    the construct the signal is about. Absent on `compose-read` and
+    `unavailable-substrate`, which are about the component as a whole.
 
   The classifier's conjunction: no signals routes Folded; any
   realm-answerable signal routes Simulated; otherwise Static. Every signal
@@ -893,6 +910,15 @@ sources skip the detour entirely: plain `tsc` checks them directly against
 `frontend/tsx/host-profile.d.ts`, with no span table and no remapping (the
 `typecheck` script compiles the corpus first, so the generated modules and
 ambients exist).
+
+**Diagnostic locations are authored positions.** Every `CompileDiagnostic`
+producer reads the authored AST (either front end), so its range is already
+in the authored file; a stylesheet finding is lifted from the sheet slice by
+where the slice starts. No compile diagnostic arises in a generated module —
+those are `check:corpus`'s tsc diagnostics, remapped through the span tables
+above. The terminal views print a location's start as a line: the corpus
+build report reads the authored text, and the tier census takes a reader for
+it (`tierCensus(subjects, sourceOf)`); a whole-file location prints no line.
 
 **Harness types ride the same gate.** Generated code calls into the
 `runtime.ts` value harness (the compose post-processing, the fold

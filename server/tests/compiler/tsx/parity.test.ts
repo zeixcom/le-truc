@@ -40,6 +40,7 @@ import { collectI18n, writeI18nModule } from '../../../effects/i18n'
 import { createGeneratedDir } from '../../helpers/generated-corpus'
 import { CORPUS_ARGS, renderName } from '../corpus-args'
 import { loadCorpus } from '../corpus-fixture'
+import { lineAt, textAt } from '../located'
 
 const ROOT = path.resolve(import.meta.dir, '../../../..')
 /** Synthetic `.tsx` shapes and tsc probes — test fixtures, not examples (LT-237). */
@@ -578,17 +579,27 @@ export function BadHost(
 	})
 
 	test('a form-associated component annotating plain FactoryContext is LTC050', () => {
+		const source = withContext(
+			'{ host, first, expose }: FactoryContext<BadHostProps>',
+		)
 		const { diagnostics } = compileComponentTsx(
-			withContext('{ host, first, expose }: FactoryContext<BadHostProps>'),
+			source,
 			'bad-host.tsx',
 			new Set(['bad-host']),
 		)
 		const hit = diagnostics.find(d => d.code === 'LTC050')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('FormFactoryContext')
-		// LT-358b: the report carries the annotation's line (line 10 — the
-		// written type sits on the context parameter's second line).
-		expect(hit?.line).toBe(10)
+		// LT-358b: the report covers the written type (line 10 — it sits on
+		// the context parameter's second line), not the whole parameter.
+		expect(lineAt(source, hit)).toBe(10)
+		expect(textAt(source, hit)).toBe('FactoryContext<BadHostProps>')
+		expect(hit?.location.file).toBe('bad-host.tsx')
+		// LT-371: no fix. Renaming the written type alone would leave
+		// `FormFactoryContext` unimported (this fixture, like the corpus,
+		// imports only `FactoryContext`), and ADR 0044 s1 attaches a fix only
+		// where applying it needs no author judgement.
+		expect(hit?.fix).toBeUndefined()
 	})
 
 	test('a plain component annotating FormFactoryContext is LTC050 too', () => {
@@ -603,7 +614,10 @@ export function BadHost(
 		const hit = diagnostics.find(d => d.code === 'LTC050')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('does not set `config.formAssociated`')
-		expect(hit?.line).toBeDefined()
+		expect(textAt(source, hit)).toBe('FormFactoryContext<BadHostProps>')
+		// Two repairs (annotate FactoryContext, or set formAssociated): the
+		// message names both and there is no fix (ADR 0044 s1).
+		expect(hit?.fix).toBeUndefined()
 	})
 
 	test('a matching FormFactoryContext annotation compiles clean', () => {
@@ -629,10 +643,11 @@ describe('a boundary as a .map() body root is LTC053 (LT-358a)', () => {
 }`
 
 	test('an expression-bodied callback', () => {
+		const root =
+			'<truc:try catch={e => <li class="b">{e.message}</li>}><li class="a">{row}</li></truc:try>'
+		const source = mapBody(root)
 		const { diagnostics } = compileComponentTsx(
-			mapBody(
-				'<truc:try catch={e => <li class="b">{e.message}</li>}><li class="a">{row}</li></truc:try>',
-			),
+			source,
 			'bad.tsx',
 			new Set(['bad-el']),
 		)
@@ -641,7 +656,7 @@ describe('a boundary as a .map() body root is LTC053 (LT-358a)', () => {
 		// The loop rule, not the generic unrecognized-tag rule `lowerElement`
 		// would raise for a truc:* name.
 		expect(hit?.message).toContain('cannot sit directly in')
-		expect(hit?.line).toBeDefined()
+		expect(textAt(source, hit)).toBe(root)
 	})
 
 	test('a block-bodied callback whose return is the boundary', () => {
@@ -655,7 +670,7 @@ describe('a boundary as a .map() body root is LTC053 (LT-358a)', () => {
 		const hit = diagnostics.find(d => d.code === 'LTC053')
 		expect(hit).toBeDefined()
 		expect(hit?.message).toContain('cannot sit directly in')
-		expect(hit?.line).toBeDefined()
+		expect(hit?.location.end).toBeGreaterThan(hit?.location.start ?? 0)
 	})
 
 	test('an element root still compiles (negative pin)', () => {

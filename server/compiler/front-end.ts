@@ -19,7 +19,7 @@
 import { assembleComponentIR, readModuleDecls } from './assemble-ir'
 import type { AstNode } from './ast-node'
 import { asArray, identifierName, isNode } from './ast-utils'
-import { type CompileDiagnostic, diagnostic } from './diagnostics'
+import { diagnostic, type LocalDiagnostic } from './diagnostics'
 import type { EmitPaths } from './emit-paths'
 import type { ExtractContext } from './extract-context'
 import { messageBindingsOf } from './i18n'
@@ -38,19 +38,19 @@ import { extractParams } from './params'
 import { extractSetup, seedExtractionContext } from './setup-extraction'
 import { type Surface, wordingOf } from './surface'
 import { resolveTemplateOutput } from './template-output'
-import type { RoutingSignal } from './tier'
+import type { LocalRoutingSignal } from './tier'
 import { validateLoweredComponent } from './validate-lowered'
 
 /* === Types === */
 
 export type CompileResult = {
 	component: ComponentIR | null
-	diagnostics: CompileDiagnostic[]
+	diagnostics: LocalDiagnostic[]
 	/**
 	 * Setup-extraction routing signals (ADR 0029, LT-165). Merged with the
 	 * analysis pass's own in `pipeline.ts`, where the tier is classified.
 	 */
-	routingSignals: RoutingSignal[]
+	routingSignals: LocalRoutingSignal[]
 }
 
 /** What one surface's grammar decides; everything else is shared. */
@@ -142,7 +142,7 @@ export const runFrontEnd = (
 			ctx.diagnostics.push(
 				diagnostic.invalidSource(
 					ctx.source,
-					stmt.start,
+					stmt,
 					`${filename}: multiple component functions per file are outside the sanctioned subset.`,
 				),
 			)
@@ -174,7 +174,7 @@ export const runFrontEnd = (
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
 				ctx.source,
-				fn.start,
+				fn,
 				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
 			),
 		)
@@ -213,7 +213,7 @@ export const runFrontEnd = (
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
 				ctx.source,
-				output?.start,
+				output,
 				`${filename}: ${wording.outputShape}`,
 			),
 		)

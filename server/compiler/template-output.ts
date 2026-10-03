@@ -14,7 +14,7 @@ import {
 	checkSheetContract,
 	type GlobalFace,
 } from './css-scope'
-import type { CompileDiagnostic } from './diagnostics'
+import type { LocalDiagnostic, Site } from './diagnostics'
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import {
@@ -102,7 +102,7 @@ export const resolveTemplateOutput = (
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
 				ctx.source,
-				root.node.start,
+				root.node,
 				`${filename}: the root element must be the component's custom element tag (got \`${root.tag}\`).`,
 			),
 		)
@@ -123,7 +123,7 @@ export const resolveTemplateOutput = (
 				required: !maybe,
 				reason: reasonText,
 				stage,
-				offset: node.start,
+				at: { start: node.start, end: node.end },
 			})
 		}
 		const { elements } = collectMatchingElements(root, selectorText)
@@ -151,12 +151,7 @@ export const resolveTemplateOutput = (
 				continue
 			}
 			ctx.diagnostics.push(
-				diagnostic.firstSelectorNotFound(
-					source,
-					node.start,
-					refName,
-					selectorText,
-				),
+				diagnostic.firstSelectorNotFound(source, node, refName, selectorText),
 			)
 			resolve('rejected')
 			continue
@@ -178,7 +173,7 @@ export const resolveTemplateOutput = (
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					source,
-					node.start,
+					node,
 					`A \`first()\` reference to <${inArm.tag}> inside a reactive conditional's arm`,
 					"The arm's elements are cloned anew each time the arm renders, so a reference taken at connect goes stale — bind the element from inside the arm instead (an event handler or a reactive attribute on it).",
 				),
@@ -188,18 +183,13 @@ export const resolveTemplateOutput = (
 		}
 		if (!maybe && elements.every(el => inOptionalBranch(root, el)))
 			ctx.diagnostics.push(
-				diagnostic.deadRequiredReason(
-					source,
-					node.start,
-					refName,
-					selectorText,
-				),
+				diagnostic.deadRequiredReason(source, node, refName, selectorText),
 			)
 		if (elements.length > 1 && !shareExclusiveIf(root, elements)) {
 			ctx.diagnostics.push(
 				diagnostic.firstSelectorAmbiguous(
 					source,
-					node.start,
+					node,
 					refName,
 					selectorText,
 					elements.length,
@@ -218,10 +208,11 @@ export const resolveTemplateOutput = (
 			ctx.diagnostics.push(
 				diagnostic.firstSelectorDuplicate(
 					source,
-					node.start,
+					node,
 					refName,
 					selectorText,
 					claimed.name,
+					extraction.elementRefs.get(claimed.name)?.node,
 				),
 			)
 			resolve('rejected')
@@ -255,10 +246,7 @@ export const resolveTemplateOutput = (
 			// undefined only if the slice cannot be relocated.
 			const sheetStart = source.indexOf(sheetText, styleChild.node.start)
 			for (const sheetError of parsed.errors) {
-				const authoredOffset =
-					sheetStart >= 0 && sheetError.offset !== undefined
-						? sheetStart + sheetError.offset
-						: undefined
+				const authoredOffset = authoredRange(sheetStart, sheetError)
 				switch (sheetError.face) {
 					case 'syntax':
 						ctx.diagnostics.push(
@@ -318,6 +306,23 @@ export const resolveTemplateOutput = (
 }
 
 /**
+ * Lift a sheet finding's range into the authored source (ADR 0044 s2):
+ * the sheet text is a verbatim slice, so offsets shift by where it starts.
+ * Undefined — the whole file — only when the slice cannot be relocated or
+ * the parser gave no position.
+ */
+export const authoredRange = (
+	sheetStart: number,
+	finding: { offset?: number | undefined; end?: number | undefined },
+): Site =>
+	sheetStart >= 0 && finding.offset !== undefined
+		? {
+				start: sheetStart + finding.offset,
+				end: sheetStart + (finding.end ?? finding.offset),
+			}
+		: undefined
+
+/**
  * Map one shadow-root contract finding (ADR 0033 s6, LT-304) onto its
  * diagnostic: the sheet offset lifts into the authored source when the
  * slice relocated, and each face names its own builder.
@@ -327,11 +332,8 @@ const contractDiagnostic = (
 	sheetStart: number,
 	finding: ContractFinding,
 	tag: string,
-): CompileDiagnostic => {
-	const authoredOffset =
-		sheetStart >= 0 && finding.offset !== undefined
-			? sheetStart + finding.offset
-			: undefined
+): LocalDiagnostic => {
+	const authoredOffset = authoredRange(sheetStart, finding)
 	switch (finding.face) {
 		case 'own-tag-led':
 			return diagnostic.ownTagLedRule(source, authoredOffset, tag)

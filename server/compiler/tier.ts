@@ -59,8 +59,9 @@
 
 import type { AstNode } from './ast-node'
 import { forEachChild, isNode } from './ast-utils'
-import { lineOf } from './diagnostics'
+import { type DiagnosticLocation, rangeOf, type Site } from './diagnostics'
 import { type ImpureAmbientCause, impureAmbientCauses } from './evaluability'
+import type { SourceRange } from './ir'
 import {
 	UNANSWERABLE_GLOBAL_NAMES,
 	UNANSWERABLE_MEMBERS,
@@ -144,9 +145,23 @@ export type RoutingSignal = {
 	origin: RoutingSignalOrigin
 	/** The name or expression the signal is about, for the census line. */
 	detail: string
-	/** 1-based line in the authored source (either front end), when known. */
-	line?: number
+	/**
+	 * The construct the signal is about, in the authored file — the
+	 * diagnostic record's location shape (ADR 0044 s1, LT-371). Absent on
+	 * corpus-level signals (`compose-read`, `unavailable-substrate`), which
+	 * are about the component as a whole.
+	 */
+	location?: DiagnosticLocation
 	resolution: Resolution
+}
+
+/**
+ * A routing signal as the stages produce it, with its range local to the
+ * file being compiled (internal) — `locateSignal()` names the file in the
+ * pipeline, as `locate()` does for diagnostics.
+ */
+export type LocalRoutingSignal = Omit<RoutingSignal, 'location'> & {
+	range?: SourceRange
 }
 
 /** A component's tier and the reasons behind it — one census record. */
@@ -173,17 +188,22 @@ const IMPURITY_REASONS: Record<ImpureAmbientCause, string> = {
 /* === Exported Functions === */
 
 /**
- * The optional `line` field, spread-ready. `exactOptionalPropertyTypes` is
- * on, so an explicit `line: undefined` is a type error rather than an
- * absent field — this keeps every signal-construction site from repeating
- * the same ternary.
+ * A signal's `range` field, spread-ready: the construct `at` covers, or the
+ * whole file when nothing in range is known — the diagnostics' `rangeOf`,
+ * so a signal and a diagnostic about one construct agree.
  */
-export const lineFields = (
+export const rangeFields = (
 	source: string,
-	offset: number | undefined,
-): { line?: number } => {
-	const line = lineOf(source, offset)
-	return line === undefined ? {} : { line }
+	at: Site,
+): { range: SourceRange } => ({ range: rangeOf(source, at) })
+
+/** Publish a stage's routing signal against `file` (ADR 0044 s1). */
+export const locateSignal = (
+	signal: LocalRoutingSignal,
+	file: string,
+): RoutingSignal => {
+	const { range, ...rest } = signal
+	return range === undefined ? rest : { ...rest, location: { file, ...range } }
 }
 
 /**
@@ -285,7 +305,7 @@ export const resolutionOf = (
  * unresolvable, so no mechanism needs to run at all.
  */
 export const classifyTier = (
-	signals: readonly RoutingSignal[],
+	signals: readonly { resolution: Resolution }[],
 ): EvaluationTier => {
 	if (signals.length === 0) return 'folded'
 	return signals.some(signal => signal.resolution.by === 'realm')

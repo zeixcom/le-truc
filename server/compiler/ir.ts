@@ -26,7 +26,10 @@ import type { Surface } from './surface'
  */
 export type ComponentSheet = StyleSheet
 
-/** A character range in the `.tsrx` source (LT-011 span table). */
+/**
+ * A character range in the authored source (LT-011 span table; a
+ * diagnostic's range before the file is named, LT-371).
+ */
 export type SourceRange = { start: number; end: number }
 
 /** A verbatim setup/side-effect statement, with its source range for LT-011. */
@@ -181,8 +184,8 @@ export type FirstRefDecl = {
 	 */
 	reason: string | null
 	stage: FirstRefStage
-	/** Source offset of the `first()` call. */
-	offset: number | undefined
+	/** Source range of the `first()` call's declaration, when known. */
+	at: { start?: number | undefined; end?: number | undefined } | undefined
 }
 
 /** Fields every signal declaration carries, whatever its family. */

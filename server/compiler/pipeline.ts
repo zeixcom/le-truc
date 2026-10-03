@@ -15,7 +15,12 @@ import {
 	collectScopeBoundaries,
 	emitScopedSheet,
 } from './css-scope'
-import { type CompileDiagnostic, diagnostic } from './diagnostics'
+import {
+	type CompileDiagnostic,
+	diagnostic,
+	type LocalDiagnostic,
+	locate,
+} from './diagnostics'
 import { emitClientModule } from './emit-client'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from './emit-paths'
 import { emitServerModule } from './emit-server'
@@ -23,8 +28,8 @@ import { checkFoldInputs } from './fold-inputs'
 import type { ComponentIR } from './ir'
 import type { RegistryEntry } from './registry'
 import type { SourceSpan } from './spans'
-import type { RoutingSignal } from './tier'
-import { classifyTier } from './tier'
+import { authoredRange } from './template-output'
+import { classifyTier, type LocalRoutingSignal, locateSignal } from './tier'
 import { collectComposeElements } from './walk'
 
 /* === Types === */
@@ -92,15 +97,18 @@ export type CompileFileResult = {
  */
 export const compileFromIR = (
 	component: ComponentIR | null,
-	diagnostics: CompileDiagnostic[],
-	setupSignals: RoutingSignal[],
+	diagnostics: LocalDiagnostic[],
+	setupSignals: LocalRoutingSignal[],
 	filename: string,
 	registry: ReadonlySet<string>,
 	childImports?: ReadonlyMap<string, string>,
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
 ): CompileFileResult => {
-	if (!component) return { component: null, diagnostics }
+	// Every return publishes the stages' diagnostics against the file the
+	// caller named (ADR 0044 s1, LT-371).
+	const located = () => diagnostics.map(d => locate(d, filename))
+	if (!component) return { component: null, diagnostics: located() }
 	const composeNodes = collectComposeElements(component)
 	if (composeRegistry) {
 		for (const node of composeNodes) {
@@ -108,7 +116,7 @@ export const compileFromIR = (
 				diagnostics.push(
 					diagnostic.composedComponentNotCompiled(
 						component.source,
-						node.node.start,
+						node.node,
 						node.component,
 						node.source,
 					),
@@ -138,16 +146,14 @@ export const compileFromIR = (
 			diagnostics.push(
 				diagnostic.descendsPastBoundary(
 					component.source,
-					sheetStart >= 0 && finding.offset !== undefined
-						? sheetStart + finding.offset
-						: undefined,
+					authoredRange(sheetStart, finding),
 					finding.selector,
 					finding.boundary,
 				),
 			)
 	}
 	if (diagnostics.some(d => d.severity === 'error'))
-		return { component: null, diagnostics }
+		return { component: null, diagnostics: located() }
 	/**
 	 * The per-component half of the tier decision (ADR 0029, LT-165). Both
 	 * halves of the analysis contribute: setup extraction sees the
@@ -161,7 +167,9 @@ export const compileFromIR = (
 	 * the component's tier BEFORE contamination, and can only move
 	 * downward (towards the Simulated tier) from here.
 	 */
-	const routingSignals = [...setupSignals, ...plan.routingSignals]
+	const routingSignals = [...setupSignals, ...plan.routingSignals].map(signal =>
+		locateSignal(signal, filename),
+	)
 	const tier = classifyTier(routingSignals)
 	/**
 	 * Composed children this component READS — a `first()` addressing the
@@ -259,6 +267,6 @@ export const compileFromIR = (
 			clientSpans: client.spans,
 			serverSpans: server.spans,
 		},
-		diagnostics,
+		diagnostics: located(),
 	}
 }

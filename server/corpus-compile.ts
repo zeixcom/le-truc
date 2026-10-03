@@ -31,7 +31,7 @@ import {
 	type VariantSurface,
 	validateVariantOverrides,
 } from './compiler/corpus-config'
-import { diagnostic } from './compiler/diagnostics'
+import { diagnostic, lineOf, wholeFile } from './compiler/diagnostics'
 import type { EmitPaths } from './compiler/emit-paths'
 import {
 	type CompileDiagnostic,
@@ -250,9 +250,26 @@ export const compileCorpus = async (
 	// component. A file that errors in pass 1 and survives to pass 2 is
 	// reported by its pass-2 verdict (last write wins per file).
 	const errorLabels = new Map<string, string>()
+	// Authored text by project-relative path: the terminal view prints a
+	// location's start as a line, and corpus-level rules locate whole files
+	// (ADR 0044 s1–s2).
+	const contentOf = new Map(
+		files.map(file => [relative(root, file.path), file.content]),
+	)
+	const locationOf = (rel: string) => wholeFile(rel, contentOf.get(rel) ?? '')
+	const lineLabel = (d: CompileDiagnostic): string => {
+		const content = contentOf.get(d.location.file)
+		if (
+			content === undefined ||
+			(d.location.start === 0 && d.location.end === content.length)
+		)
+			return ''
+		const line = lineOf(content, d.location.start)
+		return line === undefined ? '' : `line ${line}: `
+	}
 	const report = (rel: string, diagnostics: CompileDiagnostic[]) => {
 		for (const d of diagnostics) {
-			const label = `[${d.code}] ${d.line ? `line ${d.line}: ` : ''}${d.message}`
+			const label = `[${d.code}] ${lineLabel(d)}${d.message}`
 			if (d.severity === 'error') {
 				console.error(`❌ ${rel} — ${label}`)
 				errorLabels.set(rel, label)
@@ -282,7 +299,14 @@ export const compileCorpus = async (
 		if (sources.length < 2) continue
 		if (isVariantSet(sources)) continue
 		for (const rel of sources) {
-			report(rel, [diagnostic.duplicateTag(tag, sources)])
+			report(rel, [
+				diagnostic.duplicateTag(
+					tag,
+					sources,
+					locationOf(rel),
+					sources.filter(other => other !== rel).map(locationOf),
+				),
+			])
 			// Both files are dropped by never reaching pass 1: `report` put
 			// them in `errorLabels`, which the pass-1 loop skips.
 		}
@@ -402,7 +426,15 @@ export const compileCorpus = async (
 									]),
 								)
 					for (const rel of sources)
-						report(rel, [diagnostic.variantCssDrift(tag, sources, boundaries)])
+						report(rel, [
+							diagnostic.variantCssDrift(
+								tag,
+								sources,
+								locationOf(rel),
+								sources.filter(other => other !== rel).map(locationOf),
+								boundaries,
+							),
+						])
 					// The set serves nothing — LTC048's all-dropped semantics.
 					continue
 				}

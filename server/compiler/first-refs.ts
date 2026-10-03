@@ -20,7 +20,7 @@
 import * as cssWhat from 'css-what'
 import type { AstNode } from './ast-node'
 import { isNode } from './ast-utils'
-import { type CompileDiagnostic, diagnostic } from './diagnostics'
+import { diagnostic, type LocalDiagnostic, type Site } from './diagnostics'
 import type { FirstRefDecl, TemplateNode } from './ir'
 import {
 	childNodes,
@@ -351,7 +351,7 @@ export const shareExclusiveIf = (
 export type DuplicatedChannelsCheck = {
 	root: TemplateNode
 	source: string
-	diagnostics: CompileDiagnostic[]
+	diagnostics: LocalDiagnostic[]
 	argNames: ReadonlySet<string>
 	parserProps: ReadonlySet<string>
 	parserFactoryOf: (prop: string) => string
@@ -383,11 +383,11 @@ export const reportDuplicatedChannels = ({
 		formResetProp !== null &&
 		root.kind === 'element' &&
 		root.attrs.some(a => a.kind === 'server' && a.name === formResetProp)
-	const report = (prop: string, offset: number | undefined): void => {
+	const report = (prop: string, at: Site): void => {
 		diagnostics.push(
 			diagnostic.duplicatedPropChannel(
 				source,
-				offset,
+				at,
 				prop,
 				parserFactoryOf(prop),
 				prop === formResetProp,
@@ -429,7 +429,7 @@ export const reportDuplicatedChannels = ({
 				) &&
 				!(prop === formResetProp && rootHasBaselineAttr)
 			)
-				report(prop, node.node.start)
+				report(prop, node.node)
 			return
 		}
 		if (node.kind !== 'element' || node === root) return
@@ -441,7 +441,7 @@ export const reportDuplicatedChannels = ({
 				!isSanctionedOverride(prop, node) &&
 				!(prop === formResetProp && rootHasBaselineAttr)
 			)
-				report(prop, attr.node.start)
+				report(prop, attr.node)
 		}
 	})
 }
@@ -460,7 +460,7 @@ export const reportDuplicatedChannels = ({
 export const reportStaticIds = (
 	root: TemplateNode,
 	source: string,
-	diagnostics: CompileDiagnostic[],
+	diagnostics: LocalDiagnostic[],
 ): void => {
 	walkTemplate(root, node => {
 		if (node.kind !== 'element') return
@@ -469,7 +469,7 @@ export const reportStaticIds = (
 				diagnostics.push(
 					diagnostic.staticIdInTemplate(
 						source,
-						node.node.start,
+						node.node,
 						node.tag,
 						attr.value,
 					),

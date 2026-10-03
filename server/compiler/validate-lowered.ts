@@ -63,7 +63,7 @@ const reportNamedFormControls = (
 			)
 			if (nameAttr)
 				ctx.diagnostics.push(
-					diagnostic.formControlHasName(ctx.source, node.node.start, node.tag),
+					diagnostic.formControlHasName(ctx.source, node.node, node.tag),
 				)
 		},
 		{ intoCompose: false },
@@ -93,7 +93,7 @@ const reportLoopsInBranches = (
 			ctx.diagnostics.push(
 				diagnostic.loopInBranch(
 					ctx.source,
-					node.node?.start,
+					node.node,
 					wordingOf(ctx),
 					parent.construct,
 				),
@@ -181,7 +181,7 @@ export const validateLoweredComponent = (
 		walkTemplate(root, node => {
 			if (node.kind !== 'text' || !/[A-Za-z]{2}/.test(node.value)) return
 			ctx.diagnostics.push(
-				diagnostic.untranslatedLiteral(source, node.node?.start, node.value),
+				diagnostic.untranslatedLiteral(source, node.node, node.value),
 			)
 		})
 
@@ -205,7 +205,7 @@ export const validateLoweredComponent = (
 			const propName = identifierName(prop.key)
 			if (propName && RESERVED_PROP_NAMES.has(propName))
 				ctx.diagnostics.push(
-					diagnostic.reservedExposeName(source, prop.start, propName),
+					diagnostic.reservedExposeName(source, prop, propName),
 				)
 		}
 	}
@@ -225,7 +225,7 @@ export const validateLoweredComponent = (
 				ctx.diagnostics.push(
 					diagnostic.managedFormMemberShadowed(
 						source,
-						prop.start,
+						prop,
 						propName,
 						extensionName,
 					),

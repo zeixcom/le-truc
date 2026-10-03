@@ -31,7 +31,7 @@ import type {
 	SignalIR,
 	SourceRange,
 } from './ir'
-import { lineFields, resolutionOf } from './tier'
+import { rangeFields, resolutionOf } from './tier'
 import {
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
@@ -195,7 +195,7 @@ export const extractSetup = (
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						source,
-						stmt.start,
+						stmt,
 						'A setup declaration other than a single initialized `const`',
 						'Declare one initialized `const` per statement.',
 					),
@@ -235,7 +235,7 @@ export const extractSetup = (
 					(args.length === 2 && reasonText === null)
 				)
 					ctx.diagnostics.push(
-						diagnostic.invalidFirstCall(source, stmt.start, declName),
+						diagnostic.invalidFirstCall(source, stmt, declName),
 					)
 				else {
 					elementRefs.set(declName, {
@@ -284,7 +284,7 @@ export const extractSetup = (
 					ctx.routingSignals.push({
 						origin: 'LTC043',
 						detail: `\`${declName}\` reads element ref(s) ${refReads.join(', ')} in setup`,
-						...lineFields(source, stmt.start),
+						...rangeFields(source, stmt),
 						resolution: { by: 'realm' },
 					})
 				}
@@ -303,7 +303,7 @@ export const extractSetup = (
 				const args = asArray(init.arguments)
 				if (args.length !== 2) {
 					ctx.diagnostics.push(
-						diagnostic.invalidRequestContextCall(source, stmt.start, declName),
+						diagnostic.invalidRequestContextCall(source, stmt, declName),
 					)
 				} else {
 					const fallbackNode = args[1] as AstNode
@@ -315,7 +315,7 @@ export const extractSetup = (
 						ctx.diagnostics.push(
 							diagnostic.contextFallbackNotServerKnown(
 								source,
-								stmt.start,
+								stmt,
 								declName,
 								badFallbackNames,
 							),
@@ -369,7 +369,7 @@ export const extractSetup = (
 					ctx.routingSignals.push({
 						origin: 'LTC013',
 						detail: `\`${declName}\`'s ${calleeName}() compute reads ${badContextNames.join('/')}`,
-						...lineFields(source, stmt.start),
+						...rangeFields(source, stmt),
 						resolution: resolutionOf(init, ctx.serverKnown),
 					})
 				} else {
@@ -412,11 +412,7 @@ export const extractSetup = (
 					SIGNAL_CONSTRUCTORS.has(alternateName)
 				) {
 					ctx.diagnostics.push(
-						diagnostic.conditionalSignalConstructor(
-							source,
-							stmt.start,
-							declName,
-						),
+						diagnostic.conditionalSignalConstructor(source, stmt, declName),
 					)
 				} else {
 					plainSetup.push(setupStmt)
@@ -436,7 +432,7 @@ export const extractSetup = (
 					ctx.routingSignals.push({
 						origin: 'LTC013',
 						detail: `\`${declName}\` calls client-only primitive(s) ${badPrimitives.join(', ')}`,
-						...lineFields(source, stmt.start),
+						...rangeFields(source, stmt),
 						resolution: resolutionOf(init, ctx.serverKnown),
 					})
 				}
@@ -454,7 +450,7 @@ export const extractSetup = (
 				String(((stmt as AstNode).argument as AstNode).type),
 			)
 		) {
-			ctx.diagnostics.push(diagnostic.reactReturnJsx(source, stmt.start))
+			ctx.diagnostics.push(diagnostic.reactReturnJsx(source, stmt))
 			continue
 		}
 		// The client-only free-name gate (LT-008, widened by LT-069/087/088):
@@ -615,7 +611,7 @@ export const extractSetup = (
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				source,
-				stmt.start,
+				stmt,
 				'A setup statement other than a `const` declaration, `expose()` or a client-only side effect over `host`, `internals` or signals',
 				'Move the logic into a `const` initializer, or into a `watch()` or `on()` handler.',
 			),

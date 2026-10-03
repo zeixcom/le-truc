@@ -66,6 +66,12 @@ export type SheetError = {
 	 * the caller maps it onto the authored source.
 	 */
 	offset?: number
+	/**
+	 * Where the offending construct ends (exclusive) in the sheet text —
+	 * the declaration's end for the declaration faces; absent for a syntax
+	 * error, which the parser locates as a point.
+	 */
+	end?: number
 	/** The offending property, for the declaration faces. */
 	property?: string
 	/** The echoed value text, for the invalid-value face. */
@@ -194,6 +200,13 @@ const grammarErrors = (source: string): SheetError[] => {
 		return errors
 	}
 
+	// css-tree ends a declaration without a `;` after the whitespace that
+	// follows it; the reported range stops at its last character.
+	const trimmedEnd = (text: string, end: number): number => {
+		while (end > 0 && /\s/.test(text[end - 1] ?? '')) end--
+		return end
+	}
+
 	const checkDeclaration = (node: CssTreeDeclaration, base: number): void => {
 		const property = String(node.property)
 		if (property.startsWith('--')) return
@@ -216,6 +229,9 @@ const grammarErrors = (source: string): SheetError[] => {
 		errors.push({
 			face: unknown ? 'unknown-property' : 'invalid-value',
 			offset: base + (node.loc?.start.offset ?? 0),
+			...(node.loc
+				? { end: trimmedEnd(source, base + node.loc.end.offset) }
+				: {}),
 			property,
 			...(echoed !== undefined ? { value: echoed } : {}),
 			detail: unknown ? message : 'Mismatch',

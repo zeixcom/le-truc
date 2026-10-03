@@ -431,7 +431,17 @@ export const simulateCorpus = async ({
 				`${rerouted.length} Simulated-tier component(s) routed Static ` +
 				'(ADR 0034 s5); the build is green, their initial markup is the skeleton',
 		)
-		log(formatCensus(tierCensus(reroutedSubjects)))
+		// The census prints each signal's line from the authored file its
+		// location names (project-relative, like the registry's `source`).
+		const sources = new Map<string, string>()
+		for (const subject of reroutedSubjects)
+			for (const { location } of subject.routingSignals) {
+				if (!location || sources.has(location.file)) continue
+				const path = join(root, location.file)
+				if (await io.fileExists(path))
+					sources.set(location.file, await io.readTextFile(path))
+			}
+		log(formatCensus(tierCensus(reroutedSubjects, file => sources.get(file))))
 		return {
 			simulated,
 			skipped,

@@ -29,7 +29,7 @@ import {
 	walkNodes,
 } from '../../ast-utils'
 import { getStyleElementStylesheet, parseModule } from '../../core'
-import { diagnostic } from '../../diagnostics'
+import { diagnostic, type Site } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import type { ExtractContext } from '../../extract-context'
 import { createExtractContext } from '../../extract-context'
@@ -125,7 +125,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: AstNode): void => {
 			ctx.diagnostics.push(
 				diagnostic.reactLogicalJsx(
 					ctx.source,
-					node.start,
+					node,
 					text(ctx.source, node.left as AstNode),
 					text(ctx.source, node),
 				),
@@ -137,7 +137,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: AstNode): void => {
 			ctx.diagnostics.push(
 				diagnostic.reactTernaryJsx(
 					ctx.source,
-					node.start,
+					node,
 					text(ctx.source, node.test as AstNode),
 					text(ctx.source, node),
 				),
@@ -158,7 +158,7 @@ const reportReactJsxNearMisses = (ctx: ExtractContext, ast: AstNode): void => {
 				ctx.diagnostics.push(
 					diagnostic.reactMapJsx(
 						ctx.source,
-						node.start,
+						node,
 						identifierName(asArray(callback.params)[0]) ?? 'item',
 						text(ctx.source, node.callee.object as AstNode),
 						text(ctx.source, node),
@@ -187,6 +187,18 @@ const TSRX_ADAPTER: SurfaceAdapter = {
 	lowerElement,
 }
 
+/**
+ * Where `@tsrx/core` located its failure (acorn-style `pos` and
+ * `raisedAt`, offsets in `source`) — the parse diagnostic's range (ADR 0044
+ * s1); undefined, the whole file, when the error carries none.
+ */
+const parseErrorSite = (e: unknown): Site => {
+	const { pos, raisedAt } = (e ?? {}) as { pos?: unknown; raisedAt?: unknown }
+	return typeof pos === 'number'
+		? { start: pos, end: typeof raisedAt === 'number' ? raisedAt : pos }
+		: undefined
+}
+
 /* === Exported Functions === */
 
 /**
@@ -209,7 +221,7 @@ export const compileSource = (
 			diagnostics: [
 				diagnostic.invalidSource(
 					source,
-					undefined,
+					parseErrorSite(e),
 					`Failed to parse ${filename}: ${e instanceof Error ? e.message : String(e)}${newerGrammarHint(source, e)}`,
 				),
 			],

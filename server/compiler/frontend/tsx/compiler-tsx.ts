@@ -28,7 +28,7 @@
  */
 
 import { asArray, identifierName, isNode } from '../../ast-utils'
-import { diagnostic } from '../../diagnostics'
+import { diagnostic, type Site } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import { createExtractContext } from '../../extract-context'
 import {
@@ -97,7 +97,7 @@ const tsxAdapter = (source: string): SurfaceAdapter => ({
 			ctx.diagnostics.push(
 				diagnostic.invalidSource(
 					ctx.source,
-					fn.start,
+					fn,
 					`${filename}: the component function must end in a single \`return <jsx/>\` (setup statements before it).`,
 				),
 			)
@@ -112,6 +112,24 @@ const tsxAdapter = (source: string): SurfaceAdapter => ({
 	lowerChildren,
 	lowerElement,
 })
+
+/**
+ * Where the TS parser located its failure (`TSError.location`, offsets in
+ * `source`) — the parse diagnostic's range (ADR 0044 s1); undefined, the
+ * whole file, when the error carries none.
+ */
+const parseErrorSite = (e: unknown): Site => {
+	const location = (
+		e as {
+			location?: { start?: { offset?: unknown }; end?: { offset?: unknown } }
+		}
+	)?.location
+	const start = location?.start?.offset
+	const end = location?.end?.offset
+	return typeof start === 'number'
+		? { start, end: typeof end === 'number' ? end : start }
+		: undefined
+}
 
 /* === Exported Functions === */
 
@@ -135,7 +153,7 @@ export const compileSourceTsx = (
 			diagnostics: [
 				diagnostic.invalidSource(
 					source,
-					undefined,
+					parseErrorSite(e),
 					`Failed to parse ${filename}: ${e instanceof Error ? e.message : String(e)}`,
 				),
 			],

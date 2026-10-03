@@ -10,6 +10,7 @@ import { assertFoldScopeClosed } from '../../compiler/fold-inputs'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../compiler/registry'
+import { lineAt, textAt } from './located'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -343,7 +344,8 @@ import { deriveList } from '@zeix/le-truc'`
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC052')
 		expect(hit?.severity).toBe('error')
-		expect(hit?.line).toBe(6)
+		expect(lineAt(source, hit)).toBe(6)
+		expect(textAt(source, hit)).toBe('k')
 	})
 })
 
@@ -368,7 +370,8 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC053')
 		expect(hit?.severity).toBe('error')
-		expect(hit?.line).toBe(5)
+		expect(lineAt(source, hit)).toBe(5)
+		expect(textAt(source, hit)).toBe('<{level}>Hi</{level}>')
 		expect(hit?.message).toContain('<{level}>')
 		expect(hit?.message).toContain('@else')
 	})
@@ -394,7 +397,10 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC053')
 		expect(hit?.severity).toBe('error')
-		expect(hit?.line).toBe(5)
+		expect(lineAt(source, hit)).toBe(5)
+		expect(textAt(source, hit)).toBe(
+			'<truc:element tag={level}>Hi</truc:element>',
+		)
 		expect(hit?.message).toContain('<truc:element>')
 		expect(hit?.message).toContain('? <h2>')
 	})
@@ -466,7 +472,8 @@ export function C({}: {}) {
 			expect(component).toBeNull()
 			const hit = diagnostics.find(d => d.code === 'LTC005')
 			expect(hit?.severity).toBe('error')
-			expect(hit?.line).toBe(9)
+			expect(lineAt(trySource(boundary), hit)).toBe(9)
+			expect(textAt(trySource(boundary), hit)).toBe(boundary)
 			expect(hit?.message).toContain(
 				'`<truc:try>` boundary with arms that are not inline',
 			)
@@ -3379,14 +3386,13 @@ ${setup}	return (
 	})
 
 	test('a setup const the render evaluates is a fold input', () => {
-		const { hits } = ltc054(
-			tsx('<c-el><span>{w}</span></c-el>', {
-				setup: '\tconst w = String(window.innerWidth)\n',
-			}),
-		)
+		const source = tsx('<c-el><span>{w}</span></c-el>', {
+			setup: '\tconst w = String(window.innerWidth)\n',
+		})
+		const { hits } = ltc054(source)
 		expect(hits).toHaveLength(1)
 		expect(hits[0]?.message).toContain('setup const `w`')
-		expect(hits[0]?.line).toBe(2)
+		expect(lineAt(source, hits[0])).toBe(2)
 	})
 
 	test('a setup helper reading page context taints the fold that calls it', () => {

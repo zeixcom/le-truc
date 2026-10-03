@@ -78,6 +78,8 @@ export type ContractFinding = {
 	selector: string
 	/** 0-based offset within the sheet text, when known. */
 	offset?: number | undefined
+	/** Where the rule's selector list ends (exclusive), when known. */
+	end?: number | undefined
 }
 
 /**
@@ -92,6 +94,8 @@ export type BoundaryFinding = {
 	selector: string
 	/** 0-based offset within the sheet text, when known. */
 	offset: number | undefined
+	/** Where the rule's selector list ends (exclusive), when known. */
+	end?: number | undefined
 	/** The boundary tag the first dead member descends past. */
 	boundary: string
 }
@@ -222,6 +226,23 @@ const selectorTextOf = (selector: LcSelector): string =>
 			return component.name ?? `[${component.type}]`
 		})
 		.join('')
+
+/**
+ * A rule finding's range (ADR 0044 s1, LT-371): lightningcss locates a
+ * rule by its start only, so the selector list runs from there to the
+ * rule's `{`, trailing whitespace trimmed.
+ */
+const withSelectorEnd = <F extends { offset?: number | undefined }>(
+	sheetText: string,
+	finding: F,
+): F & { end?: number | undefined } => {
+	if (finding.offset === undefined) return finding
+	const brace = sheetText.indexOf('{', finding.offset)
+	if (brace < 0) return finding
+	let end = brace
+	while (end > finding.offset && /\s/.test(sheetText[end - 1] ?? '')) end--
+	return { ...finding, end }
+}
 
 /** 0-based-line/1-based-column loc → offset within the sheet text. */
 const lineStartsOf = (text: string): number[] => {
@@ -428,7 +449,7 @@ export const checkSheetContract = (
 		lineStarts,
 		findings,
 	)
-	return findings
+	return findings.map(finding => withSelectorEnd(sheetText, finding))
 }
 
 /* === Descending past a boundary (ADR 0033 s6, LT-399) === */
@@ -573,7 +594,7 @@ export const checkSheetBoundaries = (
 		lineStartsOf(sheetText),
 		findings,
 	)
-	return findings
+	return findings.map(finding => withSelectorEnd(sheetText, finding))
 }
 
 /* === The boundary === */

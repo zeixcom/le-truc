@@ -93,14 +93,14 @@ export const lowerSwitch = (
 	if (mode === null) return null
 	const rawCases = Array.isArray(node.cases) ? node.cases : []
 	if (rawCases.length === 0) {
-		reportEmptySwitch(ctx, node.start, 'switch')
+		reportEmptySwitch(ctx, node, 'switch')
 		return null
 	}
 	const cases: Array<{ test: AstNode | null; children: TemplateNode[] }> = []
 	for (const raw of rawCases as AstNode[]) {
 		const children = lowerBodyStatements(ctx, raw.consequent, signals, fors)
 		if (children.length === 0) {
-			reportEmptySwitch(ctx, raw.start ?? node.start, 'arm')
+			reportEmptySwitch(ctx, raw.start === undefined ? node : raw, 'arm')
 			return null
 		}
 		cases.push({ test: isNode(raw.test) ? raw.test : null, children })
@@ -169,7 +169,7 @@ const lowerBodyStatements = (
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
-					stmt.start,
+					stmt,
 					'A `<style>` block inside a control-flow branch',
 					'Styles are component-scoped — move the block beside the root element.',
 				),
@@ -201,7 +201,7 @@ const lowerBodyStatements = (
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
-				stmt.start,
+				stmt,
 				'A statement other than an output element or a nested directive inside a control-flow branch',
 				'Move the statement into setup.',
 			),
@@ -247,7 +247,7 @@ export const lowerTry = (
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
-				node.finalizer.start,
+				node.finalizer,
 				'A `@finally` arm on a template `@try` block',
 				'Remove the arm — a template boundary has `@pending` and `@catch` arms only.',
 			),
@@ -267,7 +267,7 @@ export const lowerTry = (
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
-				node.start,
+				node,
 				'A `@pending` arm without a `@catch (e)` arm',
 				'An async boundary routes the pending, resolved and error states together (ADR 0024 sub-design 13) — add a `@catch (e)` arm.',
 			),
@@ -280,9 +280,9 @@ export const lowerTry = (
 		catchChildren,
 		pendingChildren,
 		at: {
-			body: (isNode(node.block) ? node.block.start : node.start) as number,
-			pending: isNode(node.pending) ? node.pending.start : node.start,
-			catch: handler?.start ?? node.start,
+			body: isNode(node.block) ? node.block : node,
+			pending: isNode(node.pending) ? node.pending : node,
+			catch: handler?.start === undefined ? node : handler,
 		},
 	})
 }
@@ -317,7 +317,7 @@ export const lowerChildren = (
 				ctx.diagnostics.push(
 					diagnostic.retiredLazySigil(
 						ctx.source,
-						child.start,
+						child,
 						isNode(expr) ? text(ctx.source, expr) : '…',
 					),
 				)
@@ -351,7 +351,7 @@ export const lowerChildren = (
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						ctx.source,
-						child.start,
+						child,
 						'A `@for-in` loop over object keys',
 						'Loop with `@for-of` over an array, for example `Object.keys(record)`.',
 					),
@@ -406,7 +406,7 @@ const lowerEmptyArm = (
 	if (!isNode(node.empty)) return null
 	const arm = lowerBodyStatements(ctx, asArray(node.empty.body), signals, fors)
 	if (arm.length === 0) return null
-	return validateEmptyArm(ctx, arm, kind, fors, node.empty.start) ?? false
+	return validateEmptyArm(ctx, arm, kind, fors, node.empty) ?? false
 }
 
 /**
@@ -432,7 +432,7 @@ export const lowerFor = (
 	const tryStmt = statements.find(s => s.type === 'JSXTryExpression')
 	if (isNode(tryStmt)) {
 		ctx.diagnostics.push(
-			diagnostic.boundaryAsLoopRoot(ctx.source, tryStmt.start, wordingOf(ctx)),
+			diagnostic.boundaryAsLoopRoot(ctx.source, tryStmt, wordingOf(ctx)),
 		)
 		return null
 	}
@@ -447,7 +447,7 @@ export const lowerFor = (
 				declarations.length === 1
 					? identifierName(declarations[0]?.id) || null
 					: null,
-			index: indexName ? { name: indexName, at: indexNode?.start } : null,
+			index: indexName ? { name: indexName, at: indexNode } : null,
 			iterable: node.right as AstNode,
 			key: isNode(node.key) ? node.key : null,
 			extraParams: false,

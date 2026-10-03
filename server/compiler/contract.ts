@@ -59,7 +59,15 @@
 
 /* === The refusal channels — how a compile fails honestly === */
 
-export type { CompileDiagnostic, DiagnosticCode } from './diagnostics'
+// The record's location, fix and edit shapes are named because
+// `CompileDiagnostic` names them (ADR 0044 s1).
+export type {
+	CompileDiagnostic,
+	DiagnosticCode,
+	DiagnosticEdit,
+	DiagnosticFix,
+	DiagnosticLocation,
+} from './diagnostics'
 export type {
 	EvaluationTier,
 	Resolution,

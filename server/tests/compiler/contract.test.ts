@@ -21,13 +21,18 @@ const DESIGNATED_VALUES = ['DEFAULT_EMIT_PATHS', 'compileComponentTsx'].sort()
  * No IR type and no `compileFromIR` (LT-370, ADR 0034 s8): the IR is the
  * lowering and internal. `SourceSpan` and `ExposeKind` stay because public
  * result types name them (`CompiledComponent`'s span tables,
- * `RegistryEntry.exposedProps`).
+ * `RegistryEntry.exposedProps`); so do the diagnostic record's
+ * `DiagnosticLocation`, `DiagnosticFix` and `DiagnosticEdit` (ADR 0044 s1,
+ * LT-371).
  */
 const DESIGNATED_TYPES = [
 	'CompileDiagnostic',
 	'CompiledComponent',
 	'CompileFileResult',
 	'DiagnosticCode',
+	'DiagnosticEdit',
+	'DiagnosticFix',
+	'DiagnosticLocation',
 	'EmitPaths',
 	'EvaluationTier',
 	'ExposeKind',

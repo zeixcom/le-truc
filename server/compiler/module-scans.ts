@@ -61,7 +61,7 @@ export const reportMalformedSelectors = (
 						ctx.diagnostics.push(
 							diagnostic.malformedSelector(
 								ctx.source,
-								arg.start,
+								arg,
 								helper,
 								arg.value,
 								reason,
@@ -109,7 +109,7 @@ export const reportDeferredCollectorCalls = (
 			const helper = identifierName(node.callee)
 			if (helper && COLLECTOR_HELPERS.has(helper))
 				ctx.diagnostics.push(
-					diagnostic.deferredCollectorCall(ctx.source, node.start, helper),
+					diagnostic.deferredCollectorCall(ctx.source, node, helper),
 				)
 		}
 		// `each(collection, item => …)` runs its callback inside a collector
@@ -165,7 +165,7 @@ export const reportLeTrucImportMismatch = (
 	ast: AstNode,
 	leTrucImports: LeTrucImport[],
 ): void => {
-	const usage = new Map<string, number>()
+	const usage = new Map<string, AstNode>()
 	// Type positions are walked: an unimported name in one (`typeof
 	// createState`, an error class as an annotation) is missing its import
 	// exactly as a value read is.
@@ -173,28 +173,27 @@ export const reportLeTrucImportMismatch = (
 		ast,
 		node => {
 			const name = String(node.name)
-			if (REAL_EXPORT_NAMES.has(name) && !usage.has(name))
-				usage.set(name, typeof node.start === 'number' ? node.start : 0)
+			if (REAL_EXPORT_NAMES.has(name) && !usage.has(name)) usage.set(name, node)
 		},
 		'descend',
 	)
 
-	const imported = new Map<string, number>()
+	const imported = new Map<string, AstNode | undefined>()
 	for (const imp of leTrucImports)
 		for (const name of imp.names)
-			if (!imported.has(name)) imported.set(name, imp.start)
+			if (!imported.has(name)) imported.set(name, imp.specifiers.get(name))
 	const contextVocabulary = new Set<string>([
 		...FACTORY_CONTEXT_MEMBERS,
 		...CONTEXT_NAMES,
 	])
-	for (const [name, offset] of usage)
+	for (const [name, read] of usage)
 		if (!imported.has(name))
 			ctx.diagnostics.push(
-				diagnostic.missingRealExportImport(ctx.source, offset, name),
+				diagnostic.missingRealExportImport(ctx.source, read, name),
 			)
-	for (const [name, offset] of imported)
+	for (const [name, specifier] of imported)
 		if (contextVocabulary.has(name))
 			ctx.diagnostics.push(
-				diagnostic.contextNameInImport(ctx.source, offset, name),
+				diagnostic.contextNameInImport(ctx.source, specifier, name),
 			)
 }

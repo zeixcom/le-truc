@@ -24,6 +24,7 @@ import {
 } from '../../effects/i18n'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { loadCorpus } from './corpus-fixture'
+import { lineAt, textAt } from './located'
 
 const compile = (source: string, path = 'examples/x/c-i18n.tsrx') =>
 	compileComponent(source, path, new Set())
@@ -49,12 +50,16 @@ const injectedCatalogs = (
 
 describe('LTC008 from the i18n walk carries a line (LT-223)', () => {
 	test('a malformed inline i18n declaration reports its line number', () => {
-		const { diagnostics } = compile(
-			catalogSource(`{t['task.other']}`, `export const i18n = 'task'`),
+		const source = catalogSource(
+			`{t['task.other']}`,
+			`export const i18n = 'task'`,
 		)
+		const { diagnostics } = compile(source)
 		const hit = diagnostics.find(d => d.code === 'LTC008')
 		expect(hit).toBeDefined()
-		expect(hit?.line).toBe(2)
+		expect(lineAt(source, hit)).toBe(2)
+		// LT-371: the range covers the declarator, not just its line.
+		expect(textAt(source, hit)).toBe(`i18n = 'task'`)
 	})
 })
 
@@ -76,11 +81,14 @@ export function C({ i18n: { t } }: { i18n: I18n })
 
 describe('LTC047 — untranslated literal prose (LT-173 step 5)', () => {
 	test('literal prose in a catalog-using component warns', () => {
-		const { diagnostics } = compile(catalogSource(`Hello world`))
+		const source = catalogSource(`Hello world`)
+		const { diagnostics } = compile(source)
 		const hit = diagnostics.find(d => d.code === 'LTC047')
 		expect(hit).toBeDefined()
 		expect(hit?.severity).toBe('warning')
-		expect(hit?.line).toBe(7)
+		expect(lineAt(source, hit)).toBe(7)
+		expect(textAt(source, hit)).toBe('Hello world')
+		expect(hit?.location.file).toBe('examples/x/c-i18n.tsrx')
 	})
 
 	test('a single-letter fragment is page data, not prose — exempt', () => {
@@ -973,8 +981,10 @@ const ICU_DECL = `export const i18n = {
 }`
 
 describe('LTC055 — ICU patterns and their call sites (LT-250)', () => {
+	const sourceOf = (template: string, decl = ICU_DECL) =>
+		catalogSource(template, decl)
 	const codes = (template: string, decl = ICU_DECL) =>
-		compile(catalogSource(template, decl)).diagnostics.filter(
+		compile(sourceOf(template, decl)).diagnostics.filter(
 			d => d.code === 'LTC055',
 		)
 
@@ -1001,13 +1011,13 @@ describe('LTC055 — ICU patterns and their call sites (LT-250)', () => {
 	})
 
 	test('an unparseable source pattern is an error at its line', () => {
-		const [hit, ...rest] = codes(
-			`{t.done}`,
-			`export const i18n = {\n\tdone: 'All done',\n\tbroken: '{count, plural, one {x}}',\n}`,
-		)
+		const decl = `export const i18n = {\n\tdone: 'All done',\n\tbroken: '{count, plural, one {x}}',\n}`
+		const [hit, ...rest] = codes(`{t.done}`, decl)
 		expect(rest).toEqual([])
 		expect(hit?.severity).toBe('error')
-		expect(hit?.line).toBe(4)
+		const source = sourceOf(`{t.done}`, decl)
+		expect(lineAt(source, hit)).toBe(4)
+		expect(textAt(source, hit)).toBe(`'{count, plural, one {x}}'`)
 		expect(hit?.message).toContain('`broken`')
 		expect(hit?.message).toContain('other')
 	})
@@ -1024,7 +1034,9 @@ describe('LTC055 — ICU patterns and their call sites (LT-250)', () => {
 		const [hit, ...rest] = codes(`{t.tasks({ total: 2 })}`)
 		expect(rest).toEqual([])
 		expect(hit?.severity).toBe('error')
-		expect(hit?.line).toBe(11)
+		const source = sourceOf(`{t.tasks({ total: 2 })}`)
+		expect(lineAt(source, hit)).toBe(11)
+		expect(textAt(source, hit)).toBe('t.tasks({ total: 2 })')
 		expect(hit?.message).toContain('`t.tasks` is missing `count`')
 		expect(hit?.message).toContain('passes `total`')
 	})

@@ -21,6 +21,7 @@
  * compiler-side so that is true by construction.
  */
 
+import { lineOf } from './diagnostics.ts'
 import type { EvaluationTier, RoutingSignal } from './tier.ts'
 
 /* === Types === */
@@ -135,6 +136,22 @@ const TRANSLATION_GAP_REASONS: Record<TranslationGapStatus, string> = {
 		'client fallback — the translation uses a construct its source does not, so the browser renders the source-locale string',
 }
 
+/** The line a signal's location starts on, unless it spans its whole file. */
+const signalLine = (
+	signal: RoutingSignal,
+	sourceOf: (file: string) => string | undefined,
+): number | undefined => {
+	const location = signal.location
+	if (!location) return undefined
+	const source = sourceOf(location.file)
+	if (
+		source === undefined ||
+		(location.start === 0 && location.end === source.length)
+	)
+		return undefined
+	return lineOf(source, location.start)
+}
+
 /* === Exported Functions === */
 
 /**
@@ -144,8 +161,16 @@ const TRANSLATION_GAP_REASONS: Record<TranslationGapStatus, string> = {
  * records Simulated with its `compose-read` reason, not the pre-contamination
  * Folded tier its emit used). Sorted by tag so the output is stable whatever
  * order the corpus glob scanned in.
+ *
+ * A signal's location prints as the line it starts on (ADR 0044 s4: the
+ * census is a terminal view). `sourceOf` reads the authored file a location
+ * names; without it, or for a whole-file location, the reason carries no
+ * line.
  */
-export const tierCensus = (subjects: readonly TierCensusSubject[]): Census => ({
+export const tierCensus = (
+	subjects: readonly TierCensusSubject[],
+	sourceOf: (file: string) => string | undefined = () => undefined,
+): Census => ({
 	kind: 'tier',
 	name: 'Tier census',
 	values: ['folded', 'simulated', 'static'],
@@ -154,11 +179,12 @@ export const tierCensus = (subjects: readonly TierCensusSubject[]): Census => ({
 		.map(subject => ({
 			subject: subject.tag,
 			value: subject.tier,
-			reasons: subject.routingSignals.map(signal =>
-				signal.line === undefined
+			reasons: subject.routingSignals.map(signal => {
+				const line = signalLine(signal, sourceOf)
+				return line === undefined
 					? `${signal.origin}: ${signal.detail}`
-					: `${signal.origin}: ${signal.detail} (line ${signal.line})`,
-			),
+					: `${signal.origin}: ${signal.detail} (line ${line})`
+			}),
 		})),
 })
 

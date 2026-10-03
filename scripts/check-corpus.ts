@@ -218,7 +218,18 @@ console.log(
 const registry = JSON.parse(
 	readFileSync(join(GENERATED_DIR, 'registry.json'), 'utf8'),
 ) as ComponentRegistry
-console.log(`\n${formatCensus(tierCensus(Object.values(registry)))}`)
+// Signal locations name the authored file, project-relative (the registry's
+// `source` convention); the census prints each one's line.
+const authoredText = (file: string): string | undefined => {
+	try {
+		return readFileSync(join(ROOT, file), 'utf8')
+	} catch {
+		return undefined
+	}
+}
+console.log(
+	`\n${formatCensus(tierCensus(Object.values(registry), authoredText))}`,
+)
 const i18nGaps = await collectI18n(
 	Object.values(registry),
 	undefined,

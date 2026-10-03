@@ -34,7 +34,7 @@ export const readConfig = (
 		ctx.diagnostics.push(
 			diagnostic.invalidConfig(
 				ctx.source,
-				decl.start,
+				decl,
 				'`export const config` must be an object literal.',
 			),
 		)
@@ -54,7 +54,7 @@ export const readConfig = (
 				ctx.diagnostics.push(
 					diagnostic.invalidConfig(
 						ctx.source,
-						prop.start,
+						prop,
 						`config.${key} must be \`true\`.`,
 					),
 				)
@@ -64,7 +64,7 @@ export const readConfig = (
 				ctx.diagnostics.push(
 					diagnostic.invalidConfig(
 						ctx.source,
-						prop.start,
+						prop,
 						'config cannot combine formAssociated and formAssociatedCheckbox — the runtime throws ExtensionCollisionError.',
 					),
 				)
@@ -76,7 +76,7 @@ export const readConfig = (
 				ctx.diagnostics.push(
 					diagnostic.invalidConfig(
 						ctx.source,
-						prop.start,
+						prop,
 						'config.observedAttributes must be an array of string literals.',
 					),
 				)
@@ -93,7 +93,7 @@ export const readConfig = (
 					ctx.diagnostics.push(
 						diagnostic.invalidConfig(
 							ctx.source,
-							isNode(element) ? element.start : value.start,
+							isNode(element) ? element : value,
 							'config.observedAttributes must contain string literals only.',
 						),
 					)
@@ -102,7 +102,7 @@ export const readConfig = (
 			ctx.diagnostics.push(
 				diagnostic.invalidConfig(
 					ctx.source,
-					prop.start,
+					prop,
 					`Unknown config key \`${key}\`. Known keys: formAssociated, formAssociatedCheckbox, observedAttributes.`,
 				),
 			)

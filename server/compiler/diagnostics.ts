@@ -17,6 +17,7 @@
  * `VOCABULARY_LEDGER.md` beside this file.
  */
 
+import type { SourceRange } from './ir'
 import type { SurfaceWording } from './surface'
 
 /* === Types === */
@@ -101,12 +102,78 @@ export type DiagnosticCode =
 	| 'LTC070' // `:host` directly followed by a qualifier (`:host.x`, `:host:hover`, `:host[attr]`) — matches nothing in a shadow root; the qualifier belongs in the arguments (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC071' // a stylesheet selector descends past a boundary tag (`child-tag .x`, `child-tag > .x`) — its subject is a composed child's content, which the scope always excludes (ADR 0033 s6, LT-399) — tier 1 Prevented, statically decidable, no runtime half
 
+/**
+ * A range in the file the author wrote (ADR 0044 s1–s2): `start` and `end`
+ * are 0-based character offsets (UTF-16 code units, `end` exclusive) — the
+ * convention of the estree `start`/`end` every compiler stage walks and of
+ * `SourceSpan`. `file` is the path the caller handed the compiler.
+ */
+export type DiagnosticLocation = {
+	file: string
+	start: number
+	end: number
+}
+
+/** One text replacement a fix applies: `location`'s range becomes `text`. */
+export type DiagnosticEdit = {
+	location: DiagnosticLocation
+	text: string
+}
+
+/**
+ * A repair that is safe to apply without author judgement (ADR 0044 s1).
+ * A rule with two equally valid repairs names both in its message and
+ * carries no fix.
+ */
+export type DiagnosticFix = {
+	description: string
+	edits: DiagnosticEdit[]
+}
+
+/**
+ * The published diagnostic record (ADR 0044 s1, s5): adding an optional
+ * field is a minor; removing or retyping one is a major.
+ */
 export type CompileDiagnostic = {
 	code: DiagnosticCode
 	severity: 'error' | 'warning'
 	message: string
-	/** 1-based line in the authored source (either front end), when known. */
-	line?: number
+	/**
+	 * The offending construct. A producer with no construct in scope (a
+	 * file-level shape) reports the nearest enclosing range — the whole
+	 * file — rather than none (ADR 0044 s2).
+	 */
+	location: DiagnosticLocation
+	/** Further locations the message refers to; empty when there are none. */
+	related: DiagnosticLocation[]
+	fix?: DiagnosticFix
+}
+
+/**
+ * What a producer hands a factory for the offending construct: any AST
+ * node (its `start`/`end`), an explicit range, or nothing (the whole
+ * file). Internal.
+ */
+export type Site =
+	| { start?: number | undefined; end?: number | undefined }
+	| null
+	| undefined
+
+/**
+ * A diagnostic as the stages produce it, with ranges local to the file
+ * being compiled (internal). `locate()` turns it into the published
+ * `CompileDiagnostic` at the compile shell, which knows the file name.
+ */
+export type LocalDiagnostic = {
+	code: DiagnosticCode
+	severity: 'error' | 'warning'
+	message: string
+	range: SourceRange
+	related?: SourceRange[]
+	fix?: {
+		description: string
+		edits: { range: SourceRange; text: string }[]
+	}
 }
 
 /* === Internal Functions === */
@@ -114,11 +181,22 @@ export type CompileDiagnostic = {
 const error = (
 	code: DiagnosticCode,
 	message: string,
-	line?: number,
-): CompileDiagnostic =>
-	line === undefined
-		? { code, severity: 'error', message }
-		: { code, severity: 'error', message, line }
+	range: SourceRange,
+): LocalDiagnostic => ({ code, severity: 'error', message, range })
+
+/** A corpus-level error: the caller names the file and the related ones. */
+const corpusError = (
+	code: DiagnosticCode,
+	message: string,
+	location: DiagnosticLocation,
+	related: DiagnosticLocation[],
+): CompileDiagnostic => ({
+	code,
+	severity: 'error',
+	message,
+	location,
+	related,
+})
 
 /**
  * `basic-gauge-label` → `basicGaugeLabelId`: a plausible server-arg name for
@@ -146,16 +224,13 @@ const codeList = (items: Iterable<string>): string => {
 const warning = (
 	code: DiagnosticCode,
 	message: string,
-	line?: number,
-): CompileDiagnostic =>
-	line === undefined
-		? { code, severity: 'warning', message }
-		: { code, severity: 'warning', message, line }
+	range: SourceRange,
+): LocalDiagnostic => ({ code, severity: 'warning', message, range })
 
 /**
- * 1-based line for a source offset. Exported since LT-165: the tier census
- * cites the same line the diagnostic did, and one implementation keeps the
- * two agreeing.
+ * 1-based line for a source offset — the terminal views print a location's
+ * `start` as a line (corpus build report, tier census), and one
+ * implementation keeps them agreeing.
  */
 export const lineOf = (
 	source: string,
@@ -168,6 +243,60 @@ export const lineOf = (
 	return line
 }
 
+/**
+ * The range a factory reports for `at` in `source`: the node's own
+ * `start`/`end`; a zero-width range where only `start` is known; the whole
+ * file when nothing in range is known — the nearest enclosing span, never
+ * none (ADR 0044 s2).
+ */
+export const rangeOf = (source: string, at: Site): SourceRange => {
+	const start = at?.start
+	if (start === undefined || start < 0 || start > source.length)
+		return { start: 0, end: source.length }
+	const end = at?.end
+	return {
+		start,
+		end: end === undefined || end < start || end > source.length ? start : end,
+	}
+}
+
+/** A whole file's range — corpus-level rules have no construct inside it. */
+export const wholeFile = (
+	file: string,
+	source: string,
+): DiagnosticLocation => ({
+	file,
+	start: 0,
+	end: source.length,
+})
+
+/**
+ * Publish a stage's diagnostic against `file` (ADR 0044 s1): the compile
+ * shells call this once, on the way out.
+ */
+export const locate = (
+	diagnostic: LocalDiagnostic,
+	file: string,
+): CompileDiagnostic => {
+	const at = (range: SourceRange): DiagnosticLocation => ({ file, ...range })
+	const located: CompileDiagnostic = {
+		code: diagnostic.code,
+		severity: diagnostic.severity,
+		message: diagnostic.message,
+		location: at(diagnostic.range),
+		related: (diagnostic.related ?? []).map(at),
+	}
+	if (diagnostic.fix)
+		located.fix = {
+			description: diagnostic.fix.description,
+			edits: diagnostic.fix.edits.map(edit => ({
+				location: at(edit.range),
+				text: edit.text,
+			})),
+		}
+	return located
+}
+
 /* === Exported Functions === */
 
 export const diagnostic = {
@@ -178,14 +307,14 @@ export const diagnostic = {
 	 */
 	reactiveForNotSupported: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		iterable: string,
 		wording: SurfaceWording,
 	) =>
 		warning(
 			'LTC001',
 			`${wording.loop} over reactive source \`${iterable}\` — only declared createList(…) signals lower (reconcile(), ADR 0017); derived or non-List reactive sources are not supported. File skipped.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -201,11 +330,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-09-24).
 	 */
-	keyOnServerDataFor: (source: string, offset: number | undefined) =>
+	keyOnServerDataFor: (source: string, at: Site) =>
 		error(
 			'LTC052',
 			'This `@for` iterates server data but has a `key` clause — only a `@for` over a declared `createList(…)` signal reconciles its items by key, so this key has no effect. Remove the `key` clause, or declare the items with `createList(…)` if they must be keyed.',
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -225,14 +354,14 @@ export const diagnostic = {
 	 */
 	unsupportedElementTag: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		spelled: string,
 		conditional: string,
 	) =>
 		error(
 			'LTC053',
 			`The tag \`<${spelled}>\` is not a static element name — the compiler makes elements from static tag names only. To choose a tag at render time, choose between static tags with a conditional, for example \`${conditional}\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -255,15 +384,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-359 — worded for both trigger positions).
 	 */
-	boundaryAsLoopRoot: (
-		source: string,
-		offset: number | undefined,
-		wording: SurfaceWording,
-	) =>
+	boundaryAsLoopRoot: (source: string, at: Site, wording: SurfaceWording) =>
 		error(
 			'LTC053',
 			`A ${wording.boundary} cannot sit directly in a ${wording.loop} body — the body's root must be an element, because the client addresses each item through it. Wrap the boundary in an element inside the ${wording.loop} body, or move it out of the ${wording.loop} body.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -282,11 +407,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-359 — the LT-358 first draft, finalized).
 	 */
-	scriptElementInTemplate: (source: string, offset: number | undefined) =>
+	scriptElementInTemplate: (source: string, at: Site) =>
 		error(
 			'LTC056',
 			"A `<script>` element in a component template — scripts are refused, whatever their `type`: the page owns script loading, and a component template is static markup plus component behavior. Move the script to the page that places this component, or do its work in the component's setup (in `watch()` or an `on()` handler).",
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -304,11 +429,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-359 — the LT-383 first draft, finalized).
 	 */
-	templateElementInTemplate: (source: string, offset: number | undefined) =>
+	templateElementInTemplate: (source: string, at: Site) =>
 		error(
 			'LTC061',
 			"A `<template>` element in a component template — the compiler emits the `<template>`s a component needs (a reactive list's item template, its conditional arms), and an authored one would collide with them. Render the markup directly, or let a reactive list or condition produce the repeated or switched content.",
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -325,7 +450,7 @@ export const diagnostic = {
 	 */
 	dynamicCaseValue: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		caseText: string,
 		wording: SurfaceWording,
 		duplicate = false,
@@ -335,7 +460,7 @@ export const diagnostic = {
 			duplicate
 				? `The ${wording.caseLabel} value \`${caseText}\` names the same arm as an earlier one in a switch that reads a signal. Its arms switch on the client by a key derived from each value, so every value must name a distinct arm — remove or merge the duplicate.`
 				: `The ${wording.caseLabel} value \`${caseText}\` is not a literal in a switch that reads a signal. Its arms switch on the client by a key derived from each value at compile time — write each value as a string, number, boolean or \`null\` literal.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -351,13 +476,13 @@ export const diagnostic = {
 	 */
 	reactiveConditionInReconcileContainer: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		wording: SurfaceWording,
 	) =>
 		error(
 			'LTC063',
 			`${wording.reactiveConditional} inside the container of a reactive-list ${wording.loop}. The list owns that container's children and removes everything it did not place, the arm and its templates included — move the condition out of the container, or wrap the loop in an element of its own.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -377,7 +502,7 @@ export const diagnostic = {
 	 */
 	foldReadsPageContext: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		where: string,
 		reads: readonly string[],
 		ambients: Iterable<string>,
@@ -385,7 +510,7 @@ export const diagnostic = {
 		error(
 			'LTC054',
 			`The server evaluates ${where} at build time, but it reads ${codeList(reads)}, which is page context. Server-rendered HTML can depend only on the component's own args and on ${codeList(ambients)} from the \`i18n\` record — a template backend has no variable for page context. Pass the value in as an arg, or read it in the factory (in \`watch()\` or an \`on()\` handler), where it runs in the browser.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -399,14 +524,14 @@ export const diagnostic = {
 	 */
 	undeclaredPageAmbient: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		member: string | null,
 		ambients: Iterable<string>,
 	) =>
 		error(
 			'LTC054',
 			`${member === null ? 'This destructuring takes an undeclared member' : `\`${member}\` is not a member`} of the reserved \`i18n\` record. The record carries only ${codeList(ambients)} — the page values that server-rendered HTML can depend on besides the component's own args. ${member === null ? 'Destructure the members you need by name' : `Destructure one of these members, or declare \`${member}\` as an arg`}.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -414,28 +539,24 @@ export const diagnostic = {
 	 * Worded surface-neutrally ("loop variables"): the rule is the same for
 	 * a `@for` and a `.map()` callback (LT-233).
 	 */
-	loopVariableInReactiveThunk: (
-		source: string,
-		offset: number | undefined,
-		names: string[],
-	) =>
+	loopVariableInReactiveThunk: (source: string, at: Site, names: string[]) =>
 		error(
 			'LTC002',
 			`Reactive expressions must not reference loop variables directly (${names.map(n => `\`${n}\``).join(', ')}). Hoist the derived value into a const first (e.g. \`const pid = panelId(tab.id)\`) so the client can rebind it to a server-rendered attribute.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/** Hoisted const referenced reactively but never rendered as a bare attribute. */
 	constNotRebindable: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		name: string,
 		element: string,
 	) =>
 		error(
 			'LTC003',
 			`Hoisted const \`${name}\` is referenced by a reactive expression but never rendered as a bare attribute of <${element}>, so the client cannot rebind it. Render it (e.g. \`aria-controls={${name}}\` or a \`data-\` attribute) or stop referencing it reactively.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- subset, attribute shapes, addressing, source structure ---
@@ -444,16 +565,11 @@ export const diagnostic = {
 	 * construct as the subject of the sentence; `fix`, when the site knows
 	 * it, is the imperative the author acts on (LT-300).
 	 */
-	unsupported: (
-		source: string,
-		offset: number | undefined,
-		what: string,
-		fix?: string,
-	) =>
+	unsupported: (source: string, at: Site, what: string, fix?: string) =>
 		error(
 			'LTC005',
 			`${what} is outside the supported subset (ADR 0024).${fix ? ` ${fix}` : ''}`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -484,7 +600,7 @@ export const diagnostic = {
 	 */
 	serverOnlyNames: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		subject: string,
 		names: {
 			server: readonly string[]
@@ -528,7 +644,7 @@ export const diagnostic = {
 			)
 		if (listBody.length > 0)
 			sentences.push('Read the value through an exposed prop instead.')
-		return error('LTC005', sentences.join(' '), lineOf(source, offset))
+		return error('LTC005', sentences.join(' '), rangeOf(source, at))
 	},
 
 	/**
@@ -539,7 +655,7 @@ export const diagnostic = {
 	 */
 	loopInBranch: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		wording: SurfaceWording,
 		branch: 'if' | 'switch',
 	) => {
@@ -547,52 +663,42 @@ export const diagnostic = {
 		return error(
 			'LTC005',
 			`${wording.aLoop} inside ${inside} is outside the supported subset: the client addresses a branch's content by its roots, so only the loop's first item would get its bindings. Render the empty case with ${wording.emptyArmFix}, or move the loop out of ${outOf}.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		)
 	},
 
 	/** Attribute shape the classifier does not accept. */
-	invalidAttribute: (
-		source: string,
-		offset: number | undefined,
-		what: string,
-	) => error('LTC006', what, lineOf(source, offset)),
+	invalidAttribute: (source: string, at: Site, what: string) =>
+		error('LTC006', what, rangeOf(source, at)),
 
 	/** Element the generated client cannot address deterministically. */
-	unaddressableElement: (
-		source: string,
-		offset: number | undefined,
-		what: string,
-	) => error('LTC007', what, lineOf(source, offset)),
+	unaddressableElement: (source: string, at: Site, what: string) =>
+		error('LTC007', what, rangeOf(source, at)),
 
 	/**
 	 * Source-level structure violations. `invalidSource` takes the family's
-	 * `(source, offset, what)` shape like its siblings (LT-223): sites that
-	 * have a node in scope pass its offset so the report carries a line;
-	 * file-level shapes (parse failures, a missing component function) pass
-	 * `undefined` and stay line-less.
+	 * `(source, at, what)` shape like its siblings (LT-223): sites that have
+	 * a node in scope pass it so the report covers it; a parse failure
+	 * passes the parser's position, and a file-level shape (a missing
+	 * component function) passes `undefined` and reports the whole file.
 	 */
-	invalidSource: (source: string, offset: number | undefined, what: string) =>
-		error('LTC008', what, lineOf(source, offset)),
+	invalidSource: (source: string, at: Site, what: string) =>
+		error('LTC008', what, rangeOf(source, at)),
 
 	// --- config, managed form props, composition, pass legality ---
 	/** Invalid `export const config` declaration (ADR 0024 sub-design 8). */
-	invalidConfig: (source: string, offset: number | undefined, what: string) =>
-		error('LTC009', what, lineOf(source, offset)),
+	invalidConfig: (source: string, at: Site, what: string) =>
+		error('LTC009', what, rangeOf(source, at)),
 
 	/**
 	 * Managed form prop (`{host.validationMessage}`) without `formAssociated`
 	 * — the watch source exists only on FormFactoryContext (LT-008).
 	 */
-	managedPropWithoutForm: (
-		source: string,
-		offset: number | undefined,
-		prop: string,
-	) =>
+	managedPropWithoutForm: (source: string, at: Site, prop: string) =>
 		error(
 			'LTC010',
 			`\`{host.${prop}}\` reads a managed form prop — it is watchable only when formAssociated() leads the extensions. Declare \`export const config = { formAssociated: true }\` or expose a prop of that name.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -600,15 +706,11 @@ export const diagnostic = {
 	 * `'….tsx'`; ADR 0024 sub-design 10) — composition resolves by import,
 	 * never falls back to raw custom-element treatment.
 	 */
-	unresolvedComposedComponent: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
+	unresolvedComposedComponent: (source: string, at: Site, name: string) =>
 		error(
 			'LTC011',
 			`\`<${name}>\` has no matching \`import { ${name} }\` of a \`.tsrx\` or \`.tsx\` module — composed (capitalized) tags must import the component they compose (ADR 0024 sub-design 10). A lowercase dashed tag addresses a raw custom element instead.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -618,14 +720,14 @@ export const diagnostic = {
 	 */
 	composedComponentNotCompiled: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		name: string,
 		path: string,
 	) =>
 		error(
 			'LTC011',
 			`\`<${name}>\` composes \`${path}\`, but that file did not compile (or was not found) — fix its own diagnostics first.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -633,15 +735,11 @@ export const diagnostic = {
 	 * position, that composition does not support yet. `what` names the
 	 * construct and its position as the subject of the sentence.
 	 */
-	composedElementUnsupported: (
-		source: string,
-		offset: number | undefined,
-		what: string,
-	) =>
+	composedElementUnsupported: (source: string, at: Site, what: string) =>
 		error(
 			'LTC011',
 			`${what} is not supported yet (ADR 0024 sub-design 10). Move the construct into the composed component's own template, or out of this position.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -651,26 +749,22 @@ export const diagnostic = {
 	 */
 	reactiveAttrOnCustomElement: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		tag: string,
 		attr: string,
 	) =>
 		error(
 			'LTC012',
 			`Reactive attribute \`${attr}={…}\` on custom element <${tag}> is no longer bound to anything (ADR 0024 sub-design 10) — use \`pass={{ ${attr}: ${attr} }}\` for client-side signal interop, or a plain value for a static attribute.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/** `pass={{ }}` on a native element or an unregistered/unknown custom tag. */
-	passTargetNotCustom: (
-		source: string,
-		offset: number | undefined,
-		tag: string,
-	) =>
+	passTargetNotCustom: (source: string, at: Site, tag: string) =>
 		error(
 			'LTC012',
 			`pass={{ … }} on <${tag}> — its target must be a registry-known custom element (ADR 0024 sub-design 10); native elements use reactive attribute bindings instead. At connect this is \`InvalidCustomElementError\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -687,7 +781,7 @@ export const diagnostic = {
 	 */
 	passPropNotExposed: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		tag: string,
 		prop: string,
 		exposed: string[],
@@ -695,7 +789,7 @@ export const diagnostic = {
 		error(
 			'LTC012',
 			`pass={{ ${prop}: … }} targets <${tag}>, which does not expose \`${prop}\` — its reactive props are ${exposed.length ? exposed.map(p => `\`${p}\``).join(', ') : '(none)'}. Add \`${prop}\` to that component's \`expose({ … })\`, or pass one of the props it does declare. At connect this is \`InvalidPassPropertyError\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -715,7 +809,7 @@ export const diagnostic = {
 	 */
 	passPropNotSlotBacked: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		tag: string,
 		prop: string,
 		kind: 'computed' | 'method',
@@ -725,7 +819,7 @@ export const diagnostic = {
 			kind === 'method'
 				? `pass={{ ${prop}: … }} targets <${tag}>, whose \`${prop}\` is a \`defineMethod()\` producer, not a reactive property — it is installed as a plain member and has no Slot to swap. Call it (\`el.${prop}()\`) from an event handler instead of passing to it. At connect this is \`InvalidPassPropertyError\`.`
 				: `pass={{ ${prop}: … }} targets <${tag}>, whose \`${prop}\` is exposed READ-ONLY — a computed initializer (\`sig.get\` or \`() => …\`) is defined with a getter, not a Slot, so there is no backing signal for pass() to swap (ADR 0004). Expose \`${prop}\` from a mutable initializer on <${tag}> (a value, a Parser, or a \`{ get, set }\` descriptor) if it is meant to be driven from outside; otherwise drive it from <${tag}>'s own state. At connect this is \`InvalidPassPropertyError\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- imports, requestContext, children, ref spellings ---
@@ -736,15 +830,11 @@ export const diagnostic = {
 	 * detectable usage would otherwise be silently dropped rather than fail
 	 * loudly.
 	 */
-	unusedPlainImport: (
-		source: string,
-		offset: number | undefined,
-		names: string[],
-	) =>
+	unusedPlainImport: (source: string, at: Site, names: string[]) =>
 		warning(
 			'LTC014',
 			`Import ${names.map(n => `\`${n}\``).join(', ')} is never referenced in setup code or the template — it would be dropped from both generated modules. Remove it, or use it so the compiler can place it.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -753,15 +843,11 @@ export const diagnostic = {
 	 * is the only recognized shape; the server needs the second argument as
 	 * the signal's render-time value (there is no ancestor DOM to walk).
 	 */
-	invalidRequestContextCall: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
+	invalidRequestContextCall: (source: string, at: Site, name: string) =>
 		error(
 			'LTC015',
 			`\`${name} = requestContext(...)\` must be called with exactly two arguments: the context key and a fallback value. The fallback is what the server renders (ADR 0024 sub-design 15) — there is no ancestor DOM to walk at render time.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -773,14 +859,14 @@ export const diagnostic = {
 	 */
 	contextFallbackNotServerKnown: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		name: string,
 		names: string[],
 	) =>
 		error(
 			'LTC016',
 			`\`${name}\`'s fallback argument references ${names.map(n => `\`${n}\``).join(', ')}, which the server cannot resolve — requestContext()'s fallback must be a literal or an expression over server args/setup, since the server renders using it directly (no ancestor DOM to walk at render time).`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -792,14 +878,14 @@ export const diagnostic = {
 	 */
 	unliftableChild: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		names: string[],
 		exprText: string,
 	) =>
 		error(
 			'LTC017',
 			`${names.map(n => `\`${n}\``).join(', ')} ${names.length > 1 ? 'are' : 'is'} passed into a call the compiler cannot see inside, so it cannot tell whether this child is reactive. Wrap it in an explicit thunk: \`{() => ${exprText}}\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -808,15 +894,11 @@ export const diagnostic = {
 	 * (lazy destructuring left the grammar), and reactivity is decided by the
 	 * lift rule (`reactivity.ts`), so the sigil carries no information.
 	 */
-	retiredLazySigil: (
-		source: string,
-		offset: number | undefined,
-		exprText: string,
-	) =>
+	retiredLazySigil: (source: string, at: Site, exprText: string) =>
 		error(
 			'TSRX018',
 			`The \`&\` sigil in \`&{${exprText}}\` has no meaning in a template child — the compiler decides reactivity itself, and TSRX 0.2 removed the lazy destructuring the sigil once introduced. Drop the sigil: \`{${exprText}}\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -826,15 +908,11 @@ export const diagnostic = {
 	 * sigil `{'label'}` is indistinguishable from the literal string, so the
 	 * prop read must be written explicitly.
 	 */
-	stringLiteralPropChild: (
-		source: string,
-		offset: number | undefined,
-		prop: string,
-	) =>
+	stringLiteralPropChild: (source: string, at: Site, prop: string) =>
 		error(
 			'LTC019',
 			`\`{'${prop}'}\` names a prop but reads as the literal string "${prop}" — the \`&\` sigil that used to distinguish them is gone (LT-052). Write the read explicitly: \`{host.${prop}}\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- React near-miss idioms ---
@@ -846,14 +924,14 @@ export const diagnostic = {
 	 */
 	reactLogicalJsx: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		condText: string,
 		exprText: string,
 	) =>
 		error(
 			'TSRX021',
 			`\`{${exprText}}\` is the React \`&&\` conditional-render idiom — TSRX has no implicit falsy-renders-nothing rule, so this renders literally instead of conditionally. Use \`@if (${condText}) { … }\` instead.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -863,14 +941,14 @@ export const diagnostic = {
 	 */
 	reactTernaryJsx: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		condText: string,
 		exprText: string,
 	) =>
 		error(
 			'TSRX022',
 			`\`{${exprText}}\` is the React ternary conditional-render idiom — TSRX renders it literally (the chosen branch stringified), not conditionally. Use \`@if (${condText}) { … } @else { … }\` instead.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -880,7 +958,7 @@ export const diagnostic = {
 	 */
 	reactMapJsx: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		itemName: string,
 		arrayText: string,
 		exprText: string,
@@ -888,7 +966,7 @@ export const diagnostic = {
 		error(
 			'TSRX023',
 			`\`{${exprText}}\` is the React \`.map()\` list-render idiom — TSRX renders it literally (the array stringified), not as a loop. Use \`@for (const ${itemName} of ${arrayText}) { … }\` instead.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -896,11 +974,11 @@ export const diagnostic = {
 	 * idiom. TSRX's output is the setup block's trailing JSX expression
 	 * itself — there is no `return` in the sanctioned subset.
 	 */
-	reactReturnJsx: (source: string, offset: number | undefined) =>
+	reactReturnJsx: (source: string, at: Site) =>
 		error(
 			'TSRX024',
 			"`return (…)` is the React component-return idiom — TSRX's output is the setup block's trailing JSX expression itself, not a return value. Drop `return`, keep the `<>…</>` as a bare expression.",
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- first()/all() selectors ---
@@ -912,15 +990,11 @@ export const diagnostic = {
 	 * which may match markup the component did not itself render and
 	 * yields `undefined` instead of throwing.
 	 */
-	invalidFirstCall: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
+	invalidFirstCall: (source: string, at: Site, name: string) =>
 		error(
 			'LTC025',
 			`\`const ${name} = first(…)\` must be called with one or two string literals — a selector alone for an optional reference (\`first('span.badge')\`, yields \`undefined\` when absent), or a selector plus a required-reason string (\`first('input', 'required')\`, throws with that reason) — so the compiler can resolve the reference structurally at compile time.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -932,14 +1006,14 @@ export const diagnostic = {
 	 */
 	firstSelectorNotFound: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		name: string,
 		selector: string,
 	) =>
 		error(
 			'LTC026',
 			`\`first('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, or uses selector syntax this compiler cannot verify structurally — supported: a tag plus any combination of \`.class\`, \`#id\`, \`[attr]\`/\`[attr="value"]\`, and comma-separated lists. Adjust the selector to match a real, statically-addressable element. A required reference that survives to runtime with no match is \`MissingElementError\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -960,7 +1034,7 @@ export const diagnostic = {
 	 */
 	malformedSelector: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		helper: 'first' | 'all',
 		selector: string,
 		reason: string,
@@ -968,7 +1042,7 @@ export const diagnostic = {
 		error(
 			'LTC026',
 			`\`${helper}('${selector}', …)\` is not a valid CSS selector — ${reason}. \`querySelector\` would throw a SyntaxError on it (InvalidSelectorError at connect); fix the selector.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -980,7 +1054,7 @@ export const diagnostic = {
 	 */
 	firstSelectorAmbiguous: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		name: string,
 		selector: string,
 		count: number,
@@ -989,7 +1063,7 @@ export const diagnostic = {
 		error(
 			'LTC027',
 			`\`first('${selector}', …)\` (bound to \`${name}\`) matches ${count} elements in this component's template, and they are not all mutually-exclusive branches of the same ${wording.if} — give the target a distinguishing \`class\`/\`id\`/\`data-*\` and name it in the selector. On a COMPOSED (PascalCase) element the attribute goes on the COMPOSE SITE, not inside the child (LT-127): \`<FormSpinbutton class="lightness" />\` → \`first('form-spinbutton.lightness', …)\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- formAssociated surface ---
@@ -1008,15 +1082,11 @@ export const diagnostic = {
 	 * `expose()` key is not available," and both are fixed by renaming the
 	 * prop.
 	 */
-	reservedExposeName: (
-		source: string,
-		offset: number | undefined,
-		member: string,
-	) =>
+	reservedExposeName: (source: string, at: Site, member: string) =>
 		error(
 			'LTC028',
 			`\`expose({ ${member}: … })\` names \`${member}\`, a reserved word or Object builtin — it cannot be a reactive property, because defining an accessor for it would shadow a member every object inherits. Rename the prop (e.g. \`${member}Value\`). At connect this is \`InvalidPropertyNameError\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1030,14 +1100,14 @@ export const diagnostic = {
 	 */
 	managedFormMemberShadowed: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		member: string,
 		extension: 'formAssociated' | 'formAssociatedCheckbox',
 	) =>
 		error(
 			'LTC028',
 			`\`expose({ ${member}: … })\` shadows the \`${member}\` member ${extension}() installs on the prototype — it is managed automatically (form-participation host contract) and cannot be exposed. Remove it, or rename the reactive property if you need something similar under a different name. At connect this is \`InvalidPropertyNameError\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1049,15 +1119,11 @@ export const diagnostic = {
 	 * and the failure is server-side (a duplicate form field) and invisible
 	 * in the browser, so this is a compiler error, not a doc note.
 	 */
-	formControlHasName: (
-		source: string,
-		offset: number | undefined,
-		tag: string,
-	) =>
+	formControlHasName: (source: string, at: Site, tag: string) =>
 		error(
 			'LTC029',
 			`<${tag}> is a descendant of a formAssociated() component and carries a \`name\` — it would submit natively AND via the host's \`setFormValue\`, submitting the field twice. Remove \`name\` from <${tag}>; the host element is the sole form participant.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1067,11 +1133,11 @@ export const diagnostic = {
 	 * attribute-value form (static, server, or reactive-thunk) uniformly,
 	 * since all three render into the same invalid server attribute.
 	 */
-	textareaValueAttribute: (source: string, offset: number | undefined) =>
+	textareaValueAttribute: (source: string, at: Site) =>
 		error(
 			'LTC030',
 			'`<textarea value={…}>` has no effect — `value` is not a real HTML attribute on `<textarea>` (the browser ignores it) and the pre-hydration control renders empty. Set the initial value as text content instead: `<textarea>{value}</textarea>`.',
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- binding defaults, impure ambients, loaded-attribute defaults ---
@@ -1084,15 +1150,11 @@ export const diagnostic = {
 	 * unreachable from outside: omitting the prop is a type error before the
 	 * default ever gets a chance to apply.
 	 */
-	defaultOnRequiredProp: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
+	defaultOnRequiredProp: (source: string, at: Site, name: string) =>
 		error(
 			'LTC032',
 			`Prop \`${name}\` has a default value but its type isn't marked optional — mark it \`${name}?:\` in the props type, or the default is unreachable (omitting \`${name}\` is a type error for any external caller before the default ever applies).`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1107,11 +1169,11 @@ export const diagnostic = {
 	 * corrects it, so it is unresolvability (ADR 0029 s1 limb b), not an
 	 * author error — while a static child has no correction at all.
 	 */
-	impureStaticChild: (source: string, offset: number | undefined) =>
+	impureStaticChild: (source: string, at: Site) =>
 		error(
 			'LTC033',
 			"This child reads an ambient value (`Date`/`Intl`, a random-number generator such as `Math.random()` or `crypto.randomUUID()`, or a locale/timezone method) with no signal dependency, so it renders exactly once, server-side, at build time, forever — the build machine's clock/locale/timezone/RNG reading gets baked into the page permanently, with no client-side correction. Wrap it in a signal (e.g. `createCell(...)` set from a client-only effect) so it can be a reactive child instead, or move the computation out of the template entirely.",
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1124,15 +1186,11 @@ export const diagnostic = {
 	 * initial HTML instead and draws no diagnostic (LT-165 step 5): the
 	 * client's first binding pass supplies the value.
 	 */
-	impureStaticAttribute: (
-		source: string,
-		offset: number | undefined,
-		attrName: string,
-	) =>
+	impureStaticAttribute: (source: string, at: Site, attrName: string) =>
 		error(
 			'LTC033',
 			`Attribute \`${attrName}\` reads an ambient value (\`Date\`/\`Intl\`, a random-number generator such as \`Math.random()\` or \`crypto.randomUUID()\`, or a locale/timezone method) with no signal dependency, so it is rendered exactly once, server-side, at build time, forever — the build machine's clock/locale/timezone/RNG reading gets baked into the page permanently, with no client-side correction. Make it a reactive thunk (\`${attrName}={() => …}\`, which the client's first binding pass sets) or take the value as a server arg so the caller owns it.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1146,11 +1204,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-09-25).
 	 */
-	impureLoopItems: (source: string, offset: number | undefined) =>
+	impureLoopItems: (source: string, at: Site) =>
 		error(
 			'LTC033',
 			"This loop's items read an ambient value (`Date`/`Intl`, a random-number generator such as `Math.random()` or `crypto.randomUUID()`, or a locale/timezone method), so the server computes them exactly once, at build time — a shuffle or a generated id is baked into the page permanently, with no client-side correction. Pass the items in as an arg, already in their final order, or hold them in a `createList` and reorder it in the factory, where it runs in the browser.",
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1180,11 +1238,7 @@ export const diagnostic = {
 	 * diagnostic would be noise), including on a component routed Simulated
 	 * by some other signal. Non-severe sites never reach this builder at all.
 	 */
-	unsafeLoadedAttributeDefault: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) => {
+	unsafeLoadedAttributeDefault: (source: string, at: Site, name: string) => {
 		const stateWord =
 			name === 'hidden'
 				? 'visible'
@@ -1198,7 +1252,7 @@ export const diagnostic = {
 		return error(
 			'LTC034',
 			`\`${name}\` has no server-renderable initial value here, and no server phase can resolve this value in any tier — so \`${name}\` is silently OMITTED from the initial HTML. Omission is not neutral for \`${name}\`: it renders the ${stateWord} state regardless of what this expression would actually evaluate to once connected. This is a real submittable form control, so the wrong default is a correctness bug — the control can submit, or fail to, regardless of what the author intended — not just a cosmetic pre-hydration flash. Trace the value to a server-known prop or signal so it can render an initial value, or accept the pre-hydration flash explicitly by giving this element a static/server-rendered default for \`${name}\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		)
 	},
 
@@ -1212,15 +1266,11 @@ export const diagnostic = {
 	 * declares. FactoryContext vocabulary (`expose`, `host`, `first`, …) is
 	 * ambient and NEVER needs an import.
 	 */
-	missingRealExportImport: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
+	missingRealExportImport: (source: string, at: Site, name: string) =>
 		error(
 			'LTC036',
 			`\`${name}\` is a real '@zeix/le-truc' export used here but never imported — add \`import { ${name} } from '@zeix/le-truc'\` (FactoryContext helpers are ambient and need no import).`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1232,15 +1282,11 @@ export const diagnostic = {
 	 * a false declaration a future working language service would flag, and
 	 * re-emitting it would break the generated module.
 	 */
-	contextNameInImport: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
+	contextNameInImport: (source: string, at: Site, name: string) =>
 		error(
 			'LTC037',
 			`\`${name}\` is FactoryContext vocabulary — ambient in this host profile, not a '@zeix/le-truc' export. Remove it from the import (drop the whole line if it's the only named import left).`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1251,16 +1297,11 @@ export const diagnostic = {
 	 * id-based addressing (`first('#x')`, label `for`) resolves to at most
 	 * one of them, never reliably the right one.
 	 */
-	duplicateComposeId: (
-		source: string,
-		offset: number | undefined,
-		id: string,
-		count: number,
-	) =>
+	duplicateComposeId: (source: string, at: Site, id: string, count: number) =>
 		error(
 			'LTC038',
 			`id="${id}" appears on ${count} composed elements — each compose site's id is materialized on that instance's host element, so this is ${count} elements sharing an id in the same document. Give each site a distinct id, or address the instances with a static class instead.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1289,7 +1330,7 @@ export const diagnostic = {
 	 */
 	duplicatedPropChannel: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		prop: string,
 		parser: string,
 		formManaged: boolean,
@@ -1299,7 +1340,7 @@ export const diagnostic = {
 			formManaged
 				? `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. On a form-associated host \`${prop}\` is the reset baseline (\`default${prop === 'checked' ? 'Checked' : 'Value'}\`) — render the host attribute too (\`<… ${prop}={${prop}}>\`) rather than dropping it; do not stop rendering the value here either, since the baseline attribute alone gives no initial DOM state for the control to mirror.`
 				: `\`${prop}\` is exposed through a Parser (\`${parser}\`, which reads the host attribute) and is ALSO rendered into this component's own markup from the \`${prop}\` arg — the value ships twice, and when the host attribute is absent the Parser's fallback wins and this site's server-rendered content is overwritten on the first binding pass. Harvest it from the site instead (\`expose({ ${prop}: <ref read> })\`, HOST_PROFILE § data account) and drop the attribute, or stop rendering the value here.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- reference identity and per-instance ids ---
@@ -1311,14 +1352,14 @@ export const diagnostic = {
 	 */
 	deadRequiredReason: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		name: string,
 		selector: string,
 	) =>
 		warning(
 			'LTC040',
 			`\`const ${name} = first('${selector}', …)\` is declared REQUIRED, but its only match in this template sits inside a branch that may not render — the client addresses it with an existence guard either way, so the required-reason string is never thrown. Drop it (\`first('${selector}')\`) to say optional outright. For a template-owning component the compiler controls the markup, so a required-reason only earns its keep on a selector that may match markup this component did not itself render.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1334,16 +1375,22 @@ export const diagnostic = {
 	 */
 	firstSelectorDuplicate: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		name: string,
 		selector: string,
 		existing: string,
-	) =>
-		error(
+		/** The `first()` declaration of `existing`, related (ADR 0044 s1). */
+		existingAt?: Site,
+	): LocalDiagnostic => {
+		const reported = error(
 			'LTC041',
 			`\`first('${selector}', …)\` (bound to \`${name}\`) resolves to the same element as \`${existing}\` — two names for one element. Only one of them would become a query and the other would be undefined at runtime. Use \`${existing}\` in both places, or give the two elements distinguishing \`class\`/\`id\`/\`data-*\` attributes and address them separately.`,
-			lineOf(source, offset),
-		),
+			rangeOf(source, at),
+		)
+		if (existingAt?.start !== undefined)
+			reported.related = [rangeOf(source, existingAt)]
+		return reported
+	},
 
 	/**
 	 * A STATIC `id` attribute in a template (LT-131). An `id` is unique per
@@ -1360,16 +1407,11 @@ export const diagnostic = {
 	 * stable to re-derive, so the id belongs to whoever instantiates the
 	 * component (HOST_PROFILE § data account, bullet 3).
 	 */
-	staticIdInTemplate: (
-		source: string,
-		offset: number | undefined,
-		tag: string,
-		id: string,
-	) =>
+	staticIdInTemplate: (source: string, at: Site, tag: string, id: string) =>
 		warning(
 			'LTC042',
 			`\`<${tag} id="${id}">\` is a constant \`id\` in a template — it duplicates the moment a page places this component twice, and any \`aria-labelledby\`/\`aria-describedby\`/\`<label for>\` pointing at it resolves to the FIRST instance. Take the id as a server arg with a default instead (\`{ ${sanitizeArgName(id)} = '${id}' }\`) and render it as \`id={${sanitizeArgName(id)}}\`, so whoever instantiates the component owns the value; wire every reference from that same arg.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- signal initializer shapes ---
@@ -1385,15 +1427,11 @@ export const diagnostic = {
 	 * and no tier supersedes that — so unlike its former code-mates it stays
 	 * an error rather than becoming a routing signal (ADR 0029 s5).
 	 */
-	conditionalSignalConstructor: (
-		source: string,
-		offset: number | undefined,
-		name: string,
-	) =>
+	conditionalSignalConstructor: (source: string, at: Site, name: string) =>
 		error(
 			'LTC044',
 			`\`${name}\`'s initializer conditionally chooses between two signal-constructor calls — a signal must be a single, unconditional call to a recognized constructor (createCell/createState/deriveCell/…). Move the condition inside the callback instead (e.g. \`deriveCell(() => cond ? a : b)\`).`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1421,15 +1459,11 @@ export const diagnostic = {
 	 * stays an error; retiring it with the server-evaluation guards would
 	 * have deleted a real check (ADR 0029 s5).
 	 */
-	deferredCollectorCall: (
-		source: string,
-		offset: number | undefined,
-		helper: string,
-	) =>
+	deferredCollectorCall: (source: string, at: Site, helper: string) =>
 		error(
 			'LTC045',
 			`\`${helper}(…)\` is called from inside a callback — it collects an effect descriptor into the factory's ambient collector, which is gone by the time a deferred callback runs, so this throws NoActiveCollectorError at connect (contained per ADR 0028, so the effect silently never activates). Call \`${helper}(…)\` directly in setup and make the callback's condition part of the effect instead (e.g. \`watch(() => cond ? … : …, sink)\`).`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1455,14 +1489,14 @@ export const diagnostic = {
 	 */
 	renderedClientOnlyConst: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		name: string,
 		badNames: string[],
 	) =>
 		error(
 			'LTC046',
 			`The server render evaluates \`${name}\` — in the markup or in an \`expose()\` initializer — but its initializer reads ${codeList(badNames)}, which ${badNames.length === 1 ? 'exists' : 'exist'} only on the client. No tier can produce that value, so the site renders wrong or stays empty, and no client binding corrects a static value. Compute \`${name}\` from a server arg or a signal instead, or make each site that reads it reactive (a thunk, for example \`title={() => …}\`), so the client's first binding pass supplies the value.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- i18n and the tier-1 prevented surface ---
@@ -1483,15 +1517,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01).
 	 */
-	untranslatedLiteral: (
-		source: string,
-		offset: number | undefined,
-		sample: string,
-	) =>
+	untranslatedLiteral: (source: string, at: Site, sample: string) =>
 		warning(
 			'LTC047',
 			`Literal prose \`${sample}\` is written directly in the template of a component that declares \`export const i18n\` — no locale can translate it. Add a message key with this text as its source-locale value to \`export const i18n\`, and render \`{t.<key>}\` here; the translation census then reports each locale that lacks the key.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1505,16 +1535,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01).
 	 */
-	unparseableMessage: (
-		source: string,
-		offset: number | undefined,
-		key: string,
-		reason: string,
-	) =>
+	unparseableMessage: (source: string, at: Site, key: string, reason: string) =>
 		error(
 			'LTC055',
 			`The source message \`${key}\` in \`export const i18n\` is not a supported ICU MessageFormat 1 pattern: ${reason}. The source locale has no fallback, so the build cannot render it. Correct the pattern: quote a literal \`{\`, \`}\` or \`#\` with apostrophes (\`'{'\`), and double a literal apostrophe (\`''\`).`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1532,12 +1557,11 @@ export const diagnostic = {
 	 */
 	messageArgumentMismatch: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		key: string,
 		problem: string,
 		fix: string,
-	) =>
-		error('LTC055', `\`t.${key}\` ${problem}. ${fix}`, lineOf(source, offset)),
+	) => error('LTC055', `\`t.${key}\` ${problem}. ${fix}`, rangeOf(source, at)),
 
 	/**
 	 * One component tag declared by MULTIPLE corpus sources that are not a
@@ -1556,12 +1580,20 @@ export const diagnostic = {
 	 *
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-01). Corpus-level: fires once per involved file,
-	 * no source offset.
+	 * located at that whole file, with every other declaring file related
+	 * (ADR 0044 s1).
 	 */
-	duplicateTag: (tag: string, sources: ReadonlyArray<string>) =>
-		error(
+	duplicateTag: (
+		tag: string,
+		sources: ReadonlyArray<string>,
+		at: DiagnosticLocation,
+		related: DiagnosticLocation[],
+	): CompileDiagnostic =>
+		corpusError(
 			'LTC048',
 			`Component tag \`${tag}\` is declared by more than one corpus source: ${sources.join(', ')}. A tag has one owner, whatever surface it is written in — only a variant set shares a tag, and a variant set is at most one source per surface (\`.tsrx\`, \`.tsx\`) with one base name in one folder. Delete the extra same-surface source, move the spellings into one folder under one base name, or rename the tag of one source.`,
+			at,
+			related,
 		),
 
 	/**
@@ -1584,14 +1616,17 @@ export const diagnostic = {
 	 *
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402). Corpus-level: fires once per involved
-	 * file, no source offset.
+	 * file, located at that whole file, with every other member related
+	 * (ADR 0044 s1).
 	 */
 	variantCssDrift: (
 		tag: string,
 		sources: ReadonlyArray<string>,
+		at: DiagnosticLocation,
+		related: DiagnosticLocation[],
 		boundaries?: ReadonlyMap<string, readonly string[]>,
-	) =>
-		error(
+	): CompileDiagnostic =>
+		corpusError(
 			'LTC051',
 			boundaries
 				? `Variant set \`${tag}\` has the same styles in every member, but its members render different custom elements, so the scope stops at different boundaries: ${sources
@@ -1603,6 +1638,8 @@ export const diagnostic = {
 							'; ',
 						)} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make every member render the same custom elements.`
 				: `Variant set \`${tag}\` compiles to different CSS across its members: ${sources.join(', ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make the styles of every member byte-identical: copy the styles of the served member into the others.`,
+			at,
+			related,
 		),
 
 	/**
@@ -1620,13 +1657,13 @@ export const diagnostic = {
 	 */
 	badFactoryContextParam: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		bad: ReadonlyArray<string>,
 	) =>
 		error(
 			'LTC049',
 			`The factory-context parameter destructures ${codeList(bad)}, which ${bad.length === 1 ? 'is' : 'are'} not FactoryContext vocabulary — the generated client destructures the same names from its own factory context, where ${bad.length === 1 ? 'it does' : 'they do'} not exist. Destructure only ${codeList(['host', 'first', 'all', 'expose', 'watch', 'on', 'pass', 'internals', 'requestContext', 'provideContexts'])}, for example \`, { host, expose }: FactoryContext<Props>\`.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1639,13 +1676,16 @@ export const diagnostic = {
 	 * (Prevented): both facts are AST-visible, no runtime half exists.
 	 *
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
-	 * (reviewed 2026-10-01). The offset is the annotation's own start (the
-	 * written type, not the whole parameter — LT-358b), so the report
-	 * carries the line the annotation sits on.
+	 * (reviewed 2026-10-01). The report covers the written type, not the
+	 * whole parameter (LT-358b). Neither face carries a fix (ADR 0044 s1,
+	 * LT-371): the plain face names two repairs, and renaming the written
+	 * type on the form-associated face leaves `FormFactoryContext`
+	 * unimported — the `import type` that would need the same edit is
+	 * one the import scan skips.
 	 */
 	formContextMismatch: (
 		source: string,
-		offset: number | undefined,
+		annotation: Site,
 		annotated: 'FactoryContext' | 'FormFactoryContext',
 	) =>
 		error(
@@ -1653,7 +1693,7 @@ export const diagnostic = {
 			annotated === 'FactoryContext'
 				? `This component sets \`config.formAssociated\` but annotates its factory context as \`FactoryContext\`, so \`host\` lacks the managed form members the element carries. Annotate \`FormFactoryContext<Props>\` instead — its \`host\` is \`FormAssociatedElement & Props\`.`
 				: `This component annotates its factory context as \`FormFactoryContext\` but does not set \`config.formAssociated\`, so \`host\` claims form members the element does not carry. Annotate \`FactoryContext<Props>\` instead, or set \`config.formAssociated\` if the component takes part in forms.`,
-			lineOf(source, offset),
+			rangeOf(source, annotation),
 		),
 
 	// --- Stylesheet grammar (ADR 0033 s9, LT-268) ---
@@ -1668,15 +1708,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (final copy 2026-10-02, LT-395).
 	 */
-	malformedStyleSheet: (
-		source: string,
-		offset: number | undefined,
-		detail: string,
-	) =>
+	malformedStyleSheet: (source: string, at: Site, detail: string) =>
 		error(
 			'LTC064',
 			`The component's stylesheet does not parse (${detail}) — the compiler cannot scope or emit a sheet it cannot read. Correct the CSS syntax.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1691,15 +1727,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (final copy 2026-10-02, LT-395).
 	 */
-	unknownCssProperty: (
-		source: string,
-		offset: number | undefined,
-		property: string,
-	) =>
+	unknownCssProperty: (source: string, at: Site, property: string) =>
 		warning(
 			'LTC065',
 			`\`${property}\` is not a CSS property the compiler knows — a browser drops a declaration it does not recognize. Correct the name if it is a typo. If the property is newer than the compiler's CSS dictionary, ignore this warning: the declaration ships as written.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1718,14 +1750,14 @@ export const diagnostic = {
 	 */
 	invalidCssValue: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		property: string,
 		value: string,
 	) =>
 		warning(
 			'LTC065',
 			`The value \`${value}\` does not match the grammar of \`${property}\` that the compiler knows — a browser drops a declaration whose value it does not accept. Correct the value if it is a mistake. If the value is newer than the compiler's CSS dictionary, ignore this warning: the declaration ships as written.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	// --- Shadow-root stylesheet contract (ADR 0033 s6/s6a, LT-304) ---
@@ -1743,11 +1775,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
-	ownTagLedRule: (source: string, offset: number | undefined, tag: string) =>
+	ownTagLedRule: (source: string, at: Site, tag: string) =>
 		error(
 			'LTC066',
 			`This rule is led by the component's own tag \`${tag}\`. A compiled stylesheet is shadow-root CSS: bare selectors style the component's internals, and the host element is styled through \`:host { … }\`. A \`${tag} { … }\` rule would silently stop applying — the selector addresses a nested \`<${tag}>\` inside the scope, not the host. Style the host through \`:host\`, and drop the tag from selectors that mean the component's own internals.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1761,11 +1793,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
-	slottedInLightDom: (source: string, offset: number | undefined) =>
+	slottedInLightDom: (source: string, at: Site) =>
 		error(
 			'LTC067',
 			"`::slotted()` cannot match in a compiled component: it addresses slotted content, which exists only inside a shadow root, and a compiled component renders light DOM — composed children are real children, not slotted nodes. Style a composed child's host element by its tag, and let the child style its own internals.",
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1779,11 +1811,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
-	hostContextSelector: (source: string, offset: number | undefined) =>
+	hostContextSelector: (source: string, at: Site) =>
 		error(
 			'LTC068',
 			'`:host-context()` is removed from the CSS spec and matched by no browser, so the rule could never apply. Theme the component by ancestor through inheritance and custom properties instead — custom properties cross every boundary.',
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1798,11 +1830,11 @@ export const diagnostic = {
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
 	 */
-	hostQualifier: (source: string, offset: number | undefined) =>
+	hostQualifier: (source: string, at: Site) =>
 		error(
 			'LTC070',
 			'`:host` followed directly by a qualifier matches nothing in a shadow root — a compound on the bare `:host` pseudo-class has no matchable form. Move the qualifier into the arguments: `:host(.x)`, `:host(:hover)`, `:host([attr])`.',
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1820,14 +1852,14 @@ export const diagnostic = {
 	 */
 	descendsPastBoundary: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		selector: string,
 		boundary: string,
 	) =>
 		error(
 			'LTC071',
 			`The selector \`${selector}\` reaches inside \`<${boundary}>\`, a custom element this component renders — the scope stops at it, so the rule matches nothing. Style that content from \`<${boundary}>\`'s own stylesheet, or, for a page-level rule, move it into a top-level \`:global { … }\` block.`,
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 
 	/**
@@ -1848,7 +1880,7 @@ export const diagnostic = {
 	 */
 	globalMisuse: (
 		source: string,
-		offset: number | undefined,
+		at: Site,
 		face:
 			| 'nested'
 			| 'prefixed'
@@ -1870,6 +1902,6 @@ export const diagnostic = {
 							: face === 'mid-selector'
 								? "This `:global(…)` sits in the middle of a selector, which is an error in TSRX too. Split the rule: the component's own compounds style internals with bare selectors, and a genuinely page-level rule hoists as `:global(<whole selector>) { … }` at the top level."
 								: 'These declarations sit directly in a bare `:global { … }` block, which carries no selector — they style nothing. Put them under a selector: a `:global(<selector>) { … }` rule, or a rule inside the block.',
-			lineOf(source, offset),
+			rangeOf(source, at),
 		),
 }

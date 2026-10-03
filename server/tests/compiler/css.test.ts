@@ -19,6 +19,7 @@ import { parseComponentSheet } from '../../compiler/css'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import { compileSourceTsx } from '../../compiler/frontend/tsx/compiler-tsx'
 import { compileCorpusSource, loadCorpus } from './corpus-fixture'
+import { lineAt, textAt } from './located'
 
 /* === Sources === */
 
@@ -122,6 +123,7 @@ describe('parseComponentSheet — the LTC064/LTC065 faces', () => {
 			{
 				face: 'unknown-property',
 				offset: css.indexOf('colr'),
+				end: css.indexOf('colr: red') + 'colr: red'.length,
 				property: 'colr',
 				detail: 'Unknown property `colr`',
 			},
@@ -135,6 +137,7 @@ describe('parseComponentSheet — the LTC064/LTC065 faces', () => {
 			{
 				face: 'invalid-value',
 				offset: css.indexOf('width: 10pxx'),
+				end: css.indexOf('width: 10pxx') + 'width: 10pxx'.length,
 				property: 'width',
 				value: '10pxx',
 				detail: 'Mismatch',
@@ -148,6 +151,8 @@ describe('parseComponentSheet — the LTC064/LTC065 faces', () => {
 			{
 				face: 'invalid-value',
 				offset: SHEET_WITH_BAD_UNIT.indexOf('width: 10pxx'),
+				end:
+					SHEET_WITH_BAD_UNIT.indexOf('width: 10pxx') + 'width: 10pxx'.length,
 				property: 'width',
 				value: '10pxx',
 				detail: 'Mismatch',
@@ -233,7 +238,9 @@ describe('the IR carries the parsed sheet', () => {
 		expect(diagnostics.map(d => [d.code, d.severity])).toEqual([
 			['LTC065', 'warning'],
 		])
-		expect(diagnostics[0]?.line).toBe(lineOf(source, 'width: 10pxx'))
+		expect(lineAt(source, diagnostics[0])).toBe(lineOf(source, 'width: 10pxx'))
+		// LT-371: the range covers the declaration (css-tree's own span).
+		expect(textAt(source, diagnostics[0])).toBe('width: 10pxx')
 		expect(diagnostics[0]?.message).toContain('`width`')
 		expect(diagnostics[0]?.message).toContain('10pxx')
 	})

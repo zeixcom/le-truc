@@ -51,7 +51,7 @@ import {
 	isNode,
 	walkNodes,
 } from './ast-utils'
-import { type CompileDiagnostic, diagnostic } from './diagnostics'
+import { diagnostic, type LocalDiagnostic } from './diagnostics'
 import {
 	containsImpureAmbient,
 	foldableHostProps,
@@ -145,9 +145,9 @@ export const pageContextReads = (node: AstNode): string[] =>
 export const ambientRecordViolations = (
 	source: string,
 	paramsNode: AstNode | null,
-): CompileDiagnostic[] => {
+): LocalDiagnostic[] => {
 	if (!paramsNode || paramsNode.type !== 'ObjectPattern') return []
-	const out: CompileDiagnostic[] = []
+	const out: LocalDiagnostic[] = []
 	for (const prop of asArray(paramsNode.properties)) {
 		if (prop.type !== 'Property') continue
 		if (identifierName(prop.key) !== AMBIENT_RECORD_PARAM) continue
@@ -157,12 +157,7 @@ export const ambientRecordViolations = (
 		for (const inner of asArray(value.properties)) {
 			if (inner.type === 'RestElement') {
 				out.push(
-					diagnostic.undeclaredPageAmbient(
-						source,
-						inner.start,
-						null,
-						PAGE_AMBIENTS,
-					),
+					diagnostic.undeclaredPageAmbient(source, inner, null, PAGE_AMBIENTS),
 				)
 				continue
 			}
@@ -172,7 +167,7 @@ export const ambientRecordViolations = (
 				out.push(
 					diagnostic.undeclaredPageAmbient(
 						source,
-						inner.start,
+						inner,
 						member,
 						PAGE_AMBIENTS,
 					),
@@ -212,7 +207,7 @@ export const assertFoldScopeClosed = (component: ComponentIR): void => {
  */
 export const checkFoldInputs = (
 	component: ComponentIR,
-	diagnostics: CompileDiagnostic[],
+	diagnostics: LocalDiagnostic[],
 ): void => {
 	assertFoldScopeClosed(component)
 	const { source } = component
@@ -254,7 +249,7 @@ export const checkFoldInputs = (
 		diagnostics.push(
 			diagnostic.foldReadsPageContext(
 				source,
-				node.start,
+				node,
 				where,
 				reads,
 				PAGE_AMBIENTS,
@@ -351,7 +346,7 @@ export const checkFoldInputs = (
 						// needs to fold.
 						if (containsImpureAmbient(loop.iterable, scope))
 							diagnostics.push(
-								diagnostic.impureLoopItems(source, loop.iterable.start),
+								diagnostic.impureLoopItems(source, loop.iterable),
 							)
 					}
 					const loopScope = new Set(scope)
