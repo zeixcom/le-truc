@@ -164,7 +164,9 @@ const tail = (s: string | undefined): string => {
 // Entry Gates lines and agent handoffs spell gates loosely ("bun run
 // test:variants", "bun test server/tests (the test:server suite)"). Normalize
 // to what runGate dispatches on: the bare package.json script name, or an
-// explicit "bun test <paths>" invocation.
+// explicit "bun test <paths>" invocation. This is the single choke point every
+// gate string passes through, so a doubled "bun run bun run …" can reach the
+// command line from nowhere else.
 function normalizeGate(raw: string): string {
 	return raw
 		.replace(/\s*\([^)]*\)/g, '')
@@ -186,7 +188,7 @@ async function runGate(rawCmd: string): Promise<GateOutcome> {
 	if (lintPath) {
 		argv = ['biome', 'check', lintPath]
 	} else if (bunTest) {
-		argv = ['test', ...cmd.slice(bunTest[0].length).split(/\s+/)]
+		argv = ['test', ...cmd.slice(bunTest[0].length).split(/\s+/), '--dots']
 	} else {
 		const parts = cmd.split(/\s+/)
 		const dots = BUN_TEST_SCRIPTS.has(parts[0]) ? ['--dots'] : []
@@ -246,7 +248,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
 				(task.rework
 					? `This is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green. `
 					: `Read the entry, the sources it cites (${(task.citations ?? []).join(', ') || 'none listed'}) and the area's living docs first. `) +
-				`Run ${GATE_TABLE}${task.gates?.length ? ` (${task.gates.join(', ')})` : ''} and report each real result. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The script re-runs the gates independently after your turn, so report honestly and never a gate you did not run.\n` +
+				`Run ${GATE_TABLE}${task.gates?.length ? ` (${task.gates.join(', ')})` : ''} and report each real result. Report each gate as the bare package.json script name (for example \`test:server\`), not the full command line — the script re-runs them from those names. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The script re-runs the gates independently after your turn, so report honestly and never a gate you did not run.\n` +
 				`If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. ` +
 				`Do not commit, do not move queue entries, do not edit ARCHITECTURE.md, and do not write the status suffix or handoff fields.`,
 		)
