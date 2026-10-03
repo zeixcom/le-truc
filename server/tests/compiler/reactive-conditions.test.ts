@@ -914,3 +914,123 @@ describe('placement and shape refusals', () => {
 		).toEqual([])
 	})
 })
+
+/* === Mode classification follows scope (LT-387) === */
+
+/** A one-file component around `body`, `.tsx` spelling. */
+const tsx = (
+	body: string,
+	{ params = '{}: {}', setup = '' }: { params?: string; setup?: string } = {},
+): string => `import { createCell } from '@zeix/le-truc'
+
+export function C(${params}) {
+	${setup}
+	return (
+			<c-el>${body}
+				<style>{'c-el { color: red }'}</style>
+			</c-el>
+	)
+}
+`
+
+describe('condition classification follows scope (LT-387)', () => {
+	const setup = 'const open = createCell(false)\n\t\texpose({ open: open.get })'
+	const listParams = '{ items }: { items: boolean[] }'
+	const errorsOn = (surface: 'tsrx' | 'tsx', source: string) =>
+		(surface === 'tsrx'
+			? compileComponent(source, 'c.tsrx', new Set())
+			: compileComponentTsx(source, 'c.tsx', new Set())
+		).diagnostics.filter(d => d.severity === 'error')
+
+	test.each(['tsrx', 'tsx'] as const)(
+		'a live setup alias of a signal is refused (LTC005) on .%s',
+		surface => {
+			const at = (alias: string, cond: string) =>
+				surface === 'tsrx'
+					? tsrx(`<div>@if (${cond}) { <b>x</b> }</div>`, {
+							setup: `${setup}\n\t\t${alias}`,
+						})
+					: tsx(`{${cond} ? <b>x</b> : null}`, {
+							setup: `${setup}\n\t\t${alias}`,
+						})
+			// A function whose body reads the signal, a bare signal alias and
+			// a method reference without the call are all LIVE reads: under a
+			// `server` classification the condition would never update.
+			for (const [alias, cond] of [
+				['const isOpen = () => open.get()', 'isOpen()'],
+				['const o = open', 'o.get()'],
+				['const a = open.get', 'a'],
+			] as Array<[string, string]>) {
+				expect(errorsOn(surface, at(alias, cond)).map(d => d.code)).toEqual([
+					'LTC005',
+				])
+			}
+		},
+	)
+
+	test.each(['tsrx', 'tsx'] as const)(
+		'an eager snapshot const of a signal stays server on .%s',
+		surface => {
+			const at = (snapshotSetup: string, cond: string) =>
+				surface === 'tsrx'
+					? tsrx(`<div>@if (${cond}) { <b>x</b> }</div>`, {
+							setup: snapshotSetup,
+						})
+					: tsx(`{${cond} ? <b>x</b> : null}`, {
+							setup: snapshotSetup,
+						})
+			// The dereference runs once in setup — one server value, not a
+			// live read. Direct, and through a further bare alias.
+			expect(
+				errorsOn(
+					surface,
+					at(`${setup}\n\t\tconst snapshot = open.get()`, 'snapshot'),
+				),
+			).toEqual([])
+			expect(
+				errorsOn(
+					surface,
+					at(`${setup}\n\t\tconst s = open.get()\n\t\tconst t = s`, 't'),
+				),
+			).toEqual([])
+		},
+	)
+
+	test.each(['tsrx', 'tsx'] as const)(
+		'a loop binding shadowing a signal name compiles on .%s',
+		surface => {
+			const source =
+				surface === 'tsrx'
+					? tsrx(
+							'<ul>@for (const open of items) { <li>@if (open) { <b>x</b> }</li> }</ul>',
+							{ params: listParams, setup },
+						)
+					: tsx('<ul>{items.map(open => <li>{open && <b>x</b>}</li>)}</ul>', {
+							params: listParams,
+							setup,
+						})
+			// The binding shadows the same-named signal inside the body, so
+			// the condition is the per-item server value, not a signal read.
+			expect(errorsOn(surface, source)).toEqual([])
+		},
+	)
+
+	test.each(['tsrx', 'tsx'] as const)(
+		'a hoisted const shadowing a signal name compiles on .%s',
+		surface => {
+			const itemParams = '{ items }: { items: { open: boolean }[] }'
+			const source =
+				surface === 'tsrx'
+					? tsrx(
+							'<ul>@for (const item of items) { const open = item.open; <li>@if (open) { <b>x</b> }</li> }</ul>',
+							{ params: itemParams, setup },
+						)
+					: tsx(
+							'<ul>{items.map(item => { const open = item.open; return <li>{open && <b>x</b>}</li> })}</ul>',
+							{ params: itemParams, setup },
+						)
+			// The hoisted per-item const shadows the same-named signal too.
+			expect(errorsOn(surface, source)).toEqual([])
+		},
+	)
+})

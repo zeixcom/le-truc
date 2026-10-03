@@ -82,14 +82,94 @@ export type Lowering = {
  */
 export type ConditionMode = 'server' | 'reactive'
 
+/** Lower a loop body with the loop's bindings shadowing same-named signals. */
+const lowerLoopBody = <T>(
+	ctx: ExtractContext,
+	names: ReadonlyArray<string | null | undefined>,
+	lower: () => T,
+): T => {
+	const depth = ctx.loopBound.length
+	for (const n of names) if (n) ctx.loopBound.push(n)
+	try {
+		return lower()
+	} finally {
+		ctx.loopBound.length = depth
+	}
+}
+
+/** Whether a setup const's initializer reads a signal or `host`, transitively. */
+const readsSignalThroughAlias = (
+	ctx: ExtractContext,
+	signals: ReadonlyMap<string, SignalIR>,
+	name: string,
+	seen: Set<string> = new Set(),
+): boolean => {
+	if (seen.has(name) || signals.has(name)) return false
+	seen.add(name)
+	const init = ctx.setupInits.get(name)
+	if (!init) return false
+	for (const read of freeIdentifiers(init)) {
+		if (signals.has(read) || read === 'host') return true
+		if (readsSignalThroughAlias(ctx, signals, read, seen)) return true
+	}
+	return false
+}
+
+/**
+ * Whether a setup const's initializer EAGERLY dereferences a signal — an
+ * `X.get()` call whose `X` is a signal (or resolves to one through further
+ * setup consts), or a bare alias of such a const. The snapshot is one
+ * server value, so a condition reading it stays `server`, exactly as the
+ * setup-const contract promises; only a LIVE alias (a function whose body
+ * reads a signal or `host`, or a bare signal alias) goes stale under a
+ * `server` classification and is refused instead.
+ */
+const eagerlyDereferencesSignal = (
+	ctx: ExtractContext,
+	signals: ReadonlyMap<string, SignalIR>,
+	name: string,
+	seen: Set<string> = new Set(),
+): boolean => {
+	if (seen.has(name)) return false
+	seen.add(name)
+	const init = ctx.setupInits.get(name)
+	if (!init) return false
+	if (init.type === 'Identifier')
+		return eagerlyDereferencesSignal(ctx, signals, String(init.name), seen)
+	if (init.type !== 'CallExpression') return false
+	const callee = init.callee as AstNode | undefined
+	if (
+		!isNode(callee) ||
+		callee.type !== 'MemberExpression' ||
+		callee.computed === true ||
+		!isNode(callee.property) ||
+		callee.property.type !== 'Identifier' ||
+		callee.property.name !== 'get'
+	)
+		return false
+	const object = callee.object as AstNode | undefined
+	if (!isNode(object) || object.type !== 'Identifier') return false
+	const target = String(object.name)
+	return (
+		signals.has(target) ||
+		target === 'host' ||
+		readsSignalThroughAlias(ctx, signals, target, seen)
+	)
+}
+
 /**
  * Classify a control-flow condition (`@if` test / ternary test, `@switch`
  * discriminant). A test that reads a signal or `host` is reactive (ADR
  * 0037: its arms become template-cloned branches) — which names its client
- * thunk may read is the analysis's check, as for every client position.
- * Any other test must be server-known at render time (args, setup consts,
- * globals); null when it is not, after reporting why. The message names the
- * surface's spelling of the construct.
+ * thunk may read is the analysis's check, as for every client position,
+ * and a loop binding shadows a same-named signal (LT-387). Any other test
+ * must be server-known at render time (args, setup consts, globals); null
+ * when it is not, after reporting why. A setup const that eagerly
+ * dereferences a signal (`const snapshot = open.get()`) is one server
+ * value and stays `server`; a live alias of a signal or `host` — a
+ * function reading it, or a bare alias — would classify `server` and never
+ * update, so it is refused (LTC005). The message names the surface's
+ * spelling of the construct.
  */
 export const validateCondition = (
 	ctx: ExtractContext,
@@ -101,15 +181,38 @@ export const validateCondition = (
 	const what = kind === 'if' ? wording.ifCondition : wording.switchDiscriminant
 	const free = freeIdentifiers(test)
 	for (const global of JS_GLOBALS) free.delete(global)
-	if ([...free].some(name => signals.has(name) || name === 'host'))
-		return 'reactive'
+	const bound = new Set(ctx.loopBound)
+	const isSignal = (name: string) =>
+		!bound.has(name) && (signals.has(name) || name === 'host')
+	if ([...free].some(isSignal)) return 'reactive'
+	// A live setup alias of a signal (`const isOpen = () => open.get()`)
+	// would classify `server` and never update; refuse it rather than go
+	// stale. An eager snapshot (`const snapshot = open.get()`) is one server
+	// value — exempt.
+	const alias = [...free].find(
+		name =>
+			!bound.has(name) &&
+			!eagerlyDereferencesSignal(ctx, signals, name) &&
+			readsSignalThroughAlias(ctx, signals, name),
+	)
+	if (alias) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				test,
+				`${what} that reads the setup const \`${alias}\`, which reads a signal or \`host\`,`,
+				'The server classifies the condition from the names it spells — read the signal or `host` directly in the condition.',
+			),
+		)
+		return null
+	}
 	const unknown = [...free].filter(name => !ctx.serverKnown.has(name))
 	if (unknown.length > 0) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
 				ctx.source,
 				test,
-				`${what} that reads ${unknown.map(n => `\`${n}\``).join(', ')}, which the server render does not know`,
+				`${what} that reads ${unknown.map(n => `\`${n}\``).join(', ')}, which the server render does not know,`,
 				'A condition is evaluated during the server render, or on the client when it reads a signal or `host` — derive it from args, setup consts or signals.',
 			),
 		)
@@ -966,7 +1069,9 @@ const lowerListLoop = (
 		)
 		return null
 	}
-	const output = lowerElement(ctx, outputNode, signals, fors, lowering)
+	const output = lowerLoopBody(ctx, [itemName, keyName], () =>
+		lowerElement(ctx, outputNode, signals, fors, lowering),
+	)
 	// The item binding is the slot fill — reactive by position, not a
 	// declared signal, so the lift rule alone would leave it static and
 	// `validateListBody` would then see zero holes.
@@ -1114,7 +1219,11 @@ export const lowerLoop = (
 		)
 		return null
 	}
-	const output = lowerElement(ctx, outputNode, signals, fors, lowering)
+	const output = lowerLoopBody(
+		ctx,
+		[itemName, loop.index?.name, ...hoisted.map(h => h.name)],
+		() => lowerElement(ctx, outputNode, signals, fors, lowering),
+	)
 	if (!output.tag) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
