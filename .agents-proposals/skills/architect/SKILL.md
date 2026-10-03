@@ -34,7 +34,7 @@ Write an ADR only when all three hold: the decision is **hard to reverse**, it i
 - **Read before proposing:** read the relevant `REQUIREMENTS.md` sections, `CONTEXT.md`, `ARCHITECTURE.md`, the ADRs in the area, and the code itself. Many apparent bugs are documented decisions.
 - **Make trade-offs explicit:** for each major choice, give what you chose, what you rejected, and why. Prefer extending an existing pattern to adding a concept. If a design looks over-engineered, say so.
 - **Show the design to the owner before you write documents** when it changes the public API or reverses an ADR.
-- **Triage** sorts each report into one of five classes: won't do (explain with a reference), confirmed bug, clear win, docs gap, or unclear (ask). Every resolvable class except won't do ends as a `BACKLOG.md` task.
+- **Triage** sorts each report into one of five classes: won't do (explain with a reference), confirmed bug, clear win, docs gap, or unclear (ask). Every resolvable class except won't do ends as a banded task in the store.
 - **Architecture reviews** look for shallow modules, leaking seams and poor locality. The heuristics and vocabulary are in `references/deepening.md`. Present candidates first, and design an interface only after the owner picks one.
 
 ## Prose in `ARCHITECTURE.md`

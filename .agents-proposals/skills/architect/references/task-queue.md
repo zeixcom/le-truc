@@ -2,7 +2,7 @@
 
 The queue is a per-task store: one `queue/LT-NNN.md` per task, plus the prose files `queue/ITERATION.md`, `queue/BANDS.md` and `queue/LEDGER.md`. `BACKLOG.md`, `TODO.md` and `DONE.md` are generated views — `bun run queue:build` renders them from the store, and a hand edit is lost on the next build. Task IDs (`LT-NNN`) are unique by construction (the filename is the ID) and sequential; the "Next free task ID" line lives in the `queue/ITERATION.md` header.
 
-The format and the chain below are **machine-enforced**: `bun run check:queue` validates every rule on this page, and the `do-task` workflows (`.zcode/workflows/do-task.dwf.ts` for ZCode, `.claude/workflows/do-task.js` for Claude Code) pick, claim and annotate only through `bun run scripts/queue.ts` — never by editing a store file directly. This page is the contract that script implements; when the contract and the script disagree, fix one of them in the same commit.
+The format and the chain below are **machine-enforced**: `bun run check:queue` validates every rule in *Entry format* and *The chain*, and the `do-task` workflows (`.zcode/workflows/do-task.dwf.ts` for ZCode, `.claude/workflows/do-task.js` for Claude Code) pick, claim and annotate only through `bun run scripts/queue.ts` — never by editing a store file directly. This page is the contract that script implements; when the contract and the script disagree, fix one of them in the same commit.
 
 | File | Holds | Who writes |
 |---|---|---|
@@ -62,7 +62,7 @@ Name the error channel and tier for any new runtime check (ADR 0028).
 | `area:` | yes | `runtime` (`src/`), `compiler` (`server/compiler/`, `scripts/` corpus tooling), `server` (docs pipeline, dev server), `examples`, `docs` (prose, JSDoc, error copy), `design` (needs the Architect or owner; never auto-picked) |
 | `needs:` | when it has prerequisites | LT-IDs that must be `done ✓`, `done, pending review ⏳` or `reviewed ✓` before this task is ready. A pending review or a `changes requested ↩` satisfies a prerequisite: rework stays inside the task's scope and keeps dependents' gates green. A finding that would change what a dependent relies on is a follow-up task, not rework. A compacted ID that only `queue/LEDGER.md` mentions counts as satisfied. |
 | `gates:` | when it needs more than the area's defaults | Extra commands from `package.json` (`contributor` → *Gates*) |
-| `band:` | for tasks outside the iteration | The BACKLOG band the task belongs to (`P1`…`P7`); an iteration task keeps its origin band. |
+| `band:` | for tasks outside the iteration | The BACKLOG band the task belongs to (`P1`…`P7`, with lettered sub-bands such as `P2b`); an iteration task keeps its origin band. |
 | `status:` | yes | The suffix below |
 | body (`**Context:**`) | yes, for open tasks | Enough that the contributor makes no architectural decision |
 
