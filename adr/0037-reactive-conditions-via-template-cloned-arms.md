@@ -46,7 +46,7 @@ Conditions over signals are legal on both surfaces. Their arms are **template-cl
 - Le Truc now creates DOM from conditions as well as from lists — ADR 0017's "bounded exception" widens (amended there).
 - Uncommitted input state inside an arm is destroyed on flip. This matches Solid/Octane semantics; preservation remains available via toggle-shaped constructs.
 - Adoption is the historically bug-prone seam. The equivalence audit's connect-diff classes grow (initial arm state is a new designed class), and the boundary migration churns every boundary-using component's goldens.
-- The old condition diagnostic retires and new codes arrive, so the [ADR 0028](0028-tiered-error-surfacing.md) error-message lifecycle runs; Tech Writer owns final copy.
+- The old condition diagnostic retires and new codes arrive, so the [ADR 0028](0028-tiered-error-surfacing.md) error-message lifecycle runs; Writer owns final copy.
 
 ## Related
 
