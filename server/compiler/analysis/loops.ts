@@ -223,7 +223,7 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 		}
 		collectDescendants(output)
 		const gatedLazyChild = (node: TemplateNode): unknown => {
-			if (node.kind === 'expr' && node.lazy) {
+			if (node.kind === 'expr' && node.reactivity === 'reactive') {
 				diagnostics.push(
 					diagnostic.unsupported(
 						source,
@@ -424,7 +424,7 @@ const runReconcileLoops = (
 			for (const child of node.children) {
 				if (
 					child.kind === 'expr' &&
-					child.lazy &&
+					child.reactivity === 'reactive' &&
 					child.exprText === loop.itemName
 				)
 					return node

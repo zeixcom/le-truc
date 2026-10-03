@@ -298,7 +298,11 @@ import { createCell } from '@zeix/le-truc'`,
 		)
 		const span = firstElementChild(component?.root)
 		const expr = span?.children.find(c => c.kind === 'expr')
-		expect(expr).toMatchObject({ lazy: true, exprText: 'n' })
+		expect(expr).toMatchObject({
+			reactivity: 'reactive',
+			exprText: 'n',
+			deps: { signals: ['n'], hostProps: [], args: [], bound: [] },
+		})
 	})
 
 	test('non-lazy child expression is not lazy', () => {
@@ -316,7 +320,10 @@ import { createCell } from '@zeix/le-truc'`,
 		)
 		const span = firstElementChild(component?.root)
 		const expr = span?.children.find(c => c.kind === 'expr')
-		expect(expr).toMatchObject({ lazy: false })
+		expect(expr).toMatchObject({
+			reactivity: 'server',
+			deps: { signals: [], hostProps: [], args: ['label'], bound: [] },
+		})
 	})
 
 	test('@for over server data collects hoisted consts', () => {
@@ -580,8 +587,9 @@ import { Widget } from './widget.tsrx'`,
 		const p = firstElementChild(component?.root)
 		const expr = p?.children.find(c => c.kind === 'expr')
 		expect(expr).toMatchObject({
-			lazy: true,
+			reactivity: 'reactive',
 			exprText: 'host.validationMessage',
+			deps: { hostProps: ['validationMessage'] },
 		})
 	})
 })

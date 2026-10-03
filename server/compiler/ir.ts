@@ -244,6 +244,47 @@ export type SignalIR = DeclaredSignalIR | DerivedSignalIR | ContextSignalIR
 /** A signal with an initializer — every family but `requestContext`. */
 export type InitSignalIR = DeclaredSignalIR | DerivedSignalIR
 
+/**
+ * A template expression's reactivity class (ADR 0040 s7), decided once in
+ * lowering by ADR 0024 s4's rule — a function-valued attribute is reactive,
+ * a text child is reactive by what it reads (`reactivity.ts`):
+ *
+ * - `static` — a literal; no expression to evaluate (a `text` node, a
+ *   `static` attribute);
+ * - `server` — evaluated once, by the server render; no client effect;
+ * - `reactive` — the client re-evaluates it in a `watch()`.
+ *
+ * On an attribute the variant's `kind` IS the class (`reactivity.ts`'s
+ * `attributeReactivity` projects it; LT-122's `bindsProp` makes a `server`
+ * attribute `reactive`, as on a text child); a text child carries it as
+ * `reactivity`. Consumers read the recorded class and never re-derive it
+ * from the expression.
+ */
+export type ReactivityClass = 'static' | 'server' | 'reactive'
+
+/**
+ * What a template expression reads (ADR 0040 s7), recorded beside its
+ * class at lowering. Each list is sorted and duplicate-free.
+ *
+ * - `signals` — declared signals the expression references (free, not
+ *   shadowed), whatever the read form (`sig.get()`, the bare identifier,
+ *   inside an authored thunk);
+ * - `hostProps` — non-computed `host.<prop>` reads, plus the prop an
+ *   LT-122 arg-and-prop site (`bindsProp`) binds;
+ * - `args` — server args (component parameters) the expression references;
+ * - `bound` — names reactive by POSITION, not declaration (a `@catch`
+ *   parameter, a reactive loop's item; `markPositionallyReactive`).
+ *
+ * Nothing else is recorded: a setup const, a loop-local or a JS global is
+ * neither a client dependency nor a server hole.
+ */
+export type DependencyClosure = {
+	signals: readonly string[]
+	hostProps: readonly string[]
+	args: readonly string[]
+	bound: readonly string[]
+}
+
 /** Template IR — the shared input of both emitters. */
 export type TemplateNode =
 	| {
@@ -267,14 +308,23 @@ export type TemplateNode =
 			/** `{expr}` or `&{expr}` child expression. */
 			expr: AstNode
 			exprText: string
-			lazy: boolean
+			/**
+			 * The child's class (ADR 0040 s7): `reactive` when it lifts into a
+			 * client `watch()` (a visible signal/`host` read, an authored
+			 * thunk, LT-122's `bindsProp`, or a positional read), else
+			 * `server`. A `{expr}` child is never `static` — literal text is
+			 * a `text` node.
+			 */
+			reactivity: Exclude<ReactivityClass, 'static'>
+			/** What the child reads (ADR 0040 s7). */
+			deps: DependencyClosure
 			/**
 			 * The exposed prop this server-rendered text site ALSO
 			 * binds client-side (LT-122) — see the identically-named
-			 * field on the `'server'` attribute kind. `lazy` is true
-			 * whenever this is set: the site needs a client effect,
-			 * but its `exprText` stays the ARG so the server can
-			 * still render it.
+			 * field on the `'server'` attribute kind. `reactivity` is
+			 * `reactive` whenever this is set: the site needs a client
+			 * effect, but its `exprText` stays the ARG so the server
+			 * can still render it.
 			 */
 			bindsProp?: string
 			node: AstNode
@@ -420,6 +470,7 @@ export type AttributeIR =
 			name: string
 			exprText: string
 			node: AstNode
+			deps: DependencyClosure
 			/**
 			 * The exposed prop this server-rendered attribute ALSO binds
 			 * client-side (LT-122) — set when `exprText` is a bare
@@ -431,7 +482,13 @@ export type AttributeIR =
 			 */
 			bindsProp?: string
 	  }
-	| { kind: 'reactive'; name: string; thunk: AstNode; thunkText: string }
+	| {
+			kind: 'reactive'
+			name: string
+			thunk: AstNode
+			thunkText: string
+			deps: DependencyClosure
+	  }
 	| { kind: 'pass'; entries: PassEntryIR[] }
 	| {
 			kind: 'class-map'
@@ -439,6 +496,7 @@ export type AttributeIR =
 			/** The arrow function node — thunkText's own source range (LT-011). */
 			thunk: AstNode
 			object: AstNode
+			deps: DependencyClosure
 	  }
 	| {
 			/**
@@ -455,6 +513,7 @@ export type AttributeIR =
 			/** The arrow function node — thunkText's own source range (LT-011). */
 			thunk: AstNode
 			object: AstNode
+			deps: DependencyClosure
 	  }
 	| ({
 			/**
@@ -472,6 +531,8 @@ export type AttributeIR =
 			kind: 'html'
 			exprText: string
 			node: AstNode
+			/** What the value reads — the thunk's, for the reactive form. */
+			deps: DependencyClosure
 	  } & (
 			| { reactive: false }
 			| { reactive: true; thunk: AstNode; thunkText: string }

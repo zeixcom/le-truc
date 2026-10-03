@@ -7,11 +7,19 @@
  * Pinned directly rather than only through goldens because both failure
  * modes are silent in a golden: an under-lift renders correct HTML that
  * never updates, and an over-lift renders correct HTML that updates
- * redundantly. Only the `lazy` flag distinguishes them.
+ * redundantly. Only the recorded `reactivity` class distinguishes them.
+ * The dependency closure recorded beside it (ADR 0040 s7, LT-373) is pinned
+ * here too: no golden reads it yet.
  */
 import { describe, expect, test } from 'bun:test'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
-import { classifyChild } from '../../compiler/reactivity'
+import { markPositionallyReactive } from '../../compiler/lower-shared'
+import {
+	attributeReactivity,
+	classifyChild,
+	NO_DEPS,
+} from '../../compiler/reactivity'
+import { isClientConstructAttr } from '../../compiler/walk'
 
 /** Compile a one-child fixture and return that child's IR node. */
 const childOf = (body: string, setup = 'const count = createCell(0)') => {
@@ -72,8 +80,8 @@ describe('classifyChild — the lift rule', () => {
 		)
 	})
 
-	test('an expression over neither signals nor host is static', () => {
-		expect(classifyChild(parse("'a' + 'b'"), signals).kind).toBe('static')
+	test('an expression over neither signals nor host is server-rendered', () => {
+		expect(classifyChild(parse("'a' + 'b'"), signals).kind).toBe('server')
 	})
 
 	test('a signal crossing a call boundary is opaque, and names the escapee', () => {
@@ -92,36 +100,36 @@ describe('classifyChild — the lift rule', () => {
 	test('a bound name shadowing a signal is not a read', () => {
 		expect(
 			classifyChild(parse('[1].map(count => count + 1)'), signals).kind,
-		).toBe('static')
+		).toBe('server')
 	})
 })
 
 describe('lowerChildren — lift applied to template children', () => {
-	test('{label} over a server arg stays static', () => {
+	test('{label} over a server arg stays server-rendered', () => {
 		const { child, diagnostics } = childOf('{label}')
 		expect(child?.kind).toBe('expr')
 		if (child?.kind !== 'expr') throw new Error('unreachable')
-		expect(child.lazy).toBe(false)
+		expect(child.reactivity).toBe('server')
 		expect(diagnostics).toHaveLength(0)
 	})
 
 	test('{count.get()} lifts without the & sigil', () => {
 		const { child, diagnostics } = childOf('{count.get()}')
 		if (child?.kind !== 'expr') throw new Error('expected expr child')
-		expect(child.lazy).toBe(true)
+		expect(child.reactivity).toBe('reactive')
 		expect(diagnostics).toHaveLength(0)
 	})
 
 	test('a bare signal identifier lifts', () => {
 		const { child } = childOf('{count}')
 		if (child?.kind !== 'expr') throw new Error('expected expr child')
-		expect(child.lazy).toBe(true)
+		expect(child.reactivity).toBe('reactive')
 	})
 
 	test('an explicit thunk lifts and is never inspected', () => {
 		const { child, diagnostics } = childOf('{() => fmt(count)}')
 		if (child?.kind !== 'expr') throw new Error('expected expr child')
-		expect(child.lazy).toBe(true)
+		expect(child.reactivity).toBe('reactive')
 		// `count` escapes into fmt() inside the thunk — legal, because the
 		// author took responsibility by writing the thunk.
 		expect(diagnostics).toHaveLength(0)
@@ -133,7 +141,118 @@ describe('lowerChildren — lift applied to template children', () => {
 		expect(diagnostics[0]?.message).toContain('{() => fmt(count)}')
 		// Not lifted — but the error fails the file, so it never reaches emit.
 		if (child?.kind !== 'expr') throw new Error('expected expr child')
-		expect(child.lazy).toBe(false)
+		expect(child.reactivity).toBe('server')
+	})
+})
+
+describe('the recorded class and dependency closure (ADR 0040 s7, LT-373)', () => {
+	test('a text child records the signals and server args it reads', () => {
+		const { child } = childOf('{label + count.get()}')
+		if (child?.kind !== 'expr') throw new Error('expected expr child')
+		expect(child.reactivity).toBe('reactive')
+		expect(child.deps).toEqual({
+			signals: ['count'],
+			hostProps: [],
+			args: ['label'],
+			bound: [],
+		})
+	})
+
+	test('a name a nested parameter shadows is not a dependency', () => {
+		const { child } = childOf('{[1].map(label => label + count.get())}')
+		if (child?.kind !== 'expr') throw new Error('expected expr child')
+		expect(child.deps.args).toEqual([])
+		expect(child.deps.signals).toEqual(['count'])
+	})
+
+	test('host.<prop> reads are recorded by prop name; a computed read is not', () => {
+		const { child } = childOf("{host.count + host['x']}")
+		if (child?.kind !== 'expr') throw new Error('expected expr child')
+		expect(child.deps.hostProps).toEqual(['count'])
+	})
+
+	test('an LT-122 arg-and-prop site records the arg and the bound prop', () => {
+		const { component, diagnostics } = compileSource(
+			`export function C({ label }: { label: string })
+			@{
+				expose({ label: '' })
+					<c-el><p>{label}</p>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
+			}`,
+			'c.tsrx',
+		)
+		expect(diagnostics).toEqual([])
+		const p = component?.root.children.find(c => c.kind === 'element')
+		const child = p?.kind === 'element' ? p.children[0] : undefined
+		if (child?.kind !== 'expr') throw new Error('expected expr child')
+		expect(child.bindsProp).toBe('label')
+		expect(child.reactivity).toBe('reactive')
+		expect(child.deps).toEqual({
+			signals: [],
+			hostProps: ['label'],
+			args: ['label'],
+			bound: [],
+		})
+	})
+
+	test('an LT-122 arg-and-prop attribute is reactive and records the bound prop', () => {
+		const { component, diagnostics } = compileSource(
+			`export function C({ disabled }: { disabled: boolean })
+			@{
+				expose({ disabled: false })
+					<c-el><button disabled={disabled}>Go</button>
+						<style>:host {
+	  color: red;
+	}</style>
+					</c-el>
+			}`,
+			'c.tsrx',
+		)
+		expect(diagnostics).toEqual([])
+		const button = component?.root.children.find(c => c.kind === 'element')
+		if (button?.kind !== 'element') throw new Error('expected <button>')
+		const attr = button.attrs.find(a => 'name' in a && a.name === 'disabled')
+		if (attr?.kind !== 'server') throw new Error('expected server attribute')
+		expect(attr.bindsProp).toBe('disabled')
+		expect(attributeReactivity(attr)).toBe('reactive')
+		expect(isClientConstructAttr(attr)).toBe(true)
+		expect(attr.deps).toEqual({
+			signals: [],
+			hostProps: ['disabled'],
+			args: ['disabled'],
+			bound: [],
+		})
+	})
+
+	test('attributes: the variant is the class, each value records its closure', () => {
+		const { child } = childOf(
+			'<span id="s" title={label} data-n={() => count.get()} onClick={() => {}}>x</span>',
+		)
+		if (child?.kind !== 'element') throw new Error('expected <span>')
+		const byName = (name: string) =>
+			child.attrs.find(a => 'name' in a && a.name === name)
+		const [id, title, n, click] = ['id', 'title', 'data-n', 'onClick'].map(
+			byName,
+		)
+		if (!id || !title || !n || !click) throw new Error('missing attribute')
+		expect(attributeReactivity(id)).toBe('static')
+		expect(attributeReactivity(title)).toBe('server')
+		expect(attributeReactivity(n)).toBe('reactive')
+		expect(attributeReactivity(click)).toBeNull()
+		expect(title.kind === 'server' && title.deps.args).toEqual(['label'])
+		expect(n.kind === 'reactive' && n.deps.signals).toEqual(['count'])
+	})
+
+	test('a positional read flips the class and records the bound name', () => {
+		const { child } = childOf('{label}')
+		if (child?.kind !== 'expr') throw new Error('expected expr child')
+		const node = { ...child, deps: NO_DEPS }
+		markPositionallyReactive([node], new Set(['label']))
+		expect(node.reactivity).toBe('reactive')
+		expect(node.deps.bound).toEqual(['label'])
 	})
 })
 
@@ -162,7 +281,7 @@ describe('the retired &{} sigil (LT-052)', () => {
 		const { child, diagnostics } = childOf("{'hello'}")
 		expect(diagnostics).toHaveLength(0)
 		if (child?.kind !== 'expr') throw new Error('expected expr child')
-		expect(child.lazy).toBe(false)
+		expect(child.reactivity).toBe('server')
 	})
 })
 

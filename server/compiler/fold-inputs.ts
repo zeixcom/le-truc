@@ -364,7 +364,8 @@ export const checkFoldInputs = (
 				break
 			}
 			case 'expr':
-				if (node.lazy) checkReactive(node.expr, scope, 'a text child')
+				if (node.reactivity === 'reactive')
+					checkReactive(node.expr, scope, 'a text child')
 				else checkEvaluated(node.expr, 'a text child')
 				break
 			case 'conditional':

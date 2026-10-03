@@ -327,7 +327,7 @@ const emitLazyTextChildren = (
 	addressHost: boolean,
 ): void => {
 	const lazyChildren = el.children.filter(
-		(c): c is ExprNode => c.kind === 'expr' && c.lazy,
+		(c): c is ExprNode => c.kind === 'expr' && c.reactivity === 'reactive',
 	)
 	if (lazyChildren.length === 0) return
 	for (const child of lazyChildren) {
@@ -348,7 +348,9 @@ const emitLazyTextChildren = (
 	}
 	// The gate itself: one lazy child, alone.
 	const contentSiblings = el.children.filter(
-		c => c.kind !== 'client-stmt' && !(c.kind === 'expr' && c.lazy),
+		c =>
+			c.kind !== 'client-stmt' &&
+			!(c.kind === 'expr' && c.reactivity === 'reactive'),
 	)
 	if (lazyChildren.length > 1) {
 		fx.diagnostics.push(
@@ -389,7 +391,7 @@ const emitLazyTextChildren = (
 /** Does this element carry a construct of its own (not a nested one)? */
 const hasOwnConstruct = (el: ElementNode): boolean =>
 	el.attrs.some(isClientConstructAttr) ||
-	el.children.some(c => c.kind === 'expr' && c.lazy)
+	el.children.some(c => c.kind === 'expr' && c.reactivity === 'reactive')
 
 // A lazy text child of the branch ROOT itself is a legitimate construct
 // (watched via the root's own query, exactly like a reactive attribute)
@@ -398,7 +400,7 @@ const hasOwnConstruct = (el: ElementNode): boolean =>
 const hasDeepConstruct = (el: ElementNode, depth = 0): boolean =>
 	el.children.some(
 		child =>
-			(depth > 0 && child.kind === 'expr' && child.lazy) ||
+			(depth > 0 && child.kind === 'expr' && child.reactivity === 'reactive') ||
 			(child.kind === 'element' &&
 				(child.attrs.some(isClientConstructAttr) ||
 					hasDeepConstruct(child, depth + 1))),
@@ -453,7 +455,7 @@ const constructSignatureOf = (root: ElementNode): string => {
 /** Does a subtree carry client constructs (client-side-only elements)? */
 const hasClientConstructs = (node: TemplateNode): boolean => {
 	if (node.kind === 'client-stmt') return true
-	if (node.kind === 'expr') return node.lazy
+	if (node.kind === 'expr') return node.reactivity === 'reactive'
 	if (node.kind === 'conditional' || node.kind === 'try') return false
 	if (!isElement(node)) return false
 	if (node.attrs.some(isClientConstructAttr)) return true
@@ -465,7 +467,7 @@ const directLazyIdentifier = (el: ElementNode): string | null => {
 	for (const child of el.children) {
 		if (
 			child.kind === 'expr' &&
-			child.lazy &&
+			child.reactivity === 'reactive' &&
 			nodeType(child.expr) === 'Identifier'
 		)
 			return String((child.expr as AstNode).name)
@@ -483,7 +485,7 @@ const directLazyCatchRef = (
 	catchParam: string,
 ): string | null => {
 	for (const child of el.children) {
-		if (child.kind !== 'expr' || !child.lazy) continue
+		if (child.kind !== 'expr' || child.reactivity === 'server') continue
 		const expr = child.expr
 		if (
 			nodeType(expr) === 'Identifier' &&
@@ -1320,7 +1322,9 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 
 	const errText = catchParam ? directLazyCatchRef(errRoot, catchParam) : null
 	if (
-		errRoot.children.some(c => c.kind === 'expr' && c.lazy) &&
+		errRoot.children.some(
+			c => c.kind === 'expr' && c.reactivity === 'reactive',
+		) &&
 		errText === null
 	) {
 		diagnostics.push(
@@ -1507,7 +1511,7 @@ const unmountableInArm = (
 ): string | null => {
 	const carriesConstruct = (n: TemplateNode): boolean =>
 		n.kind === 'client-stmt' ||
-		(n.kind === 'expr' && n.lazy) ||
+		(n.kind === 'expr' && n.reactivity === 'reactive') ||
 		(n.kind === 'element' && n.attrs.some(isClientConstructAttr))
 	// A nested arm set is `validateArmSetPlacement`'s.
 	if (hasArmSet(node)) return null
@@ -1923,7 +1927,7 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 	} else {
 		const hasClientConstruct =
 			node.attrs.some(isClientConstructAttr) ||
-			node.children.some(c => c.kind === 'expr' && c.lazy)
+			node.children.some(c => c.kind === 'expr' && c.reactivity === 'reactive')
 		if (hasClientConstruct) {
 			const { selector, unique } = resolveSelector(fx, node)
 			if (!unique) {

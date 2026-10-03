@@ -49,7 +49,12 @@ import type {
 	SignalIR,
 	TemplateNode,
 } from './ir'
-import { bindsExposedArg, classifyChild } from './reactivity'
+import {
+	bindsExposedArg,
+	classifyChild,
+	dependencyClosure,
+	withBound,
+} from './reactivity'
 import { wordingOf } from './surface'
 import { JS_GLOBALS } from './vocabulary'
 import {
@@ -149,12 +154,13 @@ export const markPositionallyReactive = (
 	if (names.size === 0) return
 	const visit = (node: TemplateNode): void => {
 		if (node.kind === 'expr') {
-			if (node.lazy) return
-			for (const name of freeIdentifiers(node.expr))
-				if (names.has(name)) {
-					node.lazy = true
-					return
-				}
+			if (node.reactivity === 'reactive') return
+			const read = [...freeIdentifiers(node.expr)].filter(name =>
+				names.has(name),
+			)
+			if (read.length === 0) return
+			node.reactivity = 'reactive'
+			node.deps = withBound(node.deps, read)
 			return
 		}
 		if (node.kind === 'element') for (const child of node.children) visit(child)
@@ -205,22 +211,22 @@ const liftsToReactive = (
 		)
 		return false
 	}
-	// CHECKLIST §4 / LTC033 (error form): a `static` child renders ONCE,
+	// CHECKLIST §4 / LTC033 (error form): a `server` child renders ONCE,
 	// server-side, forever — there is no watch() to ever correct it, unlike
 	// a `reactive` child (which gets the WARNING form of this check in
 	// analysis/effects.ts, since the client's first binding pass corrects
 	// an omitted fold there). An impure ambient here (`Date.now()`, a random
 	// id, `Intl`/`toLocaleString`) bakes one build-time reading into the
 	// page permanently with no safety net at all — hard error, not a warning.
-	if (verdict.kind === 'static' && containsImpureAmbient(expr))
+	if (verdict.kind === 'server' && containsImpureAmbient(expr))
 		ctx.diagnostics.push(diagnostic.impureStaticChild(ctx.source, expr))
 	return verdict.kind === 'reactive'
 }
 
 /**
  * The shared expression-child lowering: reactivity classification
- * (`bindsExposedArg`'s positional rule, LT-122 + the lift rule) into the
- * `expr` IR node. Both front ends' `lowerChildren` funnel every ordinary
+ * (`bindsExposedArg`'s positional rule, LT-122 + the lift rule) and the
+ * dependency closure, recorded once on the `expr` IR node (ADR 0040 s7). Both front ends' `lowerChildren` funnel every ordinary
  * `{expr}` child through here, so the lift rule cannot drift between
  * surfaces.
  */
@@ -243,13 +249,20 @@ export const lowerExpressionChild = (
 		signals,
 		ctx.parserProps,
 	)
+	const reactive =
+		bindsProp !== null ||
+		liftsToReactive(ctx, signals, expr, exprText, container)
 	return {
 		kind: 'expr',
 		expr,
 		exprText,
-		lazy:
-			bindsProp !== null ||
-			liftsToReactive(ctx, signals, expr, exprText, container),
+		reactivity: reactive ? 'reactive' : 'server',
+		deps: dependencyClosure(
+			expr,
+			signals,
+			ctx.argNames,
+			bindsProp ?? undefined,
+		),
 		...(bindsProp !== null ? { bindsProp } : {}),
 		node: container,
 	}
@@ -278,7 +291,7 @@ export const validateComposedChildren = (
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'text') return
 		if (node.kind === 'expr') {
-			if (node.lazy)
+			if (node.reactivity === 'reactive')
 				ctx.diagnostics.push(
 					diagnostic.composedElementUnsupported(
 						ctx.source,
@@ -661,8 +674,8 @@ export const validateEmptyArm = (
 				if (node.mode === 'reactive') offending = node.node
 				return node.mode === 'reactive'
 			case 'expr':
-				if (node.lazy) offending = node.node
-				return node.lazy
+				if (node.reactivity === 'reactive') offending = node.node
+				return node.reactivity === 'reactive'
 			case 'element':
 				// A client construct, or any `truc:html` — the arm root renders
 				// through `emitElement`, which writes no inner HTML.
@@ -801,11 +814,11 @@ const validateListBody = (
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'expr') {
 			const isItemHole =
-				node.lazy &&
+				node.reactivity === 'reactive' &&
 				node.expr.type === 'Identifier' &&
 				node.exprText === itemName
 			if (isItemHole) holes++
-			else if (node.lazy)
+			else if (node.reactivity === 'reactive')
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						ctx.source,

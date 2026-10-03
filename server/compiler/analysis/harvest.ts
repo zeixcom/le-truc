@@ -299,7 +299,7 @@ const collectRenderSites = (component: ComponentIR): RenderSites => {
 		for (const child of node.children) {
 			if (
 				child.kind === 'expr' &&
-				child.lazy &&
+				child.reactivity === 'reactive' &&
 				!insideLoopOutput &&
 				!isLoopOutput
 			) {
@@ -353,7 +353,8 @@ const collectRenderSites = (component: ComponentIR): RenderSites => {
 		for (const arm of node.arms)
 			for (const child of arm.children)
 				walkTemplate(child, inner => {
-					if (inner.kind === 'expr' && inner.lazy) creditSignalReads(inner.expr)
+					if (inner.kind === 'expr' && inner.reactivity === 'reactive')
+						creditSignalReads(inner.expr)
 					if (inner.kind !== 'element') return
 					for (const attr of inner.attrs) {
 						if (

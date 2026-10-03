@@ -18,7 +18,7 @@ import {
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import type { AttributeIR, ComposeAttrIR, PassEntryIR } from './ir'
-import { bindsExposedArg } from './reactivity'
+import { bindsExposedArg, dependencyClosure } from './reactivity'
 
 /**
  * Parse `pass={{ prop: thunk, … }}` entries — shared by raw dashed tags and
@@ -127,7 +127,12 @@ const REACT_ATTR_RENAMES: ReadonlyMap<string, string> = new Map([
 	['htmlFor', 'for'],
 ])
 
-/** Classify one JSXAttribute into the attribute IR. */
+/**
+ * Classify one JSXAttribute into the attribute IR. The variant chosen is the
+ * value's reactivity class (ADR 0024 s4: a function-valued attribute is
+ * reactive), and every value-bearing variant records its dependency closure
+ * (ADR 0040 s7) — decided here, once.
+ */
 export const classifyAttribute = (
 	ctx: ExtractContext,
 	attr: AstNode,
@@ -135,6 +140,8 @@ export const classifyAttribute = (
 	signals: { has(name: string): boolean },
 ): AttributeIR | { kind: 'invalid'; reason: string } => {
 	const name = attrName(attr)
+	const depsOf = (expr: AstNode, hostProp?: string) =>
+		dependencyClosure(expr, signals, ctx.argNames, hostProp)
 	const value = attr.value
 	if (name === PASS_ATTR) {
 		const entries = classifyPassEntries(ctx, attr)
@@ -228,6 +235,7 @@ export const classifyAttribute = (
 				kind: 'html',
 				exprText: text(ctx.source, body),
 				node: body,
+				deps: depsOf(expr),
 				reactive: true,
 				thunk: expr,
 				thunkText: text(ctx.source, expr),
@@ -243,6 +251,7 @@ export const classifyAttribute = (
 			kind: 'html',
 			exprText: text(ctx.source, expr),
 			node: expr,
+			deps: depsOf(expr),
 			reactive: false,
 		}
 	}
@@ -274,6 +283,7 @@ export const classifyAttribute = (
 					thunkText: text(ctx.source, expr),
 					thunk: expr,
 					object: body,
+					deps: depsOf(expr),
 				}
 			if (name === 'style' && isNode(body) && body.type === 'ObjectExpression')
 				return {
@@ -281,6 +291,7 @@ export const classifyAttribute = (
 					thunkText: text(ctx.source, expr),
 					thunk: expr,
 					object: body,
+					deps: depsOf(expr),
 				}
 			if (!isNode(body))
 				return {
@@ -292,6 +303,7 @@ export const classifyAttribute = (
 				name,
 				thunk: expr,
 				thunkText: text(ctx.source, expr),
+				deps: depsOf(expr),
 			}
 		}
 		if (expr.type === 'FunctionExpression')
@@ -316,6 +328,7 @@ export const classifyAttribute = (
 			name,
 			exprText: text(ctx.source, expr),
 			node: expr,
+			deps: depsOf(expr, bindsProp ?? undefined),
 			...(bindsProp !== null ? { bindsProp } : {}),
 		}
 	}

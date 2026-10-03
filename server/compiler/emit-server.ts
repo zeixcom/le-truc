@@ -45,6 +45,7 @@ import type {
 	SetupStmt,
 	TemplateNode,
 } from './ir'
+import { NO_DEPS } from './reactivity'
 import type { RegistryEntry } from './registry'
 import { reindent, type SourceSpan } from './spans'
 import type { EvaluationTier } from './tier'
@@ -470,12 +471,12 @@ const listTemplate = (ctx: EmitContext, loop: ReconcileForIR): CodeBuilder => {
 		}
 		if (node.kind === 'expr') {
 			if (
-				node.lazy &&
+				node.reactivity === 'reactive' &&
 				node.expr.type === 'Identifier' &&
 				node.exprText === loop.itemName
 			)
 				pushTo("'<slot></slot>'")
-			else if (!node.lazy) {
+			else if (node.reactivity === 'server') {
 				ctx.used.add('esc')
 				pushTo(`${ctx.h('esc')}(String(${node.exprText}))`)
 			}
@@ -536,6 +537,8 @@ const emitListFor = (
 		name: 'data-key',
 		exprText: keyVar,
 		node: loop.node,
+		// Compiler-minted locals: no authored dependency.
+		deps: NO_DEPS,
 	}
 	emitElement(ctx, loop.output, loopScope, [dataKey])
 	for (const child of loop.output.children) emit(ctx, child, loopScope)
@@ -556,6 +559,7 @@ const emitListFor = (
 					name: 'hidden',
 					exprText: `!${emptyFlag}`,
 					node: loop.node,
+					deps: NO_DEPS,
 				},
 			])
 			for (const child of root.children) emit(ctx, child, scope)
@@ -852,7 +856,9 @@ const emitAsyncBoundary = (
 	const errRoot = rootOf(node.catchChildren)
 	const signalChild = okRoot.children.find(
 		(c): c is TemplateNode & { kind: 'expr' } =>
-			c.kind === 'expr' && c.lazy && c.expr.type === 'Identifier',
+			c.kind === 'expr' &&
+			c.reactivity === 'reactive' &&
+			c.expr.type === 'Identifier',
 	)
 	const signalName = signalChild
 		? String((signalChild.expr as AstNode).name)
@@ -883,7 +889,7 @@ const emitAsyncBoundary = (
 	): void => {
 		emitElement(ctx, root, armScope, extraAttrs)
 		for (const child of root.children) {
-			if (child.kind === 'expr' && child.lazy) {
+			if (child.kind === 'expr' && child.reactivity === 'reactive') {
 				if (value === null) continue
 				ctx.used.add('esc')
 				push(ctx, `${ctx.h('esc')}(String(${value}))`)
@@ -897,7 +903,8 @@ const emitAsyncBoundary = (
 		{ kind: 'static', name: 'data-key', value: key },
 	]
 	const errChild = errRoot.children.find(
-		(c): c is TemplateNode & { kind: 'expr' } => c.kind === 'expr' && c.lazy,
+		(c): c is TemplateNode & { kind: 'expr' } =>
+			c.kind === 'expr' && c.reactivity === 'reactive',
 	)
 	ctx.out.open(`if (${stateVar} === 'ok') {`)
 	emitArmRoot(okRoot, scope, `${signalName}.get()`, keyed('ok'))
@@ -1075,7 +1082,7 @@ const emit = (
 		// not user input, so it renders UNESCAPED here (analogous to the
 		// MANAGED_TEXT_PROPS/host-prop-mirror special-casing above).
 		if (
-			!node.lazy &&
+			node.reactivity === 'server' &&
 			node.expr.type === 'Identifier' &&
 			node.exprText === 'children'
 		) {
@@ -1085,18 +1092,19 @@ const emit = (
 		// LT-385c: inside an arm template a lazy (client-written) site bakes
 		// empty — the server has no initial value for it under the arm's
 		// condition; the mount writes it on enter.
-		if (node.lazy && ctx.inArmTemplate) return
+		if (node.reactivity === 'reactive' && ctx.inArmTemplate) return
 		ctx.used.add('esc')
-		const value = node.lazy
-			? lazyValueExpression(
-					ctx.component,
-					node.exprText,
-					node.expr,
-					scope,
-					ctx.foldScope,
-					seed => useSeedNames(ctx, seed),
-				)
-			: node.exprText
+		const value =
+			node.reactivity === 'reactive'
+				? lazyValueExpression(
+						ctx.component,
+						node.exprText,
+						node.expr,
+						scope,
+						ctx.foldScope,
+						seed => useSeedNames(ctx, seed),
+					)
+				: node.exprText
 		push(ctx, `${ctx.h('esc')}(String(${value}))`)
 		return
 	}

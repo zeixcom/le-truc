@@ -100,7 +100,7 @@ describe("sites converged onto 'skip' — a type position is not a read", () => 
 			expr('label as unknown as typeof count'),
 			new Set(['count']),
 		)
-		expect(verdict).toEqual({ kind: 'static' })
+		expect(verdict).toEqual({ kind: 'server' })
 	})
 
 	test('impureAmbientCauses: a Date or Intl annotation is not an ambient read', () => {

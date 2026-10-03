@@ -429,7 +429,7 @@ narrowed within each member, so exact-constructor dispatch still works.
 | --- | --- | --- |
 | `element` | `tag, attrs, children` | Lowered JSX element; `<style>` becomes a placeholder. `tag` is always a static name: a `.tsrx` dynamic `<{expr}>` tag or an unrecognized `.tsx` namespaced/member tag is a compile error (LTC053, tier 1 Prevented) |
 | `text` | `value` | JSX text after whitespace collapse |
-| `expr` | `expr, lazy` | A child expression; `lazy` marks it reactive (decided by `reactivity.ts`: a lexically visible signal or `host.<prop>` read lifts; an expression over server args stays static; a signal escaping into an opaque call is LTC017) |
+| `expr` | `expr, reactivity, deps` | A child expression; `reactivity` is its class, `reactive` or `server` (decided by `reactivity.ts`: a lexically visible signal or `host.<prop>` read lifts; an expression over server args is server-rendered; a signal escaping into an opaque call is LTC017), and `deps` its dependency closure (ADR 0040 s7) |
 | `conditional` | `construct ('if' \| 'switch'), mode ('server' \| 'reactive'), test, testText, arms[], initial` | One node for both constructs (ADR 0043 s4): `@if`/`@else` and the ternary/`&&` are `construct: 'if'` (arms `then` then `else`, an absent else branch an empty arm); `@switch`/`@case` and the switch IIFE are `construct: 'switch'` (one arm per case, source order). `mode: 'server'` — the test is server-known, the server renders the taken arm and the client addresses the branch roots through a union selector. `mode: 'reactive'` (ADR 0037) — the test reads a signal or `host`: every non-empty arm is extracted to an inert `<template data-arms data-key>` keyed by its compile-time name (`then`/`else`, `case:` + the literal's JSON, `default`), the server renders the initial winner live beside them, and the client switches arms through `reconcile()`'s arm form over the key thunk |
 | `try` | `children, catchParam, catchChildren, pendingChildren?` | `pendingChildren ≠ null` ⇒ async boundary: the arm that won at render time renders live, its root keyed `ok`/`nil`/`err`, and every arm ships as an inert `<template data-arms data-key>`; the client's `reconcile()` switches them as the task settles (ADR 0037 s4). Three arms on both surfaces — `.tsx` spells them `<truc:try pending catch>` (ADR 0041), and there is no `stale` arm (LT-211); the in-flight state is the reactive `isPending` idiom beside the boundary, folded server-side |
 | `compose` | `component, source, attrs, children` | PascalCase tag bound to an authored-source import (either surface); server splices the child's render |
@@ -465,6 +465,20 @@ spelling; branch-scoped `each()` is deferred. A `key` clause on a server-data lo
 `reactive` (thunk → `watch()`), `pass` (`truc:pass={{ }}`), `class-map` /
 `style-map`, `html` (sanitized dynamic rendering), `event` (stripped
 server-side), `ref`.
+
+**Reactivity class and dependency closure** (ADR 0040 s7, LT-373) — lowering
+classifies every template expression once, by ADR 0024 s4's rule, as
+`static`, `server` or `reactive`. A text child records it as
+`reactivity`; on an attribute the variant is the class (`class-map`,
+`style-map` and the thunk form of `html` are reactive), projected by
+`attributeReactivity`. An LT-122 arg-and-prop site is `reactive` on both
+sides: a `server` attribute with `bindsProp` projects as `reactive`, like
+the text child, and `isClientConstructAttr` reads that projection. Every value-bearing node also records `deps`, a
+`DependencyClosure`: the declared `signals`, the `host.<prop>` reads
+(`hostProps`, plus an arg-and-prop site's bound prop) and the server `args`
+it references free, and the names reactive by position (`bound`: a `@catch`
+parameter, a reactive loop's item). The emitters and the fold-input
+checks read the class; none re-derives it from the expression.
 
 **`ClientPlan`** (`analysis/plan.ts`) — what the client half needs:
 `queries` (`first`/`all`/non-throwing, with cardinality `'one' | 'many' |
