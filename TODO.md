@@ -76,8 +76,12 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
   and LT-385). LT-110 is LT-165 step 7's corpus pin.
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
-- **Parallel slot** — independent work. LT-415 first (test servers on a free port; the do-task gates trip on a stray server on 3000), then LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
-  (server), LT-393 (comment-only sweep), LT-410 (the `errors.md` rows).
+- **Parallel slot** — independent work. LT-420 first (worktree commits + review-pass
+  integration; owner ruling 2026-10-03 — the flow LT-418 and LT-419 are the first tasks to
+  ride end to end), then LT-418 → LT-419 (the skills-restructuring residue), then LT-415 (test
+  servers on a free port; the do-task gates trip on a stray server on 3000), then LT-305 (the
+  Baseline 2023 guard, ships in 3.0), LT-277 (server), LT-393 (comment-only sweep), LT-410
+  (the `errors.md` rows).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
@@ -97,7 +101,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-420.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-421.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -526,6 +530,65 @@ recorded against the 30.4k opening measurement.
 
 
 ### Parallel slot
+
+- [ ] LT-420: Task branches commit in the worktree at finish; the review pass integrates them (owner, 2026-10-03).
+  **Area:** server
+  **Gates:** check:queue
+  **Context:** owner ruling 2026-10-03: a run commits its task branch at finish, and the
+  Architect's review pass — owner-attended — integrates approved branches. `scripts/worktree.ts`
+  gains `commit` (stage exactly the handoff's Changed paths — the protected queue-store, kanban,
+  NOTES and agent-config paths are refused mechanically, so churn and queue edits never ride — and
+  commit unsigned) and `integrate` (clean-worktree check, a mergeable-status gate, a `--no-ff`
+  signed merge into the main checkout's branch, then worktree and branch cleanup). Bootstrap sets
+  worktree-local `commit.gpgsign=false` via `extensions.worktreeConfig` (owner-approved: task
+  branches are local-only; the integration merge stays signed, and 1Password unlock is available
+  because the pass is owner-attended). Both `do-task` ports run the commit after the annotate
+  agent and before the queue annotate op, so the `⏳` suffix implies a committed branch; the owner
+  handoff loses its commit/merge/cleanup steps. `review-pending` reviews committed branches
+  (three-dot diff against the source branch), applies nits in the worktree as a `review:` commit
+  on the branch, and returns a merge plan for the confirming session. Bootstrap reuse accepts a
+  branch that carries commits beyond HEAD (rework continues it) instead of failing. The contract
+  (`task-queue.md`, contributor skill) changes in the same commit as the scripts. LT-418 and
+  LT-419 are the first tasks through the full pipeline.
+  **Channel/tier:** none — tooling, no runtime check.
+  **Verification:** `check:queue` and `test/queue.test.ts` green; a scratch task bootstraps,
+  commits (a protected path refused, residue reported), and integrates; LT-418 and LT-419 land
+  through do-task → review-pending → signed merges.
+
+- [ ] LT-418: Bring the `architect` and `writer` skills up to the queue store and the four workflows (SKILLS_REPORT R5 residue).
+  **Area:** docs
+  **Gates:** check:queue
+  **Context:** the queue moved to a per-task store (`queue/LT-NNN.md`, `queue/ITERATION.md`,
+  `queue/BANDS.md`, `queue/LEDGER.md`; `BACKLOG.md`/`TODO.md`/`DONE.md` are views built by
+  `bun run queue:build`), but `architect/SKILL.md` rule 2 and `references/task-queue.md` → *Moves*
+  still describe hand-moving entries between the three files and "prune `DONE.md`", and
+  `writer/references/changelog.md` → *Sources* names `DONE.md` as the thing the Architect prunes.
+  Neither skill names the `release-notes`, `skill-drift` or `review-pending` workflows where their
+  step happens. Run `skill-drift` on `architect` and `writer`, then make sure the proposals also
+  say: a move is a `status:`/`band:` edit in the store followed by `queue:build`; a prune deletes
+  `queue/LT-NNN.md` and carries rulings with no other home into `queue/LEDGER.md` (the
+  2026-10-03 sixth pass is the worked example); *After a release* runs `release-notes` first and
+  prunes from its `consumed` list; `skill-drift` runs before a release, per unit (a full run is
+  ~19 agents). Proposals go to `.agents-proposals/` for the owner's copy-in.
+  **Channel/tier:** none — guidance only.
+  **Verification:** `check:queue` green; every command and path the proposals name exists.
+
+- [ ] LT-419: Move the `contributor` reference facts into writable homes (SKILLS_REPORT R1/R2 residue).
+  **Area:** docs
+  **Needs:** LT-418
+  **Context:** R1 moved the server-only facts to `server/SERVER.md` and R2 limited reference files
+  to what has no writable home, but `contributor/references/docs-server.md` still keeps its traps
+  (the two `html` tags, `raw()`, `guardPath`, HMR conditions, the Markdoc-tag checklist) with a
+  note to move them, and `references/runtime-internals.md` (~150 lines after the 2026-10-03
+  `skill-drift` pass) holds runtime facts with natural homes in `src/` JSDoc, `AGENTS.md` or
+  `ARCHITECTURE.md`. Move each entry to its home (the docs-server traps into `SERVER.md`; runtime
+  facts into the JSDoc of the function they describe or `AGENTS.md` when they surprise an
+  author); propose any `ARCHITECTURE.md` text in `NOTES.md` for the Architect. Then propose
+  the two reference files cut to pointers plus whatever has no writable home, via
+  `.agents-proposals/`. Keep `AGENTS.md` to non-obvious facts only.
+  **Channel/tier:** none — guidance only.
+  **Verification:** `check:links` green; no fact lost (each removed entry names its new home in
+  the handoff).
 
 - [ ] LT-415: Test servers take a free port; reuse a running server only when it is this checkout (owner, 2026-10-03).
   **Area:** server

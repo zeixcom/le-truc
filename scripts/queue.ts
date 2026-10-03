@@ -38,6 +38,7 @@ import {
 	buildViews,
 	checkStore,
 	claimTaskStore,
+	loadStore,
 	migrateQueue,
 	pickByIdStore,
 	pickStore,
@@ -105,7 +106,7 @@ const write = (result: { ok: boolean; error?: string }): number => {
 
 const usage = (): number => {
 	console.error(
-		'usage: queue.ts check | pick [LT-NNN] | claim LT-NNN | annotate LT-NNN <pending-review|done|blocked> <prose-file> | reset LT-NNN | migrate | build [--out <dir>]',
+		'usage: queue.ts check | pick [LT-NNN] | claim LT-NNN | annotate LT-NNN <pending-review|done|blocked> <prose-file> | reset LT-NNN | list [--status <status>] | migrate | build [--out <dir>]',
 	)
 	return 2
 }
@@ -176,6 +177,44 @@ switch (command) {
 			break
 		}
 		exit = write(stored ? resetTaskStore(ROOT, id) : resetTask(ROOT, id))
+		break
+	}
+	case 'list': {
+		// Read-only discovery for the review pass and other sweeps: the store's
+		// tasks as JSON, optionally filtered by status. Refuses an invalid store,
+		// exactly like pick.
+		if (!stored) {
+			console.error('problem: list needs the queue/ store; the kanban files have no list')
+			exit = 1
+			break
+		}
+		const [flag, value] = args
+		if (flag && flag !== '--status') {
+			exit = usage()
+			break
+		}
+		const store = loadStore(ROOT)
+		if (store.problems.length) {
+			for (const problem of store.problems) console.error(`problem: ${problem}`)
+			exit = 1
+			break
+		}
+		const tasks = [...store.tasks.values()]
+			.filter(t => !flag || t.status === value)
+			.sort((a, b) => (a.id < b.id ? -1 : 1))
+			.map(t => ({
+				id: t.id,
+				title: t.title,
+				area: t.area,
+				status: t.status,
+				note: t.note,
+				band: t.band,
+				needs: t.needs,
+				gates: t.gates,
+				entry: renderEntry(t),
+			}))
+		console.log(JSON.stringify({ tasks }))
+		exit = 0
 		break
 	}
 	case 'migrate': {

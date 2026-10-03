@@ -76,8 +76,12 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
   and LT-385). LT-110 is LT-165 step 7's corpus pin.
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
-- **Parallel slot** — independent work. LT-415 first (test servers on a free port; the do-task gates trip on a stray server on 3000), then LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
-  (server), LT-393 (comment-only sweep), LT-410 (the `errors.md` rows).
+- **Parallel slot** — independent work. LT-420 first (worktree commits + review-pass
+  integration; owner ruling 2026-10-03 — the flow LT-418 and LT-419 are the first tasks to
+  ride end to end), then LT-418 → LT-419 (the skills-restructuring residue), then LT-415 (test
+  servers on a free port; the do-task gates trip on a stray server on 3000), then LT-305 (the
+  Baseline 2023 guard, ships in 3.0), LT-277 (server), LT-393 (comment-only sweep), LT-410
+  (the `errors.md` rows).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
@@ -97,7 +101,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-420.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-421.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 

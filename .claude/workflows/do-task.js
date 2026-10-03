@@ -1,13 +1,14 @@
 export const meta = {
   name: 'do-task',
-  description: 'Pick the next ready TODO task (or a given LT-ID), implement it in its own git worktree, verify gates, review, annotate the suffix',
-  whenToUse: 'Work the le-truc queue without hand-offs. Args: "LT-NNN", or { id?: "LT-NNN", max?: number } to run up to max ready tasks in sequence. Ends with one task branch per task in its own worktree, waiting for the owner to commit and merge.',
+  description: 'Pick the next ready TODO task (or a given LT-ID), implement it in its own git worktree, verify gates, review, commit the branch, annotate the suffix',
+  whenToUse: 'Work the le-truc queue without hand-offs. Args: "LT-NNN", or { id?: "LT-NNN", max?: number } to run up to max ready tasks in sequence. Ends with one committed task branch per task, in its own worktree, awaiting the owner-attended review pass (review-pending), which integrates approved branches.',
   phases: [
     { title: 'Pick', detail: 'queue script pick+claim, worktree bootstrap' },
     { title: 'Implement', detail: 'contributor skill, area gates, in the worktree' },
     { title: 'Verify', detail: 'independent gate re-run and review lenses' },
     { title: 'Fix', detail: 'address blocking findings, at most 2 rounds' },
     { title: 'Annotate', detail: 'queue script annotate, prose + commit message' },
+    { title: 'Commit', detail: 'worktree.ts commit stages exactly the Changed paths' },
   ],
 }
 
@@ -18,11 +19,15 @@ export const meta = {
 // happens in a per-task git worktree (.worktrees/LT-NNN, branch task/LT-NNN,
 // bootstrapped by scripts/worktree.ts), so two runs — or a run and a human —
 // cannot collide in one tree, and a task's diff is exactly its worktree's
-// diff. The ZCode twin (.zcode/workflows/do-task.dwf.ts) drives the same
-// queue script with real command primitives; here low-effort agents relay the
-// commands. Nothing is ever committed by this run: patches wait on the task
-// branch for the owner. This script never moves entries between queue files,
-// never edits ARCHITECTURE.md and never stages .agents/.
+// diff. The run commits its work at finish via `scripts/worktree.ts commit`
+// (exactly the handoff's Changed paths — gate-run churn never rides; the
+// protected queue/agent-config paths are refused mechanically) — owner
+// ruling 2026-10-03; the merge back happens only in the review pass, via
+// `scripts/worktree.ts integrate`. The ZCode twin
+// (.zcode/workflows/do-task.dwf.ts) drives the same queue script with real
+// command primitives; here low-effort agents relay the commands. This script
+// never moves entries between queue files, never edits ARCHITECTURE.md and
+// never stages .agents/.
 
 const input = typeof args === 'string' ? { id: args } : (args || {})
 const MAX_TASKS = input.id ? 1 : Math.max(1, input.max || 1)
@@ -55,7 +60,8 @@ const HANDOFF = {
     reviewClass: { type: 'string', enum: ['api', 'internal'], description: 'api = public API, compiler-authored surface semantics, a diagnostic code\'s meaning, or server routes/output (→ ⏳); internal = everything else (→ done ✓)' },
     errorCopyChanged: { type: 'boolean', description: 'An error class in src/errors.ts or a code in diagnostics.ts was added, reworded or retired' },
     mechanical: { type: 'boolean', description: 'No behavior can change: comments, docs, or a rename proven byte-identical by goldens' },
-    changed: { type: 'array', items: { type: 'string' }, description: 'path plus what changed, one per entry' },
+    changed: { type: 'array', items: { type: 'string' }, description: 'path plus what changed, one per entry — the handoff\'s human record' },
+    changedPaths: { type: 'array', items: { type: 'string' }, description: 'the same changes as bare repo-relative paths (no prose): the exact pathspec scripts/worktree.ts commit stages. Required when done.' },
     how: { type: 'string' },
     check: { type: 'string', description: 'Where a reviewer should look' },
     blocker: { type: 'string', description: 'When blocked: the decision the task does not contain' },
@@ -94,13 +100,35 @@ const REVIEW = {
 const ANNOTATION = {
   type: 'object',
   properties: {
-    annotated: { type: 'boolean', description: 'The queue annotate command exited 0' },
+    written: { type: 'boolean', description: 'The prose file exists' },
+    commitWritten: { type: 'boolean', description: 'The commit message file exists' },
     commit: { type: 'string', description: 'The full commit message for this task\'s changes' },
   },
-  required: ['annotated', 'commit'],
+  required: ['written', 'commitWritten', 'commit'],
 }
 
-// Signing is unreachable from the sandbox, so the owner commits from this message.
+const COMMITTED = {
+  type: 'object',
+  properties: {
+    committed: { type: 'boolean', description: 'The worktree.ts commit command exited 0' },
+    sha: { type: 'string', description: 'The short commit sha from its JSON' },
+    subject: { type: 'string', description: 'The commit subject from its JSON' },
+    residue: { type: 'array', items: { type: 'string' }, description: 'Worktree paths the commit left unstaged, from its JSON' },
+    reason: { type: 'string', description: 'The command\'s stderr when it refused' },
+  },
+  required: ['committed'],
+}
+
+const ANNOTATED = {
+  type: 'object',
+  properties: {
+    annotated: { type: 'boolean', description: 'The queue annotate command exited 0' },
+  },
+  required: ['annotated'],
+}
+
+// Worktree commits are unsigned by worktree-local config (owner ruling
+// 2026-10-03); the commit message is composed for the run's commit step.
 const COMMIT_STYLE = [
   'Subject: `<area>: LT-NNN — <what changed>`, at most 72 characters, phrased like `git log --oneline -10`. Use `docs(queue):` when only queue files changed.',
   'Body only when needed, at most 3 lines: what the diff cannot show — a ruling, a deviation, a follow-up LT-ID, a red gate. No file lists, gate transcripts, or restating the subject.',
@@ -162,7 +190,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
       : '') +
     `\nLeave your work green: run the gates you judge relevant (${GATE_TABLE}${setup.gates?.length ? `, plus the entry's (${setup.gates.join(', ')})` : ''}) and fix failures before handoff — from inside the worktree. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The worktree contains no .agents/, .claude/, .vscode/ or .zcode/ — the bootstrap excludes those agent-config dirs (sandboxed hosts like yours block writes under them) and no task targets them; never create or edit them in the worktree. The gates agent verifies the full list independently after your turn, so report no gate results.\n` +
     `If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. ` +
-    `Boundaries: the worktree's BACKLOG.md, TODO.md, DONE.md, NOTES.md and the excluded agent-config dirs are out of reach — the queue is managed in the main checkout, so never edit those files here, and never stage or commit anything (the owner commits). Do not write the status suffix or handoff fields.`,
+    `Boundaries: the worktree's BACKLOG.md, TODO.md, DONE.md, NOTES.md and the excluded agent-config dirs are out of reach — the queue is managed in the main checkout, so never edit those files here, and never stage or commit anything (the run commits your work via scripts/worktree.ts after your turn; the commit stages exactly changedPaths, so keep that list exact). Do not write the status suffix or handoff fields.`,
     { label: `implement ${setup.id}`, phase: 'Implement', schema: HANDOFF },
   )
   if (!handoff) {
@@ -218,7 +246,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
     handoff = await agent(
       `Load the contributor skill. You are continuing ${describe(setup)}; the uncommitted change is in your worktree ${setup.worktree} (git -C ${setup.worktree} diff HEAD). Fix these, or rebut a finding with evidence in "how" if it is wrong:\n` +
       [...red.map(x => `- RED GATE ${x.cmd}: ${x.tail || ''}`), ...blocking.map(f => `- ${f.file || ''} ${f.issue}${f.fix ? ` (suggested: ${f.fix})` : ''}`)].join('\n') +
-      `\n\nThen re-run the affected gates (read-only lint form) inside the worktree. Same limits as before: queue files, .agents/ and .vscode/ stay untouched, no staging, no commit. Return the full updated handoff (all changed files, not only this round's).`,
+      `\n\nThen re-run the affected gates (read-only lint form) inside the worktree. Same limits as before: queue files, .agents/ and .vscode/ stay untouched, no staging, no commit — the run commits via the script after your turn. Return the full updated handoff (all changed files, not only this round's).`,
       { label: `fix ${setup.id} r${round + 1}`, phase: 'Fix', schema: HANDOFF },
     ) || { ...handoff, outcome: 'blocked', blocker: 'fix agent failed' }
   }
@@ -231,6 +259,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
     : handoff.reviewClass === 'api' ? '— done, pending review ⏳' : '— done ✓'
   const statusKey = handoff.outcome === 'blocked' ? 'blocked' : handoff.reviewClass === 'api' ? 'pending-review' : 'done'
   const prosePath = `.zcode/workflow-drafts/queue-annotate/${setup.id}.md`
+  const commitMsgPath = `.zcode/workflow-drafts/commit-msg/${setup.id}.txt`
   const annotation = await agent(
     `Compose the queue annotation for ${setup.id} and write it to ${prosePath} (create the directory if needed). The queue script inserts it after the entry; you write only the prose.\n` +
     (handoff.outcome === 'blocked'
@@ -242,16 +271,43 @@ for (let n = 0; n < MAX_TASKS; n++) {
       ? ` This was rework: instead of new Changed/How/Check lines, write one **Reworked:** line answering each numbered finding on the entry's **Review:** line briefly (fixed how, or rebutted why).`
       : '') +
     `\nThe handoff for context: outcome=${handoff.outcome}, reviewClass=${handoff.reviewClass}, changed=${JSON.stringify(handoff.changed)}.\n` +
-    `Then run \`bun run scripts/queue.ts annotate ${setup.id} ${statusKey} ${prosePath}\` with Bash — it must exit 0 (it flips the suffix in the main checkout's queue). ` +
-    `Finally return a commit message for the task's changes (\`git -C ${setup.worktree} diff HEAD\` and \`git -C ${setup.worktree} status --porcelain\`). Style: ${COMMIT_STYLE}`,
+    `Then write the commit message for the task's changes to ${commitMsgPath} (create the directory if needed) — see them with \`git -C ${setup.worktree} diff HEAD\` and \`git -C ${setup.worktree} status --porcelain\`. Style: ${COMMIT_STYLE}\n` +
+    `Return written=true once ${prosePath} exists and commitWritten=true once ${commitMsgPath} exists. Do not run any queue or git command yourself.`,
     { label: `annotate ${setup.id}`, phase: 'Annotate', schema: ANNOTATION, effort: 'low' },
   )
+
+  // The branch commits before the suffix flips, so "pending review" always
+  // means a committed branch. Only a done run commits: blocked work stays
+  // uncommitted on its worktree.
+  let committed = null
+  if (handoff.outcome === 'done' && annotation?.commitWritten && (handoff.changedPaths || []).length) {
+    phase('Commit')
+    const paths = (handoff.changedPaths || []).map(p => `'${p}'`).join(' ')
+    committed = await agent(
+      `Relay one command with Bash, from the repository root: bun run scripts/worktree.ts commit ${setup.id} --message-file ${commitMsgPath} -- ${paths}\n` +
+      `It prints JSON ({commit, subject, residue}) on success and refuses on anything else. Report committed=true only when it exited 0, with sha/subject/residue from its JSON; otherwise report its stderr as reason.`,
+      { label: `commit ${setup.id}`, phase: 'Commit', schema: COMMITTED, effort: 'low' },
+    )
+    if (!committed?.committed) log(`${setup.id}: the commit refused — the suffix stays unflipped; check the worktree by hand: ${committed?.reason || 'relay failed'}`)
+    else log(`${setup.id}: committed ${committed.sha} — ${committed.subject}${committed.residue?.length ? ` (residue: ${committed.residue.join(', ')})` : ''}`)
+  }
+
+  let annotated = false
+  if (annotation?.written && (handoff.outcome === 'blocked' || committed?.committed)) {
+    annotated = await agent(
+      `Run \`bun run scripts/queue.ts annotate ${setup.id} ${statusKey} ${prosePath}\` with Bash, from the repository root. Report annotated=true only when it exited 0; otherwise report its stderr.`,
+      { label: `annotate-op ${setup.id}`, phase: 'Annotate', schema: ANNOTATED, effort: 'low' },
+    ).then(r => !!r?.annotated)
+    if (!annotated) log(`${setup.id}: the queue refused the annotation — check the queue manually`)
+  }
 
   runs.push({
     id: setup.id,
     title: setup.title,
     area: setup.area,
-    suffix: annotation?.annotated ? suffix : '— in progress ⚙ (annotation failed)',
+    suffix: annotated
+      ? suffix
+      : `— in progress ⚙ (${handoff.outcome === 'done' && annotation?.commitWritten ? 'commit failed' : 'annotation failed'})`,
     branch: setup.branch,
     worktree: setup.worktree,
     changed: handoff.changed,
@@ -260,6 +316,8 @@ for (let n = 0; n < MAX_TASKS; n++) {
     minorFindings: minors.map(f => `${f.file || ''} ${f.issue}`.trim()),
     blocker: handoff.blocker,
     commit: annotation?.commit,
+    commitSha: committed?.sha,
+    residue: committed?.residue,
   })
   if (handoff.outcome === 'blocked') break
 }
@@ -267,10 +325,10 @@ for (let n = 0; n < MAX_TASKS; n++) {
 return {
   runs,
   next: [
-    'Owner, per task branch (nothing is committed; the queue suffix edits stay uncommitted in the main checkout for a separate docs(queue) commit):',
-    '1. Review: git -C <worktree> diff HEAD  ·  git -C <worktree> status --porcelain',
-    '2. Commit in the worktree. First check status against the handoff\'s Changed list — a build gate run inside the worktree can churn a committed bundle (e.g. index.js gets a ../../ banner through the node_modules symlink); restore such files (git -C <worktree> checkout -- <path>) and mind the minor review findings. Then: git -C <worktree> add -A && git -C <worktree> commit -m "<the run\'s commit message>"',
-    '3. Merge from v3 (task branches never touch queue files, so the dirty queue merges clean): git merge task/<id>',
-    '4. Clean up: git worktree remove --force <worktree> && git branch -d task/<id>',
+    'Per committed branch, the review pass (owner-attended Architect session; the queue suffix edits stay uncommitted in the main checkout for a separate docs(queue) commit):',
+    '1. Run the review-pending workflow — it reviews each branch (three-dot diff against the source branch), applies nits as a review commit on the branch, and returns verdicts plus a merge plan.',
+    '2. Integrate each approved branch, one at a time in pick order: bun run scripts/worktree.ts integrate <LT-NNN> — a signed --no-ff merge that also removes the worktree and deletes the branch. A conflict is resolved by hand.',
+    '3. Apply the verdicts to the queue (store status edits, then bun run queue:build) and commit the queue state.',
+    'Residue reported for a worktree is restored (git -C <worktree> checkout -- <path>) or named before integrating — integrate refuses a dirty worktree.',
   ].join('\n'),
 }

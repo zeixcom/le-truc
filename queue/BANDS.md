@@ -109,7 +109,7 @@ ADR 0030's corpus-multiplication consequences bullet was retracted in place 2026
 History: `git log -p`, ADR 0030, `CHANGELOG.md` `[Unreleased]`, and the compacted entries in
 `DONE.md`. Two review
 handoffs became tasks: **LT-201** (the ADR amendment; done — DONE.md) and **LT-189** (the
-Tech Writer copy round, scope widened).
+Writer copy round, scope widened).
 
 **The ICU MessageFormat switch landed 2026-10-01** (iteration opened 2026-09-25: LT-250, LT-308,
 LT-252, LT-251, LT-253, LT-218, LT-219, LT-220, LT-189, with LT-242, LT-233, LT-249 and LT-138).

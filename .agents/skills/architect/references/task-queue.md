@@ -53,8 +53,8 @@ The contributor writes the suffix. The Architect updates it on review.
 |---|---|
 | *(none)* | Open |
 | `— in progress ⚙` | Claimed by a running session or workflow. Prevents double pickup. |
-| `— done, pending review ⏳` | The change touches the public API, compiler-authored surface semantics, a diagnostic code's meaning, or server routes or output. The entry carries a `Changed`/`How`/`Check` handoff. |
-| `— done ✓` | A bug fix, test, internal change, or docs change. The entry carries a one-line `Changed`. |
+| `— done, pending review ⏳` | The change touches the public API, compiler-authored surface semantics, a diagnostic code's meaning, or server routes or output. The entry carries a `Changed`/`How`/`Check` handoff, and the commit sits on the task's branch. |
+| `— done ✓` | A bug fix, test, internal change, or docs change. The entry carries a one-line `Changed`, and the commit sits on the task's branch. |
 | `— changes requested ↩` | Review found work inside the task's scope. The `**Review:**` line numbers the findings. The contributor fixes them in the same task, adds a `**Reworked:**` line, and sets the suffix again. |
 | `— reviewed ✓` | The Architect approved it. |
 | `— blocked ⛔` | The contributor stopped. An entry in `NOTES.md` explains why. |
@@ -65,13 +65,12 @@ A few entries carry a non-contract closed suffix instead (`parked`, `closed as m
 
 `do-task` never implements in the main checkout. Per task it bootstraps `.worktrees/LT-NNN` — a git worktree on branch `task/LT-NNN` cut from the current HEAD, with the main checkout's `node_modules` symlinked in (`bun run scripts/worktree.ts LT-NNN`, idempotent). Consequences:
 
-- **The queue never lives in a worktree.** Pick, claim and annotate run `scripts/queue.ts` against the main checkout only, so a task branch never touches a queue file and merging it back is clean even with the workflow's own suffix edits uncommitted. This — not locking — is what prevents two agents from colliding.
-- **A task's diff is its worktree's diff.** Reviewers and the owner read `git -C .worktrees/LT-NNN diff HEAD`; earlier tasks in the same run are invisible.
-- **Worktrees never materialize the agent-config dirs `.agents/`, `.claude/`, `.vscode/`, `.zcode/`.** The bootstrap creates the worktree `--no-checkout`, populates its index from HEAD, marks those paths skip-worktree, and only then checks the rest out. Sandboxed hosts (Claude Code among them) refuse writes under their own config dirs, so a plain checkout dies materializing them (`.vscode/settings.json` first). No task targets these dirs; edits and staging of them happen in the main checkout only.
+- **The queue never lives in a worktree.** Pick, claim and annotate run `scripts/queue.ts` against the main checkout only. The commit step enforces this mechanically: `bun run scripts/worktree.ts commit <LT-NNN> --message-file <path> -- <paths>` refuses the protected paths (the store, the generated views, `NOTES.md`, the agent-config dirs) even when a handoff wrongly lists them. This — not locking — is what prevents two agents from colliding.
+- **A task's diff is its branch's diff.** A run commits its work at finish, staging exactly the handoff's Changed paths, so gate-run churn never rides and anything else left in the worktree is reported as residue. The review pass reads `git diff HEAD...task/LT-NNN` — an immutable snapshot, not a moving worktree; a `⏳` suffix always means a committed branch.
+- **Worktree commits are unsigned; integration is signed.** The bootstrap sets `commit.gpgsign=false` worktree-locally (`extensions.worktreeConfig`; owner ruling 2026-10-03) so an agent run can commit without the owner's signing key. Task branches are local-only. The merge back runs in the owner-attended review pass: `bun run scripts/worktree.ts integrate <LT-NNN>` refuses a dirty worktree and a task whose status is not `pending-review`/`done`/`reviewed`, merges `--no-ff` into the current branch (signed), and removes the worktree and the branch. A merge conflict is resolved by hand — it is two tasks overlapping, a design call. One branch integrates at a time, in pick order.
+- **Worktrees never materialize the agent-config dirs `.agents/`, `.claude/`, `.vscode/`, `.zcode/`.** The bootstrap creates the worktree `--no-checkout`, populates its index from HEAD, marks those paths skip-worktree, and only then checks the rest out. Sandboxed hosts (Claude Code among them) refuse writes under their own config dirs, so a plain checkout dies materializing them (`.vscode/settings.json` first). No task targets these dirs; edits and staging of them happen in the main checkout only. Re-running the bootstrap on a branch that already carries its task's commits continues that branch (rework) instead of failing.
 - Gates run with the worktree as cwd: `bun run --cwd <path> <script>`, `bun test --cwd <path> <paths>`. Never `bun --cwd <path> run <script>` — bun silently ignores that form (exit 0, nothing runs).
 - Fresh worktrees lack built `docs/`; a gate that reads it (`test:server` serve tests, `check:links`) runs `build:docs` first.
-
-After the owner commits and merges a task branch: `git worktree remove --force .worktrees/LT-NNN && git branch -d task/LT-NNN`.
 
 ## The chain
 
@@ -83,7 +82,7 @@ After the owner commits and merges a task branch: `git worktree remove --force .
 - A track whose next task is claimed (`⚙`) or `blocked ⛔` **stalls**: that task and everything behind it in that track is skipped, and the scan falls through to the next track. A `blocked ⛔` does not end the iteration.
 - When the order depends on a ruling that a `Needs:` field cannot express, write the ruling into the header's rulings list and the dependency into `Needs:`.
 
-`bun run scripts/queue.ts pick [LT-NNN]` prints this decision as JSON (read-only; `claim`, `annotate`, `reset` are the write commands). `bun run check:queue` fails the build when an entry breaks the format, a `Needs:` reference dangles, IDs collide, or the checkbox and suffix disagree; an open entry the chain does not name is reported as a note.
+`bun run scripts/queue.ts pick [LT-NNN]` prints this decision as JSON, and `list [--status <status>]` prints the store's tasks as JSON (both read-only; `claim`, `annotate`, `reset` are the write commands). `bun run check:queue` fails the build when an entry breaks the format, a `Needs:` reference dangles, IDs collide, or the checkbox and suffix disagree; an open entry the chain does not name is reported as a note.
 
 ## Moves (Architect only)
 
