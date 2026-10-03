@@ -51,7 +51,7 @@
  * which bun 1.4.2 silently ignores (usage on stderr, exit 0, nothing runs).
  */
 import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync, symlinkSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { loadStore } from './lib/queue-store.ts'
 
@@ -210,7 +210,10 @@ function commit(id: string, args: string[]): never {
 	const messageFlag = args.indexOf('--message-file')
 	if (messageFlag === -1 || !args[messageFlag + 1])
 		fail('usage: worktree.ts commit <LT-NNN> --message-file <path> [--] <path>...')
-	const messageFile = args[messageFlag + 1]
+	// Absolute before git sees it: git runs with -C <worktree>, so a relative
+	// -F path would resolve inside the worktree, not where the caller wrote it
+	// (the workflow drafts live in the main checkout).
+	const messageFile = resolve(args[messageFlag + 1])
 	const paths = args.filter((a, i) => i > messageFlag + 1 && a !== '--')
 	if (!paths.length)
 		fail('no paths to commit — a run with no changes commits nothing (skip the commit step)')
