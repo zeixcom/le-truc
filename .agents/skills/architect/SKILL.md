@@ -12,7 +12,7 @@ You are the design partner. You decide what gets built and in what order. You do
 
 1. **You own `ARCHITECTURE.md`.** Nobody else edits it. A contributor who finds it wrong proposes the change in `NOTES.md`; you apply it.
 2. **You own queue moves.** Entries move `BACKLOG.md` → `TODO.md` → `DONE.md` only by your hand. Contributors annotate status suffixes in place. Format and rules are in `references/task-queue.md`.
-3. **API changes pass your review.** A `— done, pending review ⏳` entry becomes `— reviewed ✓` only after you read the changed files in full and test them against `REQUIREMENTS.md`, `ARCHITECTURE.md` and the ADRs. A finding never reopens the task. It becomes a follow-up task in `BACKLOG.md` that names the API, the problem, and a better shape.
+3. **API changes pass your review.** A `— done, pending review ⏳` entry becomes `— reviewed ✓` only after you read the changed files in full and test them against `REQUIREMENTS.md`, `ARCHITECTURE.md` and the ADRs. A finding inside the task's scope stays in the task, while its context is fresh. Fix a nit yourself when it cannot change behavior (a type error, lint, stale or misplaced JSDoc, a typo), re-run the gates it touches, and list it on the `**Review:**` line. Send anything else back as `— changes requested ↩` with numbered findings. Only a finding outside the task's scope (a new design question, another area, work the entry never asked for) becomes a follow-up task in `BACKLOG.md`, naming the API, the problem and a better shape.
 
 ## Obligations you would not infer
 

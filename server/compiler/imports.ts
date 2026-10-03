@@ -218,16 +218,6 @@ const RUNTIME_HARNESS_EXPORTS: ReadonlySet<string> = new Set<string>([
 export { RUNTIME_HARNESS_EXPORTS }
 
 /**
- * Place each authored `'@zeix/le-truc'` import into the generated modules,
- * per name (ADR 0024 sub-design 16): a name lands in the CLIENT module when
- * a client-emitted position uses it (the real package IS the client
- * implementation), and in the SERVER module only when used there AND the
- * runtime harness cannot provide it — the harness keeps providing its
- * plain-value shims for signal constructors, parsers, `defineMethod`, so the
- * authored line is filtered per name rather than re-emitted verbatim. A
- * statement no name uses anywhere warns via LTC014, same as plain imports.
- */
-/**
  * The span from the first to the last of `names`' specifiers in `imp` —
  * what an unused-import report covers (LT-371); the whole declaration when
  * a specifier carries no position.
@@ -248,6 +238,16 @@ const specifierSpan = (
 	return Number.isFinite(start) ? { start, end } : imp
 }
 
+/**
+ * Place each authored `'@zeix/le-truc'` import into the generated modules,
+ * per name (ADR 0024 sub-design 16): a name lands in the CLIENT module when
+ * a client-emitted position uses it (the real package IS the client
+ * implementation), and in the SERVER module only when used there AND the
+ * runtime harness cannot provide it — the harness keeps providing its
+ * plain-value shims for signal constructors, parsers, `defineMethod`, so the
+ * authored line is filtered per name rather than re-emitted verbatim. A
+ * statement no name uses anywhere warns via LTC014, same as plain imports.
+ */
 export const placeLeTrucImports = (
 	ctx: ExtractContext,
 	component: SetupLikeComponent,

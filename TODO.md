@@ -276,7 +276,7 @@ recorded against the 30.4k opening measurement.
 
 ### A — Pre-publish reshapes ((LT-370 →) LT-371 → LT-375 ∥ LT-373 → LT-387)
 
-- [x] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2). — done, pending review ⏳
+- [x] LT-371: Give diagnostics their published record shape (D-30, ADR 0044 s1–s2). — changes requested ↩
   **Area:** compiler
   **Needs:** LT-370
   **Context:** `CompileDiagnostic` is `{ code, severity, message, line? }`
@@ -297,11 +297,16 @@ recorded against the 30.4k opening measurement.
   `RoutingSignal.location` optional; corpus LTC048 carries `related`. No `fix` attached yet.
   **How:** first `do-task` run. Full gates green; `test:variants` (441 pass) run by the owner,
   outside the sandbox.
-  **Check:** the record shape against ADR 0044 s1–s2. Open review notes: (1) `imports.ts`
-  `specifierSpan` orphans `placeLeTrucImports`' JSDoc; (2) LTC014's span includes a context
-  name between two unused names; (3) no range pin for loops (LTC001–003) or reactive conditions
-  (LTC062/063); (4) the LT-242 parity suite compares no ranges and its header still speaks of
-  line numbers.
+  **Check:** the record shape against ADR 0044 s1–s2.
+  **Review (owner + Architect, 2026-10-03):** the record shape is right. (1) LTC014's
+  `specifierSpan` takes first-to-last over the unused names, so `{ createTask, host, createCell }`
+  covers `host`, which LTC037 reports. Report one range per contiguous run of unused names, or
+  one diagnostic per name, so no range covers a context name. (2) The Verification line asks for
+  a range pin per producer family: add pins for loops (LTC001–LTC003) and reactive conditions
+  (LTC062/LTC063). (3) The LT-242 parity suite (`tsx/diagnostic-parity.test.ts`) still compares
+  `[code, severity, message]` only, and its header still speaks of line numbers. Make it compare
+  the covered authored text on both surfaces and fix the header. Nit fixed by the reviewer:
+  `placeLeTrucImports`' JSDoc, orphaned by `specifierSpan`, moved back above its function.
 
 - [ ] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07).
   **Area:** compiler

@@ -28,13 +28,18 @@ The format is the same in all three files.
 
 - [x] LT-412: Brief title — reviewed ✓
   **Area:** runtime
-  **Review:** Approved. One line, only if it records a ruling.
+  **Review:** Approved. One line, only if it records a ruling or a nit the reviewer fixed.
+
+- [x] LT-413: Brief title — changes requested ↩
+  **Area:** compiler
+  **Changed:** …
+  **Review:** (1) What is wrong, where. (2) … Nits fixed by the reviewer: the JSDoc on `foo()`.
 ```
 
 | Field | Required | Meaning |
 |---|---|---|
 | `**Area:**` | yes | `runtime` (`src/`), `compiler` (`server/compiler/`, `scripts/` corpus tooling), `server` (docs pipeline, dev server), `examples`, `docs` (prose, JSDoc, error copy), `design` (needs the Architect or owner; never auto-picked) |
-| `**Needs:**` | when it has prerequisites | LT-IDs that must be `done ✓`, `done, pending review ⏳` or `reviewed ✓` before this task is ready. A pending review satisfies a prerequisite, because review findings become new tasks and never reopen old ones. |
+| `**Needs:**` | when it has prerequisites | LT-IDs that must be `done ✓`, `done, pending review ⏳` or `reviewed ✓` before this task is ready. A pending review or a `changes requested ↩` satisfies a prerequisite: rework stays inside the task's scope and keeps dependents' gates green. A finding that would change what a dependent relies on is a follow-up task, not rework. |
 | `**Gates:**` | when it needs more than the area's defaults | Extra commands from `package.json` (`contributor` → *Gates*) |
 | `**Context:**` | yes, for open tasks | Enough that the contributor makes no architectural decision |
 
@@ -48,6 +53,7 @@ The contributor writes the suffix. The Architect updates it on review.
 | `— in progress ⚙` | Claimed by a running session or workflow. Prevents double pickup. |
 | `— done, pending review ⏳` | The change touches the public API, compiler-authored surface semantics, a diagnostic code's meaning, or server routes or output. The entry carries a `Changed`/`How`/`Check` handoff. |
 | `— done ✓` | A bug fix, test, internal change, or docs change. The entry carries a one-line `Changed`. |
+| `— changes requested ↩` | Review found work inside the task's scope. The `**Review:**` line numbers the findings. The contributor fixes them in the same task, adds a `**Reworked:**` line, and sets the suffix again. |
 | `— reviewed ✓` | The Architect approved it. |
 | `— blocked ⛔` | The contributor stopped. An entry in `NOTES.md` explains why. |
 
@@ -57,7 +63,7 @@ The contributor writes the suffix. The Architect updates it on review.
 
 - Group the tasks into tracks with one line of purpose each. Inside a track, list the tasks in pick order.
 - A task is **ready** when four things hold: it has no suffix, its `Area` is not `design`, every LT-ID in its `**Needs:**` is satisfied, and every earlier task in its track is satisfied or `blocked ⛔`.
-- `do-task` picks the first ready task, tracks in order. When nothing is ready, it stops and reports why. It does not guess.
+- `do-task` first takes any `— changes requested ↩` task, in file order. Then it picks the first ready task, tracks in order. When nothing is ready, it stops and reports why. It does not guess.
 - When the order depends on a ruling that a `Needs:` field cannot express, write the ruling into the header's rulings list and the dependency into `Needs:`.
 
 ## Moves (Architect only)

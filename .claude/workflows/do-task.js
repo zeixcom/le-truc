@@ -26,6 +26,7 @@ const PICK = {
   type: 'object',
   properties: {
     picked: { type: 'boolean' },
+    rework: { type: 'boolean', description: 'The task carried — changes requested ↩' },
     id: { type: 'string', description: 'LT-NNN' },
     title: { type: 'string' },
     area: { type: 'string', enum: ['runtime', 'compiler', 'server', 'examples', 'docs'] },
@@ -55,7 +56,13 @@ const HANDOFF = {
 const GATES = {
   type: 'object',
   properties: {
-    results: { type: 'array', items: { type: 'object', properties: { cmd: { type: 'string' }, pass: { type: 'boolean' }, flaky: { type: 'boolean' }, tail: { type: 'string', description: 'Last relevant lines of output on failure' } }, required: ['cmd', 'pass'] } },
+    results: { type: 'array', items: { type: 'object', properties: {
+      cmd: { type: 'string' },
+      pass: { type: 'boolean' },
+      unrunnable: { type: 'boolean', description: 'Failed because of the sandbox or environment (port binding, signing, network, missing tool), before any test ran' },
+      flaky: { type: 'boolean' },
+      tail: { type: 'string', description: 'Last relevant lines of output on failure' },
+    }, required: ['cmd', 'pass'] } },
   },
   required: ['results'],
 }
@@ -95,10 +102,13 @@ const GATE_TABLE = 'the area\'s default gates in the contributor skill\'s Gates 
 // The gate re-runner runs package.json commands only. The entry's Check line is
 // the conformance reviewer's to judge, so a sound, evidenced deviation from it
 // is a finding, not a red gate.
-const GATE_RULES = 'Run only package.json scripts; the entry\'s Check line is not yours to run. The lint scripts use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file.'
+const GATE_RULES = 'Run only package.json scripts; the entry\'s Check line is not yours to run. The lint scripts use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. Mark a gate unrunnable when it fails before any test runs because of the sandbox or environment (a port it cannot bind, signing, network, a missing tool).'
 
 const describe = t => `${t.id} (${t.title}; Area: ${t.area})`
-const failing = g => (g?.results || []).filter(r => !r.pass)
+// An unrunnable gate is not red: no code change fixes the sandbox. It goes to the
+// owner in the handoff instead of into a fix round.
+const failing = g => (g?.results || []).filter(r => !r.pass && !r.unrunnable)
+const unrunnable = g => (g?.results || []).filter(r => !r.pass && r.unrunnable)
 
 const runs = []
 for (let n = 0; n < MAX_TASKS; n++) {
@@ -106,9 +116,9 @@ for (let n = 0; n < MAX_TASKS; n++) {
   phase('Pick')
   const task = await agent(
     (input.id
-      ? `Find ${input.id} in TODO.md. It is pickable only if it is in TODO.md (not BACKLOG.md), has no status suffix, its Area is not design, and every LT-ID on its Needs line is done ✓, done, pending review ⏳ or reviewed ✓ in any queue file.`
-      : `Read TODO.md's "The chain" section and pick the first ready task, tracks in order, by the contract in .agents/skills/architect/references/task-queue.md → "The chain": no suffix, Area not design, every Needs LT-ID satisfied (done ✓, ⏳ or reviewed ✓ in TODO.md, BACKLOG.md or DONE.md), and every earlier task in its track satisfied or blocked ⛔. Do not guess an order the chain does not state.`) +
-    `\n\nIf a task is pickable, claim it: append " — in progress ⚙" to its title line in TODO.md and change nothing else in any file. Return picked=false with the reason when nothing is pickable; never claim a task that fails the contract.`,
+      ? `Find ${input.id} in TODO.md. It is pickable if it is in TODO.md (not BACKLOG.md) and either carries "— changes requested ↩", or has no status suffix, its Area is not design, and every LT-ID on its Needs line is done ✓, done, pending review ⏳, changes requested ↩ or reviewed ✓ in any queue file.`
+      : `Pick by the contract in .agents/skills/architect/references/task-queue.md → "The chain". First, any TODO.md entry carrying "— changes requested ↩", in file order. Otherwise read TODO.md's "The chain" section and pick the first ready task, tracks in order: no suffix, Area not design, every Needs LT-ID satisfied (done ✓, ⏳, ↩ or reviewed ✓ in TODO.md, BACKLOG.md or DONE.md), and every earlier task in its track satisfied or blocked ⛔. Do not guess an order the chain does not state.`) +
+    `\n\nIf a task is pickable, claim it: on its title line in TODO.md, replace "— changes requested ↩" with "— in progress ⚙", or append " — in progress ⚙" when it had no suffix. Change nothing else in any file. Set rework=true for a changes-requested task. Return picked=false with the reason when nothing is pickable; never claim a task that fails the contract.`,
     { label: 'pick', phase: 'Pick', schema: PICK, effort: 'low' },
   )
   if (!task?.picked) {
@@ -122,7 +132,9 @@ for (let n = 0; n < MAX_TASKS; n++) {
   phase('Implement')
   let handoff = await agent(
     `Load the contributor skill and implement queue task ${describe(task)} from TODO.md. It is already claimed (— in progress ⚙); leave that suffix in place, the Annotate step replaces it.\n` +
-    `Read the entry, the sources it cites (${(task.citations || []).join(', ') || 'none listed'}) and the area's living docs first. ` +
+    (task.rework
+      ? `This is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green. `
+      : `Read the entry, the sources it cites (${(task.citations || []).join(', ') || 'none listed'}) and the area's living docs first. `) +
     `Run ${GATE_TABLE}${task.gates?.length ? ` (${task.gates.join(', ')})` : ''} and report each real result.\n` +
     `If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. ` +
     `Do not commit, do not move queue entries, do not edit ARCHITECTURE.md, and do not write the status suffix or handoff fields.`,
@@ -196,6 +208,9 @@ for (let n = 0; n < MAX_TASKS; n++) {
       : handoff.reviewClass === 'api'
         ? `Add under the entry, after its existing fields: **Changed:** (${handoff.changed.join('; ')}), **How:** (${handoff.how || ''}), **Check:** (${handoff.check || ''}${minors.length ? `; minor review notes: ${minors.map(f => f.issue).join('; ')}` : ''}). Keep each to one or two lines in the queue's register.`
         : `Add one line under the entry: **Changed:** summarizing ${handoff.changed.join('; ')}.`) +
+    (task.rework && handoff.outcome !== 'blocked'
+      ? ` This was rework: instead of new Changed/How/Check lines, add one **Reworked:** line after the **Review:** line, answering each numbered finding briefly (fixed how, or rebutted why).`
+      : '') +
     `\nReturn the suffix written, whether you wrote a NOTES.md entry, and a commit message for the uncommitted changes of ${task.id} (git diff, including your queue edits). Style: ${COMMIT_STYLE}`,
     { label: `annotate ${task.id}`, phase: 'Annotate', schema: ANNOTATION, effort: 'low' },
   )
@@ -206,7 +221,8 @@ for (let n = 0; n < MAX_TASKS; n++) {
     area: task.area,
     suffix: annotation?.suffix || suffix,
     changed: handoff.changed,
-    gates: (gates?.results || handoff.gates).map(x => `${x.pass ? '✓' : '✗'} ${x.cmd}`),
+    gates: (gates?.results || handoff.gates).map(x => `${x.pass ? '✓' : x.unrunnable ? '⊘' : '✗'} ${x.cmd}`),
+    ownerMustRun: unrunnable(gates).map(x => x.cmd),
     minorFindings: minors.map(f => `${f.file || ''} ${f.issue}`.trim()),
     blocker: handoff.blocker,
     commit: annotation?.commit,
