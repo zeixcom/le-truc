@@ -293,16 +293,20 @@ function parseChain(
 		if (raw === null) return
 		const rest = raw
 		raw = null
-		const closed = /~~\s*LT-\d+/.test(rest)
-		if (closed) {
-			chain.push({ name, positions: [], closed: true })
-			return
-		}
+		// Struck ids name closed work, but a track that also carries live
+		// positions (`~~LT-371~~ → LT-375 → …`) is open — only a track with no
+		// live ids of its own is a closed one (the gate-zero pattern).
+		const struck = /~~\s*LT-\d+/.test(rest)
 		const positions: ChainPosition[] = []
 		for (const segment of stripParens(rest).split(/\s*[→∥]\s*/)) {
 			positions.push({ ids: bareIds(segment) })
 		}
-		chain.push({ name, positions, closed: false })
+		const live = positions.some(p => p.ids.length > 0)
+		chain.push({
+			name,
+			positions: live ? positions : [],
+			closed: !live && struck,
+		})
 	}
 	for (let i = start + 1; i < lines.length; i++) {
 		const line = lines[i] ?? ''

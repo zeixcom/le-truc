@@ -62,7 +62,7 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓). Everything below is open.
 - **Design gates** — Area `design`: the Architect with the owner; `do-task` never picks them.
   LT-280 (per-item effect channels; owner grilling → ADR 0024 s5 / ADR 0032 amendments →
-  implementation tasks written into this file; LT-342 ruled with it). LT-334 (lazyload's
+  implementation tasks written into this file). LT-342 (ruled with LT-280). LT-334 (lazyload's
   boundary; its implementation task pairs with LT-390). LT-409 (the shadow-root departures
   session; re-scopes LT-405/LT-407/LT-408).
 - **A — pre-publish reshapes** — the published diagnostic record, root-is-host and the
@@ -103,81 +103,12 @@ recorded against the 30.4k opening measurement.
 
 ### Gate zero (closed 2026-10-02, b795ff3e)
 
-- [x] LT-370: Take the IR out of the public contract (D-25). — reviewed ✓
-  **Area:** compiler
-  **Context:** ADR 0034 s8 now says the IR is the lowering, internal, and may change in any
-  release; ADR 0040's reshapes no longer gate the publish. `contract.ts` still exports
-  `compileFromIR`, the IR types, `AstNode` and `SourceSpan`, and `contract.test.ts` plus the
-  `check:contract` toy front end exercise that IR-level seam (ADR 0032 s6 replaced it with the
-  source-to-source adapter seam, LT-376). Remove the IR types and `compileFromIR` from the
-  contract; move the toy front end's coverage to an internal test or retire it. **Leave
-  everything else in `contract.ts` as it is** — which entry points and result types are public
-  is the D-32 design session's call, not this task's.
-  **Docs:** `LE_TRUC_COMPILER.md` §2's published set and stability policy (the IR-union
-  clauses) follow; Tech Writer reviews.
-  **Channel/tier:** none — no check is added or retired.
-  **Note (LT-268 review, 2026-10-02):** the toy IR literal in `scripts/contract-check.ts`
-  predates LT-287/LT-288 (`exposeText`/`exposeKinds`/`refReasons`) and `check:contract` is red
-  at HEAD. Retiring or moving the toy here discharges it; don't refresh it separately.
-  **Verification:** `check:contract` and the full gates; goldens byte-identical.
-  **Changed (8b574f38):** `contract.ts` drops `compileFromIR`, `AstNode`, `SourceRange` and the
-  `ir.ts` IR types; its module doc says the IR is internal (ADR 0034 s8) and names the adapter seam
-  (ADR 0032 s6, LT-376) as the external extension point; the stability policy loses its IR
-  clauses. `SourceSpan` stays (`CompiledComponent.clientSpans`/`serverSpans`), and so does
-  `ExposeKind` (`RegistryEntry.exposedProps`). `contract.test.ts` pins the smaller set.
-  `scripts/contract-check.ts` retires the toy IR front end: `check:contract` now compiles one
-  `.tsx` source through `compileComponentTsx`, imported from `contract.ts` only, across Folded,
-  Simulated, Static and an LTC008 refusal (12 checks). The toy's IR-level coverage is retired, not
-  moved, since both front ends call `compileFromIR` across the suite. `LE_TRUC_COMPILER.md` §1, §2
-  ("The front-end seam and the public contract") and the §3 `contract.ts` row follow.
-  **Review (Architect, 2026-10-02):** API approved. The cut is the one D-25 asks for, and everything
-  else in `contract.ts` stays for D-32. Keeping `ExposeKind` is right: a public type names it.
-  `check:contract` over the public entry point is the proof LT-254 needs against the published
-  package. LT-387's `firstRefs` crash is gone with the toy. **Tech Writer (2026-10-02): approved with
-  edits.** `LE_TRUC_COMPILER.md` §2's result paragraph now gives the real shape
-  (`CompileFileResult` is `{ component, diagnostics }`; the artifacts, `entry` and spans are on
-  `CompiledComponent`, which is `null` after an error). The adapter sentence says the seam is not
-  built yet (LT-376). The stability rule covers every member of the set, restoring the coverage
-  the IR bullet gave (ADR 0034 s8). `contract.ts`'s module doc matches. `COMPILER_SPEC.md`
-  Appendix B's §4 and §8 cells are corrected. **For D-32:** `RegistryEntry` names `RenderedShape` (`ir.ts`) and
-  `SuppressedSite` (`simulation/contract.ts`), and neither is exported, before or after this task.
-
-- [x] LT-335: The simulation realm attributes a composed child's late work to the next component (LT-105 review). — done ✓
-  **Area:** compiler
-  **Context:** In the sim-driver's shared realm, module-coloreditor's composed form-colorgraph
-  draws after its render window closes. The `getContext` notice then lands on
-  **module-colorinfo**, which has no canvas. `realm.ts` § Attribution documents late reports
-  going to the most recent window, but that case is a late *rejection* after the last render.
-  This one blames an innocent component whenever a composite renders before a leaf. The
-  `module-colorinfo` entry in `sim/classifications.ts` is a workaround that masks this.
-  **Fix direction:** drain the composed closure's scheduled work (rAF, `schedule()`) before a
-  window closes, so it attributes to its own render. Falling back to tagging each diagnostic
-  with its originating element's host tag is acceptable if draining is not possible.
-  **Channel/tier:** none.
-  **Check:** the `module-colorinfo` canvas classification is retired, and the baseline test
-  stays green with it gone.
-  **Changed (3e831bd1):** `sim/realm.ts` gains `settlePreviousRender()`, which `render()` calls before
-  `renderWindow()`: it empties `document.body` while `currentComponent` still names the previous
-  render, then drains microtasks until a turn records no new diagnostic, all before the next call's
-  diagnostics slice starts. § Attribution documents it. The `module-colorinfo` canvas
-  classification is retired; `module-coloreditor`'s stays (LT-188's correct attribution to the
-  rendering parent, which now also covers its own teardown).
-  **How:** the task's hypothesis (rAF/`schedule()` work after the window) was wrong. rAF is stubbed
-  never to fire and no timer ran. The leak was disconnect-time work: the next window's `innerHTML`
-  assignment detached the previous tree, module-coloreditor's `pass()` restored form-colorgraph's
-  own `value` Slot, and the child's still-live canvas `watch` re-fired. So the notice blamed
-  whatever the page order rendered next (module-colorinfo in the suite, module-lazyload in
-  `build:docs`). Drain chosen; the origin-tag fallback was not needed.
-  **Check:** two pins fail at the old realm and pass now: `sim-realm.test.ts` (an inline fixture
-  reporting synchronously and from a queued microtask on disconnect) and `sim-driver.test.ts`
-  (build:docs' coloreditor → lazyload order). The LT-163 baseline is green without the retired entry.
-  **Residue → LT-411 (BACKLOG P5):** at `dispose()`, `window.close()` tears down the last render's tree
-  and module-listnav logs `window is not defined` after the report is computed.
+<!-- entries -->
 
 ### Design gates
 
 - [ ] LT-280: Per-item effect channels in reactive-list loops — the lowering covers text fill + events and nothing richer (LT-266 evidence). **Design first (grilling); gates the loop-heavy composite migrations LT-109/LT-110/LT-111.**
-  **Area:** design (then compiler)
+  **Area:** design
   **Context:** The LT-266 size-bet conversion drafted module-todo on `.tsx` in full and drove
   it through the compiler until it hit structural walls; the evidence and full analysis are
   pinned in [spike/size-bet/FINDING.md](spike/size-bet/FINDING.md) § "The TSX conversion
@@ -212,9 +143,11 @@ recorded against the 30.4k opening measurement.
   sanctioned subset with per-item wiring surviving hydration; parity suite extended;
   `bun test server/tests`, typecheck, warning baseline 0.
 
+
 - [ ] LT-342: A `.tsx` spelling for the reactive-list key binding — capability parity (ADR 0032 s6), found by the LT-233 review.
-  **Area:** design (then compiler)
+  **Area:** design
   **Needs:** LT-280
+  **Gates:** the first `.tsx` variant of form-tokenbox or module-list.
   **Context:** `.tsrx` binds the item key in the loop header (`@for (const item of items; key k)`)
   and a per-item handler acts through it (`items.remove(k)`) — form-tokenbox and module-list do.
   `.tsx`'s `.map()` has no spelling: an index parameter over a List is LTC005 (keyed
@@ -233,10 +166,10 @@ recorded against the 30.4k opening measurement.
   `listItemHandlerFix`/`listHandlerNames` in `surface.ts` gain the `.tsx` spelling, and a
   diagnostic-parity case pins the handler fix-it on both surfaces.
   **Channel/tier:** compiler, tier 1 (the shapes stay statically decidable).
-  **Gates:** the first `.tsx` variant of form-tokenbox or module-list.
+
 
 - [ ] LT-334: An async boundary lazyload can be spelled in (LT-104 review). **Gated by LT-276 (ADR 0037's template-cloned arms).**
-  **Area:** design (then compiler)
+  **Area:** design
   **Needs:** LT-276
   **Context:** The owner kept lazyload's hand-written `watch(content, { ok, nil, stale, err })`
   (2026-09-25), because the compiled `<truc:try>` misses its contract four ways:
@@ -252,6 +185,7 @@ recorded against the 30.4k opening measurement.
   stays a `watch` beside it (the `isPending` idiom's precedent says beside). Decide, then write
   the implementation task. The exit clause "lazyload's boundary is spelled `<truc:try>`"
   moves here.
+
 
 - [ ] LT-409: Design session — the departures of compiled CSS from a real shadow root (ADR 0033 s7 as a whole; re-scopes LT-405, LT-407, LT-408).
   **Area:** design
@@ -274,49 +208,8 @@ recorded against the 30.4k opening measurement.
   say so in the rewritten task and require LT-397's pixel-parity procedure.
   **Channel/tier:** decided per difference by the session.
 
-### A — Pre-publish reshapes ((LT-370 →) LT-371 → LT-375 ∥ LT-373 → LT-387)
 
-- [x] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07). — done, pending review ⏳
-  **Area:** compiler
-  **Needs:** LT-371
-  **Context:** owner ruling 2026-09-29, recorded in ADR 0032 s1 and `HOST_PROFILE.md`: the
-  template's root is the host element, there is no fragment root, and `<style>` is a child of
-  the root. 16 of 17 corpus `.tsx` sources still wrap the root and its `<style>` in a fragment.
-  Migrate them (mechanical: move `<style>` inside the root, drop the fragment) and then make the
-  fragment root a compile error naming the fix. Check what `.tsrx` accepts and give it the same
-  answer (ADR 0032 s6 parity; D-04 is parked, so `.tsrx` stays first-class). LT-306 also rewrites
-  every corpus sheet; land together or one right after the other, not interleaved.
-  **Channel/tier:** compiler, tier 1 Prevented (LTC060). Runtime: none (a source shape). Copy
-  follows `writer` → error-messages.
-  **Verification:** goldens byte-identical across the migration (the fragment never reached the
-  output); the new rule's fixture; diagnostic parity; full gates.
-  **Changed:** LTC060 (tier 1) + a shared driver refuse a fragment root on both surfaces;
-  `<style>` hoists into the root; 39 corpus sources + ~46 test files migrated; docs updated.
-  **How:** no fix was mine this round — the typecheck red was the concurrent queue session's
-  WIP, landed between rounds as round 2 predicted; every gate re-run green.
-  **Check:** all gates exit 0 (build-corpus, `tsc --noEmit` via bunx, typecheck, suite, lint).
-  Caveat: scripts/queue.ts is the round-2 reconstruction, validated but not byte-faithful.
-  **Review (Architect, 2026-10-03, `review-pending`):** changes requested ↩. LTC060 sits in the
-  shared driver and both surfaces refuse a fragment root from one place. (1) The migration
-  deleted layout Biome does not force — stylesheet blank lines, the blogmeta `<img>`,
-  `module-codeblock.tsx` from 22 blank lines to 9 (`git diff -w`: +69/−571) — which changes the
-  css/authoredCss artifacts and breaks "goldens byte-identical". Restore it so the edit is only
-  the mechanical move (`<style>` inside the root, fragment and one indent level dropped); keep the
-  Biome-forced setup reformatting (colorinfo, listbox/pluralize). Confirm the css/authoredCss
-  hashes match `1acffc9e^`. (2) LTC060's copy (`diagnostics.ts` ~457) names a `<style>` block the
-  author may not have; the rule fires on any fragment root. Make it shape-neutral (drop the
-  fragment, the root is the host; a stylesheet is a `<style>` child of the root), optionally
-  leading with `wording.outputLabel` as LTC008 does. Update the pins in
-  `first-cardinality.test.ts`, `diagnostic-parity.test.ts` and `skills/le-truc/references/errors.md`.
-  Nits fixed by the reviewer (a25c362c): the CHANGELOG LTC060 bullet, the dead
-  `SurfaceAdapter.lowerChildren`, COMPILER_SPEC App. B row 3.1, the `lower-template.ts` fix text,
-  two JSDoc headers. Follow-up: LT-417.
-  **Reworked:** (1) fixed — migration regenerated by script from `1acffc9e^`; authoredCss hashes
-  match for all 39 sources, `git diff -w` +50/−131; only Biome-forced reformat kept (blogmeta `<img>`,
-  listbox; colorinfo also lost pre-existing semicolons, unforced). (2) fixed — LTC060 copy, JSDoc,
-  pins, errors.md and ledger shape-neutral; `outputLabel` declined (surface-specific copy, no gain).
-  Left: `DiagnosticCode` union comment (~93) and errors.md line 33 still assume `<style>`;
-  test:variants unrun (Playwright times out in sandbox).
+### A — pre-publish reshapes
 
 - [ ] LT-373: Annotate every template expression with its reactivity class (D-26, ADR 0040 s7).
   **Area:** compiler
@@ -333,6 +226,7 @@ recorded against the 30.4k opening measurement.
   **Verification:** goldens, render and diagnostic parity byte-identical; the tier census
   unchanged; full gates.
 
+
 - [ ] LT-387: Reactive-condition mode classification follows scope (LT-274 review).
   **Area:** compiler
   **Needs:** LT-373
@@ -347,25 +241,8 @@ recorded against the 30.4k opening measurement.
   *(Planning, 2026-10-02: discharged by LT-370 in gate zero — same stale toy IR; drop the
   ride-along if `check:contract` is green when this is picked up.)*
 
-### B — Correctness
 
-- [ ] LT-378: The `@if` branch signature ignores which prop a prop-bound attribute binds (LT-368 review).
-  **Area:** compiler
-  **Context:** `constructSignatureOf` (`analysis/effects.ts`) keys each client-construct attribute
-  as `bind:<name>=<text>`, but takes text only from `event`, `reactive`, `class-map` and
-  `style-map` attributes. A `server` attribute with `bindsProp` (LT-122), a `pass` attribute and a
-  reactive `html` attribute all contribute an empty text. So two branch roots that bind
-  *different* props to the same attribute compare equal and are union-addressed. Reproduced
-  2026-10-01 in `.tsrx`: `@if (flag) { <p class="msg" title={label} …> } @else { <p class="msg"
-  title={desc} …> }` compiles with no diagnostic to one `watch(() => host.label,
-  bindAttribute(p, 'title'))`, so the `@else` root shows `label`. This is a silent miscompile; it
-  predates LT-231. Fix: give each of the three kinds its distinguishing text (`bindsProp`, the pass
-  entries' text, the html value text). Unequal signatures then route to per-branch addressing,
-  which already raises LTC007 when the roots cannot be told apart. Pin it in
-  `converged-answers.test.ts` beside LT-368's pins, on both surfaces (the `.tsx` ternary).
-  **Channel/tier:** none added; LTC007 (compiler, tier 1 Prevented) now fires where it should.
-  **Verification:** the pin fails with the fix reverted; corpus byte-identical; diagnostic parity;
-  full gates.
+### B — correctness
 
 - [ ] LT-391: An arm kind for `SuppressedSite` (ADR 0037 s5 under the Simulated tier).
   **Area:** compiler
@@ -373,6 +250,7 @@ recorded against the 30.4k opening measurement.
   correctly renders no live arm, but when the component is Simulated for another reason the
   realm's connect clones an arm into the served HTML. Record suppressed arm sets and strip
   the realm-cloned arm before serialization, as other limb-(b) sites are.
+
 
 - [ ] LT-392: Regenerate the declared types and gate an arm-set client against them (LT-385 review finding).
   **Area:** compiler
@@ -395,6 +273,7 @@ recorded against the 30.4k opening measurement.
   the golden invocation; `check:contract` stays green; run the full `build` to regenerate
   `types/` and diff for any other stale-surface drift landing in the same pass.
 
+
 - [ ] LT-356: An unparseable or non-object catalog FILE is silent in the census and destroyed by `i18n:sync` (LT-249 review).
   **Area:** server
   **Context:** LT-249 made non-string catalog VALUES loud. The file-level sibling is worse.
@@ -415,6 +294,7 @@ recorded against the 30.4k opening measurement.
   leaves the file byte-identical and exits non-zero naming it; committed catalogs are
   unaffected. **Copy:** follows `writer` → error-messages.
 
+
 - [ ] LT-353: Reject unrecognized `truc:`-namespaced attributes at classification, on both surfaces (LT-251 review).
   **Area:** compiler
   **Needs:** LT-371
@@ -431,6 +311,7 @@ recorded against the 30.4k opening measurement.
   decidable, no runtime half). **Copy:** follows `writer` → error-messages (error-message lifecycle).
   **Check:** add a `diagnostic-parity.test.ts` row for a `truc:bogus` attribute on both
   surfaces; the corpus stays warning-free.
+
 
 - [ ] LT-355: A composed child inside a reactive-list template is silently dropped — render it, with its root `lang` and `i18n` (LT-351 ruling, ADR 0030 s9).
   **Area:** compiler
@@ -458,6 +339,7 @@ recorded against the 30.4k opening measurement.
   **Docs on landing:** `server/compiler/HOST_PROFILE.md` ("A client-created instance speaks the
   source locale") gets the revised rule.
 
+
 - [ ] LT-417: Refuse a `<style>` block that is not the root's single direct `<style>` child (LT-375 review).
   **Area:** compiler
   **Needs:** LT-375
@@ -474,7 +356,8 @@ recorded against the 30.4k opening measurement.
   **Verification:** fixtures on both surfaces (a second direct `<style>`, a nested `<style>`);
   diagnostic parity; the corpus still builds; full gates.
 
-### C — Corpus port (LT-280 → LT-109–LT-111)
+
+### C — corpus port
 
 - [ ] LT-374: Enforce the raw-value-source rule for formatted reactive values (D-20).
   **Area:** compiler
@@ -494,6 +377,7 @@ recorded against the 30.4k opening measurement.
   **Verification:** a failing fixture per formatting kind; a passing `<data value>` and
   `<time datetime>` fixture whose harvest round-trips; corpus byte-identical or each change
   justified; full gates.
+
 
 - [ ] LT-186: A TSRX rule for an unkeyed element sibling of a `@for` in a reconcile container (LT-185's compiler half).
   **Area:** compiler
@@ -532,6 +416,7 @@ recorded against the 30.4k opening measurement.
   explicitly exempt) ADR 0037's arm templates as container children. See
   [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) sub-design 5.
 
+
 - [ ] LT-109: Migrate `module-calctable` to `.tsx` with same-commit cutover.
   **Area:** examples
   **Needs:** LT-280, LT-375, LT-374, LT-186
@@ -539,6 +424,7 @@ recorded against the 30.4k opening measurement.
   lower to the compiled `each()`/reconcile path (LT-003) — check loop-body reactive attrs on
   non-root children (LT-037) carefully. Formats numbers through `Intl`; read LT-142's fold rule
   and ADR 0029's tier split rather than re-deciding whether those thunks fold.
+
 
 - [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
   **Area:** examples
@@ -550,6 +436,7 @@ recorded against the 30.4k opening measurement.
   LT-165 step 7's corpus pin:** Simulated tier with its `Math.random()` expression suppressed
   and everything else simulated.
 
+
 - [ ] LT-111: Migrate `module-todo` to `.tsx` with same-commit cutover — last hand-written example, completes the corpus port.
   **Area:** examples
   **Needs:** LT-280, LT-375, LT-374, LT-186
@@ -557,6 +444,7 @@ recorded against the 30.4k opening measurement.
   Has a spec. Completing this satisfies LT-014's trigger — after review, confirm the corpus
   sweep: no `.ts` component files remain in `examples/` outside `test/`, `docs/`, and `_common`
   helpers.
+
 
 - [ ] LT-390: A corpus consumer for reactive conditions and the boundary, with audit coverage.
   **Area:** examples
@@ -568,7 +456,41 @@ recorded against the 30.4k opening measurement.
   extend `equivalence-audit.test.ts` to the arm-adoption class.
   **Depends on** LT-385.
 
-### D — CSS departures (LT-409 → re-scoped)
+
+- [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
+  **Area:** examples
+  **Needs:** LT-280, LT-375, LT-374, LT-186
+  **Context:** ~283 lines, the most loop-dense example (`each()` ×11, `MutationObserver` ×6,
+  `IntersectionObserver`, `populate`). Expect this to stress the loop/effect analysis hardest —
+  surface compiler gaps in NOTES.md rather than restructuring the component away from its
+  demonstrated patterns. Formats through `Intl`; same tiering reference as LT-109. **This is
+  LT-165 step 7's corpus pin:** Simulated tier with its `Math.random()` expression suppressed
+  and everything else simulated.
+
+
+### D — CSS departures
+
+- [ ] LT-409: Design session — the departures of compiled CSS from a real shadow root (ADR 0033 s7 as a whole; re-scopes LT-405, LT-407, LT-408).
+  **Area:** design
+  **Context:** The owner's ruling and the facts the session starts from, moved from the
+  BACKLOG.md P2b preamble:
+  **[2026-10-02, owner: LT-405 rolled back; LT-407 and LT-408 deferred from the current iteration's track D.]** All three explain or police a way compiled CSS departs from a real shadow root. The owner wants those departures re-evaluated in a design session (architect) before more of them are documented or given diagnostics: "the differences to real Shadow DOM become a burden that is increasingly hard to explain." The session reviews ADR 0033 s7's list as a whole (zero-specificity `:host(…)`, template-authored content inside a composed child, the LTC070/LTC071 refusals) and decides, for each, whether to keep it, close the gap in the emission, or reshape it. Re-scope all three from the session's outcome before picking any up.
+
+  **Known state after the rollback (2026-10-02, measured by a contributor).** These are the input facts for the session.
+  - `:host { &:hover/&.x/&[open] { … } }` (and `:host(.a) { &:hover }`) gets no diagnostic. It emits exactly what the flat `:host:hover` would, `:where(my-box):hover` lowered and `:where(:scope):hover` native. That styles the host, where a shadow root matches nothing (`:host` is featureless; spec reasoning, not browser-checked).
+  - The qualifier carries (0,1,0), so a page `my-box { … }` rule loses to it. That makes `styling.md:74` / `HOST_PROFILE.md:76` ("Page styles still win over `:host` rules") and § Differences' "behaves like the same sheet in a shadow root, except where …" overclaim for this form.
+  - In lowered mode with boundaries, the nested form picks up the self-nesting guard, which `:host(X)` does not.
+  - The corpus relies on the nested form at about 37 sites in 14 sources.
+  - `:host(X)` still emits at (0,0,0), arguments included (LT-408's difference, undocumented).
+  **Deliverable:** for each s7 difference — zero-specificity `:host(…)`, the nested
+  `&<qualifier>` in `:host { }`, template-authored content inside a composed child, the
+  LTC070/LTC071 refusals — a ruling: keep (and document once), close the gap in the emission,
+  or reshape the authored form. Amend ADR 0033 s7 in place (unpublished). Then rewrite LT-405,
+  LT-407 and LT-408 from the outcome (or strike them), naming channel and tier for any check
+  that returns (ADR 0028). A ruling that changes emission changes goldens and pixels by design:
+  say so in the rewritten task and require LT-397's pixel-parity procedure.
+  **Channel/tier:** decided per difference by the session.
+
 
 - [ ] LT-405: A nested qualifier on `:host` evades LTC070 (LT-398 residue). — rolled back 2026-10-02, deferred to the design session
   **Area:** compiler
@@ -588,6 +510,7 @@ recorded against the 30.4k opening measurement.
   corpus's specificity loss changes no computed value (static pass), and pixel confirmation
   rides LT-397. The nested face's copy and fix-it go to LT-407.
 
+
 - [ ] LT-407: LTC070's nested face — `&<qualifier>` inside `:host { }` gets its own message and fix-it (LT-405 review).
   **Area:** compiler
   **Needs:** LT-409
@@ -606,6 +529,7 @@ recorded against the 30.4k opening measurement.
   each face's message (the nested one has no in-place `:host(…)` fix-it). `tsc` 0, server suite
   green.
 
+
 - [ ] LT-408: Document the zero-specificity `:host(…)` arguments as an s7 difference (owner ruling 2026-10-02, LT-405 NOTES question).
   **Area:** docs
   **Needs:** LT-409
@@ -623,6 +547,7 @@ recorded against the 30.4k opening measurement.
   limitation, not a deferred check.)
   **Verification:** `check:links` green, and the three files state the difference in the same
   words.
+
 
 ### Parallel slot
 
@@ -643,6 +568,7 @@ recorded against the 30.4k opening measurement.
   with this checkout's `bun run dev` on 3000, `bun run test` reuses it; `grep -rn "localhost:3000"
   examples/` returns nothing.
 
+
 - [ ] LT-305: Baseline guard — fail the build when shipped code needs a feature newer than the pinned baseline (REQUIREMENTS § Browser support). **Ships in 3.0.**
   **Area:** runtime
   **Context:** Owner ruling 2026-09-24: the runtime baseline is **Baseline 2023**, pinned per
@@ -661,6 +587,7 @@ recorded against the 30.4k opening measurement.
   (a CI failure; no runtime half).
   **Check:** the gate is green at HEAD with Baseline 2023; a fixture using a 2024-only API
   unguarded fails it; bumping the year without a major version fails it.
+
 
 - [ ] LT-277: Seam hardening from the LT-267 review — glob dot-rule edges, `fileExists` contract, doc enumeration.
   **Area:** server
@@ -702,35 +629,3 @@ recorded against the 30.4k opening measurement.
   dot-segment scan semantics on BOTH implementations; `check:portability` stays 3/3
   byte-identical.
 
-- [x] LT-393: Sweep the stale ADR 0023 citations in compiler module docs to ADR 0024 (LT-359 residue). — done ✓
-  **Area:** compiler
-  **Context:** The 2026-10-01 ruling fixed the compiler ADR's number: the isomorphic-format
-  ADR is 0024, and its sub-design numbers already match — only the number is wrong.
-  LT-359(c) swept the ruled scope (diagnostic copy in `diagnostics.ts`, message-bearing
-  call sites, `errors.md`, the CHANGELOG line), but ~20 pipeline module docs still cite
-  "ADR 0023" for compiler decisions: `config.ts`, `ir.ts`, `compose-attrs.ts`,
-  `classify-attributes.ts`, `imports.ts`, `extract-context.ts`, `runtime.ts` JSDoc,
-  `spans.ts`, `emit-server.ts`, `emit-client.ts`, `registry.ts`, `assemble-ir.ts`,
-  `walk.ts`, `core.ts`, `core-shim.d.ts`, `css.ts`, `vocabulary.ts`,
-  `setup-extraction.ts`, `ast-utils.ts`, `analysis/harvest.ts`, `analysis/plan.ts`,
-  `analysis/selectors.ts`, `analysis/effects.ts` comments, `lower-shared.ts` JSDoc and
-  `frontend/tsrx/*`. Comment-only sweep, zero behavior: comment citations move to
-  "ADR 0024" (keep the sub-design number); a citation that genuinely means the
-  bind-helper map-form ADR 0023 stays. Byte-identity gates protect the sweep (goldens
-  unchanged proves comment-only).
-  **Check:** `grep -rn "ADR 0023" server/compiler/` returns only genuine bind-helper
-  citations **in comments** (Architect, 2026-10-03: the four string citations are output and
-  moved to LT-414); corpus goldens and parity byte-identical; tsc clean.
-  **Changed:** comment and JSDoc citations in 27 `server/compiler/` modules → ADR 0024 (first
-  `do-task` run). `css.ts` had none left. Gates green.
-
-- [x] LT-410: `errors.md` rows for LTC071 and the widened LTC051 (LT-402 handoff, found by the `writer` at the 2026-10-02 changelog prune). — done ✓
-  **Area:** docs
-  **Changed:** `skills/le-truc/references/errors.md` (rewritten with the skill slim, 2026-10-03: one row per emitted code, 61, script-checked against `diagnostics.ts`; LTC051 has both faces); the CHANGELOG skill entry was rewritten for the shipped skills.
-  **Context:** LT-402's copy round reworded LTC066–LTC071 and gave LTC051 a boundary face (LT-403
-  wired it), but the `le-truc` skill's `references/errors.md` has no LTC071 row and LTC051's row
-  still describes only the sheet drift. The CHANGELOG's skill entry correctly says LTC061–LTC070,
-  so update it to LTC071 in the same pass. Take the wording from `diagnostics.ts` as landed.
-  **Channel/tier:** none — copy only.
-  **Verification:** every `LTC` code `diagnostics.ts` can emit has an `errors.md` row; `check:links`
-  green.

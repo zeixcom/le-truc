@@ -328,4 +328,19 @@ describe('chainOrder', () => {
 		])
 		expect(tracks[0]?.ids).toEqual(['LT-200', 'LT-201'])
 	})
+
+	test('an inline struck id does not close its track', () => {
+		// The live chain strikes LT-371 mid-sequence in track A while LT-375,
+		// LT-373 and LT-387 stay live; only an all-struck track is closed.
+		const { tracks, closed } = chainOrder(
+			[
+				'**The chain.**',
+				'- **Gate zero — closed 2026-10-02.** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).',
+				'- **A — struck inline** — live past the strike. ~~LT-371~~ (reviewed ✓) → LT-375 → LT-373.',
+			].join('\n'),
+		)
+		expect(closed.has('LT-371')).toBe(true)
+		expect(tracks.map(t => t.name)).toEqual(['A — struck inline'])
+		expect(tracks[0]?.ids).toEqual(['LT-375', 'LT-373'])
+	})
 })

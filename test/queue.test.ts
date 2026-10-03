@@ -198,6 +198,34 @@ function parseChainForTest(text: string) {
 describe('pick', () => {
 	const todo = (entries: string) => `${TODO_HEADER}${entries}`
 
+	test('an inline struck id does not close its track', () => {
+		// Track A of the 2026-10-03 iteration strikes LT-371 mid-sequence while
+		// LT-373 stays live; the gate-zero track is all-struck and stays closed.
+		const state = stateFrom({
+			'TODO.md': [
+				'# TODO',
+				'',
+				'**The chain.**',
+				'- **A — struck inline** — live past the strike. ~~LT-371~~ (reviewed ✓) → LT-373.',
+				'- **Gate zero — closed (abc123).** ~~LT-104~~ (done ✓).',
+				'',
+				'**Next free task ID: LT-105.**',
+				'',
+				'---',
+				'',
+				'- [x] LT-371: Struck mid-sequence — reviewed ✓',
+				'  **Area:** compiler',
+				'- [ ] LT-373: Live behind the strike',
+				'  **Area:** compiler',
+			].join('\n'),
+			'BACKLOG.md': '# BACKLOG\n',
+			'DONE.md': '# DONE\n',
+		})
+		const decision = pick(state)
+		expect(decision.picked).toBe(true)
+		expect(decision.task?.id).toBe('LT-373')
+	})
+
 	test('picks the first ready task in track order', () => {
 		const state = stateFrom({
 			'TODO.md': todo(

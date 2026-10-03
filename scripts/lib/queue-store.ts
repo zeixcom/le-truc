@@ -241,15 +241,20 @@ export function renderTitleLine(task: QueueTask): string {
 	return `- [${settled ? 'x' : ' '}] ${task.id}: ${task.title}${tail ? ` — ${tail}` : ''}`
 }
 
-/** The entry block as it appears in a kanban file (body indented two spaces). */
+/** The entry block as it appears in a kanban file: title line, the machine
+ * fields as body lines (they live in front matter in the store), then the
+ * prose body — indented two spaces, blank lines collapsed away. */
 export function renderEntry(task: QueueTask): string {
-	const body = task.body
-		? task.body
-				.split('\n')
-				.map(line => (line.trim() === '' ? '' : `  ${line}`))
-				.join('\n')
-		: ''
-	return body ? `${renderTitleLine(task)}\n${body}` : renderTitleLine(task)
+	const fields = [
+		`**Area:** ${task.area}`,
+		...(task.needs.length ? [`**Needs:** ${task.needs.join(', ')}`] : []),
+		...(task.gates.length ? [`**Gates:** ${task.gates.join(', ')}`] : []),
+	]
+	const body = [...fields, ...task.body.split('\n')]
+		.map(line => (line.trim() === '' ? '' : `  ${line}`))
+		.filter((line, i, all) => !(line === '' && all[i - 1] === ''))
+		.join('\n')
+	return `${renderTitleLine(task)}${body ? `\n${body}` : ''}`
 }
 
 const TERMINAL: TaskStatus[] = ['pending-review', 'done', 'reviewed']
@@ -271,11 +276,7 @@ export function chainOrder(iteration: string): {
 		if (raw === null) return
 		const rest = raw
 		raw = null
-		if (/~~\s*LT-\d+/.test(rest)) {
-			for (const m of rest.matchAll(/~~\s*(LT-\d+)/g))
-				if (m[1]) closed.add(m[1])
-			return
-		}
+		for (const m of rest.matchAll(/~~\s*(LT-\d+)/g)) if (m[1]) closed.add(m[1])
 		let flat = rest
 		let prev = ''
 		while (flat !== prev) {
@@ -290,7 +291,10 @@ export function chainOrder(iteration: string): {
 				ids.push(m[0])
 			}
 		}
-		tracks.push({ name, ids })
+		// A track whose ids are all struck is closed (the gate-zero pattern) and
+		// contributes nothing; a track with live positions stays open even when
+		// it also strikes one id (`~~LT-371~~ → LT-375 → …`).
+		if (ids.length) tracks.push({ name, ids })
 	}
 	for (let i = start + 1; i < lines.length; i++) {
 		const line = lines[i] ?? ''
@@ -328,7 +332,7 @@ export function renderBacklog(store: Store): string {
 			out = insertUnderHeading(
 				out,
 				section,
-				members.map(renderEntry).join('\n'),
+				members.map(renderEntry).join('\n\n'),
 			)
 		}
 	}
@@ -336,7 +340,7 @@ export function renderBacklog(store: Store): string {
 		t => !sections.some(section => inBand(t, section)),
 	)
 	if (unbanded.length) {
-		out += `\n## Unbanded\n\n${unbanded.map(renderEntry).join('\n')}\n`
+		out += `\n## Unbanded\n\n${unbanded.map(renderEntry).join('\n\n')}\n`
 	}
 	return out
 }
@@ -375,7 +379,7 @@ export function renderTodo(store: Store): string {
 		})
 		if (members.length) {
 			sections.push(
-				`### ${track.name}\n\n${members.map(renderEntry).join('\n')}`,
+				`### ${track.name}\n\n${members.map(renderEntry).join('\n\n')}`,
 			)
 		}
 	}
@@ -391,7 +395,7 @@ export function renderDone(store: Store): string {
 		.sort(byIdNumber)
 	const base = store.ledger.replace(/\n?$/, '\n')
 	if (!done.length) return base
-	return `${base}\n${done.map(renderEntry).join('\n')}\n`
+	return `${base}\n${done.map(renderEntry).join('\n\n')}\n`
 }
 
 // ── Migration (markdown queue → store) ────────────────────────────────────────
