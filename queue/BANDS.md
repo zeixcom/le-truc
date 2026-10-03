@@ -1,7 +1,7 @@
 # BACKLOG
 
-Planned tasks out of scope for the current iteration. Part of the 3-file mini-kanban
-(owner, 2026-09-18):
+Planned tasks out of scope for the current iteration. Part of the per-task queue store
+(owner, 2026-09-18; store since 2026-10-03):
 
 - **BACKLOG.md** (this file) — everything planned; new tasks are created here, with full context.
 - **TODO.md** — the current iteration only. The Architect moves tasks here at iteration
@@ -11,7 +11,7 @@ Planned tasks out of scope for the current iteration. Part of the 3-file mini-ka
   the `writer`'s changelog).
 
 Only the Architect moves tasks between files; contributors annotate the status suffix on the entry in place. Task IDs are global and
-sequential across all three files; the "Next free task ID" line lives in TODO.md's header.
+sequential across all three files; the "Next free task ID" line lives in the `queue/ITERATION.md` header.
 Bands below are priority-ordered: they are the planned pick order for future iterations, not a
 schedule. Band preambles may narrate landed work as history — the compacted records live in
 DONE.md.

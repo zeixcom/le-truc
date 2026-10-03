@@ -1,13 +1,16 @@
 # DONE
 
-Done-and-reviewed tasks since the last release, compacted per the 3-file mini-kanban (owner,
-2026-09-18). Each entry keeps only what is still load-bearing: rulings recorded nowhere else,
-live handoffs into open tasks (referenced by LT-ID), and the changed-artifact facts the `writer`
-needs for the changelog at release planning. Verification transcripts, changed-file line inventories and
-review narratives are dropped — the full record stays in `git log -p`. Entries still carrying
-`— done, pending review ⏳` are finished but not yet reviewed; their review pass happens in a
-future iteration. At release planning the `writer` consumes this file alongside
-`CHANGELOG.md [Unreleased]`; the Architect then prunes entries whose context no live task needs.
+Done-and-reviewed tasks since the last release, compacted into this ledger prose (the
+`DONE.md` view is built from it by `bun run queue:build`; a task's own record lives in
+`queue/LT-NNN.md` until a prune deletes it). Each entry keeps only what is still load-bearing:
+rulings recorded nowhere else, live handoffs into open tasks (referenced by LT-ID), and the
+changed-artifact facts the `writer` needs for the changelog at release planning. Verification
+transcripts, changed-file line inventories and review narratives are dropped — the full record
+stays in `git log -p`. Entries still carrying `— done, pending review ⏳` are finished but not
+yet reviewed; their review pass happens in a future iteration. At release planning the
+`writer` consumes the DONE view alongside `CHANGELOG.md [Unreleased]`; the Architect then
+prunes `queue/LT-NNN.md` files whose context no live task needs, carrying homeless rulings
+into this prose.
 
 ---
 

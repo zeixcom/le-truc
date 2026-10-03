@@ -1,7 +1,7 @@
 # BACKLOG
 
-Planned tasks out of scope for the current iteration. Part of the 3-file mini-kanban
-(owner, 2026-09-18):
+Planned tasks out of scope for the current iteration. Part of the per-task queue store
+(owner, 2026-09-18; store since 2026-10-03):
 
 - **BACKLOG.md** (this file) — everything planned; new tasks are created here, with full context.
 - **TODO.md** — the current iteration only. The Architect moves tasks here at iteration
@@ -1285,20 +1285,6 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Channel/tier:** none — no rule or copy change.
   **Check:** the range pin covers `async` on both surfaces; parity green.
 
-
-- [ ] LT-421: Fix the dead `workflows/improve-docs-architecture.md` citation in the writer's document map.
-  **Area:** docs
-  **Gates:** check:links
-  **Context:** `.agents/skills/writer/references/document-map.md:341` cites "see
-  `workflows/improve-docs-architecture.md`", which exists nowhere in the repo — a repo-wide grep
-  finds only this citation and the historical mention at `CHANGELOG.md:158` (a `tech-writer`
-  workflow of that name); the live reference doc is
-  `.agents/skills/writer/references/docs-architecture.md`. Point the citation at
-  `references/docs-architecture.md` or drop it; propose via
-  `.agents-proposals/skills/writer/references/document-map.md`. Fix it in the same pass as the
-  LT-418 finding (4) — same line — when that rework lands.
-  **Channel/tier:** none — guidance only.
-  **Verification:** `check:links` green; no other dead pointer on the touched page.
 
 ## Unbanded
 
