@@ -15,10 +15,11 @@
  * commits beyond HEAD is reused too, because that is a task's rework
  * continuing, not a stale cut. Prints the worktree facts as JSON.
  *
- * Commits made inside a worktree are unsigned: the bootstrap sets
- * commit.gpgsign=false worktree-locally (extensions.worktreeConfig; owner
- * ruling 2026-10-03). Task branches are local-only and the integration merge
- * in the main checkout stays signed.
+ * Commits made inside a worktree are unsigned: the commit step passes
+ * `-c commit.gpgsign=false` (owner ruling 2026-10-03), and the bootstrap
+ * additionally sets commit.gpgsign=false worktree-locally where the host
+ * allows config writes. Task branches are local-only and the integration
+ * merge in the main checkout stays signed.
  *
  * `commit` is how a run lands its work (owner ruling 2026-10-03): it stages
  * exactly the given paths — the run's Changed list, so gate-run churn never
@@ -84,11 +85,29 @@ const PROTECTED_PATHS = ['BACKLOG.md', 'TODO.md', 'DONE.md', 'NOTES.md', 'queue/
 const worktreePath = (id: string) => join(ROOT, '.worktrees', id)
 const branchOf = (id: string) => `task/${id}`
 
-// Signing is configured worktree-locally so a human or a tool committing in
-// the worktree cannot silently depend on the owner's agent key being present.
+// Signing is disabled worktree-locally where the host allows it, so a human
+// or tool committing by hand in the worktree needs no key. Some sandboxes
+// (Claude Code's) block writes under .git/config, so the write is
+// best-effort: the actual guarantee is the commit step's
+// `-c commit.gpgsign=false`, which touches no config file.
 function ensureUnsigned(worktreePath: string): void {
-	git(['config', 'extensions.worktreeConfig', 'true'])
-	git(['-C', worktreePath, 'config', '--worktree', 'commit.gpgsign', 'false'])
+	const note = 'worktree commits stay unsigned via the commit step only'
+	if (
+		spawnSync('git', ['config', 'extensions.worktreeConfig', 'true'], {
+			cwd: ROOT,
+			encoding: 'utf8',
+		}).status !== 0
+	) {
+		console.error(`note: could not set extensions.worktreeConfig (.git/config write-blocked?) — ${note}`)
+		return
+	}
+	if (
+		spawnSync('git', ['-C', worktreePath, 'config', '--worktree', 'commit.gpgsign', 'false'], {
+			cwd: ROOT,
+			encoding: 'utf8',
+		}).status !== 0
+	)
+		console.error(`note: could not set worktree-local commit.gpgsign=false — ${note}`)
 }
 
 function linkNodeModules(worktreePath: string): string {
