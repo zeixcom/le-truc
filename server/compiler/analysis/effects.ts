@@ -411,7 +411,13 @@ const hasDeepConstruct = (el: ElementNode, depth = 0): boolean =>
  * whichever branch rendered); differing signatures — a construct key
  * present on only some roots (the old LTC031 case) or the same key with
  * different text (the old "constructs differ" case) — route to per-branch
- * addressing instead. Same key/text extraction those diagnostics compared.
+ * addressing instead. The text is whatever the client effect would differ
+ * by: an event's handler, a reactive/class-map/style-map thunk, a
+ * `server` attribute's `bindsProp` name, a `pass` attribute's
+ * `prop=thunk` entries, a reactive `html` attribute's value text
+ * (LT-378 — those last three contributed an empty text before, so two
+ * roots binding DIFFERENT sources to the same attribute compared equal
+ * and were union-addressed onto the primary root's source).
  */
 const constructSignatureOf = (root: ElementNode): string => {
 	const parts: string[] = []
@@ -425,7 +431,20 @@ const constructSignatureOf = (root: ElementNode): string => {
 						attr.kind === 'class-map' ||
 						attr.kind === 'style-map'
 					? attr.thunkText
-					: ''
+					: attr.kind === 'server'
+						? (attr.bindsProp ?? '')
+						: attr.kind === 'pass'
+							? attr.entries
+									.map(
+										entry =>
+											`${entry.prop}=${entry.thunkText}${
+												entry.setThunkText ? ` set=${entry.setThunkText}` : ''
+											}`,
+									)
+									.join(',')
+							: attr.kind === 'html'
+								? attr.exprText
+								: ''
 		parts.push(`${key}=${attrText}`)
 	}
 	return parts.sort().join('|')
