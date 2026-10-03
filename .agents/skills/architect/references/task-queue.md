@@ -78,8 +78,8 @@ A few entries carry a non-contract closed suffix instead (`parked`, `closed as m
 
 - Group the tasks into tracks with one line of purpose each. Inside a track, list the tasks in pick order.
 - A task is **ready** when four things hold: it has no suffix, its `Area` is not `design`, every LT-ID in its `**Needs:**` is satisfied, and every earlier task in its track is satisfied or `blocked ⛔`.
-- `do-task` first takes any `— changes requested ↩` task, in file order. Then it picks the first ready task, tracks in order. When nothing is ready, it stops and reports why. It does not guess.
-- A track whose next task is claimed (`⚙`) or `blocked ⛔` **stalls**: that task and everything behind it in that track is skipped, and the scan falls through to the next track. A `blocked ⛔` does not end the iteration.
+- `do-task` first takes any `— changes requested ↩` task, in chain order. Then it picks the first ready task, tracks in order. When nothing is ready, it stops and reports why. It does not guess.
+- A track whose next task is claimed (`⚙`) or on a non-contract status **stalls**: that task and everything behind it in that track is skipped, and the scan falls through to the next track. A `blocked ⛔` task is skipped and its track continues.
 - When the order depends on a ruling that a `Needs:` field cannot express, write the ruling into the header's rulings list and the dependency into `Needs:`.
 
 `bun run scripts/queue.ts pick [LT-NNN]` prints this decision as JSON, and `list [--status <status>]` prints the store's tasks as JSON (both read-only; `claim`, `annotate`, `reset` are the write commands). `bun run check:queue` fails the build when an entry breaks the format, a `Needs:` reference dangles, IDs collide, or the checkbox and suffix disagree; an open entry the chain does not name is reported as a note.

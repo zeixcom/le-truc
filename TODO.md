@@ -1,10 +1,11 @@
 # TODO
 
-Current iteration only. Part of the 3-file mini-kanban (owner, 2026-09-18) with `BACKLOG.md`
-(everything planned, out of iteration scope — new tasks are created there) and `DONE.md`
-(done-and-reviewed tasks since the last release, compacted for the `writer`'s changelog pass). Only the
-Architect moves tasks between files; contributors annotate the status suffix on the entry in
-place. Task IDs are global and sequential across all three files.
+Current iteration only. The queue is a per-task store (`queue/LT-NNN.md`, one file per task;
+`BACKLOG.md`, `TODO.md` and `DONE.md` are views built by `bun run queue:build`). New tasks are
+created in `queue/` with a `band:`; the Architect moves them by editing `status:` and the chain
+in this file; contributors claim and annotate only through `bun run scripts/queue.ts`. Task IDs
+are unique by construction — the filename is the ID; the "Next free task ID" line below
+allocates the next one.
 
 **Current iteration (opened 2026-10-02): the corpus port and the pre-publish reshapes.** The
 previous iteration (consolidate the compiler, then land the pre-publish reshapes: tracks A–D,
@@ -78,7 +79,7 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
   needs LT-409).
 - **Parallel slot** — independent work. LT-420 first (worktree commits + review-pass
   integration; owner ruling 2026-10-03 — the flow LT-418 and LT-419 are the first tasks to
-  ride end to end), then LT-418 → LT-419 (the skills-restructuring residue), then LT-415 (test
+  ride end to end), then LT-418 → LT-419 (the skills-restructuring residue; LT-421 rides its pass), then LT-415 (test
   servers on a free port; the do-task gates trip on a stray server on 3000), then LT-305 (the
   Baseline 2023 guard, ships in 3.0), LT-277 (server), LT-393 (comment-only sweep), LT-410
   (the `errors.md` rows).
@@ -101,7 +102,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-421.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-422.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -211,23 +212,6 @@ recorded against the 30.4k opening measurement.
   that returns (ADR 0028). A ruling that changes emission changes goldens and pixels by design:
   say so in the rewritten task and require LT-397's pixel-parity procedure.
   **Channel/tier:** decided per difference by the session.
-
-
-### A — pre-publish reshapes
-
-- [ ] LT-387: Reactive-condition mode classification follows scope (LT-274 review).
-  **Area:** compiler
-  **Needs:** LT-373
-  **Context:** `validateCondition` (`lower-shared.ts`) goes reactive only when a free name is a
-  signal or `host`. An alias — `const isOpen = () => open.get(); @if (isOpen())`,
-  `const o = open; @if (o.get())` — compiles silently as `mode: 'server'` and never updates,
-  against the documented contract; conversely a `@for` binding that shadows a signal name
-  (`@for (const open of items) { @if (open) … }`) is classified reactive and refused.
-  Resolve setup aliases to their signal (or refuse the read, tier 1 Prevented) and make
-  `freeIdentifiers` scope-aware. Ride-along: `check:contract`'s scratch front end crashes in
-  `analyzeClient` on an undefined `component.firstRefs` (fails on HEAD before LT-274 too).
-  *(Planning, 2026-10-02: discharged by LT-370 in gate zero — same stale toy IR; drop the
-  ride-along if `check:contract` is green when this is picked up.)*
 
 
 ### B — correctness
@@ -531,7 +515,7 @@ recorded against the 30.4k opening measurement.
 
 ### Parallel slot
 
-- [ ] LT-420: Task branches commit in the worktree at finish; the review pass integrates them (owner, 2026-10-03).
+- [ ] LT-420: Task branches commit in the worktree at finish; the review pass integrates them (owner, 2026-10-03). — in progress ⚙
   **Area:** server
   **Gates:** check:queue
   **Context:** owner ruling 2026-10-03: a run commits its task branch at finish, and the
@@ -555,7 +539,7 @@ recorded against the 30.4k opening measurement.
   commits (a protected path refused, residue reported), and integrates; LT-418 and LT-419 land
   through do-task → review-pending → signed merges.
 
-- [ ] LT-418: Bring the `architect` and `writer` skills up to the queue store and the four workflows (SKILLS_REPORT R5 residue).
+- [ ] LT-418: Bring the `architect` and `writer` skills up to the queue store and the four workflows (SKILLS_REPORT R5 residue). — in progress ⚙
   **Area:** docs
   **Gates:** check:queue
   **Context:** the queue moved to a per-task store (`queue/LT-NNN.md`, `queue/ITERATION.md`,
@@ -573,22 +557,43 @@ recorded against the 30.4k opening measurement.
   **Channel/tier:** none — guidance only.
   **Verification:** `check:queue` green; every command and path the proposals name exists.
 
-- [ ] LT-419: Move the `contributor` reference facts into writable homes (SKILLS_REPORT R1/R2 residue).
-  **Area:** docs
-  **Needs:** LT-418
-  **Context:** R1 moved the server-only facts to `server/SERVER.md` and R2 limited reference files
-  to what has no writable home, but `contributor/references/docs-server.md` still keeps its traps
-  (the two `html` tags, `raw()`, `guardPath`, HMR conditions, the Markdoc-tag checklist) with a
-  note to move them, and `references/runtime-internals.md` (~150 lines after the 2026-10-03
-  `skill-drift` pass) holds runtime facts with natural homes in `src/` JSDoc, `AGENTS.md` or
-  `ARCHITECTURE.md`. Move each entry to its home (the docs-server traps into `SERVER.md`; runtime
-  facts into the JSDoc of the function they describe or `AGENTS.md` when they surprise an
-  author); propose any `ARCHITECTURE.md` text in `NOTES.md` for the Architect. Then propose
-  the two reference files cut to pointers plus whatever has no writable home, via
-  `.agents-proposals/`. Keep `AGENTS.md` to non-obvious facts only.
-  **Channel/tier:** none — guidance only.
-  **Verification:** `check:links` green; no fact lost (each removed entry names its new home in
-  the handoff).
+  **Changed:** `.agents-proposals/skills/architect/SKILL.md` — full-file proposal: rule 2 describes the per-task store (a move = `status:`/`band:` edit or chain edit in `queue/ITERATION.md` + `bun run queue:build`; a prune deletes `queue/LT-NNN.md` and carries homeless rulings into `queue/LEDGER.md`); rule 3 names the `review-pending` workflow and `worktree.ts integrate`; the chain obligation points at `queue/ITERATION.md`; the Files table names `queue/` with the three built views. `.agents-proposals/skills/architect/references/task-queue.md` — full-file proposal: store+views intro, store file table, front-matter entry format, status suffix ↔ `status:` mapping (incl. the `status: note` note), store-accurate `check:queue` failure list, and *Moves* rewritten — *Iteration planning* edits the chain; *After review* runs `review-pending` and compacts the task file in place; *After a release* runs `release-notes` first and prunes from its `consumed` list (the 2026-10-03 sixth pass as the worked example), `skill-drift` before a release per unit (~19 agents full run). `.agents-proposals/skills/writer/references/changelog.md` — full-file proposal: *Sources* says `DONE.md` is a generated view of the store (ledger prose in `queue/LEDGER.md`) that the Architect prunes from the `release-notes` run's `consumed` list; *Release* names `skill-drift` before a release (per unit, ~19 agents full run) and `release-notes` (`.claude/workflows/release-notes.js`) as step 1.
+
+  **Review (Architect, 2026-10-03, `review-pending`):** changes requested ↩ — the store-facing
+  claims check out (front-matter/statuses queue-store.ts:39-48,130-133; the check:queue failure
+  list :526-586; integrate gate+merge worktree.ts:280-316; skill-drift units skill-drift.js:27-50;
+  release-notes' consumed list release-notes.js:196-199; the sixth-pass example queue/LEDGER.md:12-16),
+  and `bun run check:queue` is green in `.worktrees/LT-418` (34 pass / 0 fail).
+  (1) task-queue.md:91 credits unsigned worktree commits to the bootstrap alone; the unconditional
+  mechanism is the commit step's `-c commit.gpgsign=false` (worktree.ts:264 — "the actual
+  guarantee", :88-92 — the bootstrap write is best-effort, skipped with a note :96-110), and the
+  replaced HEAD text (:70) had the two-mechanism wording — restore it: the commit step passes
+  `-c commit.gpgsign=false` (owner ruling 2026-10-03), touching no config file; the bootstrap
+  additionally sets `commit.gpgsign=false` worktree-locally (`extensions.worktreeConfig`) where the
+  host allows config writes and skips it with a note where it does not (Claude Code's sandbox blocks
+  `.git/config`). (2) task-queue.md:103 makes `blocked ⛔` stall a track — both picks skip it and
+  continue the track (queue.ts:542-543, queue-store.ts:661; comment :650-652 "a claimed or
+  non-contract task standing first ends its own track"), and :101's own ready definition says
+  "satisfied or `blocked ⛔`" — rewrite to: a next task claimed (`⚙`) or on a non-contract status
+  stalls the track and the scan falls through; a `blocked ⛔` task is skipped and the track
+  continues. (3) task-queue.md:102 "in file order" is a kanban leftover (queue.ts:486-488); the
+  store pick takes rework in chain order over flatChain (queue-store.ts:638-640) — "in chain
+  order". (2)/(3) sit on the contract page (:5 "the contract that script implements", fix in the
+  same commit), so each wrong line invites a behavior-breaking script "fix". (4) writer
+  document-map.md:341 — "any pipeline *code* goes to `docs-server-dev` as a `BACKLOG.md` task"
+  teaches the hand-edit-of-views anti-pattern this entry purges (`BACKLOG.md` is a built view;
+  `docs-server-dev` exists nowhere in the store, no band matches) — add a writer proposal
+  (document-map.md or an addendum) rephrasing to store language, naming the work's home without
+  implying a band: "a task in the queue store, `queue/LT-NNN.md` with a `band:`, rendered into
+  `BACKLOG.md` by `bun run queue:build`".
+  Nits fixed in the worktree (5b1de37a): SKILL.md:37 triage now ends "a banded task in the store";
+  task-queue.md:65 band range covers lettered sub-bands (`P2b`, per :53 and BANDS.md:131);
+  task-queue.md:5 claim narrowed to "every rule in *Entry format* and *The chain*" (matches
+  loadStore :193-216 and checkStore :524-582).
+  Follow-up: `queue/ITERATION.md`'s own header still opens on the retired three-file mini-kanban —
+  resolved by the Architect directly (queue prose is the Architect's file), no task. Follow-up:
+  LT-421 document-map.md:341's `workflows/improve-docs-architecture.md` pointer is dead — filed as
+  LT-421; fix it in the same pass as (4).
 
 - [ ] LT-415: Test servers take a free port; reuse a running server only when it is this checkout (owner, 2026-10-03).
   **Area:** server

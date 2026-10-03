@@ -1,10 +1,11 @@
 # TODO
 
-Current iteration only. Part of the 3-file mini-kanban (owner, 2026-09-18) with `BACKLOG.md`
-(everything planned, out of iteration scope — new tasks are created there) and `DONE.md`
-(done-and-reviewed tasks since the last release, compacted for the `writer`'s changelog pass). Only the
-Architect moves tasks between files; contributors annotate the status suffix on the entry in
-place. Task IDs are global and sequential across all three files.
+Current iteration only. The queue is a per-task store (`queue/LT-NNN.md`, one file per task;
+`BACKLOG.md`, `TODO.md` and `DONE.md` are views built by `bun run queue:build`). New tasks are
+created in `queue/` with a `band:`; the Architect moves them by editing `status:` and the chain
+in this file; contributors claim and annotate only through `bun run scripts/queue.ts`. Task IDs
+are unique by construction — the filename is the ID; the "Next free task ID" line below
+allocates the next one.
 
 **Current iteration (opened 2026-10-02): the corpus port and the pre-publish reshapes.** The
 previous iteration (consolidate the compiler, then land the pre-publish reshapes: tracks A–D,
@@ -78,7 +79,7 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
   needs LT-409).
 - **Parallel slot** — independent work. LT-420 first (worktree commits + review-pass
   integration; owner ruling 2026-10-03 — the flow LT-418 and LT-419 are the first tasks to
-  ride end to end), then LT-418 → LT-419 (the skills-restructuring residue), then LT-415 (test
+  ride end to end), then LT-418 → LT-419 (the skills-restructuring residue; LT-421 rides its pass), then LT-415 (test
   servers on a free port; the do-task gates trip on a stray server on 3000), then LT-305 (the
   Baseline 2023 guard, ships in 3.0), LT-277 (server), LT-393 (comment-only sweep), LT-410
   (the `errors.md` rows).
@@ -101,7 +102,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-421.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-422.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 

@@ -11,7 +11,7 @@ Planned tasks out of scope for the current iteration. Part of the 3-file mini-ka
   the `writer`'s changelog).
 
 Only the Architect moves tasks between files; contributors annotate the status suffix on the entry in place. Task IDs are global and
-sequential across all three files; the "Next free task ID" line lives in TODO.md's header.
+sequential across all three files; the "Next free task ID" line lives in the `queue/ITERATION.md` header.
 Bands below are priority-ordered: they are the planned pick order for future iterations, not a
 schedule. Band preambles may narrate landed work as history — the compacted records live in
 DONE.md.
@@ -1285,6 +1285,20 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Channel/tier:** none — no rule or copy change.
   **Check:** the range pin covers `async` on both surfaces; parity green.
 
+
+- [ ] LT-421: Fix the dead `workflows/improve-docs-architecture.md` citation in the writer's document map.
+  **Area:** docs
+  **Gates:** check:links
+  **Context:** `.agents/skills/writer/references/document-map.md:341` cites "see
+  `workflows/improve-docs-architecture.md`", which exists nowhere in the repo — a repo-wide grep
+  finds only this citation and the historical mention at `CHANGELOG.md:158` (a `tech-writer`
+  workflow of that name); the live reference doc is
+  `.agents/skills/writer/references/docs-architecture.md`. Point the citation at
+  `references/docs-architecture.md` or drop it; propose via
+  `.agents-proposals/skills/writer/references/document-map.md`. Fix it in the same pass as the
+  LT-418 finding (4) — same line — when that rework lands.
+  **Channel/tier:** none — guidance only.
+  **Verification:** `check:links` green; no other dead pointer on the touched page.
 
 ## Unbanded
 
