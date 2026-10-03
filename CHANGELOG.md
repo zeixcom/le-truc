@@ -99,6 +99,7 @@
 - **The examples serve the compiled, scoped stylesheets**: `examples/main.css` imports each compiled component's emitted sheet instead of its hand-written file; `basic-number` and `card-mediaqueries` ship theirs for the first time. `module-codeblock`'s `pre`/`code` rules are now page-level `:global`, so they also reach nested instances.
 - **`CompileDiagnostic` reports a source range instead of a line**: each diagnostic carries `location` (`{ file, start, end }`, 0-based character offsets into the authored file) and a `related` list of further locations. Migration: `line` is removed; derive the line from `location.start`.
 - **`LTC014` ranges skip context names**: an unused `@zeix/le-truc` import list broken by a context name such as `host` now reports one `LTC014` per run of unused names. Each range covers only those names; `LTC037` reports the context name on its own.
+- **Condition classification follows scope (LT-387)**: an `@if`/`@switch` (or `.tsx` ternary) test reading a live setup alias of a signal or `host` — a function reading it, a bare alias, a method reference without the call — now fails the compile (`LTC005`) instead of compiling as a server condition that never updates; an eager snapshot (`const snapshot = open.get()`) still classifies `server`, as before. And a `@for`/`.map()` binding that shadows a same-named signal — the item, the index or a hoisted per-item `const` — now compiles, instead of being refused as a signal read inside the loop body.
 
 ### Removed
 

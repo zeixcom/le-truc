@@ -116,13 +116,60 @@ const readsSignalThroughAlias = (
 }
 
 /**
+ * Whether a setup const's initializer EAGERLY dereferences a signal — an
+ * `X.get()` call whose `X` is a signal (or resolves to one through further
+ * setup consts), or a bare alias of such a const. The snapshot is one
+ * server value, so a condition reading it stays `server`, exactly as the
+ * setup-const contract promises; only a LIVE alias (a function whose body
+ * reads a signal or `host`, or a bare signal alias) goes stale under a
+ * `server` classification and is refused instead.
+ */
+const eagerlyDereferencesSignal = (
+	ctx: ExtractContext,
+	signals: ReadonlyMap<string, SignalIR>,
+	name: string,
+	seen: Set<string> = new Set(),
+): boolean => {
+	if (seen.has(name)) return false
+	seen.add(name)
+	const init = ctx.setupInits.get(name)
+	if (!init) return false
+	if (init.type === 'Identifier')
+		return eagerlyDereferencesSignal(ctx, signals, String(init.name), seen)
+	if (init.type !== 'CallExpression') return false
+	const callee = init.callee as AstNode | undefined
+	if (
+		!isNode(callee) ||
+		callee.type !== 'MemberExpression' ||
+		callee.computed === true ||
+		!isNode(callee.property) ||
+		callee.property.type !== 'Identifier' ||
+		callee.property.name !== 'get'
+	)
+		return false
+	const object = callee.object as AstNode | undefined
+	if (!isNode(object) || object.type !== 'Identifier') return false
+	const target = String(object.name)
+	return (
+		signals.has(target) ||
+		target === 'host' ||
+		readsSignalThroughAlias(ctx, signals, target, seen)
+	)
+}
+
+/**
  * Classify a control-flow condition (`@if` test / ternary test, `@switch`
  * discriminant). A test that reads a signal or `host` is reactive (ADR
  * 0037: its arms become template-cloned branches) — which names its client
- * thunk may read is the analysis's check, as for every client position.
- * Any other test must be server-known at render time (args, setup consts,
- * globals); null when it is not, after reporting why. The message names the
- * surface's spelling of the construct.
+ * thunk may read is the analysis's check, as for every client position,
+ * and a loop binding shadows a same-named signal (LT-387). Any other test
+ * must be server-known at render time (args, setup consts, globals); null
+ * when it is not, after reporting why. A setup const that eagerly
+ * dereferences a signal (`const snapshot = open.get()`) is one server
+ * value and stays `server`; a live alias of a signal or `host` — a
+ * function reading it, or a bare alias — would classify `server` and never
+ * update, so it is refused (LTC005). The message names the surface's
+ * spelling of the construct.
  */
 export const validateCondition = (
 	ctx: ExtractContext,
@@ -138,10 +185,15 @@ export const validateCondition = (
 	const isSignal = (name: string) =>
 		!bound.has(name) && (signals.has(name) || name === 'host')
 	if ([...free].some(isSignal)) return 'reactive'
-	// A setup alias of a signal (`const isOpen = () => open.get()`) would
-	// classify `server` and never update; refuse it rather than go stale.
+	// A live setup alias of a signal (`const isOpen = () => open.get()`)
+	// would classify `server` and never update; refuse it rather than go
+	// stale. An eager snapshot (`const snapshot = open.get()`) is one server
+	// value — exempt.
 	const alias = [...free].find(
-		name => !bound.has(name) && readsSignalThroughAlias(ctx, signals, name),
+		name =>
+			!bound.has(name) &&
+			!eagerlyDereferencesSignal(ctx, signals, name) &&
+			readsSignalThroughAlias(ctx, signals, name),
 	)
 	if (alias) {
 		ctx.diagnostics.push(
@@ -1167,8 +1219,10 @@ export const lowerLoop = (
 		)
 		return null
 	}
-	const output = lowerLoopBody(ctx, [itemName, loop.index?.name], () =>
-		lowerElement(ctx, outputNode, signals, fors, lowering),
+	const output = lowerLoopBody(
+		ctx,
+		[itemName, loop.index?.name, ...hoisted.map(h => h.name)],
+		() => lowerElement(ctx, outputNode, signals, fors, lowering),
 	)
 	if (!output.tag) {
 		ctx.diagnostics.push(
