@@ -1,6 +1,9 @@
 /**
  * The single home of the reactive-lift rule (LT-051): the predicate deciding
- * WHETHER A TEMPLATE CHILD IS REACTIVE. Sibling of `evaluability.ts`, which
+ * WHETHER A TEMPLATE CHILD IS REACTIVE — and of the dependency closure
+ * lowering records beside every template expression's class (ADR 0040 s7,
+ * LT-373). Lowering asks here once; every later stage reads the recorded
+ * `reactivity`/`deps` instead of asking again. Sibling of `evaluability.ts`, which
  * decides what the SERVER renders — the two questions are independent (a
  * reactive child may still have a server-known initial value, and a static
  * child may not).
@@ -11,7 +14,7 @@
  *   {host.validationMessage}              → reactive (visible host read)
  *   {length.get() === 0}                  → reactive (visible .get())
  *   {description.replace('{n}', …get())}  → reactive (visible .get())
- *   {label}                               → static   (a server arg)
+ *   {label}                               → server   (a server arg)
  *   {formatRemaining(maxlength, length)}  → OPAQUE   (signal crosses a call)
  *
  * The opaque case is an error rather than a silent static emit because a
@@ -23,7 +26,15 @@
  */
 
 import type { AstNode } from './ast-node'
-import { forEachChild, isNode, nodeType } from './ast-utils'
+import {
+	forEachChild,
+	forEachFreeIdentifier,
+	identifierName,
+	isNode,
+	nodeType,
+	walkNodes,
+} from './ast-utils'
+import type { AttributeIR, DependencyClosure, ReactivityClass } from './ir'
 
 /**
  * The client-only ambient whose property reads are reactive by definition.
@@ -42,7 +53,7 @@ type NameSet = { has(name: string): boolean }
 /** Verdict for one template-child expression. */
 export type LiftVerdict =
 	/** No reactive read anywhere — server-render it once, emit no watch. */
-	| { kind: 'static' }
+	| { kind: 'server' }
 	/** A lexically visible reactive read — lift it into a `watch()`. */
 	| { kind: 'reactive' }
 	/**
@@ -98,7 +109,7 @@ export const bindsExposedArg = (
  * Classify a template-child expression against the component's signal names.
  *
  * `signals` is the declared-signal name set; `host` is always reactive. Server
- * args and plain setup consts are neither, so they classify `static` — which
+ * args and plain setup consts are neither, so they classify `server` — which
  * is why adding this rule left the existing corpus byte-identical.
  */
 export const classifyChild = (expr: AstNode, signals: NameSet): LiftVerdict => {
@@ -180,5 +191,92 @@ export const classifyChild = (expr: AstNode, signals: NameSet): LiftVerdict => {
 	visit(expr, new Set<string>())
 
 	if (escapes.size > 0) return { kind: 'opaque', names: [...escapes].sort() }
-	return reads > 0 ? { kind: 'reactive' } : { kind: 'static' }
+	return reads > 0 ? { kind: 'reactive' } : { kind: 'server' }
+}
+
+/** The empty closure — an expression that reads nothing tracked. */
+export const NO_DEPS: DependencyClosure = {
+	signals: [],
+	hostProps: [],
+	args: [],
+	bound: [],
+}
+
+const sorted = (names: Iterable<string>): string[] => [...new Set(names)].sort()
+
+/**
+ * The dependency closure of one template expression (ADR 0040 s7): the
+ * declared signals and server args it references and the `host.<prop>`
+ * members it reads, each free in `expr` — a name a nested thunk's parameter
+ * or a local declaration shadows is not a dependency (`forEachFreeIdentifier`,
+ * LT-231's one scope walk). `hostProp` adds an LT-122 site's bound prop.
+ */
+export const dependencyClosure = (
+	expr: AstNode,
+	signals: NameSet,
+	args: NameSet,
+	hostProp?: string,
+): DependencyClosure => {
+	// `host.<prop>`: the member a free `host` identifier is the object of.
+	const hostMembers = new Map<AstNode, string>()
+	walkNodes(expr, current => {
+		if (current.type !== 'MemberExpression' || current.computed) return
+		const prop = identifierName(current.property)
+		if (
+			prop !== null &&
+			isNode(current.object) &&
+			identifierName(current.object) === REACTIVE_AMBIENT
+		)
+			hostMembers.set(current.object, prop)
+	})
+	const signalNames: string[] = []
+	const argNames: string[] = []
+	const hostProps: string[] = hostProp === undefined ? [] : [hostProp]
+	forEachFreeIdentifier(expr, identifier => {
+		const name = String(identifier.name)
+		if (signals.has(name)) signalNames.push(name)
+		if (args.has(name)) argNames.push(name)
+		const member = hostMembers.get(identifier)
+		if (member !== undefined) hostProps.push(member)
+	})
+	return {
+		signals: sorted(signalNames),
+		hostProps: sorted(hostProps),
+		args: sorted(argNames),
+		bound: [],
+	}
+}
+
+/** `deps` with `names` added as positionally reactive (`bound`). */
+export const withBound = (
+	deps: DependencyClosure,
+	names: Iterable<string>,
+): DependencyClosure => ({ ...deps, bound: sorted([...deps.bound, ...names]) })
+
+/**
+ * An attribute's reactivity class (ADR 0040 s7), projected from the
+ * variant lowering chose — the variant IS the class, so this reads the
+ * record and never the expression. A `server` attribute with LT-122's
+ * `bindsProp` is `reactive`: the client binds `() => host.<bindsProp>`
+ * against it — the same rule as an arg-and-prop text child. `null` for the
+ * kinds that carry no template value: an event handler, a `truc:pass`
+ * channel, a `first()` ref.
+ */
+export const attributeReactivity = (
+	attr: AttributeIR,
+): ReactivityClass | null => {
+	switch (attr.kind) {
+		case 'static':
+		case 'reactive':
+			return attr.kind
+		case 'server':
+			return attr.bindsProp != null ? 'reactive' : 'server'
+		case 'class-map':
+		case 'style-map':
+			return 'reactive'
+		case 'html':
+			return attr.reactive ? 'reactive' : 'server'
+		default:
+			return null
+	}
 }

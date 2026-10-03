@@ -432,7 +432,8 @@ export const parsePlainImports = (
 const serverExprNodes = (root: TemplateNode): AstNode[] => {
 	const out: AstNode[] = []
 	walkTemplate(root, node => {
-		if (node.kind === 'expr' && !node.lazy) out.push(node.expr)
+		if (node.kind === 'expr' && node.reactivity === 'server')
+			out.push(node.expr)
 		else if (node.kind === 'conditional' && node.mode === 'server') {
 			out.push(node.test)
 			for (const arm of node.arms) if (arm.test) out.push(arm.test)
@@ -449,7 +450,8 @@ const serverExprNodes = (root: TemplateNode): AstNode[] => {
 const clientExprNodes = (root: TemplateNode): AstNode[] => {
 	const out: AstNode[] = []
 	walkTemplate(root, node => {
-		if (node.kind === 'expr' && node.lazy) out.push(node.expr)
+		if (node.kind === 'expr' && node.reactivity === 'reactive')
+			out.push(node.expr)
 		else if (node.kind === 'client-stmt') out.push(node.node)
 		// A reactive conditional's test is its client arm-key thunk (ADR 0037).
 		else if (node.kind === 'conditional' && node.mode === 'reactive')

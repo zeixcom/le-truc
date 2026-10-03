@@ -9,6 +9,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { AstNode } from '../../compiler/ast-node'
 import type { TemplateNode } from '../../compiler/ir'
+import { NO_DEPS } from '../../compiler/reactivity'
 import {
 	childNodes,
 	collectAttrs,
@@ -41,7 +42,8 @@ const tree: TemplateNode & { kind: 'element' } = {
 			kind: 'expr',
 			expr: n('Identifier'),
 			exprText: 'count',
-			lazy: true,
+			reactivity: 'reactive',
+			deps: NO_DEPS,
 			node: n('Expr'),
 		},
 		{

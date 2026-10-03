@@ -43,6 +43,7 @@
  */
 
 import type { AttributeIR, ComponentIR, TemplateNode } from './ir'
+import { attributeReactivity } from './reactivity'
 
 /* === Conditionals === */
 
@@ -213,12 +214,14 @@ export const collectComposeElements = (
 /**
  * Does this attribute carry a client construct — something the client
  * module binds or addresses (LT-231: the one answer; every "has its own
- * client construct" check derives from it)? Every kind but `static`, with
- * two exceptions: a `server` attribute is render-only unless LT-122's
- * arg-and-prop coincidence (`bindsProp`) makes it bind too, and a
- * non-reactive `truc:html={ref}` is server-rendered only (LT-025) — the
- * reactive form lowers to a `dangerouslyBindInnerHTML` watch.
+ * client construct" check derives from it)? Read off the recorded class
+ * (ADR 0040 s7, none re-derives): a `reactive` value is bound — including
+ * LT-122's arg-and-prop `server` attribute and a reactive `truc:html` — and
+ * the kinds with no template value (event, `truc:pass`, ref) are addressed.
+ * A `static` or `server` value — a non-reactive `truc:html={ref}` included
+ * (LT-025) — is render-only.
  */
-export const isClientConstructAttr = (a: AttributeIR): boolean =>
-	(a.kind === 'server' ? a.bindsProp != null : a.kind !== 'static') &&
-	!(a.kind === 'html' && !a.reactive)
+export const isClientConstructAttr = (a: AttributeIR): boolean => {
+	const reactivity = attributeReactivity(a)
+	return reactivity === 'reactive' || reactivity === null
+}
