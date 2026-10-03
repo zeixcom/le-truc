@@ -440,8 +440,10 @@ narrowed within each member, so exact-constructor dispatch still works.
 lowers to `each()`; it carries `indexName`, `iterableText`, `iterable` (the
 node, which `checkFoldInputs` reads — LT-313), `iterableName` and `hoisted`.
 The body's bindings — the item, the index and every hoisted const's name —
-shadow same-named signals while the body lowers (LT-387), so a conditional
-over them classifies `server`.
+shadow same-named signals while the body lowers (LT-387): a conditional
+whose test reads the signal through such a binding — the binding, not the
+signal — classifies `server`; a conditional over anything else the server
+render does not know is still refused (LTC005).
 `ReconcileForIR` (`kind: 'reconcile'`) is a loop over a declared
 `createList` and lowers to `reconcile()` (ADR 0017); it carries `listSignal`,
 `keyName` and `keyText`. The plan maps are typed per member —
