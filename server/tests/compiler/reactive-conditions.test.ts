@@ -929,7 +929,7 @@ describe('condition classification follows scope', () => {
 				}),
 			)
 			expect(found.map(d => d.message).join('\n')).toContain(
-				'reads the setup alias',
+				'reads the setup const',
 			)
 		}
 	})

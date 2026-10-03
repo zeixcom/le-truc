@@ -148,7 +148,7 @@ export const validateCondition = (
 			diagnostic.unsupported(
 				ctx.source,
 				test,
-				`${what} that reads the setup alias \`${alias}\`, which reads a signal or \`host\``,
+				`${what} that reads the setup const \`${alias}\`, which reads a signal or \`host\`,`,
 				'The server classifies the condition from the names it spells — read the signal or `host` directly in the condition.',
 			),
 		)
@@ -160,7 +160,7 @@ export const validateCondition = (
 			diagnostic.unsupported(
 				ctx.source,
 				test,
-				`${what} that reads ${unknown.map(n => `\`${n}\``).join(', ')}, which the server render does not know`,
+				`${what} that reads ${unknown.map(n => `\`${n}\``).join(', ')}, which the server render does not know,`,
 				'A condition is evaluated during the server render, or on the client when it reads a signal or `host` — derive it from args, setup consts or signals.',
 			),
 		)
