@@ -227,12 +227,13 @@ function commit(id: string, args: string[]): never {
 		fail(`${wtPath} is on ${head}, not ${branch}`)
 
 	const messageFlag = args.indexOf('--message-file')
-	if (messageFlag === -1 || !args[messageFlag + 1])
+	const messageArg = args[messageFlag + 1]
+	if (messageFlag === -1 || !messageArg)
 		fail('usage: worktree.ts commit <LT-NNN> --message-file <path> [--] <path>...')
 	// Absolute before git sees it: git runs with -C <worktree>, so a relative
 	// -F path would resolve inside the worktree, not where the caller wrote it
 	// (the workflow drafts live in the main checkout).
-	const messageFile = resolve(args[messageFlag + 1])
+	const messageFile = resolve(messageArg)
 	const paths = args.filter((a, i) => i > messageFlag + 1 && a !== '--')
 	if (!paths.length)
 		fail('no paths to commit — a run with no changes commits nothing (skip the commit step)')
