@@ -17,7 +17,7 @@ Consequences:
 
 **Always use `asParser()` to create custom parsers.** Parser signature: `(value: string | null | undefined) => T`. Fallbacks are static values captured in the factory closure.
 
-In `DEV_MODE`, using an unbranded function that resembles a parser triggers `console.warn`.
+An unbranded function that resembles a parser gets no warning, even in `DEV_MODE`. It is silently wrapped as a memo.
 
 ## MethodProducer is Branded, Not Structurally Distinguished
 
@@ -25,7 +25,7 @@ In `DEV_MODE`, using an unbranded function that resembles a parser triggers `con
 
 **Always wrap method producer initializers with `defineMethod()`.** The function IS the method — it is installed directly as `host[key] = fn`.
 
-`provideContexts([...])` creates an `EffectDescriptor` and pushes it into the ambient collector (ADR 0018) — no `return` needed as of v2.3, though returning it still works (dual support, deprecated in v3.0).
+`provideContexts([...])` creates an `EffectDescriptor` and pushes it into the ambient collector (ADR 0018). The factory's return value has been ignored since v3.0, so returning the descriptor does nothing.
 
 ## `watch()` Requires `createEffect` Internally
 
@@ -47,7 +47,7 @@ The observer watches only mutations implied by the CSS selector (class, ID, `[at
 
 `reconcile(container, template, source, bindItem)` (src/helpers/reactive.ts) is data-driven and owns the container's children — the opposite ownership of `each()`, which enhances DOM the component doesn't own. Non-obvious details (see ADR 0017):
 
-- The source parameter is the **branded** union `List<T> | Collection<T>`, not a structural interface — `Store<T>` satisfies the shape but is deliberately excluded (its items are not homomorphic).
+- The source parameter is the **branded** union `MutableList<T> | DerivedList<T>`, not a structural interface — `Store<T>` satisfies the shape but is deliberately excluded (its items are not homomorphic).
 - First run **adopts** existing children by `data-key` and removes everything else, including unkeyed children (self-cleaning). `bindItem` runs for adopted elements too and must be idempotent against server-rendered content.
 - Children with `data-unreconciled` are structurally invisible: never removed, never repositioned, no `bindItem`. But an element `reconcile()` itself placed that later gains the attribute (mid-drag pin) still **claims its key** — otherwise a re-run would clone a duplicate for it.
 - Positioning is keyed-relative (after the previous keyed sibling), not absolute-index, so unmanaged elements never drift keyed positions.
@@ -104,9 +104,9 @@ Two security checks in `src/bindings.ts` throw errors:
 
 `bindAttribute` uses `safeSetAttribute` by default. Pass `allowUnsafe: true` only when the value has been validated upstream.
 
-## `undefined` from a Reactive Source Restores the Original DOM Value
+## A Nil Value Routes to `nil`
 
-When a reactive resolves to `undefined`, the component degrades gracefully to the pre-JS state. The `RESET` symbol no longer exists — `undefined` is the reset mechanism.
+There is no restore-to-pre-JS mechanism: a plain handler gets no call on nil, and only the match-handler bindings act on it. AGENTS.md (Surprising Behaviors → *A nil value routes to `nil`*) owns the details.
 
 ## Dependency Resolution Has a 200ms Timeout
 
@@ -122,28 +122,16 @@ If an event handler in `src/helpers/events.ts` returns `{ prop: value }`, all re
 
 `provideContexts` / `requestContext` implement the [webcomponents-cg context spec](https://github.com/webcomponents-cg/community-protocols/blob/main/proposals/context.md), not a custom protocol. `provideContexts([...])` registers an `EffectDescriptor` automatically (ADR 0018) — call it directly, `return` is not required; `requestContext(context, fallback)` returns a `Signal<T>` backed by a `Slot`, used directly in `expose()`. The Slot serves `fallback` until a provider answers; a provider that misses the initial synchronous dispatch is caught by two re-dispatches — once on a microtask and once after `CONTEXT_RETRY_DELAY` (~210 ms) — after which the fallback is permanent for that connection (ADR 0015). Providers are stable single sources of truth: removing one does not revert connected consumers to their fallback.
 
-## `bindVisible` is the Inverse of `el.hidden`
-
-`bindVisible(el)` sets `el.hidden = !value`. A value of `true` makes the element visible.
-
-## `bindAttribute` Returns `SingleMatchHandlers`, Not a Function
-
-Use as `watch('prop', bindAttribute(el, 'name'))` — `watch` accepts both a plain function and a `SingleMatchHandlers` object.
-
-## `bindAttribute` Boolean Dispatch
-
-When the reactive value is boolean, `toggleAttribute` is called — the attribute is added (without value) when `true` and removed when `false`. Do not pass boolean for attributes that require a string value.
-
 ## `bindStyle` Nil Path Removes Inline Style
 
 When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring whatever value the CSS cascade provides. Setting the reactive back to a string re-applies the inline style.
 
 ## Map-Form `bind*` Overloads: Static Array, `typeof` Narrowing, `bindProperty` is the Odd One Out
 
-`bindStyle`, `bindAttribute`, `bindClass`, `bindProperty`, and `bindState` (`src/bindings.ts`, ADR 0023) each have a second overload accepting `readonly string[]` in place of the single target, returning a handler keyed by that array instead of a bare value.
+`bindStyle`, `bindAttribute`, `bindAria`, `bindClass`, `bindProperty`, and `bindState` (`src/bindings.ts`, ADR 0023) each have a second overload accepting a readonly array of names in place of the single target, returning a handler keyed by that array instead of a bare value.
 
-- **The array is declared statically at the call site, never accumulated.** This is what resolves the "clear everything vs. clear only absent" question: the array is always the complete key set for that binding, so there's no history to track. `bindStyle`/`bindAttribute`'s `nil()` removes every declared key; `bindClass`/`bindState` need no `nil` at all — an empty map already clears every declared token via the same toggle loop that handles absent keys.
-- **`bindProperty`'s map form is a partial PATCH, not a clear/set pair** — the one exception. Arbitrary object properties have no "remove" operation, so a key absent from the value object is left untouched, not cleared. Every other helper's map form treats an absent/`null` key as "clear this one." Don't generalize `bindProperty`'s behavior to the other four, or vice versa.
+- **The array is declared statically at the call site, never accumulated.** This is what resolves the "clear everything vs. clear only absent" question: the array is always the complete key set for that binding, so there's no history to track. `bindStyle`/`bindAttribute`'s `nil()` removes every declared key; `bindAria`'s `nil()` assigns `null` to every declared name; `bindClass`/`bindState` need no `nil` at all — an empty map already clears every declared token via the same toggle loop that handles absent keys.
+- **`bindProperty`'s map form is a partial PATCH, not a clear/set pair** — the one exception. Arbitrary object properties have no "remove" operation, so a key absent from the value object is left untouched, not cleared. Every other helper's map form treats an absent/`null` key as "clear this one." Don't generalize `bindProperty`'s behavior to the other five, or vice versa.
 - **Each helper is implemented as a `function` declaration with two overload signatures plus one shared implementation**, replacing the previous `const` arrow function. The implementation branches on `typeof arg === 'string'`, not `Array.isArray(arg)`. `Array.isArray`'s negative narrowing does not exclude `readonly string[]` from a `string | readonly string[]` union, because a readonly array is not assignable to the type guard's `any[]` return type — the false branch stays unnarrowed. `typeof` narrows cleanly both ways. Follow this pattern for any future `bind*` map-form addition.
 
 ## Debug Mode Guards and the `debug()` Extension
@@ -151,10 +139,6 @@ When the reactive is nil, `el.style.removeProperty(prop)` is called, restoring w
 DEV-gated code is guarded inline by `process.env.DEV_MODE === 'true'` at each use site — there is no `DEV_MODE` const, because this exact literal-comparison form is what Bun's minifier folds for dead-code elimination in production builds. Keep the env check first in `&&` chains. `debug()` (`src/extensions/debug.ts`) narrows `DEV_MODE` rather than adding a second mode: its `debug` property only exists when `DEV_MODE` is on, and every effect it drives re-checks the same guard at fire time.
 
 `pulse()` schedules debug writes under a private per-element `WeakMap<Element, PulseState>` token (annotated `/*#__PURE__*/` so DCE doesn't strip it) instead of the element itself, to avoid colliding with `dangerouslyBindInnerHTML`'s `schedule()` key for the same element — any new per-element diagnostic scheduling needs its own key too. `onConnect` injects the debug stylesheet eagerly, not lazily from `pulse()`, and skips only the resting `*:state(debug)` outline if `attachInternals()` isn't available in the environment (older browsers, non-DOM test environments) — every other debug feature still works. `findDebuggableHost()`'s metaKey-toggle walk looks for a `debug` accessor (`'debug' in node`), not a dashed tag name, and crosses shadow boundaries via `parentElement ?? root.host`. `component.ts` statically imports `debug()` and injects it into every component's extensions when `DEV_MODE` is on — a deliberate exception (ADR 0022) to "never statically import a concrete extension module" (ADR 0019); don't make it opt-in or remove the static import.
-
-## Event-Driven Read-Only Props
-
-Expose `state.get` (not the full `State`) to make a prop readable but not settable by consumers. Update the value in an `on()` handler. To watch the prop inside the factory, pass the signal directly: `watch(length, bindVisible(clearBtn))`.
 
 ## `expose()` Accepts a `SlotDescriptor` (`{ get, set? }`) for a Mediated Read/Write Prop
 
@@ -164,7 +148,7 @@ Use this instead of a pair of `watch()` calls syncing two signals by hand (one d
 
 `isSignal({ get, set })` is `false` (no brand) — this is what lets `#setAccessor` distinguish a descriptor from a static value that happens to be an arbitrary object. `formResetCallback`/`formAssociatedCheckbox()`'s reset path (`src/extensions/form.ts`) also checks `isSlotDescriptor()` before treating an initializer as a literal default to reassign — a descriptor has no "default", so reset is a no-op for it, same as for a `Signal` or callback initializer.
 
-See `examples/form/tokenbox/form-tokenbox.ts` for a real usage.
+See `examples/form/tokenbox/form-tokenbox.tsrx` for a real usage.
 
 ## Form Reset Is Deferred and Restores From `defaultValue`/`defaultChecked`
 
