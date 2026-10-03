@@ -97,7 +97,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-418.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-420.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -211,22 +211,6 @@ recorded against the 30.4k opening measurement.
 
 ### A — pre-publish reshapes
 
-- [ ] LT-373: Annotate every template expression with its reactivity class (D-26, ADR 0040 s7).
-  **Area:** compiler
-  **Needs:** LT-371
-  **Context:** today the class is derived in several places — `AttributeIR` carries
-  `static`/`server`/`reactive`, a text child carries a boolean `lazy` decided by `reactivity.ts`,
-  and the emitters re-ask. ADR 0040 s7: lowering classifies each attribute value and text child
-  once, by ADR 0024 s4's rule (function-valued attribute → reactive; a text child by what it
-  reads), and records its dependency closure (signals, `host.<prop>` reads, server args). The
-  emitters, the tier classifier and LT-257's hole classifier read it. Build on LT-231's single
-  "is this a signal read" answer. Behaviour-preserving.
-  **Sequencing:** before LT-257's shared walk, which would otherwise grow a fourth derivation.
-  **Channel/tier:** none.
-  **Verification:** goldens, render and diagnostic parity byte-identical; the tier census
-  unchanged; full gates.
-
-
 - [ ] LT-387: Reactive-condition mode classification follows scope (LT-274 review).
   **Area:** compiler
   **Needs:** LT-373
@@ -243,14 +227,6 @@ recorded against the 30.4k opening measurement.
 
 
 ### B — correctness
-
-- [ ] LT-391: An arm kind for `SuppressedSite` (ADR 0037 s5 under the Simulated tier).
-  **Area:** compiler
-  **Context:** LT-274 review. A reactive test over the wall clock or RNG (ADR 0029 limb b)
-  correctly renders no live arm, but when the component is Simulated for another reason the
-  realm's connect clones an arm into the served HTML. Record suppressed arm sets and strip
-  the realm-cloned arm before serialization, as other limb-(b) sites are.
-
 
 - [ ] LT-392: Regenerate the declared types and gate an arm-set client against them (LT-385 review finding).
   **Area:** compiler

@@ -1286,6 +1286,41 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Check:** the range pin covers `async` on both surfaces; parity green.
 
 
+- [ ] LT-418: Bring the `architect` and `writer` skills up to the queue store and the four workflows (SKILLS_REPORT R5 residue).
+  **Area:** docs
+  **Gates:** check:queue
+  **Context:** the queue moved to a per-task store (`queue/LT-NNN.md`, `queue/ITERATION.md`,
+  `queue/BANDS.md`, `queue/LEDGER.md`; `BACKLOG.md`/`TODO.md`/`DONE.md` are views built by
+  `bun run queue:build`), but `architect/SKILL.md` rule 2 and `references/task-queue.md` → *Moves*
+  still describe hand-moving entries between the three files and "prune `DONE.md`", and
+  `writer/references/changelog.md` → *Sources* names `DONE.md` as the thing the Architect prunes.
+  Neither skill names the `release-notes`, `skill-drift` or `review-pending` workflows where their
+  step happens. Run `skill-drift` on `architect` and `writer`, then make sure the proposals also
+  say: a move is a `status:`/`band:` edit in the store followed by `queue:build`; a prune deletes
+  `queue/LT-NNN.md` and carries rulings with no other home into `queue/LEDGER.md` (the
+  2026-10-03 sixth pass is the worked example); *After a release* runs `release-notes` first and
+  prunes from its `consumed` list; `skill-drift` runs before a release, per unit (a full run is
+  ~19 agents). Proposals go to `.agents-proposals/` for the owner's copy-in.
+  **Channel/tier:** none — guidance only.
+  **Verification:** `check:queue` green; every command and path the proposals name exists.
+
+- [ ] LT-419: Move the `contributor` reference facts into writable homes (SKILLS_REPORT R1/R2 residue).
+  **Area:** docs
+  **Needs:** LT-418
+  **Context:** R1 moved the server-only facts to `server/SERVER.md` and R2 limited reference files
+  to what has no writable home, but `contributor/references/docs-server.md` still keeps its traps
+  (the two `html` tags, `raw()`, `guardPath`, HMR conditions, the Markdoc-tag checklist) with a
+  note to move them, and `references/runtime-internals.md` (~150 lines after the 2026-10-03
+  `skill-drift` pass) holds runtime facts with natural homes in `src/` JSDoc, `AGENTS.md` or
+  `ARCHITECTURE.md`. Move each entry to its home (the docs-server traps into `SERVER.md`; runtime
+  facts into the JSDoc of the function they describe or `AGENTS.md` when they surprise an
+  author); propose any `ARCHITECTURE.md` text in `NOTES.md` for the Architect. Then propose
+  the two reference files cut to pointers plus whatever has no writable home, via
+  `.agents-proposals/`. Keep `AGENTS.md` to non-obvious facts only.
+  **Channel/tier:** none — guidance only.
+  **Verification:** `check:links` green; no fact lost (each removed entry names its new home in
+  the handoff).
+
 ## Unbanded
 
 - [ ] LT-134: LTC035 and LTC042 give opposite advice on the same construct (LT-131 review finding). — closed as moot (Architect, 2026-10-02)

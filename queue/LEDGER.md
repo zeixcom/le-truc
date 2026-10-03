@@ -11,6 +11,15 @@ future iteration. At release planning the `writer` consumes this file alongside
 
 ---
 
+Pruned 2026-10-03, sixth pass (Architect, after the first `release-notes` run recorded
+LT-370, LT-371 and LT-378 in `CHANGELOG.md [Unreleased]` and found LT-335 and LT-410 covered,
+LT-373 and LT-393 internal). Consumed: LT-335, LT-370, LT-371, LT-373, LT-378, LT-393, LT-410.
+Where their rulings live: `sim/realm.ts` § Attribution (LT-335), ADR 0044 s1 and LT-254's entry
+(LT-370, LT-371), `do-task.js`'s commit step (LT-378's bundle-churn note), and the notes below.
+Open handoffs: LT-411, LT-414, LT-416 in `BACKLOG.md`.
+
+---
+
 Pruned 2026-10-02, fifth pass (Architect, after the "consolidate the compiler, then land the
 pre-publish reshapes" iteration closed; the `writer` recorded it in `CHANGELOG.md
 [Unreleased]` the same day, deliberately omitting the byte-identical internal refactors).
@@ -56,10 +65,13 @@ Full entry text: `git log -p -- DONE.md`.
 - **Docs-server routing is ours, not Bun's** (LT-364): first-differing segment kind wins
   (static > `:param` > `*`), params are `decodeURIComponent`-ed (a malformed escape is a 404), and
   traversal tests use an encoded slash (`..%2f`), since WHATWG URL parsing normalizes `%2e%2e`.
-- **No `errors.md` row yet for `LTC071`, nor the widened `LTC051`** (LT-402's handoff to the
-  owner's `.agents/` pass). Tracked as LT-410.
+- **Narrowing a diagnostic's range later is not a breaking change to the record** (LT-371).
+  Removing or widening a field is; a tighter `start`/`end` for the same construct is not.
 
 **Open obligations** (not yet discharged; check before closing the named work):
+- **`check:contract` is LT-254's proof against the published package** (LT-370): it now compiles
+  through `compileComponentTsx` imported from `contract.ts` only, so run it against the packed
+  `@zeix/le-truc-compiler`, not the source tree.
 - **Track the lightningcss upstream issues #1081 and #1065.** `css-scope.ts` does string-level
   selector surgery over a read-only parse to avoid them; keep the `lightningcss-wasm` and
   `lightningcss-cli` pins on one version (ADR 0033 s9). Retire the surgery when both are fixed (LT-304).
@@ -190,4 +202,4 @@ Full entry text: `git log -p -- DONE.md`.
 
 ---
 
-**Since the 2026-10-02 prune:**
+**Since the 2026-10-03 prune:**
