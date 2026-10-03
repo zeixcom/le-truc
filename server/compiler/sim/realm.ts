@@ -568,6 +568,28 @@ export function createSimulationRealm(
 	 * pre-connect property snapshot handles it). A site whose element did
 	 * not render (a guarded branch) contributes nothing.
 	 */
+	/**
+	 * The live arm of arm set `armSet` in `container` (ADR 0037, LT-391):
+	 * the element immediately before the set's first `<template data-arms>`,
+	 * when its `data-key` names one of the set's arms and it is neither a
+	 * `<template>` nor a `[data-arms]` carrier — the rule `reconcile()`'s arm
+	 * form adopts by.
+	 */
+	const liveArmOf = (container: Element, armSet: number): Element | null => {
+		const templates = container.querySelectorAll(
+			`:scope > template[data-arms="${armSet}"]`,
+		)
+		const previous = templates[0]?.previousElementSibling ?? null
+		const key = previous?.getAttribute('data-key') ?? null
+		return previous !== null &&
+			key !== null &&
+			[...templates].some(t => t.getAttribute('data-key') === key) &&
+			previous.localName !== 'template' &&
+			!previous.hasAttribute('data-arms')
+			? previous
+			: null
+	}
+
 	const snapshotSuppressedSites = (
 		component: string,
 		markup: string,
@@ -589,7 +611,16 @@ export function createSimulationRealm(
 					? skeleton.body.querySelector(component)
 					: skeleton.body.querySelector(site.selector)
 			if (!el) continue
-			if (site.kind === 'text') {
+			if (site.kind === 'arms') {
+				// The skeleton holds no live arm for a recorded set (no tier
+				// picks its winner); should one be there, the skeleton state
+				// already matches and nothing is stripped.
+				if (liveArmOf(el, site.armSet)) continue
+				undo.push(() => {
+					const target = live(site)
+					if (target) liveArmOf(target, site.armSet)?.remove()
+				})
+			} else if (site.kind === 'text') {
 				const text = el.textContent
 				undo.push(() => {
 					const target = live(site)

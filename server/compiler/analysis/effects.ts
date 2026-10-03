@@ -1713,13 +1713,25 @@ const handleReactiveConditional = (
 	// No server phase can pick the winner: no live arm renders (ADR 0037
 	// s5), and the component leaves the Folded tier — the realm, when it
 	// can answer, renders the arm the client would.
-	if (!initialFold(component, node))
+	if (!initialFold(component, node)) {
 		fx.routingSignals.push({
 			origin: 'LTC034',
 			detail: `the initial arm of a ${isIf(node) ? 'conditional' : 'switch'} that reads a signal has no server-renderable value`,
 			...rangeFields(source, node.test),
 			resolution: resolutionOf(node.test, component.serverKnown),
 		})
+		// LT-391: a test over the wall clock or the RNG (limb b) has no
+		// winner in ANY tier, the realm included — but the replayed client's
+		// `reconcile()` clones one at connect when the component is Simulated
+		// for another reason. Record the arm set so the driver strips that
+		// arm before serializing, as it reverts every other limb-(b) site.
+		if (suppresses(fx, node.test))
+			fx.suppressedSites.push({
+				kind: 'arms',
+				selector: selectorOf(fx, containerQuery),
+				armSet: armSetOf(component.root, node),
+			})
+	}
 
 	const elementParam = uniqueName(usedNames, 'armElement')
 	const keyParam = uniqueName(usedNames, 'armKey')

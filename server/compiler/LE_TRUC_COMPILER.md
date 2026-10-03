@@ -802,7 +802,11 @@ the typechecker never follows it into jsdom. Activation is installation.
   skeleton state from an inert parse of the markup and reverts them after
   the quiescence drain and before serializing — never inside the drain — so
   an impure binding's connect-time write never bakes the build machine's
-  reading into the served HTML.
+  reading into the served HTML. An `arms` record (LT-391) covers a reactive
+  condition whose test reads the clock or the RNG: no tier picks its winner
+  (ADR 0037 s5), so the driver strips the arm the replayed `reconcile()`
+  cloned — the element before the set's first `<template data-arms>` —
+  and the served HTML keeps the server's arm-less skeleton.
 - **`boundary.ts`** — the serialization boundary: the instantiate→serialize
   window performs no IO and advances no timers, draining microtasks to a
   bounded quiescence, so the compiler — not microtask timing — decides which

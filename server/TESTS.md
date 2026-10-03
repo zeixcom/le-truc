@@ -225,7 +225,8 @@ form-combobox's post-contamination Simulated record.
 
 The **realm-side suppression of unresolvable sites** (LT-165 step 7, ADR 0029 § 1's
 implementation constraint) is pinned by `suppression.test.ts` over synthetic
-Simulated-tier fixtures: attribute, text-child, and dirty-flag (`prop`) record forms, both
+Simulated-tier fixtures: attribute, text-child, dirty-flag (`prop`) and arm-set (LT-391:
+the arm the replayed `reconcile()` clones for an RNG-tested condition) record forms, both
 upgrade timings (define-replay and parse-time), and an unwired realm as the standing
 negative control. The corpus carries no suppressed sites today, so the
 `sim-driver.test.ts` fixtures and the baselines above are unchanged by it.

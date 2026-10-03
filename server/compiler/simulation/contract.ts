@@ -149,6 +149,26 @@ export type SuppressedSite =
 			/** CSS selector for the element, or {@link SUPPRESSED_HOST_SELECTOR}. */
 			selector: string
 	  }
+	| {
+			/**
+			 * A reactive condition's arm set whose test no tier can answer
+			 * (ADR 0037 s5, LT-391): the server renders no live arm, but the
+			 * replayed client's `reconcile()` clones one at connect. The
+			 * driver restores the skeleton's arm-less state by removing the
+			 * live arm — the element immediately before the set's first
+			 * `<template data-arms>`, claimed by the same rule `reconcile()`
+			 * adopts it by (a `data-key` carrier that is neither a
+			 * `<template>` nor a `[data-arms]` element).
+			 */
+			kind: 'arms'
+			/**
+			 * CSS selector for the arm set's container, or
+			 * {@link SUPPRESSED_HOST_SELECTOR} at the component root.
+			 */
+			selector: string
+			/** The arm set's `data-arms` index. */
+			armSet: number
+	  }
 
 /* === The realm interface === */
 

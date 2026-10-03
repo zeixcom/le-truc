@@ -106,6 +106,30 @@ export function C({}: {})
 
 }`
 
+/**
+ * Simulated-tier fixture with two reactive conditions whose tests read the
+ * RNG (LT-391): one switching in a nested container, one at the component
+ * root (the `'host'` sentinel). No tier picks a winner (ADR 0037 s5), so
+ * the server renders only the arm templates — but the replayed client's
+ * `reconcile()` clones an arm at connect, which the driver must strip. The
+ * root test always holds at runtime, so the unwired control can pin that
+ * its arm really is cloned; the compiler still cannot answer it.
+ */
+const simulatedArmsFixture = `import { asString, createCell } from '@zeix/le-truc'
+
+export function C({ name }: { name: string })
+@{
+	const seed = createCell('seed')
+	expose({ label: asString('') })
+		<a-el>
+			<div class="box">@if (host.label.length + Math.random() > 0.5) { <b class="heads">heads</b> } @else { <i class="tails">tails</i> }</div>
+			@if (host.label.length + Math.random() >= 0) { <em class="up">up</em> }
+			<style>:host {
+	  color: red;
+	}</style>
+		</a-el>
+}`
+
 const generated = createGeneratedDir('suppression')
 afterAll(() => generated.cleanup())
 
@@ -119,11 +143,17 @@ const simulatedRoot = compileComponent(
 	'suppression-root.tsrx',
 	new Set(),
 )
+const simulatedArms = compileComponent(
+	simulatedArmsFixture,
+	'suppression-arms.tsrx',
+	new Set(),
+)
 const folded = compileComponent(foldedFixture, 'folded.tsrx', new Set())
 
 for (const [label, result] of [
 	['simulated', simulated],
 	['simulated-root', simulatedRoot],
+	['simulated-arms', simulatedArms],
 	['folded', folded],
 ] as const) {
 	if (!result.component)
@@ -137,6 +167,7 @@ for (const [label, result] of [
 for (const [tag, result] of [
 	['c-el', simulated],
 	['r-el', simulatedRoot],
+	['a-el', simulatedArms],
 	['folded', folded],
 ] as const) {
 	const component = result.component
@@ -171,12 +202,20 @@ describe('the compile-time suppression record', () => {
 		expect(simulatedRoot.component?.entry.suppressedSites).toEqual([
 			{ kind: 'text', selector: 'host' },
 		])
+		// LT-391: an arm set whose test no tier answers is recorded by its
+		// container and `data-arms` index.
+		expect(simulatedArms.component?.entry.tier).toBe('simulated')
+		expect(simulatedArms.component?.entry.suppressedSites).toEqual([
+			{ kind: 'arms', selector: 'div', armSet: 0 },
+			{ kind: 'arms', selector: 'host', armSet: 1 },
+		])
 	})
 
 	test('the records are plain data — they ride registry.json', () => {
 		for (const entry of [
 			simulated.component?.entry,
 			simulatedRoot.component?.entry,
+			simulatedArms.component?.entry,
 			folded.component?.entry,
 		])
 			expect(JSON.parse(JSON.stringify(entry?.suppressedSites))).toEqual(
@@ -219,14 +258,45 @@ describe('the realm reverts suppressed sites before serializing', () => {
 				? (simulated.component?.entry.suppressedSites ?? [])
 				: tag === 'r-el'
 					? (simulatedRoot.component?.entry.suppressedSites ?? [])
-					: [],
+					: tag === 'a-el'
+						? (simulatedArms.component?.entry.suppressedSites ?? [])
+						: [],
 	})
 	afterAll(() => realm.dispose())
 
 	test('fixtures loaded exactly once', async () => {
 		await realm.load(() => generated.importModule('c-el.client.ts'))
 		await realm.load(() => generated.importModule('r-el.client.ts'))
-		expect(realm.definitions.map(entry => entry.name)).toEqual(['c-el', 'r-el'])
+		await realm.load(() => generated.importModule('a-el.client.ts'))
+		expect(realm.definitions.map(entry => entry.name)).toEqual([
+			'c-el',
+			'r-el',
+			'a-el',
+		])
+	})
+
+	test('arm site: the RNG-picked arm the client clones does not ship (LT-391)', async () => {
+		const render = (
+			await generated.importModule<{
+				renderC: (args: unknown) => string
+			}>('a-el.server.ts')
+		).renderC
+		const markup = render({ name: 'x' })
+		// The server renders no live arm (ADR 0037 s5) — templates only.
+		expect(markup).not.toMatch(/<(b|i|em) [^>]*data-key/)
+		const { html } = await realm.render({ markup, component: 'a-el' })
+		// The connect DID clone an arm into each container: the live tree
+		// held one before the revert (the realm's reconcile ran), and the
+		// served HTML is the skeleton again.
+		expect(html).not.toMatch(/<(b|i|em) [^>]*data-key/)
+		expect(html).toBe(markup)
+		// Fixed point: the repeat render (a-el already defined, so it
+		// upgrades during the parse) strips the arm again.
+		const { html: second } = await realm.render({
+			markup: html,
+			component: 'a-el',
+		})
+		expect(second).toBe(html)
 	})
 
 	test('attribute site: the build machine’s clock does not reach the HTML', async () => {
@@ -324,6 +394,25 @@ describe('the realm reverts suppressed sites before serializing', () => {
 				expect((input as unknown as { value: string }).value).toMatch(
 					/^\d{13}$/,
 				)
+				// LT-391: unwired, the client's `reconcile()` clones an arm
+				// into each RNG-tested arm set and it ships.
+				await realm2.load(
+					() =>
+						import(pathToFileURL(join(unwired.path, 'a-el.client.ts')).href),
+				)
+				const renderArms = (
+					await generated.importModule<{
+						renderC: (args: unknown) => string
+					}>('a-el.server.ts')
+				).renderC
+				const { html: arms } = await realm2.render({
+					markup: renderArms({ name: 'x' }),
+					component: 'a-el',
+				})
+				expect(arms).toMatch(
+					/<div class="box"><(b|i) class="(heads|tails)" data-key="(then|else)">/,
+				)
+				expect(arms).toContain('<em class="up" data-key="then">')
 			} finally {
 				// LIFO against the file-level realm (its restores re-install
 				// the outer realm's patches) — disposed before this file's
