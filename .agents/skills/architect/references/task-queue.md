@@ -2,6 +2,8 @@
 
 The queue is three files. Task IDs (`LT-NNN`) are global and sequential across all three. The `TODO.md` header tracks the next free ID.
 
+The format and the chain below are **machine-enforced**: `bun run check:queue` validates every rule on this page, and the `do-task` workflows (`.zcode/workflows/do-task.dwf.ts` for ZCode, `.claude/workflows/do-task.js` for Claude Code) pick, claim and annotate only through `bun run scripts/queue.ts` — never by editing a queue file directly. This page is the contract that script implements; when the contract and the script disagree, fix one of them in the same commit.
+
 | File | Holds | Who writes |
 |---|---|---|
 | `BACKLOG.md` | Everything planned but out of iteration scope. New tasks are created here. | Architect creates entries. Anyone may annotate a suffix in place. |
@@ -57,6 +59,20 @@ The contributor writes the suffix. The Architect updates it on review.
 | `— reviewed ✓` | The Architect approved it. |
 | `— blocked ⛔` | The contributor stopped. An entry in `NOTES.md` explains why. |
 
+A few entries carry a non-contract closed suffix instead (`parked`, `closed as moot`, `rolled back`). The queue tool classifies any of these as closed, so they never block a pick; normalize one to a contract status when you touch the entry.
+
+## Where the work happens
+
+`do-task` never implements in the main checkout. Per task it bootstraps `.worktrees/LT-NNN` — a git worktree on branch `task/LT-NNN` cut from the current HEAD, with the main checkout's `node_modules` symlinked in (`bun run scripts/worktree.ts LT-NNN`, idempotent). Consequences:
+
+- **The queue never lives in a worktree.** Pick, claim and annotate run `scripts/queue.ts` against the main checkout only, so a task branch never touches a queue file and merging it back is clean even with the workflow's own suffix edits uncommitted. This — not locking — is what prevents two agents from colliding.
+- **A task's diff is its worktree's diff.** Reviewers and the owner read `git -C .worktrees/LT-NNN diff HEAD`; earlier tasks in the same run are invisible.
+- The worktree's `.agents/` and `.vscode/` copies are read-only references; edits and staging of those happen in the main checkout only.
+- Gates run with the worktree as cwd: `bun run --cwd <path> <script>`, `bun test --cwd <path> <paths>`. Never `bun --cwd <path> run <script>` — bun silently ignores that form (exit 0, nothing runs).
+- Fresh worktrees lack built `docs/`; a gate that reads it (`test:server` serve tests, `check:links`) runs `build:docs` first.
+
+After the owner commits and merges a task branch: `git worktree remove --force .worktrees/LT-NNN && git branch -d task/LT-NNN`.
+
 ## The chain
 
 `TODO.md` has a `**The chain.**` section that orders the iteration. The `do-task` workflow reads it with no human present, so keep it mechanical:
@@ -64,7 +80,10 @@ The contributor writes the suffix. The Architect updates it on review.
 - Group the tasks into tracks with one line of purpose each. Inside a track, list the tasks in pick order.
 - A task is **ready** when four things hold: it has no suffix, its `Area` is not `design`, every LT-ID in its `**Needs:**` is satisfied, and every earlier task in its track is satisfied or `blocked ⛔`.
 - `do-task` first takes any `— changes requested ↩` task, in file order. Then it picks the first ready task, tracks in order. When nothing is ready, it stops and reports why. It does not guess.
+- A track whose next task is claimed (`⚙`) or `blocked ⛔` **stalls**: that task and everything behind it in that track is skipped, and the scan falls through to the next track. A `blocked ⛔` does not end the iteration.
 - When the order depends on a ruling that a `Needs:` field cannot express, write the ruling into the header's rulings list and the dependency into `Needs:`.
+
+`bun run scripts/queue.ts pick [LT-NNN]` prints this decision as JSON (read-only; `claim`, `annotate`, `reset` are the write commands). `bun run check:queue` fails the build when an entry breaks the format, a `Needs:` reference dangles, IDs collide, or the checkbox and suffix disagree; an open entry the chain does not name is reported as a note.
 
 ## Moves (Architect only)
 

@@ -1,9 +1,10 @@
 /* zcode-workflow
-description: Pick the next ready TODO task (or a given LT-ID), implement it,
-  verify gates, review, annotate the suffix.
+description: Pick the next ready TODO task (or a given LT-ID), implement it in
+  its own git worktree, verify gates, review, annotate the suffix.
 whenToUse: "Work the le-truc queue without hand-offs. Args: id (an LT-NNN to
   implement instead of picking) or max (run up to that many ready tasks). Ends
-  with a patch for the owner to commit."
+  with one task branch per task in its own worktree, waiting for the owner to
+  commit and merge."
 args:
   id:
     type: string
@@ -15,25 +16,43 @@ args:
     required: false
     default: 1
 */
-// Ported from .claude/workflows/do-task.js (the Claude Code version stays in
-// service for Claude sessions). ZCode-facade differences: gates run as
-// deterministic world.run commands instead of a trusting subagent, per-task
-// results are reported as they land so a dead run still salvages finished
-// work, and the owner handoff is published as an artifact.
+// The queue lives only in the main checkout and is written exclusively by
+// scripts/queue.ts — deterministic pick/claim/annotate under `bun test`
+// (contract: .agents/skills/architect/references/task-queue.md). Code work
+// happens in a per-task git worktree (.worktrees/LT-NNN, branch task/LT-NNN,
+// bootstrapped by scripts/worktree.ts), so two runs — or a run and a human —
+// cannot collide in one tree, and a task's diff is exactly its worktree's
+// diff. Nothing is ever committed by this run: patches wait on the task
+// branch for the owner. The Claude Code twin (.claude/workflows/do-task.js)
+// drives the same queue script.
 
-interface PickResult {
+interface QueuePick {
 	picked: boolean
-	/** The LT-NNN, empty when nothing is pickable. */
-	id: string
-	title: string
-	area: 'runtime' | 'compiler' | 'server' | 'examples' | 'docs'
-	/** The task carried — changes requested ↩. */
-	rework?: boolean
-	/** Extra commands from the entry's Gates line. */
-	gates?: string[]
-	/** ADRs, REQUIREMENTS items, ARCHITECTURE sections and LT-IDs the entry cites. */
-	citations?: string[]
 	reason: string
+	/** Absent when picked is false. */
+	task?: {
+		id: string
+		title: string
+		area?: string
+		/** The suffix found on the entry: '' (open) or 'changes-requested'. */
+		suffix: string
+		rework: boolean
+		needs: string[]
+		/** Extra commands from the entry's Gates line. */
+		gates: string[]
+		/** ADRs, REQUIREMENTS items, ARCHITECTURE sections and LT-IDs the entry cites. */
+		citations: string[]
+		/** The full entry text, injected into the agent prompts. */
+		entryText: string
+	}
+}
+
+interface Worktree {
+	created: boolean
+	/** Absolute path of .worktrees/<id>. */
+	path: string
+	branch: string
+	nodeModules: string
 }
 
 interface Handoff {
@@ -78,8 +97,8 @@ interface Review {
 }
 
 interface Annotation {
-	suffix: string
-	notesEntry: boolean
+	/** True once the prose file at prosePath is written. */
+	written: boolean
 	/** The full commit message for this task's changes. */
 	commit: string
 }
@@ -89,6 +108,8 @@ interface TaskRun {
 	title: string
 	area: string
 	suffix: string
+	branch: string
+	worktree: string
 	changed: string[]
 	gates: string[]
 	ownerMustRun: string[]
@@ -98,17 +119,22 @@ interface TaskRun {
 }
 
 // ── Contract ────────────────────────────────────────────────────────────────
-// The queue format and the chain are defined in
-// .agents/skills/architect/references/task-queue.md. This script never moves
-// entries between queue files, never edits ARCHITECTURE.md, never commits and
-// never stages .agents/. Implementation runs sequentially in the main checkout
-// (worktrees start on main and lack node_modules and docs/), so no isolation.
+// This script never edits a queue file directly — every queue write goes
+// through `bun run scripts/queue.ts` in the main checkout, so a task branch
+// never touches queue files and merges back stay clean by construction. It
+// never edits ARCHITECTURE.md, never commits, and its agents never touch
+// .agents/ or .vscode/ (the worktree copies are read-only references).
 
 const inputId = typeof args.id === 'string' ? args.id : undefined
 const inputMax = typeof args.max === 'number' ? args.max : undefined
 const MAX_TASKS = inputId ? 1 : Math.max(1, inputMax ?? 1)
 const MAX_FIX_ROUNDS = 2
 const GATE_TIMEOUT = { timeoutMs: 1_800_000 }
+
+// The queue tool. Every call is a world.run: exit 0 means the JSON/prose on
+// stdout is authoritative, anything else means the queue refused (already
+// claimed, contract violation) and the run must stop for that task.
+const QUEUE = ['run', 'scripts/queue.ts'] as const
 
 const COMMIT_STYLE = [
 	'Subject: `<area>: LT-NNN — <what changed>`, at most 72 characters, phrased like `git log --oneline -10`. Use `docs(queue):` when only queue files changed.',
@@ -122,6 +148,7 @@ const GATE_TABLE =
 	"the area's default gates in the contributor skill's Gates table (.agents/skills/contributor/SKILL.md), plus the entry's Gates line"
 
 // The lint scripts use biome --write; their read-only form changes no file.
+// Paths stay worktree-relative: gates run with the worktree as cwd.
 const LINT_READ_ONLY: Record<string, string> = {
 	lint: './src',
 	'lint:server': './server',
@@ -139,6 +166,11 @@ const BUN_TEST_SCRIPTS = new Set([
 	'test:server:integration',
 	'check:size',
 ])
+
+// Gates that read the built docs/ output, which a fresh worktree lacks —
+// build:docs runs first in the worktree whenever one of them is in the gate
+// list (serve.test.ts 404s without it).
+const DOCS_DEPENDENT = new Set(['test:server', 'check:links'])
 
 // The area's unconditional defaults. The conditional ones (Playwright,
 // check:size, build:docs, check:links, test:variants) ride in through the
@@ -180,28 +212,32 @@ function normalizeGate(raw: string): string {
 // cannot decide either, so the gate goes to the owner with the rejection
 // reason in the tail. A failing gate is re-run once to rule out a flake
 // (NOTES.md lists the known ones).
-async function runGate(rawCmd: string): Promise<GateOutcome> {
+//
+// Every gate runs with the task's worktree as cwd, via flags AFTER the
+// subcommand: `bun run --cwd <wt> <script>` and `bun test --cwd <wt> <paths>`.
+// NEVER `bun --cwd <wt> run <script>` — bun 1.4.2 silently ignores that form
+// (usage on stderr, exit 0, nothing runs), so the gate would report green
+// without executing. Lint goes through `bun run --cwd <wt> biome check …`
+// because bunx has no usable --cwd (it would resolve a package named after
+// the path).
+async function runGate(rawCmd: string, wt: string): Promise<GateOutcome> {
 	const cmd = normalizeGate(rawCmd)
 	const lintPath = LINT_READ_ONLY[cmd]
 	const bunTest = /^bun\s+test\s+/.exec(cmd)
 	let argv: string[]
 	if (lintPath) {
-		argv = ['biome', 'check', lintPath]
+		argv = ['run', '--cwd', wt, 'biome', 'check', lintPath]
 	} else if (bunTest) {
-		argv = ['test', ...cmd.slice(bunTest[0].length).split(/\s+/), '--dots']
+		argv = ['test', '--cwd', wt, ...cmd.slice(bunTest[0].length).split(/\s+/), '--dots']
 	} else {
 		const parts = cmd.split(/\s+/)
 		const dots = BUN_TEST_SCRIPTS.has(parts[0]) ? ['--dots'] : []
-		argv = ['run', parts[0], ...dots, ...parts.slice(1)]
+		argv = ['run', '--cwd', wt, parts[0], ...dots, ...parts.slice(1)]
 	}
 	try {
-		let result = lintPath
-			? await world.run('bunx', argv, GATE_TIMEOUT)
-			: await world.run('bun', argv, GATE_TIMEOUT)
+		let result = await world.run('bun', argv, GATE_TIMEOUT)
 		if (result.exitCode !== 0) {
-			const rerun = lintPath
-				? await world.run('bunx', argv, GATE_TIMEOUT)
-				: await world.run('bun', argv, GATE_TIMEOUT)
+			const rerun = await world.run('bun', argv, GATE_TIMEOUT)
 			if (rerun.exitCode === 0) {
 				return { cmd, pass: true, unrunnable: false, flaky: true, tail: '' }
 			}
@@ -219,24 +255,67 @@ async function runGate(rawCmd: string): Promise<GateOutcome> {
 	}
 }
 
-const pickPrompt =
-	(inputId
-		? `Find ${inputId} in TODO.md. It is pickable if it is in TODO.md (not BACKLOG.md) and either carries "— changes requested ↩", or has no status suffix, its Area is not design, and every LT-ID on its Needs line is done ✓, done, pending review ⏳, changes requested ↩ or reviewed ✓ in any queue file.`
-		: `Pick by the contract in .agents/skills/architect/references/task-queue.md → "The chain". First, any TODO.md entry carrying "— changes requested ↩", in file order. Otherwise read TODO.md's "The chain" section and pick the first ready task, tracks in order: no suffix, Area not design, every Needs LT-ID satisfied (done ✓, ⏳, ↩ or reviewed ✓ in TODO.md, BACKLOG.md or DONE.md), and every earlier task in its track satisfied or blocked ⛔. Do not guess an order the chain does not state.`) +
-	`\n\nIf a task is pickable, claim it: on its title line in TODO.md, replace "— changes requested ↩" with "— in progress ⚙", or append " — in progress ⚙" when it had no suffix. Change nothing else in any file. Set rework=true for a changes-requested task. Return picked=false with the reason when nothing is pickable; never claim a task that fails the contract.`
+// One deterministic queue command. A nonzero exit is the queue refusing —
+// surfaced to the caller as null.
+async function queueRun(op: 'pick' | 'claim' | 'reset' | 'annotate', rest: string[]): Promise<string | null> {
+	try {
+		const result = await world.run('bun', [...QUEUE, op, ...rest])
+		if (result.exitCode !== 0) {
+			log(`queue ${op} refused: ${tail(result.stderr || result.stdout)}`)
+			return null
+		}
+		return result.stdout
+	} catch (e) {
+		log(`queue ${op} could not run: ${tail(String(e))}`)
+		return null
+	}
+}
 
 const runs: TaskRun[] = []
-const picker = agent('pick next queue task')
 
 for (let n = 0; n < MAX_TASKS; n++) {
-	// ── Pick and claim ────────────────────────────────────────────────────────
+	// ── Pick, claim, bootstrap the worktree ───────────────────────────────────
 	phase('Pick')
-	const task = await picker.ask<PickResult>(pickPrompt)
-	if (!task.picked) {
-		log(`Nothing picked: ${task.reason || 'pick agent failed'}`)
+	const pickOut = await queueRun('pick', inputId ? [inputId] : [])
+	if (pickOut === null) {
+		report({ outcome: 'pick-failed' })
 		break
 	}
-	log(`Picked ${describe(task)}: ${task.reason}`)
+	const decision = JSON.parse(pickOut) as QueuePick
+	if (!decision.picked || !decision.task) {
+		log(`Nothing picked: ${decision.reason || 'queue reports nothing ready'}`)
+		break
+	}
+	const task = decision.task
+	const area = task.area ?? 'runtime'
+	log(`Picked ${describe({ id: task.id, title: task.title, area })}: ${decision.reason}`)
+
+	if ((await queueRun('claim', [task.id])) === null) {
+		report({ id: task.id, outcome: 'claim-failed' })
+		break
+	}
+
+	let wt: Worktree | undefined
+	try {
+		const boot = await world.run('bun', ['run', 'scripts/worktree.ts', task.id])
+		if (boot.exitCode !== 0) {
+			log(`worktree bootstrap failed for ${task.id}: ${tail(boot.stderr || boot.stdout)}`)
+		} else {
+			wt = JSON.parse(boot.stdout) as Worktree
+			log(
+				`Worktree ${wt.path} ready on ${wt.branch}${wt.created ? ' (created)' : ' (reused)'}`,
+			)
+		}
+	} catch (e) {
+		log(`worktree bootstrap failed for ${task.id}: ${tail(String(e))}`)
+	}
+	if (!wt) {
+		// The task is claimed (— in progress ⚙) but has no workspace: reset it so
+		// the next pick can take it, rather than stranding a claim.
+		await queueRun('reset', [task.id])
+		report({ id: task.id, outcome: 'bootstrap-failed' })
+		break
+	}
 
 	// ── Implement ─────────────────────────────────────────────────────────────
 	phase('Implement')
@@ -244,40 +323,44 @@ for (let n = 0; n < MAX_TASKS; n++) {
 	let handoff: Handoff
 	try {
 		handoff = await implementer.ask<Handoff>(
-			`Read .agents/skills/contributor/SKILL.md and follow its conventions. Implement queue task ${describe(task)} from TODO.md. It is already claimed (— in progress ⚙); leave that suffix in place, the Annotate step replaces it.\n` +
+			`Work ONLY inside the git worktree ${wt.path} (branch ${wt.branch}). Read .agents/skills/contributor/SKILL.md there and follow its conventions.\n` +
+				`Implement queue task ${describe({ id: task.id, title: task.title, area })}. Its full queue entry:\n---\n${task.entryText}\n---\n` +
+				`Sources it cites: ${(task.citations ?? []).join(', ') || 'none listed'} — read them, plus the area's living docs, before coding.` +
 				(task.rework
-					? `This is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green. `
-					: `Read the entry, the sources it cites (${(task.citations ?? []).join(', ') || 'none listed'}) and the area's living docs first. `) +
-				`Run ${GATE_TABLE}${task.gates?.length ? ` (${task.gates.join(', ')})` : ''} and report each real result. Report each gate as the bare package.json script name (for example \`test:server\`), not the full command line — the script re-runs them from those names. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The script re-runs the gates independently after your turn, so report honestly and never a gate you did not run.\n` +
-				`If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. ` +
-				`Do not commit, do not move queue entries, do not edit ARCHITECTURE.md, and do not write the status suffix or handoff fields.`,
+					? `\nThis is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log of the main checkout). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green.`
+					: '') +
+				`\nRun ${GATE_TABLE}${task.gates?.length ? ` (${task.gates.join(', ')})` : ''} and report each real result — from inside the worktree. Report each gate as the bare package.json script name (for example \`test:server\`), not the full command line — the script re-runs them from those names in your worktree. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The script re-runs the gates independently after your turn, so report honestly and never a gate you did not run.\n` +
+				`Boundaries: the worktree's BACKLOG.md, TODO.md, DONE.md, NOTES.md, .agents/ and .vscode/ are read-only references — the queue is managed in the main checkout, so never edit those files here, and never stage or commit anything (the owner commits). If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. Do not write the handoff fields from outside — report your own result honestly.`,
 		)
 	} catch (e) {
-		log(
-			`${task.id}: the implement agent failed (${String(e)}); the entry is still claimed (— in progress ⚙) and needs a manual reset`,
-		)
+		log(`${task.id}: the implement agent failed (${String(e)}); resetting the claim`)
+		await queueRun('reset', [task.id])
 		report({ id: task.id, outcome: 'agent-failed' })
 		break
 	}
 
 	// The gate list: area defaults, the entry's Gates line, and any extra gate
 	// the implement agent reports it ran (the conditional ones in the table) —
-	// all normalized to bare script names before deduplication.
+	// all normalized to bare script names before deduplication. Gates that read
+	// built docs/ get build:docs first, which a fresh worktree lacks.
 	const gateSet = new Set<string>([
-		...(AREA_GATES[task.area] ?? []),
+		...(AREA_GATES[area] ?? []),
 		...(task.gates ?? []).map(normalizeGate),
 	])
 	for (const g of handoff.gates) {
 		gateSet.add(normalizeGate(g.cmd))
 	}
 	const gateList = [...gateSet].filter(Boolean)
+	if (gateList.some((g) => DOCS_DEPENDENT.has(g))) {
+		gateList.unshift('build:docs')
+	}
 
 	// Review lenses; the actors are created once per task and reused across fix
 	// rounds so each round builds on what the reviewer already saw.
 	const lenses: { key: string; prompt: string }[] = [
 		{
 			key: 'conformance',
-			prompt: `Does the change do what ${task.id}'s entry in TODO.md asks, and only that? Check it against the entry's Context, Check/Verification lines and the sources it cites (${(task.citations ?? []).join(', ') || 'none listed'}), AGENTS.md, and the ADR 0028 channel/tier the entry names. Run the entry's Check line yourself. If it fails but the handoff explains why with evidence and the explanation holds, report a minor finding (the Architect rules on it), not a blocking one. Flag scope creep, a missing regression test for a fix, and docs the change made stale but did not update.`,
+			prompt: `Does the change do what ${task.id} asks, and only that? The full queue entry is your contract:\n---\n${task.entryText}\n---\nCheck the change against that entry's Context, Check/Verification lines and the sources it cites (${(task.citations ?? []).join(', ') || 'none listed'}), AGENTS.md, and the ADR 0028 channel/tier the entry names. Run the entry's Check line yourself, inside the worktree. If it fails but the handoff explains why with evidence and the explanation holds, report a minor finding (the Architect rules on it), not a blocking one. Flag scope creep, a missing regression test for a fix, and docs the change made stale but did not update.`,
 		},
 	]
 	if (!handoff.mechanical) {
@@ -304,17 +387,11 @@ for (let n = 0; n < MAX_TASKS; n++) {
 		phase('Verify')
 		const changed = handoff.changed.join('\n- ')
 		const [gateResults, ...reviewResults] = await Promise.all([
-			Promise.all(gateList.map((c) => runGate(c))),
+			Promise.all(gateList.map((c) => runGate(c, wt.path))),
 			...reviewers.map((r) =>
 				r.actor.ask<Review>(
-					`Review the uncommitted change for ${describe(task)}. Read-only: do not edit any file. Use git diff to see it.` +
-						(runs.length
-							? ` The working tree also holds this run's earlier, uncommitted tasks (${runs
-									.map((x) => x.id)
-									.filter(Boolean)
-									.join(', ')}); judge only ${task.id}'s files.`
-							: '') +
-						` The handoff says:\n- ${changed}\nHow: ${handoff.how ?? '-'}\n\n${r.prompt}\n\nMark a finding blocking only if the task would be wrong to accept as is. Also judge whether the handoff's reviewClass="${handoff.reviewClass}" is right per the contributor skill's rule 3.`,
+					`Review the change for ${describe({ id: task.id, title: task.title, area })}, isolated in the git worktree ${wt.path} (branch ${wt.branch}) — nothing else is in progress there. Read-only: do not edit any file. See it with \`git -C ${wt.path} diff HEAD\` plus \`git -C ${wt.path} status --porcelain\` for untracked files.\n` +
+						`The handoff says:\n- ${changed}\nHow: ${handoff.how ?? '-'}\n\n${r.prompt}\n\nMark a finding blocking only if the task would be wrong to accept as is. Also judge whether the handoff's reviewClass="${handoff.reviewClass}" is right per the contributor skill's rule 3.`,
 				),
 			),
 		])
@@ -346,12 +423,12 @@ for (let n = 0; n < MAX_TASKS; n++) {
 		phase('Fix')
 		try {
 			handoff = await implementer.ask<Handoff>(
-				`You are continuing ${describe(task)}; the uncommitted change is in the working tree (git diff). Fix these, or rebut a finding with evidence in "how" if it is wrong:\n` +
+				`You are continuing ${describe({ id: task.id, title: task.title, area })}; the uncommitted change is in your worktree ${wt.path} (git -C ${wt.path} diff HEAD). Fix these, or rebut a finding with evidence in "how" if it is wrong:\n` +
 					[
 						...red.map((x) => `- RED GATE ${x.cmd}: ${x.tail || ''}`),
 						...blocking.map((f) => `- ${f.file ?? ''} ${f.issue}${f.fix ? ` (suggested: ${f.fix})` : ''}`),
 					].join('\n') +
-					`\n\nThen re-run the affected gates (read-only lint form). Same limits as before: no commit, no queue moves, no ARCHITECTURE.md, no suffix. Return the full updated handoff (all changed files, not only this round's).`,
+					`\n\nThen re-run the affected gates (read-only lint form) inside the worktree. Same limits as before: queue files, .agents/ and .vscode/ stay untouched, no staging, no commit. Return the full updated handoff (all changed files, not only this round's).`,
 			)
 		} catch {
 			handoff = { ...handoff, outcome: 'blocked', blocker: 'fix agent failed' }
@@ -367,29 +444,41 @@ for (let n = 0; n < MAX_TASKS; n++) {
 			: handoff.reviewClass === 'api'
 				? '— done, pending review ⏳'
 				: '— done ✓'
+	const statusKey =
+		handoff.outcome === 'blocked' ? 'blocked' : handoff.reviewClass === 'api' ? 'pending-review' : 'done'
+	const prosePath = `.zcode/workflow-drafts/queue-annotate/${task.id}.md`
 	let annotation: Annotation | undefined
 	try {
 		annotation = await agent(`annotate ${task.id}`).ask<Annotation>(
-			`In TODO.md, on ${task.id}'s title line, replace " — in progress ⚙" with " ${suffix}". Do not move the entry or touch any other entry.\n` +
+			`Compose the queue annotation for ${task.id} and write it to ${prosePath} (create the directory if needed). The queue script inserts it after the entry; you write only the prose.\n` +
 				(handoff.outcome === 'blocked'
-					? `Append a NOTES.md entry in the format of .agents/skills/architect/references/task-queue.md ("NOTES.md entry format"), Area ${task.area}, describing: ${handoff.blocker ?? 'the run blocked without a stated reason'}. Give options only if they follow from the facts.`
+					? `The run blocked: ${handoff.blocker ?? 'no stated reason'}. Write a NOTES.md entry in the format of .agents/skills/architect/references/task-queue.md ("NOTES.md entry format"), Area ${area}, describing the blocker. Give options only if they follow from the facts.`
 					: handoff.reviewClass === 'api'
-						? `Add under the entry, after its existing fields: **Changed:** (${handoff.changed.join('; ')}), **How:** (${handoff.how ?? ''}), **Check:** (${handoff.check ?? ''}${minors.length ? `; minor review notes: ${minors.map((f) => f.issue).join('; ')}` : ''}). Keep each to one or two lines in the queue's register.`
-						: `Add one line under the entry: **Changed:** summarizing ${handoff.changed.join('; ')}.`) +
+						? `Write Changed/How/Check lines in the queue's register, one or two lines each: **Changed:** (${handoff.changed.join('; ')}), **How:** (${handoff.how ?? ''}), **Check:** (${handoff.check ?? ''}${minors.length ? `; minor review notes: ${minors.map((f) => f.issue).join('; ')}` : ''}).`
+						: `Write one line: **Changed:** summarizing ${handoff.changed.join('; ')}.`) +
 				(task.rework && handoff.outcome !== 'blocked'
-					? ` This was rework: instead of new Changed/How/Check lines, add one **Reworked:** line after the **Review:** line, answering each numbered finding briefly (fixed how, or rebutted why).`
+					? ` This was rework: instead of new Changed/How/Check lines, write one **Reworked:** line answering each numbered finding on the entry's **Review:** line briefly (fixed how, or rebutted why).`
 					: '') +
-				`\nReturn the suffix written, whether you wrote a NOTES.md entry, and a commit message for the uncommitted changes of ${task.id} (git diff, including your queue edits). Style: ${COMMIT_STYLE}`,
+				`\nThe handoff for context: outcome=${handoff.outcome}, reviewClass=${handoff.reviewClass}, changed=${JSON.stringify(handoff.changed)}.\n` +
+				`Then return written=true once the file exists, and a commit message for the task's changes (run \`git -C ${wt.path} diff HEAD\` and \`git -C ${wt.path} status --porcelain\` to see them). Style: ${COMMIT_STYLE}`,
 		)
 	} catch {
-		log(`${task.id}: the annotate agent failed; the computed suffix was not written — check TODO.md manually`)
+		log(`${task.id}: the annotate agent failed; the computed suffix was not written — check the queue manually`)
+	}
+	let annotated = false
+	if (annotation?.written) {
+		const out = await queueRun('annotate', [task.id, statusKey, prosePath])
+		annotated = out !== null
+		if (!annotated) log(`${task.id}: the queue refused the annotation — check the queue manually`)
 	}
 
 	const run: TaskRun = {
 		id: task.id,
 		title: task.title,
-		area: task.area,
-		suffix: annotation?.suffix ?? suffix,
+		area,
+		suffix: annotated ? suffix : '— in progress ⚙ (annotation failed)',
+		branch: wt.branch,
+		worktree: wt.path,
 		changed: handoff.changed,
 		gates: gates.length
 			? gates.map((x) => `${x.pass ? '✓' : x.unrunnable ? '⊘' : '✗'} ${x.cmd}`)
@@ -405,7 +494,13 @@ for (let n = 0; n < MAX_TASKS; n++) {
 }
 
 // ── Owner handoff ─────────────────────────────────────────────────────────────
-const NEXT = "Owner: review git diff and commit with each run's commit message. Nothing is committed or moved between queue files."
+const NEXT = [
+	'Owner, per task branch (nothing is committed; the queue suffix edits stay uncommitted in the main checkout for a separate docs(queue) commit):',
+	'1. Review: git -C <worktree> diff HEAD  ·  git -C <worktree> status --porcelain',
+	'2. Commit in the worktree: git -C <worktree> add -A && git -C <worktree> commit -m "<the message below>"',
+	'3. Merge from v3 (task branches never touch queue files, so the dirty queue merges clean): git merge task/<id>',
+	'4. Clean up: git worktree remove --force <worktree> && git branch -d task/<id>',
+].join('\n')
 if (runs.length) {
 	const lines: string[] = ['# do-task handoff', '']
 	for (const r of runs) {
@@ -413,6 +508,7 @@ if (runs.length) {
 			`## ${r.id} — ${r.title}`,
 			'',
 			`- Status: ${r.suffix}`,
+			`- Branch: ${r.branch} · worktree ${r.worktree}`,
 			`- Gates: ${r.gates.join(' · ') || 'none run'}`,
 			`- Changed: ${r.changed.join('; ')}`,
 		)
@@ -425,15 +521,15 @@ if (runs.length) {
 	lines.push(NEXT)
 	await artifact.markdown('handoff', lines.join('\n'), {
 		title: 'do-task handoff',
-		description: `${runs.length} task(s) processed; patches wait uncommitted for the owner.`,
+		description: `${runs.length} task branch(es) ready in their worktrees; patches wait for the owner.`,
 		primary: true,
 	})
 }
 
 return {
 	conclusion: runs.length
-		? `${runs.map((r) => `${r.id} ${r.suffix}`).join('; ')}. Nothing committed; patches wait for the owner.`
-		: 'Nothing picked: no ready TODO task matched the chain contract.',
+		? `${runs.map((r) => `${r.id} ${r.suffix} on ${r.branch}`).join('; ')}. Nothing committed; each patch waits on its task branch.`
+		: 'Nothing picked: the queue reports no ready task for the chain contract.',
 	runs,
 	next: NEXT,
 }

@@ -1,40 +1,51 @@
 export const meta = {
   name: 'do-task',
-  description: 'Pick the next ready TODO task (or a given LT-ID), implement it, verify gates, review, annotate the suffix',
-  whenToUse: 'Work the le-truc queue without hand-offs. Args: "LT-NNN", or { id?: "LT-NNN", max?: number } to run up to max ready tasks in sequence. Ends with a patch for the owner to commit.',
+  description: 'Pick the next ready TODO task (or a given LT-ID), implement it in its own git worktree, verify gates, review, annotate the suffix',
+  whenToUse: 'Work the le-truc queue without hand-offs. Args: "LT-NNN", or { id?: "LT-NNN", max?: number } to run up to max ready tasks in sequence. Ends with one task branch per task in its own worktree, waiting for the owner to commit and merge.',
   phases: [
-    { title: 'Pick', detail: 'apply the chain contract, claim with in progress' },
-    { title: 'Implement', detail: 'contributor skill, area gates' },
+    { title: 'Pick', detail: 'queue script pick+claim, worktree bootstrap' },
+    { title: 'Implement', detail: 'contributor skill, area gates, in the worktree' },
     { title: 'Verify', detail: 'independent gate re-run and review lenses' },
     { title: 'Fix', detail: 'address blocking findings, at most 2 rounds' },
-    { title: 'Annotate', detail: 'status suffix and handoff in place' },
+    { title: 'Annotate', detail: 'queue script annotate, prose + commit message' },
   ],
 }
 
 // ── Contract ────────────────────────────────────────────────────────────────
-// The queue format and the chain are defined in
-// .agents/skills/architect/references/task-queue.md. This script never moves
-// entries between queue files, never edits ARCHITECTURE.md, never commits and
-// never stages .agents/. Implementation runs sequentially in the main checkout
-// (worktrees start on main and lack node_modules and docs/), so no isolation.
+// The queue lives only in the main checkout and is written exclusively by
+// scripts/queue.ts — deterministic pick/claim/annotate under `bun test`
+// (contract: .agents/skills/architect/references/task-queue.md). Code work
+// happens in a per-task git worktree (.worktrees/LT-NNN, branch task/LT-NNN,
+// bootstrapped by scripts/worktree.ts), so two runs — or a run and a human —
+// cannot collide in one tree, and a task's diff is exactly its worktree's
+// diff. The ZCode twin (.zcode/workflows/do-task.dwf.ts) drives the same
+// queue script with real command primitives; here low-effort agents relay the
+// commands. Nothing is ever committed by this run: patches wait on the task
+// branch for the owner. This script never moves entries between queue files,
+// never edits ARCHITECTURE.md and never stages .agents/.
 
 const input = typeof args === 'string' ? { id: args } : (args || {})
 const MAX_TASKS = input.id ? 1 : Math.max(1, input.max || 1)
 const MAX_FIX_ROUNDS = 2
 
-const PICK = {
+const QUEUE_SETUP = {
   type: 'object',
   properties: {
-    picked: { type: 'boolean' },
-    rework: { type: 'boolean', description: 'The task carried — changes requested ↩' },
+    picked: { type: 'boolean', description: 'The pick JSON said picked=true' },
+    claimed: { type: 'boolean', description: 'The claim command exited 0' },
+    bootstrapped: { type: 'boolean', description: 'The worktree bootstrap exited 0 (after which the claim was NOT reset)' },
+    reason: { type: 'string', description: 'Why this task is ready, or why nothing is, or which command refused with its stderr' },
     id: { type: 'string', description: 'LT-NNN' },
     title: { type: 'string' },
-    area: { type: 'string', enum: ['runtime', 'compiler', 'server', 'examples', 'docs'] },
+    area: { type: 'string' },
+    rework: { type: 'boolean', description: 'The task carried — changes requested ↩' },
     gates: { type: 'array', items: { type: 'string' }, description: 'Extra commands from the entry\'s Gates line' },
     citations: { type: 'array', items: { type: 'string' }, description: 'ADRs, REQUIREMENTS items, ARCHITECTURE sections and LT-IDs the entry cites' },
-    reason: { type: 'string', description: 'Why this task is ready, or why nothing is' },
+    entryText: { type: 'string', description: 'The full entry text from the pick JSON, verbatim' },
+    worktree: { type: 'string', description: 'Absolute worktree path from the scripts/worktree.ts JSON' },
+    branch: { type: 'string', description: 'The task branch name from the scripts/worktree.ts JSON' },
   },
-  required: ['picked', 'reason'],
+  required: ['picked', 'claimed', 'bootstrapped', 'reason'],
 }
 
 const HANDOFF = {
@@ -84,11 +95,10 @@ const REVIEW = {
 const ANNOTATION = {
   type: 'object',
   properties: {
-    suffix: { type: 'string' },
-    notesEntry: { type: 'boolean' },
+    annotated: { type: 'boolean', description: 'The queue annotate command exited 0' },
     commit: { type: 'string', description: 'The full commit message for this task\'s changes' },
   },
-  required: ['suffix', 'notesEntry', 'commit'],
+  required: ['annotated', 'commit'],
 }
 
 // Signing is unreachable from the sandbox, so the owner commits from this message.
@@ -99,10 +109,13 @@ const COMMIT_STYLE = [
 ].join(' ')
 
 const GATE_TABLE = 'the area\'s default gates in the contributor skill\'s Gates table (.agents/skills/contributor/SKILL.md), plus the entry\'s Gates line'
-// The gate re-runner runs package.json commands only. The entry's Check line is
-// the conformance reviewer's to judge, so a sound, evidenced deviation from it
-// is a finding, not a red gate.
-const GATE_RULES = 'Run only package.json scripts; the entry\'s Check line is not yours to run. The lint scripts use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. Mark a gate unrunnable when it fails before any test runs because of the sandbox or environment (a port it cannot bind or that another server holds, signing, network, a missing tool). Give each gate at most 10 minutes (run it with a timeout); one that hangs waiting on a port or a server that never becomes ready is unrunnable, not something to wait out.'
+// Gates run inside the task's worktree, via flags AFTER the subcommand:
+// `bun run --cwd <wt> <script>` and `bun test --cwd <wt> <paths>`. NEVER
+// `bun --cwd <wt> run <script>` — bun 1.4.2 silently ignores that form (usage
+// on stderr, exit 0, nothing runs), so a gate would report green without
+// executing. The entry's Check line is the conformance reviewer's to judge, so
+// a sound, evidenced deviation from it is a finding, not a red gate.
+const GATE_RULES = 'Run gates inside the worktree with `bun run --cwd <worktree> <script>` (never `bun --cwd <worktree> run <script>` — that form silently runs nothing) or `bun test --cwd <worktree> <paths>`; only package.json scripts otherwise. The lint scripts use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. Mark a gate unrunnable when it fails before any test runs because of the sandbox or environment (a port it cannot bind or that another server holds, signing, network, a missing tool). Give each gate at most 10 minutes (run it with a timeout); one that hangs waiting on a port or a server that never becomes ready is unrunnable, not something to wait out.'
 
 const describe = t => `${t.id} (${t.title}; Area: ${t.area})`
 // An unrunnable gate is not red: no code change fixes the sandbox. It goes to the
@@ -112,37 +125,54 @@ const unrunnable = g => (g?.results || []).filter(r => !r.pass && r.unrunnable)
 
 const runs = []
 for (let n = 0; n < MAX_TASKS; n++) {
-  // ── Pick and claim ──────────────────────────────────────────────────────────
+  // ── Pick, claim, bootstrap the worktree ──────────────────────────────────────
   phase('Pick')
-  const task = await agent(
-    (input.id
-      ? `Find ${input.id} in TODO.md. It is pickable if it is in TODO.md (not BACKLOG.md) and either carries "— changes requested ↩", or has no status suffix, its Area is not design, and every LT-ID on its Needs line is done ✓, done, pending review ⏳, changes requested ↩ or reviewed ✓ in any queue file.`
-      : `Pick by the contract in .agents/skills/architect/references/task-queue.md → "The chain". First, any TODO.md entry carrying "— changes requested ↩", in file order. Otherwise read TODO.md's "The chain" section and pick the first ready task, tracks in order: no suffix, Area not design, every Needs LT-ID satisfied (done ✓, ⏳, ↩ or reviewed ✓ in TODO.md, BACKLOG.md or DONE.md), and every earlier task in its track satisfied or blocked ⛔. Do not guess an order the chain does not state.`) +
-    `\n\nIf a task is pickable, claim it: on its title line in TODO.md, replace "— changes requested ↩" with "— in progress ⚙", or append " — in progress ⚙" when it had no suffix. Change nothing else in any file. Set rework=true for a changes-requested task. Return picked=false with the reason when nothing is pickable; never claim a task that fails the contract.`,
-    { label: 'pick', phase: 'Pick', schema: PICK, effort: 'low' },
+  const setup = await agent(
+    `Relay three commands with Bash, from the repository root, and report their JSON. Do not apply the queue contract yourself — scripts/queue.ts owns it.\n` +
+    `1. \`bun run scripts/queue.ts pick${input.id ? ` ${input.id}` : ''}\` — prints the pick decision as JSON.\n` +
+    `2. When picked=true: \`bun run scripts/queue.ts claim <id>\` — must exit 0; on nonzero, report its stderr as reason and stop.\n` +
+    `3. When the claim exited 0: \`bun run scripts/worktree.ts <id>\` — prints the worktree as JSON. If it exits nonzero, run \`bun run scripts/queue.ts reset <id>\` to release the claim, report the bootstrap stderr as reason, and set bootstrapped=false.\n` +
+    `Return the pick JSON's fields verbatim (picked, reason, and task.id/title/area/suffix/rework/needs/gates/citations/entryText), plus claimed=true only when step 2 exited 0, and bootstrapped/worktree/branch from step 3's JSON.`,
+    { label: 'pick', phase: 'Pick', schema: QUEUE_SETUP, effort: 'low' },
   )
-  if (!task?.picked) {
-    log(`Nothing picked: ${task?.reason || 'pick agent failed'}`)
-    runs.push({ picked: false, reason: task?.reason })
+  if (!setup?.picked) {
+    log(`Nothing picked: ${setup?.reason || 'queue relay failed'}`)
+    runs.push({ picked: false, reason: setup?.reason })
     break
   }
-  log(`Picked ${describe(task)}: ${task.reason}`)
+  if (!setup.claimed) {
+    log(`${setup.id}: the queue refused the claim: ${setup.reason}`)
+    runs.push({ id: setup.id, outcome: 'claim-failed' })
+    break
+  }
+  if (!setup.bootstrapped) {
+    log(`${setup.id}: worktree bootstrap failed: ${setup.reason} — the claim was reset`)
+    runs.push({ id: setup.id, outcome: 'bootstrap-failed' })
+    break
+  }
+  log(`Picked ${describe(setup)}: ${setup.reason} — ${setup.branch} in ${setup.worktree}`)
 
   // ── Implement ───────────────────────────────────────────────────────────────
   phase('Implement')
   let handoff = await agent(
-    `Load the contributor skill and implement queue task ${describe(task)} from TODO.md. It is already claimed (— in progress ⚙); leave that suffix in place, the Annotate step replaces it.\n` +
-    (task.rework
-      ? `This is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green. `
-      : `Read the entry, the sources it cites (${(task.citations || []).join(', ') || 'none listed'}) and the area's living docs first. `) +
-    `Run ${GATE_TABLE}${task.gates?.length ? ` (${task.gates.join(', ')})` : ''} and report each real result.\n` +
+    `Work ONLY inside the git worktree ${setup.worktree} (branch ${setup.branch}). Load the contributor skill there and follow its conventions.\n` +
+    `Implement queue task ${describe(setup)}. Its full queue entry:\n---\n${setup.entryText}\n---\n` +
+    `Sources it cites: ${(setup.citations || []).join(', ') || 'none listed'} — read them, plus the area's living docs, before coding.` +
+    (setup.rework
+      ? `\nThis is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log of the main checkout). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green.`
+      : '') +
+    `\nRun ${GATE_TABLE}${setup.gates?.length ? ` (${setup.gates.join(', ')})` : ''} and report each real result — from inside the worktree. Report each gate as the bare package.json script name (for example \`test:server\`), not the full command line. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file.\n` +
     `If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. ` +
-    `Do not commit, do not move queue entries, do not edit ARCHITECTURE.md, and do not write the status suffix or handoff fields.`,
-    { label: `implement ${task.id}`, phase: 'Implement', schema: HANDOFF },
+    `Boundaries: the worktree's BACKLOG.md, TODO.md, DONE.md, NOTES.md, .agents/ and .vscode/ are read-only references — the queue is managed in the main checkout, so never edit those files here, and never stage or commit anything (the owner commits). Do not write the status suffix or handoff fields.`,
+    { label: `implement ${setup.id}`, phase: 'Implement', schema: HANDOFF },
   )
   if (!handoff) {
-    log(`${task.id}: the implement agent failed; the entry is still claimed (— in progress ⚙) and needs a manual reset`)
-    runs.push({ id: task.id, outcome: 'agent-failed' })
+    log(`${setup.id}: the implement agent failed; resetting the claim`)
+    await agent(
+      `Run \`bun run scripts/queue.ts reset ${setup.id}\` with Bash and report whether it exited 0.`,
+      { label: `reset ${setup.id}`, phase: 'Pick', effort: 'low' },
+    )
+    runs.push({ id: setup.id, outcome: 'agent-failed' })
     break
   }
 
@@ -153,21 +183,20 @@ for (let n = 0; n < MAX_TASKS; n++) {
     phase('Verify')
     const changed = handoff.changed.join('\n- ')
     const lenses = [
-      { key: 'conformance', prompt: `Does the change do what ${task.id}'s entry in TODO.md asks, and only that? Check it against the entry's Context, Check/Verification lines and the sources it cites (${(task.citations || []).join(', ') || 'none listed'}), AGENTS.md, and the ADR 0028 channel/tier the entry names. Run the entry's Check line yourself. If it fails but the handoff explains why with evidence and the explanation holds, report a minor finding (the Architect rules on it), not a blocking one. Flag scope creep, a missing regression test for a fix, and docs the change made stale but did not update.` },
+      { key: 'conformance', prompt: `Does the change do what ${setup.id} asks, and only that? The full queue entry is your contract:\n---\n${setup.entryText}\n---\nCheck the change against that entry's Context, Check/Verification lines and the sources it cites (${(setup.citations || []).join(', ') || 'none listed'}), AGENTS.md, and the ADR 0028 channel/tier the entry names. Run the entry's Check line yourself, inside the worktree. If it fails but the handoff explains why with evidence and the explanation holds, report a minor finding (the Architect rules on it), not a blocking one. Flag scope creep, a missing regression test for a fix, and docs the change made stale but did not update.` },
       !handoff.mechanical && { key: 'correctness', prompt: `Try to break the change: edge cases, both authored surfaces (.tsx and .tsrx) where the compiler is touched, server/client parity, cleanup on disconnect, silent fallbacks. Report only defects you can tie to a line.` },
     ].filter(Boolean)
     if (handoff.errorCopyChanged) lenses.push({ key: 'copy', prompt: `Review the added, reworded or retired error copy against .agents/skills/writer/references/error-messages.md: three-part message, Tier 2 wording, prefix, the propagation checklist (including skills/le-truc/references/errors.md) and message-substring tests.` })
 
     const [g, ...r] = await parallel([
       () => agent(
-        `Re-run the gates for ${describe(task)} independently in the main checkout: ${GATE_TABLE}${task.gates?.length ? ` (${task.gates.join(', ')})` : ''}. ${GATE_RULES} Re-run a failing gate once to rule out a flake (NOTES.md lists known flakes). Do not edit any file. Report each command's real result.`,
-        { label: `gates ${task.id}`, phase: 'Verify', schema: GATES, effort: 'low' },
+        `Re-run the gates for ${describe(setup)} independently inside the git worktree ${setup.worktree}: ${GATE_TABLE}${setup.gates?.length ? ` (${setup.gates.join(', ')})` : ''}. ${GATE_RULES} Re-run a failing gate once to rule out a flake (NOTES.md lists known flakes). Do not edit any file. Report each command's real result.`,
+        { label: `gates ${setup.id}`, phase: 'Verify', schema: GATES, effort: 'low' },
       ),
       ...lenses.map(l => () => agent(
-        `Review the uncommitted change for ${describe(task)}. Read-only: do not edit any file. Use git diff to see it.` +
-        (runs.length ? ` The working tree also holds this run's earlier, uncommitted tasks (${runs.map(x => x.id).filter(Boolean).join(', ')}); judge only ${task.id}'s files.` : '') +
+        `Review the change for ${describe(setup)}, isolated in the git worktree ${setup.worktree} (branch ${setup.branch}) — nothing else is in progress there. Read-only: do not edit any file. See it with \`git -C ${setup.worktree} diff HEAD\` plus \`git -C ${setup.worktree} status --porcelain\` for untracked files.` +
         ` The handoff says:\n- ${changed}\nHow: ${handoff.how || '-'}\n\n${l.prompt}\n\nMark a finding blocking only if the task would be wrong to accept as is. Also judge whether the handoff's reviewClass="${handoff.reviewClass}" is right per the contributor skill's rule 3.`,
-        { label: `review:${l.key} ${task.id}`, phase: 'Verify', schema: REVIEW },
+        { label: `review:${l.key} ${setup.id}`, phase: 'Verify', schema: REVIEW },
       )),
     ])
     gates = g
@@ -176,22 +205,22 @@ for (let n = 0; n < MAX_TASKS; n++) {
     const blocking = reviews.flatMap(x => x.findings.filter(f => f.severity === 'blocking'))
     const red = failing(gates)
     if (reviews.some(x => !x.reviewClassAgrees) && handoff.reviewClass === 'internal') {
-      log(`${task.id}: a reviewer reads this as an API change; marking for review`)
+      log(`${setup.id}: a reviewer reads this as an API change; marking for review`)
       handoff = { ...handoff, reviewClass: 'api' }
     }
     if (!blocking.length && !red.length) break
     if (round === MAX_FIX_ROUNDS) {
-      log(`${task.id}: still ${blocking.length} blocking finding(s), ${red.length} red gate(s) after ${MAX_FIX_ROUNDS} fix rounds`)
+      log(`${setup.id}: still ${blocking.length} blocking finding(s), ${red.length} red gate(s) after ${MAX_FIX_ROUNDS} fix rounds`)
       handoff = { ...handoff, outcome: 'blocked', blocker: `Unresolved after ${MAX_FIX_ROUNDS} fix rounds: ${[...red.map(x => `gate ${x.cmd} red`), ...blocking.map(f => f.issue)].join('; ')}` }
       break
     }
 
     phase('Fix')
     handoff = await agent(
-      `Load the contributor skill. You are continuing ${describe(task)}; the uncommitted change is in the working tree (git diff). Fix these, or rebut a finding with evidence in "how" if it is wrong:\n` +
+      `Load the contributor skill. You are continuing ${describe(setup)}; the uncommitted change is in your worktree ${setup.worktree} (git -C ${setup.worktree} diff HEAD). Fix these, or rebut a finding with evidence in "how" if it is wrong:\n` +
       [...red.map(x => `- RED GATE ${x.cmd}: ${x.tail || ''}`), ...blocking.map(f => `- ${f.file || ''} ${f.issue}${f.fix ? ` (suggested: ${f.fix})` : ''}`)].join('\n') +
-      `\n\nThen re-run the affected gates. Same limits as before: no commit, no queue moves, no ARCHITECTURE.md, no suffix. Return the full updated handoff (all changed files, not only this round's).`,
-      { label: `fix ${task.id} r${round + 1}`, phase: 'Fix', schema: HANDOFF },
+      `\n\nThen re-run the affected gates (read-only lint form) inside the worktree. Same limits as before: queue files, .agents/ and .vscode/ stay untouched, no staging, no commit. Return the full updated handoff (all changed files, not only this round's).`,
+      { label: `fix ${setup.id} r${round + 1}`, phase: 'Fix', schema: HANDOFF },
     ) || { ...handoff, outcome: 'blocked', blocker: 'fix agent failed' }
   }
 
@@ -201,25 +230,31 @@ for (let n = 0; n < MAX_TASKS; n++) {
   const suffix = handoff.outcome === 'blocked'
     ? '— blocked ⛔'
     : handoff.reviewClass === 'api' ? '— done, pending review ⏳' : '— done ✓'
+  const statusKey = handoff.outcome === 'blocked' ? 'blocked' : handoff.reviewClass === 'api' ? 'pending-review' : 'done'
+  const prosePath = `.zcode/workflow-drafts/queue-annotate/${setup.id}.md`
   const annotation = await agent(
-    `In TODO.md, on ${task.id}'s title line, replace " — in progress ⚙" with " ${suffix}". Do not move the entry or touch any other entry.\n` +
+    `Compose the queue annotation for ${setup.id} and write it to ${prosePath} (create the directory if needed). The queue script inserts it after the entry; you write only the prose.\n` +
     (handoff.outcome === 'blocked'
-      ? `Append a NOTES.md entry in the format of .agents/skills/architect/references/task-queue.md ("NOTES.md entry format"), Area ${task.area}, describing: ${handoff.blocker}. Give options only if they follow from the facts.`
+      ? `The run blocked: ${handoff.blocker}. Write a NOTES.md entry in the format of .agents/skills/architect/references/task-queue.md ("NOTES.md entry format"), Area ${setup.area}, describing the blocker. Give options only if they follow from the facts.`
       : handoff.reviewClass === 'api'
-        ? `Add under the entry, after its existing fields: **Changed:** (${handoff.changed.join('; ')}), **How:** (${handoff.how || ''}), **Check:** (${handoff.check || ''}${minors.length ? `; minor review notes: ${minors.map(f => f.issue).join('; ')}` : ''}). Keep each to one or two lines in the queue's register.`
-        : `Add one line under the entry: **Changed:** summarizing ${handoff.changed.join('; ')}.`) +
-    (task.rework && handoff.outcome !== 'blocked'
-      ? ` This was rework: instead of new Changed/How/Check lines, add one **Reworked:** line after the **Review:** line, answering each numbered finding briefly (fixed how, or rebutted why).`
+        ? `Write Changed/How/Check lines in the queue's register, one or two lines each: **Changed:** (${handoff.changed.join('; ')}), **How:** (${handoff.how || ''}), **Check:** (${handoff.check || ''}${minors.length ? `; minor review notes: ${minors.map(f => f.issue).join('; ')}` : ''}).`
+        : `Write one line: **Changed:** summarizing ${handoff.changed.join('; ')}.`) +
+    (setup.rework && handoff.outcome !== 'blocked'
+      ? ` This was rework: instead of new Changed/How/Check lines, write one **Reworked:** line answering each numbered finding on the entry's **Review:** line briefly (fixed how, or rebutted why).`
       : '') +
-    `\nReturn the suffix written, whether you wrote a NOTES.md entry, and a commit message for the uncommitted changes of ${task.id} (git diff, including your queue edits). Style: ${COMMIT_STYLE}`,
-    { label: `annotate ${task.id}`, phase: 'Annotate', schema: ANNOTATION, effort: 'low' },
+    `\nThe handoff for context: outcome=${handoff.outcome}, reviewClass=${handoff.reviewClass}, changed=${JSON.stringify(handoff.changed)}.\n` +
+    `Then run \`bun run scripts/queue.ts annotate ${setup.id} ${statusKey} ${prosePath}\` with Bash — it must exit 0 (it flips the suffix in the main checkout's queue). ` +
+    `Finally return a commit message for the task's changes (\`git -C ${setup.worktree} diff HEAD\` and \`git -C ${setup.worktree} status --porcelain\`). Style: ${COMMIT_STYLE}`,
+    { label: `annotate ${setup.id}`, phase: 'Annotate', schema: ANNOTATION, effort: 'low' },
   )
 
   runs.push({
-    id: task.id,
-    title: task.title,
-    area: task.area,
-    suffix: annotation?.suffix || suffix,
+    id: setup.id,
+    title: setup.title,
+    area: setup.area,
+    suffix: annotation?.annotated ? suffix : '— in progress ⚙ (annotation failed)',
+    branch: setup.branch,
+    worktree: setup.worktree,
     changed: handoff.changed,
     gates: (gates?.results || handoff.gates).map(x => `${x.pass ? '✓' : x.unrunnable ? '⊘' : '✗'} ${x.cmd}`),
     ownerMustRun: unrunnable(gates).map(x => x.cmd),
@@ -230,4 +265,13 @@ for (let n = 0; n < MAX_TASKS; n++) {
   if (handoff.outcome === 'blocked') break
 }
 
-return { runs, next: 'Owner: review git diff and commit with each run\'s `commit` message. Nothing is committed or moved between queue files.' }
+return {
+  runs,
+  next: [
+    'Owner, per task branch (nothing is committed; the queue suffix edits stay uncommitted in the main checkout for a separate docs(queue) commit):',
+    '1. Review: git -C <worktree> diff HEAD  ·  git -C <worktree> status --porcelain',
+    '2. Commit in the worktree: git -C <worktree> add -A && git -C <worktree> commit -m "<the run\'s commit message>"',
+    '3. Merge from v3 (task branches never touch queue files, so the dirty queue merges clean): git merge task/<id>',
+    '4. Clean up: git worktree remove --force <worktree> && git branch -d task/<id>',
+  ].join('\n'),
+}
