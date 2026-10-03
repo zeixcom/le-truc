@@ -914,3 +914,34 @@ describe('placement and shape refusals', () => {
 		).toEqual([])
 	})
 })
+
+/* === Mode classification follows scope (LT-387) === */
+
+describe('condition classification follows scope', () => {
+	const setup = 'const open = createCell(false)\n\t\texpose({ open: open.get })'
+
+	test('a setup alias of a signal is refused, not classified server', () => {
+		for (const alias of ['const isOpen = () => open.get()', 'const o = open']) {
+			const cond = alias.startsWith('const isOpen') ? 'isOpen()' : 'o.get()'
+			const found = errors(
+				tsrx(`<div>@if (${cond}) { <b>x</b> }</div>`, {
+					setup: `${setup}\n\t\t${alias}`,
+				}),
+			)
+			expect(found.map(d => d.message).join('\n')).toContain(
+				'reads the setup alias',
+			)
+		}
+	})
+
+	test('a loop binding shadowing a signal name is not read as the signal', () => {
+		const found = errors(
+			tsrx(
+				'<ul>@for (const open of items) { <li>@if (open) { <b>x</b> }</li> }</ul>',
+				{ params: '{ items }: { items: boolean[] }', setup },
+			),
+		)
+		const text = found.map(d => d.message).join('\n')
+		expect(text).not.toContain('condition that reads a signal')
+	})
+})

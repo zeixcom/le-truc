@@ -73,6 +73,11 @@ export type ExtractContext = {
 	 * so `@if` branches that share the identifier automatically agree).
 	 */
 	setupInits: ReadonlyMap<string, AstNode>
+	/**
+	 * Loop item/index/key bindings of the loops being lowered (innermost last).
+	 * They shadow same-named signals inside the loop body (LT-387).
+	 */
+	loopBound: string[]
 }
 
 /* === Internal Functions === */
@@ -99,4 +104,5 @@ export const createExtractContext = (
 	parserFallbackRefsOf: () => EMPTY_NAMES,
 	composeImports: new Map<string, string>(),
 	setupInits: new Map<string, AstNode>(),
+	loopBound: [],
 })
