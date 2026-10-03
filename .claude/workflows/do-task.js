@@ -115,7 +115,7 @@ const GATE_TABLE = 'the area\'s default gates in the contributor skill\'s Gates 
 // on stderr, exit 0, nothing runs), so a gate would report green without
 // executing. The entry's Check line is the conformance reviewer's to judge, so
 // a sound, evidenced deviation from it is a finding, not a red gate.
-const GATE_RULES = 'Run gates inside the worktree with `bun run --cwd <worktree> <script>` (never `bun --cwd <worktree> run <script>` — that form silently runs nothing) or `bun test --cwd <worktree> <paths>`; only package.json scripts otherwise. The lint scripts use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. Mark a gate unrunnable when it fails before any test runs because of the sandbox or environment (a port it cannot bind or that another server holds, signing, network, a missing tool). Give each gate at most 10 minutes (run it with a timeout); one that hangs waiting on a port or a server that never becomes ready is unrunnable, not something to wait out.'
+const GATE_RULES = 'Run gates inside the worktree with `bun run --cwd <worktree> <script>` (never `bun --cwd <worktree> run <script>` — that form silently runs nothing) or `bun test --cwd <worktree> <paths>`; only package.json scripts otherwise. Report a gate only when it names a package.json script or is an explicit `bun test <paths>` form — never prose from the entry\'s Verification line ("diagnostic parity" is not a gate). The lint scripts use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. Mark a gate unrunnable when it fails before any test runs because of the sandbox or environment (a port it cannot bind or that another server holds, signing, network, a missing tool). Give each gate at most 10 minutes (run it with a timeout); one that hangs waiting on a port or a server that never becomes ready is unrunnable, not something to wait out.'
 
 const describe = t => `${t.id} (${t.title}; Area: ${t.area})`
 // An unrunnable gate is not red: no code change fixes the sandbox. It goes to the
@@ -270,7 +270,7 @@ return {
   next: [
     'Owner, per task branch (nothing is committed; the queue suffix edits stay uncommitted in the main checkout for a separate docs(queue) commit):',
     '1. Review: git -C <worktree> diff HEAD  ·  git -C <worktree> status --porcelain',
-    '2. Commit in the worktree: git -C <worktree> add -A && git -C <worktree> commit -m "<the run\'s commit message>"',
+    '2. Commit in the worktree. First check status against the handoff\'s Changed list — a build gate run inside the worktree can churn a committed bundle (e.g. index.js gets a ../../ banner through the node_modules symlink); restore such files (git -C <worktree> checkout -- <path>) and mind the minor review findings. Then: git -C <worktree> add -A && git -C <worktree> commit -m "<the run\'s commit message>"',
     '3. Merge from v3 (task branches never touch queue files, so the dirty queue merges clean): git merge task/<id>',
     '4. Clean up: git worktree remove --force <worktree> && git branch -d task/<id>',
   ].join('\n'),

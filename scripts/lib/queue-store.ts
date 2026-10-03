@@ -272,7 +272,8 @@ export function chainOrder(iteration: string): {
 		const rest = raw
 		raw = null
 		if (/~~\s*LT-\d+/.test(rest)) {
-			for (const m of rest.matchAll(/~~\s*(LT-\d+)/g)) if (m[1]) closed.add(m[1])
+			for (const m of rest.matchAll(/~~\s*(LT-\d+)/g))
+				if (m[1]) closed.add(m[1])
 			return
 		}
 		let flat = rest
@@ -396,7 +397,12 @@ export function renderDone(store: Store): string {
 // ── Migration (markdown queue → store) ────────────────────────────────────────
 
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { loadState, mentionedIds, parseEntries } from './queue.ts'
+import {
+	loadState,
+	mentionedIds,
+	parseEntries,
+	type WriteResult,
+} from './queue.ts'
 
 const stripEntries = (text: string): string => {
 	const { entries } = parseEntries(text, 'BACKLOG.md')
@@ -573,4 +579,244 @@ export function checkStore(root: string): {
 		}
 	}
 	return { problems, notes }
+}
+
+// ── Store pick and writes (the do-task queue operations, store dialect) ───────
+// Same contract as scripts/lib/queue.ts (task-queue.md), one dialect down:
+// the chain lives in ITERATION.md, statuses in front matter, and every write
+// re-renders the kanban views so `check` never sees a stale one. NOTES.md is
+// not a view — blocked prose lands in the main checkout's file as before.
+
+const SATISFIED: TaskStatus[] = [
+	'pending-review',
+	'done',
+	'changes-requested',
+	'reviewed',
+]
+
+export interface StorePick {
+	picked: boolean
+	task: QueueTask | null
+	reason: string
+}
+
+const needSatisfied = (id: string, store: Store): boolean => {
+	const target = store.tasks.get(id)
+	if (target) return SATISFIED.includes(target.status)
+	return mentionedIds(store.ledger).has(id)
+}
+
+function unsatisfiedNeeds(task: QueueTask, store: Store): string | null {
+	const missing = task.needs.filter(id => !needSatisfied(id, store))
+	if (!missing.length) return null
+	const detail = missing
+		.map(id => {
+			const target = store.tasks.get(id)
+			if (!target) return `${id} (compacted record absent from LEDGER.md)`
+			return `${id} is ${target.status === 'open' ? 'open' : STATUS_TAILS[target.status]}`
+		})
+		.join('; ')
+	return `its Needs are unsatisfied: ${detail}`
+}
+
+const flatChain = (store: Store): string[] =>
+	chainOrder(store.iteration).tracks.flatMap(t => t.ids)
+
+export function pickStore(root: string): StorePick {
+	const store = loadStore(root)
+	if (store.problems.length)
+		return {
+			picked: false,
+			task: null,
+			reason: `the store is invalid: ${store.problems[0] ?? 'unknown problem'}`,
+		}
+
+	// Rework first, in chain order — the TODO view's order.
+	const chain = flatChain(store)
+	for (const id of chain) {
+		const task = store.tasks.get(id)
+		if (task?.status === 'changes-requested')
+			return {
+				picked: true,
+				task,
+				reason: 'rework: the task carries — changes requested ↩',
+			}
+	}
+
+	// First ready task, tracks in order. Same stall rule as the kanban pick: a
+	// claimed or non-contract task standing first ends its own track, and the
+	// scan falls through to the next.
+	let firstStall: string | null = null
+	for (const track of chainOrder(store.iteration).tracks) {
+		for (const id of track.ids) {
+			const task = store.tasks.get(id)
+			// Only a declared task picks or blocks here; compacted ids ride the
+			// task's Needs line instead.
+			if (!task) continue
+			if (task.area === 'design') continue
+			if (SATISFIED.includes(task.status) || task.status === 'blocked') continue
+			const notReady =
+				task.status !== 'open'
+					? task.status === 'in-progress'
+						? 'it is in progress ⚙ (claimed by a running session)'
+						: `it is not on a contract status ("— ${task.note}")`
+					: unsatisfiedNeeds(task, store)
+			if (notReady) {
+				firstStall ??= `${id} (${track.name}) stands first and ${notReady}`
+				break
+			}
+			return {
+				picked: true,
+				task,
+				reason: `first ready task in track "${track.name}"`,
+			}
+		}
+	}
+
+	const openCount = [...store.tasks.values()].filter(
+		t => t.status === 'open' && t.area !== 'design' && chain.includes(t.id),
+	).length
+	return {
+		picked: false,
+		task: null,
+		reason: firstStall
+			? `no ready task: ${firstStall}`
+			: openCount > 0
+				? `no ready task: ${openCount} open non-design chain task${openCount === 1 ? ' is' : 's are'} not first-ready in ${openCount === 1 ? 'its' : 'their'} track`
+				: 'no open non-design chain tasks: the iteration needs planning',
+	}
+}
+
+/** Pick a named task instead of the chain's first ready one: stored, not
+ * design, named by the chain (a BACKLOG task is not pickable), Needs satisfied. */
+export function pickByIdStore(id: string, root: string): StorePick {
+	const store = loadStore(root)
+	if (store.problems.length)
+		return {
+			picked: false,
+			task: null,
+			reason: `the store is invalid: ${store.problems[0] ?? 'unknown problem'}`,
+		}
+	const task = store.tasks.get(id)
+	if (!task)
+		return {
+			picked: false,
+			task: null,
+			reason: `${id} is stored by no task file`,
+		}
+	if (!flatChain(store).includes(id))
+		return {
+			picked: false,
+			task: null,
+			reason: `${id} is not named by the chain; it is a BACKLOG task`,
+		}
+	if (task.status === 'changes-requested')
+		return {
+			picked: true,
+			task,
+			reason: 'named task carrying — changes requested ↩ (rework)',
+		}
+	if (task.status !== 'open')
+		return {
+			picked: false,
+			task: null,
+			reason: `${id} is not open (status: ${task.status})`,
+		}
+	if (task.area === 'design')
+		return {
+			picked: false,
+			task: null,
+			reason: `${id} is Area: design; do-task never picks it`,
+		}
+	const notReady = unsatisfiedNeeds(task, store)
+	if (notReady)
+		return {
+			picked: false,
+			task: null,
+			reason: `${id} is not ready: ${notReady}`,
+		}
+	return { picked: true, task, reason: 'named task, ready per the contract' }
+}
+
+// Every store write: re-read the task file, guard the expected status, mutate
+// the front matter or body, rewrite, then rebuild the views so the kanban
+// files stay exact renders of the store.
+
+const writeTask = (root: string, task: QueueTask): string | null => {
+	try {
+		writeFileSync(join(root, 'queue', `${task.id}.md`), renderTaskFile(task))
+	} catch (e) {
+		return String(e)
+	}
+	const built = buildViews(root)
+	return built.problems.length ? built.problems.join('; ') : null
+}
+
+/** Claim an open or changes-requested task: its status becomes `in-progress`. */
+export function claimTaskStore(root: string, id: string): WriteResult {
+	const store = loadStore(root)
+	const task = store.tasks.get(id)
+	if (!task) return { ok: false, error: `${id} is stored by no task file` }
+	if (!flatChain(store).includes(id))
+		return {
+			ok: false,
+			error: `${id} is not named by the chain; only chain tasks are pickable`,
+		}
+	if (task.status !== 'open' && task.status !== 'changes-requested')
+		return {
+			ok: false,
+			error: `${id} carries "${task.status}"; only open or changes-requested tasks are claimable`,
+		}
+	const error = writeTask(root, { ...task, status: 'in-progress' })
+	return error ? { ok: false, error } : { ok: true }
+}
+
+/** Write the run's outcome: flip the claimed status and append the handoff
+ * prose to the task body — except blocked, whose prose is a NOTES.md entry in
+ * the main checkout, exactly as the kanban dialect writes it. */
+export function annotateTaskStore(
+	root: string,
+	id: string,
+	suffix: 'pending-review' | 'done' | 'blocked',
+	prose: string,
+): WriteResult {
+	const store = loadStore(root)
+	const task = store.tasks.get(id)
+	if (!task) return { ok: false, error: `${id} is stored by no task file` }
+	if (task.status !== 'in-progress')
+		return {
+			ok: false,
+			error: `${id} carries "${task.status}"; annotate only a claimed (in-progress) task`,
+		}
+
+	if (suffix === 'blocked') {
+		const notesPath = join(root, 'NOTES.md')
+		const notes = readFileSync(notesPath, 'utf8')
+		const separator = notes.indexOf('\n---\n')
+		if (separator === -1)
+			return {
+				ok: false,
+				error: 'NOTES.md has no `---` separator to insert below',
+			}
+		const insertAt = separator + '\n---\n'.length
+		writeFileSync(
+			notesPath,
+			`${notes.slice(0, insertAt)}\n${prose.trim()}\n${notes.slice(insertAt)}`,
+		)
+	} else if (prose.trim()) {
+		task.body = task.body ? `${task.body}\n\n${prose.trim()}` : prose.trim()
+	}
+	const error = writeTask(root, { ...task, status: suffix })
+	return error ? { ok: false, error } : { ok: true }
+}
+
+/** Return a claimed task to open (the recover path when an implement agent dies). */
+export function resetTaskStore(root: string, id: string): WriteResult {
+	const store = loadStore(root)
+	const task = store.tasks.get(id)
+	if (!task) return { ok: false, error: `${id} is stored by no task file` }
+	if (task.status !== 'in-progress')
+		return { ok: false, error: `${id} is not claimed (status: ${task.status})` }
+	const error = writeTask(root, { ...task, status: 'open' })
+	return error ? { ok: false, error } : { ok: true }
 }

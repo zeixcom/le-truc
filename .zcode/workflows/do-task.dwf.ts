@@ -131,6 +131,31 @@ const MAX_TASKS = inputId ? 1 : Math.max(1, inputMax ?? 1)
 const MAX_FIX_ROUNDS = 2
 const GATE_TIMEOUT = { timeoutMs: 1_800_000 }
 
+// Gates spawn through this wrapper: the child's full output is piped (held in
+// memory, no cap) and only a short tail reaches world.run. The server suites
+// print hundreds of KB of per-corpus-component compile logs that no reporter
+// flag quiets (--dots shrinks only the results section), and world.run
+// rejects any stream over 256KB. The child's exit code propagates.
+const GATE_WRAPPER = [
+	'const argv = Bun.argv.slice(1)',
+	'const r = Bun.spawnSync(["bun", ...argv], { stdout: "pipe", stderr: "pipe" })',
+	'const clip = b => { const t = new TextDecoder().decode(b).trim(); return t.length > 2200 ? "…" + t.slice(-2199) : t }',
+	'if (r.stdout?.length) console.log("STDOUT-TAIL\\n" + clip(r.stdout))',
+	'if (r.stderr?.length) console.log("STDERR-TAIL\\n" + clip(r.stderr))',
+	'console.log("EXIT " + r.exitCode)',
+	'process.exit(r.exitCode || 0)',
+].join('\n')
+
+// The package.json script names, for gate-list hygiene: agent handoffs may
+// report prose from the entry's Verification line ("diagnostic parity") as a
+// gate, and only a real script or an explicit `bun test <paths>` form runs.
+const pkg = JSON.parse(await files.read('package.json')) as {
+	scripts?: Record<string, string>
+}
+const KNOWN_SCRIPTS = new Set(Object.keys(pkg.scripts ?? {}))
+const isRunnableGate = (gate: string): boolean =>
+	/^bun\s+test\s+/.test(gate) || KNOWN_SCRIPTS.has(gate.split(/\s+/)[0])
+
 // The queue tool. Every call is a world.run: exit 0 means the JSON/prose on
 // stdout is authoritative, anything else means the queue refused (already
 // claimed, contract violation) and the run must stop for that task.
@@ -235,9 +260,9 @@ async function runGate(rawCmd: string, wt: string): Promise<GateOutcome> {
 		argv = ['run', '--cwd', wt, parts[0], ...dots, ...parts.slice(1)]
 	}
 	try {
-		let result = await world.run('bun', argv, GATE_TIMEOUT)
+		let result = await world.run('bun', ['-e', GATE_WRAPPER, ...argv], GATE_TIMEOUT)
 		if (result.exitCode !== 0) {
-			const rerun = await world.run('bun', argv, GATE_TIMEOUT)
+			const rerun = await world.run('bun', ['-e', GATE_WRAPPER, ...argv], GATE_TIMEOUT)
 			if (rerun.exitCode === 0) {
 				return { cmd, pass: true, unrunnable: false, flaky: true, tail: '' }
 			}
@@ -350,7 +375,12 @@ for (let n = 0; n < MAX_TASKS; n++) {
 	for (const g of handoff.gates) {
 		gateSet.add(normalizeGate(g.cmd))
 	}
-	const gateList = [...gateSet].filter(Boolean)
+	const dropped = [...gateSet].filter(Boolean).filter((g) => !isRunnableGate(g))
+	if (dropped.length)
+		log(
+			`${task.id}: dropping gate report(s) that name no package.json script: ${dropped.join(', ')} — the conformance reviewer judges the entry's Verification line`,
+		)
+	const gateList = [...gateSet].filter(Boolean).filter(isRunnableGate)
 	if (gateList.some((g) => DOCS_DEPENDENT.has(g))) {
 		gateList.unshift('build:docs')
 	}
@@ -497,7 +527,7 @@ for (let n = 0; n < MAX_TASKS; n++) {
 const NEXT = [
 	'Owner, per task branch (nothing is committed; the queue suffix edits stay uncommitted in the main checkout for a separate docs(queue) commit):',
 	'1. Review: git -C <worktree> diff HEAD  ·  git -C <worktree> status --porcelain',
-	'2. Commit in the worktree: git -C <worktree> add -A && git -C <worktree> commit -m "<the message below>"',
+	'2. Commit in the worktree. First check status against the handoff\'s Changed list — a build gate run inside the worktree can churn a committed bundle (e.g. index.js gets a ../../ banner through the node_modules symlink); restore such files (git -C <worktree> checkout -- <path>) and mind the minor review findings. Then: git -C <worktree> add -A && git -C <worktree> commit -m "<the message below>"',
 	'3. Merge from v3 (task branches never touch queue files, so the dirty queue merges clean): git merge task/<id>',
 	'4. Clean up: git worktree remove --force <worktree> && git branch -d task/<id>',
 ].join('\n')

@@ -29,15 +29,37 @@ import {
 	type Pick,
 	pick,
 	pickById,
-	type QueueEntry,
 	type QueueState,
 	ROOT,
 	resetTask,
 } from './lib/queue.ts'
-import { checkStore } from './lib/queue-store.ts'
+import {
+	annotateTaskStore,
+	buildViews,
+	checkStore,
+	claimTaskStore,
+	migrateQueue,
+	pickByIdStore,
+	pickStore,
+	renderEntry,
+	resetTaskStore,
+	type StorePick,
+} from './lib/queue-store.ts'
 
-/** The pick decision's task, as the do-task workflow consumes it. */
-const taskInfo = (entry: QueueEntry) => ({
+/** The pick decision's task, as the do-task workflow consumes it. Both queue
+ * dialects shape their task into this view: the kanban entry directly, the
+ * store task via its rendered entry text. */
+interface PickTaskView {
+	id: string
+	title: string
+	area?: string | undefined
+	suffix: string
+	needs: string[]
+	gates: string[]
+	text: string
+}
+
+const taskInfo = (entry: PickTaskView) => ({
 	id: entry.id,
 	title: entry.title,
 	area: entry.area,
@@ -56,6 +78,25 @@ const decision = (state: QueueState, p: Pick): string =>
 		...(p.picked && p.task ? { task: taskInfo(p.task) } : {}),
 	})
 
+const storeDecision = (p: StorePick): string =>
+	JSON.stringify({
+		picked: p.picked,
+		reason: p.reason,
+		...(p.picked && p.task
+			? {
+					task: taskInfo({
+						id: p.task.id,
+						title: p.task.title,
+						area: p.task.area,
+						suffix: p.task.status,
+						needs: p.task.needs,
+						gates: p.task.gates,
+						text: renderEntry(p.task),
+					}),
+				}
+			: {}),
+	})
+
 const write = (result: { ok: boolean; error?: string }): number => {
 	if (result.ok) return 0
 	console.error(result.error)
@@ -71,12 +112,15 @@ const usage = (): number => {
 
 const [command, ...args] = process.argv.slice(2)
 
+// When the per-task store exists it is the source and the kanban files are
+// generated views; every command then works on the store and rebuilds the
+// views after each write. Without it the kanban files are the source, exactly
+// as before the migration.
+const stored = existsSync(join(ROOT, 'queue'))
+
 let exit: number
 switch (command) {
 	case 'check': {
-		// When the per-task store exists it is the source and the kanban files
-		// are generated views; check validates the store and view freshness.
-		const stored = existsSync(join(ROOT, 'queue'))
 		const { problems, notes } = stored ? checkStore(ROOT) : loadState(ROOT)
 		for (const note of notes) console.log(`note: ${note}`)
 		for (const problem of problems) console.error(`problem: ${problem}`)
@@ -84,15 +128,23 @@ switch (command) {
 		break
 	}
 	case 'pick': {
-		const state = loadState(ROOT)
 		const [id] = args
-		console.log(decision(state, id ? pickById(id, state) : pick(state)))
+		if (stored) {
+			console.log(storeDecision(id ? pickByIdStore(id, ROOT) : pickStore(ROOT)))
+		} else {
+			const state = loadState(ROOT)
+			console.log(decision(state, id ? pickById(id, state) : pick(state)))
+		}
 		exit = 0
 		break
 	}
 	case 'claim': {
 		const [id] = args
-		exit = id ? write(claimTask(ROOT, id)) : usage()
+		if (!id) {
+			exit = usage()
+			break
+		}
+		exit = write(stored ? claimTaskStore(ROOT, id) : claimTask(ROOT, id))
 		break
 	}
 	case 'annotate': {
@@ -109,18 +161,29 @@ switch (command) {
 			exit = usage()
 			break
 		}
+		const prose = readFileSync(prosePath, 'utf8')
 		exit = write(
-			annotateTask(ROOT, id, suffix, readFileSync(prosePath, 'utf8')),
+			stored
+				? annotateTaskStore(ROOT, id, suffix, prose)
+				: annotateTask(ROOT, id, suffix, prose),
 		)
 		break
 	}
 	case 'reset': {
 		const [id] = args
-		exit = id ? write(resetTask(ROOT, id)) : usage()
+		if (!id) {
+			exit = usage()
+			break
+		}
+		exit = write(stored ? resetTaskStore(ROOT, id) : resetTask(ROOT, id))
 		break
 	}
 	case 'migrate': {
-		const { migrateQueue } = await import('./lib/queue-store.ts')
+		if (stored) {
+			console.error('problem: queue/ already exists; migrate is one-off')
+			exit = 1
+			break
+		}
 		const result = migrateQueue(ROOT)
 		for (const problem of result.problems) console.error(`problem: ${problem}`)
 		console.log(`migrated ${result.written.length} file(s)`)
@@ -128,7 +191,11 @@ switch (command) {
 		break
 	}
 	case 'build': {
-		const { buildViews } = await import('./lib/queue-store.ts')
+		if (!stored) {
+			console.log('no queue/ store; the kanban files are the source')
+			exit = 0
+			break
+		}
 		const [flag, outDir] = args
 		const result = buildViews(ROOT, flag === '--out' && outDir ? outDir : ROOT)
 		if (result.problems.length > 0) {
