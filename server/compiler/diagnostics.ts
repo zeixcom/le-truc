@@ -90,7 +90,7 @@ export type DiagnosticCode =
 	| 'LTC054' // a position the server render evaluates reads page context outside the declared ambient set, or the reserved `i18n` record is destructured for a member outside it (ADR 0034 s4, LT-258) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC055' // an `export const i18n` source pattern is not a supported ICU MessageFormat 1 pattern, or a `t.<key>` site disagrees with its pattern's arguments: missing/extra/non-literal arguments, an argument message read without a call, an argument-less message called (ADR 0030 s4, LT-250) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC056' // an authored `<script>` element in a component template, whatever its `type` — the page owns script loading (LT-358 rider) — tier 1 Prevented, statically decidable, no runtime half
-	| 'LTC060' // a fragment root — the template's root is the host element, and the `<style>` block is a child of the root, not a sibling (ADR 0032 s1, LT-375) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC060' // a fragment root, whatever it wraps — the template's root is the host element (ADR 0032 s1, LT-375) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC061' // an authored `<template>` element in a component template — the compiler owns template extraction, and the selector proof cannot see inside one (LT-383) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC062' // a reactive switch (one whose discriminant reads a signal) has a `@case`/`case` value that is not a literal, or two cases share an arm key (ADR 0037 s2, LT-274) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC063' // a reactive condition inside a reactive list's reconcile() container (ADR 0037 s5, LT-274) — tier 1 Prevented, statically decidable, no runtime half
@@ -438,13 +438,14 @@ export const diagnostic = {
 		),
 
 	/**
-	 * A fragment root — the template output is `<>…</>` wrapping the root
-	 * element and its `<style>` block (LT-375; owner ruling 2026-09-29,
-	 * ADR 0032 s1): the template's root is the host element, there is no
-	 * fragment root, and the stylesheet is a `<style>` child of the root, not
-	 * a sibling of it. The fragment never reached the output — the migration
-	 * of the corpus sources that still wrapped the root is purely textual —
-	 * so the rule prevents the shape from returning, it fixes no wrong bytes.
+	 * A fragment root — the template output is a `<>…</>` fragment, whatever
+	 * it wraps (LT-375; owner ruling 2026-09-29, ADR 0032 s1): the template's
+	 * root is the host element, there is no fragment root, and a stylesheet
+	 * is a `<style>` child of the root, not a sibling of it. The copy is
+	 * shape-neutral: the fragment may hold no `<style>` block at all. The
+	 * fragment never reached the output — the migration of the corpus
+	 * sources that still wrapped the root is purely textual — so the rule
+	 * prevents the shape from returning, it fixes no wrong bytes.
 	 * Channel: compiler (the shared driver, both surfaces). ADR 0028 tier 1
 	 * (Prevented): statically decidable from the output node alone, no
 	 * runtime half.
@@ -454,7 +455,7 @@ export const diagnostic = {
 	fragmentRoot: (source: string, at: Site) =>
 		error(
 			'LTC060',
-			"A fragment root — the template output wraps the root element and its `<style>` block in `<>…</>`. The template's root is the host element, there is no fragment root, and the stylesheet is a `<style>` child of the root, not a sibling of it. Move the `<style>` block inside the root element and drop the fragment.",
+			"The template output is a fragment (`<>…</>`) — the template's root is the host element, and there is no fragment root. Drop the fragment so that the host element is the root. If the component has a stylesheet, put it inside the root as a `<style>` child.",
 			rangeOf(source, at),
 		),
 

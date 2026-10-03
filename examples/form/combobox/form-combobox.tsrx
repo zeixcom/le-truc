@@ -147,177 +147,194 @@ export function FormCombobox(
 		bindAttribute(popup, 'hidden'),
 	);
 
-		<form-combobox {name} {value}>
-			<label for={inputId}>{label}</label>
-			<div class="input">
-				<input
-					type="text"
-					id={inputId}
-					value={() => host.value}
-					autocomplete="off"
-					role="combobox"
-					aria-expanded="false"
-					aria-describedby={description ? descriptionId : null}
-					onInput={() => {
-						host.value = textbox.value;
-						textbox.checkValidity();
-						host.setCustomValidity(textbox.validationMessage ?? '');
-						showPopup.set(true);
-					}}
-					onKeyup={(e: KeyboardEvent) => {
-						if (e.key === 'Escape') {
-							showPopup.set(false);
-							textbox.focus();
-						}
-						if (e.key === 'Delete') host.clear();
-					}}
-					onKeydown={(e: KeyboardEvent) => {
-						if (e.key !== 'ArrowDown') return;
-						if (e.altKey) showPopup.set(true);
-						if (showPopup.get()) listbox.focusFirstOption();
-					}}
-				/>
-				@if (clearable) {
-					<button
-						type="button"
-						class="clear"
-						aria-label={t.clearInput}
-						hidden={() => host.value === ''}
-						onClick={() => host.clear()}
-					>✕</button>
-				}
-			</div>
-			<div
-				class="popup"
-				hidden
-				onChange={() => {
-					textbox.value = listbox.value;
-					host.value = listbox.value;
+	<form-combobox {name} {value}>
+		<label for={inputId}>{label}</label>
+		<div class="input">
+			<input
+				type="text"
+				id={inputId}
+				value={() => host.value}
+				autocomplete="off"
+				role="combobox"
+				aria-expanded="false"
+				aria-describedby={description ? descriptionId : null}
+				onInput={() => {
+					host.value = textbox.value;
 					textbox.checkValidity();
 					host.setCustomValidity(textbox.validationMessage ?? '');
-					showPopup.set(false);
-					textbox.focus();
+					showPopup.set(true);
 				}}
-			>
-				<FormListbox
-					name={`${name}-options`}
-					options={options}
-					filterable={false}
-					truc:pass={{ filter: () => host.value }}
-				/>
-			</div>
-			@if (description) {
-				<p class="description" aria-live="polite" id={descriptionId}>
-					{description}
-				</p>
+				onKeyup={(e: KeyboardEvent) => {
+					if (e.key === 'Escape') {
+						showPopup.set(false);
+						textbox.focus();
+					}
+					if (e.key === 'Delete') host.clear();
+				}}
+				onKeydown={(e: KeyboardEvent) => {
+					if (e.key !== 'ArrowDown') return;
+					if (e.altKey) showPopup.set(true);
+					if (showPopup.get()) listbox.focusFirstOption();
+				}}
+			/>
+			@if (clearable) {
+				<button
+					type="button"
+					class="clear"
+					aria-label={t.clearInput}
+					hidden={() => host.value === ''}
+					onClick={() => host.clear()}
+				>✕</button>
 			}
-			<p class="error" role="alert" aria-live="assertive">
-				{host.validationMessage}
+		</div>
+		<div
+			class="popup"
+			hidden
+			onChange={() => {
+				textbox.value = listbox.value;
+				host.value = listbox.value;
+				textbox.checkValidity();
+				host.setCustomValidity(textbox.validationMessage ?? '');
+				showPopup.set(false);
+				textbox.focus();
+			}}
+		>
+			<FormListbox
+				name={`${name}-options`}
+				options={options}
+				filterable={false}
+				truc:pass={{ filter: () => host.value }}
+			/>
+		</div>
+		@if (description) {
+			<p class="description" aria-live="polite" id={descriptionId}>
+				{description}
 			</p>
-			<style>
-			:host {
+		}
+		<p class="error" role="alert" aria-live="assertive">
+			{host.validationMessage}
+		</p>
+
+		<style>
+		:host {
+			display: block;
+			width: 100%;
+
+			> label,
+			> p,
+			> button {
+				opacity: var(--opacity-dimmed);
+				transition: opacity var(--transition-short) var(--easing-inout);
+			}
+
+			> label {
 				display: block;
-				width: 100%;
+				font-size: var(--font-size-s);
+				color: var(--color-text);
+				margin-bottom: var(--space-xxs);
+			}
+
+			> .input {
+				position: relative;
+
+				> input {
+					display: inline-block;
+					box-sizing: border-box;
+					background: var(--color-input);
+					color: var(--color-text);
+					border: none;
+					border-bottom: 1px solid var(--color-border);
+					padding: var(--space-xs) var(--input-height) var(--space-xs)
+						var(--space-xxs);
+					font-size: var(--font-size-m);
+					height: var(--input-height);
+					width: 100%;
+					transition: color var(--transition-short) var(--easing-inout);
+
+					&::placeholder {
+						color: var(--color-text);
+						opacity: var(--opacity-translucent);
+					}
+				}
+			}
+
+			&[clearable] .input {
+				> input {
+					padding-right: var(--input-height);
+				}
+
+				.clear {
+					position: absolute;
+					bottom: 0;
+					right: 0;
+					border: 0;
+					border-radius: 50%;
+					font-size: var(--font-size-xs);
+					line-height: var(--line-height-xs);
+					color: var(--color-input);
+					background-color: var(--color-text-soft);
+					width: calc(0.6 * var(--input-height));
+					height: calc(0.6 * var(--input-height));
+					margin: calc(0.2 * var(--input-height));
+					padding: 0;
+
+					&:hover {
+						background-color: var(--color-text);
+					}
+				}
+			}
+
+			/* Native validity styling — replaces the old aria-invalid attribute hook. */
+			&:user-invalid > .input > input {
+				box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
+			}
+
+			form-listbox {
+				display: none;
+				position: absolute;
+				list-style: none;
+				top: 100%;
+				left: 0;
+				width: calc(100% - 2px);
+				border: 1px solid var(--color-border);
+				border-top: none;
+				z-index: 1;
+			}
+
+			> .error,
+			> .description {
+				margin: var(--space-xs) 0 0;
+				font-size: var(--font-size-xs);
+				line-height: var(--line-height-s);
+
+				&:empty {
+					display: none;
+				}
+			}
+
+			> .error {
+				color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+			}
+
+			> .description {
+				color: var(--color-text-soft);
+			}
+
+			&:focus-within {
 				> label,
 				> p,
 				> button {
-					opacity: var(--opacity-dimmed);
-					transition: opacity var(--transition-short) var(--easing-inout);
+					opacity: var(--opacity-solid);
 				}
-				> label {
-					display: block;
-					font-size: var(--font-size-s);
-					color: var(--color-text);
-					margin-bottom: var(--space-xxs);
-				}
-				> .input {
-					position: relative;
-					> input {
-						display: inline-block;
-						box-sizing: border-box;
-						background: var(--color-input);
-						color: var(--color-text);
-						border: none;
-						border-bottom: 1px solid var(--color-border);
-						padding: var(--space-xs) var(--input-height) var(--space-xs)
-							var(--space-xxs);
-						font-size: var(--font-size-m);
-						height: var(--input-height);
-						width: 100%;
-						transition: color var(--transition-short) var(--easing-inout);
-						&::placeholder {
-							color: var(--color-text);
-							opacity: var(--opacity-translucent);
-						}
-					}
-				}
-				&[clearable] .input {
-					> input {
-						padding-right: var(--input-height);
-					}
-					.clear {
-						position: absolute;
-						bottom: 0;
-						right: 0;
-						border: 0;
-						border-radius: 50%;
-						font-size: var(--font-size-xs);
-						line-height: var(--line-height-xs);
-						color: var(--color-input);
-						background-color: var(--color-text-soft);
-						width: calc(0.6 * var(--input-height));
-						height: calc(0.6 * var(--input-height));
-						margin: calc(0.2 * var(--input-height));
-						padding: 0;
-						&:hover {
-							background-color: var(--color-text);
-						}
-					}
-				}
-				/* Native validity styling — replaces the old aria-invalid attribute hook. */
-				&:user-invalid > .input > input {
-					box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
-				}
-				form-listbox {
-					display: none;
-					position: absolute;
-					list-style: none;
-					top: 100%;
-					left: 0;
-					width: calc(100% - 2px);
-					border: 1px solid var(--color-border);
-					border-top: none;
-					z-index: 1;
-				}
-				> .error,
-				> .description {
-					margin: var(--space-xs) 0 0;
-					font-size: var(--font-size-xs);
-					line-height: var(--line-height-s);
-					&:empty {
-						display: none;
-					}
-				}
-				> .error {
-					color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
-				}
-				> .description {
-					color: var(--color-text-soft);
-				}
-				&:focus-within {
-					> label,
-					> p,
-					> button {
-						opacity: var(--opacity-solid);
-					}
-					> .input > input {
-						color: var(--color-text);
-					}
-					form-listbox:not([hidden]) {
-						display: block;
-					}
-				}
-			}</style>
-		</form-combobox>
 
+				> .input > input {
+					color: var(--color-text);
+				}
+
+				form-listbox:not([hidden]) {
+					display: block;
+				}
+			}
+		}</style>
+	</form-combobox>
 }

@@ -27,24 +27,25 @@ export function CssProbe({}: CssProbeProps) {
 			<button type="button" class="own">
 				{'Own'}
 			</button>
+
 			<style>{css`
-					:host {
-						display: block;
-						border-top: 3px solid rgb(255, 0, 0);
-					}
-					:host::before {
-						content: '';
-					}
-					.label {
-						color: rgb(0, 0, 255);
-					}
-					button {
-						text-transform: uppercase;
-					}
-					:global(.probe-global) {
-						letter-spacing: 2px;
-					}
-				`}</style>
+				:host {
+					display: block;
+					border-top: 3px solid rgb(255, 0, 0);
+				}
+				:host::before {
+					content: '';
+				}
+				.label {
+					color: rgb(0, 0, 255);
+				}
+				button {
+					text-transform: uppercase;
+				}
+				:global(.probe-global) {
+					letter-spacing: 2px;
+				}
+			`}</style>
 		</css-probe>
 	)
 }

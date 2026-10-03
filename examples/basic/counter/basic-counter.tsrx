@@ -42,31 +42,34 @@ export function BasicCounter({ start = 42 }: { start?: number })
 		const count = createCell(start)
 		expose({ count: count.get })
 
-			<basic-counter>
-				<button type="button" onClick={() => count.set(count.get() + 1)}>
-					💐 <span>{count}</span>
-				</button>
-				<style>
-				:host {
-					display: inline-block;
-					& button {
-						border: 1px solid var(--color-border);
-						border-radius: var(--space-xs);
-						background-color: var(--color-secondary);
-						padding: var(--space-xs) var(--space-s);
-						cursor: pointer;
-						color: var(--color-text);
-						font-size: var(--font-size-m);
-						line-height: var(--line-height-xs);
-						transition: background-color var(--transition-short) var(--easing-inout);
-						&:hover {
-							background-color: var(--color-secondary-hover);
-						}
-						&:active {
-							background-color: var(--color-secondary-active);
-						}
-					}
-				}</style>
-			</basic-counter>
+		<basic-counter>
+			<button type="button" onClick={() => count.set(count.get() + 1)}>
+				💐 <span>{count}</span>
+			</button>
 
+			<style>
+			:host {
+				display: inline-block;
+
+				& button {
+					border: 1px solid var(--color-border);
+					border-radius: var(--space-xs);
+					background-color: var(--color-secondary);
+					padding: var(--space-xs) var(--space-s);
+					cursor: pointer;
+					color: var(--color-text);
+					font-size: var(--font-size-m);
+					line-height: var(--line-height-xs);
+					transition: background-color var(--transition-short) var(--easing-inout);
+
+					&:hover {
+						background-color: var(--color-secondary-hover);
+					}
+
+					&:active {
+						background-color: var(--color-secondary-active);
+					}
+				}
+			}</style>
+		</basic-counter>
 	}

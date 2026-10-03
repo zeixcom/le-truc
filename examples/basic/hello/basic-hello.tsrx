@@ -58,20 +58,20 @@ export function BasicHello(
 		const input = first('input', 'subject input')
 		expose({ subject: asString('World') })
 
-			<basic-hello {subject}>
-				<label for={subjectId}>Your name</label><br />
-				<input
-					id={subjectId}
-					name="subject"
-					type="text"
-					autocomplete="given-name"
-					onInput={() => ({ subject: input.value || 'World' })}
-				/>
-				<p>Hello, <output for={subjectId}>{host.subject}</output>!</p>
-				<style>
-				:host {
-					display: block;
-				}</style>
-			</basic-hello>
+		<basic-hello {subject}>
+			<label for={subjectId}>Your name</label><br />
+			<input
+				id={subjectId}
+				name="subject"
+				type="text"
+				autocomplete="given-name"
+				onInput={() => ({ subject: input.value || 'World' })}
+			/>
+			<p>Hello, <output for={subjectId}>{host.subject}</output>!</p>
 
+			<style>
+			:host {
+				display: block;
+			}</style>
+		</basic-hello>
 	}

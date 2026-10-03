@@ -101,10 +101,11 @@ export function BasicPluralize(
 				</span>
 				{t.remaining}
 			</p>
+
 			<style>{css`
-				:host {
-					display: block;
-				}`}</style>
+			:host {
+				display: block;
+			}`}</style>
 		</basic-pluralize>
 	)
 }

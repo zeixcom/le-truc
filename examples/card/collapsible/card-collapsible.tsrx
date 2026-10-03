@@ -41,77 +41,86 @@ export function CardCollapsible({ open = false }: { open?: boolean })
 		const details = first('details', 'details element')
 		expose({ open: asBoolean(false) })
 
-			<card-collapsible {open}>
-				<details open={() => host.open} onToggle={() => ({ open: details.open })}>
-					<summary>
-						<span class="description">
-							Click to expand and read the rest of this card — the summary text
-							is truncated with an ellipsis while collapsed.
-						</span>
-					</summary>
-					<div class="content">
-						<p>
-							This is the full body content of the card. It is only visible once
-							the card is expanded, and the summary text above wraps normally
-							instead of being truncated.
-						</p>
-					</div>
-				</details>
-				<style>
-				:host {
-					display: block;
-					margin: 0 0 var(--space-l);
-					& details {
-						border: 1px solid var(--color-border-soft);
-						border-radius: var(--space-s);
-						overflow: clip;
-					}
-					& summary {
-						display: flex;
-						align-items: baseline;
-						gap: var(--space-xs);
-						padding: var(--space-s) var(--space-m);
-						cursor: pointer;
-						font-weight: var(--font-weight-bold);
-						list-style: none;
-						height: auto;
-						&::-webkit-details-marker {
-							display: none;
-						}
-						&::before {
-							content: "▶";
-							flex: none;
-							font-size: var(--font-size-s);
-							transition: transform var(--transition-short) var(--easing-inout);
-						}
-						& .description {
-							flex: 1 1 auto;
-							min-width: 0;
-							overflow: hidden;
-							text-overflow: ellipsis;
-							white-space: nowrap;
-							font-weight: var(--font-weight-regular);
-							color: var(--color-text-soft);
-						}
-					}
-					& details[open] > summary {
-						&::before {
-							transform: rotate(90deg);
-						}
-						& .description {
-							overflow: visible;
-							text-overflow: unset;
-							white-space: normal;
-							line-height: var(--line-height-m);
-						}
-					}
-					& .content {
-						padding: var(--space-xs) var(--space-m) var(--space-m);
-						> *:last-child {
-							margin-bottom: 0;
-						}
-					}
-				}</style>
-			</card-collapsible>
+		<card-collapsible {open}>
+			<details open={() => host.open} onToggle={() => ({ open: details.open })}>
+				<summary>
+					<span class="description">
+						Click to expand and read the rest of this card — the summary text
+						is truncated with an ellipsis while collapsed.
+					</span>
+				</summary>
+				<div class="content">
+					<p>
+						This is the full body content of the card. It is only visible once
+						the card is expanded, and the summary text above wraps normally
+						instead of being truncated.
+					</p>
+				</div>
+			</details>
 
+			<style>
+			:host {
+				display: block;
+				margin: 0 0 var(--space-l);
+
+				& details {
+					border: 1px solid var(--color-border-soft);
+					border-radius: var(--space-s);
+					overflow: clip;
+				}
+
+				& summary {
+					display: flex;
+					align-items: baseline;
+					gap: var(--space-xs);
+					padding: var(--space-s) var(--space-m);
+					cursor: pointer;
+					font-weight: var(--font-weight-bold);
+					list-style: none;
+					height: auto;
+
+					&::-webkit-details-marker {
+						display: none;
+					}
+
+					&::before {
+						content: "▶";
+						flex: none;
+						font-size: var(--font-size-s);
+						transition: transform var(--transition-short) var(--easing-inout);
+					}
+
+					& .description {
+						flex: 1 1 auto;
+						min-width: 0;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
+						font-weight: var(--font-weight-regular);
+						color: var(--color-text-soft);
+					}
+				}
+
+				& details[open] > summary {
+					&::before {
+						transform: rotate(90deg);
+					}
+
+					& .description {
+						overflow: visible;
+						text-overflow: unset;
+						white-space: normal;
+						line-height: var(--line-height-m);
+					}
+				}
+
+				& .content {
+					padding: var(--space-xs) var(--space-m) var(--space-m);
+
+					> *:last-child {
+						margin-bottom: 0;
+					}
+				}
+			}</style>
+		</card-collapsible>
 	}

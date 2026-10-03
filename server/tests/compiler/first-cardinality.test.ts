@@ -151,7 +151,7 @@ describe('output shape (LT-123)', () => {
 			expect(diagnostics[0]?.code).toBe('LTC060')
 			expect(diagnostics[0]?.severity).toBe('error')
 			expect(diagnostics[0]?.message).toContain(
-				'Move the `<style>` block inside the root element and drop the fragment',
+				'Drop the fragment so that the host element is the root',
 			)
 		}
 	})

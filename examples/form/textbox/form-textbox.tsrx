@@ -194,143 +194,158 @@ export function FormTextbox(
 		host.value = input.value;
 	};
 
-		<form-textbox {name} {value}>
-			<label for={inputId}>{label}</label>
-			<div class="input">
-				@if (multiline) {
-					<textarea
-						id={inputId}
-						value={() => host.value}
-						autocomplete="off"
-						{required}
-						{maxlength}
-						rows={3}
-						aria-describedby={describedBy}
-						{onInput}
-						{onChange}
-					>{value}</textarea>
-				} @else {
-					<input
-						type="text"
-						id={inputId}
-						value={() => host.value}
-						autocomplete="off"
-						{required}
-						{maxlength}
-						aria-describedby={describedBy}
-						{onInput}
-						{onChange}
-					/>
-				}
-				@if (clearable) {
-					<button
-						type="button"
-						class="clear"
-						aria-label={t.clearInput}
-						hidden={() => length.get() === 0}
-						onClick={() => host.clear()}
-					>
-						✕
-					</button>
-				}
-			</div>
-			@if (validatable) {
-				<p class="error" role="alert" aria-live="assertive" id={errorId}>
-					{host.validationMessage}
-				</p>
+	<form-textbox {name} {value}>
+		<label for={inputId}>{label}</label>
+		<div class="input">
+			@if (multiline) {
+				<textarea
+					id={inputId}
+					value={() => host.value}
+					autocomplete="off"
+					{required}
+					{maxlength}
+					rows={3}
+					aria-describedby={describedBy}
+					{onInput}
+					{onChange}
+				>{value}</textarea>
+			} @else {
+				<input
+					type="text"
+					id={inputId}
+					value={() => host.value}
+					autocomplete="off"
+					{required}
+					{maxlength}
+					aria-describedby={describedBy}
+					{onInput}
+					{onChange}
+				/>
 			}
-			@if (description) {
-				<p class="description" aria-live="polite" id={descriptionId} data-remaining={description}>{remainingCount}</p>
+			@if (clearable) {
+				<button
+					type="button"
+					class="clear"
+					aria-label={t.clearInput}
+					hidden={() => length.get() === 0}
+					onClick={() => host.clear()}
+				>
+					✕
+				</button>
 			}
-			<style>
-				:host {
+		</div>
+		@if (validatable) {
+			<p class="error" role="alert" aria-live="assertive" id={errorId}>
+				{host.validationMessage}
+			</p>
+		}
+		@if (description) {
+			<p class="description" aria-live="polite" id={descriptionId} data-remaining={description}>{remainingCount}</p>
+		}
+
+		<style>
+			:host {
+				display: block;
+				width: 100%;
+
+				& label,
+				& p,
+				& button {
+					opacity: var(--opacity-dimmed);
+					transition: opacity var(--transition-short) var(--easing-inout);
+				}
+
+				& label {
 					display: block;
+					font-size: var(--font-size-s);
+					color: var(--color-text);
+					margin-bottom: var(--space-xxs);
+				}
+
+				& input,
+				& textarea {
+					display: inline-block;
+					box-sizing: border-box;
+					background: var(--color-input);
+					color: var(--color-text);
+					border: none;
+					border-bottom: 1px solid var(--color-border);
+					padding: var(--space-xs) var(--space-xxs);
+					font-size: var(--font-size-m);
 					width: 100%;
+
+					&::placeholder {
+						color: var(--color-text);
+						opacity: var(--opacity-translucent);
+					}
+				}
+
+				/* Native validity styling — replaces the old aria-invalid attribute hook.
+				   :user-invalid matches after user interaction (the right UX for required
+				   fields); :invalid would match immediately on page load. */
+				&:user-invalid input,
+				&:user-invalid textarea {
+					box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
+				}
+
+				& input {
+					height: var(--input-height);
+				}
+
+				&:state(clearable) .input {
+					position: relative;
+
+					& input {
+						padding-right: var(--input-height);
+					}
+
+					.clear {
+						position: absolute;
+						bottom: 0;
+						right: 0;
+						border: 0;
+						border-radius: 50%;
+						font-size: var(--font-size-xs);
+						line-height: var(--line-height-xs);
+						color: var(--color-input);
+						background-color: var(--color-text-soft);
+						width: calc(0.6 * var(--input-height));
+						height: calc(0.6 * var(--input-height));
+						margin: calc(0.2 * var(--input-height));
+						padding: 0;
+
+						&:hover {
+							background-color: var(--color-text);
+						}
+					}
+				}
+
+				.error,
+				.description {
+					margin: var(--space-xs) 0 0;
+					font-size: var(--font-size-xs);
+					line-height: var(--line-height-s);
+
+					&:empty {
+						display: none;
+					}
+				}
+
+				.error {
+					color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+				}
+
+				.description {
+					color: var(--color-text-soft);
+				}
+
+				&:focus-within {
 					& label,
 					& p,
 					& button {
-						opacity: var(--opacity-dimmed);
-						transition: opacity var(--transition-short) var(--easing-inout);
+						opacity: var(--opacity-solid);
 					}
-					& label {
-						display: block;
-						font-size: var(--font-size-s);
-						color: var(--color-text);
-						margin-bottom: var(--space-xxs);
-					}
-					& input,
-					& textarea {
-						display: inline-block;
-						box-sizing: border-box;
-						background: var(--color-input);
-						color: var(--color-text);
-						border: none;
-						border-bottom: 1px solid var(--color-border);
-						padding: var(--space-xs) var(--space-xxs);
-						font-size: var(--font-size-m);
-						width: 100%;
-						&::placeholder {
-							color: var(--color-text);
-							opacity: var(--opacity-translucent);
-						}
-					}
-					/* Native validity styling — replaces the old aria-invalid attribute hook.
-					   :user-invalid matches after user interaction (the right UX for required
-					   fields); :invalid would match immediately on page load. */
-					&:user-invalid input,
-					&:user-invalid textarea {
-						box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
-					}
-					& input {
-						height: var(--input-height);
-					}
-					&:state(clearable) .input {
-						position: relative;
-						& input {
-							padding-right: var(--input-height);
-						}
-						.clear {
-							position: absolute;
-							bottom: 0;
-							right: 0;
-							border: 0;
-							border-radius: 50%;
-							font-size: var(--font-size-xs);
-							line-height: var(--line-height-xs);
-							color: var(--color-input);
-							background-color: var(--color-text-soft);
-							width: calc(0.6 * var(--input-height));
-							height: calc(0.6 * var(--input-height));
-							margin: calc(0.2 * var(--input-height));
-							padding: 0;
-							&:hover {
-								background-color: var(--color-text);
-							}
-						}
-					}
-					.error,
-					.description {
-						margin: var(--space-xs) 0 0;
-						font-size: var(--font-size-xs);
-						line-height: var(--line-height-s);
-						&:empty {
-							display: none;
-						}
-					}
-					.error {
-						color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
-					}
-					.description {
-						color: var(--color-text-soft);
-					}
-					&:focus-within {
-						& label,
-						& p,
-						& button {
-							opacity: var(--opacity-solid);
-						}
-					}
-				}</style>
-		</form-textbox>
-
+				}
+			}</style>
+	</form-textbox>
 }

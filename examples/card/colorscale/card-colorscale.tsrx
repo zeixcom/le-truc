@@ -74,158 +74,173 @@ export function CardColorscale({ label }: { label: string })
 			value: asOklch(),
 		})
 
-			<card-colorscale
-				{label}
-				style={() => ({
-					'--card-colorscale-color-base': formatCss(host.value),
-					'--card-colorscale-color-text': isLight(host.value) ? 'black' : 'white',
-					'--card-colorscale-color-text-soft': step(host.value, isLight(host.value) ? 0.1 : 0.9),
-					'--card-colorscale-color-lighten80': step(host.value, 0.9),
-					'--card-colorscale-color-lighten60': step(host.value, 0.8),
-					'--card-colorscale-color-lighten40': step(host.value, 0.7),
-					'--card-colorscale-color-lighten20': step(host.value, 0.6),
-					'--card-colorscale-color-darken20': step(host.value, 0.4),
-					'--card-colorscale-color-darken40': step(host.value, 0.3),
-					'--card-colorscale-color-darken60': step(host.value, 0.2),
-					'--card-colorscale-color-darken80': step(host.value, 0.1),
-				})}
-			>
-				<ol role="presentation">
-					<li class="lighten80"></li>
-					<li class="lighten60"></li>
-					<li class="lighten40"></li>
-					<li class="lighten20"></li>
-					<li class="base">
-						<span class="label">
-							<strong>{host.label}</strong>
-							<small>{() => formatHex(host.value)}</small>
-						</span>
-					</li>
-					<li class="darken20"></li>
-					<li class="darken40"></li>
-					<li class="darken60"></li>
-					<li class="darken80"></li>
-				</ol>
-				<style>
-				:host {
-					--card-colorscale-max-size: 18rem;
-					--card-colorscale-padding: 0.5em;
-					--card-colorscale-color-text: white;
-					display: inline-flex;
+		<card-colorscale
+			{label}
+			style={() => ({
+				'--card-colorscale-color-base': formatCss(host.value),
+				'--card-colorscale-color-text': isLight(host.value) ? 'black' : 'white',
+				'--card-colorscale-color-text-soft': step(host.value, isLight(host.value) ? 0.1 : 0.9),
+				'--card-colorscale-color-lighten80': step(host.value, 0.9),
+				'--card-colorscale-color-lighten60': step(host.value, 0.8),
+				'--card-colorscale-color-lighten40': step(host.value, 0.7),
+				'--card-colorscale-color-lighten20': step(host.value, 0.6),
+				'--card-colorscale-color-darken20': step(host.value, 0.4),
+				'--card-colorscale-color-darken40': step(host.value, 0.3),
+				'--card-colorscale-color-darken60': step(host.value, 0.2),
+				'--card-colorscale-color-darken80': step(host.value, 0.1),
+			})}
+		>
+			<ol role="presentation">
+				<li class="lighten80"></li>
+				<li class="lighten60"></li>
+				<li class="lighten40"></li>
+				<li class="lighten20"></li>
+				<li class="base">
+					<span class="label">
+						<strong>{host.label}</strong>
+						<small>{() => formatHex(host.value)}</small>
+					</span>
+				</li>
+				<li class="darken20"></li>
+				<li class="darken40"></li>
+				<li class="darken60"></li>
+				<li class="darken80"></li>
+			</ol>
+
+			<style>
+			:host {
+				--card-colorscale-max-size: 18rem;
+				--card-colorscale-padding: 0.5em;
+				--card-colorscale-color-text: white;
+
+				display: inline-flex;
+				margin: 0 auto;
+
+				& ol {
+					display: grid;
+					list-style: none;
 					margin: 0 auto;
-					& ol {
-						display: grid;
-						list-style: none;
-						margin: 0 auto;
-						border-radius: 6% / 4%;
-						padding: 0;
-						grid-template-areas:
-							"lighten80 lighten60 lighten40 lighten20"
-							"base base base base"
-							"darken20 darken40 darken60 darken80";
-						grid-template-columns: repeat(4, 1fr);
-						grid-template-rows: 1fr 4fr 1fr;
-						aspect-ratio: 2 / 3;
-						min-height: min(100%, 150cqw, 100cqh, var(--card-colorscale-max-size));
-						max-width: calc(2 * var(--card-colorscale-max-size) / 3);
-						overflow: hidden;
-						object-fit: contain;
-						align-self: center;
-						container-type: inline-size;
-						gap: 0;
-					}
-					&.tiny {
-						& ol {
-							height: 3rem;
-						}
-						.label {
-							display: none;
-						}
-					}
-					&.small {
-						& ol {
-							height: 7.5rem;
-						}
-						.label small {
-							display: none;
-						}
-					}
-					&.medium ol {
-						height: 12rem;
-					}
-					&.large ol {
-						height: 18rem;
-					}
-					& li {
-						margin: 0;
-					}
-					.lighten80 {
-						grid-area: lighten80;
-						background: var(--card-colorscale-color-lighten80);
-					}
-					.lighten60 {
-						grid-area: lighten60;
-						background: var(--card-colorscale-color-lighten60);
-					}
-					.lighten40 {
-						grid-area: lighten40;
-						background: var(--card-colorscale-color-lighten40);
-					}
-					.lighten20 {
-						grid-area: lighten20;
-						background: var(--card-colorscale-color-lighten20);
-					}
-					.base {
-						grid-area: base;
-						background: var(--card-colorscale-color-base);
-					}
-					.darken20 {
-						grid-area: darken20;
-						background: var(--card-colorscale-color-darken20);
-					}
-					.darken40 {
-						grid-area: darken40;
-						background: var(--card-colorscale-color-darken40);
-					}
-					.darken60 {
-						grid-area: darken60;
-						background: var(--card-colorscale-color-darken60);
-					}
-					.darken80 {
-						grid-area: darken80;
-						background: var(--card-colorscale-color-darken80);
-					}
-					.base {
-						display: flex;
-						flex-direction: column;
-						justify-content: flex-end;
-						align-items: flex-start;
-						padding: var(--card-colorscale-padding);
-						line-height: 1;
-					}
-					& strong {
-						display: block;
-						color: var(--card-colorscale-color-text);
-						font-size: 15cqi;
-						font-weight: 700;
-					}
-					& small {
-						display: block;
-						color: var(--card-colorscale-color-text-soft);
-						font-size: 10cqi;
-						font-weight: 400;
-					}
+					border-radius: 6% / 4%;
+					padding: 0;
+					grid-template-areas:
+						"lighten80 lighten60 lighten40 lighten20"
+						"base base base base"
+						"darken20 darken40 darken60 darken80";
+					grid-template-columns: repeat(4, 1fr);
+					grid-template-rows: 1fr 4fr 1fr;
+					aspect-ratio: 2 / 3;
+					min-height: min(100%, 150cqw, 100cqh, var(--card-colorscale-max-size));
+					max-width: calc(2 * var(--card-colorscale-max-size) / 3);
+					overflow: hidden;
+					object-fit: contain;
+					align-self: center;
+					container-type: inline-size;
+					gap: 0;
 				}
-				@container (width < 5rem) or (height < 7.5rem) {
+
+				&.tiny {
+					& ol {
+						height: 3rem;
+					}
+
 					.label {
 						display: none;
 					}
 				}
-				@container (width < 8rem) or (height < 12rem) {
+
+				&.small {
+					& ol {
+						height: 7.5rem;
+					}
+
 					.label small {
 						display: none;
 					}
-				}</style>
-			</card-colorscale>
+				}
 
+				&.medium ol {
+					height: 12rem;
+				}
+
+				&.large ol {
+					height: 18rem;
+				}
+
+				& li {
+					margin: 0;
+				}
+
+				.lighten80 {
+					grid-area: lighten80;
+					background: var(--card-colorscale-color-lighten80);
+				}
+				.lighten60 {
+					grid-area: lighten60;
+					background: var(--card-colorscale-color-lighten60);
+				}
+				.lighten40 {
+					grid-area: lighten40;
+					background: var(--card-colorscale-color-lighten40);
+				}
+				.lighten20 {
+					grid-area: lighten20;
+					background: var(--card-colorscale-color-lighten20);
+				}
+				.base {
+					grid-area: base;
+					background: var(--card-colorscale-color-base);
+				}
+				.darken20 {
+					grid-area: darken20;
+					background: var(--card-colorscale-color-darken20);
+				}
+				.darken40 {
+					grid-area: darken40;
+					background: var(--card-colorscale-color-darken40);
+				}
+				.darken60 {
+					grid-area: darken60;
+					background: var(--card-colorscale-color-darken60);
+				}
+				.darken80 {
+					grid-area: darken80;
+					background: var(--card-colorscale-color-darken80);
+				}
+
+				.base {
+					display: flex;
+					flex-direction: column;
+					justify-content: flex-end;
+					align-items: flex-start;
+					padding: var(--card-colorscale-padding);
+					line-height: 1;
+				}
+
+				& strong {
+					display: block;
+					color: var(--card-colorscale-color-text);
+					font-size: 15cqi;
+					font-weight: 700;
+				}
+
+				& small {
+					display: block;
+					color: var(--card-colorscale-color-text-soft);
+					font-size: 10cqi;
+					font-weight: 400;
+				}
+			}
+
+			@container (width < 5rem) or (height < 7.5rem) {
+				.label {
+					display: none;
+				}
+			}
+
+			@container (width < 8rem) or (height < 12rem) {
+				.label small {
+					display: none;
+				}
+			}</style>
+		</card-colorscale>
 	}

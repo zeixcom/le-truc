@@ -963,9 +963,7 @@ const FAMILIES: Case[] = [
 		spans: [
 			[coveredFragment(FRAGMENT_ROOT.tsrx), coveredFragment(FRAGMENT_ROOT.tsx)],
 		],
-		pins: [
-			'Move the `<style>` block inside the root element and drop the fragment',
-		],
+		pins: ['Drop the fragment so that the host element is the root'],
 	},
 	{
 		name: 'LTC006 React DOM-property name',

@@ -102,82 +102,90 @@ export function FormInplaceEdit(
 		host.toggleAttribute('editing', editing)
 	})
 
-		<form-inplace-edit {name} {value} editing={initialEditing}>
-			<span
-				class="text"
-				hidden={() => host.editing}
-				onDblclick={() => {
-					if (host.disabled) return
-					host.editing = true
-					textbox.focusControl()
-				}}
-			>{() => host.value}</span>
-			<div class="edit" hidden={() => !host.editing}>
-				{/* name="" keeps the composed textbox OUT of FormData (the
-				    colorgraph precedent) — the host alone submits `name` */}
-				<FormTextbox name="" label="Edit" />
-			</div>
-			<button
-				type="button"
-				disabled={() => host.disabled}
-				aria-label={() => (host.editing ? 'Accept' : 'Edit')}
-				onMousedown={(e: Event) => e.preventDefault()}
-				onClick={(e: Event) => {
-					e.stopPropagation()
-					if (host.editing) {
-						host.value = textbox.value;
-						host.editing = false;
-					} else {
-						host.editing = true;
-						textbox.focusControl();
-					}
-				}}
-			>{() => (host.editing ? '✓' : '✎')}</button>
-			<style>
-			:host {
-				display: flex;
-				align-items: center;
-				.text {
-					flex: 1;
-					line-height: var(--line-height-s);
+	<form-inplace-edit {name} {value} editing={initialEditing}>
+		<span
+			class="text"
+			hidden={() => host.editing}
+			onDblclick={() => {
+				if (host.disabled) return
+				host.editing = true
+				textbox.focusControl()
+			}}
+		>{() => host.value}</span>
+		<div class="edit" hidden={() => !host.editing}>
+			{/* name="" keeps the composed textbox OUT of FormData (the
+			    colorgraph precedent) — the host alone submits `name` */}
+			<FormTextbox name="" label="Edit" />
+		</div>
+		<button
+			type="button"
+			disabled={() => host.disabled}
+			aria-label={() => (host.editing ? 'Accept' : 'Edit')}
+			onMousedown={(e: Event) => e.preventDefault()}
+			onClick={(e: Event) => {
+				e.stopPropagation()
+				if (host.editing) {
+					host.value = textbox.value;
+					host.editing = false;
+				} else {
+					host.editing = true;
+					textbox.focusControl();
 				}
-				> button {
-					flex: 0;
-					height: var(--input-height);
-					min-inline-size: var(--input-height);
-					border-radius: var(--space-xs);
-					line-height: var(--line-height-s);
-					background: transparent;
-					border: none;
-					padding: var(--space-xs);
-					color: var(--color-primary);
-					&:hover {
-						background-color: var(--color-overlay-hover);
-						color: var(--color-primary-hover);
-					}
-					&:active {
-						background-color: var(--color-overlay-active);
-						color: var(--color-primary-active);
-					}
-				}
-				&[editing] {
-					.text {
-						display: none;
-					}
-					> button {
-						color: var(--color-primary-text);
-						background-color: var(--color-primary);
-						border-color: var(--color-primary-active);
-						border-radius: 0 var(--space-xs) var(--space-xs) 0;
-						&:hover {
-							background-color: var(--color-primary-hover);
-						}
-						&:active {
-							background-color: var(--color-primary-active);
-						}
-					}
-				}
-			}</style>
-		</form-inplace-edit>
+			}}
+		>{() => (host.editing ? '✓' : '✎')}</button>
 
+		<style>
+		:host {
+			display: flex;
+			align-items: center;
+
+			.text {
+				flex: 1;
+				line-height: var(--line-height-s);
+			}
+
+			> button {
+				flex: 0;
+				height: var(--input-height);
+				min-inline-size: var(--input-height);
+				border-radius: var(--space-xs);
+				line-height: var(--line-height-s);
+				background: transparent;
+				border: none;
+				padding: var(--space-xs);
+				color: var(--color-primary);
+
+				&:hover {
+					background-color: var(--color-overlay-hover);
+					color: var(--color-primary-hover);
+				}
+
+				&:active {
+					background-color: var(--color-overlay-active);
+					color: var(--color-primary-active);
+				}
+			}
+
+			&[editing] {
+				.text {
+					display: none;
+				}
+
+				> button {
+					color: var(--color-primary-text);
+					background-color: var(--color-primary);
+					border-color: var(--color-primary-active);
+					border-radius: 0 var(--space-xs) var(--space-xs) 0;
+
+					&:hover {
+						background-color: var(--color-primary-hover);
+					}
+
+					&:active {
+						background-color: var(--color-primary-active);
+					}
+				}
+			}
+		}</style>
+	</form-inplace-edit>
 }

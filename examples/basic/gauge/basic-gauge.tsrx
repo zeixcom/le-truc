@@ -117,89 +117,94 @@ export function BasicGauge(
 
 		expose({ value: asNumber(meter.value) });
 
-			<basic-gauge
+		<basic-gauge
+			{value}
+			{thresholds}
+			style={() => ({
+				'--basic-gauge-color': qualification.get().color,
+				'--basic-gauge-degree': qualification.get().degree,
+			})}
+		>
+			<p id={labelId}>{label}</p>
+			<meter
+				class="visually-hidden"
+				value={() => host.value}
+				aria-labelledby={labelId}
+			></meter>
+			<BasicNumber
 				{value}
-				{thresholds}
-				style={() => ({
-					'--basic-gauge-color': qualification.get().color,
-					'--basic-gauge-degree': qualification.get().degree,
-				})}
-			>
-				<p id={labelId}>{label}</p>
-				<meter
-					class="visually-hidden"
-					value={() => host.value}
-					aria-labelledby={labelId}
-				></meter>
-				<BasicNumber
-					{value}
-					options={'{"style":"percent","maximumFractionDigits":1}'}
-					truc:pass={{ value: () => host.value }}
-				/>
-				<small class="label">{qualification.get().label}</small>
-				<style>
-				:host {
-					--basic-gauge-background: var(
-						--color-background,
-						light-dark(#ecebef, #242326)
-					);
-					--basic-gauge-label-color: var(
-						--color-text-soft,
-						light-dark(#46444a, #d8d6dd)
-					);
-					--basic-gauge-label-font-size: var(--font-size-s, 0.875rem);
-					--basic-gauge-metric-color: var(--color-text, light-dark(#242326, #ecebef));
-					--basic-gauge-metric-font-size: var(--font-size-xl, 1.3125rem);
-					--basic-gauge-ring-width: var(--space-xs, 0.382rem);
-					--basic-gauge-size: 8rem;
-					--basic-gauge-track-color: var(
-						--color-secondary,
-						light-dark(#d8d6dd, #46444a)
-					);
-					/* Computed CSS properties */
-					--basic-gauge-color: var(--color-primary, light-dark(#6e5597, #cfb5fe));
-					--basic-gauge-degree: 120deg;
-					width: var(--basic-gauge-size);
-					display: flex;
-					flex-direction: column;
-					justify-content: center;
-					align-items: center;
-					aspect-ratio: 1;
-					background-image:
-						radial-gradient(
-							closest-side,
-							var(--basic-gauge-background) 0%,
-							var(--basic-gauge-background) calc(100% - var(--basic-gauge-ring-width)),
-							transparent calc(100% - var(--basic-gauge-ring-width))
-						),
-						conic-gradient(
-							from -120deg,
-							var(--basic-gauge-color) 0deg var(--basic-gauge-degree),
-							transparent var(--basic-gauge-degree) 240deg
-						),
-						conic-gradient(
-							from -120deg,
-							var(--basic-gauge-track-color) 0deg 240deg,
-							transparent 240deg
-						);
-					border-radius: 50%;
-					& p {
-						display: inline-block;
-						color: var(--basic-gauge-label-color);
-						font-size: var(--basic-gauge-label-font-size);
-						margin: 0;
-					}
-					& basic-number {
-						display: inline-block;
-						color: var(--basic-gauge-metric-color);
-						font-size: var(--basic-gauge-metric-font-size);
-					}
-					.label {
-						display: inline-block;
-						font-size: var(--basic-gauge-label-font-size);
-						color: var(--basic-gauge-label-color);
-					}
-				}</style>
-			</basic-gauge>
+				options={'{"style":"percent","maximumFractionDigits":1}'}
+				truc:pass={{ value: () => host.value }}
+			/>
+			<small class="label">{qualification.get().label}</small>
 
+			<style>
+			:host {
+				--basic-gauge-background: var(
+					--color-background,
+					light-dark(#ecebef, #242326)
+				);
+				--basic-gauge-label-color: var(
+					--color-text-soft,
+					light-dark(#46444a, #d8d6dd)
+				);
+				--basic-gauge-label-font-size: var(--font-size-s, 0.875rem);
+				--basic-gauge-metric-color: var(--color-text, light-dark(#242326, #ecebef));
+				--basic-gauge-metric-font-size: var(--font-size-xl, 1.3125rem);
+				--basic-gauge-ring-width: var(--space-xs, 0.382rem);
+				--basic-gauge-size: 8rem;
+				--basic-gauge-track-color: var(
+					--color-secondary,
+					light-dark(#d8d6dd, #46444a)
+				);
+
+				/* Computed CSS properties */
+				--basic-gauge-color: var(--color-primary, light-dark(#6e5597, #cfb5fe));
+				--basic-gauge-degree: 120deg;
+
+				width: var(--basic-gauge-size);
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				aspect-ratio: 1;
+				background-image:
+					radial-gradient(
+						closest-side,
+						var(--basic-gauge-background) 0%,
+						var(--basic-gauge-background) calc(100% - var(--basic-gauge-ring-width)),
+						transparent calc(100% - var(--basic-gauge-ring-width))
+					),
+					conic-gradient(
+						from -120deg,
+						var(--basic-gauge-color) 0deg var(--basic-gauge-degree),
+						transparent var(--basic-gauge-degree) 240deg
+					),
+					conic-gradient(
+						from -120deg,
+						var(--basic-gauge-track-color) 0deg 240deg,
+						transparent 240deg
+					);
+				border-radius: 50%;
+
+				& p {
+					display: inline-block;
+					color: var(--basic-gauge-label-color);
+					font-size: var(--basic-gauge-label-font-size);
+					margin: 0;
+				}
+
+				& basic-number {
+					display: inline-block;
+					color: var(--basic-gauge-metric-color);
+					font-size: var(--basic-gauge-metric-font-size);
+				}
+
+				.label {
+					display: inline-block;
+					font-size: var(--basic-gauge-label-font-size);
+					color: var(--basic-gauge-label-color);
+				}
+			}</style>
+		</basic-gauge>
 	}

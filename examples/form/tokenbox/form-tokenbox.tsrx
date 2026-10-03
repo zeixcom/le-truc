@@ -132,62 +132,33 @@ export function FormTokenbox(
 		}),
 	})
 
-		<form-tokenbox {name} value={value}>
-			<label for={inputId}>{label}</label>
-			<div class="input" data-container>
-				@for (const token of tokens; key k) {
-					<span class="token" data-key>
-						<span class="token-label">{token}</span>
-						<button
-							type="button"
-							class="remove"
-							aria-label={t.remove}
-							onClick={() => {
-								const removedValue = tokens.byKey(k)?.get()
-								tokens.remove(k)
-								if (removedValue) statusEl.textContent = t.removed({ token: removedValue })
-								textbox.focus()
-							}}
-						>✕</button>
-					</span>
-				}
-				<input
-					{type}
-					id={inputId}
-					data-unreconciled
-					aria-describedby={description ? descriptionId : null}
-					onKeydown={(e: KeyboardEvent) => {
-						if (e.key === ',' || e.key === 'Enter') {
-							e.preventDefault()
-							const trimmed = textbox.value.trim()
-							if (!trimmed) return
-							textbox.value = trimmed
-							if (!textbox.checkValidity()) {
-								host.setCustomValidity(textbox.validationMessage)
-								return
-							}
-							try {
-								tokens.add(trimmed)
-								host.setCustomValidity('')
-							} catch (err) {
-								if (err instanceof DuplicateKeyError) {
-									host.setCustomValidity(t.duplicate({ token: trimmed }))
-									return
-								}
-								throw err
-							}
-							textbox.value = ''
-							statusEl.textContent = t.added({ token: trimmed })
-						} else if (e.key === 'Backspace' && textbox.value === '') {
-							const lastKey = tokens.keyAt(tokens.length - 1)
-							if (lastKey) {
-								const removedValue = tokens.byKey(lastKey)?.get()
-								tokens.remove(lastKey)
-								if (removedValue) statusEl.textContent = t.removed({ token: removedValue })
-							}
-						}
-					}}
-					onBlur={() => {
+	<form-tokenbox {name} value={value}>
+		<label for={inputId}>{label}</label>
+		<div class="input" data-container>
+			@for (const token of tokens; key k) {
+				<span class="token" data-key>
+					<span class="token-label">{token}</span>
+					<button
+						type="button"
+						class="remove"
+						aria-label={t.remove}
+						onClick={() => {
+							const removedValue = tokens.byKey(k)?.get()
+							tokens.remove(k)
+							if (removedValue) statusEl.textContent = t.removed({ token: removedValue })
+							textbox.focus()
+						}}
+					>✕</button>
+				</span>
+			}
+			<input
+				{type}
+				id={inputId}
+				data-unreconciled
+				aria-describedby={description ? descriptionId : null}
+				onKeydown={(e: KeyboardEvent) => {
+					if (e.key === ',' || e.key === 'Enter') {
+						e.preventDefault()
 						const trimmed = textbox.value.trim()
 						if (!trimmed) return
 						textbox.value = trimmed
@@ -207,120 +178,165 @@ export function FormTokenbox(
 						}
 						textbox.value = ''
 						statusEl.textContent = t.added({ token: trimmed })
-					}}
-				/>
-			</div>
-			<p class="error" role="alert" aria-live="assertive">
-				{host.validationMessage}
-			</p>
-			@if (description) {
-				<p class="description" aria-live="polite" id={descriptionId}>
-					{description}
-				</p>
-			}
-			<p class="status visually-hidden" role="status" aria-live="polite"></p>
-			<style>
-			:host {
-				display: block;
-				width: 100%;
-				& label,
-				& p {
-					opacity: var(--opacity-dimmed);
-					transition: opacity var(--transition-short) var(--easing-inout);
-				}
-				& label {
-					display: block;
-					font-size: var(--font-size-s);
-					color: var(--color-text);
-					margin-bottom: var(--space-xxs);
-				}
-				& .input {
-					display: flex;
-					flex-wrap: wrap;
-					align-items: center;
-					gap: var(--space-xxs);
-					box-sizing: border-box;
-					min-height: var(--input-height);
-					background: var(--color-input);
-					border: none;
-					border-bottom: 1px solid var(--color-border);
-					padding: var(--space-xxs);
-				}
-				& input {
-					flex: 1 1 8ch;
-					min-width: 8ch;
-					box-sizing: border-box;
-					border: none;
-					background: transparent;
-					color: var(--color-text);
-					font-size: var(--font-size-m);
-					padding: var(--space-xxs);
-					line-height: var(--line-height-s);
-					&:focus {
-						outline: none;
-						box-shadow: none;
-					}
-					&::placeholder {
-						color: var(--color-text);
-						opacity: var(--opacity-translucent);
-					}
-				}
-				& .input:has(input:focus-visible) {
-					box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
-				}
-				/* Native validity styling — matches form-textbox's :user-invalid hook. */
-				&:invalid .input:has(input:invalid) {
-					box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
-				}
-				& .token {
-					display: inline-flex;
-					align-items: center;
-					gap: var(--space-xxs);
-					background: var(--color-secondary);
-					color: var(--color-text);
-					border-radius: var(--space-l);
-					padding: 0 0 0 var(--space-m);
-					font-size: var(--font-size-s);
-					line-height: var(--line-height-s);
-					.remove {
-						border: 0;
-						border-radius: 50%;
-						font-size: var(--font-size-xs);
-						line-height: var(--line-height-xs);
-						color: var(--color-text-soft);
-						background-color: var(--color-secondary);
-						width: var(--space-l);
-						height: var(--space-l);
-						padding: 0;
-						cursor: pointer;
-						&:hover {
-							color: var(--color-text);
-							background-color: var(--color-secondary-hover);
+					} else if (e.key === 'Backspace' && textbox.value === '') {
+						const lastKey = tokens.keyAt(tokens.length - 1)
+						if (lastKey) {
+							const removedValue = tokens.byKey(lastKey)?.get()
+							tokens.remove(lastKey)
+							if (removedValue) statusEl.textContent = t.removed({ token: removedValue })
 						}
 					}
-				}
-				.error,
-				.description {
-					margin: var(--space-xs) 0 0;
-					font-size: var(--font-size-xs);
-					line-height: var(--line-height-s);
-					&:empty {
-						display: none;
+				}}
+				onBlur={() => {
+					const trimmed = textbox.value.trim()
+					if (!trimmed) return
+					textbox.value = trimmed
+					if (!textbox.checkValidity()) {
+						host.setCustomValidity(textbox.validationMessage)
+						return
 					}
-				}
-				.error {
-					color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
-				}
-				.description {
-					color: var(--color-text-soft);
-				}
-				&:focus-within {
-					& label,
-					& p {
-						opacity: var(--opacity-solid);
+					try {
+						tokens.add(trimmed)
+						host.setCustomValidity('')
+					} catch (err) {
+						if (err instanceof DuplicateKeyError) {
+							host.setCustomValidity(t.duplicate({ token: trimmed }))
+							return
+						}
+						throw err
 					}
-				}
-			}</style>
-		</form-tokenbox>
+					textbox.value = ''
+					statusEl.textContent = t.added({ token: trimmed })
+				}}
+			/>
+		</div>
+		<p class="error" role="alert" aria-live="assertive">
+			{host.validationMessage}
+		</p>
+		@if (description) {
+			<p class="description" aria-live="polite" id={descriptionId}>
+				{description}
+			</p>
+		}
+		<p class="status visually-hidden" role="status" aria-live="polite"></p>
 
+		<style>
+		:host {
+			display: block;
+			width: 100%;
+
+			& label,
+			& p {
+				opacity: var(--opacity-dimmed);
+				transition: opacity var(--transition-short) var(--easing-inout);
+			}
+
+			& label {
+				display: block;
+				font-size: var(--font-size-s);
+				color: var(--color-text);
+				margin-bottom: var(--space-xxs);
+			}
+
+			& .input {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: var(--space-xxs);
+				box-sizing: border-box;
+				min-height: var(--input-height);
+				background: var(--color-input);
+				border: none;
+				border-bottom: 1px solid var(--color-border);
+				padding: var(--space-xxs);
+			}
+
+			& input {
+				flex: 1 1 8ch;
+				min-width: 8ch;
+				box-sizing: border-box;
+				border: none;
+				background: transparent;
+				color: var(--color-text);
+				font-size: var(--font-size-m);
+				padding: var(--space-xxs);
+				line-height: var(--line-height-s);
+
+				&:focus {
+					outline: none;
+					box-shadow: none;
+				}
+
+				&::placeholder {
+					color: var(--color-text);
+					opacity: var(--opacity-translucent);
+				}
+			}
+
+			& .input:has(input:focus-visible) {
+				box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+			}
+
+			/* Native validity styling — matches form-textbox's :user-invalid hook. */
+			&:invalid .input:has(input:invalid) {
+				box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
+			}
+
+			& .token {
+				display: inline-flex;
+				align-items: center;
+				gap: var(--space-xxs);
+				background: var(--color-secondary);
+				color: var(--color-text);
+				border-radius: var(--space-l);
+				padding: 0 0 0 var(--space-m);
+				font-size: var(--font-size-s);
+				line-height: var(--line-height-s);
+
+				.remove {
+					border: 0;
+					border-radius: 50%;
+					font-size: var(--font-size-xs);
+					line-height: var(--line-height-xs);
+					color: var(--color-text-soft);
+					background-color: var(--color-secondary);
+					width: var(--space-l);
+					height: var(--space-l);
+					padding: 0;
+					cursor: pointer;
+
+					&:hover {
+						color: var(--color-text);
+						background-color: var(--color-secondary-hover);
+					}
+				}
+			}
+
+			.error,
+			.description {
+				margin: var(--space-xs) 0 0;
+				font-size: var(--font-size-xs);
+				line-height: var(--line-height-s);
+
+				&:empty {
+					display: none;
+				}
+			}
+
+			.error {
+				color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+			}
+
+			.description {
+				color: var(--color-text-soft);
+			}
+
+			&:focus-within {
+				& label,
+				& p {
+					opacity: var(--opacity-solid);
+				}
+			}
+		}</style>
+	</form-tokenbox>
 }

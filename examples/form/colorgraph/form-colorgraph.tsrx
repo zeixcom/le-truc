@@ -398,296 +398,313 @@ export function FormColorgraph(
 		else host.setCustomValidity(t.outOfGamut);
 	});
 
-		<form-colorgraph
-			{name}
-			{value}
-			style={() => ({ '--color-base': formatCss(parseOklch(host.value)) })}
-		>
-			<div class="graph" style={() => ({ '--canvas-size': `${canvasSize.get()}px` })}>
-				<canvas class="graph-canvas" width="400" height="400"></canvas>
-				<button
-					type="button"
-					class="knob"
-					style={() => ({
-						top: `${Math.round((1 - parseOklch(host.value).l) * canvasSize.get())}px`,
-						left: `${Math.round((parseOklch(host.value).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						'--color-border': parseOklch(host.value).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-					})}
-				>
-					<span class="visually-hidden">{t.drag}</span>
-				</button>
-				<ol role="presentation">
-					<li class="lighten80" style={() => ({
-						'background-color': formatCss(getStepColor(parseOklch(host.value), 0.9)),
-						'border-color': getStepColor(parseOklch(host.value), 0.9).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-						left: `${Math.round((getStepColor(parseOklch(host.value), 0.9).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.9).l) * canvasSize.get())}px`,
-					})}></li>
-					<li class="lighten60" style={() => ({
-						'background-color': formatCss(getStepColor(parseOklch(host.value), 0.8)),
-						'border-color': getStepColor(parseOklch(host.value), 0.8).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-						left: `${Math.round((getStepColor(parseOklch(host.value), 0.8).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.8).l) * canvasSize.get())}px`,
-					})}></li>
-					<li class="lighten40" style={() => ({
-						'background-color': formatCss(getStepColor(parseOklch(host.value), 0.7)),
-						'border-color': getStepColor(parseOklch(host.value), 0.7).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-						left: `${Math.round((getStepColor(parseOklch(host.value), 0.7).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.7).l) * canvasSize.get())}px`,
-					})}></li>
-					<li class="lighten20" style={() => ({
-						'background-color': formatCss(getStepColor(parseOklch(host.value), 0.6)),
-						'border-color': getStepColor(parseOklch(host.value), 0.6).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-						left: `${Math.round((getStepColor(parseOklch(host.value), 0.6).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.6).l) * canvasSize.get())}px`,
-					})}></li>
-					<li class="darken20" style={() => ({
-						'background-color': formatCss(getStepColor(parseOklch(host.value), 0.4)),
-						'border-color': getStepColor(parseOklch(host.value), 0.4).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-						left: `${Math.round((getStepColor(parseOklch(host.value), 0.4).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.4).l) * canvasSize.get())}px`,
-					})}></li>
-					<li class="darken40" style={() => ({
-						'background-color': formatCss(getStepColor(parseOklch(host.value), 0.3)),
-						'border-color': getStepColor(parseOklch(host.value), 0.3).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-						left: `${Math.round((getStepColor(parseOklch(host.value), 0.3).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.3).l) * canvasSize.get())}px`,
-					})}></li>
-					<li class="darken60" style={() => ({
-						'background-color': formatCss(getStepColor(parseOklch(host.value), 0.2)),
-						'border-color': getStepColor(parseOklch(host.value), 0.2).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-						left: `${Math.round((getStepColor(parseOklch(host.value), 0.2).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.2).l) * canvasSize.get())}px`,
-					})}></li>
-					<li class="darken80" style={() => ({
-						'background-color': formatCss(getStepColor(parseOklch(host.value), 0.1)),
-						'border-color': getStepColor(parseOklch(host.value), 0.1).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-						left: `${Math.round((getStepColor(parseOklch(host.value), 0.1).c * canvasSize.get()) / AXIS_MAX.c)}px`,
-						top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.1).l) * canvasSize.get())}px`,
-					})}></li>
-				</ol>
-			</div>
-			<div
-				class="slider"
-				role="slider"
-				tabindex="0"
-				aria-valuemin="0"
-				aria-valuemax="360"
-				aria-controls="hue"
-				aria-labelledby="hue-label"
-				aria-valuenow={() => String(parseOklch(host.value).h ?? 0)}
-				aria-valuetext={() => `${fn2Digits(parseOklch(host.value).h ?? 0)}°`}
-				style={() => ({ '--track-width': `${(canvasSize.get() - 2 * TRACK_OFFSET)}px` })}
+	<form-colorgraph
+		{name}
+		{value}
+		style={() => ({ '--color-base': formatCss(parseOklch(host.value)) })}
+	>
+		<div class="graph" style={() => ({ '--canvas-size': `${canvasSize.get()}px` })}>
+			<canvas class="graph-canvas" width="400" height="400"></canvas>
+			<button
+				type="button"
+				class="knob"
+				style={() => ({
+					top: `${Math.round((1 - parseOklch(host.value).l) * canvasSize.get())}px`,
+					left: `${Math.round((parseOklch(host.value).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					'--color-border': parseOklch(host.value).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+				})}
 			>
-				<canvas class="hue-track" width="360" height="1"></canvas>
-				<span
-					class="thumb"
-					style={() => ({
-						left: `${Math.round(((parseOklch(host.value).h ?? 0) * (canvasSize.get() - 2 * TRACK_OFFSET)) / AXIS_MAX.h) + TRACK_OFFSET}px`,
-						'--color-border': parseOklch(host.value).l > CONTRAST_THRESHOLD ? 'black' : 'white',
-					})}
-				></span>
-			</div>
-			{/* No `id` here (LT-131): nothing references it, and a constant
-			    one would duplicate as soon as a page places two colorgraphs.
-			    `.error` is what addresses this element. */}
-			<p class="error" aria-live="assertive">{host.validationMessage}</p>
-			<FormSpinbutton
-				class="lightness"
-				name=""
-				label="Lightness"
-				unit="%"
-				min={0}
-				max={100}
-				step={0.25}
-				bigStep={5}
-			/>
-			<FormSpinbutton
-				class="chroma"
-				name=""
-				label="Chroma"
-				min={0}
-				max={0.4}
-				step={0.001}
-				bigStep={0.02}
-			/>
-			<FormSpinbutton
-				class="hue"
-				name=""
-				label="Hue"
-				unit="°"
-				min={0}
-				max={360}
-				step={0.01}
-				bigStep={15}
-			/>
-			<style>
-			:host {
-				--color-base: transparent;
-				--step-size: 1.25rem;
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-s);
-				margin: var(--space-m) 0;
-				.graph {
-					--canvas-size: 400px;
-					position: relative;
-					width: 100%;
-					display: block;
+				<span class="visually-hidden">{t.drag}</span>
+			</button>
+			<ol role="presentation">
+				<li class="lighten80" style={() => ({
+					'background-color': formatCss(getStepColor(parseOklch(host.value), 0.9)),
+					'border-color': getStepColor(parseOklch(host.value), 0.9).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+					left: `${Math.round((getStepColor(parseOklch(host.value), 0.9).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.9).l) * canvasSize.get())}px`,
+				})}></li>
+				<li class="lighten60" style={() => ({
+					'background-color': formatCss(getStepColor(parseOklch(host.value), 0.8)),
+					'border-color': getStepColor(parseOklch(host.value), 0.8).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+					left: `${Math.round((getStepColor(parseOklch(host.value), 0.8).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.8).l) * canvasSize.get())}px`,
+				})}></li>
+				<li class="lighten40" style={() => ({
+					'background-color': formatCss(getStepColor(parseOklch(host.value), 0.7)),
+					'border-color': getStepColor(parseOklch(host.value), 0.7).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+					left: `${Math.round((getStepColor(parseOklch(host.value), 0.7).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.7).l) * canvasSize.get())}px`,
+				})}></li>
+				<li class="lighten20" style={() => ({
+					'background-color': formatCss(getStepColor(parseOklch(host.value), 0.6)),
+					'border-color': getStepColor(parseOklch(host.value), 0.6).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+					left: `${Math.round((getStepColor(parseOklch(host.value), 0.6).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.6).l) * canvasSize.get())}px`,
+				})}></li>
+				<li class="darken20" style={() => ({
+					'background-color': formatCss(getStepColor(parseOklch(host.value), 0.4)),
+					'border-color': getStepColor(parseOklch(host.value), 0.4).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+					left: `${Math.round((getStepColor(parseOklch(host.value), 0.4).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.4).l) * canvasSize.get())}px`,
+				})}></li>
+				<li class="darken40" style={() => ({
+					'background-color': formatCss(getStepColor(parseOklch(host.value), 0.3)),
+					'border-color': getStepColor(parseOklch(host.value), 0.3).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+					left: `${Math.round((getStepColor(parseOklch(host.value), 0.3).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.3).l) * canvasSize.get())}px`,
+				})}></li>
+				<li class="darken60" style={() => ({
+					'background-color': formatCss(getStepColor(parseOklch(host.value), 0.2)),
+					'border-color': getStepColor(parseOklch(host.value), 0.2).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+					left: `${Math.round((getStepColor(parseOklch(host.value), 0.2).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.2).l) * canvasSize.get())}px`,
+				})}></li>
+				<li class="darken80" style={() => ({
+					'background-color': formatCss(getStepColor(parseOklch(host.value), 0.1)),
+					'border-color': getStepColor(parseOklch(host.value), 0.1).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+					left: `${Math.round((getStepColor(parseOklch(host.value), 0.1).c * canvasSize.get()) / AXIS_MAX.c)}px`,
+					top: `${Math.round((1 - getStepColor(parseOklch(host.value), 0.1).l) * canvasSize.get())}px`,
+				})}></li>
+			</ol>
+		</div>
+		<div
+			class="slider"
+			role="slider"
+			tabindex="0"
+			aria-valuemin="0"
+			aria-valuemax="360"
+			aria-controls="hue"
+			aria-labelledby="hue-label"
+			aria-valuenow={() => String(parseOklch(host.value).h ?? 0)}
+			aria-valuetext={() => `${fn2Digits(parseOklch(host.value).h ?? 0)}°`}
+			style={() => ({ '--track-width': `${(canvasSize.get() - 2 * TRACK_OFFSET)}px` })}
+		>
+			<canvas class="hue-track" width="360" height="1"></canvas>
+			<span
+				class="thumb"
+				style={() => ({
+					left: `${Math.round(((parseOklch(host.value).h ?? 0) * (canvasSize.get() - 2 * TRACK_OFFSET)) / AXIS_MAX.h) + TRACK_OFFSET}px`,
+					'--color-border': parseOklch(host.value).l > CONTRAST_THRESHOLD ? 'black' : 'white',
+				})}
+			></span>
+		</div>
+		{/* No `id` here (LT-131): nothing references it, and a constant
+		    one would duplicate as soon as a page places two colorgraphs.
+		    `.error` is what addresses this element. */}
+		<p class="error" aria-live="assertive">{host.validationMessage}</p>
+		<FormSpinbutton
+			class="lightness"
+			name=""
+			label="Lightness"
+			unit="%"
+			min={0}
+			max={100}
+			step={0.25}
+			bigStep={5}
+		/>
+		<FormSpinbutton
+			class="chroma"
+			name=""
+			label="Chroma"
+			min={0}
+			max={0.4}
+			step={0.001}
+			bigStep={0.02}
+		/>
+		<FormSpinbutton
+			class="hue"
+			name=""
+			label="Hue"
+			unit="°"
+			min={0}
+			max={360}
+			step={0.01}
+			bigStep={15}
+		/>
+
+		<style>
+		:host {
+			--color-base: transparent;
+			--step-size: 1.25rem;
+
+			display: flex;
+			flex-direction: column;
+			gap: var(--space-s);
+			margin: var(--space-m) 0;
+
+			.graph {
+				--canvas-size: 400px;
+
+				position: relative;
+				width: 100%;
+				display: block;
+				user-select: none;
+				transition: opacity var(--transition-medium) var(--easing-inout);
+
+				& canvas {
+					width: var(--canvas-size);
+					height: var(--canvas-size);
+					aspect-ratio: 1;
 					user-select: none;
-					transition: opacity var(--transition-medium) var(--easing-inout);
-					& canvas {
-						width: var(--canvas-size);
-						height: var(--canvas-size);
-						aspect-ratio: 1;
-						user-select: none;
-					}
-					.knob {
-						position: absolute;
-						top: 0;
-						left: 0;
-						width: var(--input-height);
-						height: var(--input-height);
-						border-radius: 50%;
-						background-color: var(--color-base);
-						border: 1px solid var(--color-border);
-						box-shadow: 0 0 var(--space-xxs) 2px var(--color-shadow);
-						cursor: move;
-						user-select: none;
-						touch-action: none;
-						transform: translate(
-							calc(var(--input-height) / -2),
-							calc(var(--input-height) / -2)
-						);
-						&:focus-visible {
-							box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
-						}
-					}
-					& ol {
-						list-style: none;
-						margin: 0;
-						padding: 0;
-						user-select: none;
-					}
-					& li {
-						position: absolute;
-						box-sizing: border-box;
-						top: 0;
-						left: 0;
-						width: var(--step-size);
-						height: var(--step-size);
-						transform: translate(
-							calc(var(--step-size) / -2),
-							calc(var(--step-size) / -2)
-						);
-						border-radius: 100%;
-						background-color: transparent;
-						border: 1px solid black;
-						opacity: var(--opacity-dimmed);
-						user-select: none;
-					}
-					.lighten80 {
-						background: var(--color-lighten80);
-					}
-					.lighten60 {
-						background: var(--color-lighten60);
-					}
-					.lighten40 {
-						background: var(--color-lighten40);
-					}
-					.lighten20 {
-						background: var(--color-lighten20);
-					}
-					.darken20 {
-						background: var(--color-darken20);
-					}
-					.darken40 {
-						background: var(--color-darken40);
-					}
-					.darken60 {
-						background: var(--color-darken60);
-					}
-					.darken80 {
-						background: var(--color-darken80);
-					}
 				}
-				> .error {
-					grid-area: error;
-					margin: var(--space-xs) 0 0;
-					font-size: var(--font-size-xs);
-					line-height: var(--line-height-s);
-					color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
-					&:empty {
-						display: none;
-					}
-				}
-				.slider {
-					--slider-width: 400px;
-					--slider-height: 40px;
-					--track-width: 360px;
-					--track-height: 8px;
-					--track-offset: 20px;
-					position: relative;
-					display: inline-block;
-					height: var(--slider-height);
-					user-select: none;
-					transition: opacity var(--transition-medium) var(--easing-inout);
-					& canvas {
-						width: calc(100% - 2 * var(--track-offset));
-						height: var(--track-height);
-						margin: calc(var(--track-offset) - var(--track-height) / 2)
-							var(--track-offset);
-						user-select: none;
-					}
-				}
-				.thumb {
+
+				.knob {
 					position: absolute;
-					top: calc(var(--slider-height) / 2);
-					left: var(--track-offset);
+					top: 0;
+					left: 0;
 					width: var(--input-height);
 					height: var(--input-height);
-					background-color: var(--color-base);
-					box-sizing: border-box;
-					border: 1px solid var(--color-border);
 					border-radius: 50%;
+					background-color: var(--color-base);
+					border: 1px solid var(--color-border);
 					box-shadow: 0 0 var(--space-xxs) 2px var(--color-shadow);
-					cursor: ew-resize;
+					cursor: move;
 					user-select: none;
 					touch-action: none;
-					opacity: var(--opacity-dimmed);
 					transform: translate(
 						calc(var(--input-height) / -2),
 						calc(var(--input-height) / -2)
 					);
+
+					&:focus-visible {
+						box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+					}
+				}
+
+				& ol {
+					list-style: none;
+					margin: 0;
+					padding: 0;
+					user-select: none;
+				}
+
+				& li {
+					position: absolute;
+					box-sizing: border-box;
+					top: 0;
+					left: 0;
+					width: var(--step-size);
+					height: var(--step-size);
+					transform: translate(
+						calc(var(--step-size) / -2),
+						calc(var(--step-size) / -2)
+					);
+					border-radius: 100%;
+					background-color: transparent;
+					border: 1px solid black;
+					opacity: var(--opacity-dimmed);
+					user-select: none;
+				}
+
+				.lighten80 {
+					background: var(--color-lighten80);
+				}
+				.lighten60 {
+					background: var(--color-lighten60);
+				}
+				.lighten40 {
+					background: var(--color-lighten40);
+				}
+				.lighten20 {
+					background: var(--color-lighten20);
+				}
+				.darken20 {
+					background: var(--color-darken20);
+				}
+				.darken40 {
+					background: var(--color-darken40);
+				}
+				.darken60 {
+					background: var(--color-darken60);
+				}
+				.darken80 {
+					background: var(--color-darken80);
 				}
 			}
-			@container (width > 27rem) {
-				:host {
-					display: grid;
-					grid-template-areas:
-						"graph graph graph"
-						"slider slider slider"
-						"lightness chroma hue";
-					grid-template-columns: 1fr 1fr 1fr;
-					gap: var(--space-s) var(--space-m);
-					align-items: start;
-					.graph {
-						grid-area: graph;
-					}
-					.slider {
-						grid-area: slider;
-					}
-					.lightness {
-						grid-area: lightness;
-					}
-					.chroma {
-						grid-area: chroma;
-					}
-					.hue {
-						grid-area: hue;
-					}
-				}
-			}</style>
-		</form-colorgraph>
 
+			> .error {
+				grid-area: error;
+				margin: var(--space-xs) 0 0;
+				font-size: var(--font-size-xs);
+				line-height: var(--line-height-s);
+				color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
+
+				&:empty {
+					display: none;
+				}
+			}
+
+			.slider {
+				--slider-width: 400px;
+				--slider-height: 40px;
+				--track-width: 360px;
+				--track-height: 8px;
+				--track-offset: 20px;
+
+				position: relative;
+				display: inline-block;
+				height: var(--slider-height);
+				user-select: none;
+				transition: opacity var(--transition-medium) var(--easing-inout);
+
+				& canvas {
+					width: calc(100% - 2 * var(--track-offset));
+					height: var(--track-height);
+					margin: calc(var(--track-offset) - var(--track-height) / 2)
+						var(--track-offset);
+					user-select: none;
+				}
+			}
+
+			.thumb {
+				position: absolute;
+				top: calc(var(--slider-height) / 2);
+				left: var(--track-offset);
+				width: var(--input-height);
+				height: var(--input-height);
+				background-color: var(--color-base);
+				box-sizing: border-box;
+				border: 1px solid var(--color-border);
+				border-radius: 50%;
+				box-shadow: 0 0 var(--space-xxs) 2px var(--color-shadow);
+				cursor: ew-resize;
+				user-select: none;
+				touch-action: none;
+				opacity: var(--opacity-dimmed);
+				transform: translate(
+					calc(var(--input-height) / -2),
+					calc(var(--input-height) / -2)
+				);
+			}
+		}
+
+		@container (width > 27rem) {
+			:host {
+				display: grid;
+				grid-template-areas:
+					"graph graph graph"
+					"slider slider slider"
+					"lightness chroma hue";
+				grid-template-columns: 1fr 1fr 1fr;
+				gap: var(--space-s) var(--space-m);
+				align-items: start;
+
+				.graph {
+					grid-area: graph;
+				}
+				.slider {
+					grid-area: slider;
+				}
+				.lightness {
+					grid-area: lightness;
+				}
+				.chroma {
+					grid-area: chroma;
+				}
+				.hue {
+					grid-area: hue;
+				}
+			}
+		}</style>
+	</form-colorgraph>
 }

@@ -138,35 +138,39 @@ export function BasicBlogmeta({
 				</span>
 			) : null}
 			<style>{css`
-	:host {
+:host {
+	display: flex;
+	align-items: center;
+	gap: var(--space-m);
+	font-size: var(--font-size-s);
+	color: var(--color-text-soft);
+	flex-wrap: wrap;
+	margin-bottom: var(--space-l);
+
+	& span {
 		display: flex;
 		align-items: center;
-		gap: var(--space-m);
-		font-size: var(--font-size-s);
-		color: var(--color-text-soft);
-		flex-wrap: wrap;
-		margin-bottom: var(--space-l);
-		& span {
-			display: flex;
-			align-items: center;
-			gap: var(--space-xs);
-		}
-		& img,
-		& svg.avatar {
-			width: var(--input-height);
-			height: var(--input-height);
-			border-radius: 50%;
-			object-fit: cover;
-			flex-shrink: 0;
-		}
-		& svg.avatar {
-			color: var(--color-border-soft);
-			background-color: var(--color-background-alt);
-		}
-		& time {
-			font-variant-numeric: tabular-nums;
-		}
-	}`}</style>
+		gap: var(--space-xs);
+	}
+
+	& img,
+	& svg.avatar {
+		width: var(--input-height);
+		height: var(--input-height);
+		border-radius: 50%;
+		object-fit: cover;
+		flex-shrink: 0;
+	}
+
+	& svg.avatar {
+		color: var(--color-border-soft);
+		background-color: var(--color-background-alt);
+	}
+
+	& time {
+		font-variant-numeric: tabular-nums;
+	}
+}`}</style>
 		</basic-blogmeta>
 	)
 }

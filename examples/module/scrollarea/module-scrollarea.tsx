@@ -137,58 +137,69 @@ export function ModuleScrollarea(
 	return (
 		<module-scrollarea orientation={orientation}>
 			<div>{children}</div>
+
 			<style>{css`
-				/* @media (prefers-reduced-motion: no-preference) { */
-				:host {
+			/* @media (prefers-reduced-motion: no-preference) { */
+
+			:host {
+				display: block;
+				position: relative;
+				overflow-y: auto;
+				-webkit-overflow-scrolling: touch;
+
+				&::before,
+				&::after {
+					content: "";
+					position: sticky;
 					display: block;
-					position: relative;
-					overflow-y: auto;
-					-webkit-overflow-scrolling: touch;
+					width: 100%;
+					height: var(--space-m);
+					opacity: 0;
+					pointer-events: none;
+					transition: opacity var(--transition-short);
+					z-index: 1;
+				}
+
+				&::before {
+					top: 0;
+					background: linear-gradient(180deg, var(--color-shadow), transparent);
+				}
+
+				&::after {
+					bottom: 0;
+					background: linear-gradient(0deg, var(--color-shadow), transparent);
+				}
+
+				&:state(overflow-start)::before {
+					opacity: 1;
+				}
+
+				&:state(overflow-end)::after {
+					opacity: 1;
+				}
+
+				&[orientation="horizontal"] {
+					overflow-x: auto;
+					overflow-y: clip;
+
 					&::before,
 					&::after {
-						content: "";
-						position: sticky;
-						display: block;
-						width: 100%;
-						height: var(--space-m);
-						opacity: 0;
-						pointer-events: none;
-						transition: opacity var(--transition-short);
-						z-index: 1;
+						width: var(--space-m);
+						height: 1000vh;
+						margin-block-end: -1000vh;
 					}
+
 					&::before {
-						top: 0;
-						background: linear-gradient(180deg, var(--color-shadow), transparent);
+						left: 0;
+						background: linear-gradient(90deg, var(--color-shadow), transparent);
 					}
+
 					&::after {
-						bottom: 0;
-						background: linear-gradient(0deg, var(--color-shadow), transparent);
+						left: calc(100% - var(--space-m));
+						background: linear-gradient(270deg, var(--color-shadow), transparent);
 					}
-					&:state(overflow-start)::before {
-						opacity: 1;
-					}
-					&:state(overflow-end)::after {
-						opacity: 1;
-					}
-					&[orientation="horizontal"] {
-						overflow-x: auto;
-						overflow-y: clip;
-						&::before,
-						&::after {
-							width: var(--space-m);
-							height: 1000vh;
-							margin-block-end: -1000vh;
-						}
-						&::before {
-							left: 0;
-							background: linear-gradient(90deg, var(--color-shadow), transparent);
-						}
-						&::after {
-							left: calc(100% - var(--space-m));
-							background: linear-gradient(270deg, var(--color-shadow), transparent);
-						}
-					}
-				}`}</style>
+				}
+			}`}</style>
 		</module-scrollarea>
 	)
 }

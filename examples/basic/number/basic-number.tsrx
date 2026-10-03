@@ -65,10 +65,11 @@ export function BasicNumber(
 	@{
 		expose({ value: asNumber() })
 
-			<basic-number {value} {lang} {options}>{() => getNumberFormatter(getLocale(host), host.getAttribute('options')).format(host.value)}
-				<style>
-				:host {
-					display: inline;
-				}</style>
-			</basic-number>
+		<basic-number {value} {lang} {options}>{() => getNumberFormatter(getLocale(host), host.getAttribute('options')).format(host.value)}
+
+			<style>
+			:host {
+				display: inline;
+			}</style>
+		</basic-number>
 	}

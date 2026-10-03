@@ -166,26 +166,30 @@ export function ModuleCatalog(
 					</li>
 				))}
 			</ul>
+
 			<style>{css`
-				:host {
+			:host {
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-l);
+
+				> header,
+				p {
+					margin: 0;
+				}
+
+				& ul {
+					padding: 0;
+					margin: 0;
+				}
+
+				& header,
+				li {
 					display: flex;
-					flex-direction: column;
-					gap: var(--space-l);
-					> header,
-					p {
-						margin: 0;
-					}
-					& ul {
-						padding: 0;
-						margin: 0;
-					}
-					& header,
-					li {
-						display: flex;
-						gap: var(--space-m);
-						justify-content: space-between;
-					}
-				}`}</style>
+					gap: var(--space-m);
+					justify-content: space-between;
+				}
+			}`}</style>
 		</module-catalog>
 	)
 }

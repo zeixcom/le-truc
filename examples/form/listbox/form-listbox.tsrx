@@ -154,173 +154,188 @@ export function FormListbox(
 		}),
 	});
 
-		<form-listbox {name} value={value || options[0]?.value || ''}>
-			<div class="input">
-				@if (filterable) {
-					<input
-						type="text"
-						class="filter"
-						placeholder={t.filter}
-						onInput={(e: Event) => ({ filter: (e.target as HTMLInputElement).value })}
-					/>
-				}
-				@if (filterable) {
-					<button
-						type="button"
-						class="clear"
-						aria-label={t.clearFilter}
-						hidden={() => !host.filter}
-						onClick={() => ({ filter: '' })}
-					>✕</button>
-				}
-			</div>
-			<div
-				role="listbox"
-				aria-label={ariaLabel ?? ''}
-				onKeydown={(e: KeyboardEvent) => {
-					const { key } = e
-					if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) return
-					const elements = all('button[role="option"]:not([hidden])').get()
-					e.preventDefault()
-					e.stopPropagation()
-					const current = elements.indexOf(document.activeElement as HTMLButtonElement)
-					const next =
-						key === 'Home'
-							? 0
-							: key === 'End'
-								? elements.length - 1
-								: (current + (key === 'ArrowDown' ? 1 : -1) + elements.length) % elements.length
-					elements[next]?.focus()
-				}}
-				onKeyup={(e: KeyboardEvent) => {
-					if (e.key !== 'Enter') return
-					if (document.activeElement instanceof HTMLButtonElement)
-						document.activeElement.click()
-				}}
-			>
-				@for (const option of options; index i) {
-					const optValue = option.value
-					const optLabel = option.label
-					<button
-						type="button"
-						role="option"
-						data-value={optValue}
-						data-label={optLabel}
-						tabindex={() => (host.value === optValue ? 0 : -1)}
-						aria-selected={() => String(host.value === optValue)}
-						hidden={() => !optLabel.toLowerCase().includes(host.filter.toLowerCase())}
-						onClick={() => {
-							host.value = optValue
-							host.dispatchEvent(new Event('change', { bubbles: true }))
-						}}
-					>{optLabel}</button>
-				}
-			</div>
-			<style>
-			:host {
-				display: block;
-				margin: 0;
-				max-width: 16rem;
-				.input {
-					position: relative;
-					margin-bottom: var(--space-m);
-					& input.filter {
-						display: inline-block;
-						box-sizing: border-box;
-						background: var(--color-input);
-						color: var(--color-text);
-						border: none;
-						border-bottom: 1px solid var(--color-border);
-						padding: var(--space-xs) var(--input-height) var(--space-xs)
-							var(--space-xxs);
-						font-size: var(--font-size-m);
-						width: 100%;
-						height: var(--input-height);
-						&::placeholder {
-							color: var(--color-text);
-							opacity: var(--opacity-translucent);
-						}
-					}
-					& button.clear {
-						position: absolute;
-						bottom: 0;
-						right: 0;
-						border: 0;
-						border-radius: 50%;
-						font-size: var(--font-size-xs);
-						line-height: var(--line-height-xs);
-						color: var(--color-input);
-						background-color: var(--color-text-soft);
-						width: calc(0.6 * var(--input-height));
-						height: calc(0.6 * var(--input-height));
-						margin: calc(0.2 * var(--input-height));
-						padding: 0;
-						&:hover {
-							background-color: var(--color-text);
-						}
-					}
-				}
-				& module-scrollarea {
-					max-height: 40rem;
-					background-color: var(--color-background);
-					&:has([role="group"]) {
-						scroll-padding-block-start: var(--space-xl);
-					}
-				}
-				[role="listbox"] {
-					display: flex;
-					flex-direction: column;
-					gap: 0;
-					list-style: none;
-					padding: 0;
-					margin: 0;
-					background: var(--color-input);
-				}
-				[role="group"] {
-					margin-block-end: var(--space-xs);
-					&:not(:has(button:not([hidden]))) {
-						display: none;
-					}
-				}
-				[role="presentation"] {
-					position: sticky;
-					top: 0;
-					background-color: var(--color-background);
-					padding: var(--space-xs) var(--space-m);
-					font-size: var(--font-size-xs);
-					font-weight: var(--font-weight-bold);
-					text-transform: uppercase;
-					letter-spacing: 1px;
-					margin-block-end: var(--space-xxs);
-				}
-				[role="option"] {
-					display: block;
-					width: 100%;
-					text-align: left;
-					margin: 0;
-					padding: var(--space-xs) var(--space-m);
-					border: 0;
-					font-size: var(--font-size-s);
-					line-height: var(--line-height-s);
-					background: transparent;
-					color: var(--color-text);
-					cursor: pointer;
-					transition: background var(--transition-short) var(--easing-inout);
-					text-overflow: ellipsis;
-					max-width: 100%;
-					overflow-x: hidden;
-					&[aria-selected="true"] {
-						background: var(--color-selection-selected);
-						color: var(--color-text-inverted);
-					}
-					&:hover {
-						background: var(--color-selection-hover);
-						&[aria-selected="true"] {
-							background: var(--color-selection-active);
-						}
-					}
-				}
-			}</style>
-		</form-listbox>
+	<form-listbox {name} value={value || options[0]?.value || ''}>
+		<div class="input">
+			@if (filterable) {
+				<input
+					type="text"
+					class="filter"
+					placeholder={t.filter}
+					onInput={(e: Event) => ({ filter: (e.target as HTMLInputElement).value })}
+				/>
+			}
+			@if (filterable) {
+				<button
+					type="button"
+					class="clear"
+					aria-label={t.clearFilter}
+					hidden={() => !host.filter}
+					onClick={() => ({ filter: '' })}
+				>✕</button>
+			}
+		</div>
+		<div
+			role="listbox"
+			aria-label={ariaLabel ?? ''}
+			onKeydown={(e: KeyboardEvent) => {
+				const { key } = e
+				if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key)) return
+				const elements = all('button[role="option"]:not([hidden])').get()
+				e.preventDefault()
+				e.stopPropagation()
+				const current = elements.indexOf(document.activeElement as HTMLButtonElement)
+				const next =
+					key === 'Home'
+						? 0
+						: key === 'End'
+							? elements.length - 1
+							: (current + (key === 'ArrowDown' ? 1 : -1) + elements.length) % elements.length
+				elements[next]?.focus()
+			}}
+			onKeyup={(e: KeyboardEvent) => {
+				if (e.key !== 'Enter') return
+				if (document.activeElement instanceof HTMLButtonElement)
+					document.activeElement.click()
+			}}
+		>
+			@for (const option of options; index i) {
+				const optValue = option.value
+				const optLabel = option.label
+				<button
+					type="button"
+					role="option"
+					data-value={optValue}
+					data-label={optLabel}
+					tabindex={() => (host.value === optValue ? 0 : -1)}
+					aria-selected={() => String(host.value === optValue)}
+					hidden={() => !optLabel.toLowerCase().includes(host.filter.toLowerCase())}
+					onClick={() => {
+						host.value = optValue
+						host.dispatchEvent(new Event('change', { bubbles: true }))
+					}}
+				>{optLabel}</button>
+			}
+		</div>
 
+		<style>
+		:host {
+			display: block;
+			margin: 0;
+			max-width: 16rem;
+
+			.input {
+				position: relative;
+				margin-bottom: var(--space-m);
+
+				& input.filter {
+					display: inline-block;
+					box-sizing: border-box;
+					background: var(--color-input);
+					color: var(--color-text);
+					border: none;
+					border-bottom: 1px solid var(--color-border);
+					padding: var(--space-xs) var(--input-height) var(--space-xs)
+						var(--space-xxs);
+					font-size: var(--font-size-m);
+					width: 100%;
+					height: var(--input-height);
+
+					&::placeholder {
+						color: var(--color-text);
+						opacity: var(--opacity-translucent);
+					}
+				}
+
+				& button.clear {
+					position: absolute;
+					bottom: 0;
+					right: 0;
+					border: 0;
+					border-radius: 50%;
+					font-size: var(--font-size-xs);
+					line-height: var(--line-height-xs);
+					color: var(--color-input);
+					background-color: var(--color-text-soft);
+					width: calc(0.6 * var(--input-height));
+					height: calc(0.6 * var(--input-height));
+					margin: calc(0.2 * var(--input-height));
+					padding: 0;
+
+					&:hover {
+						background-color: var(--color-text);
+					}
+				}
+			}
+
+			& module-scrollarea {
+				max-height: 40rem;
+				background-color: var(--color-background);
+
+				&:has([role="group"]) {
+					scroll-padding-block-start: var(--space-xl);
+				}
+			}
+
+			[role="listbox"] {
+				display: flex;
+				flex-direction: column;
+				gap: 0;
+				list-style: none;
+				padding: 0;
+				margin: 0;
+				background: var(--color-input);
+			}
+
+			[role="group"] {
+				margin-block-end: var(--space-xs);
+
+				&:not(:has(button:not([hidden]))) {
+					display: none;
+				}
+			}
+
+			[role="presentation"] {
+				position: sticky;
+				top: 0;
+				background-color: var(--color-background);
+				padding: var(--space-xs) var(--space-m);
+				font-size: var(--font-size-xs);
+				font-weight: var(--font-weight-bold);
+				text-transform: uppercase;
+				letter-spacing: 1px;
+				margin-block-end: var(--space-xxs);
+			}
+
+			[role="option"] {
+				display: block;
+				width: 100%;
+				text-align: left;
+				margin: 0;
+				padding: var(--space-xs) var(--space-m);
+				border: 0;
+				font-size: var(--font-size-s);
+				line-height: var(--line-height-s);
+				background: transparent;
+				color: var(--color-text);
+				cursor: pointer;
+				transition: background var(--transition-short) var(--easing-inout);
+				text-overflow: ellipsis;
+				max-width: 100%;
+				overflow-x: hidden;
+
+				&[aria-selected="true"] {
+					background: var(--color-selection-selected);
+					color: var(--color-text-inverted);
+				}
+
+				&:hover {
+					background: var(--color-selection-hover);
+
+					&[aria-selected="true"] {
+						background: var(--color-selection-active);
+					}
+				}
+			}
+		}</style>
+	</form-listbox>
 }

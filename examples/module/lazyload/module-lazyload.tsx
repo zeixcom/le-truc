@@ -157,9 +157,9 @@ export function ModuleLazyload(
 			</card-callout>
 			<div class="content" hidden></div>
 			<style>{css`
-	:host {
-		display: block;
-	}`}</style>
+:host {
+	display: block;
+}`}</style>
 		</module-lazyload>
 	)
 }

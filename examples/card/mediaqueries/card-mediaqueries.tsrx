@@ -54,41 +54,45 @@ export function CardMediaqueries({ label }: { label?: string })
 		const viewport = requestContext(MEDIA_VIEWPORT, 'unknown')
 		const orientation = requestContext(MEDIA_ORIENTATION, 'unknown')
 
-			<card-mediaqueries>
-				@if (label) {
-					<h5>{label}</h5>
-				}
-				<dl>
-					<dt>Motion Preference:</dt>
-					<dd class="motion">{motion}</dd>
-					<dt>Theme Preference:</dt>
-					<dd class="theme">{theme}</dd>
-					<dt>Device Viewport:</dt>
-					<dd class="viewport">{viewport}</dd>
-					<dt>Device Orientation:</dt>
-					<dd class="orientation">{orientation}</dd>
-				</dl>
-				<style>
-				:host {
-					display: block;
-					margin: 0 0 var(--space-l);
-					& h5 {
-						margin: 0 0 var(--space-s);
-					}
-					& dl {
-						display: grid;
-						grid-template-columns: auto 1fr;
-						gap: var(--space-xs) var(--space-s);
-						margin: 0;
-					}
-					& dt {
-						font-weight: var(--font-weight-bold);
-					}
-					& dd {
-						margin: 0;
-						color: var(--color-text-soft);
-					}
-				}</style>
-			</card-mediaqueries>
+		<card-mediaqueries>
+			@if (label) {
+				<h5>{label}</h5>
+			}
+			<dl>
+				<dt>Motion Preference:</dt>
+				<dd class="motion">{motion}</dd>
+				<dt>Theme Preference:</dt>
+				<dd class="theme">{theme}</dd>
+				<dt>Device Viewport:</dt>
+				<dd class="viewport">{viewport}</dd>
+				<dt>Device Orientation:</dt>
+				<dd class="orientation">{orientation}</dd>
+			</dl>
 
+			<style>
+			:host {
+				display: block;
+				margin: 0 0 var(--space-l);
+
+				& h5 {
+					margin: 0 0 var(--space-s);
+				}
+
+				& dl {
+					display: grid;
+					grid-template-columns: auto 1fr;
+					gap: var(--space-xs) var(--space-s);
+					margin: 0;
+				}
+
+				& dt {
+					font-weight: var(--font-weight-bold);
+				}
+
+				& dd {
+					margin: 0;
+					color: var(--color-text-soft);
+				}
+			}</style>
+		</card-mediaqueries>
 	}
