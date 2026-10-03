@@ -67,7 +67,7 @@ A few entries carry a non-contract closed suffix instead (`parked`, `closed as m
 
 - **The queue never lives in a worktree.** Pick, claim and annotate run `scripts/queue.ts` against the main checkout only, so a task branch never touches a queue file and merging it back is clean even with the workflow's own suffix edits uncommitted. This — not locking — is what prevents two agents from colliding.
 - **A task's diff is its worktree's diff.** Reviewers and the owner read `git -C .worktrees/LT-NNN diff HEAD`; earlier tasks in the same run are invisible.
-- The worktree's `.agents/` and `.vscode/` copies are read-only references; edits and staging of those happen in the main checkout only.
+- **Worktrees never materialize the agent-config dirs `.agents/`, `.claude/`, `.vscode/`, `.zcode/`.** The bootstrap creates the worktree `--no-checkout`, populates its index from HEAD, marks those paths skip-worktree, and only then checks the rest out. Sandboxed hosts (Claude Code among them) refuse writes under their own config dirs, so a plain checkout dies materializing them (`.vscode/settings.json` first). No task targets these dirs; edits and staging of them happen in the main checkout only.
 - Gates run with the worktree as cwd: `bun run --cwd <path> <script>`, `bun test --cwd <path> <paths>`. Never `bun --cwd <path> run <script>` — bun silently ignores that form (exit 0, nothing runs).
 - Fresh worktrees lack built `docs/`; a gate that reads it (`test:server` serve tests, `check:links`) runs `build:docs` first.
 

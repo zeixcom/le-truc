@@ -160,9 +160,9 @@ for (let n = 0; n < MAX_TASKS; n++) {
     (setup.rework
       ? `\nThis is rework: review requested changes. The numbered findings on the entry's **Review:** line are the work; the rest of the task is done (see its Changed/How lines and git log of the main checkout). Fix each finding in the same task, or rebut one with evidence in "how". Keep dependents' gates green.`
       : '') +
-    `\nLeave your work green: run the gates you judge relevant (${GATE_TABLE}${setup.gates?.length ? `, plus the entry's (${setup.gates.join(', ')})` : ''}) and fix failures before handoff — from inside the worktree. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The gates agent verifies the full list independently after your turn, so report no gate results.\n` +
+    `\nLeave your work green: run the gates you judge relevant (${GATE_TABLE}${setup.gates?.length ? `, plus the entry's (${setup.gates.join(', ')})` : ''}) and fix failures before handoff — from inside the worktree. Lint gates use biome --write, so run their read-only form instead (bunx biome check <same path>) and change no file. The worktree contains no .agents/, .claude/, .vscode/ or .zcode/ — the bootstrap excludes those agent-config dirs (sandboxed hosts like yours block writes under them) and no task targets them; never create or edit them in the worktree. The gates agent verifies the full list independently after your turn, so report no gate results.\n` +
     `If the task needs an architectural decision it does not contain, stop: return outcome=blocked with the blocker, and make no further edits. ` +
-    `Boundaries: the worktree's BACKLOG.md, TODO.md, DONE.md, NOTES.md, .agents/ and .vscode/ are read-only references — the queue is managed in the main checkout, so never edit those files here, and never stage or commit anything (the owner commits). Do not write the status suffix or handoff fields.`,
+    `Boundaries: the worktree's BACKLOG.md, TODO.md, DONE.md, NOTES.md and the excluded agent-config dirs are out of reach — the queue is managed in the main checkout, so never edit those files here, and never stage or commit anything (the owner commits). Do not write the status suffix or handoff fields.`,
     { label: `implement ${setup.id}`, phase: 'Implement', schema: HANDOFF },
   )
   if (!handoff) {
