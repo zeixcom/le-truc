@@ -51,6 +51,12 @@ declare const withCollector: <T>(collector: EffectDescriptor[], fn: () => T) => 
 /**
  * Pushes an effect descriptor into the currently active collector.
  *
+ * This registration decides *when* a descriptor activates (after dependency
+ * resolution). It is separate from, and unrelated to, the `createEffect()`/
+ * `createScope()` call inside a descriptor's own body — that one decides
+ * where the descriptor's cleanup lives once activated. The helpers do both,
+ * for different reasons.
+ *
  * @since 2.3
  * @param host - Component host, used in the error message; `each()` and `reconcile()` pass `undefined`.
  * @param helper - Name of the calling helper (`'watch'`, `'on'`, `'pass'`, `'each'`, `'provideContexts'`), used in the error message.

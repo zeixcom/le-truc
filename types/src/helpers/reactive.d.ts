@@ -140,7 +140,23 @@ declare const keyedScopes: <E extends object>(memo: Signal<E[]>, mount: (element
  *
  * `watch` wraps `match` to create a reactive effect driven by explicitly
  * declared signal sources. Only the declared sources trigger re-runs; other
- * reads inside the handler are not tracked. Returns an `EffectDescriptor`.
+ * reads inside the handler are not tracked. Returns `void` — the descriptor
+ * registers in the active ambient collector (ADR 0018).
+ *
+ * Two unrelated registrations happen per call, for different reasons:
+ * `pushDescriptor()` puts the descriptor in the collector, which decides
+ * *when* it activates (after dependency resolution); the `createEffect()`
+ * inside the descriptor body registers the returned cleanup on the active
+ * owner, which decides *where it is disposed*. Calling `match()` without
+ * that internal `createEffect()` would track dependencies synchronously and
+ * never re-run. This is also the only registration path for a hand-authored
+ * descriptor's cleanup — `watch(() => true, descriptor)` runs once (no
+ * signal dependency) and self-registers the descriptor's returned cleanup;
+ * a raw descriptor's cleanup is silently dropped (ADR 0018).
+ *
+ * A throw inside the handler never reaches `connectedCallback`'s error
+ * containment: `match()` routes it to its `err` branch, by default
+ * `console.error`.
  *
  * @since 2.0
  * @param host - The component host element
@@ -163,6 +179,14 @@ declare const makeWatch: <P extends ComponentProps>(host: HTMLElement & P) => Wa
  *
  * The property-key and bare-signal short forms were removed in v3.0
  * (ADR-0012); a retired form fails the eager validation (ADR 0011).
+ *
+ * `pass()` only works on Le Truc components — Slot-backed properties are
+ * the thing being swapped. For any other element, bind through the public
+ * JS setter instead: `watch(source, bindProperty(el, key))`. The eager
+ * validation throws `InvalidPassPropertyError` at activation — inside
+ * `connectedCallback`, after the calling factory has already returned, so
+ * the factory cannot catch it; it is contained per descriptor and reported
+ * (ADR 0028). The commit is atomic: a failure leaves the target untouched.
  *
  * @since 2.0
  * @param host - The component host element

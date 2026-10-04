@@ -24,6 +24,11 @@ declare const FALLBACK_VALIDITY_MESSAGE = "Invalid value";
  * (`form`, `name`, `labels`, `validity`, ...), managed `disabled`, value sync, reset, and state restore.
  * Pass to `defineComponent`'s third parameter. See ADR 0016.
  *
+ * Never put the driving prop (`value`/`checked`) into `observedAttributes()` on a
+ * form-associated component: re-parsing the baseline attribute into the live prop
+ * conflates the reset baseline with live state — the same mistake the reset path
+ * avoids by restoring from `defaultValue`/`defaultChecked`.
+ *
  * @since 2.3
  */
 declare const formAssociated: () => FormAssociatedExtension;
@@ -34,6 +39,8 @@ declare const formAssociated: () => FormAssociatedExtension;
  * `formAssociated()` instead.
  *
  * Do not combine with `formAssociated()` on the same component; see ADR 0019.
+ * Like `formAssociated()`: never put `checked` into `observedAttributes()` —
+ * it would re-parse the reset baseline into the live prop.
  *
  * @since 2.3
  */
