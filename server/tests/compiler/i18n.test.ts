@@ -6,7 +6,14 @@
  * the generated record runtime.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
-import { readdirSync, readFileSync } from 'node:fs'
+import {
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { formatCensus, translationCensus } from '../../compiler/census'
@@ -18,6 +25,7 @@ import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
 import { compileCorpus } from '../../corpus-compile'
 import {
 	collectI18n,
+	readCatalogs,
 	sourceHash,
 	syncLocale,
 	writeI18nModule,
@@ -963,6 +971,57 @@ describe('non-string catalog values are malformed (LT-249)', () => {
 		const rest = (gaps: { status: string; detail?: string }[]) =>
 			gaps.filter(gap => !nonString([gap]).length)
 		expect(rest(planted.gaps)).toEqual(rest(clean.gaps))
+	})
+})
+
+/* === Unreadable catalog files (LT-356) === */
+
+describe('an unreadable catalog file is one census record (LT-356)', () => {
+	const probe = {
+		tag: 'census-probe',
+		i18nMessages: { greet: 'Hello, {name}!', bye: 'Bye' },
+	} as unknown as RegistryEntry
+	const scratch = mkdtempSync(join(tmpdir(), 'lt-356-'))
+	afterAll(() => rmSync(scratch, { recursive: true, force: true }))
+	writeFileSync(join(scratch, 'de.json'), '{ "census-probe.bye": "Tschüss", }')
+	writeFileSync(join(scratch, 'fr.json'), '["census-probe.bye"]')
+	writeFileSync(join(scratch, 'it.json'), '{ "census-probe.bye": "Ciao" }')
+
+	test('readCatalogs tells an unreadable file from an empty catalog', async () => {
+		const catalogs = await readCatalogs(scratch)
+		expect(catalogs.locales).toEqual(['de', 'fr', 'it'])
+		expect([...(catalogs.unreadable?.keys() ?? [])]).toEqual(['de', 'fr'])
+		expect(catalogs.unreadable?.get('fr')).toBe(
+			'its top level is an array, not an object',
+		)
+		expect(catalogs.overrides.get('de')).toEqual({})
+		expect(catalogs.overrides.get('it')).toEqual({ 'census-probe.bye': 'Ciao' })
+	})
+
+	test('a trailing comma yields one malformed record on the file, not N missing', async () => {
+		const { gaps, overrides } = await collectI18n([probe], undefined, scratch)
+		const of = (locale: string) =>
+			gaps
+				.filter(gap => gap.locale === locale)
+				.map(gap => [gap.key, gap.status])
+		expect(of('de')).toEqual([['de.json', 'malformed']])
+		expect(of('fr')).toEqual([['fr.json', 'malformed']])
+		expect(gaps.find(gap => gap.key === 'de.json')?.detail).toStartWith(
+			'the whole catalog file is unreadable, so no entry in this locale renders — ',
+		)
+		expect(gaps.find(gap => gap.key === 'fr.json')?.detail).toBe(
+			'the whole catalog file is unreadable, so no entry in this locale renders — its top level is an array, not an object',
+		)
+		// The readable sibling is censused as before.
+		expect(of('it')).toContainEqual(['census-probe.greet', 'missing'])
+		// The unreadable locale renders the source strings.
+		expect(overrides.get('de')).toEqual({})
+	})
+
+	test('the committed catalogs are all readable', async () => {
+		const catalogs = await readCatalogs(join(import.meta.dir, '../../../i18n'))
+		expect(catalogs.locales.length).toBeGreaterThan(0)
+		expect(catalogs.unreadable?.size).toBe(0)
 	})
 })
 

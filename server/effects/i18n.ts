@@ -141,6 +141,14 @@ export type Catalogs = {
 	 * confirms them.
 	 */
 	manifest: Map<string, Record<string, string>>
+	/**
+	 * Per locale whose catalog file exists but cannot be used — it does not
+	 * parse as JSON, or its top level is not an object (LT-356): why. Its
+	 * `overrides` entry is empty. The census records the file once instead
+	 * of reporting every declared key `missing`, and `i18n:sync` refuses to
+	 * write the locale. Absent from injected test catalogs = none.
+	 */
+	unreadable?: Map<string, string>
 }
 
 const readJson = async (path: string): Promise<unknown> => {
@@ -151,11 +159,6 @@ const readJson = async (path: string): Promise<unknown> => {
 	}
 }
 
-const asRecord = (value: unknown): Record<string, unknown> =>
-	typeof value === 'object' && value !== null && !Array.isArray(value)
-		? { ...(value as Record<string, unknown>) }
-		: {}
-
 const asStringRecord = (value: unknown): Record<string, string> =>
 	typeof value === 'object' && value !== null
 		? Object.fromEntries(
@@ -165,8 +168,34 @@ const asStringRecord = (value: unknown): Record<string, string> =>
 			)
 		: {}
 
-const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
+/**
+ * Read one catalog file: its entries, or why it cannot be used (LT-356).
+ * A file that does not parse, or whose top level is not an object, is
+ * UNREADABLE — never an empty catalog, which the census would misreport as
+ * every key `missing` and `i18n:sync` would overwrite with placeholders.
+ */
+const readCatalog = async (
+	path: string,
+): Promise<{ catalog: Record<string, unknown> } | { error: string }> => {
+	let value: unknown
+	try {
+		value = JSON.parse(await readFile(path, 'utf8'))
+	} catch (error) {
+		return { error: error instanceof Error ? error.message : String(error) }
+	}
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+		? { catalog: { ...(value as Record<string, unknown>) } }
+		: { error: `its top level is ${valueKind(value)}, not an object` }
+}
+
+/**
+ * The committed catalogs under `i18nDir` — the one reader the build and
+ * `i18n:sync` share (LT-356), so neither can mistake an unreadable file
+ * for an empty one.
+ */
+export const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
 	const overrides = new Map<string, Record<string, unknown>>()
+	const unreadable = new Map<string, string>()
 	const locales: string[] = []
 	try {
 		// Sorted: readdir order is the runtime's, and the locale order flows
@@ -176,7 +205,11 @@ const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
 			if (!file.endsWith('.json') || file === 'manifest.json') continue
 			const locale = file.replace(/\.json$/, '')
 			locales.push(locale)
-			overrides.set(locale, asRecord(await readJson(join(i18nDir, file))))
+			const read = await readCatalog(join(i18nDir, file))
+			if ('error' in read) {
+				overrides.set(locale, {})
+				unreadable.set(locale, read.error)
+			} else overrides.set(locale, read.catalog)
 		}
 	} catch {
 		// No i18n directory yet: zero locales, zero gaps.
@@ -186,7 +219,7 @@ const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
 	if (typeof rawManifest === 'object' && rawManifest !== null)
 		for (const [locale, entries] of Object.entries(rawManifest))
 			manifest.set(locale, asStringRecord(entries))
-	return { locales, overrides, manifest }
+	return { locales, overrides, manifest, unreadable }
 }
 
 /**
@@ -224,6 +257,7 @@ export const collectI18n = async (
 		locales,
 		overrides: rawOverrides,
 		manifest,
+		unreadable = new Map<string, string>(),
 	} = catalogs ?? (await readCatalogs(i18nDir))
 	const sources = new Map<string, Record<string, string>>()
 	// Split each catalog into its string entries and the rest (LT-249): a
@@ -235,6 +269,18 @@ export const collectI18n = async (
 	const overrides = new Map<string, Record<string, string>>()
 	const malformed: TranslationGap[] = []
 	for (const locale of locales) {
+		// An unreadable catalog FILE (LT-356) is one `malformed` record on
+		// the file, not one `missing` per declared key — those would blame
+		// the translator's keys for a syntax error. Its locale renders the
+		// source strings, exactly as an empty catalog would.
+		const error = unreadable.get(locale)
+		if (error !== undefined)
+			malformed.push({
+				key: `${locale}.json`,
+				locale,
+				status: 'malformed',
+				detail: `the whole catalog file is unreadable, so no entry in this locale renders — ${error}`,
+			})
 		const strings: Record<string, string> = {}
 		for (const [compound, value] of Object.entries(
 			rawOverrides.get(locale) ?? {},
@@ -269,6 +315,7 @@ export const collectI18n = async (
 			}),
 		)
 		for (const locale of locales) {
+			if (unreadable.has(locale)) continue // one file record, above
 			const localeOverrides = overrides.get(locale) ?? {}
 			const localeManifest = manifest.get(locale) ?? {}
 			for (const [key, source] of Object.entries(entry.i18nMessages)) {

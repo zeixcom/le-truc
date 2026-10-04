@@ -30,4 +30,7 @@ i18n/manifest.json  per locale, per key: the source-string hash the
   **stale** (the manifest hash no longer matches); the census reports it.
 - **`bun run i18n:sync`** writes missing keys into the locale catalogs as
   empty entries, prunes orphaned keys, and refreshes the manifest — run it
-  by a person; the build never writes these files.
+  by a person; the build never writes these files. A catalog file that does
+  not parse as a JSON object (a trailing comma, a merge-conflict marker) is
+  one `malformed` census record, and sync refuses it: the file and its
+  manifest entries stay untouched, and sync exits non-zero naming it.

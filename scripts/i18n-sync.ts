@@ -28,6 +28,13 @@
  *    `argument-mismatch`, `missing-arms`, a `client-fallback`) is LISTED and
  *    left alone — each is a translation only a translator can correct.
  *
+ * A catalog FILE that does not parse as JSON, or whose top level is not an
+ * object (a trailing comma, a merge-conflict marker), is REFUSED (LT-356):
+ * sync names the file and the parse error, writes nothing to it or to its
+ * manifest entries, syncs the other locales, and exits non-zero. Reading
+ * it as empty would overwrite a translator's whole catalog with
+ * placeholders.
+ *
  * The corpus scan is the CONFIGURED one (LT-273): `le-truc.config.json`
  * selects the sources, the output root and the catalog directory, exactly
  * as for the build — this was the last script that hard-coded the corpus
@@ -46,7 +53,12 @@ import {
 	loadCorpusConfig,
 	REPO_ROOT,
 } from '../server/corpus-sources'
-import { collectI18n, SOURCE_LOCALE, syncLocale } from '../server/effects/i18n'
+import {
+	collectI18n,
+	readCatalogs,
+	SOURCE_LOCALE,
+	syncLocale,
+} from '../server/effects/i18n'
 import { io } from '../server/runtimes'
 
 const config = loadCorpusConfig(REPO_ROOT)
@@ -58,9 +70,12 @@ await compileCorpus(collectCorpusSources(config), config)
 const registry = JSON.parse(
 	readFileSync(join(config.outDir, 'registry.json'), 'utf8'),
 ) as ComponentRegistry
+// The build's own reader (LT-356): an unreadable catalog file is reported,
+// never read as empty.
+const catalogs = await readCatalogs(config.i18nDir)
 const collection = await collectI18n(
 	Object.values(registry),
-	undefined,
+	catalogs,
 	config.i18nDir,
 )
 
@@ -89,15 +104,17 @@ let prunedKeys = 0
 const staleKeys: string[] = []
 const orphanKeys: string[] = []
 const flaggedKeys: string[] = []
+const refused: string[] = []
 
 for (const locale of collection.locales) {
 	const catalogPath = join(config.i18nDir, `${locale}.json`)
-	let catalog: Record<string, unknown> = {}
-	try {
-		catalog = JSON.parse(readFileSync(catalogPath, 'utf8'))
-	} catch {
-		catalog = {}
+	const unreadable = catalogs.unreadable?.get(locale)
+	if (unreadable !== undefined) {
+		// Untouched: the file, and the locale's manifest entries.
+		refused.push(`${catalogPath}: ${unreadable}`)
+		continue
 	}
+	const catalog = catalogs.overrides.get(locale) ?? {}
 	const result = syncLocale(
 		catalog,
 		collection.gaps.filter(g => g.locale === locale),
@@ -147,4 +164,12 @@ if (flaggedKeys.length > 0) {
 		`${flaggedKeys.length} translation(s) FLAGGED — malformed (unparseable or not a string), argument mismatch, missing plural arms or client fallback; fix them by hand, nothing was changed:\n` +
 			flaggedKeys.map(key => `  • ${key}`).join('\n'),
 	)
+}
+if (refused.length > 0) {
+	console.error(
+		`i18n:sync did not sync ${refused.length} catalog file(s) — none reads as a JSON object, so nothing in it or in its manifest entries was changed:\n` +
+			refused.map(entry => `  • ${entry}`).join('\n') +
+			'\nFix each file by hand (look for a trailing comma or a merge-conflict marker), then re-run `bun run i18n:sync`.',
+	)
+	process.exit(1)
 }
