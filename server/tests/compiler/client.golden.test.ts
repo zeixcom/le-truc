@@ -53,6 +53,23 @@ const SOURCES = [
 // client's child-module import, but carrying no snapshot of its own.
 const TYPECHECK_DEPS = ['examples/basic/button/basic-button.tsrx'] as const
 
+// An arm-set client (ADR 0037, LT-392): no corpus component emits one yet, so
+// without this fixture the emit-then-check never exercises reconcile()'s arm
+// form, and the declared `types/` surface drifted from it once unnoticed
+// (LT-385g failed tsc with "Overload 1 of 2"). The LT-385g fixture: a cell
+// seeded from a server arg through its DOM site, switching two arms.
+const ARM_SET_SOURCE = `import { createCell } from '@zeix/le-truc'
+export function C({ mode }: { mode: string })
+	@{
+		const open = createCell(mode === 'wide')
+		expose({ open: open.get })
+			<c-arm-set data-mode={mode}>@if (open.get()) { <p>a</p> } @else { <b>b</b> }
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-arm-set>
+	}`
+
 // module-list composes FormTextbox (ADR 0023 sub-design 10, LT-020) — the
 // compose registry must be built before it compiles, keyed by form-textbox's
 // own repo-relative source path (mirroring server/effects/compile.ts).
@@ -295,7 +312,7 @@ const generated = createGeneratedDir('client-golden')
 afterAll(() => generated.cleanup())
 
 describe('client golden — emit-then-check (ADR 0023 sub-design 6)', () => {
-	test('generated client modules typecheck against @zeix/le-truc', async () => {
+	test('generated client modules, an arm-set client among them, typecheck against @zeix/le-truc', async () => {
 		const files: string[] = []
 		for (const { result } of compiled) {
 			const component = result.component
@@ -320,6 +337,17 @@ describe('client golden — emit-then-check (ADR 0023 sub-design 6)', () => {
 			if (!component) throw new Error(`${rel} must compile`)
 			generated.emit(component.entry.clientModule, component.clientCode)
 		}
+		const armSet = compileComponent(ARM_SET_SOURCE, 'c-arm-set.tsrx', registry)
+		const armSetClient = armSet.component?.clientCode ?? ''
+		if (!armSet.component)
+			throw new Error(
+				`arm-set fixture must compile: ${JSON.stringify(armSet.diagnostics)}`,
+			)
+		// Guard the fixture's purpose: it must lower through the arm form.
+		expect(armSetClient).toContain('template[data-arms="0"]')
+		files.push(
+			generated.emit(armSet.component.entry.clientModule, armSetClient),
+		)
 		const proc = Bun.spawn(
 			[
 				'bunx',
