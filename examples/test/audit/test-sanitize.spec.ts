@@ -14,7 +14,7 @@ import { expect, test } from '@playwright/test'
  */
 test.describe('dangerouslyBindInnerHTML sanitize hook', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-sanitize')
+		await page.goto('/test/test-sanitize')
 		// The component has no visible content until `content` is set, so wait
 		// for attachment, not visibility.
 		await page.waitForSelector('audit-sanitize', { state: 'attached' })

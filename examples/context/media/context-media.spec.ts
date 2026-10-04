@@ -43,7 +43,7 @@ test.describe('context-media component', () => {
 		test('seeds every prop from its media query', async ({ page }) => {
 			await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' })
 			await page.setViewportSize({ width: 800, height: 600 })
-			await page.goto('http://localhost:3000/test/context-media')
+			await page.goto('/test/context-media')
 			await page.waitForSelector('context-media')
 			expect(await hostState(page)).toEqual({
 				motion: 'reduce',
@@ -59,7 +59,7 @@ test.describe('context-media component', () => {
 				colorScheme: 'light',
 			})
 			await page.setViewportSize({ width: 400, height: 700 })
-			await page.goto('http://localhost:3000/test/context-media')
+			await page.goto('/test/context-media')
 			await page.waitForSelector('context-media')
 			expect(await hostState(page)).toEqual({
 				motion: 'no-preference',
@@ -72,7 +72,7 @@ test.describe('context-media component', () => {
 		test('provides every value to a descendant consumer', async ({ page }) => {
 			await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' })
 			await page.setViewportSize({ width: 800, height: 600 })
-			await page.goto('http://localhost:3000/test/context-media')
+			await page.goto('/test/context-media')
 			await page.waitForSelector('context-media')
 			const card = consumer(page)
 			await expect(card.locator('.motion')).toHaveText('reduce')
@@ -89,7 +89,7 @@ test.describe('context-media component', () => {
 				colorScheme: 'light',
 			})
 			await page.setViewportSize({ width: 800, height: 600 })
-			await page.goto('http://localhost:3000/test/context-media')
+			await page.goto('/test/context-media')
 			await page.waitForSelector('context-media')
 		})
 
@@ -120,7 +120,7 @@ test.describe('context-media component', () => {
 	test.describe('Breakpoint attributes', () => {
 		test.beforeEach(async ({ page }) => {
 			await page.setViewportSize({ width: 700, height: 600 })
-			await page.goto('http://localhost:3000/test/context-media')
+			await page.goto('/test/context-media')
 			await page.waitForSelector('context-media')
 		})
 

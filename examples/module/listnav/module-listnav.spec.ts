@@ -9,7 +9,7 @@ import { expect, test } from '@playwright/test'
  * (`value`, `filter`, `options`), never its owned option buttons (LT-332).
  */
 
-const PAGE = 'http://localhost:3000/test/module-listnav'
+const PAGE = '/test/module-listnav'
 
 test.describe('module-listnav component', () => {
 	let pageErrors: string[]

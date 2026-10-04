@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('v2.0 factory form: expose() + empty return array', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-expose')
+		await page.goto('/test/test-expose')
 		// test-expose has no visible content — wait for DOM attachment
 		await page.waitForSelector('test-expose', { state: 'attached' })
 	})

@@ -35,7 +35,7 @@ test.describe('dangerouslyBindInnerHTML under Trusted Types enforcement', () => 
 				},
 			})
 		})
-		await page.goto('http://localhost:3000/test/test-sanitize-tt')
+		await page.goto('/test/test-sanitize-tt')
 		await page.waitForSelector('audit-trusted-html', { state: 'attached' })
 		await page.waitForSelector('audit-dompurify', { state: 'attached' })
 		await page.waitForSelector('audit-sanitize', { state: 'attached' })
@@ -158,7 +158,7 @@ test.describe('dangerouslyBindInnerHTML under Trusted Types enforcement', () => 
 		// path — is observed. Before the fix, this threw via the innerHTML sink
 		// and was silently swallowed as a console.error, invisible to the
 		// pageerror-only assertions in the tests above.
-		await page.goto('http://localhost:3000/test/test-sanitize-tt')
+		await page.goto('/test/test-sanitize-tt')
 		await page.waitForSelector('audit-trusted-html', { state: 'attached' })
 		await page.waitForSelector('audit-dompurify', { state: 'attached' })
 		await page.waitForSelector('audit-sanitize', { state: 'attached' })

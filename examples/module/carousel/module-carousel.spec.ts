@@ -33,7 +33,7 @@ test.describe('module-carousel component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/module-carousel')
+		await page.goto('/test/module-carousel')
 		await page.waitForSelector('module-carousel')
 	})
 
@@ -309,7 +309,7 @@ test.describe('module-carousel component', () => {
 					return realDisconnect.call(this)
 				}
 			})
-			await page.goto('http://localhost:3000/test/module-carousel')
+			await page.goto('/test/module-carousel')
 			await page.waitForSelector('module-carousel')
 
 			const before = await page.evaluate(

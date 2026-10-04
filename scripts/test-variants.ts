@@ -10,11 +10,11 @@
  * `<tag>.spec.ts`; every other example is out of scope (`bun run test`
  * covers it once).
  *
- * Specs address `http://localhost:3000/test/<tag>` directly, so the surface
- * is chosen server-side: per surface this starts `server/serve.ts` with
- * `TEST_SURFACE=<surface>` and Playwright reuses it (`reuseExistingServer`).
- * A server already listening on the port would silently serve the default
- * page, so the runner refuses to start instead.
+ * Specs address `/test/<tag>` relative to Playwright's `baseURL`, so the
+ * surface is chosen server-side: per surface this starts `server/serve.ts`
+ * on a free port with `TEST_SURFACE=<surface>`, hands the port to Playwright
+ * as `TEST_PORT` (which reuses that server), and stops it afterwards. A
+ * server on 3000 is never touched (LT-415).
  *
  * Usage:
  *   bun run test:variants                  # every variant set, every surface
@@ -26,12 +26,11 @@
 import { type ChildProcess, spawn } from 'node:child_process'
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { freePort, servesThisCheckout } from './test-server'
 
 type Surface = 'ts' | 'tsrx' | 'tsx'
 
 const SURFACES: readonly Surface[] = ['ts', 'tsrx', 'tsx']
-const PORT = 3000
-const ORIGIN = `http://localhost:${PORT}`
 const READY_TIMEOUT_MS = 30_000
 
 type VariantSet = { tag: string; spec: string; surfaces: Surface[] }
@@ -59,32 +58,26 @@ const run = (cmd: string, args: string[], env = process.env): Promise<number> =>
 		child.on('error', () => done(1))
 	})
 
-const isListening = async (): Promise<boolean> => {
-	try {
-		await fetch(ORIGIN)
-		return true
-	} catch {
-		return false
-	}
-}
+type RunningServer = { process: ChildProcess; port: number }
 
-const startServer = async (
-	surface: Surface,
-	probeTag: string,
-): Promise<ChildProcess> => {
+const startServer = async (surface: Surface): Promise<RunningServer> => {
+	const port = await freePort()
 	const server = spawn('bun', ['server/serve.ts'], {
 		stdio: ['ignore', 'ignore', 'inherit'],
-		env: { ...process.env, PLAYWRIGHT: '1', TEST_SURFACE: surface },
+		env: {
+			...process.env,
+			PLAYWRIGHT: '1',
+			PORT: String(port),
+			TEST_SURFACE: surface,
+		},
 	})
 	const deadline = Date.now() + READY_TIMEOUT_MS
 	while (Date.now() < deadline) {
 		if (server.exitCode !== null) break
-		try {
-			const res = await fetch(`${ORIGIN}/test/${probeTag}`)
-			if (res.ok) return server
-		} catch {
-			// not listening yet
-		}
+		// Ready once `/api/status` names this checkout and surface — not
+		// merely once something answers on the port
+		if (await servesThisCheckout(port, surface))
+			return { process: server, port }
 		await Bun.sleep(200)
 	}
 	server.kill()
@@ -124,12 +117,6 @@ const main = async () => {
 		)
 		process.exit(1)
 	}
-	if (await isListening()) {
-		console.error(
-			`❌ Port ${PORT} is already in use — stop that server first; it would serve the default surface to every run.`,
-		)
-		process.exit(1)
-	}
 
 	console.log(
 		`🧬 Variant sets: ${sets.map(s => `${s.tag} (${s.surfaces.join('/')})`).join(', ')}`,
@@ -144,17 +131,16 @@ const main = async () => {
 		console.log(
 			`\n🎭 Surface "${surface}": ${specs.map(s => s.tag).join(', ')}`,
 		)
-		const server = await startServer(surface, specs[0]!.tag)
+		const server = await startServer(surface)
 		try {
-			const code = await run('bunx', [
-				'playwright',
-				'test',
-				...specs.map(s => s.spec),
-				...playwrightArgs,
-			])
+			const code = await run(
+				'bunx',
+				['playwright', 'test', ...specs.map(s => s.spec), ...playwrightArgs],
+				{ ...process.env, TEST_PORT: String(server.port) },
+			)
 			if (code !== 0) failed.push(surface)
 		} finally {
-			await stopServer(server)
+			await stopServer(server.process)
 		}
 	}
 

@@ -23,7 +23,7 @@ test.describe('basic-pluralize component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/basic-pluralize')
+		await page.goto('/test/basic-pluralize')
 		await page.waitForSelector('basic-pluralize')
 	})
 

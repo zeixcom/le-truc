@@ -17,7 +17,7 @@ test.describe('form-spinbutton component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/form-spinbutton')
+		await page.goto('/test/form-spinbutton')
 		await page.waitForSelector('form-spinbutton')
 	})
 

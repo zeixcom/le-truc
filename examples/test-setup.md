@@ -7,7 +7,7 @@ Le Truc uses a sophisticated test setup that combines Bun's build system with Pl
 ### **Test Server Architecture**
 
 1. **Bun Development Server** (`examples/server.ts`)
-   - Serves on `http://localhost:3000`
+   - Serves on a free port picked by `playwright.config.ts` (or reuses this checkout's running server on 3000); specs use relative URLs against `baseURL`
    - Dynamically injects component HTML fragments into a layout template
    - Routes `/test/{component}.html` to render component examples for testing
    - Serves compiled assets from `/assets/` directory
@@ -28,7 +28,7 @@ Le Truc uses a sophisticated test setup that combines Bun's build system with Pl
 // Standard test pattern
 test.describe('component-name component', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:3000/test/component-name.html')
+    await page.goto('/test/component-name')
     await page.waitForSelector('component-name')
   })
 

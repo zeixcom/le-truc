@@ -49,7 +49,7 @@ test.describe('form-combobox component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/form-combobox')
+		await page.goto('/test/form-combobox')
 		await page.waitForSelector('form-combobox')
 	})
 
@@ -737,7 +737,7 @@ test.describe('form-combobox component', () => {
 
 test.describe('pass() Slot cleanup and restore', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/form-combobox')
+		await page.goto('/test/form-combobox')
 		await page.waitForSelector('form-combobox')
 	})
 

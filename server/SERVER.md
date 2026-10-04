@@ -377,7 +377,7 @@ Every route but `/ws` lives in `routes.ts` as a pure `createRequestHandler({ dev
 |-------|--------|--------|
 | `GET /` | 302 redirect to the default locale's index (`Accept: text/markdown` → source) | Inline |
 | `GET /index.html` | The root redirect stub the build emits for static hosts | `docs/index.html` |
-| `GET /api/status` | Health check (`"OK"`) | Inline |
+| `GET /api/status` | Health and checkout identity: `{ status, root, surface }` — what a test run checks before reusing a running server (LT-415) | Inline |
 | `GET /ws` | WebSocket upgrade (HMR) | In-memory |
 | `GET /api/:category/:page` | API doc fragment (locale-independent, at the docs root) | `docs/api/<category>/<page>` |
 | `GET /assets/*` | Static assets | `docs/assets/` |
@@ -393,7 +393,7 @@ Every route but `/ws` lives in `routes.ts` as a pure `createRequestHandler({ dev
 
 Pages live under `docs/<locale>/` — one complete tree per locale (LT-174) — while the api/, examples/ and sources/ fragment trees stay single-copy at the docs root. `GET /:locale/:page` redirects 301 extensionless URLs (`/en/guide`) to the matching `<page>.html` when it exists and 404s otherwise. `Accept: text/markdown` returns raw `.md` source from `docs-src/pages/` on `/` and `/:locale/:page`; blog posts serve their built markdown mirror directly at `/<locale>/blog/<slug>.md`. `handleStaticFile` 404s on directory paths generally, so no route can attempt `sendfile` on a directory.
 
-**Component test surfaces** (LT-284, ADR 0039 s2). A variant set carries up to three spellings of one tag; `?surface=ts|tsrx|tsx` on `/test/:component` swaps the page's `{{ test-script }}` from `/assets/main.js` to `surface.js`. That bundle is the full `examples/main.ts` graph with the component's canonical client emptied and one module appended: the hand-written twin (`ts`), the canonical client when that surface is the registry's selected member, or else `variants/<tag>.<surface>.client.ts`. The corpus compile owns `variants/`: each run deletes any file there it did not write (LT-296), so a dissolved set or a flipped `variantOverrides` leaves no stale client for `?surface=` to serve. The tag is therefore defined exactly once. A surface the component does not carry is a 404, an unknown one a 400. With no query, the `TEST_SURFACE` env var applies. Specs hard-code `/test/<tag>`, so `scripts/test-variants.ts` uses the env var: it builds once and, per surface, starts `serve.ts` with `TEST_SURFACE` set, then runs the specs of the folders that carry that surface. It refuses to start while port 3000 is taken, because Playwright's `reuseExistingServer` would test the default page.
+**Component test surfaces** (LT-284, ADR 0039 s2). A variant set carries up to three spellings of one tag; `?surface=ts|tsrx|tsx` on `/test/:component` swaps the page's `{{ test-script }}` from `/assets/main.js` to `surface.js`. That bundle is the full `examples/main.ts` graph with the component's canonical client emptied and one module appended: the hand-written twin (`ts`), the canonical client when that surface is the registry's selected member, or else `variants/<tag>.<surface>.client.ts`. The corpus compile owns `variants/`: each run deletes any file there it did not write (LT-296), so a dissolved set or a flipped `variantOverrides` leaves no stale client for `?surface=` to serve. The tag is therefore defined exactly once. A surface the component does not carry is a 404, an unknown one a 400. With no query, the `TEST_SURFACE` env var applies. Specs address `/test/<tag>` relative to Playwright's `baseURL`, so `scripts/test-variants.ts` uses the env var: it builds once and, per surface, starts `serve.ts` on a free port with `TEST_SURFACE` set, hands the port to Playwright as `TEST_PORT` (the config reuses that server instead of starting one), and stops the server after the surface's specs. A server left on 3000 — dev or another worktree's — is never touched (LT-415).
 
 **Legacy root-level URLs** (`/guide.html`, `/blog/<slug>`, …) 404 by design (LT-198 ruling): a redirect map in `serve.ts` would not reach the static host that actually serves the site, and the locale layout is unreleased, so there is no population of broken external links yet. Only `/` got the stub treatment, because it is the URL people actually type. Pinned by the `legacy root URLs` tests in `server/tests/serve.test.ts`.
 
@@ -421,14 +421,14 @@ Layout files are cached in a `Map<string, string>` in `routes.ts` for performanc
 The `handleStaticFile` function:
 - Checks file existence before serving
 - Returns proper 404 for missing files
-- Injects HMR script in development mode for HTML responses
+- Injects HMR script in development mode for HTML pages; test mocks (`/test/:component/mocks/*`) are fragments and never get one (LT-415)
 - Handles MIME types from `config.ts` `MIME_TYPES` map
 - Supports Brotli/Gzip compression via `getCompressedBuffer()` from `io.ts`
 
 ### Port and Startup
 
-- Default port: 3000 (configurable in `SERVER_CONFIG`)
-- Port conflict detection: hits `/api/status` on startup; exits with `lsof` hint if occupied
+- Default port: 3000 (`SERVER_CONFIG`); the `PORT` environment variable overrides it — test runners pass a free one (LT-415), non-integer or out-of-range values exit with an error
+- Port conflict detection: hits `/api/status` on startup; exits with `lsof` and `PORT=` hints if occupied
 - CLI flags: `--mode docs`, `--build-first`, `--help`
 
 ## Hot Module Replacement (HMR)

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('test-context: provideContexts() + requestContext() helpers', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-context')
+		await page.goto('/test/test-context')
 		await page.waitForSelector('test-context-provider')
 	})
 

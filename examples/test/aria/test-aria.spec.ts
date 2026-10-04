@@ -24,7 +24,7 @@ const readAriaState = (page: Page, selector: string) =>
 
 test.describe('test-aria: bindAria() + element-internals registry', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-aria')
+		await page.goto('/test/test-aria')
 		await page.waitForSelector('test-aria')
 	})
 
@@ -138,7 +138,7 @@ test.describe('test-aria: bindAria() + element-internals registry', () => {
 
 test.describe('test-aria: axe-core visibility via the declaration registry', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-aria')
+		await page.goto('/test/test-aria')
 		// The trap elements have no content (zero height), so the default
 		// visible state would never settle — attached is the right wait here.
 		await page.waitForSelector('test-aria-trap', { state: 'attached' })
@@ -177,7 +177,7 @@ test.describe('test-aria: axe-core visibility via the declaration registry', () 
 
 test.describe('test-aria-late-ref: element reference to a :not(:defined) target', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-aria')
+		await page.goto('/test/test-aria')
 		await page.waitForSelector('test-aria-late-ref', { state: 'attached' })
 	})
 

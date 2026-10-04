@@ -58,7 +58,7 @@ function hasState(element: Locator, state: string): Promise<boolean> {
 
 test.describe('module-todo component', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/module-todo')
+		await page.goto('/test/module-todo')
 		await page.waitForSelector('module-todo')
 	})
 

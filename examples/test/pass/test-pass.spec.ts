@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('test-pass: pass() helper', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-pass')
+		await page.goto('/test/test-pass')
 		await page.waitForSelector('test-pass')
 	})
 

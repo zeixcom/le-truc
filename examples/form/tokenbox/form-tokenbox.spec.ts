@@ -12,7 +12,7 @@ test.describe('form-tokenbox event-time messages', () => {
 		page.on('console', msg => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
-		await page.goto('http://localhost:3000/test/form-tokenbox')
+		await page.goto('/test/form-tokenbox')
 		await page.waitForSelector('form-tokenbox')
 	})
 

@@ -116,7 +116,8 @@ async function checkPort(port: number): Promise<void> {
 				`❌ Port ${port} is already in use by another server.\n\n` +
 					`   Kill the blocking process:\n` +
 					`     lsof -ti:${port} | xargs kill\n\n` +
-					`   Or change the port in server/config.ts\n`,
+					`   Or pick another port:\n` +
+					`     PORT=${port + 1} bun run dev\n`,
 			)
 			process.exit(1)
 		}
@@ -125,8 +126,23 @@ async function checkPort(port: number): Promise<void> {
 	}
 }
 
+/**
+ * The port to bind: `PORT` from the environment (test runners pass a free
+ * one, LT-415), else the interactive default from `server/config.ts`.
+ */
+const resolvePort = (): number => {
+	const raw = process.env.PORT
+	if (!raw) return SERVER_CONFIG.PORT
+	const port = Number(raw)
+	if (!Number.isInteger(port) || port < 0 || port > 65535) {
+		console.error(`❌ Invalid PORT "${raw}" — expected an integer 0–65535`)
+		process.exit(1)
+	}
+	return port
+}
+
 async function startServer() {
-	const port = SERVER_CONFIG.PORT
+	const port = resolvePort()
 
 	await checkPort(port)
 

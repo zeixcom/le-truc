@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('docs-task-states', () => {
 	test('first fetch routes nil, then ok with the resolved value', async ({ page }) => {
-		await page.goto('http://localhost:3000/test/docs-task-states')
+		await page.goto('/test/docs-task-states')
 		await expect(page.locator('.states')).toHaveAttribute('data-state', 'nil', {
 			timeout: 2000,
 		})
@@ -24,7 +24,7 @@ test.describe('docs-task-states', () => {
 	})
 
 	test('refetch keeps the retained value visible under stale', async ({ page }) => {
-		await page.goto('http://localhost:3000/test/docs-task-states')
+		await page.goto('/test/docs-task-states')
 		await expect(page.locator('.states')).toHaveAttribute('data-state', 'ok', {
 			timeout: 6000,
 		})
@@ -45,7 +45,7 @@ test.describe('docs-task-states', () => {
 	})
 
 	test('failing refetch routes err, and recovery routes ok again', async ({ page }) => {
-		await page.goto('http://localhost:3000/test/docs-task-states')
+		await page.goto('/test/docs-task-states')
 		await expect(page.locator('.states')).toHaveAttribute('data-state', 'ok', {
 			timeout: 6000,
 		})

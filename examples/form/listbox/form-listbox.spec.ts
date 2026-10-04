@@ -37,7 +37,7 @@ test.describe('form-listbox component', () => {
 			}
 		})
 
-		await page.goto('http://localhost:3000/test/form-listbox')
+		await page.goto('/test/form-listbox')
 		await page.waitForSelector('form-listbox')
 	})
 
@@ -442,7 +442,7 @@ test.describe('form-listbox component', () => {
 
 test.describe('setAttribute security (safeSetAttribute)', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/form-listbox')
+		await page.goto('/test/form-listbox')
 		await page.waitForSelector('form-listbox')
 		await page.waitForSelector('security-onevil', { state: 'attached' })
 	})
@@ -459,7 +459,7 @@ test.describe('setAttribute security (safeSetAttribute)', () => {
 		})
 
 		// Navigate fresh so we capture the error emitted during connectedCallback
-		await page.goto('http://localhost:3000/test/form-listbox')
+		await page.goto('/test/form-listbox')
 		await page.waitForSelector('security-onevil', { state: 'attached' })
 		await page.waitForTimeout(100)
 
