@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { io as bunIO } from '../runtimes/bun'
 import { globToRegExp, matchGlob, scanGlobSync } from '../runtimes/glob'
 import { io as nodeIO } from '../runtimes/node'
 
@@ -35,6 +36,10 @@ beforeAll(() => {
 	writeFileSync(join(fixtureDir, 'src', 'deep', 'deeper', 'three.ts'), 'e {}')
 	writeFileSync(join(fixtureDir, 'src', 'mocks', 'mock.html'), '<p>')
 	writeFileSync(join(fixtureDir, 'src', '.hidden', 'x.ts'), 'e {}')
+	writeFileSync(join(fixtureDir, 'src', '.hidden', '.rc'), 'x')
+	writeFileSync(join(fixtureDir, 'src', '.env'), 'X=1')
+	writeFileSync(join(fixtureDir, 'src', 'deep', '.rc'), 'x')
+	writeFileSync(join(fixtureDir, 'src', 'mocks', '.tmp'), 'x')
 })
 
 afterAll(() => {
@@ -79,6 +84,16 @@ describe('globToRegExp / matchGlob', () => {
 		expect(matchGlob('.hidden/*.ts', '.hidden/x.ts')).toBe(true)
 	})
 
+	test('a trailing `**` keeps the dot rule (LT-277)', () => {
+		expect(matchGlob('mocks/**', 'mocks/.tmp')).toBe(false)
+		expect(matchGlob('mocks/**', 'mocks/.hidden/x.ts')).toBe(false)
+		expect(matchGlob('mocks/**', 'mocks/deep/x.ts')).toBe(true)
+		expect(matchGlob('**', '.hidden')).toBe(false)
+		expect(matchGlob('**', 'a/.hidden/x.ts')).toBe(false)
+		expect(matchGlob('**', 'a/b/x.ts')).toBe(true)
+		expect(matchGlob('.hidden/**', '.hidden/deep/x.ts')).toBe(true)
+	})
+
 	test('generated regexes are anchored', () => {
 		expect(globToRegExp('*.ts').source.startsWith('^')).toBe(true)
 		expect(globToRegExp('*.ts').source.endsWith('$')).toBe(true)
@@ -97,6 +112,49 @@ describe('scanGlobSync', () => {
 		const all = scanGlobSync('**/*', fixtureDir)
 		expect(all.some(path => path.includes('.hidden'))).toBe(false)
 		expect(all.some(path => path.includes('.dotfile'))).toBe(false)
+	})
+})
+
+/* === Explicit-dot segments: one scan semantics on both implementations === */
+
+describe('explicit-dot scan patterns (LT-277)', () => {
+	// The walk un-skips a dot entry exactly when a pattern segment starting
+	// with `.` matches it — what Bun.Glob does — so the corpus a dot-prefixed
+	// glob configures does not depend on the runtime.
+	const CASES: Array<[pattern: string, expected: string[]]> = [
+		['.env', ['.env']],
+		['.*', ['.dotfile.css', '.env']],
+		['.hidden/*.ts', ['.hidden/x.ts']],
+		['.hidden/**', ['.hidden/x.ts']],
+		['**/.rc', ['deep/.rc']],
+		['mocks/**', ['mocks/mock.html']],
+		[
+			'**',
+			[
+				'deep/deeper/three.ts',
+				'deep/one.tsx',
+				'deep/two.tsrx',
+				'mocks/mock.html',
+				'top.css',
+				'top.ts',
+			],
+		],
+	]
+
+	for (const [pattern, expected] of CASES) {
+		test(`${pattern} scans the same under Bun and Node`, () => {
+			const cwd = join(fixtureDir, 'src')
+			expect(scanGlobSync(pattern, cwd)).toEqual(expected)
+			expect(nodeIO.scanGlob(pattern, { cwd })).toEqual(expected)
+			expect(bunIO.scanGlob(pattern, { cwd })).toEqual(expected)
+		})
+	}
+
+	test('every scanned path also passes the matcher', () => {
+		const cwd = join(fixtureDir, 'src')
+		for (const [pattern] of CASES)
+			for (const path of bunIO.scanGlob(pattern, { cwd }))
+				expect(matchGlob(pattern, path)).toBe(true)
 	})
 })
 
@@ -132,6 +190,12 @@ describe('nodeIO (LT-267 seam, Node half)', () => {
 			await nodeIO.fileExists(join(fixtureDir, 'nested', 'dir', 'file.txt')),
 		).toBe(true)
 		expect(await nodeIO.fileExists(join(fixtureDir, 'nope.txt'))).toBe(false)
+	})
+
+	test('fileExists answers false for a directory, like the Bun half (LT-277)', async () => {
+		const dir = join(fixtureDir, 'src', 'deep')
+		expect(await nodeIO.fileExists(dir)).toBe(false)
+		expect(await bunIO.fileExists(dir)).toBe(false)
 	})
 
 	test('scanGlob matches the shared translator, sorted', () => {
