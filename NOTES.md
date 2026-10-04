@@ -4,16 +4,14 @@ Deviation notes and unexpected challenges from agent sessions, newest first. Ent
 
 ---
 
-**Agent worktrees and the sandbox (LT-370/LT-335 sessions, 2026-10-02).** Four blockers, all
-the sandbox's and not the code's. (1) `git commit` fails because the 1Password signing socket is
-unreachable, so the owner commits. Never turn signing off. (2) An agent worktree comes up on
-`main`'s head, not the current branch. `git reset --hard` then aborts halfway, because
-`.agents/skills/**` (and `.vscode/`) are write-denied, and those paths keep `main`'s content in
-the worktree. Never stage them. (3) `bun install` in a fresh worktree can hit a tempdir EPERM;
-symlinking the main checkout's `node_modules` works, and the symlink must not be staged.
-(4) `check:sim`'s Deno leg cannot create its npm cache. A fresh worktree also has no built
-`docs/`, so `serve.test.ts` fails there with 404s until `build:docs` runs. For gate-touching work,
-prefer the main checkout, or expect the owner to commit and re-run the gates.
+**Agent worktrees and the sandbox (LT-370/LT-335 sessions, 2026-10-02; trimmed 2026-10-04).**
+Signing and the worktree base are settled by `scripts/worktree.ts` (unsigned task commits, signed
+owner-run integration; worktrees branch from the current branch). Still open, all the sandbox's
+and not the code's: (1) `bun install` in a fresh worktree can hit a tempdir EPERM; symlinking the
+main checkout's `node_modules` works, and the symlink must not be staged. (2) `check:sim`'s Deno
+leg cannot create its npm cache. (3) A fresh worktree has no built `docs/`, so `serve.test.ts`
+fails there with 404s until `build:docs` runs. (4) Signed commits in the main checkout fail: the
+1Password prompt never reaches an agent session, so the owner commits there.
 
 ---
 
