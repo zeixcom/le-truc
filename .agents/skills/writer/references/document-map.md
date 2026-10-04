@@ -338,4 +338,4 @@ Quick reference for update-after-change.md:
 | New example component added | — | — | — | — | examples.md nav list |
 | Example renamed/removed | — | — | — | — | examples.md nav list |
 | Installation/package change | — | — | — | ✓ | getting-started.md |
-| Guide restructured (pages added/removed/renamed) | — | — | — | ✓ docs list | update `PAGE_ORDER` + `CHAPTERS` in `server/config.ts`, `CURATED_PAGES` in `server/effects/llms-full-manifest.ts`, and document-map entries; any pipeline *code* goes to `docs-server-dev` as a `BACKLOG.md` task (see workflows/improve-docs-architecture.md) |
+| Guide restructured (pages added/removed/renamed) | — | — | — | ✓ docs list | update `PAGE_ORDER` + `CHAPTERS` in `server/config.ts`, `CURATED_PAGES` in `server/effects/llms-full-manifest.ts`, and document-map entries; any pipeline *code* goes to a task in the queue store, `queue/LT-NNN.md` with a `band:`, rendered into `BACKLOG.md` by `bun run queue:build` (see references/docs-architecture.md) |

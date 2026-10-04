@@ -17,8 +17,7 @@
 			"!**/server/typedoc-heading-shift.mjs",
 			"!**/docs-src/layouts/**/*",
 			"!**/server/tests/compiler/fixtures/tsx/**/*",
-			"!.claude/workflows/**/*",
-			"!.zcode/workflows/**/*"
+			"!.claude/workflows/**/*"
 		]
 	},
 	"formatter": {

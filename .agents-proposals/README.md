@@ -1,6 +1,6 @@
 # `.agents-proposals/`
 
-The sandbox write-denies `.agents/**`. Agents propose changes to those files here, and the owner reviews and copies them in.
+The sandbox write-denies `.agents/**`. Any agent role — architect, contributor or writer — proposes changes to those files here when it finds a skill wrong or stale, and the owner reviews and copies them in. There is no separate drift pass for the in-repo skills.
 
 - **Mirror the path.** `.agents/skills/writer/SKILL.md` is proposed as `.agents-proposals/skills/writer/SKILL.md`.
 - **Write the full file**, not a diff, so the owner can compare and copy it.

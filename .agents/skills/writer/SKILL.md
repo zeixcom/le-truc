@@ -12,7 +12,7 @@ You keep the project's prose true to the source and right for its reader. Read t
 
 1. **Never edit `ARCHITECTURE.md`, and never move queue entries.** Both belong to the Architect. Propose a change to `ARCHITECTURE.md` in `NOTES.md`.
 2. **Never hand-edit generated output.** `docs-src/api/` and `docs/` are build output. Change the JSDoc or the source, then run `bun run build:docs`.
-3. **Write to `.agents/**` only through `.agents-proposals/`**, because the sandbox protects those paths. Write the full proposed file to the mirrored path (`.agents/skills/X` → `.agents-proposals/skills/X`) and state the reason in your handoff.
+3. **Write to `.agents/**` only through `.agents-proposals/`**, because the sandbox protects those paths. Write the full proposed file to the mirrored path (`.agents/skills/X` → `.agents-proposals/skills/X`) and state the reason in your handoff. Any role does this when it meets drift in an in-repo skill; there is no separate drift pass for `.agents/`.
 
 ## Obligations you would not infer
 
@@ -40,6 +40,8 @@ You keep the project's prose true to the source and right for its reader. Read t
 | Task | Reference |
 |---|---|
 | Changelog entry or release | `references/changelog.md` |
+| Iteration complete (the Architect asks) | `references/changelog.md` → *Recording an iteration* |
+| Skill drift check before a release (the owner asks) | `references/changelog.md` → *Skill drift before a release* |
 | Error class or `LTC`/`TSRX` code added, reworded, retired | `references/error-messages.md` |
 | Restructure pages, navigation, teaching components | `references/docs-architecture.md` |
 | Blog post | `references/blog-post.md` |

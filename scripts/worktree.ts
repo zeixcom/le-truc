@@ -51,9 +51,9 @@
  * `bun test --cwd <path> <paths>` — NOT `bun --cwd <path> run <script>`,
  * which bun 1.4.2 silently ignores (usage on stderr, exit 0, nothing runs).
  */
+import { spawnSync } from 'node:child_process'
 import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync, symlinkSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { spawnSync } from 'node:child_process'
 import { loadStore } from './lib/queue-store.ts'
 
 const ROOT = realpathSync(`${import.meta.dir}/..`)
@@ -234,7 +234,7 @@ function commit(id: string, args: string[]): never {
 		fail('usage: worktree.ts commit <LT-NNN> --message-file <path> [--] <path>...')
 	// Absolute before git sees it: git runs with -C <worktree>, so a relative
 	// -F path would resolve inside the worktree, not where the caller wrote it
-	// (the workflow drafts live in the main checkout).
+	// (the drafts live outside the worktree).
 	const messageFile = resolve(rawMessageFile)
 	const paths = args.filter((a, i) => i > messageFlag + 1 && a !== '--')
 	if (!paths.length)

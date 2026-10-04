@@ -61,7 +61,7 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓). Everything below is open.
-- **Design gates** — Area `design`: the Architect with the owner; `do-task` never picks them.
+- **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
   LT-280 (per-item effect channels; owner grilling → ADR 0024 s5 / ADR 0032 amendments →
   implementation tasks written into this file). LT-342 (ruled with LT-280). LT-334 (lazyload's
   boundary; its implementation task pairs with LT-390). LT-409 (the shadow-root departures
@@ -80,7 +80,7 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
 - **Parallel slot** — independent work. LT-420 first (worktree commits + review-pass
   integration; owner ruling 2026-10-03 — the flow LT-418 and LT-419 are the first tasks to
   ride end to end), then LT-418 → LT-419 (the skills-restructuring residue; LT-421 rides its pass), then LT-415 (test
-  servers on a free port; the do-task gates trip on a stray server on 3000), then LT-305 (the
+  servers on a free port; task gates trip on a stray server on 3000), then LT-305 (the
   Baseline 2023 guard, ships in 3.0), LT-277 (server), LT-393 (comment-only sweep), LT-410
   (the `errors.md` rows).
 

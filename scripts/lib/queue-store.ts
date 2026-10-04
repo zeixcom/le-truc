@@ -585,7 +585,7 @@ export function checkStore(root: string): {
 	return { problems, notes }
 }
 
-// ── Store pick and writes (the do-task queue operations, store dialect) ───────
+// ── Store pick and writes (the contributor queue operations, store dialect) ─────
 // Same contract as scripts/lib/queue.ts (task-queue.md), one dialect down:
 // the chain lives in ITERATION.md, statuses in front matter, and every write
 // re-renders the kanban views so `check` never sees a stale one. NOTES.md is
@@ -730,7 +730,7 @@ export function pickByIdStore(id: string, root: string): StorePick {
 		return {
 			picked: false,
 			task: null,
-			reason: `${id} is Area: design; do-task never picks it`,
+			reason: `${id} is Area: design; the queue never auto-picks it`,
 		}
 	const notReady = unsatisfiedNeeds(task, store)
 	if (notReady)

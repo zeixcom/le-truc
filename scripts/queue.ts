@@ -5,16 +5,16 @@
  *   check   Validate the queue against the contract (entry format, Area lines,
  *           ID uniqueness, Needs resolution, next-free-ID, chain references).
  *           Exit 1 listing every problem; non-fatal notes are listed too.
- *   pick    Print the do-task pick decision as JSON (read-only; claims nothing).
+ *   pick    Print the pick decision as JSON (read-only; claims nothing).
  *           An optional second argument names a task instead of the chain's
  *           first ready one.
- *   claim   Mark a task — in progress ⚙ (the workflow claims it for a run).
+ *   claim   Mark a task — in progress ⚙ (scripts/start-task.ts claims it for a session).
  *   annotate  Write a run's outcome: flip the suffix, insert the handoff prose
  *           after the entry (or a NOTES.md entry when blocked).
  *   reset   Return a claimed task to open (crash recovery).
  *
  * The parsing and the writes live in scripts/lib/queue.ts, under `bun test`;
- * this file is the command-line shell the do-task workflow drives. The queue
+ * this file is the command-line shell scripts/start-task.ts and the contributor drive. The queue
  * contract is .agents/skills/architect/references/task-queue.md; this tool
  * never moves entries between queue files, never edits ARCHITECTURE.md and
  * never commits.
@@ -47,7 +47,7 @@ import {
 	type StorePick,
 } from './lib/queue-store.ts'
 
-/** The pick decision's task, as the do-task workflow consumes it. Both queue
+/** The pick decision's task, as scripts/start-task.ts and the contributor consume it. Both queue
  * dialects shape their task into this view: the kanban entry directly, the
  * store task via its rendered entry text. */
 interface PickTaskView {

@@ -1,7 +1,7 @@
 /**
  * Tests for the queue store's pick and write operations
  * (scripts/lib/queue-store.ts → pickStore/claimTaskStore/annotateTaskStore/
- * resetTaskStore) — the do-task contract in its store dialect. The views must
+ * resetTaskStore) — the pick/claim/annotate contract in its store dialect. The views must
  * come out of every write fresh, because `check` compares them byte for byte.
  */
 

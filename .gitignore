@@ -178,6 +178,5 @@ dataset/
 !.mimosa/security-policy.json
 .playwright-mcp/
 .zcode/plans/
-.zcode/workflow-drafts/
 .zcodeignore
 /.worktrees/

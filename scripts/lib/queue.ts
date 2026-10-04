@@ -3,7 +3,7 @@
  *
  * Parses BACKLOG.md, TODO.md and DONE.md against the entry format and chain
  * grammar of .agents/skills/architect/references/task-queue.md, and answers
- * the one question the do-task workflow must decide deterministically: which
+ * the one question a task pick must decide deterministically: which
  * task is picked next. Parsing is strict — anything outside the documented
  * grammar is a problem, never a guess.
  *
@@ -554,7 +554,7 @@ function scanTrack(track: ChainTrack, state: QueueState): TrackScan {
 	return null
 }
 
-/** Pick a named task instead of the chain's first ready one (the workflow's
+/** Pick a named task instead of the chain's first ready one (start-task's
  * `id` argument): in TODO.md, claimable, not design, and its Needs satisfied.
  * The chain position is not consulted — naming the task is the override. */
 export function pickById(id: string, state: QueueState): Pick {
@@ -587,7 +587,7 @@ export function pickById(id: string, state: QueueState): Pick {
 		return {
 			picked: false,
 			task: null,
-			reason: `${id} is Area: design; do-task never picks it`,
+			reason: `${id} is Area: design; the queue never auto-picks it`,
 		}
 	const notReady = unsatisfiedNeeds(entry, state)
 	if (notReady)
@@ -651,7 +651,7 @@ export function extractCitations(entryText: string): string[] {
 	return [...citations]
 }
 
-// ── Write operations (the do-task workflow's only queue writes) ──────────────
+// ── Write operations (a contributor session's only queue writes) ──────────────
 // Every write re-parses the target file first and edits exactly the entry's
 // title line (suffix, checkbox) or inserts prose after its body. BACKLOG.md and
 // DONE.md are never written — moving entries between files stays the
