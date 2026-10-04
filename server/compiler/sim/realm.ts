@@ -548,27 +548,6 @@ export function createSimulationRealm(
 	}
 
 	/**
-	 * Snapshot each suppressed site's server-rendered state (ADR 0029
-	 * sub-design 1, LT-165 step 7) and return the closure that restores it.
-	 *
-	 * The snapshot is taken from an INERT parse of the same markup — not
-	 * from the live document — because an already-defined tag upgrades
-	 * DURING the `innerHTML` assignment that parses the markup (every
-	 * render after the component's first in a realm, the fixed-point second
-	 * pass included), so by the time the live tree exists its bindings have
-	 * already written. The inert document has no browsing context and
-	 * upgrades nothing, so its tree is the server-rendered skeleton
-	 * regardless of upgrade timing — provably the pre-connect state.
-	 *
-	 * Restoring that state after the drain — rather than enumerating
-	 * per-attribute revert operations — sidesteps the two ways a targeted
-	 * revert goes wrong: an attribute the binding REMOVED must become
-	 * present-with-value again, and a dirty-flag IDL property a
-	 * `bindProperty` write set must not survive the attribute revert (the
-	 * pre-connect property snapshot handles it). A site whose element did
-	 * not render (a guarded branch) contributes nothing.
-	 */
-	/**
 	 * The live arm of arm set `armSet` in `container` (ADR 0037, LT-391):
 	 * the element immediately before the set's first `<template data-arms>`,
 	 * when its `data-key` names one of the set's arms and it is neither a
@@ -590,6 +569,27 @@ export function createSimulationRealm(
 			: null
 	}
 
+	/**
+	 * Snapshot each suppressed site's server-rendered state (ADR 0029
+	 * sub-design 1, LT-165 step 7) and return the closure that restores it.
+	 *
+	 * The snapshot is taken from an INERT parse of the same markup — not
+	 * from the live document — because an already-defined tag upgrades
+	 * DURING the `innerHTML` assignment that parses the markup (every
+	 * render after the component's first in a realm, the fixed-point second
+	 * pass included), so by the time the live tree exists its bindings have
+	 * already written. The inert document has no browsing context and
+	 * upgrades nothing, so its tree is the server-rendered skeleton
+	 * regardless of upgrade timing — provably the pre-connect state.
+	 *
+	 * Restoring that state after the drain — rather than enumerating
+	 * per-attribute revert operations — sidesteps the two ways a targeted
+	 * revert goes wrong: an attribute the binding REMOVED must become
+	 * present-with-value again, and a dirty-flag IDL property a
+	 * `bindProperty` write set must not survive the attribute revert (the
+	 * pre-connect property snapshot handles it). A site whose element did
+	 * not render (a guarded branch) contributes nothing.
+	 */
 	const snapshotSuppressedSites = (
 		component: string,
 		markup: string,
