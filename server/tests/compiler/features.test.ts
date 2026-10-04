@@ -690,7 +690,7 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 		const items = createList<string>(initial, { keyConfig: 'item' })
 			<c-el>
 				<ul data-container>
-					<li class="header">static header</li>
+					<li class="header" data-unreconciled>static header</li>
 					@for (const item of items; key k) {
 						<li><span>{item}</span></li>
 					}
