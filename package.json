@@ -45,6 +45,9 @@
 		"SECURITY.md"
 	],
 	"customElements": "custom-elements.json",
+	"leTruc": {
+		"baseline": 2023
+	},
 	"directories": {
 		"doc": "docs",
 		"example": "examples"
@@ -74,6 +77,7 @@
 		"test:server:watch": "bun test server/tests --watch",
 		"check:links": "bun scripts/check-doc-links.ts",
 		"check:size": "bun test test/regression-bundle.test.ts",
+		"check:baseline": "bun run scripts/check-baseline.ts",
 		"typecheck": "bun run scripts/build-corpus.ts && tsc -p tsconfig.json --noEmit",
 		"build:corpus": "bun run scripts/build-corpus.ts",
 		"build:cem": "bun run scripts/build-corpus.ts && cem analyze && bun run verify:cem",
@@ -127,7 +131,8 @@
 		"shiki": "^4.4.3",
 		"typedoc": "^0.28.20",
 		"typedoc-plugin-markdown": "^4.12.0",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3",
+		"web-features": "3.40.1"
 	},
 	"peerDependencies": {
 		"jsdom": "^30.0.0",

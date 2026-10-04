@@ -68,6 +68,13 @@ export type CompiledSpanInfo = {
 	/** Generated server module path on disk, absolute. */
 	serverModulePath: string
 	serverSpans: SourceSpan[]
+	/** Emitted stylesheet path on disk, absolute. */
+	cssPath: string
+	/**
+	 * The stylesheet as authored, before scoping and lowering — what the
+	 * baseline guard (LT-305) subtracts to see what the compiler added.
+	 */
+	authoredCss: string
 }
 
 /* === Exported Constants === */
@@ -487,7 +494,8 @@ export const compileCorpus = async (
 			const serverModulePath = getFilePath(outDir, entry.serverModule)
 			await writeFileSafe(serverModulePath, component.serverCode)
 			await writeFileSafe(clientModulePath, component.clientCode)
-			await writeFileSafe(getFilePath(outDir, entry.css), component.css)
+			const cssPath = getFilePath(outDir, entry.css)
+			await writeFileSafe(cssPath, component.css)
 			entries.push(entry)
 			if (component.formAssociated) formAssociatedTags.add(entry.tag)
 			spanInfos.push({
@@ -497,6 +505,8 @@ export const compileCorpus = async (
 				spans: component.clientSpans,
 				serverModulePath,
 				serverSpans: component.serverSpans,
+				cssPath,
+				authoredCss: component.authoredCss,
 			})
 			console.log(`✅ Compiled ${entry.tag} from ${rel}`)
 		}

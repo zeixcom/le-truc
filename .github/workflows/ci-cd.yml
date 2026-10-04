@@ -17,6 +17,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          # Full history and tags: check:baseline compares the Baseline pin
+          # with the latest release tag (LT-305).
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -45,6 +49,12 @@ jobs:
 
       - name: Bundle size regression
         run: bun run check:size
+
+      - name: Baseline guard
+        # LT-305: shipped code (runtime, bundled cause-effect, compiler output
+        # under the default cssTargets) stays within the pinned Baseline year,
+        # and the pin moves only with a major version.
+        run: bun run check:baseline
 
       - name: Generate & verify Custom Elements Manifest
         # Guards against silent plugin-load failure: if @zeix/cem-plugin-le-truc
