@@ -116,6 +116,36 @@ const renamedHtmlReason =
 	'`html={…}` is now `truc:html={…}` — host-owned attributes are namespaced so they cannot collide with a user prop called `html` (LT-128). Core TSRX defines no `{html expr}` keyword in any published release; it delegates raw markup to the host, and Le Truc owns this one because it routes the value through `sanitizeHtml` rather than assigning it raw.'
 
 /**
+ * The rest of the host-owned `truc:` namespace (LT-353). Only the names
+ * above carry meaning; any other `truc:*` name used to fall through to the
+ * ordinary attribute arms and render into the markup verbatim, where the
+ * browser ignores it — silently wrong, the LT-222 failure for `class:`.
+ * `truc:case`/`truc:case-type` were the pre-ICU plural spellings, retired
+ * by ADR 0030 s4 (the variance lives in the message pattern now).
+ */
+const TRUC_NAMESPACE = 'truc:'
+const RETIRED_TRUC_ATTRS: ReadonlySet<string> = new Set([
+	'truc:case',
+	'truc:case-type',
+])
+
+/**
+ * The LTC006 reason for an unrecognized `truc:*` name, or `null` when the
+ * name is outside the namespace. `known` is the vocabulary the element kind
+ * accepts, named in the message so a typo has its fix in sight.
+ */
+const unknownTrucAttrReason = (
+	name: string,
+	known: readonly string[],
+): string | null => {
+	if (!name.startsWith(TRUC_NAMESPACE)) return null
+	if (RETIRED_TRUC_ATTRS.has(name))
+		return `\`${name}\` is retired (ADR 0030) — plural and select variance lives in the message's ICU pattern now. Declare the message in the \`i18n\` record, e.g. \`tasks: '{count, plural, one {task} other {tasks}}'\`, and render it as \`{t.tasks({ count })}\`.`
+	const names = known.map(n => `\`${n}\``).join(' and ')
+	return `\`${name}\` is not a Le Truc attribute — the \`truc:\` namespace is host-owned, so an unrecognized name would pass through as an ordinary attribute that nothing reads. Use ${names}, or drop the \`truc:\` prefix for an ordinary attribute.`
+}
+
+/**
  * React's DOM-property attribute names (LT-054). Rendered verbatim they are
  * not real HTML attributes — the browser ignores `className`/`htmlFor`
  * entirely, so the near-miss is silently broken rather than merely
@@ -255,6 +285,10 @@ export const classifyAttribute = (
 			reactive: false,
 		}
 	}
+	// Any other `truc:*` name (LT-353): the namespace is host-owned, so an
+	// unrecognized one is a typo or a retired spelling, never an attribute.
+	const trucReason = unknownTrucAttrReason(name, [PASS_ATTR, HTML_ATTR])
+	if (trucReason) return { kind: 'invalid', reason: trucReason }
 	// The Svelte-style per-class spelling (LT-222): `class:`-prefixed names
 	// used to slip past every check above into the ordinary fallthrough —
 	// the server-evaluable call form rendered a literal `class:token`
@@ -373,6 +407,11 @@ export const classifyComposeAttribute = (
 			kind: 'invalid',
 			reason: `\`${name}\` is a React DOM-property name, not an HTML attribute — TSRX has no JSX-to-DOM-property translation, so this would render into the markup verbatim and the browser would ignore it. Use \`${reactRename}\` instead.`,
 		}
+	// Any other `truc:*` name (LT-353). `truc:pass` is the only host-owned
+	// attribute a compose site accepts; anything else would be forwarded
+	// as a server arg no child declares.
+	const trucReason = unknownTrucAttrReason(name, [PASS_ATTR])
+	if (trucReason) return { kind: 'invalid', reason: trucReason }
 	// `ref={}` is retired on COMPOSED elements too (LT-127) — one addressing
 	// mechanism for both element kinds. `first()`'s structural resolution
 	// walks `kind: 'element'` nodes only (`first-refs.ts`), so a selector

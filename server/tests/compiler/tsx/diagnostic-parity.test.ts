@@ -971,6 +971,18 @@ const FAMILIES: Case[] = [
 		spec: { body: '<p className="x">x</p>' },
 	},
 	{
+		name: 'LTC006 unrecognized truc: attribute (LT-353)',
+		code: 'LTC006',
+		spec: { body: '<p truc:bogus="x">x</p>' },
+		pins: ['`truc:bogus` is not a Le Truc attribute'],
+	},
+	{
+		name: 'LTC006 retired truc:case (LT-353)',
+		code: 'LTC006',
+		spec: { body: '<span truc:case="one">x</span>' },
+		pins: ['is retired (ADR 0030)'],
+	},
+	{
 		name: 'LTC006 non-function event attribute',
 		code: 'LTC006',
 		spec: { body: '<p onClick="x()">x</p>' },

@@ -1239,6 +1239,79 @@ export function BasicParent({ title }: { title: string })
 			),
 		).toBe(true)
 	})
+
+	test('an unrecognized truc: attribute is LTC006 naming the vocabulary (LT-353)', () => {
+		const source = el('<p truc:htm={cond}>x</p>')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC006')
+		expect(hit?.message).toContain('`truc:htm` is not a Le Truc attribute')
+		expect(hit?.message).toContain('Use `truc:pass` and `truc:html`')
+	})
+
+	test('a retired truc:case/truc:case-type points to the ICU pattern (LT-353)', () => {
+		const source = el('<span truc:case="one" truc:case-type="ordinal">x</span>')
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		const hits = diagnostics.filter(d => d.code === 'LTC006')
+		expect(hits.map(h => h.message.split(' ')[0])).toEqual([
+			'`truc:case`',
+			'`truc:case-type`',
+		])
+		for (const hit of hits) {
+			expect(hit.message).toContain('is retired (ADR 0030)')
+			expect(hit.message).toContain('ICU pattern')
+		}
+	})
+
+	test('a compose site accepts truc:pass only (LT-353)', () => {
+		const childSource = `export function BasicChild({ label }: { label: string })
+	@{
+		expose({})
+			<basic-child>{label}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-child>
+	}`
+		const { component: child } = compileComponent(
+			childSource,
+			'examples/child/basic-child.tsrx',
+			new Set(),
+		)
+		if (!child) throw new Error('child must compile')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+			<basic-parent>
+				<BasicChild truc:html={title} label={title} />
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(),
+			undefined,
+			new Map<string, RegistryEntry>([[child.entry.source, child.entry]]),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC006')
+		expect(hit?.message).toContain('`truc:html` is not a Le Truc attribute')
+		expect(hit?.message).toContain('Use `truc:pass`, or drop')
+	})
 })
 
 describe('first(selector, required) element references (LT-055)', () => {
