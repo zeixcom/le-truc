@@ -124,6 +124,11 @@ check runs in the shared post-lowering pass, on both surfaces.
 its `type` — the page owns script loading; LT-358 rider) follows. It is
 `LTC`, not `TSRX`: the refusal is raised in `lowerElement` (shared), on
 both surfaces.
+`LTC059` (a signal seeded from server args renders only as formatted
+text and has no raw value source to harvest — D-20, LT-374) was reserved
+with `LTC057`/`LTC058` (LT-257) and lands after `LTC060`–`LTC071`. It is
+`LTC`, not `TSRX`: Pass 3 (`analysis/harvest.ts`) raises it, on both
+surfaces.
 `LTC060` (a fragment root — the template output is a `<>…</>` fragment,
 whatever it wraps; ADR 0032 s1, LT-375) was RESERVED at the
 same planning round as `LTC061`–`LTC065` but lands out of numeric order:

@@ -57,6 +57,7 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 | LTC044 | a signal initializer conditionally chooses between two constructors | one unconditional call, with the condition inside (`deriveCell(() => c ? a : b)`) |
 | LTC045 | an effect helper deferred into a callback. At connect it would throw `NoActiveCollectorError`. | call it in setup, with the condition inside the effect |
 | LTC046 | a setup `const` whose value is rendered into markup reads a client-only name (`first`, `host`, `internals`, a ref, …). No tier can produce it, and no binding corrects a static site. | compute it from an arg or signal, or make each site that reads it reactive |
+| LTC059 | a signal seeded from an arg renders only as formatted text (`Intl`, `toLocaleString()`, a message with a number or date argument). Formatted text doesn't parse back, so the client can't seed from it | render the raw value beside the text, reactive: `<data value={() => n.get()}>`, `<time datetime={() => d.get()}>`, or render the arg as a host attribute |
 | LTC054 | a position the server evaluates reads page context (`document`, `window`, `location`, storage, …), or the `i18n` record is destructured for a member it doesn't have (or with a rest element) | pass the value as an arg, or read it in `watch()`/a handler. Destructure only `lang`, `t`, `timeZone`, `currency`, `dir` |
 
 ### Element references

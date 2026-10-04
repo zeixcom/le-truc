@@ -90,6 +90,7 @@ export type DiagnosticCode =
 	| 'LTC054' // a position the server render evaluates reads page context outside the declared ambient set, or the reserved `i18n` record is destructured for a member outside it (ADR 0034 s4, LT-258) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC055' // an `export const i18n` source pattern is not a supported ICU MessageFormat 1 pattern, or a `t.<key>` site disagrees with its pattern's arguments: missing/extra/non-literal arguments, an argument message read without a call, an argument-less message called (ADR 0030 s4, LT-250) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC056' // an authored `<script>` element in a component template, whatever its `type` — the page owns script loading (LT-358 rider) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC059' // a signal seeded from server args renders only as formatted text (`Intl`, `toLocaleString()`/`toLocaleDateString()`/`toLocaleTimeString()`, a message call with a number/date argument) and has no raw value source to harvest from (D-20, HOST_PROFILE data account bullet 6, LT-374) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC060' // a fragment root, whatever it wraps — the template's root is the host element (ADR 0032 s1, LT-375) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC061' // an authored `<template>` element in a component template — the compiler owns template extraction, and the selector proof cannot see inside one (LT-383) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC062' // a reactive switch (one whose discriminant reads a signal) has a `@case`/`case` value that is not a literal, or two cases share an arm key (ADR 0037 s2, LT-274) — tier 1 Prevented, statically decidable, no runtime half
@@ -412,6 +413,36 @@ export const diagnostic = {
 		error(
 			'LTC056',
 			"A `<script>` element in a component template — scripts are refused, whatever their `type`: the page owns script loading, and a component template is static markup plus component behavior. Move the script to the page that places this component, or do its work in the component's setup (in `watch()` or an `on()` handler).",
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A signal seeded from server args whose only render site is formatted
+	 * text, with no raw value source to harvest from (D-20, HOST_PROFILE
+	 * data account bullet 6, LT-374). Formatted text (`1’234`, a localized
+	 * date) does not parse back into state, so the client cannot seed the
+	 * signal from it; it needs the unformatted value beside the text — a
+	 * reactive `value`/`aria-valuenow`/`datetime` attribute reading exactly
+	 * the signal (`<data value>`, `<time datetime>`), or the arg rendered as
+	 * an attribute on the host or an owned element. `subject` opens the
+	 * sentence (`` Signal `count` ``); `formatting` names how the site
+	 * formats it (`` `Intl` ``, `` `toLocaleString()` ``, `` message
+	 * `t.items` ``). ADR 0028 tier 1 (Prevented): statically decidable from
+	 * the template and the setup consts the site reads, no runtime half — a
+	 * harvest of formatted text cannot know the text was formatted. Raised
+	 * in Pass 3 (`analysis/harvest.ts`), shared by both surfaces.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 */
+	formattedWithoutRawSource: (
+		source: string,
+		at: Site,
+		subject: string,
+		formatting: string,
+	) =>
+		error(
+			'LTC059',
+			`${subject} is seeded from server args but renders only as text formatted with ${formatting} — formatted text does not parse back into state, so the client has no value to start from. Render the raw value where the client can read it: a reactive \`<data value={() => …}>\` beside a number, a reactive \`<time datetime={() => …}>\` beside a date, or the arg as an attribute on the host.`,
 			rangeOf(source, at),
 		),
 

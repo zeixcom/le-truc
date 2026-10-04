@@ -118,9 +118,10 @@ describe('an exposed Parser prop arg seeds derived signals through the prop Slot
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
 		// Eager initializers execute at declaration, BEFORE expose() installs
 		// the Slot-backed property — a host.<prop> read there would be
-		// undefined. The DOM (attribute) read is the only sound seed.
+		// undefined. The DOM (attribute) read is the only sound seed — and,
+		// for a `number` arg, converted back with `Number()` (LT-374).
 		expect(component?.clientCode).toContain(
-			"createCell(String((host.getAttribute('value') ?? '')))",
+			"createCell(String(Number(host.getAttribute('value') ?? '')))",
 		)
 		expect(component?.clientCode).not.toContain('String(host.value)')
 	})

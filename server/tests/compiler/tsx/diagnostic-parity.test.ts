@@ -1264,6 +1264,19 @@ const FAMILIES: Case[] = [
 		pins: ['whatever their `type`'],
 	},
 	{
+		// LT-374 (D-20): formatted text does not parse back into state — a
+		// signal seeded from an arg needs a raw value source beside it.
+		name: 'LTC059 formatted-only signal with no raw value source',
+		code: 'LTC059',
+		spec: {
+			pre: imports('createState'),
+			params: '{ count = 0 }: { count?: number }',
+			setup: 'const n = createState(count)\n\t\texpose({})',
+			body: '<p>{() => n.get().toLocaleString(\'en-US\')}</p><button type="button" onClick={() => n.set(n.get() + 1)}>+</button>',
+		},
+		pins: ['formatted with `toLocaleString()`', '<data value={() => …}>'],
+	},
+	{
 		// LT-383: an authored <template> is refused on both surfaces — the
 		// compiler owns template extraction, and the selector probe cannot
 		// see inside one.
