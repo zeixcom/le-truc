@@ -59,30 +59,47 @@ reactivity class (LT-373). The last iteration's reviews left four silent miscomp
    baseline 0; translation census 0 gaps across 6 locales. `check:sim` green on all three
    runtimes (owner, Deno leg outside the sandbox).
 
+**Re-plan (Architect, 2026-10-04).** The process restructuring (LT-418–LT-421: single-agent
+roles, task branches committed in the worktree, integration in the review pass) is done, and
+so is all of track A: LT-371 and LT-373 are pruned (`queue/LEDGER.md`), and LT-375 and LT-387 are
+reviewed. Rulings 1–3 are therefore discharged: every remaining diagnostic producer is born
+with `location`, root-is-host is enforced, and the reactivity class is central. LT-378,
+LT-393 and LT-410 are pruned too, and LT-391 is reviewed. What is left splits cleanly. About ten mechanical tasks are all
+pickable now, and the three migrations plus LT-390 sit behind three design sessions that
+have not run. LT-280 has waited since 2026-09-21. The iteration's exit therefore turns on
+the owner's calendar, not on contributor throughput. The sessions are scheduled in this order:
+7. **Design sessions in critical-path order.** LT-280 with LT-342 first: it gates LT-109–LT-111,
+   and its implementation tasks join track C. LT-334 next. LT-276 is pruned, so it is unblocked
+   now, and it gates LT-390. LT-409 last: track D is the only thing it gates, and nothing else
+   waits on track D.
+8. **Corpus-port prerequisites before the correctness track.** LT-374 and LT-186 move ahead of
+   track B. When LT-280 rules, the migrations then wait only on LT-280's own implementation
+   tasks. Track B still lands in full this iteration, so the reorder only changes what lands first.
+9. **LT-415 first.** Every task gate under the worktree flow runs a test server. A stray server
+   on 3000 makes `test:variants` refuse and lets Playwright test another checkout's build without
+   any error. Fix it before the run of ten.
+
 **The chain.**
-- **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓). Everything below is open.
+- **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
+- **A — pre-publish reshapes — landed.** ~~LT-371~~, ~~LT-373~~ (pruned), ~~LT-375~~,
+  ~~LT-387~~ (reviewed ✓).
 - **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
-  LT-280 (per-item effect channels; owner grilling → ADR 0024 s5 / ADR 0032 amendments →
-  implementation tasks written into this file). LT-342 (ruled with LT-280). LT-334 (lazyload's
-  boundary; its implementation task pairs with LT-390). LT-409 (the shadow-root departures
-  session; re-scopes LT-405/LT-407/LT-408).
-- **A — pre-publish reshapes** — the published diagnostic record, root-is-host and the
-  reactivity class, before new producers and new `.tsx` sources. ~~LT-371~~ (reviewed ✓, in DONE.md) → LT-375 → LT-373 →
-  LT-387. (LT-370 is done. LT-375 and LT-373 each need only LT-371 and may run in parallel.)
-- **B — correctness** — the last iteration's silent miscompiles and drops. LT-378, LT-391,
-  LT-392, LT-356, then LT-353 and LT-355 (both need LT-371), then LT-417 (after LT-375).
-- **C — corpus port** — every example folder served compiled (ruling 5). LT-374, LT-186 (both
-  need LT-371) → LT-280's implementation tasks (written in when its design rules) → LT-109,
-  LT-110, LT-111 (each needs LT-280, LT-375, LT-374 and LT-186) → LT-390 (needs LT-375, LT-334
-  and LT-385). LT-110 is LT-165 step 7's corpus pin.
+  In ruling 7's order: LT-280 + LT-342 (per-item effect channels and the `.tsx` key spelling;
+  owner grilling → ADR 0024 s5 / ADR 0032 amendments → implementation tasks written into
+  track C), LT-334 (lazyload's boundary; its implementation task pairs with LT-390), LT-409
+  (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
+- **0 — test hygiene** (ruling 9). LT-415.
+- **C — corpus port** — every example folder served compiled (ruling 5). LT-374, LT-186 →
+  LT-280's implementation tasks (written in when its design rules) → LT-109, LT-110, LT-111
+  (each needs LT-280, LT-374 and LT-186) → LT-390 (needs LT-334). LT-110 is LT-165 step 7's
+  corpus pin.
+- **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
+  ~~LT-391~~ landed. LT-392, LT-356, LT-353, LT-355, LT-417.
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
-- **Parallel slot** — independent work. LT-420 first (worktree commits + review-pass
-  integration; owner ruling 2026-10-03 — the flow LT-418 and LT-419 are the first tasks to
-  ride end to end), then LT-418 → LT-419 (the skills-restructuring residue; LT-421 rides its pass), then LT-415 (test
-  servers on a free port; task gates trip on a stray server on 3000), then LT-305 (the
-  Baseline 2023 guard, ships in 3.0), LT-277 (server), LT-393 (comment-only sweep), LT-410
-  (the `errors.md` rows).
+- **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421~~ (done ✓; the
+  restructured flow is in use). LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
+  (server).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
