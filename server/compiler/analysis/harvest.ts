@@ -660,6 +660,17 @@ const planHarvests = (
 	const loopFor = (node: TemplateNode) => loopForIn(component, node)
 
 	/**
+	 * An attribute read is a string; a `number`-typed arg converts back
+	 * with `Number()`, so a raw value source round-trips (D-20, LT-374:
+	 * `<data value={count}>` seeds `createState(count)` with a number,
+	 * not its text). The server rendered the attribute as `String(arg)`, which
+	 * `Number()` inverts for every finite number — no truncation.
+	 */
+	const asParamType = (param: string, read: string): string =>
+		component.paramProps.find(p => p.name === param)?.isNumber
+			? `Number${read}`
+			: read
+	/**
 	 * DOM read expression for a server arg, traced to its rendered site.
 	 * Precedence (LT-115):
 	 * 1. the exposed prop's Slot — when `allowTrackedRead` (a LAZY
@@ -682,17 +693,6 @@ const planHarvests = (
 	 * regrouping-era edit dropped it). Null when the arg renders nowhere (the
 	 * signal stays unharvestable).
 	 */
-	/**
-	 * An attribute read is a string; a `number`-typed arg converts back
-	 * with `Number()`, so a raw value source round-trips (D-20, LT-374:
-	 * `<data value={count}>` seeds `createState(count)` with a number,
-	 * not its text). The server rendered the attribute as `String(arg)`, which
-	 * `Number()` inverts for every finite number — no truncation.
-	 */
-	const asParamType = (param: string, read: string): string =>
-		component.paramProps.find(p => p.name === param)?.isNumber
-			? `Number${read}`
-			: read
 	const paramDomRead = (
 		param: string,
 		allowTrackedRead: boolean,
