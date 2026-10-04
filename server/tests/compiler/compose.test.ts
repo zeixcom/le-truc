@@ -80,6 +80,38 @@ export function BasicParent({ title }: { title: string })
 		)
 	})
 
+	test('an unkeyed composed element beside a reactive-list loop in its container is LTC074 (LT-186)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { createList } from '@zeix/le-truc'
+import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({}: {})
+	@{
+		const items = createList<string>([], { keyConfig: 'item' })
+		expose({})
+			<basic-parent>
+				<ul data-container>
+					<BasicChild label="Hello" />
+					@for (const item of items) { <li>{item}</li> }
+				</ul>
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC074')
+		expect(hit?.message).toContain('<BasicChild>')
+		expect(hit?.message).toContain('composed element cannot carry')
+	})
+
 	test('static and literal attributes pass through as server args verbatim', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'

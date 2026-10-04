@@ -102,6 +102,7 @@ export type DiagnosticCode =
 	| 'LTC069' // `:global` in a form other than the two whole-rule forms — nested, prefixed, trailing, leading-ancestor, mid-selector, or declarations directly in a bare block (ADR 0033 s6a, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC070' // `:host` directly followed by a qualifier (`:host.x`, `:host:hover`, `:host[attr]`) — matches nothing in a shadow root; the qualifier belongs in the arguments (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC071' // a stylesheet selector descends past a boundary tag (`child-tag .x`, `child-tag > .x`) — its subject is a composed child's content, which the scope always excludes (ADR 0033 s6, LT-399) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC074' // an element sibling of a reactive-list loop in its reconcile() container carries neither `data-key` nor `data-unreconciled`, so the first reconcile removes it (LT-186) — tier 1 Prevented, statically decidable; the runtime half is LT-185's DEV_MODE advisory, not a Contained error. Lands out of numeric order: `LTC072` is LT-429's, `LTC073` LT-417's — both reserved before this rule picked
 
 /**
  * A range in the file the author wrote (ADR 0044 s1–s2): `start` and `end`
@@ -505,6 +506,34 @@ export const diagnostic = {
 		error(
 			'LTC063',
 			`${wording.reactiveConditional} inside the container of a reactive-list ${wording.loop}. The list owns that container's children and removes everything it did not place, the arm and its templates included — move the condition out of the container, or wrap the loop in an element of its own.`,
+			rangeOf(source, at),
+		),
+
+	/**
+	 * An element beside a reactive-list loop in its `reconcile()` container
+	 * (ADR 0017), carrying neither `data-key` nor `data-unreconciled`: the
+	 * container is self-cleaning, so the list's first run removes it — the
+	 * shape that cost form-tokenbox its text input (LT-185). Channel:
+	 * compiler (shared lowering, both surfaces). ADR 0028 tier 1
+	 * (Prevented). The runtime half is LT-185's DEV_MODE `console.warn` in
+	 * `reconcile()`, deliberately an advisory rather than a Contained error:
+	 * it covers hand-authored markup the compiler never sees. A composed
+	 * element takes no `data-unreconciled`, so its fix-it moves it out.
+	 * Arm sets in the container are LTC063's, not this rule's.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-186), agreeing with LT-185's runtime message.
+	 */
+	unkeyedSiblingInReconcileContainer: (
+		source: string,
+		at: Site,
+		tag: string,
+		composed: boolean,
+		wording: SurfaceWording,
+	) =>
+		error(
+			'LTC074',
+			`<${tag}> sits beside a reactive-list ${wording.loop} in the list's container, without \`data-key\` or \`data-unreconciled\`. The list owns that container's children and removes every element it did not place on its first run — ${composed ? 'a composed element cannot carry `data-unreconciled`, so move it out of the container' : 'add `data-unreconciled` to keep the element, or move it out of the container'}.`,
 			rangeOf(source, at),
 		),
 

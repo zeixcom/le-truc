@@ -140,6 +140,12 @@ condition inside a reactive list's reconcile() container; LT-274), then
 and `LTC065` (a warning: a declaration names an unknown property or a value
 outside the property's grammar; LT-394). All `LTC`, not `TSRX`: each
 is raised in shared machinery, on both surfaces.
+`LTC074` (an element beside a reactive-list loop in its reconcile()
+container that carries neither `data-key` nor `data-unreconciled` — the
+list removes it on its first run; ADR 0017, LT-186) lands out of numeric
+order: `LTC072` is LT-429's and `LTC073` LT-417's, both reserved before
+this rule picked. It is `LTC`, not `TSRX`: the refusal is raised in the
+shared loop analysis (`analysis/loops.ts`), on both surfaces.
 
 ## 5. Kept, with the surface named correctly
 

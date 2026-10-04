@@ -628,6 +628,17 @@ const CONDITIONS: Case[] = [
 		},
 	},
 	{
+		name: 'LTC074 an unkeyed element beside a reactive-list loop in its container',
+		code: 'LTC074',
+		spec: {
+			pre: imports('createList'),
+			setup: LIST,
+			body: '<ul data-container><input type="text" />@for (const item of items) { <li>{item}</li> }</ul>',
+			tsx: '<ul data-container><input type="text" />{items.map(item => <li>{item}</li>)}</ul>',
+		},
+		pins: ['data-unreconciled', 'first run'],
+	},
+	{
 		name: 'a reactive condition inside a server-known branch',
 		code: 'LTC005',
 		spans: [['@if (open.get()) { <p>x</p> }', 'open.get() ? <p>x</p> : null']],
