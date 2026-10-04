@@ -207,6 +207,32 @@ Full entry text: `git log -p -- DONE.md`.
 
 **Since the 2026-10-03 prune:**
 
+- [x] LT-280: Per-item effect channels in reactive-list loops — the lowering covers text fill + events and nothing richer (LT-266 evidence). **Ruled 2026-10-04 → ADR 0046.** — reviewed ✓
+  **Area:** design
+  **Ruled (owner + Architect, design session 2026-10-04):** recorded in ADR 0046
+  (reactive-list items as Mount Scopes), with amendments to ADR 0024 s5, ADR 0032 s2 and
+  ADR 0037 s5, and the **Mount Scope** term in `CONTEXT.md`. The four original questions:
+  (1) items lower through the arm emission, which recurses (every channel at once); (2) the
+  `.tsx` key spelling is `items.map((item, k))` on a new Cause & Effect `map`/`forEach`
+  (handoff: `CAUSE_EFFECT_LIST_MAP.md`; LT-342 ruled with it); (3) a non-primitive reaching a
+  text position is a TypeScript error on both surfaces, not an LTC rule, and items may be
+  anything; (4) every component is expressible in every supported spelling, with no v3 release
+  until that holds. module-todo's drag logic goes into one shared client-only helper module;
+  module-ticker is nested lists (blocks → rows) with an empty-arm placeholder and a measured
+  height from the sensor's `IntersectionObserverEntry`.
+  **Session rulings with no ADR home:** a cleanup ambient is not added (`watch` handler cleanups
+  already run before removal, `reactive.ts:891-904, 1033-1038`); per-field parser declaration is
+  an open design question on LT-429; the probes are the migrations themselves (LT-425's
+  module-list `.tsx` variant, then LT-109–LT-111), and acceptance criteria are goals, not
+  constraints to satisfy by workaround (ITERATION ruling 10).
+  **Implementation:** LT-422 → LT-423 → LT-424, LT-425 → LT-426; LT-427, LT-428 independent;
+  LT-429 (design first) after LT-423.
+
+- [x] LT-342: A `.tsx` spelling for the reactive-list key binding — capability parity (ADR 0032 s6), found by the LT-233 review. **Ruled 2026-10-04 with LT-280 → ADR 0046 s4; implemented by LT-425.** — reviewed ✓
+  **Area:** design
+  **Needs:** LT-280
+  **Ruled (2026-10-04, with LT-280):** neither (a) as weighed here nor (b) nor (c). Cause & Effect lists gain `map((item, key))`/`forEach` (Map.forEach precedent), and `.tsx` spells the reactive loop `items.map((item, k) => …)` over a declared `createList`/`deriveList`; over an Array the second parameter stays the index (an accepted inconsistency, owner). `.tsrx` keeps `key k`. Implementation, including the `loopBindings`/`listItemHandlerFix` changes and the parity case, is LT-425.
+
 - [x] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07). — reviewed ✓
   **Area:** compiler
   **Needs:** LT-371

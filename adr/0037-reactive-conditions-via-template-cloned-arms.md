@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted — amends ADR 0017, 0024, 0029, 0030, 0032 and 0034 (see Related).
+✅ Accepted — amends ADR 0017, 0024, 0029, 0030, 0032 and 0034 (see Related); s5 by [ADR 0046](0046-reactive-list-items-as-mount-scopes.md).
 
 ## Context
 
@@ -22,7 +22,7 @@ Conditions over signals are legal on both surfaces. Their arms are **template-cl
 
 4. **The boundary switches to the same mechanism.** `@try`/`@pending`/`@catch` arms become templates plus adopted winner, keyed `ok`/`nil`/`err`. This retires machinery that exists only because both arms are live simultaneously: the fieldset wrappers at every arm root, the client's `hidden` + `disabled` sweep, and the fieldset-era `.parentElement` addressing (the fieldset existed to make disabling cheap). The ok arm's resolved-value text and the err arm's bound catch-param text move into the per-arm mount. The no-stale-arm ruling and the reactive `isPending` idiom are untouched. By that ruling boundary flips are rare, so re-clone cost is negligible.
 
-5. **Scope rules.** First-landing scope, each restriction widenable on demand: an arm set sits directly in an element — not inside another branch, not in composed content, not in a reactive list's container, not in a server-data loop body (diagnostic; channel compiler, Prevented); each arm has exactly one root element; `first()` does not resolve into an arm (the root is recreated on every flip); and an arm hosts no nested client-construct control flow. Arm templates inherit `@for`'s extracted-template container hygiene; this is pinned at implementation, not new machinery. `@for`'s `@empty` arm stays on the toggle path: it shares the item container's key namespace, and joining the keyed space buys nothing. A condition whose initial value is unresolvable in every Evaluation Tier ([ADR 0029](0029-tiered-server-evaluation.md) sub-design 1) has no server-pickable winner. Unresolvability is a routing signal through the fold-refusal origin (sub-design 5's list), never a guess: a test whose seed is not render-scope-resolvable — a Parser-backed prop whose instance is not re-declarable in render scope — routes the site off the host-derived fold. What remains unanswerable in every tier renders no live arm: the author supplies the default; the compiler does not guess.
+5. **Scope rules.** An arm set sits directly in an element — not in composed content, not in a reactive list's container, not in a server-data loop body (diagnostic; channel compiler, Prevented); it nests inside arms and list items, both Mount Scopes ([ADR 0046](0046-reactive-list-items-as-mount-scopes.md)). Each arm has exactly one root element; a host-level `first()` does not resolve into an arm (the root is recreated on every flip). Arm templates inherit `@for`'s extracted-template container hygiene; this is pinned at implementation, not new machinery. `@for`'s `@empty` arm stays on the toggle path: it shares the item container's key namespace, and joining the keyed space buys nothing. A condition whose initial value is unresolvable in every Evaluation Tier ([ADR 0029](0029-tiered-server-evaluation.md) sub-design 1) has no server-pickable winner. Unresolvability is a routing signal through the fold-refusal origin (sub-design 5's list), never a guess: a test whose seed is not render-scope-resolvable — a Parser-backed prop whose instance is not re-declarable in render scope — routes the site off the host-derived fold. What remains unanswerable in every tier renders no live arm: the author supplies the default; the compiler does not guess.
 
 ## Alternatives Considered
 

@@ -140,6 +140,10 @@ _Avoid_: placeholder, slot (a different construct), variable (that is the target
 One alternative of a conditional (`@if`/`@switch`, a `.tsx` ternary, `&&` or switch IIFE) or of the async boundary, keyed by a compile-time **Arm Key** (`then`/`else`, `case:<literal>`, `default`; `ok`/`nil`/`err` for the boundary). When the condition is reactive, each arm ships as an inert `<template data-arms data-key>` and at most one arm, the **Live Arm**, is in the document ([ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md)). An **Arm Set** is one conditional's or boundary's templates plus its live arm.
 _Avoid_: branch (for the reactive case, which suggests both alternatives exist in the document), toggled arm (the retired mechanism)
 
+**Mount Scope**:
+An element subtree with its own mount and its own `first`, bound to its root: the host (the factory), a **Live Arm** (`bindArm`) or a reactive-list item (`bindItem`). Every compiled construct emits into the mount of its nearest enclosing Mount Scope, so scopes nest by recursion ([ADR 0046](adr/0046-reactive-list-items-as-mount-scopes.md)). A selector bound in a scope is proved to match nothing in a nested scope, and may name the scope root itself.
+_Avoid_: scope alone (CSS `@scope`, Cause & Effect's `createScope`), context (the Context protocol), hole (a CMS template position)
+
 **Initial Winner**:
 The arm a conditional renders live at render time, kept on the IR apart from the client's key thunk: a constant key, a portable select over **Server Args**, or a fold through the **Value Harness** ([ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md) s4). An **Unresolvable** test has none: no arm renders live.
 _Avoid_: default arm (that is the `@default` case)

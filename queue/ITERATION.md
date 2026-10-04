@@ -78,23 +78,34 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
 9. **LT-415 first.** Every task gate under the worktree flow runs a test server. A stray server
    on 3000 makes `test:variants` refuse and lets Playwright test another checkout's build without
    any error. Fix it before the run of ten.
+10. **Acceptance criteria are goals, not constraints to satisfy by workaround** (owner,
+    2026-10-04). For the LT-280 implementation chain and the migrations: byte-identical CSS
+    across a variant set, the warning baseline 0, unchanged Playwright specs and unchanged
+    goldens are the target. A contributor who can meet one only through a workaround that
+    bends the design stops, annotates `blocked` and writes the impasse into `NOTES.md`. The
+    hand-written twins may carry latent bugs. A spec or golden that encodes one is reported
+    with the evidence and ruled by the Architect (fix the twin, or change the expectation);
+    it is never matched silently.
+11. **LT-280 ruled (2026-10-04) → ADR 0046.** The chain's implementation tasks are LT-422–LT-429.
+    LT-425 waits on Cause & Effect 1.6.0 (handoff `CAUSE_EFFECT_LIST_MAP.md`). Without the
+    release it is `blocked`, and the track continues past it. LT-355 moves from track B into
+    track C after LT-423, which makes its composed child renderable; LT-355 keeps the locale half.
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
 - **A — pre-publish reshapes — landed.** ~~LT-371~~, ~~LT-373~~ (pruned), ~~LT-375~~,
   ~~LT-387~~ (reviewed ✓).
 - **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
-  In ruling 7's order: LT-280 + LT-342 (per-item effect channels and the `.tsx` key spelling;
-  owner grilling → ADR 0024 s5 / ADR 0032 amendments → implementation tasks written into
-  track C), LT-334 (lazyload's boundary; its implementation task pairs with LT-390), LT-409
-  (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
+  ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). Then: LT-429 (the parser-declaration
+  question; gates LT-109 and LT-110), LT-334 (lazyload's boundary; its implementation task pairs
+  with LT-390), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
 - **0 — test hygiene** (ruling 9). LT-415.
-- **C — corpus port** — every example folder served compiled (ruling 5). LT-374, LT-186 →
-  LT-280's implementation tasks (written in when its design rules) → LT-109, LT-110, LT-111
-  (each needs LT-280, LT-374 and LT-186) → LT-390 (needs LT-334). LT-110 is LT-165 step 7's
-  corpus pin.
+- **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
+  (ruling 11). LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425 → LT-424 → LT-355 →
+  LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. LT-392, LT-356, LT-353, LT-355, LT-417.
+  ~~LT-391~~ landed. LT-392, LT-356, LT-353, LT-417.
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421~~ (done ✓; the
@@ -113,13 +124,13 @@ measurement (recorded on the gate-zero commit, ruling 6), except where LT-109–
 LT-280/LT-409 ruling change them by design, as those tasks state; the warning baseline stays 0.
 The mechanical tasks (LT-370, LT-371, LT-373, LT-375's migration half, LT-393) leave goldens
 and parity byte-identical. Every example folder is served compiled, per ruling 5. ADRs record
-LT-280's and LT-409's rulings. The IR is out of `contract.ts`, every diagnostic carries
+LT-280's (ADR 0046) and LT-409's rulings. The IR is out of `contract.ts`, every diagnostic carries
 `location` on both surfaces, and a fragment root fails LTC060. No silent miscompile from the
 last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:contract`,
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-422.** Next free diagnostic code: LTC072 (LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-430.** Next free diagnostic code: LTC073 (LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 

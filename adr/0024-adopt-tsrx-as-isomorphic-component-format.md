@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted — amended by [ADR 0029](0029-tiered-server-evaluation.md) (tiered server evaluation), [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) (`.tsx` primary), [ADR 0033](0033-scope-component-styles-by-custom-element-name.md) (compiled CSS, sub-design 2) and [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) (template-cloned arms, sub-design 13).
+✅ Accepted — amended by [ADR 0029](0029-tiered-server-evaluation.md) (tiered server evaluation), [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) (`.tsx` primary), [ADR 0033](0033-scope-component-styles-by-custom-element-name.md) (compiled CSS, sub-design 2) [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) (template-cloned arms, sub-design 13) and [ADR 0046](0046-reactive-list-items-as-mount-scopes.md) (list items as Mount Scopes, sub-design 5).
 
 ## Context
 
@@ -20,7 +20,7 @@ Adopt an **isomorphic single-file `.tsrx` format** — server args, signals, `ex
 
 4. **Author-declared reactivity, no markers** — a function-valued attribute is a reactive binding, an `on*` attribute an event, a reactive `{expr}` child the reactive child: reactivity is what the expression reads, never a marker. Reactive `aria-*` (IDREF ARIA excepted) lowers to `bindAria()` by target ([ADR 0026](0026-aria-reflection-via-elementinternals-and-bindaria.md)) — never style the host on `aria-*`; `:state()` ([ADR 0016](0016-element-internals-for-form-association-and-states.md)) is the styling hook.
 
-5. **Dual `@for` lowering** — over server data: rendered once, enhanced via `each()` scopes ([ADR 0014](0014-keyed-per-element-scopes-for-memo-collections.md)); over a reactive List: keyed items plus an extracted `<template>` reconciled by `reconcile()` ([ADR 0017](0017-keyed-template-clone-reconciliation-for-lists.md)). Server-known expressions fold into every item.
+5. **Dual `@for` lowering** — over server data: rendered once, enhanced via `each()` scopes ([ADR 0014](0014-keyed-per-element-scopes-for-memo-collections.md)); over a reactive List: keyed items plus an extracted `<template>` reconciled by `reconcile()` ([ADR 0017](0017-keyed-template-clone-reconciliation-for-lists.md)). Server-known expressions fold into every item; each item is a Mount Scope whose content lowers through the arm emission, the item a signal ([ADR 0046](0046-reactive-list-items-as-mount-scopes.md)).
 
 6. **Type flow by emit-then-check** — CI `tsc`-checks both generated modules through the compiler's own span-table mappings.
 
