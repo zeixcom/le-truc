@@ -581,7 +581,10 @@ Every locale carries the same key set. Two pattern-integrity walks read
 each translation against its source pattern (ADR 0030 s5): argument
 preservation (`argument-mismatch`) and `plural` arm coverage against the
 locale's CLDR categories (`missing-arms`). An entry that is not a string,
-or does not parse, reports `malformed` and renders the source. Staleness rides a committed
+or does not parse, reports `malformed` and renders the source. A catalog
+FILE that does not parse as a JSON object is one `malformed` record whose
+key is the file name (`de.json`), not one `missing` per declared key, and
+`i18n:sync` refuses to write it (LT-356). Staleness rides a committed
 manifest (`i18n/manifest.json`, per locale per key the source hash the
 translation was recorded against): a source-string edit is a source edit
 that silently invalidates that key's translations, so an override without a

@@ -81,7 +81,11 @@ export type TierCensusSubject = {
  * file (ADR 0030 sub-design 5, LT-173 step 4).
  */
 export type TranslationGap = {
-	/** The component-namespaced catalog key (`basic-pluralize.remaining`). */
+	/**
+	 * The component-namespaced catalog key (`basic-pluralize.remaining`) —
+	 * or, for a `malformed` catalog FILE that does not parse as a JSON
+	 * object, the file name (`de.json`, LT-356).
+	 */
 	key: string
 	/** The locale the key is missing, stale, or orphaned in. */
 	locale: string
