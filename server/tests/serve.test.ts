@@ -14,6 +14,11 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {
+	CHECKOUT_ROOT,
+	freePort,
+	servesThisCheckout,
+} from '../../scripts/test-server'
+import {
 	DEFAULT_LOCALE,
 	EXAMPLES_DIR,
 	GENERATED_CLIENTS_DIR,
@@ -113,7 +118,9 @@ const request = async (
 describe('route precedence', () => {
 	test('a static route beats a param route on the same segment', async () => {
 		// `/api/status` vs `/:locale/:page`, `/index.html` vs `/:locale`
-		expect(await (await request('/api/status')).text()).toBe('OK')
+		expect(
+			(await request('/api/status')).headers.get('content-type'),
+		).toContain('application/json')
 		const res = await request('/index.html', { redirect: 'manual' })
 		expect(res.status).toBe(200)
 	})
@@ -140,10 +147,24 @@ describe('route precedence', () => {
 /* === §14.1 Route responses (production mode) === */
 
 describe('route responses', () => {
-	test('GET /api/status → 200 "OK"', async () => {
+	test('GET /api/status → 200 with the checkout identity (LT-415)', async () => {
 		const res = await request(`/api/status`)
 		expect(res.status).toBe(200)
-		expect(await res.text()).toBe('OK')
+		expect(await res.json()).toEqual({
+			status: 'ok',
+			root: fs.realpathSync(ROOT),
+			surface: 'default',
+		})
+	})
+
+	test('GET /api/status reports a TEST_SURFACE override (LT-415)', async () => {
+		process.env.TEST_SURFACE = 'tsrx'
+		try {
+			const body = await (await request(`/api/status`)).json()
+			expect(body.surface).toBe('tsrx')
+		} finally {
+			delete process.env.TEST_SURFACE
+		}
 	})
 
 	test('GET /ws → 404 in production', async () => {
@@ -230,6 +251,20 @@ describe('HMR injection', () => {
 		const res = await request('/assets/main.css', {}, devHandler)
 		const body = await res.text()
 		expect(body).not.toContain('<script>')
+	})
+
+	test('development: mock fragments carry no HMR script (LT-415)', async () => {
+		// The component inserts a mock with innerHTML; an injected HMR
+		// client would surface as the fragment's text content
+		const res = await request(
+			'/test/module-lazyload/mocks/empty.html',
+			{},
+			devHandler,
+		)
+		expect(res.status).toBe(200)
+		const body = await res.text()
+		expect(body).not.toContain('<script')
+		expect(body).not.toContain('/ws')
 	})
 })
 
@@ -656,10 +691,29 @@ describe.skipIf(!canListen && !process.env.CI)('Bun.serve wiring', () => {
 		server.stop(true)
 	})
 
-	test('GET /api/status over a socket → 200 "OK"', async () => {
+	test('GET /api/status over a socket → 200 with the checkout root', async () => {
 		const res = await fetch(new URL('/api/status', server.url))
 		expect(res.status).toBe(200)
-		expect(await res.text()).toBe('OK')
+		expect((await res.json()).root).toBe(CHECKOUT_ROOT)
+	})
+
+	test('servesThisCheckout matches this checkout on the expected surface only (LT-415)', async () => {
+		const port = Number(server.port)
+		expect(await servesThisCheckout(port)).toBe(true)
+		expect(await servesThisCheckout(port, 'tsx')).toBe(false)
+	})
+
+	test('servesThisCheckout rejects a foreign server and a free port (LT-415)', async () => {
+		const foreign = Bun.serve({
+			port: 0,
+			fetch: () => Response.json({ status: 'ok', root: '/elsewhere' }),
+		})
+		try {
+			expect(await servesThisCheckout(Number(foreign.port))).toBe(false)
+		} finally {
+			foreign.stop(true)
+		}
+		expect(await servesThisCheckout(await freePort())).toBe(false)
 	})
 
 	test('GET /ws over a socket → 404 outside development', async () => {

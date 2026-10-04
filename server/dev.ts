@@ -81,10 +81,9 @@ Usage:
 
 Options:
   --help, -h     Show this help message
-  --port PORT    Set server port (default: from Bun.serve)
-  --host HOST    Set server host (default: localhost)
 
 Environment Variables:
+  PORT           Set server port (default: 3000)
   NODE_ENV       Set to 'development' for dev features (default)
   DEBUG          Enable debug logging
 

@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs'
 import pkg from '../package.json'
 import {
 	ASSETS_DIR,
@@ -420,13 +421,17 @@ const handleComponentTest = async (
 const handleStaticFile = async (
 	filePath: string,
 	development: boolean,
+	asFragment = false,
 ): Promise<Response> => {
 	// Directories pass existsSync but fail in sendfile — treat as not found
 	if (!fileExists(filePath) || isDirectory(filePath)) return notFound()
 
 	try {
-		// For HTML files in development, inject HMR script
-		if (development && filePath.endsWith('.html')) {
+		// For HTML files in development, inject HMR script. A fragment
+		// (a test mock, inserted with innerHTML) never gets one: the HMR
+		// client is page vocabulary, and the injected script's text would
+		// pollute the fragment's content (LT-415).
+		if (development && filePath.endsWith('.html') && !asFragment) {
 			const content = await Bun.file(filePath).text()
 			const enhancedContent = injectHMRScript(content, development)
 			return new Response(enhancedContent, {
@@ -545,6 +550,9 @@ const matchRoute = (
 
 /* === Request Handler === */
 
+/** The checkout root as `/api/status` reports it: symlinks resolved. */
+const CHECKOUT_ROOT = realpathSync(ROOT)
+
 /**
  * Build the docs server's request handler: every route but the `/ws`
  * upgrade, which needs the `Server` and stays in `serve.ts` (LT-364). Pure
@@ -553,11 +561,19 @@ const matchRoute = (
 const createRequestHandler = ({
 	development,
 }: RequestHandlerOptions): RequestHandler => {
-	const serveFile = (filePath: string) =>
-		handleStaticFile(filePath, development)
+	const serveFile = (filePath: string, asFragment = false) =>
+		handleStaticFile(filePath, development, asFragment)
 
 	const routes: Record<string, RouteHandler> = {
-		'/api/status': () => new Response('OK'),
+		// Health check and checkout identity (LT-415): a test run reuses a
+		// running server only when `root` is its own checkout and `surface`
+		// is the one it expects (`default`: no `TEST_SURFACE` override).
+		'/api/status': () =>
+			Response.json({
+				status: 'ok',
+				root: CHECKOUT_ROOT,
+				surface: readEnvSurface() ?? 'default',
+			}),
 
 		// `serve.ts` upgrades `/ws` itself in development; any request that
 		// reaches the handler has no live socket to hand over.
@@ -588,10 +604,11 @@ const createRequestHandler = ({
 			return filePath ? serveFile(filePath) : notFound()
 		},
 
-		// Component tests mock files
+		// Component tests mock files — fragments for innerHTML, never
+		// HMR-enhanced pages (LT-415)
 		'/test/:component/mocks/:mock': (_, { component = '', mock = '' }) => {
 			const filePath = findMockFilePath(component, mock)
-			return filePath ? serveFile(filePath) : notFound()
+			return filePath ? serveFile(filePath, true) : notFound()
 		},
 
 		// A variant set component's per-surface client bundle (LT-284):
