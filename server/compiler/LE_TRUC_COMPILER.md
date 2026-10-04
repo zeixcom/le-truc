@@ -985,7 +985,9 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   (LTC066), `::slotted()` (LTC067), `:host-context()` (LTC068), `:global`
   outside the two top-level whole-rule forms (LTC069), a qualifier on bare
   `:host` (LTC070), and a selector that descends past a boundary tag
-  (LTC071).
+  (LTC071); and a `<style>` block that is not the root's single direct
+  `<style>` child — a second direct one, or one nested in a descendant —
+  whose CSS the hoist would drop (LTC073, LT-417).
 - *Corpus-level*: one component tag declared by more than one corpus source
   outside a folder-local variant set (LTC048) — fires before pass 2, names
   every declaring file whatever surface each is written in, and drops them

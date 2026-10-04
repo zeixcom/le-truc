@@ -140,6 +140,10 @@ condition inside a reactive list's reconcile() container; LT-274), then
 and `LTC065` (a warning: a declaration names an unknown property or a value
 outside the property's grammar; LT-394). All `LTC`, not `TSRX`: each
 is raised in shared machinery, on both surfaces.
+`LTC073` (a `<style>` block that is not the root's single direct `<style>`
+child; ADR 0032 s1, LT-417) skips `LTC072`, which LT-429 holds. It is
+`LTC`, not `TSRX`: the refusal is raised in the shared hoist
+(`template-output.ts`), on both surfaces.
 
 ## 5. Kept, with the surface named correctly
 

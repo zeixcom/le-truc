@@ -41,6 +41,7 @@
 - **`LTC062` and `LTC063`**: a reactive `@case` value that is not a unique literal fails the compile, and so does a reactive condition inside a reactive list's container.
 - **`LTC056` and `LTC061`**: an authored `<script>` (any `type`) or `<template>` element in a component template fails the compile on both surfaces.
 - **Root-is-host is enforced (`LTC060`)** (ADR 0032 s1, owner ruling 2026-09-29): the template output must be the bare root element — a `<>…</>` fragment root fails the compile on both surfaces. The stylesheet is a `<style>` child of the root; the fragment never reached the output, so the corpus migration changed no artifact beyond the whitespace and formatting of authored text the compiler passes through.
+- **`LTC073`**: a `<style>` block that is not the root's single direct `<style>` child — a second one in the root, or one nested in a descendant — fails the compile on both surfaces. Its CSS used to be dropped silently, leaving an empty `<style></style>` in the markup.
 - **`DiagnosticLocation`, `DiagnosticFix` and `DiagnosticEdit` in the compiler contract**: `contract.ts` now exports the shapes `CompileDiagnostic` names, including the optional `fix` (a description plus text edits). No diagnostic attaches a `fix` yet.
 
 ### Changed

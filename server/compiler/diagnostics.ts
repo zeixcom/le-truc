@@ -102,6 +102,7 @@ export type DiagnosticCode =
 	| 'LTC069' // `:global` in a form other than the two whole-rule forms — nested, prefixed, trailing, leading-ancestor, mid-selector, or declarations directly in a bare block (ADR 0033 s6a, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC070' // `:host` directly followed by a qualifier (`:host.x`, `:host:hover`, `:host[attr]`) — matches nothing in a shadow root; the qualifier belongs in the arguments (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC071' // a stylesheet selector descends past a boundary tag (`child-tag .x`, `child-tag > .x`) — its subject is a composed child's content, which the scope always excludes (ADR 0033 s6, LT-399) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC073' // a `<style>` block that is not the root's single direct `<style>` child — a second direct one, or one nested in a descendant; only the first direct child is hoisted as the stylesheet, so the CSS would be dropped (ADR 0032 s1, LT-417) — tier 1 Prevented, statically decidable, no runtime half
 
 /**
  * A range in the file the author wrote (ADR 0044 s1–s2): `start` and `end`
@@ -456,6 +457,28 @@ export const diagnostic = {
 		error(
 			'LTC060',
 			"The template output is a fragment (`<>…</>`) — the template's root is the host element, and there is no fragment root. Drop the fragment so that the host element is the root. If the component has a stylesheet, put it inside the root as a `<style>` child.",
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A `<style>` block that is not the root's single direct `<style>` child
+	 * (LT-417, LT-375 review; owner ruling 2026-09-29, ADR 0032 s1): a second
+	 * direct `<style>` child of the root, or a `<style>` nested in any
+	 * descendant. `resolveTemplateOutput` hoists only the first direct child
+	 * as the stylesheet, so any other block's CSS was dropped and an empty
+	 * `<style></style>` rendered into the host markup — a silent drop. The
+	 * fix names the one accepted place. Channel: compiler (the shared hoist
+	 * in `template-output.ts`, both surfaces). ADR 0028 tier 1 (Prevented):
+	 * statically decidable from the lowered template, no runtime half.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 */
+	misplacedStyleBlock: (source: string, at: Site, nested: boolean) =>
+		error(
+			'LTC073',
+			nested
+				? "A `<style>` block nested inside an element of the template — the stylesheet is read only from a `<style>` child of the root, so this block's CSS would be dropped. Move its rules into the root's single `<style>` child."
+				: "A second `<style>` block in the root — the stylesheet is read only from the root's first `<style>` child, so this block's CSS would be dropped. Merge its rules into the root's single `<style>` child.",
 			rangeOf(source, at),
 		),
 
