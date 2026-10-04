@@ -444,6 +444,11 @@ export type PassShared = {
 	usedNames: Set<string>
 	/** Every ref name in the template, pre-collected. */
 	refNames: Set<string>
+	/**
+	 * Signals Pass 3 refused for a formatted-only render with no raw value
+	 * source (LTC059, LT-374) — the setup half's LTC005 skips them.
+	 */
+	rawSourceRefused: Set<string>
 	/** Register (or reuse) a query; returns its variable name. */
 	addQuery: (
 		base: string,
@@ -668,6 +673,7 @@ export const analyzeClient = (
 		ambient,
 		usedNames,
 		refNames,
+		rawSourceRefused: new Set(),
 		addQuery: (base, selector, cardinality) =>
 			addQuery(
 				usedNames,
@@ -709,6 +715,7 @@ export const analyzeClient = (
 	// setup entry holds the whole constructor call, options included.
 	for (const signal of component.signals) {
 		if (signal.family === 'context') continue
+		if (shared.rawSourceRefused.has(signal.name)) continue
 		const harvest = harvests.find(h => h.signal === signal.name)
 		if (harvest && !(harvest.kind === 'list' && harvest.seed === 'verbatim'))
 			continue

@@ -972,9 +972,11 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
 - *Harvest and evaluability*: no render site or harvest route for a signal
   (LTC004), no server-renderable value for a reactive attribute (LTC034),
   the Parser-prop double-render warning (LTC039), a dead required-reason
-  string (LTC040), and the rendered-client-only-const error (LTC046 — the
+  string (LTC040), the rendered-client-only-const error (LTC046 — the
   narrow residue of this family that stays an error; see the reclassification
-  below).
+  below), and a signal seeded from server args that renders only as
+  formatted text with no raw value source to harvest (LTC059 — D-20; the
+  recognition rule is in `HOST_PROFILE.md`'s data account, bullet 6).
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

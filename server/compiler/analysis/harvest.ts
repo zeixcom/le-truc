@@ -193,6 +193,108 @@ export const lazyWatchSource = (child: ExprNode): string => {
 	return `() => ${child.exprText}`
 }
 
+/* === Formatted text (D-20) === */
+
+/** Locale-formatting instance methods: their output never parses back. */
+const LOCALE_FORMAT_METHODS: ReadonlySet<string> = new Set([
+	'toLocaleString',
+	'toLocaleDateString',
+	'toLocaleTimeString',
+])
+
+/** Message argument kinds the evaluator formats (`{n, number}`, `#`, `{d, date}`). */
+const FORMATTED_ARG_KINDS: ReadonlySet<string> = new Set(['number', 'date'])
+
+/**
+ * How `node` formats a value for display, or null when it does not (D-20,
+ * LT-374). Recognition is syntactic, over the expression and — through
+ * their names — the setup consts it reads, transitively (`const fmt = new
+ * Intl.NumberFormat(…).format`, read as `fmt(n.get())`):
+ *
+ * - any `Intl` read (`new Intl.NumberFormat(…)`, `Intl.DateTimeFormat(…)`);
+ * - a `toLocaleString()`/`toLocaleDateString()`/`toLocaleTimeString()` call,
+ *   whatever the receiver;
+ * - a call of a declared message (`t.<key>(…)`, `t['<key>'](…)`) whose
+ *   pattern takes a number or date argument (`plural`/`selectordinal`/
+ *   `number`/`date`/`time`).
+ *
+ * A formatter reached through an import (`getNumberFormatter(…)`) is not
+ * recognized: the compiler does not read other modules. That costs only the
+ * diagnostic's precision — a computed text thunk is never a harvest site,
+ * so the signal still fails to seed (LTC005) rather than harvesting
+ * formatted text.
+ */
+export const formattingOf = (
+	node: AstNode,
+	component: ComponentIR,
+): string | null => {
+	const tNames = new Set(component.messageTBindings ?? [])
+	const args = component.i18nArgs ?? {}
+	const setupByName = new Map(
+		component.setup.flatMap(stmt =>
+			stmt.name === null ? [] : [[stmt.name, stmt.node] as const],
+		),
+	)
+	const messageKey = (callee: unknown): string | null => {
+		if (nodeType(callee) !== 'MemberExpression') return null
+		const member = callee as AstNode
+		const object = member.object as AstNode
+		if (nodeType(object) !== 'Identifier' || !tNames.has(String(object.name)))
+			return null
+		const property = member.property as AstNode
+		if (!member.computed && nodeType(property) === 'Identifier')
+			return String(property.name)
+		if (
+			member.computed &&
+			nodeType(property) === 'Literal' &&
+			typeof property.value === 'string'
+		)
+			return property.value
+		return null
+	}
+	const visited = new Set<string>()
+	const inspect = (root: AstNode): string | null => {
+		let found: string | null = null
+		walkNodes(root, current => {
+			if (found) return false
+			const type = nodeType(current)
+			if (type === 'Identifier' && String(current.name) === 'Intl') {
+				found = '`Intl`'
+				return false
+			}
+			if (type !== 'CallExpression' && type !== 'OptionalCallExpression') return
+			const callee = current.callee as AstNode
+			if (
+				nodeType(callee) === 'MemberExpression' &&
+				!callee.computed &&
+				nodeType(callee.property) === 'Identifier' &&
+				LOCALE_FORMAT_METHODS.has(String((callee.property as AstNode).name))
+			) {
+				found = `\`${String((callee.property as AstNode).name)}()\``
+				return false
+			}
+			const key = messageKey(callee)
+			if (
+				key !== null &&
+				(args[key] ?? []).some(arg => FORMATTED_ARG_KINDS.has(arg.kind))
+			) {
+				found = `message \`${String((callee.object as AstNode).name)}.${key}\``
+				return false
+			}
+		})
+		if (found) return found
+		for (const name of dependenciesOf(root)) {
+			const stmt = setupByName.get(name)
+			if (!stmt || visited.has(name)) continue
+			visited.add(name)
+			const inner = inspect(stmt)
+			if (inner) return inner
+		}
+		return null
+	}
+	return inspect(node)
+}
+
 /* === Render Sites (Pass 2) === */
 
 /**
@@ -231,12 +333,19 @@ type RenderSites = {
 	thunkRendered: Set<string>
 	renderCredited: Set<string>
 	clientCredited: Set<string>
+	/**
+	 * Per signal, its first reactive text site that formats the value for
+	 * display (`formattingOf`), with the formatting named — LTC059's input
+	 * when the signal also has no raw value source (D-20, LT-374).
+	 */
+	formattedText: Map<string, { node: AstNode; formatting: string }>
 }
 
 /** Pass 2: signal render sites, in document order, plus thunk/client credit. */
 const collectRenderSites = (component: ComponentIR): RenderSites => {
 	const sites: Site[] = []
 	const thunkRendered = new Set<string>()
+	const textChildren: ExprNode[] = []
 	let documentOrder = 0
 	const loopFor = (node: TemplateNode) => loopForIn(component, node)
 
@@ -303,6 +412,7 @@ const collectRenderSites = (component: ComponentIR): RenderSites => {
 				!insideLoopOutput &&
 				!isLoopOutput
 			) {
+				textChildren.push(child)
 				const order = documentOrder++
 				const expr = child.expr
 				if (nodeType(expr) === 'Identifier') {
@@ -473,7 +583,28 @@ const collectRenderSites = (component: ComponentIR): RenderSites => {
 		}
 	})
 
-	return { sites, thunkRendered, renderCredited, clientCredited }
+	// Formatted reactive text (D-20): the carriers say which signals a text
+	// site reads, through setup consts included; `formattingOf` says whether
+	// it formats them. First site in document order wins.
+	const formattedText = new Map<string, { node: AstNode; formatting: string }>()
+	for (const child of textChildren) {
+		const carried = [...carriedBy(child.expr)].filter(
+			signal => !formattedText.has(signal),
+		)
+		if (carried.length === 0) continue
+		const formatting = formattingOf(child.expr, component)
+		if (!formatting) continue
+		for (const signal of carried)
+			formattedText.set(signal, { node: child.expr, formatting })
+	}
+
+	return {
+		sites,
+		thunkRendered,
+		renderCredited,
+		clientCredited,
+		formattedText,
+	}
 }
 
 /* === Harvest Plans (Pass 3) === */
@@ -482,7 +613,13 @@ const collectRenderSites = (component: ComponentIR): RenderSites => {
 const planHarvests = (
 	shared: PassShared,
 	{ forPlans, reconcilePlans }: LoopPlans,
-	{ sites, thunkRendered, renderCredited, clientCredited }: RenderSites,
+	{
+		sites,
+		thunkRendered,
+		renderCredited,
+		clientCredited,
+		formattedText,
+	}: RenderSites,
 ): HarvestPlan[] => {
 	const {
 		component,
@@ -492,6 +629,7 @@ const planHarvests = (
 		addQuery,
 		ambient,
 		refNames,
+		rawSourceRefused,
 	} = shared
 	const harvests: HarvestPlan[] = []
 	/**
@@ -521,6 +659,17 @@ const planHarvests = (
 	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
 	const loopFor = (node: TemplateNode) => loopForIn(component, node)
 
+	/**
+	 * An attribute read is a string; a `number`-typed arg converts back
+	 * with `Number()`, so a raw value source round-trips (D-20, LT-374:
+	 * `<data value={count}>` seeds `createState(count)` with a number,
+	 * not its text). The server rendered the attribute as `String(arg)`, which
+	 * `Number()` inverts for every finite number — no truncation.
+	 */
+	const asParamType = (param: string, read: string): string =>
+		component.paramProps.find(p => p.name === param)?.isNumber
+			? `Number${read}`
+			: read
 	/**
 	 * DOM read expression for a server arg, traced to its rendered site.
 	 * Precedence (LT-115):
@@ -661,16 +810,19 @@ const planHarvests = (
 				resolved.selector,
 				optional ? 'maybe' : 'one',
 			)
-			return optional
-				? `(${query}?.getAttribute('${site.attr.name}') ?? '')`
-				: `(${query}.getAttribute('${site.attr.name}') ?? '')`
+			return asParamType(
+				param,
+				optional
+					? `(${query}?.getAttribute('${site.attr.name}') ?? '')`
+					: `(${query}.getAttribute('${site.attr.name}') ?? '')`,
+			)
 		}
 		const rootAttr = component.root.attrs.find(
 			a => a.kind === 'server' && a.name !== null && a.exprText === param,
 		) as Extract<AttributeIR, { kind: 'server' }> | undefined
 		if (rootAttr) {
 			ambient.add('host')
-			return `(host.getAttribute('${rootAttr.name}') ?? '')`
+			return asParamType(param, `(host.getAttribute('${rootAttr.name}') ?? '')`)
 		}
 		return null
 	}
@@ -847,6 +999,7 @@ const planHarvests = (
 			// rendered only through a map/computed thunk (LT-036) may also
 			// reuse its initializer verbatim — same soundness as a derived
 			// callback, per `allowVerbatim`'s contract above.
+			const reported = diagnostics.length
 			const substituted = signal.init
 				? substituteArgExpr(
 						signal.init,
@@ -861,6 +1014,34 @@ const planHarvests = (
 					signal: signal.name,
 					expr: substituted,
 				})
+				continue
+			}
+			// D-20 (LT-374): a signal seeded from server args that renders only
+			// as formatted text has nothing the client can read back — the text
+			// does not parse, and no arg it reads renders as a raw attribute
+			// (else the substitution above would have found it). LTC059 names
+			// the raw-source fix; it replaces the generic server-only-name
+			// LTC005 `plan.ts` would raise for the same initializer. Skipped
+			// when the substitution failed for another, already-reported reason
+			// (an unaddressable arg site).
+			const formatted = formattedText.get(signal.name)
+			if (
+				formatted &&
+				signal.init &&
+				diagnostics.length === reported &&
+				[...dependenciesOf(signal.init)].some(name =>
+					component.paramNames.includes(name),
+				)
+			) {
+				diagnostics.push(
+					diagnostic.formattedWithoutRawSource(
+						source,
+						formatted.node,
+						`Signal \`${signal.name}\``,
+						formatted.formatting,
+					),
+				)
+				rawSourceRefused.add(signal.name)
 				continue
 			}
 			reportUnharvestable(signal)

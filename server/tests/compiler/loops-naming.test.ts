@@ -23,6 +23,7 @@ const contextFor = (component: ComponentIR): PassShared => {
 		routingSignals: [],
 		suppressedSites: [],
 		registry: new Set(),
+		rawSourceRefused: new Set(),
 		composeRefs: { mode: 'skipped' },
 		queries,
 		childTags: new Set(),
