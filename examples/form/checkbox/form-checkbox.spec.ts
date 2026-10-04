@@ -16,7 +16,7 @@ test.describe('form-checkbox component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/form-checkbox')
+		await page.goto('/test/form-checkbox')
 		await page.waitForSelector('form-checkbox')
 	})
 

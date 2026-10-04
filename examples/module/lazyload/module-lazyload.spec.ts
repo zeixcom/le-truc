@@ -33,7 +33,7 @@ test.describe('module-lazyload component', () => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
 
-		await page.goto('http://localhost:3000/test/module-lazyload')
+		await page.goto('/test/module-lazyload')
 		await page.waitForSelector('module-lazyload')
 	})
 

@@ -26,7 +26,7 @@ const setup = async (page: Page) => {
 	page.on('console', msg => {
 		console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 	})
-	await page.goto('http://localhost:3000/test/module-splitview')
+	await page.goto('/test/module-splitview')
 	await page.waitForSelector('module-splitview')
 }
 

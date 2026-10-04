@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('debug instrumentation (ADR 0022)', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-debug')
+		await page.goto('/test/test-debug')
 		await page.waitForSelector('test-debug')
 	})
 
@@ -269,7 +269,7 @@ test.describe('debug reserved-name collision (ADR 0022 Consequences)', () => {
 		})
 		page.on('pageerror', err => pageErrors.push(err.message))
 
-		await page.goto('http://localhost:3000/test/test-debug-collision')
+		await page.goto('/test/test-debug-collision')
 		// The throw happens synchronously during connectedCallback, before any
 		// content this component would otherwise render — waiting for the
 		// custom element to upgrade is enough to have observed it. Since ADR

@@ -19,7 +19,7 @@ test.describe('Reserved-word runtime guard', () => {
 	test.beforeEach(async ({ page }) => {
 		// Loads main.js so audit-reserved-word is defined, but the page has no
 		// static instance (it throws on connect).
-		await page.goto('http://localhost:3000/test/test-reserved-word')
+		await page.goto('/test/test-reserved-word')
 		await page.waitForSelector('#anchor', { state: 'attached' })
 	})
 

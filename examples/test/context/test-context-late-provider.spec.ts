@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('test-context-late-provider: requestContext recovers from a late-defined provider', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-context-late-provider')
+		await page.goto('/test/test-context-late-provider')
 		await page.waitForSelector('#consumer #output')
 	})
 

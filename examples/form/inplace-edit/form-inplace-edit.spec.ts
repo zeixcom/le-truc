@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('form-inplace-edit component', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/form-inplace-edit')
+		await page.goto('/test/form-inplace-edit')
 		await page.waitForSelector('form-inplace-edit')
 	})
 

@@ -14,7 +14,7 @@ import { expect, test } from '@playwright/test'
  */
 test.describe('Reconnect does not leak listeners', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-reconnect')
+		await page.goto('/test/test-reconnect')
 		await page.waitForSelector('audit-reconnect')
 	})
 

@@ -59,7 +59,7 @@ test.describe('module-coloreditor component', () => {
 		page.on('console', msg => {
 			console.log(`[browser] ${msg.type()}: ${msg.text()}`)
 		})
-		await page.goto('http://localhost:3000/test/module-coloreditor')
+		await page.goto('/test/module-coloreditor')
 		await page.waitForSelector('module-coloreditor')
 	})
 

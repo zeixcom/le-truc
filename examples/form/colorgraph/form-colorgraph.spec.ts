@@ -49,7 +49,7 @@ type Colorgraph = HTMLElement & {
 
 test.describe('form-colorgraph component (compiled .tsrx)', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/form-colorgraph')
+		await page.goto('/test/form-colorgraph')
 		await page.waitForSelector('form-colorgraph')
 		// The module script defines the tag after parse; wait for the
 		// upgrade so every test sees the factory's exposed interface.

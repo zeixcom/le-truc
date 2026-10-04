@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe('test-watch: watch() helper', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('http://localhost:3000/test/test-watch')
+		await page.goto('/test/test-watch')
 		await page.waitForSelector('test-watch')
 	})
 
