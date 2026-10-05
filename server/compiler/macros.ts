@@ -12,7 +12,13 @@
  * authored `.tsx` sources.
  */
 
-import type { Parser } from '@zeix/le-truc'
+/**
+ * A `harvest()` entry: reads a field's raw value from the item's markup. A
+ * `Parser` of the field's type fits (`asNumber()`, `asParser(…)`); an
+ * optional field's entry may also return `undefined`, which a `Parser`
+ * cannot.
+ */
+export type FieldParser<V> = (value: string | null | undefined) => V
 
 /** The message a marker stub throws when its source ran uncompiled. */
 const uncompiled = (name: string): Error =>
@@ -57,7 +63,7 @@ export const css = (
  */
 export function harvest<T extends object>(
 	seed: T[],
-	parsers: { [K in keyof T]?: Parser<T[K] & {}> },
+	parsers: { [K in keyof T]?: FieldParser<T[K]> },
 ): T[]
 export function harvest(_seed: unknown, _parsers: unknown): unknown {
 	throw uncompiled('harvest')

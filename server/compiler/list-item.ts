@@ -15,7 +15,7 @@
 import type { AstNode } from './ast-node'
 import { asArray, identifierName, isNode, nodeType, text } from './ast-utils'
 import type { ExtractContext } from './extract-context'
-import { markerOf } from './imports'
+import { claimMarker, markerOf } from './imports'
 import type {
 	HarvestSeedIR,
 	InferredParserIR,
@@ -115,11 +115,19 @@ const fieldsOf = (
 				: null)
 		if (!name || !isNode(member.typeAnnotation)) continue
 		const annotation = member.typeAnnotation as AstNode
-		fields.push({
-			name,
-			typeText: text(source, unwrapAnnotation(annotation)),
-			parser: parserForField(annotation, types, source),
-		})
+		const authored = text(source, unwrapAnnotation(annotation))
+		// An optional field may be `undefined` on the server, which no
+		// inferred parser reproduces (an absent site reads the parser's
+		// fallback): only a `harvest()` entry declares its parser.
+		fields.push(
+			member.optional
+				? { name, typeText: `${authored} | undefined`, parser: null }
+				: {
+						name,
+						typeText: authored,
+						parser: parserForField(annotation, types, source),
+					},
+		)
 	}
 	return fields
 }
@@ -311,6 +319,9 @@ export const harvestCallOf = (
 	if (nodeType(node) !== 'CallExpression') return null
 	const call = node as AstNode
 	if (markerOf(ctx, call.callee, enclosing) !== 'harvest') return null
+	// Read here, refused or not: whatever the caller reports names it, so
+	// the unclaimed-marker sweep does not report it again.
+	claimMarker(ctx, call.callee)
 	const [seed, map, ...rest] = asArray(call.arguments)
 	if (!seed || !map || rest.length > 0 || map.type !== 'ObjectExpression')
 		return {

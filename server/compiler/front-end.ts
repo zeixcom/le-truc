@@ -28,6 +28,7 @@ import {
 	parseLeTrucImports,
 	parseMarkerImports,
 	parsePlainImports,
+	reportUnclaimedMarkers,
 	shadowMarkers,
 } from './imports'
 import type { ComponentIR, ForIR, SignalIR, TemplateNode } from './ir'
@@ -141,6 +142,7 @@ export const runFrontEnd = (
 	reportMalformedSelectors(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
 	ctx.markers = parseMarkerImports(ast)
+	const importedMarkers = ctx.markers
 	ctx.moduleTypes = collectModuleTypes(ast)
 	const plainImports = parsePlainImports(
 		ctx,
@@ -280,6 +282,8 @@ export const runFrontEnd = (
 	)
 	if (!resolved) return done()
 
+	// Every marker reference no consumer read is refused (ADR 0034 s1).
+	reportUnclaimedMarkers(ctx, fn, importedMarkers)
 	validateLoweredComponent(ctx, {
 		root: resolved.root,
 		config: decls.config,

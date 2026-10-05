@@ -20,7 +20,6 @@ import {
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import { staticMessageReads } from './i18n'
-import { markerOf } from './imports'
 import { inferType, type TypeContext } from './infer-type'
 import type {
 	DeclaredSignalIR,
@@ -113,23 +112,6 @@ const listHarvestOf = (
 	if (!isNode(init) || identifierName(init.callee) !== 'createList') return null
 	return harvestCallOf(ctx, asArray(init.arguments)[0], enclosing)
 }
-
-/**
- * Whether `nodes` read the `harvest()` marker anywhere — a call outside the
- * one position the compiler recognizes (the seed of a `createList`), which
- * would reach a generated module whose marker import is stripped.
- */
-const readsHarvest = (
-	ctx: ExtractContext,
-	nodes: readonly AstNode[],
-	enclosing: Iterable<string> = [],
-): boolean =>
-	nodes.some(node =>
-		[...freeIdentifiers(node)].some(
-			name =>
-				markerOf(ctx, { type: 'Identifier', name }, enclosing) === 'harvest',
-		),
-	)
 
 /** The refusal for a `harvest()` call the compiler does not consume. */
 const misplacedHarvest = (
@@ -326,8 +308,9 @@ export const extractSetup = (
 	const contextRefs = new Set<string>()
 	const typeCtx: TypeContext = { paramsNode, setupInits }
 	for (const stmt of setupStmts) {
-		// A `harvest()` seed (ADR 0046 s7): consumed here, so every other
-		// read of the marker in the statement is one no module can run.
+		// A `harvest()` seed (ADR 0046 s7) is consumed here; any other
+		// reference to the marker is the unclaimed-marker sweep's
+		// (`reportUnclaimedMarkers`, after extraction).
 		const listHarvest = listHarvestOf(ctx, stmt)
 		if (listHarvest?.form === 'malformed') {
 			ctx.diagnostics.push(
@@ -336,27 +319,6 @@ export const extractSetup = (
 					listHarvest.call,
 					listHarvest.what,
 					listHarvest.fix,
-				),
-			)
-			continue
-		}
-		const harvestRest =
-			listHarvest?.form === 'list'
-				? [
-						listHarvest.seed,
-						...listHarvest.marker.entries.map(entry => entry.value),
-						...asArray(
-							(asArray(stmt.declarations)[0]?.init as AstNode | undefined)
-								?.arguments,
-						).slice(1),
-					]
-				: [stmt]
-		if (readsHarvest(ctx, harvestRest)) {
-			ctx.diagnostics.push(
-				misplacedHarvest(
-					ctx,
-					stmt,
-					'A `harvest()` call outside the seed of a `createList()`',
 				),
 			)
 			continue
@@ -998,7 +960,8 @@ export const extractItemSetup = (
 		// The `harvest()` marker resolves against the item's scopes: its
 		// binding, key and setup names, and every enclosing item's
 		// (LT-442's rider). An item's list is seeded from the item on both
-		// sides, so nothing is harvested and no position here consumes it.
+		// sides, so nothing is harvested; any other reference here is the
+		// unclaimed-marker sweep's.
 		const enclosing = [...own.keys(), ...ctx.loopBound, ...signals.keys()]
 		if (listHarvestOf(ctx, stmt, enclosing)) {
 			ctx.diagnostics.push(
@@ -1006,16 +969,6 @@ export const extractItemSetup = (
 					ctx,
 					stmt,
 					"A `harvest()` seed on a list declared in a reactive-list item's setup",
-				),
-			)
-			continue
-		}
-		if (readsHarvest(ctx, [stmt], enclosing)) {
-			ctx.diagnostics.push(
-				misplacedHarvest(
-					ctx,
-					stmt,
-					'A `harvest()` call outside the seed of a `createList()`',
 				),
 			)
 			continue

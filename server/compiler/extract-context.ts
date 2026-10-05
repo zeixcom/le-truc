@@ -73,6 +73,13 @@ export type ExtractContext = {
 	 */
 	markers: ReadonlyMap<string, MarkerName>
 	/**
+	 * The marker references a consumer read (the `css` tag of the root's
+	 * `<style>`, a `harvest()` callee in a `createList` seed). After
+	 * extraction, every other reference to a marker binding is refused
+	 * (`reportUnclaimedMarkers`, LTC005).
+	 */
+	claimedMarkers: Set<AstNode>
+	/**
 	 * The module's own `type` aliases and interfaces, by name — what a list
 	 * item type resolves through for the per-field harvest (ADR 0046 s7).
 	 */
@@ -134,6 +141,7 @@ export const createExtractContext = (
 	parserFallbackRefsOf: () => EMPTY_NAMES,
 	composeImports: new Map<string, string>(),
 	markers: new Map<string, MarkerName>(),
+	claimedMarkers: new Set<AstNode>(),
 	moduleTypes: new Map<string, AstNode>(),
 	setupInits: new Map<string, AstNode>(),
 	loopBound: [],

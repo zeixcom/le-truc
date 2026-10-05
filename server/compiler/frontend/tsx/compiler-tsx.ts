@@ -39,7 +39,7 @@ import {
 	runFrontEnd,
 	type SurfaceAdapter,
 } from '../../front-end'
-import { markerOf } from '../../imports'
+import { claimMarker, markerOf } from '../../imports'
 import type { StylesheetRead } from '../../template-output'
 import { lowerElement } from './lower-tsx'
 import { type AstNode, parseTsxModule } from './to-estree'
@@ -95,6 +95,7 @@ const styleElementStylesheet = (
 						at: tag,
 						tag: ctx.source.slice(tag.start ?? 0, tag.end ?? 0),
 					}
+		claimMarker(ctx, tag)
 		template = expr.quasi as AstNode | undefined
 	}
 	if (!template || template.type !== 'TemplateLiteral')

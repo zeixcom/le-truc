@@ -28,6 +28,7 @@
 import type { AstNode } from './ast-node'
 import {
 	asArray,
+	forEachFreeIdentifier,
 	freeIdentifiers,
 	identifierName,
 	isNode,
@@ -220,6 +221,37 @@ export const markerOf = (
 	const name = identifierName(node)
 	if (!name) return null
 	return withoutShadowed(ctx.markers, enclosing).get(name) ?? null
+}
+
+/**
+ * Record that a consumer read the marker reference `node`: the sweep
+ * (`reportUnclaimedMarkers`) leaves it alone.
+ */
+export const claimMarker = (ctx: ExtractContext, node: unknown): void => {
+	if (isNode(node)) ctx.claimedMarkers.add(node)
+}
+
+/**
+ * Refuse every reference to a marker binding inside the component function
+ * that no consumer claimed (LTC005): the marker import is stripped from both
+ * generated modules, so an unconsumed reference would reach one unbound.
+ * `markers` is the import table before component-scope shadowing — the walk
+ * resolves shadowing itself, through every scope inside `fn`. Generic over
+ * `MARKER_NAMES`: each marker's copy lives in `diagnostic.misplacedMarker`.
+ */
+export const reportUnclaimedMarkers = (
+	ctx: ExtractContext,
+	fn: AstNode,
+	markers: ReadonlyMap<string, MarkerName>,
+): void => {
+	if (markers.size === 0) return
+	forEachFreeIdentifier(fn, identifier => {
+		const marker = markers.get(String(identifier.name))
+		if (!marker || ctx.claimedMarkers.has(identifier)) return
+		ctx.diagnostics.push(
+			diagnostic.misplacedMarker(ctx.source, identifier, marker),
+		)
+	})
 }
 
 /**

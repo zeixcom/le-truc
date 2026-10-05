@@ -250,9 +250,9 @@ export type HarvestSeedIR = {
 /** One field of a resolved list item type (ADR 0046 s7). */
 export type ListItemFieldIR = {
 	name: string
-	/** The field's type annotation text, as authored. */
+	/** The field's type annotation text, as authored; `| undefined` appended for an optional field. */
 	typeText: string
-	/** The parser its type infers, or null (an object, a `Date`, a union). */
+	/** The parser its type infers, or null (an object, a `Date`, a union, an optional field). */
 	parser: InferredParserIR | null
 }
 

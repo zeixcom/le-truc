@@ -582,6 +582,140 @@ type Task = { id: string; due: Date }`,
 	}
 })
 
+/* === An optional field has no inferred parser (review finding 1) === */
+
+const NOTE_PRE = `import { createList } from '@zeix/le-truc'
+import { harvest } from '@zeix/le-truc-compiler/macros'
+type Note = { id: string; label: string; note?: string }`
+
+const noteParts = (seed: string): Parts => ({
+	pre: NOTE_PRE,
+	params: '{ rows = [] }: { rows?: Note[] }',
+	props: '{ notes: string }',
+	setup: `expose({
+			notes: () => items.get().map(row => row.note ?? '<undefined>').join(','),
+		})`,
+	list: {
+		decl: `const items = createList<Note>(${seed}, { keyConfig: row => row.id })`,
+		item: 'row',
+		row: '<li><span class="label">{row.get().label}</span><i data-note={() => row.get().note}></i></li>',
+	},
+})
+
+describe('an optional field needs a declared parser (LT-429 review)', () => {
+	for (const surface of SURFACES) {
+		describe(surface, async () => {
+			test('without a harvest() entry it is LTC076', () => {
+				const result = compile(
+					surface,
+					`c-optional-${surface}`,
+					noteParts('rows'),
+				)
+				expect(codesOf(result)).toEqual(['LTC076'])
+				expect(errorsOf(result)[0]?.message).toContain(
+					'Field `note` of list `items` has type `string | undefined`, which the compiler infers no parser from',
+				)
+			})
+
+			const tag = `c-note-${surface}`
+			const result = compile(
+				surface,
+				tag,
+				noteParts('harvest(rows, { note: v => v ?? undefined })'),
+			)
+			const component = result.component
+			if (!component) throw new Error(JSON.stringify(result.diagnostics))
+			const markup = await render(component.serverCode, {
+				rows: [
+					{ id: 'a', label: 'With', note: 'kept' },
+					{ id: 'b', label: 'Without' },
+				],
+			})
+			const { realm, html, diagnostics } = await mount(
+				`note-${surface}`,
+				tag,
+				component.clientCode,
+				markup,
+			)
+			afterAll(() => realm.dispose())
+
+			test('a declared entry round-trips undefined', () => {
+				expect(result.diagnostics).toEqual([])
+				expect(component.clientCode).toContain(
+					"note: (v => v ?? undefined)(el.querySelector('i')?.getAttribute('data-note')),",
+				)
+				expect(diagnostics).toEqual([])
+				expect(html).toBe(serialized(markup))
+				const host = realm.document.querySelector(tag) as HTMLElement & {
+					notes: string
+				}
+				expect(host.notes).toBe('kept,<undefined>')
+			})
+		})
+	}
+})
+
+/* === Every unclaimed marker reference is refused (review finding 2) === */
+
+describe('a marker reference no consumer reads is LTC005 (LT-429 review)', () => {
+	const strayHarvest = 'A `harvest()` call outside the seed of a `createList()`'
+	for (const surface of SURFACES) {
+		describe(surface, () => {
+			const refused = (tag: string, row: string, pre = DUE.pre) => {
+				const result = compile(surface, tag, {
+					...DUE,
+					pre,
+					list: { ...DUE.list, row },
+				})
+				return errorsOf(result).map(d => ({
+					code: d.code,
+					message: d.message,
+					at: result.source.slice(d.location.start, d.location.end),
+				}))
+			}
+			const ROW_TAIL =
+				'<span class="label">{task.get().label}</span><time datetime={() => String(task.get().due)}></time>'
+
+			test('harvest() in a template expression', () => {
+				const errors = refused(
+					`c-stray-text-${surface}`,
+					`<li>${ROW_TAIL}<b>{() => String(harvest([], {}).length)}</b></li>`,
+				)
+				expect(errors).toHaveLength(1)
+				expect(errors[0]?.code).toBe('LTC005')
+				expect(errors[0]?.message).toContain(strayHarvest)
+				expect(errors[0]?.at).toBe('harvest')
+			})
+
+			test('harvest() in a handler', () => {
+				const errors = refused(
+					`c-stray-handler-${surface}`,
+					`<li>${ROW_TAIL}<button type="button" onClick={() => console.log(harvest([], {}))}>x</button></li>`,
+				)
+				expect(errors).toHaveLength(1)
+				expect(errors[0]?.code).toBe('LTC005')
+				expect(errors[0]?.message).toContain(strayHarvest)
+			})
+
+			test('a css tag outside <style>', () => {
+				const errors = refused(
+					`c-stray-css-${surface}`,
+					`<li>${ROW_TAIL}<button type="button" onClick={() => console.log(css\`p {}\`)}>x</button></li>`,
+					surface === 'tsrx'
+						? `${DUE.pre}\nimport { css } from '@zeix/le-truc-compiler/macros'`
+						: DUE.pre,
+				)
+				expect(errors).toHaveLength(1)
+				expect(errors[0]?.code).toBe('LTC005')
+				expect(errors[0]?.message).toContain(
+					'A `css` tag outside the content of the root’s `<style>`',
+				)
+				expect(errors[0]?.at).toBe('css')
+			})
+		})
+	}
+})
+
 /* === harvest() is recognized by binding, in one position === */
 
 describe('harvest() resolves by binding, in its one position (LT-429, LT-442 rider)', () => {
