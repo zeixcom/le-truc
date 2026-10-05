@@ -207,6 +207,97 @@ Full entry text: `git log -p -- DONE.md`.
 
 **Since the 2026-10-03 prune:**
 
+- [x] LT-186: A TSRX rule for an unkeyed element sibling of a `@for` in a reconcile container (LT-185's compiler half). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-371
+  **Context:** LT-185 cost form-tokenbox its only text input: the `.tsrx` port dropped the
+  `data-unreconciled` attribute, `reconcile()` removed the input as an unkeyed child of
+  `data-container`, and nothing said so. LT-185 added the DEV_MODE warning for the runtime half.
+  This is the compiler half, and the **user's direction (2026-09-06) is that TSRX is the better
+  channel precisely because it is earlier** — the author learns at compile time instead of by
+  opening a browser in dev mode. The shape is statically decidable for the `.tsrx` corpus: an
+  element sibling of a `@for` inside the same `[data-container]`, carrying neither `data-key`
+  nor `data-unreconciled`, will be removed at the first reconcile. Note the two channels are
+  **complementary, not alternatives** — the compiler cannot see hand-authored HTML written by a
+  library consumer, which is the case the runtime warning keeps covering. Do not retire the
+  LT-185 warning when this lands.
+  **Channel:** compiler (a new `TSRX0NN`), per ADR 0028 sub-design 1 — **confirmed at the
+  LT-185 review**, and it is the user's direction: the compiler is earlier than a browser
+  dev-mode warning. **Tier:** 1 (Prevented). **Error, not warning** — decided here so it is not
+  re-litigated at implementation: the compile-warning baseline's target is zero (ADR 0029 s6,
+  REQUIREMENTS M23), so a warning would either be fixed immediately or break the baseline, and
+  the fix-it is one attribute. Check the false-positive shape FIRST — a container that
+  legitimately self-cleans a dirty server render: if a corpus component needs that, come back
+  before writing the rule rather than weakening it.
+  **A deviation from ADR 0028's usual pairing, stated so it is not "fixed":** the ADR's Prevented
+  tier says the runtime check "remains, behaving as Contained". Here the runtime half is LT-185's
+  DEV_MODE advisory, not a Contained error — nothing fails at runtime, so do NOT convert it to a
+  `console.error` or invent an error class to match the pattern.
+  **Copy:** follows `writer` → error-messages; check it against LT-185's runtime message so
+  the two agree (the ADR 0028 lifecycle applies — this introduces a code).
+  Acceptance: the form-tokenbox shape at its pre-LT-185 state produces the diagnostic; a sibling
+  carrying `data-unreconciled` does not, and neither does `module-list.tsrx` (whose container
+  holds only the `@for`) — pin both negatives, the vacuous assertion is the failure mode; the
+  compile-warning baseline stays at 0 over the corpus; `bun test server` green.
+  **ADR 0037 rider (2026-09-21):** reactive conditions inside a reconcile container are
+  **banned** (compiler, tier 1) until this rule exists — and this rule must also cover (or
+  explicitly exempt) ADR 0037's arm templates as container children. See
+  [ADR 0037](adr/0037-reactive-conditions-via-template-cloned-arms.md) sub-design 5.
+
+  **Changed:** the compiler refuses an authored element (or composed element) beside a reactive-list loop inside the loop's reconcile() container when it carries neither `data-key` nor `data-unreconciled` — the list removes it on the first reconcile (new **LTC074**, tier 1 Prevented, an error not a warning, raised in shared loop analysis so both surfaces get it). The ADR 0037 rider is discharged: arm sets in the container stay LTC063's, and the new rule exempts them — their inert arm templates can never be container children through a legal compile; a non-duplication test pins that.
+
+  **How:** the check sits in `runReconcileLoops` (`server/compiler/analysis/loops.ts`) right after the container query registers: it walks the container's children, skips the loop output and the `@empty` arm's roots (the server stamps those `data-unreconciled`, LT-212 — they sit in the tree as `output`'s siblings and would otherwise false-positive), flags `compose` children via `ComposeAttrIR`'s ref/arg/pass-only shape (a composed element can carry neither attribute, so its fix-it moves it out), and flags `element` children lacking both attributes. Diagnostic: `diagnostic.unkeyedSiblingInReconcileContainer`; copy agrees with LT-185's runtime message. Pins: a ranges test (positive + the `data-unreconciled`, bare-container and `@empty` negatives on both surfaces), a cross-surface parity case, a compose-fixture pin of the composed fix-it variant, and a corpus test compiling `module-list.tsrx` + `form-tokenbox.tsrx` front-end-plus-analysis clean. `features.test.ts`'s arg-seeded-harvest fixture carried the bug shape itself (a static header `<li>` with neither attribute — its runtime twin would have been removed) and now opts out via `data-unreconciled`; the harvest-filter assertion under test is unchanged. The LT-185 DEV_MODE advisory is untouched, per the entry.
+
+  **Check:** gates in the worktree: `test:server` 2888 pass / 0 fail (after `build:docs` — a fresh worktree has no built docs/ and the serve-route tests read it), `typecheck` clean, `check:contract` ✓, `check:corpus` exit 0 with the compile-warning baseline still 0 and zero LTC074 hits — the false-positive probe ran before the rule was trusted, per the entry's "check the false-positive shape FIRST". `biome check` clean on the changed paths. Two doubts for review: **(1) the code is LTC074, not LTC073** — the stale session had drafted LTC073 before the `queue/ITERATION.md` 2026-10-04 note reserved LTC072 for LT-429 and LTC073 for LT-417 (in flight in a parallel worktree, 9 files deep); renumbered to the next free code with the ledger entry added — ITERATION.md's "next free diagnostic code" note now owes "LTC075". **(2)** a *server-mode* conditional directly in a reconcile container renders unkeyed element roots that the first run would also remove; the rule exempts `conditional`/`try` nodes entirely (no tag to name in the ruled message shape, which speaks element/compose) and no corpus component does this — worth a follow-up LT if that shape should be refused too.
+  **Review:** Approved (Architect, 2026-10-05). LTC074, not LTC073, because LTC073 is LT-417's. LT-417's branch carries the additive merge resolution, so integrate this one first. A server-mode conditional directly in a reconcile container is LT-431.
+
+- [x] LT-277: Seam hardening from the LT-267 review — glob dot-rule edges, `fileExists` contract, doc enumeration. — reviewed ✓
+  **Area:** server
+  **Context:** the LT-267 review (2026-09-21) probed `server/runtimes/glob.ts` beyond the
+  real-tree parity tests and found two edges where the seam's categorical claims do not
+  hold, both verified live at 4097198c. Neither is reachable with any glob the repo or a
+  realistic consumer writes today (they need an explicit-dot pattern segment, or a
+  dot-prefixed path under a trailing `**`), but both contradict claims pinned in `glob.ts`'s
+  JSDoc and `server/SERVER.md` — and the whole point of the shared translator is that these
+  semantics are decided ONCE:
+  1. **Trailing `**` matcher leak.** The trailing-`**` branch compiles to an unguarded
+     `.*`: `matchGlob('mocks/**', 'mocks/.tmp')` and `matchGlob('**', '.hidden')` are TRUE
+     while no scanner ever yields those paths — violating "a watcher filter cannot admit a
+     file the scanner would never yield". Give the remainder the shape the interior `**`
+     already uses (zero-or-more dot-guarded directory segments plus an optional dot-guarded
+     file) and pin it with a test.
+  2. **Explicit-dot scan patterns diverge per runtime.** `scanGlobSync` skips dotfiles
+     unconditionally during the walk, but `Bun.Glob` yields files matched by an
+     explicit-dot pattern segment (`new Bun.Glob('.env')` scans it; the walk returns `[]`).
+     A consumer configuring a dot-prefixed source glob would get a different corpus under
+     Bun than under Node — the exact divergence the seam exists to prevent. Decide at
+     pickup: make the walk's skip rule pattern-aware (a pattern segment starting with `.`
+     un-skips that level, matching Bun), or declare dot-prefixed patterns outside the
+     grammar and reject them at config resolution. **Channel and tier (ADR 0028 s1) if
+     rejected:** compiler/config resolution, tier 1 Prevented; if adopted, runtime seam
+     semantics with parity tests, tier 2 Contained.
+  3. **`node.ts` `fileExists` returns true for directories** (`access(F_OK)`) while the
+     interface says "regular file exists" — the Bun impl matches the contract. Unreachable
+     today (every caller passes a file path), but it is latent per-runtime divergence
+     inside the seam itself; check the file type, not just existence.
+  4. **Doc accuracy riders:** SERVER.md's "No Bun.* outside the seam" exception list omits
+     `corpus-portability-check.ts` and `codemod-react-jsx.ts` under a "the only exceptions
+     are" phrasing; and the portability check's diff report prints "first differing byte
+     at N" where N is a code-unit index computed by a variable named `line`. One-line
+     fixes. **Rider:** `scripts/i18n-sync.ts` still globs `examples/**/*.tsrx` only (the
+     LT-267 handoff's unfiled residue) — fold here or into wave 4's migration of the first
+     i18n-declaring `.tsx` component; until then it silently prunes nothing.
+  **Check:** `server/tests/runtimes.test.ts` pins the trailing-`**` dot rule and the chosen
+  dot-segment scan semantics on BOTH implementations; `check:portability` stays 3/3
+  byte-identical.
+
+  **Changed:** the glob seam's two categorical holes are closed and the doc claims now hold. (1) A trailing `**` matcher keeps the dot rule: `matchGlob('mocks/**', 'mocks/.tmp')` and `matchGlob('**', '.hidden')` are false — the remainder has the interior `**`'s shape (zero or more dot-guarded directory segments plus one dot-guarded file). (2) Explicit-dot scan patterns adopted as runtime seam semantics (the entry's first branch, tier 2 Contained): a pattern segment starting with `.` (`.env`, `.hidden/*.ts`, `**/.rc`, `.*`) un-skips the dot entries it matches during the Node walk, mirroring `Bun.Glob`'s scanner, so a dot-prefixed source glob configures the same corpus under Bun and Node. (3) `node.ts` `fileExists` answers `stat().isFile()` — a directory answers false, matching the Bun half and the interface's "regular file exists". (4) Doc riders: SERVER.md's exception sentence is now complete (see How), and the portability diff report prints "first differing character at code unit N" from an `index`, not a `line`.
+
+  **How:** `globToRegExp`'s trailing branch compiles the dot-guarded remainder; the walk (`scanGlobSync`) consults `dotSegmentMatchers(pattern)` — whole-name matchers over the pattern's explicit-dot segments, pruning only, with the full-path regex still deciding every yielded file — so walk and match agree by construction. `server/tests/runtimes.test.ts` pins the trailing-`**` rule on the matcher and seven dot-segment patterns scanned through ALL THREE paths (`scanGlobSync`, `nodeIO.scanGlob`, `bunIO.scanGlob` — the last being Bun's own scanner, so Bun-vs-walk parity is asserted directly), plus a scanned-path-passes-matcher sweep and the `fileExists(directory)` pair. SERVER.md's "No Bun.* outside the seam" list: the stale session had added the review's two missing files, but the "only exceptions" claim was still false — completed it with `routes.ts` (dev server), `contract-check.ts`, `measure-size-bet.ts`, and `lib/substrate-probe.ts` (grouped under `substrate-evaluation.ts`, its only consumer); verified by grepping `Bun\.` across scripts/ and server/ (corpus-config/corpus-sources hits are comment prose only). The i18n-sync rider is discharged by prior work: the script already walks the CONFIGURED scan (`collectCorpusSources` + `compileCorpus`, the LT-273 migration) — variant-aware, so `.tsx` declarers are covered; no glob is left to fold.
+
+  **Check:** gates in the worktree: `bun test server/tests/runtimes.test.ts` 32/32; `test:server` full suite pass, 0 fail; `check:portability` 3/3 byte-identical; `typecheck` clean; `biome check` clean on the changed server paths. Notes for review: no repo glob uses explicit-dot segments or a trailing `**` today, so no configured behavior changes — the strictness only removes dot paths no scanner ever yielded. `scripts/corpus-portability-check.ts` carries a PRE-EXISTING biome format violation at HEAD (the multi-line `copyFileSync` at ~line 171); `scripts/` is outside `lint:server`'s scope (`./server` only), so it gates nothing — left alone to keep the diff on-task.
+  **Review:** Approved (Architect, 2026-10-05). Explicit-dot segments adopted as seam semantics (tier 2 Contained, parity-pinned on all three scan paths). The i18n-sync rider is discharged by LT-273. The biome format drift in `corpus-portability-check.ts` predates this task, and `scripts/` is outside lint scope.
+
 - [x] LT-280: Per-item effect channels in reactive-list loops — the lowering covers text fill + events and nothing richer (LT-266 evidence). **Ruled 2026-10-04 → ADR 0046.** — reviewed ✓
   **Area:** design
   **Ruled (owner + Architect, design session 2026-10-04):** recorded in ADR 0046
@@ -228,10 +319,105 @@ Full entry text: `git log -p -- DONE.md`.
   **Implementation:** LT-422 → LT-423 → LT-424, LT-425 → LT-426; LT-427, LT-428 independent;
   LT-429 (design first) after LT-423.
 
+- [x] LT-305: Baseline guard — fail the build when shipped code needs a feature newer than the pinned baseline (REQUIREMENTS § Browser support). **Ships in 3.0.** — reviewed ✓
+  **Area:** runtime
+  **Context:** Owner ruling 2026-09-24: the runtime baseline is **Baseline 2023**, pinned per
+  major release to three years before it (3.0 → 2023); **minor and patch releases never move
+  it**. The stated floor drifted once already (REQUIREMENTS said 2020 while `Object.hasOwn`
+  set 2022), so a check replaces the prose. Record the pinned year in one place
+  (the runtime's `package.json`, e.g. `"leTruc": { "baseline": 2023 }`; the baseline belongs
+  to the runtime's major, ADR 0034 s8) and scan what ships: `src/`, the bundled
+  `@zeix/cause-effect`, and the compiler's generated client modules and emitted CSS under the
+  default `cssTargets`, against that year. Resolve features to Baseline dates with `web-features`;
+  choose the scanner (a browserslist `baseline 2023` query fed to an API/syntax compat
+  linter, or a direct `web-features` mapping) and justify it in the handoff. Features the
+  runtime uses only behind a guard (`CustomStateSet`, ARIA reflection on internals) are
+  allowlisted by name with the reason, never by pattern. A check that the pinned year only
+  changes on a runtime major version bump is part of the gate. **Channel: build check, tier 1**
+  (a CI failure; no runtime half).
+  **Check:** the gate is green at HEAD with Baseline 2023; a fixture using a 2024-only API
+  unguarded fails it; bumping the year without a major version fails it.
+
+  **Changed:** new tier-1 build gate `bun run check:baseline` (`scripts/check-baseline.ts`, scanner in `scripts/lib/baseline.ts`, CI step after `check:size`), the pin `"leTruc": { "baseline": 2023 }` in package.json, devDependency `web-features@3.40.1` (exact pin, data-only), and `CompiledSpanInfo` gains `cssPath`/`authoredCss` (additive). Green at HEAD.
+  **How:** I chose a direct `web-features` mapping over browserslist plus a compat linter. web-features gives each BCD compat key its own Baseline date. TypeScript's checker (types `[]`, platform libs only) resolves member receivers through mixins and base interfaces to the BCD name (`api.Element.ariaLabel`, `javascript.builtins.Promise.withResolvers`). css-tree names CSS properties, values, selectors, at-rules, media features, functions and units. A small `SYNTAX_KEYS` table covers post-ES2020 syntax. A compat linter would add an ESLint stack that covers a curated API subset and no CSS. The scan covers `index.ts`, `src/`, cause-effect's source and the corpus compiled under `DEFAULT_CSS_TARGETS` (into `server/generated/baseline/`). Of the corpus output, only what the compiler added is judged: client findings inside emitter source spans, and emitted CSS keys the flattened authored sheet already uses, count as author code (REQUIREMENTS: the author's own baseline). They are listed but do not fail the gate. The allowlist holds exact keys with a reason each: `ElementInternals.states` and `CustomStateSet.add`/`.delete` (guarded in `bindState`), and `CustomElementRegistry.get` (a BCD data gap: no Safari support recorded on that key, though its feature is Baseline 2020). A stale entry fails the gate. The pin rule compares with the latest `v*` tag reachable from HEAD: the year may move only with a higher major. A release without a pin (v2.6.0) constrains nothing, and no reachable tag fails the gate (CI checkout is now `fetch-depth: 0`).
+  **Check:** `bun run check:baseline` green; `test/baseline.test.ts` covers the 2024-API fixture failing, the year bump without a major failing, the syntax and CSS mapping, and allowlist staleness. Doubts for review: (1) the author/compiler split is my reading of REQUIREMENTS § Browser support. Judging corpus author code as-is fails on `cursor`, `user-select`, `:state()`, `light-dark()`, `backdrop-filter` and `getCoalescedEvents`. (2) Allowlisting the `CustomElementRegistry.get` data gap. (3) Coverage limits: `any` receivers, computed keys, Raw-folded CSS. No ARIA-on-internals key is detected because those writes use dynamic keys. Playwright not run (no example behavior change).
+  **Review:** Approved (Architect, 2026-10-04). Ruling: only what the compiler adds is held to the pin. Author spans and the CSS features the authored sheet already uses are the author's baseline (REQUIREMENTS § Browser support): they are reported, not judged. The `CustomElementRegistry.get` allowlist entry is a BCD data gap, kept with its reason.
+
 - [x] LT-342: A `.tsx` spelling for the reactive-list key binding — capability parity (ADR 0032 s6), found by the LT-233 review. **Ruled 2026-10-04 with LT-280 → ADR 0046 s4; implemented by LT-425.** — reviewed ✓
   **Area:** design
   **Needs:** LT-280
   **Ruled (2026-10-04, with LT-280):** neither (a) as weighed here nor (b) nor (c). Cause & Effect lists gain `map((item, key))`/`forEach` (Map.forEach precedent), and `.tsx` spells the reactive loop `items.map((item, k) => …)` over a declared `createList`/`deriveList`; over an Array the second parameter stays the index (an accepted inconsistency, owner). `.tsrx` keeps `key k`. Implementation, including the `loopBindings`/`listItemHandlerFix` changes and the parity case, is LT-425.
+
+- [x] LT-353: Reject unrecognized `truc:`-namespaced attributes at classification, on both surfaces (LT-251 review). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-371
+  **Context:** `truc:` is the host-owned attribute namespace (LT-128), but
+  `classify-attributes.ts` recognizes names one by one (`truc:pass`, `truc:html`) and lets
+  anything else fall through to the ordinary static/server arms. So a retired `truc:case`, or
+  a typo like `truc:htm`, renders as a literal attribute the browser ignores: silently wrong.
+  That is the same failure LT-222 closed for `class:`. In `.tsx` a tsc error covers authored
+  names, but the compiler itself still accepts them, so the two surfaces diagnose differently
+  (the LT-242 parity bar). After the recognized names, reject any other `truc:*` name as
+  LTC006 (malformed or unsupported attribute shape). Name the known vocabulary in the message,
+  and give a retired name (`truc:case`/`truc:case-type`) a pointer to the ICU pattern
+  replacement (ADR 0030 s4). **Channel:** compiler. **Tier:** 1 Prevented (statically
+  decidable, no runtime half). **Copy:** follows `writer` → error-messages (error-message lifecycle).
+  **Check:** add a `diagnostic-parity.test.ts` row for a `truc:bogus` attribute on both
+  surfaces; the corpus stays warning-free.
+
+  **Changed:** the attribute classifier now rejects any `truc:*` name it does not recognize as LTC006, the same on both surfaces. A raw element accepts `truc:pass` and `truc:html`. A compose site accepts only `truc:pass`, so a `truc:html` there used to be forwarded as a dead server arg. The retired `truc:case`/`truc:case-type` point to the ICU pattern (ADR 0030 s4).
+  **How:** `unknownTrucAttrReason()` in `server/compiler/classify-attributes.ts` runs after the recognized names in `classifyAttribute` and `classifyComposeAttribute`, and its message names the vocabulary that element kind accepts. Tests: parity rows for `truc:bogus` and `truc:case`, plus unit tests for the typo, the retired pair and a compose site. Docs: a `HOST_PROFILE.md` bullet and the LTC006 row in `skills/le-truc/references/errors.md`.
+  **Check:** `bun test server/tests/compiler/tsx/diagnostic-parity.test.ts server/tests/compiler/diagnostics.test.ts`. Gates green: test:server (2888 pass), biome check server/, typecheck, check:contract, check:corpus (0 warnings), build:docs, check:links. Doubt: the compose-site arm goes a little beyond the entry's raw-element wording. It is the same silent fallthrough, so I included it. The copy could use a `writer` look.
+  **Review:** Approved (Architect, 2026-10-04). The compose-site arm, which accepts only `truc:pass`, is in scope: it is the same fallthrough.
+
+- [x] LT-356: An unparseable or non-object catalog FILE is silent in the census and destroyed by `i18n:sync` (LT-249 review). — reviewed ✓
+  **Area:** server
+  **Context:** LT-249 made non-string catalog VALUES loud. The file-level sibling is worse.
+  If `i18n/<locale>.json` fails `JSON.parse` (a trailing comma, a merge-conflict marker) or
+  its top level is not an object, `readCatalogs` (`readJson` → `undefined` → `asRecord` →
+  `{}`) treats the locale as empty. The census then reports every declared key `missing`,
+  which is loud but wrongly attributed. `scripts/i18n-sync.ts` does the same (`catch {
+  catalog = {} }`) and then **overwrites the file** with empty placeholders, so a
+  translator's whole catalog is destroyed by one syntax error. **Channel and tier (ADR 0028
+  s1):** the census stays a report (the build never fails on catalog data). Sync, the one
+  writer, must refuse: an unreadable catalog aborts the sync for that locale, names the file
+  and the parse error, and writes nothing to it or to its manifest entries. **How:** make
+  `readCatalogs` distinguish "absent" from "unreadable" (for example a per-locale
+  `unreadable: string` error), and have the census record it once per locale instead of N
+  `missing` records (new status or a `malformed` record on the file; decide at pickup).
+  Sync reads through the same path instead of its own `JSON.parse`. **Acceptance:** a
+  scratch catalog with a trailing comma yields one census record, not N `missing`; sync
+  leaves the file byte-identical and exits non-zero naming it; committed catalogs are
+  unaffected. **Copy:** follows `writer` → error-messages.
+
+  **Changed:** `readCatalogs` (now exported from `server/effects/i18n.ts`) tells an unreadable catalog file apart from an empty one. "Unreadable" means it does not parse, or its top level is not an object. `Catalogs.unreadable` is optional, so injected test catalogs still type-check. The census records such a file once, as a `malformed` record whose key is the file name (`de.json`), and skips that locale's declared-key walk, so no `missing` records appear. `i18n:sync` now reads through `readCatalogs`. It skips an unreadable locale, leaving the file and its manifest entries untouched, syncs the other locales, and then exits 1, naming the path and the parse error.
+  **How:** Record shape: I reused the existing `malformed` status (it already covers non-string values per LT-249, with the reason given in `detail`) and put the file name in `key`. No new status, so `TRANSLATION_GAP_STATUSES`, the report buckets and the census types are unchanged. Updated the docs for `TranslationGap.key`, `LE_TRUC_COMPILER.md` and `i18n/README.md`. Added 3 regression tests in `server/tests/compiler/i18n.test.ts`.
+  **Check:** I put a trailing comma in a scratch copy of `i18n/de.json` in the worktree and ran `bun run i18n:sync`. The census showed 1 record. Sync exited 1, named the file, and left `de.json` and `manifest.json` byte-identical (same shasum before and after). I then restored the file. Gates: test:server 2886/0, typecheck, check:corpus, check:contract and `biome check` on server/ and the script all pass, and build:docs passes. Doubts: (1) the generic `malformed` reason ("the entry is not a valid ICU pattern…") is a slightly loose fit for a whole file; the `detail` field carries the exact cause. (2) Sync still reads `manifest.json` with its own `catch {}` → `{}`, so an unparseable manifest would still be overwritten. That is outside this entry's scope and could be a follow-up.
+  **Review:** Approved (Architect, 2026-10-04). Reusing `malformed` with the file name as `key` is the ruling for file-level records. The refused locale keeps its manifest entries, because the manifest is rewritten from the parsed object. An unparseable `manifest.json` is LT-430.
+
+- [x] LT-374: Enforce the raw-value-source rule for formatted reactive values (D-20). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-371
+  **Context:** `HOST_PROFILE.md` data account bullet 6 (2026-10-01): text formatted for display
+  does not parse back into state, so a formatted reactive value needs a canonical raw source —
+  `value`, `valuenow` or `datetime` on an owned descendant (`<data value>`, `<time datetime>`),
+  or a host attribute — and the generated client harvests from it. ADR 0043 s6 already relies on
+  the rule. Two halves: (1) the compiler rule — a harvested prop whose only render site is
+  formatted text (`Intl` formatting, a message call with a `number`/`date` argument,
+  `toLocaleString`) with no raw source is an error, naming the `<data value>` / `<time datetime>`
+  fix; (2) emit-client harvests from the raw source when one exists. Decide in the task how
+  "formatted" is recognized and record it in HOST_PROFILE. LT-109/LT-110 (P5) format numbers and
+  are the first corpus cases.
+  **Channel/tier:** compiler, tier 1 Prevented (LTC059). Runtime: none — a harvest of formatted
+  text cannot know the text was formatted. Copy follows `writer` → error-messages.
+  **Verification:** a failing fixture per formatting kind; a passing `<data value>` and
+  `<time datetime>` fixture whose harvest round-trips; corpus byte-identical or each change
+  justified; full gates.
+
+  **Changed:** new LTC059 (tier 1 Prevented, both surfaces): a signal seeded from server args whose only render site is formatted text, with no raw value source, fails the compile naming the reactive `<data value>` / `<time datetime>` / host-attribute fix; it replaces the generic LTC005 for that initializer. Half 2: a raw source rendered from a `number` arg (`<data value={count}>`, a host attribute) now harvests through `Number(…)` instead of seeding the attribute string; reactive `value`/`aria-valuenow`/`datetime` sites already harvested with a parser.
+  **How:** `formattingOf` in `analysis/harvest.ts` recognizes formatting syntactically over the text thunk and, transitively, the setup consts it reads: any `Intl` read, `toLocaleString`/`toLocaleDateString`/`toLocaleTimeString` calls, and a declared message call whose pattern has a number/date argument. Pass 2 records the first formatted text site per signal. Pass 3 raises LTC059 when the arg substitution finds no raw site and nothing else already reported. `PassShared.rawSourceRefused` stops the duplicate LTC005 in `plan.ts`. The recognition rule is recorded in HOST_PROFILE bullet 6. Imported formatters (`getNumberFormatter`) are not recognized; they still get LTC005, never a formatted-text harvest.
+  **Check:** `server/tests/compiler/raw-value-source.test.ts`: 8 failing fixtures (Intl direct and through a const, toLocaleString, toLocaleDateString, message plural/number/date, deriveCell) on both surfaces; 4 passing raw-source fixtures that connect in the simulation realm and re-render the server's formatted text; plus a parity case. Corpus output is byte-identical (diffed generated components before and after). Gates green: test:server, typecheck, check:contract, check:corpus (0 warnings), build:docs, check:links, biome. Doubts: (1) `number` harvests still use `asInteger` on direct sites (decimals truncate; LT-429 flagged this), while arg reads use `Number()`. (2) Boolean args are not coerced. (3) LTC059 can hide a co-occurring module-name LTC005 on the same initializer until the author fixes it.
+  **Review:** Approved (Architect, 2026-10-04). Reviewer nit: `asParamType` moved above `paramDomRead`, which had taken its JSDoc. The `Number()` arg read versus `asInteger` on a direct site is LT-429's question.
 
 - [x] LT-375: Enforce root-is-host and migrate the fragment-root `.tsx` sources (D-07). — reviewed ✓
   **Area:** compiler
@@ -385,6 +571,80 @@ Full entry text: `git log -p -- DONE.md`.
   the first release. An arm set that can't fold for another reason (an unseeded Parser prop) still
   ships the realm's arm, as ADR 0037 s5 intends. The rework's tests are proven to guard the strip:
   with the strip disabled, all four arms tests fail.
+
+- [x] LT-392: Regenerate the declared types and gate an arm-set client against them (LT-385 review finding). — reviewed ✓
+  **Area:** compiler
+  **Context (updated 2026-10-04, Architect):** the REGENERATION half has landed — commit
+  3ed0814b refreshed `index.js` and the arm-form JSDoc, and 56c1a0be regenerated `types/src/`
+  from current sources, so `types/src/helpers/reactive.d.ts:268` now declares `reconcile()`'s
+  arm-form overload. What remains is the GATE half, so this cannot drift again: the declared
+  surface lagged once because nothing checks an emitted arm-set client against it.
+  **Original context (2026-10-02, LT-386):** `types/` was last regenerated at LT-361 and
+  declared only `reconcile()`'s two list-form overloads. No corpus component emits an
+  arm-set client, so `client.golden.test.ts`'s emit-then-check never exercised one; the
+  first ever (LT-385's (g) fixture, `createCell(mode === 'wide')` over a `data-mode` DOM
+  site) fails the golden tsc invocation with "Overload 1 of 2" — the arm-form overload does
+  not resolve against the declared types. LT-389 already owns regenerating
+  `types/src/helpers/reactive.d.ts` as a docs deliverable; this task adds the missing GATE
+  so the declared surface cannot drift from the emitted clients again: confirm `types/` is
+  current against the sources, then pin an emit-then-check of an arm-set client (the (g)
+  fixture is the candidate) in the same shape as `client.golden`'s, so it runs on every
+  suite pass rather than only when a docs build happens to refresh the artifact.
+  **Check:** the arm-set client typechecks against the regenerated declared types under
+  the golden invocation; `check:contract` stays green; run the full `build` to regenerate
+  `types/` and diff for any other stale-surface drift landing in the same pass.
+
+  **Changed:** `client.golden.test.ts`'s emit-then-check now compiles the LT-385g arm-set fixture (`createCell(mode === 'wide')` over `data-mode`, `@if`/`@else`) into the same tsc invocation, asserting it lowers through `reconcile()`'s arm form; verified it reproduces LT-385g's "Overload 1 of 2" against the pre-3ed0814b `reactive.d.ts` and passes against the current one. Full `build` regenerated `types/` with no drift (only `index.js`'s worktree-symlink path comment, restored). Gates: test:server 2883/0, typecheck, check:contract, check:corpus, build:docs green.
+  **Review:** Approved (Architect, 2026-10-04). The async-boundary arm set is not pinned; it gets its first corpus consumer with LT-390.
+
+- [x] LT-415: Test servers take a free port; reuse a running server only when it is this checkout (owner, 2026-10-03). — reviewed ✓
+  **Area:** server
+  **Context:** `test:variants` (`scripts/test-variants.ts`, `PORT = 3000`), Playwright
+  (`playwright.config.ts` `webServer.port: 3000`, `reuseExistingServer: true`) and 48 specs under
+  `examples/` hard-code `http://localhost:3000`. A dev server left on 3000 makes `test:variants`
+  refuse and lets `bun run test` silently test another worktree's or branch's build — and agent
+  sessions cannot see or stop it. Specs use relative URLs (`page.goto('/test/<tag>')`) against
+  Playwright's `baseURL`. `test:variants` always starts its per-surface server on a free port
+  (`Bun.serve({ port: 0 })` or a probe), passes it to `serve.ts` and Playwright, and stops it after
+  each surface. `bun run test` reuses a running server only when `/api/status` identifies the
+  same checkout (repo root and default surface in a JSON body); otherwise it starts its own on a
+  free port. `serve.ts`/`dev.ts` keep 3000 as the interactive default and accept `PORT`.
+  **Channel/tier:** none — test tooling.
+  **Check:** with a foreign server on 3000, `bun run test:variants` and `bun run test` both pass;
+  with this checkout's `bun run dev` on 3000, `bun run test` reuses it; `grep -rn "localhost:3000"
+  examples/` returns nothing.
+
+  **Changed:** test servers take a free port and a run reuses a running server only when it is this checkout. `/api/status` now returns `{ status, root, surface }` JSON — the realpath'd repo root and the `TEST_SURFACE` override (`default` when unset); `serve.ts`/`dev.ts` keep 3000 as the interactive default and accept `PORT`. `test:variants` starts each surface's server on a free port, hands it to Playwright as `TEST_PORT`, and stops it after the surface. `playwright.config.ts` picks the port: `TEST_PORT` when a caller owns the server, else 3000 when `/api/status` names this checkout on the default surface, else a free port; its `baseURL` makes the 48 specs' addresses relative (`/test/<tag>`), and `examples/` is grep-clean of `localhost:3000`. Mock fragments (`/test/:component/mocks/*`) are no longer HMR-enhanced (deviation, below).
+
+  **How:** new `scripts/test-server.ts` (`freePort`, `servesThisCheckout`, `CHECKOUT_ROOT`, `INTERACTIVE_PORT`) runs under both Node (Playwright's runner) and Bun, so it imports nothing from `server/`. The reuse rule compares `/api/status`'s `root` with the caller's own realpath and the `surface` the run expects; the config writes its port choice back to `TEST_PORT` so workers inherit it. **Deviation found on the way:** reusing a dev server injected the HMR script into mock HTML fragments (dev-mode `handleStaticFile` injects into every `.html`), and `module-lazyload` rendered the injected script text as fetched content — "handles empty content gracefully" failed on Chromium and WebKit against `bun run dev`. Mocks are innerHTML fragments, so the mock route now serves them with a fragment flag that skips HMR injection; regression test `development: mock fragments carry no HMR script` pins it. SERVER.md (route table, test-surfaces paragraph, Port and Startup) and `examples/test-setup.md` updated; dev.ts help text documents `PORT`.
+
+  **Check:** foreign server on 3000 → `bun run test` exit 0 (990 passed, 10 pre-existing browser-conditional skips) and `bun run test:variants` exit 0 ("Every variant set passed on every surface"); this checkout's `bun run dev` on 3000 → `bun run test` exit 0 with `DEBUG=pw:webserver` printing "WebServer is already available" (reuse proven, twice: full suite and the lazyload spec); `grep -rn "localhost:3000" examples/` empty. Gates: `test:server` 2887/0 including the new `/api/status` identity, `TEST_SURFACE`, `servesThisCheckout` (same checkout / wrong surface / foreign server / free port) and mock-fragment tests; `typecheck` green; `biome check` on the changed paths clean. Not run: `check:size` (no `src/` change), `build:docs`/`check:links` (no docs-src or emission change). Notes for review: (1) the mock-HMR fix touches server output beyond the entry's literal text — it is what makes the dev-reuse acceptance achievable end to end. (2) `webServer.env` relies on Playwright merging it over `process.env` (verified in the installed 1.62.1 runner); `PLAYWRIGHT=1` also rides the command string. (3) The reuse check races a dev server dying mid-run — same exposure as any `reuseExistingServer` setup.
+
+  Commits on `task/LT-415`: 5926cdb7 (server + config + scripts + docs) and f40bfb6f (the 48 spec conversions — first round left them unstaged via a wrong-cwd path list; same change, no content difference).
+  **Review:** Approved (Architect, 2026-10-05). The mock-fragment HMR exclusion is in scope: dev-server reuse cannot pass without it. `/api/status` now reports the checkout's absolute path. That is acceptable, because the docs server is local tooling and the site ships as static `docs/`.
+
+- [x] LT-417: Refuse a `<style>` block that is not the root's single direct `<style>` child (LT-375 review). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-375
+  **Context:** `resolveTemplateOutput` (`server/compiler/template-output.ts`) hoists only the
+  first direct `<style>` child of the root. A second direct `<style>`, or one nested in a
+  descendant element, compiles with no diagnostic on both surfaces: its CSS is dropped and an
+  empty `<style></style>` renders into the host markup — a silent drop, predating LT-375. Since
+  the owner ruling 2026-09-29 (ADR 0032 s1) a `<style>` child of the root is the only accepted
+  place for the sheet, so refuse every other placement, naming the fix. Extend LTC060 or add a
+  sibling code (next free: LTC072). Correct the JSDoc claim at `template-output.ts` ~70–72 ("no
+  `<style>` placeholder can reach an emitter") in the same change.
+  **Channel/tier:** compiler, tier 1 Prevented, in the shared hoist so both surfaces get it.
+  Runtime: none (a source shape). Copy follows `writer` → error-messages.
+  **Verification:** fixtures on both surfaces (a second direct `<style>`, a nested `<style>`);
+  diagnostic parity; the corpus still builds; full gates.
+
+  **Changed:** a `<style>` block that is not the root's single direct `<style>` child fails the compile (new **LTC073**, tier 1 Prevented, both surfaces, no runtime half): a second direct child of the root ("A second `<style>` block in the root") and one nested in any descendant ("A `<style>` block nested inside an element"), each told that its CSS would be dropped and to merge its rules into the root's single `<style>` child. The JSDoc claim at `template-output.ts` ("no `<style>` placeholder can reach an emitter") is corrected in the same change, as the entry required.
+
+  **How:** the check lives in `resolveTemplateOutput` (the shared hoist, `template-output.ts`): after the first direct `<style>` child is hoisted as the stylesheet, a `walkTemplate` over the root flags every `<style>` element still in the tree, `parent !== root` selecting the nested message variant — composed content included. Diagnostic: `diagnostic.misplacedStyleBlock(source, at, nested)`. The code is **LTC073, not LTC072**: the entry's "next free" predates the 2026-10-04 iteration note that reserves LTC072 for LT-429; the VOCABULARY_LEDGER entry documents the skip. Pins: two cross-surface parity cases (second-direct and nested) with covered-text spans — the second-direct case deliberately trips on the test builders' own trailing `<style>` block, proving the hoist keeps only the first. Docs updated in the same change: HOST_PROFILE.md's output-shape bullet, LE_TRUC_COMPILER.md's stylesheet family, the errors catalog, `compiled.md`, and a CHANGELOG Added bullet.
+
+  **Check:** gates in the worktree: `test:server` 2885 pass / 0 fail (after `build:docs` — fresh worktree), `typecheck` clean, `check:contract` ✓, `check:corpus` exit 0 with zero LTC073 hits and the compile-warning baseline still 0 (no corpus component keeps a misplaced block — the LT-375 migration had already moved them all), `biome check` clean on the changed paths after one format pass over the new parity cases. No doubts; the entry's verification line (fixtures on both surfaces, diagnostic parity, corpus builds, full gates) is satisfied in full.
+  **Review:** Approved (Architect, 2026-10-05). Review commit 395791a1 merges `task/LT-186` into this branch and keeps both LTC073 and LTC074: the two branches append to the same union and ledger lines. Integrate after LT-186.
 
 - [x] LT-418: Bring the `architect` and `writer` skills up to the queue store and the four workflows (SKILLS_REPORT R5 residue). — done ✓
   **Area:** docs
