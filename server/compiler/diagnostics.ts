@@ -17,6 +17,7 @@
  * `VOCABULARY_LEDGER.md` beside this file.
  */
 
+import type { MarkerName } from './imports'
 import type { SourceRange } from './ir'
 import type { SurfaceWording } from './surface'
 
@@ -103,9 +104,11 @@ export type DiagnosticCode =
 	| 'LTC069' // `:global` in a form other than the two whole-rule forms — nested, prefixed, trailing, leading-ancestor, mid-selector, or declarations directly in a bare block (ADR 0033 s6a, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC070' // `:host` directly followed by a qualifier (`:host.x`, `:host:hover`, `:host[attr]`) — matches nothing in a shadow root; the qualifier belongs in the arguments (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC071' // a stylesheet selector descends past a boundary tag (`child-tag .x`, `child-tag > .x`) — its subject is a composed child's content, which the scope always excludes (ADR 0033 s6, LT-399) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC072' // a field of a list item seeded from server args has no harvest site in the item — no text child or reactive attribute reads exactly the field, and the `keyConfig` does not return it verbatim — so the client cannot rebuild the item at connect (ADR 0046 s7, LT-429) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC073' // a `<style>` block that is not the root's single direct `<style>` child — a second direct one, or one nested in a descendant; only the first direct child is hoisted as the stylesheet, so the CSS would be dropped (ADR 0032 s1, LT-417) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC074' // an element sibling of a reactive-list loop in its reconcile() container — directly or as an arm root, in any arm, of a server-mode conditional or a non-async `try` — carries no `data-unreconciled`, so the first reconcile removes it (LT-186, LT-431; an authored `data-key` is no exemption) — tier 1 Prevented, statically decidable; the runtime half is LT-185's DEV_MODE advisory, not a Contained error. Lands out of numeric order: `LTC072` is LT-429's, `LTC073` LT-417's — both reserved before this rule picked
 	| 'LTC075' // a composed element in a reactive-list item whose args or content read the item or key binding — the child renders once, into the extracted `<template>` every item clones (ADR 0030 s9, ADR 0046, LT-355) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC076' // a field of a list item seeded from server args has a harvest site but no parser — its type is not one the compiler infers a parser from (`string`, a string-literal union, `number`, `boolean`; never an optional field) and no `harvest()` entry declares one; or the item type itself is unreadable (imported, generic) and no `harvest()` map lists its fields (ADR 0046 s7, LT-429) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC078' // a `<style>` block whose content is not a stylesheet spelling — on `.tsx` anything but the `css` marker's tagged template, a bare template literal or nothing (another tag, a shadowed or unimported `css`, a `${}` substitution, any other expression or text); on `.tsrx` an expression child in place of the CSS body. The sheet would read as empty and ship no CSS (ADR 0034 s1, LT-444) — tier 1 Prevented, statically decidable, no runtime half. Lands out of numeric order: `LTC076` is LT-429's, `LTC077` LT-443's — both reserved before this rule picked
 
 /**
@@ -459,6 +462,99 @@ export const diagnostic = {
 		error(
 			'LTC059',
 			`${subject} is seeded from server args but renders only as text formatted with ${formatting} — formatted text does not parse back into state, so the client has no value to start from. Render the raw value where the client can read it: a reactive \`<data value={() => …}>\` beside a number, a reactive \`<time datetime={() => …}>\` beside a date, or the arg as an attribute on the host.`,
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A reference to a compile-time marker (ADR 0034 s1) that no consumer
+	 * reads: LTC005's marker face (LT-429). The compiler consumes `css` only
+	 * as the tag of the root's `<style>` content, and `harvest()` only as the
+	 * seed of a component-setup `createList`; it strips the marker import
+	 * from both generated modules, so any other reference — a template
+	 * expression, a handler, a thunk, an `expose()` entry, a setup statement
+	 * — would reach a module where the name is unbound, or run the throwing
+	 * stub. One copy per marker, so a new marker adds a row. ADR 0028 tier 1
+	 * (Prevented): statically decidable, no runtime half beyond the stub.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-429).
+	 */
+	misplacedMarker: (source: string, at: Site, marker: MarkerName) => {
+		const copy: Record<MarkerName, { what: string; fix: string }> = {
+			css: {
+				what: 'A `css` tag outside the content of the root’s `<style>`',
+				fix: '`css` marks the component’s stylesheet, and the compiler reads it only as the tag of the template literal inside the root’s `<style>` — move the CSS there, or drop the tag.',
+			},
+			harvest: {
+				what: 'A `harvest()` call outside the seed of a `createList()`',
+				fix: '`harvest()` declares the field parsers of a list seeded from server args, so the compiler reads it only as the seed of a component-setup `createList()` — call it there, or drop it.',
+			},
+		}
+		return error(
+			'LTC005',
+			`${copy[marker].what} is outside the supported subset (ADR 0024). ${copy[marker].fix}`,
+			rangeOf(source, at),
+		)
+	},
+
+	/**
+	 * A field of an arg-seeded list's item with no harvest site (ADR 0046
+	 * s7, LT-429). The client rebuilds each server-rendered item field by
+	 * field from the item's markup — a text child or a reactive attribute
+	 * reading exactly the field, or `data-key` for the field the `keyConfig`
+	 * returns verbatim — and a field the markup does not carry has no value
+	 * at connect (ADR 0003). `list` names the list signal, `field` the field.
+	 * Located at the item's root element, where the fix goes. A field whose
+	 * only site formats it is LTC059's instead. Channel: compiler (Pass 3,
+	 * `analysis/list-harvest.ts`, both surfaces). ADR 0028 tier 1
+	 * (Prevented): statically decidable, no runtime half.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-429).
+	 */
+	listFieldWithoutSite: (
+		source: string,
+		at: Site,
+		list: string,
+		field: string,
+	) =>
+		error(
+			'LTC072',
+			`Field \`${field}\` of list \`${list}\` renders nowhere in the item, so the client cannot read it back. The client rebuilds each server-rendered item from its markup, and a field the item does not carry has no value at connect — render the raw value in the item, reading exactly the field: \`data-${field.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}={() => …}\` on the item root, or \`<data value={() => …}>\`.`,
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A field of an arg-seeded list's item that has a harvest site but no
+	 * parser (ADR 0046 s7, LT-429): its type is none the compiler infers a
+	 * parser from (`string` or a string-literal union → `asString`, `number`
+	 * → `asNumber`, `boolean` → `asBoolean`; an optional field infers none),
+	 * and no `harvest()` entry declares one. `field` null is the whole item: its type is unreadable
+	 * (imported, generic, a union) and no `harvest()` map lists the fields.
+	 * `typeText` is the field's (or the item's) type as authored; `seed` the
+	 * seed's text; `marked` whether the seed already carries a `harvest()`
+	 * map, which the fix then extends. Located at the seed, where the fix
+	 * goes. Channel: compiler (Pass 3, `analysis/list-harvest.ts`, both
+	 * surfaces). ADR 0028 tier 1 (Prevented): statically decidable, no
+	 * runtime half.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-429).
+	 */
+	listFieldWithoutParser: (
+		source: string,
+		at: Site,
+		list: string,
+		field: string | null,
+		typeText: string,
+		seed: string,
+		marked: boolean,
+	) =>
+		error(
+			'LTC076',
+			field === null
+				? `The items of list \`${list}\` have type \`${typeText}\`, which the compiler cannot read — it reads only types declared in this file — so it cannot list the fields the client rebuilds each server-rendered item from. Declare a parser for every field on the seed: \`createList(harvest(${seed}, { <field>: … }), …)\`.`
+				: `Field \`${field}\` of list \`${list}\` has type \`${typeText}\`, which the compiler infers no parser from, so the client cannot read the field back from the item's markup. ${marked ? `Add its parser to the \`harvest()\` map: \`${field}: …\`.` : `Declare its parser on the seed: \`createList(harvest(${seed}, { ${field}: … }), …)\`.`}`,
 			rangeOf(source, at),
 		),
 

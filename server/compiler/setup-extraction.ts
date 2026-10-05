@@ -32,6 +32,7 @@ import type {
 	SignalIR,
 	SourceRange,
 } from './ir'
+import { type HarvestCall, harvestCallOf, resolveListItem } from './list-item'
 import { type Resolution, rangeFields, resolutionOf } from './tier'
 import {
 	CLIENT_ONLY_PRIMITIVES,
@@ -95,6 +96,73 @@ const setupStatementRefusal = (ctx: ExtractContext, stmt: AstNode) =>
 		'A setup statement other than a `const` declaration, `expose()` or a client-only side effect over `host`, `internals` or signals',
 		'Move the logic into a `const` initializer, or into a `watch()` or `on()` handler.',
 	)
+
+/**
+ * A `const name = createList(harvest(seed, { … }), …)` declaration's
+ * marker call (ADR 0046 s7), read through the marker binding as resolved in
+ * `enclosing`'s scopes; null when the seed is not a `harvest()` call.
+ */
+const listHarvestOf = (
+	ctx: ExtractContext,
+	stmt: AstNode,
+	enclosing: Iterable<string> = [],
+): HarvestCall | null => {
+	if (stmt.type !== 'VariableDeclaration') return null
+	const init = asArray(stmt.declarations)[0]?.init as AstNode | undefined
+	if (!isNode(init) || identifierName(init.callee) !== 'createList') return null
+	return harvestCallOf(ctx, asArray(init.arguments)[0], enclosing)
+}
+
+/** The refusal for a `harvest()` call the compiler does not consume. */
+const misplacedHarvest = (
+	ctx: ExtractContext,
+	stmt: AstNode,
+	subject: string,
+) =>
+	diagnostic.unsupported(
+		ctx.source,
+		stmt,
+		subject,
+		'`harvest()` declares the field parsers of a list seeded from server args, so the compiler reads it only as the seed of a component-setup `createList()` — call it there, or drop it.',
+	)
+
+/**
+ * A component-setup `createList(harvest(seed, map), …)` statement with the
+ * marker read through (ADR 0046 s7): the server's statement text and node
+ * name `seed` where the call was, with source slices around the cut; the
+ * call itself stays on the signal (`DeclaredSignalIR.harvest`) for the
+ * client to splice the harvested array over.
+ */
+const readThroughHarvest = (
+	source: string,
+	stmt: AstNode,
+	init: AstNode,
+	harvest: Extract<HarvestCall, { form: 'list' }>,
+): {
+	init: AstNode
+	text: string
+	slices: NonNullable<SetupStmt['slices']>
+} => {
+	const { call } = harvest.marker
+	const stmtStart = stmt.start as number
+	const callStart = call.start as number
+	const callEnd = call.end as number
+	const before = source.slice(stmtStart, callStart)
+	const seedText = text(source, harvest.seed)
+	const after = source.slice(callEnd, stmt.end as number)
+	return {
+		init: {
+			...init,
+			arguments: [harvest.seed, ...asArray(init.arguments).slice(1)],
+		},
+		text: `${before}${seedText}${after}`,
+		slices: [
+			{ text: before, start: stmtStart },
+			{ text: seedText, start: harvest.seed.start as number },
+			{ text: after, start: callEnd },
+		],
+	}
+}
 
 /** Is `node` a function expression (an initializer defined, not called)? */
 const isFunctionNode = (node: unknown): node is AstNode =>
@@ -240,6 +308,21 @@ export const extractSetup = (
 	const contextRefs = new Set<string>()
 	const typeCtx: TypeContext = { paramsNode, setupInits }
 	for (const stmt of setupStmts) {
+		// A `harvest()` seed (ADR 0046 s7) is consumed here; any other
+		// reference to the marker is the unclaimed-marker sweep's
+		// (`reportUnclaimedMarkers`, after extraction).
+		const listHarvest = listHarvestOf(ctx, stmt)
+		if (listHarvest?.form === 'malformed') {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					listHarvest.call,
+					listHarvest.what,
+					listHarvest.fix,
+				),
+			)
+			continue
+		}
 		if (stmt.type === 'VariableDeclaration') {
 			const declarations = asArray(stmt.declarations)
 			const decl = declarations[0] ?? null
@@ -260,7 +343,14 @@ export const extractSetup = (
 				)
 				continue
 			}
-			const init = (decl as AstNode).init as AstNode
+			const authoredInit = (decl as AstNode).init as AstNode
+			// A `harvest()` seed is read through to its seed for every
+			// consumer of the statement; the signal keeps the marker call.
+			const readThrough =
+				listHarvest?.form === 'list'
+					? readThroughHarvest(source, stmt, authoredInit, listHarvest)
+					: null
+			const init = readThrough?.init ?? authoredInit
 			// `first(selector, required)` element reference (LT-055, replacing
 			// `ref={}`): doesn't exist server-side and has no server
 			// substitution the way `requestContext` does, so it must never
@@ -307,13 +397,14 @@ export const extractSetup = (
 			}
 			setupInits.set(declName, init)
 			const setupStmt: SetupStmt = {
-				text: text(ctx.source, stmt),
+				text: readThrough?.text ?? text(ctx.source, stmt),
 				range: {
 					start: typeof stmt.start === 'number' ? stmt.start : 0,
 					end: typeof stmt.end === 'number' ? stmt.end : 0,
 				},
 				node: init,
 				name: declName,
+				...(readThrough ? { slices: readThrough.slices } : {}),
 			}
 			setup.push(setupStmt)
 			// LT-125: this statement is now bound for the SERVER render function
@@ -451,11 +542,29 @@ export const extractSetup = (
 							...rangeFields(source, stmt),
 							resolution: sensorResolution,
 						})
+					// A list's item type and `harvest()` map feed the per-field
+					// harvest of an arg-seeded list (ADR 0046 s7, LT-429).
+					const listFields =
+						calleeName === 'createList'
+							? {
+									listItem: resolveListItem(
+										ctx,
+										init,
+										computeArg,
+										paramsNode,
+										paramNames,
+									),
+									...(listHarvest?.form === 'list'
+										? { harvest: listHarvest.marker }
+										: {}),
+								}
+							: {}
 					const signal: SignalIR = MUTABLE_SIGNAL_CONSTRUCTORS.has(calleeName)
 						? {
 								...base,
 								family: 'declared',
 								constructor: calleeName as DeclaredSignalIR['constructor'],
+								...listFields,
 							}
 						: {
 								...base,
@@ -848,6 +957,22 @@ export const extractItemSetup = (
 	}
 
 	for (const stmt of stmts) {
+		// The `harvest()` marker resolves against the item's scopes: its
+		// binding, key and setup names, and every enclosing item's
+		// (LT-442's rider). An item's list is seeded from the item on both
+		// sides, so nothing is harvested; any other reference here is the
+		// unclaimed-marker sweep's.
+		const enclosing = [...own.keys(), ...ctx.loopBound, ...signals.keys()]
+		if (listHarvestOf(ctx, stmt, enclosing)) {
+			ctx.diagnostics.push(
+				misplacedHarvest(
+					ctx,
+					stmt,
+					"A `harvest()` seed on a list declared in a reactive-list item's setup",
+				),
+			)
+			continue
+		}
 		if (stmt.type === 'VariableDeclaration') {
 			const declarations = asArray(stmt.declarations)
 			const decl = declarations[0] ?? null

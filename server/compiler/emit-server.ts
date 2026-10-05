@@ -2074,7 +2074,14 @@ export const emitServerModule = (
 		const stmtText = ctxSignal
 			? `const ${ctxSignal.name} = createCell(${ctxSignal.fallbackText})`
 			: stmt.text
-		setup.line(stmtText, [{ text: stmtText, start: stmt.range.start }])
+		// A `harvest()` seed's statement reads the marker through to its seed
+		// (ADR 0046 s7), so its slices map around the cut.
+		setup.line(
+			stmtText,
+			(!ctxSignal && stmt.slices) || [
+				{ text: stmtText, start: stmt.range.start },
+			],
+		)
 	}
 	body
 		.append(setup)

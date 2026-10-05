@@ -364,9 +364,10 @@ front-end modules, then the two front ends:
 | `icu/parse.ts` | ICU MessageFormat 1 at build time (ADR 0030 s4, LT-250): `@messageformat/parser` → the evaluator's JSON AST, `::` skeletons resolved to plain `Intl` options, the argument signature (`MessageArg`); an unsupported construct is a reasoned parse failure. `@messageformat/core` is never imported under `server/compiler/` — it is the test oracle (`icu.test.ts`) |
 | `icu/evaluate.ts` | `formatMessage` — the ONE evaluator, dependency-free so it can be inlined: the server fold reaches it through the generated `i18n` module's `t`; `emit-client.ts` inlines a narrowed copy into the message preamble (LT-218). `bakeMessageEnv` folds the record's `timeZone` and `currency` (never the locale, which the root `lang` carries) into a message the client channel serializes (`runtime.ts`'s `clientMessages`, which leaves out every key equal to the source record `icu/parse.ts`'s `clientSourceRecord` builds) |
 | `infer-type.ts` | Signal value-type inference |
+| `list-item.ts` | The per-field harvest's front-end half (ADR 0046 s7, LT-429): a `createList` item type read without a checker (`resolveListItem` — the first type argument, else the seed arg annotation's element type, through a same-file alias or `interface`; each field's inferred parser), the module's own type declarations (`collectModuleTypes`), and the `harvest()` marker call (`harvestCallOf`, resolved by binding through `markerOf`) |
 | `config.ts` | `export const config` extraction |
-| `imports.ts` | Compose-import resolution (accepts `.tsrx` AND `.tsx` specifiers — cross-surface composition falls out of the path-keyed registry) + plain import collection and placement + compile-time marker bindings (`parseMarkerImports`/`markerOf`, ADR 0034 s1): a marker from `@zeix/le-truc-compiler/macros` is recognized by specifier and imported name on both surfaces, a component-scope declaration shadows it, and its specifiers are stripped before plain-import placement, so neither generated module imports it |
-| `macros.ts` | The `@zeix/le-truc-compiler/macros` module (LT-442): typed stubs of the compile-time markers (`css`) that throw when reached uncompiled. In-repo, authored-`.tsx` tsconfigs resolve the specifier here through `paths` until the package exists (LT-254) |
+| `imports.ts` | Compose-import resolution (accepts `.tsrx` AND `.tsx` specifiers — cross-surface composition falls out of the path-keyed registry) + plain import collection and placement + compile-time marker bindings (`parseMarkerImports`/`markerOf`, ADR 0034 s1): a marker from `@zeix/le-truc-compiler/macros` (`css`, `harvest`) is recognized by specifier and imported name on both surfaces, a component-scope declaration shadows it, `markerOf`'s `enclosing` names shadow it in a nested scope (a list item's setup), a reference no consumer claimed (`claimMarker`) is LTC005 (`reportUnclaimedMarkers`, run by `front-end.ts` after lowering), and its specifiers are stripped before plain-import placement, so neither generated module imports it |
+| `macros.ts` | The `@zeix/le-truc-compiler/macros` module (LT-442): typed stubs of the compile-time markers (`css`, `harvest()` — LT-429) that throw when reached uncompiled. In-repo, authored-`.tsx` tsconfigs resolve the specifier here through `paths` until the package exists (LT-254) |
 | `first-refs.ts` | Structural matcher for `first(selector, reason?)`: which template element(s) an author's selector refers to; compose-deferral test; ref-presence guards |
 | `selector-syntax.ts` | Conservative CSS selector *parse* validation for `first()`/`all()` — a css-what parse plus a small post-check; reports only what no CSS parser accepts (ADR 0045 Decision 5) |
 | `corpus-config.ts` | The corpus configuration surface (§ 7.1): `CorpusConfig`, the defaults, `resolveCorpusConfig`, `outDirPrefix`, `emitPathsFor` — pure path math, no file IO |
@@ -378,6 +379,7 @@ front-end modules, then the two front ends:
 | `analysis/compose-refs.ts` | Registry-aware resolution of `first()` references addressing composed children |
 | `analysis/naming.ts` | `uniqueName`, `addQuery` (query table + name allocation) |
 | `analysis/harvest.ts` | Passes 2+3: render sites (`collectRenderSites`), harvest-plan selection and arg→DOM-site substitution (`planHarvests`) |
+| `analysis/list-harvest.ts` | Pass 3's per-field plan for a list seeded from server args (ADR 0046 s7, LT-429): each field's site in the adopted item (`data-key`, else the first text child or reactive attribute reading exactly the field) and its parser; LTC072/LTC076, LTC059 per field |
 | `analysis/loops.ts` | Passes 1+1b: `each()` (`runEachLoops`) and `reconcile()` (`runReconcileLoops`) planning |
 | `analysis/effects.ts` | Pass 4: document-ordered per-construct effect planning |
 | `emit-server.ts` | `ComponentIR` → server render module |
@@ -1037,7 +1039,12 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   read the item or key (LTC075, LT-355) — the child renders once into the
   extracted `<template>`, its root `lang`/`i18n` at the parent's locale
   (ADR 0030 s9), so no per-item value exists to render; `truc:pass` is the
-  per-item channel.
+  per-item channel. A list seeded from server args is harvested field by
+  field (ADR 0046 s7, LT-429, `analysis/list-harvest.ts`): a field with no
+  harvest site in the item (LTC072; LTC059 when its only site formats it),
+  and a field with a site but no parser — neither a type the compiler infers
+  one from nor a `harvest()` entry — or an unreadable item type with no
+  `harvest()` map (LTC076).
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

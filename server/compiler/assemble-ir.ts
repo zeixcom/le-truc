@@ -263,6 +263,11 @@ export const assembleComponentIR = (
 	// Placements run BEFORE the milestone-gate check: an unused-import
 	// warning (LTC014) belongs in the report even when the file is gated
 	// (diagnostic-order parity with the pre-extraction pipeline).
+	const listItemTypeTexts = extraction.signals.flatMap(signal =>
+		signal.family === 'declared' && signal.listItem?.typeText
+			? [signal.listItem.typeText]
+			: [],
+	)
 	const plainPlacement = placePlainImports(
 		ctx,
 		{
@@ -276,13 +281,19 @@ export const assembleComponentIR = (
 		},
 		plainImports,
 		{
+			// The setup statements are verbatim in both modules, and a
+			// per-field list harvest annotates each rebuilt item with the item
+			// type (ADR 0046 s7): a type import they name is a use.
 			server: [
 				...decls.typeDecls,
 				paramsNode ? text(ctx.source, paramsNode) : '',
+				...extraction.setup.map(stmt => stmt.text),
 			],
 			client: [
 				...decls.typeDecls,
 				...(decls.globalDecl ? [decls.globalDecl] : []),
+				...extraction.setup.map(stmt => stmt.text),
+				...listItemTypeTexts,
 			],
 		},
 	)
@@ -312,6 +323,7 @@ export const assembleComponentIR = (
 				...(decls.globalDecl ? [decls.globalDecl] : []),
 				...extraction.setup.map(stmt => stmt.text),
 				...itemSetup.map(stmt => stmt.text),
+				...listItemTypeTexts,
 			],
 		},
 	)

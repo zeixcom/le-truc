@@ -104,6 +104,8 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 | LTC063 | a reactive condition or async boundary inside a reactive list's container, which the list clears | move it out, or wrap the loop in its own element |
 | LTC074 | an element beside a reactive-list loop in the list's container, directly or as an arm root (any arm) of a conditional that reads no signal or of a `try` without a pending arm, carrying no `data-unreconciled` — the list removes it on its first run. An authored `data-key` does not exempt it. A composed element cannot carry the attribute | add `data-unreconciled` to keep the element, or move it out of the container |
 | LTC075 | a composed element in a reactive-list item whose args or content read the item or key binding. The server renders the child once, into the `<template>` that every item clones | pass the value through `truc:pass`, or give the child only server-known values |
+| LTC072 | a field of a list item seeded from server args renders nowhere in the item: no text child or reactive attribute reads exactly the field, and `keyConfig` doesn't return it. The client rebuilds each server-rendered item from its markup | render the raw value in the item, reading exactly the field: `data-<field>={() => …}` on the item root, or `<data value={() => …}>` |
+| LTC076 | a field of a list item seeded from server args has no parser: its type isn't `string`, a string-literal union, `number` or `boolean` (a `Date`, an object, an optional `?:` field), or the item type is imported and no `harvest()` map lists the fields | declare the parser on the seed: `createList(harvest(items, { due: … }), …)`, with `harvest` imported from `@zeix/le-truc-compiler/macros` |
 
 ### Stylesheet
 

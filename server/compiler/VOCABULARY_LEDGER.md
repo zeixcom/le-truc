@@ -145,6 +145,10 @@ condition inside a reactive list's reconcile() container; LT-274), then
 and `LTC065` (a warning: a declaration names an unknown property or a value
 outside the property's grammar; LT-394). All `LTC`, not `TSRX`: each
 is raised in shared machinery, on both surfaces.
+`LTC072` (a field of a list item seeded from server args has no harvest
+site in the item; ADR 0046 s7, LT-429) was reserved at the LT-429 design
+session and lands after `LTC075`. It is `LTC`, not `TSRX`: Pass 3
+(`analysis/list-harvest.ts`) raises it, on both surfaces.
 `LTC073` (a `<style>` block that is not the root's single direct `<style>`
 child; ADR 0032 s1, LT-417) skips `LTC072`, which LT-429 holds. It is
 `LTC`, not `TSRX`: the refusal is raised in the shared hoist
@@ -161,6 +165,12 @@ shared loop analysis (`analysis/loops.ts`), on both surfaces.
 read the item or key binding; ADR 0030 s9, LT-355) replaces an `LTC005`
 face of the same condition. It is `LTC`, not `TSRX`: the refusal is raised
 in the shared list-body validation (`lower-shared.ts`), on both surfaces.
+`LTC076` (a field of a list item seeded from server args has a harvest
+site but no parser — no type the compiler infers one from and no
+`harvest()` entry — or the item type is unreadable and no `harvest()` map
+lists its fields; ADR 0046 s7, LT-429) lands with `LTC072`, after `LTC078`.
+It is `LTC`, not `TSRX`: Pass 3 (`analysis/list-harvest.ts`) raises it, on
+both surfaces.
 `LTC078` (a `<style>` block whose content is not a stylesheet spelling; ADR
 0034 s1, LT-444) skips `LTC076` and `LTC077`, which LT-429 and LT-443 hold.
 It is `LTC`, not `TSRX`: each surface's `stylesheetOf` reads the block and

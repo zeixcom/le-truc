@@ -8,6 +8,7 @@
  */
 
 import type { AstNode } from './ast-node'
+import { forEachFreeIdentifier } from './ast-utils'
 import { dedentCss, parseComponentSheet } from './css'
 import {
 	type ContractFinding,
@@ -26,6 +27,7 @@ import {
 	reportStaticIds,
 	shareExclusiveIf,
 } from './first-refs'
+import { claimMarker } from './imports'
 import type {
 	ComponentSheet,
 	FirstRefDecl,
@@ -141,10 +143,15 @@ export const resolveTemplateOutput = (
 	// descendant (composed content included) — would render empty, its CSS
 	// silently dropped.
 	walkTemplate(root, (node, parent) => {
-		if (node.kind === 'element' && node.tag === 'style')
+		if (node.kind === 'element' && node.tag === 'style') {
 			ctx.diagnostics.push(
 				diagnostic.misplacedStyleBlock(source, node.node, parent !== root),
 			)
+			// Its `css` tag is this refusal's, not a stray marker (LT-429).
+			forEachFreeIdentifier(node.node, identifier =>
+				claimMarker(ctx, identifier),
+			)
+		}
 	})
 
 	// LTC078 (LT-444): the hoisted child's content must be a stylesheet

@@ -111,8 +111,47 @@ export type HarvestPlan =
 			 * Otherwise the seed is arg-dependent and the client harvests the
 			 * container's adopted children (keys regenerate identically).
 			 */
-			seed: 'verbatim' | { container: string; valueSelector: string }
+			seed:
+				| 'verbatim'
+				| { container: string; valueSelector: string }
+				| { container: string; fields: ListFieldPlan[] }
 	  }
+
+/**
+ * How one field of an arg-seeded list's item is read back from the adopted
+ * item (ADR 0046 s7, LT-429): its site — `data-key` for the field the
+ * `keyConfig` returns verbatim, else the first text child or reactive
+ * attribute reading exactly the field — and its parser. A `selector` is the
+ * item's own scoped query; null reads the item root.
+ */
+export type ListFieldPlan = {
+	field: string
+	site:
+		| { kind: 'key' }
+		| { kind: 'text'; selector: string | null }
+		| {
+				kind: 'attr'
+				selector: string | null
+				attr: string
+				/** A dirty-flag attribute (`value`/`checked`/`selected`) reads the live property. */
+				property: boolean
+				/** The site element's tag, for the property read's type. */
+				tag: string
+		  }
+	parser:
+		| { kind: 'inferred'; name: ParserKind; cast: string | null }
+		| {
+				kind: 'authored'
+				/** The `harvest()` entry's parser, as authored. */
+				text: string
+				start: number
+				/** Whether the call needs parentheses around `text` (an arrow, an operator). */
+				wrap: boolean
+				/** The entry's key, and where it starts — a type error maps there. */
+				keyText: string
+				keyStart: number
+		  }
+}
 
 /** A hoisted const rebound to a server-rendered attribute inside each(). */
 export type RebindingPlan = {
@@ -539,8 +578,10 @@ export type PassShared = {
 	/** Every ref name in the template, pre-collected. */
 	refNames: Set<string>
 	/**
-	 * Signals Pass 3 refused for a formatted-only render with no raw value
-	 * source (LTC059, LT-374) — the setup half's LTC005 skips them.
+	 * Signals Pass 3 refused with their own harvest diagnostic — a
+	 * formatted-only render with no raw value source (LTC059, LT-374), a
+	 * list item field with no site or no parser (LTC072/LTC076, LT-429) —
+	 * so the setup half's LTC005 skips them.
 	 */
 	rawSourceRefused: Set<string>
 	/** Register (or reuse) a query; returns its variable name. */
