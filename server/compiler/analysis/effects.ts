@@ -1580,6 +1580,7 @@ const armContainer = (
 			diagnostic.reactiveConditionInReconcileContainer(
 				source,
 				node.node,
+				node.kind === 'try' ? 'try' : 'conditional',
 				wording,
 			),
 		)

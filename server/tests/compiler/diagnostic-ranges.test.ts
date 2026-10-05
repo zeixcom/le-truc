@@ -670,6 +670,8 @@ describe('each producer family covers the offending construct, on both surfaces'
 		}
 		for (const { surface, hit } of reportOn(shape, 'LTC063')) {
 			expect(hit).toBeDefined()
+			expect(hit?.message).toContain('reads a signal inside the container')
+			expect(hit?.message).toContain('move the condition out')
 			const source = surface === 'tsx' ? tsxSource(shape) : tsrxSource(shape)
 			const file = `examples/c/c-el.${surface}`
 			const { diagnostics } =
@@ -690,7 +692,16 @@ describe('each producer family covers the offending construct, on both surfaces'
 			tsxTemplate:
 				'<ul data-container><truc:try pending={<li class="p">p</li>} catch={e => <li class="b">{e.message}</li>}><li class="a">{data}</li></truc:try>{items.map(item => <li>{item}</li>)}</ul>',
 		}
-		for (const { hit } of reportOn(shape, 'LTC063')) expect(hit).toBeDefined()
+		// The message names the boundary, not a conditional (LT-432).
+		for (const { surface, hit } of reportOn(shape, 'LTC063')) {
+			expect(hit?.message).toStartWith(
+				surface === 'tsx'
+					? 'An async `<truc:try>` boundary (one with `pending`) inside the container'
+					: 'An async `@try` boundary (one with `@pending`) inside the container',
+			)
+			expect(hit?.message).toContain('move the boundary out')
+			expect(hit?.message).not.toContain('signal')
+		}
 		for (const { hit } of reportOn(shape, 'LTC074')) {
 			expect(hit).toBeUndefined()
 		}

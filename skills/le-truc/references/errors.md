@@ -100,7 +100,7 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 | LTC073 | a `<style>` that isn't the root's first direct `<style>` child: a second one in the root, or one nested in a descendant. Its CSS would be dropped | merge its rules into the root's single `<style>` child |
 | LTC061 | an authored `<template>` in a template. The compiler emits its own. | render directly, or use a list or condition |
 | LTC062 | a reactive switch has a non-literal `case` value, or two values with the same key | string, number, boolean or `null` literals, one arm each |
-| LTC063 | a reactive condition inside a reactive list's container, which the list clears | move it out, or wrap the loop in its own element |
+| LTC063 | a reactive condition or async boundary inside a reactive list's container, which the list clears | move it out, or wrap the loop in its own element |
 | LTC074 | an element beside a reactive-list loop in the list's container, directly or as an arm root (any arm) of a conditional that reads no signal or of a `try` without a pending arm, carrying no `data-unreconciled` — the list removes it on its first run. An authored `data-key` does not exempt it. A composed element cannot carry the attribute | add `data-unreconciled` to keep the element, or move it out of the container |
 
 ### Stylesheet

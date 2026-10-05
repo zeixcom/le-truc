@@ -49,7 +49,7 @@ export function MyToggle(
   - Each arm has exactly one root element.
   - The condition sits directly in an element, not in another branch, a loop body or composed content (LTC005).
   - Reactive `case` values are literals with distinct keys (LTC062).
-  - A reactive list's container cannot hold a reactive condition (LTC063).
+  - A reactive list's container cannot hold a reactive condition or an async boundary (LTC063).
   - `first()` cannot target an element inside an arm, because the element is recreated on every flip.
 - **To keep DOM across a toggle**, use `hidden={() => …}` instead of a condition.
 - A condition on server-known values only is rendered once on the server.

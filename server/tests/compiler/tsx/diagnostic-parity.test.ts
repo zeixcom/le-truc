@@ -106,6 +106,7 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 	term('ifBranch', 'one conditional branch'),
 	term('caseLabel', 'a switch arm test (LTC062)'),
 	term('reactiveConditional', 'a condition over a signal (ADR 0037)'),
+	term('asyncBoundary', 'an async boundary as an arm set (LTC063, LT-432)'),
 	term('tryBody', 'the boundary body'),
 	term('pendingArm', 'the pending arm'),
 	term('catchArm', 'the catch arm'),
@@ -626,6 +627,25 @@ const CONDITIONS: Case[] = [
 			body: '<ul data-container>@if (open.get()) { <li class="head">x</li> }@for (const item of items) { <li>{item}</li> }</ul>',
 			tsx: '<ul data-container>{open.get() ? <li class="head">x</li> : null}{items.map(item => <li>{item}</li>)}</ul>',
 		},
+	},
+	{
+		name: 'LTC063 an async boundary in a reactive list container',
+		code: 'LTC063',
+		spans: [
+			[
+				'@try { <li class="a">{data}</li> } @pending { <li class="p">p</li> } @catch (e) { <li class="b">{e.message}</li> }',
+				'<truc:try pending={<li class="p">p</li>} catch={e => <li class="b">{e.message}</li>}><li class="a">{data}</li></truc:try>',
+			],
+		],
+		spec: {
+			pre: imports('createList', 'deriveCell'),
+			setup: `${LIST}
+		const data = deriveCell(async () => 'x')
+		expose({})`,
+			body: '<ul data-container>@try { <li class="a">{data}</li> } @pending { <li class="p">p</li> } @catch (e) { <li class="b">{e.message}</li> }@for (const item of items) { <li>{item}</li> }</ul>',
+			tsx: '<ul data-container><truc:try pending={<li class="p">p</li>} catch={e => <li class="b">{e.message}</li>}><li class="a">{data}</li></truc:try>{items.map(item => <li>{item}</li>)}</ul>',
+		},
+		pins: ['move the boundary out'],
 	},
 	{
 		name: 'LTC074 an unkeyed element beside a reactive-list loop in its container',
