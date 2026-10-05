@@ -472,7 +472,11 @@ exports[`variant sets — front-end parity (§4.3, ADR 0039 s1) module-todo clie
  * examples/module/todo/module-todo.tsx — DO NOT EDIT. The server half lives in module-todo.server.ts.
  */
 import { bindAttribute, defineComponent, reconcile } from '@zeix/le-truc'
-import { nextTodoId, setupReorder, type TodoItem } from "../../../examples/_common/reorder"
+import {
+	nextTodoId,
+	setupReorder,
+	type TodoItem,
+} from "../../../examples/_common/reorder"
 import { bindState, createList, createMemo, createStore, type MutableStore } from '@zeix/le-truc'
 
 declare global {
@@ -544,7 +548,8 @@ export default defineComponent(
 		})
 		pass(basicPluralize, { count: { get: () => activeCount.get() } })
 		pass(clearCompleted, { disabled: { get: () => !completedCount.get() } })
-		pass(clearCompleted, { badge: { get: () => (completedCount.get() ? String(completedCount.get()) : '') } })
+		pass(clearCompleted, { badge: { get: () =>
+		completedCount.get() ? String(completedCount.get()) : '' } })
 	},
 )
 "
