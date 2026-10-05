@@ -13,6 +13,7 @@ import type { AstNode } from '../ast-node'
 import {
 	forEachChild,
 	hostPropOf,
+	identifierName,
 	isNode,
 	nodeType,
 	sanitizeVarName,
@@ -151,11 +152,41 @@ export const defaultForType = (type: string): string => {
 	}
 }
 
+/** The library's number-valued parsers, by their authored name. */
+const NUMBER_PARSERS: ReadonlySet<string> = new Set([
+	'asNumber',
+	'asInteger',
+	'asClampedInteger',
+])
+
+/**
+ * Does a signal's scalar `harvest()` marker declare a number-valued parser
+ * (LT-443)? The marker does not inform `inferredType`, so a seed whose
+ * annotation the compiler cannot read (`price: Price`) still connects as a
+ * number once wrapped. Matched by name, called or bare — the same syntactic
+ * honesty as `CALLABLE_AS_WRITTEN`: an aliased factory misses and its
+ * generated attribute site fails tsc rather than being guessed at.
+ */
+const hasNumberMarker = (signal: SignalIR): boolean => {
+	if (signal.family !== 'declared' || signal.harvest?.kind !== 'scalar')
+		return false
+	const parser = signal.harvest.parser
+	const named =
+		nodeType(parser) === 'CallExpression'
+			? (parser.callee as AstNode | undefined)
+			: parser
+	return (
+		nodeType(named) === 'Identifier' &&
+		NUMBER_PARSERS.has(identifierName(named) ?? '')
+	)
+}
+
 /**
  * Conservative check: does a thunk body evaluate to a number? Number
  * literals, conditionals over them, and — since LT-126 — a bare read of a
  * number-typed signal (`count.get()`), resolved through the signal's own
- * `inferredType` rather than guessed from the expression's shape.
+ * `inferredType` rather than guessed from the expression's shape — or,
+ * since LT-443, through a number-valued `harvest()` marker parser.
  *
  * The signal case matters because of LT-116: `value` on a native form
  * control now dispatches as a PROPERTY write, and `HTMLInputElement.value`
@@ -177,7 +208,10 @@ export const returnsNumber = (
 	const name = signalGetCallName(body)
 	return (
 		name !== null &&
-		signals.some(s => s.name === name && s.inferredType === 'number')
+		signals.some(
+			s =>
+				s.name === name && (s.inferredType === 'number' || hasNumberMarker(s)),
+		)
 	)
 }
 

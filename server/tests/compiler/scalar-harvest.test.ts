@@ -256,6 +256,45 @@ describe('harvest(price, asNumber()) declares the scalar parser (LT-443)', () =>
 	}
 })
 
+/* === A number-valued marker coerces its attribute site === */
+
+describe('a number-valued marker coerces its reactive attribute site (LT-443)', () => {
+	const attrSite = (surface: Surface, parser: string) =>
+		compile(surface, `c-scalar-coerce-${surface}`, {
+			...WRAPPED,
+			pre: `import { asBoolean, asClampedInteger, asInteger, asNumber, createState } from '@zeix/le-truc'
+import { harvest } from '@zeix/le-truc-compiler/macros'
+type Price = number`,
+			setup: `const p = createState(harvest(price, ${parser}))
+		expose({ value: () => p.get() })`,
+			body: '<data aria-valuenow={() => p.get()}>{p}</data>',
+		})
+
+	for (const surface of SURFACES) {
+		for (const parser of [
+			'asNumber()',
+			'asNumber',
+			'asInteger()',
+			'asClampedInteger(0, 10)',
+		]) {
+			test(`${surface}: harvest(price, ${parser}) → String() around the read`, () => {
+				const result = attrSite(surface, parser)
+				expect(result.diagnostics).toEqual([])
+				expect(result.component?.clientCode).toContain(
+					"watch(() => String((() => p.get())()), bindAttribute(data, 'aria-valuenow'))",
+				)
+			})
+		}
+
+		test(`${surface}: a boolean marker keeps toggle semantics — no coercion`, () => {
+			const result = attrSite(surface, 'asBoolean()')
+			expect(result.component?.clientCode).toContain(
+				"watch(() => p.get(), bindAttribute(data, 'aria-valuenow'))",
+			)
+		})
+	}
+})
+
 /* === A Date seed round-trips through an authored parser (substitute route) === */
 
 const DUE: Parts = {
