@@ -23,16 +23,14 @@
 		"noFallthroughCasesInSwitch": true,
 		"forceConsistentCasingInFileNames": true
 	},
+	"include": ["**/*.tsx"],
 	"files": [
 		"basic/blogmeta/basic-blogmeta.ts",
 		"basic/blogmeta/basic-blogmeta.tsx",
 		"basic/counter/basic-counter.ts",
 		"basic/counter/basic-counter.tsx",
-		"basic/pluralize/basic-pluralize.tsx",
 		"context/media/context-media.ts",
 		"context/media/context-media.tsx",
-		"form/listbox/form-listbox.tsx",
-		"form/combobox/form-combobox.tsx",
 		"module/carousel/module-carousel.ts",
 		"module/carousel/module-carousel.tsx",
 		"module/codeblock/module-codeblock.ts",
