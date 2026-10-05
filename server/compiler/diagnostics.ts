@@ -327,9 +327,9 @@ export const diagnostic = {
 	 * reactive-List concern; a server-data loop lowers to `each()`, which
 	 * has no key parameter, so the clause was silently collected and
 	 * dropped. ADR 0028 tier 1 (Prevented): statically decidable from the
-	 * loop's iterable alone, no runtime half exists. Mirrors the `.tsx`
-	 * surface's existing `map` arity rejection ("the key clause is a
-	 * reactive-List concern").
+	 * loop's iterable alone, no runtime half exists. The `.tsx` twin is the
+	 * receiver's type: over an Array a `.map()` callback's second parameter
+	 * is the index, over a List the key (ADR 0046 s4, LT-425).
 	 *
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-09-24).
