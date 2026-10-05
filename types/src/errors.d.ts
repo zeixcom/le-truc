@@ -22,17 +22,36 @@ declare const reportConnectFailure: (host: HTMLElement, phase: string, error: un
  * to name *which* effect failed, or a partially enhanced component is not
  * debuggable.
  *
- * `reconcile()` reports through the same channel one level down: a Mount
- * Scope (an arm or a list item, ADR 0046) whose `bindArm`/`bindItem` throws
- * is contained to that scope and named by its key, e.g.
- * `reconcile() item "a"` in the reconciled container.
+ * `reconcile()` reports one level down through its own reporter,
+ * {@link reportScopeFailure}, whose copy says what containment means for a
+ * Mount Scope.
  *
  * @since 3.0.0
- * @param host - Component instance the descriptor belongs to, or the container `reconcile()` reconciles
- * @param descriptor - Description of the failing effect, e.g. `"watch()"` or `reconcile() arm "then"`
+ * @param host - Component instance the descriptor belongs to
+ * @param descriptor - Description of the failing effect, e.g. `"watch()"`
  * @param error - The thrown value
  */
 declare const reportEffectFailure: (host: Element, descriptor: string, error: unknown) => void;
+/**
+ * Reports a `reconcile()` Mount Scope whose activation threw.
+ *
+ * ADR 0028 sub-design 3 one level down (LT-436): a list item or an arm
+ * (ADR 0046) whose `bindItem`/`bindArm` throws is contained to that scope.
+ * Its element stays in place without behavior — its server-rendered or
+ * cloned markup, which is already correct (ADR 0003). A failed item leaves
+ * the other items unaffected; a failed arm stays unbound until the condition
+ * switches, and the next arm mounts afresh (re-entry clones, ADR 0037).
+ * The diagnostic names the scope by its key, in the reconciled container.
+ * A dedicated reporter rather than a flavour of {@link reportEffectFailure},
+ * so the copy tree-shakes away with `reconcile()` (LT-438).
+ *
+ * @since 3.0.0
+ * @param container - The container `reconcile()` reconciles
+ * @param scope - The Mount Scope kind
+ * @param key - The scope's key: the item key, or the arm key (`then`, `case:<value>`, …)
+ * @param error - The thrown value
+ */
+declare const reportScopeFailure: (container: Element, scope: "item" | "arm", key: string, error: unknown) => void;
 /**
  * Error thrown when component name violates rules for custom element names
  *
@@ -209,4 +228,4 @@ declare class UnsafeAttributeError extends TypeError {
      */
     constructor(element: Element, attr: string, reason: string, value?: string);
 }
-export { DependencyTimeoutError, ExtensionCollisionError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, InvalidTemplateError, MissingElementError, NoActiveCollectorError, reportConnectFailure, reportEffectFailure, UnsafeAttributeError, };
+export { DependencyTimeoutError, ExtensionCollisionError, InvalidComponentNameError, InvalidCustomElementError, InvalidPassPropertyError, InvalidPropertyNameError, InvalidReactivesError, InvalidSelectorError, InvalidTemplateError, MissingElementError, NoActiveCollectorError, reportConnectFailure, reportEffectFailure, reportScopeFailure, UnsafeAttributeError, };

@@ -2081,6 +2081,12 @@ var reportEffectFailure = (host, descriptor, error) => {
   else
     console.error(`${descriptor} did not activate in ${elementName(host)}; its other effects are unaffected:`, error);
 };
+var reportScopeFailure = (container, scope, key, error) => {
+  if (false)
+    ;
+  else
+    console.error(`reconcile() ${scope} "${key}" did not activate in ${elementName(container)} and stays unbound${scope === "item" ? "; the other items are unaffected" : " until the condition switches; the next arm mounts afresh"}:`, error);
+};
 
 class InvalidComponentNameError extends TypeError {
   constructor(component) {
@@ -3076,11 +3082,11 @@ var mountScope = (bind) => {
   }
   return dispose;
 };
-var mountContained = (container, scope, bind) => {
+var mountContained = (container, scope, key, bind) => {
   try {
     return mountScope(bind);
   } catch (error) {
-    reportEffectFailure(container, `reconcile() ${scope}`, error);
+    reportScopeFailure(container, scope, key, error);
     return () => {};
   }
 };
@@ -3132,7 +3138,7 @@ var reconcileArms = (container, templates, source, bindArm) => {
           const element = current;
           const armKey = currentKey;
           if (element && armKey !== null)
-            dispose = mountContained(container, `arm "${armKey}"`, () => bindArm(element, armKey, bindFirst(element)));
+            dispose = mountContained(container, "arm", armKey, () => bindArm(element, armKey, bindFirst(element)));
         });
       });
       return () => {
@@ -3223,7 +3229,7 @@ var reconcileList = (container, template, source, bindItem) => {
           const item = source.byKey(key);
           if (item) {
             const element = el;
-            disposers.set(key, mountContained(container, `item "${key}"`, () => bindItem(element, item, key, bindFirst(element))));
+            disposers.set(key, mountContained(container, "item", key, () => bindItem(element, item, key, bindFirst(element))));
           }
         }
       }
