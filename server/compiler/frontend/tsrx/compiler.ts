@@ -81,7 +81,7 @@ const newerGrammarHint = (source: string, error: unknown): string => {
 	]
 	for (const [pattern, what] of signatures)
 		if (pattern.test(around))
-			return ` — ${what} is not parseable by the pinned @tsrx/core 0.1.63 (pin upgrades are reviewed changes — see ADR 0023 sub-design 2)`
+			return ` — ${what} is not parseable by the pinned @tsrx/core 0.1.63 (pin upgrades are reviewed changes — see ADR 0024 sub-design 2)`
 	return ''
 }
 
