@@ -9,7 +9,7 @@
  * the analysis passes — reads the table for the surface it is compiling
  * (`ctx.surface` / `component.surface`) and never spells a directive
  * itself. Messages emitted only by one surface's grammar-specific code (the
- * `.tsrx` key clause, the `.tsx` switch IIFE) stay inline there: they have
+ * `.tsx` switch IIFE) stay inline there: they have
  * no twin to drift from.
  *
  * `server/tests/compiler/tsx/diagnostic-parity.test.ts` pins the contract:
@@ -94,6 +94,10 @@ export type SurfaceWording = {
 	loopBodyStatements: string
 	/** The names a reactive-list loop can bind (the reserved-name check). */
 	loopBindings: string
+	/** A reactive-list key binding that is not a bare identifier, as a sentence subject. */
+	keyBindingShape: string
+	/** The key binding spelled as a bare identifier, for the fix-it. */
+	keyBindingExample: string
 	/** A reactive-list loop's empty arm. */
 	emptyArm: string
 	/** The empty arm as a fix-it. */
@@ -144,6 +148,9 @@ const TSRX: SurfaceWording = {
 	loopBodyStatements:
 		'A statement other than a `const` declaration in a `@for` body',
 	loopBindings: 'A loop variable or key binding',
+	keyBindingShape:
+		'A reactive-list `@for` key clause that is not a bare identifier',
+	keyBindingExample: '`key k`',
 	emptyArm: '`@empty` arm',
 	emptyArmFix: "the loop's own `@empty` arm",
 	loopInBranch: branch => ({
@@ -195,7 +202,10 @@ const TSX: SurfaceWording = {
 	aLoop: 'A `.map()` loop',
 	loopBodyStatements:
 		'A statement other than a `const` declaration in a `.map()` body',
-	loopBindings: 'A loop variable',
+	loopBindings: 'A loop variable or key binding',
+	keyBindingShape:
+		'A reactive-list `.map()` key parameter that is not a bare identifier',
+	keyBindingExample: '`(item, k)`',
 	emptyArm: 'empty-state arm',
 	emptyArmFix:
 		'the empty-state idiom (`{items.length === 0 ? <empty/> : items.map(…)}`)',

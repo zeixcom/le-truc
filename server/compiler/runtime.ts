@@ -290,11 +290,49 @@ export const createMemo = <T>(
 /**
  * `deriveList(fn, options?)` → the same cell-iterating list over `fn()`
  * evaluated once, keyed by `options.keyConfig` as `createList` keys it.
+ * `deriveList(source, itemFn)` → one cell per source item over
+ * `itemFn(item.get())`, keeping the source's keys, as Cause & Effect does.
  */
-export const deriveList = <T>(
+export function deriveList<T>(
 	compute: () => Iterable<T>,
 	options?: { keyConfig?: KeyConfig<T> },
-): ServerList<T> => createList(compute(), options)
+): ServerList<T>
+export function deriveList<T, U>(
+	source: ServerList<U, { get: () => U }>,
+	itemCallback: (sourceValue: U) => T,
+	options?: { keyConfig?: KeyConfig<U> },
+): ServerList<T>
+export function deriveList<T, U>(
+	input: (() => Iterable<T>) | ServerList<U, { get: () => U }>,
+	second?: ((sourceValue: U) => T) | { keyConfig?: KeyConfig<T> },
+): ServerList<T> {
+	if (typeof input === 'function')
+		return createList(
+			input(),
+			second as { keyConfig?: KeyConfig<T> } | undefined,
+		)
+	const map = second as (sourceValue: U) => T
+	const keyed = input
+		.entries()
+		.map(([key, item]) => [key, createCell(map(item.get()))] as const)
+	const values = keyed.map(([, cell]) => cell.get())
+	const cells = keyed.map(([, cell]) => cell)
+	const byKey = new Map(keyed)
+	return {
+		get: () => values,
+		set: () => {},
+		length: values.length,
+		[Symbol.iterator]: () => cells[Symbol.iterator](),
+		at: index => cells.at(index),
+		keys: () => byKey.keys(),
+		byKey: key => byKey.get(key),
+		map: callback => keyed.map(([key, cell]) => callback(cell, key)),
+		forEach: callback => {
+			for (const [key, cell] of keyed) callback(cell, key)
+		},
+		entries: () => keyed.map(([key, cell]) => [key, cell]),
+	}
+}
 
 /** `deriveStore(fn)` → box over `fn()` evaluated once. */
 export const deriveStore = <T>(compute: () => T): ServerCell<T> =>

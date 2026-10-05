@@ -6,8 +6,8 @@
  * `parity.test.ts` proves successful compiles agree. Every drift COMPILER_
  * REVIEW §2.3 found lived on the failure path instead, where it could not
  * look: the `.tsx` `offenders` truthiness bug (fixed LT-221), the
- * `.tsrx`-only `keyName` arm (ruled grammar asymmetry, LT-221) and the
- * per-item `ref` message. A user of either surface must get the same code
+ * `.tsrx`-only `keyName` arm (a grammar asymmetry until the `.tsx` keyed
+ * `map` closed it, LT-425) and the per-item `ref` message. A user of either surface must get the same code
  * and the same sentence for the same invalid component — otherwise one
  * surface teaches its users something the other never hears.
  *
@@ -83,10 +83,8 @@ const framed = (
  * `conditional` would also rewrite surface-neutral prose.
  */
 const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
-	term(
-		'loopBindings',
-		'the names a list loop binds (`.tsx` has no key binding)',
-	),
+	term('keyBindingShape', 'a key binding that is not a bare identifier'),
+	term('keyBindingExample', 'the key binding as a fix-it'),
 	term('loopBodyStatements', 'statements in a server-data loop body'),
 	framed('loop', l => `reactive-list ${l}`, 'the list loop'),
 	framed('loop', l => `${l} over`, 'a loop over its iterable'),
@@ -338,6 +336,37 @@ const REVIEW_SHAPES: Case[] = [
 /** The reactive-list body family (ADR 0024 sub-design 5, the copied seam). */
 const LIST_BODY: Case[] = [
 	{
+		// ADR 0046 s4 (LT-425): the `.tsx` keyed `map` binds the key, so the
+		// reserved-name check covers the key binding on both surfaces.
+		name: 'a key binding named `first`',
+		code: 'LTC005',
+		spans: [
+			[
+				'@for (const item of items; key first) { <li>{item}</li> }',
+				'items.map((item, first) => <li>{item}</li>)',
+			],
+		],
+		spec: {
+			pre: imports('createList'),
+			setup: LIST,
+			body: '<ul data-container>@for (const item of items; key first) { <li>{item}</li> }</ul>',
+			tsx: '<ul data-container>{items.map((item, first) => <li>{item}</li>)}</ul>',
+		},
+		pins: ['reserved parameters of `reconcile()`’s `bindItem`'],
+	},
+	{
+		name: 'a key binding that is not a bare identifier',
+		code: 'LTC005',
+		spans: [['item.id', '{ id }']],
+		spec: {
+			pre: imports('createList'),
+			setup: LIST,
+			body: '<ul data-container>@for (const item of items; key item.id) { <li>{item}</li> }</ul>',
+			tsx: '<ul data-container>{items.map((item, { id }) => <li>{item}</li>)}</ul>',
+		},
+		pins: ['write a bare identifier'],
+	},
+	{
 		// The one-hole rule retired (ADR 0046 s1); the shared lazy-text gate
 		// owns this shape now — two lazy children race on the shared
 		// textContent.
@@ -435,16 +464,6 @@ const LIST_BODY: Case[] = [
 			'Reactive attribute `title` inside the',
 			'references server-only name `label` — the generated client does not bind it',
 		],
-	},
-	{
-		name: 'an index binding',
-		code: 'LTC005',
-		spec: {
-			pre: imports('createList'),
-			setup: LIST,
-			body: '<ul>@for (const item of items; index i) { <li>{item}</li> }</ul>',
-			tsx: '<ul>{items.map((item, i) => <li>{item}</li>)}</ul>',
-		},
 	},
 	{
 		name: 'a list directly under the component root',
@@ -1594,13 +1613,11 @@ describe('diagnostic parity — one sample per family', () => {
 	runCases(FAMILIES)
 })
 
-describe('grammar asymmetry — shapes with no counterpart', () => {
-	// ADR 0046 s1: a `server` attribute over the key binding alone is a
-	// key-derived attribute — set once at clone, baked empty in the
-	// extracted template. The key binding is `.tsrx` grammar (`key k`);
-	// the `.tsx` keyed `map` is LT-425.
-	test('.tsrx: a key-derived attribute compiles, set once at clone', () => {
-		const { component, diagnostics } = compileComponent(
+describe('the keyed `map` (ADR 0046 s4, LT-425)', () => {
+	// A `server` attribute over the key binding alone is a key-derived
+	// attribute — set once at clone, baked empty in the extracted template.
+	test('a key-derived attribute compiles on both surfaces, set once at clone', () => {
+		const { component: tsrx, diagnostics: tsrxDiagnostics } = compileComponent(
 			tsrxSource({
 				pre: imports('createList'),
 				setup: LIST,
@@ -1609,10 +1626,107 @@ describe('grammar asymmetry — shapes with no counterpart', () => {
 			'c.tsrx',
 			new Set(),
 		)
+		const { component: tsx, diagnostics: tsxDiagnostics } = compileComponentTsx(
+			tsxSource({
+				pre: imports('createList'),
+				setup: LIST,
+				body: '<ul data-container>{items.map((item, k) => <li id={k}><label for={k}>{item}</label></li>)}</ul>',
+			}),
+			'c.tsx',
+			new Set(),
+		)
+		expect(tsrxDiagnostics).toEqual([])
+		expect(tsxDiagnostics).toEqual([])
+		for (const component of [tsrx, tsx]) {
+			expect(component?.clientCode).toContain(".setAttribute('id', k)")
+			expect(component?.clientCode).toContain(".setAttribute('for', k)")
+			expect(component?.serverCode).toContain('<template data-list="0">')
+		}
+		expect(tsx?.clientCode).toBe(tsrx?.clientCode.replace('c.tsrx', 'c.tsx'))
+		expect(tsx?.serverCode).toBe(tsrx?.serverCode.replace('c.tsrx', 'c.tsx'))
+	})
+
+	test('the key reaches an item handler (`items.remove(k)`)', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			tsxSource({
+				pre: imports('createList'),
+				setup: LIST,
+				body: '<ul data-container>{items.map((item, k) => <li><button onClick={() => items.remove(k)}>{item}</button></li>)}</ul>',
+			}),
+			'c.tsx',
+			new Set(),
+		)
 		expect(diagnostics).toEqual([])
-		expect(component?.clientCode).toContain(".setAttribute('id', k)")
-		expect(component?.clientCode).toContain(".setAttribute('for', k)")
-		expect(component?.serverCode).toContain('<template data-list="0">')
+		expect(component?.clientCode).toContain('(_element, item, k, first) =>')
+		expect(component?.clientCode).toContain('() => items.remove(k)')
+	})
+
+	test('over an Array the second parameter stays the index', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			tsxSource({
+				params: '{ names }: { names: string[] }',
+				body: '<ul>{names.map((n, i) => <li data-i={i}>{n}</li>)}</ul>',
+			}),
+			'c.tsx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.serverCode).not.toContain('<template data-list')
+	})
+
+	test('a `deriveList` is a list source, keyed by its own keyConfig on both sides', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			tsxSource({
+				pre: imports('createList', 'deriveList'),
+				setup: `${LIST}
+	const upper = deriveList(() => items.get().map(s => s.toUpperCase()), { keyConfig: 'u' })`,
+				body: '<ul data-container>{upper.map((item, k) => <li id={k}>{item}</li>)}</ul>',
+			}),
+			'c.tsx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		const declaration =
+			"const upper = deriveList(() => items.get().map(s => s.toUpperCase()), { keyConfig: 'u' })"
+		expect(component?.clientCode).toContain(declaration)
+		expect(component?.serverCode).toContain(declaration)
+		expect(component?.clientCode).toContain('reconcile(container,')
+		expect(component?.serverCode).toContain('of upper.entries()')
+	})
+
+	test('a `.map()` callback over a List takes `(item, key)` at most', () => {
+		const { diagnostics } = compileComponentTsx(
+			tsxSource({
+				pre: imports('createList'),
+				setup: LIST,
+				body: '<ul data-container>{items.map((item, k, x) => <li>{item}</li>)}</ul>',
+			}),
+			'c.tsx',
+			new Set(),
+		)
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC005'])
+		expect(diagnostics[0]?.message).toContain('passes `(item, key)`')
+	})
+})
+
+describe('grammar asymmetry — shapes with no counterpart', () => {
+	test('.tsrx: an index binding over a List is LTC005 (the `.tsx` second parameter is the key)', () => {
+		const { diagnostics } = compileComponent(
+			tsrxSource({
+				pre: imports('createList'),
+				setup: LIST,
+				body: '<ul>@for (const item of items; index i) { <li>{item}</li> }</ul>',
+			}),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(
+				d =>
+					d.code === 'LTC005' &&
+					d.message.includes('An index binding in a reactive-list'),
+			),
+		).toBe(true)
 	})
 
 	test('.tsrx: a nested reactive loop inside the item is LTC005 (LT-424 owns nesting)', () => {
@@ -1627,27 +1741,6 @@ describe('grammar asymmetry — shapes with no counterpart', () => {
 				d =>
 					d.code === 'LTC005' &&
 					d.message.includes('A loop inside a reactive-list'),
-			),
-		).toBe(true)
-	})
-
-	test('.tsrx: a key binding named `first` is rejected (no `.tsx` spelling — the key comes from keyConfig)', () => {
-		const { diagnostics } = compileComponent(
-			tsrxSource({
-				pre: imports('createList'),
-				setup: LIST,
-				body: '<ul data-container>@for (const item of items; key first) { <li>{item}</li> }</ul>',
-			}),
-			'c.tsrx',
-			new Set(),
-		)
-		expect(
-			diagnostics.some(
-				d =>
-					d.code === 'LTC005' &&
-					d.message.includes(
-						'reserved parameters of `reconcile()`’s `bindItem`',
-					),
 			),
 		).toBe(true)
 	})

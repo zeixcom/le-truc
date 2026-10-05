@@ -408,11 +408,12 @@ const isMapCall = (node: AstNode): boolean => {
  * parameters, and a block body's statements (the output is the one
  * `return <jsx/>`) or an expression body's JSX — into a `LoopSource`;
  * `lowerLoop` (shared) routes and validates the rest. Over server data this
- * is the `each()` plan; over a declared reactive `createList` the reconcile
- * plan — the loop's iterable type, not its spelling, routes it.
+ * is the `each()` plan; over a declared `createList` or `deriveList` the
+ * reconcile plan — the loop's iterable type, not its spelling, routes it.
  *
- * `@for`'s `key k` clause has no `.map()` spelling; the reactive-list form
- * keys by the declared `createList`'s own `keyConfig`.
+ * The callback's second parameter is routed the same way (ADR 0046 s4): the
+ * index over an Array, the item's stable key over a List — the `.tsx`
+ * spelling of `@for`'s `key k` clause (`items.map((item, k) => …)`).
  */
 export const lowerFor = (
 	ctx: ExtractContext,
@@ -450,6 +451,7 @@ export const lowerFor = (
 			index: indexName ? { name: indexName, at: params[1] as AstNode } : null,
 			iterable: callee.object as AstNode,
 			key: null,
+			keyOverList: isNode(params[1]) ? (params[1] as AstNode) : null,
 			extraParams: params.length > 2,
 			statements: block ? asArray(body.body) : [],
 			outputOf: stmt =>

@@ -8,6 +8,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import {
 	createList as realCreateList,
 	createStore as realCreateStore,
+	deriveList as realDeriveList,
 } from '@zeix/cause-effect'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
@@ -81,6 +82,27 @@ describe('ServerList iterates cells, keyed like Cause & Effect', () => {
 			'b:Beta',
 			'c:Gamma',
 		])
+	})
+})
+
+describe('deriveList: a list source keyed like Cause & Effect (ADR 0046 s4)', () => {
+	test('the compute form keys by its own keyConfig', () => {
+		const real = realDeriveList(() => items, { keyConfig: 'd' })
+		const list = deriveList(() => items, { keyConfig: 'd' })
+		expect([...list.keys()]).toEqual([...real.keys()])
+		expect(list.get()).toEqual(real.get())
+	})
+
+	test('the source form keeps the source keys and maps each value', () => {
+		const realSource = realCreateList(items, { keyConfig: item => item.id })
+		const real = realDeriveList(realSource, item => item.label.toUpperCase())
+		const source = createList(items, { keyConfig: item => item.id })
+		const list = deriveList(source, item => item.label.toUpperCase())
+		expect([...list.keys()]).toEqual([...real.keys()])
+		expect(list.get()).toEqual(real.get())
+		expect(list.map((cell, key) => [key, cell.get()])).toEqual(
+			real.map((signal, key) => [key, signal.get()]),
+		)
 	})
 })
 

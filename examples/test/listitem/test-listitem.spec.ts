@@ -11,7 +11,8 @@ import { expect, type Page, test } from '@playwright/test'
  *   marker set on an adopted item survives a state change (no re-clone);
  * - the Add button appends an item the client CLONED from the extracted
  *   `<template data-list="0">` — and the same wiring applies to the
- *   clone, including the key-derived `id`/`for` on the `.tsrx` surface.
+ *   clone, including the key-derived `id`/`for` (the `.tsx` keyed `map`
+ *   binds the key since LT-425).
  */
 
 const firstTask = (page: Page, tag: string) =>
@@ -23,10 +24,7 @@ const checkbox = (page: Page, tag: string, key: string) =>
 const textInput = (page: Page, tag: string, key: string) =>
 	page.locator(`${tag} li[data-key="${key}"] input[type="text"]`)
 
-for (const [tag, keyed] of [
-	['test-listitem', true],
-	['test-listitem-tsx', false],
-] as const) {
+for (const tag of ['test-listitem', 'test-listitem-tsx'] as const) {
 	test.describe(`${tag}: the item is a Mount Scope (LT-423)`, () => {
 		test.beforeEach(async ({ page }) => {
 			await page.goto(`/test/${tag}`)
@@ -79,20 +77,18 @@ for (const [tag, keyed] of [
 			await expect(added).toHaveClass(/done/)
 			await expect(added.locator('> label')).toHaveText('Added task')
 			await expect(added.locator('form-checkbox input')).toBeChecked()
-			if (keyed) {
-				// Key-derived attributes, set once at clone: the new task's
-				// label points at its own input by key.
-				const key = await added.getAttribute('data-key')
-				expect(key).toBeTruthy()
-				await expect(added.locator(`input[type="text"]#${key}`)).toBeAttached()
-				await expect(added.locator(`label[for="${key}"]`)).toBeAttached()
-				await expect(added.locator(`label[for="${key}"]`)).toHaveText(
-					'Added task',
-				)
-				// And the clone's own input drives its label.
-				await added.locator('input[type="text"]').fill('Edited clone')
-				await expect(added.locator('> label')).toHaveText('Edited clone')
-			}
+			// Key-derived attributes, set once at clone: the new task's
+			// label points at its own input by key.
+			const key = await added.getAttribute('data-key')
+			expect(key).toBeTruthy()
+			await expect(added.locator(`input[type="text"]#${key}`)).toBeAttached()
+			await expect(added.locator(`label[for="${key}"]`)).toBeAttached()
+			await expect(added.locator(`label[for="${key}"]`)).toHaveText(
+				'Added task',
+			)
+			// And the clone's own input drives its label.
+			await added.locator('input[type="text"]').fill('Edited clone')
+			await expect(added.locator('> label')).toHaveText('Edited clone')
 		})
 	})
 }

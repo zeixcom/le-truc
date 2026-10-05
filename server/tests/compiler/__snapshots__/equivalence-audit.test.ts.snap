@@ -69,8 +69,8 @@ exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8
           P2: …e=""><label for="tags-input">Tags</label><div data-container="" class="input"><input type="text" id="tags-input" data-unrec…
 @158 (-0/+3)  P1: …"input"><input type="text" id="tags-input" data-unreconciled></div><template data-list="0"><span class="token" data-key>…
           P2: …"input"><input type="text" id="tags-input" data-unreconciled=""></div><template data-list="0"><span class="token" data-key=…
-@217 (-0/+3)  P1: …d></div><template data-list="0"><span class="token" data-key><span class="token-label"><slot></slot></span><button type=…
-          P2: …"></div><template data-list="0"><span class="token" data-key=""><span class="token-label"><slot></slot></span><button type=…"
+@217 (-0/+3)  P1: …d></div><template data-list="0"><span class="token" data-key><span class="token-label"></span><button type="button" clas…
+          P2: …"></div><template data-list="0"><span class="token" data-key=""><span class="token-label"></span><button type="button" clas…"
 `;
 
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) module-list: the connect diff against the harness render is the recorded hydration boundary 1`] = `
@@ -78,14 +78,16 @@ exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8
           P2: …="off"><button type="button" aria-label="Clear input" hidden="" class="clear">✕</button></div></form-textbox><basic-button …
 @369 (-0/+12)  P1: …on class="submit"><button type="submit" class="constructive">Add</button></basic-button></form><ul data-container></ul><…
           P2: …on class="submit"><button type="submit" class="constructive" disabled="">Add</button></basic-button></form><ul data-container=""></u…
-@422 (-0/+3)  P1: …uctive">Add</button></basic-button></form><ul data-container></ul><template data-list="0"><li><span><slot></slot></span>…
-          P2: …bled="">Add</button></basic-button></form><ul data-container=""></ul><template data-list="0"><li><span><slot></slot></span>…"
+@422 (-0/+3)  P1: …uctive">Add</button></basic-button></form><ul data-container></ul><template data-list="0"><li><span></span><basic-button…
+          P2: …bled="">Add</button></basic-button></form><ul data-container=""></ul><template data-list="0"><li><span></span><basic-button…"
 `;
 
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) module-tabgroup: the connect diff against the harness render is the recorded hydration boundary 1`] = `
 "@448 (-31/+34)  P1: …"tabpanel" id="paneltwo" aria-labelledby="triggertwo" hidden>Second</div></module-tabgroup>…
           P2: …"tabpanel" id="paneltwo" aria-labelledby="triggertwo" hidden="">Second</div></module-tabgroup>…"
 `;
+
+exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) test-listitem: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
 
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) basic-blogmeta: the connect diff against the harness render is the recorded hydration boundary 1`] = `
 "@59 (-0/+3)  P1: …<basic-blogmeta lang="en"><span itemprop="author" itemscope itemtype="https://schema.org/Person" class="author"><img sr…
@@ -148,8 +150,6 @@ exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8
 
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) module-splitview: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
 
-exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) css-probe: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
-
-exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) test-listitem: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
-
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) test-listitem-tsx: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
+
+exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) css-probe: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;

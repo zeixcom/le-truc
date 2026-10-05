@@ -955,10 +955,12 @@ const planHarvests = (
 		// a harvest would replace the start callback (ADR 0046 s5).
 		if (signal.constructor === 'createSensor') continue
 		// A reconciled List seeds from the adopted DOM, not a text/attr site.
+		// A derived List (ADR 0046 s4) has no seed to harvest: like every
+		// derive callback it re-derives on the client from its sources.
 		const listPlan = [...reconcilePlans.values()].find(
 			p => p.signal === signal.name,
 		)
-		if (listPlan) {
+		if (listPlan && signal.family === 'declared') {
 			const free = signal.init ? dependenciesOf(signal.init) : new Set<string>()
 			if ([...free].every(name => JS_GLOBALS.has(name))) {
 				harvests.push({ kind: 'list', signal: signal.name, seed: 'verbatim' })
@@ -1008,6 +1010,7 @@ const planHarvests = (
 		// substitution route for these constructors.
 		const isDerivedCallback =
 			signal.constructor === 'deriveCell' ||
+			signal.constructor === 'deriveList' ||
 			signal.constructor === 'deriveStore' ||
 			signal.constructor === 'createMemo'
 		const own = isDerivedCallback

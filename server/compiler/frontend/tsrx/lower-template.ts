@@ -450,6 +450,7 @@ export const lowerFor = (
 			index: indexName ? { name: indexName, at: indexNode } : null,
 			iterable: node.right as AstNode,
 			key: isNode(node.key) ? node.key : null,
+			keyOverList: null,
 			extraParams: false,
 			statements: isNode(node.body) ? asArray(node.body.body) : [],
 			outputOf: stmt => (stmt.type === 'JSXElement' ? stmt : null),

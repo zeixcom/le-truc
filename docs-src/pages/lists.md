@@ -229,9 +229,9 @@ on(host, 'click', e => {
     </basic-button>
   </form>
   <ul data-container></ul>
-  <template>
+  <template data-list="0">
     <li>
-      <span><slot></slot></span>
+      <span></span>
       <basic-button class="remove">
         <button type="button" class="tertiary destructive small">Remove</button>
       </basic-button>

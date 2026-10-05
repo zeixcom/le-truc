@@ -644,7 +644,7 @@ export type EachForIR = ForIRBase & {
 /**
  * A `@for` over a declared reactive `List` (ADR 0024 sub-design 5,
  * milestone 3): the server renders initial keyed items in place plus an
- * extracted `<template>` whose item hole becomes a `<slot>` marker, and the
+ * extracted `<template>` whose item-dependent sites bake empty, and the
  * client lowers to `reconcile()` (ADR 0017).
  */
 export type ReconcileForIR = ForIRBase & {

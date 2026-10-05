@@ -446,7 +446,7 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 
 describe('server golden — module-list (reactive @for → template extraction)', () => {
 	const itemTemplate =
-		'<template data-list="0"><li><span><slot></slot></span>' +
+		'<template data-list="0"><li><span></span>' +
 		'<basic-button class="remove">' +
 		'<button type="button" class="tertiary destructive small">Remove</button>' +
 		'</basic-button></li></template>'
@@ -488,7 +488,7 @@ describe('server golden — module-list (reactive @for → template extraction)'
 				'<li data-key="item0"><span>Apples</span></li>' +
 				'<li data-key="item1"><span>Pears</span></li>' +
 				'</ul>' +
-				'<template data-list="0"><li><span><slot></slot></span></li></template>' +
+				'<template data-list="0"><li><span></span></li></template>' +
 				'</c-el>',
 		)
 	})
