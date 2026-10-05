@@ -105,7 +105,7 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
   LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. LT-392, LT-356, LT-353, LT-417, LT-430 (LT-356 review follow-up), LT-431 (LT-186 review follow-up).
+  ~~LT-391~~ landed. LT-392, LT-356, LT-353, LT-417, LT-430 (LT-356 review follow-up), LT-431 (LT-186 review follow-up), LT-432 (LT-431 review follow-up).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421~~ (done ✓; the
@@ -130,7 +130,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-432.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-433.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -204,36 +204,6 @@ recorded against the 30.4k opening measurement.
 
 
 ### C — corpus port
-
-- [ ] LT-427: An imported function is a known name in a client-only setup side effect (ADR 0046 s5).
-  **Area:** compiler
-  **Context:** module-todo's drag, keyboard reorder and live-region logic moves into one shared
-  client-only helper module that all its surfaces call from setup (LT-111). Today a client-only
-  setup statement must read only client-known names (`setup-extraction.ts:574-590`: context
-  members, signals, ambients, JS globals, earlier consts, `first()` locals), so a call to an
-  imported function is LTC005. Count a non-compose import binding (ADR 0024 s14: re-emitted
-  verbatim into the modules that use it) as client-known in an expression statement. The
-  statement stays client-only: the server never runs it, and the import is emitted into the
-  client module only.
-  **Channel/tier:** compiler; parity case on both surfaces.
-  **Check:** a fixture whose setup calls an imported helper with `host` and a declared list
-  compiles on both surfaces; the import lands in the client module only. Full gates.
-
-- [ ] LT-428: Every compiler-emitted text sink takes `string | number`, on the server and the client (ADR 0046 s6).
-  **Area:** compiler
-  **Context:** `bindText` is already typed `(value: string | number) => void`
-  (`src/bindings.ts:278-281`), so a client text fill over an object is a tsc error through
-  emit-then-check (`check:corpus` covers both surfaces' generated client and server modules).
-  The server's text-escape path (`esc(String(…))`, `emit-server.ts`; `runtime.ts:311`) takes
-  anything. Type the server text sink `(value: string | number | null | undefined) => string`
-  (nil renders empty, matching the client keeping its last value), and route every emitted text
-  position through it, so an object or a boolean reaching a text position fails tsc at its
-  authored line on both surfaces. Name the fix in the sink's JSDoc: render a field
-  (`{() => item.get().label}`), or a ternary for a boolean. Also fix `check-corpus.ts`'s header
-  comment, which still says `.tsrx` only.
-  **Channel/tier:** TypeScript, tier 1 Prevented (ADR 0028), no LTC code.
-  **Check:** a failing fixture per surface (object item text, boolean text) reports at the
-  authored line; corpus `check:corpus` green; goldens byte-identical. Full gates.
 
 - [ ] LT-422: The Value Harness follows the signal meaning — lists iterate cells, store fields are cells; `createSensor` is a signal constructor (ADR 0046 s3, s5).
   **Area:** compiler
@@ -451,70 +421,21 @@ recorded against the 30.4k opening measurement.
 
 ### B — correctness
 
-- [ ] LT-430: An unparseable `i18n/manifest.json` is read as empty and overwritten by `i18n:sync` (LT-356 review).
-  **Area:** server
-  **Needs:** LT-356
-  **Context:** LT-356 made an unreadable catalog FILE refuse sync. The manifest has the same
-  hole twice. `readCatalogs` (`server/effects/i18n.ts`) reads it via `readJson` and
-  `asStringRecord`, so a parse error becomes "no recorded sources": every carried translation
-  then reads as unconfirmed. `scripts/i18n-sync.ts` reads it with its own `catch { return {} }`
-  and rewrites it at the end, which destroys every locale's recorded source strings. **Channel
-  and tier (ADR 0028 s1):** the census stays a report. Record one `malformed` record keyed
-  `manifest.json` (locale `*`, the same shape LT-356 ruled for catalog files), and skip the
-  stale/confirmed comparison while the manifest is unreadable. Sync, the writer, refuses
-  outright: if `manifest.json` exists and does not parse as a JSON object, it writes nothing (no
-  catalog, no manifest), names the file and the parse error, and exits non-zero. Sync reads the
-  manifest through `readCatalogs` (add an `unreadableManifest?: string` to `Catalogs`) instead
-  of its own `JSON.parse`. An ABSENT manifest stays the legitimate first-run empty state.
-  **Acceptance:** a scratch manifest with a trailing comma yields one census record, and sync
-  leaves every file in `i18n/` byte-identical and exits 1 naming it. A regression test sits
-  beside LT-356's in `server/tests/compiler/i18n.test.ts`. **Copy:** follows `writer` → error-messages.
-
-- [ ] LT-431: LTC074 checks server-mode conditional arms in a reconcile container, and `data-key` no longer exempts a sibling (LT-186 review).
+- [ ] LT-432: LTC063's message names the async boundary when that is the culprit (LT-431 review).
   **Area:** compiler
-  **Needs:** LT-186
-  **Context:** LTC074 (LT-186, `runReconcileLoops` in `server/compiler/analysis/loops.ts`)
-  refuses an element beside a reactive-list loop in its `reconcile()` container that carries
-  neither `data-key` nor `data-unreconciled`. It has two holes, both the same silent drop at
-  upgrade (ADR 0017; LT-185's runtime advisory):
-
-  1. **Server-mode conditionals are exempt.** A `conditional` node with `mode: 'server'` renders
-     its taken arm's elements unkeyed as container children, and the list's first run removes
-     them. **Ruling (Architect with owner, 2026-10-05): extend LTC074 into the arms; do not
-     refuse the conditional outright.** A server-known flag gating a `data-unreconciled`
-     sibling (a sortable list's drag placeholder, say) is a legal shape. Check **every arm**,
-     not only `initial`: the winner depends on render args, so a compile-time winner proves
-     nothing. Walk each arm's children with the same rules as direct children: an `element`
-     needs `data-unreconciled`, a `compose` child is flagged with the move-it-out fix-it, and a
-     nested server-mode `conditional` recurses. Text needs no check, because `reconcile()`
-     classifies element children only. A `reactive` conditional and a `try` node stay LTC063's
-     (ADR 0037 s5) and are not also LTC074. Pin that a `try` in the container *is* LTC063.
-     If it is not, stop and record it in `NOTES.md`; do not widen LTC063 in this task.
-     The diagnostic sits on the offending arm-root element, and the message names its tag as
-     now. Add nothing about the arm, since the range already points at it.
-  2. **`data-key` is not an exemption.** At runtime (`src/helpers/reactive.ts`, `classify`),
-     an authored `data-key` sibling is removed when its key is not in the source, and when the
-     key matches an item it is adopted *as that item*. An authored static `data-key` beside the
-     loop is never correct. Drop `data-key` from the attribute test in `loops.ts`, and only
-     `data-unreconciled` exempts. Update the message in `diagnostics.ts`
-     (`unkeyedSiblingInReconcileContainer`) to drop "without `data-key`". The fix-it stays:
-     add `data-unreconciled`, or move the element out. Update the `LTC074` comment in the code
-     union and the `VOCABULARY_LEDGER.md` line to match. The `@empty` arm's roots stay exempt
-     as now (server-stamped `data-unreconciled`, LT-212).
-
-  **Channel and tier (ADR 0028):** compiler, tier 1 Prevented, both surfaces (shared loop
-  analysis). It is an error, as LTC074 already is. The runtime half stays LT-185's DEV_MODE
-  advisory, unchanged.
-
-  **Acceptance:** in `server/tests/compiler/diagnostic-ranges.test.ts`, positive cases on both
-  surfaces: (a) a server-mode `@if`/ternary arm root without `data-unreconciled` beside the
-  loop, where the hit is on the arm root; (b) the same in the *losing* arm (the test seeds the
-  other winner); (c) an authored `<li data-key="x">` beside the loop. Negatives: a server-mode
-  arm whose root carries `data-unreconciled`, and a text-only arm. Plus the LTC063-not-LTC074
-  pin for a `try`. The existing negatives and the corpus pin (`module-list`, `form-tokenbox`)
-  stay green. `check:corpus` exit 0 with the compile-warning baseline at 0. Grep the corpus
-  and `server/tests` for an authored `data-key` beside a loop first: any fixture that relied
-  on it switches to `data-unreconciled`. **Copy:** follows `writer` → error-messages.
+  **Needs:** LT-431
+  **Context:** LTC063 (LT-274) refuses an arm set in a reactive list's container. An async
+  boundary (`@try` with `@pending`, `<truc:try pending={…}>`) is an arm set too (ADR 0037 s4)
+  and hits the same rule, but the message names only "`@if` or `@switch`" / "A conditional or
+  `switch`". Found by the LT-431 session. Make the message name the construct that fired. The
+  producer (`reactiveConditionInReconcileContainer`, `server/compiler/diagnostics.ts`) takes only
+  `wording`; give it the arm set's construct (`conditional` vs `try`, from the node at the call
+  site) and add a boundary spelling per surface to `SurfaceWording` (`@try` / `<truc:try>`), so a
+  boundary's message names it and a conditional's stays as it is. Keep the code and the
+  tier as they are. Update `skills/le-truc/references/errors.md`'s LTC063 row to say "a reactive
+  condition or async boundary". **Channel/tier:** compiler, tier 1 Prevented, unchanged; copy
+  and one producer parameter. **Copy:** follows `writer` → error-messages. **Check:** LT-431's async-boundary pin in
+  `diagnostic-ranges.test.ts` asserts the new wording on both surfaces; `test:server` green.
 
 ### D — CSS departures
 

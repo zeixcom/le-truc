@@ -770,3 +770,68 @@ Full entry text: `git log -p -- DONE.md`.
   `.agents-proposals/skills/writer/references/document-map.md` (merged on task/LT-418, 922f5d81)
   rephrases line 341 to queue-store language and points at `references/docs-architecture.md`.
   The owner's copy-in of that proposal discharges the `.agents/` fix; nothing further to do here.
+
+- [x] LT-427: An imported function is a known name in a client-only setup side effect (ADR 0046 s5). — reviewed ✓
+  **Area:** compiler
+  **Changed:** no compiler behavior change. The entry's premise did not hold: `clientKnownName`
+  (`server/compiler/setup-extraction.ts`) has admitted authored non-compose import bindings since
+  LT-088. Pinned by `server/tests/compiler/imported-setup-helper.test.ts` (both surfaces: clean
+  compile, import and call in the client module only, byte-identical modules, a compose import
+  stays LTC005); the gate comment lists import bindings; `HOST_PROFILE.md` → Imports states the
+  rule.
+
+  **Review:** Approved (Architect, 2026-10-05). Pinning an already-true behavior closes the task.
+  Imports in per-item setup (`map` block body, `@for` statements, ADR 0046 s5) stay LT-426's.
+
+- [x] LT-428: Every compiler-emitted text sink takes `string | number`, on the server and the client (ADR 0046 s6). — reviewed ✓
+  **Area:** compiler
+  **Changed:** every compiler-emitted text position takes `string | number` (ADR 0046 s6); an
+  object or a boolean fails tsc at the authored line on both phases and both surfaces. The server
+  renders text through new harness sinks `text`/`textOf` (`server/compiler/runtime.ts`,
+  `TextValue = string | number | null | undefined`; nil renders empty, where it rendered
+  "undefined" before). The client async-boundary arms now write through `bindText`. Sink statements carry
+  spans so `check:corpus` reports at the authored line. Consequences: a bare `{e}` in a catch arm
+  is a tsc error (the analysis hint now asks for a text member, e.g. `{e.message}`), the server
+  catch parameter is typed `Error`, and `.tsrx` drops `{/* comment */}` children as `.tsx` does.
+  `check-corpus.ts`'s header covers both surfaces; `LE_TRUC_COMPILER.md` documents typed text
+  sinks. Tests: `server/tests/compiler/text-sinks.test.ts`.
+
+  **Review:** Approved (Architect, 2026-10-05); Playwright and `test:variants` run green by the
+  owner (sandbox times out page loads). The JSDoc's field fix (`{() => item.get().label}`) only
+  compiles once ADR 0046 s1 lands, so the test pins the ternary fix alone. A compiler-wrapped
+  expression maps through a synthetic slice: line exact, column approximate.
+
+- [x] LT-430: An unparseable `i18n/manifest.json` is read as empty and overwritten by `i18n:sync` (LT-356 review). — reviewed ✓
+  **Area:** server
+  **Needs:** LT-356
+  **Changed:** an `i18n/manifest.json` that exists but does not parse as a JSON object is no
+  longer read as empty. `readCatalogs` (`server/effects/i18n.ts`) reports it as
+  `Catalogs.unreadableManifest`; the census records one `malformed` gap keyed `manifest.json`
+  (locale `*`) and reports no `stale` while it stands. `i18n:sync` reads the manifest through
+  `readCatalogs` before compiling, and on an unreadable one exits 1 naming the file and the parse
+  error, writing nothing. An absent manifest stays the first-run empty state. Documented in
+  `LE_TRUC_COMPILER.md`; regression tests in `server/tests/compiler/i18n.test.ts`.
+
+  **Review:** Approved (Architect, 2026-10-05). Accepted as is: the shared reader maps a missing
+  file to an empty catalog (only reachable for a catalog file that vanishes after the listing),
+  and sync now drops non-string hashes and non-object locale entries inside a readable manifest
+  (they were never usable). The census summary counts the record under `*` (cosmetic). Sync
+  has no automated test, because it reads its config from `REPO_ROOT`; acceptance was verified
+  by hand.
+
+- [x] LT-431: LTC074 checks server-mode conditional arms in a reconcile container, and `data-key` no longer exempts a sibling (LT-186 review). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-186
+  **Changed:** LTC074 (`server/compiler/analysis/loops.ts`) checks every arm root of a
+  server-mode conditional in a reconcile container (every arm, nested ones included) and the
+  body and catch roots of a `try` without a pending arm. Only `data-unreconciled` exempts a
+  sibling now; an authored `data-key` does not. Message, code comment, `VOCABULARY_LEDGER.md`
+  and `skills/le-truc/references/errors.md`/`runtime.md` updated. Tests in
+  `server/tests/compiler/diagnostic-ranges.test.ts` (both surfaces; nested recursion `.tsrx`
+  only, as `.tsx` refuses a nested ternary branch).
+
+  **Review:** Approved (Architect, 2026-10-05). Rulings: (1) extend LTC074 into the arms rather
+  than refuse the conditional (owner, 2026-10-05); every arm is checked, because the winner
+  depends on render args. (2) `data-key` is no exemption: `reconcile()` removes an unknown key
+  and adopts a matching one as that item. (3) A `try` without a pending arm is a server boundary
+  and LTC074's; an async boundary stays LTC063's. LTC063's copy for a boundary is LT-432.
