@@ -38,6 +38,7 @@ import { DEFAULT_EMIT_PATHS } from './emit-paths'
 import { dependenciesOf, isServerEvaluable } from './evaluability'
 import type { ExtractContext } from './extract-context'
 import type { ComponentIR, TemplateNode } from './ir'
+import { onServer } from './setup-extraction'
 import {
 	CONTEXT_NAMES,
 	FACTORY_CONTEXT_MEMBERS,
@@ -570,7 +571,13 @@ const serverRenderedThunkNodes = (
 
 type SetupLikeComponent = Pick<
 	ComponentIR,
-	'root' | 'setup' | 'plainSetup' | 'clientSetup' | 'signals' | 'serverKnown'
+	| 'root'
+	| 'setup'
+	| 'plainSetup'
+	| 'clientSetup'
+	| 'itemSetup'
+	| 'signals'
+	| 'serverKnown'
 >
 
 /**
@@ -594,6 +601,11 @@ export const computeClientNeededNames = (
 		for (const n of dependenciesOf(exprNode)) needed.add(n)
 	for (const stmt of component.clientSetup)
 		for (const n of dependenciesOf(stmt.node)) needed.add(n)
+	// Every item setup statement is client-emitted, in `bindItem` (ADR
+	// 0046 s5) — a ref through its selector alone.
+	for (const stmt of component.itemSetup)
+		if (stmt.kind !== 'ref')
+			for (const n of dependenciesOf(stmt.node)) needed.add(n)
 	// Every `setup` entry that ISN'T a plain const (signals, `expose()`) is
 	// always client-emitted too — `plainSetup` is `setup`'s only conditional
 	// subset (same object references, so `Set` membership by name is enough
@@ -634,6 +646,10 @@ export const serverUsageNames = (
 	const serverNames = new Set<string>()
 	for (const stmt of component.setup)
 		for (const n of dependenciesOf(stmt.node)) serverNames.add(n)
+	// The item setup the server's loop declares (ADR 0046 s5).
+	for (const stmt of component.itemSetup)
+		if (onServer(stmt))
+			for (const n of dependenciesOf(stmt.node)) serverNames.add(n)
 	for (const exprNode of serverExprNodes(component.root))
 		for (const n of dependenciesOf(exprNode)) serverNames.add(n)
 	for (const exprNode of serverRenderedThunkNodes(

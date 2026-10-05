@@ -46,6 +46,7 @@ import type {
 	InitialWinner,
 	TemplateNode,
 } from './ir'
+import { onServer } from './setup-extraction'
 import { type ConditionalNode, childNodes } from './walk'
 
 /* === Types === */
@@ -328,10 +329,18 @@ export const resolveInitialWinners = (component: ComponentIR): void => {
 		// with them in scope, so a conditional over the item folds per item
 		// in the harness. The item is a signal — `item.get()` is a call the
 		// portable grammar does not admit, so it is no hole.
+		// The item's setup names the server's loop declares (ADR 0046 s5) are
+		// in scope there too.
 		if (loop?.kind === 'reconcile')
 			innerKnown = union(
 				serverKnown,
-				new Set([loop.itemName, ...(loop.keyName ? [loop.keyName] : [])]),
+				new Set([
+					loop.itemName,
+					...(loop.keyName ? [loop.keyName] : []),
+					...loop.setup.flatMap(stmt =>
+						onServer(stmt) ? [stmt.name as string] : [],
+					),
+				]),
 			)
 		if (node.kind === 'conditional')
 			node.initial = winnerOf(

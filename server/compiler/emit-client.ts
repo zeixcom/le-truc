@@ -24,12 +24,12 @@ import type {
 	ReconcilePlan,
 	TopEffectPlan,
 } from './analysis/plan'
-import { sanitizeVarName } from './ast-utils'
+import { freeIdentifiers, sanitizeVarName } from './ast-utils'
 import { CodeBuilder, isJsIdentifier, jsData, jsString } from './codegen'
 import { carriedKinds, FORMATTING_KINDS, type Message } from './icu/evaluate'
 import { clientSourceRecord } from './icu/parse'
 import { computeClientNeededNames } from './imports'
-import type { ComponentIR, InitSignalIR } from './ir'
+import type { ComponentIR, InitSignalIR, ItemSetupStmt } from './ir'
 import type { SourceSlice, SourceSpan } from './spans'
 import {
 	DIRTY_FLAG_ATTRS,
@@ -335,7 +335,7 @@ const factoryScopeNames = (
 		if (loop.kind === 'each') {
 			if (loop.indexName) names.add(loop.indexName)
 			for (const hoisted of loop.hoisted) names.add(hoisted.name)
-		}
+		} else for (const stmt of loop.setup) if (stmt.name) names.add(stmt.name)
 	}
 	names.delete('host')
 	names.delete('internals')
@@ -739,6 +739,31 @@ export const emitClientModule = (
 			)
 	}
 
+	// An item's setup (ADR 0046 s5), verbatim and in source order, once per
+	// entering item: consts, signal declarations and client-only side
+	// effects, disposed with the item. A ref queries through the item's
+	// `first` — or, naming the item root, is the element parameter itself.
+	const emitItemSetup = (setup: readonly ItemSetupStmt[]): void => {
+		for (const stmt of setup) {
+			if (stmt.kind === 'ref') {
+				if (stmt.root) {
+					needsElementType = true
+					out.line(
+						`const ${stmt.name} = _element as ElementFromSelector<${jsString(stmt.selector)}>`,
+					)
+				} else
+					out.line(
+						stmt.reason === null || !stmt.required
+							? `const ${stmt.name} = first(${jsString(stmt.selector)})`
+							: `const ${stmt.name} = first(${jsString(stmt.selector)}, ${jsString(stmt.reason)})`,
+					)
+				continue
+			}
+			if (stmt.kind === 'signal') imports.add(stmt.constructor)
+			push(stmt.text, sliceOf(stmt.text, stmt.range.start))
+		}
+	}
+
 	// One reactive-list @for → reconcile()'s list form (ADR 0017), the item
 	// a Mount Scope (ADR 0046 s1): bindItem mounts the item's own effects
 	// against its element parameter and `first` — descendants queried once
@@ -755,12 +780,24 @@ export const emitClientModule = (
 		// one is markup drift, and `reconcile()`'s own template checks are
 		// the Contained backstop (ADR 0028).
 		const templateQuery = `${plan.parent}.querySelector<HTMLTemplateElement>(${jsString(`:scope > template[data-list="${plan.listIndex}"]`)})!`
-		if (scope.effects.length === 0 && scope.keyAttrs.length === 0) {
+		if (
+			scope.effects.length === 0 &&
+			scope.keyAttrs.length === 0 &&
+			scope.setup.length === 0
+		) {
 			out.line(
 				`${imports.local('reconcile')}(${plan.container}, ${templateQuery}, ${plan.signal}, () => {})`,
 			)
 		} else {
-			const usesFirst = scope.locals.length > 0
+			// The item's `first` answers its locals, its non-root refs and any
+			// setup statement that queries through it (ADR 0046 s5).
+			const usesFirst =
+				scope.locals.length > 0 ||
+				scope.setup.some(stmt =>
+					stmt.kind === 'ref'
+						? !stmt.root
+						: freeIdentifiers(stmt.node).has('first'),
+				)
 			out.open(
 				`${imports.local('reconcile')}(${plan.container}, ${templateQuery}, ${plan.signal}, (_element, ${plan.itemParam}, ${keyParam}${usesFirst ? ', first' : ''}) => {`,
 			)
@@ -776,6 +813,7 @@ export const emitClientModule = (
 						? `const ${local.name} = first(${jsString(local.selector)})`
 						: `const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
 				)
+			emitItemSetup(scope.setup)
 			emitKeyAttrs(scope.keyAttrs)
 			for (const inner of scope.effects) emitTopEffect(inner)
 			out.close('})')

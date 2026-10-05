@@ -41,15 +41,17 @@ import type {
 	ComponentIR,
 	ContextSignalIR,
 	ForIR,
+	ItemSetupStmt,
 	ReconcileForIR,
 	SetupStmt,
 	TemplateNode,
 } from './ir'
 import { NO_DEPS } from './reactivity'
 import type { RegistryEntry } from './registry'
+import { onServer } from './setup-extraction'
 import { reindent, type SourceSpan } from './spans'
 import type { EvaluationTier } from './tier'
-import { CLIENT_ONLY_PRIMITIVES, JS_GLOBALS } from './vocabulary'
+import { CLIENT_ONLY_PRIMITIVES, CONTEXT_NAMES, JS_GLOBALS } from './vocabulary'
 import {
 	armSetOf,
 	type ConditionalNode,
@@ -121,6 +123,9 @@ const renderScopeNames = (component: ComponentIR): Set<string> => {
 		if (loop.kind === 'each') {
 			if (loop.indexName) names.add(loop.indexName)
 			for (const hoisted of loop.hoisted) names.add(hoisted.name)
+		} else {
+			if (loop.keyName) names.add(loop.keyName)
+			for (const stmt of loop.setup) if (stmt.name) names.add(stmt.name)
 		}
 	}
 	walkTemplate(component.root, node => {
@@ -208,7 +213,8 @@ type EmitContext = {
 	/**
 	 * The item names of the reactive lists whose server loop is open (ADR
 	 * 0046 s3): the loop binds each to the item CELL the list hands out, so
-	 * the bare `{item}` fill reads it with `.get()`.
+	 * the bare `{item}` fill reads it with `.get()` — and so does a bare
+	 * read of a signal the item's setup declares (ADR 0046 s5).
 	 */
 	listItems: Set<string>
 	/**
@@ -530,6 +536,17 @@ const listTemplate = (
 		out.line(`${ctx.buffer}.push(${expr})`)
 	}
 	pushTo(`'<template data-list="${listIndex}">'`)
+	// The item's own names are unbound in the template render, which runs
+	// once, outside the loop (ADR 0046 s5).
+	const unbound = [
+		loop.itemName,
+		...(loop.keyName === null ? [] : [loop.keyName]),
+		...loop.setup.flatMap(stmt => (stmt.name === null ? [] : [stmt.name])),
+	]
+	const cloneTime = new Set(
+		loop.setup.flatMap(stmt => (stmt.kind === 'const' ? [stmt.name] : [])),
+	)
+	if (loop.keyName !== null) cloneTime.add(loop.keyName)
 	// A nested arm set or loop (LT-424) renders through the main emitter in
 	// template mode — no live arm, no items, the enclosing items' bindings
 	// unbound — into this template, one copy per outer item.
@@ -541,11 +558,7 @@ const listTemplate = (
 		}
 		ctx.out = out
 		ctx.inArmTemplate = true
-		ctx.templateUnbound = new Set([
-			...saved.templateUnbound,
-			loop.itemName,
-			...(loop.keyName === null ? [] : [loop.keyName]),
-		])
+		ctx.templateUnbound = new Set([...saved.templateUnbound, ...unbound])
 		try {
 			emit(ctx, node, scope)
 		} finally {
@@ -628,12 +641,7 @@ const listTemplate = (
 				// mount sets it once at clone; `validateListBody` proved the
 				// expression reads the key binding alone.
 				const reads = [...freeIdentifiers(attr.node)]
-				if (
-					loop.keyName !== null &&
-					reads.length > 0 &&
-					reads.every(n => n === loop.keyName)
-				)
-					continue
+				if (reads.length > 0 && reads.every(n => cloneTime.has(n))) continue
 				// An enclosing list's key, while that list's own template renders
 				// (LT-424): unbound here, set by the owning mount.
 				if (reads.some(n => ctx.templateUnbound.has(n))) continue
@@ -662,6 +670,44 @@ const listTemplate = (
 }
 
 /**
+ * An item's setup in the server's loop (ADR 0046 s5): its plain consts and
+ * signal declarations, verbatim, once per initial item — the value harness
+ * evaluates each signal once. A `createSensor` start callback or a function
+ * const's body may name what only the client binds (`host`, a ref, `on`):
+ * defined, never called, here, so those names are declared as `any` stubs
+ * for the module to type-check, exactly like `expose()`'s.
+ */
+const emitItemSetup = (
+	ctx: EmitContext,
+	loop: ReconcileForIR,
+	setup: readonly ItemSetupStmt[],
+): void => {
+	if (setup.length === 0) return
+	const refs = declaredRefNames(ctx.component.firstRefs)
+	for (const stmt of loop.setup) if (stmt.kind === 'ref') refs.add(stmt.name)
+	const stubs = new Set<string>()
+	for (const stmt of setup)
+		for (const name of freeIdentifiers(stmt.node))
+			if (
+				refs.has(name) ||
+				CONTEXT_NAMES.has(name) ||
+				CLIENT_ONLY_PRIMITIVES.has(name)
+			)
+				stubs.add(name)
+	if (stubs.size > 0) ctx.used.add('refStub')
+	for (const name of [...stubs].sort())
+		ctx.out.line(`const ${name}: any = ${ctx.h('refStub')}`)
+	for (const stmt of setup) {
+		if (stmt.kind === 'signal') {
+			ctx.used.add(stmt.constructor)
+			for (const id of stmt.text.match(/[A-Za-z_$][\w$]*/g) ?? [])
+				if (RUNTIME_HARNESS_EXPORTS.has(id)) ctx.used.add(id)
+		}
+		ctx.out.line(stmt.text, [{ text: stmt.text, start: stmt.range.start }])
+	}
+}
+
+/**
  * Reactive `@for` over a declared List (ADR 0024 sub-design 5): initial
  * keyed items render in place (adopted children are complete) with
  * `data-key` from the shim's cause-effect-parity key generation, and the
@@ -677,6 +723,8 @@ const emitListFor = (
 	const loopScope = new Set(scope)
 	loopScope.add(loop.itemName)
 	if (loop.keyName) loopScope.add(keyVar)
+	const setup = loop.setup.filter(onServer)
+	for (const stmt of setup) loopScope.add(stmt.name as string)
 	const emptyFlag = openEmptyFlag(ctx, loop)
 	// Inside a template (an arm's, an enclosing list's; LT-424) the list
 	// renders no items: the clone's mount reconciles them from the List.
@@ -685,8 +733,18 @@ const emitListFor = (
 			`for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
 		)
 		if (emptyFlag) ctx.out.line(`${emptyFlag} = false`)
-		const added = !ctx.listItems.has(loop.itemName)
-		ctx.listItems.add(loop.itemName)
+		emitItemSetup(ctx, loop, setup)
+		// The item and its setup's signals are cells — a bare `{name}` reads
+		// `.get()` — and its consts are values that shadow an enclosing one.
+		const cells = [
+			loop.itemName,
+			...setup.flatMap(stmt => (stmt.kind === 'signal' ? [stmt.name] : [])),
+		]
+		const added = cells.filter(name => !ctx.listItems.has(name))
+		for (const name of added) ctx.listItems.add(name)
+		const shadowed = setup
+			.flatMap(stmt => (stmt.kind === 'const' ? [stmt.name] : []))
+			.filter(name => ctx.listItems.delete(name))
 		const dataKey: AttributeIR = {
 			kind: 'server',
 			name: 'data-key',
@@ -697,7 +755,8 @@ const emitListFor = (
 		}
 		emitElement(ctx, loop.output, loopScope, [dataKey])
 		for (const child of loop.output.children) emit(ctx, child, loopScope)
-		if (added) ctx.listItems.delete(loop.itemName)
+		for (const name of added) ctx.listItems.delete(name)
+		for (const name of shadowed) ctx.listItems.add(name)
 		pushClose(ctx, loop.output.tag)
 		ctx.out.close()
 	}

@@ -22,6 +22,7 @@ import { computeClientNeededNames, serverUsageNames } from '../imports'
 import type {
 	ComponentIR,
 	EachForIR,
+	ItemSetupStmt,
 	ReconcileForIR,
 	TemplateNode,
 } from '../ir'
@@ -202,6 +203,12 @@ export type ReconcileItemScope = {
 	keyAttrs: KeyAttrPlan[]
 	/** The item's effects, in document order. */
 	effects: TopEffectPlan[]
+	/**
+	 * The item's setup statements (ADR 0046 s5), in source order: mounted
+	 * in `bindItem` before its key-derived attributes and effects, which
+	 * may read them.
+	 */
+	setup: readonly ItemSetupStmt[]
 }
 
 /** One reactive `@for` over a declared List lowered to `reconcile()`. */
@@ -597,6 +604,11 @@ export const analyzeClient = (
 		component.tag.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()),
 		...component.signals.map(s => s.name),
 		'host',
+		// An item's setup names bind in `bindItem` (ADR 0046 s5): a minted
+		// local there must not shadow one.
+		...component.itemSetup.flatMap(stmt =>
+			stmt.name === null ? [] : [stmt.name],
+		),
 	])
 	// LT-127: `first()` selectors addressing COMPOSED children are resolved
 	// here, not in `compileSource` — the child's tag needs the registry.
@@ -738,7 +750,10 @@ export const analyzeClient = (
 	// Client-only setup statements admitted for their `t.<key>` reads
 	// (`setup-extraction.ts`'s gate, LT-349) carry their keys into the
 	// attribute; the preamble precedes those statements.
-	for (const stmt of component.clientSetup)
+	for (const stmt of [
+		...component.clientSetup,
+		...component.itemSetup.filter(stmt => stmt.kind !== 'ref'),
+	])
 		for (const name of dependenciesOf(stmt.node)) {
 			if (!tNames.has(name)) continue
 			for (const key of staticMessageReads(stmt.node, name, declaredKeys) ?? [])

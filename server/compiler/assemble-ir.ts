@@ -41,7 +41,7 @@ import {
 import { resolveInitialWinners } from './initial-winner'
 import type { ComponentIR, ComponentParam, ConfigIR, ForIR } from './ir'
 import type { ComponentParams } from './params'
-import type { SetupExtraction } from './setup-extraction'
+import { onServer, type SetupExtraction } from './setup-extraction'
 import type { ResolvedTemplate } from './template-output'
 
 /** Module-level declarations beside the component function. */
@@ -252,6 +252,11 @@ export const assembleComponentIR = (
 	// NOT reopen @if over signals — `validateCondition` diagnoses signal
 	// reads first.
 	const serverKnown = ctx.serverKnown
+	// Every reactive-list item's setup (ADR 0046 s5): the usage walks below
+	// place the imports it reads, like component setup's.
+	const itemSetup = [...resolved.fors.values()].flatMap(loop =>
+		loop.kind === 'reconcile' ? loop.setup : [],
+	)
 
 	// Placements run BEFORE the milestone-gate check: an unused-import
 	// warning (LTC014) belongs in the report even when the file is gated
@@ -264,6 +269,7 @@ export const assembleComponentIR = (
 			plainSetup: extraction.plainSetup,
 			clientSetup: extraction.clientSetup,
 			signals: extraction.signals,
+			itemSetup,
 			serverKnown,
 		},
 		plainImports,
@@ -286,6 +292,7 @@ export const assembleComponentIR = (
 			plainSetup: extraction.plainSetup,
 			clientSetup: extraction.clientSetup,
 			signals: extraction.signals,
+			itemSetup,
 			serverKnown,
 		},
 		leTrucImports,
@@ -293,11 +300,16 @@ export const assembleComponentIR = (
 			// The verbatim texts both modules re-emit: the type declarations
 			// and the setup statements, whose type positions a usage walk
 			// never sees (the params slice is value vocabulary).
-			server: [...decls.typeDecls, ...extraction.setup.map(stmt => stmt.text)],
+			server: [
+				...decls.typeDecls,
+				...extraction.setup.map(stmt => stmt.text),
+				...itemSetup.filter(onServer).map(stmt => stmt.text),
+			],
 			client: [
 				...decls.typeDecls,
 				...(decls.globalDecl ? [decls.globalDecl] : []),
 				...extraction.setup.map(stmt => stmt.text),
+				...itemSetup.map(stmt => stmt.text),
 			],
 		},
 	)
@@ -336,6 +348,7 @@ export const assembleComponentIR = (
 		setup: extraction.setup,
 		clientSetup: extraction.clientSetup,
 		plainSetup: extraction.plainSetup,
+		itemSetup,
 		signals: extraction.signals,
 		expose: extraction.expose,
 		exposeProps: extraction.exposeProps,

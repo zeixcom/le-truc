@@ -97,6 +97,17 @@ export const reportDeferredCollectorCalls = (
 		'FunctionExpression',
 		'ArrowFunctionExpression',
 	])
+	// The declared Lists (`createList`/`deriveList` consts, an item's own
+	// included): a `.map()` over one is a reactive loop (ADR 0046 s4), whose
+	// callback body is the item's setup, mounted in `bindItem`'s collector.
+	const lists = new Set<string>()
+	walkNodes(fn, node => {
+		if (node.type !== 'VariableDeclarator' || !isNode(node.init)) return
+		const callee = identifierName(node.init.callee)
+		const name = identifierName(node.id)
+		if (name && (callee === 'createList' || callee === 'deriveList'))
+			lists.add(name)
+	})
 	const visit = (node: unknown, depth: number): void => {
 		if (Array.isArray(node)) {
 			for (const child of node) visit(child, depth)
@@ -126,6 +137,28 @@ export const reportDeferredCollectorCalls = (
 				: []
 			visit(node.callee, depth)
 			visit(collection, depth)
+			if (isNode(callback) && FUNCTION_TYPES.has(String(callback.type))) {
+				visit(callback.params, depth + 1)
+				visit(callback.body, depth)
+			} else visit(callback, depth)
+			visit(rest, depth)
+			return
+		}
+		// A reactive loop's `map` callback (ADR 0046 s5): its block body is
+		// the item's setup, run inside `bindItem`'s collector — a helper
+		// called directly there is registered per item, not deferred.
+		const callee = node.type === 'CallExpression' ? node.callee : null
+		if (
+			isNode(callee) &&
+			callee.type === 'MemberExpression' &&
+			callee.computed !== true &&
+			identifierName(callee.property) === 'map' &&
+			lists.has(identifierName(callee.object) ?? '')
+		) {
+			const [callback, ...rest] = Array.isArray(node.arguments)
+				? node.arguments
+				: []
+			visit(callee, depth)
 			if (isNode(callback) && FUNCTION_TYPES.has(String(callback.type))) {
 				visit(callback.params, depth + 1)
 				visit(callback.body, depth)

@@ -357,6 +357,12 @@ export const checkFoldInputs = (
 							checkEvaluated(hoisted.node, `loop const \`${hoisted.name}\``)
 							loopScope.add(hoisted.name)
 						}
+					} else {
+						// The key and the item's setup names bind per item in the
+						// server's loop (ADR 0046 s5).
+						if (loop.keyName) loopScope.add(loop.keyName)
+						for (const stmt of loop.setup)
+							if (stmt.name) loopScope.add(stmt.name)
 					}
 					inner = loopScope
 				}
