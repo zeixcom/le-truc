@@ -53,7 +53,7 @@ export const CLASSIFIED_DIAGNOSTICS: readonly ClassifiedDiagnostic[] = [
 		kind: 'console',
 		component: 'test-listitem-tsx',
 		message:
-			/reconcile\(\) did not activate .*InvalidPassPropertyError: Cannot pass from <test-listitem-tsx> to <form-checkbox>: 'checked' is not a property/,
+			/reconcile\(\) item "[^"]+" did not activate .*InvalidPassPropertyError: Cannot pass from <test-listitem-tsx> to <form-checkbox>: 'checked' is not a property/,
 		reason:
 			'The same notice for the `.tsx` twin (LT-423). Same fixed-point ' +
 			're-parse, same real-page verification, same per-descriptor ' +
@@ -63,7 +63,7 @@ export const CLASSIFIED_DIAGNOSTICS: readonly ClassifiedDiagnostic[] = [
 		kind: 'console',
 		component: 'test-listitem',
 		message:
-			/reconcile\(\) did not activate .*InvalidPassPropertyError: Cannot pass from <test-listitem> to <form-checkbox>: 'checked' is not a property/,
+			/reconcile\(\) item "[^"]+" did not activate .*InvalidPassPropertyError: Cannot pass from <test-listitem> to <form-checkbox>: 'checked' is not a property/,
 		reason:
 			'LT-423: the fixed-point second pass re-parses with the definitions ' +
 			'already live, so jsdom connects parent-first and the composed ' +
