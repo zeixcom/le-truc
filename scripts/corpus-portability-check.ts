@@ -234,9 +234,13 @@ try {
 				const a = await Bun.file(join(referenceDir, rel)).text()
 				const b = await Bun.file(join(otherDir, rel)).text()
 				if (a !== b) {
-					const line = [...a].findIndex((ch, i) => ch !== b[i])
+					// A UTF-16 code-unit index (`b` is the longer one when `a` is its prefix).
+					const index = Array.from(
+						{ length: Math.max(a.length, b.length) },
+						(_, i) => i,
+					).find(i => a[i] !== b[i])
 					console.error(
-						`  ${rel}: first differing byte at ${line >= 0 ? line : 0}`,
+						`  ${rel}: first differing character at code unit ${index ?? 0}`,
 					)
 				}
 			}

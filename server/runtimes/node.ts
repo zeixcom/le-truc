@@ -8,13 +8,12 @@
  */
 
 import { spawn as spawnProcess } from 'node:child_process'
-import { constants as fsConstants } from 'node:fs'
 import {
-	access,
 	copyFile as copyFileFs,
 	mkdir,
 	readFile,
 	rm,
+	stat,
 	writeFile,
 } from 'node:fs/promises'
 import { dirname } from 'node:path'
@@ -31,9 +30,10 @@ const io: RuntimeIO = {
 	},
 
 	async fileExists(path) {
+		// A regular file, per the interface — a directory answers false, as
+		// `Bun.file(path).exists()` does (LT-277).
 		try {
-			await access(path, fsConstants.F_OK)
-			return true
+			return (await stat(path)).isFile()
 		} catch {
 			return false
 		}
