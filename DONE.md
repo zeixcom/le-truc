@@ -878,6 +878,33 @@ Full entry text: `git log -p -- DONE.md`.
   state the insert-before-mount ordering contract (pinned by the unit test); the uncaught-throw
   containment gap on a re-run predates the task → LT-435.
 
+- [x] LT-425: The `.tsx` keyed `map` — `items.map((item, k) => …)` over `createList`/`deriveList`, Cause & Effect 1.6, a module-list `.tsx` variant (ADR 0046 s4; closes LT-342). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-423
+  **Changed:** the `.tsx` keyed `map` (ADR 0046 s4). Over a declared List, the `.map()`
+  callback's second parameter is the item's key (`LoopSource.keyOverList`, swapped in as `key` by
+  `lowerLoop`), the `.tsx` spelling of `@for`'s `key k`; over an Array it stays the index. The
+  key-binding checks (reserved names, bare identifier, key-derived attributes) run on both
+  surfaces and are parity-pinned; a List `.map()` with 3+ parameters is LTC005; `surface.ts`
+  gains `keyBindingShape`/`keyBindingExample`. `deriveList` is a reconcile source beside
+  `createList` (LTC001 copy updated): no list-seed harvest (derive-callback route), the client
+  keeps the whole call so `keyConfig`/the item callback survive, and the server harness gains the
+  `(source, itemFn)` form keyed by the source. `examples/module/list/module-list.tsx` is the
+  served member of the module-list variant set (CSS, server render, registry entry identical);
+  the listitem `.tsx` twin gains key-derived `id`/`for` and the spec asserts it on both surfaces.
+  Host profile: `module-list`, `basic-button` (`truc:pass` `disabled`), `form` `action`/`onSubmit`.
+  `parity.test.ts` registers the whole corpus (module-list composes a non-member).
+  `CAUSE_EFFECT_LIST_MAP.md` deleted.
+  **Ruling (owner, 2026-10-05):** the extracted item `<template>` no longer bakes the slot-fill
+  `<slot></slot>` for a bare `{item}` — a vestige of the path ADR 0046 s1 retired, and the marker
+  ADR 0024 s10 rejected for its Declarative Shadow DOM collision. Every lazy child bakes empty,
+  so both surfaces emit the same template bytes; goldens, sim/equivalence snapshots and the
+  `module-list`/`form-tokenbox` fixture pages changed accordingly.
+  **Review:** Approved. Reviewer nit: `keyOnServerDataFor` JSDoc quoted the retired arity
+  message (6ce5d686). Playwright run by the owner in the worktree (sandbox could not drive the
+  browser): all green. Noted, no task: module-list has no Playwright spec; the harness
+  `deriveList` source form does not run async item callbacks.
+
 - [x] LT-427: An imported function is a known name in a client-only setup side effect (ADR 0046 s5). — reviewed ✓
   **Area:** compiler
   **Changed:** no compiler behavior change. The entry's premise did not hold: `clientKnownName`
@@ -972,6 +999,21 @@ Full entry text: `git log -p -- DONE.md`.
   `cmp`-identical to HEAD's committed bundle, and `bun run build` leaves `index.js` clean. No unit
   test: the rewrite only acts under a symlinked `node_modules`, so the `cmp` check is the
   regression check.
+
+- [x] LT-434: Sweep the remaining "ADR 0023" misattributions outside `server/compiler/` (LT-414 residue). — reviewed ✓
+  **Area:** server
+  **Changed:** every TSRX-sub-design citation that read "ADR 0023" now reads "ADR 0024" — `server/`
+  (effects header, `corpus-compile.ts`, `server/tests/compiler/` describe titles and headers),
+  `scripts/` (build-corpus, check-corpus, verify-cem), `custom-elements-manifest.config.mjs`, the
+  `examples/**/*.tsrx` header comments, and ADR 0039 s4. Comments and test titles only; no snapshot
+  or generated artifact changed. ADR 0023 is now cited only for the bind-helper map form
+  (`ARCHITECTURE.md`, `CHANGELOG.md`, ADR 0026, `src/bindings.ts`, `types/src/bindings.d.ts`).
+  **Review:** Approved. Rescoped by the owner (2026-10-05) to include the examples after the entry's
+  "examples are bind-helper citations" premise proved wrong. The one red server test (TS2578 in
+  `examples/test/listitem/test-listitem-tsx.tsx`) is LT-425's to clear. `test:variants` did not
+  finish in the sandbox (hung past 10 min); the risk is nil for comment-only `.tsrx` edits, because
+  `check:corpus` and the compiled goldens are green. Nits fixed by the reviewer: ADR 0039 s4
+  citation; `queue/LT-331.md` "ADR 0024 s10".
 
 - [x] LT-435: Typecheck `css-probe.tsx` under the `.tsx` host profile, and glob the examples program so no `.tsx` source falls out of it. — reviewed ✓
   **Area:** examples

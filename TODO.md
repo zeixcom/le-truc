@@ -91,28 +91,39 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
     the dependency moved to `^1.6.0` on 2026-10-05, so LT-425 is open again. LT-355 moves from track B into
     track C after LT-423, which makes its composed child renderable; LT-355 keeps the locale half.
 
+**Next batch (Architect, 2026-10-05).** LT-423, LT-425 and LT-434 are reviewed and integrated
+(460fd94e and the merges before it), and so is every task in tracks 0, A and B except LT-412.
+Track C's critical path is now LT-424 → LT-355 → LT-426, all on the compiler's list and arm
+emission, so they run one at a time. Two runtime tasks run beside them in `src/`: LT-412 (the
+Cause & Effect 1.6.1 bump, unblocked by LT-425) and LT-436. LT-429's design is unblocked
+(LT-423 landed) and is the owner's next session: LT-109 and LT-110 wait on it and on LT-426,
+so ruling it while LT-424–LT-426 land keeps the migrations off the critical path.
+12. **LT-436 ruled: a throwing Mount Scope is Contained per scope** (ADR 0028 s3 extended one
+    level down; runtime, tier 2). `reconcile()` reports it once through `reportEffectFailure`,
+    leaves the element in place unbound, and continues. The task entry carries the detail.
+13. **The landed tasks are not pruned yet.** Pruning waits for the `writer`'s changelog pass
+    at iteration close (hard rule); the reviewed entries stay in `DONE.md` until then.
+
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
 - **A — pre-publish reshapes — landed.** ~~LT-371~~, ~~LT-373~~ (pruned), ~~LT-375~~,
   ~~LT-387~~ (reviewed ✓).
 - **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
-  ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). Then: LT-429 (the parser-declaration
-  question; gates LT-109 and LT-110), LT-334 (lazyload's boundary; its implementation task pairs
+  ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). **Next owner session:** LT-429 (the
+  parser-declaration question, unblocked by LT-423; gates LT-109 and LT-110), LT-334 (lazyload's boundary; its implementation task pairs
   with LT-390), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
-- **0 — test hygiene** (ruling 9). LT-415.
+- **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
-  (ruling 11). LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425 → LT-424 → LT-355 →
-  LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
+  **next:** LT-424 → LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. LT-392, LT-356, LT-353, LT-417, LT-430 (LT-356 review follow-up), LT-431 (LT-186 review follow-up), LT-432 (LT-431 review follow-up).
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). **Next:** LT-412 (needs LT-425; the Cause & Effect 1.6.1 bump).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
   LT-433~~ (done ✓). ~~LT-411~~ (reviewed ✓), ~~LT-416~~ (reviewed ✓), ~~LT-414~~
-  (reviewed ✓), ~~LT-187~~ (reviewed ✓), LT-434 (ADR 0023 sweep outside `server/compiler/`;
-  LT-414 residue), LT-435 (`css-probe.tsx` under the host profile; glob the
-  examples `.tsx` program — owner, 2026-10-05), LT-436 (an uncaught throw in a
+  (reviewed ✓), ~~LT-187, LT-434, LT-435~~ (reviewed ✓). **Next:** LT-436 (ruling 12; an uncaught throw in a
   reconcile effect's re-run; LT-423 finding).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
@@ -207,34 +218,6 @@ recorded against the 30.4k opening measurement.
 
 
 ### C — corpus port
-
-- [ ] LT-425: The `.tsx` keyed `map` — `items.map((item, k) => …)` over `createList`/`deriveList`, Cause & Effect 1.6, a module-list `.tsx` variant (ADR 0046 s4; closes LT-342).
-  **Area:** compiler
-  **Needs:** LT-423
-  **Context:** Cause & Effect 1.6.0 adds `map((item, key) => R): R[]` and `forEach` to both list
-  kinds (handoff: `CAUSE_EFFECT_LIST_MAP.md`; delete that file in this task). The dependency is
-  already at `^1.6.0` (Architect, 2026-10-05; build, typecheck, unit, size and baseline gates green).
-  1. Confirm `items.map` typechecks on a `createList` receiver in a `.tsx` corpus file.
-  2. `lowerFor` (`frontend/tsx/lower-tsx.ts:417-466`) binds the callback's second parameter as
-     the key when the receiver is a declared list source. It no longer hard-codes `key: null`,
-     and the "index binding" refusal over a List (`lower-shared.ts:1001-1013`) retires on
-     `.tsx`. Over an Array the second parameter stays the index.
-  3. "Declared list source" widens from `createList` to `createList` + `deriveList`
-     (`deriveList` today is LTC001 "File skipped", `lower-shared.ts:1124-1133`).
-  4. `surface.ts`: `loopBindings` reads "A loop variable or key binding" on `.tsx`;
-     `listItemHandlerFix` gains its `.tsx` text (`items.remove(k)`). The LT-221 grammar-asymmetry
-     block in `diagnostic-parity.test.ts:1437-1457` loses its `keyName` arm; the parity case
-     pins the reserved-name check on both surfaces.
-  5. Add `examples/module/list/module-list.tsx` beside the `.tsrx` (ADR 0039 variant set),
-     with `{() => item.get()}` and `items.remove(k)`. It becomes the served surface.
-  **Channel/tier:** compiler (tier 1) and TypeScript (the `map` typing).
-  **Check:** the module-list variant set's CSS is byte-identical and render parity holds;
-  `module-list.spec.ts` (if any) or `test:variants` pass for both surfaces; full gates.
-  **Impasse rule (iteration ruling 10).**
-  **Handoff (LT-423, 2026-10-05):** mirror the key-derived parity case — LT-423's
-  `examples/test/listitem/` fixture pair carries the key-derived `id`/`for` on `.tsrx` only;
-  the keyed `map` gives `.tsx` its half (the `.tsx` twin deliberately logs instead of
-  removing).
 
 - [ ] LT-424: Mount Scopes nest — arms and lists inside arms and items, scoped server-data loops, the cross-scope uniqueness proof (ADR 0046 s1–s2).
   **Area:** compiler
@@ -369,6 +352,32 @@ recorded against the 30.4k opening measurement.
   and everything else simulated.
 
 
+### B — correctness
+
+- [ ] LT-412: `watch(prop, { stale })` never fires when a Slot fronts a Task (found 2026-10-03, cause-effect skill rewrite).
+  **Area:** runtime
+  **Needs:** LT-425
+  **Context:** cause-effect's `match()` used to route to `stale` only when the argument was
+  literally a Task (`isTask(s) && s.isPending()`). A writable prop is a Slot
+  (`src/component.ts:566`), so when a parent `pass()`es an async thunk into it, the child's
+  `watch('prop', { stale })` fell back to `ok`. **Ruled (Architect, 2026-10-05): fixed upstream.**
+  Cause & Effect 1.6.1 makes `match()` call the free `isPending(s)`, which resolves a Slot to its
+  current backing (`getAsyncSource`, `graph.ts:932`). Le Truc's `watch` changes nothing.
+  **Needs LT-425** only to serialize the dependency move: LT-425 runs on 1.6.0, and this task
+  owns the bump.
+  1. Bump `@zeix/cause-effect` to `^1.6.1`; rebuild `index.js`.
+  2. Add the verification case below. If it fails on 1.6.1, annotate `blocked` with the evidence
+     in `NOTES.md` and stop; do not fix it in `watch`.
+  3. Retire the documented edge: `skills/cause-effect/SKILL.md:45` and `:53` (`stale` now sees
+     through a Slot, so a `pass()`ed async thunk fires the child's `stale`), any matching text in
+     `skills/le-truc/`, and the AGENTS.md `stale` bullet — propose the AGENTS.md edit in
+     `NOTES.md` for the Architect if that file is write-protected.
+  **Channel/tier:** none — a semantics fix upstream, no new check.
+  **Verification:** a `reactive.test.ts` case: a parent passes an async thunk into a Slot-backed
+  child prop, and the child's `stale` handler fires during a re-fetch. Gates: unit, typecheck,
+  `check:size`, `check:baseline`. `check:sim`'s Deno leg refuses 1.6.1 until 24 h after its
+  publication (2026-10-05 12:58 UTC) — a known, self-clearing failure.
+
 ### D — CSS departures
 
 - [ ] LT-409: Design session — the departures of compiled CSS from a real shadow root (ADR 0033 s7 as a whole; re-scopes LT-405, LT-407, LT-408).
@@ -452,21 +461,6 @@ recorded against the 30.4k opening measurement.
 
 ### Parallel slot
 
-- [ ] LT-434: Sweep the remaining "ADR 0023" misattributions outside `server/compiler/` (LT-414 residue).
-  **Area:** server
-  **Context:** LT-414 fixed the four citations inside `server/compiler/` and flagged the same
-  misattribution class outside its scope — all mean ADR 0024 (or should drop the citation where
-  they reach a published or generated artifact): the pass header comment
-  `server/effects/compile.ts:2` ("ADR 0023 milestone 1"), test describe titles
-  (`server/tests/compiler/features.test.ts:211`), and CEM tooling comments
-  (`server/tests/compiler/cem.golden.test.ts:2`, `scripts/verify-cem.ts:90`,
-  `custom-elements-manifest.config.mjs:15`). Legitimate bind-helper citations
-  (`src/bindings.ts`, `types/src/bindings.d.ts`, examples) keep ADR 0023 — do not touch those.
-  Re-locate by content; line numbers are approximate. If a describe title or comment string is
-  pinned by a test, update it in the same change.
-  **Channel/tier:** none — comments and test titles only.
-  **Check:** `git grep -n "ADR 0023"` returns only bind-helper citations; server suite green.
-
 - [ ] LT-436: A throw inside a reconcile effect's re-run escapes uncaught (LT-423 finding).
   **Area:** runtime
   **Context:** Found on the LT-423 add-click path, pre-existing and unchanged by it. When a
@@ -479,7 +473,20 @@ recorded against the 30.4k opening measurement.
   keeps its other work, or the escape is ruled deliberate and documented next to
   `reconcile()`'s contract (whose JSDoc also owes the insert-before-mount ordering
   LT-423 pinned by test).
-  **Channel/tier:** to decide in the task (ADR 0028; likely runtime DEV_MODE advisory,
-  tier 2 Contained).
-  **Check:** a pin where `bindItem` throws mid-mount and mid-re-run; the rest of the list's
-  work and the scope's other effects survive; `test:src` green.
+  **Ruled (Architect, 2026-10-05): Contained, per Mount Scope.** ADR 0028 s3 already contains
+  activation per effect descriptor; a Mount Scope (an arm or a list item, ADR 0046) is the same
+  unit one level down. In `reconcile()`, a `mountScope()` that throws — on the first run or on a
+  re-run — is caught per scope and reported once through the existing `reportEffectFailure`
+  (`src/errors.ts`), naming the scope (e.g. `"reconcile() item <key>"` / `"reconcile() arm
+  <key>"`); not DEV-gated, like every Contained report. `mountScope` keeps disposing the partial
+  scope before it rethrows (LT-385f). The element stays in the DOM unbound — the ADR 0003
+  degradation, and the list's key bookkeeping stays consistent — and the loop continues with the
+  remaining items and the structural effect's other work. Throws inside an already-mounted
+  item's own effects are Cause & Effect's and out of scope.
+  **Channel/tier:** runtime, tier 2 Contained. No compiler rule: a throwing `bindItem` is user
+  code, not statically decidable.
+  **Docs:** `reconcile()`'s JSDoc states the containment and the insert-before-mount ordering
+  LT-423 pinned.
+  **Check:** pins where `bindItem` throws mid-mount on the first run and on a re-run: exactly one
+  `console.error` per failing scope, the failing element stays unbound in place, the other items
+  mount and the scope's other effects survive; `test:src`, `check:size`, typecheck green.

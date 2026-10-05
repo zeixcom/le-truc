@@ -777,7 +777,7 @@ to `TODO.md`.
   `JSX.ElementChildrenAttribute` in `server/compiler/frontend/tsx/host-profile.d.ts`. That
   declaration is global, so `tsc` now also checks a compose site's JSX children against the
   child's args. But a content-substituting child declares `children?: string`: the server
-  renders the markup to a string and forwards it (ADR 0023 s10, `validateComposedChildren`).
+  renders the markup to a string and forwards it (ADR 0024 s10, `validateComposedChildren`).
   The result, verified 2026-09-25: `<ModuleScrollarea><p>…</p></ModuleScrollarea>` in a `.tsx`
   parent now fails with TS2322 "Type 'Element' is not assignable to type 'string'", although it
   type-checked under the old profile. module-dialog and module-codeblock have the same shape.
@@ -1123,21 +1123,6 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Channel/tier:** none until designed; adapter-side refusals stay in the adapter's own channel
   (adapters never mint `LTC` codes).
   **Verification:** the toy adapter's conformance run; full gates.
-
-
-- [ ] LT-412: `watch(prop, { stale })` never fires when a Slot fronts a Task (found 2026-10-03, cause-effect skill rewrite).
-  **Area:** design
-  **Context:** cause-effect's `match()` routes to `stale` only when the argument is literally a Task
-  (`isTask(s) && s.isPending()`, `nodes/effect.ts:231`). A read-only async-thunk prop is stored as
-  the bare Task, so `stale` works there. A writable prop is a Slot (`src/component.ts:566`), so
-  when a parent `pass()`es an async thunk into it, the child's `watch('prop', { stale })` falls back
-  to `ok` and the retained value shows with no in-flight signal. Decide where it is fixed: in
-  cause-effect (`match()` checks the free `isPending(s)`, which may see through a Slot; that is an
-  upstream issue) or in `watch` (resolve the Slot's current backing before `match`). Until then,
-  the `cause-effect` skill documents the edge.
-  **Channel/tier:** none — a semantics fix, no new check.
-  **Verification:** a `reactive.test.ts` case: a parent passes an async thunk into a Slot-backed
-  child prop, and the child's `stale` handler fires during a re-fetch.
 
 
 - [ ] LT-413: `check:skills` — fail on retired diagnostic codes and removed API names in `skills/` (SKILLS_REPORT R4).

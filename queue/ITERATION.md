@@ -91,28 +91,39 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
     the dependency moved to `^1.6.0` on 2026-10-05, so LT-425 is open again. LT-355 moves from track B into
     track C after LT-423, which makes its composed child renderable; LT-355 keeps the locale half.
 
+**Next batch (Architect, 2026-10-05).** LT-423, LT-425 and LT-434 are reviewed and integrated
+(460fd94e and the merges before it), and so is every task in tracks 0, A and B except LT-412.
+Track C's critical path is now LT-424 → LT-355 → LT-426, all on the compiler's list and arm
+emission, so they run one at a time. Two runtime tasks run beside them in `src/`: LT-412 (the
+Cause & Effect 1.6.1 bump, unblocked by LT-425) and LT-436. LT-429's design is unblocked
+(LT-423 landed) and is the owner's next session: LT-109 and LT-110 wait on it and on LT-426,
+so ruling it while LT-424–LT-426 land keeps the migrations off the critical path.
+12. **LT-436 ruled: a throwing Mount Scope is Contained per scope** (ADR 0028 s3 extended one
+    level down; runtime, tier 2). `reconcile()` reports it once through `reportEffectFailure`,
+    leaves the element in place unbound, and continues. The task entry carries the detail.
+13. **The landed tasks are not pruned yet.** Pruning waits for the `writer`'s changelog pass
+    at iteration close (hard rule); the reviewed entries stay in `DONE.md` until then.
+
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
 - **A — pre-publish reshapes — landed.** ~~LT-371~~, ~~LT-373~~ (pruned), ~~LT-375~~,
   ~~LT-387~~ (reviewed ✓).
 - **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
-  ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). Then: LT-429 (the parser-declaration
-  question; gates LT-109 and LT-110), LT-334 (lazyload's boundary; its implementation task pairs
+  ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). **Next owner session:** LT-429 (the
+  parser-declaration question, unblocked by LT-423; gates LT-109 and LT-110), LT-334 (lazyload's boundary; its implementation task pairs
   with LT-390), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
-- **0 — test hygiene** (ruling 9). LT-415.
+- **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
-  (ruling 11). LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425 → LT-424 → LT-355 →
-  LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
+  **next:** LT-424 → LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. LT-392, LT-356, LT-353, LT-417, LT-430 (LT-356 review follow-up), LT-431 (LT-186 review follow-up), LT-432 (LT-431 review follow-up).
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). **Next:** LT-412 (needs LT-425; the Cause & Effect 1.6.1 bump).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
   LT-433~~ (done ✓). ~~LT-411~~ (reviewed ✓), ~~LT-416~~ (reviewed ✓), ~~LT-414~~
-  (reviewed ✓), ~~LT-187~~ (reviewed ✓), LT-434 (ADR 0023 sweep outside `server/compiler/`;
-  LT-414 residue), LT-435 (`css-probe.tsx` under the host profile; glob the
-  examples `.tsx` program — owner, 2026-10-05), LT-436 (an uncaught throw in a
+  (reviewed ✓), ~~LT-187, LT-434, LT-435~~ (reviewed ✓). **Next:** LT-436 (ruling 12; an uncaught throw in a
   reconcile effect's re-run; LT-423 finding).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
