@@ -2073,7 +2073,7 @@ export function C({}: {}) {
 				`export function C(${PROPS}) {
 	return (
 			<c-el><ul>{${iterable}.map(a => <li>{a}</li>)}</ul>
-				<style>{'c-el { color: red }'}</style>
+				<style></style>
 			</c-el>
 	)
 }`,

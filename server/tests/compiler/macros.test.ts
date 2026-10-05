@@ -2,8 +2,9 @@
  * Compile-time markers (ADR 0034 s1, LT-442): a marker is imported from
  * `@zeix/le-truc-compiler/macros`, recognized by module specifier and
  * imported name — an alias resolves, a same-named local never matches —
- * and its import never reaches either generated module. The shipped stub
- * throws when a source reaches it uncompiled.
+ * and its import never reaches either generated module. A `css` that is
+ * not the marker is refused (LTC078, LT-444), not read as an empty sheet.
+ * The shipped stub throws when a source reaches it uncompiled.
  */
 import { describe, expect, test } from 'bun:test'
 import { compileComponent } from '../../compiler/frontend/tsrx'
@@ -28,6 +29,13 @@ const compile = (source: string) =>
 	compileComponentTsx(source, 'examples/c/c-el.tsx', new Set(['c-el']))
 
 const IMPORT = "import { css } from '@zeix/le-truc-compiler/macros'"
+
+/** A source whose `css` tag is not the marker: refused, not compiled empty. */
+const refused = (source: string) => {
+	const { component, diagnostics } = compile(source)
+	expect(component).toBeNull()
+	expect(diagnostics.filter(d => d.code === 'LTC078')).toHaveLength(1)
+}
 
 /* === Tests === */
 
@@ -59,32 +67,26 @@ describe('compile-time markers (ADR 0034 s1, LT-442)', () => {
 	})
 
 	test('a bare `css` with no marker import is not the marker', () => {
-		const { component } = compile(tsx('', 'css'))
-		expect(component?.authoredCss).toBe('')
+		refused(tsx('', 'css'))
 	})
 
 	test('a `css` imported from another module is not the marker', () => {
-		const { component } = compile(
-			tsx("import { css } from 'some-css-lib'", 'css'),
-		)
-		expect(component?.authoredCss).toBe('')
+		refused(tsx("import { css } from 'some-css-lib'", 'css'))
 	})
 
 	test('a component-scope `css` shadowing the import is not the marker', () => {
-		const { component } = compile(
+		refused(
 			tsx(IMPORT, 'css', 'const css = (s: TemplateStringsArray) => s.join("")'),
 		)
-		expect(component?.authoredCss).toBe('')
 	})
 
 	test('an alias leaves a same-named local `css` unrecognized', () => {
-		const { component } = compile(
+		refused(
 			tsx(
 				"import { css as style } from '@zeix/le-truc-compiler/macros'",
 				'css',
 			),
 		)
-		expect(component?.authoredCss).toBe('')
 	})
 
 	test('a mixed declaration drops only its marker specifiers', () => {

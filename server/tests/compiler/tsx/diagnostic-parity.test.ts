@@ -112,6 +112,7 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 		'the boundary construct (the loop-body rule, LT-358a/LT-359)',
 	),
 	term('conditionalTag', 'choosing between static tags (LTC053 fix-it)'),
+	term('stylesheetForm', 'the stylesheet spelling as a fix-it (LTC078)'),
 	...(['if', 'switch'] as const).flatMap(branch => [
 		{
 			tsrx: W.tsrx.loopInBranch(branch).inside,
@@ -1032,6 +1033,22 @@ export function C({}: {}) {
 }`,
 }
 
+/**
+ * A `<style>` block holding an expression in place of the stylesheet, per
+ * surface (LTC078, LT-444) — read before LT-444 as an empty sheet.
+ */
+const STYLE_EXPRESSION = {
+	tsrx: `export function C({}: {})
+	@{
+		const sheet = ':host { color: red }'
+		<c-el><p>x</p><style>{sheet}</style></c-el>
+	}`,
+	tsx: `export function C({}: {}) {
+	const sheet = ':host { color: red }'
+	return <c-el><p>x</p><style>{sheet}</style></c-el>
+}`,
+}
+
 /** The text a fragment-root diagnostic (LTC060) covers: the whole fragment. */
 const coveredFragment = (source: string): string =>
 	source.slice(source.indexOf('<>'), source.indexOf('</>') + '</>'.length)
@@ -1088,6 +1105,14 @@ const FAMILIES: Case[] = [
 			'A `<style>` block nested inside an element',
 			"root's single `<style>` child",
 		],
+	},
+	{
+		// LT-444: an expression child is no stylesheet on either surface;
+		// it compiled to an empty sheet with no message.
+		name: 'LTC078 an expression in place of the stylesheet',
+		code: 'LTC078',
+		sources: STYLE_EXPRESSION,
+		pins: ['The content of this `<style>` block is not a stylesheet'],
 	},
 	{
 		name: 'LTC006 React DOM-property name',
@@ -1885,6 +1910,130 @@ describe('the keyed `map` (ADR 0046 s4, LT-425)', () => {
 })
 
 describe('grammar asymmetry — shapes with no counterpart', () => {
+	/** A `.tsx` component whose root's `<style>` child is `style`. */
+	const styled = (style: string, pre = '', setup = '') =>
+		`${pre}
+export function C({}: {}) {
+	${setup}
+	return <c-el><p>x</p>${style}</c-el>
+}`
+	const MACROS = "import { css } from '@zeix/le-truc-compiler/macros'"
+	const ltc078 = (source: string) =>
+		compileComponentTsx(source, 'c.tsx', new Set())
+			.diagnostics.filter(d => d.code === 'LTC078')
+			.map(d => [source.slice(d.location.start, d.location.end), d.message])
+
+	// LT-444: the `.tsx` template-literal shapes `.tsrx` has no spelling for.
+	// Each read as an empty sheet before, shipping no CSS without a word.
+	test.each([
+		[
+			'a `css` a component-scope declaration shadows',
+			styled(
+				'<style>{css`p { color: red }`}</style>',
+				MACROS,
+				"const css = (s: TemplateStringsArray) => s.join('')",
+			),
+			'css',
+			'a declaration in the component shadows that import',
+		],
+		[
+			"another module's `css`",
+			styled(
+				'<style>{css`p { color: red }`}</style>',
+				"import { css } from 'lit'",
+			),
+			'css',
+			'is not the `css` marker',
+		],
+		[
+			'a foreign tag',
+			styled('<style>{scss`p { color: red }`}</style>', MACROS),
+			'scss',
+			'is tagged `scss`, not the `css` marker',
+		],
+		[
+			'a substitution in the `css` template',
+			styled(
+				'<style>{css`p { color: ${tone} }`}</style>',
+				MACROS,
+				"const tone = 'red'",
+			),
+			'tone',
+			'contains a `${}` substitution',
+		],
+		[
+			'a substitution in a bare template literal',
+			styled(
+				'<style>{`p { color: ${tone} }`}</style>',
+				'',
+				"const tone = 'red'",
+			),
+			'tone',
+			'contains a `${}` substitution',
+		],
+		[
+			'JSX text in place of the template',
+			styled('<style>p</style>', MACROS),
+			'p',
+			'is not a stylesheet',
+		],
+		[
+			'a second expression after the template',
+			styled(
+				'<style>{css`p { color: red }`}{css`a { color: red }`}</style>',
+				MACROS,
+			),
+			'{css`a { color: red }`}',
+			'is not a stylesheet',
+		],
+	])('.tsx: LTC078 refuses %s', (_, source, covered, pin) => {
+		const found = ltc078(source)
+		expect(found).toHaveLength(1)
+		expect(found[0]?.[0]).toBe(covered)
+		expect(found[0]?.[1]).toContain(pin)
+	})
+
+	test.each([
+		[
+			'the `css` marker under an alias',
+			styled(
+				'<style>{style`p { color: red }`}</style>',
+				"import { css as style } from '@zeix/le-truc-compiler/macros'",
+			),
+		],
+		['a bare template literal', styled('<style>{`p { color: red }`}</style>')],
+		['an empty block', styled('<style></style>')],
+		['an empty container', styled('<style>{/* none yet */}</style>')],
+		[
+			'blank text around the template',
+			styled('<style>\n\t{css`p { color: red }`}\n</style>', MACROS),
+		],
+	])('.tsx: %s is a stylesheet spelling', (_, source) => {
+		const { diagnostics, component } = compileComponentTsx(
+			source,
+			'c.tsx',
+			new Set(),
+		)
+		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+		// The sheet is read, not dropped: an authored rule reaches the CSS.
+		if (source.includes('color: red'))
+			expect(component?.css).toContain('color: red')
+	})
+
+	test('.tsrx: a `${}` in the CSS body is CSS text, not a substitution — a value position fails the parse', () => {
+		// The `.tsrx` body is parsed as CSS by `@tsrx/core`: it has no
+		// substitution to refuse (LT-444 item 2).
+		const { diagnostics } = compileComponent(
+			`export function C({}: {})
+	@{
+		<c-el><p>x</p><style>p { color: \${tone} }</style></c-el>
+	}`,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC008'])
+	})
+
 	test('.tsrx: an index binding over a List is LTC005 (the `.tsx` second parameter is the key)', () => {
 		const { diagnostics } = compileComponent(
 			tsrxSource({

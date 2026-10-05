@@ -51,7 +51,7 @@ const tsx = compileComponentTsx(
 			<c-el>
 				<p title={text}>{text}</p>
 				<ul>{items.map(item => <li>{item}</li>)}</ul>
-				<style>{'c-el { color: red }'}</style>
+				<style></style>
 			</c-el>
 	)
 }`,

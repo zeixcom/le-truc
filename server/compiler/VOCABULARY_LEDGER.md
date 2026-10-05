@@ -161,6 +161,13 @@ shared loop analysis (`analysis/loops.ts`), on both surfaces.
 read the item or key binding; ADR 0030 s9, LT-355) replaces an `LTC005`
 face of the same condition. It is `LTC`, not `TSRX`: the refusal is raised
 in the shared list-body validation (`lower-shared.ts`), on both surfaces.
+`LTC078` (a `<style>` block whose content is not a stylesheet spelling; ADR
+0034 s1, LT-444) skips `LTC076` and `LTC077`, which LT-429 and LT-443 hold.
+It is `LTC`, not `TSRX`: each surface's `stylesheetOf` reads the block and
+the shared hoist (`template-output.ts`) reports it. Its `.tsx`-only reasons
+(another tag, a `css` that is not the marker, a `${}` substitution) are
+template-literal shapes, not `.tsrx` grammar; the shared reason — an
+expression in place of the sheet — fires on both surfaces.
 
 ## 5. Kept, with the surface named correctly
 

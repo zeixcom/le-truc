@@ -14,7 +14,7 @@ import {
 	checkSheetContract,
 	type GlobalFace,
 } from './css-scope'
-import type { LocalDiagnostic, Site } from './diagnostics'
+import type { LocalDiagnostic, Site, StyleBlockRefusal } from './diagnostics'
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import {
@@ -36,6 +36,12 @@ import type {
 import type { SetupExtraction } from './setup-extraction'
 import { wordingOf } from './surface'
 import { walkTemplate } from './walk'
+
+/**
+ * A surface's read of its `<style>` block: the raw CSS text (empty for an
+ * empty block), or why the content is not a stylesheet (LTC078, LT-444).
+ */
+export type StylesheetRead = string | StyleBlockRefusal
 
 /** Template-output resolution: the root, the style block, the CSS and the parsed sheet. */
 export type ResolvedTemplate = {
@@ -87,7 +93,7 @@ export const resolveTemplateOutput = (
 	filename: string,
 	extraction: SetupExtraction,
 	lowered: TemplateNode[],
-	stylesheetOf: (ctx: ExtractContext, node: AstNode) => string,
+	stylesheetOf: (ctx: ExtractContext, node: AstNode) => StylesheetRead,
 	outputShapeLabel: string,
 	/** The lowered loops, for the host-level `first()`-into-an-item check. */
 	fors: ReadonlyMap<AstNode, ForIR> = new Map(),
@@ -140,6 +146,17 @@ export const resolveTemplateOutput = (
 				diagnostic.misplacedStyleBlock(source, node.node, parent !== root),
 			)
 	})
+
+	// LTC078 (LT-444): the hoisted child's content must be a stylesheet
+	// spelling — anything else would read as an empty sheet, the component
+	// shipping no CSS without a word.
+	const sheetRead = styleChild ? stylesheetOf(ctx, styleChild.node) : ''
+	let sheetText = ''
+	if (typeof sheetRead === 'string') sheetText = sheetRead
+	else
+		ctx.diagnostics.push(
+			diagnostic.unreadableStyleBlock(source, sheetRead, wordingOf(ctx)),
+		)
 
 	// Resolve `first(selector, required)` element references (LT-055) now
 	// that `root` exists.
@@ -288,7 +305,6 @@ export const resolveTemplateOutput = (
 	// spec-grammar faces of LTC064/LTC065 reported against the authored source.
 	let sheet: ComponentSheet | null = null
 	if (styleChild) {
-		const sheetText = stylesheetOf(ctx, styleChild.node)
 		if (sheetText.trim()) {
 			const parsed = parseComponentSheet(sheetText)
 			// The sheet text is a verbatim slice of the source (the template
@@ -342,8 +358,7 @@ export const resolveTemplateOutput = (
 			}
 		}
 	}
-	const css = styleChild ? dedentCss(stylesheetOf(ctx, styleChild.node)) : ''
-	const sheetText = styleChild ? stylesheetOf(ctx, styleChild.node) : ''
+	const css = styleChild ? dedentCss(sheetText) : ''
 	const hasSheet = sheetText.trim() !== '' && sheet !== null
 
 	return {

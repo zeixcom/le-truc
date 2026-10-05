@@ -27,7 +27,7 @@
  * from `surface.ts` (ADR 0032 sub-design 6's anti-drift contract).
  */
 
-import { asArray, isNode } from '../../ast-utils'
+import { asArray, identifierName, isNode } from '../../ast-utils'
 import { diagnostic, type Site } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import {
@@ -40,6 +40,7 @@ import {
 	type SurfaceAdapter,
 } from '../../front-end'
 import { markerOf } from '../../imports'
+import type { StylesheetRead } from '../../template-output'
 import { lowerElement } from './lower-tsx'
 import { type AstNode, parseTsxModule } from './to-estree'
 
@@ -48,6 +49,12 @@ import { type AstNode, parseTsxModule } from './to-estree'
 export type { CompileResult } from '../../front-end'
 
 /* === Spike-local helpers === */
+
+/** Whitespace-only JSX text, or an empty `{}` container (a comment-only one too). */
+const isBlankChild = (child: AstNode): boolean =>
+	(child.type === 'JSXText' && String(child.value ?? '').trim() === '') ||
+	// `to-estree` maps an empty container's `JSXEmptyExpression` to null.
+	(child.type === 'JSXExpressionContainer' && !isNode(child.expression))
 
 /**
  * Raw CSS text of a `<style>` element. SURFACE SHAPE vs `.tsrx`: JSX text
@@ -58,29 +65,42 @@ export type { CompileResult } from '../../front-end'
  * vocabulary): editors highlight a `css`-tagged template literal as CSS out
  * of the box. The tag is the `css` compile-time marker, recognized by
  * binding (ADR 0034 s1, LT-442): imported from
- * `@zeix/le-truc-compiler/macros` under any local name, never a bare `css`
- * — evaluated by nothing, so a `${}` substitution inside is still rejected.
- * A bare template literal (the spike spelling) stays accepted.
+ * `@zeix/le-truc-compiler/macros` under any local name, never a bare `css`.
+ * A bare template literal (the spike spelling) stays accepted, and so does
+ * an empty block; blank text around the child is ignored. Anything else —
+ * another tag, a `css` that is not the marker, a `${}` substitution (the
+ * sheet is evaluated by nothing), any other expression or text — is a
+ * refusal (LTC078, LT-444), never an empty sheet.
  */
 const styleElementStylesheet = (
 	ctx: ExtractContext,
 	node: AstNode,
-): string | null => {
-	const child = Array.isArray(node.children)
-		? ((node.children as AstNode[])[0] as AstNode | undefined)
-		: undefined
+): StylesheetRead => {
+	const children = asArray(node.children).filter(c => !isBlankChild(c))
+	const [child, extra] = children
+	if (!child) return ''
+	if (extra) return { reason: 'content', at: extra }
 	const expr =
-		child && child.type === 'JSXExpressionContainer'
+		child.type === 'JSXExpressionContainer'
 			? (child.expression as AstNode | undefined)
 			: undefined
 	let template = expr
 	if (expr?.type === 'TaggedTemplateExpression') {
-		const tag = expr.tag as AstNode | undefined
-		if (markerOf(ctx, tag) !== 'css') return null
+		const tag = expr.tag as AstNode
+		if (markerOf(ctx, tag) !== 'css')
+			return identifierName(tag) === 'css'
+				? { reason: 'shadowed', at: tag }
+				: {
+						reason: 'tag',
+						at: tag,
+						tag: ctx.source.slice(tag.start ?? 0, tag.end ?? 0),
+					}
 		template = expr.quasi as AstNode | undefined
 	}
-	if (!template || template.type !== 'TemplateLiteral') return null
-	if ((template.expressions as unknown[] | undefined)?.length) return null
+	if (!template || template.type !== 'TemplateLiteral')
+		return { reason: 'content', at: child }
+	const substitution = asArray(template.expressions)[0]
+	if (substitution) return { reason: 'substitution', at: substitution }
 	// Slice between the backticks (the literal's own brackets).
 	const start = (template.start ?? 0) + 1
 	const end = (template.end ?? 0) - 1
@@ -114,7 +134,7 @@ const tsxAdapter: SurfaceAdapter = {
 			output: returnStmt.argument as AstNode,
 		}
 	},
-	stylesheetOf: (ctx, node) => styleElementStylesheet(ctx, node) ?? '',
+	stylesheetOf: styleElementStylesheet,
 	lowerElement,
 }
 
