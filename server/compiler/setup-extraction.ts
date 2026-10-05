@@ -575,10 +575,12 @@ export const extractSetup = (
 			// (`internals?.states.add('clearable')`) whose free names are all
 			// client-known — context members, signals, expose ambients, JS
 			// globals, earlier plain setup consts, `first()`-bound element
-			// locals, `ref={}`-bound composed-element locals (LT-087), and the
-			// `watch`/`on`/`pass` ambients (LT-069) — those touch connect-time
-			// APIs (ElementInternals, DOM, ResizeObserver/pointer capture) that
-			// don't exist render-time, same posture as the pre-existing cases.
+			// locals, `ref={}`-bound composed-element locals (LT-087), authored
+			// non-compose import bindings (LT-088 — a shared client-only helper
+			// module, ADR 0046 s5) and the `watch`/`on`/`pass` ambients
+			// (LT-069) — those touch connect-time APIs (ElementInternals, DOM,
+			// ResizeObserver/pointer capture) that don't exist render-time,
+			// same posture as the pre-existing cases.
 			// A plain-const reference is picked up client-side automatically:
 			// `imports.ts`'s `computeClientNeededNames` already walks
 			// `clientSetup` nodes' free names into its plain-setup fixpoint.
