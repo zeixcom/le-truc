@@ -18,6 +18,13 @@ export type TestListItemTask = {
 
 export type TestListitemTsxProps = Record<string, never>
 
+declare global {
+	interface HTMLElementTagNameMap {
+		'test-listitem-tsx': HTMLElement
+	}
+}
+
+// biome-ignore lint/correctness/noEmptyPattern: the fixture takes no server args, and the compiler's params contract requires an (empty) destructured object pattern.
 export function TestListitemTsx({}: TestListitemTsxProps) {
 	const items = createList<TestListItemTask, MutableStore<TestListItemTask>>(
 		[
@@ -33,31 +40,39 @@ export function TestListitemTsx({}: TestListitemTsxProps) {
 	return (
 		<test-listitem-tsx>
 			<ul class="tasks">
-				{items.map(task => (
-					<li class={() => (task.done.get() ? 'done' : null)}>
-						<label>{task.label.get()}</label>
-						<input
-							type="text"
-							value={() => task.label.get()}
-							onInput={(e: InputEvent) =>
-								task.label.set((e.target as HTMLInputElement).value)
-							}
-						/>
-						<FormCheckbox
-							name="task"
-							label="Done"
-							truc:pass={{
-								checked: {
-									get: () => task.done.get(),
-									set: (v: boolean) => task.done.set(v),
-								},
-							}}
-						/>
-						<button type="button" onClick={() => console.log(task.done.get())}>
-							Log
-						</button>
-					</li>
-				))}
+				{
+					// @ts-expect-error — `map` on a List is ADR 0046 s4, typed when
+					// Cause & Effect 1.6 lands (LT-425); the compiler accepts and
+					// lowers the spelling today, and this directive retires then.
+					items.map(task => (
+						<li class={() => (task.done.get() ? 'done' : null)}>
+							<label>{task.label.get()}</label>
+							<input
+								type="text"
+								value={() => task.label.get()}
+								onInput={(e: Event) =>
+									task.label.set((e.target as HTMLInputElement).value)
+								}
+							/>
+							<FormCheckbox
+								name="task"
+								label="Done"
+								truc:pass={{
+									checked: {
+										get: () => task.done.get(),
+										set: v => task.done.set(Boolean(v)),
+									},
+								}}
+							/>
+							<button
+								type="button"
+								onClick={() => console.log(task.done.get())}
+							>
+								Log
+							</button>
+						</li>
+					))
+				}
 			</ul>
 			<button
 				type="button"

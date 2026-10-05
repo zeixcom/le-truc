@@ -390,6 +390,10 @@ declare namespace JSX {
 	 * not a migrated example: the probe takes no args, so only the common
 	 * set applies. */
 	type CssProbeAttrs = CommonLightDom
+	/** A test-fixture tag (LT-423, `examples/test/listitem/`): the Mount
+	 * Scope fixture pair's `.tsx` twin takes no args, so only the common
+	 * set applies. */
+	type TestListitemTsxAttrs = CommonLightDom
 
 	/**
 	 * `<truc:try>` (ADR 0041), the `.tsx` spelling of
@@ -469,6 +473,7 @@ declare namespace JSX {
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs
 		'css-probe': CssProbeAttrs
+		'test-listitem-tsx': TestListitemTsxAttrs
 		'truc:try': TrucTryAttrs
 	}
 }
