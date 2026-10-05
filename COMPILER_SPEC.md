@@ -528,12 +528,12 @@ Out-of-order streaming, data loading and routing stay outside the compiler.
 Each component with at least one reactive binding or event handler compiles to one Le Truc module that adopts server HTML. Fully static components ship no JS.
 
 ```ts
-import { asInteger, bindText, createCell, defineComponent } from '@zeix/le-truc'
+import { asNumber, bindText, createCell, defineComponent } from '@zeix/le-truc'
 
 export default defineComponent<MyCounterProps>('my-counter', ({ expose, first, on, watch }) => {
   const span = first('span', 'my-counter: span missing')
   const button = first('button', 'my-counter: button missing')
-  const count = createCell(asInteger()(span.textContent)) // harvested, not recomputed
+  const count = createCell(asNumber()(span.textContent)) // harvested, not recomputed
   const step = createCell(1)
   expose({ count })
   on(button, 'click', () => count.set(count.get() + step.get()))
