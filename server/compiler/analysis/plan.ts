@@ -212,8 +212,8 @@ export type ReconcilePlan = {
 	/**
 	 * The list's compile-time document-order index per component (ADR 0046
 	 * s2): the extracted template is stamped `data-list` and queried from the
-	 * container as `:scope > template[data-list="N"]` — the stamp lifts the
-	 * one-list-per-component limit.
+	 * container's parent as `:scope > template[data-list="N"]` — the stamp
+	 * lifts the one-list-per-component limit.
 	 */
 	listIndex: number
 	/**
