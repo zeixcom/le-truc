@@ -116,9 +116,11 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
     beside-watch — a sanctioned escape hatch — with a required ordering probe. The
     `allow-scripts` question is decoupled to LT-448 (design): the goal is partials bringing
     *new* components to the page, build-unknown, same-origin or CSP-approved origins, with
-    code-splitting required. `shake-hands` stays broken until LT-448 rules; the three
-    script-execution spec legs and `mocks/module-with-type.html` move to its implementation
-    task. LT-390 is re-pointed at LT-449.
+    code-splitting required. The decoupling is one-directional — nothing in the lazyload
+    track waits on LT-448: LT-449 is pickable now and complete on its own terms, and
+    LT-448's session writes the follow-up that revives `shake-hands` (inert → alive per the
+    ruled design), absorbing the three re-scoped script-execution spec legs and
+    `mocks/module-with-type.html`. LT-390 is re-pointed at LT-449.
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
@@ -128,12 +130,12 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). ~~LT-429~~ (ruled 2026-10-05 → ADR 0046
   s7, ADR 0034 s1; ruling 14). ~~LT-334~~ (ruled 2026-10-06 → LT-449; `allow-scripts`
   decoupled to LT-448; ruling 15). **Next owner sessions:** LT-448 (partials that bring new
-  components; gates the `allow-scripts` follow-up), LT-409 (the shadow-root departures;
-  re-scopes LT-405/LT-407/LT-408).
+  components; its session writes the shake-hands revival follow-up — the lazyload track
+  does not wait on it), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → LT-110 → LT-449 (lazyload's boundary, ruled 2026-10-06 — folder-independent, runs parallel to the migrations; pairs with LT-390) → LT-445 (cem-list, filed from LT-111's sweep) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-449). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → LT-110 → LT-449 (lazyload's boundary, ruled 2026-10-06 — pickable immediately, folder-independent, not gated on LT-448; pairs with LT-390) → LT-445 (cem-list, filed from LT-111's sweep) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-449 only). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
   ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). **Next:** LT-443 (needs LT-429).
@@ -228,8 +230,11 @@ recorded against the 30.4k opening measurement.
   script-execution spec legs (LT-449 re-scoped them here) are this session's test input.
   **Exit:** rule the direction (an option, a combination, or a new one); decide whether it
   needs an ADR (ADR 0047 if so) or an `ARCHITECTURE.md`/`HOST_PROFILE.md` record; write the
-  implementation task, including the compiled-path wiring and the runtime binding's adoption
-  of the same policy function (one policy, two hosts, no drift).
+  follow-up implementation task — the one that transforms `shake-hands` from inert to alive
+  per the ruled design (owner, 2026-10-06), absorbing the script-execution spec legs
+  re-scoped from LT-449 — including the compiled-path wiring and the runtime binding's
+  adoption of the same policy function (one policy, two hosts, no drift). Nothing in the
+  lazyload track waits on this session: LT-449 and LT-390 proceed independently.
 
 - [ ] LT-409: Design session — the departures of compiled CSS from a real shadow root (ADR 0033 s7 as a whole; re-scopes LT-405, LT-407, LT-408).
   **Area:** design
@@ -286,16 +291,19 @@ recorded against the 30.4k opening measurement.
      (today a hidden one remains). Spec legs asserting the toggling shape are reported with
      evidence and re-ruled per ITERATION ruling 10, never matched silently. The no-JS story
      holds: the server renders the pending arm live.
-  2. **`allow-scripts` is out of scope** — decoupled to LT-448 (design). The attribute stays
-     page-authorable on the host and documented, but the compiled `truc:html` path passes
-     `sanitize: sanitizeHtml` and strips scripts, so it is inert compiled. Leave
-     `shake-hands` (`mocks/snippet.html`) broken until LT-448 rules — do NOT fix it by
-     pre-registering the component. Re-scope the three script-execution spec legs to LT-448's
-     implementation task: 'executes JavaScript in loaded content when allow-scripts is
-     present', 'respects allow-scripts attribute for script execution control', 'preserves
-     script type attributes when recreating scripts' (`module-lazyload.spec.ts:419,451,490`),
-     plus the shake-hands assertions (~line 431). Keep `mocks/module-with-type.html` as
-     LT-448's test input.
+  2. **`allow-scripts` is out of scope, and this task waits for nothing** (owner, 2026-10-06:
+     everything is settled — the `<truc:try>` pattern works and the previous blockers are
+     lifted). The decoupling from LT-448 is one-directional: LT-448's design session produces
+     the follow-up that revives `shake-hands`; this migration is complete without it. The
+     attribute stays page-authorable on the host and documented, but the compiled `truc:html`
+     path passes `sanitize: sanitizeHtml` and strips scripts, so `shake-hands`
+     (`mocks/snippet.html`) renders inert in the interim — the accepted state, never fixed
+     here by pre-registering the component. The three script-execution spec legs
+     ('executes JavaScript in loaded content when allow-scripts is present', 'respects
+     allow-scripts attribute for script execution control', 'preserves script type attributes
+     when recreating scripts', `module-lazyload.spec.ts:419,451,490`) plus the shake-hands
+     assertions (~line 431) move to that follow-up, which LT-448's session writes. Keep
+     `mocks/module-with-type.html` as its test input.
   3. **Stale dimming** stays the documented idiom: a reactive `style` (or `class`) thunk
      reading `isPending(content)` on the ok arm root. It works because a re-fetching task
      keeps its ok arm (LT-211), so the arm effect stays live across the dim. If it lands as
@@ -367,7 +375,9 @@ recorded against the 30.4k opening measurement.
   pinned only by `reactive-conditions.test.ts`. Migrate one example that wants a reactive
   `@if` (a disclosure or a tab-like switch) and pair the boundary with LT-449 (lazyload),
   extend `equivalence-audit.test.ts` to the arm-adoption class.
-  **Depends on** LT-385 and LT-449 (lazyload's boundary migration, ruled 2026-10-06).
+  **Depends on** LT-385 and LT-449 (lazyload's boundary migration, ruled 2026-10-06). It
+  waits on nothing from LT-448 — the allow-scripts design is downstream of this track, not
+  upstream.
 
 
 - [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
@@ -381,36 +391,6 @@ recorded against the 30.4k opening measurement.
   LT-165 step 7's corpus pin:** Simulated tier with its `Math.random()` expression suppressed
   and everything else simulated.
 
-
-### B — correctness
-
-- [ ] LT-443: An unresolvable scalar seed type harvests silently as a string — refuse it (LTC077) unless `harvest(value, parser)` declares its parser (ADR 0046 s7). — in progress ⚙
-  **Area:** compiler
-  **Needs:** LT-429
-  **Context:** `typeOfAnnotation` (`server/compiler/infer-type.ts:128`) recognizes only the
-  `string`/`number`/`boolean` keywords; an alias (`price: Price`), a literal union, `number | null`
-  or `Date` infers `'unknown'`, which `parserForType` reads as `asString`. A signal seeded from such
-  an arg and harvested from a render site connects holding a string, and tsc does not reliably catch
-  it (`'2.5' + 1` is legal). Ruling (owner, 2026-10-05; ADR 0046 s7): S3 — refuse, with the scalar
-  form of LT-429's marker as the fix-it.
-  1. **The overload.** `harvest<T>(seed: T, parser: Parser<T>): T` beside LT-429's list form in
-     `server/compiler/macros.ts`; same stub, same recognition and stripping. Recognized wherever a
-     harvested signal's seed is spelled today (the `createState` argument, a server-arg `expose()`
-     initializer — the positions `analysis/harvest.ts` plans a scalar harvest for).
-  2. **Parser selection.** A harvest site whose signal is seeded through `harvest(x, p)` reads
-     through `p` (spliced as authored; its free names must be client-resolvable — a server-only name
-     is LTC005's client-position face, as for LT-429's map entries). Without the marker, inference
-     as today (with LT-440's `asNumber`).
-  3. **LTC077** — compiler, tier 1 Prevented, statically decidable, no runtime half: a harvested
-     signal whose inferred type is `'unknown'` and that carries no `harvest()` parser. Copy per
-     `writer` → error-messages, naming the signal, the annotation it could not read and the fix:
-     *declare its parser — `createState(harvest(price, asNumber()))`*. A non-harvested signal (no
-     render site, a Parser-exposed prop, a context or sensor) is never refused: only the harvest
-     needs a parser.
-  **Check:** an aliased-`number` arg rendered as text fails LTC077 on both surfaces and passes once
-  wrapped in `harvest(…, asNumber())`, connecting as a number; a `Date` seed round-trips through an
-  authored parser; run the corpus census first — any existing component this refuses is listed in
-  the handoff and fixed in the task. Full compiler gates.
 
 ### D — CSS departures
 
