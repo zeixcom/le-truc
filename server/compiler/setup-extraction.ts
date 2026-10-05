@@ -31,7 +31,7 @@ import type {
 	SignalIR,
 	SourceRange,
 } from './ir'
-import { rangeFields, resolutionOf } from './tier'
+import { type Resolution, rangeFields, resolutionOf } from './tier'
 import {
 	CLIENT_ONLY_PRIMITIVES,
 	CONTEXT_NAMES,
@@ -71,6 +71,36 @@ export type SetupExtraction = {
 
 /** Shared empty result for the `parserFallbackRefsOf` context hook. */
 const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
+
+/**
+ * Why a `createSensor(start, options)` call has no server value, or null
+ * when it has one (ADR 0046 s5): the `value` seed is the server value, so
+ * a sensor without one is unresolvable, and so is a seed that reads a
+ * stubbed API or a non-server fact (`resolutionOf`'s own limbs).
+ */
+const sensorSeedResolution = (
+	options: unknown,
+): Extract<Resolution, { by: 'none' }> | null => {
+	const seed =
+		isNode(options) && options.type === 'ObjectExpression'
+			? asArray(options.properties).find(
+					(p): p is AstNode =>
+						isNode(p) &&
+						p.type === 'Property' &&
+						!p.computed &&
+						identifierName(p.key) === 'value',
+				)?.value
+			: undefined
+	if (!isNode(seed))
+		return {
+			by: 'none',
+			limb: 'not-a-server-fact',
+			reason:
+				'has no `{ value }` seed, so its first value comes from a client source after connect',
+		}
+	const resolution = resolutionOf(seed, EMPTY_NAMES)
+	return resolution.by === 'none' ? resolution : null
+}
 
 /**
  * Which of `#setAccessor`'s three landings an `expose()` initializer takes
@@ -380,6 +410,19 @@ export const extractSetup = (
 						init: computeArg,
 						inferredType: inferType(computeArg, typeCtx),
 					}
+					// A sensor's server value is its `{ value }` seed (ADR 0046
+					// s5). Without one — or with one no server phase can answer
+					// — every read is unresolvable (ADR 0029 s5): the sensor
+					// stays out of `serverKnown`, so each read site is omitted.
+					const sensorResolution =
+						calleeName === 'createSensor' ? sensorSeedResolution(args[1]) : null
+					if (sensorResolution)
+						ctx.routingSignals.push({
+							origin: 'LTC013',
+							detail: `\`${declName}\`'s createSensor() has no server value`,
+							...rangeFields(source, stmt),
+							resolution: sensorResolution,
+						})
 					const signal: SignalIR = MUTABLE_SIGNAL_CONSTRUCTORS.has(calleeName)
 						? {
 								...base,
@@ -390,6 +433,7 @@ export const extractSetup = (
 								...base,
 								family: 'derived',
 								constructor: calleeName as DerivedSignalIR['constructor'],
+								...(sensorResolution ? { unresolvable: true as const } : {}),
 							}
 					signals.push(signal)
 					signalByName.set(declName, signal)
@@ -668,6 +712,10 @@ export const seedExtractionContext = (
 	ctx.argNames = new Set<string>(paramNames)
 	for (const s of extraction.signals) ctx.serverKnown.add(s.name)
 	for (const n of extraction.setupInits.keys()) ctx.serverKnown.add(n)
+	// An unresolvable signal (an unseeded sensor, ADR 0046 s5) has no server
+	// value, so no read of it is server-known.
+	for (const s of extraction.signals)
+		if ('unresolvable' in s && s.unresolvable) ctx.serverKnown.delete(s.name)
 	ctx.setupInits = extraction.setupInits
 	for (const [prop, decl] of extraction.exposeProps) {
 		ctx.exposedProps.add(prop)

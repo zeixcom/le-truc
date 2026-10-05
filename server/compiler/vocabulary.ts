@@ -33,6 +33,7 @@ export const SIGNAL_CONSTRUCTOR_NAMES = [
 	'deriveList',
 	'deriveStore',
 	'createMemo',
+	'createSensor',
 ] as const
 
 export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>(
@@ -192,7 +193,6 @@ export const REAL_EXPORT_NAMES: ReadonlySet<string> = new Set<string>([
 	'createEffect',
 	'createMutableSignal',
 	'createScope',
-	'createSensor',
 	'createSignal',
 	'createSlot',
 	'createTask',
