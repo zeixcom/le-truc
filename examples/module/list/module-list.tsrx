@@ -1,6 +1,6 @@
 /**
  * Unified-format spike: module-list — exercises `@for` over a reactive List
- * and component composition (ADR 0023 sub-design 10).
+ * and component composition (ADR 0024 sub-design 10).
  *
  * - `<FormTextbox ... />` composes `form-textbox.tsrx`: the server splices
  *   its `renderFormTextbox()` output inline instead of hand-duplicating its
@@ -12,7 +12,7 @@
  *   `<template>` whose holes become `<slot>` markers; client lowers to
  *   `reconcile()` with a generated `bindItem` that fills the slots.
  * - `truc:pass={{ disabled: () => … }}` on a child custom element → `pass()`
- *   lowering (explicit client-prop attribute, ADR 0023 sub-design 10)
+ *   lowering (explicit client-prop attribute, ADR 0024 sub-design 10)
  * - `onClick` inside `@for` → per-item listener in the `bindItem` scope
  *   (ADR 0017 collector parity) — delegation becomes an optimization
  * - ZERO imports: createList auto-imported from '@zeix/le-truc' (v2 bridge)
