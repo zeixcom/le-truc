@@ -93,7 +93,7 @@
 		"eval:substrate": "bun run scripts/substrate-evaluation.ts"
 	},
 	"dependencies": {
-		"@zeix/cause-effect": "^1.6.0",
+		"@zeix/cause-effect": "^1.6.1",
 		"css-select": "^7.0.0",
 		"css-tree": "^3.2.1",
 		"css-what": "^8.0.0",

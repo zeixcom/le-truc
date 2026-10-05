@@ -42,7 +42,7 @@ Import from `@zeix/le-truc`. It re-exports the public surface except the depreca
 
 - Throws `RequiredOwnerError` outside an owner (effect or scope).
 - Precedence: `nil` > `err` > `stale` > `ok`. A missing `nil` renders nothing while unset; it does not fall back to `ok`. A missing `err` logs with `console.error`. A throw inside `ok` is routed to `err`.
-- `stale` fires only when an argument is **literally a Task** (`isTask`) that is pending and has a value. It never fires for a Slot or other wrapper around a Task, a derived list or store, or a Memo. A Task seeded with `{ value }` routes to `stale` already during its first run. `stale` gets no arguments.
+- `stale` fires when an argument has a value and `isPending()` is true for it: a Task, a Slot whose current backing is a Task (followed through a chain of Slots), or a list or store derived from an async computation. It never fires for a State or a Memo. A Task seeded with `{ value }` routes to `stale` already during its first run. `stale` gets no arguments.
 - **A cleanup returned by a sync handler is returned from `match`, not registered.** Write `createEffect(() => match(...))` or `return match(...)`. A bare `match(...)` statement drops the cleanup. A cleanup resolved from an async handler registers on the owner, unless the effect re-ran or was disposed first.
 - Async handlers cannot be cancelled, and a stale rejection still reaches `err`. Keep signal writes out of them and model async state as a Task.
 
@@ -50,7 +50,7 @@ Import from `@zeix/le-truc`. It re-exports the public surface except the depreca
 
 A Slot is a stable reactive position with a swappable backing signal. Subscribers link to the Slot, so `replace(next)` re-notifies them without re-subscribing. A plain `{ get, set? }` descriptor is accepted as a backing too, and its `get` is tracked like a Memo. The Slot itself is a valid `Object.defineProperty` descriptor. `set` forwards to the backing signal (`ReadonlySignalError` if it has no `set`), and there is no `update`.
 
-In Le Truc, a writable `expose()`d property (a static value, a `State`, or a `{ get, set }` descriptor) is Slot-backed, while a read-only derived one (a thunk) is stored as its bare Memo or Task. `pass()` swaps the child's Slot backing (restored on disconnect), and `requestContext()` returns a Slot. Because `stale` checks for a literal Task, a child's `watch('prop', { stale })` never fires when `pass()` puts an async thunk behind that prop's Slot. Details are in the le-truc skill.
+In Le Truc, a writable `expose()`d property (a static value, a `State`, or a `{ get, set }` descriptor) is Slot-backed, while a read-only derived one (a thunk) is stored as its bare Memo or Task. `pass()` swaps the child's Slot backing (restored on disconnect), and `requestContext()` returns a Slot. Because `match()` resolves `stale` through the Slot, a child's `watch('prop', { stale })` fires when `pass()` puts an async thunk behind that prop's Slot. Details are in the le-truc skill.
 
 ## Naming bridge to 2.0
 

@@ -570,13 +570,29 @@ var asyncSources = new WeakMap;
 function registerAsyncSource(signal, source) {
   asyncSources.set(signal, source);
 }
+function resolveSlot(signal) {
+  let current = signal;
+  let visited;
+  while (current != null && typeof current === "object" && current[Symbol.toStringTag] === TYPE_SLOT) {
+    if (!visited)
+      visited = new Set;
+    else if (visited.has(current))
+      return;
+    visited.add(current);
+    current = current.current();
+  }
+  return current;
+}
 function getAsyncSource(signal) {
   if (signal == null || typeof signal !== "object")
     return;
-  const candidate = signal;
+  const target = resolveSlot(signal);
+  if (target == null || typeof target !== "object")
+    return;
+  const candidate = target;
   if (typeof candidate.isPending === "function" && typeof candidate.abort === "function")
     return candidate;
-  return asyncSources.get(signal);
+  return asyncSources.get(target);
 }
 function isPending(signal) {
   return getAsyncSource(signal)?.isPending() ?? false;
@@ -1559,7 +1575,7 @@ function match(signalOrSignals, handlers) {
       out = nil?.();
     else if (errors)
       out = err(errors);
-    else if (stale && (isSingle ? isTask(signals[0]) && signals[0].isPending() : signals.some((s) => isTask(s) && s.isPending())))
+    else if (stale && (isSingle ? isPending(signals[0]) : signals.some((s) => isPending(s))))
       out = stale();
     else
       out = ok(values);

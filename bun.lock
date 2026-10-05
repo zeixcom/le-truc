@@ -5,7 +5,7 @@
     "": {
       "name": "le-truc",
       "dependencies": {
-        "@zeix/cause-effect": "^1.6.0",
+        "@zeix/cause-effect": "^1.6.1",
         "css-select": "^7.0.0",
         "css-tree": "^3.2.1",
         "css-what": "^8.0.0",
@@ -268,7 +268,7 @@
 
     "@xn-sakina/rml-win32-x64-msvc": ["@xn-sakina/rml-win32-x64-msvc@2.8.0", "", { "os": "win32", "cpu": "x64" }, "sha512-xeyoBIfccb7prfiUVLv0K+1HlLT4vnDfXHSkLpsp4wI0LtYR7sYbiGaMVgNdgR2nDHC+W+65inUHvhY5m7pbnw=="],
 
-    "@zeix/cause-effect": ["@zeix/cause-effect@1.6.0", "", { "peerDependencies": { "typescript": ">=5.8.0" }, "optionalPeers": ["typescript"] }, "sha512-NhwZHB9/q7MiTneAkfXic9Eo0Qlsm0lOXwMpkhapZOdOLISEfoDxAr7EMZ809JwnU5kl4kjO2KPQWhDbvId+kg=="],
+    "@zeix/cause-effect": ["@zeix/cause-effect@1.6.1", "", { "peerDependencies": { "typescript": ">=5.8.0" }, "optionalPeers": ["typescript"] }, "sha512-Iy2jMj+JZujCJ6ACwH5Dpkrl7HnIQ+zIA6WvcU3GOYikHR38Bg9BKJnHQHPRPBT7iZ245zIa+JrqJCkwT7CzhA=="],
 
     "@zeix/cem-plugin-le-truc": ["@zeix/cem-plugin-le-truc@0.3.3", "", { "peerDependencies": { "@custom-elements-manifest/analyzer": "^0.11", "typescript": "^5.0" } }, "sha512-01q3OIXVUQrZBo1l3jHgPIR2kuximNB1e16pHK4iWlDZHh+vJ072EggSLiwZcQCQnNJOxyqN/KcAQrURQ0xV9A=="],
 
