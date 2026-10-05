@@ -854,7 +854,7 @@ export type ComponentIR = {
 	 * sheet and its checks.
 	 */
 	sheet?: ComponentSheet | null
-	/** Exported `type`/`interface` declarations, verbatim. */
+	/** Module-level `type`/`interface` declarations, exported or not, verbatim. */
 	typeDecls: string[]
 	/** `declare global { … }` block text, verbatim (client module only). */
 	globalDecl: string | null
