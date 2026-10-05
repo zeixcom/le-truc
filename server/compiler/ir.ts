@@ -60,6 +60,7 @@ export type SignalConstructor =
 	| 'deriveList'
 	| 'deriveStore'
 	| 'createMemo'
+	| 'createSensor'
 	| 'requestContext'
 
 /**
@@ -210,15 +211,28 @@ export type DeclaredSignalIR = SignalIRBase & {
 }
 
 /**
- * A derived signal (`deriveCell`/`deriveList`/`deriveStore`/`createMemo`):
- * `init` is the derive expression — the compute callback, or the source
- * signal a `deriveList`/`deriveStore` maps over (ADR 0040 s2).
+ * A derived signal (`deriveCell`/`deriveList`/`deriveStore`/`createMemo`),
+ * or a read-only `createSensor` (ADR 0046 s5): `init` is the derive
+ * expression — the compute callback, or the source signal a
+ * `deriveList`/`deriveStore` maps over (ADR 0040 s2); a sensor's is its
+ * start callback, and its server value is the `{ value }` seed.
  */
 export type DerivedSignalIR = SignalIRBase & {
 	family: 'derived'
-	constructor: 'deriveCell' | 'deriveList' | 'deriveStore' | 'createMemo'
+	constructor:
+		| 'deriveCell'
+		| 'deriveList'
+		| 'deriveStore'
+		| 'createMemo'
+		| 'createSensor'
 	/** The derive expression node; `null` for an argument-less call. */
 	init: AstNode | null
+	/**
+	 * A `createSensor` with no server value — no `{ value }` seed, or one no
+	 * server phase can answer (ADR 0046 s5). It is not server-known, so
+	 * every read of it is omitted from the server render.
+	 */
+	unresolvable?: true
 }
 
 /**

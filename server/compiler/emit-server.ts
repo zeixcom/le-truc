@@ -196,6 +196,12 @@ type EmitContext = {
 	 */
 	inArmTemplate: boolean
 	/**
+	 * The item names of the reactive lists whose server loop is open (ADR
+	 * 0046 s3): the loop binds each to the item CELL the list hands out, so
+	 * the bare `{item}` fill reads it with `.get()`.
+	 */
+	listItems: Set<string>
+	/**
 	 * Every loop's `emptyArm` roots (LT-212). They sit in the template tree
 	 * as the loop output's following siblings, so selector resolution and
 	 * the id/prose checks see them, but they render from inside the loop
@@ -363,7 +369,8 @@ const lazyValueExpression = (
 	if (expr.type === 'Identifier') {
 		const name = String(expr.name)
 		if (component.signals.some(s => s.name === name))
-			return value(`${name}.get()`)
+			// An unresolvable signal (an unseeded sensor) is not in scope.
+			return value(scope.has(name) ? `${name}.get()` : "''")
 		return value(exprText)
 	}
 	// Anything else (a call expression, an arrow thunk, a bare non-signal
@@ -565,6 +572,8 @@ const emitListFor = (
 		`for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
 	)
 	if (emptyFlag) ctx.out.line(`${emptyFlag} = false`)
+	const added = !ctx.listItems.has(loop.itemName)
+	ctx.listItems.add(loop.itemName)
 	const dataKey: AttributeIR = {
 		kind: 'server',
 		name: 'data-key',
@@ -575,6 +584,7 @@ const emitListFor = (
 	}
 	emitElement(ctx, loop.output, loopScope, [dataKey])
 	for (const child of loop.output.children) emit(ctx, child, loopScope)
+	if (added) ctx.listItems.delete(loop.itemName)
 	pushClose(ctx, loop.output.tag)
 	ctx.out.close()
 
@@ -651,8 +661,17 @@ const emitFor = (
 	if (emptyFlag) ctx.out.line(`${emptyFlag} = false`)
 	for (const hoisted of loop.hoisted)
 		ctx.out.line(`const ${hoisted.name} = ${hoisted.initText}`)
+	// A name this loop binds shadows an enclosing list item: a value here.
+	const shadowed = [
+		loop.itemName,
+		loop.indexName,
+		...loop.hoisted.map(h => h.name),
+	].filter(
+		(name): name is string => name !== null && ctx.listItems.delete(name),
+	)
 	emitElement(ctx, loop.output, loopScope)
 	for (const child of loop.output.children) emit(ctx, child, loopScope)
+	for (const name of shadowed) ctx.listItems.add(name)
 	pushClose(ctx, loop.output.tag)
 	ctx.out.close()
 	if (emptyFlag && loop.emptyArm) {
@@ -1131,17 +1150,20 @@ const emit = (
 		// empty — the server has no initial value for it under the arm's
 		// condition; the mount writes it on enter.
 		if (node.reactivity === 'reactive' && ctx.inArmTemplate) return
+		// The bare `{item}` fill of a reactive list reads the item cell.
 		const value =
-			node.reactivity === 'reactive'
-				? lazyValueExpression(
-						ctx.component,
-						node.exprText,
-						node.expr,
-						scope,
-						ctx.foldScope,
-						seed => useSeedNames(ctx, seed),
-					)
-				: { expr: node.exprText, thunk: false }
+			node.expr.type === 'Identifier' && ctx.listItems.has(node.exprText)
+				? { expr: `${node.exprText}.get()`, thunk: false }
+				: node.reactivity === 'reactive'
+					? lazyValueExpression(
+							ctx.component,
+							node.exprText,
+							node.expr,
+							scope,
+							ctx.foldScope,
+							seed => useSeedNames(ctx, seed),
+						)
+					: { expr: node.exprText, thunk: false }
 		// An authored arrow is `textOf`'s argument, anything else `text`'s.
 		pushText(ctx, ctx.out, value.thunk ? 'textOf' : 'text', value.expr, node)
 		return
@@ -1321,6 +1343,7 @@ export const emitServerModule = (
 		templateQueue: [],
 		foldScope: foldableRenderScope(component),
 		inArmTemplate: false,
+		listItems: new Set(),
 		h: name => (renderScope.has(name) ? mint(`__${name}`) : name),
 		mint,
 	}
@@ -1545,6 +1568,19 @@ export const emitServerModule = (
 	// Suppressing `expose()` suppresses its stubs with it: the `any`-stubs
 	// exist only so the dropped call's own free names resolve.
 	const { expose } = component
+	// A harness export named inside `expose()` (an inline `createSensor(…)`,
+	// ADR 0046 s5) binds from the harness: the authored import of it is
+	// filtered out server-side, and an `any` stub would refuse its type
+	// arguments.
+	const exposeHarnessNames =
+		expose?.argNode && !harnessSuppressed
+			? [...freeIdentifiers(expose.argNode)].filter(
+					name =>
+						RUNTIME_HARNESS_EXPORTS.has(name) &&
+						!component.serverKnown.has(name),
+				)
+			: []
+	for (const name of exposeHarnessNames) used.add(name)
 	const stubNames =
 		expose?.argNode && !harnessSuppressed
 			? [...freeIdentifiers(expose.argNode)]
@@ -1552,6 +1588,7 @@ export const emitServerModule = (
 						name =>
 							!JS_GLOBALS.has(name) &&
 							name !== 'expose' &&
+							!RUNTIME_HARNESS_EXPORTS.has(name) &&
 							!component.serverKnown.has(name) &&
 							!expose.ambients.includes(name) &&
 							// LT-034: a custom Parser factory (e.g. `asOklch`) may now

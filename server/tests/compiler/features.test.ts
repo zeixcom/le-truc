@@ -678,7 +678,7 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 		const list = createList(['a', 'b'], {
 			keyConfig: () => '',
 		})
-		expect(list.entries()).toEqual([
+		expect(list.entries().map(([key, cell]) => [key, cell.get()])).toEqual([
 			['0', 'a'],
 			['1', 'b'],
 		])

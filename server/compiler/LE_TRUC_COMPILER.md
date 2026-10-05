@@ -417,7 +417,8 @@ leading JSDoc, and the placed plain imports (`server` / `client`).
 family (ADR 0040 s2) tagged `family`: `DeclaredSignalIR` (`createCell`/
 `createState`/`createList`/`createStore` — `init` is the initializer),
 `DerivedSignalIR` (`deriveCell`/`deriveList`/`deriveStore`/`createMemo` —
-`init` is the derive expression), and `ContextSignalIR` (`requestContext` —
+`init` is the derive expression; `createSensor` — `init` is the start
+callback, `unresolvable` set when it has no server value), and `ContextSignalIR` (`requestContext` —
 the `fallback` node and its verbatim `fallbackText`, no initializer). Every
 member carries name, verbatim text/span and inferred type; `constructor` is
 narrowed within each member, so exact-constructor dispatch still works.
@@ -746,7 +747,15 @@ LT-385c — composition calls for `compose` nodes), and
 setup re-declared verbatim against the `runtime.ts` harness, where a signal
 is its initial value
 in a box (`.get()` reads once, `.set()` is a no-op) — "signals as plain
-values". A thunk whose closure is not directly server-known gets the
+values". The harness follows the signal meaning (ADR 0046 s3, LT-422): a
+list iterates the item cells it hands out (`map((cell, key))`, `forEach`,
+`keys()`, `byKey()`, keyed as Cause & Effect keys the same seed; the
+emitted loop reads `[key, cell]` from an internal `entries()` and the bare
+`{item}` fill reads `item.get()`), a store's fields are signals (nested
+objects stores, arrays lists), and `createSensor`'s `{ value }` seed is its
+server value. An unseeded sensor, or one whose seed no phase can answer, is
+left out of `serverKnown`: every read of it is omitted, and an `LTC013`
+routing signal with resolution `none` records why. A thunk whose closure is not directly server-known gets the
 **host-derived fold**: an expression whose every read has a compiler-known
 server truth (a Parser prop's root attribute, a prop harvested from a
 same-named server arg, a `first()` ref's branch presence) is spliced to an

@@ -948,6 +948,11 @@ const planHarvests = (
 		// rendered") does not apply: emit-client.ts emits them through a
 		// dedicated verbatim path, never this harvest machinery.
 		if (signal.family === 'context') continue
+		// A sensor seeds itself on the client: its `{ value }` seed and its
+		// start callback are client code, declared verbatim (`emit-client.ts`
+		// no-harvest path; LT-348 still refuses a server name in either), and
+		// a harvest would replace the start callback (ADR 0046 s5).
+		if (signal.constructor === 'createSensor') continue
 		// A reconciled List seeds from the adopted DOM, not a text/attr site.
 		const listPlan = [...reconcilePlans.values()].find(
 			p => p.signal === signal.name,

@@ -51,11 +51,54 @@ export type ServerCell<T> = {
 	set: (value: T) => void
 }
 
-/** Server-side stand-in for a `List`: iterates its seed, never mutates. */
-export type ServerList<T> = ServerCell<T[]> & {
-	[Symbol.iterator]: () => Iterator<T>
-	/** Key/value pairs mirroring cause-effect's keyConfig generation. */
-	entries: () => Array<[string, T]>
+/**
+ * The signal the harness hands out for a value inside a store, mirroring
+ * Cause & Effect's `MutableStore` field rule: an array is a list, a plain
+ * object is a store, anything else is a cell.
+ */
+export type ServerFieldSignal<V> = V extends readonly (infer U)[]
+	? ServerList<U>
+	: V extends Record<string, unknown>
+		? ServerStore<V>
+		: ServerCell<V>
+
+/**
+ * Server-side stand-in for a `MutableStore` (ADR 0046 s3): every field is a
+ * signal ({@link ServerFieldSignal}), and `get()` returns the whole value.
+ */
+export type ServerStore<T extends Record<string, unknown>> = ServerCell<T> & {
+	readonly [K in keyof T]: ServerFieldSignal<T[K]>
+}
+
+/**
+ * Server-side stand-in for a `List` (ADR 0046 s3, s4): iterates the item
+ * CELLS it hands out — `S` is the `createItem` result, a cell by default —
+ * keyed exactly as Cause & Effect keys the same seed. `get()` returns the
+ * plain values. Never mutates.
+ */
+export type ServerList<T, S = ServerCell<T>> = ServerCell<T[]> & {
+	readonly length: number
+	[Symbol.iterator]: () => Iterator<S>
+	at: (index: number) => S | undefined
+	keys: () => IterableIterator<string>
+	byKey: (key: string) => S | undefined
+	/** `(cell, key)` per item, in order — a plain array, like C&E's `map`. */
+	map: <R>(callback: (cell: S, key: string) => R) => R[]
+	forEach: (callback: (cell: S, key: string) => void) => void
+	/**
+	 * `[key, cell]` pairs, for the emitted server loop only — not part of
+	 * the authored vocabulary (C&E lists have no `entries()`).
+	 */
+	entries: () => Array<[string, S]>
+}
+
+/** Key configuration as Cause & Effect's `KeyConfig` accepts it. */
+type KeyConfig<T> = string | ((item: T) => string | undefined)
+
+/** Options the harness honors on `createList`/`deriveList`. */
+type ServerListOptions<T, S> = {
+	keyConfig?: KeyConfig<T>
+	createItem?: (value: T) => S
 }
 
 /* === Exported Functions === */
@@ -67,17 +110,18 @@ export const createCell = <T>(initial: T): ServerCell<T> => ({
 })
 
 /**
- * `createList(seed, { keyConfig })` → iterable box over the seed items, with
- * key/value entries that mirror cause-effect's `getKeyGenerator` exactly
- * (string prefix → `prefix0…`, function → `fn(item) ?? auto`, none →
- * positional `0…`) — the server render's `data-key` values must match the
- * keys the client's real `createList` generates for the same seed, or
- * `reconcile()` adoption fails (ADR 0024 sub-design 3: one seeding story).
+ * `createList(seed, { keyConfig, createItem })` → a list over one cell per
+ * seed item (`createItem`'s result, else a {@link createCell} box), with
+ * keys that mirror cause-effect's `getKeyGenerator` exactly (string prefix
+ * → `prefix0…`, function → `fn(item) || auto`, none → positional `0…`) —
+ * the server render's `data-key` values must match the keys the client's
+ * real `createList` generates for the same seed, or `reconcile()` adoption
+ * fails (ADR 0024 sub-design 3: one seeding story).
  */
-export const createList = <T>(
+export const createList = <T, S = ServerCell<T>>(
 	seed: Iterable<T> = [],
-	options?: { keyConfig?: string | ((item: T) => string | undefined) },
-): ServerList<T> => {
+	options?: ServerListOptions<T, S>,
+): ServerList<T, S> => {
 	const items = Array.from(seed)
 	let keyCounter = 0
 	const keyConfig = options?.keyConfig
@@ -87,17 +131,81 @@ export const createList = <T>(
 			: typeof keyConfig === 'function'
 				? keyConfig(item) || String(keyCounter++)
 				: String(keyCounter++)
-	const keyed = items.map(item => [keyOf(item), item] as [string, T])
+	const createItem =
+		options?.createItem ?? ((value: T) => createCell(value) as S)
+	const keyed = items.map(
+		item => [keyOf(item), createItem(item)] as [string, S],
+	)
+	const cells = keyed.map(([, cell]) => cell)
+	const byKey = new Map(keyed)
 	return {
 		get: () => items,
 		set: () => {},
-		[Symbol.iterator]: () => items[Symbol.iterator](),
+		length: items.length,
+		[Symbol.iterator]: () => cells[Symbol.iterator](),
+		at: index => cells.at(index),
+		keys: () => byKey.keys(),
+		byKey: key => byKey.get(key),
+		map: callback => keyed.map(([key, cell]) => callback(cell, key)),
+		forEach: callback => {
+			for (const [key, cell] of keyed) callback(cell, key)
+		},
 		entries: () => keyed,
 	}
 }
 
-/** `createStore(initial)` → box over `initial`. */
-export const createStore = <T>(initial: T): ServerCell<T> => createCell(initial)
+/** Cause & Effect's `isRecord`: a plain object, the only kind a store nests. */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	value !== null &&
+	typeof value === 'object' &&
+	Object.getPrototypeOf(value) === Object.prototype
+
+/** The signal for one store field, by C&E's `MutableStore` rule. */
+const fieldSignal = (value: unknown): unknown =>
+	Array.isArray(value)
+		? createList(value)
+		: isRecord(value)
+			? createStore(value)
+			: createCell(value)
+
+/**
+ * `createStore(initial)` → a store whose fields are signals (nested objects
+ * stores, arrays lists, anything else cells) and whose `get()` returns the
+ * whole value — so `item.label.get()` runs at render time, as it does on the
+ * client (ADR 0046 s3).
+ */
+export const createStore = <T extends Record<string, unknown>>(
+	initial: T,
+): ServerStore<T> => {
+	const store: Record<string, unknown> = {}
+	for (const [key, value] of Object.entries(initial))
+		store[key] = fieldSignal(value)
+	store.get = () => initial
+	store.set = () => {}
+	return store as ServerStore<T>
+}
+
+/**
+ * `createSensor(start, { value })` → box over the `value` seed, its server
+ * value (ADR 0046 s5). `start` subscribes to a client source and never runs
+ * here. Unseeded, a sensor has no server value: the compiler routes every
+ * read of one as unresolvable, so this `get()` throwing is only a backstop
+ * against a read that analysis missed.
+ */
+export const createSensor = <T>(
+	_start: (set: (value: T) => void) => () => void,
+	options?: { value?: T },
+): ServerCell<T> =>
+	options?.value !== undefined
+		? createCell<T>(options.value)
+		: {
+				get: () => {
+					throw new Error(
+						'createSensor(...) has no { value } seed, so it has no server value — seed it, or read it only in a client position.',
+					)
+				},
+				set: () => {},
+			}
 
 /** `createState(initial)` → same box as createCell (the v2 name). */
 export const createState = <T>(initial: T): ServerCell<T> => createCell(initial)
@@ -169,9 +277,14 @@ export const createMemo = <T>(
 	options?: { value?: T },
 ): ServerCell<T> => createCell(compute(options?.value))
 
-/** `deriveList(fn)` → list box over `fn()` evaluated once. */
-export const deriveList = <T>(compute: () => Iterable<T>): ServerList<T> =>
-	createList(compute())
+/**
+ * `deriveList(fn, options?)` → the same cell-iterating list over `fn()`
+ * evaluated once, keyed by `options.keyConfig` as `createList` keys it.
+ */
+export const deriveList = <T>(
+	compute: () => Iterable<T>,
+	options?: { keyConfig?: KeyConfig<T> },
+): ServerList<T> => createList(compute(), options)
 
 /** `deriveStore(fn)` → box over `fn()` evaluated once. */
 export const deriveStore = <T>(compute: () => T): ServerCell<T> =>
