@@ -30,7 +30,7 @@
 @import "../server/generated/components/form-textbox.css";
 @import "../server/generated/components/form-tokenbox.css";
 @import "./module/blogarchive/module-blogarchive.css";
-@import "./module/calctable/module-calctable.css";
+@import "../server/generated/components/module-calctable.css";
 @import "../server/generated/components/module-carousel.css";
 @import "../server/generated/components/module-catalog.css";
 @import "./module/cem-list/module-cem-list.css";

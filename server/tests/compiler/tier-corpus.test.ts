@@ -120,6 +120,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'form-radiogroup',
 				'form-textbox',
 				'form-tokenbox',
+				'module-calctable',
 				'module-catalog',
 				'module-codeblock',
 				'module-colorinfo',
