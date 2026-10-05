@@ -389,47 +389,61 @@ const runReconcileLoops = (
 		)
 
 		// The list owns its container's children (ADR 0017): an authored
-		// element beside the loop that carries neither `data-key` nor
-		// `data-unreconciled` is removed on the list's first run (LT-186,
-		// the compiler half of LT-185's DEV_MODE advisory). Arm sets in the
-		// container are LTC063's — their inert templates can never be
-		// container children through a legal compile — and the `@empty`
-		// arm's roots also sit here as `output`'s siblings, but the server
-		// stamps them `data-unreconciled`, so they are exempt. A composed
-		// element's attributes are ComposeAttrIR (ref/arg/pass), so it can
-		// carry neither attribute and its fix-it moves it out.
+		// element beside the loop that carries no `data-unreconciled` is
+		// removed on the list's first run (LT-186, the compiler half of
+		// LT-185's DEV_MODE advisory). An authored `data-key` is no
+		// exemption (LT-431): `reconcile()` removes a key the source lacks
+		// and adopts a matching one as that item. A server-mode
+		// conditional renders its taken arm's elements as container
+		// children, so every arm is checked — the winner depends on render
+		// args — with the same rules, recursing into a nested one; text
+		// needs none (`reconcile()` classifies elements only). A non-async
+		// `try` is walked the same way, body and catch arm. Arm sets in
+		// the container (a reactive conditional, an async boundary) are
+		// LTC063's — their inert templates can never be container children
+		// through a legal compile — and the `@empty` arm's roots also sit
+		// here as `output`'s siblings, but the server stamps them
+		// `data-unreconciled`, so they are exempt. A composed element's
+		// attributes are ComposeAttrIR (ref/arg/pass), so it can carry no
+		// `data-unreconciled` and its fix-it moves it out.
 		const exempt = new Set(loop.emptyArm ?? [])
-		for (const child of container.children) {
-			if (child === output || exempt.has(child)) continue
-			if (child.kind === 'compose') {
-				diagnostics.push(
-					diagnostic.unkeyedSiblingInReconcileContainer(
-						source,
-						child.node,
-						child.component,
-						true,
-						wording,
-					),
-				)
-			} else if (
-				child.kind === 'element' &&
-				!child.attrs.some(
-					a =>
-						'name' in a &&
-						(a.name === 'data-key' || a.name === 'data-unreconciled'),
-				)
-			) {
-				diagnostics.push(
-					diagnostic.unkeyedSiblingInReconcileContainer(
-						source,
-						child.node,
-						child.tag,
-						false,
-						wording,
-					),
-				)
+		const checkSiblings = (children: TemplateNode[]): void => {
+			for (const child of children) {
+				if (child === output || exempt.has(child)) continue
+				if (child.kind === 'compose') {
+					diagnostics.push(
+						diagnostic.unkeyedSiblingInReconcileContainer(
+							source,
+							child.node,
+							child.component,
+							true,
+							wording,
+						),
+					)
+				} else if (
+					child.kind === 'element' &&
+					!child.attrs.some(a => 'name' in a && a.name === 'data-unreconciled')
+				) {
+					diagnostics.push(
+						diagnostic.unkeyedSiblingInReconcileContainer(
+							source,
+							child.node,
+							child.tag,
+							false,
+							wording,
+						),
+					)
+				} else if (child.kind === 'conditional' && child.mode === 'server') {
+					for (const arm of child.arms) checkSiblings(arm.children)
+				} else if (child.kind === 'try' && child.pendingChildren === null) {
+					// A non-async boundary is server-rendered too: the body or
+					// the catch arm wins on whether the body throws at render.
+					checkSiblings(child.children)
+					checkSiblings(child.catchChildren)
+				}
 			}
 		}
+		checkSiblings(container.children)
 
 		// Arm templates (ADR 0037) are `<template>`s too: beside an arm set
 		// the item template is the one without `data-arms`.

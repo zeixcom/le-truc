@@ -73,7 +73,7 @@ Non-obvious consequences:
 ## Lists: `each()` and `reconcile()`
 
 - `each(cell, (el, first) => …)` gives every element in the collection its own scope. Effect helpers called inside it attach to that element, and leaving disposes them.
-- `reconcile(container, template, list, bindItem)` syncs a keyed `List`/`Collection` one way, data to DOM. Mutate the list, never the container. On the first run it adopts server children by `data-key` and runs `bindItem` for them too, so make `bindItem` idempotent. It **removes every other child** except those marked `data-unreconciled` — and the compiler refuses an authored sibling that carries neither attribute (LTC074), so at runtime only hand-authored markup can hit that removal. The template needs exactly one root element (`InvalidTemplateError`).
+- `reconcile(container, template, list, bindItem)` syncs a keyed `List`/`Collection` one way, data to DOM. Mutate the list, never the container. On the first run it adopts server children by `data-key` and runs `bindItem` for them too, so make `bindItem` idempotent. It **removes every other child** except those marked `data-unreconciled` — and the compiler refuses an authored sibling without `data-unreconciled`, an authored `data-key` included (LTC074), so at runtime only hand-authored markup can hit that removal. The template needs exactly one root element (`InvalidTemplateError`).
 - The arm form `reconcile(container, templates, keyThunk, bindArm)` switches conditional arms. It's what compiled conditions lower to. Re-entering an arm clones it afresh, so uncommitted input is lost.
 
 ## Hand-written effects

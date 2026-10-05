@@ -150,8 +150,10 @@ child; ADR 0032 s1, LT-417) skips `LTC072`, which LT-429 holds. It is
 `LTC`, not `TSRX`: the refusal is raised in the shared hoist
 (`template-output.ts`), on both surfaces.
 `LTC074` (an element beside a reactive-list loop in its reconcile()
-container that carries neither `data-key` nor `data-unreconciled` — the
-list removes it on its first run; ADR 0017, LT-186) lands out of numeric
+container, directly or as any arm root of a server-mode conditional or a non-async
+`try`, that
+carries no `data-unreconciled` — the list removes it on its first run, and
+an authored `data-key` is no exemption; ADR 0017, LT-186, LT-431) lands out of numeric
 order: `LTC072` is LT-429's and `LTC073` LT-417's, both reserved before
 this rule picked. It is `LTC`, not `TSRX`: the refusal is raised in the
 shared loop analysis (`analysis/loops.ts`), on both surfaces.
