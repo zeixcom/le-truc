@@ -33,6 +33,7 @@ import type {
 } from './ir'
 import type { SetupExtraction } from './setup-extraction'
 import { wordingOf } from './surface'
+import { walkTemplate } from './walk'
 
 /** Template-output resolution: the root, the style block, the CSS and the parsed sheet. */
 export type ResolvedTemplate = {
@@ -67,10 +68,13 @@ export type ResolvedTemplate = {
  *
  * Since LT-375 (ADR 0032 s1) the output is a single root element, and the
  * `<style>` block — the stylesheet — is a direct child of that root. This
- * pass HOISTS it out of the root's children before anything else reads the
- * template, so no `<style>` placeholder can reach an emitter and the sheet
- * resolution is unchanged from the days when the block rode beside the
- * root in a fragment.
+ * pass HOISTS the first such child out of the root's children before
+ * anything else reads the template, so the sheet resolution is unchanged
+ * from the days when the block rode beside the root in a fragment. Every
+ * other `<style>` element — a second direct child, or one nested in a
+ * descendant — is refused (LTC073, LT-417) rather than left in place: it
+ * would reach the emitters as an empty `<style></style>` with its CSS
+ * dropped.
  *
  * `outputShapeLabel` names the surface's output shape in the no-root
  * message: `the @{ } output` (.tsrx) / `the template return` (.tsx).
@@ -122,6 +126,16 @@ export const resolveTemplateOutput = (
 					kind: 'element'
 				})
 			: null
+	// LTC073 (LT-417): the hoisted child is the only accepted `<style>`.
+	// Any left in the tree — a second direct child, or one nested in a
+	// descendant (composed content included) — would render empty, its CSS
+	// silently dropped.
+	walkTemplate(root, (node, parent) => {
+		if (node.kind === 'element' && node.tag === 'style')
+			ctx.diagnostics.push(
+				diagnostic.misplacedStyleBlock(source, node.node, parent !== root),
+			)
+	})
 
 	// Resolve `first(selector, required)` element references (LT-055) now
 	// that `root` exists.

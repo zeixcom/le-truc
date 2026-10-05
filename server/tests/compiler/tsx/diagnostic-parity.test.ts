@@ -977,6 +977,46 @@ const FAMILIES: Case[] = [
 		pins: ['Drop the fragment so that the host element is the root'],
 	},
 	{
+		// LT-417: only the root's first direct `<style>` child is the
+		// stylesheet. A second direct one (here the builders' own block,
+		// which follows the body's) and a nested one are refused, not
+		// rendered empty with their CSS dropped.
+		name: 'LTC073 second direct <style> child of the root',
+		code: 'LTC073',
+		spec: {
+			body: '<style>p { color: blue }</style>',
+			tsx: '<style>{css`p { color: blue }`}</style>',
+		},
+		spans: [
+			[
+				'<style>:host {\n\t  color: red;\n\t}</style>',
+				'<style>{css`:host {\n\t  color: red;\n\t}`}</style>',
+			],
+		],
+		pins: [
+			'A second `<style>` block in the root',
+			"root's single `<style>` child",
+		],
+	},
+	{
+		name: 'LTC073 <style> nested in a descendant',
+		code: 'LTC073',
+		spec: {
+			body: '<div><style>p { color: blue }</style></div>',
+			tsx: '<div><style>{css`p { color: blue }`}</style></div>',
+		},
+		spans: [
+			[
+				'<style>p { color: blue }</style>',
+				'<style>{css`p { color: blue }`}</style>',
+			],
+		],
+		pins: [
+			'A `<style>` block nested inside an element',
+			"root's single `<style>` child",
+		],
+	},
+	{
 		name: 'LTC006 React DOM-property name',
 		code: 'LTC006',
 		spec: { body: '<p className="x">x</p>' },

@@ -145,6 +145,10 @@ condition inside a reactive list's reconcile() container; LT-274), then
 and `LTC065` (a warning: a declaration names an unknown property or a value
 outside the property's grammar; LT-394). All `LTC`, not `TSRX`: each
 is raised in shared machinery, on both surfaces.
+`LTC073` (a `<style>` block that is not the root's single direct `<style>`
+child; ADR 0032 s1, LT-417) skips `LTC072`, which LT-429 holds. It is
+`LTC`, not `TSRX`: the refusal is raised in the shared hoist
+(`template-output.ts`), on both surfaces.
 `LTC074` (an element beside a reactive-list loop in its reconcile()
 container that carries neither `data-key` nor `data-unreconciled` — the
 list removes it on its first run; ADR 0017, LT-186) lands out of numeric
