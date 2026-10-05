@@ -4,6 +4,13 @@ Deviation notes and unexpected challenges from agent sessions, newest first. Ent
 
 ---
 
+**LT-425 blocked (Architect, 2026-10-05).** Ruling 11 holds the `.tsx` keyed `map` until
+Cause & Effect ships 1.6.0 (`createList`/`deriveList` `map`/`forEach`); the registry pins
+1.5.2. Status set to `blocked ⛔` so track C continues past it; unblock by re-checking the
+release, then work the task normally.
+
+---
+
 **Agent worktrees and the sandbox (LT-370/LT-335 sessions, 2026-10-02; trimmed 2026-10-04).**
 Signing and the worktree base are settled by `scripts/worktree.ts` (unsigned task commits, signed
 owner-run integration; worktrees branch from the current branch). Still open, all the sandbox's

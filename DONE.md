@@ -251,6 +251,19 @@ Full entry text: `git log -p -- DONE.md`.
   **Check:** gates in the worktree: `test:server` 2888 pass / 0 fail (after `build:docs` — a fresh worktree has no built docs/ and the serve-route tests read it), `typecheck` clean, `check:contract` ✓, `check:corpus` exit 0 with the compile-warning baseline still 0 and zero LTC074 hits — the false-positive probe ran before the rule was trusted, per the entry's "check the false-positive shape FIRST". `biome check` clean on the changed paths. Two doubts for review: **(1) the code is LTC074, not LTC073** — the stale session had drafted LTC073 before the `queue/ITERATION.md` 2026-10-04 note reserved LTC072 for LT-429 and LTC073 for LT-417 (in flight in a parallel worktree, 9 files deep); renumbered to the next free code with the ledger entry added — ITERATION.md's "next free diagnostic code" note now owes "LTC075". **(2)** a *server-mode* conditional directly in a reconcile container renders unkeyed element roots that the first run would also remove; the rule exempts `conditional`/`try` nodes entirely (no tag to name in the ruled message shape, which speaks element/compose) and no corpus component does this — worth a follow-up LT if that shape should be refused too.
   **Review:** Approved (Architect, 2026-10-05). LTC074, not LTC073, because LTC073 is LT-417's. LT-417's branch carries the additive merge resolution, so integrate this one first. A server-mode conditional directly in a reconcile container is LT-431.
 
+- [x] LT-187: `reconcile()` misreports a DUPLICATE `data-key` as "key not present in the source" (LT-185 review finding). — reviewed ✓
+  **Area:** runtime
+  **Changed:** `reconcile()`'s DEV_MODE removal warning distinguishes a duplicate `data-key`
+  from a genuinely absent one (`src/helpers/reactive.ts` `classify()`: at the removal branch
+  `keySet.has(harvested)` exactly separates the two — the duplicate message names the collision
+  and that the first occurrence wins); behaviour unchanged, only the message. Pins in
+  `src/tests/reconcile.test.ts`: the duplicate on the adoption pass, the previously-untested
+  absent-key message, and a duplicate introduced by external DOM mutation after the first run.
+  CHANGELOG `Fixed` entry. Channel: runtime DEV_MODE advisory (REQUIREMENTS S3), not an
+  ADR 0028 tier — the compiler emits `data-key` on `@for` items itself and cannot produce a
+  duplicate; hand-authored `reconcile()` markup is the only source.
+  **Review:** Approved.
+
 - [x] LT-277: Seam hardening from the LT-267 review — glob dot-rule edges, `fileExists` contract, doc enumeration. — reviewed ✓
   **Area:** server
   **Context:** the LT-267 review (2026-09-21) probed `server/runtimes/glob.ts` beyond the
@@ -597,6 +610,31 @@ Full entry text: `git log -p -- DONE.md`.
   **Changed:** `client.golden.test.ts`'s emit-then-check now compiles the LT-385g arm-set fixture (`createCell(mode === 'wide')` over `data-mode`, `@if`/`@else`) into the same tsc invocation, asserting it lowers through `reconcile()`'s arm form; verified it reproduces LT-385g's "Overload 1 of 2" against the pre-3ed0814b `reactive.d.ts` and passes against the current one. Full `build` regenerated `types/` with no drift (only `index.js`'s worktree-symlink path comment, restored). Gates: test:server 2883/0, typecheck, check:contract, check:corpus, build:docs green.
   **Review:** Approved (Architect, 2026-10-04). The async-boundary arm set is not pinned; it gets its first corpus consumer with LT-390.
 
+- [x] LT-411: Teardown at `dispose()` runs after the realm's report is computed (LT-335 residue). — reviewed ✓
+  **Area:** compiler
+  **Changed:** `dispose()` settles the LAST render's tree before the restores and
+  `window.close()` — the same teardown every earlier render got at the next window
+  (`server/compiler/sim/realm.ts`; now `Promise<void>` and idempotent, timers the disconnect
+  scheduled cancelled per LT-207's posture). The pass disposes before the report is computed,
+  with the `finally` covering the error path (`server/effects/simulate.ts`). The seam member's
+  meaning changed: `SIMULATION_SEAM_VERSION` 1→2 (`server/compiler/simulation/contract.ts`);
+  SERVER.md's simulation paragraphs updated.
+  **Review:** Approved. Reviewer nit: the two seam-typed `realm.dispose()` calls in
+  `scripts/substrate-evaluation.ts` now await (efb3ad2a). Listnav's `window is not defined`
+  notice ruled a harness-ordering artifact, not a component defect — post-fix the cleanup
+  succeeds silently, so no `CLASSIFIED_DIAGNOSTICS` entry (one would bless the broken ordering).
+
+- [x] LT-414: Move the four non-comment "ADR 0023" citations in `server/compiler/` to ADR 0024 (LT-393 residue). — reviewed ✓
+  **Area:** compiler
+  **Changed:** the two generated-module headers (`emit-server.ts`, `emit-client.ts`) drop the
+  ADR citation entirely (Architect ruling: a published artifact does not cite an internal ADR;
+  milestone wording kept); the two diagnostic-copy sites (`analysis/effects.ts` async-boundary
+  deeper-construct, `frontend/tsrx/compiler.ts` pinned-`@tsrx/core` grammar hint) cite ADR 0024
+  (sub-design 13 = template-cloned arms; sub-design 2 = split compiler, pinned dependency).
+  Six `.snap` goldens re-blessed; the only golden diff is the header lines.
+  **Review:** Approved. Residue outside the task's scope (the same misattribution class in
+  `server/effects/`, `server/tests/compiler/` titles and CEM tooling) filed as LT-434.
+
 - [x] LT-415: Test servers take a free port; reuse a running server only when it is this checkout (owner, 2026-10-03). — reviewed ✓
   **Area:** server
   **Context:** `test:variants` (`scripts/test-variants.ts`, `PORT = 3000`), Playwright
@@ -622,6 +660,17 @@ Full entry text: `git log -p -- DONE.md`.
 
   Commits on `task/LT-415`: 5926cdb7 (server + config + scripts + docs) and f40bfb6f (the 48 spec conversions — first round left them unstaged via a wrong-cwd path list; same change, no content difference).
   **Review:** Approved (Architect, 2026-10-05). The mock-fragment HMR exclusion is in scope: dev-server reuse cannot pass without it. `/api/status` now reports the checkout's absolute path. That is acceptable, because the docs server is local tooling and the site ships as static `docs/`.
+
+- [x] LT-416: Narrow LTC008's async-component range to the `async` keyword (LT-371 review). — reviewed ✓
+  **Area:** compiler
+  **Changed:** LTC008 on an `async` component function reports the `async` token instead of the
+  whole exported statement (`front-end.ts` `runFrontEnd`: `indexOf('async')` from the statement
+  start, fall back to the function node; the `fnStmt` local is gone) — ADR 0044 s1; in a
+  single-component file the old range equaled the file and `lineLabel` printed no line. Code,
+  severity and copy unchanged; narrowing a range is not a breaking change (LT-371 ruling).
+  `tsx/diagnostic-parity.test.ts` drops the case's `spans` pair; `diagnostic-ranges.test.ts`
+  pins the covered text `async` on both surfaces.
+  **Review:** Approved.
 
 - [x] LT-417: Refuse a `<style>` block that is not the root's single direct `<style>` child (LT-375 review). — reviewed ✓
   **Area:** compiler
@@ -794,6 +843,41 @@ Full entry text: `git log -p -- DONE.md`.
   a server arg counts as Unresolvable. CONTEXT.md's **Value Harness** entry was updated by the
   reviewer.
 
+- [x] LT-423: A reactive-list item is a Mount Scope — item content lowers through the arm emission (ADR 0046 s1–s3). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-422
+  **Gates:** check:sim
+  **Changed:** a reactive-list item is a Mount Scope (ADR 0046 s1–s3). Item content — reactive
+  attributes, class/style maps, `truc:pass` into composed children, events, lazy text children
+  over the item, key-derived `id`/`for` set once at clone — plans through the arm machinery
+  (`planReconcileItem`, pass 4 in `analysis/effects.ts` → `ReconcilePlan.itemScope`) and mounts
+  in `bindItem` against the item's own `first`. The extracted `<template>` is stamped
+  `data-list="N"` (compile-time document-order index, `walk.ts` `listIndexOf`) outside the
+  container and queried from the container's parent — the one-list-per-component limit is
+  lifted. Retired refusals (LTC005 arms; parity-pinned on both surfaces): `validateListBody`'s
+  slot-fill restrictions (one hole, server-static-only, no control flow, no client constructs),
+  the handler-reads-item refusal with its `listItemHandlerFix` wording key, the second-list
+  refusal. Remaining refusals: item with other than one root; host-level `first()` into an item
+  (`template-output.ts` + `analysis/compose-refs.ts`); server attrs reading the item; arm sets,
+  plain boundaries and nested loops inside an item (nesting lowering is LT-424). The server
+  bakes item-dependent sites empty (ADR 0037 s1's losing-arm rule) and renders server-known
+  conditionals' winner and composed children into the template; the harvest refuses an
+  arg-seeded list whose body renders the item nowhere. **Runtime rider (same change):**
+  `reconcileList`'s `enter()` now inserts a cloned item BEFORE mounting it — the order
+  `reconcileArms` already used — so a `pass()` in `bindItem` validates an upgraded composed
+  child instead of throwing uncaught (regression test in `src/tests/reconcile.test.ts`).
+  `index.js` bundle regenerated. Fixtures on both surfaces at `examples/test/listitem/`
+  (separate tags, not a variant set): store item, reactive attribute, `truc:pass {get,set}`,
+  handlers reading the item, key-derived `id`/`for` (`.tsrx`; the `.tsx` keyed map is LT-425).
+  Tier census +2 Folded (`test-listitem`, `test-listitem-tsx`) — the ADR 0046 fixture pair;
+  warning baseline stays 0.
+  **Review:** Approved. Reviewer nit: `listIndex` JSDoc named the container as the query root
+  (22d2af7c). Realm classifications for the two fixture tags document the fixed-point
+  re-parse's parent-first connect (Contained, per-descriptor; real pages upgrade children
+  first — verified in plain jsdom and Chromium/WebKit). `reconcile()`'s JSDoc does not yet
+  state the insert-before-mount ordering contract (pinned by the unit test); the uncaught-throw
+  containment gap on a re-run predates the task → LT-435.
+
 - [x] LT-427: An imported function is a known name in a client-only setup side effect (ADR 0046 s5). — reviewed ✓
   **Area:** compiler
   **Changed:** no compiler behavior change. The entry's premise did not hold: `clientKnownName`
@@ -888,3 +972,14 @@ Full entry text: `git log -p -- DONE.md`.
   `cmp`-identical to HEAD's committed bundle, and `bun run build` leaves `index.js` clean. No unit
   test: the rewrite only acts under a symlinked `node_modules`, so the `cmp` check is the
   regression check.
+
+- [x] LT-435: Typecheck `css-probe.tsx` under the `.tsx` host profile, and glob the examples program so no `.tsx` source falls out of it. — reviewed ✓
+  **Area:** examples
+  **Changed:** `examples/tsconfig.json` gains `"include": ["**/*.tsx"]` for untwinned `.tsx`;
+  twin pairs stay in `files` as both members, because tsc silently drops a wildcard `.tsx` whose
+  base name a `.ts` literal already claims (the first ruling, twins alone, lost 13 of 17 and
+  still compiled green; caught by the contributor). `host-profile.d.ts` gains `'css-probe'`
+  (`CssProbeAttrs = CommonLightDom`, test-fixture tag). `typecheck.test.ts` gains a membership
+  test: every `examples/**/*.tsx` on disk must be in the program's `--listFilesOnly` output.
+  **Review:** Approved (Architect, 2026-10-05). Gates re-run: typecheck test 4 pass, 18 `.tsx`
+  in the program, tsc clean; owner confirmed 0 editor diagnostics on `css-probe.tsx`.

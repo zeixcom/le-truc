@@ -852,82 +852,6 @@ to `TODO.md`.
   if diagnosed; none if accepted. Any new copy follows `writer` → error-messages.
   **Check:** lazyload's original destructuring spelling compiles, or fails at its own line.
 
-
-- [ ] LT-411: Teardown at `dispose()` runs after the realm's report is computed (LT-335 residue).
-  **Area:** compiler
-  **Context:** LT-335 settles each render's tree before the next window opens, but the last render's
-  tree is torn down by `window.close()` in `dispose()`. That is after the report exists, so whatever
-  its disconnect does goes nowhere. In the corpus run module-listnav logs `window is not defined`
-  at that point. It is harmless today, because nothing reads it, but it is the shape LT-335 fixed:
-  disconnect runs component code. Call `settlePreviousRender()` (or its equivalent) at the start of
-  `dispose()`, before the report is final and before `window.close()`, so the last render's
-  teardown is attributed and classified like every other one. Then decide whether listnav's notice
-  is a real defect (a disconnect path reading `window` after close) or a classification.
-  **Channel/tier:** none.
-  **Check:** a realm pin whose last-rendered fixture reports on disconnect shows that report in the
-  final diagnostics under its own tag; the LT-163 baseline stays green.
-
-  **Framework framing (S0, 2026-09-18):** the corpus is no longer only a playground — it is the
-  **public showcase of the authoring surfaces** for the library's users, which is also the
-  resolution of COMPILER_REFLECTION §2's "default by rule, not by practice" finding: the owner's
-  LT-238 ruling (all three spellings side by side) makes the corpus the honest side-by-side demo
-  of the surfaces' trade-offs, and the wave-4 migrations bank the `.tsx`-default DX story the
-  reflection asked to see banked somewhere. ~~**Gated on LT-178/LT-179 only** (P4) — the other gates landed 2026-09-18: LT-202 (the
-  `.tsx` front end in the build) and LT-210 (the TSRX pin upgrade, 0.2.3; owner sequencing
-  2026-09-17).~~ **[2026-09-21] Those gates are merged (PRs #131/#132) and the wave is
-  opening in `TODO.md`.** **[2026-09-25]** LT-238, LT-212 and LT-213 are landed (module-codeblock
-  was the first migration). The remaining per-shape gates are: LT-291 (a compiled parent references a
-  twin-carrying tag), LT-303 (a migration authors a boundary: LT-104), LT-301 (a loop inside a
-  branch), LT-307 (a Simulated `.tsx`-served entry), LT-312 (a `.tsx` parent over a `.tsrx`
-  child), and LT-280 (the loop-heavy composites). LT-291, LT-307 and LT-312 are in the
-  2026-09-25 iteration, with LT-098–LT-103. **LT-266 addendum (2026-09-21, Architect ruling on review):** the loop-heavy
-  composites — LT-109 `module-calctable`, LT-110 `module-ticker`, LT-111 `module-todo` — are
-  **additionally gated on LT-280**: the size-bet conversion proved reactive-list loops lower to
-  a per-item text fill + events and nothing richer ([spike/size-bet/FINDING.md](spike/size-bet/FINDING.md)),
-  which cannot express their per-item pass/attribute wiring. The text-shape migrations
-  (LT-095–LT-108) are unaffected. LT-183 returned GO (ADR 0032, dual front end) — **migrations author
-  `.tsx`**;
-  the four `.tsx` variant-set members in `examples/` (moved there by LT-237) and
-  `ARCHITECTURE.md` § Authoring Surfaces are the shape reference. Otherwise unblocked. The canonical pattern is LT-092's, amended by [ADR 0039](adr/0039-canonical-plus-variants-authored-surfaces.md) (LT-238): same-commit cutover — **retain the `.ts` twin as a variant** beside the new `.tsx` source (it stops being the served surface but stays the artifact of record, and leaves the CEM globs while its component is compiled), point
-  `examples/main.ts` at the generated client, keep the demo/spec green
-  against the served compiled component. Surface compiler gaps in NOTES.md — or fix them
-  directly if small (LT-088 precedent) — never weaken a component to dodge a gap. **Per
-  migration, record the tier and the reason** alongside the zero-warning check; only the
-  Simulated tier opens a realm, so Folded and Static both mean near-zero added build cost
-  regardless of occurrence count.
-
-  **[2026-09-25, iteration planning]** LT-095 and LT-104–LT-108 moved to `TODO.md` as wave 4's
-  second batch, with their gates LT-303, LT-325 and LT-301 (+ LT-300), and the P3 riders LT-326
-  and LT-302. What remains in this band is LT-280 and the three composites it gates
-  (LT-109–LT-111), plus LT-309–LT-311 and LT-319.
-
-  **Two LT-165 obligations land on wave 4's first Static-tier component.** (a) `check:tsrx`
-  type-checks each module at its OWN classified tier and the Static census is empty, so the build
-  type-checks the Static emit path nowhere today; `emit-tier.test.ts`'s "dropped ⇒ name absent"
-  assertion stands in for it. The first real Static component closes the gap for free — confirm it
-  does. (b) Census reasons carry `origin: detail (line N)` but not the signal's `resolution`
-  (`realm` vs `none`), which is self-evident for today's Simulated reasons but not for a Static
-  one: a Static reason must also say why NOTHING answers it. Add the resolution to the reason text
-  then — the format is pinned and its tests update with it.
-
-  **Suppression records are incomplete by design** (LT-165 step 7). Reactive `truc:html`,
-  `class:`/`style:` maps (a shared-surface attribute, where a per-site revert would undo other
-  bindings' legitimate work) and `truc:pass`-into-child sites are NOT recorded, and a parent's
-  render does not consult a composed child's records. No corpus component hits these today. A
-  migration that produces a Simulated-tier component with an unresolvable read behind one of those
-  shapes must extend the record set FIRST — surface it in NOTES.md rather than shipping a site
-  that is suppressed in name only.
-
-  **`data-unreconciled` must survive its migration** (LT-185's root cause). Porting a component
-  to `.tsrx` silently dropped that attribute from form-tokenbox's input, and `reconcile()` then
-  removed the input as an unkeyed child — nowhere to type, no diagnostic. **`module-calctable`
-  (LT-109) and `module-todo` (LT-111) both carry `data-unreconciled` in their hand-written
-  sources today.** When migrating either, diff the emitted markup's attributes against the `.ts`
-  twin's before calling the port done, and assert the opt-out survives hydration the way
-  `equivalence-audit.test.ts`'s LT-185 regression test does for form-tokenbox. **LT-186 (P3) makes
-  this a compile error** — if it has landed by then, these two migrations get the check for free
-  and this note is redundant; if it has not, do the manual diff.
-
 ## P6 — Cleanup round (after the corpus port)
 
 ---
@@ -998,31 +922,6 @@ to `TODO.md`.
   where the arg is read outside the loop body — and emit a dedicated diagnostic naming both the
   shadowing and the rename. Low priority: no corpus component hits it, and the build already
   stops.
-
-
-- [ ] LT-187: `reconcile()` misreports a DUPLICATE `data-key` as "key not present in the source" (LT-185 review finding).
-  **Area:** runtime
-  **Context:** Pre-existing, found reading the removal branch during the LT-185 review. In
-  `classify()` (`src/helpers/reactive.ts`) a child is adopted only when
-  `harvested !== null && keySet.has(harvested) && !current.has(harvested)`. A SECOND child
-  carrying a `data-key` that is in the source but already claimed by an earlier sibling falls
-  through all three conditions to the removal branch, where it draws the keyed message —
-  "key not present in the source" — which is false. The key IS present; the child is a
-  duplicate. An author chasing that message looks at their data source, where nothing is wrong,
-  instead of at the two elements sharing a key in their markup. Removing the duplicate is the
-  correct action, so only the message is wrong, not the behaviour.
-  **Fix:** distinguish the two cases at the branch — `keySet.has(harvested)` separates "duplicate
-  key, first occurrence wins" from "key not in source" — and give the duplicate its own message
-  naming the collision.
-  **Channel:** runtime DEV_MODE advisory (REQUIREMENTS S3), same as its sibling — NOT an ADR 0028
-  tier, for the reason recorded in LT-185's review. Statically decidable for the `.tsrx` corpus
-  in principle, but the compiler emits `data-key` on `@for` items itself and cannot produce a
-  duplicate, so no `TSRX` rule is owed; hand-authored `reconcile()` markup is the only source.
-  **Copy:** follows `writer` → error-messages; word it with LT-185's and LT-186's messages so all
-  three read as one family.
-  Acceptance: a duplicate-key child draws the duplicate message, a genuinely absent key still
-  draws the existing one, and both are pinned (the existing message has no test today — add one
-  while there); `test:src` green.
 
 
 - [ ] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review).
@@ -1253,37 +1152,6 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   `contributor` skill (owner's `.agents/` pass, via `.agents-proposals/`).
   **Channel/tier:** build check, tier 1 Prevented.
   **Verification:** green at HEAD; a fixture skill file naming a retired code or a removed export fails it.
-
-
-- [ ] LT-414: Move the four non-comment "ADR 0023" citations in `server/compiler/` to ADR 0024 (LT-393 residue).
-  **Area:** compiler
-  **Context:** LT-393 swept the comments. Four strings remain, and all mean ADR 0024: the
-  generated-module headers in `emit-server.ts` (~L1701, "milestone 1") and `emit-client.ts`
-  (~L936, "milestone 2"), and diagnostic copy in `analysis/effects.ts` (~L1251, "ADR 0023
-  sub-design 13") and `frontend/tsrx/compiler.ts` (~L84, "see ADR 0023 sub-design 2"). The
-  headers reach every generated module and the `.snap` goldens, so re-bless them in the same
-  change and state that the only golden diff is the header. The copy follows `writer` →
-  error-messages; check message-substring tests first. Consider dropping the ADR number from
-  the generated header altogether: a published artifact should not cite an internal ADR.
-  **Channel/tier:** none — copy and generated-comment change.
-  **Check:** `grep -rn "ADR 0023" server/compiler/` returns only bind-helper citations; the
-  golden diff is header-only; server suite green.
-
-
-- [ ] LT-416: Narrow LTC008's async-component range to the `async` keyword (LT-371 review).
-  **Area:** compiler
-  **Context:** LTC008 on an `async` component function (`server/compiler/front-end.ts`
-  `runFrontEnd`) reports `fnStmt ?? fn`, the whole exported statement, so editors and CI
-  annotations underline the entire component for one keyword. When the file holds only the
-  component, the range equals the file and `corpus-compile.ts`'s `lineLabel` prints no line.
-  ADR 0044 s1 wants the location to name the offending construct. Report the `async` token:
-  search the source for `async` from the statement start, fall back to `fn`. The two parsers
-  disagree on where the declaration starts but agree on that text. Drop the `spans` pair from the
-  LTC008 async case in `tsx/diagnostic-parity.test.ts`, and pin the covered text `async` on both
-  surfaces in `diagnostic-ranges.test.ts`. Narrowing a range is not a breaking change (LT-371
-  ruling).
-  **Channel/tier:** none — no rule or copy change.
-  **Check:** the range pin covers `async` on both surfaces; parity green.
 
 
 ## Unbanded

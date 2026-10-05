@@ -108,9 +108,12 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
   ~~LT-391~~ landed. LT-392, LT-356, LT-353, LT-417, LT-430 (LT-356 review follow-up), LT-431 (LT-186 review follow-up), LT-432 (LT-431 review follow-up).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
-- **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421~~ (done ✓; the
-  restructured flow is in use). LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277, LT-433 (worktree-independent bundle; LT-422 review)
-  (server).
+- **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
+  LT-433~~ (done ✓). ~~LT-411~~ (reviewed ✓), ~~LT-416~~ (reviewed ✓), ~~LT-414~~
+  (reviewed ✓), ~~LT-187~~ (reviewed ✓), LT-434 (ADR 0023 sweep outside `server/compiler/`;
+  LT-414 residue), LT-435 (`css-probe.tsx` under the host profile; glob the
+  examples `.tsx` program — owner, 2026-10-05), LT-436 (an uncaught throw in a
+  reconcile effect's re-run; LT-423 finding).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
@@ -130,7 +133,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-434.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-437.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -205,40 +208,7 @@ recorded against the 30.4k opening measurement.
 
 ### C — corpus port
 
-- [ ] LT-423: A reactive-list item is a Mount Scope — item content lowers through the arm emission (ADR 0046 s1–s3).
-  **Area:** compiler
-  **Needs:** LT-422
-  **Gates:** check:sim
-  **Context:** Today `bindItem` gets a bare-`{item}` text fill plus events (`ReconcilePlan`,
-  `analysis/plan.ts:179-216`; `emitReconcileBlock`, `emit-client.ts:281-318`), and
-  `validateListBody` (`lower-shared.ts:898-986`) refuses everything else under LTC005. The arm
-  path already emits full effects per cloned root (`handleReactiveConditional`,
-  `analysis/effects.ts`; `ArmPlan` locals at `emit-client.ts:698-722`). This task lowers **one
-  level** of item content through that emission. Nesting is LT-424.
-  1. **Item as Mount Scope.** Reactive attributes, class/style maps, `truc:pass` on custom
-     elements and composed children, events, and key-derived attributes (set once at clone,
-     because a key never changes) all emit into `bindItem` against the item's `first`. Item
-     reads follow the signal meaning: arrows over `item.get()`, store fields `item.f.get()`;
-     `.tsrx`'s bare `{item}` is the signal shorthand. Handlers may read the item; the LTC005
-     "handler reads item" refusal and `listItemHandlerFix` retire on `.tsrx`.
-  2. **Template.** The server bakes item-dependent sites **empty** in the `<template>` (ADR 0037
-     s1's losing-arm rule) and server-known content as today. Stamp it `data-list="N"`
-     (compile-time document-order index per component), place it outside the container, and
-     query it as `<parent>.querySelector(':scope > template[data-list="N"]')`. This lifts the
-     one-list-per-component limit (`analysis/loops.ts:333-337`).
-  3. **Composed children** in the item render into the template; LT-355 owns their `lang`/`i18n`.
-  4. **Retire** `validateListBody`'s slot-fill restrictions, except where ADR 0046 s1 still
-     refuses: the item's single root, and a host-level `first()` into an item.
-  **Channel/tier:** compiler. Retired LTC005 arms change that code's meaning (ADR 0028 lifecycle;
-  copy follows `writer` → error-messages). Parity cases on both surfaces for every retired and
-  remaining refusal (`diagnostic-parity.test.ts`).
-  **Check:** module-list and form-tokenbox goldens: rendered HTML byte-identical except the
-  `data-list` stamp (state it). New fixtures on both surfaces: a store item with a reactive
-  attribute, `truc:pass` `{get,set}`, a key-derived `id`/`for` and a composed child, adopted and
-  then cloned, with wiring surviving adoption (no re-clone at connect). Full gates.
-  **Impasse rule (iteration ruling 10):** stop and report rather than work around.
-
-- [ ] LT-425: The `.tsx` keyed `map` — `items.map((item, k) => …)` over `createList`/`deriveList`, Cause & Effect 1.6, a module-list `.tsx` variant (ADR 0046 s4; closes LT-342).
+- [ ] LT-425: The `.tsx` keyed `map` — `items.map((item, k) => …)` over `createList`/`deriveList`, Cause & Effect 1.6, a module-list `.tsx` variant (ADR 0046 s4; closes LT-342). — blocked ⛔
   **Area:** compiler
   **Needs:** LT-423
   **Context:** Cause & Effect 1.6.0 adds `map((item, key) => R): R[]` and `forEach` to both list
@@ -262,6 +232,10 @@ recorded against the 30.4k opening measurement.
   **Check:** the module-list variant set's CSS is byte-identical and render parity holds;
   `module-list.spec.ts` (if any) or `test:variants` pass for both surfaces; full gates.
   **Impasse rule (iteration ruling 10).**
+  **Handoff (LT-423, 2026-10-05):** mirror the key-derived parity case — LT-423's
+  `examples/test/listitem/` fixture pair carries the key-derived `id`/`for` on `.tsrx` only;
+  the keyed `map` gives `.tsx` its half (the `.tsx` twin deliberately logs instead of
+  removing). Unblock by re-checking the Cause & Effect 1.6.0 release (see NOTES.md).
 
 - [ ] LT-424: Mount Scopes nest — arms and lists inside arms and items, scoped server-data loops, the cross-scope uniqueness proof (ADR 0046 s1–s2).
   **Area:** compiler
@@ -476,3 +450,37 @@ recorded against the 30.4k opening measurement.
   **Verification:** `check:links` green, and the three files state the difference in the same
   words.
 
+
+### Parallel slot
+
+- [ ] LT-434: Sweep the remaining "ADR 0023" misattributions outside `server/compiler/` (LT-414 residue).
+  **Area:** server
+  **Context:** LT-414 fixed the four citations inside `server/compiler/` and flagged the same
+  misattribution class outside its scope — all mean ADR 0024 (or should drop the citation where
+  they reach a published or generated artifact): the pass header comment
+  `server/effects/compile.ts:2` ("ADR 0023 milestone 1"), test describe titles
+  (`server/tests/compiler/features.test.ts:211`), and CEM tooling comments
+  (`server/tests/compiler/cem.golden.test.ts:2`, `scripts/verify-cem.ts:90`,
+  `custom-elements-manifest.config.mjs:15`). Legitimate bind-helper citations
+  (`src/bindings.ts`, `types/src/bindings.d.ts`, examples) keep ADR 0023 — do not touch those.
+  Re-locate by content; line numbers are approximate. If a describe title or comment string is
+  pinned by a test, update it in the same change.
+  **Channel/tier:** none — comments and test titles only.
+  **Check:** `git grep -n "ADR 0023"` returns only bind-helper citations; server suite green.
+
+- [ ] LT-436: A throw inside a reconcile effect's re-run escapes uncaught (LT-423 finding).
+  **Area:** runtime
+  **Context:** Found on the LT-423 add-click path, pre-existing and unchanged by it. When a
+  `reconcile()` effect's re-run throws (there: a `pass()` validating a not-yet-upgraded
+  composed child, before LT-423's insert-before-mount reorder), the exception escapes the
+  structural effect as an uncaught error — no DEV_MODE advisory, no Contained drop, no pin.
+  The same throw on the first run is also unpinned. Decide the channel per ADR 0028 (the
+  runtime advisory family is the likely carrier — `classify()`'s removal branch already warns
+  under DEV_MODE) and pin both paths: an effect body that throws is reported and the list
+  keeps its other work, or the escape is ruled deliberate and documented next to
+  `reconcile()`'s contract (whose JSDoc also owes the insert-before-mount ordering
+  LT-423 pinned by test).
+  **Channel/tier:** to decide in the task (ADR 0028; likely runtime DEV_MODE advisory,
+  tier 2 Contained).
+  **Check:** a pin where `bindItem` throws mid-mount and mid-re-run; the rest of the list's
+  work and the scope's other effects survive; `test:src` green.
