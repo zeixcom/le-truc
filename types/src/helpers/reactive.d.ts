@@ -237,6 +237,20 @@ declare function each<E extends Element>(memo: Signal<E[]>, callback: (element: 
  * `bindItem`'s 4th parameter, `first`, is a type-safe, throwing lookup
  * scoped to `element` instead of the host (see ADR 0021).
  *
+ * `bindItem` runs only after its element sits at its position in the
+ * container, never on a detached clone: a cloned item's composed children
+ * upgrade on insertion, so a `pass()` inside `bindItem` finds their exposed
+ * properties.
+ *
+ * A `bindItem` that throws costs only its own item (ADR 0028 containment, per
+ * Mount Scope), whether it mounts on the first run or on a later source
+ * change. The failure is reported once through `console.error`, naming the
+ * item's key and the container. Effects the item activated before the throw
+ * are disposed. The element stays in place, unbound, and is not mounted
+ * again while its key stays in the source. The other items and the list's
+ * own sync carry on. The arm form contains a throwing `bindArm` the same
+ * way, per arm.
+ *
  * See ADR 0017 for SSR adoption, unreconciled pinning, and keyed-relative
  * positioning.
  *
