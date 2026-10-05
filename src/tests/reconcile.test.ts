@@ -2061,4 +2061,71 @@ describe('reconcile — a throwing Mount Scope is contained (LT-436)', () => {
 		])
 		dispose?.()
 	})
+	// LT-438: the copy is the Mount Scope's own, not the component's — the
+	// element stays unbound and the other items (or arms) are unaffected.
+	// Pinned whole in both modes; the production pin is also what the
+	// simulation's `test-listitem` classifications match.
+	const pinScope = async (
+		mode: 'true' | 'false',
+	): Promise<{ item: unknown[]; arm: unknown[] }> => {
+		const prev = process.env.DEV_MODE
+		process.env.DEV_MODE = mode
+		try {
+			const list = createList<string>(['bad'], { keyConfig: item => item })
+			const ul = new FakeElement('ul')
+			const div = new FakeElement('div')
+			const templates = [armTemplate(div, 'then', 'p')]
+			let dispose: (() => void) | undefined
+			const { calls } = await captureErrorsAsync(async () => {
+				dispose = createScope(() =>
+					activate(() => {
+						reconcile(ul as unknown as Element, makeTemplate(), list, () => {
+							throw boom
+						})
+						reconcile(
+							div as unknown as Element,
+							asTemplates(templates),
+							() => 'then',
+							() => {
+								throw boom
+							},
+						)
+					}),
+				)
+				await tick()
+			})
+			dispose?.()
+			expect(calls).toHaveLength(2)
+			const item = calls.find(c => String(c[0]).includes('item'))
+			const arm = calls.find(c => String(c[0]).includes('arm'))
+			return { item: item ?? [], arm: arm ?? [] }
+		} finally {
+			if (prev === undefined) delete process.env.DEV_MODE
+			else process.env.DEV_MODE = prev
+		}
+	}
+
+	test('production: the report says the scope stays unbound and the others are unaffected', async () => {
+		const { item, arm } = await pinScope('false')
+		expect(item).toEqual([
+			'reconcile() item "bad" did not activate in <ul> and stays unbound; the other items are unaffected:',
+			boom,
+		])
+		expect(arm).toEqual([
+			'reconcile() arm "then" did not activate in <div> and stays unbound; the other arms are unaffected:',
+			boom,
+		])
+	})
+
+	test('DEV: the report adds what to fix', async () => {
+		const { item, arm } = await pinScope('true')
+		expect(item).toEqual([
+			'reconcile() item "bad" did not activate in <ul>. The item stays in place but is not bound; the other items are unaffected. Fix the error below, thrown while the item\'s effects were set up.',
+			boom,
+		])
+		expect(arm).toEqual([
+			'reconcile() arm "then" did not activate in <div>. The arm stays in place but is not bound; the other arms are unaffected. Fix the error below, thrown while the arm\'s effects were set up.',
+			boom,
+		])
+	})
 })

@@ -27,7 +27,7 @@ import {
 	InvalidPassPropertyError,
 	InvalidReactivesError,
 	InvalidTemplateError,
-	reportEffectFailure,
+	reportScopeFailure,
 } from '../errors'
 import { debugFire, markIfDebugging } from '../extensions/debug'
 import { getSignals, pushDescriptor, withCollector } from '../internal'
@@ -853,13 +853,14 @@ const mountScope = (bind: () => MaybeCleanup): Cleanup => {
  */
 const mountContained = (
 	container: Element,
-	scope: string,
+	scope: 'item' | 'arm',
+	key: string,
 	bind: () => MaybeCleanup,
 ): Cleanup => {
 	try {
 		return mountScope(bind)
 	} catch (error) {
-		reportEffectFailure(container, `reconcile() ${scope}`, error)
+		reportScopeFailure(container, scope, key, error)
 		return () => {}
 	}
 }
@@ -953,7 +954,7 @@ const reconcileArms = (
 					const element = current
 					const armKey = currentKey
 					if (element && armKey !== null)
-						dispose = mountContained(container, `arm "${armKey}"`, () =>
+						dispose = mountContained(container, 'arm', armKey, () =>
 							bindArm(element, armKey, bindFirst(element)),
 						)
 				})
@@ -1118,7 +1119,7 @@ const reconcileList = <T extends {}>(
 						// (LT-423).
 						disposers.set(
 							key,
-							mountContained(container, `item "${key}"`, () =>
+							mountContained(container, 'item', key, () =>
 								bindItem(element, item, key, bindFirst(element)),
 							),
 						)
