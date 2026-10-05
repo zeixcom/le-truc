@@ -53,6 +53,8 @@
 		"module/scrollarea/module-scrollarea.ts",
 		"module/scrollarea/module-scrollarea.tsx",
 		"module/splitview/module-splitview.ts",
+		"module/todo/module-todo.ts",
+		"module/todo/module-todo.tsx",
 		"module/splitview/module-splitview.tsx",
 		"../server/compiler/frontend/tsx/host-profile.d.ts",
 		"../server/generated/components/tsrx-imports.d.ts"

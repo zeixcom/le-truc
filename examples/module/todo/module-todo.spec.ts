@@ -739,4 +739,56 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.none')).toBeVisible()
 		})
 	})
+
+	test.describe('Compiled surface probes (LT-111)', () => {
+		// These hold on every surface of the variant set: the hand-written
+		// `.ts` twin's reconcile() derives the same ids the compiled members
+		// set as clone-time attributes over the key binding (ADR 0046 s2).
+		test('checkbox input id and label for derive from the item key', async ({
+			page,
+		}) => {
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form > form-textbox input')
+			const submitButton = todo.locator('.submit button')
+
+			await textboxInput.fill('probed task')
+			await submitButton.click()
+
+			const item = todo.locator('li[data-key]').first()
+			const key = await item.getAttribute('data-key')
+			await expect(item.locator('form-checkbox > input')).toHaveId(
+				`${key}-checkbox`,
+			)
+			await expect(item.locator('form-checkbox > label')).toHaveAttribute(
+				'for',
+				`${key}-checkbox`,
+			)
+		})
+
+		test('the reorder handle disables reactively from the list length', async ({
+			page,
+		}) => {
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form > form-textbox input')
+			const submitButton = todo.locator('.submit button')
+			const items = todo.locator('li[data-key]')
+
+			for (const label of ['first task', 'second task']) {
+				await textboxInput.fill(label)
+				await submitButton.click()
+			}
+			await expect(items).toHaveCount(2)
+
+			// Two items: every handle is enabled
+			const reorderButtons = items.locator('button.reorder')
+			await expect(reorderButtons).toHaveCount(2)
+			await expect(reorderButtons.nth(0)).toBeEnabled()
+			await expect(reorderButtons.nth(1)).toBeEnabled()
+
+			// Down to one: the remaining handle disables
+			await items.nth(0).locator('basic-button.remove button').click()
+			await expect(items).toHaveCount(1)
+			await expect(items.nth(0).locator('button.reorder')).toBeDisabled()
+		})
+	})
 })
