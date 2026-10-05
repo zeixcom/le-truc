@@ -70,7 +70,7 @@ export function C({ mode }: { mode: string })
 			</c-arm-set>
 	}`
 
-// module-list composes FormTextbox (ADR 0023 sub-design 10, LT-020) — the
+// module-list composes FormTextbox (ADR 0024 sub-design 10, LT-020) — the
 // compose registry must be built before it compiles, keyed by form-textbox's
 // own repo-relative source path (mirroring server/effects/compile.ts).
 const formTextboxResult = compileComponent(
@@ -213,7 +213,7 @@ describe('client golden — convergence with the hand-written trio', () => {
 		// the extension ordering stays type-enforced, just via the host type
 		// rather than the watch() key.
 		// (named p2: the description paragraph claimed `p` first, harvested
-		// via arg-substitution rather than a direct site — ADR 0023 sub-design 12)
+		// via arg-substitution rather than a direct site — ADR 0024 sub-design 12)
 		expect(code).toContain('const p2 = first(\'p[role="alert"]\')')
 		expect(code).toContain('watch(() => host.validationMessage, bindText(p2))')
 		// description (LT-113): a WRITABLE createCell whose seed is harvested
@@ -309,7 +309,7 @@ describe('client golden — convergence with the hand-written trio', () => {
 const generated = createGeneratedDir('client-golden')
 afterAll(() => generated.cleanup())
 
-describe('client golden — emit-then-check (ADR 0023 sub-design 6)', () => {
+describe('client golden — emit-then-check (ADR 0024 sub-design 6)', () => {
 	test('generated client modules, an arm-set client among them, typecheck against @zeix/le-truc', async () => {
 		const files: string[] = []
 		for (const { result } of compiled) {

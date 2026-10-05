@@ -1,6 +1,6 @@
 /**
  * TSRX migration: form-tokenbox — the token pills are a reactive `createList`
- * reconciled via `@for (const token of tokens; key k)` (ADR 0023 sub-design
+ * reconciled via `@for (const token of tokens; key k)` (ADR 0024 sub-design
  * 5/17, same lowering module-list.tsrx already proves). `validateListBody`
  * only allows statics, event attributes, and exactly one lazy `{item}`
  * text hole in the item body — no dynamic attributes — so the remove

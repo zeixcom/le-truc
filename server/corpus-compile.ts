@@ -226,7 +226,7 @@ export const compileCorpus = async (
 	// Registry-aware dispatch needs every compilable tag up front: first
 	// pass collects tags (warnings already skip their files), second pass
 	// compiles against the full registry. The same first pass also builds
-	// the compose registry (ADR 0023 sub-design 10) — a composed element's
+	// the compose registry (ADR 0024 sub-design 10) — a composed element's
 	// import specifier resolves to another file's own repo-relative path,
 	// so every file's entry is keyed by that path for the second pass to
 	// look up regardless of compile order (composition is not order-dependent

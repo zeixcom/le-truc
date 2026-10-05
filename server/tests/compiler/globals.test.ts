@@ -1,5 +1,5 @@
 /**
- * Coverage tests for the .tsrx ambient globals (LT-004, ADR 0023 sub-design 6):
+ * Coverage tests for the .tsrx ambient globals (LT-004, ADR 0024 sub-design 6):
  *
  * 1. Parity — every identifier the compiler recognizes as an ambient (signal
  *    constructors, context names, parser factories, `expose`, `defineMethod`,

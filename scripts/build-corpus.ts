@@ -13,7 +13,7 @@
  * out. See `server/compiler/corpus-config.ts`.
  *
  * `build:cem` runs this before `cem analyze`: the Custom Element Manifest
- * reads the corpus entries from the generated clients (ADR 0023, LT-006),
+ * reads the corpus entries from the generated clients (ADR 0024, LT-006),
  * and that output is gitignored — a fresh checkout has none until compiled.
  */
 

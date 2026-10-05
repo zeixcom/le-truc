@@ -1,6 +1,6 @@
 /**
  * Unified-format spike: form-textbox — extension activation and the widened
- * FormFactoryContext (LT-005, ADR 0023 sub-design 8).
+ * FormFactoryContext (LT-005, ADR 0024 sub-design 8).
  *
  * Beyond basic-counter / module-tabgroup:
  * - `export const config` activates defineComponent's third argument with zero
@@ -20,7 +20,7 @@
  * - `defineMethod()` brands the `clear` method producer
  * - `value={() => host.value}` mirrors the host prop onto the control — lowers
  *   to `watch(() => host.value, bindProperty(input, 'value'))` (property
- *   dispatch, since it's a host-prop mirror — ADR 0023 sub-design 12) and is
+ *   dispatch, since it's a host-prop mirror — ADR 0024 sub-design 12) and is
  *   present on BOTH `@if` branches identically. This is load-bearing, not
  *   redundant: union addressing only walks the first branch that carries any
  *   client construct (`analysis/effects.ts` `handleIfEffects`), so if the two

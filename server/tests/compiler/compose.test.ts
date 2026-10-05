@@ -1,5 +1,5 @@
 /**
- * Component composition — server-side PascalCase invocation (ADR 0023
+ * Component composition — server-side PascalCase invocation (ADR 0024
  * sub-design 10, LT-015). Scoped to server splicing: a capitalized JSX tag
  * bound to an `import` of another `.tsrx` module resolves against a
  * corpus-wide compose registry (keyed by resolved source path, mirroring
@@ -48,7 +48,7 @@ const ensureEmitted = (tag: string, code: string): void => {
 	generated.emit(`${tag}.server.ts`, code)
 }
 
-describe('component composition (ADR 0023 sub-design 10)', () => {
+describe('component composition (ADR 0024 sub-design 10)', () => {
 	test('splices the child render call with server args', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'

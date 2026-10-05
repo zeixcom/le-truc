@@ -10,7 +10,7 @@
  *
  * `color` is NOT a derived signal: the hand-written original caches
  * `parseOklch(host.value)` in a `createMemo`, but a signal declaration is
- * re-emitted verbatim into the SERVER module too (ADR 0023 sub-design 12),
+ * re-emitted verbatim into the SERVER module too (ADR 0024 sub-design 12),
  * and `host` doesn't exist there — the same wall `hostPropOf`/
  * `hostDerivedFold` exist to work around for simple mirrors, but this thunk
  * (an object-valued parse of an arbitrary string) doesn't fit that shape.

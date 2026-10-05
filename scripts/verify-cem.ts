@@ -87,7 +87,7 @@ function main() {
 	const GARBAGE_NAMES = new Set(['Truc', 'J'])
 
 	// The migrated .tsrx corpus is read from gitignored generated clients
-	// (ADR 0023, LT-006). If `cem analyze` ran against a stale or empty
+	// (ADR 0024, LT-006). If `cem analyze` ran against a stale or empty
 	// server/generated/components/, the corpus tags silently vanish from the
 	// manifest — this guard turns that into a build failure with the fix.
 	const REQUIRED_TAGS = [

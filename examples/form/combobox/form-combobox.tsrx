@@ -1,5 +1,5 @@
 /**
- * TSRX migration: form-combobox — composes `form-listbox.tsrx` (ADR 0023
+ * TSRX migration: form-combobox — composes `form-listbox.tsrx` (ADR 0024
  * sub-design 10), the first composition in this batch between two
  * MIGRATED (not hand-written) sibling components. Two composition-specific
  * constraints shaped this file:

@@ -1,5 +1,5 @@
 /**
- * Golden tests — CEM equivalence (LT-006, ADR 0023): the Custom Element
+ * Golden tests — CEM equivalence (LT-006, ADR 0024): the Custom Element
  * Manifest entries extracted by `@zeix/cem-plugin-le-truc` from GENERATED
  * clients must equal the entries the same plugin extracted from the
  * hand-written components. This pins the staged CEM decision — plugin over
