@@ -1275,7 +1275,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 				source,
 				node.node,
 				'A client construct below the root element of an async-boundary arm',
-				"Deeper elements have no addressing (ADR 0023 sub-design 13) — move the construct onto the arm's root element.",
+				"Deeper elements have no addressing (ADR 0024 sub-design 13) — move the construct onto the arm's root element.",
 			),
 		)
 		return
