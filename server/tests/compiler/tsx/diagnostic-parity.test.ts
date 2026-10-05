@@ -1782,7 +1782,7 @@ const NESTED_SCOPES: Case[] = [
 			body: '<ul data-container>@for (const item of items) { <li><b><span>{item}</span></b><b><span>{() => item.get()}</span></b><ol class="x">@for (const x of others) { <li><b><span>{x}</span></b></li> }</ol></li> }</ul>',
 			tsx: '<ul data-container>{items.map(item => <li><b><span>{item}</span></b><b><span>{() => item.get()}</span></b><ol class="x">{others.map(x => <li><b><span>{x}</span></b></li>)}</ol></li>)}</ul>',
 		},
-		pins: ['give it a unique `class`'],
+		pins: ['Give it a unique `class`'],
 	},
 ]
 

@@ -193,7 +193,7 @@ export type ReconcileItemScope = {
 	/** The item root's local (the bound element, typed by its tag). */
 	root: { name: string; tag: string } | null
 	/** Descendants the item's effects address, queried within the item root. */
-	locals: Array<{ name: string; selector: string; message: string }>
+	locals: ScopeLocal[]
 	/**
 	 * Key-derived attributes (ADR 0046 s1): `server` attributes over the key
 	 * binding, set once at clone — a key never changes, so there is nothing
@@ -256,6 +256,19 @@ export type ReconcilePlan = {
 }
 
 /**
+ * One element a Mount Scope's mount queries through its `first`. `optional`
+ * marks an element reached through a server-rendered conditional branch
+ * that carries only key-derived attributes (LT-424): the render's winner may
+ * not include it, so the query does not throw (`first(selector)`).
+ */
+export type ScopeLocal = {
+	name: string
+	selector: string
+	message: string
+	optional?: boolean
+}
+
+/**
  * A key-derived attribute (ADR 0046 s1): a `server` attribute over the
  * enclosing items' key bindings alone, set once at mount — a key never
  * changes, so there is nothing to watch. `el` names the scope root local or
@@ -263,6 +276,8 @@ export type ReconcilePlan = {
  */
 export type KeyAttrPlan = {
 	el: string
+	/** `el` is an optional local (LT-424): the write is `el?.setAttribute`. */
+	optional?: boolean
 	attr: string
 	exprText: string
 	sourceStart: number | undefined
@@ -280,7 +295,7 @@ export type ArmPlan = {
 	/** The arm root's local (the bound element, typed by its tag). */
 	root: { name: string; tag: string } | null
 	/** Descendants the arm's effects address, queried within the arm root. */
-	locals: Array<{ name: string; selector: string; message: string }>
+	locals: ScopeLocal[]
 	/** Key-derived attributes of an arm nested in a list item (LT-424). */
 	keyAttrs: KeyAttrPlan[]
 	effects: TopEffectPlan[]

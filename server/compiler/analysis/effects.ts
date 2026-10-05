@@ -73,6 +73,7 @@ import type {
 	PassShared,
 	QueryPlan,
 	ReconcilePlan,
+	ScopeLocal,
 	TopEffectPlan,
 } from './plan'
 import {
@@ -1620,9 +1621,13 @@ type MountScope = {
 	/**
 	 * The local naming `el` inside the scope (memoized; the root's own for
 	 * the root), queried once per mount through the scope's `first` with a
-	 * selector proved within the scope root.
+	 * selector proved within the scope root. `optional` mints a
+	 * non-throwing query (an element in a server-rendered branch); a later
+	 * required request for the same element makes it required.
 	 */
-	localFor: (el: ElementNode) => string
+	localFor: (el: ElementNode, optional?: boolean) => string
+	/** Is the local `name` an optional (non-throwing) query? */
+	isOptional: (name: string) => boolean
 	/** The scope's effects, in document order. */
 	sink: TopEffectPlan[]
 	/** The scope's key-derived attributes (ADR 0046 s1). */
@@ -1643,7 +1648,7 @@ const mountScope = (
 	init: {
 		root: ElementNode
 		rootRef: () => string
-		locals: Array<{ name: string; selector: string; message: string }>
+		locals: ScopeLocal[]
 		sink: TopEffectPlan[]
 		keyAttrs: KeyAttrPlan[]
 		label: string
@@ -1657,10 +1662,18 @@ const mountScope = (
 		sink: init.sink,
 		keyAttrs: init.keyAttrs,
 		label: init.label,
-		localFor: el => {
+		isOptional: name =>
+			init.locals.some(local => local.name === name && local.optional),
+		localFor: (el, optional = false) => {
 			if (el === init.root) return init.rootRef()
 			const known = names.get(el)
-			if (known) return known
+			if (known) {
+				if (!optional) {
+					const local = init.locals.find(l => l.name === known)
+					if (local?.optional) delete local.optional
+				}
+				return known
+			}
 			const scoped = resolveScopedSelector(
 				init.root,
 				el,
@@ -1671,7 +1684,7 @@ const mountScope = (
 					diagnostic.unaddressableElement(
 						source,
 						el.node,
-						`No unique selector for <${el.tag}> inside ${init.label} — give it a unique \`class\`.`,
+						`No unique selector for <${el.tag}> inside ${init.label} — no \`class\`, \`role\`, \`data-*\` attribute or child path tells it apart from the other elements there, nested arms and list items included. Give it a unique \`class\`.`,
 					),
 				)
 			const name = uniqueName(usedNames, sanitizeVarName(el.tag))
@@ -1680,6 +1693,7 @@ const mountScope = (
 				name,
 				selector: scoped.selector,
 				message: `${component.tag}: ${scoped.selector} missing`,
+				...(optional ? { optional: true } : {}),
 			})
 			fx.armSelectors.set(name, resolveSelector(fx, el).selector)
 			return name
@@ -1760,7 +1774,7 @@ const planNestedList = (
 				source,
 				loop.output.node,
 				`A reactive-list ${wording.loop} directly under ${scope.label}`,
-				"`reconcile()` keeps the item template after its container's close tag, which would put it outside the arm or item — wrap the loop in an element of its own.",
+				"The list puts its item template after the container's closing tag, and that position is outside the arm or item — wrap the loop in an element of its own.",
 			),
 		)
 		return
@@ -1814,20 +1828,51 @@ const keyAttrsOf = (
 				},
 			)
 
-/** Record `el`'s key-derived attributes on `scope`. */
+/**
+ * Record `el`'s key-derived attributes on `scope`. `inBranch`: `el` sits in a
+ * server-rendered conditional branch, whose winner the render fixes for every
+ * clone but may leave out — its local is a non-throwing query, and the write
+ * is guarded.
+ */
 const collectKeyAttrs = (
 	fx: EffectsContext,
 	scope: MountScope,
 	el: ElementNode,
+	inBranch = false,
 ): void => {
-	for (const attr of keyAttrsOf(fx, el))
+	for (const attr of keyAttrsOf(fx, el)) {
+		const local = scope.localFor(el, inBranch)
 		scope.keyAttrs.push({
-			el: scope.localFor(el),
+			el: local,
+			...(scope.isOptional(local) ? { optional: true } : {}),
 			attr: attr.name,
 			exprText: attr.exprText,
 			sourceStart: attr.node.start,
 			sourceEnd: attr.node.end,
 		})
+	}
+}
+
+/**
+ * The key-derived attributes in a server-rendered conditional's arms (and
+ * the server conditionals nested in them), for `scope`: the same descent the
+ * item walk makes. Client constructs there are refused elsewhere
+ * (`unmountableInArm`), so only key-derived attributes bind.
+ */
+const collectBranchKeyAttrs = (
+	fx: EffectsContext,
+	scope: MountScope,
+	node: TemplateNode,
+): void => {
+	if (isElement(node)) {
+		if (loopFor(fx, node)) return
+		collectKeyAttrs(fx, scope, node, true)
+		for (const child of node.children) collectBranchKeyAttrs(fx, scope, child)
+		return
+	}
+	if (node.kind === 'conditional' && node.mode === 'server')
+		for (const arm of node.arms)
+			for (const child of arm.children) collectBranchKeyAttrs(fx, scope, child)
 }
 
 /**
@@ -1972,7 +2017,7 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 					source,
 					node.node,
 					`A reactive-list ${wording.loop} inside a server-data ${wording.loop} body`,
-					'`each()` binds each item through its own element, and the list would clone into every one of them — move the list out of the loop.',
+					'`each()` binds the loop items once at connect and has no mount for a list in each item — move the list out of the loop.',
 				),
 			)
 		}
@@ -2152,6 +2197,10 @@ const handleReactiveConditional = (
 		const visitDescendants = (el: ElementNode): void => {
 			for (const child of el.children) {
 				if (planNested(fx, armScope, child)) continue
+				if (child.kind === 'conditional' && child.mode === 'server') {
+					collectBranchKeyAttrs(fx, armScope, child)
+					continue
+				}
 				if (!isElement(child)) continue
 				if (hasOwnConstruct(child))
 					emitConstructEffects(
@@ -2262,19 +2311,20 @@ const planReconcileItem = (
 		// arms (the winner is fixed per render call, so the mount-time write
 		// addresses markup that exists in both adopted items and clones) but
 		// never into a nested scope or loop, whose own mount sets its own.
-		const keyAttrSites: ElementNode[] = []
-		const collectKeySites = (node: TemplateNode): void => {
+		const keyAttrSites: Array<{ el: ElementNode; inBranch: boolean }> = []
+		const collectKeySites = (node: TemplateNode, inBranch: boolean): void => {
 			if (isElement(node)) {
 				if (node !== output && loopFor(fx, node)) return
-				if (keyAttrsOf(fx, node).length > 0) keyAttrSites.push(node)
-				for (const child of node.children) collectKeySites(child)
+				if (keyAttrsOf(fx, node).length > 0)
+					keyAttrSites.push({ el: node, inBranch })
+				for (const child of node.children) collectKeySites(child, inBranch)
 				return
 			}
 			if (node.kind === 'conditional' && node.mode === 'server')
 				for (const arm of node.arms)
-					for (const child of arm.children) collectKeySites(child)
+					for (const child of arm.children) collectKeySites(child, true)
 		}
-		collectKeySites(output)
+		collectKeySites(output, false)
 
 		// The item root's own constructs.
 		if (hasOwnConstruct(output))
@@ -2372,7 +2422,8 @@ const planReconcileItem = (
 		visitElements(output)
 
 		// The key-derived attributes, with the locals their sites claimed.
-		for (const el of keyAttrSites) collectKeyAttrs(fx, scope, el)
+		for (const { el, inBranch } of keyAttrSites)
+			collectKeyAttrs(fx, scope, el, inBranch)
 	} finally {
 		fx.itemNames = saved.itemNames
 		fx.keyNames = saved.keyNames

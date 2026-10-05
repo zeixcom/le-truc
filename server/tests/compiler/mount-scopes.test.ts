@@ -88,12 +88,15 @@ const body = (code: string | undefined): string =>
 
 let renderCount = 0
 /** Emit `serverCode` and call its render function. */
-const render = async (serverCode: string): Promise<string> => {
+const render = async (
+	serverCode: string,
+	args: unknown = {},
+): Promise<string> => {
 	const file = `render-${++renderCount}.server.ts`
 	generated.emit(file, serverCode)
 	const mod =
 		await generated.importModule<Record<string, (a: unknown) => string>>(file)
-	return (mod.renderC as (a: unknown) => string)({})
+	return (mod.renderC as (a: unknown) => string)(args)
 }
 
 /** `markup` as the realm serializes it: boolean attributes take `=""`. */
@@ -358,6 +361,107 @@ describe('an arm set inside a list item', async () => {
 		await settle()
 		expect(armOf('c').className).toBe('finish')
 	})
+})
+
+/* === A key-derived attribute in a server branch of a nested arm === */
+
+const BRANCH_KEY = {
+	tsrx: tsrx(
+		"import { createList, createStore, type MutableStore } from '@zeix/le-truc'\ntype Task = { title: string; done: boolean }",
+		`${TASKS}
+		expose({})`,
+		`
+				<button type="button" class="add" onClick={() => { tasks.add({ title: 'c', done: true }) }}>Add</button>
+				<ul class="tasks">
+					@for (const task of tasks; key k) {
+						<li>
+							<button type="button" class="toggle" onClick={() => { task.done.set(!task.done.get()) }}>toggle</button>
+							@if (task.done.get()) {
+								<p class="done">@if (verbose) { <b class="mark" data-for={k}>done</b> }</p>
+							}
+						</li>
+					}
+				</ul>`,
+		'{ verbose }: { verbose: boolean }',
+	),
+	tsx: tsx(
+		"import { createList, createStore, type MutableStore } from '@zeix/le-truc'\ntype Task = { title: string; done: boolean }",
+		'{}',
+		`${TASKS}
+	expose({})`,
+		`
+				<button type="button" class="add" onClick={() => { tasks.add({ title: 'c', done: true }) }}>Add</button>
+				<ul class="tasks">
+					{tasks.map((task, k) => (
+						<li>
+							<button type="button" class="toggle" onClick={() => { task.done.set(!task.done.get()) }}>toggle</button>
+							{task.done.get() ? (
+								<p class="done">{verbose ? <b class="mark" data-for={k}>done</b> : null}</p>
+							) : null}
+						</li>
+					))}
+				</ul>`,
+		'{ verbose }: { verbose: boolean }',
+	),
+}
+
+describe('a key-derived attribute in a server branch of an arm nested in an item', async () => {
+	const { fromTsrx, fromTsx } = compileBoth(BRANCH_KEY)
+	const component = fromTsrx.component
+	if (!component) throw new Error(JSON.stringify(fromTsrx.diagnostics))
+
+	test('both surfaces compile clean, to the same modules', () => {
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		expect(body(fromTsx.component?.serverCode)).toBe(body(component.serverCode))
+		expect(body(fromTsx.component?.clientCode)).toBe(body(component.clientCode))
+	})
+
+	test("the arm's mount sets it through a non-throwing query", () => {
+		expect(component.clientCode).toContain("first('b')")
+		expect(component.clientCode).toMatch(
+			/b\d*\?\.setAttribute\('data-for', k\)/,
+		)
+	})
+
+	for (const verbose of [true, false])
+		describe(`with the branch ${verbose ? 'taken' : 'not taken'}`, async () => {
+			const markup = await render(component.serverCode, { verbose })
+			const { realm, html, diagnostics } = await mount(
+				`branch-key-${verbose}`,
+				component.clientCode,
+				markup,
+			)
+			afterAll(() => realm.dispose())
+			const item = (key: string) =>
+				realm.document.querySelector(
+					`c-el ul.tasks > li[data-key="${key}"]`,
+				) as HTMLElement
+			const mark = (key: string) =>
+				item(key).querySelector('p.done b.mark') as HTMLElement | null
+
+			test('connect adopts without touching the markup', () => {
+				expect(diagnostics).toEqual([])
+				expect(html).toBe(serialized(markup))
+				expect(mark('b')?.dataset.for).toBe(verbose ? 'b' : undefined)
+			})
+
+			test('a re-entered arm carries the key again', async () => {
+				;(item('a').querySelector('button.toggle') as HTMLElement).click()
+				await settle()
+				expect(item('a').querySelector('p.done')).not.toBeNull()
+				expect(mark('a')?.dataset.for).toBe(verbose ? 'a' : undefined)
+			})
+
+			test('a cloned item clones its arm with the key set', async () => {
+				;(
+					realm.document.querySelector('c-el button.add') as HTMLElement
+				).click()
+				await settle()
+				expect(item('c').querySelector('p.done')).not.toBeNull()
+				expect(mark('c')?.dataset.for).toBe(verbose ? 'c' : undefined)
+			})
+		})
 })
 
 /* === A list inside a list item, with a reactive `@empty` arm === */
@@ -690,7 +794,7 @@ describe('a selector bound in a scope matches nothing in a nested scope', () => 
 			const ltc007 = diagnostics.filter(d => d.code === 'LTC007')
 			expect(ltc007.length).toBeGreaterThan(0)
 			for (const d of ltc007)
-				expect(d.message).toContain('give it a unique `class`')
+				expect(d.message).toContain('Give it a unique `class`')
 		}
 		expect(fromTsx.diagnostics.filter(d => d.code === 'LTC007').length).toBe(
 			fromTsrx.diagnostics.filter(d => d.code === 'LTC007').length,

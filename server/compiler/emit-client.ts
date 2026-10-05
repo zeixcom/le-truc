@@ -718,7 +718,9 @@ export const emitClientModule = (
 			}
 			for (const local of arm.locals)
 				out.line(
-					`const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
+					local.optional
+						? `const ${local.name} = first(${jsString(local.selector)})`
+						: `const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
 				)
 			emitKeyAttrs(arm.keyAttrs)
 			for (const inner of arm.effects) emitTopEffect(inner)
@@ -732,7 +734,7 @@ export const emitClientModule = (
 	const emitKeyAttrs = (keyAttrs: readonly KeyAttrPlan[]): void => {
 		for (const keyAttr of keyAttrs)
 			out.line(
-				`${keyAttr.el}.setAttribute(${jsString(keyAttr.attr)}, ${keyAttr.exprText})`,
+				`${keyAttr.el}${keyAttr.optional ? '?' : ''}.setAttribute(${jsString(keyAttr.attr)}, ${keyAttr.exprText})`,
 				sliceOf(keyAttr.exprText, keyAttr.sourceStart),
 			)
 	}
@@ -770,7 +772,9 @@ export const emitClientModule = (
 			}
 			for (const local of scope.locals)
 				out.line(
-					`const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
+					local.optional
+						? `const ${local.name} = first(${jsString(local.selector)})`
+						: `const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
 				)
 			emitKeyAttrs(scope.keyAttrs)
 			for (const inner of scope.effects) emitTopEffect(inner)

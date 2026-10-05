@@ -308,7 +308,7 @@ export const planEachLoop = (
 				diagnostic.unaddressableElement(
 					source,
 					output.node,
-					`No unique selector for the ${wording.loop} output <${output.tag}> inside its scope root <${scope.tree.tag}> — give it a unique \`class\`.`,
+					`No unique selector for the ${wording.loop} output <${output.tag}> inside its scope root <${scope.tree.tag}> — no \`class\`, \`role\`, \`data-*\` attribute or child path tells it apart from the other elements there, nested arms and list items included. Give it a unique \`class\`.`,
 				),
 			)
 		const rebindings = rebindingsFor(loop.itemName)
