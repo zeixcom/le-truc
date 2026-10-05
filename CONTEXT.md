@@ -93,7 +93,7 @@ To read a **Component**'s initial state back out of the server-rendered DOM at c
 _Avoid_: hydrate, scrape, parse. "Hydrate" is correct only when describing other frameworks, which do ship a state payload; a Le Truc **Component** enhances markup and harvests from it.
 
 **Value Harness**:
-The server-side stand-in for the reactive system that the **Folded** tier runs setup against. A **Signal** is its initial value in a box: `.get()` reads once, and `.set()` does nothing. The harness has no DOM.
+The server-side stand-in for the reactive system that the **Folded** tier runs setup against. It follows the signal meaning of Cause & Effect, frozen at the seed ([ADR 0046](adr/0046-reactive-list-items-as-mount-scopes.md) s3). A cell is its initial value in a box: `.get()` reads once, and `.set()` does nothing. A list hands out one cell per item, keyed as the client keys the same seed. A store's fields are signals. A sensor's server value is its `{ value }` seed, and an unseeded sensor is **Unresolvable**. The harness has no DOM.
 _Avoid_: shim, mock, stub (those name the **Simulation Realm**'s replacements for absent APIs)
 
 **Simulation Realm**:

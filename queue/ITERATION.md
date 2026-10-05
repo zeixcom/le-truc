@@ -109,7 +109,7 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421~~ (done ✓; the
-  restructured flow is in use). LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
+  restructured flow is in use). LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277, LT-433 (worktree-independent bundle; LT-422 review)
   (server).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
@@ -130,7 +130,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-433.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-434.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 

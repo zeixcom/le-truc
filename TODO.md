@@ -109,7 +109,7 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421~~ (done ✓; the
-  restructured flow is in use). LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277
+  restructured flow is in use). LT-305 (the Baseline 2023 guard, ships in 3.0), LT-277, LT-433 (worktree-independent bundle; LT-422 review)
   (server).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
@@ -130,7 +130,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-433.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-434.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -204,29 +204,6 @@ recorded against the 30.4k opening measurement.
 
 
 ### C — corpus port
-
-- [ ] LT-422: The Value Harness follows the signal meaning — lists iterate cells, store fields are cells; `createSensor` is a signal constructor (ADR 0046 s3, s5).
-  **Area:** compiler
-  **Context:** ADR 0046 s3 makes a reactive-list item the signal the List hands out, on both
-  phases. The harness (`server/compiler/runtime.ts:55-96`) iterates **values** today, and its
-  `createStore` is a plain box, so `item.label.get()` cannot run at render time. Make it follow
-  Cause & Effect exactly:
-  1. `ServerList` iterates cells. It gains `map((cell, key) => R): R[]`, `forEach`, `keys()`
-     and `byKey()`, keyed exactly as today (`getKeyGenerator` parity). `entries()` stays
-     internal to the emitted server loop and yields `[key, cell]`.
-  2. `createStore(initial)` returns an object whose fields are cells, plus `get()` returning
-     the whole value. Nested objects are stores and arrays are lists, as in C&E's `MutableStore`.
-  3. `deriveList` returns the same cell-iterating list.
-  4. `createSensor(start, { value })` joins `SIGNAL_CONSTRUCTOR_NAMES` (`vocabulary.ts`). The
-     harness boxes the `value` seed, which is its server value. Without a seed, a read is
-     Unresolvable, through the existing fold-refusal routing (ADR 0029 s5).
-  5. The emitted server loop and the bare `{item}` fill read the cell (`item.get()`), so rendered
-     HTML is unchanged.
-  **Channel/tier:** none — server mechanism.
-  **Check:** rendered HTML goldens and parity byte-identical (server-module goldens change by
-  design; state which). Harness unit tests pin store fields, `map`/`byKey` key parity with C&E
-  for the string-prefix, function and positional `keyConfig` forms, and a seeded/unseeded
-  `createSensor` read. Full gates, `check:sim`.
 
 - [ ] LT-423: A reactive-list item is a Mount Scope — item content lowers through the arm emission (ADR 0046 s1–s3).
   **Area:** compiler
@@ -418,24 +395,6 @@ recorded against the 30.4k opening measurement.
   LT-165 step 7's corpus pin:** Simulated tier with its `Math.random()` expression suppressed
   and everything else simulated.
 
-
-### B — correctness
-
-- [ ] LT-432: LTC063's message names the async boundary when that is the culprit (LT-431 review).
-  **Area:** compiler
-  **Needs:** LT-431
-  **Context:** LTC063 (LT-274) refuses an arm set in a reactive list's container. An async
-  boundary (`@try` with `@pending`, `<truc:try pending={…}>`) is an arm set too (ADR 0037 s4)
-  and hits the same rule, but the message names only "`@if` or `@switch`" / "A conditional or
-  `switch`". Found by the LT-431 session. Make the message name the construct that fired. The
-  producer (`reactiveConditionInReconcileContainer`, `server/compiler/diagnostics.ts`) takes only
-  `wording`; give it the arm set's construct (`conditional` vs `try`, from the node at the call
-  site) and add a boundary spelling per surface to `SurfaceWording` (`@try` / `<truc:try>`), so a
-  boundary's message names it and a conditional's stays as it is. Keep the code and the
-  tier as they are. Update `skills/le-truc/references/errors.md`'s LTC063 row to say "a reactive
-  condition or async boundary". **Channel/tier:** compiler, tier 1 Prevented, unchanged; copy
-  and one producer parameter. **Copy:** follows `writer` → error-messages. **Check:** LT-431's async-boundary pin in
-  `diagnostic-ranges.test.ts` asserts the new wording on both surfaces; `test:server` green.
 
 ### D — CSS departures
 

@@ -771,6 +771,29 @@ Full entry text: `git log -p -- DONE.md`.
   rephrases line 341 to queue-store language and points at `references/docs-architecture.md`.
   The owner's copy-in of that proposal discharges the `.agents/` fix; nothing further to do here.
 
+- [x] LT-422: The Value Harness follows the signal meaning — lists iterate cells, store fields are cells; `createSensor` is a signal constructor (ADR 0046 s3, s5). — reviewed ✓
+  **Area:** compiler
+  **Changed:** the Value Harness follows the signal meaning (ADR 0046 s3, s5;
+  `server/compiler/runtime.ts`). `ServerList` iterates the item cells it hands out
+  (`createItem`'s result, a cell by default), keyed as Cause & Effect keys the same seed, and
+  gains `length`, `at`, `keys()`, `byKey()`, `map((cell, key))` and `forEach`; `entries()` stays
+  internal to the emitted loop. `createStore` fields are signals (nested objects stores, arrays
+  lists) and `get()` returns the whole value. `deriveList` returns the same list and passes
+  `keyConfig` through. `createSensor` is a signal constructor (`vocabulary.ts`, the IR's
+  derived family): its `{ value }` seed is its server value, and an unseeded one is
+  Unresolvable (out of `serverKnown`, one `LTC013` routing signal) and skipped by the harvest.
+  The bare `{item}` fill emits `text(item.get())`. A harness export named inside `expose()` is
+  imported from the harness, not stubbed. Rendered HTML unchanged; the `module-list`,
+  `form-tokenbox` and `context-media` server modules changed by design. `LE_TRUC_COMPILER.md`
+  §4/§5.3 updated; tests in `server/tests/compiler/value-harness.test.ts`.
+
+  **Review:** Approved (Architect, 2026-10-05); Playwright, `test:variants` and all three
+  `check:sim` legs run green by the owner. Accepted as is: an unseeded sensor routes at its
+  declaration, not per server read, which follows the context-reading-derive precedent
+  (`setup-extraction.ts`); a sensor seed resolves against an empty scope, so a seed that reads
+  a server arg counts as Unresolvable. CONTEXT.md's **Value Harness** entry was updated by the
+  reviewer.
+
 - [x] LT-427: An imported function is a known name in a client-only setup side effect (ADR 0046 s5). — reviewed ✓
   **Area:** compiler
   **Changed:** no compiler behavior change. The entry's premise did not hold: `clientKnownName`
@@ -835,3 +858,33 @@ Full entry text: `git log -p -- DONE.md`.
   depends on render args. (2) `data-key` is no exemption: `reconcile()` removes an unknown key
   and adopts a matching one as that item. (3) A `try` without a pending arm is a server boundary
   and LTC074's; an async boundary stays LTC063's. LTC063's copy for a boundary is LT-432.
+
+- [x] LT-432: LTC063's message names the async boundary when that is the culprit (LT-431 review). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-431
+  **Changed:** LTC063 names an async boundary when one fires it: "An async `@try` boundary
+  (one with `@pending`)" / "An async `<truc:try>` boundary (one with `pending`)", with "move the
+  boundary out". A reactive conditional's message is unchanged. `reactiveConditionInReconcileContainer`
+  (`server/compiler/diagnostics.ts`) takes `construct: 'conditional' | 'try'` from `armContainer`;
+  `SurfaceWording` gains `asyncBoundary`. The LTC063 lines in `skills/le-truc/references/errors.md`
+  and `compiled.md` and in `CHANGELOG.md` updated. Tests: `diagnostic-ranges.test.ts`,
+  `tsx/diagnostic-parity.test.ts`.
+
+  **Review:** Approved (Architect, 2026-10-05). The "(one with `@pending`)" clause stays: a
+  plain `try` in the same place is LTC074's, so it tells the author which rule fired.
+
+- [x] LT-433: The `index.js` bundle is byte-identical whether built in the main checkout or a task worktree (LT-422 review). — reviewed ✓
+  **Area:** server
+  **Gates:** build
+  **Changed:** `build:prod` runs the new `scripts/build-bundle.ts` (same entry, `--outdir` and
+  `--define` flags; any other flag is refused). It builds through `Bun.build` and rewrites only
+  the `// ../…` module comments that resolve inside the real `node_modules` back to
+  `// node_modules/…`, so a worktree's `index.js` is byte-identical to the main checkout's.
+  Where `node_modules` is not a symlink it changes nothing. Bun 1.4.2 has no native fix: neither
+  `--preserve-symlinks` nor `preserveSymlinks` keeps the symlinked path. The `scripts/worktree.ts`
+  header records that the bundle is location-independent.
+
+  **Review:** Approved (Architect, 2026-10-05). The worktree's `build:prod` output is
+  `cmp`-identical to HEAD's committed bundle, and `bun run build` leaves `index.js` clean. No unit
+  test: the rewrite only acts under a symlinked `node_modules`, so the `cmp` check is the
+  regression check.
