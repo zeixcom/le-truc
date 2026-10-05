@@ -952,23 +952,6 @@ to `TODO.md`.
   **Channel/tier:** none — docs.
   **Check:** every behavioral claim in both files traces to the 1.6.1 source; the stamp names 1.6.x
   and the version verified.
-
-- [ ] LT-438: `reportEffectFailure` copy for a `reconcile()` Mount Scope — "its other effects" names the container (LT-436 review follow-up).
-  **Area:** runtime
-  **Needs:** LT-436
-  **Context:** LT-436 reports a throwing list item or arm through `reportEffectFailure`
-  (`src/errors.ts`) with the container as `host`. The copy was written for a component: production
-  reads ``reconcile() item "a" did not activate in <ul>; its other effects are unaffected:`` and
-  DEV reads "…the component's other effects are unaffected." For a Mount Scope the truthful
-  statement is that the item (or arm) stays unbound and the list's other items are unaffected. Give
-  the scope case its own wording — a `scope` flavour of the reporter or a dedicated
-  `reportScopeFailure` beside it, whichever keeps `check:size` flat — following
-  `writer` → `references/error-messages.md`. Update `skills/le-truc/references/errors.md` to the
-  final string.
-  **Channel/tier:** runtime, tier 2 Contained (unchanged; copy only).
-  **Rider (LT-355 review):** the `test-listitem` classifications in `server/compiler/sim/classifications.ts` match this string (LT-441) — update them in the same change.
-  **Check:** the LT-436 pins assert the new strings in both DEV and production modes; `test:src`,
-  `check:size` green.
 ## P7 — Backlog (not scheduled)
 
 **Moved to TODO.md 2026-10-02:** LT-393.
