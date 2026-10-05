@@ -235,6 +235,8 @@ declare namespace JSX {
 		checked?: Reactive<boolean>
 		min?: Reactive<string>
 		max?: Reactive<string>
+		step?: string
+		inputmode?: string
 	}
 	interface label extends CommonLightDom {
 		/** The native attribute is `for` — there is no `htmlFor` here. */
@@ -281,6 +283,16 @@ declare namespace JSX {
 	interface nav extends CommonLightDom {}
 	/** module-todo's item container. */
 	interface ol extends CommonLightDom {}
+	/* module-calctable's table skeleton. */
+	interface table extends CommonLightDom {}
+	interface thead extends CommonLightDom {}
+	interface tbody extends CommonLightDom {}
+	interface tfoot extends CommonLightDom {}
+	interface tr extends CommonLightDom {}
+	interface th extends CommonLightDom {
+		scope?: string
+	}
+	interface td extends CommonLightDom {}
 	interface p extends CommonLightDom {}
 	interface pre extends CommonLightDom {}
 	interface span extends CommonLightDom, Microdata {}
@@ -353,6 +365,14 @@ declare namespace JSX {
 	type FormRadiogroupAttrs = CommonLightDom & {
 		name?: Reactive<string>
 		value?: Reactive<string>
+	}
+	type ModuleCalctableAttrs = CommonLightDom & {
+		/** Config-only locale of the table's number formatting (basic-number's
+		 * contract). Ancestor-walking is the client's `getLocale` job, which
+		 * the composed children carry. */
+		lang?: string
+		/** JSON-encoded `Intl.NumberFormatOptions` (LT-142). */
+		options?: string
 	}
 	type ModuleCarouselAttrs = CommonLightDom
 	type ModuleCatalogAttrs = CommonLightDom
@@ -450,6 +470,13 @@ declare namespace JSX {
 		dt: dt
 		fieldset: fieldset
 		div: div
+		table: table
+		thead: thead
+		tbody: tbody
+		tfoot: tfoot
+		tr: tr
+		th: th
+		td: td
 		form: form
 		h2: h2
 		h3: h3
@@ -482,6 +509,7 @@ declare namespace JSX {
 		'context-media': ContextMediaAttrs
 		'basic-pluralize': BasicPluralizeAttrs
 		'basic-number': BasicNumberAttrs
+		'module-calctable': ModuleCalctableAttrs
 		'form-combobox': FormComboboxAttrs
 		'form-listbox': FormListboxAttrs
 		'form-checkbox': FormCheckboxAttrs

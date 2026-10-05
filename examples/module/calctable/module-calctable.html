@@ -1,5 +1,15 @@
-<!-- Pre-filled example with CHF currency -->
-<module-calctable options='{"style":"currency","currency":"CHF"}'>
+<!-- Regenerated from the compiled server render (LT-109 cutover):
+     renderModuleCalctable({ lang, options, rows }) from
+     server/generated/components/module-calctable.server.ts — the demo serves exactly
+     the markup the compiled client hydrates. The variant set serves
+     module-calctable.tsx (ADR 0039); module-calctable.tsrx and the hand-written
+     module-calctable.ts stay as variants. The rows are the per-field harvest
+     sites (ADR 0046 s7): the key from data-key, description/amount/price-per-unit
+     from the inputs' value sites. The per-row and total prices compose
+     <basic-number>, whose raw value arrives through the pass at mount; the
+     text below is the steady state for the un-upgraded page. The item
+     template's data-key and the entry row are the LT-186 shape. -->
+<module-calctable lang="en" options='{"style":"currency","currency":"CHF"}'>
 	<table>
 		<thead>
 			<tr>
@@ -12,93 +22,97 @@
 		<tbody data-container>
 			<tr data-key="item1">
 				<td class="description">
-					<input type="text" class="description" value="Widget" aria-label="Description">
+					<input type="text" value="Widget" aria-label="Description" class="description">
 				</td>
 				<td class="amount">
 					<input
 						type="number"
-						class="amount"
 						min="0"
 						max="100"
 						step="1"
 						inputmode="numeric"
 						value="3"
 						aria-label="Amount"
+						class="amount"
 					>
 				</td>
 				<td class="price-per-unit">
 					<input
 						type="number"
-						class="price-per-unit"
 						min="0"
 						max="1000"
 						step="0.01"
 						inputmode="decimal"
-						value="12.50"
+						value="12.5"
 						aria-label="Price per unit"
+						class="price-per-unit"
 					>
 				</td>
-				<td class="price">CHF 37.50</td>
+				<td class="price">
+					<basic-number value="0" lang="en" options='{"style":"currency","currency":"CHF"}'>CHF 37.50</basic-number>
+				</td>
 			</tr>
 			<tr data-key="item2">
 				<td class="description">
-					<input type="text" class="description" value="Gadget" aria-label="Description">
+					<input type="text" value="Gadget" aria-label="Description" class="description">
 				</td>
 				<td class="amount">
 					<input
 						type="number"
-						class="amount"
 						min="0"
 						max="100"
 						step="1"
 						inputmode="numeric"
 						value="5"
 						aria-label="Amount"
+						class="amount"
 					>
 				</td>
 				<td class="price-per-unit">
 					<input
 						type="number"
-						class="price-per-unit"
 						min="0"
 						max="1000"
 						step="0.01"
 						inputmode="decimal"
-						value="8.00"
+						value="8"
 						aria-label="Price per unit"
+						class="price-per-unit"
 					>
 				</td>
-				<td class="price">CHF 40.00</td>
+				<td class="price">
+					<basic-number value="0" lang="en" options='{"style":"currency","currency":"CHF"}'>CHF 40.00</basic-number>
+				</td>
 			</tr>
 			<tr data-unreconciled>
 				<td class="description">
 					<input
 						type="text"
-						class="description"
 						placeholder="New item"
 						aria-label="Description"
+						class="entry-description"
 					>
 				</td>
 				<td class="amount">
 					<input
 						type="number"
-						class="amount"
 						min="0"
 						max="100"
 						step="1"
 						inputmode="numeric"
 						aria-label="Amount"
+						class="entry-amount"
 					>
 				</td>
 				<td class="price-per-unit">
 					<input
 						type="number"
-						class="price-per-unit"
 						min="0"
 						max="1000"
 						step="0.01"
 						inputmode="decimal"
 						aria-label="Price per unit"
+						class="entry-price"
 					>
 				</td>
 				<td class="price"></td>
@@ -107,40 +121,44 @@
 		<tfoot>
 			<tr>
 				<td class="description">Total</td>
-				<td class="amount">8</td>
-				<td class="price-per-unit"></td>
-				<td class="price">CHF 77.50</td>
+				<td class="amount-total">8</td>
+				<td class="price-per-unit total"></td>
+				<td class="price-total">
+					<basic-number class="total-price" value="0" lang="en" options='{"style":"currency","currency":"CHF"}'>CHF 77.50</basic-number>
+				</td>
 			</tr>
 		</tfoot>
 	</table>
-	<template>
+	<template data-list="0">
 		<tr>
 			<td class="description">
-				<input type="text" class="description" aria-label="Description">
+				<input type="text" aria-label="Description" class="description">
 			</td>
 			<td class="amount">
 				<input
 					type="number"
-					class="amount"
 					min="0"
 					max="100"
 					step="1"
 					inputmode="numeric"
 					aria-label="Amount"
+					class="amount"
 				>
 			</td>
 			<td class="price-per-unit">
 				<input
 					type="number"
-					class="price-per-unit"
 					min="0"
 					max="1000"
 					step="0.01"
 					inputmode="decimal"
 					aria-label="Price per unit"
+					class="price-per-unit"
 				>
 			</td>
-			<td class="price"></td>
+			<td class="price">
+				<basic-number value="0" lang="en" options='{"style":"currency","currency":"CHF"}'></basic-number>
+			</td>
 		</tr>
 	</template>
 </module-calctable>
@@ -148,7 +166,7 @@
 <hr>
 
 <!-- Empty table, default (decimal) formatting since no currency options are given -->
-<module-calctable>
+<module-calctable lang="en">
 	<table>
 		<thead>
 			<tr>
@@ -163,31 +181,31 @@
 				<td class="description">
 					<input
 						type="text"
-						class="description"
 						placeholder="New item"
 						aria-label="Description"
+						class="entry-description"
 					>
 				</td>
 				<td class="amount">
 					<input
 						type="number"
-						class="amount"
 						min="0"
 						max="100"
 						step="1"
 						inputmode="numeric"
 						aria-label="Amount"
+						class="entry-amount"
 					>
 				</td>
 				<td class="price-per-unit">
 					<input
 						type="number"
-						class="price-per-unit"
 						min="0"
 						max="1000"
 						step="0.01"
 						inputmode="decimal"
 						aria-label="Price per unit"
+						class="entry-price"
 					>
 				</td>
 				<td class="price"></td>
@@ -196,40 +214,44 @@
 		<tfoot>
 			<tr>
 				<td class="description">Total</td>
-				<td class="amount">0</td>
-				<td class="price-per-unit"></td>
-				<td class="price">0</td>
+				<td class="amount-total">0</td>
+				<td class="price-per-unit total"></td>
+				<td class="price-total">
+					<basic-number class="total-price" value="0" lang="en"></basic-number>
+				</td>
 			</tr>
 		</tfoot>
 	</table>
-	<template>
+	<template data-list="0">
 		<tr>
 			<td class="description">
-				<input type="text" class="description" aria-label="Description">
+				<input type="text" aria-label="Description" class="description">
 			</td>
 			<td class="amount">
 				<input
 					type="number"
-					class="amount"
 					min="0"
 					max="100"
 					step="1"
 					inputmode="numeric"
 					aria-label="Amount"
+					class="amount"
 				>
 			</td>
 			<td class="price-per-unit">
 				<input
 					type="number"
-					class="price-per-unit"
 					min="0"
 					max="1000"
 					step="0.01"
 					inputmode="decimal"
 					aria-label="Price per unit"
+					class="price-per-unit"
 				>
 			</td>
-			<td class="price"></td>
+			<td class="price">
+				<basic-number value="0" lang="en"></basic-number>
+			</td>
 		</tr>
 	</template>
 </module-calctable>

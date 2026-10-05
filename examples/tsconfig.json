@@ -32,6 +32,8 @@
 		"basic/counter/basic-counter.tsx",
 		"context/media/context-media.ts",
 		"context/media/context-media.tsx",
+		"module/calctable/module-calctable.ts",
+		"module/calctable/module-calctable.tsx",
 		"module/carousel/module-carousel.ts",
 		"module/carousel/module-carousel.tsx",
 		"module/codeblock/module-codeblock.ts",

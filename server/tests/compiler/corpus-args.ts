@@ -201,6 +201,14 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 			{ value: './test/module-listnav/mocks/page2.html', label: 'Page 2' },
 		],
 	},
+	'module-calctable': {
+		lang: 'en',
+		options: '{"style":"currency","currency":"CHF"}',
+		rows: [
+			{ id: 'item1', description: 'Widget', amount: 3, pricePerUnit: 12.5 },
+			{ id: 'item2', description: 'Gadget', amount: 5, pricePerUnit: 8 },
+		],
+	},
 	'module-pagination': { max: 10, value: 1 },
 	'module-scrollarea': { children: '<p>Scrollable content</p>' },
 	'module-splitview': {
