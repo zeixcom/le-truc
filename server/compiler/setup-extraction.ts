@@ -27,6 +27,7 @@ import type {
 	ExposeKind,
 	ExposePropDecl,
 	ExposeStmt,
+	ItemSetupStmt,
 	SetupStmt,
 	SignalIR,
 	SourceRange,
@@ -67,10 +68,37 @@ export type SetupExtraction = {
 	expose: ExposeStmt | null
 	exposeProps: Map<string, ExposePropDecl>
 	contextRefs: Set<string>
+	/** The authored import bindings the client gate admitted. */
+	importedNames: ReadonlySet<string>
+	/** The client message channel the client gate admitted. */
+	messages: {
+		tNames: ReadonlySet<string>
+		declaredKeys: Readonly<Record<string, string>>
+	}
 }
 
 /** Shared empty result for the `parserFallbackRefsOf` context hook. */
 const EMPTY_NAMES: ReadonlySet<string> = new Set<string>()
+
+/** Which phase binds a name an item's setup statement reads. */
+type ItemNameClass = 'both' | 'client' | 'server' | 'unknown'
+
+/** A list of names as message copy: `` `a` and `b` ``. */
+const nameList = (names: readonly string[]): string =>
+	names.map(n => `\`${n}\``).join(' and ')
+
+/** The setup refusal component setup reports, verbatim (ADR 0046 s5). */
+const setupStatementRefusal = (ctx: ExtractContext, stmt: AstNode) =>
+	diagnostic.unsupported(
+		ctx.source,
+		stmt,
+		'A setup statement other than a `const` declaration, `expose()` or a client-only side effect over `host`, `internals` or signals',
+		'Move the logic into a `const` initializer, or into a `watch()` or `on()` handler.',
+	)
+
+/** Is `node` a function expression (an initializer defined, not called)? */
+const isFunctionNode = (node: unknown): node is AstNode =>
+	isNode(node) && /Function(Expression)?$/.test(String(node.type))
 
 /**
  * Why a `createSensor(start, options)` call has no server value, or null
@@ -654,14 +682,7 @@ export const extractSetup = (
 				continue
 			}
 		}
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				source,
-				stmt,
-				'A setup statement other than a `const` declaration, `expose()` or a client-only side effect over `host`, `internals` or signals',
-				'Move the logic into a `const` initializer, or into a `watch()` or `on()` handler.',
-			),
-		)
+		ctx.diagnostics.push(setupStatementRefusal(ctx, stmt))
 	}
 	return {
 		setup,
@@ -674,6 +695,8 @@ export const extractSetup = (
 		expose: expose && { ...expose, ambients: [...exposeAmbients].sort() },
 		exposeProps,
 		contextRefs,
+		importedNames,
+		messages,
 	}
 }
 
@@ -731,4 +754,319 @@ export const seedExtractionContext = (
 		)
 	}
 	for (const prop of MANAGED_TEXT_PROPS) ctx.exposedProps.add(prop)
+	ctx.setupScope = {
+		importedNames: extraction.importedNames,
+		refNames: new Set(extraction.elementRefs.keys()),
+		tNames: extraction.messages.tNames,
+		declaredKeys: extraction.messages.declaredKeys,
+	}
 }
+
+/* === Per-item setup (ADR 0046 s5) === */
+
+/**
+ * Classify a reactive-list item's setup statements (ADR 0046 s5) by the
+ * component-setup rules, with the item, the key and every enclosing item's
+ * names known. Runs while the item and key are bound (`ctx.loopBound`);
+ * `signals` are the signals in scope, enclosing items' included.
+ *
+ * A per-item statement runs in two places: per initial item in the
+ * server's loop, and per entering item in `bindItem`. So a plain const and
+ * a signal declaration read only names both phases bind — the item and
+ * key, enclosing items' names, signals, setup consts, imports, globals.
+ * The exceptions are positions the server defines but never calls: a
+ * function const's body and a `createSensor` start callback may read
+ * client-only names (`host`, refs, `on`), which the server leaves out or
+ * stubs. Nothing may read a server arg: the client has none. A client-only
+ * side effect is gated exactly like component setup's.
+ */
+export const extractItemSetup = (
+	ctx: ExtractContext,
+	stmts: readonly AstNode[],
+	signals: ReadonlyMap<string, SignalIR>,
+): { setup: ItemSetupStmt[]; signals: SignalIR[] } => {
+	const { source } = ctx
+	const scope = ctx.setupScope
+	const setup: ItemSetupStmt[] = []
+	const itemSignals: SignalIR[] = []
+	const own = new Map<string, ItemNameClass>()
+	const classOf = (name: string): ItemNameClass => {
+		const mine = own.get(name)
+		if (mine) return mine
+		const bound = ctx.loopBound.lastIndexOf(name)
+		if (bound >= 0) return ctx.loopReactive[bound] ? 'both' : 'server'
+		if (signals.has(name) || ctx.setupInits.has(name)) return 'both'
+		if (scope.refNames.has(name)) return 'client'
+		if (CONTEXT_NAMES.has(name) || CLIENT_ONLY_PRIMITIVES.has(name))
+			return 'client'
+		if (ctx.argNames.has(name) || scope.tNames.has(name)) return 'server'
+		if (JS_GLOBALS.has(name) || scope.importedNames.has(name)) return 'both'
+		return 'unknown'
+	}
+	const namesOf = (node: AstNode, cls: ItemNameClass): string[] =>
+		[...freeIdentifiers(node)].filter(n => classOf(n) === cls).sort()
+	const rangeOfStmt = (stmt: AstNode): SourceRange => ({
+		start: typeof stmt.start === 'number' ? stmt.start : 0,
+		end: typeof stmt.end === 'number' ? stmt.end : 0,
+	})
+	/**
+	 * Refuse a both-phase position reading a name one phase lacks; true
+	 * when it was refused. `clientOnlyOk` admits client-only names (a
+	 * position the server defines but never calls).
+	 */
+	const refusePhase = (
+		stmt: AstNode,
+		node: AstNode,
+		subject: string,
+		clientOnlyOk: boolean,
+	): boolean => {
+		const serverOnly = namesOf(node, 'server')
+		if (serverOnly.length > 0) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					stmt,
+					`${subject} reading ${nameList(serverOnly)}, which the item's client mount does not have,`,
+					'Item setup also runs on the client, once per entering item, where server args and server-data loop bindings do not exist — read the value from the item or from a signal.',
+				),
+			)
+			return true
+		}
+		const clientOnly = clientOnlyOk ? [] : namesOf(node, 'client')
+		if (clientOnly.length > 0) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					stmt,
+					`${subject} reading ${nameList(clientOnly)}, which the server render does not have,`,
+					'Item setup also runs on the server, once per initial item — read client-only names in a function const, a `createSensor()` start callback, or a `watch()` or `on()` handler.',
+				),
+			)
+			return true
+		}
+		return false
+	}
+
+	for (const stmt of stmts) {
+		if (stmt.type === 'VariableDeclaration') {
+			const declarations = asArray(stmt.declarations)
+			const decl = declarations[0] ?? null
+			const declName = identifierName(decl?.id)
+			if (
+				stmt.kind !== 'const' ||
+				declarations.length !== 1 ||
+				!declName ||
+				!isNode(decl?.init)
+			) {
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						stmt,
+						'A setup declaration other than a single initialized `const`',
+						'Declare one initialized `const` per statement.',
+					),
+				)
+				continue
+			}
+			const init = (decl as AstNode).init as AstNode
+			const base = {
+				text: text(source, stmt),
+				range: rangeOfStmt(stmt),
+				node: init,
+				name: declName,
+			}
+			const calleeName = identifierName(init.callee)
+			// `first()` against the item's own `first` (ADR 0046 s2): resolved
+			// against the item's content once it is lowered.
+			if (calleeName === 'first') {
+				const args = asArray(init.arguments)
+				const [selectorArg, reasonArg] = args
+				const selectorText =
+					selectorArg?.type === 'Literal' &&
+					typeof selectorArg.value === 'string'
+						? selectorArg.value
+						: null
+				const reasonText =
+					reasonArg?.type === 'Literal' && typeof reasonArg.value === 'string'
+						? reasonArg.value
+						: null
+				if (
+					(args.length !== 1 && args.length !== 2) ||
+					selectorText === null ||
+					(args.length === 2 && reasonText === null)
+				) {
+					ctx.diagnostics.push(
+						diagnostic.invalidFirstCall(source, stmt, declName),
+					)
+					continue
+				}
+				setup.push({
+					...base,
+					kind: 'ref',
+					selector: selectorText,
+					reason: reasonText,
+					required: args.length === 2,
+					root: false,
+				})
+				own.set(declName, 'client')
+				continue
+			}
+			if (calleeName === 'requestContext') {
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						stmt,
+						"`requestContext()` in a reactive-list item's setup",
+						'A context is requested once per component — request it in the component setup and read it in the item.',
+					),
+				)
+				continue
+			}
+			if (calleeName && SIGNAL_CONSTRUCTORS.has(calleeName)) {
+				const args = asArray(init.arguments)
+				const subject = `The per-item signal \`${declName}\``
+				if (calleeName === 'createSensor') {
+					// The seed is the sensor's server value (ADR 0046 s5), and every
+					// initial item renders from it.
+					if (sensorSeedResolution(args[1]) !== null) {
+						ctx.diagnostics.push(
+							diagnostic.unsupported(
+								source,
+								stmt,
+								`A per-item \`createSensor()\` without a server-known \`{ value }\` seed`,
+								'The seed is the sensor’s server value, and the server renders every initial item from it — add `{ value: … }` over values both phases know.',
+							),
+						)
+						continue
+					}
+					// The start callback subscribes on the client and never runs on
+					// the server: client-only names are admitted there and stubbed.
+					const [start, options] = args
+					if (
+						(isNode(start) &&
+							refusePhase(stmt, start, subject, isFunctionNode(start))) ||
+						(isNode(options) && refusePhase(stmt, options, subject, false))
+					)
+						continue
+				} else if (refusePhase(stmt, init, subject, false)) continue
+				const signalBase = {
+					name: declName,
+					text: text(source, init),
+					textStart: typeof init.start === 'number' ? init.start : 0,
+					init: args[0] ?? null,
+					inferredType: 'unknown' as const,
+				}
+				itemSignals.push(
+					MUTABLE_SIGNAL_CONSTRUCTORS.has(calleeName)
+						? {
+								...signalBase,
+								family: 'declared',
+								constructor: calleeName as DeclaredSignalIR['constructor'],
+							}
+						: {
+								...signalBase,
+								family: 'derived',
+								constructor: calleeName as DerivedSignalIR['constructor'],
+							},
+				)
+				setup.push({
+					...base,
+					kind: 'signal',
+					constructor: calleeName as Exclude<
+						SignalIR['constructor'],
+						'requestContext'
+					>,
+				})
+				own.set(declName, 'both')
+				continue
+			}
+			if (init.type === 'ConditionalExpression') {
+				const consequentName = identifierName(
+					(init.consequent as AstNode | undefined)?.callee,
+				)
+				const alternateName = identifierName(
+					(init.alternate as AstNode | undefined)?.callee,
+				)
+				if (
+					consequentName &&
+					SIGNAL_CONSTRUCTORS.has(consequentName) &&
+					alternateName &&
+					SIGNAL_CONSTRUCTORS.has(alternateName)
+				) {
+					ctx.diagnostics.push(
+						diagnostic.conditionalSignalConstructor(source, stmt, declName),
+					)
+					continue
+				}
+			}
+			// A plain const. A function is defined in both phases and called on
+			// the client only, so its body may read client-only names — the
+			// server then leaves it out.
+			const isFunction = isFunctionNode(init)
+			if (
+				refusePhase(
+					stmt,
+					init,
+					`The per-item const \`${declName}\``,
+					isFunction,
+				)
+			)
+				continue
+			setup.push({
+				...base,
+				kind: 'const',
+				server: !isFunction || namesOf(init, 'client').length === 0,
+			})
+			own.set(declName, 'both')
+			continue
+		}
+		const expression =
+			stmt.type === 'ExpressionStatement'
+				? (stmt.expression as AstNode | undefined)
+				: undefined
+		if (identifierName(expression?.callee) === 'expose') {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					stmt,
+					"`expose()` in a reactive-list item's setup",
+					'A component exposes its props once — call `expose()` in the component setup.',
+				),
+			)
+			continue
+		}
+		if (expression) {
+			// A client-only side effect, gated like component setup's: every
+			// name client-known, a static `t.<key>` read of a declared key the
+			// one server binding admitted (LT-349).
+			const bad = [...freeIdentifiers(expression)].filter(n => {
+				const cls = classOf(n)
+				if (cls === 'both' || cls === 'client') return false
+				return !(
+					scope.tNames.has(n) &&
+					staticMessageReads(expression, n, scope.declaredKeys) !== null
+				)
+			})
+			if (bad.length === 0) {
+				setup.push({
+					text: text(source, stmt),
+					range: rangeOfStmt(stmt),
+					node: expression,
+					name: null,
+					kind: 'client',
+				})
+				continue
+			}
+		}
+		ctx.diagnostics.push(setupStatementRefusal(ctx, stmt))
+	}
+	return { setup, signals: itemSignals }
+}
+
+/**
+ * Whether the server's loop declares an item setup statement (ADR 0046
+ * s5): every signal and every const but a function whose body reads a
+ * client-only name. A ref and a client-only side effect are the client's.
+ */
+export const onServer = (stmt: ItemSetupStmt): boolean =>
+	stmt.kind === 'signal' || (stmt.kind === 'const' && stmt.server)

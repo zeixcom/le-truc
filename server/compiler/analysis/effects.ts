@@ -174,17 +174,19 @@ type EffectsContext = {
 	/** Registry-child tags addressed (type-flow imports), from `PassShared`. */
 	childTags: Set<string>
 	/**
-	 * The item and key bindings of the reactive-list item currently being
-	 * planned (ADR 0046 s1), empty outside one. Item-scoped sites are
+	 * The item and key bindings and the setup names (ADR 0046 s5) of the
+	 * reactive-list items currently being planned (ADR 0046 s1), empty
+	 * outside one. Item-scoped sites are
 	 * per-item state the server deliberately omits in every tier — never a
 	 * routing signal, and never a suppression record (the revert would
 	 * undo per-item truth the mount re-establishes on every clone).
 	 */
 	itemNames: ReadonlySet<string>
 	/**
-	 * The key bindings of every enclosing reactive-list item (ADR 0046 s1,
-	 * LT-424), empty outside one. A `server` attribute over these alone is
-	 * key-derived: set once at the mount of the scope that owns its element.
+	 * The key bindings and per-item consts of every enclosing reactive-list
+	 * item (ADR 0046 s1 and s5, LT-424/LT-426), empty outside one — the
+	 * clone-time names. A `server` attribute over these alone is set once at
+	 * the mount of the scope that owns its element.
 	 */
 	keyNames: ReadonlySet<string>
 	/**
@@ -2275,14 +2277,26 @@ const planReconcileItem = (
 		keyNames: fx.keyNames,
 		scopeBadNames: fx.scopeBadNames,
 	}
+	// The item's setup names are per-item too (ADR 0046 s5), and its consts
+	// are clone-time values like the key: an attribute over them is set
+	// once at mount.
+	const setupNames = loop.setup.flatMap(stmt =>
+		stmt.name === null ? [] : [stmt.name],
+	)
+	const consts = loop.setup.flatMap(stmt =>
+		stmt.kind === 'const' ? [stmt.name] : [],
+	)
 	fx.itemNames = new Set([
 		...saved.itemNames,
 		loop.itemName,
 		...(loop.keyName ? [loop.keyName] : []),
+		...setupNames,
 	])
-	fx.keyNames = loop.keyName
-		? new Set([...saved.keyNames, loop.keyName])
-		: saved.keyNames
+	fx.keyNames = new Set([
+		...saved.keyNames,
+		...(loop.keyName ? [loop.keyName] : []),
+		...consts,
+	])
 	fx.scopeBadNames = fx.badListBodyNames
 	const badNames = fx.badListBodyNames
 	try {

@@ -543,21 +543,6 @@ const LIST_BODY: Case[] = [
 		},
 	},
 	{
-		// LT-233: the `.tsx` list body used to keep only its `return` and
-		// drop every other statement silently; one shared body walk now
-		// rejects a hoisted const on both surfaces.
-		name: 'a hoisted const in a reactive-list body',
-		code: 'LTC005',
-		spans: [["const label = 'x'", "const label = 'x';"]],
-		spec: {
-			pre: imports('createList'),
-			setup: LIST,
-			body: "<ul data-container>@for (const item of items) { const label = 'x'\n<li>{item}</li> }</ul>",
-			tsx: "<ul data-container>{items.map(item => { const label = 'x'; return <li>{item}</li> })}</ul>",
-		},
-		pins: ['A hoisted const in a reactive-list'],
-	},
-	{
 		name: 'a list handler reading a server-only name',
 		code: 'LTC005',
 		spec: list(
@@ -1472,6 +1457,171 @@ const FAMILIES: Case[] = [
 	},
 ]
 
+/**
+ * A reactive list whose body carries the item's setup (ADR 0046 s5):
+ * `stmts` before the output, statement per line on `.tsrx`, a block body
+ * with semicolons on `.tsx`.
+ */
+const itemSetup = (
+	stmts: string[],
+	body: string,
+	options: {
+		tsx?: string
+		params?: string
+		pre?: string[]
+		setup?: string
+	} = {},
+): Spec => ({
+	pre: imports('createList', ...(options.pre ?? [])),
+	...(options.params ? { params: options.params } : {}),
+	setup: `${LIST}${options.setup ? `\n\t\t${options.setup}` : ''}`,
+	body: `<ul data-container>@for (const item of items; key k) { ${stmts.join('\n')}\n${body} }</ul>`,
+	tsx: `<ul data-container>{items.map((item, k) => { ${stmts.map(stmt => `${stmt};`).join(' ')} return ${options.tsx ?? body} })}</ul>`,
+})
+
+/** The covered-text pair of a statement refused on both surfaces. */
+const stmtSpan = (stmt: string): [string, string] => [stmt, `${stmt};`]
+
+/**
+ * Per-item setup (ADR 0046 s5, LT-426): the component-setup rules with the
+ * item and key known, run in both phases — what one phase lacks is refused.
+ */
+const ITEM_SETUP: Case[] = [
+	{
+		name: 'a per-item const reading a server arg',
+		code: 'LTC005',
+		spans: [stmtSpan('const tag = `${label}-${k}`')],
+		spec: itemSetup(
+			['const tag = `${label}-${k}`'],
+			'<li id={tag}>{item}</li>',
+			{
+				params: '{ label }: { label: string }',
+			},
+		),
+		pins: ["which the item's client mount does not have"],
+	},
+	{
+		name: 'a per-item const reading `host`',
+		code: 'LTC005',
+		spans: [stmtSpan('const t = host.title')],
+		spec: itemSetup(['const t = host.title'], '<li>{item}</li>'),
+		pins: ['which the server render does not have'],
+	},
+	{
+		name: 'a per-item derived signal whose compute reads a ref',
+		code: 'LTC005',
+		spans: [stmtSpan('const w = createMemo(() => row.title)')],
+		spec: itemSetup(
+			["const row = first('li')", 'const w = createMemo(() => row.title)'],
+			'<li>{item}</li>',
+			{ pre: ['createMemo'] },
+		),
+		pins: ['The per-item signal `w`', 'a `createSensor()` start callback'],
+	},
+	{
+		name: 'a per-item createSensor without a seed',
+		code: 'LTC005',
+		spans: [stmtSpan('const s = createSensor<boolean>(set => () => {})')],
+		spec: itemSetup(
+			['const s = createSensor<boolean>(set => () => {})'],
+			'<li>{item}</li>',
+			{ pre: ['createSensor'] },
+		),
+		pins: [
+			'A per-item `createSensor()` without a server-known `{ value }` seed',
+		],
+	},
+	{
+		name: '`expose()` in an item',
+		code: 'LTC005',
+		spans: [stmtSpan('expose({})')],
+		spec: itemSetup(['expose({})'], '<li>{item}</li>'),
+		pins: ["`expose()` in a reactive-list item's setup"],
+	},
+	{
+		name: '`requestContext()` in an item',
+		code: 'LTC005',
+		spans: [stmtSpan("const c = requestContext('x', 0)")],
+		spec: itemSetup(["const c = requestContext('x', 0)"], '<li>{item}</li>'),
+		pins: ["`requestContext()` in a reactive-list item's setup"],
+	},
+	{
+		name: 'a `let` in an item',
+		code: 'LTC005',
+		spans: [stmtSpan('let n = 1')],
+		spec: itemSetup(['let n = 1'], '<li>{item}</li>'),
+		pins: ['A setup declaration other than a single initialized `const`'],
+	},
+	{
+		name: 'a statement outside the setup rules, refused with component setup’s message',
+		code: 'LTC005',
+		spans: [['if (k) {}', 'if (k) {}']],
+		spec: {
+			...itemSetup([], '<li>{item}</li>'),
+			body: '<ul data-container>@for (const item of items; key k) { if (k) {}\n<li>{item}</li> }</ul>',
+			tsx: '<ul data-container>{items.map((item, k) => { if (k) {} return <li>{item}</li> })}</ul>',
+		},
+		pins: [
+			'A setup statement other than a `const` declaration, `expose()` or a client-only side effect',
+		],
+	},
+	{
+		name: 'a per-item `first()` into a nested arm',
+		code: 'LTC005',
+		spans: [["first('b')", "first('b')"]],
+		spec: itemSetup(
+			["const b = first('b')"],
+			'<li><span>{item}</span>@if (open.get()) { <b>x</b> }</li>',
+			{
+				pre: ['createCell'],
+				setup: cell('open', 'false'),
+				tsx: '<li><span>{item}</span>{open.get() ? <b>x</b> : null}</li>',
+			},
+		),
+		pins: ['inside a nested arm or list item'],
+	},
+	{
+		name: 'a per-item `first()` matching nothing',
+		code: 'LTC026',
+		spans: [["first('em', 'needed')", "first('em', 'needed')"]],
+		spec: itemSetup(["const e = first('em', 'needed')"], '<li>{item}</li>'),
+	},
+	{
+		name: 'an attribute over an item const mixed with a server arg',
+		code: 'LTC005',
+		spans: [same('`${tag}${label}`')],
+		spec: itemSetup(
+			['const tag = `t-${k}`'],
+			'<li title={`${tag}${label}`}>{item}</li>',
+			{
+				params: '{ label }: { label: string }',
+			},
+		),
+		pins: [
+			"reading the item's `tag` together with `label`",
+			"An attribute over the item's consts alone (`title={tag}`)",
+		],
+	},
+	{
+		name: 'a non-arrow text child over an item const',
+		code: 'LTC005',
+		spans: [same('{tag}')],
+		spec: itemSetup(['const tag = `t-${k}`'], '<li>{tag}</li>'),
+		pins: ["The item's setup names are per-item"],
+	},
+	{
+		name: 'a per-item signal in a non-arrow attribute',
+		code: 'LTC005',
+		spans: [same('loud')],
+		spec: itemSetup(
+			['const loud = createMemo(() => item.get().toUpperCase())'],
+			'<li title={loud}>{item}</li>',
+			{ pre: ['createMemo'] },
+		),
+		pins: ['reading `loud`, which is a signal, not a value'],
+	},
+]
+
 /* === Tests === */
 
 const sourcesOf = (c: Case) =>
@@ -1872,6 +2022,59 @@ describe('diagnostic parity — nested Mount Scopes (LT-424)', () => {
 				body: '<div class="box">@if (open.get()) { <section>@if (more.get()) { <b>more</b> }</section> }</div>',
 				tsx: '<div class="box">{open.get() ? <section>{more.get() ? <b>more</b> : null}</section> : null}</div>',
 			},
+		],
+	] as const)('%s compiles on both surfaces', (_, spec) => {
+		const { tsrx, tsx } = compileBoth({ name: 'clean', code: 'LTC005', spec })
+		for (const diagnostics of [tsrx, tsx])
+			expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+	})
+})
+
+describe('diagnostic parity — per-item setup (LT-426)', () => {
+	runCases(ITEM_SETUP)
+	// What ADR 0046 s5 admits: a key-derived const, a per-item memo, a
+	// `first()` naming the item root, a seeded sensor, a client-only side
+	// effect, a function const as an event handler.
+	test.each([
+		[
+			'a key-derived const',
+			itemSetup(['const id = `opt-${k}`'], '<li id={id}>{item}</li>'),
+		],
+		[
+			'a per-item memo, read in an arrow and a condition',
+			itemSetup(
+				['const loud = createMemo(() => item.get().toUpperCase())'],
+				"<li title={() => loud.get()}><span>{item}</span>@if (loud.get() === 'A') { <b>a</b> }</li>",
+				{
+					pre: ['createMemo'],
+					tsx: "<li title={() => loud.get()}><span>{item}</span>{loud.get() === 'A' ? <b>a</b> : null}</li>",
+				},
+			),
+		],
+		[
+			'a root ref and a client-only side effect',
+			itemSetup(
+				["const row = first('li')", 'watch(item, v => { row.title = v })'],
+				'<li>{item}</li>',
+			),
+		],
+		[
+			'a seeded sensor whose start reads the root ref',
+			itemSetup(
+				[
+					"const row = first('li')",
+					"const hot = createSensor<boolean>(set => { const on = () => set(true); row.addEventListener('pointerenter', on); return () => row.removeEventListener('pointerenter', on) }, { value: false })",
+				],
+				"<li class={() => (hot.get() ? 'hot' : null)}>{item}</li>",
+				{ pre: ['createSensor'] },
+			),
+		],
+		[
+			'a function const as an event handler',
+			itemSetup(
+				['const remove = () => items.remove(k)'],
+				'<li><span>{item}</span><button type="button" onClick={remove}>x</button></li>',
+			),
 		],
 	] as const)('%s compiles on both surfaces', (_, spec) => {
 		const { tsrx, tsx } = compileBoth({ name: 'clean', code: 'LTC005', spec })

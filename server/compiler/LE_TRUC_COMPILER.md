@@ -339,7 +339,7 @@ front-end modules, then the two front ends:
 | `extract-context.ts` | The front end's mutable per-source state: `ExtractContext` and `createExtractContext` (LT-244, evicted from `ir.ts`) |
 | `module-scans.ts` | Front-end-neutral whole-module scans: malformed selectors (LTC026), deferred collector calls (LTC045), `'@zeix/le-truc'` import mismatches (LTC036/037) |
 | `params.ts` | The params contract (`extractParams`): the destructured args object (LTC008) plus the LT-209 factory-context parameter |
-| `setup-extraction.ts` | The setup-statement loop (`extractSetup`) and context seeding (`seedExtractionContext`) |
+| `setup-extraction.ts` | The setup-statement loop (`extractSetup`), its per-item twin for a reactive list's body (`extractItemSetup`, ADR 0046 s5) and context seeding (`seedExtractionContext`) |
 | `template-output.ts` | Template-output resolution (`resolveTemplateOutput`): root, the `<style>` block hoisted out of the root's children (LT-375 — the stylesheet is a child of the root, never rendered markup), CSS, `first()`/`all()` reference resolution (LT-055) |
 | `validate-lowered.ts` | The post-lowering validation tail (`validateLoweredComponent`): LTC039/047/028/010, `config.observedAttributes`, LT-059, loops as branch roots (LT-301), LTC055 message call sites (LT-250) |
 | `assemble-ir.ts` | IR assembly (`assembleComponentIR`), import placement, module-level declarations (`readModuleDecls`) |
@@ -452,7 +452,17 @@ render does not know is still refused (LTC005).
 `createList` or `deriveList` and lowers to `reconcile()` (ADR 0017); it
 carries `listSignal`, `keyName` and `keyText`. `keyName` comes from `.tsrx`'s
 `key k` clause or from a `.tsx` `.map()` callback's second parameter, which
-over a List is the item's key (ADR 0046 s4). The plan maps are typed per
+over a List is the item's key (ADR 0046 s4). `setup` is the item's setup
+(ADR 0046 s5, LT-426): the body's statements before the output, classified
+by `extractItemSetup` (`setup-extraction.ts`) into `ItemSetupStmt`s — a
+`const` and a `signal` run in both phases (declared per initial item in the
+server's loop, per entering item in `bindItem`), a `ref` is `first()` against
+the item (`root` when its selector names the item root, emitted as the
+element parameter), a `client` statement runs in `bindItem` only. Their names
+are bound while the body lowers — reactive by position, so a condition over
+one switches arms in the item — and an attribute over the item's consts and
+key alone is set once at clone. `ComponentIR.itemSetup` flattens every loop's
+list for the usage walks that place imports and pick client-needed consts. The plan maps are typed per
 member — `Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR, ReconcilePlan>` — so
 a pass that reads the wrong map fails to type-check. `emptyArm` on the union
 base is the loop's empty arm (LT-212): `.tsrx` `@for … @empty { … }`, and
@@ -506,7 +516,7 @@ thunk and one mount per arm, ADR 0037 — and the item Mount Scope of a
 reactive list: a `ReconcilePlan` carries `listIndex` (the `data-list` stamp),
 the container's parent query, and an `itemScope` of root local, descendants,
 key-derived attributes and effects that `bindItem` mounts per entering item,
-ADR 0046 s1). Emission recurses (LT-424): an arm set, a reactive list or a
+ADR 0046 s1; the item's setup statements mount there first, ADR 0046 s5). Emission recurses (LT-424): an arm set, a reactive list or a
 server-data loop inside an arm or an item plans into that scope's effects
 through the scope's locals — selectors proved within the scope root, so they
 match nothing in a nested scope's content (`resolveScopedSelector`, which
@@ -1322,7 +1332,8 @@ member.
 - **A control-flow arm is statement context on `.tsrx` only**: `@if`/`@else`
   bodies parse as JS statements, not JSX children — a grammar fact of the
   pinned parser. The `.tsx` front end's branches are expressions that must
-  return JSX; bare statements live in setup.
+  return JSX; bare statements live in setup — or, for a reactive list, in
+  the `map` callback's block body, the item's setup (ADR 0046 s5).
 - **Pin isolation**: `@tsrx/core` values enter through `core.ts` only, and
   only the `.tsrx` front end imports them; `typescript`-API access is
   confined to `frontend/tsx/to-estree.ts`. Each surface's parser churn stops

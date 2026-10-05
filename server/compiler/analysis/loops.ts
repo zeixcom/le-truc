@@ -535,7 +535,13 @@ const runReconcileLoops = (
 				itemParam: loop.itemName,
 				keyParam: loop.keyName,
 				holeSelector: holeSelectorOf(component, loop),
-				itemScope: { root: null, locals: [], keyAttrs: [], effects: [] },
+				itemScope: {
+					root: null,
+					locals: [],
+					keyAttrs: [],
+					effects: [],
+					setup: loop.setup,
+				},
 				emptyQueries: [],
 				scoped: true,
 			})
@@ -646,7 +652,13 @@ const runReconcileLoops = (
 			itemParam: loop.itemName,
 			keyParam: loop.keyName,
 			holeSelector,
-			itemScope: { root: null, locals: [], keyAttrs: [], effects: [] },
+			itemScope: {
+				root: null,
+				locals: [],
+				keyAttrs: [],
+				effects: [],
+				setup: loop.setup,
+			},
 			emptyQueries,
 			scoped: false,
 		})

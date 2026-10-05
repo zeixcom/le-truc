@@ -91,6 +91,18 @@ export type ExtractContext = {
 	 * switches arms inside the item's mount (LT-424).
 	 */
 	loopReactive: boolean[]
+	/**
+	 * What a reactive-list item's setup (ADR 0046 s5) resolves against
+	 * beyond its own names: the authored imports, the component's `first()`
+	 * refs, and the client message channel's `t` bindings and declared keys.
+	 * Seeded with the rest of the context after setup extraction.
+	 */
+	setupScope: {
+		importedNames: ReadonlySet<string>
+		refNames: ReadonlySet<string>
+		tNames: ReadonlySet<string>
+		declaredKeys: Readonly<Record<string, string>>
+	}
 }
 
 /* === Internal Functions === */
@@ -120,4 +132,10 @@ export const createExtractContext = (
 	setupInits: new Map<string, AstNode>(),
 	loopBound: [],
 	loopReactive: [],
+	setupScope: {
+		importedNames: EMPTY_NAMES,
+		refNames: EMPTY_NAMES,
+		tNames: EMPTY_NAMES,
+		declaredKeys: {},
+	},
 })

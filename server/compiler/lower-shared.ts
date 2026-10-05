@@ -38,6 +38,14 @@ import {
 	isServerEvaluable,
 } from './evaluability'
 import type { ExtractContext } from './extract-context'
+import {
+	collectMatchingElements,
+	inOptionalBranch,
+	inReactiveArm,
+	inReconcileItem,
+	namesCustomElementTag,
+	shareExclusiveIf,
+} from './first-refs'
 import type {
 	ArmTemplate,
 	AttributeIR,
@@ -45,6 +53,7 @@ import type {
 	EachForIR,
 	ForIR,
 	InitialWinner,
+	ItemSetupStmt,
 	ReconcileForIR,
 	SignalIR,
 	TemplateNode,
@@ -55,6 +64,7 @@ import {
 	dependencyClosure,
 	withBound,
 } from './reactivity'
+import { extractItemSetup } from './setup-extraction'
 import { wordingOf } from './surface'
 import { JS_GLOBALS } from './vocabulary'
 import {
@@ -106,6 +116,10 @@ const lowerLoopBody = <T>(
 		ctx.loopReactive.length = depth
 	}
 }
+
+/** A list of names as message copy: `` `a` and `b` ``. */
+const nameList = (names: readonly string[]): string =>
+	names.map(n => `\`${n}\``).join(' and ')
 
 /** Is `name`'s innermost loop binding a reactive list's item or key? */
 const boundReactive = (ctx: ExtractContext, name: string): boolean =>
@@ -965,12 +979,23 @@ const validateListBody = (
 	itemName: string,
 	keyName: string | null,
 	fors: ReadonlyMap<AstNode, ForIR>,
+	setup: readonly ItemSetupStmt[],
 ): void => {
 	const wording = wordingOf(ctx)
 	const { loop } = wording
+	// The item's own setup names (ADR 0046 s5) are per-item like the item:
+	// a const is a value fixed per item — set once at clone, like the key —
+	// and a signal or a ref is read in an arrow.
+	const consts = new Set<string>()
+	const live = new Set<string>([itemName])
+	for (const stmt of setup)
+		if (stmt.kind === 'const') consts.add(stmt.name)
+		else if (stmt.kind !== 'client') live.add(stmt.name)
+	const cloneTime = new Set<string>(consts)
+	if (keyName !== null) cloneTime.add(keyName)
 	const itemRead = (node: AstNode): string[] =>
 		[...freeIdentifiers(node)].filter(
-			name => name === itemName || name === keyName,
+			name => live.has(name) || cloneTime.has(name),
 		)
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'expr') {
@@ -984,7 +1009,9 @@ const validateListBody = (
 						ctx.source,
 						node.node,
 						`The expression \`{${node.exprText}}\` in a reactive-list ${loop} body reading ${reads.map(n => `\`${n}\``).join(' and ')}, which the extracted \`<template>\` render does not bind`,
-						`The loop item is the signal the List hands out: \`${itemName}\` is read with \`.get()\` in an arrow (\`{() => ${itemName}.get()}\`), and the bare \`{${itemName}}\` child is its shorthand. The key is not renderable text.`,
+						reads.every(n => n === itemName || n === keyName)
+							? `The loop item is the signal the List hands out: \`${itemName}\` is read with \`.get()\` in an arrow (\`{() => ${itemName}.get()}\`), and the bare \`{${itemName}}\` child is its shorthand. The key is not renderable text.`
+							: `The item's setup names are per-item: read them in an arrow (\`{() => ${reads.find(n => n !== itemName && n !== keyName)}}\`), which the item's mount writes.`,
 					),
 				)
 			return
@@ -1074,23 +1101,27 @@ const validateListBody = (
 			if (attr.kind !== 'server' || attr.bindsProp != null) continue
 			const reads = itemRead(attr.node)
 			if (reads.length === 0) continue
-			if (!reads.includes(itemName) && keyName !== null) {
+			const signal = reads.find(n => live.has(n))
+			if (signal === undefined) {
 				// A key-only read is a key-derived attribute (ADR 0046 s1):
-				// set once at clone against the key binding, nothing to watch.
-				// The key binding mixed with anything else has no clone-time
-				// meaning — the other names are server values no client phase
-				// can fold there.
+				// set once at clone against the key binding, nothing to watch —
+				// and so is a read of the item's own consts (ADR 0046 s5), each
+				// a value fixed per item. Those names mixed with anything else
+				// have no clone-time meaning — the other names are server
+				// values no client phase can fold there.
 				const free = [...freeIdentifiers(attr.node)]
-				if (free.every(n => n === keyName)) continue
+				if (free.every(n => cloneTime.has(n))) continue
+				const subject = reads.every(n => n === keyName)
+					? `the key binding \`${keyName}\``
+					: `the item's ${nameList(reads)}`
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						ctx.source,
 						attr.node,
-						`The attribute \`${attr.name}\` in a reactive-list ${loop} body reading the key binding \`${keyName}\` together with ${free
-							.filter(n => n !== keyName)
-							.map(n => `\`${n}\``)
-							.join(' and ')}`,
-						`A key-derived attribute reads the key binding alone (\`${attr.name}={${keyName}}\`) and is set once at clone, because a key never changes; the other names are server values the clone-time write cannot fold.`,
+						`The attribute \`${attr.name}\` in a reactive-list ${loop} body reading ${subject} together with ${nameList(free.filter(n => !cloneTime.has(n)))}`,
+						reads.every(n => n === keyName)
+							? `A key-derived attribute reads the key binding alone (\`${attr.name}={${keyName}}\`) and is set once at clone, because a key never changes; the other names are server values the clone-time write cannot fold.`
+							: `An attribute over the item's consts alone (\`${attr.name}={${reads.find(n => n !== keyName)}}\`) is set once at clone, because each is fixed per item; the other names are server values the clone-time write cannot fold.`,
 					),
 				)
 				continue
@@ -1099,8 +1130,10 @@ const validateListBody = (
 				diagnostic.unsupported(
 					ctx.source,
 					attr.node,
-					`The attribute \`${attr.name}\` in a reactive-list ${loop} body reading \`${itemName}\`, which is a signal, not a value`,
-					`Read it in an arrow thunk: \`${attr.name}={() => ${itemName}.get()}\` — a store item's fields are cells too (\`${itemName}.field.get()\`). A key-derived attribute (\`${attr.name}\` over the key binding alone) is set once at clone.`,
+					`The attribute \`${attr.name}\` in a reactive-list ${loop} body reading \`${signal}\`, which is a signal, not a value`,
+					signal === itemName
+						? `Read it in an arrow thunk: \`${attr.name}={() => ${itemName}.get()}\` — a store item's fields are cells too (\`${itemName}.field.get()\`). A key-derived attribute (\`${attr.name}\` over the key binding alone) is set once at clone.`
+						: `Read it in an arrow thunk: \`${attr.name}={() => ${signal}.get()}\`.`,
 				),
 			)
 		}
@@ -1130,10 +1163,91 @@ const validateListBody = (
 }
 
 /**
+ * Resolve an item's `first()` references against the item's own content
+ * (ADR 0046 s2): structurally, like a component's, but within the item. A
+ * selector that names the item root resolves at build time to `bindItem`'s
+ * element parameter — `first` searches descendants only. One that reaches
+ * into a nested arm or a nested list's item is refused: those elements are
+ * recreated while the item lives. A required reference whose only match
+ * sits in a branch that may not render is optional in fact (LTC040).
+ */
+const resolveItemRefs = (
+	ctx: ExtractContext,
+	output: TemplateNode & { kind: 'element' },
+	setup: ItemSetupStmt[],
+	fors: ReadonlyMap<AstNode, ForIR>,
+): void => {
+	const wording = wordingOf(ctx)
+	const nestedOutputs = [...fors.values()]
+		.filter(f => f.kind === 'reconcile' && f.output !== output)
+		.map(f => f.output)
+		.filter(o => someNode(output, n => n === o))
+	for (const stmt of setup) {
+		if (stmt.kind !== 'ref') continue
+		const at = stmt.node
+		const { elements } = collectMatchingElements(output, stmt.selector)
+		if (elements.length === 0) {
+			// An optional reference may match markup the template does not
+			// render, and a custom-element tag may name a composed child,
+			// whose tag this pass cannot know: the client queries as authored.
+			if (!stmt.required || namesCustomElementTag(stmt.selector)) continue
+			ctx.diagnostics.push(
+				diagnostic.firstSelectorNotFound(
+					ctx.source,
+					at,
+					stmt.name,
+					stmt.selector,
+				),
+			)
+			continue
+		}
+		const nested =
+			elements.find(el => inReactiveArm(output, el)) ??
+			elements.find(el => inReconcileItem(nestedOutputs, el))
+		if (nested) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					at,
+					`A \`first()\` reference in a reactive-list ${wording.loop} item's setup to <${nested.tag}> inside a nested arm or list item`,
+					'Those elements are cloned anew while the item lives, so a reference taken when the item mounts goes stale — bind the element from inside its own arm or item instead (an event handler or a reactive attribute on it).',
+				),
+			)
+			continue
+		}
+		if (elements.length > 1 && !shareExclusiveIf(output, elements)) {
+			ctx.diagnostics.push(
+				diagnostic.firstSelectorAmbiguous(
+					ctx.source,
+					at,
+					stmt.name,
+					stmt.selector,
+					elements.length,
+					wording,
+				),
+			)
+			continue
+		}
+		if (elements[0] === output) {
+			stmt.root = true
+			continue
+		}
+		if (stmt.required && elements.every(el => inOptionalBranch(output, el))) {
+			ctx.diagnostics.push(
+				diagnostic.deadRequiredReason(ctx.source, at, stmt.name, stmt.selector),
+			)
+			stmt.required = false
+		}
+	}
+}
+
+/**
  * The reactive-list loop over a declared `createList` or `deriveList`
  * (milestone 3, ADR 0046 s4): the reconcile plan. Index bindings stay gated
- * (keyed reconciliation); the body is exactly the output element — a hoisted const has no per-item
- * rebinding channel here.
+ * (keyed reconciliation). The body's statements before the output element
+ * are the item's setup (ADR 0046 s5, `extractItemSetup`), classified while
+ * the item and key are bound; their names stay bound, reactive by position,
+ * while the output lowers.
  */
 const lowerListLoop = (
 	ctx: ExtractContext,
@@ -1193,25 +1307,14 @@ const lowerListLoop = (
 		)
 		return null
 	}
+	// The body's statements are the item's setup (ADR 0046 s5); the output
+	// element is the one the body renders.
 	let outputNode = loop.expressionOutput
+	const setupStmts: AstNode[] = []
 	for (const stmt of loop.statements) {
 		const candidate = outputNode ? null : loop.outputOf(stmt)
-		if (candidate) {
-			outputNode = candidate
-			continue
-		}
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				stmt,
-				stmt.type === 'VariableDeclaration'
-					? `A hoisted const in a reactive-list ${wording.loop} body`
-					: `A statement other than the output element in a reactive-list ${wording.loop} body`,
-				stmt.type === 'VariableDeclaration'
-					? 'The client does not rebind per-item consts — write the expression where it is used.'
-					: 'Move the statement into setup.',
-			),
-		)
+		if (candidate) outputNode = candidate
+		else setupStmts.push(stmt)
 	}
 	if (!outputNode) {
 		ctx.diagnostics.push(
@@ -1224,17 +1327,47 @@ const lowerListLoop = (
 		)
 		return null
 	}
-	const output = lowerLoopBody(
+	const body = outputNode
+	const lowered = lowerLoopBody(
 		ctx,
 		[itemName, keyName],
-		() => lowerElement(ctx, outputNode, signals, fors, lowering),
+		() => {
+			const item = extractItemSetup(ctx, setupStmts, signals)
+			// The item's own names: per-item values, so a condition over one
+			// switches arms in the item's mount, like one over the item.
+			const names = item.setup
+				.filter(stmt => stmt.kind === 'const' || stmt.kind === 'signal')
+				.map(stmt => stmt.name as string)
+			const itemSignals = new Map(signals)
+			for (const signal of item.signals) itemSignals.set(signal.name, signal)
+			// A per-item function const is an event handler by identifier, like
+			// a setup const (`onClick={remove}`).
+			const outerInits = ctx.setupInits
+			const inits = new Map(outerInits)
+			for (const stmt of item.setup)
+				if (stmt.kind === 'const') inits.set(stmt.name, stmt.node)
+			ctx.setupInits = inits
+			try {
+				const output = lowerLoopBody(
+					ctx,
+					names,
+					() => lowerElement(ctx, body, itemSignals, fors, lowering),
+					true,
+				)
+				return { output, setup: item.setup }
+			} finally {
+				ctx.setupInits = outerInits
+			}
+		},
 		true,
 	)
+	const { output, setup } = lowered
 	// The item binding is the slot fill — reactive by position, not a
 	// declared signal, so the lift rule alone would leave it static and
 	// `validateListBody` would then see no item reads to route.
 	markPositionallyReactive([output], new Set([itemName]))
-	validateListBody(ctx, output, itemName, keyName, fors)
+	resolveItemRefs(ctx, output, setup, fors)
+	validateListBody(ctx, output, itemName, keyName, fors, setup)
 	const emptyArm = loop.lowerEmptyArm('reconcile')
 	if (emptyArm === false) return null
 	const forIR: ReconcileForIR = {
@@ -1243,6 +1376,7 @@ const lowerListLoop = (
 		listSignal,
 		keyText: loop.key ? text(ctx.source, loop.key) : null,
 		keyName,
+		setup,
 		output,
 		node: loop.node,
 		emptyArm,

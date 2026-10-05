@@ -655,7 +655,44 @@ export type ReconcileForIR = ForIRBase & {
 	keyText: string | null
 	/** Key binding name when the key clause is a bare identifier (`key k`). */
 	keyName: string | null
+	/** The item's setup statements, in source order (ADR 0046 s5). */
+	setup: ItemSetupStmt[]
 }
+
+/**
+ * One statement of a reactive-list item's setup (ADR 0046 s5): the block
+ * body of the `.tsx` `map` callback, or the statements of a `.tsrx` `@for`
+ * body, classified by the component-setup rules with the item and key as
+ * known names. Every kind but `client` declares a per-item name.
+ *
+ * - `const` — a plain const, evaluated in both phases: per initial item in
+ *   the server's loop, per entering item in `bindItem`. `server` is false
+ *   for a function initializer whose body reads a client-only name: it is
+ *   defined, never called, server-side, so the server leaves it out.
+ * - `signal` — a signal declaration over the item: the value harness
+ *   evaluates it once per initial item, the client per entering item.
+ * - `ref` — `first()` against the item's own `first`; `root` when the
+ *   selector names the item root itself, resolved at build time to
+ *   `bindItem`'s element parameter (ADR 0046 s2).
+ * - `client` — a client-only side effect (`watch`/`on`/`pass` and the
+ *   like), run in `bindItem` only and disposed with the item.
+ */
+export type ItemSetupStmt =
+	| (SetupStmt & { kind: 'const'; name: string; server: boolean })
+	| (SetupStmt & {
+			kind: 'signal'
+			name: string
+			constructor: Exclude<SignalConstructor, 'requestContext'>
+	  })
+	| (SetupStmt & {
+			kind: 'ref'
+			name: string
+			selector: string
+			reason: string | null
+			required: boolean
+			root: boolean
+	  })
+	| (SetupStmt & { kind: 'client'; name: null })
 
 /** A `@for` loop, discriminated by its lowering (ADR 0040 s1). */
 export type ForIR = EachForIR | ReconcileForIR
@@ -806,6 +843,13 @@ export type ComponentIR = {
 	 * is the SERVER-only verbatim re-declaration.
 	 */
 	plainSetup: SetupStmt[]
+	/**
+	 * Every reactive-list item's setup statements (ADR 0046 s5), flattened
+	 * across loops — the usage walks that place imports and pick the
+	 * client-needed setup consts read them; each loop's own list
+	 * (`ReconcileForIR.setup`) is what the emitters write.
+	 */
+	itemSetup: ItemSetupStmt[]
 	signals: SignalIR[]
 	/** The `expose({...})` call, or null when the component declares none. */
 	expose: ExposeStmt | null
