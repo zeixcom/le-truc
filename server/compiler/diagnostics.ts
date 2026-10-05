@@ -549,17 +549,22 @@ export const diagnostic = {
 	 * Channel: compiler (shared lowering, both surfaces). ADR 0028 tier 1
 	 * (Prevented): statically decidable, no runtime half.
 	 *
+	 * An async boundary is an arm set too (ADR 0037 s4): `construct` names
+	 * which one fired, so the message names it (LT-432).
+	 *
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
-	 * (reviewed 2026-10-02, LT-275 — the LT-274 first draft, finalized).
+	 * (reviewed 2026-10-02, LT-275 — the LT-274 first draft, finalized;
+	 * the boundary subject added, LT-432).
 	 */
 	reactiveConditionInReconcileContainer: (
 		source: string,
 		at: Site,
+		construct: 'conditional' | 'try',
 		wording: SurfaceWording,
 	) =>
 		error(
 			'LTC063',
-			`${wording.reactiveConditional} inside the container of a reactive-list ${wording.loop}. The list owns that container's children and removes everything it did not place, the arm and its templates included — move the condition out of the container, or wrap the loop in an element of its own.`,
+			`${construct === 'try' ? wording.asyncBoundary : wording.reactiveConditional} inside the container of a reactive-list ${wording.loop}. The list owns that container's children and removes everything it did not place, the arm and its templates included — move the ${construct === 'try' ? 'boundary' : 'condition'} out of the container, or wrap the loop in an element of its own.`,
 			rangeOf(source, at),
 		),
 
