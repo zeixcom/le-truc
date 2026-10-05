@@ -395,6 +395,29 @@ const LIST_BODY: Case[] = [
 		pins: ['reads an ambient value'],
 	},
 	{
+		// A composed child renders once into the extracted template, root
+		// `lang`/`i18n` included (ADR 0030 s9, LT-355): an arg over the item
+		// has no per-item render to reach.
+		name: 'LTC075 a composed child in the item reading the item in an arg',
+		code: 'LTC075',
+		spec: {
+			...list(...same('<li><Kid label={item.get()} /></li>')),
+			pre: `${imports('createList')}\nimport { Kid } from './kid.tsrx'`,
+		},
+		pins: ['<Kid>', 'its `label` arg', '`truc:pass`'],
+	},
+	{
+		name: 'LTC075 a composed child in the item reading the key in its content',
+		code: 'LTC075',
+		spec: {
+			pre: `${imports('createList')}\nimport { Kid } from './kid.tsrx'`,
+			setup: LIST,
+			body: '<ul data-container>@for (const item of items; key k) { <li><Kid><b title={k}>x</b></Kid></li> }</ul>',
+			tsx: '<ul data-container>{items.map((item, k) => <li><Kid><b title={k}>x</b></Kid></li>)}</ul>',
+		},
+		pins: ['reads `k` in its content'],
+	},
+	{
 		// A server-data loop renders once into the extracted template, so
 		// one over the item has no lowering (LT-424); a loop over server
 		// data nests.

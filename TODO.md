@@ -112,13 +112,13 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). **Next owner session:** LT-429 (the
   parser-declaration question, unblocked by LT-423; gates LT-109 and LT-110), LT-334 (lazyload's boundary; its implementation task pairs
   with LT-390), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
-- **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓).
+- **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). **Next:** LT-441 (`test:server` is red on v3 until it lands; every contributor gate reports it).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → **next:** LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → **next:** LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types).
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types) → LT-440 (ahead of LT-429, which reuses its mapping).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
@@ -143,7 +143,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-440.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-442.** Next free diagnostic code: LTC076 (LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -216,35 +216,27 @@ recorded against the 30.4k opening measurement.
   **Channel/tier:** decided per difference by the session.
 
 
-### C — corpus port
+### 0 — test hygiene
 
-- [ ] LT-355: A composed child inside a reactive-list template is silently dropped — render it, with its root `lang` and `i18n` (LT-351 ruling, ADR 0030 s9).
+- [ ] LT-441: The `test-listitem` simulation classifications predate LT-436's Mount Scope descriptor — `test:server` is red on v3 (LT-355 review finding).
   **Area:** compiler
-  **Needs:** LT-423
-  **Updated (Architect, 2026-10-04):** LT-423 (ADR 0046) makes a composed child in an item a supported construct and renders it into the `<template>`; this task keeps the locale half (its `lang`/`i18n` at the parent's effective locale) and the per-item-args refusal. The line citations below predate LT-423 — re-locate them (`listTemplateLines` is now `listTemplate`).
-  **Context:** ADR 0030 s9 (revised 2026-09-30) says a client-created instance speaks its
-  creating parent's locale: the parent's server render bakes each composed child's root `lang`
-  and `i18n` into the template it clones from. Today it does not. `validateListBody`
-  (`lower-shared.ts:742-837`) admits a `compose` node nested inside the list output element,
-  and `listTemplateLines` (`emit-server.ts:422-486`) then drops it at `:459` (`kind !== 'element'`).
-  The child vanishes from the served `<template>` with no diagnostic. No corpus component hits
-  this yet (the LT-351 inventory), so a fixture drives it.
-  1. **Render a nested compose in the template** exactly as a rendered occurrence: call the
-     child's `render*()` with its static args at the parent's effective locale (ADR 0030 s3
-     precedence, so a child's own `lang` wins) and emit its full markup, root `lang` and `i18n`
-     included. `cloneNode(true)` (`src/helpers/reactive.ts:831`) keeps both.
-  2. **Reject what cannot be rendered once:** a compose whose args or children read the item
-     hole or any per-item value. That is a new LTC code, tier 1 Prevented, statically decidable,
-     no runtime half, identical on both surfaces (`diagnostic-parity.test.ts`). Copy
-     follows `writer` → error-messages.
-  **Pins:** a fixture parent whose list item nests a client-keyed child renders the child's
-  `lang` and `i18n` inside `<template>` at de and none at en (after LT-354); a jsdom pin
-  clones an item and the child formats in de; the item-hole case is the new LTC on both surfaces.
-  **Check:** gates green; server goldens for module-list and tokenbox templates byte-identical
-  (neither nests a compose).
-  **Docs on landing:** `server/compiler/HOST_PROFILE.md` ("A client-created instance speaks the
-  source locale") gets the revised rule.
+  **Gates:** test:server
+  **Context:** LT-436 reports a throwing `reconcile()` item through `reportEffectFailure` with the
+  descriptor `reconcile() item "<key>"`, so the realm logs ``reconcile() item "task-1" did not
+  activate in <ul.tasks>; …``. The two standing entries for `test-listitem` and `test-listitem-tsx`
+  in `server/compiler/sim/classifications.ts` still match `/reconcile\(\) did not activate .*/`. Result
+  on v3 (c59013a2): `sim-driver.test.ts` "build-report baseline (LT-163)" fails three tests — the
+  `.tsrx` notice is unclassified and the `.tsx` entry matches nothing. The attribution also needs a
+  look: the failing run reports only `test-listitem`, not the `.tsx` twin.
+  1. Widen both regexes to the LT-436 descriptor (`reconcile\(\) item "[^"]+" did not activate`).
+     Do not loosen them past the `InvalidPassPropertyError` clause.
+  2. Confirm both twins still report the notice. If the `.tsx` twin no longer does, retire its
+     entry (the test demands it) and state why in the handoff.
+  **Channel/tier:** none — test classification data only.
+  **Check:** `test:server` green, the LT-163 baseline included. LT-438 rewords the same message
+  again; it updates these regexes in the same change.
 
+### C — corpus port
 
 - [ ] LT-426: Per-item setup — the `map` block body and `@for` statements classified by the setup rules; selectors may name the scope root (ADR 0046 s2, s5).
   **Area:** compiler
@@ -343,6 +335,23 @@ recorded against the 30.4k opening measurement.
   **Channel/tier:** compiler — a carry-through fix, no new diagnostic.
   **Check:** the fixture's generated modules typecheck on both surfaces; corpus goldens
   byte-identical; server suite and `check:corpus` green.
+
+- [ ] LT-440: A compiler-inferred `number` harvest truncates decimals — `parserForType` maps `number` to `asNumber` (LT-429 design session).
+  **Area:** compiler
+  **Context:** `parserForType` (`server/compiler/analysis/harvest.ts:123`) maps an inferred
+  `number` signal to `asInteger`, which `Math.trunc`s (`src/parsers/number.ts:39`). A number signal
+  harvested from a text or attribute site whose server value is `2.5` connects as `2` — a silent
+  miscompile (ADR 0003: the DOM is the truth at load, and the harvest must reproduce it). The server
+  renders numbers with `String(n)`, the shortest round-tripping form, so `parseFloat` (`asNumber`)
+  recovers every value exactly; `asInteger` adds only hex, which the server never writes.
+  Ruling (owner, 2026-10-05): `asInteger` is not a generalizable inference — map `number` →
+  `asNumber`. Narrow `ParserKind` (`analysis/plan.ts:47`) to `'asNumber' | 'asBoolean' | 'asString'`
+  and drop `asInteger` from the harvest emission path; an authored `asInteger()` (a Parser-exposed
+  prop, `evaluability.ts` route 1) is untouched. LT-429 reuses this mapping for list-item fields.
+  Channel/tier: none — no new check; this fixes a silent wrong value.
+  **Check:** a fixture with a number signal seeded `2.5` from a text site and from an attribute site
+  connects at `2.5` on both surfaces; regenerate affected generated-module snapshots and confirm the
+  diff is the parser name only. Full compiler gates.
 
 ### D — CSS departures
 

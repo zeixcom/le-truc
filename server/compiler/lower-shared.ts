@@ -940,9 +940,12 @@ export type LoopSource = {
  * empty in the extracted `<template>`. Arm sets and loops nest (ADR 0046 s1,
  * LT-424): their content is walked under the same rules. What still has no
  * lowering inside an item: a plain `@try` boundary (neither emitter renders
- * one in an item template), a server-data loop over the item or key, and
- * any non-arrow expression or attribute over the item or key — the item is
- * the signal the List hands out, so a client read takes the arrow form
+ * one in an item template), a server-data loop over the item or key, a
+ * composed child whose args or content read the item or key (LTC075 — the
+ * child renders once into the template, its root `lang`/`i18n` baked at
+ * the parent's locale; ADR 0030 s9), and any non-arrow expression or
+ * attribute over the item or key — the item is the signal the List hands
+ * out, so a client read takes the arrow form
  * (`() => item.get()`) and the bare `{item}` child is the signal shorthand.
  *
  * The slot-fill restrictions this walk used to enforce (one lazy hole,
@@ -1015,6 +1018,57 @@ const validateListBody = (
 			)
 			return
 		}
+		// A composed child renders once, into the extracted `<template>` —
+		// its root `lang` and `i18n` included (ADR 0030 s9) — so neither its
+		// args nor its content may read the item or key (LTC075, LT-355).
+		// `truc:pass` is the per-item channel: the item's mount wires it.
+		if (node.kind === 'compose') {
+			for (const attr of node.attrs) {
+				if (attr.kind !== 'arg' || attr.node === null) continue
+				const reads = itemRead(attr.node)
+				if (reads.length > 0)
+					ctx.diagnostics.push(
+						diagnostic.composeReadsListItem(
+							ctx.source,
+							attr.node,
+							node.component,
+							`its \`${attr.name}\` arg`,
+							reads,
+							wording,
+						),
+					)
+			}
+			const content = (child: TemplateNode): void => {
+				// A reactive child in composed content is already LTC011's
+				// (`validateComposedChildren`).
+				const at =
+					child.kind === 'expr' && child.reactivity !== 'reactive'
+						? child.expr
+						: null
+				const sites: AstNode[] = at ? [at] : []
+				if (child.kind === 'element') {
+					for (const attr of child.attrs)
+						if (attr.kind === 'server') sites.push(attr.node)
+					for (const grandchild of child.children) content(grandchild)
+				}
+				for (const site of sites) {
+					const reads = itemRead(site)
+					if (reads.length > 0)
+						ctx.diagnostics.push(
+							diagnostic.composeReadsListItem(
+								ctx.source,
+								site,
+								node.component,
+								'its content',
+								reads,
+								wording,
+							),
+						)
+				}
+			}
+			for (const child of node.children) content(child)
+			return
+		}
 		if (node.kind !== 'element') return
 		for (const attr of node.attrs) {
 			if (attr.kind !== 'server' || attr.bindsProp != null) continue
@@ -1049,24 +1103,6 @@ const validateListBody = (
 					`Read it in an arrow thunk: \`${attr.name}={() => ${itemName}.get()}\` — a store item's fields are cells too (\`${itemName}.field.get()\`). A key-derived attribute (\`${attr.name}\` over the key binding alone) is set once at clone.`,
 				),
 			)
-		}
-		if (node.kind === 'element') {
-			for (const child of node.children) {
-				if (child.kind !== 'compose') continue
-				for (const composeAttr of child.attrs) {
-					if (composeAttr.kind !== 'arg' || composeAttr.node === null) continue
-					const reads = itemRead(composeAttr.node)
-					if (reads.length > 0)
-						ctx.diagnostics.push(
-							diagnostic.unsupported(
-								ctx.source,
-								composeAttr.node,
-								`The \`${composeAttr.name}\` arg of a composed element in a reactive-list ${loop} body reading ${reads.map(n => `\`${n}\``).join(' and ')}, which the child render call does not bind`,
-								`The extracted \`<template>\` renders once per render call, outside the loop — pass the child a server-known arg, or compose it per item outside the list.`,
-							),
-						)
-				}
-			}
 		}
 		for (const child of node.children) {
 			// A nested loop (ADR 0046 s1, LT-424): a reactive list's item is a

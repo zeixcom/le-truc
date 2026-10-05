@@ -571,3 +571,145 @@ export function C(${params})
 		expect(component.clientCode).not.toContain('Intl.PluralRules')
 	})
 })
+
+describe('a composed child inside a reactive-list item (LT-355, ADR 0030 s9)', async () => {
+	// A client-created instance speaks its creating parent's locale: the
+	// parent's server render bakes the composed child's root `lang` and
+	// `i18n` into the extracted `<template>` every client clone copies.
+	const parentDecl = "export const i18n = { title: 'List' } as const"
+	const parentParams = '{ i18n: { lang } }: { i18n: I18n<typeof i18n> }'
+	const parentSetup =
+		"const items = createList<string>([], { keyConfig: 'item' })\n\t\texpose({})"
+	const parentSources = {
+		tsrx: `import { createList } from '@zeix/le-truc'
+import { C } from './c.tsrx'
+${parentDecl}
+export function P(${parentParams})
+	@{
+		${parentSetup}
+			<p-el><ul data-container>@for (const item of items) { <li><span>{item}</span><C /></li> }</ul>
+				<style>:host {
+	  color: red;
+	}</style>
+			</p-el>
+	}`,
+		tsx: `import { createList } from '@zeix/le-truc'
+import { C } from './c.tsrx'
+${parentDecl}
+export function P(${parentParams}) {
+	${parentSetup}
+	return (
+			<p-el><ul data-container>{items.map(item => <li><span>{item}</span><C /></li>)}</ul>
+				<style>{css\`:host {
+	  color: red;
+	}\`}</style>
+			</p-el>
+	)
+}`,
+	}
+	if (!tsrx.component) throw new Error('child fixture')
+	const registry = new Map([
+		[tsrx.component.entry.source, tsrx.component.entry],
+	])
+	generated.emit('c-el.server.ts', tsrx.component.serverCode)
+	const parents = {
+		tsrx: compileComponent(
+			parentSources.tsrx,
+			'p.tsrx',
+			new Set(),
+			undefined,
+			registry,
+		),
+		tsx: compileComponentTsx(
+			parentSources.tsx,
+			'p.tsx',
+			new Set(),
+			undefined,
+			registry,
+		),
+	}
+	const renders: Record<string, (args: unknown) => string> = {}
+	for (const [surface, { component, diagnostics }] of Object.entries(parents)) {
+		if (!component)
+			throw new Error(
+				`${surface} parent: ${diagnostics.map(d => d.message).join('; ')}`,
+			)
+		generated.emit(`p-el.${surface}.server.ts`, component.serverCode)
+		renders[surface] = (
+			await generated.importModule<{ renderP: (args: unknown) => string }>(
+				`p-el.${surface}.server.ts`,
+			)
+		).renderP
+	}
+	const parentRecord = (lang: string) => i18nModule.i18nRecord('p-el', lang)
+
+	/** The extracted item `<template>`'s markup. */
+	const templateOf = (markup: string) =>
+		markup.match(/<template data-list="0">.*<\/template>/)?.[0] ?? ''
+
+	test("the template carries the child's root `lang` and `i18n` at the parent's locale", () => {
+		for (const render of Object.values(renders)) {
+			const template = templateOf(render({ i18n: parentRecord('de') }))
+			expect(template).toMatch(/<c-el lang="de" i18n="/)
+			expect(JSON.stringify(i18nAttribute(template)?.tasks)).toContain(
+				'weitere Aufgabe',
+			)
+			expect(i18nAttribute(template)?.hi).toBe('Hallo')
+		}
+	})
+
+	test('at the source locale the template child carries no `i18n`', () => {
+		for (const render of Object.values(renders)) {
+			const template = templateOf(render({ i18n: parentRecord('en') }))
+			expect(template).toContain('<c-el lang="en">')
+			expect(template).not.toContain(' i18n=')
+		}
+	})
+
+	test('both surfaces bake identical template bytes', () => {
+		for (const lang of ['en', 'de'])
+			expect(
+				templateOf(renders.tsx?.({ i18n: parentRecord(lang) }) ?? ''),
+			).toBe(templateOf(renders.tsrx?.({ i18n: parentRecord(lang) }) ?? ''))
+	})
+
+	test('a clone of the item speaks de in the simulation realm', async () => {
+		const realm = createSimulationRealm()
+		try {
+			await realm.load(
+				() =>
+					import(
+						pathToFileURL(
+							generated.emit(
+								'c-el.lt355.client.ts',
+								tsrx.component?.clientCode ?? '',
+							),
+						).href
+					),
+			)
+			await realm.render({
+				markup: renders.tsrx?.({ i18n: parentRecord('de') }) ?? '',
+				component: 'p-el',
+			})
+			// The reconcile() enter path: clone the template's root, insert it.
+			const { document } = realm
+			const template = document.querySelector('template[data-list]')
+			const item = (
+				template as HTMLTemplateElement | null
+			)?.content.firstElementChild?.cloneNode(true) as Element | undefined
+			if (!item) throw new Error('no item template')
+			document.querySelector('ul')?.append(item)
+			for (let i = 0; i < 5; i++) await Promise.resolve()
+			const child = item.querySelector('c-el')
+			expect(child?.querySelector('button')?.getAttribute('title')).toBe(
+				'Hallo',
+			)
+			// A German percent carries a no-break space.
+			const span = child?.querySelector('span')?.textContent ?? ''
+			expect(span).toContain('weitere Aufgaben')
+			expect(span).toContain('(25\u00a0%)')
+		} finally {
+			await realm.dispose()
+		}
+	})
+})

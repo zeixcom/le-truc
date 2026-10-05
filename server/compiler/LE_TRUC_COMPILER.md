@@ -1020,6 +1020,11 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   below), and a signal seeded from server args that renders only as
   formatted text with no raw value source to harvest (LTC059 — D-20; the
   recognition rule is in `HOST_PROFILE.md`'s data account, bullet 6).
+- *Reactive-list items*: a composed child in an item whose args or content
+  read the item or key (LTC075, LT-355) — the child renders once into the
+  extracted `<template>`, its root `lang`/`i18n` at the parent's locale
+  (ADR 0030 s9), so no per-item value exists to render; `truc:pass` is the
+  per-item channel.
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

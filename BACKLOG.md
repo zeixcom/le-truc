@@ -962,6 +962,7 @@ to `TODO.md`.
   `writer` → `references/error-messages.md`. Update `skills/le-truc/references/errors.md` to the
   final string.
   **Channel/tier:** runtime, tier 2 Contained (unchanged; copy only).
+  **Rider (LT-355 review):** the `test-listitem` classifications in `server/compiler/sim/classifications.ts` match this string (LT-441) — update them in the same change.
   **Check:** the LT-436 pins assert the new strings in both DEV and production modes; `test:src`,
   `check:size` green.
 ## P7 — Backlog (not scheduled)

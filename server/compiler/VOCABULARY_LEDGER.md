@@ -157,6 +157,10 @@ an authored `data-key` is no exemption; ADR 0017, LT-186, LT-431) lands out of n
 order: `LTC072` is LT-429's and `LTC073` LT-417's, both reserved before
 this rule picked. It is `LTC`, not `TSRX`: the refusal is raised in the
 shared loop analysis (`analysis/loops.ts`), on both surfaces.
+`LTC075` (a composed element in a reactive-list item whose args or content
+read the item or key binding; ADR 0030 s9, LT-355) replaces an `LTC005`
+face of the same condition. It is `LTC`, not `TSRX`: the refusal is raised
+in the shared list-body validation (`lower-shared.ts`), on both surfaces.
 
 ## 5. Kept, with the surface named correctly
 

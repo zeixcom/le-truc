@@ -105,6 +105,7 @@ export type DiagnosticCode =
 	| 'LTC071' // a stylesheet selector descends past a boundary tag (`child-tag .x`, `child-tag > .x`) — its subject is a composed child's content, which the scope always excludes (ADR 0033 s6, LT-399) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC073' // a `<style>` block that is not the root's single direct `<style>` child — a second direct one, or one nested in a descendant; only the first direct child is hoisted as the stylesheet, so the CSS would be dropped (ADR 0032 s1, LT-417) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC074' // an element sibling of a reactive-list loop in its reconcile() container — directly or as an arm root, in any arm, of a server-mode conditional or a non-async `try` — carries no `data-unreconciled`, so the first reconcile removes it (LT-186, LT-431; an authored `data-key` is no exemption) — tier 1 Prevented, statically decidable; the runtime half is LT-185's DEV_MODE advisory, not a Contained error. Lands out of numeric order: `LTC072` is LT-429's, `LTC073` LT-417's — both reserved before this rule picked
+	| 'LTC075' // a composed element in a reactive-list item whose args or content read the item or key binding — the child renders once, into the extracted `<template>` every item clones (ADR 0030 s9, ADR 0046, LT-355) — tier 1 Prevented, statically decidable, no runtime half
 
 /**
  * A range in the file the author wrote (ADR 0044 s1–s2): `start` and `end`
@@ -598,6 +599,35 @@ export const diagnostic = {
 		error(
 			'LTC074',
 			`<${tag}> sits beside a reactive-list ${wording.loop} in the list's container, without \`data-unreconciled\`. The list owns that container's children and removes every element it did not place on its first run — ${composed ? 'a composed element cannot carry `data-unreconciled`, so move it out of the container' : 'add `data-unreconciled` to keep the element, or move it out of the container'}.`,
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A composed element in a reactive-list item whose args or content read
+	 * the item or key binding (ADR 0030 s9, ADR 0046; LT-355). The parent's
+	 * server render calls the child's `render*()` once per render call. The
+	 * call renders into the extracted `<template>` that every client clone
+	 * copies, root `lang` and `i18n` included. No per-item value exists
+	 * there. `site` names where the read sits (`its \`label\` arg`,
+	 * `its content`); `reads` are the bindings it reads. `truc:pass` is the
+	 * per-item client channel: the item's mount wires it against each clone.
+	 * Channel: compiler (shared lowering, both surfaces). ADR 0028 tier 1
+	 * (Prevented): statically decidable, no runtime half.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
+	 * (reviewed 2026-10-05, LT-355).
+	 */
+	composeReadsListItem: (
+		source: string,
+		at: Site,
+		component: string,
+		site: string,
+		reads: readonly string[],
+		wording: SurfaceWording,
+	) =>
+		error(
+			'LTC075',
+			`<${component}> in a reactive-list ${wording.loop} body reads ${reads.map(n => `\`${n}\``).join(' and ')} in ${site}. The server renders the child once, into the \`<template>\` that every item clones, so no per-item value exists there — pass the value through \`truc:pass\`, or give the child only server-known values.`,
 			rangeOf(source, at),
 		),
 
