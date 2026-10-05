@@ -103,22 +103,28 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
     leaves the element in place unbound, and continues. The task entry carries the detail.
 13. **The landed tasks are not pruned yet.** Pruning waits for the `writer`'s changelog pass
     at iteration close (hard rule); the reviewed entries stay in `DONE.md` until then.
+14. **LT-429 ruled (owner, 2026-10-05).** List-item field parsers are inferred from a same-file
+    item type and declared otherwise with `harvest(items, { field: parser })` (ADR 0046 s7). A
+    compile-time marker is an import from `@zeix/le-truc-compiler/macros`, never an ambient
+    (ADR 0034 s1): LT-442 builds the subpath and moves `css` onto it. `asInteger` is not an
+    inferable parser: LT-440 maps `number` → `asNumber`. An unresolvable scalar seed type is
+    refused unless `harvest(value, parser)` declares it: LT-443 (S3).
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
 - **A — pre-publish reshapes — landed.** ~~LT-371~~, ~~LT-373~~ (pruned), ~~LT-375~~,
   ~~LT-387~~ (reviewed ✓).
 - **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
-  ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). **Next owner session:** LT-429 (the
-  parser-declaration question, unblocked by LT-423; gates LT-109 and LT-110), LT-334 (lazyload's boundary; its implementation task pairs
+  ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). ~~LT-429~~ (ruled 2026-10-05 → ADR 0046
+  s7, ADR 0034 s1; ruling 14). **Next owner session:** LT-334 (lazyload's boundary; its implementation task pairs
   with LT-390), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). **Next:** LT-441 (`test:server` is red on v3 until it lands; every contributor gate reports it).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → **next:** LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → **next:** LT-426 → LT-429 (needs LT-439, LT-440, LT-442 from track B) → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types) → LT-440 (ahead of LT-429, which reuses its mapping).
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types) → LT-440 (ahead of LT-429, which reuses its mapping) → LT-442 (the `/macros` subpath LT-429 extends) → LT-443 (needs LT-429).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
@@ -143,7 +149,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-442.** Next free diagnostic code: LTC076 (LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-444.** Next free diagnostic code: LTC078 (LTC077 is LT-443's; LTC076 is LT-429's; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -152,28 +158,6 @@ recorded against the 30.4k opening measurement.
 <!-- entries -->
 
 ### Design gates
-
-- [ ] LT-429: Per-field harvest for list items seeded from server args; LTC072 for an item field with no harvest site (ADR 0046 s7). **Design first: how a field declares its parser.**
-  **Area:** design
-  **Needs:** LT-423
-  **Context:** The `list` harvest (`emit-client.ts:163-179` `listDeclaration`) rebuilds each
-  adopted item from one slot's `textContent`, which works for string items only. ADR 0046 s7:
-  harvest each field from its canonical render site inside the adopted item (a direct text child,
-  or an attribute/property whose arrow reads exactly the field, unformatted; first in document
-  order; a field `keyConfig` returns verbatim comes from `data-key`). A formatted-only site needs
-  a raw source (LT-374's LTC059 per field). A field with no site is **LTC072** (compiler,
-  tier 1 Prevented), naming the fix: render it (`data-<field>` on the item root, or
-  `<data value>`). Only lists seeded from server args are in scope.
-  **Design question (owner, 2026-10-04) — rule before this task is pickable:** how each field
-  declares its parser. Syntactic inference from a same-file item type (`parserForType`,
-  `analysis/harvest.ts:122-131`) was judged fragile. Weigh explicit declaration (e.g. a parser
-  map beside the `createList` call, or a per-site annotation) against inference. Also verify
-  whether `parserForType`'s `number → asInteger` truncates decimals for top-level props today;
-  list fields need `asNumber` (module-calctable's `pricePerUnit`). When ruled, the Architect
-  rewrites this entry as `area: compiler`.
-  **Check (after ruling):** a calctable-shaped fixture round-trips a seeded `{ id, description,
-  amount, pricePerUnit }` item set on both surfaces; an unrendered field fails LTC072 on both;
-  copy follows `writer` → error-messages. Full gates.
 
 - [ ] LT-334: An async boundary lazyload can be spelled in (LT-104 review). **Gated by LT-276 (ADR 0037's template-cloned arms).**
   **Area:** design
@@ -261,6 +245,49 @@ recorded against the 30.4k opening measurement.
   `first()` naming the item root, a per-item `createSensor` with a seed driving an arm or empty
   state, a nested list over a scope-declared `deriveList`. Full gates.
   **Impasse rule (iteration ruling 10).**
+
+- [ ] LT-429: Per-field harvest for list items seeded from server args — parsers inferred or declared with `harvest()`; LTC072 for a field with no harvest site, LTC076 for a field with no parser (ADR 0046 s7).
+  **Area:** compiler
+  **Needs:** LT-423, LT-439, LT-440, LT-442
+  **Gates:** check:corpus
+  **Context:** The `list` harvest (`emit-client.ts:164` `listDeclaration`) rebuilds each adopted
+  item from one slot's `textContent` — strings only. ADR 0046 s7 (ruled with the owner,
+  2026-10-05) harvests each field from its canonical render site and settles how each field gets
+  its parser. Only lists seeded from server args are in scope (a literal-array seed, as in
+  `test-listitem`, is not harvested).
+  1. **Sites.** Per field, inside the adopted item: a direct text child, or an attribute/property
+     whose arrow reads exactly the field, unformatted; first in document order. A field the
+     `keyConfig` returns verbatim comes from `data-key`. Each site reads the way the scalar harvest
+     reads that site kind today. A formatted-only site needs a raw source (LT-374's LTC059, per
+     field).
+  2. **Inferred parsers.** Resolve the item type syntactically: the declaring call's type argument
+     (`createList<CalcItem, …>`), else the element type of the seed arg's annotation; follow a
+     same-file `type` alias or `interface` (no `extends`) to its members, or read an inline type
+     literal. `string` and string-literal unions → `asString`, `number` → `asNumber` (LT-440's
+     mapping), `boolean` → `asBoolean`. Anything else, or an unresolvable type, has no inferred
+     parser.
+  3. **`harvest()`.** Add `harvest<T>(seed: T[], parsers: { [K in keyof T]?: Parser<T[K]> }): T[]`
+     to `server/compiler/macros.ts` (LT-442's subpath; same throwing stub, specifier+binding
+     recognition, stripped from both modules), recognized only as the seed argument of
+     `createList`. An entry overrides inference. For an unresolvable item type the map's keys are
+     the field list. Entries are spliced into the client as authored; a free name the client cannot
+     resolve is LTC005's client-position face. The server reads the seed through as identity.
+     Leave the scalar overload to LT-443, but shape the recognition so it adds one.
+  4. **Typed result.** The generated harvested array is checked against the item type: by the
+     declaring call's explicit type argument where present, else by `satisfies <element type>[]`
+     spelled from the seed arg's annotation. A wrong parser type, or a field missing from the map of
+     an imported type, is then a tsc error, mapped to the authored line on both surfaces.
+  5. **LTC072** — compiler, tier 1 Prevented, statically decidable: a field with no harvest site.
+     Copy names the field and the fix: render it raw (`data-<field>` on the item root, or
+     `<data value>`). **LTC076** — compiler, tier 1 Prevented, statically decidable: a field with a
+     site but neither an inferable type nor a `harvest()` entry; the copy names the field and its type
+     text and shows the fix, `harvest(items, { <field>: … })`. Both per `writer` → error-messages;
+     update `ITERATION.md`'s code ledger in the handoff.
+  **Check:** a calctable-shaped fixture round-trips a seeded `{ id, description, amount,
+  pricePerUnit }` set on both surfaces, `pricePerUnit` keeping decimals; an imported item type
+  compiles with a complete map and fails tsc with a field missing; a `Date` field round-trips
+  through an authored parser; a wrong parser type is a tsc error at the authored line; an
+  unrendered field fails LTC072 and an unparsable one LTC076, on both surfaces. Full gates.
 
 - [ ] LT-111: Migrate `module-todo` to `.tsx` with same-commit cutover — last hand-written example, completes the corpus port.
   **Area:** examples
@@ -352,6 +379,69 @@ recorded against the 30.4k opening measurement.
   **Check:** a fixture with a number signal seeded `2.5` from a text site and from an attribute site
   connects at `2.5` on both surfaces; regenerate affected generated-module snapshots and confirm the
   diff is the parser name only. Full compiler gates.
+
+- [ ] LT-442: Stand up the `@zeix/le-truc-compiler/macros` subpath and move the `css` tag onto it — compile-time markers are imports, never ambients (ADR 0034 s1).
+  **Area:** compiler
+  **Gates:** check:corpus
+  **Context:** Ruling (owner, LT-429 design session, 2026-10-05; ADR 0034 s1, ARCHITECTURE.md →
+  *Authoring Surfaces* → Compile-time markers): a call the compiler consumes and never runs is
+  imported from `@zeix/le-truc-compiler/macros`, because a `.tsx` source is plain TypeScript and the
+  import is the only sign a compiler consumes the call. Today `css` is a global in
+  `server/compiler/frontend/tsx/host-profile.d.ts:112`, matched by bare name
+  (`frontend/tsx/compiler-tsx.ts:73`). This task builds the subpath with `css` as its first export;
+  LT-429 adds `harvest()` to it.
+  1. **The module.** `server/compiler/macros.ts` exports `css` with today's signature
+     (`(source: TemplateStringsArray, ...substitutions: never[]) => string`) and JSDoc moved from
+     the profile. Its body throws `Error('css is a compile-time marker: this module was not compiled
+     by @zeix/le-truc-compiler')` — copy per `writer` → error-messages. The package does not exist
+     yet (LT-254): resolve the specifier in-repo with a `tsconfig.json` `paths` entry beside
+     `@zeix/le-truc`, and in whatever resolution `check:corpus` and the pipeline use for authored
+     sources. LT-254 carries the `./macros` export (rider added there).
+  2. **Recognition by binding.** The compiler matches a marker by module specifier and imported
+     name: `import { css as style }` resolves, and a local `css` that is not the import does not
+     match. Put the resolution in shared code both front ends call (`.tsrx` uses no `css` today, but
+     `harvest()` arrives on both surfaces).
+  3. **Stripping.** The marker import never reaches either generated module; drop the whole
+     declaration when every specifier is a marker, otherwise only the marker specifiers.
+  4. **Retire the ambient.** Delete `css` from `host-profile.d.ts`; add the import to every corpus
+     `.tsx` that uses the tag and to the probe/fixture sources. A missing import is then tsc's
+     "Cannot find name 'css'" (channel TypeScript, tier 1 Prevented — no LTC rule: tsc already
+     decides it at the authored line). Existing `css`-position rules keep their codes, now keyed on
+     the resolved binding.
+  5. **Docs.** `server/compiler/HOST_PROFILE.md` and `LE_TRUC_COMPILER.md`: the import replaces the
+     ambient in every example; one paragraph on markers (specifier + binding, stripped, throwing
+     stub). AGENTS.md's mentions of the `css` tag go through `.agents-proposals/` if they need it.
+  **Check:** an aliased import compiles identically; a shadowing local `css` is not treated as the
+  marker; generated modules carry no `/macros` import; `check:corpus` and the full compiler gates
+  green on every `.tsx`.
+
+- [ ] LT-443: An unresolvable scalar seed type harvests silently as a string — refuse it (LTC077) unless `harvest(value, parser)` declares its parser (ADR 0046 s7).
+  **Area:** compiler
+  **Needs:** LT-429
+  **Context:** `typeOfAnnotation` (`server/compiler/infer-type.ts:128`) recognizes only the
+  `string`/`number`/`boolean` keywords; an alias (`price: Price`), a literal union, `number | null`
+  or `Date` infers `'unknown'`, which `parserForType` reads as `asString`. A signal seeded from such
+  an arg and harvested from a render site connects holding a string, and tsc does not reliably catch
+  it (`'2.5' + 1` is legal). Ruling (owner, 2026-10-05; ADR 0046 s7): S3 — refuse, with the scalar
+  form of LT-429's marker as the fix-it.
+  1. **The overload.** `harvest<T>(seed: T, parser: Parser<T>): T` beside LT-429's list form in
+     `server/compiler/macros.ts`; same stub, same recognition and stripping. Recognized wherever a
+     harvested signal's seed is spelled today (the `createState` argument, a server-arg `expose()`
+     initializer — the positions `analysis/harvest.ts` plans a scalar harvest for).
+  2. **Parser selection.** A harvest site whose signal is seeded through `harvest(x, p)` reads
+     through `p` (spliced as authored; its free names must be client-resolvable — a server-only name
+     is LTC005's client-position face, as for LT-429's map entries). Without the marker, inference
+     as today (with LT-440's `asNumber`).
+  3. **LTC077** — compiler, tier 1 Prevented, statically decidable, no runtime half: a harvested
+     signal whose inferred type is `'unknown'` and that carries no `harvest()` parser. Copy per
+     `writer` → error-messages, naming the signal, the annotation it could not read and the fix:
+     *declare its parser — `createState(harvest(price, asNumber()))`*. A non-harvested signal (no
+     render site, a Parser-exposed prop, a context or sensor) is never refused: only the harvest
+     needs a parser.
+  **Check:** an aliased-`number` arg rendered as text fails LTC077 on both surfaces and passes once
+  wrapped in `harvest(…, asNumber())`, connecting as a number; a `Date` seed round-trips through an
+  authored parser; run the corpus census first — any existing component this refuses is listed in
+  the handoff and fixed in the task. Full compiler gates.
 
 ### D — CSS departures
 

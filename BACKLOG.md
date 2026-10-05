@@ -101,6 +101,10 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-370, LT-371 and LT-375** (the pre-publish reshapes of what stays public: the IR leaves the contract, the diagnostic record takes its published shape, the root-is-host dialect is enforced) **and on the D-32 design session** (which compiler entry points and result types are public, `COMPILER_SPEC.md` §12). *Re-gated 2026-10-01:* the IR is internal (ADR 0034 s8, D-25), so the ADR 0040 reshapes (LT-288, LT-274, LT-276) no longer gate the publish.
   **Area:** compiler
   **Needs:** LT-370, LT-371, LT-375
+  **Rider (LT-429 design session, 2026-10-05):** the package exports a `./macros` subpath (ADR 0034
+  s1): the compile-time markers, types plus throwing stubs, built in-repo by LT-442 as
+  `server/compiler/macros.ts` behind a `tsconfig.json` `paths` entry. It must resolve without
+  loading the compiler's dependencies (typescript, jsdom).
   **Rider for the D-32 session (LT-370 copy review, 2026-10-02):** ADR 0034 s8 counts the
   generated-module API as public (a change is a major), but `contract.ts` and
   `LE_TRUC_COMPILER.md` §2 say semver applies to the designated set "and to nothing else", and the

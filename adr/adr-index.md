@@ -54,4 +54,4 @@ Maintained by the Architect (`.agents/skills/architect/references/adr.md`) — u
 
 ---
 
-**Last updated:** 2026-10-04
+**Last updated:** 2026-10-05

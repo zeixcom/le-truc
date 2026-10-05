@@ -24,7 +24,7 @@ A reactive-list item is a **Mount Scope**: like the host and an arm, it is an el
 
 6. **Text positions take primitives, through TypeScript.** Every text sink the compiler emits, on the server and the client, accepts `string | number`. Nil keeps the last value, and a boolean is an error. The emit-then-check pass ([ADR 0024](0024-adopt-tsrx-as-isomorphic-component-format.md) s6) reports an object reaching a text position at its authored line, on both surfaces.
 
-7. **Per-field harvest.** An item of a list seeded from server args is harvested field by field, each field from its canonical render site within the adopted item. A field the key configuration returns verbatim comes from `data-key`. A formatted site needs a raw source. Every field of the item type needs a site, otherwise the build fails: no phase can deliver a value the markup does not carry ([ADR 0003](0003-attributes-drive-state-at-connect-time-only.md)). How each field declares its parser is decided with the harvest's implementation, explicit declaration weighed against syntactic inference from the item type.
+7. **Per-field harvest.** An item of a list seeded from server args is harvested field by field, each field from its canonical render site within the adopted item. A field the key configuration returns verbatim comes from `data-key`. A formatted site needs a raw source. Every field of the item type needs a site, otherwise the build fails: no phase can deliver a value the markup does not carry ([ADR 0003](0003-attributes-drive-state-at-connect-time-only.md)). A field's parser is inferred from a same-file item type (`number` through `asNumber`: `String(n)` round-trips). A field it cannot resolve (an imported type, `Date`) is declared on the seed: `createList(harvest(items, { due: … }), …)`. `harvest()` is a compile-time marker ([ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s1), typed so each entry is a `Parser` of its field. An entry overrides inference; for an unresolvable item type, its keys are the field list. The generated item is checked against the item type, so a wrong or missing parser is a tsc error at the authored line; a field with neither fails the build. A scalar seed declares its parser alike: `harvest(price, asNumber())`.
 
 ## Alternatives Considered
 
@@ -34,6 +34,7 @@ A reactive-list item is a **Mount Scope**: like the host and an arm, it is an el
 - **A boundary-aware runtime `first`**: costs bytes and a walk per query, and `data-key` marks arm roots too.
 - **Author-supplied template ids**: an id must be unique per page, and a component's markup repeats.
 - **Sub-components for per-item setup**: needs a per-item argument channel into composed children. It stays available as an authoring choice.
+- **Inference only**: cannot express a `Date` field or an imported type. **An explicit parser map only**: restates the item type per list. **A `parse` option on `createList`**: Cause & Effect has no parsers and would carry a field it never reads. **Parsers annotated at render sites**: a field may render at several sites, and only the canonical one is read.
 - **Compiler-stamped attributes for unrendered fields**: a per-item state payload under another name.
 - **An LTC rule for non-primitive text**: the compiler has no type information, so a syntactic heuristic would catch less than tsc already proves.
 
@@ -53,6 +54,7 @@ A reactive-list item is a **Mount Scope**: like the host and an arm, it is an el
 - Deeper nesting makes the uniqueness proof refuse more often. The fix is cheap (a class), but authors meet it.
 - `.map`'s second parameter is an index or a key depending on the receiver.
 - Le Truc depends on a Cause & Effect minor that adds `map` and `forEach`.
+- A seeded list whose item type is imported must list every field in `harvest()`.
 
 ## Related
 

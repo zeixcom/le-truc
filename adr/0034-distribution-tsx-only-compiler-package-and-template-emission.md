@@ -10,7 +10,7 @@ The compiler was built in this repo, for this repo: REQUIREMENTS [§5](../REQUIR
 
 ## Decision
 
-1. **The compiler ships as `@zeix/le-truc-compiler`** — named for its **function, not its input format** — while `@zeix/le-truc` stays the browser-only client layer. The `@tsrx/le-truc` name is withdrawn; the npm name registers before the first pre-release: a name is the one decision that cannot be revised after first publish.
+1. **The compiler ships as `@zeix/le-truc-compiler`** — named for its **function, not its input format** — while `@zeix/le-truc` stays the browser-only client layer. The `@tsrx/le-truc` name is withdrawn; the npm name registers before the first pre-release: a name is the one decision that cannot be revised after first publish. Its `/macros` subpath exports the **compile-time markers** an authored source imports (the `css` tag, `harvest()`). A marker is an import, never an ambient: a `.tsx` source is plain TypeScript, so the import is the only sign that a compiler consumes the call. The compiler recognizes a marker by module specifier and imported binding, so an alias resolves and a same-named local never matches, and it strips the import from both generated modules. The shipped stubs throw when reached uncompiled.
 
 2. **v3.0 publishes the `.tsx` front end only.** `.tsrx` stays repo-internal — the parity contract ([ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md)) unchanged — but publishing it would make the format, its pre-1.0 parser pin, and its `TSRX###` codes public API before they settle. It publishes in a later 3.x, gated on `@tsrx/core` 1.0.
 
@@ -24,7 +24,7 @@ The compiler was built in this repo, for this repo: REQUIREMENTS [§5](../REQUIR
 
 7. **Per-request SSR stays out of scope for 3.x.** [§7](../REQUIREMENTS.md#7-out-of-scope) stands: a request-time JS sidecar contradicts the founding constraint — no JavaScript on the backend. Reconsidered no earlier than 4.0; sub-designs 3 and 4 keep it reachable without an authoring break.
 
-8. **The compiler and the runtime version independently; a peer range ties them.** The public API is the compiler's exported entry points and result types plus the generated-module API — emitted bytes are not API, and neither is the IR: it is the lowering, internal, and may change in any release. No TypeScript type appears in the public API, so the engine can move from the TypeScript 6 compiler API to TypeScript 7.1 or a native parser without a major. Emitted clients import the runtime, so the compiler declares it a **peer dependency**. Raising the peer floor is a compiler **minor**, never a major (older runtimes get a warning, not a silent break; a build check enforces the floor). Tightened contract types or a changed generated-module API is a major. The browser baseline belongs to the runtime major: default output (JS, CSS under default `cssTargets`) stays within it, so a compiler major never moves it alone.
+8. **The compiler and the runtime version independently; a peer range ties them.** The public API is the compiler's exported entry points and result types, the `/macros` exports, and the generated-module API — emitted bytes are not API, and neither is the IR: it is the lowering, internal, and may change in any release. No TypeScript type appears in the public API, so the engine can move from the TypeScript 6 compiler API to TypeScript 7.1 or a native parser without a major. Emitted clients import the runtime, so the compiler declares it a **peer dependency**. Raising the peer floor is a compiler **minor**, never a major (older runtimes get a warning, not a silent break; a build check enforces the floor). Tightened contract types or a changed generated-module API is a major. The browser baseline belongs to the runtime major: default output (JS, CSS under default `cssTargets`) stays within it, so a compiler major never moves it alone.
 
 ## Alternatives Considered
 
@@ -32,6 +32,7 @@ The compiler was built in this repo, for this repo: REQUIREMENTS [§5](../REQUIR
 - **Default-state partial**: cheap, backend-neutral, but no real content — Static tier with nicer structure; verifies nothing that matters at pioneer 2.
 - **Pre-folded per instantiation**: content-bearing server args are unbounded, and the consumer must author a manifest — a new public API solving the easy half.
 - **A per-request SSR runtime**: reverses the founding premise; see sub-design 7.
+- **Ambient compile-time markers**: what `.vue` and `.svelte` do, where the file type already announces compilation; a `.tsx` source does not, so an ambient falls from nowhere and matches by bare name.
 - **`@tsrx/le-truc` as the name**: names the product after the minority pre-1.0 surface the TSX adoption exists to route around.
 - **Publish both surfaces at 3.0**: makes a pre-1.0 format and its pin a compatibility obligation before they settle.
 - **jsdom as a hard dependency**: what the repo does today — a heavyweight build dependency in every downstream install for a capability few components use.
