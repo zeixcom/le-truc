@@ -204,6 +204,65 @@ describe('makeWatch — SingleMatchHandlers', () => {
 
 		cleanup?.()
 	})
+
+	test('stale fires through a Slot when a parent passes an async thunk (LT-412)', async () => {
+		const calls: string[] = []
+		const query = createState('a')
+		const pending: Array<() => void> = []
+
+		// Child: a Slot-backed prop, watched by key — the path `watch('prop')` takes.
+		const child = { localName: 'my-child' } as unknown as HTMLElement &
+			ComponentProps
+		const slot = createSlot(createState('initial'))
+		getSignals(child)['result'] = slot
+		Object.defineProperty(child, 'result', slot)
+
+		// Parent: passes an async thunk, which deriveCell turns into a Task.
+		const parent = {} as unknown as HTMLElement & ComponentProps
+		const pass = makePass(parent)
+		const cleanupPass = activate(() =>
+			pass(child, {
+				result: async () => {
+					const q = query.get()
+					await new Promise<void>(r => pending.push(r))
+					return `result:${q}`
+				},
+			} as PassedProps<typeof child>),
+		)
+
+		const watch = makeWatch(child)
+		const cleanupWatch = activate(() => {
+			watch('result', {
+				ok: v => {
+					calls.push(`ok:${v}`)
+				},
+				nil: () => {
+					calls.push('nil')
+				},
+				stale: () => {
+					calls.push('stale')
+				},
+			})
+		})
+
+		// No value yet → nil.
+		expect(calls).toEqual(['nil'])
+		pending.shift()?.()
+		await new Promise<void>(r => setTimeout(r, 0))
+		expect(calls).toEqual(['nil', 'ok:result:a'])
+
+		// Re-fetch: the Slot's Task retains 'result:a' while pending → stale.
+		query.set('b')
+		await new Promise<void>(r => setTimeout(r, 0))
+		expect(calls).toEqual(['nil', 'ok:result:a', 'stale'])
+
+		pending.shift()?.()
+		await new Promise<void>(r => setTimeout(r, 0))
+		expect(calls).toEqual(['nil', 'ok:result:a', 'stale', 'ok:result:b'])
+
+		cleanupWatch?.()
+		cleanupPass?.()
+	})
 })
 
 describe('makeWatch — array source', () => {

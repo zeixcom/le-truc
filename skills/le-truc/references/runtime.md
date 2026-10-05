@@ -42,7 +42,7 @@ Non-obvious consequences:
 - **Source**: a prop name, a signal, a thunk, or an array of these. **Only the source is tracked.** Signal reads inside the handler are untracked, so a value the handler needs fresh belongs in the source.
 - **Routing**: `nil` > `err` > `stale` > `ok`. A thunk that returns `null`/`undefined`, or a signal with no value yet, routes to `nil`. A throw routes to `err`, and without an `err` handler it goes to `console.error`.
 - **A plain-function handler only has `ok`.** On `nil` it does nothing, so the DOM keeps whatever it last showed. That covers `bindText`, `bindProperty`, `bindVisible`, `bindClass`, `bindState`, and your own functions. The `SingleMatchHandlers` binders do act on `nil`: `bindAttribute` removes the attribute, `bindStyle` calls `removeProperty` (the cascade value comes back), `bindAria` assigns `null`, and `dangerouslyBindInnerHTML` resets.
-- **`stale`** fires only for a `Task` that has a retained value and is pending again. It never fires for a cell or memo. Without a seed value, a task's first read routes to `nil`. If you omit `stale`, the old value stays in place during a re-fetch.
+- **`stale`** fires only for a `Task` that has a retained value and is pending again, including a `Task` behind a Slot-backed prop (a `pass()`ed async thunk fires the child's `watch('prop', { stale })`). It never fires for a cell or memo. Without a seed value, a task's first read routes to `nil`. If you omit `stale`, the old value stays in place during a re-fetch.
 - A handler that adds listeners or timers must return a cleanup. It runs before the next `ok` run and on disconnect.
 
 ## `bind*` helpers
