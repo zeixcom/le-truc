@@ -36,9 +36,12 @@
 
 /**
  * The seam revision this compiler speaks. Bumped on a breaking change to
- * anything in this file; see the module header for what counts.
+ * anything in this file; see the module header for what counts. Revision 2
+ * (LT-411) made `dispose()` settle the last render's tree before restoring
+ * the globals, so it returns a promise a caller must await before reading
+ * the final diagnostics.
  */
-export const SIMULATION_SEAM_VERSION = 1
+export const SIMULATION_SEAM_VERSION = 2
 
 /* === Diagnostics === */
 
@@ -254,8 +257,15 @@ export type SimulationRealm = {
 	 * End-of-process, never between renders (ADR 0027 sub-design 2, LT-154):
 	 * a disposed realm's deleted globals turn a contained component's
 	 * lingering dependency-wait into a process-aborting flood.
+	 *
+	 * Settles the last render's tree first (LT-411) — the same teardown
+	 * every earlier render got at the start of the next one — so its
+	 * disconnect work lands in `diagnostics` attributed to the component
+	 * that built the tree, and nothing it queued fires against the restored
+	 * globals. Await the returned promise before reading `diagnostics` for
+	 * the last time: the settle drains, and the restores happen after it.
 	 */
-	dispose(): void
+	dispose(): Promise<void>
 }
 
 /**

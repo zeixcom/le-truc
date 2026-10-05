@@ -86,4 +86,6 @@ console.log(
 	),
 )
 
-realm.dispose()
+// Awaited (LT-411): dispose settles the final tree before restoring globals,
+// and the probe must not exit mid-settle.
+await realm.dispose()
