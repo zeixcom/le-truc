@@ -12,13 +12,17 @@
  */
 
 import { describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
+import * as path from 'node:path'
+import { analyzeClient } from '../../compiler/analysis/plan'
 import {
 	type CompileDiagnostic,
 	diagnostic,
+	type LocalDiagnostic,
 	locate,
 	wholeFile,
 } from '../../compiler/diagnostics'
-import { compileComponent } from '../../compiler/frontend/tsrx'
+import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import { textAt } from './located'
 
@@ -455,6 +459,93 @@ describe('each producer family covers the offending construct, on both surfaces'
 				tsx: 'open.get() ? <li class="head">x</li> : null',
 			},
 		)
+	})
+
+	test('an unkeyed element beside a reactive-list loop in its container (LTC074)', () => {
+		expectCovers(
+			{
+				head: "import { createList } from '@zeix/le-truc'\n",
+				setup:
+					"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\texpose({})",
+				template:
+					'<ul data-container><input type="text" />@for (const item of items) { <li>{item}</li> }</ul>',
+				tsxTemplate:
+					'<ul data-container><input type="text" />{items.map(item => <li>{item}</li>)}</ul>',
+			},
+			'LTC074',
+			'<input type="text" />',
+		)
+	})
+
+	test('an unreconciled sibling, a bare container, and the @empty arm roots stay legal (LTC074)', () => {
+		const head = "import { createList } from '@zeix/le-truc'\n"
+		const setup =
+			"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\texpose({})"
+		for (const shape of [
+			// form-tokenbox's fixed shape (LT-185): the input is exempt
+			{
+				template:
+					'<ul data-container><input type="text" data-unreconciled>@for (const item of items) { <li>{item}</li> }</ul>',
+				tsxTemplate:
+					'<ul data-container><input type="text" data-unreconciled />{items.map(item => <li>{item}</li>)}</ul>',
+			},
+			// module-list.tsrx's container: it holds only the loop
+			{
+				template:
+					'<ul data-container>@for (const item of items) { <li>{item}</li> }</ul>',
+				tsxTemplate:
+					'<ul data-container>{items.map(item => <li>{item}</li>)}</ul>',
+			},
+			// the @empty arm's roots also sit beside the loop as `output`'s
+			// siblings — the server stamps them `data-unreconciled` (LT-212)
+			{
+				template:
+					'<ul data-container>@for (const item of items) { <li>{item}</li> } @empty { <li class="none">Nothing yet</li> }</ul>',
+				tsxTemplate:
+					'<ul data-container>{items.length === 0 ? <li class="none">Nothing yet</li> : items.map(item => <li>{item}</li>)}</ul>',
+			},
+		] as const) {
+			for (const { hit } of reportOn({ head, setup, ...shape }, 'LTC074')) {
+				expect(hit).toBeUndefined()
+			}
+		}
+	})
+
+	test('an arm set in the container stays LTC063, not also LTC074', () => {
+		const shape: Shape = {
+			head: "import { createCell, createList } from '@zeix/le-truc'\n",
+			setup:
+				"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\tconst open = createCell(false)\n\t\texpose({ open: open.get })",
+			template:
+				'<ul data-container>@if (open.get()) { <li class="head">x</li> }@for (const item of items) { <li>{item}</li> }</ul>',
+			tsxTemplate:
+				'<ul data-container>{open.get() ? <li class="head">x</li> : null}{items.map(item => <li>{item}</li>)}</ul>',
+		}
+		for (const { surface, hit } of reportOn(shape, 'LTC063')) {
+			expect(hit).toBeDefined()
+			const source = surface === 'tsx' ? tsxSource(shape) : tsrxSource(shape)
+			const file = `examples/c/c-el.${surface}`
+			const { diagnostics } =
+				surface === 'tsx'
+					? compileComponentTsx(source, file, new Set())
+					: compileComponent(source, file, new Set())
+			expect(diagnostics.some(d => d.code === 'LTC074')).toBe(false)
+		}
+	})
+
+	test('the corpus reconcile containers stay clean (LTC074: module-list, form-tokenbox)', () => {
+		const root = path.resolve(import.meta.dir, '../../..')
+		for (const rel of [
+			'examples/module/list/module-list.tsrx',
+			'examples/form/tokenbox/form-tokenbox.tsrx',
+		]) {
+			const source = readFileSync(path.join(root, rel), 'utf8')
+			const { component } = compileSource(source, rel)
+			expect(component).not.toBeNull()
+			const diagnostics: LocalDiagnostic[] = []
+			analyzeClient(component!, new Set(), diagnostics)
+			expect(diagnostics.some(d => d.code === 'LTC074')).toBe(false)
+		}
 	})
 
 	test('config and params: an unknown key (LTC009) and a default on a required prop (LTC032)', () => {

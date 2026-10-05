@@ -100,6 +100,7 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 | LTC061 | an authored `<template>` in a template. The compiler emits its own. | render directly, or use a list or condition |
 | LTC062 | a reactive switch has a non-literal `case` value, or two values with the same key | string, number, boolean or `null` literals, one arm each |
 | LTC063 | a reactive condition inside a reactive list's container, which the list clears | move it out, or wrap the loop in its own element |
+| LTC074 | an element beside a reactive-list loop in the list's container, carrying neither `data-key` nor `data-unreconciled` — the list removes it on its first run. A composed element can carry neither attribute | add `data-unreconciled` to keep the element, or move it out of the container |
 
 ### Stylesheet
 

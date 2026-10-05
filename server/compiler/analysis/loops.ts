@@ -388,6 +388,49 @@ const runReconcileLoops = (
 			'one',
 		)
 
+		// The list owns its container's children (ADR 0017): an authored
+		// element beside the loop that carries neither `data-key` nor
+		// `data-unreconciled` is removed on the list's first run (LT-186,
+		// the compiler half of LT-185's DEV_MODE advisory). Arm sets in the
+		// container are LTC063's — their inert templates can never be
+		// container children through a legal compile — and the `@empty`
+		// arm's roots also sit here as `output`'s siblings, but the server
+		// stamps them `data-unreconciled`, so they are exempt. A composed
+		// element's attributes are ComposeAttrIR (ref/arg/pass), so it can
+		// carry neither attribute and its fix-it moves it out.
+		const exempt = new Set(loop.emptyArm ?? [])
+		for (const child of container.children) {
+			if (child === output || exempt.has(child)) continue
+			if (child.kind === 'compose') {
+				diagnostics.push(
+					diagnostic.unkeyedSiblingInReconcileContainer(
+						source,
+						child.node,
+						child.component,
+						true,
+						wording,
+					),
+				)
+			} else if (
+				child.kind === 'element' &&
+				!child.attrs.some(
+					a =>
+						'name' in a &&
+						(a.name === 'data-key' || a.name === 'data-unreconciled'),
+				)
+			) {
+				diagnostics.push(
+					diagnostic.unkeyedSiblingInReconcileContainer(
+						source,
+						child.node,
+						child.tag,
+						false,
+						wording,
+					),
+				)
+			}
+		}
+
 		// Arm templates (ADR 0037) are `<template>`s too: beside an arm set
 		// the item template is the one without `data-arms`.
 		const templateName = addQuery(
