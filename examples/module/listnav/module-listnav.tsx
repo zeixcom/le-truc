@@ -21,6 +21,7 @@
  */
 
 import { batch, createEffect, type FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 import { FormListbox } from '../../form/listbox/form-listbox.tsx'
 import { ModuleLazyload } from '../lazyload/module-lazyload.tsx'
 import { hashToValue, valueToHash } from './listnav-hash'

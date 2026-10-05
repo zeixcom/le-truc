@@ -19,6 +19,7 @@
  */
 
 import { asNumber, type FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 export type ModuleSplitviewProps = {
 	/** Split ratio between 0.1 and 0.9 (e.g. 0.5 = 50/50). Read from the `split` attribute at connect time. */

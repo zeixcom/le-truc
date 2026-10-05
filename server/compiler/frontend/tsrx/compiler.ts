@@ -182,7 +182,8 @@ const TSRX_ADAPTER: SurfaceAdapter = {
 			output: codeBlock.render as AstNode | undefined,
 		}
 	},
-	stylesheetOf: node => String(getStyleElementStylesheet(node)?.source ?? ''),
+	stylesheetOf: (_ctx, node) =>
+		String(getStyleElementStylesheet(node)?.source ?? ''),
 	lowerElement,
 }
 

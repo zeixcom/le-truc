@@ -433,7 +433,8 @@ export function BasicParent({ title }: { title: string })
 	}`
 		const tsxParent = (
 			declare: string,
-		) => `import { BasicChild } from '../child/basic-child.tsrx'
+		) => `import { css } from '@zeix/le-truc-compiler/macros'
+import { BasicChild } from '../child/basic-child.tsrx'
 
 export function BasicParent({ title }: { title: string }) {
 	${declare}
@@ -534,7 +535,8 @@ export function BasicParent({ title }: { title: string })
 			a: string,
 			b: string,
 			declare = '',
-		) => `import { BasicChild } from '../child/basic-child.tsrx'
+		) => `import { css } from '@zeix/le-truc-compiler/macros'
+import { BasicChild } from '../child/basic-child.tsrx'
 
 export function BasicParent({ title }: { title: string }) {
 	${declare}

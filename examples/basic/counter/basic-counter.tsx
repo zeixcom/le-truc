@@ -11,6 +11,7 @@
  * Props type diverging from the twin's fails TS 2717.
  */
 import { createCell, type FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 export type BasicCounterProps = {
 	/** Current counter value. Increments on each button click. */

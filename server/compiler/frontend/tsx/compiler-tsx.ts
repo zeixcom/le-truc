@@ -27,15 +27,19 @@
  * from `surface.ts` (ADR 0032 sub-design 6's anti-drift contract).
  */
 
-import { asArray, identifierName, isNode } from '../../ast-utils'
+import { asArray, isNode } from '../../ast-utils'
 import { diagnostic, type Site } from '../../diagnostics'
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
-import { createExtractContext } from '../../extract-context'
+import {
+	createExtractContext,
+	type ExtractContext,
+} from '../../extract-context'
 import {
 	type CompileResult,
 	runFrontEnd,
 	type SurfaceAdapter,
 } from '../../front-end'
+import { markerOf } from '../../imports'
 import { lowerElement } from './lower-tsx'
 import { type AstNode, parseTsxModule } from './to-estree'
 
@@ -52,12 +56,14 @@ export type { CompileResult } from '../../front-end'
  * — and the bytes are read from INSIDE the backticks (verbatim, original
  * indentation). The `css` TAG is the default spelling (ADR 0032 surface
  * vocabulary): editors highlight a `css`-tagged template literal as CSS out
- * of the box, and the ambient `css` identity function is compile-consumed —
- * evaluated by nothing, so a `${}` substitution inside is still rejected. A
- * bare template literal (the spike spelling) stays accepted.
+ * of the box. The tag is the `css` compile-time marker, recognized by
+ * binding (ADR 0034 s1, LT-442): imported from
+ * `@zeix/le-truc-compiler/macros` under any local name, never a bare `css`
+ * — evaluated by nothing, so a `${}` substitution inside is still rejected.
+ * A bare template literal (the spike spelling) stays accepted.
  */
 const styleElementStylesheet = (
-	source: string,
+	ctx: ExtractContext,
 	node: AstNode,
 ): string | null => {
 	const child = Array.isArray(node.children)
@@ -70,7 +76,7 @@ const styleElementStylesheet = (
 	let template = expr
 	if (expr?.type === 'TaggedTemplateExpression') {
 		const tag = expr.tag as AstNode | undefined
-		if (!isNode(tag) || identifierName(tag) !== 'css') return null
+		if (markerOf(ctx, tag) !== 'css') return null
 		template = expr.quasi as AstNode | undefined
 	}
 	if (!template || template.type !== 'TemplateLiteral') return null
@@ -78,11 +84,11 @@ const styleElementStylesheet = (
 	// Slice between the backticks (the literal's own brackets).
 	const start = (template.start ?? 0) + 1
 	const end = (template.end ?? 0) - 1
-	return source.slice(start, end)
+	return ctx.source.slice(start, end)
 }
 
 /** The `.tsx` grammar's half of the shared driver (`front-end.ts`). */
-const tsxAdapter = (source: string): SurfaceAdapter => ({
+const tsxAdapter: SurfaceAdapter = {
 	surface: 'tsx',
 	componentBodyType: 'BlockStatement',
 	// Setup = statements before the single return; template = the returned JSX.
@@ -108,9 +114,9 @@ const tsxAdapter = (source: string): SurfaceAdapter => ({
 			output: returnStmt.argument as AstNode,
 		}
 	},
-	stylesheetOf: node => styleElementStylesheet(source, node) ?? '',
+	stylesheetOf: (ctx, node) => styleElementStylesheet(ctx, node) ?? '',
 	lowerElement,
-})
+}
 
 /**
  * Where the TS parser located its failure (`TSError.location`, offsets in
@@ -163,6 +169,6 @@ export const compileSourceTsx = (
 		ast,
 		filename,
 		emitPaths,
-		tsxAdapter(source),
+		tsxAdapter,
 	)
 }

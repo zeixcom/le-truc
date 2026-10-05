@@ -12,6 +12,7 @@
 
 import type { FactoryContext } from '@zeix/le-truc'
 import { asBoolean, asClampedInteger } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 import { getLocale } from '../../_common/getLocale'
 
 export const i18n = {

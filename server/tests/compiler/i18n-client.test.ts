@@ -75,7 +75,8 @@ const tsxSource = (
 	s = setup,
 	p = params,
 	names = 'createCell',
-) => `import { ${names} } from '@zeix/le-truc'
+) => `import { css } from '@zeix/le-truc-compiler/macros'
+import { ${names} } from '@zeix/le-truc'
 ${decl}
 export function C(${p}) {
 	${s}
@@ -593,7 +594,8 @@ export function P(${parentParams})
 	}</style>
 			</p-el>
 	}`,
-		tsx: `import { createList } from '@zeix/le-truc'
+		tsx: `import { css } from '@zeix/le-truc-compiler/macros'
+import { createList } from '@zeix/le-truc'
 import { C } from './c.tsrx'
 ${parentDecl}
 export function P(${parentParams}) {

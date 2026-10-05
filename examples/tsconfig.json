@@ -12,7 +12,8 @@
 		"resolveJsonModule": true,
 		"types": ["bun", "node"],
 		"paths": {
-			"@zeix/le-truc": ["../index.ts"]
+			"@zeix/le-truc": ["../index.ts"],
+			"@zeix/le-truc-compiler/macros": ["../server/compiler/macros.ts"]
 		},
 		"noEmit": true,
 		"strict": true,

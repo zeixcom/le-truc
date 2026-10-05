@@ -24,6 +24,7 @@
  */
 
 import { asString, bindProperty, type FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 import 'culori/css'
 import {
 	colorsNamed,

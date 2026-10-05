@@ -12,6 +12,7 @@
  * `sync-el.tsrx` is its byte-parity twin.
  */
 import type { FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 export type SyncItem = { id: string; label: string }
 

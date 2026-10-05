@@ -203,7 +203,10 @@ import { createSensor } from '@zeix/le-truc'`
 })
 
 describe('createSensor on the .tsx surface', () => {
-	const source = (seed: string) => `import { createSensor } from '@zeix/le-truc'
+	const source = (
+		seed: string,
+	) => `import { css } from '@zeix/le-truc-compiler/macros'
+import { createSensor } from '@zeix/le-truc'
 import type { FactoryContext } from '@zeix/le-truc'
 
 export type CElProps = { mode: string }

@@ -247,7 +247,8 @@ const tsxSource = ({
 	body,
 	tsx,
 }: Spec) =>
-	`${pre}
+	`import { css } from '@zeix/le-truc-compiler/macros'
+${pre}
 export function C(${params}) {
 	${setup}
 	return (
@@ -1019,7 +1020,9 @@ const SECOND = {
 	tsrx: tsrxSource({ body: '<p>y</p>' })
 		.replace('C(', 'D(')
 		.replaceAll('c-el', 'd-el'),
+	// The second function only: the source's marker import stays once, at the top.
 	tsx: tsxSource({ body: '<p>y</p>' })
+		.replace("import { css } from '@zeix/le-truc-compiler/macros'\n", '')
 		.replace('C(', 'D(')
 		.replaceAll('c-el', 'd-el'),
 }
@@ -1033,7 +1036,8 @@ const FRAGMENT_ROOT = {
 			<style>:host { color: red }</style>
 		</>
 	}`,
-	tsx: `export function C({}: {}) {
+	tsx: `import { css } from '@zeix/le-truc-compiler/macros'
+export function C({}: {}) {
 	return (
 		<>
 			<c-el><p>x</p></c-el>

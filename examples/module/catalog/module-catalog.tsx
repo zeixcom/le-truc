@@ -19,6 +19,7 @@
  */
 
 import { createMemo, type FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 import { BasicButton } from '../../basic/button/basic-button.tsrx'
 import { FormSpinbutton } from '../../form/spinbutton/form-spinbutton.tsrx'
 

@@ -30,6 +30,7 @@ import {
 	each,
 	type FactoryContext,
 } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 export type ModuleCarouselProps = {
 	/** Zero-based index of the currently visible slide. */

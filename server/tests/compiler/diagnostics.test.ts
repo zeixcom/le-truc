@@ -382,7 +382,8 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 	})
 
 	test('.tsx unrecognized namespaced tag <truc:element> is LTC053', () => {
-		const source = `export function C({ level }: { level: string }) {
+		const source = `import { css } from '@zeix/le-truc-compiler/macros'
+export function C({ level }: { level: string }) {
 	return (
 			<c-el>
 				<truc:element tag={level}>Hi</truc:element>
@@ -400,7 +401,7 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC053')
 		expect(hit?.severity).toBe('error')
-		expect(lineAt(source, hit)).toBe(4)
+		expect(lineAt(source, hit)).toBe(5)
 		expect(textAt(source, hit)).toBe(
 			'<truc:element tag={level}>Hi</truc:element>',
 		)
@@ -424,7 +425,8 @@ describe('non-static element tags (LTC053, LT-213)', () => {
 
 describe('<truc:try> arm shapes (LT-303, ADR 0041)', () => {
 	const trySource = (boundary: string): string =>
-		`import { deriveCell } from '@zeix/le-truc'
+		`import { css } from '@zeix/le-truc-compiler/macros'
+import { deriveCell } from '@zeix/le-truc'
 export function C({}: {}) {
 	const data = deriveCell(async () => 'x')
 	const fallback = (e: Error) => <p>{e.message}</p>
@@ -473,7 +475,7 @@ export function C({}: {}) {
 			expect(component).toBeNull()
 			const hit = diagnostics.find(d => d.code === 'LTC005')
 			expect(hit?.severity).toBe('error')
-			expect(lineAt(trySource(boundary), hit)).toBe(8)
+			expect(lineAt(trySource(boundary), hit)).toBe(9)
 			expect(textAt(trySource(boundary), hit)).toBe(boundary)
 			expect(hit?.message).toContain(
 				'`<truc:try>` boundary with arms that are not inline',
@@ -586,7 +588,8 @@ export function C({}: {})
 			'rows.length === 0 ? <li class="none">none</li> : other.map(row => <li>{row}</li>)',
 		]) {
 			const { component, diagnostics } = compileComponentTsx(
-				`export function C({ rows, other, ready }: { rows: string[]; other: string[]; ready: boolean }) {
+				`import { css } from '@zeix/le-truc-compiler/macros'
+export function C({ rows, other, ready }: { rows: string[]; other: string[]; ready: boolean }) {
 	return (
 			<c-el>
 				<ul>{${expr}}</ul>
@@ -658,7 +661,8 @@ describe('loops inside conditional branches (LT-301)', () => {
 
 	test('.tsx: a loop in a fragment arm is LTC005', () => {
 		const { component, diagnostics } = compileComponentTsx(
-			`export function C({ rows, ready }: { rows: string[]; ready: boolean }) {
+			`import { css } from '@zeix/le-truc-compiler/macros'
+export function C({ rows, ready }: { rows: string[]; ready: boolean }) {
 	return (
 			<c-el>
 				<ul>{ready ? <li class="none">x</li> : <>{rows.map(row => <li class="item" onClick={() => console.log(1)}>{row}</li>)}</>}</ul>
@@ -2041,7 +2045,8 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 		['crypto.randomUUID()'],
 		['crypto.getRandomValues(new Uint8Array(4)).join()'],
 	])('%s in a static position is LTC033 (LT-314)', expr => {
-		const source = `export function C({}: {}) {
+		const source = `import { css } from '@zeix/le-truc-compiler/macros'
+export function C({}: {}) {
 	return (
 			<c-el><span id={${expr}}>x</span>
 				<style>{css\`:host {
@@ -2119,7 +2124,8 @@ describe('impure ambients (CHECKLIST §4, LTC033 — static forms only after LT-
 	})
 
 	test('crypto.randomUUID() in a reactive position is omitted, not folded (LT-314)', () => {
-		const source = `export function C({}: {}) {
+		const source = `import { css } from '@zeix/le-truc-compiler/macros'
+export function C({}: {}) {
 	return (
 			<c-el><span id={() => crypto.randomUUID()}>x</span>
 				<style>{css\`:host {
@@ -3299,7 +3305,8 @@ describe('reactive-list body impure-ambient diagnostic (LT-221 §1.1, retired LT
 	const mapBody = '{items.map(item => <li>{item} {Date.now()}</li>)}'
 
 	test('.tsx — the retired impure-ambient refusal is the shared gate now', () => {
-		const source = `import { createList } from '@zeix/le-truc'
+		const source = `import { css } from '@zeix/le-truc-compiler/macros'
+import { createList } from '@zeix/le-truc'
 
 export function C({}, { expose }: FactoryContext<{}>) {
 	const items = createList([])

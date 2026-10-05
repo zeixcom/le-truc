@@ -15,6 +15,7 @@
  */
 
 import { asBoolean, bindAttribute, type FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 import { BasicButton } from '../../basic/button/basic-button.tsrx'
 import { copyToClipboard } from '../../basic/button/copyToClipboard'
 

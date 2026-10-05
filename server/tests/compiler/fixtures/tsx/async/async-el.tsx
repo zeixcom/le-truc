@@ -14,6 +14,7 @@
  */
 import { deriveCell, isPending } from '@zeix/le-truc'
 import type { FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 export type AsyncElProps = {
 	/** The async result once the task settles; empty until then. */
