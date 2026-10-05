@@ -58,9 +58,9 @@ export type ModuleDecls = {
 }
 
 /**
- * Module-level declarations beside the component function: exported type
- * declarations and `declare global`, verbatim; `export const config`;
- * `export const i18n` (ADR 0030 sub-design 4, LT-173).
+ * Module-level declarations beside the component function: type
+ * declarations (exported or module-local) and `declare global`, verbatim;
+ * `export const config`; `export const i18n` (ADR 0030 sub-design 4, LT-173).
  */
 export const readModuleDecls = (
 	ctx: ExtractContext,
@@ -100,15 +100,17 @@ export const readModuleDecls = (
 			i18nArgs = declaredI18n.args
 			continue
 		}
+		// Exported or not: a module-local `type`/`interface` is as much a
+		// part of the setup's typing as an exported one, and a generated
+		// module that drops it names a type it never declares (LT-439).
 		if (
-			stmt.type === 'ExportNamedDeclaration' &&
-			isNode(stmt.declaration) &&
-			(stmt.declaration.type === 'TSTypeAliasDeclaration' ||
-				stmt.declaration.type === 'TSInterfaceDeclaration')
+			valueDecl.type === 'TSTypeAliasDeclaration' ||
+			valueDecl.type === 'TSInterfaceDeclaration'
 		) {
 			typeDecls.push(text(ctx.source, stmt))
-			const declName = identifierName(stmt.declaration.id)
-			if (declName === `${componentName}Props`) propsTypeName = declName
+			const declName = identifierName(valueDecl.id)
+			if (stmt !== valueDecl && declName === `${componentName}Props`)
+				propsTypeName = declName
 		}
 		if (stmt.type === 'TSModuleDeclaration' && String(stmt.kind) === 'global')
 			globalDecl = text(ctx.source, stmt)
